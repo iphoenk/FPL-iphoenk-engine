@@ -1,265 +1,60 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
-import requests
+from .adapters import collect_source
+from .health import build_source_health
+from .http_client import AcquisitionClient, utc_now
+from .normalizer import build_canonical_fixtures, build_canonical_players, build_canonical_teams, build_evidence_index, build_lineage_catalog
+from .registry import load_registry, source_map
+from .store import EVIDENCE, HEALTH, MANIFEST, NORMALIZED, load_previous_sources, write_json, write_source
 
-ROOT = Path(__file__).resolve().parents[2]
-CONFIG = ROOT / "config" / "v6" / "source_registry.json"
-OUT = ROOT / "data" / "v6"
-CURRENT = OUT / "current"
-MANIFEST = OUT / "manifest.json"
-
-USER_AGENT = "FPL-iphoenk-engine-v6-data-ingestion/1.0 (+public read-only collector)"
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _load_config() -> dict[str, Any]:
-    payload = json.loads(CONFIG.read_text(encoding="utf-8"))
-    assert payload.get("engine") == "V6_DATA_INGESTION_ONLY"
-    assert (payload.get("policy") or {}).get("data_only") is True
-    return payload
-
-
-def _sha256(raw: bytes) -> str:
-    return hashlib.sha256(raw).hexdigest()
-
-
-def _request(url: str, timeout: float, max_body: int) -> dict[str, Any]:
-    started = time.perf_counter()
-    try:
-        response = requests.get(
-            url,
-            timeout=timeout,
-            headers={
-                "User-Agent": USER_AGENT,
-                "Accept": "application/json,text/csv,text/html,application/xhtml+xml,*/*;q=0.8",
-            },
-        )
-        elapsed = round((time.perf_counter() - started) * 1000.0, 3)
-        raw = response.content
-        kept = raw[:max_body]
-        content_type = str(response.headers.get("content-type") or "")
-        body_text = kept.decode(response.encoding or "utf-8", errors="replace")
-        parsed_json = None
-        if "json" in content_type.lower():
-            try:
-                parsed_json = response.json()
-            except ValueError:
-                parsed_json = None
-        return {
-            "status": "AVAILABLE" if 200 <= response.status_code < 400 else "UNAVAILABLE",
-            "http_status": response.status_code,
-            "url": url,
-            "fetched_at": _now(),
-            "latency_ms": elapsed,
-            "content_type": content_type,
-            "content_length_bytes": len(raw),
-            "stored_bytes": len(kept),
-            "truncated": len(raw) > len(kept),
-            "sha256": _sha256(raw),
-            "json": parsed_json,
-            "body": body_text if parsed_json is None else None,
-            "error": None,
-        }
-    except requests.RequestException as exc:
-        return {
-            "status": "UNAVAILABLE",
-            "http_status": None,
-            "url": url,
-            "fetched_at": _now(),
-            "latency_ms": round((time.perf_counter() - started) * 1000.0, 3),
-            "content_type": None,
-            "content_length_bytes": None,
-            "stored_bytes": 0,
-            "truncated": False,
-            "sha256": None,
-            "json": None,
-            "body": None,
-            "error": type(exc).__name__,
-        }
-
-
-def _collect_http(source: dict[str, Any], timeout: float, max_body: int) -> dict[str, Any]:
-    rows = [_request(str(url), timeout, max_body) for url in source.get("urls") or []]
-    available = [row for row in rows if row.get("status") == "AVAILABLE"]
-    if available and len(available) == len(rows):
-        status = "AVAILABLE"
-    elif available:
-        status = "PARTIAL"
-    else:
-        status = "UNAVAILABLE"
-    return {
-        "schema_version": 1,
-        "source_id": source["id"],
-        "source_name": source.get("name"),
-        "kind": source.get("kind"),
-        "generated_at": _now(),
-        "status": status,
-        "critical": bool(source.get("critical")),
-        "requests": rows,
-        "governance": {
-            "data_only": True,
-            "decision_authority": "NONE",
-            "public_read_only": True,
-            "auth_bypass_used": False,
-            "values_not_invented": True,
-        },
-    }
-
-
-def _collect_official(source: dict[str, Any], timeout: float, max_body: int) -> dict[str, Any]:
-    payload = _collect_http(source, timeout, max_body)
-    by_url = {row.get("url"): row for row in payload.get("requests") or []}
-    bootstrap_url = next((u for u in source.get("urls") or [] if "bootstrap-static" in u), None)
-    fixtures_url = next((u for u in source.get("urls") or [] if u.rstrip("/").endswith("fixtures")), None)
-    status_url = next((u for u in source.get("urls") or [] if "event-status" in u), None)
-    payload["official"] = {
-        "bootstrap": (by_url.get(bootstrap_url) or {}).get("json") if bootstrap_url else None,
-        "fixtures": (by_url.get(fixtures_url) or {}).get("json") if fixtures_url else None,
-        "event_status": (by_url.get(status_url) or {}).get("json") if status_url else None,
-    }
-    return payload
-
-
-def _collect_price_predictor(source: dict[str, Any], official_payload: dict[str, Any]) -> dict[str, Any]:
-    bootstrap = ((official_payload.get("official") or {}).get("bootstrap") or {})
-    elements = list(bootstrap.get("elements") or [])
-    fields = [str(x) for x in source.get("fields") or []]
-    rows = [{key: player.get(key) for key in fields if key in player} for player in elements]
-    required = {"price_change_percent", "price_change_projections"}
-    covered = sum(1 for row in rows if required.issubset(set(row)))
-    status = "AVAILABLE" if rows and covered == len(rows) else ("PARTIAL" if rows else "UNAVAILABLE")
-    return {
-        "schema_version": 1,
-        "source_id": source["id"],
-        "source_name": source.get("name"),
-        "kind": source.get("kind"),
-        "generated_at": _now(),
-        "status": status,
-        "critical": bool(source.get("critical")),
-        "derived_from": "official_fpl.bootstrap",
-        "player_count": len(rows),
-        "covered_player_count": covered,
-        "coverage_ratio": round(covered / len(rows), 6) if rows else 0.0,
-        "fields": fields,
-        "players": rows,
-        "governance": {
-            "data_only": True,
-            "decision_authority": "NONE",
-            "source": "OFFICIAL_FPL",
-            "ui_scraping": False,
-            "auth_required": False,
-            "values_not_invented": True,
-        },
-    }
-
-
-def _write(source_id: str, payload: dict[str, Any]) -> None:
-    CURRENT.mkdir(parents=True, exist_ok=True)
-    path = CURRENT / f"{source_id}.json"
-    tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    tmp.replace(path)
-
+def _isolated_failure(source: dict[str, Any], exc: Exception) -> dict[str, Any]:
+    return {"schema_version": 2, "source_id": source["id"], "source_name": source["name"], "category": source["category"], "adapter": source["adapter"], "critical": bool(source.get("critical")), "independence_group": source.get("independence_group"), "checked_at": utc_now(), "health": "RED" if source.get("critical") else "AMBER", "availability": "UNAVAILABLE", "effective_state": "MISSING", "changed": None, "error": type(exc).__name__, "governance": {"data_only": True, "decision_authority": "NONE", "prediction_authority": "NONE", "optimizer_authority": "NONE", "isolated_failure": True, "values_not_invented": True}}
 
 def run() -> dict[str, Any]:
-    cfg = _load_config()
-    policy = cfg.get("policy") or {}
-    timeout = float(policy.get("timeout_seconds") or 20)
-    max_body = int(policy.get("max_body_bytes") or 250000)
-    workers = int(policy.get("max_workers") or 8)
-    sources = list(cfg.get("sources") or [])
-    source_map = {row["id"]: row for row in sources}
-
-    started = time.perf_counter()
+    config = load_registry()
+    sources = list(config["sources"])
+    by_id = source_map(config)
+    previous = load_previous_sources()
+    client = AcquisitionClient(config["policy"])
     results: dict[str, dict[str, Any]] = {}
-
-    official = _collect_official(source_map["official_fpl"], timeout, max_body)
+    started = time.perf_counter()
+    official = collect_source(by_id["official_fpl"], client, previous=previous.get("official_fpl"))
     results["official_fpl"] = official
-    results["official_price_predictor"] = _collect_price_predictor(
-        source_map["official_price_predictor"], official
-    )
-
-    remaining = [
-        row for row in sources
-        if row["id"] not in {"official_fpl", "official_price_predictor"}
-    ]
-    with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
-        future_map = {
-            pool.submit(_collect_http, source, timeout, max_body): source
-            for source in remaining
-        }
-        for future in as_completed(future_map):
-            source = future_map[future]
+    results["official_price_predictor"] = collect_source(by_id["official_price_predictor"], client, previous=previous.get("official_price_predictor"), official_payload=official)
+    remaining = [source for source in sources if source["id"] not in {"official_fpl", "official_price_predictor"}]
+    workers = max(1, int(config["policy"].get("max_workers") or 12))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(collect_source, source, client, previous=previous.get(source["id"])): source for source in remaining}
+        for future in as_completed(futures):
+            source = futures[future]
             try:
                 results[source["id"]] = future.result()
             except Exception as exc:
-                results[source["id"]] = {
-                    "schema_version": 1,
-                    "source_id": source["id"],
-                    "source_name": source.get("name"),
-                    "generated_at": _now(),
-                    "status": "UNAVAILABLE",
-                    "critical": bool(source.get("critical")),
-                    "error": type(exc).__name__,
-                    "governance": {
-                        "data_only": True,
-                        "decision_authority": "NONE",
-                        "isolated_failure": True,
-                        "values_not_invented": True,
-                    },
-                }
-
+                results[source["id"]] = _isolated_failure(source, exc)
     for source in sources:
-        _write(source["id"], results[source["id"]])
-
-    critical_failures = [
-        source["id"]
-        for source in sources
-        if source.get("critical") and results[source["id"]].get("status") != "AVAILABLE"
-    ]
-    statuses = {source["id"]: results[source["id"]].get("status") for source in sources}
-    manifest = {
-        "schema_version": 1,
-        "engine": "V6_DATA_INGESTION_ONLY",
-        "generated_at": _now(),
-        "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3),
-        "source_count": len(sources),
-        "statuses": statuses,
-        "critical_failures": critical_failures,
-        "overall": "RED" if critical_failures else (
-            "GREEN" if all(value == "AVAILABLE" for value in statuses.values()) else "AMBER"
-        ),
-        "files": {source["id"]: f"data/v6/current/{source['id']}.json" for source in sources},
-        "governance": {
-            "decision_authority": "NONE",
-            "prediction_authority": "NONE",
-            "optimizer_authority": "NONE",
-            "data_only": True,
-            "no_cross_source_averaging": True,
-            "no_fabrication": True,
-            "source_failure_isolated": True,
-        },
-    }
-    OUT.mkdir(parents=True, exist_ok=True)
-    MANIFEST.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+        write_source(source["id"], results[source["id"]])
+    source_ids = [source["id"] for source in sources]
+    write_json(NORMALIZED / "canonical_players.json", build_canonical_players(official, source_ids))
+    write_json(NORMALIZED / "canonical_teams.json", build_canonical_teams(official))
+    write_json(NORMALIZED / "canonical_fixtures.json", build_canonical_fixtures(official))
+    write_json(EVIDENCE / "lineage.json", build_lineage_catalog(config))
+    write_json(EVIDENCE / "latest_index.json", build_evidence_index(results))
+    health = build_source_health(config, results)
+    write_json(HEALTH / "source_health.json", health)
+    elapsed = round((time.perf_counter() - started) * 1000.0, 3)
+    critical_failures = [source["id"] for source in sources if source.get("critical") and results[source["id"]].get("health") == "RED"]
+    manifest = {"schema_version": 2, "engine": config["engine"], "season": config["season"], "generated_at": utc_now(), "elapsed_ms": elapsed, "source_count": len(sources), "source_ids": source_ids, "overall": "RED" if critical_failures else health["overall"], "health_counts": health["counts"], "critical_failures": critical_failures, "paths": {"current_sources": "data/v6/current/", "health": "data/v6/health/source_health.json", "canonical_players": "data/v6/normalized/canonical_players.json", "canonical_teams": "data/v6/normalized/canonical_teams.json", "canonical_fixtures": "data/v6/normalized/canonical_fixtures.json", "lineage": "data/v6/evidence/lineage.json", "evidence_index": "data/v6/evidence/latest_index.json"}, "governance": {"decision_authority": "NONE", "prediction_authority": "NONE", "optimizer_authority": "NONE", "data_only": True, "no_cross_source_averaging": True, "no_fabrication": True, "source_failures_are_isolated": True, "unchanged_upstream_is_not_degraded": True}}
+    write_json(MANIFEST, manifest)
     return manifest
-
 
 def main() -> int:
     print(json.dumps(run(), ensure_ascii=False))
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

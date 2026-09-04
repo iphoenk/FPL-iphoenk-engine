@@ -1,8 +1,13 @@
 {
-  "schema_version": 1,
-  "engine": "V6_DATA_INGESTION_ONLY",
+  "schema_version": 2,
+  "engine": "V6_FRESH_DATA_PLATFORM",
   "season": "2026-2027",
-  "cadence": {"schedule": "hourly", "workflow_cron_utc": "5 * * * *"},
+  "cadence": {
+    "schedule": "hourly",
+    "workflow_cron_utc": "5 * * * *",
+    "check_every_source_each_cycle": true,
+    "default_check_freshness_minutes": 90
+  },
   "policy": {
     "decision_authority": "NONE",
     "prediction_authority": "NONE",
@@ -11,25 +16,74 @@
     "no_cross_source_averaging": true,
     "no_fabrication": true,
     "preserve_provenance": true,
+    "preserve_last_good_on_failure": true,
     "source_failures_are_isolated": true,
-    "public_read_only_only": true,
     "no_auth_bypass": true,
-    "max_body_bytes": 250000,
-    "timeout_seconds": 20,
-    "max_workers": 8
+    "allow_secret_backed_official_apis": true,
+    "max_body_bytes": 750000,
+    "timeout_seconds": 25,
+    "max_workers": 12,
+    "retry_attempts": 2,
+    "retry_backoff_seconds": 0.75,
+    "raw_artifact_retention_days": 14
+  },
+  "identity": {
+    "canonical_player_authority": "official_fpl",
+    "canonical_team_authority": "official_fpl",
+    "canonical_fixture_authority": "official_fpl",
+    "canonical_player_key": "official_fpl_element_id",
+    "external_ids_are_attributes_not_primary_keys": true
   },
   "sources": [
-    {"id":"official_fpl","name":"Official FPL","kind":"official_fpl","critical":true,"urls":["https://fantasy.premierleague.com/api/bootstrap-static/","https://fantasy.premierleague.com/api/fixtures/","https://fantasy.premierleague.com/api/event-status/"]},
-    {"id":"official_price_predictor","name":"Official FPL Price Predictor","kind":"official_price_predictor","critical":true,"derived_from":"official_fpl.bootstrap","fields":["id","web_name","team","element_type","now_cost","selected_by_percent","transfers_in_event","transfers_out_event","price_change_percent","price_change_hourly_rate","price_change_projections","price_change_locked_until","price_change_calibrating"]},
-    {"id":"understat","name":"Understat","kind":"http","critical":false,"urls":["https://understat.com/league/EPL/2026"]},
-    {"id":"opta_the_analyst","name":"Opta / The Analyst","kind":"http","critical":false,"urls":["https://theanalyst.com/football/premier-league"]},
-    {"id":"statmuse","name":"StatMuse FC","kind":"http","critical":false,"urls":["https://www.statmuse.com/fc"]},
-    {"id":"onside","name":"Onside","kind":"http","critical":false,"urls":["https://onsidearena.com/fpl/predicted-points"]},
-    {"id":"ben_crellin","name":"Ben Crellin","kind":"http","critical":false,"urls":["https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?actor=bencrellin.bsky.social&limit=50"]},
-    {"id":"fffix","name":"Fantasy Football Fix","kind":"http","critical":false,"urls":["https://www.fantasyfootballfix.com/price/","https://www.fantasyfootballfix.com/algorithm_predictions/"]},
-    {"id":"ffhub","name":"Fantasy Football Hub","kind":"http","critical":false,"urls":["https://www.fantasyfootballhub.co.uk/predictions","https://www.fantasyfootballhub.co.uk/tools"]},
-    {"id":"onefpl","name":"OneFPL","kind":"http","critical":false,"urls":["https://onefpl.com/prices"]},
-    {"id":"livefpl","name":"LiveFPL","kind":"http","critical":false,"urls":["https://plan.livefpl.net/prices","https://plan.livefpl.net/price_changes"]},
-    {"id":"ffscout","name":"Fantasy Football Scout","kind":"http","critical":false,"urls":["https://www.fantasyfootballscout.co.uk/"]}    
+    {
+      "id": "official_fpl",
+      "name": "Official FPL",
+      "category": "factual_authority",
+      "adapter": "official_fpl",
+      "critical": true,
+      "check_freshness_minutes": 90,
+      "independence_group": "official_fpl",
+      "requests": [
+        {"id": "bootstrap", "url": "https://fantasy.premierleague.com/api/bootstrap-static/", "expect": "json"},
+        {"id": "fixtures", "url": "https://fantasy.premierleague.com/api/fixtures/", "expect": "json"},
+        {"id": "event_status", "url": "https://fantasy.premierleague.com/api/event-status/", "expect": "json"}
+      ]
+    },
+    {
+      "id": "official_price_predictor",
+      "name": "Official FPL Price Predictor",
+      "category": "market",
+      "adapter": "official_price_predictor",
+      "critical": true,
+      "check_freshness_minutes": 90,
+      "independence_group": "official_fpl",
+      "derived_from": "official_fpl.bootstrap",
+      "fields": ["id", "web_name", "team", "element_type", "now_cost", "selected_by_percent", "transfers_in_event", "transfers_out_event", "price_change_percent", "price_change_hourly_rate", "price_change_projections", "price_change_locked_until", "price_change_calibrating"]
+    },
+    {"id": "understat", "name": "Understat", "category": "advanced_performance", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "understat", "requests": [{"id": "epl_2026", "url": "https://understat.com/league/EPL/2026", "expect": "text"}]},
+    {"id": "opta_the_analyst", "name": "Opta / The Analyst", "category": "advanced_performance", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "opta_family", "requests": [{"id": "premier_league", "url": "https://theanalyst.com/football/premier-league", "expect": "text"}]},
+    {"id": "statmuse", "name": "StatMuse FC", "category": "advanced_performance", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "statmuse", "requests": [{"id": "fc", "url": "https://www.statmuse.com/fc", "expect": "text"}]},
+    {"id": "onside", "name": "Onside", "category": "fpl_model_reference", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "onside", "requests": [{"id": "predicted_points", "url": "https://onsidearena.com/fpl/predicted-points", "expect": "text"}]},
+    {"id": "ben_crellin", "name": "Ben Crellin", "category": "fixture_schedule_reference", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "ben_crellin", "requests": [{"id": "bluesky_feed", "url": "https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed", "params": {"actor": "bencrellin.bsky.social", "limit": "50"}, "expect": "json"}]},
+    {"id": "fffix", "name": "Fantasy Football Fix", "category": "fpl_model_reference", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "fffix", "requests": [{"id": "price", "url": "https://www.fantasyfootballfix.com/price/", "expect": "text"}, {"id": "algorithm_predictions", "url": "https://www.fantasyfootballfix.com/algorithm_predictions/", "expect": "text"}]},
+    {"id": "ffhub", "name": "Fantasy Football Hub", "category": "fpl_model_reference", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "ffhub", "requests": [{"id": "predictions", "url": "https://www.fantasyfootballhub.co.uk/predictions", "expect": "text"}, {"id": "tools", "url": "https://www.fantasyfootballhub.co.uk/tools", "expect": "text"}]},
+    {"id": "onefpl", "name": "OneFPL", "category": "price_reference", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "onefpl", "requests": [{"id": "prices", "url": "https://onefpl.com/prices", "expect": "text"}]},
+    {"id": "livefpl", "name": "LiveFPL", "category": "price_reference", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "livefpl", "requests": [{"id": "prices", "url": "https://plan.livefpl.net/prices", "expect": "text"}, {"id": "price_changes", "url": "https://plan.livefpl.net/price_changes", "expect": "text"}]},
+    {"id": "ffscout", "name": "Fantasy Football Scout", "category": "fpl_model_reference", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "ffscout", "requests": [{"id": "home", "url": "https://www.fantasyfootballscout.co.uk/", "expect": "text"}]},
+    {"id": "fbref", "name": "FBref", "category": "advanced_performance", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "opta_family", "requests": [{"id": "premier_league", "url": "https://fbref.com/en/comps/9/Premier-League-Stats", "expect": "text"}, {"id": "shooting", "url": "https://fbref.com/en/comps/9/shooting/Premier-League-Stats", "expect": "text"}], "notes": "Treat as a retrieval/cross-check path; do not count correlated provider lineage as independent evidence."},
+    {"id": "fotmob", "name": "FotMob", "category": "advanced_performance", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "fotmob", "requests": [{"id": "league", "url": "https://www.fotmob.com/api/leagues", "params": {"id": "47", "ccode3": "GBR"}, "expect": "json"}]},
+    {"id": "sofascore", "name": "Sofascore", "category": "advanced_performance", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "sofascore", "requests": [{"id": "seasons", "url": "https://www.sofascore.com/api/v1/unique-tournament/17/seasons", "expect": "json"}, {"id": "last_events", "url": "https://www.sofascore.com/api/v1/unique-tournament/17/events/last/0", "expect": "json"}, {"id": "next_events", "url": "https://www.sofascore.com/api/v1/unique-tournament/17/events/next/0", "expect": "json"}]},
+    {"id": "statsbomb", "name": "StatsBomb Open Data", "category": "historical_event_data", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "statsbomb", "requests": [{"id": "competitions", "url": "https://raw.githubusercontent.com/statsbomb/open-data/master/data/competitions.json", "expect": "json"}], "notes": "Open-data catalogue; checked hourly even when the upstream dataset is unchanged."},
+    {"id": "rotowire", "name": "RotoWire Soccer", "category": "availability_lineups", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "rotowire", "requests": [{"id": "lineups", "url": "https://www.rotowire.com/soccer/lineups.php", "expect": "text"}]},
+    {"id": "premierleague_stats", "name": "PremierLeague.com Stats", "category": "official_league_stats", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "premierleague_stats", "requests": [{"id": "stats", "url": "https://www.premierleague.com/en/stats", "expect": "text"}]},
+    {"id": "clubelo", "name": "ClubElo", "category": "team_strength", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "clubelo", "requests": [{"id": "ranking", "url": "http://api.clubelo.com/Ranking", "expect": "csv"}]},
+    {"id": "football_data_uk", "name": "Football-Data.co.uk", "category": "market_fixture_data", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "football_data_uk", "requests": [{"id": "epl_2627", "url": "https://www.football-data.co.uk/mmz4281/2627/E0.csv", "expect": "csv"}]},
+    {"id": "sportmonks", "name": "Sportmonks", "category": "structured_provider_api", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "sportmonks", "requests": [{"id": "epl_fixtures", "url": "https://api.sportmonks.com/v3/football/fixtures", "params": {"filters": "fixtureLeagues:8", "include": "participants;scores;lineups;statistics;xGFixture"}, "expect": "json"}], "auth": {"mode": "query", "env": "SPORTMONKS_API_TOKEN", "name": "api_token"}, "notes": "Optional secret-backed provider. No credential bypass."},
+    {"id": "api_football", "name": "API-Football / API-Sports", "category": "structured_provider_api", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "api_football", "requests": [{"id": "epl_fixtures", "url": "https://v3.football.api-sports.io/fixtures", "params": {"league": "39", "season": "2026"}, "expect": "json"}], "auth": {"mode": "header", "env": "API_FOOTBALL_KEY", "name": "x-apisports-key"}},
+    {"id": "transfermarkt", "name": "Transfermarkt", "category": "availability_squad", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "transfermarkt", "requests": [{"id": "injuries", "url": "https://www.transfermarkt.com/premier-league/verletztespieler/wettbewerb/GB1", "expect": "text"}]},
+    {"id": "whoscored", "name": "WhoScored", "category": "advanced_performance", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "opta_family", "requests": [{"id": "premier_league", "url": "https://www.whoscored.com/Regions/252/Tournaments/2/England-Premier-League", "expect": "text"}], "notes": "Correlated with Opta-family data; use as retrieval redundancy/cross-check, not an independent vote."},
+    {"id": "espn", "name": "ESPN Football Data", "category": "fixture_match_data", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "espn", "requests": [{"id": "scoreboard", "url": "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard", "expect": "json"}]},
+    {"id": "football_data_org", "name": "football-data.org", "category": "structured_provider_api", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "football_data_org", "requests": [{"id": "epl_matches", "url": "https://api.football-data.org/v4/competitions/PL/matches", "expect": "json"}], "auth": {"mode": "header", "env": "FOOTBALL_DATA_ORG_TOKEN", "name": "X-Auth-Token"}},
+    {"id": "vaastav_fpl", "name": "vaastav/Fantasy-Premier-League", "category": "historical_fpl", "adapter": "http", "critical": false, "check_freshness_minutes": 90, "independence_group": "official_fpl_history", "requests": [{"id": "players_raw", "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2026-27/players_raw.csv", "expect": "csv"}, {"id": "fixtures", "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2026-27/fixtures.csv", "expect": "csv"}, {"id": "player_idlist", "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2026-27/player_idlist.csv", "expect": "csv"}], "notes": "Historical/calibration mirror; not a live factual authority over Official FPL."}
   ]
 }

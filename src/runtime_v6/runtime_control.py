@@ -63,6 +63,8 @@ def scheduled_slot_already_completed(
     previous = dict(previous_manifest or {})
     previous_control = dict(previous.get("runtime_control") or {})
     last_authoritative = _parse_dt(previous_control.get("last_authoritative_cycle_at"))
+    if last_authoritative is None and event == "schedule":
+        last_authoritative = _parse_dt(previous_control.get("last_scheduled_cycle_at"))
     if last_authoritative is None and previous_control.get("authoritative_runtime_snapshot") is True:
         last_authoritative = _parse_dt(previous_control.get("cycle_observed_at"))
     if last_authoritative is None:

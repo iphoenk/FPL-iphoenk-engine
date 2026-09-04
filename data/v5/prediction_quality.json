@@ -9,15 +9,15 @@
       "pass": true
     },
     "owned_prior_coverage": {
-      "value": 0.7333,
+      "value": 0.8,
       "threshold": 0.5,
       "sample": 15,
       "pass": true
     },
     "starter_xmins_dispersion": {
-      "value": 0.0806,
+      "value": 0.0807,
       "threshold": 0.035,
-      "sample": 247,
+      "sample": 249,
       "minimum_sample": 40,
       "pass": true
     },
@@ -44,7 +44,7 @@
   },
   "owned_squad": {
     "players": 15,
-    "historical_prior_players": 11,
+    "historical_prior_players": 12,
     "low_confidence_players": 0
   },
   "governance": {

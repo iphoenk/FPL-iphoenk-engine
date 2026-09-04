@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "model": "v5_dss_source_fusion_v3",
-  "generated_at": "2026-09-04T14:28:40.777472+00:00",
+  "generated_at": "2026-09-04T23:08:58.371419+00:00",
   "status": "ACTIVE",
   "season": {
     "season": "2026/27",
@@ -20,8 +20,8 @@
         "status": "ACTIVE",
         "availability_class": null,
         "reason": null,
-        "fetch_mode": "CACHE",
-        "player_count": 364,
+        "fetch_mode": "NETWORK",
+        "player_count": 366,
         "fixture_count": 0,
         "credential_present": null,
         "network_requests": null,
@@ -41,9 +41,9 @@
         "player_count": 0,
         "fixture_count": 0,
         "credential_present": true,
-        "network_requests": 0,
-        "cache_hits": 1,
-        "availability_cache_hits": 1,
+        "network_requests": 1,
+        "cache_hits": 0,
+        "availability_cache_hits": 0,
         "competitions_attempted": 1,
         "competitions_resolved": 0,
         "quota_remaining": null,
@@ -56,8 +56,8 @@
     "understat": {
       "source": "understat",
       "status": "ACTIVE",
-      "generated_at": "2026-09-01T07:56:18.079083+00:00",
-      "fetch_mode": "CACHE",
+      "generated_at": "2026-09-04T23:08:58.369987+00:00",
+      "fetch_mode": "NETWORK",
       "season": {
         "season": "2026/27",
         "start_year": 2026,
@@ -73,7 +73,7 @@
         "xg_chain",
         "xg_buildup"
       ],
-      "player_count": 364,
+      "player_count": 366,
       "players": [
         {
           "understat_id": "1228",
@@ -87,6 +87,19 @@
           "key_passes": "6",
           "xg_chain": "3.1570396423339844",
           "xg_buildup": "1.6610369086265564"
+        },
+        {
+          "understat_id": "5232",
+          "player_name": "Alexander Isak",
+          "team_title": "Liverpool",
+          "games": "3",
+          "time": "246",
+          "shots": "9",
+          "xg": "2.4227875769138336",
+          "xa": "0.10231703147292137",
+          "key_passes": "2",
+          "xg_chain": "1.4112459272146225",
+          "xg_buildup": "0.22133386693894863"
         },
         {
           "understat_id": "7322",
@@ -258,19 +271,6 @@
           "xg_buildup": "1.2994698882102966"
         },
         {
-          "understat_id": "5232",
-          "player_name": "Alexander Isak",
-          "team_title": "Liverpool",
-          "games": "2",
-          "time": "180",
-          "shots": "7",
-          "xg": "2.174916386604309",
-          "xa": "0.10231703147292137",
-          "key_passes": "2",
-          "xg_chain": "0.9580978006124496",
-          "xg_buildup": "0.016056915745139122"
-        },
-        {
           "understat_id": "5555",
           "player_name": "Dominic Calvert-Lewin",
           "team_title": "Leeds",
@@ -391,14 +391,14 @@
           "understat_id": "8919",
           "player_name": "Leif Davis",
           "team_title": "Ipswich",
-          "games": "2",
-          "time": "180",
-          "shots": "2",
-          "xg": "0.6606451272964478",
-          "xa": "0.10865644365549088",
-          "key_passes": "1",
-          "xg_chain": "0.8425723537802696",
-          "xg_buildup": "0.0732707604765892"
+          "games": "3",
+          "time": "270",
+          "shots": "3",
+          "xg": "0.7356619387865067",
+          "xa": "0.2764790281653404",
+          "key_passes": "3",
+          "xg_chain": "1.1776501461863518",
+          "xg_buildup": "0.22538646310567856"
         },
         {
           "understat_id": "9156",
@@ -443,14 +443,14 @@
           "understat_id": "9788",
           "player_name": "Dominik Szoboszlai",
           "team_title": "Liverpool",
-          "games": "2",
-          "time": "180",
-          "shots": "6",
-          "xg": "0.9323304295539856",
-          "xa": "0.2655576914548874",
-          "key_passes": "5",
-          "xg_chain": "0.6802129149436951",
-          "xg_buildup": "0.6802129149436951"
+          "games": "3",
+          "time": "270",
+          "shots": "9",
+          "xg": "1.0804525315761566",
+          "xa": "0.4196484088897705",
+          "key_passes": "7",
+          "xg_chain": "1.242618441581726",
+          "xg_buildup": "0.9751217663288116"
         },
         {
           "understat_id": "9790",
@@ -534,14 +534,14 @@
           "understat_id": "11296",
           "player_name": "Cody Gakpo",
           "team_title": "Liverpool",
-          "games": "2",
-          "time": "164",
-          "shots": "6",
-          "xg": "0.2258007824420929",
-          "xa": "0.9563255459070206",
-          "key_passes": "5",
-          "xg_chain": "1.3730140328407288",
-          "xg_buildup": "0.970960445702076"
+          "games": "3",
+          "time": "254",
+          "shots": "7",
+          "xg": "0.3446035087108612",
+          "xa": "1.2743977159261703",
+          "key_passes": "8",
+          "xg_chain": "1.9779331684112549",
+          "xg_buildup": "1.26644117385149"
         },
         {
           "understat_id": "12035",
@@ -625,27 +625,27 @@
           "understat_id": "13019",
           "player_name": "Jack Clarke",
           "team_title": "Ipswich",
-          "games": "1",
-          "time": "17",
-          "shots": "2",
-          "xg": "0.09507670998573303",
-          "xa": "0",
-          "key_passes": "0",
-          "xg_chain": "0.09507670998573303",
-          "xg_buildup": "0"
+          "games": "2",
+          "time": "39",
+          "shots": "3",
+          "xg": "0.12354925461113453",
+          "xa": "0.05676797404885292",
+          "key_passes": "1",
+          "xg_chain": "0.20185691863298416",
+          "xg_buildup": "0.02153969183564186"
         },
         {
           "understat_id": "13279",
           "player_name": "Víctor Muñoz",
           "team_title": "Liverpool",
-          "games": "2",
-          "time": "116",
+          "games": "3",
+          "time": "182",
           "shots": "6",
           "xg": "0.29636629670858383",
           "xa": "0.10245111584663391",
           "key_passes": "1",
-          "xg_chain": "0.44199784845113754",
-          "xg_buildup": "0.05923735350370407"
+          "xg_chain": "0.4906674735248089",
+          "xg_buildup": "0.10790697857737541"
         },
         {
           "understat_id": "13711",
@@ -664,14 +664,14 @@
           "understat_id": "14082",
           "player_name": "Emersonn",
           "team_title": "Ipswich",
-          "games": "2",
-          "time": "116",
-          "shots": "3",
-          "xg": "0.6148083209991455",
+          "games": "3",
+          "time": "184",
+          "shots": "4",
+          "xg": "0.7227535918354988",
           "xa": "0.645197331905365",
           "key_passes": "3",
-          "xg_chain": "1.8385957479476929",
-          "xg_buildup": "0.6158341765403748"
+          "xg_chain": "2.0266976207494736",
+          "xg_buildup": "0.6959907785058022"
         },
         {
           "understat_id": "14424",
@@ -898,14 +898,14 @@
           "understat_id": "833",
           "player_name": "Virgil van Dijk",
           "team_title": "Liverpool",
-          "games": "2",
-          "time": "180",
+          "games": "3",
+          "time": "270",
           "shots": "2",
           "xg": "0.122930608689785",
           "xa": "0",
           "key_passes": "0",
-          "xg_chain": "1.3277238458395004",
-          "xg_buildup": "1.3277238458395004"
+          "xg_chain": "1.75770865380764",
+          "xg_buildup": "1.75770865380764"
         },
         {
           "understat_id": "884",
@@ -976,27 +976,27 @@
           "understat_id": "1257",
           "player_name": "Alisson",
           "team_title": "Liverpool",
-          "games": "2",
-          "time": "180",
+          "games": "3",
+          "time": "270",
           "shots": "0",
           "xg": "0",
           "xa": "0",
           "key_passes": "0",
-          "xg_chain": "1.0077846869826317",
-          "xg_buildup": "1.0077846869826317"
+          "xg_chain": "1.175257034599781",
+          "xg_buildup": "1.175257034599781"
         },
         {
           "understat_id": "1537",
           "player_name": "Sasa Lukic",
           "team_title": "Ipswich",
-          "games": "2",
-          "time": "165",
+          "games": "3",
+          "time": "255",
           "shots": "1",
           "xg": "0.03799659386277199",
-          "xa": "0.0855647437274456",
-          "key_passes": "2",
-          "xg_chain": "1.4459731578826904",
-          "xg_buildup": "1.381716787815094"
+          "xa": "0.09949547424912453",
+          "key_passes": "3",
+          "xg_chain": "1.6183681637048721",
+          "xg_buildup": "1.5541117936372757"
         },
         {
           "understat_id": "1679",
@@ -1093,14 +1093,14 @@
           "understat_id": "3203",
           "player_name": "Issa Diop",
           "team_title": "Ipswich",
-          "games": "2",
-          "time": "180",
+          "games": "3",
+          "time": "270",
           "shots": "0",
           "xg": "0",
-          "xa": "0",
-          "key_passes": "0",
-          "xg_chain": "0.5532883927226067",
-          "xg_buildup": "0.5532883927226067"
+          "xa": "0.028472544625401497",
+          "key_passes": "1",
+          "xg_chain": "0.7223987802863121",
+          "xg_buildup": "0.6939262375235558"
         },
         {
           "understat_id": "3645",
@@ -1990,14 +1990,14 @@
           "understat_id": "8091",
           "player_name": "Ronald Araújo",
           "team_title": "Liverpool",
-          "games": "2",
-          "time": "29",
+          "games": "3",
+          "time": "119",
           "shots": "0",
           "xg": "0",
           "xa": "0",
           "key_passes": "0",
-          "xg_chain": "0.17030898481607437",
-          "xg_buildup": "0.17030898481607437"
+          "xg_chain": "0.46521783620119095",
+          "xg_buildup": "0.46521783620119095"
         },
         {
           "understat_id": "8117",
@@ -2081,14 +2081,14 @@
           "understat_id": "8325",
           "player_name": "Exequiel Palacios",
           "team_title": "Ipswich",
-          "games": "1",
-          "time": "26",
+          "games": "2",
+          "time": "106",
           "shots": "0",
           "xg": "0",
-          "xa": "0.01357230730354786",
-          "key_passes": "1",
-          "xg_chain": "0.01357230730354786",
-          "xg_buildup": "0.01357230730354786"
+          "xa": "0.10509649850428104",
+          "key_passes": "3",
+          "xg_chain": "0.4039175231009722",
+          "xg_buildup": "0.3123933095484972"
         },
         {
           "understat_id": "8327",
@@ -2133,14 +2133,14 @@
           "understat_id": "8379",
           "player_name": "Alexis Mac Allister",
           "team_title": "Liverpool",
-          "games": "2",
-          "time": "106",
-          "shots": "0",
-          "xg": "0",
-          "xa": "0",
-          "key_passes": "0",
-          "xg_chain": "0.7374118193984032",
-          "xg_buildup": "0.7374118193984032"
+          "games": "3",
+          "time": "192",
+          "shots": "2",
+          "xg": "0.08338574320077896",
+          "xa": "0.06221974641084671",
+          "key_passes": "1",
+          "xg_chain": "0.9914390370249748",
+          "xg_buildup": "0.8805496767163277"
         },
         {
           "understat_id": "8393",
@@ -2159,14 +2159,14 @@
           "understat_id": "8397",
           "player_name": "Florian Wirtz",
           "team_title": "Liverpool",
-          "games": "2",
-          "time": "154",
-          "shots": "5",
-          "xg": "0.40784336626529694",
-          "xa": "0.08841471001505852",
-          "key_passes": "2",
-          "xg_chain": "1.1793667376041412",
-          "xg_buildup": "1.0356005132198334"
+          "games": "3",
+          "time": "244",
+          "shots": "7",
+          "xg": "0.5538003891706467",
+          "xa": "0.15278569236397743",
+          "key_passes": "4",
+          "xg_chain": "1.6795525252819061",
+          "xg_buildup": "1.4164117276668549"
         },
         {
           "understat_id": "8401",
@@ -2315,14 +2315,14 @@
           "understat_id": "8756",
           "player_name": "Dara O&#039;Shea",
           "team_title": "Ipswich",
-          "games": "2",
-          "time": "180",
+          "games": "3",
+          "time": "270",
           "shots": "1",
           "xg": "0.018843594938516617",
           "xa": "0.0479024201631546",
           "key_passes": "2",
-          "xg_chain": "0.5036303550004959",
-          "xg_buildup": "0.4929719753563404"
+          "xg_chain": "0.5391007773578167",
+          "xg_buildup": "0.5284423977136612"
         },
         {
           "understat_id": "8831",
@@ -2861,14 +2861,14 @@
           "understat_id": "9960",
           "player_name": "Kjell Scherpen",
           "team_title": "Ipswich",
-          "games": "2",
-          "time": "180",
+          "games": "3",
+          "time": "270",
           "shots": "0",
           "xg": "0",
           "xa": "0",
           "key_passes": "0",
-          "xg_chain": "1.074543446302414",
-          "xg_buildup": "1.074543446302414"
+          "xg_chain": "1.1508043482899666",
+          "xg_buildup": "1.1508043482899666"
         },
         {
           "understat_id": "9977",
@@ -2895,6 +2895,19 @@
           "key_passes": "0",
           "xg_chain": "0.1096467524766922",
           "xg_buildup": "0"
+        },
+        {
+          "understat_id": "10016",
+          "player_name": "Bradley Barcola",
+          "team_title": "Liverpool",
+          "games": "1",
+          "time": "24",
+          "shots": "0",
+          "xg": "0",
+          "xa": "0.11880272626876831",
+          "key_passes": "1",
+          "xg_chain": "0.11880272626876831",
+          "xg_buildup": "0.11880272626876831"
         },
         {
           "understat_id": "10024",
@@ -2965,14 +2978,14 @@
           "understat_id": "10166",
           "player_name": "Kasey McAteer",
           "team_title": "Ipswich",
-          "games": "2",
-          "time": "27",
-          "shots": "0",
-          "xg": "0",
+          "games": "3",
+          "time": "36",
+          "shots": "1",
+          "xg": "0.02153969183564186",
           "xa": "0",
           "key_passes": "0",
-          "xg_chain": "0",
-          "xg_buildup": "0"
+          "xg_chain": "0.07830766588449478",
+          "xg_buildup": "0.05676797404885292"
         },
         {
           "understat_id": "10184",
@@ -3017,14 +3030,14 @@
           "understat_id": "10485",
           "player_name": "Guemissongui Ouattara",
           "team_title": "Ipswich",
-          "games": "2",
-          "time": "23",
+          "games": "3",
+          "time": "33",
           "shots": "0",
           "xg": "0",
-          "xa": "0.030820326879620552",
-          "key_passes": "1",
-          "xg_chain": "0.030820326879620552",
-          "xg_buildup": "0"
+          "xa": "0.05236001871526241",
+          "key_passes": "2",
+          "xg_chain": "0.10912799276411533",
+          "xg_buildup": "0.07830766588449478"
         },
         {
           "understat_id": "10552",
@@ -3069,8 +3082,8 @@
           "understat_id": "10697",
           "player_name": "Ryan Gravenberch",
           "team_title": "Liverpool",
-          "games": "2",
-          "time": "95",
+          "games": "3",
+          "time": "119",
           "shots": "2",
           "xg": "0.05566263943910599",
           "xa": "0.06266020238399506",
@@ -3238,14 +3251,14 @@
           "understat_id": "11058",
           "player_name": "Julio Enciso",
           "team_title": "Ipswich",
-          "games": "2",
-          "time": "163",
-          "shots": "6",
-          "xg": "0.7533487230539322",
-          "xa": "0.996240645647049",
-          "key_passes": "2",
-          "xg_chain": "2.7154765129089355",
-          "xg_buildup": "0.9658870100975037"
+          "games": "3",
+          "time": "253",
+          "shots": "12",
+          "xg": "1.0101652294397354",
+          "xa": "1.0305762588977814",
+          "key_passes": "4",
+          "xg_chain": "3.1361135840415955",
+          "xg_buildup": "1.0953719764947891"
         },
         {
           "understat_id": "11070",
@@ -3446,14 +3459,14 @@
           "understat_id": "11545",
           "player_name": "Jérémy Jacquet",
           "team_title": "Liverpool",
-          "games": "2",
-          "time": "151",
+          "games": "3",
+          "time": "241",
           "shots": "0",
           "xg": "0",
-          "xa": "0.02940269745886326",
-          "key_passes": "2",
-          "xg_chain": "1.088374063372612",
-          "xg_buildup": "1.0589713901281357"
+          "xa": "0.055985117331147194",
+          "key_passes": "3",
+          "xg_chain": "1.3832829147577286",
+          "xg_buildup": "1.3538802415132523"
         },
         {
           "understat_id": "11592",
@@ -3485,14 +3498,14 @@
           "understat_id": "11709",
           "player_name": "Milos Kerkez",
           "team_title": "Liverpool",
-          "games": "2",
-          "time": "164",
+          "games": "3",
+          "time": "254",
           "shots": "2",
           "xg": "0.03831126540899277",
           "xa": "0.040309472009539604",
           "key_passes": "2",
-          "xg_chain": "0.43527208268642426",
-          "xg_buildup": "0.3951357305049896"
+          "xg_chain": "0.6972126811742783",
+          "xg_buildup": "0.6570763289928436"
         },
         {
           "understat_id": "11711",
@@ -3693,8 +3706,8 @@
           "understat_id": "12203",
           "player_name": "Treymaurice Nyoni",
           "team_title": "Liverpool",
-          "games": "1",
-          "time": "10",
+          "games": "2",
+          "time": "14",
           "shots": "0",
           "xg": "0",
           "xa": "0",
@@ -3745,8 +3758,8 @@
           "understat_id": "12434",
           "player_name": "Lewis Koumas",
           "team_title": "Liverpool",
-          "games": "1",
-          "time": "11",
+          "games": "2",
+          "time": "12",
           "shots": "1",
           "xg": "0.05200997367501259",
           "xa": "0",
@@ -3810,14 +3823,14 @@
           "understat_id": "12745",
           "player_name": "Jacob Greaves",
           "team_title": "Ipswich",
-          "games": "2",
-          "time": "180",
+          "games": "3",
+          "time": "270",
           "shots": "0",
           "xg": "0",
-          "xa": "0",
-          "key_passes": "0",
-          "xg_chain": "1.0210055708885193",
-          "xg_buildup": "1.0210055708885193"
+          "xa": "0.05254272371530533",
+          "key_passes": "1",
+          "xg_chain": "1.1510695964097977",
+          "xg_buildup": "1.098526880145073"
         },
         {
           "understat_id": "12757",
@@ -3875,14 +3888,14 @@
           "understat_id": "12911",
           "player_name": "Abdul Fatawu",
           "team_title": "Ipswich",
-          "games": "2",
-          "time": "153",
-          "shots": "0",
-          "xg": "0",
-          "xa": "1.3685936331748962",
-          "key_passes": "5",
-          "xg_chain": "1.4797148704528809",
-          "xg_buildup": "0.12996479868888855"
+          "games": "3",
+          "time": "234",
+          "shots": "2",
+          "xg": "0.03433561325073242",
+          "xa": "1.4856613278388977",
+          "key_passes": "7",
+          "xg_chain": "1.7390634417533875",
+          "xg_buildup": "0.31292688846588135"
         },
         {
           "understat_id": "12912",
@@ -4169,6 +4182,19 @@
           "key_passes": "0",
           "xg_chain": "1.6741243302822113",
           "xg_buildup": "1.6643683016300201"
+        },
+        {
+          "understat_id": "13729",
+          "player_name": "Zian Flemming",
+          "team_title": "Ipswich",
+          "games": "1",
+          "time": "22",
+          "shots": "1",
+          "xg": "0.013968085870146751",
+          "xa": "0",
+          "key_passes": "0",
+          "xg_chain": "0.013968085870146751",
+          "xg_buildup": "0"
         },
         {
           "understat_id": "13775",
@@ -4642,13 +4668,13 @@
           "understat_id": "14772",
           "player_name": "Daizen Maeda",
           "team_title": "Ipswich",
-          "games": "2",
-          "time": "157",
-          "shots": "2",
-          "xg": "0.7244906201958656",
+          "games": "3",
+          "time": "225",
+          "shots": "3",
+          "xg": "0.7843679301440716",
           "xa": "0",
           "key_passes": "0",
-          "xg_chain": "1.164871484041214",
+          "xg_chain": "1.22474879398942",
           "xg_buildup": "0.44038090109825134"
         },
         {
@@ -4830,12 +4856,14 @@
       "failures": [],
       "observability": {
         "credential_present": true,
-        "network_requests": 0,
-        "endpoint_requests": {},
-        "cache_hits": 1,
+        "network_requests": 1,
+        "endpoint_requests": {
+          "leagues": 1
+        },
+        "cache_hits": 0,
         "league_cache_hits": 0,
         "fixture_cache_hits": 0,
-        "availability_cache_hits": 1,
+        "availability_cache_hits": 0,
         "competitions_attempted": 1,
         "competitions_resolved": 0,
         "fixtures_returned": 0,
@@ -4851,7 +4879,7 @@
       "governance": {
         "fail_neutral": true,
         "missing_is_unavailable_not_zero": true,
-        "cached_provider_restriction": true
+        "cached_provider_restriction": false
       }
     }
   },

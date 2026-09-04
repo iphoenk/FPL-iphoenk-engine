@@ -1,1 +1,1 @@
-{"generated_at": "2026-09-01T07:56:16.410178+00:00", "availability_class": "PLAN_RESTRICTED", "reason": "RuntimeError:API-Football errors: {'plan': 'Free plans do not have access to this season, try from 2022 to 2024.'}", "competitions_attempted": 1}
+{"generated_at": "2026-09-04T23:08:57.543289+00:00", "availability_class": "PLAN_RESTRICTED", "reason": "RuntimeError:API-Football errors: {'plan': 'Free plans do not have access to this season, try from 2022 to 2024.'}", "competitions_attempted": 1}

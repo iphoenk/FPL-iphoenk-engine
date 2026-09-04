@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-09-04T14:28:42.191504+00:00",
+  "generated_at": "2026-09-04T23:08:59.966518+00:00",
   "registry": "EXTERNAL_CHALLENGER_SCORECARD",
-  "planning_gw": 3,
+  "planning_gw": 4,
   "auto_scrape": false,
   "providers": [
     {

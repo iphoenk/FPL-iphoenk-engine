@@ -3,7 +3,12 @@
   "sources": {
     "official_fpl": {
       "acquisition_kind": "rest_json",
-      "poll_interval_minutes": 60
+      "poll_interval_minutes": 60,
+      "required_for_platform": true
+    },
+    "official_price_predictor": {
+      "required_for_platform": true,
+      "depends_on": ["official_fpl"]
     },
     "opta_the_analyst": {
       "requests": [

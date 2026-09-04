@@ -5,6 +5,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from .http_client import utc_now
+from .runtime_control import scheduler_slot_start
 
 WIB = ZoneInfo("Asia/Jakarta")
 _VERIFIED = {"VERIFIED"}
@@ -89,6 +90,30 @@ def _budget_state(
     }
 
 
+def _decision_payload(
+    *,
+    due: bool,
+    reason: str,
+    current: datetime,
+    interval: int | None,
+    scheduler_interval: int,
+    deadline_window: bool,
+    source: dict[str, Any],
+    budget: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "due": due,
+        "reason": reason,
+        "evaluated_at": current.astimezone(timezone.utc).isoformat(),
+        "poll_interval_minutes": interval,
+        "scheduler_interval_minutes": scheduler_interval,
+        "scheduler_slot": scheduler_slot_start(current, scheduler_interval).isoformat(),
+        "deadline_window": deadline_window,
+        "verification_status": source.get("verification_status"),
+        "budget": budget,
+    }
+
+
 def poll_decision(
     source: dict[str, Any],
     previous: dict[str, Any] | None,
@@ -111,53 +136,61 @@ def poll_decision(
     if source.get("verification_required") is True:
         status = str(source.get("verification_status") or "PENDING").upper()
         if status not in _VERIFIED:
-            return {
-                "due": False,
-                "reason": "VERIFICATION_REQUIRED",
-                "evaluated_at": current.astimezone(timezone.utc).isoformat(),
-                "poll_interval_minutes": interval,
-                "scheduler_interval_minutes": scheduler_interval,
-                "deadline_window": deadline_window,
-                "verification_status": status,
-                "budget": budget,
-            }
+            return _decision_payload(
+                due=False,
+                reason="VERIFICATION_REQUIRED",
+                current=current,
+                interval=interval,
+                scheduler_interval=scheduler_interval,
+                deadline_window=deadline_window,
+                source=source,
+                budget=budget,
+            )
 
     if budget["limit"] is not None:
         required = int(budget["reserved_requests_next_poll"] or 0)
         if required > int(budget["remaining"] or 0):
-            return {
-                "due": False,
-                "reason": "BUDGET_EXHAUSTED",
-                "evaluated_at": current.astimezone(timezone.utc).isoformat(),
-                "poll_interval_minutes": interval,
-                "scheduler_interval_minutes": scheduler_interval,
-                "deadline_window": deadline_window,
-                "verification_status": source.get("verification_status"),
-                "budget": budget,
-            }
+            return _decision_payload(
+                due=False,
+                reason="BUDGET_EXHAUSTED",
+                current=current,
+                interval=interval,
+                scheduler_interval=scheduler_interval,
+                deadline_window=deadline_window,
+                source=source,
+                budget=budget,
+            )
 
-    if interval is None or previous is None or interval <= scheduler_interval:
+    last_polled_at = _parse_dt(
+        (((previous or {}).get("polling") or {}).get("last_polled_at"))
+        or (previous or {}).get("last_polled_at")
+        or (previous or {}).get("checked_at")
+    )
+
+    if previous is None or last_polled_at is None:
         due = True
+        reason = "DUE"
+    elif interval is None or interval <= scheduler_interval:
+        current_slot = scheduler_slot_start(current, scheduler_interval)
+        previous_slot = scheduler_slot_start(last_polled_at, scheduler_interval)
+        due = current_slot != previous_slot
+        reason = "DUE" if due else "ALREADY_POLLED_THIS_SLOT"
     else:
-        last_polled_at = _parse_dt(
-            ((previous.get("polling") or {}).get("last_polled_at"))
-            or previous.get("last_polled_at")
-            or previous.get("checked_at")
-        )
-        due = last_polled_at is None or (
+        due = (
             current.astimezone(timezone.utc) - last_polled_at.astimezone(timezone.utc)
         ).total_seconds() >= interval * 60
+        reason = "DUE" if due else "NOT_DUE"
 
-    return {
-        "due": due,
-        "reason": "DUE" if due else "NOT_DUE",
-        "evaluated_at": current.astimezone(timezone.utc).isoformat(),
-        "poll_interval_minutes": interval,
-        "scheduler_interval_minutes": scheduler_interval,
-        "deadline_window": deadline_window,
-        "verification_status": source.get("verification_status"),
-        "budget": budget,
-    }
+    return _decision_payload(
+        due=due,
+        reason=reason,
+        current=current,
+        interval=interval,
+        scheduler_interval=scheduler_interval,
+        deadline_window=deadline_window,
+        source=source,
+        budget=budget,
+    )
 
 
 def carry_forward_skipped(
@@ -201,12 +234,15 @@ def carry_forward_skipped(
         "budget": decision["budget"],
     }
     governance = dict(payload.get("governance") or {})
-    governance.update({
-        "adaptive_polling": True,
-        "scheduled_skip_is_not_transport_failure": True,
-        "budget_guard": decision["budget"].get("limit") is not None,
-        "verification_gate": source.get("verification_required") is True,
-    })
+    governance.update(
+        {
+            "adaptive_polling": True,
+            "scheduled_skip_is_not_transport_failure": True,
+            "single_logical_acquisition_per_scheduler_slot": True,
+            "budget_guard": decision["budget"].get("limit") is not None,
+            "verification_gate": source.get("verification_required") is True,
+        }
+    )
     payload["governance"] = governance
     return payload
 
@@ -232,10 +268,13 @@ def attach_poll_result(
         "provider_calls_this_poll": provider_calls,
     }
     governance = dict(out.get("governance") or {})
-    governance.update({
-        "adaptive_polling": True,
-        "budget_guard": budget.get("limit") is not None,
-        "verification_gate": source.get("verification_required") is True,
-    })
+    governance.update(
+        {
+            "adaptive_polling": True,
+            "single_logical_acquisition_per_scheduler_slot": True,
+            "budget_guard": budget.get("limit") is not None,
+            "verification_gate": source.get("verification_required") is True,
+        }
+    )
     out["governance"] = governance
     return out

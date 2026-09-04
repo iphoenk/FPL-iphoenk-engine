@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import json
+from copy import deepcopy
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+ROOT = Path(__file__).resolve().parents[2]
 LONDON = ZoneInfo("Europe/London")
 
 
@@ -12,6 +16,59 @@ def _float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def load_weather_venues(source: dict[str, Any]) -> list[dict[str, Any]]:
+    """Resolve weather venues from the repo-wide canonical venue registry."""
+    registry_ref = str(source.get("venue_registry") or "").strip()
+    if not registry_ref:
+        raise ValueError("Open-Meteo source requires venue_registry")
+    path = ROOT / registry_ref
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if (payload.get("governance") or {}).get("coordinates_are_registry_owned") is not True:
+        raise ValueError("weather venue coordinates must be registry-owned")
+
+    default_tz = str(payload.get("default_timezone") or "Europe/London")
+    venues: list[dict[str, Any]] = []
+    seen_ids: set[int] = set()
+    seen_names: set[str] = set()
+    for raw in payload.get("venues") or []:
+        team_id = int(raw["team_id"])
+        team_name = str(raw.get("team_name") or "").strip()
+        if not team_name or team_id in seen_ids or team_name in seen_names:
+            raise ValueError("invalid or duplicate weather venue identity")
+        seen_ids.add(team_id)
+        seen_names.add(team_name)
+        venues.append(
+            {
+                "team_id": team_id,
+                "team": team_name,
+                "stadium": str(raw.get("venue") or "").strip(),
+                "latitude": float(raw["latitude"]),
+                "longitude": float(raw["longitude"]),
+                "timezone": str(raw.get("timezone") or default_tz),
+            }
+        )
+    if not venues:
+        raise ValueError("weather venue registry is empty")
+    return venues
+
+
+def materialize_open_meteo_source(source: dict[str, Any]) -> dict[str, Any]:
+    """Inject multi-location coordinates from the shared venue SSoT at runtime."""
+    out = deepcopy(source)
+    venues = load_weather_venues(source)
+    requests = []
+    for request in out.get("requests") or []:
+        row = deepcopy(request)
+        if str(row.get("id")) == "epl_venues":
+            params = dict(row.get("params") or {})
+            params["latitude"] = ",".join(str(venue["latitude"]) for venue in venues)
+            params["longitude"] = ",".join(str(venue["longitude"]) for venue in venues)
+            row["params"] = params
+        requests.append(row)
+    out["requests"] = requests
+    return out
 
 
 def classify_weather(row: dict[str, Any], contract: dict[str, Any] | None = None) -> tuple[str, list[str]]:
@@ -138,7 +195,7 @@ def enrich_open_meteo_payload(
 
     raw = (((out.get("data") or {}).get("epl_venues") or {}).get("json"))
     locations = raw if isinstance(raw, list) else ([raw] if isinstance(raw, dict) else [])
-    venues = list(source.get("venues") or [])
+    venues = load_weather_venues(source)
     location_by_team: dict[str, dict[str, Any]] = {}
     venue_by_team: dict[str, dict[str, Any]] = {}
     for idx, venue in enumerate(venues):
@@ -204,6 +261,7 @@ def enrich_open_meteo_payload(
         "weather_provider": "open_meteo",
         "event": next_event,
         "contract": contract,
+        "venue_registry": source.get("venue_registry"),
         "venue_count": len(venues),
         "provider_location_count": len(locations),
         "fixture_count": len(next_fixtures),
@@ -216,4 +274,5 @@ def enrich_open_meteo_payload(
     out.setdefault("governance", {})["weather_is_context_only"] = True
     out["governance"]["weather_direct_xpts_multiplier"] = False
     out["governance"]["weather_alone_can_trigger_transfer"] = False
+    out["governance"]["venue_coordinates_are_registry_owned"] = True
     return out

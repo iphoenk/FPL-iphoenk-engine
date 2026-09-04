@@ -124,7 +124,8 @@ def _apply_activation(payload: dict[str, Any], path: Path = ACTIVATION) -> dict[
     constraints = dict(activation.get("constraints") or {})
     tiers = dict(activation.get("tiers") or {})
     out = deepcopy(payload)
-    known = {str(source.get("id")) for source in out.get("sources") or []}
+    configured = list(out.get("sources") or [])
+    known = {str(source.get("id")) for source in configured}
     unknown = sorted((set(disabled) | set(reference_only) | set(constraints) | set(tiers)) - known)
     if unknown:
         raise RegistryError(f"unknown V6 source activation ids: {unknown!r}")
@@ -133,8 +134,17 @@ def _apply_activation(payload: dict[str, Any], path: Path = ACTIVATION) -> dict[
     if overlap:
         raise RegistryError(f"V6 source cannot be both disabled and reference-only: {overlap!r}")
 
+    required = {
+        str(source.get("id"))
+        for source in configured
+        if source.get("required_for_platform") is True
+    }
+    pruned_required = sorted(required.intersection(set(disabled) | set(reference_only)))
+    if pruned_required:
+        raise RegistryError(f"required V6 platform sources cannot be pruned: {pruned_required!r}")
+
     sources: list[dict[str, Any]] = []
-    for source in out.get("sources") or []:
+    for source in configured:
         source_id = str(source.get("id"))
         if source_id in disabled or source_id in reference_only:
             continue
@@ -152,6 +162,8 @@ def _apply_activation(payload: dict[str, Any], path: Path = ACTIVATION) -> dict[
         "active_source_count": len(sources),
         "disabled_source_count": len(disabled),
         "reference_only_source_count": len(reference_only),
+        "required_active_source_count": len(required),
+        "required_active_sources": sorted(required),
         "disabled_sources": disabled,
         "reference_only_sources": reference_only,
         "constraints": constraints,
@@ -221,9 +233,10 @@ def validate_registry(payload: dict[str, Any]) -> None:
 
     sources = list(payload.get("sources") or [])
     ids = tuple(str(row.get("id")) for row in sources)
+    active_ids = set(ids)
     if ids != EXPECTED_SOURCE_IDS:
         raise RegistryError(f"V6 active source set/order mismatch: {ids!r}")
-    if len(set(ids)) != len(ids):
+    if len(active_ids) != len(ids):
         raise RegistryError("duplicate V6 active source ids")
 
     activation = payload.get("activation") or {}
@@ -240,6 +253,9 @@ def validate_registry(payload: dict[str, Any]) -> None:
             raise RegistryError("V6 active source count mismatch")
         if activation.get("base_source_count") != len(BASE_SOURCE_IDS):
             raise RegistryError("V6 configured source count mismatch")
+        required_active = set(activation.get("required_active_sources") or [])
+        if not required_active.issubset(active_ids):
+            raise RegistryError("V6 required platform source missing from active set")
 
     for source in sources:
         if not source.get("name") or not source.get("category") or not source.get("adapter"):
@@ -248,6 +264,9 @@ def validate_registry(payload: dict[str, Any]) -> None:
             raise RegistryError(f"http source has no requests: {source['id']}")
         if source.get("acquisition_kind") not in _ALLOWED_ACQUISITION_KINDS:
             raise RegistryError(f"unsupported acquisition kind: {source['id']}")
+        for dependency in source.get("depends_on") or []:
+            if str(dependency) not in active_ids:
+                raise RegistryError(f"active V6 dependency missing: {source['id']} -> {dependency}")
         for key in ("poll_interval_minutes", "poll_interval_minutes_deadline_window", "daily_request_budget"):
             _positive_int(source, key)
         if source.get("content_hash_dedup") not in {None, True, False}:

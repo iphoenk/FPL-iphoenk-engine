@@ -213,11 +213,37 @@ jobs:
       contents: write
       actions: read
     steps:
+      - name: Select V6 publisher identity
+        id: publisher_mode
+        shell: bash
+        env:
+          V6_RUNTIME_APP_ID: ${{ vars.V6_RUNTIME_APP_ID }}
+        run: |
+          if [ -n "$V6_RUNTIME_APP_ID" ]; then
+            echo "use_app=true" >> "$GITHUB_OUTPUT"
+            echo "mode=dedicated_v6_github_app" >> "$GITHUB_OUTPUT"
+          else
+            echo "use_app=false" >> "$GITHUB_OUTPUT"
+            echo "mode=scoped_github_token_fallback" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Mint governed V6 runtime publisher token
+        id: runtime_app_token
+        if: steps.publisher_mode.outputs.use_app == 'true'
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349
+        with:
+          app-id: ${{ vars.V6_RUNTIME_APP_ID }}
+          private-key: ${{ secrets.V6_RUNTIME_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: FPL-iphoenk-engine
+          permission-contents: write
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
           ref: ${{ github.sha }}
-          persist-credentials: true
+          token: ${{ steps.runtime_app_token.outputs.token || github.token }}
+          persist-credentials: false
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
@@ -263,6 +289,8 @@ jobs:
 
       - name: Publish atomic V6 runtime snapshot
         shell: bash
+        env:
+          PUBLISH_TOKEN: ${{ steps.runtime_app_token.outputs.token || github.token }}
         run: |
           set -euo pipefail
           publish_tree="$RUNNER_TEMP/v6-runtime-worktree"
@@ -276,9 +304,10 @@ jobs:
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           tar -xf "$RUNNER_TEMP/v6-runtime-publication/v6-runtime-data.tar"
           git add -f data/v6
-          git commit -m "data(v6): atomic hourly snapshot ${{ github.run_id }} [${{ needs.collect.outputs.schedule_kind }}]"
+          git commit -m "data(v6): atomic hourly snapshot ${{ github.run_id }} [${{ needs.collect.outputs.schedule_kind }}] [${{ steps.publisher_mode.outputs.mode }}]"
           published_sha="$(git rev-parse HEAD)"
-          git push \
+          basic_auth="$(printf 'x-access-token:%s' "$PUBLISH_TOKEN" | base64 -w0)"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $basic_auth" push \
             --force-with-lease="refs/heads/${RUNTIME_BRANCH}:${RUNTIME_BASE_SHA}" \
             origin "HEAD:refs/heads/${RUNTIME_BRANCH}"
           echo "PUBLISHED_RUNTIME_SHA=$published_sha" >> "$GITHUB_ENV"

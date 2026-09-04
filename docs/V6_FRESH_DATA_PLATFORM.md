@@ -6,22 +6,30 @@ V6 is the repository's dedicated fresh-data acquisition, validation, provenance,
 
 Official FPL is the factual and canonical authority for player, team, fixture, and current FPL state. External providers remain separate evidence sources. V6 never averages providers into a hidden consensus and never fabricates missing values.
 
-Consumers such as V3, V4, reporting, price models, and the Master Monitor may read a published V6 snapshot. Consumers must evaluate snapshot freshness and integrity at read time. A stale, missing, invalid, or broken V6 snapshot may permit a minimum-scope direct fallback by the consumer, but the consumer must not trigger a V6 refresh.
+Consumers such as reporting and the Master Monitor may read a published V6 snapshot. The FPL Master Monitor is also a governed V6 acquisition orchestrator: its hourly task may invoke V6 through the explicit `master_orchestrated` workflow-dispatch mode. Other consumers must not trigger V6 refresh. All consumers must evaluate snapshot freshness and integrity at read time. A stale, missing, invalid, or broken V6 snapshot may permit a minimum-scope direct fallback by the consumer.
 
 V6 never reads V3/V4/V5 runtime branches, data trees, caches, manifests, or engine artifacts. Those engines are downstream consumers only. Any permitted consumer fallback is external-source retrieval owned by that consumer; it is never a fallback from V6 into another engine's runtime data.
 
-## Production schedule
+## Production cadence and trigger authority
 
-The authoritative production cadence is scheduler-owned and intentionally offset from other repository cron traffic and from GitHub's high-load start-of-hour window:
+V6 supports two independent authoritative operational triggers. The preferred operational path is the hourly FPL Master Monitor invoking `workflow_dispatch: master_orchestrated`; the repository natural scheduler remains a separate recovery/observability path and its health is tracked independently.
+
+The natural scheduler cadence remains intentionally offset from other repository cron traffic and from GitHub's high-load start-of-hour window:
 
 - primary acquisition: minute `23` of every UTC hour;
 - idempotent recovery acquisition: minute `53` of every UTC hour.
 
-Both scheduled invocations belong to the same logical hourly scheduler slot. If the primary cycle already published that slot, the scheduled recovery invocation exits without a second acquisition. Normal pushes and pull requests never trigger production acquisition. CI is a separate read-only workflow.
+The Master-orchestrated invocation and both natural scheduled invocations belong to the same logical hourly operational slot. If an authoritative V6 cycle already published that slot, a later natural primary/recovery invocation exits without a second acquisition. Normal pushes and pull requests never trigger production acquisition. CI is a separate read-only workflow.
 
 The schedule expressions and emergency-recovery policy are declared in `config/v6/schedule_policy.json`. GitHub's `on.schedule` expressions must remain literal in the workflow, so contract tests verify that those trigger expressions exactly match the policy file. The classifier reads the policy file instead of duplicating cron literals in executable logic. The contract also requires both schedule minutes to stay away from the top of the hour and keeps recovery 30 minutes behind primary without hard-coding a second schedule registry.
 
-`runtime_control` records the logical slot, GitHub run ID, schedule kind, schedule lag, duplicate detection, and missed-cycle state. Missed scheduled cycles are explicit control-plane evidence and are never hidden by manual or off-cadence activity.
+`runtime_control` records the logical slot, GitHub run ID, trigger kind, schedule lag, duplicate detection, authoritative operational-cycle state, and natural missed-cycle state. `master_orchestrated` is authoritative for V6 runtime freshness but does not count as a natural scheduled cycle. Missed natural scheduler cycles therefore remain explicit evidence and are never hidden by Master orchestration or emergency manual recovery.
+
+## Governed FPL Master orchestration
+
+`workflow_dispatch` with `mode: master_orchestrated` is the governed hourly acquisition path used by the FPL Master Monitor. It requires a non-empty audit reason, is restricted to the repository owner, uses the same isolated dedicated V6 GitHub App publisher, publishes `schedule_kind: master_orchestrated`, and may set `authoritative_runtime_snapshot: true` only after the normal V6 source-health, lineage, identity, publish-integrity, and isolation checks pass.
+
+A Master-orchestrated cycle counts as a completed operational slot but not as a completed natural scheduled slot. It never advances `last_scheduled_cycle_at`, never rewrites historical natural-scheduler evidence, and never uses V3/V4/V5 runtime data as fallback.
 
 ## Governed manual recovery
 
@@ -130,7 +138,7 @@ Fuzzy player-name matching is not allowed in V6 identity publication. Partial de
 
 The Master Monitor and other consumers apply a hard V6 freshness threshold of 90 minutes unless a stricter consumer contract is explicitly supplied. A static historical manifest that says GREEN is not sufficient. The consumer must verify current age, runtime-control provenance, exact source set, exact resolved registry, identity consistency, stored tree digest, recomputed tree digest, every zero-authority dimension, and control/critical failures.
 
-Only a real scheduled snapshot with valid `primary` or `recovery` provenance may become primary V6 consumer authority. A governed `manual_recovery` snapshot remains invalid for that role by design. If the latest V6 snapshot is stale or invalid, only the consumer's documented minimum-scope external-source fallback is eligible. Fallback into another engine's runtime artifacts is forbidden.
+A snapshot may become V6 consumer authority only when its governed provenance is `primary`, `recovery`, or `master_orchestrated`, `authoritative_runtime_snapshot` is true, publish integrity passes, freshness is valid, and no disqualifying control/source failures exist. A governed `manual_recovery` snapshot remains invalid for that role by design. Natural scheduler health is a separate operational signal and must not be inferred from a Master-orchestrated publication. If the latest V6 snapshot is stale or invalid, only the documented minimum-scope external-source fallback is eligible. Fallback into another engine's runtime artifacts is forbidden.
 
 ## Runtime branch governance
 

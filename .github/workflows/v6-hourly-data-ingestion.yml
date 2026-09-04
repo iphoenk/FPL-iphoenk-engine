@@ -61,7 +61,7 @@ jobs:
           tests/test_adaptive_polling.py
           tests/test_weather_context.py
           tests/test_data_platform_hardening.py
-          tests/test_v6_runtime_control.py
+          tests/test_data_platform_runtime_control.py
 
       - name: Run active V6 acquisition cycle
         run: python -m src.runtime_v6.collector

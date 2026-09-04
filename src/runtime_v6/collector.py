@@ -8,6 +8,7 @@ from typing import Any
 from .adapters import collect_source
 from .health import build_source_health
 from .http_client import AcquisitionClient, utc_now
+from .identity import build_player_identity_map
 from .normalizer import (
     build_canonical_fixtures,
     build_canonical_players,
@@ -159,8 +160,13 @@ def run() -> dict[str, Any]:
         by_id["official_fpl"],
         RuntimeError("official_fpl_missing_from_results"),
     )
+    identity_map = build_player_identity_map(official, results, source_ids)
 
-    write_json(NORMALIZED / "canonical_players.json", build_canonical_players(official, source_ids))
+    write_json(EVIDENCE / "player_identity_map.json", identity_map)
+    write_json(
+        NORMALIZED / "canonical_players.json",
+        build_canonical_players(official, source_ids, identity_map),
+    )
     write_json(NORMALIZED / "canonical_teams.json", build_canonical_teams(official))
     write_json(NORMALIZED / "canonical_fixtures.json", build_canonical_fixtures(official))
     write_json(EVIDENCE / "lineage.json", build_lineage_catalog(config))
@@ -221,6 +227,12 @@ def run() -> dict[str, Any]:
             "skipped_source_count": len(skipped),
             "skipped_sources": skipped,
         },
+        "identity": {
+            "canonical_authority": "official_fpl",
+            "mapping_artifact": "data/v6/evidence/player_identity_map.json",
+            "fuzzy_name_matching_allowed": False,
+            "coverage": identity_map.get("coverage") or {},
+        },
         "paths": {
             "current_sources": "data/v6/current/",
             "health": "data/v6/health/source_health.json",
@@ -230,6 +242,7 @@ def run() -> dict[str, Any]:
             "lineage": "data/v6/evidence/lineage.json",
             "evidence_index": "data/v6/evidence/latest_index.json",
             "resolved_registry": "data/v6/evidence/resolved_registry.json",
+            "player_identity_map": "data/v6/evidence/player_identity_map.json",
             "publish_integrity": "data/v6/health/publish_integrity.json",
         },
         "governance": {
@@ -248,6 +261,8 @@ def run() -> dict[str, Any]:
             "dependency_order_is_registry_driven": True,
             "resolved_registry_is_published": True,
             "publish_integrity_required": True,
+            "identity_mapping_is_deterministic_only": True,
+            "fuzzy_identity_matching": False,
             "daily_budget_timezone": "Asia/Jakarta",
             "weather_is_context_only": True,
             "weather_direct_xpts_multiplier": False,

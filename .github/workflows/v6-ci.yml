@@ -10,7 +10,7 @@ on:
       - "tests/test_adaptive_polling.py"
       - "tests/test_weather_context.py"
       - "tests/test_data_platform_hardening.py"
-      - "tests/test_v6_runtime_control.py"
+      - "tests/test_data_platform_runtime_control.py"
       - ".github/workflows/v6-ci.yml"
       - ".github/workflows/v6-hourly-data-ingestion.yml"
   push:
@@ -23,7 +23,7 @@ on:
       - "tests/test_adaptive_polling.py"
       - "tests/test_weather_context.py"
       - "tests/test_data_platform_hardening.py"
-      - "tests/test_v6_runtime_control.py"
+      - "tests/test_data_platform_runtime_control.py"
       - ".github/workflows/v6-ci.yml"
       - ".github/workflows/v6-hourly-data-ingestion.yml"
 
@@ -56,4 +56,4 @@ jobs:
           tests/test_adaptive_polling.py
           tests/test_weather_context.py
           tests/test_data_platform_hardening.py
-          tests/test_v6_runtime_control.py
+          tests/test_data_platform_runtime_control.py

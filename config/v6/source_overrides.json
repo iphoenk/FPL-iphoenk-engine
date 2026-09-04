@@ -1,6 +1,10 @@
 {
   "schema_version": 1,
   "sources": {
+    "official_fpl": {
+      "acquisition_kind": "rest_json",
+      "poll_interval_minutes": 60
+    },
     "opta_the_analyst": {
       "requests": [
         {
@@ -130,6 +134,14 @@
       ]
     },
     "api_football": {
+      "acquisition_kind": "rest_json",
+      "poll_interval_minutes": 1440,
+      "poll_interval_minutes_deadline_window": 360,
+      "daily_request_budget": 100,
+      "check_freshness_minutes": 1500,
+      "verification_required": true,
+      "verification_status": "PENDING",
+      "verification_note": "Before scheduled polling, verify the active key with /status and one 2026-season fixture request.",
       "requests": [
         {
           "id": "epl_fixtures",
@@ -172,6 +184,9 @@
       ]
     },
     "understat": {
+      "acquisition_kind": "html_scrape",
+      "poll_interval_minutes": 60,
+      "content_hash_dedup": true,
       "requests": [
         {
           "id": "epl_2026",
@@ -195,6 +210,12 @@
         }
       ]
     },
+    "statsbomb": {
+      "acquisition_kind": "rest_json",
+      "poll_interval_minutes": 1440,
+      "check_freshness_minutes": 1500,
+      "content_hash_dedup": true
+    },
     "football_data_uk": {
       "requests": [
         {
@@ -207,6 +228,10 @@
           }
         }
       ]
+    },
+    "football_data_org": {
+      "acquisition_kind": "rest_json",
+      "poll_interval_minutes": 60
     },
     "vaastav_fpl": {
       "requests": [

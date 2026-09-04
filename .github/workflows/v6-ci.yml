@@ -20,7 +20,7 @@ on:
       - "tests/test_data_platform_identity.py"
       - "tests/test_data_platform_publisher_governance.py"
       - "tests/test_data_platform_consumer.py"
-      - "tests/test_v6_architecture_independence.py"
+      - "tests/test_data_platform_architecture_independence.py"
       - ".github/workflows/v6-ci.yml"
       - ".github/workflows/v6-hourly-data-ingestion.yml"
   push:
@@ -43,7 +43,7 @@ on:
       - "tests/test_data_platform_identity.py"
       - "tests/test_data_platform_publisher_governance.py"
       - "tests/test_data_platform_consumer.py"
-      - "tests/test_v6_architecture_independence.py"
+      - "tests/test_data_platform_architecture_independence.py"
       - ".github/workflows/v6-ci.yml"
       - ".github/workflows/v6-hourly-data-ingestion.yml"
 
@@ -88,7 +88,7 @@ jobs:
           tests/test_data_platform_identity.py
           tests/test_data_platform_publisher_governance.py
           tests/test_data_platform_consumer.py
-          tests/test_v6_architecture_independence.py
+          tests/test_data_platform_architecture_independence.py
 
   v6-publisher-config:
     name: v6-publisher-config

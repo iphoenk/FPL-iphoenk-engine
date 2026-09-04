@@ -38,20 +38,37 @@ def test_non_configured_sources_preserve_legacy_every_cycle_behavior():
     assert decision["poll_interval_minutes"] is None
 
 
-def test_poll_interval_skips_until_source_is_due():
+def test_longer_poll_interval_skips_until_source_is_due():
     now = datetime(2026, 9, 4, 5, 0, tzinfo=timezone.utc)
     source = {
         "id": "example",
-        "poll_interval_minutes": 60,
+        "poll_interval_minutes": 120,
         "requests": [{"id": "one"}],
     }
     previous = {
         "polling": {"last_polled_at": (now - timedelta(minutes=30)).isoformat()},
     }
 
-    assert poll_decision(source, previous, now=now)["reason"] == "NOT_DUE"
-    previous["polling"]["last_polled_at"] = (now - timedelta(minutes=61)).isoformat()
-    assert poll_decision(source, previous, now=now)["reason"] == "DUE"
+    assert poll_decision(source, previous, now=now, scheduler_interval_minutes=60)["reason"] == "NOT_DUE"
+    previous["polling"]["last_polled_at"] = (now - timedelta(minutes=121)).isoformat()
+    assert poll_decision(source, previous, now=now, scheduler_interval_minutes=60)["reason"] == "DUE"
+
+
+def test_hourly_policy_runs_every_hourly_scheduler_cycle_despite_runner_jitter():
+    now = datetime(2026, 9, 4, 5, 0, tzinfo=timezone.utc)
+    source = {
+        "id": "official_fpl",
+        "poll_interval_minutes": 60,
+        "requests": [{"id": "bootstrap"}],
+    }
+    previous = {
+        "polling": {"last_polled_at": (now - timedelta(minutes=55)).isoformat()},
+    }
+
+    decision = poll_decision(source, previous, now=now, scheduler_interval_minutes=60)
+
+    assert decision["due"] is True
+    assert decision["reason"] == "DUE"
 
 
 def test_deadline_window_uses_tighter_configured_interval():

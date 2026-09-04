@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from src.runtime_v6.registry import load_registry, source_map
-from src.runtime_v6.weather import classify_weather, enrich_open_meteo_payload
+from src.runtime_v6.weather import (
+    classify_weather,
+    enrich_open_meteo_payload,
+    load_weather_venues,
+    materialize_open_meteo_source,
+)
 
 
 def test_weather_classifier_is_context_only_and_intensity_aware():
@@ -48,14 +53,7 @@ def test_weather_classifier_is_context_only_and_intensity_aware():
 def test_open_meteo_fixture_join_uses_official_fpl_authority():
     source = {
         "id": "open_meteo_weather",
-        "venues": [
-            {
-                "team": "Arsenal",
-                "stadium": "Emirates Stadium",
-                "latitude": 51.5549,
-                "longitude": -0.1084,
-            }
-        ],
+        "venue_registry": "config/venues/premier_league_2026_27.json",
         "weather_contract": {
             "legacy_attention_thresholds": {
                 "wind_speed_kmh": 30,
@@ -117,6 +115,7 @@ def test_open_meteo_fixture_join_uses_official_fpl_authority():
     fixture = weather["fixtures"][0]
 
     assert weather["fixture_authority"] == "official_fpl"
+    assert weather["venue_registry"] == "config/venues/premier_league_2026_27.json"
     assert weather["event"] == 3
     assert fixture["fixture_id"] == 301
     assert fixture["stadium"] == "Emirates Stadium"
@@ -127,15 +126,23 @@ def test_open_meteo_fixture_join_uses_official_fpl_authority():
     assert fixture["direct_xpts_multiplier"] is False
     assert fixture["weather_alone_can_trigger_transfer"] is False
     assert result["governance"]["weather_is_context_only"] is True
+    assert result["governance"]["venue_coordinates_are_registry_owned"] is True
 
 
-def test_open_meteo_registry_covers_all_2026_27_home_venues_once():
+def test_open_meteo_reuses_canonical_2026_27_venue_registry_once():
     sources = source_map(load_registry())
     weather = sources["open_meteo_weather"]
-    venues = weather["venues"]
-    params = weather["requests"][0]["params"]
+    static_params = weather["requests"][0]["params"]
+    venues = load_weather_venues(weather)
+    materialized = materialize_open_meteo_source(weather)
+    params = materialized["requests"][0]["params"]
 
+    assert weather["venue_registry"] == "config/venues/premier_league_2026_27.json"
+    assert "venues" not in weather
+    assert "latitude" not in static_params
+    assert "longitude" not in static_params
     assert len(venues) == 20
+    assert len({venue["team_id"] for venue in venues}) == 20
     assert len({venue["team"] for venue in venues}) == 20
     assert len(str(params["latitude"]).split(",")) == 20
     assert len(str(params["longitude"]).split(",")) == 20

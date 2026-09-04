@@ -7,7 +7,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
-from src.runtime_v6.http_client import _redact_url
+from src.runtime_v6.http_client import _read_bounded, _redact_url
 from src.runtime_v6.registry import (
     RegistryError,
     _apply_activation,
@@ -147,3 +147,38 @@ def test_query_auth_redaction_is_key_based_and_encoding_safe():
     assert encoded_secret not in safe
     assert query["league"] == ["39"]
     assert query["season"] == ["2026"]
+
+
+def test_http_body_reader_stops_at_configured_storage_cap():
+    class FakeResponse:
+        headers = {"content-length": "10"}
+
+        def iter_content(self, chunk_size):
+            assert chunk_size > 0
+            yield b"1234"
+            yield b"5678"
+            yield b"90"
+
+    kept, content_length, truncated, declared = _read_bounded(FakeResponse(), 5)
+
+    assert kept == b"12345"
+    assert content_length == 10
+    assert declared == 10
+    assert truncated is True
+
+
+def test_http_body_reader_detects_unknown_length_overflow_without_buffering_full_body():
+    class FakeResponse:
+        headers = {}
+
+        def iter_content(self, chunk_size):
+            yield b"12345"
+            yield b"67890"
+            raise AssertionError("reader should stop after proving overflow")
+
+    kept, content_length, truncated, declared = _read_bounded(FakeResponse(), 5)
+
+    assert kept == b"12345"
+    assert content_length == 6
+    assert declared is None
+    assert truncated is True

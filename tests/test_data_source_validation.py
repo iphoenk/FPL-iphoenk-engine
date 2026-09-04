@@ -15,7 +15,7 @@ def test_source_overrides_preserve_27_and_repair_routes():
     assert clubelo_request["url"] == "https://clubelo.com/Ranking"
     assert clubelo_request["expect"] == "text"
     assert set(clubelo_request["validation"]["required_text_all"]) == {"Ranking", "Elo"}
-    assert clubelo_request["timeout_seconds"] == 5
+    assert clubelo_request["read_timeout_seconds"] == 6
     assert sources["espn"]["requests"][0]["use_default_user_agent"] is True
 
 

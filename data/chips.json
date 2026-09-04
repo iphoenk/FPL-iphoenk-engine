@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-09-04T16:33:36.354079+00:00",
+  "used": [
+    {
+      "name": "bboost",
+      "time": "2026-08-21T13:52:44.153226Z",
+      "event": 1
+    },
+    {
+      "name": "wildcard",
+      "time": "2026-08-24T05:07:55.443463Z",
+      "event": 2
+    }
+  ],
+  "current": {
+    "submitted_gw": 2,
+    "submitted_chip": "WILDCARD",
+    "submitted_chip_source": "official_fpl_picks.active_chip",
+    "chip_used_this_submitted_gw": true,
+    "historical_used_chips": [
+      "BBOOST",
+      "WILDCARD"
+    ],
+    "planning_gw": 3,
+    "planning_chip": "NONE",
+    "planning_chip_source": "decision_pipeline_default_until_explicit_user_plan",
+    "phase_semantics": "submitted_chip_is_historical_truth_after_deadline; planning_chip_is_future_decision_state"
+  }
+}

@@ -1,0 +1,2716 @@
+{
+  "schema_version": 4963,
+  "engine": "v4.9.6-lineup-risk-auditable-understat-close-call",
+  "gw_offset": 1,
+  "formation": "4-3-3",
+  "formation_state": "OPEN",
+  "formation_margin": 0.127,
+  "formation_alternatives": [
+    {
+      "formation": "4-3-3",
+      "xi_xpts": 46.685,
+      "risk_adjusted_score": 45.611,
+      "uncertainty": 58.565,
+      "dnp_risk": 1.327,
+      "structural_correlation_penalty": 0.0,
+      "mean_start_probability": 0.866,
+      "mean_dnp_probability": 0.1206,
+      "understat_positive_context_count": 0,
+      "understat_player_close_calls": [],
+      "marginal_gain_vs_best": 0.0,
+      "understat_formation_close_call": {
+        "used": false,
+        "raw_risk_leader_formation": "4-3-3",
+        "raw_risk_leader_score": 45.611,
+        "governed_margin": 0.25,
+        "xmins_guarded": true,
+        "direct_xpts_mutation": false,
+        "direct_xmins_mutation": false
+      },
+      "starting_ids": [
+        109,
+        88,
+        115,
+        8,
+        279,
+        426,
+        40,
+        565,
+        411,
+        165,
+        346
+      ]
+    },
+    {
+      "formation": "3-4-3",
+      "xi_xpts": 46.553,
+      "risk_adjusted_score": 45.484,
+      "uncertainty": 58.462,
+      "dnp_risk": 1.313,
+      "structural_correlation_penalty": 0.0,
+      "mean_start_probability": 0.8674,
+      "mean_dnp_probability": 0.1194,
+      "understat_positive_context_count": 0,
+      "understat_player_close_calls": [],
+      "marginal_gain_vs_best": -0.127,
+      "understat_formation_close_call": {
+        "used": false,
+        "raw_risk_leader_formation": "4-3-3",
+        "raw_risk_leader_score": 45.611,
+        "governed_margin": 0.25,
+        "xmins_guarded": true,
+        "direct_xpts_mutation": false,
+        "direct_xmins_mutation": false
+      },
+      "starting_ids": [
+        109,
+        88,
+        115,
+        8,
+        426,
+        40,
+        565,
+        557,
+        411,
+        165,
+        346
+      ]
+    },
+    {
+      "formation": "5-2-3",
+      "xi_xpts": 45.915,
+      "risk_adjusted_score": 44.831,
+      "uncertainty": 58.167,
+      "dnp_risk": 1.38,
+      "structural_correlation_penalty": 0.0,
+      "mean_start_probability": 0.8606,
+      "mean_dnp_probability": 0.1255,
+      "understat_positive_context_count": 0,
+      "understat_player_close_calls": [],
+      "marginal_gain_vs_best": -0.78,
+      "understat_formation_close_call": {
+        "used": false,
+        "raw_risk_leader_formation": "4-3-3",
+        "raw_risk_leader_score": 45.611,
+        "governed_margin": 0.25,
+        "xmins_guarded": true,
+        "direct_xpts_mutation": false,
+        "direct_xmins_mutation": false
+      },
+      "starting_ids": [
+        109,
+        88,
+        115,
+        8,
+        279,
+        254,
+        426,
+        40,
+        411,
+        165,
+        346
+      ]
+    },
+    {
+      "formation": "5-3-2",
+      "xi_xpts": 45.429,
+      "risk_adjusted_score": 44.332,
+      "uncertainty": 57.973,
+      "dnp_risk": 1.432,
+      "structural_correlation_penalty": 0.0,
+      "mean_start_probability": 0.8553,
+      "mean_dnp_probability": 0.1302,
+      "understat_positive_context_count": 0,
+      "understat_player_close_calls": [],
+      "marginal_gain_vs_best": -1.279,
+      "understat_formation_close_call": {
+        "used": false,
+        "raw_risk_leader_formation": "4-3-3",
+        "raw_risk_leader_score": 45.611,
+        "governed_margin": 0.25,
+        "xmins_guarded": true,
+        "direct_xpts_mutation": false,
+        "direct_xmins_mutation": false
+      },
+      "starting_ids": [
+        109,
+        88,
+        115,
+        8,
+        279,
+        254,
+        426,
+        40,
+        565,
+        411,
+        165
+      ]
+    },
+    {
+      "formation": "4-4-2",
+      "xi_xpts": 45.4,
+      "risk_adjusted_score": 44.317,
+      "uncertainty": 57.893,
+      "dnp_risk": 1.387,
+      "structural_correlation_penalty": 0.0,
+      "mean_start_probability": 0.86,
+      "mean_dnp_probability": 0.1261,
+      "understat_positive_context_count": 0,
+      "understat_player_close_calls": [],
+      "marginal_gain_vs_best": -1.294,
+      "understat_formation_close_call": {
+        "used": false,
+        "raw_risk_leader_formation": "4-3-3",
+        "raw_risk_leader_score": 45.611,
+        "governed_margin": 0.25,
+        "xmins_guarded": true,
+        "direct_xpts_mutation": false,
+        "direct_xmins_mutation": false
+      },
+      "starting_ids": [
+        109,
+        88,
+        115,
+        8,
+        279,
+        426,
+        40,
+        565,
+        557,
+        411,
+        165
+      ]
+    },
+    {
+      "formation": "3-5-2",
+      "xi_xpts": 45.165,
+      "risk_adjusted_score": 44.008,
+      "uncertainty": 57.811,
+      "dnp_risk": 1.439,
+      "structural_correlation_penalty": 0.06,
+      "mean_start_probability": 0.8547,
+      "mean_dnp_probability": 0.1308,
+      "understat_positive_context_count": 0,
+      "understat_player_close_calls": [],
+      "marginal_gain_vs_best": -1.603,
+      "understat_formation_close_call": {
+        "used": false,
+        "raw_risk_leader_formation": "4-3-3",
+        "raw_risk_leader_score": 45.611,
+        "governed_margin": 0.25,
+        "xmins_guarded": true,
+        "direct_xpts_mutation": false,
+        "direct_xmins_mutation": false
+      },
+      "starting_ids": [
+        109,
+        88,
+        115,
+        8,
+        426,
+        40,
+        565,
+        557,
+        15,
+        411,
+        165
+      ]
+    },
+    {
+      "formation": "5-4-1",
+      "xi_xpts": 44.037,
+      "risk_adjusted_score": 42.93,
+      "uncertainty": 57.256,
+      "dnp_risk": 1.5,
+      "structural_correlation_penalty": 0.0,
+      "mean_start_probability": 0.8485,
+      "mean_dnp_probability": 0.1363,
+      "understat_positive_context_count": 0,
+      "understat_player_close_calls": [],
+      "marginal_gain_vs_best": -2.681,
+      "understat_formation_close_call": {
+        "used": false,
+        "raw_risk_leader_formation": "4-3-3",
+        "raw_risk_leader_score": 45.611,
+        "governed_margin": 0.25,
+        "xmins_guarded": true,
+        "direct_xpts_mutation": false,
+        "direct_xmins_mutation": false
+      },
+      "starting_ids": [
+        109,
+        88,
+        115,
+        8,
+        279,
+        254,
+        426,
+        40,
+        565,
+        557,
+        411
+      ]
+    },
+    {
+      "formation": "4-5-1",
+      "xi_xpts": 43.905,
+      "risk_adjusted_score": 42.733,
+      "uncertainty": 57.197,
+      "dnp_risk": 1.52,
+      "structural_correlation_penalty": 0.06,
+      "mean_start_probability": 0.8465,
+      "mean_dnp_probability": 0.1382,
+      "understat_positive_context_count": 0,
+      "understat_player_close_calls": [],
+      "marginal_gain_vs_best": -2.878,
+      "understat_formation_close_call": {
+        "used": false,
+        "raw_risk_leader_formation": "4-3-3",
+        "raw_risk_leader_score": 45.611,
+        "governed_margin": 0.25,
+        "xmins_guarded": true,
+        "direct_xpts_mutation": false,
+        "direct_xmins_mutation": false
+      },
+      "starting_ids": [
+        109,
+        88,
+        115,
+        8,
+        279,
+        426,
+        40,
+        565,
+        557,
+        15,
+        411
+      ]
+    }
+  ],
+  "xi_xpts": 46.69,
+  "starting_xi": [
+    {
+      "element": 109,
+      "name": "Verbruggen",
+      "position": "GK",
+      "team": "Brighton",
+      "xpts": 3.664,
+      "lower80": 1.19,
+      "upper80": 6.138,
+      "start_probability": 0.9467,
+      "start_probability_confidence": 0.7474,
+      "bench_probability": 0.0053,
+      "dnp_probability": 0.048,
+      "availability": 0.952,
+      "captain_score": 3.8817,
+      "vice_score": 3.6941,
+      "bench_score": 3.7243,
+      "selection_score": 3.6968,
+      "interval_width": 4.948,
+      "role": "goalkeeper",
+      "understat_tactical": {
+        "state": "NEUTRAL",
+        "confidence": 0.4,
+        "freshness": "SOURCE_SNAPSHOT",
+        "dimensions": {
+          "attacking_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own chance quality x opponent concession quality"
+          },
+          "creativity_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own deep entries x opponent deep entries allowed"
+          },
+          "finishing_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "non-penalty chance environment"
+          },
+          "transition_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "transition environment",
+            "context": {
+              "own_press_vs_league": 1
+            },
+            "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+          },
+          "clean_sheet_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own defensive chance suppression x opponent attack"
+          },
+          "goalkeeper_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "goalkeeper environment",
+            "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+          },
+          "set_piece_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "set-piece environment",
+            "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+          }
+        },
+        "supporting_signals": [],
+        "conflicting_signals": [],
+        "uncertainty": {
+          "small_sample": true,
+          "player_recent_form_missing": true,
+          "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+          "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+        }
+      },
+      "captain_reason": {
+        "raw_xpts": 3.664,
+        "ceiling_uplift": 0.2969,
+        "dnp_penalty": 0.0792,
+        "start_security_penalty": 0.0
+      },
+      "vice_reason": {
+        "raw_xpts": 3.664,
+        "ceiling_uplift": 0.1237,
+        "dnp_penalty": 0.0936,
+        "start_security_penalty": 0.0
+      }
+    },
+    {
+      "element": 88,
+      "name": "Kayode",
+      "position": "DEF",
+      "team": "Brentford",
+      "xpts": 3.986,
+      "lower80": 1.425,
+      "upper80": 6.548,
+      "start_probability": 0.9467,
+      "start_probability_confidence": 0.7448,
+      "bench_probability": 0.0053,
+      "dnp_probability": 0.048,
+      "availability": 0.952,
+      "captain_score": 4.2142,
+      "vice_score": 4.0205,
+      "bench_score": 4.0416,
+      "selection_score": 4.0166,
+      "interval_width": 5.123,
+      "role": "attacking_fullback",
+      "understat_tactical": {
+        "state": "NEUTRAL",
+        "confidence": 0.4,
+        "freshness": "SOURCE_SNAPSHOT",
+        "dimensions": {
+          "attacking_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own chance quality x opponent concession quality"
+          },
+          "creativity_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own deep entries x opponent deep entries allowed"
+          },
+          "finishing_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "non-penalty chance environment"
+          },
+          "transition_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "transition environment",
+            "context": {
+              "own_press_vs_league": 1
+            },
+            "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+          },
+          "clean_sheet_environment": {
+            "state": "POSITIVE",
+            "signal_balance": 2,
+            "signal_count": 2,
+            "label": "own defensive chance suppression x opponent attack"
+          },
+          "goalkeeper_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "goalkeeper environment",
+            "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+          },
+          "set_piece_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "set-piece environment",
+            "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+          }
+        },
+        "supporting_signals": [
+          "clean_sheet_environment"
+        ],
+        "conflicting_signals": [],
+        "uncertainty": {
+          "small_sample": true,
+          "player_recent_form_missing": true,
+          "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+          "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+        }
+      },
+      "captain_reason": {
+        "raw_xpts": 3.986,
+        "ceiling_uplift": 0.3074,
+        "dnp_penalty": 0.0792,
+        "start_security_penalty": 0.0
+      },
+      "vice_reason": {
+        "raw_xpts": 3.986,
+        "ceiling_uplift": 0.1281,
+        "dnp_penalty": 0.0936,
+        "start_security_penalty": 0.0
+      }
+    },
+    {
+      "element": 115,
+      "name": "De Cuyper",
+      "position": "DEF",
+      "team": "Brighton",
+      "xpts": 3.376,
+      "lower80": 0.853,
+      "upper80": 5.9,
+      "start_probability": 0.7477,
+      "start_probability_confidence": 0.6935,
+      "bench_probability": 0.0252,
+      "dnp_probability": 0.2271,
+      "availability": 0.7729,
+      "captain_score": 3.2896,
+      "vice_score": 3.0086,
+      "bench_score": 3.2405,
+      "selection_score": 3.3394,
+      "interval_width": 5.047,
+      "role": "attacking_fullback",
+      "understat_tactical": {
+        "state": "NEUTRAL",
+        "confidence": 0.4,
+        "freshness": "SOURCE_SNAPSHOT",
+        "dimensions": {
+          "attacking_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own chance quality x opponent concession quality"
+          },
+          "creativity_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own deep entries x opponent deep entries allowed"
+          },
+          "finishing_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "non-penalty chance environment"
+          },
+          "transition_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "transition environment",
+            "context": {
+              "own_press_vs_league": 1
+            },
+            "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+          },
+          "clean_sheet_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own defensive chance suppression x opponent attack"
+          },
+          "goalkeeper_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "goalkeeper environment",
+            "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+          },
+          "set_piece_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "set-piece environment",
+            "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+          }
+        },
+        "supporting_signals": [],
+        "conflicting_signals": [],
+        "uncertainty": {
+          "small_sample": true,
+          "player_recent_form_missing": true,
+          "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+          "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+        }
+      },
+      "captain_reason": {
+        "raw_xpts": 3.376,
+        "ceiling_uplift": 0.3029,
+        "dnp_penalty": 0.3747,
+        "start_security_penalty": 0.0145
+      },
+      "vice_reason": {
+        "raw_xpts": 3.376,
+        "ceiling_uplift": 0.1262,
+        "dnp_penalty": 0.4428,
+        "start_security_penalty": 0.0508
+      }
+    },
+    {
+      "element": 8,
+      "name": "Calafiori",
+      "position": "DEF",
+      "team": "Arsenal",
+      "xpts": 3.238,
+      "lower80": 0.786,
+      "upper80": 5.69,
+      "start_probability": 0.7925,
+      "start_probability_confidence": 0.7064,
+      "bench_probability": 0.0208,
+      "dnp_probability": 0.1868,
+      "availability": 0.8132,
+      "captain_score": 3.224,
+      "vice_score": 2.9702,
+      "bench_score": 3.1553,
+      "selection_score": 3.2185,
+      "interval_width": 4.904,
+      "role": "central_defender",
+      "understat_tactical": {
+        "state": "NEUTRAL",
+        "confidence": 0.4,
+        "freshness": "SOURCE_SNAPSHOT",
+        "dimensions": {
+          "attacking_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own chance quality x opponent concession quality"
+          },
+          "creativity_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own deep entries x opponent deep entries allowed"
+          },
+          "finishing_environment": {
+            "state": "NEGATIVE",
+            "signal_balance": -2,
+            "signal_count": 2,
+            "label": "non-penalty chance environment"
+          },
+          "transition_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "transition environment",
+            "context": {
+              "own_press_vs_league": 1
+            },
+            "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+          },
+          "clean_sheet_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own defensive chance suppression x opponent attack"
+          },
+          "goalkeeper_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "goalkeeper environment",
+            "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+          },
+          "set_piece_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "set-piece environment",
+            "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+          }
+        },
+        "supporting_signals": [],
+        "conflicting_signals": [
+          "finishing_environment"
+        ],
+        "uncertainty": {
+          "small_sample": true,
+          "player_recent_form_missing": true,
+          "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+          "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+        }
+      },
+      "captain_reason": {
+        "raw_xpts": 3.238,
+        "ceiling_uplift": 0.2942,
+        "dnp_penalty": 0.3082,
+        "start_security_penalty": 0.0
+      },
+      "vice_reason": {
+        "raw_xpts": 3.238,
+        "ceiling_uplift": 0.1226,
+        "dnp_penalty": 0.3643,
+        "start_security_penalty": 0.0261
+      }
+    },
+    {
+      "element": 279,
+      "name": "Ajayi",
+      "position": "DEF",
+      "team": "Hull City",
+      "xpts": 2.896,
+      "lower80": 0.546,
+      "upper80": 5.247,
+      "start_probability": 0.7854,
+      "start_probability_confidence": 0.5586,
+      "bench_probability": 0.0215,
+      "dnp_probability": 0.1931,
+      "availability": 0.8069,
+      "captain_score": 2.8595,
+      "vice_score": 2.607,
+      "bench_score": 2.819,
+      "selection_score": 2.8707,
+      "interval_width": 4.701,
+      "role": "central_defender",
+      "understat_tactical": {
+        "state": "NEUTRAL",
+        "confidence": 0.4,
+        "freshness": "SOURCE_SNAPSHOT",
+        "dimensions": {
+          "attacking_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own chance quality x opponent concession quality"
+          },
+          "creativity_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own deep entries x opponent deep entries allowed"
+          },
+          "finishing_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "non-penalty chance environment"
+          },
+          "transition_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "transition environment",
+            "context": {
+              "own_press_vs_league": -1
+            },
+            "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+          },
+          "clean_sheet_environment": {
+            "state": "POSITIVE",
+            "signal_balance": 2,
+            "signal_count": 2,
+            "label": "own defensive chance suppression x opponent attack"
+          },
+          "goalkeeper_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "goalkeeper environment",
+            "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+          },
+          "set_piece_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "set-piece environment",
+            "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+          }
+        },
+        "supporting_signals": [
+          "clean_sheet_environment"
+        ],
+        "conflicting_signals": [],
+        "uncertainty": {
+          "small_sample": true,
+          "player_recent_form_missing": true,
+          "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+          "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+        }
+      },
+      "captain_reason": {
+        "raw_xpts": 2.896,
+        "ceiling_uplift": 0.2821,
+        "dnp_penalty": 0.3186,
+        "start_security_penalty": 0.0
+      },
+      "vice_reason": {
+        "raw_xpts": 2.896,
+        "ceiling_uplift": 0.1176,
+        "dnp_penalty": 0.3765,
+        "start_security_penalty": 0.03
+      }
+    },
+    {
+      "element": 426,
+      "name": "B.Fernandes",
+      "position": "MID",
+      "team": "Man Utd",
+      "xpts": 7.675,
+      "lower80": 4.23,
+      "upper80": 11.12,
+      "start_probability": 0.9079,
+      "start_probability_confidence": 0.7397,
+      "bench_probability": 0.0092,
+      "dnp_probability": 0.0829,
+      "availability": 0.9171,
+      "captain_score": 7.9516,
+      "vice_score": 7.6856,
+      "bench_score": 7.5937,
+      "selection_score": 7.6713,
+      "interval_width": 6.89,
+      "role": "attacking_midfielder",
+      "understat_tactical": {
+        "state": "POSITIVE",
+        "confidence": 0.4,
+        "freshness": "SOURCE_SNAPSHOT",
+        "dimensions": {
+          "attacking_environment": {
+            "state": "POSITIVE",
+            "signal_balance": 2,
+            "signal_count": 2,
+            "label": "own chance quality x opponent concession quality"
+          },
+          "creativity_environment": {
+            "state": "POSITIVE",
+            "signal_balance": 2,
+            "signal_count": 2,
+            "label": "own deep entries x opponent deep entries allowed"
+          },
+          "finishing_environment": {
+            "state": "POSITIVE",
+            "signal_balance": 2,
+            "signal_count": 2,
+            "label": "non-penalty chance environment"
+          },
+          "transition_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "transition environment",
+            "context": {
+              "own_press_vs_league": 1
+            },
+            "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+          },
+          "clean_sheet_environment": {
+            "state": "POSITIVE",
+            "signal_balance": 2,
+            "signal_count": 2,
+            "label": "own defensive chance suppression x opponent attack"
+          },
+          "goalkeeper_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "goalkeeper environment",
+            "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+          },
+          "set_piece_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "set-piece environment",
+            "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+          }
+        },
+        "supporting_signals": [
+          "attacking_environment",
+          "creativity_environment",
+          "finishing_environment",
+          "clean_sheet_environment"
+        ],
+        "conflicting_signals": [],
+        "uncertainty": {
+          "small_sample": true,
+          "player_recent_form_missing": true,
+          "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+          "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+        }
+      },
+      "captain_reason": {
+        "raw_xpts": 7.675,
+        "ceiling_uplift": 0.4134,
+        "dnp_penalty": 0.1368,
+        "start_security_penalty": 0.0
+      },
+      "vice_reason": {
+        "raw_xpts": 7.675,
+        "ceiling_uplift": 0.1722,
+        "dnp_penalty": 0.1617,
+        "start_security_penalty": 0.0
+      }
+    },
+    {
+      "element": 40,
+      "name": "Rogers",
+      "position": "MID",
+      "team": "Chelsea",
+      "xpts": 3.576,
+      "lower80": 1.101,
+      "upper80": 6.051,
+      "start_probability": 0.9079,
+      "start_probability_confidence": 0.7448,
+      "bench_probability": 0.0092,
+      "dnp_probability": 0.0829,
+      "availability": 0.9171,
+      "captain_score": 3.7362,
+      "vice_score": 3.5381,
+      "bench_score": 3.5969,
+      "selection_score": 3.5958,
+      "interval_width": 4.95,
+      "role": "attacking_midfielder",
+      "understat_tactical": {
+        "state": "NEUTRAL",
+        "confidence": 0.4,
+        "freshness": "SOURCE_SNAPSHOT",
+        "dimensions": {
+          "attacking_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own chance quality x opponent concession quality"
+          },
+          "creativity_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own deep entries x opponent deep entries allowed"
+          },
+          "finishing_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "non-penalty chance environment"
+          },
+          "transition_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "transition environment",
+            "context": {
+              "own_press_vs_league": -1
+            },
+            "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+          },
+          "clean_sheet_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own defensive chance suppression x opponent attack"
+          },
+          "goalkeeper_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "goalkeeper environment",
+            "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+          },
+          "set_piece_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "set-piece environment",
+            "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+          }
+        },
+        "supporting_signals": [],
+        "conflicting_signals": [],
+        "uncertainty": {
+          "small_sample": true,
+          "player_recent_form_missing": true,
+          "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+          "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+        }
+      },
+      "captain_reason": {
+        "raw_xpts": 3.576,
+        "ceiling_uplift": 0.297,
+        "dnp_penalty": 0.1368,
+        "start_security_penalty": 0.0
+      },
+      "vice_reason": {
+        "raw_xpts": 3.576,
+        "ceiling_uplift": 0.1238,
+        "dnp_penalty": 0.1617,
+        "start_security_penalty": 0.0
+      }
+    },
+    {
+      "element": 565,
+      "name": "M.Sangaré",
+      "position": "MID",
+      "team": "Brentford",
+      "xpts": 3.563,
+      "lower80": 1.025,
+      "upper80": 6.101,
+      "start_probability": 0.8088,
+      "start_probability_confidence": 0.5676,
+      "bench_probability": 0.0191,
+      "dnp_probability": 0.1721,
+      "availability": 0.8279,
+      "captain_score": 3.5836,
+      "vice_score": 3.3371,
+      "bench_score": 3.4721,
+      "selection_score": 3.5413,
+      "interval_width": 5.076,
+      "role": "balanced_midfielder",
+      "understat_tactical": {
+        "state": "NEUTRAL",
+        "confidence": 0.4,
+        "freshness": "SOURCE_SNAPSHOT",
+        "dimensions": {
+          "attacking_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own chance quality x opponent concession quality"
+          },
+          "creativity_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own deep entries x opponent deep entries allowed"
+          },
+          "finishing_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "non-penalty chance environment"
+          },
+          "transition_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "transition environment",
+            "context": {
+              "own_press_vs_league": 1
+            },
+            "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+          },
+          "clean_sheet_environment": {
+            "state": "POSITIVE",
+            "signal_balance": 2,
+            "signal_count": 2,
+            "label": "own defensive chance suppression x opponent attack"
+          },
+          "goalkeeper_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "goalkeeper environment",
+            "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+          },
+          "set_piece_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "set-piece environment",
+            "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+          }
+        },
+        "supporting_signals": [
+          "clean_sheet_environment"
+        ],
+        "conflicting_signals": [],
+        "uncertainty": {
+          "small_sample": true,
+          "player_recent_form_missing": true,
+          "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+          "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+        }
+      },
+      "captain_reason": {
+        "raw_xpts": 3.563,
+        "ceiling_uplift": 0.3046,
+        "dnp_penalty": 0.284,
+        "start_security_penalty": 0.0
+      },
+      "vice_reason": {
+        "raw_xpts": 3.563,
+        "ceiling_uplift": 0.1269,
+        "dnp_penalty": 0.3356,
+        "start_security_penalty": 0.0172
+      }
+    },
+    {
+      "element": 411,
+      "name": "Haaland",
+      "position": "FWD",
+      "team": "Man City",
+      "xpts": 6.506,
+      "lower80": 3.336,
+      "upper80": 9.677,
+      "start_probability": 0.9399,
+      "start_probability_confidence": 0.7371,
+      "bench_probability": 0.006,
+      "dnp_probability": 0.0541,
+      "availability": 0.9459,
+      "captain_score": 6.7973,
+      "vice_score": 6.5591,
+      "bench_score": 6.5125,
+      "selection_score": 6.5194,
+      "interval_width": 6.341,
+      "role": "striker",
+      "understat_tactical": {
+        "state": "POSITIVE",
+        "confidence": 0.4,
+        "freshness": "SOURCE_SNAPSHOT",
+        "dimensions": {
+          "attacking_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own chance quality x opponent concession quality"
+          },
+          "creativity_environment": {
+            "state": "POSITIVE",
+            "signal_balance": 2,
+            "signal_count": 2,
+            "label": "own deep entries x opponent deep entries allowed"
+          },
+          "finishing_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "non-penalty chance environment"
+          },
+          "transition_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "transition environment",
+            "context": {
+              "own_press_vs_league": 1
+            },
+            "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+          },
+          "clean_sheet_environment": {
+            "state": "POSITIVE",
+            "signal_balance": 2,
+            "signal_count": 2,
+            "label": "own defensive chance suppression x opponent attack"
+          },
+          "goalkeeper_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "goalkeeper environment",
+            "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+          },
+          "set_piece_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "set-piece environment",
+            "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+          }
+        },
+        "supporting_signals": [
+          "creativity_environment",
+          "clean_sheet_environment"
+        ],
+        "conflicting_signals": [],
+        "uncertainty": {
+          "small_sample": true,
+          "player_recent_form_missing": true,
+          "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+          "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+        }
+      },
+      "captain_reason": {
+        "raw_xpts": 6.506,
+        "ceiling_uplift": 0.3805,
+        "dnp_penalty": 0.0893,
+        "start_security_penalty": 0.0
+      },
+      "vice_reason": {
+        "raw_xpts": 6.506,
+        "ceiling_uplift": 0.1585,
+        "dnp_penalty": 0.1055,
+        "start_security_penalty": 0.0
+      }
+    },
+    {
+      "element": 165,
+      "name": "João Pedro",
+      "position": "FWD",
+      "team": "Chelsea",
+      "xpts": 4.156,
+      "lower80": 1.498,
+      "upper80": 6.813,
+      "start_probability": 0.8755,
+      "start_probability_confidence": 0.7295,
+      "bench_probability": 0.0125,
+      "dnp_probability": 0.1121,
+      "availability": 0.8879,
+      "captain_score": 4.2899,
+      "vice_score": 4.0703,
+      "bench_score": 4.1227,
+      "selection_score": 4.1601,
+      "interval_width": 5.315,
+      "role": "striker",
+      "understat_tactical": {
+        "state": "NEUTRAL",
+        "confidence": 0.4,
+        "freshness": "SOURCE_SNAPSHOT",
+        "dimensions": {
+          "attacking_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own chance quality x opponent concession quality"
+          },
+          "creativity_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own deep entries x opponent deep entries allowed"
+          },
+          "finishing_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "non-penalty chance environment"
+          },
+          "transition_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "transition environment",
+            "context": {
+              "own_press_vs_league": -1
+            },
+            "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+          },
+          "clean_sheet_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own defensive chance suppression x opponent attack"
+          },
+          "goalkeeper_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "goalkeeper environment",
+            "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+          },
+          "set_piece_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "set-piece environment",
+            "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+          }
+        },
+        "supporting_signals": [],
+        "conflicting_signals": [],
+        "uncertainty": {
+          "small_sample": true,
+          "player_recent_form_missing": true,
+          "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+          "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+        }
+      },
+      "captain_reason": {
+        "raw_xpts": 4.156,
+        "ceiling_uplift": 0.3188,
+        "dnp_penalty": 0.185,
+        "start_security_penalty": 0.0
+      },
+      "vice_reason": {
+        "raw_xpts": 4.156,
+        "ceiling_uplift": 0.1328,
+        "dnp_penalty": 0.2186,
+        "start_security_penalty": 0.0
+      }
+    },
+    {
+      "element": 346,
+      "name": "Calvert-Lewin",
+      "position": "FWD",
+      "team": "Leeds",
+      "xpts": 4.049,
+      "lower80": 1.414,
+      "upper80": 6.684,
+      "start_probability": 0.8668,
+      "start_probability_confidence": 0.7268,
+      "bench_probability": 0.0133,
+      "dnp_probability": 0.1198,
+      "availability": 0.8802,
+      "captain_score": 4.1675,
+      "vice_score": 3.9471,
+      "bench_score": 4.0092,
+      "selection_score": 4.0506,
+      "interval_width": 5.27,
+      "role": "striker",
+      "understat_tactical": {
+        "state": "NEUTRAL",
+        "confidence": 0.4,
+        "freshness": "SOURCE_SNAPSHOT",
+        "dimensions": {
+          "attacking_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own chance quality x opponent concession quality"
+          },
+          "creativity_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own deep entries x opponent deep entries allowed"
+          },
+          "finishing_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "non-penalty chance environment"
+          },
+          "transition_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "transition environment",
+            "context": {
+              "own_press_vs_league": 1
+            },
+            "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+          },
+          "clean_sheet_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own defensive chance suppression x opponent attack"
+          },
+          "goalkeeper_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "goalkeeper environment",
+            "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+          },
+          "set_piece_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "set-piece environment",
+            "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+          }
+        },
+        "supporting_signals": [],
+        "conflicting_signals": [],
+        "uncertainty": {
+          "small_sample": true,
+          "player_recent_form_missing": true,
+          "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+          "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+        }
+      },
+      "captain_reason": {
+        "raw_xpts": 4.049,
+        "ceiling_uplift": 0.3162,
+        "dnp_penalty": 0.1977,
+        "start_security_penalty": 0.0
+      },
+      "vice_reason": {
+        "raw_xpts": 4.049,
+        "ceiling_uplift": 0.1318,
+        "dnp_penalty": 0.2336,
+        "start_security_penalty": 0.0
+      }
+    }
+  ],
+  "captain": {
+    "element": 426,
+    "name": "B.Fernandes",
+    "position": "MID",
+    "team": "Man Utd",
+    "xpts": 7.675,
+    "lower80": 4.23,
+    "upper80": 11.12,
+    "start_probability": 0.9079,
+    "start_probability_confidence": 0.7397,
+    "bench_probability": 0.0092,
+    "dnp_probability": 0.0829,
+    "availability": 0.9171,
+    "captain_score": 7.9516,
+    "vice_score": 7.6856,
+    "bench_score": 7.5937,
+    "selection_score": 7.6713,
+    "interval_width": 6.89,
+    "role": "attacking_midfielder",
+    "understat_tactical": {
+      "state": "POSITIVE",
+      "confidence": 0.4,
+      "freshness": "SOURCE_SNAPSHOT",
+      "dimensions": {
+        "attacking_environment": {
+          "state": "POSITIVE",
+          "signal_balance": 2,
+          "signal_count": 2,
+          "label": "own chance quality x opponent concession quality"
+        },
+        "creativity_environment": {
+          "state": "POSITIVE",
+          "signal_balance": 2,
+          "signal_count": 2,
+          "label": "own deep entries x opponent deep entries allowed"
+        },
+        "finishing_environment": {
+          "state": "POSITIVE",
+          "signal_balance": 2,
+          "signal_count": 2,
+          "label": "non-penalty chance environment"
+        },
+        "transition_environment": {
+          "state": "INSUFFICIENT_EVIDENCE",
+          "label": "transition environment",
+          "context": {
+            "own_press_vs_league": 1
+          },
+          "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+        },
+        "clean_sheet_environment": {
+          "state": "POSITIVE",
+          "signal_balance": 2,
+          "signal_count": 2,
+          "label": "own defensive chance suppression x opponent attack"
+        },
+        "goalkeeper_environment": {
+          "state": "INSUFFICIENT_EVIDENCE",
+          "label": "goalkeeper environment",
+          "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+        },
+        "set_piece_environment": {
+          "state": "INSUFFICIENT_EVIDENCE",
+          "label": "set-piece environment",
+          "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+        }
+      },
+      "supporting_signals": [
+        "attacking_environment",
+        "creativity_environment",
+        "finishing_environment",
+        "clean_sheet_environment"
+      ],
+      "conflicting_signals": [],
+      "uncertainty": {
+        "small_sample": true,
+        "player_recent_form_missing": true,
+        "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+        "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+      }
+    },
+    "captain_reason": {
+      "raw_xpts": 7.675,
+      "ceiling_uplift": 0.4134,
+      "dnp_penalty": 0.1368,
+      "start_security_penalty": 0.0
+    },
+    "vice_reason": {
+      "raw_xpts": 7.675,
+      "ceiling_uplift": 0.1722,
+      "dnp_penalty": 0.1617,
+      "start_security_penalty": 0.0
+    }
+  },
+  "vice_captain": {
+    "element": 411,
+    "name": "Haaland",
+    "position": "FWD",
+    "team": "Man City",
+    "xpts": 6.506,
+    "lower80": 3.336,
+    "upper80": 9.677,
+    "start_probability": 0.9399,
+    "start_probability_confidence": 0.7371,
+    "bench_probability": 0.006,
+    "dnp_probability": 0.0541,
+    "availability": 0.9459,
+    "captain_score": 6.7973,
+    "vice_score": 6.5591,
+    "bench_score": 6.5125,
+    "selection_score": 6.5194,
+    "interval_width": 6.341,
+    "role": "striker",
+    "understat_tactical": {
+      "state": "POSITIVE",
+      "confidence": 0.4,
+      "freshness": "SOURCE_SNAPSHOT",
+      "dimensions": {
+        "attacking_environment": {
+          "state": "NEUTRAL",
+          "signal_balance": 0,
+          "signal_count": 2,
+          "label": "own chance quality x opponent concession quality"
+        },
+        "creativity_environment": {
+          "state": "POSITIVE",
+          "signal_balance": 2,
+          "signal_count": 2,
+          "label": "own deep entries x opponent deep entries allowed"
+        },
+        "finishing_environment": {
+          "state": "NEUTRAL",
+          "signal_balance": 0,
+          "signal_count": 2,
+          "label": "non-penalty chance environment"
+        },
+        "transition_environment": {
+          "state": "INSUFFICIENT_EVIDENCE",
+          "label": "transition environment",
+          "context": {
+            "own_press_vs_league": 1
+          },
+          "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+        },
+        "clean_sheet_environment": {
+          "state": "POSITIVE",
+          "signal_balance": 2,
+          "signal_count": 2,
+          "label": "own defensive chance suppression x opponent attack"
+        },
+        "goalkeeper_environment": {
+          "state": "INSUFFICIENT_EVIDENCE",
+          "label": "goalkeeper environment",
+          "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+        },
+        "set_piece_environment": {
+          "state": "INSUFFICIENT_EVIDENCE",
+          "label": "set-piece environment",
+          "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+        }
+      },
+      "supporting_signals": [
+        "creativity_environment",
+        "clean_sheet_environment"
+      ],
+      "conflicting_signals": [],
+      "uncertainty": {
+        "small_sample": true,
+        "player_recent_form_missing": true,
+        "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+        "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+      }
+    },
+    "captain_reason": {
+      "raw_xpts": 6.506,
+      "ceiling_uplift": 0.3805,
+      "dnp_penalty": 0.0893,
+      "start_security_penalty": 0.0
+    },
+    "vice_reason": {
+      "raw_xpts": 6.506,
+      "ceiling_uplift": 0.1585,
+      "dnp_penalty": 0.1055,
+      "start_security_penalty": 0.0
+    }
+  },
+  "captaincy_governance": {
+    "status": "DECIDED",
+    "captain_margin": 1.1543,
+    "open_threshold": 0.3,
+    "captain_candidates": [
+      {
+        "element": 426,
+        "name": "B.Fernandes",
+        "score": 7.9516,
+        "reason": {
+          "raw_xpts": 7.675,
+          "ceiling_uplift": 0.4134,
+          "dnp_penalty": 0.1368,
+          "start_security_penalty": 0.0
+        }
+      },
+      {
+        "element": 411,
+        "name": "Haaland",
+        "score": 6.7973,
+        "reason": {
+          "raw_xpts": 6.506,
+          "ceiling_uplift": 0.3805,
+          "dnp_penalty": 0.0893,
+          "start_security_penalty": 0.0
+        }
+      },
+      {
+        "element": 165,
+        "name": "João Pedro",
+        "score": 4.2899,
+        "reason": {
+          "raw_xpts": 4.156,
+          "ceiling_uplift": 0.3188,
+          "dnp_penalty": 0.185,
+          "start_security_penalty": 0.0
+        }
+      },
+      {
+        "element": 88,
+        "name": "Kayode",
+        "score": 4.2142,
+        "reason": {
+          "raw_xpts": 3.986,
+          "ceiling_uplift": 0.3074,
+          "dnp_penalty": 0.0792,
+          "start_security_penalty": 0.0
+        }
+      },
+      {
+        "element": 346,
+        "name": "Calvert-Lewin",
+        "score": 4.1675,
+        "reason": {
+          "raw_xpts": 4.049,
+          "ceiling_uplift": 0.3162,
+          "dnp_penalty": 0.1977,
+          "start_security_penalty": 0.0
+        }
+      }
+    ],
+    "vice_candidates": [
+      {
+        "element": 411,
+        "name": "Haaland",
+        "score": 6.5591,
+        "reason": {
+          "raw_xpts": 6.506,
+          "ceiling_uplift": 0.1585,
+          "dnp_penalty": 0.1055,
+          "start_security_penalty": 0.0
+        }
+      },
+      {
+        "element": 165,
+        "name": "João Pedro",
+        "score": 4.0703,
+        "reason": {
+          "raw_xpts": 4.156,
+          "ceiling_uplift": 0.1328,
+          "dnp_penalty": 0.2186,
+          "start_security_penalty": 0.0
+        }
+      },
+      {
+        "element": 88,
+        "name": "Kayode",
+        "score": 4.0205,
+        "reason": {
+          "raw_xpts": 3.986,
+          "ceiling_uplift": 0.1281,
+          "dnp_penalty": 0.0936,
+          "start_security_penalty": 0.0
+        }
+      },
+      {
+        "element": 346,
+        "name": "Calvert-Lewin",
+        "score": 3.9471,
+        "reason": {
+          "raw_xpts": 4.049,
+          "ceiling_uplift": 0.1318,
+          "dnp_penalty": 0.2336,
+          "start_security_penalty": 0.0
+        }
+      },
+      {
+        "element": 40,
+        "name": "Rogers",
+        "score": 3.5381,
+        "reason": {
+          "raw_xpts": 3.576,
+          "ceiling_uplift": 0.1238,
+          "dnp_penalty": 0.1617,
+          "start_security_penalty": 0.0
+        }
+      }
+    ],
+    "attacker_vs_defender_vice": {
+      "attacker": {
+        "element": 411,
+        "name": "Haaland",
+        "position": "FWD",
+        "team": "Man City",
+        "xpts": 6.506,
+        "lower80": 3.336,
+        "upper80": 9.677,
+        "start_probability": 0.9399,
+        "start_probability_confidence": 0.7371,
+        "bench_probability": 0.006,
+        "dnp_probability": 0.0541,
+        "availability": 0.9459,
+        "captain_score": 6.7973,
+        "vice_score": 6.5591,
+        "bench_score": 6.5125,
+        "selection_score": 6.5194,
+        "interval_width": 6.341,
+        "role": "striker",
+        "understat_tactical": {
+          "state": "POSITIVE",
+          "confidence": 0.4,
+          "freshness": "SOURCE_SNAPSHOT",
+          "dimensions": {
+            "attacking_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own chance quality x opponent concession quality"
+            },
+            "creativity_environment": {
+              "state": "POSITIVE",
+              "signal_balance": 2,
+              "signal_count": 2,
+              "label": "own deep entries x opponent deep entries allowed"
+            },
+            "finishing_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "non-penalty chance environment"
+            },
+            "transition_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "transition environment",
+              "context": {
+                "own_press_vs_league": 1
+              },
+              "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+            },
+            "clean_sheet_environment": {
+              "state": "POSITIVE",
+              "signal_balance": 2,
+              "signal_count": 2,
+              "label": "own defensive chance suppression x opponent attack"
+            },
+            "goalkeeper_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "goalkeeper environment",
+              "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+            },
+            "set_piece_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "set-piece environment",
+              "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+            }
+          },
+          "supporting_signals": [
+            "creativity_environment",
+            "clean_sheet_environment"
+          ],
+          "conflicting_signals": [],
+          "uncertainty": {
+            "small_sample": true,
+            "player_recent_form_missing": true,
+            "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+            "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+          }
+        },
+        "captain_reason": {
+          "raw_xpts": 6.506,
+          "ceiling_uplift": 0.3805,
+          "dnp_penalty": 0.0893,
+          "start_security_penalty": 0.0
+        },
+        "vice_reason": {
+          "raw_xpts": 6.506,
+          "ceiling_uplift": 0.1585,
+          "dnp_penalty": 0.1055,
+          "start_security_penalty": 0.0
+        }
+      },
+      "defender": {
+        "element": 88,
+        "name": "Kayode",
+        "position": "DEF",
+        "team": "Brentford",
+        "xpts": 3.986,
+        "lower80": 1.425,
+        "upper80": 6.548,
+        "start_probability": 0.9467,
+        "start_probability_confidence": 0.7448,
+        "bench_probability": 0.0053,
+        "dnp_probability": 0.048,
+        "availability": 0.952,
+        "captain_score": 4.2142,
+        "vice_score": 4.0205,
+        "bench_score": 4.0416,
+        "selection_score": 4.0166,
+        "interval_width": 5.123,
+        "role": "attacking_fullback",
+        "understat_tactical": {
+          "state": "NEUTRAL",
+          "confidence": 0.4,
+          "freshness": "SOURCE_SNAPSHOT",
+          "dimensions": {
+            "attacking_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own chance quality x opponent concession quality"
+            },
+            "creativity_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own deep entries x opponent deep entries allowed"
+            },
+            "finishing_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "non-penalty chance environment"
+            },
+            "transition_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "transition environment",
+              "context": {
+                "own_press_vs_league": 1
+              },
+              "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+            },
+            "clean_sheet_environment": {
+              "state": "POSITIVE",
+              "signal_balance": 2,
+              "signal_count": 2,
+              "label": "own defensive chance suppression x opponent attack"
+            },
+            "goalkeeper_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "goalkeeper environment",
+              "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+            },
+            "set_piece_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "set-piece environment",
+              "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+            }
+          },
+          "supporting_signals": [
+            "clean_sheet_environment"
+          ],
+          "conflicting_signals": [],
+          "uncertainty": {
+            "small_sample": true,
+            "player_recent_form_missing": true,
+            "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+            "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+          }
+        },
+        "captain_reason": {
+          "raw_xpts": 3.986,
+          "ceiling_uplift": 0.3074,
+          "dnp_penalty": 0.0792,
+          "start_security_penalty": 0.0
+        },
+        "vice_reason": {
+          "raw_xpts": 3.986,
+          "ceiling_uplift": 0.1281,
+          "dnp_penalty": 0.0936,
+          "start_security_penalty": 0.0
+        }
+      }
+    },
+    "small_raw_xpts_edge_cannot_bypass_risk_adjustment": true,
+    "understat_captaincy_semantics_unchanged": true
+  },
+  "gk_selection": {
+    "status": "DECIDED",
+    "selected": {
+      "element": 109,
+      "name": "Verbruggen",
+      "position": "GK",
+      "team": "Brighton",
+      "xpts": 3.664,
+      "lower80": 1.19,
+      "upper80": 6.138,
+      "start_probability": 0.9467,
+      "start_probability_confidence": 0.7474,
+      "bench_probability": 0.0053,
+      "dnp_probability": 0.048,
+      "availability": 0.952,
+      "captain_score": 3.8817,
+      "vice_score": 3.6941,
+      "bench_score": 3.7243,
+      "selection_score": 3.6968,
+      "interval_width": 4.948,
+      "role": "goalkeeper",
+      "understat_tactical": {
+        "state": "NEUTRAL",
+        "confidence": 0.4,
+        "freshness": "SOURCE_SNAPSHOT",
+        "dimensions": {
+          "attacking_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own chance quality x opponent concession quality"
+          },
+          "creativity_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own deep entries x opponent deep entries allowed"
+          },
+          "finishing_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "non-penalty chance environment"
+          },
+          "transition_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "transition environment",
+            "context": {
+              "own_press_vs_league": 1
+            },
+            "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+          },
+          "clean_sheet_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own defensive chance suppression x opponent attack"
+          },
+          "goalkeeper_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "goalkeeper environment",
+            "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+          },
+          "set_piece_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "set-piece environment",
+            "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+          }
+        },
+        "supporting_signals": [],
+        "conflicting_signals": [],
+        "uncertainty": {
+          "small_sample": true,
+          "player_recent_form_missing": true,
+          "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+          "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+        }
+      },
+      "captain_reason": {
+        "raw_xpts": 3.664,
+        "ceiling_uplift": 0.2969,
+        "dnp_penalty": 0.0792,
+        "start_security_penalty": 0.0
+      },
+      "vice_reason": {
+        "raw_xpts": 3.664,
+        "ceiling_uplift": 0.1237,
+        "dnp_penalty": 0.0936,
+        "start_security_penalty": 0.0
+      }
+    },
+    "alternatives": [
+      {
+        "element": 109,
+        "name": "Verbruggen",
+        "position": "GK",
+        "team": "Brighton",
+        "xpts": 3.664,
+        "lower80": 1.19,
+        "upper80": 6.138,
+        "start_probability": 0.9467,
+        "start_probability_confidence": 0.7474,
+        "bench_probability": 0.0053,
+        "dnp_probability": 0.048,
+        "availability": 0.952,
+        "captain_score": 3.8817,
+        "vice_score": 3.6941,
+        "bench_score": 3.7243,
+        "selection_score": 3.6968,
+        "interval_width": 4.948,
+        "role": "goalkeeper",
+        "understat_tactical": {
+          "state": "NEUTRAL",
+          "confidence": 0.4,
+          "freshness": "SOURCE_SNAPSHOT",
+          "dimensions": {
+            "attacking_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own chance quality x opponent concession quality"
+            },
+            "creativity_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own deep entries x opponent deep entries allowed"
+            },
+            "finishing_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "non-penalty chance environment"
+            },
+            "transition_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "transition environment",
+              "context": {
+                "own_press_vs_league": 1
+              },
+              "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+            },
+            "clean_sheet_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own defensive chance suppression x opponent attack"
+            },
+            "goalkeeper_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "goalkeeper environment",
+              "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+            },
+            "set_piece_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "set-piece environment",
+              "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+            }
+          },
+          "supporting_signals": [],
+          "conflicting_signals": [],
+          "uncertainty": {
+            "small_sample": true,
+            "player_recent_form_missing": true,
+            "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+            "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+          }
+        },
+        "captain_reason": {
+          "raw_xpts": 3.664,
+          "ceiling_uplift": 0.2969,
+          "dnp_penalty": 0.0792,
+          "start_security_penalty": 0.0
+        },
+        "vice_reason": {
+          "raw_xpts": 3.664,
+          "ceiling_uplift": 0.1237,
+          "dnp_penalty": 0.0936,
+          "start_security_penalty": 0.0
+        }
+      },
+      {
+        "element": 572,
+        "name": "Tzolakis",
+        "position": "GK",
+        "team": "Hull City",
+        "xpts": 3.273,
+        "lower80": 0.843,
+        "upper80": 5.702,
+        "start_probability": 0.8433,
+        "start_probability_confidence": 0.5614,
+        "bench_probability": 0.0157,
+        "dnp_probability": 0.141,
+        "availability": 0.859,
+        "captain_score": 3.3318,
+        "vice_score": 3.1195,
+        "bench_score": 3.2301,
+        "selection_score": 3.2651,
+        "interval_width": 4.859,
+        "role": "goalkeeper",
+        "understat_tactical": {
+          "state": "NEUTRAL",
+          "confidence": 0.4,
+          "freshness": "SOURCE_SNAPSHOT",
+          "dimensions": {
+            "attacking_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own chance quality x opponent concession quality"
+            },
+            "creativity_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own deep entries x opponent deep entries allowed"
+            },
+            "finishing_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "non-penalty chance environment"
+            },
+            "transition_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "transition environment",
+              "context": {
+                "own_press_vs_league": -1
+              },
+              "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+            },
+            "clean_sheet_environment": {
+              "state": "POSITIVE",
+              "signal_balance": 2,
+              "signal_count": 2,
+              "label": "own defensive chance suppression x opponent attack"
+            },
+            "goalkeeper_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "goalkeeper environment",
+              "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+            },
+            "set_piece_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "set-piece environment",
+              "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+            }
+          },
+          "supporting_signals": [
+            "clean_sheet_environment"
+          ],
+          "conflicting_signals": [],
+          "uncertainty": {
+            "small_sample": true,
+            "player_recent_form_missing": true,
+            "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+            "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+          }
+        },
+        "captain_reason": {
+          "raw_xpts": 3.273,
+          "ceiling_uplift": 0.2915,
+          "dnp_penalty": 0.2326,
+          "start_security_penalty": 0.0
+        },
+        "vice_reason": {
+          "raw_xpts": 3.273,
+          "ceiling_uplift": 0.1215,
+          "dnp_penalty": 0.2749,
+          "start_security_penalty": 0.0
+        }
+      }
+    ],
+    "raw_xpts_margin": 0.391,
+    "risk_adjusted_margin": 0.4317,
+    "raw_open_threshold": 0.15,
+    "selection_open_threshold": 0.12,
+    "reason": "RISK_ADJUSTED_GK_LEADER"
+  },
+  "bench": {
+    "gk": {
+      "element": 572,
+      "name": "Tzolakis",
+      "position": "GK",
+      "team": "Hull City",
+      "xpts": 3.273,
+      "lower80": 0.843,
+      "upper80": 5.702,
+      "start_probability": 0.8433,
+      "start_probability_confidence": 0.5614,
+      "bench_probability": 0.0157,
+      "dnp_probability": 0.141,
+      "availability": 0.859,
+      "captain_score": 3.3318,
+      "vice_score": 3.1195,
+      "bench_score": 3.2301,
+      "selection_score": 3.2651,
+      "interval_width": 4.859,
+      "role": "goalkeeper",
+      "understat_tactical": {
+        "state": "NEUTRAL",
+        "confidence": 0.4,
+        "freshness": "SOURCE_SNAPSHOT",
+        "dimensions": {
+          "attacking_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own chance quality x opponent concession quality"
+          },
+          "creativity_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "own deep entries x opponent deep entries allowed"
+          },
+          "finishing_environment": {
+            "state": "NEUTRAL",
+            "signal_balance": 0,
+            "signal_count": 2,
+            "label": "non-penalty chance environment"
+          },
+          "transition_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "transition environment",
+            "context": {
+              "own_press_vs_league": -1
+            },
+            "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+          },
+          "clean_sheet_environment": {
+            "state": "POSITIVE",
+            "signal_balance": 2,
+            "signal_count": 2,
+            "label": "own defensive chance suppression x opponent attack"
+          },
+          "goalkeeper_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "goalkeeper environment",
+            "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+          },
+          "set_piece_environment": {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "label": "set-piece environment",
+            "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+          }
+        },
+        "supporting_signals": [
+          "clean_sheet_environment"
+        ],
+        "conflicting_signals": [],
+        "uncertainty": {
+          "small_sample": true,
+          "player_recent_form_missing": true,
+          "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+          "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+        }
+      },
+      "captain_reason": {
+        "raw_xpts": 3.273,
+        "ceiling_uplift": 0.2915,
+        "dnp_penalty": 0.2326,
+        "start_security_penalty": 0.0
+      },
+      "vice_reason": {
+        "raw_xpts": 3.273,
+        "ceiling_uplift": 0.1215,
+        "dnp_penalty": 0.2749,
+        "start_security_penalty": 0.0
+      }
+    },
+    "order": [
+      {
+        "slot": 1,
+        "element": 557,
+        "name": "Tzolis",
+        "position": "MID",
+        "team": "Arsenal",
+        "xpts": 2.764,
+        "lower80": 0.465,
+        "upper80": 5.063,
+        "start_probability": 0.8006,
+        "start_probability_confidence": 0.5721,
+        "bench_probability": 0.0199,
+        "dnp_probability": 0.1795,
+        "availability": 0.8205,
+        "captain_score": 2.7437,
+        "vice_score": 2.5073,
+        "bench_score": 2.7078,
+        "selection_score": 2.7455,
+        "interval_width": 4.598,
+        "role": "balanced_midfielder",
+        "understat_tactical": {
+          "state": "NEUTRAL",
+          "confidence": 0.4,
+          "freshness": "SOURCE_SNAPSHOT",
+          "dimensions": {
+            "attacking_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own chance quality x opponent concession quality"
+            },
+            "creativity_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own deep entries x opponent deep entries allowed"
+            },
+            "finishing_environment": {
+              "state": "NEGATIVE",
+              "signal_balance": -2,
+              "signal_count": 2,
+              "label": "non-penalty chance environment"
+            },
+            "transition_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "transition environment",
+              "context": {
+                "own_press_vs_league": 1
+              },
+              "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+            },
+            "clean_sheet_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own defensive chance suppression x opponent attack"
+            },
+            "goalkeeper_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "goalkeeper environment",
+              "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+            },
+            "set_piece_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "set-piece environment",
+              "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+            }
+          },
+          "supporting_signals": [],
+          "conflicting_signals": [
+            "finishing_environment"
+          ],
+          "uncertainty": {
+            "small_sample": true,
+            "player_recent_form_missing": true,
+            "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+            "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+          }
+        },
+        "captain_reason": {
+          "raw_xpts": 2.764,
+          "ceiling_uplift": 0.2759,
+          "dnp_penalty": 0.2962,
+          "start_security_penalty": 0.0
+        },
+        "vice_reason": {
+          "raw_xpts": 2.764,
+          "ceiling_uplift": 0.1149,
+          "dnp_penalty": 0.35,
+          "start_security_penalty": 0.0217
+        }
+      },
+      {
+        "slot": 2,
+        "element": 254,
+        "name": "Robinson",
+        "position": "DEF",
+        "team": "Fulham",
+        "xpts": 2.793,
+        "lower80": 0.454,
+        "upper80": 5.132,
+        "start_probability": 0.7498,
+        "start_probability_confidence": 0.6935,
+        "bench_probability": 0.025,
+        "dnp_probability": 0.2252,
+        "availability": 0.7748,
+        "captain_score": 2.6885,
+        "vice_score": 2.4212,
+        "bench_score": 2.699,
+        "selection_score": 2.7615,
+        "interval_width": 4.678,
+        "role": "central_defender",
+        "understat_tactical": {
+          "state": "NEGATIVE",
+          "confidence": 0.4,
+          "freshness": "SOURCE_SNAPSHOT",
+          "dimensions": {
+            "attacking_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own chance quality x opponent concession quality"
+            },
+            "creativity_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 1,
+              "signal_count": 2,
+              "label": "own deep entries x opponent deep entries allowed"
+            },
+            "finishing_environment": {
+              "state": "NEGATIVE",
+              "signal_balance": -2,
+              "signal_count": 2,
+              "label": "non-penalty chance environment"
+            },
+            "transition_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "transition environment",
+              "context": {
+                "own_press_vs_league": 1
+              },
+              "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+            },
+            "clean_sheet_environment": {
+              "state": "NEGATIVE",
+              "signal_balance": -2,
+              "signal_count": 2,
+              "label": "own defensive chance suppression x opponent attack"
+            },
+            "goalkeeper_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "goalkeeper environment",
+              "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+            },
+            "set_piece_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "set-piece environment",
+              "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+            }
+          },
+          "supporting_signals": [],
+          "conflicting_signals": [
+            "finishing_environment",
+            "clean_sheet_environment"
+          ],
+          "uncertainty": {
+            "small_sample": true,
+            "player_recent_form_missing": true,
+            "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+            "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+          }
+        },
+        "captain_reason": {
+          "raw_xpts": 2.793,
+          "ceiling_uplift": 0.2807,
+          "dnp_penalty": 0.3716,
+          "start_security_penalty": 0.0136
+        },
+        "vice_reason": {
+          "raw_xpts": 2.793,
+          "ceiling_uplift": 0.1169,
+          "dnp_penalty": 0.4391,
+          "start_security_penalty": 0.0496
+        }
+      },
+      {
+        "slot": 3,
+        "element": 15,
+        "name": "Ødegaard",
+        "position": "MID",
+        "team": "Arsenal",
+        "xpts": 2.661,
+        "lower80": 0.352,
+        "upper80": 4.971,
+        "start_probability": 0.7276,
+        "start_probability_confidence": 0.6909,
+        "bench_probability": 0.0272,
+        "dnp_probability": 0.2452,
+        "availability": 0.7548,
+        "captain_score": 2.51,
+        "vice_score": 2.2365,
+        "bench_score": 2.558,
+        "selection_score": 2.6228,
+        "interval_width": 4.619,
+        "role": "balanced_midfielder",
+        "understat_tactical": {
+          "state": "NEUTRAL",
+          "confidence": 0.4,
+          "freshness": "SOURCE_SNAPSHOT",
+          "dimensions": {
+            "attacking_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own chance quality x opponent concession quality"
+            },
+            "creativity_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own deep entries x opponent deep entries allowed"
+            },
+            "finishing_environment": {
+              "state": "NEGATIVE",
+              "signal_balance": -2,
+              "signal_count": 2,
+              "label": "non-penalty chance environment"
+            },
+            "transition_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "transition environment",
+              "context": {
+                "own_press_vs_league": 1
+              },
+              "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+            },
+            "clean_sheet_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own defensive chance suppression x opponent attack"
+            },
+            "goalkeeper_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "goalkeeper environment",
+              "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+            },
+            "set_piece_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "set-piece environment",
+              "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+            }
+          },
+          "supporting_signals": [],
+          "conflicting_signals": [
+            "finishing_environment"
+          ],
+          "uncertainty": {
+            "small_sample": true,
+            "player_recent_form_missing": true,
+            "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+            "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+          }
+        },
+        "captain_reason": {
+          "raw_xpts": 2.661,
+          "ceiling_uplift": 0.2772,
+          "dnp_penalty": 0.4046,
+          "start_security_penalty": 0.0236
+        },
+        "vice_reason": {
+          "raw_xpts": 2.661,
+          "ceiling_uplift": 0.1155,
+          "dnp_penalty": 0.4781,
+          "start_security_penalty": 0.0618
+        }
+      }
+    ]
+  },
+  "bench_governance": {
+    "status": "OPEN",
+    "score_gaps": [
+      0.0088,
+      0.141
+    ],
+    "open_threshold": 0.15,
+    "reasoning": [
+      {
+        "slot": 1,
+        "element": 557,
+        "name": "Tzolis",
+        "bench_score": 2.7078,
+        "autosub_legal": true,
+        "start_security": 0.8006,
+        "ceiling": 5.063,
+        "role": "balanced_midfielder",
+        "dnp_risk": 0.1795,
+        "understat_tactical": {
+          "state": "NEUTRAL",
+          "confidence": 0.4,
+          "freshness": "SOURCE_SNAPSHOT",
+          "dimensions": {
+            "attacking_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own chance quality x opponent concession quality"
+            },
+            "creativity_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own deep entries x opponent deep entries allowed"
+            },
+            "finishing_environment": {
+              "state": "NEGATIVE",
+              "signal_balance": -2,
+              "signal_count": 2,
+              "label": "non-penalty chance environment"
+            },
+            "transition_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "transition environment",
+              "context": {
+                "own_press_vs_league": 1
+              },
+              "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+            },
+            "clean_sheet_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own defensive chance suppression x opponent attack"
+            },
+            "goalkeeper_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "goalkeeper environment",
+              "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+            },
+            "set_piece_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "set-piece environment",
+              "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+            }
+          },
+          "supporting_signals": [],
+          "conflicting_signals": [
+            "finishing_environment"
+          ],
+          "uncertainty": {
+            "small_sample": true,
+            "player_recent_form_missing": true,
+            "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+            "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+          }
+        }
+      },
+      {
+        "slot": 2,
+        "element": 254,
+        "name": "Robinson",
+        "bench_score": 2.699,
+        "autosub_legal": true,
+        "start_security": 0.7498,
+        "ceiling": 5.132,
+        "role": "central_defender",
+        "dnp_risk": 0.2252,
+        "understat_tactical": {
+          "state": "NEGATIVE",
+          "confidence": 0.4,
+          "freshness": "SOURCE_SNAPSHOT",
+          "dimensions": {
+            "attacking_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own chance quality x opponent concession quality"
+            },
+            "creativity_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 1,
+              "signal_count": 2,
+              "label": "own deep entries x opponent deep entries allowed"
+            },
+            "finishing_environment": {
+              "state": "NEGATIVE",
+              "signal_balance": -2,
+              "signal_count": 2,
+              "label": "non-penalty chance environment"
+            },
+            "transition_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "transition environment",
+              "context": {
+                "own_press_vs_league": 1
+              },
+              "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+            },
+            "clean_sheet_environment": {
+              "state": "NEGATIVE",
+              "signal_balance": -2,
+              "signal_count": 2,
+              "label": "own defensive chance suppression x opponent attack"
+            },
+            "goalkeeper_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "goalkeeper environment",
+              "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+            },
+            "set_piece_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "set-piece environment",
+              "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+            }
+          },
+          "supporting_signals": [],
+          "conflicting_signals": [
+            "finishing_environment",
+            "clean_sheet_environment"
+          ],
+          "uncertainty": {
+            "small_sample": true,
+            "player_recent_form_missing": true,
+            "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+            "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+          }
+        }
+      },
+      {
+        "slot": 3,
+        "element": 15,
+        "name": "Ødegaard",
+        "bench_score": 2.558,
+        "autosub_legal": true,
+        "start_security": 0.7276,
+        "ceiling": 4.971,
+        "role": "balanced_midfielder",
+        "dnp_risk": 0.2452,
+        "understat_tactical": {
+          "state": "NEUTRAL",
+          "confidence": 0.4,
+          "freshness": "SOURCE_SNAPSHOT",
+          "dimensions": {
+            "attacking_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own chance quality x opponent concession quality"
+            },
+            "creativity_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own deep entries x opponent deep entries allowed"
+            },
+            "finishing_environment": {
+              "state": "NEGATIVE",
+              "signal_balance": -2,
+              "signal_count": 2,
+              "label": "non-penalty chance environment"
+            },
+            "transition_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "transition environment",
+              "context": {
+                "own_press_vs_league": 1
+              },
+              "reason": "PPDA_ALONE_CANNOT_ESTABLISH_TRANSITION_VALUE"
+            },
+            "clean_sheet_environment": {
+              "state": "NEUTRAL",
+              "signal_balance": 0,
+              "signal_count": 2,
+              "label": "own defensive chance suppression x opponent attack"
+            },
+            "goalkeeper_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "goalkeeper environment",
+              "reason": "SHOT_VOLUME_NOT_RELIABLY_PRESENT_IN_GOVERNED_TEAM_SNAPSHOT"
+            },
+            "set_piece_environment": {
+              "state": "INSUFFICIENT_EVIDENCE",
+              "label": "set-piece environment",
+              "reason": "UNDERSTAT_TEAM_SET_PIECE_SPLIT_NOT_PRESENT_IN_GOVERNED_SNAPSHOT"
+            }
+          },
+          "supporting_signals": [],
+          "conflicting_signals": [
+            "finishing_environment"
+          ],
+          "uncertainty": {
+            "small_sample": true,
+            "player_recent_form_missing": true,
+            "game_state_adjustment": "INSUFFICIENT_EVIDENCE",
+            "red_card_adjustment": "INSUFFICIENT_EVIDENCE"
+          }
+        }
+      }
+    ],
+    "false_precision_forbidden": true,
+    "understat_close_call_swaps": [],
+    "understat_xmins_guarded": true,
+    "understat_direct_xpts_mutation": false,
+    "understat_direct_xmins_mutation": false
+  },
+  "optimizer_proposal": {
+    "formation": "4-3-3",
+    "xi_xpts": 46.69,
+    "starting_ids": [
+      109,
+      88,
+      115,
+      8,
+      279,
+      426,
+      40,
+      565,
+      411,
+      165,
+      346
+    ],
+    "captain": 426,
+    "vice_captain": 411
+  },
+  "manual_draft": null,
+  "governance": {
+    "manual_draft_available": false,
+    "decision": "OPTIMIZER_ONLY",
+    "captain_decision": "OPTIMIZER"
+  },
+  "understat_tactical": {
+    "health": "AVAILABLE",
+    "close_call_only": true,
+    "xmins_guarded": true,
+    "direct_xpts_mutation": false,
+    "direct_xmins_mutation": false,
+    "captaincy_semantics_unchanged": true
+  },
+  "chip_context": {
+    "active_chip": "NONE",
+    "other_chip_recommendation": "UNASSESSED",
+    "single_chip_rule_respected": true
+  },
+  "guardrails": {
+    "legal_formation": true,
+    "all_legal_formations_evaluated": true,
+    "formation_close_call_can_be_open": true,
+    "gk_near_tie_risk_adjusted": true,
+    "bench_false_precision_forbidden": true,
+    "captain_reason_decomposed": true,
+    "attacker_defender_vice_compared": true,
+    "one_gk_in_xi": true,
+    "captain_in_xi": true,
+    "vice_in_xi": true,
+    "bench_has_one_gk_three_outfield": true,
+    "manual_draft_not_overwritten_without_margin": true,
+    "prediction_interval_robustness": true,
+    "understat_only_breaks_governed_close_calls": true,
+    "understat_missing_is_neutral": true,
+    "understat_cannot_erase_xmins": true,
+    "understat_no_direct_xpts_mutation": true,
+    "understat_no_direct_xmins_mutation": true,
+    "optimizer_legal_formation_width_unchanged": true
+  }
+}

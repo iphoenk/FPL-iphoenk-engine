@@ -1,0 +1,75 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-09-04T16:33:42.451847+00:00",
+  "quick_serving": {
+    "actual_ms": 0.302,
+    "target_ms": 1000.0,
+    "status": "PASS"
+  },
+  "warm_serving": {
+    "runs": 25,
+    "median_ms": 0.207,
+    "p95_ms": 0.238,
+    "target_p95_ms": 1000.0,
+    "status": "PASS",
+    "production_sized_materialized_inputs": true,
+    "decision_semantics_recomputed": false
+  },
+  "deep_review": {
+    "actual_ms": null,
+    "source": "service_orchestration_v4.total_wall_ms",
+    "status": "UNAVAILABLE"
+  },
+  "match_mode_refresh": {
+    "actual_ms": null,
+    "source": "raw_snapshot.duration_ms",
+    "status": "NOT_CURRENT_MODE"
+  },
+  "deadline_day_refresh": {
+    "actual_ms": null,
+    "source": "raw_snapshot.duration_ms",
+    "status": "NOT_CURRENT_MODE"
+  },
+  "long_term_quick_serving_sub1s_target_preserved": true,
+  "volatile_official_facts_must_not_be_cached_past_freshness_threshold": true,
+  "runtime_publish_at": "2026-09-04T16:33:54.478937+00:00",
+  "publication_source_age_minutes": 0.37,
+  "runtime_provenance": {
+    "canonical_source_sha": "810fb648fa6a560712f06e18441fabc73e884f16",
+    "workflow_run_id": 33895716023,
+    "workflow_run_attempt": 1,
+    "workflow": "FPL iphoenk V4 production scheduler",
+    "event": "schedule",
+    "actor": "iphoenk",
+    "repository": "iphoenk/FPL-iphoenk-engine",
+    "runtime_branch": "runtime-data-v4",
+    "schema_version": 2,
+    "contract": "V4_RUNTIME_PROVENANCE_V1",
+    "runtime_publish_at": "2026-09-04T16:33:54.478937+00:00",
+    "snapshot_sha256": "4901f9f06d57b8e7be29aaff183ed94fe4f5a9f9fac0f2d8438d90d7a0c6bd09",
+    "checkpoint": {
+      "snapshot_role": "PRIMARY_FALLBACK_CURRENT_CHECKPOINT",
+      "target_checkpoint": "2026-09-04T16:30:00+00:00",
+      "target_checkpoint_local": "2026-09-04T23:30:00+07:00",
+      "target_visible_mode": "DYNAMIC_CHECKPOINT",
+      "precomputed": false,
+      "generated_before_or_at_target": false,
+      "materialization_complete": true,
+      "publication_proof": "PRESENCE_ON_RUNTIME_BRANCH",
+      "schedule_expression": "30 * * * *",
+      "timezone_authority": "Asia/Jakarta"
+    }
+  },
+  "runtime_checkpoint": {
+    "snapshot_role": "PRIMARY_FALLBACK_CURRENT_CHECKPOINT",
+    "target_checkpoint": "2026-09-04T16:30:00+00:00",
+    "target_checkpoint_local": "2026-09-04T23:30:00+07:00",
+    "target_visible_mode": "DYNAMIC_CHECKPOINT",
+    "precomputed": false,
+    "generated_before_or_at_target": false,
+    "materialization_complete": true,
+    "publication_proof": "PRESENCE_ON_RUNTIME_BRANCH",
+    "schedule_expression": "30 * * * *",
+    "timezone_authority": "Asia/Jakarta"
+  }
+}

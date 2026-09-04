@@ -1,0 +1,367 @@
+{
+  "generated_at": "2026-09-04T16:33:36.354079+00:00",
+  "team_id": 3462711,
+  "squad_authority": "USER_CAPTURE_PREDEADLINE",
+  "projection_baseline": {
+    "authority_model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
+    "public_official_role": "UNIVERSAL_FACTUAL_BACKBONE",
+    "user_capture_role": "PRIVATE_PREDEADLINE_OVERRIDE",
+    "authenticated_official_role": "OPTIONAL_PRIVATE_ENRICHMENT",
+    "authenticated_official_production_blocking": false,
+    "planning_gw": 3,
+    "baseline_gw": 2,
+    "default_rule": "PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD",
+    "default_authority": "OFFICIAL_SUBMITTED",
+    "override_requested": true,
+    "override_target_gw": 3,
+    "override_applied": true,
+    "effective_authority": "USER_CAPTURE_PREDEADLINE",
+    "authority_source": "USER_CONFIRMED_SCREENSHOT_GW3_TRANSFER",
+    "stale_override_rejected": false
+  },
+  "squad": [
+    {
+      "element": 572,
+      "name": "Tzolakis",
+      "team_id": 11,
+      "position": "GK",
+      "purchase_cost": 45,
+      "source": "user_capture_element_id"
+    },
+    {
+      "element": 109,
+      "name": "Verbruggen",
+      "team_id": 5,
+      "position": "GK",
+      "purchase_cost": 45,
+      "source": "user_capture_element_id"
+    },
+    {
+      "element": 115,
+      "name": "De Cuyper",
+      "team_id": 5,
+      "position": "DEF",
+      "purchase_cost": 45,
+      "source": "user_capture_element_id"
+    },
+    {
+      "element": 8,
+      "name": "Calafiori",
+      "team_id": 1,
+      "position": "DEF",
+      "purchase_cost": 55,
+      "source": "user_capture_element_id"
+    },
+    {
+      "element": 88,
+      "name": "Kayode",
+      "team_id": 4,
+      "position": "DEF",
+      "purchase_cost": 45,
+      "source": "user_capture_element_id"
+    },
+    {
+      "element": 254,
+      "name": "Robinson",
+      "team_id": 10,
+      "position": "DEF",
+      "purchase_cost": 45,
+      "source": "user_capture_element_id"
+    },
+    {
+      "element": 279,
+      "name": "Ajayi",
+      "team_id": 11,
+      "position": "DEF",
+      "purchase_cost": 40,
+      "source": "user_capture_element_id"
+    },
+    {
+      "element": 426,
+      "name": "B.Fernandes",
+      "team_id": 16,
+      "position": "MID",
+      "purchase_cost": 120,
+      "source": "user_capture_element_id"
+    },
+    {
+      "element": 15,
+      "name": "Ødegaard",
+      "team_id": 1,
+      "position": "MID",
+      "purchase_cost": 65,
+      "source": "user_capture_element_id"
+    },
+    {
+      "element": 557,
+      "name": "Tzolis",
+      "team_id": 1,
+      "position": "MID",
+      "purchase_cost": 65,
+      "source": "user_capture_element_id"
+    },
+    {
+      "element": 40,
+      "name": "Rogers",
+      "team_id": 6,
+      "position": "MID",
+      "purchase_cost": 75,
+      "source": "user_capture_element_id"
+    },
+    {
+      "element": 565,
+      "name": "M.Sangaré",
+      "team_id": 4,
+      "position": "MID",
+      "purchase_cost": 55,
+      "source": "user_capture_element_id"
+    },
+    {
+      "element": 411,
+      "name": "Haaland",
+      "team_id": 15,
+      "position": "FWD",
+      "purchase_cost": 155,
+      "source": "user_capture_element_id"
+    },
+    {
+      "element": 165,
+      "name": "João Pedro",
+      "team_id": 6,
+      "position": "FWD",
+      "purchase_cost": 75,
+      "source": "user_capture_element_id"
+    },
+    {
+      "element": 346,
+      "name": "Calvert-Lewin",
+      "team_id": 13,
+      "position": "FWD",
+      "purchase_cost": 60,
+      "source": "user_capture_element_id"
+    }
+  ],
+  "team_value_ledger": [
+    {
+      "element": 572,
+      "name": "Tzolakis",
+      "team": "Hull City",
+      "team_id": 11,
+      "position": "GK",
+      "purchase_cost": 45,
+      "now_cost": 46,
+      "sell_cost": 45,
+      "purchase_source": "user_capture_element_id",
+      "ownership": "8.1",
+      "status": "a"
+    },
+    {
+      "element": 109,
+      "name": "Verbruggen",
+      "team": "Brighton",
+      "team_id": 5,
+      "position": "GK",
+      "purchase_cost": 45,
+      "now_cost": 45,
+      "sell_cost": 45,
+      "purchase_source": "user_capture_element_id",
+      "ownership": "21.9",
+      "status": "a"
+    },
+    {
+      "element": 115,
+      "name": "De Cuyper",
+      "team": "Brighton",
+      "team_id": 5,
+      "position": "DEF",
+      "purchase_cost": 45,
+      "now_cost": 47,
+      "sell_cost": 46,
+      "purchase_source": "user_capture_element_id",
+      "ownership": "18.3",
+      "status": "a"
+    },
+    {
+      "element": 8,
+      "name": "Calafiori",
+      "team": "Arsenal",
+      "team_id": 1,
+      "position": "DEF",
+      "purchase_cost": 55,
+      "now_cost": 57,
+      "sell_cost": 56,
+      "purchase_source": "user_capture_element_id",
+      "ownership": "44.5",
+      "status": "a"
+    },
+    {
+      "element": 88,
+      "name": "Kayode",
+      "team": "Brentford",
+      "team_id": 4,
+      "position": "DEF",
+      "purchase_cost": 45,
+      "now_cost": 46,
+      "sell_cost": 45,
+      "purchase_source": "user_capture_element_id",
+      "ownership": "9.9",
+      "status": "a"
+    },
+    {
+      "element": 254,
+      "name": "Robinson",
+      "team": "Fulham",
+      "team_id": 10,
+      "position": "DEF",
+      "purchase_cost": 45,
+      "now_cost": 45,
+      "sell_cost": 45,
+      "purchase_source": "user_capture_element_id",
+      "ownership": "1.6",
+      "status": "a"
+    },
+    {
+      "element": 279,
+      "name": "Ajayi",
+      "team": "Hull City",
+      "team_id": 11,
+      "position": "DEF",
+      "purchase_cost": 40,
+      "now_cost": 41,
+      "sell_cost": 40,
+      "purchase_source": "user_capture_element_id",
+      "ownership": "9.9",
+      "status": "a"
+    },
+    {
+      "element": 426,
+      "name": "B.Fernandes",
+      "team": "Man Utd",
+      "team_id": 16,
+      "position": "MID",
+      "purchase_cost": 120,
+      "now_cost": 120,
+      "sell_cost": 120,
+      "purchase_source": "user_capture_element_id",
+      "ownership": "48.4",
+      "status": "a"
+    },
+    {
+      "element": 15,
+      "name": "Ødegaard",
+      "team": "Arsenal",
+      "team_id": 1,
+      "position": "MID",
+      "purchase_cost": 65,
+      "now_cost": 66,
+      "sell_cost": 65,
+      "purchase_source": "user_capture_element_id",
+      "ownership": "10.9",
+      "status": "a"
+    },
+    {
+      "element": 557,
+      "name": "Tzolis",
+      "team": "Arsenal",
+      "team_id": 1,
+      "position": "MID",
+      "purchase_cost": 65,
+      "now_cost": 65,
+      "sell_cost": 65,
+      "purchase_source": "user_capture_element_id",
+      "ownership": "18.8",
+      "status": "a"
+    },
+    {
+      "element": 40,
+      "name": "Rogers",
+      "team": "Chelsea",
+      "team_id": 6,
+      "position": "MID",
+      "purchase_cost": 75,
+      "now_cost": 75,
+      "sell_cost": 75,
+      "purchase_source": "user_capture_element_id",
+      "ownership": "23.9",
+      "status": "a"
+    },
+    {
+      "element": 565,
+      "name": "M.Sangaré",
+      "team": "Brentford",
+      "team_id": 4,
+      "position": "MID",
+      "purchase_cost": 55,
+      "now_cost": 57,
+      "sell_cost": 56,
+      "purchase_source": "user_capture_element_id",
+      "ownership": "15.3",
+      "status": "a"
+    },
+    {
+      "element": 411,
+      "name": "Haaland",
+      "team": "Man City",
+      "team_id": 15,
+      "position": "FWD",
+      "purchase_cost": 155,
+      "now_cost": 155,
+      "sell_cost": 155,
+      "purchase_source": "user_capture_element_id",
+      "ownership": "72.4",
+      "status": "a"
+    },
+    {
+      "element": 165,
+      "name": "João Pedro",
+      "team": "Chelsea",
+      "team_id": 6,
+      "position": "FWD",
+      "purchase_cost": 75,
+      "now_cost": 77,
+      "sell_cost": 76,
+      "purchase_source": "user_capture_element_id",
+      "ownership": "69.1",
+      "status": "a"
+    },
+    {
+      "element": 346,
+      "name": "Calvert-Lewin",
+      "team": "Leeds",
+      "team_id": 13,
+      "position": "FWD",
+      "purchase_cost": 60,
+      "now_cost": 60,
+      "sell_cost": 60,
+      "purchase_source": "user_capture_element_id",
+      "ownership": "25.3",
+      "status": "a"
+    }
+  ],
+  "totals": {
+    "squad_market_value": 1002,
+    "itb": 10,
+    "total_market_funds": 1012,
+    "squad_sell_value": 994,
+    "transferable_funds": 1004,
+    "unit": "tenths_gbp_million",
+    "market_value": 1002,
+    "sell_value": 994
+  },
+  "chip_summary": {
+    "submitted_gw": 2,
+    "submitted_chip": "WILDCARD",
+    "submitted_chip_source": "official_fpl_picks.active_chip",
+    "chip_used_this_submitted_gw": true,
+    "historical_used_chips": [
+      "BBOOST",
+      "WILDCARD"
+    ],
+    "planning_gw": 3,
+    "planning_chip": "NONE",
+    "planning_chip_source": "decision_pipeline_default_until_explicit_user_plan",
+    "phase_semantics": "submitted_chip_is_historical_truth_after_deadline; planning_chip_is_future_decision_state"
+  },
+  "free_transfers": null,
+  "free_transfer_source": "AUTHENTICATED_MY_TEAM_REQUIRED_NOT_AVAILABLE_IN_PUBLIC_SNAPSHOT"
+}

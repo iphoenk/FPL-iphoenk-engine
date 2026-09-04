@@ -1,0 +1,8 @@
+{
+  "source": "FPL-Core-Insights",
+  "season": "2026-2027",
+  "gw": 1,
+  "fetched_at": "2026-08-25T11:26:35.059939+00:00",
+  "schema_valid": false,
+  "error": "HTTPError: 404 Client Error: Not Found for url: https://raw.githubusercontent.com/olbauday/FPL-Core-Insights/main/data/2026-2027/players/gw1.csv"
+}

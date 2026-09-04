@@ -1,0 +1,673 @@
+{
+  "schema_version": 492,
+  "engine": "v4.9.2-wc-optimizer-truthful-health-exact-streaming",
+  "wildcard_active": false,
+  "budget_tenths": 1004,
+  "baseline_itb_tenths": 10,
+  "affordability": {
+    "price_basis": "owned_sell_cost_unowned_now_cost",
+    "owned_players": 15,
+    "owned_sell_value_tenths": 994,
+    "bank_tenths": 10,
+    "available_budget_tenths": 1004,
+    "ledger": [
+      {
+        "element": 572,
+        "purchase_cost": 45,
+        "now_cost": 46,
+        "sell_cost": 45,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 109,
+        "purchase_cost": 45,
+        "now_cost": 45,
+        "sell_cost": 45,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 115,
+        "purchase_cost": 45,
+        "now_cost": 47,
+        "sell_cost": 46,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 8,
+        "purchase_cost": 55,
+        "now_cost": 57,
+        "sell_cost": 56,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 88,
+        "purchase_cost": 45,
+        "now_cost": 46,
+        "sell_cost": 45,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 254,
+        "purchase_cost": 45,
+        "now_cost": 45,
+        "sell_cost": 45,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 279,
+        "purchase_cost": 40,
+        "now_cost": 41,
+        "sell_cost": 40,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 426,
+        "purchase_cost": 120,
+        "now_cost": 120,
+        "sell_cost": 120,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 15,
+        "purchase_cost": 65,
+        "now_cost": 66,
+        "sell_cost": 65,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 557,
+        "purchase_cost": 65,
+        "now_cost": 65,
+        "sell_cost": 65,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 40,
+        "purchase_cost": 75,
+        "now_cost": 75,
+        "sell_cost": 75,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 565,
+        "purchase_cost": 55,
+        "now_cost": 57,
+        "sell_cost": 56,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 411,
+        "purchase_cost": 155,
+        "now_cost": 155,
+        "sell_cost": 155,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 165,
+        "purchase_cost": 75,
+        "now_cost": 77,
+        "sell_cost": 76,
+        "source": "official_or_locked_selling_price"
+      },
+      {
+        "element": 346,
+        "purchase_cost": 60,
+        "now_cost": 60,
+        "sell_cost": 60,
+        "source": "official_or_locked_selling_price"
+      }
+    ],
+    "fail_closed_on_missing_purchase_price": true
+  },
+  "screened_players": 552,
+  "current": {
+    "cost": 994,
+    "objective": 58.2637,
+    "squad_xpts_3": 172.78,
+    "squad_xpts_5": 288.38,
+    "squad_xpts_10": 576.68,
+    "squad_xpts_15": 864.61,
+    "best_xi_xpts_5": 232.04,
+    "bench_adjusted_utility_5": 238.8,
+    "best_xi_by_gw": [
+      {
+        "gw_offset": 1,
+        "xpts": 46.69,
+        "elements": [
+          109,
+          88,
+          115,
+          8,
+          279,
+          426,
+          40,
+          565,
+          411,
+          165,
+          346
+        ]
+      },
+      {
+        "gw_offset": 2,
+        "xpts": 46.69,
+        "elements": [
+          109,
+          88,
+          8,
+          115,
+          426,
+          40,
+          565,
+          557,
+          411,
+          165,
+          346
+        ]
+      },
+      {
+        "gw_offset": 3,
+        "xpts": 46.19,
+        "elements": [
+          109,
+          88,
+          8,
+          115,
+          426,
+          40,
+          565,
+          557,
+          411,
+          165,
+          346
+        ]
+      },
+      {
+        "gw_offset": 4,
+        "xpts": 45.93,
+        "elements": [
+          109,
+          8,
+          88,
+          115,
+          426,
+          40,
+          565,
+          557,
+          411,
+          165,
+          346
+        ]
+      },
+      {
+        "gw_offset": 5,
+        "xpts": 46.54,
+        "elements": [
+          109,
+          88,
+          8,
+          115,
+          254,
+          426,
+          40,
+          565,
+          411,
+          165,
+          346
+        ]
+      }
+    ]
+  },
+  "optimized": {
+    "cost": 1001,
+    "objective": 69.9586,
+    "squad_xpts_3": 208.46,
+    "squad_xpts_5": 345.92,
+    "squad_xpts_10": 691.67,
+    "squad_xpts_15": 1039.49,
+    "best_xi_xpts_5": 273.44,
+    "bench_adjusted_utility_5": 282.14,
+    "best_xi_by_gw": [
+      {
+        "gw_offset": 1,
+        "xpts": 55.45,
+        "elements": [
+          384,
+          84,
+          388,
+          88,
+          426,
+          427,
+          398,
+          480,
+          154,
+          106,
+          165
+        ]
+      },
+      {
+        "gw_offset": 2,
+        "xpts": 53.58,
+        "elements": [
+          384,
+          204,
+          84,
+          88,
+          426,
+          427,
+          154,
+          480,
+          165,
+          106,
+          249
+        ]
+      },
+      {
+        "gw_offset": 3,
+        "xpts": 55.46,
+        "elements": [
+          384,
+          388,
+          84,
+          88,
+          426,
+          427,
+          480,
+          398,
+          154,
+          106,
+          249
+        ]
+      },
+      {
+        "gw_offset": 4,
+        "xpts": 54.22,
+        "elements": [
+          384,
+          305,
+          204,
+          84,
+          426,
+          427,
+          154,
+          480,
+          165,
+          106,
+          249
+        ]
+      },
+      {
+        "gw_offset": 5,
+        "xpts": 54.73,
+        "elements": [
+          384,
+          388,
+          84,
+          88,
+          426,
+          427,
+          398,
+          154,
+          480,
+          106,
+          165
+        ]
+      }
+    ],
+    "itb": 3
+  },
+  "delta": {
+    "best_xi_xpts_5": 41.4,
+    "bench_adjusted_utility_5": 43.34
+  },
+  "classification": "MATERIAL_UPGRADE",
+  "out": [
+    {
+      "element": 279,
+      "name": "Ajayi",
+      "position": "DEF",
+      "sell_cost": 40
+    },
+    {
+      "element": 8,
+      "name": "Calafiori",
+      "position": "DEF",
+      "sell_cost": 56
+    },
+    {
+      "element": 115,
+      "name": "De Cuyper",
+      "position": "DEF",
+      "sell_cost": 46
+    },
+    {
+      "element": 254,
+      "name": "Robinson",
+      "position": "DEF",
+      "sell_cost": 45
+    },
+    {
+      "element": 346,
+      "name": "Calvert-Lewin",
+      "position": "FWD",
+      "sell_cost": 60
+    },
+    {
+      "element": 411,
+      "name": "Haaland",
+      "position": "FWD",
+      "sell_cost": 155
+    },
+    {
+      "element": 572,
+      "name": "Tzolakis",
+      "position": "GK",
+      "sell_cost": 45
+    },
+    {
+      "element": 109,
+      "name": "Verbruggen",
+      "position": "GK",
+      "sell_cost": 45
+    },
+    {
+      "element": 565,
+      "name": "M.Sangaré",
+      "position": "MID",
+      "sell_cost": 56
+    },
+    {
+      "element": 40,
+      "name": "Rogers",
+      "position": "MID",
+      "sell_cost": 75
+    },
+    {
+      "element": 557,
+      "name": "Tzolis",
+      "position": "MID",
+      "sell_cost": 65
+    },
+    {
+      "element": 15,
+      "name": "Ødegaard",
+      "position": "MID",
+      "sell_cost": 65
+    }
+  ],
+  "in": [
+    {
+      "element": 84,
+      "name": "Collins",
+      "position": "DEF",
+      "now_cost": 55
+    },
+    {
+      "element": 305,
+      "name": "Davis",
+      "position": "DEF",
+      "now_cost": 40
+    },
+    {
+      "element": 388,
+      "name": "Guéhi",
+      "position": "DEF",
+      "now_cost": 60
+    },
+    {
+      "element": 204,
+      "name": "Mitchell",
+      "position": "DEF",
+      "now_cost": 45
+    },
+    {
+      "element": 249,
+      "name": "Barry",
+      "position": "FWD",
+      "now_cost": 55
+    },
+    {
+      "element": 106,
+      "name": "Thiago",
+      "position": "FWD",
+      "now_cost": 80
+    },
+    {
+      "element": 384,
+      "name": "Donnarumma",
+      "position": "GK",
+      "now_cost": 55
+    },
+    {
+      "element": 57,
+      "name": "Petrović",
+      "position": "GK",
+      "now_cost": 45
+    },
+    {
+      "element": 398,
+      "name": "Foden",
+      "position": "MID",
+      "now_cost": 70
+    },
+    {
+      "element": 480,
+      "name": "Gibbs-White",
+      "position": "MID",
+      "now_cost": 79
+    },
+    {
+      "element": 427,
+      "name": "Mbeumo",
+      "position": "MID",
+      "now_cost": 80
+    },
+    {
+      "element": 154,
+      "name": "Palmer",
+      "position": "MID",
+      "now_cost": 96
+    }
+  ],
+  "optimized_elements": [
+    384,
+    57,
+    84,
+    388,
+    204,
+    88,
+    305,
+    426,
+    427,
+    154,
+    480,
+    398,
+    106,
+    165,
+    249
+  ],
+  "direct_challengers": [
+    {
+      "owned": 572,
+      "owned_name": "Tzolakis",
+      "challenger": 384,
+      "challenger_name": "Donnarumma",
+      "position": "GK",
+      "cost_delta": 10,
+      "objective_delta": 2.2266,
+      "xpts5_delta": 11.14
+    },
+    {
+      "owned": 40,
+      "owned_name": "Rogers",
+      "challenger": 427,
+      "challenger_name": "Mbeumo",
+      "position": "MID",
+      "cost_delta": 5,
+      "objective_delta": 1.9882,
+      "xpts5_delta": 10.0
+    },
+    {
+      "owned": 15,
+      "owned_name": "Ødegaard",
+      "challenger": 398,
+      "challenger_name": "Foden",
+      "position": "MID",
+      "cost_delta": 5,
+      "objective_delta": 1.9285,
+      "xpts5_delta": 9.6
+    },
+    {
+      "owned": 109,
+      "owned_name": "Verbruggen",
+      "challenger": 384,
+      "challenger_name": "Donnarumma",
+      "position": "GK",
+      "cost_delta": 10,
+      "objective_delta": 1.9103,
+      "xpts5_delta": 9.59
+    },
+    {
+      "owned": 557,
+      "owned_name": "Tzolis",
+      "challenger": 398,
+      "challenger_name": "Foden",
+      "position": "MID",
+      "cost_delta": 5,
+      "objective_delta": 1.8226,
+      "xpts5_delta": 9.08
+    },
+    {
+      "owned": 254,
+      "owned_name": "Robinson",
+      "challenger": 84,
+      "challenger_name": "Collins",
+      "position": "DEF",
+      "cost_delta": 10,
+      "objective_delta": 1.2797,
+      "xpts5_delta": 6.0
+    },
+    {
+      "owned": 279,
+      "owned_name": "Ajayi",
+      "challenger": 445,
+      "challenger_name": "Thiaw",
+      "position": "DEF",
+      "cost_delta": 10,
+      "objective_delta": 1.0074,
+      "xpts5_delta": 5.09
+    },
+    {
+      "owned": 565,
+      "owned_name": "M.Sangaré",
+      "challenger": 94,
+      "challenger_name": "Schade",
+      "position": "MID",
+      "cost_delta": 4,
+      "objective_delta": 0.9159,
+      "xpts5_delta": 4.5
+    },
+    {
+      "owned": 115,
+      "owned_name": "De Cuyper",
+      "challenger": 84,
+      "challenger_name": "Collins",
+      "position": "DEF",
+      "cost_delta": 9,
+      "objective_delta": 0.8393,
+      "xpts5_delta": 3.96
+    },
+    {
+      "owned": 8,
+      "owned_name": "Calafiori",
+      "challenger": 84,
+      "challenger_name": "Collins",
+      "position": "DEF",
+      "cost_delta": -1,
+      "objective_delta": 0.6605,
+      "xpts5_delta": 2.94
+    },
+    {
+      "owned": 88,
+      "owned_name": "Kayode",
+      "challenger": 84,
+      "challenger_name": "Collins",
+      "position": "DEF",
+      "cost_delta": 10,
+      "objective_delta": 0.3382,
+      "xpts5_delta": 1.71
+    },
+    {
+      "owned": 165,
+      "owned_name": "João Pedro",
+      "challenger": 106,
+      "challenger_name": "Thiago",
+      "position": "FWD",
+      "cost_delta": 4,
+      "objective_delta": 0.2312,
+      "xpts5_delta": 0.93
+    },
+    {
+      "owned": 346,
+      "owned_name": "Calvert-Lewin",
+      "challenger": 249,
+      "challenger_name": "Barry",
+      "position": "FWD",
+      "cost_delta": -5,
+      "objective_delta": 0.158,
+      "xpts5_delta": 1.04
+    },
+    {
+      "owned": 411,
+      "owned_name": "Haaland",
+      "challenger": 106,
+      "challenger_name": "Thiago",
+      "position": "FWD",
+      "cost_delta": -75,
+      "objective_delta": -1.0473,
+      "xpts5_delta": -5.71
+    },
+    {
+      "owned": 426,
+      "owned_name": "B.Fernandes",
+      "challenger": 427,
+      "challenger_name": "Mbeumo",
+      "position": "MID",
+      "cost_delta": -40,
+      "objective_delta": -1.8197,
+      "xpts5_delta": -9.25
+    }
+  ],
+  "hard_constraints": {
+    "squad_size": 15,
+    "positions": {
+      "GK": 2,
+      "DEF": 5,
+      "MID": 5,
+      "FWD": 3
+    },
+    "budget_tenths": 1004,
+    "max_per_club": 3,
+    "legal_xi": true,
+    "owned_price_basis": "sell_cost",
+    "unowned_price_basis": "now_cost"
+  },
+  "performance": {
+    "fast_finalist_scoring": true,
+    "winner_only_legality_check": true,
+    "packed_club_signature": true,
+    "counter_copy_eliminated": true,
+    "precomputed_club_bits": true,
+    "bounded_top_k_same_beam": true,
+    "exact_streaming_topk": true,
+    "stable_tie_semantics": true,
+    "safe_objective_bound": true,
+    "fixed_position_finalist_scoring": true,
+    "finalist_materialization_removed": true,
+    "generated_states": 204656,
+    "objective_bound_pruned": 1731930,
+    "beam_size_unchanged": true,
+    "direct_challenger_position_index": true,
+    "value_term_consumed": true,
+    "search_quality_reduction": false
+  }
+}

@@ -1,0 +1,534 @@
+{
+  "schema_version": 494,
+  "engine": "v4.9.4-personal-gw-scorecard",
+  "generated_at": "2026-09-04T16:33:41.892828+00:00",
+  "status": "PASS",
+  "team_id": 3462711,
+  "phase": {
+    "current_gw": 2,
+    "next_gw": 3,
+    "last_finished_gw": 2,
+    "last_finished_gw_source": "BOOTSTRAP_EVENT_FINISHED",
+    "bootstrap_last_finished_gw": 2,
+    "fixture_finalized_current_gw": false,
+    "fixture_finality_candidate_count": 10,
+    "planning_gw": 3,
+    "submitted_gw": 2,
+    "scoring_gw": 2,
+    "deadline_time": "2026-09-04T17:30:00Z",
+    "current_deadline_time": "2026-08-28T17:30:00Z",
+    "post_deadline_reconciliation": false,
+    "match_day_active": false,
+    "match_day_fixture_count": 0,
+    "match_day_fixture_ids": [],
+    "match_day_timezone": "Asia/Jakarta",
+    "active_live_fixture_count": 0,
+    "active_live_fixture_ids": [],
+    "is_live_match": false,
+    "is_live_event": false
+  },
+  "snapshot_sha256": "4901f9f06d57b8e7be29aaff183ed94fe4f5a9f9fac0f2d8438d90d7a0c6bd09",
+  "effective_plan_sha256": "ce01e6749fd559226bcda352c1a65a92fcae066ec59473d3ed09282603a3ee96",
+  "previous_gw": {
+    "schema_version": 494,
+    "engine": "v4.9.4-personal-gw-result",
+    "status": "FINAL",
+    "gw": 2,
+    "captured_at": "2026-09-01T14:52:08.477636+00:00",
+    "team_id": 3462711,
+    "chip": "WILDCARD",
+    "chip_short": "WC",
+    "gross_points": 93,
+    "hit": 0,
+    "net_points": 93,
+    "official_points": 93,
+    "official_points_match": true,
+    "bench_raw_points": 6,
+    "bench_counted_points": 0,
+    "captain": {
+      "element": 165,
+      "name": "João Pedro",
+      "team": "Chelsea",
+      "position": "FWD",
+      "pick_position": 10,
+      "bench": false,
+      "multiplier": 2,
+      "captain": true,
+      "vice_captain": false,
+      "raw_points": 9,
+      "counted_points": 18,
+      "minutes": 90
+    },
+    "vice_captain": {
+      "element": 411,
+      "name": "Haaland",
+      "team": "Man City",
+      "position": "FWD",
+      "pick_position": 9,
+      "bench": false,
+      "multiplier": 1,
+      "captain": false,
+      "vice_captain": true,
+      "raw_points": 13,
+      "counted_points": 13,
+      "minutes": 90
+    },
+    "players": [
+      {
+        "element": 572,
+        "name": "Tzolakis",
+        "team": "Hull City",
+        "position": "GK",
+        "pick_position": 1,
+        "bench": false,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false,
+        "raw_points": 10,
+        "counted_points": 10,
+        "minutes": 90
+      },
+      {
+        "element": 115,
+        "name": "De Cuyper",
+        "team": "Brighton",
+        "position": "DEF",
+        "pick_position": 2,
+        "bench": false,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false,
+        "raw_points": 0,
+        "counted_points": 0,
+        "minutes": 90
+      },
+      {
+        "element": 8,
+        "name": "Calafiori",
+        "team": "Arsenal",
+        "position": "DEF",
+        "pick_position": 3,
+        "bench": false,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false,
+        "raw_points": 11,
+        "counted_points": 11,
+        "minutes": 90
+      },
+      {
+        "element": 88,
+        "name": "Kayode",
+        "team": "Brentford",
+        "position": "DEF",
+        "pick_position": 4,
+        "bench": false,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false,
+        "raw_points": 2,
+        "counted_points": 2,
+        "minutes": 87
+      },
+      {
+        "element": 426,
+        "name": "B.Fernandes",
+        "team": "Man Utd",
+        "position": "MID",
+        "pick_position": 5,
+        "bench": false,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false,
+        "raw_points": 23,
+        "counted_points": 23,
+        "minutes": 90
+      },
+      {
+        "element": 15,
+        "name": "Ødegaard",
+        "team": "Arsenal",
+        "position": "MID",
+        "pick_position": 6,
+        "bench": false,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false,
+        "raw_points": 3,
+        "counted_points": 3,
+        "minutes": 70
+      },
+      {
+        "element": 557,
+        "name": "Tzolis",
+        "team": "Arsenal",
+        "position": "MID",
+        "pick_position": 7,
+        "bench": false,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false,
+        "raw_points": 0,
+        "counted_points": 0,
+        "minutes": 45
+      },
+      {
+        "element": 40,
+        "name": "Rogers",
+        "team": "Chelsea",
+        "position": "MID",
+        "pick_position": 8,
+        "bench": false,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false,
+        "raw_points": 5,
+        "counted_points": 5,
+        "minutes": 90
+      },
+      {
+        "element": 411,
+        "name": "Haaland",
+        "team": "Man City",
+        "position": "FWD",
+        "pick_position": 9,
+        "bench": false,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": true,
+        "raw_points": 13,
+        "counted_points": 13,
+        "minutes": 90
+      },
+      {
+        "element": 165,
+        "name": "João Pedro",
+        "team": "Chelsea",
+        "position": "FWD",
+        "pick_position": 10,
+        "bench": false,
+        "multiplier": 2,
+        "captain": true,
+        "vice_captain": false,
+        "raw_points": 9,
+        "counted_points": 18,
+        "minutes": 90
+      },
+      {
+        "element": 346,
+        "name": "Calvert-Lewin",
+        "team": "Leeds",
+        "position": "FWD",
+        "pick_position": 11,
+        "bench": false,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false,
+        "raw_points": 8,
+        "counted_points": 8,
+        "minutes": 90
+      },
+      {
+        "element": 109,
+        "name": "Verbruggen",
+        "team": "Brighton",
+        "position": "GK",
+        "pick_position": 12,
+        "bench": true,
+        "multiplier": 0,
+        "captain": false,
+        "vice_captain": false,
+        "raw_points": 0,
+        "counted_points": 0,
+        "minutes": 90
+      },
+      {
+        "element": 565,
+        "name": "M.Sangaré",
+        "team": "Brentford",
+        "position": "MID",
+        "pick_position": 13,
+        "bench": true,
+        "multiplier": 0,
+        "captain": false,
+        "vice_captain": false,
+        "raw_points": 4,
+        "counted_points": 0,
+        "minutes": 90
+      },
+      {
+        "element": 254,
+        "name": "Robinson",
+        "team": "Fulham",
+        "position": "DEF",
+        "pick_position": 14,
+        "bench": true,
+        "multiplier": 0,
+        "captain": false,
+        "vice_captain": false,
+        "raw_points": 2,
+        "counted_points": 0,
+        "minutes": 90
+      },
+      {
+        "element": 473,
+        "name": "Aina",
+        "team": "Nott'm Forest",
+        "position": "DEF",
+        "pick_position": 15,
+        "bench": true,
+        "multiplier": 0,
+        "captain": false,
+        "vice_captain": false,
+        "raw_points": 0,
+        "counted_points": 0,
+        "minutes": 85
+      }
+    ],
+    "official_history": {
+      "overall_rank": 783760,
+      "event_rank": 2578047,
+      "points_on_bench": 6,
+      "team_value": 1006,
+      "bank": 5
+    },
+    "source": "raw_snapshot.official.picks_plus_event_live_plus_history",
+    "guardrails": {
+      "official_api_refetch": false,
+      "finished_event_required": true,
+      "multiplier_aware": true,
+      "hit_deducted_from_gross": true
+    }
+  },
+  "planning_gw": {
+    "status": "PROJECTION",
+    "gw": 3,
+    "decision_authority": "ENGINE_RECOMMENDATION",
+    "formation": "4-3-3",
+    "xi_xpts": 46.69,
+    "captain": {
+      "element": 426,
+      "name": "B.Fernandes",
+      "xpts": 7.675,
+      "multiplier": 2
+    },
+    "vice_captain": {
+      "element": 411,
+      "name": "Haaland",
+      "xpts": 6.506
+    },
+    "active_chip": "NONE",
+    "chip_short": "NONE",
+    "bench_xpts": 11.49,
+    "bench_counted_xpts": 0.0,
+    "standard_captain_team_xpts": 54.36,
+    "estimated_points": 54.36,
+    "starting_xi": [
+      {
+        "element": 109,
+        "name": "Verbruggen",
+        "position": "GK",
+        "xpts": 3.664
+      },
+      {
+        "element": 88,
+        "name": "Kayode",
+        "position": "DEF",
+        "xpts": 3.986
+      },
+      {
+        "element": 115,
+        "name": "De Cuyper",
+        "position": "DEF",
+        "xpts": 3.376
+      },
+      {
+        "element": 8,
+        "name": "Calafiori",
+        "position": "DEF",
+        "xpts": 3.238
+      },
+      {
+        "element": 279,
+        "name": "Ajayi",
+        "position": "DEF",
+        "xpts": 2.896
+      },
+      {
+        "element": 426,
+        "name": "B.Fernandes",
+        "position": "MID",
+        "xpts": 7.675
+      },
+      {
+        "element": 40,
+        "name": "Rogers",
+        "position": "MID",
+        "xpts": 3.576
+      },
+      {
+        "element": 565,
+        "name": "M.Sangaré",
+        "position": "MID",
+        "xpts": 3.563
+      },
+      {
+        "element": 411,
+        "name": "Haaland",
+        "position": "FWD",
+        "xpts": 6.506
+      },
+      {
+        "element": 165,
+        "name": "João Pedro",
+        "position": "FWD",
+        "xpts": 4.156
+      },
+      {
+        "element": 346,
+        "name": "Calvert-Lewin",
+        "position": "FWD",
+        "xpts": 4.049
+      }
+    ],
+    "bench": [
+      {
+        "slot": "GK",
+        "element": 572,
+        "name": "Tzolakis",
+        "position": "GK",
+        "xpts": 3.273
+      },
+      {
+        "slot": 1,
+        "element": 557,
+        "name": "Tzolis",
+        "position": "MID",
+        "xpts": 2.764
+      },
+      {
+        "slot": 2,
+        "element": 254,
+        "name": "Robinson",
+        "position": "DEF",
+        "xpts": 2.793
+      },
+      {
+        "slot": 3,
+        "element": 15,
+        "name": "Ødegaard",
+        "position": "MID",
+        "xpts": 2.661
+      }
+    ],
+    "uncertainty": {
+      "status": "DEFERRED",
+      "reason": "team_level_correlated_score_distribution_not_yet_calibrated",
+      "player_intervals_not_naively_summed": true
+    },
+    "guardrails": {
+      "projection_from_effective_plan_contract": true,
+      "captain_multiplier_applied_once": true,
+      "bench_only_counted_for_bench_boost": true,
+      "no_extra_official_api_fetch": true
+    },
+    "squad_basis": {
+      "authority_model": "PUBLIC_OFFICIAL_PLUS_USER_CAPTURE",
+      "public_official_role": "UNIVERSAL_FACTUAL_BACKBONE",
+      "user_capture_role": "PRIVATE_PREDEADLINE_OVERRIDE",
+      "authenticated_official_role": "OPTIONAL_PRIVATE_ENRICHMENT",
+      "authenticated_official_production_blocking": false,
+      "planning_gw": 3,
+      "baseline_gw": 2,
+      "default_rule": "PLANNING_GW_FROM_PREVIOUS_OFFICIAL_SUBMITTED_SQUAD",
+      "default_authority": "OFFICIAL_SUBMITTED",
+      "override_requested": true,
+      "override_target_gw": 3,
+      "override_applied": true,
+      "effective_authority": "USER_CAPTURE_PREDEADLINE",
+      "authority_source": "USER_CONFIRMED_SCREENSHOT_GW3_TRANSFER",
+      "stale_override_rejected": false
+    },
+    "human_override_active": false,
+    "engine_comparison": {
+      "changed_xi_slots_vs_engine": 0,
+      "user_minus_engine_xpts": 0.0,
+      "engine_can_warn_but_not_overwrite": true
+    },
+    "engine_recommendation": {
+      "formation": "4-3-3",
+      "xi_xpts": 46.69,
+      "captain": "B.Fernandes",
+      "active_chip": "NONE"
+    }
+  },
+  "history": [
+    {
+      "gw": 1,
+      "points": 71,
+      "gross_points": 71,
+      "hit": 0,
+      "chip": "BENCH_BOOST",
+      "chip_short": "BB",
+      "captain": "Haaland"
+    },
+    {
+      "gw": 2,
+      "points": 93,
+      "gross_points": 93,
+      "hit": 0,
+      "chip": "WILDCARD",
+      "chip_short": "WC",
+      "captain": "João Pedro"
+    }
+  ],
+  "headline": {
+    "previous": "GW2 FINAL · 93 pts · WC",
+    "planning": "GW3 PROJECTION · 54.4 xPts · 4-3-3 · C B.Fernandes"
+  },
+  "archive": {
+    "action": "PRESERVED",
+    "consistent_with_current_source": true,
+    "directory": "data/gw_results",
+    "immutable": true
+  },
+  "guardrails": {
+    "raw_snapshot_only": true,
+    "official_api_refetch": false,
+    "process_isolated_microservice": true,
+    "finished_gw_archive_immutable": true,
+    "simulation_never_mutates_archive": true,
+    "projection_from_effective_plan_contract": true,
+    "engine_is_advisory_user_plan_is_effective": true,
+    "previous_submitted_gw_is_default_projection_baseline": true,
+    "planning_override_target_gw_required": true,
+    "projection_is_estimate_not_actual": true,
+    "player_intervals_not_naively_summed": true,
+    "match_mode_live_score_inside_existing_scorecard_boundary": true,
+    "match_mode_all15_required_when_official_available": true,
+    "submitted_picks_are_match_mode_scoring_authority": true,
+    "planning_xi_cannot_replace_submitted_match_mode_picks": true,
+    "actual_vs_predicted_is_diagnostic_only": true
+  },
+  "performance_ms": 19.69,
+  "current_live_gw": {
+    "contract": "MATCH_MODE_LIVE_SCORE_V1",
+    "match_mode_active": false,
+    "scoring_gw": 2,
+    "submitted_picks_status": "AVAILABLE",
+    "event_live_status": "AVAILABLE",
+    "coverage": {
+      "owned": 0,
+      "expected_owned": 15,
+      "complete": false
+    },
+    "players": [],
+    "personalized_live_score": null,
+    "prediction_snapshot": {
+      "status": "UNAVAILABLE",
+      "gw": 2,
+      "source": null
+    },
+    "status": "IDLE"
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "audit_version": "4.9.6",
+  "ruleset": "FPL-2026-27",
+  "overall": "PASS",
+  "checks": [
+    {
+      "name": "rules_registry_identity",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "scoring_registry_loaded",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "defcon_gk_veto",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "defcon_def_cbit_10",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "defcon_mid_cbirt_12",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "defcon_fwd_cbirt_12",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "recoveries_excluded_for_def",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "recoveries_included_mid_fwd",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "defcon_reward_capped_two",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "one_chip_per_gw_constant",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "chip_half_boundary",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "free_hit_not_gw1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "free_hit_not_consecutive",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "chip_once_per_half",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "wc_fh_preserve_banked_ft",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "dgw_defcon_per_match",
+      "pass": true,
+      "detail": "[1.672, 1.672]"
+    }
+  ]
+}

@@ -1,0 +1,1440 @@
+{
+  "schema_version": 492,
+  "engine": "v4.9.6-truthful-health",
+  "phase": "preflight",
+  "checkpoint_context": {
+    "policy_id": "DEADLINE_MONITOR",
+    "label": "Deadline Day Full Hourly Report",
+    "operating_mode": "DEADLINE_DAY",
+    "requested_run_mode": "daily",
+    "run_mode": "daily",
+    "as_of": "2026-09-04T16:33:32.032230+00:00",
+    "local_as_of": "2026-09-04T23:33:32.032230+07:00",
+    "timezone": "Asia/Jakarta",
+    "deadline_time": "2026-09-04T17:30:00+00:00",
+    "minutes_to_deadline": 56.5,
+    "deadline_day_active": true,
+    "is_final_review": false,
+    "final_review_target_local": "2026-09-04T21:30:00+07:00",
+    "post_final_emergency_only": false,
+    "post_deadline_reconciliation": false,
+    "is_live_match": false,
+    "is_master_hourly_checkpoint": true,
+    "timing_probe_only": false,
+    "visible_output_authorized": true,
+    "full_visible_report_required": true,
+    "no_material_change_must_still_report": true,
+    "fresh_source_sweep_required": true,
+    "direct_official_refresh_max_age_minutes": 30,
+    "price_radar_required": true,
+    "duplicate_report_forbidden": true,
+    "absorbed_policy_ids": [],
+    "collision_merged": false,
+    "deadline_report_continues_after_final_review": true,
+    "is_simulation": false,
+    "max_snapshot_age_minutes": 30,
+    "recommended_refresh_minutes": 30,
+    "payload": null,
+    "payloads": [],
+    "roster_contract": {
+      "owned": 15,
+      "watchlist": 20
+    },
+    "report_scope": [
+      "personal_gw_scorecard",
+      "gate0",
+      "locked_15",
+      "watchlist",
+      "availability",
+      "injury_news",
+      "training_press_conference",
+      "xmins",
+      "start_security",
+      "role",
+      "rotation",
+      "tactical_matchup",
+      "fixture_rest_congestion",
+      "competitive_load",
+      "price_radar",
+      "challengers",
+      "multi_horizon_comparator",
+      "lineup",
+      "bench",
+      "captaincy",
+      "chip",
+      "affordability",
+      "source_health",
+      "source_divergence",
+      "emergency_risks"
+    ],
+    "registry": "fpl_checkpoint_policy_v2_time_schedule_governance",
+    "registry_schema_version": 2
+  },
+  "overall": "GREEN",
+  "pipeline_health": "GREEN",
+  "prediction_health": "AMBER",
+  "capability_health": "AMBER",
+  "capability_coverage": {
+    "active": 36,
+    "warmup": 2,
+    "partial": 15,
+    "failed": 0,
+    "declared": 74,
+    "active_ratio": 0.5135
+  },
+  "decision_engine": "DEGRADED",
+  "recommendation_allowed": true,
+  "go_allowed": false,
+  "registry_integrity": true,
+  "gate0": {
+    "phase": "preflight",
+    "counts": {
+      "PASS": 10,
+      "DEFERRED": 6
+    },
+    "items": [
+      {
+        "id": "G0-01",
+        "name": "Squad Size = 15",
+        "status": "PASS",
+        "detail": "count=15"
+      },
+      {
+        "id": "G0-02",
+        "name": "Exactly 2 Goalkeepers",
+        "status": "PASS",
+        "detail": "GK=2"
+      },
+      {
+        "id": "G0-03",
+        "name": "Exactly 5 Defenders",
+        "status": "PASS",
+        "detail": "DEF=5"
+      },
+      {
+        "id": "G0-04",
+        "name": "Exactly 5 Midfielders",
+        "status": "PASS",
+        "detail": "MID=5"
+      },
+      {
+        "id": "G0-05",
+        "name": "Exactly 3 Forwards",
+        "status": "PASS",
+        "detail": "FWD=3"
+      },
+      {
+        "id": "G0-06",
+        "name": "Budget / Affordability",
+        "status": "PASS",
+        "detail": "{\"available_budget_tenths\": 1004, \"bank_tenths\": 10, \"formula_reconciled\": true, \"market_value_tenths\": 1002, \"owned_players\": 15, \"sell_value_tenths\": 994}"
+      },
+      {
+        "id": "G0-07",
+        "name": "Maximum 3 Players Per Club",
+        "status": "PASS",
+        "detail": "max_club=3"
+      },
+      {
+        "id": "G0-08",
+        "name": "No Duplicate Player",
+        "status": "PASS",
+        "detail": "element uniqueness"
+      },
+      {
+        "id": "G0-09",
+        "name": "Player Eligibility / Registration",
+        "status": "PASS",
+        "detail": "eligible=True,identity_ok=True"
+      },
+      {
+        "id": "G0-10",
+        "name": "Legal XI Formation",
+        "status": "DEFERRED",
+        "detail": "requires governed postflight lineup/chip output"
+      },
+      {
+        "id": "G0-11",
+        "name": "Exactly 1 Starting Goalkeeper",
+        "status": "DEFERRED",
+        "detail": "requires governed postflight lineup/chip output"
+      },
+      {
+        "id": "G0-12",
+        "name": "Captain and Vice in Starting XI and Distinct",
+        "status": "DEFERRED",
+        "detail": "requires governed postflight lineup/chip output"
+      },
+      {
+        "id": "G0-13",
+        "name": "Bench Structure = 1 GK + 3 Outfield",
+        "status": "DEFERRED",
+        "detail": "requires governed postflight lineup/chip output"
+      },
+      {
+        "id": "G0-14",
+        "name": "Single-Chip Rule / Chip Legality",
+        "status": "DEFERRED",
+        "detail": "requires governed postflight lineup/chip output"
+      },
+      {
+        "id": "G0-15",
+        "name": "Selling-Price / ITB Arithmetic Reconciliation",
+        "status": "PASS",
+        "detail": "formula_reconciled=True,team_sell=994,reconstructed_sell=994"
+      },
+      {
+        "id": "G0-16",
+        "name": "Wildcard Package Revalidated After Every Edit",
+        "status": "DEFERRED",
+        "detail": "requires postflight package audit output"
+      }
+    ],
+    "pass": true,
+    "registry_integrity": {
+      "expected": 16,
+      "declared": 16,
+      "duplicate_ids": [],
+      "integrity_ok": true
+    }
+  },
+  "dss_core": {
+    "expected": 50,
+    "declared": 50,
+    "duplicate_ids": [],
+    "integrity_ok": true,
+    "registry": "DSS_CORE_50",
+    "counts": {
+      "ACTIVE": 26,
+      "PARTIAL": 15,
+      "DEFERRED": 8,
+      "WARMUP": 1
+    },
+    "items": [
+      {
+        "id": "DSS-01",
+        "name": "Official Player Identity & Eligibility",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/universe.json"
+        ],
+        "probe": "universe_identity",
+        "detail": {
+          "players": 652,
+          "valid": 652,
+          "unique_ids": 652
+        }
+      },
+      {
+        "id": "DSS-02",
+        "name": "Current Price & Position Eligibility",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/universe.json",
+          "data/prices.json"
+        ],
+        "probe": "universe_price_position",
+        "detail": {
+          "players": 652,
+          "valid": 652,
+          "unique_ids": 652
+        }
+      },
+      {
+        "id": "DSS-03",
+        "name": "Club & Competition Registration Status",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/universe.json"
+        ],
+        "probe": "universe_registration",
+        "detail": {
+          "players": 652,
+          "valid": 652,
+          "unique_ids": 652
+        }
+      },
+      {
+        "id": "DSS-04",
+        "name": "Availability, Injury & Suspension",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/universe.json",
+          "data/latest.json"
+        ],
+        "probe": "availability",
+        "detail": {
+          "players": 652,
+          "coverage": 1.0
+        }
+      },
+      {
+        "id": "DSS-05",
+        "name": "Starter Security / xMins",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "xmins",
+        "detail": {
+          "fixture_distributions_checked": 1956,
+          "enriched_prior_distributions": 1956,
+          "strong_direct_evidence_players": 67,
+          "strong_direct_evidence_min_pstart": 0.8263,
+          "no_evidence_players": 86,
+          "no_evidence_max_xmins": 8.8,
+          "direct_evidence_sanity": true
+        }
+      },
+      {
+        "id": "DSS-06",
+        "name": "Substitution & DNP Risk",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "xmins_distribution",
+        "detail": {
+          "fixture_distributions_checked": 1956,
+          "enriched_prior_distributions": 1956,
+          "strong_direct_evidence_players": 67,
+          "strong_direct_evidence_min_pstart": 0.8263,
+          "no_evidence_players": 86,
+          "no_evidence_max_xmins": 8.8,
+          "direct_evidence_sanity": true
+        }
+      },
+      {
+        "id": "DSS-07",
+        "name": "Manager Tactical Role",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "tactical_role",
+        "detail": {
+          "players": 652,
+          "role_covered": 652,
+          "source_covered": 652,
+          "competition_consumed": 652
+        }
+      },
+      {
+        "id": "DSS-08",
+        "name": "System / Formation Fit",
+        "critical": false,
+        "status": "PARTIAL",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "system_fit",
+        "detail": {
+          "reason": "capability is incomplete or lacks production decision-output evidence"
+        }
+      },
+      {
+        "id": "DSS-09",
+        "name": "Positional Competition & Rotation",
+        "critical": true,
+        "status": "PARTIAL",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "rotation_competition",
+        "detail": {
+          "players": 652,
+          "covered": 652,
+          "role_matched_adjustments": 652,
+          "unadjusted_players": 0,
+          "distinct_competition_factors": 22,
+          "flag_factor_consistent": 652,
+          "broad_position_diagnostics": 0,
+          "reason": "role competition lacks truthful per-player factor variation"
+        }
+      },
+      {
+        "id": "DSS-10",
+        "name": "Set-Piece Role",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "set_piece_role",
+        "detail": {
+          "fixtures": 652,
+          "covered": 652,
+          "empirical_shares": 652,
+          "posterior_team_shares": 652,
+          "prior_reallocation": 652,
+          "adjusted_fixtures": 652,
+          "reason": null
+        }
+      },
+      {
+        "id": "DSS-11",
+        "name": "Penalty Role",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "penalty_role",
+        "detail": {
+          "fixtures": 652,
+          "covered": 652,
+          "empirical_shares": 652,
+          "posterior_team_shares": 652,
+          "prior_reallocation": 652,
+          "adjusted_fixtures": 652,
+          "reason": null
+        }
+      },
+      {
+        "id": "DSS-12",
+        "name": "Expected Goals / Shot Threat",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json",
+          "data/stats/shots_gw1.json"
+        ],
+        "probe": "advanced_stats_integration",
+        "detail": {
+          "prediction_sources": [
+            "fpl_core_insights:players",
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats",
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
+          ],
+          "consumed_players": 652,
+          "materially_distinct_players": 276,
+          "materially_distinct_ratio": 0.4233,
+          "decision_used_players": 359,
+          "decision_used_ratio": 0.5506,
+          "active_minimum_ratio": 0.25,
+          "synced_but_not_consumed_broadly": false
+        }
+      },
+      {
+        "id": "DSS-13",
+        "name": "Expected Assists / Chance Creation",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json",
+          "data/stats/playermatchstats_gw1.json"
+        ],
+        "probe": "advanced_stats_integration",
+        "detail": {
+          "prediction_sources": [
+            "fpl_core_insights:players",
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats",
+            "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
+          ],
+          "consumed_players": 652,
+          "materially_distinct_players": 276,
+          "materially_distinct_ratio": 0.4233,
+          "decision_used_players": 359,
+          "decision_used_ratio": 0.5506,
+          "active_minimum_ratio": 0.25,
+          "synced_but_not_consumed_broadly": false
+        }
+      },
+      {
+        "id": "DSS-14",
+        "name": "Shots, Box Touches & Goal Threat",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/stats/shots_gw1.json"
+        ],
+        "probe": "advanced_stats_sync",
+        "detail": {
+          "shots": true,
+          "playermatchstats": true
+        }
+      },
+      {
+        "id": "DSS-15",
+        "name": "Key Passes, Big Chances Created & Assist Threat",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/stats/playermatchstats_gw1.json"
+        ],
+        "probe": "advanced_stats_sync",
+        "detail": {
+          "shots": true,
+          "playermatchstats": true
+        }
+      },
+      {
+        "id": "DSS-16",
+        "name": "Goal Involvement Sustainability",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "sustainability",
+        "detail": {
+          "players": 652,
+          "fixtures_checked": 652,
+          "shrinkage_evidence_covered": 652,
+          "valid_weight_rows": 652,
+          "material_shrinkage_players": 583,
+          "canonical_owner": "src.models.v4_prediction.rates"
+        }
+      },
+      {
+        "id": "DSS-17",
+        "name": "Defensive Contributions / DefCon Route",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "src/engines/fpl_rules_2026.py",
+          "src/models/v4_prediction.py"
+        ],
+        "probe": "defcon_rules",
+        "detail": {
+          "rules_ok": true,
+          "component": "defcon",
+          "fixtures": 150,
+          "covered": 150
+        }
+      },
+      {
+        "id": "DSS-18",
+        "name": "Bonus Points Route",
+        "critical": false,
+        "status": "PARTIAL",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "bonus_route",
+        "detail": {
+          "reason": "capability is incomplete or lacks production decision-output evidence"
+        }
+      },
+      {
+        "id": "DSS-19",
+        "name": "Clean-Sheet Probability",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "clean_sheet_probability",
+        "detail": {
+          "component": "clean_sheet",
+          "fixtures": 150,
+          "covered": 150
+        }
+      },
+      {
+        "id": "DSS-20",
+        "name": "Goal-Concession / Defensive Team Risk",
+        "critical": false,
+        "status": "PARTIAL",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "team_defensive_risk",
+        "detail": {
+          "reason": "capability is incomplete or lacks production decision-output evidence"
+        }
+      },
+      {
+        "id": "DSS-21",
+        "name": "Team Attacking Strength",
+        "critical": false,
+        "status": "PARTIAL",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "team_attacking_strength",
+        "detail": {
+          "reason": "capability is incomplete or lacks production decision-output evidence"
+        }
+      },
+      {
+        "id": "DSS-22",
+        "name": "Team Defensive Strength",
+        "critical": false,
+        "status": "PARTIAL",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "team_defensive_strength",
+        "detail": {
+          "reason": "capability is incomplete or lacks production decision-output evidence"
+        }
+      },
+      {
+        "id": "DSS-23",
+        "name": "Home / Away Context",
+        "critical": false,
+        "status": "PARTIAL",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "fixture_context",
+        "detail": {
+          "reason": "capability is incomplete or lacks production decision-output evidence"
+        }
+      },
+      {
+        "id": "DSS-24",
+        "name": "Opponent Strength / Fixture Difficulty",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "opponent_defence_dynamic",
+        "detail": {
+          "fixtures": 1956,
+          "covered": 1956,
+          "dynamic_defence": 1956,
+          "neutral_overall_fallback": 0,
+          "distinct_scoring_ratings": 20,
+          "reason": null
+        }
+      },
+      {
+        "id": "DSS-25",
+        "name": "3-GW Short Horizon",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "horizon_3",
+        "detail": {
+          "field": "xpts_3",
+          "players": 652,
+          "covered": 652
+        }
+      },
+      {
+        "id": "DSS-26",
+        "name": "5-GW Primary Horizon",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "horizon_5",
+        "detail": {
+          "field": "xpts_5",
+          "players": 652,
+          "covered": 652
+        }
+      },
+      {
+        "id": "DSS-27",
+        "name": "10-GW Strategic Horizon",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "horizon_10",
+        "detail": {
+          "field": "xpts_10",
+          "players": 652,
+          "covered": 652
+        }
+      },
+      {
+        "id": "DSS-28",
+        "name": "15-GW Strategic Horizon",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "horizon_15",
+        "detail": {
+          "field": "xpts_15",
+          "players": 652,
+          "covered": 652
+        }
+      },
+      {
+        "id": "DSS-29",
+        "name": "Fixture Swing / Future Run",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "fixture_swing",
+        "detail": {
+          "players": 652,
+          "fixture_run_covered": 652,
+          "distinct_swing_values": 20,
+          "directions": {
+            "STABLE": 260,
+            "WORSENING": 179,
+            "IMPROVING": 213
+          },
+          "canonical_owner": "src.models.v4_prediction.fixture_run_summary"
+        }
+      },
+      {
+        "id": "DSS-30",
+        "name": "European Congestion & Rotation",
+        "critical": false,
+        "status": "PARTIAL",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "european_congestion",
+        "detail": {
+          "reason": "capability is incomplete or lacks production decision-output evidence"
+        }
+      },
+      {
+        "id": "DSS-31",
+        "name": "Domestic Cup Congestion",
+        "critical": false,
+        "status": "PARTIAL",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "domestic_cup_congestion",
+        "detail": {
+          "reason": "capability is incomplete or lacks production decision-output evidence"
+        }
+      },
+      {
+        "id": "DSS-32",
+        "name": "International Call-Up, Minutes, Travel & Fatigue",
+        "critical": false,
+        "status": "PARTIAL",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "international_load",
+        "detail": {
+          "reason": "capability is incomplete or lacks production decision-output evidence"
+        }
+      },
+      {
+        "id": "DSS-33",
+        "name": "Rest Days / Recovery Window",
+        "critical": false,
+        "status": "PARTIAL",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "rest_days",
+        "detail": {
+          "reason": "capability is incomplete or lacks production decision-output evidence"
+        }
+      },
+      {
+        "id": "DSS-34",
+        "name": "Preseason Role & Performance",
+        "critical": false,
+        "status": "PARTIAL",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "preseason_prior",
+        "detail": {
+          "reason": "capability is incomplete or lacks production decision-output evidence"
+        }
+      },
+      {
+        "id": "DSS-35",
+        "name": "Last-Season Baseline",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/stats/vaastav_previous_season.json",
+          "data/predictions_v4.json"
+        ],
+        "probe": "last_season_integration",
+        "detail": {
+          "source_season": "2025-26",
+          "input_matches": 409,
+          "consumed_priors": 409
+        }
+      },
+      {
+        "id": "DSS-36",
+        "name": "Multi-Season / Historical Prior",
+        "critical": false,
+        "status": "PARTIAL",
+        "required_files": [
+          "data/history.jsonl",
+          "data/predictions_v4.json"
+        ],
+        "probe": "historical_prior",
+        "detail": {
+          "reason": "capability is incomplete or lacks production decision-output evidence"
+        }
+      },
+      {
+        "id": "DSS-37",
+        "name": "Current-Season Form",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/stats/playermatchstats_gw1.json"
+        ],
+        "probe": "current_form",
+        "detail": {
+          "shots": true,
+          "playermatchstats": true
+        }
+      },
+      {
+        "id": "DSS-38",
+        "name": "Regression / Overperformance Risk",
+        "critical": false,
+        "status": "PARTIAL",
+        "required_files": [
+          "data/predictions_v4.json"
+        ],
+        "probe": "regression_risk",
+        "detail": {
+          "reason": "capability is incomplete or lacks production decision-output evidence"
+        }
+      },
+      {
+        "id": "DSS-39",
+        "name": "Price Value / Points per Million",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "data/universe.json",
+          "data/predictions_v4.json"
+        ],
+        "probe": "price_value",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "DSS-40",
+        "name": "Budget Opportunity Cost",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "data/wc_decision_v4.json"
+        ],
+        "probe": "sell_cost_affordability",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "DSS-41",
+        "name": "Ownership & Effective Ownership Context",
+        "critical": false,
+        "status": "PARTIAL",
+        "required_files": [
+          "data/universe.json"
+        ],
+        "probe": "ownership_context",
+        "detail": {
+          "reason": "capability is incomplete or lacks production decision-output evidence"
+        }
+      },
+      {
+        "id": "DSS-42",
+        "name": "Transfer Momentum / Market Pressure",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/universe.json",
+          "data/price_cache.json"
+        ],
+        "probe": "transfer_momentum",
+        "detail": {
+          "buy_pressure_rows": 25,
+          "sell_pressure_rows": 25
+        }
+      },
+      {
+        "id": "DSS-43",
+        "name": "Price-Rise / Price-Fall Risk",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/price_cache.json",
+          "data/prices.json"
+        ],
+        "probe": "price_intelligence",
+        "detail": {
+          "buy_pressure_rows": 25,
+          "sell_pressure_rows": 25
+        }
+      },
+      {
+        "id": "DSS-44",
+        "name": "Learning Loop: Update Beliefs, Do Not Chase Hauls",
+        "critical": true,
+        "status": "WARMUP",
+        "required_files": [
+          "src/engines/v4_validation.py",
+          "src/engines/v4_backtest_store.py"
+        ],
+        "probe": "learning_loop",
+        "detail": {
+          "reason": "validation contracts are ready; no eligible reconciled post-GW sample exists yet",
+          "samples": 0
+        }
+      },
+      {
+        "id": "DSS-45",
+        "name": "Structural Squad Fit",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "data/wc_decision_v4.json"
+        ],
+        "probe": "structural_fit",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "DSS-46",
+        "name": "Direct Challenger / Replacement Quality",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "data/wc_decision_v4.json",
+          "data/wc_package_audit_v4.json"
+        ],
+        "probe": "direct_challenger",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "DSS-47",
+        "name": "Bench Depth & Autosub Utility",
+        "critical": false,
+        "status": "DEFERRED",
+        "required_files": [
+          "data/lineup_decision_v4.json"
+        ],
+        "probe": "bench_utility",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "DSS-48",
+        "name": "Captaincy / Vice-Captaincy Ceiling & Safety",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "data/lineup_decision_v4.json"
+        ],
+        "probe": "captaincy",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "DSS-49",
+        "name": "Chip / Blank / Double Strategic Context",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "data/chips.json",
+          "data/compliance_audit.json"
+        ],
+        "probe": "chip_context",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "DSS-50",
+        "name": "Decision Journal, Arithmetic & Constraint Recheck",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "data/wc_package_audit_v4.json",
+          "data/lineup_decision_v4.json"
+        ],
+        "probe": "decision_recheck",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      }
+    ]
+  },
+  "dss_extensions": {
+    "expected": 16,
+    "declared": 16,
+    "duplicate_ids": [],
+    "integrity_ok": true,
+    "registry": "DSS_EXTENSIONS",
+    "counts": {
+      "ACTIVE": 6,
+      "DEFERRED": 9,
+      "WARMUP": 1
+    },
+    "items": [
+      {
+        "id": "DSS-X01",
+        "name": "Point-in-Time / Leakage Protection",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "src/engines/leakage_guard.py",
+          "data/predictions_v4.json"
+        ],
+        "probe": "leakage_guard",
+        "detail": {
+          "players": 652,
+          "provenance_samples": 50
+        }
+      },
+      {
+        "id": "DSS-X02",
+        "name": "Prediction Uncertainty & Interval Width",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/predictions_v4.json",
+          "data/lineup_decision_v4.json"
+        ],
+        "probe": "projection_uncertainty",
+        "detail": {
+          "fixtures": 150,
+          "valid_intervals": 150
+        }
+      },
+      {
+        "id": "DSS-X03",
+        "name": "Rate-Spike / Small-Sample Detection",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "src/engines/v4_recommendation_sanity.py"
+        ],
+        "probe": "small_sample_guard",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "DSS-X04",
+        "name": "Evidence Fusion Confidence",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "src/engines/v4_recommendation_sanity.py",
+          "data/recommendation_sanity_v4.json"
+        ],
+        "probe": "reliability_overlay",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "DSS-X05",
+        "name": "Outgoing Baseline Resistance",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "src/engines/v4_recommendation_sanity.py"
+        ],
+        "probe": "governed_optimizer",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "DSS-X06",
+        "name": "Incoming Team-Cluster Penalty",
+        "critical": false,
+        "status": "DEFERRED",
+        "required_files": [
+          "src/engines/v4_recommendation_sanity.py"
+        ],
+        "probe": "team_cluster_penalty",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "DSS-X07",
+        "name": "Early-Season Multi-Change Cap",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "src/engines/v4_recommendation_sanity.py"
+        ],
+        "probe": "early_season_change_cap",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "DSS-X08",
+        "name": "Package Churn / Change-Count Penalty",
+        "critical": false,
+        "status": "DEFERRED",
+        "required_files": [
+          "src/engines/v4_wc_package_audit.py"
+        ],
+        "probe": "package_churn_penalty",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "DSS-X09",
+        "name": "Manual Draft / User Decision Authority",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "config/manual_lineup.json",
+          "src/services/user_decision_overlay_service.py",
+          "src/engines/v4_lineup_optimizer.py"
+        ],
+        "probe": "manual_authority",
+        "detail": {
+          "file": "config/manual_lineup.json"
+        }
+      },
+      {
+        "id": "DSS-X10",
+        "name": "Lineup Robustness Margin",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "src/engines/v4_lineup_optimizer.py"
+        ],
+        "probe": "lineup_robustness",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "DSS-X11",
+        "name": "Captain Safe-Pool / DNP Guard",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "src/engines/v4_lineup_optimizer.py"
+        ],
+        "probe": "captain_dnp_guard",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "DSS-X12",
+        "name": "Calibration, Reconciliation & Backtest Store",
+        "critical": true,
+        "status": "WARMUP",
+        "required_files": [
+          "src/engines/v4_validation_cycle.py",
+          "src/engines/v4_backtest_store.py"
+        ],
+        "probe": "calibration_store",
+        "detail": {
+          "reason": "validation contracts are ready; no eligible reconciled post-GW sample exists yet",
+          "samples": 0
+        }
+      },
+      {
+        "id": "DSS-X13",
+        "name": "Data Freshness & Refresh Policy",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "src/engines/refresh_policy.py",
+          "src/engines/checkpoint_policy.py",
+          "config/checkpoint_policy_registry.json",
+          "data/health.json"
+        ],
+        "probe": "data_freshness",
+        "detail": {
+          "age_minutes": 0.0,
+          "max_age_minutes": 30,
+          "checkpoint_policy_id": "DEADLINE_MONITOR"
+        }
+      },
+      {
+        "id": "DSS-X14",
+        "name": "Source / Enrichment Health",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "config/sources.json",
+          "data/latest.json"
+        ],
+        "probe": "source_health",
+        "detail": {
+          "critical_endpoints": {
+            "bootstrap": "LIVE",
+            "fixtures": "LIVE",
+            "entry": "LIVE",
+            "history": "LIVE",
+            "transfers": "LIVE"
+          }
+        }
+      },
+      {
+        "id": "DSS-X15",
+        "name": "Price Intelligence Reconciliation",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/prices.json",
+          "data/price_cache.json"
+        ],
+        "probe": "price_intelligence",
+        "detail": {
+          "buy_pressure_rows": 25,
+          "sell_pressure_rows": 25
+        }
+      },
+      {
+        "id": "DSS-X16",
+        "name": "Runtime / Performance Observability",
+        "critical": false,
+        "status": "DEFERRED",
+        "required_files": [
+          "data/decision_pipeline_v4.json"
+        ],
+        "probe": "runtime_observability",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      }
+    ]
+  },
+  "enhancements": {
+    "expected": 8,
+    "declared": 8,
+    "duplicate_ids": [],
+    "integrity_ok": true,
+    "registry": "ENHANCEMENT_LAYERS_8",
+    "counts": {
+      "ACTIVE": 4,
+      "DEFERRED": 4
+    },
+    "items": [
+      {
+        "id": "ENH-01",
+        "name": "Data Reliability & Source Triangulation",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "config/sources.json",
+          "src/engines/reliability.py",
+          "data/health.json"
+        ],
+        "probe": "data_reliability_triangulation",
+        "detail": {
+          "source_health": {
+            "critical_endpoints": {
+              "bootstrap": "LIVE",
+              "fixtures": "LIVE",
+              "entry": "LIVE",
+              "history": "LIVE",
+              "transfers": "LIVE"
+            }
+          },
+          "advanced_integration": {
+            "prediction_sources": [
+              "fpl_core_insights:players",
+              "fpl_core_insights:players+fpl_core_insights:playermatchstats",
+              "fpl_core_insights:players+fpl_core_insights:playermatchstats+fpl_core_insights:shots"
+            ],
+            "consumed_players": 652,
+            "materially_distinct_players": 276,
+            "materially_distinct_ratio": 0.4233,
+            "decision_used_players": 359,
+            "decision_used_ratio": 0.5506,
+            "active_minimum_ratio": 0.25,
+            "synced_but_not_consumed_broadly": false
+          }
+        }
+      },
+      {
+        "id": "ENH-02",
+        "name": "Point-in-Time Integrity & Leakage Safety",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "src/engines/leakage_guard.py",
+          "src/engines/v4_validation_cycle.py"
+        ],
+        "probe": "leakage_guard",
+        "detail": {
+          "players": 652,
+          "provenance_samples": 50
+        }
+      },
+      {
+        "id": "ENH-03",
+        "name": "Uncertainty, Calibration & Robustness",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "src/engines/v4_validation.py",
+          "src/engines/v4_lineup_optimizer.py",
+          "src/engines/v4_wc_package_audit.py"
+        ],
+        "probe": "uncertainty_robustness",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "ENH-04",
+        "name": "Multi-Horizon Strategic Optimization",
+        "critical": true,
+        "status": "ACTIVE",
+        "required_files": [
+          "src/engines/v4_wc_optimizer.py",
+          "data/predictions_v4.json"
+        ],
+        "probe": "multi_horizon",
+        "detail": {
+          "field": "xpts_15",
+          "players": 652,
+          "covered": 652
+        }
+      },
+      {
+        "id": "ENH-05",
+        "name": "Risk-Adjusted Market & Value Intelligence",
+        "critical": false,
+        "status": "ACTIVE",
+        "required_files": [
+          "data/prices.json",
+          "data/price_cache.json",
+          "data/universe.json"
+        ],
+        "probe": "price_intelligence",
+        "detail": {
+          "buy_pressure_rows": 25,
+          "sell_pressure_rows": 25
+        }
+      },
+      {
+        "id": "ENH-06",
+        "name": "Package & Structural Optimization",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "src/engines/v4_wc_optimizer.py",
+          "src/engines/v4_wc_package_audit.py"
+        ],
+        "probe": "package_structural",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "ENH-07",
+        "name": "Lineup, Captaincy & Human-Governance Layer",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "src/engines/v4_lineup_optimizer.py",
+          "src/services/user_decision_overlay_service.py",
+          "config/manual_lineup.json"
+        ],
+        "probe": "lineup_governance",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      },
+      {
+        "id": "ENH-08",
+        "name": "Evidence Fusion & Final Sanity Governance",
+        "critical": true,
+        "status": "DEFERRED",
+        "required_files": [
+          "src/engines/v4_recommendation_sanity.py",
+          "src/engines/v4_decision_arbitration.py",
+          "data/recommendation_sanity_v4.json",
+          "src/services/orchestrator.py",
+          "src/services/contracts.py",
+          "config/service_registry.json",
+          "config/service_contract_registry.json"
+        ],
+        "probe": "final_governance",
+        "detail": {
+          "reason": "requires postflight decision evidence"
+        }
+      }
+    ]
+  },
+  "rules_compliance": {
+    "status": "DEFERRED",
+    "detail": {
+      "reason": "compliance runs after preflight"
+    }
+  },
+  "data_freshness": {
+    "status": "PASS",
+    "detail": {
+      "age_minutes": 0.0,
+      "max_age_minutes": 30,
+      "checkpoint_policy_id": "DEADLINE_MONITOR"
+    }
+  },
+  "source_health": {
+    "status": "PASS",
+    "detail": {
+      "critical_endpoints": {
+        "bootstrap": "LIVE",
+        "fixtures": "LIVE",
+        "entry": "LIVE",
+        "history": "LIVE",
+        "transfers": "LIVE"
+      }
+    }
+  },
+  "critical_failed": [],
+  "critical_partial": [
+    "DSS-09"
+  ],
+  "critical_warmup": [
+    "DSS-44",
+    "DSS-X12"
+  ],
+  "governance": {
+    "gate0_fail_blocks_go": true,
+    "critical_framework_fail_blocks_recommendation": true,
+    "critical_partial_blocks_unqualified_go": true,
+    "critical_warmup_blocks_unqualified_go": true,
+    "pipeline_health_separate_from_prediction_health": true,
+    "noncritical_partial_is_reported_not_hidden": true,
+    "file_exists_is_not_sufficient_for_active": true,
+    "health_check_must_precede_recommendation": true,
+    "raw_optimizer_is_not_final_decision": true,
+    "preflight_defers_postflight_outputs": true,
+    "checkpoint_freshness_policy_enforced": true
+  },
+  "performance": {
+    "prediction_snapshot_reads": 1,
+    "operational_probe_cache_entries": 69,
+    "audit_scoped_cache": true
+  },
+  "performance_ms": 252.33
+}

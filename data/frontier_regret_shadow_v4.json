@@ -1,0 +1,1709 @@
+{
+  "schema_version": 1,
+  "engine": "v4-frontier-regret-shadow",
+  "audit_only": true,
+  "decision_authority": "NONE",
+  "affects_search": false,
+  "affects_decision": false,
+  "failure_cannot_block_core_publish": true,
+  "production_frontier_unchanged": true,
+  "production_frontier_per_position": 7,
+  "comparison_widths": [
+    7,
+    10,
+    13,
+    20
+  ],
+  "regret_epsilon": 0.01,
+  "status": "PER_K_REGRET_OBSERVED",
+  "interpretation": {
+    "per_k_regret_observed": true,
+    "global_regret_observed": false,
+    "package_change_observed": true,
+    "max_utility_regret": 1.54,
+    "max_xi_regret": 1.27,
+    "search_complete_claim_supported": false,
+    "global_optimum_stable_across_scanned_widths": true,
+    "evidence_scope": "observational comparison across configured widths only; not proof of exhaustive global optimality"
+  },
+  "production_parity": {
+    "status": "PASS",
+    "artifact_frontier_per_position": 7,
+    "expected_frontier_per_position": 7,
+    "per_replacement_count": {
+      "1": {
+        "signature_matches": true,
+        "utility_delta": 0.0,
+        "xi_delta": 0.0,
+        "matches": true
+      },
+      "2": {
+        "signature_matches": true,
+        "utility_delta": 0.0,
+        "xi_delta": 0.0,
+        "matches": true
+      },
+      "3": {
+        "signature_matches": true,
+        "utility_delta": 0.0,
+        "xi_delta": 0.0,
+        "matches": true
+      },
+      "4": {
+        "signature_matches": true,
+        "utility_delta": 0.0,
+        "xi_delta": 0.0,
+        "matches": true
+      }
+    },
+    "global_signature_matches": true,
+    "exact_semantic_parity": true
+  },
+  "by_width": {
+    "7": {
+      "frontier_per_position": 7,
+      "screened_players": 552,
+      "frontier_players": 28,
+      "evaluated_packages": 36911,
+      "overall_verdict": "MATERIAL_UPGRADE",
+      "per_replacement_count": {
+        "1": {
+          "production": {
+            "signature": {
+              "replacements": 1,
+              "out": [
+                40
+              ],
+              "in": [
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 9.94,
+            "adjusted_utility_gain_5": 9.94,
+            "delta_best_xi_xpts_5": 10.0,
+            "delta_bench_adjusted_utility_5": 10.0,
+            "target_itb": 5
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 1,
+              "out": [
+                40
+              ],
+              "in": [
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 9.94,
+            "adjusted_utility_gain_5": 9.94,
+            "delta_best_xi_xpts_5": 10.0,
+            "delta_bench_adjusted_utility_5": 10.0,
+            "target_itb": 5
+          },
+          "package_changed": false,
+          "utility_regret_vs_production": 0.0,
+          "xi_regret_vs_production": 0.0,
+          "regret_observed": false
+        },
+        "2": {
+          "production": {
+            "signature": {
+              "replacements": 2,
+              "out": [
+                15,
+                557
+              ],
+              "in": [
+                94,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 19.8,
+            "adjusted_utility_gain_5": 20.18,
+            "delta_best_xi_xpts_5": 20.14,
+            "delta_bench_adjusted_utility_5": 20.52,
+            "target_itb": 0
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 2,
+              "out": [
+                15,
+                557
+              ],
+              "in": [
+                94,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 19.8,
+            "adjusted_utility_gain_5": 20.18,
+            "delta_best_xi_xpts_5": 20.14,
+            "delta_bench_adjusted_utility_5": 20.52,
+            "target_itb": 0
+          },
+          "package_changed": false,
+          "utility_regret_vs_production": 0.0,
+          "xi_regret_vs_production": 0.0,
+          "regret_observed": false
+        },
+        "3": {
+          "production": {
+            "signature": {
+              "replacements": 3,
+              "out": [
+                15,
+                40,
+                572
+              ],
+              "in": [
+                94,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 25.45,
+            "adjusted_utility_gain_5": 25.74,
+            "delta_best_xi_xpts_5": 26.05,
+            "delta_bench_adjusted_utility_5": 26.34,
+            "target_itb": 0
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 3,
+              "out": [
+                15,
+                40,
+                572
+              ],
+              "in": [
+                94,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 25.45,
+            "adjusted_utility_gain_5": 25.74,
+            "delta_best_xi_xpts_5": 26.05,
+            "delta_bench_adjusted_utility_5": 26.34,
+            "target_itb": 0
+          },
+          "package_changed": false,
+          "utility_regret_vs_production": 0.0,
+          "xi_regret_vs_production": 0.0,
+          "regret_observed": false
+        },
+        "4": {
+          "production": {
+            "signature": {
+              "replacements": 4,
+              "out": [
+                8,
+                15,
+                109,
+                557
+              ],
+              "in": [
+                94,
+                204,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 30.29,
+            "adjusted_utility_gain_5": 30.66,
+            "delta_best_xi_xpts_5": 31.15,
+            "delta_bench_adjusted_utility_5": 31.52,
+            "target_itb": 1
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 4,
+              "out": [
+                8,
+                15,
+                109,
+                557
+              ],
+              "in": [
+                94,
+                204,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 30.29,
+            "adjusted_utility_gain_5": 30.66,
+            "delta_best_xi_xpts_5": 31.15,
+            "delta_bench_adjusted_utility_5": 31.52,
+            "target_itb": 1
+          },
+          "package_changed": false,
+          "utility_regret_vs_production": 0.0,
+          "xi_regret_vs_production": 0.0,
+          "regret_observed": false
+        }
+      },
+      "global_winner": {
+        "production": {
+          "signature": {
+            "replacements": 4,
+            "out": [
+              8,
+              15,
+              109,
+              557
+            ],
+            "in": [
+              94,
+              204,
+              384,
+              427
+            ]
+          },
+          "classification": "MATERIAL_UPGRADE",
+          "adjusted_best_xi_gain_5": 30.29,
+          "adjusted_utility_gain_5": 30.66,
+          "delta_best_xi_xpts_5": 31.15,
+          "delta_bench_adjusted_utility_5": 31.52,
+          "target_itb": 1
+        },
+        "challenger": {
+          "signature": {
+            "replacements": 4,
+            "out": [
+              8,
+              15,
+              109,
+              557
+            ],
+            "in": [
+              94,
+              204,
+              384,
+              427
+            ]
+          },
+          "classification": "MATERIAL_UPGRADE",
+          "adjusted_best_xi_gain_5": 30.29,
+          "adjusted_utility_gain_5": 30.66,
+          "delta_best_xi_xpts_5": 31.15,
+          "delta_bench_adjusted_utility_5": 31.52,
+          "target_itb": 1
+        },
+        "package_changed": false,
+        "utility_regret_vs_production": 0.0,
+        "xi_regret_vs_production": 0.0,
+        "regret_observed": false
+      }
+    },
+    "10": {
+      "frontier_per_position": 10,
+      "screened_players": 552,
+      "frontier_players": 40,
+      "evaluated_packages": 39224,
+      "overall_verdict": "MATERIAL_UPGRADE",
+      "per_replacement_count": {
+        "1": {
+          "production": {
+            "signature": {
+              "replacements": 1,
+              "out": [
+                40
+              ],
+              "in": [
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 9.94,
+            "adjusted_utility_gain_5": 9.94,
+            "delta_best_xi_xpts_5": 10.0,
+            "delta_bench_adjusted_utility_5": 10.0,
+            "target_itb": 5
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 1,
+              "out": [
+                40
+              ],
+              "in": [
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 9.94,
+            "adjusted_utility_gain_5": 9.94,
+            "delta_best_xi_xpts_5": 10.0,
+            "delta_bench_adjusted_utility_5": 10.0,
+            "target_itb": 5
+          },
+          "package_changed": false,
+          "utility_regret_vs_production": 0.0,
+          "xi_regret_vs_production": 0.0,
+          "regret_observed": false
+        },
+        "2": {
+          "production": {
+            "signature": {
+              "replacements": 2,
+              "out": [
+                15,
+                557
+              ],
+              "in": [
+                94,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 19.8,
+            "adjusted_utility_gain_5": 20.18,
+            "delta_best_xi_xpts_5": 20.14,
+            "delta_bench_adjusted_utility_5": 20.52,
+            "target_itb": 0
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 2,
+              "out": [
+                15,
+                557
+              ],
+              "in": [
+                94,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 19.8,
+            "adjusted_utility_gain_5": 20.18,
+            "delta_best_xi_xpts_5": 20.14,
+            "delta_bench_adjusted_utility_5": 20.52,
+            "target_itb": 0
+          },
+          "package_changed": false,
+          "utility_regret_vs_production": 0.0,
+          "xi_regret_vs_production": 0.0,
+          "regret_observed": false
+        },
+        "3": {
+          "production": {
+            "signature": {
+              "replacements": 3,
+              "out": [
+                15,
+                40,
+                572
+              ],
+              "in": [
+                94,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 25.45,
+            "adjusted_utility_gain_5": 25.74,
+            "delta_best_xi_xpts_5": 26.05,
+            "delta_bench_adjusted_utility_5": 26.34,
+            "target_itb": 0
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 3,
+              "out": [
+                15,
+                40,
+                572
+              ],
+              "in": [
+                94,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 25.45,
+            "adjusted_utility_gain_5": 25.74,
+            "delta_best_xi_xpts_5": 26.05,
+            "delta_bench_adjusted_utility_5": 26.34,
+            "target_itb": 0
+          },
+          "package_changed": false,
+          "utility_regret_vs_production": 0.0,
+          "xi_regret_vs_production": 0.0,
+          "regret_observed": false
+        },
+        "4": {
+          "production": {
+            "signature": {
+              "replacements": 4,
+              "out": [
+                8,
+                15,
+                109,
+                557
+              ],
+              "in": [
+                94,
+                204,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 30.29,
+            "adjusted_utility_gain_5": 30.66,
+            "delta_best_xi_xpts_5": 31.15,
+            "delta_bench_adjusted_utility_5": 31.52,
+            "target_itb": 1
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 4,
+              "out": [
+                8,
+                15,
+                109,
+                557
+              ],
+              "in": [
+                94,
+                204,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 30.29,
+            "adjusted_utility_gain_5": 30.66,
+            "delta_best_xi_xpts_5": 31.15,
+            "delta_bench_adjusted_utility_5": 31.52,
+            "target_itb": 1
+          },
+          "package_changed": false,
+          "utility_regret_vs_production": 0.0,
+          "xi_regret_vs_production": 0.0,
+          "regret_observed": false
+        }
+      },
+      "global_winner": {
+        "production": {
+          "signature": {
+            "replacements": 4,
+            "out": [
+              8,
+              15,
+              109,
+              557
+            ],
+            "in": [
+              94,
+              204,
+              384,
+              427
+            ]
+          },
+          "classification": "MATERIAL_UPGRADE",
+          "adjusted_best_xi_gain_5": 30.29,
+          "adjusted_utility_gain_5": 30.66,
+          "delta_best_xi_xpts_5": 31.15,
+          "delta_bench_adjusted_utility_5": 31.52,
+          "target_itb": 1
+        },
+        "challenger": {
+          "signature": {
+            "replacements": 4,
+            "out": [
+              8,
+              15,
+              109,
+              557
+            ],
+            "in": [
+              94,
+              204,
+              384,
+              427
+            ]
+          },
+          "classification": "MATERIAL_UPGRADE",
+          "adjusted_best_xi_gain_5": 30.29,
+          "adjusted_utility_gain_5": 30.66,
+          "delta_best_xi_xpts_5": 31.15,
+          "delta_bench_adjusted_utility_5": 31.52,
+          "target_itb": 1
+        },
+        "package_changed": false,
+        "utility_regret_vs_production": 0.0,
+        "xi_regret_vs_production": 0.0,
+        "regret_observed": false
+      }
+    },
+    "13": {
+      "frontier_per_position": 13,
+      "screened_players": 552,
+      "frontier_players": 52,
+      "evaluated_packages": 41160,
+      "overall_verdict": "MATERIAL_UPGRADE",
+      "per_replacement_count": {
+        "1": {
+          "production": {
+            "signature": {
+              "replacements": 1,
+              "out": [
+                40
+              ],
+              "in": [
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 9.94,
+            "adjusted_utility_gain_5": 9.94,
+            "delta_best_xi_xpts_5": 10.0,
+            "delta_bench_adjusted_utility_5": 10.0,
+            "target_itb": 5
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 1,
+              "out": [
+                40
+              ],
+              "in": [
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 9.94,
+            "adjusted_utility_gain_5": 9.94,
+            "delta_best_xi_xpts_5": 10.0,
+            "delta_bench_adjusted_utility_5": 10.0,
+            "target_itb": 5
+          },
+          "package_changed": false,
+          "utility_regret_vs_production": 0.0,
+          "xi_regret_vs_production": 0.0,
+          "regret_observed": false
+        },
+        "2": {
+          "production": {
+            "signature": {
+              "replacements": 2,
+              "out": [
+                15,
+                557
+              ],
+              "in": [
+                94,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 19.8,
+            "adjusted_utility_gain_5": 20.18,
+            "delta_best_xi_xpts_5": 20.14,
+            "delta_bench_adjusted_utility_5": 20.52,
+            "target_itb": 0
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 2,
+              "out": [
+                15,
+                557
+              ],
+              "in": [
+                94,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 19.8,
+            "adjusted_utility_gain_5": 20.18,
+            "delta_best_xi_xpts_5": 20.14,
+            "delta_bench_adjusted_utility_5": 20.52,
+            "target_itb": 0
+          },
+          "package_changed": false,
+          "utility_regret_vs_production": 0.0,
+          "xi_regret_vs_production": 0.0,
+          "regret_observed": false
+        },
+        "3": {
+          "production": {
+            "signature": {
+              "replacements": 3,
+              "out": [
+                15,
+                40,
+                572
+              ],
+              "in": [
+                94,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 25.45,
+            "adjusted_utility_gain_5": 25.74,
+            "delta_best_xi_xpts_5": 26.05,
+            "delta_bench_adjusted_utility_5": 26.34,
+            "target_itb": 0
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 3,
+              "out": [
+                15,
+                557,
+                572
+              ],
+              "in": [
+                127,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 26.72,
+            "adjusted_utility_gain_5": 27.28,
+            "delta_best_xi_xpts_5": 27.37,
+            "delta_bench_adjusted_utility_5": 27.93,
+            "target_itb": 0
+          },
+          "package_changed": true,
+          "utility_regret_vs_production": 1.54,
+          "xi_regret_vs_production": 1.27,
+          "regret_observed": true
+        },
+        "4": {
+          "production": {
+            "signature": {
+              "replacements": 4,
+              "out": [
+                8,
+                15,
+                109,
+                557
+              ],
+              "in": [
+                94,
+                204,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 30.29,
+            "adjusted_utility_gain_5": 30.66,
+            "delta_best_xi_xpts_5": 31.15,
+            "delta_bench_adjusted_utility_5": 31.52,
+            "target_itb": 1
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 4,
+              "out": [
+                8,
+                15,
+                109,
+                557
+              ],
+              "in": [
+                94,
+                204,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 30.29,
+            "adjusted_utility_gain_5": 30.66,
+            "delta_best_xi_xpts_5": 31.15,
+            "delta_bench_adjusted_utility_5": 31.52,
+            "target_itb": 1
+          },
+          "package_changed": false,
+          "utility_regret_vs_production": 0.0,
+          "xi_regret_vs_production": 0.0,
+          "regret_observed": false
+        }
+      },
+      "global_winner": {
+        "production": {
+          "signature": {
+            "replacements": 4,
+            "out": [
+              8,
+              15,
+              109,
+              557
+            ],
+            "in": [
+              94,
+              204,
+              384,
+              427
+            ]
+          },
+          "classification": "MATERIAL_UPGRADE",
+          "adjusted_best_xi_gain_5": 30.29,
+          "adjusted_utility_gain_5": 30.66,
+          "delta_best_xi_xpts_5": 31.15,
+          "delta_bench_adjusted_utility_5": 31.52,
+          "target_itb": 1
+        },
+        "challenger": {
+          "signature": {
+            "replacements": 4,
+            "out": [
+              8,
+              15,
+              109,
+              557
+            ],
+            "in": [
+              94,
+              204,
+              384,
+              427
+            ]
+          },
+          "classification": "MATERIAL_UPGRADE",
+          "adjusted_best_xi_gain_5": 30.29,
+          "adjusted_utility_gain_5": 30.66,
+          "delta_best_xi_xpts_5": 31.15,
+          "delta_bench_adjusted_utility_5": 31.52,
+          "target_itb": 1
+        },
+        "package_changed": false,
+        "utility_regret_vs_production": 0.0,
+        "xi_regret_vs_production": 0.0,
+        "regret_observed": false
+      }
+    },
+    "20": {
+      "frontier_per_position": 20,
+      "screened_players": 552,
+      "frontier_players": 80,
+      "evaluated_packages": 44252,
+      "overall_verdict": "MATERIAL_UPGRADE",
+      "per_replacement_count": {
+        "1": {
+          "production": {
+            "signature": {
+              "replacements": 1,
+              "out": [
+                40
+              ],
+              "in": [
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 9.94,
+            "adjusted_utility_gain_5": 9.94,
+            "delta_best_xi_xpts_5": 10.0,
+            "delta_bench_adjusted_utility_5": 10.0,
+            "target_itb": 5
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 1,
+              "out": [
+                40
+              ],
+              "in": [
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 9.94,
+            "adjusted_utility_gain_5": 9.94,
+            "delta_best_xi_xpts_5": 10.0,
+            "delta_bench_adjusted_utility_5": 10.0,
+            "target_itb": 5
+          },
+          "package_changed": false,
+          "utility_regret_vs_production": 0.0,
+          "xi_regret_vs_production": 0.0,
+          "regret_observed": false
+        },
+        "2": {
+          "production": {
+            "signature": {
+              "replacements": 2,
+              "out": [
+                15,
+                557
+              ],
+              "in": [
+                94,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 19.8,
+            "adjusted_utility_gain_5": 20.18,
+            "delta_best_xi_xpts_5": 20.14,
+            "delta_bench_adjusted_utility_5": 20.52,
+            "target_itb": 0
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 2,
+              "out": [
+                15,
+                557
+              ],
+              "in": [
+                94,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 19.8,
+            "adjusted_utility_gain_5": 20.18,
+            "delta_best_xi_xpts_5": 20.14,
+            "delta_bench_adjusted_utility_5": 20.52,
+            "target_itb": 0
+          },
+          "package_changed": false,
+          "utility_regret_vs_production": 0.0,
+          "xi_regret_vs_production": 0.0,
+          "regret_observed": false
+        },
+        "3": {
+          "production": {
+            "signature": {
+              "replacements": 3,
+              "out": [
+                15,
+                40,
+                572
+              ],
+              "in": [
+                94,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 25.45,
+            "adjusted_utility_gain_5": 25.74,
+            "delta_best_xi_xpts_5": 26.05,
+            "delta_bench_adjusted_utility_5": 26.34,
+            "target_itb": 0
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 3,
+              "out": [
+                15,
+                557,
+                572
+              ],
+              "in": [
+                127,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 26.72,
+            "adjusted_utility_gain_5": 27.28,
+            "delta_best_xi_xpts_5": 27.37,
+            "delta_bench_adjusted_utility_5": 27.93,
+            "target_itb": 0
+          },
+          "package_changed": true,
+          "utility_regret_vs_production": 1.54,
+          "xi_regret_vs_production": 1.27,
+          "regret_observed": true
+        },
+        "4": {
+          "production": {
+            "signature": {
+              "replacements": 4,
+              "out": [
+                8,
+                15,
+                109,
+                557
+              ],
+              "in": [
+                94,
+                204,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 30.29,
+            "adjusted_utility_gain_5": 30.66,
+            "delta_best_xi_xpts_5": 31.15,
+            "delta_bench_adjusted_utility_5": 31.52,
+            "target_itb": 1
+          },
+          "challenger": {
+            "signature": {
+              "replacements": 4,
+              "out": [
+                8,
+                15,
+                109,
+                557
+              ],
+              "in": [
+                94,
+                204,
+                384,
+                427
+              ]
+            },
+            "classification": "MATERIAL_UPGRADE",
+            "adjusted_best_xi_gain_5": 30.29,
+            "adjusted_utility_gain_5": 30.66,
+            "delta_best_xi_xpts_5": 31.15,
+            "delta_bench_adjusted_utility_5": 31.52,
+            "target_itb": 1
+          },
+          "package_changed": false,
+          "utility_regret_vs_production": 0.0,
+          "xi_regret_vs_production": 0.0,
+          "regret_observed": false
+        }
+      },
+      "global_winner": {
+        "production": {
+          "signature": {
+            "replacements": 4,
+            "out": [
+              8,
+              15,
+              109,
+              557
+            ],
+            "in": [
+              94,
+              204,
+              384,
+              427
+            ]
+          },
+          "classification": "MATERIAL_UPGRADE",
+          "adjusted_best_xi_gain_5": 30.29,
+          "adjusted_utility_gain_5": 30.66,
+          "delta_best_xi_xpts_5": 31.15,
+          "delta_bench_adjusted_utility_5": 31.52,
+          "target_itb": 1
+        },
+        "challenger": {
+          "signature": {
+            "replacements": 4,
+            "out": [
+              8,
+              15,
+              109,
+              557
+            ],
+            "in": [
+              94,
+              204,
+              384,
+              427
+            ]
+          },
+          "classification": "MATERIAL_UPGRADE",
+          "adjusted_best_xi_gain_5": 30.29,
+          "adjusted_utility_gain_5": 30.66,
+          "delta_best_xi_xpts_5": 31.15,
+          "delta_bench_adjusted_utility_5": 31.52,
+          "target_itb": 1
+        },
+        "package_changed": false,
+        "utility_regret_vs_production": 0.0,
+        "xi_regret_vs_production": 0.0,
+        "regret_observed": false
+      }
+    }
+  },
+  "current_observation": {
+    "generated_at": "2026-09-04T16:34:09.728288+00:00",
+    "source_snapshot": {
+      "predictions_generated_at": "2026-09-04T16:33:36.354079+00:00",
+      "latest_generated_at": "2026-09-04T16:33:36.354079+00:00",
+      "runtime_publish_at": "2026-09-04T16:33:54.478937+00:00"
+    },
+    "status": "PER_K_REGRET_OBSERVED",
+    "production_frontier_per_position": 7,
+    "comparison_widths": [
+      7,
+      10,
+      13,
+      20
+    ],
+    "max_utility_regret": 1.54,
+    "max_xi_regret": 1.27,
+    "per_k_regret_observed": true,
+    "global_regret_observed": false,
+    "package_change_observed": true,
+    "search_complete_claim_supported": false,
+    "global_optimum_stable_across_scanned_widths": true,
+    "production_parity_status": "PASS"
+  },
+  "history": [
+    {
+      "generated_at": "2026-09-02T23:44:44.596136+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-02T23:44:10.348362+00:00",
+        "latest_generated_at": "2026-09-02T23:44:10.348362+00:00",
+        "runtime_publish_at": "2026-09-02T23:44:29.052561+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.3,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "FAIL"
+    },
+    {
+      "generated_at": "2026-09-02T23:52:20.350731+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-02T23:51:46.671517+00:00",
+        "latest_generated_at": "2026-09-02T23:51:46.671517+00:00",
+        "runtime_publish_at": "2026-09-02T23:52:04.511722+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.3,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-03T00:13:46.575368+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-03T00:13:13.191216+00:00",
+        "latest_generated_at": "2026-09-03T00:13:13.191216+00:00",
+        "runtime_publish_at": "2026-09-03T00:13:30.564869+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.3,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-03T01:22:34.919864+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-03T01:22:04.297426+00:00",
+        "latest_generated_at": "2026-09-03T01:22:04.297426+00:00",
+        "runtime_publish_at": "2026-09-03T01:22:20.948052+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.3,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-03T04:23:38.894637+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-03T04:23:04.530019+00:00",
+        "latest_generated_at": "2026-09-03T04:23:04.530019+00:00",
+        "runtime_publish_at": "2026-09-03T04:23:23.262014+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.3,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-03T05:23:56.077759+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-03T05:23:32.837174+00:00",
+        "latest_generated_at": "2026-09-03T05:23:32.837174+00:00",
+        "runtime_publish_at": "2026-09-03T05:23:45.110889+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.3,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-03T05:26:07.359900+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-03T05:25:45.125025+00:00",
+        "latest_generated_at": "2026-09-03T05:25:45.125025+00:00",
+        "runtime_publish_at": "2026-09-03T05:25:55.947708+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.3,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-03T09:46:20.426253+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-03T09:45:36.138030+00:00",
+        "latest_generated_at": "2026-09-03T09:45:36.138030+00:00",
+        "runtime_publish_at": "2026-09-03T09:46:02.557900+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.3,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-03T11:37:09.322453+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-03T11:36:35.370453+00:00",
+        "latest_generated_at": "2026-09-03T11:36:35.370453+00:00",
+        "runtime_publish_at": "2026-09-03T11:36:53.655145+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.3,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-03T14:32:56.427598+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-03T14:32:33.462952+00:00",
+        "latest_generated_at": "2026-09-03T14:32:33.462952+00:00",
+        "runtime_publish_at": "2026-09-03T14:32:46.968094+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.3,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-03T16:39:03.005543+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-03T16:38:29.396849+00:00",
+        "latest_generated_at": "2026-09-03T16:38:29.396849+00:00",
+        "runtime_publish_at": "2026-09-03T16:38:47.385943+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.31,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-03T18:33:14.283056+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-03T18:32:40.661450+00:00",
+        "latest_generated_at": "2026-09-03T18:32:40.661450+00:00",
+        "runtime_publish_at": "2026-09-03T18:32:58.511927+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.29,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-03T18:37:20.679218+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-03T18:36:45.623210+00:00",
+        "latest_generated_at": "2026-09-03T18:36:45.623210+00:00",
+        "runtime_publish_at": "2026-09-03T18:37:05.068340+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.3,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-03T20:05:00.061041+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-03T20:04:28.882619+00:00",
+        "latest_generated_at": "2026-09-03T20:04:28.882619+00:00",
+        "runtime_publish_at": "2026-09-03T20:04:45.979200+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.29,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-03T21:42:26.099515+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-03T21:42:00.771384+00:00",
+        "latest_generated_at": "2026-09-03T21:42:00.771384+00:00",
+        "runtime_publish_at": "2026-09-03T21:42:16.338743+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.29,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-03T22:46:18.955932+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-03T22:45:50.345153+00:00",
+        "latest_generated_at": "2026-09-03T22:45:50.345153+00:00",
+        "runtime_publish_at": "2026-09-03T22:46:06.867337+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.29,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-04T00:03:56.482009+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-04T00:03:20.206894+00:00",
+        "latest_generated_at": "2026-09-04T00:03:20.206894+00:00",
+        "runtime_publish_at": "2026-09-04T00:03:43.207552+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.29,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-04T01:14:23.764018+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-04T01:13:49.802767+00:00",
+        "latest_generated_at": "2026-09-04T01:13:49.802767+00:00",
+        "runtime_publish_at": "2026-09-04T01:14:08.068188+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.29,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-04T04:27:35.870202+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-04T04:27:00.392380+00:00",
+        "latest_generated_at": "2026-09-04T04:27:00.392380+00:00",
+        "runtime_publish_at": "2026-09-04T04:27:19.807420+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.29,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-04T06:24:43.516186+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-04T06:24:20.531810+00:00",
+        "latest_generated_at": "2026-09-04T06:24:20.531810+00:00",
+        "runtime_publish_at": "2026-09-04T06:24:34.778535+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.57,
+      "max_xi_regret": 1.29,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-04T09:37:17.516567+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-04T09:36:42.616713+00:00",
+        "latest_generated_at": "2026-09-04T09:36:42.616713+00:00",
+        "runtime_publish_at": "2026-09-04T09:37:01.522441+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.56,
+      "max_xi_regret": 1.29,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-04T11:38:15.548696+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-04T11:37:41.527078+00:00",
+        "latest_generated_at": "2026-09-04T11:37:41.527078+00:00",
+        "runtime_publish_at": "2026-09-04T11:37:59.862048+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.56,
+      "max_xi_regret": 1.29,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-04T14:14:29.971963+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-04T14:13:54.289304+00:00",
+        "latest_generated_at": "2026-09-04T14:13:54.289304+00:00",
+        "runtime_publish_at": "2026-09-04T14:14:14.032445+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.56,
+      "max_xi_regret": 1.28,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-04T14:20:48.644901+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-04T14:20:17.337852+00:00",
+        "latest_generated_at": "2026-09-04T14:20:17.337852+00:00",
+        "runtime_publish_at": "2026-09-04T14:20:33.110952+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.56,
+      "max_xi_regret": 1.28,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-04T14:43:35.534265+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-04T14:42:59.793986+00:00",
+        "latest_generated_at": "2026-09-04T14:42:59.793986+00:00",
+        "runtime_publish_at": "2026-09-04T14:43:19.683205+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.56,
+      "max_xi_regret": 1.28,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    },
+    {
+      "generated_at": "2026-09-04T16:34:09.728288+00:00",
+      "source_snapshot": {
+        "predictions_generated_at": "2026-09-04T16:33:36.354079+00:00",
+        "latest_generated_at": "2026-09-04T16:33:36.354079+00:00",
+        "runtime_publish_at": "2026-09-04T16:33:54.478937+00:00"
+      },
+      "status": "PER_K_REGRET_OBSERVED",
+      "production_frontier_per_position": 7,
+      "comparison_widths": [
+        7,
+        10,
+        13,
+        20
+      ],
+      "max_utility_regret": 1.54,
+      "max_xi_regret": 1.27,
+      "per_k_regret_observed": true,
+      "global_regret_observed": false,
+      "package_change_observed": true,
+      "search_complete_claim_supported": false,
+      "global_optimum_stable_across_scanned_widths": true,
+      "production_parity_status": "PASS"
+    }
+  ],
+  "history_limit": 48,
+  "guardrails": {
+    "production_width_is_baseline": true,
+    "production_search_width_unchanged": true,
+    "production_ranking_semantics_unchanged": true,
+    "production_beam_semantics_unchanged": true,
+    "shadow_has_zero_decision_authority": true,
+    "shadow_failure_is_non_blocking": true
+  },
+  "runtime_execution": {
+    "outcome": "success",
+    "duration_ms": 15272.79,
+    "failure_cannot_block_core_publish": true,
+    "observational_outside_decision_chain": true
+  }
+}

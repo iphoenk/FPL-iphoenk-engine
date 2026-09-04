@@ -1,0 +1,222 @@
+{
+  "schema_version": 4963,
+  "kind": "official_submitted_state",
+  "gw": 2,
+  "deadline_time": "2026-08-28T17:30:00Z",
+  "captured_at": "2026-08-29T03:47:05.163389+00:00",
+  "official_truth": true,
+  "immutable": true,
+  "submitted": {
+    "players": [
+      {
+        "element": 572,
+        "position": 1,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false
+      },
+      {
+        "element": 115,
+        "position": 2,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false
+      },
+      {
+        "element": 8,
+        "position": 3,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false
+      },
+      {
+        "element": 88,
+        "position": 4,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false
+      },
+      {
+        "element": 426,
+        "position": 5,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false
+      },
+      {
+        "element": 15,
+        "position": 6,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false
+      },
+      {
+        "element": 557,
+        "position": 7,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false
+      },
+      {
+        "element": 40,
+        "position": 8,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false
+      },
+      {
+        "element": 411,
+        "position": 9,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": true
+      },
+      {
+        "element": 165,
+        "position": 10,
+        "multiplier": 2,
+        "captain": true,
+        "vice_captain": false
+      },
+      {
+        "element": 346,
+        "position": 11,
+        "multiplier": 1,
+        "captain": false,
+        "vice_captain": false
+      },
+      {
+        "element": 109,
+        "position": 12,
+        "multiplier": 0,
+        "captain": false,
+        "vice_captain": false
+      },
+      {
+        "element": 565,
+        "position": 13,
+        "multiplier": 0,
+        "captain": false,
+        "vice_captain": false
+      },
+      {
+        "element": 254,
+        "position": 14,
+        "multiplier": 0,
+        "captain": false,
+        "vice_captain": false
+      },
+      {
+        "element": 473,
+        "position": 15,
+        "multiplier": 0,
+        "captain": false,
+        "vice_captain": false
+      }
+    ],
+    "squad_elements": [
+      572,
+      115,
+      8,
+      88,
+      426,
+      15,
+      557,
+      40,
+      411,
+      165,
+      346,
+      109,
+      565,
+      254,
+      473
+    ],
+    "starting_xi": [
+      572,
+      115,
+      8,
+      88,
+      426,
+      15,
+      557,
+      40,
+      411,
+      165,
+      346
+    ],
+    "bench": [
+      109,
+      565,
+      254,
+      473
+    ],
+    "captain": 165,
+    "vice_captain": 411,
+    "active_chip": "wildcard",
+    "entry_history": {
+      "event": 2,
+      "points": 13,
+      "total_points": 84,
+      "rank": 6063578,
+      "rank_sort": 6383232,
+      "overall_rank": 1440081,
+      "percentile_rank": 65,
+      "overall_rank_percentage": "14",
+      "bank": 5,
+      "value": 1006,
+      "event_transfers": 0,
+      "event_transfers_cost": 0,
+      "points_on_bench": 0
+    }
+  },
+  "submitted_sha256": "8fb51e121a469d6f04f804d0d41d1da62d557d24ff5fa6e6b08467d75cbdf3d3",
+  "predeadline_baseline": {
+    "applicable": true,
+    "target_gw": 2,
+    "squad_elements": [
+      572,
+      109,
+      115,
+      8,
+      88,
+      254,
+      473,
+      426,
+      15,
+      557,
+      40,
+      565,
+      411,
+      165,
+      346
+    ],
+    "starting_xi": [],
+    "bench": [],
+    "captain": 426,
+    "vice_captain": 411,
+    "chip": "WILDCARD",
+    "source": "locked_squad+manual_lineup"
+  },
+  "baseline_comparison": {
+    "status": "COMPARED",
+    "squad_added": [],
+    "squad_removed": [],
+    "starting_xi_changed": false,
+    "bench_changed": false,
+    "captain_changed": true,
+    "vice_captain_changed": false,
+    "chip_changed": true,
+    "material_change": false
+  },
+  "guardrails": {
+    "official_picks_only": true,
+    "exactly_15_players": true,
+    "starting_xi_from_official_pick_positions_1_to_11": true,
+    "bench_order_from_official_pick_positions_12_to_15": true,
+    "captain_vice_from_official_flags": true,
+    "chip_from_official_picks": true,
+    "archive_append_only": true,
+    "later_conflicting_payload_fails_closed": true,
+    "canonical_validation_digest_reused": true
+  }
+}

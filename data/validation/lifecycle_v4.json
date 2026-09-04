@@ -1,0 +1,228 @@
+{
+  "schema_version": 4943,
+  "engine": "v4.9.3-validation-lifecycle-v4.9.4.3-truthful-starts",
+  "release": "4.9.6",
+  "status": "PASS",
+  "simulated": false,
+  "snapshot": {
+    "status": "PASS",
+    "action": "PRESERVED",
+    "gw": 3,
+    "deadline_time": "2026-09-04T17:30:00Z",
+    "players": 622,
+    "model_version": "v4.9.2-truthful-health",
+    "captured_at": "2026-08-29T03:47:05.164245+00:00",
+    "immutable": true
+  },
+  "submitted_state": {
+    "status": "PASS",
+    "action": "PRESERVED",
+    "gw": 2,
+    "immutable": true,
+    "players": 15,
+    "starting_xi": 11,
+    "bench": 4,
+    "captain": 165,
+    "vice_captain": 411,
+    "active_chip": "wildcard",
+    "baseline_comparison": {
+      "status": "COMPARED",
+      "squad_added": [],
+      "squad_removed": [],
+      "starting_xi_changed": false,
+      "bench_changed": false,
+      "captain_changed": true,
+      "vice_captain_changed": false,
+      "chip_changed": true,
+      "material_change": false
+    }
+  },
+  "reconciliation": {
+    "status": "PASS",
+    "action": "PRESERVED",
+    "gw": 2,
+    "metrics": {
+      "status": "PASS",
+      "n": 614,
+      "leakage_rejected": 0,
+      "mae": 1.1719,
+      "rmse": 2.14,
+      "interval80_coverage": 0.8404,
+      "ranking": {
+        "spearman": 0.3949,
+        "top10_precision": 0.3,
+        "top10_actual_points": 86.0,
+        "top25_precision": 0.28,
+        "top25_actual_points": 141.0,
+        "top50_precision": 0.3,
+        "top50_actual_points": 219.0
+      },
+      "minutes": {
+        "n": 614,
+        "mae": 15.2257,
+        "start_n": 614,
+        "start_missing": 0,
+        "start_brier": 0.0908,
+        "start_log_loss": 0.299,
+        "dnp_n": 614,
+        "dnp_brier": 0.119,
+        "dnp_log_loss": 0.394,
+        "p60_brier": 0.0968
+      },
+      "by_position": {
+        "FWD": {
+          "n": 73,
+          "mae": 1.3235,
+          "rmse": 2.1568,
+          "mean_predicted": 1.2257,
+          "mean_actual": 1.4932,
+          "bias": -0.2675,
+          "drift_abs": 0.2675,
+          "interval80_coverage": 0.8082,
+          "minutes": {
+            "n": 73,
+            "mae": 16.163,
+            "start_n": 73,
+            "start_missing": 0,
+            "start_brier": 0.1122,
+            "start_log_loss": 0.3581,
+            "dnp_n": 73,
+            "dnp_brier": 0.1632,
+            "dnp_log_loss": 0.4746,
+            "p60_brier": 0.1214
+          }
+        },
+        "MID": {
+          "n": 269,
+          "mae": 1.1451,
+          "rmse": 2.3256,
+          "mean_predicted": 1.3391,
+          "mean_actual": 1.6245,
+          "bias": -0.2855,
+          "drift_abs": 0.2855,
+          "interval80_coverage": 0.8662,
+          "minutes": {
+            "n": 269,
+            "mae": 15.2509,
+            "start_n": 269,
+            "start_missing": 0,
+            "start_brier": 0.1057,
+            "start_log_loss": 0.3368,
+            "dnp_n": 269,
+            "dnp_brier": 0.1264,
+            "dnp_log_loss": 0.4368,
+            "p60_brier": 0.1093
+          }
+        },
+        "DEF": {
+          "n": 205,
+          "mae": 1.2449,
+          "rmse": 2.0474,
+          "mean_predicted": 1.4773,
+          "mean_actual": 1.3854,
+          "bias": 0.0919,
+          "drift_abs": 0.0919,
+          "interval80_coverage": 0.8146,
+          "minutes": {
+            "n": 205,
+            "mae": 16.0961,
+            "start_n": 205,
+            "start_missing": 0,
+            "start_brier": 0.0764,
+            "start_log_loss": 0.2623,
+            "dnp_n": 205,
+            "dnp_brier": 0.1131,
+            "dnp_log_loss": 0.3621,
+            "p60_brier": 0.0865
+          }
+        },
+        "GK": {
+          "n": 67,
+          "mae": 0.8907,
+          "rmse": 1.5359,
+          "mean_predicted": 1.1578,
+          "mean_actual": 0.8358,
+          "bias": 0.322,
+          "drift_abs": 0.322,
+          "interval80_coverage": 0.8507,
+          "minutes": {
+            "n": 67,
+            "mae": 11.4403,
+            "start_n": 67,
+            "start_missing": 0,
+            "start_brier": 0.0515,
+            "start_log_loss": 0.1954,
+            "dnp_n": 67,
+            "dnp_brier": 0.0587,
+            "dnp_log_loss": 0.2322,
+            "p60_brier": 0.0515
+          }
+        }
+      },
+      "captaincy": {
+        "predicted_captain": 426,
+        "predicted_captain_actual": 23.0,
+        "actual_best": 426,
+        "actual_best_points": 23.0,
+        "regret": 0.0
+      },
+      "decision_regret": {
+        "status": "PASS",
+        "captain_regret": 14.0,
+        "xi_regret": 60.0,
+        "bench_regret": 6.0,
+        "transfer_regret_3_5gw": {
+          "status": "PENDING_HORIZON",
+          "reason": "requires realized multi-GW outcomes; never reconstructed early"
+        }
+      },
+      "tactical_ablation": {
+        "status": "PASS",
+        "n": 614,
+        "mae_with_tactical": 1.1719,
+        "mae_without_tactical": 1.1719,
+        "lift": 0.0
+      },
+      "calibration_source": "immutable_predeadline_forecast_vs_post_gw_actuals"
+    },
+    "model_version": "v4.9.2-truthful-health",
+    "integrity_deferred_to_eligibility": true,
+    "integrity_verified_by_eligibility_rebuild": true
+  },
+  "eligibility": {
+    "model_version": "v4.9.2-truthful-health",
+    "eligible_samples": 1,
+    "eligible_gws": [
+      2
+    ],
+    "integrity_checked_gws": [
+      2
+    ],
+    "integrity_checked_sha256": {
+      "2": "e50208cb81900e4b8b1aee0f15b1e8010b2c6a3ad87ebbeb83311d856a398367"
+    },
+    "rejected_samples": [],
+    "archive_is_append_only": true,
+    "health_view_rebuilt": true,
+    "single_pass_source_integrity": true
+  },
+  "guardrails": {
+    "raw_snapshot_only": true,
+    "official_api_refetch": false,
+    "retroactive_snapshot_rejected": true,
+    "deadline_snapshot_immutable": true,
+    "submitted_state_immutable": true,
+    "submitted_state_from_official_picks_only": true,
+    "submitted_state_conflict_fails_closed": true,
+    "reconciliation_archive_immutable": true,
+    "reconciliation_idempotent": true,
+    "health_view_current_model_only": true,
+    "simulation_never_mutates_store": true,
+    "started_from_official_stats_starts_only": true,
+    "minutes_never_infer_started": true,
+    "missing_starts_excluded_from_start_brier": true,
+    "preloaded_snapshot_contract_equivalent": true,
+    "rollover_actuals_acquired_by_raw_snapshot_only": true,
+    "rollover_actuals_event_bound": true
+  }
+}

@@ -1,0 +1,960 @@
+{
+  "schema_version": 460,
+  "engine": "v4.6-evidence-fusion-sanity",
+  "point_in_time": true,
+  "raw_package_verdict": "MATERIAL_UPGRADE",
+  "final_verdict": "MATERIAL_UPGRADE",
+  "best_by_replacement_count": {
+    "1": {
+      "replacements": 1,
+      "out": [
+        {
+          "element": 40,
+          "name": "Rogers",
+          "position": "MID",
+          "team": "Chelsea",
+          "team_id": 6,
+          "cost": 75,
+          "xpts_3": 11.92,
+          "xpts_5": 20.07,
+          "xpts_10": 40.56,
+          "xpts_15": 60.68,
+          "uncertainty": 0.233,
+          "objective": 4.0481
+        }
+      ],
+      "in": [
+        {
+          "element": 427,
+          "name": "Mbeumo",
+          "position": "MID",
+          "team": "Man Utd",
+          "team_id": 16,
+          "cost": 80,
+          "xpts_3": 17.76,
+          "xpts_5": 30.07,
+          "xpts_10": 60.26,
+          "xpts_15": 90.43,
+          "uncertainty": 0.408,
+          "objective": 6.0363
+        }
+      ],
+      "raw_classification": "MATERIAL_UPGRADE",
+      "raw_adjusted_utility_gain_5": 9.94,
+      "evidence_confidence": 0.7534,
+      "sanity_gain_5": 7.489,
+      "classification": "MATERIAL_UPGRADE",
+      "material_eligible": true,
+      "evidence": {
+        "incoming": [
+          {
+            "element": 427,
+            "name": "Mbeumo",
+            "team": "Man Utd",
+            "position": "MID",
+            "confidence": 0.7562,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.8755,
+            "dnp_probability_5": 0.1121,
+            "uncertainty": 0.408,
+            "role_prior": 0.7829,
+            "horizon_stability": 0.9584,
+            "rate_spike_risk": 0.4031,
+            "current_season_weight": 0.2,
+            "market_support": 0.4577,
+            "flags": [
+              "HIGH_UNCERTAINTY"
+            ]
+          }
+        ],
+        "outgoing": [
+          {
+            "element": 40,
+            "name": "Rogers",
+            "team": "Chelsea",
+            "position": "MID",
+            "confidence": 0.8254,
+            "grade": "HIGH",
+            "start_probability_5": 0.9079,
+            "dnp_probability_5": 0.0829,
+            "uncertainty": 0.233,
+            "role_prior": 0.7047,
+            "horizon_stability": 0.9556,
+            "rate_spike_risk": 0.3351,
+            "current_season_weight": 0.1919,
+            "market_support": 0.4097,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          }
+        ],
+        "avg_incoming_confidence": 0.7562,
+        "avg_outgoing_confidence": 0.8254,
+        "min_incoming_confidence": 0.7562,
+        "severe_rate_spikes": 0,
+        "team_cluster_excess": 0,
+        "early_season": false,
+        "reasons": [
+          "STRONG_BASELINE_RESISTANCE"
+        ]
+      }
+    },
+    "2": {
+      "replacements": 2,
+      "out": [
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "position": "MID",
+          "team": "Arsenal",
+          "team_id": 1,
+          "cost": 65,
+          "xpts_3": 8.3,
+          "xpts_5": 14.08,
+          "xpts_10": 28.17,
+          "xpts_15": 42.13,
+          "uncertainty": 0.102,
+          "objective": 2.8382
+        },
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "position": "MID",
+          "team": "Arsenal",
+          "team_id": 1,
+          "cost": 65,
+          "xpts_3": 7.99,
+          "xpts_5": 13.56,
+          "xpts_10": 27.12,
+          "xpts_15": 40.56,
+          "uncertainty": 0.098,
+          "objective": 2.7323
+        }
+      ],
+      "in": [
+        {
+          "element": 427,
+          "name": "Mbeumo",
+          "position": "MID",
+          "team": "Man Utd",
+          "team_id": 16,
+          "cost": 80,
+          "xpts_3": 17.76,
+          "xpts_5": 30.07,
+          "xpts_10": 60.26,
+          "xpts_15": 90.43,
+          "uncertainty": 0.408,
+          "objective": 6.0363
+        },
+        {
+          "element": 94,
+          "name": "Schade",
+          "position": "MID",
+          "team": "Brentford",
+          "team_id": 4,
+          "cost": 60,
+          "xpts_3": 12.82,
+          "xpts_5": 20.88,
+          "xpts_10": 41.93,
+          "xpts_15": 63.19,
+          "uncertainty": 0.193,
+          "objective": 4.2607
+        }
+      ],
+      "raw_classification": "MATERIAL_UPGRADE",
+      "raw_adjusted_utility_gain_5": 20.18,
+      "evidence_confidence": 0.759,
+      "sanity_gain_5": 15.317,
+      "classification": "MATERIAL_UPGRADE",
+      "material_eligible": true,
+      "evidence": {
+        "incoming": [
+          {
+            "element": 427,
+            "name": "Mbeumo",
+            "team": "Man Utd",
+            "position": "MID",
+            "confidence": 0.7562,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.8755,
+            "dnp_probability_5": 0.1121,
+            "uncertainty": 0.408,
+            "role_prior": 0.7829,
+            "horizon_stability": 0.9584,
+            "rate_spike_risk": 0.4031,
+            "current_season_weight": 0.2,
+            "market_support": 0.4577,
+            "flags": [
+              "HIGH_UNCERTAINTY"
+            ]
+          },
+          {
+            "element": 94,
+            "name": "Schade",
+            "team": "Brentford",
+            "position": "MID",
+            "confidence": 0.8618,
+            "grade": "HIGH",
+            "start_probability_5": 0.9203,
+            "dnp_probability_5": 0.0717,
+            "uncertainty": 0.193,
+            "role_prior": 0.5193,
+            "horizon_stability": 0.9515,
+            "rate_spike_risk": 0.0,
+            "current_season_weight": 0.1973,
+            "market_support": 0.297,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          }
+        ],
+        "outgoing": [
+          {
+            "element": 557,
+            "name": "Tzolis",
+            "team": "Arsenal",
+            "position": "MID",
+            "confidence": 0.8249,
+            "grade": "HIGH",
+            "start_probability_5": 0.8006,
+            "dnp_probability_5": 0.1795,
+            "uncertainty": 0.102,
+            "role_prior": 0.4421,
+            "horizon_stability": 0.959,
+            "rate_spike_risk": 0.0,
+            "current_season_weight": 0.1429,
+            "market_support": 0.3223,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 15,
+            "name": "Ødegaard",
+            "team": "Arsenal",
+            "position": "MID",
+            "confidence": 0.7762,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.7276,
+            "dnp_probability_5": 0.2452,
+            "uncertainty": 0.098,
+            "role_prior": 0.3848,
+            "horizon_stability": 0.9584,
+            "rate_spike_risk": 0.0,
+            "current_season_weight": 0.1676,
+            "market_support": 0.1869,
+            "flags": [
+              "MINUTES_RISK",
+              "EARLY_SEASON_SAMPLE"
+            ]
+          }
+        ],
+        "avg_incoming_confidence": 0.809,
+        "avg_outgoing_confidence": 0.8005,
+        "min_incoming_confidence": 0.7562,
+        "severe_rate_spikes": 0,
+        "team_cluster_excess": 0,
+        "early_season": false,
+        "reasons": []
+      }
+    },
+    "3": {
+      "replacements": 3,
+      "out": [
+        {
+          "element": 572,
+          "name": "Tzolakis",
+          "position": "GK",
+          "team": "Hull City",
+          "team_id": 11,
+          "cost": 45,
+          "xpts_3": 9.34,
+          "xpts_5": 15.73,
+          "xpts_10": 31.81,
+          "xpts_15": 47.41,
+          "uncertainty": 0.179,
+          "objective": 3.1986
+        },
+        {
+          "element": 40,
+          "name": "Rogers",
+          "position": "MID",
+          "team": "Chelsea",
+          "team_id": 6,
+          "cost": 75,
+          "xpts_3": 11.92,
+          "xpts_5": 20.07,
+          "xpts_10": 40.56,
+          "xpts_15": 60.68,
+          "uncertainty": 0.233,
+          "objective": 4.0481
+        },
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "position": "MID",
+          "team": "Arsenal",
+          "team_id": 1,
+          "cost": 65,
+          "xpts_3": 7.99,
+          "xpts_5": 13.56,
+          "xpts_10": 27.12,
+          "xpts_15": 40.56,
+          "uncertainty": 0.098,
+          "objective": 2.7323
+        }
+      ],
+      "in": [
+        {
+          "element": 384,
+          "name": "Donnarumma",
+          "position": "GK",
+          "team": "Man City",
+          "team_id": 15,
+          "cost": 55,
+          "xpts_3": 16.32,
+          "xpts_5": 26.87,
+          "xpts_10": 52.68,
+          "xpts_15": 79.47,
+          "uncertainty": 0.494,
+          "objective": 5.4252
+        },
+        {
+          "element": 427,
+          "name": "Mbeumo",
+          "position": "MID",
+          "team": "Man Utd",
+          "team_id": 16,
+          "cost": 80,
+          "xpts_3": 17.76,
+          "xpts_5": 30.07,
+          "xpts_10": 60.26,
+          "xpts_15": 90.43,
+          "uncertainty": 0.408,
+          "objective": 6.0363
+        },
+        {
+          "element": 94,
+          "name": "Schade",
+          "position": "MID",
+          "team": "Brentford",
+          "team_id": 4,
+          "cost": 60,
+          "xpts_3": 12.82,
+          "xpts_5": 20.88,
+          "xpts_10": 41.93,
+          "xpts_15": 63.19,
+          "uncertainty": 0.193,
+          "objective": 4.2607
+        }
+      ],
+      "raw_classification": "MATERIAL_UPGRADE",
+      "raw_adjusted_utility_gain_5": 25.74,
+      "evidence_confidence": 0.6207,
+      "sanity_gain_5": 15.977,
+      "classification": "OPTIONAL_IMPROVEMENT",
+      "material_eligible": false,
+      "evidence": {
+        "incoming": [
+          {
+            "element": 384,
+            "name": "Donnarumma",
+            "team": "Man City",
+            "position": "GK",
+            "confidence": 0.5507,
+            "grade": "LOW",
+            "start_probability_5": 0.9399,
+            "dnp_probability_5": 0.0541,
+            "uncertainty": 0.494,
+            "role_prior": 0.0571,
+            "horizon_stability": 0.9303,
+            "rate_spike_risk": 1.0,
+            "current_season_weight": 0.2,
+            "market_support": 0.1371,
+            "flags": [
+              "HIGH_UNCERTAINTY",
+              "LOW_ROLE_PRIOR",
+              "RAW_RATE_SPIKE"
+            ]
+          },
+          {
+            "element": 427,
+            "name": "Mbeumo",
+            "team": "Man Utd",
+            "position": "MID",
+            "confidence": 0.7562,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.8755,
+            "dnp_probability_5": 0.1121,
+            "uncertainty": 0.408,
+            "role_prior": 0.7829,
+            "horizon_stability": 0.9584,
+            "rate_spike_risk": 0.4031,
+            "current_season_weight": 0.2,
+            "market_support": 0.4577,
+            "flags": [
+              "HIGH_UNCERTAINTY"
+            ]
+          },
+          {
+            "element": 94,
+            "name": "Schade",
+            "team": "Brentford",
+            "position": "MID",
+            "confidence": 0.8618,
+            "grade": "HIGH",
+            "start_probability_5": 0.9203,
+            "dnp_probability_5": 0.0717,
+            "uncertainty": 0.193,
+            "role_prior": 0.5193,
+            "horizon_stability": 0.9515,
+            "rate_spike_risk": 0.0,
+            "current_season_weight": 0.1973,
+            "market_support": 0.297,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          }
+        ],
+        "outgoing": [
+          {
+            "element": 572,
+            "name": "Tzolakis",
+            "team": "Hull City",
+            "position": "GK",
+            "confidence": 0.7312,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.8433,
+            "dnp_probability_5": 0.141,
+            "uncertainty": 0.179,
+            "role_prior": 0.0579,
+            "horizon_stability": 0.9565,
+            "rate_spike_risk": 0.0,
+            "current_season_weight": 0.2,
+            "market_support": 0.5389,
+            "flags": [
+              "LOW_ROLE_PRIOR"
+            ]
+          },
+          {
+            "element": 40,
+            "name": "Rogers",
+            "team": "Chelsea",
+            "position": "MID",
+            "confidence": 0.8254,
+            "grade": "HIGH",
+            "start_probability_5": 0.9079,
+            "dnp_probability_5": 0.0829,
+            "uncertainty": 0.233,
+            "role_prior": 0.7047,
+            "horizon_stability": 0.9556,
+            "rate_spike_risk": 0.3351,
+            "current_season_weight": 0.1919,
+            "market_support": 0.4097,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 15,
+            "name": "Ødegaard",
+            "team": "Arsenal",
+            "position": "MID",
+            "confidence": 0.7762,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.7276,
+            "dnp_probability_5": 0.2452,
+            "uncertainty": 0.098,
+            "role_prior": 0.3848,
+            "horizon_stability": 0.9584,
+            "rate_spike_risk": 0.0,
+            "current_season_weight": 0.1676,
+            "market_support": 0.1869,
+            "flags": [
+              "MINUTES_RISK",
+              "EARLY_SEASON_SAMPLE"
+            ]
+          }
+        ],
+        "avg_incoming_confidence": 0.7229,
+        "avg_outgoing_confidence": 0.7776,
+        "min_incoming_confidence": 0.5507,
+        "severe_rate_spikes": 1,
+        "team_cluster_excess": 0,
+        "early_season": false,
+        "reasons": [
+          "RATE_SPIKE_CAP",
+          "WEAK_LINK_EVIDENCE",
+          "STRONG_BASELINE_RESISTANCE"
+        ]
+      }
+    },
+    "4": {
+      "replacements": 4,
+      "out": [
+        {
+          "element": 8,
+          "name": "Calafiori",
+          "position": "DEF",
+          "team": "Arsenal",
+          "team_id": 1,
+          "cost": 56,
+          "xpts_3": 9.72,
+          "xpts_5": 16.66,
+          "xpts_10": 33.32,
+          "xpts_15": 49.76,
+          "uncertainty": 0.184,
+          "objective": 3.3513
+        },
+        {
+          "element": 109,
+          "name": "Verbruggen",
+          "position": "GK",
+          "team": "Brighton",
+          "team_id": 5,
+          "cost": 45,
+          "xpts_3": 10.47,
+          "xpts_5": 17.28,
+          "xpts_10": 34.07,
+          "xpts_15": 51.17,
+          "uncertainty": 0.183,
+          "objective": 3.5148
+        },
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "position": "MID",
+          "team": "Arsenal",
+          "team_id": 1,
+          "cost": 65,
+          "xpts_3": 8.3,
+          "xpts_5": 14.08,
+          "xpts_10": 28.17,
+          "xpts_15": 42.13,
+          "uncertainty": 0.102,
+          "objective": 2.8382
+        },
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "position": "MID",
+          "team": "Arsenal",
+          "team_id": 1,
+          "cost": 65,
+          "xpts_3": 7.99,
+          "xpts_5": 13.56,
+          "xpts_10": 27.12,
+          "xpts_15": 40.56,
+          "uncertainty": 0.098,
+          "objective": 2.7323
+        }
+      ],
+      "in": [
+        {
+          "element": 204,
+          "name": "Mitchell",
+          "position": "DEF",
+          "team": "Crystal Palace",
+          "team_id": 8,
+          "cost": 45,
+          "xpts_3": 10.89,
+          "xpts_5": 18.07,
+          "xpts_10": 36.56,
+          "xpts_15": 53.43,
+          "uncertainty": 0.224,
+          "objective": 3.6815
+        },
+        {
+          "element": 384,
+          "name": "Donnarumma",
+          "position": "GK",
+          "team": "Man City",
+          "team_id": 15,
+          "cost": 55,
+          "xpts_3": 16.32,
+          "xpts_5": 26.87,
+          "xpts_10": 52.68,
+          "xpts_15": 79.47,
+          "uncertainty": 0.494,
+          "objective": 5.4252
+        },
+        {
+          "element": 427,
+          "name": "Mbeumo",
+          "position": "MID",
+          "team": "Man Utd",
+          "team_id": 16,
+          "cost": 80,
+          "xpts_3": 17.76,
+          "xpts_5": 30.07,
+          "xpts_10": 60.26,
+          "xpts_15": 90.43,
+          "uncertainty": 0.408,
+          "objective": 6.0363
+        },
+        {
+          "element": 94,
+          "name": "Schade",
+          "position": "MID",
+          "team": "Brentford",
+          "team_id": 4,
+          "cost": 60,
+          "xpts_3": 12.82,
+          "xpts_5": 20.88,
+          "xpts_10": 41.93,
+          "xpts_15": 63.19,
+          "uncertainty": 0.193,
+          "objective": 4.2607
+        }
+      ],
+      "raw_classification": "MATERIAL_UPGRADE",
+      "raw_adjusted_utility_gain_5": 30.66,
+      "evidence_confidence": 0.5748,
+      "sanity_gain_5": 17.625,
+      "classification": "OPTIONAL_IMPROVEMENT",
+      "material_eligible": false,
+      "evidence": {
+        "incoming": [
+          {
+            "element": 204,
+            "name": "Mitchell",
+            "team": "Crystal Palace",
+            "position": "DEF",
+            "confidence": 0.7409,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.9467,
+            "dnp_probability_5": 0.048,
+            "uncertainty": 0.224,
+            "role_prior": 0.1796,
+            "horizon_stability": 0.9472,
+            "rate_spike_risk": 0.2388,
+            "current_season_weight": 0.2,
+            "market_support": 0.0789,
+            "flags": []
+          },
+          {
+            "element": 384,
+            "name": "Donnarumma",
+            "team": "Man City",
+            "position": "GK",
+            "confidence": 0.5507,
+            "grade": "LOW",
+            "start_probability_5": 0.9399,
+            "dnp_probability_5": 0.0541,
+            "uncertainty": 0.494,
+            "role_prior": 0.0571,
+            "horizon_stability": 0.9303,
+            "rate_spike_risk": 1.0,
+            "current_season_weight": 0.2,
+            "market_support": 0.1371,
+            "flags": [
+              "HIGH_UNCERTAINTY",
+              "LOW_ROLE_PRIOR",
+              "RAW_RATE_SPIKE"
+            ]
+          },
+          {
+            "element": 427,
+            "name": "Mbeumo",
+            "team": "Man Utd",
+            "position": "MID",
+            "confidence": 0.7562,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.8755,
+            "dnp_probability_5": 0.1121,
+            "uncertainty": 0.408,
+            "role_prior": 0.7829,
+            "horizon_stability": 0.9584,
+            "rate_spike_risk": 0.4031,
+            "current_season_weight": 0.2,
+            "market_support": 0.4577,
+            "flags": [
+              "HIGH_UNCERTAINTY"
+            ]
+          },
+          {
+            "element": 94,
+            "name": "Schade",
+            "team": "Brentford",
+            "position": "MID",
+            "confidence": 0.8618,
+            "grade": "HIGH",
+            "start_probability_5": 0.9203,
+            "dnp_probability_5": 0.0717,
+            "uncertainty": 0.193,
+            "role_prior": 0.5193,
+            "horizon_stability": 0.9515,
+            "rate_spike_risk": 0.0,
+            "current_season_weight": 0.1973,
+            "market_support": 0.297,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          }
+        ],
+        "outgoing": [
+          {
+            "element": 8,
+            "name": "Calafiori",
+            "team": "Arsenal",
+            "position": "DEF",
+            "confidence": 0.7645,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.7925,
+            "dnp_probability_5": 0.1868,
+            "uncertainty": 0.184,
+            "role_prior": 0.4487,
+            "horizon_stability": 0.9358,
+            "rate_spike_risk": 0.6528,
+            "current_season_weight": 0.191,
+            "market_support": 1.0,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 109,
+            "name": "Verbruggen",
+            "team": "Brighton",
+            "position": "GK",
+            "confidence": 0.8001,
+            "grade": "HIGH",
+            "start_probability_5": 0.9467,
+            "dnp_probability_5": 0.048,
+            "uncertainty": 0.183,
+            "role_prior": 0.1564,
+            "horizon_stability": 0.9449,
+            "rate_spike_risk": 0.0,
+            "current_season_weight": 0.2,
+            "market_support": 0.6637,
+            "flags": []
+          },
+          {
+            "element": 557,
+            "name": "Tzolis",
+            "team": "Arsenal",
+            "position": "MID",
+            "confidence": 0.8249,
+            "grade": "HIGH",
+            "start_probability_5": 0.8006,
+            "dnp_probability_5": 0.1795,
+            "uncertainty": 0.102,
+            "role_prior": 0.4421,
+            "horizon_stability": 0.959,
+            "rate_spike_risk": 0.0,
+            "current_season_weight": 0.1429,
+            "market_support": 0.3223,
+            "flags": [
+              "EARLY_SEASON_SAMPLE"
+            ]
+          },
+          {
+            "element": 15,
+            "name": "Ødegaard",
+            "team": "Arsenal",
+            "position": "MID",
+            "confidence": 0.7762,
+            "grade": "MEDIUM",
+            "start_probability_5": 0.7276,
+            "dnp_probability_5": 0.2452,
+            "uncertainty": 0.098,
+            "role_prior": 0.3848,
+            "horizon_stability": 0.9584,
+            "rate_spike_risk": 0.0,
+            "current_season_weight": 0.1676,
+            "market_support": 0.1869,
+            "flags": [
+              "MINUTES_RISK",
+              "EARLY_SEASON_SAMPLE"
+            ]
+          }
+        ],
+        "avg_incoming_confidence": 0.7274,
+        "avg_outgoing_confidence": 0.7914,
+        "min_incoming_confidence": 0.5507,
+        "severe_rate_spikes": 1,
+        "team_cluster_excess": 0,
+        "early_season": false,
+        "reasons": [
+          "RATE_SPIKE_CAP",
+          "WEAK_LINK_EVIDENCE",
+          "STRONG_BASELINE_RESISTANCE"
+        ]
+      }
+    }
+  },
+  "recommended_package": {
+    "replacements": 2,
+    "out": [
+      {
+        "element": 557,
+        "name": "Tzolis",
+        "position": "MID",
+        "team": "Arsenal",
+        "team_id": 1,
+        "cost": 65,
+        "xpts_3": 8.3,
+        "xpts_5": 14.08,
+        "xpts_10": 28.17,
+        "xpts_15": 42.13,
+        "uncertainty": 0.102,
+        "objective": 2.8382
+      },
+      {
+        "element": 15,
+        "name": "Ødegaard",
+        "position": "MID",
+        "team": "Arsenal",
+        "team_id": 1,
+        "cost": 65,
+        "xpts_3": 7.99,
+        "xpts_5": 13.56,
+        "xpts_10": 27.12,
+        "xpts_15": 40.56,
+        "uncertainty": 0.098,
+        "objective": 2.7323
+      }
+    ],
+    "in": [
+      {
+        "element": 427,
+        "name": "Mbeumo",
+        "position": "MID",
+        "team": "Man Utd",
+        "team_id": 16,
+        "cost": 80,
+        "xpts_3": 17.76,
+        "xpts_5": 30.07,
+        "xpts_10": 60.26,
+        "xpts_15": 90.43,
+        "uncertainty": 0.408,
+        "objective": 6.0363
+      },
+      {
+        "element": 94,
+        "name": "Schade",
+        "position": "MID",
+        "team": "Brentford",
+        "team_id": 4,
+        "cost": 60,
+        "xpts_3": 12.82,
+        "xpts_5": 20.88,
+        "xpts_10": 41.93,
+        "xpts_15": 63.19,
+        "uncertainty": 0.193,
+        "objective": 4.2607
+      }
+    ],
+    "raw_classification": "MATERIAL_UPGRADE",
+    "raw_adjusted_utility_gain_5": 20.18,
+    "evidence_confidence": 0.759,
+    "sanity_gain_5": 15.317,
+    "classification": "MATERIAL_UPGRADE",
+    "material_eligible": true,
+    "evidence": {
+      "incoming": [
+        {
+          "element": 427,
+          "name": "Mbeumo",
+          "team": "Man Utd",
+          "position": "MID",
+          "confidence": 0.7562,
+          "grade": "MEDIUM",
+          "start_probability_5": 0.8755,
+          "dnp_probability_5": 0.1121,
+          "uncertainty": 0.408,
+          "role_prior": 0.7829,
+          "horizon_stability": 0.9584,
+          "rate_spike_risk": 0.4031,
+          "current_season_weight": 0.2,
+          "market_support": 0.4577,
+          "flags": [
+            "HIGH_UNCERTAINTY"
+          ]
+        },
+        {
+          "element": 94,
+          "name": "Schade",
+          "team": "Brentford",
+          "position": "MID",
+          "confidence": 0.8618,
+          "grade": "HIGH",
+          "start_probability_5": 0.9203,
+          "dnp_probability_5": 0.0717,
+          "uncertainty": 0.193,
+          "role_prior": 0.5193,
+          "horizon_stability": 0.9515,
+          "rate_spike_risk": 0.0,
+          "current_season_weight": 0.1973,
+          "market_support": 0.297,
+          "flags": [
+            "EARLY_SEASON_SAMPLE"
+          ]
+        }
+      ],
+      "outgoing": [
+        {
+          "element": 557,
+          "name": "Tzolis",
+          "team": "Arsenal",
+          "position": "MID",
+          "confidence": 0.8249,
+          "grade": "HIGH",
+          "start_probability_5": 0.8006,
+          "dnp_probability_5": 0.1795,
+          "uncertainty": 0.102,
+          "role_prior": 0.4421,
+          "horizon_stability": 0.959,
+          "rate_spike_risk": 0.0,
+          "current_season_weight": 0.1429,
+          "market_support": 0.3223,
+          "flags": [
+            "EARLY_SEASON_SAMPLE"
+          ]
+        },
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "team": "Arsenal",
+          "position": "MID",
+          "confidence": 0.7762,
+          "grade": "MEDIUM",
+          "start_probability_5": 0.7276,
+          "dnp_probability_5": 0.2452,
+          "uncertainty": 0.098,
+          "role_prior": 0.3848,
+          "horizon_stability": 0.9584,
+          "rate_spike_risk": 0.0,
+          "current_season_weight": 0.1676,
+          "market_support": 0.1869,
+          "flags": [
+            "MINUTES_RISK",
+            "EARLY_SEASON_SAMPLE"
+          ]
+        }
+      ],
+      "avg_incoming_confidence": 0.809,
+      "avg_outgoing_confidence": 0.8005,
+      "min_incoming_confidence": 0.7562,
+      "severe_rate_spikes": 0,
+      "team_cluster_excess": 0,
+      "early_season": false,
+      "reasons": []
+    }
+  },
+  "evidence_health": {
+    "official_universe": true,
+    "prediction_priors_xmins_uncertainty": true,
+    "market_movement": true,
+    "global_advanced_sync_healthy": true
+  },
+  "guardrails": {
+    "raw_optimizer_not_authoritative": true,
+    "rate_spike_detection": true,
+    "team_cluster_penalty": true,
+    "outgoing_baseline_resistance": true,
+    "early_season_multi_change_cap": true,
+    "point_in_time_required": true,
+    "prefer_fewer_changes_when_evidence_similar": true
+  }
+}

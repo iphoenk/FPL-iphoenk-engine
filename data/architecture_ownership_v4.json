@@ -1,0 +1,476 @@
+{
+  "schema_version": 497,
+  "release": "4.9.6",
+  "service": "architecture_guard",
+  "status": "PASS",
+  "checks": {
+    "unique_service_ids": {
+      "pass": true,
+      "detail": []
+    },
+    "unique_contract_producers": {
+      "pass": true,
+      "detail": []
+    },
+    "contract_paths_complete": {
+      "pass": true,
+      "detail": []
+    },
+    "unique_contract_paths": {
+      "pass": true,
+      "detail": []
+    },
+    "unique_registry_ids": {
+      "pass": true,
+      "detail": []
+    },
+    "unique_responsibility_ids": {
+      "pass": true,
+      "detail": []
+    },
+    "unique_shared_primitive_ids": {
+      "pass": true,
+      "detail": []
+    },
+    "all_responsibilities_have_one_owner": {
+      "pass": true,
+      "detail": []
+    },
+    "capability_matrix_unique": {
+      "pass": true,
+      "detail": []
+    },
+    "capability_matrix_required_coverage": {
+      "pass": true,
+      "detail": []
+    },
+    "capability_matrix_contract_complete": {
+      "pass": true,
+      "detail": []
+    },
+    "capability_matrix_overlap_actions_governed": {
+      "pass": true,
+      "detail": []
+    },
+    "owned_challenger_single_decision_authority": {
+      "pass": true,
+      "detail": []
+    },
+    "canonical_rule_definitions_single_owner": {
+      "pass": true,
+      "detail": []
+    },
+    "official_fpl_fetch_single_owner": {
+      "pass": true,
+      "detail": []
+    },
+    "no_exact_nontrivial_function_clones": {
+      "pass": true,
+      "detail": []
+    },
+    "legacy_engine_is_thin_adapter": {
+      "pass": true,
+      "detail": []
+    },
+    "reconciliation_truth_single_owner": {
+      "pass": true,
+      "detail": []
+    },
+    "raw_snapshot_reuses_canonical_legality": {
+      "pass": true,
+      "detail": []
+    },
+    "reporting_composition_only": {
+      "pass": true,
+      "detail": []
+    },
+    "reference_modules_read_only": {
+      "pass": true,
+      "detail": []
+    },
+    "moving_operational_identity_single_owner": {
+      "pass": true,
+      "detail": []
+    },
+    "single_reusable_production_workflow": {
+      "pass": true,
+      "detail": []
+    },
+    "release_single_source_coherent": {
+      "pass": true,
+      "detail": []
+    }
+  },
+  "ownership_matrix": [
+    {
+      "capability": "OFFICIAL_PUBLIC_ACQUISITION",
+      "current_owner": "raw_snapshot",
+      "input_contract": "Official FPL public endpoints via src.sources.official_fpl",
+      "output_artifact": "data/runtime/snapshot.v1.json",
+      "consumers": [
+        "enrichment",
+        "prediction",
+        "validation"
+      ],
+      "duplicates_overlap": "Official client is transport-only; downstream refetch forbidden",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "AUTHENTICATED_PERSONAL_STATE",
+      "current_owner": "raw_snapshot",
+      "input_contract": "Authenticated Official FPL personal endpoints when session is available",
+      "output_artifact": "data/runtime/snapshot.v1.json#official.personal",
+      "consumers": [
+        "team_state",
+        "submitted_state",
+        "personal_gw_scorecard"
+      ],
+      "duplicates_overlap": "No downstream authenticated fetch owner permitted",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "PHASE_GW_DEADLINE_AUTHORITY",
+      "current_owner": "checkpoint_policy",
+      "input_contract": "raw_snapshot Official events + Asia/Jakarta governed checkpoint policy",
+      "output_artifact": "checkpoint_context embedded in runtime/latest artifacts",
+      "consumers": [
+        "orchestrator",
+        "prediction",
+        "governance",
+        "reporting"
+      ],
+      "duplicates_overlap": "Raw snapshot supplies facts; checkpoint_policy alone determines report timing semantics",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "SUBMITTED_LIVE_STATE",
+      "current_owner": "reconciliation_truth",
+      "input_contract": "raw_snapshot Official picks/event-live/history + immutable submitted archive",
+      "output_artifact": "data/validation/archive/submitted/gwNN.json + validation artifacts",
+      "consumers": [
+        "validation_lifecycle",
+        "gw_scorecard",
+        "planning baseline"
+      ],
+      "duplicates_overlap": "v4_submitted_state owns archive identity primitive; reconciliation_truth owns lifecycle truth",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "IDENTITY_RESOLVER",
+      "current_owner": "player_identity",
+      "input_contract": "Official element/team IDs",
+      "output_artifact": "resolved player rows embedded in universe/team/predictions",
+      "consumers": [
+        "prediction",
+        "optimization",
+        "reporting"
+      ],
+      "duplicates_overlap": "Name strings are presentation fields, never alternate identity authority",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "HISTORICAL_PRIORS",
+      "current_owner": "prediction",
+      "input_contract": "previous-season materialized stats + current Official history",
+      "output_artifact": "data/predictions_v4.json#players.priors",
+      "consumers": [
+        "xPts",
+        "xMins",
+        "validation"
+      ],
+      "duplicates_overlap": "Historical source adapters enrich only; they do not calculate final priors",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "ADVANCED_STATS",
+      "current_owner": "enrichment",
+      "input_contract": "Core Insights/Vaastav/deep-stat adapters with governed TTL",
+      "output_artifact": "data/runtime/enrichment.v1.json + data/stats/*",
+      "consumers": [
+        "prediction",
+        "ablation",
+        "health"
+      ],
+      "duplicates_overlap": "Source adapters are transport/normalization only",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "XMINS_START_DNP",
+      "current_owner": "prediction",
+      "input_contract": "Official starts/status + lineup distribution + external evidence confidence",
+      "output_artifact": "data/predictions_v4.json#players.fixtures.xmins",
+      "consumers": [
+        "lineup_optimizer",
+        "tactical_serving",
+        "validation"
+      ],
+      "duplicates_overlap": "v4_xmins_evidence augments confidence; it does not own baseline xMins",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "XPTS",
+      "current_owner": "prediction",
+      "input_contract": "materialized Official/enrichment/priors/xMins/opponent evidence",
+      "output_artifact": "data/predictions_v4.json",
+      "consumers": [
+        "optimizer",
+        "lineup",
+        "watchlist",
+        "reporting"
+      ],
+      "duplicates_overlap": "src.models.projection is legacy support/reference and not a production xPts owner",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "OPPONENT_MODEL",
+      "current_owner": "prediction",
+      "input_contract": "Official fixtures/team strengths + finished results",
+      "output_artifact": "data/predictions_v4.json#players.fixtures.calibration",
+      "consumers": [
+        "xPts",
+        "tactical_serving",
+        "validation"
+      ],
+      "duplicates_overlap": "Reporting may expose opponent evidence but may not rebuild it",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "TACTICAL_SYSTEM_FIT",
+      "current_owner": "optimization",
+      "input_contract": "predictions + universe + current team + prior tactical evidence",
+      "output_artifact": "data/tactical_serving_v4.json",
+      "consumers": [
+        "decision_arbitration",
+        "serving_payload"
+      ],
+      "duplicates_overlap": "Tactical evidence is composed in reporting, never recalculated there",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "COMPETITIVE_LOAD",
+      "current_owner": "enrichment",
+      "input_contract": "governed recent competitive-load evidence",
+      "output_artifact": "data/competitive_load_v4.json / enrichment contract",
+      "consumers": [
+        "prediction",
+        "tactical_serving",
+        "serving_payload"
+      ],
+      "duplicates_overlap": "Serving only summarizes precomputed load evidence",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "SET_PIECES_PENALTIES",
+      "current_owner": "prediction",
+      "input_contract": "Official/player role evidence + model inputs",
+      "output_artifact": "data/predictions_v4.json#players role/components",
+      "consumers": [
+        "xPts",
+        "tactical_serving",
+        "captaincy"
+      ],
+      "duplicates_overlap": "No report-layer set-piece calculation allowed",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "PRICE_SELL_VALUE_AFFORDABILITY",
+      "current_owner": "prediction",
+      "input_contract": "Official now_cost + reconstructed purchase/sell ledger",
+      "output_artifact": "data/team.json + data/prices.json",
+      "consumers": [
+        "package_optimizer",
+        "decision_arbitration",
+        "serving_payload"
+      ],
+      "duplicates_overlap": "Optimizer consumes exact finance contract and may not reconstruct a second ledger",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "WATCHLIST_DISCOVERY",
+      "current_owner": "optimization",
+      "input_contract": "full prediction universe + tactical/comparator evidence",
+      "output_artifact": "data/tactical_serving_v4.json#watchlist",
+      "consumers": [
+        "decision_arbitration",
+        "serving_payload"
+      ],
+      "duplicates_overlap": "Serving enforces exactly 20 but does not discover candidates",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "OWNED_VS_CHALLENGER_COMPARATOR",
+      "current_owner": "optimization",
+      "input_contract": "15 owned + 20 external watchlist + emerging challenger evidence + multi-horizon predictions",
+      "output_artifact": "data/tactical_serving_v4.json comparator evidence + data/owned_challenger_decision_v4.json advisory challenge evidence",
+      "consumers": [
+        "package_optimizer",
+        "decision_arbitration",
+        "serving_payload"
+      ],
+      "duplicates_overlap": "Owned challenger may rank and classify challenge evidence; CANONICAL_DECISION_ARBITRATION alone owns final HOLD/REVIEW/CHANGE action; reporting may not recompute",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "PACKAGE_OPTIMIZER",
+      "current_owner": "optimization",
+      "input_contract": "canonical candidates + exact finance + planning squad",
+      "output_artifact": "data/wc_package_audit_v4.json",
+      "consumers": [
+        "recommendation_sanity",
+        "decision_arbitration"
+      ],
+      "duplicates_overlap": "v4_wc_package_audit.py retained as reference/equivalence implementation, not runtime owner",
+      "action": "READ_ONLY_ALIAS_REQUIRED"
+    },
+    {
+      "capability": "XI_BENCH",
+      "current_owner": "optimization",
+      "input_contract": "owned prediction/xMins semantics + lineup policy",
+      "output_artifact": "data/lineup_decision_v4.json",
+      "consumers": [
+        "user_decision_overlay",
+        "decision_arbitration",
+        "gw_scorecard"
+      ],
+      "duplicates_overlap": "User overlay may override valid plan but does not recalculate optimizer ranking",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "CAPTAINCY",
+      "current_owner": "optimization",
+      "input_contract": "lineup candidate xPts/xMins/tactical evidence",
+      "output_artifact": "data/lineup_decision_v4.json#captain/vice_captain",
+      "consumers": [
+        "user_decision_overlay",
+        "decision_arbitration",
+        "serving_payload"
+      ],
+      "duplicates_overlap": "Reporting displays canonical C/VC only",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "CHIP",
+      "current_owner": "optimization",
+      "input_contract": "Official chip state + planning context + canonical decision evidence",
+      "output_artifact": "data/decision_arbitration_v4.json#dimensions.chip",
+      "consumers": [
+        "user_decision_overlay",
+        "checkpoint_governance",
+        "serving_payload"
+      ],
+      "duplicates_overlap": "Submitted chip remains Official truth; planning chip is advisory until user lock",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "EXTERNAL_CONSENSUS",
+      "current_owner": "report_governance",
+      "input_contract": "materialized external_source_evidence + source sweep status",
+      "output_artifact": "data/serving_payload_v4.json#consensus",
+      "consumers": [
+        "human report"
+      ],
+      "duplicates_overlap": "Advisory only; cannot override Official or canonical model decision",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "VALIDATION_CALIBRATION",
+      "current_owner": "validation_lifecycle",
+      "input_contract": "immutable snapshots + predictions + finished Official outcomes",
+      "output_artifact": "data/validation/lifecycle_v4.json + framework health",
+      "consumers": [
+        "quality_gate",
+        "governance",
+        "telemetry"
+      ],
+      "duplicates_overlap": "Model metrics are shared primitives, not a second lifecycle owner",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "LEGALITY_RULES",
+      "current_owner": "domain_legality",
+      "input_contract": "canonical FPL rules registry + effective plan",
+      "output_artifact": "data/compliance_audit.json + Gate0 legality evidence",
+      "consumers": [
+        "optimization",
+        "postflight",
+        "governance"
+      ],
+      "duplicates_overlap": "FPL constants remain single-owner in fpl_rules_2026",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "REPORTING_SERVING",
+      "current_owner": "report_governance",
+      "input_contract": "canonical decision arbitration + effective plan + validated materialized evidence",
+      "output_artifact": "data/checkpoint_decision_v4.json + data/serving_payload_v4.json",
+      "consumers": [
+        "USER_REPORT",
+        "publication"
+      ],
+      "duplicates_overlap": "Composition/format/explanation only; arbitration fallback forbidden",
+      "action": "MERGE_INTO_CANONICAL"
+    },
+    {
+      "capability": "BASE_PREDICTION_CACHE",
+      "current_owner": "prediction",
+      "input_contract": "semantic source/model/schema fingerprint",
+      "output_artifact": "data/predictions_base_hot_cache_v4.json",
+      "consumers": [
+        "prediction_service"
+      ],
+      "duplicates_overlap": "Exact reuse only; fresh xMins evidence is reattached",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "DECISION_ARTIFACT_CACHE",
+      "current_owner": "optimization",
+      "input_contract": "candidate/lineup/planning semantic fingerprint",
+      "output_artifact": "data/decision_hot_cache_v4.json",
+      "consumers": [
+        "decision_pipeline"
+      ],
+      "duplicates_overlap": "Only WC/package/lineup cached; sanity/tactical/arbitration always recomputed",
+      "action": "KEEP_CANONICAL"
+    },
+    {
+      "capability": "HEALTH_TELEMETRY",
+      "current_owner": "framework_health",
+      "input_contract": "DSS registries + runtime evidence + validation/gate state",
+      "output_artifact": "data/framework_health_v4.json",
+      "consumers": [
+        "quality_gate",
+        "governance",
+        "production acceptance"
+      ],
+      "duplicates_overlap": "Legacy service-named views may be read-only aliases only",
+      "action": "MERGE_INTO_CANONICAL"
+    },
+    {
+      "capability": "SCHEDULING",
+      "current_owner": "checkpoint_policy",
+      "input_contract": "Asia/Jakarta policy registry + Official deadlines",
+      "output_artifact": "checkpoint_context + reusable GitHub workflow dispatch",
+      "consumers": [
+        "main scheduler",
+        "recovery",
+        "governance"
+      ],
+      "duplicates_overlap": "Reusable production workflow is single owner; main/recovery are dispatchers",
+      "action": "KEEP_CANONICAL"
+    }
+  ],
+  "guardrails": {
+    "one_owner_per_artifact": true,
+    "one_owner_per_rule": true,
+    "shared_primitives_reused_not_reimplemented": true,
+    "official_fpl_single_acquisition_owner": true,
+    "reconciliation_single_owner": true,
+    "legacy_entrypoint_adapter_only": true,
+    "reusable_workflow_single_pipeline": true,
+    "audit_first_capability_matrix_enforced": true,
+    "reporting_composition_only": true,
+    "moving_operational_identity_single_owner": true,
+    "owned_challenger_single_decision_authority": true,
+    "reference_modules_read_only": true
+  }
+}

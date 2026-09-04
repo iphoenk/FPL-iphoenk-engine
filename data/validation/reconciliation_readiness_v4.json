@@ -1,0 +1,82 @@
+{
+  "schema_version": 4962,
+  "release": "4.9.6",
+  "service": "reconciliation_readiness",
+  "execution_boundary": "validation",
+  "status": "PASS",
+  "target_gw": 3,
+  "stage": "PREDEADLINE_READY",
+  "ready_for_reconciliation_now": false,
+  "checks": {
+    "snapshot_integrity": {
+      "pass": true,
+      "reason": null,
+      "players": 622
+    },
+    "validation_lifecycle": {
+      "pass": true,
+      "snapshot_status": "PASS"
+    },
+    "ownership_chain": {
+      "pass": true,
+      "owners": {
+        "official_fpl_acquisition": true,
+        "validation_store": true,
+        "reconciliation_truth": true,
+        "validation_lifecycle": true,
+        "reconciliation_readiness": true
+      }
+    },
+    "submitted_picks": {
+      "pass": false,
+      "submitted_gw": 2,
+      "picks": 0,
+      "expected_gw": 3
+    },
+    "finished_gw": {
+      "pass": false,
+      "last_finished_gw": 2,
+      "expected_gw": 3
+    },
+    "official_actuals": {
+      "pass": false,
+      "scoring_gw": 2,
+      "elements": 0,
+      "expected_gw": 3
+    },
+    "reconciliation_archive": {
+      "pass": false,
+      "exists": false,
+      "reason": null
+    },
+    "calibration_entry": {
+      "pass": false,
+      "eligible_gws": [
+        2
+      ]
+    }
+  },
+  "blockers": [],
+  "pending": [
+    "gw_finish",
+    "official_event_live_actuals",
+    "official_submitted_picks_after_deadline",
+    "post_gw_reconciliation"
+  ],
+  "input_reuse": {
+    "raw_snapshot_preloaded": true,
+    "lifecycle_preloaded": true,
+    "ownership_preloaded": false
+  },
+  "guardrails": {
+    "read_only_audit": true,
+    "official_api_refetch": false,
+    "deadline_snapshot_integrity_reused_from_validation_store": true,
+    "reconciliation_integrity_reused_from_validation_store": true,
+    "reconciliation_truth_not_reimplemented": true,
+    "official_fpl_single_acquisition_owner": true,
+    "expected_future_state_is_pending_not_failure": true,
+    "logical_owner_preserved_inside_consolidated_boundary": true,
+    "preloaded_input_contract_equivalent": true
+  }
+}

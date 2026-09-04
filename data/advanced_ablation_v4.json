@@ -1,0 +1,553 @@
+{
+  "schema_version": 493,
+  "engine": "v4.9.3-advanced-ablation",
+  "status": "PASS",
+  "generated_at": "2026-09-04T16:33:36.354079+00:00",
+  "snapshot_sha256": "4901f9f06d57b8e7be29aaff183ed94fe4f5a9f9fac0f2d8438d90d7a0c6bd09",
+  "enrichment_sha256": "9511345c975f08f659fed6c5994675ff1ca93a5d1bd4d5cedf4408d7f26c7f63",
+  "model_version": "v4.9.2-truthful-health",
+  "ablation": {
+    "treatment": "community_advanced_current_season_enrichment",
+    "control": "same_official_snapshot_and_last_season_priors_without_advanced_enrichment",
+    "advanced_removed_only": true,
+    "same_official_snapshot": true,
+    "same_last_season_priors": true,
+    "same_quality_config": true,
+    "same_optimizer_semantics": true,
+    "full_shadow_parity": {
+      "ok": true,
+      "ids_match": true,
+      "players": 652,
+      "shadow_players": 652,
+      "max_horizon_delta": 0.0,
+      "tolerance": 1e-06,
+      "mismatches": []
+    }
+  },
+  "prediction_impact": {
+    "players": 652,
+    "mean_abs_delta_xpts5": 0.1998,
+    "median_abs_delta_xpts5": 0.0,
+    "max_abs_delta_xpts5": 9.48,
+    "mean_abs_rank_shift": 3.819,
+    "max_abs_rank_shift": 57,
+    "players_abs_delta_ge": {
+      "0.05": 202,
+      "0.10": 172,
+      "0.25": 124,
+      "0.50": 79
+    },
+    "top_overlap": {
+      "10": {
+        "overlap": 6,
+        "overlap_ratio": 0.6,
+        "full_only": [
+          384,
+          480,
+          398,
+          397
+        ],
+        "no_advanced_only": [
+          368,
+          12,
+          388,
+          40
+        ]
+      },
+      "25": {
+        "overlap": 18,
+        "overlap_ratio": 0.72,
+        "full_only": [
+          384,
+          249,
+          84,
+          445,
+          453,
+          542,
+          229
+        ],
+        "no_advanced_only": [
+          115,
+          387,
+          356,
+          226,
+          366,
+          88,
+          428
+        ]
+      },
+      "50": {
+        "overlap": 46,
+        "overlap_ratio": 0.92,
+        "full_only": [
+          453,
+          569,
+          69,
+          390
+        ],
+        "no_advanced_only": [
+          115,
+          379,
+          86,
+          61
+        ]
+      }
+    },
+    "largest_impacts": [
+      {
+        "element": 384,
+        "name": "Donnarumma",
+        "position": "GK",
+        "full_xpts5": 26.87,
+        "no_advanced_xpts5": 17.39,
+        "delta_xpts5": 9.48,
+        "abs_delta_xpts5": 9.48,
+        "full_rank": 4,
+        "no_advanced_rank": 37,
+        "rank_shift": 33
+      },
+      {
+        "element": 426,
+        "name": "B.Fernandes",
+        "position": "MID",
+        "full_xpts5": 39.32,
+        "no_advanced_xpts5": 33.05,
+        "delta_xpts5": 6.27,
+        "abs_delta_xpts5": 6.27,
+        "full_rank": 1,
+        "no_advanced_rank": 1,
+        "rank_shift": 0
+      },
+      {
+        "element": 115,
+        "name": "De Cuyper",
+        "position": "DEF",
+        "full_xpts5": 15.64,
+        "no_advanced_xpts5": 19.31,
+        "delta_xpts5": -3.67,
+        "abs_delta_xpts5": 3.67,
+        "full_rank": 75,
+        "no_advanced_rank": 18,
+        "rank_shift": -57
+      },
+      {
+        "element": 249,
+        "name": "Barry",
+        "position": "FWD",
+        "full_xpts5": 21.55,
+        "no_advanced_xpts5": 17.89,
+        "delta_xpts5": 3.66,
+        "abs_delta_xpts5": 3.66,
+        "full_rank": 11,
+        "no_advanced_rank": 31,
+        "rank_shift": 20
+      },
+      {
+        "element": 453,
+        "name": "Barnes",
+        "position": "MID",
+        "full_xpts5": 18.77,
+        "no_advanced_xpts5": 15.68,
+        "delta_xpts5": 3.09,
+        "abs_delta_xpts5": 3.09,
+        "full_rank": 23,
+        "no_advanced_rank": 71,
+        "rank_shift": 48
+      },
+      {
+        "element": 427,
+        "name": "Mbeumo",
+        "position": "MID",
+        "full_xpts5": 30.07,
+        "no_advanced_xpts5": 27.21,
+        "delta_xpts5": 2.86,
+        "abs_delta_xpts5": 2.86,
+        "full_rank": 3,
+        "no_advanced_rank": 3,
+        "rank_shift": 0
+      },
+      {
+        "element": 388,
+        "name": "Guéhi",
+        "position": "DEF",
+        "full_xpts5": 19.17,
+        "no_advanced_xpts5": 21.99,
+        "delta_xpts5": -2.82,
+        "abs_delta_xpts5": 2.82,
+        "full_rank": 19,
+        "no_advanced_rank": 9,
+        "rank_shift": -10
+      },
+      {
+        "element": 368,
+        "name": "Szoboszlai",
+        "position": "MID",
+        "full_xpts5": 20.2,
+        "no_advanced_xpts5": 22.55,
+        "delta_xpts5": -2.35,
+        "abs_delta_xpts5": 2.35,
+        "full_rank": 15,
+        "no_advanced_rank": 6,
+        "rank_shift": -9
+      },
+      {
+        "element": 398,
+        "name": "Foden",
+        "position": "MID",
+        "full_xpts5": 23.16,
+        "no_advanced_xpts5": 21.14,
+        "delta_xpts5": 2.02,
+        "abs_delta_xpts5": 2.02,
+        "full_rank": 9,
+        "no_advanced_rank": 12,
+        "rank_shift": 3
+      },
+      {
+        "element": 480,
+        "name": "Gibbs-White",
+        "position": "MID",
+        "full_xpts5": 23.39,
+        "no_advanced_xpts5": 21.44,
+        "delta_xpts5": 1.95,
+        "abs_delta_xpts5": 1.95,
+        "full_rank": 8,
+        "no_advanced_rank": 11,
+        "rank_shift": 3
+      },
+      {
+        "element": 305,
+        "name": "Davis",
+        "position": "DEF",
+        "full_xpts5": 16.74,
+        "no_advanced_xpts5": 14.91,
+        "delta_xpts5": 1.83,
+        "abs_delta_xpts5": 1.83,
+        "full_rank": 55,
+        "no_advanced_rank": 88,
+        "rank_shift": 33
+      },
+      {
+        "element": 40,
+        "name": "Rogers",
+        "position": "MID",
+        "full_xpts5": 20.07,
+        "no_advanced_xpts5": 21.82,
+        "delta_xpts5": -1.75,
+        "abs_delta_xpts5": 1.75,
+        "full_rank": 16,
+        "no_advanced_rank": 10,
+        "rank_shift": -6
+      },
+      {
+        "element": 346,
+        "name": "Calvert-Lewin",
+        "position": "FWD",
+        "full_xpts5": 20.51,
+        "no_advanced_xpts5": 18.76,
+        "delta_xpts5": 1.75,
+        "abs_delta_xpts5": 1.75,
+        "full_rank": 14,
+        "no_advanced_rank": 20,
+        "rank_shift": 6
+      },
+      {
+        "element": 86,
+        "name": "Lewis-Potter",
+        "position": "MID",
+        "full_xpts5": 15.19,
+        "no_advanced_xpts5": 16.86,
+        "delta_xpts5": -1.67,
+        "abs_delta_xpts5": 1.67,
+        "full_rank": 87,
+        "no_advanced_rank": 48,
+        "rank_shift": -39
+      },
+      {
+        "element": 306,
+        "name": "Greaves",
+        "position": "DEF",
+        "full_xpts5": 15.04,
+        "no_advanced_xpts5": 13.46,
+        "delta_xpts5": 1.58,
+        "abs_delta_xpts5": 1.58,
+        "full_rank": 94,
+        "no_advanced_rank": 141,
+        "rank_shift": 47
+      },
+      {
+        "element": 165,
+        "name": "João Pedro",
+        "position": "FWD",
+        "full_xpts5": 23.62,
+        "no_advanced_xpts5": 22.04,
+        "delta_xpts5": 1.58,
+        "abs_delta_xpts5": 1.58,
+        "full_rank": 7,
+        "no_advanced_rank": 7,
+        "rank_shift": 0
+      },
+      {
+        "element": 542,
+        "name": "E.Le Fée",
+        "position": "MID",
+        "full_xpts5": 18.57,
+        "no_advanced_xpts5": 17.0,
+        "delta_xpts5": 1.57,
+        "abs_delta_xpts5": 1.57,
+        "full_rank": 24,
+        "no_advanced_rank": 45,
+        "rank_shift": 21
+      },
+      {
+        "element": 70,
+        "name": "Kluivert",
+        "position": "MID",
+        "full_xpts5": 15.76,
+        "no_advanced_xpts5": 14.26,
+        "delta_xpts5": 1.5,
+        "abs_delta_xpts5": 1.5,
+        "full_rank": 71,
+        "no_advanced_rank": 107,
+        "rank_shift": 36
+      },
+      {
+        "element": 84,
+        "name": "Collins",
+        "position": "DEF",
+        "full_xpts5": 19.6,
+        "no_advanced_xpts5": 18.12,
+        "delta_xpts5": 1.48,
+        "abs_delta_xpts5": 1.48,
+        "full_rank": 18,
+        "no_advanced_rank": 28,
+        "rank_shift": 10
+      },
+      {
+        "element": 397,
+        "name": "Semenyo",
+        "position": "MID",
+        "full_xpts5": 22.29,
+        "no_advanced_xpts5": 20.93,
+        "delta_xpts5": 1.36,
+        "abs_delta_xpts5": 1.36,
+        "full_rank": 10,
+        "no_advanced_rank": 14,
+        "rank_shift": 4
+      },
+      {
+        "element": 204,
+        "name": "Mitchell",
+        "position": "DEF",
+        "full_xpts5": 18.07,
+        "no_advanced_xpts5": 16.72,
+        "delta_xpts5": 1.35,
+        "abs_delta_xpts5": 1.35,
+        "full_rank": 32,
+        "no_advanced_rank": 50,
+        "rank_shift": 18
+      },
+      {
+        "element": 390,
+        "name": "Rúben",
+        "position": "DEF",
+        "full_xpts5": 17.15,
+        "no_advanced_xpts5": 15.89,
+        "delta_xpts5": 1.26,
+        "abs_delta_xpts5": 1.26,
+        "full_rank": 50,
+        "no_advanced_rank": 68,
+        "rank_shift": 18
+      },
+      {
+        "element": 569,
+        "name": "Gonzalo",
+        "position": "FWD",
+        "full_xpts5": 17.43,
+        "no_advanced_xpts5": 16.18,
+        "delta_xpts5": 1.25,
+        "abs_delta_xpts5": 1.25,
+        "full_rank": 43,
+        "no_advanced_rank": 61,
+        "rank_shift": 18
+      },
+      {
+        "element": 417,
+        "name": "Dalot",
+        "position": "DEF",
+        "full_xpts5": 11.77,
+        "no_advanced_xpts5": 10.53,
+        "delta_xpts5": 1.24,
+        "abs_delta_xpts5": 1.24,
+        "full_rank": 173,
+        "no_advanced_rank": 191,
+        "rank_shift": 18
+      },
+      {
+        "element": 67,
+        "name": "Rayan",
+        "position": "MID",
+        "full_xpts5": 15.06,
+        "no_advanced_xpts5": 13.88,
+        "delta_xpts5": 1.18,
+        "abs_delta_xpts5": 1.18,
+        "full_rank": 93,
+        "no_advanced_rank": 128,
+        "rank_shift": 35
+      },
+      {
+        "element": 525,
+        "name": "Fernandes",
+        "position": "MID",
+        "full_xpts5": 11.5,
+        "no_advanced_xpts5": 10.34,
+        "delta_xpts5": 1.16,
+        "abs_delta_xpts5": 1.16,
+        "full_rank": 178,
+        "no_advanced_rank": 194,
+        "rank_shift": 16
+      },
+      {
+        "element": 105,
+        "name": "Anthony",
+        "position": "MID",
+        "full_xpts5": 12.03,
+        "no_advanced_xpts5": 10.88,
+        "delta_xpts5": 1.15,
+        "abs_delta_xpts5": 1.15,
+        "full_rank": 166,
+        "no_advanced_rank": 182,
+        "rank_shift": 16
+      },
+      {
+        "element": 154,
+        "name": "Palmer",
+        "position": "MID",
+        "full_xpts5": 24.04,
+        "no_advanced_xpts5": 22.89,
+        "delta_xpts5": 1.15,
+        "abs_delta_xpts5": 1.15,
+        "full_rank": 6,
+        "no_advanced_rank": 5,
+        "rank_shift": -1
+      },
+      {
+        "element": 316,
+        "name": "Emersonn",
+        "position": "FWD",
+        "full_xpts5": 13.07,
+        "no_advanced_xpts5": 14.17,
+        "delta_xpts5": -1.1,
+        "abs_delta_xpts5": 1.1,
+        "full_rank": 149,
+        "no_advanced_rank": 110,
+        "rank_shift": -39
+      },
+      {
+        "element": 332,
+        "name": "Justin",
+        "position": "DEF",
+        "full_xpts5": 15.85,
+        "no_advanced_xpts5": 14.75,
+        "delta_xpts5": 1.1,
+        "abs_delta_xpts5": 1.1,
+        "full_rank": 70,
+        "no_advanced_rank": 94,
+        "rank_shift": 24
+      }
+    ]
+  },
+  "decision_impact": {
+    "classification_full": "MATERIAL_UPGRADE",
+    "classification_no_advanced": "MATERIAL_UPGRADE",
+    "classification_changed": false,
+    "optimized_squad_overlap": 9,
+    "optimized_squad_changed_players": 12,
+    "full_only_optimized": [
+      84,
+      204,
+      305,
+      384,
+      398,
+      480
+    ],
+    "no_advanced_only_optimized": [
+      40,
+      115,
+      226,
+      368,
+      445,
+      469
+    ],
+    "transfer_out_changed": true,
+    "transfer_in_changed": true,
+    "full_out": [
+      8,
+      15,
+      40,
+      109,
+      115,
+      254,
+      279,
+      346,
+      411,
+      557,
+      565,
+      572
+    ],
+    "no_advanced_out": [
+      8,
+      15,
+      109,
+      254,
+      279,
+      346,
+      411,
+      557,
+      565,
+      572
+    ],
+    "full_in": [
+      57,
+      84,
+      106,
+      154,
+      204,
+      249,
+      305,
+      384,
+      388,
+      398,
+      427,
+      480
+    ],
+    "no_advanced_in": [
+      57,
+      106,
+      154,
+      226,
+      249,
+      368,
+      388,
+      427,
+      445,
+      469
+    ],
+    "delta_best_xi_xpts_5_full": 41.4,
+    "delta_best_xi_xpts_5_no_advanced": 24.46,
+    "delta_bench_adjusted_utility_5_full": 43.34,
+    "delta_bench_adjusted_utility_5_no_advanced": 26.04,
+    "decision_changed": true
+  },
+  "interpretation": {
+    "impact_is_diagnostic_not_health_threshold": true,
+    "small_effect_does_not_fail_pipeline": true,
+    "decision_flip_is_reported_not_forced": true,
+    "future_empirical_value_requires_reconciled_samples": true
+  },
+  "performance_ms": 9925.84,
+  "runtime_execution": {
+    "outcome": "success",
+    "failure_cannot_block_core_publish": true,
+    "observational_outside_decision_chain": true
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 2,
+  "algorithm": "v4.9.6-exact-semantic-decision-cache-v3-understat-close-call",
+  "fingerprint": "a5edf0b2583fbcaca63e5deaa5aa46aaa60d863bf2e4c3d33d474d619844a664",
+  "artifact_sha256": {
+    "wc": "4904be31895e0b603b0843c30645cb660774b035b47d89aa5fa6fc841ec0230e",
+    "packages": "f5709da25ca5ced972c46a9293e393ef21385d147d7f0b8d3dbb27b74faefe44",
+    "lineup": "f97bd5fe57c5ca98524758864d2c454bb4dc5fb914b286a0f978586e633fa4c5"
+  },
+  "guardrails": {
+    "exact_semantic_inputs_only": true,
+    "bounded_consumer_projection_not_full_payload": true,
+    "runtime_timestamps_not_consumed_by_cache_key": true,
+    "understat_close_call_semantics_in_cache_key": true,
+    "artifact_digest_verified_before_reuse": true,
+    "manual_user_override_not_cached": true,
+    "sanity_tactical_arbitration_rerun_every_time": true,
+    "search_width_unchanged": true
+  }
+}

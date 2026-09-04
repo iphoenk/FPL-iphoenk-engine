@@ -11,6 +11,12 @@ ADDITIONS = ROOT / "config" / "v6" / "source_additions.json"
 OVERRIDES = ROOT / "config" / "v6" / "source_overrides.json"
 ACTIVATION = ROOT / "config" / "v6" / "source_activation.json"
 
+_LAYER_SCHEMA_VERSIONS = {
+    CONFIG: 3,
+    ADDITIONS: 1,
+    OVERRIDES: 2,
+    ACTIVATION: 4,
+}
 _ALLOWED_ACQUISITION_KINDS = {"derived", "rest_json", "rest_csv", "html_scrape", "rss", "generic_http"}
 _ALLOWED_VERIFICATION_STATUSES = {"PENDING", "VERIFIED", "FAILED"}
 _ALLOWED_SOURCE_TIERS = {"core", "pilot", "reference_only"}
@@ -20,15 +26,36 @@ class RegistryError(ValueError):
     pass
 
 
-def _read_json(path: Path) -> dict[str, Any]:
+def _read_json(path: Path, *, expected_schema_version: int | None = None) -> dict[str, Any]:
     if not path.exists():
         return {}
-    return json.loads(path.read_text(encoding="utf-8"))
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if expected_schema_version is not None:
+        actual = payload.get("schema_version")
+        if actual != expected_schema_version:
+            raise RegistryError(
+                f"V6 config schema mismatch for {path.name}: expected {expected_schema_version}, got {actual!r}"
+            )
+    return payload
+
+
+def _read_layer(path: Path) -> dict[str, Any]:
+    expected = _LAYER_SCHEMA_VERSIONS.get(path)
+    return _read_json(path, expected_schema_version=expected)
+
+
+def config_layer_metadata() -> dict[str, dict[str, Any]]:
+    return {
+        "registry": {"path": "config/v6/source_registry.json", "schema_version": _LAYER_SCHEMA_VERSIONS[CONFIG]},
+        "additions": {"path": "config/v6/source_additions.json", "schema_version": _LAYER_SCHEMA_VERSIONS[ADDITIONS]},
+        "overrides": {"path": "config/v6/source_overrides.json", "schema_version": _LAYER_SCHEMA_VERSIONS[OVERRIDES]},
+        "activation": {"path": "config/v6/source_activation.json", "schema_version": _LAYER_SCHEMA_VERSIONS[ACTIVATION]},
+    }
 
 
 def _configured_source_ids() -> tuple[str, ...]:
-    base = list((_read_json(CONFIG).get("sources") or []))
-    additions = list((_read_json(ADDITIONS).get("sources") or []))
+    base = list((_read_layer(CONFIG).get("sources") or []))
+    additions = list((_read_layer(ADDITIONS).get("sources") or []))
     ids = tuple(str(row.get("id")) for row in [*base, *additions])
     if len(set(ids)) != len(ids):
         raise RegistryError("duplicate V6 configured source ids")
@@ -36,7 +63,7 @@ def _configured_source_ids() -> tuple[str, ...]:
 
 
 def _activation_id_set(key: str) -> set[str]:
-    payload = _read_json(ACTIVATION)
+    payload = _read_layer(ACTIVATION)
     return {str(source_id) for source_id in dict(payload.get(key) or {})}
 
 
@@ -67,7 +94,7 @@ def _merge_source(base: dict[str, Any], override: dict[str, Any]) -> dict[str, A
 
 
 def _apply_additions(payload: dict[str, Any], path: Path = ADDITIONS) -> dict[str, Any]:
-    additions_payload = _read_json(path)
+    additions_payload = _read_json(path, expected_schema_version=1)
     additions = list(additions_payload.get("sources") or [])
     if not additions:
         return payload
@@ -95,7 +122,7 @@ def _validate_base_source_set(payload: dict[str, Any]) -> None:
 
 
 def _apply_overrides(payload: dict[str, Any], path: Path = OVERRIDES) -> dict[str, Any]:
-    override_payload = _read_json(path)
+    override_payload = _read_json(path, expected_schema_version=2)
     overrides = dict(override_payload.get("sources") or {})
     if not overrides:
         return payload
@@ -111,6 +138,11 @@ def _apply_overrides(payload: dict[str, Any], path: Path = OVERRIDES) -> dict[st
         for source in out.get("sources") or []
     ]
     out["source_overrides_applied"] = sorted(overrides)
+    out["override_lifecycle"] = {
+        "role": "repair_or_incubation_layer",
+        "stable_repairs_should_be_promoted_to_canonical_registry": True,
+        "effective_registry_is_published_for_drift_review": True,
+    }
     return out
 
 
@@ -118,7 +150,7 @@ def _apply_activation(payload: dict[str, Any], path: Path = ACTIVATION) -> dict[
     if not path.exists():
         return payload
 
-    activation = _read_json(path)
+    activation = _read_json(path, expected_schema_version=4)
     disabled = dict(activation.get("disabled_sources") or {})
     reference_only = dict(activation.get("reference_only_sources") or {})
     constraints = dict(activation.get("constraints") or {})
@@ -196,8 +228,58 @@ def _normalize_ingestion_policy(payload: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def dependency_layers(payload: dict[str, Any]) -> list[list[str]]:
+    sources = list(payload.get("sources") or [])
+    ordered_ids = [str(source["id"]) for source in sources]
+    dependencies = {
+        str(source["id"]): [str(dependency) for dependency in source.get("depends_on") or []]
+        for source in sources
+    }
+    active = set(ordered_ids)
+    for source_id, required in dependencies.items():
+        missing = [dependency for dependency in required if dependency not in active]
+        if missing:
+            raise RegistryError(f"active V6 dependency missing: {source_id} -> {missing!r}")
+
+    remaining = set(ordered_ids)
+    completed: set[str] = set()
+    layers: list[list[str]] = []
+    while remaining:
+        layer = [
+            source_id
+            for source_id in ordered_ids
+            if source_id in remaining and all(dependency in completed for dependency in dependencies[source_id])
+        ]
+        if not layer:
+            cycle = [source_id for source_id in ordered_ids if source_id in remaining]
+            raise RegistryError(f"cyclic V6 source dependency graph: {cycle!r}")
+        layers.append(layer)
+        completed.update(layer)
+        remaining.difference_update(layer)
+    return layers
+
+
+def resolved_registry_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "engine": payload["engine"],
+        "season": payload["season"],
+        "config_layers": config_layer_metadata(),
+        "source_additions_applied": list(payload.get("source_additions_applied") or []),
+        "source_overrides_applied": list(payload.get("source_overrides_applied") or []),
+        "override_lifecycle": dict(payload.get("override_lifecycle") or {}),
+        "cadence": deepcopy(payload.get("cadence") or {}),
+        "policy": deepcopy(payload.get("policy") or {}),
+        "identity": deepcopy(payload.get("identity") or {}),
+        "activation": deepcopy(payload.get("activation") or {}),
+        "dependency_layers": dependency_layers(payload),
+        "source_count": len(payload.get("sources") or []),
+        "sources": deepcopy(payload.get("sources") or []),
+    }
+
+
 def load_registry(path: Path = CONFIG) -> dict[str, Any]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = _read_json(path, expected_schema_version=3)
     payload = _apply_additions(payload)
     _validate_base_source_set(payload)
     payload = _apply_overrides(payload)
@@ -260,15 +342,14 @@ def validate_registry(payload: dict[str, Any]) -> None:
     for source in sources:
         if not source.get("name") or not source.get("category") or not source.get("adapter"):
             raise RegistryError(f"incomplete source metadata: {source.get('id')}")
+        if source.get("critical") not in {True, False}:
+            raise RegistryError(f"critical flag must be boolean: {source['id']}")
+        if source.get("required_for_platform") not in {None, True, False}:
+            raise RegistryError(f"required_for_platform flag must be boolean: {source['id']}")
         if source["adapter"] == "http" and not source.get("requests"):
             raise RegistryError(f"http source has no requests: {source['id']}")
         if source.get("acquisition_kind") not in _ALLOWED_ACQUISITION_KINDS:
             raise RegistryError(f"unsupported acquisition kind: {source['id']}")
-        if source.get("required_for_platform") is True and source.get("critical") is not True:
-            raise RegistryError(f"required V6 platform source must be critical: {source['id']}")
-        for dependency in source.get("depends_on") or []:
-            if str(dependency) not in active_ids:
-                raise RegistryError(f"active V6 dependency missing: {source['id']} -> {dependency}")
         for key in ("poll_interval_minutes", "poll_interval_minutes_deadline_window", "daily_request_budget"):
             _positive_int(source, key)
         if source.get("content_hash_dedup") not in {None, True, False}:
@@ -286,6 +367,8 @@ def validate_registry(payload: dict[str, Any]) -> None:
                 raise RegistryError(f"unsupported auth mode: {source['id']}")
             if not auth.get("env") or not auth.get("name"):
                 raise RegistryError(f"incomplete auth configuration: {source['id']}")
+
+    dependency_layers(payload)
 
 
 def source_map(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:

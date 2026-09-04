@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "engine": "V6_FRESH_DATA_PLATFORM",
-  "primary_cron_utc": "5 * * * *",
-  "recovery_cron_utc": "35 * * * *",
+  "primary_cron_utc": "23 * * * *",
+  "recovery_cron_utc": "53 * * * *",
   "schedule_authority": true,
   "source_registry_schedule_metadata_authoritative": false,
   "manual_recovery": {
@@ -19,6 +19,7 @@
     "manual_recovery_never_masks_missed_schedule": true,
     "manual_recovery_must_use_dedicated_v6_publisher": true,
     "push_triggered_production_acquisition_allowed": false,
-    "pull_request_triggered_production_acquisition_allowed": false
+    "pull_request_triggered_production_acquisition_allowed": false,
+    "avoid_top_of_hour_scheduler_load": true
   }
 }

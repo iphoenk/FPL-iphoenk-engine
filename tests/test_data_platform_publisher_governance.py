@@ -21,6 +21,15 @@ def test_v6_acquisition_path_is_read_only_and_cannot_publish():
     assert "v6-runtime-publication-${{ github.run_id }}-${{ github.run_attempt }}" in before_publish
 
 
+def test_v6_production_uses_locked_runtime_dependencies_and_lightweight_preflight():
+    before_publish, _ = _sections()
+
+    assert "python -m pip install --require-hashes -r requirements.lock" in before_publish
+    assert "python -m compileall -q src/runtime_v6" in before_publish
+    assert "python -m pytest" not in before_publish
+    assert "requirements.txt pytest" not in before_publish
+
+
 def test_v6_write_authority_is_isolated_to_publisher_job():
     _, publish = _sections()
 
@@ -31,19 +40,22 @@ def test_v6_write_authority_is_isolated_to_publisher_job():
     assert "Revalidate transferred runtime snapshot" in publish
 
 
-def test_v6_has_dedicated_publisher_app_contract_without_cross_version_secret_reuse():
+def test_v6_has_fail_closed_dedicated_publisher_app_contract_without_cross_version_secret_reuse():
     _, publish = _sections()
 
+    assert "Require dedicated V6 publisher app configuration" in publish
     assert "actions/create-github-app-token@" in publish
     assert "V6_RUNTIME_APP_ID" in publish
     assert "V6_RUNTIME_APP_PRIVATE_KEY" in publish
     assert "dedicated_v6_github_app" in publish
-    assert "scoped_github_token_fallback" in publish
+    assert "scoped_github_token_fallback" not in publish
     assert "V3_RUNTIME_APP_ID" not in publish
     assert "V3_RUNTIME_APP_PRIVATE_KEY" not in publish
     assert "V4_RUNTIME_APP_ID" not in publish
     assert "V4_RUNTIME_APP_PRIVATE_KEY" not in publish
-    assert "steps.runtime_app_token.outputs.token || github.token" in publish
+    assert "steps.runtime_app_token.outputs.token || github.token" not in publish
+    assert "token: ${{ steps.runtime_app_token.outputs.token }}" in publish
+    assert "PUBLISH_TOKEN: ${{ steps.runtime_app_token.outputs.token }}" in publish
     assert "persist-credentials: false" in publish
 
 
@@ -67,3 +79,4 @@ def test_v6_publisher_reverifies_governance_after_artifact_transfer():
     assert 'manifest["governance"]["prediction_authority"] == "NONE"' in publish
     assert 'manifest["governance"]["optimizer_authority"] == "NONE"' in publish
     assert 'integrity["status"] == "PASS"' in publish
+    assert 'integrity["resolved_registry_exact"] is True' in publish

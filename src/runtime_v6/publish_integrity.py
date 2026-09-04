@@ -89,14 +89,30 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
         if not path.is_file():
             errors.append(f"required_artifact_missing:{key}")
 
-    resolved_path = _resolve_runtime_path(root, paths.get("resolved_registry") or "data/v6/evidence/resolved_registry.json")
+    resolved_path = _resolve_runtime_path(
+        root,
+        paths.get("resolved_registry") or "data/v6/evidence/resolved_registry.json",
+    )
     resolved = read_json(resolved_path) or {}
-    if resolved and int(resolved.get("source_count") or 0) != len(source_ids):
-        errors.append("resolved_registry_source_count_mismatch")
+    if resolved:
+        resolved_sources = list(resolved.get("sources") or [])
+        resolved_source_ids = [str(source.get("id")) for source in resolved_sources]
+        if int(resolved.get("source_count") or 0) != len(source_ids):
+            errors.append("resolved_registry_source_count_mismatch")
+        if resolved_source_ids != source_ids:
+            errors.append("resolved_registry_source_ids_mismatch")
+        if len(set(resolved_source_ids)) != len(resolved_source_ids):
+            errors.append("resolved_registry_duplicate_source_ids")
 
-    identity_path = _resolve_runtime_path(root, paths.get("player_identity_map") or "data/v6/evidence/player_identity_map.json")
+    identity_path = _resolve_runtime_path(
+        root,
+        paths.get("player_identity_map") or "data/v6/evidence/player_identity_map.json",
+    )
     identity = read_json(identity_path) or {}
-    canonical_players_path = _resolve_runtime_path(root, paths.get("canonical_players") or "data/v6/normalized/canonical_players.json")
+    canonical_players_path = _resolve_runtime_path(
+        root,
+        paths.get("canonical_players") or "data/v6/normalized/canonical_players.json",
+    )
     canonical_players = read_json(canonical_players_path) or {}
     identity_count = int(identity.get("canonical_player_count") or 0)
     canonical_count = int(canonical_players.get("player_count") or 0)
@@ -108,7 +124,9 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
     files = sorted(
         path
         for path in root.rglob("*")
-        if path.is_file() and path != root / "health" / "publish_integrity.json" and not path.name.endswith(".tmp")
+        if path.is_file()
+        and path != root / "health" / "publish_integrity.json"
+        and not path.name.endswith(".tmp")
     )
     aggregate = hashlib.sha256()
     for path in files:
@@ -118,6 +136,9 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
         aggregate.update(_sha256_file(path).encode("ascii"))
         aggregate.update(b"\n")
 
+    resolved_registry_exact = bool(resolved) and [
+        str(source.get("id")) for source in resolved.get("sources") or []
+    ] == source_ids
     return {
         "schema_version": 1,
         "status": "PASS" if not errors else "FAIL",
@@ -126,6 +147,7 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
         "checked_file_count": len(files),
         "tree_sha256": aggregate.hexdigest(),
         "current_source_files_exact": actual_current == expected_current,
+        "resolved_registry_exact": resolved_registry_exact,
         "identity_map_consistent": identity_count == canonical_count if identity and canonical_players else False,
     }
 

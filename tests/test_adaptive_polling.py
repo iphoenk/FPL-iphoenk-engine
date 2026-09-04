@@ -24,7 +24,7 @@ def test_registry_keeps_full_27_source_contract_and_adds_ingestion_metadata():
     assert sources["api_football"]["poll_interval_minutes"] == 1440
     assert sources["api_football"]["poll_interval_minutes_deadline_window"] == 360
     assert sources["api_football"]["verification_required"] is True
-    assert sources["api_football"]["verification_status"] == "PENDING"
+    assert sources["api_football"]["verification_status"] == "FAILED"
 
 
 def test_non_configured_sources_preserve_legacy_every_cycle_behavior():
@@ -101,12 +101,13 @@ def test_deadline_window_detects_upcoming_official_fpl_deadline():
     assert deadline_window_active(previous, hours=24, now=now) is False
 
 
-def test_verification_gate_blocks_scheduled_poll_until_verified():
+def test_verification_gate_distinguishes_pending_failed_and_verified():
     now = datetime(2026, 9, 4, 5, 0, tzinfo=timezone.utc)
     source = {
         "id": "api_football",
         "verification_required": True,
         "verification_status": "PENDING",
+        "verification_note": "qualification not complete",
         "poll_interval_minutes": 1440,
         "requests": [{"id": "fixtures"}],
     }
@@ -114,6 +115,13 @@ def test_verification_gate_blocks_scheduled_poll_until_verified():
     decision = poll_decision(source, None, now=now)
     assert decision["due"] is False
     assert decision["reason"] == "VERIFICATION_REQUIRED"
+
+    source["verification_status"] = "FAILED"
+    source["verification_note"] = "current plan does not cover season 2026"
+    failed = poll_decision(source, None, now=now)
+    assert failed["due"] is False
+    assert failed["reason"] == "VERIFICATION_FAILED"
+    assert failed["verification_note"] == "current plan does not cover season 2026"
 
     source["verification_status"] = "VERIFIED"
     assert poll_decision(source, None, now=now)["due"] is True

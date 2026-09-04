@@ -6155,7 +6155,7 @@
       "gw": 3,
       "deadline_time": "2026-09-04T17:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-09-04T09:48:27.311161+00:00",
+        "generated_at": "2026-09-04T14:28:41.366072+00:00",
         "players": [
           {
             "element": 1,
@@ -6261,10 +6261,10 @@
             "element": 11,
             "name": "Mosquera",
             "position": "DEF",
-            "xpts": 3.299,
-            "xpts_std": 2.935,
-            "xmins": 68.9,
-            "start_probability": 0.7304,
+            "xpts": 2.375,
+            "xpts_std": 2.664,
+            "xmins": 51.7,
+            "start_probability": 0.5478,
             "clean_sheet_probability": 0.2865
           },
           {
@@ -6331,10 +6331,10 @@
             "element": 18,
             "name": "Martinelli",
             "position": "MID",
-            "xpts": 3.504,
-            "xpts_std": 3.108,
-            "xmins": 60.4,
-            "start_probability": 0.6219,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2865
           },
           {
@@ -6431,10 +6431,10 @@
             "element": 452,
             "name": "Bruno G.",
             "position": "MID",
-            "xpts": 3.62,
-            "xpts_std": 3.081,
-            "xmins": 67.9,
-            "start_probability": 0.7178,
+            "xpts": 2.618,
+            "xpts_std": 2.772,
+            "xmins": 50.9,
+            "start_probability": 0.5384,
             "clean_sheet_probability": 0.2865
           },
           {
@@ -6561,10 +6561,10 @@
             "element": 44,
             "name": "Bailey",
             "position": "MID",
-            "xpts": 2.0,
-            "xpts_std": 2.531,
-            "xmins": 52.3,
-            "start_probability": 0.518,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.076
           },
           {
@@ -6751,10 +6751,10 @@
             "element": 607,
             "name": "Lynch",
             "position": "MID",
-            "xpts": 1.999,
-            "xpts_std": 2.505,
-            "xmins": 46.2,
-            "start_probability": 0.5726,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.076
           },
           {
@@ -7231,10 +7231,10 @@
             "element": 97,
             "name": "Jensen",
             "position": "MID",
-            "xpts": 2.63,
-            "xpts_std": 2.751,
-            "xmins": 51.7,
-            "start_probability": 0.5774,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.4461
           },
           {
@@ -7281,10 +7281,10 @@
             "element": 103,
             "name": "Dasilva",
             "position": "MID",
-            "xpts": 2.902,
-            "xpts_std": 2.884,
-            "xmins": 46.2,
-            "start_probability": 0.5726,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.4461
           },
           {
@@ -7701,10 +7701,10 @@
             "element": 652,
             "name": "Azeez",
             "position": "MID",
-            "xpts": 2.493,
-            "xpts_std": 2.712,
-            "xmins": 46.2,
-            "start_probability": 0.5726,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2527
           },
           {
@@ -9791,10 +9791,10 @@
             "element": 307,
             "name": "Johnson",
             "position": "DEF",
-            "xpts": 2.566,
-            "xpts_std": 2.743,
-            "xmins": 46.2,
-            "start_probability": 0.5726,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2382
           },
           {
@@ -10791,10 +10791,10 @@
             "element": 389,
             "name": "Matheus N.",
             "position": "DEF",
-            "xpts": 2.789,
-            "xpts_std": 2.819,
-            "xmins": 53.5,
-            "start_probability": 0.5752,
+            "xpts": 3.865,
+            "xpts_std": 3.136,
+            "xmins": 71.3,
+            "start_probability": 0.7669,
             "clean_sheet_probability": 0.4374
           },
           {
@@ -11621,10 +11621,10 @@
             "element": 466,
             "name": "Neave",
             "position": "FWD",
-            "xpts": 2.47,
-            "xpts_std": 2.703,
-            "xmins": 46.2,
-            "start_probability": 0.5726,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2527
           },
           {
@@ -12011,10 +12011,10 @@
             "element": 403,
             "name": "Sávio",
             "position": "MID",
-            "xpts": 1.719,
-            "xpts_std": 2.444,
-            "xmins": 42.3,
-            "start_probability": 0.4276,
+            "xpts": 2.372,
+            "xpts_std": 2.663,
+            "xmins": 56.3,
+            "start_probability": 0.5702,
             "clean_sheet_probability": 0.1706
           },
           {
@@ -12301,10 +12301,10 @@
             "element": 523,
             "name": "Moore",
             "position": "MID",
-            "xpts": 2.478,
-            "xpts_std": 2.638,
-            "xmins": 54.7,
-            "start_probability": 0.6744,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.1706
           },
           {
@@ -12341,10 +12341,10 @@
             "element": 527,
             "name": "Richarlison",
             "position": "FWD",
-            "xpts": 2.581,
-            "xpts_std": 2.647,
-            "xmins": 67.8,
-            "start_probability": 0.7159,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.1706
           },
           {
@@ -12682,6 +12682,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-09-04T09:48:28.196961+00:00",
+  "updated_at": "2026-09-04T14:28:42.191439+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

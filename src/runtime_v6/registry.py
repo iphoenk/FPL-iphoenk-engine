@@ -8,14 +8,27 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = ROOT / "config" / "v6" / "source_registry.json"
 OVERRIDES = ROOT / "config" / "v6" / "source_overrides.json"
+ACTIVATION = ROOT / "config" / "v6" / "source_activation.json"
 
-EXPECTED_SOURCE_IDS = (
+BASE_SOURCE_IDS = (
     "official_fpl", "official_price_predictor", "understat", "opta_the_analyst",
     "statmuse", "onside", "ben_crellin", "fffix", "ffhub", "onefpl", "livefpl",
     "ffscout", "fbref", "fotmob", "sofascore", "statsbomb", "rotowire",
     "premierleague_stats", "clubelo", "football_data_uk", "sportmonks", "api_football",
     "transfermarkt", "whoscored", "espn", "football_data_org", "vaastav_fpl",
 )
+
+DROPPED_SOURCE_IDS = (
+    "fbref",
+    "sofascore",
+    "sportmonks",
+    "api_football",
+    "transfermarkt",
+    "whoscored",
+    "football_data_org",
+)
+
+EXPECTED_SOURCE_IDS = tuple(source_id for source_id in BASE_SOURCE_IDS if source_id not in DROPPED_SOURCE_IDS)
 
 _ALLOWED_ACQUISITION_KINDS = {"derived", "rest_json", "rest_csv", "html_scrape", "rss", "generic_http"}
 _ALLOWED_VERIFICATION_STATUSES = {"PENDING", "VERIFIED", "FAILED"}
@@ -37,6 +50,14 @@ def _merge_source(base: dict[str, Any], override: dict[str, Any]) -> dict[str, A
     return merged
 
 
+def _validate_base_source_set(payload: dict[str, Any]) -> None:
+    ids = tuple(str(row.get("id")) for row in payload.get("sources") or [])
+    if ids != BASE_SOURCE_IDS:
+        raise RegistryError(f"V6 base source definition set/order mismatch: {ids!r}")
+    if len(set(ids)) != len(ids):
+        raise RegistryError("duplicate V6 base source ids")
+
+
 def _apply_overrides(payload: dict[str, Any], path: Path = OVERRIDES) -> dict[str, Any]:
     if not path.exists():
         return payload
@@ -56,6 +77,41 @@ def _apply_overrides(payload: dict[str, Any], path: Path = OVERRIDES) -> dict[st
         for source in out.get("sources") or []
     ]
     out["source_overrides_applied"] = sorted(overrides)
+    return out
+
+
+def _apply_activation(payload: dict[str, Any], path: Path = ACTIVATION) -> dict[str, Any]:
+    if not path.exists():
+        return payload
+
+    activation = json.loads(path.read_text(encoding="utf-8"))
+    disabled = dict(activation.get("disabled_sources") or {})
+    constraints = dict(activation.get("constraints") or {})
+    out = deepcopy(payload)
+    known = {str(source.get("id")) for source in out.get("sources") or []}
+    unknown = sorted((set(disabled) | set(constraints)) - known)
+    if unknown:
+        raise RegistryError(f"unknown V6 source activation ids: {unknown!r}")
+
+    sources: list[dict[str, Any]] = []
+    for source in out.get("sources") or []:
+        source_id = str(source.get("id"))
+        if source_id in disabled:
+            continue
+        row = deepcopy(source)
+        if source_id in constraints:
+            row["activation_constraint"] = str(constraints[source_id])
+        sources.append(row)
+
+    out["sources"] = sources
+    out["activation"] = {
+        "policy": str(activation.get("policy") or "explicit_active_source_pruning"),
+        "base_source_count": len(known),
+        "active_source_count": len(sources),
+        "disabled_source_count": len(disabled),
+        "disabled_sources": disabled,
+        "constraints": constraints,
+    }
     return out
 
 
@@ -85,8 +141,10 @@ def _normalize_ingestion_policy(payload: dict[str, Any]) -> dict[str, Any]:
 
 def load_registry(path: Path = CONFIG) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
+    _validate_base_source_set(payload)
     payload = _apply_overrides(payload)
     payload = _normalize_ingestion_policy(payload)
+    payload = _apply_activation(payload)
     validate_registry(payload)
     return payload
 
@@ -117,9 +175,16 @@ def validate_registry(payload: dict[str, Any]) -> None:
     sources = list(payload.get("sources") or [])
     ids = tuple(str(row.get("id")) for row in sources)
     if ids != EXPECTED_SOURCE_IDS:
-        raise RegistryError(f"V6 source set/order mismatch: {ids!r}")
+        raise RegistryError(f"V6 active source set/order mismatch: {ids!r}")
     if len(set(ids)) != len(ids):
-        raise RegistryError("duplicate V6 source ids")
+        raise RegistryError("duplicate V6 active source ids")
+    activation = payload.get("activation") or {}
+    if activation:
+        disabled = tuple(source_id for source_id in BASE_SOURCE_IDS if source_id in activation.get("disabled_sources", {}))
+        if disabled != DROPPED_SOURCE_IDS:
+            raise RegistryError(f"V6 dropped source set/order mismatch: {disabled!r}")
+        if activation.get("active_source_count") != len(EXPECTED_SOURCE_IDS):
+            raise RegistryError("V6 active source count mismatch")
     for source in sources:
         if not source.get("name") or not source.get("category") or not source.get("adapter"):
             raise RegistryError(f"incomplete source metadata: {source.get('id')}")

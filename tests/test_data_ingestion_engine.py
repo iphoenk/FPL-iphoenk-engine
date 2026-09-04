@@ -5,12 +5,25 @@ from pathlib import Path
 from src.runtime_v6 import adapters, normalizer, registry
 from src.runtime_v6.http_client import AcquisitionClient
 
+REMOVED_UNSTABLE_SOURCES = {
+    "opta_the_analyst",
+    "fbref",
+    "fotmob",
+    "sofascore",
+    "clubelo",
+    "sportmonks",
+    "whoscored",
+    "espn",
+    "football_data_org",
+}
 
-def test_registry_is_data_only_and_has_exact_27_sources():
+
+def test_registry_is_data_only_and_has_exact_18_sources():
     cfg = registry.load_registry()
     ids = tuple(row["id"] for row in cfg["sources"])
     assert ids == registry.EXPECTED_SOURCE_IDS
-    assert len(ids) == 27
+    assert len(ids) == 18
+    assert REMOVED_UNSTABLE_SOURCES.isdisjoint(ids)
     assert cfg["policy"]["data_only"] is True
     assert cfg["policy"]["decision_authority"] == "NONE"
     assert cfg["policy"]["prediction_authority"] == "NONE"
@@ -22,6 +35,7 @@ def test_all_sources_are_hourly_checked_fail_isolated_and_concurrent():
     assert cfg["cadence"]["schedule"] == "hourly"
     assert cfg["cadence"]["check_every_source_each_cycle"] is True
     assert cfg["policy"]["source_failures_are_isolated"] is True
+    assert cfg["policy"]["request_failures_are_isolated"] is True
     assert cfg["policy"]["preserve_last_good_on_failure"] is True
     assert cfg["policy"]["source_workers"] >= 12
     assert cfg["policy"]["request_workers"] >= 2
@@ -29,9 +43,9 @@ def test_all_sources_are_hourly_checked_fail_isolated_and_concurrent():
 
 
 def test_secret_backed_source_without_secret_is_config_required(monkeypatch):
-    monkeypatch.delenv("SPORTMONKS_API_TOKEN", raising=False)
+    monkeypatch.delenv("API_FOOTBALL_KEY", raising=False)
     cfg = registry.load_registry()
-    source = registry.source_map(cfg)["sportmonks"]
+    source = registry.source_map(cfg)["api_football"]
     result = AcquisitionClient(cfg["policy"]).fetch(source, source["requests"][0])
     assert result["status"] == "CONFIG_REQUIRED"
     assert result["health"] == "AMBER"
@@ -64,7 +78,10 @@ def test_http_last_good_cache_survives_failure(monkeypatch):
     def fail(*args, **kwargs):
         raise requests.RequestException("down")
 
-    monkeypatch.setattr("src.runtime_v6.http_client.AcquisitionClient._session", lambda self: type("S", (), {"get": fail})())
+    monkeypatch.setattr(
+        "src.runtime_v6.http_client.AcquisitionClient._session",
+        lambda self: type("S", (), {"get": fail})(),
+    )
     result = adapters.collect_http(
         source,
         AcquisitionClient({**cfg["policy"], "retry_attempts": 1}),
@@ -222,16 +239,19 @@ def test_canonical_identity_is_official_fpl():
     assert players["players"][0]["identity_authority"] == "official_fpl"
 
 
-def test_lineage_groups_correlated_opta_paths():
+def test_lineage_catalog_contains_only_active_sources():
     cfg = registry.load_registry()
     lineage = normalizer.build_lineage_catalog(cfg)
-    assert set(lineage["groups"]["opta_family"]) == {"opta_the_analyst", "fbref", "whoscored"}
+    active = set(registry.EXPECTED_SOURCE_IDS)
+    seen = {source_id for members in lineage["groups"].values() for source_id in members}
+    assert seen == active
+    assert REMOVED_UNSTABLE_SOURCES.isdisjoint(seen)
 
 
 def test_workflow_hydrates_runtime_last_good_before_collection():
     workflow = Path(".github/workflows/v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
     hydrate = workflow.index("Hydrate previous V6 last-good snapshot")
-    collect = workflow.index("Pull all 27 V6 sources")
+    collect = workflow.index("Pull all 18 V6 sources")
     assert hydrate < collect
     assert 'git archive "origin/${RUNTIME_BRANCH}" data/v6' in workflow
 

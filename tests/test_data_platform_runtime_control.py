@@ -159,8 +159,45 @@ def test_runtime_control_escalates_manifest_overall_on_missed_cycle():
     assert updated["control_failures"] == ["MISSED_SCHEDULED_CYCLE"]
     assert updated["paths"]["runtime_control"] == "data/v6/health/runtime_control.json"
     assert updated["governance"]["production_ingestion_schedule_only"] is True
-    assert updated["governance"]["production_authoritative_snapshots_require_schedule"] is True
+    assert updated["governance"]["production_authoritative_snapshots_require_schedule"] is False
+    assert updated["governance"]["production_authoritative_snapshots_require_governed_trigger"] is True
     assert updated["governance"]["scheduled_recovery_is_idempotent"] is True
+
+
+def test_master_orchestrated_is_authoritative_without_masking_natural_schedule():
+    manifest = {
+        "overall": "GREEN",
+        "polling": {"scheduler_interval_minutes": 60},
+        "paths": {},
+        "governance": {},
+    }
+    previous = {
+        "runtime_control": {
+            "last_scheduled_cycle_at": "2026-09-04T06:00:00+00:00"
+        }
+    }
+
+    updated, control = apply_runtime_control(
+        manifest,
+        previous,
+        now=datetime(2026, 9, 4, 8, 31, tzinfo=timezone.utc),
+        event_name="workflow_dispatch",
+        schedule_kind="master_orchestrated",
+    )
+
+    assert control["health"] == "GREEN"
+    assert control["scheduled_cycle"] is False
+    assert control["master_orchestrated"] is True
+    assert control["manual_recovery"] is False
+    assert control["authoritative_runtime_snapshot"] is True
+    assert control["counts_as_completed_operational_slot"] is True
+    assert control["counts_as_completed_scheduled_slot"] is False
+    assert control["last_scheduled_cycle_at"] == "2026-09-04T06:00:00+00:00"
+    assert control["last_authoritative_cycle_at"] == "2026-09-04T08:00:00+00:00"
+    assert updated["overall"] == "GREEN"
+    assert updated["control_failures"] == []
+    assert updated["governance"]["master_orchestrated_is_authoritative"] is True
+    assert updated["governance"]["manual_recovery_is_authoritative"] is False
 
 
 def test_manual_recovery_is_non_authoritative_and_manifested_amber():

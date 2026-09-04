@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "policy": "explicit_active_source_pruning",
+  "schema_version": 2,
+  "policy": "explicit_active_source_pruning_with_reference_tiers",
   "disabled_sources": {
     "fbref": "DROP_DUPLICATE_ACCESS_RESTRICTED",
     "sofascore": "DROP_DUPLICATE_UNOFFICIAL_403",
@@ -10,9 +10,25 @@
     "whoscored": "DROP_DUPLICATE_ACCESS_RESTRICTED",
     "football_data_org": "DROP_PAID_BY_OWNER_DECISION"
   },
+  "reference_only_sources": {
+    "bbc_team_news": "FREE_EDITORIAL_TARGETED_DEADLINE_REFERENCE",
+    "premier_injuries": "FREE_PUBLIC_REFERENCE_NO_DATASET_REPUBLISH",
+    "fpl_form": "FREE_PERSONAL_USE_REFERENCE_NO_RUNTIME_REPUBLISH",
+    "fpl_review_free": "FREE_MODEL_REFERENCE_NO_STABLE_MACHINE_CONTRACT"
+  },
   "constraints": {
     "ffhub": "FREE_OR_PUBLIC_PARTIAL_ONLY_NO_PRO_UPGRADE",
     "fffix": "FREE_OR_PUBLIC_ONLY",
-    "clubelo": "KEEP_AND_REPAIR"
+    "clubelo": "KEEP_AND_REPAIR",
+    "solio_analytics": "FREE_PUBLIC_NO_AUTH",
+    "open_meteo_weather": "FREE_PUBLIC_NO_AUTH_MANDATORY_WEATHER_CONTEXT",
+    "check_the_chance": "FREE_PUBLIC_ONLY",
+    "fantasy_football_pundit": "FREE_PUBLIC_ONLY"
+  },
+  "tiers": {
+    "solio_analytics": "core",
+    "open_meteo_weather": "core",
+    "check_the_chance": "pilot",
+    "fantasy_football_pundit": "pilot"
   }
 }

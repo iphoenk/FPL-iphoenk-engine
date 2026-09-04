@@ -25,6 +25,7 @@ def _good_tree(root: Path) -> None:
             "lineage": "data/v6/evidence/lineage.json",
             "evidence_index": "data/v6/evidence/latest_index.json",
             "resolved_registry": "data/v6/evidence/resolved_registry.json",
+            "player_identity_map": "data/v6/evidence/player_identity_map.json",
             "runtime_control": "data/v6/health/runtime_control.json",
             "publish_integrity": "data/v6/health/publish_integrity.json",
         },
@@ -34,12 +35,20 @@ def _good_tree(root: Path) -> None:
         _write(root / "current" / f"{source_id}.json", {"source_id": source_id})
     _write(root / "health" / "source_health.json", {"overall": "GREEN"})
     _write(root / "health" / "runtime_control.json", {"health": "GREEN"})
-    _write(root / "normalized" / "canonical_players.json", {"players": []})
+    _write(root / "normalized" / "canonical_players.json", {"player_count": 0, "players": []})
     _write(root / "normalized" / "canonical_teams.json", {"teams": []})
     _write(root / "normalized" / "canonical_fixtures.json", {"fixtures": []})
     _write(root / "evidence" / "lineage.json", {"groups": {}})
     _write(root / "evidence" / "latest_index.json", {"sources": {}})
     _write(root / "evidence" / "resolved_registry.json", {"source_count": len(source_ids)})
+    _write(
+        root / "evidence" / "player_identity_map.json",
+        {
+            "canonical_player_count": 0,
+            "governance": {"fuzzy_name_matching_allowed": False},
+            "mappings": {},
+        },
+    )
 
 
 def test_publish_integrity_passes_for_exact_runtime_tree(tmp_path: Path):
@@ -50,6 +59,7 @@ def test_publish_integrity_passes_for_exact_runtime_tree(tmp_path: Path):
     assert report["status"] == "PASS"
     assert report["errors"] == []
     assert report["current_source_files_exact"] is True
+    assert report["identity_map_consistent"] is True
     assert report["tree_sha256"]
 
 
@@ -91,3 +101,14 @@ def test_publish_integrity_fails_when_required_artifact_is_missing(tmp_path: Pat
 
     assert report["status"] == "FAIL"
     assert "required_artifact_missing:resolved_registry" in report["errors"]
+
+
+def test_publish_integrity_fails_when_identity_count_diverges(tmp_path: Path):
+    _good_tree(tmp_path)
+    _write(root := tmp_path / "normalized" / "canonical_players.json", {"player_count": 2, "players": []})
+    assert root.exists()
+
+    report = validate_publish_tree(tmp_path)
+
+    assert report["status"] == "FAIL"
+    assert "identity_map_canonical_player_count_mismatch" in report["errors"]

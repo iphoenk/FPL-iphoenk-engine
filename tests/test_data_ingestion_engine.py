@@ -4,6 +4,7 @@ from pathlib import Path
 
 from src.runtime_v6 import adapters, normalizer, registry
 from src.runtime_v6.http_client import AcquisitionClient
+from src.runtime_v6.weather import load_weather_venues
 
 
 def test_registry_is_data_only_and_registry_driven():
@@ -55,7 +56,9 @@ def test_free_source_expansion_is_registered_with_safe_tiers():
     assert sources["solio_analytics"]["acquisition_kind"] == "rest_json"
     assert sources["open_meteo_weather"]["source_tier"] == "core"
     assert sources["open_meteo_weather"]["poll_interval_minutes"] == 60
-    assert len(sources["open_meteo_weather"]["venues"]) == 20
+    assert sources["open_meteo_weather"]["venue_registry"] == "config/venues/premier_league_2026_27.json"
+    assert "venues" not in sources["open_meteo_weather"]
+    assert len(load_weather_venues(sources["open_meteo_weather"])) == 20
     assert sources["open_meteo_weather"]["weather_contract"]["direct_xpts_multiplier"] is False
     assert sources["open_meteo_weather"]["weather_contract"]["weather_alone_can_trigger_transfer"] is False
     assert sources["check_the_chance"]["source_tier"] == "pilot"

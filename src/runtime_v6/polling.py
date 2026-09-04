@@ -111,14 +111,16 @@ def poll_decision(
     if source.get("verification_required") is True:
         status = str(source.get("verification_status") or "PENDING").upper()
         if status not in _VERIFIED:
+            reason = "VERIFICATION_FAILED" if status == "FAILED" else "VERIFICATION_REQUIRED"
             return {
                 "due": False,
-                "reason": "VERIFICATION_REQUIRED",
+                "reason": reason,
                 "evaluated_at": current.astimezone(timezone.utc).isoformat(),
                 "poll_interval_minutes": interval,
                 "scheduler_interval_minutes": scheduler_interval,
                 "deadline_window": deadline_window,
                 "verification_status": status,
+                "verification_note": source.get("verification_note"),
                 "budget": budget,
             }
 
@@ -156,6 +158,7 @@ def poll_decision(
         "scheduler_interval_minutes": scheduler_interval,
         "deadline_window": deadline_window,
         "verification_status": source.get("verification_status"),
+        "verification_note": source.get("verification_note"),
         "budget": budget,
     }
 
@@ -171,9 +174,9 @@ def carry_forward_skipped(
     health = str(prior.get("health") or ("RED" if source.get("critical") and not has_data else "AMBER"))
     availability = prior.get("availability") or ("PARTIAL" if has_data else "UNAVAILABLE")
     effective_state = "SCHEDULED_CACHE"
-    if reason == "VERIFICATION_REQUIRED":
+    if reason in {"VERIFICATION_REQUIRED", "VERIFICATION_FAILED"}:
         health = "AMBER"
-        effective_state = "VERIFICATION_REQUIRED"
+        effective_state = reason
     elif reason == "BUDGET_EXHAUSTED":
         health = "AMBER"
         effective_state = "BUDGET_EXHAUSTED"

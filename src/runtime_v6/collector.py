@@ -75,10 +75,12 @@ def run() -> dict[str, Any]:
         hours=int(config["policy"].get("deadline_window_hours") or 48),
     )
 
-    # Only the derived Official price source has a dependency. All network-backed
-    # sources that are due start together so one slow authority does not block
-    # unrelated acquisition. Sources not due are carried forward explicitly.
-    runnable = [source for source in sources if source["id"] != "official_price_predictor"]
+    # Official price prediction is derived. Open-Meteo is network-backed but
+    # depends on Official FPL for canonical teams, next event and fixture times.
+    # Every other due network source starts together and remains fail-isolated.
+    dependent_network = [source for source in sources if source.get("adapter") == "open_meteo_weather"]
+    excluded_ids = {"official_price_predictor", *(source["id"] for source in dependent_network)}
+    runnable = [source for source in sources if source["id"] not in excluded_ids]
     decisions = {
         source["id"]: poll_decision(
             source,
@@ -87,10 +89,12 @@ def run() -> dict[str, Any]:
             max_attempts_per_request=client.retry_attempts,
             scheduler_interval_minutes=scheduler_interval_minutes,
         )
-        for source in runnable
+        for source in [*runnable, *dependent_network]
     }
     due_sources = [source for source in runnable if decisions[source["id"]]["due"]]
-    for source in runnable:
+    dependent_due_sources = [source for source in dependent_network if decisions[source["id"]]["due"]]
+
+    for source in [*runnable, *dependent_network]:
         decision = decisions[source["id"]]
         if not decision["due"]:
             results[source["id"]] = carry_forward_skipped(
@@ -136,6 +140,7 @@ def run() -> dict[str, Any]:
         by_id["official_fpl"],
         RuntimeError("official_fpl_missing_from_results"),
     )
+
     price_source = by_id["official_price_predictor"]
     try:
         results["official_price_predictor"] = collect_source(
@@ -146,6 +151,26 @@ def run() -> dict[str, Any]:
         )
     except Exception as exc:
         results["official_price_predictor"] = _isolated_failure(price_source, exc)
+
+    # Fetch Official-dependent network evidence only after Official has resolved;
+    # unrelated source acquisition above is never blocked by this dependency.
+    for source in dependent_due_sources:
+        decision = decisions[source["id"]]
+        try:
+            payload = collect_source(
+                source,
+                client,
+                previous=previous.get(source["id"]),
+                official_payload=official,
+            )
+        except Exception as exc:
+            payload = _isolated_failure(source, exc)
+        results[source["id"]] = attach_poll_result(
+            source,
+            payload,
+            previous.get(source["id"]),
+            decision,
+        )
 
     for source in sources:
         write_source(source["id"], results[source["id"]])
@@ -202,7 +227,7 @@ def run() -> dict[str, Any]:
             "scheduler_interval_minutes": scheduler_interval_minutes,
             "deadline_window_active": deadline_window,
             "deadline_window_hours": int(config["policy"].get("deadline_window_hours") or 48),
-            "due_source_count": len(due_sources),
+            "due_source_count": len(due_sources) + len(dependent_due_sources),
             "skipped_source_count": len(skipped),
             "skipped_sources": skipped,
         },
@@ -229,6 +254,9 @@ def run() -> dict[str, Any]:
             "adaptive_polling_is_registry_driven": True,
             "active_source_pruning_is_registry_driven": True,
             "daily_budget_timezone": "Asia/Jakarta",
+            "weather_is_context_only": True,
+            "weather_direct_xpts_multiplier": False,
+            "weather_alone_can_trigger_transfer": False,
         },
     }
     write_json(MANIFEST, manifest)

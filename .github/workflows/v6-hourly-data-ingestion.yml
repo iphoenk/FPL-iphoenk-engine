@@ -1,7 +1,6 @@
 name: FPL V6 hourly fresh-data acquisition
 
 on:
-  workflow_dispatch:
   schedule:
     - cron: "0 * * * *"
     - cron: "12 * * * *"
@@ -73,7 +72,7 @@ jobs:
           event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
           schedule = str(event.get("schedule") or "")
           if os.environ.get("GITHUB_EVENT_NAME") != "schedule":
-              kind = "manual"
+              kind = "non_production_local"
           elif schedule == "0 * * * *":
               kind = "primary"
           elif schedule == "12 * * * *":
@@ -173,7 +172,7 @@ jobs:
           assert integrity["identity_map_consistent"] is True
           assert control["event_name"] == os.environ["GITHUB_EVENT_NAME"]
           assert control["schedule_kind"] == os.environ["V6_SCHEDULE_KIND"]
-          assert control["scheduled_cycle"] is (os.environ["GITHUB_EVENT_NAME"] == "schedule")
+          assert control["scheduled_cycle"] is True
           print(json.dumps({
               "overall": manifest["overall"],
               "elapsed_ms": manifest["elapsed_ms"],
@@ -251,7 +250,7 @@ jobs:
           assert manifest["governance"]["prediction_authority"] == "NONE"
           assert manifest["governance"]["optimizer_authority"] == "NONE"
           assert integrity["status"] == "PASS", integrity
-          print({"overall": manifest["overall"], "tree_digest": integrity.get("tree_digest")})
+          print({"overall": manifest["overall"], "tree_sha256": integrity.get("tree_sha256")})
           PY
 
       - name: Capture runtime branch lease
@@ -321,6 +320,6 @@ jobs:
               "overall": manifest["overall"],
               "generated_at": manifest["generated_at"],
               "schedule_kind": manifest["runtime_control"]["schedule_kind"],
-              "tree_digest": integrity.get("tree_digest"),
+              "tree_sha256": integrity.get("tree_sha256"),
           })
           PY

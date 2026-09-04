@@ -197,7 +197,7 @@ def test_manual_recovery_is_non_authoritative_and_manifested_amber():
 
 
 def test_production_workflow_has_off_minute_schedule_and_governed_manual_recovery():
-    workflow = Path(".github/workflows/v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
+    workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
     policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
 

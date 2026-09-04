@@ -72,12 +72,16 @@ def assess_snapshot(
         failures.append("PUBLISH_INTEGRITY_NOT_PASS")
     if integrity.get("current_source_files_exact") is not True:
         failures.append("CURRENT_SOURCE_FILESET_NOT_EXACT")
+    if integrity.get("resolved_registry_exact") is not True:
+        failures.append("RESOLVED_REGISTRY_NOT_EXACT")
     if integrity.get("identity_map_consistent") is not True:
         failures.append("IDENTITY_MAP_NOT_CONSISTENT")
 
     recomputed = validate_publish_tree(root)
     if recomputed.get("status") != "PASS":
         failures.append("RECOMPUTED_PUBLISH_INTEGRITY_NOT_PASS")
+    if recomputed.get("resolved_registry_exact") is not True:
+        failures.append("RECOMPUTED_RESOLVED_REGISTRY_NOT_EXACT")
     stored_digest = integrity.get("tree_sha256")
     recomputed_digest = recomputed.get("tree_sha256")
     if not stored_digest:
@@ -155,6 +159,7 @@ def assess_snapshot(
         "governance": {
             "consumer_does_not_trust_static_green_without_freshness": True,
             "consumer_recomputes_publish_integrity": True,
+            "consumer_requires_exact_resolved_registry": True,
             "consumer_requires_scheduled_runtime_provenance": True,
             "stale_or_invalid_allows_minimum_scope_direct_fallback": True,
             "fresh_v6_is_primary_data_authority": True,

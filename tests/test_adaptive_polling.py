@@ -8,23 +8,23 @@ from src.runtime_v6.polling import (
     effective_poll_interval_minutes,
     poll_decision,
 )
-from src.runtime_v6.registry import EXPECTED_SOURCE_IDS, load_registry, source_map
+from src.runtime_v6.registry import DROPPED_SOURCE_IDS, EXPECTED_SOURCE_IDS, load_registry, source_map
 
 
-def test_registry_keeps_full_27_source_contract_and_adds_ingestion_metadata():
+def test_registry_keeps_active_20_source_contract_and_adds_ingestion_metadata():
     registry = load_registry()
     sources = source_map(registry)
 
     assert tuple(sources) == EXPECTED_SOURCE_IDS
-    assert len(sources) == 27
+    assert len(sources) == 20
+    assert set(sources).isdisjoint(DROPPED_SOURCE_IDS)
+    assert registry["activation"]["active_source_count"] == 20
+    assert registry["activation"]["disabled_source_count"] == 7
+    assert tuple(registry["activation"]["disabled_sources"]) == DROPPED_SOURCE_IDS
     assert sources["official_fpl"]["acquisition_kind"] == "rest_json"
     assert sources["understat"]["acquisition_kind"] == "html_scrape"
     assert sources["understat"]["content_hash_dedup"] is True
-    assert sources["api_football"]["daily_request_budget"] == 100
-    assert sources["api_football"]["poll_interval_minutes"] == 1440
-    assert sources["api_football"]["poll_interval_minutes_deadline_window"] == 360
-    assert sources["api_football"]["verification_required"] is True
-    assert sources["api_football"]["verification_status"] == "PENDING"
+    assert sources["ffhub"]["activation_constraint"] == "FREE_OR_PUBLIC_PARTIAL_ONLY_NO_PRO_UPGRADE"
 
 
 def test_non_configured_sources_preserve_legacy_every_cycle_behavior():
@@ -104,7 +104,7 @@ def test_deadline_window_detects_upcoming_official_fpl_deadline():
 def test_verification_gate_blocks_scheduled_poll_until_verified():
     now = datetime(2026, 9, 4, 5, 0, tzinfo=timezone.utc)
     source = {
-        "id": "api_football",
+        "id": "example_provider",
         "verification_required": True,
         "verification_status": "PENDING",
         "poll_interval_minutes": 1440,

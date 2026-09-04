@@ -230,6 +230,7 @@ def run() -> dict[str, Any]:
             "lineage": "data/v6/evidence/lineage.json",
             "evidence_index": "data/v6/evidence/latest_index.json",
             "resolved_registry": "data/v6/evidence/resolved_registry.json",
+            "publish_integrity": "data/v6/health/publish_integrity.json",
         },
         "governance": {
             "decision_authority": policy["decision_authority"],
@@ -246,6 +247,7 @@ def run() -> dict[str, Any]:
             "active_source_pruning_is_registry_driven": True,
             "dependency_order_is_registry_driven": True,
             "resolved_registry_is_published": True,
+            "publish_integrity_required": True,
             "daily_budget_timezone": "Asia/Jakarta",
             "weather_is_context_only": True,
             "weather_direct_xpts_multiplier": False,

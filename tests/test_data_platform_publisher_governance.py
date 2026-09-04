@@ -30,11 +30,12 @@ def test_v6_production_uses_locked_runtime_dependencies_and_lightweight_prefligh
     assert "requirements.txt pytest" not in before_publish
 
 
-def test_v6_write_authority_is_isolated_to_publisher_job():
+def test_v6_builtin_github_token_remains_read_only_in_publisher_job():
     _, publish = _sections()
 
     assert "environment: v6-runtime-publisher" in publish
-    assert "contents: write" in publish
+    assert "contents: read" in publish
+    assert "contents: write" not in publish
     assert "actions: read" in publish
     assert "actions/download-artifact@" in publish
     assert "Revalidate transferred runtime snapshot" in publish
@@ -47,6 +48,7 @@ def test_v6_has_fail_closed_dedicated_publisher_app_contract_without_cross_versi
     assert "actions/create-github-app-token@" in publish
     assert "V6_RUNTIME_APP_ID" in publish
     assert "V6_RUNTIME_APP_PRIVATE_KEY" in publish
+    assert "permission-contents: write" in publish
     assert "dedicated_v6_github_app" in publish
     assert "scoped_github_token_fallback" not in publish
     assert "V3_RUNTIME_APP_ID" not in publish

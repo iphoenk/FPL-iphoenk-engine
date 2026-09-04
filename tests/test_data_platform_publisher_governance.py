@@ -35,7 +35,9 @@ def test_v6_builtin_github_token_remains_read_only_in_publisher_job():
 
     assert "environment: v6-runtime-publisher" in publish
     assert "contents: read" in publish
-    assert "contents: write" not in publish
+    # Match the job-level permissions entry exactly enough to avoid treating
+    # the GitHub App input `permission-contents: write` as built-in-token write.
+    assert "\n      contents: write\n" not in publish
     assert "actions: read" in publish
     assert "actions/download-artifact@" in publish
     assert "Revalidate transferred runtime snapshot" in publish

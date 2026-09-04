@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "policy": "explicit_active_source_pruning",
+  "disabled_sources": {
+    "fbref": "DROP_DUPLICATE_ACCESS_RESTRICTED",
+    "sofascore": "DROP_DUPLICATE_UNOFFICIAL_403",
+    "sportmonks": "DROP_PAID_PROVIDER",
+    "api_football": "DROP_PAID_PROVIDER",
+    "transfermarkt": "DROP_AUTOMATION_RESTRICTED",
+    "whoscored": "DROP_DUPLICATE_ACCESS_RESTRICTED",
+    "football_data_org": "DROP_PAID_BY_OWNER_DECISION"
+  },
+  "constraints": {
+    "ffhub": "FREE_OR_PUBLIC_PARTIAL_ONLY_NO_PRO_UPGRADE",
+    "fffix": "FREE_OR_PUBLIC_ONLY",
+    "clubelo": "KEEP_AND_REPAIR"
+  }
+}

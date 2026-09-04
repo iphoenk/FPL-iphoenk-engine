@@ -13,7 +13,7 @@ on:
       - "tests/test_data_ingestion_engine.py"
       - "tests/test_adaptive_polling.py"
       - "tests/test_weather_context.py"
-      - "tests/test_v6_audit_hardening.py"
+      - "tests/test_data_platform_hardening.py"
       - ".github/workflows/v6-hourly-data-ingestion.yml"
 
 permissions:
@@ -59,8 +59,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt pytest
 
-      - name: Validate V6 data-only, source, weather and audit-hardening contracts
-        run: python -m pytest -q tests/test_data_ingestion_engine.py tests/test_adaptive_polling.py tests/test_weather_context.py tests/test_v6_audit_hardening.py
+      - name: Validate V6 data-only, source, weather and data-platform hardening contracts
+        run: python -m pytest -q tests/test_data_ingestion_engine.py tests/test_adaptive_polling.py tests/test_weather_context.py tests/test_data_platform_hardening.py
 
       - name: Run active V6 acquisition cycle
         run: python -m src.runtime_v6.collector

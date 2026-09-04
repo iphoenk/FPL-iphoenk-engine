@@ -113,6 +113,7 @@ jobs:
           tests/test_weather_context.py
           tests/test_data_platform_hardening.py
           tests/test_data_platform_runtime_control.py
+          tests/test_data_platform_publish_integrity.py
 
       - name: Run active V6 acquisition cycle
         if: steps.slot_guard.outputs.skip != 'true'
@@ -121,6 +122,10 @@ jobs:
       - name: Apply V6 scheduler and missed-cycle health
         if: steps.slot_guard.outputs.skip != 'true'
         run: python -m src.runtime_v6.runtime_control
+
+      - name: Validate V6 publish-tree integrity
+        if: steps.slot_guard.outputs.skip != 'true'
+        run: python -m src.runtime_v6.publish_integrity
 
       - name: Validate publishable V6 manifest
         if: steps.slot_guard.outputs.skip != 'true'
@@ -132,6 +137,7 @@ jobs:
           from src.runtime_v6.registry import load_registry
 
           manifest = json.loads(Path("data/v6/manifest.json").read_text())
+          integrity = json.loads(Path("data/v6/health/publish_integrity.json").read_text())
           registry = load_registry()
           expected_active = registry["activation"]["active_source_count"]
           required_active = registry["activation"]["required_active_sources"]
@@ -144,6 +150,9 @@ jobs:
           assert manifest["governance"]["production_ingestion_schedule_only"] is True
           assert manifest["governance"]["single_logical_acquisition_per_scheduler_slot"] is True
           assert manifest["governance"]["scheduled_recovery_is_idempotent"] is True
+          assert manifest["governance"]["publish_integrity_required"] is True
+          assert integrity["status"] == "PASS", integrity
+          assert integrity["current_source_files_exact"] is True
           assert control["event_name"] == os.environ["GITHUB_EVENT_NAME"]
           assert control["schedule_kind"] == os.environ["V6_SCHEDULE_KIND"]
           assert control["scheduled_cycle"] is (os.environ["GITHUB_EVENT_NAME"] == "schedule")
@@ -155,6 +164,7 @@ jobs:
               "critical_failures": manifest["critical_failures"],
               "control_failures": manifest["control_failures"],
               "runtime_control": control,
+              "publish_integrity": integrity,
               "activation": manifest["activation"],
           }, indent=2))
           PY

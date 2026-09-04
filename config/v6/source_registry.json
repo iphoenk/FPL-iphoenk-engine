@@ -4,7 +4,6 @@
   "season": "2026-2027",
   "cadence": {
     "schedule": "hourly",
-    "workflow_cron_utc": "0 * * * *",
     "check_every_source_each_cycle": true,
     "default_check_freshness_minutes": 90
   },
@@ -12,6 +11,11 @@
     "decision_authority": "NONE",
     "prediction_authority": "NONE",
     "optimizer_authority": "NONE",
+    "tactical_authority": "NONE",
+    "transfer_authority": "NONE",
+    "captain_authority": "NONE",
+    "chip_authority": "NONE",
+    "formation_authority": "NONE",
     "data_only": true,
     "no_cross_source_averaging": true,
     "no_fabrication": true,

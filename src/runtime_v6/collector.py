@@ -69,6 +69,7 @@ def run() -> dict[str, Any]:
             source,
             previous.get(source["id"]),
             deadline_window=deadline_window,
+            max_attempts_per_request=client.retry_attempts,
         )
         for source in runnable
     }

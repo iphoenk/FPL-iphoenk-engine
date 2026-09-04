@@ -102,7 +102,9 @@ jobs:
           cd /tmp/v6-runtime
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/v6
+          # data/v6 is intentionally ignored on code branches. Runtime snapshots
+          # live only on runtime-data-v6, so force-add that isolated write-set.
+          git add -f data/v6
           if git diff --cached --quiet; then
             echo "No V6 snapshot change"
             exit 0

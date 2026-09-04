@@ -234,3 +234,9 @@ def test_workflow_hydrates_runtime_last_good_before_collection():
     collect = workflow.index("Pull all 27 V6 sources")
     assert hydrate < collect
     assert 'git archive "origin/${RUNTIME_BRANCH}" data/v6' in workflow
+
+
+def test_workflow_force_adds_ignored_runtime_snapshot():
+    workflow = Path(".github/workflows/v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
+    assert "git add -f data/v6" in workflow
+    assert "git add data/v6" not in workflow

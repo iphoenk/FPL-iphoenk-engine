@@ -7,11 +7,13 @@ from pathlib import Path
 from typing import Any
 
 from .publish_integrity import validate_publish_tree
+from .registry import ZERO_AUTHORITY_KEYS
 
 
 DEFAULT_MAX_AGE_MINUTES = 90
 MAX_CLOCK_SKEW_MINUTES = 5
 _ALLOWED_SCHEDULE_KINDS = {"primary", "recovery"}
+_FALLBACK_SCOPE = "EXTERNAL_SOURCES_ONLY"
 
 
 def _utc(value: str) -> datetime:
@@ -19,6 +21,29 @@ def _utc(value: str) -> datetime:
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc)
+
+
+def _governance_failures(governance: dict[str, Any]) -> list[str]:
+    failures: list[str] = []
+    if governance.get("data_only") is not True:
+        failures.append("DATA_ONLY_CONTRACT_BROKEN")
+    for authority in ZERO_AUTHORITY_KEYS:
+        if governance.get(authority) != "NONE":
+            failures.append(f"UNEXPECTED_{authority.upper()}")
+    if governance.get("production_ingestion_schedule_only") is not True:
+        failures.append("PRODUCTION_SCHEDULE_ONLY_CONTRACT_BROKEN")
+    return failures
+
+
+def _invalid_result(failure: str) -> dict[str, Any]:
+    return {
+        "state": "INVALID",
+        "usable": False,
+        "direct_fallback_eligible": True,
+        "fallback_scope": _FALLBACK_SCOPE,
+        "engine_artifact_fallback_allowed": False,
+        "failures": [failure],
+    }
 
 
 def assess_snapshot(
@@ -34,39 +59,18 @@ def assess_snapshot(
     manifest_path = root / "manifest.json"
     integrity_path = root / "health" / "publish_integrity.json"
     if not manifest_path.exists():
-        return {
-            "state": "INVALID",
-            "usable": False,
-            "direct_fallback_eligible": True,
-            "failures": ["MISSING_MANIFEST"],
-        }
+        return _invalid_result("MISSING_MANIFEST")
     if not integrity_path.exists():
-        return {
-            "state": "INVALID",
-            "usable": False,
-            "direct_fallback_eligible": True,
-            "failures": ["MISSING_PUBLISH_INTEGRITY"],
-        }
+        return _invalid_result("MISSING_PUBLISH_INTEGRITY")
 
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         integrity = json.loads(integrity_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
-        return {
-            "state": "INVALID",
-            "usable": False,
-            "direct_fallback_eligible": True,
-            "failures": [f"UNREADABLE_RUNTIME:{type(exc).__name__}"],
-        }
+        return _invalid_result(f"UNREADABLE_RUNTIME:{type(exc).__name__}")
 
     governance = manifest.get("governance") or {}
-    if governance.get("data_only") is not True:
-        failures.append("DATA_ONLY_CONTRACT_BROKEN")
-    for authority in ("decision_authority", "prediction_authority", "optimizer_authority"):
-        if governance.get(authority) != "NONE":
-            failures.append(f"UNEXPECTED_{authority.upper()}")
-    if governance.get("production_ingestion_schedule_only") is not True:
-        failures.append("PRODUCTION_SCHEDULE_ONLY_CONTRACT_BROKEN")
+    failures.extend(_governance_failures(governance))
 
     if integrity.get("status") != "PASS":
         failures.append("PUBLISH_INTEGRITY_NOT_PASS")
@@ -147,6 +151,8 @@ def assess_snapshot(
         "state": state,
         "usable": usable,
         "direct_fallback_eligible": fallback,
+        "fallback_scope": _FALLBACK_SCOPE if fallback else None,
+        "engine_artifact_fallback_allowed": False,
         "generated_at": generated_at.isoformat() if generated_at else None,
         "evaluated_at": now.isoformat(),
         "age_minutes": round(age_minutes, 3) if age_minutes is not None else None,
@@ -161,7 +167,10 @@ def assess_snapshot(
             "consumer_recomputes_publish_integrity": True,
             "consumer_requires_exact_resolved_registry": True,
             "consumer_requires_scheduled_runtime_provenance": True,
+            "consumer_requires_full_zero_authority_contract": True,
             "stale_or_invalid_allows_minimum_scope_direct_fallback": True,
+            "fallback_is_external_sources_only": True,
+            "fallback_must_not_read_other_engine_artifacts": True,
             "fresh_v6_is_primary_data_authority": True,
         },
     }

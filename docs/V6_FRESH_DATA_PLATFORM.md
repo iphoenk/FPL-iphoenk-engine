@@ -8,6 +8,8 @@ Official FPL is the factual and canonical authority for player, team, fixture, a
 
 Consumers such as V3, V4, reporting, price models, and the Master Monitor may read a published V6 snapshot. Consumers must evaluate snapshot freshness and integrity at read time. A stale, missing, invalid, or broken V6 snapshot may permit a minimum-scope direct fallback by the consumer, but the consumer must not trigger a V6 refresh.
 
+V6 never reads V3/V4/V5 runtime branches, data trees, caches, manifests, or engine artifacts. Those engines are downstream consumers only. Any permitted consumer fallback is external-source retrieval owned by that consumer; it is never a fallback from V6 into another engine's runtime data.
+
 ## Production schedule
 
 The authoritative production cadence is scheduler-owned and intentionally offset from other repository cron traffic:
@@ -35,16 +37,16 @@ A manual recovery:
 - is manifested as AMBER/non-authoritative rather than pretending to restore scheduled health;
 - remains invalid as primary V6 consumer authority until a real `schedule` cycle succeeds.
 
-This recovery path can refresh last-good evidence and caches during an incident without hiding `MISSED_SCHEDULED_CYCLE` evidence or creating false freshness. Consumers continue to use their documented minimum-scope direct fallback whenever the latest V6 snapshot is stale or invalid.
+This recovery path can refresh V6-owned last-good evidence and caches during an incident without hiding `MISSED_SCHEDULED_CYCLE` evidence or creating false freshness. Consumers continue to use their documented minimum-scope external-source fallback whenever the latest V6 snapshot is stale or invalid. No V3/V4/V5 artifact may be used as a V6 fallback.
 
 ## Production workflow boundaries
 
 The production workflow has two jobs with different authority:
 
-1. `collect` is read-only. It hydrates the previous last-good snapshot, runs a lightweight registry/runtime preflight, acquires active sources, applies runtime-control health, validates publish integrity, and transfers one verified artifact. Governed manual recovery is authorized before acquisition and remains non-authoritative in runtime control.
+1. `collect` is read-only. It hydrates the previous V6-owned last-good snapshot, runs a lightweight registry/runtime preflight, acquires active sources, applies runtime-control health, validates publish integrity, and transfers one verified artifact. Governed manual recovery is authorized before acquisition and remains non-authoritative in runtime control.
 2. `publish` is the only writer. It requires the `v6-runtime-publisher` environment and a dedicated V6 GitHub App token. There is no generic `github.token` publisher fallback. It publishes an atomic orphan snapshot to `runtime-data-v6` using a branch lease and then verifies the exact published tree.
 
-Runtime dependencies are installed from `requirements.lock` with hashes. Full unit and regression contracts run in `v6-ci.yml` using `requirements-ci.lock`; the hourly acquisition hot path does not rerun the unit-test suite.
+Runtime dependencies are installed from `requirements-v6.lock` with hashes. Full unit and regression contracts run in `v6-ci.yml` using `requirements-v6-ci.lock`; the hourly acquisition hot path does not rerun the unit-test suite.
 
 ## Registry and configuration
 
@@ -89,7 +91,7 @@ Weather is contextual evidence only. It cannot directly multiply xPts and weathe
 
 ## Persistent last-good state
 
-Before acquisition, the workflow hydrates `data/v6/` from the latest `runtime-data-v6` snapshot. Failed requests do not silently erase a previously usable payload. Current attempts and effective data state remain distinguishable through explicit origin and health metadata.
+Before acquisition, the workflow hydrates `data/v6/` only from the latest `runtime-data-v6` snapshot. It never hydrates V6 from V3/V4/V5 runtime branches or data trees. Failed requests do not silently erase a previously usable payload. Current attempts and effective data state remain distinguishable through explicit origin and health metadata.
 
 A conditional HTTP `304 Not Modified` is successful current-cycle revalidation. A last-good cache carried because the provider could not be revalidated is degraded and must not be mislabeled as fresh live evidence.
 
@@ -126,9 +128,9 @@ Fuzzy player-name matching is not allowed in V6 identity publication. Partial de
 
 ## Freshness and consumer rule
 
-The Master Monitor and other consumers apply a hard V6 freshness threshold of 90 minutes unless a stricter consumer contract is explicitly supplied. A static historical manifest that says GREEN is not sufficient. The consumer must verify current age, runtime-control provenance, exact source set, exact resolved registry, identity consistency, stored tree digest, recomputed tree digest, and control/critical failures.
+The Master Monitor and other consumers apply a hard V6 freshness threshold of 90 minutes unless a stricter consumer contract is explicitly supplied. A static historical manifest that says GREEN is not sufficient. The consumer must verify current age, runtime-control provenance, exact source set, exact resolved registry, identity consistency, stored tree digest, recomputed tree digest, every zero-authority dimension, and control/critical failures.
 
-Only a real scheduled snapshot with valid `primary` or `recovery` provenance may become primary V6 consumer authority. A governed `manual_recovery` snapshot remains invalid for that role by design. If the latest V6 snapshot is stale or invalid, only the consumer's documented minimum-scope direct fallback is eligible.
+Only a real scheduled snapshot with valid `primary` or `recovery` provenance may become primary V6 consumer authority. A governed `manual_recovery` snapshot remains invalid for that role by design. If the latest V6 snapshot is stale or invalid, only the consumer's documented minimum-scope external-source fallback is eligible. Fallback into another engine's runtime artifacts is forbidden.
 
 ## Runtime branch governance
 

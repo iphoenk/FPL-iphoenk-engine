@@ -115,6 +115,7 @@ def test_open_meteo_fixture_join_uses_official_fpl_authority():
     fixture = weather["fixtures"][0]
 
     assert weather["fixture_authority"] == "official_fpl"
+    assert weather["weather_provider"] == "open_meteo"
     assert weather["venue_registry"] == "config/venues/premier_league_2026_27.json"
     assert weather["event"] == 3
     assert fixture["fixture_id"] == 301
@@ -152,3 +153,13 @@ def test_open_meteo_reuses_canonical_2026_27_venue_registry_once():
         "FRESH_FORECAST",
         "STALE_FORECAST",
     ]
+
+
+def test_open_meteo_is_native_v6_acquisition_not_v3_upstream():
+    sources = source_map(load_registry())
+    weather = sources["open_meteo_weather"]
+
+    assert weather["adapter"] == "open_meteo_weather"
+    assert weather["depends_on"] == ["official_fpl"]
+    assert weather["requests"][0]["url"] == "https://api.open-meteo.com/v1/forecast"
+    assert "v3" not in str(weather).lower()

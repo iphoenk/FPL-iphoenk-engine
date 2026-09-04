@@ -5,7 +5,8 @@ on:
     - cron: "0 * * * *"
     - cron: "12 * * * *"
 
-# Acquisition is read-only. Write authority exists only in the isolated publish job.
+# The built-in GITHUB_TOKEN remains read-only. Runtime write authority is minted
+# only from the dedicated V6 publisher GitHub App inside the publish job.
 permissions:
   contents: read
 
@@ -222,7 +223,7 @@ jobs:
     timeout-minutes: 5
     environment: v6-runtime-publisher
     permissions:
-      contents: write
+      contents: read
       actions: read
     steps:
       - name: Require dedicated V6 publisher app configuration

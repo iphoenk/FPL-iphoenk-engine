@@ -122,7 +122,7 @@
     },
     "clubelo": {
       "acquisition_kind": "rest_csv",
-      "poll_interval_minutes": 360,
+      "poll_interval_minutes": 60,
       "check_freshness_minutes": 1500,
       "content_hash_dedup": true,
       "requests": [

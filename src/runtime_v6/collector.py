@@ -17,7 +17,7 @@ from .normalizer import (
     build_lineage_catalog,
 )
 from .polling import attach_poll_result, carry_forward_skipped, deadline_window_active, poll_decision
-from .registry import dependency_layers, load_registry, resolved_registry_snapshot, source_map
+from .registry import ZERO_AUTHORITY_KEYS, dependency_layers, load_registry, resolved_registry_snapshot, source_map
 from .store import (
     EVIDENCE,
     HEALTH,
@@ -28,6 +28,12 @@ from .store import (
     write_json,
     write_source,
 )
+
+
+def _zero_authority_fields(policy: dict[str, Any] | None = None) -> dict[str, str]:
+    if policy is None:
+        return {key: "NONE" for key in ZERO_AUTHORITY_KEYS}
+    return {key: str(policy[key]) for key in ZERO_AUTHORITY_KEYS}
 
 
 def _isolated_failure(source: dict[str, Any], exc: Exception) -> dict[str, Any]:
@@ -47,9 +53,7 @@ def _isolated_failure(source: dict[str, Any], exc: Exception) -> dict[str, Any]:
         "error": type(exc).__name__,
         "governance": {
             "data_only": True,
-            "decision_authority": "NONE",
-            "prediction_authority": "NONE",
-            "optimizer_authority": "NONE",
+            **_zero_authority_fields(),
             "isolated_failure": True,
             "values_not_invented": True,
         },
@@ -246,9 +250,7 @@ def run() -> dict[str, Any]:
             "publish_integrity": "data/v6/health/publish_integrity.json",
         },
         "governance": {
-            "decision_authority": policy["decision_authority"],
-            "prediction_authority": policy["prediction_authority"],
-            "optimizer_authority": policy["optimizer_authority"],
+            **_zero_authority_fields(policy),
             "data_only": bool(policy["data_only"]),
             "no_cross_source_averaging": bool(policy.get("no_cross_source_averaging")),
             "no_fabrication": bool(policy["no_fabrication"]),

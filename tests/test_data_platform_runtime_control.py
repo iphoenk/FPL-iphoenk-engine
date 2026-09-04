@@ -4,7 +4,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src.runtime_v6.polling import poll_decision
-from src.runtime_v6.runtime_control import apply_runtime_control, build_runtime_control
+from src.runtime_v6.runtime_control import (
+    apply_runtime_control,
+    build_runtime_control,
+    scheduled_slot_already_completed,
+)
 
 
 def test_same_scheduler_slot_never_polls_twice():
@@ -46,6 +50,7 @@ def test_runtime_control_detects_missed_scheduled_cycle():
         now=datetime(2026, 9, 4, 8, 3, tzinfo=timezone.utc),
         event_name="schedule",
         run_id="123",
+        schedule_kind="primary",
     )
 
     assert control["health"] == "RED"
@@ -53,6 +58,7 @@ def test_runtime_control_detects_missed_scheduled_cycle():
     assert control["missed_cycle_count"] == 1
     assert control["expected_cycle_at"] == "2026-09-04T08:00:00+00:00"
     assert control["last_scheduled_cycle_at"] == "2026-09-04T08:00:00+00:00"
+    assert control["schedule_kind"] == "primary"
 
 
 def test_manual_cycle_does_not_mask_missing_scheduled_baseline():
@@ -73,6 +79,51 @@ def test_manual_cycle_does_not_mask_missing_scheduled_baseline():
     assert control["missed_cycle"] is False
 
 
+def test_recovery_schedule_skips_when_primary_already_published_same_slot():
+    previous = {
+        "runtime_control": {
+            "last_scheduled_cycle_at": "2026-09-04T08:00:00+00:00"
+        }
+    }
+
+    assert scheduled_slot_already_completed(
+        previous,
+        scheduler_interval_minutes=60,
+        now=datetime(2026, 9, 4, 8, 12, tzinfo=timezone.utc),
+        event_name="schedule",
+    ) is True
+
+
+def test_recovery_schedule_runs_when_current_slot_has_not_been_published():
+    previous = {
+        "runtime_control": {
+            "last_scheduled_cycle_at": "2026-09-04T07:00:00+00:00"
+        }
+    }
+
+    assert scheduled_slot_already_completed(
+        previous,
+        scheduler_interval_minutes=60,
+        now=datetime(2026, 9, 4, 8, 12, tzinfo=timezone.utc),
+        event_name="schedule",
+    ) is False
+
+
+def test_manual_refresh_never_counts_as_completed_scheduled_slot():
+    previous = {
+        "runtime_control": {
+            "last_scheduled_cycle_at": "2026-09-04T08:00:00+00:00"
+        }
+    }
+
+    assert scheduled_slot_already_completed(
+        previous,
+        scheduler_interval_minutes=60,
+        now=datetime(2026, 9, 4, 8, 30, tzinfo=timezone.utc),
+        event_name="workflow_dispatch",
+    ) is False
+
+
 def test_runtime_control_escalates_manifest_overall_on_missed_cycle():
     manifest = {
         "overall": "GREEN",
@@ -91,6 +142,7 @@ def test_runtime_control_escalates_manifest_overall_on_missed_cycle():
         previous,
         now=datetime(2026, 9, 4, 8, 4, tzinfo=timezone.utc),
         event_name="schedule",
+        schedule_kind="primary",
     )
 
     assert control["health"] == "RED"
@@ -98,17 +150,21 @@ def test_runtime_control_escalates_manifest_overall_on_missed_cycle():
     assert updated["control_failures"] == ["MISSED_SCHEDULED_CYCLE"]
     assert updated["paths"]["runtime_control"] == "data/v6/health/runtime_control.json"
     assert updated["governance"]["production_ingestion_schedule_only"] is True
+    assert updated["governance"]["scheduled_recovery_is_idempotent"] is True
 
 
 def test_production_workflow_is_not_triggered_by_push_or_pull_request():
     workflow = Path(".github/workflows/v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
 
     assert 'cron: "0 * * * *"' in workflow
+    assert 'cron: "12 * * * *"' in workflow
     assert "workflow_dispatch:" in workflow
     assert "  push:" not in workflow
     assert "  pull_request:" not in workflow
     assert "python -m src.runtime_v6.collector" in workflow
     assert "python -m src.runtime_v6.runtime_control" in workflow
+    assert "scheduled_slot_already_completed" in workflow
+    assert "steps.slot_guard.outputs.skip != 'true'" in workflow
 
 
 def test_v6_ci_never_acquires_or_writes_runtime_branch():

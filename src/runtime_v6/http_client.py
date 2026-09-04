@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import threading
 import time
@@ -20,6 +21,7 @@ _ACCESS_BLOCK_MARKERS = (
     "attention required! | cloudflare",
     "just a moment...",
 )
+_STREAM_CHUNK_BYTES = 65536
 
 
 def utc_now() -> str:
@@ -172,6 +174,54 @@ def _validate_payload(
     return "AVAILABLE", "GREEN", None, "USABLE_DATA"
 
 
+def _declared_content_length(response: requests.Response) -> int | None:
+    raw = str(response.headers.get("content-length") or "").strip()
+    if not raw:
+        return None
+    try:
+        value = int(raw)
+    except ValueError:
+        return None
+    return value if value >= 0 else None
+
+
+def _read_bounded(response: requests.Response, max_body: int) -> tuple[bytes, int, bool, int | None]:
+    """Read at most max_body + one chunk and stop the network stream early."""
+    limit = max(1, int(max_body))
+    chunks: list[bytes] = []
+    observed = 0
+    truncated = False
+    for chunk in response.iter_content(chunk_size=_STREAM_CHUNK_BYTES):
+        if not chunk:
+            continue
+        remaining = limit - observed
+        if remaining <= 0:
+            truncated = True
+            break
+        if len(chunk) > remaining:
+            chunks.append(chunk[:remaining])
+            observed += remaining
+            truncated = True
+            break
+        chunks.append(chunk)
+        observed += len(chunk)
+        if observed == limit:
+            declared = _declared_content_length(response)
+            if declared is not None and declared > limit:
+                truncated = True
+                break
+            # If Content-Length is absent/equal, read one more iterator item only
+            # to prove whether a larger body exists; do not retain it.
+            continue
+
+    declared = _declared_content_length(response)
+    if declared is not None and declared > limit:
+        truncated = True
+    kept = b"".join(chunks)
+    effective_length = declared if declared is not None else observed + (1 if truncated else 0)
+    return kept, effective_length, truncated, declared
+
+
 class AcquisitionClient:
     def __init__(self, policy: dict[str, Any]):
         legacy_timeout = float(policy.get("timeout_seconds") or 20)
@@ -268,9 +318,12 @@ class AcquisitionClient:
                     timeout=(connect_timeout, read_timeout),
                     headers=headers,
                     allow_redirects=True,
+                    stream=True,
                 )
                 if response.status_code in _RETRYABLE_STATUS and attempt < self.retry_attempts:
+                    response.close()
                     time.sleep(_retry_delay(response, self.retry_backoff, attempt))
+                    response = None
                     continue
                 break
             except requests.RequestException as exc:
@@ -298,7 +351,7 @@ class AcquisitionClient:
         safe_url = _redact_url(str(response.url), secret, query_auth_name)
 
         if response.status_code == 304 and previous:
-            return {
+            result = {
                 "request_id": request_cfg["id"],
                 "status": "NOT_MODIFIED",
                 "health": "GREEN",
@@ -315,21 +368,23 @@ class AcquisitionClient:
                 "error": None,
                 "validation_classification": previous.get("validation_classification") or "REVALIDATED_USABLE_DATA",
             }
+            response.close()
+            return result
 
-        raw = response.content
-        kept = raw[:max_body]
-        digest = sha256_bytes(raw)
+        kept, content_length, truncated, declared_length = _read_bounded(response, max_body)
         content_type = str(response.headers.get("content-type") or "")
         encoding = response.encoding or "utf-8"
         text = kept.decode(encoding, errors="replace")
         expected = str(request_cfg.get("expect") or "auto").lower()
         parsed_json = None
-        if expected == "json" or "json" in content_type.lower():
+        if not truncated and (expected == "json" or "json" in content_type.lower()):
             try:
-                parsed_json = response.json()
+                parsed_json = json.loads(text)
             except ValueError:
                 parsed_json = None
 
+        digest = sha256_bytes(kept)
+        sha_scope = "stored_prefix" if truncated else "full_body"
         status = "AVAILABLE" if 200 <= response.status_code < 400 else "UNAVAILABLE"
         if response.status_code in {401, 403} and auth:
             status = "AUTH_REJECTED"
@@ -337,17 +392,16 @@ class AcquisitionClient:
         validation_error = None
         validation_classification = "TRANSPORT_OK" if status == "AVAILABLE" else "TRANSPORT_FAILURE"
 
-        if status == "AVAILABLE" and expected == "json" and parsed_json is None:
+        if status == "AVAILABLE" and truncated:
+            status = "TRUNCATED"
+            health = "AMBER"
+            validation_error = "payload_exceeds_max_body_bytes"
+            validation_classification = "TRUNCATED"
+        elif status == "AVAILABLE" and expected == "json" and parsed_json is None:
             status = "INVALID_PAYLOAD"
             health = "AMBER"
             validation_error = "expected_json_not_parseable"
             validation_classification = "INVALID_PAYLOAD"
-
-        body = None if parsed_json is not None else text
-        truncated = parsed_json is None and len(raw) > len(kept)
-        if truncated and status == "AVAILABLE":
-            health = "AMBER"
-            validation_classification = "TRUNCATED"
 
         if status == "AVAILABLE":
             status, health, validation_error, validation_classification = _validate_payload(
@@ -356,10 +410,11 @@ class AcquisitionClient:
                 final_url=str(response.url),
                 parsed_json=parsed_json,
                 text=text,
-                raw_size=len(raw),
+                raw_size=content_length,
             )
 
-        return {
+        body = None if parsed_json is not None else text
+        result = {
             "request_id": request_cfg["id"],
             "status": status,
             "health": health,
@@ -372,14 +427,19 @@ class AcquisitionClient:
             "etag": response.headers.get("etag"),
             "last_modified": response.headers.get("last-modified"),
             "server_date": response.headers.get("date"),
-            "content_length_bytes": len(raw),
-            "stored_bytes": len(kept) if parsed_json is None else len(raw),
+            "content_length_bytes": content_length,
+            "declared_content_length_bytes": declared_length,
+            "stored_bytes": len(kept),
             "truncated": truncated,
+            "max_body_bytes": max_body,
             "sha256": digest,
-            "content_changed": previous is None or previous.get("sha256") != digest,
+            "sha256_scope": sha_scope,
+            "content_changed": previous is None or previous.get("sha256") != digest or previous.get("sha256_scope") != sha_scope,
             "payload_kind": "json" if parsed_json is not None else expected,
             "json": parsed_json,
             "body": body,
             "error": validation_error if validation_error is not None else (None if status == "AVAILABLE" else f"http_{response.status_code}"),
             "validation_classification": validation_classification,
         }
+        response.close()
+        return result

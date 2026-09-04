@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .store import HEALTH, MANIFEST, OUT, read_json, write_json
+from .store import HEALTH, OUT, read_json, write_json
 
 _REQUIRED_PATH_KEYS = {
     "current_sources",
@@ -16,6 +16,7 @@ _REQUIRED_PATH_KEYS = {
     "lineage",
     "evidence_index",
     "resolved_registry",
+    "player_identity_map",
     "runtime_control",
     "publish_integrity",
 }
@@ -93,6 +94,17 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
     if resolved and int(resolved.get("source_count") or 0) != len(source_ids):
         errors.append("resolved_registry_source_count_mismatch")
 
+    identity_path = _resolve_runtime_path(root, paths.get("player_identity_map") or "data/v6/evidence/player_identity_map.json")
+    identity = read_json(identity_path) or {}
+    canonical_players_path = _resolve_runtime_path(root, paths.get("canonical_players") or "data/v6/normalized/canonical_players.json")
+    canonical_players = read_json(canonical_players_path) or {}
+    identity_count = int(identity.get("canonical_player_count") or 0)
+    canonical_count = int(canonical_players.get("player_count") or 0)
+    if identity and canonical_players and identity_count != canonical_count:
+        errors.append("identity_map_canonical_player_count_mismatch")
+    if identity and (identity.get("governance") or {}).get("fuzzy_name_matching_allowed") is not False:
+        errors.append("identity_map_fuzzy_matching_policy_invalid")
+
     files = sorted(
         path
         for path in root.rglob("*")
@@ -114,6 +126,7 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
         "checked_file_count": len(files),
         "tree_sha256": aggregate.hexdigest(),
         "current_source_files_exact": actual_current == expected_current,
+        "identity_map_consistent": identity_count == canonical_count if identity and canonical_players else False,
     }
 
 

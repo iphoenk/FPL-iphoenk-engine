@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "policy": "explicit_active_source_pruning_with_reference_tiers",
   "disabled_sources": {
     "fbref": "DROP_DUPLICATE_ACCESS_RESTRICTED",
@@ -13,13 +13,13 @@
   "reference_only_sources": {
     "fffix": "FREE_ACCOUNT_EXISTS_BUT_MACHINE_ENDPOINTS_REDIRECT_TO_LOGIN",
     "ffhub": "FREE_PUBLIC_SITE_EXISTS_BUT_PREDICTIONS_ARE_AUTH_GATED",
+    "clubelo": "FREE_PUBLIC_REFERENCE_BUT_RUNTIME_HTTPS_CONNECT_TIMEOUT_AFTER_REPAIR_RETRY",
     "bbc_team_news": "FREE_EDITORIAL_TARGETED_DEADLINE_REFERENCE",
     "premier_injuries": "FREE_PUBLIC_REFERENCE_NO_DATASET_REPUBLISH",
     "fpl_form": "FREE_PERSONAL_USE_REFERENCE_NO_RUNTIME_REPUBLISH",
     "fpl_review_free": "FREE_MODEL_REFERENCE_NO_STABLE_MACHINE_CONTRACT"
   },
   "constraints": {
-    "clubelo": "KEEP_AND_REPAIR",
     "solio_analytics": "FREE_PUBLIC_NO_AUTH",
     "open_meteo_weather": "FREE_PUBLIC_NO_AUTH_MANDATORY_WEATHER_CONTEXT",
     "check_the_chance": "FREE_PUBLIC_ONLY",

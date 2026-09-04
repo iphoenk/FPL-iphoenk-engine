@@ -185,7 +185,11 @@ def enrich_open_meteo_payload(
     teams = list(bootstrap.get("teams") or [])
     events = list(bootstrap.get("events") or [])
 
-    team_name_by_id = {int(team["id"]): str(team.get("name") or "") for team in teams if team.get("id") is not None}
+    team_name_by_id = {
+        int(team["id"]): str(team.get("name") or "")
+        for team in teams
+        if team.get("id") is not None
+    }
     next_event = next((event.get("id") for event in events if event.get("is_next") is True), None)
     next_fixtures = [
         fixture
@@ -196,32 +200,38 @@ def enrich_open_meteo_payload(
     raw = (((out.get("data") or {}).get("epl_venues") or {}).get("json"))
     locations = raw if isinstance(raw, list) else ([raw] if isinstance(raw, dict) else [])
     venues = load_weather_venues(source)
-    location_by_team: dict[str, dict[str, Any]] = {}
-    venue_by_team: dict[str, dict[str, Any]] = {}
+    location_by_team_id: dict[int, dict[str, Any]] = {}
+    venue_by_team_id: dict[int, dict[str, Any]] = {}
     for idx, venue in enumerate(venues):
-        team = str(venue.get("team") or "")
-        if not team:
+        team_id = venue.get("team_id")
+        if team_id is None:
             continue
-        venue_by_team[team] = dict(venue)
+        canonical_team_id = int(team_id)
+        venue_by_team_id[canonical_team_id] = dict(venue)
         if idx < len(locations) and isinstance(locations[idx], dict):
-            location_by_team[team] = locations[idx]
+            location_by_team_id[canonical_team_id] = locations[idx]
 
     fixture_weather: list[dict[str, Any]] = []
     unmapped_home_teams: list[str] = []
+    identity_mismatch_home_team_ids: list[int] = []
     unavailable_forecasts: list[int] = []
     contract = dict(source.get("weather_contract") or {})
 
     for fixture in next_fixtures:
-        home_id = fixture.get("team_h")
-        away_id = fixture.get("team_a")
-        home = team_name_by_id.get(int(home_id)) if home_id is not None else None
-        away = team_name_by_id.get(int(away_id)) if away_id is not None else None
+        home_id_raw = fixture.get("team_h")
+        away_id_raw = fixture.get("team_a")
+        home_id = int(home_id_raw) if home_id_raw is not None else None
+        away_id = int(away_id_raw) if away_id_raw is not None else None
+        home = team_name_by_id.get(home_id) if home_id is not None else None
+        away = team_name_by_id.get(away_id) if away_id is not None else None
         fixture_id = int(fixture.get("id")) if fixture.get("id") is not None else None
-        venue = venue_by_team.get(str(home))
-        location = location_by_team.get(str(home))
+        venue = venue_by_team_id.get(home_id) if home_id is not None else None
+        location = location_by_team_id.get(home_id) if home_id is not None else None
         row: dict[str, Any] = {
             "fixture_id": fixture_id,
             "event": fixture.get("event"),
+            "home_team_id": home_id,
+            "away_team_id": away_id,
             "home_team": home,
             "away_team": away,
             "kickoff_time": fixture.get("kickoff_time"),
@@ -232,6 +242,14 @@ def enrich_open_meteo_payload(
             if home:
                 unmapped_home_teams.append(home)
             row["reason"] = "VENUE_OR_LOCATION_UNMAPPED"
+            fixture_weather.append(row)
+            continue
+
+        registry_team_name = str(venue.get("team") or "")
+        if not home or registry_team_name != home:
+            if home_id is not None:
+                identity_mismatch_home_team_ids.append(home_id)
+            row["reason"] = "VENUE_IDENTITY_MISMATCH"
             fixture_weather.append(row)
             continue
 
@@ -258,6 +276,7 @@ def enrich_open_meteo_payload(
 
     out["weather"] = {
         "fixture_authority": "official_fpl",
+        "fixture_join_key": "official_fpl_team_id",
         "weather_provider": "open_meteo",
         "event": next_event,
         "contract": contract,
@@ -267,6 +286,7 @@ def enrich_open_meteo_payload(
         "fixture_count": len(next_fixtures),
         "forecasted_fixture_count": sum(row.get("weather_available") is True for row in fixture_weather),
         "unmapped_home_teams": sorted(set(unmapped_home_teams)),
+        "identity_mismatch_home_team_ids": sorted(set(identity_mismatch_home_team_ids)),
         "unavailable_forecast_fixture_ids": unavailable_forecasts,
         "fixtures": fixture_weather,
         "attribution": source.get("attribution"),
@@ -275,4 +295,5 @@ def enrich_open_meteo_payload(
     out["governance"]["weather_direct_xpts_multiplier"] = False
     out["governance"]["weather_alone_can_trigger_transfer"] = False
     out["governance"]["venue_coordinates_are_registry_owned"] = True
+    out["governance"]["venue_fixture_join_uses_official_team_id"] = True
     return out

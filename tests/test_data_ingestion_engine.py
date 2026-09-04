@@ -266,7 +266,7 @@ def test_lineage_reflects_only_active_opta_family_paths():
 
 
 def test_workflow_hydrates_runtime_last_good_before_collection():
-    workflow = Path(".github/workflows/v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
+    workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
     hydrate = workflow.index("Hydrate previous V6 last-good snapshot")
     collect = workflow.index("Run active V6 acquisition cycle")
     assert hydrate < collect
@@ -274,7 +274,7 @@ def test_workflow_hydrates_runtime_last_good_before_collection():
 
 
 def test_workflow_does_not_inject_dropped_paid_provider_secrets_or_hardcode_source_count():
-    workflow = Path(".github/workflows/v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
+    workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
     assert "SPORTMONKS_API_TOKEN" not in workflow
     assert "API_FOOTBALL_KEY" not in workflow
     assert "FOOTBALL_DATA_ORG_TOKEN" not in workflow
@@ -283,6 +283,6 @@ def test_workflow_does_not_inject_dropped_paid_provider_secrets_or_hardcode_sour
 
 
 def test_workflow_force_adds_ignored_runtime_snapshot():
-    workflow = Path(".github/workflows/v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
+    workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
     assert "git add -f data/v6" in workflow
     assert "git add data/v6" not in workflow

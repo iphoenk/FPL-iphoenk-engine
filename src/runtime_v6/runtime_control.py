@@ -55,7 +55,7 @@ def scheduled_slot_already_completed(
     event = str(event_name or os.getenv("GITHUB_EVENT_NAME") or "local")
     kind = str(schedule_kind or os.getenv("V6_SCHEDULE_KIND") or "")
     authoritative_invocation = (
-        (event == "schedule" and kind in {"primary", "recovery"})
+        event == "schedule"
         or (event == "workflow_dispatch" and kind == "master_orchestrated")
     )
     if not authoritative_invocation:
@@ -202,7 +202,7 @@ def apply_runtime_control(
     governance = dict(out.get("governance") or {})
     governance.update(
         {
-            "production_ingestion_schedule_only": False,
+            "production_ingestion_schedule_only": control["scheduled_cycle"],
             "production_authoritative_snapshots_require_schedule": False,
             "production_authoritative_snapshots_require_governed_trigger": True,
             "authoritative_trigger_kinds": ["primary", "recovery", "master_orchestrated"],

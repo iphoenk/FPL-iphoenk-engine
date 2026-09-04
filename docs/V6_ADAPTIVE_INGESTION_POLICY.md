@@ -22,7 +22,7 @@ Optional per-source fields:
 - `verification_required`: source cannot enter scheduled polling until qualification is complete.
 - `verification_status`: `PENDING`, `VERIFIED`, or `FAILED`.
 
-Sources without `poll_interval_minutes` retain legacy behavior and remain eligible every V6 workflow cycle.
+Sources without `poll_interval_minutes` retain legacy behavior and remain eligible every V6 workflow cycle. A configured interval equal to or shorter than the scheduler interval is also treated as every-cycle eligibility; this prevents runner timing jitter from accidentally turning a nominal hourly source into an approximately two-hour source.
 
 ## Deadline window
 
@@ -31,6 +31,8 @@ The collector derives a deadline window from the latest persisted Official FPL b
 ## Budget semantics
 
 Daily request counters use `Asia/Jakarta` calendar days. The persisted source snapshot carries the budget counter across ephemeral runners through the existing `runtime-data-v6` hydration path. Actual provider attempts, including retries, are counted from `attempt_count`; missing-credential checks do not consume provider budget.
+
+Before starting a budgeted poll, V6 reserves enough remaining budget for the worst-case configured retry count across all requests in that source. This prevents a request that starts within budget from crossing the provider's daily limit because of retries. After the poll, only actual provider attempts are charged to the persisted counter.
 
 If the next configured poll would exceed the remaining budget, the source is not called and is reported explicitly as `BUDGET_EXHAUSTED` rather than as a transport failure.
 

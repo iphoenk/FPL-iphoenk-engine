@@ -31,6 +31,22 @@ def test_v6_write_authority_is_isolated_to_publisher_job():
     assert "Revalidate transferred runtime snapshot" in publish
 
 
+def test_v6_has_dedicated_publisher_app_contract_without_cross_version_secret_reuse():
+    _, publish = _sections()
+
+    assert "actions/create-github-app-token@" in publish
+    assert "V6_RUNTIME_APP_ID" in publish
+    assert "V6_RUNTIME_APP_PRIVATE_KEY" in publish
+    assert "dedicated_v6_github_app" in publish
+    assert "scoped_github_token_fallback" in publish
+    assert "V3_RUNTIME_APP_ID" not in publish
+    assert "V3_RUNTIME_APP_PRIVATE_KEY" not in publish
+    assert "V4_RUNTIME_APP_ID" not in publish
+    assert "V4_RUNTIME_APP_PRIVATE_KEY" not in publish
+    assert "steps.runtime_app_token.outputs.token || github.token" in publish
+    assert "persist-credentials: false" in publish
+
+
 def test_v6_publisher_uses_atomic_orphan_snapshot_with_lease():
     _, publish = _sections()
 
@@ -40,6 +56,7 @@ def test_v6_publisher_uses_atomic_orphan_snapshot_with_lease():
     assert "git add -f data/v6" in publish
     assert "grep -v '^data/v6/'" in publish
     assert "diff -qr" in publish
+    assert 'http.https://github.com/.extraheader="AUTHORIZATION: basic $basic_auth"' in publish
 
 
 def test_v6_publisher_reverifies_governance_after_artifact_transfer():

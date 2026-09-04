@@ -14,7 +14,6 @@ V6_OWNED_PATH_MARKERS = (
     "tests/test_adaptive_polling.py",
     "tests/test_weather_context.py",
     "tests/test_data_platform_*.py",
-    "tests/test_v6_architecture_independence.py",
     "requirements-v6.lock",
     "requirements-v6-ci.lock",
     ".github/workflows/v6-ci.yml",

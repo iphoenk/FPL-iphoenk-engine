@@ -21,11 +21,14 @@ def test_v6_acquisition_path_is_read_only_and_cannot_publish():
     assert "v6-runtime-publication-${{ github.run_id }}-${{ github.run_attempt }}" in before_publish
 
 
-def test_v6_production_uses_locked_runtime_dependencies_and_lightweight_preflight():
+def test_v6_production_uses_v6_owned_locked_runtime_dependencies_and_lightweight_preflight():
     before_publish, _ = _sections()
 
-    assert "python -m pip install --require-hashes -r requirements.lock" in before_publish
+    assert "python -m pip install --require-hashes -r requirements-v6.lock" in before_publish
+    assert "python -m pip install --require-hashes -r requirements.lock" not in before_publish
+    assert "cache-dependency-path: requirements-v6.lock" in before_publish
     assert "python -m compileall -q src/runtime_v6" in before_publish
+    assert "python -m src.runtime_v6.architecture_independence_validate" in before_publish
     assert "python -m pytest" not in before_publish
     assert "requirements.txt pytest" not in before_publish
 

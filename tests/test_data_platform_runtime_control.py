@@ -202,7 +202,11 @@ def test_production_workflow_has_off_minute_schedule_and_governed_manual_recover
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
 
     assert workflow_crons == [policy["primary_cron_utc"], policy["recovery_cron_utc"]]
-    assert workflow_crons == ["5 * * * *", "35 * * * *"]
+    cron_minutes = [int(cron.split()[0]) for cron in workflow_crons]
+    assert len(cron_minutes) == 2
+    assert all(10 <= minute <= 59 for minute in cron_minutes)
+    assert (cron_minutes[1] - cron_minutes[0]) % 60 == 30
+    assert policy["governance"]["avoid_top_of_hour_scheduler_load"] is True
     assert "workflow_dispatch:" in workflow
     assert "Authorize governed manual recovery" in workflow
     assert "RECOVER_V6" in workflow

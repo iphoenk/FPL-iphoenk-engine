@@ -6,6 +6,7 @@ from pathlib import Path
 
 from src.runtime_v6.consumer import assess_snapshot
 from src.runtime_v6.publish_integrity import validate_publish_tree
+from src.runtime_v6.registry import ZERO_AUTHORITY_KEYS
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -55,9 +56,7 @@ def _write_snapshot(
         "paths": paths,
         "governance": {
             "data_only": True,
-            "decision_authority": "NONE",
-            "prediction_authority": "NONE",
-            "optimizer_authority": "NONE",
+            **{key: "NONE" for key in ZERO_AUTHORITY_KEYS},
             "production_ingestion_schedule_only": True,
         },
     }
@@ -103,10 +102,14 @@ def test_fresh_green_snapshot_is_usable(tmp_path: Path):
     assert result["state"] == "FRESH"
     assert result["usable"] is True
     assert result["direct_fallback_eligible"] is False
+    assert result["fallback_scope"] is None
+    assert result["engine_artifact_fallback_allowed"] is False
     assert result["stored_tree_sha256"] == result["recomputed_tree_sha256"]
     assert result["governance"]["consumer_recomputes_publish_integrity"] is True
     assert result["governance"]["consumer_requires_exact_resolved_registry"] is True
     assert result["governance"]["consumer_requires_scheduled_runtime_provenance"] is True
+    assert result["governance"]["consumer_requires_full_zero_authority_contract"] is True
+    assert result["governance"]["fallback_must_not_read_other_engine_artifacts"] is True
 
 
 def test_static_green_snapshot_becomes_stale_at_read_time(tmp_path: Path):
@@ -123,6 +126,8 @@ def test_static_green_snapshot_becomes_stale_at_read_time(tmp_path: Path):
     assert result["state"] == "STALE"
     assert result["usable"] is False
     assert result["direct_fallback_eligible"] is True
+    assert result["fallback_scope"] == "EXTERNAL_SOURCES_ONLY"
+    assert result["engine_artifact_fallback_allowed"] is False
     assert result["governance"]["consumer_does_not_trust_static_green_without_freshness"] is True
 
 
@@ -189,4 +194,6 @@ def test_missing_runtime_snapshot_requires_direct_fallback(tmp_path: Path):
 
     assert result["state"] == "INVALID"
     assert result["direct_fallback_eligible"] is True
+    assert result["fallback_scope"] == "EXTERNAL_SOURCES_ONLY"
+    assert result["engine_artifact_fallback_allowed"] is False
     assert result["failures"] == ["MISSING_MANIFEST"]

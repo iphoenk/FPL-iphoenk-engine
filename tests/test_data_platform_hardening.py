@@ -7,7 +7,7 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 
 from src.runtime_v6.http_client import _redact_url
-from src.runtime_v6.registry import RegistryError, _apply_activation, load_registry, source_map
+from src.runtime_v6.registry import RegistryError, _apply_activation, load_registry, source_map, validate_registry
 
 
 def test_workflow_cron_matches_registry_cadence_metadata():
@@ -19,7 +19,7 @@ def test_workflow_cron_matches_registry_cadence_metadata():
     assert f'cron: "{cron}"' in workflow
 
 
-def test_required_platform_sources_are_active_and_dependencies_are_closed():
+def test_required_platform_sources_are_active_critical_and_dependencies_are_closed():
     registry = load_registry()
     sources = source_map(registry)
     required = {
@@ -29,6 +29,7 @@ def test_required_platform_sources_are_active_and_dependencies_are_closed():
     }
 
     assert required == {"official_fpl", "official_price_predictor", "open_meteo_weather"}
+    assert all(sources[source_id]["critical"] is True for source_id in required)
     assert sources["official_price_predictor"]["depends_on"] == ["official_fpl"]
     assert sources["open_meteo_weather"]["depends_on"] == ["official_fpl"]
     assert set(registry["activation"]["required_active_sources"]) == required
@@ -56,6 +57,16 @@ def test_activation_cannot_prune_required_platform_source(tmp_path: Path):
 
     with pytest.raises(RegistryError, match="required V6 platform sources cannot be pruned"):
         _apply_activation(payload, activation)
+
+
+def test_required_platform_source_cannot_be_noncritical():
+    registry = load_registry()
+    registry["sources"] = [dict(source) for source in registry["sources"]]
+    target = next(source for source in registry["sources"] if source["id"] == "open_meteo_weather")
+    target["critical"] = False
+
+    with pytest.raises(RegistryError, match="required V6 platform source must be critical"):
+        validate_registry(registry)
 
 
 def test_query_auth_redaction_is_key_based_and_encoding_safe():

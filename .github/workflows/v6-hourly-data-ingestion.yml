@@ -3,7 +3,7 @@ name: FPL V6 hourly fresh-data acquisition
 on:
   workflow_dispatch:
   schedule:
-    - cron: "5 * * * *"
+    - cron: "0 * * * *"
   push:
     branches: [main]
     paths:

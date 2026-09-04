@@ -11,7 +11,11 @@ def test_source_overrides_preserve_27_and_repair_routes():
     assert len(cfg["sources"]) == 27
     assert sources["opta_the_analyst"]["requests"][0]["url"] == "https://theanalyst.com/competition/premier-league/stats"
     assert sources["fotmob"]["requests"][0]["url"] == "https://www.fotmob.com/api/data/leagues"
-    assert sources["clubelo"]["requests"][0]["url"].endswith("/{utc_date}")
+    clubelo_request = sources["clubelo"]["requests"][0]
+    assert clubelo_request["url"] == "https://clubelo.com/Ranking"
+    assert clubelo_request["expect"] == "text"
+    assert set(clubelo_request["validation"]["required_text_all"]) == {"Ranking", "Elo"}
+    assert clubelo_request["read_timeout_seconds"] == 6
     assert sources["espn"]["requests"][0]["use_default_user_agent"] is True
 
 

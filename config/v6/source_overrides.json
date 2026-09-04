@@ -120,11 +120,12 @@
       "requests": [
         {
           "id": "ranking",
-          "url": "http://api.clubelo.com/{utc_date}",
-          "expect": "csv",
+          "url": "https://clubelo.com/Ranking",
+          "expect": "text",
+          "read_timeout_seconds": 6,
           "validation": {
             "min_body_bytes": 1000,
-            "required_text_any": ["Rank,Club"]
+            "required_text_all": ["Ranking", "Elo"]
           }
         }
       ]

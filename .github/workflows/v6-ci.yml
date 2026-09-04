@@ -16,7 +16,7 @@ on:
       - "tests/test_weather_context.py"
       - "tests/test_data_platform_*.py"
       - ".github/workflows/v6-ci.yml"
-      - ".github/workflows/v6-hourly-data-ingestion.yml"
+      - ".github/workflows/v6-natural-data-ingestion.yml"
   push:
     branches: [main]
     # Intentionally mirrors pull_request.paths above. Do not change one side
@@ -33,7 +33,7 @@ on:
       - "tests/test_weather_context.py"
       - "tests/test_data_platform_*.py"
       - ".github/workflows/v6-ci.yml"
-      - ".github/workflows/v6-hourly-data-ingestion.yml"
+      - ".github/workflows/v6-natural-data-ingestion.yml"
 
 permissions:
   contents: read

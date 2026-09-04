@@ -129,14 +129,21 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     if not re.search(r"(?m)^  v6-verify:\s*$", ci):
         failures.append("V6 CI check identity must be v6-verify")
 
-    hourly = (workflow_root / "v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
-    if "-r requirements-v6.lock" not in hourly:
-        failures.append("V6 runtime must install requirements-v6.lock")
-    if re.search(r"(?m)-r\s+requirements\.lock\s*$", hourly):
-        failures.append("V6 runtime still installs shared/V3 runtime lock")
-    runtime_branch = re.findall(r"(?m)^\s*RUNTIME_BRANCH:\s*([^\s#]+)\s*$", hourly)
-    if runtime_branch != ["runtime-data-v6"]:
-        failures.append(f"V6 production runtime branch must be exactly runtime-data-v6, got {runtime_branch!r}")
+    production_path = workflow_root / "v6-natural-data-ingestion.yml"
+    legacy_path = workflow_root / "v6-hourly-data-ingestion.yml"
+    if legacy_path.exists():
+        failures.append("legacy V6 scheduler workflow identity must be absent after control-plane reset")
+    if not production_path.exists():
+        failures.append("fresh V6 scheduler workflow identity is missing")
+    else:
+        hourly = production_path.read_text(encoding="utf-8")
+        if "-r requirements-v6.lock" not in hourly:
+            failures.append("V6 runtime must install requirements-v6.lock")
+        if re.search(r"(?m)-r\s+requirements\.lock\s*$", hourly):
+            failures.append("V6 runtime still installs shared/V3 runtime lock")
+        runtime_branch = re.findall(r"(?m)^\s*RUNTIME_BRANCH:\s*([^\s#]+)\s*$", hourly)
+        if runtime_branch != ["runtime-data-v6"]:
+            failures.append(f"V6 production runtime branch must be exactly runtime-data-v6, got {runtime_branch!r}")
 
     for path in sorted(config_root.rglob("*")):
         if not path.is_file():

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-WORKFLOW = Path(".github/workflows/v6-hourly-data-ingestion.yml")
+WORKFLOW = Path(".github/workflows/v6-natural-data-ingestion.yml")
 
 
 def _sections() -> tuple[str, str]:

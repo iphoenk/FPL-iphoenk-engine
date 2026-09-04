@@ -14,6 +14,7 @@ Base: `88f9c39` (PR #419 merged)
 - Keep manual recovery non-authoritative: it does not advance the scheduled baseline, does not satisfy a missed scheduled slot, is manifested AMBER, and remains invalid to the normal V6 consumer until a real scheduled cycle succeeds.
 - Preserve dedicated V6 GitHub App publication and the governed `runtime-data-v6` ruleset.
 - Synchronize V6 architecture documentation with the new cadence and recovery semantics.
+- Document the duplicated V6 CI event-local `paths` filters as an explicit keep-in-sync contract instead of introducing a YAML-anchor convention used nowhere else in the repository.
 
 ## Verified collision analysis
 
@@ -22,6 +23,8 @@ The current V3 runtime/package wake-up set is `:02,:07,:12,:17,:22,:27,:32,:37,:
 ## Deliberately not executed
 
 The external recommendation to reduce V3 runtime/package cadence is cross-scope and is not required to create collision-free V6 slots. It remains a separate V3 capacity/efficiency decision and must not be changed as a side effect of a V6 incident repair.
+
+The recommendation to add V6 status into root `IMPLEMENTATION_STATUS.json` is also not applied as written. That file is V3-owned governance metadata (`3.39.0`, V3 release acceptance, V3 REC status and V3 runtime authority). Adding V6 state there would create cross-version ownership overlap. V6 status remains owned by `docs/V6_*.md`, `config/v6/**`, the V6 workflows, and the governed `runtime-data-v6:data/v6/manifest.json` runtime authority.
 
 ## Production acceptance
 

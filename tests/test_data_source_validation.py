@@ -4,18 +4,22 @@ from src.runtime_v6 import registry
 from src.runtime_v6.http_client import _validate_payload
 
 
-def test_source_overrides_preserve_active_20_and_repair_routes():
+def test_source_overrides_preserve_dynamic_active_contract_and_repair_routes():
     cfg = registry.load_registry()
     sources = registry.source_map(cfg)
+    activation = cfg["activation"]
     assert tuple(row["id"] for row in cfg["sources"]) == registry.EXPECTED_SOURCE_IDS
-    assert len(cfg["sources"]) == 20
+    assert len(cfg["sources"]) == activation["active_source_count"] == len(registry.EXPECTED_SOURCE_IDS)
     assert set(sources).isdisjoint(registry.DROPPED_SOURCE_IDS)
-    assert cfg["activation"]["base_source_count"] == 27
-    assert cfg["activation"]["active_source_count"] == 20
+    assert set(sources).isdisjoint(registry.REFERENCE_ONLY_SOURCE_IDS)
+    assert activation["base_source_count"] == len(registry.BASE_SOURCE_IDS)
+    assert activation["disabled_source_count"] == len(registry.DROPPED_SOURCE_IDS)
+    assert activation["reference_only_source_count"] == len(registry.REFERENCE_ONLY_SOURCE_IDS)
     assert sources["opta_the_analyst"]["requests"][0]["url"] == "https://theanalyst.com/competition/premier-league/stats"
     assert sources["fotmob"]["requests"][0]["url"] == "https://www.fotmob.com/api/data/leagues"
-    assert sources["clubelo"]["requests"][0]["url"].endswith("/{utc_date}")
+    assert sources["clubelo"]["requests"][0]["url"] == "https://api.clubelo.com/{utc_date}"
     assert sources["espn"]["requests"][0]["use_default_user_agent"] is True
+    assert sources["open_meteo_weather"]["adapter"] == "open_meteo_weather"
 
 
 def test_login_redirect_is_not_false_green():

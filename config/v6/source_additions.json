@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "policy": "free_sources_are_registered_with_safe_activation_tiers",
+  "sources": [
+    {
+      "id": "solio_analytics",
+      "name": "Solio Analytics FPL",
+      "category": "fpl_model_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 300,
+      "independence_group": "solio_analytics",
+      "requests": [
+        {
+          "id": "latest",
+          "url": "https://fpl.solioanalytics.com/api/data/latest.json",
+          "expect": "json",
+          "validation": {
+            "min_body_bytes": 1000
+          }
+        }
+      ],
+      "notes": "Public no-auth endpoint intended for AI/data consumers. Preserve as independent model evidence; never average blindly with V3/V4."
+    },
+    {
+      "id": "open_meteo_weather",
+      "name": "Open-Meteo Matchday Weather",
+      "category": "fixture_weather_context",
+      "adapter": "open_meteo_weather",
+      "critical": false,
+      "check_freshness_minutes": 90,
+      "independence_group": "open_meteo",
+      "requests": [
+        {
+          "id": "epl_venues",
+          "url": "https://api.open-meteo.com/v1/forecast",
+          "params": {
+            "latitude": "51.5549,52.5092,50.7352,51.4906,50.8617,51.4816,52.4481,51.3983,53.4508,51.4750,53.7462,52.0545,53.7778,53.4308,53.4831,53.4631,54.9756,52.9400,54.9144,51.6043",
+            "longitude": "-0.1084,-1.8848,-1.8380,-0.2886,-0.0837,-0.1910,-1.4956,-0.0855,-2.9930,-0.2217,-0.3680,1.1446,-1.5722,-2.9608,-2.2004,-2.2913,-1.6217,-1.1327,-1.3883,-0.0668",
+            "current": "temperature_2m,relative_humidity_2m,precipitation,rain,showers,weather_code,wind_speed_10m,wind_gusts_10m",
+            "hourly": "temperature_2m,relative_humidity_2m,precipitation_probability,precipitation,rain,showers,weather_code,wind_speed_10m,wind_gusts_10m",
+            "timezone": "Europe/London",
+            "forecast_days": "16",
+            "wind_speed_unit": "kmh"
+          },
+          "expect": "json",
+          "validation": {
+            "min_body_bytes": 1000
+          }
+        }
+      ],
+      "venues": [
+        {"team": "Arsenal", "stadium": "Emirates Stadium", "latitude": 51.5549, "longitude": -0.1084},
+        {"team": "Aston Villa", "stadium": "Villa Park", "latitude": 52.5092, "longitude": -1.8848},
+        {"team": "Bournemouth", "stadium": "Vitality Stadium", "latitude": 50.7352, "longitude": -1.8380},
+        {"team": "Brentford", "stadium": "Gtech Community Stadium", "latitude": 51.4906, "longitude": -0.2886},
+        {"team": "Brighton", "stadium": "Amex Stadium", "latitude": 50.8617, "longitude": -0.0837},
+        {"team": "Chelsea", "stadium": "Stamford Bridge", "latitude": 51.4816, "longitude": -0.1910},
+        {"team": "Coventry City", "stadium": "Coventry Building Society Arena", "latitude": 52.4481, "longitude": -1.4956},
+        {"team": "Crystal Palace", "stadium": "Selhurst Park", "latitude": 51.3983, "longitude": -0.0855},
+        {"team": "Everton", "stadium": "Hill Dickinson Stadium", "latitude": 53.4508, "longitude": -2.9930},
+        {"team": "Fulham", "stadium": "Craven Cottage", "latitude": 51.4750, "longitude": -0.2217},
+        {"team": "Hull City", "stadium": "MKM Stadium", "latitude": 53.7462, "longitude": -0.3680},
+        {"team": "Ipswich Town", "stadium": "Portman Road", "latitude": 52.0545, "longitude": 1.1446},
+        {"team": "Leeds", "stadium": "Elland Road", "latitude": 53.7778, "longitude": -1.5722},
+        {"team": "Liverpool", "stadium": "Anfield", "latitude": 53.4308, "longitude": -2.9608},
+        {"team": "Man City", "stadium": "Etihad Stadium", "latitude": 53.4831, "longitude": -2.2004},
+        {"team": "Man Utd", "stadium": "Old Trafford", "latitude": 53.4631, "longitude": -2.2913},
+        {"team": "Newcastle", "stadium": "St James' Park", "latitude": 54.9756, "longitude": -1.6217},
+        {"team": "Nott'm Forest", "stadium": "City Ground", "latitude": 52.94, "longitude": -1.1327},
+        {"team": "Sunderland", "stadium": "Stadium of Light", "latitude": 54.9144, "longitude": -1.3883},
+        {"team": "Spurs", "stadium": "Tottenham Hotspur Stadium", "latitude": 51.6043, "longitude": -0.0668}
+      ],
+      "weather_contract": {
+        "timezone": "Europe/London",
+        "precedence": ["LIVE_OBSERVED", "CLOSEST_TO_KICKOFF_OBSERVATION", "FRESH_FORECAST", "STALE_FORECAST"],
+        "severity": ["NORMAL", "NOTABLE", "ADVERSE", "EXTREME"],
+        "direct_xpts_multiplier": false,
+        "weather_alone_can_trigger_transfer": false,
+        "signals": ["temperature_2m", "relative_humidity_2m", "precipitation_probability", "precipitation", "rain", "showers", "weather_code", "wind_speed_10m", "wind_gusts_10m"],
+        "legacy_attention_thresholds": {
+          "wind_speed_kmh": 30,
+          "rain_probability_pct": 60,
+          "temperature_c": 5
+        }
+      },
+      "attribution": "Weather data by Open-Meteo.com (CC BY 4.0)."
+    },
+    {
+      "id": "check_the_chance",
+      "name": "Check The Chance",
+      "category": "market_model_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 420,
+      "independence_group": "bookmaker_market",
+      "requests": [
+        {
+          "id": "player_predictions",
+          "url": "https://checkthechance.com/fantasy-football/player-predictions/",
+          "expect": "text",
+          "validation": {
+            "required_text_any": ["Player Predictions", "FPL"]
+          }
+        }
+      ],
+      "notes": "Public bookmaker-derived probabilities. Treat as market evidence; rotation/minutes risk must come from separate lineup evidence."
+    },
+    {
+      "id": "fantasy_football_pundit",
+      "name": "Fantasy Football Pundit",
+      "category": "lineup_probability_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 420,
+      "independence_group": "fantasy_football_pundit",
+      "requests": [
+        {
+          "id": "points_predictor",
+          "url": "https://www.fantasyfootballpundit.com/fpl-points-predictor/",
+          "expect": "text",
+          "validation": {
+            "required_text_any": ["Predicted Points", "Start"]
+          }
+        },
+        {
+          "id": "team_news",
+          "url": "https://www.fantasyfootballpundit.com/fantasy-premier-league-team-news/",
+          "expect": "text",
+          "validation": {
+            "required_text_any": ["Team News", "Predicted Lineups", "Premier League"]
+          }
+        }
+      ],
+      "notes": "Free public lineup/start-probability evidence. Prefer Start % and team news as the distinctive signal rather than duplicating internal xPts."
+    },
+    {
+      "id": "bbc_team_news",
+      "name": "BBC Sport Premier League Team News",
+      "category": "editorial_team_news_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 360,
+      "independence_group": "bbc_sport",
+      "requests": [
+        {"id": "premier_league", "url": "https://www.bbc.com/sport/football/premier-league", "expect": "text"}
+      ],
+      "notes": "Free editorial evidence retained for targeted deadline-time retrieval; not mirrored into scheduled runtime snapshots."
+    },
+    {
+      "id": "premier_injuries",
+      "name": "Premier Injuries",
+      "category": "injury_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 360,
+      "independence_group": "premier_injuries",
+      "requests": [
+        {"id": "injury_table", "url": "https://www.premierinjuries.com/injury-table.php", "expect": "text"}
+      ],
+      "notes": "Public-site reference only. Do not mirror or republish the commercial injury dataset."
+    },
+    {
+      "id": "fpl_form",
+      "name": "FPL Form",
+      "category": "fpl_model_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 360,
+      "independence_group": "fpl_form",
+      "requests": [
+        {"id": "export_info", "url": "https://www.fplform.com/export-fpl-form-data", "expect": "text"}
+      ],
+      "notes": "Free/personal-use model reference only. Do not persist or republish restricted export data."
+    },
+    {
+      "id": "fpl_review_free",
+      "name": "FPL Review Free Model",
+      "category": "fpl_model_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 360,
+      "independence_group": "fpl_review",
+      "requests": [
+        {"id": "free_model", "url": "https://fplreview.com/", "expect": "text"}
+      ],
+      "notes": "Free-model comparator retained for targeted retrieval; no stable public machine-ingestion contract is assumed."
+    }
+  ]
+}

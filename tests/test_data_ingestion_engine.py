@@ -6,15 +6,18 @@ from src.runtime_v6 import adapters, normalizer, registry
 from src.runtime_v6.http_client import AcquisitionClient
 
 
-def test_registry_is_data_only_and_has_exact_active_20_sources():
+def test_registry_is_data_only_and_registry_driven():
     cfg = registry.load_registry()
     ids = tuple(row["id"] for row in cfg["sources"])
+    activation = cfg["activation"]
+
     assert ids == registry.EXPECTED_SOURCE_IDS
-    assert len(ids) == 20
+    assert len(ids) == activation["active_source_count"]
+    assert activation["base_source_count"] == len(registry.BASE_SOURCE_IDS)
+    assert activation["disabled_source_count"] == len(registry.DROPPED_SOURCE_IDS)
+    assert activation["reference_only_source_count"] == len(registry.REFERENCE_ONLY_SOURCE_IDS)
     assert set(ids).isdisjoint(registry.DROPPED_SOURCE_IDS)
-    assert cfg["activation"]["base_source_count"] == 27
-    assert cfg["activation"]["active_source_count"] == 20
-    assert cfg["activation"]["disabled_source_count"] == 7
+    assert set(ids).isdisjoint(registry.REFERENCE_ONLY_SOURCE_IDS)
     assert cfg["policy"]["data_only"] is True
     assert cfg["policy"]["decision_authority"] == "NONE"
     assert cfg["policy"]["prediction_authority"] == "NONE"
@@ -37,9 +40,32 @@ def test_dropped_paid_and_restricted_sources_never_enter_active_source_map():
     sources = registry.source_map(cfg)
     for source_id in registry.DROPPED_SOURCE_IDS:
         assert source_id not in sources
+    for source_id in registry.REFERENCE_ONLY_SOURCE_IDS:
+        assert source_id not in sources
     assert sources["ffhub"]["activation_constraint"] == "FREE_OR_PUBLIC_PARTIAL_ONLY_NO_PRO_UPGRADE"
     assert sources["fffix"]["activation_constraint"] == "FREE_OR_PUBLIC_ONLY"
     assert sources["clubelo"]["activation_constraint"] == "KEEP_AND_REPAIR"
+
+
+def test_free_source_expansion_is_registered_with_safe_tiers():
+    cfg = registry.load_registry()
+    sources = registry.source_map(cfg)
+
+    assert sources["solio_analytics"]["source_tier"] == "core"
+    assert sources["solio_analytics"]["acquisition_kind"] == "rest_json"
+    assert sources["open_meteo_weather"]["source_tier"] == "core"
+    assert sources["open_meteo_weather"]["poll_interval_minutes"] == 60
+    assert len(sources["open_meteo_weather"]["venues"]) == 20
+    assert sources["open_meteo_weather"]["weather_contract"]["direct_xpts_multiplier"] is False
+    assert sources["open_meteo_weather"]["weather_contract"]["weather_alone_can_trigger_transfer"] is False
+    assert sources["check_the_chance"]["source_tier"] == "pilot"
+    assert sources["fantasy_football_pundit"]["source_tier"] == "pilot"
+    assert set(registry.REFERENCE_ONLY_SOURCE_IDS) == {
+        "bbc_team_news",
+        "premier_injuries",
+        "fpl_form",
+        "fpl_review_free",
+    }
 
 
 def test_http_last_good_cache_survives_failure(monkeypatch):
@@ -241,12 +267,13 @@ def test_workflow_hydrates_runtime_last_good_before_collection():
     assert 'git archive "origin/${RUNTIME_BRANCH}" data/v6' in workflow
 
 
-def test_workflow_does_not_inject_dropped_paid_provider_secrets():
+def test_workflow_does_not_inject_dropped_paid_provider_secrets_or_hardcode_source_count():
     workflow = Path(".github/workflows/v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
     assert "SPORTMONKS_API_TOKEN" not in workflow
     assert "API_FOOTBALL_KEY" not in workflow
     assert "FOOTBALL_DATA_ORG_TOKEN" not in workflow
-    assert 'manifest["source_count"] == 20' in workflow
+    assert 'manifest["source_count"] == 20' not in workflow
+    assert 'registry["activation"]["active_source_count"]' in workflow
 
 
 def test_workflow_force_adds_ignored_runtime_snapshot():

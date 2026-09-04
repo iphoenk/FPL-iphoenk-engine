@@ -8,23 +8,33 @@ from src.runtime_v6.polling import (
     effective_poll_interval_minutes,
     poll_decision,
 )
-from src.runtime_v6.registry import DROPPED_SOURCE_IDS, EXPECTED_SOURCE_IDS, load_registry, source_map
+from src.runtime_v6.registry import (
+    DROPPED_SOURCE_IDS,
+    EXPECTED_SOURCE_IDS,
+    REFERENCE_ONLY_SOURCE_IDS,
+    load_registry,
+    source_map,
+)
 
 
-def test_registry_keeps_active_20_source_contract_and_adds_ingestion_metadata():
+def test_registry_keeps_dynamic_active_contract_and_adds_ingestion_metadata():
     registry = load_registry()
     sources = source_map(registry)
+    activation = registry["activation"]
 
     assert tuple(sources) == EXPECTED_SOURCE_IDS
-    assert len(sources) == 20
+    assert len(sources) == activation["active_source_count"]
     assert set(sources).isdisjoint(DROPPED_SOURCE_IDS)
-    assert registry["activation"]["active_source_count"] == 20
-    assert registry["activation"]["disabled_source_count"] == 7
-    assert tuple(registry["activation"]["disabled_sources"]) == DROPPED_SOURCE_IDS
+    assert set(sources).isdisjoint(REFERENCE_ONLY_SOURCE_IDS)
+    assert activation["disabled_source_count"] == len(DROPPED_SOURCE_IDS)
+    assert activation["reference_only_source_count"] == len(REFERENCE_ONLY_SOURCE_IDS)
     assert sources["official_fpl"]["acquisition_kind"] == "rest_json"
     assert sources["understat"]["acquisition_kind"] == "html_scrape"
     assert sources["understat"]["content_hash_dedup"] is True
     assert sources["ffhub"]["activation_constraint"] == "FREE_OR_PUBLIC_PARTIAL_ONLY_NO_PRO_UPGRADE"
+    assert sources["open_meteo_weather"]["poll_interval_minutes"] == 60
+    assert sources["solio_analytics"]["poll_interval_minutes"] == 240
+    assert sources["solio_analytics"]["poll_interval_minutes_deadline_window"] == 60
 
 
 def test_non_configured_sources_preserve_legacy_every_cycle_behavior():

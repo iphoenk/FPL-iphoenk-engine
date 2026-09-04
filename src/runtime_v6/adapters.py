@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from .http_client import AcquisitionClient, utc_now
+from .weather import enrich_open_meteo_payload
 
 _SUCCESS_STATUSES = {"AVAILABLE", "NOT_MODIFIED"}
 
@@ -255,6 +256,16 @@ def collect_price_predictor(
     }
 
 
+def collect_open_meteo_weather(
+    source: dict[str, Any],
+    client: AcquisitionClient,
+    official_payload: dict[str, Any],
+    previous: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload = collect_http(source, client, previous)
+    return enrich_open_meteo_payload(source, payload, official_payload)
+
+
 def collect_source(
     source: dict[str, Any],
     client: AcquisitionClient,
@@ -269,6 +280,10 @@ def collect_source(
         if official_payload is None:
             raise ValueError("official price predictor requires official FPL payload")
         return collect_price_predictor(source, official_payload, previous)
+    if adapter == "open_meteo_weather":
+        if official_payload is None:
+            raise ValueError("Open-Meteo weather adapter requires official FPL payload")
+        return collect_open_meteo_weather(source, client, official_payload, previous)
     if adapter == "http":
         return collect_http(source, client, previous)
     raise ValueError(f"unsupported V6 adapter: {adapter}")

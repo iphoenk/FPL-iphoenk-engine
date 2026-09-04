@@ -7,35 +7,51 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = ROOT / "config" / "v6" / "source_registry.json"
+ADDITIONS = ROOT / "config" / "v6" / "source_additions.json"
 OVERRIDES = ROOT / "config" / "v6" / "source_overrides.json"
 ACTIVATION = ROOT / "config" / "v6" / "source_activation.json"
 
-BASE_SOURCE_IDS = (
-    "official_fpl", "official_price_predictor", "understat", "opta_the_analyst",
-    "statmuse", "onside", "ben_crellin", "fffix", "ffhub", "onefpl", "livefpl",
-    "ffscout", "fbref", "fotmob", "sofascore", "statsbomb", "rotowire",
-    "premierleague_stats", "clubelo", "football_data_uk", "sportmonks", "api_football",
-    "transfermarkt", "whoscored", "espn", "football_data_org", "vaastav_fpl",
-)
-
-DROPPED_SOURCE_IDS = (
-    "fbref",
-    "sofascore",
-    "sportmonks",
-    "api_football",
-    "transfermarkt",
-    "whoscored",
-    "football_data_org",
-)
-
-EXPECTED_SOURCE_IDS = tuple(source_id for source_id in BASE_SOURCE_IDS if source_id not in DROPPED_SOURCE_IDS)
-
 _ALLOWED_ACQUISITION_KINDS = {"derived", "rest_json", "rest_csv", "html_scrape", "rss", "generic_http"}
 _ALLOWED_VERIFICATION_STATUSES = {"PENDING", "VERIFIED", "FAILED"}
+_ALLOWED_SOURCE_TIERS = {"core", "pilot", "reference_only"}
 
 
 class RegistryError(ValueError):
     pass
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _configured_source_ids() -> tuple[str, ...]:
+    base = list((_read_json(CONFIG).get("sources") or []))
+    additions = list((_read_json(ADDITIONS).get("sources") or []))
+    ids = tuple(str(row.get("id")) for row in [*base, *additions])
+    if len(set(ids)) != len(ids):
+        raise RegistryError("duplicate V6 configured source ids")
+    return ids
+
+
+def _activation_id_set(key: str) -> set[str]:
+    payload = _read_json(ACTIVATION)
+    return {str(source_id) for source_id in dict(payload.get(key) or {})}
+
+
+# Compatibility exports used by tests and downstream diagnostics. These are
+# intentionally derived from configuration rather than hard-coded source lists.
+BASE_SOURCE_IDS = _configured_source_ids()
+_DISABLED_IDS = _activation_id_set("disabled_sources")
+_REFERENCE_ONLY_IDS = _activation_id_set("reference_only_sources")
+DROPPED_SOURCE_IDS = tuple(source_id for source_id in BASE_SOURCE_IDS if source_id in _DISABLED_IDS)
+REFERENCE_ONLY_SOURCE_IDS = tuple(source_id for source_id in BASE_SOURCE_IDS if source_id in _REFERENCE_ONLY_IDS)
+EXPECTED_SOURCE_IDS = tuple(
+    source_id
+    for source_id in BASE_SOURCE_IDS
+    if source_id not in _DISABLED_IDS and source_id not in _REFERENCE_ONLY_IDS
+)
 
 
 def _merge_source(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
@@ -50,18 +66,36 @@ def _merge_source(base: dict[str, Any], override: dict[str, Any]) -> dict[str, A
     return merged
 
 
+def _apply_additions(payload: dict[str, Any], path: Path = ADDITIONS) -> dict[str, Any]:
+    additions_payload = _read_json(path)
+    additions = list(additions_payload.get("sources") or [])
+    if not additions:
+        return payload
+
+    out = deepcopy(payload)
+    known = {str(source.get("id")) for source in out.get("sources") or []}
+    addition_ids = [str(source.get("id")) for source in additions]
+    duplicates = sorted(known.intersection(addition_ids))
+    if duplicates:
+        raise RegistryError(f"duplicate V6 source additions: {duplicates!r}")
+    if len(set(addition_ids)) != len(addition_ids):
+        raise RegistryError("duplicate ids inside V6 source additions")
+
+    out["sources"] = [*(out.get("sources") or []), *deepcopy(additions)]
+    out["source_additions_applied"] = addition_ids
+    return out
+
+
 def _validate_base_source_set(payload: dict[str, Any]) -> None:
     ids = tuple(str(row.get("id")) for row in payload.get("sources") or [])
     if ids != BASE_SOURCE_IDS:
-        raise RegistryError(f"V6 base source definition set/order mismatch: {ids!r}")
+        raise RegistryError(f"V6 configured source definition set/order mismatch: {ids!r}")
     if len(set(ids)) != len(ids):
-        raise RegistryError("duplicate V6 base source ids")
+        raise RegistryError("duplicate V6 configured source ids")
 
 
 def _apply_overrides(payload: dict[str, Any], path: Path = OVERRIDES) -> dict[str, Any]:
-    if not path.exists():
-        return payload
-    override_payload = json.loads(path.read_text(encoding="utf-8"))
+    override_payload = _read_json(path)
     overrides = dict(override_payload.get("sources") or {})
     if not overrides:
         return payload
@@ -84,23 +118,31 @@ def _apply_activation(payload: dict[str, Any], path: Path = ACTIVATION) -> dict[
     if not path.exists():
         return payload
 
-    activation = json.loads(path.read_text(encoding="utf-8"))
+    activation = _read_json(path)
     disabled = dict(activation.get("disabled_sources") or {})
+    reference_only = dict(activation.get("reference_only_sources") or {})
     constraints = dict(activation.get("constraints") or {})
+    tiers = dict(activation.get("tiers") or {})
     out = deepcopy(payload)
     known = {str(source.get("id")) for source in out.get("sources") or []}
-    unknown = sorted((set(disabled) | set(constraints)) - known)
+    unknown = sorted((set(disabled) | set(reference_only) | set(constraints) | set(tiers)) - known)
     if unknown:
         raise RegistryError(f"unknown V6 source activation ids: {unknown!r}")
+
+    overlap = sorted(set(disabled).intersection(reference_only))
+    if overlap:
+        raise RegistryError(f"V6 source cannot be both disabled and reference-only: {overlap!r}")
 
     sources: list[dict[str, Any]] = []
     for source in out.get("sources") or []:
         source_id = str(source.get("id"))
-        if source_id in disabled:
+        if source_id in disabled or source_id in reference_only:
             continue
         row = deepcopy(source)
         if source_id in constraints:
             row["activation_constraint"] = str(constraints[source_id])
+        if source_id in tiers:
+            row["source_tier"] = str(tiers[source_id])
         sources.append(row)
 
     out["sources"] = sources
@@ -109,8 +151,11 @@ def _apply_activation(payload: dict[str, Any], path: Path = ACTIVATION) -> dict[
         "base_source_count": len(known),
         "active_source_count": len(sources),
         "disabled_source_count": len(disabled),
+        "reference_only_source_count": len(reference_only),
         "disabled_sources": disabled,
+        "reference_only_sources": reference_only,
         "constraints": constraints,
+        "tiers": tiers,
     }
     return out
 
@@ -141,6 +186,7 @@ def _normalize_ingestion_policy(payload: dict[str, Any]) -> dict[str, Any]:
 
 def load_registry(path: Path = CONFIG) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = _apply_additions(payload)
     _validate_base_source_set(payload)
     payload = _apply_overrides(payload)
     payload = _normalize_ingestion_policy(payload)
@@ -172,19 +218,29 @@ def validate_registry(payload: dict[str, Any]) -> None:
         raise RegistryError("V6 must remain data-only")
     if policy.get("no_fabrication") is not True:
         raise RegistryError("V6 must prohibit fabricated values")
+
     sources = list(payload.get("sources") or [])
     ids = tuple(str(row.get("id")) for row in sources)
     if ids != EXPECTED_SOURCE_IDS:
         raise RegistryError(f"V6 active source set/order mismatch: {ids!r}")
     if len(set(ids)) != len(ids):
         raise RegistryError("duplicate V6 active source ids")
+
     activation = payload.get("activation") or {}
     if activation:
         disabled = tuple(source_id for source_id in BASE_SOURCE_IDS if source_id in activation.get("disabled_sources", {}))
+        reference_only = tuple(
+            source_id for source_id in BASE_SOURCE_IDS if source_id in activation.get("reference_only_sources", {})
+        )
         if disabled != DROPPED_SOURCE_IDS:
             raise RegistryError(f"V6 dropped source set/order mismatch: {disabled!r}")
+        if reference_only != REFERENCE_ONLY_SOURCE_IDS:
+            raise RegistryError(f"V6 reference-only source set/order mismatch: {reference_only!r}")
         if activation.get("active_source_count") != len(EXPECTED_SOURCE_IDS):
             raise RegistryError("V6 active source count mismatch")
+        if activation.get("base_source_count") != len(BASE_SOURCE_IDS):
+            raise RegistryError("V6 configured source count mismatch")
+
     for source in sources:
         if not source.get("name") or not source.get("category") or not source.get("adapter"):
             raise RegistryError(f"incomplete source metadata: {source.get('id')}")
@@ -196,6 +252,9 @@ def validate_registry(payload: dict[str, Any]) -> None:
             _positive_int(source, key)
         if source.get("content_hash_dedup") not in {None, True, False}:
             raise RegistryError(f"invalid content_hash_dedup: {source['id']}")
+        tier = source.get("source_tier")
+        if tier is not None and str(tier) not in _ALLOWED_SOURCE_TIERS:
+            raise RegistryError(f"invalid source tier: {source['id']}")
         if source.get("verification_required") is True:
             status = str(source.get("verification_status") or "").upper()
             if status not in _ALLOWED_VERIFICATION_STATUSES:

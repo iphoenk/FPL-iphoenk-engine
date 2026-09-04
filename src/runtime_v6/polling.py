@@ -96,9 +96,11 @@ def poll_decision(
     deadline_window: bool = False,
     now: datetime | None = None,
     max_attempts_per_request: int = 1,
+    scheduler_interval_minutes: int = 60,
 ) -> dict[str, Any]:
     current = _now(now)
     interval = effective_poll_interval_minutes(source, deadline_window=deadline_window)
+    scheduler_interval = max(1, int(scheduler_interval_minutes))
     budget = _budget_state(
         source,
         previous,
@@ -114,6 +116,7 @@ def poll_decision(
                 "reason": "VERIFICATION_REQUIRED",
                 "evaluated_at": current.astimezone(timezone.utc).isoformat(),
                 "poll_interval_minutes": interval,
+                "scheduler_interval_minutes": scheduler_interval,
                 "deadline_window": deadline_window,
                 "verification_status": status,
                 "budget": budget,
@@ -127,12 +130,13 @@ def poll_decision(
                 "reason": "BUDGET_EXHAUSTED",
                 "evaluated_at": current.astimezone(timezone.utc).isoformat(),
                 "poll_interval_minutes": interval,
+                "scheduler_interval_minutes": scheduler_interval,
                 "deadline_window": deadline_window,
                 "verification_status": source.get("verification_status"),
                 "budget": budget,
             }
 
-    if interval is None or previous is None:
+    if interval is None or previous is None or interval <= scheduler_interval:
         due = True
     else:
         last_polled_at = _parse_dt(
@@ -149,6 +153,7 @@ def poll_decision(
         "reason": "DUE" if due else "NOT_DUE",
         "evaluated_at": current.astimezone(timezone.utc).isoformat(),
         "poll_interval_minutes": interval,
+        "scheduler_interval_minutes": scheduler_interval,
         "deadline_window": deadline_window,
         "verification_status": source.get("verification_status"),
         "budget": budget,

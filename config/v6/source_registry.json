@@ -4,7 +4,7 @@
   "season": "2026-2027",
   "cadence": {
     "schedule": "hourly",
-    "workflow_cron_utc": "5 * * * *",
+    "workflow_cron_utc": "0 * * * *",
     "check_every_source_each_cycle": true,
     "default_check_freshness_minutes": 90
   },
@@ -352,7 +352,7 @@
           "expect": "json"
         }
       ],
-      "notes": "Open-data catalogue; checked hourly even when the upstream dataset is unchanged."
+      "notes": "Open-data catalogue; adaptive polling may carry forward unchanged data between due cycles."
     },
     {
       "id": "rotowire",

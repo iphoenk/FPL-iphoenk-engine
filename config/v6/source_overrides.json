@@ -4,7 +4,8 @@
     "official_fpl": {
       "acquisition_kind": "rest_json",
       "poll_interval_minutes": 60,
-      "required_for_platform": true
+      "required_for_platform": true,
+      "max_body_bytes": 4000000
     },
     "official_price_predictor": {
       "required_for_platform": true,
@@ -300,7 +301,8 @@
       "poll_interval_minutes": 360,
       "poll_interval_minutes_deadline_window": 60,
       "check_freshness_minutes": 420,
-      "content_hash_dedup": true
+      "content_hash_dedup": true,
+      "max_body_bytes": 4000000
     }
   }
 }

@@ -1,5 +1,6 @@
 """V6 fresh-data acquisition platform.
 
 V6 has no FPL decision, prediction, optimizer, captaincy, chip, or transfer authority.
-It checks 27 configured sources every hour and publishes provenance-preserving snapshots.
+Configured and scheduled source membership is registry-driven; source counts must be read
+from the V6 activation policy/resolved registry rather than hard-coded in this module.
 """

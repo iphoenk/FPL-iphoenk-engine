@@ -49,6 +49,19 @@ def test_required_platform_sources_are_active_but_context_source_is_not_availabi
     assert set(registry["activation"]["required_active_sources"]) == required
 
 
+def test_large_provider_payloads_use_bounded_source_specific_budgets():
+    registry = load_registry()
+    sources = source_map(registry)
+    global_limit = int(registry["policy"]["max_body_bytes"])
+
+    assert global_limit == 1_000_000
+    for source_id in ("official_fpl", "fantasy_football_pundit"):
+        source_limit = int(sources[source_id]["max_body_bytes"])
+        assert source_limit > global_limit
+        assert source_limit == 4_000_000
+        assert source_limit <= 4 * global_limit
+
+
 def test_activation_cannot_prune_required_platform_source(tmp_path: Path):
     activation = tmp_path / "activation.json"
     activation.write_text(

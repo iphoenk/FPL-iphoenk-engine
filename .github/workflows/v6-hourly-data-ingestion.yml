@@ -1,29 +1,38 @@
 name: FPL V6 hourly fresh-data acquisition
 
 on:
-  workflow_dispatch:
   schedule:
     - cron: "0 * * * *"
     - cron: "12 * * * *"
 
+# The built-in GITHUB_TOKEN remains read-only. Runtime write authority is minted
+# only from the dedicated V6 publisher GitHub App inside the publish job.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: fpl-v6-hourly-data-ingestion
   cancel-in-progress: false
 
+env:
+  RUNTIME_BRANCH: runtime-data-v6
+
 jobs:
   collect:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      skip: ${{ steps.slot_guard.outputs.skip }}
+      schedule_kind: ${{ steps.scheduler.outputs.kind }}
     env:
-      RUNTIME_BRANCH: runtime-data-v6
       V6_PREVIOUS_MANIFEST: /tmp/v6-previous-manifest.json
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Hydrate previous V6 last-good snapshot
         shell: bash
@@ -53,6 +62,7 @@ jobs:
           cache: pip
 
       - name: Classify scheduler invocation
+        id: scheduler
         shell: bash
         run: |
           python - <<'PY'
@@ -63,7 +73,7 @@ jobs:
           event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
           schedule = str(event.get("schedule") or "")
           if os.environ.get("GITHUB_EVENT_NAME") != "schedule":
-              kind = "manual"
+              kind = "non_production_local"
           elif schedule == "0 * * * *":
               kind = "primary"
           elif schedule == "12 * * * *":
@@ -72,6 +82,8 @@ jobs:
               kind = "scheduled_unknown"
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
               handle.write(f"V6_SCHEDULE_KIND={kind}\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"kind={kind}\n")
           print(f"V6 schedule kind: {kind}")
           PY
 
@@ -100,21 +112,32 @@ jobs:
           print(f"logical scheduler slot already published: {skip}")
           PY
 
-      - name: Install dependencies
+      - name: Install locked runtime dependencies
         if: steps.slot_guard.outputs.skip != 'true'
-        run: pip install -r requirements.txt pytest
+        run: python -m pip install --require-hashes -r requirements.lock
 
-      - name: Validate V6 production contracts
+      - name: Validate V6 production preflight
         if: steps.slot_guard.outputs.skip != 'true'
-        run: >-
-          python -m pytest -q
-          tests/test_data_ingestion_engine.py
-          tests/test_adaptive_polling.py
-          tests/test_weather_context.py
-          tests/test_data_platform_hardening.py
-          tests/test_data_platform_runtime_control.py
-          tests/test_data_platform_publish_integrity.py
-          tests/test_data_platform_identity.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m compileall -q src/runtime_v6
+          python - <<'PY'
+          from src.runtime_v6.registry import dependency_layers, load_registry
+
+          registry = load_registry()
+          assert registry["engine"] == "V6_FRESH_DATA_PLATFORM"
+          assert registry["policy"]["data_only"] is True
+          assert registry["policy"]["decision_authority"] == "NONE"
+          assert registry["policy"]["prediction_authority"] == "NONE"
+          assert registry["policy"]["optimizer_authority"] == "NONE"
+          assert dependency_layers(registry)
+          print({
+              "active_sources": registry["activation"]["active_source_count"],
+              "required_sources": registry["activation"]["required_active_sources"],
+              "dependency_layers": dependency_layers(registry),
+          })
+          PY
 
       - name: Run active V6 acquisition cycle
         if: steps.slot_guard.outputs.skip != 'true'
@@ -158,10 +181,11 @@ jobs:
           assert identity["governance"]["fuzzy_name_matching_allowed"] is False
           assert integrity["status"] == "PASS", integrity
           assert integrity["current_source_files_exact"] is True
+          assert integrity["resolved_registry_exact"] is True
           assert integrity["identity_map_consistent"] is True
           assert control["event_name"] == os.environ["GITHUB_EVENT_NAME"]
           assert control["schedule_kind"] == os.environ["V6_SCHEDULE_KIND"]
-          assert control["scheduled_cycle"] is (os.environ["GITHUB_EVENT_NAME"] == "schedule")
+          assert control["scheduled_cycle"] is True
           print(json.dumps({
               "overall": manifest["overall"],
               "elapsed_ms": manifest["elapsed_ms"],
@@ -176,35 +200,167 @@ jobs:
           }, indent=2))
           PY
 
-      - name: Upload immutable acquisition artifact
-        if: steps.slot_guard.outputs.skip != 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: v6-data-${{ github.run_id }}
-          path: data/v6/
-          retention-days: 14
-          if-no-files-found: error
-
-      - name: Publish latest V6 database snapshot
+      - name: Package verified runtime snapshot
         if: steps.slot_guard.outputs.skip != 'true'
         shell: bash
         run: |
           set -euo pipefail
+          tar -C "$GITHUB_WORKSPACE" -cf "$RUNNER_TEMP/v6-runtime-data.tar" data/v6
+
+      - name: Transfer verified runtime snapshot to isolated publisher
+        if: steps.slot_guard.outputs.skip != 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-runtime-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/v6-runtime-data.tar
+          retention-days: 14
+          if-no-files-found: error
+
+  publish:
+    needs: collect
+    if: needs.collect.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: v6-runtime-publisher
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Require dedicated V6 publisher app configuration
+        shell: bash
+        env:
+          V6_RUNTIME_APP_ID: ${{ vars.V6_RUNTIME_APP_ID }}
+          V6_RUNTIME_APP_PRIVATE_KEY: ${{ secrets.V6_RUNTIME_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$V6_RUNTIME_APP_ID"
+          test -n "$V6_RUNTIME_APP_PRIVATE_KEY"
+          echo "Dedicated V6 publisher app configuration present"
+
+      - name: Mint governed V6 runtime publisher token
+        id: runtime_app_token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349
+        with:
+          app-id: ${{ vars.V6_RUNTIME_APP_ID }}
+          private-key: ${{ secrets.V6_RUNTIME_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: FPL-iphoenk-engine
+          permission-contents: write
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+          token: ${{ steps.runtime_app_token.outputs.token }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Download verified runtime snapshot
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: v6-runtime-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/v6-runtime-publication
+
+      - name: Revalidate transferred runtime snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/v6-publication-check"
+          mkdir -p "$RUNNER_TEMP/v6-publication-check"
+          tar -xf "$RUNNER_TEMP/v6-runtime-publication/v6-runtime-data.tar" -C "$RUNNER_TEMP/v6-publication-check"
+          test -f "$RUNNER_TEMP/v6-publication-check/data/v6/manifest.json"
+          test -f "$RUNNER_TEMP/v6-publication-check/data/v6/health/publish_integrity.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"]) / "v6-publication-check" / "data" / "v6"
+          manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+          integrity = json.loads((root / "health" / "publish_integrity.json").read_text(encoding="utf-8"))
+          assert manifest["governance"]["data_only"] is True
+          assert manifest["governance"]["decision_authority"] == "NONE"
+          assert manifest["governance"]["prediction_authority"] == "NONE"
+          assert manifest["governance"]["optimizer_authority"] == "NONE"
+          assert integrity["status"] == "PASS", integrity
+          assert integrity["resolved_registry_exact"] is True
+          print({"overall": manifest["overall"], "tree_sha256": integrity.get("tree_sha256")})
+          PY
+
+      - name: Capture runtime branch lease
+        shell: bash
+        run: |
+          set -euo pipefail
           git fetch origin "${RUNTIME_BRANCH}"
-          rm -rf /tmp/v6-runtime
-          git worktree add /tmp/v6-runtime "origin/${RUNTIME_BRANCH}"
-          rm -rf /tmp/v6-runtime/data/v6
-          mkdir -p /tmp/v6-runtime/data
-          cp -R data/v6 /tmp/v6-runtime/data/v6
-          cd /tmp/v6-runtime
+          runtime_base="$(git rev-parse "refs/remotes/origin/${RUNTIME_BRANCH}")"
+          echo "RUNTIME_BASE_SHA=$runtime_base" >> "$GITHUB_ENV"
+
+      - name: Publish atomic V6 runtime snapshot
+        shell: bash
+        env:
+          PUBLISH_TOKEN: ${{ steps.runtime_app_token.outputs.token }}
+        run: |
+          set -euo pipefail
+          publish_tree="$RUNNER_TEMP/v6-runtime-worktree"
+          rm -rf "$publish_tree"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # data/v6 is intentionally ignored on code branches. Runtime snapshots
-          # live only on runtime-data-v6, so force-add that isolated write-set.
+          git worktree add --detach "$publish_tree" "$GITHUB_SHA"
+          cd "$publish_tree"
+          git checkout --orphan runtime-snapshot
+          git rm -rf . >/dev/null 2>&1 || true
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          tar -xf "$RUNNER_TEMP/v6-runtime-publication/v6-runtime-data.tar"
           git add -f data/v6
-          if git diff --cached --quiet; then
-            echo "No V6 snapshot change"
-            exit 0
+          git commit -m "data(v6): atomic hourly snapshot ${{ github.run_id }} [${{ needs.collect.outputs.schedule_kind }}] [dedicated_v6_github_app]"
+          published_sha="$(git rev-parse HEAD)"
+          basic_auth="$(printf 'x-access-token:%s' "$PUBLISH_TOKEN" | base64 -w0)"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $basic_auth" push \
+            --force-with-lease="refs/heads/${RUNTIME_BRANCH}:${RUNTIME_BASE_SHA}" \
+            origin "HEAD:refs/heads/${RUNTIME_BRANCH}"
+          echo "PUBLISHED_RUNTIME_SHA=$published_sha" >> "$GITHUB_ENV"
+
+      - name: Verify published V6 runtime provenance and exact tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
+          published_head="$(git rev-parse "refs/remotes/origin/${RUNTIME_BRANCH}")"
+          test "$published_head" = "$PUBLISHED_RUNTIME_SHA"
+
+          verify_tree="$RUNNER_TEMP/v6-runtime-verify"
+          rm -rf "$verify_tree"
+          git worktree add --detach "$verify_tree" "refs/remotes/origin/${RUNTIME_BRANCH}"
+          unauthorized="$(git -C "$verify_tree" ls-files | grep -v '^data/v6/' || true)"
+          if [ -n "$unauthorized" ]; then
+            echo "Unauthorized files outside data/v6/:"
+            echo "$unauthorized"
+            exit 1
           fi
-          git commit -m "data(v6): hourly active-source refresh ${{ github.run_id }}"
-          git push origin HEAD:"${RUNTIME_BRANCH}"
+
+          diff -qr \
+            "$RUNNER_TEMP/v6-publication-check/data/v6" \
+            "$verify_tree/data/v6"
+
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"]) / "v6-runtime-verify" / "data" / "v6"
+          manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+          integrity = json.loads((root / "health" / "publish_integrity.json").read_text(encoding="utf-8"))
+          assert manifest["governance"]["data_only"] is True
+          assert manifest["governance"]["decision_authority"] == "NONE"
+          assert integrity["status"] == "PASS", integrity
+          assert integrity["resolved_registry_exact"] is True
+          print({
+              "published": True,
+              "overall": manifest["overall"],
+              "generated_at": manifest["generated_at"],
+              "schedule_kind": manifest["runtime_control"]["schedule_kind"],
+              "publisher_mode": "dedicated_v6_github_app",
+              "tree_sha256": integrity.get("tree_sha256"),
+          })
+          PY

@@ -40,7 +40,10 @@ def _good_tree(root: Path) -> None:
     _write(root / "normalized" / "canonical_fixtures.json", {"fixtures": []})
     _write(root / "evidence" / "lineage.json", {"groups": {}})
     _write(root / "evidence" / "latest_index.json", {"sources": {}})
-    _write(root / "evidence" / "resolved_registry.json", {"source_count": len(source_ids)})
+    _write(
+        root / "evidence" / "resolved_registry.json",
+        {"source_count": len(source_ids), "sources": [{"id": source_id} for source_id in source_ids]},
+    )
     _write(
         root / "evidence" / "player_identity_map.json",
         {
@@ -59,6 +62,7 @@ def test_publish_integrity_passes_for_exact_runtime_tree(tmp_path: Path):
     assert report["status"] == "PASS"
     assert report["errors"] == []
     assert report["current_source_files_exact"] is True
+    assert report["resolved_registry_exact"] is True
     assert report["identity_map_consistent"] is True
     assert report["tree_sha256"]
 
@@ -101,6 +105,23 @@ def test_publish_integrity_fails_when_required_artifact_is_missing(tmp_path: Pat
 
     assert report["status"] == "FAIL"
     assert "required_artifact_missing:resolved_registry" in report["errors"]
+
+
+def test_publish_integrity_fails_when_resolved_registry_ids_diverge(tmp_path: Path):
+    _good_tree(tmp_path)
+    _write(
+        tmp_path / "evidence" / "resolved_registry.json",
+        {
+            "source_count": 2,
+            "sources": [{"id": "official_fpl"}, {"id": "rogue_source"}],
+        },
+    )
+
+    report = validate_publish_tree(tmp_path)
+
+    assert report["status"] == "FAIL"
+    assert "resolved_registry_source_ids_mismatch" in report["errors"]
+    assert report["resolved_registry_exact"] is False
 
 
 def test_publish_integrity_fails_when_identity_count_diverges(tmp_path: Path):

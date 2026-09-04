@@ -153,12 +153,12 @@ def test_runtime_control_escalates_manifest_overall_on_missed_cycle():
     assert updated["governance"]["scheduled_recovery_is_idempotent"] is True
 
 
-def test_production_workflow_is_not_triggered_by_push_or_pull_request():
+def test_production_workflow_is_scheduler_only_and_not_triggered_by_ad_hoc_events():
     workflow = Path(".github/workflows/v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
 
     assert 'cron: "0 * * * *"' in workflow
     assert 'cron: "12 * * * *"' in workflow
-    assert "workflow_dispatch:" in workflow
+    assert "workflow_dispatch:" not in workflow
     assert "  push:" not in workflow
     assert "  pull_request:" not in workflow
     assert "python -m src.runtime_v6.collector" in workflow

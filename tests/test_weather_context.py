@@ -115,9 +115,14 @@ def test_open_meteo_fixture_join_uses_official_fpl_authority():
     fixture = weather["fixtures"][0]
 
     assert weather["fixture_authority"] == "official_fpl"
+    assert weather["fixture_join_key"] == "official_fpl_team_id"
+    assert weather["weather_provider"] == "open_meteo"
     assert weather["venue_registry"] == "config/venues/premier_league_2026_27.json"
     assert weather["event"] == 3
+    assert weather["identity_mismatch_home_team_ids"] == []
     assert fixture["fixture_id"] == 301
+    assert fixture["home_team_id"] == 1
+    assert fixture["away_team_id"] == 2
     assert fixture["stadium"] == "Emirates Stadium"
     assert fixture["weather_available"] is True
     assert fixture["severity"] == "ADVERSE"
@@ -127,6 +132,7 @@ def test_open_meteo_fixture_join_uses_official_fpl_authority():
     assert fixture["weather_alone_can_trigger_transfer"] is False
     assert result["governance"]["weather_is_context_only"] is True
     assert result["governance"]["venue_coordinates_are_registry_owned"] is True
+    assert result["governance"]["venue_fixture_join_uses_official_team_id"] is True
 
 
 def test_open_meteo_reuses_canonical_2026_27_venue_registry_once():
@@ -152,3 +158,13 @@ def test_open_meteo_reuses_canonical_2026_27_venue_registry_once():
         "FRESH_FORECAST",
         "STALE_FORECAST",
     ]
+
+
+def test_open_meteo_is_native_v6_acquisition_not_v3_upstream():
+    sources = source_map(load_registry())
+    weather = sources["open_meteo_weather"]
+
+    assert weather["adapter"] == "open_meteo_weather"
+    assert weather["depends_on"] == ["official_fpl"]
+    assert weather["requests"][0]["url"] == "https://api.open-meteo.com/v1/forecast"
+    assert "v3" not in str(weather).lower()

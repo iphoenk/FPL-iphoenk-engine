@@ -14,8 +14,17 @@ This README is a human-readable projection, not a second source of truth. Curren
 - current production runtime/provenance: `runtime-data/data/runtime_manifest.json`
 - historical release/projection metadata: `IMPLEMENTATION_STATUS.json`
 - operational roadmap and monitor explanations: `MASTER_TASK_LIST_V3.md`
+- V6 fresh-data architecture/governance: `docs/V6_FRESH_DATA_PLATFORM.md`
+- V6 deterministic identity-bridge roadmap: `docs/V6_IDENTITY_BRIDGE_ROADMAP.md`
+- V6 mutable runtime truth: `runtime-data-v6:data/v6/manifest.json`
 
 Do not copy a current commit SHA, topology count, or mutable SLO into this document as an independent authority. Historical values may remain only when explicitly labelled as historical evidence.
+
+## V6 fresh-data platform
+
+V6 is an isolated, registry-driven, data-only acquisition and evidence-publication platform. It has no prediction, optimizer, transfer, captaincy, chip, xPts, xMins, Monte Carlo, tactical, recommendation, or decision authority. Its active source set and health must be read from V6 registry/runtime artifacts rather than inferred from static counts in this README.
+
+V6 consumers may use a fresh, integrity-valid `runtime-data-v6` snapshot. Stale or invalid snapshots must remain visibly degraded and may only use explicitly governed minimum-scope direct fallback. See `docs/V6_FRESH_DATA_PLATFORM.md` for the architecture contract and `docs/V6_IDENTITY_BRIDGE_ROADMAP.md` for deterministic cross-source identity work.
 
 ## Production architecture
 

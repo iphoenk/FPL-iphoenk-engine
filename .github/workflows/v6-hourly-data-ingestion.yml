@@ -6,24 +6,33 @@ on:
     - cron: "0 * * * *"
     - cron: "12 * * * *"
 
+# Acquisition is read-only. Write authority exists only in the isolated publish job.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: fpl-v6-hourly-data-ingestion
   cancel-in-progress: false
 
+env:
+  RUNTIME_BRANCH: runtime-data-v6
+
 jobs:
   collect:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      skip: ${{ steps.slot_guard.outputs.skip }}
+      schedule_kind: ${{ steps.scheduler.outputs.kind }}
     env:
-      RUNTIME_BRANCH: runtime-data-v6
       V6_PREVIOUS_MANIFEST: /tmp/v6-previous-manifest.json
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Hydrate previous V6 last-good snapshot
         shell: bash
@@ -53,6 +62,7 @@ jobs:
           cache: pip
 
       - name: Classify scheduler invocation
+        id: scheduler
         shell: bash
         run: |
           python - <<'PY'
@@ -72,6 +82,8 @@ jobs:
               kind = "scheduled_unknown"
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
               handle.write(f"V6_SCHEDULE_KIND={kind}\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"kind={kind}\n")
           print(f"V6 schedule kind: {kind}")
           PY
 
@@ -176,35 +188,139 @@ jobs:
           }, indent=2))
           PY
 
-      - name: Upload immutable acquisition artifact
-        if: steps.slot_guard.outputs.skip != 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: v6-data-${{ github.run_id }}
-          path: data/v6/
-          retention-days: 14
-          if-no-files-found: error
-
-      - name: Publish latest V6 database snapshot
+      - name: Package verified runtime snapshot
         if: steps.slot_guard.outputs.skip != 'true'
         shell: bash
         run: |
           set -euo pipefail
+          tar -C "$GITHUB_WORKSPACE" -cf "$RUNNER_TEMP/v6-runtime-data.tar" data/v6
+
+      - name: Transfer verified runtime snapshot to isolated publisher
+        if: steps.slot_guard.outputs.skip != 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-runtime-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/v6-runtime-data.tar
+          retention-days: 14
+          if-no-files-found: error
+
+  publish:
+    needs: collect
+    if: needs.collect.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: v6-runtime-publisher
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+          persist-credentials: true
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Download verified runtime snapshot
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          name: v6-runtime-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/v6-runtime-publication
+
+      - name: Revalidate transferred runtime snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/v6-publication-check"
+          mkdir -p "$RUNNER_TEMP/v6-publication-check"
+          tar -xf "$RUNNER_TEMP/v6-runtime-publication/v6-runtime-data.tar" -C "$RUNNER_TEMP/v6-publication-check"
+          test -f "$RUNNER_TEMP/v6-publication-check/data/v6/manifest.json"
+          test -f "$RUNNER_TEMP/v6-publication-check/data/v6/health/publish_integrity.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"]) / "v6-publication-check" / "data" / "v6"
+          manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+          integrity = json.loads((root / "health" / "publish_integrity.json").read_text(encoding="utf-8"))
+          assert manifest["governance"]["data_only"] is True
+          assert manifest["governance"]["decision_authority"] == "NONE"
+          assert manifest["governance"]["prediction_authority"] == "NONE"
+          assert manifest["governance"]["optimizer_authority"] == "NONE"
+          assert integrity["status"] == "PASS", integrity
+          print({"overall": manifest["overall"], "tree_digest": integrity.get("tree_digest")})
+          PY
+
+      - name: Capture runtime branch lease
+        shell: bash
+        run: |
+          set -euo pipefail
           git fetch origin "${RUNTIME_BRANCH}"
-          rm -rf /tmp/v6-runtime
-          git worktree add /tmp/v6-runtime "origin/${RUNTIME_BRANCH}"
-          rm -rf /tmp/v6-runtime/data/v6
-          mkdir -p /tmp/v6-runtime/data
-          cp -R data/v6 /tmp/v6-runtime/data/v6
-          cd /tmp/v6-runtime
+          runtime_base="$(git rev-parse "refs/remotes/origin/${RUNTIME_BRANCH}")"
+          echo "RUNTIME_BASE_SHA=$runtime_base" >> "$GITHUB_ENV"
+
+      - name: Publish atomic V6 runtime snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          publish_tree="$RUNNER_TEMP/v6-runtime-worktree"
+          rm -rf "$publish_tree"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # data/v6 is intentionally ignored on code branches. Runtime snapshots
-          # live only on runtime-data-v6, so force-add that isolated write-set.
+          git worktree add --detach "$publish_tree" "$GITHUB_SHA"
+          cd "$publish_tree"
+          git checkout --orphan runtime-snapshot
+          git rm -rf . >/dev/null 2>&1 || true
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          tar -xf "$RUNNER_TEMP/v6-runtime-publication/v6-runtime-data.tar"
           git add -f data/v6
-          if git diff --cached --quiet; then
-            echo "No V6 snapshot change"
-            exit 0
+          git commit -m "data(v6): atomic hourly snapshot ${{ github.run_id }} [${{ needs.collect.outputs.schedule_kind }}]"
+          published_sha="$(git rev-parse HEAD)"
+          git push \
+            --force-with-lease="refs/heads/${RUNTIME_BRANCH}:${RUNTIME_BASE_SHA}" \
+            origin "HEAD:refs/heads/${RUNTIME_BRANCH}"
+          echo "PUBLISHED_RUNTIME_SHA=$published_sha" >> "$GITHUB_ENV"
+
+      - name: Verify published V6 runtime provenance and exact tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
+          published_head="$(git rev-parse "refs/remotes/origin/${RUNTIME_BRANCH}")"
+          test "$published_head" = "$PUBLISHED_RUNTIME_SHA"
+
+          verify_tree="$RUNNER_TEMP/v6-runtime-verify"
+          rm -rf "$verify_tree"
+          git worktree add --detach "$verify_tree" "refs/remotes/origin/${RUNTIME_BRANCH}"
+          unauthorized="$(git -C "$verify_tree" ls-files | grep -v '^data/v6/' || true)"
+          if [ -n "$unauthorized" ]; then
+            echo "Unauthorized files outside data/v6/:"
+            echo "$unauthorized"
+            exit 1
           fi
-          git commit -m "data(v6): hourly active-source refresh ${{ github.run_id }}"
-          git push origin HEAD:"${RUNTIME_BRANCH}"
+
+          diff -qr \
+            "$RUNNER_TEMP/v6-publication-check/data/v6" \
+            "$verify_tree/data/v6"
+
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"]) / "v6-runtime-verify" / "data" / "v6"
+          manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+          integrity = json.loads((root / "health" / "publish_integrity.json").read_text(encoding="utf-8"))
+          assert manifest["governance"]["data_only"] is True
+          assert manifest["governance"]["decision_authority"] == "NONE"
+          assert integrity["status"] == "PASS", integrity
+          print({
+              "published": True,
+              "overall": manifest["overall"],
+              "generated_at": manifest["generated_at"],
+              "schedule_kind": manifest["runtime_control"]["schedule_kind"],
+              "tree_digest": integrity.get("tree_digest"),
+          })
+          PY

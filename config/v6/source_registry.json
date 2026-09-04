@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "engine": "V6_DATA_INGESTION_ONLY",
+  "season": "2026-2027",
+  "cadence": {"schedule": "hourly", "workflow_cron_utc": "5 * * * *"},
+  "policy": {
+    "decision_authority": "NONE",
+    "prediction_authority": "NONE",
+    "optimizer_authority": "NONE",
+    "data_only": true,
+    "no_cross_source_averaging": true,
+    "no_fabrication": true,
+    "preserve_provenance": true,
+    "source_failures_are_isolated": true,
+    "public_read_only_only": true,
+    "no_auth_bypass": true,
+    "max_body_bytes": 250000,
+    "timeout_seconds": 20,
+    "max_workers": 8
+  },
+  "sources": [
+    {"id":"official_fpl","name":"Official FPL","kind":"official_fpl","critical":true,"urls":["https://fantasy.premierleague.com/api/bootstrap-static/","https://fantasy.premierleague.com/api/fixtures/","https://fantasy.premierleague.com/api/event-status/"]},
+    {"id":"official_price_predictor","name":"Official FPL Price Predictor","kind":"official_price_predictor","critical":true,"derived_from":"official_fpl.bootstrap","fields":["id","web_name","team","element_type","now_cost","selected_by_percent","transfers_in_event","transfers_out_event","price_change_percent","price_change_hourly_rate","price_change_projections","price_change_locked_until","price_change_calibrating"]},
+    {"id":"understat","name":"Understat","kind":"http","critical":false,"urls":["https://understat.com/league/EPL/2026"]},
+    {"id":"opta_the_analyst","name":"Opta / The Analyst","kind":"http","critical":false,"urls":["https://theanalyst.com/football/premier-league"]},
+    {"id":"statmuse","name":"StatMuse FC","kind":"http","critical":false,"urls":["https://www.statmuse.com/fc"]},
+    {"id":"onside","name":"Onside","kind":"http","critical":false,"urls":["https://onsidearena.com/fpl/predicted-points"]},
+    {"id":"ben_crellin","name":"Ben Crellin","kind":"http","critical":false,"urls":["https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?actor=bencrellin.bsky.social&limit=50"]},
+    {"id":"fffix","name":"Fantasy Football Fix","kind":"http","critical":false,"urls":["https://www.fantasyfootballfix.com/price/","https://www.fantasyfootballfix.com/algorithm_predictions/"]},
+    {"id":"ffhub","name":"Fantasy Football Hub","kind":"http","critical":false,"urls":["https://www.fantasyfootballhub.co.uk/predictions","https://www.fantasyfootballhub.co.uk/tools"]},
+    {"id":"onefpl","name":"OneFPL","kind":"http","critical":false,"urls":["https://onefpl.com/prices"]},
+    {"id":"livefpl","name":"LiveFPL","kind":"http","critical":false,"urls":["https://plan.livefpl.net/prices","https://plan.livefpl.net/price_changes"]},
+    {"id":"ffscout","name":"Fantasy Football Scout","kind":"http","critical":false,"urls":["https://www.fantasyfootballscout.co.uk/"]}    
+  ]
+}

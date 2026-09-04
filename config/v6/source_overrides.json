@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "sources": {
     "official_fpl": {
       "acquisition_kind": "rest_json",
@@ -121,11 +121,17 @@
       ]
     },
     "clubelo": {
+      "acquisition_kind": "rest_csv",
+      "poll_interval_minutes": 360,
+      "check_freshness_minutes": 1500,
+      "content_hash_dedup": true,
       "requests": [
         {
           "id": "ranking",
-          "url": "http://api.clubelo.com/{utc_date}",
+          "url": "https://api.clubelo.com/{utc_date}",
           "expect": "csv",
+          "connect_timeout_seconds": 3,
+          "read_timeout_seconds": 6,
           "validation": {
             "min_body_bytes": 1000,
             "required_text_any": ["Rank,Club"]
@@ -263,6 +269,33 @@
           }
         }
       ]
+    },
+    "solio_analytics": {
+      "acquisition_kind": "rest_json",
+      "poll_interval_minutes": 240,
+      "poll_interval_minutes_deadline_window": 60,
+      "check_freshness_minutes": 300,
+      "content_hash_dedup": true
+    },
+    "open_meteo_weather": {
+      "acquisition_kind": "rest_json",
+      "poll_interval_minutes": 60,
+      "check_freshness_minutes": 90,
+      "content_hash_dedup": true
+    },
+    "check_the_chance": {
+      "acquisition_kind": "html_scrape",
+      "poll_interval_minutes": 360,
+      "poll_interval_minutes_deadline_window": 60,
+      "check_freshness_minutes": 420,
+      "content_hash_dedup": true
+    },
+    "fantasy_football_pundit": {
+      "acquisition_kind": "html_scrape",
+      "poll_interval_minutes": 360,
+      "poll_interval_minutes_deadline_window": 60,
+      "check_freshness_minutes": 420,
+      "content_hash_dedup": true
     }
   }
 }

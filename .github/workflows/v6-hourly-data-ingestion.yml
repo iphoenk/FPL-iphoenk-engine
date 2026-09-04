@@ -97,6 +97,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+          cache-dependency-path: requirements-v6.lock
 
       - name: Classify scheduler invocation
         id: scheduler
@@ -153,9 +154,9 @@ jobs:
           print(f"logical scheduler slot already published: {skip}")
           PY
 
-      - name: Install locked runtime dependencies
+      - name: Install V6 locked runtime dependencies
         if: steps.slot_guard.outputs.skip != 'true'
-        run: python -m pip install --require-hashes -r requirements.lock
+        run: python -m pip install --require-hashes -r requirements-v6.lock
 
       - name: Validate V6 production preflight
         if: steps.slot_guard.outputs.skip != 'true'
@@ -163,6 +164,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m compileall -q src/runtime_v6
+          python -m src.runtime_v6.architecture_independence_validate
           python - <<'PY'
           from src.runtime_v6.registry import dependency_layers, load_registry
 

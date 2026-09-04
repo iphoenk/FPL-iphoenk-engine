@@ -193,19 +193,19 @@ def collect_official(
 
 def collect_price_predictor(
     source: dict[str, Any],
-    official_payload: dict[str, Any],
+    upstream_payload: dict[str, Any],
     previous: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     started = time.perf_counter()
-    bootstrap = ((official_payload.get("official") or {}).get("bootstrap") or {})
+    bootstrap = ((upstream_payload.get("official") or {}).get("bootstrap") or {})
     elements = list(bootstrap.get("elements") or [])
     fields = [str(field) for field in source.get("fields") or []]
     rows = [{key: player.get(key) for key in fields if key in player} for player in elements]
     required = {"price_change_percent", "price_change_projections"}
     covered = sum(required.issubset(row.keys()) for row in rows)
-    official_live = official_payload.get("health") == "GREEN"
+    upstream_live = upstream_payload.get("health") == "GREEN"
 
-    if rows and covered == len(rows) and official_live:
+    if rows and covered == len(rows) and upstream_live:
         health, availability, effective_state = "GREEN", "AVAILABLE", "LIVE_DERIVED"
     elif rows and covered == len(rows):
         health, availability, effective_state = "AMBER", "PARTIAL", "CACHED_DERIVED"
@@ -233,8 +233,8 @@ def collect_price_predictor(
         "effective_state": effective_state,
         "changed": None,
         "derived_from": source.get("derived_from"),
-        "upstream_health": official_payload.get("health"),
-        "upstream_effective_state": official_payload.get("effective_state"),
+        "upstream_health": upstream_payload.get("health"),
+        "upstream_effective_state": upstream_payload.get("effective_state"),
         "fields": fields,
         "data": {"players": rows},
         "coverage": {
@@ -259,12 +259,26 @@ def collect_price_predictor(
 def collect_open_meteo_weather(
     source: dict[str, Any],
     client: AcquisitionClient,
-    official_payload: dict[str, Any],
+    upstream_payload: dict[str, Any],
     previous: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     materialized = materialize_open_meteo_source(source)
     payload = collect_http(materialized, client, previous)
-    return enrich_open_meteo_payload(source, payload, official_payload)
+    return enrich_open_meteo_payload(source, payload, upstream_payload)
+
+
+def _single_dependency_payload(
+    source: dict[str, Any],
+    dependency_payloads: dict[str, dict[str, Any]] | None,
+) -> dict[str, Any]:
+    required = [str(dependency) for dependency in source.get("depends_on") or []]
+    if len(required) != 1:
+        raise ValueError(f"adapter {source['adapter']} requires exactly one declared dependency")
+    payloads = dependency_payloads or {}
+    dependency_id = required[0]
+    if dependency_id not in payloads:
+        raise ValueError(f"missing dependency payload: {source['id']} -> {dependency_id}")
+    return payloads[dependency_id]
 
 
 def collect_source(
@@ -272,19 +286,24 @@ def collect_source(
     client: AcquisitionClient,
     *,
     previous: dict[str, Any] | None = None,
-    official_payload: dict[str, Any] | None = None,
+    dependency_payloads: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     adapter = source["adapter"]
     if adapter == "official_fpl":
         return collect_official(source, client, previous)
     if adapter == "official_price_predictor":
-        if official_payload is None:
-            raise ValueError("official price predictor requires official FPL payload")
-        return collect_price_predictor(source, official_payload, previous)
+        return collect_price_predictor(
+            source,
+            _single_dependency_payload(source, dependency_payloads),
+            previous,
+        )
     if adapter == "open_meteo_weather":
-        if official_payload is None:
-            raise ValueError("Open-Meteo weather adapter requires official FPL payload")
-        return collect_open_meteo_weather(source, client, official_payload, previous)
+        return collect_open_meteo_weather(
+            source,
+            client,
+            _single_dependency_payload(source, dependency_payloads),
+            previous,
+        )
     if adapter == "http":
         return collect_http(source, client, previous)
     raise ValueError(f"unsupported V6 adapter: {adapter}")

@@ -31,5 +31,8 @@
     "coefficient_of_variation": 0.42,
     "xmins_std_points_multiplier": 0.035,
     "small_sample_extra_std": 0.45
+  },
+  "validation": {
+    "minimum_player_coverage_ratio": 0.95
   }
 }

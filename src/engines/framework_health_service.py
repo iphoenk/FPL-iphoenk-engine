@@ -66,7 +66,7 @@ def activate_canonical_probe_contracts() -> tuple[str, ...]:
             expected = float(xmins.get("expected_minutes") or 0.0)
             availability = float(xmins.get("availability", xmins.get("overall_availability", 1.0)) or 0.0)
             if (
-                abs((start + bench + dnp) - 1.0) < 0.002
+                abs((start + bench + dnp) - 1.0) < audit_engine.XMINS_PROBABILITY_SUM_TOLERANCE
                 and 0.0 <= expected <= 90.0
                 and 0.0 <= availability <= 1.0
             ):

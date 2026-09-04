@@ -2,83 +2,83 @@
 
 ## Mission
 
-V6 is the repository's dedicated fresh-data acquisition and evidence-storage layer. V6 does not make FPL decisions. It has no transfer, captaincy, chip, optimizer, xPts, xMins, Monte Carlo, or recommendation authority. Consumers such as V3, V4, reporting, price models, or later engines may read V6 snapshots, but V6 itself only acquires, validates, preserves, normalizes identity, tracks provenance, and publishes source health.
+V6 is the repository's dedicated fresh-data acquisition and evidence-storage layer. V6 does not make FPL decisions. It has no transfer, captaincy, chip, optimizer, xPts, xMins, Monte Carlo, or recommendation authority. Manual FPL reads V6 snapshots as its structured fresh-data layer. V3 and V4 remain decoupled from V6 until explicitly redesigned or repaired. V6 only acquires, validates, preserves, normalizes identity, tracks provenance, and publishes source health.
 
-## Hourly lifecycle
+## Stable-core design
 
-Every cycle checks all configured sources: hydrate the previous runtime snapshot, validate registry and credentials, acquire, conditionally revalidate unchanged upstreams, preserve last-good data on failure, normalize Official-FPL-authoritative identities, publish lineage, classify health, publish to `runtime-data-v6`, and retain the generated `data/v6/` tree as a 14-day GitHub Actions artifact. The scheduler runs at minute `05` every UTC hour.
+The active V6 universe is intentionally limited to sources that have a maintainable acquisition path. V6 does not chase nominal source count by adding anti-bot workarounds, fragile undocumented endpoints, or unnecessary paid dependencies. Sources that cannot be acquired cleanly are excluded from the active registry and are not counted as failures.
 
-`changed=false` or HTTP `304 Not Modified` is a successful current-cycle validation and remains GREEN. `checked_at`, `last_success_at`, `effective_state`, `data_origin`, and effective data age are kept separate.
+A user command `fresh V6` means one complete acquisition cycle across the full active universe. A cycle is FULL only when all **18/18 active sources** are attempted.
 
-## Performance architecture
+## Hourly lifecycle and persistence
 
-V6 uses two bounded concurrency layers:
+Every cycle:
 
-1. Source-level workers start all network-backed sources together, including Official FPL.
-2. Request-level workers execute independent endpoints within a source concurrently.
+1. hydrates the previous `runtime-data-v6` last-good snapshot when available;
+2. validates registry and credentials;
+3. acquires all active sources with isolated source/request failure handling and bounded concurrency;
+4. performs conditional revalidation when supported, so an upstream `NOT_MODIFIED` response is a successful fresh check rather than a degradation;
+5. preserves last-good source data on transient failure and marks its origin truthfully;
+6. normalizes Official-FPL-authoritative identities;
+7. publishes source lineage, freshness, health, and the latest evidence index;
+8. publishes the governed snapshot to `runtime-data-v6`;
+9. retains `data/v6/` as a 14-day GitHub Actions artifact.
 
-The derived Official price-predictor adapter is the only acquisition dependency. It runs after Official FPL completes. Official FPL no longer blocks unrelated sources.
+The scheduler runs at minute `05` every UTC hour. No upstream content change is required for a GREEN acquisition: a successful current-cycle revalidation with unchanged content remains GREEN.
 
-The default policy is 20 source workers and up to 4 request workers per active source, with short connect/read timeouts, bounded retries, retry backoff, and HTTP conditional revalidation using ETag / Last-Modified when the provider supports it.
-
-This is intentionally a modular in-process acquisition service rather than 27 deployment units. Separate workflow shards or services should only be introduced when runtime telemetry proves a provider family needs a separate failure domain or substantially different resource envelope. Avoiding premature microservice fragmentation keeps V6 faster and simpler while preserving adapter isolation.
-
-## Persistent last-good state
-
-The GitHub Actions workflow hydrates `data/v6/` from `runtime-data-v6` before every acquisition cycle. This is required for real last-good behavior across ephemeral runners.
-
-A failed source or request never silently erases a previously usable payload. The current attempt is preserved in `attempts`, while the effective payload explicitly reports one of:
-
-- `CURRENT_CYCLE`
-- `REVALIDATED_CACHE`
-- `LAST_GOOD_CACHE`
-
-A revalidated cache is current evidence that the upstream body has not changed. A last-good cache is degraded and remains AMBER.
-
-## 27-source universe
+## Active 18-source universe
 
 1. Official FPL
 2. Official FPL Price Predictor
 3. Understat
-4. Opta / The Analyst
-5. StatMuse
-6. Onside
-7. Ben Crellin
-8. Fantasy Football Fix
-9. Fantasy Football Hub
-10. OneFPL
-11. LiveFPL
-12. Fantasy Football Scout
-13. FBref
-14. FotMob
-15. Sofascore
-16. StatsBomb Open Data
-17. RotoWire Soccer
-18. PremierLeague.com Stats
-19. ClubElo
-20. Football-Data.co.uk
-21. Sportmonks
-22. API-Football / API-Sports
-23. Transfermarkt
-24. WhoScored
-25. ESPN Football Data
-26. football-data.org
-27. vaastav/Fantasy-Premier-League
+4. StatMuse
+5. Onside
+6. Ben Crellin
+7. Fantasy Football Fix
+8. Fantasy Football Hub
+9. OneFPL
+10. LiveFPL
+11. Fantasy Football Scout
+12. StatsBomb Open Data
+13. RotoWire Soccer
+14. PremierLeague.com Stats
+15. Football-Data.co.uk
+16. API-Football / API-Sports
+17. Transfermarkt
+18. vaastav/Fantasy-Premier-League
+
+## Intentionally excluded sources
+
+These sources are outside the active V6 universe because their API/scraping mechanism is currently too difficult, access-restricted, credential-dependent, paid, or operationally fragile for the desired clean hourly contract:
+
+- Opta / The Analyst
+- FBref
+- FotMob
+- Sofascore
+- ClubElo
+- Sportmonks
+- WhoScored
+- ESPN Football Data
+- football-data.org
+
+Excluded sources are **not** counted as missing, AMBER, RED, or skipped. They may return only through an explicit future source-set change with a maintainable acquisition path.
+
+`Football-Data.co.uk` is a separate source from `football-data.org` and remains active.
 
 ## Health semantics
 
-- GREEN: current acquisition or conditional revalidation succeeded. Content may be changed or unchanged.
-- AMBER: partial source, last-good cache, credential not configured, truncated text payload, or non-critical upstream degradation.
-- RED: critical source has no usable current or cached data.
+- **GREEN**: the active source succeeded in the current acquisition cycle, including a valid conditional revalidation where content is unchanged.
+- **AMBER**: an active non-critical source is partial, uses last-good cache, has a required credential not configured, or its upstream is temporarily unavailable.
+- **RED**: an active critical source has no usable current or cached data.
 
-Health exposes source duration and effective data age so a source can be checked recently without pretending that an unrevalidated stale cache is fresh.
+V6 keeps acquisition time, upstream data time, content-change state, effective state, and cache origin separate. Cached data is explicitly marked and V6 never silently substitutes or fabricates values.
 
 ## Runtime database layout
 
 ```text
 data/v6/
 ├── manifest.json
-├── current/<27 source snapshots>.json
+├── current/<18 active source snapshots>.json
 ├── normalized/canonical_players.json
 ├── normalized/canonical_teams.json
 ├── normalized/canonical_fixtures.json
@@ -87,34 +87,22 @@ data/v6/
 └── health/source_health.json
 ```
 
-The complete `data/v6/` tree is also retained as an immutable GitHub Actions artifact for each cycle.
-
 ## Canonical identity
 
-Official FPL owns canonical player (`official_fpl_element_id`), team, and fixture identities. External provider identifiers are attributes, not competing primary keys. The player registry exposes external-ID slots for all configured sources.
+Official FPL owns canonical player (`official_fpl_element_id`), team, and fixture identities. External provider identifiers are attributes, not competing primary keys. The canonical player registry exposes external-ID slots only for the configured active source universe.
 
-## Lineage
+## Lineage and independence
 
-V6 stores sources separately and never averages them. `opta_the_analyst`, `fbref`, and `whoscored` share the `opta_family` independence group so consumers do not count correlated retrieval paths as independent confirmations. Official price prediction remains derived from Official FPL; vaastav history cannot outrank current Official truth.
+V6 stores evidence by source and does not average provider values. `independence_group` is preserved so downstream Manual FPL can avoid double-counting correlated evidence. Official price prediction remains derived from Official FPL. The vaastav historical mirror cannot outrank current Official FPL truth.
 
-The price-predictor adapter inherits Official FPL freshness. A complete predictor payload derived from cached Official data is AMBER, not falsely GREEN.
+## Credential-backed provider
 
-## Credential-backed providers
-
-Expected Actions secrets are `SPORTMONKS_API_TOKEN`, `API_FOOTBALL_KEY`, and `FOOTBALL_DATA_ORG_TOKEN`. Missing credentials produce `CONFIG_REQUIRED` / AMBER with no auth bypass.
+The active source universe expects only `API_FOOTBALL_KEY` as an Actions secret. If it is absent, API-Football is truthfully `CONFIG_REQUIRED` / AMBER. V6 does not bypass authentication controls.
 
 ## Failure isolation and consumer rule
 
-A source failure cannot terminate the other acquisitions, and one endpoint failure cannot terminate sibling endpoints. V3/V4/other consumers should read V6 snapshots rather than duplicate upstream scraping unless an intentional emergency fallback is invoked; model weights remain the consumer's responsibility.
+One active source failure cannot terminate the other 17 acquisitions. Multiple requests within a source are also isolated. Official FPL runs first because canonical identities and Official price fields depend on it. Manual FPL should read V6 snapshots rather than duplicate upstream scraping. V3 and V4 are not V6 consumers until explicitly redesigned. Model weights and decisions remain outside V6.
 
-## Scale-out trigger
+## Publication governance
 
-Create separate workflow shards or services only when telemetry shows one of the following:
-
-- a source family repeatedly consumes a material share of the cycle wall-clock time;
-- provider-specific rate limits require separate scheduling;
-- authentication or network policy needs a separate failure domain;
-- payload size or parsing needs a materially different runtime;
-- one source family causes recurrent worker starvation despite bounded timeouts.
-
-Until one of those conditions is measured, bounded in-process concurrency is the preferred production design.
+Generated `data/v6` remains ignored on code branches. The dedicated publisher hydrates from and publishes to `runtime-data-v6`; it uses a force-add only inside that isolated runtime worktree. This keeps code branches clean while preserving persistent last-good evidence across hourly runs.

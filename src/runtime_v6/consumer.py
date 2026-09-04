@@ -6,9 +6,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .publish_integrity import validate_publish_tree
+
 
 DEFAULT_MAX_AGE_MINUTES = 90
 MAX_CLOCK_SKEW_MINUTES = 5
+_ALLOWED_SCHEDULE_KINDS = {"primary", "recovery"}
 
 
 def _utc(value: str) -> datetime:
@@ -62,6 +65,8 @@ def assess_snapshot(
     for authority in ("decision_authority", "prediction_authority", "optimizer_authority"):
         if governance.get(authority) != "NONE":
             failures.append(f"UNEXPECTED_{authority.upper()}")
+    if governance.get("production_ingestion_schedule_only") is not True:
+        failures.append("PRODUCTION_SCHEDULE_ONLY_CONTRACT_BROKEN")
 
     if integrity.get("status") != "PASS":
         failures.append("PUBLISH_INTEGRITY_NOT_PASS")
@@ -69,6 +74,16 @@ def assess_snapshot(
         failures.append("CURRENT_SOURCE_FILESET_NOT_EXACT")
     if integrity.get("identity_map_consistent") is not True:
         failures.append("IDENTITY_MAP_NOT_CONSISTENT")
+
+    recomputed = validate_publish_tree(root)
+    if recomputed.get("status") != "PASS":
+        failures.append("RECOMPUTED_PUBLISH_INTEGRITY_NOT_PASS")
+    stored_digest = integrity.get("tree_sha256")
+    recomputed_digest = recomputed.get("tree_sha256")
+    if not stored_digest:
+        failures.append("MISSING_PUBLISH_TREE_DIGEST")
+    elif stored_digest != recomputed_digest:
+        failures.append("PUBLISH_TREE_DIGEST_MISMATCH")
 
     generated_at_raw = manifest.get("generated_at")
     if not generated_at_raw:
@@ -87,6 +102,17 @@ def assess_snapshot(
             failures.append("INVALID_GENERATED_AT")
 
     control = manifest.get("runtime_control") or {}
+    if control.get("scheduled_cycle") is not True:
+        failures.append("NON_SCHEDULED_RUNTIME_SNAPSHOT")
+    if control.get("event_name") != "schedule":
+        failures.append("INVALID_RUNTIME_EVENT_PROVENANCE")
+    if control.get("schedule_kind") not in _ALLOWED_SCHEDULE_KINDS:
+        failures.append("INVALID_RUNTIME_SCHEDULE_KIND")
+    if control.get("duplicate_scheduled_cycle") is True:
+        failures.append("DUPLICATE_SCHEDULED_CYCLE")
+    if not control.get("run_id"):
+        failures.append("MISSING_RUNTIME_RUN_ID")
+
     if manifest.get("overall") == "RED":
         failures.append("MANIFEST_OVERALL_RED")
     if control.get("health") == "RED":
@@ -123,9 +149,13 @@ def assess_snapshot(
         "max_age_minutes": int(max_age_minutes),
         "manifest_overall": manifest.get("overall"),
         "runtime_control_health": control.get("health"),
+        "stored_tree_sha256": stored_digest,
+        "recomputed_tree_sha256": recomputed_digest,
         "failures": failures,
         "governance": {
             "consumer_does_not_trust_static_green_without_freshness": True,
+            "consumer_recomputes_publish_integrity": True,
+            "consumer_requires_scheduled_runtime_provenance": True,
             "stale_or_invalid_allows_minimum_scope_direct_fallback": True,
             "fresh_v6_is_primary_data_authority": True,
         },

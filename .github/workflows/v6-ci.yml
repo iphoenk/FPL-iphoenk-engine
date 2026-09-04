@@ -14,6 +14,7 @@ on:
       - "tests/test_data_platform_publish_integrity.py"
       - "tests/test_data_platform_identity.py"
       - "tests/test_data_platform_publisher_governance.py"
+      - "tests/test_data_platform_consumer.py"
       - ".github/workflows/v6-ci.yml"
       - ".github/workflows/v6-hourly-data-ingestion.yml"
   push:
@@ -30,6 +31,7 @@ on:
       - "tests/test_data_platform_publish_integrity.py"
       - "tests/test_data_platform_identity.py"
       - "tests/test_data_platform_publisher_governance.py"
+      - "tests/test_data_platform_consumer.py"
       - ".github/workflows/v6-ci.yml"
       - ".github/workflows/v6-hourly-data-ingestion.yml"
 
@@ -66,3 +68,4 @@ jobs:
           tests/test_data_platform_publish_integrity.py
           tests/test_data_platform_identity.py
           tests/test_data_platform_publisher_governance.py
+          tests/test_data_platform_consumer.py

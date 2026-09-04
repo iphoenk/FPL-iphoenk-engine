@@ -38,6 +38,30 @@ def _read_json(path: Path) -> dict[str, Any]:
         return {}
 
 
+def scheduled_slot_already_completed(
+    previous_manifest: dict[str, Any] | None,
+    *,
+    scheduler_interval_minutes: int = 60,
+    now: datetime | None = None,
+    event_name: str | None = None,
+) -> bool:
+    """Return True only when this scheduled slot was already published.
+
+    This intentionally does not infer completion from ``generated_at``. A manual
+    or legacy non-scheduled refresh must not mask a missing scheduled cycle.
+    """
+    event = str(event_name or os.getenv("GITHUB_EVENT_NAME") or "local")
+    if event != "schedule":
+        return False
+    previous = dict(previous_manifest or {})
+    previous_control = dict(previous.get("runtime_control") or {})
+    last_scheduled = _parse_dt(previous_control.get("last_scheduled_cycle_at"))
+    if last_scheduled is None:
+        return False
+    interval = max(1, int(scheduler_interval_minutes))
+    return scheduler_slot_start(last_scheduled, interval) == scheduler_slot_start(_now(now), interval)
+
+
 def build_runtime_control(
     previous_manifest: dict[str, Any] | None,
     *,
@@ -45,12 +69,18 @@ def build_runtime_control(
     now: datetime | None = None,
     event_name: str | None = None,
     run_id: str | None = None,
+    schedule_kind: str | None = None,
 ) -> dict[str, Any]:
     current = _now(now)
     scheduler_interval = max(1, int(scheduler_interval_minutes))
     slot = scheduler_slot_start(current, scheduler_interval)
     event = str(event_name or os.getenv("GITHUB_EVENT_NAME") or "local")
     scheduled_cycle = event == "schedule"
+    kind = str(
+        schedule_kind
+        or os.getenv("V6_SCHEDULE_KIND")
+        or ("scheduled" if scheduled_cycle else "manual")
+    )
     previous = dict(previous_manifest or {})
     previous_control = dict(previous.get("runtime_control") or {})
 
@@ -65,7 +95,12 @@ def build_runtime_control(
     missed_cycle_count = 0
     duplicate_scheduled_cycle = False
     if scheduled_cycle and previous_scheduled is not None:
-        slot_gap = int((slot - scheduler_slot_start(previous_scheduled, scheduler_interval)).total_seconds() // (scheduler_interval * 60))
+        slot_gap = int(
+            (
+                slot - scheduler_slot_start(previous_scheduled, scheduler_interval)
+            ).total_seconds()
+            // (scheduler_interval * 60)
+        )
         duplicate_scheduled_cycle = slot_gap == 0
         missed_cycle_count = max(0, slot_gap - 1)
 
@@ -79,9 +114,10 @@ def build_runtime_control(
     schedule_lag_seconds = max(0.0, (current - slot).total_seconds()) if scheduled_cycle else None
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "health": health,
         "event_name": event,
+        "schedule_kind": kind,
         "run_id": str(run_id or os.getenv("GITHUB_RUN_ID") or "") or None,
         "scheduled_cycle": scheduled_cycle,
         "scheduler_interval_minutes": scheduler_interval,
@@ -105,6 +141,7 @@ def apply_runtime_control(
     now: datetime | None = None,
     event_name: str | None = None,
     run_id: str | None = None,
+    schedule_kind: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     out = dict(manifest)
     polling = dict(out.get("polling") or {})
@@ -115,6 +152,7 @@ def apply_runtime_control(
         now=now,
         event_name=event_name,
         run_id=run_id,
+        schedule_kind=schedule_kind,
     )
 
     control_failures = []
@@ -134,6 +172,7 @@ def apply_runtime_control(
             "production_ingestion_schedule_only": True,
             "single_logical_acquisition_per_scheduler_slot": True,
             "runtime_schedule_health_is_manifested": True,
+            "scheduled_recovery_is_idempotent": True,
         }
     )
     out["governance"] = governance

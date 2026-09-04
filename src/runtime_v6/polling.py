@@ -57,6 +57,7 @@ def _budget_state(
     previous: dict[str, Any] | None,
     *,
     now: datetime,
+    max_attempts_per_request: int,
 ) -> dict[str, Any]:
     daily_budget = source.get("daily_request_budget")
     day_wib = now.astimezone(WIB).date().isoformat()
@@ -64,12 +65,16 @@ def _budget_state(
     previous_day = str(previous_budget.get("date_wib") or "")
     used = int(previous_budget.get("requests_used") or 0) if previous_day == day_wib else 0
     configured_requests = len(source.get("requests") or [])
+    attempts = max(1, int(max_attempts_per_request))
+    reserved_requests = configured_requests * attempts
     if daily_budget is None:
         return {
             "date_wib": day_wib,
             "limit": None,
             "requests_used": used,
             "configured_requests_next_poll": configured_requests,
+            "max_attempts_per_request": attempts,
+            "reserved_requests_next_poll": reserved_requests,
             "remaining": None,
         }
     limit = max(1, int(daily_budget))
@@ -78,6 +83,8 @@ def _budget_state(
         "limit": limit,
         "requests_used": used,
         "configured_requests_next_poll": configured_requests,
+        "max_attempts_per_request": attempts,
+        "reserved_requests_next_poll": reserved_requests,
         "remaining": max(0, limit - used),
     }
 
@@ -88,10 +95,16 @@ def poll_decision(
     *,
     deadline_window: bool = False,
     now: datetime | None = None,
+    max_attempts_per_request: int = 1,
 ) -> dict[str, Any]:
     current = _now(now)
     interval = effective_poll_interval_minutes(source, deadline_window=deadline_window)
-    budget = _budget_state(source, previous, now=current)
+    budget = _budget_state(
+        source,
+        previous,
+        now=current,
+        max_attempts_per_request=max_attempts_per_request,
+    )
 
     if source.get("verification_required") is True:
         status = str(source.get("verification_status") or "PENDING").upper()
@@ -107,7 +120,7 @@ def poll_decision(
             }
 
     if budget["limit"] is not None:
-        required = int(budget["configured_requests_next_poll"] or 0)
+        required = int(budget["reserved_requests_next_poll"] or 0)
         if required > int(budget["remaining"] or 0):
             return {
                 "due": False,

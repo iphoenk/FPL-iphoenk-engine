@@ -36,6 +36,7 @@ on:
       - 'requirements-v6-ci.lock'
       - '.github/workflows/v6-ci.yml'
       - '.github/workflows/v6-hourly-data-ingestion.yml'
+      - '.github/workflows/v3-ci.yml'
       - '.github/workflows/v4-prediction.yml'
       - '.github/workflows/v4-timing-probe.yml'
       - '.github/workflows/fpl-engine-recovery.yml'

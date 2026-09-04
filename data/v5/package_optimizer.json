@@ -266,7 +266,7 @@
         {
           "element": 8,
           "name": "Calafiori",
-          "sell_cost": 55
+          "sell_cost": 56
         }
       ],
       "ins": [
@@ -282,9 +282,9 @@
         }
       ],
       "affordability": {
-        "cash_available": 140,
+        "cash_available": 141,
         "incoming_cost": 140,
-        "resulting_itb": 0
+        "resulting_itb": 1
       },
       "score": {
         "valid": true,
@@ -367,7 +367,7 @@
         {
           "element": 8,
           "name": "Calafiori",
-          "sell_cost": 55
+          "sell_cost": 56
         }
       ],
       "ins": [
@@ -383,9 +383,9 @@
         }
       ],
       "affordability": {
-        "cash_available": 130,
+        "cash_available": 131,
         "incoming_cost": 130,
-        "resulting_itb": 0
+        "resulting_itb": 1
       },
       "score": {
         "valid": true,
@@ -468,7 +468,7 @@
         {
           "element": 8,
           "name": "Calafiori",
-          "sell_cost": 55
+          "sell_cost": 56
         }
       ],
       "ins": [
@@ -484,9 +484,9 @@
         }
       ],
       "affordability": {
-        "cash_available": 130,
+        "cash_available": 131,
         "incoming_cost": 130,
-        "resulting_itb": 0
+        "resulting_itb": 1
       },
       "score": {
         "valid": true,
@@ -969,7 +969,7 @@
         {
           "element": 8,
           "name": "Calafiori",
-          "sell_cost": 55
+          "sell_cost": 56
         },
         {
           "element": 40,
@@ -990,9 +990,9 @@
         }
       ],
       "affordability": {
-        "cash_available": 140,
+        "cash_available": 141,
         "incoming_cost": 137,
-        "resulting_itb": 3
+        "resulting_itb": 4
       },
       "score": {
         "valid": true,
@@ -1075,7 +1075,7 @@
         {
           "element": 8,
           "name": "Calafiori",
-          "sell_cost": 55
+          "sell_cost": 56
         }
       ],
       "ins": [
@@ -1091,9 +1091,9 @@
         }
       ],
       "affordability": {
-        "cash_available": 140,
+        "cash_available": 141,
         "incoming_cost": 140,
-        "resulting_itb": 0
+        "resulting_itb": 1
       },
       "score": {
         "valid": true,
@@ -1374,7 +1374,7 @@
         {
           "element": 8,
           "name": "Calafiori",
-          "sell_cost": 55
+          "sell_cost": 56
         },
         {
           "element": 346,
@@ -1395,9 +1395,9 @@
         }
       ],
       "affordability": {
-        "cash_available": 125,
+        "cash_available": 126,
         "incoming_cost": 115,
-        "resulting_itb": 10
+        "resulting_itb": 11
       },
       "score": {
         "valid": true,
@@ -1683,7 +1683,7 @@
         {
           "element": 8,
           "name": "Calafiori",
-          "sell_cost": 55
+          "sell_cost": 56
         }
       ],
       "ins": [
@@ -1699,9 +1699,9 @@
         }
       ],
       "affordability": {
-        "cash_available": 140,
+        "cash_available": 141,
         "incoming_cost": 135,
-        "resulting_itb": 5
+        "resulting_itb": 6
       },
       "score": {
         "valid": true,
@@ -1880,7 +1880,7 @@
         {
           "element": 8,
           "name": "Calafiori",
-          "sell_cost": 55
+          "sell_cost": 56
         },
         {
           "element": 40,
@@ -1901,9 +1901,9 @@
         }
       ],
       "affordability": {
-        "cash_available": 140,
+        "cash_available": 141,
         "incoming_cost": 130,
-        "resulting_itb": 10
+        "resulting_itb": 11
       },
       "score": {
         "valid": true,
@@ -4514,7 +4514,7 @@
       "optimizer challenger clears configured strong-review thresholds"
     ],
     "reasons_against": [
-      "market timing context contains 76 active price alerts"
+      "market timing context contains 72 active price alerts"
     ],
     "evidence": [
       {
@@ -4617,7 +4617,7 @@
     "team_cluster_penalty"
   ],
   "price_context": {
-    "alert_count": 76
+    "alert_count": 72
   },
   "governance": {
     "candidate_generation_only": true,

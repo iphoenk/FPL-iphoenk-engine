@@ -1,0 +1,19 @@
+name: V5 P0 E2E Dispatch Smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/v5-e2e-dispatch-smoke.yml'
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  shadow-cycle:
+    uses: iphoenk/FPL-iphoenk-engine/.github/workflows/v5-shadow-cycle.yml@v5-unified-engine
+    with:
+      scheduler_reasons: P0_E2E_DISPATCH_SMOKE
+      scheduler_source: temporary-pr-e2e-smoke
+    secrets: inherit

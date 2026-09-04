@@ -200,6 +200,28 @@ def test_master_orchestrated_is_authoritative_without_masking_natural_schedule()
     assert updated["governance"]["manual_recovery_is_authoritative"] is False
 
 
+def test_issue_comment_master_orchestration_is_authoritative():
+    manifest = {
+        "overall": "GREEN",
+        "polling": {"scheduler_interval_minutes": 60},
+        "paths": {},
+        "governance": {},
+    }
+    updated, control = apply_runtime_control(
+        manifest,
+        {},
+        now=datetime(2026, 9, 4, 9, 31, tzinfo=timezone.utc),
+        event_name="issue_comment",
+        schedule_kind="master_orchestrated",
+    )
+
+    assert control["health"] == "GREEN"
+    assert control["master_orchestrated"] is True
+    assert control["scheduled_cycle"] is False
+    assert control["authoritative_runtime_snapshot"] is True
+    assert updated["control_failures"] == []
+
+
 def test_manual_recovery_is_non_authoritative_and_manifested_amber():
     manifest = {
         "overall": "GREEN",
@@ -245,6 +267,10 @@ def test_production_workflow_has_off_minute_schedule_and_governed_manual_recover
     assert (cron_minutes[1] - cron_minutes[0]) % 60 == 30
     assert policy["governance"]["avoid_top_of_hour_scheduler_load"] is True
     assert "workflow_dispatch:" in workflow
+    assert "issue_comment:" in workflow
+    assert "V6 Master Orchestrator Trigger" not in workflow
+    assert "github.event.issue.number == 431" in workflow
+    assert "/v6-master-acquire" in workflow
     assert "Authorize governed manual recovery" in workflow
     assert "RECOVER_V6" in workflow
     assert "schedule_policy.json" in workflow

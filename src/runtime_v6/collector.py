@@ -55,6 +55,10 @@ def run() -> dict[str, Any]:
     results: dict[str, dict[str, Any]] = {}
     started = time.perf_counter()
 
+    scheduler_interval_minutes = max(
+        1,
+        int((config.get("cadence") or {}).get("scheduler_interval_minutes") or 60),
+    )
     deadline_window = deadline_window_active(
         previous,
         hours=int(config["policy"].get("deadline_window_hours") or 48),
@@ -70,6 +74,7 @@ def run() -> dict[str, Any]:
             previous.get(source["id"]),
             deadline_window=deadline_window,
             max_attempts_per_request=client.retry_attempts,
+            scheduler_interval_minutes=scheduler_interval_minutes,
         )
         for source in runnable
     }
@@ -181,6 +186,7 @@ def run() -> dict[str, Any]:
         },
         "polling": {
             "adaptive": True,
+            "scheduler_interval_minutes": scheduler_interval_minutes,
             "deadline_window_active": deadline_window,
             "deadline_window_hours": int(config["policy"].get("deadline_window_hours") or 48),
             "due_source_count": len(due_sources),

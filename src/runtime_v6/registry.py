@@ -264,6 +264,8 @@ def validate_registry(payload: dict[str, Any]) -> None:
             raise RegistryError(f"http source has no requests: {source['id']}")
         if source.get("acquisition_kind") not in _ALLOWED_ACQUISITION_KINDS:
             raise RegistryError(f"unsupported acquisition kind: {source['id']}")
+        if source.get("required_for_platform") is True and source.get("critical") is not True:
+            raise RegistryError(f"required V6 platform source must be critical: {source['id']}")
         for dependency in source.get("depends_on") or []:
             if str(dependency) not in active_ids:
                 raise RegistryError(f"active V6 dependency missing: {source['id']} -> {dependency}")

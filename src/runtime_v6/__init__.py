@@ -1,1 +1,5 @@
-"""V6 data-ingestion runtime.\n\nV6 has no FPL decision, prediction, optimizer, captaincy, chip, or transfer authority.\nIt only acquires and publishes source snapshots.\n"""\n
+"""V6 data-ingestion runtime.
+
+V6 has no FPL decision, prediction, optimizer, captaincy, chip, or transfer authority.
+It only acquires and publishes source snapshots.
+"""

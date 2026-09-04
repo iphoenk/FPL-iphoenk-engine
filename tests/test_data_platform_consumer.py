@@ -71,7 +71,10 @@ def _write_snapshot(
     _write_json(root / "normalized" / "canonical_fixtures.json", {})
     _write_json(root / "evidence" / "lineage.json", {})
     _write_json(root / "evidence" / "latest_index.json", {})
-    _write_json(root / "evidence" / "resolved_registry.json", {"source_count": 1})
+    _write_json(
+        root / "evidence" / "resolved_registry.json",
+        {"source_count": 1, "sources": [{"id": "official_fpl"}]},
+    )
     _write_json(
         root / "evidence" / "player_identity_map.json",
         {
@@ -82,6 +85,7 @@ def _write_snapshot(
 
     publish_integrity = validate_publish_tree(root)
     assert publish_integrity["status"] == "PASS"
+    assert publish_integrity["resolved_registry_exact"] is True
     publish_integrity["status"] = integrity
     _write_json(root / "health" / "publish_integrity.json", publish_integrity)
 
@@ -101,6 +105,7 @@ def test_fresh_green_snapshot_is_usable(tmp_path: Path):
     assert result["direct_fallback_eligible"] is False
     assert result["stored_tree_sha256"] == result["recomputed_tree_sha256"]
     assert result["governance"]["consumer_recomputes_publish_integrity"] is True
+    assert result["governance"]["consumer_requires_exact_resolved_registry"] is True
     assert result["governance"]["consumer_requires_scheduled_runtime_provenance"] is True
 
 
@@ -144,6 +149,21 @@ def test_tampered_tree_is_invalid_even_if_stored_integrity_still_says_pass(tmp_p
 
     assert result["state"] == "INVALID"
     assert "PUBLISH_TREE_DIGEST_MISMATCH" in result["failures"]
+
+
+def test_registry_identity_divergence_is_invalid_even_with_matching_source_count(tmp_path: Path):
+    root = tmp_path / "v6"
+    _write_snapshot(root, "2026-09-04T10:40:00+00:00")
+    _write_json(
+        root / "evidence" / "resolved_registry.json",
+        {"source_count": 1, "sources": [{"id": "rogue_source"}]},
+    )
+
+    result = assess_snapshot(root, now=datetime(2026, 9, 4, 10, 45, tzinfo=timezone.utc))
+
+    assert result["state"] == "INVALID"
+    assert "RECOMPUTED_PUBLISH_INTEGRITY_NOT_PASS" in result["failures"]
+    assert "RECOMPUTED_RESOLVED_REGISTRY_NOT_EXACT" in result["failures"]
 
 
 def test_manual_or_non_scheduled_snapshot_is_invalid(tmp_path: Path):

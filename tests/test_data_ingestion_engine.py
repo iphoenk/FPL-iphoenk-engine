@@ -44,7 +44,7 @@ def test_dropped_and_reference_only_sources_never_enter_active_source_map():
         assert source_id not in sources
     assert "fffix" in registry.REFERENCE_ONLY_SOURCE_IDS
     assert "ffhub" in registry.REFERENCE_ONLY_SOURCE_IDS
-    assert sources["clubelo"]["activation_constraint"] == "KEEP_AND_REPAIR"
+    assert "clubelo" in registry.REFERENCE_ONLY_SOURCE_IDS
 
 
 def test_free_source_expansion_is_registered_with_safe_tiers():
@@ -63,6 +63,7 @@ def test_free_source_expansion_is_registered_with_safe_tiers():
     assert set(registry.REFERENCE_ONLY_SOURCE_IDS) == {
         "fffix",
         "ffhub",
+        "clubelo",
         "bbc_team_news",
         "premier_injuries",
         "fpl_form",

@@ -44,22 +44,33 @@ def scheduled_slot_already_completed(
     scheduler_interval_minutes: int = 60,
     now: datetime | None = None,
     event_name: str | None = None,
+    schedule_kind: str | None = None,
 ) -> bool:
-    """Return True only when this scheduled slot was already published.
+    """Return True when this logical hourly V6 slot already has authoritative data.
 
-    This intentionally does not infer completion from ``generated_at``. A manual
-    or legacy non-scheduled refresh must not mask a missing scheduled cycle.
+    Natural schedule and FPL Master orchestration share one operational slot, while
+    natural-scheduler evidence remains tracked separately in runtime_control.
+    Emergency manual recovery never completes an authoritative slot.
     """
     event = str(event_name or os.getenv("GITHUB_EVENT_NAME") or "local")
-    if event != "schedule":
+    kind = str(schedule_kind or os.getenv("V6_SCHEDULE_KIND") or "")
+    authoritative_invocation = (
+        event == "schedule"
+        or (event == "workflow_dispatch" and kind == "master_orchestrated")
+    )
+    if not authoritative_invocation:
         return False
     previous = dict(previous_manifest or {})
     previous_control = dict(previous.get("runtime_control") or {})
-    last_scheduled = _parse_dt(previous_control.get("last_scheduled_cycle_at"))
-    if last_scheduled is None:
+    last_authoritative = _parse_dt(previous_control.get("last_authoritative_cycle_at"))
+    if last_authoritative is None and event == "schedule":
+        last_authoritative = _parse_dt(previous_control.get("last_scheduled_cycle_at"))
+    if last_authoritative is None and previous_control.get("authoritative_runtime_snapshot") is True:
+        last_authoritative = _parse_dt(previous_control.get("cycle_observed_at"))
+    if last_authoritative is None:
         return False
     interval = max(1, int(scheduler_interval_minutes))
-    return scheduler_slot_start(last_scheduled, interval) == scheduler_slot_start(_now(now), interval)
+    return scheduler_slot_start(last_authoritative, interval) == scheduler_slot_start(_now(now), interval)
 
 
 def build_runtime_control(
@@ -81,8 +92,12 @@ def build_runtime_control(
         or os.getenv("V6_SCHEDULE_KIND")
         or ("scheduled" if scheduled_cycle else "manual")
     )
+    master_orchestrated = event == "workflow_dispatch" and kind == "master_orchestrated"
     manual_recovery = event == "workflow_dispatch" and kind == "manual_recovery"
-    authoritative_runtime_snapshot = scheduled_cycle and kind in {"primary", "recovery"}
+    authoritative_runtime_snapshot = (
+        (scheduled_cycle and kind in {"primary", "recovery"})
+        or master_orchestrated
+    )
     previous = dict(previous_manifest or {})
     previous_control = dict(previous.get("runtime_control") or {})
 
@@ -111,14 +126,18 @@ def build_runtime_control(
     else:
         last_scheduled_cycle = previous_scheduled
 
+    previous_authoritative = _parse_dt(previous_control.get("last_authoritative_cycle_at"))
+    if previous_authoritative is None and previous_control.get("authoritative_runtime_snapshot") is True:
+        previous_authoritative = _parse_dt(previous_control.get("cycle_observed_at"))
+    last_authoritative_cycle = slot if authoritative_runtime_snapshot else previous_authoritative
+
     if scheduled_cycle:
         health = "RED" if missed_cycle_count else ("AMBER" if duplicate_scheduled_cycle else "GREEN")
+    elif master_orchestrated:
+        health = "GREEN"
     else:
-        # A governed manual recovery is deliberately non-authoritative. It may
-        # refresh last-good evidence/caches, but consumers must wait for a real
-        # scheduled cycle before treating V6 as fresh production authority.
         health = "AMBER"
-    expected = slot if scheduled_cycle else None
+    expected = slot if (scheduled_cycle or master_orchestrated) else None
     schedule_lag_seconds = max(0.0, (current - slot).total_seconds()) if scheduled_cycle else None
 
     return {
@@ -128,15 +147,18 @@ def build_runtime_control(
         "schedule_kind": kind,
         "run_id": str(run_id or os.getenv("GITHUB_RUN_ID") or "") or None,
         "scheduled_cycle": scheduled_cycle,
+        "master_orchestrated": master_orchestrated,
         "manual_recovery": manual_recovery,
         "authoritative_runtime_snapshot": authoritative_runtime_snapshot,
         "counts_as_completed_scheduled_slot": scheduled_cycle,
+        "counts_as_completed_operational_slot": authoritative_runtime_snapshot,
         "scheduler_interval_minutes": scheduler_interval,
         "expected_cycle_at": expected.isoformat() if expected else None,
         "cycle_observed_at": current.isoformat(),
         "schedule_lag_seconds": round(schedule_lag_seconds, 3) if schedule_lag_seconds is not None else None,
         "previous_scheduled_cycle_at": previous_scheduled.isoformat() if previous_scheduled else None,
         "last_scheduled_cycle_at": last_scheduled_cycle.isoformat() if last_scheduled_cycle else None,
+        "last_authoritative_cycle_at": last_authoritative_cycle.isoformat() if last_authoritative_cycle else None,
         "missed_cycle": missed_cycle_count > 0,
         "missed_cycle_count": missed_cycle_count,
         "duplicate_scheduled_cycle": duplicate_scheduled_cycle,
@@ -183,7 +205,10 @@ def apply_runtime_control(
     governance.update(
         {
             "production_ingestion_schedule_only": control["scheduled_cycle"],
-            "production_authoritative_snapshots_require_schedule": True,
+            "production_authoritative_snapshots_require_schedule": False,
+            "production_authoritative_snapshots_require_governed_trigger": True,
+            "authoritative_trigger_kinds": ["primary", "recovery", "master_orchestrated"],
+            "master_orchestrated_is_authoritative": True,
             "governed_manual_recovery_enabled": True,
             "manual_recovery_is_authoritative": False,
             "single_logical_acquisition_per_scheduler_slot": True,

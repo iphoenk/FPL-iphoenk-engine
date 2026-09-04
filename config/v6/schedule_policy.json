@@ -14,12 +14,28 @@
     "confirmation_phrase": "RECOVER_V6"
   },
   "governance": {
-    "scheduled_runtime_is_primary_authority": true,
+    "scheduled_runtime_is_primary_authority": false,
     "single_schedule_owner": "config/v6/schedule_policy.json",
     "manual_recovery_never_masks_missed_schedule": true,
     "manual_recovery_must_use_dedicated_v6_publisher": true,
     "push_triggered_production_acquisition_allowed": false,
     "pull_request_triggered_production_acquisition_allowed": false,
-    "avoid_top_of_hour_scheduler_load": true
+    "avoid_top_of_hour_scheduler_load": true,
+    "authoritative_operational_triggers": [
+      "schedule:primary",
+      "schedule:recovery",
+      "workflow_dispatch:master_orchestrated"
+    ],
+    "master_orchestrated_is_authoritative": true,
+    "master_orchestrated_never_masks_natural_scheduler_evidence": true
+  },
+  "master_orchestrated": {
+    "enabled": true,
+    "schedule_kind": "master_orchestrated",
+    "authoritative_runtime_snapshot": true,
+    "counts_as_completed_operational_slot": true,
+    "counts_as_completed_scheduled_slot": false,
+    "allowed_actor": "repository_owner",
+    "reason_required": true
   }
 }

@@ -6,18 +6,22 @@ from src.runtime_v6 import adapters, normalizer, registry
 from src.runtime_v6.http_client import AcquisitionClient
 
 
-def test_registry_is_data_only_and_has_exact_27_sources():
+def test_registry_is_data_only_and_has_exact_active_20_sources():
     cfg = registry.load_registry()
     ids = tuple(row["id"] for row in cfg["sources"])
     assert ids == registry.EXPECTED_SOURCE_IDS
-    assert len(ids) == 27
+    assert len(ids) == 20
+    assert set(ids).isdisjoint(registry.DROPPED_SOURCE_IDS)
+    assert cfg["activation"]["base_source_count"] == 27
+    assert cfg["activation"]["active_source_count"] == 20
+    assert cfg["activation"]["disabled_source_count"] == 7
     assert cfg["policy"]["data_only"] is True
     assert cfg["policy"]["decision_authority"] == "NONE"
     assert cfg["policy"]["prediction_authority"] == "NONE"
     assert cfg["policy"]["optimizer_authority"] == "NONE"
 
 
-def test_all_sources_are_hourly_checked_fail_isolated_and_concurrent():
+def test_all_active_sources_are_fail_isolated_and_concurrent():
     cfg = registry.load_registry()
     assert cfg["cadence"]["schedule"] == "hourly"
     assert cfg["cadence"]["check_every_source_each_cycle"] is True
@@ -28,13 +32,14 @@ def test_all_sources_are_hourly_checked_fail_isolated_and_concurrent():
     assert cfg["policy"]["conditional_revalidation"] is True
 
 
-def test_secret_backed_source_without_secret_is_config_required(monkeypatch):
-    monkeypatch.delenv("SPORTMONKS_API_TOKEN", raising=False)
+def test_dropped_paid_and_restricted_sources_never_enter_active_source_map():
     cfg = registry.load_registry()
-    source = registry.source_map(cfg)["sportmonks"]
-    result = AcquisitionClient(cfg["policy"]).fetch(source, source["requests"][0])
-    assert result["status"] == "CONFIG_REQUIRED"
-    assert result["health"] == "AMBER"
+    sources = registry.source_map(cfg)
+    for source_id in registry.DROPPED_SOURCE_IDS:
+        assert source_id not in sources
+    assert sources["ffhub"]["activation_constraint"] == "FREE_OR_PUBLIC_PARTIAL_ONLY_NO_PRO_UPGRADE"
+    assert sources["fffix"]["activation_constraint"] == "FREE_OR_PUBLIC_ONLY"
+    assert sources["clubelo"]["activation_constraint"] == "KEEP_AND_REPAIR"
 
 
 def test_http_last_good_cache_survives_failure(monkeypatch):
@@ -222,18 +227,26 @@ def test_canonical_identity_is_official_fpl():
     assert players["players"][0]["identity_authority"] == "official_fpl"
 
 
-def test_lineage_groups_correlated_opta_paths():
+def test_lineage_reflects_only_active_opta_family_paths():
     cfg = registry.load_registry()
     lineage = normalizer.build_lineage_catalog(cfg)
-    assert set(lineage["groups"]["opta_family"]) == {"opta_the_analyst", "fbref", "whoscored"}
+    assert set(lineage["groups"]["opta_family"]) == {"opta_the_analyst"}
 
 
 def test_workflow_hydrates_runtime_last_good_before_collection():
     workflow = Path(".github/workflows/v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
     hydrate = workflow.index("Hydrate previous V6 last-good snapshot")
-    collect = workflow.index("Pull all 27 V6 sources")
+    collect = workflow.index("Run active V6 acquisition cycle")
     assert hydrate < collect
     assert 'git archive "origin/${RUNTIME_BRANCH}" data/v6' in workflow
+
+
+def test_workflow_does_not_inject_dropped_paid_provider_secrets():
+    workflow = Path(".github/workflows/v6-hourly-data-ingestion.yml").read_text(encoding="utf-8")
+    assert "SPORTMONKS_API_TOKEN" not in workflow
+    assert "API_FOOTBALL_KEY" not in workflow
+    assert "FOOTBALL_DATA_ORG_TOKEN" not in workflow
+    assert 'manifest["source_count"] == 20' in workflow
 
 
 def test_workflow_force_adds_ignored_runtime_snapshot():

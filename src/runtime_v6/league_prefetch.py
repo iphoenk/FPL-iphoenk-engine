@@ -224,6 +224,12 @@ def acquire_manager_picks(
 
     available = [entry_id for entry_id in manager_ids if entries[str(entry_id)]["status"] == "AVAILABLE"]
     missing = [entry_id for entry_id in manager_ids if entries[str(entry_id)]["status"] != "AVAILABLE"]
+    expected_count = len(manager_ids)
+    available_count = len(available)
+    missing_count = len(missing)
+    complete = expected_count > 0 and missing_count == 0
+    coverage_percent = round(available_count * 100 / expected_count, 4) if expected_count else 0.0
+    health = "GREEN" if complete else ("AMBER" if available_count else "RED")
     origins = {
         "LIVE_FETCHED_CURRENT_GW": sum(
             1 for record in entries.values() if record.get("origin") == "LIVE_FETCHED_CURRENT_GW"
@@ -241,11 +247,14 @@ def acquire_manager_picks(
         "deadline_passed": deadline_passed,
         "immutable_after_deadline": deadline_passed,
         "manager_set_digest": manager_set_digest,
-        "expected_manager_count": len(manager_ids),
-        "submitted_picks_available_count": len(available),
-        "submitted_picks_missing_count": len(missing),
+        "expected_manager_count": expected_count,
+        "collected_manager_count": available_count,
+        "submitted_picks_available_count": available_count,
+        "submitted_picks_missing_count": missing_count,
+        "coverage_percent": coverage_percent,
+        "health": health,
         "missing_entry_ids": missing,
-        "complete": not missing,
+        "complete": complete,
         "entries": {key: entries[key] for key in sorted(entries, key=int)},
         "cache": {
             "enabled": cache_enabled,
@@ -272,9 +281,9 @@ def acquire_manager_picks(
             "gw": gw,
             "league_id": league_id,
             "pagination_coverage": {
-                "expected_managers": len(manager_ids),
-                "available_managers": len(available),
-                "missing_managers": len(missing),
+                "expected_managers": expected_count,
+                "available_managers": available_count,
+                "missing_managers": missing_count,
             },
             "normalization_version": NORMALIZATION_VERSION,
         },
@@ -396,6 +405,9 @@ def exposure_artifact(
         players.append(row)
 
     expected = int(manager_picks.get("expected_manager_count") or 0)
+    missing_count = max(0, expected - denominator)
+    complete = expected > 0 and denominator == expected
+    health = "GREEN" if complete else ("AMBER" if denominator else "RED")
     return {
         "schema_version": SCHEMA_VERSION,
         "season": manager_picks.get("season"),
@@ -403,13 +415,14 @@ def exposure_artifact(
         "league_id": manager_picks.get("league_id"),
         "generated_at": iso(utc_now()),
         "expected_manager_count": expected,
-        "collected_manager_count": expected,
+        "collected_manager_count": denominator,
         "submitted_picks_available_count": denominator,
-        "submitted_picks_missing_count": max(0, expected - denominator),
+        "submitted_picks_missing_count": missing_count,
         "coverage_percent": round(denominator * 100 / expected, 4) if expected else 0.0,
+        "health": health,
         "ownership_denominator": denominator,
         "ownership_denominator_semantics": "SUBMITTED_PICKS_AVAILABLE_MANAGERS_ONLY",
-        "complete": expected > 0 and denominator == expected,
+        "complete": complete,
         "players": players,
         "lineage": {
             "submitted_picks": manager_picks.get("lineage"),

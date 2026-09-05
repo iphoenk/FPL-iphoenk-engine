@@ -12685,7 +12685,7 @@
       "gw": 4,
       "deadline_time": "2026-09-12T12:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-09-04T23:08:58.924397+00:00",
+        "generated_at": "2026-09-05T01:10:30.683389+00:00",
         "players": [
           {
             "element": 1,
@@ -16381,8 +16381,8 @@
             "element": 313,
             "name": "Clarke",
             "position": "MID",
-            "xpts": 3.144,
-            "xpts_std": 2.986,
+            "xpts": 3.152,
+            "xpts_std": 2.989,
             "xmins": 46.2,
             "start_probability": 0.5726,
             "clean_sheet_probability": 0.1412
@@ -16411,8 +16411,8 @@
             "element": 316,
             "name": "Emersonn",
             "position": "FWD",
-            "xpts": 3.942,
-            "xpts_std": 3.152,
+            "xpts": 3.934,
+            "xpts_std": 3.148,
             "xmins": 54.3,
             "start_probability": 0.7825,
             "clean_sheet_probability": 0.1412
@@ -16481,8 +16481,8 @@
             "element": 323,
             "name": "McAteer",
             "position": "MID",
-            "xpts": 3.004,
-            "xpts_std": 2.927,
+            "xpts": 3.013,
+            "xpts_std": 2.931,
             "xmins": 46.2,
             "start_probability": 0.5726,
             "clean_sheet_probability": 0.1412
@@ -16511,8 +16511,8 @@
             "element": 562,
             "name": "Maeda",
             "position": "MID",
-            "xpts": 3.834,
-            "xpts_std": 3.107,
+            "xpts": 3.84,
+            "xpts_std": 3.109,
             "xmins": 58.9,
             "start_probability": 0.7825,
             "clean_sheet_probability": 0.1412
@@ -16541,8 +16541,8 @@
             "element": 591,
             "name": "Enciso",
             "position": "MID",
-            "xpts": 4.212,
-            "xpts_std": 3.265,
+            "xpts": 4.218,
+            "xpts_std": 3.268,
             "xmins": 62.7,
             "start_probability": 0.7825,
             "clean_sheet_probability": 0.1412
@@ -17061,8 +17061,8 @@
             "element": 366,
             "name": "Wirtz",
             "position": "MID",
-            "xpts": 3.33,
-            "xpts_std": 2.836,
+            "xpts": 3.333,
+            "xpts_std": 2.837,
             "xmins": 75.1,
             "start_probability": 0.8318,
             "clean_sheet_probability": 0.2527
@@ -17071,8 +17071,8 @@
             "element": 367,
             "name": "Gakpo",
             "position": "MID",
-            "xpts": 3.977,
-            "xpts_std": 3.067,
+            "xpts": 3.98,
+            "xpts_std": 3.068,
             "xmins": 75.3,
             "start_probability": 0.8618,
             "clean_sheet_probability": 0.2527
@@ -17081,8 +17081,8 @@
             "element": 368,
             "name": "Szoboszlai",
             "position": "MID",
-            "xpts": 3.612,
-            "xpts_std": 2.877,
+            "xpts": 3.617,
+            "xpts_std": 2.879,
             "xmins": 80.9,
             "start_probability": 0.8865,
             "clean_sheet_probability": 0.2527
@@ -17121,8 +17121,8 @@
             "element": 372,
             "name": "Mac Allister",
             "position": "MID",
-            "xpts": 2.925,
-            "xpts_std": 2.635,
+            "xpts": 2.923,
+            "xpts_std": 2.634,
             "xmins": 74.9,
             "start_probability": 0.8547,
             "clean_sheet_probability": 0.2527
@@ -19212,6 +19212,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-09-04T23:08:59.966430+00:00",
+  "updated_at": "2026-09-05T01:10:31.697865+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

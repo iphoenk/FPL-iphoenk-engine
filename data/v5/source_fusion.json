@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "model": "v5_dss_source_fusion_v3",
-  "generated_at": "2026-09-04T23:08:58.371419+00:00",
+  "generated_at": "2026-09-05T01:10:30.113374+00:00",
   "status": "ACTIVE",
   "season": {
     "season": "2026/27",
@@ -20,7 +20,7 @@
         "status": "ACTIVE",
         "availability_class": null,
         "reason": null,
-        "fetch_mode": "NETWORK",
+        "fetch_mode": "CACHE",
         "player_count": 366,
         "fixture_count": 0,
         "credential_present": null,
@@ -41,9 +41,9 @@
         "player_count": 0,
         "fixture_count": 0,
         "credential_present": true,
-        "network_requests": 1,
-        "cache_hits": 0,
-        "availability_cache_hits": 0,
+        "network_requests": 0,
+        "cache_hits": 1,
+        "availability_cache_hits": 1,
         "competitions_attempted": 1,
         "competitions_resolved": 0,
         "quota_remaining": null,
@@ -57,7 +57,7 @@
       "source": "understat",
       "status": "ACTIVE",
       "generated_at": "2026-09-04T23:08:58.369987+00:00",
-      "fetch_mode": "NETWORK",
+      "fetch_mode": "CACHE",
       "season": {
         "season": "2026/27",
         "start_year": 2026,
@@ -4856,14 +4856,12 @@
       "failures": [],
       "observability": {
         "credential_present": true,
-        "network_requests": 1,
-        "endpoint_requests": {
-          "leagues": 1
-        },
-        "cache_hits": 0,
+        "network_requests": 0,
+        "endpoint_requests": {},
+        "cache_hits": 1,
         "league_cache_hits": 0,
         "fixture_cache_hits": 0,
-        "availability_cache_hits": 0,
+        "availability_cache_hits": 1,
         "competitions_attempted": 1,
         "competitions_resolved": 0,
         "fixtures_returned": 0,
@@ -4879,7 +4877,7 @@
       "governance": {
         "fail_neutral": true,
         "missing_is_unavailable_not_zero": true,
-        "cached_provider_restriction": false
+        "cached_provider_restriction": true
       }
     }
   },

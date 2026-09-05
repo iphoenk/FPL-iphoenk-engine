@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "contract": "V5_EXTERNAL_CONSENSUS_V1",
-  "generated_at": "2026-09-04T23:09:04.016964+00:00",
+  "generated_at": "2026-09-05T01:10:35.271065+00:00",
   "owner": "evaluation.external_consensus",
   "native_conclusion_frozen_before_overlay": true,
   "native_snapshot": {
@@ -239,7 +239,7 @@
           "team_id": 14,
           "start_probability": 0.8865,
           "dnp_probability": 0.0397,
-          "score": 3.1874,
+          "score": 3.1921,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 10,
@@ -697,7 +697,7 @@
       ],
       "main_starting_xi_battle": {
         "status": "CLOSE",
-        "margin": 0.0113,
+        "margin": 0.0114,
         "starter_side": [
           {
             "element": 279,
@@ -735,9 +735,9 @@
         {
           "rank": 1,
           "formation": "5-3-2",
-          "selection_score": 43.0606,
-          "mean": 48.685,
-          "std": 10.953,
+          "selection_score": 43.0654,
+          "mean": 48.69,
+          "std": 10.954,
           "element_ids": [
             8,
             40,
@@ -755,9 +755,9 @@
         {
           "rank": 2,
           "formation": "4-4-2",
-          "selection_score": 43.0493,
-          "mean": 48.584,
-          "std": 10.94,
+          "selection_score": 43.054,
+          "mean": 48.589,
+          "std": 10.941,
           "element_ids": [
             8,
             15,
@@ -775,8 +775,8 @@
         {
           "rank": 3,
           "formation": "4-4-2",
-          "selection_score": 42.9919,
-          "mean": 48.528,
+          "selection_score": 42.9967,
+          "mean": 48.533,
           "std": 10.936,
           "element_ids": [
             8,
@@ -795,9 +795,9 @@
         {
           "rank": 4,
           "formation": "4-4-2",
-          "selection_score": 42.9555,
-          "mean": 48.577,
-          "std": 10.942,
+          "selection_score": 42.9603,
+          "mean": 48.582,
+          "std": 10.943,
           "element_ids": [
             8,
             15,
@@ -815,8 +815,8 @@
         {
           "rank": 5,
           "formation": "4-3-3",
-          "selection_score": 42.9396,
-          "mean": 48.417,
+          "selection_score": 42.9443,
+          "mean": 48.422,
           "std": 10.904,
           "element_ids": [
             8,
@@ -835,8 +835,8 @@
         {
           "rank": 6,
           "formation": "4-4-2",
-          "selection_score": 42.8981,
-          "mean": 48.521,
+          "selection_score": 42.9028,
+          "mean": 48.526,
           "std": 10.938,
           "element_ids": [
             8,
@@ -853,8 +853,8 @@
           ]
         }
       ],
-      "expected_starting_xi_mean": 48.584,
-      "selection_score": 43.0493,
+      "expected_starting_xi_mean": 48.589,
+      "selection_score": 43.054,
       "authority": "v5_decision_lineup_optimizer",
       "performance": {
         "projection_lookup": "indexed_o1",

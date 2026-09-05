@@ -40,8 +40,40 @@ def _digest(payload: Any) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _resolve_auth_mode_from_env() -> str:
+    """Resolve V6 auth without requiring a separate mode variable when one credential exists.
+
+    The production workflow historically supplied ``FPL_AUTH_MODE=disabled`` as its
+    fallback even when an Actions secret was provisioned. For report-driven V6 auth,
+    credential presence is therefore allowed to promote that fallback to the single
+    unambiguous configured credential. Explicit ``off`` remains a hard disable.
+    """
+
+    raw_mode = (os.getenv("FPL_AUTH_MODE") or "disabled").strip().lower() or "disabled"
+    session_present = bool((os.getenv("FPL_SESSION_B64") or "").strip())
+    bearer_present = bool((os.getenv("FPL_ACCESS_TOKEN") or "").strip())
+
+    if raw_mode == "off":
+        return "disabled"
+    if raw_mode in {"session_cookie", "bearer_token"}:
+        return raw_mode
+    if raw_mode not in {"disabled", "auto"}:
+        raise OfficialFPLAuthConfigurationError(f"unsupported FPL_AUTH_MODE={raw_mode}")
+
+    available_modes = []
+    if session_present:
+        available_modes.append("session_cookie")
+    if bearer_present:
+        available_modes.append("bearer_token")
+    if len(available_modes) > 1:
+        raise OfficialFPLAuthConfigurationError("multiple FPL auth credentials configured; set FPL_AUTH_MODE explicitly")
+    if available_modes:
+        return available_modes[0]
+    return "disabled"
+
+
 def auth_material_from_env() -> AuthMaterial | None:
-    mode = (os.getenv("FPL_AUTH_MODE") or "disabled").strip().lower() or "disabled"
+    mode = _resolve_auth_mode_from_env()
     if mode == "disabled":
         return None
     if mode == "session_cookie":

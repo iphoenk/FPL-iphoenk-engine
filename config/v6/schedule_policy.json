@@ -34,7 +34,9 @@
     "report_prefetch_is_report_driven_only": true,
     "report_prefetch_has_no_independent_cron": true,
     "report_prefetch_reuses_runtime_data_v6_publisher": true,
-    "report_prefetch_does_not_count_as_scheduled_core_cycle": true
+    "report_prefetch_does_not_count_as_scheduled_core_cycle": true,
+    "historical_backfill_is_ad_hoc_only": true,
+    "historical_backfill_reuses_report_prefetch_control_plane": true
   },
   "master_orchestrated": {
     "enabled": true,
@@ -64,7 +66,14 @@
       "match_mode",
       "deadline_review",
       "ad_hoc",
+      "historical_backfill",
       "05:30_price"
-    ]
+    ],
+    "historical_backfill": {
+      "scope": "mini_league",
+      "finished_gws_only": true,
+      "requires_gw_range": true,
+      "cohort_semantics": "CURRENT_COHORT_HISTORY"
+    }
   }
 }

@@ -5,6 +5,20 @@
   "recovery_cron_utc": "53 * * * *",
   "schedule_authority": true,
   "source_registry_schedule_metadata_authoritative": false,
+  "authorities": {
+    "data_acquisition": "V6",
+    "normalization": "V6",
+    "provenance": "V6",
+    "freshness_health": "V6",
+    "decision": "NONE",
+    "prediction": "NONE",
+    "optimizer": "NONE",
+    "tactical": "NONE",
+    "transfer": "NONE",
+    "captain": "NONE",
+    "chip": "NONE",
+    "formation": "NONE"
+  },
   "manual_recovery": {
     "enabled": true,
     "schedule_kind": "manual_recovery",
@@ -16,6 +30,9 @@
   "governance": {
     "scheduled_runtime_is_primary_authority": false,
     "single_schedule_owner": "config/v6/schedule_policy.json",
+    "v6_is_fresh_data_only": true,
+    "v6_may_import_or_call_v3_v4_v5": false,
+    "v6_may_publish_decisions_or_predictions": false,
     "manual_recovery_never_masks_missed_schedule": true,
     "manual_recovery_must_use_dedicated_v6_publisher": true,
     "push_triggered_production_acquisition_allowed": false,

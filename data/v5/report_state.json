@@ -1,5 +1,5 @@
 {
-  "fingerprint": "d52a888803a6cc81",
+  "fingerprint": "e04998149a1c1d56",
   "state": {
     "squad": "HOLD",
     "starting_xi": [
@@ -25,7 +25,7 @@
         8,
         388,
         "REVIEW",
-        5.57
+        6.133
       ],
       [
         254,
@@ -43,13 +43,13 @@
         254,
         469,
         "REVIEW",
-        3.146
+        3.743
       ],
       [
-        279,
-        330,
+        254,
+        503,
         "REVIEW",
-        2.671
+        3.527
       ]
     ],
     "critical_health": {

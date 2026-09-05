@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "contract": "V5_EXTERNAL_CONSENSUS_V1",
-  "generated_at": "2026-09-05T19:12:42.433932+00:00",
+  "generated_at": "2026-09-05T21:26:54.314502+00:00",
   "owner": "evaluation.external_consensus",
   "native_conclusion_frozen_before_overlay": true,
   "native_snapshot": {
@@ -104,11 +104,11 @@
           "name": "Haaland",
           "position": "FWD",
           "team_id": 15,
-          "mean": 7.266,
-          "std": 4.424,
+          "mean": 7.423,
+          "std": 4.49,
           "start_probability": 0.8787,
           "dnp_probability": 0.0424,
-          "score": 6.6503
+          "score": 6.7994
         },
         {
           "element": 165,
@@ -260,7 +260,7 @@
         "team_id": 15,
         "start_probability": 0.8787,
         "dnp_probability": 0.0424,
-        "score": 8.6393,
+        "score": 8.8081,
         "tactical": {
           "status": "READY",
           "opponent_team_id": 16,
@@ -323,7 +323,7 @@
           "team_id": 15,
           "start_probability": 0.8787,
           "dnp_probability": 0.0424,
-          "score": 8.6393,
+          "score": 8.8081,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 16,
@@ -478,7 +478,7 @@
       ],
       "main_starting_xi_battle": {
         "status": "CLOSE",
-        "margin": 0.0635,
+        "margin": 0.0636,
         "starter_side": [
           {
             "element": 15,
@@ -516,9 +516,9 @@
         {
           "rank": 1,
           "formation": "4-4-2",
-          "selection_score": 43.1971,
-          "mean": 48.74,
-          "std": 10.979,
+          "selection_score": 43.3462,
+          "mean": 48.897,
+          "std": 11.006,
           "element_ids": [
             8,
             15,
@@ -536,9 +536,9 @@
         {
           "rank": 2,
           "formation": "5-3-2",
-          "selection_score": 43.1336,
-          "mean": 48.762,
-          "std": 10.984,
+          "selection_score": 43.2826,
+          "mean": 48.919,
+          "std": 11.011,
           "element_ids": [
             8,
             40,
@@ -556,9 +556,9 @@
         {
           "rank": 3,
           "formation": "4-3-3",
-          "selection_score": 43.0779,
-          "mean": 48.563,
-          "std": 10.942,
+          "selection_score": 43.2269,
+          "mean": 48.72,
+          "std": 10.969,
           "element_ids": [
             8,
             40,
@@ -576,9 +576,9 @@
         {
           "rank": 4,
           "formation": "4-4-2",
-          "selection_score": 43.0279,
-          "mean": 48.566,
-          "std": 10.962,
+          "selection_score": 43.177,
+          "mean": 48.723,
+          "std": 10.989,
           "element_ids": [
             8,
             40,
@@ -596,9 +596,9 @@
         {
           "rank": 5,
           "formation": "4-4-2",
-          "selection_score": 43.0274,
-          "mean": 48.653,
-          "std": 10.972,
+          "selection_score": 43.1765,
+          "mean": 48.81,
+          "std": 10.999,
           "element_ids": [
             8,
             15,
@@ -616,9 +616,9 @@
         {
           "rank": 6,
           "formation": "5-3-2",
-          "selection_score": 43.0014,
-          "mean": 48.529,
-          "std": 10.923,
+          "selection_score": 43.1505,
+          "mean": 48.686,
+          "std": 10.95,
           "element_ids": [
             8,
             40,
@@ -634,8 +634,8 @@
           ]
         }
       ],
-      "expected_starting_xi_mean": 48.74,
-      "selection_score": 43.197,
+      "expected_starting_xi_mean": 48.897,
+      "selection_score": 43.346,
       "authority": "v5_decision_lineup_optimizer",
       "performance": {
         "projection_lookup": "indexed_o1",

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "season": "2026-2027",
+  "entry_id": 3462711,
+  "priority_leagues": [
+    {
+      "name": "ICON+ League",
+      "kind": "classic",
+      "full_submitted_picks": true
+    }
+  ],
+  "personal_team_enabled": true,
+  "mini_league_enabled": true,
+  "priority_full_picks_enabled": true,
+  "deadline_review_mini_league_enabled": false,
+  "submitted_picks_cache_enabled": true,
+  "prefetch_lead_minutes": 30,
+  "prefetch_max_age_minutes": 35,
+  "standings_max_workers": 1,
+  "rival_picks_max_workers": 8,
+  "http_timeout_seconds": 15,
+  "http_retries": 2,
+  "http_backoff_seconds": 0.4,
+  "authority": {
+    "personal": "official_fpl_personal",
+    "mini_league": "official_fpl_leagues",
+    "independence_group": "official_fpl"
+  }
+}

@@ -77,7 +77,7 @@ def test_report_prefetch_reuses_existing_control_plane_without_new_cron():
 
 def test_0530_is_explicit_no_personal_no_league_control_contract():
     workflow = WORKFLOW.read_text(encoding="utf-8")
-    assert 'prefetch["report_kind"] == "05:30_price"' in workflow
+    assert 'if report_kind == "05:30_price":' in workflow
     assert 'prefetch["personal_requested"] is False' in workflow
     assert 'prefetch["mini_league_requested"] is False' in workflow
     assert 'prefetch["telemetry"]["request_count"] == 0' in workflow

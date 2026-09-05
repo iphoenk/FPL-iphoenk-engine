@@ -21,15 +21,23 @@ on:
         required: false
         type: string
       report_kind:
-        description: "For report_prefetch: full_master, match_mode, deadline_review, ad_hoc, or 05:30_price"
+        description: "For report_prefetch: full_master, match_mode, deadline_review, ad_hoc, historical_backfill, or 05:30_price"
         required: false
         type: string
       logical_slot:
-        description: "For report_prefetch: timezone-aware ISO-8601 logical report slot"
+        description: "For normal report_prefetch: timezone-aware ISO-8601 logical report slot"
         required: false
         type: string
       scope:
-        description: "For ad_hoc only: comma-separated personal,mini_league,live"
+        description: "For ad_hoc or historical_backfill scope"
+        required: false
+        type: string
+      gw_from:
+        description: "For historical_backfill: first completed GW, inclusive"
+        required: false
+        type: string
+      gw_to:
+        description: "For historical_backfill: last completed GW, inclusive"
         required: false
         type: string
       force:
@@ -43,8 +51,6 @@ on:
     - cron: "23 * * * *"
     - cron: "53 * * * *"
 
-# The built-in GITHUB_TOKEN remains read-only. Runtime write authority is minted
-# only from the dedicated V6 publisher GitHub App inside the publish job.
 permissions:
   contents: read
 
@@ -104,30 +110,25 @@ jobs:
               raise SystemExit("V6 governed dispatch is restricted to the repository owner")
           if not reason:
               raise SystemExit("V6 governed dispatch requires an audit reason")
-
           if mode == "master_orchestrated":
-              master = dict(policy.get("master_orchestrated") or {})
-              if master.get("enabled") is not True:
-                  raise SystemExit("V6 master orchestration is disabled")
-              if master.get("authoritative_runtime_snapshot") is not True:
-                  raise SystemExit("V6 master orchestration policy is not authoritative")
-              print("Governed V6 FPL Master orchestration authorized")
+              control = dict(policy.get("master_orchestrated") or {})
+              if control.get("enabled") is not True or control.get("authoritative_runtime_snapshot") is not True:
+                  raise SystemExit("V6 master orchestration is not authorized")
           elif mode == "manual_recovery":
-              manual = dict(policy.get("manual_recovery") or {})
-              if manual.get("enabled") is not True:
+              control = dict(policy.get("manual_recovery") or {})
+              if control.get("enabled") is not True:
                   raise SystemExit("V6 governed manual recovery is disabled")
-              if os.environ.get("V6_MANUAL_CONFIRM") != str(manual.get("confirmation_phrase") or ""):
+              if os.environ.get("V6_MANUAL_CONFIRM") != str(control.get("confirmation_phrase") or ""):
                   raise SystemExit("V6 manual recovery confirmation phrase mismatch")
-              print("Governed V6 manual recovery authorized")
           elif mode == "report_prefetch":
-              prefetch = dict(policy.get("report_prefetch") or {})
-              if prefetch.get("enabled") is not True or prefetch.get("report_driven") is not True:
+              control = dict(policy.get("report_prefetch") or {})
+              if control.get("enabled") is not True or control.get("report_driven") is not True:
                   raise SystemExit("V6 report prefetch is disabled")
-              if prefetch.get("independent_cron") is not False:
+              if control.get("independent_cron") is not False:
                   raise SystemExit("V6 report prefetch policy must prohibit independent cron")
-              print("Governed V6 report-prefetch dispatch authorized")
           else:
               raise SystemExit(f"Unsupported V6 governed dispatch mode: {mode}")
+          print(f"Governed V6 {mode} dispatch authorized")
           PY
 
       - name: Authorize FPL Master issue-command orchestration
@@ -145,17 +146,14 @@ jobs:
           from pathlib import Path
 
           policy = json.loads(Path(os.environ["V6_SCHEDULE_POLICY"]).read_text(encoding="utf-8"))
-          body = str(os.environ.get("V6_COMMENT_BODY") or "").strip()
-          tokens = shlex.split(body)
+          tokens = shlex.split(str(os.environ.get("V6_COMMENT_BODY") or "").strip())
           command = tokens[0] if tokens else ""
           master = dict(policy.get("master_orchestrated") or {})
           prefetch = dict(policy.get("report_prefetch") or {})
           if command == str(master.get("issue_comment_command") or ""):
-              control = master
-              label = "Master acquisition"
+              control, label = master, "Master acquisition"
           elif command == str(prefetch.get("issue_comment_command") or ""):
-              control = prefetch
-              label = "report prefetch"
+              control, label = prefetch, "report prefetch"
           else:
               raise SystemExit("V6 governed issue command mismatch")
           if control.get("enabled") is not True:
@@ -218,8 +216,7 @@ jobs:
           elif event_name == "issue_comment":
               master = dict(policy.get("master_orchestrated") or {})
               prefetch = dict(policy.get("report_prefetch") or {})
-              body = str((event.get("comment") or {}).get("body") or "").strip()
-              tokens = shlex.split(body)
+              tokens = shlex.split(str((event.get("comment") or {}).get("body") or "").strip())
               command = tokens[0] if tokens else ""
               if command == str(master.get("issue_comment_command") or ""):
                   kind = str(master.get("schedule_kind") or "master_orchestrated")
@@ -288,7 +285,6 @@ jobs:
           python -m src.runtime_v6.architecture_independence_validate
           python - <<'PY'
           from src.runtime_v6.registry import dependency_layers, load_registry
-
           registry = load_registry()
           assert registry["engine"] == "V6_FRESH_DATA_PLATFORM"
           assert registry["policy"]["data_only"] is True
@@ -296,11 +292,7 @@ jobs:
           assert registry["policy"]["prediction_authority"] == "NONE"
           assert registry["policy"]["optimizer_authority"] == "NONE"
           assert dependency_layers(registry)
-          print({
-              "active_sources": registry["activation"]["active_source_count"],
-              "required_sources": registry["activation"]["required_active_sources"],
-              "dependency_layers": dependency_layers(registry),
-          })
+          print({"active_sources": registry["activation"]["active_source_count"], "required_sources": registry["activation"]["required_active_sources"], "dependency_layers": dependency_layers(registry)})
           PY
 
       - name: Resolve governed V6 report-prefetch request
@@ -310,6 +302,8 @@ jobs:
           V6_DISPATCH_REPORT_KIND: ${{ inputs.report_kind }}
           V6_DISPATCH_LOGICAL_SLOT: ${{ inputs.logical_slot }}
           V6_DISPATCH_SCOPE: ${{ inputs.scope }}
+          V6_DISPATCH_GW_FROM: ${{ inputs.gw_from }}
+          V6_DISPATCH_GW_TO: ${{ inputs.gw_to }}
           V6_DISPATCH_FORCE: ${{ inputs.force }}
           V6_COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
@@ -324,8 +318,8 @@ jobs:
           policy = json.loads(Path(os.environ["V6_SCHEDULE_POLICY"]).read_text(encoding="utf-8"))
           prefetch = dict(policy.get("report_prefetch") or {})
           event_name = os.environ.get("GITHUB_EVENT_NAME")
-          values = {}
           if event_name == "issue_comment":
+              values = {}
               tokens = shlex.split(str(os.environ.get("V6_COMMENT_BODY") or ""))
               for token in tokens[1:]:
                   if "=" not in token:
@@ -334,7 +328,7 @@ jobs:
                   if key in values:
                       raise SystemExit(f"Duplicate report-prefetch argument: {key}")
                   values[key] = value
-              unknown = set(values) - {"report_kind", "logical_slot", "scope", "force", "reason"}
+              unknown = set(values) - {"report_kind", "logical_slot", "scope", "gw_from", "gw_to", "force", "reason"}
               if unknown:
                   raise SystemExit(f"Unsupported report-prefetch arguments: {sorted(unknown)}")
               if not str(values.get("reason") or "").strip():
@@ -344,19 +338,16 @@ jobs:
                   "report_kind": os.environ.get("V6_DISPATCH_REPORT_KIND") or "",
                   "logical_slot": os.environ.get("V6_DISPATCH_LOGICAL_SLOT") or "",
                   "scope": os.environ.get("V6_DISPATCH_SCOPE") or "",
+                  "gw_from": os.environ.get("V6_DISPATCH_GW_FROM") or "",
+                  "gw_to": os.environ.get("V6_DISPATCH_GW_TO") or "",
                   "force": os.environ.get("V6_DISPATCH_FORCE") or "false",
               }
 
           report_kind = str(values.get("report_kind") or "").strip()
-          logical_slot = str(values.get("logical_slot") or "").strip()
           if report_kind not in set(prefetch.get("supported_report_kinds") or []):
               raise SystemExit(f"Unsupported report_kind={report_kind}")
-          if not logical_slot:
-              raise SystemExit("report-prefetch logical_slot is required")
-          parsed = datetime.fromisoformat(logical_slot)
-          if parsed.tzinfo is None or parsed.utcoffset() is None:
-              raise SystemExit("report-prefetch logical_slot must include timezone offset")
-
+          historical = report_kind == "historical_backfill"
+          logical_slot = str(values.get("logical_slot") or "").strip()
           scope_raw = str(values.get("scope") or "").strip()
           scopes = [part.strip() for part in scope_raw.split(",") if part.strip()]
           aliases = {"mini": "mini_league", "league": "mini_league"}
@@ -366,28 +357,53 @@ jobs:
           unknown_scopes = set(scopes) - {"personal", "mini_league", "live"}
           if unknown_scopes:
               raise SystemExit(f"Unsupported report-prefetch scopes: {sorted(unknown_scopes)}")
-          if report_kind != "ad_hoc" and scopes:
-              raise SystemExit("scope override is allowed only for ad_hoc report prefetch")
-          if report_kind == "ad_hoc" and not scopes:
-              raise SystemExit("ad_hoc report prefetch requires a non-empty scope")
+
+          gw_from = ""
+          gw_to = ""
+          if historical:
+              if logical_slot:
+                  raise SystemExit("historical_backfill does not accept logical_slot")
+              if scopes != ["mini_league"]:
+                  raise SystemExit("historical_backfill requires scope=mini_league")
+              try:
+                  gw_from_value = int(str(values.get("gw_from") or ""))
+                  gw_to_value = int(str(values.get("gw_to") or ""))
+              except ValueError as exc:
+                  raise SystemExit("historical_backfill requires integer gw_from and gw_to") from exc
+              if gw_from_value < 1 or gw_to_value < 1 or gw_from_value > gw_to_value:
+                  raise SystemExit("historical_backfill GW range is invalid")
+              gw_from, gw_to = str(gw_from_value), str(gw_to_value)
+          else:
+              if values.get("gw_from") or values.get("gw_to"):
+                  raise SystemExit("gw_from/gw_to are valid only for historical_backfill")
+              if not logical_slot:
+                  raise SystemExit("report-prefetch logical_slot is required")
+              parsed = datetime.fromisoformat(logical_slot)
+              if parsed.tzinfo is None or parsed.utcoffset() is None:
+                  raise SystemExit("report-prefetch logical_slot must include timezone offset")
+              if report_kind != "ad_hoc" and scopes:
+                  raise SystemExit("scope override is allowed only for ad_hoc report prefetch")
+              if report_kind == "ad_hoc" and not scopes:
+                  raise SystemExit("ad_hoc report prefetch requires a non-empty scope")
 
           force_raw = str(values.get("force") or "false").strip().lower()
           if force_raw not in {"true", "false", "1", "0", "yes", "no"}:
               raise SystemExit("force must be boolean")
           force = force_raw in {"true", "1", "yes"}
-
           env = {
               "V6_PREFETCH_REPORT_KIND": report_kind,
               "V6_PREFETCH_LOGICAL_SLOT": logical_slot,
               "V6_PREFETCH_PERSONAL": "true" if "personal" in scopes else "false",
               "V6_PREFETCH_MINI_LEAGUE": "true" if "mini_league" in scopes else "false",
               "V6_PREFETCH_LIVE": "true" if "live" in scopes else "false",
+              "V6_PREFETCH_GW_FROM": gw_from,
+              "V6_PREFETCH_GW_TO": gw_to,
               "V6_PREFETCH_FORCE": "true" if force else "false",
           }
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
               for key, value in env.items():
                   handle.write(f"{key}={value}\n")
-          print({"report_kind": report_kind, "logical_slot": logical_slot, "scope": scopes, "force": force})
+          print({"report_kind": report_kind, "logical_slot": logical_slot, "scope": scopes, "gw_from": gw_from, "gw_to": gw_to, "force": force})
           PY
 
       - name: Run active V6 acquisition cycle
@@ -409,24 +425,33 @@ jobs:
           FPL_PRIORITY_LEAGUES: ${{ vars.FPL_PRIORITY_LEAGUES }}
         run: |
           set -euo pipefail
-          args=(
-            --report-kind "$V6_PREFETCH_REPORT_KIND"
-            --logical-slot "$V6_PREFETCH_LOGICAL_SLOT"
-            --requested-by "FPL_MASTER_MONITOR"
-            --requested-for-report "$V6_PREFETCH_REPORT_KIND"
-          )
-          [[ "$V6_PREFETCH_PERSONAL" == "true" ]] && args+=(--personal)
-          [[ "$V6_PREFETCH_MINI_LEAGUE" == "true" ]] && args+=(--mini-league)
-          [[ "$V6_PREFETCH_LIVE" == "true" ]] && args+=(--live)
-          [[ "$V6_PREFETCH_FORCE" == "true" ]] && args+=(--force)
-          set +e
-          python -m src.runtime_v6.report_prefetch "${args[@]}"
-          rc=$?
-          set -e
+          if [[ "$V6_PREFETCH_REPORT_KIND" == "historical_backfill" ]]; then
+            args=(--gw-from "$V6_PREFETCH_GW_FROM" --gw-to "$V6_PREFETCH_GW_TO" --requested-by "FPL_MASTER_MONITOR")
+            [[ "$V6_PREFETCH_FORCE" == "true" ]] && args+=(--force)
+            set +e
+            python -m src.runtime_v6.historical_backfill "${args[@]}"
+            rc=$?
+            set -e
+          else
+            args=(
+              --report-kind "$V6_PREFETCH_REPORT_KIND"
+              --logical-slot "$V6_PREFETCH_LOGICAL_SLOT"
+              --requested-by "FPL_MASTER_MONITOR"
+              --requested-for-report "$V6_PREFETCH_REPORT_KIND"
+            )
+            [[ "$V6_PREFETCH_PERSONAL" == "true" ]] && args+=(--personal)
+            [[ "$V6_PREFETCH_MINI_LEAGUE" == "true" ]] && args+=(--mini-league)
+            [[ "$V6_PREFETCH_LIVE" == "true" ]] && args+=(--live)
+            [[ "$V6_PREFETCH_FORCE" == "true" ]] && args+=(--force)
+            set +e
+            python -m src.runtime_v6.report_prefetch "${args[@]}"
+            rc=$?
+            set -e
+          fi
           if [[ $rc -ne 0 && $rc -ne 3 ]]; then
             exit "$rc"
           fi
-          echo "Report-prefetch process exit=$rc; manifest truth controls completeness"
+          echo "V6 report-prefetch process exit=$rc; published health truth controls completeness"
 
       - name: Validate V6 publish-tree integrity
         if: steps.slot_guard.outputs.skip != 'true'
@@ -445,12 +470,8 @@ jobs:
           integrity = json.loads(Path("data/v6/health/publish_integrity.json").read_text())
           identity = json.loads(Path("data/v6/evidence/player_identity_map.json").read_text())
           registry = load_registry()
-          expected_active = registry["activation"]["active_source_count"]
-          required_active = registry["activation"]["required_active_sources"]
-          event_name = os.environ["GITHUB_EVENT_NAME"]
-          schedule_kind = os.environ["V6_SCHEDULE_KIND"]
-          assert manifest["source_count"] == expected_active
-          assert manifest["activation"]["required_active_sources"] == required_active
+          assert manifest["source_count"] == registry["activation"]["active_source_count"]
+          assert manifest["activation"]["required_active_sources"] == registry["activation"]["required_active_sources"]
           assert manifest["governance"]["data_only"] is True
           assert manifest["governance"]["decision_authority"] == "NONE"
           assert manifest["governance"]["weather_direct_xpts_multiplier"] is False
@@ -469,39 +490,45 @@ jobs:
           assert integrity["resolved_registry_exact"] is True
           assert integrity["identity_map_consistent"] is True
 
+          event_name = os.environ["GITHUB_EVENT_NAME"]
+          schedule_kind = os.environ["V6_SCHEDULE_KIND"]
           if schedule_kind == "report_prefetch":
-              prefetch = json.loads(Path("data/v6/report_prefetch/latest.json").read_text(encoding="utf-8"))
-              health = json.loads(Path("data/v6/health/report_prefetch.json").read_text(encoding="utf-8"))
-              assert prefetch["report_kind"] == os.environ["V6_PREFETCH_REPORT_KIND"]
-              assert prefetch["target_logical_report_slot"] == os.environ["V6_PREFETCH_LOGICAL_SLOT"]
-              assert prefetch["governance"]["data_only"] is True
-              assert prefetch["governance"]["decision_authority"] == "NONE"
-              assert prefetch["governance"]["prediction_authority"] == "NONE"
-              assert prefetch["governance"]["optimizer_authority"] == "NONE"
-              assert prefetch["governance"]["independent_prefetch_cron"] is False
-              assert prefetch["governance"]["core_source_freshness_separate"] is True
-              assert prefetch["governance"]["report_prefetch_freshness_separate"] is True
-              assert health["fresh_for_target_report"] == prefetch["fresh_for_target_report"]
-              if prefetch["report_kind"] == "05:30_price":
-                  assert prefetch["personal_requested"] is False
-                  assert prefetch["mini_league_requested"] is False
-                  assert prefetch["live_requested"] is False
-                  assert prefetch["personal_status"] == "NOT_REFRESHED_FOR_05_30_PRICE_CHECKPOINT"
-                  assert prefetch["telemetry"]["request_count"] == 0
-              print(json.dumps({
-                  "report_prefetch": True,
-                  "request_id": prefetch["request_id"],
-                  "report_kind": prefetch["report_kind"],
-                  "complete": prefetch["complete"],
-                  "fresh_for_target_report": prefetch["fresh_for_target_report"],
-                  "personal_status": prefetch["personal_status"],
-                  "mini_league_status": prefetch["mini_league_status"],
-                  "live_status": prefetch["live_status"],
-                  "telemetry": prefetch["telemetry"],
-                  "source_failures": prefetch["source_failures"],
-                  "control_failures": prefetch["control_failures"],
-                  "publish_integrity": integrity,
-              }, indent=2))
+              report_kind = os.environ["V6_PREFETCH_REPORT_KIND"]
+              if report_kind == "historical_backfill":
+                  history = json.loads(Path("data/v6/health/historical_backfill.json").read_text(encoding="utf-8"))
+                  assert history["report_kind"] == "historical_backfill"
+                  assert history["scope"] == "mini_league"
+                  assert history["gw_from"] == int(os.environ["V6_PREFETCH_GW_FROM"])
+                  assert history["gw_to"] == int(os.environ["V6_PREFETCH_GW_TO"])
+                  assert history["cohort_semantics"] == "CURRENT_COHORT_HISTORY"
+                  assert history["governance"]["data_only"] is True
+                  assert history["governance"]["decision_authority"] == "NONE"
+                  assert history["governance"]["prediction_authority"] == "NONE"
+                  assert history["governance"]["optimizer_authority"] == "NONE"
+                  assert history["governance"]["bayesian_authority"] == "NONE"
+                  assert history["governance"]["monte_carlo_authority"] == "NONE"
+                  assert history["overall_status"] in {"GREEN", "AMBER"}
+                  print(json.dumps({"historical_backfill": history, "publish_integrity": integrity}, indent=2))
+              else:
+                  prefetch = json.loads(Path("data/v6/report_prefetch/latest.json").read_text(encoding="utf-8"))
+                  health = json.loads(Path("data/v6/health/report_prefetch.json").read_text(encoding="utf-8"))
+                  assert prefetch["report_kind"] == report_kind
+                  assert prefetch["target_logical_report_slot"] == os.environ["V6_PREFETCH_LOGICAL_SLOT"]
+                  assert prefetch["governance"]["data_only"] is True
+                  assert prefetch["governance"]["decision_authority"] == "NONE"
+                  assert prefetch["governance"]["prediction_authority"] == "NONE"
+                  assert prefetch["governance"]["optimizer_authority"] == "NONE"
+                  assert prefetch["governance"]["independent_prefetch_cron"] is False
+                  assert prefetch["governance"]["core_source_freshness_separate"] is True
+                  assert prefetch["governance"]["report_prefetch_freshness_separate"] is True
+                  assert health["fresh_for_target_report"] == prefetch["fresh_for_target_report"]
+                  if report_kind == "05:30_price":
+                      assert prefetch["personal_requested"] is False
+                      assert prefetch["mini_league_requested"] is False
+                      assert prefetch["live_requested"] is False
+                      assert prefetch["personal_status"] == "NOT_REFRESHED_FOR_05_30_PRICE_CHECKPOINT"
+                      assert prefetch["telemetry"]["request_count"] == 0
+                  print(json.dumps({"report_prefetch": prefetch, "publish_integrity": integrity}, indent=2))
           else:
               control = manifest["runtime_control"]
               assert control["event_name"] == event_name
@@ -526,18 +553,7 @@ jobs:
                   assert "NON_AUTHORITATIVE_MANUAL_RECOVERY" in manifest["control_failures"]
               else:
                   raise AssertionError(f"unexpected V6 production event: {event_name}/{schedule_kind}")
-              print(json.dumps({
-                  "overall": manifest["overall"],
-                  "elapsed_ms": manifest["elapsed_ms"],
-                  "source_count": manifest["source_count"],
-                  "health_counts": manifest["health_counts"],
-                  "critical_failures": manifest["critical_failures"],
-                  "control_failures": manifest["control_failures"],
-                  "runtime_control": control,
-                  "publish_integrity": integrity,
-                  "identity_coverage": identity["coverage"],
-                  "activation": manifest["activation"],
-              }, indent=2))
+              print(json.dumps({"overall": manifest["overall"], "elapsed_ms": manifest["elapsed_ms"], "runtime_control": control, "publish_integrity": integrity}, indent=2))
           PY
 
       - name: Package verified runtime snapshot
@@ -629,6 +645,11 @@ jobs:
           assert manifest["governance"]["manual_recovery_is_authoritative"] is False
           assert integrity["status"] == "PASS", integrity
           assert integrity["resolved_registry_exact"] is True
+          historical = root / "health" / "historical_backfill.json"
+          if historical.exists():
+              history = json.loads(historical.read_text(encoding="utf-8"))
+              assert history["governance"]["data_only"] is True
+              assert history["cohort_semantics"] == "CURRENT_COHORT_HISTORY"
           report_prefetch = root / "report_prefetch" / "latest.json"
           if report_prefetch.exists():
               prefetch = json.loads(report_prefetch.read_text(encoding="utf-8"))
@@ -677,7 +698,6 @@ jobs:
           git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
           published_head="$(git rev-parse "refs/remotes/origin/${RUNTIME_BRANCH}")"
           test "$published_head" = "$PUBLISHED_RUNTIME_SHA"
-
           verify_tree="$RUNNER_TEMP/v6-runtime-verify"
           rm -rf "$verify_tree"
           git worktree add --detach "$verify_tree" "refs/remotes/origin/${RUNTIME_BRANCH}"
@@ -687,11 +707,7 @@ jobs:
             echo "$unauthorized"
             exit 1
           fi
-
-          diff -qr \
-            "$RUNNER_TEMP/v6-publication-check/data/v6" \
-            "$verify_tree/data/v6"
-
+          diff -qr "$RUNNER_TEMP/v6-publication-check/data/v6" "$verify_tree/data/v6"
           python - <<'PY'
           import json
           import os
@@ -705,7 +721,6 @@ jobs:
           assert manifest["governance"]["production_authoritative_snapshots_require_governed_trigger"] is True
           assert integrity["status"] == "PASS", integrity
           assert integrity["resolved_registry_exact"] is True
-          report_prefetch = root / "report_prefetch" / "latest.json"
           evidence = {
               "published": True,
               "overall": manifest["overall"],
@@ -715,6 +730,18 @@ jobs:
               "publisher_mode": "dedicated_v6_github_app",
               "tree_sha256": integrity.get("tree_sha256"),
           }
+          historical = root / "health" / "historical_backfill.json"
+          if historical.exists():
+              history = json.loads(historical.read_text(encoding="utf-8"))
+              evidence["historical_backfill"] = {
+                  "league_id": history.get("league_id"),
+                  "gw_from": history.get("gw_from"),
+                  "gw_to": history.get("gw_to"),
+                  "overall_status": history.get("overall_status"),
+                  "current_cohort_manager_count": history.get("current_cohort_manager_count"),
+                  "cache": history.get("cache"),
+              }
+          report_prefetch = root / "report_prefetch" / "latest.json"
           if report_prefetch.exists():
               prefetch = json.loads(report_prefetch.read_text(encoding="utf-8"))
               evidence["report_prefetch"] = {

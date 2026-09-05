@@ -80,7 +80,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
 
       - name: Authorize governed manual recovery and FPL Master orchestration
@@ -173,7 +173,7 @@ jobs:
           set -euo pipefail
           rm -rf data/v6
           mkdir -p data
-          if git fetch origin "${RUNTIME_BRANCH}"; then
+          if git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"; then
             if git cat-file -e "origin/${RUNTIME_BRANCH}:data/v6" 2>/dev/null; then
               git archive "origin/${RUNTIME_BRANCH}" data/v6 | tar -x -C .
               echo "Hydrated previous runtime-data-v6 snapshot"
@@ -402,7 +402,7 @@ jobs:
         if: steps.slot_guard.outputs.skip != 'true' && steps.scheduler.outputs.kind == 'report_prefetch'
         shell: bash
         env:
-          FPL_AUTH_MODE: ${{ vars.FPL_AUTH_MODE || 'session_cookie' }}
+          FPL_AUTH_MODE: ${{ vars.FPL_AUTH_MODE || 'disabled' }}
           FPL_SESSION_B64: ${{ secrets.FPL_SESSION_B64 }}
           FPL_ACCESS_TOKEN: ${{ secrets.FPL_ACCESS_TOKEN }}
           FPL_TEAM_ID: ${{ vars.FPL_TEAM_ID }}
@@ -589,7 +589,7 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           ref: ${{ github.sha }}
           token: ${{ steps.runtime_app_token.outputs.token }}
           persist-credentials: false
@@ -641,7 +641,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin "${RUNTIME_BRANCH}"
+          git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
           runtime_base="$(git rev-parse "refs/remotes/origin/${RUNTIME_BRANCH}")"
           echo "RUNTIME_BASE_SHA=$runtime_base" >> "$GITHUB_ENV"
 

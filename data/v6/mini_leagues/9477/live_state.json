@@ -1,0 +1,4881 @@
+{
+  "authority": "OFFICIAL_FPL",
+  "checked_at": "2026-09-05T14:02:17.075143+00:00",
+  "elements": [
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 1,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 2,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 3,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 4,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 5,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 6,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 7,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 8,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 9,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 10,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 11,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 12,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 13,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 14,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 15,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 16,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 17,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 18,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 19,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 20,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 21,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 22,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 23,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 24,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 25,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 26,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 27,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 28,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 29,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 30,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 31,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 32,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 33,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 34,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 35,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 36,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 37,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 38,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 39,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 40,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 41,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 42,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 43,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 44,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 45,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 46,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 47,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 48,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 49,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 50,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 51,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 52,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 53,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 54,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 55,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 56,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 57,
+      "minutes": 90,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 58,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 59,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 3,
+      "element_id": 60,
+      "minutes": 90,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 1,
+      "element_id": 61,
+      "minutes": 90,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 62,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 63,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 1,
+      "element_id": 64,
+      "minutes": 90,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 65,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 66,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 6,
+      "element_id": 67,
+      "minutes": 89,
+      "total_points": 2
+    },
+    {
+      "bonus": 3,
+      "bps": 43,
+      "element_id": 68,
+      "minutes": 88,
+      "total_points": 10
+    },
+    {
+      "bonus": 2,
+      "bps": 37,
+      "element_id": 69,
+      "minutes": 90,
+      "total_points": 10
+    },
+    {
+      "bonus": 0,
+      "bps": 6,
+      "element_id": 70,
+      "minutes": 75,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 2,
+      "element_id": 71,
+      "minutes": 14,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 3,
+      "element_id": 72,
+      "minutes": 1,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 15,
+      "element_id": 73,
+      "minutes": 75,
+      "total_points": 4
+    },
+    {
+      "bonus": 0,
+      "bps": 2,
+      "element_id": 74,
+      "minutes": 14,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 3,
+      "element_id": 75,
+      "minutes": 1,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 76,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 77,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 78,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 4,
+      "element_id": 79,
+      "minutes": 90,
+      "total_points": 2
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 80,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 81,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 82,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 83,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 84,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 85,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 86,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 87,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 88,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 89,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 90,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 91,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 92,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 93,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 94,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 95,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 96,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 97,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 98,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 99,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 100,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 101,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 102,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 103,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 104,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 105,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 106,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 107,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 108,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 109,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 110,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 111,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 112,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 113,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 114,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 115,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 116,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 117,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 118,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 119,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 120,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 121,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 122,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 123,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 124,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 125,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 126,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 127,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 128,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 129,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 130,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 131,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 132,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 133,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 134,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 135,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 136,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 137,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 138,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 139,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 140,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 141,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 142,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 143,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 144,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 145,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 146,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 147,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 148,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 149,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 150,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 151,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 152,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 153,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 154,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 155,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 156,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 157,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 158,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 159,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 160,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 161,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 162,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 163,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 164,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 165,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 166,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 167,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 168,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 169,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 170,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 171,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 172,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 173,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 174,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 175,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 176,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 177,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 178,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 179,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 180,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 181,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 182,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 183,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 184,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 185,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 186,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 187,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 188,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 189,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 190,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 191,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 192,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 193,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 194,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 195,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 196,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 197,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 198,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 199,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 200,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 201,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 202,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 203,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 204,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 205,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 206,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 207,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 208,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 209,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 210,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 211,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 212,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 213,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 214,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 215,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 216,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 217,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 218,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 219,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 220,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 221,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 222,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 223,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 224,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 225,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 226,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 227,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 228,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 229,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 230,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 231,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 232,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 233,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 234,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 235,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 236,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 237,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 238,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 239,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 240,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 241,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 242,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 243,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 244,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 245,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 246,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 247,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 248,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 249,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 250,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 251,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 252,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 253,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 254,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 255,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 256,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 257,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 258,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 10,
+      "element_id": 259,
+      "minutes": 90,
+      "total_points": 3
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 260,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 261,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 262,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 263,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 264,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 265,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 266,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 13,
+      "element_id": 267,
+      "minutes": 90,
+      "total_points": 2
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 268,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 269,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 270,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 271,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 272,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 273,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 274,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 275,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 276,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 277,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 278,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 279,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 280,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 281,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 282,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 283,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 284,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 285,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 286,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 287,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 288,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 289,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 290,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 291,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 292,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 293,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 294,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 295,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 296,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 297,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 298,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 299,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 300,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 301,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 302,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 303,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 5,
+      "element_id": 304,
+      "minutes": 90,
+      "total_points": 3
+    },
+    {
+      "bonus": 0,
+      "bps": 4,
+      "element_id": 305,
+      "minutes": 90,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 6,
+      "element_id": 306,
+      "minutes": 90,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 307,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 308,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 309,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 310,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 311,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 312,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 3,
+      "element_id": 313,
+      "minutes": 24,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 314,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 14,
+      "element_id": 315,
+      "minutes": 78,
+      "total_points": 2
+    },
+    {
+      "bonus": 0,
+      "bps": 8,
+      "element_id": 316,
+      "minutes": 65,
+      "total_points": 2
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 317,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 318,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 319,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 320,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 321,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 322,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 5,
+      "element_id": 323,
+      "minutes": 11,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 324,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 325,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 326,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 327,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 328,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 329,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 330,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 331,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 332,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 333,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 334,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 335,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 336,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 337,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 338,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 339,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 340,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 341,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 342,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 343,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 344,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 345,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 346,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 347,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 348,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 349,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 1,
+      "bps": 35,
+      "element_id": 350,
+      "minutes": 90,
+      "total_points": 8
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 351,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 352,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 353,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 354,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 355,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 32,
+      "element_id": 356,
+      "minutes": 90,
+      "total_points": 6
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 357,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 23,
+      "element_id": 358,
+      "minutes": 90,
+      "total_points": 5
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 359,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 360,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 361,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 28,
+      "element_id": 362,
+      "minutes": 90,
+      "total_points": 5
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 363,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 364,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 365,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 14,
+      "element_id": 366,
+      "minutes": 90,
+      "total_points": 3
+    },
+    {
+      "bonus": 2,
+      "bps": 43,
+      "element_id": 367,
+      "minutes": 90,
+      "total_points": 11
+    },
+    {
+      "bonus": 0,
+      "bps": 20,
+      "element_id": 368,
+      "minutes": 90,
+      "total_points": 3
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 369,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 370,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 2,
+      "element_id": 371,
+      "minutes": 26,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 14,
+      "element_id": 372,
+      "minutes": 83,
+      "total_points": 2
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 373,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 374,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 3,
+      "element_id": 375,
+      "minutes": 6,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 376,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 9,
+      "element_id": 377,
+      "minutes": 63,
+      "total_points": 3
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 378,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 3,
+      "bps": 61,
+      "element_id": 379,
+      "minutes": 63,
+      "total_points": 13
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 380,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 3,
+      "element_id": 381,
+      "minutes": 1,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 382,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 383,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 384,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 385,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 386,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 387,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 388,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 389,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 390,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 391,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 392,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 393,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 394,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 395,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 396,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 397,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 398,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 399,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 400,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 401,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 402,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 403,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 404,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 11,
+      "element_id": 405,
+      "minutes": 76,
+      "total_points": 2
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 406,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 407,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 408,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 409,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 410,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 411,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 412,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 413,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 414,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 415,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 416,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 417,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 418,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 419,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 420,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 421,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 422,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 423,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 424,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 425,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 426,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 427,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 428,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 429,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 430,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 431,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 432,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 433,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 434,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 435,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 436,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 437,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 438,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 439,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 440,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 441,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 442,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 443,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 444,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": -1,
+      "element_id": 445,
+      "minutes": 90,
+      "total_points": -1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 446,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 3,
+      "element_id": 447,
+      "minutes": 90,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 448,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 19,
+      "element_id": 449,
+      "minutes": 89,
+      "total_points": 4
+    },
+    {
+      "bonus": 0,
+      "bps": 3,
+      "element_id": 450,
+      "minutes": 1,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 451,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 452,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 2,
+      "bps": 37,
+      "element_id": 453,
+      "minutes": 90,
+      "total_points": 12
+    },
+    {
+      "bonus": 0,
+      "bps": 8,
+      "element_id": 454,
+      "minutes": 77,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 455,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 22,
+      "element_id": 456,
+      "minutes": 27,
+      "total_points": 6
+    },
+    {
+      "bonus": 0,
+      "bps": 5,
+      "element_id": 457,
+      "minutes": 12,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 458,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 11,
+      "element_id": 459,
+      "minutes": 62,
+      "total_points": 2
+    },
+    {
+      "bonus": 0,
+      "bps": 6,
+      "element_id": 460,
+      "minutes": 62,
+      "total_points": 2
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 461,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 3,
+      "element_id": 462,
+      "minutes": 13,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 463,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 5,
+      "element_id": 464,
+      "minutes": 90,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 465,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 466,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 467,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 468,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 469,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 470,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 471,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 472,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 473,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 474,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 475,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 476,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 477,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 478,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 479,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 480,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 481,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 482,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 483,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 484,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 485,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 486,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 487,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 488,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 489,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 490,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 491,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 492,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 493,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 494,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 495,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 496,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 497,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 498,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 499,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 500,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 501,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 502,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 503,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 504,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 505,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 506,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 507,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 508,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 509,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 510,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 511,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 512,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 513,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 514,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 515,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 516,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 517,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 518,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 519,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 520,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 521,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 522,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 523,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 524,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 525,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 526,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 527,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 528,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 529,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 530,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 531,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 532,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 533,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 534,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 535,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 536,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 537,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 538,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 539,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 540,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 541,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 542,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 543,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 544,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 545,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 546,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 547,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 548,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 549,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 550,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 551,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 552,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 553,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 554,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 555,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 556,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 557,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 558,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 559,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 560,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 561,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 9,
+      "element_id": 562,
+      "minutes": 65,
+      "total_points": 2
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 563,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 13,
+      "element_id": 564,
+      "minutes": 90,
+      "total_points": 2
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 565,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 8,
+      "element_id": 566,
+      "minutes": 90,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 12,
+      "element_id": 567,
+      "minutes": 90,
+      "total_points": 2
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 568,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 569,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 570,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 571,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 572,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 573,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 574,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 575,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 576,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 577,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 578,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 27,
+      "element_id": 579,
+      "minutes": 90,
+      "total_points": 8
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 580,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 581,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 582,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 583,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 584,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 585,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 586,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 587,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 588,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 589,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 590,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 16,
+      "element_id": 591,
+      "minutes": 90,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 4,
+      "element_id": 592,
+      "minutes": 12,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 1,
+      "element_id": 593,
+      "minutes": 90,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 594,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 595,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 596,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 597,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 598,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 599,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 600,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 601,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 602,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 603,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 604,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 605,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 606,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 607,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 4,
+      "element_id": 608,
+      "minutes": 1,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 609,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 610,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 611,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 612,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 613,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 614,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 615,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 616,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 617,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 618,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 24,
+      "element_id": 619,
+      "minutes": 77,
+      "total_points": 4
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 620,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 621,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 622,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 623,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 624,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 625,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 626,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 5,
+      "element_id": 627,
+      "minutes": 26,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 628,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 629,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 630,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 631,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 632,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 633,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 4,
+      "element_id": 634,
+      "minutes": 27,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 635,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 636,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 637,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 638,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 639,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 4,
+      "element_id": 640,
+      "minutes": 24,
+      "total_points": 1
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 641,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 642,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 643,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 644,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 645,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 646,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 647,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 648,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 649,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 650,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 651,
+      "minutes": 0,
+      "total_points": 0
+    },
+    {
+      "bonus": 0,
+      "bps": 0,
+      "element_id": 652,
+      "minutes": 0,
+      "total_points": 0
+    }
+  ],
+  "generated_at": "2026-09-05T14:02:17.082359+00:00",
+  "gw": 3,
+  "lineage": {
+    "authority": "OFFICIAL_FPL",
+    "checked_at": "2026-09-05T14:02:17.075143+00:00",
+    "endpoint_class": "event_live",
+    "entry_id": null,
+    "gw": 3,
+    "http_status": 200,
+    "league_id": null,
+    "normalization_version": "v6-report-prefetch-1",
+    "origin": "LIVE_FETCHED",
+    "pagination_coverage": null,
+    "payload_digest": "c704e30fcdc0359ed7a592e978df5b44b691e0493462dadbc4cbb5b5a108af58"
+  },
+  "manager_multiplier_points": [
+    {
+      "entry_id": 46571,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 5
+    },
+    {
+      "entry_id": 172575,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 6
+    },
+    {
+      "entry_id": 365743,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 0
+    },
+    {
+      "entry_id": 713037,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 15
+    },
+    {
+      "entry_id": 735831,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 4
+    },
+    {
+      "entry_id": 1418403,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 9
+    },
+    {
+      "entry_id": 2164749,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 6
+    },
+    {
+      "entry_id": 2207732,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 4
+    },
+    {
+      "entry_id": 2434955,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 1
+    },
+    {
+      "entry_id": 3203921,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 3
+    },
+    {
+      "entry_id": 3251919,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 3
+    },
+    {
+      "entry_id": 3354613,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 10
+    },
+    {
+      "entry_id": 3364828,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 8
+    },
+    {
+      "entry_id": 3397610,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 3
+    },
+    {
+      "entry_id": 3401022,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 14
+    },
+    {
+      "entry_id": 3413227,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 3
+    },
+    {
+      "entry_id": 3429687,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 8
+    },
+    {
+      "entry_id": 3462711,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 3
+    },
+    {
+      "entry_id": 3490399,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 3
+    },
+    {
+      "entry_id": 3610068,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 3
+    },
+    {
+      "entry_id": 3761043,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 12
+    },
+    {
+      "entry_id": 3771537,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 9
+    },
+    {
+      "entry_id": 3779079,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 12
+    },
+    {
+      "entry_id": 3779181,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 9
+    },
+    {
+      "entry_id": 3783589,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 5
+    },
+    {
+      "entry_id": 3785321,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 0
+    },
+    {
+      "entry_id": 3786216,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 6
+    },
+    {
+      "entry_id": 3897045,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 11
+    },
+    {
+      "entry_id": 4154537,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 19
+    },
+    {
+      "entry_id": 5079007,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 3
+    },
+    {
+      "entry_id": 5109730,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 0
+    },
+    {
+      "entry_id": 5246338,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 3
+    },
+    {
+      "entry_id": 5482054,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 0
+    },
+    {
+      "entry_id": 5515155,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 20
+    },
+    {
+      "entry_id": 5530168,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 0
+    },
+    {
+      "entry_id": 5608211,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 2
+    },
+    {
+      "entry_id": 5988806,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 1
+    },
+    {
+      "entry_id": 6126656,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 14
+    },
+    {
+      "entry_id": 6522451,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 0
+    },
+    {
+      "entry_id": 6563401,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 0
+    },
+    {
+      "entry_id": 7534328,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 5
+    },
+    {
+      "entry_id": 7537543,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 0
+    },
+    {
+      "entry_id": 7550933,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 9
+    },
+    {
+      "entry_id": 7555930,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 3
+    },
+    {
+      "entry_id": 7589782,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 17
+    },
+    {
+      "entry_id": 7602777,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 5
+    },
+    {
+      "entry_id": 7838370,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 7
+    },
+    {
+      "entry_id": 7926560,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 1
+    },
+    {
+      "entry_id": 8060324,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 11
+    },
+    {
+      "entry_id": 8124713,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 3
+    },
+    {
+      "entry_id": 9083226,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 3
+    },
+    {
+      "entry_id": 9105893,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 3
+    },
+    {
+      "entry_id": 9170139,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 1
+    },
+    {
+      "entry_id": 9196844,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 8
+    },
+    {
+      "entry_id": 9212427,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 1
+    },
+    {
+      "entry_id": 9691410,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 11
+    },
+    {
+      "entry_id": 9840431,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 4
+    },
+    {
+      "entry_id": 9972493,
+      "missing_live_element_ids": [],
+      "raw_multiplier_points": 7
+    }
+  ],
+  "manager_multiplier_points_semantics": "MECHANICAL_SUBMITTED_MULTIPLIER_X_CURRENT_ELEMENT_POINTS",
+  "normalization_version": "v6-report-prefetch-1",
+  "schema_version": 1,
+  "status": "AVAILABLE"
+}

@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-05T20:44:27.751404+00:00",
+  "authority": "official_fpl",
+  "team_count": 20,
+  "teams": [
+    {
+      "canonical_team_id": "fpl-team:1",
+      "official_fpl_team_id": 1,
+      "code": 3,
+      "name": "Arsenal",
+      "short_name": "ARS",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:2",
+      "official_fpl_team_id": 2,
+      "code": 7,
+      "name": "Aston Villa",
+      "short_name": "AVL",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:3",
+      "official_fpl_team_id": 3,
+      "code": 91,
+      "name": "Bournemouth",
+      "short_name": "BOU",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:4",
+      "official_fpl_team_id": 4,
+      "code": 94,
+      "name": "Brentford",
+      "short_name": "BRE",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:5",
+      "official_fpl_team_id": 5,
+      "code": 36,
+      "name": "Brighton",
+      "short_name": "BHA",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:6",
+      "official_fpl_team_id": 6,
+      "code": 8,
+      "name": "Chelsea",
+      "short_name": "CHE",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:7",
+      "official_fpl_team_id": 7,
+      "code": 9,
+      "name": "Coventry City",
+      "short_name": "COV",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:8",
+      "official_fpl_team_id": 8,
+      "code": 31,
+      "name": "Crystal Palace",
+      "short_name": "CRY",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:9",
+      "official_fpl_team_id": 9,
+      "code": 11,
+      "name": "Everton",
+      "short_name": "EVE",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:10",
+      "official_fpl_team_id": 10,
+      "code": 54,
+      "name": "Fulham",
+      "short_name": "FUL",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:11",
+      "official_fpl_team_id": 11,
+      "code": 88,
+      "name": "Hull City",
+      "short_name": "HUL",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:12",
+      "official_fpl_team_id": 12,
+      "code": 40,
+      "name": "Ipswich Town",
+      "short_name": "IPS",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:13",
+      "official_fpl_team_id": 13,
+      "code": 2,
+      "name": "Leeds",
+      "short_name": "LEE",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:14",
+      "official_fpl_team_id": 14,
+      "code": 14,
+      "name": "Liverpool",
+      "short_name": "LIV",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:15",
+      "official_fpl_team_id": 15,
+      "code": 43,
+      "name": "Man City",
+      "short_name": "MCI",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:16",
+      "official_fpl_team_id": 16,
+      "code": 1,
+      "name": "Man Utd",
+      "short_name": "MUN",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:17",
+      "official_fpl_team_id": 17,
+      "code": 4,
+      "name": "Newcastle",
+      "short_name": "NEW",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:18",
+      "official_fpl_team_id": 18,
+      "code": 17,
+      "name": "Nott'm Forest",
+      "short_name": "NFO",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:19",
+      "official_fpl_team_id": 19,
+      "code": 6,
+      "name": "Spurs",
+      "short_name": "TOT",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:20",
+      "official_fpl_team_id": 20,
+      "code": 56,
+      "name": "Sunderland",
+      "short_name": "SUN",
+      "identity_authority": "official_fpl"
+    }
+  ]
+}

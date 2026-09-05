@@ -1,0 +1,100 @@
+{
+  "age_target_minutes": 29.7,
+  "artifacts": [
+    {
+      "bytes": 4579,
+      "path": "data/v6/personal/memberships.json",
+      "sha256": "6eecbe037bde8a0f9a8bb3c50942c7501acbafad4823e65bef54a4423d52159d"
+    },
+    {
+      "bytes": 13639,
+      "path": "data/v6/mini_leagues/9477/standings.json",
+      "sha256": "d3651c352938eb3fc04f57a341ba7f19164f577e174a83aedb13547fc2703e8e"
+    },
+    {
+      "bytes": 229505,
+      "path": "data/v6/mini_leagues/9477/gw_3_manager_picks.json",
+      "sha256": "1402e338dabf530da51ce2ec2dc545a567b9e9f41f711090bd9696443010bd61"
+    },
+    {
+      "bytes": 77329,
+      "path": "data/v6/mini_leagues/9477/gw_3_exposure.json",
+      "sha256": "fe8431ec287e3162d24fda439c481842fac8d15c2cfa47970af89a41726fe31d"
+    }
+  ],
+  "collected_manager_count": 58,
+  "complete": true,
+  "control_failures": [],
+  "coverage_percent": 100.0,
+  "entry_id": 3462711,
+  "expected_manager_count": 58,
+  "fresh_for_target_report": true,
+  "generated_at": "2026-09-05T14:42:17.986766+00:00",
+  "governance": {
+    "core_source_freshness_separate": true,
+    "data_only": true,
+    "decision_authority": "NONE",
+    "independence_group": "official_fpl",
+    "independent_prefetch_cron": false,
+    "normal_hourly_personal_refresh": false,
+    "optimizer_authority": "NONE",
+    "prediction_authority": "NONE",
+    "report_prefetch_freshness_separate": true
+  },
+  "gw": 3,
+  "gw_deadline_time": "2026-09-04T17:30:00+00:00",
+  "idempotency": {
+    "reused": false
+  },
+  "league_manager_count": 58,
+  "live_checked_at": null,
+  "live_requested": false,
+  "live_status": "NOT_REQUESTED",
+  "mini_league_requested": true,
+  "mini_league_status": "AVAILABLE",
+  "personal_requested": false,
+  "personal_status": "NOT_REQUESTED",
+  "prefetch_lead_minutes": 30,
+  "prefetch_max_age_minutes": 35,
+  "priority_league_id": 9477,
+  "priority_league_name": "ICON+ League",
+  "priority_leagues": [
+    {
+      "cache_hits": 58,
+      "cache_misses": 0,
+      "collected_manager_count": 58,
+      "coverage_percent": 100.0,
+      "expected_manager_count": 58,
+      "league_id": 9477,
+      "league_kind": "classic",
+      "league_name": "ICON+ League",
+      "status": "AVAILABLE",
+      "submitted_picks_available_count": 58,
+      "submitted_picks_missing_count": 0
+    }
+  ],
+  "report_kind": "ad_hoc",
+  "request_id": "17569c04-c477-48ed-8a3c-becaceda3404",
+  "requested_at": "2026-09-05T14:42:17.986766+00:00",
+  "requested_by": "FPL_MASTER_MONITOR",
+  "requested_for_report": "ad_hoc",
+  "schema_version": 1,
+  "slot_identity": "2026-2027|ad_hoc|2026-09-05T22:12:00+07:00",
+  "slot_key": "2026-2027|3|ad_hoc|2026-09-05T22:12:00+07:00",
+  "source_failures": [],
+  "standings_checked_at": "2026-09-05T14:42:18.888801+00:00",
+  "submitted_picks_available_count": 58,
+  "submitted_picks_cache_complete": true,
+  "submitted_picks_cache_gw": 3,
+  "submitted_picks_manager_count": 58,
+  "submitted_picks_missing_count": 0,
+  "target_logical_report_slot": "2026-09-05T22:12:00+07:00",
+  "telemetry": {
+    "cache_hits": 58,
+    "cache_misses": 0,
+    "duration_ms": 941,
+    "failed_requests": 0,
+    "maximum_concurrency_used": 1,
+    "request_count": 4
+  }
+}

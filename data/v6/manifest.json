@@ -1,0 +1,407 @@
+{
+  "schema_version": 3,
+  "engine": "V6_FRESH_DATA_PLATFORM",
+  "season": "2026-2027",
+  "generated_at": "2026-09-05T20:44:27.757410+00:00",
+  "elapsed_ms": 7571.168,
+  "source_count": 21,
+  "source_ids": [
+    "official_fpl",
+    "official_price_predictor",
+    "understat",
+    "opta_the_analyst",
+    "statmuse",
+    "onside",
+    "ben_crellin",
+    "onefpl",
+    "livefpl",
+    "ffscout",
+    "fotmob",
+    "statsbomb",
+    "rotowire",
+    "premierleague_stats",
+    "football_data_uk",
+    "espn",
+    "vaastav_fpl",
+    "solio_analytics",
+    "open_meteo_weather",
+    "check_the_chance",
+    "fantasy_football_pundit"
+  ],
+  "activation": {
+    "policy": "explicit_active_source_pruning_with_reference_tiers",
+    "base_source_count": 35,
+    "active_source_count": 21,
+    "disabled_source_count": 7,
+    "reference_only_source_count": 7,
+    "required_active_source_count": 3,
+    "required_active_sources": [
+      "official_fpl",
+      "official_price_predictor",
+      "open_meteo_weather"
+    ],
+    "disabled_sources": {
+      "fbref": "DROP_DUPLICATE_ACCESS_RESTRICTED",
+      "sofascore": "DROP_DUPLICATE_UNOFFICIAL_403",
+      "sportmonks": "DROP_PAID_PROVIDER",
+      "api_football": "DROP_PAID_PROVIDER",
+      "transfermarkt": "DROP_AUTOMATION_RESTRICTED",
+      "whoscored": "DROP_DUPLICATE_ACCESS_RESTRICTED",
+      "football_data_org": "DROP_PAID_BY_OWNER_DECISION"
+    },
+    "reference_only_sources": {
+      "fffix": "FREE_ACCOUNT_EXISTS_BUT_MACHINE_ENDPOINTS_REDIRECT_TO_LOGIN",
+      "ffhub": "FREE_PUBLIC_SITE_EXISTS_BUT_PREDICTIONS_ARE_AUTH_GATED",
+      "clubelo": "FREE_PUBLIC_REFERENCE_BUT_RUNTIME_HTTPS_CONNECT_TIMEOUT_AFTER_REPAIR_RETRY",
+      "bbc_team_news": "FREE_EDITORIAL_TARGETED_DEADLINE_REFERENCE",
+      "premier_injuries": "FREE_PUBLIC_REFERENCE_NO_DATASET_REPUBLISH",
+      "fpl_form": "FREE_PERSONAL_USE_REFERENCE_NO_RUNTIME_REPUBLISH",
+      "fpl_review_free": "FREE_MODEL_REFERENCE_NO_STABLE_MACHINE_CONTRACT"
+    },
+    "constraints": {
+      "solio_analytics": "FREE_PUBLIC_NO_AUTH",
+      "open_meteo_weather": "FREE_PUBLIC_NO_AUTH_MANDATORY_WEATHER_CONTEXT",
+      "check_the_chance": "FREE_PUBLIC_ONLY",
+      "fantasy_football_pundit": "FREE_PUBLIC_ONLY"
+    },
+    "tiers": {
+      "solio_analytics": "core",
+      "open_meteo_weather": "core",
+      "check_the_chance": "pilot",
+      "fantasy_football_pundit": "pilot"
+    },
+    "pruned_runtime_source_files": []
+  },
+  "overall": "AMBER",
+  "health_counts": {
+    "GREEN": 20,
+    "AMBER": 1,
+    "RED": 0
+  },
+  "critical_failures": [],
+  "performance": {
+    "source_workers": 15,
+    "configured_source_workers": 20,
+    "request_workers_per_source": 4,
+    "source_duration_ms": {
+      "statsbomb": 0.0,
+      "solio_analytics": 0.0,
+      "check_the_chance": 0.0,
+      "fantasy_football_pundit": 0.0,
+      "opta_the_analyst": 196.186,
+      "espn": 239.516,
+      "onside": 348.185,
+      "ben_crellin": 376.046,
+      "official_fpl": 394.639,
+      "premierleague_stats": 502.929,
+      "vaastav_fpl": 509.762,
+      "rotowire": 671.603,
+      "fotmob": 781.89,
+      "onefpl": 799.217,
+      "livefpl": 840.891,
+      "ffscout": 871.655,
+      "statmuse": 931.618,
+      "understat": 1034.988,
+      "football_data_uk": 6458.049,
+      "official_price_predictor": 1.663,
+      "open_meteo_weather": 876.919
+    },
+    "slowest_source_ms": 6458.049,
+    "dependency_layers": [
+      [
+        "official_fpl",
+        "understat",
+        "opta_the_analyst",
+        "statmuse",
+        "onside",
+        "ben_crellin",
+        "onefpl",
+        "livefpl",
+        "ffscout",
+        "fotmob",
+        "statsbomb",
+        "rotowire",
+        "premierleague_stats",
+        "football_data_uk",
+        "espn",
+        "vaastav_fpl",
+        "solio_analytics",
+        "check_the_chance",
+        "fantasy_football_pundit"
+      ],
+      [
+        "official_price_predictor",
+        "open_meteo_weather"
+      ]
+    ],
+    "unrelated_sources_are_not_dependency_blocked": true
+  },
+  "polling": {
+    "adaptive": true,
+    "scheduler_interval_minutes": 60,
+    "deadline_window_active": false,
+    "deadline_window_hours": 48,
+    "due_source_count": 17,
+    "skipped_source_count": 4,
+    "skipped_sources": {
+      "statsbomb": "NOT_DUE",
+      "solio_analytics": "NOT_DUE",
+      "check_the_chance": "NOT_DUE",
+      "fantasy_football_pundit": "NOT_DUE"
+    }
+  },
+  "identity": {
+    "canonical_authority": "official_fpl",
+    "mapping_artifact": "data/v6/evidence/player_identity_map.json",
+    "fuzzy_name_matching_allowed": false,
+    "coverage": {
+      "official_price_predictor": {
+        "strategy": "OFFICIAL_DERIVED_SHARED_ELEMENT_ID",
+        "deterministic_bridge": true,
+        "mapped_player_count": 653,
+        "canonical_player_count": 653,
+        "coverage_ratio": 1.0,
+        "unmapped_player_count": 0
+      },
+      "understat": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "opta_the_analyst": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "statmuse": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "onside": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "ben_crellin": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "onefpl": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "livefpl": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "ffscout": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "fotmob": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "statsbomb": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "rotowire": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "premierleague_stats": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "football_data_uk": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "espn": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "vaastav_fpl": {
+        "strategy": "FPL_ELEMENT_ID_AND_CODE_EXACT",
+        "deterministic_bridge": true,
+        "mapped_player_count": 616,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.943338,
+        "unmapped_player_count": 37
+      },
+      "solio_analytics": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "open_meteo_weather": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "check_the_chance": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      },
+      "fantasy_football_pundit": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "mapped_player_count": 0,
+        "canonical_player_count": 653,
+        "coverage_ratio": 0.0,
+        "unmapped_player_count": 653
+      }
+    }
+  },
+  "paths": {
+    "current_sources": "data/v6/current/",
+    "health": "data/v6/health/source_health.json",
+    "canonical_players": "data/v6/normalized/canonical_players.json",
+    "canonical_teams": "data/v6/normalized/canonical_teams.json",
+    "canonical_fixtures": "data/v6/normalized/canonical_fixtures.json",
+    "lineage": "data/v6/evidence/lineage.json",
+    "evidence_index": "data/v6/evidence/latest_index.json",
+    "resolved_registry": "data/v6/evidence/resolved_registry.json",
+    "player_identity_map": "data/v6/evidence/player_identity_map.json",
+    "publish_integrity": "data/v6/health/publish_integrity.json",
+    "runtime_control": "data/v6/health/runtime_control.json"
+  },
+  "governance": {
+    "decision_authority": "NONE",
+    "prediction_authority": "NONE",
+    "optimizer_authority": "NONE",
+    "tactical_authority": "NONE",
+    "transfer_authority": "NONE",
+    "captain_authority": "NONE",
+    "chip_authority": "NONE",
+    "formation_authority": "NONE",
+    "data_only": true,
+    "no_cross_source_averaging": true,
+    "no_fabrication": true,
+    "source_failures_are_isolated": true,
+    "request_failures_are_isolated": true,
+    "unchanged_upstream_is_not_degraded": true,
+    "last_good_cache_hydrated_by_workflow": true,
+    "adaptive_polling_is_registry_driven": true,
+    "active_source_pruning_is_registry_driven": true,
+    "dependency_order_is_registry_driven": true,
+    "resolved_registry_is_published": true,
+    "publish_integrity_required": true,
+    "identity_mapping_is_deterministic_only": true,
+    "fuzzy_identity_matching": false,
+    "daily_budget_timezone": "Asia/Jakarta",
+    "weather_is_context_only": true,
+    "weather_direct_xpts_multiplier": false,
+    "weather_alone_can_trigger_transfer": false,
+    "production_ingestion_schedule_only": true,
+    "production_authoritative_snapshots_require_schedule": false,
+    "production_authoritative_snapshots_require_governed_trigger": true,
+    "authoritative_trigger_kinds": [
+      "primary",
+      "recovery",
+      "master_orchestrated"
+    ],
+    "master_orchestrated_is_authoritative": true,
+    "governed_manual_recovery_enabled": true,
+    "manual_recovery_is_authoritative": false,
+    "single_logical_acquisition_per_scheduler_slot": true,
+    "runtime_schedule_health_is_manifested": true,
+    "scheduled_recovery_is_idempotent": true,
+    "scheduled_slot_uses_nominal_cron": true
+  },
+  "runtime_control": {
+    "schema_version": 4,
+    "health": "GREEN",
+    "event_name": "schedule",
+    "schedule_kind": "recovery",
+    "run_id": "33990980765",
+    "scheduled_cycle": true,
+    "master_orchestrated": false,
+    "manual_recovery": false,
+    "authoritative_runtime_snapshot": true,
+    "counts_as_completed_scheduled_slot": true,
+    "counts_as_completed_operational_slot": true,
+    "scheduler_interval_minutes": 60,
+    "schedule_expression": "53 * * * *",
+    "nominal_schedule_at": "2026-09-05T19:53:00+00:00",
+    "nominal_schedule_resolved": true,
+    "expected_cycle_at": "2026-09-05T19:00:00+00:00",
+    "cycle_observed_at": "2026-09-05T20:44:27.840856+00:00",
+    "schedule_lag_seconds": 3087.841,
+    "previous_scheduled_cycle_at": "2026-09-05T18:00:00+00:00",
+    "last_scheduled_cycle_at": "2026-09-05T19:00:00+00:00",
+    "last_authoritative_cycle_at": "2026-09-05T19:00:00+00:00",
+    "missed_cycle": false,
+    "missed_cycle_count": 0,
+    "duplicate_scheduled_cycle": false,
+    "out_of_order_scheduled_cycle": false,
+    "baseline_inferred_from_legacy_manifest": false,
+    "single_logical_acquisition_per_scheduler_slot": true,
+    "scheduled_slot_uses_nominal_cron": true
+  },
+  "control_failures": []
+}

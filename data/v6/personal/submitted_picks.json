@@ -1,0 +1,145 @@
+{
+  "active_chip": "3xc",
+  "authority": "OFFICIAL_FPL",
+  "entry_id": 3462711,
+  "generated_at": "2026-09-05T14:26:04.714877+00:00",
+  "gw": 3,
+  "lineage": {
+    "authority": "OFFICIAL_FPL",
+    "checked_at": "2026-09-05T14:26:04.714785+00:00",
+    "endpoint_class": "submitted_picks",
+    "entry_id": 3462711,
+    "gw": 3,
+    "http_status": 200,
+    "league_id": null,
+    "normalization_version": "v6-report-prefetch-1",
+    "origin": "LIVE_FETCHED_CURRENT_GW",
+    "pagination_coverage": null,
+    "payload_digest": "3a886c229756a4915015c24d9e16d833f99b3f23ef6ca5fc1a18e1b23f4300a4"
+  },
+  "normalization_version": "v6-report-prefetch-1",
+  "picks": [
+    {
+      "bench_order": null,
+      "captain": false,
+      "element_id": 572,
+      "multiplier": 1,
+      "squad_position": 1,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "element_id": 115,
+      "multiplier": 1,
+      "squad_position": 2,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "element_id": 8,
+      "multiplier": 1,
+      "squad_position": 3,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "element_id": 88,
+      "multiplier": 1,
+      "squad_position": 4,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "element_id": 426,
+      "multiplier": 1,
+      "squad_position": 5,
+      "vice_captain": true
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "element_id": 565,
+      "multiplier": 1,
+      "squad_position": 6,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "element_id": 368,
+      "multiplier": 1,
+      "squad_position": 7,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "element_id": 40,
+      "multiplier": 1,
+      "squad_position": 8,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "element_id": 15,
+      "multiplier": 1,
+      "squad_position": 9,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": true,
+      "element_id": 411,
+      "multiplier": 3,
+      "squad_position": 10,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "element_id": 165,
+      "multiplier": 1,
+      "squad_position": 11,
+      "vice_captain": false
+    },
+    {
+      "bench_order": 1,
+      "captain": false,
+      "element_id": 109,
+      "multiplier": 0,
+      "squad_position": 12,
+      "vice_captain": false
+    },
+    {
+      "bench_order": 2,
+      "captain": false,
+      "element_id": 346,
+      "multiplier": 0,
+      "squad_position": 13,
+      "vice_captain": false
+    },
+    {
+      "bench_order": 3,
+      "captain": false,
+      "element_id": 279,
+      "multiplier": 0,
+      "squad_position": 14,
+      "vice_captain": false
+    },
+    {
+      "bench_order": 4,
+      "captain": false,
+      "element_id": 254,
+      "multiplier": 0,
+      "squad_position": 15,
+      "vice_captain": false
+    }
+  ],
+  "schema_version": 1,
+  "status": "AVAILABLE"
+}

@@ -1,0 +1,158 @@
+{
+  "authority": "OFFICIAL_FPL",
+  "entry_id": 3462711,
+  "generated_at": "2026-09-05T14:42:17.986766+00:00",
+  "lineage": {
+    "authority": "OFFICIAL_FPL",
+    "checked_at": "2026-09-05T14:42:18.475891+00:00",
+    "endpoint_class": "entry",
+    "entry_id": 3462711,
+    "gw": null,
+    "http_status": 200,
+    "league_id": null,
+    "normalization_version": "v6-report-prefetch-1",
+    "origin": "LIVE_FETCHED",
+    "pagination_coverage": null,
+    "payload_digest": "4710d9dfe05d496730a6f78f66352e589d2e1946fda71d723e7f351d68f70da8"
+  },
+  "memberships": [
+    {
+      "current_rank": null,
+      "discovered_at": "2026-09-05T14:42:17.986766+00:00",
+      "entry_can_admin": false,
+      "entry_can_invite": false,
+      "entry_can_leave": true,
+      "league_id": 5063,
+      "league_kind": "classic",
+      "league_name": "FPL INDO [8cxqq1]",
+      "league_type": "x",
+      "previous_rank": null
+    },
+    {
+      "current_rank": null,
+      "discovered_at": "2026-09-05T14:42:17.986766+00:00",
+      "entry_can_admin": false,
+      "entry_can_invite": false,
+      "entry_can_leave": true,
+      "league_id": 6348,
+      "league_kind": "classic",
+      "league_name": "YouTube.com/FPLtips",
+      "league_type": "x",
+      "previous_rank": null
+    },
+    {
+      "current_rank": null,
+      "discovered_at": "2026-09-05T14:42:17.986766+00:00",
+      "entry_can_admin": false,
+      "entry_can_invite": false,
+      "entry_can_leave": true,
+      "league_id": 9477,
+      "league_kind": "classic",
+      "league_name": "ICON+ League ",
+      "league_type": "x",
+      "previous_rank": null
+    },
+    {
+      "current_rank": null,
+      "discovered_at": "2026-09-05T14:42:17.986766+00:00",
+      "entry_can_admin": false,
+      "entry_can_invite": false,
+      "entry_can_leave": true,
+      "league_id": 27604,
+      "league_kind": "classic",
+      "league_name": "Liga FPL Box2Box (rizelo)",
+      "league_type": "x",
+      "previous_rank": null
+    },
+    {
+      "current_rank": null,
+      "discovered_at": "2026-09-05T14:42:17.986766+00:00",
+      "entry_can_admin": false,
+      "entry_can_invite": false,
+      "entry_can_leave": true,
+      "league_id": 130459,
+      "league_kind": "classic",
+      "league_name": "Basdor FPL 2026/2027",
+      "league_type": "x",
+      "previous_rank": null
+    },
+    {
+      "current_rank": null,
+      "discovered_at": "2026-09-05T14:42:17.986766+00:00",
+      "entry_can_admin": false,
+      "entry_can_invite": false,
+      "entry_can_leave": true,
+      "league_id": 179859,
+      "league_kind": "classic",
+      "league_name": "FPL Experts",
+      "league_type": "x",
+      "previous_rank": null
+    },
+    {
+      "current_rank": null,
+      "discovered_at": "2026-09-05T14:42:17.986766+00:00",
+      "entry_can_admin": false,
+      "entry_can_invite": false,
+      "entry_can_leave": true,
+      "league_id": 285587,
+      "league_kind": "classic",
+      "league_name": "FPL Architect’s League",
+      "league_type": "x",
+      "previous_rank": null
+    },
+    {
+      "current_rank": null,
+      "discovered_at": "2026-09-05T14:42:17.986766+00:00",
+      "entry_can_admin": false,
+      "entry_can_invite": false,
+      "entry_can_leave": true,
+      "league_id": 1436718,
+      "league_kind": "classic",
+      "league_name": "Pandit FPL 2026/27",
+      "league_type": "x",
+      "previous_rank": null
+    },
+    {
+      "current_rank": null,
+      "discovered_at": "2026-09-05T14:42:17.986766+00:00",
+      "entry_can_admin": false,
+      "entry_can_invite": false,
+      "entry_can_leave": true,
+      "league_id": 1517881,
+      "league_kind": "classic",
+      "league_name": "Liga Kopdes Paris",
+      "league_type": "x",
+      "previous_rank": null
+    },
+    {
+      "current_rank": null,
+      "discovered_at": "2026-09-05T14:42:17.986766+00:00",
+      "entry_can_admin": false,
+      "entry_can_invite": false,
+      "entry_can_leave": false,
+      "league_id": 1798198,
+      "league_kind": "h2h",
+      "league_name": "Liga H2H Basdor FPL",
+      "league_type": "x",
+      "previous_rank": null
+    }
+  ],
+  "priority_resolution": [
+    {
+      "current_rank": null,
+      "discovered_at": "2026-09-05T14:42:17.986766+00:00",
+      "entry_can_admin": false,
+      "entry_can_invite": false,
+      "entry_can_leave": true,
+      "full_submitted_picks": true,
+      "league_id": 9477,
+      "league_kind": "classic",
+      "league_name": "ICON+ League",
+      "league_type": "x",
+      "previous_rank": null,
+      "resolution_status": "RESOLVED"
+    }
+  ],
+  "schema_version": 1,
+  "status": "AVAILABLE"
+}

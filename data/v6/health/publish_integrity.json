@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "status": "PASS",
+  "errors": [],
+  "source_count": 21,
+  "checked_file_count": 40,
+  "tree_sha256": "fc3906add8bd9cd26bdc6569baa06f5b4b4a12703d913e79dcb5ecd002788aa0",
+  "current_source_files_exact": true,
+  "resolved_registry_exact": true,
+  "identity_map_consistent": true
+}

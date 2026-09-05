@@ -1,0 +1,578 @@
+{
+  "authority": "OFFICIAL_FPL",
+  "collected_manager_count": 58,
+  "complete": true,
+  "expected_manager_count": 58,
+  "failed_pages": [],
+  "generated_at": "2026-09-05T14:42:17.986766+00:00",
+  "league_id": 9477,
+  "league_kind": "classic",
+  "league_name": "ICON+ League",
+  "lineage": [
+    {
+      "authority": "OFFICIAL_FPL",
+      "checked_at": "2026-09-05T14:42:18.705396+00:00",
+      "endpoint_class": "classic_standings",
+      "entry_id": null,
+      "gw": null,
+      "http_status": 200,
+      "league_id": 9477,
+      "normalization_version": "v6-report-prefetch-1",
+      "origin": "LIVE_FETCHED",
+      "pagination_coverage": {
+        "page": 1,
+        "rows_on_page": 50
+      },
+      "payload_digest": "7c4d9f7a2d7178d3ba82081a56bc51ffa2f1862514c12c3897e26f677c5e20fe"
+    },
+    {
+      "authority": "OFFICIAL_FPL",
+      "checked_at": "2026-09-05T14:42:18.888801+00:00",
+      "endpoint_class": "classic_standings",
+      "entry_id": null,
+      "gw": null,
+      "http_status": 200,
+      "league_id": 9477,
+      "normalization_version": "v6-report-prefetch-1",
+      "origin": "LIVE_FETCHED",
+      "pagination_coverage": {
+        "page": 2,
+        "rows_on_page": 8
+      },
+      "payload_digest": "dd9f671fe809f1ab08583558493796a4edfa12b020db42c4adf782d544ccd7ba"
+    }
+  ],
+  "managers": [
+    {
+      "entry_id": 3897045,
+      "gw_score": 32,
+      "last_rank": 2,
+      "league_rank": 1,
+      "league_total": 211,
+      "manager_name": "Dallas Permadi",
+      "team_name": "Madame de Syuga"
+    },
+    {
+      "entry_id": 735831,
+      "gw_score": 23,
+      "last_rank": 1,
+      "league_rank": 2,
+      "league_total": 206,
+      "manager_name": "Arief Novrianto",
+      "team_name": "Tim Penggembira"
+    },
+    {
+      "entry_id": 3761043,
+      "gw_score": 34,
+      "last_rank": 9,
+      "league_rank": 3,
+      "league_total": 192,
+      "manager_name": "gegsy ajrdwn",
+      "team_name": "Musashi FC"
+    },
+    {
+      "entry_id": 3413227,
+      "gw_score": 31,
+      "last_rank": 3,
+      "league_rank": 4,
+      "league_total": 192,
+      "manager_name": "Andi Vicky",
+      "team_name": "AaronArk FC"
+    },
+    {
+      "entry_id": 3397610,
+      "gw_score": 22,
+      "last_rank": 4,
+      "league_rank": 5,
+      "league_total": 190,
+      "manager_name": "Dicky Haliansyah",
+      "team_name": "eQuaLiZtoRe"
+    },
+    {
+      "entry_id": 3462711,
+      "gw_score": 29,
+      "last_rank": 6,
+      "league_rank": 6,
+      "league_total": 189,
+      "manager_name": "sam iphöenk",
+      "team_name": "Kutu Kupret"
+    },
+    {
+      "entry_id": 3251919,
+      "gw_score": 24,
+      "last_rank": 5,
+      "league_rank": 7,
+      "league_total": 187,
+      "manager_name": "Naldo Baskara Armand",
+      "team_name": "ARM FC"
+    },
+    {
+      "entry_id": 3354613,
+      "gw_score": 29,
+      "last_rank": 10,
+      "league_rank": 8,
+      "league_total": 185,
+      "manager_name": "Aditya Rizki",
+      "team_name": "Pendowo FC"
+    },
+    {
+      "entry_id": 8124713,
+      "gw_score": 32,
+      "last_rank": 11,
+      "league_rank": 9,
+      "league_total": 185,
+      "manager_name": "Rudy Okto",
+      "team_name": "Republic of Goals"
+    },
+    {
+      "entry_id": 2434955,
+      "gw_score": 21,
+      "last_rank": 8,
+      "league_rank": 10,
+      "league_total": 180,
+      "manager_name": "Rangga Yudistira",
+      "team_name": "Retjo_Pentung"
+    },
+    {
+      "entry_id": 3610068,
+      "gw_score": 38,
+      "last_rank": 17,
+      "league_rank": 11,
+      "league_total": 179,
+      "manager_name": "akun palsu",
+      "team_name": "Los Melengos"
+    },
+    {
+      "entry_id": 365743,
+      "gw_score": 25,
+      "last_rank": 13,
+      "league_rank": 12,
+      "league_total": 175,
+      "manager_name": "Andre Kris",
+      "team_name": "Royal Kludge"
+    },
+    {
+      "entry_id": 46571,
+      "gw_score": 33,
+      "last_rank": 19,
+      "league_rank": 13,
+      "league_total": 173,
+      "manager_name": "Agung Hidayat",
+      "team_name": "Gounk FC"
+    },
+    {
+      "entry_id": 3783589,
+      "gw_score": 8,
+      "last_rank": 7,
+      "league_rank": 14,
+      "league_total": 169,
+      "manager_name": "Tri Yulianto",
+      "team_name": "SK Reborn"
+    },
+    {
+      "entry_id": 5530168,
+      "gw_score": 27,
+      "last_rank": 15,
+      "league_rank": 15,
+      "league_total": 169,
+      "manager_name": "Bambang Aryadi",
+      "team_name": "Gendelanfc"
+    },
+    {
+      "entry_id": 2164749,
+      "gw_score": 26,
+      "last_rank": 15,
+      "league_rank": 16,
+      "league_total": 168,
+      "manager_name": "дема пермана",
+      "team_name": "Bango Koprol"
+    },
+    {
+      "entry_id": 3364828,
+      "gw_score": 26,
+      "last_rank": 17,
+      "league_rank": 17,
+      "league_total": 167,
+      "manager_name": "rico yusman",
+      "team_name": "rico's Team"
+    },
+    {
+      "entry_id": 6126656,
+      "gw_score": 33,
+      "last_rank": 23,
+      "league_rank": 18,
+      "league_total": 166,
+      "manager_name": "wepe can do",
+      "team_name": "parkia farm"
+    },
+    {
+      "entry_id": 3786216,
+      "gw_score": 31,
+      "last_rank": 26,
+      "league_rank": 19,
+      "league_total": 159,
+      "manager_name": "BENNY C",
+      "team_name": "ManusiaBijak drTimur"
+    },
+    {
+      "entry_id": 7602777,
+      "gw_score": 22,
+      "last_rank": 20,
+      "league_rank": 20,
+      "league_total": 157,
+      "manager_name": "Gaha Maulana",
+      "team_name": "Air dingin"
+    },
+    {
+      "entry_id": 6522451,
+      "gw_score": 9,
+      "last_rank": 14,
+      "league_rank": 21,
+      "league_total": 156,
+      "manager_name": "Habibi Arrozin",
+      "team_name": "TimNas"
+    },
+    {
+      "entry_id": 5482054,
+      "gw_score": 23,
+      "last_rank": 23,
+      "league_rank": 22,
+      "league_total": 156,
+      "manager_name": "Sandria Abhiseka",
+      "team_name": "Corner FC"
+    },
+    {
+      "entry_id": 5079007,
+      "gw_score": 7,
+      "last_rank": 12,
+      "league_rank": 23,
+      "league_total": 156,
+      "manager_name": "abdul sidoel",
+      "team_name": "VEST fc"
+    },
+    {
+      "entry_id": 6563401,
+      "gw_score": 25,
+      "last_rank": 21,
+      "league_rank": 24,
+      "league_total": 155,
+      "manager_name": "Nurhadi hadi",
+      "team_name": "KagokGanteng"
+    },
+    {
+      "entry_id": 3203921,
+      "gw_score": 39,
+      "last_rank": 36,
+      "league_rank": 25,
+      "league_total": 154,
+      "manager_name": "Mihat Sesarea",
+      "team_name": "spoky"
+    },
+    {
+      "entry_id": 2207732,
+      "gw_score": 27,
+      "last_rank": 27,
+      "league_rank": 26,
+      "league_total": 153,
+      "manager_name": "Muhamad Anhall",
+      "team_name": "Elektro's Team"
+    },
+    {
+      "entry_id": 172575,
+      "gw_score": 25,
+      "last_rank": 30,
+      "league_rank": 27,
+      "league_total": 150,
+      "manager_name": "Sony Wibisono",
+      "team_name": "WarrockFC"
+    },
+    {
+      "entry_id": 7537543,
+      "gw_score": 30,
+      "last_rank": 35,
+      "league_rank": 27,
+      "league_total": 150,
+      "manager_name": "Ilham FM",
+      "team_name": "Maung Hideung"
+    },
+    {
+      "entry_id": 3401022,
+      "gw_score": 34,
+      "last_rank": 38,
+      "league_rank": 29,
+      "league_total": 150,
+      "manager_name": "Rizal Adiansyah",
+      "team_name": "Distorsi"
+    },
+    {
+      "entry_id": 7589782,
+      "gw_score": 34,
+      "last_rank": 39,
+      "league_rank": 30,
+      "league_total": 149,
+      "manager_name": "Rhama Sukmana",
+      "team_name": "Teddy Mayor"
+    },
+    {
+      "entry_id": 7555930,
+      "gw_score": 23,
+      "last_rank": 27,
+      "league_rank": 30,
+      "league_total": 149,
+      "manager_name": "Lionel Messi",
+      "team_name": "JAKBAN JUARA FC"
+    },
+    {
+      "entry_id": 3490399,
+      "gw_score": 22,
+      "last_rank": 27,
+      "league_rank": 32,
+      "league_total": 148,
+      "manager_name": "Radie die flying donkey",
+      "team_name": "Radie die's Team"
+    },
+    {
+      "entry_id": 5988806,
+      "gw_score": 29,
+      "last_rank": 30,
+      "league_rank": 33,
+      "league_total": 146,
+      "manager_name": "Semangka Kurma",
+      "team_name": "Semangkur Team"
+    },
+    {
+      "entry_id": 1418403,
+      "gw_score": 27,
+      "last_rank": 32,
+      "league_rank": 34,
+      "league_total": 145,
+      "manager_name": "Bro Aboed",
+      "team_name": "MAUK FC"
+    },
+    {
+      "entry_id": 7926560,
+      "gw_score": 10,
+      "last_rank": 21,
+      "league_rank": 35,
+      "league_total": 144,
+      "manager_name": "Gooners FC",
+      "team_name": "The Special Gunners"
+    },
+    {
+      "entry_id": 713037,
+      "gw_score": 33,
+      "last_rank": 36,
+      "league_rank": 36,
+      "league_total": 144,
+      "manager_name": "Nardi Abim",
+      "team_name": "BallBall4N"
+    },
+    {
+      "entry_id": 3779181,
+      "gw_score": 27,
+      "last_rank": 40,
+      "league_rank": 37,
+      "league_total": 141,
+      "manager_name": "Fendy A",
+      "team_name": "NITIJEN"
+    },
+    {
+      "entry_id": 7534328,
+      "gw_score": 8,
+      "last_rank": 25,
+      "league_rank": 38,
+      "league_total": 139,
+      "manager_name": "Pradipta Bs",
+      "team_name": "Jasmisne Guard"
+    },
+    {
+      "entry_id": 3779079,
+      "gw_score": 19,
+      "last_rank": 41,
+      "league_rank": 39,
+      "league_total": 130,
+      "manager_name": "Faisal Rahman",
+      "team_name": "JMBR"
+    },
+    {
+      "entry_id": 3771537,
+      "gw_score": 11,
+      "last_rank": 32,
+      "league_rank": 40,
+      "league_total": 129,
+      "manager_name": "RH Yudha",
+      "team_name": "Cak Su"
+    },
+    {
+      "entry_id": 3785321,
+      "gw_score": 5,
+      "last_rank": 34,
+      "league_rank": 41,
+      "league_total": 127,
+      "manager_name": "Lesmana Prawira",
+      "team_name": "HARI HARI MISKOM ✌️"
+    },
+    {
+      "entry_id": 5608211,
+      "gw_score": 27,
+      "last_rank": 43,
+      "league_rank": 42,
+      "league_total": 127,
+      "manager_name": "Mang Mamed",
+      "team_name": "mamed"
+    },
+    {
+      "entry_id": 8060324,
+      "gw_score": 28,
+      "last_rank": 44,
+      "league_rank": 43,
+      "league_total": 123,
+      "manager_name": "Brian Aditiayuda",
+      "team_name": "Botak Belanda"
+    },
+    {
+      "entry_id": 5109730,
+      "gw_score": 22,
+      "last_rank": 47,
+      "league_rank": 44,
+      "league_total": 120,
+      "manager_name": "Haryo Tetuko Bimantoro",
+      "team_name": "Connect"
+    },
+    {
+      "entry_id": 9212427,
+      "gw_score": 18,
+      "last_rank": 46,
+      "league_rank": 45,
+      "league_total": 117,
+      "manager_name": "Jhon Panto",
+      "team_name": "Jhon's Team"
+    },
+    {
+      "entry_id": 9196844,
+      "gw_score": 27,
+      "last_rank": 52,
+      "league_rank": 46,
+      "league_total": 115,
+      "manager_name": "Andi ervan Surahmat",
+      "team_name": "Solar System"
+    },
+    {
+      "entry_id": 5515155,
+      "gw_score": 23,
+      "last_rank": 49,
+      "league_rank": 47,
+      "league_total": 113,
+      "manager_name": "Sir Ogee Kerenz",
+      "team_name": "Team Poekin"
+    },
+    {
+      "entry_id": 5246338,
+      "gw_score": 28,
+      "last_rank": 48,
+      "league_rank": 48,
+      "league_total": 113,
+      "manager_name": "julian anto",
+      "team_name": "julian's Team"
+    },
+    {
+      "entry_id": 3429687,
+      "gw_score": 26,
+      "last_rank": 53,
+      "league_rank": 49,
+      "league_total": 112,
+      "manager_name": "Big Bojong",
+      "team_name": "Big Bojong"
+    },
+    {
+      "entry_id": 4154537,
+      "gw_score": 22,
+      "last_rank": 49,
+      "league_rank": 49,
+      "league_total": 112,
+      "manager_name": "Tri Wibowo Kramadibrata",
+      "team_name": "NdutJiwo"
+    },
+    {
+      "entry_id": 7838370,
+      "gw_score": 8,
+      "last_rank": 42,
+      "league_rank": 51,
+      "league_total": 112,
+      "manager_name": "Zaky Said",
+      "team_name": "Red Army"
+    },
+    {
+      "entry_id": 9083226,
+      "gw_score": 31,
+      "last_rank": 54,
+      "league_rank": 52,
+      "league_total": 110,
+      "manager_name": "Juergen Sakamoto",
+      "team_name": "Karhutla Team"
+    },
+    {
+      "entry_id": 9170139,
+      "gw_score": 4,
+      "last_rank": 45,
+      "league_rank": 53,
+      "league_total": 106,
+      "manager_name": "Muhammad Syah Rezha",
+      "team_name": "Jakpus United"
+    },
+    {
+      "entry_id": 7550933,
+      "gw_score": 13,
+      "last_rank": 51,
+      "league_rank": 54,
+      "league_total": 102,
+      "manager_name": "Willy Chandra",
+      "team_name": "Pending Moderation"
+    },
+    {
+      "entry_id": 9105893,
+      "gw_score": 21,
+      "last_rank": 55,
+      "league_rank": 54,
+      "league_total": 102,
+      "manager_name": "Doa Ibu",
+      "team_name": "haykalunited"
+    },
+    {
+      "entry_id": 9840431,
+      "gw_score": 23,
+      "last_rank": 56,
+      "league_rank": 56,
+      "league_total": 95,
+      "manager_name": "IRFAN ARIF",
+      "team_name": "Dream Team"
+    },
+    {
+      "entry_id": 9691410,
+      "gw_score": 21,
+      "last_rank": 57,
+      "league_rank": 57,
+      "league_total": 89,
+      "manager_name": "Ilman Fauzi",
+      "team_name": "Varokah"
+    },
+    {
+      "entry_id": 9972493,
+      "gw_score": 11,
+      "last_rank": 0,
+      "league_rank": 58,
+      "league_total": 11,
+      "manager_name": "Rismanto Arif Nugroho",
+      "team_name": "mbuh_piye_carane"
+    }
+  ],
+  "normalization_version": "v6-report-prefetch-1",
+  "pages_collected": 2,
+  "schema_version": 1,
+  "user_summary": {
+    "entry_id": 3462711,
+    "gap_to_first": 22,
+    "rank": 6,
+    "total": 189
+  }
+}

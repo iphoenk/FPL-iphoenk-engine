@@ -12,7 +12,9 @@ def test_historical_backfill_reuses_issue_431_report_prefetch_control_plane():
     assert "historical_backfill" in prefetch["supported_report_kinds"]
     assert prefetch["historical_backfill"] == {
         "scope": "mini_league",
-        "finished_gws_only": True,
+        "completed_gws_allowed": True,
+        "current_post_deadline_gw_allowed": True,
+        "future_gws_allowed": False,
         "requires_gw_range": True,
         "cohort_semantics": "CURRENT_COHORT_HISTORY",
     }

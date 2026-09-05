@@ -71,7 +71,9 @@
     ],
     "historical_backfill": {
       "scope": "mini_league",
-      "finished_gws_only": true,
+      "completed_gws_allowed": true,
+      "current_post_deadline_gw_allowed": true,
+      "future_gws_allowed": false,
       "requires_gw_range": true,
       "cohort_semantics": "CURRENT_COHORT_HISTORY"
     }

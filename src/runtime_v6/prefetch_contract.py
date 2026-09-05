@@ -226,8 +226,8 @@ def lineage(
 
 
 def freshness(generated: datetime, slot: datetime, maximum_age_minutes: int) -> tuple[float, bool]:
-    age = max(0.0, (slot.astimezone(timezone.utc) - generated.astimezone(timezone.utc)).total_seconds() / 60)
-    return round(age, 3), age <= maximum_age_minutes
+    age = (slot.astimezone(timezone.utc) - generated.astimezone(timezone.utc)).total_seconds() / 60
+    return round(age, 3), 0.0 <= age <= maximum_age_minutes
 
 
 def reusable(

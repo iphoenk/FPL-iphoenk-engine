@@ -12685,7 +12685,7 @@
       "gw": 4,
       "deadline_time": "2026-09-12T12:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-09-05T21:26:49.582617+00:00",
+        "generated_at": "2026-09-05T23:04:35.915781+00:00",
         "players": [
           {
             "element": 1,
@@ -13661,8 +13661,8 @@
             "element": 86,
             "name": "Lewis-Potter",
             "position": "MID",
-            "xpts": 3.64,
-            "xpts_std": 2.993,
+            "xpts": 3.621,
+            "xpts_std": 2.985,
             "xmins": 74.4,
             "start_probability": 0.8096,
             "clean_sheet_probability": 0.3561
@@ -13721,8 +13721,8 @@
             "element": 93,
             "name": "Schuster",
             "position": "DEF",
-            "xpts": 2.715,
-            "xpts_std": 2.806,
+            "xpts": 2.711,
+            "xpts_std": 2.804,
             "xmins": 46.2,
             "start_probability": 0.5726,
             "clean_sheet_probability": 0.3561
@@ -13731,8 +13731,8 @@
             "element": 94,
             "name": "Schade",
             "position": "MID",
-            "xpts": 4.006,
-            "xpts_std": 3.079,
+            "xpts": 4.021,
+            "xpts_std": 3.086,
             "xmins": 75.6,
             "start_probability": 0.8618,
             "clean_sheet_probability": 0.3561
@@ -13751,8 +13751,8 @@
             "element": 96,
             "name": "Damsgaard",
             "position": "MID",
-            "xpts": 3.351,
-            "xpts_std": 2.862,
+            "xpts": 3.465,
+            "xpts_std": 2.91,
             "xmins": 71.8,
             "start_probability": 0.818,
             "clean_sheet_probability": 0.3561
@@ -13771,8 +13771,8 @@
             "element": 98,
             "name": "Janelt",
             "position": "MID",
-            "xpts": 3.184,
-            "xpts_std": 2.845,
+            "xpts": 3.187,
+            "xpts_std": 2.847,
             "xmins": 72.1,
             "start_probability": 0.7714,
             "clean_sheet_probability": 0.3561
@@ -13821,8 +13821,8 @@
             "element": 105,
             "name": "Anthony",
             "position": "MID",
-            "xpts": 3.128,
-            "xpts_std": 2.774,
+            "xpts": 3.136,
+            "xpts_std": 2.777,
             "xmins": 71.2,
             "start_probability": 0.8135,
             "clean_sheet_probability": 0.3561
@@ -13861,8 +13861,8 @@
             "element": 565,
             "name": "M.Sangaré",
             "position": "MID",
-            "xpts": 3.241,
-            "xpts_std": 2.857,
+            "xpts": 3.244,
+            "xpts_std": 2.859,
             "xmins": 58.2,
             "start_probability": 0.7825,
             "clean_sheet_probability": 0.3561
@@ -18921,7 +18921,7 @@
             "element": 501,
             "name": "Danso",
             "position": "DEF",
-            "xpts": 3.239,
+            "xpts": 3.241,
             "xpts_std": 2.914,
             "xmins": 66.8,
             "start_probability": 0.7261,
@@ -19051,8 +19051,8 @@
             "element": 541,
             "name": "Meunier",
             "position": "DEF",
-            "xpts": 3.453,
-            "xpts_std": 2.946,
+            "xpts": 3.446,
+            "xpts_std": 2.944,
             "xmins": 61.9,
             "start_probability": 0.7825,
             "clean_sheet_probability": 0.3635
@@ -19061,8 +19061,8 @@
             "element": 542,
             "name": "E.Le Fée",
             "position": "MID",
-            "xpts": 3.386,
-            "xpts_std": 2.808,
+            "xpts": 3.378,
+            "xpts_std": 2.804,
             "xmins": 78.7,
             "start_probability": 0.8696,
             "clean_sheet_probability": 0.3635
@@ -19081,8 +19081,8 @@
             "element": 544,
             "name": "Xhaka",
             "position": "MID",
-            "xpts": 3.341,
-            "xpts_std": 2.805,
+            "xpts": 3.339,
+            "xpts_std": 2.804,
             "xmins": 78.9,
             "start_probability": 0.8581,
             "clean_sheet_probability": 0.3635
@@ -19091,8 +19091,8 @@
             "element": 545,
             "name": "Sadiki",
             "position": "MID",
-            "xpts": 2.823,
-            "xpts_std": 2.571,
+            "xpts": 2.798,
+            "xpts_std": 2.561,
             "xmins": 77.7,
             "start_probability": 0.8696,
             "clean_sheet_probability": 0.3635
@@ -19201,8 +19201,8 @@
             "element": 646,
             "name": "Fofana",
             "position": "MID",
-            "xpts": 2.163,
-            "xpts_std": 2.574,
+            "xpts": 2.158,
+            "xpts_std": 2.571,
             "xmins": 46.2,
             "start_probability": 0.5726,
             "clean_sheet_probability": 0.3635
@@ -19222,6 +19222,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-09-05T21:26:50.612114+00:00",
+  "updated_at": "2026-09-05T23:04:36.906602+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

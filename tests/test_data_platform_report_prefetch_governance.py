@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from src.runtime_v6.official_fpl_client import OfficialFPLClient
+from src.runtime_v6.prefetch_contract import freshness
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -109,3 +111,10 @@ def test_report_prefetch_force_is_governed_and_not_implicit():
     assert 'force_raw = str(values.get("force") or "false")' in workflow
     assert 'if force_raw not in {"true", "false", "1", "0", "yes", "no"}' in workflow
     assert '[[ "$V6_PREFETCH_FORCE" == "true" ]] && args+=(--force)' in workflow
+
+
+def test_report_prefetch_generated_after_target_slot_is_not_fresh():
+    slot = datetime(2026, 9, 5, 5, 30, tzinfo=timezone.utc)
+    age, is_fresh = freshness(slot + timedelta(seconds=1), slot, 35)
+    assert age < 0
+    assert is_fresh is False

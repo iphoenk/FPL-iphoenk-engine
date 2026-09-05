@@ -25,10 +25,16 @@
       "schedule:primary",
       "schedule:recovery",
       "workflow_dispatch:master_orchestrated",
-      "issue_comment:master_orchestrated"
+      "issue_comment:master_orchestrated",
+      "workflow_dispatch:report_prefetch",
+      "issue_comment:report_prefetch"
     ],
     "master_orchestrated_is_authoritative": true,
-    "master_orchestrated_never_masks_natural_scheduler_evidence": true
+    "master_orchestrated_never_masks_natural_scheduler_evidence": true,
+    "report_prefetch_is_report_driven_only": true,
+    "report_prefetch_has_no_independent_cron": true,
+    "report_prefetch_reuses_runtime_data_v6_publisher": true,
+    "report_prefetch_does_not_count_as_scheduled_core_cycle": true
   },
   "master_orchestrated": {
     "enabled": true,
@@ -40,5 +46,25 @@
     "reason_required": true,
     "control_issue_number": 431,
     "issue_comment_command": "/v6-master-acquire"
+  },
+  "report_prefetch": {
+    "enabled": true,
+    "schedule_kind": "report_prefetch",
+    "report_driven": true,
+    "independent_cron": false,
+    "authoritative_runtime_snapshot": true,
+    "counts_as_completed_operational_slot": true,
+    "counts_as_completed_scheduled_slot": false,
+    "allowed_actor": "repository_owner",
+    "reason_required": true,
+    "control_issue_number": 431,
+    "issue_comment_command": "/v6-report-prefetch",
+    "supported_report_kinds": [
+      "full_master",
+      "match_mode",
+      "deadline_review",
+      "ad_hoc",
+      "05:30_price"
+    ]
   }
 }

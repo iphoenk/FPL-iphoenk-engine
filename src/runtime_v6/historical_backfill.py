@@ -9,6 +9,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .historical_availability import (
+    BEFORE_FIRST_OFFICIAL_ENTRY_HISTORY_GW,
+    OFFICIAL_GW_RECORD_NOT_AVAILABLE,
+    captain_multiplier_consistent,
+    classify_completed_gw_official_absence,
+    history_rows,
+)
 from .league_prefetch import fetch_all_standings
 from .official_fpl_client import OfficialFPLClient
 from .personal_prefetch import discover_memberships, normalise_submitted_picks, resolve_priority_leagues
@@ -22,7 +29,7 @@ LIVE_HISTORICAL = "LIVE_FETCHED_HISTORICAL_GW"
 REUSED_HISTORICAL = "IMMUTABLE_HISTORICAL_CACHE_REUSED"
 LIVE_CURRENT = "LIVE_FETCHED_CURRENT_GW_POST_DEADLINE"
 REUSED_CURRENT = "POST_DEADLINE_CURRENT_GW_SUBMITTED_PICKS_CACHE_REUSED"
-HISTORICAL_SCHEMA_VERSION = 2
+HISTORICAL_SCHEMA_VERSION = 3
 
 
 class HistoricalBackfillError(RuntimeError):
@@ -32,9 +39,8 @@ class HistoricalBackfillError(RuntimeError):
 def _parse_deadline(value: Any) -> datetime | None:
     if not isinstance(value, str) or not value.strip():
         return None
-    text = value.strip().replace("Z", "+00:00")
     try:
-        parsed = datetime.fromisoformat(text)
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
     except ValueError:
         return None
     if parsed.tzinfo is None:
@@ -57,11 +63,9 @@ def _event_catalog(bootstrap: dict[str, Any], *, now: datetime | None = None) ->
         is_current = event.get("is_current") is True
         post_deadline = deadline is not None and deadline <= current_time
         if finished:
-            semantics = "COMPLETED_GW"
-            eligible = True
+            semantics, eligible = "COMPLETED_GW", True
         elif is_current and post_deadline:
-            semantics = "CURRENT_GW_POST_DEADLINE"
-            eligible = True
+            semantics, eligible = "CURRENT_GW_POST_DEADLINE", True
         else:
             semantics = "CURRENT_GW_PRE_DEADLINE" if is_current else "FUTURE_OR_UNFINISHED_GW"
             eligible = False
@@ -152,13 +156,7 @@ def _retry_count(result: dict[str, Any] | None) -> int:
     return max(0, int(attempts) - 1) if isinstance(attempts, int) else 0
 
 
-def _historical_record(
-    entry_id: int,
-    gw: int,
-    result: dict[str, Any],
-    *,
-    completed: bool,
-) -> dict[str, Any]:
+def _historical_record(entry_id: int, gw: int, result: dict[str, Any], *, completed: bool) -> dict[str, Any]:
     origin = LIVE_HISTORICAL if completed else LIVE_CURRENT
     normal = normalise_submitted_picks(entry_id, gw, result, origin=origin)
     record = {
@@ -187,17 +185,19 @@ def _historical_record(
     return record
 
 
-def _cache_valid(
-    record: Any,
-    *,
-    season: str,
-    league_id: int,
-    gw: int,
-    entry_id: int,
-) -> bool:
+def _cache_valid(record: Any, *, season: str, league_id: int, gw: int, entry_id: int) -> bool:
     if not isinstance(record, dict):
         return False
-    if record.get("entry_id") != entry_id or record.get("gw") != gw or record.get("status") != "AVAILABLE":
+    if record.get("entry_id") != entry_id or record.get("gw") != gw:
+        return False
+    factual_available = record.get("status") == "AVAILABLE"
+    factual_absence = (
+        record.get("completed_gw") is True
+        and record.get("official_exclusion") is True
+        and record.get("official_availability_status") == OFFICIAL_GW_RECORD_NOT_AVAILABLE
+        and record.get("official_exclusion_reason") == BEFORE_FIRST_OFFICIAL_ENTRY_HISTORY_GW
+    )
+    if not (factual_available or factual_absence):
         return False
     if record.get("cache_identity") != {"season": season, "gw": gw, "league_id": league_id, "entry_id": entry_id}:
         return False
@@ -340,13 +340,7 @@ def acquire_historical_picks(
 
 
 def _history_rows(result: dict[str, Any]) -> dict[int, dict[str, Any]]:
-    if result.get("status") != "LIVE":
-        return {}
-    return {
-        int(row["event"]): dict(row)
-        for row in ((result.get("payload") or {}).get("current") or [])
-        if isinstance(row, dict) and row.get("event") is not None
-    }
+    return history_rows(result)
 
 
 def _chip_events(result: dict[str, Any]) -> dict[int, str]:
@@ -372,8 +366,7 @@ def _cached_history_result(manager: dict[str, Any], requested_gws: list[int]) ->
     }
     if any(gw not in by_gw for gw in requested_gws):
         return None
-    current = []
-    chips = []
+    current, chips = [], []
     for gw in requested_gws:
         row = by_gw[gw]
         if row.get("gw_points") is None or row.get("cumulative_points") is None:
@@ -457,6 +450,61 @@ def acquire_entry_histories(
     }
 
 
+def _apply_official_absence_classification(
+    picks: dict[str, Any],
+    histories: dict[int, dict[str, Any]],
+    manager_ids: list[int],
+    *,
+    gw: int,
+    completed: bool,
+) -> dict[int, dict[str, Any]]:
+    exclusions: dict[int, dict[str, Any]] = {}
+    entries = picks.get("entries") or {}
+    for entry_id in manager_ids:
+        record = entries.get(str(entry_id))
+        exclusion = classify_completed_gw_official_absence(
+            pick_record=record,
+            history_result=histories.get(entry_id),
+            gw=gw,
+            completed=completed,
+        )
+        if exclusion is None:
+            if isinstance(record, dict) and record.get("official_exclusion") is True:
+                # Cached strict exclusions are still revalidated against fresh Official history.
+                record.pop("official_availability_status", None)
+                record.pop("official_exclusion", None)
+                record.pop("official_exclusion_reason", None)
+                record.pop("official_exclusion_evidence", None)
+                record["record_digest"] = digest({key: value for key, value in record.items() if key != "record_digest"})
+            continue
+        exclusions[entry_id] = exclusion
+        if isinstance(record, dict):
+            record["official_availability_status"] = exclusion["official_availability_status"]
+            record["official_exclusion"] = True
+            record["official_exclusion_reason"] = exclusion["official_exclusion_reason"]
+            record["official_exclusion_evidence"] = exclusion
+            record["record_digest"] = digest({key: value for key, value in record.items() if key != "record_digest"})
+
+    raw_missing = {
+        int(entry_id)
+        for entry_id, record in entries.items()
+        if record.get("status") != "AVAILABLE"
+    }
+    unresolved = sorted(raw_missing - set(exclusions))
+    picks["officially_excluded_entry_ids"] = sorted(exclusions)
+    picks["officially_excluded_manager_count"] = len(exclusions)
+    picks["official_exclusion_reason_counts"] = {
+        BEFORE_FIRST_OFFICIAL_ENTRY_HISTORY_GW: sum(
+            1 for item in exclusions.values() if item.get("official_exclusion_reason") == BEFORE_FIRST_OFFICIAL_ENTRY_HISTORY_GW
+        )
+    }
+    picks["eligible_manager_count"] = len(manager_ids) - len(exclusions)
+    picks["unresolved_missing_entry_ids"] = unresolved
+    picks["unresolved_submitted_picks_missing_count"] = len(unresolved)
+    picks["complete"] = not unresolved
+    return exclusions
+
+
 def _live_points(result: dict[str, Any]) -> dict[int, int] | None:
     if result.get("status") != "LIVE":
         return None
@@ -480,10 +528,7 @@ def _exposure(
     *,
     completed: bool,
 ) -> dict[str, Any]:
-    available = [
-        row for row in (manager_picks.get("entries") or {}).values()
-        if row.get("status") == "AVAILABLE"
-    ]
+    available = [row for row in (manager_picks.get("entries") or {}).values() if row.get("status") == "AVAILABLE"]
     denominator = len(available)
     aggregate: dict[int, dict[str, Any]] = {}
     for manager in available:
@@ -526,6 +571,7 @@ def _exposure(
             "total_cohort_points_contribution": row["multiplier_sum"] * point_value if isinstance(point_value, int) else None,
         })
     expected = int(manager_picks.get("expected_manager_count") or 0)
+    eligible = int(manager_picks.get("eligible_manager_count") or expected)
     return {
         "schema_version": HISTORICAL_SCHEMA_VERSION,
         "season": manager_picks.get("season"),
@@ -535,9 +581,13 @@ def _exposure(
         "cohort_semantics": COHORT_SEMANTICS,
         "manager_count_denominator": denominator,
         "expected_manager_count": expected,
+        "eligible_manager_count": eligible,
+        "officially_excluded_manager_count": int(manager_picks.get("officially_excluded_manager_count") or 0),
+        "officially_excluded_entry_ids": list(manager_picks.get("officially_excluded_entry_ids") or []),
         "submitted_picks_available_count": denominator,
         "submitted_picks_missing_count": max(0, expected - denominator),
         "coverage_percent": round(denominator * 100 / expected, 4) if expected else 0.0,
+        "eligible_coverage_percent": round(denominator * 100 / eligible, 4) if eligible else 100.0,
         "players": players,
         "authority": "OFFICIAL_FPL_MECHANICAL_AGGREGATE",
         "identity_limitation": "Player club/position labels use current Official bootstrap identity; historical club snapshot is not asserted.",
@@ -554,17 +604,15 @@ def _reconciliation(
 ) -> dict[str, Any]:
     history = _history_rows(history_result).get(gw)
     chip_history = _chip_events(history_result).get(gw)
-    captains = [pick for pick in pick_record.get("picks") or [] if pick.get("captain")]
-    vice = [pick for pick in pick_record.get("picks") or [] if pick.get("vice_captain")]
+    picks = pick_record.get("picks") or []
+    captains = [pick for pick in picks if pick.get("captain")]
+    vice = [pick for pick in picks if pick.get("vice_captain")]
+    excluded = pick_record.get("official_exclusion") is True
     checks = {
-        "exact_15_picks": len(pick_record.get("picks") or []) == 15 if pick_record.get("status") == "AVAILABLE" else None,
+        "exact_15_picks": len(picks) == 15 if pick_record.get("status") == "AVAILABLE" else None,
         "one_captain": len(captains) == 1 if pick_record.get("status") == "AVAILABLE" else None,
         "one_vice": len(vice) == 1 if pick_record.get("status") == "AVAILABLE" else None,
-        "captain_multiplier_consistent": (
-            bool(captains)
-            and isinstance(captains[0].get("multiplier"), (int, float))
-            and captains[0]["multiplier"] >= 2
-        ) if pick_record.get("status") == "AVAILABLE" else None,
+        "captain_multiplier_consistent": captain_multiplier_consistent(picks) if pick_record.get("status") == "AVAILABLE" else None,
         "chip_consistent": pick_record.get("active_chip") == chip_history if history is not None else None,
     }
     return {
@@ -578,9 +626,12 @@ def _reconciliation(
         "active_chip_submitted_picks": pick_record.get("active_chip"),
         "active_chip_entry_history": chip_history,
         "history_available": history is not None,
-        "history_required_for_complete": completed,
+        "history_required_for_complete": completed and not excluded,
+        "official_exclusion": excluded,
+        "official_exclusion_reason": pick_record.get("official_exclusion_reason"),
+        "official_exclusion_evidence": pick_record.get("official_exclusion_evidence"),
         "checks": checks,
-        "consistent": all(value is not False for value in checks.values()),
+        "consistent": True if excluded else all(value is not False for value in checks.values()),
         "authority": "OFFICIAL_FPL_RECONCILED_FACT",
     }
 
@@ -598,6 +649,8 @@ def _manager_gw_state(
         "gw": gw,
         "gw_semantics": "COMPLETED_GW" if completed else "CURRENT_GW_POST_DEADLINE",
         "submitted_picks_available": pick_record.get("status") == "AVAILABLE",
+        "official_exclusion": pick_record.get("official_exclusion") is True,
+        "official_exclusion_reason": pick_record.get("official_exclusion_reason"),
         "squad": [int(p["element_id"]) for p in picks],
         "starting_xi": [int(p["element_id"]) for p in picks if int(p.get("squad_position") or 99) <= 11],
         "bench": [
@@ -751,9 +804,9 @@ def _overlap_artifact(picks_by_gw: dict[int, dict[str, Any]], gws: list[int]) ->
     gw_rows = []
     for gw in gws:
         entries = {
-            int(k): v
-            for k, v in (picks_by_gw[gw].get("entries") or {}).items()
-            if v.get("status") == "AVAILABLE"
+            int(key): value
+            for key, value in (picks_by_gw[gw].get("entries") or {}).items()
+            if value.get("status") == "AVAILABLE"
         }
         pairs, squad_values, xi_values = [], [], []
         manager_ids = sorted(entries)
@@ -929,6 +982,7 @@ class HistoricalBackfillService:
             "reused_count": 0,
             "missing_count": 0,
             "failed_count": history_metrics["history_failed"],
+            "official_absence_count": 0,
             "manager_requests": 0,
             "history_requests": history_metrics["history_requests"],
             "retry_count": _retry_count(bootstrap_result) + _retry_count(entry_result) + history_metrics["retry_count"],
@@ -937,6 +991,7 @@ class HistoricalBackfillService:
         picks_by_gw: dict[int, dict[str, Any]] = {}
         exposure_by_gw: dict[int, dict[str, Any]] = {}
         reconciliations_by_gw: dict[int, list[dict[str, Any]]] = {}
+        exclusions_by_gw: dict[int, dict[int, dict[str, Any]]] = {}
         event_points_available: dict[int, bool] = {}
 
         for gw in gws:
@@ -954,6 +1009,15 @@ class HistoricalBackfillService:
                 cache_enabled=cache_enabled,
                 completed=completed,
             )
+            exclusions = _apply_official_absence_classification(
+                picks,
+                histories,
+                manager_ids,
+                gw=gw,
+                completed=completed,
+            )
+            exclusions_by_gw[gw] = exclusions
+            telemetry["official_absence_count"] += len(exclusions)
             picks_by_gw[gw] = picks
             telemetry["cache_hits"] += cache_metrics["cache_hits"]
             telemetry["cache_misses"] += cache_metrics["cache_misses"]
@@ -962,8 +1026,7 @@ class HistoricalBackfillService:
             telemetry["manager_requests"] += cache_metrics["cache_misses"]
             telemetry["retry_count"] += cache_metrics["retry_count"]
             telemetry["maximum_concurrency_used"] = max(
-                telemetry["maximum_concurrency_used"],
-                cache_metrics["maximum_concurrency_used"],
+                telemetry["maximum_concurrency_used"], cache_metrics["maximum_concurrency_used"]
             )
 
             live_result = self.client.event_live(gw)
@@ -993,44 +1056,65 @@ class HistoricalBackfillService:
             completed = bool(gw_states[gw]["finished"])
             picks = picks_by_gw[gw]
             reconciliations = reconciliations_by_gw[gw]
+            exclusions = exclusions_by_gw[gw]
+            excluded_ids = set(exclusions)
+            eligible_ids = set(manager_ids) - excluded_ids
             ranks = _ranks(manager_longitudinal["managers"], gw)
-            available = int(picks.get("submitted_picks_available_count") or 0)
-            history_available_count = sum(1 for row in reconciliations if row["history_available"])
-            pick_failures = set(picks.get("missing_entry_ids") or [])
+            available_ids = {
+                int(entry_id)
+                for entry_id, record in (picks.get("entries") or {}).items()
+                if record.get("status") == "AVAILABLE"
+            }
+            available = len(available_ids)
+            history_available_ids = {row["entry_id"] for row in reconciliations if row["history_available"]}
+            raw_history_available_count = len(history_available_ids)
+            pick_failures = eligible_ids - available_ids
             reconciliation_failures = {
                 row["entry_id"]
                 for row in reconciliations
-                if row["history_available"] and not row["consistent"]
+                if row["entry_id"] in eligible_ids and row["history_available"] and not row["consistent"]
             }
-            history_missing = {
-                row["entry_id"]
-                for row in reconciliations
-                if not row["history_available"]
-            }
+            history_missing = eligible_ids - history_available_ids
             failed_ids = sorted(pick_failures | reconciliation_failures | (history_missing if completed else set()))
-            history_ok = history_available_count == len(manager_ids) if completed else True
+            history_ok = not history_missing if completed else True
             complete = (
-                available == len(manager_ids)
-                and not failed_ids
+                not pick_failures
+                and not reconciliation_failures
                 and event_points_available[gw]
                 and history_ok
             )
-            coverage_count = min(available, history_available_count) if completed else available
+            raw_coverage_count = min(available, raw_history_available_count) if completed else available
+            eligible_coverage_count = (
+                min(len(available_ids & eligible_ids), len(history_available_ids & eligible_ids))
+                if completed
+                else len(available_ids & eligible_ids)
+            )
+            eligible_count = len(eligible_ids)
             health = {
                 "gw": gw,
                 "gw_semantics": gw_states[gw]["gw_semantics"],
                 "expected_manager_count": len(manager_ids),
+                "current_cohort_manager_count": len(manager_ids),
+                "eligible_manager_count": eligible_count,
+                "officially_excluded_manager_count": len(excluded_ids),
+                "officially_excluded_entry_ids": sorted(excluded_ids),
+                "official_exclusion_reason_counts": dict(picks.get("official_exclusion_reason_counts") or {}),
                 "collected_manager_count": available,
                 "submitted_picks_available_count": available,
                 "submitted_picks_missing_count": len(manager_ids) - available,
-                "entry_history_available_count": history_available_count,
-                "entry_history_missing_count": len(manager_ids) - history_available_count,
+                "unresolved_submitted_picks_missing_count": len(pick_failures),
+                "entry_history_available_count": raw_history_available_count,
+                "entry_history_missing_count": len(manager_ids) - raw_history_available_count,
+                "eligible_entry_history_available_count": len(history_available_ids & eligible_ids),
+                "eligible_entry_history_missing_count": len(history_missing),
                 "entry_history_required_for_complete": completed,
                 "entry_history_current_gw_policy": None if completed else "OPTIONAL_UNTIL_OFFICIAL_CURRENT_GW_HISTORY_IS_AVAILABLE",
                 "final_points_available": event_points_available[gw] if completed else False,
                 "live_points_available": event_points_available[gw] if not completed else False,
-                "coverage_percent": round(coverage_count * 100 / len(manager_ids), 4),
+                "coverage_percent": round(raw_coverage_count * 100 / len(manager_ids), 4),
+                "eligible_coverage_percent": round(eligible_coverage_count * 100 / eligible_count, 4) if eligible_count else 100.0,
                 "complete": complete,
+                "complete_with_explicit_official_exclusions": complete and bool(excluded_ids),
                 "failed_entry_ids": failed_ids,
                 "officially_unavailable_or_optional_entry_ids": sorted(history_missing) if not completed else [],
             }
@@ -1045,6 +1129,7 @@ class HistoricalBackfillService:
                 "cohort_semantics": COHORT_SEMANTICS,
                 "rank_semantics": "RECONSTRUCTED_CURRENT_COHORT_ONLY",
                 "official_historical_league_rank_available": False,
+                "officially_excluded_current_cohort_entries": [exclusions[key] | {"entry_id": key} for key in sorted(exclusions)],
                 "reconciliations": reconciliations,
                 "reconstructed_current_cohort_ranks": ranks,
                 "reconstructed_rank_manager_count": len(ranks),
@@ -1116,15 +1201,14 @@ class HistoricalBackfillService:
         write_json(history_root / "managers.json", managers_artifact)
 
         complete_gws = sum(1 for row in gw_health if row["complete"])
-        partial_gws = sum(1 for row in gw_health if not row["complete"] and row["coverage_percent"] > 0)
+        partial_gws = sum(1 for row in gw_health if not row["complete"] and row["eligible_coverage_percent"] > 0)
         failed_gws = len(gw_health) - complete_gws - partial_gws
         overall_status = "GREEN" if complete_gws == len(gws) else ("AMBER" if complete_gws or partial_gws else "RED")
         client_telemetry = self.client.telemetry() if callable(getattr(self.client, "telemetry", None)) else {}
         telemetry["total_requests"] = client_telemetry.get("request_count")
         telemetry["failed_requests"] = client_telemetry.get("failed_requests")
         telemetry["maximum_concurrency_used"] = max(
-            telemetry["maximum_concurrency_used"],
-            int(client_telemetry.get("maximum_concurrency_used") or 0),
+            telemetry["maximum_concurrency_used"], int(client_telemetry.get("maximum_concurrency_used") or 0)
         )
         telemetry["duration_ms"] = round((time.perf_counter() - started) * 1000)
 
@@ -1154,6 +1238,7 @@ class HistoricalBackfillService:
             "gw_health": gw_health,
             "cache": {
                 "immutable_completed_gw_cache": True,
+                "immutable_official_absence_cache": True,
                 "current_post_deadline_submitted_picks_cache_reusable": True,
                 "current_gw_entry_history_cache_reused": False if has_provisional_current else telemetry["history_cache_hits"] > 0,
                 "force": bool(force),
@@ -1176,6 +1261,7 @@ class HistoricalBackfillService:
                 "Historical league membership is not inferred from current membership; records are CURRENT_COHORT_HISTORY.",
                 "Historical league rank is not asserted; reconstructed_current_cohort_rank uses only today's resolved cohort.",
                 "Historical club identity is not asserted when Official historical endpoints do not expose it; element_id remains authoritative.",
+                "Completed-GW current-cohort entries may be explicitly excluded only when Official submitted-picks returns 404 and Official entry-history begins in a later GW; this is an availability fact and not historical league-membership evidence.",
                 "A current post-deadline GW is provisional: submitted picks are factual, but live points are not labeled final and Official entry-history rows may remain unavailable until the GW completes.",
             ],
         }

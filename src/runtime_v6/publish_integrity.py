@@ -101,6 +101,28 @@ def _semantic_errors(path: Path, root: Path, payload: dict[str, Any]) -> list[st
     return errors
 
 
+def _prune_legacy_analytical_artifacts(root: Path) -> list[str]:
+    removed: list[str] = []
+    patterns = (
+        "mini_leagues/**/gw_*_exposure.json",
+        "mini_leagues/**/history/gw_*/exposure.json",
+        "mini_leagues/**/history/gw_*/standings_or_points.json",
+        "mini_leagues/**/history/gw_*/transitions.json",
+        "mini_leagues/**/history/longitudinal/player_ownership_history.json",
+        "mini_leagues/**/history/longitudinal/captain_history.json",
+        "mini_leagues/**/history/longitudinal/squad_overlap_history.json",
+        "mini_leagues/**/history/longitudinal/transitions.json",
+    )
+    for pattern in patterns:
+        for path in root.glob(pattern):
+            if not path.is_file():
+                continue
+            relative = path.relative_to(root).as_posix()
+            path.unlink()
+            removed.append(relative)
+    return sorted(set(removed))
+
+
 def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
     manifest_path = root / "manifest.json"
     manifest = read_json(manifest_path) or {}
@@ -231,7 +253,9 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
 
 
 def main() -> int:
+    pruned = _prune_legacy_analytical_artifacts(OUT)
     report = validate_publish_tree(OUT)
+    report["pruned_legacy_analytical_artifacts"] = pruned
     write_json(HEALTH / "publish_integrity.json", report)
     print(json.dumps(report, ensure_ascii=False))
     return 0 if report["status"] == "PASS" else 1

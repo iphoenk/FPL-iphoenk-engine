@@ -5,13 +5,16 @@
       "acquisition_kind": "rest_json",
       "poll_interval_minutes": 60,
       "required_for_platform": true,
-      "max_body_bytes": 4000000
+      "max_body_bytes": 4000000,
+      "entity_scopes": ["PLAYER", "TEAM", "FIXTURE", "EVENT"]
     },
     "official_price_predictor": {
       "required_for_platform": true,
-      "depends_on": ["official_fpl"]
+      "depends_on": ["official_fpl"],
+      "entity_scopes": ["PLAYER", "TEAM"]
     },
     "opta_the_analyst": {
+      "entity_scopes": ["PLAYER", "TEAM", "COMPETITION"],
       "requests": [
         {
           "id": "premier_league_stats",
@@ -24,6 +27,7 @@
       ]
     },
     "statmuse": {
+      "entity_scopes": ["TEAM", "COMPETITION"],
       "requests": [
         {
           "id": "team_xg",
@@ -36,6 +40,7 @@
       ]
     },
     "fffix": {
+      "entity_scopes": ["PLAYER"],
       "requests": [
         {
           "id": "price",
@@ -58,6 +63,7 @@
       ]
     },
     "ffhub": {
+      "entity_scopes": ["PLAYER"],
       "requests": [
         {
           "id": "predictions",
@@ -78,6 +84,7 @@
       ]
     },
     "onefpl": {
+      "entity_scopes": ["PLAYER"],
       "requests": [
         {
           "id": "prices",
@@ -90,6 +97,7 @@
       ]
     },
     "livefpl": {
+      "entity_scopes": ["PLAYER"],
       "requests": [
         {
           "id": "prices",
@@ -110,6 +118,7 @@
       ]
     },
     "fotmob": {
+      "entity_scopes": ["PLAYER", "TEAM", "FIXTURE", "COMPETITION"],
       "requests": [
         {
           "id": "league",
@@ -131,6 +140,7 @@
       "poll_interval_minutes": 60,
       "check_freshness_minutes": 1500,
       "content_hash_dedup": true,
+      "entity_scopes": ["TEAM", "COMPETITION"],
       "requests": [
         {
           "id": "ranking",
@@ -154,6 +164,7 @@
       "verification_required": true,
       "verification_status": "PENDING",
       "verification_note": "Before scheduled polling, verify the active key with /status and one 2026-season fixture request.",
+      "entity_scopes": ["TEAM", "FIXTURE", "COMPETITION"],
       "requests": [
         {
           "id": "epl_fixtures",
@@ -171,6 +182,7 @@
       ]
     },
     "transfermarkt": {
+      "entity_scopes": ["PLAYER", "TEAM"],
       "requests": [
         {
           "id": "injuries",
@@ -183,6 +195,7 @@
       ]
     },
     "espn": {
+      "entity_scopes": ["TEAM", "FIXTURE", "COMPETITION"],
       "requests": [
         {
           "id": "scoreboard",
@@ -199,6 +212,7 @@
       "acquisition_kind": "html_scrape",
       "poll_interval_minutes": 60,
       "content_hash_dedup": true,
+      "entity_scopes": ["PLAYER", "TEAM", "FIXTURE", "COMPETITION"],
       "requests": [
         {
           "id": "epl_2026",
@@ -211,6 +225,7 @@
       ]
     },
     "onside": {
+      "entity_scopes": ["PLAYER"],
       "requests": [
         {
           "id": "predicted_points",
@@ -226,9 +241,11 @@
       "acquisition_kind": "rest_json",
       "poll_interval_minutes": 1440,
       "check_freshness_minutes": 1500,
-      "content_hash_dedup": true
+      "content_hash_dedup": true,
+      "entity_scopes": ["COMPETITION", "FEED"]
     },
     "football_data_uk": {
+      "entity_scopes": ["TEAM", "FIXTURE", "COMPETITION"],
       "requests": [
         {
           "id": "epl_2627",
@@ -243,9 +260,11 @@
     },
     "football_data_org": {
       "acquisition_kind": "rest_json",
-      "poll_interval_minutes": 60
+      "poll_interval_minutes": 60,
+      "entity_scopes": ["TEAM", "FIXTURE", "COMPETITION"]
     },
     "vaastav_fpl": {
+      "entity_scopes": ["PLAYER", "TEAM", "FIXTURE"],
       "requests": [
         {
           "id": "players_raw",
@@ -281,20 +300,23 @@
       "poll_interval_minutes": 240,
       "poll_interval_minutes_deadline_window": 60,
       "check_freshness_minutes": 300,
-      "content_hash_dedup": true
+      "content_hash_dedup": true,
+      "entity_scopes": ["PLAYER"]
     },
     "open_meteo_weather": {
       "acquisition_kind": "rest_json",
       "poll_interval_minutes": 60,
       "check_freshness_minutes": 90,
-      "content_hash_dedup": true
+      "content_hash_dedup": true,
+      "entity_scopes": ["TEAM", "FIXTURE"]
     },
     "check_the_chance": {
       "acquisition_kind": "html_scrape",
       "poll_interval_minutes": 360,
       "poll_interval_minutes_deadline_window": 60,
       "check_freshness_minutes": 420,
-      "content_hash_dedup": true
+      "content_hash_dedup": true,
+      "entity_scopes": ["PLAYER"]
     },
     "fantasy_football_pundit": {
       "acquisition_kind": "html_scrape",
@@ -302,7 +324,8 @@
       "poll_interval_minutes_deadline_window": 60,
       "check_freshness_minutes": 420,
       "content_hash_dedup": true,
-      "max_body_bytes": 4000000
+      "max_body_bytes": 4000000,
+      "entity_scopes": ["PLAYER", "TEAM"]
     }
   }
 }

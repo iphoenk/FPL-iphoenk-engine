@@ -5,9 +5,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from .http_client import AcquisitionClient, utc_now
-from .weather import enrich_open_meteo_payload, materialize_open_meteo_source
 
 _SUCCESS_STATUSES = {"AVAILABLE", "NOT_MODIFIED"}
+_MODEL_SIGNAL_CATEGORIES = {
+    "fpl_model_reference",
+    "market_model_reference",
+    "lineup_probability_reference",
+}
 
 
 def _previous_data(previous: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
@@ -81,6 +85,34 @@ def _source_health(
     return "AMBER", "UNAVAILABLE", "MISSING"
 
 
+def _current_run_action(
+    attempts: list[dict[str, Any]],
+    merged_data: dict[str, dict[str, Any]],
+) -> str:
+    statuses = {str(row.get("status") or "") for row in attempts}
+    origins = {str(row.get("data_origin") or "") for row in merged_data.values() if isinstance(row, dict)}
+    if "AVAILABLE" in statuses:
+        return "FETCHED"
+    if statuses and statuses <= {"NOT_MODIFIED"}:
+        return "REVALIDATED"
+    if "LAST_GOOD_CACHE" in origins:
+        return "LAST_GOOD_CACHE"
+    if "REVALIDATED_CACHE" in origins:
+        return "REVALIDATED"
+    return "FETCHED" if attempts else "REUSED"
+
+
+def _model_signal_metadata(source: dict[str, Any]) -> dict[str, Any]:
+    if str(source.get("category") or "") not in _MODEL_SIGNAL_CATEGORIES:
+        return {}
+    return {
+        "semantic_class": "UPSTREAM_MODEL_SIGNAL",
+        "model_author": str(source.get("name") or source.get("id") or "UPSTREAM_SOURCE"),
+        "v6_computation": "NONE",
+        "v6_transformation": "SOURCE_NATIVE_PRESERVATION",
+    }
+
+
 def _failed_attempt(source: dict[str, Any], request_cfg: dict[str, Any], exc: Exception) -> dict[str, Any]:
     return {
         "request_id": request_cfg["id"],
@@ -129,17 +161,20 @@ def collect_http(
     data = _merge_last_good(request_cfgs, attempts, previous)
     health, availability, effective_state = _source_health(source, attempts, data)
     elapsed = round((time.perf_counter() - started) * 1000.0, 3)
+    action = _current_run_action(attempts, data)
 
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "source_id": source["id"],
         "source_name": source["name"],
         "category": source["category"],
         "adapter": source["adapter"],
         "critical": bool(source.get("critical")),
         "independence_group": source.get("independence_group"),
+        "entity_scopes": list(source.get("entity_scopes") or []),
         "checked_at": utc_now(),
         "duration_ms": elapsed,
+        "current_run_action": action,
         "health": health,
         "availability": availability,
         "effective_state": effective_state,
@@ -162,6 +197,7 @@ def collect_http(
             ),
             "truncated_attempts": sum(row.get("truncated") is True for row in attempts),
         },
+        **_model_signal_metadata(source),
         "governance": {
             "data_only": True,
             "decision_authority": "NONE",
@@ -183,6 +219,7 @@ def collect_official(
 ) -> dict[str, Any]:
     payload = collect_http(source, client, previous)
     data = payload.get("data") or {}
+    payload["semantic_class"] = "FACT"
     payload["official"] = {
         "bootstrap": (data.get("bootstrap") or {}).get("json"),
         "fixtures": (data.get("fixtures") or {}).get("json"),
@@ -219,20 +256,27 @@ def collect_price_predictor(
         health, availability, effective_state = "RED", "UNAVAILABLE", "MISSING"
 
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "source_id": source["id"],
         "source_name": source["name"],
         "category": source["category"],
         "adapter": source["adapter"],
         "critical": bool(source.get("critical")),
         "independence_group": source.get("independence_group"),
+        "entity_scopes": list(source.get("entity_scopes") or ["PLAYER", "TEAM"]),
         "checked_at": utc_now(),
         "duration_ms": round((time.perf_counter() - started) * 1000.0, 3),
+        "current_run_action": "REUSED",
         "health": health,
         "availability": availability,
         "effective_state": effective_state,
         "changed": None,
+        "semantic_class": "UPSTREAM_MODEL_SIGNAL",
+        "model_author": "OFFICIAL_FPL",
+        "v6_computation": "NONE",
+        "v6_transformation": "FIELD_PROJECTION",
         "derived_from": source.get("derived_from"),
+        "source_snapshot_ids": ["official_fpl"],
         "upstream_health": upstream_payload.get("health"),
         "upstream_effective_state": upstream_payload.get("effective_state"),
         "fields": fields,
@@ -252,19 +296,9 @@ def collect_price_predictor(
             "auth_bypass_used": False,
             "values_not_invented": True,
             "inherits_upstream_freshness": True,
+            "v6_authors_prediction": False,
         },
     }
-
-
-def collect_open_meteo_weather(
-    source: dict[str, Any],
-    client: AcquisitionClient,
-    upstream_payload: dict[str, Any],
-    previous: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    materialized = materialize_open_meteo_source(source)
-    payload = collect_http(materialized, client, previous)
-    return enrich_open_meteo_payload(source, payload, upstream_payload)
 
 
 def _single_dependency_payload(
@@ -294,13 +328,6 @@ def collect_source(
     if adapter == "official_price_predictor":
         return collect_price_predictor(
             source,
-            _single_dependency_payload(source, dependency_payloads),
-            previous,
-        )
-    if adapter == "open_meteo_weather":
-        return collect_open_meteo_weather(
-            source,
-            client,
             _single_dependency_payload(source, dependency_payloads),
             previous,
         )

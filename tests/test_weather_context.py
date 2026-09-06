@@ -1,67 +1,30 @@
 from __future__ import annotations
 
+import json
+
 from src.runtime_v6.registry import load_registry, source_map
 from src.runtime_v6.weather import (
-    classify_weather,
-    enrich_open_meteo_payload,
     load_weather_venues,
     materialize_open_meteo_source,
+    normalize_open_meteo_payload,
 )
 
 
-def test_weather_classifier_is_context_only_and_intensity_aware():
-    normal, _ = classify_weather(
-        {
-            "temperature_2m": 18,
-            "precipitation_probability": 10,
-            "precipitation": 0,
-            "rain": 0,
-            "showers": 0,
-            "wind_speed_10m": 10,
-            "wind_gusts_10m": 15,
-        }
-    )
-    adverse, reasons = classify_weather(
-        {
-            "temperature_2m": 14,
-            "precipitation_probability": 90,
-            "precipitation": 5,
-            "rain": 4,
-            "showers": 0,
-            "wind_speed_10m": 35,
-            "wind_gusts_10m": 48,
-        }
-    )
-    extreme, _ = classify_weather(
-        {
-            "temperature_2m": 12,
-            "precipitation_probability": 95,
-            "precipitation": 9,
-            "rain": 7,
-            "showers": 0,
-            "wind_speed_10m": 58,
-            "wind_gusts_10m": 72,
-        }
-    )
-
-    assert normal == "NORMAL"
-    assert adverse == "ADVERSE"
-    assert any(reason.startswith("rain_") or reason.startswith("precipitation_") for reason in reasons)
-    assert extreme == "EXTREME"
+def test_weather_module_has_no_context_classifier():
+    source = __import__("src.runtime_v6.weather", fromlist=["*"])
+    assert not hasattr(source, "classify_weather")
+    assert not hasattr(source, "enrich_open_meteo_payload")
 
 
-def test_open_meteo_fixture_join_uses_official_fpl_authority():
+def test_open_meteo_fixture_join_uses_official_fpl_authority_without_interpretation():
     source = {
         "id": "open_meteo_weather",
         "venue_registry": "config/venues/premier_league_2026_27.json",
-        "weather_contract": {
-            "legacy_attention_thresholds": {
-                "wind_speed_kmh": 30,
-                "rain_probability_pct": 60,
-                "temperature_c": 5,
-            },
-            "direct_xpts_multiplier": False,
-            "weather_alone_can_trigger_transfer": False,
+        "weather_data_contract": {
+            "semantic_class": "NORMALIZED_FACT",
+            "classification_authority": "NONE",
+            "impact_authority": "NONE",
+            "decision_authority": "NONE",
         },
         "attribution": "Weather data by Open-Meteo.com (CC BY 4.0).",
     }
@@ -110,10 +73,11 @@ def test_open_meteo_fixture_join_uses_official_fpl_authority():
         }
     }
 
-    result = enrich_open_meteo_payload(source, payload, official)
+    result = normalize_open_meteo_payload(source, payload, official)
     weather = result["weather"]
     fixture = weather["fixtures"][0]
 
+    assert weather["semantic_class"] == "NORMALIZED_FACT"
     assert weather["fixture_authority"] == "official_fpl"
     assert weather["fixture_join_key"] == "official_fpl_team_id"
     assert weather["weather_provider"] == "open_meteo"
@@ -125,12 +89,17 @@ def test_open_meteo_fixture_join_uses_official_fpl_authority():
     assert fixture["away_team_id"] == 2
     assert fixture["stadium"] == "Emirates Stadium"
     assert fixture["weather_available"] is True
-    assert fixture["severity"] == "ADVERSE"
     assert fixture["rain"] == 4.0
     assert fixture["wind_gusts_10m"] == 48.0
-    assert fixture["direct_xpts_multiplier"] is False
-    assert fixture["weather_alone_can_trigger_transfer"] is False
-    assert result["governance"]["weather_is_context_only"] is True
+    rendered = json.dumps(result)
+    assert "severity" not in rendered
+    assert "attention_reasons" not in rendered
+    assert "direct_xpts_multiplier" not in rendered
+    assert "weather_alone_can_trigger_transfer" not in rendered
+    assert result["governance"]["weather_normalization_only"] is True
+    assert result["governance"]["weather_classification_authority"] == "NONE"
+    assert result["governance"]["weather_impact_authority"] == "NONE"
+    assert result["governance"]["weather_decision_authority"] == "NONE"
     assert result["governance"]["venue_coordinates_are_registry_owned"] is True
     assert result["governance"]["venue_fixture_join_uses_official_team_id"] is True
 
@@ -152,12 +121,11 @@ def test_open_meteo_reuses_canonical_2026_27_venue_registry_once():
     assert len({venue["team"] for venue in venues}) == 20
     assert len(str(params["latitude"]).split(",")) == 20
     assert len(str(params["longitude"]).split(",")) == 20
-    assert weather["weather_contract"]["precedence"] == [
-        "LIVE_OBSERVED",
-        "CLOSEST_TO_KICKOFF_OBSERVATION",
-        "FRESH_FORECAST",
-        "STALE_FORECAST",
-    ]
+    contract = weather["weather_data_contract"]
+    assert contract["semantic_class"] == "NORMALIZED_FACT"
+    assert contract["classification_authority"] == "NONE"
+    assert contract["impact_authority"] == "NONE"
+    assert contract["decision_authority"] == "NONE"
 
 
 def test_open_meteo_is_native_v6_acquisition_not_v3_upstream():
@@ -166,5 +134,7 @@ def test_open_meteo_is_native_v6_acquisition_not_v3_upstream():
 
     assert weather["adapter"] == "open_meteo_weather"
     assert weather["depends_on"] == ["official_fpl"]
+    assert weather["required_for_platform"] is False
+    assert weather["entity_scopes"] == ["TEAM", "FIXTURE"]
     assert weather["requests"][0]["url"] == "https://api.open-meteo.com/v1/forecast"
     assert "v3" not in str(weather).lower()

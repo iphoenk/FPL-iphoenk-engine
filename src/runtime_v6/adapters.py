@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from .http_client import AcquisitionClient, utc_now
-from .weather import enrich_open_meteo_payload, materialize_open_meteo_source
+from .weather import materialize_open_meteo_source, normalize_open_meteo_payload
 
 _SUCCESS_STATUSES = {"AVAILABLE", "NOT_MODIFIED"}
 
@@ -188,6 +188,8 @@ def collect_official(
         "fixtures": (data.get("fixtures") or {}).get("json"),
         "event_status": (data.get("event_status") or {}).get("json"),
     }
+    payload["semantic_class"] = "FACT"
+    payload["authority"] = "OFFICIAL_FPL"
     return payload
 
 
@@ -219,7 +221,7 @@ def collect_price_predictor(
         health, availability, effective_state = "RED", "UNAVAILABLE", "MISSING"
 
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "source_id": source["id"],
         "source_name": source["name"],
         "category": source["category"],
@@ -232,6 +234,11 @@ def collect_price_predictor(
         "availability": availability,
         "effective_state": effective_state,
         "changed": None,
+        "semantic_class": "UPSTREAM_MODEL_SIGNAL",
+        "authority": "OFFICIAL_FPL",
+        "model_author": "OFFICIAL_FPL",
+        "v6_computation": "NONE",
+        "v6_transformation": "FIELD_PROJECTION",
         "derived_from": source.get("derived_from"),
         "upstream_health": upstream_payload.get("health"),
         "upstream_effective_state": upstream_payload.get("effective_state"),
@@ -252,6 +259,7 @@ def collect_price_predictor(
             "auth_bypass_used": False,
             "values_not_invented": True,
             "inherits_upstream_freshness": True,
+            "upstream_model_signal_is_not_v6_fact": True,
         },
     }
 
@@ -264,7 +272,9 @@ def collect_open_meteo_weather(
 ) -> dict[str, Any]:
     materialized = materialize_open_meteo_source(source)
     payload = collect_http(materialized, client, previous)
-    return enrich_open_meteo_payload(source, payload, upstream_payload)
+    payload["semantic_class"] = "NORMALIZED_FACT"
+    payload["authority"] = "OPEN_METEO"
+    return normalize_open_meteo_payload(source, payload, upstream_payload)
 
 
 def _single_dependency_payload(

@@ -3,14 +3,17 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from .entity_scope import entity_scopes_for_source
 from .http_client import utc_now
+
+_DIMENSION_STATES = {"GREEN", "AMBER", "RED", "NOT_APPLICABLE"}
 
 
 def _parse_dt(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     except ValueError:
         return None
 
@@ -47,9 +50,153 @@ def _last_success_at(payload: dict[str, Any]) -> str | None:
     return max(values) if values else None
 
 
-def build_source_health(config: dict[str, Any], results: dict[str, dict[str, Any]]) -> dict[str, Any]:
+def _transport_health(source: dict[str, Any], payload: dict[str, Any]) -> str:
+    polling = dict(payload.get("polling") or {})
+    if polling.get("skipped") is True:
+        return "GREEN" if payload.get("availability") != "UNAVAILABLE" else "AMBER"
+    attempts = [row for row in payload.get("attempts") or [] if isinstance(row, dict)]
+    if not attempts:
+        return "GREEN" if payload.get("availability") in {"AVAILABLE", "PARTIAL"} else "AMBER"
+    success = sum(row.get("status") in {"AVAILABLE", "NOT_MODIFIED"} for row in attempts)
+    if success == len(attempts):
+        return "GREEN"
+    if success > 0:
+        return "AMBER"
+    return "RED"
+
+
+def _freshness_health(source: dict[str, Any], payload: dict[str, Any]) -> str:
+    target = float(source.get("check_freshness_minutes") or 90)
+    age = _max_data_age_minutes(payload)
+    if age is None:
+        age = _minutes_since(payload.get("checked_at"))
+    if age is None:
+        return "RED" if source.get("critical") else "AMBER"
+    if age <= target:
+        return "GREEN"
+    if age <= target * 2:
+        return "AMBER"
+    return "RED"
+
+
+def _schema_health(payload: dict[str, Any]) -> str:
+    coverage = dict(payload.get("coverage") or {})
+    if int(coverage.get("truncated_attempts") or 0) > 0:
+        return "RED"
+    attempts = [row for row in payload.get("attempts") or [] if isinstance(row, dict)]
+    successful = [row for row in attempts if row.get("status") in {"AVAILABLE", "NOT_MODIFIED"}]
+    if any(row.get("health") not in {None, "GREEN"} for row in successful):
+        return "AMBER"
+    if payload.get("availability") == "UNAVAILABLE" and not successful and attempts:
+        return "AMBER"
+    return "GREEN"
+
+
+def _coverage_health(source: dict[str, Any], payload: dict[str, Any]) -> str:
+    coverage = dict(payload.get("coverage") or {})
+    if "coverage_ratio" in coverage:
+        try:
+            ratio = float(coverage.get("coverage_ratio") or 0.0)
+        except (TypeError, ValueError):
+            ratio = 0.0
+        if ratio >= 0.999999:
+            return "GREEN"
+        if ratio > 0:
+            return "AMBER"
+        return "RED" if source.get("critical") else "AMBER"
+    expected = int(coverage.get("expected_requests") or 0)
+    usable = int(coverage.get("usable_requests") or 0)
+    if expected <= 0:
+        return "GREEN" if payload.get("availability") in {"AVAILABLE", "PARTIAL"} else "AMBER"
+    if usable >= expected:
+        return "GREEN"
+    if usable > 0:
+        return "AMBER"
+    return "RED" if source.get("critical") else "AMBER"
+
+
+def _identity_scope_health(
+    source_id: str,
+    scopes: list[str],
+    identity_map: dict[str, Any],
+) -> tuple[str, dict[str, str]]:
+    applicable: dict[str, str] = {}
+    if "PLAYER" in scopes:
+        row = dict((identity_map.get("coverage") or {}).get(source_id) or {})
+        applicable["PLAYER"] = str(row.get("identity_health") or "RED")
+    bridges = dict(identity_map.get("entity_bridges") or {})
+    if "TEAM" in scopes:
+        row = dict(((bridges.get("team") or {}).get("coverage") or {}).get(source_id) or {})
+        applicable["TEAM"] = str(row.get("identity_health") or "RED")
+    if "FIXTURE" in scopes:
+        row = dict(((bridges.get("fixture") or {}).get("coverage") or {}).get(source_id) or {})
+        applicable["FIXTURE"] = str(row.get("identity_health") or "RED")
+
+    if not applicable:
+        return "NOT_APPLICABLE", {}
+    states = set(applicable.values())
+    if "RED" in states:
+        return "RED", applicable
+    if "AMBER" in states:
+        return "AMBER", applicable
+    return "GREEN", applicable
+
+
+def _provenance_health(payload: dict[str, Any]) -> str:
+    if not payload.get("source_id") or not payload.get("checked_at"):
+        return "RED"
+    if payload.get("semantic_class") == "UPSTREAM_MODEL_SIGNAL":
+        if not payload.get("model_author") or payload.get("v6_computation") != "NONE":
+            return "RED"
+    attempts = [row for row in payload.get("attempts") or [] if isinstance(row, dict)]
+    for row in attempts:
+        if row.get("status") in {"AVAILABLE", "NOT_MODIFIED"} and not row.get("checked_at"):
+            return "AMBER"
+    return "GREEN"
+
+
+def _payload_integrity(payload: dict[str, Any]) -> str:
+    coverage = dict(payload.get("coverage") or {})
+    if int(coverage.get("truncated_attempts") or 0) > 0:
+        return "RED"
+    data_rows = [row for row in (payload.get("data") or {}).values() if isinstance(row, dict)]
+    raw_rows = [row for row in data_rows if row.get("data_origin") in {"CURRENT_CYCLE", "REVALIDATED_CACHE", "LAST_GOOD_CACHE"}]
+    if raw_rows and any(not row.get("sha256") for row in raw_rows):
+        return "AMBER"
+    if payload.get("semantic_class") == "UPSTREAM_MODEL_SIGNAL" and payload.get("v6_computation") != "NONE":
+        return "RED"
+    return "GREEN"
+
+
+def _current_run_action(payload: dict[str, Any]) -> str:
+    polling = dict(payload.get("polling") or {})
+    if polling.get("skipped") is True:
+        reason = str(polling.get("reason") or "")
+        return "SKIPPED_ALREADY_POLLED" if "ALREADY" in reason else "SKIPPED_NOT_DUE"
+    value = str(payload.get("current_run_action") or "")
+    if value:
+        return value
+    origins = {
+        str(row.get("data_origin") or "")
+        for row in (payload.get("data") or {}).values()
+        if isinstance(row, dict)
+    }
+    if "LAST_GOOD_CACHE" in origins:
+        return "LAST_GOOD_CACHE"
+    if "REVALIDATED_CACHE" in origins:
+        return "REVALIDATED"
+    return "FETCHED"
+
+
+def build_source_health(
+    config: dict[str, Any],
+    results: dict[str, dict[str, Any]],
+    identity_map: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    identity_map = identity_map or {}
     sources = []
     counts = {"GREEN": 0, "AMBER": 0, "RED": 0}
+    dimension_counts: dict[str, dict[str, int]] = {}
 
     for source in config.get("sources") or []:
         payload = results[source["id"]]
@@ -61,6 +208,28 @@ def build_source_health(config: dict[str, Any], results: dict[str, dict[str, Any
         max_data_age = _max_data_age_minutes(payload)
         coverage = payload.get("coverage") or {}
         polling = payload.get("polling") or {}
+        scopes = entity_scopes_for_source(source)
+        identity_health, identity_by_scope = _identity_scope_health(
+            str(source["id"]), scopes, identity_map
+        )
+        dimensions = {
+            "transport_health": _transport_health(source, payload),
+            "freshness_health": _freshness_health(source, payload),
+            "schema_health": _schema_health(payload),
+            "coverage_health": _coverage_health(source, payload),
+            "identity_health": identity_health,
+            "provenance_health": _provenance_health(payload),
+            "payload_integrity": _payload_integrity(payload),
+        }
+        for dimension, state in dimensions.items():
+            if state not in _DIMENSION_STATES:
+                state = "AMBER"
+                dimensions[dimension] = state
+            bucket = dimension_counts.setdefault(
+                dimension,
+                {"GREEN": 0, "AMBER": 0, "RED": 0, "NOT_APPLICABLE": 0},
+            )
+            bucket[state] = bucket.get(state, 0) + 1
 
         sources.append(
             {
@@ -68,7 +237,11 @@ def build_source_health(config: dict[str, Any], results: dict[str, dict[str, Any
                 "source_name": source["name"],
                 "category": source["category"],
                 "critical": bool(source.get("critical")),
+                "entity_scopes": scopes,
                 "health": health,
+                "dimensions": dimensions,
+                "identity_by_scope": identity_by_scope,
+                "join_ready": identity_health in {"GREEN", "NOT_APPLICABLE"},
                 "availability": payload.get("availability"),
                 "effective_state": payload.get("effective_state"),
                 "changed": payload.get("changed"),
@@ -78,6 +251,7 @@ def build_source_health(config: dict[str, Any], results: dict[str, dict[str, Any
                 "max_effective_data_age_minutes": round(max_data_age, 3) if max_data_age is not None else None,
                 "check_freshness_target_minutes": source.get("check_freshness_minutes"),
                 "duration_ms": payload.get("duration_ms"),
+                "current_run_action": _current_run_action(payload),
                 "coverage": coverage,
                 "polling": {
                     "acquisition_kind": source.get("acquisition_kind"),
@@ -93,15 +267,21 @@ def build_source_health(config: dict[str, Any], results: dict[str, dict[str, Any
 
     overall = "RED" if counts.get("RED", 0) else ("AMBER" if counts.get("AMBER", 0) else "GREEN")
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "generated_at": utc_now(),
         "overall": overall,
         "counts": counts,
+        "dimension_counts": dimension_counts,
         "source_count": len(sources),
         "sources": sources,
         "semantics": {
-            "GREEN": "Latest required acquisition/revalidation succeeded, or the source is intentionally not due yet under its registry polling contract. Unchanged upstream data is not degraded.",
-            "AMBER": "Usable but partial/cached, credential or verification required, budget exhausted, truncated, or otherwise degraded.",
-            "RED": "Critical source has no usable current or cached data.",
+            "health": "Backward-compatible operational acquisition health; inspect dimensions for data usability and join readiness.",
+            "transport_health": "Whether the current network/source acquisition attempt succeeded independently of cache freshness.",
+            "freshness_health": "Age of the effective payload against the source-specific freshness target.",
+            "schema_health": "Whether the payload passed structural/validation checks without truncation or degraded successful reads.",
+            "coverage_health": "Whether the expected source-native requests/records are materially covered.",
+            "identity_health": "Deterministic cross-source identity readiness only for entity scopes relevant to this source.",
+            "provenance_health": "Whether source identity, timestamps, and upstream-model authorship lineage are explicit.",
+            "payload_integrity": "Whether payload hashes/truncation/model-signal boundaries are internally consistent.",
         },
     }

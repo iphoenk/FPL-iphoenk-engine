@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import statistics
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
@@ -19,8 +18,8 @@ from .historical_availability import (
 from .league_prefetch import fetch_all_standings
 from .official_fpl_client import OfficialFPLClient
 from .personal_prefetch import discover_memberships, normalise_submitted_picks, resolve_priority_leagues
-from .prefetch_contract import NORMALIZATION_VERSION, digest, iso, lineage, load_consumer_context, read_json, utc_now, write_json
-from .security import assert_publish_safe, safe_error
+from .prefetch_contract import NORMALIZATION_VERSION, digest, iso, load_consumer_context, read_json, utc_now, write_json
+from .security import safe_error
 
 COHORT_SEMANTICS = "CURRENT_COHORT_HISTORY"
 MEMBERSHIP_STATUS = "UNKNOWN"
@@ -29,7 +28,7 @@ LIVE_HISTORICAL = "LIVE_FETCHED_HISTORICAL_GW"
 REUSED_HISTORICAL = "IMMUTABLE_HISTORICAL_CACHE_REUSED"
 LIVE_CURRENT = "LIVE_FETCHED_CURRENT_GW_POST_DEADLINE"
 REUSED_CURRENT = "POST_DEADLINE_CURRENT_GW_SUBMITTED_PICKS_CACHE_REUSED"
-HISTORICAL_SCHEMA_VERSION = 3
+HISTORICAL_SCHEMA_VERSION = 4
 
 
 class HistoricalBackfillError(RuntimeError):
@@ -109,46 +108,6 @@ def validate_gw_range(
     return gw_from, gw_to
 
 
-def _element_index(bootstrap: dict[str, Any]) -> dict[int, dict[str, Any]]:
-    teams = {
-        int(team["id"]): {"name": team.get("name"), "short_name": team.get("short_name")}
-        for team in (bootstrap.get("teams") or [])
-        if isinstance(team, dict) and team.get("id") is not None
-    }
-    positions = {
-        int(item["id"]): item.get("singular_name_short") or item.get("singular_name")
-        for item in (bootstrap.get("element_types") or [])
-        if isinstance(item, dict) and item.get("id") is not None
-    }
-    result: dict[int, dict[str, Any]] = {}
-    for element in bootstrap.get("elements") or []:
-        if not isinstance(element, dict) or element.get("id") is None:
-            continue
-        team_id = element.get("team")
-        team = teams.get(int(team_id)) if team_id is not None else {}
-        element_type = element.get("element_type")
-        result[int(element["id"])] = {
-            "official_element_id": int(element["id"]),
-            "web_name": element.get("web_name"),
-            "club": (team or {}).get("short_name") or (team or {}).get("name"),
-            "club_id_current": int(team_id) if team_id is not None else None,
-            "position": positions.get(int(element_type)) if element_type is not None else None,
-            "identity_snapshot_semantics": "CURRENT_BOOTSTRAP_CANONICAL_IDENTITY",
-            "historical_club_snapshot_available": False,
-        }
-    return result
-
-
-def _entry_history(client: Any, entry_id: int) -> dict[str, Any]:
-    public = getattr(client, "entry_history", None)
-    if callable(public):
-        return public(int(entry_id))
-    request = getattr(client, "_request", None)
-    if not callable(request):
-        raise HistoricalBackfillError("Official FPL client does not expose shared request transport")
-    return request("entry_history", f"entry/{int(entry_id)}/history/")
-
-
 def _retry_count(result: dict[str, Any] | None) -> int:
     if not isinstance(result, dict):
         return 0
@@ -181,7 +140,7 @@ def _historical_record(entry_id: int, gw: int, result: dict[str, Any], *, comple
     }
     if record["status"] == "AVAILABLE" and len(record["picks"]) != 15:
         record["status"] = "INVALID_PICK_COUNT"
-    record["record_digest"] = digest({key: value for key, value in record.items() if key != "record_digest"})
+    record["record_digest"] = digest(record)
     return record
 
 
@@ -304,6 +263,7 @@ def acquire_historical_picks(
         "collected_manager_count": len(available),
         "submitted_picks_available_count": len(available),
         "submitted_picks_missing_count": len(missing),
+        "coverage_percent": round(len(available) * 100 / len(manager_ids), 4) if manager_ids else 0.0,
         "missing_entry_ids": missing,
         "complete": not missing,
         "entries": {key: entries[key] for key in sorted(entries, key=int)},
@@ -326,6 +286,7 @@ def acquire_historical_picks(
                 REUSED_CURRENT: sum(1 for row in entries.values() if row.get("origin") == REUSED_CURRENT),
             },
         },
+        "governance": {"data_only": True, "analytics_published": False},
     }
     return artifact, {
         "cache_hits": cache_hits,
@@ -339,53 +300,47 @@ def acquire_historical_picks(
     }
 
 
-def _history_rows(result: dict[str, Any]) -> dict[int, dict[str, Any]]:
-    return history_rows(result)
+def _entry_history(client: Any, entry_id: int) -> dict[str, Any]:
+    public = getattr(client, "entry_history", None)
+    if callable(public):
+        return public(int(entry_id))
+    request = getattr(client, "_request", None)
+    if not callable(request):
+        raise HistoricalBackfillError("Official FPL client does not expose shared request transport")
+    return request("entry_history", f"entry/{int(entry_id)}/history/")
 
 
-def _chip_events(result: dict[str, Any]) -> dict[int, str]:
-    if result.get("status") != "LIVE":
-        return {}
-    values: dict[int, str] = {}
-    for chip in ((result.get("payload") or {}).get("chips") or []):
-        if isinstance(chip, dict) and chip.get("event") is not None and chip.get("name"):
-            values[int(chip["event"])] = str(chip["name"])
-    return values
-
-
-def _cached_history_result(manager: dict[str, Any], requested_gws: list[int]) -> dict[str, Any] | None:
-    if not isinstance(manager, dict):
-        return None
-    expected = manager.get("record_digest")
-    if not isinstance(expected, str) or expected != digest({key: value for key, value in manager.items() if key != "record_digest"}):
-        return None
-    by_gw = {
-        int(row["gw"]): row
-        for row in (manager.get("gws") or [])
-        if isinstance(row, dict) and row.get("gw") is not None
+def _history_cache_record(entry_id: int, result: dict[str, Any]) -> dict[str, Any]:
+    record = {
+        "entry_id": entry_id,
+        "status": result.get("status"),
+        "endpoint_class": result.get("endpoint_class") or "entry_history",
+        "checked_at": result.get("checked_at"),
+        "http_status": result.get("http_status"),
+        "payload_digest": result.get("payload_digest"),
+        "payload": result.get("payload") if result.get("status") == "LIVE" else None,
+        "attempts": result.get("attempts"),
+        "error": result.get("error"),
+        "origin": result.get("origin") or LIVE_HISTORICAL,
+        "authority": "OFFICIAL_FPL",
     }
-    if any(gw not in by_gw for gw in requested_gws):
+    record["record_digest"] = digest(record)
+    return record
+
+
+def _cached_history_result(record: Any) -> dict[str, Any] | None:
+    if not isinstance(record, dict) or record.get("status") != "LIVE":
         return None
-    current, chips = [], []
-    for gw in requested_gws:
-        row = by_gw[gw]
-        if row.get("gw_points") is None or row.get("cumulative_points") is None:
-            return None
-        current.append({
-            "event": gw,
-            "points": row.get("gw_points"),
-            "total_points": row.get("cumulative_points"),
-            "overall_rank": row.get("overall_rank"),
-        })
-        if row.get("active_chip"):
-            chips.append({"event": gw, "name": row["active_chip"]})
+    expected = record.get("record_digest")
+    if not isinstance(expected, str) or expected != digest({key: value for key, value in record.items() if key != "record_digest"}):
+        return None
     return {
         "status": "LIVE",
         "endpoint_class": "entry_history",
-        "checked_at": manager.get("history_checked_at"),
-        "http_status": 200,
-        "payload_digest": manager.get("history_payload_digest"),
-        "payload": {"current": current, "chips": chips},
+        "checked_at": record.get("checked_at"),
+        "http_status": record.get("http_status") or 200,
+        "payload_digest": record.get("payload_digest"),
+        "payload": record.get("payload") or {},
         "attempts": 0,
         "duration_ms": 0,
         "error": None,
@@ -398,16 +353,11 @@ def acquire_entry_histories(
     manager_ids: list[int],
     workers: int,
     *,
-    previous_manager_history: dict[str, Any] | None,
-    requested_gws: list[int],
+    previous_entry_histories: dict[str, Any] | None,
     force: bool,
     allow_cache_reuse: bool = True,
 ) -> tuple[dict[int, dict[str, Any]], dict[str, int]]:
-    previous_managers = {
-        int(row["entry_id"]): row
-        for row in ((previous_manager_history or {}).get("managers") or [])
-        if isinstance(row, dict) and row.get("entry_id") is not None
-    }
+    previous_entries = dict((previous_entry_histories or {}).get("entries") or {})
     manager_ids = sorted({int(value) for value in manager_ids})
     results: dict[int, dict[str, Any]] = {}
     misses: list[int] = []
@@ -415,7 +365,7 @@ def acquire_entry_histories(
     for entry_id in manager_ids:
         cached = None
         if allow_cache_reuse and not force:
-            cached = _cached_history_result(previous_managers.get(entry_id, {}), requested_gws)
+            cached = _cached_history_result(previous_entries.get(str(entry_id)))
         if cached is not None:
             results[entry_id] = cached
             hits += 1
@@ -450,6 +400,27 @@ def acquire_entry_histories(
     }
 
 
+def _entry_histories_artifact(
+    *,
+    season: str,
+    league_id: int,
+    results: dict[int, dict[str, Any]],
+) -> dict[str, Any]:
+    entries = {
+        str(entry_id): _history_cache_record(entry_id, result)
+        for entry_id, result in sorted(results.items())
+    }
+    return {
+        "schema_version": HISTORICAL_SCHEMA_VERSION,
+        "season": season,
+        "league_id": league_id,
+        "generated_at": iso(utc_now()),
+        "entries": entries,
+        "authority": "OFFICIAL_FPL",
+        "governance": {"data_only": True, "raw_entry_history_cache": True},
+    }
+
+
 def _apply_official_absence_classification(
     picks: dict[str, Any],
     histories: dict[int, dict[str, Any]],
@@ -470,7 +441,6 @@ def _apply_official_absence_classification(
         )
         if exclusion is None:
             if isinstance(record, dict) and record.get("official_exclusion") is True:
-                # Cached strict exclusions are still revalidated against fresh Official history.
                 record.pop("official_availability_status", None)
                 record.pop("official_exclusion", None)
                 record.pop("official_exclusion_reason", None)
@@ -485,11 +455,7 @@ def _apply_official_absence_classification(
             record["official_exclusion_evidence"] = exclusion
             record["record_digest"] = digest({key: value for key, value in record.items() if key != "record_digest"})
 
-    raw_missing = {
-        int(entry_id)
-        for entry_id, record in entries.items()
-        if record.get("status") != "AVAILABLE"
-    }
+    raw_missing = {int(entry_id) for entry_id, record in entries.items() if record.get("status") != "AVAILABLE"}
     unresolved = sorted(raw_missing - set(exclusions))
     picks["officially_excluded_entry_ids"] = sorted(exclusions)
     picks["officially_excluded_manager_count"] = len(exclusions)
@@ -505,92 +471,51 @@ def _apply_official_absence_classification(
     return exclusions
 
 
-def _live_points(result: dict[str, Any]) -> dict[int, int] | None:
+def _history_row(result: dict[str, Any], gw: int) -> dict[str, Any] | None:
+    return history_rows(result).get(gw)
+
+
+def _chip_events(result: dict[str, Any]) -> dict[int, str]:
     if result.get("status") != "LIVE":
-        return None
-    values: dict[int, int] = {}
-    for item in ((result.get("payload") or {}).get("elements") or []):
-        stats = item.get("stats") if isinstance(item, dict) else None
-        if (
-            isinstance(item, dict)
-            and item.get("id") is not None
-            and isinstance(stats, dict)
-            and isinstance(stats.get("total_points"), int)
-        ):
-            values[int(item["id"])] = int(stats["total_points"])
+        return {}
+    values: dict[int, str] = {}
+    for chip in ((result.get("payload") or {}).get("chips") or []):
+        if isinstance(chip, dict) and chip.get("event") is not None and chip.get("name"):
+            values[int(chip["event"])] = str(chip["name"])
     return values
 
 
-def _exposure(
-    manager_picks: dict[str, Any],
-    element_index: dict[int, dict[str, Any]],
-    points: dict[int, int] | None,
-    *,
-    completed: bool,
-) -> dict[str, Any]:
-    available = [row for row in (manager_picks.get("entries") or {}).values() if row.get("status") == "AVAILABLE"]
-    denominator = len(available)
-    aggregate: dict[int, dict[str, Any]] = {}
-    for manager in available:
-        for pick in manager.get("picks") or []:
-            element_id = int(pick["element_id"])
-            row = aggregate.setdefault(element_id, {
-                "official_element_id": element_id,
-                "managers_owned_count": 0,
-                "starts_count": 0,
-                "captain_count": 0,
-                "vice_count": 0,
-                "bench_count": 0,
-                "multiplier_sum": 0,
-            })
-            row["managers_owned_count"] += 1
-            row["starts_count" if int(pick.get("squad_position") or 99) <= 11 else "bench_count"] += 1
-            row["captain_count"] += int(bool(pick.get("captain")))
-            row["vice_count"] += int(bool(pick.get("vice_captain")))
-            if isinstance(pick.get("multiplier"), (int, float)):
-                row["multiplier_sum"] += pick["multiplier"]
-
-    players = []
-    for element_id in sorted(aggregate):
-        row = aggregate[element_id]
-        point_value = points.get(element_id) if points is not None else None
-        meta = element_index.get(element_id, {})
-        players.append({
-            **row,
-            "web_name": meta.get("web_name"),
-            "club": meta.get("club"),
-            "position": meta.get("position"),
-            "identity_snapshot_semantics": meta.get("identity_snapshot_semantics"),
-            "historical_club_snapshot_available": meta.get("historical_club_snapshot_available"),
-            "manager_count": denominator,
-            "ownership_percent": round(row["managers_owned_count"] * 100 / denominator, 4) if denominator else None,
-            "effective_ownership_percent": round(row["multiplier_sum"] * 100 / denominator, 4) if denominator else None,
-            "points_semantics": "FINAL_COMPLETED_GW" if completed else "LIVE_CURRENT_GW",
-            "final_points": point_value if completed else None,
-            "live_points": None if completed else point_value,
-            "total_cohort_points_contribution": row["multiplier_sum"] * point_value if isinstance(point_value, int) else None,
-        })
-    expected = int(manager_picks.get("expected_manager_count") or 0)
-    eligible = int(manager_picks.get("eligible_manager_count") or expected)
+def _event_live_artifact(result: dict[str, Any], gw: int, *, completed: bool) -> dict[str, Any]:
+    elements = []
+    if result.get("status") == "LIVE":
+        for item in ((result.get("payload") or {}).get("elements") or []):
+            if not isinstance(item, dict) or item.get("id") is None:
+                continue
+            stats = item.get("stats") or {}
+            elements.append(
+                {
+                    "element_id": int(item["id"]),
+                    "total_points": stats.get("total_points"),
+                    "minutes": stats.get("minutes"),
+                    "bonus": stats.get("bonus"),
+                    "bps": stats.get("bps"),
+                }
+            )
     return {
         "schema_version": HISTORICAL_SCHEMA_VERSION,
-        "season": manager_picks.get("season"),
-        "league_id": manager_picks.get("league_id"),
-        "gw": manager_picks.get("gw"),
+        "gw": gw,
         "gw_semantics": "COMPLETED_GW" if completed else "CURRENT_GW_POST_DEADLINE",
-        "cohort_semantics": COHORT_SEMANTICS,
-        "manager_count_denominator": denominator,
-        "expected_manager_count": expected,
-        "eligible_manager_count": eligible,
-        "officially_excluded_manager_count": int(manager_picks.get("officially_excluded_manager_count") or 0),
-        "officially_excluded_entry_ids": list(manager_picks.get("officially_excluded_entry_ids") or []),
-        "submitted_picks_available_count": denominator,
-        "submitted_picks_missing_count": max(0, expected - denominator),
-        "coverage_percent": round(denominator * 100 / expected, 4) if expected else 0.0,
-        "eligible_coverage_percent": round(denominator * 100 / eligible, 4) if eligible else 100.0,
-        "players": players,
-        "authority": "OFFICIAL_FPL_MECHANICAL_AGGREGATE",
-        "identity_limitation": "Player club/position labels use current Official bootstrap identity; historical club snapshot is not asserted.",
+        "status": "AVAILABLE" if result.get("status") == "LIVE" else "UNAVAILABLE",
+        "checked_at": result.get("checked_at"),
+        "elements": elements,
+        "authority": "OFFICIAL_FPL",
+        "lineage": {
+            "endpoint_class": "event_live",
+            "http_status": result.get("http_status"),
+            "payload_digest": result.get("payload_digest"),
+            "attempts": result.get("attempts"),
+        },
+        "governance": {"data_only": True, "manager_scoring_analytics": "DOWNSTREAM"},
     }
 
 
@@ -602,7 +527,7 @@ def _reconciliation(
     *,
     completed: bool,
 ) -> dict[str, Any]:
-    history = _history_rows(history_result).get(gw)
+    history = _history_row(history_result, gw)
     chip_history = _chip_events(history_result).get(gw)
     picks = pick_record.get("picks") or []
     captains = [pick for pick in picks if pick.get("captain")]
@@ -620,282 +545,16 @@ def _reconciliation(
         "gw": gw,
         "gw_semantics": "COMPLETED_GW" if completed else "CURRENT_GW_POST_DEADLINE",
         "submitted_picks_status": pick_record.get("status"),
-        "gw_points": history.get("points") if history else None,
-        "cumulative_points": history.get("total_points") if history else None,
-        "official_overall_rank": history.get("overall_rank") if history else None,
-        "active_chip_submitted_picks": pick_record.get("active_chip"),
-        "active_chip_entry_history": chip_history,
         "history_available": history is not None,
         "history_required_for_complete": completed and not excluded,
+        "active_chip_submitted_picks": pick_record.get("active_chip"),
+        "active_chip_entry_history": chip_history,
         "official_exclusion": excluded,
         "official_exclusion_reason": pick_record.get("official_exclusion_reason"),
         "official_exclusion_evidence": pick_record.get("official_exclusion_evidence"),
         "checks": checks,
         "consistent": True if excluded else all(value is not False for value in checks.values()),
-        "authority": "OFFICIAL_FPL_RECONCILED_FACT",
-    }
-
-
-def _manager_gw_state(
-    pick_record: dict[str, Any],
-    history_result: dict[str, Any],
-    gw: int,
-    *,
-    completed: bool,
-) -> dict[str, Any]:
-    history = _history_rows(history_result).get(gw)
-    picks = pick_record.get("picks") or []
-    return {
-        "gw": gw,
-        "gw_semantics": "COMPLETED_GW" if completed else "CURRENT_GW_POST_DEADLINE",
-        "submitted_picks_available": pick_record.get("status") == "AVAILABLE",
-        "official_exclusion": pick_record.get("official_exclusion") is True,
-        "official_exclusion_reason": pick_record.get("official_exclusion_reason"),
-        "squad": [int(p["element_id"]) for p in picks],
-        "starting_xi": [int(p["element_id"]) for p in picks if int(p.get("squad_position") or 99) <= 11],
-        "bench": [
-            int(p["element_id"])
-            for p in sorted(picks, key=lambda p: int(p.get("squad_position") or 99))
-            if int(p.get("squad_position") or 99) > 11
-        ],
-        "captain": next((int(p["element_id"]) for p in picks if p.get("captain")), None),
-        "vice_captain": next((int(p["element_id"]) for p in picks if p.get("vice_captain")), None),
-        "active_chip": pick_record.get("active_chip"),
-        "gw_points": history.get("points") if history else None,
-        "cumulative_points": history.get("total_points") if history else None,
-        "overall_rank": history.get("overall_rank") if history else None,
-    }
-
-
-def _pct_overlap(left: list[int], right: list[int], denominator: int) -> float | None:
-    if len(left) != denominator or len(right) != denominator:
-        return None
-    return round(len(set(left) & set(right)) * 100 / denominator, 4)
-
-
-def _manager_longitudinal(
-    manager_ids: list[int],
-    picks_by_gw: dict[int, dict[str, Any]],
-    histories: dict[int, dict[str, Any]],
-    gws: list[int],
-    gw_states: dict[int, dict[str, Any]],
-) -> dict[str, Any]:
-    managers = []
-    for entry_id in manager_ids:
-        rows = []
-        previous = None
-        for gw in gws:
-            pick = (picks_by_gw[gw].get("entries") or {}).get(str(entry_id), {})
-            completed = bool(gw_states[gw]["finished"])
-            state = _manager_gw_state(pick, histories.get(entry_id, {}), gw, completed=completed)
-            if previous is None:
-                state.update({
-                    "squad_overlap_percent_vs_previous_gw": None,
-                    "xi_overlap_percent_vs_previous_gw": None,
-                    "number_of_player_changes": None,
-                    "number_of_captain_changes": None,
-                    "number_of_starting_xi_changes": None,
-                    "number_of_bench_order_changes": None,
-                })
-            else:
-                state.update({
-                    "squad_overlap_percent_vs_previous_gw": _pct_overlap(previous["squad"], state["squad"], 15),
-                    "xi_overlap_percent_vs_previous_gw": _pct_overlap(previous["starting_xi"], state["starting_xi"], 11),
-                    "number_of_player_changes": 15 - len(set(previous["squad"]) & set(state["squad"])) if len(previous["squad"]) == len(state["squad"]) == 15 else None,
-                    "number_of_captain_changes": int(previous["captain"] != state["captain"]) if previous["captain"] is not None and state["captain"] is not None else None,
-                    "number_of_starting_xi_changes": 11 - len(set(previous["starting_xi"]) & set(state["starting_xi"])) if len(previous["starting_xi"]) == len(state["starting_xi"]) == 11 else None,
-                    "number_of_bench_order_changes": sum(a != b for a, b in zip(previous["bench"], state["bench"])) if len(previous["bench"]) == len(state["bench"]) == 4 else None,
-                })
-            rows.append(state)
-            previous = state
-        history_result = histories.get(entry_id, {})
-        manager = {
-            "entry_id": entry_id,
-            "current_cohort_member": True,
-            "cohort_semantics": COHORT_SEMANTICS,
-            "historical_membership_confirmed": None,
-            "history_origin": history_result.get("origin", LIVE_HISTORICAL),
-            "history_checked_at": history_result.get("checked_at"),
-            "history_payload_digest": history_result.get("payload_digest"),
-            "gws": rows,
-        }
-        manager["record_digest"] = digest(manager)
-        managers.append(manager)
-    return {
-        "schema_version": HISTORICAL_SCHEMA_VERSION,
-        "cohort_semantics": COHORT_SEMANTICS,
-        "managers": managers,
-        "authority": "OFFICIAL_FPL_MECHANICAL_LONGITUDINAL_FACTS",
-    }
-
-
-def _player_longitudinal(
-    exposure_by_gw: dict[int, dict[str, Any]],
-    picks_by_gw: dict[int, dict[str, Any]],
-    gws: list[int],
-) -> dict[str, Any]:
-    element_ids = sorted({
-        int(row["official_element_id"])
-        for artifact in exposure_by_gw.values()
-        for row in artifact.get("players") or []
-    })
-    players = []
-    for element_id in element_ids:
-        series = []
-        previous_owned: set[int] = set()
-        previous_captain: set[int] = set()
-        previous_started: set[int] = set()
-        for index, gw in enumerate(gws):
-            exposure = next(
-                (row for row in exposure_by_gw[gw].get("players") or [] if int(row["official_element_id"]) == element_id),
-                None,
-            )
-            entries = picks_by_gw[gw].get("entries") or {}
-            owned = {
-                int(entry_id) for entry_id, record in entries.items()
-                if record.get("status") == "AVAILABLE"
-                and any(int(p["element_id"]) == element_id for p in record.get("picks") or [])
-            }
-            captain = {
-                int(entry_id) for entry_id, record in entries.items()
-                if record.get("status") == "AVAILABLE"
-                and any(int(p["element_id"]) == element_id and p.get("captain") for p in record.get("picks") or [])
-            }
-            started = {
-                int(entry_id) for entry_id, record in entries.items()
-                if record.get("status") == "AVAILABLE"
-                and any(int(p["element_id"]) == element_id and int(p.get("squad_position") or 99) <= 11 for p in record.get("picks") or [])
-            }
-            series.append({
-                "gw": gw,
-                "owned_count": len(owned),
-                "started_count": len(started),
-                "captain_count": len(captain),
-                "vice_count": exposure.get("vice_count") if exposure else 0,
-                "effective_ownership_percent": exposure.get("effective_ownership_percent") if exposure else 0.0,
-                "new_owners_from_previous_gw": None if index == 0 else len(owned - previous_owned),
-                "dropped_by_previous_owners": None if index == 0 else len(previous_owned - owned),
-                "retained_by_previous_owners": None if index == 0 else len(owned & previous_owned),
-                "captain_gain_count": None if index == 0 else len(captain - previous_captain),
-                "captain_drop_count": None if index == 0 else len(previous_captain - captain),
-                "bench_to_start_count": None if index == 0 else len((started & previous_owned) - previous_started),
-                "start_to_bench_count": None if index == 0 else len((previous_started & owned) - started),
-            })
-            previous_owned, previous_captain, previous_started = owned, captain, started
-        meta = next(
-            (row for artifact in exposure_by_gw.values() for row in artifact.get("players") or [] if int(row["official_element_id"]) == element_id),
-            {},
-        )
-        players.append({
-            "official_element_id": element_id,
-            "web_name": meta.get("web_name"),
-            "position": meta.get("position"),
-            "gws": series,
-        })
-    return {
-        "schema_version": HISTORICAL_SCHEMA_VERSION,
-        "cohort_semantics": COHORT_SEMANTICS,
-        "players": players,
-        "authority": "OFFICIAL_FPL_MECHANICAL_LONGITUDINAL_FACTS",
-    }
-
-
-def _overlap_artifact(picks_by_gw: dict[int, dict[str, Any]], gws: list[int]) -> dict[str, Any]:
-    gw_rows = []
-    for gw in gws:
-        entries = {
-            int(key): value
-            for key, value in (picks_by_gw[gw].get("entries") or {}).items()
-            if value.get("status") == "AVAILABLE"
-        }
-        pairs, squad_values, xi_values = [], [], []
-        manager_ids = sorted(entries)
-        for index, left in enumerate(manager_ids):
-            left_squad = {int(p["element_id"]) for p in entries[left].get("picks") or []}
-            left_xi = {int(p["element_id"]) for p in entries[left].get("picks") or [] if int(p.get("squad_position") or 99) <= 11}
-            for right in manager_ids[index + 1:]:
-                right_squad = {int(p["element_id"]) for p in entries[right].get("picks") or []}
-                right_xi = {int(p["element_id"]) for p in entries[right].get("picks") or [] if int(p.get("squad_position") or 99) <= 11}
-                squad_overlap = round(len(left_squad & right_squad) * 100 / 15, 4)
-                xi_overlap = round(len(left_xi & right_xi) * 100 / 11, 4)
-                squad_values.append(squad_overlap)
-                xi_values.append(xi_overlap)
-                pairs.append({
-                    "entry_id_a": left,
-                    "entry_id_b": right,
-                    "squad_overlap_percent": squad_overlap,
-                    "xi_overlap_percent": xi_overlap,
-                })
-        captain_counts: dict[int, int] = {}
-        player_counts: dict[int, int] = {}
-        for record in entries.values():
-            for pick in record.get("picks") or []:
-                element_id = int(pick["element_id"])
-                player_counts[element_id] = player_counts.get(element_id, 0) + 1
-                if pick.get("captain"):
-                    captain_counts[element_id] = captain_counts.get(element_id, 0) + 1
-        denominator = len(entries)
-        captain_shares = [count / denominator for count in captain_counts.values()] if denominator else []
-        slot_denominator = denominator * 15
-        slot_shares = [count / slot_denominator for count in player_counts.values()] if slot_denominator else []
-        gw_rows.append({
-            "gw": gw,
-            "manager_count": denominator,
-            "pair_count": len(pairs),
-            "pairs": pairs,
-            "average_pairwise_squad_overlap_percent": round(statistics.mean(squad_values), 4) if squad_values else None,
-            "median_pairwise_squad_overlap_percent": round(statistics.median(squad_values), 4) if squad_values else None,
-            "average_pairwise_xi_overlap_percent": round(statistics.mean(xi_values), 4) if xi_values else None,
-            "median_pairwise_xi_overlap_percent": round(statistics.median(xi_values), 4) if xi_values else None,
-            "player_concentration": {
-                "maximum_ownership_percent": round(max(player_counts.values()) * 100 / denominator, 4) if denominator and player_counts else None,
-                "squad_slot_hhi": round(sum(value * value for value in slot_shares), 6) if slot_shares else None,
-            },
-            "captain_concentration": {
-                "maximum_captain_percent": round(max(captain_shares) * 100, 4) if captain_shares else None,
-                "captain_hhi": round(sum(value * value for value in captain_shares), 6) if captain_shares else None,
-            },
-        })
-    return {
-        "schema_version": HISTORICAL_SCHEMA_VERSION,
-        "cohort_semantics": COHORT_SEMANTICS,
-        "gws": gw_rows,
-        "authority": "OFFICIAL_FPL_MECHANICAL_AGGREGATE",
-    }
-
-
-def _ranks(manager_states: list[dict[str, Any]], gw: int) -> list[dict[str, Any]]:
-    values = []
-    for manager in manager_states:
-        row = next((item for item in manager.get("gws") or [] if item.get("gw") == gw), None)
-        if row and isinstance(row.get("cumulative_points"), int):
-            values.append((int(manager["entry_id"]), int(row["cumulative_points"]), row.get("gw_points")))
-    values.sort(key=lambda item: (-item[1], item[0]))
-    ranks, last_points, last_rank = [], None, 0
-    for index, (entry_id, points, gw_points) in enumerate(values, start=1):
-        if points != last_points:
-            last_rank, last_points = index, points
-        ranks.append({
-            "entry_id": entry_id,
-            "gw": gw,
-            "gw_points": gw_points,
-            "cumulative_points": points,
-            "reconstructed_current_cohort_rank": last_rank,
-            "rank_semantics": "RECONSTRUCTED_CURRENT_COHORT_ONLY",
-            "official_historical_league_rank": None,
-        })
-    return ranks
-
-
-def _authority() -> dict[str, Any]:
-    return {
-        "data_only": True,
-        "decision_authority": "NONE",
-        "prediction_authority": "NONE",
-        "optimizer_authority": "NONE",
-        "tactical_authority": "NONE",
-        "bayesian_authority": "NONE",
-        "monte_carlo_authority": "NONE",
+        "authority": "OFFICIAL_FPL_RECONCILIATION_INTEGRITY",
     }
 
 
@@ -961,18 +620,20 @@ class HistoricalBackfillService:
         season = str(self.config.get("season") or "")
         workers = max(1, int(self.config.get("rival_picks_max_workers") or 8))
         cache_enabled = bool(self.config.get("submitted_picks_cache_enabled", True))
-        element_index = _element_index(bootstrap)
-        previous_manager_history = read_json(history_root / "longitudinal" / "manager_history.json") if cache_enabled else None
-
+        previous_entry_histories = read_json(history_root / "entry_histories.json") if cache_enabled else None
         histories, history_metrics = acquire_entry_histories(
             self.client,
             manager_ids,
             workers,
-            previous_manager_history=previous_manager_history,
-            requested_gws=gws,
+            previous_entry_histories=previous_entry_histories,
             force=force,
             allow_cache_reuse=not has_provisional_current,
         )
+        write_json(
+            history_root / "entry_histories.json",
+            _entry_histories_artifact(season=season, league_id=league_id, results=histories),
+        )
+
         telemetry = {
             "cache_hits": 0,
             "cache_misses": 0,
@@ -988,11 +649,7 @@ class HistoricalBackfillService:
             "retry_count": _retry_count(bootstrap_result) + _retry_count(entry_result) + history_metrics["retry_count"],
             "maximum_concurrency_used": history_metrics["maximum_concurrency_used"],
         }
-        picks_by_gw: dict[int, dict[str, Any]] = {}
-        exposure_by_gw: dict[int, dict[str, Any]] = {}
-        reconciliations_by_gw: dict[int, list[dict[str, Any]]] = {}
-        exclusions_by_gw: dict[int, dict[int, dict[str, Any]]] = {}
-        event_points_available: dict[int, bool] = {}
+        gw_health: list[dict[str, Any]] = []
 
         for gw in gws:
             completed = bool(gw_states[gw]["finished"])
@@ -1016,25 +673,20 @@ class HistoricalBackfillService:
                 gw=gw,
                 completed=completed,
             )
-            exclusions_by_gw[gw] = exclusions
             telemetry["official_absence_count"] += len(exclusions)
-            picks_by_gw[gw] = picks
             telemetry["cache_hits"] += cache_metrics["cache_hits"]
             telemetry["cache_misses"] += cache_metrics["cache_misses"]
             telemetry["reused_count"] += cache_metrics["cache_hits"]
             telemetry["fetched_count"] += cache_metrics["cache_misses"]
             telemetry["manager_requests"] += cache_metrics["cache_misses"]
             telemetry["retry_count"] += cache_metrics["retry_count"]
-            telemetry["maximum_concurrency_used"] = max(
-                telemetry["maximum_concurrency_used"], cache_metrics["maximum_concurrency_used"]
-            )
+            telemetry["maximum_concurrency_used"] = max(telemetry["maximum_concurrency_used"], cache_metrics["maximum_concurrency_used"])
 
             live_result = self.client.event_live(gw)
             telemetry["retry_count"] += _retry_count(live_result)
-            points = _live_points(live_result)
-            event_points_available[gw] = points is not None
-            exposure_by_gw[gw] = _exposure(picks, element_index, points, completed=completed)
-            reconciliations_by_gw[gw] = [
+            live_artifact = _event_live_artifact(live_result, gw, completed=completed)
+            event_points_available = live_artifact["status"] == "AVAILABLE"
+            reconciliations = [
                 _reconciliation(
                     candidate,
                     gw,
@@ -1044,30 +696,37 @@ class HistoricalBackfillService:
                 )
                 for candidate in manager_ids
             ]
+
             write_json(gw_root / "manager_picks.json", picks)
-            write_json(gw_root / "exposure.json", exposure_by_gw[gw])
+            write_json(gw_root / "event_live.json", live_artifact)
+            write_json(
+                gw_root / "reconciliation.json",
+                {
+                    "schema_version": HISTORICAL_SCHEMA_VERSION,
+                    "gw": gw,
+                    "gw_semantics": gw_states[gw]["gw_semantics"],
+                    "cohort_semantics": COHORT_SEMANTICS,
+                    "officially_excluded_current_cohort_entries": [
+                        exclusions[key] | {"entry_id": key} for key in sorted(exclusions)
+                    ],
+                    "reconciliations": reconciliations,
+                    "authority": "OFFICIAL_FPL_RECONCILIATION_INTEGRITY",
+                    "governance": {
+                        "data_only": True,
+                        "historical_rank_reconstruction": "DOWNSTREAM",
+                        "transition_analytics": "DOWNSTREAM",
+                    },
+                },
+            )
 
-        manager_longitudinal = _manager_longitudinal(manager_ids, picks_by_gw, histories, gws, gw_states)
-        player_longitudinal = _player_longitudinal(exposure_by_gw, picks_by_gw, gws)
-        overlap = _overlap_artifact(picks_by_gw, gws)
-        gw_health = []
-
-        for gw in gws:
-            completed = bool(gw_states[gw]["finished"])
-            picks = picks_by_gw[gw]
-            reconciliations = reconciliations_by_gw[gw]
-            exclusions = exclusions_by_gw[gw]
             excluded_ids = set(exclusions)
             eligible_ids = set(manager_ids) - excluded_ids
-            ranks = _ranks(manager_longitudinal["managers"], gw)
             available_ids = {
-                int(entry_id)
-                for entry_id, record in (picks.get("entries") or {}).items()
+                int(candidate)
+                for candidate, record in (picks.get("entries") or {}).items()
                 if record.get("status") == "AVAILABLE"
             }
-            available = len(available_ids)
             history_available_ids = {row["entry_id"] for row in reconciliations if row["history_available"]}
-            raw_history_available_count = len(history_available_ids)
             pick_failures = eligible_ids - available_ids
             reconciliation_failures = {
                 row["entry_id"]
@@ -1077,19 +736,15 @@ class HistoricalBackfillService:
             history_missing = eligible_ids - history_available_ids
             failed_ids = sorted(pick_failures | reconciliation_failures | (history_missing if completed else set()))
             history_ok = not history_missing if completed else True
-            complete = (
-                not pick_failures
-                and not reconciliation_failures
-                and event_points_available[gw]
-                and history_ok
-            )
-            raw_coverage_count = min(available, raw_history_available_count) if completed else available
+            complete = not pick_failures and not reconciliation_failures and event_points_available and history_ok
+            raw_history_available_count = len(history_available_ids)
+            raw_coverage_count = min(len(available_ids), raw_history_available_count) if completed else len(available_ids)
+            eligible_count = len(eligible_ids)
             eligible_coverage_count = (
                 min(len(available_ids & eligible_ids), len(history_available_ids & eligible_ids))
                 if completed
                 else len(available_ids & eligible_ids)
             )
-            eligible_count = len(eligible_ids)
             health = {
                 "gw": gw,
                 "gw_semantics": gw_states[gw]["gw_semantics"],
@@ -1099,9 +754,9 @@ class HistoricalBackfillService:
                 "officially_excluded_manager_count": len(excluded_ids),
                 "officially_excluded_entry_ids": sorted(excluded_ids),
                 "official_exclusion_reason_counts": dict(picks.get("official_exclusion_reason_counts") or {}),
-                "collected_manager_count": available,
-                "submitted_picks_available_count": available,
-                "submitted_picks_missing_count": len(manager_ids) - available,
+                "collected_manager_count": len(available_ids),
+                "submitted_picks_available_count": len(available_ids),
+                "submitted_picks_missing_count": len(manager_ids) - len(available_ids),
                 "unresolved_submitted_picks_missing_count": len(pick_failures),
                 "entry_history_available_count": raw_history_available_count,
                 "entry_history_missing_count": len(manager_ids) - raw_history_available_count,
@@ -1109,8 +764,8 @@ class HistoricalBackfillService:
                 "eligible_entry_history_missing_count": len(history_missing),
                 "entry_history_required_for_complete": completed,
                 "entry_history_current_gw_policy": None if completed else "OPTIONAL_UNTIL_OFFICIAL_CURRENT_GW_HISTORY_IS_AVAILABLE",
-                "final_points_available": event_points_available[gw] if completed else False,
-                "live_points_available": event_points_available[gw] if not completed else False,
+                "final_points_available": event_points_available if completed else False,
+                "live_points_available": event_points_available if not completed else False,
                 "coverage_percent": round(raw_coverage_count * 100 / len(manager_ids), 4),
                 "eligible_coverage_percent": round(eligible_coverage_count * 100 / eligible_count, 4) if eligible_count else 100.0,
                 "complete": complete,
@@ -1121,61 +776,6 @@ class HistoricalBackfillService:
             gw_health.append(health)
             telemetry["missing_count"] += len(failed_ids)
             telemetry["failed_count"] += len(pick_failures)
-            gw_root = history_root / f"gw_{gw}"
-            write_json(gw_root / "standings_or_points.json", {
-                "schema_version": HISTORICAL_SCHEMA_VERSION,
-                "gw": gw,
-                "gw_semantics": gw_states[gw]["gw_semantics"],
-                "cohort_semantics": COHORT_SEMANTICS,
-                "rank_semantics": "RECONSTRUCTED_CURRENT_COHORT_ONLY",
-                "official_historical_league_rank_available": False,
-                "officially_excluded_current_cohort_entries": [exclusions[key] | {"entry_id": key} for key in sorted(exclusions)],
-                "reconciliations": reconciliations,
-                "reconstructed_current_cohort_ranks": ranks,
-                "reconstructed_rank_manager_count": len(ranks),
-            })
-            write_json(gw_root / "transitions.json", {
-                "schema_version": HISTORICAL_SCHEMA_VERSION,
-                "gw": gw,
-                "gw_semantics": gw_states[gw]["gw_semantics"],
-                "cohort_semantics": COHORT_SEMANTICS,
-                "manager_rows": [
-                    {"entry_id": manager["entry_id"], **next(item for item in manager["gws"] if item["gw"] == gw)}
-                    for manager in manager_longitudinal["managers"]
-                ],
-            })
-
-        longitudinal_root = history_root / "longitudinal"
-        write_json(longitudinal_root / "player_ownership_history.json", player_longitudinal)
-        write_json(longitudinal_root / "captain_history.json", {
-            "schema_version": HISTORICAL_SCHEMA_VERSION,
-            "cohort_semantics": COHORT_SEMANTICS,
-            "players": [
-                {
-                    "official_element_id": row["official_element_id"],
-                    "web_name": row.get("web_name"),
-                    "gws": [
-                        {
-                            "gw": item["gw"],
-                            "captain_count": item["captain_count"],
-                            "captain_gain_count": item["captain_gain_count"],
-                            "captain_drop_count": item["captain_drop_count"],
-                        }
-                        for item in row["gws"]
-                    ],
-                }
-                for row in player_longitudinal["players"]
-            ],
-            "authority": "OFFICIAL_FPL_MECHANICAL_LONGITUDINAL_FACTS",
-        })
-        write_json(longitudinal_root / "manager_history.json", manager_longitudinal)
-        write_json(longitudinal_root / "squad_overlap_history.json", overlap)
-        write_json(longitudinal_root / "transitions.json", {
-            "schema_version": HISTORICAL_SCHEMA_VERSION,
-            "cohort_semantics": COHORT_SEMANTICS,
-            "player_transitions": player_longitudinal["players"],
-            "manager_transitions": manager_longitudinal["managers"],
-        })
 
         managers_artifact = {
             "schema_version": HISTORICAL_SCHEMA_VERSION,
@@ -1197,6 +797,7 @@ class HistoricalBackfillService:
                 for row in manager_rows
             ],
             "authority": "OFFICIAL_FPL_CURRENT_STANDINGS",
+            "governance": {"data_only": True},
         }
         write_json(history_root / "managers.json", managers_artifact)
 
@@ -1207,9 +808,7 @@ class HistoricalBackfillService:
         client_telemetry = self.client.telemetry() if callable(getattr(self.client, "telemetry", None)) else {}
         telemetry["total_requests"] = client_telemetry.get("request_count")
         telemetry["failed_requests"] = client_telemetry.get("failed_requests")
-        telemetry["maximum_concurrency_used"] = max(
-            telemetry["maximum_concurrency_used"], int(client_telemetry.get("maximum_concurrency_used") or 0)
-        )
+        telemetry["maximum_concurrency_used"] = max(telemetry["maximum_concurrency_used"], int(client_telemetry.get("maximum_concurrency_used") or 0))
         telemetry["duration_ms"] = round((time.perf_counter() - started) * 1000)
 
         manifest = {
@@ -1219,81 +818,118 @@ class HistoricalBackfillService:
             "requested_by": requested_by,
             "report_kind": "historical_backfill",
             "scope": "mini_league",
-            "league_id": league_id,
-            "league_name": target.get("league_name"),
-            "league_kind": target.get("league_kind"),
-            "league_resolution": "DYNAMIC_PRIORITY_LEAGUE_NAME_AND_KIND",
-            "cohort_semantics": COHORT_SEMANTICS,
-            "historical_membership_confirmed": False,
             "gw_from": gw_from,
             "gw_to": gw_to,
             "requested_gw_count": len(gws),
             "completed_requested_gw_count": sum(1 for gw in gws if gw_states[gw]["finished"]),
             "provisional_current_gw_count": sum(1 for gw in gws if not gw_states[gw]["finished"]),
+            "league_id": league_id,
+            "league_name": target.get("league_name"),
+            "current_cohort_manager_count": len(manager_ids),
+            "cohort_semantics": COHORT_SEMANTICS,
+            "historical_membership_confirmed": False,
+            "gw_health": gw_health,
             "complete_gw_count": complete_gws,
             "partial_gw_count": partial_gws,
             "failed_gw_count": failed_gws,
             "overall_status": overall_status,
-            "current_cohort_manager_count": len(manager_ids),
-            "gw_health": gw_health,
             "cache": {
-                "immutable_completed_gw_cache": True,
-                "immutable_official_absence_cache": True,
-                "current_post_deadline_submitted_picks_cache_reusable": True,
-                "current_gw_entry_history_cache_reused": False if has_provisional_current else telemetry["history_cache_hits"] > 0,
-                "force": bool(force),
                 "cache_hits": telemetry["cache_hits"],
                 "cache_misses": telemetry["cache_misses"],
                 "history_cache_hits": telemetry["history_cache_hits"],
                 "history_cache_misses": telemetry["history_cache_misses"],
-                "fetched_count": telemetry["fetched_count"],
-                "reused_count": telemetry["reused_count"],
+                "current_gw_entry_history_cache_reused": has_provisional_current and telemetry["history_cache_hits"] > 0,
             },
             "telemetry": telemetry,
-            "governance": _authority(),
-            "lineage": {
-                "bootstrap": lineage(bootstrap_result),
-                "entry": lineage(entry_result, entry_id=entry_id),
-                "standings_pages": standings.get("lineage") or [],
-                "authority": "OFFICIAL_FPL",
+            "artifacts": {
+                "managers": f"data/v6/mini_leagues/{league_id}/history/managers.json",
+                "entry_histories": f"data/v6/mini_leagues/{league_id}/history/entry_histories.json",
+                "per_gw": [
+                    {
+                        "gw": gw,
+                        "manager_picks": f"data/v6/mini_leagues/{league_id}/history/gw_{gw}/manager_picks.json",
+                        "event_live": f"data/v6/mini_leagues/{league_id}/history/gw_{gw}/event_live.json",
+                        "reconciliation": f"data/v6/mini_leagues/{league_id}/history/gw_{gw}/reconciliation.json",
+                    }
+                    for gw in gws
+                ],
             },
-            "limitations": [
-                "Historical league membership is not inferred from current membership; records are CURRENT_COHORT_HISTORY.",
-                "Historical league rank is not asserted; reconstructed_current_cohort_rank uses only today's resolved cohort.",
-                "Historical club identity is not asserted when Official historical endpoints do not expose it; element_id remains authoritative.",
-                "Completed-GW current-cohort entries may be explicitly excluded only when Official submitted-picks returns 404 and Official entry-history begins in a later GW; this is an availability fact and not historical league-membership evidence.",
-                "A current post-deadline GW is provisional: submitted picks are factual, but live points are not labeled final and Official entry-history rows may remain unavailable until the GW completes.",
+            "retired_analytics": [
+                "exposure.json",
+                "transitions.json",
+                "player_ownership_history.json",
+                "captain_history.json",
+                "manager_history.json",
+                "squad_overlap_history.json",
+                "reconstructed_current_cohort_ranks",
             ],
+            "governance": {
+                "data_only": True,
+                "decision_authority": "NONE",
+                "prediction_authority": "NONE",
+                "optimizer_authority": "NONE",
+                "tactical_authority": "NONE",
+                "bayesian_authority": "NONE",
+                "monte_carlo_authority": "NONE",
+                "ownership_analytics_authority": "NONE",
+                "effective_ownership_authority": "NONE",
+                "rival_analytics_authority": "NONE",
+                "atomic_facts_only": True,
+                "analytics_belong_downstream": True,
+            },
         }
-        assert_publish_safe(manifest, secret_values=getattr(self.client, "secret_values", ()))
         write_json(history_root / "manifest.json", manifest)
-        write_json(self.output_root / "health" / "historical_backfill.json", manifest)
+        write_json(self.output_root / "health/historical_backfill.json", {
+            "schema_version": HISTORICAL_SCHEMA_VERSION,
+            "generated_at": generated_at,
+            "overall_status": overall_status,
+            "league_id": league_id,
+            "gw_from": gw_from,
+            "gw_to": gw_to,
+            "complete_gw_count": complete_gws,
+            "partial_gw_count": partial_gws,
+            "failed_gw_count": failed_gws,
+            "cohort_semantics": COHORT_SEMANTICS,
+            "data_contract": "ATOMIC_FACTS_ONLY",
+        })
         return manifest
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Governed V6 historical mini-league backfill")
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="V6 data-only historical mini-league backfill")
     parser.add_argument("--gw-from", type=int, required=True)
     parser.add_argument("--gw-to", type=int, required=True)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--requested-by", default="FPL_MASTER_MONITOR")
-    parser.add_argument("--config", default="config/v6/consumer_context.json")
-    parser.add_argument("--output-root", default="data/v6")
-    args = parser.parse_args()
-    config = load_consumer_context(Path(args.config))
-    service = HistoricalBackfillService(config=config, output_root=Path(args.output_root))
+    parser.add_argument("--config", type=Path, default=Path("config/v6/consumer_context.json"))
+    parser.add_argument("--output-root", type=Path, default=Path("data/v6"))
+    return parser
+
+
+def main() -> int:
+    args = build_parser().parse_args()
     try:
-        manifest = service.run(
+        manifest = HistoricalBackfillService(
+            config=load_consumer_context(args.config),
+            output_root=args.output_root,
+        ).run(
             gw_from=args.gw_from,
             gw_to=args.gw_to,
             force=args.force,
             requested_by=args.requested_by,
         )
     except HistoricalBackfillError as exc:
-        print(json.dumps({"status": "RED", "error": safe_error(exc), "reason": str(exc)}, indent=2))
+        print(json.dumps({"status": "REJECTED", "error": safe_error(exc)}))
         return 2
-    print(json.dumps(manifest, indent=2, sort_keys=True))
-    return 0 if manifest["overall_status"] == "GREEN" else 3
+    print(json.dumps({
+        "status": manifest.get("overall_status"),
+        "league_id": manifest.get("league_id"),
+        "gw_from": manifest.get("gw_from"),
+        "gw_to": manifest.get("gw_to"),
+        "cache": manifest.get("cache"),
+        "telemetry": manifest.get("telemetry"),
+    }, indent=2))
+    return 0 if manifest.get("overall_status") == "GREEN" else 3
 
 
 if __name__ == "__main__":

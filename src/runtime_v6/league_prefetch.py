@@ -83,7 +83,6 @@ def standings_artifact(
     generated_at: str,
 ) -> dict[str, Any]:
     rows = state["rows"]
-    leader_total = rows[0].get("league_total") if rows else None
     user = next((row for row in rows if row["entry_id"] == entry_id), None)
     return {
         "schema_version": SCHEMA_VERSION,
@@ -101,13 +100,6 @@ def standings_artifact(
             "entry_id": entry_id,
             "rank": user.get("league_rank") if user else None,
             "total": user.get("league_total") if user else None,
-            "gap_to_first": (
-                leader_total - user.get("league_total")
-                if user
-                and isinstance(leader_total, int)
-                and isinstance(user.get("league_total"), int)
-                else None
-            ),
         },
         "lineage": state["lineage"],
         "authority": "OFFICIAL_FPL",

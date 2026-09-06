@@ -348,18 +348,32 @@ def exposure_artifact(
     live_points: dict[int, int] | None = None,
     live_lineage: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Backward-compatible tombstone for the retired V6 exposure artifact.
+    """Backward-compatible noncanonical tombstone for retired V6 analytics.
 
-    V6 no longer aggregates ownership/EO/start/bench/captain/vice or player-level
-    rival analytics. Those are downstream Manual FPL responsibilities. The
-    report-prefetch writer still references this function during the migration,
-    so return only acquisition/completeness metadata already present in the raw
-    submitted-picks artifact. No football/FPL analytical values are calculated.
+    Only integrity/completeness metadata is retained here. V6 does not aggregate
+    player ownership, EO, starter/bench/captain/vice, relative exposure, or
+    manager live-score analytics. Those are downstream Manual FPL duties.
     """
     del element_index, live_points
-    expected = int(manager_picks.get("expected_manager_count") or 0)
-    collected = int(manager_picks.get("submitted_picks_available_count") or 0)
-    missing = int(manager_picks.get("submitted_picks_missing_count") or max(0, expected - collected))
+    entries = manager_picks.get("entries") or {}
+    available_records = [
+        record for record in entries.values()
+        if isinstance(record, dict) and record.get("status") == "AVAILABLE"
+    ]
+    expected = int(manager_picks.get("expected_manager_count") or len(entries) or 0)
+    collected = int(
+        manager_picks.get("submitted_picks_available_count")
+        if manager_picks.get("submitted_picks_available_count") is not None
+        else len(available_records)
+    )
+    missing = int(
+        manager_picks.get("submitted_picks_missing_count")
+        if manager_picks.get("submitted_picks_missing_count") is not None
+        else max(0, expected - collected)
+    )
+    complete = expected > 0 and collected == expected and missing == 0
+    coverage_percent = round(collected * 100 / expected, 4) if expected else 0.0
+    health = "GREEN" if complete else ("AMBER" if collected else "RED")
     return {
         "schema_version": SCHEMA_VERSION,
         "artifact_class": "DEPRECATED_NONCANONICAL_TOMBSTONE",
@@ -379,8 +393,9 @@ def exposure_artifact(
         "collected_manager_count": collected,
         "submitted_picks_available_count": collected,
         "submitted_picks_missing_count": missing,
-        "coverage_percent": manager_picks.get("coverage_percent"),
-        "complete": manager_picks.get("complete") is True,
+        "coverage_percent": coverage_percent,
+        "health": health,
+        "complete": complete,
         "players": [],
         "lineage": {
             "submitted_picks": manager_picks.get("lineage"),
@@ -403,11 +418,7 @@ def add_manager_live_totals(
     manager_picks: dict[str, Any],
     points: dict[int, int],
 ) -> dict[str, Any]:
-    """Preserve the raw live artifact without manager-level score aggregation.
-
-    Manager multiplier/live totals are report analytics and now belong
-    downstream. Parameters are retained for API compatibility during migration.
-    """
+    """Preserve raw live data without manager-level analytical aggregation."""
     del manager_picks, points
     value = dict(live)
     value.pop("manager_multiplier_points", None)

@@ -5,6 +5,15 @@ from typing import Any
 from .prefetch_contract import NORMALIZATION_VERSION, SCHEMA_VERSION, iso, lineage, utc_now
 
 SYSTEM_LEAGUE_TYPES = frozenset({"s"})
+AUTH_STATES = frozenset(
+    {
+        "AUTH_AVAILABLE",
+        "AUTH_EXPIRED",
+        "AUTH_INVALID",
+        "AUTH_ENTRY_MISMATCH",
+        "AUTH_UNAVAILABLE",
+    }
+)
 
 
 def discover_memberships(entry_payload: dict[str, Any], discovered_at: str) -> list[dict[str, Any]]:
@@ -138,6 +147,9 @@ def normalise_team(
     auth_lineage: list[dict[str, Any] | None],
     generated_at: str,
 ) -> dict[str, Any]:
+    if auth_state not in AUTH_STATES:
+        raise ValueError(f"unsupported V6 personal auth state: {auth_state}")
+
     submitted_by_element = {
         int(item["element_id"]): item
         for item in submitted.get("picks", [])
@@ -172,10 +184,6 @@ def normalise_team(
 
     transfers = (my_team_payload or {}).get("transfers") if isinstance(my_team_payload, dict) else None
     transfers = transfers if isinstance(transfers, dict) else {}
-    current_prices = [player["current_price"] for player in players]
-    sell_prices = [player["selling_price"] for player in players]
-    market_value = sum(current_prices) if players and all(isinstance(value, int) for value in current_prices) else None
-    sell_value = sum(sell_prices) if players and all(isinstance(value, int) for value in sell_prices) else None
 
     raw_chips = (my_team_payload or {}).get("chips") if isinstance(my_team_payload, dict) else None
     chips = None
@@ -199,8 +207,7 @@ def normalise_team(
         "auth_state": auth_state,
         "squad_state": "AUTHENTICATED_CURRENT_TEAM" if isinstance(auth_picks, list) else "SUBMITTED_PICKS_ONLY",
         "bank": transfers.get("bank"),
-        "squad_market_value": market_value,
-        "effective_sell_value": sell_value,
+        "official_team_value": transfers.get("value"),
         "free_transfers": transfers.get("free_transfers"),
         "transfers_made": transfers.get("made"),
         "hit_cost": transfers.get("cost"),
@@ -209,6 +216,7 @@ def normalise_team(
         "availability": {
             "authenticated_state": auth_state,
             "bank": "AVAILABLE" if "bank" in transfers else "UNAVAILABLE",
+            "official_team_value": "AVAILABLE" if "value" in transfers else "UNAVAILABLE",
             "free_transfers": "AVAILABLE" if "free_transfers" in transfers else "NOT_SUPPORTED",
             "purchase_price": "AVAILABLE"
             if players and all(item["purchase_price"] is not None for item in players)
@@ -217,6 +225,14 @@ def normalise_team(
             if players and all(item["selling_price"] is not None for item in players)
             else "UNAVAILABLE",
             "chips": "AVAILABLE" if chips is not None else "UNAVAILABLE",
+        },
+        "governance": {
+            "data_only": True,
+            "authenticated_finance_is_raw_official_fact": True,
+            "derived_squad_market_value": False,
+            "derived_effective_sell_value": False,
+            "bank_is_not_inferred": True,
+            "free_transfers_are_not_inferred": True,
         },
         "lineage": {
             "bootstrap_static": bootstrap_lineage,

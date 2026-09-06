@@ -12,7 +12,9 @@ from .registry import ZERO_AUTHORITY_KEYS
 
 DEFAULT_MAX_AGE_MINUTES = 90
 MAX_CLOCK_SKEW_MINUTES = 5
-_ALLOWED_SCHEDULE_KINDS = {"primary", "recovery"}
+_ALLOWED_SCHEDULE_KINDS = {"primary", "recovery", "master_orchestrated"}
+_NATURAL_SCHEDULE_KINDS = {"primary", "recovery"}
+_MASTER_EVENTS = {"workflow_dispatch", "issue_comment"}
 _FALLBACK_SCOPE = "EXTERNAL_SOURCES_ONLY"
 
 
@@ -30,8 +32,43 @@ def _governance_failures(governance: dict[str, Any]) -> list[str]:
     for authority in ZERO_AUTHORITY_KEYS:
         if governance.get(authority) != "NONE":
             failures.append(f"UNEXPECTED_{authority.upper()}")
-    if governance.get("production_ingestion_schedule_only") is not True:
-        failures.append("PRODUCTION_SCHEDULE_ONLY_CONTRACT_BROKEN")
+
+    # Natural scheduler provenance and operational authority are separate concerns.
+    # Master-orchestrated snapshots are allowed to be authoritative without claiming
+    # that the invocation itself was a GitHub ``schedule`` event.
+    governed_trigger = governance.get("production_authoritative_snapshots_require_governed_trigger")
+    if governed_trigger is False:
+        failures.append("GOVERNED_TRIGGER_CONTRACT_BROKEN")
+    return failures
+
+
+def _runtime_control_failures(control: dict[str, Any]) -> list[str]:
+    failures: list[str] = []
+    kind = str(control.get("schedule_kind") or "")
+    event_name = str(control.get("event_name") or "")
+
+    if control.get("authoritative_runtime_snapshot") is not True:
+        failures.append("NON_AUTHORITATIVE_RUNTIME_SNAPSHOT")
+    if control.get("counts_as_completed_operational_slot") is not True:
+        failures.append("INCOMPLETE_OPERATIONAL_SLOT")
+    if kind not in _ALLOWED_SCHEDULE_KINDS:
+        failures.append("INVALID_RUNTIME_SCHEDULE_KIND")
+
+    if kind in _NATURAL_SCHEDULE_KINDS:
+        if control.get("scheduled_cycle") is not True:
+            failures.append("NON_SCHEDULED_NATURAL_RUNTIME_SNAPSHOT")
+        if event_name != "schedule":
+            failures.append("INVALID_NATURAL_SCHEDULE_EVENT_PROVENANCE")
+    elif kind == "master_orchestrated":
+        if control.get("master_orchestrated") is not True:
+            failures.append("MASTER_ORCHESTRATION_FLAG_MISSING")
+        if event_name not in _MASTER_EVENTS:
+            failures.append("INVALID_MASTER_ORCHESTRATED_EVENT_PROVENANCE")
+
+    if control.get("duplicate_scheduled_cycle") is True:
+        failures.append("DUPLICATE_SCHEDULED_CYCLE")
+    if not control.get("run_id"):
+        failures.append("MISSING_RUNTIME_RUN_ID")
     return failures
 
 
@@ -110,16 +147,7 @@ def assess_snapshot(
             failures.append("INVALID_GENERATED_AT")
 
     control = manifest.get("runtime_control") or {}
-    if control.get("scheduled_cycle") is not True:
-        failures.append("NON_SCHEDULED_RUNTIME_SNAPSHOT")
-    if control.get("event_name") != "schedule":
-        failures.append("INVALID_RUNTIME_EVENT_PROVENANCE")
-    if control.get("schedule_kind") not in _ALLOWED_SCHEDULE_KINDS:
-        failures.append("INVALID_RUNTIME_SCHEDULE_KIND")
-    if control.get("duplicate_scheduled_cycle") is True:
-        failures.append("DUPLICATE_SCHEDULED_CYCLE")
-    if not control.get("run_id"):
-        failures.append("MISSING_RUNTIME_RUN_ID")
+    failures.extend(_runtime_control_failures(control))
 
     if manifest.get("overall") == "RED":
         failures.append("MANIFEST_OVERALL_RED")
@@ -166,7 +194,8 @@ def assess_snapshot(
             "consumer_does_not_trust_static_green_without_freshness": True,
             "consumer_recomputes_publish_integrity": True,
             "consumer_requires_exact_resolved_registry": True,
-            "consumer_requires_scheduled_runtime_provenance": True,
+            "consumer_requires_authoritative_operational_provenance": True,
+            "consumer_separates_natural_scheduler_evidence_from_operational_authority": True,
             "consumer_requires_full_zero_authority_contract": True,
             "stale_or_invalid_allows_minimum_scope_direct_fallback": True,
             "fallback_is_external_sources_only": True,

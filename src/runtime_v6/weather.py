@@ -11,13 +11,6 @@ ROOT = Path(__file__).resolve().parents[2]
 LONDON = ZoneInfo("Europe/London")
 
 
-def _float(value: Any) -> float | None:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
 def load_weather_venues(source: dict[str, Any]) -> list[dict[str, Any]]:
     """Resolve weather venues from the repo-wide canonical venue registry."""
     registry_ref = str(source.get("venue_registry") or "").strip()
@@ -71,64 +64,8 @@ def materialize_open_meteo_source(source: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def classify_weather(row: dict[str, Any], contract: dict[str, Any] | None = None) -> tuple[str, list[str]]:
-    """Classify weather context without turning it into a direct FPL points coefficient."""
-    contract = contract or {}
-    legacy = dict(contract.get("legacy_attention_thresholds") or {})
-    wind_attention = float(legacy.get("wind_speed_kmh") or 30)
-    rain_probability_attention = float(legacy.get("rain_probability_pct") or 60)
-    cold_attention = float(legacy.get("temperature_c") or 5)
-
-    temp = _float(row.get("temperature_2m"))
-    rain_probability = _float(row.get("precipitation_probability"))
-    precipitation = _float(row.get("precipitation")) or 0.0
-    rain = _float(row.get("rain")) or 0.0
-    showers = _float(row.get("showers")) or 0.0
-    wind = _float(row.get("wind_speed_10m")) or 0.0
-    gust = _float(row.get("wind_gusts_10m")) or 0.0
-
-    reasons: list[str] = []
-    severity = "NORMAL"
-
-    # Intensity-aware upper bands. These are transparent contextual flags only;
-    # they never become an automatic xPts multiplier or transfer trigger.
-    if wind >= 55 or gust >= 70 or precipitation >= 8 or rain >= 6 or showers >= 8:
-        severity = "EXTREME"
-    elif wind >= 40 or gust >= 55 or precipitation >= 4 or rain >= 3 or showers >= 4:
-        severity = "ADVERSE"
-    elif (
-        wind >= wind_attention
-        or gust >= 40
-        or precipitation >= 1
-        or rain >= 1
-        or showers >= 1
-        or (rain_probability is not None and rain_probability >= rain_probability_attention)
-        or (temp is not None and temp <= cold_attention)
-        or (temp is not None and temp >= 30)
-    ):
-        severity = "NOTABLE"
-
-    if wind >= wind_attention:
-        reasons.append(f"wind_speed_{wind:.1f}kmh")
-    if gust >= 40:
-        reasons.append(f"wind_gust_{gust:.1f}kmh")
-    if rain_probability is not None and rain_probability >= rain_probability_attention:
-        reasons.append(f"rain_probability_{rain_probability:.0f}pct")
-    if precipitation >= 1:
-        reasons.append(f"precipitation_{precipitation:.1f}mm")
-    if rain >= 1:
-        reasons.append(f"rain_{rain:.1f}mm")
-    if showers >= 1:
-        reasons.append(f"showers_{showers:.1f}mm")
-    if temp is not None and temp <= cold_attention:
-        reasons.append(f"cold_{temp:.1f}c")
-    if temp is not None and temp >= 30:
-        reasons.append(f"heat_{temp:.1f}c")
-
-    return severity, reasons
-
-
 def _nearest_hourly_weather(location: dict[str, Any], kickoff_iso: str) -> dict[str, Any] | None:
+    """Select the provider hour closest to kickoff without interpreting its impact."""
     hourly = dict(location.get("hourly") or {})
     times = list(hourly.get("time") or [])
     if not times:
@@ -164,7 +101,6 @@ def _nearest_hourly_weather(location: dict[str, Any], kickoff_iso: str) -> dict[
         "forecast_time_local": forecast_time.isoformat(),
         "kickoff_time_local": kickoff.isoformat(),
         "forecast_distance_minutes": round(distance_seconds / 60.0, 1),
-        "evidence_state": "FRESH_FORECAST",
     }
     for field in fields:
         values = hourly.get(field)
@@ -172,12 +108,17 @@ def _nearest_hourly_weather(location: dict[str, Any], kickoff_iso: str) -> dict[
     return row
 
 
-def enrich_open_meteo_payload(
+def normalize_open_meteo_payload(
     source: dict[str, Any],
     payload: dict[str, Any],
     official_payload: dict[str, Any],
 ) -> dict[str, Any]:
-    """Attach next-GW fixture weather using Official FPL as fixture/team authority."""
+    """Normalize provider weather facts against Official FPL fixture/team identities.
+
+    V6 deliberately does not classify weather severity, generate attention reasons,
+    infer football impact, or create any decision/xPts semantics. Those belong to
+    downstream consumers.
+    """
     out = dict(payload)
     official = dict(official_payload.get("official") or {})
     bootstrap = dict(official.get("bootstrap") or {})
@@ -215,7 +156,6 @@ def enrich_open_meteo_payload(
     unmapped_home_teams: list[str] = []
     identity_mismatch_home_team_ids: list[int] = []
     unavailable_forecasts: list[int] = []
-    contract = dict(source.get("weather_contract") or {})
 
     for fixture in next_fixtures:
         home_id_raw = fixture.get("team_h")
@@ -241,7 +181,7 @@ def enrich_open_meteo_payload(
         if venue is None or location is None:
             if home:
                 unmapped_home_teams.append(home)
-            row["reason"] = "VENUE_OR_LOCATION_UNMAPPED"
+            row["normalization_status"] = "VENUE_OR_LOCATION_UNMAPPED"
             fixture_weather.append(row)
             continue
 
@@ -249,7 +189,7 @@ def enrich_open_meteo_payload(
         if not home or registry_team_name != home:
             if home_id is not None:
                 identity_mismatch_home_team_ids.append(home_id)
-            row["reason"] = "VENUE_IDENTITY_MISMATCH"
+            row["normalization_status"] = "VENUE_IDENTITY_MISMATCH"
             fixture_weather.append(row)
             continue
 
@@ -257,29 +197,25 @@ def enrich_open_meteo_payload(
         if weather is None:
             if fixture_id is not None:
                 unavailable_forecasts.append(fixture_id)
-            row["reason"] = "FORECAST_OUTSIDE_AVAILABLE_HORIZON"
+            row["normalization_status"] = "FORECAST_OUTSIDE_AVAILABLE_HORIZON"
             fixture_weather.append(row)
             continue
 
-        severity, reasons = classify_weather(weather, contract)
         row.update(weather)
         row.update(
             {
                 "weather_available": True,
-                "severity": severity,
-                "attention_reasons": reasons,
-                "direct_xpts_multiplier": False,
-                "weather_alone_can_trigger_transfer": False,
+                "normalization_status": "NORMALIZED_PROVIDER_FORECAST",
             }
         )
         fixture_weather.append(row)
 
     out["weather"] = {
+        "semantic_class": "NORMALIZED_FACT",
         "fixture_authority": "official_fpl",
         "fixture_join_key": "official_fpl_team_id",
         "weather_provider": "open_meteo",
         "event": next_event,
-        "contract": contract,
         "venue_registry": source.get("venue_registry"),
         "venue_count": len(venues),
         "provider_location_count": len(locations),
@@ -291,9 +227,10 @@ def enrich_open_meteo_payload(
         "fixtures": fixture_weather,
         "attribution": source.get("attribution"),
     }
-    out.setdefault("governance", {})["weather_is_context_only"] = True
-    out["governance"]["weather_direct_xpts_multiplier"] = False
-    out["governance"]["weather_alone_can_trigger_transfer"] = False
+    out.setdefault("governance", {})["weather_normalization_only"] = True
+    out["governance"]["weather_classification_authority"] = "NONE"
+    out["governance"]["weather_impact_authority"] = "NONE"
+    out["governance"]["weather_decision_authority"] = "NONE"
     out["governance"]["venue_coordinates_are_registry_owned"] = True
     out["governance"]["venue_fixture_join_uses_official_team_id"] = True
     return out

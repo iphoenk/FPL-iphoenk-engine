@@ -108,8 +108,7 @@
       "current_post_deadline_gw_allowed": true,
       "future_gws_allowed": false,
       "requires_gw_range": true,
-      "cohort_semantics": "CURRENT_COHORT_HISTORY",
-      "publish_atomic_facts_only": true
+      "cohort_semantics": "CURRENT_COHORT_HISTORY"
     }
   }
 }

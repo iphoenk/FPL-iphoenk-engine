@@ -11,6 +11,8 @@
     "community_signal_requires_crosscheck_before_fact_promotion": true,
     "pundit_consensus_is_advisory_only": true,
     "fixture_strategy_experts_do_not_vote_on_player_projection": true,
+    "secondary_availability_sources_are_advisory_only": true,
+    "secondary_availability_requires_primary_crosscheck": true,
     "onefpl_is_report_time_only": true,
     "press_conference_sweep_required": true,
     "last_competitive_match_sweep_required": true,
@@ -29,6 +31,7 @@
       "FIXTURE_STRATEGY_EXPERT": 72,
       "PUNDIT_CONSENSUS": 48,
       "COMMUNITY_SIGNAL": 12,
+      "SECONDARY_AVAILABILITY": 12,
       "VERIFIED_NEWS": 12
     }
   },
@@ -128,6 +131,18 @@
       "capabilities": ["eye_test", "captain_poll", "rotation_observation", "role_change_signal", "injury_observation", "sentiment"],
       "consensus_vote": false,
       "authority_ceiling": "LEAD_REQUIRES_CROSSCHECK"
+    },
+    {
+      "id": "rotowire",
+      "name": "RotoWire Soccer",
+      "class": "SECONDARY_AVAILABILITY",
+      "enabled": true,
+      "retrieval": "REPORT_TIME_WEB",
+      "domains": ["rotowire.com"],
+      "queries": ["RotoWire Premier League predicted lineups", "RotoWire Premier League injuries", "RotoWire soccer lineup injury news"],
+      "capabilities": ["predicted_lineups", "availability_signal", "injury_signal", "formation_signal", "starting_xi_signal"],
+      "consensus_vote": false,
+      "authority_ceiling": "ADVISORY"
     },
     {
       "id": "premier_league_official_news",

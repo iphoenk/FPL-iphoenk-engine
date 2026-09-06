@@ -32,6 +32,7 @@ from .store import (
     write_source,
 )
 from .verified_bridges import enrich_shared_identity_bridges
+from .verified_crosswalks import build_verified_crosswalk_report, enrich_verified_external_crosswalks
 
 
 def _zero_authority_fields(policy: dict[str, Any] | None = None) -> dict[str, str]:
@@ -189,15 +190,19 @@ def run() -> dict[str, Any]:
     )
     scopes = source_scope_map(config)
     identity_map = apply_entity_scope_identity_semantics(
-        enrich_shared_identity_bridges(
-            build_player_identity_map(official, results, source_ids),
-            official,
+        enrich_verified_external_crosswalks(
+            enrich_shared_identity_bridges(
+                build_player_identity_map(official, results, source_ids),
+                official,
+                results,
+            ),
             results,
         ),
         scopes,
     )
 
     write_json(EVIDENCE / "player_identity_map.json", identity_map)
+    write_json(EVIDENCE / "verified_crosswalks.json", build_verified_crosswalk_report(identity_map, results))
     write_json(
         NORMALIZED / "canonical_players.json",
         build_canonical_players(official, source_ids, identity_map),
@@ -269,6 +274,7 @@ def run() -> dict[str, Any]:
         "identity": {
             "canonical_authority": "official_fpl",
             "mapping_artifact": "data/v6/evidence/player_identity_map.json",
+            "verified_crosswalk_artifact": "data/v6/evidence/verified_crosswalks.json",
             "fuzzy_name_matching_allowed": False,
             "entity_scopes": scopes,
             "coverage": identity_map.get("coverage") or {},
@@ -292,6 +298,8 @@ def run() -> dict[str, Any]:
             "evidence_index": "data/v6/evidence/latest_index.json",
             "resolved_registry": "data/v6/evidence/resolved_registry.json",
             "player_identity_map": "data/v6/evidence/player_identity_map.json",
+            "verified_crosswalks": "data/v6/evidence/verified_crosswalks.json",
+            "artifact_catalog": "data/v6/evidence/artifact_catalog.json",
             "publish_integrity": "data/v6/health/publish_integrity.json",
         },
         "governance": {
@@ -308,8 +316,10 @@ def run() -> dict[str, Any]:
             "dependency_order_is_registry_driven": True,
             "resolved_registry_is_published": True,
             "publish_integrity_required": True,
+            "artifact_catalog_required": True,
             "identity_mapping_is_deterministic_only": True,
             "identity_health_is_entity_scope_aware": True,
+            "verified_crosswalks_are_evidence_backed": True,
             "fuzzy_identity_matching": False,
             "source_specific_normalization_is_data_only": True,
             "normalized_model_signals_retain_upstream_authorship": True,

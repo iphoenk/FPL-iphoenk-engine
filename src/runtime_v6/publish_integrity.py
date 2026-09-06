@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .artifact_catalog import refresh_artifact_catalog, validate_artifact_catalog
 from .authority_contract import (
     AuthorityContractError,
     FORBIDDEN_DOWNSTREAM_AUTHORITIES,
@@ -12,7 +13,7 @@ from .authority_contract import (
 )
 from .store import HEALTH, OUT, read_json, write_json
 
-_REQUIRED_PATH_KEYS = {
+_BASE_REQUIRED_PATH_KEYS = {
     "current_sources",
     "health",
     "canonical_players",
@@ -130,7 +131,7 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
     if not manifest:
         errors.append("manifest_missing_or_invalid")
         return {
-            "schema_version": 2,
+            "schema_version": 3,
             "status": "FAIL",
             "errors": errors,
             "source_count": 0,
@@ -146,7 +147,12 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
         errors.append("duplicate_manifest_source_ids")
 
     paths = dict(manifest.get("paths") or {})
-    missing_path_keys = sorted(_REQUIRED_PATH_KEYS - set(paths))
+    governance = dict(manifest.get("governance") or {})
+    artifact_catalog_required = governance.get("artifact_catalog_required") is True
+    required_path_keys = set(_BASE_REQUIRED_PATH_KEYS)
+    if artifact_catalog_required:
+        required_path_keys.update({"artifact_catalog", "verified_crosswalks"})
+    missing_path_keys = sorted(required_path_keys - set(paths))
     if missing_path_keys:
         errors.append(f"manifest_paths_missing:{','.join(missing_path_keys)}")
 
@@ -168,8 +174,11 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
         if str(payload.get("source_id")) != source_id:
             errors.append(f"source_identity_mismatch:{source_id}")
 
-    for key, configured in paths.items():
+    for key in required_path_keys:
         if key in {"current_sources", "publish_integrity"}:
+            continue
+        configured = paths.get(key)
+        if not configured:
             continue
         path = _resolve_runtime_path(root, configured)
         if not path.is_file():
@@ -207,6 +216,12 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
     if identity and (identity.get("governance") or {}).get("fuzzy_name_matching_allowed") is not False:
         errors.append("identity_map_fuzzy_matching_policy_invalid")
 
+    catalog_validation = {"valid": True, "errors": [], "checked": 0}
+    if artifact_catalog_required:
+        catalog_validation = validate_artifact_catalog(root)
+        if not catalog_validation.get("valid"):
+            errors.extend(str(error) for error in catalog_validation.get("errors") or [])
+
     files = sorted(
         path
         for path in root.rglob("*")
@@ -237,7 +252,7 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
         str(source.get("id")) for source in resolved.get("sources") or []
     ] == source_ids
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "status": "PASS" if not errors else "FAIL",
         "errors": errors,
         "source_count": len(source_ids),
@@ -247,6 +262,9 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
         "current_source_files_exact": actual_current == expected_current,
         "resolved_registry_exact": resolved_registry_exact,
         "identity_map_consistent": identity_count == canonical_count if identity and canonical_players else False,
+        "artifact_catalog_required": artifact_catalog_required,
+        "artifact_catalog_valid": bool(catalog_validation.get("valid")),
+        "artifact_catalog_checked_count": int(catalog_validation.get("checked") or 0),
         "semantic_authority_enforced": True,
         "canonical_mini_league_analytics_forbidden": True,
     }
@@ -254,8 +272,11 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
 
 def main() -> int:
     pruned = _prune_legacy_analytical_artifacts(OUT)
+    catalog = refresh_artifact_catalog(OUT)
     report = validate_publish_tree(OUT)
     report["pruned_legacy_analytical_artifacts"] = pruned
+    report["artifact_catalog_record_count"] = catalog.get("record_count")
+    report["artifact_catalog_sha256"] = catalog.get("catalog_sha256")
     write_json(HEALTH / "publish_integrity.json", report)
     print(json.dumps(report, ensure_ascii=False))
     return 0 if report["status"] == "PASS" else 1

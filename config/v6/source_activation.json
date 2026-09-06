@@ -8,7 +8,8 @@
     "api_football": "DROP_PAID_PROVIDER",
     "transfermarkt": "DROP_AUTOMATION_RESTRICTED",
     "whoscored": "DROP_DUPLICATE_ACCESS_RESTRICTED",
-    "football_data_org": "DROP_PAID_BY_OWNER_DECISION"
+    "football_data_org": "DROP_PAID_BY_OWNER_DECISION",
+    "football_data_uk": "TEMPORARY_DISABLE_FREE_PUBLIC_PROVIDER_RUNTIME_HTTP_503_REENABLE_AFTER_STABLE_REVALIDATION"
   },
   "reference_only_sources": {
     "fffix": "FREE_ACCOUNT_EXISTS_BUT_MACHINE_ENDPOINTS_REDIRECT_TO_LOGIN",

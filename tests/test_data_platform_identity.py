@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from src.runtime_v6.identity import build_player_identity_map
+from src.runtime_v6.identity_scopes import apply_entity_scopes
 from src.runtime_v6.normalizer import build_canonical_players
 
 
@@ -30,6 +31,7 @@ def _results() -> dict:
             }
         },
         "understat": {"data": {"epl_2026": {"body": "raw html only"}}},
+        "open_meteo_weather": {"data": {}},
     }
 
 
@@ -45,6 +47,52 @@ def test_verified_shared_ids_are_mapped_without_fuzzy_matching():
     assert identity["coverage"]["understat"]["mapped_player_count"] == 0
     assert identity["coverage"]["understat"]["strategy"] == "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE"
     assert identity["mappings"]["1"]["links"]["vaastav_fpl"]["method"] == "FPL_ELEMENT_ID_AND_CODE_EXACT"
+
+
+def test_entity_scope_projection_does_not_score_weather_as_player_identity():
+    source_ids = [
+        "official_fpl",
+        "official_price_predictor",
+        "vaastav_fpl",
+        "understat",
+        "open_meteo_weather",
+    ]
+    raw = build_player_identity_map(_official(), _results(), source_ids)
+    scoped = apply_entity_scopes(
+        raw,
+        [
+            {"id": "official_fpl", "entity_scopes": ["PLAYER", "TEAM", "FIXTURE"]},
+            {"id": "official_price_predictor", "entity_scopes": ["PLAYER", "TEAM"]},
+            {"id": "vaastav_fpl", "entity_scopes": ["PLAYER", "TEAM", "FIXTURE"]},
+            {"id": "understat", "entity_scopes": ["PLAYER", "TEAM", "FIXTURE"]},
+            {"id": "open_meteo_weather", "entity_scopes": ["TEAM", "FIXTURE"]},
+        ],
+    )
+
+    assert "open_meteo_weather" not in scoped["coverage"]
+    assert "open_meteo_weather" not in scoped["entity_bridges"]["player"]["coverage"]
+    assert "open_meteo_weather" in scoped["entity_bridges"]["team"]["coverage"]
+    assert "open_meteo_weather" in scoped["entity_bridges"]["fixture"]["coverage"]
+    assert scoped["source_entity_scopes"]["open_meteo_weather"] == ["TEAM", "FIXTURE"]
+    assert scoped["governance"]["identity_health_is_entity_scope_aware"] is True
+
+
+def test_undeclared_entity_scope_is_not_invented():
+    raw = build_player_identity_map(
+        _official(),
+        _results(),
+        ["official_fpl", "understat"],
+    )
+    scoped = apply_entity_scopes(
+        raw,
+        [
+            {"id": "official_fpl", "entity_scopes": ["PLAYER", "TEAM", "FIXTURE"]},
+            {"id": "understat"},
+        ],
+    )
+
+    assert scoped["source_entity_scopes"]["understat"] == []
+    assert "understat" not in scoped["coverage"]
 
 
 def test_provider_code_mismatch_is_not_force_mapped():

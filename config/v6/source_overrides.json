@@ -283,12 +283,6 @@
       "check_freshness_minutes": 300,
       "content_hash_dedup": true
     },
-    "open_meteo_weather": {
-      "acquisition_kind": "rest_json",
-      "poll_interval_minutes": 60,
-      "check_freshness_minutes": 90,
-      "content_hash_dedup": true
-    },
     "check_the_chance": {
       "acquisition_kind": "html_scrape",
       "poll_interval_minutes": 360,

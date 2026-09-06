@@ -108,9 +108,6 @@ def build_player_identity_map(
     provider_links: dict[str, dict[int, dict[str, Any]]] = {}
     coverage: dict[str, dict[str, Any]] = {}
 
-    # This adapter transports fields from the Official FPL bootstrap and
-    # therefore shares the exact Official element namespace. V6 does not
-    # author the upstream model signal.
     if "official_price_predictor" in source_ids:
         derived_rows = list((((results.get("official_price_predictor") or {}).get("data") or {}).get("players")) or [])
         row_ids = {
@@ -227,11 +224,16 @@ def external_ids_for_player(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     mapping = dict((identity_map.get("mappings") or {}).get(str(element_id)) or {})
     links = dict(mapping.get("links") or {})
+    # Preserve explicit nulls for every configured provider so downstream schemas
+    # remain stable. Null does not mean joinable; only verified statuses below do.
     external_ids = {
-        source_id: (links.get(source_id) or {}).get("external_id")
+        source_id: (
+            (links.get(source_id) or {}).get("external_id")
+            if (links.get(source_id) or {}).get("status") in CANONICAL_JOINABLE_STATUSES
+            else None
+        )
         for source_id in source_ids
         if source_id != "official_fpl"
-        and (links.get(source_id) or {}).get("status") in CANONICAL_JOINABLE_STATUSES
     }
     identity_links = {
         source_id: dict(link)

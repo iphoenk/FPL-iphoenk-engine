@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "season": "2026-2027",
+  "canonical_authority": "official_fpl",
+  "fuzzy_matching_allowed": false,
+  "sources": {
+    "fotmob": {
+      "entity_scopes": ["TEAM"],
+      "verification_status": "VERIFIED_MANUAL",
+      "verification_method": "SOURCE_NATIVE_ID_TO_OFFICIAL_FPL_ID_CROSSWALK",
+      "verified_at": "2026-09-06T15:25:38+00:00",
+      "evidence": [
+        "runtime-data-v6:data/v6/current/fotmob.json",
+        "runtime-data-v6:data/v6/normalized/canonical_teams.json"
+      ],
+      "teams": [
+        {"source_native_id": 9825, "official_fpl_team_id": 1},
+        {"source_native_id": 10252, "official_fpl_team_id": 2},
+        {"source_native_id": 8678, "official_fpl_team_id": 3},
+        {"source_native_id": 9937, "official_fpl_team_id": 4},
+        {"source_native_id": 10204, "official_fpl_team_id": 5},
+        {"source_native_id": 8455, "official_fpl_team_id": 6},
+        {"source_native_id": 8669, "official_fpl_team_id": 7},
+        {"source_native_id": 9826, "official_fpl_team_id": 8},
+        {"source_native_id": 8668, "official_fpl_team_id": 9},
+        {"source_native_id": 9879, "official_fpl_team_id": 10},
+        {"source_native_id": 8667, "official_fpl_team_id": 11},
+        {"source_native_id": 9902, "official_fpl_team_id": 12},
+        {"source_native_id": 8463, "official_fpl_team_id": 13},
+        {"source_native_id": 8650, "official_fpl_team_id": 14},
+        {"source_native_id": 8456, "official_fpl_team_id": 15},
+        {"source_native_id": 10260, "official_fpl_team_id": 16},
+        {"source_native_id": 10261, "official_fpl_team_id": 17},
+        {"source_native_id": 10203, "official_fpl_team_id": 18},
+        {"source_native_id": 8586, "official_fpl_team_id": 19},
+        {"source_native_id": 8472, "official_fpl_team_id": 20}
+      ]
+    }
+  },
+  "governance": {
+    "manual_crosswalk_requires_source_native_observation": true,
+    "canonical_ids_must_exist_in_official_fpl": true,
+    "silent_name_matching_allowed": false,
+    "unverified_records_remain_unmapped": true
+  }
+}

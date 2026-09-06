@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from src.runtime_v6 import adapters, normalizer, registry
+from src.runtime_v6.entity_scope import entity_scopes_for_source
 from src.runtime_v6.http_client import AcquisitionClient
-from src.runtime_v6.weather import load_weather_venues
 
 
 def test_registry_is_data_only_and_registry_driven():
@@ -19,6 +19,7 @@ def test_registry_is_data_only_and_registry_driven():
     assert activation["reference_only_source_count"] == len(registry.REFERENCE_ONLY_SOURCE_IDS)
     assert set(ids).isdisjoint(registry.DROPPED_SOURCE_IDS)
     assert set(ids).isdisjoint(registry.REFERENCE_ONLY_SOURCE_IDS)
+    assert "open_meteo_weather" not in ids
     assert cfg["policy"]["data_only"] is True
     assert cfg["policy"]["decision_authority"] == "NONE"
     assert cfg["policy"]["prediction_authority"] == "NONE"
@@ -28,7 +29,6 @@ def test_registry_is_data_only_and_registry_driven():
 def test_all_active_sources_are_fail_isolated_and_concurrent():
     cfg = registry.load_registry()
     assert cfg["cadence"]["schedule"] == "hourly"
-    assert cfg["cadence"]["check_every_source_each_cycle"] is True
     assert cfg["policy"]["source_failures_are_isolated"] is True
     assert cfg["policy"]["preserve_last_good_on_failure"] is True
     assert cfg["policy"]["source_workers"] >= 12
@@ -48,21 +48,16 @@ def test_dropped_and_reference_only_sources_never_enter_active_source_map():
     assert "clubelo" in registry.REFERENCE_ONLY_SOURCE_IDS
 
 
-def test_free_source_expansion_is_registered_with_safe_tiers():
+def test_free_source_expansion_is_registered_with_safe_tiers_and_no_weather_interpretation():
     cfg = registry.load_registry()
     sources = registry.source_map(cfg)
 
     assert sources["solio_analytics"]["source_tier"] == "core"
     assert sources["solio_analytics"]["acquisition_kind"] == "rest_json"
-    assert sources["open_meteo_weather"]["source_tier"] == "core"
-    assert sources["open_meteo_weather"]["poll_interval_minutes"] == 60
-    assert sources["open_meteo_weather"]["venue_registry"] == "config/venues/premier_league_2026_27.json"
-    assert "venues" not in sources["open_meteo_weather"]
-    assert len(load_weather_venues(sources["open_meteo_weather"])) == 20
-    assert sources["open_meteo_weather"]["weather_contract"]["direct_xpts_multiplier"] is False
-    assert sources["open_meteo_weather"]["weather_contract"]["weather_alone_can_trigger_transfer"] is False
     assert sources["check_the_chance"]["source_tier"] == "pilot"
     assert sources["fantasy_football_pundit"]["source_tier"] == "pilot"
+    assert "open_meteo_weather" not in sources
+    assert not Path("src/runtime_v6/weather.py").exists()
     assert set(registry.REFERENCE_ONLY_SOURCE_IDS) == {
         "fffix",
         "ffhub",
@@ -72,6 +67,14 @@ def test_free_source_expansion_is_registered_with_safe_tiers():
         "fpl_form",
         "fpl_review_free",
     }
+
+
+def test_entity_scope_policy_is_source_specific():
+    cfg = registry.load_registry()
+    sources = registry.source_map(cfg)
+    assert entity_scopes_for_source(sources["official_price_predictor"]) == ["PLAYER", "TEAM"]
+    assert entity_scopes_for_source(sources["ben_crellin"]) == ["EVENT", "FEED", "FIXTURE"]
+    assert entity_scopes_for_source(sources["statsbomb"]) == ["COMPETITION", "EVENT", "FEED"]
 
 
 def test_http_last_good_cache_survives_failure(monkeypatch):
@@ -109,6 +112,7 @@ def test_http_last_good_cache_survives_failure(monkeypatch):
     )
     assert result["health"] == "AMBER"
     assert result["effective_state"] == "STALE_CACHE"
+    assert result["current_run_action"] == "LAST_GOOD_CACHE"
     assert result["data"]["one"]["json"] == {"value": 1}
     assert result["data"]["one"]["data_origin"] == "LAST_GOOD_CACHE"
 
@@ -152,12 +156,13 @@ def test_conditional_not_modified_is_green_and_revalidated():
     result = adapters.collect_http(source, FakeClient(), previous)
     assert result["health"] == "GREEN"
     assert result["effective_state"] == "LIVE_UNCHANGED"
+    assert result["current_run_action"] == "REVALIDATED"
     assert result["data"]["one"]["json"] == {"value": 1}
     assert result["data"]["one"]["data_origin"] == "REVALIDATED_CACHE"
     assert result["coverage"]["revalidated_not_modified"] == 1
 
 
-def test_price_predictor_is_derived_only_from_official():
+def test_price_predictor_is_typed_upstream_model_signal_derived_only_from_official():
     source = {
         "id": "official_price_predictor",
         "name": "Official FPL Price Predictor",
@@ -187,6 +192,9 @@ def test_price_predictor_is_derived_only_from_official():
     result = adapters.collect_price_predictor(source, official)
     assert result["health"] == "GREEN"
     assert result["coverage"]["coverage_ratio"] == 1.0
+    assert result["semantic_class"] == "UPSTREAM_MODEL_SIGNAL"
+    assert result["model_author"] == "OFFICIAL_FPL"
+    assert result["v6_computation"] == "NONE"
     assert result["governance"]["source"] == "OFFICIAL_FPL"
     assert result["governance"]["ui_scraping"] is False
 
@@ -221,6 +229,7 @@ def test_price_predictor_inherits_cached_official_degradation():
     result = adapters.collect_price_predictor(source, official)
     assert result["health"] == "AMBER"
     assert result["effective_state"] == "CACHED_DERIVED"
+    assert result["v6_computation"] == "NONE"
 
 
 def test_canonical_identity_is_official_fpl():

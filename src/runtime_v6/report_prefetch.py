@@ -48,6 +48,24 @@ from .prefetch_contract import (
 from .security import safe_error
 
 
+_AUTH_ACTION_BY_STATE = {
+    "AUTH_AVAILABLE": "NONE",
+    "AUTH_EXPIRED": "RENEW_CREDENTIALS",
+    "AUTH_INVALID": "REVIEW_AUTH_CONFIGURATION",
+    "AUTH_ENTRY_MISMATCH": "VERIFY_ENTRY_CONFIGURATION",
+    "AUTH_UNAVAILABLE": "CONFIGURE_CREDENTIALS",
+    "NOT_REQUESTED": "NONE",
+}
+
+
+def _auth_observability(auth_state: Any, *, personal_requested: bool) -> tuple[str, bool, str]:
+    if not personal_requested:
+        return "NOT_REQUESTED", False, "NONE"
+    state = str(auth_state or "AUTH_UNAVAILABLE").strip().upper()
+    action = _AUTH_ACTION_BY_STATE.get(state, "REVIEW_AUTH_STATE")
+    return state, action != "NONE", action
+
+
 class PrefetchService:
     def __init__(
         self,
@@ -73,6 +91,14 @@ class PrefetchService:
 
     def _publish_health(self, manifest: dict[str, Any]) -> None:
         telemetry = manifest.get("telemetry") or {}
+        auth_state = manifest.get("auth_state")
+        if manifest.get("personal_requested") and not auth_state:
+            current_team = read_json(self.output_root / "personal/current_team.json") or {}
+            auth_state = current_team.get("auth_state")
+        auth_state, auth_action_required, auth_action = _auth_observability(
+            auth_state,
+            personal_requested=bool(manifest.get("personal_requested")),
+        )
         health = {
             "schema_version": 1,
             "generated_at": manifest["generated_at"],
@@ -82,6 +108,9 @@ class PrefetchService:
                 else ("AMBER" if manifest.get("source_failures") or not manifest.get("complete") else "STALE")
             ),
             "personal_status": manifest.get("personal_status"),
+            "auth_state": auth_state,
+            "auth_action_required": auth_action_required,
+            "auth_action": auth_action,
             "league_status": manifest.get("mini_league_status"),
             "live_status": manifest.get("live_status"),
             "expected_managers": manifest.get("expected_manager_count"),
@@ -127,6 +156,9 @@ class PrefetchService:
             "fresh_for_target_report": fresh,
             "personal_requested": False,
             "personal_status": "NOT_REFRESHED_FOR_05_30_PRICE_CHECKPOINT",
+            "auth_state": "NOT_REQUESTED",
+            "auth_action_required": False,
+            "auth_action": "NONE",
             "personal_reference_generated_at": (personal_reference or {}).get("generated_at"),
             "mini_league_requested": False,
             "mini_league_status": "NOT_REQUESTED",
@@ -297,6 +329,7 @@ class PrefetchService:
                 )
 
         personal_status = "NOT_REQUESTED"
+        personal_auth_state = "NOT_REQUESTED"
         submitted: dict[str, Any] = {}
         if scope.personal:
             picks_result = client.submitted_picks(entry_id, gw) if gw is not None else None
@@ -372,6 +405,7 @@ class PrefetchService:
                 auth_lineage=auth_lineages,
                 generated_at=generated_at,
             )
+            personal_auth_state = str(team_artifact.get("auth_state") or "AUTH_UNAVAILABLE")
             write_json(
                 self.output_root / "personal/current_team.json", team_artifact, secrets=secrets
             )
@@ -570,6 +604,10 @@ class PrefetchService:
             and (not scope.mini_league or mini_status == "AVAILABLE")
             and (not scope.live or live_status == "AVAILABLE")
         )
+        personal_auth_state, auth_action_required, auth_action = _auth_observability(
+            personal_auth_state,
+            personal_requested=scope.personal,
+        )
         manifest = {
             "schema_version": 1,
             "request_id": str(uuid.uuid4()),
@@ -587,6 +625,9 @@ class PrefetchService:
             "fresh_for_target_report": fresh,
             "personal_requested": scope.personal,
             "personal_status": personal_status,
+            "auth_state": personal_auth_state,
+            "auth_action_required": auth_action_required,
+            "auth_action": auth_action,
             "mini_league_requested": scope.mini_league,
             "mini_league_status": mini_status,
             "live_requested": scope.live,
@@ -688,6 +729,9 @@ def main() -> int:
                 "report_kind": manifest.get("report_kind"),
                 "gw": manifest.get("gw"),
                 "personal_status": manifest.get("personal_status"),
+                "auth_state": manifest.get("auth_state"),
+                "auth_action_required": manifest.get("auth_action_required"),
+                "auth_action": manifest.get("auth_action"),
                 "mini_league_status": manifest.get("mini_league_status"),
                 "live_status": manifest.get("live_status"),
                 "fresh_for_target_report": manifest.get("fresh_for_target_report"),

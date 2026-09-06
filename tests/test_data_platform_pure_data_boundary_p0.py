@@ -8,7 +8,11 @@ from src.runtime_v6.identity import (
     IDENTITY_EXACT,
     IDENTITY_VERIFIED_MANUAL,
 )
-from src.runtime_v6.league_prefetch import add_manager_live_totals, exposure_artifact
+from src.runtime_v6.league_prefetch import (
+    add_manager_live_totals,
+    exposure_artifact,
+    standings_artifact,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,6 +60,49 @@ def test_identity_join_policy_is_fail_closed() -> None:
         IDENTITY_VERIFIED_MANUAL,
     }
     assert CANONICAL_JOINABLE_STATUSES == {IDENTITY_EXACT, IDENTITY_VERIFIED_MANUAL}
+
+
+def test_v6_standings_artifact_preserves_official_facts_without_derived_gap() -> None:
+    artifact = standings_artifact(
+        league={
+            "league_id": 9477,
+            "league_name": "ICON+ League",
+            "league_kind": "classic",
+        },
+        state={
+            "rows": [
+                {
+                    "entry_id": 1,
+                    "manager_name": "Leader",
+                    "team_name": "Leader XI",
+                    "league_rank": 1,
+                    "league_total": 200,
+                    "gw_score": 60,
+                    "last_rank": 1,
+                },
+                {
+                    "entry_id": 2,
+                    "manager_name": "User",
+                    "team_name": "User XI",
+                    "league_rank": 2,
+                    "league_total": 190,
+                    "gw_score": 55,
+                    "last_rank": 2,
+                },
+            ],
+            "complete": True,
+            "pages_collected": 1,
+            "failed_pages": [],
+            "lineage": [{"authority": "OFFICIAL_FPL"}],
+        },
+        entry_id=2,
+        generated_at="2026-09-06T15:00:00+00:00",
+    )
+
+    assert artifact["user_summary"] == {"entry_id": 2, "rank": 2, "total": 190}
+    assert "gap_to_first" not in json.dumps(artifact)
+    assert artifact["managers"][0]["league_total"] == 200
+    assert artifact["authority"] == "OFFICIAL_FPL"
 
 
 def test_v6_exposure_artifact_is_noncanonical_tombstone_only() -> None:

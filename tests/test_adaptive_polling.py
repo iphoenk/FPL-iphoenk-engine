@@ -29,8 +29,11 @@ def test_registry_keeps_dynamic_active_contract_and_adds_ingestion_metadata():
     assert activation["disabled_source_count"] == len(DROPPED_SOURCE_IDS)
     assert activation["reference_only_source_count"] == len(REFERENCE_ONLY_SOURCE_IDS)
     assert sources["official_fpl"]["acquisition_kind"] == "rest_json"
-    assert sources["understat"]["acquisition_kind"] == "html_scrape"
+    assert sources["understat"]["acquisition_kind"] == "generic_http"
     assert sources["understat"]["content_hash_dedup"] is True
+    understat_requests = {request["id"]: request for request in sources["understat"]["requests"]}
+    assert understat_requests["epl_2026"].get("method", "GET") == "GET"
+    assert understat_requests["players_api"]["method"] == "POST"
     assert "ffhub" in REFERENCE_ONLY_SOURCE_IDS
     assert "fffix" in REFERENCE_ONLY_SOURCE_IDS
     assert "open_meteo_weather" not in sources

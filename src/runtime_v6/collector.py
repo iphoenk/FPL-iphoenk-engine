@@ -10,6 +10,7 @@ from .entity_scope import entity_scopes_for_source, source_scope_map
 from .health import build_source_health
 from .http_client import AcquisitionClient, utc_now
 from .identity import build_player_identity_map
+from .identity_scope import apply_entity_scope_identity_semantics
 from .normalizer import (
     build_canonical_fixtures,
     build_canonical_players,
@@ -166,7 +167,11 @@ def run() -> dict[str, Any]:
         by_id["official_fpl"],
         RuntimeError("official_fpl_missing_from_results"),
     )
-    identity_map = build_player_identity_map(official, results, source_ids)
+    scopes = source_scope_map(config)
+    identity_map = apply_entity_scope_identity_semantics(
+        build_player_identity_map(official, results, source_ids),
+        scopes,
+    )
 
     write_json(EVIDENCE / "player_identity_map.json", identity_map)
     write_json(
@@ -202,7 +207,6 @@ def run() -> dict[str, Any]:
     activation["pruned_runtime_source_files"] = pruned_runtime_source_files
     policy = dict(config.get("policy") or {})
     due_source_count = sum(bool(decision["due"]) for decision in decisions.values())
-    scopes = source_scope_map(config)
 
     manifest = {
         "schema_version": 4,
@@ -244,6 +248,7 @@ def run() -> dict[str, Any]:
             "entity_scopes": scopes,
             "coverage": identity_map.get("coverage") or {},
             "entity_bridges": identity_map.get("entity_bridges") or {},
+            "source_entity_identity": identity_map.get("source_entity_identity") or {},
         },
         "paths": {
             "current_sources": "data/v6/current/",
@@ -276,6 +281,8 @@ def run() -> dict[str, Any]:
             "fuzzy_identity_matching": False,
             "daily_budget_timezone": "Asia/Jakarta",
             "weather_context_is_downstream_report_time_only": True,
+            "weather_direct_xpts_multiplier": False,
+            "weather_alone_can_trigger_transfer": False,
         },
     }
     write_json(MANIFEST, manifest)

@@ -31,8 +31,16 @@ def _good_tree(root: Path) -> None:
         },
     }
     _write(root / "manifest.json", manifest)
-    for source_id in source_ids:
-        _write(root / "current" / f"{source_id}.json", {"source_id": source_id})
+    _write(root / "current" / "official_fpl.json", {"source_id": "official_fpl", "semantic_class": "FACT"})
+    _write(
+        root / "current" / "official_price_predictor.json",
+        {
+            "source_id": "official_price_predictor",
+            "semantic_class": "UPSTREAM_MODEL_SIGNAL",
+            "model_author": "OFFICIAL_FPL",
+            "v6_computation": "NONE",
+        },
+    )
     _write(root / "health" / "source_health.json", {"overall": "GREEN"})
     _write(root / "health" / "runtime_control.json", {"health": "GREEN"})
     _write(root / "normalized" / "canonical_players.json", {"player_count": 0, "players": []})
@@ -64,6 +72,8 @@ def test_publish_integrity_passes_for_exact_runtime_tree(tmp_path: Path):
     assert report["current_source_files_exact"] is True
     assert report["resolved_registry_exact"] is True
     assert report["identity_map_consistent"] is True
+    assert report["semantic_authority_enforced"] is True
+    assert report["semantic_checked_json_count"] > 0
     assert report["tree_sha256"]
 
 
@@ -133,3 +143,34 @@ def test_publish_integrity_fails_when_identity_count_diverges(tmp_path: Path):
 
     assert report["status"] == "FAIL"
     assert "identity_map_canonical_player_count_mismatch" in report["errors"]
+
+
+def test_publish_integrity_rejects_forbidden_canonical_semantic_class(tmp_path: Path):
+    _good_tree(tmp_path)
+    _write(
+        tmp_path / "normalized" / "rogue_analytics.json",
+        {"canonical": True, "semantic_class": "MINI_LEAGUE_ANALYTICS"},
+    )
+
+    report = validate_publish_tree(tmp_path)
+
+    assert report["status"] == "FAIL"
+    assert any("semantic_authority_violation" in error for error in report["errors"])
+    assert any("MINI_LEAGUE_ANALYTICS" in error for error in report["errors"])
+
+
+def test_publish_integrity_rejects_downstream_authority_claim(tmp_path: Path):
+    _good_tree(tmp_path)
+    _write(
+        tmp_path / "current" / "official_fpl.json",
+        {
+            "source_id": "official_fpl",
+            "semantic_class": "FACT",
+            "governance": {"decision_authority": "V6"},
+        },
+    )
+
+    report = validate_publish_tree(tmp_path)
+
+    assert report["status"] == "FAIL"
+    assert any("downstream_authority_claim" in error for error in report["errors"])

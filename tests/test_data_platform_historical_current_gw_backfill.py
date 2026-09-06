@@ -24,7 +24,11 @@ def result(endpoint: str, payload=None, status="LIVE", code=200):
         "endpoint_class": endpoint,
         "checked_at": "2026-09-05T14:00:00+00:00",
         "http_status": code,
-        "payload_digest": hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest() if status == "LIVE" else None,
+        "payload_digest": hashlib.sha256(
+            json.dumps(payload, sort_keys=True).encode()
+        ).hexdigest()
+        if status == "LIVE"
+        else None,
         "payload": payload if status == "LIVE" else None,
         "attempts": 1,
         "duration_ms": 1,
@@ -35,10 +39,31 @@ def result(endpoint: str, payload=None, status="LIVE", code=200):
 def current_bootstrap(*, deadline="2026-09-05T12:00:00Z"):
     return {
         "events": [
-            {"id": 1, "finished": True, "is_current": False, "deadline_time": "2026-08-22T12:00:00Z"},
-            {"id": 2, "finished": True, "is_current": False, "deadline_time": "2026-08-29T12:00:00Z"},
-            {"id": 3, "finished": False, "is_current": True, "deadline_time": deadline},
-            {"id": 4, "finished": False, "is_current": False, "is_next": True, "deadline_time": "2026-09-12T12:00:00Z"},
+            {
+                "id": 1,
+                "finished": True,
+                "is_current": False,
+                "deadline_time": "2026-08-22T12:00:00Z",
+            },
+            {
+                "id": 2,
+                "finished": True,
+                "is_current": False,
+                "deadline_time": "2026-08-29T12:00:00Z",
+            },
+            {
+                "id": 3,
+                "finished": False,
+                "is_current": True,
+                "deadline_time": deadline,
+            },
+            {
+                "id": 4,
+                "finished": False,
+                "is_current": False,
+                "is_next": True,
+                "deadline_time": "2026-09-12T12:00:00Z",
+            },
         ],
         "teams": [{"id": 1, "name": "Alpha", "short_name": "ALP"}],
         "element_types": [
@@ -52,7 +77,9 @@ def current_bootstrap(*, deadline="2026-09-05T12:00:00Z"):
                 "id": element_id,
                 "web_name": f"P{element_id}",
                 "team": 1,
-                "element_type": 1 if element_id <= 2 else (2 if element_id <= 7 else (3 if element_id <= 12 else 4)),
+                "element_type": 1
+                if element_id <= 2
+                else (2 if element_id <= 7 else (3 if element_id <= 12 else 4)),
             }
             for element_id in range(1, 21)
         ],
@@ -68,7 +95,9 @@ def submitted_payload(entry_id: int, gw: int):
             {
                 "element": element_id,
                 "position": position,
-                "multiplier": 2 if position == 1 else (0 if position > 11 else 1),
+                "multiplier": 2
+                if position == 1
+                else (0 if position > 11 else 1),
                 "is_captain": position == 1,
                 "is_vice_captain": position == 2,
             }
@@ -114,10 +143,29 @@ class CurrentGWClient:
     def classic_standings(self, league_id, page):
         self.calls.append(f"standings:{league_id}:{page}")
         rows = [
-            {"entry": 3462711, "entry_name": "Ours", "player_name": "Us", "rank": 1, "last_rank": 1, "event_total": 50, "total": 150},
-            {"entry": 4000001, "entry_name": "Rival", "player_name": "Rival", "rank": 2, "last_rank": 2, "event_total": 48, "total": 148},
+            {
+                "entry": 3462711,
+                "entry_name": "Ours",
+                "player_name": "Us",
+                "rank": 1,
+                "last_rank": 1,
+                "event_total": 50,
+                "total": 150,
+            },
+            {
+                "entry": 4000001,
+                "entry_name": "Rival",
+                "player_name": "Rival",
+                "rank": 2,
+                "last_rank": 2,
+                "event_total": 48,
+                "total": 148,
+            },
         ]
-        return result("classic_standings", {"standings": {"results": rows, "has_next": False}})
+        return result(
+            "classic_standings",
+            {"standings": {"results": rows, "has_next": False}},
+        )
 
     def h2h_standings(self, league_id, page):
         raise AssertionError("classic league must not call h2h")
@@ -128,13 +176,22 @@ class CurrentGWClient:
 
     def entry_history(self, entry_id):
         self.calls.append(f"history:{entry_id}")
-        # Deliberately omit current GW3: Official may not expose the row until later.
         return result(
             "entry_history",
             {
                 "current": [
-                    {"event": 1, "points": 50, "total_points": 50, "overall_rank": 1000},
-                    {"event": 2, "points": 48, "total_points": 98, "overall_rank": 900},
+                    {
+                        "event": 1,
+                        "points": 50,
+                        "total_points": 50,
+                        "overall_rank": 1000,
+                    },
+                    {
+                        "event": 2,
+                        "points": 48,
+                        "total_points": 98,
+                        "overall_rank": 900,
+                    },
                 ],
                 "chips": [],
             },
@@ -144,11 +201,20 @@ class CurrentGWClient:
         self.calls.append(f"live:{gw}")
         return result(
             "event_live",
-            {"elements": [{"id": element_id, "stats": {"total_points": element_id % 6}} for element_id in range(1, 21)]},
+            {
+                "elements": [
+                    {"id": element_id, "stats": {"total_points": element_id % 6}}
+                    for element_id in range(1, 21)
+                ]
+            },
         )
 
     def telemetry(self):
-        return {"request_count": len(self.calls), "failed_requests": 0, "maximum_concurrency_used": 1}
+        return {
+            "request_count": len(self.calls),
+            "failed_requests": 0,
+            "maximum_concurrency_used": 1,
+        }
 
 
 def config():
@@ -156,7 +222,13 @@ def config():
         "schema_version": 1,
         "season": "2026-2027",
         "entry_id": 3462711,
-        "priority_leagues": [{"name": "ICON+ League", "kind": "classic", "full_submitted_picks": True}],
+        "priority_leagues": [
+            {
+                "name": "ICON+ League",
+                "kind": "classic",
+                "full_submitted_picks": True,
+            }
+        ],
         "personal_team_enabled": True,
         "mini_league_enabled": True,
         "submitted_picks_cache_enabled": True,
@@ -210,14 +282,23 @@ def test_current_submitted_picks_cache_reuse_has_explicit_current_origin(tmp_pat
         cache_enabled=True,
         completed=False,
     )
-    assert second_metrics == {"cache_hits": 1, "cache_misses": 0, "maximum_concurrency_used": 0, "retry_count": 0}
+    assert second_metrics == {
+        "cache_hits": 1,
+        "cache_misses": 0,
+        "maximum_concurrency_used": 0,
+        "retry_count": 0,
+    }
     assert second["entries"]["3462711"]["origin"] == REUSED_CURRENT
     assert not any(call.startswith("picks:") for call in second_client.calls)
 
 
-def test_service_current_gw_is_green_with_explicit_provisional_semantics_and_refreshes_history(tmp_path: Path):
+def test_service_current_gw_is_green_with_explicit_provisional_factual_semantics_and_refreshes_history(
+    tmp_path: Path,
+):
     first_client = CurrentGWClient()
-    first = HistoricalBackfillService(config=config(), output_root=tmp_path, client=first_client).run(gw_from=1, gw_to=3)
+    first = HistoricalBackfillService(
+        config=config(), output_root=tmp_path, client=first_client
+    ).run(gw_from=1, gw_to=3)
     assert first["overall_status"] == "GREEN"
     assert first["completed_requested_gw_count"] == 2
     assert first["provisional_current_gw_count"] == 1
@@ -231,13 +312,27 @@ def test_service_current_gw_is_green_with_explicit_provisional_semantics_and_ref
     assert gw3["live_points_available"] is True
     assert gw3["complete"] is True
 
-    exposure = json.loads((tmp_path / "mini_leagues" / "9477" / "history" / "gw_3" / "exposure.json").read_text())
-    assert exposure["gw_semantics"] == "CURRENT_GW_POST_DEADLINE"
-    assert all(row["final_points"] is None for row in exposure["players"])
-    assert all(row["points_semantics"] == "LIVE_CURRENT_GW" for row in exposure["players"])
+    root = tmp_path / "mini_leagues" / "9477" / "history" / "gw_3"
+    event_points = json.loads((root / "event_points.json").read_text())
+    assert event_points["gw_semantics"] == "CURRENT_GW_POST_DEADLINE"
+    assert event_points["points_semantics"] == "LIVE_CURRENT_GW"
+    assert event_points["status"] == "AVAILABLE"
+    assert event_points["elements"]
+    assert not (root / "exposure.json").exists()
+
+    entry_history = json.loads((root / "entry_history.json").read_text())
+    assert all(
+        row["history_available"] is False
+        for row in entry_history["reconciliations"]
+    )
+    raw = json.dumps(entry_history)
+    assert "reconstructed_current_cohort_rank" not in raw
+    assert "ownership_percent" not in raw
 
     second_client = CurrentGWClient()
-    second = HistoricalBackfillService(config=config(), output_root=tmp_path, client=second_client).run(gw_from=1, gw_to=3)
+    second = HistoricalBackfillService(
+        config=config(), output_root=tmp_path, client=second_client
+    ).run(gw_from=1, gw_to=3)
     assert second["overall_status"] == "GREEN"
     assert second["cache"]["cache_hits"] == 6
     assert second["cache"]["cache_misses"] == 0
@@ -245,4 +340,6 @@ def test_service_current_gw_is_green_with_explicit_provisional_semantics_and_ref
     assert second["cache"]["history_cache_misses"] == 2
     assert second["cache"]["current_gw_entry_history_cache_reused"] is False
     assert not any(call.startswith("picks:") for call in second_client.calls)
-    assert sorted(call for call in second_client.calls if call.startswith("history:")) == ["history:3462711", "history:4000001"]
+    assert sorted(
+        call for call in second_client.calls if call.startswith("history:")
+    ) == ["history:3462711", "history:4000001"]

@@ -14,6 +14,7 @@
   "priority_full_picks_enabled": true,
   "deadline_review_mini_league_enabled": false,
   "submitted_picks_cache_enabled": true,
+  "authenticated_personal_required_for_public_green": false,
   "prefetch_lead_minutes": 30,
   "prefetch_max_age_minutes": 35,
   "standings_max_workers": 1,

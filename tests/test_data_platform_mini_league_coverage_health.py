@@ -1,38 +1,69 @@
 from __future__ import annotations
 
-from src.runtime_v6.league_prefetch import exposure_artifact
+from pathlib import Path
+
+from src.runtime_v6.league_prefetch import acquire_manager_picks
 
 
-def _available(entry_id: int, element_id: int) -> dict:
+def _result(entry_id: int, *, available: bool) -> dict:
+    if not available:
+        return {
+            "status": "FAILED",
+            "endpoint_class": "submitted_picks",
+            "checked_at": "2026-09-06T16:00:00+00:00",
+            "http_status": 503,
+            "payload_digest": None,
+            "payload": None,
+        }
     return {
-        "entry_id": entry_id,
-        "status": "AVAILABLE",
-        "picks": [
-            {
-                "element_id": element_id,
-                "squad_position": 1,
-                "multiplier": 1,
-                "captain": False,
-                "vice_captain": False,
-            }
-        ],
-    }
-
-
-def test_partial_picks_integrity_metadata_never_claims_full_coverage():
-    manager_picks = {
-        "season": "2026-2027",
-        "gw": 3,
-        "league_id": 9477,
-        "expected_manager_count": 2,
-        "entries": {
-            "1": _available(1, 100),
-            "2": {"entry_id": 2, "status": "UNAVAILABLE", "picks": []},
+        "status": "LIVE",
+        "endpoint_class": "submitted_picks",
+        "checked_at": "2026-09-06T16:00:00+00:00",
+        "http_status": 200,
+        "payload_digest": f"digest-{entry_id}",
+        "payload": {
+            "active_chip": None,
+            "picks": [
+                {
+                    "element": 100 + entry_id,
+                    "position": 1,
+                    "multiplier": 1,
+                    "is_captain": False,
+                    "is_vice_captain": False,
+                }
+            ],
         },
-        "lineage": {},
     }
 
-    artifact = exposure_artifact(manager_picks, {}, bootstrap_lineage=None)
+
+class PicksClient:
+    def __init__(self, availability: dict[int, bool]) -> None:
+        self.availability = availability
+
+    def submitted_picks(self, entry_id: int, gw: int) -> dict:
+        del gw
+        return _result(entry_id, available=self.availability.get(entry_id, False))
+
+
+def _collect(tmp_path: Path, availability: dict[int, bool]) -> dict:
+    manager_ids = sorted(availability)
+    artifact, _ = acquire_manager_picks(
+        PicksClient(availability),
+        previous_path=tmp_path / "gw_3_manager_picks.json",
+        season="2026-2027",
+        league_id=9477,
+        gw=3,
+        manager_ids=manager_ids,
+        deadline_passed=True,
+        workers=4,
+        force=False,
+        cache_enabled=False,
+    )
+    return artifact
+
+
+def test_partial_picks_integrity_metadata_never_claims_full_coverage(tmp_path: Path):
+    artifact = _collect(tmp_path, {1: True, 2: False})
 
     assert artifact["expected_manager_count"] == 2
     assert artifact["collected_manager_count"] == 1
@@ -41,49 +72,30 @@ def test_partial_picks_integrity_metadata_never_claims_full_coverage():
     assert artifact["coverage_percent"] == 50.0
     assert artifact["health"] == "AMBER"
     assert artifact["complete"] is False
-    assert artifact["deprecated"] is True
-    assert artifact["canonical"] is False
-    assert artifact["analytics_removed"] is True
-    assert artifact["players"] == []
+    assert artifact["authority"] == "OFFICIAL_FPL"
+    assert artifact["governance"]["mini_league_analytics_authority"] == "NONE"
+    assert "players" not in artifact
 
 
-def test_complete_mini_league_integrity_metadata_is_green_only_at_full_coverage():
-    manager_picks = {
-        "season": "2026-2027",
-        "gw": 3,
-        "league_id": 9477,
-        "expected_manager_count": 2,
-        "entries": {
-            "1": _available(1, 100),
-            "2": _available(2, 100),
-        },
-        "lineage": {},
-    }
-
-    artifact = exposure_artifact(manager_picks, {}, bootstrap_lineage=None)
+def test_complete_mini_league_integrity_metadata_is_green_only_at_full_coverage(tmp_path: Path):
+    artifact = _collect(tmp_path, {1: True, 2: True})
 
     assert artifact["collected_manager_count"] == 2
     assert artifact["submitted_picks_missing_count"] == 0
     assert artifact["coverage_percent"] == 100.0
     assert artifact["health"] == "GREEN"
     assert artifact["complete"] is True
-    assert artifact["players"] == []
+    assert artifact["cache"]["current_run_action"] == "FETCHED"
+    assert "players" not in artifact
 
 
-def test_zero_available_managers_is_red_not_false_complete():
-    manager_picks = {
-        "season": "2026-2027",
-        "gw": 3,
-        "league_id": 9477,
-        "expected_manager_count": 1,
-        "entries": {"1": {"entry_id": 1, "status": "UNAVAILABLE", "picks": []}},
-        "lineage": {},
-    }
-
-    artifact = exposure_artifact(manager_picks, {}, bootstrap_lineage=None)
+def test_zero_available_managers_is_red_not_false_complete(tmp_path: Path):
+    artifact = _collect(tmp_path, {1: False})
 
     assert artifact["collected_manager_count"] == 0
+    assert artifact["submitted_picks_missing_count"] == 1
     assert artifact["coverage_percent"] == 0.0
     assert artifact["health"] == "RED"
     assert artifact["complete"] is False
-    assert artifact["players"] == []
+    assert artifact["missing_entry_ids"] == [1]
+    assert "players" not in artifact

@@ -7,11 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from src.runtime_v6.league_prefetch import (
-    acquire_manager_picks,
-    exposure_artifact,
-    fetch_all_standings,
-)
+from src.runtime_v6.league_prefetch import acquire_manager_picks, fetch_all_standings
 from src.runtime_v6.personal_prefetch import discover_memberships, normalise_team, resolve_priority_leagues
 from src.runtime_v6.prefetch_contract import (
     PrefetchContractError,
@@ -356,48 +352,7 @@ def test_rival_picks_full_failure_cache_gw_and_membership_changes(tmp_path):
     assert failed["missing_entry_ids"] == [2]
 
 
-def test_exposure_artifact_is_retired_noncanonical_tombstone():
-    manager_picks = {
-        "season": "2026-2027",
-        "gw": 3,
-        "league_id": 99,
-        "expected_manager_count": 2,
-        "entries": {
-            "1": {
-                "status": "AVAILABLE",
-                "picks": [
-                    {"element_id": 1, "squad_position": 1, "multiplier": 2, "captain": True, "vice_captain": False},
-                    {"element_id": 2, "squad_position": 12, "multiplier": 0, "captain": False, "vice_captain": True},
-                ],
-            },
-            "2": {
-                "status": "AVAILABLE",
-                "picks": [
-                    {"element_id": 1, "squad_position": 1, "multiplier": 3, "captain": True, "vice_captain": False},
-                    {"element_id": 2, "squad_position": 2, "multiplier": 1, "captain": False, "vice_captain": False},
-                ],
-            },
-        },
-        "lineage": {},
-    }
-    exposure = exposure_artifact(manager_picks, {1: {"web_name": "A"}}, bootstrap_lineage=None)
-    assert exposure["deprecated"] is True
-    assert exposure["canonical"] is False
-    assert exposure["authority"] == "NONE"
-    assert exposure["players"] == []
-    assert exposure["coverage_percent"] == 100.0
-    rendered = json.dumps(exposure)
-    assert "ownership_percent" not in rendered
-    assert "mini_league_effective_ownership_percent" not in rendered
-
-    manager_picks["entries"]["2"]["status"] = "UNAVAILABLE"
-    partial = exposure_artifact(manager_picks, {}, bootstrap_lineage=None)
-    assert partial["submitted_picks_available_count"] == 1
-    assert partial["coverage_percent"] == 50.0
-    assert partial["complete"] is False
-
-
-def test_personal_normalization_auth_available_and_missing_fields():
+def test_personal_normalization_preserves_only_source_finance_facts():
     submitted = {
         "picks": [
             {
@@ -421,14 +376,16 @@ def test_personal_normalization_auth_available_and_missing_fields():
         auth_lineage=[],
         generated_at="now",
     )
+    assert team["auth_state"] == "AUTH_AVAILABLE"
     assert team["bank"] == 5
-    assert team["effective_sell_value"] is None
+    assert "effective_sell_value" not in team
+    assert "squad_market_value" not in team
     assert team["free_transfers"] is None
     assert team["availability"]["free_transfers"] == "NOT_SUPPORTED"
     assert team["chips"] is None
 
 
-def test_full_prefetch_auth_available_publication_and_idempotency(tmp_path):
+def test_full_prefetch_publishes_atomic_facts_without_exposure_artifact_and_is_idempotent(tmp_path):
     client = FakeClient(auth=True)
     service = PrefetchService(config=config(), output_root=tmp_path, client=client, now=NOW)
     first = service.run(report_kind="full_master", logical_slot=SLOT)
@@ -439,16 +396,15 @@ def test_full_prefetch_auth_available_publication_and_idempotency(tmp_path):
     assert first["submitted_picks_available_count"] == 2
     assert first["complete"] is True
     assert (tmp_path / "personal/current_team.json").exists()
-    exposure_path = tmp_path / "mini_leagues/99/gw_3_exposure.json"
-    assert exposure_path.exists()
-    exposure = json.loads(exposure_path.read_text())
-    assert exposure["canonical"] is False
+    assert (tmp_path / "mini_leagues/99/standings.json").exists()
+    assert (tmp_path / "mini_leagues/99/gw_3_manager_picks.json").exists()
+    assert not (tmp_path / "mini_leagues/99/gw_3_exposure.json").exists()
     exposure_meta = next(
         item for item in first["artifacts"] if item["path"].endswith("gw_3_exposure.json")
     )
     assert exposure_meta["canonical"] is False
-    assert exposure_meta["deprecated"] is True
-    assert exposure_meta["authority"] == "NONE"
+    assert exposure_meta["omitted"] is True
+    assert exposure_meta["artifact_class"] == "DEPRECATED_REMOVED"
     calls = list(client.calls)
 
     second = service.run(report_kind="full_master", logical_slot=SLOT)
@@ -490,19 +446,18 @@ def test_match_mode_reuses_rival_cache_but_refreshes_live(tmp_path):
     assert manifest["live_status"] == "AVAILABLE"
 
 
-def test_priority_partial_coverage_is_explicit(tmp_path):
+def test_priority_partial_coverage_is_explicit_in_atomic_manager_picks(tmp_path):
     client = FakeClient(fail_pick=4000001)
     manifest = PrefetchService(config=config(), output_root=tmp_path, client=client, now=NOW).run(
         report_kind="full_master", logical_slot=SLOT
     )
-    exposure = json.loads((tmp_path / "mini_leagues/99/gw_3_exposure.json").read_text())
     picks = json.loads((tmp_path / "mini_leagues/99/gw_3_manager_picks.json").read_text())
     assert manifest["mini_league_status"] == "PARTIAL"
     assert picks["missing_entry_ids"] == [4000001]
-    assert exposure["canonical"] is False
-    assert exposure["submitted_picks_available_count"] == 1
-    assert exposure["coverage_percent"] == 50.0
-    assert exposure["complete"] is False
+    assert picks["submitted_picks_available_count"] == 1
+    assert picks["coverage_percent"] == 50.0
+    assert picks["complete"] is False
+    assert not (tmp_path / "mini_leagues/99/gw_3_exposure.json").exists()
 
 
 class ExplodingClient:
@@ -556,12 +511,15 @@ def test_freshness_t30_age34_stale_and_slot_validation():
         parse_slot("2026-09-05T12:30:00")
 
 
-def test_manifest_artifact_references_have_exact_digests(tmp_path):
+def test_manifest_artifact_references_have_exact_digests_for_materialized_artifacts(tmp_path):
     manifest = PrefetchService(config=config(), output_root=tmp_path, client=FakeClient(), now=NOW).run(
         report_kind="full_master", logical_slot=SLOT
     )
     assert manifest["slot_key"].startswith("2026-2027|3|full_master|")
     for artifact in manifest["artifacts"]:
+        if artifact.get("omitted") is True:
+            assert artifact["sha256"] is None
+            continue
         relative = artifact["path"].removeprefix("data/v6/")
         raw = (tmp_path / relative).read_bytes()
         assert hashlib.sha256(raw).hexdigest() == artifact["sha256"]

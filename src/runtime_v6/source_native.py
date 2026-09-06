@@ -7,6 +7,7 @@ import re
 from typing import Any
 
 from .http_client import utc_now
+from .rotowire_normalizer import parse_rotowire_lineups
 
 NORMALIZATION_VERSION = "V6_SOURCE_NATIVE_1"
 _JOINABLE = {"EXACT", "VERIFIED_MANUAL"}
@@ -443,6 +444,56 @@ def _fotmob(payload: dict[str, Any], identity_map: dict[str, Any]) -> dict[str, 
     )
 
 
+def _rotowire(payload: dict[str, Any], identity_map: dict[str, Any]) -> dict[str, Any]:
+    body = _request(payload, "lineups").get("body")
+    parsed = parse_rotowire_lineups(body if isinstance(body, str) else "")
+    player_reverse = _reverse_links(identity_map, "rotowire", "player")
+    fixture_reverse = _reverse_links(identity_map, "rotowire", "fixture")
+
+    fixtures: list[dict[str, Any]] = []
+    for raw in parsed["fixtures"]:
+        row = dict(raw)
+        native_id = row.get("source_native_id")
+        row.update(_identity_fields(fixture_reverse, native_id, "official_fixture_id"))
+        fixtures.append(row)
+
+    def player_rows(group: str) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        for raw in parsed[group]:
+            row = dict(raw)
+            native_id = row.get("source_native_id")
+            row.update(_identity_fields(player_reverse, native_id, "official_element_id"))
+            rows.append(row)
+        return rows
+
+    lineups = player_rows("lineups")
+    availability = player_rows("availability")
+    status = "NORMALIZED" if fixtures or lineups or availability else "EMPTY_OR_SCHEMA_UNAVAILABLE"
+    dataset = _dataset(
+        source_id="rotowire",
+        payload=payload,
+        semantic_class="UPSTREAM_MODEL_SIGNAL",
+        authority="ROTOWIRE",
+        model_author="ROTOWIRE",
+        record_groups={"fixtures": fixtures, "lineups": lineups, "availability": availability},
+        normalization_status=status,
+    )
+    dataset["authority_ceiling"] = "ADVISORY"
+    dataset["record_semantics"] = {
+        "confirmed_lineup": "SECONDARY_REPORTED_FACT_REQUIRES_PRIMARY_CROSSCHECK",
+        "predicted_lineup": "UPSTREAM_MODEL_SIGNAL",
+        "availability": "SECONDARY_AVAILABILITY_SIGNAL_REQUIRES_PRIMARY_CROSSCHECK",
+    }
+    dataset["governance"].update(
+        {
+            "requires_primary_crosscheck_for_fact_promotion": True,
+            "may_override_verified_facts": False,
+            "consensus_vote": False,
+        }
+    )
+    return dataset
+
+
 def build_source_native_datasets(
     results: dict[str, dict[str, Any]], identity_map: dict[str, Any]
 ) -> dict[str, dict[str, Any]]:
@@ -450,6 +501,7 @@ def build_source_native_datasets(
         "vaastav_fpl": _vaastav,
         "understat": _understat,
         "fotmob": _fotmob,
+        "rotowire": _rotowire,
     }
     datasets: dict[str, dict[str, Any]] = {}
     for source_id, parser in parsers.items():

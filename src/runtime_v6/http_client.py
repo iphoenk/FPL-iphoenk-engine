@@ -22,6 +22,7 @@ _ACCESS_BLOCK_MARKERS = (
     "just a moment...",
 )
 _STREAM_CHUNK_BYTES = 65536
+_ALLOWED_METHODS = {"GET", "POST"}
 
 
 def utc_now() -> str:
@@ -269,7 +270,21 @@ class AcquisitionClient:
         url = str(request_cfg["url"]).format(
             utc_date=datetime.now(timezone.utc).date().isoformat(),
         )
+        method = str(request_cfg.get("method") or "GET").strip().upper()
+        if method not in _ALLOWED_METHODS:
+            return {
+                "request_id": request_cfg["id"],
+                "status": "INVALID_REQUEST_CONFIG",
+                "health": "RED" if source.get("critical") else "AMBER",
+                "url": url,
+                "checked_at": utc_now(),
+                "error": f"unsupported_http_method:{method}",
+                "content_changed": None,
+                "attempt_count": 0,
+                "validation_classification": "INVALID_REQUEST_CONFIG",
+            }
         params = dict(request_cfg.get("params") or {})
+        form = dict(request_cfg.get("form") or {})
         headers = {
             "Accept": "application/json,text/csv,text/html,application/xhtml+xml,*/*;q=0.8",
         }
@@ -283,7 +298,7 @@ class AcquisitionClient:
         for key, value in (request_cfg.get("headers") or {}).items():
             headers[str(key)] = str(value)
 
-        if self.conditional_revalidation and previous:
+        if method == "GET" and self.conditional_revalidation and previous:
             etag = previous.get("etag")
             last_modified = previous.get("last_modified")
             if etag:
@@ -312,14 +327,25 @@ class AcquisitionClient:
         for attempt in range(1, self.retry_attempts + 1):
             attempt_count = attempt
             try:
-                response = self._session().get(
-                    url,
-                    params=params or None,
-                    timeout=(connect_timeout, read_timeout),
-                    headers=headers,
-                    allow_redirects=True,
-                    stream=True,
-                )
+                if method == "POST":
+                    response = self._session().post(
+                        url,
+                        params=params or None,
+                        data=form or None,
+                        timeout=(connect_timeout, read_timeout),
+                        headers=headers,
+                        allow_redirects=True,
+                        stream=True,
+                    )
+                else:
+                    response = self._session().get(
+                        url,
+                        params=params or None,
+                        timeout=(connect_timeout, read_timeout),
+                        headers=headers,
+                        allow_redirects=True,
+                        stream=True,
+                    )
                 if response.status_code in _RETRYABLE_STATUS and attempt < self.retry_attempts:
                     response.close()
                     time.sleep(_retry_delay(response, self.retry_backoff, attempt))
@@ -350,7 +376,7 @@ class AcquisitionClient:
         query_auth_name = str(auth.get("name")) if auth.get("mode") == "query" and auth.get("name") else None
         safe_url = _redact_url(str(response.url), secret, query_auth_name)
 
-        if response.status_code == 304 and previous:
+        if method == "GET" and response.status_code == 304 and previous:
             result = {
                 "request_id": request_cfg["id"],
                 "status": "NOT_MODIFIED",

@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "allowed_scopes": ["PLAYER", "TEAM", "FIXTURE", "EVENT", "COMPETITION", "FEED"],
+  "category_defaults": {
+    "factual_authority": ["PLAYER", "TEAM", "FIXTURE", "EVENT"],
+    "market": ["PLAYER", "TEAM"],
+    "advanced_performance": ["PLAYER", "TEAM", "FIXTURE"],
+    "fpl_model_reference": ["PLAYER", "TEAM", "FIXTURE"],
+    "fixture_schedule_reference": ["FIXTURE", "EVENT"],
+    "price_reference": ["PLAYER"],
+    "historical_event_data": ["COMPETITION", "EVENT", "FIXTURE"],
+    "availability_lineups": ["PLAYER", "TEAM", "FIXTURE"],
+    "official_league_stats": ["PLAYER", "TEAM"],
+    "team_strength": ["TEAM"],
+    "market_fixture_data": ["TEAM", "FIXTURE"],
+    "structured_provider_api": ["PLAYER", "TEAM", "FIXTURE", "EVENT"],
+    "availability_squad": ["PLAYER", "TEAM"],
+    "fixture_match_data": ["TEAM", "FIXTURE", "EVENT"],
+    "historical_fpl": ["PLAYER", "TEAM", "FIXTURE", "EVENT"],
+    "fixture_weather_context": ["TEAM", "FIXTURE"],
+    "market_model_reference": ["PLAYER"],
+    "lineup_probability_reference": ["PLAYER", "TEAM"],
+    "editorial_team_news_reference": ["PLAYER", "TEAM"],
+    "injury_reference": ["PLAYER", "TEAM"]
+  },
+  "source_overrides": {
+    "official_fpl": ["PLAYER", "TEAM", "FIXTURE", "EVENT"],
+    "official_price_predictor": ["PLAYER", "TEAM"],
+    "ben_crellin": ["FIXTURE", "EVENT", "FEED"],
+    "statsbomb": ["COMPETITION", "EVENT", "FEED"],
+    "football_data_uk": ["TEAM", "FIXTURE"],
+    "espn": ["TEAM", "FIXTURE", "EVENT"],
+    "vaastav_fpl": ["PLAYER", "TEAM", "FIXTURE", "EVENT"]
+  },
+  "governance": {
+    "identity_health_is_evaluated_only_for_relevant_entity_scopes": true,
+    "non_applicable_entity_scopes_are_not_red": true,
+    "silent_fuzzy_runtime_join_allowed": false
+  }
+}

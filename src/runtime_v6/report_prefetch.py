@@ -11,8 +11,6 @@ from typing import Any
 
 from .league_prefetch import (
     acquire_manager_picks,
-    add_manager_live_totals,
-    exposure_artifact,
     fetch_all_standings,
     live_state,
     standings_artifact,
@@ -74,7 +72,7 @@ class PrefetchService:
     def _publish_health(self, manifest: dict[str, Any]) -> None:
         telemetry = manifest.get("telemetry") or {}
         health = {
-            "schema_version": 1,
+            "schema_version": 2,
             "generated_at": manifest["generated_at"],
             "prefetch_status": (
                 "GREEN"
@@ -93,6 +91,8 @@ class PrefetchService:
             "duration_ms": telemetry.get("duration_ms", 0),
             "fresh_for_target_report": manifest.get("fresh_for_target_report"),
             "idempotent_reuse": bool((manifest.get("idempotency") or {}).get("reused")),
+            "data_contract": "ATOMIC_FACTS_ONLY",
+            "football_analytics_published": False,
         }
         write_json(self.output_root / "health/report_prefetch.json", health)
 
@@ -111,7 +111,7 @@ class PrefetchService:
         personal_reference = read_json(self.output_root / "personal/current_team.json")
         season = str(self.config.get("season") or "UNKNOWN")
         manifest = {
-            "schema_version": 1,
+            "schema_version": 2,
             "request_id": str(uuid.uuid4()),
             "requested_at": iso(self.now),
             "requested_by": requested_by,
@@ -166,10 +166,14 @@ class PrefetchService:
                 "decision_authority": "NONE",
                 "prediction_authority": "NONE",
                 "optimizer_authority": "NONE",
+                "ownership_analytics_authority": "NONE",
+                "effective_ownership_authority": "NONE",
+                "rival_analytics_authority": "NONE",
                 "price_0530_personal_refresh_prohibited": True,
                 "core_source_freshness_separate": True,
                 "report_prefetch_freshness_separate": True,
                 "independent_prefetch_cron": False,
+                "atomic_facts_only": True,
             },
         }
         write_json(self.output_root / "report_prefetch/latest.json", manifest)
@@ -219,6 +223,8 @@ class PrefetchService:
                 "request_count": 0,
                 "failed_requests": 0,
                 "duration_ms": round((time.perf_counter() - started) * 1000),
+                "current_run_action": "REUSED",
+                "reuse_reason": "AUTHORITATIVE_COMPLETE_SLOT_ALREADY_EXISTS",
             }
             write_json(self.output_root / "report_prefetch/latest.json", result)
             self._publish_health(result)
@@ -383,7 +389,6 @@ class PrefetchService:
             )
 
         live_status = "NOT_REQUESTED"
-        live_points = None
         live_artifact = None
         live_checked_at = None
         if scope.live:
@@ -394,7 +399,7 @@ class PrefetchService:
                 )
             else:
                 live_result = client.event_live(gw)
-                live_points, live_artifact = live_state(live_result, gw)
+                _, live_artifact = live_state(live_result, gw)
                 live_status = live_artifact["status"]
                 live_checked_at = live_artifact.get("checked_at")
                 if live_status != "AVAILABLE":
@@ -461,7 +466,7 @@ class PrefetchService:
                         )
 
                     manager_ids = [int(row["entry_id"]) for row in state["rows"]]
-                    manager_picks = exposure = None
+                    manager_picks = None
                     metrics = {"cache_hits": 0, "cache_misses": 0, "maximum_concurrency_used": 0}
                     full_picks = bool(priority.get("full_submitted_picks")) and bool(
                         self.config.get("priority_full_picks_enabled", True)
@@ -482,30 +487,17 @@ class PrefetchService:
                         )
                         write_json(self.output_root / picks_relative, manager_picks, secrets=secrets)
                         artifacts.append(artifact_meta(self.output_root, picks_relative))
-                        exposure = exposure_artifact(
-                            manager_picks,
-                            elements,
-                            bootstrap_lineage=lineage(bootstrap_result, gw=gw),
-                            live_points=live_points,
-                            live_lineage=(live_artifact or {}).get("lineage"),
-                        )
-                        exposure_relative = f"mini_leagues/{league_id}/gw_{gw}_exposure.json"
-                        write_json(self.output_root / exposure_relative, exposure, secrets=secrets)
-                        artifacts.append(artifact_meta(self.output_root, exposure_relative))
                         cache_hits += metrics["cache_hits"]
                         cache_misses += metrics["cache_misses"]
                         max_rival_concurrency = max(
                             max_rival_concurrency, metrics["maximum_concurrency_used"]
                         )
 
+                    # Event-live is a raw factual feed. It is published without
+                    # manager-level scoring, ownership, EO, overlap or rank analytics.
                     if scope.live and live_artifact is not None:
-                        league_live = live_artifact
-                        if manager_picks is not None and live_points is not None:
-                            league_live = add_manager_live_totals(
-                                live_artifact, manager_picks, live_points
-                            )
                         live_relative = f"mini_leagues/{league_id}/live_state.json"
-                        write_json(self.output_root / live_relative, league_live, secrets=secrets)
+                        write_json(self.output_root / live_relative, live_artifact, secrets=secrets)
                         artifacts.append(artifact_meta(self.output_root, live_relative))
 
                     league_complete = bool(
@@ -516,31 +508,37 @@ class PrefetchService:
                         )
                     )
                     states.append("AVAILABLE" if league_complete else "PARTIAL")
+                    available_count = manager_picks.get("submitted_picks_available_count") if manager_picks else None
+                    expected_count = len(manager_ids) if state["complete"] else None
+                    coverage_percent = (
+                        round(available_count * 100 / expected_count, 4)
+                        if isinstance(available_count, int)
+                        and isinstance(expected_count, int)
+                        and expected_count
+                        else None
+                    )
                     processed_leagues.append(
                         {
                             "league_id": league_id,
                             "league_name": priority["league_name"],
                             "league_kind": priority["league_kind"],
                             "status": "AVAILABLE" if league_complete else "PARTIAL",
-                            "expected_manager_count": len(manager_ids) if state["complete"] else None,
+                            "expected_manager_count": expected_count,
                             "collected_manager_count": len(manager_ids),
-                            "submitted_picks_available_count": manager_picks.get(
-                                "submitted_picks_available_count"
-                            ) if manager_picks else None,
+                            "submitted_picks_available_count": available_count,
                             "submitted_picks_missing_count": manager_picks.get(
                                 "submitted_picks_missing_count"
                             ) if manager_picks else None,
-                            "coverage_percent": exposure.get("coverage_percent") if exposure else None,
+                            "coverage_percent": coverage_percent,
                             "cache_hits": metrics["cache_hits"],
                             "cache_misses": metrics["cache_misses"],
+                            "analytics_published": False,
                         }
                     )
                     if league_id == primary_id:
-                        primary_expected = len(manager_ids) if state["complete"] else None
+                        primary_expected = expected_count
                         primary_collected = len(manager_ids)
-                        primary_available = manager_picks.get(
-                            "submitted_picks_available_count"
-                        ) if manager_picks else None
+                        primary_available = available_count
                         primary_missing = manager_picks.get(
                             "submitted_picks_missing_count"
                         ) if manager_picks else None
@@ -571,7 +569,7 @@ class PrefetchService:
             and (not scope.live or live_status == "AVAILABLE")
         )
         manifest = {
-            "schema_version": 1,
+            "schema_version": 2,
             "request_id": str(uuid.uuid4()),
             "requested_at": generated_at,
             "requested_by": requested_by,
@@ -625,6 +623,7 @@ class PrefetchService:
                     int(telemetry.get("maximum_concurrency_used") or 0),
                     max_rival_concurrency,
                 ),
+                "current_run_action": "FETCHED_OR_REVALIDATED",
             },
             "artifacts": artifacts,
             "complete": complete,
@@ -634,11 +633,16 @@ class PrefetchService:
                 "decision_authority": "NONE",
                 "prediction_authority": "NONE",
                 "optimizer_authority": "NONE",
+                "ownership_analytics_authority": "NONE",
+                "effective_ownership_authority": "NONE",
+                "rival_analytics_authority": "NONE",
                 "independence_group": "official_fpl",
                 "core_source_freshness_separate": True,
                 "report_prefetch_freshness_separate": True,
                 "normal_hourly_personal_refresh": False,
                 "independent_prefetch_cron": False,
+                "atomic_facts_only": True,
+                "analytics_belong_downstream": True,
             },
         }
         write_json(self.output_root / "report_prefetch/latest.json", manifest, secrets=secrets)

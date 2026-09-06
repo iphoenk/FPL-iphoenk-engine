@@ -20,50 +20,7 @@
           }
         }
       ],
-      "notes": "Public no-auth endpoint intended for AI/data consumers. Preserve as independent model evidence; never average blindly with V3/V4."
-    },
-    {
-      "id": "open_meteo_weather",
-      "name": "Open-Meteo Matchday Weather",
-      "category": "fixture_weather_context",
-      "adapter": "open_meteo_weather",
-      "critical": false,
-      "required_for_platform": true,
-      "depends_on": ["official_fpl"],
-      "check_freshness_minutes": 90,
-      "independence_group": "open_meteo",
-      "venue_registry": "config/venues/premier_league_2026_27.json",
-      "requests": [
-        {
-          "id": "epl_venues",
-          "url": "https://api.open-meteo.com/v1/forecast",
-          "params": {
-            "current": "temperature_2m,relative_humidity_2m,precipitation,rain,showers,weather_code,wind_speed_10m,wind_gusts_10m",
-            "hourly": "temperature_2m,relative_humidity_2m,precipitation_probability,precipitation,rain,showers,weather_code,wind_speed_10m,wind_gusts_10m",
-            "timezone": "Europe/London",
-            "forecast_days": "16",
-            "wind_speed_unit": "kmh"
-          },
-          "expect": "json",
-          "validation": {
-            "min_body_bytes": 1000
-          }
-        }
-      ],
-      "weather_contract": {
-        "timezone": "Europe/London",
-        "precedence": ["LIVE_OBSERVED", "CLOSEST_TO_KICKOFF_OBSERVATION", "FRESH_FORECAST", "STALE_FORECAST"],
-        "severity": ["NORMAL", "NOTABLE", "ADVERSE", "EXTREME"],
-        "direct_xpts_multiplier": false,
-        "weather_alone_can_trigger_transfer": false,
-        "signals": ["temperature_2m", "relative_humidity_2m", "precipitation_probability", "precipitation", "rain", "showers", "weather_code", "wind_speed_10m", "wind_gusts_10m"],
-        "legacy_attention_thresholds": {
-          "wind_speed_kmh": 30,
-          "rain_probability_pct": 60,
-          "temperature_c": 5
-        }
-      },
-      "attribution": "Weather data by Open-Meteo.com (CC BY 4.0)."
+      "notes": "Public no-auth endpoint intended for AI/data consumers. Preserve as independent upstream model evidence; V6 does not author or blend predictions."
     },
     {
       "id": "check_the_chance",
@@ -83,7 +40,7 @@
           }
         }
       ],
-      "notes": "Public bookmaker-derived probabilities. Treat as market evidence; rotation/minutes risk must come from separate lineup evidence."
+      "notes": "Public bookmaker-derived probabilities retained only as an upstream model signal. V6 performs no interpretation or decision logic."
     },
     {
       "id": "fantasy_football_pundit",
@@ -111,7 +68,7 @@
           }
         }
       ],
-      "notes": "Free public lineup/start-probability evidence. Prefer Start % and team news as the distinctive signal rather than duplicating internal xPts."
+      "notes": "Free public source-native model/team-news evidence. V6 preserves the source payload and provenance only."
     },
     {
       "id": "bbc_team_news",

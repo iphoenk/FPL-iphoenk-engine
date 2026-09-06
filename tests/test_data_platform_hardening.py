@@ -48,7 +48,7 @@ def test_workflow_cron_matches_v6_schedule_policy():
     assert policy["manual_recovery"]["authoritative_runtime_snapshot"] is False
 
 
-def test_required_platform_sources_are_active_but_context_source_is_not_availability_critical():
+def test_required_platform_sources_are_factual_data_plane_only():
     registry = load_registry()
     sources = source_map(registry)
     required = {
@@ -57,12 +57,11 @@ def test_required_platform_sources_are_active_but_context_source_is_not_availabi
         if source.get("required_for_platform") is True
     }
 
-    assert required == {"official_fpl", "official_price_predictor", "open_meteo_weather"}
+    assert required == {"official_fpl", "official_price_predictor"}
     assert sources["official_fpl"]["critical"] is True
     assert sources["official_price_predictor"]["critical"] is True
-    assert sources["open_meteo_weather"]["critical"] is False
     assert sources["official_price_predictor"]["depends_on"] == ["official_fpl"]
-    assert sources["open_meteo_weather"]["depends_on"] == ["official_fpl"]
+    assert "open_meteo_weather" not in sources
     assert set(registry["activation"]["required_active_sources"]) == required
 
 
@@ -104,14 +103,12 @@ def test_activation_cannot_prune_required_platform_source(tmp_path: Path):
         _apply_activation(payload, activation)
 
 
-def test_required_context_source_may_be_noncritical_without_becoming_optional():
+def test_weather_is_not_a_v6_required_context_source():
     registry = load_registry()
     validate_registry(registry)
-    weather = source_map(registry)["open_meteo_weather"]
-
-    assert weather["required_for_platform"] is True
-    assert weather["critical"] is False
-    assert "open_meteo_weather" in registry["activation"]["required_active_sources"]
+    assert "open_meteo_weather" not in source_map(registry)
+    assert "open_meteo_weather" not in registry["activation"]["required_active_sources"]
+    assert not Path("src/runtime_v6/weather.py").exists()
 
 
 def test_config_layers_fail_closed_on_schema_version_mismatch(tmp_path: Path):
@@ -143,7 +140,6 @@ def test_dependency_layers_are_topological_and_cycle_safe():
     }
 
     assert positions["official_fpl"] < positions["official_price_predictor"]
-    assert positions["official_fpl"] < positions["open_meteo_weather"]
 
     cyclic = deepcopy(registry)
     sources = source_map(cyclic)

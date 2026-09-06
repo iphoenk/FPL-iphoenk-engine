@@ -12,7 +12,7 @@ from .registry import ZERO_AUTHORITY_KEYS
 
 DEFAULT_MAX_AGE_MINUTES = 90
 MAX_CLOCK_SKEW_MINUTES = 5
-_ALLOWED_SCHEDULE_KINDS = {"primary", "recovery"}
+_ALLOWED_OPERATIONAL_KINDS = {"primary", "recovery", "master_orchestrated"}
 _FALLBACK_SCOPE = "EXTERNAL_SOURCES_ONLY"
 
 
@@ -30,8 +30,47 @@ def _governance_failures(governance: dict[str, Any]) -> list[str]:
     for authority in ZERO_AUTHORITY_KEYS:
         if governance.get(authority) != "NONE":
             failures.append(f"UNEXPECTED_{authority.upper()}")
-    if governance.get("production_ingestion_schedule_only") is not True:
-        failures.append("PRODUCTION_SCHEDULE_ONLY_CONTRACT_BROKEN")
+    return failures
+
+
+def _control_failures(control: dict[str, Any]) -> list[str]:
+    failures: list[str] = []
+    kind = str(control.get("schedule_kind") or "")
+    event_name = str(control.get("event_name") or "")
+    scheduled = control.get("scheduled_cycle") is True
+    natural = kind in {"primary", "recovery"} and event_name == "schedule" and scheduled
+    master = (
+        kind == "master_orchestrated"
+        and event_name in {"issue_comment", "workflow_dispatch"}
+        and control.get("master_orchestrated") is True
+    )
+
+    explicit_authority = control.get("authoritative_runtime_snapshot")
+    authoritative = explicit_authority is True or (explicit_authority is None and natural)
+    explicit_operational = control.get("counts_as_completed_operational_slot")
+    operational = explicit_operational is True or (explicit_operational is None and natural)
+
+    if not authoritative:
+        failures.append("NON_AUTHORITATIVE_RUNTIME_SNAPSHOT")
+    if not operational:
+        failures.append("NON_OPERATIONAL_RUNTIME_SNAPSHOT")
+    if kind not in _ALLOWED_OPERATIONAL_KINDS:
+        failures.append("INVALID_RUNTIME_SCHEDULE_KIND")
+        if not scheduled:
+            failures.append("NON_SCHEDULED_RUNTIME_SNAPSHOT")
+
+    if kind in {"primary", "recovery"} and not natural:
+        failures.append("INVALID_NATURAL_SCHEDULE_PROVENANCE")
+    elif kind == "master_orchestrated" and not master:
+        failures.append("INVALID_MASTER_ORCHESTRATED_PROVENANCE")
+
+    if scheduled:
+        if control.get("duplicate_scheduled_cycle") is True:
+            failures.append("DUPLICATE_SCHEDULED_CYCLE")
+        if control.get("out_of_order_scheduled_cycle") is True:
+            failures.append("OUT_OF_ORDER_SCHEDULED_CYCLE")
+    if not control.get("run_id"):
+        failures.append("MISSING_RUNTIME_RUN_ID")
     return failures
 
 
@@ -110,16 +149,7 @@ def assess_snapshot(
             failures.append("INVALID_GENERATED_AT")
 
     control = manifest.get("runtime_control") or {}
-    if control.get("scheduled_cycle") is not True:
-        failures.append("NON_SCHEDULED_RUNTIME_SNAPSHOT")
-    if control.get("event_name") != "schedule":
-        failures.append("INVALID_RUNTIME_EVENT_PROVENANCE")
-    if control.get("schedule_kind") not in _ALLOWED_SCHEDULE_KINDS:
-        failures.append("INVALID_RUNTIME_SCHEDULE_KIND")
-    if control.get("duplicate_scheduled_cycle") is True:
-        failures.append("DUPLICATE_SCHEDULED_CYCLE")
-    if not control.get("run_id"):
-        failures.append("MISSING_RUNTIME_RUN_ID")
+    failures.extend(_control_failures(control))
 
     if manifest.get("overall") == "RED":
         failures.append("MANIFEST_OVERALL_RED")
@@ -130,6 +160,7 @@ def assess_snapshot(
     for failure in manifest.get("control_failures") or []:
         failures.append(f"CONTROL:{failure}")
 
+    failures = list(dict.fromkeys(failures))
     if failures:
         state = "INVALID"
         usable = False
@@ -159,6 +190,8 @@ def assess_snapshot(
         "max_age_minutes": int(max_age_minutes),
         "manifest_overall": manifest.get("overall"),
         "runtime_control_health": control.get("health"),
+        "runtime_schedule_kind": control.get("schedule_kind"),
+        "authoritative_runtime_snapshot": control.get("authoritative_runtime_snapshot"),
         "stored_tree_sha256": stored_digest,
         "recomputed_tree_sha256": recomputed_digest,
         "failures": failures,
@@ -166,7 +199,9 @@ def assess_snapshot(
             "consumer_does_not_trust_static_green_without_freshness": True,
             "consumer_recomputes_publish_integrity": True,
             "consumer_requires_exact_resolved_registry": True,
-            "consumer_requires_scheduled_runtime_provenance": True,
+            "consumer_requires_authoritative_operational_provenance": True,
+            "consumer_accepts_natural_and_master_orchestrated_authority": True,
+            "natural_scheduler_evidence_is_checked_separately": True,
             "consumer_requires_full_zero_authority_contract": True,
             "stale_or_invalid_allows_minimum_scope_direct_fallback": True,
             "fallback_is_external_sources_only": True,

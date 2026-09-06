@@ -33,7 +33,7 @@ def test_registry_keeps_dynamic_active_contract_and_adds_ingestion_metadata():
     assert sources["understat"]["content_hash_dedup"] is True
     assert "ffhub" in REFERENCE_ONLY_SOURCE_IDS
     assert "fffix" in REFERENCE_ONLY_SOURCE_IDS
-    assert sources["open_meteo_weather"]["poll_interval_minutes"] == 60
+    assert "open_meteo_weather" not in sources
     assert sources["solio_analytics"]["poll_interval_minutes"] == 240
     assert sources["solio_analytics"]["poll_interval_minutes_deadline_window"] == 60
 

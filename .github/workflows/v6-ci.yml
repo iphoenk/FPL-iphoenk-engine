@@ -6,14 +6,12 @@ on:
     # push.paths below; config/v6/** includes schedule_policy.json.
     paths:
       - "config/v6/**"
-      - "config/venues/**"
       - "docs/V6_*.md"
       - "src/runtime_v6/**"
       - "requirements-v6.lock"
       - "requirements-v6-ci.lock"
       - "tests/test_data_ingestion_engine.py"
       - "tests/test_adaptive_polling.py"
-      - "tests/test_weather_context.py"
       - "tests/test_data_platform_*.py"
       - ".github/workflows/v6-ci.yml"
       - ".github/workflows/v6-natural-data-ingestion.yml"
@@ -23,14 +21,12 @@ on:
     # without the other; keeping event-local filters avoids repo-wide V6 CI.
     paths:
       - "config/v6/**"
-      - "config/venues/**"
       - "docs/V6_*.md"
       - "src/runtime_v6/**"
       - "requirements-v6.lock"
       - "requirements-v6-ci.lock"
       - "tests/test_data_ingestion_engine.py"
       - "tests/test_adaptive_polling.py"
-      - "tests/test_weather_context.py"
       - "tests/test_data_platform_*.py"
       - ".github/workflows/v6-ci.yml"
       - ".github/workflows/v6-natural-data-ingestion.yml"
@@ -72,7 +68,6 @@ jobs:
           python -m pytest -q
           tests/test_data_ingestion_engine.py
           tests/test_adaptive_polling.py
-          tests/test_weather_context.py
           tests/test_data_platform_*.py
 
   v6-publisher-config:

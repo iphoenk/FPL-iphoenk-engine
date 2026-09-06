@@ -23,6 +23,9 @@ def _write_snapshot(
     scheduled_cycle: bool = True,
     event_name: str = "schedule",
     schedule_kind: str = "primary",
+    authoritative_runtime_snapshot: bool | None = None,
+    counts_as_completed_operational_slot: bool | None = None,
+    master_orchestrated: bool = False,
 ) -> None:
     paths = {
         "current_sources": "data/v6/current/",
@@ -44,7 +47,13 @@ def _write_snapshot(
         "run_id": "12345",
         "scheduled_cycle": scheduled_cycle,
         "duplicate_scheduled_cycle": False,
+        "master_orchestrated": master_orchestrated,
     }
+    if authoritative_runtime_snapshot is not None:
+        runtime_control["authoritative_runtime_snapshot"] = authoritative_runtime_snapshot
+    if counts_as_completed_operational_slot is not None:
+        runtime_control["counts_as_completed_operational_slot"] = counts_as_completed_operational_slot
+
     manifest = {
         "source_count": 1,
         "source_ids": ["official_fpl"],
@@ -107,9 +116,33 @@ def test_fresh_green_snapshot_is_usable(tmp_path: Path):
     assert result["stored_tree_sha256"] == result["recomputed_tree_sha256"]
     assert result["governance"]["consumer_recomputes_publish_integrity"] is True
     assert result["governance"]["consumer_requires_exact_resolved_registry"] is True
-    assert result["governance"]["consumer_requires_scheduled_runtime_provenance"] is True
+    assert result["governance"]["consumer_requires_authoritative_operational_provenance"] is True
+    assert result["governance"]["consumer_accepts_natural_and_master_orchestrated_authority"] is True
+    assert result["governance"]["natural_scheduler_evidence_is_checked_separately"] is True
     assert result["governance"]["consumer_requires_full_zero_authority_contract"] is True
     assert result["governance"]["fallback_must_not_read_other_engine_artifacts"] is True
+
+
+def test_master_orchestrated_snapshot_is_authoritative_without_natural_schedule_flag(tmp_path: Path):
+    root = tmp_path / "v6"
+    _write_snapshot(
+        root,
+        "2026-09-04T10:40:00+00:00",
+        scheduled_cycle=False,
+        event_name="issue_comment",
+        schedule_kind="master_orchestrated",
+        authoritative_runtime_snapshot=True,
+        counts_as_completed_operational_slot=True,
+        master_orchestrated=True,
+    )
+
+    result = assess_snapshot(root, now=datetime(2026, 9, 4, 10, 45, tzinfo=timezone.utc))
+
+    assert result["state"] == "FRESH"
+    assert result["usable"] is True
+    assert result["runtime_schedule_kind"] == "master_orchestrated"
+    assert result["authoritative_runtime_snapshot"] is True
+    assert result["failures"] == []
 
 
 def test_static_green_snapshot_becomes_stale_at_read_time(tmp_path: Path):
@@ -185,8 +218,9 @@ def test_manual_or_non_scheduled_snapshot_is_invalid(tmp_path: Path):
 
     assert result["state"] == "INVALID"
     assert "NON_SCHEDULED_RUNTIME_SNAPSHOT" in result["failures"]
-    assert "INVALID_RUNTIME_EVENT_PROVENANCE" in result["failures"]
     assert "INVALID_RUNTIME_SCHEDULE_KIND" in result["failures"]
+    assert "NON_AUTHORITATIVE_RUNTIME_SNAPSHOT" in result["failures"]
+    assert "NON_OPERATIONAL_RUNTIME_SNAPSHOT" in result["failures"]
 
 
 def test_missing_runtime_snapshot_requires_direct_fallback(tmp_path: Path):

@@ -5,6 +5,13 @@ from typing import Any
 from .prefetch_contract import NORMALIZATION_VERSION, SCHEMA_VERSION, iso, lineage, utc_now
 
 SYSTEM_LEAGUE_TYPES = frozenset({"s"})
+AUTH_STATES = {
+    "AUTH_AVAILABLE",
+    "AUTH_EXPIRED",
+    "AUTH_INVALID",
+    "AUTH_ENTRY_MISMATCH",
+    "AUTH_UNAVAILABLE",
+}
 
 
 def discover_memberships(entry_payload: dict[str, Any], discovered_at: str) -> list[dict[str, Any]]:
@@ -126,6 +133,30 @@ def verified_auth_entry(me_payload: dict[str, Any]) -> int | None:
     return None
 
 
+def _normalise_auth_state(raw_state: str, auth_lineage: list[dict[str, Any] | None]) -> str:
+    raw = str(raw_state or "").upper()
+    if raw in AUTH_STATES:
+        return raw
+    if raw == "AVAILABLE":
+        return "AUTH_AVAILABLE"
+    if raw == "AUTH_ENTRY_MISMATCH":
+        return "AUTH_ENTRY_MISMATCH"
+    if raw in {"AUTH_IDENTITY_UNVERIFIED", "AUTH_CONFIGURATION_INVALID", "INVALID"}:
+        return "AUTH_INVALID"
+    statuses = {
+        int(item.get("http_status"))
+        for item in auth_lineage
+        if isinstance(item, dict) and isinstance(item.get("http_status"), int)
+    }
+    if 401 in statuses:
+        return "AUTH_EXPIRED"
+    if statuses.intersection({400, 403}):
+        return "AUTH_INVALID"
+    if raw in {"AUTH_UNAVAILABLE", "UNAVAILABLE", "DEGRADED", ""}:
+        return "AUTH_UNAVAILABLE"
+    return "AUTH_INVALID"
+
+
 def normalise_team(
     *,
     entry_id: int,
@@ -138,6 +169,7 @@ def normalise_team(
     auth_lineage: list[dict[str, Any] | None],
     generated_at: str,
 ) -> dict[str, Any]:
+    authenticated_state = _normalise_auth_state(auth_state, auth_lineage)
     submitted_by_element = {
         int(item["element_id"]): item
         for item in submitted.get("picks", [])
@@ -172,10 +204,6 @@ def normalise_team(
 
     transfers = (my_team_payload or {}).get("transfers") if isinstance(my_team_payload, dict) else None
     transfers = transfers if isinstance(transfers, dict) else {}
-    current_prices = [player["current_price"] for player in players]
-    sell_prices = [player["selling_price"] for player in players]
-    market_value = sum(current_prices) if players and all(isinstance(value, int) for value in current_prices) else None
-    sell_value = sum(sell_prices) if players and all(isinstance(value, int) for value in sell_prices) else None
 
     raw_chips = (my_team_payload or {}).get("chips") if isinstance(my_team_payload, dict) else None
     chips = None
@@ -192,22 +220,24 @@ def normalise_team(
 
     return {
         "schema_version": SCHEMA_VERSION,
+        "semantic_class": "NORMALIZED_FACT",
+        "canonical": True,
         "entry_id": entry_id,
         "gw": gw,
         "generated_at": generated_at,
         "authority": "OFFICIAL_FPL",
-        "auth_state": auth_state,
-        "squad_state": "AUTHENTICATED_CURRENT_TEAM" if isinstance(auth_picks, list) else "SUBMITTED_PICKS_ONLY",
+        "auth_state": authenticated_state,
+        "squad_state": "AUTHENTICATED_CURRENT_TEAM"
+        if authenticated_state == "AUTH_AVAILABLE" and isinstance(auth_picks, list)
+        else "SUBMITTED_PICKS_ONLY",
         "bank": transfers.get("bank"),
-        "squad_market_value": market_value,
-        "effective_sell_value": sell_value,
         "free_transfers": transfers.get("free_transfers"),
         "transfers_made": transfers.get("made"),
         "hit_cost": transfers.get("cost"),
         "chips": chips,
         "players": players,
         "availability": {
-            "authenticated_state": auth_state,
+            "authenticated_state": authenticated_state,
             "bank": "AVAILABLE" if "bank" in transfers else "UNAVAILABLE",
             "free_transfers": "AVAILABLE" if "free_transfers" in transfers else "NOT_SUPPORTED",
             "purchase_price": "AVAILABLE"
@@ -223,5 +253,12 @@ def normalise_team(
             "submitted_picks": submitted.get("lineage"),
             "authenticated": [item for item in auth_lineage if item is not None],
             "normalization_version": NORMALIZATION_VERSION,
+        },
+        "governance": {
+            "data_only": True,
+            "auth_bypass_used": False,
+            "finance_is_upstream_fact_only": True,
+            "free_transfers_are_not_derived": True,
+            "squad_value_aggregates_not_authored": True,
         },
     }

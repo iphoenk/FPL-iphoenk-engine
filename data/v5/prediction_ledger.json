@@ -12685,7 +12685,7 @@
       "gw": 4,
       "deadline_time": "2026-09-12T12:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-09-06T11:11:00.661659+00:00",
+        "generated_at": "2026-09-06T14:18:36.758951+00:00",
         "players": [
           {
             "element": 1,
@@ -15291,18 +15291,18 @@
             "element": 209,
             "name": "Johnson",
             "position": "MID",
-            "xpts": 2.839,
-            "xpts_std": 2.789,
-            "xmins": 64.6,
-            "start_probability": 0.6762,
+            "xpts": 2.989,
+            "xpts_std": 2.801,
+            "xmins": 69.2,
+            "start_probability": 0.7347,
             "clean_sheet_probability": 0.3768
           },
           {
             "element": 226,
             "name": "Pickford",
             "position": "GK",
-            "xpts": 4.247,
-            "xpts_std": 3.144,
+            "xpts": 4.197,
+            "xpts_std": 3.123,
             "xmins": 81.1,
             "start_probability": 0.8865,
             "clean_sheet_probability": 0.3768
@@ -15331,8 +15331,8 @@
             "element": 229,
             "name": "Tarkowski",
             "position": "DEF",
-            "xpts": 4.598,
-            "xpts_std": 3.291,
+            "xpts": 4.531,
+            "xpts_std": 3.263,
             "xmins": 81.1,
             "start_probability": 0.8865,
             "clean_sheet_probability": 0.3768
@@ -15341,8 +15341,8 @@
             "element": 230,
             "name": "Branthwaite",
             "position": "DEF",
-            "xpts": 3.654,
-            "xpts_std": 3.069,
+            "xpts": 3.635,
+            "xpts_std": 3.061,
             "xmins": 70.1,
             "start_probability": 0.7457,
             "clean_sheet_probability": 0.3768
@@ -15371,8 +15371,8 @@
             "element": 233,
             "name": "Mykolenko",
             "position": "DEF",
-            "xpts": 3.988,
-            "xpts_std": 3.061,
+            "xpts": 3.96,
+            "xpts_std": 3.049,
             "xmins": 79.5,
             "start_probability": 0.8696,
             "clean_sheet_probability": 0.3768
@@ -15401,8 +15401,8 @@
             "element": 236,
             "name": "Dewsbury-Hall",
             "position": "MID",
-            "xpts": 3.979,
-            "xpts_std": 3.087,
+            "xpts": 3.878,
+            "xpts_std": 3.044,
             "xmins": 76.1,
             "start_probability": 0.8483,
             "clean_sheet_probability": 0.3768
@@ -15421,18 +15421,18 @@
             "element": 239,
             "name": "Garner",
             "position": "MID",
-            "xpts": 3.343,
-            "xpts_std": 2.823,
-            "xmins": 77.7,
-            "start_probability": 0.8453,
+            "xpts": 3.551,
+            "xpts_std": 2.851,
+            "xmins": 80.9,
+            "start_probability": 0.8865,
             "clean_sheet_probability": 0.3768
           },
           {
             "element": 242,
             "name": "George",
             "position": "MID",
-            "xpts": 2.787,
-            "xpts_std": 2.837,
+            "xpts": 2.713,
+            "xpts_std": 2.806,
             "xmins": 56.4,
             "start_probability": 0.5703,
             "clean_sheet_probability": 0.3768
@@ -15451,8 +15451,8 @@
             "element": 244,
             "name": "Armstrong",
             "position": "MID",
-            "xpts": 3.183,
-            "xpts_std": 2.86,
+            "xpts": 3.119,
+            "xpts_std": 2.833,
             "xmins": 68.9,
             "start_probability": 0.757,
             "clean_sheet_probability": 0.3768
@@ -15471,8 +15471,8 @@
             "element": 246,
             "name": "Röhl",
             "position": "MID",
-            "xpts": 3.002,
-            "xpts_std": 2.821,
+            "xpts": 2.967,
+            "xpts_std": 2.807,
             "xmins": 67.9,
             "start_probability": 0.7182,
             "clean_sheet_probability": 0.3768
@@ -15501,8 +15501,8 @@
             "element": 249,
             "name": "Barry",
             "position": "FWD",
-            "xpts": 4.218,
-            "xpts_std": 3.243,
+            "xpts": 4.176,
+            "xpts_std": 3.225,
             "xmins": 74.7,
             "start_probability": 0.8046,
             "clean_sheet_probability": 0.3768
@@ -17591,8 +17591,8 @@
             "element": 43,
             "name": "Tielemans",
             "position": "MID",
-            "xpts": 3.046,
-            "xpts_std": 2.749,
+            "xpts": 2.986,
+            "xpts_std": 2.723,
             "xmins": 73.5,
             "start_probability": 0.8057,
             "clean_sheet_probability": 0.1188
@@ -17631,8 +17631,8 @@
             "element": 412,
             "name": "Lammens",
             "position": "GK",
-            "xpts": 3.09,
-            "xpts_std": 2.695,
+            "xpts": 3.053,
+            "xpts_std": 2.679,
             "xmins": 79.2,
             "start_probability": 0.8618,
             "clean_sheet_probability": 0.1188
@@ -17681,18 +17681,18 @@
             "element": 417,
             "name": "Dalot",
             "position": "DEF",
-            "xpts": 3.172,
-            "xpts_std": 2.821,
-            "xmins": 73.5,
-            "start_probability": 0.7891,
+            "xpts": 3.337,
+            "xpts_std": 2.825,
+            "xmins": 77.7,
+            "start_probability": 0.8425,
             "clean_sheet_probability": 0.1188
           },
           {
             "element": 418,
             "name": "Maguire",
             "position": "DEF",
-            "xpts": 3.013,
-            "xpts_std": 2.744,
+            "xpts": 2.973,
+            "xpts_std": 2.727,
             "xmins": 71.7,
             "start_probability": 0.7983,
             "clean_sheet_probability": 0.1188
@@ -17701,10 +17701,10 @@
             "element": 419,
             "name": "Martinez",
             "position": "DEF",
-            "xpts": 2.612,
-            "xpts_std": 2.676,
-            "xmins": 66.3,
-            "start_probability": 0.6979,
+            "xpts": 2.806,
+            "xpts_std": 2.691,
+            "xmins": 71.8,
+            "start_probability": 0.7676,
             "clean_sheet_probability": 0.1188
           },
           {
@@ -17741,8 +17741,8 @@
             "element": 423,
             "name": "Shaw",
             "position": "DEF",
-            "xpts": 3.155,
-            "xpts_std": 2.685,
+            "xpts": 3.126,
+            "xpts_std": 2.673,
             "xmins": 76.4,
             "start_probability": 0.8865,
             "clean_sheet_probability": 0.1188
@@ -17771,8 +17771,8 @@
             "element": 426,
             "name": "B.Fernandes",
             "position": "MID",
-            "xpts": 5.529,
-            "xpts_std": 3.682,
+            "xpts": 5.4,
+            "xpts_std": 3.628,
             "xmins": 79.0,
             "start_probability": 0.8865,
             "clean_sheet_probability": 0.1188
@@ -17781,8 +17781,8 @@
             "element": 427,
             "name": "Mbeumo",
             "position": "MID",
-            "xpts": 5.028,
-            "xpts_std": 3.518,
+            "xpts": 5.185,
+            "xpts_std": 3.584,
             "xmins": 73.7,
             "start_probability": 0.8547,
             "clean_sheet_probability": 0.1188
@@ -17791,8 +17791,8 @@
             "element": 428,
             "name": "Cunha",
             "position": "MID",
-            "xpts": 3.64,
-            "xpts_std": 2.952,
+            "xpts": 3.594,
+            "xpts_std": 2.933,
             "xmins": 74.3,
             "start_probability": 0.8425,
             "clean_sheet_probability": 0.1188
@@ -17801,20 +17801,20 @@
             "element": 429,
             "name": "Rashford",
             "position": "MID",
-            "xpts": 2.842,
-            "xpts_std": 2.791,
-            "xmins": 59.4,
-            "start_probability": 0.6744,
+            "xpts": 3.07,
+            "xpts_std": 2.786,
+            "xmins": 63.2,
+            "start_probability": 0.7825,
             "clean_sheet_probability": 0.1188
           },
           {
             "element": 430,
             "name": "Mount",
             "position": "MID",
-            "xpts": 1.939,
-            "xpts_std": 2.515,
-            "xmins": 43.8,
-            "start_probability": 0.4837,
+            "xpts": 2.692,
+            "xpts_std": 2.75,
+            "xmins": 58.5,
+            "start_probability": 0.645,
             "clean_sheet_probability": 0.1188
           },
           {
@@ -17831,10 +17831,10 @@
             "element": 432,
             "name": "Mainoo",
             "position": "MID",
-            "xpts": 2.483,
-            "xpts_std": 2.629,
-            "xmins": 65.6,
-            "start_probability": 0.6885,
+            "xpts": 2.898,
+            "xpts_std": 2.738,
+            "xmins": 71.2,
+            "start_probability": 0.7596,
             "clean_sheet_probability": 0.1188
           },
           {
@@ -19222,6 +19222,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-09-06T11:11:01.662052+00:00",
+  "updated_at": "2026-09-06T14:18:37.767513+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

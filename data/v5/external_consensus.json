@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "contract": "V5_EXTERNAL_CONSENSUS_V1",
-  "generated_at": "2026-09-06T11:11:05.333796+00:00",
+  "generated_at": "2026-09-06T14:18:41.395905+00:00",
   "owner": "evaluation.external_consensus",
   "native_conclusion_frozen_before_overlay": true,
   "native_snapshot": {
@@ -60,11 +60,11 @@
           "name": "B.Fernandes",
           "position": "MID",
           "team_id": 16,
-          "mean": 5.529,
-          "std": 3.682,
+          "mean": 5.4,
+          "std": 3.628,
           "start_probability": 0.8865,
           "dnp_probability": 0.0397,
-          "score": 5.0078
+          "score": 4.8852
         },
         {
           "element": 368,
@@ -293,7 +293,7 @@
         "team_id": 16,
         "start_probability": 0.8865,
         "dnp_probability": 0.0397,
-        "score": 5.9483,
+        "score": 5.8236,
         "tactical": {
           "status": "READY",
           "opponent_team_id": 15,
@@ -356,7 +356,7 @@
           "team_id": 16,
           "start_probability": 0.8865,
           "dnp_probability": 0.0397,
-          "score": 6.7766,
+          "score": 6.6379,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 15,
@@ -478,7 +478,7 @@
       ],
       "main_starting_xi_battle": {
         "status": "CLOSE",
-        "margin": 0.0636,
+        "margin": 0.0635,
         "starter_side": [
           {
             "element": 15,
@@ -516,9 +516,9 @@
         {
           "rank": 1,
           "formation": "4-4-2",
-          "selection_score": 43.3462,
-          "mean": 48.897,
-          "std": 11.006,
+          "selection_score": 43.2236,
+          "mean": 48.768,
+          "std": 10.988,
           "element_ids": [
             8,
             15,
@@ -536,9 +536,9 @@
         {
           "rank": 2,
           "formation": "5-3-2",
-          "selection_score": 43.2826,
-          "mean": 48.919,
-          "std": 11.011,
+          "selection_score": 43.1601,
+          "mean": 48.79,
+          "std": 10.993,
           "element_ids": [
             8,
             40,
@@ -556,9 +556,9 @@
         {
           "rank": 3,
           "formation": "4-3-3",
-          "selection_score": 43.2269,
-          "mean": 48.72,
-          "std": 10.969,
+          "selection_score": 43.1044,
+          "mean": 48.591,
+          "std": 10.951,
           "element_ids": [
             8,
             40,
@@ -576,9 +576,9 @@
         {
           "rank": 4,
           "formation": "4-4-2",
-          "selection_score": 43.1798,
-          "mean": 48.726,
-          "std": 10.989,
+          "selection_score": 43.0572,
+          "mean": 48.597,
+          "std": 10.971,
           "element_ids": [
             8,
             40,
@@ -596,9 +596,9 @@
         {
           "rank": 5,
           "formation": "4-4-2",
-          "selection_score": 43.1765,
-          "mean": 48.81,
-          "std": 10.999,
+          "selection_score": 43.054,
+          "mean": 48.681,
+          "std": 10.981,
           "element_ids": [
             8,
             15,
@@ -616,9 +616,9 @@
         {
           "rank": 6,
           "formation": "5-3-2",
-          "selection_score": 43.1505,
-          "mean": 48.686,
-          "std": 10.95,
+          "selection_score": 43.028,
+          "mean": 48.557,
+          "std": 10.932,
           "element_ids": [
             8,
             40,
@@ -634,8 +634,8 @@
           ]
         }
       ],
-      "expected_starting_xi_mean": 48.897,
-      "selection_score": 43.346,
+      "expected_starting_xi_mean": 48.768,
+      "selection_score": 43.224,
       "authority": "v5_decision_lineup_optimizer",
       "performance": {
         "projection_lookup": "indexed_o1",

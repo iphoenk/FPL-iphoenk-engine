@@ -20,6 +20,7 @@ from .normalizer import (
 )
 from .polling import attach_poll_result, carry_forward_skipped, deadline_window_active, poll_decision
 from .registry import ZERO_AUTHORITY_KEYS, dependency_layers, load_registry, resolved_registry_snapshot, source_map
+from .source_native import build_source_native_datasets
 from .store import (
     EVIDENCE,
     HEALTH,
@@ -30,6 +31,7 @@ from .store import (
     write_json,
     write_source,
 )
+from .verified_bridges import enrich_shared_identity_bridges
 
 
 def _zero_authority_fields(policy: dict[str, Any] | None = None) -> dict[str, str]:
@@ -70,6 +72,24 @@ def _dependency_payloads(source: dict[str, Any], results: dict[str, dict[str, An
         for dependency in source.get("depends_on") or []
         if str(dependency) in results
     }
+
+
+def _publish_source_native_datasets(
+    results: dict[str, dict[str, Any]], identity_map: dict[str, Any]
+) -> list[str]:
+    datasets = build_source_native_datasets(results, identity_map)
+    target = NORMALIZED / "sources"
+    expected = {f"{source_id}.json" for source_id in datasets}
+    if target.exists():
+        for path in target.glob("*.json"):
+            if path.name not in expected:
+                path.unlink()
+    artifacts: list[str] = []
+    for source_id, dataset in sorted(datasets.items()):
+        path = target / f"{source_id}.json"
+        write_json(path, dataset)
+        artifacts.append(f"data/v6/normalized/sources/{source_id}.json")
+    return artifacts
 
 
 def run() -> dict[str, Any]:
@@ -169,7 +189,11 @@ def run() -> dict[str, Any]:
     )
     scopes = source_scope_map(config)
     identity_map = apply_entity_scope_identity_semantics(
-        build_player_identity_map(official, results, source_ids),
+        enrich_shared_identity_bridges(
+            build_player_identity_map(official, results, source_ids),
+            official,
+            results,
+        ),
         scopes,
     )
 
@@ -180,6 +204,7 @@ def run() -> dict[str, Any]:
     )
     write_json(NORMALIZED / "canonical_teams.json", build_canonical_teams(official))
     write_json(NORMALIZED / "canonical_fixtures.json", build_canonical_fixtures(official))
+    normalized_source_artifacts = _publish_source_native_datasets(results, identity_map)
     write_json(EVIDENCE / "lineage.json", build_lineage_catalog(config))
     write_json(EVIDENCE / "latest_index.json", build_evidence_index(results))
     write_json(EVIDENCE / "resolved_registry.json", resolved_registry_snapshot(config))
@@ -209,7 +234,7 @@ def run() -> dict[str, Any]:
     due_source_count = sum(bool(decision["due"]) for decision in decisions.values())
 
     manifest = {
-        "schema_version": 4,
+        "schema_version": 5,
         "engine": config["engine"],
         "season": config["season"],
         "generated_at": utc_now(),
@@ -250,6 +275,13 @@ def run() -> dict[str, Any]:
             "entity_bridges": identity_map.get("entity_bridges") or {},
             "source_entity_identity": identity_map.get("source_entity_identity") or {},
         },
+        "source_native_normalization": {
+            "normalization_version": "V6_SOURCE_NATIVE_1",
+            "source_specific_parsers": True,
+            "raw_source_payloads_preserved": True,
+            "cross_source_synthesis": False,
+            "artifacts": normalized_source_artifacts,
+        },
         "paths": {
             "current_sources": "data/v6/current/",
             "health": "data/v6/health/source_health.json",
@@ -279,6 +311,8 @@ def run() -> dict[str, Any]:
             "identity_mapping_is_deterministic_only": True,
             "identity_health_is_entity_scope_aware": True,
             "fuzzy_identity_matching": False,
+            "source_specific_normalization_is_data_only": True,
+            "normalized_model_signals_retain_upstream_authorship": True,
             "daily_budget_timezone": "Asia/Jakarta",
             "weather_context_is_downstream_report_time_only": True,
             "weather_direct_xpts_multiplier": False,

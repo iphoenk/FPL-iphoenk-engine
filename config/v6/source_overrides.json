@@ -196,7 +196,7 @@
       ]
     },
     "understat": {
-      "acquisition_kind": "html_scrape",
+      "acquisition_kind": "generic_http",
       "poll_interval_minutes": 60,
       "content_hash_dedup": true,
       "requests": [
@@ -206,6 +206,23 @@
           "expect": "text",
           "validation": {
             "required_text_all": ["2026/2027", "xG"]
+          }
+        },
+        {
+          "id": "players_api",
+          "url": "https://understat.com/main/getPlayersStats/",
+          "method": "POST",
+          "form": {
+            "league": "EPL",
+            "season": "2026"
+          },
+          "headers": {
+            "Referer": "https://understat.com/league/EPL/2026",
+            "X-Requested-With": "XMLHttpRequest"
+          },
+          "expect": "json",
+          "validation": {
+            "required_json_paths": ["players"]
           }
         }
       ]

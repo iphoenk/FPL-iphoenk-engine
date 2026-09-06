@@ -64,6 +64,9 @@ jobs:
       - name: Prove V6 architecture independence
         run: python -m src.runtime_v6.architecture_independence_validate
 
+      - name: Enforce V6 zero-downstream-authority schema
+        run: python -m src.runtime_v6.authority_contract
+
       - name: Validate V6 contracts without network acquisition
         run: >-
           python -m pytest -q

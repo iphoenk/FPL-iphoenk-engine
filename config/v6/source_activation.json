@@ -22,13 +22,11 @@
   },
   "constraints": {
     "solio_analytics": "FREE_PUBLIC_NO_AUTH",
-    "open_meteo_weather": "FREE_PUBLIC_NO_AUTH_MANDATORY_WEATHER_CONTEXT",
     "check_the_chance": "FREE_PUBLIC_ONLY",
     "fantasy_football_pundit": "FREE_PUBLIC_ONLY"
   },
   "tiers": {
     "solio_analytics": "core",
-    "open_meteo_weather": "core",
     "check_the_chance": "pilot",
     "fantasy_football_pundit": "pilot"
   }

@@ -16,6 +16,7 @@
     "FIXTURE_STRATEGY_EXPERT",
     "PUNDIT_CONSENSUS",
     "COMMUNITY_SIGNAL",
+    "SECONDARY_AVAILABILITY",
     "VERIFIED_NEWS"
   ],
   "allowed_stances": [
@@ -39,6 +40,7 @@
     "facts_require_verified_source_or_independent_crosscheck": true,
     "pundit_votes_are_advisory": true,
     "community_signal_does_not_become_fact_by_vote_count": true,
+    "secondary_availability_is_advisory_and_requires_crosscheck": true,
     "fixture_expert_signals_do_not_vote_in_player_consensus": true,
     "onefpl_signals_are_model_challenger_context": true,
     "signals_without_source_url_are_rejected": true

@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .authority_contract import AuthorityContractError, validate_artifact_descriptor
+from .registry import ZERO_AUTHORITY_KEYS
 from .store import HEALTH, OUT, read_json, write_json
 
 _REQUIRED_PATH_KEYS = {
@@ -19,6 +21,18 @@ _REQUIRED_PATH_KEYS = {
     "player_identity_map",
     "runtime_control",
     "publish_integrity",
+}
+
+_RUNTIME_FORBIDDEN_AUTHORITY_KEYS = {
+    *ZERO_AUTHORITY_KEYS,
+    "vice_captain_authority",
+    "xpts_authority",
+    "xmins_authority",
+    "p_start_authority",
+    "bayesian_authority",
+    "monte_carlo_authority",
+    "mini_league_analytics_authority",
+    "rank_probability_authority",
 }
 
 
@@ -38,6 +52,36 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _semantic_contract_errors(value: Any, *, location: str) -> list[str]:
+    """Fail closed on forbidden V6 semantics anywhere in a published JSON artifact."""
+    errors: list[str] = []
+    if isinstance(value, dict):
+        if "semantic_class" in value or "canonical" in value:
+            try:
+                validate_artifact_descriptor(value)
+            except AuthorityContractError as exc:
+                errors.append(f"semantic_authority_violation:{location}:{exc}")
+
+        for key in _RUNTIME_FORBIDDEN_AUTHORITY_KEYS:
+            if key not in value:
+                continue
+            authority = value.get(key)
+            if authority not in {None, False, "", "NONE"}:
+                errors.append(
+                    f"downstream_authority_claim:{location}:{key}={authority}"
+                )
+
+        for key, nested in value.items():
+            child_location = f"{location}.{key}" if location else str(key)
+            errors.extend(_semantic_contract_errors(nested, location=child_location))
+    elif isinstance(value, list):
+        for index, nested in enumerate(value):
+            errors.extend(
+                _semantic_contract_errors(nested, location=f"{location}[{index}]")
+            )
+    return errors
+
+
 def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
     manifest_path = root / "manifest.json"
     manifest = read_json(manifest_path) or {}
@@ -45,11 +89,12 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
     if not manifest:
         errors.append("manifest_missing_or_invalid")
         return {
-            "schema_version": 1,
+            "schema_version": 2,
             "status": "FAIL",
             "errors": errors,
             "source_count": 0,
             "checked_file_count": 0,
+            "semantic_checked_json_count": 0,
             "tree_sha256": None,
         }
 
@@ -129,6 +174,7 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
         and not path.name.endswith(".tmp")
     )
     aggregate = hashlib.sha256()
+    semantic_checked_json_count = 0
     for path in files:
         relative = path.relative_to(root).as_posix()
         aggregate.update(relative.encode("utf-8"))
@@ -136,15 +182,26 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
         aggregate.update(_sha256_file(path).encode("ascii"))
         aggregate.update(b"\n")
 
+        if path.suffix.lower() == ".json":
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                errors.append(f"published_json_invalid:{relative}")
+                continue
+            semantic_checked_json_count += 1
+            errors.extend(_semantic_contract_errors(payload, location=relative))
+
     resolved_registry_exact = bool(resolved) and [
         str(source.get("id")) for source in resolved.get("sources") or []
     ] == source_ids
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "status": "PASS" if not errors else "FAIL",
         "errors": errors,
         "source_count": len(source_ids),
         "checked_file_count": len(files),
+        "semantic_checked_json_count": semantic_checked_json_count,
+        "semantic_authority_enforced": True,
         "tree_sha256": aggregate.hexdigest(),
         "current_source_files_exact": actual_current == expected_current,
         "resolved_registry_exact": resolved_registry_exact,

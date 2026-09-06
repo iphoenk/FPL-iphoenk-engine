@@ -66,6 +66,10 @@ def _auth_observability(auth_state: Any, *, personal_requested: bool) -> tuple[s
     return state, action != "NONE", action
 
 
+def _is_auth_control_failure(value: Any) -> bool:
+    return str(value or "").upper().startswith("AUTH_")
+
+
 class PrefetchService:
     def __init__(
         self,
@@ -99,15 +103,30 @@ class PrefetchService:
             auth_state,
             personal_requested=bool(manifest.get("personal_requested")),
         )
+        strict_status = (
+            "GREEN"
+            if manifest.get("complete") and manifest.get("fresh_for_target_report")
+            else ("AMBER" if manifest.get("source_failures") or not manifest.get("complete") else "STALE")
+        )
+        public_complete = bool(manifest.get("public_core_complete", manifest.get("complete")))
+        public_status = (
+            "GREEN"
+            if public_complete and manifest.get("fresh_for_target_report")
+            else ("AMBER" if not public_complete else "STALE")
+        )
         health = {
-            "schema_version": 1,
+            "schema_version": 2,
             "generated_at": manifest["generated_at"],
-            "prefetch_status": (
-                "GREEN"
-                if manifest.get("complete") and manifest.get("fresh_for_target_report")
-                else ("AMBER" if manifest.get("source_failures") or not manifest.get("complete") else "STALE")
+            "prefetch_status": strict_status,
+            "strict_prefetch_status": strict_status,
+            "public_core_status": public_status,
+            "public_core_complete": public_complete,
+            "authenticated_personal_required_for_public_green": bool(
+                manifest.get("authenticated_personal_required_for_public_green")
             ),
+            "authenticated_personal_deferred": bool(manifest.get("authenticated_personal_deferred")),
             "personal_status": manifest.get("personal_status"),
+            "public_personal_status": manifest.get("public_personal_status"),
             "auth_state": auth_state,
             "auth_action_required": auth_action_required,
             "auth_action": auth_action,
@@ -140,7 +159,7 @@ class PrefetchService:
         personal_reference = read_json(self.output_root / "personal/current_team.json")
         season = str(self.config.get("season") or "UNKNOWN")
         manifest = {
-            "schema_version": 1,
+            "schema_version": 2,
             "request_id": str(uuid.uuid4()),
             "requested_at": iso(self.now),
             "requested_by": requested_by,
@@ -156,9 +175,12 @@ class PrefetchService:
             "fresh_for_target_report": fresh,
             "personal_requested": False,
             "personal_status": "NOT_REFRESHED_FOR_05_30_PRICE_CHECKPOINT",
+            "public_personal_status": "NOT_REQUESTED",
             "auth_state": "NOT_REQUESTED",
             "auth_action_required": False,
             "auth_action": "NONE",
+            "authenticated_personal_required_for_public_green": False,
+            "authenticated_personal_deferred": False,
             "personal_reference_generated_at": (personal_reference or {}).get("generated_at"),
             "mini_league_requested": False,
             "mini_league_status": "NOT_REQUESTED",
@@ -182,6 +204,7 @@ class PrefetchService:
             "live_checked_at": None,
             "source_failures": [],
             "control_failures": [],
+            "public_control_failures": [],
             "telemetry": {
                 "request_count": 0,
                 "failed_requests": 0,
@@ -192,6 +215,8 @@ class PrefetchService:
             },
             "artifacts": [],
             "complete": True,
+            "strict_complete": True,
+            "public_core_complete": True,
             "idempotency": {"reused": False},
             "governance": {
                 "data_only": True,
@@ -201,6 +226,7 @@ class PrefetchService:
                 "price_0530_personal_refresh_prohibited": True,
                 "core_source_freshness_separate": True,
                 "report_prefetch_freshness_separate": True,
+                "public_core_acceptance_is_independent_of_deferred_authenticated_personal_state": True,
                 "independent_prefetch_cron": False,
             },
         }
@@ -329,6 +355,7 @@ class PrefetchService:
                 )
 
         personal_status = "NOT_REQUESTED"
+        public_personal_status = "NOT_REQUESTED"
         personal_auth_state = "NOT_REQUESTED"
         submitted: dict[str, Any] = {}
         if scope.personal:
@@ -414,6 +441,13 @@ class PrefetchService:
                 "AVAILABLE"
                 if submitted["status"] == "AVAILABLE" and auth_state == "AVAILABLE"
                 else ("DEGRADED" if submitted["status"] == "AVAILABLE" else "UNAVAILABLE")
+            )
+            public_personal_status = (
+                "AVAILABLE"
+                if submitted["status"] == "AVAILABLE"
+                and bootstrap_result is not None
+                and bootstrap_result.get("status") == "LIVE"
+                else "UNAVAILABLE"
             )
 
         live_status = "NOT_REQUESTED"
@@ -604,12 +638,38 @@ class PrefetchService:
             and (not scope.mini_league or mini_status == "AVAILABLE")
             and (not scope.live or live_status == "AVAILABLE")
         )
+        auth_required_for_public = bool(
+            self.config.get("authenticated_personal_required_for_public_green", False)
+        )
+        public_control_failures = [
+            failure
+            for failure in control_failures
+            if auth_required_for_public or not _is_auth_control_failure(failure)
+        ]
+        public_core_complete = (
+            not public_control_failures
+            and (
+                not scope.personal
+                or (
+                    personal_status == "AVAILABLE"
+                    if auth_required_for_public
+                    else public_personal_status == "AVAILABLE"
+                )
+            )
+            and (not scope.mini_league or mini_status == "AVAILABLE")
+            and (not scope.live or live_status == "AVAILABLE")
+        )
         personal_auth_state, auth_action_required, auth_action = _auth_observability(
             personal_auth_state,
             personal_requested=scope.personal,
         )
+        auth_deferred = bool(
+            scope.personal
+            and not auth_required_for_public
+            and personal_auth_state != "AUTH_AVAILABLE"
+        )
         manifest = {
-            "schema_version": 1,
+            "schema_version": 2,
             "request_id": str(uuid.uuid4()),
             "requested_at": generated_at,
             "requested_by": requested_by,
@@ -625,9 +685,12 @@ class PrefetchService:
             "fresh_for_target_report": fresh,
             "personal_requested": scope.personal,
             "personal_status": personal_status,
+            "public_personal_status": public_personal_status,
             "auth_state": personal_auth_state,
             "auth_action_required": auth_action_required,
             "auth_action": auth_action,
+            "authenticated_personal_required_for_public_green": auth_required_for_public,
+            "authenticated_personal_deferred": auth_deferred,
             "mini_league_requested": scope.mini_league,
             "mini_league_status": mini_status,
             "live_requested": scope.live,
@@ -657,6 +720,7 @@ class PrefetchService:
             "live_checked_at": live_checked_at,
             "source_failures": source_failures,
             "control_failures": control_failures,
+            "public_control_failures": public_control_failures,
             "telemetry": {
                 **telemetry,
                 "cache_hits": cache_hits,
@@ -669,6 +733,8 @@ class PrefetchService:
             },
             "artifacts": artifacts,
             "complete": complete,
+            "strict_complete": complete,
+            "public_core_complete": public_core_complete,
             "idempotency": {"reused": False},
             "governance": {
                 "data_only": True,
@@ -678,6 +744,8 @@ class PrefetchService:
                 "independence_group": "official_fpl",
                 "core_source_freshness_separate": True,
                 "report_prefetch_freshness_separate": True,
+                "public_official_fpl_facts_remain_available_without_authenticated_my_team": True,
+                "authenticated_personal_state_is_separate_from_public_core_acceptance": True,
                 "normal_hourly_personal_refresh": False,
                 "independent_prefetch_cron": False,
             },
@@ -721,14 +789,26 @@ def main() -> int:
     except PrefetchContractError as exc:
         print(json.dumps({"status": "REJECTED", "error": safe_error(exc)}))
         return 2
+    public_complete = bool(manifest.get("public_core_complete", manifest.get("complete")))
+    if manifest.get("complete"):
+        status = "COMPLETE"
+    elif public_complete and manifest.get("authenticated_personal_deferred"):
+        status = "PUBLIC_COMPLETE_AUTH_DEFERRED"
+    elif public_complete:
+        status = "PUBLIC_COMPLETE"
+    else:
+        status = "PARTIAL"
     print(
         json.dumps(
             {
-                "status": "COMPLETE" if manifest.get("complete") else "PARTIAL",
+                "status": status,
                 "request_id": manifest.get("request_id"),
                 "report_kind": manifest.get("report_kind"),
                 "gw": manifest.get("gw"),
+                "strict_complete": manifest.get("strict_complete", manifest.get("complete")),
+                "public_core_complete": public_complete,
                 "personal_status": manifest.get("personal_status"),
+                "public_personal_status": manifest.get("public_personal_status"),
                 "auth_state": manifest.get("auth_state"),
                 "auth_action_required": manifest.get("auth_action_required"),
                 "auth_action": manifest.get("auth_action"),
@@ -741,7 +821,7 @@ def main() -> int:
             indent=2,
         )
     )
-    return 0 if manifest.get("complete") else 3
+    return 0 if public_complete else 3
 
 
 if __name__ == "__main__":

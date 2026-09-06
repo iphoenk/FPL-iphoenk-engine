@@ -193,6 +193,26 @@ def poll_decision(
     )
 
 
+def _skip_action(reason: str) -> str:
+    if reason == "ALREADY_POLLED_THIS_SLOT":
+        return "SKIPPED_ALREADY_POLLED"
+    return "SKIPPED_NOT_DUE"
+
+
+def _acquisition_action(payload: dict[str, Any]) -> str:
+    attempts = list(payload.get("attempts") or [])
+    if attempts and all(row.get("status") == "NOT_MODIFIED" for row in attempts):
+        return "REVALIDATED"
+    if any(row.get("status") == "AVAILABLE" for row in attempts):
+        return "FETCHED"
+    data_rows = [row for row in (payload.get("data") or {}).values() if isinstance(row, dict)]
+    if data_rows and any(row.get("data_origin") == "LAST_GOOD_CACHE" for row in data_rows):
+        return "LAST_GOOD_CACHE"
+    if data_rows:
+        return "REUSED"
+    return "FETCHED"
+
+
 def carry_forward_skipped(
     source: dict[str, Any],
     previous: dict[str, Any] | None,
@@ -213,7 +233,7 @@ def carry_forward_skipped(
 
     payload = {
         **prior,
-        "schema_version": 3,
+        "schema_version": 4,
         "source_id": source["id"],
         "source_name": source["name"],
         "category": source["category"],
@@ -225,10 +245,12 @@ def carry_forward_skipped(
         "effective_state": effective_state,
         "changed": False,
         "duration_ms": 0.0,
+        "current_run_action": _skip_action(reason),
         "polling": {
             **dict(prior.get("polling") or {}),
             **{key: value for key, value in decision.items() if key != "budget"},
             "skipped": True,
+            "current_run_action": _skip_action(reason),
             "last_polled_at": ((prior.get("polling") or {}).get("last_polled_at")) or prior.get("checked_at"),
         },
         "budget": decision["budget"],
@@ -241,6 +263,7 @@ def carry_forward_skipped(
             "single_logical_acquisition_per_scheduler_slot": True,
             "budget_guard": decision["budget"].get("limit") is not None,
             "verification_gate": source.get("verification_required") is True,
+            "cache_action_vocabulary_standardized": True,
         }
     )
     payload["governance"] = governance
@@ -253,6 +276,7 @@ def attach_poll_result(
     previous: dict[str, Any] | None,
     decision: dict[str, Any],
 ) -> dict[str, Any]:
+    del previous
     out = dict(payload)
     attempts = list(out.get("attempts") or [])
     provider_calls = sum(max(0, int(row.get("attempt_count") or 0)) for row in attempts)
@@ -260,10 +284,14 @@ def attach_poll_result(
     if budget.get("limit") is not None:
         budget["requests_used"] = int(budget.get("requests_used") or 0) + provider_calls
         budget["remaining"] = max(0, int(budget["limit"]) - int(budget["requests_used"]))
+    action = _acquisition_action(out)
+    out["schema_version"] = max(4, int(out.get("schema_version") or 0))
+    out["current_run_action"] = action
     out["budget"] = budget
     out["polling"] = {
         **{key: value for key, value in decision.items() if key != "budget"},
         "skipped": False,
+        "current_run_action": action,
         "last_polled_at": out.get("checked_at") or utc_now(),
         "provider_calls_this_poll": provider_calls,
     }
@@ -274,6 +302,7 @@ def attach_poll_result(
             "single_logical_acquisition_per_scheduler_slot": True,
             "budget_guard": budget.get("limit") is not None,
             "verification_gate": source.get("verification_required") is True,
+            "cache_action_vocabulary_standardized": True,
         }
     )
     out["governance"] = governance

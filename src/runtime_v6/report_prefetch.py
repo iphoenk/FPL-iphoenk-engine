@@ -12,7 +12,6 @@ from typing import Any
 from .league_prefetch import (
     acquire_manager_picks,
     add_manager_live_totals,
-    exposure_artifact,
     fetch_all_standings,
     live_state,
     standings_artifact,
@@ -48,6 +47,27 @@ from .prefetch_contract import (
 from .security import safe_error
 
 
+AUTH_AVAILABLE = "AUTH_AVAILABLE"
+AUTH_EXPIRED = "AUTH_EXPIRED"
+AUTH_INVALID = "AUTH_INVALID"
+AUTH_ENTRY_MISMATCH = "AUTH_ENTRY_MISMATCH"
+AUTH_UNAVAILABLE = "AUTH_UNAVAILABLE"
+
+
+def _auth_failure_state(result: dict[str, Any] | None) -> str:
+    """Map an authenticated endpoint result to a factual credential state."""
+    row = result or {}
+    status = str(row.get("status") or "")
+    http_status = row.get("http_status")
+    if status == "AUTH_REJECTED":
+        return AUTH_EXPIRED if http_status == 401 else AUTH_INVALID
+    if status == "REDIRECT_REJECTED":
+        return AUTH_INVALID
+    if status == "AUTH_UNAVAILABLE":
+        return AUTH_UNAVAILABLE
+    return AUTH_UNAVAILABLE
+
+
 class PrefetchService:
     def __init__(
         self,
@@ -71,10 +91,24 @@ class PrefetchService:
             )
         return self.client
 
+    def _purge_legacy_exposure_artifacts(self) -> list[str]:
+        """Remove retired mini-league analytics tombstones from the V6 publish tree."""
+        root = self.output_root / "mini_leagues"
+        if not root.exists():
+            return []
+        removed: list[str] = []
+        for path in sorted(root.glob("*/gw_*_exposure.json")):
+            if not path.is_file():
+                continue
+            relative = path.relative_to(self.output_root).as_posix()
+            path.unlink()
+            removed.append(relative)
+        return removed
+
     def _publish_health(self, manifest: dict[str, Any]) -> None:
         telemetry = manifest.get("telemetry") or {}
         health = {
-            "schema_version": 1,
+            "schema_version": 2,
             "generated_at": manifest["generated_at"],
             "prefetch_status": (
                 "GREEN"
@@ -82,6 +116,7 @@ class PrefetchService:
                 else ("AMBER" if manifest.get("source_failures") or not manifest.get("complete") else "STALE")
             ),
             "personal_status": manifest.get("personal_status"),
+            "auth_state": manifest.get("auth_state"),
             "league_status": manifest.get("mini_league_status"),
             "live_status": manifest.get("live_status"),
             "expected_managers": manifest.get("expected_manager_count"),
@@ -91,6 +126,7 @@ class PrefetchService:
             "request_count": telemetry.get("request_count", 0),
             "failed_requests": telemetry.get("failed_requests", 0),
             "duration_ms": telemetry.get("duration_ms", 0),
+            "legacy_exposure_artifacts_removed": telemetry.get("legacy_exposure_artifacts_removed", 0),
             "fresh_for_target_report": manifest.get("fresh_for_target_report"),
             "idempotent_reuse": bool((manifest.get("idempotency") or {}).get("reused")),
         }
@@ -105,13 +141,14 @@ class PrefetchService:
         requested_by: str,
         requested_for_report: str,
         started: float,
+        legacy_exposure_artifacts_removed: list[str],
     ) -> dict[str, Any]:
         max_age = int(self.config["prefetch_max_age_minutes"])
         age, fresh = freshness(self.now, slot, max_age)
         personal_reference = read_json(self.output_root / "personal/current_team.json")
         season = str(self.config.get("season") or "UNKNOWN")
         manifest = {
-            "schema_version": 1,
+            "schema_version": 2,
             "request_id": str(uuid.uuid4()),
             "requested_at": iso(self.now),
             "requested_by": requested_by,
@@ -127,6 +164,7 @@ class PrefetchService:
             "fresh_for_target_report": fresh,
             "personal_requested": False,
             "personal_status": "NOT_REFRESHED_FOR_05_30_PRICE_CHECKPOINT",
+            "auth_state": None,
             "personal_reference_generated_at": (personal_reference or {}).get("generated_at"),
             "mini_league_requested": False,
             "mini_league_status": "NOT_REQUESTED",
@@ -150,11 +188,13 @@ class PrefetchService:
             "live_checked_at": None,
             "source_failures": [],
             "control_failures": [],
+            "legacy_exposure_artifacts_removed": legacy_exposure_artifacts_removed,
             "telemetry": {
                 "request_count": 0,
                 "failed_requests": 0,
                 "cache_hits": 0,
                 "cache_misses": 0,
+                "legacy_exposure_artifacts_removed": len(legacy_exposure_artifacts_removed),
                 "duration_ms": round((time.perf_counter() - started) * 1000),
                 "maximum_concurrency_used": 0,
             },
@@ -167,6 +207,8 @@ class PrefetchService:
                 "prediction_authority": "NONE",
                 "optimizer_authority": "NONE",
                 "price_0530_personal_refresh_prohibited": True,
+                "legacy_exposure_artifact_retired": True,
+                "mini_league_analytics_authority": "NONE",
                 "core_source_freshness_separate": True,
                 "report_prefetch_freshness_separate": True,
                 "independent_prefetch_cron": False,
@@ -201,6 +243,7 @@ class PrefetchService:
         entry_id = int(self.config["entry_id"])
         max_age = int(self.config["prefetch_max_age_minutes"])
         slot_identity = f"{season}|{report_kind}|{slot.isoformat()}"
+        legacy_exposure_artifacts_removed = self._purge_legacy_exposure_artifacts()
         prior = read_json(self.output_root / "report_prefetch/latest.json")
         if not force and reusable(
             prior,
@@ -210,6 +253,12 @@ class PrefetchService:
             maximum_age_minutes=max_age,
         ):
             result = dict(prior)
+            result["artifacts"] = [
+                item
+                for item in result.get("artifacts") or []
+                if not str((item or {}).get("path") or "").endswith("_exposure.json")
+            ]
+            result["legacy_exposure_artifacts_removed"] = legacy_exposure_artifacts_removed
             result["idempotency"] = {
                 "reused": True,
                 "reason": "AUTHORITATIVE_COMPLETE_SLOT_ALREADY_EXISTS",
@@ -218,8 +267,11 @@ class PrefetchService:
             result["reuse_telemetry"] = {
                 "request_count": 0,
                 "failed_requests": 0,
+                "legacy_exposure_artifacts_removed": len(legacy_exposure_artifacts_removed),
                 "duration_ms": round((time.perf_counter() - started) * 1000),
             }
+            result.setdefault("governance", {})["legacy_exposure_artifact_retired"] = True
+            result["governance"]["mini_league_analytics_authority"] = "NONE"
             write_json(self.output_root / "report_prefetch/latest.json", result)
             self._publish_health(result)
             return result
@@ -233,6 +285,7 @@ class PrefetchService:
                 requested_by=requested_by,
                 requested_for_report=requested_for_report,
                 started=started,
+                legacy_exposure_artifacts_removed=legacy_exposure_artifacts_removed,
             )
 
         generated_at = iso(self.now)
@@ -297,6 +350,7 @@ class PrefetchService:
                 )
 
         personal_status = "NOT_REQUESTED"
+        auth_state: str | None = None
         submitted: dict[str, Any] = {}
         if scope.personal:
             picks_result = client.submitted_picks(entry_id, gw) if gw is not None else None
@@ -314,15 +368,17 @@ class PrefetchService:
                     }
                 )
 
-            auth_state = "AUTH_UNAVAILABLE"
+            auth_state = AUTH_UNAVAILABLE
             auth_lineages = []
             my_team_payload = None
             if getattr(client, "auth_configuration_state", "UNAVAILABLE") == "INVALID":
+                auth_state = AUTH_INVALID
                 source_failures.append(
                     {
                         "domain": "official_fpl_personal",
                         "endpoint_class": "authentication",
-                        "status": "AUTH_CONFIGURATION_INVALID",
+                        "status": AUTH_INVALID,
+                        "reason": "AUTH_CONFIGURATION_INVALID",
                     }
                 )
             elif getattr(client, "auth_available", False):
@@ -334,30 +390,34 @@ class PrefetchService:
                         team = client.my_team(entry_id)
                         auth_lineages.append(lineage(team, entry_id=entry_id))
                         if team.get("status") == "LIVE":
-                            auth_state = "AVAILABLE"
+                            auth_state = AUTH_AVAILABLE
                             my_team_payload = team.get("payload") or {}
                         else:
-                            auth_state = "DEGRADED"
+                            auth_state = _auth_failure_state(team)
                             source_failures.append(
                                 {
                                     "domain": "official_fpl_personal",
                                     "endpoint_class": "my_team",
-                                    "status": team.get("status"),
+                                    "status": auth_state,
+                                    "upstream_status": team.get("status"),
+                                    "http_status": team.get("http_status"),
                                 }
                             )
                     elif verified is None:
-                        auth_state = "AUTH_IDENTITY_UNVERIFIED"
+                        auth_state = AUTH_INVALID
                         control_failures.append("AUTH_IDENTITY_UNVERIFIED")
                     else:
-                        auth_state = "AUTH_ENTRY_MISMATCH"
-                        control_failures.append("AUTH_ENTRY_MISMATCH")
+                        auth_state = AUTH_ENTRY_MISMATCH
+                        control_failures.append(AUTH_ENTRY_MISMATCH)
                 else:
-                    auth_state = "DEGRADED"
+                    auth_state = _auth_failure_state(me)
                     source_failures.append(
                         {
                             "domain": "official_fpl_personal",
                             "endpoint_class": "me",
-                            "status": me.get("status"),
+                            "status": auth_state,
+                            "upstream_status": me.get("status"),
+                            "http_status": me.get("http_status"),
                         }
                     )
 
@@ -378,7 +438,7 @@ class PrefetchService:
             artifacts.append(artifact_meta(self.output_root, "personal/current_team.json"))
             personal_status = (
                 "AVAILABLE"
-                if submitted["status"] == "AVAILABLE" and auth_state == "AVAILABLE"
+                if submitted["status"] == "AVAILABLE" and auth_state == AUTH_AVAILABLE
                 else ("DEGRADED" if submitted["status"] == "AVAILABLE" else "UNAVAILABLE")
             )
 
@@ -461,7 +521,7 @@ class PrefetchService:
                         )
 
                     manager_ids = [int(row["entry_id"]) for row in state["rows"]]
-                    manager_picks = exposure = None
+                    manager_picks = None
                     metrics = {"cache_hits": 0, "cache_misses": 0, "maximum_concurrency_used": 0}
                     full_picks = bool(priority.get("full_submitted_picks")) and bool(
                         self.config.get("priority_full_picks_enabled", True)
@@ -482,16 +542,6 @@ class PrefetchService:
                         )
                         write_json(self.output_root / picks_relative, manager_picks, secrets=secrets)
                         artifacts.append(artifact_meta(self.output_root, picks_relative))
-                        exposure = exposure_artifact(
-                            manager_picks,
-                            elements,
-                            bootstrap_lineage=lineage(bootstrap_result, gw=gw),
-                            live_points=live_points,
-                            live_lineage=(live_artifact or {}).get("lineage"),
-                        )
-                        exposure_relative = f"mini_leagues/{league_id}/gw_{gw}_exposure.json"
-                        write_json(self.output_root / exposure_relative, exposure, secrets=secrets)
-                        artifacts.append(artifact_meta(self.output_root, exposure_relative))
                         cache_hits += metrics["cache_hits"]
                         cache_misses += metrics["cache_misses"]
                         max_rival_concurrency = max(
@@ -530,7 +580,7 @@ class PrefetchService:
                             "submitted_picks_missing_count": manager_picks.get(
                                 "submitted_picks_missing_count"
                             ) if manager_picks else None,
-                            "coverage_percent": exposure.get("coverage_percent") if exposure else None,
+                            "coverage_percent": manager_picks.get("coverage_percent") if manager_picks else None,
                             "cache_hits": metrics["cache_hits"],
                             "cache_misses": metrics["cache_misses"],
                         }
@@ -571,7 +621,7 @@ class PrefetchService:
             and (not scope.live or live_status == "AVAILABLE")
         )
         manifest = {
-            "schema_version": 1,
+            "schema_version": 2,
             "request_id": str(uuid.uuid4()),
             "requested_at": generated_at,
             "requested_by": requested_by,
@@ -587,6 +637,7 @@ class PrefetchService:
             "fresh_for_target_report": fresh,
             "personal_requested": scope.personal,
             "personal_status": personal_status,
+            "auth_state": auth_state,
             "mini_league_requested": scope.mini_league,
             "mini_league_status": mini_status,
             "live_requested": scope.live,
@@ -616,10 +667,12 @@ class PrefetchService:
             "live_checked_at": live_checked_at,
             "source_failures": source_failures,
             "control_failures": control_failures,
+            "legacy_exposure_artifacts_removed": legacy_exposure_artifacts_removed,
             "telemetry": {
                 **telemetry,
                 "cache_hits": cache_hits,
                 "cache_misses": cache_misses,
+                "legacy_exposure_artifacts_removed": len(legacy_exposure_artifacts_removed),
                 "duration_ms": round((time.perf_counter() - started) * 1000),
                 "maximum_concurrency_used": max(
                     int(telemetry.get("maximum_concurrency_used") or 0),
@@ -634,6 +687,10 @@ class PrefetchService:
                 "decision_authority": "NONE",
                 "prediction_authority": "NONE",
                 "optimizer_authority": "NONE",
+                "mini_league_analytics_authority": "NONE",
+                "legacy_exposure_artifact_retired": True,
+                "auth_state_is_typed": True,
+                "auth_bypass_used": False,
                 "independence_group": "official_fpl",
                 "core_source_freshness_separate": True,
                 "report_prefetch_freshness_separate": True,
@@ -688,6 +745,7 @@ def main() -> int:
                 "report_kind": manifest.get("report_kind"),
                 "gw": manifest.get("gw"),
                 "personal_status": manifest.get("personal_status"),
+                "auth_state": manifest.get("auth_state"),
                 "mini_league_status": manifest.get("mini_league_status"),
                 "live_status": manifest.get("live_status"),
                 "fresh_for_target_report": manifest.get("fresh_for_target_report"),

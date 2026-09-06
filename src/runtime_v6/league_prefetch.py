@@ -230,6 +230,7 @@ def acquire_manager_picks(
             1 for record in entries.values() if record.get("origin") == "IMMUTABLE_GW_CACHE_REUSED"
         ),
     }
+    current_run_action = "REUSED" if hits and not misses else "FETCHED"
     artifact = {
         "schema_version": SCHEMA_VERSION,
         "season": season,
@@ -254,6 +255,7 @@ def acquire_manager_picks(
             "cache_misses": len(misses),
             "previous_manager_set_digest": previous.get("manager_set_digest"),
             "manager_set_changed": bool(previous) and previous.get("manager_set_digest") != manager_set_digest,
+            "current_run_action": current_run_action,
         },
         "lineage": {
             "authority": "OFFICIAL_FPL",
@@ -280,6 +282,11 @@ def acquire_manager_picks(
             "normalization_version": NORMALIZATION_VERSION,
         },
         "authority": "OFFICIAL_FPL",
+        "governance": {
+            "data_only": True,
+            "mini_league_analytics_authority": "NONE",
+            "submitted_picks_are_raw_manager_facts": True,
+        },
         "normalization_version": NORMALIZATION_VERSION,
     }
     return artifact, {
@@ -328,79 +335,6 @@ def live_state(result: dict[str, Any], gw: int) -> tuple[dict[int, int] | None, 
         "elements": elements,
         "lineage": lineage(result, gw=gw),
         "authority": "OFFICIAL_FPL",
-        "normalization_version": NORMALIZATION_VERSION,
-    }
-
-
-def exposure_artifact(
-    manager_picks: dict[str, Any],
-    element_index: dict[int, dict[str, Any]],
-    *,
-    bootstrap_lineage: dict[str, Any] | None,
-    live_points: dict[int, int] | None = None,
-    live_lineage: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Backward-compatible noncanonical tombstone for retired V6 analytics.
-
-    Only integrity/completeness metadata is retained here. V6 does not aggregate
-    player ownership, EO, starter/bench/captain/vice, relative exposure, or
-    manager live-score analytics. Those are downstream Manual FPL duties.
-    """
-    del element_index, live_points
-    entries = manager_picks.get("entries") or {}
-    available_records = [
-        record for record in entries.values()
-        if isinstance(record, dict) and record.get("status") == "AVAILABLE"
-    ]
-    expected = int(manager_picks.get("expected_manager_count") or len(entries) or 0)
-    collected = int(
-        manager_picks.get("submitted_picks_available_count")
-        if manager_picks.get("submitted_picks_available_count") is not None
-        else len(available_records)
-    )
-    missing = int(
-        manager_picks.get("submitted_picks_missing_count")
-        if manager_picks.get("submitted_picks_missing_count") is not None
-        else max(0, expected - collected)
-    )
-    complete = expected > 0 and collected == expected and missing == 0
-    coverage_percent = round(collected * 100 / expected, 4) if expected else 0.0
-    health = "GREEN" if complete else ("AMBER" if collected else "RED")
-    return {
-        "schema_version": SCHEMA_VERSION,
-        "artifact_class": "DEPRECATED_NONCANONICAL_TOMBSTONE",
-        "deprecated": True,
-        "canonical": False,
-        "analytics_removed": True,
-        "replacement_inputs": [
-            "standings.json",
-            "gw_<gw>_manager_picks.json",
-            "live_state.json",
-        ],
-        "season": manager_picks.get("season"),
-        "gw": manager_picks.get("gw"),
-        "league_id": manager_picks.get("league_id"),
-        "generated_at": iso(utc_now()),
-        "expected_manager_count": expected,
-        "collected_manager_count": collected,
-        "submitted_picks_available_count": collected,
-        "submitted_picks_missing_count": missing,
-        "coverage_percent": coverage_percent,
-        "health": health,
-        "complete": complete,
-        "players": [],
-        "lineage": {
-            "submitted_picks": manager_picks.get("lineage"),
-            "bootstrap_static": bootstrap_lineage,
-            "event_live": live_lineage,
-            "normalization_version": NORMALIZATION_VERSION,
-        },
-        "authority": "NONE",
-        "governance": {
-            "data_only": True,
-            "mini_league_analytics_authority": "NONE",
-            "ownership_eo_computation": "DOWNSTREAM_ONLY",
-        },
         "normalization_version": NORMALIZATION_VERSION,
     }
 

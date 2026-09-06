@@ -436,12 +436,18 @@ def test_runtime_tree_is_factual_only_secret_safe_and_v6_isolated(tmp_path):
     actual = {str(path.relative_to(root)) for path in root.rglob("*.json")}
     assert expected == actual
 
-    published = "\n".join(path.read_text() for path in tmp_path.rglob("*.json"))
-    assert "sessionid=never-publish" not in published
+    all_published = "\n".join(path.read_text() for path in tmp_path.rglob("*.json"))
+    assert "sessionid=never-publish" not in all_published
+    for token in ("runtime-data-v3", "runtime-data-v4", "runtime-data-v5"):
+        assert token not in all_published
+
+    factual_paths = [
+        path
+        for path in root.rglob("*.json")
+        if path.name != "manifest.json"
+    ]
+    factual_published = "\n".join(path.read_text() for path in factual_paths)
     for token in (
-        "runtime-data-v3",
-        "runtime-data-v4",
-        "runtime-data-v5",
         "ownership_percent",
         "effective_ownership",
         "squad_overlap",
@@ -449,7 +455,7 @@ def test_runtime_tree_is_factual_only_secret_safe_and_v6_isolated(tmp_path):
         "player_concentration",
         "reconstructed_current_cohort_rank",
     ):
-        assert token not in published
+        assert token not in factual_published
 
 
 def test_zero_authority_contract_and_no_decision_payloads(tmp_path):

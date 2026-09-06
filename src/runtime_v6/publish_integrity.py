@@ -5,6 +5,11 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .authority_contract import (
+    AuthorityContractError,
+    FORBIDDEN_DOWNSTREAM_AUTHORITIES,
+    validate_artifact_descriptor,
+)
 from .store import HEALTH, OUT, read_json, write_json
 
 _REQUIRED_PATH_KEYS = {
@@ -19,6 +24,24 @@ _REQUIRED_PATH_KEYS = {
     "player_identity_map",
     "runtime_control",
     "publish_integrity",
+}
+
+_FORBIDDEN_CANONICAL_MINI_LEAGUE_AGGREGATES = {
+    "ownership_percent",
+    "mini_league_effective_ownership_percent",
+    "managers_owned_count",
+    "starts_count",
+    "bench_count",
+    "captain_count",
+    "vice_count",
+    "manager_multiplier_points",
+    "manager_multiplier_points_semantics",
+    "gap_to_first",
+    "squad_overlap",
+    "xi_overlap",
+    "concentration_hhi",
+    "rank_probability",
+    "rival_leverage",
 }
 
 
@@ -38,6 +61,46 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _walk_keys(value: Any) -> set[str]:
+    keys: set[str] = set()
+    if isinstance(value, dict):
+        for key, child in value.items():
+            keys.add(str(key))
+            keys.update(_walk_keys(child))
+    elif isinstance(value, list):
+        for child in value:
+            keys.update(_walk_keys(child))
+    return keys
+
+
+def _semantic_errors(path: Path, root: Path, payload: dict[str, Any]) -> list[str]:
+    relative = path.relative_to(root).as_posix()
+    errors: list[str] = []
+    try:
+        validate_artifact_descriptor(payload)
+    except AuthorityContractError as exc:
+        errors.append(f"semantic_contract:{relative}:{exc}")
+
+    canonical = payload.get("canonical") is not False
+    governance = dict(payload.get("governance") or {})
+    if canonical:
+        for authority in FORBIDDEN_DOWNSTREAM_AUTHORITIES:
+            candidates = {
+                authority,
+                f"{authority}_authority",
+            }
+            for key in candidates:
+                if key in governance and str(governance.get(key)).upper() != "NONE":
+                    errors.append(f"forbidden_governance_authority:{relative}:{key}")
+        if relative.startswith("mini_leagues/"):
+            forbidden = sorted(_walk_keys(payload) & _FORBIDDEN_CANONICAL_MINI_LEAGUE_AGGREGATES)
+            if forbidden:
+                errors.append(
+                    f"forbidden_canonical_mini_league_analytics:{relative}:{','.join(forbidden)}"
+                )
+    return errors
+
+
 def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
     manifest_path = root / "manifest.json"
     manifest = read_json(manifest_path) or {}
@@ -45,11 +108,12 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
     if not manifest:
         errors.append("manifest_missing_or_invalid")
         return {
-            "schema_version": 1,
+            "schema_version": 2,
             "status": "FAIL",
             "errors": errors,
             "source_count": 0,
             "checked_file_count": 0,
+            "semantic_checked_file_count": 0,
             "tree_sha256": None,
         }
 
@@ -128,6 +192,7 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
         and path != root / "health" / "publish_integrity.json"
         and not path.name.endswith(".tmp")
     )
+    semantic_checked = 0
     aggregate = hashlib.sha256()
     for path in files:
         relative = path.relative_to(root).as_posix()
@@ -135,20 +200,33 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
         aggregate.update(b"\0")
         aggregate.update(_sha256_file(path).encode("ascii"))
         aggregate.update(b"\n")
+        if path.suffix.lower() != ".json":
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            errors.append(f"invalid_json_artifact:{relative}")
+            continue
+        if isinstance(payload, dict):
+            semantic_checked += 1
+            errors.extend(_semantic_errors(path, root, payload))
 
     resolved_registry_exact = bool(resolved) and [
         str(source.get("id")) for source in resolved.get("sources") or []
     ] == source_ids
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "status": "PASS" if not errors else "FAIL",
         "errors": errors,
         "source_count": len(source_ids),
         "checked_file_count": len(files),
+        "semantic_checked_file_count": semantic_checked,
         "tree_sha256": aggregate.hexdigest(),
         "current_source_files_exact": actual_current == expected_current,
         "resolved_registry_exact": resolved_registry_exact,
         "identity_map_consistent": identity_count == canonical_count if identity and canonical_players else False,
+        "semantic_authority_enforced": True,
+        "canonical_mini_league_analytics_forbidden": True,
     }
 
 

@@ -7,6 +7,7 @@ from .entity_scope import entity_scopes_for_source
 from .http_client import utc_now
 
 _DIMENSION_STATES = {"GREEN", "AMBER", "RED", "NOT_APPLICABLE"}
+_READINESS_ORDER = {"GREEN": 0, "NOT_APPLICABLE": 0, "AMBER": 1, "RED": 2}
 
 
 def _parse_dt(value: str | None) -> datetime | None:
@@ -188,6 +189,53 @@ def _current_run_action(payload: dict[str, Any]) -> str:
     return "FETCHED"
 
 
+def _worst_state(states: list[str]) -> str:
+    concrete = [state for state in states if state != "NOT_APPLICABLE"]
+    if not concrete:
+        return "NOT_APPLICABLE"
+    return max(concrete, key=lambda state: _READINESS_ORDER.get(state, 1))
+
+
+def _readiness(dimensions: dict[str, str]) -> dict[str, str]:
+    operational = _worst_state(
+        [
+            dimensions["transport_health"],
+            dimensions["freshness_health"],
+            dimensions["provenance_health"],
+            dimensions["payload_integrity"],
+        ]
+    )
+    data = _worst_state(
+        [
+            dimensions["freshness_health"],
+            dimensions["schema_health"],
+            dimensions["coverage_health"],
+            dimensions["payload_integrity"],
+        ]
+    )
+    return {
+        "operational": operational,
+        "data": data,
+        "join": dimensions["identity_health"],
+    }
+
+
+def _fallback_reason(dimensions: dict[str, str], payload: dict[str, Any]) -> str | None:
+    if dimensions["transport_health"] != "GREEN" or payload.get("availability") == "UNAVAILABLE":
+        return "TRANSPORT_UNAVAILABLE"
+    if dimensions["freshness_health"] != "GREEN":
+        return "STALE"
+    if dimensions["schema_health"] != "GREEN":
+        return "SCHEMA_UNAVAILABLE"
+    if dimensions["coverage_health"] != "GREEN":
+        return "COVERAGE_INCOMPLETE"
+    if dimensions["payload_integrity"] != "GREEN":
+        return "PAYLOAD_INTEGRITY"
+    if dimensions["provenance_health"] != "GREEN":
+        return "PROVENANCE_INCOMPLETE"
+    return None
+
+
 def build_source_health(
     config: dict[str, Any],
     results: dict[str, dict[str, Any]],
@@ -197,6 +245,13 @@ def build_source_health(
     sources = []
     counts = {"GREEN": 0, "AMBER": 0, "RED": 0}
     dimension_counts: dict[str, dict[str, int]] = {}
+    readiness_counts = {
+        "operational": {"GREEN": 0, "AMBER": 0, "RED": 0, "NOT_APPLICABLE": 0},
+        "data": {"GREEN": 0, "AMBER": 0, "RED": 0, "NOT_APPLICABLE": 0},
+        "join": {"GREEN": 0, "AMBER": 0, "RED": 0, "NOT_APPLICABLE": 0},
+    }
+    fallback_sources: list[dict[str, str]] = []
+    critical_readiness: list[str] = []
 
     for source in config.get("sources") or []:
         payload = results[source["id"]]
@@ -231,6 +286,19 @@ def build_source_health(
             )
             bucket[state] = bucket.get(state, 0) + 1
 
+        readiness = _readiness(dimensions)
+        for name, state in readiness.items():
+            readiness_counts[name][state] = readiness_counts[name].get(state, 0) + 1
+        consumer_state = _worst_state([readiness["operational"], readiness["data"]])
+        if bool(source.get("critical")):
+            critical_readiness.append(consumer_state)
+        fallback_reason = _fallback_reason(dimensions, payload)
+        fallback_recommended = fallback_reason is not None
+        if fallback_recommended:
+            fallback_sources.append(
+                {"source_id": str(source["id"]), "reason": str(fallback_reason)}
+            )
+
         sources.append(
             {
                 "source_id": source["id"],
@@ -240,6 +308,10 @@ def build_source_health(
                 "entity_scopes": scopes,
                 "health": health,
                 "dimensions": dimensions,
+                "readiness": readiness,
+                "consumer_readiness": consumer_state,
+                "fallback_recommended": fallback_recommended,
+                "fallback_reason": fallback_reason,
                 "identity_by_scope": identity_by_scope,
                 "join_ready": identity_health in {"GREEN", "NOT_APPLICABLE"},
                 "availability": payload.get("availability"),
@@ -266,21 +338,33 @@ def build_source_health(
         )
 
     overall = "RED" if counts.get("RED", 0) else ("AMBER" if counts.get("AMBER", 0) else "GREEN")
+    public_core_status = _worst_state(critical_readiness) if critical_readiness else "GREEN"
+    consumer_readiness_overall = _worst_state(
+        [str(row["consumer_readiness"]) for row in sources]
+    ) if sources else "GREEN"
     return {
-        "schema_version": 4,
+        "schema_version": 5,
         "generated_at": utc_now(),
         "overall": overall,
+        "public_core_status": public_core_status,
+        "consumer_readiness_overall": consumer_readiness_overall,
+        "fallback_recommended": bool(fallback_sources),
+        "fallback_sources": fallback_sources,
         "counts": counts,
         "dimension_counts": dimension_counts,
+        "readiness_counts": readiness_counts,
         "source_count": len(sources),
         "sources": sources,
         "semantics": {
-            "health": "Backward-compatible operational acquisition health; inspect dimensions for data usability and join readiness.",
+            "health": "Backward-compatible operational acquisition health; inspect readiness and dimensions for consumer usability.",
+            "public_core_status": "Critical public V6 data-plane readiness only; authenticated personal state is a separate report-prefetch concern.",
+            "consumer_readiness_overall": "Worst operational/data readiness across all active public sources; identity is intentionally reported separately.",
+            "fallback_recommended": "Machine-readable hint for FPL Master/report layer to refresh only degraded, stale, or unusable public resources directly. V6 itself never performs downstream fallback.",
             "transport_health": "Whether the current network/source acquisition attempt succeeded independently of cache freshness.",
             "freshness_health": "Age of the effective payload against the source-specific freshness target.",
             "schema_health": "Whether the payload passed structural/validation checks without truncation or degraded successful reads.",
             "coverage_health": "Whether the expected source-native requests/records are materially covered.",
-            "identity_health": "Deterministic cross-source identity readiness only for entity scopes relevant to this source.",
+            "identity_health": "Deterministic cross-source identity readiness only for entity scopes relevant to this source; unmapped identity does not make source-native public facts unavailable.",
             "provenance_health": "Whether source identity, timestamps, and upstream-model authorship lineage are explicit.",
             "payload_integrity": "Whether payload hashes/truncation/model-signal boundaries are internally consistent.",
         },

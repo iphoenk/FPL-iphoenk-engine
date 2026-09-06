@@ -12685,7 +12685,7 @@
       "gw": 4,
       "deadline_time": "2026-09-12T12:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-09-05T23:04:35.915781+00:00",
+        "generated_at": "2026-09-06T01:09:44.781818+00:00",
         "players": [
           {
             "element": 1,
@@ -13011,8 +13011,8 @@
             "element": 33,
             "name": "Mings",
             "position": "DEF",
-            "xpts": 3.175,
-            "xpts_std": 2.894,
+            "xpts": 3.047,
+            "xpts_std": 2.841,
             "xmins": 66.6,
             "start_probability": 0.7181,
             "clean_sheet_probability": 0.2382
@@ -13081,8 +13081,8 @@
             "element": 41,
             "name": "Buendía",
             "position": "MID",
-            "xpts": 2.923,
-            "xpts_std": 2.697,
+            "xpts": 2.97,
+            "xpts_std": 2.717,
             "xmins": 69.6,
             "start_probability": 0.8057,
             "clean_sheet_probability": 0.2382
@@ -13101,8 +13101,8 @@
             "element": 45,
             "name": "McGinn",
             "position": "MID",
-            "xpts": 2.92,
-            "xpts_std": 2.657,
+            "xpts": 2.938,
+            "xpts_std": 2.664,
             "xmins": 65.8,
             "start_probability": 0.837,
             "clean_sheet_probability": 0.2382
@@ -13111,8 +13111,8 @@
             "element": 46,
             "name": "Barkley",
             "position": "MID",
-            "xpts": 2.697,
-            "xpts_std": 2.7,
+            "xpts": 2.706,
+            "xpts_std": 2.704,
             "xmins": 67.3,
             "start_probability": 0.7107,
             "clean_sheet_probability": 0.2382
@@ -13161,8 +13161,8 @@
             "element": 51,
             "name": "George Hemmings",
             "position": "MID",
-            "xpts": 2.759,
-            "xpts_std": 2.655,
+            "xpts": 2.747,
+            "xpts_std": 2.65,
             "xmins": 60.9,
             "start_probability": 0.7825,
             "clean_sheet_probability": 0.2382
@@ -13231,8 +13231,8 @@
             "element": 166,
             "name": "N.Jackson",
             "position": "FWD",
-            "xpts": 2.703,
-            "xpts_std": 2.631,
+            "xpts": 2.734,
+            "xpts_std": 2.645,
             "xmins": 60.2,
             "start_probability": 0.7825,
             "clean_sheet_probability": 0.2382
@@ -16031,8 +16031,8 @@
             "element": 295,
             "name": "McBurnie",
             "position": "FWD",
-            "xpts": 3.193,
-            "xpts_std": 2.837,
+            "xpts": 3.19,
+            "xpts_std": 2.836,
             "xmins": 64.9,
             "start_probability": 0.7825,
             "clean_sheet_probability": 0.1572
@@ -16131,8 +16131,8 @@
             "element": 576,
             "name": "Stroud",
             "position": "MID",
-            "xpts": 2.931,
-            "xpts_std": 2.727,
+            "xpts": 2.927,
+            "xpts_std": 2.725,
             "xmins": 56.0,
             "start_probability": 0.7825,
             "clean_sheet_probability": 0.1572
@@ -19222,6 +19222,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-09-05T23:04:36.906602+00:00",
+  "updated_at": "2026-09-06T01:09:45.841066+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

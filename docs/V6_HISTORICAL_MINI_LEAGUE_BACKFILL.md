@@ -2,160 +2,173 @@
 
 ## Purpose
 
-V6 backfills Official FPL facts for managers who belong to a configured priority mini-league at the time the backfill is run. The first production target is the configured `ICON+ League` classic league.
+V6 historical backfill is a **data-acquisition, normalization, validation, cache, and publication** capability only. It exists to preserve Official FPL facts for the currently resolved priority mini-league cohort so downstream systems can perform their own analysis.
 
-This capability is factual data acquisition, normalization, reconciliation, caching, and mechanical aggregation only. It does not produce FPL decisions, predictions, xPts, xMins, tactical scores, Bayesian recommendations, Monte Carlo results, transfer/captain/chip/formation recommendations, or WAIT/PREPARE/ACT classifications.
+V6 does not own decision, prediction, optimization, tactical, transfer, captain, chip, Bayesian, Monte Carlo, rank-probability, or mini-league analytical authority.
 
-## Governed control path
+## Control plane
 
-Historical backfill reuses issue #431 and the existing `/v6-report-prefetch` control plane, owner authorization, `runtime-data-v6`, and the existing V6 publisher. It has no cron and no independent publisher.
+Historical acquisition reuses the governed report-prefetch control plane. It has no independent cron and no second publisher.
 
-Example:
+Example request:
 
 ```text
 /v6-report-prefetch report_kind=historical_backfill gw_from=1 gw_to=3 scope=mini_league reason=icon_plus_history_backfill
 ```
 
-`gw_from` and `gw_to` are inclusive. Historical mode accepts completed Official FPL GWs and the current GW only after its Official deadline. A reversed range, GW 0, current pre-deadline GW, or future GW fails closed. `scope` must be exactly `mini_league`.
-
-A governed force retry is available:
+The production workflow continues to invoke:
 
 ```text
-/v6-report-prefetch report_kind=historical_backfill gw_from=1 gw_to=3 scope=mini_league force=true reason=icon_plus_history_force_retry
+python -m src.runtime_v6.historical_backfill
 ```
 
-## League resolution
+`src.runtime_v6.historical_backfill` is now a compatibility entrypoint. The factual implementation lives in `src.runtime_v6.historical_facts`.
 
-The executable configuration does not contain the numeric ICON+ league ID. The service reads the V6 consumer context, discovers the user's current Official FPL league memberships, and resolves the priority league by configured `name + kind`.
-
-If the configured priority league is missing or ambiguous, backfill fails closed. The manager count is derived from the fully paginated current standings and is never assumed to be 58.
+The publisher remains `runtime-data-v6` only.
 
 ## Cohort semantics
 
-Historical output is explicitly labeled `CURRENT_COHORT_HISTORY`.
-
-This means historical FPL records for managers who are members of the resolved priority-league cohort now. Current membership does not prove membership in an earlier GW. Unless Official FPL provides separate authoritative historical league-membership evidence, every manager/GW record uses:
-
-- `current_cohort_member: true`
-- `membership_at_gw_status: UNKNOWN`
-- `membership_evidence: CURRENT_STANDINGS_COHORT_ONLY`
-- `historical_membership_confirmed: null`
-
-The service must never describe the current cohort as the exact historical league membership of GW1/GW2/etc without authoritative evidence.
-
-## Historical rank semantics
-
-Official entry history may expose manager GW points, cumulative points, and overall rank, but it does not establish a historical mini-league standings table for the current cohort.
-
-Therefore V6 publishes `reconstructed_current_cohort_rank` when it can mechanically rank current cohort members by historical cumulative points. The field is labeled `RECONSTRUCTED_CURRENT_COHORT_ONLY`. `official_historical_league_rank` remains null unless a future Official endpoint provides authoritative historical league standings.
-
-## Acquisition and cache
-
-For every requested eligible GW and every currently resolved cohort manager, V6 acquires Official submitted picks and records entry ID, exact 15 submitted players, squad position, starting XI/bench order, captain, vice captain, multiplier, active chip, and Official entry-history points/cumulative points where available.
-
-Completed-GW submitted picks are immutable cache candidates. Current post-deadline submitted picks are also factual and cache-reusable, but current-GW points remain provisional and are labeled live rather than final. Current-GW entry history is refreshed while that GW remains unfinished.
-
-The canonical cache identity is `season + gw + league_id + entry_id` and each cached record has a deterministic digest. Reusable records report origins including:
-
-- `LIVE_FETCHED_HISTORICAL_GW`
-- `IMMUTABLE_HISTORICAL_CACHE_REUSED`
-- `LIVE_FETCHED_CURRENT_GW_POST_DEADLINE`
-- `POST_DEADLINE_CURRENT_GW_SUBMITTED_PICKS_CACHE_REUSED`
-
-Digest mismatch, corruption, force retry, manager-set change for a new manager, or unresolved cached facts cause a refetch.
-
-### Strict Official absence
-
-Current cohort membership does not imply that the same FPL entry had an Official record in every earlier GW. For a completed GW, V6 may explicitly exclude a current-cohort entry from the eligible denominator only when all of these facts are simultaneously true:
-
-1. Official submitted-picks for that entry/GW returns HTTP 404.
-2. Official entry-history is available.
-3. The requested GW has no Official history row.
-4. The first Official entry-history row starts in a later GW.
-
-The record remains present and `UNAVAILABLE`; it is not deleted or fabricated. It is marked with `official_availability_status=OFFICIAL_GW_RECORD_NOT_AVAILABLE`, `official_exclusion_reason=BEFORE_FIRST_OFFICIAL_ENTRY_HISTORY_GW`, the first Official history GW, and provenance from both Official endpoints.
-
-This is only an Official FPL availability fact. It does not prove or infer historical league membership. Strict completed-GW Official absences are immutable cache candidates after digest validation.
-
-## Canonical output tree
+Historical rows use:
 
 ```text
-data/v6/
-  health/
-    historical_backfill.json
-  mini_leagues/<resolved_league_id>/history/
-    manifest.json
-    managers.json
-    gw_1/
-      manager_picks.json
-      exposure.json
-      standings_or_points.json
-      transitions.json
-    gw_2/...
-    gw_3/...
-    longitudinal/
-      player_ownership_history.json
-      captain_history.json
-      manager_history.json
-      squad_overlap_history.json
-      transitions.json
+CURRENT_COHORT_HISTORY
 ```
 
-The tree is published only through the existing `runtime-data-v6` publisher. V3/V4/V5 caches and runtime branches are not read or used as fallback.
+This means the manager set is the mini-league cohort resolved from current Official FPL standings at acquisition time. V6 does not infer that every current member belonged to the league in every historical GW.
 
-## Per-GW factual aggregates
+Historical membership remains unknown unless Official FPL provides direct evidence for that GW.
 
-Per player, exposure includes Official element ID, current canonical name/position/club labels, owners, ownership percentage, starts, captain count, vice count, bench count, multiplier sum, effective ownership, denominator, final points for completed GWs or live points for the current unfinished GW, and multiplier-adjusted cohort contribution.
+## Eligible gameweeks
 
-The Official element ID is the primary identity. Current bootstrap club/position labels are explicitly marked as current canonical identity. V6 does not silently assert that those labels are a historical club snapshot when Official historical endpoints do not provide one.
+The backfill accepts:
 
-## Longitudinal factual aggregates
+- completed GWs;
+- the current GW only after its deadline;
+- no future GW;
+- no current pre-deadline GW.
 
-V6 mechanically publishes player adoption/drop/retention counts, captain gains/drops, bench-to-start/start-to-bench counts, manager points and cumulative points by GW, captain/chip history, squad/XI overlap vs the previous GW, player changes, captain changes, XI changes, bench-order changes, pairwise cohort overlap, and player/captain concentration.
+A current post-deadline GW is provisional. Submitted picks are factual post-deadline records, while event points are labeled live rather than final. Entry-history rows may remain unavailable until the GW completes.
 
-These are descriptive facts. V6 does not label managers or players as aggressive, conservative, template, differential, danger, shield, buy, sell, good, or bad.
+## Canonical factual artifacts
 
-## Reconciliation
+For each resolved league, V6 publishes only atomic or normalized factual artifacts under:
 
-For each manager/GW where Official data is available, V6 reconciles submitted picks with entry history and checks exact pick count, one captain, one vice captain, captain multiplier domain, chip state, and points/history availability.
+```text
+data/v6/mini_leagues/<league_id>/history/
+```
 
-The designated captain is not required to have multiplier >=2. Official submitted picks can legitimately show the designated captain at multiplier 0 when that player did not play. V6 therefore accepts designated-captain multiplier values that are mechanically valid in Official submitted picks rather than treating a no-show as corruption.
+Canonical layout:
 
-Missing values remain null/unavailable rather than being fabricated.
+```text
+manifest.json
+managers.json
+gw_<n>/manager_picks.json
+gw_<n>/event_points.json
+gw_<n>/entry_history.json
+longitudinal/manager_history.json
+```
 
-## Completeness and health
+### `managers.json`
 
-Each GW publishes both raw current-cohort coverage and eligible coverage after any strict Official absences. Important fields include:
+Contains the current Official FPL standings cohort and explicit membership semantics. Current membership is a fact. Historical membership is not inferred.
 
-- `expected_manager_count` / `current_cohort_manager_count`
-- `eligible_manager_count`
-- `officially_excluded_manager_count`
-- `officially_excluded_entry_ids`
-- `official_exclusion_reason_counts`
-- `submitted_picks_available_count`
-- `submitted_picks_missing_count`
-- `unresolved_submitted_picks_missing_count`
-- `coverage_percent` for the full current cohort
-- `eligible_coverage_percent` after strict Official exclusions
-- `failed_entry_ids`
-- `complete_with_explicit_official_exclusions`
+### `gw_<n>/manager_picks.json`
 
-Raw coverage is never rewritten to 100% merely because an exclusion is known. For example, 50 records from a current cohort of 58 remain raw coverage 86.2069%; if the other eight satisfy the strict Official absence policy, eligible coverage may be 100% and the GW can be complete with explicit exclusions.
+Contains Official submitted picks for each current-cohort manager, including the 15 submitted players, squad position, bench order, multiplier, designated captain, designated vice-captain, and active chip when Official FPL exposes it.
 
-Backfill status is factual:
+Completed-GW submitted picks may be reused as immutable cache records when the record digest and cache identity still validate.
 
-- `GREEN`: every requested GW has complete eligible coverage and reconciliation, with any missing current-cohort records explained by strict Official exclusions or an explicitly optional current-GW history condition.
-- `AMBER`: unresolved manager/GW gaps remain but the dataset is factually useful.
-- `RED`: acquisition/control/integrity failure makes the requested backfill unusable.
+### `gw_<n>/event_points.json`
 
-Silent gaps are never GREEN.
+Contains Official event element points only.
 
-## Recovery
+For completed GWs:
 
-A normal rerun is idempotent and primarily reuses immutable submitted-picks facts and strict completed-GW Official absences. Use `force=true` only for governed corruption recovery, identity correction, or when Official evidence is known to have changed.
+```text
+points_semantics = FINAL_COMPLETED_GW
+```
 
-## Downstream contract
+For the current post-deadline GW:
 
-Manual FPL / FPL Master Monitor may consume these canonical facts to build Bayesian behavior models, rival/captain/ownership/chip models, Monte Carlo simulation, expected rank swing, P(top3), P(#1), and 3-5 GW decision analysis.
+```text
+points_semantics = LIVE_CURRENT_GW
+```
 
-Those calculations remain outside V6. Downstream consumers should not need to scrape Official FPL again for historical facts already published by V6.
+V6 does not multiply these values by mini-league ownership, captaincy, or manager selections.
+
+### `gw_<n>/entry_history.json`
+
+Contains factual reconciliation between Official submitted picks and Official entry-history rows. Validation checks may include exact pick count, designated captain/vice presence, captain multiplier consistency, and chip consistency.
+
+Official overall rank from entry history may be preserved as an upstream fact. V6 does not reconstruct mini-league rank or derive rank probability.
+
+### `longitudinal/manager_history.json`
+
+Contains a normalized per-manager sequence of factual GW states: submitted squad, starting XI, bench order, designated captain/vice, active chip, Official GW points, cumulative points, and Official overall rank where available.
+
+It deliberately contains no previous-GW deltas, behavioral labels, similarity score, ownership calculation, or concentration statistic.
+
+## Retired analytical artifacts
+
+P0 retires the former historical analytical publication path. V6 no longer publishes canonical historical:
+
+- ownership/EO or player exposure;
+- player ownership history;
+- captain concentration/history aggregates;
+- transitions or ownership churn;
+- pairwise squad/XI overlap;
+- concentration or HHI metrics;
+- reconstructed cohort rank;
+- behavioral classification.
+
+Legacy files with these meanings are removed from the runtime tree during a factual backfill run. In particular, the former paths `exposure.json`, `standings_or_points.json`, `transitions.json`, `player_ownership_history.json`, `captain_history.json`, and `squad_overlap_history.json` are not canonical V6 outputs.
+
+Any ownership/EO, transitions, overlap, concentration, reconstructed cohort rank, rival modeling, probability, or decision analysis must be produced downstream from the atomic facts.
+
+## Official absence handling
+
+A missing completed-GW submitted-picks record is not automatically treated as a failure or as proof that the manager was not in the league.
+
+V6 may classify a strict Official availability exclusion only when both are true:
+
+1. Official submitted-picks returns HTTP 404 for that completed GW; and
+2. Official entry history begins in a later GW.
+
+That classification is an availability fact only. It does not infer historical mini-league membership.
+
+Raw coverage and eligible coverage are reported separately so a strict Official absence cannot be hidden by denominator manipulation.
+
+## Cache behavior
+
+Completed-GW submitted picks are reusable only when cache identity and record digest validate. Corrupted records are fetched again. Current post-deadline submitted picks may be reused, but current-GW entry history is refreshed because Official can add that row while the GW progresses.
+
+Entry-history cache reuse is allowed for completed requested ranges when the cached factual manager history contains every requested GW with the required Official points fields.
+
+## Health
+
+`data/v6/health/historical_backfill.json` mirrors the run manifest and reports factual acquisition health, including:
+
+- expected/current-cohort manager count;
+- eligible manager count;
+- submitted-picks coverage;
+- entry-history coverage;
+- strict Official exclusions;
+- cache hits/misses;
+- request and retry telemetry;
+- completed versus provisional current GW semantics;
+- overall GREEN / AMBER / RED data-acquisition status.
+
+GREEN means the requested factual dataset is complete under the explicit Official availability rules. It does not mean any downstream model or FPL decision is correct.
+
+## Isolation and authority
+
+Historical backfill reads Official FPL through V6 clients and writes V6 artifacts only. It must not retrieve runtime data from V3, V4, or V5.
+
+The publication contract is fail-closed:
+
+- canonical atomic facts: allowed;
+- normalized facts: allowed;
+- validation/control telemetry: allowed;
+- deterministic identity crosswalks: allowed;
+- V6-authored mini-league analytics: forbidden;
+- decisions, predictions, optimization, tactical outputs, Bayesian outputs, and Monte Carlo outputs: forbidden.

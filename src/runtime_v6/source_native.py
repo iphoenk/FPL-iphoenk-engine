@@ -286,51 +286,141 @@ def _understat(payload: dict[str, Any], identity_map: dict[str, Any]) -> dict[st
     )
 
 
+def _fotmob_table_rows(raw: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    table_sections = raw.get("table")
+    if not isinstance(table_sections, list):
+        return rows
+    for section in table_sections:
+        if not isinstance(section, dict):
+            continue
+        data = section.get("data") if isinstance(section.get("data"), dict) else {}
+        direct_table = data.get("table") if isinstance(data.get("table"), dict) else {}
+        direct_rows = direct_table.get("all")
+        if isinstance(direct_rows, list):
+            rows.extend(row for row in direct_rows if isinstance(row, dict))
+        nested_tables = data.get("tables") if isinstance(data.get("tables"), list) else []
+        for nested in nested_tables:
+            nested = nested if isinstance(nested, dict) else {}
+            nested_table = nested.get("table") if isinstance(nested.get("table"), dict) else {}
+            nested_rows = nested_table.get("all")
+            if isinstance(nested_rows, list):
+                rows.extend(row for row in nested_rows if isinstance(row, dict))
+    return rows
+
+
+def _fotmob_match_rows(raw: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for key in ("matches", "fixtures"):
+        value = raw.get(key)
+        if isinstance(value, list):
+            rows.extend(row for row in value if isinstance(row, dict))
+        elif isinstance(value, dict):
+            for child_key in ("allMatches", "matches", "fixtures"):
+                child = value.get(child_key)
+                if isinstance(child, list):
+                    rows.extend(row for row in child if isinstance(row, dict))
+    table_sections = raw.get("table")
+    if isinstance(table_sections, list):
+        for section in table_sections:
+            if not isinstance(section, dict):
+                continue
+            data = section.get("data") if isinstance(section.get("data"), dict) else {}
+            ongoing = data.get("ongoing")
+            if isinstance(ongoing, list):
+                rows.extend(row for row in ongoing if isinstance(row, dict))
+    deduped: dict[str, dict[str, Any]] = {}
+    anonymous: list[dict[str, Any]] = []
+    for row in rows:
+        native_id = row.get("id")
+        if native_id is None:
+            anonymous.append(row)
+        else:
+            deduped[str(native_id)] = row
+    return list(deduped.values()) + anonymous
+
+
+def _fotmob_team_record(row: dict[str, Any], team_reverse: dict[str, tuple[int, str]]) -> dict[str, Any] | None:
+    native_id = _int(row.get("id"))
+    if native_id is None:
+        return None
+    return {
+        "source_native_id": native_id,
+        "name": row.get("name"),
+        "short_name": row.get("shortName"),
+        "played": _int(row.get("played")),
+        "wins": _int(row.get("wins")),
+        "draws": _int(row.get("draws")),
+        "losses": _int(row.get("losses")),
+        "scores": row.get("scoresStr"),
+        "goal_difference": _int(row.get("goalConDiff")),
+        "points": _int(row.get("pts")),
+        "table_position": _int(row.get("idx")),
+        **_identity_fields(team_reverse, native_id, "official_team_id"),
+    }
+
+
+def _fotmob_side(row: dict[str, Any], side: str) -> dict[str, Any]:
+    value = row.get(side)
+    if isinstance(value, dict):
+        return {
+            "source_native_id": _int(value.get("id")),
+            "name": value.get("name"),
+            "score": value.get("score"),
+        }
+    prefix = "h" if side == "home" else "a"
+    return {
+        "source_native_id": _int(row.get(f"{prefix}Id")),
+        "name": row.get(f"{prefix}Team"),
+        "score": row.get(f"{prefix}Score"),
+    }
+
+
 def _fotmob(payload: dict[str, Any], identity_map: dict[str, Any]) -> dict[str, Any]:
     raw = _request(payload, "league").get("json")
     raw = raw if isinstance(raw, dict) else {}
     fixture_reverse = _reverse_links(identity_map, "fotmob", "fixture")
     team_reverse = _reverse_links(identity_map, "fotmob", "team")
 
-    matches_container = raw.get("matches") if isinstance(raw.get("matches"), dict) else {}
-    matches = matches_container.get("allMatches") or matches_container.get("matches") or []
     teams_by_id: dict[int, dict[str, Any]] = {}
+    for row in _fotmob_table_rows(raw):
+        team = _fotmob_team_record(row, team_reverse)
+        if team is not None:
+            teams_by_id[int(team["source_native_id"])] = team
+
     fixtures: list[dict[str, Any]] = []
-    if isinstance(matches, list):
-        for row in matches:
-            if not isinstance(row, dict):
-                continue
-            home = row.get("home") if isinstance(row.get("home"), dict) else {}
-            away = row.get("away") if isinstance(row.get("away"), dict) else {}
-            for team in (home, away):
-                team_id = _int(team.get("id"))
-                if team_id is not None:
-                    teams_by_id[team_id] = {
-                        "source_native_id": team_id,
-                        "name": team.get("name"),
-                        "short_name": team.get("shortName"),
-                        **_identity_fields(team_reverse, team_id, "official_team_id"),
-                    }
-            native_id = _int(row.get("id"))
-            fixtures.append(
-                {
-                    "source_native_id": native_id,
-                    "round": row.get("round"),
-                    "status": row.get("status"),
-                    "utc_time": row.get("utcTime"),
-                    "home": {
-                        "source_native_id": _int(home.get("id")),
-                        "name": home.get("name"),
-                        "score": home.get("score"),
-                    },
-                    "away": {
-                        "source_native_id": _int(away.get("id")),
-                        "name": away.get("name"),
-                        "score": away.get("score"),
-                    },
-                    **_identity_fields(fixture_reverse, native_id, "official_fixture_id"),
+    for row in _fotmob_match_rows(raw):
+        home = _fotmob_side(row, "home")
+        away = _fotmob_side(row, "away")
+        for side in (home, away):
+            team_id = _int(side.get("source_native_id"))
+            if team_id is not None and team_id not in teams_by_id:
+                teams_by_id[team_id] = {
+                    "source_native_id": team_id,
+                    "name": side.get("name"),
+                    "short_name": None,
+                    "played": None,
+                    "wins": None,
+                    "draws": None,
+                    "losses": None,
+                    "scores": None,
+                    "goal_difference": None,
+                    "points": None,
+                    "table_position": None,
+                    **_identity_fields(team_reverse, team_id, "official_team_id"),
                 }
-            )
+        native_id = _int(row.get("id"))
+        fixtures.append(
+            {
+                "source_native_id": native_id,
+                "round": row.get("round", row.get("stage")),
+                "status": row.get("status"),
+                "utc_time": row.get("utcTime", row.get("time")),
+                "home": home,
+                "away": away,
+                **_identity_fields(fixture_reverse, native_id, "official_fixture_id"),
+            }
+        )
 
     details = raw.get("details") if isinstance(raw.get("details"), dict) else {}
     competition = [

@@ -19,7 +19,10 @@ def test_source_overrides_preserve_dynamic_active_contract_and_repair_routes():
     assert sources["fotmob"]["requests"][0]["url"] == "https://www.fotmob.com/api/data/leagues"
     assert "clubelo" in registry.REFERENCE_ONLY_SOURCE_IDS
     assert sources["espn"]["requests"][0]["use_default_user_agent"] is True
-    assert sources["open_meteo_weather"]["adapter"] == "open_meteo_weather"
+    # Weather interpretation is downstream/report-time by contract; V6 no longer owns
+    # an active Open-Meteo weather adapter in the canonical data-plane registry.
+    assert "open_meteo_weather" not in sources
+    assert "open_meteo_weather" not in registry.EXPECTED_SOURCE_IDS
 
 
 def test_login_redirect_is_not_false_green():

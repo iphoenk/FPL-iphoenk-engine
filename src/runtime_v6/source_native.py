@@ -220,7 +220,9 @@ def _understat(payload: dict[str, Any], identity_map: dict[str, Any]) -> dict[st
     embedded = _decode_understat_embedded(body) if isinstance(body, str) else {}
     player_reverse = _reverse_links(identity_map, "understat", "player")
 
-    players_raw = embedded.get("playersData") or []
+    api_payload = _request(payload, "players_api").get("json")
+    api_players = api_payload.get("players") if isinstance(api_payload, dict) else None
+    players_raw = api_players if isinstance(api_players, list) else (embedded.get("playersData") or [])
     players: list[dict[str, Any]] = []
     if isinstance(players_raw, list):
         for row in players_raw:

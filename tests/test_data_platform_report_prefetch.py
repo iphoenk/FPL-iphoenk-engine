@@ -7,11 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from src.runtime_v6.league_prefetch import (
-    acquire_manager_picks,
-    exposure_artifact,
-    fetch_all_standings,
-)
+from src.runtime_v6.league_prefetch import acquire_manager_picks, fetch_all_standings
 from src.runtime_v6.personal_prefetch import discover_memberships, normalise_team, resolve_priority_leagues
 from src.runtime_v6.prefetch_contract import (
     PrefetchContractError,
@@ -129,13 +125,25 @@ def manager_row(entry_id, rank):
 
 
 class FakeClient:
-    def __init__(self, *, auth=True, fail_pick=None, duplicate_priority=False, pages=None):
+    def __init__(
+        self,
+        *,
+        auth=True,
+        auth_configuration_state=None,
+        me_result=None,
+        team_result=None,
+        fail_pick=None,
+        duplicate_priority=False,
+        pages=None,
+    ):
         self.auth_available = auth
-        self.auth_configuration_state = "CONFIGURED" if auth else "UNAVAILABLE"
+        self.auth_configuration_state = auth_configuration_state or ("CONFIGURED" if auth else "UNAVAILABLE")
         self.secret_values = ("sessionid=never-publish",) if auth else ()
         self.calls = []
         self.fail_pick = fail_pick
         self.duplicate_priority = duplicate_priority
+        self.me_result = me_result
+        self.team_result = team_result
         self.pages = pages or {
             1: standings_page([manager_row(3462711, 1), manager_row(4000001, 2)], False)
         }
@@ -180,10 +188,12 @@ class FakeClient:
 
     def me(self):
         self._call("me")
-        return result("me", {"player": {"entry": 3462711}})
+        return self.me_result or result("me", {"player": {"entry": 3462711}})
 
     def my_team(self, entry_id):
         self._call(f"my-team:{entry_id}")
+        if self.team_result is not None:
+            return self.team_result
         payload = {
             "transfers": {"bank": 10, "value": 1010, "made": 1, "cost": 4, "free_transfers": 0},
             "picks": [
@@ -285,6 +295,7 @@ def test_rival_picks_full_failure_cache_gw_and_membership_changes(tmp_path):
         cache_enabled=True,
     )
     assert first["complete"] is True
+    assert first["cache"]["current_run_action"] == "FETCHED"
     assert metrics["cache_misses"] == 2
     write_json(path, first)
 
@@ -302,6 +313,7 @@ def test_rival_picks_full_failure_cache_gw_and_membership_changes(tmp_path):
         cache_enabled=True,
     )
     assert metrics2 == {"cache_hits": 2, "cache_misses": 0, "maximum_concurrency_used": 0}
+    assert second["cache"]["current_run_action"] == "REUSED"
     assert not [call for call in second_client.calls if call.startswith("picks:")]
     assert all(record["origin"] == "IMMUTABLE_GW_CACHE_REUSED" for record in second["entries"].values())
 
@@ -356,48 +368,7 @@ def test_rival_picks_full_failure_cache_gw_and_membership_changes(tmp_path):
     assert failed["missing_entry_ids"] == [2]
 
 
-def test_exposure_artifact_is_retired_noncanonical_tombstone():
-    manager_picks = {
-        "season": "2026-2027",
-        "gw": 3,
-        "league_id": 99,
-        "expected_manager_count": 2,
-        "entries": {
-            "1": {
-                "status": "AVAILABLE",
-                "picks": [
-                    {"element_id": 1, "squad_position": 1, "multiplier": 2, "captain": True, "vice_captain": False},
-                    {"element_id": 2, "squad_position": 12, "multiplier": 0, "captain": False, "vice_captain": True},
-                ],
-            },
-            "2": {
-                "status": "AVAILABLE",
-                "picks": [
-                    {"element_id": 1, "squad_position": 1, "multiplier": 3, "captain": True, "vice_captain": False},
-                    {"element_id": 2, "squad_position": 2, "multiplier": 1, "captain": False, "vice_captain": False},
-                ],
-            },
-        },
-        "lineage": {},
-    }
-    exposure = exposure_artifact(manager_picks, {1: {"web_name": "A"}}, bootstrap_lineage=None)
-    assert exposure["deprecated"] is True
-    assert exposure["canonical"] is False
-    assert exposure["authority"] == "NONE"
-    assert exposure["players"] == []
-    assert exposure["coverage_percent"] == 100.0
-    rendered = json.dumps(exposure)
-    assert "ownership_percent" not in rendered
-    assert "mini_league_effective_ownership_percent" not in rendered
-
-    manager_picks["entries"]["2"]["status"] = "UNAVAILABLE"
-    partial = exposure_artifact(manager_picks, {}, bootstrap_lineage=None)
-    assert partial["submitted_picks_available_count"] == 1
-    assert partial["coverage_percent"] == 50.0
-    assert partial["complete"] is False
-
-
-def test_personal_normalization_auth_available_and_missing_fields():
+def test_personal_normalization_uses_typed_auth_and_raw_finance_only():
     submitted = {
         "picks": [
             {
@@ -413,19 +384,22 @@ def test_personal_normalization_auth_available_and_missing_fields():
         element_index={1: {"position": "MID", "current_price": 70}},
         bootstrap_lineage={},
         submitted=submitted,
-        auth_state="AVAILABLE",
+        auth_state="AUTH_AVAILABLE",
         my_team_payload={
-            "transfers": {"bank": 5, "made": 1, "cost": 4},
+            "transfers": {"bank": 5, "value": 990, "made": 1, "cost": 4},
             "picks": [{"element": 1, "purchase_price": 60}],
         },
         auth_lineage=[],
         generated_at="now",
     )
     assert team["bank"] == 5
-    assert team["effective_sell_value"] is None
+    assert team["official_team_value"] == 990
+    assert "squad_market_value" not in team
+    assert "effective_sell_value" not in team
     assert team["free_transfers"] is None
     assert team["availability"]["free_transfers"] == "NOT_SUPPORTED"
     assert team["chips"] is None
+    assert team["governance"]["derived_effective_sell_value"] is False
 
 
 def test_full_prefetch_auth_available_publication_and_idempotency(tmp_path):
@@ -433,28 +407,38 @@ def test_full_prefetch_auth_available_publication_and_idempotency(tmp_path):
     service = PrefetchService(config=config(), output_root=tmp_path, client=client, now=NOW)
     first = service.run(report_kind="full_master", logical_slot=SLOT)
     assert first["personal_status"] == "AVAILABLE"
+    assert first["auth_state"] == "AUTH_AVAILABLE"
     assert first["mini_league_status"] == "AVAILABLE"
     assert first["priority_league_id"] == 99
     assert first["expected_manager_count"] == 2
     assert first["submitted_picks_available_count"] == 2
     assert first["complete"] is True
     assert (tmp_path / "personal/current_team.json").exists()
-    exposure_path = tmp_path / "mini_leagues/99/gw_3_exposure.json"
-    assert exposure_path.exists()
-    exposure = json.loads(exposure_path.read_text())
-    assert exposure["canonical"] is False
-    exposure_meta = next(
-        item for item in first["artifacts"] if item["path"].endswith("gw_3_exposure.json")
-    )
-    assert exposure_meta["canonical"] is False
-    assert exposure_meta["deprecated"] is True
-    assert exposure_meta["authority"] == "NONE"
+    assert not (tmp_path / "mini_leagues/99/gw_3_exposure.json").exists()
+    assert not any(item["path"].endswith("_exposure.json") for item in first["artifacts"])
     calls = list(client.calls)
 
     second = service.run(report_kind="full_master", logical_slot=SLOT)
     assert second["idempotency"]["reused"] is True
     assert second["reuse_telemetry"]["request_count"] == 0
+    assert not any(item["path"].endswith("_exposure.json") for item in second["artifacts"])
     assert client.calls == calls
+
+
+def test_legacy_exposure_file_is_purged_even_when_slot_reused(tmp_path):
+    client = FakeClient(auth=True)
+    service = PrefetchService(config=config(), output_root=tmp_path, client=client, now=NOW)
+    first = service.run(report_kind="full_master", logical_slot=SLOT)
+    legacy = tmp_path / "mini_leagues/99/gw_3_exposure.json"
+    legacy.write_text(json.dumps({"canonical": False, "deprecated": True}))
+    assert legacy.exists()
+
+    second = service.run(report_kind="full_master", logical_slot=SLOT)
+
+    assert second["idempotency"]["reused"] is True
+    assert not legacy.exists()
+    assert second["legacy_exposure_artifacts_removed"] == ["mini_leagues/99/gw_3_exposure.json"]
+    assert first["complete"] is True
 
 
 def test_personal_auth_unavailable_degrades_without_guessing(tmp_path):
@@ -463,10 +447,35 @@ def test_personal_auth_unavailable_degrades_without_guessing(tmp_path):
     manifest = service.run(report_kind="full_master", logical_slot=SLOT)
     team = json.loads((tmp_path / "personal/current_team.json").read_text())
     assert manifest["personal_status"] == "DEGRADED"
+    assert manifest["auth_state"] == "AUTH_UNAVAILABLE"
     assert team["auth_state"] == "AUTH_UNAVAILABLE"
     assert team["bank"] is None
+    assert team["official_team_value"] is None
     assert team["free_transfers"] is None
     assert team["players"][0]["purchase_price"] is None
+
+
+def test_personal_auth_401_is_typed_expired(tmp_path):
+    client = FakeClient(
+        auth=True,
+        me_result=result("me", status="AUTH_REJECTED", code=401),
+    )
+    service = PrefetchService(config={**config(), "mini_league_enabled": False}, output_root=tmp_path, client=client, now=NOW)
+    manifest = service.run(report_kind="full_master", logical_slot=SLOT)
+    team = json.loads((tmp_path / "personal/current_team.json").read_text())
+
+    assert manifest["auth_state"] == "AUTH_EXPIRED"
+    assert team["auth_state"] == "AUTH_EXPIRED"
+    assert team["bank"] is None
+    assert any(row["status"] == "AUTH_EXPIRED" for row in manifest["source_failures"])
+
+
+def test_personal_auth_configuration_invalid_is_typed_invalid(tmp_path):
+    client = FakeClient(auth=False, auth_configuration_state="INVALID")
+    service = PrefetchService(config={**config(), "mini_league_enabled": False}, output_root=tmp_path, client=client, now=NOW)
+    manifest = service.run(report_kind="full_master", logical_slot=SLOT)
+    assert manifest["auth_state"] == "AUTH_INVALID"
+    assert any(row["status"] == "AUTH_INVALID" for row in manifest["source_failures"])
 
 
 def test_match_mode_reuses_rival_cache_but_refreshes_live(tmp_path):
@@ -490,23 +499,23 @@ def test_match_mode_reuses_rival_cache_but_refreshes_live(tmp_path):
     assert manifest["live_status"] == "AVAILABLE"
 
 
-def test_priority_partial_coverage_is_explicit(tmp_path):
+def test_priority_partial_coverage_is_explicit_without_exposure_artifact(tmp_path):
     client = FakeClient(fail_pick=4000001)
     manifest = PrefetchService(config=config(), output_root=tmp_path, client=client, now=NOW).run(
         report_kind="full_master", logical_slot=SLOT
     )
-    exposure = json.loads((tmp_path / "mini_leagues/99/gw_3_exposure.json").read_text())
     picks = json.loads((tmp_path / "mini_leagues/99/gw_3_manager_picks.json").read_text())
     assert manifest["mini_league_status"] == "PARTIAL"
     assert picks["missing_entry_ids"] == [4000001]
-    assert exposure["canonical"] is False
-    assert exposure["submitted_picks_available_count"] == 1
-    assert exposure["coverage_percent"] == 50.0
-    assert exposure["complete"] is False
+    assert picks["submitted_picks_available_count"] == 1
+    assert picks["coverage_percent"] == 50.0
+    assert picks["complete"] is False
+    assert not (tmp_path / "mini_leagues/99/gw_3_exposure.json").exists()
 
 
 class ExplodingClient:
     calls = []
+
     def __getattr__(self, name):
         raise AssertionError(f"05:30 must not touch Official client: {name}")
 

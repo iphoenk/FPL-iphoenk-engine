@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from .adapters import collect_source
+from .crosswalk import apply_verified_crosswalks
 from .entity_scope import entity_scopes_for_source, source_scope_map
 from .health import build_source_health
 from .http_client import AcquisitionClient, utc_now
@@ -20,6 +21,7 @@ from .normalizer import (
 )
 from .polling import attach_poll_result, carry_forward_skipped, deadline_window_active, poll_decision
 from .registry import ZERO_AUTHORITY_KEYS, dependency_layers, load_registry, resolved_registry_snapshot, source_map
+from .source_parsers import build_source_native_datasets, supported_parser_sources
 from .store import (
     EVIDENCE,
     HEALTH,
@@ -70,6 +72,20 @@ def _dependency_payloads(source: dict[str, Any], results: dict[str, dict[str, An
         for dependency in source.get("depends_on") or []
         if str(dependency) in results
     }
+
+
+def _publish_source_native_datasets(datasets: dict[str, dict[str, Any]]) -> list[str]:
+    root = NORMALIZED / "source_native"
+    root.mkdir(parents=True, exist_ok=True)
+    expected = {f"{source_id}.json" for source_id in datasets}
+    for path in root.glob("*.json"):
+        if path.name not in expected:
+            path.unlink()
+    published: list[str] = []
+    for source_id in sorted(datasets):
+        write_json(root / f"{source_id}.json", datasets[source_id])
+        published.append(source_id)
+    return published
 
 
 def run() -> dict[str, Any]:
@@ -168,12 +184,16 @@ def run() -> dict[str, Any]:
         RuntimeError("official_fpl_missing_from_results"),
     )
     scopes = source_scope_map(config)
-    identity_map = apply_entity_scope_identity_semantics(
+    source_native = build_source_native_datasets(results)
+    identity_map, source_native, crosswalk_report = apply_verified_crosswalks(
         build_player_identity_map(official, results, source_ids),
-        scopes,
+        source_native,
     )
+    identity_map = apply_entity_scope_identity_semantics(identity_map, scopes)
+    published_native_sources = _publish_source_native_datasets(source_native)
 
     write_json(EVIDENCE / "player_identity_map.json", identity_map)
+    write_json(EVIDENCE / "verified_crosswalks.json", crosswalk_report)
     write_json(
         NORMALIZED / "canonical_players.json",
         build_canonical_players(official, source_ids, identity_map),
@@ -241,9 +261,19 @@ def run() -> dict[str, Any]:
             "skipped_source_count": len(skipped),
             "skipped_sources": skipped,
         },
+        "normalization": {
+            "source_native_parser_sources": list(supported_parser_sources()),
+            "source_native_published_sources": published_native_sources,
+            "source_native_artifact_count": len(published_native_sources),
+            "parser_status": {
+                source_id: source_native[source_id].get("parser_status")
+                for source_id in published_native_sources
+            },
+        },
         "identity": {
             "canonical_authority": "official_fpl",
             "mapping_artifact": "data/v6/evidence/player_identity_map.json",
+            "verified_crosswalk_artifact": "data/v6/evidence/verified_crosswalks.json",
             "fuzzy_name_matching_allowed": False,
             "entity_scopes": scopes,
             "coverage": identity_map.get("coverage") or {},
@@ -260,6 +290,8 @@ def run() -> dict[str, Any]:
             "evidence_index": "data/v6/evidence/latest_index.json",
             "resolved_registry": "data/v6/evidence/resolved_registry.json",
             "player_identity_map": "data/v6/evidence/player_identity_map.json",
+            "verified_crosswalks": "data/v6/evidence/verified_crosswalks.json",
+            "artifact_catalog": "data/v6/evidence/artifact_catalog.json",
             "publish_integrity": "data/v6/health/publish_integrity.json",
         },
         "governance": {
@@ -278,6 +310,10 @@ def run() -> dict[str, Any]:
             "publish_integrity_required": True,
             "identity_mapping_is_deterministic_only": True,
             "identity_health_is_entity_scope_aware": True,
+            "verified_crosswalks_are_evidence_backed": True,
+            "source_native_normalization_is_source_specific": True,
+            "source_native_parser_failures_are_isolated": True,
+            "artifact_catalog_required": True,
             "fuzzy_identity_matching": False,
             "daily_budget_timezone": "Asia/Jakarta",
             "weather_context_is_downstream_report_time_only": True,

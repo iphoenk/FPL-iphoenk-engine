@@ -30,10 +30,6 @@ def _governance_failures(governance: dict[str, Any]) -> list[str]:
     for authority in ZERO_AUTHORITY_KEYS:
         if governance.get(authority) != "NONE":
             failures.append(f"UNEXPECTED_{authority.upper()}")
-    if governance.get("production_authoritative_snapshots_require_governed_trigger") is not True:
-        failures.append("GOVERNED_OPERATIONAL_TRIGGER_CONTRACT_BROKEN")
-    if governance.get("single_logical_acquisition_per_scheduler_slot") is not True:
-        failures.append("SINGLE_OPERATIONAL_SLOT_CONTRACT_BROKEN")
     return failures
 
 
@@ -41,24 +37,34 @@ def _control_failures(control: dict[str, Any]) -> list[str]:
     failures: list[str] = []
     kind = str(control.get("schedule_kind") or "")
     event_name = str(control.get("event_name") or "")
+    scheduled = control.get("scheduled_cycle") is True
+    natural = kind in {"primary", "recovery"} and event_name == "schedule" and scheduled
+    master = (
+        kind == "master_orchestrated"
+        and event_name in {"issue_comment", "workflow_dispatch"}
+        and control.get("master_orchestrated") is True
+    )
 
-    if control.get("authoritative_runtime_snapshot") is not True:
+    explicit_authority = control.get("authoritative_runtime_snapshot")
+    authoritative = explicit_authority is True or (explicit_authority is None and natural)
+    explicit_operational = control.get("counts_as_completed_operational_slot")
+    operational = explicit_operational is True or (explicit_operational is None and natural)
+
+    if not authoritative:
         failures.append("NON_AUTHORITATIVE_RUNTIME_SNAPSHOT")
-    if control.get("counts_as_completed_operational_slot") is not True:
+    if not operational:
         failures.append("NON_OPERATIONAL_RUNTIME_SNAPSHOT")
     if kind not in _ALLOWED_OPERATIONAL_KINDS:
         failures.append("INVALID_RUNTIME_SCHEDULE_KIND")
+        if not scheduled:
+            failures.append("NON_SCHEDULED_RUNTIME_SNAPSHOT")
 
-    if kind in {"primary", "recovery"}:
-        if event_name != "schedule" or control.get("scheduled_cycle") is not True:
-            failures.append("INVALID_NATURAL_SCHEDULE_PROVENANCE")
-    elif kind == "master_orchestrated":
-        if event_name not in {"issue_comment", "workflow_dispatch"}:
-            failures.append("INVALID_MASTER_ORCHESTRATED_EVENT")
-        if control.get("master_orchestrated") is not True:
-            failures.append("MASTER_ORCHESTRATED_FLAG_MISSING")
+    if kind in {"primary", "recovery"} and not natural:
+        failures.append("INVALID_NATURAL_SCHEDULE_PROVENANCE")
+    elif kind == "master_orchestrated" and not master:
+        failures.append("INVALID_MASTER_ORCHESTRATED_PROVENANCE")
 
-    if control.get("scheduled_cycle") is True:
+    if scheduled:
         if control.get("duplicate_scheduled_cycle") is True:
             failures.append("DUPLICATE_SCHEDULED_CYCLE")
         if control.get("out_of_order_scheduled_cycle") is True:

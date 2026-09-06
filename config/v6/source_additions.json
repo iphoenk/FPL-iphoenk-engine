@@ -25,13 +25,14 @@
     {
       "id": "open_meteo_weather",
       "name": "Open-Meteo Matchday Weather",
-      "category": "fixture_weather_context",
+      "category": "fixture_weather_facts",
       "adapter": "open_meteo_weather",
       "critical": false,
-      "required_for_platform": true,
+      "required_for_platform": false,
       "depends_on": ["official_fpl"],
       "check_freshness_minutes": 90,
       "independence_group": "open_meteo",
+      "entity_scopes": ["TEAM", "FIXTURE"],
       "venue_registry": "config/venues/premier_league_2026_27.json",
       "requests": [
         {
@@ -50,18 +51,13 @@
           }
         }
       ],
-      "weather_contract": {
+      "weather_data_contract": {
         "timezone": "Europe/London",
-        "precedence": ["LIVE_OBSERVED", "CLOSEST_TO_KICKOFF_OBSERVATION", "FRESH_FORECAST", "STALE_FORECAST"],
-        "severity": ["NORMAL", "NOTABLE", "ADVERSE", "EXTREME"],
-        "direct_xpts_multiplier": false,
-        "weather_alone_can_trigger_transfer": false,
+        "semantic_class": "NORMALIZED_FACT",
         "signals": ["temperature_2m", "relative_humidity_2m", "precipitation_probability", "precipitation", "rain", "showers", "weather_code", "wind_speed_10m", "wind_gusts_10m"],
-        "legacy_attention_thresholds": {
-          "wind_speed_kmh": 30,
-          "rain_probability_pct": 60,
-          "temperature_c": 5
-        }
+        "classification_authority": "NONE",
+        "impact_authority": "NONE",
+        "decision_authority": "NONE"
       },
       "attribution": "Weather data by Open-Meteo.com (CC BY 4.0)."
     },

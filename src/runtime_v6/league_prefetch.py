@@ -348,89 +348,52 @@ def exposure_artifact(
     live_points: dict[int, int] | None = None,
     live_lineage: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    available = [
-        record
-        for record in (manager_picks.get("entries") or {}).values()
-        if record.get("status") == "AVAILABLE"
-    ]
-    denominator = len(available)
-    aggregate: dict[int, dict[str, Any]] = {}
-    for record in available:
-        for pick in record.get("picks") or []:
-            element_id = int(pick["element_id"])
-            row = aggregate.setdefault(
-                element_id,
-                {
-                    "official_element_id": element_id,
-                    "managers_owned_count": 0,
-                    "starts_count": 0,
-                    "captain_count": 0,
-                    "vice_count": 0,
-                    "bench_count": 0,
-                    "multiplier_sum": 0,
-                },
-            )
-            row["managers_owned_count"] += 1
-            position = pick.get("squad_position")
-            if isinstance(position, int) and position <= 11:
-                row["starts_count"] += 1
-            else:
-                row["bench_count"] += 1
-            row["captain_count"] += int(bool(pick.get("captain")))
-            row["vice_count"] += int(bool(pick.get("vice_captain")))
-            if isinstance(pick.get("multiplier"), (int, float)):
-                row["multiplier_sum"] += pick["multiplier"]
+    """Backward-compatible tombstone for the retired V6 exposure artifact.
 
-    players = []
-    for element_id in sorted(aggregate):
-        row = aggregate[element_id]
-        meta = element_index.get(element_id, {})
-        row.update(
-            {
-                "web_name": meta.get("web_name"),
-                "club": meta.get("club"),
-                "position": meta.get("position"),
-                "manager_count": denominator,
-                "ownership_percent": round(row["managers_owned_count"] * 100 / denominator, 4)
-                if denominator
-                else None,
-                "mini_league_effective_ownership_percent": round(
-                    row["multiplier_sum"] * 100 / denominator, 4
-                )
-                if denominator
-                else None,
-                "live_points": live_points.get(element_id) if live_points is not None else None,
-            }
-        )
-        players.append(row)
-
+    V6 no longer aggregates ownership/EO/start/bench/captain/vice or player-level
+    rival analytics. Those are downstream Manual FPL responsibilities. The
+    report-prefetch writer still references this function during the migration,
+    so return only acquisition/completeness metadata already present in the raw
+    submitted-picks artifact. No football/FPL analytical values are calculated.
+    """
+    del element_index, live_points
     expected = int(manager_picks.get("expected_manager_count") or 0)
-    missing_count = max(0, expected - denominator)
-    complete = expected > 0 and denominator == expected
-    health = "GREEN" if complete else ("AMBER" if denominator else "RED")
+    collected = int(manager_picks.get("submitted_picks_available_count") or 0)
+    missing = int(manager_picks.get("submitted_picks_missing_count") or max(0, expected - collected))
     return {
         "schema_version": SCHEMA_VERSION,
+        "artifact_class": "DEPRECATED_NONCANONICAL_TOMBSTONE",
+        "deprecated": True,
+        "canonical": False,
+        "analytics_removed": True,
+        "replacement_inputs": [
+            "standings.json",
+            "gw_<gw>_manager_picks.json",
+            "live_state.json",
+        ],
         "season": manager_picks.get("season"),
         "gw": manager_picks.get("gw"),
         "league_id": manager_picks.get("league_id"),
         "generated_at": iso(utc_now()),
         "expected_manager_count": expected,
-        "collected_manager_count": denominator,
-        "submitted_picks_available_count": denominator,
-        "submitted_picks_missing_count": missing_count,
-        "coverage_percent": round(denominator * 100 / expected, 4) if expected else 0.0,
-        "health": health,
-        "ownership_denominator": denominator,
-        "ownership_denominator_semantics": "SUBMITTED_PICKS_AVAILABLE_MANAGERS_ONLY",
-        "complete": complete,
-        "players": players,
+        "collected_manager_count": collected,
+        "submitted_picks_available_count": collected,
+        "submitted_picks_missing_count": missing,
+        "coverage_percent": manager_picks.get("coverage_percent"),
+        "complete": manager_picks.get("complete") is True,
+        "players": [],
         "lineage": {
             "submitted_picks": manager_picks.get("lineage"),
             "bootstrap_static": bootstrap_lineage,
             "event_live": live_lineage,
             "normalization_version": NORMALIZATION_VERSION,
         },
-        "authority": "OFFICIAL_FPL_DERIVED_FACT",
+        "authority": "NONE",
+        "governance": {
+            "data_only": True,
+            "mini_league_analytics_authority": "NONE",
+            "ownership_eo_computation": "DOWNSTREAM_ONLY",
+        },
         "normalization_version": NORMALIZATION_VERSION,
     }
 
@@ -440,29 +403,19 @@ def add_manager_live_totals(
     manager_picks: dict[str, Any],
     points: dict[int, int],
 ) -> dict[str, Any]:
+    """Preserve the raw live artifact without manager-level score aggregation.
+
+    Manager multiplier/live totals are report analytics and now belong
+    downstream. Parameters are retained for API compatibility during migration.
+    """
+    del manager_picks, points
     value = dict(live)
-    totals = []
-    for record in (manager_picks.get("entries") or {}).values():
-        if record.get("status") != "AVAILABLE":
-            continue
-        total = 0
-        missing = []
-        for pick in record.get("picks") or []:
-            element_id = int(pick["element_id"])
-            multiplier = pick.get("multiplier")
-            if element_id not in points or not isinstance(multiplier, (int, float)):
-                missing.append(element_id)
-                continue
-            total += multiplier * points[element_id]
-        totals.append(
-            {
-                "entry_id": record["entry_id"],
-                "raw_multiplier_points": total if not missing else None,
-                "missing_live_element_ids": sorted(set(missing)),
-            }
-        )
-    value["manager_multiplier_points"] = totals
-    value["manager_multiplier_points_semantics"] = (
-        "MECHANICAL_SUBMITTED_MULTIPLIER_X_CURRENT_ELEMENT_POINTS"
-    )
+    value.pop("manager_multiplier_points", None)
+    value.pop("manager_multiplier_points_semantics", None)
+    value["governance"] = {
+        **dict(value.get("governance") or {}),
+        "data_only": True,
+        "manager_live_aggregation_authority": "NONE",
+        "manager_live_aggregation": "DOWNSTREAM_ONLY",
+    }
     return value

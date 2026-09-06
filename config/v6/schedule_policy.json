@@ -1,10 +1,36 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "engine": "V6_FRESH_DATA_PLATFORM",
   "primary_cron_utc": "23 * * * *",
   "recovery_cron_utc": "53 * * * *",
   "schedule_authority": true,
   "source_registry_schedule_metadata_authoritative": false,
+  "authorities": {
+    "data_acquisition": "V6",
+    "normalization": "V6",
+    "deterministic_identity": "V6",
+    "validation": "V6",
+    "cache_history": "V6",
+    "provenance_lineage": "V6",
+    "freshness_health": "V6",
+    "publication": "V6",
+    "decision": "NONE",
+    "prediction_authored_by_v6": "NONE",
+    "optimizer": "NONE",
+    "tactical": "NONE",
+    "transfer": "NONE",
+    "captain": "NONE",
+    "vice_captain": "NONE",
+    "chip": "NONE",
+    "formation": "NONE",
+    "xpts": "NONE",
+    "xmins": "NONE",
+    "p_start": "NONE",
+    "bayesian": "NONE",
+    "monte_carlo": "NONE",
+    "mini_league_analytics": "NONE",
+    "rank_probability": "NONE"
+  },
   "manual_recovery": {
     "enabled": true,
     "schedule_kind": "manual_recovery",
@@ -16,6 +42,12 @@
   "governance": {
     "scheduled_runtime_is_primary_authority": false,
     "single_schedule_owner": "config/v6/schedule_policy.json",
+    "v6_is_fresh_data_only": true,
+    "v6_may_import_or_call_v3_v4_v5": false,
+    "v6_may_publish_decisions_or_predictions": false,
+    "v6_may_publish_mini_league_analytics": false,
+    "atomic_facts_are_canonical": true,
+    "deprecated_analytical_artifacts_are_noncanonical": true,
     "manual_recovery_never_masks_missed_schedule": true,
     "manual_recovery_must_use_dedicated_v6_publisher": true,
     "push_triggered_production_acquisition_allowed": false,
@@ -36,7 +68,20 @@
     "report_prefetch_reuses_runtime_data_v6_publisher": true,
     "report_prefetch_does_not_count_as_scheduled_core_cycle": true,
     "historical_backfill_is_ad_hoc_only": true,
-    "historical_backfill_reuses_report_prefetch_control_plane": true
+    "historical_backfill_reuses_report_prefetch_control_plane": true,
+    "identity_join_policy": {
+      "silent_fuzzy_runtime_join_allowed": false,
+      "allowed_statuses_for_canonical_join": [
+        "EXACT",
+        "VERIFIED_MANUAL"
+      ],
+      "other_statuses": [
+        "UNMAPPED",
+        "AMBIGUOUS",
+        "ORPHANED",
+        "STALE"
+      ]
+    }
   },
   "master_orchestrated": {
     "enabled": true,

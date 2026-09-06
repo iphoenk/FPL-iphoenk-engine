@@ -9,6 +9,7 @@ from .adapters import collect_source
 from .health import build_source_health
 from .http_client import AcquisitionClient, utc_now
 from .identity import build_player_identity_map
+from .identity_scopes import apply_entity_scopes
 from .normalizer import (
     build_canonical_fixtures,
     build_canonical_players,
@@ -164,7 +165,10 @@ def run() -> dict[str, Any]:
         by_id["official_fpl"],
         RuntimeError("official_fpl_missing_from_results"),
     )
-    identity_map = build_player_identity_map(official, results, source_ids)
+    identity_map = apply_entity_scopes(
+        build_player_identity_map(official, results, source_ids),
+        sources,
+    )
 
     write_json(EVIDENCE / "player_identity_map.json", identity_map)
     write_json(
@@ -177,7 +181,7 @@ def run() -> dict[str, Any]:
     write_json(EVIDENCE / "latest_index.json", build_evidence_index(results))
     write_json(EVIDENCE / "resolved_registry.json", resolved_registry_snapshot(config))
 
-    health = build_source_health(config, results)
+    health = build_source_health(config, results, identity_map=identity_map)
     write_json(HEALTH / "source_health.json", health)
 
     elapsed = round((time.perf_counter() - started) * 1000.0, 3)
@@ -202,7 +206,7 @@ def run() -> dict[str, Any]:
     due_source_count = sum(bool(decision["due"]) for decision in decisions.values())
 
     manifest = {
-        "schema_version": 3,
+        "schema_version": 4,
         "engine": config["engine"],
         "season": config["season"],
         "generated_at": utc_now(),
@@ -227,14 +231,20 @@ def run() -> dict[str, Any]:
             "scheduler_interval_minutes": scheduler_interval_minutes,
             "deadline_window_active": deadline_window,
             "deadline_window_hours": int(policy.get("deadline_window_hours") or 48),
+            "evaluated_source_count": len(sources),
             "due_source_count": due_source_count,
             "skipped_source_count": len(skipped),
             "skipped_sources": skipped,
+            "evaluate_every_source_each_cycle": True,
+            "fetch_only_when_due": True,
         },
         "identity": {
             "canonical_authority": "official_fpl",
             "mapping_artifact": "data/v6/evidence/player_identity_map.json",
             "fuzzy_name_matching_allowed": False,
+            "entity_scope_aware": True,
+            "source_entity_scopes": identity_map.get("source_entity_scopes") or {},
+            "scope_health": identity_map.get("scope_health") or {},
             "coverage": identity_map.get("coverage") or {},
         },
         "paths": {
@@ -264,11 +274,13 @@ def run() -> dict[str, Any]:
             "resolved_registry_is_published": True,
             "publish_integrity_required": True,
             "identity_mapping_is_deterministic_only": True,
+            "identity_health_is_entity_scope_aware": True,
             "fuzzy_identity_matching": False,
             "daily_budget_timezone": "Asia/Jakarta",
-            "weather_is_context_only": True,
-            "weather_direct_xpts_multiplier": False,
-            "weather_alone_can_trigger_transfer": False,
+            "weather_normalization_only": True,
+            "weather_classification_authority": "NONE",
+            "weather_impact_authority": "NONE",
+            "weather_decision_authority": "NONE",
         },
     }
     write_json(MANIFEST, manifest)

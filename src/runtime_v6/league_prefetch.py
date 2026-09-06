@@ -82,9 +82,8 @@ def standings_artifact(
     entry_id: int,
     generated_at: str,
 ) -> dict[str, Any]:
+    del entry_id  # Consumer-specific rank/gap analytics are downstream.
     rows = state["rows"]
-    leader_total = rows[0].get("league_total") if rows else None
-    user = next((row for row in rows if row["entry_id"] == entry_id), None)
     return {
         "schema_version": SCHEMA_VERSION,
         "league_id": int(league["league_id"]),
@@ -97,21 +96,13 @@ def standings_artifact(
         "expected_manager_count": len(rows) if state["complete"] else None,
         "collected_manager_count": len(rows),
         "managers": rows,
-        "user_summary": {
-            "entry_id": entry_id,
-            "rank": user.get("league_rank") if user else None,
-            "total": user.get("league_total") if user else None,
-            "gap_to_first": (
-                leader_total - user.get("league_total")
-                if user
-                and isinstance(leader_total, int)
-                and isinstance(user.get("league_total"), int)
-                else None
-            ),
-        },
         "lineage": state["lineage"],
         "authority": "OFFICIAL_FPL",
         "normalization_version": NORMALIZATION_VERSION,
+        "governance": {
+            "data_only": True,
+            "rank_gap_analytics": "DOWNSTREAM",
+        },
     }
 
 
@@ -289,6 +280,10 @@ def acquire_manager_picks(
         },
         "authority": "OFFICIAL_FPL",
         "normalization_version": NORMALIZATION_VERSION,
+        "governance": {
+            "data_only": True,
+            "analytics_published": False,
+        },
     }
     return artifact, {
         "cache_hits": hits,
@@ -337,132 +332,8 @@ def live_state(result: dict[str, Any], gw: int) -> tuple[dict[int, int] | None, 
         "lineage": lineage(result, gw=gw),
         "authority": "OFFICIAL_FPL",
         "normalization_version": NORMALIZATION_VERSION,
-    }
-
-
-def exposure_artifact(
-    manager_picks: dict[str, Any],
-    element_index: dict[int, dict[str, Any]],
-    *,
-    bootstrap_lineage: dict[str, Any] | None,
-    live_points: dict[int, int] | None = None,
-    live_lineage: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    available = [
-        record
-        for record in (manager_picks.get("entries") or {}).values()
-        if record.get("status") == "AVAILABLE"
-    ]
-    denominator = len(available)
-    aggregate: dict[int, dict[str, Any]] = {}
-    for record in available:
-        for pick in record.get("picks") or []:
-            element_id = int(pick["element_id"])
-            row = aggregate.setdefault(
-                element_id,
-                {
-                    "official_element_id": element_id,
-                    "managers_owned_count": 0,
-                    "starts_count": 0,
-                    "captain_count": 0,
-                    "vice_count": 0,
-                    "bench_count": 0,
-                    "multiplier_sum": 0,
-                },
-            )
-            row["managers_owned_count"] += 1
-            position = pick.get("squad_position")
-            if isinstance(position, int) and position <= 11:
-                row["starts_count"] += 1
-            else:
-                row["bench_count"] += 1
-            row["captain_count"] += int(bool(pick.get("captain")))
-            row["vice_count"] += int(bool(pick.get("vice_captain")))
-            if isinstance(pick.get("multiplier"), (int, float)):
-                row["multiplier_sum"] += pick["multiplier"]
-
-    players = []
-    for element_id in sorted(aggregate):
-        row = aggregate[element_id]
-        meta = element_index.get(element_id, {})
-        row.update(
-            {
-                "web_name": meta.get("web_name"),
-                "club": meta.get("club"),
-                "position": meta.get("position"),
-                "manager_count": denominator,
-                "ownership_percent": round(row["managers_owned_count"] * 100 / denominator, 4)
-                if denominator
-                else None,
-                "mini_league_effective_ownership_percent": round(
-                    row["multiplier_sum"] * 100 / denominator, 4
-                )
-                if denominator
-                else None,
-                "live_points": live_points.get(element_id) if live_points is not None else None,
-            }
-        )
-        players.append(row)
-
-    expected = int(manager_picks.get("expected_manager_count") or 0)
-    missing_count = max(0, expected - denominator)
-    complete = expected > 0 and denominator == expected
-    health = "GREEN" if complete else ("AMBER" if denominator else "RED")
-    return {
-        "schema_version": SCHEMA_VERSION,
-        "season": manager_picks.get("season"),
-        "gw": manager_picks.get("gw"),
-        "league_id": manager_picks.get("league_id"),
-        "generated_at": iso(utc_now()),
-        "expected_manager_count": expected,
-        "collected_manager_count": denominator,
-        "submitted_picks_available_count": denominator,
-        "submitted_picks_missing_count": missing_count,
-        "coverage_percent": round(denominator * 100 / expected, 4) if expected else 0.0,
-        "health": health,
-        "ownership_denominator": denominator,
-        "ownership_denominator_semantics": "SUBMITTED_PICKS_AVAILABLE_MANAGERS_ONLY",
-        "complete": complete,
-        "players": players,
-        "lineage": {
-            "submitted_picks": manager_picks.get("lineage"),
-            "bootstrap_static": bootstrap_lineage,
-            "event_live": live_lineage,
-            "normalization_version": NORMALIZATION_VERSION,
+        "governance": {
+            "data_only": True,
+            "manager_scoring_analytics": "DOWNSTREAM",
         },
-        "authority": "OFFICIAL_FPL_DERIVED_FACT",
-        "normalization_version": NORMALIZATION_VERSION,
     }
-
-
-def add_manager_live_totals(
-    live: dict[str, Any],
-    manager_picks: dict[str, Any],
-    points: dict[int, int],
-) -> dict[str, Any]:
-    value = dict(live)
-    totals = []
-    for record in (manager_picks.get("entries") or {}).values():
-        if record.get("status") != "AVAILABLE":
-            continue
-        total = 0
-        missing = []
-        for pick in record.get("picks") or []:
-            element_id = int(pick["element_id"])
-            multiplier = pick.get("multiplier")
-            if element_id not in points or not isinstance(multiplier, (int, float)):
-                missing.append(element_id)
-                continue
-            total += multiplier * points[element_id]
-        totals.append(
-            {
-                "entry_id": record["entry_id"],
-                "raw_multiplier_points": total if not missing else None,
-                "missing_live_element_ids": sorted(set(missing)),
-            }
-        )
-    value["manager_multiplier_points"] = totals
-    value["manager_multiplier_points_semantics"] = (
-        "MECHANICAL_SUBMITTED_MULTIPLIER_X_CURRENT_ELEMENT_POINTS"
-    )
-    return value

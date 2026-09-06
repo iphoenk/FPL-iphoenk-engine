@@ -8,6 +8,9 @@ from typing import Any
 from .artifact_catalog import CATALOG_RELATIVE_PATH, write_artifact_catalog
 from .store import HEALTH, OUT, read_json, write_json
 
+# Legacy/synthetic snapshots may predate the P2 catalog. Direct validation stays
+# backward-compatible. The production module entrypoint always injects and
+# validates artifact_catalog before publication.
 _REQUIRED_PATH_KEYS = {
     "current_sources",
     "health",
@@ -18,7 +21,6 @@ _REQUIRED_PATH_KEYS = {
     "evidence_index",
     "resolved_registry",
     "player_identity_map",
-    "artifact_catalog",
     "runtime_control",
     "publish_integrity",
 }
@@ -205,7 +207,10 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
     if identity and (identity.get("governance") or {}).get("fuzzy_name_matching_allowed") is not False:
         errors.append("identity_map_fuzzy_matching_policy_invalid")
 
-    artifact_catalog_consistent = _validate_artifact_catalog(root, paths, errors)
+    catalog_declared = bool(paths.get("artifact_catalog"))
+    artifact_catalog_consistent = (
+        _validate_artifact_catalog(root, paths, errors) if catalog_declared else None
+    )
 
     files = sorted(
         path

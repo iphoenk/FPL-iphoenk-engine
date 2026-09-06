@@ -45,9 +45,23 @@ def test_historical_backfill_adds_no_cron_or_second_publisher():
     assert workflow.count('data/v6/health/historical_backfill.json') == 1
 
 
-def test_historical_command_documented_exactly():
+def test_historical_command_documented_as_factual_only():
     doc = Path("docs/V6_HISTORICAL_MINI_LEAGUE_BACKFILL.md").read_text(encoding="utf-8")
     assert "/v6-report-prefetch report_kind=historical_backfill gw_from=1 gw_to=3 scope=mini_league reason=icon_plus_history_backfill" in doc
     assert "CURRENT_COHORT_HISTORY" in doc
-    assert "reconstructed_current_cohort_rank" in doc
+    assert "event_points.json" in doc
+    assert "entry_history.json" in doc
+    assert "manager_history.json" in doc
     assert "runtime-data-v6" in doc
+    assert "ownership/EO" in doc
+    assert "reconstructed cohort rank" in doc
+    assert "V6 does not" in doc
+
+
+def test_production_entrypoint_is_compatibility_shim_to_factual_runtime():
+    shim = Path("src/runtime_v6/historical_backfill.py").read_text(encoding="utf-8")
+    facts = Path("src/runtime_v6/historical_facts.py").read_text(encoding="utf-8")
+    assert "from .historical_facts import" in shim
+    assert "HistoricalBackfillService" in facts
+    assert "LEGACY_ANALYTICAL_FILENAMES" in facts
+    assert "statistics" not in facts

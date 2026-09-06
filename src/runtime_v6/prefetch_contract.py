@@ -64,11 +64,29 @@ def write_json(path: Path, value: dict[str, Any], *, secrets: Iterable[str] = ()
 
 def artifact_meta(output_root: Path, relative_path: str) -> dict[str, Any]:
     raw = (output_root / relative_path).read_bytes()
-    return {
+    meta: dict[str, Any] = {
         "path": f"data/v6/{relative_path}",
         "sha256": hashlib.sha256(raw).hexdigest(),
         "bytes": len(raw),
+        "canonical": True,
     }
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return meta
+    if not isinstance(payload, dict):
+        return meta
+
+    meta["canonical"] = payload.get("canonical") is not False
+    if payload.get("deprecated") is not None:
+        meta["deprecated"] = bool(payload.get("deprecated"))
+    if payload.get("artifact_class") is not None:
+        meta["artifact_class"] = payload.get("artifact_class")
+    if payload.get("semantic_class") is not None:
+        meta["semantic_class"] = payload.get("semantic_class")
+    if payload.get("authority") is not None:
+        meta["authority"] = payload.get("authority")
+    return meta
 
 
 def parse_slot(value: str) -> datetime:

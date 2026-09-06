@@ -83,7 +83,6 @@ def standings_artifact(
     generated_at: str,
 ) -> dict[str, Any]:
     rows = state["rows"]
-    leader_total = rows[0].get("league_total") if rows else None
     user = next((row for row in rows if row["entry_id"] == entry_id), None)
     return {
         "schema_version": SCHEMA_VERSION,
@@ -101,13 +100,6 @@ def standings_artifact(
             "entry_id": entry_id,
             "rank": user.get("league_rank") if user else None,
             "total": user.get("league_total") if user else None,
-            "gap_to_first": (
-                leader_total - user.get("league_total")
-                if user
-                and isinstance(leader_total, int)
-                and isinstance(user.get("league_total"), int)
-                else None
-            ),
         },
         "lineage": state["lineage"],
         "authority": "OFFICIAL_FPL",
@@ -348,89 +340,67 @@ def exposure_artifact(
     live_points: dict[int, int] | None = None,
     live_lineage: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    available = [
-        record
-        for record in (manager_picks.get("entries") or {}).values()
-        if record.get("status") == "AVAILABLE"
+    """Backward-compatible noncanonical tombstone for retired V6 analytics.
+
+    Only integrity/completeness metadata is retained here. V6 does not aggregate
+    player ownership, EO, starter/bench/captain/vice, relative exposure, or
+    manager live-score analytics. Those are downstream Manual FPL duties.
+    """
+    del element_index, live_points
+    entries = manager_picks.get("entries") or {}
+    available_records = [
+        record for record in entries.values()
+        if isinstance(record, dict) and record.get("status") == "AVAILABLE"
     ]
-    denominator = len(available)
-    aggregate: dict[int, dict[str, Any]] = {}
-    for record in available:
-        for pick in record.get("picks") or []:
-            element_id = int(pick["element_id"])
-            row = aggregate.setdefault(
-                element_id,
-                {
-                    "official_element_id": element_id,
-                    "managers_owned_count": 0,
-                    "starts_count": 0,
-                    "captain_count": 0,
-                    "vice_count": 0,
-                    "bench_count": 0,
-                    "multiplier_sum": 0,
-                },
-            )
-            row["managers_owned_count"] += 1
-            position = pick.get("squad_position")
-            if isinstance(position, int) and position <= 11:
-                row["starts_count"] += 1
-            else:
-                row["bench_count"] += 1
-            row["captain_count"] += int(bool(pick.get("captain")))
-            row["vice_count"] += int(bool(pick.get("vice_captain")))
-            if isinstance(pick.get("multiplier"), (int, float)):
-                row["multiplier_sum"] += pick["multiplier"]
-
-    players = []
-    for element_id in sorted(aggregate):
-        row = aggregate[element_id]
-        meta = element_index.get(element_id, {})
-        row.update(
-            {
-                "web_name": meta.get("web_name"),
-                "club": meta.get("club"),
-                "position": meta.get("position"),
-                "manager_count": denominator,
-                "ownership_percent": round(row["managers_owned_count"] * 100 / denominator, 4)
-                if denominator
-                else None,
-                "mini_league_effective_ownership_percent": round(
-                    row["multiplier_sum"] * 100 / denominator, 4
-                )
-                if denominator
-                else None,
-                "live_points": live_points.get(element_id) if live_points is not None else None,
-            }
-        )
-        players.append(row)
-
-    expected = int(manager_picks.get("expected_manager_count") or 0)
-    missing_count = max(0, expected - denominator)
-    complete = expected > 0 and denominator == expected
-    health = "GREEN" if complete else ("AMBER" if denominator else "RED")
+    expected = int(manager_picks.get("expected_manager_count") or len(entries) or 0)
+    collected = int(
+        manager_picks.get("submitted_picks_available_count")
+        if manager_picks.get("submitted_picks_available_count") is not None
+        else len(available_records)
+    )
+    missing = int(
+        manager_picks.get("submitted_picks_missing_count")
+        if manager_picks.get("submitted_picks_missing_count") is not None
+        else max(0, expected - collected)
+    )
+    complete = expected > 0 and collected == expected and missing == 0
+    coverage_percent = round(collected * 100 / expected, 4) if expected else 0.0
+    health = "GREEN" if complete else ("AMBER" if collected else "RED")
     return {
         "schema_version": SCHEMA_VERSION,
+        "artifact_class": "DEPRECATED_NONCANONICAL_TOMBSTONE",
+        "deprecated": True,
+        "canonical": False,
+        "analytics_removed": True,
+        "replacement_inputs": [
+            "standings.json",
+            "gw_<gw>_manager_picks.json",
+            "live_state.json",
+        ],
         "season": manager_picks.get("season"),
         "gw": manager_picks.get("gw"),
         "league_id": manager_picks.get("league_id"),
         "generated_at": iso(utc_now()),
         "expected_manager_count": expected,
-        "collected_manager_count": denominator,
-        "submitted_picks_available_count": denominator,
-        "submitted_picks_missing_count": missing_count,
-        "coverage_percent": round(denominator * 100 / expected, 4) if expected else 0.0,
+        "collected_manager_count": collected,
+        "submitted_picks_available_count": collected,
+        "submitted_picks_missing_count": missing,
+        "coverage_percent": coverage_percent,
         "health": health,
-        "ownership_denominator": denominator,
-        "ownership_denominator_semantics": "SUBMITTED_PICKS_AVAILABLE_MANAGERS_ONLY",
         "complete": complete,
-        "players": players,
+        "players": [],
         "lineage": {
             "submitted_picks": manager_picks.get("lineage"),
             "bootstrap_static": bootstrap_lineage,
             "event_live": live_lineage,
             "normalization_version": NORMALIZATION_VERSION,
         },
-        "authority": "OFFICIAL_FPL_DERIVED_FACT",
+        "authority": "NONE",
+        "governance": {
+            "data_only": True,
+            "mini_league_analytics_authority": "NONE",
+            "ownership_eo_computation": "DOWNSTREAM_ONLY",
+        },
         "normalization_version": NORMALIZATION_VERSION,
     }
 
@@ -440,29 +410,15 @@ def add_manager_live_totals(
     manager_picks: dict[str, Any],
     points: dict[int, int],
 ) -> dict[str, Any]:
+    """Preserve raw live data without manager-level analytical aggregation."""
+    del manager_picks, points
     value = dict(live)
-    totals = []
-    for record in (manager_picks.get("entries") or {}).values():
-        if record.get("status") != "AVAILABLE":
-            continue
-        total = 0
-        missing = []
-        for pick in record.get("picks") or []:
-            element_id = int(pick["element_id"])
-            multiplier = pick.get("multiplier")
-            if element_id not in points or not isinstance(multiplier, (int, float)):
-                missing.append(element_id)
-                continue
-            total += multiplier * points[element_id]
-        totals.append(
-            {
-                "entry_id": record["entry_id"],
-                "raw_multiplier_points": total if not missing else None,
-                "missing_live_element_ids": sorted(set(missing)),
-            }
-        )
-    value["manager_multiplier_points"] = totals
-    value["manager_multiplier_points_semantics"] = (
-        "MECHANICAL_SUBMITTED_MULTIPLIER_X_CURRENT_ELEMENT_POINTS"
-    )
+    value.pop("manager_multiplier_points", None)
+    value.pop("manager_multiplier_points_semantics", None)
+    value["governance"] = {
+        **dict(value.get("governance") or {}),
+        "data_only": True,
+        "manager_live_aggregation_authority": "NONE",
+        "manager_live_aggregation": "DOWNSTREAM_ONLY",
+    }
     return value

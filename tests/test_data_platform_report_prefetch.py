@@ -356,7 +356,7 @@ def test_rival_picks_full_failure_cache_gw_and_membership_changes(tmp_path):
     assert failed["missing_entry_ids"] == [2]
 
 
-def test_eo_aggregation_x1_x2_x3_bench_and_partial_denominator():
+def test_exposure_artifact_is_retired_noncanonical_tombstone():
     manager_picks = {
         "season": "2026-2027",
         "gw": 3,
@@ -380,21 +380,21 @@ def test_eo_aggregation_x1_x2_x3_bench_and_partial_denominator():
         },
         "lineage": {},
     }
-    index = {1: {"web_name": "A"}, 2: {"web_name": "B"}}
-    exposure = exposure_artifact(manager_picks, index, bootstrap_lineage=None)
-    p1, p2 = exposure["players"]
-    assert p1["ownership_percent"] == 100.0
-    assert p1["multiplier_sum"] == 5
-    assert p1["mini_league_effective_ownership_percent"] == 250.0
-    assert p2["starts_count"] == 1
-    assert p2["bench_count"] == 1
-    assert p2["mini_league_effective_ownership_percent"] == 50.0
+    exposure = exposure_artifact(manager_picks, {1: {"web_name": "A"}}, bootstrap_lineage=None)
+    assert exposure["deprecated"] is True
+    assert exposure["canonical"] is False
+    assert exposure["authority"] == "NONE"
+    assert exposure["players"] == []
+    assert exposure["coverage_percent"] == 100.0
+    rendered = json.dumps(exposure)
+    assert "ownership_percent" not in rendered
+    assert "mini_league_effective_ownership_percent" not in rendered
 
     manager_picks["entries"]["2"]["status"] = "UNAVAILABLE"
-    partial = exposure_artifact(manager_picks, index, bootstrap_lineage=None)
-    assert partial["ownership_denominator"] == 1
+    partial = exposure_artifact(manager_picks, {}, bootstrap_lineage=None)
+    assert partial["submitted_picks_available_count"] == 1
     assert partial["coverage_percent"] == 50.0
-    assert partial["players"][0]["ownership_percent"] == 100.0
+    assert partial["complete"] is False
 
 
 def test_personal_normalization_auth_available_and_missing_fields():
@@ -439,7 +439,16 @@ def test_full_prefetch_auth_available_publication_and_idempotency(tmp_path):
     assert first["submitted_picks_available_count"] == 2
     assert first["complete"] is True
     assert (tmp_path / "personal/current_team.json").exists()
-    assert (tmp_path / "mini_leagues/99/gw_3_exposure.json").exists()
+    exposure_path = tmp_path / "mini_leagues/99/gw_3_exposure.json"
+    assert exposure_path.exists()
+    exposure = json.loads(exposure_path.read_text())
+    assert exposure["canonical"] is False
+    exposure_meta = next(
+        item for item in first["artifacts"] if item["path"].endswith("gw_3_exposure.json")
+    )
+    assert exposure_meta["canonical"] is False
+    assert exposure_meta["deprecated"] is True
+    assert exposure_meta["authority"] == "NONE"
     calls = list(client.calls)
 
     second = service.run(report_kind="full_master", logical_slot=SLOT)
@@ -490,7 +499,8 @@ def test_priority_partial_coverage_is_explicit(tmp_path):
     picks = json.loads((tmp_path / "mini_leagues/99/gw_3_manager_picks.json").read_text())
     assert manifest["mini_league_status"] == "PARTIAL"
     assert picks["missing_entry_ids"] == [4000001]
-    assert exposure["ownership_denominator"] == 1
+    assert exposure["canonical"] is False
+    assert exposure["submitted_picks_available_count"] == 1
     assert exposure["coverage_percent"] == 50.0
     assert exposure["complete"] is False
 

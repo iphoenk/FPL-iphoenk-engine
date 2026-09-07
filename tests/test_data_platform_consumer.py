@@ -38,6 +38,7 @@ def _write_snapshot(
         "resolved_registry": "data/v6/evidence/resolved_registry.json",
         "player_identity_map": "data/v6/evidence/player_identity_map.json",
         "runtime_control": "data/v6/health/runtime_control.json",
+        "operational_slots": "data/v6/health/operational_slots.json",
         "publish_integrity": "data/v6/health/publish_integrity.json",
     }
     runtime_control = {
@@ -74,6 +75,7 @@ def _write_snapshot(
     _write_json(root / "current" / "official_fpl.json", {"source_id": "official_fpl"})
     _write_json(root / "health" / "source_health.json", {})
     _write_json(root / "health" / "runtime_control.json", runtime_control)
+    _write_json(root / "health" / "operational_slots.json", {"schema_version": 1, "slots": [], "summary": {"health": "AMBER", "maturity": "WARMING_UP"}})
     _write_json(root / "normalized" / "canonical_players.json", {"player_count": 1})
     _write_json(root / "normalized" / "canonical_teams.json", {})
     _write_json(root / "normalized" / "canonical_fixtures.json", {})

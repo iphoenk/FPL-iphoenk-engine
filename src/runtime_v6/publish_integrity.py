@@ -24,6 +24,7 @@ _BASE_REQUIRED_PATH_KEYS = {
     "resolved_registry",
     "player_identity_map",
     "runtime_control",
+    "operational_slots",
     "publish_integrity",
 }
 

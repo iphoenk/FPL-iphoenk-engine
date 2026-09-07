@@ -275,6 +275,100 @@ def build_runtime_control(
     }
 
 
+
+def build_operational_slots(
+    previous_ledger: dict[str, Any] | None,
+    control: dict[str, Any],
+    *,
+    window_size: int = 48,
+) -> dict[str, Any]:
+    """Build factual rolling fulfillment telemetry without guessing skipped cron arrivals."""
+    limit = max(1, int(window_size))
+    previous = dict(previous_ledger or {})
+    rows = [
+        dict(row)
+        for row in previous.get("slots") or []
+        if isinstance(row, dict) and row.get("slot")
+    ]
+
+    if control.get("counts_as_completed_operational_slot") is True and control.get("expected_cycle_at"):
+        kind = str(control.get("schedule_kind") or "")
+        fulfilled_by = (
+            "PRIMARY"
+            if control.get("scheduled_cycle") is True and kind == "primary"
+            else "RECOVERY"
+            if control.get("scheduled_cycle") is True and kind == "recovery"
+            else "MASTER"
+            if control.get("master_orchestrated") is True
+            else "OTHER"
+        )
+        slot = str(control["expected_cycle_at"])
+        rows = [row for row in rows if str(row.get("slot")) != slot]
+        rows.append(
+            {
+                "slot": slot,
+                "fulfilled_by": fulfilled_by,
+                "natural_scheduler_fulfillment": fulfilled_by in {"PRIMARY", "RECOVERY"},
+                "master_orchestrated_fulfillment": fulfilled_by == "MASTER",
+                "run_id": control.get("run_id"),
+                "observed_at": control.get("cycle_observed_at"),
+                "schedule_kind": control.get("schedule_kind"),
+                "schedule_lag_seconds": control.get("schedule_lag_seconds"),
+            }
+        )
+
+    rows.sort(key=lambda row: str(row.get("slot")))
+    rows = rows[-limit:]
+    tracked = len(rows)
+    primary = sum(row.get("fulfilled_by") == "PRIMARY" for row in rows)
+    recovery = sum(row.get("fulfilled_by") == "RECOVERY" for row in rows)
+    master = sum(row.get("fulfilled_by") == "MASTER" for row in rows)
+    natural = primary + recovery
+    natural_ratio = round(natural / tracked, 4) if tracked else None
+    master_ratio = round(master / tracked, 4) if tracked else None
+
+    if tracked < 6:
+        reliability_health = "AMBER"
+        maturity = "WARMING_UP"
+    elif natural_ratio is not None and natural_ratio >= 0.90:
+        reliability_health = "GREEN"
+        maturity = "ESTABLISHED"
+    elif natural_ratio is not None and natural_ratio >= 0.75:
+        reliability_health = "AMBER"
+        maturity = "ESTABLISHED"
+    else:
+        reliability_health = "RED"
+        maturity = "ESTABLISHED"
+
+    return {
+        "schema_version": 1,
+        "generated_at": control.get("cycle_observed_at"),
+        "window_size": limit,
+        "slots": rows,
+        "summary": {
+            "health": reliability_health,
+            "maturity": maturity,
+            "tracked_operational_slots": tracked,
+            "fulfilled_by_primary": primary,
+            "fulfilled_by_recovery": recovery,
+            "fulfilled_by_master": master,
+            "natural_fulfilled_slots": natural,
+            "natural_fulfillment_ratio": natural_ratio,
+            "master_reliance_ratio": master_ratio,
+            "reliability_basis": "FULFILLED_OPERATIONAL_SLOTS_ONLY",
+            "post_fulfillment_skipped_cron_arrivals_observable": False,
+            "data_availability_health_is_separate": True,
+        },
+        "governance": {
+            "data_only": True,
+            "scheduler_observability_only": True,
+            "decision_authority": "NONE",
+            "prediction_authority": "NONE",
+            "optimizer_authority": "NONE",
+            "natural_scheduler_presence_is_not_inferred": True,
+        },
+    }
+
 def apply_runtime_control(
     manifest: dict[str, Any],
     previous_manifest: dict[str, Any] | None,
@@ -334,11 +428,10 @@ def apply_runtime_control(
     )
     out["governance"] = governance
 
-    source_overall = str(out.get("overall") or "AMBER")
-    if control["health"] == "RED":
-        out["overall"] = "RED"
-    elif control["health"] == "AMBER" and source_overall == "GREEN":
-        out["overall"] = "AMBER"
+    out["data_availability_health"] = str(out.get("overall") or "AMBER")
+    out["runtime_control_health"] = control["health"]
+    governance["scheduler_reliability_does_not_override_data_availability"] = True
+    out["governance"] = governance
 
     return out, control
 
@@ -349,10 +442,24 @@ def main() -> int:
     if not manifest:
         raise SystemExit("V6 manifest missing before runtime-control application")
     previous = _read_json(previous_path)
+    previous_ledger = _read_json(HEALTH / "operational_slots.json")
     updated, control = apply_runtime_control(manifest, previous)
+    ledger = build_operational_slots(previous_ledger, control, window_size=48)
+    updated["operational_reliability"] = ledger["summary"]
+    updated["paths"] = {
+        **dict(updated.get("paths") or {}),
+        "operational_slots": "data/v6/health/operational_slots.json",
+    }
+    updated["governance"] = {
+        **dict(updated.get("governance") or {}),
+        "operational_slot_ledger_is_factual_only": True,
+        "natural_scheduler_presence_is_not_inferred": True,
+        "scheduler_reliability_is_separate_from_data_availability": True,
+    }
     write_json(MANIFEST, updated)
     write_json(HEALTH / "runtime_control.json", control)
-    print(json.dumps(control, ensure_ascii=False))
+    write_json(HEALTH / "operational_slots.json", ledger)
+    print(json.dumps({"runtime_control": control, "operational_reliability": ledger["summary"]}, ensure_ascii=False))
     return 0
 
 

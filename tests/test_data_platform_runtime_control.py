@@ -8,6 +8,7 @@ from pathlib import Path
 from src.runtime_v6.polling import poll_decision
 from src.runtime_v6.runtime_control import (
     apply_runtime_control,
+    build_operational_slots,
     build_runtime_control,
     scheduled_slot_already_completed,
 )
@@ -155,7 +156,9 @@ def test_runtime_control_escalates_manifest_overall_on_missed_cycle():
     )
 
     assert control["health"] == "RED"
-    assert updated["overall"] == "RED"
+    assert updated["overall"] == "GREEN"
+    assert updated["data_availability_health"] == "GREEN"
+    assert updated["runtime_control_health"] == "RED"
     assert updated["control_failures"] == ["MISSED_SCHEDULED_CYCLE"]
     assert updated["paths"]["runtime_control"] == "data/v6/health/runtime_control.json"
     assert updated["governance"]["production_ingestion_schedule_only"] is True
@@ -247,7 +250,9 @@ def test_manual_recovery_is_non_authoritative_and_manifested_amber():
     assert control["scheduled_cycle"] is False
     assert control["manual_recovery"] is True
     assert control["last_scheduled_cycle_at"] == "2026-09-04T06:00:00+00:00"
-    assert updated["overall"] == "AMBER"
+    assert updated["overall"] == "GREEN"
+    assert updated["data_availability_health"] == "GREEN"
+    assert updated["runtime_control_health"] == "AMBER"
     assert updated["control_failures"] == ["NON_AUTHORITATIVE_MANUAL_RECOVERY"]
     assert updated["governance"]["production_ingestion_schedule_only"] is False
     assert updated["governance"]["production_authoritative_snapshots_require_schedule"] is False
@@ -294,3 +299,60 @@ def test_v6_ci_never_acquires_or_writes_runtime_branch():
     assert "runtime-data-v6" not in workflow
     assert "git push" not in workflow
     assert "contents: read" in workflow
+
+
+def test_operational_slot_ledger_separates_natural_fulfillment_from_master_reliance():
+    ledger = {}
+    controls = [
+        build_runtime_control({}, now=datetime(2026, 9, 7, hour, 23, tzinfo=timezone.utc), event_name="schedule", run_id=str(hour), schedule_kind="primary", schedule_expression="23 * * * *")
+        for hour in range(0, 5)
+    ]
+    controls.append(
+        build_runtime_control({}, now=datetime(2026, 9, 7, 5, 7, tzinfo=timezone.utc), event_name="issue_comment", run_id="master", schedule_kind="master_orchestrated")
+    )
+    for control in controls:
+        ledger = build_operational_slots(ledger, control, window_size=48)
+
+    summary = ledger["summary"]
+    assert summary["tracked_operational_slots"] == 6
+    assert summary["fulfilled_by_primary"] == 5
+    assert summary["fulfilled_by_recovery"] == 0
+    assert summary["fulfilled_by_master"] == 1
+    assert summary["natural_fulfillment_ratio"] == 0.8333
+    assert summary["master_reliance_ratio"] == 0.1667
+    assert summary["health"] == "AMBER"
+    assert summary["data_availability_health_is_separate"] is True
+    assert summary["post_fulfillment_skipped_cron_arrivals_observable"] is False
+
+
+def test_report_prefetch_never_creates_operational_slot_ledger_entry():
+    control = build_runtime_control(
+        {},
+        now=datetime(2026, 9, 7, 12, 30, tzinfo=timezone.utc),
+        event_name="issue_comment",
+        run_id="prefetch",
+        schedule_kind="report_prefetch",
+    )
+    ledger = build_operational_slots({}, control)
+    assert ledger["slots"] == []
+    assert ledger["summary"]["tracked_operational_slots"] == 0
+    assert ledger["summary"]["maturity"] == "WARMING_UP"
+
+
+def test_operational_slot_ledger_is_bounded_to_48_slots():
+    ledger = {}
+    for hour in range(60):
+        day = 1 + hour // 24
+        clock = hour % 24
+        control = build_runtime_control(
+            {},
+            now=datetime(2026, 9, day, clock, 23, tzinfo=timezone.utc),
+            event_name="schedule",
+            run_id=str(hour),
+            schedule_kind="primary",
+            schedule_expression="23 * * * *",
+        )
+        ledger = build_operational_slots(ledger, control, window_size=48)
+    assert len(ledger["slots"]) == 48
+    assert ledger["summary"]["tracked_operational_slots"] == 48
+    assert ledger["summary"]["health"] == "GREEN"

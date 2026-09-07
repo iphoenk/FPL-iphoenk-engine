@@ -35,6 +35,7 @@
     "enabled": true,
     "schedule_kind": "manual_recovery",
     "authoritative_runtime_snapshot": false,
+    "counts_as_completed_operational_slot": false,
     "counts_as_completed_scheduled_slot": false,
     "allowed_actor": "repository_owner",
     "confirmation_phrase": "RECOVER_V6"
@@ -53,7 +54,7 @@
     "push_triggered_production_acquisition_allowed": false,
     "pull_request_triggered_production_acquisition_allowed": false,
     "avoid_top_of_hour_scheduler_load": true,
-    "authoritative_operational_triggers": [
+    "authoritative_runtime_triggers": [
       "schedule:primary",
       "schedule:recovery",
       "workflow_dispatch:master_orchestrated",
@@ -61,11 +62,25 @@
       "workflow_dispatch:report_prefetch",
       "issue_comment:report_prefetch"
     ],
+    "authoritative_operational_triggers": [
+      "schedule:primary",
+      "schedule:recovery",
+      "workflow_dispatch:master_orchestrated",
+      "issue_comment:master_orchestrated"
+    ],
+    "operational_slot_completing_triggers": [
+      "schedule:primary",
+      "schedule:recovery",
+      "workflow_dispatch:master_orchestrated",
+      "issue_comment:master_orchestrated"
+    ],
     "master_orchestrated_is_authoritative": true,
     "master_orchestrated_never_masks_natural_scheduler_evidence": true,
     "report_prefetch_is_report_driven_only": true,
     "report_prefetch_has_no_independent_cron": true,
     "report_prefetch_reuses_runtime_data_v6_publisher": true,
+    "report_prefetch_is_authoritative_snapshot": true,
+    "report_prefetch_does_not_complete_core_operational_slot": true,
     "report_prefetch_does_not_count_as_scheduled_core_cycle": true,
     "historical_backfill_is_ad_hoc_only": true,
     "historical_backfill_reuses_report_prefetch_control_plane": true,
@@ -100,8 +115,9 @@
     "report_driven": true,
     "independent_cron": false,
     "authoritative_runtime_snapshot": true,
-    "counts_as_completed_operational_slot": true,
+    "counts_as_completed_operational_slot": false,
     "counts_as_completed_scheduled_slot": false,
+    "counts_as_completed_report_slot": true,
     "allowed_actor": "repository_owner",
     "reason_required": true,
     "control_issue_number": 431,

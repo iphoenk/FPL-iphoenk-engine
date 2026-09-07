@@ -12,7 +12,6 @@ from typing import Any
 from .league_prefetch import (
     acquire_manager_picks,
     add_manager_live_totals,
-    exposure_artifact,
     fetch_all_standings,
     live_state,
     standings_artifact,
@@ -529,7 +528,7 @@ class PrefetchService:
                         )
 
                     manager_ids = [int(row["entry_id"]) for row in state["rows"]]
-                    manager_picks = exposure = None
+                    manager_picks = None
                     metrics = {"cache_hits": 0, "cache_misses": 0, "maximum_concurrency_used": 0}
                     full_picks = bool(priority.get("full_submitted_picks")) and bool(
                         self.config.get("priority_full_picks_enabled", True)
@@ -550,16 +549,6 @@ class PrefetchService:
                         )
                         write_json(self.output_root / picks_relative, manager_picks, secrets=secrets)
                         artifacts.append(artifact_meta(self.output_root, picks_relative))
-                        exposure = exposure_artifact(
-                            manager_picks,
-                            elements,
-                            bootstrap_lineage=lineage(bootstrap_result, gw=gw),
-                            live_points=live_points,
-                            live_lineage=(live_artifact or {}).get("lineage"),
-                        )
-                        exposure_relative = f"mini_leagues/{league_id}/gw_{gw}_exposure.json"
-                        write_json(self.output_root / exposure_relative, exposure, secrets=secrets)
-                        artifacts.append(artifact_meta(self.output_root, exposure_relative))
                         cache_hits += metrics["cache_hits"]
                         cache_misses += metrics["cache_misses"]
                         max_rival_concurrency = max(
@@ -598,7 +587,7 @@ class PrefetchService:
                             "submitted_picks_missing_count": manager_picks.get(
                                 "submitted_picks_missing_count"
                             ) if manager_picks else None,
-                            "coverage_percent": exposure.get("coverage_percent") if exposure else None,
+                            "coverage_percent": manager_picks.get("coverage_percent") if manager_picks else None,
                             "cache_hits": metrics["cache_hits"],
                             "cache_misses": metrics["cache_misses"],
                         }

@@ -11,6 +11,7 @@ from .authority_contract import (
     FORBIDDEN_DOWNSTREAM_AUTHORITIES,
     validate_artifact_descriptor,
 )
+from .operational_reliability import refresh_operational_reliability
 from .store import HEALTH, OUT, read_json, write_json
 
 _BASE_REQUIRED_PATH_KEYS = {
@@ -272,6 +273,7 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
 
 
 def main() -> int:
+    refresh_operational_reliability()
     pruned = _prune_legacy_analytical_artifacts(OUT)
     catalog = refresh_artifact_catalog(OUT)
     report = validate_publish_tree(OUT)

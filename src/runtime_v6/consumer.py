@@ -45,7 +45,11 @@ def _control_failures(control: dict[str, Any]) -> list[str]:
 
     explicit_authority = control.get("authoritative_runtime_snapshot")
     authoritative = explicit_authority is True or (explicit_authority is None and natural)
-    operational = control.get("counts_as_completed_operational_slot") is True
+    operational_raw = control.get("counts_as_completed_operational_slot")
+    # Runtime snapshots published before the explicit operational-slot field was
+    # introduced are still valid when they have unambiguous natural-scheduler
+    # provenance. Governed non-natural snapshots must remain explicit.
+    operational = operational_raw is True or (operational_raw is None and natural)
 
     if not authoritative:
         failures.append("NON_AUTHORITATIVE_RUNTIME_SNAPSHOT")
@@ -53,6 +57,8 @@ def _control_failures(control: dict[str, Any]) -> list[str]:
         failures.append("INVALID_RUNTIME_SCHEDULE_KIND")
         if not scheduled:
             failures.append("NON_SCHEDULED_RUNTIME_SNAPSHOT")
+        if not operational:
+            failures.append("NON_OPERATIONAL_RUNTIME_SNAPSHOT")
 
     if kind in {"primary", "recovery"} and not natural:
         failures.append("INVALID_NATURAL_SCHEDULE_PROVENANCE")
@@ -207,7 +213,9 @@ def assess_snapshot(
             "consumer_recomputes_publish_integrity": True,
             "consumer_requires_exact_resolved_registry": True,
             "consumer_requires_authoritative_runtime_provenance": True,
+            "consumer_requires_authoritative_operational_provenance": True,
             "consumer_accepts_natural_master_and_report_prefetch_authority": True,
+            "consumer_accepts_natural_and_master_orchestrated_authority": True,
             "report_prefetch_does_not_complete_core_operational_slot": True,
             "natural_scheduler_evidence_is_checked_separately": True,
             "consumer_requires_full_zero_authority_contract": True,

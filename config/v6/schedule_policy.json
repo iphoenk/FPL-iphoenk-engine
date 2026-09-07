@@ -1,8 +1,27 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "engine": "V6_FRESH_DATA_PLATFORM",
-  "primary_cron_utc": "23 * * * *",
-  "recovery_cron_utc": "53 * * * *",
+  "primary_cron_utc": "13 * * * *",
+  "recovery_cron_utc": "28 * * * *",
+  "scheduled_crons_utc": [
+    {
+      "cron": "13 * * * *",
+      "kind": "primary"
+    },
+    {
+      "cron": "28 * * * *",
+      "kind": "recovery"
+    },
+    {
+      "cron": "43 * * * *",
+      "kind": "recovery"
+    },
+    {
+      "cron": "58 * * * *",
+      "kind": "recovery"
+    }
+  ],
+  "natural_schedule_redundancy_attempts_per_hour": 4,
   "schedule_authority": true,
   "source_registry_schedule_metadata_authoritative": false,
   "authorities": {
@@ -54,6 +73,9 @@
     "push_triggered_production_acquisition_allowed": false,
     "pull_request_triggered_production_acquisition_allowed": false,
     "avoid_top_of_hour_scheduler_load": true,
+    "natural_scheduler_redundancy_enabled": true,
+    "natural_scheduler_redundancy_attempts_per_hour": 4,
+    "redundant_schedule_arrivals_share_one_logical_hourly_slot": true,
     "authoritative_runtime_triggers": [
       "schedule:primary",
       "schedule:recovery",

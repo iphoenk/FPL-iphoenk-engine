@@ -264,13 +264,18 @@ def test_production_workflow_has_off_minute_schedule_and_governed_manual_recover
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
     policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
+    configured = list(policy["scheduled_crons_utc"])
 
-    assert workflow_crons == [policy["primary_cron_utc"], policy["recovery_cron_utc"]]
+    assert workflow_crons == [str(entry["cron"]) for entry in configured]
     cron_minutes = [int(cron.split()[0]) for cron in workflow_crons]
-    assert len(cron_minutes) == 2
+    assert len(cron_minutes) == policy["natural_schedule_redundancy_attempts_per_hour"] == 4
     assert all(10 <= minute <= 59 for minute in cron_minutes)
-    assert (cron_minutes[1] - cron_minutes[0]) % 60 == 30
+    assert [b - a for a, b in zip(cron_minutes, cron_minutes[1:])] == [15, 15, 15]
+    assert configured[0]["kind"] == "primary"
+    assert all(entry["kind"] == "recovery" for entry in configured[1:])
     assert policy["governance"]["avoid_top_of_hour_scheduler_load"] is True
+    assert policy["governance"]["natural_scheduler_redundancy_enabled"] is True
+    assert policy["governance"]["redundant_schedule_arrivals_share_one_logical_hourly_slot"] is True
     assert "workflow_dispatch:" in workflow
     assert "issue_comment:" in workflow
     assert "V6 Master Orchestrator Trigger" not in workflow

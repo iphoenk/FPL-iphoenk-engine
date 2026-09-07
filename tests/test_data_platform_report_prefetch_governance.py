@@ -62,10 +62,11 @@ def test_report_prefetch_reuses_existing_control_plane_without_new_cron():
     workflow = WORKFLOW.read_text(encoding="utf-8")
     policy = json.loads(POLICY.read_text(encoding="utf-8"))
     prefetch = policy["report_prefetch"]
+    scheduled_crons = [str(entry["cron"]) for entry in policy["scheduled_crons_utc"]]
 
-    assert workflow.count('cron: "23 * * * *"') == 1
-    assert workflow.count('cron: "53 * * * *"') == 1
-    assert workflow.count("cron:") == 2
+    assert workflow.count("cron:") == len(scheduled_crons)
+    for cron in scheduled_crons:
+        assert workflow.count(f'cron: "{cron}"') == 1
     assert prefetch["independent_cron"] is False
     assert prefetch["report_driven"] is True
     assert prefetch["control_issue_number"] == policy["master_orchestrated"]["control_issue_number"] == 431

@@ -10,8 +10,9 @@ ADDITIONS = ROOT / "config" / "v6" / "source_additions.json"
 ACTIVATION = ROOT / "config" / "v6" / "source_activation.json"
 VENUES = ROOT / "config" / "v6" / "venue_geography.json"
 
-NO_AUTH_SOURCES = {"reep_register", "wikidata", "open_meteo", "thesportsdb_v1"}
-P0_CORE = {"reep_register", "wikidata", "open_meteo"}
+DECLARED_NO_AUTH_SOURCES = {"reep_register", "wikidata", "open_meteo", "thesportsdb_v1"}
+ACTIVE_NO_AUTH_SOURCES = {"wikidata", "open_meteo", "thesportsdb_v1"}
+ACTIVE_CORE = {"wikidata", "open_meteo"}
 EXPECTED_2026_27_CLUBS = {
     "AFC Bournemouth",
     "Arsenal",
@@ -40,16 +41,15 @@ def _json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def test_new_source_wave_is_zero_cost_no_account_no_login_no_private_secret() -> None:
+def test_declared_source_wave_is_zero_cost_no_account_no_login_no_private_secret() -> None:
     additions = _json(ADDITIONS)
     activation = _json(ACTIVATION)
     by_id = {str(row["id"]): row for row in additions["sources"]}
 
-    assert NO_AUTH_SOURCES.issubset(by_id)
-    for source_id in NO_AUTH_SOURCES:
+    assert DECLARED_NO_AUTH_SOURCES.issubset(by_id)
+    for source_id in DECLARED_NO_AUTH_SOURCES:
         row = by_id[source_id]
         access = row.get("access") or {}
-        assert activation["constraints"][source_id] == "NO_AUTH_PUBLIC_ONLY"
         assert access.get("cost") == "ZERO"
         assert access.get("account_required") is False
         assert access.get("login_required") is False
@@ -58,20 +58,29 @@ def test_new_source_wave_is_zero_cost_no_account_no_login_no_private_secret() ->
         assert "auth" not in row
         assert row.get("critical") is False
 
+    for source_id in ACTIVE_NO_AUTH_SOURCES:
+        assert activation["constraints"][source_id] == "NO_AUTH_PUBLIC_ONLY"
+
     assert activation["tiers"]["thesportsdb_v1"] == "pilot"
-    assert {source_id for source_id in P0_CORE if activation["tiers"][source_id] == "core"} == P0_CORE
+    assert {source_id for source_id in ACTIVE_CORE if activation["tiers"][source_id] == "core"} == ACTIVE_CORE
 
 
-def test_resolved_registry_preserves_no_auth_activation_contract() -> None:
+def test_resolved_registry_preserves_active_no_auth_contract_and_prunes_unstable_reep() -> None:
     registry = load_registry()
     by_id = {str(row["id"]): row for row in registry["sources"]}
-    assert NO_AUTH_SOURCES.issubset(by_id)
-    for source_id in NO_AUTH_SOURCES:
+    assert ACTIVE_NO_AUTH_SOURCES.issubset(by_id)
+    assert "reep_register" not in by_id
+    for source_id in ACTIVE_NO_AUTH_SOURCES:
         assert by_id[source_id]["activation_constraint"] == "NO_AUTH_PUBLIC_ONLY"
         assert by_id[source_id].get("auth") is None
 
+    reference_only = (registry.get("activation") or {}).get("reference_only_sources") or {}
+    reason = str(reference_only.get("reep_register") or "")
+    assert "HTTP_404" in reason
+    assert "REENABLE_ONLY_AFTER_STABLE_PUBLIC_DOWNLOAD_REVALIDATION" in reason
 
-def test_reep_uses_download_surface_not_keyed_api() -> None:
+
+def test_reep_declaration_uses_download_surface_not_keyed_api() -> None:
     additions = _json(ADDITIONS)
     reep = next(row for row in additions["sources"] if row["id"] == "reep_register")
     urls = [str(request["url"]) for request in reep["requests"]]

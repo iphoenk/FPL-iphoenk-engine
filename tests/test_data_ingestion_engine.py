@@ -58,7 +58,8 @@ def test_free_source_expansion_is_registered_with_safe_tiers_and_no_weather_inte
     assert sources["fantasy_football_pundit"]["source_tier"] == "pilot"
     assert "open_meteo_weather" not in sources
     assert not Path("src/runtime_v6/weather.py").exists()
-    assert set(registry.REFERENCE_ONLY_SOURCE_IDS) == {
+    reference_only = set(registry.REFERENCE_ONLY_SOURCE_IDS)
+    assert {
         "fffix",
         "ffhub",
         "clubelo",
@@ -66,7 +67,9 @@ def test_free_source_expansion_is_registered_with_safe_tiers_and_no_weather_inte
         "premier_injuries",
         "fpl_form",
         "fpl_review_free",
-    }
+    }.issubset(reference_only)
+    assert "reep_register" in reference_only
+    assert "reep_register" not in sources
 
 
 def test_entity_scope_policy_is_source_specific():

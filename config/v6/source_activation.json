@@ -18,13 +18,13 @@
     "bbc_team_news": "FREE_EDITORIAL_TARGETED_DEADLINE_REFERENCE",
     "premier_injuries": "FREE_PUBLIC_REFERENCE_NO_DATASET_REPUBLISH",
     "fpl_form": "FREE_PERSONAL_USE_REFERENCE_NO_RUNTIME_REPUBLISH",
-    "fpl_review_free": "FREE_MODEL_REFERENCE_NO_STABLE_MACHINE_CONTRACT"
+    "fpl_review_free": "FREE_MODEL_REFERENCE_NO_STABLE_MACHINE_CONTRACT",
+    "reep_register": "PUBLIC_NO_AUTH_RELEASE_POINTER_HTTP_404_ON_2026_09_07_REENABLE_ONLY_AFTER_STABLE_PUBLIC_DOWNLOAD_REVALIDATION"
   },
   "constraints": {
     "solio_analytics": "FREE_PUBLIC_NO_AUTH",
     "check_the_chance": "FREE_PUBLIC_ONLY",
     "fantasy_football_pundit": "FREE_PUBLIC_ONLY",
-    "reep_register": "NO_AUTH_PUBLIC_ONLY",
     "wikidata": "NO_AUTH_PUBLIC_ONLY",
     "open_meteo": "NO_AUTH_PUBLIC_ONLY",
     "thesportsdb_v1": "NO_AUTH_PUBLIC_ONLY"
@@ -33,7 +33,6 @@
     "solio_analytics": "core",
     "check_the_chance": "pilot",
     "fantasy_football_pundit": "pilot",
-    "reep_register": "core",
     "wikidata": "core",
     "open_meteo": "core",
     "thesportsdb_v1": "pilot"

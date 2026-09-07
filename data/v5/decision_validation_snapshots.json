@@ -274,14 +274,11 @@
       "supersedes_captured_at": "2026-09-05T19:12:42.843393+00:00"
     }
   },
-  "updated_at": "2026-09-07T12:51:32.792202+00:00",
+  "updated_at": "2026-09-07T18:20:41.295766+00:00",
   "last_capture": {
-    "status": "PREDEADLINE_REVISION_CAPTURED",
+    "status": "ALREADY_FROZEN",
     "planning_gw": 4,
-    "revision": 3,
-    "xi": 11,
-    "owned": 15,
-    "comparisons": 0
+    "revision": 3
   },
   "revision_history": {
     "3": [

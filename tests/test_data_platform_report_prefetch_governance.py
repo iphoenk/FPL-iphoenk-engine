@@ -99,9 +99,10 @@ def test_0530_is_explicit_no_personal_no_league_control_contract():
     assert env["V6_PREFETCH_PERSONAL"] == "false"
     assert env["V6_PREFETCH_MINI_LEAGUE"] == "false"
     assert env["V6_PREFETCH_LIVE"] == "false"
+    assert policy["report_prefetch"]["independent_cron"] is False
+    assert policy["report_prefetch"]["counts_as_completed_operational_slot"] is False
     assert 'if report_kind == "05:30_price":' in workflow
     assert 'prefetch["telemetry"]["request_count"] == 0' in workflow
-    assert "NOT_REFRESHED_FOR_05_30_PRICE_CHECKPOINT" in workflow
 
 
 def test_priority_league_id_is_not_hardcoded_in_executable_v6_code():

@@ -38,6 +38,7 @@ def _write_snapshot(
         "resolved_registry": "data/v6/evidence/resolved_registry.json",
         "player_identity_map": "data/v6/evidence/player_identity_map.json",
         "runtime_control": "data/v6/health/runtime_control.json",
+        "operational_slots": "data/v6/health/operational_slots.json",
         "publish_integrity": "data/v6/health/publish_integrity.json",
     }
     runtime_control = {

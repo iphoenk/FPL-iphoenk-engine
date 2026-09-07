@@ -57,8 +57,12 @@ def test_workflow_accepts_governed_range_and_routes_only_historical_mode():
 
 def test_historical_backfill_adds_no_cron_or_second_publisher():
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
-    assert workflow.count('cron: "23 * * * *"') == 1
-    assert workflow.count('cron: "53 * * * *"') == 1
+    policy = load_policy()
+    scheduled_crons = [str(entry["cron"]) for entry in policy["scheduled_crons_utc"]]
+    assert workflow.count("cron:") == len(scheduled_crons)
+    for cron in scheduled_crons:
+        assert workflow.count(f'cron: "{cron}"') == 1
+    assert policy["report_prefetch"]["independent_cron"] is False
     assert workflow.count('\n  publish:\n') == 1
     assert workflow.count('Publish atomic V6 runtime snapshot') == 1
     assert workflow.count('"historical_backfill.json"') == 1

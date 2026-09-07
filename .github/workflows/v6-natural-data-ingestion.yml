@@ -48,8 +48,10 @@ on:
   issue_comment:
     types: [created]
   schedule:
-    - cron: "23 * * * *"
-    - cron: "53 * * * *"
+    - cron: "13 * * * *"
+    - cron: "28 * * * *"
+    - cron: "43 * * * *"
+    - cron: "58 * * * *"
 
 permissions:
   contents: read

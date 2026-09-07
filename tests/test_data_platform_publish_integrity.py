@@ -27,6 +27,7 @@ def _good_tree(root: Path) -> None:
             "resolved_registry": "data/v6/evidence/resolved_registry.json",
             "player_identity_map": "data/v6/evidence/player_identity_map.json",
             "runtime_control": "data/v6/health/runtime_control.json",
+            "operational_slots": "data/v6/health/operational_slots.json",
             "publish_integrity": "data/v6/health/publish_integrity.json",
         },
     }
@@ -35,6 +36,7 @@ def _good_tree(root: Path) -> None:
         _write(root / "current" / f"{source_id}.json", {"source_id": source_id})
     _write(root / "health" / "source_health.json", {"overall": "GREEN"})
     _write(root / "health" / "runtime_control.json", {"health": "GREEN"})
+    _write(root / "health" / "operational_slots.json", {"schema_version": 1, "slots": [], "summary": {"health": "AMBER", "maturity": "WARMING_UP"}})
     _write(root / "normalized" / "canonical_players.json", {"player_count": 0, "players": []})
     _write(root / "normalized" / "canonical_teams.json", {"teams": []})
     _write(root / "normalized" / "canonical_fixtures.json", {"fixtures": []})

@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "engine": "V6_FRESH_DATA_PLATFORM",
-  "season": "2026-2027",
+  "season": "{{season.canonical}}",
   "cadence": {
     "schedule": "hourly",
     "check_every_source_each_cycle": true,
@@ -112,12 +112,12 @@
       "independence_group": "understat",
       "requests": [
         {
-          "id": "epl_2026",
-          "url": "https://understat.com/league/EPL/2026",
+          "id": "epl_{{season.start_year}}",
+          "url": "https://understat.com/league/{{season.competition}}/{{season.start_year}}",
           "expect": "text",
           "validation": {
             "required_text_all": [
-              "2026/2027",
+              "{{season.slash_full}}",
               "xG"
             ]
           }
@@ -127,11 +127,11 @@
           "url": "https://understat.com/main/getPlayersStats/",
           "method": "POST",
           "form": {
-            "league": "EPL",
-            "season": "2026"
+            "league": "{{season.competition}}",
+            "season": "{{season.start_year}}"
           },
           "headers": {
-            "Referer": "https://understat.com/league/EPL/2026",
+            "Referer": "https://understat.com/league/{{season.competition}}/{{season.start_year}}",
             "X-Requested-With": "XMLHttpRequest"
           },
           "expect": "json",
@@ -205,7 +205,7 @@
           "validation": {
             "required_text_all": [
               "Predicted Points",
-              "2026/27"
+              "{{season.slash_short}}"
             ]
           }
         }
@@ -289,7 +289,7 @@
           "validation": {
             "required_text_all": [
               "Price Changes",
-              "2026/27"
+              "{{season.slash_short}}"
             ]
           }
         }
@@ -380,7 +380,7 @@
           "params": {
             "id": "47",
             "ccode3": "ENG",
-            "season": "2026/2027"
+            "season": "{{season.slash_full}}"
           },
           "expect": "json",
           "validation": {
@@ -496,8 +496,8 @@
       "independence_group": "football_data_uk",
       "requests": [
         {
-          "id": "epl_2627",
-          "url": "https://www.football-data.co.uk/mmz4281/2627/E0.csv",
+          "id": "epl_{{season.compact_short}}",
+          "url": "https://www.football-data.co.uk/mmz4281/{{season.compact_short}}/E0.csv",
           "expect": "csv"
         }
       ]
@@ -542,7 +542,7 @@
           "url": "https://v3.football.api-sports.io/fixtures",
           "params": {
             "league": "39",
-            "season": "2026"
+            "season": "{{season.start_year}}"
           },
           "expect": "json"
         }
@@ -641,7 +641,7 @@
       "requests": [
         {
           "id": "players_raw",
-          "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2026-27/players_raw.csv",
+          "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/{{season.hyphen_short}}/players_raw.csv",
           "expect": "csv",
           "validation": {
             "min_body_bytes": 1000,
@@ -653,7 +653,7 @@
         },
         {
           "id": "fixtures",
-          "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2026-27/fixtures.csv",
+          "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/{{season.hyphen_short}}/fixtures.csv",
           "expect": "csv",
           "validation": {
             "min_body_bytes": 1000,
@@ -666,7 +666,7 @@
         },
         {
           "id": "player_idlist",
-          "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2026-27/player_idlist.csv",
+          "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/{{season.hyphen_short}}/player_idlist.csv",
           "expect": "csv",
           "validation": {
             "min_body_bytes": 1000,

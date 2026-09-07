@@ -1,24 +1,14 @@
 # V6 Adaptive Ingestion Policy
 
-V6 remains a data-only acquisition platform. The base source catalogue is retained for provenance and reversibility, while the active acquisition set is explicitly pruned by `config/v6/source_activation.json`.
+V6 remains a data-only acquisition platform. The configured source catalogue is retained for provenance and reversibility, while the active acquisition set is explicitly pruned by `config/v6/source_activation.json`.
 
 ## Current active-source contract
 
-The base catalogue contains 27 source definitions. The active scheduled acquisition set contains 20 sources.
+Current source counts and source membership are generated from the resolved V6 registry and published in `docs/V6_SOURCE_CONTRACT_GENERATED.md`. That generated contract is CI-checked and is the documentation authority for configured, active, disabled, reference-only, required, and temporary-override counts.
 
-Seven sources are disabled from active V6 polling:
+Do not hand-maintain source totals in this policy document. Stable provider contracts belong in the canonical registry/additions layer, temporary repairs belong in `source_overrides.json`, and activation state belongs only in `source_activation.json`.
 
-- `fbref` — duplicate advanced-stat path plus access restriction.
-- `sofascore` — duplicate path using an unofficial endpoint currently returning 403.
-- `sportmonks` — paid provider; dropped by owner decision.
-- `api_football` — paid access required for the current season; dropped by owner decision.
-- `transfermarkt` — automated-access restriction; dropped from scheduled acquisition.
-- `whoscored` — duplicate Opta-family path plus access restriction.
-- `football_data_org` — dropped by owner decision after pricing/access review.
-
-The source definitions remain in the base catalogue only as historical/audit metadata. They do not enter the active registry, do not consume workers, do not appear in active health denominators, and do not receive provider calls.
-
-FFHub remains active only on a free/public-partial basis. V6 must not depend on a Pro upgrade. FFFix remains free/public only. ClubElo remains active and is designated for repair rather than removal.
+Reference-only sources remain available as provenance or targeted retrieval references but do not enter scheduled acquisition, consume scheduled workers, or enter active health denominators. Disabled sources likewise remain configuration/audit facts without being treated as runtime failures.
 
 ## Goals
 
@@ -28,6 +18,7 @@ FFHub remains active only on a free/public-partial basis. V6 must not depend on 
 - Preserve fail-isolated concurrent acquisition for every active source that is due.
 - Reuse existing SHA/content-change evidence instead of introducing a second deduplication engine.
 - Make intentional scheduled skips explicit in runtime health.
+- Keep source-count documentation generated from the same resolved registry used by production.
 
 ## Registry fields
 
@@ -45,16 +36,22 @@ Sources without `poll_interval_minutes` retain every-cycle eligibility. A config
 
 ## Activation policy
 
-`config/v6/source_activation.json` is the single activation layer. `source_registry.json` remains the source-definition catalogue, while the activation layer determines which definitions are allowed into the runtime registry.
+`config/v6/source_activation.json` is the single activation layer. `source_registry.json` plus governed additive source definitions form the configured source catalogue, while the activation layer determines which definitions are allowed into the runtime registry.
 
-The loader validates both contracts:
+The loader validates the contracts:
 
-- base definitions must still match the 27-source catalogue;
-- active definitions must match the 20-source acquisition contract;
-- disabled IDs must match the approved drop set;
-- unknown activation IDs fail validation.
+- configured source IDs must remain unique and deterministic;
+- disabled and reference-only IDs must resolve to configured sources;
+- required platform sources cannot be pruned;
+- active definitions must exactly match the resolved activation contract;
+- unknown activation IDs fail validation;
+- temporary source overrides must remain lifecycle-governed and must not target inactive sources.
 
 Dropped-source files from a previously hydrated `runtime-data-v6` snapshot are pruned before publication so stale provider artifacts cannot masquerade as active sources.
+
+## Season contract
+
+The football season is owned by `config/v6/season_contract.json`. Provider-specific season representations are derived from that contract rather than being independently interpreted at runtime. This keeps canonical season identity and provider formatting under one V6-owned contract.
 
 ## Deadline window
 
@@ -70,14 +67,10 @@ If the next configured poll would exceed the remaining budget, the source is not
 
 ## Current targeted polling policies
 
-- Official FPL: 60 minutes.
-- Understat: 60 minutes, `html_scrape`, SHA/content-hash dedup semantics.
-- StatsBomb Open Data catalogue: 1,440 minutes, SHA/content-hash dedup semantics.
-
-All other active sources keep existing every-cycle eligibility until their cadence is explicitly qualified.
+Provider-specific polling intervals remain registry-owned and are visible in the generated resolved registry/runtime evidence. This policy document intentionally does not duplicate the current per-provider values.
 
 ## Health semantics
 
 A scheduled `NOT_DUE` skip can preserve the latest healthy source state because no provider call was required by contract. Runtime output exposes `polling.reason`, `polling.last_polled_at`, effective interval, deadline-window state, and budget metadata so a scheduled cache is distinguishable from an acquisition failure.
 
-`BUDGET_EXHAUSTED` is AMBER. Critical active sources with no usable current or cached data remain RED. Disabled sources are not health failures because they are not part of the active V6 runtime contract.
+`BUDGET_EXHAUSTED` is AMBER. Critical active sources with no usable current or cached data remain RED. Disabled or reference-only sources are not health failures because they are not part of the active scheduled V6 runtime contract.

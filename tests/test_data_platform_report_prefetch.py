@@ -399,12 +399,9 @@ def test_full_prefetch_publishes_atomic_facts_without_exposure_artifact_and_is_i
     assert (tmp_path / "mini_leagues/99/standings.json").exists()
     assert (tmp_path / "mini_leagues/99/gw_3_manager_picks.json").exists()
     assert not (tmp_path / "mini_leagues/99/gw_3_exposure.json").exists()
-    exposure_meta = next(
-        item for item in first["artifacts"] if item["path"].endswith("gw_3_exposure.json")
+    assert not any(
+        item["path"].endswith("gw_3_exposure.json") for item in first["artifacts"]
     )
-    assert exposure_meta["canonical"] is False
-    assert exposure_meta["omitted"] is True
-    assert exposure_meta["artifact_class"] == "DEPRECATED_REMOVED"
     calls = list(client.calls)
 
     second = service.run(report_kind="full_master", logical_slot=SLOT)

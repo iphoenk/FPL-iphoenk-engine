@@ -1,6 +1,14 @@
 {
   "schema_version": 1,
   "policy": "free_sources_are_registered_with_safe_activation_tiers",
+  "admission_policy": {
+    "cost": "ZERO",
+    "account_required": false,
+    "login_required": false,
+    "private_api_key_required": false,
+    "private_token_required": false,
+    "auth_block_allowed": false
+  },
   "sources": [
     {
       "id": "solio_analytics",
@@ -247,11 +255,18 @@
           "id": "premier_league_venues",
           "url": "https://api.open-meteo.com/v1/forecast",
           "params": {
-            "latitude": "50.7352,51.5549,52.5092,51.4908,50.8618,51.4817,52.4481,51.3983,53.4255,51.4749,53.7463,52.0547,53.7778,53.4308,53.4831,53.4631,54.9752,52.9400,54.9144,51.6043",
-            "longitude": "-1.8383,-0.1084,-1.8848,-0.2887,-0.0833,-0.1910,-1.4956,-0.0855,-3.0037,-0.2216,-0.3674,1.1448,-1.5721,-2.9608,-2.2004,-2.2913,-1.6224,-1.1328,-1.3882,-0.0665",
             "hourly": "temperature_2m,precipitation_probability,precipitation,wind_speed_10m,wind_gusts_10m,weather_code",
             "forecast_days": "16",
             "timezone": "GMT"
+          },
+          "params_from_records": {
+            "path": "config/v6/venue_geography.json",
+            "records_key": "venues",
+            "format": "csv",
+            "fields": {
+              "latitude": "latitude",
+              "longitude": "longitude"
+            }
           },
           "expect": "json",
           "validation": {
@@ -267,7 +282,7 @@
         "private_token_required": false,
         "shared_public_key": false
       },
-      "notes": "No-auth raw venue forecast acquisition. Venue ordering is governed by config/v6/venue_geography.json. V6 stores provider weather fields only and computes no FPL impact, xPts multiplier or transfer decision."
+      "notes": "No-auth raw venue forecast acquisition. Venue coordinates and ordering are owned only by config/v6/venue_geography.json. V6 stores provider weather fields only and computes no FPL impact, xPts multiplier or transfer decision."
     },
     {
       "id": "thesportsdb_v1",

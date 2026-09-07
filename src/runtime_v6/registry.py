@@ -5,6 +5,12 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from .source_policy import (
+    SourcePolicyError,
+    materialize_config_request_params,
+    normalize_addition_admission,
+)
+
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = ROOT / "config" / "v6" / "source_registry.json"
 ADDITIONS = ROOT / "config" / "v6" / "source_additions.json"
@@ -105,6 +111,10 @@ def _merge_source(base: dict[str, Any], override: dict[str, Any]) -> dict[str, A
 
 def _apply_additions(payload: dict[str, Any], path: Path = ADDITIONS) -> dict[str, Any]:
     additions_payload = _read_json(path, expected_schema_version=1)
+    try:
+        additions_payload = normalize_addition_admission(additions_payload)
+    except SourcePolicyError as exc:
+        raise RegistryError(str(exc)) from exc
     additions = list(additions_payload.get("sources") or [])
     if not additions:
         return payload
@@ -120,6 +130,7 @@ def _apply_additions(payload: dict[str, Any], path: Path = ADDITIONS) -> dict[st
 
     out["sources"] = [*(out.get("sources") or []), *deepcopy(additions)]
     out["source_additions_applied"] = addition_ids
+    out["source_addition_admission_policy"] = deepcopy(additions_payload.get("admission_policy") or {})
     return out
 
 
@@ -276,6 +287,7 @@ def resolved_registry_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
         "season": payload["season"],
         "config_layers": config_layer_metadata(),
         "source_additions_applied": list(payload.get("source_additions_applied") or []),
+        "source_addition_admission_policy": deepcopy(payload.get("source_addition_admission_policy") or {}),
         "source_overrides_applied": list(payload.get("source_overrides_applied") or []),
         "override_lifecycle": dict(payload.get("override_lifecycle") or {}),
         "cadence": deepcopy(payload.get("cadence") or {}),
@@ -293,6 +305,10 @@ def load_registry(path: Path = CONFIG) -> dict[str, Any]:
     payload = _apply_additions(payload)
     _validate_base_source_set(payload)
     payload = _apply_overrides(payload)
+    try:
+        payload = materialize_config_request_params(payload)
+    except SourcePolicyError as exc:
+        raise RegistryError(str(exc)) from exc
     payload = _normalize_ingestion_policy(payload)
     payload = _apply_activation(payload)
     validate_registry(payload)

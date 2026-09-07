@@ -24,3 +24,5 @@ jobs:
           persist-credentials: false
       - name: Validate repository version isolation
         run: python src/platform/repository_version_isolation_validate.py
+      - name: Validate shared repository test naming policy
+        run: python src/platform/repository_test_naming_validate.py

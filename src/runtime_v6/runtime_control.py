@@ -39,12 +39,6 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _event_schedule_expression(explicit: str | None = None) -> str | None:
-    """Resolve the nominal GitHub schedule without hard-coding cron minutes.
-
-    GitHub scheduled workflows can start many minutes late. The event payload still
-    carries the cron expression that caused the run, which is the correct authority
-    for assigning the invocation to an operational scheduler slot.
-    """
     if explicit is not None:
         value = str(explicit).strip()
         return value or None
@@ -57,12 +51,6 @@ def _event_schedule_expression(explicit: str | None = None) -> str | None:
 
 
 def _simple_hourly_cron_minute(expression: str | None) -> int | None:
-    """Return minute for the V6 policy shape ``M * * * *``; otherwise fail safe.
-
-    V6 intentionally owns only the two simple hourly cron expressions declared in
-    ``config/v6/schedule_policy.json``. Unsupported cron syntax falls back to the
-    legacy wall-clock slot rather than guessing a nominal execution time.
-    """
     if not expression:
         return None
     parts = str(expression).split()
@@ -76,7 +64,6 @@ def _simple_hourly_cron_minute(expression: str | None) -> int | None:
 
 
 def nominal_schedule_time(value: datetime, schedule_expression: str | None) -> datetime | None:
-    """Infer the latest nominal hourly cron occurrence at or before ``value``."""
     minute = _simple_hourly_cron_minute(schedule_expression)
     if minute is None:
         return None
@@ -92,10 +79,17 @@ def scheduled_invocation_slot(
     scheduler_interval_minutes: int,
     schedule_expression: str | None,
 ) -> datetime:
-    """Map a delayed scheduled invocation to the slot of its nominal cron event."""
     nominal = nominal_schedule_time(value, schedule_expression)
     anchor = nominal if nominal is not None else _now(value)
     return scheduler_slot_start(anchor, scheduler_interval_minutes)
+
+
+def _is_master(event: str, kind: str) -> bool:
+    return event in {"workflow_dispatch", "issue_comment"} and kind == "master_orchestrated"
+
+
+def _is_report_prefetch(event: str, kind: str) -> bool:
+    return event in {"workflow_dispatch", "issue_comment"} and kind == "report_prefetch"
 
 
 def scheduled_slot_already_completed(
@@ -107,33 +101,27 @@ def scheduled_slot_already_completed(
     schedule_kind: str | None = None,
     schedule_expression: str | None = None,
 ) -> bool:
-    """Return True when this logical hourly V6 slot already has authoritative data.
+    """Return True only for acquisition invocations whose core operational slot is done.
 
-    Natural schedule and FPL Master orchestration share one operational slot, while
-    natural-scheduler evidence remains tracked separately in runtime_control.
-    Emergency manual recovery never completes an authoritative slot.
-
-    For natural GitHub schedule events the logical slot is derived from the cron
-    expression that triggered the run, not from runner start time. This prevents a
-    delayed ``:53`` recovery that starts after the hour from stealing the following
-    hour's ``:23`` primary slot.
+    Report-prefetch snapshots are authoritative publications but intentionally never
+    complete or suppress the hourly core acquisition slot.
     """
     event = str(event_name or os.getenv("GITHUB_EVENT_NAME") or "local")
     kind = str(schedule_kind or os.getenv("V6_SCHEDULE_KIND") or "")
-    authoritative_invocation = (
-        event == "schedule"
-        or (event in {"workflow_dispatch", "issue_comment"} and kind == "master_orchestrated")
-    )
-    if not authoritative_invocation:
+    operational_invocation = event == "schedule" or _is_master(event, kind)
+    if not operational_invocation:
         return False
+
     previous = dict(previous_manifest or {})
     previous_control = dict(previous.get("runtime_control") or {})
-    last_authoritative = _parse_dt(previous_control.get("last_authoritative_cycle_at"))
-    if last_authoritative is None and event == "schedule":
-        last_authoritative = _parse_dt(previous_control.get("last_scheduled_cycle_at"))
-    if last_authoritative is None and previous_control.get("authoritative_runtime_snapshot") is True:
-        last_authoritative = _parse_dt(previous_control.get("cycle_observed_at"))
-    if last_authoritative is None:
+    last_operational = _parse_dt(previous_control.get("last_operational_cycle_at"))
+    if last_operational is None:
+        last_operational = _parse_dt(previous_control.get("last_authoritative_cycle_at"))
+    if last_operational is None and event == "schedule":
+        last_operational = _parse_dt(previous_control.get("last_scheduled_cycle_at"))
+    if last_operational is None and previous_control.get("counts_as_completed_operational_slot") is True:
+        last_operational = _parse_dt(previous_control.get("cycle_observed_at"))
+    if last_operational is None:
         return False
 
     interval = max(1, int(scheduler_interval_minutes))
@@ -143,10 +131,7 @@ def scheduled_slot_already_completed(
         current_slot = scheduled_invocation_slot(current, interval, expression)
     else:
         current_slot = scheduler_slot_start(current, interval)
-    previous_slot = scheduler_slot_start(last_authoritative, interval)
-
-    # A newer authoritative snapshot also satisfies an older delayed recovery. Do
-    # not allow queued scheduled work to regress runtime-data-v6 to an older slot.
+    previous_slot = scheduler_slot_start(last_operational, interval)
     return previous_slot >= current_slot
 
 
@@ -164,11 +149,7 @@ def build_runtime_control(
     scheduler_interval = max(1, int(scheduler_interval_minutes))
     event = str(event_name or os.getenv("GITHUB_EVENT_NAME") or "local")
     scheduled_cycle = event == "schedule"
-    kind = str(
-        schedule_kind
-        or os.getenv("V6_SCHEDULE_KIND")
-        or ("scheduled" if scheduled_cycle else "manual")
-    )
+    kind = str(schedule_kind or os.getenv("V6_SCHEDULE_KIND") or ("scheduled" if scheduled_cycle else "manual"))
     expression = _event_schedule_expression(schedule_expression) if scheduled_cycle else None
     nominal = nominal_schedule_time(current, expression) if scheduled_cycle else None
     slot = (
@@ -176,12 +157,14 @@ def build_runtime_control(
         if scheduled_cycle
         else scheduler_slot_start(current, scheduler_interval)
     )
-    master_orchestrated = event in {"workflow_dispatch", "issue_comment"} and kind == "master_orchestrated"
+
+    master_orchestrated = _is_master(event, kind)
+    report_prefetch = _is_report_prefetch(event, kind)
     manual_recovery = event == "workflow_dispatch" and kind == "manual_recovery"
-    authoritative_runtime_snapshot = (
-        (scheduled_cycle and kind in {"primary", "recovery"})
-        or master_orchestrated
-    )
+    natural_authority = scheduled_cycle and kind in {"primary", "recovery"}
+    authoritative_runtime_snapshot = natural_authority or master_orchestrated or report_prefetch
+    completes_operational_slot = natural_authority or master_orchestrated
+
     previous = dict(previous_manifest or {})
     previous_control = dict(previous.get("runtime_control") or {})
 
@@ -202,38 +185,43 @@ def build_runtime_control(
         else None
     )
     if scheduled_cycle and previous_scheduled_slot is not None:
-        slot_gap = int(
-            (slot - previous_scheduled_slot).total_seconds()
-            // (scheduler_interval * 60)
-        )
+        slot_gap = int((slot - previous_scheduled_slot).total_seconds() // (scheduler_interval * 60))
         duplicate_scheduled_cycle = slot_gap == 0
         out_of_order_scheduled_cycle = slot_gap < 0
         missed_cycle_count = max(0, slot_gap - 1)
 
     if scheduled_cycle:
-        if previous_scheduled_slot is not None and previous_scheduled_slot > slot:
-            last_scheduled_cycle = previous_scheduled_slot
-        else:
-            last_scheduled_cycle = slot
-    else:
-        last_scheduled_cycle = previous_scheduled
-
-    previous_authoritative = _parse_dt(previous_control.get("last_authoritative_cycle_at"))
-    if previous_authoritative is None and previous_control.get("authoritative_runtime_snapshot") is True:
-        previous_authoritative = _parse_dt(previous_control.get("cycle_observed_at"))
-    previous_authoritative_slot = (
-        scheduler_slot_start(previous_authoritative, scheduler_interval)
-        if previous_authoritative is not None
-        else None
-    )
-    if authoritative_runtime_snapshot:
-        last_authoritative_cycle = (
-            previous_authoritative_slot
-            if previous_authoritative_slot is not None and previous_authoritative_slot > slot
+        last_scheduled_cycle = (
+            previous_scheduled_slot
+            if previous_scheduled_slot is not None and previous_scheduled_slot > slot
             else slot
         )
     else:
-        last_authoritative_cycle = previous_authoritative
+        last_scheduled_cycle = previous_scheduled
+
+    previous_operational = _parse_dt(previous_control.get("last_operational_cycle_at"))
+    if previous_operational is None:
+        previous_operational = _parse_dt(previous_control.get("last_authoritative_cycle_at"))
+    if previous_operational is None and previous_control.get("counts_as_completed_operational_slot") is True:
+        previous_operational = _parse_dt(previous_control.get("cycle_observed_at"))
+    previous_operational_slot = (
+        scheduler_slot_start(previous_operational, scheduler_interval)
+        if previous_operational is not None
+        else None
+    )
+    if completes_operational_slot:
+        last_operational_cycle = (
+            previous_operational_slot
+            if previous_operational_slot is not None and previous_operational_slot > slot
+            else slot
+        )
+    else:
+        last_operational_cycle = previous_operational
+
+    previous_snapshot = _parse_dt(previous_control.get("last_authoritative_snapshot_at"))
+    if previous_snapshot is None and previous_control.get("authoritative_runtime_snapshot") is True:
+        previous_snapshot = _parse_dt(previous_control.get("cycle_observed_at"))
+    last_authoritative_snapshot = current if authoritative_runtime_snapshot else previous_snapshot
 
     if scheduled_cycle:
         health = (
@@ -241,26 +229,29 @@ def build_runtime_control(
             if missed_cycle_count
             else ("AMBER" if duplicate_scheduled_cycle or out_of_order_scheduled_cycle else "GREEN")
         )
-    elif master_orchestrated:
+    elif master_orchestrated or report_prefetch:
         health = "GREEN"
     else:
         health = "AMBER"
-    expected = slot if (scheduled_cycle or master_orchestrated) else None
+
+    expected = slot if completes_operational_slot else None
     lag_anchor = nominal if nominal is not None else slot
     schedule_lag_seconds = max(0.0, (current - lag_anchor).total_seconds()) if scheduled_cycle else None
 
     return {
-        "schema_version": 4,
+        "schema_version": 5,
         "health": health,
         "event_name": event,
         "schedule_kind": kind,
         "run_id": str(run_id or os.getenv("GITHUB_RUN_ID") or "") or None,
         "scheduled_cycle": scheduled_cycle,
         "master_orchestrated": master_orchestrated,
+        "report_prefetch": report_prefetch,
         "manual_recovery": manual_recovery,
         "authoritative_runtime_snapshot": authoritative_runtime_snapshot,
         "counts_as_completed_scheduled_slot": scheduled_cycle,
-        "counts_as_completed_operational_slot": authoritative_runtime_snapshot,
+        "counts_as_completed_operational_slot": completes_operational_slot,
+        "counts_as_completed_report_slot": report_prefetch,
         "scheduler_interval_minutes": scheduler_interval,
         "schedule_expression": expression,
         "nominal_schedule_at": nominal.isoformat() if nominal else None,
@@ -270,13 +261,16 @@ def build_runtime_control(
         "schedule_lag_seconds": round(schedule_lag_seconds, 3) if schedule_lag_seconds is not None else None,
         "previous_scheduled_cycle_at": previous_scheduled.isoformat() if previous_scheduled else None,
         "last_scheduled_cycle_at": last_scheduled_cycle.isoformat() if last_scheduled_cycle else None,
-        "last_authoritative_cycle_at": last_authoritative_cycle.isoformat() if last_authoritative_cycle else None,
+        "last_authoritative_cycle_at": last_operational_cycle.isoformat() if last_operational_cycle else None,
+        "last_operational_cycle_at": last_operational_cycle.isoformat() if last_operational_cycle else None,
+        "last_authoritative_snapshot_at": last_authoritative_snapshot.isoformat() if last_authoritative_snapshot else None,
         "missed_cycle": missed_cycle_count > 0,
         "missed_cycle_count": missed_cycle_count,
         "duplicate_scheduled_cycle": duplicate_scheduled_cycle,
         "out_of_order_scheduled_cycle": out_of_order_scheduled_cycle,
         "baseline_inferred_from_legacy_manifest": baseline_inferred,
         "single_logical_acquisition_per_scheduler_slot": True,
+        "report_prefetch_cannot_complete_core_operational_slot": True,
         "scheduled_slot_uses_nominal_cron": scheduled_cycle and nominal is not None,
     }
 
@@ -304,7 +298,7 @@ def apply_runtime_control(
         schedule_expression=schedule_expression,
     )
 
-    control_failures = []
+    control_failures: list[str] = []
     if control["missed_cycle"]:
         control_failures.append("MISSED_SCHEDULED_CYCLE")
     if control["duplicate_scheduled_cycle"]:
@@ -325,8 +319,11 @@ def apply_runtime_control(
             "production_ingestion_schedule_only": control["scheduled_cycle"],
             "production_authoritative_snapshots_require_schedule": False,
             "production_authoritative_snapshots_require_governed_trigger": True,
-            "authoritative_trigger_kinds": ["primary", "recovery", "master_orchestrated"],
+            "authoritative_trigger_kinds": ["primary", "recovery", "master_orchestrated", "report_prefetch"],
+            "operational_slot_completing_trigger_kinds": ["primary", "recovery", "master_orchestrated"],
             "master_orchestrated_is_authoritative": True,
+            "report_prefetch_is_authoritative": True,
+            "report_prefetch_completes_core_operational_slot": False,
             "governed_manual_recovery_enabled": True,
             "manual_recovery_is_authoritative": False,
             "single_logical_acquisition_per_scheduler_slot": True,

@@ -12,7 +12,7 @@ from .registry import ZERO_AUTHORITY_KEYS
 
 DEFAULT_MAX_AGE_MINUTES = 90
 MAX_CLOCK_SKEW_MINUTES = 5
-_ALLOWED_OPERATIONAL_KINDS = {"primary", "recovery", "master_orchestrated"}
+_ALLOWED_RUNTIME_KINDS = {"primary", "recovery", "master_orchestrated", "report_prefetch"}
 _FALLBACK_SCOPE = "EXTERNAL_SOURCES_ONLY"
 
 
@@ -39,30 +39,42 @@ def _control_failures(control: dict[str, Any]) -> list[str]:
     event_name = str(control.get("event_name") or "")
     scheduled = control.get("scheduled_cycle") is True
     natural = kind in {"primary", "recovery"} and event_name == "schedule" and scheduled
-    master = (
-        kind == "master_orchestrated"
-        and event_name in {"issue_comment", "workflow_dispatch"}
-        and control.get("master_orchestrated") is True
-    )
+    governed_event = event_name in {"issue_comment", "workflow_dispatch"}
+    master = kind == "master_orchestrated" and governed_event and control.get("master_orchestrated") is True
+    report_prefetch = kind == "report_prefetch" and governed_event and control.get("report_prefetch") is True
 
     explicit_authority = control.get("authoritative_runtime_snapshot")
     authoritative = explicit_authority is True or (explicit_authority is None and natural)
-    explicit_operational = control.get("counts_as_completed_operational_slot")
-    operational = explicit_operational is True or (explicit_operational is None and natural)
+    operational_raw = control.get("counts_as_completed_operational_slot")
+    # Runtime snapshots published before the explicit operational-slot field was
+    # introduced are still valid when they have unambiguous natural-scheduler
+    # provenance. Governed non-natural snapshots must remain explicit.
+    operational = operational_raw is True or (operational_raw is None and natural)
 
     if not authoritative:
         failures.append("NON_AUTHORITATIVE_RUNTIME_SNAPSHOT")
-    if not operational:
-        failures.append("NON_OPERATIONAL_RUNTIME_SNAPSHOT")
-    if kind not in _ALLOWED_OPERATIONAL_KINDS:
+    if kind not in _ALLOWED_RUNTIME_KINDS:
         failures.append("INVALID_RUNTIME_SCHEDULE_KIND")
         if not scheduled:
             failures.append("NON_SCHEDULED_RUNTIME_SNAPSHOT")
+        if not operational:
+            failures.append("NON_OPERATIONAL_RUNTIME_SNAPSHOT")
 
     if kind in {"primary", "recovery"} and not natural:
         failures.append("INVALID_NATURAL_SCHEDULE_PROVENANCE")
     elif kind == "master_orchestrated" and not master:
         failures.append("INVALID_MASTER_ORCHESTRATED_PROVENANCE")
+    elif kind == "report_prefetch" and not report_prefetch:
+        failures.append("INVALID_REPORT_PREFETCH_PROVENANCE")
+
+    if natural or master:
+        if not operational:
+            failures.append("NON_OPERATIONAL_RUNTIME_SNAPSHOT")
+    elif report_prefetch:
+        if operational:
+            failures.append("REPORT_PREFETCH_MUST_NOT_COMPLETE_CORE_OPERATIONAL_SLOT")
+        if control.get("counts_as_completed_report_slot") is not True:
+            failures.append("REPORT_PREFETCH_SLOT_NOT_RECORDED")
 
     if scheduled:
         if control.get("duplicate_scheduled_cycle") is True:
@@ -192,6 +204,7 @@ def assess_snapshot(
         "runtime_control_health": control.get("health"),
         "runtime_schedule_kind": control.get("schedule_kind"),
         "authoritative_runtime_snapshot": control.get("authoritative_runtime_snapshot"),
+        "counts_as_completed_operational_slot": control.get("counts_as_completed_operational_slot"),
         "stored_tree_sha256": stored_digest,
         "recomputed_tree_sha256": recomputed_digest,
         "failures": failures,
@@ -199,8 +212,11 @@ def assess_snapshot(
             "consumer_does_not_trust_static_green_without_freshness": True,
             "consumer_recomputes_publish_integrity": True,
             "consumer_requires_exact_resolved_registry": True,
+            "consumer_requires_authoritative_runtime_provenance": True,
             "consumer_requires_authoritative_operational_provenance": True,
+            "consumer_accepts_natural_master_and_report_prefetch_authority": True,
             "consumer_accepts_natural_and_master_orchestrated_authority": True,
+            "report_prefetch_does_not_complete_core_operational_slot": True,
             "natural_scheduler_evidence_is_checked_separately": True,
             "consumer_requires_full_zero_authority_contract": True,
             "stale_or_invalid_allows_minimum_scope_direct_fallback": True,

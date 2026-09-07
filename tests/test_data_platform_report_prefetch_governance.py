@@ -4,8 +4,11 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
 from src.runtime_v6.official_fpl_client import OfficialFPLClient
 from src.runtime_v6.prefetch_contract import freshness
+from src.runtime_v6.workflow_control import WorkflowControlError, load_policy, resolve_prefetch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -73,15 +76,33 @@ def test_report_prefetch_reuses_existing_control_plane_without_new_cron():
     assert "Run active V6 acquisition cycle" in workflow
     assert "steps.scheduler.outputs.kind != 'report_prefetch'" in workflow
     assert "Run report-driven V6 personal and mini-league prefetch" in workflow
+    assert "python -m src.runtime_v6.workflow_control resolve-prefetch" in workflow
 
 
 def test_0530_is_explicit_no_personal_no_league_control_contract():
     workflow = WORKFLOW.read_text(encoding="utf-8")
+    policy = load_policy()
+    env, summary = resolve_prefetch(
+        policy,
+        event_name="workflow_dispatch",
+        dispatch_values={
+            "report_kind": "05:30_price",
+            "logical_slot": "2026-09-07T05:30:00+07:00",
+            "scope": "",
+            "gw_from": "",
+            "gw_to": "",
+            "force": "false",
+        },
+    )
+
+    assert summary["report_kind"] == "05:30_price"
+    assert env["V6_PREFETCH_PERSONAL"] == "false"
+    assert env["V6_PREFETCH_MINI_LEAGUE"] == "false"
+    assert env["V6_PREFETCH_LIVE"] == "false"
+    assert policy["report_prefetch"]["independent_cron"] is False
+    assert policy["report_prefetch"]["counts_as_completed_operational_slot"] is False
     assert 'if report_kind == "05:30_price":' in workflow
-    assert 'prefetch["personal_requested"] is False' in workflow
-    assert 'prefetch["mini_league_requested"] is False' in workflow
     assert 'prefetch["telemetry"]["request_count"] == 0' in workflow
-    assert "NOT_REFRESHED_FOR_05_30_PRICE_CHECKPOINT" in workflow
 
 
 def test_priority_league_id_is_not_hardcoded_in_executable_v6_code():
@@ -108,8 +129,35 @@ def test_report_prefetch_auth_secrets_are_scoped_to_prefetch_step_only():
 
 def test_report_prefetch_force_is_governed_and_not_implicit():
     workflow = WORKFLOW.read_text(encoding="utf-8")
-    assert 'force_raw = str(values.get("force") or "false")' in workflow
-    assert 'if force_raw not in {"true", "false", "1", "0", "yes", "no"}' in workflow
+    policy = load_policy()
+    env, summary = resolve_prefetch(
+        policy,
+        event_name="workflow_dispatch",
+        dispatch_values={
+            "report_kind": "full_master",
+            "logical_slot": "2026-09-07T12:30:00+07:00",
+            "scope": "",
+            "gw_from": "",
+            "gw_to": "",
+            "force": "true",
+        },
+    )
+
+    assert summary["force"] is True
+    assert env["V6_PREFETCH_FORCE"] == "true"
+    with pytest.raises(WorkflowControlError, match="force must be boolean"):
+        resolve_prefetch(
+            policy,
+            event_name="workflow_dispatch",
+            dispatch_values={
+                "report_kind": "full_master",
+                "logical_slot": "2026-09-07T12:30:00+07:00",
+                "scope": "",
+                "gw_from": "",
+                "gw_to": "",
+                "force": "definitely",
+            },
+        )
     assert '[[ "$V6_PREFETCH_FORCE" == "true" ]] && args+=(--force)' in workflow
 
 

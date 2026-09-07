@@ -125,7 +125,7 @@ def test_all_config_layer_versions_are_explicitly_governed():
     assert layers == {
         "registry": {"path": "config/v6/source_registry.json", "schema_version": 3},
         "additions": {"path": "config/v6/source_additions.json", "schema_version": 1},
-        "overrides": {"path": "config/v6/source_overrides.json", "schema_version": 2},
+        "overrides": {"path": "config/v6/source_overrides.json", "schema_version": 3},
         "activation": {"path": "config/v6/source_activation.json", "schema_version": 4},
     }
 
@@ -167,7 +167,7 @@ def test_resolved_registry_snapshot_exposes_effective_layers_without_hidden_auth
         "formation_authority",
     )
     assert all(resolved["policy"][key] == "NONE" for key in ZERO_AUTHORITY_KEYS)
-    assert resolved["config_layers"]["overrides"]["schema_version"] == 2
+    assert resolved["config_layers"]["overrides"]["schema_version"] == 3
 
 
 def test_zero_authority_contract_fails_closed_for_every_business_authority():

@@ -241,6 +241,7 @@ def collect_price_predictor(
     required = {"price_change_percent", "price_change_projections"}
     covered = sum(required.issubset(row.keys()) for row in rows)
     upstream_live = upstream_payload.get("health") == "GREEN"
+    action = "DERIVED" if rows else "NO_DATA"
 
     if rows and covered == len(rows) and upstream_live:
         health, availability, effective_state = "GREEN", "AVAILABLE", "LIVE_DERIVED"
@@ -252,8 +253,12 @@ def collect_price_predictor(
         health, availability, effective_state = "AMBER", "UNAVAILABLE", "STALE_CACHE"
         rows = list((previous.get("data") or {}).get("players") or [])
         covered = int((previous.get("coverage") or {}).get("covered_player_count") or 0)
+        action = "LAST_GOOD_CACHE"
     else:
         health, availability, effective_state = "RED", "UNAVAILABLE", "MISSING"
+
+    previous_rows = list(((previous or {}).get("data") or {}).get("players") or [])
+    changed = rows != previous_rows if action == "DERIVED" and previous_rows else None
 
     return {
         "schema_version": 4,
@@ -266,11 +271,11 @@ def collect_price_predictor(
         "entity_scopes": list(source.get("entity_scopes") or ["PLAYER", "TEAM"]),
         "checked_at": utc_now(),
         "duration_ms": round((time.perf_counter() - started) * 1000.0, 3),
-        "current_run_action": "REUSED",
+        "current_run_action": action,
         "health": health,
         "availability": availability,
         "effective_state": effective_state,
-        "changed": None,
+        "changed": changed,
         "semantic_class": "UPSTREAM_MODEL_SIGNAL",
         "model_author": "OFFICIAL_FPL",
         "v6_computation": "NONE",
@@ -297,6 +302,7 @@ def collect_price_predictor(
             "values_not_invented": True,
             "inherits_upstream_freshness": True,
             "v6_authors_prediction": False,
+            "current_run_action_is_truthful": True,
         },
     }
 

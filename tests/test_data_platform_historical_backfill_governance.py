@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from src.runtime_v6.workflow_control import load_policy, resolve_prefetch
+
 
 def test_historical_backfill_reuses_issue_431_report_prefetch_control_plane():
     policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
@@ -24,8 +26,25 @@ def test_historical_backfill_reuses_issue_431_report_prefetch_control_plane():
 
 def test_workflow_accepts_governed_range_and_routes_only_historical_mode():
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
-    assert '"gw_from", "gw_to"' in workflow
-    assert 'historical_backfill requires scope=mini_league' in workflow
+    policy = load_policy()
+    env, summary = resolve_prefetch(
+        policy,
+        event_name="workflow_dispatch",
+        dispatch_values={
+            "report_kind": "historical_backfill",
+            "logical_slot": "",
+            "scope": "mini_league",
+            "gw_from": "1",
+            "gw_to": "3",
+            "force": "false",
+        },
+    )
+
+    assert summary["report_kind"] == "historical_backfill"
+    assert summary["scope"] == ["mini_league"]
+    assert env["V6_PREFETCH_GW_FROM"] == "1"
+    assert env["V6_PREFETCH_GW_TO"] == "3"
+    assert 'python -m src.runtime_v6.workflow_control resolve-prefetch' in workflow
     assert 'python -m src.runtime_v6.historical_backfill' in workflow
     assert '--gw-from "$V6_PREFETCH_GW_FROM"' in workflow
     assert '--gw-to "$V6_PREFETCH_GW_TO"' in workflow
@@ -42,7 +61,7 @@ def test_historical_backfill_adds_no_cron_or_second_publisher():
     assert workflow.count('cron: "53 * * * *"') == 1
     assert workflow.count('\n  publish:\n') == 1
     assert workflow.count('Publish atomic V6 runtime snapshot') == 1
-    assert workflow.count('data/v6/health/historical_backfill.json') == 1
+    assert workflow.count('"historical_backfill.json"') == 1
 
 
 def test_historical_command_documented_as_factual_only():

@@ -220,7 +220,7 @@
           "url": "https://query.wikidata.org/sparql",
           "params": {
             "format": "json",
-            "query": "SELECT ?club ?clubLabel ?website WHERE { ?club wdt:P118 wd:Q9448 . OPTIONAL { ?club wdt:P856 ?website . } SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". } } ORDER BY ?clubLabel"
+            "query": "SELECT ?club ?clubLabel (SAMPLE(?website) AS ?website) WHERE { ?club wdt:P118 wd:Q9448 . ?club wdt:P31/wdt:P279* wd:Q476028 . OPTIONAL { ?club wdt:P856 ?website . } SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". } } GROUP BY ?club ?clubLabel ORDER BY ?clubLabel"
           },
           "expect": "json",
           "validation": {
@@ -236,7 +236,7 @@
         "private_token_required": false,
         "shared_public_key": false
       },
-      "notes": "Public no-auth SPARQL corroboration only. Results never supersede Official FPL identity and never authorize fuzzy runtime joins."
+      "notes": "Public no-auth SPARQL corroboration only. Query scope is constrained to association-football-club entities and grouped to one row per Wikidata club QID; P118 is not treated as proof of current-season membership. Results never supersede Official FPL identity and never authorize fuzzy runtime joins."
     },
     {
       "id": "open_meteo",

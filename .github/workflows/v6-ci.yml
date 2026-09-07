@@ -13,7 +13,7 @@ on:
       - "tests/test_data_ingestion_engine.py"
       - "tests/test_adaptive_polling.py"
       - "tests/test_data_platform_*.py"
-      - "tests/test_v6_p0_p1_green_prod.py"
+      - "tests/test_data_platform_production_acceptance.py"
       - ".github/workflows/v6-ci.yml"
       - ".github/workflows/v6-natural-data-ingestion.yml"
   push:
@@ -29,7 +29,7 @@ on:
       - "tests/test_data_ingestion_engine.py"
       - "tests/test_adaptive_polling.py"
       - "tests/test_data_platform_*.py"
-      - "tests/test_v6_p0_p1_green_prod.py"
+      - "tests/test_data_platform_production_acceptance.py"
       - ".github/workflows/v6-ci.yml"
       - ".github/workflows/v6-natural-data-ingestion.yml"
 
@@ -71,7 +71,7 @@ jobs:
           tests/test_data_ingestion_engine.py
           tests/test_adaptive_polling.py
           tests/test_data_platform_*.py
-          tests/test_v6_p0_p1_green_prod.py
+          tests/test_data_platform_production_acceptance.py
 
   v6-publisher-config:
     name: v6-publisher-config

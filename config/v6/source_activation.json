@@ -23,11 +23,19 @@
   "constraints": {
     "solio_analytics": "FREE_PUBLIC_NO_AUTH",
     "check_the_chance": "FREE_PUBLIC_ONLY",
-    "fantasy_football_pundit": "FREE_PUBLIC_ONLY"
+    "fantasy_football_pundit": "FREE_PUBLIC_ONLY",
+    "reep_register": "NO_AUTH_PUBLIC_ONLY",
+    "wikidata": "NO_AUTH_PUBLIC_ONLY",
+    "open_meteo": "NO_AUTH_PUBLIC_ONLY",
+    "thesportsdb_v1": "NO_AUTH_PUBLIC_ONLY"
   },
   "tiers": {
     "solio_analytics": "core",
     "check_the_chance": "pilot",
-    "fantasy_football_pundit": "pilot"
+    "fantasy_football_pundit": "pilot",
+    "reep_register": "core",
+    "wikidata": "core",
+    "open_meteo": "core",
+    "thesportsdb_v1": "pilot"
   }
 }

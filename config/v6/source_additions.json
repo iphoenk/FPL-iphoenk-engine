@@ -36,7 +36,10 @@
           "url": "https://checkthechance.com/fantasy-football/player-predictions/",
           "expect": "text",
           "validation": {
-            "required_text_any": ["Player Predictions", "FPL"]
+            "required_text_any": [
+              "Player Predictions",
+              "FPL"
+            ]
           }
         }
       ],
@@ -56,7 +59,10 @@
           "url": "https://www.fantasyfootballpundit.com/fpl-points-predictor/",
           "expect": "text",
           "validation": {
-            "required_text_any": ["Predicted Points", "Start"]
+            "required_text_any": [
+              "Predicted Points",
+              "Start"
+            ]
           }
         },
         {
@@ -64,7 +70,11 @@
           "url": "https://www.fantasyfootballpundit.com/fantasy-premier-league-team-news/",
           "expect": "text",
           "validation": {
-            "required_text_any": ["Team News", "Predicted Lineups", "Premier League"]
+            "required_text_any": [
+              "Team News",
+              "Predicted Lineups",
+              "Premier League"
+            ]
           }
         }
       ],
@@ -79,7 +89,11 @@
       "check_freshness_minutes": 360,
       "independence_group": "bbc_sport",
       "requests": [
-        {"id": "premier_league", "url": "https://www.bbc.com/sport/football/premier-league", "expect": "text"}
+        {
+          "id": "premier_league",
+          "url": "https://www.bbc.com/sport/football/premier-league",
+          "expect": "text"
+        }
       ],
       "notes": "Free editorial evidence retained for targeted deadline-time retrieval; not mirrored into scheduled runtime snapshots."
     },
@@ -92,7 +106,11 @@
       "check_freshness_minutes": 360,
       "independence_group": "premier_injuries",
       "requests": [
-        {"id": "injury_table", "url": "https://www.premierinjuries.com/injury-table.php", "expect": "text"}
+        {
+          "id": "injury_table",
+          "url": "https://www.premierinjuries.com/injury-table.php",
+          "expect": "text"
+        }
       ],
       "notes": "Public-site reference only. Do not mirror or republish the commercial injury dataset."
     },
@@ -105,7 +123,11 @@
       "check_freshness_minutes": 360,
       "independence_group": "fpl_form",
       "requests": [
-        {"id": "export_info", "url": "https://www.fplform.com/export-fpl-form-data", "expect": "text"}
+        {
+          "id": "export_info",
+          "url": "https://www.fplform.com/export-fpl-form-data",
+          "expect": "text"
+        }
       ],
       "notes": "Free/personal-use model reference only. Do not persist or republish restricted export data."
     },
@@ -118,9 +140,194 @@
       "check_freshness_minutes": 360,
       "independence_group": "fpl_review",
       "requests": [
-        {"id": "free_model", "url": "https://fplreview.com/", "expect": "text"}
+        {
+          "id": "free_model",
+          "url": "https://fplreview.com/",
+          "expect": "text"
+        }
       ],
       "notes": "Free-model comparator retained for targeted retrieval; no stable public machine-ingestion contract is assumed."
+    },
+    {
+      "id": "reep_register",
+      "name": "Reep Football Identity Register",
+      "category": "identity_bridge_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 720,
+      "independence_group": "reep_register",
+      "entity_scopes": [
+        "PLAYER",
+        "TEAM",
+        "FIXTURE",
+        "COMPETITION"
+      ],
+      "requests": [
+        {
+          "id": "latest_manifest",
+          "url": "https://data.reep.football/latest.json",
+          "expect": "json",
+          "validation": {
+            "min_body_bytes": 100
+          }
+        },
+        {
+          "id": "downloads_contract",
+          "url": "https://reep.football/downloads/",
+          "expect": "text",
+          "validation": {
+            "required_text_any": [
+              "Download the register",
+              "CC0 1.0",
+              "Latest release"
+            ]
+          }
+        }
+      ],
+      "access": {
+        "cost": "ZERO",
+        "account_required": false,
+        "login_required": false,
+        "private_api_key_required": false,
+        "private_token_required": false,
+        "shared_public_key": false
+      },
+      "notes": "No-auth public release surface only. The keyed /api/v1 service is forbidden for V6. Generic acquisition intentionally fetches only the small release manifest/contract page; large CSV/DuckDB assets remain outside the 1 MB generic HTTP path until a bounded streaming identity adapter is implemented."
+    },
+    {
+      "id": "wikidata",
+      "name": "Wikidata Query Service",
+      "category": "identity_bridge_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 720,
+      "independence_group": "wikidata",
+      "entity_scopes": [
+        "TEAM",
+        "COMPETITION"
+      ],
+      "requests": [
+        {
+          "id": "premier_league_clubs",
+          "url": "https://query.wikidata.org/sparql",
+          "params": {
+            "format": "json",
+            "query": "SELECT ?club ?clubLabel ?website WHERE { ?club wdt:P118 wd:Q9448 . OPTIONAL { ?club wdt:P856 ?website . } SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". } } ORDER BY ?clubLabel"
+          },
+          "expect": "json",
+          "validation": {
+            "min_body_bytes": 100
+          }
+        }
+      ],
+      "access": {
+        "cost": "ZERO",
+        "account_required": false,
+        "login_required": false,
+        "private_api_key_required": false,
+        "private_token_required": false,
+        "shared_public_key": false
+      },
+      "notes": "Public no-auth SPARQL corroboration only. Results never supersede Official FPL identity and never authorize fuzzy runtime joins."
+    },
+    {
+      "id": "open_meteo",
+      "name": "Open-Meteo Forecast API",
+      "category": "fixture_weather_context",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 180,
+      "independence_group": "open_meteo",
+      "entity_scopes": [
+        "TEAM",
+        "FIXTURE"
+      ],
+      "requests": [
+        {
+          "id": "premier_league_venues",
+          "url": "https://api.open-meteo.com/v1/forecast",
+          "params": {
+            "latitude": "50.7352,51.5549,52.5092,51.4908,50.8618,51.4817,52.4481,51.3983,53.4255,51.4749,53.7463,52.0547,53.7778,53.4308,53.4831,53.4631,54.9752,52.9400,54.9144,51.6043",
+            "longitude": "-1.8383,-0.1084,-1.8848,-0.2887,-0.0833,-0.1910,-1.4956,-0.0855,-3.0037,-0.2216,-0.3674,1.1448,-1.5721,-2.9608,-2.2004,-2.2913,-1.6224,-1.1328,-1.3882,-0.0665",
+            "hourly": "temperature_2m,precipitation_probability,precipitation,wind_speed_10m,wind_gusts_10m,weather_code",
+            "forecast_days": "16",
+            "timezone": "GMT"
+          },
+          "expect": "json",
+          "validation": {
+            "min_body_bytes": 1000
+          }
+        }
+      ],
+      "access": {
+        "cost": "ZERO",
+        "account_required": false,
+        "login_required": false,
+        "private_api_key_required": false,
+        "private_token_required": false,
+        "shared_public_key": false
+      },
+      "notes": "No-auth raw venue forecast acquisition. Venue ordering is governed by config/v6/venue_geography.json. V6 stores provider weather fields only and computes no FPL impact, xPts multiplier or transfer decision."
+    },
+    {
+      "id": "thesportsdb_v1",
+      "name": "TheSportsDB V1 Public API",
+      "category": "fixture_match_data",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 360,
+      "independence_group": "thesportsdb",
+      "entity_scopes": [
+        "TEAM",
+        "FIXTURE",
+        "EVENT",
+        "COMPETITION"
+      ],
+      "requests": [
+        {
+          "id": "league",
+          "url": "https://www.thesportsdb.com/api/v1/json/123/lookupleague.php",
+          "params": {
+            "id": "4328"
+          },
+          "expect": "json",
+          "validation": {
+            "min_body_bytes": 100
+          }
+        },
+        {
+          "id": "next_event",
+          "url": "https://www.thesportsdb.com/api/v1/json/123/eventsnextleague.php",
+          "params": {
+            "id": "4328"
+          },
+          "expect": "json",
+          "validation": {
+            "min_body_bytes": 100
+          }
+        },
+        {
+          "id": "past_event",
+          "url": "https://www.thesportsdb.com/api/v1/json/123/eventspastleague.php",
+          "params": {
+            "id": "4328"
+          },
+          "expect": "json",
+          "validation": {
+            "min_body_bytes": 100
+          }
+        }
+      ],
+      "access": {
+        "cost": "ZERO",
+        "account_required": false,
+        "login_required": false,
+        "private_api_key_required": false,
+        "private_token_required": false,
+        "shared_public_key": true,
+        "public_shared_access_segment": "123"
+      },
+      "notes": "Legacy free V1 pilot using TheSportsDB's documented shared public access segment 123. No user account, login or private secret is permitted. Secondary factual redundancy only; never an authority over Official FPL."
     }
   ]
 }

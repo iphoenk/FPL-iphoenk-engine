@@ -271,7 +271,7 @@ def test_production_workflow_has_off_minute_schedule_and_governed_manual_recover
     assert "V6 Master Orchestrator Trigger" not in workflow
     assert "github.event.issue.number == 431" in workflow
     assert "/v6-master-acquire" in workflow
-    assert "Authorize governed manual recovery" in workflow
+    assert "python -m src.runtime_v6.workflow_control authorize-dispatch" in workflow
     assert "RECOVER_V6" in workflow
     assert "schedule_policy.json" in workflow
     assert "manual_recovery" in workflow

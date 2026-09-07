@@ -11,6 +11,7 @@ from .health import build_source_health
 from .http_client import AcquisitionClient, utc_now
 from .identity import build_player_identity_map
 from .identity_scope import apply_entity_scope_identity_semantics
+from .noauth_source_native import build_noauth_source_native_datasets
 from .normalizer import (
     build_canonical_fixtures,
     build_canonical_players,
@@ -79,6 +80,11 @@ def _publish_source_native_datasets(
     results: dict[str, dict[str, Any]], identity_map: dict[str, Any]
 ) -> list[str]:
     datasets = build_source_native_datasets(results, identity_map)
+    noauth_datasets = build_noauth_source_native_datasets(results, identity_map)
+    overlap = sorted(set(datasets) & set(noauth_datasets))
+    if overlap:
+        raise RuntimeError(f"source_native_parser_overlap:{overlap}")
+    datasets.update(noauth_datasets)
     target = NORMALIZED / "sources"
     expected = {f"{source_id}.json" for source_id in datasets}
     if target.exists():
@@ -283,7 +289,10 @@ def run() -> dict[str, Any]:
         },
         "source_native_normalization": {
             "normalization_version": "V6_SOURCE_NATIVE_1",
+            "additional_normalization_versions": ["V6_NOAUTH_SOURCE_NATIVE_1"],
             "source_specific_parsers": True,
+            "isolated_parser_families": True,
+            "parser_overlap_guard": True,
             "raw_source_payloads_preserved": True,
             "cross_source_synthesis": False,
             "artifacts": normalized_source_artifacts,
@@ -324,7 +333,8 @@ def run() -> dict[str, Any]:
             "source_specific_normalization_is_data_only": True,
             "normalized_model_signals_retain_upstream_authorship": True,
             "daily_budget_timezone": "Asia/Jakarta",
-            "weather_context_is_downstream_report_time_only": True,
+            "weather_raw_context_may_be_acquired": True,
+            "weather_fpl_interpretation_is_downstream_only": True,
             "weather_direct_xpts_multiplier": False,
             "weather_alone_can_trigger_transfer": False,
         },

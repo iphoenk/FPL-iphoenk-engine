@@ -1,5 +1,29 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
+  "policy": {
+    "role": "TEMPORARY_REPAIR_ONLY",
+    "max_active_overrides": 15,
+    "stable_repairs_should_be_promoted_to_canonical_registry": true,
+    "inactive_sources_must_not_have_overrides": true,
+    "effective_registry_is_published_for_drift_review": true
+  },
+  "lifecycle": {
+    "official_fpl": {"temporary": true, "reason": "Runtime request and body-size hardening pending canonical promotion", "review_by": "2026-10-01"},
+    "official_price_predictor": {"temporary": true, "reason": "Required dependency contract pending canonical promotion", "review_by": "2026-10-01"},
+    "opta_the_analyst": {"temporary": true, "reason": "Current public stats endpoint validation repair", "review_by": "2026-10-01"},
+    "statmuse": {"temporary": true, "reason": "Current public query validation repair", "review_by": "2026-10-01"},
+    "onefpl": {"temporary": true, "reason": "Current-season price page validation repair", "review_by": "2026-10-01"},
+    "livefpl": {"temporary": true, "reason": "Current public price endpoints repair", "review_by": "2026-10-01"},
+    "fotmob": {"temporary": true, "reason": "Current league API shape repair", "review_by": "2026-10-01"},
+    "espn": {"temporary": true, "reason": "Current public scoreboard API shape repair", "review_by": "2026-10-01"},
+    "understat": {"temporary": true, "reason": "Current EPL page and POST players endpoint repair", "review_by": "2026-10-01"},
+    "onside": {"temporary": true, "reason": "Current predicted-points public page validation repair", "review_by": "2026-10-01"},
+    "statsbomb": {"temporary": true, "reason": "Open-data cadence and dedup runtime hardening", "review_by": "2026-10-01"},
+    "vaastav_fpl": {"temporary": true, "reason": "2026-27 current-season file surface repair", "review_by": "2026-10-01"},
+    "solio_analytics": {"temporary": true, "reason": "Public no-auth source cadence hardening", "review_by": "2026-10-01"},
+    "check_the_chance": {"temporary": true, "reason": "Public source cadence and dedup hardening", "review_by": "2026-10-01"},
+    "fantasy_football_pundit": {"temporary": true, "reason": "Public source cadence and body-size hardening", "review_by": "2026-10-01"}
+  },
   "sources": {
     "official_fpl": {
       "acquisition_kind": "rest_json",
@@ -17,9 +41,7 @@
           "id": "premier_league_stats",
           "url": "https://theanalyst.com/competition/premier-league/stats",
           "expect": "text",
-          "validation": {
-            "required_text_any": ["Premier League Stats"]
-          }
+          "validation": {"required_text_any": ["Premier League Stats"]}
         }
       ]
     },
@@ -29,51 +51,7 @@
           "id": "team_xg",
           "url": "https://www.statmuse.com/fc/ask/premier-league-xg-by-team",
           "expect": "text",
-          "validation": {
-            "required_text_all": ["Premier League", "xG"]
-          }
-        }
-      ]
-    },
-    "fffix": {
-      "requests": [
-        {
-          "id": "price",
-          "url": "https://www.fantasyfootballfix.com/price/",
-          "expect": "text",
-          "validation": {
-            "reject_redirect_contains": ["/signin/", "/login"],
-            "forbidden_text_any": ["Log in to Fix"]
-          }
-        },
-        {
-          "id": "algorithm_predictions",
-          "url": "https://www.fantasyfootballfix.com/algorithm_predictions/",
-          "expect": "text",
-          "validation": {
-            "reject_redirect_contains": ["/signin/", "/login"],
-            "forbidden_text_any": ["Log in to Fix"]
-          }
-        }
-      ]
-    },
-    "ffhub": {
-      "requests": [
-        {
-          "id": "predictions",
-          "url": "https://www.fantasyfootballhub.co.uk/predictions",
-          "expect": "text",
-          "validation": {
-            "forbidden_text_any": ["mepr-unauthorized-message", "become a member today"]
-          }
-        },
-        {
-          "id": "tools",
-          "url": "https://www.fantasyfootballhub.co.uk/tools",
-          "expect": "text",
-          "validation": {
-            "required_text_any": ["Fantasy Football Hub", "FPL"]
-          }
+          "validation": {"required_text_all": ["Premier League", "xG"]}
         }
       ]
     },
@@ -83,9 +61,7 @@
           "id": "prices",
           "url": "https://onefpl.com/prices",
           "expect": "text",
-          "validation": {
-            "required_text_all": ["Price Changes", "2026/27"]
-          }
+          "validation": {"required_text_all": ["Price Changes", "2026/27"]}
         }
       ]
     },
@@ -95,17 +71,13 @@
           "id": "prices",
           "url": "https://www.livefpl.net/prices",
           "expect": "text",
-          "validation": {
-            "required_text_any": ["LiveFPL Price Changes"]
-          }
+          "validation": {"required_text_any": ["LiveFPL Price Changes"]}
         },
         {
           "id": "price_changes",
           "url": "https://plan.livefpl.net/price_changes",
           "expect": "text",
-          "validation": {
-            "required_text_any": ["price changes", "Price Changes"]
-          }
+          "validation": {"required_text_any": ["price changes", "Price Changes"]}
         }
       ]
     },
@@ -114,71 +86,9 @@
         {
           "id": "league",
           "url": "https://www.fotmob.com/api/data/leagues",
-          "params": {
-            "id": "47",
-            "ccode3": "ENG",
-            "season": "2026/2027"
-          },
+          "params": {"id": "47", "ccode3": "ENG", "season": "2026/2027"},
           "expect": "json",
-          "validation": {
-            "required_json_paths": ["details.id", "details.selectedSeason"]
-          }
-        }
-      ]
-    },
-    "clubelo": {
-      "acquisition_kind": "rest_csv",
-      "poll_interval_minutes": 60,
-      "check_freshness_minutes": 1500,
-      "content_hash_dedup": true,
-      "requests": [
-        {
-          "id": "ranking",
-          "url": "https://api.clubelo.com/{utc_date}",
-          "expect": "csv",
-          "connect_timeout_seconds": 3,
-          "read_timeout_seconds": 6,
-          "validation": {
-            "min_body_bytes": 1000,
-            "required_text_any": ["Rank,Club"]
-          }
-        }
-      ]
-    },
-    "api_football": {
-      "acquisition_kind": "rest_json",
-      "poll_interval_minutes": 1440,
-      "poll_interval_minutes_deadline_window": 360,
-      "daily_request_budget": 100,
-      "check_freshness_minutes": 1500,
-      "verification_required": true,
-      "verification_status": "PENDING",
-      "verification_note": "Before scheduled polling, verify the active key with /status and one 2026-season fixture request.",
-      "requests": [
-        {
-          "id": "epl_fixtures",
-          "url": "https://v3.football.api-sports.io/fixtures",
-          "params": {
-            "league": "39",
-            "season": "2026"
-          },
-          "expect": "json",
-          "validation": {
-            "reject_json_truthy_paths": ["errors"],
-            "required_json_paths": ["response"]
-          }
-        }
-      ]
-    },
-    "transfermarkt": {
-      "requests": [
-        {
-          "id": "injuries",
-          "url": "https://www.transfermarkt.com/premier-league/verletztespieler/wettbewerb/GB1",
-          "expect": "text",
-          "validation": {
-            "forbidden_text_any": ["verify that you're not a robot", "JavaScript is disabled"]
-          }
+          "validation": {"required_json_paths": ["details.id", "details.selectedSeason"]}
         }
       ]
     },
@@ -189,9 +99,7 @@
           "url": "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard",
           "expect": "json",
           "use_default_user_agent": true,
-          "validation": {
-            "required_json_paths": ["leagues", "events"]
-          }
+          "validation": {"required_json_paths": ["leagues", "events"]}
         }
       ]
     },
@@ -204,26 +112,16 @@
           "id": "epl_2026",
           "url": "https://understat.com/league/EPL/2026",
           "expect": "text",
-          "validation": {
-            "required_text_all": ["2026/2027", "xG"]
-          }
+          "validation": {"required_text_all": ["2026/2027", "xG"]}
         },
         {
           "id": "players_api",
           "url": "https://understat.com/main/getPlayersStats/",
           "method": "POST",
-          "form": {
-            "league": "EPL",
-            "season": "2026"
-          },
-          "headers": {
-            "Referer": "https://understat.com/league/EPL/2026",
-            "X-Requested-With": "XMLHttpRequest"
-          },
+          "form": {"league": "EPL", "season": "2026"},
+          "headers": {"Referer": "https://understat.com/league/EPL/2026", "X-Requested-With": "XMLHttpRequest"},
           "expect": "json",
-          "validation": {
-            "required_json_paths": ["players"]
-          }
+          "validation": {"required_json_paths": ["players"]}
         }
       ]
     },
@@ -233,9 +131,7 @@
           "id": "predicted_points",
           "url": "https://onsidearena.com/fpl/predicted-points",
           "expect": "text",
-          "validation": {
-            "required_text_all": ["Predicted Points", "2026/27"]
-          }
+          "validation": {"required_text_all": ["Predicted Points", "2026/27"]}
         }
       ]
     },
@@ -245,51 +141,25 @@
       "check_freshness_minutes": 1500,
       "content_hash_dedup": true
     },
-    "football_data_uk": {
-      "requests": [
-        {
-          "id": "epl_2627",
-          "url": "https://www.football-data.co.uk/mmz4281/2627/E0.csv",
-          "expect": "csv",
-          "validation": {
-            "min_body_bytes": 1000,
-            "required_text_any": ["HomeTeam,AwayTeam"]
-          }
-        }
-      ]
-    },
-    "football_data_org": {
-      "acquisition_kind": "rest_json",
-      "poll_interval_minutes": 60
-    },
     "vaastav_fpl": {
       "requests": [
         {
           "id": "players_raw",
           "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2026-27/players_raw.csv",
           "expect": "csv",
-          "validation": {
-            "min_body_bytes": 1000,
-            "required_text_any": ["first_name", "second_name"]
-          }
+          "validation": {"min_body_bytes": 1000, "required_text_any": ["first_name", "second_name"]}
         },
         {
           "id": "fixtures",
           "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2026-27/fixtures.csv",
           "expect": "csv",
-          "validation": {
-            "min_body_bytes": 1000,
-            "required_text_any": ["kickoff_time", "team_h", "team_a"]
-          }
+          "validation": {"min_body_bytes": 1000, "required_text_any": ["kickoff_time", "team_h", "team_a"]}
         },
         {
           "id": "player_idlist",
           "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2026-27/player_idlist.csv",
           "expect": "csv",
-          "validation": {
-            "min_body_bytes": 1000,
-            "required_text_any": ["first_name,second_name,id"]
-          }
+          "validation": {"min_body_bytes": 1000, "required_text_any": ["first_name,second_name,id"]}
         }
       ]
     },

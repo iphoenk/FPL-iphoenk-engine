@@ -10,6 +10,89 @@ Consumers such as reporting and the Master Monitor may read a published V6 snaps
 
 V6 never reads V3/V4/V5 runtime branches, data trees, caches, manifests, or engine artifacts. Those engines are downstream consumers only. Any permitted consumer fallback is external-source retrieval owned by that consumer; it is never a fallback from V6 into another engine's runtime data.
 
+## Canonical effective architecture
+
+The architecture below reflects the effective V6 data plane. It intentionally separates sources that participate in scheduled acquisition from sources that are reference-only, disabled, or excluded by policy. Source membership itself remains registry-owned by `config/v6/source_activation.json` and the published resolved registry; this diagram is a human-readable projection, not a second source of truth.
+
+```text
+                         OFFICIAL / PRIMARY FACTS
+
+                              Official FPL
+                                  │
+                     factual + canonical authority
+                                  │
+                       deterministic identity
+                                  │
+                  Official FPL canonical IDs
+                                  │
+        ┌─────────────────────────┼──────────────────────────┐
+        │                         │                          │
+   PERFORMANCE               AVAILABILITY               ENVIRONMENT
+   Understat                 RotoWire                    Open-Meteo
+   FotMob                    public team-news           venue geography
+   Opta / The Analyst        evidence                   raw provider weather
+   StatMuse
+   StatsBomb Open Data*
+        │                         │                          │
+        └─────────────────────────┼──────────────────────────┘
+                                  │
+                   OTHER ACTIVE FACT / REFERENCE LANES
+        PremierLeague.com stats · Ben Crellin · Wikidata
+            TheSportsDB V1 pilot · Vaastav / Official-derived data
+                                  │
+                                  ▼
+                         SOURCE-NATIVE OUTPUT
+             FACT · NORMALIZED_FACT · IDENTITY_CROSSWALK
+                      UPSTREAM_MODEL_SIGNAL
+                                  │
+                  upstream only, never V6-authored
+                                  │
+                                  ▼
+                   acquire → normalize → reconcile
+                   → validate → cache/history → lineage
+                            → health → publish
+                                  │
+                                  ▼
+                              FPL MASTER
+                    interpretation / intelligence
+          Bayesian · xMins/xPts · Monte Carlo · tactical · DSS
+```
+
+`StatsBomb Open Data*` means the public historical/open-data surface only. It does not mean StatsBomb LIVE or another licensed current-EPL feed. `Opta / The Analyst` means the currently configured public evidence surface; it does not grant access to a licensed Opta API.
+
+The data boundary is enforced in code: V6 may publish atomic facts, normalized facts, deterministic identity crosswalks, control telemetry, and provider-authored upstream model signals. V6 must not author prediction, optimization, tactical, transfer, captaincy, chip, formation, xPts, xMins, Bayesian, Monte Carlo, mini-league analytics, or rank-probability output.
+
+## Sidelined and excluded sources
+
+Sources that are not part of the active scheduled data plane must stay visibly outside the architecture above rather than being drawn as if they are production dependencies.
+
+### Reference-only
+
+These sources may remain available for targeted/manual evidence or future revalidation, but they are excluded from scheduled mirroring by `source_activation.json`:
+
+- `reep_register` — public no-auth release pointer returned HTTP 404 during production acceptance; re-enable only after a stable public-download contract is revalidated;
+- `fffix` — machine endpoints redirect to login;
+- `ffhub` — prediction surface is auth-gated;
+- `clubelo` — public reference retained but runtime transport was not stable enough for active acquisition;
+- `bbc_team_news` — targeted editorial deadline reference;
+- `premier_injuries` — public reference, no scheduled dataset mirroring;
+- `fpl_form` — personal-use/reference constraints;
+- `fpl_review_free` — free model reference without a stable machine-ingestion contract.
+
+### Disabled
+
+These definitions remain out of the active runtime because they are paid, access-restricted, duplicate, unstable, or deliberately dropped. The authoritative list and reasons live in `config/v6/source_activation.json`. Current examples include `sportmonks`, `api_football`, `football_data_org`, `fbref`, `sofascore`, `transfermarkt`, `whoscored`, and temporarily disabled `football_data_uk`.
+
+### Explicitly outside the active architecture
+
+- **Sportradar** is not an active V6 source. Paid/licensed access is outside the current zero-cost/no-login source policy.
+- **Met Office Weather DataHub** is not an active V6 source because registration/account/API-key access is outside the current no-account/no-private-key policy.
+- **StatsBomb LIVE / licensed feeds** are not represented by `statsbomb`; only StatsBomb Open Data is configured.
+- **Licensed Opta APIs** are not represented by `opta_the_analyst`; only the configured public evidence surface is used.
+- **FA/licensed official-facts lanes** must not be shown as active unless a concrete, permitted source is actually registered and production-accepted.
+
+New additive sources must default to zero cost, no account creation, no login, and no private API key/token. A documented shared public access segment may be admitted only as a non-critical pilot when it is not a user credential or secret. If a provider later introduces an auth/paywall requirement, the source must leave active acquisition rather than silently bypassing access policy.
+
 ## Production cadence and trigger authority
 
 V6 supports two independent authoritative operational triggers. The preferred operational path is the hourly FPL Master Monitor invoking `workflow_dispatch: master_orchestrated`; the repository natural scheduler remains a separate recovery/observability path and its health is tracked independently.
@@ -79,11 +162,11 @@ The configured source universe is intentionally larger than the active runtime s
 - reference-only sources retained for targeted/manual evidence use but excluded from scheduled mirroring;
 - disabled sources that are paid, access-restricted, duplicate, unstable, or intentionally dropped.
 
-The current activation contract contains 21 scheduled active sources. Do not infer the active count from old documentation or from the number of configured definitions. `source_activation.json`, the resolved registry, and the published manifest are the authoritative runtime source-set evidence.
+Do not hard-code the current active-source count in prose or architecture diagrams. `source_activation.json`, the resolved registry, and the published manifest are the authoritative runtime source-set evidence.
 
 ## Performance architecture
 
-V6 is intentionally a modular in-process acquisition service rather than dozens of deployment units. Its logical domains are separated into registry, polling, HTTP acquisition, adapters, weather, identity, normalization, health, runtime control, publish integrity, storage, consumer trust, and orchestration.
+V6 is intentionally a modular in-process acquisition service rather than dozens of deployment units. Its logical domains are separated into registry, polling, HTTP acquisition, adapters, source-native normalization, identity, validation, health, runtime control, publish integrity, storage, consumer trust, and orchestration.
 
 Independent sources execute concurrently within topological dependency layers. Independent requests within a source use bounded request-level concurrency. Only declared dependencies serialize. Distributed microservices or workflow shards should be introduced only when telemetry proves a provider family needs a distinct failure domain, rate-limit envelope, network policy, or materially different resource profile.
 
@@ -91,11 +174,9 @@ Premature service fragmentation is explicitly avoided because it would increase 
 
 ## Open-Meteo ownership
 
-Open-Meteo is a native V6 source. V6 retrieves weather directly from `api.open-meteo.com` through the V6 acquisition client. V6 does not retrieve weather from V3 and V3 is not an upstream dependency of the V6 weather adapter.
+`open_meteo` is a native V6 source. V6 retrieves raw forecast fields directly from `api.open-meteo.com` through the V6 acquisition client. Venue coordinates and ordering are governed by `config/v6/venue_geography.json`, not duplicated in interpretation logic.
 
-The only declared dependency of `open_meteo_weather` is `official_fpl`, used for fixture, home-team, and kickoff authority. Venue coordinates come from the canonical 2026/27 venue registry rather than duplicated source configuration.
-
-Weather is contextual evidence only. It cannot directly multiply xPts and weather alone cannot trigger a transfer decision.
+Open-Meteo is environmental provider evidence, not FPL intelligence. V6 stores source-native forecast fields and provenance only. Fixture binding and any downstream interpretation must preserve Official FPL fixture authority. V6 does not calculate a weather impact score, xPts multiplier, tactical adjustment, or transfer decision from the forecast.
 
 ## Persistent last-good state
 

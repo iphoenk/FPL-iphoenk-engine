@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +21,7 @@ ACTIVATION = ROOT / "config" / "v6" / "source_activation.json"
 _LAYER_SCHEMA_VERSIONS = {
     CONFIG: 3,
     ADDITIONS: 1,
-    OVERRIDES: 2,
+    OVERRIDES: 3,
     ACTIVATION: 4,
 }
 _ALLOWED_ACQUISITION_KINDS = {"derived", "rest_json", "rest_csv", "html_scrape", "rss", "generic_http"}
@@ -142,11 +143,67 @@ def _validate_base_source_set(payload: dict[str, Any]) -> None:
         raise RegistryError("duplicate V6 configured source ids")
 
 
+def _override_lifecycle_summary(override_payload: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
+    policy = dict(override_payload.get("policy") or {})
+    lifecycle = dict(override_payload.get("lifecycle") or {})
+    if policy.get("role") != "TEMPORARY_REPAIR_ONLY":
+        raise RegistryError("V6 source overrides must be TEMPORARY_REPAIR_ONLY")
+    if policy.get("stable_repairs_should_be_promoted_to_canonical_registry") is not True:
+        raise RegistryError("V6 source override policy must require canonical promotion")
+    if policy.get("inactive_sources_must_not_have_overrides") is not True:
+        raise RegistryError("V6 source override policy must reject inactive-source overrides")
+
+    try:
+        max_active = int(policy.get("max_active_overrides"))
+    except (TypeError, ValueError) as exc:
+        raise RegistryError("V6 source override max_active_overrides must be an integer") from exc
+    if max_active <= 0 or len(overrides) > max_active:
+        raise RegistryError(f"V6 source override count exceeds governed maximum: {len(overrides)} > {max_active}")
+
+    if set(lifecycle) != set(overrides):
+        missing = sorted(set(overrides) - set(lifecycle))
+        orphaned = sorted(set(lifecycle) - set(overrides))
+        raise RegistryError(f"V6 source override lifecycle mismatch: missing={missing!r} orphaned={orphaned!r}")
+
+    inactive = set(overrides).intersection(_DISABLED_IDS | _REFERENCE_ONLY_IDS)
+    if inactive:
+        raise RegistryError(f"inactive/reference-only V6 sources must not retain overrides: {sorted(inactive)!r}")
+
+    review_by: dict[str, str] = {}
+    for source_id, metadata_raw in lifecycle.items():
+        metadata = dict(metadata_raw or {})
+        if metadata.get("temporary") is not True:
+            raise RegistryError(f"V6 source override must be temporary: {source_id}")
+        if not str(metadata.get("reason") or "").strip():
+            raise RegistryError(f"V6 source override requires lifecycle reason: {source_id}")
+        review = str(metadata.get("review_by") or "").strip()
+        try:
+            date.fromisoformat(review)
+        except ValueError as exc:
+            raise RegistryError(f"V6 source override requires ISO review_by date: {source_id}") from exc
+        review_by[source_id] = review
+
+    return {
+        "role": "TEMPORARY_REPAIR_ONLY",
+        "active_override_count": len(overrides),
+        "max_active_overrides": max_active,
+        "inactive_source_overrides": [],
+        "temporary_override_ids": sorted(overrides),
+        "review_by": review_by,
+        "stable_repairs_should_be_promoted_to_canonical_registry": True,
+        "effective_registry_is_published_for_drift_review": policy.get("effective_registry_is_published_for_drift_review") is True,
+    }
+
+
 def _apply_overrides(payload: dict[str, Any], path: Path = OVERRIDES) -> dict[str, Any]:
-    override_payload = _read_json(path, expected_schema_version=2)
+    override_payload = _read_json(path, expected_schema_version=3)
     overrides = dict(override_payload.get("sources") or {})
+    lifecycle_summary = _override_lifecycle_summary(override_payload, overrides)
     if not overrides:
-        return payload
+        out = deepcopy(payload)
+        out["source_overrides_applied"] = []
+        out["override_lifecycle"] = lifecycle_summary
+        return out
 
     out = deepcopy(payload)
     known = {str(source.get("id")) for source in out.get("sources") or []}
@@ -159,11 +216,7 @@ def _apply_overrides(payload: dict[str, Any], path: Path = OVERRIDES) -> dict[st
         for source in out.get("sources") or []
     ]
     out["source_overrides_applied"] = sorted(overrides)
-    out["override_lifecycle"] = {
-        "role": "repair_or_incubation_layer",
-        "stable_repairs_should_be_promoted_to_canonical_registry": True,
-        "effective_registry_is_published_for_drift_review": True,
-    }
+    out["override_lifecycle"] = lifecycle_summary
     return out
 
 
@@ -289,7 +342,7 @@ def resolved_registry_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
         "source_additions_applied": list(payload.get("source_additions_applied") or []),
         "source_addition_admission_policy": deepcopy(payload.get("source_addition_admission_policy") or {}),
         "source_overrides_applied": list(payload.get("source_overrides_applied") or []),
-        "override_lifecycle": dict(payload.get("override_lifecycle") or {}),
+        "override_lifecycle": deepcopy(payload.get("override_lifecycle") or {}),
         "cadence": deepcopy(payload.get("cadence") or {}),
         "policy": deepcopy(payload.get("policy") or {}),
         "identity": deepcopy(payload.get("identity") or {}),
@@ -345,6 +398,15 @@ def validate_registry(payload: dict[str, Any]) -> None:
         raise RegistryError(f"V6 active source set/order mismatch: {ids!r}")
     if len(active_ids) != len(ids):
         raise RegistryError("duplicate V6 active source ids")
+
+    override_lifecycle = dict(payload.get("override_lifecycle") or {})
+    override_ids = set(payload.get("source_overrides_applied") or [])
+    if override_lifecycle.get("role") != "TEMPORARY_REPAIR_ONLY":
+        raise RegistryError("V6 effective registry missing temporary override lifecycle contract")
+    if set(override_lifecycle.get("temporary_override_ids") or []) != override_ids:
+        raise RegistryError("V6 effective registry override lifecycle does not match applied overrides")
+    if override_ids.intersection(_DISABLED_IDS | _REFERENCE_ONLY_IDS):
+        raise RegistryError("V6 effective registry contains inactive-source overrides")
 
     activation = payload.get("activation") or {}
     if activation:

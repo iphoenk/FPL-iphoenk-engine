@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "season": "2026-2027",
+  "competition": "Premier League",
+  "ordering_contract": "array order is the Open-Meteo multi-location request/response order",
+  "authority": "CONFIGURED_GEOGRAPHY",
+  "governance": {
+    "data_only": true,
+    "weather_impact_computation": false,
+    "official_fixture_authority": "official_fpl",
+    "code_hardcoded_coordinates": false,
+    "coordinates_are_configuration": true
+  },
+  "venues": [
+    {"club":"AFC Bournemouth","venue":"Vitality Stadium","latitude":50.7352,"longitude":-1.8383},
+    {"club":"Arsenal","venue":"Emirates Stadium","latitude":51.5549,"longitude":-0.1084},
+    {"club":"Aston Villa","venue":"Villa Park","latitude":52.5092,"longitude":-1.8848},
+    {"club":"Brentford","venue":"Gtech Community Stadium","latitude":51.4908,"longitude":-0.2887},
+    {"club":"Brighton & Hove Albion","venue":"Amex Stadium","latitude":50.8618,"longitude":-0.0833},
+    {"club":"Chelsea","venue":"Stamford Bridge","latitude":51.4817,"longitude":-0.1910},
+    {"club":"Coventry City","venue":"Coventry Building Society Arena","latitude":52.4481,"longitude":-1.4956},
+    {"club":"Crystal Palace","venue":"Selhurst Park","latitude":51.3983,"longitude":-0.0855},
+    {"club":"Everton","venue":"Hill Dickinson Stadium","latitude":53.4255,"longitude":-3.0037},
+    {"club":"Fulham","venue":"Craven Cottage","latitude":51.4749,"longitude":-0.2216},
+    {"club":"Hull City","venue":"MKM Stadium","latitude":53.7463,"longitude":-0.3674},
+    {"club":"Ipswich Town","venue":"Portman Road","latitude":52.0547,"longitude":1.1448},
+    {"club":"Leeds United","venue":"Elland Road","latitude":53.7778,"longitude":-1.5721},
+    {"club":"Liverpool","venue":"Anfield","latitude":53.4308,"longitude":-2.9608},
+    {"club":"Manchester City","venue":"Etihad Stadium","latitude":53.4831,"longitude":-2.2004},
+    {"club":"Manchester United","venue":"Old Trafford","latitude":53.4631,"longitude":-2.2913},
+    {"club":"Newcastle United","venue":"St James' Park","latitude":54.9752,"longitude":-1.6224},
+    {"club":"Nottingham Forest","venue":"City Ground","latitude":52.9400,"longitude":-1.1328},
+    {"club":"Sunderland","venue":"Stadium of Light","latitude":54.9144,"longitude":-1.3882},
+    {"club":"Tottenham Hotspur","venue":"Tottenham Hotspur Stadium","latitude":51.6043,"longitude":-0.0665}
+  ]
+}

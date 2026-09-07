@@ -182,6 +182,7 @@ def test_override_layer_is_temporary_active_only_and_bounded() -> None:
     assert overrides["schema_version"] == 3
     assert overrides["policy"]["role"] == "TEMPORARY_REPAIR_ONLY"
     assert len(override_ids) <= int(overrides["policy"]["max_active_overrides"])
+    assert override_ids == set(), "Stable V6 provider repairs must live in canonical registry/additions, not temporary overrides"
     assert not override_ids.intersection(inactive)
     assert set(overrides["lifecycle"]) == override_ids
     assert all(row["temporary"] is True for row in overrides["lifecycle"].values())
@@ -203,3 +204,16 @@ def test_production_workflow_delegates_control_plane_to_tested_module() -> None:
     assert "python -m src.runtime_v6.workflow_control resolve-prefetch" in text
     assert "Apply V6 report-prefetch runtime control" in text
     assert "steps.scheduler.outputs.kind == 'report_prefetch'" in text
+
+
+def test_stable_provider_repairs_are_promoted_and_legacy_exposure_writer_is_removed() -> None:
+    registry = load_registry()
+    assert registry["source_overrides_applied"] == []
+    assert registry["override_lifecycle"]["active_override_count"] == 0
+
+    report_prefetch = (ROOT / "src" / "runtime_v6" / "report_prefetch.py").read_text(encoding="utf-8")
+    league_prefetch = (ROOT / "src" / "runtime_v6" / "league_prefetch.py").read_text(encoding="utf-8")
+    assert "exposure_artifact" not in report_prefetch
+    assert "gw_{gw}_exposure.json" not in report_prefetch
+    assert "def exposure_artifact(" not in league_prefetch
+    assert "ownership_eo_computation" not in league_prefetch

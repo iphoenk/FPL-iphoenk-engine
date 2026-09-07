@@ -178,9 +178,11 @@ def _override_lifecycle_summary(override_payload: dict[str, Any], overrides: dic
             raise RegistryError(f"V6 source override requires lifecycle reason: {source_id}")
         review = str(metadata.get("review_by") or "").strip()
         try:
-            date.fromisoformat(review)
+            review_date = date.fromisoformat(review)
         except ValueError as exc:
             raise RegistryError(f"V6 source override requires ISO review_by date: {source_id}") from exc
+        if review_date < date.today():
+            raise RegistryError(f"V6 source override review_by is overdue: {source_id} -> {review}")
         review_by[source_id] = review
 
     return {

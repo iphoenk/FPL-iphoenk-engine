@@ -28,7 +28,11 @@
           }
         }
       ],
-      "notes": "Public no-auth endpoint intended for AI/data consumers. Preserve as independent upstream model evidence; V6 does not author or blend predictions."
+      "notes": "Public no-auth endpoint intended for AI/data consumers. Preserve as independent upstream model evidence; V6 does not author or blend predictions.",
+      "acquisition_kind": "rest_json",
+      "poll_interval_minutes": 240,
+      "poll_interval_minutes_deadline_window": 60,
+      "content_hash_dedup": true
     },
     {
       "id": "check_the_chance",
@@ -51,7 +55,11 @@
           }
         }
       ],
-      "notes": "Public bookmaker-derived probabilities retained only as an upstream model signal. V6 performs no interpretation or decision logic."
+      "notes": "Public bookmaker-derived probabilities retained only as an upstream model signal. V6 performs no interpretation or decision logic.",
+      "acquisition_kind": "html_scrape",
+      "poll_interval_minutes": 360,
+      "poll_interval_minutes_deadline_window": 60,
+      "content_hash_dedup": true
     },
     {
       "id": "fantasy_football_pundit",
@@ -86,7 +94,12 @@
           }
         }
       ],
-      "notes": "Free public source-native model/team-news evidence. V6 preserves the source payload and provenance only."
+      "notes": "Free public source-native model/team-news evidence. V6 preserves the source payload and provenance only.",
+      "acquisition_kind": "html_scrape",
+      "poll_interval_minutes": 360,
+      "poll_interval_minutes_deadline_window": 60,
+      "content_hash_dedup": true,
+      "max_body_bytes": 4000000
     },
     {
       "id": "bbc_team_news",

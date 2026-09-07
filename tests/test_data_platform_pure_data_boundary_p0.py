@@ -10,7 +10,6 @@ from src.runtime_v6.identity import (
 )
 from src.runtime_v6.league_prefetch import (
     add_manager_live_totals,
-    exposure_artifact,
     standings_artifact,
 )
 
@@ -103,50 +102,6 @@ def test_v6_standings_artifact_preserves_official_facts_without_derived_gap() ->
     assert "gap_to_first" not in json.dumps(artifact)
     assert artifact["managers"][0]["league_total"] == 200
     assert artifact["authority"] == "OFFICIAL_FPL"
-
-
-def test_v6_exposure_artifact_is_noncanonical_tombstone_only() -> None:
-    picks = {
-        "season": "2026-2027",
-        "gw": 3,
-        "league_id": 9477,
-        "expected_manager_count": 2,
-        "submitted_picks_available_count": 2,
-        "submitted_picks_missing_count": 0,
-        "coverage_percent": 100.0,
-        "complete": True,
-        "entries": {
-            "1": {
-                "status": "AVAILABLE",
-                "picks": [
-                    {"element_id": 10, "squad_position": 1, "captain": True, "vice_captain": False, "multiplier": 2}
-                ],
-            },
-            "2": {
-                "status": "AVAILABLE",
-                "picks": [
-                    {"element_id": 10, "squad_position": 12, "captain": False, "vice_captain": True, "multiplier": 0}
-                ],
-            },
-        },
-        "lineage": {"authority": "OFFICIAL_FPL"},
-    }
-
-    artifact = exposure_artifact(
-        picks,
-        {10: {"web_name": "Example", "club": "AAA", "position": "MID"}},
-        bootstrap_lineage={"authority": "OFFICIAL_FPL"},
-        live_points={10: 12},
-        live_lineage={"authority": "OFFICIAL_FPL"},
-    )
-
-    assert artifact["deprecated"] is True
-    assert artifact["canonical"] is False
-    assert artifact["analytics_removed"] is True
-    assert artifact["authority"] == "NONE"
-    assert artifact["players"] == []
-    assert "ownership_percent" not in json.dumps(artifact)
-    assert "effective_ownership" not in json.dumps(artifact)
 
 
 def test_v6_live_artifact_does_not_add_manager_analytics() -> None:

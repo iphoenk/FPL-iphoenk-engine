@@ -5,7 +5,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from .season_contract import materialize_season_tokens
+from .season_contract import SeasonContractError, materialize_season_tokens
 
 ROOT = Path(__file__).resolve().parents[2]
 V6_CONFIG_ROOT = (ROOT / "config" / "v6").resolve()
@@ -116,7 +116,10 @@ def _materialize_request(request: dict[str, Any]) -> dict[str, Any]:
 
 def materialize_config_request_params(payload: dict[str, Any]) -> dict[str, Any]:
     """Resolve V6 season tokens and config-backed provider request parameters."""
-    out = materialize_season_tokens(deepcopy(payload))
+    try:
+        out = materialize_season_tokens(deepcopy(payload))
+    except SeasonContractError as exc:
+        raise SourcePolicyError(str(exc)) from exc
     sources: list[dict[str, Any]] = []
     for source in out.get("sources") or []:
         row = deepcopy(source)

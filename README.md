@@ -24,6 +24,8 @@ Do not copy a current commit SHA, topology count, or mutable SLO into this docum
 
 V6 is an isolated, registry-driven, data-only acquisition and evidence-publication platform. It has no prediction, optimizer, transfer, captaincy, chip, xPts, xMins, Monte Carlo, tactical, recommendation, or decision authority. Its active source set and health must be read from V6 registry/runtime artifacts rather than inferred from static counts in this README.
 
+The V6 architecture document shows only active scheduled sources in the primary data path. Reference-only, disabled, paid/auth-gated, unstable, or explicitly excluded providers are kept in a sidelined lifecycle section and must not be presented as production dependencies. Exact lifecycle status is owned by `config/v6/source_activation.json`, the published resolved registry, and the runtime manifest.
+
 V6 consumers may use a fresh, integrity-valid `runtime-data-v6` snapshot. Stale or invalid snapshots must remain visibly degraded and may only use explicitly governed minimum-scope direct fallback. See `docs/V6_FRESH_DATA_PLATFORM.md` for the architecture contract and `docs/V6_IDENTITY_BRIDGE_ROADMAP.md` for deterministic cross-source identity work.
 
 ## Production architecture

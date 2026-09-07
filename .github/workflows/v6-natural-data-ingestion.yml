@@ -89,81 +89,20 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Authorize governed manual recovery and FPL Master orchestration
+      - name: Authorize governed workflow dispatch
         if: github.event_name == 'workflow_dispatch'
-        shell: bash
         env:
           V6_DISPATCH_MODE: ${{ inputs.mode }}
           V6_DISPATCH_REASON: ${{ inputs.reason }}
           V6_MANUAL_CONFIRM: ${{ inputs.confirm }}
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
+        run: python -m src.runtime_v6.workflow_control authorize-dispatch
 
-          policy = json.loads(Path(os.environ["V6_SCHEDULE_POLICY"]).read_text(encoding="utf-8"))
-          mode = str(os.environ.get("V6_DISPATCH_MODE") or "")
-          reason = str(os.environ.get("V6_DISPATCH_REASON") or "").strip()
-          if os.environ.get("GITHUB_ACTOR") != os.environ.get("GITHUB_REPOSITORY_OWNER"):
-              raise SystemExit("V6 governed dispatch is restricted to the repository owner")
-          if not reason:
-              raise SystemExit("V6 governed dispatch requires an audit reason")
-          if mode == "master_orchestrated":
-              control = dict(policy.get("master_orchestrated") or {})
-              if control.get("enabled") is not True or control.get("authoritative_runtime_snapshot") is not True:
-                  raise SystemExit("V6 master orchestration is not authorized")
-          elif mode == "manual_recovery":
-              control = dict(policy.get("manual_recovery") or {})
-              if control.get("enabled") is not True:
-                  raise SystemExit("V6 governed manual recovery is disabled")
-              if os.environ.get("V6_MANUAL_CONFIRM") != str(control.get("confirmation_phrase") or ""):
-                  raise SystemExit("V6 manual recovery confirmation phrase mismatch")
-          elif mode == "report_prefetch":
-              control = dict(policy.get("report_prefetch") or {})
-              if control.get("enabled") is not True or control.get("report_driven") is not True:
-                  raise SystemExit("V6 report prefetch is disabled")
-              if control.get("independent_cron") is not False:
-                  raise SystemExit("V6 report prefetch policy must prohibit independent cron")
-          else:
-              raise SystemExit(f"Unsupported V6 governed dispatch mode: {mode}")
-          print(f"Governed V6 {mode} dispatch authorized")
-          PY
-
-      - name: Authorize FPL Master issue-command orchestration
+      - name: Authorize governed issue command
         if: github.event_name == 'issue_comment'
-        shell: bash
         env:
           V6_COMMENT_BODY: ${{ github.event.comment.body }}
           V6_ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json
-          import os
-          import shlex
-          from pathlib import Path
-
-          policy = json.loads(Path(os.environ["V6_SCHEDULE_POLICY"]).read_text(encoding="utf-8"))
-          tokens = shlex.split(str(os.environ.get("V6_COMMENT_BODY") or "").strip())
-          command = tokens[0] if tokens else ""
-          master = dict(policy.get("master_orchestrated") or {})
-          prefetch = dict(policy.get("report_prefetch") or {})
-          if command == str(master.get("issue_comment_command") or ""):
-              control, label = master, "Master acquisition"
-          elif command == str(prefetch.get("issue_comment_command") or ""):
-              control, label = prefetch, "report prefetch"
-          else:
-              raise SystemExit("V6 governed issue command mismatch")
-          if control.get("enabled") is not True:
-              raise SystemExit(f"V6 {label} is disabled")
-          if os.environ.get("GITHUB_ACTOR") != os.environ.get("GITHUB_REPOSITORY_OWNER"):
-              raise SystemExit("V6 governed issue command is restricted to repository owner")
-          if int(os.environ.get("V6_ISSUE_NUMBER") or "0") != int(control.get("control_issue_number") or 0):
-              raise SystemExit("V6 governed control issue number mismatch")
-          print(f"Governed V6 {label} issue-command authorized")
-          PY
+        run: python -m src.runtime_v6.workflow_control authorize-issue
 
       - name: Hydrate previous V6 last-good snapshot
         shell: bash
@@ -195,53 +134,7 @@ jobs:
 
       - name: Classify scheduler invocation
         id: scheduler
-        shell: bash
-        run: |
-          python - <<'PY'
-          import json
-          import os
-          import shlex
-          from pathlib import Path
-
-          event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
-          policy = json.loads(Path(os.environ["V6_SCHEDULE_POLICY"]).read_text(encoding="utf-8"))
-          event_name = str(os.environ.get("GITHUB_EVENT_NAME") or "")
-          schedule = str(event.get("schedule") or "")
-          scheduled_kinds = {
-              str(policy["primary_cron_utc"]): "primary",
-              str(policy["recovery_cron_utc"]): "recovery",
-          }
-          if event_name == "schedule":
-              kind = scheduled_kinds.get(schedule, "scheduled_unknown")
-          elif event_name == "issue_comment":
-              master = dict(policy.get("master_orchestrated") or {})
-              prefetch = dict(policy.get("report_prefetch") or {})
-              tokens = shlex.split(str((event.get("comment") or {}).get("body") or "").strip())
-              command = tokens[0] if tokens else ""
-              if command == str(master.get("issue_comment_command") or ""):
-                  kind = str(master.get("schedule_kind") or "master_orchestrated")
-              elif command == str(prefetch.get("issue_comment_command") or ""):
-                  kind = str(prefetch.get("schedule_kind") or "report_prefetch")
-              else:
-                  kind = "governed_issue_command_unknown"
-          elif event_name == "workflow_dispatch":
-              mode = str((event.get("inputs") or {}).get("mode") or "")
-              if mode == "master_orchestrated" and (policy.get("master_orchestrated") or {}).get("enabled") is True:
-                  kind = str((policy.get("master_orchestrated") or {}).get("schedule_kind") or "master_orchestrated")
-              elif mode == "manual_recovery" and (policy.get("manual_recovery") or {}).get("enabled") is True:
-                  kind = str((policy.get("manual_recovery") or {}).get("schedule_kind") or "manual_recovery")
-              elif mode == "report_prefetch" and (policy.get("report_prefetch") or {}).get("enabled") is True:
-                  kind = str((policy.get("report_prefetch") or {}).get("schedule_kind") or "report_prefetch")
-              else:
-                  kind = "governed_dispatch_unknown"
-          else:
-              kind = "non_production_local"
-          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
-              handle.write(f"V6_SCHEDULE_KIND={kind}\n")
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
-              handle.write(f"kind={kind}\n")
-          print(f"V6 schedule kind: {kind}")
-          PY
+        run: python -m src.runtime_v6.workflow_control classify
 
       - name: Guard already-published logical scheduler slot
         id: slot_guard
@@ -291,13 +184,18 @@ jobs:
           assert registry["policy"]["decision_authority"] == "NONE"
           assert registry["policy"]["prediction_authority"] == "NONE"
           assert registry["policy"]["optimizer_authority"] == "NONE"
+          assert registry["override_lifecycle"]["role"] == "TEMPORARY_REPAIR_ONLY"
+          assert registry["override_lifecycle"]["inactive_source_overrides"] == []
           assert dependency_layers(registry)
-          print({"active_sources": registry["activation"]["active_source_count"], "required_sources": registry["activation"]["required_active_sources"], "dependency_layers": dependency_layers(registry)})
+          print({
+              "active_sources": registry["activation"]["active_source_count"],
+              "active_overrides": registry["override_lifecycle"]["active_override_count"],
+              "dependency_layers": dependency_layers(registry),
+          })
           PY
 
       - name: Resolve governed V6 report-prefetch request
         if: steps.slot_guard.outputs.skip != 'true' && steps.scheduler.outputs.kind == 'report_prefetch'
-        shell: bash
         env:
           V6_DISPATCH_REPORT_KIND: ${{ inputs.report_kind }}
           V6_DISPATCH_LOGICAL_SLOT: ${{ inputs.logical_slot }}
@@ -306,105 +204,7 @@ jobs:
           V6_DISPATCH_GW_TO: ${{ inputs.gw_to }}
           V6_DISPATCH_FORCE: ${{ inputs.force }}
           V6_COMMENT_BODY: ${{ github.event.comment.body }}
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json
-          import os
-          import shlex
-          from datetime import datetime
-          from pathlib import Path
-
-          policy = json.loads(Path(os.environ["V6_SCHEDULE_POLICY"]).read_text(encoding="utf-8"))
-          prefetch = dict(policy.get("report_prefetch") or {})
-          event_name = os.environ.get("GITHUB_EVENT_NAME")
-          if event_name == "issue_comment":
-              values = {}
-              tokens = shlex.split(str(os.environ.get("V6_COMMENT_BODY") or ""))
-              for token in tokens[1:]:
-                  if "=" not in token:
-                      raise SystemExit(f"Malformed report-prefetch token: {token}")
-                  key, value = token.split("=", 1)
-                  if key in values:
-                      raise SystemExit(f"Duplicate report-prefetch argument: {key}")
-                  values[key] = value
-              unknown = set(values) - {"report_kind", "logical_slot", "scope", "gw_from", "gw_to", "force", "reason"}
-              if unknown:
-                  raise SystemExit(f"Unsupported report-prefetch arguments: {sorted(unknown)}")
-              if not str(values.get("reason") or "").strip():
-                  raise SystemExit("Issue-command report prefetch requires reason=<audit reason>")
-          else:
-              values = {
-                  "report_kind": os.environ.get("V6_DISPATCH_REPORT_KIND") or "",
-                  "logical_slot": os.environ.get("V6_DISPATCH_LOGICAL_SLOT") or "",
-                  "scope": os.environ.get("V6_DISPATCH_SCOPE") or "",
-                  "gw_from": os.environ.get("V6_DISPATCH_GW_FROM") or "",
-                  "gw_to": os.environ.get("V6_DISPATCH_GW_TO") or "",
-                  "force": os.environ.get("V6_DISPATCH_FORCE") or "false",
-              }
-
-          report_kind = str(values.get("report_kind") or "").strip()
-          if report_kind not in set(prefetch.get("supported_report_kinds") or []):
-              raise SystemExit(f"Unsupported report_kind={report_kind}")
-          historical = report_kind == "historical_backfill"
-          logical_slot = str(values.get("logical_slot") or "").strip()
-          scope_raw = str(values.get("scope") or "").strip()
-          scopes = [part.strip() for part in scope_raw.split(",") if part.strip()]
-          aliases = {"mini": "mini_league", "league": "mini_league"}
-          scopes = [aliases.get(scope, scope) for scope in scopes]
-          if len(scopes) != len(set(scopes)):
-              raise SystemExit("report-prefetch scope contains duplicates")
-          unknown_scopes = set(scopes) - {"personal", "mini_league", "live"}
-          if unknown_scopes:
-              raise SystemExit(f"Unsupported report-prefetch scopes: {sorted(unknown_scopes)}")
-
-          gw_from = ""
-          gw_to = ""
-          if historical:
-              if logical_slot:
-                  raise SystemExit("historical_backfill does not accept logical_slot")
-              if scopes != ["mini_league"]:
-                  raise SystemExit("historical_backfill requires scope=mini_league")
-              try:
-                  gw_from_value = int(str(values.get("gw_from") or ""))
-                  gw_to_value = int(str(values.get("gw_to") or ""))
-              except ValueError as exc:
-                  raise SystemExit("historical_backfill requires integer gw_from and gw_to") from exc
-              if gw_from_value < 1 or gw_to_value < 1 or gw_from_value > gw_to_value:
-                  raise SystemExit("historical_backfill GW range is invalid")
-              gw_from, gw_to = str(gw_from_value), str(gw_to_value)
-          else:
-              if values.get("gw_from") or values.get("gw_to"):
-                  raise SystemExit("gw_from/gw_to are valid only for historical_backfill")
-              if not logical_slot:
-                  raise SystemExit("report-prefetch logical_slot is required")
-              parsed = datetime.fromisoformat(logical_slot)
-              if parsed.tzinfo is None or parsed.utcoffset() is None:
-                  raise SystemExit("report-prefetch logical_slot must include timezone offset")
-              if report_kind != "ad_hoc" and scopes:
-                  raise SystemExit("scope override is allowed only for ad_hoc report prefetch")
-              if report_kind == "ad_hoc" and not scopes:
-                  raise SystemExit("ad_hoc report prefetch requires a non-empty scope")
-
-          force_raw = str(values.get("force") or "false").strip().lower()
-          if force_raw not in {"true", "false", "1", "0", "yes", "no"}:
-              raise SystemExit("force must be boolean")
-          force = force_raw in {"true", "1", "yes"}
-          env = {
-              "V6_PREFETCH_REPORT_KIND": report_kind,
-              "V6_PREFETCH_LOGICAL_SLOT": logical_slot,
-              "V6_PREFETCH_PERSONAL": "true" if "personal" in scopes else "false",
-              "V6_PREFETCH_MINI_LEAGUE": "true" if "mini_league" in scopes else "false",
-              "V6_PREFETCH_LIVE": "true" if "live" in scopes else "false",
-              "V6_PREFETCH_GW_FROM": gw_from,
-              "V6_PREFETCH_GW_TO": gw_to,
-              "V6_PREFETCH_FORCE": "true" if force else "false",
-          }
-          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
-              for key, value in env.items():
-                  handle.write(f"{key}={value}\n")
-          print({"report_kind": report_kind, "logical_slot": logical_slot, "scope": scopes, "gw_from": gw_from, "gw_to": gw_to, "force": force})
-          PY
+        run: python -m src.runtime_v6.workflow_control resolve-prefetch
 
       - name: Run active V6 acquisition cycle
         if: steps.slot_guard.outputs.skip != 'true' && steps.scheduler.outputs.kind != 'report_prefetch'
@@ -453,12 +253,17 @@ jobs:
           fi
           echo "V6 report-prefetch process exit=$rc; published health truth controls completeness"
 
+      - name: Apply V6 report-prefetch runtime control
+        if: steps.slot_guard.outputs.skip != 'true' && steps.scheduler.outputs.kind == 'report_prefetch'
+        run: python -m src.runtime_v6.runtime_control
+
       - name: Validate V6 publish-tree integrity
         if: steps.slot_guard.outputs.skip != 'true'
         run: python -m src.runtime_v6.publish_integrity
 
       - name: Validate publishable V6 manifest
         if: steps.slot_guard.outputs.skip != 'true'
+        shell: bash
         run: |
           python - <<'PY'
           import json
@@ -466,18 +271,26 @@ jobs:
           from pathlib import Path
           from src.runtime_v6.registry import load_registry
 
-          manifest = json.loads(Path("data/v6/manifest.json").read_text())
-          integrity = json.loads(Path("data/v6/health/publish_integrity.json").read_text())
-          identity = json.loads(Path("data/v6/evidence/player_identity_map.json").read_text())
+          root = Path("data/v6")
+          manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+          integrity = json.loads((root / "health" / "publish_integrity.json").read_text(encoding="utf-8"))
+          identity = json.loads((root / "evidence" / "player_identity_map.json").read_text(encoding="utf-8"))
           registry = load_registry()
+          control = manifest["runtime_control"]
+          event_name = os.environ["GITHUB_EVENT_NAME"]
+          schedule_kind = os.environ["V6_SCHEDULE_KIND"]
+
           assert manifest["source_count"] == registry["activation"]["active_source_count"]
           assert manifest["activation"]["required_active_sources"] == registry["activation"]["required_active_sources"]
+          assert registry["override_lifecycle"]["inactive_source_overrides"] == []
           assert manifest["governance"]["data_only"] is True
           assert manifest["governance"]["decision_authority"] == "NONE"
           assert manifest["governance"]["weather_direct_xpts_multiplier"] is False
           assert manifest["governance"]["production_authoritative_snapshots_require_schedule"] is False
           assert manifest["governance"]["production_authoritative_snapshots_require_governed_trigger"] is True
           assert manifest["governance"]["master_orchestrated_is_authoritative"] is True
+          assert manifest["governance"]["report_prefetch_is_authoritative"] is True
+          assert manifest["governance"]["report_prefetch_completes_core_operational_slot"] is False
           assert manifest["governance"]["manual_recovery_is_authoritative"] is False
           assert manifest["governance"]["single_logical_acquisition_per_scheduler_slot"] is True
           assert manifest["governance"]["scheduled_recovery_is_idempotent"] is True
@@ -489,13 +302,17 @@ jobs:
           assert integrity["current_source_files_exact"] is True
           assert integrity["resolved_registry_exact"] is True
           assert integrity["identity_map_consistent"] is True
+          assert control["event_name"] == event_name
+          assert control["schedule_kind"] == schedule_kind
 
-          event_name = os.environ["GITHUB_EVENT_NAME"]
-          schedule_kind = os.environ["V6_SCHEDULE_KIND"]
           if schedule_kind == "report_prefetch":
+              assert control["authoritative_runtime_snapshot"] is True
+              assert control["report_prefetch"] is True
+              assert control["counts_as_completed_report_slot"] is True
+              assert control["counts_as_completed_operational_slot"] is False
               report_kind = os.environ["V6_PREFETCH_REPORT_KIND"]
               if report_kind == "historical_backfill":
-                  history = json.loads(Path("data/v6/health/historical_backfill.json").read_text(encoding="utf-8"))
+                  history = json.loads((root / "health" / "historical_backfill.json").read_text(encoding="utf-8"))
                   assert history["report_kind"] == "historical_backfill"
                   assert history["scope"] == "mini_league"
                   assert history["gw_from"] == int(os.environ["V6_PREFETCH_GW_FROM"])
@@ -508,10 +325,9 @@ jobs:
                   assert history["governance"]["bayesian_authority"] == "NONE"
                   assert history["governance"]["monte_carlo_authority"] == "NONE"
                   assert history["overall_status"] in {"GREEN", "AMBER"}
-                  print(json.dumps({"historical_backfill": history, "publish_integrity": integrity}, indent=2))
               else:
-                  prefetch = json.loads(Path("data/v6/report_prefetch/latest.json").read_text(encoding="utf-8"))
-                  health = json.loads(Path("data/v6/health/report_prefetch.json").read_text(encoding="utf-8"))
+                  prefetch = json.loads((root / "report_prefetch" / "latest.json").read_text(encoding="utf-8"))
+                  health = json.loads((root / "health" / "report_prefetch.json").read_text(encoding="utf-8"))
                   assert prefetch["report_kind"] == report_kind
                   assert prefetch["target_logical_report_slot"] == os.environ["V6_PREFETCH_LOGICAL_SLOT"]
                   assert prefetch["governance"]["data_only"] is True
@@ -519,41 +335,31 @@ jobs:
                   assert prefetch["governance"]["prediction_authority"] == "NONE"
                   assert prefetch["governance"]["optimizer_authority"] == "NONE"
                   assert prefetch["governance"]["independent_prefetch_cron"] is False
-                  assert prefetch["governance"]["core_source_freshness_separate"] is True
-                  assert prefetch["governance"]["report_prefetch_freshness_separate"] is True
                   assert health["fresh_for_target_report"] == prefetch["fresh_for_target_report"]
                   if report_kind == "05:30_price":
-                      assert prefetch["personal_requested"] is False
-                      assert prefetch["mini_league_requested"] is False
-                      assert prefetch["live_requested"] is False
-                      assert prefetch["personal_status"] == "NOT_REFRESHED_FOR_05_30_PRICE_CHECKPOINT"
                       assert prefetch["telemetry"]["request_count"] == 0
-                  print(json.dumps({"report_prefetch": prefetch, "publish_integrity": integrity}, indent=2))
+          elif event_name == "schedule":
+              assert control["scheduled_cycle"] is True
+              assert control["authoritative_runtime_snapshot"] is True
+              assert control["counts_as_completed_operational_slot"] is True
+              assert control["manual_recovery"] is False
+              assert manifest["governance"]["production_ingestion_schedule_only"] is True
+          elif event_name in {"workflow_dispatch", "issue_comment"} and schedule_kind == "master_orchestrated":
+              assert control["scheduled_cycle"] is False
+              assert control["master_orchestrated"] is True
+              assert control["authoritative_runtime_snapshot"] is True
+              assert control["counts_as_completed_operational_slot"] is True
+              assert control["manual_recovery"] is False
+              assert "NON_AUTHORITATIVE_MANUAL_RECOVERY" not in manifest["control_failures"]
+          elif event_name == "workflow_dispatch" and schedule_kind == "manual_recovery":
+              assert control["scheduled_cycle"] is False
+              assert control["authoritative_runtime_snapshot"] is False
+              assert control["counts_as_completed_operational_slot"] is False
+              assert control["manual_recovery"] is True
+              assert "NON_AUTHORITATIVE_MANUAL_RECOVERY" in manifest["control_failures"]
           else:
-              control = manifest["runtime_control"]
-              assert control["event_name"] == event_name
-              assert control["schedule_kind"] == schedule_kind
-              if event_name == "schedule":
-                  assert control["scheduled_cycle"] is True
-                  assert control["authoritative_runtime_snapshot"] is True
-                  assert control["manual_recovery"] is False
-                  assert manifest["governance"]["production_ingestion_schedule_only"] is True
-              elif event_name in {"workflow_dispatch", "issue_comment"} and schedule_kind == "master_orchestrated":
-                  assert control["scheduled_cycle"] is False
-                  assert control["master_orchestrated"] is True
-                  assert control["authoritative_runtime_snapshot"] is True
-                  assert control["manual_recovery"] is False
-                  assert control["counts_as_completed_operational_slot"] is True
-                  assert "NON_AUTHORITATIVE_MANUAL_RECOVERY" not in manifest["control_failures"]
-              elif event_name == "workflow_dispatch" and schedule_kind == "manual_recovery":
-                  assert control["scheduled_cycle"] is False
-                  assert control["master_orchestrated"] is False
-                  assert control["authoritative_runtime_snapshot"] is False
-                  assert control["manual_recovery"] is True
-                  assert "NON_AUTHORITATIVE_MANUAL_RECOVERY" in manifest["control_failures"]
-              else:
-                  raise AssertionError(f"unexpected V6 production event: {event_name}/{schedule_kind}")
-              print(json.dumps({"overall": manifest["overall"], "elapsed_ms": manifest["elapsed_ms"], "runtime_control": control, "publish_integrity": integrity}, indent=2))
+              raise AssertionError(f"unexpected V6 production event: {event_name}/{schedule_kind}")
+          print(json.dumps({"overall": manifest["overall"], "runtime_control": control, "publish_integrity": integrity}, indent=2))
           PY
 
       - name: Package verified runtime snapshot
@@ -627,8 +433,6 @@ jobs:
           rm -rf "$RUNNER_TEMP/v6-publication-check"
           mkdir -p "$RUNNER_TEMP/v6-publication-check"
           tar -xf "$RUNNER_TEMP/v6-runtime-publication/v6-runtime-data.tar" -C "$RUNNER_TEMP/v6-publication-check"
-          test -f "$RUNNER_TEMP/v6-publication-check/data/v6/manifest.json"
-          test -f "$RUNNER_TEMP/v6-publication-check/data/v6/health/publish_integrity.json"
           python - <<'PY'
           import json
           import os
@@ -636,6 +440,7 @@ jobs:
           root = Path(os.environ["RUNNER_TEMP"]) / "v6-publication-check" / "data" / "v6"
           manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
           integrity = json.loads((root / "health" / "publish_integrity.json").read_text(encoding="utf-8"))
+          control = manifest["runtime_control"]
           assert manifest["governance"]["data_only"] is True
           assert manifest["governance"]["decision_authority"] == "NONE"
           assert manifest["governance"]["prediction_authority"] == "NONE"
@@ -643,19 +448,12 @@ jobs:
           assert manifest["governance"]["production_authoritative_snapshots_require_schedule"] is False
           assert manifest["governance"]["production_authoritative_snapshots_require_governed_trigger"] is True
           assert manifest["governance"]["manual_recovery_is_authoritative"] is False
+          if control["schedule_kind"] == "report_prefetch":
+              assert control["authoritative_runtime_snapshot"] is True
+              assert control["counts_as_completed_operational_slot"] is False
           assert integrity["status"] == "PASS", integrity
           assert integrity["resolved_registry_exact"] is True
-          historical = root / "health" / "historical_backfill.json"
-          if historical.exists():
-              history = json.loads(historical.read_text(encoding="utf-8"))
-              assert history["governance"]["data_only"] is True
-              assert history["cohort_semantics"] == "CURRENT_COHORT_HISTORY"
-          report_prefetch = root / "report_prefetch" / "latest.json"
-          if report_prefetch.exists():
-              prefetch = json.loads(report_prefetch.read_text(encoding="utf-8"))
-              assert prefetch["governance"]["data_only"] is True
-              assert prefetch["governance"]["independent_prefetch_cron"] is False
-          print({"overall": manifest["overall"], "tree_sha256": integrity.get("tree_sha256")})
+          print({"overall": manifest["overall"], "schedule_kind": control["schedule_kind"], "tree_sha256": integrity.get("tree_sha256")})
           PY
 
       - name: Capture runtime branch lease
@@ -715,6 +513,7 @@ jobs:
           root = Path(os.environ["RUNNER_TEMP"]) / "v6-runtime-verify" / "data" / "v6"
           manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
           integrity = json.loads((root / "health" / "publish_integrity.json").read_text(encoding="utf-8"))
+          control = manifest["runtime_control"]
           assert manifest["governance"]["data_only"] is True
           assert manifest["governance"]["decision_authority"] == "NONE"
           assert manifest["governance"]["production_authoritative_snapshots_require_schedule"] is False
@@ -725,30 +524,11 @@ jobs:
               "published": True,
               "overall": manifest["overall"],
               "generated_at": manifest["generated_at"],
-              "schedule_kind": manifest["runtime_control"]["schedule_kind"],
-              "authoritative_runtime_snapshot": manifest["runtime_control"].get("authoritative_runtime_snapshot"),
+              "schedule_kind": control["schedule_kind"],
+              "authoritative_runtime_snapshot": control.get("authoritative_runtime_snapshot"),
+              "counts_as_completed_operational_slot": control.get("counts_as_completed_operational_slot"),
               "publisher_mode": "dedicated_v6_github_app",
               "tree_sha256": integrity.get("tree_sha256"),
           }
-          historical = root / "health" / "historical_backfill.json"
-          if historical.exists():
-              history = json.loads(historical.read_text(encoding="utf-8"))
-              evidence["historical_backfill"] = {
-                  "league_id": history.get("league_id"),
-                  "gw_from": history.get("gw_from"),
-                  "gw_to": history.get("gw_to"),
-                  "overall_status": history.get("overall_status"),
-                  "current_cohort_manager_count": history.get("current_cohort_manager_count"),
-                  "cache": history.get("cache"),
-              }
-          report_prefetch = root / "report_prefetch" / "latest.json"
-          if report_prefetch.exists():
-              prefetch = json.loads(report_prefetch.read_text(encoding="utf-8"))
-              evidence["report_prefetch"] = {
-                  "request_id": prefetch.get("request_id"),
-                  "report_kind": prefetch.get("report_kind"),
-                  "complete": prefetch.get("complete"),
-                  "fresh_for_target_report": prefetch.get("fresh_for_target_report"),
-              }
           print(evidence)
           PY

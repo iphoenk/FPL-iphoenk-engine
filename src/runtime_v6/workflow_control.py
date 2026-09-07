@@ -19,10 +19,45 @@ class WorkflowControlError(ValueError):
     pass
 
 
+def scheduled_cron_kinds(policy: dict[str, Any]) -> dict[str, str]:
+    configured = policy.get("scheduled_crons_utc")
+    if configured is None:
+        configured = [
+            {"cron": policy.get("primary_cron_utc"), "kind": "primary"},
+            {"cron": policy.get("recovery_cron_utc"), "kind": "recovery"},
+        ]
+    if not isinstance(configured, list) or not configured:
+        raise WorkflowControlError("V6 schedule policy requires scheduled_crons_utc")
+
+    scheduled: dict[str, str] = {}
+    for entry in configured:
+        if not isinstance(entry, dict):
+            raise WorkflowControlError("V6 scheduled_crons_utc entries must be objects")
+        cron = str(entry.get("cron") or "").strip()
+        kind = str(entry.get("kind") or "").strip()
+        if not cron or kind not in {"primary", "recovery"}:
+            raise WorkflowControlError("V6 scheduled cron requires cron plus primary/recovery kind")
+        if cron in scheduled:
+            raise WorkflowControlError(f"duplicate V6 scheduled cron: {cron}")
+        scheduled[cron] = kind
+
+    primary = str(policy.get("primary_cron_utc") or "").strip()
+    recovery = str(policy.get("recovery_cron_utc") or "").strip()
+    if scheduled.get(primary) != "primary":
+        raise WorkflowControlError("primary_cron_utc must identify the primary scheduled cron")
+    if scheduled.get(recovery) != "recovery":
+        raise WorkflowControlError("recovery_cron_utc must identify a recovery scheduled cron")
+    expected_attempts = int(policy.get("natural_schedule_redundancy_attempts_per_hour") or len(scheduled))
+    if expected_attempts != len(scheduled):
+        raise WorkflowControlError("V6 natural scheduler redundancy attempt count mismatch")
+    return scheduled
+
+
 def load_policy(path: Path | str = DEFAULT_POLICY_PATH) -> dict[str, Any]:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if payload.get("engine") != "V6_FRESH_DATA_PLATFORM":
         raise WorkflowControlError("unexpected V6 schedule policy engine")
+    scheduled_cron_kinds(payload)
     return payload
 
 
@@ -99,11 +134,7 @@ def classify_invocation(
     event: dict[str, Any],
 ) -> str:
     if event_name == "schedule":
-        scheduled_kinds = {
-            str(policy["primary_cron_utc"]): "primary",
-            str(policy["recovery_cron_utc"]): "recovery",
-        }
-        return scheduled_kinds.get(str(event.get("schedule") or ""), "scheduled_unknown")
+        return scheduled_cron_kinds(policy).get(str(event.get("schedule") or ""), "scheduled_unknown")
 
     if event_name == "issue_comment":
         command = _issue_command(str((event.get("comment") or {}).get("body") or ""))

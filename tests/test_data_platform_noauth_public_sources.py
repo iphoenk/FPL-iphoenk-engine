@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from src.runtime_v6.registry import load_registry
+from src.runtime_v6.source_policy import SourcePolicyError, normalize_addition_admission
 
 ROOT = Path(__file__).resolve().parents[1]
 ADDITIONS = ROOT / "config" / "v6" / "source_additions.json"
@@ -41,28 +44,55 @@ def _json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def test_declared_source_wave_is_zero_cost_no_account_no_login_no_private_secret() -> None:
+def test_all_additive_sources_are_zero_cost_no_account_no_login_no_private_secret() -> None:
     additions = _json(ADDITIONS)
+    normalized = normalize_addition_admission(additions)
     activation = _json(ACTIVATION)
-    by_id = {str(row["id"]): row for row in additions["sources"]}
+    by_id = {str(row["id"]): row for row in normalized["sources"]}
 
     assert DECLARED_NO_AUTH_SOURCES.issubset(by_id)
+    for source_id, row in by_id.items():
+        access = row["access"]
+        assert access["cost"] == "ZERO", source_id
+        assert access["account_required"] is False, source_id
+        assert access["login_required"] is False, source_id
+        assert access["private_api_key_required"] is False, source_id
+        assert access["private_token_required"] is False, source_id
+        assert "auth" not in row, source_id
+
     for source_id in DECLARED_NO_AUTH_SOURCES:
-        row = by_id[source_id]
-        access = row.get("access") or {}
-        assert access.get("cost") == "ZERO"
-        assert access.get("account_required") is False
-        assert access.get("login_required") is False
-        assert access.get("private_api_key_required") is False
-        assert access.get("private_token_required") is False
-        assert "auth" not in row
-        assert row.get("critical") is False
+        assert by_id[source_id].get("critical") is False
 
     for source_id in ACTIVE_NO_AUTH_SOURCES:
         assert activation["constraints"][source_id] == "NO_AUTH_PUBLIC_ONLY"
 
     assert activation["tiers"]["thesportsdb_v1"] == "pilot"
     assert {source_id for source_id in ACTIVE_CORE if activation["tiers"][source_id] == "core"} == ACTIVE_CORE
+
+
+def test_additive_source_admission_fails_closed_on_paid_or_private_auth() -> None:
+    base_policy = {
+        "cost": "ZERO",
+        "account_required": False,
+        "login_required": False,
+        "private_api_key_required": False,
+        "private_token_required": False,
+        "auth_block_allowed": False,
+    }
+    with pytest.raises(SourcePolicyError):
+        normalize_addition_admission(
+            {
+                "admission_policy": base_policy,
+                "sources": [{"id": "paid", "access": {"cost": "PAID"}}],
+            }
+        )
+    with pytest.raises(SourcePolicyError):
+        normalize_addition_admission(
+            {
+                "admission_policy": base_policy,
+                "sources": [{"id": "secret", "auth": {"mode": "header", "env": "SECRET", "name": "Authorization"}}],
+            }
+        )
 
 
 def test_resolved_registry_preserves_active_no_auth_contract_and_prunes_unstable_reep() -> None:
@@ -73,6 +103,8 @@ def test_resolved_registry_preserves_active_no_auth_contract_and_prunes_unstable
     for source_id in ACTIVE_NO_AUTH_SOURCES:
         assert by_id[source_id]["activation_constraint"] == "NO_AUTH_PUBLIC_ONLY"
         assert by_id[source_id].get("auth") is None
+        assert by_id[source_id]["access"]["cost"] == "ZERO"
+        assert by_id[source_id]["access"]["login_required"] is False
 
     reference_only = (registry.get("activation") or {}).get("reference_only_sources") or {}
     reason = str(reference_only.get("reep_register") or "")
@@ -98,7 +130,7 @@ def test_thesportsdb_only_uses_documented_public_v1_access_segment() -> None:
     assert all("/api/v1/json/123/" in str(request["url"]) for request in source["requests"])
 
 
-def test_venue_geography_matches_current_2026_27_pl_membership_and_open_meteo_order() -> None:
+def test_venue_geography_is_single_coordinate_owner_and_materializes_open_meteo_order() -> None:
     venue_payload = _json(VENUES)
     venues = venue_payload["venues"]
     assert venue_payload["season"] == "2026-2027"
@@ -109,8 +141,18 @@ def test_venue_geography_matches_current_2026_27_pl_membership_and_open_meteo_or
     assert all(-180 <= float(row["longitude"]) <= 180 for row in venues)
 
     additions = _json(ADDITIONS)
-    open_meteo = next(row for row in additions["sources"] if row["id"] == "open_meteo")
-    params = open_meteo["requests"][0]["params"]
+    declared = next(row for row in additions["sources"] if row["id"] == "open_meteo")
+    request = declared["requests"][0]
+    assert "latitude" not in request["params"]
+    assert "longitude" not in request["params"]
+    binding = request["params_from_records"]
+    assert binding["path"] == "config/v6/venue_geography.json"
+    assert binding["records_key"] == "venues"
+    assert binding["fields"] == {"latitude": "latitude", "longitude": "longitude"}
+
+    registry = load_registry()
+    resolved = next(row for row in registry["sources"] if row["id"] == "open_meteo")
+    params = resolved["requests"][0]["params"]
     latitudes = [float(value) for value in params["latitude"].split(",")]
     longitudes = [float(value) for value in params["longitude"].split(",")]
     assert latitudes == [float(row["latitude"]) for row in venues]

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import json
 from pathlib import Path
 
 from src.runtime_v6.operational_reliability import densify_operational_slots
+from src.runtime_v6.registry import load_registry, source_map
 from src.runtime_v6.season_contract import load_season_contract, materialize_season_tokens
 from src.runtime_v6.source_contract_doc import render_source_contract
 
@@ -16,7 +17,7 @@ def _workflow_paths(text: str, event: str) -> list[str]:
     paths_line = next(i for i in range(event_line + 1, len(lines)) if lines[i].strip() == "paths:")
     values: list[str] = []
     for line in lines[paths_line + 1 :]:
-        if line.startswith("  ") and not line.startswith("      "):
+        if line.strip() and len(line) - len(line.lstrip()) < 6:
             break
         stripped = line.strip()
         if stripped.startswith("- "):
@@ -74,6 +75,25 @@ def test_season_contract_derives_provider_notations_deterministically() -> None:
         "vaastav": "2026-27",
         "football_data": "2627",
     }
+
+
+def test_provider_season_bindings_are_tokenized_and_resolve_from_one_contract() -> None:
+    raw = (ROOT / "config" / "v6" / "source_registry.json").read_text(encoding="utf-8")
+    for stale_literal in ("2026-2027", "2026/2027", "2026/27", "2026-27", "/2627/"):
+        assert stale_literal not in raw
+    assert "{{season." in raw
+
+    registry = load_registry()
+    sources = source_map(registry)
+    assert registry["season"] == "2026-2027"
+    understat = sources["understat"]["requests"]
+    assert understat[0]["url"].endswith("/league/EPL/2026")
+    assert understat[1]["form"]["season"] == "2026"
+    assert sources["fotmob"]["requests"][0]["params"]["season"] == "2026/2027"
+    assert "/2026-27/" in sources["vaastav_fpl"]["requests"][0]["url"]
+
+    consumer = json.loads((ROOT / "config" / "v6" / "consumer_context.json").read_text(encoding="utf-8"))
+    assert consumer["season"] == load_season_contract()["values"]["canonical"]
 
 
 def test_operational_reliability_counts_retrospective_missing_slots() -> None:

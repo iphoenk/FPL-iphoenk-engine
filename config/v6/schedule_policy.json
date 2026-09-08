@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "engine": "V6_FRESH_DATA_PLATFORM",
   "schedule_authority": true,
   "scheduler_authority": {
@@ -14,19 +14,23 @@
     "required_reason": "chatgpt_hourly_master",
     "required_audit": "FPL_MASTER_HOURLY",
     "health_epoch": "CHATGPT_MASTER_V1",
+    "migration_started_at": "2026-09-08T10:35:31+07:00",
+    "legacy_history_before": "2026-09-08T10:35:31+07:00",
     "green_after_consecutive_slots": 6
   },
   "github_natural_schedule": {
     "enabled": false,
     "authority": "NONE",
     "reason": "GITHUB_SCHEDULER_NOT_RELIABLE_FOR_V6_HOURLY_AUTHORITY",
-    "legacy_workflow_crons_are_dormant_noop": true,
+    "workflow_schedule_triggers_removed": true,
+    "removed_at": "2026-09-08T10:35:31+07:00",
     "former_crons_utc": [
       "13 * * * *",
       "28 * * * *",
       "43 * * * *",
       "58 * * * *"
-    ]
+    ],
+    "former_crons_are_historical_evidence_only": true
   },
   "scheduled_crons_utc": [],
   "natural_schedule_redundancy_attempts_per_hour": 0,
@@ -79,10 +83,11 @@
     "push_triggered_production_acquisition_allowed": false,
     "pull_request_triggered_production_acquisition_allowed": false,
     "github_natural_scheduler_is_authority": false,
-    "github_schedule_events_are_dormant_noop": true,
+    "github_schedule_events_are_removed": true,
     "chatgpt_scheduler_is_only_hourly_authority": true,
     "chatgpt_scheduler_health_is_current_epoch_authority": true,
     "legacy_github_scheduler_evidence_is_historical_only": true,
+    "scheduler_migration_boundary_is_explicit": true,
     "authoritative_runtime_triggers": [
       "issue_comment:chatgpt_scheduler",
       "workflow_dispatch:master_orchestrated",

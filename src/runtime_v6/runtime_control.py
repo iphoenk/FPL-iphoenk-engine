@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from .legacy_scheduler_compat import event_schedule_expression as _event_schedule_expression
+from .legacy_scheduler_compat import nominal_schedule_time, scheduled_invocation_slot
 from .schedule_policy import SCHEDULE_POLICY, scheduler_proof_telemetry
 from .store import HEALTH, MANIFEST, write_json
 
@@ -42,52 +44,6 @@ def _read_json(path: Path) -> dict[str, Any]:
         return json.loads(path.read_text(encoding="utf-8"))
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
-
-
-def _event_schedule_expression(explicit: str | None = None) -> str | None:
-    if explicit is not None:
-        value = str(explicit).strip()
-        return value or None
-    event_path = os.getenv("GITHUB_EVENT_PATH")
-    if not event_path:
-        return None
-    event = _read_json(Path(event_path))
-    value = str(event.get("schedule") or "").strip()
-    return value or None
-
-
-def _simple_hourly_cron_minute(expression: str | None) -> int | None:
-    if not expression:
-        return None
-    parts = str(expression).split()
-    if len(parts) != 5 or parts[1:] != ["*", "*", "*", "*"]:
-        return None
-    try:
-        minute = int(parts[0])
-    except ValueError:
-        return None
-    return minute if 0 <= minute <= 59 else None
-
-
-def nominal_schedule_time(value: datetime, schedule_expression: str | None) -> datetime | None:
-    minute = _simple_hourly_cron_minute(schedule_expression)
-    if minute is None:
-        return None
-    current = _now(value)
-    nominal = current.replace(minute=minute, second=0, microsecond=0)
-    if nominal > current:
-        nominal -= timedelta(hours=1)
-    return nominal
-
-
-def scheduled_invocation_slot(
-    value: datetime,
-    scheduler_interval_minutes: int,
-    schedule_expression: str | None,
-) -> datetime:
-    nominal = nominal_schedule_time(value, schedule_expression)
-    anchor = nominal if nominal is not None else _now(value)
-    return scheduler_slot_start(anchor, scheduler_interval_minutes)
 
 
 def _is_chatgpt_scheduler(event: str, kind: str) -> bool:

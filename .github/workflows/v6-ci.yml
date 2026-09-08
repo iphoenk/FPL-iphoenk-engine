@@ -1,7 +1,6 @@
 name: FPL V6 CI contracts
 
 on:
-  pull_request:
   push:
     branches: [main]
     paths:
@@ -16,12 +15,13 @@ on:
       - "tests/test_data_platform_production_acceptance.py"
       - ".github/workflows/v6-ci.yml"
       - ".github/workflows/v6-natural-data-ingestion.yml"
+      - ".github/workflows/repository-governance.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: fpl-v6-ci-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+  group: fpl-v6-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -39,23 +39,9 @@ jobs:
       - name: Detect V6-owned change surface
         id: detect
         shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          if [[ "$EVENT_NAME" != "pull_request" ]]; then
-            echo "v6_changed=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
-          printf '%s\n' "$changed"
-          if printf '%s\n' "$changed" | grep -Eq '^(config/v6/|docs/V6_.*\.md$|src/runtime_v6/|requirements-v6(-ci)?\.lock$|tests/test_data_ingestion_engine\.py$|tests/test_adaptive_polling\.py$|tests/test_data_platform_.*\.py$|\.github/workflows/v6-ci\.yml$|\.github/workflows/v6-natural-data-ingestion\.yml$)'; then
-            echo "v6_changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "v6_changed=false" >> "$GITHUB_OUTPUT"
-          fi
+          echo "v6_changed=true" >> "$GITHUB_OUTPUT"
 
   v6-verify:
     name: v6-verify
@@ -138,7 +124,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Enforce V6 gate only when V6 is touched
+      - name: Enforce post-merge V6 gate
         env:
           DETECT_RESULT: ${{ needs.detect-v6-change.result }}
           V6_CHANGED: ${{ needs.detect-v6-change.outputs.v6_changed }}
@@ -152,11 +138,11 @@ jobs:
             exit 1
           fi
           if [[ "$V6_CHANGED" != "true" ]]; then
-            echo "Non-V6 PR: V6 governance gate satisfied without running V6 suite"
+            echo "V6 post-merge gate received no V6 change"
             exit 0
           fi
           if [[ "$VERIFY_RESULT" != "success" || "$PUBLISHER_RESULT" != "success" ]]; then
-            echo "V6 governance gate failed: verify=$VERIFY_RESULT publisher=$PUBLISHER_RESULT"
+            echo "V6 post-merge gate failed: verify=$VERIFY_RESULT publisher=$PUBLISHER_RESULT"
             exit 1
           fi
-          echo "V6 governance gate passed"
+          echo "V6 post-merge gate passed"

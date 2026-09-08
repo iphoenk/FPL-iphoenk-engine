@@ -28,7 +28,9 @@ def test_v6_production_uses_v6_owned_locked_runtime_dependencies_and_lightweight
     assert "python -m pip install --require-hashes -r requirements.lock" not in before_publish
     assert "cache-dependency-path: requirements-v6.lock" in before_publish
     assert "python -m compileall -q src/runtime_v6" in before_publish
-    assert "python -m src.runtime_v6.architecture_independence_validate" in before_publish
+    assert "python -m src.runtime_v6.production_validate preflight" in before_publish
+    validator = Path("src/runtime_v6/production_validate.py").read_text(encoding="utf-8")
+    assert "validate_repository()" in validator
     assert "python -m pytest" not in before_publish
     assert "requirements.txt pytest" not in before_publish
 

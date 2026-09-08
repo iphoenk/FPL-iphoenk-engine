@@ -30,6 +30,7 @@ def _write_snapshot(
     runtime_control_health: str = "GREEN",
     runtime_control_overrides: dict | None = None,
     control_failures: list[str] | None = None,
+    operational_summary: dict | None = None,
 ) -> None:
     paths = {
         "current_sources": "data/v6/current/",
@@ -77,11 +78,26 @@ def _write_snapshot(
         },
     }
 
+    default_operational_summary = {
+        "health": "GREEN",
+        "maturity": "ESTABLISHED",
+        "missing_operational_slots": 0,
+        "consecutive_successful_slots": 6,
+        "required_consecutive_successful_slots": 6,
+    }
+
     _write_json(root / "manifest.json", manifest)
     _write_json(root / "current" / "official_fpl.json", {"source_id": "official_fpl"})
     _write_json(root / "health" / "source_health.json", {})
     _write_json(root / "health" / "runtime_control.json", runtime_control)
-    _write_json(root / "health" / "operational_slots.json", {"schema_version": 1, "slots": [], "summary": {"health": "AMBER", "maturity": "WARMING_UP"}})
+    _write_json(
+        root / "health" / "operational_slots.json",
+        {
+            "schema_version": 3,
+            "slots": [],
+            "summary": dict(operational_summary or default_operational_summary),
+        },
+    )
     _write_json(root / "normalized" / "canonical_players.json", {"player_count": 1})
     _write_json(root / "normalized" / "canonical_teams.json", {"team_count": 0, "teams": []})
     _write_json(root / "normalized" / "canonical_fixtures.json", {"fixture_count": 0, "fixtures": []})
@@ -127,6 +143,10 @@ def test_fresh_green_snapshot_is_usable(tmp_path: Path):
     assert result["fallback_scope"] is None
     assert result["engine_artifact_fallback_allowed"] is False
     assert result["stored_tree_sha256"] == result["recomputed_tree_sha256"]
+    assert result["scheduler_reliability_health"] == "GREEN"
+    assert result["scheduler_reliability_maturity"] == "ESTABLISHED"
+    assert result["scheduler_missing_operational_slots"] == 0
+    assert result["scheduler_reliability_degraded"] is False
     assert result["governance"]["consumer_recomputes_publish_integrity"] is True
     assert result["governance"]["consumer_requires_exact_resolved_registry"] is True
     assert result["governance"]["consumer_requires_authoritative_operational_provenance"] is True
@@ -134,6 +154,7 @@ def test_fresh_green_snapshot_is_usable(tmp_path: Path):
     assert result["governance"]["natural_scheduler_evidence_is_checked_separately"] is True
     assert result["governance"]["consumer_requires_full_zero_authority_contract"] is True
     assert result["governance"]["fallback_must_not_read_other_engine_artifacts"] is True
+    assert result["governance"]["scheduler_reliability_comes_from_operational_ledger"] is True
 
 
 def test_master_orchestrated_snapshot_is_authoritative_without_natural_schedule_flag(tmp_path: Path):
@@ -180,6 +201,7 @@ def test_chatgpt_scheduler_snapshot_is_authoritative_runtime_data(tmp_path: Path
     assert result["state"] == "FRESH"
     assert result["usable"] is True
     assert result["runtime_schedule_kind"] == "chatgpt_scheduler"
+    assert result["scheduler_reliability_health"] == "GREEN"
     assert result["scheduler_reliability_degraded"] is False
     assert result["failures"] == []
     assert result["governance"]["consumer_accepts_chatgpt_scheduler_authority"] is True
@@ -234,10 +256,80 @@ def test_recovered_fresh_snapshot_remains_usable_when_scheduler_reliability_is_r
     assert result["state"] == "FRESH"
     assert result["usable"] is True
     assert result["runtime_control_health"] == "RED"
+    assert result["scheduler_reliability_health"] == "GREEN"
     assert result["scheduler_reliability_degraded"] is True
     assert result["scheduler_reliability_warnings"] == ["MISSED_CHATGPT_SCHEDULER_SLOT"]
     assert result["failures"] == []
     assert result["governance"]["scheduler_reliability_is_observability_not_data_validity"] is True
+
+
+def test_report_prefetch_does_not_hide_operational_scheduler_gap(tmp_path: Path):
+    root = tmp_path / "v6"
+    _write_snapshot(
+        root,
+        "2026-09-08T06:33:00+00:00",
+        scheduled_cycle=False,
+        event_name="issue_comment",
+        schedule_kind="report_prefetch",
+        authoritative_runtime_snapshot=True,
+        counts_as_completed_operational_slot=False,
+        runtime_control_health="GREEN",
+        runtime_control_overrides={
+            "report_prefetch": True,
+            "counts_as_completed_report_slot": True,
+            "scheduler_authority": CHATGPT_SCHEDULER_AUTHORITY,
+            "last_chatgpt_scheduler_cycle_at": "2026-09-08T06:00:00+00:00",
+        },
+        operational_summary={
+            "health": "AMBER",
+            "maturity": "WARMING_UP",
+            "tracked_operational_slots": 4,
+            "fulfilled_operational_slots": 3,
+            "missing_operational_slots": 1,
+            "consecutive_successful_slots": 1,
+            "required_consecutive_successful_slots": 6,
+        },
+    )
+
+    result = assess_snapshot(root, now=datetime(2026, 9, 8, 6, 36, tzinfo=timezone.utc))
+
+    assert result["state"] == "FRESH"
+    assert result["usable"] is True
+    assert result["runtime_control_health"] == "GREEN"
+    assert result["runtime_schedule_kind"] == "report_prefetch"
+    assert result["scheduler_reliability_health"] == "AMBER"
+    assert result["scheduler_reliability_maturity"] == "WARMING_UP"
+    assert result["scheduler_missing_operational_slots"] == 1
+    assert result["scheduler_consecutive_successful_slots"] == 1
+    assert result["scheduler_required_consecutive_successful_slots"] == 6
+    assert result["scheduler_reliability_degraded"] is True
+    assert result["scheduler_reliability_warnings"] == ["OPERATIONAL_LEDGER_MISSING_SLOTS"]
+    assert result["failures"] == []
+    assert result["governance"]["report_prefetch_cannot_hide_core_scheduler_reliability"] is True
+
+
+def test_warming_up_ledger_is_visible_without_becoming_data_failure(tmp_path: Path):
+    root = tmp_path / "v6"
+    _write_snapshot(
+        root,
+        "2026-09-08T06:33:00+00:00",
+        operational_summary={
+            "health": "AMBER",
+            "maturity": "WARMING_UP",
+            "missing_operational_slots": 0,
+            "consecutive_successful_slots": 2,
+            "required_consecutive_successful_slots": 6,
+        },
+    )
+
+    result = assess_snapshot(root, now=datetime(2026, 9, 8, 6, 36, tzinfo=timezone.utc))
+
+    assert result["state"] == "FRESH"
+    assert result["usable"] is True
+    assert result["scheduler_reliability_health"] == "AMBER"
+    assert result["scheduler_reliability_degraded"] is True
+    assert result["scheduler_reliability_warnings"] == []
+    assert result["failures"] == []
 
 
 def test_unknown_control_failure_still_fails_closed(tmp_path: Path):

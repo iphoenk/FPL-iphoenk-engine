@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .artifact_migration import migrate_legacy_canonical_provenance
-from .artifact_provenance import build_artifact_meta, publication_provenance
+from .artifact_provenance import build_artifact_meta, execution_provenance, publication_provenance
 from .store import OUT, write_json
 
 CATALOG_RELATIVE_PATH = "evidence/artifact_catalog.json"
@@ -96,6 +96,7 @@ def _origin_errors(meta: dict[str, Any], relative: str) -> list[str]:
 def build_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
     generated_at = datetime.now(timezone.utc).isoformat()
     publication = publication_provenance(published_at=generated_at)
+    legacy_execution = execution_provenance()
     previous = _previous_artifacts(root)
     artifacts = [
         build_artifact_meta(
@@ -117,9 +118,10 @@ def build_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
         "primary_keys": ["path"],
         "record_count": len(artifacts),
         "catalog_sha256": _catalog_digest(artifacts),
+        **legacy_execution,
         **publication,
         "publication_provenance": publication,
-        "execution_provenance": publication,
+        "execution_provenance": legacy_execution,
         "completeness": _completeness_summary(artifacts),
         "excluded_paths": [
             f"data/v6/{CATALOG_RELATIVE_PATH}",
@@ -138,6 +140,8 @@ def build_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
             "publication_provenance_changes_per_publication_execution": True,
             "pre_contract_reused_origin_is_explicitly_legacy_unknown": True,
             "legacy_origin_is_never_inferred_from_republisher_execution": True,
+            "catalog_level_producer_fields_are_deprecated_publication_aliases": True,
+            "artifact_entries_do_not_use_ambiguous_generic_producer_fields": True,
             "class_aware_completeness": True,
             "immutable_source_snapshot_ids_required_for_usable_current_sources": True,
             "canonical_dataset_provenance_fail_closed": True,

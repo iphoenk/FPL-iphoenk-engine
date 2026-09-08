@@ -68,6 +68,60 @@ def test_longer_poll_interval_skips_until_source_is_due():
     assert poll_decision(source, previous, now=now, scheduler_interval_minutes=60)["reason"] == "DUE"
 
 
+def test_chatgpt_logical_slot_is_the_acquisition_clock(monkeypatch):
+    monkeypatch.setenv("V6_MASTER_LOGICAL_SLOT", "2026-09-08T10:00:00+07:00")
+    source = {
+        "id": "official_fpl",
+        "poll_interval_minutes": 60,
+        "requests": [{"id": "bootstrap"}],
+    }
+    previous = {
+        "polling": {
+            "scheduler_slot": "2026-09-08T02:00:00+00:00",
+            "last_polled_at": "2026-09-08T02:51:00+00:00",
+        }
+    }
+
+    decision = poll_decision(source, previous, scheduler_interval_minutes=60)
+
+    assert decision["evaluated_at"] == "2026-09-08T03:00:00+00:00"
+    assert decision["scheduler_slot"] == "2026-09-08T03:00:00+00:00"
+    assert decision["due"] is True
+    assert decision["reason"] == "DUE"
+
+
+def test_long_interval_uses_previous_logical_slot_not_runner_finish_time(monkeypatch):
+    monkeypatch.setenv("V6_MASTER_LOGICAL_SLOT", "2026-09-08T10:00:00+07:00")
+    source = {
+        "id": "slow_source",
+        "poll_interval_minutes": 120,
+        "requests": [{"id": "one"}],
+    }
+    previous = {
+        "polling": {
+            "scheduler_slot": "2026-09-08T01:00:00+00:00",
+            "last_polled_at": "2026-09-08T01:55:00+00:00",
+        }
+    }
+
+    decision = poll_decision(source, previous, scheduler_interval_minutes=60)
+
+    assert decision["scheduler_slot"] == "2026-09-08T03:00:00+00:00"
+    assert decision["due"] is True
+    assert decision["reason"] == "DUE"
+
+
+def test_explicit_now_overrides_chatgpt_environment_clock(monkeypatch):
+    monkeypatch.setenv("V6_MASTER_LOGICAL_SLOT", "2026-09-08T10:00:00+07:00")
+    explicit = datetime(2026, 9, 8, 5, 0, tzinfo=timezone.utc)
+    source = {"id": "example", "requests": [{"id": "one"}]}
+
+    decision = poll_decision(source, None, now=explicit)
+
+    assert decision["evaluated_at"] == explicit.isoformat()
+    assert decision["scheduler_slot"] == explicit.isoformat()
+
+
 def test_hourly_policy_runs_every_hourly_scheduler_cycle_despite_runner_jitter():
     now = datetime(2026, 9, 4, 5, 0, tzinfo=timezone.utc)
     source = {

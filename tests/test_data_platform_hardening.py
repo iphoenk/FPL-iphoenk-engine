@@ -28,27 +28,24 @@ def test_workflow_cron_matches_v6_schedule_policy():
     policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
     source_registry = json.loads(Path("config/v6/source_registry.json").read_text(encoding="utf-8"))
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
-    configured = list(policy["scheduled_crons_utc"])
 
-    assert policy["schema_version"] == 2
+    assert policy["schema_version"] == 3
     assert policy["engine"] == "V6_FRESH_DATA_PLATFORM"
-    assert workflow_crons == [str(entry["cron"]) for entry in configured]
-    assert len(workflow_crons) == policy["natural_schedule_redundancy_attempts_per_hour"] == 4
-    cron_minutes = [int(cron.split()[0]) for cron in workflow_crons]
-    assert all(cron.split()[1:] == ["*", "*", "*", "*"] for cron in workflow_crons)
-    assert len(set(cron_minutes)) == 4
-    assert all(10 <= minute <= 59 for minute in cron_minutes)
-    assert [b - a for a, b in zip(cron_minutes, cron_minutes[1:])] == [15, 15, 15]
-    assert configured[0]["kind"] == "primary"
-    assert all(entry["kind"] == "recovery" for entry in configured[1:])
-    assert policy["primary_cron_utc"] == configured[0]["cron"]
-    assert policy["recovery_cron_utc"] == configured[1]["cron"]
-    assert policy["schedule_authority"] is True
-    assert policy["source_registry_schedule_metadata_authoritative"] is False
-    assert policy["governance"]["single_schedule_owner"] == "config/v6/schedule_policy.json"
-    assert policy["governance"]["avoid_top_of_hour_scheduler_load"] is True
-    assert policy["governance"]["natural_scheduler_redundancy_enabled"] is True
-    assert policy["governance"]["redundant_schedule_arrivals_share_one_logical_hourly_slot"] is True
+    assert policy["scheduler_authority"]["kind"] == "CHATGPT_TASK"
+    assert policy["scheduler_authority"]["name"] == "FPL Master Monitor"
+    assert policy["scheduler_authority"]["timezone"] == "Asia/Jakarta"
+    assert policy["scheduler_authority"]["cadence_minutes"] == 60
+    assert policy["scheduler_authority"]["physical_minute"] == 31
+    assert policy["scheduler_authority"]["logical_slot_minute"] == 0
+    assert policy["scheduled_crons_utc"] == []
+    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 0
+    assert policy["github_natural_schedule"]["enabled"] is False
+    assert policy["github_natural_schedule"]["authority"] == "NONE"
+    assert workflow_crons == policy["github_natural_schedule"]["former_crons_utc"]
+    assert policy["governance"]["single_schedule_owner"] == "CHATGPT:FPL Master Monitor"
+    assert policy["governance"]["github_schedule_events_are_dormant_noop"] is True
+    assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True
+    assert policy["governance"]["scheduler_health_proof_trigger"] == "issue_comment:chatgpt_scheduler"
     assert "workflow_cron_utc" not in source_registry["cadence"]
     assert source_registry["cadence"]["schedule"] == "hourly"
     assert policy["manual_recovery"]["counts_as_completed_scheduled_slot"] is False

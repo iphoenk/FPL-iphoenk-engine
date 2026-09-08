@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -58,15 +59,16 @@ def test_official_fpl_client_retries_transient_failure_then_succeeds():
     assert telemetry["failed_requests"] == 0
 
 
-def test_report_prefetch_reuses_existing_control_plane_without_new_cron():
+def test_report_prefetch_reuses_existing_control_plane_without_new_scheduler():
     workflow = WORKFLOW.read_text(encoding="utf-8")
     policy = json.loads(POLICY.read_text(encoding="utf-8"))
     prefetch = policy["report_prefetch"]
-    scheduled_crons = [str(entry["cron"]) for entry in policy["scheduled_crons_utc"]]
+    workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
 
-    assert workflow.count("cron:") == len(scheduled_crons)
-    for cron in scheduled_crons:
-        assert workflow.count(f'cron: "{cron}"') == 1
+    assert policy["scheduler_authority"]["kind"] == "CHATGPT_TASK"
+    assert policy["scheduled_crons_utc"] == []
+    assert policy["github_natural_schedule"]["enabled"] is False
+    assert workflow_crons == policy["github_natural_schedule"]["former_crons_utc"]
     assert prefetch["independent_cron"] is False
     assert prefetch["report_driven"] is True
     assert prefetch["control_issue_number"] == policy["master_orchestrated"]["control_issue_number"] == 431

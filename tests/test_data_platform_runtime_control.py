@@ -7,6 +7,8 @@ from pathlib import Path
 
 from src.runtime_v6.polling import poll_decision
 from src.runtime_v6.runtime_control import (
+    CHATGPT_GREEN_STREAK,
+    CHATGPT_SCHEDULER_AUTHORITY,
     apply_runtime_control,
     build_operational_slots,
     build_runtime_control,
@@ -15,325 +17,247 @@ from src.runtime_v6.runtime_control import (
 
 
 def test_same_scheduler_slot_never_polls_twice():
-    now = datetime(2026, 9, 4, 8, 30, tzinfo=timezone.utc)
+    now = datetime(2026, 9, 8, 3, 31, tzinfo=timezone.utc)
     source = {"id": "example", "requests": [{"id": "one"}]}
-    previous = {
-        "polling": {"last_polled_at": datetime(2026, 9, 4, 8, 5, tzinfo=timezone.utc).isoformat()}
-    }
-
+    previous = {"polling": {"last_polled_at": "2026-09-08T03:03:00+00:00"}}
     decision = poll_decision(source, previous, now=now, scheduler_interval_minutes=60)
-
     assert decision["due"] is False
     assert decision["reason"] == "ALREADY_POLLED_THIS_SLOT"
-    assert decision["scheduler_slot"] == "2026-09-04T08:00:00+00:00"
+    assert decision["scheduler_slot"] == "2026-09-08T03:00:00+00:00"
 
 
-def test_new_scheduler_slot_is_due_even_after_runner_jitter():
-    now = datetime(2026, 9, 4, 9, 2, tzinfo=timezone.utc)
+def test_new_scheduler_slot_is_due_after_previous_hour():
+    now = datetime(2026, 9, 8, 4, 31, tzinfo=timezone.utc)
     source = {"id": "example", "poll_interval_minutes": 60, "requests": [{"id": "one"}]}
-    previous = {
-        "polling": {"last_polled_at": datetime(2026, 9, 4, 8, 14, tzinfo=timezone.utc).isoformat()}
-    }
-
+    previous = {"polling": {"last_polled_at": "2026-09-08T03:31:00+00:00"}}
     decision = poll_decision(source, previous, now=now, scheduler_interval_minutes=60)
-
     assert decision["due"] is True
     assert decision["reason"] == "DUE"
 
 
-def test_runtime_control_detects_missed_scheduled_cycle():
-    previous = {
-        "runtime_control": {
-            "last_scheduled_cycle_at": "2026-09-04T06:00:00+00:00"
-        }
-    }
-    control = build_runtime_control(
-        previous,
-        scheduler_interval_minutes=60,
-        now=datetime(2026, 9, 4, 8, 3, tzinfo=timezone.utc),
-        event_name="schedule",
-        run_id="123",
-        schedule_kind="primary",
-    )
-
-    assert control["health"] == "RED"
-    assert control["missed_cycle"] is True
-    assert control["missed_cycle_count"] == 1
-    assert control["expected_cycle_at"] == "2026-09-04T08:00:00+00:00"
-    assert control["last_scheduled_cycle_at"] == "2026-09-04T08:00:00+00:00"
-    assert control["schedule_kind"] == "primary"
-    assert control["authoritative_runtime_snapshot"] is True
-    assert control["manual_recovery"] is False
-
-
-def test_manual_cycle_does_not_mask_missing_scheduled_baseline():
-    previous = {
-        "runtime_control": {
-            "last_scheduled_cycle_at": "2026-09-04T06:00:00+00:00"
-        }
-    }
-    control = build_runtime_control(
-        previous,
-        scheduler_interval_minutes=60,
-        now=datetime(2026, 9, 4, 7, 30, tzinfo=timezone.utc),
-        event_name="workflow_dispatch",
-        schedule_kind="manual_recovery",
-    )
-
-    assert control["health"] == "AMBER"
-    assert control["scheduled_cycle"] is False
-    assert control["manual_recovery"] is True
-    assert control["authoritative_runtime_snapshot"] is False
-    assert control["counts_as_completed_scheduled_slot"] is False
-    assert control["last_scheduled_cycle_at"] == "2026-09-04T06:00:00+00:00"
-    assert control["missed_cycle"] is False
-
-
-def test_recovery_schedule_skips_when_primary_already_published_same_slot():
-    previous = {
-        "runtime_control": {
-            "last_scheduled_cycle_at": "2026-09-04T08:00:00+00:00"
-        }
-    }
-
+def test_dormant_github_schedule_is_always_skipped():
     assert scheduled_slot_already_completed(
-        previous,
+        {},
         scheduler_interval_minutes=60,
-        now=datetime(2026, 9, 4, 8, 35, tzinfo=timezone.utc),
+        now=datetime(2026, 9, 8, 3, 13, tzinfo=timezone.utc),
         event_name="schedule",
+        schedule_kind="schedule_disabled",
     ) is True
 
 
-def test_recovery_schedule_runs_when_current_slot_has_not_been_published():
+def test_chatgpt_scheduler_uses_explicit_jakarta_logical_slot():
+    control = build_runtime_control(
+        {},
+        scheduler_interval_minutes=60,
+        now=datetime(2026, 9, 8, 3, 31, 15, tzinfo=timezone.utc),
+        event_name="issue_comment",
+        run_id="chatgpt-1",
+        schedule_kind="chatgpt_scheduler",
+        logical_slot="2026-09-08T10:00:00+07:00",
+    )
+    assert control["health"] == "GREEN"
+    assert control["scheduler_authority"] == CHATGPT_SCHEDULER_AUTHORITY
+    assert control["chatgpt_scheduler"] is True
+    assert control["chatgpt_scheduler_proof"] is True
+    assert control["scheduled_cycle"] is True
+    assert control["github_schedule_event"] is False
+    assert control["expected_cycle_at"] == "2026-09-08T03:00:00+00:00"
+    assert control["last_chatgpt_scheduler_cycle_at"] == "2026-09-08T03:00:00+00:00"
+    assert control["logical_slot_source"] == "CHATGPT_COMMAND"
+    assert control["counts_as_completed_scheduled_slot"] is True
+    assert control["counts_as_completed_operational_slot"] is True
+    assert control["scheduled_slot_uses_nominal_cron"] is False
+
+
+def test_first_chatgpt_proof_is_allowed_even_if_data_slot_was_already_fulfilled():
     previous = {
         "runtime_control": {
-            "last_scheduled_cycle_at": "2026-09-04T07:00:00+00:00"
+            "last_operational_cycle_at": "2026-09-08T03:00:00+00:00",
+            "schedule_kind": "master_orchestrated",
         }
     }
-
     assert scheduled_slot_already_completed(
         previous,
         scheduler_interval_minutes=60,
-        now=datetime(2026, 9, 4, 8, 35, tzinfo=timezone.utc),
-        event_name="schedule",
+        event_name="issue_comment",
+        schedule_kind="chatgpt_scheduler",
+        logical_slot="2026-09-08T10:00:00+07:00",
     ) is False
 
 
-def test_manual_refresh_never_counts_as_completed_scheduled_slot():
+def test_second_chatgpt_proof_same_slot_is_skipped():
     previous = {
         "runtime_control": {
-            "last_scheduled_cycle_at": "2026-09-04T08:00:00+00:00"
+            "last_chatgpt_scheduler_cycle_at": "2026-09-08T03:00:00+00:00",
+            "last_operational_cycle_at": "2026-09-08T03:00:00+00:00",
+            "schedule_kind": "chatgpt_scheduler",
         }
     }
-
     assert scheduled_slot_already_completed(
         previous,
         scheduler_interval_minutes=60,
-        now=datetime(2026, 9, 4, 8, 30, tzinfo=timezone.utc),
-        event_name="workflow_dispatch",
-    ) is False
+        event_name="issue_comment",
+        schedule_kind="chatgpt_scheduler",
+        logical_slot="2026-09-08T10:00:00+07:00",
+    ) is True
 
 
-def test_runtime_control_escalates_manifest_overall_on_missed_cycle():
-    manifest = {
-        "overall": "GREEN",
-        "polling": {"scheduler_interval_minutes": 60},
-        "paths": {},
-        "governance": {},
-    }
-    previous = {
-        "runtime_control": {
-            "last_scheduled_cycle_at": "2026-09-04T06:00:00+00:00"
-        }
-    }
-
+def test_chatgpt_gap_is_runtime_control_failure():
+    manifest = {"overall": "GREEN", "polling": {"scheduler_interval_minutes": 60}, "paths": {}, "governance": {}}
+    previous = {"runtime_control": {"last_chatgpt_scheduler_cycle_at": "2026-09-08T01:00:00+00:00"}}
     updated, control = apply_runtime_control(
         manifest,
         previous,
-        now=datetime(2026, 9, 4, 8, 4, tzinfo=timezone.utc),
-        event_name="schedule",
-        schedule_kind="primary",
+        now=datetime(2026, 9, 8, 3, 31, tzinfo=timezone.utc),
+        event_name="issue_comment",
+        schedule_kind="chatgpt_scheduler",
+        logical_slot="2026-09-08T10:00:00+07:00",
     )
-
     assert control["health"] == "RED"
+    assert control["missed_cycle"] is True
+    assert control["missed_cycle_count"] == 1
     assert updated["overall"] == "GREEN"
     assert updated["data_availability_health"] == "GREEN"
     assert updated["runtime_control_health"] == "RED"
-    assert updated["control_failures"] == ["MISSED_SCHEDULED_CYCLE"]
-    assert updated["paths"]["runtime_control"] == "data/v6/health/runtime_control.json"
-    assert updated["governance"]["production_ingestion_schedule_only"] is True
-    assert updated["governance"]["production_authoritative_snapshots_require_schedule"] is False
-    assert updated["governance"]["production_authoritative_snapshots_require_governed_trigger"] is True
-    assert updated["governance"]["scheduled_recovery_is_idempotent"] is True
+    assert updated["control_failures"] == ["MISSED_CHATGPT_SCHEDULER_SLOT"]
+    assert updated["governance"]["chatgpt_scheduler_is_authority"] is True
+    assert updated["governance"]["github_natural_scheduler_is_authority"] is False
 
 
-def test_master_orchestrated_is_authoritative_without_masking_natural_schedule():
-    manifest = {
-        "overall": "GREEN",
-        "polling": {"scheduler_interval_minutes": 60},
-        "paths": {},
-        "governance": {},
-    }
-    previous = {
-        "runtime_control": {
-            "last_scheduled_cycle_at": "2026-09-04T06:00:00+00:00"
-        }
-    }
-
+def test_generic_master_dispatch_is_authoritative_but_not_scheduler_proof():
+    manifest = {"overall": "GREEN", "polling": {"scheduler_interval_minutes": 60}, "paths": {}, "governance": {}}
     updated, control = apply_runtime_control(
         manifest,
-        previous,
-        now=datetime(2026, 9, 4, 8, 31, tzinfo=timezone.utc),
+        {},
+        now=datetime(2026, 9, 8, 3, 20, tzinfo=timezone.utc),
         event_name="workflow_dispatch",
         schedule_kind="master_orchestrated",
     )
-
     assert control["health"] == "GREEN"
-    assert control["scheduled_cycle"] is False
     assert control["master_orchestrated"] is True
-    assert control["manual_recovery"] is False
+    assert control["chatgpt_scheduler"] is False
+    assert control["scheduled_cycle"] is False
     assert control["authoritative_runtime_snapshot"] is True
     assert control["counts_as_completed_operational_slot"] is True
     assert control["counts_as_completed_scheduled_slot"] is False
-    assert control["last_scheduled_cycle_at"] == "2026-09-04T06:00:00+00:00"
-    assert control["last_authoritative_cycle_at"] == "2026-09-04T08:00:00+00:00"
-    assert updated["overall"] == "GREEN"
-    assert updated["control_failures"] == []
-    assert updated["governance"]["master_orchestrated_is_authoritative"] is True
-    assert updated["governance"]["manual_recovery_is_authoritative"] is False
+    assert updated["governance"]["generic_master_dispatch_does_not_count_as_scheduler_health_proof"] is True
 
 
-def test_issue_comment_master_orchestration_is_authoritative():
-    manifest = {
-        "overall": "GREEN",
-        "polling": {"scheduler_interval_minutes": 60},
-        "paths": {},
-        "governance": {},
-    }
+def test_manual_recovery_is_non_authoritative():
+    manifest = {"overall": "GREEN", "polling": {"scheduler_interval_minutes": 60}, "paths": {}, "governance": {}}
     updated, control = apply_runtime_control(
         manifest,
         {},
-        now=datetime(2026, 9, 4, 9, 31, tzinfo=timezone.utc),
-        event_name="issue_comment",
-        schedule_kind="master_orchestrated",
-    )
-
-    assert control["health"] == "GREEN"
-    assert control["master_orchestrated"] is True
-    assert control["scheduled_cycle"] is False
-    assert control["authoritative_runtime_snapshot"] is True
-    assert updated["control_failures"] == []
-
-
-def test_manual_recovery_is_non_authoritative_and_manifested_amber():
-    manifest = {
-        "overall": "GREEN",
-        "polling": {"scheduler_interval_minutes": 60},
-        "paths": {},
-        "governance": {},
-    }
-    previous = {
-        "runtime_control": {
-            "last_scheduled_cycle_at": "2026-09-04T06:00:00+00:00"
-        }
-    }
-
-    updated, control = apply_runtime_control(
-        manifest,
-        previous,
-        now=datetime(2026, 9, 4, 8, 20, tzinfo=timezone.utc),
+        now=datetime(2026, 9, 8, 3, 20, tzinfo=timezone.utc),
         event_name="workflow_dispatch",
         schedule_kind="manual_recovery",
     )
-
     assert control["health"] == "AMBER"
-    assert control["scheduled_cycle"] is False
     assert control["manual_recovery"] is True
-    assert control["last_scheduled_cycle_at"] == "2026-09-04T06:00:00+00:00"
-    assert updated["overall"] == "GREEN"
-    assert updated["data_availability_health"] == "GREEN"
-    assert updated["runtime_control_health"] == "AMBER"
+    assert control["authoritative_runtime_snapshot"] is False
     assert updated["control_failures"] == ["NON_AUTHORITATIVE_MANUAL_RECOVERY"]
-    assert updated["governance"]["production_ingestion_schedule_only"] is False
-    assert updated["governance"]["production_authoritative_snapshots_require_schedule"] is False
-    assert updated["governance"]["governed_manual_recovery_enabled"] is True
-    assert updated["governance"]["manual_recovery_is_authoritative"] is False
 
 
-def test_production_workflow_has_off_minute_schedule_and_governed_manual_recovery():
+def test_production_policy_uses_chatgpt_and_dormant_github_crons():
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
     policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
-    configured = list(policy["scheduled_crons_utc"])
-
-    assert workflow_crons == [str(entry["cron"]) for entry in configured]
-    cron_minutes = [int(cron.split()[0]) for cron in workflow_crons]
-    assert len(cron_minutes) == policy["natural_schedule_redundancy_attempts_per_hour"] == 4
-    assert all(10 <= minute <= 59 for minute in cron_minutes)
-    assert [b - a for a, b in zip(cron_minutes, cron_minutes[1:])] == [15, 15, 15]
-    assert configured[0]["kind"] == "primary"
-    assert all(entry["kind"] == "recovery" for entry in configured[1:])
-    assert policy["governance"]["avoid_top_of_hour_scheduler_load"] is True
-    assert policy["governance"]["natural_scheduler_redundancy_enabled"] is True
-    assert policy["governance"]["redundant_schedule_arrivals_share_one_logical_hourly_slot"] is True
+    assert policy["scheduler_authority"]["kind"] == "CHATGPT_TASK"
+    assert policy["scheduler_authority"]["name"] == "FPL Master Monitor"
+    assert policy["scheduler_authority"]["physical_minute"] == 31
+    assert policy["scheduler_authority"]["logical_slot_minute"] == 0
+    assert policy["github_natural_schedule"]["enabled"] is False
+    assert policy["github_natural_schedule"]["authority"] == "NONE"
+    assert policy["scheduled_crons_utc"] == []
+    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 0
+    assert workflow_crons == policy["github_natural_schedule"]["former_crons_utc"]
+    assert policy["governance"]["github_schedule_events_are_dormant_noop"] is True
+    assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True
+    assert policy["governance"]["scheduler_health_proof_trigger"] == "issue_comment:chatgpt_scheduler"
     assert "workflow_dispatch:" in workflow
     assert "issue_comment:" in workflow
-    assert "V6 Master Orchestrator Trigger" not in workflow
     assert "github.event.issue.number == 431" in workflow
     assert "/v6-master-acquire" in workflow
-    assert "python -m src.runtime_v6.workflow_control authorize-dispatch" in workflow
-    assert "RECOVER_V6" in workflow
-    assert "schedule_policy.json" in workflow
-    assert "manual_recovery" in workflow
-    assert "  push:" not in workflow
-    assert "  pull_request:" not in workflow
+    assert "python -m src.runtime_v6.workflow_control authorize-issue" in workflow
     assert "python -m src.runtime_v6.collector" in workflow
     assert "python -m src.runtime_v6.runtime_control" in workflow
     assert "scheduled_slot_already_completed" in workflow
-    assert "steps.slot_guard.outputs.skip != 'true'" in workflow
-    assert policy["manual_recovery"]["authoritative_runtime_snapshot"] is False
-    assert policy["manual_recovery"]["counts_as_completed_scheduled_slot"] is False
+    assert "  push:" not in workflow
+    assert "  pull_request:" not in workflow
 
 
-def test_v6_ci_never_acquires_or_writes_runtime_branch():
-    workflow = Path(".github/workflows/v6-ci.yml").read_text(encoding="utf-8")
-
-    assert "pull_request:" in workflow
-    assert "push:" in workflow
-    assert "python -m src.runtime_v6.collector" not in workflow
-    assert "runtime-data-v6" not in workflow
-    assert "git push" not in workflow
-    assert "contents: read" in workflow
-
-
-def test_operational_slot_ledger_separates_natural_fulfillment_from_master_reliance():
-    ledger = {}
-    controls = [
-        build_runtime_control({}, now=datetime(2026, 9, 7, hour, 23, tzinfo=timezone.utc), event_name="schedule", run_id=str(hour), schedule_kind="primary", schedule_expression="23 * * * *")
-        for hour in range(0, 5)
-    ]
-    controls.append(
-        build_runtime_control({}, now=datetime(2026, 9, 7, 5, 7, tzinfo=timezone.utc), event_name="issue_comment", run_id="master", schedule_kind="master_orchestrated")
+def _chatgpt_control(hour: int, run_id: str | None = None):
+    return build_runtime_control(
+        {},
+        now=datetime(2026, 9, 8, hour, 31, tzinfo=timezone.utc),
+        event_name="issue_comment",
+        run_id=run_id or str(hour),
+        schedule_kind="chatgpt_scheduler",
+        logical_slot=f"2026-09-08T{hour + 7:02d}:00:00+07:00",
     )
-    for control in controls:
-        ledger = build_operational_slots(ledger, control, window_size=48)
 
+
+def test_ledger_migrates_old_github_history_out_of_current_health():
+    legacy = {
+        "schema_version": 2,
+        "slots": [
+            {"slot": "2026-09-08T00:00:00+00:00", "fulfilled_by": "RECOVERY", "fulfilled": True},
+            {"slot": "2026-09-08T01:00:00+00:00", "fulfilled_by": "MISSING", "fulfilled": False},
+        ],
+    }
+    ledger = build_operational_slots(legacy, _chatgpt_control(3, "first"))
+    assert ledger["schema_version"] == 3
+    assert len(ledger["legacy_slots"]) == 2
+    assert ledger["legacy_summary"]["health_authority"] == "HISTORICAL_ONLY"
+    assert ledger["summary"]["tracked_operational_slots"] == 1
+    assert ledger["summary"]["fulfilled_by_chatgpt"] == 1
+    assert ledger["summary"]["health"] == "AMBER"
+    assert ledger["summary"]["maturity"] == "WARMING_UP"
+    assert ledger["summary"]["legacy_github_scheduler_excluded_from_current_health"] is True
+
+
+def test_six_consecutive_chatgpt_slots_establish_green():
+    ledger = {}
+    for hour in range(0, CHATGPT_GREEN_STREAK):
+        ledger = build_operational_slots(ledger, _chatgpt_control(hour), window_size=48)
     summary = ledger["summary"]
-    assert summary["tracked_operational_slots"] == 6
-    assert summary["fulfilled_by_primary"] == 5
-    assert summary["fulfilled_by_recovery"] == 0
-    assert summary["fulfilled_by_master"] == 1
-    assert summary["natural_fulfillment_ratio"] == 0.8333
-    assert summary["master_reliance_ratio"] == 0.1667
-    assert summary["health"] == "AMBER"
-    assert summary["data_availability_health_is_separate"] is True
-    assert summary["post_fulfillment_skipped_cron_arrivals_observable"] is False
+    assert summary["tracked_operational_slots"] == CHATGPT_GREEN_STREAK
+    assert summary["fulfilled_by_chatgpt"] == CHATGPT_GREEN_STREAK
+    assert summary["chatgpt_fulfillment_ratio"] == 1.0
+    assert summary["consecutive_successful_slots"] == CHATGPT_GREEN_STREAK
+    assert summary["health"] == "GREEN"
+    assert summary["maturity"] == "ESTABLISHED"
 
 
-def test_report_prefetch_never_creates_operational_slot_ledger_entry():
+def test_missing_chatgpt_slot_is_retrospectively_densified():
+    ledger = build_operational_slots({}, _chatgpt_control(0), window_size=48)
+    ledger = build_operational_slots(ledger, _chatgpt_control(2), window_size=48)
+    assert [row["fulfilled_by"] for row in ledger["slots"]] == ["CHATGPT", "MISSING", "CHATGPT"]
+    assert ledger["summary"]["missing_operational_slots"] == 1
+    assert ledger["summary"]["chatgpt_fulfillment_ratio"] == 0.6667
+    assert ledger["summary"]["health"] == "AMBER"
+
+
+def test_generic_master_goes_to_auxiliary_and_does_not_green_scheduler():
+    ledger = {}
     control = build_runtime_control(
         {},
-        now=datetime(2026, 9, 7, 12, 30, tzinfo=timezone.utc),
+        now=datetime(2026, 9, 8, 3, 15, tzinfo=timezone.utc),
+        event_name="workflow_dispatch",
+        run_id="manual-master",
+        schedule_kind="master_orchestrated",
+    )
+    ledger = build_operational_slots(ledger, control)
+    assert ledger["slots"] == []
+    assert len(ledger["auxiliary_operational_slots"]) == 1
+    assert ledger["summary"]["tracked_operational_slots"] == 0
+    assert ledger["summary"]["health"] == "AMBER"
+
+
+def test_report_prefetch_never_creates_scheduler_slot():
+    control = build_runtime_control(
+        {},
+        now=datetime(2026, 9, 8, 3, 30, tzinfo=timezone.utc),
         event_name="issue_comment",
         run_id="prefetch",
         schedule_kind="report_prefetch",
@@ -341,23 +265,32 @@ def test_report_prefetch_never_creates_operational_slot_ledger_entry():
     ledger = build_operational_slots({}, control)
     assert ledger["slots"] == []
     assert ledger["summary"]["tracked_operational_slots"] == 0
-    assert ledger["summary"]["maturity"] == "WARMING_UP"
 
 
-def test_operational_slot_ledger_is_bounded_to_48_slots():
+def test_chatgpt_ledger_is_bounded_to_48_slots():
     ledger = {}
-    for hour in range(60):
-        day = 1 + hour // 24
-        clock = hour % 24
+    for index in range(60):
+        day = 8 + index // 24
+        hour = index % 24
         control = build_runtime_control(
             {},
-            now=datetime(2026, 9, day, clock, 23, tzinfo=timezone.utc),
-            event_name="schedule",
-            run_id=str(hour),
-            schedule_kind="primary",
-            schedule_expression="23 * * * *",
+            now=datetime(2026, 9, day, hour, 31, tzinfo=timezone.utc),
+            event_name="issue_comment",
+            run_id=str(index),
+            schedule_kind="chatgpt_scheduler",
+            logical_slot=datetime(2026, 9, day, hour, 0, tzinfo=timezone.utc).astimezone(timezone.utc).isoformat(),
         )
         ledger = build_operational_slots(ledger, control, window_size=48)
     assert len(ledger["slots"]) == 48
     assert ledger["summary"]["tracked_operational_slots"] == 48
     assert ledger["summary"]["health"] == "GREEN"
+
+
+def test_v6_ci_never_acquires_or_writes_runtime_branch():
+    workflow = Path(".github/workflows/v6-ci.yml").read_text(encoding="utf-8")
+    assert "pull_request:" in workflow
+    assert "push:" in workflow
+    assert "python -m src.runtime_v6.collector" not in workflow
+    assert "runtime-data-v6" not in workflow
+    assert "git push" not in workflow
+    assert "contents: read" in workflow

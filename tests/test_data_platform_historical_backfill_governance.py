@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from src.runtime_v6.workflow_control import load_policy, resolve_prefetch
@@ -55,13 +56,13 @@ def test_workflow_accepts_governed_range_and_routes_only_historical_mode():
     assert 'runtime-data-v5' not in workflow
 
 
-def test_historical_backfill_adds_no_cron_or_second_publisher():
+def test_historical_backfill_adds_no_scheduler_or_second_publisher():
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
     policy = load_policy()
-    scheduled_crons = [str(entry["cron"]) for entry in policy["scheduled_crons_utc"]]
-    assert workflow.count("cron:") == len(scheduled_crons)
-    for cron in scheduled_crons:
-        assert workflow.count(f'cron: "{cron}"') == 1
+    workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
+    assert policy["scheduled_crons_utc"] == []
+    assert policy["github_natural_schedule"]["enabled"] is False
+    assert workflow_crons == policy["github_natural_schedule"]["former_crons_utc"]
     assert policy["report_prefetch"]["independent_cron"] is False
     assert workflow.count('\n  publish:\n') == 1
     assert workflow.count('Publish atomic V6 runtime snapshot') == 1

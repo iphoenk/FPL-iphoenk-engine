@@ -4,7 +4,7 @@ import argparse
 import json
 import os
 import shlex
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +20,10 @@ class WorkflowControlError(ValueError):
 
 
 def scheduled_cron_kinds(policy: dict[str, Any]) -> dict[str, str]:
+    github_schedule = dict(policy.get("github_natural_schedule") or {})
+    if github_schedule.get("enabled") is False:
+        return {}
+
     configured = policy.get("scheduled_crons_utc")
     if configured is None:
         configured = [
@@ -27,7 +31,7 @@ def scheduled_cron_kinds(policy: dict[str, Any]) -> dict[str, str]:
             {"cron": policy.get("recovery_cron_utc"), "kind": "recovery"},
         ]
     if not isinstance(configured, list) or not configured:
-        raise WorkflowControlError("V6 schedule policy requires scheduled_crons_utc")
+        raise WorkflowControlError("V6 schedule policy requires scheduled_crons_utc when GitHub schedule is enabled")
 
     scheduled: dict[str, str] = {}
     for entry in configured:
@@ -43,9 +47,9 @@ def scheduled_cron_kinds(policy: dict[str, Any]) -> dict[str, str]:
 
     primary = str(policy.get("primary_cron_utc") or "").strip()
     recovery = str(policy.get("recovery_cron_utc") or "").strip()
-    if scheduled.get(primary) != "primary":
+    if primary and scheduled.get(primary) != "primary":
         raise WorkflowControlError("primary_cron_utc must identify the primary scheduled cron")
-    if scheduled.get(recovery) != "recovery":
+    if recovery and scheduled.get(recovery) != "recovery":
         raise WorkflowControlError("recovery_cron_utc must identify a recovery scheduled cron")
     expected_attempts = int(policy.get("natural_schedule_redundancy_attempts_per_hour") or len(scheduled))
     if expected_attempts != len(scheduled):
@@ -58,6 +62,11 @@ def load_policy(path: Path | str = DEFAULT_POLICY_PATH) -> dict[str, Any]:
     if payload.get("engine") != "V6_FRESH_DATA_PLATFORM":
         raise WorkflowControlError("unexpected V6 schedule policy engine")
     scheduled_cron_kinds(payload)
+    scheduler = dict(payload.get("scheduler_authority") or {})
+    if scheduler.get("kind") != "CHATGPT_TASK":
+        raise WorkflowControlError("V6 scheduler authority must be CHATGPT_TASK")
+    if int(scheduler.get("cadence_minutes") or 0) != 60:
+        raise WorkflowControlError("V6 ChatGPT scheduler cadence must be hourly")
     return payload
 
 
@@ -96,9 +105,57 @@ def authorize_dispatch(
     return mode
 
 
+def _issue_tokens(comment_body: str) -> list[str]:
+    return shlex.split(str(comment_body or "").strip())
+
+
 def _issue_command(comment_body: str) -> str:
-    tokens = shlex.split(str(comment_body or "").strip())
+    tokens = _issue_tokens(comment_body)
     return tokens[0] if tokens else ""
+
+
+def _parse_key_value_tokens(comment_body: str, *, label: str) -> dict[str, str]:
+    tokens = _issue_tokens(comment_body)
+    values: dict[str, str] = {}
+    for token in tokens[1:]:
+        if "=" not in token:
+            raise WorkflowControlError(f"Malformed {label} token: {token}")
+        key, value = token.split("=", 1)
+        if not key or not value:
+            raise WorkflowControlError(f"Malformed {label} token: {token}")
+        if key in values:
+            raise WorkflowControlError(f"Duplicate {label} argument: {key}")
+        values[key] = value
+    return values
+
+
+def parse_master_issue_values(policy: dict[str, Any], comment_body: str) -> dict[str, str]:
+    values = _parse_key_value_tokens(comment_body, label="master-acquire")
+    allowed = {"reason", "logical_slot", "audit"}
+    unknown = set(values) - allowed
+    if unknown:
+        raise WorkflowControlError(f"Unsupported master-acquire arguments: {sorted(unknown)}")
+    missing = allowed - set(values)
+    if missing:
+        raise WorkflowControlError(f"Missing master-acquire arguments: {sorted(missing)}")
+
+    scheduler = dict(policy.get("scheduler_authority") or {})
+    if values["reason"] != str(scheduler.get("required_reason") or ""):
+        raise WorkflowControlError("master-acquire reason does not identify ChatGPT hourly authority")
+    if values["audit"] != str(scheduler.get("required_audit") or ""):
+        raise WorkflowControlError("master-acquire audit does not identify FPL Master hourly scheduler")
+
+    try:
+        logical_slot = datetime.fromisoformat(values["logical_slot"])
+    except ValueError as exc:
+        raise WorkflowControlError("master-acquire logical_slot must be ISO-8601") from exc
+    if logical_slot.tzinfo is None or logical_slot.utcoffset() is None:
+        raise WorkflowControlError("master-acquire logical_slot must include timezone offset")
+    if logical_slot.utcoffset() != timedelta(hours=7):
+        raise WorkflowControlError("master-acquire logical_slot must use Asia/Jakarta +07:00 offset")
+    if logical_slot.minute != 0 or logical_slot.second != 0 or logical_slot.microsecond != 0:
+        raise WorkflowControlError("master-acquire logical_slot must be the top of the logical hour")
+    return values
 
 
 def authorize_issue(
@@ -124,6 +181,8 @@ def authorize_issue(
         raise WorkflowControlError(f"V6 {mode} is disabled")
     if int(issue_number) != int(control.get("control_issue_number") or 0):
         raise WorkflowControlError("V6 governed control issue number mismatch")
+    if mode == "master_orchestrated":
+        parse_master_issue_values(policy, comment_body)
     return mode
 
 
@@ -134,14 +193,20 @@ def classify_invocation(
     event: dict[str, Any],
 ) -> str:
     if event_name == "schedule":
+        if dict(policy.get("github_natural_schedule") or {}).get("enabled") is False:
+            return "schedule_disabled"
         return scheduled_cron_kinds(policy).get(str(event.get("schedule") or ""), "scheduled_unknown")
 
     if event_name == "issue_comment":
-        command = _issue_command(str((event.get("comment") or {}).get("body") or ""))
-        for mode in ("master_orchestrated", "report_prefetch"):
-            control = dict(policy.get(mode) or {})
-            if command == str(control.get("issue_comment_command") or ""):
-                return str(control.get("schedule_kind") or mode)
+        body = str((event.get("comment") or {}).get("body") or "")
+        command = _issue_command(body)
+        master = dict(policy.get("master_orchestrated") or {})
+        if command == str(master.get("issue_comment_command") or ""):
+            parse_master_issue_values(policy, body)
+            return str(master.get("issue_schedule_kind") or "chatgpt_scheduler")
+        prefetch = dict(policy.get("report_prefetch") or {})
+        if command == str(prefetch.get("issue_comment_command") or ""):
+            return str(prefetch.get("schedule_kind") or "report_prefetch")
         return "governed_issue_command_unknown"
 
     if event_name == "workflow_dispatch":
@@ -155,15 +220,7 @@ def classify_invocation(
 
 
 def _parse_issue_prefetch_values(comment_body: str) -> dict[str, str]:
-    tokens = shlex.split(str(comment_body or ""))
-    values: dict[str, str] = {}
-    for token in tokens[1:]:
-        if "=" not in token:
-            raise WorkflowControlError(f"Malformed report-prefetch token: {token}")
-        key, value = token.split("=", 1)
-        if key in values:
-            raise WorkflowControlError(f"Duplicate report-prefetch argument: {key}")
-        values[key] = value
+    values = _parse_key_value_tokens(comment_body, label="report-prefetch")
     allowed = {"report_kind", "logical_slot", "scope", "gw_from", "gw_to", "force", "reason"}
     unknown = set(values) - allowed
     if unknown:
@@ -300,13 +357,25 @@ def main() -> int:
             )
             print(f"Governed V6 {mode} dispatch authorized")
         elif args.command == "authorize-issue":
+            comment_body = str(os.environ.get("V6_COMMENT_BODY") or "")
             mode = authorize_issue(
                 policy,
                 actor=str(os.environ.get("GITHUB_ACTOR") or ""),
                 repository_owner=str(os.environ.get("GITHUB_REPOSITORY_OWNER") or ""),
                 issue_number=int(os.environ.get("V6_ISSUE_NUMBER") or 0),
-                comment_body=str(os.environ.get("V6_COMMENT_BODY") or ""),
+                comment_body=comment_body,
             )
+            if mode == "master_orchestrated":
+                values = parse_master_issue_values(policy, comment_body)
+                _append(
+                    "GITHUB_ENV",
+                    {
+                        "V6_MASTER_LOGICAL_SLOT": values["logical_slot"],
+                        "V6_MASTER_REASON": values["reason"],
+                        "V6_MASTER_AUDIT": values["audit"],
+                        "V6_CHATGPT_SCHEDULER_PROOF": "true",
+                    },
+                )
             print(f"Governed V6 {mode} issue-command authorized")
         elif args.command == "classify":
             kind = classify_invocation(

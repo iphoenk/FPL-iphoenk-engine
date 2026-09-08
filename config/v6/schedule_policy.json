@@ -1,28 +1,35 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "engine": "V6_FRESH_DATA_PLATFORM",
-  "primary_cron_utc": "13 * * * *",
-  "recovery_cron_utc": "28 * * * *",
-  "scheduled_crons_utc": [
-    {
-      "cron": "13 * * * *",
-      "kind": "primary"
-    },
-    {
-      "cron": "28 * * * *",
-      "kind": "recovery"
-    },
-    {
-      "cron": "43 * * * *",
-      "kind": "recovery"
-    },
-    {
-      "cron": "58 * * * *",
-      "kind": "recovery"
-    }
-  ],
-  "natural_schedule_redundancy_attempts_per_hour": 4,
   "schedule_authority": true,
+  "scheduler_authority": {
+    "kind": "CHATGPT_TASK",
+    "name": "FPL Master Monitor",
+    "timezone": "Asia/Jakarta",
+    "cadence_minutes": 60,
+    "physical_minute": 31,
+    "logical_slot_minute": 0,
+    "control_issue_number": 431,
+    "issue_comment_command": "/v6-master-acquire",
+    "required_reason": "chatgpt_hourly_master",
+    "required_audit": "FPL_MASTER_HOURLY",
+    "health_epoch": "CHATGPT_MASTER_V1",
+    "green_after_consecutive_slots": 6
+  },
+  "github_natural_schedule": {
+    "enabled": false,
+    "authority": "NONE",
+    "reason": "GITHUB_SCHEDULER_NOT_RELIABLE_FOR_V6_HOURLY_AUTHORITY",
+    "legacy_workflow_crons_are_dormant_noop": true,
+    "former_crons_utc": [
+      "13 * * * *",
+      "28 * * * *",
+      "43 * * * *",
+      "58 * * * *"
+    ]
+  },
+  "scheduled_crons_utc": [],
+  "natural_schedule_redundancy_attempts_per_hour": 0,
   "source_registry_schedule_metadata_authoritative": false,
   "authorities": {
     "data_acquisition": "V6",
@@ -61,43 +68,38 @@
   },
   "governance": {
     "scheduled_runtime_is_primary_authority": false,
-    "single_schedule_owner": "config/v6/schedule_policy.json",
+    "single_schedule_owner": "CHATGPT:FPL Master Monitor",
     "v6_is_fresh_data_only": true,
     "v6_may_import_or_call_v3_v4_v5": false,
     "v6_may_publish_decisions_or_predictions": false,
     "v6_may_publish_mini_league_analytics": false,
     "atomic_facts_are_canonical": true,
     "deprecated_analytical_artifacts_are_noncanonical": true,
-    "manual_recovery_never_masks_missed_schedule": true,
     "manual_recovery_must_use_dedicated_v6_publisher": true,
     "push_triggered_production_acquisition_allowed": false,
     "pull_request_triggered_production_acquisition_allowed": false,
-    "avoid_top_of_hour_scheduler_load": true,
-    "natural_scheduler_redundancy_enabled": true,
-    "natural_scheduler_redundancy_attempts_per_hour": 4,
-    "redundant_schedule_arrivals_share_one_logical_hourly_slot": true,
+    "github_natural_scheduler_is_authority": false,
+    "github_schedule_events_are_dormant_noop": true,
+    "chatgpt_scheduler_is_only_hourly_authority": true,
+    "chatgpt_scheduler_health_is_current_epoch_authority": true,
+    "legacy_github_scheduler_evidence_is_historical_only": true,
     "authoritative_runtime_triggers": [
-      "schedule:primary",
-      "schedule:recovery",
+      "issue_comment:chatgpt_scheduler",
       "workflow_dispatch:master_orchestrated",
-      "issue_comment:master_orchestrated",
       "workflow_dispatch:report_prefetch",
       "issue_comment:report_prefetch"
     ],
     "authoritative_operational_triggers": [
-      "schedule:primary",
-      "schedule:recovery",
-      "workflow_dispatch:master_orchestrated",
-      "issue_comment:master_orchestrated"
+      "issue_comment:chatgpt_scheduler",
+      "workflow_dispatch:master_orchestrated"
     ],
     "operational_slot_completing_triggers": [
-      "schedule:primary",
-      "schedule:recovery",
-      "workflow_dispatch:master_orchestrated",
-      "issue_comment:master_orchestrated"
+      "issue_comment:chatgpt_scheduler",
+      "workflow_dispatch:master_orchestrated"
     ],
+    "scheduler_health_proof_trigger": "issue_comment:chatgpt_scheduler",
     "master_orchestrated_is_authoritative": true,
-    "master_orchestrated_never_masks_natural_scheduler_evidence": true,
+    "generic_master_dispatch_does_not_count_as_scheduler_health_proof": true,
     "report_prefetch_is_report_driven_only": true,
     "report_prefetch_has_no_independent_cron": true,
     "report_prefetch_reuses_runtime_data_v6_publisher": true,
@@ -123,6 +125,7 @@
   "master_orchestrated": {
     "enabled": true,
     "schedule_kind": "master_orchestrated",
+    "issue_schedule_kind": "chatgpt_scheduler",
     "authoritative_runtime_snapshot": true,
     "counts_as_completed_operational_slot": true,
     "counts_as_completed_scheduled_slot": false,

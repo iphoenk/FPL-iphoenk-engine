@@ -91,15 +91,15 @@ def scheduled_invocation_slot(
 
 
 def _is_chatgpt_scheduler(event: str, kind: str) -> bool:
-    return event == "issue_comment" and kind == "chatgpt_scheduler"
+    return event in {"issue_comment", "issues"} and kind == "chatgpt_scheduler"
 
 
 def _is_master(event: str, kind: str) -> bool:
-    return event in {"workflow_dispatch", "issue_comment"} and kind in {"master_orchestrated", "chatgpt_scheduler"}
+    return event in {"workflow_dispatch", "issue_comment", "issues"} and kind in {"master_orchestrated", "chatgpt_scheduler"}
 
 
 def _is_report_prefetch(event: str, kind: str) -> bool:
-    return event in {"workflow_dispatch", "issue_comment"} and kind == "report_prefetch"
+    return event in {"workflow_dispatch", "issue_comment", "issues"} and kind == "report_prefetch"
 
 
 def _chatgpt_logical_slot(explicit: str | None = None) -> datetime | None:

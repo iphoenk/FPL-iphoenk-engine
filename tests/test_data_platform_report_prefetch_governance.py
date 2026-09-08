@@ -75,13 +75,33 @@ def test_report_prefetch_reuses_existing_control_plane_without_new_scheduler():
     assert prefetch["report_driven"] is True
     assert prefetch["control_issue_number"] == policy["master_orchestrated"]["control_issue_number"] == 431
     assert prefetch["issue_comment_command"] == "/v6-report-prefetch"
+    assert prefetch["issue_title_marker"] == "FPL_REPORT_PREFETCH"
+    assert prefetch["issue_title_edit_enabled"] is True
     assert "/v6-master-acquire" in workflow
     assert "/v6-report-prefetch" in workflow
+    assert "FPL_REPORT_PREFETCH" in workflow
     assert "github.actor == github.repository_owner" in workflow
     assert "Run active V6 acquisition cycle" in workflow
     assert "steps.scheduler.outputs.kind != 'report_prefetch'" in workflow
     assert "Run report-driven V6 personal and mini-league prefetch" in workflow
     assert "python -m src.runtime_v6.workflow_control resolve-prefetch" in workflow
+
+
+def test_report_prefetch_accepts_issue_title_control_transport():
+    policy = load_policy()
+    env, summary = resolve_prefetch(
+        policy,
+        event_name="issues",
+        issue_title=(
+            "FPL_REPORT_PREFETCH report_kind=full_master "
+            "logical_slot=2026-09-08T21:30:00+07:00 "
+            "reason=FPL_MASTER_REPORT observed_at=2026-09-08T21:31:00+07:00"
+        ),
+    )
+    assert summary["report_kind"] == "full_master"
+    assert summary["logical_slot"] == "2026-09-08T21:30:00+07:00"
+    assert env["V6_PREFETCH_PERSONAL"] == "false"
+    assert env["V6_PREFETCH_MINI_LEAGUE"] == "false"
 
 
 def test_0530_is_explicit_no_personal_no_league_control_contract():

@@ -2,12 +2,33 @@ from __future__ import annotations
 
 from typing import Any
 
+from .artifact_provenance import source_snapshot_ids_for_payload
 from .http_client import utc_now
 from .identity import external_ids_for_player
+
+CANONICAL_NORMALIZATION_VERSION = "V6_CANONICAL_FPL_1"
 
 
 def _official_bootstrap(official_snapshot: dict[str, Any]) -> dict[str, Any]:
     return ((official_snapshot.get("official") or {}).get("bootstrap") or {})
+
+
+def _canonical_descriptor(
+    official_snapshot: dict[str, Any],
+    *,
+    primary_keys: list[str],
+) -> dict[str, Any]:
+    generated_at = utc_now()
+    return {
+        "canonical": True,
+        "semantic_class": "NORMALIZED_FACT",
+        "authority": "official_fpl",
+        "generated_at": generated_at,
+        "effective_at": official_snapshot.get("checked_at") or generated_at,
+        "normalization_version": CANONICAL_NORMALIZATION_VERSION,
+        "primary_keys": primary_keys,
+        "source_snapshot_ids": source_snapshot_ids_for_payload(official_snapshot),
+    }
 
 
 def build_canonical_players(
@@ -41,8 +62,10 @@ def build_canonical_players(
         )
     return {
         "schema_version": 2,
-        "generated_at": utc_now(),
-        "authority": "official_fpl",
+        **_canonical_descriptor(
+            official_snapshot,
+            primary_keys=["official_fpl_element_id"],
+        ),
         "canonical_key": "official_fpl_element_id",
         "player_count": len(rows),
         "identity_map_path": "data/v6/evidence/player_identity_map.json",
@@ -69,8 +92,10 @@ def build_canonical_teams(official_snapshot: dict[str, Any]) -> dict[str, Any]:
         )
     return {
         "schema_version": 1,
-        "generated_at": utc_now(),
-        "authority": "official_fpl",
+        **_canonical_descriptor(
+            official_snapshot,
+            primary_keys=["official_fpl_team_id"],
+        ),
         "team_count": len(rows),
         "teams": rows,
     }
@@ -98,8 +123,10 @@ def build_canonical_fixtures(official_snapshot: dict[str, Any]) -> dict[str, Any
         )
     return {
         "schema_version": 1,
-        "generated_at": utc_now(),
-        "authority": "official_fpl",
+        **_canonical_descriptor(
+            official_snapshot,
+            primary_keys=["official_fpl_fixture_id"],
+        ),
         "fixture_count": len(rows),
         "fixtures": rows,
     }
@@ -143,10 +170,11 @@ def build_evidence_index(results: dict[str, dict[str, Any]]) -> dict[str, Any]:
                 "checked_at": payload.get("checked_at"),
                 "path": f"data/v6/current/{source_id}.json",
                 "independence_group": payload.get("independence_group"),
+                "source_snapshot_ids": source_snapshot_ids_for_payload(payload),
             }
         )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_at": utc_now(),
         "source_count": len(rows),
         "sources": rows,

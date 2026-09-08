@@ -16,7 +16,25 @@ _ORIGIN_STATUSES = {"PROVEN", "LEGACY_UNKNOWN", "LOCAL_UNKNOWN"}
 
 
 def _catalog_digest(artifacts: list[dict[str, Any]]) -> str:
-    raw = json.dumps(artifacts, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    """Digest stable artifact identity, excluding mutable publication telemetry."""
+    digestable: list[dict[str, Any]] = []
+    mutable_publication_fields = {
+        "publication_provenance",
+        "publication_sha",
+        "publication_run_id",
+        "publication_workflow",
+        "publication_logical_slot",
+        "published_at",
+    }
+    for meta in artifacts:
+        digestable.append(
+            {
+                key: value
+                for key, value in meta.items()
+                if key not in mutable_publication_fields
+            }
+        )
+    raw = json.dumps(digestable, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
 
 
@@ -138,6 +156,7 @@ def build_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
             "artifact_provenance_contract": "V6_ARTIFACT_PROVENANCE_2",
             "origin_provenance_is_immutable_while_content_digest_is_unchanged": True,
             "publication_provenance_changes_per_publication_execution": True,
+            "catalog_digest_excludes_mutable_publication_telemetry": True,
             "pre_contract_reused_origin_is_explicitly_legacy_unknown": True,
             "legacy_origin_is_never_inferred_from_republisher_execution": True,
             "catalog_level_producer_fields_are_deprecated_publication_aliases": True,

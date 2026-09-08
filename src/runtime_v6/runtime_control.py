@@ -6,11 +6,13 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from .schedule_policy import SCHEDULE_POLICY, scheduler_proof_telemetry
 from .store import HEALTH, MANIFEST, write_json
 
-CHATGPT_SCHEDULER_AUTHORITY = "CHATGPT_FPL_MASTER_MONITOR"
-CHATGPT_SCHEDULER_EPOCH = "CHATGPT_MASTER_V1"
-CHATGPT_GREEN_STREAK = 6
+# Compatibility exports. Values come exclusively from config/v6/schedule_policy.json.
+CHATGPT_SCHEDULER_AUTHORITY = SCHEDULE_POLICY.runtime_authority_id
+CHATGPT_SCHEDULER_EPOCH = SCHEDULE_POLICY.health_epoch
+CHATGPT_GREEN_STREAK = SCHEDULE_POLICY.green_after_consecutive_slots
 
 
 def _parse_dt(value: str | None) -> datetime | None:
@@ -109,7 +111,7 @@ def _chatgpt_logical_slot(explicit: str | None = None) -> datetime | None:
 def scheduled_slot_already_completed(
     previous_manifest: dict[str, Any] | None,
     *,
-    scheduler_interval_minutes: int = 60,
+    scheduler_interval_minutes: int | None = None,
     now: datetime | None = None,
     event_name: str | None = None,
     schedule_kind: str | None = None,
@@ -136,7 +138,7 @@ def scheduled_slot_already_completed(
 
     previous = dict(previous_manifest or {})
     previous_control = dict(previous.get("runtime_control") or {})
-    interval = max(1, int(scheduler_interval_minutes))
+    interval = max(1, int(scheduler_interval_minutes or SCHEDULE_POLICY.cadence_minutes))
     current = _now(now)
 
     if chatgpt_scheduler:
@@ -168,7 +170,7 @@ def scheduled_slot_already_completed(
 def build_runtime_control(
     previous_manifest: dict[str, Any] | None,
     *,
-    scheduler_interval_minutes: int = 60,
+    scheduler_interval_minutes: int | None = None,
     now: datetime | None = None,
     event_name: str | None = None,
     run_id: str | None = None,
@@ -177,7 +179,7 @@ def build_runtime_control(
     logical_slot: str | None = None,
 ) -> dict[str, Any]:
     current = _now(now)
-    interval = max(1, int(scheduler_interval_minutes))
+    interval = max(1, int(scheduler_interval_minutes or SCHEDULE_POLICY.cadence_minutes))
     event = str(event_name or os.getenv("GITHUB_EVENT_NAME") or "local")
     kind = str(schedule_kind or os.getenv("V6_SCHEDULE_KIND") or "manual")
 
@@ -440,6 +442,16 @@ def build_operational_slots(
     else:
         health, maturity = "RED", "ESTABLISHED"
 
+    latest_proof_at = None
+    for row in reversed(active_rows):
+        if row.get("fulfilled_by") == "CHATGPT" and row.get("fulfilled") is True:
+            latest_proof_at = row.get("observed_at")
+            break
+    proof_telemetry = scheduler_proof_telemetry(
+        str(latest_proof_at) if latest_proof_at else None,
+        now=control.get("cycle_observed_at"),
+    )
+
     return {
         "schema_version": 3,
         "generated_at": control.get("cycle_observed_at"),
@@ -467,6 +479,9 @@ def build_operational_slots(
             "scheduler_fulfillment_ratio": ratio,
             "consecutive_successful_slots": consecutive,
             "required_consecutive_successes": CHATGPT_GREEN_STREAK,
+            **proof_telemetry,
+            "proof_fresh_after_minutes": SCHEDULE_POLICY.proof_fresh_after_minutes,
+            "proof_stale_after_minutes": SCHEDULE_POLICY.proof_stale_after_minutes,
             "auxiliary_master_slots": len(auxiliary_rows),
             "reliability_basis": "CHATGPT_MASTER_LOGICAL_HOURLY_SLOTS",
             "legacy_github_scheduler_excluded_from_current_health": True,
@@ -483,6 +498,8 @@ def build_operational_slots(
             "github_scheduler_is_not_current_health_authority": True,
             "legacy_scheduler_evidence_preserved": True,
             "missing_slots_are_retrospective_only": True,
+            "scheduler_policy_source": "config/v6/schedule_policy.json",
+            "scheduler_proof_age_does_not_fabricate_slots": True,
         },
     }
 

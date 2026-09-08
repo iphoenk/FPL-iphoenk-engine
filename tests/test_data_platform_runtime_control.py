@@ -50,7 +50,7 @@ def test_chatgpt_scheduler_uses_explicit_jakarta_logical_slot():
         {},
         scheduler_interval_minutes=60,
         now=datetime(2026, 9, 8, 3, 31, 15, tzinfo=timezone.utc),
-        event_name="issue_comment",
+        event_name="issues",
         run_id="chatgpt-1",
         schedule_kind="chatgpt_scheduler",
         logical_slot="2026-09-08T10:00:00+07:00",
@@ -79,7 +79,7 @@ def test_first_chatgpt_proof_is_allowed_even_if_data_slot_was_already_fulfilled(
     assert scheduled_slot_already_completed(
         previous,
         scheduler_interval_minutes=60,
-        event_name="issue_comment",
+        event_name="issues",
         schedule_kind="chatgpt_scheduler",
         logical_slot="2026-09-08T10:00:00+07:00",
     ) is False
@@ -96,7 +96,7 @@ def test_second_chatgpt_proof_same_slot_is_skipped():
     assert scheduled_slot_already_completed(
         previous,
         scheduler_interval_minutes=60,
-        event_name="issue_comment",
+        event_name="issues",
         schedule_kind="chatgpt_scheduler",
         logical_slot="2026-09-08T10:00:00+07:00",
     ) is True
@@ -109,7 +109,7 @@ def test_chatgpt_gap_is_runtime_control_failure():
         manifest,
         previous,
         now=datetime(2026, 9, 8, 3, 31, tzinfo=timezone.utc),
-        event_name="issue_comment",
+        event_name="issues",
         schedule_kind="chatgpt_scheduler",
         logical_slot="2026-09-08T10:00:00+07:00",
     )
@@ -176,12 +176,15 @@ def test_production_policy_uses_chatgpt_and_removed_github_crons():
     assert policy["governance"]["github_schedule_events_are_removed"] is True
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
     assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True
-    assert policy["governance"]["scheduler_health_proof_trigger"] == "issue_comment:chatgpt_scheduler"
+    assert policy["governance"]["scheduler_health_proof_trigger"] == "issues:chatgpt_scheduler"
     assert "workflow_dispatch:" in workflow
     assert "issue_comment:" in workflow
+    assert "issues:" in workflow
     assert "github.event.issue.number == 431" in workflow
     assert "/v6-master-acquire" in workflow
+    assert "FPL_MASTER_SLOT" in workflow
     assert "python -m src.runtime_v6.workflow_control authorize-issue" in workflow
+    assert "python -m src.runtime_v6.workflow_control authorize-issue-edit" in workflow
     assert "python -m src.runtime_v6.collector" in workflow
     assert "python -m src.runtime_v6.runtime_control" in workflow
     assert "scheduled_slot_already_completed" in workflow
@@ -194,7 +197,7 @@ def _chatgpt_control(hour: int, run_id: str | None = None):
     return build_runtime_control(
         {},
         now=datetime(2026, 9, 8, hour, 31, tzinfo=timezone.utc),
-        event_name="issue_comment",
+        event_name="issues",
         run_id=run_id or str(hour),
         schedule_kind="chatgpt_scheduler",
         logical_slot=f"2026-09-08T{hour + 7:02d}:00:00+07:00",

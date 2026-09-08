@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from .schedule_policy import SCHEDULE_POLICY
+
 DEFAULT_POLICY_PATH = Path("config/v6/schedule_policy.json")
 _ALLOWED_PREFETCH_SCOPES = {"personal", "mini_league", "live"}
 _SCOPE_ALIASES = {"mini": "mini_league", "league": "mini_league"}
@@ -340,7 +342,7 @@ def _event() -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Governed V6 GitHub workflow control plane")
-    parser.add_argument("command", choices=["authorize-dispatch", "authorize-issue", "classify", "resolve-prefetch"])
+    parser.add_argument("command", choices=["authorize-dispatch", "authorize-issue", "classify", "resolve-prefetch", "slot-guard"])
     parser.add_argument("--policy", default=str(DEFAULT_POLICY_PATH))
     args = parser.parse_args()
     policy = load_policy(args.policy)
@@ -386,6 +388,22 @@ def main() -> int:
             _append("GITHUB_ENV", {"V6_SCHEDULE_KIND": kind})
             _append("GITHUB_OUTPUT", {"kind": kind})
             print(f"V6 schedule kind: {kind}")
+        elif args.command == "slot-guard":
+            from .runtime_control import scheduled_slot_already_completed
+
+            if os.environ.get("V6_SCHEDULE_KIND") == "report_prefetch":
+                skip = False
+            else:
+                previous_path = Path(os.environ.get("V6_PREVIOUS_MANIFEST") or "/tmp/v6-previous-manifest.json")
+                previous = json.loads(previous_path.read_text(encoding="utf-8")) if previous_path.exists() else {}
+                skip = scheduled_slot_already_completed(
+                    previous,
+                    scheduler_interval_minutes=SCHEDULE_POLICY.cadence_minutes,
+                    event_name=os.environ.get("GITHUB_EVENT_NAME"),
+                    schedule_kind=os.environ.get("V6_SCHEDULE_KIND"),
+                )
+            _append("GITHUB_OUTPUT", {"skip": "true" if skip else "false"})
+            print(f"logical scheduler slot already published: {skip}")
         else:
             event_name = str(os.environ.get("GITHUB_EVENT_NAME") or "")
             dispatch_values = {

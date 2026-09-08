@@ -13,8 +13,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: verify
+  detect-v6-change:
+    name: detect-v6-change
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      v6_changed: ${{ steps.detect.outputs.v6_changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect V6-owned change surface
+        id: detect
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" != "pull_request" ]]; then
+            echo "v6_changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          printf '%s\n' "$changed"
+          if printf '%s\n' "$changed" | grep -Eq '^(config/v6/|docs/V6_.*\.md$|src/runtime_v6/|requirements-v6(-ci)?\.lock$|tests/test_data_ingestion_engine\.py$|tests/test_adaptive_polling\.py$|tests/test_data_platform_.*\.py$|\.github/workflows/v6-ci\.yml$|\.github/workflows/v6-natural-data-ingestion\.yml$|\.github/workflows/repository-governance\.yml$)'; then
+            echo "v6_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "v6_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  repository-policy:
+    name: repository-policy
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -26,3 +58,107 @@ jobs:
         run: python src/platform/repository_version_isolation_validate.py
       - name: Validate shared repository test naming policy
         run: python src/platform/repository_test_naming_validate.py
+
+  v6-verify:
+    name: v6-required-verify
+    needs: detect-v6-change
+    if: needs.detect-v6-change.outputs.v6_changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-v6-ci.lock
+      - name: Install V6 hash-locked CI dependencies
+        run: python -m pip install --require-hashes -r requirements-v6-ci.lock
+      - name: Prove V6 architecture independence
+        run: python -m src.runtime_v6.architecture_independence_validate
+      - name: Enforce V6 zero-downstream-authority schema
+        run: python -m src.runtime_v6.authority_contract
+      - name: Validate V6 contracts without network acquisition
+        run: >-
+          python -m pytest -q
+          tests/test_data_ingestion_engine.py
+          tests/test_adaptive_polling.py
+          tests/test_data_platform_*.py
+          tests/test_data_platform_production_acceptance.py
+
+  v6-publisher-config:
+    name: v6-required-publisher-config
+    needs: detect-v6-change
+    if: needs.detect-v6-change.outputs.v6_changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    environment: v6-runtime-publisher
+    permissions:
+      contents: read
+    env:
+      V6_RUNTIME_APP_ID: ${{ vars.V6_RUNTIME_APP_ID }}
+      V6_RUNTIME_APP_PRIVATE_KEY: ${{ secrets.V6_RUNTIME_APP_PRIVATE_KEY }}
+    steps:
+      - name: Verify dedicated V6 publisher configuration is provisioned
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${V6_RUNTIME_APP_ID}" ]; then
+            echo "V6_RUNTIME_APP_ID is not provisioned in v6-runtime-publisher"
+            exit 1
+          fi
+          if [ -z "${V6_RUNTIME_APP_PRIVATE_KEY}" ]; then
+            echo "V6_RUNTIME_APP_PRIVATE_KEY is not provisioned in v6-runtime-publisher"
+            exit 1
+          fi
+          case "${V6_RUNTIME_APP_ID}" in
+            *[!0-9]*|'')
+              echo "V6_RUNTIME_APP_ID must be numeric"
+              exit 1
+              ;;
+          esac
+          case "${V6_RUNTIME_APP_PRIVATE_KEY}" in
+            *"BEGIN "*"PRIVATE KEY"*) ;;
+            *)
+              echo "V6_RUNTIME_APP_PRIVATE_KEY is not a private-key payload"
+              exit 1
+              ;;
+          esac
+          echo "Dedicated V6 publisher configuration is present"
+
+  verify:
+    name: verify
+    needs: [detect-v6-change, repository-policy, v6-verify, v6-publisher-config]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Enforce repository policy and conditional V6 governance
+        env:
+          DETECT_RESULT: ${{ needs.detect-v6-change.result }}
+          V6_CHANGED: ${{ needs.detect-v6-change.outputs.v6_changed }}
+          REPOSITORY_POLICY_RESULT: ${{ needs.repository-policy.result }}
+          V6_VERIFY_RESULT: ${{ needs.v6-verify.result }}
+          V6_PUBLISHER_RESULT: ${{ needs.v6-publisher-config.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$DETECT_RESULT" != "success" ]]; then
+            echo "Repository governance failed: V6 change detection failed"
+            exit 1
+          fi
+          if [[ "$REPOSITORY_POLICY_RESULT" != "success" ]]; then
+            echo "Repository governance failed: repository policy=$REPOSITORY_POLICY_RESULT"
+            exit 1
+          fi
+          if [[ "$V6_CHANGED" != "true" ]]; then
+            echo "Repository governance passed: non-V6 change, V6 suite not required"
+            exit 0
+          fi
+          if [[ "$V6_VERIFY_RESULT" != "success" || "$V6_PUBLISHER_RESULT" != "success" ]]; then
+            echo "Repository governance failed: V6 verify=$V6_VERIFY_RESULT publisher=$V6_PUBLISHER_RESULT"
+            exit 1
+          fi
+          echo "Repository governance passed: required V6 CI and publisher gate are GREEN"

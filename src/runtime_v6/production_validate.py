@@ -74,7 +74,7 @@ def validate_publishable(root: Path = ROOT) -> dict[str, Any]:
 
     if schedule_kind == "report_prefetch":
         _validate_report_prefetch(root, control)
-    elif event_name == "issue_comment" and schedule_kind == "chatgpt_scheduler":
+    elif event_name in {"issue_comment", "issues"} and schedule_kind == "chatgpt_scheduler":
         _validate_chatgpt_scheduler(manifest, control)
     elif event_name == "workflow_dispatch" and schedule_kind == "master_orchestrated":
         assert control["scheduled_cycle"] is False

@@ -1,5 +1,5 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "engine": "V6_FRESH_DATA_PLATFORM",
   "schedule_authority": true,
   "scheduler_authority": {
@@ -19,7 +19,11 @@
     "green_after_consecutive_slots": 6,
     "runtime_authority_id": "CHATGPT_FPL_MASTER_MONITOR",
     "proof_fresh_after_minutes": 75,
-    "proof_stale_after_minutes": 135
+    "proof_stale_after_minutes": 135,
+    "issue_title_marker": "FPL_MASTER_SLOT",
+    "preferred_transport": "ISSUE_TITLE_EDIT",
+    "legacy_issue_comment_transport_enabled": true,
+    "transport_note": "ChatGPT updates control issue #431 title with current logical slot; GitHub remains executor-only."
   },
   "github_natural_schedule": {
     "enabled": false,
@@ -92,20 +96,24 @@
     "legacy_github_scheduler_evidence_is_historical_only": true,
     "scheduler_migration_boundary_is_explicit": true,
     "authoritative_runtime_triggers": [
+      "issues:chatgpt_scheduler",
       "issue_comment:chatgpt_scheduler",
       "workflow_dispatch:master_orchestrated",
       "workflow_dispatch:report_prefetch",
+      "issues:report_prefetch",
       "issue_comment:report_prefetch"
     ],
     "authoritative_operational_triggers": [
+      "issues:chatgpt_scheduler",
       "issue_comment:chatgpt_scheduler",
       "workflow_dispatch:master_orchestrated"
     ],
     "operational_slot_completing_triggers": [
+      "issues:chatgpt_scheduler",
       "issue_comment:chatgpt_scheduler",
       "workflow_dispatch:master_orchestrated"
     ],
-    "scheduler_health_proof_trigger": "issue_comment:chatgpt_scheduler",
+    "scheduler_health_proof_trigger": "issues:chatgpt_scheduler",
     "master_orchestrated_is_authoritative": true,
     "generic_master_dispatch_does_not_count_as_scheduler_health_proof": true,
     "report_prefetch_is_report_driven_only": true,
@@ -130,7 +138,13 @@
       ]
     },
     "scheduler_policy_is_single_runtime_authority": true,
-    "scheduler_proof_age_is_read_time_observability": true
+    "scheduler_proof_age_is_read_time_observability": true,
+    "scheduler_health_proof_triggers": [
+      "issues:chatgpt_scheduler",
+      "issue_comment:chatgpt_scheduler"
+    ],
+    "issue_title_edit_is_preferred_scheduler_transport": true,
+    "issue_comment_is_legacy_scheduler_transport": true
   },
   "master_orchestrated": {
     "enabled": true,
@@ -142,7 +156,8 @@
     "allowed_actor": "repository_owner",
     "reason_required": true,
     "control_issue_number": 431,
-    "issue_comment_command": "/v6-master-acquire"
+    "issue_comment_command": "/v6-master-acquire",
+    "issue_title_marker": "FPL_MASTER_SLOT"
   },
   "report_prefetch": {
     "enabled": true,
@@ -172,6 +187,8 @@
       "future_gws_allowed": false,
       "requires_gw_range": true,
       "cohort_semantics": "CURRENT_COHORT_HISTORY"
-    }
+    },
+    "issue_title_marker": "FPL_REPORT_PREFETCH",
+    "issue_title_edit_enabled": true
   }
 }

@@ -70,7 +70,24 @@ def test_chatgpt_issue_command_is_the_scheduler_classifier():
     }
     assert classify_invocation(policy, event_name="issue_comment", event=event) == "chatgpt_scheduler"
     assert policy["scheduler_authority"]["kind"] == "CHATGPT_TASK"
-    assert policy["governance"]["scheduler_health_proof_trigger"] == "issue_comment:chatgpt_scheduler"
+    assert policy["governance"]["scheduler_health_proof_trigger"] == "issues:chatgpt_scheduler"
+    assert "issue_comment:chatgpt_scheduler" in policy["governance"]["scheduler_health_proof_triggers"]
+
+
+def test_chatgpt_issue_title_edit_is_preferred_scheduler_classifier():
+    policy = _policy()
+    event = {
+        "issue": {
+            "title": (
+                "FPL_MASTER_SLOT reason=chatgpt_hourly_master "
+                "logical_slot=2026-09-08T10:00:00+07:00 "
+                "audit=FPL_MASTER_HOURLY observed_at=2026-09-08T10:31:00+07:00"
+            )
+        }
+    }
+    assert classify_invocation(policy, event_name="issues", event=event) == "chatgpt_scheduler"
+    assert policy["scheduler_authority"]["preferred_transport"] == "ISSUE_TITLE_EDIT"
+    assert policy["scheduler_authority"]["issue_title_marker"] == "FPL_MASTER_SLOT"
 
 
 def test_chatgpt_scheduler_contract_is_single_hourly_authority():

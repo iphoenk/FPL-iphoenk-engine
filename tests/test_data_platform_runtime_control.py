@@ -303,3 +303,14 @@ def test_v6_ci_never_acquires_or_writes_runtime_branch():
     assert "detect-v6-change:" in workflow
     assert "v6-governance-gate:" in workflow
     assert "Non-V6 PR: V6 governance gate satisfied without running V6 suite" in workflow
+
+
+
+def test_operational_ledger_is_extracted_without_duplicate_implementation():
+    runtime = Path("src/runtime_v6/runtime_control.py").read_text(encoding="utf-8")
+    ledger = Path("src/runtime_v6/operational_ledger.py").read_text(encoding="utf-8")
+    assert "from .operational_ledger import build_operational_slots" in runtime
+    assert "def build_operational_slots(" not in runtime
+    assert "def _densify_chatgpt_rows(" not in runtime
+    assert "def build_operational_slots(" in ledger
+    assert "scheduler_observability_only" in ledger

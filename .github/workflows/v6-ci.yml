@@ -1,6 +1,20 @@
 name: FPL V6 CI contracts
 
 on:
+  pull_request:
+    paths:
+      - "config/v6/**"
+      - "docs/V6_*.md"
+      - "src/runtime_v6/**"
+      - "requirements-v6.lock"
+      - "requirements-v6-ci.lock"
+      - "tests/test_data_ingestion_engine.py"
+      - "tests/test_adaptive_polling.py"
+      - "tests/test_data_platform_*.py"
+      - "tests/test_data_platform_production_acceptance.py"
+      - ".github/workflows/v6-ci.yml"
+      - ".github/workflows/v6-natural-data-ingestion.yml"
+      - ".github/workflows/repository-governance.yml"
   push:
     branches: [main]
     paths:
@@ -21,7 +35,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: fpl-v6-ci-${{ github.ref }}
+  group: fpl-v6-ci-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -36,12 +50,18 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Detect V6-owned change surface
+      - name: Detect post-merge V6 validation surface
         id: detect
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          echo "v6_changed=true" >> "$GITHUB_OUTPUT"
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            echo "v6_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "v6_changed=false" >> "$GITHUB_OUTPUT"
+          fi
 
   v6-verify:
     name: v6-verify
@@ -138,7 +158,7 @@ jobs:
             exit 1
           fi
           if [[ "$V6_CHANGED" != "true" ]]; then
-            echo "V6 post-merge gate received no V6 change"
+            echo "Non-V6 PR: V6 governance gate satisfied without running V6 suite"
             exit 0
           fi
           if [[ "$VERIFY_RESULT" != "success" || "$PUBLISHER_RESULT" != "success" ]]; then

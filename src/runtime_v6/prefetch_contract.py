@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from .artifact_provenance import build_artifact_meta
 from .security import assert_publish_safe
 
 SCHEMA_VERSION = 1
@@ -65,90 +66,9 @@ def write_json(path: Path, value: dict[str, Any], *, secrets: Iterable[str] = ()
     temporary.replace(path)
 
 
-def _record_count(payload: dict[str, Any]) -> int | None:
-    for key in (
-        "record_count",
-        "player_count",
-        "team_count",
-        "fixture_count",
-        "collected_manager_count",
-        "source_count",
-    ):
-        value = payload.get(key)
-        if isinstance(value, int):
-            return value
-    for key in ("players", "teams", "fixtures", "managers", "elements", "entries"):
-        value = payload.get(key)
-        if isinstance(value, (list, dict)):
-            return len(value)
-    return None
-
-
-def _source_snapshot_ids(payload: dict[str, Any]) -> list[str]:
-    explicit = payload.get("source_snapshot_ids")
-    if isinstance(explicit, list):
-        return [str(value) for value in explicit]
-    lineage_value = payload.get("lineage")
-    candidates: set[str] = set()
-    stack: list[Any] = [lineage_value]
-    while stack:
-        value = stack.pop()
-        if isinstance(value, dict):
-            source = value.get("source_id") or value.get("authority")
-            digest_value = value.get("payload_digest")
-            if source and digest_value:
-                candidates.add(f"{source}:{digest_value}")
-            stack.extend(value.values())
-        elif isinstance(value, list):
-            stack.extend(value)
-    return sorted(candidates)
-
-
 def artifact_meta(output_root: Path, relative_path: str) -> dict[str, Any]:
-    path = output_root / relative_path
-    if not path.exists():
-        return {
-            "path": f"data/v6/{relative_path}",
-            "canonical": False,
-            "omitted": True,
-            "artifact_class": "DEPRECATED_REMOVED",
-            "bytes": 0,
-            "sha256": None,
-        }
-
-    raw = path.read_bytes()
-    meta: dict[str, Any] = {
-        "path": f"data/v6/{relative_path}",
-        "sha256": hashlib.sha256(raw).hexdigest(),
-        "bytes": len(raw),
-        "canonical": True,
-    }
-    try:
-        payload = json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return meta
-    if not isinstance(payload, dict):
-        return meta
-
-    meta["canonical"] = payload.get("canonical") is not False
-    if payload.get("deprecated") is not None:
-        meta["deprecated"] = bool(payload.get("deprecated"))
-    if payload.get("artifact_class") is not None:
-        meta["artifact_class"] = payload.get("artifact_class")
-    if payload.get("semantic_class") is not None:
-        meta["semantic_class"] = payload.get("semantic_class")
-    if payload.get("authority") is not None:
-        meta["authority"] = payload.get("authority")
-    meta["schema_version"] = payload.get("schema_version")
-    meta["generated_at"] = payload.get("generated_at")
-    meta["effective_at"] = payload.get("effective_at") or payload.get("checked_at")
-    meta["record_count"] = _record_count(payload)
-    meta["primary_keys"] = payload.get("primary_keys")
-    meta["source_snapshot_ids"] = _source_snapshot_ids(payload)
-    meta["normalization_version"] = payload.get("normalization_version")
-    meta["freshness_class"] = payload.get("freshness_class") or payload.get("effective_state")
-    meta["current_run_action"] = payload.get("current_run_action")
-    return meta
+    """Compatibility wrapper around the single V6 artifact provenance contract."""
+    return build_artifact_meta(output_root, relative_path)
 
 
 def parse_slot(value: str) -> datetime:

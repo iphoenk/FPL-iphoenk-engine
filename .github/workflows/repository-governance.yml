@@ -24,7 +24,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Detect V6-owned change surface
+      - name: Detect V6-owned PR surface
         id: detect
         shell: bash
         env:
@@ -34,7 +34,9 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$EVENT_NAME" != "pull_request" ]]; then
-            echo "v6_changed=true" >> "$GITHUB_OUTPUT"
+            # Post-merge full V6 verification belongs exclusively to v6-ci.yml.
+            echo "v6_changed=false" >> "$GITHUB_OUTPUT"
+            echo "Push/main: V6 full suite delegated to FPL V6 CI contracts"
             exit 0
           fi
           changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
@@ -62,7 +64,7 @@ jobs:
   v6-verify:
     name: v6-required-verify
     needs: detect-v6-change
-    if: needs.detect-v6-change.outputs.v6_changed == 'true'
+    if: github.event_name == 'pull_request' && needs.detect-v6-change.outputs.v6_changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -91,7 +93,7 @@ jobs:
   v6-publisher-config:
     name: v6-required-publisher-config
     needs: detect-v6-change
-    if: needs.detect-v6-change.outputs.v6_changed == 'true'
+    if: github.event_name == 'pull_request' && needs.detect-v6-change.outputs.v6_changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     environment: v6-runtime-publisher
@@ -137,6 +139,7 @@ jobs:
     steps:
       - name: Enforce repository policy and conditional V6 governance
         env:
+          EVENT_NAME: ${{ github.event_name }}
           DETECT_RESULT: ${{ needs.detect-v6-change.result }}
           V6_CHANGED: ${{ needs.detect-v6-change.outputs.v6_changed }}
           REPOSITORY_POLICY_RESULT: ${{ needs.repository-policy.result }}
@@ -153,8 +156,12 @@ jobs:
             echo "Repository governance failed: repository policy=$REPOSITORY_POLICY_RESULT"
             exit 1
           fi
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            echo "Repository governance passed: push/main full V6 validation is delegated to FPL V6 CI contracts"
+            exit 0
+          fi
           if [[ "$V6_CHANGED" != "true" ]]; then
-            echo "Repository governance passed: non-V6 change, V6 suite not required"
+            echo "Repository governance passed: non-V6 PR, V6 suite not required"
             exit 0
           fi
           if [[ "$V6_VERIFY_RESULT" != "success" || "$V6_PUBLISHER_RESULT" != "success" ]]; then

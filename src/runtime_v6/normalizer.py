@@ -61,7 +61,7 @@ def build_canonical_players(
             }
         )
     return {
-        "schema_version": 3,
+        "schema_version": 2,
         **_canonical_descriptor(
             official_snapshot,
             primary_keys=["official_fpl_element_id"],
@@ -91,7 +91,7 @@ def build_canonical_teams(official_snapshot: dict[str, Any]) -> dict[str, Any]:
             }
         )
     return {
-        "schema_version": 2,
+        "schema_version": 1,
         **_canonical_descriptor(
             official_snapshot,
             primary_keys=["official_fpl_team_id"],
@@ -122,7 +122,7 @@ def build_canonical_fixtures(official_snapshot: dict[str, Any]) -> dict[str, Any
             }
         )
     return {
-        "schema_version": 2,
+        "schema_version": 1,
         **_canonical_descriptor(
             official_snapshot,
             primary_keys=["official_fpl_fixture_id"],

@@ -12685,7 +12685,7 @@
       "gw": 4,
       "deadline_time": "2026-09-12T12:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-09-08T16:47:43.848192+00:00",
+        "generated_at": "2026-09-08T20:01:45.471577+00:00",
         "players": [
           {
             "element": 1,
@@ -15981,10 +15981,10 @@
             "element": 289,
             "name": "Crooks",
             "position": "MID",
-            "xpts": 2.045,
-            "xpts_std": 1.839,
-            "xmins": 38.4,
-            "start_probability": 0.4637,
+            "xpts": 2.822,
+            "xpts_std": 2.093,
+            "xmins": 51.2,
+            "start_probability": 0.6183,
             "clean_sheet_probability": 0.2019
           },
           {
@@ -16031,10 +16031,10 @@
             "element": 294,
             "name": "Zambrano",
             "position": "MID",
-            "xpts": 0.0,
-            "xpts_std": 1.15,
-            "xmins": 0.0,
-            "start_probability": 0.0,
+            "xpts": 2.575,
+            "xpts_std": 2.038,
+            "xmins": 43.6,
+            "start_probability": 0.5289,
             "clean_sheet_probability": 0.2019
           },
           {
@@ -19232,6 +19232,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-09-08T16:47:44.657728+00:00",
+  "updated_at": "2026-09-08T20:01:46.419215+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

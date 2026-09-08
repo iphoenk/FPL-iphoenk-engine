@@ -38,8 +38,8 @@ def _good_tree(root: Path) -> None:
     _write(root / "health" / "runtime_control.json", {"health": "GREEN"})
     _write(root / "health" / "operational_slots.json", {"schema_version": 1, "slots": [], "summary": {"health": "AMBER", "maturity": "WARMING_UP"}})
     _write(root / "normalized" / "canonical_players.json", {"player_count": 0, "players": []})
-    _write(root / "normalized" / "canonical_teams.json", {"teams": []})
-    _write(root / "normalized" / "canonical_fixtures.json", {"fixtures": []})
+    _write(root / "normalized" / "canonical_teams.json", {"team_count": 0, "teams": []})
+    _write(root / "normalized" / "canonical_fixtures.json", {"fixture_count": 0, "fixtures": []})
     _write(root / "evidence" / "lineage.json", {"groups": {}})
     _write(root / "evidence" / "latest_index.json", {"sources": {}})
     _write(
@@ -52,6 +52,10 @@ def _good_tree(root: Path) -> None:
             "canonical_player_count": 0,
             "governance": {"fuzzy_name_matching_allowed": False},
             "mappings": {},
+            "entity_bridges": {
+                "team": {"canonical_team_count": 0, "mappings": {}},
+                "fixture": {"canonical_fixture_count": 0, "mappings": {}},
+            },
         },
     )
 
@@ -66,6 +70,8 @@ def test_publish_integrity_passes_for_exact_runtime_tree(tmp_path: Path):
     assert report["current_source_files_exact"] is True
     assert report["resolved_registry_exact"] is True
     assert report["identity_map_consistent"] is True
+    assert set(report["identity_counts"]) == {"player", "team", "fixture"}
+    assert all(row["consistent"] is True for row in report["identity_counts"].values())
     assert report["tree_sha256"]
 
 
@@ -126,7 +132,7 @@ def test_publish_integrity_fails_when_resolved_registry_ids_diverge(tmp_path: Pa
     assert report["resolved_registry_exact"] is False
 
 
-def test_publish_integrity_fails_when_identity_count_diverges(tmp_path: Path):
+def test_publish_integrity_fails_when_player_identity_count_diverges(tmp_path: Path):
     _good_tree(tmp_path)
     _write(root := tmp_path / "normalized" / "canonical_players.json", {"player_count": 2, "players": []})
     assert root.exists()
@@ -135,3 +141,52 @@ def test_publish_integrity_fails_when_identity_count_diverges(tmp_path: Path):
 
     assert report["status"] == "FAIL"
     assert "identity_map_canonical_player_count_mismatch" in report["errors"]
+    assert report["identity_counts"]["player"]["consistent"] is False
+
+
+def test_publish_integrity_fails_when_team_identity_count_diverges(tmp_path: Path):
+    _good_tree(tmp_path)
+    _write(tmp_path / "normalized" / "canonical_teams.json", {"team_count": 1, "teams": [{"official_fpl_team_id": 1}]})
+
+    report = validate_publish_tree(tmp_path)
+
+    assert report["status"] == "FAIL"
+    assert "identity_map_canonical_team_count_mismatch" in report["errors"]
+    assert report["identity_counts"]["team"]["consistent"] is False
+
+
+def test_publish_integrity_fails_when_fixture_identity_count_diverges(tmp_path: Path):
+    _good_tree(tmp_path)
+    _write(tmp_path / "normalized" / "canonical_fixtures.json", {"fixture_count": 1, "fixtures": [{"official_fpl_fixture_id": 1}]})
+
+    report = validate_publish_tree(tmp_path)
+
+    assert report["status"] == "FAIL"
+    assert "identity_map_canonical_fixture_count_mismatch" in report["errors"]
+    assert report["identity_counts"]["fixture"]["consistent"] is False
+
+
+def test_publish_integrity_fails_when_identity_mapping_cardinality_diverges(tmp_path: Path):
+    _good_tree(tmp_path)
+    _write(
+        tmp_path / "evidence" / "player_identity_map.json",
+        {
+            "canonical_player_count": 1,
+            "governance": {"fuzzy_name_matching_allowed": False},
+            "mappings": {},
+            "entity_bridges": {
+                "team": {"canonical_team_count": 0, "mappings": {}},
+                "fixture": {"canonical_fixture_count": 0, "mappings": {}},
+            },
+        },
+    )
+    _write(
+        tmp_path / "normalized" / "canonical_players.json",
+        {"player_count": 1, "players": [{"official_fpl_element_id": 1}]},
+    )
+
+    report = validate_publish_tree(tmp_path)
+
+    assert report["status"] == "FAIL"
+    assert "identity_map_player_mapping_count_mismatch" in report["errors"]
+    assert report["identity_counts"]["player"]["mapping_consistent"] is False

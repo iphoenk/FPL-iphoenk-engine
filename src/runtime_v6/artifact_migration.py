@@ -67,16 +67,48 @@ def _official_rows(official: dict[str, Any], collection: str) -> list[Any] | Non
 def migrate_legacy_canonical_provenance(root: Path = OUT) -> dict[str, Any]:
     """Upgrade hydrated pre-contract canonical artifacts without fabricating lineage.
 
-    Migration is deliberately narrow: only the three Official-FPL canonical datasets
-    are eligible, their row counts must still match the immutable hydrated Official FPL
-    snapshot, and that snapshot must expose digest-qualified source identities.
+    Only incomplete, already-existing Official-FPL canonical datasets are eligible.
+    Their row counts must match the immutable hydrated Official FPL snapshot before
+    any metadata is added. Complete artifacts are never rewritten.
     """
-    official_path = root / "current" / "official_fpl.json"
-    official = read_json(official_path) or {}
     errors: list[str] = []
     migrated: list[str] = []
     already_complete: list[str] = []
+    pending: list[tuple[CanonicalArtifactSpec, dict[str, Any]]] = []
 
+    for spec in _CANONICAL_ARTIFACTS:
+        path = root / spec.relative_path
+        if not path.is_file():
+            continue
+        payload = read_json(path) or {}
+        if not payload:
+            errors.append(f"legacy_provenance_migration:artifact_invalid:{spec.relative_path}")
+            continue
+        meta = build_artifact_meta(root, spec.relative_path)
+        if meta.get("provenance_status") == "COMPLETE":
+            already_complete.append(spec.relative_path)
+        else:
+            pending.append((spec, payload))
+
+    if errors:
+        return {
+            "valid": False,
+            "errors": errors,
+            "migrated": migrated,
+            "already_complete": already_complete,
+            "pending_count": len(pending),
+        }
+    if not pending:
+        return {
+            "valid": True,
+            "errors": [],
+            "migrated": [],
+            "already_complete": already_complete,
+            "pending_count": 0,
+            "mode": "NOT_REQUIRED",
+        }
+
+    official = read_json(root / "current" / "official_fpl.json") or {}
     snapshot_ids = source_snapshot_ids_for_payload(official)
     effective_at = official.get("checked_at") or official.get("effective_at")
     if not official:
@@ -91,20 +123,10 @@ def migrate_legacy_canonical_provenance(root: Path = OUT) -> dict[str, Any]:
             "errors": errors,
             "migrated": migrated,
             "already_complete": already_complete,
+            "pending_count": len(pending),
         }
 
-    for spec in _CANONICAL_ARTIFACTS:
-        path = root / spec.relative_path
-        payload = read_json(path) or {}
-        if not payload:
-            errors.append(f"legacy_provenance_migration:artifact_missing:{spec.relative_path}")
-            continue
-
-        meta = build_artifact_meta(root, spec.relative_path)
-        if meta.get("provenance_status") == "COMPLETE":
-            already_complete.append(spec.relative_path)
-            continue
-
+    for spec, payload in pending:
         if payload.get("canonical") is False:
             errors.append(f"legacy_provenance_migration:noncanonical_artifact:{spec.relative_path}")
             continue
@@ -134,7 +156,7 @@ def migrate_legacy_canonical_provenance(root: Path = OUT) -> dict[str, Any]:
             "row_data_changed": False,
             "source": "data/v6/current/official_fpl.json",
         }
-        write_json(path, upgraded)
+        write_json(root / spec.relative_path, upgraded)
 
         upgraded_meta = build_artifact_meta(root, spec.relative_path)
         if upgraded_meta.get("provenance_status") != "COMPLETE":
@@ -147,6 +169,8 @@ def migrate_legacy_canonical_provenance(root: Path = OUT) -> dict[str, Any]:
         "errors": errors,
         "migrated": migrated,
         "already_complete": already_complete,
+        "pending_count": len(pending),
         "immutable_source_snapshot_count": len(snapshot_ids),
         "effective_at": effective_at,
+        "mode": "HYDRATED_LEGACY_CANONICAL_METADATA_ONLY",
     }

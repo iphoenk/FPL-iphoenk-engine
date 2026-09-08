@@ -35,4 +35,6 @@ def test_v6_ingestion_is_executor_triggered_only() -> None:
     assert "workflow_dispatch:" in text
     assert not SCHEDULE_KEY.search(text)
     assert "/v6-master-acquire" in text
-    assert "single_logical_acquisition_per_scheduler_slot" in text
+    assert "python -m src.runtime_v6.workflow_control slot-guard" in text
+    validator = Path("src/runtime_v6/production_validate.py").read_text(encoding="utf-8")
+    assert "single_logical_acquisition_per_scheduler_slot" in validator

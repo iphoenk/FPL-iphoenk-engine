@@ -159,7 +159,7 @@ jobs:
             exit 1
           fi
           if [[ "$V6_CHANGED" != "true" ]]; then
-            echo "PR compatibility surface only: required pre-merge V6 gate is repository governance"
+            echo "Non-V6 PR: V6 governance gate satisfied without running V6 suite"
             exit 0
           fi
           if [[ "$VERIFY_RESULT" != "success" || "$PUBLISHER_RESULT" != "success" ]]; then

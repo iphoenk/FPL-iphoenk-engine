@@ -25,7 +25,7 @@ on:
         required: false
         type: string
       logical_slot:
-        description: "For normal report_prefetch: timezone-aware ISO-8601 logical report slot"
+        description: "Timezone-aware ISO-8601 logical slot for governed report prefetch"
         required: false
         type: string
       scope:
@@ -47,11 +47,6 @@ on:
         type: boolean
   issue_comment:
     types: [created]
-  schedule:
-    - cron: "13 * * * *"
-    - cron: "28 * * * *"
-    - cron: "43 * * * *"
-    - cron: "58 * * * *"
 
 permissions:
   contents: read
@@ -106,27 +101,24 @@ jobs:
           V6_ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: python -m src.runtime_v6.workflow_control authorize-issue
 
-      - name: Hydrate previous V6 last-good snapshot
+      - name: Hydrate previous V6 last-good snapshot fail-closed
         shell: bash
         run: |
           set -euo pipefail
           rm -rf data/v6
           mkdir -p data
-          if git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"; then
-            if git cat-file -e "origin/${RUNTIME_BRANCH}:data/v6" 2>/dev/null; then
-              git archive "origin/${RUNTIME_BRANCH}" data/v6 | tar -x -C .
-              echo "Hydrated previous runtime-data-v6 snapshot"
-            else
-              echo "runtime-data-v6 exists without data/v6; starting clean"
-            fi
-          else
-            echo "runtime-data-v6 not available yet; starting clean"
+          if ! git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"; then
+            echo "::error::Unable to fetch ${RUNTIME_BRANCH}; refusing empty-tree acquisition"
+            exit 1
           fi
-          if [[ -f data/v6/manifest.json ]]; then
-            cp data/v6/manifest.json "${V6_PREVIOUS_MANIFEST}"
-          else
-            printf '{}\n' > "${V6_PREVIOUS_MANIFEST}"
+          if ! git cat-file -e "origin/${RUNTIME_BRANCH}:data/v6/manifest.json" 2>/dev/null; then
+            echo "::error::${RUNTIME_BRANCH} has no last-good data/v6/manifest.json; refusing empty-tree acquisition"
+            exit 1
           fi
+          git archive "origin/${RUNTIME_BRANCH}" data/v6 | tar -x -C .
+          test -s data/v6/manifest.json
+          cp data/v6/manifest.json "${V6_PREVIOUS_MANIFEST}"
+          echo "Hydrated previous runtime-data-v6 snapshot"
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
@@ -270,6 +262,7 @@ jobs:
           python - <<'PY'
           import json
           import os
+          from datetime import datetime, timezone
           from pathlib import Path
           from src.runtime_v6.registry import load_registry
 
@@ -295,7 +288,6 @@ jobs:
           assert manifest["governance"]["report_prefetch_completes_core_operational_slot"] is False
           assert manifest["governance"]["manual_recovery_is_authoritative"] is False
           assert manifest["governance"]["single_logical_acquisition_per_scheduler_slot"] is True
-          assert manifest["governance"]["scheduled_recovery_is_idempotent"] is True
           assert manifest["governance"]["publish_integrity_required"] is True
           assert manifest["governance"]["identity_mapping_is_deterministic_only"] is True
           assert manifest["governance"]["fuzzy_identity_matching"] is False
@@ -340,13 +332,19 @@ jobs:
                   assert health["fresh_for_target_report"] == prefetch["fresh_for_target_report"]
                   if report_kind == "05:30_price":
                       assert prefetch["telemetry"]["request_count"] == 0
-          elif event_name == "schedule":
+          elif event_name == "issue_comment" and schedule_kind == "chatgpt_scheduler":
+              requested = datetime.fromisoformat(os.environ["V6_MASTER_LOGICAL_SLOT"]).astimezone(timezone.utc)
+              assert control["chatgpt_scheduler"] is True
+              assert control["chatgpt_scheduler_proof"] is True
               assert control["scheduled_cycle"] is True
+              assert control["master_orchestrated"] is True
               assert control["authoritative_runtime_snapshot"] is True
               assert control["counts_as_completed_operational_slot"] is True
-              assert control["manual_recovery"] is False
-              assert manifest["governance"]["production_ingestion_schedule_only"] is True
-          elif event_name in {"workflow_dispatch", "issue_comment"} and schedule_kind == "master_orchestrated":
+              assert control["logical_slot_source"] == "CHATGPT_COMMAND"
+              assert control["expected_cycle_at"] == requested.isoformat()
+              assert manifest["governance"]["production_ingestion_schedule_only"] is False
+              assert manifest["governance"]["chatgpt_scheduler_is_authority"] is True
+          elif event_name == "workflow_dispatch" and schedule_kind == "master_orchestrated":
               assert control["scheduled_cycle"] is False
               assert control["master_orchestrated"] is True
               assert control["authoritative_runtime_snapshot"] is True
@@ -430,6 +428,8 @@ jobs:
 
       - name: Revalidate transferred runtime snapshot
         shell: bash
+        env:
+          V6_EXPECTED_SCHEDULE_KIND: ${{ needs.collect.outputs.schedule_kind }}
         run: |
           set -euo pipefail
           rm -rf "$RUNNER_TEMP/v6-publication-check"
@@ -450,6 +450,10 @@ jobs:
           assert manifest["governance"]["production_authoritative_snapshots_require_schedule"] is False
           assert manifest["governance"]["production_authoritative_snapshots_require_governed_trigger"] is True
           assert manifest["governance"]["manual_recovery_is_authoritative"] is False
+          assert control["schedule_kind"] == os.environ["V6_EXPECTED_SCHEDULE_KIND"]
+          if control["schedule_kind"] == "chatgpt_scheduler":
+              assert control["chatgpt_scheduler_proof"] is True
+              assert control["logical_slot_source"] == "CHATGPT_COMMAND"
           if control["schedule_kind"] == "report_prefetch":
               assert control["authoritative_runtime_snapshot"] is True
               assert control["counts_as_completed_operational_slot"] is False
@@ -493,6 +497,8 @@ jobs:
 
       - name: Verify published V6 runtime provenance and exact tree
         shell: bash
+        env:
+          V6_EXPECTED_SCHEDULE_KIND: ${{ needs.collect.outputs.schedule_kind }}
         run: |
           set -euo pipefail
           git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
@@ -520,6 +526,10 @@ jobs:
           assert manifest["governance"]["decision_authority"] == "NONE"
           assert manifest["governance"]["production_authoritative_snapshots_require_schedule"] is False
           assert manifest["governance"]["production_authoritative_snapshots_require_governed_trigger"] is True
+          assert control["schedule_kind"] == os.environ["V6_EXPECTED_SCHEDULE_KIND"]
+          if control["schedule_kind"] == "chatgpt_scheduler":
+              assert control["chatgpt_scheduler_proof"] is True
+              assert control["logical_slot_source"] == "CHATGPT_COMMAND"
           assert integrity["status"] == "PASS", integrity
           assert integrity["resolved_registry_exact"] is True
           evidence = {
@@ -527,6 +537,7 @@ jobs:
               "overall": manifest["overall"],
               "generated_at": manifest["generated_at"],
               "schedule_kind": control["schedule_kind"],
+              "logical_slot": control.get("expected_cycle_at"),
               "authoritative_runtime_snapshot": control.get("authoritative_runtime_snapshot"),
               "counts_as_completed_operational_slot": control.get("counts_as_completed_operational_slot"),
               "publisher_mode": "dedicated_v6_github_app",
@@ -534,3 +545,60 @@ jobs:
           }
           print(evidence)
           PY
+
+  orchestration-fulfillment:
+    name: orchestration-fulfillment
+    needs: [collect, publish]
+    if: >-
+      always() &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event_name == 'issue_comment' &&
+          github.event.issue.number == 431 &&
+          github.actor == github.repository_owner &&
+          (
+            startsWith(github.event.comment.body, '/v6-master-acquire') ||
+            startsWith(github.event.comment.body, '/v6-report-prefetch')
+          )
+        )
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    steps:
+      - name: Classify orchestration fulfillment
+        env:
+          COLLECT_RESULT: ${{ needs.collect.result }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+          SLOT_SKIP: ${{ needs.collect.outputs.skip }}
+          SCHEDULE_KIND: ${{ needs.collect.outputs.schedule_kind }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          state="WORKFLOW_RECEIVED"
+          if [[ "$COLLECT_RESULT" != "success" ]]; then
+            state="WORKFLOW_RECEIVED_ACQUISITION_NOT_COMPLETE"
+            echo "state=$state" >> "$GITHUB_STEP_SUMMARY"
+            echo "collect=$COLLECT_RESULT publish=$PUBLISH_RESULT" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          if [[ "$SLOT_SKIP" == "true" ]]; then
+            state="IDEMPOTENT_NOOP_ALREADY_PUBLISHED"
+          elif [[ "$PUBLISH_RESULT" == "success" ]]; then
+            state="SNAPSHOT_PUBLISHED_VALIDATED"
+          else
+            state="ACQUISITION_COMPLETE_PUBLICATION_NOT_VALIDATED"
+          fi
+          {
+            echo "state=$state"
+            echo "schedule_kind=$SCHEDULE_KIND"
+            echo "collect=$COLLECT_RESULT"
+            echo "publish=$PUBLISH_RESULT"
+            echo "slot_skip=$SLOT_SKIP"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "orchestration fulfillment: $state"
+          if [[ "$state" == "ACQUISITION_COMPLETE_PUBLICATION_NOT_VALIDATED" ]]; then
+            exit 1
+          fi

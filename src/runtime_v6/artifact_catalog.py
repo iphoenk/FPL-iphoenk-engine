@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .artifact_migration import migrate_legacy_canonical_provenance
 from .artifact_provenance import build_artifact_meta, execution_provenance
 from .store import OUT, write_json
 
@@ -83,12 +84,15 @@ def build_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
             "class_aware_completeness": True,
             "immutable_source_snapshot_ids_required_for_usable_current_sources": True,
             "canonical_dataset_provenance_fail_closed": True,
+            "legacy_canonical_migration_is_count_guarded": True,
         },
     }
 
 
 def refresh_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
+    migration = migrate_legacy_canonical_provenance(root)
     catalog = build_artifact_catalog(root)
+    catalog["legacy_provenance_migration"] = migration
     write_json(root / CATALOG_RELATIVE_PATH, catalog)
     return catalog
 
@@ -114,6 +118,13 @@ def validate_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
         errors.append("artifact_catalog_record_count_mismatch")
     if catalog.get("catalog_sha256") != _catalog_digest(artifacts):
         errors.append("artifact_catalog_digest_mismatch")
+
+    migration = catalog.get("legacy_provenance_migration")
+    if isinstance(migration, dict) and migration.get("valid") is False:
+        errors.extend(
+            f"artifact_provenance_migration:{error}"
+            for error in migration.get("errors") or []
+        )
 
     expected_paths = {path.relative_to(root).as_posix() for path in _iter_catalogued_files(root)}
     catalog_paths: set[str] = set()
@@ -187,6 +198,9 @@ def validate_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
         "incomplete_count": len(incomplete_paths),
         "not_applicable_count": status_counts.get("NOT_APPLICABLE", 0),
         "incomplete_paths": sorted(incomplete_paths),
+        "legacy_provenance_migration_valid": not (
+            isinstance(migration, dict) and migration.get("valid") is False
+        ),
     }
 
 

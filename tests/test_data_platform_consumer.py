@@ -458,3 +458,32 @@ def test_missing_runtime_snapshot_requires_direct_fallback(tmp_path: Path):
     assert result["fallback_scope"] == "EXTERNAL_SOURCES_ONLY"
     assert result["engine_artifact_fallback_allowed"] is False
     assert result["failures"] == ["MISSING_MANIFEST"]
+
+
+
+def test_consumer_recomputes_stale_scheduler_proof_without_invalidating_fresh_data(tmp_path: Path):
+    root = tmp_path / "v6"
+    _write_snapshot(
+        root,
+        "2026-09-08T12:40:00+00:00",
+        operational_summary={
+            "health": "GREEN",
+            "maturity": "ESTABLISHED",
+            "missing_operational_slots": 0,
+            "consecutive_successful_slots": 6,
+            "required_consecutive_successes": 6,
+            "last_chatgpt_scheduler_proof_at": "2026-09-08T10:31:00+00:00",
+        },
+    )
+
+    result = assess_snapshot(root, now=datetime(2026, 9, 8, 13, 0, tzinfo=timezone.utc))
+
+    assert result["state"] == "FRESH"
+    assert result["usable"] is True
+    assert result["scheduler_proof_freshness"] == "STALE"
+    assert result["scheduler_proof_health"] == "RED"
+    assert result["scheduler_proof_age_seconds"] == 8940.0
+    assert "CHATGPT_SCHEDULER_PROOF_STALE" in result["scheduler_reliability_warnings"]
+    assert result["scheduler_reliability_degraded"] is True
+    assert result["failures"] == []
+    assert result["governance"]["scheduler_proof_age_is_recomputed_at_consumer_read_time"] is True

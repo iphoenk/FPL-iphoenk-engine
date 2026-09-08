@@ -16,7 +16,10 @@
     "health_epoch": "CHATGPT_MASTER_V1",
     "migration_started_at": "2026-09-08T10:35:31+07:00",
     "legacy_history_before": "2026-09-08T10:35:31+07:00",
-    "green_after_consecutive_slots": 6
+    "green_after_consecutive_slots": 6,
+    "runtime_authority_id": "CHATGPT_FPL_MASTER_MONITOR",
+    "proof_fresh_after_minutes": 75,
+    "proof_stale_after_minutes": 135
   },
   "github_natural_schedule": {
     "enabled": false,
@@ -125,7 +128,9 @@
         "ORPHANED",
         "STALE"
       ]
-    }
+    },
+    "scheduler_policy_is_single_runtime_authority": true,
+    "scheduler_proof_age_is_read_time_observability": true
   },
   "master_orchestrated": {
     "enabled": true,

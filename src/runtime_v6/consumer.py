@@ -9,6 +9,7 @@ from typing import Any
 from .publish_integrity import validate_publish_tree
 from .registry import ZERO_AUTHORITY_KEYS
 from .runtime_control import CHATGPT_SCHEDULER_AUTHORITY
+from .schedule_policy import SCHEDULE_POLICY, scheduler_proof_telemetry
 
 
 DEFAULT_MAX_AGE_MINUTES = 90
@@ -170,6 +171,10 @@ def _invalid_result(failure: str) -> dict[str, Any]:
         "scheduler_required_consecutive_successful_slots": None,
         "scheduler_reliability_degraded": False,
         "scheduler_reliability_warnings": [],
+        "last_chatgpt_scheduler_proof_at": None,
+        "scheduler_proof_age_seconds": None,
+        "scheduler_proof_freshness": None,
+        "scheduler_proof_health": None,
         "failures": [failure],
     }
 
@@ -241,6 +246,16 @@ def assess_snapshot(
     failures.extend(_control_failures(control))
     operational_summary = _operational_summary(root, manifest)
     scheduler_warnings = _scheduler_reliability_warnings(manifest, control, operational_summary)
+    proof_telemetry = scheduler_proof_telemetry(
+        operational_summary.get("last_chatgpt_scheduler_proof_at"),
+        now=now,
+    )
+    proof_freshness = str(proof_telemetry.get("scheduler_proof_freshness") or "UNKNOWN")
+    if proof_freshness == "LATE":
+        scheduler_warnings.append("CHATGPT_SCHEDULER_PROOF_LATE")
+    elif proof_freshness == "STALE":
+        scheduler_warnings.append("CHATGPT_SCHEDULER_PROOF_STALE")
+    scheduler_warnings = list(dict.fromkeys(scheduler_warnings))
 
     if manifest.get("overall") == "RED":
         failures.append("MANIFEST_OVERALL_RED")
@@ -311,6 +326,9 @@ def assess_snapshot(
         "scheduler_required_consecutive_successful_slots": scheduler_required_streak,
         "scheduler_reliability_degraded": scheduler_degraded,
         "scheduler_reliability_warnings": scheduler_warnings,
+        **proof_telemetry,
+        "scheduler_proof_fresh_after_minutes": SCHEDULE_POLICY.proof_fresh_after_minutes,
+        "scheduler_proof_stale_after_minutes": SCHEDULE_POLICY.proof_stale_after_minutes,
         "stored_tree_sha256": stored_digest,
         "recomputed_tree_sha256": recomputed_digest,
         "failures": failures,
@@ -327,6 +345,8 @@ def assess_snapshot(
             "report_prefetch_does_not_complete_core_operational_slot": True,
             "scheduler_reliability_is_observability_not_data_validity": True,
             "scheduler_reliability_comes_from_operational_ledger": True,
+            "scheduler_proof_age_is_recomputed_at_consumer_read_time": True,
+            "scheduler_proof_age_does_not_fabricate_operational_slots": True,
             "report_prefetch_cannot_hide_core_scheduler_reliability": True,
             "only_explicit_scheduler_reliability_failures_are_non_blocking": True,
             "natural_scheduler_evidence_is_checked_separately": True,

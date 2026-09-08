@@ -7,15 +7,34 @@ from pathlib import Path
 from typing import Any
 
 from .artifact_migration import migrate_legacy_canonical_provenance
-from .artifact_provenance import build_artifact_meta, execution_provenance
+from .artifact_provenance import build_artifact_meta, execution_provenance, publication_provenance
 from .store import OUT, write_json
 
 CATALOG_RELATIVE_PATH = "evidence/artifact_catalog.json"
 PUBLISH_INTEGRITY_RELATIVE_PATH = "health/publish_integrity.json"
+_ORIGIN_STATUSES = {"PROVEN", "LEGACY_UNKNOWN", "LOCAL_UNKNOWN"}
 
 
 def _catalog_digest(artifacts: list[dict[str, Any]]) -> str:
-    raw = json.dumps(artifacts, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    """Digest stable artifact identity, excluding mutable publication telemetry."""
+    digestable: list[dict[str, Any]] = []
+    mutable_publication_fields = {
+        "publication_provenance",
+        "publication_sha",
+        "publication_run_id",
+        "publication_workflow",
+        "publication_logical_slot",
+        "published_at",
+    }
+    for meta in artifacts:
+        digestable.append(
+            {
+                key: value
+                for key, value in meta.items()
+                if key not in mutable_publication_fields
+            }
+        )
+    raw = json.dumps(digestable, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
 
 
@@ -47,26 +66,80 @@ def _completeness_summary(artifacts: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _previous_artifacts(root: Path) -> dict[str, dict[str, Any]]:
+    path = root / CATALOG_RELATIVE_PATH
+    try:
+        catalog = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    artifacts = catalog.get("artifacts") or []
+    return {
+        str(meta.get("path") or ""): dict(meta)
+        for meta in artifacts
+        if isinstance(meta, dict) and meta.get("path")
+    }
+
+
+def _origin_errors(meta: dict[str, Any], relative: str) -> list[str]:
+    errors: list[str] = []
+    origin = meta.get("origin_provenance")
+    if not isinstance(origin, dict):
+        return [f"artifact_origin_provenance_missing:{relative}"]
+    status = str(origin.get("status") or "")
+    if status not in _ORIGIN_STATUSES:
+        errors.append(f"artifact_origin_status_invalid:{relative}:{status or 'MISSING'}")
+        return errors
+    if status == "PROVEN":
+        for field in (
+            "origin_producer_sha",
+            "origin_run_id",
+            "origin_workflow",
+            "origin_generated_at",
+        ):
+            if not origin.get(field):
+                errors.append(f"artifact_origin_field_missing:{relative}:{field}")
+    elif any(
+        origin.get(field)
+        for field in (
+            "origin_producer_sha",
+            "origin_run_id",
+            "origin_workflow",
+            "origin_generated_at",
+        )
+    ):
+        errors.append(f"artifact_unknown_origin_must_not_be_fabricated:{relative}")
+    return errors
+
+
 def build_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
+    generated_at = datetime.now(timezone.utc).isoformat()
+    publication = publication_provenance(published_at=generated_at)
+    legacy_execution = execution_provenance()
+    previous = _previous_artifacts(root)
     artifacts = [
-        build_artifact_meta(root, path.relative_to(root).as_posix())
+        build_artifact_meta(
+            root,
+            path.relative_to(root).as_posix(),
+            previous_meta=previous.get(f"data/v6/{path.relative_to(root).as_posix()}"),
+            publication=publication,
+        )
         for path in _iter_catalogued_files(root)
     ]
-    generated_at = datetime.now(timezone.utc).isoformat()
-    execution = execution_provenance()
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "canonical": True,
         "semantic_class": "CONTROL_TELEMETRY",
         "authority": "V6_DATA_PLATFORM",
         "generated_at": generated_at,
         "effective_at": generated_at,
-        "normalization_version": "V6_ARTIFACT_CATALOG_2",
+        "normalization_version": "V6_ARTIFACT_CATALOG_3",
         "primary_keys": ["path"],
         "record_count": len(artifacts),
         "catalog_sha256": _catalog_digest(artifacts),
-        **execution,
-        "execution_provenance": execution,
+        **legacy_execution,
+        **publication,
+        "publication_provenance": publication,
+        "execution_provenance": legacy_execution,
         "completeness": _completeness_summary(artifacts),
         "excluded_paths": [
             f"data/v6/{CATALOG_RELATIVE_PATH}",
@@ -80,7 +153,14 @@ def build_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
             "optimizer_authority": "NONE",
             "catalog_is_non_recursive": True,
             "publish_integrity_is_excluded_to_avoid_digest_cycle": True,
-            "artifact_provenance_contract": "V6_ARTIFACT_PROVENANCE_1",
+            "artifact_provenance_contract": "V6_ARTIFACT_PROVENANCE_2",
+            "origin_provenance_is_immutable_while_content_digest_is_unchanged": True,
+            "publication_provenance_changes_per_publication_execution": True,
+            "catalog_digest_excludes_mutable_publication_telemetry": True,
+            "pre_contract_reused_origin_is_explicitly_legacy_unknown": True,
+            "legacy_origin_is_never_inferred_from_republisher_execution": True,
+            "catalog_level_producer_fields_are_deprecated_publication_aliases": True,
+            "artifact_entries_do_not_use_ambiguous_generic_producer_fields": True,
             "class_aware_completeness": True,
             "immutable_source_snapshot_ids_required_for_usable_current_sources": True,
             "canonical_dataset_provenance_fail_closed": True,
@@ -112,12 +192,17 @@ def validate_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
 
     errors: list[str] = []
     artifacts = list(catalog.get("artifacts") or [])
-    if catalog.get("schema_version") != 2:
+    if catalog.get("schema_version") != 3:
         errors.append("artifact_catalog_schema_version_mismatch")
     if int(catalog.get("record_count") or -1) != len(artifacts):
         errors.append("artifact_catalog_record_count_mismatch")
     if catalog.get("catalog_sha256") != _catalog_digest(artifacts):
         errors.append("artifact_catalog_digest_mismatch")
+
+    publication = catalog.get("publication_provenance")
+    if not isinstance(publication, dict):
+        errors.append("artifact_catalog_publication_provenance_missing")
+        publication = {}
 
     migration = catalog.get("legacy_provenance_migration")
     if isinstance(migration, dict) and migration.get("valid") is False:
@@ -149,7 +234,16 @@ def validate_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
             errors.append(f"artifact_catalog_missing_file:{relative}")
             continue
 
-        expected_meta = build_artifact_meta(root, relative)
+        errors.extend(_origin_errors(meta, relative))
+        if meta.get("publication_provenance") != publication:
+            errors.append(f"artifact_publication_provenance_mismatch:{relative}")
+
+        expected_meta = build_artifact_meta(
+            root,
+            relative,
+            previous_meta=meta,
+            publication=publication,
+        )
         digest = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
         if digest != meta.get("sha256"):
             errors.append(f"artifact_catalog_sha_mismatch:{relative}")
@@ -201,6 +295,7 @@ def validate_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
         "legacy_provenance_migration_valid": not (
             isinstance(migration, dict) and migration.get("valid") is False
         ),
+        "origin_publication_provenance_separated": True,
     }
 
 

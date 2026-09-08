@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -211,17 +212,97 @@ def artifact_completeness(
     }
 
 
-def execution_provenance() -> dict[str, Any]:
+def publication_provenance(*, published_at: str | None = None) -> dict[str, Any]:
+    timestamp = published_at or datetime.now(timezone.utc).isoformat()
     return {
-        "producer_sha": os.getenv("GITHUB_SHA"),
-        "producer_run_id": os.getenv("GITHUB_RUN_ID"),
-        "producer_workflow": os.getenv("GITHUB_WORKFLOW"),
-        "logical_slot": os.getenv("V6_MASTER_LOGICAL_SLOT") or os.getenv("V6_REPORT_LOGICAL_SLOT"),
+        "publication_sha": os.getenv("GITHUB_SHA"),
+        "publication_run_id": os.getenv("GITHUB_RUN_ID"),
+        "publication_workflow": os.getenv("GITHUB_WORKFLOW"),
+        "publication_logical_slot": os.getenv("V6_MASTER_LOGICAL_SLOT") or os.getenv("V6_REPORT_LOGICAL_SLOT"),
+        "published_at": timestamp,
     }
 
 
-def build_artifact_meta(output_root: Path, relative_path: str) -> dict[str, Any]:
+def execution_provenance() -> dict[str, Any]:
+    """Backward-compatible execution view.
+
+    New callers should use publication_provenance(). Generic producer fields are
+    intentionally no longer attached to artifact metadata because they cannot
+    distinguish origin from a later publication/re-catalog execution.
+    """
+    publication = publication_provenance()
+    return {
+        "producer_sha": publication["publication_sha"],
+        "producer_run_id": publication["publication_run_id"],
+        "producer_workflow": publication["publication_workflow"],
+        "logical_slot": publication["publication_logical_slot"],
+    }
+
+
+def _unknown_origin(status: str, reason: str) -> dict[str, Any]:
+    return {
+        "status": status,
+        "origin_producer_sha": None,
+        "origin_run_id": None,
+        "origin_workflow": None,
+        "origin_logical_slot": None,
+        "origin_generated_at": None,
+        "reason": reason,
+    }
+
+
+def _origin_from_publication(publication: dict[str, Any]) -> dict[str, Any]:
+    required = (
+        publication.get("publication_sha"),
+        publication.get("publication_run_id"),
+        publication.get("publication_workflow"),
+    )
+    if not all(required):
+        return _unknown_origin(
+            "LOCAL_UNKNOWN",
+            "EXECUTION_IDENTITY_UNAVAILABLE_OUTSIDE_GITHUB_RUNTIME",
+        )
+    return {
+        "status": "PROVEN",
+        "origin_producer_sha": publication.get("publication_sha"),
+        "origin_run_id": publication.get("publication_run_id"),
+        "origin_workflow": publication.get("publication_workflow"),
+        "origin_logical_slot": publication.get("publication_logical_slot"),
+        "origin_generated_at": publication.get("published_at"),
+        "reason": "ARTIFACT_FIRST_OBSERVED_OR_CONTENT_CHANGED_IN_THIS_EXECUTION",
+    }
+
+
+def _origin_for_artifact(
+    digest: str,
+    previous_meta: dict[str, Any] | None,
+    publication: dict[str, Any],
+) -> dict[str, Any]:
+    previous = dict(previous_meta or {})
+    if previous and str(previous.get("sha256") or "") == digest:
+        explicit = previous.get("origin_provenance")
+        if isinstance(explicit, dict) and explicit.get("status") in {
+            "PROVEN",
+            "LEGACY_UNKNOWN",
+            "LOCAL_UNKNOWN",
+        }:
+            return dict(explicit)
+        return _unknown_origin(
+            "LEGACY_UNKNOWN",
+            "PRE_ORIGIN_CONTRACT_ARTIFACT_REUSED_WITH_UNCHANGED_DIGEST",
+        )
+    return _origin_from_publication(publication)
+
+
+def build_artifact_meta(
+    output_root: Path,
+    relative_path: str,
+    *,
+    previous_meta: dict[str, Any] | None = None,
+    publication: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     path = output_root / relative_path
+    publication_meta = dict(publication or publication_provenance())
     if not path.exists():
         return {
             "path": f"data/v6/{relative_path}",
@@ -231,14 +312,23 @@ def build_artifact_meta(output_root: Path, relative_path: str) -> dict[str, Any]
             "bytes": 0,
             "sha256": None,
             "provenance_status": "NOT_APPLICABLE",
+            "origin_provenance": _unknown_origin("LEGACY_UNKNOWN", "ARTIFACT_NOT_PRESENT"),
+            "publication_provenance": publication_meta,
+            **publication_meta,
         }
 
     raw = path.read_bytes()
+    digest = hashlib.sha256(raw).hexdigest()
+    origin = _origin_for_artifact(digest, previous_meta, publication_meta)
     meta: dict[str, Any] = {
         "path": f"data/v6/{relative_path}",
-        "sha256": hashlib.sha256(raw).hexdigest(),
+        "sha256": digest,
         "bytes": len(raw),
         "canonical": True,
+        "origin_provenance": origin,
+        "publication_provenance": publication_meta,
+        **origin,
+        **publication_meta,
     }
     try:
         payload = json.loads(raw.decode("utf-8"))
@@ -270,5 +360,4 @@ def build_artifact_meta(output_root: Path, relative_path: str) -> dict[str, Any]
     completeness = artifact_completeness(artifact_class, meta, payload)
     meta["provenance_status"] = completeness["status"]
     meta["completeness"] = completeness
-    meta.update(execution_provenance())
     return meta

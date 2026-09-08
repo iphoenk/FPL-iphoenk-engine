@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -21,7 +22,13 @@ def _parse_dt(value: str | None) -> datetime | None:
 
 
 def _now(value: datetime | None = None) -> datetime:
-    current = value or datetime.now(timezone.utc)
+    if value is not None:
+        current = value
+    else:
+        logical_slot = str(os.environ.get("V6_MASTER_LOGICAL_SLOT") or "").strip()
+        current = _parse_dt(logical_slot) if logical_slot else None
+        if current is None:
+            current = datetime.now(timezone.utc)
     return current if current.tzinfo is not None else current.replace(tzinfo=timezone.utc)
 
 
@@ -161,23 +168,26 @@ def poll_decision(
                 budget=budget,
             )
 
+    previous_polling = dict((previous or {}).get("polling") or {})
     last_polled_at = _parse_dt(
-        (((previous or {}).get("polling") or {}).get("last_polled_at"))
+        previous_polling.get("last_polled_at")
         or (previous or {}).get("last_polled_at")
         or (previous or {}).get("checked_at")
     )
+    last_scheduler_slot = _parse_dt(previous_polling.get("scheduler_slot"))
+    cadence_reference = last_scheduler_slot or last_polled_at
 
-    if previous is None or last_polled_at is None:
+    if previous is None or cadence_reference is None:
         due = True
         reason = "DUE"
     elif interval is None or interval <= scheduler_interval:
         current_slot = scheduler_slot_start(current, scheduler_interval)
-        previous_slot = scheduler_slot_start(last_polled_at, scheduler_interval)
+        previous_slot = scheduler_slot_start(cadence_reference, scheduler_interval)
         due = current_slot != previous_slot
         reason = "DUE" if due else "ALREADY_POLLED_THIS_SLOT"
     else:
         due = (
-            current.astimezone(timezone.utc) - last_polled_at.astimezone(timezone.utc)
+            current.astimezone(timezone.utc) - cadence_reference.astimezone(timezone.utc)
         ).total_seconds() >= interval * 60
         reason = "DUE" if due else "NOT_DUE"
 

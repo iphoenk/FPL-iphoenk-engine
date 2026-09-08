@@ -184,7 +184,9 @@ def test_production_policy_uses_chatgpt_and_removed_github_crons():
     assert "python -m src.runtime_v6.workflow_control authorize-issue" in workflow
     assert "python -m src.runtime_v6.collector" in workflow
     assert "python -m src.runtime_v6.runtime_control" in workflow
-    assert "scheduled_slot_already_completed" in workflow
+    assert "python -m src.runtime_v6.workflow_control slot-guard" in workflow
+    assert "python -m src.runtime_v6.production_validate preflight" in workflow
+    assert "python -m src.runtime_v6.production_validate publishable" in workflow
     assert "  schedule:" not in workflow
     assert "  push:" not in workflow
     assert "  pull_request:" not in workflow

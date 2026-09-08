@@ -7,6 +7,7 @@ from pathlib import Path
 from src.runtime_v6.consumer import assess_snapshot
 from src.runtime_v6.publish_integrity import validate_publish_tree
 from src.runtime_v6.registry import ZERO_AUTHORITY_KEYS
+from src.runtime_v6.runtime_control import CHATGPT_SCHEDULER_AUTHORITY
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -26,6 +27,9 @@ def _write_snapshot(
     authoritative_runtime_snapshot: bool | None = None,
     counts_as_completed_operational_slot: bool | None = None,
     master_orchestrated: bool = False,
+    runtime_control_health: str = "GREEN",
+    runtime_control_overrides: dict | None = None,
+    control_failures: list[str] | None = None,
 ) -> None:
     paths = {
         "current_sources": "data/v6/current/",
@@ -42,18 +46,20 @@ def _write_snapshot(
         "publish_integrity": "data/v6/health/publish_integrity.json",
     }
     runtime_control = {
-        "health": "GREEN",
+        "health": runtime_control_health,
         "event_name": event_name,
         "schedule_kind": schedule_kind,
         "run_id": "12345",
         "scheduled_cycle": scheduled_cycle,
         "duplicate_scheduled_cycle": False,
+        "out_of_order_scheduled_cycle": False,
         "master_orchestrated": master_orchestrated,
     }
     if authoritative_runtime_snapshot is not None:
         runtime_control["authoritative_runtime_snapshot"] = authoritative_runtime_snapshot
     if counts_as_completed_operational_slot is not None:
         runtime_control["counts_as_completed_operational_slot"] = counts_as_completed_operational_slot
+    runtime_control.update(runtime_control_overrides or {})
 
     manifest = {
         "source_count": 1,
@@ -61,7 +67,7 @@ def _write_snapshot(
         "generated_at": generated_at,
         "overall": overall,
         "critical_failures": [],
-        "control_failures": [],
+        "control_failures": list(control_failures or []),
         "runtime_control": runtime_control,
         "paths": paths,
         "governance": {
@@ -77,8 +83,8 @@ def _write_snapshot(
     _write_json(root / "health" / "runtime_control.json", runtime_control)
     _write_json(root / "health" / "operational_slots.json", {"schema_version": 1, "slots": [], "summary": {"health": "AMBER", "maturity": "WARMING_UP"}})
     _write_json(root / "normalized" / "canonical_players.json", {"player_count": 1})
-    _write_json(root / "normalized" / "canonical_teams.json", {})
-    _write_json(root / "normalized" / "canonical_fixtures.json", {})
+    _write_json(root / "normalized" / "canonical_teams.json", {"team_count": 0, "teams": []})
+    _write_json(root / "normalized" / "canonical_fixtures.json", {"fixture_count": 0, "fixtures": []})
     _write_json(root / "evidence" / "lineage.json", {})
     _write_json(root / "evidence" / "latest_index.json", {})
     _write_json(
@@ -90,6 +96,11 @@ def _write_snapshot(
         {
             "canonical_player_count": 1,
             "governance": {"fuzzy_name_matching_allowed": False},
+            "mappings": {"1": {"official_fpl_element_id": 1}},
+            "entity_bridges": {
+                "team": {"canonical_team_count": 0, "mappings": {}},
+                "fixture": {"canonical_fixture_count": 0, "mappings": {}},
+            },
         },
     )
 
@@ -145,6 +156,126 @@ def test_master_orchestrated_snapshot_is_authoritative_without_natural_schedule_
     assert result["runtime_schedule_kind"] == "master_orchestrated"
     assert result["authoritative_runtime_snapshot"] is True
     assert result["failures"] == []
+
+
+def test_chatgpt_scheduler_snapshot_is_authoritative_runtime_data(tmp_path: Path):
+    root = tmp_path / "v6"
+    _write_snapshot(
+        root,
+        "2026-09-08T04:09:00+00:00",
+        event_name="issue_comment",
+        schedule_kind="chatgpt_scheduler",
+        authoritative_runtime_snapshot=True,
+        counts_as_completed_operational_slot=True,
+        runtime_control_overrides={
+            "chatgpt_scheduler": True,
+            "chatgpt_scheduler_proof": True,
+            "logical_slot_source": "CHATGPT_COMMAND",
+            "scheduler_authority": CHATGPT_SCHEDULER_AUTHORITY,
+        },
+    )
+
+    result = assess_snapshot(root, now=datetime(2026, 9, 8, 4, 15, tzinfo=timezone.utc))
+
+    assert result["state"] == "FRESH"
+    assert result["usable"] is True
+    assert result["runtime_schedule_kind"] == "chatgpt_scheduler"
+    assert result["scheduler_reliability_degraded"] is False
+    assert result["failures"] == []
+    assert result["governance"]["consumer_accepts_chatgpt_scheduler_authority"] is True
+
+
+def test_chatgpt_scheduler_requires_explicit_proof_fields(tmp_path: Path):
+    root = tmp_path / "v6"
+    _write_snapshot(
+        root,
+        "2026-09-08T04:09:00+00:00",
+        event_name="issue_comment",
+        schedule_kind="chatgpt_scheduler",
+        authoritative_runtime_snapshot=True,
+        counts_as_completed_operational_slot=True,
+        runtime_control_overrides={
+            "chatgpt_scheduler": True,
+            "chatgpt_scheduler_proof": False,
+            "logical_slot_source": "CHATGPT_COMMAND",
+            "scheduler_authority": CHATGPT_SCHEDULER_AUTHORITY,
+        },
+    )
+
+    result = assess_snapshot(root, now=datetime(2026, 9, 8, 4, 15, tzinfo=timezone.utc))
+
+    assert result["state"] == "INVALID"
+    assert "INVALID_CHATGPT_SCHEDULER_PROVENANCE" in result["failures"]
+
+
+def test_recovered_fresh_snapshot_remains_usable_when_scheduler_reliability_is_red(tmp_path: Path):
+    root = tmp_path / "v6"
+    _write_snapshot(
+        root,
+        "2026-09-08T04:09:00+00:00",
+        event_name="issue_comment",
+        schedule_kind="chatgpt_scheduler",
+        authoritative_runtime_snapshot=True,
+        counts_as_completed_operational_slot=True,
+        runtime_control_health="RED",
+        runtime_control_overrides={
+            "chatgpt_scheduler": True,
+            "chatgpt_scheduler_proof": True,
+            "logical_slot_source": "CHATGPT_COMMAND",
+            "scheduler_authority": CHATGPT_SCHEDULER_AUTHORITY,
+            "missed_cycle": True,
+            "missed_cycle_count": 1,
+        },
+        control_failures=["MISSED_CHATGPT_SCHEDULER_SLOT"],
+    )
+
+    result = assess_snapshot(root, now=datetime(2026, 9, 8, 4, 15, tzinfo=timezone.utc))
+
+    assert result["state"] == "FRESH"
+    assert result["usable"] is True
+    assert result["runtime_control_health"] == "RED"
+    assert result["scheduler_reliability_degraded"] is True
+    assert result["scheduler_reliability_warnings"] == ["MISSED_CHATGPT_SCHEDULER_SLOT"]
+    assert result["failures"] == []
+    assert result["governance"]["scheduler_reliability_is_observability_not_data_validity"] is True
+
+
+def test_unknown_control_failure_still_fails_closed(tmp_path: Path):
+    root = tmp_path / "v6"
+    _write_snapshot(
+        root,
+        "2026-09-04T10:40:00+00:00",
+        control_failures=["UNKNOWN_RUNTIME_CONTROL_FAILURE"],
+    )
+
+    result = assess_snapshot(root, now=datetime(2026, 9, 4, 10, 45, tzinfo=timezone.utc))
+
+    assert result["state"] == "INVALID"
+    assert "CONTROL:UNKNOWN_RUNTIME_CONTROL_FAILURE" in result["failures"]
+
+
+def test_duplicate_chatgpt_cycle_still_fails_closed(tmp_path: Path):
+    root = tmp_path / "v6"
+    _write_snapshot(
+        root,
+        "2026-09-08T04:09:00+00:00",
+        event_name="issue_comment",
+        schedule_kind="chatgpt_scheduler",
+        authoritative_runtime_snapshot=True,
+        counts_as_completed_operational_slot=True,
+        runtime_control_overrides={
+            "chatgpt_scheduler": True,
+            "chatgpt_scheduler_proof": True,
+            "logical_slot_source": "CHATGPT_COMMAND",
+            "scheduler_authority": CHATGPT_SCHEDULER_AUTHORITY,
+            "duplicate_scheduled_cycle": True,
+        },
+    )
+
+    result = assess_snapshot(root, now=datetime(2026, 9, 8, 4, 15, tzinfo=timezone.utc))
+
+    assert result["state"] == "INVALID"
+    assert "DUPLICATE_SCHEDULED_CYCLE" in result["failures"]
 
 
 def test_static_green_snapshot_becomes_stale_at_read_time(tmp_path: Path):

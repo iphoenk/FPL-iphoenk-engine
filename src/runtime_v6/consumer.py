@@ -34,6 +34,29 @@ def _utc(value: str) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
+def _runtime_path(root: Path, configured: str) -> Path:
+    value = str(configured or "").strip()
+    prefix = "data/v6/"
+    if value.startswith(prefix):
+        value = value[len(prefix) :]
+    return root / value
+
+
+def _operational_summary(root: Path, manifest: dict[str, Any]) -> dict[str, Any]:
+    configured = str((manifest.get("paths") or {}).get("operational_slots") or "data/v6/health/operational_slots.json")
+    path = _runtime_path(root, configured)
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    summary = payload.get("summary") or {}
+    return dict(summary) if isinstance(summary, dict) else {}
+
+
 def _governance_failures(governance: dict[str, Any]) -> list[str]:
     failures: list[str] = []
     if governance.get("data_only") is not True:
@@ -111,6 +134,7 @@ def _control_failures(control: dict[str, Any]) -> list[str]:
 def _scheduler_reliability_warnings(
     manifest: dict[str, Any],
     control: dict[str, Any],
+    operational_summary: dict[str, Any],
 ) -> list[str]:
     warnings: list[str] = []
     try:
@@ -123,6 +147,12 @@ def _scheduler_reliability_warnings(
         value = str(failure)
         if value in _NON_BLOCKING_SCHEDULER_CONTROL_FAILURES:
             warnings.append(value)
+    try:
+        ledger_missing = int(operational_summary.get("missing_operational_slots") or 0)
+    except (TypeError, ValueError):
+        ledger_missing = 0
+    if ledger_missing > 0:
+        warnings.append("OPERATIONAL_LEDGER_MISSING_SLOTS")
     return list(dict.fromkeys(warnings))
 
 
@@ -134,6 +164,10 @@ def _invalid_result(failure: str) -> dict[str, Any]:
         "fallback_scope": _FALLBACK_SCOPE,
         "engine_artifact_fallback_allowed": False,
         "scheduler_reliability_health": None,
+        "scheduler_reliability_maturity": None,
+        "scheduler_missing_operational_slots": None,
+        "scheduler_consecutive_successful_slots": None,
+        "scheduler_required_consecutive_successful_slots": None,
         "scheduler_reliability_degraded": False,
         "scheduler_reliability_warnings": [],
         "failures": [failure],
@@ -205,7 +239,8 @@ def assess_snapshot(
 
     control = manifest.get("runtime_control") or {}
     failures.extend(_control_failures(control))
-    scheduler_warnings = _scheduler_reliability_warnings(manifest, control)
+    operational_summary = _operational_summary(root, manifest)
+    scheduler_warnings = _scheduler_reliability_warnings(manifest, control, operational_summary)
 
     if manifest.get("overall") == "RED":
         failures.append("MANIFEST_OVERALL_RED")
@@ -234,6 +269,22 @@ def assess_snapshot(
         usable = True
         fallback = False
 
+    scheduler_health = operational_summary.get("health") or control.get("health")
+    scheduler_maturity = operational_summary.get("maturity")
+    try:
+        scheduler_missing = int(operational_summary.get("missing_operational_slots") or 0)
+    except (TypeError, ValueError):
+        scheduler_missing = 0
+    try:
+        scheduler_streak = int(operational_summary.get("consecutive_successful_slots") or 0)
+    except (TypeError, ValueError):
+        scheduler_streak = 0
+    try:
+        scheduler_required_streak = int(operational_summary.get("required_consecutive_successful_slots") or 0)
+    except (TypeError, ValueError):
+        scheduler_required_streak = 0
+    scheduler_degraded = bool(scheduler_warnings) or str(scheduler_health or "").upper() not in {"", "GREEN"}
+
     return {
         "state": state,
         "usable": usable,
@@ -249,8 +300,12 @@ def assess_snapshot(
         "runtime_schedule_kind": control.get("schedule_kind"),
         "authoritative_runtime_snapshot": control.get("authoritative_runtime_snapshot"),
         "counts_as_completed_operational_slot": control.get("counts_as_completed_operational_slot"),
-        "scheduler_reliability_health": control.get("health"),
-        "scheduler_reliability_degraded": bool(scheduler_warnings),
+        "scheduler_reliability_health": scheduler_health,
+        "scheduler_reliability_maturity": scheduler_maturity,
+        "scheduler_missing_operational_slots": scheduler_missing,
+        "scheduler_consecutive_successful_slots": scheduler_streak,
+        "scheduler_required_consecutive_successful_slots": scheduler_required_streak,
+        "scheduler_reliability_degraded": scheduler_degraded,
         "scheduler_reliability_warnings": scheduler_warnings,
         "stored_tree_sha256": stored_digest,
         "recomputed_tree_sha256": recomputed_digest,
@@ -267,6 +322,8 @@ def assess_snapshot(
             "chatgpt_scheduler_requires_explicit_logical_slot_provenance": True,
             "report_prefetch_does_not_complete_core_operational_slot": True,
             "scheduler_reliability_is_observability_not_data_validity": True,
+            "scheduler_reliability_comes_from_operational_ledger": True,
+            "report_prefetch_cannot_hide_core_scheduler_reliability": True,
             "only_explicit_scheduler_reliability_failures_are_non_blocking": True,
             "natural_scheduler_evidence_is_checked_separately": True,
             "consumer_requires_full_zero_authority_contract": True,

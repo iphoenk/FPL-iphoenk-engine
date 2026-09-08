@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .prefetch_contract import artifact_meta
+from .artifact_provenance import build_artifact_meta, execution_provenance
 from .store import OUT, write_json
 
 CATALOG_RELATIVE_PATH = "evidence/artifact_catalog.json"
@@ -31,27 +30,43 @@ def _iter_catalogued_files(root: Path) -> list[Path]:
     )
 
 
-def build_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
-    artifacts: list[dict[str, Any]] = []
-    for path in _iter_catalogued_files(root):
-        relative = path.relative_to(root).as_posix()
-        meta = artifact_meta(root, relative)
-        meta["producer_sha"] = os.getenv("GITHUB_SHA")
-        artifacts.append(meta)
-
-    generated_at = datetime.now(timezone.utc).isoformat()
+def _completeness_summary(artifacts: list[dict[str, Any]]) -> dict[str, Any]:
+    counts = {"COMPLETE": 0, "INCOMPLETE": 0, "NOT_APPLICABLE": 0}
+    incomplete_paths: list[str] = []
+    for meta in artifacts:
+        status = str(meta.get("provenance_status") or "INCOMPLETE")
+        counts[status] = counts.get(status, 0) + 1
+        if status == "INCOMPLETE":
+            incomplete_paths.append(str(meta.get("path") or ""))
     return {
-        "schema_version": 1,
+        "status": "PASS" if not incomplete_paths else "FAIL",
+        "counts": counts,
+        "incomplete_count": len(incomplete_paths),
+        "incomplete_paths": sorted(incomplete_paths),
+    }
+
+
+def build_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
+    artifacts = [
+        build_artifact_meta(root, path.relative_to(root).as_posix())
+        for path in _iter_catalogued_files(root)
+    ]
+    generated_at = datetime.now(timezone.utc).isoformat()
+    execution = execution_provenance()
+    return {
+        "schema_version": 2,
         "canonical": True,
         "semantic_class": "CONTROL_TELEMETRY",
         "authority": "V6_DATA_PLATFORM",
         "generated_at": generated_at,
         "effective_at": generated_at,
-        "normalization_version": "V6_ARTIFACT_CATALOG_1",
+        "normalization_version": "V6_ARTIFACT_CATALOG_2",
         "primary_keys": ["path"],
         "record_count": len(artifacts),
         "catalog_sha256": _catalog_digest(artifacts),
-        "producer_sha": os.getenv("GITHUB_SHA"),
+        **execution,
+        "execution_provenance": execution,
+        "completeness": _completeness_summary(artifacts),
         "excluded_paths": [
             f"data/v6/{CATALOG_RELATIVE_PATH}",
             f"data/v6/{PUBLISH_INTEGRITY_RELATIVE_PATH}",
@@ -64,6 +79,10 @@ def build_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
             "optimizer_authority": "NONE",
             "catalog_is_non_recursive": True,
             "publish_integrity_is_excluded_to_avoid_digest_cycle": True,
+            "artifact_provenance_contract": "V6_ARTIFACT_PROVENANCE_1",
+            "class_aware_completeness": True,
+            "immutable_source_snapshot_ids_required_for_usable_current_sources": True,
+            "canonical_dataset_provenance_fail_closed": True,
         },
     }
 
@@ -79,10 +98,18 @@ def validate_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
     try:
         catalog = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return {"valid": False, "errors": ["artifact_catalog_missing_or_invalid"], "checked": 0}
+        return {
+            "valid": False,
+            "errors": ["artifact_catalog_missing_or_invalid"],
+            "checked": 0,
+            "provenance_complete": False,
+            "incomplete_count": 0,
+        }
 
     errors: list[str] = []
     artifacts = list(catalog.get("artifacts") or [])
+    if catalog.get("schema_version") != 2:
+        errors.append("artifact_catalog_schema_version_mismatch")
     if int(catalog.get("record_count") or -1) != len(artifacts):
         errors.append("artifact_catalog_record_count_mismatch")
     if catalog.get("catalog_sha256") != _catalog_digest(artifacts):
@@ -90,6 +117,9 @@ def validate_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
 
     expected_paths = {path.relative_to(root).as_posix() for path in _iter_catalogued_files(root)}
     catalog_paths: set[str] = set()
+    incomplete_paths: list[str] = []
+    status_counts = {"COMPLETE": 0, "INCOMPLETE": 0, "NOT_APPLICABLE": 0}
+
     for meta in artifacts:
         if not isinstance(meta, dict):
             errors.append("artifact_catalog_non_object_entry")
@@ -107,11 +137,29 @@ def validate_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
         if not artifact_path.is_file():
             errors.append(f"artifact_catalog_missing_file:{relative}")
             continue
+
+        expected_meta = build_artifact_meta(root, relative)
         digest = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
         if digest != meta.get("sha256"):
             errors.append(f"artifact_catalog_sha_mismatch:{relative}")
         if artifact_path.stat().st_size != meta.get("bytes"):
             errors.append(f"artifact_catalog_size_mismatch:{relative}")
+        if meta.get("artifact_class") != expected_meta.get("artifact_class"):
+            errors.append(f"artifact_catalog_class_mismatch:{relative}")
+        if meta.get("source_snapshot_ids") != expected_meta.get("source_snapshot_ids"):
+            errors.append(f"artifact_catalog_snapshot_provenance_mismatch:{relative}")
+        if meta.get("completeness") != expected_meta.get("completeness"):
+            errors.append(f"artifact_catalog_completeness_mismatch:{relative}")
+
+        status = str((expected_meta.get("completeness") or {}).get("status") or "INCOMPLETE")
+        status_counts[status] = status_counts.get(status, 0) + 1
+        if status == "INCOMPLETE":
+            incomplete_paths.append(configured)
+            missing_fields = ",".join(
+                str(field)
+                for field in (expected_meta.get("completeness") or {}).get("missing_fields") or []
+            )
+            errors.append(f"artifact_provenance_incomplete:{relative}:{missing_fields}")
 
     missing = sorted(expected_paths - catalog_paths)
     extra = sorted(catalog_paths - expected_paths)
@@ -119,7 +167,27 @@ def validate_artifact_catalog(root: Path = OUT) -> dict[str, Any]:
         errors.append(f"artifact_catalog_missing_paths:{','.join(missing)}")
     if extra:
         errors.append(f"artifact_catalog_extra_paths:{','.join(extra)}")
-    return {"valid": not errors, "errors": errors, "checked": len(artifacts)}
+
+    expected_completeness = {
+        "status": "PASS" if not incomplete_paths else "FAIL",
+        "counts": status_counts,
+        "incomplete_count": len(incomplete_paths),
+        "incomplete_paths": sorted(incomplete_paths),
+    }
+    if catalog.get("completeness") != expected_completeness:
+        errors.append("artifact_catalog_completeness_summary_mismatch")
+
+    return {
+        "valid": not errors,
+        "errors": errors,
+        "checked": len(artifacts),
+        "schema_version": catalog.get("schema_version"),
+        "provenance_complete": not incomplete_paths,
+        "complete_count": status_counts.get("COMPLETE", 0),
+        "incomplete_count": len(incomplete_paths),
+        "not_applicable_count": status_counts.get("NOT_APPLICABLE", 0),
+        "incomplete_paths": sorted(incomplete_paths),
+    }
 
 
 def main() -> int:

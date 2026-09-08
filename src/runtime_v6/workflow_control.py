@@ -158,6 +158,74 @@ def parse_master_issue_values(policy: dict[str, Any], comment_body: str) -> dict
     return values
 
 
+def parse_master_issue_title_values(policy: dict[str, Any], issue_title: str) -> dict[str, str]:
+    values = _parse_key_value_tokens(issue_title, label="master-slot")
+    allowed = {"reason", "logical_slot", "audit", "observed_at"}
+    unknown = set(values) - allowed
+    if unknown:
+        raise WorkflowControlError(f"Unsupported master-slot arguments: {sorted(unknown)}")
+    missing = allowed - set(values)
+    if missing:
+        raise WorkflowControlError(f"Missing master-slot arguments: {sorted(missing)}")
+
+    synthetic = (
+        "FPL_MASTER_SLOT "
+        f"reason={values['reason']} "
+        f"logical_slot={values['logical_slot']} "
+        f"audit={values['audit']}"
+    )
+    parse_master_issue_values(policy, synthetic)
+
+    try:
+        logical_slot = datetime.fromisoformat(values["logical_slot"])
+        observed_at = datetime.fromisoformat(values["observed_at"])
+    except ValueError as exc:
+        raise WorkflowControlError("master-slot timestamps must be ISO-8601") from exc
+    if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+        raise WorkflowControlError("master-slot observed_at must include timezone offset")
+    if observed_at.utcoffset() != timedelta(hours=7):
+        raise WorkflowControlError("master-slot observed_at must use Asia/Jakarta +07:00 offset")
+    if observed_at < logical_slot or observed_at >= logical_slot + timedelta(hours=1):
+        raise WorkflowControlError("master-slot observed_at must belong to the requested logical hour")
+    return values
+
+
+def authorize_issue_edit(
+    policy: dict[str, Any],
+    *,
+    actor: str,
+    repository_owner: str,
+    issue_number: int,
+    issue_title: str,
+) -> str:
+    if actor != repository_owner:
+        raise WorkflowControlError("V6 governed issue edit is restricted to repository owner")
+
+    marker = _issue_command(issue_title)
+    scheduler = dict(policy.get("scheduler_authority") or {})
+    prefetch = dict(policy.get("report_prefetch") or {})
+    controls = {
+        str(scheduler.get("issue_title_marker") or ""): "master_orchestrated",
+        str(prefetch.get("issue_title_marker") or ""): "report_prefetch",
+    }
+    mode = controls.get(marker)
+    if not mode:
+        raise WorkflowControlError("V6 governed issue title marker mismatch")
+
+    control = dict(policy.get(mode) or {})
+    if control.get("enabled") is not True:
+        raise WorkflowControlError(f"V6 {mode} is disabled")
+    expected_issue = int(control.get("control_issue_number") or scheduler.get("control_issue_number") or 0)
+    if int(issue_number) != expected_issue:
+        raise WorkflowControlError("V6 governed control issue number mismatch")
+
+    if mode == "master_orchestrated":
+        parse_master_issue_title_values(policy, issue_title)
+    else:
+        _parse_issue_prefetch_values(issue_title)
+    return mode
+
+
 def authorize_issue(
     policy: dict[str, Any],
     *,
@@ -209,6 +277,20 @@ def classify_invocation(
             return str(prefetch.get("schedule_kind") or "report_prefetch")
         return "governed_issue_command_unknown"
 
+    if event_name == "issues":
+        title = str((event.get("issue") or {}).get("title") or "")
+        marker = _issue_command(title)
+        scheduler = dict(policy.get("scheduler_authority") or {})
+        if marker == str(scheduler.get("issue_title_marker") or ""):
+            parse_master_issue_title_values(policy, title)
+            master = dict(policy.get("master_orchestrated") or {})
+            return str(master.get("issue_schedule_kind") or "chatgpt_scheduler")
+        prefetch = dict(policy.get("report_prefetch") or {})
+        if marker == str(prefetch.get("issue_title_marker") or ""):
+            _parse_issue_prefetch_values(title)
+            return str(prefetch.get("schedule_kind") or "report_prefetch")
+        return "governed_issue_edit_unknown"
+
     if event_name == "workflow_dispatch":
         mode = str((event.get("inputs") or {}).get("mode") or "")
         control = dict(policy.get(mode) or {})
@@ -221,7 +303,7 @@ def classify_invocation(
 
 def _parse_issue_prefetch_values(comment_body: str) -> dict[str, str]:
     values = _parse_key_value_tokens(comment_body, label="report-prefetch")
-    allowed = {"report_kind", "logical_slot", "scope", "gw_from", "gw_to", "force", "reason"}
+    allowed = {"report_kind", "logical_slot", "scope", "gw_from", "gw_to", "force", "reason", "observed_at"}
     unknown = set(values) - allowed
     if unknown:
         raise WorkflowControlError(f"Unsupported report-prefetch arguments: {sorted(unknown)}")
@@ -244,6 +326,7 @@ def resolve_prefetch(
     *,
     event_name: str,
     comment_body: str = "",
+    issue_title: str = "",
     dispatch_values: dict[str, Any] | None = None,
 ) -> tuple[dict[str, str], dict[str, Any]]:
     prefetch = dict(policy.get("report_prefetch") or {})
@@ -252,11 +335,12 @@ def resolve_prefetch(
     if prefetch.get("counts_as_completed_operational_slot") is not False:
         raise WorkflowControlError("V6 report prefetch cannot complete the core operational slot")
 
-    values = (
-        _parse_issue_prefetch_values(comment_body)
-        if event_name == "issue_comment"
-        else {key: value for key, value in dict(dispatch_values or {}).items()}
-    )
+    if event_name == "issue_comment":
+        values = _parse_issue_prefetch_values(comment_body)
+    elif event_name == "issues":
+        values = _parse_issue_prefetch_values(issue_title)
+    else:
+        values = {key: value for key, value in dict(dispatch_values or {}).items()}
     report_kind = str(values.get("report_kind") or "").strip()
     if report_kind not in set(prefetch.get("supported_report_kinds") or []):
         raise WorkflowControlError(f"Unsupported report_kind={report_kind}")
@@ -340,7 +424,10 @@ def _event() -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Governed V6 GitHub workflow control plane")
-    parser.add_argument("command", choices=["authorize-dispatch", "authorize-issue", "classify", "resolve-prefetch"])
+    parser.add_argument(
+        "command",
+        choices=["authorize-dispatch", "authorize-issue", "authorize-issue-edit", "classify", "resolve-prefetch"],
+    )
     parser.add_argument("--policy", default=str(DEFAULT_POLICY_PATH))
     args = parser.parse_args()
     policy = load_policy(args.policy)
@@ -356,6 +443,28 @@ def main() -> int:
                 manual_confirm=str(os.environ.get("V6_MANUAL_CONFIRM") or ""),
             )
             print(f"Governed V6 {mode} dispatch authorized")
+        elif args.command == "authorize-issue-edit":
+            issue_title = str(os.environ.get("V6_ISSUE_TITLE") or "")
+            mode = authorize_issue_edit(
+                policy,
+                actor=str(os.environ.get("GITHUB_ACTOR") or ""),
+                repository_owner=str(os.environ.get("GITHUB_REPOSITORY_OWNER") or ""),
+                issue_number=int(os.environ.get("V6_ISSUE_NUMBER") or 0),
+                issue_title=issue_title,
+            )
+            if mode == "master_orchestrated":
+                values = parse_master_issue_title_values(policy, issue_title)
+                _append(
+                    "GITHUB_ENV",
+                    {
+                        "V6_MASTER_LOGICAL_SLOT": values["logical_slot"],
+                        "V6_MASTER_REASON": values["reason"],
+                        "V6_MASTER_AUDIT": values["audit"],
+                        "V6_MASTER_OBSERVED_AT": values["observed_at"],
+                        "V6_CHATGPT_SCHEDULER_PROOF": "true",
+                    },
+                )
+            print(f"Governed V6 {mode} issue-edit authorized")
         elif args.command == "authorize-issue":
             comment_body = str(os.environ.get("V6_COMMENT_BODY") or "")
             mode = authorize_issue(
@@ -400,6 +509,7 @@ def main() -> int:
                 policy,
                 event_name=event_name,
                 comment_body=str(os.environ.get("V6_COMMENT_BODY") or ""),
+                issue_title=str(os.environ.get("V6_ISSUE_TITLE") or ""),
                 dispatch_values=dispatch_values,
             )
             _append("GITHUB_ENV", env)

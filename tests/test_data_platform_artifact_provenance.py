@@ -158,7 +158,7 @@ def test_catalog_fails_closed_when_canonical_provenance_is_incomplete(tmp_path: 
     catalog = refresh_artifact_catalog(tmp_path)
     report = validate_artifact_catalog(tmp_path)
 
-    assert catalog["schema_version"] == 2
+    assert catalog["schema_version"] == 3
     assert catalog["completeness"]["status"] == "FAIL"
     assert catalog["completeness"]["incomplete_count"] == 1
     assert report["valid"] is False
@@ -182,3 +182,95 @@ def test_catalog_passes_with_valid_current_and_canonical_artifacts(tmp_path: Pat
     assert report["valid"] is True
     assert report["provenance_complete"] is True
     assert report["incomplete_count"] == 0
+
+
+
+def _artifact(catalog: dict, path: str) -> dict:
+    return next(row for row in catalog["artifacts"] if row["path"] == path)
+
+
+def test_republish_preserves_origin_and_updates_publication(tmp_path: Path, monkeypatch) -> None:
+    _write(tmp_path, "current/official_fpl.json", _official_snapshot())
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    monkeypatch.setenv("GITHUB_RUN_ID", "run-a")
+    monkeypatch.setenv("GITHUB_WORKFLOW", "V6 acquisition")
+    monkeypatch.setenv("V6_MASTER_LOGICAL_SLOT", "2026-09-08T20:00:00+07:00")
+
+    first = refresh_artifact_catalog(tmp_path)
+    first_meta = _artifact(first, "data/v6/current/official_fpl.json")
+    assert first_meta["origin_provenance"]["status"] == "PROVEN"
+    assert first_meta["origin_run_id"] == "run-a"
+    assert first_meta["publication_run_id"] == "run-a"
+
+    monkeypatch.setenv("GITHUB_SHA", "b" * 40)
+    monkeypatch.setenv("GITHUB_RUN_ID", "run-b")
+    monkeypatch.setenv("GITHUB_WORKFLOW", "V6 report prefetch")
+    monkeypatch.setenv("V6_REPORT_LOGICAL_SLOT", "2026-09-08T20:30:00+07:00")
+    monkeypatch.delenv("V6_MASTER_LOGICAL_SLOT", raising=False)
+
+    second = refresh_artifact_catalog(tmp_path)
+    second_meta = _artifact(second, "data/v6/current/official_fpl.json")
+    assert second_meta["sha256"] == first_meta["sha256"]
+    assert second_meta["origin_run_id"] == "run-a"
+    assert second_meta["origin_producer_sha"] == "a" * 40
+    assert second_meta["publication_run_id"] == "run-b"
+    assert second_meta["publication_sha"] == "b" * 40
+    assert second_meta["origin_provenance"] == first_meta["origin_provenance"]
+    assert second_meta["publication_provenance"] != first_meta["publication_provenance"]
+    assert validate_artifact_catalog(tmp_path)["valid"] is True
+
+
+def test_changed_payload_gets_new_origin(tmp_path: Path, monkeypatch) -> None:
+    payload = _official_snapshot()
+    _write(tmp_path, "current/official_fpl.json", payload)
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    monkeypatch.setenv("GITHUB_RUN_ID", "run-a")
+    monkeypatch.setenv("GITHUB_WORKFLOW", "V6 acquisition")
+    first = refresh_artifact_catalog(tmp_path)
+    first_meta = _artifact(first, "data/v6/current/official_fpl.json")
+
+    payload["checked_at"] = "2026-09-08T08:00:00+00:00"
+    _write(tmp_path, "current/official_fpl.json", payload)
+    monkeypatch.setenv("GITHUB_SHA", "b" * 40)
+    monkeypatch.setenv("GITHUB_RUN_ID", "run-b")
+    second = refresh_artifact_catalog(tmp_path)
+    second_meta = _artifact(second, "data/v6/current/official_fpl.json")
+
+    assert second_meta["sha256"] != first_meta["sha256"]
+    assert second_meta["origin_run_id"] == "run-b"
+    assert second_meta["publication_run_id"] == "run-b"
+
+
+def test_pre_contract_reused_artifact_marks_origin_unknown_without_fabrication(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _write(tmp_path, "current/official_fpl.json", _official_snapshot())
+    monkeypatch.setenv("GITHUB_SHA", "b" * 40)
+    monkeypatch.setenv("GITHUB_RUN_ID", "republisher")
+    monkeypatch.setenv("GITHUB_WORKFLOW", "V6 report prefetch")
+
+    current_meta = build_artifact_meta(tmp_path, "current/official_fpl.json")
+    legacy_meta = {
+        "path": current_meta["path"],
+        "sha256": current_meta["sha256"],
+        "producer_sha": "legacy-republisher-sha",
+        "producer_run_id": "legacy-republisher-run",
+    }
+    _write(
+        tmp_path,
+        "evidence/artifact_catalog.json",
+        {
+            "schema_version": 2,
+            "record_count": 1,
+            "artifacts": [legacy_meta],
+        },
+    )
+
+    catalog = refresh_artifact_catalog(tmp_path)
+    meta = _artifact(catalog, "data/v6/current/official_fpl.json")
+    assert meta["origin_provenance"]["status"] == "LEGACY_UNKNOWN"
+    assert meta["origin_producer_sha"] is None
+    assert meta["origin_run_id"] is None
+    assert meta["publication_run_id"] == "republisher"
+    assert validate_artifact_catalog(tmp_path)["valid"] is True

@@ -8,6 +8,10 @@ from typing import Any
 
 from .store import HEALTH, MANIFEST, write_json
 
+CHATGPT_SCHEDULER_AUTHORITY = "CHATGPT_FPL_MASTER_MONITOR"
+CHATGPT_SCHEDULER_EPOCH = "CHATGPT_MASTER_V1"
+CHATGPT_GREEN_STREAK = 6
+
 
 def _parse_dt(value: str | None) -> datetime | None:
     if not value:
@@ -16,7 +20,7 @@ def _parse_dt(value: str | None) -> datetime | None:
         parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     except ValueError:
         return None
-    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc) if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
 
 
 def _now(value: datetime | None = None) -> datetime:
@@ -84,12 +88,22 @@ def scheduled_invocation_slot(
     return scheduler_slot_start(anchor, scheduler_interval_minutes)
 
 
+def _is_chatgpt_scheduler(event: str, kind: str) -> bool:
+    return event == "issue_comment" and kind == "chatgpt_scheduler"
+
+
 def _is_master(event: str, kind: str) -> bool:
-    return event in {"workflow_dispatch", "issue_comment"} and kind == "master_orchestrated"
+    return event in {"workflow_dispatch", "issue_comment"} and kind in {"master_orchestrated", "chatgpt_scheduler"}
 
 
 def _is_report_prefetch(event: str, kind: str) -> bool:
     return event in {"workflow_dispatch", "issue_comment"} and kind == "report_prefetch"
+
+
+def _chatgpt_logical_slot(explicit: str | None = None) -> datetime | None:
+    value = explicit if explicit is not None else os.getenv("V6_MASTER_LOGICAL_SLOT")
+    parsed = _parse_dt(value)
+    return parsed
 
 
 def scheduled_slot_already_completed(
@@ -100,39 +114,55 @@ def scheduled_slot_already_completed(
     event_name: str | None = None,
     schedule_kind: str | None = None,
     schedule_expression: str | None = None,
+    logical_slot: str | None = None,
 ) -> bool:
-    """Return True only for acquisition invocations whose core operational slot is done.
+    """Guard duplicate work while still allowing the first ChatGPT proof for a slot.
 
-    Report-prefetch snapshots are authoritative publications but intentionally never
-    complete or suppress the hourly core acquisition slot.
+    Dormant GitHub schedule events are always skipped. A ChatGPT scheduler command is
+    allowed to publish its scheduler proof when the slot was previously fulfilled by
+    another authority, but a second ChatGPT proof for the same logical slot is skipped.
     """
     event = str(event_name or os.getenv("GITHUB_EVENT_NAME") or "local")
     kind = str(schedule_kind or os.getenv("V6_SCHEDULE_KIND") or "")
-    operational_invocation = event == "schedule" or _is_master(event, kind)
+    if event == "schedule" and kind == "schedule_disabled":
+        return True
+
+    chatgpt_scheduler = _is_chatgpt_scheduler(event, kind)
+    operational_invocation = chatgpt_scheduler or _is_master(event, kind) or (
+        event == "schedule" and kind in {"primary", "recovery"}
+    )
     if not operational_invocation:
         return False
 
     previous = dict(previous_manifest or {})
     previous_control = dict(previous.get("runtime_control") or {})
-    last_operational = _parse_dt(previous_control.get("last_operational_cycle_at"))
-    if last_operational is None:
-        last_operational = _parse_dt(previous_control.get("last_authoritative_cycle_at"))
-    if last_operational is None and event == "schedule":
-        last_operational = _parse_dt(previous_control.get("last_scheduled_cycle_at"))
-    if last_operational is None and previous_control.get("counts_as_completed_operational_slot") is True:
-        last_operational = _parse_dt(previous_control.get("cycle_observed_at"))
-    if last_operational is None:
-        return False
-
     interval = max(1, int(scheduler_interval_minutes))
     current = _now(now)
+
+    if chatgpt_scheduler:
+        slot_value = _chatgpt_logical_slot(logical_slot)
+        if slot_value is None:
+            return False
+        current_slot = scheduler_slot_start(slot_value, interval)
+        previous_chatgpt = _parse_dt(previous_control.get("last_chatgpt_scheduler_cycle_at"))
+        if previous_chatgpt is None:
+            return False
+        return scheduler_slot_start(previous_chatgpt, interval) >= current_slot
+
+    previous_operational = _parse_dt(previous_control.get("last_operational_cycle_at"))
+    if previous_operational is None:
+        previous_operational = _parse_dt(previous_control.get("last_authoritative_cycle_at"))
+    if previous_operational is None and previous_control.get("counts_as_completed_operational_slot") is True:
+        previous_operational = _parse_dt(previous_control.get("cycle_observed_at"))
+    if previous_operational is None:
+        return False
+
     if event == "schedule":
         expression = _event_schedule_expression(schedule_expression)
         current_slot = scheduled_invocation_slot(current, interval, expression)
     else:
         current_slot = scheduler_slot_start(current, interval)
-    previous_slot = scheduler_slot_start(last_operational, interval)
-    return previous_slot >= current_slot
+    return scheduler_slot_start(previous_operational, interval) >= current_slot
 
 
 def build_runtime_control(
@@ -144,71 +174,68 @@ def build_runtime_control(
     run_id: str | None = None,
     schedule_kind: str | None = None,
     schedule_expression: str | None = None,
+    logical_slot: str | None = None,
 ) -> dict[str, Any]:
     current = _now(now)
-    scheduler_interval = max(1, int(scheduler_interval_minutes))
+    interval = max(1, int(scheduler_interval_minutes))
     event = str(event_name or os.getenv("GITHUB_EVENT_NAME") or "local")
-    scheduled_cycle = event == "schedule"
-    kind = str(schedule_kind or os.getenv("V6_SCHEDULE_KIND") or ("scheduled" if scheduled_cycle else "manual"))
-    expression = _event_schedule_expression(schedule_expression) if scheduled_cycle else None
-    nominal = nominal_schedule_time(current, expression) if scheduled_cycle else None
-    slot = (
-        scheduled_invocation_slot(current, scheduler_interval, expression)
-        if scheduled_cycle
-        else scheduler_slot_start(current, scheduler_interval)
-    )
+    kind = str(schedule_kind or os.getenv("V6_SCHEDULE_KIND") or "manual")
 
+    github_schedule_event = event == "schedule"
+    github_schedule_disabled = github_schedule_event and kind == "schedule_disabled"
+    chatgpt_scheduler = _is_chatgpt_scheduler(event, kind)
     master_orchestrated = _is_master(event, kind)
     report_prefetch = _is_report_prefetch(event, kind)
     manual_recovery = event == "workflow_dispatch" and kind == "manual_recovery"
-    natural_authority = scheduled_cycle and kind in {"primary", "recovery"}
-    authoritative_runtime_snapshot = natural_authority or master_orchestrated or report_prefetch
-    completes_operational_slot = natural_authority or master_orchestrated
+
+    if chatgpt_scheduler:
+        requested_slot = _chatgpt_logical_slot(logical_slot)
+        if requested_slot is None:
+            raise ValueError("ChatGPT scheduler invocation requires V6_MASTER_LOGICAL_SLOT")
+        slot = scheduler_slot_start(requested_slot, interval)
+        expression = None
+        nominal = None
+    elif github_schedule_event:
+        expression = _event_schedule_expression(schedule_expression)
+        nominal = nominal_schedule_time(current, expression)
+        slot = scheduled_invocation_slot(current, interval, expression)
+    else:
+        expression = None
+        nominal = None
+        slot = scheduler_slot_start(current, interval)
+
+    authoritative_runtime_snapshot = chatgpt_scheduler or master_orchestrated or report_prefetch
+    completes_operational_slot = chatgpt_scheduler or master_orchestrated
 
     previous = dict(previous_manifest or {})
     previous_control = dict(previous.get("runtime_control") or {})
-
-    previous_scheduled = _parse_dt(previous_control.get("last_scheduled_cycle_at"))
-    baseline_inferred = False
-    if previous_scheduled is None:
-        generated = _parse_dt(previous.get("generated_at"))
-        if generated is not None:
-            previous_scheduled = scheduler_slot_start(generated, scheduler_interval)
-            baseline_inferred = True
+    previous_chatgpt = _parse_dt(previous_control.get("last_chatgpt_scheduler_cycle_at"))
+    previous_chatgpt_slot = scheduler_slot_start(previous_chatgpt, interval) if previous_chatgpt else None
 
     missed_cycle_count = 0
-    duplicate_scheduled_cycle = False
-    out_of_order_scheduled_cycle = False
-    previous_scheduled_slot = (
-        scheduler_slot_start(previous_scheduled, scheduler_interval)
-        if previous_scheduled is not None
-        else None
-    )
-    if scheduled_cycle and previous_scheduled_slot is not None:
-        slot_gap = int((slot - previous_scheduled_slot).total_seconds() // (scheduler_interval * 60))
-        duplicate_scheduled_cycle = slot_gap == 0
-        out_of_order_scheduled_cycle = slot_gap < 0
+    duplicate_scheduler_cycle = False
+    out_of_order_scheduler_cycle = False
+    if chatgpt_scheduler and previous_chatgpt_slot is not None:
+        slot_gap = int((slot - previous_chatgpt_slot).total_seconds() // (interval * 60))
+        duplicate_scheduler_cycle = slot_gap == 0
+        out_of_order_scheduler_cycle = slot_gap < 0
         missed_cycle_count = max(0, slot_gap - 1)
 
-    if scheduled_cycle:
-        last_scheduled_cycle = (
-            previous_scheduled_slot
-            if previous_scheduled_slot is not None and previous_scheduled_slot > slot
+    if chatgpt_scheduler:
+        last_chatgpt_scheduler_cycle = (
+            previous_chatgpt_slot
+            if previous_chatgpt_slot is not None and previous_chatgpt_slot > slot
             else slot
         )
     else:
-        last_scheduled_cycle = previous_scheduled
+        last_chatgpt_scheduler_cycle = previous_chatgpt
 
     previous_operational = _parse_dt(previous_control.get("last_operational_cycle_at"))
     if previous_operational is None:
         previous_operational = _parse_dt(previous_control.get("last_authoritative_cycle_at"))
     if previous_operational is None and previous_control.get("counts_as_completed_operational_slot") is True:
         previous_operational = _parse_dt(previous_control.get("cycle_observed_at"))
-    previous_operational_slot = (
-        scheduler_slot_start(previous_operational, scheduler_interval)
-        if previous_operational is not None
-        else None
-    )
+    previous_operational_slot = scheduler_slot_start(previous_operational, interval) if previous_operational else None
     if completes_operational_slot:
         last_operational_cycle = (
             previous_operational_slot
@@ -223,57 +250,114 @@ def build_runtime_control(
         previous_snapshot = _parse_dt(previous_control.get("cycle_observed_at"))
     last_authoritative_snapshot = current if authoritative_runtime_snapshot else previous_snapshot
 
-    if scheduled_cycle:
-        health = (
-            "RED"
-            if missed_cycle_count
-            else ("AMBER" if duplicate_scheduled_cycle or out_of_order_scheduled_cycle else "GREEN")
-        )
+    if chatgpt_scheduler:
+        health = "RED" if missed_cycle_count else ("AMBER" if duplicate_scheduler_cycle or out_of_order_scheduler_cycle else "GREEN")
     elif master_orchestrated or report_prefetch:
         health = "GREEN"
+    elif github_schedule_disabled:
+        health = "AMBER"
+    elif manual_recovery:
+        health = "AMBER"
     else:
         health = "AMBER"
 
+    previous_github_schedule = _parse_dt(previous_control.get("last_github_scheduled_cycle_at"))
+    if previous_github_schedule is None:
+        previous_github_schedule = _parse_dt(previous_control.get("last_scheduled_cycle_at"))
+    if github_schedule_event and not github_schedule_disabled:
+        last_github_schedule = slot
+    else:
+        last_github_schedule = previous_github_schedule
+
     expected = slot if completes_operational_slot else None
-    lag_anchor = nominal if nominal is not None else slot
-    schedule_lag_seconds = max(0.0, (current - lag_anchor).total_seconds()) if scheduled_cycle else None
+    data_slot_already_fulfilled = previous_operational_slot is not None and previous_operational_slot >= slot
 
     return {
-        "schema_version": 5,
+        "schema_version": 6,
         "health": health,
         "event_name": event,
         "schedule_kind": kind,
         "run_id": str(run_id or os.getenv("GITHUB_RUN_ID") or "") or None,
-        "scheduled_cycle": scheduled_cycle,
+        "scheduler_authority": CHATGPT_SCHEDULER_AUTHORITY,
+        "scheduler_epoch": CHATGPT_SCHEDULER_EPOCH,
+        "chatgpt_scheduler": chatgpt_scheduler,
+        "chatgpt_scheduler_proof": chatgpt_scheduler,
+        "github_schedule_event": github_schedule_event,
+        "github_schedule_disabled": github_schedule_disabled,
+        "scheduled_cycle": chatgpt_scheduler,
         "master_orchestrated": master_orchestrated,
         "report_prefetch": report_prefetch,
         "manual_recovery": manual_recovery,
         "authoritative_runtime_snapshot": authoritative_runtime_snapshot,
-        "counts_as_completed_scheduled_slot": scheduled_cycle,
+        "counts_as_completed_scheduled_slot": chatgpt_scheduler,
         "counts_as_completed_operational_slot": completes_operational_slot,
         "counts_as_completed_report_slot": report_prefetch,
-        "scheduler_interval_minutes": scheduler_interval,
+        "scheduler_interval_minutes": interval,
         "schedule_expression": expression,
         "nominal_schedule_at": nominal.isoformat() if nominal else None,
-        "nominal_schedule_resolved": nominal is not None if scheduled_cycle else None,
+        "nominal_schedule_resolved": nominal is not None if github_schedule_event else None,
+        "logical_slot_source": "CHATGPT_COMMAND" if chatgpt_scheduler else "RUNTIME_CLOCK",
         "expected_cycle_at": expected.isoformat() if expected else None,
         "cycle_observed_at": current.isoformat(),
-        "schedule_lag_seconds": round(schedule_lag_seconds, 3) if schedule_lag_seconds is not None else None,
-        "previous_scheduled_cycle_at": previous_scheduled.isoformat() if previous_scheduled else None,
-        "last_scheduled_cycle_at": last_scheduled_cycle.isoformat() if last_scheduled_cycle else None,
+        "schedule_lag_seconds": round(max(0.0, (current - slot).total_seconds()), 3) if chatgpt_scheduler else None,
+        "last_chatgpt_scheduler_cycle_at": last_chatgpt_scheduler_cycle.isoformat() if last_chatgpt_scheduler_cycle else None,
+        "last_scheduled_cycle_at": last_chatgpt_scheduler_cycle.isoformat() if last_chatgpt_scheduler_cycle else None,
+        "last_github_scheduled_cycle_at": last_github_schedule.isoformat() if last_github_schedule else None,
         "last_authoritative_cycle_at": last_operational_cycle.isoformat() if last_operational_cycle else None,
         "last_operational_cycle_at": last_operational_cycle.isoformat() if last_operational_cycle else None,
         "last_authoritative_snapshot_at": last_authoritative_snapshot.isoformat() if last_authoritative_snapshot else None,
         "missed_cycle": missed_cycle_count > 0,
         "missed_cycle_count": missed_cycle_count,
-        "duplicate_scheduled_cycle": duplicate_scheduled_cycle,
-        "out_of_order_scheduled_cycle": out_of_order_scheduled_cycle,
-        "baseline_inferred_from_legacy_manifest": baseline_inferred,
+        "duplicate_scheduled_cycle": duplicate_scheduler_cycle,
+        "out_of_order_scheduled_cycle": out_of_order_scheduler_cycle,
+        "baseline_inferred_from_legacy_manifest": False,
+        "data_slot_already_fulfilled_before_scheduler_proof": data_slot_already_fulfilled if chatgpt_scheduler else False,
         "single_logical_acquisition_per_scheduler_slot": True,
         "report_prefetch_cannot_complete_core_operational_slot": True,
-        "scheduled_slot_uses_nominal_cron": scheduled_cycle and nominal is not None,
+        "scheduled_slot_uses_nominal_cron": False,
     }
 
+
+def _legacy_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "tracked_slots": len(rows),
+        "primary": sum(row.get("fulfilled_by") == "PRIMARY" for row in rows),
+        "recovery": sum(row.get("fulfilled_by") == "RECOVERY" for row in rows),
+        "master": sum(row.get("fulfilled_by") == "MASTER" for row in rows),
+        "missing": sum(row.get("fulfilled_by") == "MISSING" for row in rows),
+        "health_authority": "HISTORICAL_ONLY",
+    }
+
+
+def _densify_chatgpt_rows(rows: list[dict[str, Any]], interval_minutes: int, window_size: int) -> list[dict[str, Any]]:
+    existing = {
+        str(row.get("slot")): dict(row)
+        for row in rows
+        if isinstance(row, dict) and _parse_dt(str(row.get("slot") or "")) is not None
+    }
+    ordered = sorted((_parse_dt(slot), slot) for slot in existing)
+    if ordered:
+        cursor = ordered[0][0]
+        end = ordered[-1][0]
+        assert cursor is not None and end is not None
+        step = timedelta(minutes=max(1, int(interval_minutes)))
+        while cursor <= end:
+            key = cursor.isoformat()
+            if key not in existing:
+                existing[key] = {
+                    "slot": key,
+                    "fulfilled_by": "MISSING",
+                    "fulfilled": False,
+                    "chatgpt_scheduler_fulfillment": False,
+                    "run_id": None,
+                    "observed_at": None,
+                    "schedule_kind": "chatgpt_scheduler",
+                    "schedule_lag_seconds": None,
+                    "missing_reason": "NO_CHATGPT_MASTER_SCHEDULER_PROOF_BEFORE_LATER_SLOT",
+                    "missing_classification_is_retrospective": True,
+                }
+            cursor += step
+    return [existing[key] for key in sorted(existing)][-max(1, int(window_size)):]
 
 
 def build_operational_slots(
@@ -282,81 +366,110 @@ def build_operational_slots(
     *,
     window_size: int = 48,
 ) -> dict[str, Any]:
-    """Build factual rolling fulfillment telemetry without guessing skipped cron arrivals."""
+    """Build current ChatGPT scheduler epoch plus immutable legacy scheduler evidence."""
     limit = max(1, int(window_size))
     previous = dict(previous_ledger or {})
-    rows = [
-        dict(row)
-        for row in previous.get("slots") or []
-        if isinstance(row, dict) and row.get("slot")
-    ]
+    previous_schema = int(previous.get("schema_version") or 0)
+
+    if previous_schema >= 3:
+        legacy_rows = [dict(row) for row in previous.get("legacy_slots") or [] if isinstance(row, dict)]
+        active_rows = [dict(row) for row in previous.get("slots") or [] if isinstance(row, dict)]
+        auxiliary_rows = [dict(row) for row in previous.get("auxiliary_operational_slots") or [] if isinstance(row, dict)]
+        epoch = dict(previous.get("epoch") or {})
+    else:
+        legacy_rows = [dict(row) for row in previous.get("slots") or [] if isinstance(row, dict)]
+        active_rows = []
+        auxiliary_rows = []
+        epoch = {}
 
     if control.get("counts_as_completed_operational_slot") is True and control.get("expected_cycle_at"):
-        kind = str(control.get("schedule_kind") or "")
-        fulfilled_by = (
-            "PRIMARY"
-            if control.get("scheduled_cycle") is True and kind == "primary"
-            else "RECOVERY"
-            if control.get("scheduled_cycle") is True and kind == "recovery"
-            else "MASTER"
-            if control.get("master_orchestrated") is True
-            else "OTHER"
-        )
         slot = str(control["expected_cycle_at"])
-        rows = [row for row in rows if str(row.get("slot")) != slot]
-        rows.append(
-            {
-                "slot": slot,
-                "fulfilled_by": fulfilled_by,
-                "natural_scheduler_fulfillment": fulfilled_by in {"PRIMARY", "RECOVERY"},
-                "master_orchestrated_fulfillment": fulfilled_by == "MASTER",
-                "run_id": control.get("run_id"),
-                "observed_at": control.get("cycle_observed_at"),
-                "schedule_kind": control.get("schedule_kind"),
-                "schedule_lag_seconds": control.get("schedule_lag_seconds"),
-            }
-        )
+        if control.get("chatgpt_scheduler") is True:
+            active_rows = [row for row in active_rows if str(row.get("slot")) != slot]
+            active_rows.append(
+                {
+                    "slot": slot,
+                    "fulfilled_by": "CHATGPT",
+                    "fulfilled": True,
+                    "chatgpt_scheduler_fulfillment": True,
+                    "run_id": control.get("run_id"),
+                    "observed_at": control.get("cycle_observed_at"),
+                    "schedule_kind": "chatgpt_scheduler",
+                    "schedule_lag_seconds": control.get("schedule_lag_seconds"),
+                    "data_slot_already_fulfilled_before_scheduler_proof": control.get("data_slot_already_fulfilled_before_scheduler_proof", False),
+                }
+            )
+            epoch.setdefault("id", CHATGPT_SCHEDULER_EPOCH)
+            epoch.setdefault("authority", CHATGPT_SCHEDULER_AUTHORITY)
+            epoch.setdefault("start_at", slot)
+            epoch.setdefault("green_after_consecutive_slots", CHATGPT_GREEN_STREAK)
+        else:
+            auxiliary_rows = [row for row in auxiliary_rows if str(row.get("slot")) != slot]
+            auxiliary_rows.append(
+                {
+                    "slot": slot,
+                    "fulfilled_by": "MASTER_AUXILIARY",
+                    "fulfilled": True,
+                    "run_id": control.get("run_id"),
+                    "observed_at": control.get("cycle_observed_at"),
+                    "schedule_kind": control.get("schedule_kind"),
+                }
+            )
 
-    rows.sort(key=lambda row: str(row.get("slot")))
-    rows = rows[-limit:]
-    tracked = len(rows)
-    primary = sum(row.get("fulfilled_by") == "PRIMARY" for row in rows)
-    recovery = sum(row.get("fulfilled_by") == "RECOVERY" for row in rows)
-    master = sum(row.get("fulfilled_by") == "MASTER" for row in rows)
-    natural = primary + recovery
-    natural_ratio = round(natural / tracked, 4) if tracked else None
-    master_ratio = round(master / tracked, 4) if tracked else None
+    active_rows = _densify_chatgpt_rows(active_rows, int(control.get("scheduler_interval_minutes") or 60), limit)
+    auxiliary_rows = sorted(auxiliary_rows, key=lambda row: str(row.get("slot")))[-limit:]
+    legacy_rows = sorted(legacy_rows, key=lambda row: str(row.get("slot")))[-limit:]
 
-    if tracked < 6:
-        reliability_health = "AMBER"
-        maturity = "WARMING_UP"
-    elif natural_ratio is not None and natural_ratio >= 0.90:
-        reliability_health = "GREEN"
-        maturity = "ESTABLISHED"
-    elif natural_ratio is not None and natural_ratio >= 0.75:
-        reliability_health = "AMBER"
-        maturity = "ESTABLISHED"
+    tracked = len(active_rows)
+    fulfilled = sum(row.get("fulfilled") is True and row.get("fulfilled_by") == "CHATGPT" for row in active_rows)
+    missing = sum(row.get("fulfilled_by") == "MISSING" for row in active_rows)
+    ratio = round(fulfilled / tracked, 4) if tracked else None
+    consecutive = 0
+    for row in reversed(active_rows):
+        if row.get("fulfilled_by") == "CHATGPT" and row.get("fulfilled") is True:
+            consecutive += 1
+        else:
+            break
+
+    if tracked < CHATGPT_GREEN_STREAK:
+        health, maturity = "AMBER", "WARMING_UP"
+    elif consecutive >= CHATGPT_GREEN_STREAK:
+        health, maturity = "GREEN", "ESTABLISHED"
+    elif ratio is not None and ratio >= 0.80:
+        health, maturity = "AMBER", "ESTABLISHED"
     else:
-        reliability_health = "RED"
-        maturity = "ESTABLISHED"
+        health, maturity = "RED", "ESTABLISHED"
 
     return {
-        "schema_version": 1,
+        "schema_version": 3,
         "generated_at": control.get("cycle_observed_at"),
         "window_size": limit,
-        "slots": rows,
+        "epoch": epoch or {
+            "id": CHATGPT_SCHEDULER_EPOCH,
+            "authority": CHATGPT_SCHEDULER_AUTHORITY,
+            "start_at": None,
+            "green_after_consecutive_slots": CHATGPT_GREEN_STREAK,
+        },
+        "slots": active_rows,
+        "auxiliary_operational_slots": auxiliary_rows,
+        "legacy_slots": legacy_rows,
+        "legacy_summary": _legacy_summary(legacy_rows),
         "summary": {
-            "health": reliability_health,
+            "health": health,
             "maturity": maturity,
+            "scheduler_authority": CHATGPT_SCHEDULER_AUTHORITY,
+            "scheduler_epoch": CHATGPT_SCHEDULER_EPOCH,
             "tracked_operational_slots": tracked,
-            "fulfilled_by_primary": primary,
-            "fulfilled_by_recovery": recovery,
-            "fulfilled_by_master": master,
-            "natural_fulfilled_slots": natural,
-            "natural_fulfillment_ratio": natural_ratio,
-            "master_reliance_ratio": master_ratio,
-            "reliability_basis": "FULFILLED_OPERATIONAL_SLOTS_ONLY",
-            "post_fulfillment_skipped_cron_arrivals_observable": False,
+            "fulfilled_operational_slots": fulfilled,
+            "missing_operational_slots": missing,
+            "fulfilled_by_chatgpt": fulfilled,
+            "chatgpt_fulfillment_ratio": ratio,
+            "scheduler_fulfillment_ratio": ratio,
+            "consecutive_successful_slots": consecutive,
+            "required_consecutive_successes": CHATGPT_GREEN_STREAK,
+            "auxiliary_master_slots": len(auxiliary_rows),
+            "reliability_basis": "CHATGPT_MASTER_LOGICAL_HOURLY_SLOTS",
+            "legacy_github_scheduler_excluded_from_current_health": True,
             "data_availability_health_is_separate": True,
         },
         "governance": {
@@ -365,9 +478,14 @@ def build_operational_slots(
             "decision_authority": "NONE",
             "prediction_authority": "NONE",
             "optimizer_authority": "NONE",
-            "natural_scheduler_presence_is_not_inferred": True,
+            "chatgpt_scheduler_is_current_health_authority": True,
+            "generic_master_is_not_scheduler_health_proof": True,
+            "github_scheduler_is_not_current_health_authority": True,
+            "legacy_scheduler_evidence_preserved": True,
+            "missing_slots_are_retrospective_only": True,
         },
     }
+
 
 def apply_runtime_control(
     manifest: dict[str, Any],
@@ -378,6 +496,7 @@ def apply_runtime_control(
     run_id: str | None = None,
     schedule_kind: str | None = None,
     schedule_expression: str | None = None,
+    logical_slot: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     out = dict(manifest)
     polling = dict(out.get("polling") or {})
@@ -390,15 +509,16 @@ def apply_runtime_control(
         run_id=run_id,
         schedule_kind=schedule_kind,
         schedule_expression=schedule_expression,
+        logical_slot=logical_slot,
     )
 
     control_failures: list[str] = []
     if control["missed_cycle"]:
-        control_failures.append("MISSED_SCHEDULED_CYCLE")
+        control_failures.append("MISSED_CHATGPT_SCHEDULER_SLOT")
     if control["duplicate_scheduled_cycle"]:
-        control_failures.append("DUPLICATE_SCHEDULED_CYCLE")
+        control_failures.append("DUPLICATE_CHATGPT_SCHEDULER_SLOT")
     if control["out_of_order_scheduled_cycle"]:
-        control_failures.append("OUT_OF_ORDER_SCHEDULED_CYCLE")
+        control_failures.append("OUT_OF_ORDER_CHATGPT_SCHEDULER_SLOT")
     if control["manual_recovery"]:
         control_failures.append("NON_AUTHORITATIVE_MANUAL_RECOVERY")
 
@@ -410,29 +530,34 @@ def apply_runtime_control(
     governance = dict(out.get("governance") or {})
     governance.update(
         {
-            "production_ingestion_schedule_only": control["scheduled_cycle"],
+            "production_ingestion_schedule_only": False,
             "production_authoritative_snapshots_require_schedule": False,
             "production_authoritative_snapshots_require_governed_trigger": True,
-            "authoritative_trigger_kinds": ["primary", "recovery", "master_orchestrated", "report_prefetch"],
-            "operational_slot_completing_trigger_kinds": ["primary", "recovery", "master_orchestrated"],
+            "scheduler_authority": CHATGPT_SCHEDULER_AUTHORITY,
+            "scheduler_epoch": CHATGPT_SCHEDULER_EPOCH,
+            "github_natural_scheduler_is_authority": False,
+            "chatgpt_scheduler_is_authority": True,
+            "authoritative_trigger_kinds": ["chatgpt_scheduler", "master_orchestrated", "report_prefetch"],
+            "operational_slot_completing_trigger_kinds": ["chatgpt_scheduler", "master_orchestrated"],
+            "scheduler_health_proof_trigger_kind": "chatgpt_scheduler",
             "master_orchestrated_is_authoritative": True,
+            "generic_master_dispatch_does_not_count_as_scheduler_health_proof": True,
             "report_prefetch_is_authoritative": True,
             "report_prefetch_completes_core_operational_slot": False,
             "governed_manual_recovery_enabled": True,
             "manual_recovery_is_authoritative": False,
             "single_logical_acquisition_per_scheduler_slot": True,
             "runtime_schedule_health_is_manifested": True,
+            "github_scheduled_recovery_enabled": False,
             "scheduled_recovery_is_idempotent": True,
-            "scheduled_slot_uses_nominal_cron": True,
+            "scheduled_slot_uses_nominal_cron": False,
         }
     )
     out["governance"] = governance
-
     out["data_availability_health"] = str(out.get("overall") or "AMBER")
     out["runtime_control_health"] = control["health"]
     governance["scheduler_reliability_does_not_override_data_availability"] = True
     out["governance"] = governance
-
     return out, control
 
 
@@ -453,7 +578,8 @@ def main() -> int:
     updated["governance"] = {
         **dict(updated.get("governance") or {}),
         "operational_slot_ledger_is_factual_only": True,
-        "natural_scheduler_presence_is_not_inferred": True,
+        "chatgpt_scheduler_is_current_health_authority": True,
+        "legacy_github_scheduler_evidence_is_historical_only": True,
         "scheduler_reliability_is_separate_from_data_availability": True,
     }
     write_json(MANIFEST, updated)

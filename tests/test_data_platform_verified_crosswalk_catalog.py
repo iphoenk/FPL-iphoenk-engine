@@ -124,7 +124,24 @@ def test_artifact_catalog_is_non_recursive_deterministic_and_tamper_evident(tmp_
     (tmp_path / "health").mkdir(parents=True)
     (tmp_path / "manifest.json").write_text(json.dumps({"schema_version": 1}), encoding="utf-8")
     (tmp_path / "current" / "one.json").write_text(
-        json.dumps({"source_id": "one", "record_count": 1}), encoding="utf-8"
+        json.dumps(
+            {
+                "schema_version": 4,
+                "source_id": "one",
+                "checked_at": "2026-09-08T07:00:00+00:00",
+                "current_run_action": "FETCHED",
+                "availability": "AVAILABLE",
+                "record_count": 1,
+                "attempts": [
+                    {
+                        "request_id": "main",
+                        "status": "AVAILABLE",
+                        "sha256": "a" * 64,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
     )
     (tmp_path / "health" / "publish_integrity.json").write_text(
         json.dumps({"status": "OLD"}), encoding="utf-8"
@@ -133,6 +150,7 @@ def test_artifact_catalog_is_non_recursive_deterministic_and_tamper_evident(tmp_
     first = refresh_artifact_catalog(tmp_path)
     assert first["record_count"] == 2
     assert first["primary_keys"] == ["path"]
+    assert first["completeness"]["status"] == "PASS"
     assert all(not row["path"].endswith("artifact_catalog.json") for row in first["artifacts"])
     assert all(not row["path"].endswith("publish_integrity.json") for row in first["artifacts"])
     assert validate_artifact_catalog(tmp_path)["valid"] is True

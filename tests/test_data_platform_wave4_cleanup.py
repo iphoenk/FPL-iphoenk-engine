@@ -96,38 +96,41 @@ def test_provider_season_bindings_are_tokenized_and_resolve_from_one_contract() 
     assert consumer["season"] == load_season_contract()["values"]["canonical"]
 
 
-def test_operational_reliability_counts_retrospective_missing_slots() -> None:
+def test_legacy_github_scheduler_rows_move_out_of_current_health_epoch() -> None:
     ledger = {
-        "schema_version": 1,
+        "schema_version": 2,
         "slots": [
-            {"slot": "2026-09-07T15:00:00+00:00", "fulfilled_by": "RECOVERY"},
-            {"slot": "2026-09-07T16:00:00+00:00", "fulfilled_by": "PRIMARY"},
-            {"slot": "2026-09-07T19:00:00+00:00", "fulfilled_by": "RECOVERY"},
-            {"slot": "2026-09-07T20:00:00+00:00", "fulfilled_by": "PRIMARY"},
+            {"slot": "2026-09-07T15:00:00+00:00", "fulfilled_by": "RECOVERY", "fulfilled": True},
+            {"slot": "2026-09-07T16:00:00+00:00", "fulfilled_by": "PRIMARY", "fulfilled": True},
+            {"slot": "2026-09-07T17:00:00+00:00", "fulfilled_by": "MISSING", "fulfilled": False},
+            {"slot": "2026-09-07T18:00:00+00:00", "fulfilled_by": "MISSING", "fulfilled": False},
+            {"slot": "2026-09-07T19:00:00+00:00", "fulfilled_by": "RECOVERY", "fulfilled": True},
+            {"slot": "2026-09-07T20:00:00+00:00", "fulfilled_by": "PRIMARY", "fulfilled": True},
         ],
     }
     dense = densify_operational_slots(ledger, interval_minutes=60)
     summary = dense["summary"]
-    assert summary["tracked_operational_slots"] == 6
-    assert summary["fulfilled_operational_slots"] == 4
-    assert summary["missing_operational_slots"] == 2
-    assert summary["natural_fulfillment_ratio"] == 0.6667
-    assert summary["operational_fulfillment_ratio"] == 0.6667
-    assert summary["health"] == "RED"
-    missing = [row for row in dense["slots"] if row["fulfilled_by"] == "MISSING"]
-    assert [row["slot"] for row in missing] == [
-        "2026-09-07T17:00:00+00:00",
-        "2026-09-07T18:00:00+00:00",
-    ]
-    assert all(row["missing_classification_is_retrospective"] is True for row in missing)
+    assert dense["schema_version"] == 3
+    assert dense["slots"] == []
+    assert len(dense["legacy_slots"]) == 6
+    assert summary["tracked_operational_slots"] == 0
+    assert summary["fulfilled_operational_slots"] == 0
+    assert summary["missing_operational_slots"] == 0
+    assert summary["health"] == "AMBER"
+    assert summary["maturity"] == "WARMING_UP"
+    assert summary["legacy_github_scheduler_excluded_from_current_health"] is True
+    assert dense["governance"]["legacy_scheduler_evidence_preserved"] is True
 
 
-def test_operational_reliability_does_not_infer_beyond_latest_observed_slot() -> None:
+def test_legacy_scheduler_history_does_not_create_future_chatgpt_slots() -> None:
     ledger = {
+        "schema_version": 2,
         "slots": [
-            {"slot": "2026-09-07T20:00:00+00:00", "fulfilled_by": "PRIMARY"},
+            {"slot": "2026-09-07T20:00:00+00:00", "fulfilled_by": "PRIMARY", "fulfilled": True},
         ]
     }
     dense = densify_operational_slots(ledger, interval_minutes=60)
-    assert len(dense["slots"]) == 1
-    assert dense["slots"][0]["slot"] == "2026-09-07T20:00:00+00:00"
+    assert dense["slots"] == []
+    assert len(dense["legacy_slots"]) == 1
+    assert dense["legacy_slots"][0]["slot"] == "2026-09-07T20:00:00+00:00"
+    assert dense["summary"]["tracked_operational_slots"] == 0

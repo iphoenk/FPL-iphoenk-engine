@@ -2,24 +2,8 @@ name: FPL V6 CI contracts
 
 on:
   pull_request:
-    # GitHub scopes path filters per event. Keep this list identical to
-    # push.paths below; config/v6/** includes schedule_policy.json.
-    paths:
-      - "config/v6/**"
-      - "docs/V6_*.md"
-      - "src/runtime_v6/**"
-      - "requirements-v6.lock"
-      - "requirements-v6-ci.lock"
-      - "tests/test_data_ingestion_engine.py"
-      - "tests/test_adaptive_polling.py"
-      - "tests/test_data_platform_*.py"
-      - "tests/test_data_platform_production_acceptance.py"
-      - ".github/workflows/v6-ci.yml"
-      - ".github/workflows/v6-natural-data-ingestion.yml"
   push:
     branches: [main]
-    # Intentionally mirrors pull_request.paths above. Do not change one side
-    # without the other; keeping event-local filters avoids repo-wide V6 CI.
     paths:
       - "config/v6/**"
       - "docs/V6_*.md"
@@ -37,12 +21,46 @@ permissions:
   contents: read
 
 concurrency:
-  group: fpl-v6-ci-${{ github.ref }}
+  group: fpl-v6-ci-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  detect-v6-change:
+    name: detect-v6-change
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      v6_changed: ${{ steps.detect.outputs.v6_changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect V6-owned change surface
+        id: detect
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" != "pull_request" ]]; then
+            echo "v6_changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          printf '%s\n' "$changed"
+          if printf '%s\n' "$changed" | grep -Eq '^(config/v6/|docs/V6_.*\.md$|src/runtime_v6/|requirements-v6(-ci)?\.lock$|tests/test_data_ingestion_engine\.py$|tests/test_adaptive_polling\.py$|tests/test_data_platform_.*\.py$|\.github/workflows/v6-ci\.yml$|\.github/workflows/v6-natural-data-ingestion\.yml$)'; then
+            echo "v6_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "v6_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
   v6-verify:
     name: v6-verify
+    needs: detect-v6-change
+    if: needs.detect-v6-change.outputs.v6_changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -75,6 +93,8 @@ jobs:
 
   v6-publisher-config:
     name: v6-publisher-config
+    needs: detect-v6-change
+    if: needs.detect-v6-change.outputs.v6_changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     environment: v6-runtime-publisher
@@ -110,3 +130,33 @@ jobs:
               ;;
           esac
           echo "Dedicated V6 publisher configuration is present"
+
+  v6-governance-gate:
+    name: v6-governance-gate
+    needs: [detect-v6-change, v6-verify, v6-publisher-config]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Enforce V6 gate only when V6 is touched
+        env:
+          DETECT_RESULT: ${{ needs.detect-v6-change.result }}
+          V6_CHANGED: ${{ needs.detect-v6-change.outputs.v6_changed }}
+          VERIFY_RESULT: ${{ needs.v6-verify.result }}
+          PUBLISHER_RESULT: ${{ needs.v6-publisher-config.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$DETECT_RESULT" != "success" ]]; then
+            echo "V6 change detection failed"
+            exit 1
+          fi
+          if [[ "$V6_CHANGED" != "true" ]]; then
+            echo "Non-V6 PR: V6 governance gate satisfied without running V6 suite"
+            exit 0
+          fi
+          if [[ "$VERIFY_RESULT" != "success" || "$PUBLISHER_RESULT" != "success" ]]; then
+            echo "V6 governance gate failed: verify=$VERIFY_RESULT publisher=$PUBLISHER_RESULT"
+            exit 1
+          fi
+          echo "V6 governance gate passed"

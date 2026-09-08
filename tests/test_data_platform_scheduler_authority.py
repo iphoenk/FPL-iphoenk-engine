@@ -32,7 +32,10 @@ def test_v6_ingestion_is_executor_triggered_only() -> None:
     text = workflow.read_text(encoding="utf-8")
 
     assert "issue_comment:" in text
+    assert "issues:" in text
     assert "workflow_dispatch:" in text
     assert not SCHEDULE_KEY.search(text)
     assert "/v6-master-acquire" in text
+    assert "FPL_MASTER_SLOT" in text
+    assert "authorize-issue-edit" in text
     assert "single_logical_acquisition_per_scheduler_slot" in text

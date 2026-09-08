@@ -280,7 +280,11 @@ def assess_snapshot(
     except (TypeError, ValueError):
         scheduler_streak = 0
     try:
-        scheduler_required_streak = int(operational_summary.get("required_consecutive_successful_slots") or 0)
+        scheduler_required_streak = int(
+            operational_summary.get("required_consecutive_successes")
+            or operational_summary.get("required_consecutive_successful_slots")
+            or 0
+        )
     except (TypeError, ValueError):
         scheduler_required_streak = 0
     scheduler_degraded = bool(scheduler_warnings) or str(scheduler_health or "").upper() not in {"", "GREEN"}

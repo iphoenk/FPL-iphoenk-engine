@@ -83,7 +83,7 @@ def _write_snapshot(
         "maturity": "ESTABLISHED",
         "missing_operational_slots": 0,
         "consecutive_successful_slots": 6,
-        "required_consecutive_successful_slots": 6,
+        "required_consecutive_successes": 6,
     }
 
     _write_json(root / "manifest.json", manifest)
@@ -202,6 +202,7 @@ def test_chatgpt_scheduler_snapshot_is_authoritative_runtime_data(tmp_path: Path
     assert result["usable"] is True
     assert result["runtime_schedule_kind"] == "chatgpt_scheduler"
     assert result["scheduler_reliability_health"] == "GREEN"
+    assert result["scheduler_required_consecutive_successful_slots"] == 6
     assert result["scheduler_reliability_degraded"] is False
     assert result["failures"] == []
     assert result["governance"]["consumer_accepts_chatgpt_scheduler_authority"] is True
@@ -287,7 +288,7 @@ def test_report_prefetch_does_not_hide_operational_scheduler_gap(tmp_path: Path)
             "fulfilled_operational_slots": 3,
             "missing_operational_slots": 1,
             "consecutive_successful_slots": 1,
-            "required_consecutive_successful_slots": 6,
+            "required_consecutive_successes": 6,
         },
     )
 
@@ -318,7 +319,7 @@ def test_warming_up_ledger_is_visible_without_becoming_data_failure(tmp_path: Pa
             "maturity": "WARMING_UP",
             "missing_operational_slots": 0,
             "consecutive_successful_slots": 2,
-            "required_consecutive_successful_slots": 6,
+            "required_consecutive_successes": 6,
         },
     )
 
@@ -327,6 +328,7 @@ def test_warming_up_ledger_is_visible_without_becoming_data_failure(tmp_path: Pa
     assert result["state"] == "FRESH"
     assert result["usable"] is True
     assert result["scheduler_reliability_health"] == "AMBER"
+    assert result["scheduler_required_consecutive_successful_slots"] == 6
     assert result["scheduler_reliability_degraded"] is True
     assert result["scheduler_reliability_warnings"] == []
     assert result["failures"] == []

@@ -132,32 +132,7 @@ jobs:
 
       - name: Guard already-published logical scheduler slot
         id: slot_guard
-        shell: bash
-        run: |
-          python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-          from src.runtime_v6.registry import load_registry
-          from src.runtime_v6.runtime_control import scheduled_slot_already_completed
-
-          if os.environ.get("V6_SCHEDULE_KIND") == "report_prefetch":
-              skip = False
-          else:
-              previous_path = Path(os.environ["V6_PREVIOUS_MANIFEST"])
-              previous = json.loads(previous_path.read_text(encoding="utf-8")) if previous_path.exists() else {}
-              registry = load_registry()
-              interval = int((registry.get("cadence") or {}).get("scheduler_interval_minutes") or 60)
-              skip = scheduled_slot_already_completed(
-                  previous,
-                  scheduler_interval_minutes=interval,
-                  event_name=os.environ.get("GITHUB_EVENT_NAME"),
-                  schedule_kind=os.environ.get("V6_SCHEDULE_KIND"),
-              )
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
-              handle.write(f"skip={'true' if skip else 'false'}\n")
-          print(f"logical scheduler slot already published: {skip}")
-          PY
+        run: python -m src.runtime_v6.workflow_control slot-guard
 
       - name: Install V6 locked runtime dependencies
         if: steps.slot_guard.outputs.skip != 'true'

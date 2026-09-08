@@ -47,6 +47,8 @@ on:
         type: boolean
   issue_comment:
     types: [created]
+  issues:
+    types: [edited]
 
 permissions:
   contents: read
@@ -62,13 +64,24 @@ env:
 jobs:
   collect:
     if: >-
-      github.event_name != 'issue_comment' ||
+      github.event_name == 'workflow_dispatch' ||
       (
+        github.event_name == 'issue_comment' &&
         github.event.issue.number == 431 &&
         github.actor == github.repository_owner &&
         (
           startsWith(github.event.comment.body, '/v6-master-acquire') ||
           startsWith(github.event.comment.body, '/v6-report-prefetch')
+        )
+      ) ||
+      (
+        github.event_name == 'issues' &&
+        github.event.issue.number == 431 &&
+        github.actor == github.repository_owner &&
+        github.event.changes.title &&
+        (
+          startsWith(github.event.issue.title, 'FPL_MASTER_SLOT ') ||
+          startsWith(github.event.issue.title, 'FPL_REPORT_PREFETCH ')
         )
       )
     runs-on: ubuntu-latest
@@ -100,6 +113,13 @@ jobs:
           V6_COMMENT_BODY: ${{ github.event.comment.body }}
           V6_ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: python -m src.runtime_v6.workflow_control authorize-issue
+
+      - name: Authorize governed issue-title control event
+        if: github.event_name == 'issues'
+        env:
+          V6_ISSUE_TITLE: ${{ github.event.issue.title }}
+          V6_ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: python -m src.runtime_v6.workflow_control authorize-issue-edit
 
       - name: Hydrate previous V6 last-good snapshot fail-closed
         shell: bash
@@ -198,6 +218,7 @@ jobs:
           V6_DISPATCH_GW_TO: ${{ inputs.gw_to }}
           V6_DISPATCH_FORCE: ${{ inputs.force }}
           V6_COMMENT_BODY: ${{ github.event.comment.body }}
+          V6_ISSUE_TITLE: ${{ github.event.issue.title }}
         run: python -m src.runtime_v6.workflow_control resolve-prefetch
 
       - name: Run active V6 acquisition cycle
@@ -332,7 +353,7 @@ jobs:
                   assert health["fresh_for_target_report"] == prefetch["fresh_for_target_report"]
                   if report_kind == "05:30_price":
                       assert prefetch["telemetry"]["request_count"] == 0
-          elif event_name == "issue_comment" and schedule_kind == "chatgpt_scheduler":
+          elif event_name in {"issue_comment", "issues"} and schedule_kind == "chatgpt_scheduler":
               requested = datetime.fromisoformat(os.environ["V6_MASTER_LOGICAL_SLOT"]).astimezone(timezone.utc)
               assert control["chatgpt_scheduler"] is True
               assert control["chatgpt_scheduler_proof"] is True
@@ -560,6 +581,16 @@ jobs:
           (
             startsWith(github.event.comment.body, '/v6-master-acquire') ||
             startsWith(github.event.comment.body, '/v6-report-prefetch')
+          )
+        ) ||
+        (
+          github.event_name == 'issues' &&
+          github.event.issue.number == 431 &&
+          github.actor == github.repository_owner &&
+          github.event.changes.title &&
+          (
+            startsWith(github.event.issue.title, 'FPL_MASTER_SLOT ') ||
+            startsWith(github.event.issue.title, 'FPL_REPORT_PREFETCH ')
           )
         )
       )

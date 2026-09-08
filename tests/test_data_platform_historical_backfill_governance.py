@@ -68,7 +68,8 @@ def test_historical_backfill_adds_no_scheduler_or_second_publisher():
     assert policy["report_prefetch"]["independent_cron"] is False
     assert workflow.count('\n  publish:\n') == 1
     assert workflow.count('Publish atomic V6 runtime snapshot') == 1
-    assert workflow.count('"historical_backfill.json"') == 1
+    validator = Path("src/runtime_v6/production_validate.py").read_text(encoding="utf-8")
+    assert validator.count('"historical_backfill.json"') == 1
 
 
 def test_historical_command_documented_as_factual_only():

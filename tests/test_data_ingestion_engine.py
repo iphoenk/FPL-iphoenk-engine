@@ -291,7 +291,8 @@ def test_workflow_does_not_inject_dropped_paid_provider_secrets_or_hardcode_sour
     assert "API_FOOTBALL_KEY" not in workflow
     assert "FOOTBALL_DATA_ORG_TOKEN" not in workflow
     assert 'manifest["source_count"] == 20' not in workflow
-    assert 'registry["activation"]["active_source_count"]' in workflow
+    validator = Path("src/runtime_v6/production_validate.py").read_text(encoding="utf-8")
+    assert 'registry["activation"]["active_source_count"]' in validator
 
 
 def test_workflow_force_adds_ignored_runtime_snapshot():

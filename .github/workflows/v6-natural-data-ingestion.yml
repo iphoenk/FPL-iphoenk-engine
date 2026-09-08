@@ -132,32 +132,7 @@ jobs:
 
       - name: Guard already-published logical scheduler slot
         id: slot_guard
-        shell: bash
-        run: |
-          python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-          from src.runtime_v6.registry import load_registry
-          from src.runtime_v6.runtime_control import scheduled_slot_already_completed
-
-          if os.environ.get("V6_SCHEDULE_KIND") == "report_prefetch":
-              skip = False
-          else:
-              previous_path = Path(os.environ["V6_PREVIOUS_MANIFEST"])
-              previous = json.loads(previous_path.read_text(encoding="utf-8")) if previous_path.exists() else {}
-              registry = load_registry()
-              interval = int((registry.get("cadence") or {}).get("scheduler_interval_minutes") or 60)
-              skip = scheduled_slot_already_completed(
-                  previous,
-                  scheduler_interval_minutes=interval,
-                  event_name=os.environ.get("GITHUB_EVENT_NAME"),
-                  schedule_kind=os.environ.get("V6_SCHEDULE_KIND"),
-              )
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
-              handle.write(f"skip={'true' if skip else 'false'}\n")
-          print(f"logical scheduler slot already published: {skip}")
-          PY
+        run: python -m src.runtime_v6.workflow_control slot-guard
 
       - name: Install V6 locked runtime dependencies
         if: steps.slot_guard.outputs.skip != 'true'
@@ -165,28 +140,9 @@ jobs:
 
       - name: Validate V6 production preflight
         if: steps.slot_guard.outputs.skip != 'true'
-        shell: bash
         run: |
-          set -euo pipefail
           python -m compileall -q src/runtime_v6
-          python -m src.runtime_v6.architecture_independence_validate
-          python - <<'PY'
-          from src.runtime_v6.registry import dependency_layers, load_registry
-          registry = load_registry()
-          assert registry["engine"] == "V6_FRESH_DATA_PLATFORM"
-          assert registry["policy"]["data_only"] is True
-          assert registry["policy"]["decision_authority"] == "NONE"
-          assert registry["policy"]["prediction_authority"] == "NONE"
-          assert registry["policy"]["optimizer_authority"] == "NONE"
-          assert registry["override_lifecycle"]["role"] == "TEMPORARY_REPAIR_ONLY"
-          assert registry["override_lifecycle"]["inactive_source_overrides"] == []
-          assert dependency_layers(registry)
-          print({
-              "active_sources": registry["activation"]["active_source_count"],
-              "active_overrides": registry["override_lifecycle"]["active_override_count"],
-              "dependency_layers": dependency_layers(registry),
-          })
-          PY
+          python -m src.runtime_v6.production_validate preflight
 
       - name: Resolve governed V6 report-prefetch request
         if: steps.slot_guard.outputs.skip != 'true' && steps.scheduler.outputs.kind == 'report_prefetch'
@@ -257,110 +213,7 @@ jobs:
 
       - name: Validate publishable V6 manifest
         if: steps.slot_guard.outputs.skip != 'true'
-        shell: bash
-        run: |
-          python - <<'PY'
-          import json
-          import os
-          from datetime import datetime, timezone
-          from pathlib import Path
-          from src.runtime_v6.registry import load_registry
-
-          root = Path("data/v6")
-          manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
-          integrity = json.loads((root / "health" / "publish_integrity.json").read_text(encoding="utf-8"))
-          identity = json.loads((root / "evidence" / "player_identity_map.json").read_text(encoding="utf-8"))
-          registry = load_registry()
-          control = manifest["runtime_control"]
-          event_name = os.environ["GITHUB_EVENT_NAME"]
-          schedule_kind = os.environ["V6_SCHEDULE_KIND"]
-
-          assert manifest["source_count"] == registry["activation"]["active_source_count"]
-          assert manifest["activation"]["required_active_sources"] == registry["activation"]["required_active_sources"]
-          assert registry["override_lifecycle"]["inactive_source_overrides"] == []
-          assert manifest["governance"]["data_only"] is True
-          assert manifest["governance"]["decision_authority"] == "NONE"
-          assert manifest["governance"]["weather_direct_xpts_multiplier"] is False
-          assert manifest["governance"]["production_authoritative_snapshots_require_schedule"] is False
-          assert manifest["governance"]["production_authoritative_snapshots_require_governed_trigger"] is True
-          assert manifest["governance"]["master_orchestrated_is_authoritative"] is True
-          assert manifest["governance"]["report_prefetch_is_authoritative"] is True
-          assert manifest["governance"]["report_prefetch_completes_core_operational_slot"] is False
-          assert manifest["governance"]["manual_recovery_is_authoritative"] is False
-          assert manifest["governance"]["single_logical_acquisition_per_scheduler_slot"] is True
-          assert manifest["governance"]["publish_integrity_required"] is True
-          assert manifest["governance"]["identity_mapping_is_deterministic_only"] is True
-          assert manifest["governance"]["fuzzy_identity_matching"] is False
-          assert identity["governance"]["fuzzy_name_matching_allowed"] is False
-          assert integrity["status"] == "PASS", integrity
-          assert integrity["current_source_files_exact"] is True
-          assert integrity["resolved_registry_exact"] is True
-          assert integrity["identity_map_consistent"] is True
-          assert control["event_name"] == event_name
-          assert control["schedule_kind"] == schedule_kind
-
-          if schedule_kind == "report_prefetch":
-              assert control["authoritative_runtime_snapshot"] is True
-              assert control["report_prefetch"] is True
-              assert control["counts_as_completed_report_slot"] is True
-              assert control["counts_as_completed_operational_slot"] is False
-              report_kind = os.environ["V6_PREFETCH_REPORT_KIND"]
-              if report_kind == "historical_backfill":
-                  history = json.loads((root / "health" / "historical_backfill.json").read_text(encoding="utf-8"))
-                  assert history["report_kind"] == "historical_backfill"
-                  assert history["scope"] == "mini_league"
-                  assert history["gw_from"] == int(os.environ["V6_PREFETCH_GW_FROM"])
-                  assert history["gw_to"] == int(os.environ["V6_PREFETCH_GW_TO"])
-                  assert history["cohort_semantics"] == "CURRENT_COHORT_HISTORY"
-                  assert history["governance"]["data_only"] is True
-                  assert history["governance"]["decision_authority"] == "NONE"
-                  assert history["governance"]["prediction_authority"] == "NONE"
-                  assert history["governance"]["optimizer_authority"] == "NONE"
-                  assert history["governance"]["bayesian_authority"] == "NONE"
-                  assert history["governance"]["monte_carlo_authority"] == "NONE"
-                  assert history["overall_status"] in {"GREEN", "AMBER"}
-              else:
-                  prefetch = json.loads((root / "report_prefetch" / "latest.json").read_text(encoding="utf-8"))
-                  health = json.loads((root / "health" / "report_prefetch.json").read_text(encoding="utf-8"))
-                  assert prefetch["report_kind"] == report_kind
-                  assert prefetch["target_logical_report_slot"] == os.environ["V6_PREFETCH_LOGICAL_SLOT"]
-                  assert prefetch["governance"]["data_only"] is True
-                  assert prefetch["governance"]["decision_authority"] == "NONE"
-                  assert prefetch["governance"]["prediction_authority"] == "NONE"
-                  assert prefetch["governance"]["optimizer_authority"] == "NONE"
-                  assert prefetch["governance"]["independent_prefetch_cron"] is False
-                  assert health["fresh_for_target_report"] == prefetch["fresh_for_target_report"]
-                  if report_kind == "05:30_price":
-                      assert prefetch["telemetry"]["request_count"] == 0
-          elif event_name == "issue_comment" and schedule_kind == "chatgpt_scheduler":
-              requested = datetime.fromisoformat(os.environ["V6_MASTER_LOGICAL_SLOT"]).astimezone(timezone.utc)
-              assert control["chatgpt_scheduler"] is True
-              assert control["chatgpt_scheduler_proof"] is True
-              assert control["scheduled_cycle"] is True
-              assert control["master_orchestrated"] is True
-              assert control["authoritative_runtime_snapshot"] is True
-              assert control["counts_as_completed_operational_slot"] is True
-              assert control["logical_slot_source"] == "CHATGPT_COMMAND"
-              assert control["expected_cycle_at"] == requested.isoformat()
-              assert manifest["governance"]["production_ingestion_schedule_only"] is False
-              assert manifest["governance"]["chatgpt_scheduler_is_authority"] is True
-          elif event_name == "workflow_dispatch" and schedule_kind == "master_orchestrated":
-              assert control["scheduled_cycle"] is False
-              assert control["master_orchestrated"] is True
-              assert control["authoritative_runtime_snapshot"] is True
-              assert control["counts_as_completed_operational_slot"] is True
-              assert control["manual_recovery"] is False
-              assert "NON_AUTHORITATIVE_MANUAL_RECOVERY" not in manifest["control_failures"]
-          elif event_name == "workflow_dispatch" and schedule_kind == "manual_recovery":
-              assert control["scheduled_cycle"] is False
-              assert control["authoritative_runtime_snapshot"] is False
-              assert control["counts_as_completed_operational_slot"] is False
-              assert control["manual_recovery"] is True
-              assert "NON_AUTHORITATIVE_MANUAL_RECOVERY" in manifest["control_failures"]
-          else:
-              raise AssertionError(f"unexpected V6 production event: {event_name}/{schedule_kind}")
-          print(json.dumps({"overall": manifest["overall"], "runtime_control": control, "publish_integrity": integrity}, indent=2))
-          PY
+        run: python -m src.runtime_v6.production_validate publishable
 
       - name: Package verified runtime snapshot
         if: steps.slot_guard.outputs.skip != 'true'

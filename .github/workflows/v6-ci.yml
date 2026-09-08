@@ -60,6 +60,7 @@ jobs:
           if [[ "$EVENT_NAME" == "push" ]]; then
             echo "v6_changed=true" >> "$GITHUB_OUTPUT"
           else
+            # Required pre-merge full V6 verification is owned by repository-governance.yml.
             echo "v6_changed=false" >> "$GITHUB_OUTPUT"
           fi
 

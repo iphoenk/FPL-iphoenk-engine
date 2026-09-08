@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .architecture_independence_validate import validate_architecture
+from .architecture_independence_validate import validate_repository
 from .registry import dependency_layers, load_registry
 
 
@@ -19,9 +19,8 @@ def _load(path: Path) -> dict[str, Any]:
 
 
 def validate_preflight() -> dict[str, Any]:
-    architecture = validate_architecture()
-    if architecture not in (None, True) and isinstance(architecture, dict) and architecture.get("valid") is False:
-        raise AssertionError(architecture)
+    architecture_failures = validate_repository()
+    assert architecture_failures == [], architecture_failures
     registry = load_registry()
     assert registry["engine"] == "V6_FRESH_DATA_PLATFORM"
     assert registry["policy"]["data_only"] is True

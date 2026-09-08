@@ -126,6 +126,63 @@ def _prune_legacy_analytical_artifacts(root: Path) -> list[str]:
     return sorted(set(removed))
 
 
+def _declared_or_collection_count(payload: dict[str, Any], count_key: str, collection_key: str) -> int:
+    raw = payload.get(count_key)
+    if isinstance(raw, int) and not isinstance(raw, bool):
+        return raw
+    collection = payload.get(collection_key)
+    return len(collection) if isinstance(collection, (list, dict)) else 0
+
+
+def _identity_count_invariants(
+    identity: dict[str, Any],
+    canonical_players: dict[str, Any],
+    canonical_teams: dict[str, Any],
+    canonical_fixtures: dict[str, Any],
+) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    errors: list[str] = []
+    bridges = dict(identity.get("entity_bridges") or {})
+    team_bridge = dict(bridges.get("team") or {})
+    fixture_bridge = dict(bridges.get("fixture") or {})
+
+    canonical_counts = {
+        "player": _declared_or_collection_count(canonical_players, "player_count", "players"),
+        "team": _declared_or_collection_count(canonical_teams, "team_count", "teams"),
+        "fixture": _declared_or_collection_count(canonical_fixtures, "fixture_count", "fixtures"),
+    }
+    identity_counts = {
+        "player": int(identity.get("canonical_player_count") or 0),
+        "team": int(team_bridge.get("canonical_team_count") or 0),
+        "fixture": int(fixture_bridge.get("canonical_fixture_count") or 0),
+    }
+    mapping_counts = {
+        "player": len(identity.get("mappings") or {}),
+        "team": len(team_bridge.get("mappings") or {}),
+        "fixture": len(fixture_bridge.get("mappings") or {}),
+    }
+
+    report: dict[str, dict[str, Any]] = {}
+    for entity in ("player", "team", "fixture"):
+        canonical_count = canonical_counts[entity]
+        identity_count = identity_counts[entity]
+        mapping_count = mapping_counts[entity]
+        count_consistent = identity_count == canonical_count
+        mapping_consistent = mapping_count == identity_count
+        report[entity] = {
+            "canonical_count": canonical_count,
+            "identity_count": identity_count,
+            "mapping_count": mapping_count,
+            "count_consistent": count_consistent,
+            "mapping_consistent": mapping_consistent,
+            "consistent": count_consistent and mapping_consistent,
+        }
+        if not count_consistent:
+            errors.append(f"identity_map_canonical_{entity}_count_mismatch")
+        if not mapping_consistent:
+            errors.append(f"identity_map_{entity}_mapping_count_mismatch")
+    return report, errors
+
+
 def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
     manifest_path = root / "manifest.json"
     manifest = read_json(manifest_path) or {}
@@ -133,7 +190,7 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
     if not manifest:
         errors.append("manifest_missing_or_invalid")
         return {
-            "schema_version": 3,
+            "schema_version": 4,
             "status": "FAIL",
             "errors": errors,
             "source_count": 0,
@@ -210,11 +267,26 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
         root,
         paths.get("canonical_players") or "data/v6/normalized/canonical_players.json",
     )
+    canonical_teams_path = _resolve_runtime_path(
+        root,
+        paths.get("canonical_teams") or "data/v6/normalized/canonical_teams.json",
+    )
+    canonical_fixtures_path = _resolve_runtime_path(
+        root,
+        paths.get("canonical_fixtures") or "data/v6/normalized/canonical_fixtures.json",
+    )
     canonical_players = read_json(canonical_players_path) or {}
-    identity_count = int(identity.get("canonical_player_count") or 0)
-    canonical_count = int(canonical_players.get("player_count") or 0)
-    if identity and canonical_players and identity_count != canonical_count:
-        errors.append("identity_map_canonical_player_count_mismatch")
+    canonical_teams = read_json(canonical_teams_path) or {}
+    canonical_fixtures = read_json(canonical_fixtures_path) or {}
+    identity_counts: dict[str, dict[str, Any]] = {}
+    if identity and canonical_players and canonical_teams and canonical_fixtures:
+        identity_counts, identity_errors = _identity_count_invariants(
+            identity,
+            canonical_players,
+            canonical_teams,
+            canonical_fixtures,
+        )
+        errors.extend(identity_errors)
     if identity and (identity.get("governance") or {}).get("fuzzy_name_matching_allowed") is not False:
         errors.append("identity_map_fuzzy_matching_policy_invalid")
 
@@ -253,8 +325,11 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
     resolved_registry_exact = bool(resolved) and [
         str(source.get("id")) for source in resolved.get("sources") or []
     ] == source_ids
+    identity_map_consistent = bool(identity_counts) and all(
+        row.get("consistent") is True for row in identity_counts.values()
+    )
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "status": "PASS" if not errors else "FAIL",
         "errors": errors,
         "source_count": len(source_ids),
@@ -263,7 +338,8 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
         "tree_sha256": aggregate.hexdigest(),
         "current_source_files_exact": actual_current == expected_current,
         "resolved_registry_exact": resolved_registry_exact,
-        "identity_map_consistent": identity_count == canonical_count if identity and canonical_players else False,
+        "identity_map_consistent": identity_map_consistent,
+        "identity_counts": identity_counts,
         "artifact_catalog_required": artifact_catalog_required,
         "artifact_catalog_valid": bool(catalog_validation.get("valid")),
         "artifact_catalog_checked_count": int(catalog_validation.get("checked") or 0),

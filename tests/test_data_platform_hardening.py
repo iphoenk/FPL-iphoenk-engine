@@ -23,13 +23,13 @@ from src.runtime_v6.registry import (
 )
 
 
-def test_workflow_cron_matches_v6_schedule_policy():
+def test_workflow_scheduler_matches_v6_chatgpt_authority_policy():
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
     policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
     source_registry = json.loads(Path("config/v6/source_registry.json").read_text(encoding="utf-8"))
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
 
-    assert policy["schema_version"] == 3
+    assert policy["schema_version"] == 4
     assert policy["engine"] == "V6_FRESH_DATA_PLATFORM"
     assert policy["scheduler_authority"]["kind"] == "CHATGPT_TASK"
     assert policy["scheduler_authority"]["name"] == "FPL Master Monitor"
@@ -41,9 +41,18 @@ def test_workflow_cron_matches_v6_schedule_policy():
     assert policy["natural_schedule_redundancy_attempts_per_hour"] == 0
     assert policy["github_natural_schedule"]["enabled"] is False
     assert policy["github_natural_schedule"]["authority"] == "NONE"
-    assert workflow_crons == policy["github_natural_schedule"]["former_crons_utc"]
+    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is True
+    assert workflow_crons == []
+    assert policy["github_natural_schedule"]["former_crons_utc"] == [
+        "13 * * * *",
+        "28 * * * *",
+        "43 * * * *",
+        "58 * * * *",
+    ]
+    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
     assert policy["governance"]["single_schedule_owner"] == "CHATGPT:FPL Master Monitor"
-    assert policy["governance"]["github_schedule_events_are_dormant_noop"] is True
+    assert policy["governance"]["github_schedule_events_are_removed"] is True
+    assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
     assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True
     assert policy["governance"]["scheduler_health_proof_trigger"] == "issue_comment:chatgpt_scheduler"
     assert "workflow_cron_utc" not in source_registry["cadence"]

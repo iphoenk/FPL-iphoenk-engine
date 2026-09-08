@@ -35,7 +35,7 @@ def test_new_scheduler_slot_is_due_after_previous_hour():
     assert decision["reason"] == "DUE"
 
 
-def test_dormant_github_schedule_is_always_skipped():
+def test_removed_github_schedule_is_always_skipped_defense_in_depth():
     assert scheduled_slot_already_completed(
         {},
         scheduler_interval_minutes=60,
@@ -158,7 +158,7 @@ def test_manual_recovery_is_non_authoritative():
     assert updated["control_failures"] == ["NON_AUTHORITATIVE_MANUAL_RECOVERY"]
 
 
-def test_production_policy_uses_chatgpt_and_dormant_github_crons():
+def test_production_policy_uses_chatgpt_and_removed_github_crons():
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
     policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
@@ -168,10 +168,13 @@ def test_production_policy_uses_chatgpt_and_dormant_github_crons():
     assert policy["scheduler_authority"]["logical_slot_minute"] == 0
     assert policy["github_natural_schedule"]["enabled"] is False
     assert policy["github_natural_schedule"]["authority"] == "NONE"
+    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is True
     assert policy["scheduled_crons_utc"] == []
     assert policy["natural_schedule_redundancy_attempts_per_hour"] == 0
-    assert workflow_crons == policy["github_natural_schedule"]["former_crons_utc"]
-    assert policy["governance"]["github_schedule_events_are_dormant_noop"] is True
+    assert workflow_crons == []
+    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
+    assert policy["governance"]["github_schedule_events_are_removed"] is True
+    assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
     assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True
     assert policy["governance"]["scheduler_health_proof_trigger"] == "issue_comment:chatgpt_scheduler"
     assert "workflow_dispatch:" in workflow
@@ -182,6 +185,7 @@ def test_production_policy_uses_chatgpt_and_dormant_github_crons():
     assert "python -m src.runtime_v6.collector" in workflow
     assert "python -m src.runtime_v6.runtime_control" in workflow
     assert "scheduled_slot_already_completed" in workflow
+    assert "  schedule:" not in workflow
     assert "  push:" not in workflow
     assert "  pull_request:" not in workflow
 
@@ -294,3 +298,6 @@ def test_v6_ci_never_acquires_or_writes_runtime_branch():
     assert "runtime-data-v6" not in workflow
     assert "git push" not in workflow
     assert "contents: read" in workflow
+    assert "detect-v6-change:" in workflow
+    assert "v6-governance-gate:" in workflow
+    assert "Non-V6 PR: V6 governance gate satisfied without running V6 suite" in workflow

@@ -3,6 +3,12 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
+from src.utils import CONFIG, read_json
+
+XMINS_CONTRACT_VALIDATION = read_json(CONFIG / "intelligence" / "xmins_v2.json", {}).get("contract_validation") or {}
+XMINS_PROBABILITY_SUM_TOLERANCE = float(XMINS_CONTRACT_VALIDATION["probability_sum_tolerance"])
+XMINS_EXPECTED_MINUTES_IDENTITY_TOLERANCE = float(XMINS_CONTRACT_VALIDATION["expected_minutes_identity_tolerance"])
+
 
 DEFENSIVE_POSITIONS = {"GK", "DEF"}
 DEFENSIVE_COMPONENTS = ("clean_sheet", "saves", "defensive_contribution", "bonus")
@@ -170,14 +176,14 @@ def enrich_xmins_contract(out: dict[str, Any]) -> dict[str, Any]:
     bench = _f(out.get("bench_probability"))
     dnp = _f(out.get("dnp_probability"))
     probability_sum = start + bench + dnp
-    if abs(probability_sum - 1.0) > 0.002:
+    if abs(probability_sum - 1.0) > XMINS_PROBABILITY_SUM_TOLERANCE:
         raise RuntimeError(f"xMins probability decomposition invalid: sum={probability_sum:.6f}")
 
     start_minutes = _f(out.get("starter_minutes_if_start"))
     bench_minutes = _f(out.get("bench_minutes_if_used"))
     expected = start * start_minutes + bench * bench_minutes
     published = _f(out.get("expected_minutes"))
-    if abs(expected - published) > 0.2:
+    if abs(expected - published) > XMINS_EXPECTED_MINUTES_IDENTITY_TOLERANCE:
         raise RuntimeError(
             "xMins expected_minutes is not derived from explicit start/bench probabilities: "
             f"derived={expected:.3f} published={published:.3f}"

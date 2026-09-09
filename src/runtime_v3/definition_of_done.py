@@ -427,7 +427,11 @@ def run(scope: str = "candidate", source_commit: str | None = None) -> dict[str,
 
     benchmark_ok, benchmark = _run_json_module("src.runtime_v3.unified_fastpath", "--benchmark")
     interactive_ms = benchmark.get("median_ms")
-    _check(rows, "INTERACTIVE_SERVING_UNDER_1S", benchmark_ok and interactive_ms is not None and float(interactive_ms) < 1000.0, benchmark)
+    slo_registry = read_json(SLO_PATH, {})
+    instant_slo = ((slo_registry.get("profiles") or {}).get("instant_serving") or {})
+    instant_ceiling_ms = _finite_number(instant_slo.get("legacy_ceiling_ms"))
+    interactive_ok = bool(benchmark_ok and interactive_ms is not None and instant_ceiling_ms is not None and float(interactive_ms) < instant_ceiling_ms)
+    _check(rows, "INTERACTIVE_SERVING_UNDER_1S", interactive_ok, {**benchmark, "configured_ceiling_ms": instant_ceiling_ms})
 
     report_registry = read_json(DATA / "report_artifact_registry.json", {})
     report_contract_ok = bool(report_registry) and (DATA / "decision_brief.json").exists() and (DATA / "deep_review_payload.json").exists()

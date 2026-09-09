@@ -35,5 +35,9 @@
     "base_minutes_std": 11.0,
     "entropy_minutes_std_multiplier": 18.0,
     "small_sample_minutes_std_extra": 8.0
+  },
+  "contract_validation": {
+    "probability_sum_tolerance": 0.002,
+    "expected_minutes_identity_tolerance": 0.2
   }
 }

@@ -73,10 +73,11 @@ def trusted_atomic_json(path: Path) -> tuple[bool, Any]:
         return False, None
     return True, proof[3]
 
-def atomic_json(path: Path, payload: Any):
+def atomic_json(path: Path, payload: Any, *, compact: bool | None = None):
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    if path.name in _COMPACT_JSON_ARTIFACTS:
+    use_compact = path.name in _COMPACT_JSON_ARTIFACTS if compact is None else bool(compact)
+    if use_compact:
         serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     else:
         serialized = json.dumps(payload, ensure_ascii=False, indent=2)

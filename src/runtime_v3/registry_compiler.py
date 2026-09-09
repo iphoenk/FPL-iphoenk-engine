@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.utils import ROOT
+from src.utils import ROOT, atomic_json
 
 DOMAIN_PATH = ROOT / "config" / "runtime" / "execution_domains.json"
 CAPABILITY_PATH = ROOT / "config" / "v3_service_registry.json"
@@ -292,8 +292,7 @@ def main() -> int:
     plan = compile_runtime_plan()
     if args.output:
         output = Path(args.output)
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        atomic_json(output, plan)
     print(json.dumps({
         "registry": plan["registry"],
         "plan_sha256": plan["plan_sha256"],

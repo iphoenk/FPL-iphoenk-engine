@@ -133,5 +133,10 @@
     "technical_health_is_one_line_in_user_report_unless_critical": true,
     "missing_external_evidence_is_never_fabricated": true,
     "scheduled_checkpoint_miss_is_explicit": true
+  },
+  "battle_reason_thresholds": {
+    "xpts_delta": 0.10,
+    "xmins_delta": 2.0,
+    "start_probability_delta": 0.03
   }
 }

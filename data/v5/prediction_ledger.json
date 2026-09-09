@@ -12685,7 +12685,7 @@
       "gw": 4,
       "deadline_time": "2026-09-12T12:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-09-09T06:10:55.306087+00:00",
+        "generated_at": "2026-09-09T19:56:15.297218+00:00",
         "players": [
           {
             "element": 1,
@@ -13001,10 +13001,10 @@
             "element": 32,
             "name": "Cash",
             "position": "DEF",
-            "xpts": 3.524,
-            "xpts_std": 2.11,
-            "xmins": 80.0,
-            "start_probability": 0.8867,
+            "xpts": 2.495,
+            "xpts_std": 1.885,
+            "xmins": 60.0,
+            "start_probability": 0.665,
             "clean_sheet_probability": 0.2286
           },
           {
@@ -13301,10 +13301,10 @@
             "element": 618,
             "name": "Goretzka",
             "position": "MID",
-            "xpts": 2.153,
-            "xpts_std": 1.861,
-            "xmins": 43.6,
-            "start_probability": 0.5289,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2286
           },
           {
@@ -14511,10 +14511,10 @@
             "element": 170,
             "name": "Emegha",
             "position": "FWD",
-            "xpts": 2.263,
-            "xpts_std": 1.907,
-            "xmins": 43.6,
-            "start_probability": 0.5289,
+            "xpts": 1.645,
+            "xpts_std": 1.691,
+            "xmins": 32.7,
+            "start_probability": 0.3966,
             "clean_sheet_probability": 0.2005
           },
           {
@@ -15941,10 +15941,10 @@
             "element": 285,
             "name": "McNair",
             "position": "DEF",
-            "xpts": 2.401,
-            "xpts_std": 1.965,
-            "xmins": 43.6,
-            "start_probability": 0.5289,
+            "xpts": 1.748,
+            "xpts_std": 1.734,
+            "xmins": 32.7,
+            "start_probability": 0.3966,
             "clean_sheet_probability": 0.2019
           },
           {
@@ -16111,10 +16111,10 @@
             "element": 563,
             "name": "Morita",
             "position": "MID",
-            "xpts": 2.608,
-            "xpts_std": 2.003,
-            "xmins": 45.6,
-            "start_probability": 0.6183,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2019
           },
           {
@@ -16191,10 +16191,10 @@
             "element": 632,
             "name": "Ansah",
             "position": "FWD",
-            "xpts": 2.543,
-            "xpts_std": 2.025,
-            "xmins": 43.6,
-            "start_probability": 0.5289,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2019
           },
           {
@@ -16591,10 +16591,10 @@
             "element": 640,
             "name": "Flemming",
             "position": "FWD",
-            "xpts": 2.917,
-            "xpts_std": 2.182,
-            "xmins": 43.6,
-            "start_probability": 0.5289,
+            "xpts": 3.604,
+            "xpts_std": 2.391,
+            "xmins": 59.5,
+            "start_probability": 0.6613,
             "clean_sheet_probability": 0.1596
           },
           {
@@ -17081,10 +17081,10 @@
             "element": 367,
             "name": "Gakpo",
             "position": "MID",
-            "xpts": 4.135,
-            "xpts_std": 2.39,
-            "xmins": 76.0,
-            "start_probability": 0.8706,
+            "xpts": 2.959,
+            "xpts_std": 2.092,
+            "xmins": 57.0,
+            "start_probability": 0.653,
             "clean_sheet_probability": 0.1912
           },
           {
@@ -18201,10 +18201,10 @@
             "element": 593,
             "name": "Dedić",
             "position": "DEF",
-            "xpts": 3.898,
-            "xpts_std": 2.381,
-            "xmins": 66.2,
-            "start_probability": 0.802,
+            "xpts": 2.804,
+            "xpts_std": 2.075,
+            "xmins": 49.7,
+            "start_probability": 0.6015,
             "clean_sheet_probability": 0.3241
           },
           {
@@ -19121,10 +19121,10 @@
             "element": 547,
             "name": "Mundle",
             "position": "MID",
-            "xpts": 1.952,
-            "xpts_std": 1.804,
-            "xmins": 46.9,
-            "start_probability": 0.449,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.3792
           },
           {
@@ -19232,6 +19232,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-09-09T06:10:56.285613+00:00",
+  "updated_at": "2026-09-09T19:56:16.059199+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

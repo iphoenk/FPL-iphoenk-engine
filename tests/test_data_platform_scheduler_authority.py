@@ -32,6 +32,8 @@ def test_v6_ingestion_is_executor_triggered_only() -> None:
     text = workflow.read_text(encoding="utf-8")
 
     assert "issue_comment:" in text
+    assert "types: [created, edited]" in text
+    assert "github.event.comment.id == 5596106114" in text
     assert "issues:" in text
     assert "workflow_dispatch:" in text
     assert not SCHEDULE_KEY.search(text)

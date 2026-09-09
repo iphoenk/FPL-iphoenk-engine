@@ -176,9 +176,11 @@ def test_production_policy_uses_chatgpt_and_removed_github_crons():
     assert policy["governance"]["github_schedule_events_are_removed"] is True
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
     assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True
-    assert policy["governance"]["scheduler_health_proof_trigger"] == "issues:chatgpt_scheduler"
+    assert policy["governance"]["scheduler_health_proof_trigger"] == "issue_comment:chatgpt_scheduler"
     assert "workflow_dispatch:" in workflow
     assert "issue_comment:" in workflow
+    assert "types: [created, edited]" in workflow
+    assert "github.event.comment.id == 5596106114" in workflow
     assert "issues:" in workflow
     assert "github.event.issue.number == 431" in workflow
     assert "/v6-master-acquire" in workflow

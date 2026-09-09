@@ -29,7 +29,7 @@ def test_workflow_scheduler_matches_v6_chatgpt_authority_policy():
     source_registry = json.loads(Path("config/v6/source_registry.json").read_text(encoding="utf-8"))
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
 
-    assert policy["schema_version"] == 5
+    assert policy["schema_version"] == 6
     assert policy["engine"] == "V6_FRESH_DATA_PLATFORM"
     assert policy["scheduler_authority"]["kind"] == "CHATGPT_TASK"
     assert policy["scheduler_authority"]["name"] == "FPL Master Monitor"
@@ -54,8 +54,9 @@ def test_workflow_scheduler_matches_v6_chatgpt_authority_policy():
     assert policy["governance"]["github_schedule_events_are_removed"] is True
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
     assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True
-    assert policy["governance"]["scheduler_health_proof_trigger"] == "issues:chatgpt_scheduler"
-    assert policy["scheduler_authority"]["preferred_transport"] == "ISSUE_TITLE_EDIT"
+    assert policy["governance"]["scheduler_health_proof_trigger"] == "issue_comment:chatgpt_scheduler"
+    assert policy["scheduler_authority"]["preferred_transport"] == "DEDICATED_ISSUE_COMMENT_EDIT"
+    assert policy["scheduler_authority"]["dedicated_control_comment_id"] == 5596106114
     assert "workflow_cron_utc" not in source_registry["cadence"]
     assert source_registry["cadence"]["schedule"] == "hourly"
     assert policy["manual_recovery"]["counts_as_completed_scheduled_slot"] is False

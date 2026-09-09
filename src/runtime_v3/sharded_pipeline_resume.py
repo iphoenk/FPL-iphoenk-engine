@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 from typing import Any
 
-from src.runtime_v3 import domain_process_runner, registry_compiler, rules_drift_refresh
+from src.runtime_v3 import domain_process_runner, registry_compiler
 from src.utils import ROOT
 
 SHARD_POLICY_PATH = ROOT / "config" / "runtime" / "package_optimizer_sharding.json"
@@ -46,7 +45,6 @@ def resume(
     stats: bool = True,
     deep_stats: bool = False,
     profile: str = "exhaustive_precompute",
-    refresh_rules: bool = False,
 ) -> dict[str, Any]:
     policy = _policy()
     domain_registry = registry_compiler.load_domain_registry()
@@ -72,17 +70,6 @@ def resume(
     }
     results: dict[str, Any] = {}
     executed_waves: list[list[str]] = []
-    rules_refresh = (
-        rules_drift_refresh.refresh_if_due()
-        if refresh_rules
-        else {
-            "status": "NOT_REQUESTED",
-            "remote_check_executed": False,
-            "drift_before": None,
-            "drift_after": None,
-            "rules_overall": None,
-        }
-    )
 
     for wave in selected_waves:
         wave_domains = set(wave)
@@ -136,7 +123,6 @@ def resume(
         "executed_domain_waves": executed_waves,
         "profile": profile,
         "mode": mode,
-        "rules_drift_refresh": rules_refresh,
         "results": results,
         "governance": {
             "domain_order_from_compiled_registry": True,
@@ -145,8 +131,7 @@ def resume(
             "downstream_business_modules_not_hardcoded": True,
             "capability_dependencies_checked": True,
             "business_authority_unchanged": True,
-            "rules_drift_freshness_hook_owned_by_sharded_resume": True,
-            "rules_remote_refresh_threshold_owned_by_rules_auditor": True,
+            "rules_freshness_is_not_owned_by_shard_resume": True,
         },
     }
 
@@ -163,7 +148,6 @@ def main() -> int:
         stats=args.stats,
         deep_stats=args.deep_stats,
         profile=args.profile,
-        refresh_rules=True,
     )
     print(json.dumps({
         "status": result["status"],
@@ -171,7 +155,6 @@ def main() -> int:
         "executed_domains": result["executed_domains"],
         "executed_domain_waves": result["executed_domain_waves"],
         "profile": result["profile"],
-        "rules_drift_refresh": result["rules_drift_refresh"],
     }, ensure_ascii=False))
     return 0
 

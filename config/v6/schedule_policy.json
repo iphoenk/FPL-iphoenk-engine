@@ -21,11 +21,11 @@
     "proof_fresh_after_minutes": 75,
     "proof_stale_after_minutes": 135,
     "issue_title_marker": "FPL_MASTER_SLOT",
-    "preferred_transport": "DEDICATED_ISSUE_COMMENT_EDIT",
-    "legacy_issue_comment_transport_enabled": true,
-    "transport_note": "ChatGPT edits one dedicated owner-authored control comment on issue #431 with the current logical slot. GitHub remains executor-only; issue-title edit is fallback, not preferred.",
+    "preferred_transport": "ISSUE_TITLE_EDIT",
+    "legacy_issue_comment_transport_enabled": false,
+    "transport_note": "ChatGPT edits issue #431 title with the current logical slot. GitHub remains executor-only. Dedicated issue-comment edit is disabled for ChatGPT transport because the connector blocks that mutation path.",
     "dedicated_control_comment_id": 5596106114,
-    "dedicated_control_comment_event": "issue_comment:edited",
+    "dedicated_control_comment_event": "DISABLED_FOR_CHATGPT_TRANSPORT",
     "issue_title_transport_enabled": true
   },
   "github_natural_schedule": {
@@ -116,7 +116,7 @@
       "issue_comment:chatgpt_scheduler",
       "workflow_dispatch:master_orchestrated"
     ],
-    "scheduler_health_proof_trigger": "issue_comment:chatgpt_scheduler",
+    "scheduler_health_proof_trigger": "issues:chatgpt_scheduler",
     "master_orchestrated_is_authoritative": true,
     "generic_master_dispatch_does_not_count_as_scheduler_health_proof": true,
     "report_prefetch_is_report_driven_only": true,
@@ -143,13 +143,12 @@
     "scheduler_policy_is_single_runtime_authority": true,
     "scheduler_proof_age_is_read_time_observability": true,
     "scheduler_health_proof_triggers": [
-      "issue_comment:chatgpt_scheduler",
       "issues:chatgpt_scheduler"
     ],
-    "issue_title_edit_is_preferred_scheduler_transport": false,
+    "issue_title_edit_is_preferred_scheduler_transport": true,
     "issue_comment_is_legacy_scheduler_transport": true,
-    "issue_comment_edit_is_preferred_scheduler_transport": true,
-    "issue_title_edit_is_fallback_scheduler_transport": true
+    "issue_comment_edit_is_preferred_scheduler_transport": false,
+    "issue_title_edit_is_fallback_scheduler_transport": false
   },
   "master_orchestrated": {
     "enabled": true,

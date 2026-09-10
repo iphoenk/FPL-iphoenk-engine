@@ -4734,7 +4734,7 @@
       "optimizer challenger clears configured strong-review thresholds"
     ],
     "reasons_against": [
-      "market timing context contains 69 active price alerts"
+      "market timing context contains 68 active price alerts"
     ],
     "evidence": [
       {
@@ -4837,7 +4837,7 @@
     "team_cluster_penalty"
   ],
   "price_context": {
-    "alert_count": 69
+    "alert_count": 68
   },
   "governance": {
     "candidate_generation_only": true,

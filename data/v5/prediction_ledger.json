@@ -12685,7 +12685,7 @@
       "gw": 4,
       "deadline_time": "2026-09-12T12:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-09-10T06:10:46.225698+00:00",
+        "generated_at": "2026-09-10T11:36:08.256775+00:00",
         "players": [
           {
             "element": 1,
@@ -14231,10 +14231,10 @@
             "element": 652,
             "name": "Azeez",
             "position": "MID",
-            "xpts": 0.0,
-            "xpts_std": 1.15,
-            "xmins": 0.0,
-            "start_probability": 0.0,
+            "xpts": 1.222,
+            "xpts_std": 1.445,
+            "xmins": 21.8,
+            "start_probability": 0.2644,
             "clean_sheet_probability": 0.2019
           },
           {
@@ -15121,10 +15121,10 @@
             "element": 219,
             "name": "J.Rak-Sakyi",
             "position": "MID",
-            "xpts": 2.386,
-            "xpts_std": 1.959,
-            "xmins": 43.6,
-            "start_probability": 0.5289,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.0867
           },
           {
@@ -19232,6 +19232,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-09-10T06:10:46.927089+00:00",
+  "updated_at": "2026-09-10T11:36:08.970086+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

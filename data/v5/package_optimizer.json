@@ -667,7 +667,7 @@
         {
           "element": 15,
           "name": "Ødegaard",
-          "sell_cost": 65
+          "sell_cost": 66
         },
         {
           "element": 254,
@@ -688,9 +688,9 @@
         }
       ],
       "affordability": {
-        "cash_available": 115,
+        "cash_available": 116,
         "incoming_cost": 115,
-        "resulting_itb": 0
+        "resulting_itb": 1
       },
       "score": {
         "valid": true,
@@ -1476,7 +1476,7 @@
         {
           "element": 15,
           "name": "Ødegaard",
-          "sell_cost": 65
+          "sell_cost": 66
         },
         {
           "element": 346,
@@ -1497,9 +1497,9 @@
         }
       ],
       "affordability": {
-        "cash_available": 130,
+        "cash_available": 131,
         "incoming_cost": 126,
-        "resulting_itb": 4
+        "resulting_itb": 5
       },
       "score": {
         "valid": true,
@@ -2114,6 +2114,12 @@
         "candidate_score": 27.601
       },
       {
+        "element": 387,
+        "name": "O'Reilly",
+        "now_cost": 64,
+        "candidate_score": 23.128
+      },
+      {
         "element": 330,
         "name": "Bogle",
         "now_cost": 45,
@@ -2142,12 +2148,6 @@
         "name": "Gabriel",
         "now_cost": 80,
         "candidate_score": 20.786
-      },
-      {
-        "element": 445,
-        "name": "Thiaw",
-        "now_cost": 50,
-        "candidate_score": 20.598
       }
     ],
     "MID": [
@@ -2184,7 +2184,7 @@
       {
         "element": 154,
         "name": "Palmer",
-        "now_cost": 96,
+        "now_cost": 97,
         "candidate_score": 23.051
       },
       {
@@ -4734,7 +4734,7 @@
       "optimizer challenger clears configured strong-review thresholds"
     ],
     "reasons_against": [
-      "market timing context contains 73 active price alerts"
+      "market timing context contains 81 active price alerts"
     ],
     "evidence": [
       {
@@ -4837,7 +4837,7 @@
     "team_cluster_penalty"
   ],
   "price_context": {
-    "alert_count": 73
+    "alert_count": 81
   },
   "governance": {
     "candidate_generation_only": true,

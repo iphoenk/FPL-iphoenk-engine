@@ -12685,7 +12685,7 @@
       "gw": 4,
       "deadline_time": "2026-09-12T12:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-09-10T11:36:08.256775+00:00",
+        "generated_at": "2026-09-11T16:40:10.605497+00:00",
         "players": [
           {
             "element": 1,
@@ -12791,10 +12791,10 @@
             "element": 11,
             "name": "Mosquera",
             "position": "DEF",
-            "xpts": 2.378,
-            "xpts_std": 1.959,
-            "xmins": 48.5,
-            "start_probability": 0.5067,
+            "xpts": 1.528,
+            "xpts_std": 1.56,
+            "xmins": 32.3,
+            "start_probability": 0.3378,
             "clean_sheet_probability": 0.4299
           },
           {
@@ -13181,10 +13181,10 @@
             "element": 53,
             "name": "Manzambi",
             "position": "MID",
-            "xpts": 0.0,
-            "xpts_std": 1.15,
-            "xmins": 0.0,
-            "start_probability": 0.0,
+            "xpts": 1.007,
+            "xpts_std": 1.355,
+            "xmins": 21.8,
+            "start_probability": 0.2644,
             "clean_sheet_probability": 0.2286
           },
           {
@@ -13641,10 +13641,10 @@
             "element": 84,
             "name": "Collins",
             "position": "DEF",
-            "xpts": 0.919,
+            "xpts": 0.0,
             "xpts_std": 1.15,
-            "xmins": 19.7,
-            "start_probability": 0.2143,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.3929
           },
           {
@@ -14111,10 +14111,10 @@
             "element": 135,
             "name": "Yohanna",
             "position": "MID",
-            "xpts": 2.571,
-            "xpts_std": 2.036,
-            "xmins": 43.6,
-            "start_probability": 0.5289,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2019
           },
           {
@@ -14261,10 +14261,10 @@
             "element": 101,
             "name": "Henderson",
             "position": "MID",
-            "xpts": 1.697,
-            "xpts_std": 1.676,
-            "xmins": 46.4,
-            "start_probability": 0.5002,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2005
           },
           {
@@ -14441,10 +14441,10 @@
             "element": 159,
             "name": "Caicedo",
             "position": "MID",
-            "xpts": 1.877,
-            "xpts_std": 1.717,
-            "xmins": 51.1,
-            "start_probability": 0.5594,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2005
           },
           {
@@ -14511,10 +14511,10 @@
             "element": 170,
             "name": "Emegha",
             "position": "FWD",
-            "xpts": 1.645,
-            "xpts_std": 1.691,
-            "xmins": 32.7,
-            "start_probability": 0.3966,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2005
           },
           {
@@ -14761,10 +14761,10 @@
             "element": 187,
             "name": "Eccles",
             "position": "MID",
-            "xpts": 2.324,
-            "xpts_std": 1.933,
-            "xmins": 43.6,
-            "start_probability": 0.5289,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.1983
           },
           {
@@ -14915,6 +14915,26 @@
             "xpts_std": 1.978,
             "xmins": 57.4,
             "start_probability": 0.5834,
+            "clean_sheet_probability": 0.1983
+          },
+          {
+            "element": 655,
+            "name": "Gboho",
+            "position": "MID",
+            "xpts": 2.324,
+            "xpts_std": 1.933,
+            "xmins": 43.6,
+            "start_probability": 0.5289,
+            "clean_sheet_probability": 0.1983
+          },
+          {
+            "element": 656,
+            "name": "Mfuni",
+            "position": "DEF",
+            "xpts": 2.3,
+            "xpts_std": 1.922,
+            "xmins": 43.6,
+            "start_probability": 0.5289,
             "clean_sheet_probability": 0.1983
           },
           {
@@ -15101,10 +15121,10 @@
             "element": 217,
             "name": "M.França",
             "position": "MID",
-            "xpts": 2.386,
-            "xpts_std": 1.959,
-            "xmins": 43.6,
-            "start_probability": 0.5289,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.0867
           },
           {
@@ -15761,10 +15781,10 @@
             "element": 610,
             "name": "De Fougerolles",
             "position": "DEF",
-            "xpts": 1.861,
-            "xpts_std": 1.782,
-            "xmins": 32.7,
-            "start_probability": 0.3966,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2565
           },
           {
@@ -15941,10 +15961,10 @@
             "element": 285,
             "name": "McNair",
             "position": "DEF",
-            "xpts": 1.748,
-            "xpts_std": 1.734,
-            "xmins": 32.7,
-            "start_probability": 0.3966,
+            "xpts": 2.401,
+            "xpts_std": 1.965,
+            "xmins": 43.6,
+            "start_probability": 0.5289,
             "clean_sheet_probability": 0.2019
           },
           {
@@ -16051,10 +16071,10 @@
             "element": 296,
             "name": "Akintola",
             "position": "MID",
-            "xpts": 2.575,
-            "xpts_std": 2.038,
-            "xmins": 43.6,
-            "start_probability": 0.5289,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2019
           },
           {
@@ -16361,10 +16381,10 @@
             "element": 310,
             "name": "Matusiwa",
             "position": "MID",
-            "xpts": 0.0,
-            "xpts_std": 1.15,
-            "xmins": 0.0,
-            "start_probability": 0.0,
+            "xpts": 2.921,
+            "xpts_std": 2.184,
+            "xmins": 43.6,
+            "start_probability": 0.5289,
             "clean_sheet_probability": 0.1596
           },
           {
@@ -16441,10 +16461,10 @@
             "element": 318,
             "name": "Philogene",
             "position": "MID",
-            "xpts": 0.0,
-            "xpts_std": 1.15,
-            "xmins": 0.0,
-            "start_probability": 0.0,
+            "xpts": 2.921,
+            "xpts_std": 2.184,
+            "xmins": 43.6,
+            "start_probability": 0.5289,
             "clean_sheet_probability": 0.1596
           },
           {
@@ -17311,10 +17331,10 @@
             "element": 387,
             "name": "O'Reilly",
             "position": "DEF",
-            "xpts": 3.326,
-            "xpts_std": 2.296,
-            "xmins": 55.7,
-            "start_probability": 0.599,
+            "xpts": 4.592,
+            "xpts_std": 2.676,
+            "xmins": 74.2,
+            "start_probability": 0.7986,
             "clean_sheet_probability": 0.1702
           },
           {
@@ -17751,10 +17771,10 @@
             "element": 423,
             "name": "Shaw",
             "position": "DEF",
-            "xpts": 3.151,
-            "xpts_std": 1.942,
-            "xmins": 77.0,
-            "start_probability": 0.894,
+            "xpts": 2.213,
+            "xpts_std": 1.76,
+            "xmins": 57.7,
+            "start_probability": 0.6705,
             "clean_sheet_probability": 0.0952
           },
           {
@@ -17971,10 +17991,10 @@
             "element": 444,
             "name": "Jaouen",
             "position": "GK",
-            "xpts": 2.457,
-            "xpts_std": 1.989,
-            "xmins": 43.6,
-            "start_probability": 0.5289,
+            "xpts": 1.159,
+            "xpts_std": 1.419,
+            "xmins": 21.8,
+            "start_probability": 0.2644,
             "clean_sheet_probability": 0.3241
           },
           {
@@ -18211,10 +18231,10 @@
             "element": 609,
             "name": "Shahar",
             "position": "DEF",
-            "xpts": 2.64,
-            "xpts_std": 2.065,
-            "xmins": 43.6,
-            "start_probability": 0.5289,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.3241
           },
           {
@@ -18771,10 +18791,10 @@
             "element": 515,
             "name": "Maddison",
             "position": "MID",
-            "xpts": 1.419,
-            "xpts_std": 1.596,
-            "xmins": 32.7,
-            "start_probability": 0.3966,
+            "xpts": 1.962,
+            "xpts_std": 1.78,
+            "xmins": 43.6,
+            "start_probability": 0.5289,
             "clean_sheet_probability": 0.2443
           },
           {
@@ -19232,6 +19252,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-09-10T11:36:08.970086+00:00",
+  "updated_at": "2026-09-11T16:40:11.403714+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

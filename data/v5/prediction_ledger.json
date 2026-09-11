@@ -12685,7 +12685,7 @@
       "gw": 4,
       "deadline_time": "2026-09-12T12:30:00Z",
       "latest_pre_deadline_forecast": {
-        "generated_at": "2026-09-11T16:40:10.605497+00:00",
+        "generated_at": "2026-09-11T22:43:02.823195+00:00",
         "players": [
           {
             "element": 1,
@@ -14001,10 +14001,10 @@
             "element": 123,
             "name": "Hinshelwood",
             "position": "MID",
-            "xpts": 2.003,
-            "xpts_std": 1.754,
-            "xmins": 32.4,
-            "start_probability": 0.3536,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2019
           },
           {
@@ -14231,10 +14231,10 @@
             "element": 652,
             "name": "Azeez",
             "position": "MID",
-            "xpts": 1.222,
-            "xpts_std": 1.445,
-            "xmins": 21.8,
-            "start_probability": 0.2644,
+            "xpts": 1.885,
+            "xpts_std": 1.792,
+            "xmins": 32.7,
+            "start_probability": 0.3966,
             "clean_sheet_probability": 0.2019
           },
           {
@@ -14391,10 +14391,10 @@
             "element": 152,
             "name": "Palestra",
             "position": "DEF",
-            "xpts": 1.676,
-            "xpts_std": 1.704,
-            "xmins": 32.7,
-            "start_probability": 0.3966,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2005
           },
           {
@@ -15441,10 +15441,10 @@
             "element": 239,
             "name": "Garner",
             "position": "MID",
-            "xpts": 2.393,
-            "xpts_std": 1.865,
-            "xmins": 59.0,
-            "start_probability": 0.6429,
+            "xpts": 3.373,
+            "xpts_std": 2.09,
+            "xmins": 78.6,
+            "start_probability": 0.8572,
             "clean_sheet_probability": 0.4429
           },
           {
@@ -18651,10 +18651,10 @@
             "element": 499,
             "name": "Pedro Porro",
             "position": "DEF",
-            "xpts": 3.51,
-            "xpts_std": 2.187,
-            "xmins": 74.3,
-            "start_probability": 0.8274,
+            "xpts": 2.503,
+            "xpts_std": 1.932,
+            "xmins": 55.7,
+            "start_probability": 0.6205,
             "clean_sheet_probability": 0.2443
           },
           {
@@ -18701,10 +18701,10 @@
             "element": 506,
             "name": "Udogie",
             "position": "DEF",
-            "xpts": 2.703,
-            "xpts_std": 2.01,
-            "xmins": 63.8,
-            "start_probability": 0.665,
+            "xpts": 1.943,
+            "xpts_std": 1.78,
+            "xmins": 47.8,
+            "start_probability": 0.4987,
             "clean_sheet_probability": 0.2443
           },
           {
@@ -18931,10 +18931,10 @@
             "element": 578,
             "name": "Mudryk",
             "position": "MID",
-            "xpts": 1.965,
-            "xpts_std": 1.782,
-            "xmins": 43.6,
-            "start_probability": 0.5289,
+            "xpts": 0.0,
+            "xpts_std": 1.15,
+            "xmins": 0.0,
+            "start_probability": 0.0,
             "clean_sheet_probability": 0.2443
           },
           {
@@ -19252,6 +19252,6 @@
       "status": "COLLECTING"
     }
   },
-  "updated_at": "2026-09-11T16:40:11.403714+00:00",
+  "updated_at": "2026-09-11T22:43:03.624061+00:00",
   "model": "v5_prediction_evaluation_v2"
 }

@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "model": "v5_dss_source_fusion_v3",
-  "generated_at": "2026-09-11T16:40:10.182346+00:00",
+  "generated_at": "2026-09-11T22:43:02.426215+00:00",
   "status": "ACTIVE",
   "season": {
     "season": "2026/27",
@@ -56,7 +56,7 @@
     "understat": {
       "source": "understat",
       "status": "ACTIVE",
-      "generated_at": "2026-09-11T16:40:10.180803+00:00",
+      "generated_at": "2026-09-11T22:43:02.425067+00:00",
       "fetch_mode": "NETWORK",
       "season": {
         "season": "2026/27",

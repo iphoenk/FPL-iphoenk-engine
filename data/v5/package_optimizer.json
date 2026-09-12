@@ -975,7 +975,7 @@
         {
           "element": 279,
           "name": "Ajayi",
-          "sell_cost": 40
+          "sell_cost": 41
         }
       ],
       "ins": [
@@ -991,9 +991,9 @@
         }
       ],
       "affordability": {
-        "cash_available": 115,
+        "cash_available": 116,
         "incoming_cost": 115,
-        "resulting_itb": 0
+        "resulting_itb": 1
       },
       "score": {
         "valid": true,
@@ -2140,7 +2140,7 @@
       {
         "element": 449,
         "name": "Hall",
-        "now_cost": 51,
+        "now_cost": 52,
         "candidate_score": 20.828
       },
       {
@@ -4734,7 +4734,7 @@
       "optimizer challenger clears configured strong-review thresholds"
     ],
     "reasons_against": [
-      "market timing context contains 83 active price alerts"
+      "market timing context contains 119 active price alerts"
     ],
     "evidence": [
       {
@@ -4837,7 +4837,7 @@
     "team_cluster_penalty"
   ],
   "price_context": {
-    "alert_count": 83
+    "alert_count": 119
   },
   "governance": {
     "candidate_generation_only": true,

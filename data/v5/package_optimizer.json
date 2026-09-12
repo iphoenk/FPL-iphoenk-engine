@@ -21,28 +21,28 @@
       "horizons": {
         "3": {
           "valid": true,
-          "mean": 182.415,
-          "std": 16.765
+          "mean": 183.181,
+          "std": 16.734
         },
         "5": {
           "valid": true,
-          "mean": 306.062,
-          "std": 21.703
+          "mean": 309.539,
+          "std": 21.847
         },
         "10": {
           "valid": true,
-          "mean": 601.992,
-          "std": 30.233
+          "mean": 608.421,
+          "std": 30.456
         },
         "15": {
           "valid": true,
-          "mean": 914.056,
-          "std": 37.389
+          "mean": 921.394,
+          "std": 37.575
         }
       },
-      "objective_mean": 359.319,
-      "objective_std": 11.637,
-      "robust_score": 357.923,
+      "objective_mean": 362.486,
+      "objective_std": 11.677,
+      "robust_score": 361.085,
       "performance": {
         "projection_lookup": "indexed_o1",
         "horizon_evaluation": "single_pass_prefix",
@@ -53,7 +53,7 @@
   },
   "packages": [
     {
-      "id": "2:8,368->388,398",
+      "id": "2:8,31->388,330",
       "changes": 2,
       "outs": [
         {
@@ -62,211 +62,9 @@
           "sell_cost": 56
         },
         {
-          "element": 368,
-          "name": "Szoboszlai",
-          "sell_cost": 70
-        }
-      ],
-      "ins": [
-        {
-          "element": 388,
-          "name": "Guéhi",
-          "now_cost": 60
-        },
-        {
-          "element": 398,
-          "name": "Foden",
-          "now_cost": 70
-        }
-      ],
-      "affordability": {
-        "cash_available": 131,
-        "incoming_cost": 130,
-        "resulting_itb": 1
-      },
-      "score": {
-        "valid": true,
-        "horizons": {
-          "3": {
-            "valid": true,
-            "mean": 189.824,
-            "std": 17.269
-          },
-          "5": {
-            "valid": true,
-            "mean": 317.123,
-            "std": 22.298
-          },
-          "10": {
-            "valid": true,
-            "mean": 616.935,
-            "std": 30.814
-          },
-          "15": {
-            "valid": true,
-            "mean": 932.078,
-            "std": 37.971
-          }
-        },
-        "objective_mean": 370.125,
-        "objective_std": 11.939,
-        "robust_score": 368.242,
-        "performance": {
-          "projection_lookup": "indexed_o1",
-          "horizon_evaluation": "single_pass_prefix",
-          "gw_lineups_evaluated": 15
-        },
-        "raw_robust_score": 368.292,
-        "team_cluster_penalty_points": 0.05,
-        "guardrails": {
-          "early_season_change_cap_enabled": true,
-          "early_season_through_gw": 5,
-          "configured_max_changes": 2,
-          "effective_max_changes": 2,
-          "team_cluster_penalty_enabled": true,
-          "free_players_per_club": 2,
-          "points_per_extra_player": 0.05,
-          "cluster_excess_players": 1,
-          "cluster_penalty_points": 0.05
-        }
-      },
-      "legal": true,
-      "monte_carlo": {
-        "p25": 362.406,
-        "p50": 369.96,
-        "p75": 377.987,
-        "p_outperform_hold_independent_baseline": 0.7416
-      },
-      "team_cluster": {
-        "club_counts": {
-          "1": 1,
-          "4": 2,
-          "5": 2,
-          "6": 2,
-          "10": 1,
-          "11": 2,
-          "13": 1,
-          "15": 3,
-          "16": 1
-        },
-        "excess_players": 1,
-        "penalty": 0.05
-      }
-    },
-    {
-      "id": "2:40,368->427,398",
-      "changes": 2,
-      "outs": [
-        {
-          "element": 40,
-          "name": "Rogers",
-          "sell_cost": 75
-        },
-        {
-          "element": 368,
-          "name": "Szoboszlai",
-          "sell_cost": 70
-        }
-      ],
-      "ins": [
-        {
-          "element": 427,
-          "name": "Mbeumo",
-          "now_cost": 79
-        },
-        {
-          "element": 398,
-          "name": "Foden",
-          "now_cost": 70
-        }
-      ],
-      "affordability": {
-        "cash_available": 150,
-        "incoming_cost": 149,
-        "resulting_itb": 1
-      },
-      "score": {
-        "valid": true,
-        "horizons": {
-          "3": {
-            "valid": true,
-            "mean": 189.398,
-            "std": 17.315
-          },
-          "5": {
-            "valid": true,
-            "mean": 315.998,
-            "std": 22.341
-          },
-          "10": {
-            "valid": true,
-            "mean": 615.521,
-            "std": 30.908
-          },
-          "15": {
-            "valid": true,
-            "mean": 934.266,
-            "std": 38.221
-          }
-        },
-        "objective_mean": 369.581,
-        "objective_std": 11.973,
-        "robust_score": 367.745,
-        "performance": {
-          "projection_lookup": "indexed_o1",
-          "horizon_evaluation": "single_pass_prefix",
-          "gw_lineups_evaluated": 15
-        },
-        "raw_robust_score": 367.745,
-        "team_cluster_penalty_points": 0.0,
-        "guardrails": {
-          "early_season_change_cap_enabled": true,
-          "early_season_through_gw": 5,
-          "configured_max_changes": 2,
-          "effective_max_changes": 2,
-          "team_cluster_penalty_enabled": true,
-          "free_players_per_club": 2,
-          "points_per_extra_player": 0.05,
-          "cluster_excess_players": 0,
-          "cluster_penalty_points": 0.0
-        }
-      },
-      "legal": true,
-      "monte_carlo": {
-        "p25": 360.994,
-        "p50": 368.315,
-        "p75": 377.285,
-        "p_outperform_hold_independent_baseline": 0.7306
-      },
-      "team_cluster": {
-        "club_counts": {
-          "1": 2,
-          "4": 2,
-          "5": 2,
-          "6": 1,
-          "10": 1,
-          "11": 2,
-          "13": 1,
-          "15": 2,
-          "16": 2
-        },
-        "excess_players": 0,
-        "penalty": 0.0
-      }
-    },
-    {
-      "id": "2:8,254->388,330",
-      "changes": 2,
-      "outs": [
-        {
-          "element": 8,
-          "name": "Calafiori",
-          "sell_cost": 56
-        },
-        {
-          "element": 254,
-          "name": "Robinson",
-          "sell_cost": 45
+          "element": 31,
+          "name": "Konsa",
+          "sell_cost": 44
         }
       ],
       "ins": [
@@ -282,43 +80,43 @@
         }
       ],
       "affordability": {
-        "cash_available": 106,
+        "cash_available": 105,
         "incoming_cost": 105,
-        "resulting_itb": 1
+        "resulting_itb": 0
       },
       "score": {
         "valid": true,
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 187.438,
-            "std": 17.004
+            "mean": 188.834,
+            "std": 17.031
           },
           "5": {
             "valid": true,
-            "mean": 315.181,
-            "std": 22.058
+            "mean": 319.326,
+            "std": 22.246
           },
           "10": {
             "valid": true,
-            "mean": 620.155,
-            "std": 30.741
+            "mean": 626.061,
+            "std": 30.961
           },
           "15": {
             "valid": true,
-            "mean": 937.878,
-            "std": 37.91
+            "mean": 945.113,
+            "std": 38.113
           }
         },
-        "objective_mean": 369.545,
-        "objective_std": 11.816,
-        "robust_score": 367.727,
+        "objective_mean": 373.108,
+        "objective_std": 11.881,
+        "robust_score": 371.283,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 367.727,
+        "raw_robust_score": 371.283,
         "team_cluster_penalty_points": 0.0,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -334,10 +132,10 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 361.328,
-        "p50": 369.689,
-        "p75": 377.294,
-        "p_outperform_hold_independent_baseline": 0.7313
+        "p25": 364.957,
+        "p50": 372.649,
+        "p75": 380.693,
+        "p_outperform_hold_independent_baseline": 0.7381
       },
       "team_cluster": {
         "club_counts": {
@@ -350,107 +148,6 @@
           "14": 1,
           "15": 2,
           "16": 1
-        },
-        "excess_players": 0,
-        "penalty": 0.0
-      }
-    },
-    {
-      "id": "2:40,254->427,330",
-      "changes": 2,
-      "outs": [
-        {
-          "element": 40,
-          "name": "Rogers",
-          "sell_cost": 75
-        },
-        {
-          "element": 254,
-          "name": "Robinson",
-          "sell_cost": 45
-        }
-      ],
-      "ins": [
-        {
-          "element": 427,
-          "name": "Mbeumo",
-          "now_cost": 79
-        },
-        {
-          "element": 330,
-          "name": "Bogle",
-          "now_cost": 45
-        }
-      ],
-      "affordability": {
-        "cash_available": 125,
-        "incoming_cost": 124,
-        "resulting_itb": 1
-      },
-      "score": {
-        "valid": true,
-        "horizons": {
-          "3": {
-            "valid": true,
-            "mean": 187.096,
-            "std": 17.056
-          },
-          "5": {
-            "valid": true,
-            "mean": 314.141,
-            "std": 22.105
-          },
-          "10": {
-            "valid": true,
-            "mean": 618.826,
-            "std": 30.838
-          },
-          "15": {
-            "valid": true,
-            "mean": 940.15,
-            "std": 38.163
-          }
-        },
-        "objective_mean": 369.086,
-        "objective_std": 11.853,
-        "robust_score": 367.263,
-        "performance": {
-          "projection_lookup": "indexed_o1",
-          "horizon_evaluation": "single_pass_prefix",
-          "gw_lineups_evaluated": 15
-        },
-        "raw_robust_score": 367.263,
-        "team_cluster_penalty_points": 0.0,
-        "guardrails": {
-          "early_season_change_cap_enabled": true,
-          "early_season_through_gw": 5,
-          "configured_max_changes": 2,
-          "effective_max_changes": 2,
-          "team_cluster_penalty_enabled": true,
-          "free_players_per_club": 2,
-          "points_per_extra_player": 0.05,
-          "cluster_excess_players": 0,
-          "cluster_penalty_points": 0.0
-        }
-      },
-      "legal": true,
-      "monte_carlo": {
-        "p25": 362.045,
-        "p50": 370.273,
-        "p75": 377.286,
-        "p_outperform_hold_independent_baseline": 0.7217
-      },
-      "team_cluster": {
-        "club_counts": {
-          "1": 2,
-          "4": 2,
-          "5": 2,
-          "6": 1,
-          "11": 2,
-          "13": 2,
-          "14": 1,
-          "15": 1,
-          "16": 2
         },
         "excess_players": 0,
         "penalty": 0.0
@@ -493,34 +190,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 188.106,
-            "std": 17.095
+            "mean": 189.541,
+            "std": 17.111
           },
           "5": {
             "valid": true,
-            "mean": 314.603,
-            "std": 22.091
+            "mean": 318.648,
+            "std": 22.255
           },
           "10": {
             "valid": true,
-            "mean": 615.618,
-            "std": 30.662
+            "mean": 621.464,
+            "std": 30.862
           },
           "15": {
             "valid": true,
-            "mean": 928.953,
-            "std": 37.754
+            "mean": 937.507,
+            "std": 37.967
           }
         },
-        "objective_mean": 368.062,
-        "objective_std": 11.836,
-        "robust_score": 366.241,
+        "objective_mean": 371.731,
+        "objective_std": 11.892,
+        "robust_score": 369.904,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 366.241,
+        "raw_robust_score": 369.904,
         "team_cluster_penalty_points": 0.0,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -536,19 +233,18 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 359.233,
-        "p50": 368.601,
-        "p75": 376.403,
-        "p_outperform_hold_independent_baseline": 0.7008
+        "p25": 363.768,
+        "p50": 371.789,
+        "p75": 379.951,
+        "p_outperform_hold_independent_baseline": 0.7105
       },
       "team_cluster": {
         "club_counts": {
-          "1": 1,
+          "1": 2,
           "4": 2,
           "5": 2,
           "6": 2,
           "9": 1,
-          "10": 1,
           "11": 2,
           "14": 1,
           "15": 2,
@@ -559,7 +255,108 @@
       }
     },
     {
-      "id": "2:8,40->388,398",
+      "id": "2:40,31->427,330",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 40,
+          "name": "Rogers",
+          "sell_cost": 75
+        },
+        {
+          "element": 31,
+          "name": "Konsa",
+          "sell_cost": 44
+        }
+      ],
+      "ins": [
+        {
+          "element": 427,
+          "name": "Mbeumo",
+          "now_cost": 79
+        },
+        {
+          "element": 330,
+          "name": "Bogle",
+          "now_cost": 45
+        }
+      ],
+      "affordability": {
+        "cash_available": 124,
+        "incoming_cost": 124,
+        "resulting_itb": 0
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 187.035,
+            "std": 16.988
+          },
+          "5": {
+            "valid": true,
+            "mean": 316.726,
+            "std": 22.218
+          },
+          "10": {
+            "valid": true,
+            "mean": 625.847,
+            "std": 31.111
+          },
+          "15": {
+            "valid": true,
+            "mean": 943.572,
+            "std": 38.26
+          }
+        },
+        "objective_mean": 371.309,
+        "objective_std": 11.878,
+        "robust_score": 369.483,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        },
+        "raw_robust_score": 369.483,
+        "team_cluster_penalty_points": 0.0,
+        "guardrails": {
+          "early_season_change_cap_enabled": true,
+          "early_season_through_gw": 5,
+          "configured_max_changes": 2,
+          "effective_max_changes": 2,
+          "team_cluster_penalty_enabled": true,
+          "free_players_per_club": 2,
+          "points_per_extra_player": 0.05,
+          "cluster_excess_players": 0,
+          "cluster_penalty_points": 0.0
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 365.521,
+        "p50": 372.091,
+        "p75": 379.775,
+        "p_outperform_hold_independent_baseline": 0.7018
+      },
+      "team_cluster": {
+        "club_counts": {
+          "1": 2,
+          "4": 2,
+          "5": 2,
+          "6": 1,
+          "11": 2,
+          "13": 2,
+          "14": 1,
+          "15": 1,
+          "16": 2
+        },
+        "excess_players": 0,
+        "penalty": 0.0
+      }
+    },
+    {
+      "id": "2:8,367->388,398",
       "changes": 2,
       "outs": [
         {
@@ -568,9 +365,9 @@
           "sell_cost": 56
         },
         {
-          "element": 40,
-          "name": "Rogers",
-          "sell_cost": 75
+          "element": 367,
+          "name": "Gakpo",
+          "sell_cost": 71
         }
       ],
       "ins": [
@@ -586,43 +383,43 @@
         }
       ],
       "affordability": {
-        "cash_available": 136,
+        "cash_available": 132,
         "incoming_cost": 130,
-        "resulting_itb": 6
+        "resulting_itb": 2
       },
       "score": {
         "valid": true,
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 188.579,
-            "std": 17.21
+            "mean": 189.446,
+            "std": 17.155
           },
           "5": {
             "valid": true,
-            "mean": 315.203,
-            "std": 22.222
+            "mean": 319.094,
+            "std": 22.348
           },
           "10": {
             "valid": true,
-            "mean": 613.71,
-            "std": 30.723
+            "mean": 617.281,
+            "std": 30.791
           },
           "15": {
             "valid": true,
-            "mean": 927.264,
-            "std": 37.853
+            "mean": 933.928,
+            "std": 37.972
           }
         },
-        "objective_mean": 368.003,
-        "objective_std": 11.899,
-        "robust_score": 366.125,
+        "objective_mean": 370.853,
+        "objective_std": 11.919,
+        "robust_score": 368.973,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 366.175,
+        "raw_robust_score": 369.023,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -638,21 +435,19 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 359.273,
-        "p50": 366.974,
-        "p75": 373.554,
-        "p_outperform_hold_independent_baseline": 0.6991
+        "p25": 362.087,
+        "p50": 370.909,
+        "p75": 379.328,
+        "p_outperform_hold_independent_baseline": 0.692
       },
       "team_cluster": {
         "club_counts": {
-          "1": 1,
+          "1": 2,
           "4": 2,
           "5": 2,
-          "6": 1,
-          "10": 1,
+          "6": 2,
           "11": 2,
           "13": 1,
-          "14": 1,
           "15": 3,
           "16": 1
         },
@@ -661,25 +456,25 @@
       }
     },
     {
-      "id": "2:15,254->398,330",
+      "id": "2:8,88->388,330",
       "changes": 2,
       "outs": [
         {
-          "element": 15,
-          "name": "Ødegaard",
-          "sell_cost": 66
+          "element": 8,
+          "name": "Calafiori",
+          "sell_cost": 56
         },
         {
-          "element": 254,
-          "name": "Robinson",
+          "element": 88,
+          "name": "Kayode",
           "sell_cost": 45
         }
       ],
       "ins": [
         {
-          "element": 398,
-          "name": "Foden",
-          "now_cost": 70
+          "element": 388,
+          "name": "Guéhi",
+          "now_cost": 60
         },
         {
           "element": 330,
@@ -688,8 +483,8 @@
         }
       ],
       "affordability": {
-        "cash_available": 116,
-        "incoming_cost": 115,
+        "cash_available": 106,
+        "incoming_cost": 105,
         "resulting_itb": 1
       },
       "score": {
@@ -697,34 +492,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 187.237,
-            "std": 17.065
+            "mean": 187.243,
+            "std": 16.975
           },
           "5": {
             "valid": true,
-            "mean": 314.569,
-            "std": 22.125
+            "mean": 316.857,
+            "std": 22.185
           },
           "10": {
             "valid": true,
-            "mean": 615.191,
-            "std": 30.685
+            "mean": 622.083,
+            "std": 30.894
           },
           "15": {
             "valid": true,
-            "mean": 929.88,
-            "std": 37.814
+            "mean": 938.691,
+            "std": 38.018
           }
         },
-        "objective_mean": 367.714,
-        "objective_std": 11.839,
-        "robust_score": 365.893,
+        "objective_mean": 370.386,
+        "objective_std": 11.847,
+        "robust_score": 368.565,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 365.893,
+        "raw_robust_score": 368.565,
         "team_cluster_penalty_points": 0.0,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -740,10 +535,111 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 358.783,
-        "p50": 367.134,
-        "p75": 375.199,
-        "p_outperform_hold_independent_baseline": 0.6935
+        "p25": 362.387,
+        "p50": 370.178,
+        "p75": 377.108,
+        "p_outperform_hold_independent_baseline": 0.6826
+      },
+      "team_cluster": {
+        "club_counts": {
+          "1": 2,
+          "4": 1,
+          "5": 2,
+          "6": 2,
+          "11": 2,
+          "13": 2,
+          "14": 1,
+          "15": 2,
+          "16": 1
+        },
+        "excess_players": 0,
+        "penalty": 0.0
+      }
+    },
+    {
+      "id": "2:15,31->398,330",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "sell_cost": 66
+        },
+        {
+          "element": 31,
+          "name": "Konsa",
+          "sell_cost": 44
+        }
+      ],
+      "ins": [
+        {
+          "element": 398,
+          "name": "Foden",
+          "now_cost": 70
+        },
+        {
+          "element": 330,
+          "name": "Bogle",
+          "now_cost": 45
+        }
+      ],
+      "affordability": {
+        "cash_available": 115,
+        "incoming_cost": 115,
+        "resulting_itb": 0
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 187.953,
+            "std": 17.038
+          },
+          "5": {
+            "valid": true,
+            "mean": 317.517,
+            "std": 22.235
+          },
+          "10": {
+            "valid": true,
+            "mean": 620.137,
+            "std": 30.845
+          },
+          "15": {
+            "valid": true,
+            "mean": 934.722,
+            "std": 37.933
+          }
+        },
+        "objective_mean": 370.214,
+        "objective_std": 11.868,
+        "robust_score": 368.389,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        },
+        "raw_robust_score": 368.389,
+        "team_cluster_penalty_points": 0.0,
+        "guardrails": {
+          "early_season_change_cap_enabled": true,
+          "early_season_through_gw": 5,
+          "configured_max_changes": 2,
+          "effective_max_changes": 2,
+          "team_cluster_penalty_enabled": true,
+          "free_players_per_club": 2,
+          "points_per_extra_player": 0.05,
+          "cluster_excess_players": 0,
+          "cluster_penalty_points": 0.0
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 363.053,
+        "p50": 370.619,
+        "p75": 378.692,
+        "p_outperform_hold_independent_baseline": 0.6787
       },
       "team_cluster": {
         "club_counts": {
@@ -798,337 +694,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 187.679,
-            "std": 17.142
+            "mean": 187.591,
+            "std": 17.059
           },
           "5": {
             "valid": true,
-            "mean": 313.479,
-            "std": 22.134
+            "mean": 315.897,
+            "std": 22.219
           },
           "10": {
             "valid": true,
-            "mean": 614.204,
-            "std": 30.757
+            "mean": 621.099,
+            "std": 31.008
           },
           "15": {
             "valid": true,
-            "mean": 931.266,
-            "std": 38.012
+            "mean": 935.836,
+            "std": 38.108
           }
         },
-        "objective_mean": 367.53,
-        "objective_std": 11.871,
-        "robust_score": 365.706,
+        "objective_mean": 369.783,
+        "objective_std": 11.885,
+        "robust_score": 367.906,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 365.706,
-        "team_cluster_penalty_points": 0.0,
-        "guardrails": {
-          "early_season_change_cap_enabled": true,
-          "early_season_through_gw": 5,
-          "configured_max_changes": 2,
-          "effective_max_changes": 2,
-          "team_cluster_penalty_enabled": true,
-          "free_players_per_club": 2,
-          "points_per_extra_player": 0.05,
-          "cluster_excess_players": 0,
-          "cluster_penalty_points": 0.0
-        }
-      },
-      "legal": true,
-      "monte_carlo": {
-        "p25": 360.376,
-        "p50": 368.155,
-        "p75": 374.319,
-        "p_outperform_hold_independent_baseline": 0.6893
-      },
-      "team_cluster": {
-        "club_counts": {
-          "1": 2,
-          "4": 2,
-          "5": 2,
-          "6": 1,
-          "9": 1,
-          "10": 1,
-          "11": 2,
-          "14": 1,
-          "15": 1,
-          "16": 2
-        },
-        "excess_players": 0,
-        "penalty": 0.0
-      }
-    },
-    {
-      "id": "2:368,254->398,330",
-      "changes": 2,
-      "outs": [
-        {
-          "element": 368,
-          "name": "Szoboszlai",
-          "sell_cost": 70
-        },
-        {
-          "element": 254,
-          "name": "Robinson",
-          "sell_cost": 45
-        }
-      ],
-      "ins": [
-        {
-          "element": 398,
-          "name": "Foden",
-          "now_cost": 70
-        },
-        {
-          "element": 330,
-          "name": "Bogle",
-          "now_cost": 45
-        }
-      ],
-      "affordability": {
-        "cash_available": 120,
-        "incoming_cost": 115,
-        "resulting_itb": 5
-      },
-      "score": {
-        "valid": true,
-        "horizons": {
-          "3": {
-            "valid": true,
-            "mean": 187.124,
-            "std": 17.092
-          },
-          "5": {
-            "valid": true,
-            "mean": 313.938,
-            "std": 22.135
-          },
-          "10": {
-            "valid": true,
-            "mean": 613.458,
-            "std": 30.695
-          },
-          "15": {
-            "valid": true,
-            "mean": 930.512,
-            "std": 37.93
-          }
-        },
-        "objective_mean": 367.262,
-        "objective_std": 11.852,
-        "robust_score": 365.439,
-        "performance": {
-          "projection_lookup": "indexed_o1",
-          "horizon_evaluation": "single_pass_prefix",
-          "gw_lineups_evaluated": 15
-        },
-        "raw_robust_score": 365.439,
-        "team_cluster_penalty_points": 0.0,
-        "guardrails": {
-          "early_season_change_cap_enabled": true,
-          "early_season_through_gw": 5,
-          "configured_max_changes": 2,
-          "effective_max_changes": 2,
-          "team_cluster_penalty_enabled": true,
-          "free_players_per_club": 2,
-          "points_per_extra_player": 0.05,
-          "cluster_excess_players": 0,
-          "cluster_penalty_points": 0.0
-        }
-      },
-      "legal": true,
-      "monte_carlo": {
-        "p25": 359.325,
-        "p50": 367.59,
-        "p75": 376.129,
-        "p_outperform_hold_independent_baseline": 0.6837
-      },
-      "team_cluster": {
-        "club_counts": {
-          "1": 2,
-          "4": 2,
-          "5": 2,
-          "6": 2,
-          "11": 2,
-          "13": 2,
-          "15": 2,
-          "16": 1
-        },
-        "excess_players": 0,
-        "penalty": 0.0
-      }
-    },
-    {
-      "id": "2:368,279->398,330",
-      "changes": 2,
-      "outs": [
-        {
-          "element": 368,
-          "name": "Szoboszlai",
-          "sell_cost": 70
-        },
-        {
-          "element": 279,
-          "name": "Ajayi",
-          "sell_cost": 41
-        }
-      ],
-      "ins": [
-        {
-          "element": 398,
-          "name": "Foden",
-          "now_cost": 70
-        },
-        {
-          "element": 330,
-          "name": "Bogle",
-          "now_cost": 45
-        }
-      ],
-      "affordability": {
-        "cash_available": 116,
-        "incoming_cost": 115,
-        "resulting_itb": 1
-      },
-      "score": {
-        "valid": true,
-        "horizons": {
-          "3": {
-            "valid": true,
-            "mean": 186.992,
-            "std": 17.087
-          },
-          "5": {
-            "valid": true,
-            "mean": 313.63,
-            "std": 22.119
-          },
-          "10": {
-            "valid": true,
-            "mean": 613.026,
-            "std": 30.673
-          },
-          "15": {
-            "valid": true,
-            "mean": 929.577,
-            "std": 37.899
-          }
-        },
-        "objective_mean": 366.946,
-        "objective_std": 11.845,
-        "robust_score": 365.125,
-        "performance": {
-          "projection_lookup": "indexed_o1",
-          "horizon_evaluation": "single_pass_prefix",
-          "gw_lineups_evaluated": 15
-        },
-        "raw_robust_score": 365.125,
-        "team_cluster_penalty_points": 0.0,
-        "guardrails": {
-          "early_season_change_cap_enabled": true,
-          "early_season_through_gw": 5,
-          "configured_max_changes": 2,
-          "effective_max_changes": 2,
-          "team_cluster_penalty_enabled": true,
-          "free_players_per_club": 2,
-          "points_per_extra_player": 0.05,
-          "cluster_excess_players": 0,
-          "cluster_penalty_points": 0.0
-        }
-      },
-      "legal": true,
-      "monte_carlo": {
-        "p25": 358.242,
-        "p50": 367.16,
-        "p75": 374.129,
-        "p_outperform_hold_independent_baseline": 0.677
-      },
-      "team_cluster": {
-        "club_counts": {
-          "1": 2,
-          "4": 2,
-          "5": 2,
-          "6": 2,
-          "10": 1,
-          "11": 1,
-          "13": 2,
-          "15": 2,
-          "16": 1
-        },
-        "excess_players": 0,
-        "penalty": 0.0
-      }
-    },
-    {
-      "id": "2:368,40->398,399",
-      "changes": 2,
-      "outs": [
-        {
-          "element": 368,
-          "name": "Szoboszlai",
-          "sell_cost": 70
-        },
-        {
-          "element": 40,
-          "name": "Rogers",
-          "sell_cost": 75
-        }
-      ],
-      "ins": [
-        {
-          "element": 398,
-          "name": "Foden",
-          "now_cost": 70
-        },
-        {
-          "element": 399,
-          "name": "Cherki",
-          "now_cost": 78
-        }
-      ],
-      "affordability": {
-        "cash_available": 150,
-        "incoming_cost": 148,
-        "resulting_itb": 2
-      },
-      "score": {
-        "valid": true,
-        "horizons": {
-          "3": {
-            "valid": true,
-            "mean": 188.726,
-            "std": 17.346
-          },
-          "5": {
-            "valid": true,
-            "mean": 314.743,
-            "std": 22.362
-          },
-          "10": {
-            "valid": true,
-            "mean": 608.383,
-            "std": 30.76
-          },
-          "15": {
-            "valid": true,
-            "mean": 922.173,
-            "std": 37.989
-          }
-        },
-        "objective_mean": 366.605,
-        "objective_std": 11.969,
-        "robust_score": 364.719,
-        "performance": {
-          "projection_lookup": "indexed_o1",
-          "horizon_evaluation": "single_pass_prefix",
-          "gw_lineups_evaluated": 15
-        },
-        "raw_robust_score": 364.769,
+        "raw_robust_score": 367.956,
         "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -1144,137 +737,35 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 359.613,
-        "p50": 367.045,
-        "p75": 374.833,
-        "p_outperform_hold_independent_baseline": 0.6687
+        "p25": 361.716,
+        "p50": 370.224,
+        "p75": 377.971,
+        "p_outperform_hold_independent_baseline": 0.6693
       },
       "team_cluster": {
         "club_counts": {
-          "1": 2,
+          "1": 3,
           "4": 2,
           "5": 2,
           "6": 1,
-          "10": 1,
+          "9": 1,
           "11": 2,
-          "13": 1,
-          "15": 3,
-          "16": 1
+          "14": 1,
+          "15": 1,
+          "16": 2
         },
         "excess_players": 1,
         "penalty": 0.05
       }
     },
     {
-      "id": "2:8,88->388,330",
+      "id": "2:8,40->388,398",
       "changes": 2,
       "outs": [
         {
           "element": 8,
           "name": "Calafiori",
           "sell_cost": 56
-        },
-        {
-          "element": 88,
-          "name": "Kayode",
-          "sell_cost": 45
-        }
-      ],
-      "ins": [
-        {
-          "element": 388,
-          "name": "Guéhi",
-          "now_cost": 60
-        },
-        {
-          "element": 330,
-          "name": "Bogle",
-          "now_cost": 45
-        }
-      ],
-      "affordability": {
-        "cash_available": 106,
-        "incoming_cost": 105,
-        "resulting_itb": 1
-      },
-      "score": {
-        "valid": true,
-        "horizons": {
-          "3": {
-            "valid": true,
-            "mean": 185.245,
-            "std": 16.927
-          },
-          "5": {
-            "valid": true,
-            "mean": 312.279,
-            "std": 21.989
-          },
-          "10": {
-            "valid": true,
-            "mean": 615.353,
-            "std": 30.667
-          },
-          "15": {
-            "valid": true,
-            "mean": 930.396,
-            "std": 37.804
-          }
-        },
-        "objective_mean": 366.198,
-        "objective_std": 11.775,
-        "robust_score": 364.385,
-        "performance": {
-          "projection_lookup": "indexed_o1",
-          "horizon_evaluation": "single_pass_prefix",
-          "gw_lineups_evaluated": 15
-        },
-        "raw_robust_score": 364.385,
-        "team_cluster_penalty_points": 0.0,
-        "guardrails": {
-          "early_season_change_cap_enabled": true,
-          "early_season_through_gw": 5,
-          "configured_max_changes": 2,
-          "effective_max_changes": 2,
-          "team_cluster_penalty_enabled": true,
-          "free_players_per_club": 2,
-          "points_per_extra_player": 0.05,
-          "cluster_excess_players": 0,
-          "cluster_penalty_points": 0.0
-        }
-      },
-      "legal": true,
-      "monte_carlo": {
-        "p25": 357.395,
-        "p50": 366.459,
-        "p75": 374.342,
-        "p_outperform_hold_independent_baseline": 0.6611
-      },
-      "team_cluster": {
-        "club_counts": {
-          "1": 1,
-          "4": 1,
-          "5": 2,
-          "6": 2,
-          "10": 1,
-          "11": 2,
-          "13": 2,
-          "14": 1,
-          "15": 2,
-          "16": 1
-        },
-        "excess_players": 0,
-        "penalty": 0.0
-      }
-    },
-    {
-      "id": "2:254,40->330,399",
-      "changes": 2,
-      "outs": [
-        {
-          "element": 254,
-          "name": "Robinson",
-          "sell_cost": 45
         },
         {
           "element": 40,
@@ -1284,55 +775,55 @@
       ],
       "ins": [
         {
-          "element": 330,
-          "name": "Bogle",
-          "now_cost": 45
+          "element": 388,
+          "name": "Guéhi",
+          "now_cost": 60
         },
         {
-          "element": 399,
-          "name": "Cherki",
-          "now_cost": 78
+          "element": 398,
+          "name": "Foden",
+          "now_cost": 70
         }
       ],
       "affordability": {
-        "cash_available": 125,
-        "incoming_cost": 123,
-        "resulting_itb": 2
+        "cash_available": 136,
+        "incoming_cost": 130,
+        "resulting_itb": 6
       },
       "score": {
         "valid": true,
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 186.424,
-            "std": 17.088
+            "mean": 188.656,
+            "std": 17.132
           },
           "5": {
             "valid": true,
-            "mean": 312.886,
-            "std": 22.126
+            "mean": 317.059,
+            "std": 22.278
           },
           "10": {
             "valid": true,
-            "mean": 611.898,
-            "std": 30.692
+            "mean": 617.55,
+            "std": 30.838
           },
           "15": {
             "valid": true,
-            "mean": 928.268,
-            "std": 37.933
+            "mean": 932.785,
+            "std": 37.979
           }
         },
-        "objective_mean": 366.162,
-        "objective_std": 11.849,
-        "robust_score": 364.34,
+        "objective_mean": 369.776,
+        "objective_std": 11.901,
+        "robust_score": 367.898,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 364.34,
-        "team_cluster_penalty_points": 0.0,
+        "raw_robust_score": 367.948,
+        "team_cluster_penalty_points": 0.05,
         "guardrails": {
           "early_season_change_cap_enabled": true,
           "early_season_through_gw": 5,
@@ -1341,16 +832,16 @@
           "team_cluster_penalty_enabled": true,
           "free_players_per_club": 2,
           "points_per_extra_player": 0.05,
-          "cluster_excess_players": 0,
-          "cluster_penalty_points": 0.0
+          "cluster_excess_players": 1,
+          "cluster_penalty_points": 0.05
         }
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 357.433,
-        "p50": 365.03,
-        "p75": 373.827,
-        "p_outperform_hold_independent_baseline": 0.6598
+        "p25": 360.493,
+        "p50": 369.966,
+        "p75": 377.632,
+        "p_outperform_hold_independent_baseline": 0.669
       },
       "team_cluster": {
         "club_counts": {
@@ -1359,216 +850,13 @@
           "5": 2,
           "6": 1,
           "11": 2,
-          "13": 2,
-          "14": 1,
-          "15": 2,
-          "16": 1
-        },
-        "excess_players": 0,
-        "penalty": 0.0
-      }
-    },
-    {
-      "id": "2:368,254->398,469",
-      "changes": 2,
-      "outs": [
-        {
-          "element": 368,
-          "name": "Szoboszlai",
-          "sell_cost": 70
-        },
-        {
-          "element": 254,
-          "name": "Robinson",
-          "sell_cost": 45
-        }
-      ],
-      "ins": [
-        {
-          "element": 398,
-          "name": "Foden",
-          "now_cost": 70
-        },
-        {
-          "element": 469,
-          "name": "N.Williams",
-          "now_cost": 50
-        }
-      ],
-      "affordability": {
-        "cash_available": 120,
-        "incoming_cost": 120,
-        "resulting_itb": 0
-      },
-      "score": {
-        "valid": true,
-        "horizons": {
-          "3": {
-            "valid": true,
-            "mean": 187.943,
-            "std": 17.128
-          },
-          "5": {
-            "valid": true,
-            "mean": 313.765,
-            "std": 22.106
-          },
-          "10": {
-            "valid": true,
-            "mean": 608.913,
-            "std": 30.52
-          },
-          "15": {
-            "valid": true,
-            "mean": 923.2,
-            "std": 37.722
-          }
-        },
-        "objective_mean": 366.135,
-        "objective_std": 11.839,
-        "robust_score": 364.315,
-        "performance": {
-          "projection_lookup": "indexed_o1",
-          "horizon_evaluation": "single_pass_prefix",
-          "gw_lineups_evaluated": 15
-        },
-        "raw_robust_score": 364.315,
-        "team_cluster_penalty_points": 0.0,
-        "guardrails": {
-          "early_season_change_cap_enabled": true,
-          "early_season_through_gw": 5,
-          "configured_max_changes": 2,
-          "effective_max_changes": 2,
-          "team_cluster_penalty_enabled": true,
-          "free_players_per_club": 2,
-          "points_per_extra_player": 0.05,
-          "cluster_excess_players": 0,
-          "cluster_penalty_points": 0.0
-        }
-      },
-      "legal": true,
-      "monte_carlo": {
-        "p25": 359.542,
-        "p50": 366.87,
-        "p75": 373.532,
-        "p_outperform_hold_independent_baseline": 0.6593
-      },
-      "team_cluster": {
-        "club_counts": {
-          "1": 2,
-          "4": 2,
-          "5": 2,
-          "6": 2,
-          "11": 2,
           "13": 1,
-          "15": 2,
-          "16": 1,
-          "18": 1
-        },
-        "excess_players": 0,
-        "penalty": 0.0
-      }
-    },
-    {
-      "id": "2:15,346->398,249",
-      "changes": 2,
-      "outs": [
-        {
-          "element": 15,
-          "name": "Ødegaard",
-          "sell_cost": 66
-        },
-        {
-          "element": 346,
-          "name": "Calvert-Lewin",
-          "sell_cost": 60
-        }
-      ],
-      "ins": [
-        {
-          "element": 398,
-          "name": "Foden",
-          "now_cost": 70
-        },
-        {
-          "element": 249,
-          "name": "Barry",
-          "now_cost": 56
-        }
-      ],
-      "affordability": {
-        "cash_available": 131,
-        "incoming_cost": 126,
-        "resulting_itb": 5
-      },
-      "score": {
-        "valid": true,
-        "horizons": {
-          "3": {
-            "valid": true,
-            "mean": 187.904,
-            "std": 17.156
-          },
-          "5": {
-            "valid": true,
-            "mean": 313.991,
-            "std": 22.158
-          },
-          "10": {
-            "valid": true,
-            "mean": 610.252,
-            "std": 30.595
-          },
-          "15": {
-            "valid": true,
-            "mean": 920.611,
-            "std": 37.66
-          }
-        },
-        "objective_mean": 366.136,
-        "objective_std": 11.859,
-        "robust_score": 364.313,
-        "performance": {
-          "projection_lookup": "indexed_o1",
-          "horizon_evaluation": "single_pass_prefix",
-          "gw_lineups_evaluated": 15
-        },
-        "raw_robust_score": 364.313,
-        "team_cluster_penalty_points": 0.0,
-        "guardrails": {
-          "early_season_change_cap_enabled": true,
-          "early_season_through_gw": 5,
-          "configured_max_changes": 2,
-          "effective_max_changes": 2,
-          "team_cluster_penalty_enabled": true,
-          "free_players_per_club": 2,
-          "points_per_extra_player": 0.05,
-          "cluster_excess_players": 0,
-          "cluster_penalty_points": 0.0
-        }
-      },
-      "legal": true,
-      "monte_carlo": {
-        "p25": 357.773,
-        "p50": 365.922,
-        "p75": 374.735,
-        "p_outperform_hold_independent_baseline": 0.6592
-      },
-      "team_cluster": {
-        "club_counts": {
-          "1": 1,
-          "4": 2,
-          "5": 2,
-          "6": 2,
-          "9": 1,
-          "10": 1,
-          "11": 2,
           "14": 1,
-          "15": 2,
+          "15": 3,
           "16": 1
         },
-        "excess_players": 0,
-        "penalty": 0.0
+        "excess_players": 1,
+        "penalty": 0.05
       }
     },
     {
@@ -1598,34 +886,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 186.277,
-            "std": 16.974
+            "mean": 187.428,
+            "std": 16.969
           },
           "5": {
             "valid": true,
-            "mean": 312.214,
-            "std": 21.964
+            "mean": 316.219,
+            "std": 22.132
           },
           "10": {
             "valid": true,
-            "mean": 612.97,
-            "std": 30.554
+            "mean": 619.104,
+            "std": 30.761
           },
           "15": {
             "valid": true,
-            "mean": 926.818,
-            "std": 37.666
+            "mean": 935.314,
+            "std": 37.887
           }
         },
-        "objective_mean": 365.894,
-        "objective_std": 11.771,
-        "robust_score": 364.282,
+        "objective_mean": 369.469,
+        "objective_std": 11.823,
+        "robust_score": 367.85,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 364.282,
+        "raw_robust_score": 367.85,
         "team_cluster_penalty_points": 0.0,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -1641,16 +929,117 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 357.855,
-        "p50": 366.043,
-        "p75": 374.655,
-        "p_outperform_hold_independent_baseline": 0.6544
+        "p25": 360.569,
+        "p50": 369.694,
+        "p75": 377.452,
+        "p_outperform_hold_independent_baseline": 0.6628
       },
       "team_cluster": {
         "club_counts": {
-          "1": 1,
+          "1": 2,
           "4": 2,
           "5": 2,
+          "6": 2,
+          "11": 2,
+          "13": 1,
+          "14": 1,
+          "15": 2,
+          "16": 1
+        },
+        "excess_players": 0,
+        "penalty": 0.0
+      }
+    },
+    {
+      "id": "2:8,109->388,250",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 8,
+          "name": "Calafiori",
+          "sell_cost": 56
+        },
+        {
+          "element": 109,
+          "name": "Verbruggen",
+          "sell_cost": 45
+        }
+      ],
+      "ins": [
+        {
+          "element": 388,
+          "name": "Guéhi",
+          "now_cost": 60
+        },
+        {
+          "element": 250,
+          "name": "Leno",
+          "now_cost": 45
+        }
+      ],
+      "affordability": {
+        "cash_available": 106,
+        "incoming_cost": 105,
+        "resulting_itb": 1
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 186.936,
+            "std": 16.972
+          },
+          "5": {
+            "valid": true,
+            "mean": 316.474,
+            "std": 22.13
+          },
+          "10": {
+            "valid": true,
+            "mean": 619.482,
+            "std": 30.752
+          },
+          "15": {
+            "valid": true,
+            "mean": 936.047,
+            "std": 37.881
+          }
+        },
+        "objective_mean": 369.477,
+        "objective_std": 11.823,
+        "robust_score": 367.658,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        },
+        "raw_robust_score": 367.658,
+        "team_cluster_penalty_points": 0.0,
+        "guardrails": {
+          "early_season_change_cap_enabled": true,
+          "early_season_through_gw": 5,
+          "configured_max_changes": 2,
+          "effective_max_changes": 2,
+          "team_cluster_penalty_enabled": true,
+          "free_players_per_club": 2,
+          "points_per_extra_player": 0.05,
+          "cluster_excess_players": 0,
+          "cluster_penalty_points": 0.0
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 360.939,
+        "p50": 369.203,
+        "p75": 375.744,
+        "p_outperform_hold_independent_baseline": 0.663
+      },
+      "team_cluster": {
+        "club_counts": {
+          "1": 2,
+          "4": 2,
+          "5": 1,
           "6": 2,
           "10": 1,
           "11": 2,
@@ -1700,34 +1089,34 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 185.659,
-            "std": 16.975
+            "mean": 186.204,
+            "std": 16.928
           },
           "5": {
             "valid": true,
-            "mean": 311.407,
-            "std": 21.98
+            "mean": 315.049,
+            "std": 22.131
           },
           "10": {
             "valid": true,
-            "mean": 614.686,
-            "std": 30.701
+            "mean": 622.543,
+            "std": 30.982
           },
           "15": {
             "valid": true,
-            "mean": 931.099,
-            "std": 37.909
+            "mean": 936.697,
+            "std": 38.043
           }
         },
-        "objective_mean": 366.054,
-        "objective_std": 11.791,
-        "robust_score": 364.239,
+        "objective_mean": 369.223,
+        "objective_std": 11.83,
+        "robust_score": 367.403,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 364.239,
+        "raw_robust_score": 367.403,
         "team_cluster_penalty_points": 0.0,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -1743,18 +1132,17 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 356.376,
-        "p50": 365.963,
-        "p75": 373.896,
-        "p_outperform_hold_independent_baseline": 0.6578
+        "p25": 361.548,
+        "p50": 369.576,
+        "p75": 377.322,
+        "p_outperform_hold_independent_baseline": 0.6574
       },
       "team_cluster": {
         "club_counts": {
-          "1": 1,
+          "1": 2,
           "4": 2,
           "5": 2,
           "6": 1,
-          "10": 1,
           "11": 2,
           "13": 2,
           "14": 1,
@@ -1766,13 +1154,315 @@
       }
     },
     {
-      "id": "2:368,346->398,249",
+      "id": "2:8,572->388,250",
       "changes": 2,
       "outs": [
         {
-          "element": 368,
-          "name": "Szoboszlai",
-          "sell_cost": 70
+          "element": 8,
+          "name": "Calafiori",
+          "sell_cost": 56
+        },
+        {
+          "element": 572,
+          "name": "Tzolakis",
+          "sell_cost": 45
+        }
+      ],
+      "ins": [
+        {
+          "element": 388,
+          "name": "Guéhi",
+          "now_cost": 60
+        },
+        {
+          "element": 250,
+          "name": "Leno",
+          "now_cost": 45
+        }
+      ],
+      "affordability": {
+        "cash_available": 106,
+        "incoming_cost": 105,
+        "resulting_itb": 1
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 187.209,
+            "std": 16.94
+          },
+          "5": {
+            "valid": true,
+            "mean": 316.489,
+            "std": 22.104
+          },
+          "10": {
+            "valid": true,
+            "mean": 618.823,
+            "std": 30.686
+          },
+          "15": {
+            "valid": true,
+            "mean": 933.198,
+            "std": 37.748
+          }
+        },
+        "objective_mean": 369.212,
+        "objective_std": 11.801,
+        "robust_score": 367.396,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        },
+        "raw_robust_score": 367.396,
+        "team_cluster_penalty_points": 0.0,
+        "guardrails": {
+          "early_season_change_cap_enabled": true,
+          "early_season_through_gw": 5,
+          "configured_max_changes": 2,
+          "effective_max_changes": 2,
+          "team_cluster_penalty_enabled": true,
+          "free_players_per_club": 2,
+          "points_per_extra_player": 0.05,
+          "cluster_excess_players": 0,
+          "cluster_penalty_points": 0.0
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 361.647,
+        "p50": 369.468,
+        "p75": 377.392,
+        "p_outperform_hold_independent_baseline": 0.6573
+      },
+      "team_cluster": {
+        "club_counts": {
+          "1": 2,
+          "4": 2,
+          "5": 2,
+          "6": 2,
+          "10": 1,
+          "11": 1,
+          "13": 1,
+          "14": 1,
+          "15": 2,
+          "16": 1
+        },
+        "excess_players": 0,
+        "penalty": 0.0
+      }
+    },
+    {
+      "id": "2:8,346->388,136",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 8,
+          "name": "Calafiori",
+          "sell_cost": 56
+        },
+        {
+          "element": 346,
+          "name": "Calvert-Lewin",
+          "sell_cost": 60
+        }
+      ],
+      "ins": [
+        {
+          "element": 388,
+          "name": "Guéhi",
+          "now_cost": 60
+        },
+        {
+          "element": 136,
+          "name": "Welbeck",
+          "now_cost": 59
+        }
+      ],
+      "affordability": {
+        "cash_available": 121,
+        "incoming_cost": 119,
+        "resulting_itb": 2
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 187.227,
+            "std": 16.969
+          },
+          "5": {
+            "valid": true,
+            "mean": 316.187,
+            "std": 22.151
+          },
+          "10": {
+            "valid": true,
+            "mean": 618.433,
+            "std": 30.776
+          },
+          "15": {
+            "valid": true,
+            "mean": 934.348,
+            "std": 37.891
+          }
+        },
+        "objective_mean": 369.177,
+        "objective_std": 11.828,
+        "robust_score": 367.307,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        },
+        "raw_robust_score": 367.357,
+        "team_cluster_penalty_points": 0.05,
+        "guardrails": {
+          "early_season_change_cap_enabled": true,
+          "early_season_through_gw": 5,
+          "configured_max_changes": 2,
+          "effective_max_changes": 2,
+          "team_cluster_penalty_enabled": true,
+          "free_players_per_club": 2,
+          "points_per_extra_player": 0.05,
+          "cluster_excess_players": 1,
+          "cluster_penalty_points": 0.05
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 362.076,
+        "p50": 369.111,
+        "p75": 377.134,
+        "p_outperform_hold_independent_baseline": 0.6564
+      },
+      "team_cluster": {
+        "club_counts": {
+          "1": 2,
+          "4": 2,
+          "5": 2,
+          "6": 3,
+          "11": 2,
+          "14": 1,
+          "15": 2,
+          "16": 1
+        },
+        "excess_players": 1,
+        "penalty": 0.05
+      }
+    },
+    {
+      "id": "2:40,367->427,398",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 40,
+          "name": "Rogers",
+          "sell_cost": 75
+        },
+        {
+          "element": 367,
+          "name": "Gakpo",
+          "sell_cost": 71
+        }
+      ],
+      "ins": [
+        {
+          "element": 427,
+          "name": "Mbeumo",
+          "now_cost": 79
+        },
+        {
+          "element": 398,
+          "name": "Foden",
+          "now_cost": 70
+        }
+      ],
+      "affordability": {
+        "cash_available": 151,
+        "incoming_cost": 149,
+        "resulting_itb": 2
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 187.496,
+            "std": 17.103
+          },
+          "5": {
+            "valid": true,
+            "mean": 316.343,
+            "std": 22.312
+          },
+          "10": {
+            "valid": true,
+            "mean": 616.916,
+            "std": 30.936
+          },
+          "15": {
+            "valid": true,
+            "mean": 932.058,
+            "std": 38.104
+          }
+        },
+        "objective_mean": 368.885,
+        "objective_std": 11.911,
+        "robust_score": 367.005,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        },
+        "raw_robust_score": 367.055,
+        "team_cluster_penalty_points": 0.05,
+        "guardrails": {
+          "early_season_change_cap_enabled": true,
+          "early_season_through_gw": 5,
+          "configured_max_changes": 2,
+          "effective_max_changes": 2,
+          "team_cluster_penalty_enabled": true,
+          "free_players_per_club": 2,
+          "points_per_extra_player": 0.05,
+          "cluster_excess_players": 1,
+          "cluster_penalty_points": 0.05
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 359.672,
+        "p50": 368.511,
+        "p75": 375.937,
+        "p_outperform_hold_independent_baseline": 0.6494
+      },
+      "team_cluster": {
+        "club_counts": {
+          "1": 3,
+          "4": 2,
+          "5": 2,
+          "6": 1,
+          "11": 2,
+          "13": 1,
+          "15": 2,
+          "16": 2
+        },
+        "excess_players": 1,
+        "penalty": 0.05
+      }
+    },
+    {
+      "id": "2:15,346->398,249",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "sell_cost": 66
         },
         {
           "element": 346,
@@ -1793,43 +1483,43 @@
         }
       ],
       "affordability": {
-        "cash_available": 135,
+        "cash_available": 131,
         "incoming_cost": 126,
-        "resulting_itb": 9
+        "resulting_itb": 5
       },
       "score": {
         "valid": true,
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 187.79,
-            "std": 17.183
+            "mean": 188.587,
+            "std": 17.122
           },
           "5": {
             "valid": true,
-            "mean": 313.36,
-            "std": 22.169
+            "mean": 316.766,
+            "std": 22.246
           },
           "10": {
             "valid": true,
-            "mean": 608.458,
-            "std": 30.603
+            "mean": 615.179,
+            "std": 30.757
           },
           "15": {
             "valid": true,
-            "mean": 921.538,
-            "std": 37.78
+            "mean": 926.755,
+            "std": 37.795
           }
         },
-        "objective_mean": 365.703,
-        "objective_std": 11.872,
-        "robust_score": 363.878,
+        "objective_mean": 368.692,
+        "objective_std": 11.882,
+        "robust_score": 366.866,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 363.878,
+        "raw_robust_score": 366.866,
         "team_cluster_penalty_points": 0.0,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -1845,10 +1535,10 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 357.545,
-        "p50": 366.49,
-        "p75": 373.817,
-        "p_outperform_hold_independent_baseline": 0.6495
+        "p25": 361.752,
+        "p50": 370.043,
+        "p75": 376.574,
+        "p_outperform_hold_independent_baseline": 0.6452
       },
       "team_cluster": {
         "club_counts": {
@@ -1857,9 +1547,111 @@
           "5": 2,
           "6": 2,
           "9": 1,
-          "10": 1,
           "11": 2,
+          "14": 1,
           "15": 2,
+          "16": 1
+        },
+        "excess_players": 0,
+        "penalty": 0.0
+      }
+    },
+    {
+      "id": "2:31,346->330,249",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 31,
+          "name": "Konsa",
+          "sell_cost": 44
+        },
+        {
+          "element": 346,
+          "name": "Calvert-Lewin",
+          "sell_cost": 60
+        }
+      ],
+      "ins": [
+        {
+          "element": 330,
+          "name": "Bogle",
+          "now_cost": 45
+        },
+        {
+          "element": 249,
+          "name": "Barry",
+          "now_cost": 56
+        }
+      ],
+      "affordability": {
+        "cash_available": 109,
+        "incoming_cost": 101,
+        "resulting_itb": 8
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 186.853,
+            "std": 16.949
+          },
+          "5": {
+            "valid": true,
+            "mean": 315.166,
+            "std": 22.091
+          },
+          "10": {
+            "valid": true,
+            "mean": 618.07,
+            "std": 30.767
+          },
+          "15": {
+            "valid": true,
+            "mean": 933.637,
+            "std": 37.881
+          }
+        },
+        "objective_mean": 368.557,
+        "objective_std": 11.81,
+        "robust_score": 366.74,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        },
+        "raw_robust_score": 366.74,
+        "team_cluster_penalty_points": 0.0,
+        "guardrails": {
+          "early_season_change_cap_enabled": true,
+          "early_season_through_gw": 5,
+          "configured_max_changes": 2,
+          "effective_max_changes": 2,
+          "team_cluster_penalty_enabled": true,
+          "free_players_per_club": 2,
+          "points_per_extra_player": 0.05,
+          "cluster_excess_players": 0,
+          "cluster_penalty_points": 0.0
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 360.936,
+        "p50": 368.992,
+        "p75": 377.306,
+        "p_outperform_hold_independent_baseline": 0.6426
+      },
+      "team_cluster": {
+        "club_counts": {
+          "1": 2,
+          "4": 2,
+          "5": 2,
+          "6": 2,
+          "9": 1,
+          "11": 2,
+          "13": 1,
+          "14": 1,
+          "15": 1,
           "16": 1
         },
         "excess_players": 0,
@@ -1903,34 +1695,237 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 184.819,
-            "std": 16.974
+            "mean": 185.292,
+            "std": 16.922
           },
           "5": {
             "valid": true,
-            "mean": 311.155,
-            "std": 22.032
+            "mean": 314.106,
+            "std": 22.149
           },
           "10": {
             "valid": true,
-            "mean": 613.94,
-            "std": 30.761
+            "mean": 621.718,
+            "std": 31.039
           },
           "15": {
             "valid": true,
-            "mean": 932.708,
-            "std": 38.062
+            "mean": 937.02,
+            "std": 38.159
           }
         },
-        "objective_mean": 365.667,
-        "objective_std": 11.809,
-        "robust_score": 363.85,
+        "objective_mean": 368.437,
+        "objective_std": 11.84,
+        "robust_score": 366.567,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 363.85,
+        "raw_robust_score": 366.617,
+        "team_cluster_penalty_points": 0.05,
+        "guardrails": {
+          "early_season_change_cap_enabled": true,
+          "early_season_through_gw": 5,
+          "configured_max_changes": 2,
+          "effective_max_changes": 2,
+          "team_cluster_penalty_enabled": true,
+          "free_players_per_club": 2,
+          "points_per_extra_player": 0.05,
+          "cluster_excess_players": 1,
+          "cluster_penalty_points": 0.05
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 361.833,
+        "p50": 369.125,
+        "p75": 376.863,
+        "p_outperform_hold_independent_baseline": 0.6398
+      },
+      "team_cluster": {
+        "club_counts": {
+          "1": 3,
+          "4": 1,
+          "5": 2,
+          "6": 1,
+          "11": 2,
+          "13": 2,
+          "14": 1,
+          "15": 1,
+          "16": 2
+        },
+        "excess_players": 1,
+        "penalty": 0.05
+      }
+    },
+    {
+      "id": "2:279,346->330,249",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 279,
+          "name": "Ajayi",
+          "sell_cost": 41
+        },
+        {
+          "element": 346,
+          "name": "Calvert-Lewin",
+          "sell_cost": 60
+        }
+      ],
+      "ins": [
+        {
+          "element": 330,
+          "name": "Bogle",
+          "now_cost": 45
+        },
+        {
+          "element": 249,
+          "name": "Barry",
+          "now_cost": 56
+        }
+      ],
+      "affordability": {
+        "cash_available": 106,
+        "incoming_cost": 101,
+        "resulting_itb": 5
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 186.671,
+            "std": 16.932
+          },
+          "5": {
+            "valid": true,
+            "mean": 314.949,
+            "std": 22.077
+          },
+          "10": {
+            "valid": true,
+            "mean": 617.202,
+            "std": 30.72
+          },
+          "15": {
+            "valid": true,
+            "mean": 932.434,
+            "std": 37.833
+          }
+        },
+        "objective_mean": 368.159,
+        "objective_std": 11.798,
+        "robust_score": 366.293,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        },
+        "raw_robust_score": 366.343,
+        "team_cluster_penalty_points": 0.05,
+        "guardrails": {
+          "early_season_change_cap_enabled": true,
+          "early_season_through_gw": 5,
+          "configured_max_changes": 2,
+          "effective_max_changes": 2,
+          "team_cluster_penalty_enabled": true,
+          "free_players_per_club": 2,
+          "points_per_extra_player": 0.05,
+          "cluster_excess_players": 1,
+          "cluster_penalty_points": 0.05
+        }
+      },
+      "legal": true,
+      "monte_carlo": {
+        "p25": 360.745,
+        "p50": 367.75,
+        "p75": 375.501,
+        "p_outperform_hold_independent_baseline": 0.6337
+      },
+      "team_cluster": {
+        "club_counts": {
+          "1": 3,
+          "4": 2,
+          "5": 2,
+          "6": 2,
+          "9": 1,
+          "11": 1,
+          "13": 1,
+          "14": 1,
+          "15": 1,
+          "16": 1
+        },
+        "excess_players": 1,
+        "penalty": 0.05
+      }
+    },
+    {
+      "id": "2:15,8->398,330",
+      "changes": 2,
+      "outs": [
+        {
+          "element": 15,
+          "name": "Ødegaard",
+          "sell_cost": 66
+        },
+        {
+          "element": 8,
+          "name": "Calafiori",
+          "sell_cost": 56
+        }
+      ],
+      "ins": [
+        {
+          "element": 398,
+          "name": "Foden",
+          "now_cost": 70
+        },
+        {
+          "element": 330,
+          "name": "Bogle",
+          "now_cost": 45
+        }
+      ],
+      "affordability": {
+        "cash_available": 127,
+        "incoming_cost": 115,
+        "resulting_itb": 12
+      },
+      "score": {
+        "valid": true,
+        "horizons": {
+          "3": {
+            "valid": true,
+            "mean": 187.122,
+            "std": 16.978
+          },
+          "5": {
+            "valid": true,
+            "mean": 315.84,
+            "std": 22.148
+          },
+          "10": {
+            "valid": true,
+            "mean": 616.66,
+            "std": 30.716
+          },
+          "15": {
+            "valid": true,
+            "mean": 927.653,
+            "std": 37.717
+          }
+        },
+        "objective_mean": 368.083,
+        "objective_std": 11.82,
+        "robust_score": 366.264,
+        "performance": {
+          "projection_lookup": "indexed_o1",
+          "horizon_evaluation": "single_pass_prefix",
+          "gw_lineups_evaluated": 15
+        },
+        "raw_robust_score": 366.264,
         "team_cluster_penalty_points": 0.0,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -1946,32 +1941,36 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 357.582,
-        "p50": 366.342,
-        "p75": 373.402,
-        "p_outperform_hold_independent_baseline": 0.6491
+        "p25": 358.005,
+        "p50": 367.365,
+        "p75": 375.066,
+        "p_outperform_hold_independent_baseline": 0.6319
       },
       "team_cluster": {
         "club_counts": {
-          "1": 2,
-          "4": 1,
+          "1": 1,
+          "4": 2,
           "5": 2,
-          "6": 1,
-          "10": 1,
+          "6": 2,
           "11": 2,
           "13": 2,
           "14": 1,
-          "15": 1,
-          "16": 2
+          "15": 2,
+          "16": 1
         },
         "excess_players": 0,
         "penalty": 0.0
       }
     },
     {
-      "id": "1:40->427",
-      "changes": 1,
+      "id": "2:31,40->330,480",
+      "changes": 2,
       "outs": [
+        {
+          "element": 31,
+          "name": "Konsa",
+          "sell_cost": 44
+        },
         {
           "element": 40,
           "name": "Rogers",
@@ -1980,49 +1979,54 @@
       ],
       "ins": [
         {
-          "element": 427,
-          "name": "Mbeumo",
+          "element": 330,
+          "name": "Bogle",
+          "now_cost": 45
+        },
+        {
+          "element": 480,
+          "name": "Gibbs-White",
           "now_cost": 79
         }
       ],
       "affordability": {
-        "cash_available": 80,
-        "incoming_cost": 79,
-        "resulting_itb": 1
+        "cash_available": 124,
+        "incoming_cost": 124,
+        "resulting_itb": 0
       },
       "score": {
         "valid": true,
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 185.851,
-            "std": 17.021
+            "mean": 186.1,
+            "std": 16.905
           },
           "5": {
             "valid": true,
-            "mean": 311.09,
-            "std": 22.006
+            "mean": 314.126,
+            "std": 22.047
           },
           "10": {
             "valid": true,
-            "mean": 611.557,
-            "std": 30.649
+            "mean": 617.575,
+            "std": 30.742
           },
           "15": {
             "valid": true,
-            "mean": 929.13,
-            "std": 37.925
+            "mean": 935.046,
+            "std": 37.926
           }
         },
-        "objective_mean": 365.364,
-        "objective_std": 11.805,
-        "robust_score": 363.747,
+        "objective_mean": 367.964,
+        "objective_std": 11.79,
+        "robust_score": 366.15,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 363.747,
+        "raw_robust_score": 366.15,
         "team_cluster_penalty_points": 0.0,
         "guardrails": {
           "early_season_change_cap_enabled": true,
@@ -2038,10 +2042,10 @@
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 356.248,
-        "p50": 364.546,
-        "p75": 371.403,
-        "p_outperform_hold_independent_baseline": 0.6423
+        "p25": 359.13,
+        "p50": 366.937,
+        "p75": 375.496,
+        "p_outperform_hold_independent_baseline": 0.6293
       },
       "team_cluster": {
         "club_counts": {
@@ -2049,12 +2053,12 @@
           "4": 2,
           "5": 2,
           "6": 1,
-          "10": 1,
           "11": 2,
-          "13": 1,
+          "13": 2,
           "14": 1,
           "15": 1,
-          "16": 2
+          "16": 1,
+          "18": 1
         },
         "excess_players": 0,
         "penalty": 0.0
@@ -2067,43 +2071,43 @@
         "element": 1,
         "name": "Raya",
         "now_cost": 60,
-        "candidate_score": 20.144
+        "candidate_score": 20.993
       },
       {
         "element": 82,
         "name": "Kelleher",
         "now_cost": 50,
-        "candidate_score": 19.794
-      },
-      {
-        "element": 384,
-        "name": "Donnarumma",
-        "now_cost": 55,
-        "candidate_score": 18.896
-      },
-      {
-        "element": 226,
-        "name": "Pickford",
-        "now_cost": 55,
-        "candidate_score": 18.892
+        "candidate_score": 20.348
       },
       {
         "element": 250,
         "name": "Leno",
         "now_cost": 45,
-        "candidate_score": 18.584
+        "candidate_score": 20.153
       },
       {
-        "element": 467,
-        "name": "Sels",
-        "now_cost": 50,
-        "candidate_score": 18.166
+        "element": 384,
+        "name": "Donnarumma",
+        "now_cost": 55,
+        "candidate_score": 19.309
       },
       {
         "element": 385,
         "name": "Trafford",
         "now_cost": 50,
-        "candidate_score": 17.752
+        "candidate_score": 18.359
+      },
+      {
+        "element": 226,
+        "name": "Pickford",
+        "now_cost": 55,
+        "candidate_score": 17.985
+      },
+      {
+        "element": 467,
+        "name": "Sels",
+        "now_cost": 50,
+        "candidate_score": 17.944
       }
     ],
     "DEF": [
@@ -2111,43 +2115,43 @@
         "element": 388,
         "name": "Guéhi",
         "now_cost": 60,
-        "candidate_score": 27.601
+        "candidate_score": 27.644
       },
       {
         "element": 387,
         "name": "O'Reilly",
         "now_cost": 64,
-        "candidate_score": 23.128
+        "candidate_score": 23.149
       },
       {
         "element": 330,
         "name": "Bogle",
         "now_cost": 45,
-        "candidate_score": 21.887
-      },
-      {
-        "element": 469,
-        "name": "N.Williams",
-        "now_cost": 50,
-        "candidate_score": 21.727
+        "candidate_score": 22.649
       },
       {
         "element": 391,
         "name": "Gvardiol",
         "now_cost": 56,
-        "candidate_score": 21.458
-      },
-      {
-        "element": 449,
-        "name": "Hall",
-        "now_cost": 52,
-        "candidate_score": 20.828
+        "candidate_score": 21.621
       },
       {
         "element": 4,
         "name": "Gabriel",
         "now_cost": 80,
-        "candidate_score": 20.786
+        "candidate_score": 21.245
+      },
+      {
+        "element": 469,
+        "name": "N.Williams",
+        "now_cost": 50,
+        "candidate_score": 21.087
+      },
+      {
+        "element": 229,
+        "name": "Tarkowski",
+        "now_cost": 60,
+        "candidate_score": 20.397
       }
     ],
     "MID": [
@@ -2155,87 +2159,87 @@
         "element": 427,
         "name": "Mbeumo",
         "now_cost": 79,
-        "candidate_score": 27.183
+        "candidate_score": 27.62
       },
       {
         "element": 399,
         "name": "Cherki",
         "now_cost": 78,
-        "candidate_score": 25.919
-      },
-      {
-        "element": 398,
-        "name": "Foden",
-        "now_cost": 70,
-        "candidate_score": 25.16
+        "candidate_score": 25.355
       },
       {
         "element": 480,
         "name": "Gibbs-White",
         "now_cost": 79,
-        "candidate_score": 23.639
+        "candidate_score": 25.089
+      },
+      {
+        "element": 398,
+        "name": "Foden",
+        "now_cost": 70,
+        "candidate_score": 24.571
       },
       {
         "element": 68,
         "name": "Tavernier",
         "now_cost": 60,
-        "candidate_score": 23.394
+        "candidate_score": 24.268
+      },
+      {
+        "element": 12,
+        "name": "Saka",
+        "now_cost": 95,
+        "candidate_score": 23.883
       },
       {
         "element": 154,
         "name": "Palmer",
         "now_cost": 97,
-        "candidate_score": 23.051
-      },
-      {
-        "element": 155,
-        "name": "Enzo",
-        "now_cost": 69,
-        "candidate_score": 22.81
+        "candidate_score": 23.429
       }
     ],
     "FWD": [
       {
-        "element": 379,
-        "name": "Isak",
-        "now_cost": 91,
-        "candidate_score": 20.264
-      },
-      {
         "element": 249,
         "name": "Barry",
         "now_cost": 56,
-        "candidate_score": 19.737
+        "candidate_score": 20.201
+      },
+      {
+        "element": 379,
+        "name": "Isak",
+        "now_cost": 91,
+        "candidate_score": 19.99
       },
       {
         "element": 106,
         "name": "Thiago",
         "now_cost": 79,
-        "candidate_score": 19.582
-      },
-      {
-        "element": 464,
-        "name": "Wissa",
-        "now_cost": 62,
-        "candidate_score": 17.838
+        "candidate_score": 19.941
       },
       {
         "element": 136,
         "name": "Welbeck",
         "now_cost": 59,
-        "candidate_score": 16.958
+        "candidate_score": 17.861
       },
       {
-        "element": 569,
-        "name": "Gonzalo",
-        "now_cost": 60,
-        "candidate_score": 16.538
+        "element": 464,
+        "name": "Wissa",
+        "now_cost": 62,
+        "candidate_score": 17.334
       },
       {
-        "element": 79,
-        "name": "Evanilson",
-        "now_cost": 60,
-        "candidate_score": 16.108
+        "element": 439,
+        "name": "Šeško",
+        "now_cost": 70,
+        "candidate_score": 16.03
+      },
+      {
+        "element": 491,
+        "name": "Igor Jesus",
+        "now_cost": 59,
+        "candidate_score": 15.653
       }
     ]
   },
@@ -2255,28 +2259,28 @@
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 182.415,
-            "std": 16.765
+            "mean": 183.181,
+            "std": 16.734
           },
           "5": {
             "valid": true,
-            "mean": 306.062,
-            "std": 21.703
+            "mean": 309.539,
+            "std": 21.847
           },
           "10": {
             "valid": true,
-            "mean": 601.992,
-            "std": 30.233
+            "mean": 608.421,
+            "std": 30.456
           },
           "15": {
             "valid": true,
-            "mean": 914.056,
-            "std": 37.389
+            "mean": 921.394,
+            "std": 37.575
           }
         },
-        "objective_mean": 359.319,
-        "objective_std": 11.637,
-        "robust_score": 357.923,
+        "objective_mean": 362.486,
+        "objective_std": 11.677,
+        "robust_score": 361.085,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
@@ -2287,7 +2291,7 @@
     },
     "selected_package_id": "HOLD",
     "optimizer_best_candidate": {
-      "id": "2:8,368->388,398",
+      "id": "2:8,31->388,330",
       "changes": 2,
       "outs": [
         {
@@ -2296,9 +2300,9 @@
           "sell_cost": 56
         },
         {
-          "element": 368,
-          "name": "Szoboszlai",
-          "sell_cost": 70
+          "element": 31,
+          "name": "Konsa",
+          "sell_cost": 44
         }
       ],
       "ins": [
@@ -2308,50 +2312,50 @@
           "now_cost": 60
         },
         {
-          "element": 398,
-          "name": "Foden",
-          "now_cost": 70
+          "element": 330,
+          "name": "Bogle",
+          "now_cost": 45
         }
       ],
       "affordability": {
-        "cash_available": 131,
-        "incoming_cost": 130,
-        "resulting_itb": 1
+        "cash_available": 105,
+        "incoming_cost": 105,
+        "resulting_itb": 0
       },
       "score": {
         "valid": true,
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 189.824,
-            "std": 17.269
+            "mean": 188.834,
+            "std": 17.031
           },
           "5": {
             "valid": true,
-            "mean": 317.123,
-            "std": 22.298
+            "mean": 319.326,
+            "std": 22.246
           },
           "10": {
             "valid": true,
-            "mean": 616.935,
-            "std": 30.814
+            "mean": 626.061,
+            "std": 30.961
           },
           "15": {
             "valid": true,
-            "mean": 932.078,
-            "std": 37.971
+            "mean": 945.113,
+            "std": 38.113
           }
         },
-        "objective_mean": 370.125,
-        "objective_std": 11.939,
-        "robust_score": 368.242,
+        "objective_mean": 373.108,
+        "objective_std": 11.881,
+        "robust_score": 371.283,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 368.292,
-        "team_cluster_penalty_points": 0.05,
+        "raw_robust_score": 371.283,
+        "team_cluster_penalty_points": 0.0,
         "guardrails": {
           "early_season_change_cap_enabled": true,
           "early_season_through_gw": 5,
@@ -2360,16 +2364,16 @@
           "team_cluster_penalty_enabled": true,
           "free_players_per_club": 2,
           "points_per_extra_player": 0.05,
-          "cluster_excess_players": 1,
-          "cluster_penalty_points": 0.05
+          "cluster_excess_players": 0,
+          "cluster_penalty_points": 0.0
         }
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 362.406,
-        "p50": 369.96,
-        "p75": 377.987,
-        "p_outperform_hold_independent_baseline": 0.7416
+        "p25": 364.957,
+        "p50": 372.649,
+        "p75": 380.693,
+        "p_outperform_hold_independent_baseline": 0.7381
       },
       "team_cluster": {
         "club_counts": {
@@ -2377,19 +2381,19 @@
           "4": 2,
           "5": 2,
           "6": 2,
-          "10": 1,
           "11": 2,
-          "13": 1,
-          "15": 3,
+          "13": 2,
+          "14": 1,
+          "15": 2,
           "16": 1
         },
-        "excess_players": 1,
-        "penalty": 0.05
+        "excess_players": 0,
+        "penalty": 0.0
       }
     },
-    "optimizer_best_candidate_id": "2:8,368->388,398",
+    "optimizer_best_candidate_id": "2:8,31->388,330",
     "optimizer_best_challenger": {
-      "id": "2:8,368->388,398",
+      "id": "2:8,31->388,330",
       "changes": 2,
       "outs": [
         {
@@ -2398,9 +2402,9 @@
           "sell_cost": 56
         },
         {
-          "element": 368,
-          "name": "Szoboszlai",
-          "sell_cost": 70
+          "element": 31,
+          "name": "Konsa",
+          "sell_cost": 44
         }
       ],
       "ins": [
@@ -2410,50 +2414,50 @@
           "now_cost": 60
         },
         {
-          "element": 398,
-          "name": "Foden",
-          "now_cost": 70
+          "element": 330,
+          "name": "Bogle",
+          "now_cost": 45
         }
       ],
       "affordability": {
-        "cash_available": 131,
-        "incoming_cost": 130,
-        "resulting_itb": 1
+        "cash_available": 105,
+        "incoming_cost": 105,
+        "resulting_itb": 0
       },
       "score": {
         "valid": true,
         "horizons": {
           "3": {
             "valid": true,
-            "mean": 189.824,
-            "std": 17.269
+            "mean": 188.834,
+            "std": 17.031
           },
           "5": {
             "valid": true,
-            "mean": 317.123,
-            "std": 22.298
+            "mean": 319.326,
+            "std": 22.246
           },
           "10": {
             "valid": true,
-            "mean": 616.935,
-            "std": 30.814
+            "mean": 626.061,
+            "std": 30.961
           },
           "15": {
             "valid": true,
-            "mean": 932.078,
-            "std": 37.971
+            "mean": 945.113,
+            "std": 38.113
           }
         },
-        "objective_mean": 370.125,
-        "objective_std": 11.939,
-        "robust_score": 368.242,
+        "objective_mean": 373.108,
+        "objective_std": 11.881,
+        "robust_score": 371.283,
         "performance": {
           "projection_lookup": "indexed_o1",
           "horizon_evaluation": "single_pass_prefix",
           "gw_lineups_evaluated": 15
         },
-        "raw_robust_score": 368.292,
-        "team_cluster_penalty_points": 0.05,
+        "raw_robust_score": 371.283,
+        "team_cluster_penalty_points": 0.0,
         "guardrails": {
           "early_season_change_cap_enabled": true,
           "early_season_through_gw": 5,
@@ -2462,16 +2466,16 @@
           "team_cluster_penalty_enabled": true,
           "free_players_per_club": 2,
           "points_per_extra_player": 0.05,
-          "cluster_excess_players": 1,
-          "cluster_penalty_points": 0.05
+          "cluster_excess_players": 0,
+          "cluster_penalty_points": 0.0
         }
       },
       "legal": true,
       "monte_carlo": {
-        "p25": 362.406,
-        "p50": 369.96,
-        "p75": 377.987,
-        "p_outperform_hold_independent_baseline": 0.7416
+        "p25": 364.957,
+        "p50": 372.649,
+        "p75": 380.693,
+        "p_outperform_hold_independent_baseline": 0.7381
       },
       "team_cluster": {
         "club_counts": {
@@ -2479,17 +2483,17 @@
           "4": 2,
           "5": 2,
           "6": 2,
-          "10": 1,
           "11": 2,
-          "13": 1,
-          "15": 3,
+          "13": 2,
+          "14": 1,
+          "15": 2,
           "16": 1
         },
-        "excess_players": 1,
-        "penalty": 0.05
+        "excess_players": 0,
+        "penalty": 0.0
       }
     },
-    "optimizer_best_challenger_id": "2:8,368->388,398",
+    "optimizer_best_challenger_id": "2:8,31->388,330",
     "manual_authority_override": false,
     "team_authority": "official_public",
     "phase": "PRE_DEADLINE",
@@ -2513,28 +2517,28 @@
       "horizons": {
         "3": {
           "valid": true,
-          "mean": 182.415,
-          "std": 16.765
+          "mean": 183.181,
+          "std": 16.734
         },
         "5": {
           "valid": true,
-          "mean": 306.062,
-          "std": 21.703
+          "mean": 309.539,
+          "std": 21.847
         },
         "10": {
           "valid": true,
-          "mean": 601.992,
-          "std": 30.233
+          "mean": 608.421,
+          "std": 30.456
         },
         "15": {
           "valid": true,
-          "mean": 914.056,
-          "std": 37.389
+          "mean": 921.394,
+          "std": 37.575
         }
       },
-      "objective_mean": 359.319,
-      "objective_std": 11.637,
-      "robust_score": 357.923,
+      "objective_mean": 362.486,
+      "objective_std": 11.677,
+      "robust_score": 361.085,
       "performance": {
         "projection_lookup": "indexed_o1",
         "horizon_evaluation": "single_pass_prefix",
@@ -2545,7 +2549,7 @@
   },
   "selected_package_id": "HOLD",
   "optimizer_best_candidate": {
-    "id": "2:8,368->388,398",
+    "id": "2:8,31->388,330",
     "changes": 2,
     "outs": [
       {
@@ -2554,9 +2558,9 @@
         "sell_cost": 56
       },
       {
-        "element": 368,
-        "name": "Szoboszlai",
-        "sell_cost": 70
+        "element": 31,
+        "name": "Konsa",
+        "sell_cost": 44
       }
     ],
     "ins": [
@@ -2566,50 +2570,50 @@
         "now_cost": 60
       },
       {
-        "element": 398,
-        "name": "Foden",
-        "now_cost": 70
+        "element": 330,
+        "name": "Bogle",
+        "now_cost": 45
       }
     ],
     "affordability": {
-      "cash_available": 131,
-      "incoming_cost": 130,
-      "resulting_itb": 1
+      "cash_available": 105,
+      "incoming_cost": 105,
+      "resulting_itb": 0
     },
     "score": {
       "valid": true,
       "horizons": {
         "3": {
           "valid": true,
-          "mean": 189.824,
-          "std": 17.269
+          "mean": 188.834,
+          "std": 17.031
         },
         "5": {
           "valid": true,
-          "mean": 317.123,
-          "std": 22.298
+          "mean": 319.326,
+          "std": 22.246
         },
         "10": {
           "valid": true,
-          "mean": 616.935,
-          "std": 30.814
+          "mean": 626.061,
+          "std": 30.961
         },
         "15": {
           "valid": true,
-          "mean": 932.078,
-          "std": 37.971
+          "mean": 945.113,
+          "std": 38.113
         }
       },
-      "objective_mean": 370.125,
-      "objective_std": 11.939,
-      "robust_score": 368.242,
+      "objective_mean": 373.108,
+      "objective_std": 11.881,
+      "robust_score": 371.283,
       "performance": {
         "projection_lookup": "indexed_o1",
         "horizon_evaluation": "single_pass_prefix",
         "gw_lineups_evaluated": 15
       },
-      "raw_robust_score": 368.292,
-      "team_cluster_penalty_points": 0.05,
+      "raw_robust_score": 371.283,
+      "team_cluster_penalty_points": 0.0,
       "guardrails": {
         "early_season_change_cap_enabled": true,
         "early_season_through_gw": 5,
@@ -2618,16 +2622,16 @@
         "team_cluster_penalty_enabled": true,
         "free_players_per_club": 2,
         "points_per_extra_player": 0.05,
-        "cluster_excess_players": 1,
-        "cluster_penalty_points": 0.05
+        "cluster_excess_players": 0,
+        "cluster_penalty_points": 0.0
       }
     },
     "legal": true,
     "monte_carlo": {
-      "p25": 362.406,
-      "p50": 369.96,
-      "p75": 377.987,
-      "p_outperform_hold_independent_baseline": 0.7416
+      "p25": 364.957,
+      "p50": 372.649,
+      "p75": 380.693,
+      "p_outperform_hold_independent_baseline": 0.7381
     },
     "team_cluster": {
       "club_counts": {
@@ -2635,18 +2639,18 @@
         "4": 2,
         "5": 2,
         "6": 2,
-        "10": 1,
         "11": 2,
-        "13": 1,
-        "15": 3,
+        "13": 2,
+        "14": 1,
+        "15": 2,
         "16": 1
       },
-      "excess_players": 1,
-      "penalty": 0.05
+      "excess_players": 0,
+      "penalty": 0.0
     }
   },
   "optimizer_best_challenger": {
-    "id": "2:8,368->388,398",
+    "id": "2:8,31->388,330",
     "changes": 2,
     "outs": [
       {
@@ -2655,9 +2659,9 @@
         "sell_cost": 56
       },
       {
-        "element": 368,
-        "name": "Szoboszlai",
-        "sell_cost": 70
+        "element": 31,
+        "name": "Konsa",
+        "sell_cost": 44
       }
     ],
     "ins": [
@@ -2667,50 +2671,50 @@
         "now_cost": 60
       },
       {
-        "element": 398,
-        "name": "Foden",
-        "now_cost": 70
+        "element": 330,
+        "name": "Bogle",
+        "now_cost": 45
       }
     ],
     "affordability": {
-      "cash_available": 131,
-      "incoming_cost": 130,
-      "resulting_itb": 1
+      "cash_available": 105,
+      "incoming_cost": 105,
+      "resulting_itb": 0
     },
     "score": {
       "valid": true,
       "horizons": {
         "3": {
           "valid": true,
-          "mean": 189.824,
-          "std": 17.269
+          "mean": 188.834,
+          "std": 17.031
         },
         "5": {
           "valid": true,
-          "mean": 317.123,
-          "std": 22.298
+          "mean": 319.326,
+          "std": 22.246
         },
         "10": {
           "valid": true,
-          "mean": 616.935,
-          "std": 30.814
+          "mean": 626.061,
+          "std": 30.961
         },
         "15": {
           "valid": true,
-          "mean": 932.078,
-          "std": 37.971
+          "mean": 945.113,
+          "std": 38.113
         }
       },
-      "objective_mean": 370.125,
-      "objective_std": 11.939,
-      "robust_score": 368.242,
+      "objective_mean": 373.108,
+      "objective_std": 11.881,
+      "robust_score": 371.283,
       "performance": {
         "projection_lookup": "indexed_o1",
         "horizon_evaluation": "single_pass_prefix",
         "gw_lineups_evaluated": 15
       },
-      "raw_robust_score": 368.292,
-      "team_cluster_penalty_points": 0.05,
+      "raw_robust_score": 371.283,
+      "team_cluster_penalty_points": 0.0,
       "guardrails": {
         "early_season_change_cap_enabled": true,
         "early_season_through_gw": 5,
@@ -2719,16 +2723,16 @@
         "team_cluster_penalty_enabled": true,
         "free_players_per_club": 2,
         "points_per_extra_player": 0.05,
-        "cluster_excess_players": 1,
-        "cluster_penalty_points": 0.05
+        "cluster_excess_players": 0,
+        "cluster_penalty_points": 0.0
       }
     },
     "legal": true,
     "monte_carlo": {
-      "p25": 362.406,
-      "p50": 369.96,
-      "p75": 377.987,
-      "p_outperform_hold_independent_baseline": 0.7416
+      "p25": 364.957,
+      "p50": 372.649,
+      "p75": 380.693,
+      "p_outperform_hold_independent_baseline": 0.7381
     },
     "team_cluster": {
       "club_counts": {
@@ -2736,19 +2740,19 @@
         "4": 2,
         "5": 2,
         "6": 2,
-        "10": 1,
         "11": 2,
-        "13": 1,
-        "15": 3,
+        "13": 2,
+        "14": 1,
+        "15": 2,
         "16": 1
       },
-      "excess_players": 1,
-      "penalty": 0.05
+      "excess_players": 0,
+      "penalty": 0.0
     }
   },
   "lineup": {
     "status": "READY",
-    "planning_gw": 4,
+    "planning_gw": 5,
     "formation": "4-3-3",
     "starters": [
       {
@@ -2758,61 +2762,26 @@
         "team_id": 1,
         "start_probability": 0.8212,
         "dnp_probability": 0.0626,
-        "score": 4.033,
+        "score": 3.2201,
         "tactical": {
           "status": "READY",
-          "opponent_team_id": 20,
+          "opponent_team_id": 5,
           "player_role": null,
           "player_return_routes": [],
-          "opponent_vulnerabilities": [
-            "transition_threat",
-            "wide_delivery"
-          ],
+          "opponent_vulnerabilities": [],
           "opponent_strengths": [
-            "set_piece_activity",
-            "final_third_progression"
+            "final_third_progression",
+            "box_pressure",
+            "shot_volume"
           ],
           "route_vulnerability_overlap": [],
           "highlights": [
-            "recent-GW lawan: ['close_central', 'box_central']"
+            "recent-GW lawan: ['long_range', 'close_central']"
           ],
           "tactical_key": [
             0,
             1,
-            2
-          ],
-          "advisory_only": true
-        }
-      },
-      {
-        "element": 15,
-        "name": "Ødegaard",
-        "position": "MID",
-        "team_id": 1,
-        "start_probability": 0.8004,
-        "dnp_probability": 0.0699,
-        "score": 3.6365,
-        "tactical": {
-          "status": "READY",
-          "opponent_team_id": 20,
-          "player_role": null,
-          "player_return_routes": [],
-          "opponent_vulnerabilities": [
-            "transition_threat",
-            "wide_delivery"
-          ],
-          "opponent_strengths": [
-            "set_piece_activity",
-            "final_third_progression"
-          ],
-          "route_vulnerability_overlap": [],
-          "highlights": [
-            "recent-GW lawan: ['close_central', 'box_central']"
-          ],
-          "tactical_key": [
-            0,
-            1,
-            2
+            1
           ],
           "advisory_only": true
         }
@@ -2824,47 +2793,18 @@
         "team_id": 6,
         "start_probability": 0.894,
         "dnp_probability": 0.0371,
-        "score": 3.8371,
+        "score": 3.7013,
         "tactical": {
           "status": "READY",
-          "opponent_team_id": 11,
-          "player_role": null,
-          "player_return_routes": [],
-          "opponent_vulnerabilities": [
-            "box_pressure",
-            "final_third_progression",
-            "chance_creation"
-          ],
-          "opponent_strengths": [
-            "wide_delivery"
-          ],
-          "route_vulnerability_overlap": [],
-          "highlights": [
-            "recent-GW lawan: ['close_central', 'long_range']"
-          ],
-          "tactical_key": [
-            0,
-            1,
-            1
-          ],
-          "advisory_only": true
-        }
-      },
-      {
-        "element": 88,
-        "name": "Kayode",
-        "position": "DEF",
-        "team_id": 4,
-        "start_probability": 0.894,
-        "dnp_probability": 0.0371,
-        "score": 4.1315,
-        "tactical": {
-          "status": "READY",
-          "opponent_team_id": 3,
+          "opponent_team_id": 4,
           "player_role": null,
           "player_return_routes": [],
           "opponent_vulnerabilities": [],
-          "opponent_strengths": [],
+          "opponent_strengths": [
+            "wide_delivery",
+            "set_piece_activity",
+            "chance_creation"
+          ],
           "route_vulnerability_overlap": [],
           "highlights": [],
           "tactical_key": [
@@ -2876,32 +2816,92 @@
         }
       },
       {
+        "element": 88,
+        "name": "Kayode",
+        "position": "DEF",
+        "team_id": 4,
+        "start_probability": 0.894,
+        "dnp_probability": 0.0371,
+        "score": 4.2748,
+        "tactical": {
+          "status": "READY",
+          "opponent_team_id": 6,
+          "player_role": null,
+          "player_return_routes": [],
+          "opponent_vulnerabilities": [],
+          "opponent_strengths": [
+            "transition_threat",
+            "box_pressure",
+            "chance_creation"
+          ],
+          "route_vulnerability_overlap": [],
+          "highlights": [],
+          "tactical_key": [
+            0,
+            0,
+            0
+          ],
+          "advisory_only": true
+        }
+      },
+      {
+        "element": 109,
+        "name": "Verbruggen",
+        "position": "GK",
+        "team_id": 5,
+        "start_probability": 0.894,
+        "dnp_probability": 0.0371,
+        "score": 3.9986,
+        "tactical": {
+          "status": "READY",
+          "opponent_team_id": 1,
+          "player_role": null,
+          "player_return_routes": [],
+          "opponent_vulnerabilities": [],
+          "opponent_strengths": [
+            "chance_creation",
+            "set_piece_activity",
+            "transition_threat"
+          ],
+          "route_vulnerability_overlap": [],
+          "highlights": [
+            "recent-GW lawan: ['long_range', 'close_central']"
+          ],
+          "tactical_key": [
+            0,
+            1,
+            1
+          ],
+          "advisory_only": true
+        }
+      },
+      {
         "element": 115,
         "name": "De Cuyper",
         "position": "DEF",
         "team_id": 5,
         "start_probability": 0.8036,
         "dnp_probability": 0.0687,
-        "score": 4.3582,
+        "score": 4.6298,
         "tactical": {
           "status": "READY",
-          "opponent_team_id": 7,
+          "opponent_team_id": 1,
           "player_role": null,
           "player_return_routes": [],
-          "opponent_vulnerabilities": [
+          "opponent_vulnerabilities": [],
+          "opponent_strengths": [
             "chance_creation",
             "set_piece_activity",
             "transition_threat"
           ],
-          "opponent_strengths": [],
           "route_vulnerability_overlap": [],
           "highlights": [
-            "recent-GW lawan: ['long_range', 'box_central']"
+            "recent-GW lawan: ['long_range', 'close_central']"
           ],
           "tactical_key": [
             0,
             1,
-            2
+            1
           ],
           "advisory_only": true
         }
@@ -2913,73 +2913,36 @@
         "team_id": 6,
         "start_probability": 0.864,
         "dnp_probability": 0.0476,
-        "score": 3.936,
+        "score": 3.9256,
         "tactical": {
           "status": "READY",
-          "opponent_team_id": 11,
+          "opponent_team_id": 4,
           "player_role": null,
           "player_return_routes": [],
-          "opponent_vulnerabilities": [
-            "box_pressure",
-            "final_third_progression",
+          "opponent_vulnerabilities": [],
+          "opponent_strengths": [
+            "wide_delivery",
+            "set_piece_activity",
             "chance_creation"
           ],
-          "opponent_strengths": [
-            "wide_delivery"
-          ],
           "route_vulnerability_overlap": [],
-          "highlights": [
-            "recent-GW lawan: ['close_central', 'long_range']"
-          ],
+          "highlights": [],
           "tactical_key": [
             0,
-            1,
-            1
+            0,
+            0
           ],
           "advisory_only": true
         }
       },
       {
-        "element": 254,
-        "name": "Robinson",
+        "element": 279,
+        "name": "Ajayi",
         "position": "DEF",
-        "team_id": 10,
-        "start_probability": 0.8036,
-        "dnp_probability": 0.0687,
-        "score": 3.3022,
-        "tactical": {
-          "status": "READY",
-          "opponent_team_id": 14,
-          "player_role": null,
-          "player_return_routes": [],
-          "opponent_vulnerabilities": [
-            "transition_threat"
-          ],
-          "opponent_strengths": [
-            "shot_volume",
-            "final_third_progression",
-            "set_piece_activity"
-          ],
-          "route_vulnerability_overlap": [],
-          "highlights": [
-            "recent-GW lawan: ['long_range', 'box_central']"
-          ],
-          "tactical_key": [
-            0,
-            1,
-            1
-          ],
-          "advisory_only": true
-        }
-      },
-      {
-        "element": 346,
-        "name": "Calvert-Lewin",
-        "position": "FWD",
-        "team_id": 13,
-        "start_probability": 0.8549,
-        "dnp_probability": 0.0508,
-        "score": 3.1884,
+        "team_id": 11,
+        "start_probability": 0.802,
+        "dnp_probability": 0.0693,
+        "score": 3.4774,
         "tactical": {
           "status": "READY",
           "opponent_team_id": 17,
@@ -3006,56 +2969,21 @@
         }
       },
       {
-        "element": 411,
-        "name": "Haaland",
+        "element": 346,
+        "name": "Calvert-Lewin",
         "position": "FWD",
-        "team_id": 15,
-        "start_probability": 0.8867,
-        "dnp_probability": 0.0397,
-        "score": 7.0744,
+        "team_id": 13,
+        "start_probability": 0.8549,
+        "dnp_probability": 0.0508,
+        "score": 3.5168,
         "tactical": {
           "status": "READY",
-          "opponent_team_id": 16,
-          "player_role": null,
-          "player_return_routes": [],
-          "opponent_vulnerabilities": [
-            "wide_delivery"
-          ],
-          "opponent_strengths": [
-            "box_pressure",
-            "final_third_progression",
-            "chance_creation"
-          ],
-          "route_vulnerability_overlap": [],
-          "highlights": [
-            "recent-GW lawan: ['close_central', 'long_range']"
-          ],
-          "tactical_key": [
-            0,
-            1,
-            1
-          ],
-          "advisory_only": true
-        }
-      },
-      {
-        "element": 426,
-        "name": "B.Fernandes",
-        "position": "MID",
-        "team_id": 16,
-        "start_probability": 0.894,
-        "dnp_probability": 0.0371,
-        "score": 5.1447,
-        "tactical": {
-          "status": "READY",
-          "opponent_team_id": 15,
+          "opponent_team_id": 8,
           "player_role": null,
           "player_return_routes": [],
           "opponent_vulnerabilities": [],
           "opponent_strengths": [
-            "wide_delivery",
-            "set_piece_activity",
-            "box_pressure"
+            "transition_threat"
           ],
           "route_vulnerability_overlap": [],
           "highlights": [],
@@ -3068,101 +2996,13 @@
         }
       },
       {
-        "element": 572,
-        "name": "Tzolakis",
-        "position": "GK",
-        "team_id": 11,
-        "start_probability": 0.802,
-        "dnp_probability": 0.0693,
-        "score": 3.2762,
-        "tactical": {
-          "status": "READY",
-          "opponent_team_id": 6,
-          "player_role": null,
-          "player_return_routes": [],
-          "opponent_vulnerabilities": [],
-          "opponent_strengths": [
-            "transition_threat",
-            "box_pressure",
-            "chance_creation"
-          ],
-          "route_vulnerability_overlap": [],
-          "highlights": [],
-          "tactical_key": [
-            0,
-            0,
-            0
-          ],
-          "advisory_only": true
-        }
-      }
-    ],
-    "bench": [
-      {
-        "element": 368,
-        "name": "Szoboszlai",
+        "element": 367,
+        "name": "Gakpo",
         "position": "MID",
         "team_id": 14,
-        "start_probability": 0.894,
-        "dnp_probability": 0.0371,
-        "score": 3.962,
-        "tactical": {
-          "status": "READY",
-          "opponent_team_id": 10,
-          "player_role": null,
-          "player_return_routes": [],
-          "opponent_vulnerabilities": [],
-          "opponent_strengths": [
-            "final_third_progression",
-            "shot_volume"
-          ],
-          "route_vulnerability_overlap": [],
-          "highlights": [],
-          "tactical_key": [
-            0,
-            0,
-            0
-          ],
-          "advisory_only": true
-        }
-      },
-      {
-        "element": 279,
-        "name": "Ajayi",
-        "position": "DEF",
-        "team_id": 11,
-        "start_probability": 0.802,
-        "dnp_probability": 0.0693,
-        "score": 3.8748,
-        "tactical": {
-          "status": "READY",
-          "opponent_team_id": 6,
-          "player_role": null,
-          "player_return_routes": [],
-          "opponent_vulnerabilities": [],
-          "opponent_strengths": [
-            "transition_threat",
-            "box_pressure",
-            "chance_creation"
-          ],
-          "route_vulnerability_overlap": [],
-          "highlights": [],
-          "tactical_key": [
-            0,
-            0,
-            0
-          ],
-          "advisory_only": true
-        }
-      },
-      {
-        "element": 565,
-        "name": "M.Sangaré",
-        "position": "MID",
-        "team_id": 4,
-        "start_probability": 0.802,
-        "dnp_probability": 0.0693,
-        "score": 3.4888,
+        "start_probability": 0.8706,
+        "dnp_probability": 0.0453,
+        "score": 4.3948,
         "tactical": {
           "status": "READY",
           "opponent_team_id": 3,
@@ -3181,201 +3021,13 @@
         }
       },
       {
-        "element": 109,
-        "name": "Verbruggen",
-        "position": "GK",
-        "team_id": 5,
-        "start_probability": 0.894,
-        "dnp_probability": 0.0371,
-        "score": 3.617,
-        "tactical": {
-          "status": "READY",
-          "opponent_team_id": 7,
-          "player_role": null,
-          "player_return_routes": [],
-          "opponent_vulnerabilities": [
-            "chance_creation",
-            "set_piece_activity",
-            "transition_threat"
-          ],
-          "opponent_strengths": [],
-          "route_vulnerability_overlap": [],
-          "highlights": [
-            "recent-GW lawan: ['long_range', 'box_central']"
-          ],
-          "tactical_key": [
-            0,
-            1,
-            2
-          ],
-          "advisory_only": true
-        }
-      }
-    ],
-    "captain": {
-      "element": 411,
-      "name": "Haaland",
-      "position": "FWD",
-      "team_id": 15,
-      "start_probability": 0.8867,
-      "dnp_probability": 0.0397,
-      "score": 8.8868,
-      "tactical": {
-        "status": "READY",
-        "opponent_team_id": 16,
-        "player_role": null,
-        "player_return_routes": [],
-        "opponent_vulnerabilities": [
-          "wide_delivery"
-        ],
-        "opponent_strengths": [
-          "box_pressure",
-          "final_third_progression",
-          "chance_creation"
-        ],
-        "route_vulnerability_overlap": [],
-        "highlights": [
-          "recent-GW lawan: ['close_central', 'long_range']"
-        ],
-        "tactical_key": [
-          0,
-          1,
-          1
-        ],
-        "advisory_only": true
-      }
-    },
-    "vice_captain": {
-      "element": 426,
-      "name": "B.Fernandes",
-      "position": "MID",
-      "team_id": 16,
-      "start_probability": 0.894,
-      "dnp_probability": 0.0371,
-      "score": 6.0601,
-      "tactical": {
-        "status": "READY",
-        "opponent_team_id": 15,
-        "player_role": null,
-        "player_return_routes": [],
-        "opponent_vulnerabilities": [],
-        "opponent_strengths": [
-          "wide_delivery",
-          "set_piece_activity",
-          "box_pressure"
-        ],
-        "route_vulnerability_overlap": [],
-        "highlights": [],
-        "tactical_key": [
-          0,
-          0,
-          0
-        ],
-        "advisory_only": true
-      }
-    },
-    "captain_safe_pool": [
-      {
         "element": 411,
         "name": "Haaland",
         "position": "FWD",
         "team_id": 15,
         "start_probability": 0.8867,
         "dnp_probability": 0.0397,
-        "score": 8.8868,
-        "tactical": {
-          "status": "READY",
-          "opponent_team_id": 16,
-          "player_role": null,
-          "player_return_routes": [],
-          "opponent_vulnerabilities": [
-            "wide_delivery"
-          ],
-          "opponent_strengths": [
-            "box_pressure",
-            "final_third_progression",
-            "chance_creation"
-          ],
-          "route_vulnerability_overlap": [],
-          "highlights": [
-            "recent-GW lawan: ['close_central', 'long_range']"
-          ],
-          "tactical_key": [
-            0,
-            1,
-            1
-          ],
-          "advisory_only": true
-        }
-      },
-      {
-        "element": 426,
-        "name": "B.Fernandes",
-        "position": "MID",
-        "team_id": 16,
-        "start_probability": 0.894,
-        "dnp_probability": 0.0371,
-        "score": 6.699,
-        "tactical": {
-          "status": "READY",
-          "opponent_team_id": 15,
-          "player_role": null,
-          "player_return_routes": [],
-          "opponent_vulnerabilities": [],
-          "opponent_strengths": [
-            "wide_delivery",
-            "set_piece_activity",
-            "box_pressure"
-          ],
-          "route_vulnerability_overlap": [],
-          "highlights": [],
-          "tactical_key": [
-            0,
-            0,
-            0
-          ],
-          "advisory_only": true
-        }
-      },
-      {
-        "element": 115,
-        "name": "De Cuyper",
-        "position": "DEF",
-        "team_id": 5,
-        "start_probability": 0.8036,
-        "dnp_probability": 0.0687,
-        "score": 5.8273,
-        "tactical": {
-          "status": "READY",
-          "opponent_team_id": 7,
-          "player_role": null,
-          "player_return_routes": [],
-          "opponent_vulnerabilities": [
-            "chance_creation",
-            "set_piece_activity",
-            "transition_threat"
-          ],
-          "opponent_strengths": [],
-          "route_vulnerability_overlap": [],
-          "highlights": [
-            "recent-GW lawan: ['long_range', 'box_central']"
-          ],
-          "tactical_key": [
-            0,
-            1,
-            2
-          ],
-          "advisory_only": true
-        }
-      },
-      {
-        "element": 8,
-        "name": "Calafiori",
-        "position": "DEF",
-        "team_id": 1,
-        "start_probability": 0.8212,
-        "dnp_probability": 0.0626,
-        "score": 5.4561,
+        "score": 4.8855,
         "tactical": {
           "status": "READY",
           "opponent_team_id": 20,
@@ -3402,29 +3054,57 @@
         }
       },
       {
-        "element": 165,
-        "name": "João Pedro",
-        "position": "FWD",
-        "team_id": 6,
-        "start_probability": 0.864,
-        "dnp_probability": 0.0476,
-        "score": 5.3377,
+        "element": 426,
+        "name": "B.Fernandes",
+        "position": "MID",
+        "team_id": 16,
+        "start_probability": 0.894,
+        "dnp_probability": 0.0371,
+        "score": 5.6716,
         "tactical": {
           "status": "READY",
-          "opponent_team_id": 11,
+          "opponent_team_id": 10,
           "player_role": null,
           "player_return_routes": [],
-          "opponent_vulnerabilities": [
-            "box_pressure",
-            "final_third_progression",
-            "chance_creation"
-          ],
+          "opponent_vulnerabilities": [],
           "opponent_strengths": [
-            "wide_delivery"
+            "final_third_progression",
+            "shot_volume"
+          ],
+          "route_vulnerability_overlap": [],
+          "highlights": [],
+          "tactical_key": [
+            0,
+            0,
+            0
+          ],
+          "advisory_only": true
+        }
+      }
+    ],
+    "bench": [
+      {
+        "element": 15,
+        "name": "Ødegaard",
+        "position": "MID",
+        "team_id": 1,
+        "start_probability": 0.8004,
+        "dnp_probability": 0.0699,
+        "score": 3.7102,
+        "tactical": {
+          "status": "READY",
+          "opponent_team_id": 5,
+          "player_role": null,
+          "player_return_routes": [],
+          "opponent_vulnerabilities": [],
+          "opponent_strengths": [
+            "final_third_progression",
+            "box_pressure",
+            "shot_volume"
           ],
           "route_vulnerability_overlap": [],
           "highlights": [
-            "recent-GW lawan: ['close_central', 'long_range']"
+            "recent-GW lawan: ['long_range', 'close_central']"
           ],
           "tactical_key": [
             0,
@@ -3433,40 +3113,342 @@
           ],
           "advisory_only": true
         }
+      },
+      {
+        "element": 31,
+        "name": "Konsa",
+        "position": "DEF",
+        "team_id": 1,
+        "start_probability": 0.8478,
+        "dnp_probability": 0.0533,
+        "score": 3.4633,
+        "tactical": {
+          "status": "READY",
+          "opponent_team_id": 5,
+          "player_role": null,
+          "player_return_routes": [],
+          "opponent_vulnerabilities": [],
+          "opponent_strengths": [
+            "final_third_progression",
+            "box_pressure",
+            "shot_volume"
+          ],
+          "route_vulnerability_overlap": [],
+          "highlights": [
+            "recent-GW lawan: ['long_range', 'close_central']"
+          ],
+          "tactical_key": [
+            0,
+            1,
+            1
+          ],
+          "advisory_only": true
+        }
+      },
+      {
+        "element": 565,
+        "name": "M.Sangaré",
+        "position": "MID",
+        "team_id": 4,
+        "start_probability": 0.802,
+        "dnp_probability": 0.0693,
+        "score": 3.8998,
+        "tactical": {
+          "status": "READY",
+          "opponent_team_id": 6,
+          "player_role": null,
+          "player_return_routes": [],
+          "opponent_vulnerabilities": [],
+          "opponent_strengths": [
+            "transition_threat",
+            "box_pressure",
+            "chance_creation"
+          ],
+          "route_vulnerability_overlap": [],
+          "highlights": [],
+          "tactical_key": [
+            0,
+            0,
+            0
+          ],
+          "advisory_only": true
+        }
+      },
+      {
+        "element": 572,
+        "name": "Tzolakis",
+        "position": "GK",
+        "team_id": 11,
+        "start_probability": 0.802,
+        "dnp_probability": 0.0693,
+        "score": 4.1288,
+        "tactical": {
+          "status": "READY",
+          "opponent_team_id": 17,
+          "player_role": null,
+          "player_return_routes": [],
+          "opponent_vulnerabilities": [
+            "shot_volume",
+            "final_third_progression",
+            "set_piece_activity"
+          ],
+          "opponent_strengths": [
+            "transition_threat"
+          ],
+          "route_vulnerability_overlap": [],
+          "highlights": [
+            "recent-GW lawan: ['long_range', 'close_central']"
+          ],
+          "tactical_key": [
+            0,
+            1,
+            2
+          ],
+          "advisory_only": true
+        }
+      }
+    ],
+    "captain": {
+      "element": 426,
+      "name": "B.Fernandes",
+      "position": "MID",
+      "team_id": 16,
+      "start_probability": 0.894,
+      "dnp_probability": 0.0371,
+      "score": 7.2961,
+      "tactical": {
+        "status": "READY",
+        "opponent_team_id": 10,
+        "player_role": null,
+        "player_return_routes": [],
+        "opponent_vulnerabilities": [],
+        "opponent_strengths": [
+          "final_third_progression",
+          "shot_volume"
+        ],
+        "route_vulnerability_overlap": [],
+        "highlights": [],
+        "tactical_key": [
+          0,
+          0,
+          0
+        ],
+        "advisory_only": true
+      }
+    },
+    "vice_captain": {
+      "element": 411,
+      "name": "Haaland",
+      "position": "FWD",
+      "team_id": 15,
+      "start_probability": 0.8867,
+      "dnp_probability": 0.0397,
+      "score": 5.7933,
+      "tactical": {
+        "status": "READY",
+        "opponent_team_id": 20,
+        "player_role": null,
+        "player_return_routes": [],
+        "opponent_vulnerabilities": [
+          "transition_threat",
+          "wide_delivery"
+        ],
+        "opponent_strengths": [
+          "set_piece_activity",
+          "final_third_progression"
+        ],
+        "route_vulnerability_overlap": [],
+        "highlights": [
+          "recent-GW lawan: ['close_central', 'box_central']"
+        ],
+        "tactical_key": [
+          0,
+          1,
+          2
+        ],
+        "advisory_only": true
+      }
+    },
+    "captain_safe_pool": [
+      {
+        "element": 426,
+        "name": "B.Fernandes",
+        "position": "MID",
+        "team_id": 16,
+        "start_probability": 0.894,
+        "dnp_probability": 0.0371,
+        "score": 7.2961,
+        "tactical": {
+          "status": "READY",
+          "opponent_team_id": 10,
+          "player_role": null,
+          "player_return_routes": [],
+          "opponent_vulnerabilities": [],
+          "opponent_strengths": [
+            "final_third_progression",
+            "shot_volume"
+          ],
+          "route_vulnerability_overlap": [],
+          "highlights": [],
+          "tactical_key": [
+            0,
+            0,
+            0
+          ],
+          "advisory_only": true
+        }
+      },
+      {
+        "element": 411,
+        "name": "Haaland",
+        "position": "FWD",
+        "team_id": 15,
+        "start_probability": 0.8867,
+        "dnp_probability": 0.0397,
+        "score": 6.4076,
+        "tactical": {
+          "status": "READY",
+          "opponent_team_id": 20,
+          "player_role": null,
+          "player_return_routes": [],
+          "opponent_vulnerabilities": [
+            "transition_threat",
+            "wide_delivery"
+          ],
+          "opponent_strengths": [
+            "set_piece_activity",
+            "final_third_progression"
+          ],
+          "route_vulnerability_overlap": [],
+          "highlights": [
+            "recent-GW lawan: ['close_central', 'box_central']"
+          ],
+          "tactical_key": [
+            0,
+            1,
+            2
+          ],
+          "advisory_only": true
+        }
+      },
+      {
+        "element": 115,
+        "name": "De Cuyper",
+        "position": "DEF",
+        "team_id": 5,
+        "start_probability": 0.8036,
+        "dnp_probability": 0.0687,
+        "score": 6.1349,
+        "tactical": {
+          "status": "READY",
+          "opponent_team_id": 1,
+          "player_role": null,
+          "player_return_routes": [],
+          "opponent_vulnerabilities": [],
+          "opponent_strengths": [
+            "chance_creation",
+            "set_piece_activity",
+            "transition_threat"
+          ],
+          "route_vulnerability_overlap": [],
+          "highlights": [
+            "recent-GW lawan: ['long_range', 'close_central']"
+          ],
+          "tactical_key": [
+            0,
+            1,
+            1
+          ],
+          "advisory_only": true
+        }
+      },
+      {
+        "element": 367,
+        "name": "Gakpo",
+        "position": "MID",
+        "team_id": 14,
+        "start_probability": 0.8706,
+        "dnp_probability": 0.0453,
+        "score": 5.8556,
+        "tactical": {
+          "status": "READY",
+          "opponent_team_id": 3,
+          "player_role": null,
+          "player_return_routes": [],
+          "opponent_vulnerabilities": [],
+          "opponent_strengths": [],
+          "route_vulnerability_overlap": [],
+          "highlights": [],
+          "tactical_key": [
+            0,
+            0,
+            0
+          ],
+          "advisory_only": true
+        }
+      },
+      {
+        "element": 88,
+        "name": "Kayode",
+        "position": "DEF",
+        "team_id": 4,
+        "start_probability": 0.894,
+        "dnp_probability": 0.0371,
+        "score": 5.7139,
+        "tactical": {
+          "status": "READY",
+          "opponent_team_id": 6,
+          "player_role": null,
+          "player_return_routes": [],
+          "opponent_vulnerabilities": [],
+          "opponent_strengths": [
+            "transition_threat",
+            "box_pressure",
+            "chance_creation"
+          ],
+          "route_vulnerability_overlap": [],
+          "highlights": [],
+          "tactical_key": [
+            0,
+            0,
+            0
+          ],
+          "advisory_only": true
+        }
       }
     ],
     "main_starting_xi_battle": {
       "status": "CLOSE",
-      "margin": 0.088,
+      "margin": 0.0977,
       "starter_side": [
         {
-          "element": 254,
-          "name": "Robinson",
-          "position": "DEF",
-          "selection_score": 3.3022
+          "element": 565,
+          "name": "M.Sangaré",
+          "position": "MID",
+          "selection_score": 3.318
         }
       ],
       "bench_side": [
         {
-          "element": 279,
-          "name": "Ajayi",
+          "element": 8,
+          "name": "Calafiori",
           "position": "DEF",
-          "selection_score": 3.2943
+          "selection_score": 3.2201
         }
       ],
-      "alternative_formation": "4-4-2",
+      "alternative_formation": "4-3-3",
       "tactical_tiebreak": {
         "eligible": true,
         "applied_to_xi": false,
         "base_xi_key": [
           0,
-          8,
-          12
+          5,
+          7
         ],
         "selected_xi_key": [
           0,
-          8,
-          12
+          5,
+          7
         ],
         "policy": "close-call tactical evidence only; canonical scores unchanged"
       }
@@ -3474,127 +3456,127 @@
     "alternatives": [
       {
         "rank": 1,
-        "formation": "4-4-2",
-        "selection_score": 46.1713,
-        "mean": 50.752,
-        "std": 8.796,
+        "formation": "3-4-3",
+        "selection_score": 45.7361,
+        "mean": 50.286,
+        "std": 8.626,
         "element_ids": [
-          8,
-          15,
           40,
           88,
+          109,
           115,
           165,
-          254,
-          368,
+          279,
+          346,
+          367,
           411,
           426,
-          572
+          565
         ]
       },
       {
         "rank": 2,
-        "formation": "4-4-2",
-        "selection_score": 46.0833,
-        "mean": 50.745,
-        "std": 8.796,
+        "formation": "4-3-3",
+        "selection_score": 45.6384,
+        "mean": 50.166,
+        "std": 8.606,
         "element_ids": [
           8,
-          15,
           40,
           88,
+          109,
           115,
           165,
           279,
-          368,
+          346,
+          367,
           411,
-          426,
-          572
+          426
         ]
       },
       {
         "rank": 3,
         "formation": "3-4-3",
-        "selection_score": 46.0577,
-        "mean": 50.586,
-        "std": 8.762,
+        "selection_score": 45.5555,
+        "mean": 50.097,
+        "std": 8.605,
         "element_ids": [
-          8,
-          15,
-          40,
-          88,
-          115,
-          165,
-          346,
-          368,
-          411,
-          426,
-          572
-        ]
-      },
-      {
-        "rank": 4,
-        "formation": "5-3-2",
-        "selection_score": 45.9665,
-        "mean": 50.704,
-        "std": 8.823,
-        "element_ids": [
-          8,
-          15,
-          40,
-          88,
-          115,
-          165,
-          254,
-          279,
-          411,
-          426,
-          572
-        ]
-      },
-      {
-        "rank": 5,
-        "formation": "4-3-3",
-        "selection_score": 45.9409,
-        "mean": 50.545,
-        "std": 8.789,
-        "element_ids": [
-          8,
-          15,
-          40,
-          88,
-          115,
-          165,
-          254,
-          346,
-          411,
-          426,
-          572
-        ]
-      },
-      {
-        "rank": 6,
-        "formation": "4-4-2",
-        "selection_score": 45.9067,
-        "mean": 50.474,
-        "std": 8.736,
-        "element_ids": [
-          8,
           15,
           40,
           88,
           109,
           115,
           165,
-          254,
-          368,
+          279,
+          346,
+          367,
           411,
           426
         ]
+      },
+      {
+        "rank": 4,
+        "formation": "3-4-3",
+        "selection_score": 45.4793,
+        "mean": 49.998,
+        "std": 8.587,
+        "element_ids": [
+          8,
+          40,
+          88,
+          109,
+          115,
+          165,
+          346,
+          367,
+          411,
+          426,
+          565
+        ]
+      },
+      {
+        "rank": 5,
+        "formation": "4-4-2",
+        "selection_score": 45.4399,
+        "mean": 50.004,
+        "std": 8.606,
+        "element_ids": [
+          8,
+          40,
+          88,
+          109,
+          115,
+          165,
+          279,
+          367,
+          411,
+          426,
+          565
+        ]
+      },
+      {
+        "rank": 6,
+        "formation": "3-5-2",
+        "selection_score": 45.357,
+        "mean": 49.935,
+        "std": 8.605,
+        "element_ids": [
+          15,
+          40,
+          88,
+          109,
+          115,
+          165,
+          279,
+          367,
+          411,
+          426,
+          565
+        ]
       }
     ],
-    "expected_starting_xi_mean": 50.545,
-    "selection_score": 45.9409,
+    "expected_starting_xi_mean": 50.166,
+    "selection_score": 45.6384,
     "authority": "v5_decision_lineup_optimizer",
     "performance": {
       "projection_lookup": "indexed_o1",
@@ -4725,16 +4707,16 @@
     "decision_type": "HOLD",
     "action": "HOLD current squad; no transfer package clears the configured review threshold",
     "subject_element_ids": [],
-    "score": 10.319,
+    "score": 10.198,
     "confidence": "MEDIUM-HIGH",
     "reasons_for": [
-      "best challenger robust score delta vs HOLD = 10.319",
-      "best challenger independent-baseline probability of outperforming HOLD = 0.742",
+      "best challenger robust score delta vs HOLD = 10.198",
+      "best challenger independent-baseline probability of outperforming HOLD = 0.738",
       "lineup formation = 4-3-3",
       "optimizer challenger clears configured strong-review thresholds"
     ],
     "reasons_against": [
-      "market timing context contains 119 active price alerts"
+      "market timing context contains 92 active price alerts"
     ],
     "evidence": [
       {
@@ -4807,10 +4789,10 @@
     "projection_model": "player_projection_v5_historical_prior",
     "ruleset_id": "FPL_2026_27",
     "selected_package_id": "HOLD",
-    "optimizer_best_challenger_id": "2:8,368->388,398",
+    "optimizer_best_challenger_id": "2:8,31->388,330",
     "manual_authority_override": false,
-    "robust_gain_vs_hold": 10.319,
-    "p_outperform_hold_independent_baseline": 0.7416,
+    "robust_gain_vs_hold": 10.198,
+    "p_outperform_hold_independent_baseline": 0.7381,
     "gate0_preflight_pass": true,
     "production_recommendation": null
   },
@@ -4837,7 +4819,7 @@
     "team_cluster_penalty"
   ],
   "price_context": {
-    "alert_count": 119
+    "alert_count": 92
   },
   "governance": {
     "candidate_generation_only": true,

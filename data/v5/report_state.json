@@ -1,23 +1,23 @@
 {
-  "fingerprint": "726cde958a2aeb7b",
+  "fingerprint": "c240ff678f50583c",
   "state": {
     "squad": "HOLD",
     "starting_xi": [
       8,
-      15,
       40,
       88,
+      109,
       115,
       165,
-      254,
+      279,
       346,
+      367,
       411,
-      426,
-      572
+      426
     ],
     "formation": "4-3-3",
-    "captain": 411,
-    "vice_captain": 426,
+    "captain": 426,
+    "vice_captain": 411,
     "chip": null,
     "price": [],
     "owned_vs_challenger": [
@@ -25,31 +25,31 @@
         8,
         388,
         "REVIEW",
-        6.271
+        6.788
       ],
       [
-        254,
+        31,
         330,
         "REVIEW",
-        3.986
+        4.029
       ],
       [
-        254,
-        469,
+        109,
+        82,
         "REVIEW",
-        3.813
+        3.236
       ],
       [
         279,
         330,
         "REVIEW",
-        2.666
+        3.158
       ],
       [
-        254,
-        445,
+        109,
+        250,
         "REVIEW",
-        2.664
+        3.038
       ]
     ],
     "critical_health": {

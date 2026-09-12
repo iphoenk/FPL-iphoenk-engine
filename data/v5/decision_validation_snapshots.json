@@ -272,13 +272,150 @@
         "optimizer_change_penalty_is_not_hit_cost": true
       },
       "supersedes_captured_at": "2026-09-05T19:12:42.843393+00:00"
+    },
+    "5": {
+      "gw": 5,
+      "captured_at": "2026-09-12T21:35:20.378762+00:00",
+      "deadline_time": "2026-09-18T17:30:00Z",
+      "status": "PREDEADLINE_CAPTURED",
+      "revision": 1,
+      "decision_authority": "official_public",
+      "lineup": {
+        "starting_xi": [
+          {
+            "element": 8,
+            "position": "DEF"
+          },
+          {
+            "element": 40,
+            "position": "MID"
+          },
+          {
+            "element": 88,
+            "position": "DEF"
+          },
+          {
+            "element": 109,
+            "position": "GK"
+          },
+          {
+            "element": 115,
+            "position": "DEF"
+          },
+          {
+            "element": 165,
+            "position": "FWD"
+          },
+          {
+            "element": 279,
+            "position": "DEF"
+          },
+          {
+            "element": 346,
+            "position": "FWD"
+          },
+          {
+            "element": 367,
+            "position": "MID"
+          },
+          {
+            "element": 411,
+            "position": "FWD"
+          },
+          {
+            "element": 426,
+            "position": "MID"
+          }
+        ],
+        "owned_squad": [
+          {
+            "element": 109,
+            "position": "GK"
+          },
+          {
+            "element": 115,
+            "position": "DEF"
+          },
+          {
+            "element": 8,
+            "position": "DEF"
+          },
+          {
+            "element": 31,
+            "position": "DEF"
+          },
+          {
+            "element": 426,
+            "position": "MID"
+          },
+          {
+            "element": 565,
+            "position": "MID"
+          },
+          {
+            "element": 40,
+            "position": "MID"
+          },
+          {
+            "element": 15,
+            "position": "MID"
+          },
+          {
+            "element": 411,
+            "position": "FWD"
+          },
+          {
+            "element": 165,
+            "position": "FWD"
+          },
+          {
+            "element": 346,
+            "position": "FWD"
+          },
+          {
+            "element": 572,
+            "position": "GK"
+          },
+          {
+            "element": 88,
+            "position": "DEF"
+          },
+          {
+            "element": 367,
+            "position": "MID"
+          },
+          {
+            "element": 279,
+            "position": "DEF"
+          }
+        ],
+        "captain": 426,
+        "vice_captain": 411
+      },
+      "comparator": {
+        "contract": null,
+        "advisory_only": true,
+        "comparisons": []
+      },
+      "governance": {
+        "genuine_predeadline_only": true,
+        "postdeadline_overwrite_forbidden": true,
+        "retroactive_reconstruction_forbidden": true,
+        "predeadline_revision_append_only": true,
+        "latest_genuine_predeadline_revision_is_settlement_authority": true,
+        "exact_hit_cost_required_for_transfer_net_gain": true,
+        "optimizer_change_penalty_is_not_hit_cost": true
+      }
     }
   },
-  "updated_at": "2026-09-12T11:01:25.619421+00:00",
+  "updated_at": "2026-09-12T21:35:20.378762+00:00",
   "last_capture": {
-    "status": "ALREADY_FROZEN",
-    "planning_gw": 4,
-    "revision": 3
+    "status": "PREDEADLINE_CAPTURED",
+    "planning_gw": 5,
+    "revision": 1,
+    "xi": 11,
+    "owned": 15,
+    "comparisons": 0
   },
   "revision_history": {
     "3": [

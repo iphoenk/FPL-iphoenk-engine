@@ -14,32 +14,105 @@ permissions:
 jobs:
   inspect-reep-v1:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - name: Inspect current Reep v1 release
+      - name: Inspect current Reep v1 release and exact bridge coverage
         shell: bash
         run: |
           set -euo pipefail
           curl -fsSL --retry 3 --retry-delay 2 https://data.reep.football/releases/latest.json -o latest.json
-          echo '--- latest.json ---'
-          cat latest.json
           manifest_url=$(python - <<'PY'
           import json
           print(json.load(open('latest.json'))['manifest_url'])
           PY
           )
           curl -fsSL --retry 3 --retry-delay 2 "$manifest_url" -o release.json
-          echo
-          echo '--- release.json ---'
-          cat release.json
-          echo
           python - <<'PY'
           import json
-          obj=json.load(open('release.json'))
-          print('\n--- manifest keys ---')
-          print(sorted(obj.keys()))
-          for key in ('files','artifacts','objects','downloads'):
-              if key in obj:
-                  print(f'\n--- {key} ---')
-                  print(json.dumps(obj[key], indent=2)[:30000])
+          latest=json.load(open('latest.json'))
+          release=json.load(open('release.json'))
+          print('REEP_V1_STAMP', latest['stamp'])
+          print('REEP_V1_MANIFEST_SHA256', latest['manifest_sha256'])
+          for key in ('csv/bridges.csv.gz','schemas/bridges.schema.json'):
+              f=release['files'][key]
+              print(key, f['url'], f['sha256'], f.get('rows'))
+          PY
+          bridges_url=$(python - <<'PY'
+          import json
+          print(json.load(open('release.json'))['files']['csv/bridges.csv.gz']['url'])
+          PY
+          )
+          schema_url=$(python - <<'PY'
+          import json
+          print(json.load(open('release.json'))['files']['schemas/bridges.schema.json']['url'])
+          PY
+          )
+          curl -fsSL --retry 3 --retry-delay 2 "$schema_url" -o bridges.schema.json
+          echo '--- bridges schema ---'
+          cat bridges.schema.json
+          curl -fsSL --retry 3 --retry-delay 2 "$bridges_url" -o bridges.csv.gz
+          echo '--- bridge header/sample ---'
+          gzip -dc bridges.csv.gz | head -n 6 || true
+          curl -fsSL --retry 3 --retry-delay 2 https://fantasy.premierleague.com/api/bootstrap-static/ -o bootstrap.json
+          python - <<'PY'
+          import csv, gzip, json
+          from collections import defaultdict, Counter
+
+          providers={'opta_numeric','understat','statmuse_pl','fotmob'}
+          rows=[]
+          counts=Counter()
+          namespaces=defaultdict(Counter)
+          samples=defaultdict(list)
+          with gzip.open('bridges.csv.gz','rt',encoding='utf-8',newline='') as f:
+              r=csv.DictReader(f)
+              print('BRIDGE_COLUMNS', r.fieldnames)
+              for row in r:
+                  p=(row.get('provider') or row.get('provider_id') or '').strip()
+                  if p in providers:
+                      rows.append(row)
+                      counts[p]+=1
+                      ns=(row.get('namespace') or '').strip()
+                      namespaces[p][ns]+=1
+                      if len(samples[p])<3:
+                          samples[p].append(row)
+          print('PROVIDER_COUNTS', dict(counts))
+          print('PROVIDER_NAMESPACES', {k:dict(v) for k,v in namespaces.items()})
+          print('PROVIDER_SAMPLES', dict(samples))
+
+          boot=json.load(open('bootstrap.json'))
+          codes={str(e['code']): int(e['id']) for e in boot['elements'] if e.get('code')}
+          print('OFFICIAL_FPL_PLAYERS', len(boot['elements']), 'UNIQUE_CODES', len(codes))
+
+          def rid(row):
+              return str(row.get('reep_id') or row.get('entity_id') or row.get('id') or '').strip()
+          def ext(row):
+              for k in ('external_id','provider_id_value','value','source_id'):
+                  v=row.get(k)
+                  if v not in (None,''):
+                      return str(v).strip()
+              return ''
+
+          by_provider_entity=defaultdict(lambda: defaultdict(list))
+          for row in rows:
+              p=(row.get('provider') or row.get('provider_id') or '').strip()
+              by_provider_entity[p][rid(row)].append(ext(row))
+          opta_entity_for_code={}
+          for entity, vals in by_provider_entity['opta_numeric'].items():
+              for value in vals:
+                  if value in codes:
+                      opta_entity_for_code[value]=entity
+          print('FPL_CODES_WITH_REEP_V1_OPTA_NUMERIC', len(opta_entity_for_code))
+          for p in ('understat','statmuse_pl','fotmob'):
+              mapped={}
+              conflicts=[]
+              for code, entity in opta_entity_for_code.items():
+                  vals=sorted(set(v for v in by_provider_entity[p].get(entity,[]) if v))
+                  if len(vals)==1:
+                      mapped[code]=vals[0]
+                  elif len(vals)>1:
+                      conflicts.append((code,entity,vals))
+              reverse=defaultdict(list)
+              for code,native in mapped.items(): reverse[native].append(code)
+              dup={k:v for k,v in reverse.items() if len(v)>1}
+              print('EXACT_V1_BRIDGE',p,'mapped',len(mapped),'canonical_ratio',round(len(mapped)/len(codes),6),'multi_provider_id_conflicts',len(conflicts),'duplicate_native_ids',len(dup))
           PY

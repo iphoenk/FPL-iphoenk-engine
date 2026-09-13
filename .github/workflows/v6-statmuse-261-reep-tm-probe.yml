@@ -1,0 +1,117 @@
+name: V6 StatMuse 261 Reep TM one-shot probe
+
+on:
+  push:
+    branches:
+      - ops/v6-statmuse-gap-profile-probe
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Hydrate Official FPL identity universe
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/statmuse-261
+          git fetch --depth=1 origin '+refs/heads/runtime-data-v6:refs/remotes/origin/runtime-data-v6'
+          git show origin/runtime-data-v6:data/v6/evidence/player_identity_map.json > /tmp/statmuse-261/player_identity_map.json
+
+      - name: Fetch pinned Reep v1 bridges
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 3 \
+            https://data.reep.football/releases/latest.json -o /tmp/statmuse-261/latest.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          latest=json.loads(Path('/tmp/statmuse-261/latest.json').read_text())
+          if latest.get('stamp')!='20260907T201034Z': raise SystemExit('unexpected Reep release')
+          if latest.get('manifest_sha256')!='65356d7522832ea58c19993a95eb31ceb9d6e22e3ff518014387734b13e43529': raise SystemExit('manifest pointer mismatch')
+          Path('/tmp/statmuse-261/manifest_url').write_text(latest['manifest_url'])
+          PY
+          curl --fail --silent --show-error --location --retry 3 \
+            "$(cat /tmp/statmuse-261/manifest_url)" -o /tmp/statmuse-261/release.json
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          p=Path('/tmp/statmuse-261/release.json')
+          if hashlib.sha256(p.read_bytes()).hexdigest()!='65356d7522832ea58c19993a95eb31ceb9d6e22e3ff518014387734b13e43529': raise SystemExit('manifest checksum mismatch')
+          entry=json.loads(p.read_text())['files']['csv/bridges.csv.gz']
+          if entry.get('sha256')!='a03aef520a454bdcd181b5b332b91e7b41ee57f4914e6e2c456cf49a8b86a735': raise SystemExit('bridge checksum metadata mismatch')
+          Path('/tmp/statmuse-261/bridges_url').write_text(entry['url'])
+          PY
+          curl --fail --silent --show-error --location --retry 3 \
+            "$(cat /tmp/statmuse-261/bridges_url)" -o /tmp/statmuse-261/bridges.csv.gz
+          printf '%s  %s\n' 'a03aef520a454bdcd181b5b332b91e7b41ee57f4914e6e2c456cf49a8b86a735' /tmp/statmuse-261/bridges.csv.gz | sha256sum -c -
+
+      - name: Resolve Transfermarkt 534033 to Opta and Official FPL
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import csv,gzip,json
+          from pathlib import Path
+          root=Path('/tmp/statmuse-261')
+          target_tm='534033'
+          reep_ids=set()
+          with gzip.open(root/'bridges.csv.gz','rt',encoding='utf-8',newline='') as fh:
+              for r in csv.DictReader(fh):
+                  if r.get('provider')=='transfermarkt' and r.get('namespace')=='spieler' and str(r.get('external_id'))==target_tm:
+                      reep_ids.add(str(r.get('reep_id')))
+          if len(reep_ids)!=1:
+              raise SystemExit(f'Transfermarkt 534033 Reep cardinality !=1: {sorted(reep_ids)}')
+          rid=next(iter(reep_ids))
+          opta=set(); relevant=[]
+          with gzip.open(root/'bridges.csv.gz','rt',encoding='utf-8',newline='') as fh:
+              for r in csv.DictReader(fh):
+                  if str(r.get('reep_id'))!=rid: continue
+                  row={'provider':r.get('provider'),'namespace':r.get('namespace'),'external_id':str(r.get('external_id') or '')}
+                  relevant.append(row)
+                  if row['provider']=='opta' and row['namespace']=='person_numeric' and row['external_id']:
+                      opta.add(row['external_id'])
+          identity=json.loads((root/'player_identity_map.json').read_text())
+          official={}
+          for key,row in (identity.get('mappings') or {}).items():
+              if isinstance(row,dict) and row.get('official_code') is not None:
+                  official[str(row['official_code'])]=int(row.get('official_fpl_element_id') or key)
+          candidates=[{'official_fpl_code':int(code),'official_element_id':official[code]} for code in sorted(opta) if code in official]
+          if len(opta)!=1 or len(candidates)!=1:
+              raise SystemExit(f'No unique Opta->Official chain: opta={sorted(opta)} candidates={candidates}')
+          out={
+              'statmuse_native_id':261,
+              'wikidata_property':'P12567',
+              'wikidata_item':'Q33297140',
+              'wikidata_transfermarkt_property':'P2446',
+              'transfermarkt_id':534033,
+              'reep_release':'20260907T201034Z',
+              'reep_id':rid,
+              'opta_person_numeric':int(next(iter(opta))),
+              'official_fpl_code':candidates[0]['official_fpl_code'],
+              'official_element_id':candidates[0]['official_element_id'],
+              'method':'CURATED_WIKIDATA_STATMUSE_ID_TO_TM__REEP_V1_TM_TO_OPTA__OFFICIAL_FPL_CODE',
+              'name_matching_used':False,
+              'fuzzy_matching_used':False,
+              'cardinality':'ONE_TO_ONE_TO_ONE',
+              'review_required':True,
+          }
+          (root/'result.json').write_text(json.dumps(out,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(out,indent=2,sort_keys=True))
+          PY
+
+      - name: Upload review-only evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-statmuse-261-reep-tm-probe
+          path: /tmp/statmuse-261/result.json
+          retention-days: 1

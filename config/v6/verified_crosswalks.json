@@ -8,6 +8,7 @@
     "player_crosswalk_duplicate_or_conflict_policy": "FAIL_CLOSED",
     "player_crosswalk_name_matching_allowed": false,
     "player_crosswalk_partial_coverage_is_allowed": true,
+    "player_crosswalk_provider_ids_are_attributes_not_canonical_keys": true,
     "player_crosswalk_uses_official_code_only": true,
     "silent_name_matching_allowed": false,
     "unverified_records_remain_unmapped": true
@@ -34,6 +35,7 @@
       "player_crosswalk_name_matching": false,
       "player_crosswalk_provider_column": "key_fotmob",
       "player_crosswalk_release": "2026.25",
+      "player_crosswalk_verified_at": "2026-06-21T00:00:00+00:00",
       "player_verification_method": "REEP_V0_PINNED_OPTA_NUMERIC_TO_PROVIDER_ID",
       "players": [
         {
@@ -1899,6 +1901,7 @@
       "player_crosswalk_name_matching": false,
       "player_crosswalk_provider_column": "key_statmuse_pl",
       "player_crosswalk_release": "2026.25",
+      "player_crosswalk_verified_at": "2026-06-21T00:00:00+00:00",
       "player_verification_method": "REEP_V0_PINNED_OPTA_NUMERIC_TO_PROVIDER_ID",
       "players": [
         {
@@ -3430,6 +3433,7 @@
       "player_crosswalk_name_matching": false,
       "player_crosswalk_provider_column": "key_understat",
       "player_crosswalk_release": "2026.25",
+      "player_crosswalk_verified_at": "2026-06-21T00:00:00+00:00",
       "player_verification_method": "REEP_V0_PINNED_OPTA_NUMERIC_TO_PROVIDER_ID",
       "players": [
         {

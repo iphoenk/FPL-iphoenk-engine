@@ -55,7 +55,9 @@ def test_workflow_scheduler_matches_v6_chatgpt_authority_policy():
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
     assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True
     assert policy["governance"]["scheduler_health_proof_trigger"] == "issue_comment:chatgpt_scheduler"
-    assert policy["scheduler_authority"]["preferred_transport"] == "DEDICATED_ISSUE_COMMENT_EDIT"
+    assert policy["governance"]["preferred_scheduler_health_proof_trigger"] == "issues:chatgpt_scheduler"
+    assert policy["scheduler_authority"]["preferred_transport"] == "ISSUE_TITLE_EDIT"
+    assert policy["governance"]["issue_title_edit_is_preferred_scheduler_transport"] is True
     assert policy["scheduler_authority"]["dedicated_control_comment_id"] == 5596106114
     assert "workflow_cron_utc" not in source_registry["cadence"]
     assert source_registry["cadence"]["schedule"] == "hourly"

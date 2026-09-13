@@ -110,6 +110,8 @@
       "critical": false,
       "check_freshness_minutes": 90,
       "independence_group": "understat",
+      "connect_timeout_seconds": 10,
+      "request_workers": 1,
       "requests": [
         {
           "id": "epl_{{season.start_year}}",

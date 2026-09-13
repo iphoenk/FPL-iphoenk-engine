@@ -70,5 +70,93 @@
     "data_only": true,
     "prediction_authority": "NONE",
     "optimizer_authority": "NONE"
+  },
+  "reviewed_provider_limitations": {
+    "policy": "EXPLICIT_NATIVE_ID_ALLOWLIST_ONLY",
+    "classification": "NOT_APPLICABLE",
+    "meaning": "Observed provider entity is real, but deterministic V6 joining is not applicable until the provider or a trusted registry exposes a stable cross-ID. It remains visible as a reviewed limitation and must never be name/fuzzy joined.",
+    "sources": {
+      "fotmob": {
+        "source_native_ids": [
+          1021382,
+          1072068,
+          1089691,
+          1104053,
+          1107648,
+          1186978,
+          1187213,
+          1197655,
+          1265626,
+          1280132,
+          1288111,
+          1292810,
+          1302005,
+          1356312,
+          1407250,
+          1413847,
+          1425182,
+          1477878,
+          1553105,
+          1572340,
+          268375,
+          277771,
+          303919,
+          618878,
+          693599,
+          776184,
+          795371,
+          796398,
+          798654,
+          807930,
+          815006,
+          844425,
+          970563,
+          980381
+        ],
+        "reason": "PROVIDER_PROFILE_SURFACE_HAS_NO_TRUSTED_EXTERNAL_PERSON_ID",
+        "review_status": "REVIEWED_PROVIDER_LIMITATION",
+        "review_reference": "github-actions:run/34765558511",
+        "evidence": [
+          "github-actions:run/34765558511",
+          "artifact_sha256:c7bf06564ff7462d2caca5c74694bb11aad9745b170ab5b81d248aa6afe08ee1",
+          "fotmob:/api/data/playerData:34_of_34_current_gap_profiles_no_external_id_like_field"
+        ],
+        "name_matching_used": false,
+        "fuzzy_matching_used": false
+      },
+      "understat": {
+        "source_native_ids": [
+          15045
+        ],
+        "reason": "NATIVE_ENTITY_ABSENT_FROM_PINNED_STABLE_ID_REGISTRY_AND_PROFILE_HAS_NO_EXTERNAL_CROSS_ID",
+        "review_status": "REVIEWED_PROVIDER_LIMITATION",
+        "review_reference": "github-actions:run/34765558511",
+        "evidence": [
+          "github-actions:run/34765558511",
+          "artifact_sha256:c7bf06564ff7462d2caca5c74694bb11aad9745b170ab5b81d248aa6afe08ee1",
+          "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+          "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+          "understat:player:15045:no_external_cross_id"
+        ],
+        "name_matching_used": false,
+        "fuzzy_matching_used": false
+      },
+      "statmuse": {
+        "source_native_ids": [
+          703
+        ],
+        "reason": "EXACT_NATIVE_ID_HAS_NO_TRUSTED_EXTERNAL_CROSS_ID",
+        "review_status": "REVIEWED_PROVIDER_LIMITATION",
+        "review_reference": "github-actions:run/34765558511",
+        "evidence": [
+          "github-actions:run/34765558511",
+          "artifact_sha256:c7bf06564ff7462d2caca5c74694bb11aad9745b170ab5b81d248aa6afe08ee1",
+          "wikidata:P12567:703:zero_exact_bindings",
+          "statmuse:fc/player/703:no_external_stable_link"
+        ],
+        "name_matching_used": false,
+        "fuzzy_matching_used": false
+      }
+    }
   }
 }

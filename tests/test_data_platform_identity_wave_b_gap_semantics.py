@@ -86,6 +86,7 @@ def test_wave_b_green_does_not_require_full_canonical_coverage() -> None:
         "VERIFIED": 1,
         "PROVIDER_ENTITY_EXISTS_BUT_UNMAPPED": 0,
         "NO_PROVIDER_ENTITY": 0,
+        "NOT_APPLICABLE": 0,
         "CONFLICT": 0,
     }
     assert row["canonical_classification_counts"]["UNKNOWN_PROVIDER_PRESENCE"] == 3

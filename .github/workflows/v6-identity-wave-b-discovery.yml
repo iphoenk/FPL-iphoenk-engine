@@ -22,6 +22,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install V6 locked runtime dependencies
+        run: python -m pip install --require-hashes -r requirements-v6.lock
+
       - name: Hydrate read-only runtime identity evidence
         shell: bash
         run: |
@@ -99,7 +102,7 @@ jobs:
             --output /tmp/wave-b/reep_latest.json \
             https://data.reep.football/releases/latest.json
           python - <<'PY'
-          import json, os
+          import json
           from pathlib import Path
           latest = json.loads(Path('/tmp/wave-b/reep_latest.json').read_text())
           expected = '20260907T201034Z'

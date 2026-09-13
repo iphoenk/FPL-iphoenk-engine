@@ -1,0 +1,210 @@
+name: V6 Wave B promote Understat secondary
+
+on:
+  push:
+    branches:
+      - feat/v6-identity-wave-b-understat-secondary
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+      - name: Hydrate runtime identity evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/waveb-understat
+          git fetch --depth=1 origin '+refs/heads/runtime-data-v6:refs/remotes/origin/runtime-data-v6'
+          git show origin/runtime-data-v6:data/v6/normalized/sources/understat.json > /tmp/waveb-understat/understat.json
+          git show origin/runtime-data-v6:data/v6/evidence/player_identity_map.json > /tmp/waveb-understat/player_identity_map.json
+      - name: Fetch pinned secondary registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 3 --retry-delay 1 \
+            'https://raw.githubusercontent.com/ChrisMusson/FPL-ID-Map/e5a9942affd98501db473a8d3b6a0f9e93751e8a/Master.csv' \
+            -o /tmp/waveb-understat/Master.csv
+          test "$(sha256sum /tmp/waveb-understat/Master.csv | awk '{print $1}')" = '19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a'
+      - name: Promote reviewed exact-ID mappings
+        shell: bash
+        env:
+          REVIEW_RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import csv, json, os
+          from collections import defaultdict
+          from pathlib import Path
+
+          root = Path('/tmp/waveb-understat')
+          config_path = Path('config/v6/verified_crosswalks.json')
+          config = json.loads(config_path.read_text(encoding='utf-8'))
+          understat_source = config['sources']['understat']
+          observed_doc = json.loads((root / 'understat.json').read_text())
+          identity = json.loads((root / 'player_identity_map.json').read_text())
+
+          observed = {
+              str(r['source_native_id']): r
+              for r in ((observed_doc.get('record_groups') or {}).get('players') or [])
+              if isinstance(r, dict) and r.get('source_native_id') is not None
+          }
+          existing_rows = list(understat_source.get('players') or [])
+          existing_native = {str(r['source_native_id']) for r in existing_rows}
+          existing_codes = {int(r['official_fpl_code']) for r in existing_rows}
+          remaining = {k: v for k, v in observed.items() if k not in existing_native}
+          if len(remaining) != 69:
+              raise SystemExit(f'expected 69 remaining observed Understat IDs before secondary promotion, got {len(remaining)}')
+
+          official_by_code = {}
+          duplicate_official = set()
+          for key, row in (identity.get('mappings') or {}).items():
+              if not isinstance(row, dict) or row.get('official_code') is None:
+                  continue
+              code = int(row['official_code'])
+              eid = int(row.get('official_fpl_element_id') or key)
+              if code in official_by_code and official_by_code[code] != eid:
+                  duplicate_official.add(code)
+              official_by_code[code] = eid
+          if duplicate_official:
+              raise SystemExit(f'duplicate Official codes: {sorted(duplicate_official)}')
+
+          by_native = defaultdict(list)
+          with open(root / 'Master.csv', encoding='utf-8-sig', newline='') as fh:
+              for row in csv.DictReader(fh):
+                  native = str(row.get('understat') or '').strip()
+                  if native in remaining:
+                      by_native[native].append(row)
+
+          candidates = []
+          absent = []
+          for native in sorted(remaining, key=lambda x: int(x)):
+              rows = by_native.get(native, [])
+              if not rows:
+                  absent.append(int(native))
+                  continue
+              if len(rows) != 1:
+                  raise SystemExit(f'non-unique secondary registry native id {native}: {len(rows)} rows')
+              row = rows[0]
+              code_text = str(row.get('code') or '').strip()
+              if not code_text:
+                  raise SystemExit(f'missing Official/Opta code for Understat native {native}')
+              code = int(code_text)
+              if code not in official_by_code:
+                  raise SystemExit(f'secondary registry code is not current Official FPL code: native={native} code={code}')
+              if code in existing_codes:
+                  raise SystemExit(f'Official FPL code already mapped in Understat crosswalk: native={native} code={code}')
+              candidates.append((int(native), code, official_by_code[code], row))
+
+          if absent != [15045]:
+              raise SystemExit(f'expected only Understat 15045 absent from pinned registry, got {absent}')
+          if len(candidates) != 68:
+              raise SystemExit(f'expected 68 deterministic secondary candidates, got {len(candidates)}')
+          candidate_codes = [c[1] for c in candidates]
+          if len(candidate_codes) != len(set(candidate_codes)):
+              raise SystemExit('duplicate Official target among secondary candidates')
+
+          review_ref = f"github-actions:run/{os.environ['REVIEW_RUN_ID']}"
+          method = 'FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE'
+          evidence_common = [
+              'github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv',
+              'sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a',
+              'official_fpl:bootstrap.elements.code',
+          ]
+          new_rows = []
+          for native, code, element_id, source_row in candidates:
+              tm = str(source_row.get('transfermarkt') or '').strip()
+              fbref = str(source_row.get('fbref') or '').strip()
+              whoscored = str(source_row.get('whoscored') or '').strip()
+              row = {
+                  'source_native_id': native,
+                  'official_fpl_code': code,
+                  'official_fpl_element_id': element_id,
+                  'verification_method': method,
+                  'verified_at': '2026-09-13T15:05:46Z',
+                  'verification_release': 'ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a',
+                  'verification_commit': 'e5a9942affd98501db473a8d3b6a0f9e93751e8a',
+                  'evidence': list(evidence_common),
+                  'bridge_path': [
+                      f'understat:player:{native}',
+                      f'FPL-ID-Map:understat:{native}',
+                      f'FPL-ID-Map:code:{code}',
+                      f'official_fpl.bootstrap.elements.code:{code}',
+                      f'official_fpl.element_id:{element_id}',
+                  ],
+                  'review_status': 'DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED',
+                  'review_reference': review_ref,
+              }
+              secondary = {}
+              if tm:
+                  secondary['transfermarkt_id'] = int(tm)
+              if fbref:
+                  secondary['fbref_id'] = fbref
+              if whoscored:
+                  secondary['whoscored_id'] = int(whoscored)
+              if secondary:
+                  row['secondary_registry_ids'] = secondary
+              new_rows.append(row)
+
+          understat_source['players'] = existing_rows + new_rows
+          understat_source['wave_b_secondary_extension'] = {
+              'mapping_count': 68,
+              'verification_method': method,
+              'registry': 'ChrisMusson/FPL-ID-Map',
+              'registry_commit': 'e5a9942affd98501db473a8d3b6a0f9e93751e8a',
+              'registry_commit_date': '2026-09-04T05:48:51Z',
+              'master_csv_sha256': '19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a',
+              'review_reference': review_ref,
+              'name_matching_used': False,
+              'fuzzy_matching_used': False,
+              'unresolved_observed_native_ids_after_review': [15045],
+          }
+          config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False, sort_keys=True) + '\n', encoding='utf-8')
+
+          expected_path = Path('tests/test_data_platform_verified_player_crosswalk_materialized.py')
+          text = expected_path.read_text(encoding='utf-8')
+          old = '"understat": 516,'
+          new = '"understat": 584,'
+          if old not in text:
+              raise SystemExit('expected Understat materialized count contract not found')
+          expected_path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          test_path = Path('tests/test_data_platform_identity_wave_b_understat_secondary.py')
+          test_path.write_text('''from __future__ import annotations\n\nfrom src.runtime_v6.verified_crosswalks import load_verified_crosswalks\n\n\ndef test_wave_b_understat_secondary_registry_extension_is_reviewed_and_stable_id_only():\n    config = load_verified_crosswalks()\n    source = config["sources"]["understat"]\n    rows = [\n        row for row in source["players"]\n        if row.get("verification_method") == "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE"\n    ]\n    assert len(rows) == 68\n    assert len({int(row["source_native_id"]) for row in rows}) == 68\n    assert len({int(row["official_fpl_code"]) for row in rows}) == 68\n    assert all(int(row["official_fpl_element_id"]) > 0 for row in rows)\n    assert all(row["review_status"] == "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED" for row in rows)\n    assert all(str(row["review_reference"]).startswith("github-actions:run/") for row in rows)\n    assert all(row["verification_commit"] == "e5a9942affd98501db473a8d3b6a0f9e93751e8a" for row in rows)\n    assert all("sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a" in row["evidence"] for row in rows)\n    assert all("name" not in row for row in rows)\n\n\ndef test_wave_b_understat_secondary_extension_keeps_only_native_15045_unresolved_by_this_registry():\n    config = load_verified_crosswalks()\n    meta = config["sources"]["understat"]["wave_b_secondary_extension"]\n    assert meta["mapping_count"] == 68\n    assert meta["name_matching_used"] is False\n    assert meta["fuzzy_matching_used"] is False\n    assert meta["unresolved_observed_native_ids_after_review"] == [15045]\n''', encoding='utf-8')
+
+          print(json.dumps({
+              'existing_configured': len(existing_rows),
+              'promoted': len(new_rows),
+              'configured_after': len(understat_source['players']),
+              'observed_before': len(observed),
+              'observed_mapped_before_secondary': len(observed) - len(remaining),
+              'projected_observed_mapped_after_secondary': len(observed) - 1,
+              'remaining_native_ids': [15045],
+              'review_reference': review_ref,
+          }, indent=2))
+          PY
+      - name: Validate focused contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest -q \
+            tests/test_data_platform_identity_wave_b_understat_secondary.py \
+            tests/test_data_platform_verified_player_crosswalk_materialized.py \
+            tests/test_data_platform_identity_wave_b_promoted_crosswalk.py
+      - name: Commit reviewed extension
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add config/v6/verified_crosswalks.json \
+                  tests/test_data_platform_verified_player_crosswalk_materialized.py \
+                  tests/test_data_platform_identity_wave_b_understat_secondary.py
+          git commit -m 'Promote 68 deterministic Understat Wave B secondary mappings'
+          git push origin HEAD:${GITHUB_REF_NAME}

@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from scripts.v6_build_identity_wave_b_candidates import (
+    FALLBACK_METHOD,
     METHOD,
     WaveBCandidateError,
     build_understat_candidates,
@@ -50,14 +51,56 @@ def _understat() -> dict:
     }
 
 
-def test_builder_closes_only_unique_typed_transfermarkt_to_v1_understat_path(tmp_path: Path) -> None:
+def _empty_v0(path: Path) -> None:
+    _write_csv(path, ["type", "key_opta_numeric", "key_transfermarkt"], [])
+
+
+def test_builder_prefers_direct_v1_opta_person_numeric_bridge(tmp_path: Path) -> None:
+    v0 = tmp_path / "people.csv"
+    v1 = tmp_path / "bridges.csv"
+    _empty_v0(v0)
+    _write_csv(
+        v1,
+        ["provider", "namespace", "external_id", "reep_id"],
+        [
+            {"provider": "opta", "namespace": "person_numeric", "external_id": 1002, "reep_id": "rp2"},
+            {"provider": "understat", "namespace": "player", "external_id": 502, "reep_id": "rp2"},
+        ],
+    )
+
+    report = build_understat_candidates(
+        bootstrap=_bootstrap(),
+        understat_dataset=_understat(),
+        reep_v0_people=v0,
+        reep_v1_bridges=v1,
+    )
+
+    assert report["schema_version"] == 2
+    assert report["candidate_count"] == 1
+    assert report["direct_candidate_count"] == 1
+    assert report["fallback_candidate_count"] == 0
+    assert report["observed_unmapped_before"] == 2
+    assert report["projected_observed_unmapped_after_reviewed_promotion"] == 1
+    assert report["unresolved_observed_native_ids"] == ["503"]
+    candidate = report["candidates"][0]
+    assert candidate["source_native_id"] == 502
+    assert candidate["official_fpl_code"] == 1002
+    assert candidate["official_element_id"] == 2
+    assert candidate["verification_method"] == METHOD
+    assert candidate["evidence"]["opta_person_numeric"] == "1002"
+    assert candidate["evidence"]["primary_canonical_bridge_used"] is True
+    assert candidate["evidence"]["name_matching_used"] is False
+    assert report["governance"]["overlay_opta_numeric_used"] is False
+    assert report["governance"]["auto_promotion_to_runtime_join"] is False
+
+
+def test_builder_uses_typed_transfermarkt_v0_fallback_only_when_direct_anchor_missing(tmp_path: Path) -> None:
     v0 = tmp_path / "people.csv"
     v1 = tmp_path / "bridges.csv"
     _write_csv(
         v0,
         ["type", "key_opta_numeric", "key_transfermarkt"],
         [
-            {"type": "player", "key_opta_numeric": 1001, "key_transfermarkt": 9001},
             {"type": "player", "key_opta_numeric": 1002, "key_transfermarkt": 9002},
             {"type": "player", "key_opta_numeric": 1003, "key_transfermarkt": 9003},
         ],
@@ -78,19 +121,40 @@ def test_builder_closes_only_unique_typed_transfermarkt_to_v1_understat_path(tmp
         reep_v0_people=v0,
         reep_v1_bridges=v1,
     )
+
     assert report["candidate_count"] == 1
-    assert report["observed_unmapped_before"] == 2
-    assert report["projected_observed_unmapped_after_reviewed_promotion"] == 1
-    assert report["unresolved_observed_native_ids"] == ["503"]
+    assert report["direct_candidate_count"] == 0
+    assert report["fallback_candidate_count"] == 1
     candidate = report["candidates"][0]
-    assert candidate["source_native_id"] == 502
     assert candidate["official_fpl_code"] == 1002
-    assert candidate["verification_method"] == METHOD
+    assert candidate["official_element_id"] == 2
+    assert candidate["verification_method"] == FALLBACK_METHOD
     assert candidate["evidence"]["transfermarkt_player_id"] == "9002"
-    assert candidate["evidence"]["reep_v1_id"] == "rp2"
-    assert candidate["evidence"]["name_matching_used"] is False
-    assert report["governance"]["auto_promotion_to_runtime_join"] is False
+    assert candidate["evidence"]["primary_canonical_bridge_used"] is False
     assert report["governance"]["v0_and_v1_reep_ids_assumed_interchangeable"] is False
+
+
+def test_builder_fails_closed_on_v1_opta_person_numeric_collision(tmp_path: Path) -> None:
+    v0 = tmp_path / "people.csv"
+    v1 = tmp_path / "bridges.csv"
+    _empty_v0(v0)
+    _write_csv(
+        v1,
+        ["provider", "namespace", "external_id", "reep_id"],
+        [
+            {"provider": "opta", "namespace": "person_numeric", "external_id": 1002, "reep_id": "rp2"},
+            {"provider": "opta", "namespace": "person_numeric", "external_id": 1002, "reep_id": "rpX"},
+            {"provider": "understat", "namespace": "player", "external_id": 502, "reep_id": "rp2"},
+        ],
+    )
+
+    with pytest.raises(WaveBCandidateError, match="bridge conflicts fail closed"):
+        build_understat_candidates(
+            bootstrap=_bootstrap(),
+            understat_dataset=_understat(),
+            reep_v0_people=v0,
+            reep_v1_bridges=v1,
+        )
 
 
 def test_builder_fails_closed_on_v1_transfermarkt_collision(tmp_path: Path) -> None:
@@ -110,6 +174,7 @@ def test_builder_fails_closed_on_v1_transfermarkt_collision(tmp_path: Path) -> N
             {"provider": "understat", "namespace": "player", "external_id": 502, "reep_id": "rp2"},
         ],
     )
+
     with pytest.raises(WaveBCandidateError, match="bridge conflicts fail closed"):
         build_understat_candidates(
             bootstrap=_bootstrap(),
@@ -122,12 +187,13 @@ def test_builder_fails_closed_on_v1_transfermarkt_collision(tmp_path: Path) -> N
 def test_builder_rejects_duplicate_observed_native_ids(tmp_path: Path) -> None:
     v0 = tmp_path / "people.csv"
     v1 = tmp_path / "bridges.csv"
-    _write_csv(v0, ["type", "key_opta_numeric", "key_transfermarkt"], [])
+    _empty_v0(v0)
     _write_csv(v1, ["provider", "namespace", "external_id", "reep_id"], [])
     dataset = _understat()
     dataset["record_groups"]["players"].append(
         {"source_native_id": 502, "official_element_id": None, "identity_status": "UNMAPPED"}
     )
+
     with pytest.raises(WaveBCandidateError, match="duplicate observed native ids"):
         build_understat_candidates(
             bootstrap=_bootstrap(),

@@ -14,15 +14,44 @@ The V6 identity implementation contains deterministic bridge logic for:
 - `vaastav_fpl` via exact FPL element ID plus exact player code;
 - `opta_the_analyst` via `Official FPL bootstrap.elements.code`, which is the shared Opta legacy numeric namespace / The Analyst `sc-` namespace. Duplicate or missing canonical codes fail closed;
 - verified provider player crosswalk rows anchored on the Official FPL `code`, with one-to-one source-native IDs, explicit evidence and no name fallback;
+- FFScout public Team News player references via exact Premier League media code to Official FPL `code`. This is public `PLAYER + FEED` scope only; Members Area data is not acquired;
 - verified FotMob team crosswalks, which remain separate from player identity.
 
 A successful source acquisition is never proof of player identity. A provider is joinable only for the individual player rows whose link status is `EXACT` or `VERIFIED_MANUAL` in `data/v6/evidence/player_identity_map.json`.
 
-For providers such as FotMob, StatMuse and Understat, the preferred external evidence route is a stamped provider-ID bridge register keyed from the same Opta numeric anchor, for example Reep release bridges. Imported rows must be reduced to a small reviewed crosswalk and stored with release/evidence provenance before runtime joins are enabled. Runtime must not download a large identity register merely to guess names.
+Runtime identity truth is published in `data/v6/evidence/player_identity_map.json`. Wave A additionally publishes `data/v6/evidence/player_identity_coverage.json` so canonical coverage and current observed join coverage are never conflated.
 
-FFScout currently has no accepted stable player-native namespace in V6. It therefore remains fail-closed and unjoinable at player level until a deterministic provider ID contract is evidenced. This is intentional, not an identity-health bug.
+## Wave A coverage semantics
 
-Runtime truth is published in `data/v6/evidence/player_identity_map.json`; this document is the engineering roadmap, not a substitute for runtime evidence.
+Two different coverage questions must be reported separately:
+
+1. **Canonical coverage**: verified provider identities divided by all current Official FPL players.
+2. **Observed join coverage**: verified joins divided by the unique provider-native player records actually observed by the current V6 acquisition surface.
+
+Observed join coverage is not automatically complete provider-universe coverage. For example, a leader table, a limited query result, or a current-season stats endpoint can observe only a subset of all entities the provider knows about.
+
+An unobserved Official FPL player must therefore not be classified as `NO_PROVIDER_ENTITY` unless V6 has complete provider-universe evidence. Until then, absence is `NOT_PROVEN`. A player that is actually observed from a provider but has no deterministic crosswalk is a factual `PROVIDER_ENTITY_EXISTS_BUT_UNMAPPED` gap and remains fail-closed.
+
+The current completeness labels are deliberately explicit:
+
+- Opta/The Analyst: `CANONICAL_SHARED_NAMESPACE_COMPLETE`;
+- Understat: `CURRENT_SEASON_STATS_OBSERVATION`;
+- FotMob: `PARTIAL_LEAGUE_STATS_OBSERVATION`;
+- StatMuse: `PARTIAL_QUERY_RESULT`.
+
+A provider may therefore have partial canonical coverage while its observed join coverage is 100%. That is acceptable only when every currently observed provider-native player row is deterministically joined with zero identity conflicts. It is not permission to claim that the provider universe itself is complete.
+
+## Reep v1 evidence posture
+
+Wave A pins Reep v1 release `20260907T201034Z` as current build-time evidence metadata in `config/v6/identity_evidence_sources.json`. Runtime acquisition does not depend on Reep network availability.
+
+The pinned release proves an important provider-role distinction:
+
+- Understat is present in the canonical `bridges.csv.gz` player namespace;
+- Opta numeric and StatMuse PL identifiers are present in `overlay_xids.csv.gz`, whose own schema explicitly describes those rows as relayed discovery identifiers and **never a bridge or corroboration evidence**;
+- FotMob was not observed in the current v1 provider surfaces used by Wave A.
+
+Reep v1 IDs are not interchangeable with the frozen Reep v0 IDs. V6 therefore does not silently replace the existing verified v0 crosswalk with v1 overlay data. The pinned Reep v0 exact-code crosswalk remains active for Understat, FotMob and StatMuse until Wave B can prove a stronger deterministic replacement. Reep v1 overlay rows may be used to investigate gaps, but they cannot create runtime `EXACT` or `VERIFIED_MANUAL` links by themselves.
 
 ## Acceptance contract for a new bridge
 
@@ -35,34 +64,25 @@ A provider bridge may be promoted only when all of the following are true:
 5. Ambiguous, duplicate or conflicting rows fail closed and remain unresolved.
 6. Mapping logic is isolated by provider and does not create a second canonical player registry.
 7. Tests cover positive mapping, mismatch rejection, missing identifiers, duplicate identifiers and conflicting identifiers.
-8. `player_identity_map.json` reports strategy, mapped count, unmapped count and coverage ratio truthfully.
+8. Runtime evidence reports mapped, observed, unresolved, conflict and both coverage ratios truthfully.
 9. No bridge may overwrite Official FPL-native identity fields.
 10. Partial verified coverage is allowed; unverified remainder stays `UNMAPPED`.
 
-## Cross-source analytics gate
+## Cross-source data join gate
 
-Cross-source player analytics may consume an external record only when all of these conditions hold:
+A downstream consumer may join an external player record only when all of these conditions hold:
 
 - the source record has a stable `source_native_id`;
 - the identity map contains an `EXACT` or `VERIFIED_MANUAL` link from that native ID to one Official FPL element;
 - the link provenance states the bridge method and evidence;
-- no conflict or duplicate guard is active for that key;
-- the source dataset itself is current enough for the intended analysis.
+- no conflict or duplicate identity guard is active for that key;
+- the source dataset itself is current enough for the consumer's intended use.
 
-`join_allowed=true` is therefore an identity permission, not a statement that the source has a complete normalized player dataset or that its football evidence is fresh.
+`join_allowed=true` is an identity permission only. It is not a statement that the source has a complete normalized player dataset, and it gives V6 no prediction or decision authority.
 
-## Priority order
+## Wave B hand-off
 
-Prioritize providers where player-level joins materially unlock useful evidence and a deterministic identifier is realistically obtainable. Do not add provider-specific mapping code merely to raise a coverage percentage.
-
-The preferred implementation sequence is:
-
-- identify provider-native stable IDs and evidence route;
-- prove the canonical anchor without names;
-- add one isolated deterministic resolver or reviewed crosswalk;
-- add regression tests;
-- verify runtime coverage and unresolved cases;
-- only then expose the bridge as verified in the published identity map.
+Wave B consumes the Wave A gap report. Its target is zero observed unresolved identities, not an artificial `657/657` score for providers that may not expose all 657 Official FPL players. It may add stronger deterministic bridges or reviewed exception crosswalks with explicit provenance. It must not use runtime fuzzy matching, names, DOB heuristics, hidden aliases, or cross-provider majority voting as identity authority.
 
 ## Non-goals
 

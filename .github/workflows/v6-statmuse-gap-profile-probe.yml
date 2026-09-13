@@ -1,0 +1,107 @@
+name: V6 StatMuse gap profile one-shot probe
+
+on:
+  push:
+    branches:
+      - ops/v6-statmuse-gap-profile-probe
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Hydrate current StatMuse runtime snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/statmuse-probe
+          git fetch --depth=1 origin '+refs/heads/runtime-data-v6:refs/remotes/origin/runtime-data-v6'
+          git show origin/runtime-data-v6:data/v6/current/statmuse.json > /tmp/statmuse-probe/current.json
+          git show origin/runtime-data-v6:data/v6/normalized/sources/statmuse.json > /tmp/statmuse-probe/normalized.json
+
+      - name: Extract exact native profile hrefs and fetch profiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+          targets={'261','703'}
+          root=json.loads(Path('/tmp/statmuse-probe/current.json').read_text())
+          found=set()
+          pat=re.compile(r'href=["\']([^"\']*/fc/player/[^"\']*-(261|703)(?:[/?#][^"\']*)?)["\']',re.I)
+          def walk(v):
+              if isinstance(v,dict):
+                  for x in v.values(): walk(x)
+              elif isinstance(v,list):
+                  for x in v: walk(x)
+              elif isinstance(v,str):
+                  for href,native in pat.findall(v):
+                      if native in targets:
+                          found.add(href)
+          walk(root)
+          if not found:
+              # deterministic native URLs from StatMuse's own profile URL contract used by runtime parser
+              found={'/fc/player/alexis-mac-allister-261','/fc/player/bobby-thomas-703'}
+          urls=[]
+          for href in sorted(found):
+              url=href if href.startswith('http') else 'https://www.statmuse.com'+href
+              urls.append(url)
+          Path('/tmp/statmuse-probe/profile_urls.txt').write_text('\n'.join(urls)+'\n')
+          print('\n'.join(urls))
+          PY
+          i=0
+          while IFS= read -r url; do
+            [ -z "$url" ] && continue
+            i=$((i+1))
+            curl --fail --silent --show-error --location --retry 2 --retry-delay 1 \
+              -A 'Mozilla/5.0' "$url" -o "/tmp/statmuse-probe/profile_${i}.html"
+          done < /tmp/statmuse-probe/profile_urls.txt
+
+      - name: Inspect profiles for stable cross-provider identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+          domains=('transfermarkt','wikidata','wikipedia','opta','understat','fbref','soccerway','worldfootball','premierleague')
+          result={'profiles':[],'governance':{'name_matching_used':False,'fuzzy_matching_used':False}}
+          urls=Path('/tmp/statmuse-probe/profile_urls.txt').read_text().splitlines()
+          for idx,url in enumerate(urls,1):
+              p=Path(f'/tmp/statmuse-probe/profile_{idx}.html')
+              text=p.read_text(encoding='utf-8',errors='replace')
+              links=sorted(set(re.findall(r'https?://[^"\'<>\\\s]+',text,re.I)))
+              external=[x for x in links if any(d in x.lower() for d in domains)]
+              id_keys=[]
+              for m in re.finditer(r'(?i)(opta|transfermarkt|wikidata|external(?:Id|_id)?|person(?:Id|_id)?|player(?:Id|_id)?|provider(?:Id|_id)?|uuid|uid)["\']?\s*[:=]\s*["\']?([A-Za-z0-9_:-]+)',text):
+                  id_keys.append({'key':m.group(1),'value':m.group(2)})
+              result['profiles'].append({
+                  'url':url,
+                  'bytes':len(text.encode('utf-8')),
+                  'external_identity_links':external[:100],
+                  'identity_like_fields':id_keys[:100],
+              })
+          out=Path('/tmp/statmuse-probe/statmuse_gap_profile_probe.json')
+          out.write_text(json.dumps(result,indent=2,ensure_ascii=False,sort_keys=True)+'\n')
+          print(json.dumps(result,indent=2,ensure_ascii=False,sort_keys=True))
+          PY
+
+      - name: Upload review-only probe
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-statmuse-gap-profile-probe
+          path: |
+            /tmp/statmuse-probe/profile_urls.txt
+            /tmp/statmuse-probe/statmuse_gap_profile_probe.json
+          if-no-files-found: warn
+          retention-days: 1

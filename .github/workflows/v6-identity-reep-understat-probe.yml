@@ -34,47 +34,54 @@ jobs:
           from pathlib import Path
 
           samples = {'8379', '10016', '14758', '1045', '212'}
-          understat_namespaces = Counter()
-          transfermarkt_namespaces = Counter()
+          provider_namespaces = Counter()
+          provider_counts = Counter()
           sample_understat_rows = []
           sample_reep_ids = set()
           all_rows_by_reep = defaultdict(list)
-          understat_rows = 0
-          transfermarkt_rows = 0
+
           with gzip.open('/tmp/reep-probe/bridges.csv.gz', 'rt', encoding='utf-8', newline='') as handle:
               reader = csv.DictReader(handle)
               print('FIELDNAMES=' + json.dumps(reader.fieldnames))
               for row in reader:
                   provider = str(row.get('provider') or '').strip().lower()
-                  namespace = str(row.get('namespace') or '').strip()
+                  namespace = str(row.get('namespace') or '').strip().lower()
                   external_id = str(row.get('external_id') or '').strip()
                   reep_id = str(row.get('reep_id') or '').strip()
-                  if provider == 'understat':
-                      understat_rows += 1
-                      understat_namespaces[namespace] += 1
-                      if external_id in samples:
-                          sample_understat_rows.append(row)
-                          sample_reep_ids.add(reep_id)
-                  elif provider == 'transfermarkt':
-                      transfermarkt_rows += 1
-                      transfermarkt_namespaces[namespace] += 1
+                  provider_counts[provider] += 1
+                  provider_namespaces[(provider, namespace)] += 1
+                  if provider == 'understat' and namespace == 'player' and external_id in samples:
+                      sample_understat_rows.append(row)
+                      sample_reep_ids.add(reep_id)
                   if reep_id:
                       all_rows_by_reep[reep_id].append(row)
 
-          sample_cross_provider = {
-              reep_id: [
-                  row for row in all_rows_by_reep[reep_id]
-                  if str(row.get('provider') or '').strip().lower() in {'understat', 'transfermarkt'}
-              ]
+          sample_all_provider_rows = {
+              reep_id: sorted(
+                  all_rows_by_reep[reep_id],
+                  key=lambda row: (
+                      str(row.get('provider') or ''),
+                      str(row.get('namespace') or ''),
+                      str(row.get('external_id') or ''),
+                  ),
+              )
               for reep_id in sorted(sample_reep_ids)
           }
+          relevant_provider_counts = {
+              provider: count
+              for provider, count in sorted(provider_counts.items())
+              if any(token in provider for token in ('fpl', 'premier', 'opta', 'transfermarkt', 'understat'))
+          }
+          relevant_provider_namespaces = {
+              f'{provider}:{namespace}': count
+              for (provider, namespace), count in sorted(provider_namespaces.items())
+              if any(token in provider for token in ('fpl', 'premier', 'opta', 'transfermarkt', 'understat'))
+          }
           out = {
-              'understat_rows': understat_rows,
-              'understat_namespaces': dict(understat_namespaces),
-              'transfermarkt_rows': transfermarkt_rows,
-              'transfermarkt_namespaces': dict(transfermarkt_namespaces),
               'sample_understat_rows': sample_understat_rows,
-              'sample_cross_provider_rows': sample_cross_provider,
+              'sample_all_provider_rows': sample_all_provider_rows,
+              'relevant_provider_counts': relevant_provider_counts,
+              'relevant_provider_namespaces': relevant_provider_namespaces,
           }
           print(json.dumps(out, indent=2, sort_keys=True))
           Path('/tmp/reep-probe/understat_probe.json').write_text(

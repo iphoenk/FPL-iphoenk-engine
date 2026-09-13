@@ -103,6 +103,7 @@ def _dataset(source_id: str, payload: dict[str, Any], players: list[dict[str, An
             "cross_source_synthesis": False,
             "silent_fuzzy_identity_join": False,
             "identity_join_requires_verified_provider_native_id": True,
+            "player_identity_is_provider_native_only": True,
             "decision_authority": "NONE",
             "prediction_authority": "NONE",
             "optimizer_authority": "NONE",

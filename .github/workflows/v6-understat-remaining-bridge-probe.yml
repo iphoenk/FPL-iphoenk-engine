@@ -1,0 +1,220 @@
+name: V6 Understat remaining bridge one-shot probe
+
+on:
+  push:
+    branches:
+      - ops/v6-understat-remaining-bridge-probe
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Hydrate read-only runtime observations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/understat-probe
+          git fetch --depth=1 origin '+refs/heads/runtime-data-v6:refs/remotes/origin/runtime-data-v6'
+          git show origin/runtime-data-v6:data/v6/normalized/sources/understat.json > /tmp/understat-probe/understat.json
+          git show origin/runtime-data-v6:data/v6/evidence/player_identity_map.json > /tmp/understat-probe/player_identity_map.json
+
+      - name: Fetch and verify pinned Reep v1 bridges
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output /tmp/understat-probe/latest.json \
+            https://data.reep.football/releases/latest.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          latest=json.loads(Path('/tmp/understat-probe/latest.json').read_text())
+          expected_stamp='20260907T201034Z'
+          expected_manifest='65356d7522832ea58c19993a95eb31ceb9d6e22e3ff518014387734b13e43529'
+          if latest.get('stamp') != expected_stamp:
+              raise SystemExit(f"Reep stamp mismatch: {latest.get('stamp')}")
+          if latest.get('manifest_sha256') != expected_manifest:
+              raise SystemExit('Reep manifest pointer checksum mismatch')
+          Path('/tmp/understat-probe/manifest_url.txt').write_text(latest['manifest_url'])
+          PY
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output /tmp/understat-probe/release.json \
+            "$(cat /tmp/understat-probe/manifest_url.txt)"
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          p=Path('/tmp/understat-probe/release.json')
+          expected_manifest='65356d7522832ea58c19993a95eb31ceb9d6e22e3ff518014387734b13e43529'
+          if hashlib.sha256(p.read_bytes()).hexdigest()!=expected_manifest:
+              raise SystemExit('Reep manifest checksum mismatch')
+          release=json.loads(p.read_text())
+          entry=release['files']['csv/bridges.csv.gz']
+          expected='a03aef520a454bdcd181b5b332b91e7b41ee57f4914e6e2c456cf49a8b86a735'
+          if entry.get('sha256') != expected or int(entry.get('rows') or 0) != 6187645:
+              raise SystemExit('Pinned Reep bridges metadata mismatch')
+          Path('/tmp/understat-probe/bridges_url.txt').write_text(entry['url'])
+          PY
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output /tmp/understat-probe/bridges.csv.gz \
+            "$(cat /tmp/understat-probe/bridges_url.txt)"
+          printf '%s  %s\n' 'a03aef520a454bdcd181b5b332b91e7b41ee57f4914e6e2c456cf49a8b86a735' /tmp/understat-probe/bridges.csv.gz | sha256sum -c -
+
+      - name: Classify every remaining observed Understat native entity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import csv,gzip,json
+          from collections import Counter,defaultdict
+          from pathlib import Path
+
+          root=Path('/tmp/understat-probe')
+          dataset=json.loads((root/'understat.json').read_text())
+          cross=json.loads(Path('config/v6/verified_crosswalks.json').read_text())
+          identity=json.loads((root/'player_identity_map.json').read_text())
+
+          observed={}
+          for row in ((dataset.get('record_groups') or {}).get('players') or []):
+              if not isinstance(row,dict) or row.get('source_native_id') is None:
+                  continue
+              native=str(row['source_native_id'])
+              observed[native]={
+                  'source_native_id': row['source_native_id'],
+                  'diagnostic_name': row.get('player_name'),
+                  'diagnostic_club': row.get('club') or row.get('teamName'),
+              }
+
+          under=((cross.get('sources') or {}).get('understat') or {})
+          known={str(r.get('source_native_id')) for r in (under.get('players') or []) if r.get('source_native_id') is not None}
+          remaining={k:v for k,v in observed.items() if k not in known}
+
+          official_codes={}
+          duplicate_codes=set()
+          for key,row in (identity.get('mappings') or {}).items():
+              if not isinstance(row,dict) or row.get('official_code') is None:
+                  continue
+              code=str(row['official_code'])
+              eid=int(row.get('official_fpl_element_id') or key)
+              if code in official_codes and official_codes[code] != eid:
+                  duplicate_codes.add(code)
+              official_codes[code]=eid
+          for code in duplicate_codes:
+              official_codes.pop(code,None)
+          if duplicate_codes:
+              raise SystemExit(f'duplicate official codes: {sorted(duplicate_codes)[:20]}')
+
+          native_to_reep=defaultdict(set)
+          target=set(remaining)
+          with gzip.open(root/'bridges.csv.gz','rt',encoding='utf-8',newline='') as fh:
+              reader=csv.DictReader(fh)
+              for row in reader:
+                  if row.get('provider')=='understat' and row.get('namespace')=='player' and str(row.get('external_id')) in target:
+                      native_to_reep[str(row['external_id'])].add(str(row['reep_id']))
+
+          conflicts={k:sorted(v) for k,v in native_to_reep.items() if len(v)!=1}
+          if any(len(v)>1 for v in native_to_reep.values()):
+              raise SystemExit(f'Understat native -> multiple Reep conflicts: {conflicts}')
+
+          reep_targets={next(iter(v)) for v in native_to_reep.values() if len(v)==1}
+          bridges=defaultdict(list)
+          with gzip.open(root/'bridges.csv.gz','rt',encoding='utf-8',newline='') as fh:
+              reader=csv.DictReader(fh)
+              for row in reader:
+                  rid=str(row.get('reep_id') or '')
+                  if rid in reep_targets:
+                      bridges[rid].append({
+                          'provider': row.get('provider'),
+                          'namespace': row.get('namespace'),
+                          'external_id': str(row.get('external_id') or ''),
+                      })
+
+          categories=Counter()
+          namespace_counts=Counter()
+          results=[]
+          safe_candidates=[]
+          candidate_by_official=defaultdict(list)
+          for native,item in sorted(remaining.items(), key=lambda kv:int(kv[0]) if kv[0].isdigit() else kv[0]):
+              rids=sorted(native_to_reep.get(native) or [])
+              entry=dict(item)
+              entry['reep_ids']=rids
+              entry['bridges']=[]
+              entry['opta_person_numeric']=[]
+              entry['official_candidates']=[]
+              if not rids:
+                  entry['classification']='UNDERSTAT_NATIVE_ABSENT_FROM_REEP_V1'
+                  categories[entry['classification']]+=1
+                  results.append(entry)
+                  continue
+              rid=rids[0]
+              rows=sorted(bridges.get(rid) or [], key=lambda r:(str(r['provider']),str(r['namespace']),str(r['external_id'])))
+              entry['bridges']=rows
+              for b in rows:
+                  namespace_counts[(b['provider'],b['namespace'])]+=1
+              opta=sorted({b['external_id'] for b in rows if b['provider']=='opta' and b['namespace']=='person_numeric' and b['external_id']})
+              entry['opta_person_numeric']=opta
+              official=[{'official_fpl_code':int(code),'official_element_id':official_codes[code]} for code in opta if code in official_codes]
+              entry['official_candidates']=official
+              if len(opta)>1:
+                  entry['classification']='REEP_V1_CONFLICTING_OPTA_PERSON_NUMERIC'
+              elif len(official)>1:
+                  entry['classification']='REEP_V1_CONFLICTING_OFFICIAL_ANCHOR'
+              elif len(official)==1:
+                  entry['classification']='SAFE_OPTA_PERSON_NUMERIC_CANDIDATE'
+                  safe={
+                      'source_native_id':item['source_native_id'],
+                      'reep_id':rid,
+                      'official_fpl_code':official[0]['official_fpl_code'],
+                      'official_element_id':official[0]['official_element_id'],
+                      'method':'REEP_V1_PINNED_OPTA_PERSON_NUMERIC_TO_UNDERSTAT',
+                      'release':'20260907T201034Z',
+                  }
+                  safe_candidates.append(safe)
+                  candidate_by_official[str(official[0]['official_element_id'])].append(safe)
+              elif opta:
+                  entry['classification']='REEP_V1_OPTA_NOT_IN_CURRENT_OFFICIAL_UNIVERSE'
+              else:
+                  entry['classification']='REEP_V1_ENTITY_WITHOUT_OPTA_PERSON_NUMERIC'
+              categories[entry['classification']]+=1
+              results.append(entry)
+
+          native_collision=[k for k,v in native_to_reep.items() if len(v)>1]
+          official_collision={k:v for k,v in candidate_by_official.items() if len(v)>1}
+          if native_collision or official_collision:
+              raise SystemExit(f'candidate collision native={native_collision} official={official_collision}')
+
+          summary={
+              'schema_version':1,
+              'reep_release':'20260907T201034Z',
+              'observed_native_count':len(observed),
+              'already_verified_current_config':len(observed)-len(remaining),
+              'remaining_observed_gap_count':len(remaining),
+              'classification_counts':dict(sorted(categories.items())),
+              'safe_candidate_count':len(safe_candidates),
+              'safe_candidates':safe_candidates,
+              'bridge_namespace_presence_counts':[
+                  {'provider':p,'namespace':n,'remaining_entities_with_bridge_occurrences':c}
+                  for (p,n),c in sorted(namespace_counts.items(), key=lambda x:(-x[1],x[0]))
+              ],
+              'rows':results,
+              'name_matching_used':False,
+              'fuzzy_matching_used':False,
+          }
+          (root/'understat_remaining_bridge_classification.json').write_text(json.dumps(summary,indent=2,ensure_ascii=False,sort_keys=True)+'\n')
+          print(json.dumps({k:summary[k] for k in ('observed_native_count','already_verified_current_config','remaining_observed_gap_count','classification_counts','safe_candidate_count')},indent=2))
+          PY
+
+      - name: Upload review-only classification
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-understat-remaining-bridge-probe
+          path: /tmp/understat-probe/understat_remaining_bridge_classification.json
+          retention-days: 1

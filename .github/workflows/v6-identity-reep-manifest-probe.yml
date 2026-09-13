@@ -1,0 +1,84 @@
+name: V6 Identity Reep manifest probe
+
+on:
+  push:
+    branches:
+      - ops/v6-identity-reep-manifest-probe
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Fetch pinned Reep v1 manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/reep-probe
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output /tmp/reep-probe/latest.json \
+            https://data.reep.football/releases/latest.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          latest = json.loads(Path('/tmp/reep-probe/latest.json').read_text())
+          expected = '20260907T201034Z'
+          actual = str(latest.get('stamp') or '')
+          if actual != expected:
+              raise SystemExit(f'unexpected Reep stamp expected={expected} actual={actual}')
+          url = str(latest.get('manifest_url') or '')
+          if not url:
+              raise SystemExit('manifest_url missing')
+          Path('/tmp/reep-probe/manifest_url.txt').write_text(url)
+          print(json.dumps(latest, indent=2, sort_keys=True))
+          PY
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output /tmp/reep-probe/release.json \
+            "$(cat /tmp/reep-probe/manifest_url.txt)"
+
+      - name: Print manifest structure and all file-like strings
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path('/tmp/reep-probe/release.json').read_text())
+          print('TOP_LEVEL_KEYS=' + json.dumps(sorted(manifest.keys())))
+          rows = []
+          def walk(value, path=''):
+              if isinstance(value, dict):
+                  for k, v in value.items():
+                      walk(v, f'{path}.{k}' if path else str(k))
+              elif isinstance(value, list):
+                  for i, v in enumerate(value):
+                      walk(v, f'{path}[{i}]')
+              elif isinstance(value, str):
+                  low = value.lower()
+                  if any(token in low for token in ('bridge', '.csv', '.gz', '.duckdb', 'object_key', 'url')):
+                      rows.append({'path': path, 'value': value})
+          walk(manifest)
+          Path('/tmp/reep-probe/file_strings.json').write_text(
+              json.dumps(rows, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(rows, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload probe evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: reep-v1-manifest-probe
+          path: |
+            /tmp/reep-probe/latest.json
+            /tmp/reep-probe/release.json
+            /tmp/reep-probe/file_strings.json
+            /tmp/reep-probe/manifest_url.txt
+          if-no-files-found: error
+          retention-days: 1

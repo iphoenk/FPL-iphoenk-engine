@@ -1,0 +1,45 @@
+name: V6 Identity Wave A bootstrap
+
+on:
+  push:
+    branches:
+      - feat/v6-identity-wave-a-coverage-truth
+    paths:
+      - .github/workflows/v6-identity-wave-a-bootstrap.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-reep-v1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Inspect current Reep v1 release
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --retry-delay 2 https://data.reep.football/releases/latest.json -o latest.json
+          echo '--- latest.json ---'
+          cat latest.json
+          manifest_url=$(python - <<'PY'
+          import json
+          print(json.load(open('latest.json'))['manifest_url'])
+          PY
+          )
+          curl -fsSL --retry 3 --retry-delay 2 "$manifest_url" -o release.json
+          echo
+          echo '--- release.json ---'
+          cat release.json
+          echo
+          python - <<'PY'
+          import json
+          obj=json.load(open('release.json'))
+          print('\n--- manifest keys ---')
+          print(sorted(obj.keys()))
+          for key in ('files','artifacts','objects','downloads'):
+              if key in obj:
+                  print(f'\n--- {key} ---')
+                  print(json.dumps(obj[key], indent=2)[:30000])
+          PY

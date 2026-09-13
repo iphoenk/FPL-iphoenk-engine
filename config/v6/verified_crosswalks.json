@@ -2800,16 +2800,16 @@
           "source_native_id": 7021
         },
         {
-          "official_fpl_code": 243016,
-          "official_fpl_element_id": 372,
-          "reep_id": "rpecc5cfdbee4a41",
-          "source_native_id": 261,
-          "verification_method": "CURATED_WIKIDATA_STATMUSE_ID_TO_TM__REEP_V1_TM_TO_OPTA__OFFICIAL_FPL_CODE",
-          "verification_release": "20260907T201034Z",
-          "verified_at": "2026-09-13T14:58:57+00:00",
-          "review_status": "REVIEWED_DETERMINISTIC_ONE_TO_ONE",
-          "reviewer": "V6_WAVE_B_IDENTITY_REVIEW",
-          "review_reference": "github_actions_run:34764199565",
+          "bridge_path": [
+            "statmuse:P12567:261",
+            "wikidata:Q33297140",
+            "wikidata:P2446:534033",
+            "reep_v1:transfermarkt:spieler:534033",
+            "reep_v1:rpecc5cfdbee4a41",
+            "reep_v1:opta:person_numeric:243016",
+            "official_fpl:bootstrap.elements.code:243016",
+            "official_fpl:element:372"
+          ],
           "evidence": [
             "statmuse:P12567:261",
             "wikidata:Q33297140",
@@ -2824,16 +2824,16 @@
             "github_actions_run:34764161740",
             "github_actions_run:34764199565"
           ],
-          "bridge_path": [
-            "statmuse:P12567:261",
-            "wikidata:Q33297140",
-            "wikidata:P2446:534033",
-            "reep_v1:transfermarkt:spieler:534033",
-            "reep_v1:rpecc5cfdbee4a41",
-            "reep_v1:opta:person_numeric:243016",
-            "official_fpl:bootstrap.elements.code:243016",
-            "official_fpl:element:372"
-          ]
+          "official_fpl_code": 243016,
+          "official_fpl_element_id": 372,
+          "reep_id": "rpecc5cfdbee4a41",
+          "review_reference": "github_actions_run:34764199565",
+          "review_status": "REVIEWED_DETERMINISTIC_ONE_TO_ONE",
+          "reviewer": "V6_WAVE_B_IDENTITY_REVIEW",
+          "source_native_id": 261,
+          "verification_method": "CURATED_WIKIDATA_STATMUSE_ID_TO_TM__REEP_V1_TM_TO_OPTA__OFFICIAL_FPL_CODE",
+          "verification_release": "20260907T201034Z",
+          "verified_at": "2026-09-13T14:58:57+00:00"
         },
         {
           "official_fpl_code": 243298,
@@ -6337,6 +6337,1910 @@
           "official_fpl_code": 699989,
           "reep_id": "reep_p1dc78984",
           "source_native_id": 14460
+        },
+        {
+          "bridge_path": [
+            "understat:player:8091",
+            "FPL-ID-Map:understat:8091",
+            "FPL-ID-Map:code:445087",
+            "official_fpl.bootstrap.elements.code:445087",
+            "official_fpl.element_id:579"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 445087,
+          "official_fpl_element_id": 579,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "2bef2bca",
+            "transfermarkt_id": 480267,
+            "whoscored_id": 384711
+          },
+          "source_native_id": 8091,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:8872",
+            "FPL-ID-Map:understat:8872",
+            "FPL-ID-Map:code:487992",
+            "official_fpl.bootstrap.elements.code:487992",
+            "official_fpl.element_id:596"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 487992,
+          "official_fpl_element_id": 596,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "ae9898c5",
+            "transfermarkt_id": 616631,
+            "whoscored_id": 402046
+          },
+          "source_native_id": 8872,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:10016",
+            "FPL-ID-Map:understat:10016",
+            "FPL-ID-Map:code:482616",
+            "official_fpl.bootstrap.elements.code:482616",
+            "official_fpl.element_id:627"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 482616,
+          "official_fpl_element_id": 627,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "a0d55a09",
+            "transfermarkt_id": 708265,
+            "whoscored_id": 425366
+          },
+          "source_native_id": 10016,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:10485",
+            "FPL-ID-Map:understat:10485",
+            "FPL-ID-Map:code:572584",
+            "official_fpl.bootstrap.elements.code:572584",
+            "official_fpl.element_id:592"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 572584,
+          "official_fpl_element_id": 592,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "d028b5e5",
+            "transfermarkt_id": 991487,
+            "whoscored_id": 433937
+          },
+          "source_native_id": 10485,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:11186",
+            "FPL-ID-Map:understat:11186",
+            "FPL-ID-Map:code:561245",
+            "official_fpl.bootstrap.elements.code:561245",
+            "official_fpl.element_id:81"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 561245,
+          "official_fpl_element_id": 81,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "49a6ecbb",
+            "transfermarkt_id": 948275,
+            "whoscored_id": 460772
+          },
+          "source_native_id": 11186,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:11545",
+            "FPL-ID-Map:understat:11545",
+            "FPL-ID-Map:code:606702",
+            "official_fpl.bootstrap.elements.code:606702",
+            "official_fpl.element_id:362"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 606702,
+          "official_fpl_element_id": 362,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "cef70c94",
+            "transfermarkt_id": 1004301,
+            "whoscored_id": 468827
+          },
+          "source_native_id": 11545,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:12035",
+            "FPL-ID-Map:understat:12035",
+            "FPL-ID-Map:code:551466",
+            "official_fpl.bootstrap.elements.code:551466",
+            "official_fpl.element_id:569"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 551466,
+          "official_fpl_element_id": 569,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "74c2d562",
+            "transfermarkt_id": 935230,
+            "whoscored_id": 498798
+          },
+          "source_native_id": 12035,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:12286",
+            "FPL-ID-Map:understat:12286",
+            "FPL-ID-Map:code:606930",
+            "official_fpl.bootstrap.elements.code:606930",
+            "official_fpl.element_id:586"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 606930,
+          "official_fpl_element_id": 586,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "7e64e657",
+            "transfermarkt_id": 1034853,
+            "whoscored_id": 469508
+          },
+          "source_native_id": 12286,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:12336",
+            "FPL-ID-Map:understat:12336",
+            "FPL-ID-Map:code:549940",
+            "official_fpl.bootstrap.elements.code:549940",
+            "official_fpl.element_id:646"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 549940,
+          "official_fpl_element_id": 646,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "8236f673",
+            "transfermarkt_id": 743386,
+            "whoscored_id": 438102
+          },
+          "source_native_id": 12336,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:12733",
+            "FPL-ID-Map:understat:12733",
+            "FPL-ID-Map:code:638987",
+            "official_fpl.bootstrap.elements.code:638987",
+            "official_fpl.element_id:631"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 638987,
+          "official_fpl_element_id": 631,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "201b4ee4",
+            "transfermarkt_id": 1185888,
+            "whoscored_id": 535536
+          },
+          "source_native_id": 12733,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:12779",
+            "FPL-ID-Map:understat:12779",
+            "FPL-ID-Map:code:605972",
+            "official_fpl.bootstrap.elements.code:605972",
+            "official_fpl.element_id:633"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 605972,
+          "official_fpl_element_id": 633,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "42ff58c3",
+            "transfermarkt_id": 1077175,
+            "whoscored_id": 535735
+          },
+          "source_native_id": 12779,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:12781",
+            "FPL-ID-Map:understat:12781",
+            "FPL-ID-Map:code:433969",
+            "official_fpl.bootstrap.elements.code:433969",
+            "official_fpl.element_id:597"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 433969,
+          "official_fpl_element_id": 597,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "51e1f4f5",
+            "transfermarkt_id": 432298,
+            "whoscored_id": 447570
+          },
+          "source_native_id": 12781,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:12843",
+            "FPL-ID-Map:understat:12843",
+            "FPL-ID-Map:code:243951",
+            "official_fpl.bootstrap.elements.code:243951",
+            "official_fpl.element_id:642"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 243951,
+          "official_fpl_element_id": 642,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "8725a42e",
+            "transfermarkt_id": 475416,
+            "whoscored_id": 366114
+          },
+          "source_native_id": 12843,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:12955",
+            "FPL-ID-Map:understat:12955",
+            "FPL-ID-Map:code:539142",
+            "official_fpl.bootstrap.elements.code:539142",
+            "official_fpl.element_id:182"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 539142,
+          "official_fpl_element_id": 182,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "1227a22d",
+            "transfermarkt_id": 635645,
+            "whoscored_id": 450271
+          },
+          "source_native_id": 12955,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:13051",
+            "FPL-ID-Map:understat:13051",
+            "FPL-ID-Map:code:613221",
+            "official_fpl.bootstrap.elements.code:613221",
+            "official_fpl.element_id:634"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 613221,
+          "official_fpl_element_id": 634,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "0cdb6a2a",
+            "transfermarkt_id": 724129,
+            "whoscored_id": 475462
+          },
+          "source_native_id": 13051,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:13102",
+            "FPL-ID-Map:understat:13102",
+            "FPL-ID-Map:code:614071",
+            "official_fpl.bootstrap.elements.code:614071",
+            "official_fpl.element_id:53"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 614071,
+          "official_fpl_element_id": 53,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "8fcf0e12",
+            "transfermarkt_id": 927353,
+            "whoscored_id": 532577
+          },
+          "source_native_id": 13102,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:13136",
+            "FPL-ID-Map:understat:13136",
+            "FPL-ID-Map:code:496181",
+            "official_fpl.bootstrap.elements.code:496181",
+            "official_fpl.element_id:638"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 496181,
+          "official_fpl_element_id": 638,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "54f5b2bd",
+            "transfermarkt_id": 728733,
+            "whoscored_id": 431573
+          },
+          "source_native_id": 13136,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:13214",
+            "FPL-ID-Map:understat:13214",
+            "FPL-ID-Map:code:632794",
+            "official_fpl.bootstrap.elements.code:632794",
+            "official_fpl.element_id:559"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 632794,
+          "official_fpl_element_id": 559,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "6906ecb2",
+            "transfermarkt_id": 975347,
+            "whoscored_id": 546589
+          },
+          "source_native_id": 13214,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:13279",
+            "FPL-ID-Map:understat:13279",
+            "FPL-ID-Map:code:551499",
+            "official_fpl.bootstrap.elements.code:551499",
+            "official_fpl.element_id:377"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 551499,
+          "official_fpl_element_id": 377,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "f8b5680f",
+            "transfermarkt_id": 935231,
+            "whoscored_id": 502450
+          },
+          "source_native_id": 13279,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:13330",
+            "FPL-ID-Map:understat:13330",
+            "FPL-ID-Map:code:631000",
+            "official_fpl.bootstrap.elements.code:631000",
+            "official_fpl.element_id:637"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 631000,
+          "official_fpl_element_id": 637,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "74fb9321",
+            "transfermarkt_id": 1131161,
+            "whoscored_id": 550149
+          },
+          "source_native_id": 13330,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:13427",
+            "FPL-ID-Map:understat:13427",
+            "FPL-ID-Map:code:611665",
+            "official_fpl.bootstrap.elements.code:611665",
+            "official_fpl.element_id:461"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 611665,
+          "official_fpl_element_id": 461,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "93945a50",
+            "transfermarkt_id": 1067904,
+            "whoscored_id": 551965
+          },
+          "source_native_id": 13427,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:13456",
+            "FPL-ID-Map:understat:13456",
+            "FPL-ID-Map:code:463726",
+            "official_fpl.bootstrap.elements.code:463726",
+            "official_fpl.element_id:593"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 463726,
+          "official_fpl_element_id": 593,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "bc6e544a",
+            "transfermarkt_id": 519184,
+            "whoscored_id": 418203
+          },
+          "source_native_id": 13456,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:13837",
+            "FPL-ID-Map:understat:13837",
+            "FPL-ID-Map:code:442299",
+            "official_fpl.bootstrap.elements.code:442299",
+            "official_fpl.element_id:650"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 442299,
+          "official_fpl_element_id": 650,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "4b00cd47",
+            "transfermarkt_id": 452483,
+            "whoscored_id": 423282
+          },
+          "source_native_id": 13837,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:13879",
+            "FPL-ID-Map:understat:13879",
+            "FPL-ID-Map:code:522047",
+            "official_fpl.bootstrap.elements.code:522047",
+            "official_fpl.element_id:334"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 522047,
+          "official_fpl_element_id": 334,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "426dda23",
+            "transfermarkt_id": 679423,
+            "whoscored_id": 439533
+          },
+          "source_native_id": 13879,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:13917",
+            "FPL-ID-Map:understat:13917",
+            "FPL-ID-Map:code:513545",
+            "official_fpl.bootstrap.elements.code:513545",
+            "official_fpl.element_id:565"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 513545,
+          "official_fpl_element_id": 565,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "e50d714b",
+            "transfermarkt_id": 808348,
+            "whoscored_id": 442971
+          },
+          "source_native_id": 13917,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14082",
+            "FPL-ID-Map:understat:14082",
+            "FPL-ID-Map:code:543968",
+            "official_fpl.bootstrap.elements.code:543968",
+            "official_fpl.element_id:316"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 543968,
+          "official_fpl_element_id": 316,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "ac24342e",
+            "transfermarkt_id": 743599,
+            "whoscored_id": 429565
+          },
+          "source_native_id": 14082,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14097",
+            "FPL-ID-Map:understat:14097",
+            "FPL-ID-Map:code:616288",
+            "official_fpl.bootstrap.elements.code:616288",
+            "official_fpl.element_id:621"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 616288,
+          "official_fpl_element_id": 621,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "8dd0d7c5",
+            "transfermarkt_id": 1187640,
+            "whoscored_id": 584927
+          },
+          "source_native_id": 14097,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14193",
+            "FPL-ID-Map:understat:14193",
+            "FPL-ID-Map:code:577285",
+            "official_fpl.bootstrap.elements.code:577285",
+            "official_fpl.element_id:51"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 577285,
+          "official_fpl_element_id": 51,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "28795530",
+            "transfermarkt_id": 1023191,
+            "whoscored_id": 576066
+          },
+          "source_native_id": 14193,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14198",
+            "FPL-ID-Map:understat:14198",
+            "FPL-ID-Map:code:576628",
+            "official_fpl.bootstrap.elements.code:576628",
+            "official_fpl.element_id:435"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 576628,
+          "official_fpl_element_id": 435,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "3160e952",
+            "transfermarkt_id": 926309,
+            "whoscored_id": 563779
+          },
+          "source_native_id": 14198,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14352",
+            "FPL-ID-Map:understat:14352",
+            "FPL-ID-Map:code:571779",
+            "official_fpl.bootstrap.elements.code:571779",
+            "official_fpl.element_id:570"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 571779,
+          "official_fpl_element_id": 570,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "f4d61d12",
+            "transfermarkt_id": 948272,
+            "whoscored_id": 534901
+          },
+          "source_native_id": 14352,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14376",
+            "FPL-ID-Map:understat:14376",
+            "FPL-ID-Map:code:450063",
+            "official_fpl.bootstrap.elements.code:450063",
+            "official_fpl.element_id:644"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 450063,
+          "official_fpl_element_id": 644,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "803e7aca",
+            "transfermarkt_id": 420213,
+            "whoscored_id": 411078
+          },
+          "source_native_id": 14376,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14424",
+            "FPL-ID-Map:understat:14424",
+            "FPL-ID-Map:code:536661",
+            "official_fpl.bootstrap.elements.code:536661",
+            "official_fpl.element_id:551"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 536661,
+          "official_fpl_element_id": 551,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "a9b9d89c",
+            "transfermarkt_id": 903611,
+            "whoscored_id": 443064
+          },
+          "source_native_id": 14424,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14446",
+            "FPL-ID-Map:understat:14446",
+            "FPL-ID-Map:code:653481",
+            "official_fpl.bootstrap.elements.code:653481",
+            "official_fpl.element_id:52"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 653481,
+          "official_fpl_element_id": 52,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "99b63a82",
+            "transfermarkt_id": 1005583,
+            "whoscored_id": 520919
+          },
+          "source_native_id": 14446,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14742",
+            "FPL-ID-Map:understat:14742",
+            "FPL-ID-Map:code:451284",
+            "official_fpl.bootstrap.elements.code:451284",
+            "official_fpl.element_id:175"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 451284,
+          "official_fpl_element_id": 175,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "58448fbb",
+            "transfermarkt_id": 587335,
+            "whoscored_id": 379760
+          },
+          "source_native_id": 14742,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14743",
+            "FPL-ID-Map:understat:14743",
+            "FPL-ID-Map:code:173878",
+            "official_fpl.bootstrap.elements.code:173878",
+            "official_fpl.element_id:176"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 173878,
+          "official_fpl_element_id": 176,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "2a158ded",
+            "transfermarkt_id": 258915,
+            "whoscored_id": 318767
+          },
+          "source_native_id": 14743,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14744",
+            "FPL-ID-Map:understat:14744",
+            "FPL-ID-Map:code:661888",
+            "official_fpl.bootstrap.elements.code:661888",
+            "official_fpl.element_id:575"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 661888,
+          "official_fpl_element_id": 575,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "d40ce7b0",
+            "transfermarkt_id": 1240763,
+            "whoscored_id": 561984
+          },
+          "source_native_id": 14744,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14745",
+            "FPL-ID-Map:understat:14745",
+            "FPL-ID-Map:code:230730",
+            "official_fpl.bootstrap.elements.code:230730",
+            "official_fpl.element_id:194"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 230730,
+          "official_fpl_element_id": 194,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "fb152f96",
+            "transfermarkt_id": 451747,
+            "whoscored_id": 331235
+          },
+          "source_native_id": 14745,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14746",
+            "FPL-ID-Map:understat:14746",
+            "FPL-ID-Map:code:226965",
+            "official_fpl.bootstrap.elements.code:226965",
+            "official_fpl.element_id:188"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 226965,
+          "official_fpl_element_id": 188,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "e8cc2cbb",
+            "transfermarkt_id": 403692,
+            "whoscored_id": 409424
+          },
+          "source_native_id": 14746,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14747",
+            "FPL-ID-Map:understat:14747",
+            "FPL-ID-Map:code:480457",
+            "official_fpl.bootstrap.elements.code:480457",
+            "official_fpl.element_id:183"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 480457,
+          "official_fpl_element_id": 183,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "4d395e2b",
+            "transfermarkt_id": 662476,
+            "whoscored_id": 381107
+          },
+          "source_native_id": 14747,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14749",
+            "FPL-ID-Map:understat:14749",
+            "FPL-ID-Map:code:501459",
+            "official_fpl.bootstrap.elements.code:501459",
+            "official_fpl.element_id:185"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 501459,
+          "official_fpl_element_id": 185,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "5e67ea3a",
+            "transfermarkt_id": 617408,
+            "whoscored_id": 431539
+          },
+          "source_native_id": 14749,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14758",
+            "FPL-ID-Map:understat:14758",
+            "FPL-ID-Map:code:473284",
+            "official_fpl.bootstrap.elements.code:473284",
+            "official_fpl.element_id:572"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 473284,
+          "official_fpl_element_id": 572,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "9052e98c",
+            "transfermarkt_id": 554389,
+            "whoscored_id": 397331
+          },
+          "source_native_id": 14758,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14759",
+            "FPL-ID-Map:understat:14759",
+            "FPL-ID-Map:code:193278",
+            "official_fpl.bootstrap.elements.code:193278",
+            "official_fpl.element_id:280"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 193278,
+          "official_fpl_element_id": 280,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "97aba136",
+            "transfermarkt_id": 413402,
+            "whoscored_id": 301415
+          },
+          "source_native_id": 14759,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14760",
+            "FPL-ID-Map:understat:14760",
+            "FPL-ID-Map:code:540324",
+            "official_fpl.bootstrap.elements.code:540324",
+            "official_fpl.element_id:286"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 540324,
+          "official_fpl_element_id": 286,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "b6cafcad",
+            "transfermarkt_id": 857079,
+            "whoscored_id": 457802
+          },
+          "source_native_id": 14760,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14761",
+            "FPL-ID-Map:understat:14761",
+            "FPL-ID-Map:code:101282",
+            "official_fpl.bootstrap.elements.code:101282",
+            "official_fpl.element_id:289"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 101282,
+          "official_fpl_element_id": 289,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "43f5d4e6",
+            "transfermarkt_id": 169416,
+            "whoscored_id": 105742
+          },
+          "source_native_id": 14761,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14762",
+            "FPL-ID-Map:understat:14762",
+            "FPL-ID-Map:code:243413",
+            "official_fpl.bootstrap.elements.code:243413",
+            "official_fpl.element_id:290"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 243413,
+          "official_fpl_element_id": 290,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "ba4d4908",
+            "transfermarkt_id": 473080,
+            "whoscored_id": 349981
+          },
+          "source_native_id": 14762,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14763",
+            "FPL-ID-Map:understat:14763",
+            "FPL-ID-Map:code:608227",
+            "official_fpl.bootstrap.elements.code:608227",
+            "official_fpl.element_id:576"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 608227,
+          "official_fpl_element_id": 576,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "ff11bdec",
+            "transfermarkt_id": 687622,
+            "whoscored_id": 614510
+          },
+          "source_native_id": 14763,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14764",
+            "FPL-ID-Map:understat:14764",
+            "FPL-ID-Map:code:232905",
+            "official_fpl.bootstrap.elements.code:232905",
+            "official_fpl.element_id:287"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 232905,
+          "official_fpl_element_id": 287,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "983515f8",
+            "transfermarkt_id": 487417,
+            "whoscored_id": 391821
+          },
+          "source_native_id": 14764,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14765",
+            "FPL-ID-Map:understat:14765",
+            "FPL-ID-Map:code:597462",
+            "official_fpl.bootstrap.elements.code:597462",
+            "official_fpl.element_id:585"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 597462,
+          "official_fpl_element_id": 585,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "6f808c85",
+            "transfermarkt_id": 1279984,
+            "whoscored_id": 606532
+          },
+          "source_native_id": 14765,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14767",
+            "FPL-ID-Map:understat:14767",
+            "FPL-ID-Map:code:552946",
+            "official_fpl.bootstrap.elements.code:552946",
+            "official_fpl.element_id:574"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 552946,
+          "official_fpl_element_id": 574,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "c232eadd",
+            "transfermarkt_id": 923535,
+            "whoscored_id": 440898
+          },
+          "source_native_id": 14767,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14769",
+            "FPL-ID-Map:understat:14769",
+            "FPL-ID-Map:code:244860",
+            "official_fpl.bootstrap.elements.code:244860",
+            "official_fpl.element_id:247"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 244860,
+          "official_fpl_element_id": 247,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "ba397562",
+            "transfermarkt_id": 538216,
+            "whoscored_id": 388651
+          },
+          "source_native_id": 14769,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14770",
+            "FPL-ID-Map:understat:14770",
+            "FPL-ID-Map:code:570794",
+            "official_fpl.bootstrap.elements.code:570794",
+            "official_fpl.element_id:588"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 570794,
+          "official_fpl_element_id": 588,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "638ddf68",
+            "transfermarkt_id": 945021,
+            "whoscored_id": 444136
+          },
+          "source_native_id": 14770,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14771",
+            "FPL-ID-Map:understat:14771",
+            "FPL-ID-Map:code:501390",
+            "official_fpl.bootstrap.elements.code:501390",
+            "official_fpl.element_id:309"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 501390,
+          "official_fpl_element_id": 309,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "b6d1cf5c",
+            "transfermarkt_id": 715558,
+            "whoscored_id": 417745
+          },
+          "source_native_id": 14771,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14772",
+            "FPL-ID-Map:understat:14772",
+            "FPL-ID-Map:code:442967",
+            "official_fpl.bootstrap.elements.code:442967",
+            "official_fpl.element_id:562"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 442967,
+          "official_fpl_element_id": 562,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "395451fc",
+            "transfermarkt_id": 420931,
+            "whoscored_id": 377287
+          },
+          "source_native_id": 14772,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14773",
+            "FPL-ID-Map:understat:14773",
+            "FPL-ID-Map:code:557012",
+            "official_fpl.bootstrap.elements.code:557012",
+            "official_fpl.element_id:321"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 557012,
+          "official_fpl_element_id": 321,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "25172468",
+            "transfermarkt_id": 923504,
+            "whoscored_id": 426913
+          },
+          "source_native_id": 14773,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14775",
+            "FPL-ID-Map:understat:14775",
+            "FPL-ID-Map:code:568420",
+            "official_fpl.bootstrap.elements.code:568420",
+            "official_fpl.element_id:581"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 568420,
+          "official_fpl_element_id": 581,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "394be156",
+            "transfermarkt_id": 974982,
+            "whoscored_id": 443663
+          },
+          "source_native_id": 14775,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14788",
+            "FPL-ID-Map:understat:14788",
+            "FPL-ID-Map:code:513086",
+            "official_fpl.bootstrap.elements.code:513086",
+            "official_fpl.element_id:93"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 513086,
+          "official_fpl_element_id": 93,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "82d73da1",
+            "transfermarkt_id": 915418,
+            "whoscored_id": 533784
+          },
+          "source_native_id": 14788,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14854",
+            "FPL-ID-Map:understat:14854",
+            "FPL-ID-Map:code:451490",
+            "official_fpl.bootstrap.elements.code:451490",
+            "official_fpl.element_id:119"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 451490,
+          "official_fpl_element_id": 119,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "80bc5e71",
+            "transfermarkt_id": 539252,
+            "whoscored_id": 395954
+          },
+          "source_native_id": 14854,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14855",
+            "FPL-ID-Map:understat:14855",
+            "FPL-ID-Map:code:700308",
+            "official_fpl.bootstrap.elements.code:700308",
+            "official_fpl.element_id:135"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 700308,
+          "official_fpl_element_id": 135,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "4a76513e",
+            "transfermarkt_id": 1421433,
+            "whoscored_id": 569789
+          },
+          "source_native_id": 14855,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14856",
+            "FPL-ID-Map:understat:14856",
+            "FPL-ID-Map:code:611695",
+            "official_fpl.bootstrap.elements.code:611695",
+            "official_fpl.element_id:605"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 611695,
+          "official_fpl_element_id": 605,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "e295402e",
+            "transfermarkt_id": 1178758,
+            "whoscored_id": 514184
+          },
+          "source_native_id": 14856,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14857",
+            "FPL-ID-Map:understat:14857",
+            "FPL-ID-Map:code:538007",
+            "official_fpl.bootstrap.elements.code:538007",
+            "official_fpl.element_id:594"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 538007,
+          "official_fpl_element_id": 594,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "dbe19468",
+            "transfermarkt_id": 888785,
+            "whoscored_id": 414536
+          },
+          "source_native_id": 14857,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14859",
+            "FPL-ID-Map:understat:14859",
+            "FPL-ID-Map:code:483067",
+            "official_fpl.bootstrap.elements.code:483067",
+            "official_fpl.element_id:566"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 483067,
+          "official_fpl_element_id": 566,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "8f0435c7",
+            "transfermarkt_id": 650568,
+            "whoscored_id": 443613
+          },
+          "source_native_id": 14859,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14874",
+            "FPL-ID-Map:understat:14874",
+            "FPL-ID-Map:code:470551",
+            "official_fpl.bootstrap.elements.code:470551",
+            "official_fpl.element_id:567"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 470551,
+          "official_fpl_element_id": 567,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "cc8312b4",
+            "transfermarkt_id": 629773,
+            "whoscored_id": 415682
+          },
+          "source_native_id": 14874,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14875",
+            "FPL-ID-Map:understat:14875",
+            "FPL-ID-Map:code:636852",
+            "official_fpl.bootstrap.elements.code:636852",
+            "official_fpl.element_id:462"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 636852,
+          "official_fpl_element_id": 462,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "7f1d94bf",
+            "transfermarkt_id": 1111063,
+            "whoscored_id": 552573
+          },
+          "source_native_id": 14875,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14923",
+            "FPL-ID-Map:understat:14923",
+            "FPL-ID-Map:code:593117",
+            "official_fpl.bootstrap.elements.code:593117",
+            "official_fpl.element_id:164"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 593117,
+          "official_fpl_element_id": 164,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "19f53b56",
+            "transfermarkt_id": 1138758,
+            "whoscored_id": 509068
+          },
+          "source_native_id": 14923,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14934",
+            "FPL-ID-Map:understat:14934",
+            "FPL-ID-Map:code:559152",
+            "official_fpl.bootstrap.elements.code:559152",
+            "official_fpl.element_id:595"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 559152,
+          "official_fpl_element_id": 595,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "bc2eb719",
+            "transfermarkt_id": 1007383,
+            "whoscored_id": 505602
+          },
+          "source_native_id": 14934,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14935",
+            "FPL-ID-Map:understat:14935",
+            "FPL-ID-Map:code:554054",
+            "official_fpl.bootstrap.elements.code:554054",
+            "official_fpl.element_id:622"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 554054,
+          "official_fpl_element_id": 622,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "dd1bd054",
+            "transfermarkt_id": 1078156,
+            "whoscored_id": 540463
+          },
+          "source_native_id": 14935,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14981",
+            "FPL-ID-Map:understat:14981",
+            "FPL-ID-Map:code:241293",
+            "official_fpl.bootstrap.elements.code:241293",
+            "official_fpl.element_id:186"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 241293,
+          "official_fpl_element_id": 186,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "0d5a541f",
+            "transfermarkt_id": 466637,
+            "whoscored_id": 342899
+          },
+          "source_native_id": 14981,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14982",
+            "FPL-ID-Map:understat:14982",
+            "FPL-ID-Map:code:445028",
+            "official_fpl.bootstrap.elements.code:445028",
+            "official_fpl.element_id:563"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a:Master.csv",
+            "sha256:19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 445028,
+          "official_fpl_element_id": 563,
+          "review_reference": "github-actions:run/34765053358",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "secondary_registry_ids": {
+            "fbref_id": "a650c75b",
+            "transfermarkt_id": 524315,
+            "whoscored_id": 409279
+          },
+          "source_native_id": 14982,
+          "verification_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+          "verified_at": "2026-09-13T15:05:46Z"
         }
       ],
       "verification_status": "VERIFIED_MANUAL",
@@ -6351,6 +8255,20 @@
         "review_reference": "github-actions:run/34762762105",
         "reviewed_at": "2026-09-13T14:28:58Z",
         "verification_method": "REEP_V1_OPTA_PERSON_NUMERIC_TO_UNDERSTAT"
+      },
+      "wave_b_secondary_extension": {
+        "fuzzy_matching_used": false,
+        "mapping_count": 68,
+        "master_csv_sha256": "19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a",
+        "name_matching_used": false,
+        "registry": "ChrisMusson/FPL-ID-Map",
+        "registry_commit": "e5a9942affd98501db473a8d3b6a0f9e93751e8a",
+        "registry_commit_date": "2026-09-04T05:48:51Z",
+        "review_reference": "github-actions:run/34765053358",
+        "unresolved_observed_native_ids_after_review": [
+          15045
+        ],
+        "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE"
       }
     }
   }

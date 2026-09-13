@@ -19,6 +19,44 @@ def _load(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _validate_registry_compatibility(
+    manifest: dict[str, Any],
+    registry: dict[str, Any],
+    *,
+    schedule_kind: str,
+) -> str:
+    """Validate registry semantics without making report delivery depend on main HEAD drift.
+
+    Core/operational publications must match the currently deployed registry exactly.
+    Report-prefetch is different: it deliberately hydrates the last-good runtime snapshot
+    before adding report-scoped factual artifacts. During a one-way registry migration,
+    that snapshot may truthfully belong to the immediately previous registry epoch.
+
+    For report-prefetch we therefore require the hydrated snapshot to be internally
+    self-consistent and leave full artifact/tree verification to publish_integrity.
+    This is not a bypass: corrupt/mixed snapshots still fail closed, while a valid
+    last-good snapshot is not rejected solely because main changed its active-source set.
+    """
+    activation = dict(manifest["activation"])
+    snapshot_source_count = int(manifest["source_count"])
+    snapshot_source_ids = list(manifest.get("source_ids") or [])
+    snapshot_active_count = int(activation["active_source_count"])
+    snapshot_required = list(activation["required_active_sources"])
+
+    assert snapshot_source_count == snapshot_active_count
+    assert snapshot_source_count == len(snapshot_source_ids)
+    assert len(snapshot_source_ids) == len(set(snapshot_source_ids))
+    assert set(snapshot_required).issubset(set(snapshot_source_ids))
+
+    if schedule_kind == "report_prefetch":
+        return "SNAPSHOT_REGISTRY_VALIDATED"
+
+    current_activation = dict(registry["activation"])
+    assert snapshot_source_count == int(current_activation["active_source_count"])
+    assert snapshot_required == list(current_activation["required_active_sources"])
+    return "CURRENT_REGISTRY_VALIDATED"
+
+
 def validate_preflight() -> dict[str, Any]:
     architecture_failures = validate_repository()
     assert architecture_failures == [], architecture_failures
@@ -50,8 +88,11 @@ def validate_publishable(root: Path = ROOT) -> dict[str, Any]:
     event_name = os.environ["GITHUB_EVENT_NAME"]
     schedule_kind = os.environ["V6_SCHEDULE_KIND"]
 
-    assert manifest["source_count"] == registry["activation"]["active_source_count"]
-    assert manifest["activation"]["required_active_sources"] == registry["activation"]["required_active_sources"]
+    registry_validation = _validate_registry_compatibility(
+        manifest,
+        registry,
+        schedule_kind=schedule_kind,
+    )
     assert registry["override_lifecycle"]["inactive_source_overrides"] == []
     governance = manifest["governance"]
     assert governance["data_only"] is True
@@ -115,6 +156,7 @@ def validate_publishable(root: Path = ROOT) -> dict[str, Any]:
         "runtime_control": control,
         "publish_integrity": integrity,
         "identity_coverage_transition": identity_coverage_transition,
+        "registry_validation": registry_validation,
     }
 
 

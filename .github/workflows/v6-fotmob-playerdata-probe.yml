@@ -1,0 +1,78 @@
+name: V6 FotMob playerData one-shot probe
+
+on:
+  push:
+    branches:
+      - ops/v6-fotmob-playerdata-probe
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Fetch selected FotMob player profiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/fotmob-playerdata/raw
+          for id in 815006 1021382 303919 618878 844425 1072068 1104053 1292810; do
+            curl --fail --silent --show-error --location \
+              --retry 2 --retry-delay 1 \
+              -A 'Mozilla/5.0' \
+              "https://www.fotmob.com/api/playerData?id=${id}" \
+              -o "/tmp/fotmob-playerdata/raw/${id}.json"
+            sleep 0.5
+          done
+
+      - name: Inspect identity-like scalar fields
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, re
+          from pathlib import Path
+
+          key_re = re.compile(r'(opta|transfer|external|provider|participant|person|player.?id|entity|uid|uuid|code|slug|id$)', re.I)
+          results = {}
+
+          def walk(path, value, rows):
+              if isinstance(value, dict):
+                  for k, v in value.items():
+                      p = f'{path}.{k}'
+                      if key_re.search(str(k)) and (v is None or isinstance(v, (str, int, float, bool))):
+                          rows.append({'path': p, 'key': k, 'value': v})
+                      if isinstance(v, (dict, list)):
+                          walk(p, v, rows)
+              elif isinstance(value, list):
+                  for i, v in enumerate(value):
+                      if isinstance(v, (dict, list)):
+                          walk(f'{path}[{i}]', v, rows)
+
+          for f in sorted(Path('/tmp/fotmob-playerdata/raw').glob('*.json')):
+              payload = json.loads(f.read_text(encoding='utf-8'))
+              rows = []
+              walk('$', payload, rows)
+              results[f.stem] = {
+                  'top_level_keys': sorted(payload.keys()) if isinstance(payload, dict) else [],
+                  'identity_like_scalars': rows[:500],
+              }
+
+          out = Path('/tmp/fotmob-playerdata/playerdata_identity_probe.json')
+          out.write_text(json.dumps(results, indent=2, ensure_ascii=False, sort_keys=True) + '\n', encoding='utf-8')
+          print(json.dumps(results, indent=2, ensure_ascii=False, sort_keys=True))
+          PY
+
+      - name: Upload probe result
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-fotmob-playerdata-probe
+          path: /tmp/fotmob-playerdata/playerdata_identity_probe.json
+          retention-days: 1

@@ -2800,6 +2800,42 @@
           "source_native_id": 7021
         },
         {
+          "official_fpl_code": 243016,
+          "official_fpl_element_id": 372,
+          "reep_id": "rpecc5cfdbee4a41",
+          "source_native_id": 261,
+          "verification_method": "CURATED_WIKIDATA_STATMUSE_ID_TO_TM__REEP_V1_TM_TO_OPTA__OFFICIAL_FPL_CODE",
+          "verification_release": "20260907T201034Z",
+          "verified_at": "2026-09-13T14:58:57+00:00",
+          "review_status": "REVIEWED_DETERMINISTIC_ONE_TO_ONE",
+          "reviewer": "V6_WAVE_B_IDENTITY_REVIEW",
+          "review_reference": "github_actions_run:34764199565",
+          "evidence": [
+            "statmuse:P12567:261",
+            "wikidata:Q33297140",
+            "wikidata:P2446:534033",
+            "reep_v1_release:20260907T201034Z",
+            "reep_v1_bridges_sha256:a03aef520a454bdcd181b5b332b91e7b41ee57f4914e6e2c456cf49a8b86a735",
+            "reep_v1:transfermarkt:spieler:534033",
+            "reep_v1:rpecc5cfdbee4a41",
+            "reep_v1:opta:person_numeric:243016",
+            "official_fpl:bootstrap.elements.code:243016",
+            "official_fpl:element:372",
+            "github_actions_run:34764161740",
+            "github_actions_run:34764199565"
+          ],
+          "bridge_path": [
+            "statmuse:P12567:261",
+            "wikidata:Q33297140",
+            "wikidata:P2446:534033",
+            "reep_v1:transfermarkt:spieler:534033",
+            "reep_v1:rpecc5cfdbee4a41",
+            "reep_v1:opta:person_numeric:243016",
+            "official_fpl:bootstrap.elements.code:243016",
+            "official_fpl:element:372"
+          ]
+        },
+        {
           "official_fpl_code": 243298,
           "reep_id": "reep_pdcda3e21",
           "source_native_id": 6939

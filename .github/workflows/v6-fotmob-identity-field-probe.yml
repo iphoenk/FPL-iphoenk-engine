@@ -18,15 +18,20 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Hydrate FotMob runtime snapshots
+      - name: Hydrate available FotMob runtime snapshots
         shell: bash
         run: |
           set -euo pipefail
           git fetch --depth=1 origin '+refs/heads/runtime-data-v6:refs/remotes/origin/runtime-data-v6'
           mkdir -p /tmp/fotmob-probe
+          git ls-tree -r --name-only origin/runtime-data-v6 | grep -i 'fotmob.*json' | sort | tee /tmp/fotmob-probe/available_paths.txt
           for path in data/v6/current/fotmob.json data/v6/staged/sources/fotmob.json data/v6/normalized/sources/fotmob.json data/v6/provenance/fotmob.json; do
-            name=$(echo "$path" | tr '/' '_')
-            git show "origin/runtime-data-v6:$path" > "/tmp/fotmob-probe/$name"
+            if git cat-file -e "origin/runtime-data-v6:$path" 2>/dev/null; then
+              name=$(echo "$path" | tr '/' '_')
+              git show "origin/runtime-data-v6:$path" > "/tmp/fotmob-probe/$name"
+            else
+              echo "SKIP_MISSING=$path"
+            fi
           done
 
       - name: Inspect native IDs and possible deterministic cross-id fields
@@ -107,5 +112,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: v6-fotmob-identity-field-probe
-          path: /tmp/fotmob-probe/identity_field_probe.json
+          path: |
+            /tmp/fotmob-probe/identity_field_probe.json
+            /tmp/fotmob-probe/available_paths.txt
           retention-days: 1

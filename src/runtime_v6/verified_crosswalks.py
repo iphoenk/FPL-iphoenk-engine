@@ -9,6 +9,12 @@ from .http_client import utc_now
 
 CONFIG = Path(__file__).resolve().parents[2] / "config" / "v6" / "verified_crosswalks.json"
 STATUS = "VERIFIED_MANUAL"
+OPTA_STATUS = "EXACT"
+OPTA_METHOD = "OFFICIAL_FPL_CODE_SHARED_OPTA_NUMERIC_NAMESPACE"
+OPTA_CONTRACT_EVIDENCE = [
+    "official_fpl:bootstrap.elements.code",
+    "https://github.com/withqwerty/reep/blob/0ec59faa5d81615b7a8200ae6121023a3bc14ce3/README.md",
+]
 
 
 class VerifiedCrosswalkError(RuntimeError):
@@ -115,13 +121,79 @@ def _link(source_id: str, native_id: int, config_source: dict[str, Any]) -> dict
     }
 
 
+def _opta_link(native_id: int) -> dict[str, Any]:
+    return {
+        "source_id": "opta_the_analyst",
+        "source_native_id": native_id,
+        "external_id": native_id,
+        "mapping_method": OPTA_METHOD,
+        "method": OPTA_METHOD,
+        "verification_status": OPTA_STATUS,
+        "status": OPTA_STATUS,
+        "confidence": 1.0,
+        "verified": True,
+        "joinable": True,
+        "verified_at": utc_now(),
+        "evidence_request_id": "official_fpl.bootstrap.elements.code",
+        "provenance": {
+            "canonical_source": "official_fpl",
+            "canonical_field": "bootstrap.elements.code",
+            "provider_namespace": "opta_numeric",
+            "evidence": list(OPTA_CONTRACT_EVIDENCE),
+            "name_matching_used": False,
+        },
+    }
+
+
+def _enrich_opta_numeric_players(
+    identity_map: dict[str, Any],
+    results: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    if "opta_the_analyst" not in results:
+        return identity_map
+
+    mappings = identity_map.get("mappings") or {}
+    canonical_count = int(identity_map.get("canonical_player_count") or len(mappings))
+    mapped = 0
+    seen_codes: set[int] = set()
+    for mapping in mappings.values():
+        if not isinstance(mapping, dict):
+            continue
+        code = _int(mapping.get("official_code"))
+        if code is None or code <= 0 or code in seen_codes:
+            continue
+        seen_codes.add(code)
+        links = mapping.setdefault("links", {})
+        links["opta_the_analyst"] = _opta_link(code)
+        unresolved = mapping.get("unresolved")
+        if isinstance(unresolved, dict):
+            unresolved.pop("opta_the_analyst", None)
+        mapped += 1
+
+    health = "GREEN" if canonical_count > 0 and mapped == canonical_count else ("AMBER" if mapped else "RED")
+    identity_map.setdefault("coverage", {})["opta_the_analyst"] = {
+        "strategy": OPTA_METHOD,
+        "deterministic_bridge": True,
+        "identity_health": health,
+        "mapped_status": OPTA_STATUS if mapped else "UNMAPPED",
+        "mapped_player_count": mapped,
+        "canonical_player_count": canonical_count,
+        "coverage_ratio": round(mapped / canonical_count, 6) if canonical_count else 0.0,
+        "unmapped_player_count": max(0, canonical_count - mapped),
+        "join_allowed": mapped > 0,
+        "shared_namespace_field": "official_fpl.bootstrap.elements.code",
+        "name_matching_used": False,
+    }
+    return identity_map
+
+
 def enrich_verified_external_crosswalks(
     identity_map: dict[str, Any],
     results: dict[str, dict[str, Any]],
     config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     config = config or load_verified_crosswalks()
-    out = deepcopy(identity_map)
+    out = _enrich_opta_numeric_players(deepcopy(identity_map), results)
     team_bridge = ((out.get("entity_bridges") or {}).get("team") or {})
     mappings = team_bridge.get("mappings") or {}
     coverage = team_bridge.setdefault("coverage", {})
@@ -165,6 +237,8 @@ def enrich_verified_external_crosswalks(
             "verified_manual_crosswalk_requires_current_native_observation": True,
             "verified_manual_crosswalk_name_matching": False,
             "verified_external_crosswalk_module": "verified_crosswalks",
+            "opta_numeric_bridge_is_name_free": True,
+            "opta_numeric_bridge_contract_evidence": list(OPTA_CONTRACT_EVIDENCE),
         }
     )
     return out
@@ -177,6 +251,7 @@ def build_verified_crosswalk_report(
 ) -> dict[str, Any]:
     config = config or load_verified_crosswalks()
     team_coverage = (((identity_map.get("entity_bridges") or {}).get("team") or {}).get("coverage") or {})
+    player_coverage = identity_map.get("coverage") or {}
     source_report: dict[str, Any] = {}
     for source_id, source in (config.get("sources") or {}).items():
         source_report[source_id] = {
@@ -189,6 +264,21 @@ def build_verified_crosswalk_report(
             "current_source_health": (results.get(source_id) or {}).get("health"),
             "current_source_effective_state": (results.get(source_id) or {}).get("effective_state"),
         }
+
+    if "opta_the_analyst" in results:
+        source_report["opta_the_analyst"] = {
+            "verification_status": OPTA_STATUS,
+            "verification_method": OPTA_METHOD,
+            "verified_at": utc_now(),
+            "evidence": list(OPTA_CONTRACT_EVIDENCE),
+            "configured_team_mapping_count": 0,
+            "current_identity_coverage": player_coverage.get("opta_the_analyst"),
+            "current_source_health": (results.get("opta_the_analyst") or {}).get("health"),
+            "current_source_effective_state": (results.get("opta_the_analyst") or {}).get("effective_state"),
+        }
+
+    team_records = sum(len(source.get("teams") or []) for source in (config.get("sources") or {}).values())
+    opta_records = int((player_coverage.get("opta_the_analyst") or {}).get("mapped_player_count") or 0)
     return {
         "schema_version": 1,
         "canonical": True,
@@ -196,10 +286,10 @@ def build_verified_crosswalk_report(
         "authority": "V6_DETERMINISTIC_IDENTITY",
         "generated_at": utc_now(),
         "effective_at": utc_now(),
-        "normalization_version": "V6_VERIFIED_CROSSWALK_1",
+        "normalization_version": "V6_VERIFIED_CROSSWALK_2",
         "canonical_authority": "official_fpl",
         "fuzzy_matching_allowed": False,
-        "record_count": sum(len(source.get("teams") or []) for source in (config.get("sources") or {}).values()),
+        "record_count": team_records + opta_records,
         "primary_keys": ["source_id", "source_native_id"],
         "sources": source_report,
         "governance": {
@@ -209,5 +299,6 @@ def build_verified_crosswalk_report(
             "optimizer_authority": "NONE",
             "silent_name_matching_allowed": False,
             "unverified_records_remain_unmapped": True,
+            "shared_namespace_exact_bridge_allowed": True,
         },
     }

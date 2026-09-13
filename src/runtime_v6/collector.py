@@ -12,6 +12,7 @@ from .http_client import AcquisitionClient, utc_now
 from .identity import build_player_identity_map
 from .identity_scope import apply_entity_scope_identity_semantics
 from .noauth_source_native import build_noauth_source_native_datasets
+from .player_observation import augment_source_native_datasets
 from .normalizer import (
     build_canonical_fixtures,
     build_canonical_players,
@@ -85,6 +86,7 @@ def _publish_source_native_datasets(
     if overlap:
         raise RuntimeError(f"source_native_parser_overlap:{overlap}")
     datasets.update(noauth_datasets)
+    datasets = augment_source_native_datasets(results, identity_map, datasets)
     target = NORMALIZED / "sources"
     expected = {f"{source_id}.json" for source_id in datasets}
     if target.exists():

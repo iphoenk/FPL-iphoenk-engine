@@ -109,9 +109,14 @@ def test_verified_crosswalk_report_is_identity_only_and_preserves_zero_decision_
     results = {"fotmob": _fotmob_result()}
     identity = enrich_verified_external_crosswalks(_identity_teams(), results)
     report = build_verified_crosswalk_report(identity, results)
+    config = load_verified_crosswalks()
+    configured_records = sum(
+        len(source.get("teams") or []) + len(source.get("players") or [])
+        for source in config["sources"].values()
+    )
     assert report["schema_version"] == 2
     assert report["semantic_class"] == "IDENTITY_CROSSWALK"
-    assert report["record_count"] == 20
+    assert report["record_count"] == configured_records
     assert report["fuzzy_matching_allowed"] is False
     assert report["sources"]["fotmob"]["current_team_identity_coverage"]["identity_health"] == "GREEN"
     assert report["governance"]["decision_authority"] == "NONE"

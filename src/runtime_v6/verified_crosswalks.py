@@ -172,7 +172,7 @@ def _opta_link(native_id: int) -> dict[str, Any]:
     }
 
 
-def _player_link(source_id: str, native_id: Any, config_source: dict[str, Any]) -> dict[str, Any]:
+def _player_link(source_id: str, native_id: Any, config_source: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:
     method = str(
         config_source.get("player_verification_method")
         or config_source.get("verification_method")
@@ -189,10 +189,15 @@ def _player_link(source_id: str, native_id: Any, config_source: dict[str, Any]) 
         "confidence": 1.0,
         "verified": True,
         "joinable": True,
-        "verified_at": config_source.get("verified_at"),
+        "verified_at": config_source.get("player_crosswalk_verified_at") or config_source.get("verified_at"),
         "provenance": {
             "source_id": source_id,
             "canonical_anchor": "official_fpl.bootstrap.elements.code",
+            "official_fpl_code": row.get("official_fpl_code"),
+            "reep_id": row.get("reep_id"),
+            "provider_column": config_source.get("player_crosswalk_provider_column"),
+            "verification_release": config_source.get("player_crosswalk_release"),
+            "verification_commit": config_source.get("player_crosswalk_commit"),
             "crosswalk_config": "config/v6/verified_crosswalks.json",
             "evidence": list(config_source.get("evidence") or []),
             "name_matching_used": False,
@@ -307,7 +312,7 @@ def _enrich_configured_player_crosswalks(
                 if str(existing.get("source_native_id")) != str(native_id):
                     conflicts += 1
                 continue
-            links[source_id] = _player_link(source_id, native_id, config_source)
+            links[source_id] = _player_link(source_id, native_id, config_source, row)
             unresolved = mapping.get("unresolved")
             if isinstance(unresolved, dict):
                 unresolved.pop(source_id, None)

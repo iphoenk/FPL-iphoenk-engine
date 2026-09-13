@@ -30,28 +30,51 @@ jobs:
             /tmp/reep-probe/bridges.csv.gz | sha256sum -c -
           python - <<'PY'
           import csv, gzip, json
-          from collections import Counter
+          from collections import Counter, defaultdict
           from pathlib import Path
 
           samples = {'8379', '10016', '14758', '1045', '212'}
-          namespaces = Counter()
-          found = []
+          understat_namespaces = Counter()
+          transfermarkt_namespaces = Counter()
+          sample_understat_rows = []
+          sample_reep_ids = set()
+          all_rows_by_reep = defaultdict(list)
           understat_rows = 0
+          transfermarkt_rows = 0
           with gzip.open('/tmp/reep-probe/bridges.csv.gz', 'rt', encoding='utf-8', newline='') as handle:
               reader = csv.DictReader(handle)
               print('FIELDNAMES=' + json.dumps(reader.fieldnames))
               for row in reader:
-                  if str(row.get('provider') or '').strip().lower() != 'understat':
-                      continue
-                  understat_rows += 1
-                  ns = str(row.get('namespace') or '').strip()
-                  namespaces[ns] += 1
-                  if str(row.get('external_id') or '').strip() in samples:
-                      found.append(row)
+                  provider = str(row.get('provider') or '').strip().lower()
+                  namespace = str(row.get('namespace') or '').strip()
+                  external_id = str(row.get('external_id') or '').strip()
+                  reep_id = str(row.get('reep_id') or '').strip()
+                  if provider == 'understat':
+                      understat_rows += 1
+                      understat_namespaces[namespace] += 1
+                      if external_id in samples:
+                          sample_understat_rows.append(row)
+                          sample_reep_ids.add(reep_id)
+                  elif provider == 'transfermarkt':
+                      transfermarkt_rows += 1
+                      transfermarkt_namespaces[namespace] += 1
+                  if reep_id:
+                      all_rows_by_reep[reep_id].append(row)
+
+          sample_cross_provider = {
+              reep_id: [
+                  row for row in all_rows_by_reep[reep_id]
+                  if str(row.get('provider') or '').strip().lower() in {'understat', 'transfermarkt'}
+              ]
+              for reep_id in sorted(sample_reep_ids)
+          }
           out = {
               'understat_rows': understat_rows,
-              'namespaces': dict(namespaces),
-              'sample_rows': found,
+              'understat_namespaces': dict(understat_namespaces),
+              'transfermarkt_rows': transfermarkt_rows,
+              'transfermarkt_namespaces': dict(transfermarkt_namespaces),
+              'sample_understat_rows': sample_understat_rows,
+              'sample_cross_provider_rows': sample_cross_provider,
           }
           print(json.dumps(out, indent=2, sort_keys=True))
           Path('/tmp/reep-probe/understat_probe.json').write_text(

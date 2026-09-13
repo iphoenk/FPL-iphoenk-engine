@@ -1,0 +1,46 @@
+name: V6 identity bootstrap temporary
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-crosswalk:
+    if: github.head_ref == 'fix/v6-identity-wave1-completion' || github.ref_name == 'fix/v6-identity-wave1-completion'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Download public deterministic identity inputs
+        run: |
+          curl --fail --silent --show-error --location --retry 3 \
+            https://fantasy.premierleague.com/api/bootstrap-static/ \
+            --output /tmp/bootstrap.json
+          curl --fail --silent --show-error --location --retry 3 \
+            https://raw.githubusercontent.com/withqwerty/reep/0ec59faa5d81615b7a8200ae6121023a3bc14ce3/data/people.csv \
+            --output /tmp/reep-people.csv
+      - name: Build crosswalk
+        run: |
+          python scripts/v6_build_verified_player_crosswalks.py \
+            --bootstrap /tmp/bootstrap.json \
+            --reep-people /tmp/reep-people.csv \
+            --base-config config/v6/verified_crosswalks.json \
+            --output /tmp/verified_crosswalks.json \
+            --report /tmp/report.json
+          cat /tmp/report.json
+      - name: Emit compressed crosswalk for one-time capture
+        run: |
+          python - <<'PY'
+          import base64, gzip
+          raw = open('/tmp/verified_crosswalks.json', 'rb').read()
+          print('V6_CROSSWALK_GZIP_BASE64=' + base64.b64encode(gzip.compress(raw, compresslevel=9)).decode())
+          PY

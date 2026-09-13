@@ -1,0 +1,102 @@
+name: V6 Wave B promote StatMuse 261
+
+on:
+  push:
+    branches:
+      - feat/v6-identity-wave-b-statmuse-261
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Promote curated deterministic mapping and provenance support
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          cfg_path=Path('config/v6/verified_crosswalks.json')
+          cfg=json.loads(cfg_path.read_text(encoding='utf-8'))
+          source=cfg['sources']['statmuse']
+          rows=list(source.get('players') or [])
+          native='261'
+          code=243016
+          for row in rows:
+              if str(row.get('source_native_id')) == native and int(row.get('official_fpl_code') or 0) != code:
+                  raise SystemExit('StatMuse 261 conflicts with an existing Official FPL code')
+              if int(row.get('official_fpl_code') or 0) == code and str(row.get('source_native_id')) != native:
+                  raise SystemExit('Official FPL code 243016 conflicts with an existing StatMuse native ID')
+          if not any(str(row.get('source_native_id')) == native for row in rows):
+              rows.append({
+                  'official_fpl_code': 243016,
+                  'official_fpl_element_id': 372,
+                  'reep_id': 'rpecc5cfdbee4a41',
+                  'source_native_id': 261,
+                  'verification_method': 'CURATED_WIKIDATA_STATMUSE_ID_TO_TM__REEP_V1_TM_TO_OPTA__OFFICIAL_FPL_CODE',
+                  'verification_release': '20260907T201034Z',
+                  'verified_at': '2026-09-13T14:58:57+00:00',
+                  'review_status': 'REVIEWED_DETERMINISTIC_ONE_TO_ONE',
+                  'reviewer': 'V6_WAVE_B_IDENTITY_REVIEW',
+                  'review_reference': 'github_actions_run:34764199565',
+                  'evidence': [
+                      'statmuse:P12567:261',
+                      'wikidata:Q33297140',
+                      'wikidata:P2446:534033',
+                      'reep_v1_release:20260907T201034Z',
+                      'reep_v1_bridges_sha256:a03aef520a454bdcd181b5b332b91e7b41ee57f4914e6e2c456cf49a8b86a735',
+                      'reep_v1:transfermarkt:spieler:534033',
+                      'reep_v1:rpecc5cfdbee4a41',
+                      'reep_v1:opta:person_numeric:243016',
+                      'official_fpl:bootstrap.elements.code:243016',
+                      'official_fpl:element:372',
+                      'github_actions_run:34764161740',
+                      'github_actions_run:34764199565'
+                  ],
+                  'bridge_path': [
+                      'statmuse:P12567:261',
+                      'wikidata:Q33297140',
+                      'wikidata:P2446:534033',
+                      'reep_v1:transfermarkt:spieler:534033',
+                      'reep_v1:rpecc5cfdbee4a41',
+                      'reep_v1:opta:person_numeric:243016',
+                      'official_fpl:bootstrap.elements.code:243016',
+                      'official_fpl:element:372'
+                  ]
+              })
+          rows.sort(key=lambda row:int(row.get('official_fpl_code') or 0))
+          source['players']=rows
+          cfg_path.write_text(json.dumps(cfg,indent=2,ensure_ascii=False,sort_keys=False)+'\n',encoding='utf-8')
+
+          py_path=Path('src/runtime_v6/verified_crosswalks.py')
+          text=py_path.read_text(encoding='utf-8')
+          needle='  "review_reference": row.get("review_reference"),\n  "name_matching_used": False,'
+          replacement='  "review_reference": row.get("review_reference"),\n  "reviewer": row.get("reviewer"),\n  "name_matching_used": False,'
+          if needle not in text:
+              if '"reviewer": row.get("reviewer")' not in text:
+                  raise SystemExit('verified_crosswalks provenance insertion point not found')
+          else:
+              text=text.replace(needle,replacement,1)
+              py_path.write_text(text,encoding='utf-8')
+
+          test_path=Path('tests/test_data_platform_identity_wave_b_statmuse_261.py')
+          test_path.write_text('''from src.runtime_v6.verified_crosswalks import load_verified_crosswalks, enrich_verified_external_crosswalks\n\n\ndef _identity_map():\n    return {\n        "canonical_player_count": 657,\n        "mappings": {\n            "372": {\n                "official_fpl_element_id": 372,\n                "official_code": 243016,\n                "links": {},\n                "unresolved": {"statmuse": {"status": "UNMAPPED"}},\n            }\n        },\n        "coverage": {},\n    }\n\n\ndef test_statmuse_261_curated_chain_is_reviewed_and_deterministic():\n    config = load_verified_crosswalks()\n    source = config["sources"]["statmuse"]\n    rows = [row for row in source["players"] if row["source_native_id"] == 261]\n    assert len(rows) == 1\n    row = rows[0]\n    assert row["official_fpl_code"] == 243016\n    assert row["official_fpl_element_id"] == 372\n    assert row["reep_id"] == "rpecc5cfdbee4a41"\n    assert row["verification_method"] == "CURATED_WIKIDATA_STATMUSE_ID_TO_TM__REEP_V1_TM_TO_OPTA__OFFICIAL_FPL_CODE"\n    assert row["review_status"] == "REVIEWED_DETERMINISTIC_ONE_TO_ONE"\n    assert row["reviewer"] == "V6_WAVE_B_IDENTITY_REVIEW"\n    assert "statmuse:P12567:261" in row["evidence"]\n    assert "wikidata:P2446:534033" in row["evidence"]\n    assert "reep_v1:opta:person_numeric:243016" in row["evidence"]\n\n\ndef test_statmuse_261_runtime_provenance_is_per_row_not_legacy_v0():\n    config = load_verified_crosswalks()\n    enriched = enrich_verified_external_crosswalks(\n        _identity_map(),\n        {"statmuse": {"data": {}}},\n        config=config,\n    )\n    link = enriched["mappings"]["372"]["links"]["statmuse"]\n    assert link["source_native_id"] == 261\n    assert link["joinable"] is True\n    assert link["method"] == "CURATED_WIKIDATA_STATMUSE_ID_TO_TM__REEP_V1_TM_TO_OPTA__OFFICIAL_FPL_CODE"\n    provenance = link["provenance"]\n    assert provenance["verification_release"] == "20260907T201034Z"\n    assert provenance["review_status"] == "REVIEWED_DETERMINISTIC_ONE_TO_ONE"\n    assert provenance["reviewer"] == "V6_WAVE_B_IDENTITY_REVIEW"\n    assert provenance["review_reference"] == "github_actions_run:34764199565"\n    assert provenance["name_matching_used"] is False\n    assert provenance["fuzzy_matching_used"] is False\n    assert "reep_v1:rpecc5cfdbee4a41" in provenance["bridge_path"]\n''',encoding='utf-8')
+          PY
+
+          rm -f .github/workflows/v6-wave-b-promote-statmuse-261.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add config/v6/verified_crosswalks.json src/runtime_v6/verified_crosswalks.py tests/test_data_platform_identity_wave_b_statmuse_261.py .github/workflows/v6-wave-b-promote-statmuse-261.yml
+          git commit -m 'Promote deterministic StatMuse 261 Wave B mapping'
+          git push origin HEAD:feat/v6-identity-wave-b-statmuse-261

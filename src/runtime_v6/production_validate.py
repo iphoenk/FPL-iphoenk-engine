@@ -9,7 +9,7 @@ from typing import Any
 
 from .architecture_independence_validate import validate_repository
 from .identity_coverage import validate_player_identity_coverage_truth
-from .registry import dependency_layers, load_registry
+from .registry import EXPECTED_SOURCE_IDS, dependency_layers, load_registry
 
 
 ROOT = Path("data/v6")
@@ -17,6 +17,52 @@ ROOT = Path("data/v6")
 
 def _load(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _validate_source_activation_transition(
+    manifest: dict[str, Any],
+    registry: dict[str, Any],
+    *,
+    schedule_kind: str,
+) -> str:
+    current_ids = set(EXPECTED_SOURCE_IDS)
+    manifest_ids = {str(source_id) for source_id in manifest.get("source_ids") or []}
+    manifest_count = int(manifest.get("source_count") or 0)
+    current_count = int(registry["activation"]["active_source_count"])
+
+    if manifest_count == current_count and manifest_ids == current_ids:
+        return "CURRENT"
+
+    # Report-prefetch intentionally hydrates the last-good factual snapshot rather
+    # than running core acquisition. During a one-way activation-policy transition,
+    # that hydrated snapshot can still contain sources that have just been demoted to
+    # reference-only on main. Permit only that exact safe superset transition.
+    if schedule_kind != "report_prefetch":
+        raise AssertionError(
+            f"V6 active-source mismatch outside report-prefetch: manifest={manifest_count}/{sorted(manifest_ids)!r} "
+            f"registry={current_count}/{sorted(current_ids)!r}"
+        )
+
+    reference_only = set(registry["activation"].get("reference_only_sources") or {})
+    disabled = set(registry["activation"].get("disabled_sources") or {})
+    removed_ids = manifest_ids - current_ids
+    missing_current_ids = current_ids - manifest_ids
+
+    assert not missing_current_ids, (
+        "report-prefetch hydrated snapshot is missing current active sources: "
+        f"{sorted(missing_current_ids)!r}"
+    )
+    assert removed_ids, "report-prefetch activation transition must remove at least one source"
+    assert removed_ids <= reference_only, (
+        "report-prefetch may only bridge sources newly demoted to reference-only; "
+        f"unexpected={sorted(removed_ids - reference_only)!r}"
+    )
+    assert not (removed_ids & disabled), (
+        "report-prefetch must not carry disabled sources through activation transition: "
+        f"{sorted(removed_ids & disabled)!r}"
+    )
+    assert manifest_count == len(manifest_ids), "manifest source_count/source_ids mismatch"
+    return "LEGACY_ACTIVE_SUPERSET_REFERENCE_ONLY_TRANSITION"
 
 
 def validate_preflight() -> dict[str, Any]:
@@ -50,7 +96,11 @@ def validate_publishable(root: Path = ROOT) -> dict[str, Any]:
     event_name = os.environ["GITHUB_EVENT_NAME"]
     schedule_kind = os.environ["V6_SCHEDULE_KIND"]
 
-    assert manifest["source_count"] == registry["activation"]["active_source_count"]
+    activation_transition = _validate_source_activation_transition(
+        manifest,
+        registry,
+        schedule_kind=schedule_kind,
+    )
     assert manifest["activation"]["required_active_sources"] == registry["activation"]["required_active_sources"]
     assert registry["override_lifecycle"]["inactive_source_overrides"] == []
     governance = manifest["governance"]
@@ -115,6 +165,7 @@ def validate_publishable(root: Path = ROOT) -> dict[str, Any]:
         "runtime_control": control,
         "publish_integrity": integrity,
         "identity_coverage_transition": identity_coverage_transition,
+        "activation_transition": activation_transition,
     }
 
 

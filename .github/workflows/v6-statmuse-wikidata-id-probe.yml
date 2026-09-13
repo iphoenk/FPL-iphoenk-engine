@@ -1,0 +1,124 @@
+name: V6 StatMuse Wikidata native-ID one-shot probe
+
+on:
+  push:
+    branches:
+      - ops/v6-statmuse-gap-profile-probe
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Query Wikidata by exact StatMuse external IDs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/statmuse-wd
+          cat > /tmp/statmuse-wd/query.rq <<'EOF'
+          SELECT ?statmuse ?item ?opta ?tm ?pl WHERE {
+            VALUES ?statmuse { "261" "703" }
+            ?item wdt:P12567 ?statmuse .
+            OPTIONAL { ?item wdt:P8736 ?opta . }
+            OPTIONAL { ?item wdt:P2446 ?tm . }
+            OPTIONAL { ?item wdt:P2002 ?twitter . }
+            OPTIONAL { ?item wdt:P2094 ?competitionClass . }
+            OPTIONAL { ?item wdt:P1238 ?pl . }
+          }
+          ORDER BY ?statmuse ?item
+          EOF
+          curl --fail --silent --show-error --location --get \
+            -A 'FPL-iphoenk-engine-v6-identity-audit/1.0' \
+            --data-urlencode "query@/tmp/statmuse-wd/query.rq" \
+            --data-urlencode 'format=json' \
+            https://query.wikidata.org/sparql \
+            -o /tmp/statmuse-wd/statmuse_wikidata.json
+
+      - name: Query whether Wikidata exposes a FotMob external-ID property
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --get \
+            -A 'FPL-iphoenk-engine-v6-identity-audit/1.0' \
+            --data-urlencode 'action=wbsearchentities' \
+            --data-urlencode 'search=FotMob' \
+            --data-urlencode 'language=en' \
+            --data-urlencode 'type=property' \
+            --data-urlencode 'format=json' \
+            https://www.wikidata.org/w/api.php \
+            -o /tmp/statmuse-wd/fotmob_property_search.json
+
+      - name: Validate deterministic StatMuse chains
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from collections import defaultdict
+          from pathlib import Path
+
+          data=json.loads(Path('/tmp/statmuse-wd/statmuse_wikidata.json').read_text())
+          rows=[]
+          by_native=defaultdict(list)
+          for b in data.get('results',{}).get('bindings',[]):
+              row={k:v.get('value') for k,v in b.items()}
+              native=row.get('statmuse')
+              if native:
+                  by_native[native].append(row)
+              rows.append(row)
+          classifications={}
+          for native in ('261','703'):
+              vals=by_native.get(native,[])
+              qids={r.get('item') for r in vals if r.get('item')}
+              opta={r.get('opta') for r in vals if r.get('opta')}
+              tm={r.get('tm') for r in vals if r.get('tm')}
+              if len(qids)>1:
+                  status='CONFLICT_MULTIPLE_WIKIDATA_ITEMS'
+              elif len(qids)==1 and len(opta)==1:
+                  status='DETERMINISTIC_STATMUSE_WIKIDATA_OPTA_CANDIDATE'
+              elif len(qids)==1 and tm:
+                  status='WIKIDATA_ITEM_WITH_TRANSFERMARKT_ONLY'
+              elif len(qids)==1:
+                  status='WIKIDATA_ITEM_WITHOUT_TRUSTED_SECONDARY_ID'
+              else:
+                  status='NO_WIKIDATA_ENTITY_FOR_STATMUSE_ID'
+              classifications[native]={
+                  'status':status,
+                  'wikidata_items':sorted(qids),
+                  'opta_ids':sorted(opta),
+                  'transfermarkt_ids':sorted(tm),
+              }
+          fotmob=json.loads(Path('/tmp/statmuse-wd/fotmob_property_search.json').read_text())
+          output={
+              'schema_version':1,
+              'statmuse_property':'P12567',
+              'opta_property':'P8736',
+              'transfermarkt_property':'P2446',
+              'classifications':classifications,
+              'raw_rows':rows,
+              'fotmob_property_search':fotmob.get('search',[]),
+              'name_matching_used':False,
+              'fuzzy_matching_used':False,
+              'auto_promotion_allowed':False,
+              'curated_review_required':True,
+          }
+          Path('/tmp/statmuse-wd/result.json').write_text(json.dumps(output,indent=2,ensure_ascii=False,sort_keys=True)+'\n')
+          print(json.dumps(output,indent=2,ensure_ascii=False,sort_keys=True))
+          PY
+
+      - name: Upload review-only evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-statmuse-wikidata-id-probe
+          path: /tmp/statmuse-wd/result.json
+          if-no-files-found: warn
+          retention-days: 1

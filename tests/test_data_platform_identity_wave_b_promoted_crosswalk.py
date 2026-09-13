@@ -48,9 +48,9 @@ def test_reviewed_understat_wave_b_rows_are_exact_unique_and_provenance_complete
     rows = source["players"]
     wave = [row for row in rows if row.get("verification_method") == METHOD]
 
-    assert len(rows) == 516
-    assert len({str(row["source_native_id"]) for row in rows}) == 516
-    assert len({int(row["official_fpl_code"]) for row in rows}) == 516
+    assert len(rows) == 584
+    assert len({str(row["source_native_id"]) for row in rows}) == 584
+    assert len({int(row["official_fpl_code"]) for row in rows}) == 584
     assert len(wave) == 13
     assert {str(row["source_native_id"]) for row in wave} == EXPECTED_NATIVE_IDS
     assert {int(row["official_fpl_code"]) for row in wave} == EXPECTED_CODES

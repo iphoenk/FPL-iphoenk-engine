@@ -1,0 +1,135 @@
+name: V6 Wave B final provider limitation audit
+
+on:
+  push:
+    branches:
+      - ops/v6-wave-b-final-provider-limitation-audit
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Audit all current FotMob unmapped native IDs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/waveb-final
+          python - <<'PY'
+          import json, re, time, urllib.request
+          from pathlib import Path
+
+          ids = [1021382,1072068,1089691,1104053,1107648,1186978,1187213,1197655,1265626,1280132,1288111,1292810,1302005,1356312,1407250,1413847,1425182,1477878,1553105,1572340,268375,277771,303919,618878,693599,776184,795371,796398,798654,807930,815006,844425,970563,980381]
+          external_key = re.compile(r'(opta|transfermarkt|wikidata|soccerway|premier.?league|external|person.?id|player.?code)', re.I)
+          ignored_internal = re.compile(r'^(id|playerId|teamId|tournamentId|leagueId|matchId|countryCode)$', re.I)
+          headers = {'User-Agent':'Mozilla/5.0 WaveBIdentityAudit/1.0'}
+          results=[]
+          for pid in ids:
+              url=f'https://www.fotmob.com/api/data/playerData?id={pid}&includeMarketValues=true'
+              req=urllib.request.Request(url,headers=headers)
+              with urllib.request.urlopen(req,timeout=20) as r:
+                  payload=json.load(r)
+              hits=[]
+              def walk(value,path='$'):
+                  if isinstance(value,dict):
+                      for k,v in value.items():
+                          kp=f'{path}.{k}'
+                          if external_key.search(str(k)) and not ignored_internal.match(str(k)):
+                              hits.append({'path':kp,'key':k,'value':v if isinstance(v,(str,int,float,bool,type(None))) else type(v).__name__})
+                          walk(v,kp)
+                  elif isinstance(value,list):
+                      for i,v in enumerate(value):
+                          walk(v,f'{path}[{i}]')
+              walk(payload)
+              results.append({'source_native_id':pid,'external_id_like_fields':hits})
+              time.sleep(0.05)
+          unsafe=[r for r in results if r['external_id_like_fields']]
+          out={'audited_count':len(results),'expected_count':34,'profiles_with_external_id_like_fields':len(unsafe),'unsafe':unsafe,'all_profiles_no_trusted_external_id_field':len(results)==34 and not unsafe,'name_matching_used':False,'fuzzy_matching_used':False}
+          Path('/tmp/waveb-final/fotmob.json').write_text(json.dumps(out,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(out,indent=2))
+          if len(results)!=34 or unsafe:
+              raise SystemExit('FotMob provider-wide no-cross-ID proof failed; manual review required')
+          PY
+      - name: Audit Understat 15045 exact native ID
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 3 \
+            'https://understat.com/player/15045' -o /tmp/waveb-final/understat-15045.html
+          curl --fail --silent --show-error --location --retry 3 \
+            'https://raw.githubusercontent.com/ChrisMusson/FPL-ID-Map/e5a9942affd98501db473a8d3b6a0f9e93751e8a/Master.csv' \
+            -o /tmp/waveb-final/Master.csv
+          test "$(sha256sum /tmp/waveb-final/Master.csv | awk '{print $1}')" = '19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a'
+          python - <<'PY'
+          import csv,json,re
+          from pathlib import Path
+          rows=[]
+          with open('/tmp/waveb-final/Master.csv',encoding='utf-8-sig',newline='') as f:
+              for row in csv.DictReader(f):
+                  if str(row.get('understat') or '').strip()=='15045': rows.append(row)
+          html=Path('/tmp/waveb-final/understat-15045.html').read_text(encoding='utf-8',errors='replace')
+          tokens=re.findall(r'(?i)(?:opta|transfermarkt|wikidata|soccerway|premierleague|premier-league)[^\"\'<>\s]{0,120}',html)
+          out={'source_native_id':15045,'pinned_registry_exact_rows':len(rows),'profile_external_reference_tokens':tokens[:50],'no_trusted_cross_id':len(rows)==0 and len(tokens)==0,'registry_commit':'e5a9942affd98501db473a8d3b6a0f9e93751e8a','master_csv_sha256':'19d1f9d08ab975e40d26b214f6984cce7d6bc58f62fbef3bec46722b2196d56a','name_matching_used':False,'fuzzy_matching_used':False}
+          Path('/tmp/waveb-final/understat.json').write_text(json.dumps(out,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(out,indent=2))
+          if not out['no_trusted_cross_id']:
+              raise SystemExit('Understat 15045 has evidence requiring review')
+          PY
+      - name: Audit StatMuse 703 exact native ID and Wikidata external-ID registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 3 \
+            'https://www.statmuse.com/fc/player/bobby-thomas-703/bio' -o /tmp/waveb-final/statmuse-703.html
+          curl --fail --silent --show-error --location --retry 3 --get \
+            --data-urlencode 'query=SELECT ?item ?tm WHERE { ?item wdt:P12567 "703". OPTIONAL { ?item wdt:P2446 ?tm. } }' \
+            --data-urlencode 'format=json' \
+            'https://query.wikidata.org/sparql' -o /tmp/waveb-final/wikidata-703.json
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+          html=Path('/tmp/waveb-final/statmuse-703.html').read_text(encoding='utf-8',errors='replace')
+          wd=json.loads(Path('/tmp/waveb-final/wikidata-703.json').read_text())
+          bindings=((wd.get('results') or {}).get('bindings') or [])
+          external_urls=re.findall(r'https?://[^\"\'<>\s]+',html)
+          external=[u for u in external_urls if any(k in u.lower() for k in ('transfermarkt','wikidata','opta','soccerway','premierleague.com'))]
+          out={'source_native_id':703,'wikidata_p12567_exact_binding_count':len(bindings),'statmuse_profile_external_stable_links':external[:50],'no_trusted_cross_id':len(bindings)==0 and len(external)==0,'name_matching_used':False,'fuzzy_matching_used':False}
+          Path('/tmp/waveb-final/statmuse.json').write_text(json.dumps(out,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(out,indent=2))
+          if not out['no_trusted_cross_id']:
+              raise SystemExit('StatMuse 703 has evidence requiring review')
+          PY
+      - name: Summarize reviewed provider limitations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          docs={p.stem:json.loads(p.read_text()) for p in Path('/tmp/waveb-final').glob('*.json')}
+          summary={
+            'schema_version':1,
+            'audit_scope':'WAVE_B_FINAL_PROVIDER_LIMITATIONS',
+            'fotmob_reviewed_native_count':docs['fotmob']['audited_count'],
+            'understat_15045_no_trusted_cross_id':docs['understat']['no_trusted_cross_id'],
+            'statmuse_703_no_trusted_cross_id':docs['statmuse']['no_trusted_cross_id'],
+            'all_reviewed_limitations_supported':docs['fotmob']['all_profiles_no_trusted_external_id_field'] and docs['understat']['no_trusted_cross_id'] and docs['statmuse']['no_trusted_cross_id'],
+            'name_matching_used':False,
+            'fuzzy_matching_used':False,
+          }
+          Path('/tmp/waveb-final/summary.json').write_text(json.dumps(summary,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(summary,indent=2))
+          if not summary['all_reviewed_limitations_supported']:
+              raise SystemExit('Wave B limitation audit is not closure-ready')
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-wave-b-final-provider-limitation-audit
+          path: /tmp/waveb-final/*.json
+          retention-days: 1

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "purpose": "V6 identity evidence posture and release provenance only",
+  "canonical_authority": "official_fpl",
+  "runtime_join_policy": "EXACT_OR_VERIFIED_MANUAL_ONLY",
+  "fuzzy_name_matching_allowed": false,
+  "reep_v1": {
+    "stamp": "20260907T201034Z",
+    "release_generated_at": "2026-09-07T20:17:31+00:00",
+    "manifest_url": "https://data.reep.football/releases/20260907T201034Z/release.json",
+    "manifest_sha256": "65356d7522832ea58c19993a95eb31ceb9d6e22e3ff518014387734b13e43529",
+    "bridges_csv_sha256": "a03aef520a454bdcd181b5b332b91e7b41ee57f4914e6e2c456cf49a8b86a735",
+    "overlay_xids_csv_sha256": "0b8f4a9fe2fb8a0c6e883ffd25766030476c5617a7c9ab070b64690f87c93030",
+    "bridge_schema": "bridge-register-v1",
+    "roles": {
+      "understat": {
+        "surface": "CANONICAL_BRIDGE",
+        "namespace": "player",
+        "current_release_row_count": 5118,
+        "may_directly_promote_to_v6_join": false,
+        "reason": "Reep v1 IDs are not interchangeable with v0 IDs and the current canonical bridge file does not expose the Official FPL shared Opta numeric anchor."
+      },
+      "opta_numeric": {
+        "surface": "OVERLAY",
+        "may_directly_promote_to_v6_join": false,
+        "reason": "Overlay identifiers are discovery context, not V6 runtime join authority."
+      },
+      "statmuse_pl": {
+        "surface": "OVERLAY",
+        "may_directly_promote_to_v6_join": false,
+        "reason": "Overlay identifiers are discovery context, not V6 runtime join authority."
+      },
+      "fotmob": {
+        "surface": "ABSENT_FROM_CURRENT_V1_PROVIDER_SURFACES_USED_BY_WAVE_A",
+        "may_directly_promote_to_v6_join": false,
+        "reason": "No current Reep v1 canonical provider bridge was observed for FotMob in the pinned release."
+      }
+    }
+  },
+  "active_runtime_crosswalk": {
+    "understat": "REEP_V0_PINNED_OPTA_NUMERIC_TO_PROVIDER_ID",
+    "fotmob": "REEP_V0_PINNED_OPTA_NUMERIC_TO_PROVIDER_ID",
+    "statmuse": "REEP_V0_PINNED_OPTA_NUMERIC_TO_PROVIDER_ID",
+    "opta_the_analyst": "OFFICIAL_FPL_CODE_SHARED_OPTA_NUMERIC_NAMESPACE"
+  },
+  "governance": {
+    "reep_v1_is_build_time_evidence_not_runtime_network_dependency": true,
+    "reep_v1_overlay_is_discovery_only": true,
+    "v0_crosswalk_retained_until_stronger_deterministic_replacement_exists": true,
+    "partial_verified_coverage_is_allowed": true,
+    "absence_must_not_be_inferred_from_unobserved_provider_rows": true,
+    "no_provider_entity_requires_complete_provider_universe_proof": true,
+    "data_only": true,
+    "prediction_authority": "NONE",
+    "optimizer_authority": "NONE"
+  }
+}

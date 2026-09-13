@@ -11,6 +11,7 @@ from .ffscout_public import augment_ffscout_public_dataset, enrich_ffscout_publi
 from .health import build_source_health
 from .http_client import AcquisitionClient, utc_now
 from .identity import build_player_identity_map
+from .identity_coverage import build_player_identity_coverage_truth
 from .identity_scope import apply_entity_scope_identity_semantics
 from .noauth_source_native import build_noauth_source_native_datasets
 from .player_observation import augment_source_native_datasets
@@ -80,7 +81,7 @@ def _dependency_payloads(source: dict[str, Any], results: dict[str, dict[str, An
 
 def _publish_source_native_datasets(
     results: dict[str, dict[str, Any]], identity_map: dict[str, Any]
-) -> list[str]:
+) -> tuple[list[str], dict[str, dict[str, Any]]]:
     datasets = build_source_native_datasets(results, identity_map)
     noauth_datasets = build_noauth_source_native_datasets(results, identity_map)
     overlap = sorted(set(datasets) & set(noauth_datasets))
@@ -100,7 +101,7 @@ def _publish_source_native_datasets(
         path = target / f"{source_id}.json"
         write_json(path, dataset)
         artifacts.append(f"data/v6/normalized/sources/{source_id}.json")
-    return artifacts
+    return artifacts, datasets
 
 
 def run() -> dict[str, Any]:
@@ -222,7 +223,9 @@ def run() -> dict[str, Any]:
     )
     write_json(NORMALIZED / "canonical_teams.json", build_canonical_teams(official))
     write_json(NORMALIZED / "canonical_fixtures.json", build_canonical_fixtures(official))
-    normalized_source_artifacts = _publish_source_native_datasets(results, identity_map)
+    normalized_source_artifacts, normalized_source_datasets = _publish_source_native_datasets(results, identity_map)
+    identity_coverage_truth = build_player_identity_coverage_truth(identity_map, normalized_source_datasets)
+    write_json(EVIDENCE / "player_identity_coverage.json", identity_coverage_truth)
     write_json(EVIDENCE / "lineage.json", build_lineage_catalog(config))
     write_json(EVIDENCE / "latest_index.json", build_evidence_index(results))
     write_json(EVIDENCE / "resolved_registry.json", resolved_registry_snapshot(config))
@@ -288,6 +291,7 @@ def run() -> dict[str, Any]:
             "canonical_authority": "official_fpl",
             "mapping_artifact": "data/v6/evidence/player_identity_map.json",
             "verified_crosswalk_artifact": "data/v6/evidence/verified_crosswalks.json",
+            "coverage_truth_artifact": "data/v6/evidence/player_identity_coverage.json",
             "fuzzy_name_matching_allowed": False,
             "entity_scopes": scopes,
             "coverage": identity_map.get("coverage") or {},
@@ -315,6 +319,7 @@ def run() -> dict[str, Any]:
             "resolved_registry": "data/v6/evidence/resolved_registry.json",
             "player_identity_map": "data/v6/evidence/player_identity_map.json",
             "verified_crosswalks": "data/v6/evidence/verified_crosswalks.json",
+            "player_identity_coverage": "data/v6/evidence/player_identity_coverage.json",
             "artifact_catalog": "data/v6/evidence/artifact_catalog.json",
             "publish_integrity": "data/v6/health/publish_integrity.json",
         },
@@ -336,6 +341,8 @@ def run() -> dict[str, Any]:
             "identity_mapping_is_deterministic_only": True,
             "identity_health_is_entity_scope_aware": True,
             "verified_crosswalks_are_evidence_backed": True,
+            "identity_coverage_uses_separate_canonical_and_observed_join_metrics": True,
+            "unobserved_players_are_not_assumed_absent_from_provider": True,
             "fuzzy_identity_matching": False,
             "source_specific_normalization_is_data_only": True,
             "normalized_model_signals_retain_upstream_authorship": True,

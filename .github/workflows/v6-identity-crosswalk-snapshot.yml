@@ -1,0 +1,22 @@
+name: V6 Identity crosswalk review snapshot
+
+on:
+  push:
+    branches:
+      - ops/v6-identity-crosswalk-snapshot
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-verified-crosswalk-snapshot
+          path: config/v6/verified_crosswalks.json
+          retention-days: 1

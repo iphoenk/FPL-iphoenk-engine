@@ -5,9 +5,9 @@
 | Metric | Count |
 |---|---:|
 | Configured source definitions | 38 |
-| Active scheduled sources | 22 |
+| Active scheduled sources | 14 |
 | Disabled sources | 8 |
-| Reference-only sources | 8 |
+| Reference-only sources | 16 |
 | Required active sources | 2 |
 | Temporary source overrides | 0 |
 
@@ -18,20 +18,12 @@
 - `understat`
 - `opta_the_analyst`
 - `statmuse`
-- `onside`
-- `ben_crellin`
-- `onefpl`
-- `livefpl`
-- `ffscout`
 - `fotmob`
 - `statsbomb`
 - `rotowire`
 - `premierleague_stats`
 - `espn`
 - `vaastav_fpl`
-- `solio_analytics`
-- `check_the_chance`
-- `fantasy_football_pundit`
 - `wikidata`
 - `open_meteo`
 - `thesportsdb_v1`
@@ -49,13 +41,21 @@
 
 ## Reference-only sources
 
-- `fffix`: FREE_ACCOUNT_EXISTS_BUT_MACHINE_ENDPOINTS_REDIRECT_TO_LOGIN
-- `ffhub`: FREE_PUBLIC_SITE_EXISTS_BUT_PREDICTIONS_ARE_AUTH_GATED
+- `onside`: WAVE_B_MODEL_SOURCE_FPL_MASTER_ONLY
+- `ben_crellin`: HUMAN_FIXTURE_ANALYSIS_FPL_MASTER_CONTEXT_ONLY
+- `fffix`: WAVE_B_MODEL_SOURCE_AUTH_GATED
+- `ffhub`: WAVE_B_MODEL_SOURCE_AUTH_GATED
+- `onefpl`: WAVE_B_MARKET_MODEL_REFERENCE_FPL_MASTER_ONLY
+- `livefpl`: WAVE_B_MARKET_MODEL_REFERENCE_FPL_MASTER_ONLY
+- `ffscout`: WAVE_B_C_MODEL_EDITORIAL_SOURCE_FPL_MASTER_ONLY
 - `clubelo`: FREE_PUBLIC_REFERENCE_BUT_RUNTIME_HTTPS_CONNECT_TIMEOUT_AFTER_REPAIR_RETRY
-- `bbc_team_news`: FREE_EDITORIAL_TARGETED_DEADLINE_REFERENCE
-- `premier_injuries`: FREE_PUBLIC_REFERENCE_NO_DATASET_REPUBLISH
-- `fpl_form`: FREE_PERSONAL_USE_REFERENCE_NO_RUNTIME_REPUBLISH
-- `fpl_review_free`: FREE_MODEL_REFERENCE_NO_STABLE_MACHINE_CONTRACT
+- `solio_analytics`: WAVE_B_MODEL_SOURCE_FPL_MASTER_ONLY
+- `check_the_chance`: WAVE_B_MARKET_MODEL_SOURCE_FPL_MASTER_ONLY
+- `fantasy_football_pundit`: WAVE_B_C_MODEL_EDITORIAL_SOURCE_FPL_MASTER_ONLY
+- `bbc_team_news`: WAVE_C_EDITORIAL_TARGETED_DEADLINE_REFERENCE
+- `premier_injuries`: WAVE_C_INJURY_CONTEXT_REFERENCE_NO_DATASET_REPUBLISH
+- `fpl_form`: WAVE_B_MODEL_REFERENCE_NO_RUNTIME_REPUBLISH
+- `fpl_review_free`: WAVE_B_MODEL_REFERENCE_NO_STABLE_MACHINE_CONTRACT
 - `reep_register`: PUBLIC_NO_AUTH_RELEASE_POINTER_HTTP_404_ON_2026_09_07_REENABLE_ONLY_AFTER_STABLE_PUBLIC_DOWNLOAD_REVALIDATION
 
 ## Required active sources

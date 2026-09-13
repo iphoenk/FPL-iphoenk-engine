@@ -26,11 +26,13 @@ def _workflow_paths(text: str, event: str) -> list[str]:
 
 
 def test_generated_source_contract_is_exactly_registry_derived() -> None:
+    registry = load_registry()
     expected = render_source_contract()
     actual = (ROOT / "docs" / "V6_SOURCE_CONTRACT_GENERATED.md").read_text(encoding="utf-8")
     assert actual == expected
-    assert "Configured source definitions | 38" in actual
-    assert "Active scheduled sources | 22" in actual
+    assert f"Configured source definitions | {registry['activation']['base_source_count']}" in actual
+    assert f"Active scheduled sources | {registry['activation']['active_source_count']}" in actual
+    assert f"Reference-only sources | {registry['activation']['reference_only_source_count']}" in actual
     assert "Temporary source overrides | 0" in actual
 
 

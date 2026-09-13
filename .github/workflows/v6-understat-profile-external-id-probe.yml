@@ -1,0 +1,68 @@
+name: V6 Understat profile external-ID one-shot probe
+
+on:
+  push:
+    branches:
+      - ops/v6-understat-profile-external-id-probe
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Fetch exact Understat native profiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/understat-profile/raw
+          for id in 1045 8379 14758 13917 212 15045 8091 10016; do
+            curl --fail --silent --show-error --location --retry 2 --retry-delay 1 \
+              -A 'Mozilla/5.0' "https://understat.com/player/${id}" \
+              -o "/tmp/understat-profile/raw/${id}.html"
+            sleep 0.5
+          done
+
+      - name: Inspect deterministic external identifiers only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+
+          domains=('transfermarkt','wikidata','wikipedia','opta','fbref','soccerway','worldfootball','premierleague','fotmob')
+          key_re=re.compile(r'(?i)(opta|transfermarkt|wikidata|external(?:Id|_id)?|person(?:Id|_id)?|player(?:Id|_id)?|provider(?:Id|_id)?|uuid|uid|code)')
+          result={'profiles':{},'name_matching_used':False,'fuzzy_matching_used':False}
+          for p in sorted(Path('/tmp/understat-profile/raw').glob('*.html')):
+              text=p.read_text(encoding='utf-8',errors='replace')
+              links=sorted(set(re.findall(r'https?://[^"\'<>\\\s]+',text,re.I)))
+              external=[x for x in links if any(d in x.lower() for d in domains)]
+              fields=[]
+              for m in re.finditer(r'(?i)(opta|transfermarkt|wikidata|external(?:Id|_id)?|person(?:Id|_id)?|player(?:Id|_id)?|provider(?:Id|_id)?|uuid|uid|code)["\']?\s*[:=]\s*["\']?([A-Za-z0-9_:-]+)',text):
+                  fields.append({'key':m.group(1),'value':m.group(2)})
+              result['profiles'][p.stem]={
+                  'bytes':len(text.encode('utf-8')),
+                  'external_identity_links':external[:100],
+                  'identity_like_fields':fields[:100],
+              }
+          out=Path('/tmp/understat-profile/result.json')
+          out.write_text(json.dumps(result,indent=2,ensure_ascii=False,sort_keys=True)+'\n')
+          print(json.dumps(result,indent=2,ensure_ascii=False,sort_keys=True))
+          PY
+
+      - name: Upload review-only evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-understat-profile-external-id-probe
+          path: /tmp/understat-profile/result.json
+          if-no-files-found: warn
+          retention-days: 1

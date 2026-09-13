@@ -116,7 +116,7 @@ def _walk_fotmob_stats(value: Any, out: dict[int, dict[str, Any]]) -> None:
         native_id = _int(value.get("id"))
         name = value.get("name") or value.get("playerName")
         team_id = _int(value.get("teamId"))
-        has_player_shape = native_id is not None and isinstance(name, str) and bool(name.strip()) and (
+        has_player_shape = native_id is not None and native_id > 0 and isinstance(name, str) and bool(name.strip()) and (
             team_id is not None
             or "value" in value
             or "statValue" in value

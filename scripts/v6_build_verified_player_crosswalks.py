@@ -24,6 +24,7 @@ from typing import Any
 REEP_COMMIT = "0ec59faa5d81615b7a8200ae6121023a3bc14ce3"
 REEP_PEOPLE_BLOB = "dc4441b1f94f05c36b807ed23f3a2b7dede5878d"
 REEP_RELEASE = "2026.25"
+REEP_RELEASED_AT = "2026-06-21T00:00:00+00:00"
 PROVIDERS = {
     "understat": "key_understat",
     "fotmob": "key_fotmob",
@@ -183,6 +184,7 @@ def build(
                 "verification_status": "VERIFIED_MANUAL",
                 "player_verification_method": METHOD,
                 "player_crosswalk_release": REEP_RELEASE,
+                "player_crosswalk_verified_at": REEP_RELEASED_AT,
                 "player_crosswalk_commit": REEP_COMMIT,
                 "player_crosswalk_blob": REEP_PEOPLE_BLOB,
                 "player_crosswalk_canonical_anchor": "official_fpl.bootstrap.elements.code",
@@ -201,6 +203,8 @@ def build(
             "mapped_player_count": len(rows),
             "coverage_ratio": round(len(rows) / len(official_codes), 6) if official_codes else 0.0,
             "unmapped_player_count": max(0, len(official_codes) - len(rows)),
+            "verification_release": REEP_RELEASE,
+            "verification_timestamp": REEP_RELEASED_AT,
         }
 
     governance = output.setdefault("governance", {})
@@ -211,6 +215,7 @@ def build(
             "player_crosswalk_name_matching_allowed": False,
             "player_crosswalk_duplicate_or_conflict_policy": "FAIL_CLOSED",
             "player_crosswalk_partial_coverage_is_allowed": True,
+            "player_crosswalk_provider_ids_are_attributes_not_canonical_keys": True,
         }
     )
     return output, report

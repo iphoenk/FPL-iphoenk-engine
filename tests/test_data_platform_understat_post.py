@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import json
+import threading
+import time
+from pathlib import Path
 
+from src.runtime_v6.adapters import collect_http
 from src.runtime_v6.http_client import AcquisitionClient
 from src.runtime_v6.source_native import build_source_native_datasets
 
@@ -39,6 +43,34 @@ class _Session:
     def get(self, url: str, **kwargs):
         self.get_calls.append({"url": url, **kwargs})
         return self.response
+
+
+class _ConcurrencyClient:
+    request_workers = 4
+    conditional_revalidation = True
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self.active = 0
+        self.max_active = 0
+
+    def fetch(self, source, request_cfg, previous=None):
+        with self._lock:
+            self.active += 1
+            self.max_active = max(self.max_active, self.active)
+        try:
+            time.sleep(0.02)
+            return {
+                "request_id": request_cfg["id"],
+                "status": "AVAILABLE",
+                "health": "GREEN",
+                "url": request_cfg["url"],
+                "checked_at": "2026-09-13T09:00:00+00:00",
+                "content_changed": True,
+            }
+        finally:
+            with self._lock:
+                self.active -= 1
 
 
 def test_acquisition_client_supports_registry_driven_form_post_without_get_fallback():
@@ -160,3 +192,40 @@ def test_understat_normalizer_prefers_modern_players_api_and_keeps_identity_unma
     assert player["official_element_id"] is None
     assert player["identity_status"] == "UNMAPPED"
     assert set(dataset["source_snapshot_ids"]) == {"api-sha", "html-sha"}
+
+
+def test_understat_source_worker_override_serializes_requests():
+    client = _ConcurrencyClient()
+    source = {
+        "id": "understat",
+        "name": "Understat",
+        "category": "advanced_performance",
+        "adapter": "http",
+        "critical": False,
+        "request_workers": 1,
+        "requests": [
+            {"id": "epl_2026", "url": "https://understat.com/league/EPL/2026"},
+            {"id": "players_api", "url": "https://understat.com/main/getPlayersStats/"},
+        ],
+    }
+
+    result = collect_http(source, client)
+
+    assert client.max_active == 1
+    assert result["health"] == "GREEN"
+    assert result["current_run_action"] == "FETCHED"
+    assert result["coverage"]["successful_checks_this_cycle"] == 2
+
+
+def test_understat_transport_override_is_temporary_and_preserves_last_good_cache_contract():
+    root = Path(__file__).resolve().parents[1]
+    payload = json.loads((root / "config" / "v6" / "source_overrides.json").read_text())
+
+    override = payload["sources"]["understat"]
+    lifecycle = payload["lifecycle"]["understat"]
+
+    assert override["connect_timeout_seconds"] == 10
+    assert override["request_workers"] == 1
+    assert lifecycle["temporary"] is True
+    assert lifecycle["review_by"] == "2026-09-20"
+    assert "last-good-cache fallback" in lifecycle["reason"]

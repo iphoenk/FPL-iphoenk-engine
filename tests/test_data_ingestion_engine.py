@@ -48,17 +48,26 @@ def test_dropped_and_reference_only_sources_never_enter_active_source_map():
     assert "clubelo" in registry.REFERENCE_ONLY_SOURCE_IDS
 
 
-def test_free_source_expansion_is_registered_with_safe_tiers_and_no_weather_interpretation():
+def test_free_source_expansion_routes_models_out_and_keeps_factual_tiers_active():
     cfg = registry.load_registry()
     sources = registry.source_map(cfg)
+    reference_only = set(registry.REFERENCE_ONLY_SOURCE_IDS)
 
-    assert sources["solio_analytics"]["source_tier"] == "core"
-    assert sources["solio_analytics"]["acquisition_kind"] == "rest_json"
-    assert sources["check_the_chance"]["source_tier"] == "pilot"
-    assert sources["fantasy_football_pundit"]["source_tier"] == "pilot"
+    for source_id in {
+        "solio_analytics",
+        "check_the_chance",
+        "fantasy_football_pundit",
+        "onside",
+        "ffscout",
+    }:
+        assert source_id in reference_only
+        assert source_id not in sources
+
+    assert sources["wikidata"]["source_tier"] == "core"
+    assert sources["open_meteo"]["source_tier"] == "core"
+    assert sources["thesportsdb_v1"]["source_tier"] == "pilot"
     assert "open_meteo_weather" not in sources
     assert not Path("src/runtime_v6/weather.py").exists()
-    reference_only = set(registry.REFERENCE_ONLY_SOURCE_IDS)
     assert {
         "fffix",
         "ffhub",
@@ -67,17 +76,17 @@ def test_free_source_expansion_is_registered_with_safe_tiers_and_no_weather_inte
         "premier_injuries",
         "fpl_form",
         "fpl_review_free",
+        "reep_register",
     }.issubset(reference_only)
-    assert "reep_register" in reference_only
-    assert "reep_register" not in sources
 
 
 def test_entity_scope_policy_is_source_specific():
     cfg = registry.load_registry()
     sources = registry.source_map(cfg)
     assert entity_scopes_for_source(sources["official_price_predictor"]) == ["PLAYER", "TEAM"]
-    assert entity_scopes_for_source(sources["ben_crellin"]) == ["EVENT", "FEED", "FIXTURE"]
     assert entity_scopes_for_source(sources["statsbomb"]) == ["COMPETITION", "EVENT", "FEED"]
+    assert "ben_crellin" in registry.REFERENCE_ONLY_SOURCE_IDS
+    assert "ben_crellin" not in sources
 
 
 def test_http_last_good_cache_survives_failure(monkeypatch):

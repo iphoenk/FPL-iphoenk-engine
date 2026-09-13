@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from src.runtime_v6.entity_scope import entity_scopes_for_source, load_entity_scope_policy
-from src.runtime_v6.registry import load_registry
+from src.runtime_v6.registry import REFERENCE_ONLY_SOURCE_IDS, load_registry
 
 
 def test_ffscout_public_player_scope_requires_deterministic_embedded_identity():
@@ -13,13 +13,10 @@ def test_ffscout_public_player_scope_requires_deterministic_embedded_identity():
     assert policy["governance"]["ffscout_public_premierleague_media_code_is_stable_identity_evidence"] is True
 
 
-def test_ffscout_registry_acquires_public_team_news_without_members_area():
+def test_ffscout_is_reference_only_and_not_runtime_acquired():
     registry = load_registry()
-    source = next(row for row in registry["sources"] if row["id"] == "ffscout")
-    requests = {row["id"]: row for row in source.get("requests") or []}
+    active_ids = {str(row["id"]) for row in registry["sources"]}
 
-    assert requests["home"]["url"] == "https://www.fantasyfootballscout.co.uk/"
-    assert requests["team_news"]["url"] == "https://www.fantasyfootballscout.co.uk/team-news/"
-    assert source["acquisition_kind"] == "generic_http"
-    assert source["content_hash_dedup"] is True
-    assert all("members.fantasyfootballscout.co.uk" not in str(row.get("url") or "") for row in requests.values())
+    assert "ffscout" in REFERENCE_ONLY_SOURCE_IDS
+    assert "ffscout" not in active_ids
+    assert registry["activation"]["reference_only_sources"]["ffscout"] == "WAVE_B_C_MODEL_EDITORIAL_SOURCE_FPL_MASTER_ONLY"

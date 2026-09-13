@@ -36,9 +36,10 @@ def test_registry_keeps_dynamic_active_contract_and_adds_ingestion_metadata():
     assert understat_requests["players_api"]["method"] == "POST"
     assert "ffhub" in REFERENCE_ONLY_SOURCE_IDS
     assert "fffix" in REFERENCE_ONLY_SOURCE_IDS
+    assert "solio_analytics" in REFERENCE_ONLY_SOURCE_IDS
     assert "open_meteo_weather" not in sources
-    assert sources["solio_analytics"]["poll_interval_minutes"] == 240
-    assert sources["solio_analytics"]["poll_interval_minutes_deadline_window"] == 60
+    assert sources["statsbomb"]["poll_interval_minutes"] == 1440
+    assert sources["statsbomb"]["content_hash_dedup"] is True
 
 
 def test_non_configured_sources_preserve_legacy_every_cycle_behavior():

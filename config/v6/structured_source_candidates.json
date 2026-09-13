@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "policy": "wave_a_structured_data_candidates_fail_closed",
+  "ownership": "V6_DATA_ONLY",
+  "promotion_rule": {
+    "requires_public_no_auth_access": true,
+    "requires_stable_retrieval_contract": true,
+    "requires_factual_field_allowlist": true,
+    "requires_deterministic_identity_path_for_player_level_data": true,
+    "requires_provenance_freshness_health": true,
+    "forbids_model_prediction_optimizer_editorial_fields": true,
+    "mixed_sources_require_field_level_extractor_before_activation": true,
+    "name_or_fuzzy_join_forbidden": true
+  },
+  "candidates": [
+    {
+      "id": "opta_the_analyst",
+      "domain": "theanalyst.com",
+      "status": "EXISTING_ACTIVE_STRUCTURED",
+      "semantic_class": "FACTUAL_ADVANCED_PERFORMANCE"
+    },
+    {
+      "id": "xgstat",
+      "domain": "xgstat.com",
+      "status": "REFERENCE_ONLY_PENDING_MACHINE_CONTRACT",
+      "semantic_class": "FACTUAL_ADVANCED_PERFORMANCE_CANDIDATE",
+      "notes": "xG/xA/player performance can be factual inputs, but activate only after a stable public retrieval contract and deterministic identity path are proven."
+    },
+    {
+      "id": "fpltoolkit_factual",
+      "domain": "fpltoolkit.co.uk",
+      "status": "REFERENCE_ONLY_PENDING_FIELD_EXTRACTOR",
+      "semantic_class": "MIXED_SOURCE_FACTUAL_SUBSET_ONLY",
+      "notes": "Only source-native factual/minutes/stat fields may enter V6. Projection, recommendation, rating or decision fields remain FPL Master Wave B/C."
+    },
+    {
+      "id": "trendline_stats",
+      "domain": "trendline.football",
+      "status": "PILOT_CANDIDATE",
+      "semantic_class": "FACTUAL_PLAYER_PERFORMANCE",
+      "candidate_fields": ["minutes", "starts", "goals", "assists", "xG", "xA", "xGI", "DefCon", "clean_sheets", "fpl_points", "price", "ownership"],
+      "notes": "Current public player tables expose factual season/player fields. Promotion still requires deterministic source-native identity and field-level extraction."
+    },
+    {
+      "id": "futmetrix_factual",
+      "domain": "futmetrix.com",
+      "status": "REFERENCE_ONLY_MIXED_SOURCE",
+      "semantic_class": "MIXED_SOURCE_FACTUAL_SUBSET_ONLY",
+      "notes": "Pages mix factual stats with ratings/badges/editorial descriptions. Do not activate generic page ingestion; a factual allowlist extractor is required."
+    },
+    {
+      "id": "sofascore",
+      "domain": "sofascore.com",
+      "status": "EXISTING_DISABLED",
+      "semantic_class": "FACTUAL_ADVANCED_PERFORMANCE",
+      "notes": "Remain disabled until compliant stable access is revalidated."
+    },
+    {
+      "id": "statmuse",
+      "domain": "statmuse.com",
+      "status": "EXISTING_ACTIVE_STRUCTURED",
+      "semantic_class": "FACTUAL_ADVANCED_PERFORMANCE"
+    },
+    {
+      "id": "fotmob",
+      "domain": "fotmob.com",
+      "status": "EXISTING_ACTIVE_STRUCTURED",
+      "semantic_class": "FACTUAL_ADVANCED_PERFORMANCE"
+    },
+    {
+      "id": "playerstats",
+      "domain": null,
+      "status": "PENDING_EXACT_DOMAIN_VALIDATION",
+      "semantic_class": "UNCLASSIFIED"
+    },
+    {
+      "id": "11v11",
+      "domain": "11v11.com",
+      "status": "PILOT_CANDIDATE",
+      "semantic_class": "FACTUAL_MATCH_PLAYER_HISTORY",
+      "notes": "Public competition/player/match statistics are suitable only after endpoint, season-token and identity-path validation."
+    },
+    {
+      "id": "fbref",
+      "domain": "fbref.com",
+      "status": "EXISTING_DISABLED_ACCESS_RESTRICTED",
+      "semantic_class": "FACTUAL_ADVANCED_PERFORMANCE_CORRELATED_OPTA_FAMILY"
+    },
+    {
+      "id": "statz",
+      "domain": null,
+      "status": "PENDING_EXACT_DOMAIN_VALIDATION",
+      "semantic_class": "UNCLASSIFIED"
+    },
+    {
+      "id": "fplanaly_factual",
+      "domain": "fplanaly.st",
+      "status": "REFERENCE_ONLY_PENDING_FIELD_EXTRACTOR",
+      "semantic_class": "MIXED_SOURCE_FACTUAL_SUBSET_ONLY"
+    },
+    {
+      "id": "squawka_stats",
+      "domain": "squawka.com",
+      "status": "PILOT_CANDIDATE",
+      "semantic_class": "FACTUAL_PLAYER_TEAM_STATS",
+      "notes": "Stats hub is factual-data oriented. Promotion requires stable current-season URL/schema and deterministic identity proof."
+    },
+    {
+      "id": "datafc",
+      "domain": null,
+      "status": "PENDING_EXACT_DOMAIN_PRODUCT_VALIDATION",
+      "semantic_class": "UNCLASSIFIED"
+    },
+    {
+      "id": "xglab",
+      "domain": null,
+      "status": "PENDING_EXACT_DOMAIN_VALIDATION",
+      "semantic_class": "UNCLASSIFIED"
+    },
+    {
+      "id": "soccerbase",
+      "domain": "soccerbase.com",
+      "status": "PILOT_PENDING_ENDPOINT_VALIDATION",
+      "semantic_class": "FACTUAL_MATCH_PLAYER_HISTORY"
+    },
+    {
+      "id": "cardstats",
+      "domain": null,
+      "status": "PENDING_EXACT_DOMAIN_VALIDATION",
+      "semantic_class": "DISCIPLINE_DATA_CANDIDATE"
+    },
+    {
+      "id": "fplanalyticsdashboard_factual",
+      "domain": "fplanalyticsdashboard.com",
+      "status": "REFERENCE_ONLY_PENDING_FIELD_EXTRACTOR",
+      "semantic_class": "MIXED_SOURCE_FACTUAL_SUBSET_ONLY"
+    }
+  ]
+}

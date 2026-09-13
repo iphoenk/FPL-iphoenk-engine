@@ -21,6 +21,60 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'
+      - name: Materialize canonical Wave1 runtime wiring
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          registry_path = Path('config/v6/source_registry.json')
+          registry = json.loads(registry_path.read_text())
+          statmuse = next(source for source in registry['sources'] if source['id'] == 'statmuse')
+          if not any(request.get('id') == 'player_xg' for request in statmuse.get('requests', [])):
+              statmuse.setdefault('requests', []).append({
+                  'id': 'player_xg',
+                  'url': 'https://www.statmuse.com/fc/ask/premier-league-xg-by-player-{{season.start_year}}-{{season.end_year}}',
+                  'expect': 'text',
+                  'validation': {'required_text_all': ['Premier League', 'xG']},
+              })
+          statmuse['max_body_bytes'] = max(int(statmuse.get('max_body_bytes') or 0), 4000000)
+          statmuse['content_hash_dedup'] = True
+          registry_path.write_text(json.dumps(registry, indent=2) + '\n')
+
+          collector_path = Path('src/runtime_v6/collector.py')
+          collector = collector_path.read_text()
+          import_anchor = 'from .noauth_source_native import build_noauth_source_native_datasets\n'
+          import_line = 'from .player_observation import augment_source_native_datasets\n'
+          if import_line not in collector:
+              if import_anchor not in collector:
+                  raise SystemExit('collector import anchor missing')
+              collector = collector.replace(import_anchor, import_anchor + import_line, 1)
+          call_anchor = '    datasets.update(noauth_datasets)\n'
+          call_line = '    datasets = augment_source_native_datasets(results, identity_map, datasets)\n'
+          if call_line not in collector:
+              if call_anchor not in collector:
+                  raise SystemExit('collector dataset anchor missing')
+              collector = collector.replace(call_anchor, call_anchor + call_line, 1)
+          collector_path.write_text(collector)
+
+          crosswalk_path = Path('src/runtime_v6/verified_crosswalks.py')
+          crosswalk = crosswalk_path.read_text()
+          old_sig = 'def _player_link(source_id: str, native_id: Any, config_source: dict[str, Any]) -> dict[str, Any]:\n'
+          new_sig = 'def _player_link(source_id: str, native_id: Any, config_source: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:\n'
+          if old_sig in crosswalk:
+              crosswalk = crosswalk.replace(old_sig, new_sig, 1)
+          old_verified = '        "verified_at": config_source.get("verified_at"),\n        "provenance": {\n            "source_id": source_id,\n            "canonical_anchor": "official_fpl.bootstrap.elements.code",\n'
+          new_verified = '        "verified_at": config_source.get("player_crosswalk_verified_at") or config_source.get("verified_at"),\n        "provenance": {\n            "source_id": source_id,\n            "canonical_anchor": "official_fpl.bootstrap.elements.code",\n            "official_fpl_code": row.get("official_fpl_code"),\n            "reep_id": row.get("reep_id"),\n            "provider_column": config_source.get("player_crosswalk_provider_column"),\n            "verification_release": config_source.get("player_crosswalk_release"),\n            "verification_commit": config_source.get("player_crosswalk_commit"),\n'
+          if old_verified in crosswalk:
+              crosswalk = crosswalk.replace(old_verified, new_verified, 1)
+          old_call = '            links[source_id] = _player_link(source_id, native_id, config_source)\n'
+          new_call = '            links[source_id] = _player_link(source_id, native_id, config_source, row)\n'
+          if old_call in crosswalk:
+              crosswalk = crosswalk.replace(old_call, new_call, 1)
+          if new_sig not in crosswalk or new_call not in crosswalk or '"reep_id": row.get("reep_id")' not in crosswalk:
+              raise SystemExit('crosswalk provenance patch did not apply cleanly')
+          crosswalk_path.write_text(crosswalk)
+          PY
       - name: Download public deterministic identity inputs
         run: |
           curl --fail --silent --show-error --location --retry 3 \
@@ -39,14 +93,14 @@ jobs:
             --report /tmp/report.json
           cat /tmp/report.json
           cp /tmp/verified_crosswalks.json config/v6/verified_crosswalks.json
-      - name: Persist generated crosswalk on Wave1 branch
+      - name: Persist generated Wave1 state on branch
         run: |
-          if git diff --quiet -- config/v6/verified_crosswalks.json; then
-            echo "Generated crosswalk already current"
+          if git diff --quiet -- config/v6/verified_crosswalks.json config/v6/source_registry.json src/runtime_v6/collector.py src/runtime_v6/verified_crosswalks.py; then
+            echo "Generated Wave1 state already current"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add config/v6/verified_crosswalks.json
-          git commit -m "V6: materialize deterministic provider player crosswalks"
+          git add config/v6/verified_crosswalks.json config/v6/source_registry.json src/runtime_v6/collector.py src/runtime_v6/verified_crosswalks.py
+          git commit -m "V6: wire deterministic player identity into normalized providers"
           git push origin HEAD:fix/v6-identity-wave1-completion

@@ -355,8 +355,21 @@
           "id": "home",
           "url": "https://www.fantasyfootballscout.co.uk/",
           "expect": "text"
+        },
+        {
+          "id": "team_news",
+          "url": "https://www.fantasyfootballscout.co.uk/team-news/",
+          "expect": "text",
+          "validation": {
+            "required_text_any": [
+              "Predicted Line-ups",
+              "Predicted Lineups"
+            ]
+          }
         }
-      ]
+      ],
+      "acquisition_kind": "generic_http",
+      "content_hash_dedup": true
     },
     {
       "id": "fbref",

@@ -135,7 +135,10 @@ def collect_http(
     previous_data = _previous_data(previous)
 
     if request_cfgs:
-        request_workers = min(len(request_cfgs), max(1, client.request_workers))
+        request_workers = min(
+            len(request_cfgs),
+            max(1, int(source.get("request_workers") or client.request_workers)),
+        )
         attempts_by_id: dict[str, dict[str, Any]] = {}
         with ThreadPoolExecutor(max_workers=request_workers) as pool:
             futures = {

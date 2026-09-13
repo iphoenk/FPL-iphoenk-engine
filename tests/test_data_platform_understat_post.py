@@ -73,6 +73,22 @@ class _ConcurrencyClient:
                 self.active -= 1
 
 
+class _FailingClient:
+    request_workers = 4
+    conditional_revalidation = True
+
+    def fetch(self, source, request_cfg, previous=None):
+        return {
+            "request_id": request_cfg["id"],
+            "status": "UNAVAILABLE",
+            "health": "AMBER",
+            "url": request_cfg["url"],
+            "checked_at": "2026-09-13T09:00:00+00:00",
+            "error": "ConnectTimeout",
+            "content_changed": None,
+        }
+
+
 def test_acquisition_client_supports_registry_driven_form_post_without_get_fallback():
     response = _Response(
         {
@@ -217,15 +233,44 @@ def test_understat_source_worker_override_serializes_requests():
     assert result["coverage"]["successful_checks_this_cycle"] == 2
 
 
-def test_understat_transport_override_is_temporary_and_preserves_last_good_cache_contract():
+def test_understat_transport_hardening_is_canonical_and_production_overrides_stay_empty():
     root = Path(__file__).resolve().parents[1]
-    payload = json.loads((root / "config" / "v6" / "source_overrides.json").read_text())
+    registry = json.loads((root / "config" / "v6" / "source_registry.json").read_text())
+    overrides = json.loads((root / "config" / "v6" / "source_overrides.json").read_text())
+    understat = next(row for row in registry["sources"] if row["id"] == "understat")
 
-    override = payload["sources"]["understat"]
-    lifecycle = payload["lifecycle"]["understat"]
+    assert understat["connect_timeout_seconds"] == 10
+    assert understat["request_workers"] == 1
+    assert overrides["sources"] == {}
+    assert overrides["lifecycle"] == {}
+    assert registry["policy"]["preserve_last_good_on_failure"] is True
 
-    assert override["connect_timeout_seconds"] == 10
-    assert override["request_workers"] == 1
-    assert lifecycle["temporary"] is True
-    assert lifecycle["review_by"] == "2026-09-20"
-    assert "last-good-cache fallback" in lifecycle["reason"]
+
+def test_understat_transport_failure_keeps_explicit_last_good_cache():
+    source = {
+        "id": "understat",
+        "name": "Understat",
+        "category": "advanced_performance",
+        "adapter": "http",
+        "critical": False,
+        "request_workers": 1,
+        "requests": [
+            {"id": "epl_2026", "url": "https://understat.com/league/EPL/2026"},
+            {"id": "players_api", "url": "https://understat.com/main/getPlayersStats/"},
+        ],
+    }
+    previous = {
+        "data": {
+            "epl_2026": {"request_id": "epl_2026", "status": "AVAILABLE", "body": "cached league"},
+            "players_api": {"request_id": "players_api", "status": "AVAILABLE", "json": {"players": []}},
+        }
+    }
+
+    result = collect_http(source, _FailingClient(), previous)
+
+    assert result["health"] == "AMBER"
+    assert result["availability"] == "PARTIAL"
+    assert result["effective_state"] == "STALE_CACHE"
+    assert result["current_run_action"] == "LAST_GOOD_CACHE"
+    assert result["coverage"]["usable_requests"] == 2
+    assert {row["data_origin"] for row in result["data"].values()} == {"LAST_GOOD_CACHE"}

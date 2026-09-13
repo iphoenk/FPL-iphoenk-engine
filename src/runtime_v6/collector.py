@@ -7,6 +7,7 @@ from typing import Any
 
 from .adapters import collect_source
 from .entity_scope import entity_scopes_for_source, source_scope_map
+from .ffscout_public import augment_ffscout_public_dataset, enrich_ffscout_public_identity
 from .health import build_source_health
 from .http_client import AcquisitionClient, utc_now
 from .identity import build_player_identity_map
@@ -87,6 +88,7 @@ def _publish_source_native_datasets(
         raise RuntimeError(f"source_native_parser_overlap:{overlap}")
     datasets.update(noauth_datasets)
     datasets = augment_source_native_datasets(results, identity_map, datasets)
+    datasets = augment_ffscout_public_dataset(results, identity_map, datasets)
     target = NORMALIZED / "sources"
     expected = {f"{source_id}.json" for source_id in datasets}
     if target.exists():
@@ -198,10 +200,13 @@ def run() -> dict[str, Any]:
     )
     scopes = source_scope_map(config)
     identity_map = apply_entity_scope_identity_semantics(
-        enrich_verified_external_crosswalks(
-            enrich_shared_identity_bridges(
-                build_player_identity_map(official, results, source_ids),
-                official,
+        enrich_ffscout_public_identity(
+            enrich_verified_external_crosswalks(
+                enrich_shared_identity_bridges(
+                    build_player_identity_map(official, results, source_ids),
+                    official,
+                    results,
+                ),
                 results,
             ),
             results,

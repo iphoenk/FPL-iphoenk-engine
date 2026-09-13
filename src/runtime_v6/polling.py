@@ -175,19 +175,23 @@ def poll_decision(
         or (previous or {}).get("checked_at")
     )
     last_scheduler_slot = _parse_dt(previous_polling.get("scheduler_slot"))
-    cadence_reference = last_scheduler_slot or last_polled_at
 
-    if previous is None or cadence_reference is None:
+    if previous is None or last_polled_at is None:
         due = True
         reason = "DUE"
     elif interval is None or interval <= scheduler_interval:
+        cadence_reference = last_scheduler_slot or last_polled_at
         current_slot = scheduler_slot_start(current, scheduler_interval)
         previous_slot = scheduler_slot_start(cadence_reference, scheduler_interval)
         due = current_slot != previous_slot
         reason = "DUE" if due else "ALREADY_POLLED_THIS_SLOT"
     else:
+        # Long-interval sources must advance only from an actual provider poll.
+        # A NOT_DUE evaluation writes the current scheduler slot for observability;
+        # using that evaluation slot as cadence would postpone the next real poll
+        # forever on an hourly scheduler.
         due = (
-            current.astimezone(timezone.utc) - cadence_reference.astimezone(timezone.utc)
+            current.astimezone(timezone.utc) - last_polled_at.astimezone(timezone.utc)
         ).total_seconds() >= interval * 60
         reason = "DUE" if due else "NOT_DUE"
 
@@ -240,6 +244,7 @@ def carry_forward_skipped(
             **{key: value for key, value in decision.items() if key != "budget"},
             "skipped": True,
             "last_polled_at": ((prior.get("polling") or {}).get("last_polled_at")) or prior.get("checked_at"),
+            "last_evaluated_scheduler_slot": decision.get("scheduler_slot"),
         },
         "budget": decision["budget"],
     }
@@ -248,6 +253,7 @@ def carry_forward_skipped(
         {
             "adaptive_polling": True,
             "scheduled_skip_is_not_transport_failure": True,
+            "scheduled_skip_does_not_advance_poll_cadence": True,
             "single_logical_acquisition_per_scheduler_slot": True,
             "budget_guard": decision["budget"].get("limit") is not None,
             "verification_gate": source.get("verification_required") is True,
@@ -275,6 +281,7 @@ def attach_poll_result(
         **{key: value for key, value in decision.items() if key != "budget"},
         "skipped": False,
         "last_polled_at": out.get("checked_at") or utc_now(),
+        "last_evaluated_scheduler_slot": decision.get("scheduler_slot"),
         "provider_calls_this_poll": provider_calls,
     }
     governance = dict(out.get("governance") or {})

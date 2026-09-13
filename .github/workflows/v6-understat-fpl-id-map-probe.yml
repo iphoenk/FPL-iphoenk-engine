@@ -1,0 +1,139 @@
+name: V6 Understat FPL-ID-Map one-shot probe
+
+on:
+  push:
+    branches:
+      - ops/v6-understat-profile-external-id-probe
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Hydrate current observed Understat and Official identity data
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/understat-idmap
+          git fetch --depth=1 origin '+refs/heads/runtime-data-v6:refs/remotes/origin/runtime-data-v6'
+          git show origin/runtime-data-v6:data/v6/normalized/sources/understat.json > /tmp/understat-idmap/understat.json
+          git show origin/runtime-data-v6:data/v6/evidence/player_identity_map.json > /tmp/understat-idmap/player_identity_map.json
+
+      - name: Fetch pinned FPL-ID-Map Master.csv
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 3 --retry-delay 1 \
+            'https://raw.githubusercontent.com/ChrisMusson/FPL-ID-Map/e5a9942affd98501db473a8d3b6a0f9e93751e8a/Master.csv' \
+            -o /tmp/understat-idmap/Master.csv
+          sha256sum /tmp/understat-idmap/Master.csv | tee /tmp/understat-idmap/master_sha256.txt
+
+      - name: Compare exact native IDs only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import csv,json
+          from collections import defaultdict
+          from pathlib import Path
+
+          root=Path('/tmp/understat-idmap')
+          observed_doc=json.loads((root/'understat.json').read_text())
+          config=json.loads(Path('config/v6/verified_crosswalks.json').read_text())
+          identity=json.loads((root/'player_identity_map.json').read_text())
+
+          observed={str(r['source_native_id']):r for r in ((observed_doc.get('record_groups') or {}).get('players') or []) if isinstance(r,dict) and r.get('source_native_id') is not None}
+          known={str(r['source_native_id']) for r in config['sources']['understat']['players']}
+          remaining={k:v for k,v in observed.items() if k not in known}
+
+          official_by_code={}
+          duplicate_official=set()
+          for key,row in (identity.get('mappings') or {}).items():
+              if not isinstance(row,dict) or row.get('official_code') is None: continue
+              code=str(row['official_code'])
+              eid=int(row.get('official_fpl_element_id') or key)
+              if code in official_by_code and official_by_code[code] != eid:
+                  duplicate_official.add(code)
+              official_by_code[code]=eid
+          for code in duplicate_official:
+              official_by_code.pop(code,None)
+          if duplicate_official:
+              raise SystemExit(f'duplicate Official FPL codes: {sorted(duplicate_official)[:20]}')
+
+          rows_by_understat=defaultdict(list)
+          with open(root/'Master.csv',encoding='utf-8-sig',newline='') as fh:
+              for row in csv.DictReader(fh):
+                  native=str(row.get('understat') or '').strip()
+                  if native and native in remaining:
+                      rows_by_understat[native].append(row)
+
+          conflicts={k:v for k,v in rows_by_understat.items() if len(v)>1}
+          candidates=[]; stale=[]; absent=[]
+          for native in sorted(remaining,key=lambda x:int(x)):
+              rows=rows_by_understat.get(native,[])
+              if not rows:
+                  absent.append(int(native)); continue
+              if len(rows)!=1:
+                  continue
+              row=rows[0]
+              code=str(row.get('code') or '').strip()
+              if code in official_by_code:
+                  candidates.append({
+                      'source_native_id':int(native),
+                      'official_fpl_code':int(code),
+                      'official_element_id':official_by_code[code],
+                      'transfermarkt_id':int(row['transfermarkt']) if str(row.get('transfermarkt') or '').strip() else None,
+                      'fbref_id':str(row.get('fbref') or '').strip() or None,
+                      'whoscored_id':int(row['whoscored']) if str(row.get('whoscored') or '').strip() else None,
+                      'fpl_id_map_commit':'e5a9942affd98501db473a8d3b6a0f9e93751e8a',
+                      'method':'PINNED_FPL_ID_MAP_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE',
+                  })
+              else:
+                  stale.append({'source_native_id':int(native),'fpl_id_map_code':int(code) if code else None})
+
+          official_targets=defaultdict(list)
+          for c in candidates:
+              official_targets[c['official_fpl_code']].append(c['source_native_id'])
+          candidate_conflicts={str(k):v for k,v in official_targets.items() if len(v)>1}
+          if conflicts or candidate_conflicts:
+              raise SystemExit(f'crosswalk conflict native={list(conflicts)} official={candidate_conflicts}')
+
+          output={
+              'schema_version':1,
+              'registry':'ChrisMusson/FPL-ID-Map',
+              'registry_commit':'e5a9942affd98501db473a8d3b6a0f9e93751e8a',
+              'registry_commit_date':'2026-09-04T05:48:51Z',
+              'observed_count':len(observed),
+              'already_verified_count':len(observed)-len(remaining),
+              'remaining_gap_count':len(remaining),
+              'exact_current_official_candidates':len(candidates),
+              'stale_or_noncurrent_code_count':len(stale),
+              'absent_count':len(absent),
+              'candidates':candidates,
+              'stale':stale,
+              'absent_native_ids':absent,
+              'name_matching_used':False,
+              'fuzzy_matching_used':False,
+              'auto_promotion_allowed':False,
+              'curated_review_required':True,
+              'master_csv_sha256':(root/'master_sha256.txt').read_text().split()[0],
+          }
+          (root/'result.json').write_text(json.dumps(output,indent=2,ensure_ascii=False,sort_keys=True)+'\n')
+          print(json.dumps({k:output[k] for k in ('observed_count','already_verified_count','remaining_gap_count','exact_current_official_candidates','stale_or_noncurrent_code_count','absent_count')},indent=2))
+          print(json.dumps(candidates,indent=2))
+          PY
+
+      - name: Upload review-only evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-understat-fpl-id-map-probe
+          path: /tmp/understat-idmap/result.json
+          retention-days: 1

@@ -174,10 +174,18 @@ def _opta_link(native_id: int) -> dict[str, Any]:
 
 def _player_link(source_id: str, native_id: Any, config_source: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:
     method = str(
-        config_source.get("player_verification_method")
+        row.get("verification_method")
+        or config_source.get("player_verification_method")
         or config_source.get("verification_method")
         or "VERIFIED_PLAYER_PROVIDER_CROSSWALK"
     )
+    row_evidence = row.get("evidence")
+    evidence = (
+        list(row_evidence)
+        if isinstance(row_evidence, list)
+        else list(config_source.get("evidence") or [])
+    )
+    bridge_path = row.get("bridge_path")
     return {
         "source_id": source_id,
         "source_native_id": native_id,
@@ -189,22 +197,35 @@ def _player_link(source_id: str, native_id: Any, config_source: dict[str, Any], 
         "confidence": 1.0,
         "verified": True,
         "joinable": True,
-        "verified_at": config_source.get("player_crosswalk_verified_at") or config_source.get("verified_at"),
+        "verified_at": (
+  row.get("verified_at")
+  or config_source.get("player_crosswalk_verified_at")
+  or config_source.get("verified_at")
+        ),
         "provenance": {
-            "source_id": source_id,
-            "canonical_anchor": "official_fpl.bootstrap.elements.code",
-            "official_fpl_code": row.get("official_fpl_code"),
-            "reep_id": row.get("reep_id"),
-            "provider_column": config_source.get("player_crosswalk_provider_column"),
-            "verification_release": config_source.get("player_crosswalk_release"),
-            "verification_commit": config_source.get("player_crosswalk_commit"),
-            "crosswalk_config": "config/v6/verified_crosswalks.json",
-            "evidence": list(config_source.get("evidence") or []),
-            "name_matching_used": False,
+  "source_id": source_id,
+  "canonical_anchor": "official_fpl.bootstrap.elements.code",
+  "official_fpl_code": row.get("official_fpl_code"),
+  "official_fpl_element_id": row.get("official_fpl_element_id"),
+  "reep_id": row.get("reep_id"),
+  "provider_column": config_source.get("player_crosswalk_provider_column"),
+  "verification_release": (
+      row.get("verification_release")
+      or config_source.get("player_crosswalk_release")
+  ),
+  "verification_commit": (
+      row.get("verification_commit")
+      or config_source.get("player_crosswalk_commit")
+  ),
+  "crosswalk_config": "config/v6/verified_crosswalks.json",
+  "evidence": evidence,
+  "bridge_path": list(bridge_path) if isinstance(bridge_path, list) else [],
+  "review_status": row.get("review_status"),
+  "review_reference": row.get("review_reference"),
+  "name_matching_used": False,
+  "fuzzy_matching_used": False,
         },
     }
-
-
 def _player_mapping_by_code(identity_map: dict[str, Any]) -> tuple[dict[int, dict[str, Any]], set[int]]:
     by_code: dict[int, dict[str, Any]] = {}
     duplicate_codes: set[int] = set()

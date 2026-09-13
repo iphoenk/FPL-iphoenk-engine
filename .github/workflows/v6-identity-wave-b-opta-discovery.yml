@@ -1,0 +1,145 @@
+name: V6 Identity Wave B Opta one-shot discovery
+
+on:
+  push:
+    branches:
+      - ops/v6-identity-wave-b-opta-discovery
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install V6 locked runtime dependencies
+        run: python -m pip install --require-hashes -r requirements-v6.lock
+
+      - name: Hydrate read-only runtime identity evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "+refs/heads/runtime-data-v6:refs/remotes/origin/runtime-data-v6"
+          git archive origin/runtime-data-v6 \
+            data/v6/evidence/player_identity_map.json \
+            data/v6/normalized/sources/understat.json \
+            data/v6/normalized/sources/fotmob.json \
+            data/v6/normalized/sources/statmuse.json | tar -x -C .
+
+      - name: Build exact observed gap matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/wave-b
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from src.runtime_v6.identity_coverage import build_player_identity_coverage_truth
+
+          def load(path):
+              return json.loads(Path(path).read_text(encoding='utf-8'))
+
+          identity = load('data/v6/evidence/player_identity_map.json')
+          datasets = {p: load(f'data/v6/normalized/sources/{p}.json') for p in ('understat', 'fotmob', 'statmuse')}
+          report = build_player_identity_coverage_truth(identity, datasets)
+          slim = {
+              'schema_version': 1,
+              'canonical_player_count': report['canonical_player_count'],
+              'integrity_status': report['integrity_status'],
+              'integrity_errors': report['integrity_errors'],
+              'sources': {p: report['sources'][p] for p in ('opta_the_analyst', 'understat', 'fotmob', 'statmuse')},
+          }
+          Path('/tmp/wave-b/gap_matrix.json').write_text(json.dumps(slim, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+
+          elements = []
+          for key, row in (identity.get('mappings') or {}).items():
+              code = row.get('official_code')
+              eid = row.get('official_fpl_element_id') or key
+              if code is not None:
+                  elements.append({'id': int(eid), 'code': int(code)})
+          Path('/tmp/wave-b/bootstrap_codes.json').write_text(json.dumps({'elements': elements}, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+
+      - name: Fetch pinned Reep v0 and pinned Reep v1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-delay 2 --output /tmp/wave-b/reep_v0_people.csv https://raw.githubusercontent.com/withqwerty/reep/main/data/people.csv
+          curl --fail --location --retry 3 --retry-delay 2 --output /tmp/wave-b/reep_latest.json https://data.reep.football/releases/latest.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          latest = json.loads(Path('/tmp/wave-b/reep_latest.json').read_text())
+          expected = '20260907T201034Z'
+          if str(latest.get('stamp') or '') != expected:
+              raise SystemExit(f"Reep v1 release stamp mismatch: {latest.get('stamp')}")
+          if str(latest.get('manifest_sha256') or '') != '65356d7522832ea58c19993a95eb31ceb9d6e22e3ff518014387734b13e43529':
+              raise SystemExit('Reep release manifest checksum pointer mismatch')
+          Path('/tmp/wave-b/manifest_url.txt').write_text(str(latest['manifest_url']))
+          PY
+          curl --fail --location --retry 3 --retry-delay 2 --output /tmp/wave-b/reep_release.json "$(cat /tmp/wave-b/manifest_url.txt)"
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          expected_manifest = '65356d7522832ea58c19993a95eb31ceb9d6e22e3ff518014387734b13e43529'
+          if hashlib.sha256(Path('/tmp/wave-b/reep_release.json').read_bytes()).hexdigest() != expected_manifest:
+              raise SystemExit('Reep release manifest checksum mismatch')
+          manifest = json.loads(Path('/tmp/wave-b/reep_release.json').read_text())
+          entry = manifest['files']['csv/bridges.csv.gz']
+          expected_sha = 'a03aef520a454bdcd181b5b332b91e7b41ee57f4914e6e2c456cf49a8b86a735'
+          if entry.get('sha256') != expected_sha or int(entry.get('rows') or 0) != 6187645:
+              raise SystemExit('Reep bridge manifest pin mismatch')
+          Path('/tmp/wave-b/bridges_url.txt').write_text(entry['url'])
+          Path('/tmp/wave-b/bridges_manifest_entry.json').write_text(json.dumps(entry, indent=2, sort_keys=True) + '\n')
+          PY
+          curl --fail --location --retry 3 --retry-delay 2 --output /tmp/wave-b/reep_v1_bridges.csv.gz "$(cat /tmp/wave-b/bridges_url.txt)"
+          printf '%s  %s\n' a03aef520a454bdcd181b5b332b91e7b41ee57f4914e6e2c456cf49a8b86a735 /tmp/wave-b/reep_v1_bridges.csv.gz | sha256sum -c -
+          gzip -dc /tmp/wave-b/reep_v1_bridges.csv.gz > /tmp/wave-b/reep_v1_bridges.csv
+
+      - name: Build deterministic Understat Wave B candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/v6_build_identity_wave_b_candidates.py \
+            --bootstrap /tmp/wave-b/bootstrap_codes.json \
+            --understat-dataset data/v6/normalized/sources/understat.json \
+            --reep-v0-people /tmp/wave-b/reep_v0_people.csv \
+            --reep-v1-bridges /tmp/wave-b/reep_v1_bridges.csv \
+            --output /tmp/wave-b/understat_candidates.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path('/tmp/wave-b/understat_candidates.json').read_text())
+          keys = (
+              'candidate_count', 'direct_candidate_count', 'fallback_candidate_count',
+              'observed_unmapped_before', 'projected_observed_unmapped_after_reviewed_promotion',
+              'candidate_observed_join_gain', 'official_codes_with_v1_opta_person_numeric_anchor',
+              'official_codes_with_v0_tm_anchor', 'v0_tm_anchors_missing_in_v1'
+          )
+          print(json.dumps({k: p[k] for k in keys}, indent=2))
+          print('UNRESOLVED=' + json.dumps(p['unresolved_observed_native_ids']))
+          PY
+
+      - name: Upload review-only evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-identity-wave-b-opta-discovery
+          path: |
+            /tmp/wave-b/gap_matrix.json
+            /tmp/wave-b/understat_candidates.json
+            /tmp/wave-b/reep_latest.json
+            /tmp/wave-b/reep_release.json
+            /tmp/wave-b/bridges_manifest_entry.json
+          if-no-files-found: warn
+          retention-days: 3

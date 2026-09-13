@@ -112,14 +112,26 @@ jobs:
           url = str(latest.get('manifest_url') or '')
           if not url:
               raise SystemExit('Reep latest pointer has no manifest_url')
+          expected_manifest = '65356d7522832ea58c19993a95eb31ceb9d6e22e3ff518014387734b13e43529'
+          if str(latest.get('manifest_sha256') or '') != expected_manifest:
+              raise SystemExit('Reep release manifest checksum pointer mismatch')
           Path('/tmp/wave-b/manifest_url.txt').write_text(url)
           print(f'pinned Reep release verified: {actual}')
           PY
           curl --fail --location --retry 3 --retry-delay 2 \
             --output /tmp/wave-b/reep_release.json \
             "$(cat /tmp/wave-b/manifest_url.txt)"
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          expected = '65356d7522832ea58c19993a95eb31ceb9d6e22e3ff518014387734b13e43529'
+          actual = hashlib.sha256(Path('/tmp/wave-b/reep_release.json').read_bytes()).hexdigest()
+          if actual != expected:
+              raise SystemExit(f'Reep release manifest checksum mismatch expected={expected} actual={actual}')
+          print(f'Reep manifest checksum verified: {actual}')
+          PY
 
-      - name: Resolve and verify Reep v1 bridges CSV
+      - name: Resolve and verify Reep v1 canonical bridges CSV
         shell: bash
         run: |
           set -euo pipefail
@@ -127,39 +139,37 @@ jobs:
           import json
           from pathlib import Path
           manifest = json.loads(Path('/tmp/wave-b/reep_release.json').read_text())
-          candidates = []
-          def walk(value):
-              if isinstance(value, dict):
-                  for v in value.values(): walk(v)
-              elif isinstance(value, list):
-                  for v in value: walk(v)
-              elif isinstance(value, str):
-                  low = value.lower()
-                  if 'bridge' in low and low.endswith('.csv'):
-                      candidates.append(value)
-          walk(manifest)
-          if not candidates:
-              raise SystemExit('No bridges CSV reference found in Reep release manifest')
-          preferred = next((x for x in candidates if 'bridges' in x.lower()), candidates[0])
-          if preferred.startswith('http://') or preferred.startswith('https://'):
-              url = preferred
-          else:
-              url = 'https://data.reep.football/' + preferred.lstrip('/')
+          entry = ((manifest.get('files') or {}).get('csv/bridges.csv.gz') or {})
+          url = str(entry.get('url') or '')
+          sha = str(entry.get('sha256') or '')
+          rows = int(entry.get('rows') or 0)
+          expected_sha = 'a03aef520a454bdcd181b5b332b91e7b41ee57f4914e6e2c456cf49a8b86a735'
+          if not url:
+              raise SystemExit('Reep canonical bridges URL missing from pinned release manifest')
+          if sha != expected_sha:
+              raise SystemExit(f'Reep bridges manifest checksum mismatch expected={expected_sha} actual={sha}')
+          if rows != 6187645:
+              raise SystemExit(f'Reep bridges row-count mismatch expected=6187645 actual={rows}')
           Path('/tmp/wave-b/bridges_url.txt').write_text(url)
-          print(url)
+          Path('/tmp/wave-b/bridges_manifest_entry.json').write_text(
+              json.dumps(entry, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(entry, indent=2, sort_keys=True))
           PY
           curl --fail --location --retry 3 --retry-delay 2 \
-            --output /tmp/wave-b/reep_v1_bridges.csv \
+            --output /tmp/wave-b/reep_v1_bridges.csv.gz \
             "$(cat /tmp/wave-b/bridges_url.txt)"
           python - <<'PY'
           import hashlib
           from pathlib import Path
           expected = 'a03aef520a454bdcd181b5b332b91e7b41ee57f4914e6e2c456cf49a8b86a735'
-          actual = hashlib.sha256(Path('/tmp/wave-b/reep_v1_bridges.csv').read_bytes()).hexdigest()
+          actual = hashlib.sha256(Path('/tmp/wave-b/reep_v1_bridges.csv.gz').read_bytes()).hexdigest()
           if actual != expected:
               raise SystemExit(f'Reep bridges checksum mismatch expected={expected} actual={actual}')
           print(f'Reep bridges checksum verified: {actual}')
           PY
+          gzip -dc /tmp/wave-b/reep_v1_bridges.csv.gz > /tmp/wave-b/reep_v1_bridges.csv
+          test -s /tmp/wave-b/reep_v1_bridges.csv
 
       - name: Build deterministic Understat Wave B candidates
         shell: bash
@@ -216,6 +226,7 @@ jobs:
           PY
 
       - name: Upload review-only evidence
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: v6-identity-wave-b-discovery
@@ -225,6 +236,7 @@ jobs:
             /tmp/wave-b/provider_posture.json
             /tmp/wave-b/reep_latest.json
             /tmp/wave-b/reep_release.json
+            /tmp/wave-b/bridges_manifest_entry.json
             /tmp/wave-b/bridges_url.txt
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 3

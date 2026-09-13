@@ -13,6 +13,10 @@ NORMALIZATION_VERSION = "V6_FFSCOUT_PUBLIC_PLAYER_1"
 _PL_MEDIA_CODE_RE = re.compile(r"/players/(?:[^/?#]+/)?(\d+)\.png(?:[?#].*)?$", re.IGNORECASE)
 
 
+class FFScoutPublicError(RuntimeError):
+    pass
+
+
 def _int(value: Any) -> int | None:
     try:
         if value is None or str(value).strip() == "":
@@ -63,7 +67,8 @@ class _PremierLeagueAvatarParser(HTMLParser):
 
 
 def _observed_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    by_key: dict[tuple[int, str], dict[str, Any]] = {}
+    by_code: dict[int, list[dict[str, Any]]] = {}
+    seen_occurrences: set[tuple[int, str, str]] = set()
     for request_id in ("team_news", "home"):
         body = _request_body(payload, request_id)
         if not body.strip():
@@ -74,8 +79,54 @@ def _observed_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
             code = _int(row.get("premierleague_media_code"))
             if code is None:
                 continue
-            by_key[(code, request_id)] = row
-    return [by_key[key] for key in sorted(by_key)]
+            image_url = str(row.get("image_url") or "").strip()
+            occurrence = (code, request_id, image_url)
+            if occurrence in seen_occurrences:
+                continue
+            seen_occurrences.add(occurrence)
+            by_code.setdefault(code, []).append(dict(row))
+
+    rows: list[dict[str, Any]] = []
+    for code, evidence_rows in sorted(by_code.items()):
+        request_ids = sorted({str(row.get("request_id")) for row in evidence_rows if row.get("request_id")})
+        image_urls = sorted({str(row.get("image_url")) for row in evidence_rows if row.get("image_url")})
+        names = sorted({str(row.get("player_name")).strip() for row in evidence_rows if str(row.get("player_name") or "").strip()})
+        observations = sorted(
+            [
+                {
+                    "request_id": str(row.get("request_id") or "").strip() or None,
+                    "image_url": str(row.get("image_url") or "").strip() or None,
+                }
+                for row in evidence_rows
+            ],
+            key=lambda item: (str(item.get("request_id") or ""), str(item.get("image_url") or "")),
+        )
+        observation_types = sorted(
+            {
+                "PREDICTED_LINEUP_PUBLIC_REFERENCE" if request_id == "team_news" else "PUBLIC_PLAYER_REFERENCE"
+                for request_id in request_ids
+            }
+        )
+        rows.append(
+            {
+                "source_native_id": code,
+                "premierleague_media_code": code,
+                "player_name": names[0] if names else None,
+                "request_id": request_ids[0] if len(request_ids) == 1 else None,
+                "request_ids": request_ids,
+                "image_url": image_urls[0] if len(image_urls) == 1 else None,
+                "image_urls": image_urls,
+                "observation_type": (
+                    "PREDICTED_LINEUP_PUBLIC_REFERENCE"
+                    if "PREDICTED_LINEUP_PUBLIC_REFERENCE" in observation_types
+                    else "PUBLIC_PLAYER_REFERENCE"
+                ),
+                "observation_types": observation_types,
+                "observation_count": len(observations),
+                "observations": observations,
+            }
+        )
+    return rows
 
 
 def _official_by_code(identity_map: dict[str, Any]) -> tuple[dict[int, dict[str, Any]], set[int]]:
@@ -223,6 +274,122 @@ def _identity_by_code(identity_map: dict[str, Any]) -> dict[int, tuple[int, str]
     return resolved
 
 
+def _normalized_observations(row: dict[str, Any]) -> set[tuple[str, str]]:
+    observations: set[tuple[str, str]] = set()
+    for item in row.get("observations") or []:
+        if not isinstance(item, dict):
+            continue
+        request_id = str(item.get("request_id") or "").strip()
+        image_url = str(item.get("image_url") or "").strip()
+        if request_id or image_url:
+            observations.add((request_id, image_url))
+    if observations:
+        return observations
+    request_id = str(row.get("request_id") or "").strip()
+    image_url = str(row.get("image_url") or "").strip()
+    if request_id or image_url:
+        observations.add((request_id, image_url))
+    return observations
+
+
+def _consolidate_normalized_player_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_native: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        if not isinstance(row, dict) or row.get("source_native_id") is None:
+            continue
+        native = str(row.get("source_native_id")).strip()
+        if not native:
+            continue
+        by_native.setdefault(native, []).append(dict(row))
+
+    consolidated: list[dict[str, Any]] = []
+    for native, native_rows in sorted(by_native.items(), key=lambda item: (int(item[0]) if item[0].isdigit() else 10**18, item[0])):
+        official_ids = {
+            int(row["official_element_id"])
+            for row in native_rows
+            if row.get("official_element_id") is not None and str(row.get("official_element_id")).strip()
+        }
+        if len(official_ids) > 1:
+            raise FFScoutPublicError(
+                f"ffscout native id {native} maps to multiple Official FPL elements: {sorted(official_ids)}"
+            )
+
+        observations: set[tuple[str, str]] = set()
+        request_ids: set[str] = set()
+        image_urls: set[str] = set()
+        names: set[str] = set()
+        observation_types: set[str] = set()
+        for row in native_rows:
+            observations.update(_normalized_observations(row))
+            request_ids.update(str(value).strip() for value in (row.get("request_ids") or []) if str(value).strip())
+            image_urls.update(str(value).strip() for value in (row.get("image_urls") or []) if str(value).strip())
+            if str(row.get("request_id") or "").strip():
+                request_ids.add(str(row.get("request_id")).strip())
+            if str(row.get("image_url") or "").strip():
+                image_urls.add(str(row.get("image_url")).strip())
+            if str(row.get("player_name") or "").strip():
+                names.add(str(row.get("player_name")).strip())
+            observation_types.update(
+                str(value).strip() for value in (row.get("observation_types") or []) if str(value).strip()
+            )
+            if str(row.get("observation_type") or "").strip():
+                observation_types.add(str(row.get("observation_type")).strip())
+
+        for request_id, image_url in observations:
+            if request_id:
+                request_ids.add(request_id)
+            if image_url:
+                image_urls.add(image_url)
+        if "team_news" in request_ids:
+            observation_types.add("PREDICTED_LINEUP_PUBLIC_REFERENCE")
+        if any(request_id != "team_news" for request_id in request_ids):
+            observation_types.add("PUBLIC_PLAYER_REFERENCE")
+
+        mapped_rows = [row for row in native_rows if row.get("official_element_id") is not None]
+        status_rank = {"EXACT": 3, "VERIFIED_MANUAL": 2, "UNMAPPED": 0}
+        selected_status = max(
+            (str(row.get("identity_status") or "UNMAPPED") for row in mapped_rows),
+            key=lambda value: status_rank.get(value, 1),
+            default="UNMAPPED",
+        )
+        identity_method = next(
+            (str(row.get("identity_method")) for row in reversed(mapped_rows) if row.get("identity_method")),
+            None,
+        )
+        sorted_requests = sorted(request_ids)
+        sorted_images = sorted(image_urls)
+        sorted_types = sorted(observation_types)
+        sorted_observations = [
+            {"request_id": request_id or None, "image_url": image_url or None}
+            for request_id, image_url in sorted(observations)
+        ]
+        code = _int(native)
+        consolidated.append(
+            {
+                "source_native_id": code if code is not None else native,
+                "premierleague_media_code": code if code is not None else native,
+                "player_name": sorted(names)[0] if names else None,
+                "request_id": sorted_requests[0] if len(sorted_requests) == 1 else None,
+                "request_ids": sorted_requests,
+                "image_url": sorted_images[0] if len(sorted_images) == 1 else None,
+                "image_urls": sorted_images,
+                "observation_type": (
+                    "PREDICTED_LINEUP_PUBLIC_REFERENCE"
+                    if "PREDICTED_LINEUP_PUBLIC_REFERENCE" in observation_types
+                    else (sorted_types[0] if sorted_types else "PUBLIC_PLAYER_REFERENCE")
+                ),
+                "observation_types": sorted_types,
+                "observation_count": len(sorted_observations),
+                "observations": sorted_observations,
+                "official_element_id": next(iter(official_ids)) if official_ids else None,
+                "identity_status": selected_status if official_ids else "UNMAPPED",
+                "join_ready": bool(official_ids and selected_status in {"EXACT", "VERIFIED_MANUAL"}),
+                "identity_method": identity_method if official_ids else None,
+            }
+        )
+    return consolidated
+
+
 def build_ffscout_public_dataset(
     payload: dict[str, Any],
     identity_map: dict[str, Any],
@@ -233,10 +400,13 @@ def build_ffscout_public_dataset(
         code = _int(row.get("premierleague_media_code"))
         resolved = reverse.get(code or -1)
         player = dict(row)
-        player["observation_type"] = (
-            "PREDICTED_LINEUP_PUBLIC_REFERENCE"
-            if row.get("request_id") == "team_news"
-            else "PUBLIC_PLAYER_REFERENCE"
+        player["observation_type"] = str(
+            row.get("observation_type")
+            or (
+                "PREDICTED_LINEUP_PUBLIC_REFERENCE"
+                if row.get("request_id") == "team_news"
+                else "PUBLIC_PLAYER_REFERENCE"
+            )
         )
         player["official_element_id"] = resolved[0] if resolved else None
         player["identity_status"] = resolved[1] if resolved else "UNMAPPED"
@@ -265,8 +435,8 @@ def build_ffscout_public_dataset(
         "source_effective_state": payload.get("effective_state"),
         "current_run_action": payload.get("current_run_action"),
         "normalization_status": "NORMALIZED" if players else "EMPTY_OR_SCHEMA_UNAVAILABLE",
-        "record_count": len(players),
-        "record_groups": {"players": players},
+        "record_count": len(_consolidate_normalized_player_rows(players)),
+        "record_groups": {"players": _consolidate_normalized_player_rows(players)},
         "governance": {
             "data_only": True,
             "public_content_only": True,
@@ -275,6 +445,9 @@ def build_ffscout_public_dataset(
             "cross_source_synthesis": False,
             "silent_fuzzy_identity_join": False,
             "identity_join_requires_embedded_premierleague_media_code": True,
+            "player_identity_rows_are_unique_by_source_native_id": True,
+            "multiple_observations_for_same_native_id_are_consolidated": True,
+            "observation_evidence_is_retained": True,
             "decision_authority": "NONE",
             "prediction_authority": "NONE",
             "optimizer_authority": "NONE",
@@ -302,16 +475,14 @@ def augment_ffscout_public_dataset(
     groups = merged.setdefault("record_groups", {})
     current = groups.get("players") if isinstance(groups.get("players"), list) else []
     observed = ((overlay.get("record_groups") or {}).get("players") or [])
-    keyed: dict[tuple[str, str], dict[str, Any]] = {}
-    for row in [*current, *observed]:
-        if not isinstance(row, dict) or row.get("source_native_id") is None:
-            continue
-        keyed[(str(row.get("source_native_id")), str(row.get("request_id") or ""))] = dict(row)
-    groups["players"] = list(keyed.values())
+    groups["players"] = _consolidate_normalized_player_rows([*current, *observed])
     merged["record_count"] = sum(len(rows) for rows in groups.values() if isinstance(rows, list))
     if groups["players"]:
         merged["normalization_status"] = "NORMALIZED"
     merged.setdefault("governance", {}).update(overlay["governance"])
     merged["governance"]["ffscout_public_player_normalization_version"] = NORMALIZATION_VERSION
+    merged["governance"]["player_identity_rows_are_unique_by_source_native_id"] = True
+    merged["governance"]["multiple_observations_for_same_native_id_are_consolidated"] = True
+    merged["governance"]["observation_evidence_is_retained"] = True
     out["ffscout"] = merged
     return out

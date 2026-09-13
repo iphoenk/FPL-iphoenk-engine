@@ -30,11 +30,13 @@
     "statsbomb": ["COMPETITION", "EVENT", "FEED"],
     "football_data_uk": ["TEAM", "FIXTURE"],
     "espn": ["TEAM", "FIXTURE", "EVENT"],
-    "vaastav_fpl": ["PLAYER", "TEAM", "FIXTURE", "EVENT"]
+    "vaastav_fpl": ["PLAYER", "TEAM", "FIXTURE", "EVENT"],
+    "ffscout": ["FEED"]
   },
   "governance": {
     "identity_health_is_evaluated_only_for_relevant_entity_scopes": true,
     "non_applicable_entity_scopes_are_not_red": true,
-    "silent_fuzzy_runtime_join_allowed": false
+    "silent_fuzzy_runtime_join_allowed": false,
+    "ffscout_player_identity_requires_stable_native_id_before_player_scope": true
   }
 }

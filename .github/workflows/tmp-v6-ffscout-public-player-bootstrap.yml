@@ -19,6 +19,8 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'
+      - name: Install V6 CI dependencies
+        run: pip install --no-deps -r requirements-v6-ci.lock
       - name: Patch canonical V6 wiring
         run: |
           python - <<'PY'

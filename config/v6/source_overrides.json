@@ -7,6 +7,17 @@
     "inactive_sources_must_not_have_overrides": true,
     "effective_registry_is_published_for_drift_review": true
   },
-  "lifecycle": {},
-  "sources": {}
+  "lifecycle": {
+    "understat": {
+      "temporary": true,
+      "reason": "Mitigate intermittent GitHub-runner ConnectTimeout by increasing connect tolerance and serializing Understat requests while preserving explicit last-good-cache fallback",
+      "review_by": "2026-09-20"
+    }
+  },
+  "sources": {
+    "understat": {
+      "connect_timeout_seconds": 10,
+      "request_workers": 1
+    }
+  }
 }

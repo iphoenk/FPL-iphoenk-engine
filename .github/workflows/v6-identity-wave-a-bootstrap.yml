@@ -14,9 +14,9 @@ permissions:
 jobs:
   inspect-reep-v1:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - name: Inspect current Reep v1 release and exact bridge coverage
+      - name: Inspect Reep v1 posture and current observed join truth
         shell: bash
         run: |
           set -euo pipefail
@@ -33,86 +33,106 @@ jobs:
           release=json.load(open('release.json'))
           print('REEP_V1_STAMP', latest['stamp'])
           print('REEP_V1_MANIFEST_SHA256', latest['manifest_sha256'])
-          for key in ('csv/bridges.csv.gz','schemas/bridges.schema.json'):
+          for key in ('csv/bridges.csv.gz','csv/overlay_xids.csv.gz','schemas/bridges.schema.json','schemas/overlay_xids.schema.json'):
               f=release['files'][key]
               print(key, f['url'], f['sha256'], f.get('rows'))
           PY
-          bridges_url=$(python - <<'PY'
-          import json
-          print(json.load(open('release.json'))['files']['csv/bridges.csv.gz']['url'])
+          for spec in bridges overlay_xids; do
+            url=$(python - "$spec" <<'PY'
+          import json,sys
+          key='csv/'+sys.argv[1]+'.csv.gz'
+          print(json.load(open('release.json'))['files'][key]['url'])
           PY
           )
-          schema_url=$(python - <<'PY'
-          import json
-          print(json.load(open('release.json'))['files']['schemas/bridges.schema.json']['url'])
+            curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$spec.csv.gz"
+            schema_url=$(python - "$spec" <<'PY'
+          import json,sys
+          key='schemas/'+sys.argv[1]+'.schema.json'
+          print(json.load(open('release.json'))['files'][key]['url'])
           PY
           )
-          curl -fsSL --retry 3 --retry-delay 2 "$schema_url" -o bridges.schema.json
-          echo '--- bridges schema ---'
-          cat bridges.schema.json
-          curl -fsSL --retry 3 --retry-delay 2 "$bridges_url" -o bridges.csv.gz
-          echo '--- bridge header/sample ---'
-          gzip -dc bridges.csv.gz | head -n 6 || true
+            curl -fsSL --retry 3 --retry-delay 2 "$schema_url" -o "$spec.schema.json"
+          done
+          echo '--- overlay_xids schema ---'
+          cat overlay_xids.schema.json
+          echo '--- overlay sample ---'
+          gzip -dc overlay_xids.csv.gz | head -n 6 || true
           curl -fsSL --retry 3 --retry-delay 2 https://fantasy.premierleague.com/api/bootstrap-static/ -o bootstrap.json
+          for provider in understat fotmob statmuse; do
+            curl -fsSL --retry 3 --retry-delay 2 "https://raw.githubusercontent.com/iphoenk/FPL-iphoenk-engine/runtime-data-v6/data/v6/normalized/sources/${provider}.json" -o "${provider}.json"
+          done
           python - <<'PY'
-          import csv, gzip, json
-          from collections import defaultdict, Counter
-
-          providers={'opta_numeric','understat','statmuse_pl','fotmob'}
-          rows=[]
-          counts=Counter()
-          namespaces=defaultdict(Counter)
-          samples=defaultdict(list)
-          with gzip.open('bridges.csv.gz','rt',encoding='utf-8',newline='') as f:
-              r=csv.DictReader(f)
-              print('BRIDGE_COLUMNS', r.fieldnames)
-              for row in r:
-                  p=(row.get('provider') or row.get('provider_id') or '').strip()
-                  if p in providers:
-                      rows.append(row)
-                      counts[p]+=1
-                      ns=(row.get('namespace') or '').strip()
-                      namespaces[p][ns]+=1
-                      if len(samples[p])<3:
-                          samples[p].append(row)
-          print('PROVIDER_COUNTS', dict(counts))
-          print('PROVIDER_NAMESPACES', {k:dict(v) for k,v in namespaces.items()})
-          print('PROVIDER_SAMPLES', dict(samples))
+          import csv,gzip,json
+          from collections import defaultdict,Counter
 
           boot=json.load(open('bootstrap.json'))
-          codes={str(e['code']): int(e['id']) for e in boot['elements'] if e.get('code')}
-          print('OFFICIAL_FPL_PLAYERS', len(boot['elements']), 'UNIQUE_CODES', len(codes))
+          codes={str(e['code']):int(e['id']) for e in boot['elements'] if e.get('code')}
+          print('OFFICIAL_FPL_PLAYERS',len(boot['elements']),'UNIQUE_CODES',len(codes))
 
-          def rid(row):
-              return str(row.get('reep_id') or row.get('entity_id') or row.get('id') or '').strip()
-          def ext(row):
-              for k in ('external_id','provider_id_value','value','source_id'):
-                  v=row.get(k)
-                  if v not in (None,''):
-                      return str(v).strip()
-              return ''
+          def read(path):
+              with gzip.open(path,'rt',encoding='utf-8',newline='') as f:
+                  r=csv.DictReader(f)
+                  rows=list(r)
+                  return r.fieldnames,rows
+          bcols,bridges=read('bridges.csv.gz')
+          ocols,overlay=read('overlay_xids.csv.gz')
+          print('BRIDGE_COLUMNS',bcols)
+          print('OVERLAY_COLUMNS',ocols)
 
-          by_provider_entity=defaultdict(lambda: defaultdict(list))
-          for row in rows:
-              p=(row.get('provider') or row.get('provider_id') or '').strip()
-              by_provider_entity[p][rid(row)].append(ext(row))
-          opta_entity_for_code={}
-          for entity, vals in by_provider_entity['opta_numeric'].items():
-              for value in vals:
-                  if value in codes:
-                      opta_entity_for_code[value]=entity
-          print('FPL_CODES_WITH_REEP_V1_OPTA_NUMERIC', len(opta_entity_for_code))
-          for p in ('understat','statmuse_pl','fotmob'):
-              mapped={}
-              conflicts=[]
-              for code, entity in opta_entity_for_code.items():
-                  vals=sorted(set(v for v in by_provider_entity[p].get(entity,[]) if v))
-                  if len(vals)==1:
-                      mapped[code]=vals[0]
-                  elif len(vals)>1:
-                      conflicts.append((code,entity,vals))
-              reverse=defaultdict(list)
-              for code,native in mapped.items(): reverse[native].append(code)
-              dup={k:v for k,v in reverse.items() if len(v)>1}
-              print('EXACT_V1_BRIDGE',p,'mapped',len(mapped),'canonical_ratio',round(len(mapped)/len(codes),6),'multi_provider_id_conflicts',len(conflicts),'duplicate_native_ids',len(dup))
+          wanted={'understat','opta_numeric','statmuse_pl','fotmob'}
+          def summarize(rows,label):
+              c=Counter(); ns=defaultdict(Counter); samples=defaultdict(list)
+              for row in rows:
+                  p=(row.get('provider') or '').strip()
+                  if p not in wanted: continue
+                  c[p]+=1; ns[p][(row.get('namespace') or '').strip()]+=1
+                  if len(samples[p])<2: samples[p].append(row)
+              print(label+'_COUNTS',dict(c))
+              print(label+'_NAMESPACES',{k:dict(v) for k,v in ns.items()})
+              print(label+'_SAMPLES',dict(samples))
+          summarize(bridges,'CANONICAL_BRIDGE')
+          summarize(overlay,'OVERLAY')
+
+          def by_provider(rows):
+              out=defaultdict(lambda:defaultdict(set))
+              for row in rows:
+                  p=(row.get('provider') or '').strip()
+                  if p not in wanted: continue
+                  rid=str(row.get('reep_id') or '').strip()
+                  ext=str(row.get('external_id') or '').strip()
+                  ns=str(row.get('namespace') or '').strip()
+                  if rid and ext: out[p][rid].add((ns,ext))
+              return out
+          canon=by_provider(bridges); over=by_provider(overlay)
+
+          # v1 posture only: overlays are discovery candidates, never runtime identity authority.
+          opta_for_code={}
+          for rid,vals in over['opta_numeric'].items():
+              ids={ext for ns,ext in vals if ns in {'player','person',''} and ext in codes}
+              if len(ids)==1: opta_for_code[next(iter(ids))]=rid
+          print('OVERLAY_FPL_CODES_WITH_OPTA_NUMERIC',len(opta_for_code))
+          for provider,store in [('understat',canon),('statmuse_pl',over),('fotmob',canon)]:
+              mapped={}; multi=0
+              for code,rid in opta_for_code.items():
+                  vals={ext for ns,ext in store[provider].get(rid,set()) if ns in {'player','person',''}}
+                  if len(vals)==1: mapped[code]=next(iter(vals))
+                  elif len(vals)>1: multi+=1
+              rev=defaultdict(list)
+              for code,native in mapped.items(): rev[native].append(code)
+              dup=sum(1 for v in rev.values() if len(v)>1)
+              print('V1_DISCOVERY_CANDIDATE',provider,'mapped',len(mapped),'canonical_ratio',round(len(mapped)/len(codes),6),'multi',multi,'duplicate_native',dup,'AUTHORITY','DISCOVERY_ONLY')
+
+          # Current V6 observed player rows. This is observation truth, not proof of complete provider universe.
+          for provider in ('understat','fotmob','statmuse'):
+              d=json.load(open(provider+'.json'))
+              players=((d.get('record_groups') or {}).get('players') or [])
+              natives=[str(r.get('source_native_id')) for r in players if isinstance(r,dict) and r.get('source_native_id') is not None]
+              unique=set(natives)
+              dup=len(natives)-len(unique)
+              joined=[r for r in players if isinstance(r,dict) and r.get('source_native_id') is not None and r.get('official_element_id') is not None and str(r.get('identity_status') or '') in {'EXACT','VERIFIED_MANUAL'}]
+              joined_native={str(r.get('source_native_id')) for r in joined}
+              unmapped=unique-joined_native
+              ratio=(len(joined_native)/len(unique)) if unique else 0.0
+              print('OBSERVED_JOIN',provider,'rows',len(players),'unique_native',len(unique),'joined',len(joined_native),'unmapped',len(unmapped),'duplicates',dup,'ratio',round(ratio,6),'normalization',d.get('normalization_version'))
+              print('OBSERVED_UNMAPPED_SAMPLE',provider,sorted(unmapped)[:20])
           PY

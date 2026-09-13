@@ -37,16 +37,33 @@
       }
     }
   },
+  "direct_runtime_evidence": {
+    "ffscout": {
+      "surface": "PUBLIC_TEAM_NEWS_AND_PUBLIC_PAGE_PLAYER_REFERENCES",
+      "namespace": "resources.premierleague.com_player_media_code",
+      "canonical_anchor": "official_fpl.bootstrap.elements.code",
+      "verification_method": "FFSCOUT_PUBLIC_PREMIERLEAGUE_MEDIA_CODE_EXACT",
+      "may_directly_promote_to_v6_join": true,
+      "public_content_only": true,
+      "member_paywalled_stats_acquired": false,
+      "name_matching_used": false,
+      "fuzzy_matching_used": false,
+      "reason": "The embedded Premier League media-code numeric identifier is compared directly with Official FPL bootstrap.elements.code; display names are evidence only and never identity keys."
+    }
+  },
   "active_runtime_crosswalk": {
     "understat": "REEP_V0_PINNED_OPTA_NUMERIC_TO_PROVIDER_ID",
     "fotmob": "REEP_V0_PINNED_OPTA_NUMERIC_TO_PROVIDER_ID",
     "statmuse": "REEP_V0_PINNED_OPTA_NUMERIC_TO_PROVIDER_ID",
-    "opta_the_analyst": "OFFICIAL_FPL_CODE_SHARED_OPTA_NUMERIC_NAMESPACE"
+    "opta_the_analyst": "OFFICIAL_FPL_CODE_SHARED_OPTA_NUMERIC_NAMESPACE",
+    "ffscout": "FFSCOUT_PUBLIC_PREMIERLEAGUE_MEDIA_CODE_EXACT"
   },
   "governance": {
     "reep_v1_is_build_time_evidence_not_runtime_network_dependency": true,
     "reep_v1_overlay_is_discovery_only": true,
     "v0_crosswalk_retained_until_stronger_deterministic_replacement_exists": true,
+    "ffscout_public_embedded_media_code_is_exact_join_evidence": true,
+    "ffscout_member_paywalled_stats_are_out_of_scope": true,
     "partial_verified_coverage_is_allowed": true,
     "absence_must_not_be_inferred_from_unobserved_provider_rows": true,
     "no_provider_entity_requires_complete_provider_universe_proof": true,

@@ -27,7 +27,7 @@ jobs:
             curl --fail --silent --show-error --location \
               --retry 2 --retry-delay 1 \
               -A 'Mozilla/5.0' \
-              "https://www.fotmob.com/api/playerData?id=${id}" \
+              "https://www.fotmob.com/api/data/playerData?id=${id}&includeMarketValues=true" \
               -o "/tmp/fotmob-playerdata/raw/${id}.json"
             sleep 0.5
           done

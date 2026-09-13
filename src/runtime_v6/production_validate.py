@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .architecture_independence_validate import validate_repository
+from .identity_coverage import validate_player_identity_coverage_truth
 from .registry import dependency_layers, load_registry
 
 
@@ -42,6 +43,8 @@ def validate_publishable(root: Path = ROOT) -> dict[str, Any]:
     manifest = _load(root / "manifest.json")
     integrity = _load(root / "health" / "publish_integrity.json")
     identity = _load(root / "evidence" / "player_identity_map.json")
+    coverage_path = root / "evidence" / "player_identity_coverage.json"
+    coverage = _load(coverage_path) if coverage_path.is_file() else None
     registry = load_registry()
     control = manifest["runtime_control"]
     event_name = os.environ["GITHUB_EVENT_NAME"]
@@ -72,6 +75,21 @@ def validate_publishable(root: Path = ROOT) -> dict[str, Any]:
     assert control["event_name"] == event_name
     assert control["schedule_kind"] == schedule_kind
 
+    identity_coverage_transition = "VALIDATED"
+    if coverage is None:
+        # A report-prefetch can temporarily hydrate the last pre-Wave-A snapshot before
+        # the next natural acquisition has produced the new coverage artifact. Do not
+        # break a report slot solely for that one-way migration window.
+        assert schedule_kind == "report_prefetch", "player_identity_coverage artifact missing"
+        identity_coverage_transition = "LEGACY_REPORT_PREFETCH_SNAPSHOT"
+    else:
+        coverage_errors = validate_player_identity_coverage_truth(coverage, identity)
+        assert coverage_errors == [], coverage_errors
+        assert coverage["integrity_status"] == "PASS"
+        assert coverage["canonical_player_count"] == identity["canonical_player_count"]
+        assert governance["identity_coverage_uses_separate_canonical_and_observed_join_metrics"] is True
+        assert manifest["paths"]["player_identity_coverage"] == "data/v6/evidence/player_identity_coverage.json"
+
     if schedule_kind == "report_prefetch":
         _validate_report_prefetch(root, control)
     elif event_name in {"issue_comment", "issues"} and schedule_kind == "chatgpt_scheduler":
@@ -96,6 +114,7 @@ def validate_publishable(root: Path = ROOT) -> dict[str, Any]:
         "overall": manifest["overall"],
         "runtime_control": control,
         "publish_integrity": integrity,
+        "identity_coverage_transition": identity_coverage_transition,
     }
 
 

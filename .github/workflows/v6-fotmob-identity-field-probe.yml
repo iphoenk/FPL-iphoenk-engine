@@ -1,0 +1,111 @@
+name: V6 FotMob identity field one-shot probe
+
+on:
+  push:
+    branches:
+      - ops/v6-fotmob-identity-field-probe
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Hydrate FotMob runtime snapshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin '+refs/heads/runtime-data-v6:refs/remotes/origin/runtime-data-v6'
+          mkdir -p /tmp/fotmob-probe
+          for path in data/v6/current/fotmob.json data/v6/staged/sources/fotmob.json data/v6/normalized/sources/fotmob.json data/v6/provenance/fotmob.json; do
+            name=$(echo "$path" | tr '/' '_')
+            git show "origin/runtime-data-v6:$path" > "/tmp/fotmob-probe/$name"
+          done
+
+      - name: Inspect native IDs and possible deterministic cross-id fields
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, re
+          from collections import Counter, defaultdict
+          from pathlib import Path
+
+          targets = {815006, 1021382, 303919, 618878, 844425, 1072068, 1104053, 1292810}
+          identity_key = re.compile(r'(opta|transfer|external|provider|participant|person|player.?id|entity|uid|uuid|code|slug)', re.I)
+          idish_key = re.compile(r'(^id$|.*id$|code$|uid$|uuid$)', re.I)
+
+          def scalar(v):
+              return v is None or isinstance(v, (str, int, float, bool))
+
+          def compact_dict(d):
+              out = {}
+              for k,v in d.items():
+                  if scalar(v):
+                      text = str(v)
+                      out[k] = text[:300] if len(text) > 300 else v
+              return out
+
+          result = {}
+          for path in sorted(Path('/tmp/fotmob-probe').glob('*.json')):
+              try:
+                  root = json.loads(path.read_text(encoding='utf-8'))
+              except Exception as exc:
+                  result[path.name] = {'error': repr(exc)}
+                  continue
+              matches = []
+              interesting_keys = Counter()
+              interesting_examples = defaultdict(list)
+
+              stack = [('$', root)]
+              while stack:
+                  p, value = stack.pop()
+                  if isinstance(value, dict):
+                      scalar_view = compact_dict(value)
+                      target_hits = []
+                      for k,v in value.items():
+                          if identity_key.search(str(k)):
+                              interesting_keys[str(k)] += 1
+                              if scalar(v) and len(interesting_examples[str(k)]) < 8:
+                                  interesting_examples[str(k)].append(v)
+                          if scalar(v):
+                              try:
+                                  iv = int(str(v))
+                              except Exception:
+                                  iv = None
+                              if iv in targets and (idish_key.search(str(k)) or str(k).lower() in {'id','playerid'}):
+                                  target_hits.append((k, iv))
+                      if target_hits:
+                          matches.append({'path': p, 'hits': target_hits, 'scalars': scalar_view})
+                      for k,v in value.items():
+                          if isinstance(v, (dict,list)):
+                              stack.append((f'{p}.{k}', v))
+                  elif isinstance(value, list):
+                      for i,v in enumerate(value):
+                          if isinstance(v, (dict,list)):
+                              stack.append((f'{p}[{i}]', v))
+
+              result[path.name] = {
+                  'target_matches': matches[:200],
+                  'identity_like_key_counts': dict(interesting_keys.most_common(100)),
+                  'identity_like_key_examples': {k:v for k,v in sorted(interesting_examples.items())},
+              }
+
+          out = Path('/tmp/fotmob-probe/identity_field_probe.json')
+          out.write_text(json.dumps(result, indent=2, ensure_ascii=False, sort_keys=True) + '\n', encoding='utf-8')
+          print(json.dumps(result, indent=2, ensure_ascii=False, sort_keys=True))
+          PY
+
+      - name: Upload probe result
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-fotmob-identity-field-probe
+          path: /tmp/fotmob-probe/identity_field_probe.json
+          retention-days: 1

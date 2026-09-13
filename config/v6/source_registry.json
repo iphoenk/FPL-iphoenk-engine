@@ -188,8 +188,21 @@
               "xG"
             ]
           }
+        },
+        {
+          "id": "player_xg",
+          "url": "https://www.statmuse.com/fc/ask/premier-league-xg-by-player-{{season.start_year}}-{{season.end_year}}",
+          "expect": "text",
+          "validation": {
+            "required_text_all": [
+              "Premier League",
+              "xG"
+            ]
+          }
         }
-      ]
+      ],
+      "max_body_bytes": 4000000,
+      "content_hash_dedup": true
     },
     {
       "id": "onside",

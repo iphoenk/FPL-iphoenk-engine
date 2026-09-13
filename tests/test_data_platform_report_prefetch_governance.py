@@ -9,7 +9,12 @@ import pytest
 
 from src.runtime_v6.official_fpl_client import OfficialFPLClient
 from src.runtime_v6.prefetch_contract import freshness
-from src.runtime_v6.workflow_control import WorkflowControlError, load_policy, resolve_prefetch
+from src.runtime_v6.workflow_control import (
+    WorkflowControlError,
+    authorize_issue_edit,
+    load_policy,
+    resolve_prefetch,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -75,11 +80,15 @@ def test_report_prefetch_reuses_existing_control_plane_without_new_scheduler():
     assert prefetch["report_driven"] is True
     assert prefetch["control_issue_number"] == policy["master_orchestrated"]["control_issue_number"] == 431
     assert prefetch["issue_comment_command"] == "/v6-report-prefetch"
-    assert prefetch["issue_title_marker"] == "FPL_REPORT_PREFETCH"
-    assert prefetch["issue_title_edit_enabled"] is True
+    assert prefetch["issue_title_marker"] == "REPORT_PREFETCH_TITLE_DISABLED"
+    assert prefetch["issue_title_edit_enabled"] is False
+    assert prefetch["preferred_transport"] == "ISSUE_COMMENT"
+    assert policy["governance"]["report_prefetch_issue_title_transport_disabled"] is True
+    assert policy["governance"]["report_prefetch_issue_comment_transport_required"] is True
+    assert "issues:report_prefetch" not in policy["governance"]["authoritative_runtime_triggers"]
+    assert "issue_comment:report_prefetch" in policy["governance"]["authoritative_runtime_triggers"]
     assert "/v6-master-acquire" in workflow
     assert "/v6-report-prefetch" in workflow
-    assert "FPL_REPORT_PREFETCH" in workflow
     assert "github.actor == github.repository_owner" in workflow
     assert "Run active V6 acquisition cycle" in workflow
     assert "steps.scheduler.outputs.kind != 'report_prefetch'" in workflow
@@ -87,21 +96,20 @@ def test_report_prefetch_reuses_existing_control_plane_without_new_scheduler():
     assert "python -m src.runtime_v6.workflow_control resolve-prefetch" in workflow
 
 
-def test_report_prefetch_accepts_issue_title_control_transport():
+def test_report_prefetch_issue_title_transport_is_rejected_by_authorization():
     policy = load_policy()
-    env, summary = resolve_prefetch(
-        policy,
-        event_name="issues",
-        issue_title=(
-            "FPL_REPORT_PREFETCH report_kind=full_master "
-            "logical_slot=2026-09-08T21:30:00+07:00 "
-            "reason=FPL_MASTER_REPORT observed_at=2026-09-08T21:31:00+07:00"
-        ),
-    )
-    assert summary["report_kind"] == "full_master"
-    assert summary["logical_slot"] == "2026-09-08T21:30:00+07:00"
-    assert env["V6_PREFETCH_PERSONAL"] == "false"
-    assert env["V6_PREFETCH_MINI_LEAGUE"] == "false"
+    with pytest.raises(WorkflowControlError, match="issue title marker mismatch"):
+        authorize_issue_edit(
+            policy,
+            actor="owner",
+            repository_owner="owner",
+            issue_number=431,
+            issue_title=(
+                "FPL_REPORT_PREFETCH report_kind=full_master "
+                "logical_slot=2026-09-08T21:30:00+07:00 "
+                "reason=FPL_MASTER_REPORT observed_at=2026-09-08T21:31:00+07:00"
+            ),
+        )
 
 
 def test_0530_is_explicit_no_personal_no_league_control_contract():

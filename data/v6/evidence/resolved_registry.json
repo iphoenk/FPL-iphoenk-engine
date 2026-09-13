@@ -1,0 +1,870 @@
+{
+  "schema_version": 1,
+  "engine": "V6_FRESH_DATA_PLATFORM",
+  "season": "2026-2027",
+  "config_layers": {
+    "registry": {
+      "path": "config/v6/source_registry.json",
+      "schema_version": 3
+    },
+    "additions": {
+      "path": "config/v6/source_additions.json",
+      "schema_version": 1
+    },
+    "overrides": {
+      "path": "config/v6/source_overrides.json",
+      "schema_version": 3
+    },
+    "activation": {
+      "path": "config/v6/source_activation.json",
+      "schema_version": 4
+    }
+  },
+  "source_additions_applied": [
+    "solio_analytics",
+    "check_the_chance",
+    "fantasy_football_pundit",
+    "bbc_team_news",
+    "premier_injuries",
+    "fpl_form",
+    "fpl_review_free",
+    "reep_register",
+    "wikidata",
+    "open_meteo",
+    "thesportsdb_v1"
+  ],
+  "source_addition_admission_policy": {
+    "cost": "ZERO",
+    "account_required": false,
+    "login_required": false,
+    "private_api_key_required": false,
+    "private_token_required": false,
+    "auth_block_allowed": false
+  },
+  "source_overrides_applied": [],
+  "override_lifecycle": {
+    "role": "TEMPORARY_REPAIR_ONLY",
+    "active_override_count": 0,
+    "max_active_overrides": 8,
+    "inactive_source_overrides": [],
+    "temporary_override_ids": [],
+    "review_by": {},
+    "stable_repairs_should_be_promoted_to_canonical_registry": true,
+    "effective_registry_is_published_for_drift_review": true
+  },
+  "cadence": {
+    "schedule": "hourly",
+    "check_every_source_each_cycle": true,
+    "default_check_freshness_minutes": 90
+  },
+  "policy": {
+    "decision_authority": "NONE",
+    "prediction_authority": "NONE",
+    "optimizer_authority": "NONE",
+    "tactical_authority": "NONE",
+    "transfer_authority": "NONE",
+    "captain_authority": "NONE",
+    "chip_authority": "NONE",
+    "formation_authority": "NONE",
+    "data_only": true,
+    "no_cross_source_averaging": true,
+    "no_fabrication": true,
+    "preserve_provenance": true,
+    "preserve_last_good_on_failure": true,
+    "source_failures_are_isolated": true,
+    "request_failures_are_isolated": true,
+    "no_auth_bypass": true,
+    "allow_secret_backed_official_apis": true,
+    "conditional_revalidation": true,
+    "max_body_bytes": 1000000,
+    "connect_timeout_seconds": 4,
+    "read_timeout_seconds": 15,
+    "source_workers": 20,
+    "request_workers": 4,
+    "retry_attempts": 2,
+    "retry_backoff_seconds": 0.5,
+    "raw_artifact_retention_days": 14
+  },
+  "identity": {
+    "canonical_player_authority": "official_fpl",
+    "canonical_team_authority": "official_fpl",
+    "canonical_fixture_authority": "official_fpl",
+    "canonical_player_key": "official_fpl_element_id",
+    "external_ids_are_attributes_not_primary_keys": true
+  },
+  "activation": {
+    "policy": "explicit_active_source_pruning_with_reference_tiers",
+    "base_source_count": 38,
+    "active_source_count": 22,
+    "disabled_source_count": 8,
+    "reference_only_source_count": 8,
+    "required_active_source_count": 2,
+    "required_active_sources": [
+      "official_fpl",
+      "official_price_predictor"
+    ],
+    "disabled_sources": {
+      "fbref": "DROP_DUPLICATE_ACCESS_RESTRICTED",
+      "sofascore": "DROP_DUPLICATE_UNOFFICIAL_403",
+      "sportmonks": "DROP_PAID_PROVIDER",
+      "api_football": "DROP_PAID_PROVIDER",
+      "transfermarkt": "DROP_AUTOMATION_RESTRICTED",
+      "whoscored": "DROP_DUPLICATE_ACCESS_RESTRICTED",
+      "football_data_org": "DROP_PAID_BY_OWNER_DECISION",
+      "football_data_uk": "TEMPORARY_DISABLE_FREE_PUBLIC_PROVIDER_RUNTIME_HTTP_503_REENABLE_AFTER_STABLE_REVALIDATION"
+    },
+    "reference_only_sources": {
+      "fffix": "FREE_ACCOUNT_EXISTS_BUT_MACHINE_ENDPOINTS_REDIRECT_TO_LOGIN",
+      "ffhub": "FREE_PUBLIC_SITE_EXISTS_BUT_PREDICTIONS_ARE_AUTH_GATED",
+      "clubelo": "FREE_PUBLIC_REFERENCE_BUT_RUNTIME_HTTPS_CONNECT_TIMEOUT_AFTER_REPAIR_RETRY",
+      "bbc_team_news": "FREE_EDITORIAL_TARGETED_DEADLINE_REFERENCE",
+      "premier_injuries": "FREE_PUBLIC_REFERENCE_NO_DATASET_REPUBLISH",
+      "fpl_form": "FREE_PERSONAL_USE_REFERENCE_NO_RUNTIME_REPUBLISH",
+      "fpl_review_free": "FREE_MODEL_REFERENCE_NO_STABLE_MACHINE_CONTRACT",
+      "reep_register": "PUBLIC_NO_AUTH_RELEASE_POINTER_HTTP_404_ON_2026_09_07_REENABLE_ONLY_AFTER_STABLE_PUBLIC_DOWNLOAD_REVALIDATION"
+    },
+    "constraints": {
+      "solio_analytics": "FREE_PUBLIC_NO_AUTH",
+      "check_the_chance": "FREE_PUBLIC_ONLY",
+      "fantasy_football_pundit": "FREE_PUBLIC_ONLY",
+      "wikidata": "NO_AUTH_PUBLIC_ONLY",
+      "open_meteo": "NO_AUTH_PUBLIC_ONLY",
+      "thesportsdb_v1": "NO_AUTH_PUBLIC_ONLY"
+    },
+    "tiers": {
+      "solio_analytics": "core",
+      "check_the_chance": "pilot",
+      "fantasy_football_pundit": "pilot",
+      "wikidata": "core",
+      "open_meteo": "core",
+      "thesportsdb_v1": "pilot"
+    }
+  },
+  "dependency_layers": [
+    [
+      "official_fpl",
+      "understat",
+      "opta_the_analyst",
+      "statmuse",
+      "onside",
+      "ben_crellin",
+      "onefpl",
+      "livefpl",
+      "ffscout",
+      "fotmob",
+      "statsbomb",
+      "rotowire",
+      "premierleague_stats",
+      "espn",
+      "vaastav_fpl",
+      "solio_analytics",
+      "check_the_chance",
+      "fantasy_football_pundit",
+      "wikidata",
+      "open_meteo",
+      "thesportsdb_v1"
+    ],
+    [
+      "official_price_predictor"
+    ]
+  ],
+  "source_count": 22,
+  "sources": [
+    {
+      "id": "official_fpl",
+      "name": "Official FPL",
+      "category": "factual_authority",
+      "adapter": "official_fpl",
+      "critical": true,
+      "check_freshness_minutes": 90,
+      "independence_group": "official_fpl",
+      "requests": [
+        {
+          "id": "bootstrap",
+          "url": "https://fantasy.premierleague.com/api/bootstrap-static/",
+          "expect": "json"
+        },
+        {
+          "id": "fixtures",
+          "url": "https://fantasy.premierleague.com/api/fixtures/",
+          "expect": "json"
+        },
+        {
+          "id": "event_status",
+          "url": "https://fantasy.premierleague.com/api/event-status/",
+          "expect": "json"
+        }
+      ],
+      "acquisition_kind": "rest_json",
+      "poll_interval_minutes": 60,
+      "required_for_platform": true,
+      "max_body_bytes": 4000000
+    },
+    {
+      "id": "official_price_predictor",
+      "name": "Official FPL Price Predictor",
+      "category": "market",
+      "adapter": "official_price_predictor",
+      "critical": true,
+      "check_freshness_minutes": 90,
+      "independence_group": "official_fpl",
+      "derived_from": "official_fpl.bootstrap",
+      "fields": [
+        "id",
+        "web_name",
+        "team",
+        "element_type",
+        "now_cost",
+        "selected_by_percent",
+        "transfers_in_event",
+        "transfers_out_event",
+        "price_change_percent",
+        "price_change_hourly_rate",
+        "price_change_projections",
+        "price_change_locked_until",
+        "price_change_calibrating"
+      ],
+      "required_for_platform": true,
+      "depends_on": [
+        "official_fpl"
+      ],
+      "requests": [],
+      "acquisition_kind": "derived"
+    },
+    {
+      "id": "understat",
+      "name": "Understat",
+      "category": "advanced_performance",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 90,
+      "independence_group": "understat",
+      "requests": [
+        {
+          "id": "epl_2026",
+          "url": "https://understat.com/league/EPL/2026",
+          "expect": "text",
+          "validation": {
+            "required_text_all": [
+              "2026/2027",
+              "xG"
+            ]
+          }
+        },
+        {
+          "id": "players_api",
+          "url": "https://understat.com/main/getPlayersStats/",
+          "method": "POST",
+          "form": {
+            "league": "EPL",
+            "season": "2026"
+          },
+          "headers": {
+            "Referer": "https://understat.com/league/EPL/2026",
+            "X-Requested-With": "XMLHttpRequest"
+          },
+          "expect": "json",
+          "validation": {
+            "required_json_paths": [
+              "players"
+            ]
+          }
+        }
+      ],
+      "acquisition_kind": "generic_http",
+      "poll_interval_minutes": 60,
+      "content_hash_dedup": true
+    },
+    {
+      "id": "opta_the_analyst",
+      "name": "Opta / The Analyst",
+      "category": "advanced_performance",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 90,
+      "independence_group": "opta_family",
+      "requests": [
+        {
+          "id": "premier_league_stats",
+          "url": "https://theanalyst.com/competition/premier-league/stats",
+          "expect": "text",
+          "validation": {
+            "required_text_any": [
+              "Premier League Stats"
+            ]
+          }
+        }
+      ],
+      "acquisition_kind": "generic_http"
+    },
+    {
+      "id": "statmuse",
+      "name": "StatMuse FC",
+      "category": "advanced_performance",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 90,
+      "independence_group": "statmuse",
+      "requests": [
+        {
+          "id": "team_xg",
+          "url": "https://www.statmuse.com/fc/ask/premier-league-xg-by-team",
+          "expect": "text",
+          "validation": {
+            "required_text_all": [
+              "Premier League",
+              "xG"
+            ]
+          }
+        }
+      ],
+      "acquisition_kind": "generic_http"
+    },
+    {
+      "id": "onside",
+      "name": "Onside",
+      "category": "fpl_model_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 90,
+      "independence_group": "onside",
+      "requests": [
+        {
+          "id": "predicted_points",
+          "url": "https://onsidearena.com/fpl/predicted-points",
+          "expect": "text",
+          "validation": {
+            "required_text_all": [
+              "Predicted Points",
+              "2026/27"
+            ]
+          }
+        }
+      ],
+      "acquisition_kind": "generic_http"
+    },
+    {
+      "id": "ben_crellin",
+      "name": "Ben Crellin",
+      "category": "fixture_schedule_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 90,
+      "independence_group": "ben_crellin",
+      "requests": [
+        {
+          "id": "bluesky_feed",
+          "url": "https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed",
+          "params": {
+            "actor": "bencrellin.bsky.social",
+            "limit": "50"
+          },
+          "expect": "json"
+        }
+      ],
+      "acquisition_kind": "rest_json"
+    },
+    {
+      "id": "onefpl",
+      "name": "OneFPL",
+      "category": "price_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 90,
+      "independence_group": "onefpl",
+      "requests": [
+        {
+          "id": "prices",
+          "url": "https://onefpl.com/prices",
+          "expect": "text",
+          "validation": {
+            "required_text_all": [
+              "Price Changes",
+              "2026/27"
+            ]
+          }
+        }
+      ],
+      "acquisition_kind": "generic_http"
+    },
+    {
+      "id": "livefpl",
+      "name": "LiveFPL",
+      "category": "price_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 90,
+      "independence_group": "livefpl",
+      "requests": [
+        {
+          "id": "prices",
+          "url": "https://www.livefpl.net/prices",
+          "expect": "text",
+          "validation": {
+            "required_text_any": [
+              "LiveFPL Price Changes"
+            ]
+          }
+        },
+        {
+          "id": "price_changes",
+          "url": "https://plan.livefpl.net/price_changes",
+          "expect": "text",
+          "validation": {
+            "required_text_any": [
+              "price changes",
+              "Price Changes"
+            ]
+          }
+        }
+      ],
+      "acquisition_kind": "generic_http"
+    },
+    {
+      "id": "ffscout",
+      "name": "Fantasy Football Scout",
+      "category": "fpl_model_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 90,
+      "independence_group": "ffscout",
+      "requests": [
+        {
+          "id": "home",
+          "url": "https://www.fantasyfootballscout.co.uk/",
+          "expect": "text"
+        }
+      ],
+      "acquisition_kind": "generic_http"
+    },
+    {
+      "id": "fotmob",
+      "name": "FotMob",
+      "category": "advanced_performance",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 90,
+      "independence_group": "fotmob",
+      "requests": [
+        {
+          "id": "league",
+          "url": "https://www.fotmob.com/api/data/leagues",
+          "params": {
+            "id": "47",
+            "ccode3": "ENG",
+            "season": "2026/2027"
+          },
+          "expect": "json",
+          "validation": {
+            "required_json_paths": [
+              "details.id",
+              "details.selectedSeason"
+            ]
+          }
+        }
+      ],
+      "acquisition_kind": "rest_json"
+    },
+    {
+      "id": "statsbomb",
+      "name": "StatsBomb Open Data",
+      "category": "historical_event_data",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 1500,
+      "independence_group": "statsbomb",
+      "requests": [
+        {
+          "id": "competitions",
+          "url": "https://raw.githubusercontent.com/statsbomb/open-data/master/data/competitions.json",
+          "expect": "json"
+        }
+      ],
+      "notes": "Open-data catalogue; adaptive polling may carry forward unchanged data between due cycles.",
+      "acquisition_kind": "rest_json",
+      "poll_interval_minutes": 1440,
+      "content_hash_dedup": true
+    },
+    {
+      "id": "rotowire",
+      "name": "RotoWire Soccer",
+      "category": "availability_lineups",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 90,
+      "independence_group": "rotowire",
+      "requests": [
+        {
+          "id": "lineups",
+          "url": "https://www.rotowire.com/soccer/lineups.php",
+          "expect": "text"
+        }
+      ],
+      "acquisition_kind": "generic_http"
+    },
+    {
+      "id": "premierleague_stats",
+      "name": "PremierLeague.com Stats",
+      "category": "official_league_stats",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 90,
+      "independence_group": "premierleague_stats",
+      "requests": [
+        {
+          "id": "stats",
+          "url": "https://www.premierleague.com/en/stats",
+          "expect": "text"
+        }
+      ],
+      "acquisition_kind": "generic_http"
+    },
+    {
+      "id": "espn",
+      "name": "ESPN Football Data",
+      "category": "fixture_match_data",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 90,
+      "independence_group": "espn",
+      "requests": [
+        {
+          "id": "scoreboard",
+          "url": "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard",
+          "expect": "json",
+          "use_default_user_agent": true,
+          "validation": {
+            "required_json_paths": [
+              "leagues",
+              "events"
+            ]
+          }
+        }
+      ],
+      "acquisition_kind": "rest_json"
+    },
+    {
+      "id": "vaastav_fpl",
+      "name": "vaastav/Fantasy-Premier-League",
+      "category": "historical_fpl",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 90,
+      "independence_group": "official_fpl_history",
+      "requests": [
+        {
+          "id": "players_raw",
+          "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2026-27/players_raw.csv",
+          "expect": "csv",
+          "validation": {
+            "min_body_bytes": 1000,
+            "required_text_any": [
+              "first_name",
+              "second_name"
+            ]
+          }
+        },
+        {
+          "id": "fixtures",
+          "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2026-27/fixtures.csv",
+          "expect": "csv",
+          "validation": {
+            "min_body_bytes": 1000,
+            "required_text_any": [
+              "kickoff_time",
+              "team_h",
+              "team_a"
+            ]
+          }
+        },
+        {
+          "id": "player_idlist",
+          "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2026-27/player_idlist.csv",
+          "expect": "csv",
+          "validation": {
+            "min_body_bytes": 1000,
+            "required_text_any": [
+              "first_name,second_name,id"
+            ]
+          }
+        }
+      ],
+      "notes": "Historical/calibration mirror; not a live factual authority over Official FPL.",
+      "acquisition_kind": "rest_csv"
+    },
+    {
+      "id": "solio_analytics",
+      "name": "Solio Analytics FPL",
+      "category": "fpl_model_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 300,
+      "independence_group": "solio_analytics",
+      "requests": [
+        {
+          "id": "latest",
+          "url": "https://fpl.solioanalytics.com/api/data/latest.json",
+          "expect": "json",
+          "validation": {
+            "min_body_bytes": 1000
+          }
+        }
+      ],
+      "notes": "Public no-auth endpoint intended for AI/data consumers. Preserve as independent upstream model evidence; V6 does not author or blend predictions.",
+      "acquisition_kind": "rest_json",
+      "poll_interval_minutes": 240,
+      "poll_interval_minutes_deadline_window": 60,
+      "content_hash_dedup": true,
+      "access": {
+        "cost": "ZERO",
+        "account_required": false,
+        "login_required": false,
+        "private_api_key_required": false,
+        "private_token_required": false,
+        "shared_public_key": false
+      },
+      "activation_constraint": "FREE_PUBLIC_NO_AUTH",
+      "source_tier": "core"
+    },
+    {
+      "id": "check_the_chance",
+      "name": "Check The Chance",
+      "category": "market_model_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 420,
+      "independence_group": "bookmaker_market",
+      "requests": [
+        {
+          "id": "player_predictions",
+          "url": "https://checkthechance.com/fantasy-football/player-predictions/",
+          "expect": "text",
+          "validation": {
+            "required_text_any": [
+              "Player Predictions",
+              "FPL"
+            ]
+          }
+        }
+      ],
+      "notes": "Public bookmaker-derived probabilities retained only as an upstream model signal. V6 performs no interpretation or decision logic.",
+      "acquisition_kind": "html_scrape",
+      "poll_interval_minutes": 360,
+      "poll_interval_minutes_deadline_window": 60,
+      "content_hash_dedup": true,
+      "access": {
+        "cost": "ZERO",
+        "account_required": false,
+        "login_required": false,
+        "private_api_key_required": false,
+        "private_token_required": false,
+        "shared_public_key": false
+      },
+      "activation_constraint": "FREE_PUBLIC_ONLY",
+      "source_tier": "pilot"
+    },
+    {
+      "id": "fantasy_football_pundit",
+      "name": "Fantasy Football Pundit",
+      "category": "lineup_probability_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 420,
+      "independence_group": "fantasy_football_pundit",
+      "requests": [
+        {
+          "id": "points_predictor",
+          "url": "https://www.fantasyfootballpundit.com/fpl-points-predictor/",
+          "expect": "text",
+          "validation": {
+            "required_text_any": [
+              "Predicted Points",
+              "Start"
+            ]
+          }
+        },
+        {
+          "id": "team_news",
+          "url": "https://www.fantasyfootballpundit.com/fantasy-premier-league-team-news/",
+          "expect": "text",
+          "validation": {
+            "required_text_any": [
+              "Team News",
+              "Predicted Lineups",
+              "Premier League"
+            ]
+          }
+        }
+      ],
+      "notes": "Free public source-native model/team-news evidence. V6 preserves the source payload and provenance only.",
+      "acquisition_kind": "html_scrape",
+      "poll_interval_minutes": 360,
+      "poll_interval_minutes_deadline_window": 60,
+      "content_hash_dedup": true,
+      "max_body_bytes": 4000000,
+      "access": {
+        "cost": "ZERO",
+        "account_required": false,
+        "login_required": false,
+        "private_api_key_required": false,
+        "private_token_required": false,
+        "shared_public_key": false
+      },
+      "activation_constraint": "FREE_PUBLIC_ONLY",
+      "source_tier": "pilot"
+    },
+    {
+      "id": "wikidata",
+      "name": "Wikidata Query Service",
+      "category": "identity_bridge_reference",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 720,
+      "independence_group": "wikidata",
+      "entity_scopes": [
+        "TEAM",
+        "COMPETITION"
+      ],
+      "requests": [
+        {
+          "id": "premier_league_clubs",
+          "url": "https://query.wikidata.org/sparql",
+          "params": {
+            "format": "json",
+            "query": "SELECT ?club ?clubLabel (SAMPLE(?website) AS ?website) WHERE { ?club wdt:P118 wd:Q9448 . ?club wdt:P31/wdt:P279* wd:Q476028 . OPTIONAL { ?club wdt:P856 ?website . } SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". } } GROUP BY ?club ?clubLabel ORDER BY ?clubLabel"
+          },
+          "expect": "json",
+          "validation": {
+            "min_body_bytes": 100
+          }
+        }
+      ],
+      "access": {
+        "cost": "ZERO",
+        "account_required": false,
+        "login_required": false,
+        "private_api_key_required": false,
+        "private_token_required": false,
+        "shared_public_key": false
+      },
+      "notes": "Public no-auth SPARQL corroboration only. Query scope is constrained to association-football-club entities and grouped to one row per Wikidata club QID; P118 is not treated as proof of current-season membership. Results never supersede Official FPL identity and never authorize fuzzy runtime joins.",
+      "acquisition_kind": "rest_json",
+      "activation_constraint": "NO_AUTH_PUBLIC_ONLY",
+      "source_tier": "core"
+    },
+    {
+      "id": "open_meteo",
+      "name": "Open-Meteo Forecast API",
+      "category": "fixture_weather_context",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 180,
+      "independence_group": "open_meteo",
+      "entity_scopes": [
+        "TEAM",
+        "FIXTURE"
+      ],
+      "requests": [
+        {
+          "id": "premier_league_venues",
+          "url": "https://api.open-meteo.com/v1/forecast",
+          "params": {
+            "hourly": "temperature_2m,precipitation_probability,precipitation,wind_speed_10m,wind_gusts_10m,weather_code",
+            "forecast_days": "16",
+            "timezone": "GMT",
+            "latitude": "50.7352,51.5549,52.5092,51.4908,50.8618,51.4817,52.4481,51.3983,53.4255,51.4749,53.7463,52.0547,53.7778,53.4308,53.4831,53.4631,54.9752,52.94,54.9144,51.6043",
+            "longitude": "-1.8383,-0.1084,-1.8848,-0.2887,-0.0833,-0.191,-1.4956,-0.0855,-3.0037,-0.2216,-0.3674,1.1448,-1.5721,-2.9608,-2.2004,-2.2913,-1.6224,-1.1328,-1.3882,-0.0665"
+          },
+          "params_from_records": {
+            "path": "config/v6/venue_geography.json",
+            "records_key": "venues",
+            "format": "csv",
+            "fields": {
+              "latitude": "latitude",
+              "longitude": "longitude"
+            }
+          },
+          "expect": "json",
+          "validation": {
+            "min_body_bytes": 1000
+          }
+        }
+      ],
+      "access": {
+        "cost": "ZERO",
+        "account_required": false,
+        "login_required": false,
+        "private_api_key_required": false,
+        "private_token_required": false,
+        "shared_public_key": false
+      },
+      "notes": "No-auth raw venue forecast acquisition. Venue coordinates and ordering are owned only by config/v6/venue_geography.json. V6 stores provider weather fields only and computes no FPL impact, xPts multiplier or transfer decision.",
+      "acquisition_kind": "rest_json",
+      "activation_constraint": "NO_AUTH_PUBLIC_ONLY",
+      "source_tier": "core"
+    },
+    {
+      "id": "thesportsdb_v1",
+      "name": "TheSportsDB V1 Public API",
+      "category": "fixture_match_data",
+      "adapter": "http",
+      "critical": false,
+      "check_freshness_minutes": 360,
+      "independence_group": "thesportsdb",
+      "entity_scopes": [
+        "TEAM",
+        "FIXTURE",
+        "EVENT",
+        "COMPETITION"
+      ],
+      "requests": [
+        {
+          "id": "league",
+          "url": "https://www.thesportsdb.com/api/v1/json/123/lookupleague.php",
+          "params": {
+            "id": "4328"
+          },
+          "expect": "json",
+          "validation": {
+            "min_body_bytes": 100
+          }
+        },
+        {
+          "id": "next_event",
+          "url": "https://www.thesportsdb.com/api/v1/json/123/eventsnextleague.php",
+          "params": {
+            "id": "4328"
+          },
+          "expect": "json",
+          "validation": {
+            "min_body_bytes": 100
+          }
+        },
+        {
+          "id": "past_event",
+          "url": "https://www.thesportsdb.com/api/v1/json/123/eventspastleague.php",
+          "params": {
+            "id": "4328"
+          },
+          "expect": "json",
+          "validation": {
+            "min_body_bytes": 100
+          }
+        }
+      ],
+      "access": {
+        "cost": "ZERO",
+        "account_required": false,
+        "login_required": false,
+        "private_api_key_required": false,
+        "private_token_required": false,
+        "shared_public_key": true,
+        "public_shared_access_segment": "123"
+      },
+      "notes": "Legacy free V1 pilot using TheSportsDB's documented shared public access segment 123. No user account, login or private secret is permitted. Secondary factual redundancy only; never an authority over Official FPL.",
+      "acquisition_kind": "rest_json",
+      "activation_constraint": "NO_AUTH_PUBLIC_ONLY",
+      "source_tier": "pilot"
+    }
+  ]
+}

@@ -1,0 +1,300 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-09-13T07:32:43.864515+00:00",
+  "source_count": 22,
+  "sources": [
+    {
+      "source_id": "statsbomb",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "SCHEDULED_CACHE",
+      "changed": false,
+      "checked_at": "2026-09-07T06:02:46.345800+00:00",
+      "path": "data/v6/current/statsbomb.json",
+      "independence_group": "statsbomb",
+      "source_snapshot_ids": [
+        "statsbomb:competitions:e6cd42f5d8956d6aa30fb917ce8d4c3b3df1879a93f02f8feba820930a6971fa"
+      ]
+    },
+    {
+      "source_id": "solio_analytics",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "SCHEDULED_CACHE",
+      "changed": false,
+      "checked_at": "2026-09-12T11:28:38.746662+00:00",
+      "path": "data/v6/current/solio_analytics.json",
+      "independence_group": "solio_analytics",
+      "source_snapshot_ids": [
+        "solio_analytics:latest:9eaff90b9eb26740c4b73b4cf4f932f264c12e8ba7c9cb0f78d971bd0639e568"
+      ]
+    },
+    {
+      "source_id": "check_the_chance",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "SCHEDULED_CACHE",
+      "changed": false,
+      "checked_at": "2026-09-12T11:28:40.539334+00:00",
+      "path": "data/v6/current/check_the_chance.json",
+      "independence_group": "bookmaker_market",
+      "source_snapshot_ids": [
+        "check_the_chance:player_predictions:92c99cd4585327bbdefc84f8dca7ee52d0f1f08eee433c469d4965d4d0b636b0"
+      ]
+    },
+    {
+      "source_id": "fantasy_football_pundit",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "SCHEDULED_CACHE",
+      "changed": false,
+      "checked_at": "2026-09-12T11:28:38.880076+00:00",
+      "path": "data/v6/current/fantasy_football_pundit.json",
+      "independence_group": "fantasy_football_pundit",
+      "source_snapshot_ids": [
+        "fantasy_football_pundit:points_predictor:e9261f91fda04b2df55a675879ba0e85efa51f70cb6303e122629d44235c4344",
+        "fantasy_football_pundit:team_news:20ee10353e36428f254af511d749025f6346fe704ee31f81a0bbcd033bafa415"
+      ]
+    },
+    {
+      "source_id": "vaastav_fpl",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-09-13T07:32:41.781263+00:00",
+      "path": "data/v6/current/vaastav_fpl.json",
+      "independence_group": "official_fpl_history",
+      "source_snapshot_ids": [
+        "vaastav_fpl:fixtures:e4a111287465dac04ef4d5bd6e5e10125c606a37b711c48735dc863ee8a261e8",
+        "vaastav_fpl:player_idlist:9cb57527a286cad92c69b352597b19d1e6f79d842b8282f877b9a755c7a6767b",
+        "vaastav_fpl:players_raw:d8f3f3ceafa3ec45fd58efef035e98a22efc7a2b73ee93e2090d4a04b136fe5d"
+      ]
+    },
+    {
+      "source_id": "espn",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:41.790130+00:00",
+      "path": "data/v6/current/espn.json",
+      "independence_group": "espn",
+      "source_snapshot_ids": [
+        "espn:scoreboard:c228a30aa31cecbc6b3c668990dff8fa4a41064e3dfef383138b424549b2d964"
+      ]
+    },
+    {
+      "source_id": "official_fpl",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:41.975229+00:00",
+      "path": "data/v6/current/official_fpl.json",
+      "independence_group": "official_fpl",
+      "source_snapshot_ids": [
+        "official_fpl:bootstrap:af50e23370768d654a303572333d7fdac7b7e7bdc6527aab14a99e9d099a8efe",
+        "official_fpl:event_status:8e7b0eb9541aaadedcab8ef8084e55b5f7e67cce43e429ba892fe9c10734af59",
+        "official_fpl:fixtures:3bcf0002d1765a9f1b8e8d60a93029521e6816784f71722fa15321af79cca601"
+      ]
+    },
+    {
+      "source_id": "premierleague_stats",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-09-13T07:32:41.975377+00:00",
+      "path": "data/v6/current/premierleague_stats.json",
+      "independence_group": "premierleague_stats",
+      "source_snapshot_ids": [
+        "premierleague_stats:stats:b25c19194b09226b89d5fb4ec10f3816764c5a03dfe6b293ffeff78c10116bb4"
+      ]
+    },
+    {
+      "source_id": "thesportsdb_v1",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:41.978333+00:00",
+      "path": "data/v6/current/thesportsdb_v1.json",
+      "independence_group": "thesportsdb",
+      "source_snapshot_ids": [
+        "thesportsdb_v1:league:57549de7ea0aed4d4da3fa8cd4e233e5e670fe21755f052e680e057e26b37a45",
+        "thesportsdb_v1:next_event:c352ad454019356a3ffc79a530588d9de8911a643ecdab90bbbf8e11fe749c5b",
+        "thesportsdb_v1:past_event:757c6767c01a6cb05a1bc57602516d36619402401f7fbb8b07342cc3f3d23cbf"
+      ]
+    },
+    {
+      "source_id": "onside",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:41.997201+00:00",
+      "path": "data/v6/current/onside.json",
+      "independence_group": "onside",
+      "source_snapshot_ids": [
+        "onside:predicted_points:9155bec83d65675929ad6159a4541fd06bb2a5efaa8d43fe9764c11bb1ae679f"
+      ]
+    },
+    {
+      "source_id": "opta_the_analyst",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-09-13T07:32:42.015135+00:00",
+      "path": "data/v6/current/opta_the_analyst.json",
+      "independence_group": "opta_family",
+      "source_snapshot_ids": [
+        "opta_the_analyst:premier_league_stats:de6c2a9bc4db8a2ab415bd24c9bb955a46912a7fcf9baa0c9f4d09136d2537e2"
+      ]
+    },
+    {
+      "source_id": "ben_crellin",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-09-13T07:32:42.120582+00:00",
+      "path": "data/v6/current/ben_crellin.json",
+      "independence_group": "ben_crellin",
+      "source_snapshot_ids": [
+        "ben_crellin:bluesky_feed:6571005d5daf35eb21e06a9ed19cb201ca2a0c42aa7f7f35b89449bb82412893"
+      ]
+    },
+    {
+      "source_id": "livefpl",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-09-13T07:32:42.146278+00:00",
+      "path": "data/v6/current/livefpl.json",
+      "independence_group": "livefpl",
+      "source_snapshot_ids": [
+        "livefpl:price_changes:5090cfc9bf25ada25a65ce6c4d8fb96aa23d986231a7031b9f381f7fdd436985",
+        "livefpl:prices:c0ee253f16bfcf2ac75a802e589d4b46d228ccf3d3158fd92da4bf276408e659"
+      ]
+    },
+    {
+      "source_id": "ffscout",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:42.213638+00:00",
+      "path": "data/v6/current/ffscout.json",
+      "independence_group": "ffscout",
+      "source_snapshot_ids": [
+        "ffscout:home:1de5f8ec975cb3a8556118ad204e93e65ef94c07571b72bdc28e9354f427ff2c"
+      ]
+    },
+    {
+      "source_id": "rotowire",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:42.271985+00:00",
+      "path": "data/v6/current/rotowire.json",
+      "independence_group": "rotowire",
+      "source_snapshot_ids": [
+        "rotowire:lineups:9411de8a6394303b0e2211bb302352566b6bf0635a09c99871310bd1aff1e8d5"
+      ]
+    },
+    {
+      "source_id": "understat",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:42.360723+00:00",
+      "path": "data/v6/current/understat.json",
+      "independence_group": "understat",
+      "source_snapshot_ids": [
+        "understat:epl_2026:1531dcc2c0e139163aa06367859f95b2da883aabd3e605d859586bdcd046092d",
+        "understat:players_api:bb0761b677ba120ca5d9239c56b08080a56de7cd9f1f5a9ede121dbea193573a"
+      ]
+    },
+    {
+      "source_id": "statmuse",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:42.443737+00:00",
+      "path": "data/v6/current/statmuse.json",
+      "independence_group": "statmuse",
+      "source_snapshot_ids": [
+        "statmuse:team_xg:d08609b39328834fe4f5a25f3f0e48a8b3929f20696dfb9b375e50992dfda72b"
+      ]
+    },
+    {
+      "source_id": "open_meteo",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:42.467584+00:00",
+      "path": "data/v6/current/open_meteo.json",
+      "independence_group": "open_meteo",
+      "source_snapshot_ids": [
+        "open_meteo:premier_league_venues:c4631d4e079a56e327b84fdabc02209ef8d6f6004212a8b5246426e567f25600"
+      ]
+    },
+    {
+      "source_id": "fotmob",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-09-13T07:32:42.868910+00:00",
+      "path": "data/v6/current/fotmob.json",
+      "independence_group": "fotmob",
+      "source_snapshot_ids": [
+        "fotmob:league:f32b944239524c6b2ce02857e40b7db8af040b0a5976328f92ff44bc9d0b755c"
+      ]
+    },
+    {
+      "source_id": "onefpl",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:43.074700+00:00",
+      "path": "data/v6/current/onefpl.json",
+      "independence_group": "onefpl",
+      "source_snapshot_ids": [
+        "onefpl:prices:ba28eb4c7b92d165de78b47b1721aac7b75e4ff44f70b45acd4f740c7180a6f2"
+      ]
+    },
+    {
+      "source_id": "wikidata",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-09-13T07:32:43.334849+00:00",
+      "path": "data/v6/current/wikidata.json",
+      "independence_group": "wikidata",
+      "source_snapshot_ids": [
+        "wikidata:premier_league_clubs:4be1ce3597d1f25f688e4b3ea8877e7538192cba05acdcc54822f72198f008c4"
+      ]
+    },
+    {
+      "source_id": "official_price_predictor",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_DERIVED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:43.337822+00:00",
+      "path": "data/v6/current/official_price_predictor.json",
+      "independence_group": "official_fpl",
+      "source_snapshot_ids": []
+    }
+  ]
+}

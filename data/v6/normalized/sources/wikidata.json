@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "normalization_version": "V6_NOAUTH_SOURCE_NATIVE_1",
+  "source_id": "wikidata",
+  "generated_at": "2026-09-13T07:32:43.793896+00:00",
+  "effective_at": "2026-09-13T07:32:43.334849+00:00",
+  "canonical": true,
+  "semantic_class": "NORMALIZED_FACT",
+  "authority": "WIKIDATA",
+  "source_snapshot_ids": [
+    "4be1ce3597d1f25f688e4b3ea8877e7538192cba05acdcc54822f72198f008c4"
+  ],
+  "source_health": "GREEN",
+  "source_effective_state": "LIVE_UNCHANGED",
+  "current_run_action": "FETCHED",
+  "normalization_status": "NORMALIZED",
+  "record_count": 20,
+  "record_groups": {
+    "teams": [
+      {
+        "source_native_id": "Q19568",
+        "source_uri": "http://www.wikidata.org/entity/Q19568",
+        "label": "AFC Bournemouth",
+        "official_website": "https://www.afcb.co.uk/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q9617",
+        "source_uri": "http://www.wikidata.org/entity/Q9617",
+        "label": "Arsenal F.C.",
+        "official_website": "https://www.arsenal.com/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q18711",
+        "source_uri": "http://www.wikidata.org/entity/Q18711",
+        "label": "Aston Villa F.C.",
+        "official_website": "https://www.avfc.co.uk/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q19571",
+        "source_uri": "http://www.wikidata.org/entity/Q19571",
+        "label": "Brentford F.C.",
+        "official_website": "https://www.brentfordfc.com/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q19453",
+        "source_uri": "http://www.wikidata.org/entity/Q19453",
+        "label": "Brighton & Hove Albion F.C.",
+        "official_website": "https://www.brightonandhovealbion.com/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q9616",
+        "source_uri": "http://www.wikidata.org/entity/Q9616",
+        "label": "Chelsea F.C.",
+        "official_website": "https://www.chelseafc.com/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q19580",
+        "source_uri": "http://www.wikidata.org/entity/Q19580",
+        "label": "Coventry City F.C.",
+        "official_website": "https://www.ccfc.co.uk/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q19467",
+        "source_uri": "http://www.wikidata.org/entity/Q19467",
+        "label": "Crystal Palace F.C.",
+        "official_website": "https://www.cpfc.co.uk/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q5794",
+        "source_uri": "http://www.wikidata.org/entity/Q5794",
+        "label": "Everton F.C.",
+        "official_website": "http://www.evertonfc.com/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q18708",
+        "source_uri": "http://www.wikidata.org/entity/Q18708",
+        "label": "Fulham F.C.",
+        "official_website": "https://www.fulhamfc.com/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q19477",
+        "source_uri": "http://www.wikidata.org/entity/Q19477",
+        "label": "Hull City A.F.C.",
+        "official_website": "https://www.wearehullcity.co.uk/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q9653",
+        "source_uri": "http://www.wikidata.org/entity/Q9653",
+        "label": "Ipswich Town F.C.",
+        "official_website": "http://www.itfc.co.uk/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q1128631",
+        "source_uri": "http://www.wikidata.org/entity/Q1128631",
+        "label": "Leeds United F.C.",
+        "official_website": "https://www.leedsunited.com/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q1130849",
+        "source_uri": "http://www.wikidata.org/entity/Q1130849",
+        "label": "Liverpool F.C.",
+        "official_website": "https://www.liverpoolfc.com",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q50602",
+        "source_uri": "http://www.wikidata.org/entity/Q50602",
+        "label": "Manchester City F.C.",
+        "official_website": "https://mancity.com",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q18656",
+        "source_uri": "http://www.wikidata.org/entity/Q18656",
+        "label": "Manchester United F.C.",
+        "official_website": "https://www.manutd.com",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q18716",
+        "source_uri": "http://www.wikidata.org/entity/Q18716",
+        "label": "Newcastle United F.C.",
+        "official_website": "https://www.newcastleunited.com/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q19490",
+        "source_uri": "http://www.wikidata.org/entity/Q19490",
+        "label": "Nottingham Forest F.C.",
+        "official_website": "https://nottinghamforest.co.uk",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q18739",
+        "source_uri": "http://www.wikidata.org/entity/Q18739",
+        "label": "Sunderland A.F.C.",
+        "official_website": "https://www.safc.com/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "Q18741",
+        "source_uri": "http://www.wikidata.org/entity/Q18741",
+        "label": "Tottenham Hotspur F.C.",
+        "official_website": "https://www.tottenhamhotspur.com/",
+        "official_team_id": null,
+        "identity_status": "UNMAPPED"
+      }
+    ]
+  },
+  "governance": {
+    "data_only": true,
+    "source_native_records_preserved": true,
+    "cross_source_synthesis": false,
+    "silent_fuzzy_identity_join": false,
+    "decision_authority": "NONE",
+    "prediction_authority": "NONE",
+    "optimizer_authority": "NONE",
+    "may_override_official_fpl": false,
+    "no_auth_public_source": true,
+    "private_secret_required": false
+  },
+  "authority_ceiling": "CORROBORATION_ONLY",
+  "record_semantics": {
+    "teams": "SECONDARY_IDENTITY_CORROBORATION"
+  }
+}

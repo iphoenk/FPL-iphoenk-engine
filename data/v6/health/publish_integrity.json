@@ -1,0 +1,46 @@
+{
+  "schema_version": 4,
+  "status": "PASS",
+  "errors": [],
+  "source_count": 22,
+  "checked_file_count": 65,
+  "semantic_checked_file_count": 65,
+  "tree_sha256": "c784efe8c2ab08b6ed4812b3ebe951c2759832246feec9528ad7f960a0e2f05d",
+  "current_source_files_exact": true,
+  "resolved_registry_exact": true,
+  "identity_map_consistent": true,
+  "identity_counts": {
+    "player": {
+      "canonical_count": 657,
+      "identity_count": 657,
+      "mapping_count": 657,
+      "count_consistent": true,
+      "mapping_consistent": true,
+      "consistent": true
+    },
+    "team": {
+      "canonical_count": 20,
+      "identity_count": 20,
+      "mapping_count": 20,
+      "count_consistent": true,
+      "mapping_consistent": true,
+      "consistent": true
+    },
+    "fixture": {
+      "canonical_count": 380,
+      "identity_count": 380,
+      "mapping_count": 380,
+      "count_consistent": true,
+      "mapping_consistent": true,
+      "consistent": true
+    }
+  },
+  "artifact_catalog_required": true,
+  "artifact_catalog_valid": true,
+  "artifact_catalog_checked_count": 64,
+  "semantic_authority_enforced": true,
+  "canonical_mini_league_analytics_forbidden": true,
+  "pruned_legacy_analytical_artifacts": [],
+  "artifact_catalog_record_count": 64,
+  "artifact_catalog_sha256": "f818110e6d1a8574c7a3d8da0fd2eb9fe26364c4b719fab5ab650cd1baf501b7"
+}

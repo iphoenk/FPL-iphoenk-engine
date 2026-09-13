@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "normalization_version": "V6_NOAUTH_SOURCE_NATIVE_1",
+  "source_id": "thesportsdb_v1",
+  "generated_at": "2026-09-13T07:32:43.794198+00:00",
+  "effective_at": "2026-09-13T07:32:41.978333+00:00",
+  "canonical": true,
+  "semantic_class": "NORMALIZED_FACT",
+  "authority": "THESPORTSDB",
+  "source_snapshot_ids": [
+    "57549de7ea0aed4d4da3fa8cd4e233e5e670fe21755f052e680e057e26b37a45",
+    "757c6767c01a6cb05a1bc57602516d36619402401f7fbb8b07342cc3f3d23cbf",
+    "c352ad454019356a3ffc79a530588d9de8911a643ecdab90bbbf8e11fe749c5b"
+  ],
+  "source_health": "GREEN",
+  "source_effective_state": "LIVE_CHANGED",
+  "current_run_action": "FETCHED",
+  "normalization_status": "NORMALIZED",
+  "record_count": 3,
+  "record_groups": {
+    "competition": [
+      {
+        "source_native_id": "4328",
+        "name": "English Premier League",
+        "alternate_name": "Premier League, EPL, England",
+        "sport": "Soccer",
+        "country": "England"
+      }
+    ],
+    "events": [
+      {
+        "source_native_id": "2494039",
+        "source_native_league_id": "4328",
+        "event_name": "Coventry City vs Brighton and Hove Albion",
+        "league_name": "English Premier League",
+        "season": "2026-2027",
+        "round": "4",
+        "timestamp": "2026-09-13T13:00:00",
+        "date_event": "2026-09-13",
+        "time_event": "13:00:00",
+        "home": {
+          "source_native_id": "133625",
+          "name": "Coventry City"
+        },
+        "away": {
+          "source_native_id": "133619",
+          "name": "Brighton and Hove Albion"
+        },
+        "home_score": null,
+        "away_score": null,
+        "status": "NS",
+        "request_role": "UPCOMING",
+        "official_fixture_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "2494038",
+        "source_native_league_id": "4328",
+        "event_name": "Sunderland vs Arsenal",
+        "league_name": "English Premier League",
+        "season": "2026-2027",
+        "round": "4",
+        "timestamp": "2026-09-12T19:00:00",
+        "date_event": "2026-09-12",
+        "time_event": "19:00:00",
+        "home": {
+          "source_native_id": "133603",
+          "name": "Sunderland"
+        },
+        "away": {
+          "source_native_id": "133604",
+          "name": "Arsenal"
+        },
+        "home_score": "0",
+        "away_score": "2",
+        "status": "FT",
+        "request_role": "PAST",
+        "official_fixture_id": null,
+        "identity_status": "UNMAPPED"
+      }
+    ]
+  },
+  "governance": {
+    "data_only": true,
+    "source_native_records_preserved": true,
+    "cross_source_synthesis": false,
+    "silent_fuzzy_identity_join": false,
+    "decision_authority": "NONE",
+    "prediction_authority": "NONE",
+    "optimizer_authority": "NONE",
+    "may_override_official_fpl": false,
+    "no_auth_public_source": true,
+    "private_secret_required": false
+  },
+  "authority_ceiling": "SECONDARY",
+  "record_semantics": {
+    "competition": "SECONDARY_PROVIDER_METADATA",
+    "events": "SECONDARY_FIXTURE_EVENT_METADATA_REQUIRES_OFFICIAL_CROSSCHECK"
+  }
+}

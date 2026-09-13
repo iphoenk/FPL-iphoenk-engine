@@ -1,0 +1,1641 @@
+{
+  "schema_version": 5,
+  "generated_at": "2026-09-13T07:32:43.867256+00:00",
+  "overall": "GREEN",
+  "public_core_status": "GREEN",
+  "consumer_readiness_overall": "RED",
+  "fallback_recommended": true,
+  "fallback_sources": [
+    {
+      "source_id": "statsbomb",
+      "reason": "STALE"
+    },
+    {
+      "source_id": "solio_analytics",
+      "reason": "STALE"
+    },
+    {
+      "source_id": "check_the_chance",
+      "reason": "STALE"
+    },
+    {
+      "source_id": "fantasy_football_pundit",
+      "reason": "STALE"
+    }
+  ],
+  "counts": {
+    "GREEN": 22,
+    "AMBER": 0,
+    "RED": 0
+  },
+  "dimension_counts": {
+    "transport_health": {
+      "GREEN": 22,
+      "AMBER": 0,
+      "RED": 0,
+      "NOT_APPLICABLE": 0
+    },
+    "freshness_health": {
+      "GREEN": 18,
+      "AMBER": 0,
+      "RED": 4,
+      "NOT_APPLICABLE": 0
+    },
+    "schema_health": {
+      "GREEN": 22,
+      "AMBER": 0,
+      "RED": 0,
+      "NOT_APPLICABLE": 0
+    },
+    "coverage_health": {
+      "GREEN": 22,
+      "AMBER": 0,
+      "RED": 0,
+      "NOT_APPLICABLE": 0
+    },
+    "identity_health": {
+      "GREEN": 2,
+      "AMBER": 1,
+      "RED": 18,
+      "NOT_APPLICABLE": 1
+    },
+    "provenance_health": {
+      "GREEN": 22,
+      "AMBER": 0,
+      "RED": 0,
+      "NOT_APPLICABLE": 0
+    },
+    "payload_integrity": {
+      "GREEN": 22,
+      "AMBER": 0,
+      "RED": 0,
+      "NOT_APPLICABLE": 0
+    }
+  },
+  "readiness_counts": {
+    "operational": {
+      "GREEN": 18,
+      "AMBER": 0,
+      "RED": 4,
+      "NOT_APPLICABLE": 0
+    },
+    "data": {
+      "GREEN": 18,
+      "AMBER": 0,
+      "RED": 4,
+      "NOT_APPLICABLE": 0
+    },
+    "join": {
+      "GREEN": 2,
+      "AMBER": 1,
+      "RED": 18,
+      "NOT_APPLICABLE": 1
+    }
+  },
+  "source_count": 22,
+  "sources": [
+    {
+      "source_id": "official_fpl",
+      "source_name": "Official FPL",
+      "category": "factual_authority",
+      "critical": true,
+      "entity_scopes": [
+        "EVENT",
+        "FIXTURE",
+        "PLAYER",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "GREEN",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "GREEN"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "PLAYER": "GREEN",
+        "TEAM": "GREEN",
+        "FIXTURE": "GREEN"
+      },
+      "join_ready": true,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:41.975229+00:00",
+      "last_success_at": "2026-09-13T07:32:41.914087+00:00",
+      "check_age_minutes": 0.032,
+      "max_effective_data_age_minutes": 0.033,
+      "check_freshness_target_minutes": 90,
+      "duration_ms": 402.872,
+      "current_run_action": "FETCHED",
+      "coverage": {
+        "expected_requests": 3,
+        "successful_checks_this_cycle": 3,
+        "downloaded_this_cycle": 3,
+        "revalidated_not_modified": 0,
+        "usable_requests": 3,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "rest_json",
+        "poll_interval_minutes": 60,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:41.975229+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 3,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 6,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "official_price_predictor",
+      "source_name": "Official FPL Price Predictor",
+      "category": "market",
+      "critical": true,
+      "entity_scopes": [
+        "PLAYER",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "GREEN",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "GREEN"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "PLAYER": "GREEN",
+        "TEAM": "GREEN"
+      },
+      "join_ready": true,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_DERIVED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:43.337822+00:00",
+      "last_success_at": null,
+      "check_age_minutes": 0.009,
+      "max_effective_data_age_minutes": null,
+      "check_freshness_target_minutes": 90,
+      "duration_ms": 1.688,
+      "current_run_action": "DERIVED",
+      "coverage": {
+        "player_count": 657,
+        "covered_player_count": 657,
+        "coverage_ratio": 1.0
+      },
+      "polling": {
+        "acquisition_kind": "derived",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:43.337822+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 0,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 0,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "understat",
+      "source_name": "Understat",
+      "category": "advanced_performance",
+      "critical": false,
+      "entity_scopes": [
+        "FIXTURE",
+        "PLAYER",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "RED"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "PLAYER": "RED",
+        "TEAM": "RED",
+        "FIXTURE": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:42.360723+00:00",
+      "last_success_at": "2026-09-13T07:32:42.218476+00:00",
+      "check_age_minutes": 0.025,
+      "max_effective_data_age_minutes": 0.028,
+      "check_freshness_target_minutes": 90,
+      "duration_ms": 788.159,
+      "current_run_action": "FETCHED",
+      "coverage": {
+        "expected_requests": 2,
+        "successful_checks_this_cycle": 2,
+        "downloaded_this_cycle": 2,
+        "revalidated_not_modified": 0,
+        "usable_requests": 2,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "generic_http",
+        "poll_interval_minutes": 60,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:42.360723+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 2,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 4,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "opta_the_analyst",
+      "source_name": "Opta / The Analyst",
+      "category": "advanced_performance",
+      "critical": false,
+      "entity_scopes": [
+        "FIXTURE",
+        "PLAYER",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "RED"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "PLAYER": "RED",
+        "TEAM": "RED",
+        "FIXTURE": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-09-13T07:32:42.015135+00:00",
+      "last_success_at": "2026-09-13T07:32:41.916170+00:00",
+      "check_age_minutes": 0.031,
+      "max_effective_data_age_minutes": 0.033,
+      "check_freshness_target_minutes": 90,
+      "duration_ms": 442.427,
+      "current_run_action": "FETCHED",
+      "coverage": {
+        "expected_requests": 1,
+        "successful_checks_this_cycle": 1,
+        "downloaded_this_cycle": 1,
+        "revalidated_not_modified": 0,
+        "usable_requests": 1,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "generic_http",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:42.015135+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 1,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 2,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "statmuse",
+      "source_name": "StatMuse FC",
+      "category": "advanced_performance",
+      "critical": false,
+      "entity_scopes": [
+        "FIXTURE",
+        "PLAYER",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "RED"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "PLAYER": "RED",
+        "TEAM": "RED",
+        "FIXTURE": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:42.443737+00:00",
+      "last_success_at": "2026-09-13T07:32:42.377313+00:00",
+      "check_age_minutes": 0.024,
+      "max_effective_data_age_minutes": 0.025,
+      "check_freshness_target_minutes": 90,
+      "duration_ms": 870.853,
+      "current_run_action": "FETCHED",
+      "coverage": {
+        "expected_requests": 1,
+        "successful_checks_this_cycle": 1,
+        "downloaded_this_cycle": 1,
+        "revalidated_not_modified": 0,
+        "usable_requests": 1,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "generic_http",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:42.443737+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 1,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 2,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "onside",
+      "source_name": "Onside",
+      "category": "fpl_model_reference",
+      "critical": false,
+      "entity_scopes": [
+        "FIXTURE",
+        "PLAYER",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "RED"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "PLAYER": "RED",
+        "TEAM": "RED",
+        "FIXTURE": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:41.997201+00:00",
+      "last_success_at": "2026-09-13T07:32:41.988339+00:00",
+      "check_age_minutes": 0.031,
+      "max_effective_data_age_minutes": 0.031,
+      "check_freshness_target_minutes": 90,
+      "duration_ms": 424.145,
+      "current_run_action": "FETCHED",
+      "coverage": {
+        "expected_requests": 1,
+        "successful_checks_this_cycle": 1,
+        "downloaded_this_cycle": 1,
+        "revalidated_not_modified": 0,
+        "usable_requests": 1,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "generic_http",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:41.997201+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 1,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 2,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "ben_crellin",
+      "source_name": "Ben Crellin",
+      "category": "fixture_schedule_reference",
+      "critical": false,
+      "entity_scopes": [
+        "EVENT",
+        "FEED",
+        "FIXTURE"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "RED"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "FIXTURE": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-09-13T07:32:42.120582+00:00",
+      "last_success_at": "2026-09-13T07:32:42.116481+00:00",
+      "check_age_minutes": 0.029,
+      "max_effective_data_age_minutes": 0.029,
+      "check_freshness_target_minutes": 90,
+      "duration_ms": 547.355,
+      "current_run_action": "FETCHED",
+      "coverage": {
+        "expected_requests": 1,
+        "successful_checks_this_cycle": 1,
+        "downloaded_this_cycle": 1,
+        "revalidated_not_modified": 0,
+        "usable_requests": 1,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "rest_json",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:42.120582+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 1,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 2,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "onefpl",
+      "source_name": "OneFPL",
+      "category": "price_reference",
+      "critical": false,
+      "entity_scopes": [
+        "PLAYER"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "RED"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "PLAYER": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:43.074700+00:00",
+      "last_success_at": "2026-09-13T07:32:43.070967+00:00",
+      "check_age_minutes": 0.013,
+      "max_effective_data_age_minutes": 0.013,
+      "check_freshness_target_minutes": 90,
+      "duration_ms": 1501.316,
+      "current_run_action": "FETCHED",
+      "coverage": {
+        "expected_requests": 1,
+        "successful_checks_this_cycle": 1,
+        "downloaded_this_cycle": 1,
+        "revalidated_not_modified": 0,
+        "usable_requests": 1,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "generic_http",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:43.074700+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 1,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 2,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "livefpl",
+      "source_name": "LiveFPL",
+      "category": "price_reference",
+      "critical": false,
+      "entity_scopes": [
+        "PLAYER"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "RED"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "PLAYER": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-09-13T07:32:42.146278+00:00",
+      "last_success_at": "2026-09-13T07:32:42.144607+00:00",
+      "check_age_minutes": 0.029,
+      "max_effective_data_age_minutes": 0.032,
+      "check_freshness_target_minutes": 90,
+      "duration_ms": 572.73,
+      "current_run_action": "FETCHED",
+      "coverage": {
+        "expected_requests": 2,
+        "successful_checks_this_cycle": 2,
+        "downloaded_this_cycle": 1,
+        "revalidated_not_modified": 1,
+        "usable_requests": 2,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "generic_http",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:42.146278+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 2,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 4,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "ffscout",
+      "source_name": "Fantasy Football Scout",
+      "category": "fpl_model_reference",
+      "critical": false,
+      "entity_scopes": [
+        "FIXTURE",
+        "PLAYER",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "RED"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "PLAYER": "RED",
+        "TEAM": "RED",
+        "FIXTURE": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:42.213638+00:00",
+      "last_success_at": "2026-09-13T07:32:42.114224+00:00",
+      "check_age_minutes": 0.028,
+      "max_effective_data_age_minutes": 0.029,
+      "check_freshness_target_minutes": 90,
+      "duration_ms": 639.904,
+      "current_run_action": "FETCHED",
+      "coverage": {
+        "expected_requests": 1,
+        "successful_checks_this_cycle": 1,
+        "downloaded_this_cycle": 1,
+        "revalidated_not_modified": 0,
+        "usable_requests": 1,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "generic_http",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:42.213638+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 1,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 2,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "fotmob",
+      "source_name": "FotMob",
+      "category": "advanced_performance",
+      "critical": false,
+      "entity_scopes": [
+        "FIXTURE",
+        "PLAYER",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "RED"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "PLAYER": "RED",
+        "TEAM": "GREEN",
+        "FIXTURE": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-09-13T07:32:42.868910+00:00",
+      "last_success_at": "2026-09-13T07:32:42.867851+00:00",
+      "check_age_minutes": 0.017,
+      "max_effective_data_age_minutes": 0.017,
+      "check_freshness_target_minutes": 90,
+      "duration_ms": 1295.048,
+      "current_run_action": "REVALIDATED",
+      "coverage": {
+        "expected_requests": 1,
+        "successful_checks_this_cycle": 1,
+        "downloaded_this_cycle": 0,
+        "revalidated_not_modified": 1,
+        "usable_requests": 1,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "rest_json",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:42.868910+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 1,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 2,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "statsbomb",
+      "source_name": "StatsBomb Open Data",
+      "category": "historical_event_data",
+      "critical": false,
+      "entity_scopes": [
+        "COMPETITION",
+        "EVENT",
+        "FEED"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "RED",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "NOT_APPLICABLE",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "RED",
+        "data": "RED",
+        "join": "NOT_APPLICABLE"
+      },
+      "consumer_readiness": "RED",
+      "fallback_recommended": true,
+      "fallback_reason": "STALE",
+      "identity_by_scope": {},
+      "join_ready": true,
+      "availability": "AVAILABLE",
+      "effective_state": "SCHEDULED_CACHE",
+      "changed": false,
+      "checked_at": "2026-09-07T06:02:46.345800+00:00",
+      "last_success_at": "2026-09-07T06:02:46.331165+00:00",
+      "check_age_minutes": 8729.959,
+      "max_effective_data_age_minutes": 8729.959,
+      "check_freshness_target_minutes": 1500,
+      "duration_ms": 0.0,
+      "current_run_action": "SKIPPED_NOT_DUE",
+      "coverage": {
+        "expected_requests": 1,
+        "successful_checks_this_cycle": 1,
+        "downloaded_this_cycle": 0,
+        "revalidated_not_modified": 1,
+        "usable_requests": 1,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "rest_json",
+        "poll_interval_minutes": 1440,
+        "deadline_window": false,
+        "skipped": true,
+        "reason": "NOT_DUE",
+        "last_polled_at": "2026-09-07T06:02:46.345800+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 1,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 2,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "rotowire",
+      "source_name": "RotoWire Soccer",
+      "category": "availability_lineups",
+      "critical": false,
+      "entity_scopes": [
+        "FIXTURE",
+        "PLAYER",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "RED"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "PLAYER": "RED",
+        "TEAM": "RED",
+        "FIXTURE": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:42.271985+00:00",
+      "last_success_at": "2026-09-13T07:32:42.261359+00:00",
+      "check_age_minutes": 0.027,
+      "max_effective_data_age_minutes": 0.027,
+      "check_freshness_target_minutes": 90,
+      "duration_ms": 697.965,
+      "current_run_action": "FETCHED",
+      "coverage": {
+        "expected_requests": 1,
+        "successful_checks_this_cycle": 1,
+        "downloaded_this_cycle": 1,
+        "revalidated_not_modified": 0,
+        "usable_requests": 1,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "generic_http",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:42.271985+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 1,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 2,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "premierleague_stats",
+      "source_name": "PremierLeague.com Stats",
+      "category": "official_league_stats",
+      "critical": false,
+      "entity_scopes": [
+        "PLAYER",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "RED"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "PLAYER": "RED",
+        "TEAM": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-09-13T07:32:41.975377+00:00",
+      "last_success_at": "2026-09-13T07:32:41.953672+00:00",
+      "check_age_minutes": 0.032,
+      "max_effective_data_age_minutes": 0.032,
+      "check_freshness_target_minutes": 90,
+      "duration_ms": 401.231,
+      "current_run_action": "FETCHED",
+      "coverage": {
+        "expected_requests": 1,
+        "successful_checks_this_cycle": 1,
+        "downloaded_this_cycle": 1,
+        "revalidated_not_modified": 0,
+        "usable_requests": 1,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "generic_http",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:41.975377+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 1,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 2,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "espn",
+      "source_name": "ESPN Football Data",
+      "category": "fixture_match_data",
+      "critical": false,
+      "entity_scopes": [
+        "EVENT",
+        "FIXTURE",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "RED"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "TEAM": "RED",
+        "FIXTURE": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:41.790130+00:00",
+      "last_success_at": "2026-09-13T07:32:41.784511+00:00",
+      "check_age_minutes": 0.035,
+      "max_effective_data_age_minutes": 0.035,
+      "check_freshness_target_minutes": 90,
+      "duration_ms": 215.843,
+      "current_run_action": "FETCHED",
+      "coverage": {
+        "expected_requests": 1,
+        "successful_checks_this_cycle": 1,
+        "downloaded_this_cycle": 1,
+        "revalidated_not_modified": 0,
+        "usable_requests": 1,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "rest_json",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:41.790130+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 1,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 2,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "vaastav_fpl",
+      "source_name": "vaastav/Fantasy-Premier-League",
+      "category": "historical_fpl",
+      "critical": false,
+      "entity_scopes": [
+        "EVENT",
+        "FIXTURE",
+        "PLAYER",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "AMBER",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "AMBER"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "PLAYER": "AMBER",
+        "TEAM": "GREEN",
+        "FIXTURE": "AMBER"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-09-13T07:32:41.781263+00:00",
+      "last_success_at": "2026-09-13T07:32:41.756874+00:00",
+      "check_age_minutes": 0.035,
+      "max_effective_data_age_minutes": 0.037,
+      "check_freshness_target_minutes": 90,
+      "duration_ms": 206.849,
+      "current_run_action": "REVALIDATED",
+      "coverage": {
+        "expected_requests": 3,
+        "successful_checks_this_cycle": 3,
+        "downloaded_this_cycle": 0,
+        "revalidated_not_modified": 3,
+        "usable_requests": 3,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "rest_csv",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:41.781263+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 3,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 6,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "solio_analytics",
+      "source_name": "Solio Analytics FPL",
+      "category": "fpl_model_reference",
+      "critical": false,
+      "entity_scopes": [
+        "FIXTURE",
+        "PLAYER",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "RED",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "RED",
+        "data": "RED",
+        "join": "RED"
+      },
+      "consumer_readiness": "RED",
+      "fallback_recommended": true,
+      "fallback_reason": "STALE",
+      "identity_by_scope": {
+        "PLAYER": "RED",
+        "TEAM": "RED",
+        "FIXTURE": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "SCHEDULED_CACHE",
+      "changed": false,
+      "checked_at": "2026-09-12T11:28:38.746662+00:00",
+      "last_success_at": "2026-09-12T11:28:38.742055+00:00",
+      "check_age_minutes": 1204.085,
+      "max_effective_data_age_minutes": 1204.085,
+      "check_freshness_target_minutes": 300,
+      "duration_ms": 0.0,
+      "current_run_action": "SKIPPED_NOT_DUE",
+      "coverage": {
+        "expected_requests": 1,
+        "successful_checks_this_cycle": 1,
+        "downloaded_this_cycle": 1,
+        "revalidated_not_modified": 0,
+        "usable_requests": 1,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "rest_json",
+        "poll_interval_minutes": 240,
+        "deadline_window": false,
+        "skipped": true,
+        "reason": "NOT_DUE",
+        "last_polled_at": "2026-09-12T11:28:38.746662+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 1,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 2,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "check_the_chance",
+      "source_name": "Check The Chance",
+      "category": "market_model_reference",
+      "critical": false,
+      "entity_scopes": [
+        "PLAYER"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "RED",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "RED",
+        "data": "RED",
+        "join": "RED"
+      },
+      "consumer_readiness": "RED",
+      "fallback_recommended": true,
+      "fallback_reason": "STALE",
+      "identity_by_scope": {
+        "PLAYER": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "SCHEDULED_CACHE",
+      "changed": false,
+      "checked_at": "2026-09-12T11:28:40.539334+00:00",
+      "last_success_at": "2026-09-12T11:28:40.412824+00:00",
+      "check_age_minutes": 1204.055,
+      "max_effective_data_age_minutes": 1204.058,
+      "check_freshness_target_minutes": 420,
+      "duration_ms": 0.0,
+      "current_run_action": "SKIPPED_NOT_DUE",
+      "coverage": {
+        "expected_requests": 1,
+        "successful_checks_this_cycle": 1,
+        "downloaded_this_cycle": 1,
+        "revalidated_not_modified": 0,
+        "usable_requests": 1,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "html_scrape",
+        "poll_interval_minutes": 360,
+        "deadline_window": false,
+        "skipped": true,
+        "reason": "NOT_DUE",
+        "last_polled_at": "2026-09-12T11:28:40.539334+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 1,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 2,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "fantasy_football_pundit",
+      "source_name": "Fantasy Football Pundit",
+      "category": "lineup_probability_reference",
+      "critical": false,
+      "entity_scopes": [
+        "PLAYER",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "RED",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "RED",
+        "data": "RED",
+        "join": "RED"
+      },
+      "consumer_readiness": "RED",
+      "fallback_recommended": true,
+      "fallback_reason": "STALE",
+      "identity_by_scope": {
+        "PLAYER": "RED",
+        "TEAM": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "SCHEDULED_CACHE",
+      "changed": false,
+      "checked_at": "2026-09-12T11:28:38.880076+00:00",
+      "last_success_at": "2026-09-12T11:28:38.841141+00:00",
+      "check_age_minutes": 1204.083,
+      "max_effective_data_age_minutes": 1204.084,
+      "check_freshness_target_minutes": 420,
+      "duration_ms": 0.0,
+      "current_run_action": "SKIPPED_NOT_DUE",
+      "coverage": {
+        "expected_requests": 2,
+        "successful_checks_this_cycle": 2,
+        "downloaded_this_cycle": 2,
+        "revalidated_not_modified": 0,
+        "usable_requests": 2,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "html_scrape",
+        "poll_interval_minutes": 360,
+        "deadline_window": false,
+        "skipped": true,
+        "reason": "NOT_DUE",
+        "last_polled_at": "2026-09-12T11:28:38.880076+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 2,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 4,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "wikidata",
+      "source_name": "Wikidata Query Service",
+      "category": "identity_bridge_reference",
+      "critical": false,
+      "entity_scopes": [
+        "COMPETITION",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "RED"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "TEAM": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-09-13T07:32:43.334849+00:00",
+      "last_success_at": "2026-09-13T07:32:43.333634+00:00",
+      "check_age_minutes": 0.009,
+      "max_effective_data_age_minutes": 0.009,
+      "check_freshness_target_minutes": 720,
+      "duration_ms": 1760.313,
+      "current_run_action": "FETCHED",
+      "coverage": {
+        "expected_requests": 1,
+        "successful_checks_this_cycle": 1,
+        "downloaded_this_cycle": 1,
+        "revalidated_not_modified": 0,
+        "usable_requests": 1,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "rest_json",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:43.334849+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 1,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 2,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "open_meteo",
+      "source_name": "Open-Meteo Forecast API",
+      "category": "fixture_weather_context",
+      "critical": false,
+      "entity_scopes": [
+        "FIXTURE",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "RED"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "TEAM": "RED",
+        "FIXTURE": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:42.467584+00:00",
+      "last_success_at": "2026-09-13T07:32:42.387650+00:00",
+      "check_age_minutes": 0.023,
+      "max_effective_data_age_minutes": 0.025,
+      "check_freshness_target_minutes": 180,
+      "duration_ms": 892.904,
+      "current_run_action": "FETCHED",
+      "coverage": {
+        "expected_requests": 1,
+        "successful_checks_this_cycle": 1,
+        "downloaded_this_cycle": 1,
+        "revalidated_not_modified": 0,
+        "usable_requests": 1,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "rest_json",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:42.467584+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 1,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 2,
+        "remaining": null
+      }
+    },
+    {
+      "source_id": "thesportsdb_v1",
+      "source_name": "TheSportsDB V1 Public API",
+      "category": "fixture_match_data",
+      "critical": false,
+      "entity_scopes": [
+        "COMPETITION",
+        "EVENT",
+        "FIXTURE",
+        "TEAM"
+      ],
+      "health": "GREEN",
+      "dimensions": {
+        "transport_health": "GREEN",
+        "freshness_health": "GREEN",
+        "schema_health": "GREEN",
+        "coverage_health": "GREEN",
+        "identity_health": "RED",
+        "provenance_health": "GREEN",
+        "payload_integrity": "GREEN"
+      },
+      "readiness": {
+        "operational": "GREEN",
+        "data": "GREEN",
+        "join": "RED"
+      },
+      "consumer_readiness": "GREEN",
+      "fallback_recommended": false,
+      "fallback_reason": null,
+      "identity_by_scope": {
+        "TEAM": "RED",
+        "FIXTURE": "RED"
+      },
+      "join_ready": false,
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-09-13T07:32:41.978333+00:00",
+      "last_success_at": "2026-09-13T07:32:41.972069+00:00",
+      "check_age_minutes": 0.031,
+      "max_effective_data_age_minutes": 0.033,
+      "check_freshness_target_minutes": 360,
+      "duration_ms": 403.528,
+      "current_run_action": "FETCHED",
+      "coverage": {
+        "expected_requests": 3,
+        "successful_checks_this_cycle": 3,
+        "downloaded_this_cycle": 3,
+        "revalidated_not_modified": 0,
+        "usable_requests": 3,
+        "degraded_successes": 0,
+        "truncated_attempts": 0
+      },
+      "polling": {
+        "acquisition_kind": "rest_json",
+        "poll_interval_minutes": null,
+        "deadline_window": false,
+        "skipped": false,
+        "reason": "DUE",
+        "last_polled_at": "2026-09-13T07:32:41.978333+00:00"
+      },
+      "budget": {
+        "date_wib": "2026-09-13",
+        "limit": null,
+        "requests_used": 0,
+        "configured_requests_next_poll": 3,
+        "max_attempts_per_request": 2,
+        "reserved_requests_next_poll": 6,
+        "remaining": null
+      }
+    }
+  ],
+  "semantics": {
+    "health": "Backward-compatible operational acquisition health; inspect readiness and dimensions for consumer usability.",
+    "public_core_status": "Critical public V6 data-plane readiness only; authenticated personal state is a separate report-prefetch concern.",
+    "consumer_readiness_overall": "Worst operational/data readiness across all active public sources; identity is intentionally reported separately.",
+    "fallback_recommended": "Machine-readable hint for FPL Master/report layer to refresh only degraded, stale, or unusable public resources directly. V6 itself never performs downstream fallback.",
+    "transport_health": "Whether the current network/source acquisition attempt succeeded independently of cache freshness.",
+    "freshness_health": "Age of the effective payload against the source-specific freshness target.",
+    "schema_health": "Whether the payload passed structural/validation checks without truncation or degraded successful reads.",
+    "coverage_health": "Whether the expected source-native requests/records are materially covered.",
+    "identity_health": "Deterministic cross-source identity readiness only for entity scopes relevant to this source; unmapped identity does not make source-native public facts unavailable.",
+    "provenance_health": "Whether source identity, timestamps, and upstream-model authorship lineage are explicit.",
+    "payload_integrity": "Whether payload hashes/truncation/model-signal boundaries are internally consistent."
+  }
+}

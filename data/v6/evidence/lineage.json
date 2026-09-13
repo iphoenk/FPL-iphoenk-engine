@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-13T07:32:43.863939+00:00",
+  "rule": "Sources sharing an independence_group must not be counted as independent confirmations.",
+  "groups": {
+    "official_fpl": [
+      "official_fpl",
+      "official_price_predictor"
+    ],
+    "understat": [
+      "understat"
+    ],
+    "opta_family": [
+      "opta_the_analyst"
+    ],
+    "statmuse": [
+      "statmuse"
+    ],
+    "onside": [
+      "onside"
+    ],
+    "ben_crellin": [
+      "ben_crellin"
+    ],
+    "onefpl": [
+      "onefpl"
+    ],
+    "livefpl": [
+      "livefpl"
+    ],
+    "ffscout": [
+      "ffscout"
+    ],
+    "fotmob": [
+      "fotmob"
+    ],
+    "statsbomb": [
+      "statsbomb"
+    ],
+    "rotowire": [
+      "rotowire"
+    ],
+    "premierleague_stats": [
+      "premierleague_stats"
+    ],
+    "espn": [
+      "espn"
+    ],
+    "official_fpl_history": [
+      "vaastav_fpl"
+    ],
+    "solio_analytics": [
+      "solio_analytics"
+    ],
+    "bookmaker_market": [
+      "check_the_chance"
+    ],
+    "fantasy_football_pundit": [
+      "fantasy_football_pundit"
+    ],
+    "wikidata": [
+      "wikidata"
+    ],
+    "open_meteo": [
+      "open_meteo"
+    ],
+    "thesportsdb": [
+      "thesportsdb_v1"
+    ]
+  },
+  "sources": [
+    {
+      "source_id": "official_fpl",
+      "source_name": "Official FPL",
+      "category": "factual_authority",
+      "independence_group": "official_fpl",
+      "derived_from": null,
+      "notes": null
+    },
+    {
+      "source_id": "official_price_predictor",
+      "source_name": "Official FPL Price Predictor",
+      "category": "market",
+      "independence_group": "official_fpl",
+      "derived_from": "official_fpl.bootstrap",
+      "notes": null
+    },
+    {
+      "source_id": "understat",
+      "source_name": "Understat",
+      "category": "advanced_performance",
+      "independence_group": "understat",
+      "derived_from": null,
+      "notes": null
+    },
+    {
+      "source_id": "opta_the_analyst",
+      "source_name": "Opta / The Analyst",
+      "category": "advanced_performance",
+      "independence_group": "opta_family",
+      "derived_from": null,
+      "notes": null
+    },
+    {
+      "source_id": "statmuse",
+      "source_name": "StatMuse FC",
+      "category": "advanced_performance",
+      "independence_group": "statmuse",
+      "derived_from": null,
+      "notes": null
+    },
+    {
+      "source_id": "onside",
+      "source_name": "Onside",
+      "category": "fpl_model_reference",
+      "independence_group": "onside",
+      "derived_from": null,
+      "notes": null
+    },
+    {
+      "source_id": "ben_crellin",
+      "source_name": "Ben Crellin",
+      "category": "fixture_schedule_reference",
+      "independence_group": "ben_crellin",
+      "derived_from": null,
+      "notes": null
+    },
+    {
+      "source_id": "onefpl",
+      "source_name": "OneFPL",
+      "category": "price_reference",
+      "independence_group": "onefpl",
+      "derived_from": null,
+      "notes": null
+    },
+    {
+      "source_id": "livefpl",
+      "source_name": "LiveFPL",
+      "category": "price_reference",
+      "independence_group": "livefpl",
+      "derived_from": null,
+      "notes": null
+    },
+    {
+      "source_id": "ffscout",
+      "source_name": "Fantasy Football Scout",
+      "category": "fpl_model_reference",
+      "independence_group": "ffscout",
+      "derived_from": null,
+      "notes": null
+    },
+    {
+      "source_id": "fotmob",
+      "source_name": "FotMob",
+      "category": "advanced_performance",
+      "independence_group": "fotmob",
+      "derived_from": null,
+      "notes": null
+    },
+    {
+      "source_id": "statsbomb",
+      "source_name": "StatsBomb Open Data",
+      "category": "historical_event_data",
+      "independence_group": "statsbomb",
+      "derived_from": null,
+      "notes": "Open-data catalogue; adaptive polling may carry forward unchanged data between due cycles."
+    },
+    {
+      "source_id": "rotowire",
+      "source_name": "RotoWire Soccer",
+      "category": "availability_lineups",
+      "independence_group": "rotowire",
+      "derived_from": null,
+      "notes": null
+    },
+    {
+      "source_id": "premierleague_stats",
+      "source_name": "PremierLeague.com Stats",
+      "category": "official_league_stats",
+      "independence_group": "premierleague_stats",
+      "derived_from": null,
+      "notes": null
+    },
+    {
+      "source_id": "espn",
+      "source_name": "ESPN Football Data",
+      "category": "fixture_match_data",
+      "independence_group": "espn",
+      "derived_from": null,
+      "notes": null
+    },
+    {
+      "source_id": "vaastav_fpl",
+      "source_name": "vaastav/Fantasy-Premier-League",
+      "category": "historical_fpl",
+      "independence_group": "official_fpl_history",
+      "derived_from": null,
+      "notes": "Historical/calibration mirror; not a live factual authority over Official FPL."
+    },
+    {
+      "source_id": "solio_analytics",
+      "source_name": "Solio Analytics FPL",
+      "category": "fpl_model_reference",
+      "independence_group": "solio_analytics",
+      "derived_from": null,
+      "notes": "Public no-auth endpoint intended for AI/data consumers. Preserve as independent upstream model evidence; V6 does not author or blend predictions."
+    },
+    {
+      "source_id": "check_the_chance",
+      "source_name": "Check The Chance",
+      "category": "market_model_reference",
+      "independence_group": "bookmaker_market",
+      "derived_from": null,
+      "notes": "Public bookmaker-derived probabilities retained only as an upstream model signal. V6 performs no interpretation or decision logic."
+    },
+    {
+      "source_id": "fantasy_football_pundit",
+      "source_name": "Fantasy Football Pundit",
+      "category": "lineup_probability_reference",
+      "independence_group": "fantasy_football_pundit",
+      "derived_from": null,
+      "notes": "Free public source-native model/team-news evidence. V6 preserves the source payload and provenance only."
+    },
+    {
+      "source_id": "wikidata",
+      "source_name": "Wikidata Query Service",
+      "category": "identity_bridge_reference",
+      "independence_group": "wikidata",
+      "derived_from": null,
+      "notes": "Public no-auth SPARQL corroboration only. Query scope is constrained to association-football-club entities and grouped to one row per Wikidata club QID; P118 is not treated as proof of current-season membership. Results never supersede Official FPL identity and never authorize fuzzy runtime joins."
+    },
+    {
+      "source_id": "open_meteo",
+      "source_name": "Open-Meteo Forecast API",
+      "category": "fixture_weather_context",
+      "independence_group": "open_meteo",
+      "derived_from": null,
+      "notes": "No-auth raw venue forecast acquisition. Venue coordinates and ordering are owned only by config/v6/venue_geography.json. V6 stores provider weather fields only and computes no FPL impact, xPts multiplier or transfer decision."
+    },
+    {
+      "source_id": "thesportsdb_v1",
+      "source_name": "TheSportsDB V1 Public API",
+      "category": "fixture_match_data",
+      "independence_group": "thesportsdb",
+      "derived_from": null,
+      "notes": "Legacy free V1 pilot using TheSportsDB's documented shared public access segment 123. No user account, login or private secret is permitted. Secondary factual redundancy only; never an authority over Official FPL."
+    }
+  ]
+}

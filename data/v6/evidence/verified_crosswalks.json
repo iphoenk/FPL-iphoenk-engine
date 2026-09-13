@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "canonical": true,
+  "semantic_class": "IDENTITY_CROSSWALK",
+  "authority": "V6_DETERMINISTIC_IDENTITY",
+  "generated_at": "2026-09-13T07:32:43.695463+00:00",
+  "effective_at": "2026-09-13T07:32:43.695487+00:00",
+  "normalization_version": "V6_VERIFIED_CROSSWALK_1",
+  "canonical_authority": "official_fpl",
+  "fuzzy_matching_allowed": false,
+  "record_count": 20,
+  "primary_keys": [
+    "source_id",
+    "source_native_id"
+  ],
+  "sources": {
+    "fotmob": {
+      "verification_status": "VERIFIED_MANUAL",
+      "verification_method": "SOURCE_NATIVE_ID_TO_OFFICIAL_FPL_ID_CROSSWALK",
+      "verified_at": "2026-09-06T15:25:38+00:00",
+      "evidence": [
+        "runtime-data-v6:data/v6/current/fotmob.json",
+        "runtime-data-v6:data/v6/normalized/canonical_teams.json"
+      ],
+      "configured_team_mapping_count": 20,
+      "current_identity_coverage": {
+        "strategy": "VERIFIED_MANUAL_SOURCE_NATIVE_TEAM_CROSSWALK",
+        "deterministic_bridge": true,
+        "identity_health": "GREEN",
+        "mapped_status": "VERIFIED_MANUAL",
+        "mapped_team_count": 20,
+        "canonical_team_count": 20,
+        "coverage_ratio": 1.0,
+        "unmapped_team_count": 0,
+        "configured_mapping_count": 20,
+        "observed_native_team_count": 20,
+        "join_allowed": true,
+        "applicable": true
+      },
+      "current_source_health": "GREEN",
+      "current_source_effective_state": "LIVE_UNCHANGED"
+    }
+  },
+  "governance": {
+    "data_only": true,
+    "decision_authority": "NONE",
+    "prediction_authority": "NONE",
+    "optimizer_authority": "NONE",
+    "silent_name_matching_allowed": false,
+    "unverified_records_remain_unmapped": true
+  }
+}

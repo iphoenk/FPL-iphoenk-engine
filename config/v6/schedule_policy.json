@@ -21,11 +21,11 @@
     "proof_fresh_after_minutes": 75,
     "proof_stale_after_minutes": 135,
     "issue_title_marker": "FPL_MASTER_SLOT",
-    "preferred_transport": "DEDICATED_ISSUE_COMMENT_EDIT",
-    "legacy_issue_comment_transport_enabled": true,
-    "transport_note": "ChatGPT edits one dedicated owner-authored control comment on issue #431 with the current logical slot. GitHub remains executor-only; issue-title edit is fallback, not preferred.",
+    "preferred_transport": "ISSUE_TITLE_EDIT",
+    "legacy_issue_comment_transport_enabled": false,
+    "transport_note": "ChatGPT edits issue #431 title with the current logical slot. GitHub remains executor-only. Dedicated issue-comment edit is disabled for ChatGPT transport because the connector blocks that mutation path.",
     "dedicated_control_comment_id": 5596106114,
-    "dedicated_control_comment_event": "issue_comment:edited",
+    "dedicated_control_comment_event": "DISABLED_FOR_CHATGPT_TRANSPORT",
     "issue_title_transport_enabled": true
   },
   "github_natural_schedule": {
@@ -34,51 +34,18 @@
     "reason": "GITHUB_SCHEDULER_NOT_RELIABLE_FOR_V6_HOURLY_AUTHORITY",
     "workflow_schedule_triggers_removed": true,
     "removed_at": "2026-09-08T10:35:31+07:00",
-    "former_crons_utc": [
-      "13 * * * *",
-      "28 * * * *",
-      "43 * * * *",
-      "58 * * * *"
-    ],
+    "former_crons_utc": ["13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"],
     "former_crons_are_historical_evidence_only": true
   },
   "scheduled_crons_utc": [],
   "natural_schedule_redundancy_attempts_per_hour": 0,
   "source_registry_schedule_metadata_authoritative": false,
   "authorities": {
-    "data_acquisition": "V6",
-    "normalization": "V6",
-    "deterministic_identity": "V6",
-    "validation": "V6",
-    "cache_history": "V6",
-    "provenance_lineage": "V6",
-    "freshness_health": "V6",
-    "publication": "V6",
-    "decision": "NONE",
-    "prediction_authored_by_v6": "NONE",
-    "optimizer": "NONE",
-    "tactical": "NONE",
-    "transfer": "NONE",
-    "captain": "NONE",
-    "vice_captain": "NONE",
-    "chip": "NONE",
-    "formation": "NONE",
-    "xpts": "NONE",
-    "xmins": "NONE",
-    "p_start": "NONE",
-    "bayesian": "NONE",
-    "monte_carlo": "NONE",
-    "mini_league_analytics": "NONE",
-    "rank_probability": "NONE"
+    "data_acquisition": "V6", "normalization": "V6", "deterministic_identity": "V6", "validation": "V6", "cache_history": "V6", "provenance_lineage": "V6", "freshness_health": "V6", "publication": "V6",
+    "decision": "NONE", "prediction_authored_by_v6": "NONE", "optimizer": "NONE", "tactical": "NONE", "transfer": "NONE", "captain": "NONE", "vice_captain": "NONE", "chip": "NONE", "formation": "NONE", "xpts": "NONE", "xmins": "NONE", "p_start": "NONE", "bayesian": "NONE", "monte_carlo": "NONE", "mini_league_analytics": "NONE", "rank_probability": "NONE"
   },
   "manual_recovery": {
-    "enabled": true,
-    "schedule_kind": "manual_recovery",
-    "authoritative_runtime_snapshot": false,
-    "counts_as_completed_operational_slot": false,
-    "counts_as_completed_scheduled_slot": false,
-    "allowed_actor": "repository_owner",
-    "confirmation_phrase": "RECOVER_V6"
+    "enabled": true, "schedule_kind": "manual_recovery", "authoritative_runtime_snapshot": false, "counts_as_completed_operational_slot": false, "counts_as_completed_scheduled_slot": false, "allowed_actor": "repository_owner", "confirmation_phrase": "RECOVER_V6"
   },
   "governance": {
     "scheduled_runtime_is_primary_authority": false,
@@ -98,25 +65,11 @@
     "chatgpt_scheduler_health_is_current_epoch_authority": true,
     "legacy_github_scheduler_evidence_is_historical_only": true,
     "scheduler_migration_boundary_is_explicit": true,
-    "authoritative_runtime_triggers": [
-      "issues:chatgpt_scheduler",
-      "issue_comment:chatgpt_scheduler",
-      "workflow_dispatch:master_orchestrated",
-      "workflow_dispatch:report_prefetch",
-      "issues:report_prefetch",
-      "issue_comment:report_prefetch"
-    ],
-    "authoritative_operational_triggers": [
-      "issues:chatgpt_scheduler",
-      "issue_comment:chatgpt_scheduler",
-      "workflow_dispatch:master_orchestrated"
-    ],
-    "operational_slot_completing_triggers": [
-      "issues:chatgpt_scheduler",
-      "issue_comment:chatgpt_scheduler",
-      "workflow_dispatch:master_orchestrated"
-    ],
+    "authoritative_runtime_triggers": ["issues:chatgpt_scheduler", "issue_comment:chatgpt_scheduler", "workflow_dispatch:master_orchestrated", "workflow_dispatch:report_prefetch", "issues:report_prefetch", "issue_comment:report_prefetch"],
+    "authoritative_operational_triggers": ["issues:chatgpt_scheduler", "issue_comment:chatgpt_scheduler", "workflow_dispatch:master_orchestrated"],
+    "operational_slot_completing_triggers": ["issues:chatgpt_scheduler", "issue_comment:chatgpt_scheduler", "workflow_dispatch:master_orchestrated"],
     "scheduler_health_proof_trigger": "issue_comment:chatgpt_scheduler",
+    "preferred_scheduler_health_proof_trigger": "issues:chatgpt_scheduler",
     "master_orchestrated_is_authoritative": true,
     "generic_master_dispatch_does_not_count_as_scheduler_health_proof": true,
     "report_prefetch_is_report_driven_only": true,
@@ -127,73 +80,22 @@
     "report_prefetch_does_not_count_as_scheduled_core_cycle": true,
     "historical_backfill_is_ad_hoc_only": true,
     "historical_backfill_reuses_report_prefetch_control_plane": true,
-    "identity_join_policy": {
-      "silent_fuzzy_runtime_join_allowed": false,
-      "allowed_statuses_for_canonical_join": [
-        "EXACT",
-        "VERIFIED_MANUAL"
-      ],
-      "other_statuses": [
-        "UNMAPPED",
-        "AMBIGUOUS",
-        "ORPHANED",
-        "STALE"
-      ]
-    },
+    "identity_join_policy": {"silent_fuzzy_runtime_join_allowed": false, "allowed_statuses_for_canonical_join": ["EXACT", "VERIFIED_MANUAL"], "other_statuses": ["UNMAPPED", "AMBIGUOUS", "ORPHANED", "STALE"]},
     "scheduler_policy_is_single_runtime_authority": true,
     "scheduler_proof_age_is_read_time_observability": true,
-    "scheduler_health_proof_triggers": [
-      "issue_comment:chatgpt_scheduler",
-      "issues:chatgpt_scheduler"
-    ],
-    "issue_title_edit_is_preferred_scheduler_transport": false,
+    "scheduler_health_proof_triggers": ["issue_comment:chatgpt_scheduler", "issues:chatgpt_scheduler"],
+    "issue_title_edit_is_preferred_scheduler_transport": true,
     "issue_comment_is_legacy_scheduler_transport": true,
-    "issue_comment_edit_is_preferred_scheduler_transport": true,
-    "issue_title_edit_is_fallback_scheduler_transport": true
+    "issue_comment_edit_is_preferred_scheduler_transport": false,
+    "issue_title_edit_is_fallback_scheduler_transport": false
   },
   "master_orchestrated": {
-    "enabled": true,
-    "schedule_kind": "master_orchestrated",
-    "issue_schedule_kind": "chatgpt_scheduler",
-    "authoritative_runtime_snapshot": true,
-    "counts_as_completed_operational_slot": true,
-    "counts_as_completed_scheduled_slot": false,
-    "allowed_actor": "repository_owner",
-    "reason_required": true,
-    "control_issue_number": 431,
-    "issue_comment_command": "/v6-master-acquire",
-    "issue_title_marker": "FPL_MASTER_SLOT"
+    "enabled": true, "schedule_kind": "master_orchestrated", "issue_schedule_kind": "chatgpt_scheduler", "authoritative_runtime_snapshot": true, "counts_as_completed_operational_slot": true, "counts_as_completed_scheduled_slot": false, "allowed_actor": "repository_owner", "reason_required": true, "control_issue_number": 431, "issue_comment_command": "/v6-master-acquire", "issue_title_marker": "FPL_MASTER_SLOT"
   },
   "report_prefetch": {
-    "enabled": true,
-    "schedule_kind": "report_prefetch",
-    "report_driven": true,
-    "independent_cron": false,
-    "authoritative_runtime_snapshot": true,
-    "counts_as_completed_operational_slot": false,
-    "counts_as_completed_scheduled_slot": false,
-    "counts_as_completed_report_slot": true,
-    "allowed_actor": "repository_owner",
-    "reason_required": true,
-    "control_issue_number": 431,
-    "issue_comment_command": "/v6-report-prefetch",
-    "supported_report_kinds": [
-      "full_master",
-      "match_mode",
-      "deadline_review",
-      "ad_hoc",
-      "historical_backfill",
-      "05:30_price"
-    ],
-    "historical_backfill": {
-      "scope": "mini_league",
-      "completed_gws_allowed": true,
-      "current_post_deadline_gw_allowed": true,
-      "future_gws_allowed": false,
-      "requires_gw_range": true,
-      "cohort_semantics": "CURRENT_COHORT_HISTORY"
-    },
-    "issue_title_marker": "FPL_REPORT_PREFETCH",
-    "issue_title_edit_enabled": true
+    "enabled": true, "schedule_kind": "report_prefetch", "report_driven": true, "independent_cron": false, "authoritative_runtime_snapshot": true, "counts_as_completed_operational_slot": false, "counts_as_completed_scheduled_slot": false, "counts_as_completed_report_slot": true, "allowed_actor": "repository_owner", "reason_required": true, "control_issue_number": 431, "issue_comment_command": "/v6-report-prefetch",
+    "supported_report_kinds": ["full_master", "match_mode", "deadline_review", "ad_hoc", "historical_backfill", "05:30_price"],
+    "historical_backfill": {"scope": "mini_league", "completed_gws_allowed": true, "current_post_deadline_gw_allowed": true, "future_gws_allowed": false, "requires_gw_range": true, "cohort_semantics": "CURRENT_COHORT_HISTORY"},
+    "issue_title_marker": "FPL_REPORT_PREFETCH", "issue_title_edit_enabled": true
   }
 }

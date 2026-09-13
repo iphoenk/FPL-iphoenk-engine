@@ -1,0 +1,72 @@
+name: V6 FotMob inventory one-shot probe
+
+on:
+  push:
+    branches:
+      - ops/v6-fotmob-inventory-probe
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Locate FotMob normalization code
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== CODE PATHS ==='
+          grep -Ril --exclude-dir=.git 'fotmob' src scripts config tests | sort || true
+          echo '=== SOURCE_NATIVE_ID WRITERS AROUND FOTMOB ==='
+          grep -Rni --exclude-dir=.git -E 'fotmob|source_native_id' src scripts | head -n 400 || true
+
+      - name: Inspect runtime FotMob normalized and raw paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin '+refs/heads/runtime-data-v6:refs/remotes/origin/runtime-data-v6'
+          echo '=== RUNTIME FOTMOB PATHS ==='
+          git ls-tree -r --name-only origin/runtime-data-v6 | grep -i fotmob | head -n 200 || true
+          git show origin/runtime-data-v6:data/v6/normalized/sources/fotmob.json > /tmp/fotmob.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('/tmp/fotmob.json').read_text())
+          players=((d.get('record_groups') or {}).get('players') or [])
+          teams=((d.get('record_groups') or {}).get('teams') or [])
+          print('players=', len(players), 'teams=', len(teams))
+          bad=[]
+          for i,row in enumerate(players):
+              native=row.get('source_native_id')
+              try:
+                  nonpositive=int(native) <= 0
+              except Exception:
+                  nonpositive=True
+              if nonpositive:
+                  bad.append((i,row))
+          print('nonpositive_or_invalid_player_native_rows=', len(bad))
+          for i,row in bad:
+              print('BAD_PLAYER_INDEX', i, json.dumps(row, sort_keys=True, ensure_ascii=False))
+          for i,row in enumerate(players):
+              if str(row.get('name') or row.get('player_name') or '').lower().find('manchester city') >= 0:
+                  print('MAN_CITY_PLAYER_ROW', i, json.dumps(row, sort_keys=True, ensure_ascii=False))
+          for i,row in enumerate(teams):
+              if str(row.get('name') or '').lower() == 'manchester city':
+                  print('MAN_CITY_TEAM_ROW', i, json.dumps(row, sort_keys=True, ensure_ascii=False))
+          print('top_level_keys=', sorted(d.keys()))
+          print('record_group_keys=', sorted((d.get('record_groups') or {}).keys()))
+          PY
+
+      - name: Upload normalized FotMob snapshot
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-fotmob-inventory-probe
+          path: /tmp/fotmob.json
+          retention-days: 1

@@ -1,0 +1,95 @@
+name: V6 Wave B final read-only proof
+
+on:
+  push:
+    branches:
+      - ops/v6-wave-b-final-readonly-proof
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-v6-ci.lock
+      - name: Install V6 dependencies
+        run: python -m pip install --require-hashes -r requirements-v6-ci.lock
+      - name: Hydrate existing runtime snapshot only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/waveb-proof/sources
+          git fetch --depth=1 origin '+refs/heads/runtime-data-v6:refs/remotes/origin/runtime-data-v6'
+          git show origin/runtime-data-v6:data/v6/evidence/player_identity_map.json > /tmp/waveb-proof/player_identity_map.json
+          for source in understat fotmob statmuse ffscout; do
+            git show origin/runtime-data-v6:data/v6/normalized/sources/${source}.json > /tmp/waveb-proof/sources/${source}.json
+          done
+          git rev-parse origin/runtime-data-v6 > /tmp/waveb-proof/runtime_sha.txt
+      - name: Build final Wave B truth against existing snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from src.runtime_v6.identity_coverage import build_player_identity_coverage_truth, load_identity_evidence_config, validate_player_identity_coverage_truth
+
+          root=Path('/tmp/waveb-proof')
+          identity=json.loads((root/'player_identity_map.json').read_text())
+          datasets={}
+          for source in ('understat','fotmob','statmuse','ffscout'):
+              datasets[source]=json.loads((root/'sources'/f'{source}.json').read_text())
+          report=build_player_identity_coverage_truth(identity,datasets,load_identity_evidence_config())
+          errors=validate_player_identity_coverage_truth(report,identity)
+          summary={
+              'main_sha':'5f68b03a5f6cbf2560924b3aa26a63c7702eee1b',
+              'runtime_snapshot_sha':(root/'runtime_sha.txt').read_text().strip(),
+              'integrity_status':report['integrity_status'],
+              'validator_errors':errors,
+              'sources':{},
+              'fuzzy_name_matching_allowed':report['governance']['fuzzy_name_matching_allowed'],
+          }
+          for source in ('opta_the_analyst','understat','fotmob','statmuse'):
+              row=report['sources'][source]
+              summary['sources'][source]={
+                  'canonical_mapped':row['canonical_mapped_player_count'],
+                  'canonical_total':row['canonical_player_count'],
+                  'observed':row['observed_provider_player_count'],
+                  'joined':row['observed_joined_player_count'],
+                  'raw_observed_ratio':row['observed_join_coverage_ratio'],
+                  'join_eligible':row.get('observed_join_eligible_player_count'),
+                  'provider_max_ratio':row.get('provider_max_observed_join_coverage_ratio'),
+                  'reviewed_limitations':row.get('observed_reviewed_provider_limitation_count',0),
+                  'actionable_unmapped':row['observed_unmapped_player_count'],
+                  'conflicts':row['identity_conflict_count'],
+                  'health':row['player_identity_health'],
+                  'closure_ready':row['wave_b_closure_ready'],
+              }
+          print(json.dumps(summary,indent=2,sort_keys=True))
+          Path('/tmp/waveb-proof/summary.json').write_text(json.dumps(summary,indent=2,sort_keys=True)+'\n')
+          required=('opta_the_analyst','understat','fotmob','statmuse')
+          if report['integrity_status']!='PASS' or errors:
+              raise SystemExit('identity truth integrity failed')
+          for source in required:
+              row=report['sources'][source]
+              if row['player_identity_health']!='GREEN' or not row['wave_b_closure_ready']:
+                  raise SystemExit(f'{source}: not closure ready')
+              if row['observed_unmapped_player_count'] != 0 or row['identity_conflict_count'] != 0:
+                  raise SystemExit(f'{source}: actionable gap/conflict remains')
+          if report['governance']['fuzzy_name_matching_allowed'] is not False:
+              raise SystemExit('fuzzy policy violation')
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-wave-b-final-readonly-proof
+          path: /tmp/waveb-proof/summary.json
+          retention-days: 1

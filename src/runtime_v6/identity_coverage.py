@@ -43,6 +43,14 @@ def _player_rows(dataset: dict[str, Any] | None) -> list[dict[str, Any]]:
     return [dict(row) for row in rows if isinstance(row, dict)]
 
 
+def _diagnostic_label(row: dict[str, Any]) -> dict[str, Any]:
+    """Display-only context. These fields are never used as identity keys."""
+    return {
+        "player_name": row.get("player_name") or row.get("name"),
+        "club": row.get("club") or row.get("team_title") or row.get("team_name"),
+    }
+
+
 def _observed_truth(rows: list[dict[str, Any]]) -> dict[str, Any]:
     by_native: dict[str, list[dict[str, Any]]] = {}
     missing_native = 0
@@ -51,18 +59,25 @@ def _observed_truth(rows: list[dict[str, Any]]) -> dict[str, Any]:
         if native is None or str(native).strip() == "":
             missing_native += 1
             continue
-        by_native.setdefault(str(native), []).append(row)
+        by_native.setdefault(str(native).strip(), []).append(row)
 
     joined_native: set[str] = set()
     unmapped_native: set[str] = set()
     native_to_multiple_targets: set[str] = set()
     canonical_to_natives: dict[int, set[str]] = {}
     duplicate_native_records = 0
+    duplicate_native_ids: set[str] = set()
+    inventory: list[dict[str, Any]] = []
 
-    for native, native_rows in by_native.items():
-        duplicate_native_records += max(0, len(native_rows) - 1)
+    for native, native_rows in sorted(by_native.items()):
+        duplicate_count = max(0, len(native_rows) - 1)
+        duplicate_native_records += duplicate_count
+        if duplicate_count:
+            duplicate_native_ids.add(native)
+
         joined_targets: set[int] = set()
         has_joinable = False
+        join_statuses: set[str] = set()
         for row in native_rows:
             status = str(row.get("identity_status") or "")
             official = row.get("official_element_id")
@@ -73,6 +88,8 @@ def _observed_truth(rows: list[dict[str, Any]]) -> dict[str, Any]:
             if status in _JOINABLE and official_id is not None and official_id > 0:
                 has_joinable = True
                 joined_targets.add(official_id)
+                join_statuses.add(status)
+
         if len(joined_targets) > 1:
             native_to_multiple_targets.add(native)
         elif has_joinable:
@@ -81,6 +98,30 @@ def _observed_truth(rows: list[dict[str, Any]]) -> dict[str, Any]:
             canonical_to_natives.setdefault(target, set()).add(native)
         else:
             unmapped_native.add(native)
+
+        if duplicate_count or len(joined_targets) > 1:
+            classification = "CONFLICT"
+            reason = "DUPLICATE_NATIVE_ID" if duplicate_count else "NATIVE_ID_MULTIPLE_CANONICAL_TARGETS"
+        elif has_joinable:
+            classification = "VERIFIED"
+            reason = "DETERMINISTIC_JOIN"
+        else:
+            classification = "PROVIDER_ENTITY_EXISTS_BUT_UNMAPPED"
+            reason = "OBSERVED_NATIVE_ENTITY_WITHOUT_DETERMINISTIC_JOIN"
+
+        diagnostic = _diagnostic_label(native_rows[0])
+        inventory.append(
+            {
+                "source_native_id": native,
+                "classification": classification,
+                "reason": reason,
+                "official_element_id": next(iter(joined_targets)) if len(joined_targets) == 1 else None,
+                "identity_status": sorted(join_statuses)[0] if len(join_statuses) == 1 else None,
+                "duplicate_record_count": duplicate_count,
+                "diagnostic_display": diagnostic,
+                "diagnostic_display_is_not_identity_evidence": True,
+            }
+        )
 
     canonical_target_collisions = {
         official_id: sorted(natives)
@@ -92,7 +133,14 @@ def _observed_truth(rows: list[dict[str, Any]]) -> dict[str, Any]:
         for natives in canonical_target_collisions.values()
         for native in natives
     }
-    hard_conflict_native_ids = native_to_multiple_targets | collision_native_ids
+    hard_conflict_native_ids = native_to_multiple_targets | collision_native_ids | duplicate_native_ids
+
+    # Reclassify any native ID implicated by a reverse canonical collision.
+    if collision_native_ids:
+        for item in inventory:
+            if item["source_native_id"] in collision_native_ids:
+                item["classification"] = "CONFLICT"
+                item["reason"] = "MULTIPLE_NATIVE_IDS_ONE_CANONICAL_TARGET"
 
     observed = len(by_native)
     joined = len(joined_native - hard_conflict_native_ids)
@@ -101,32 +149,57 @@ def _observed_truth(rows: list[dict[str, Any]]) -> dict[str, Any]:
     canonical_collision_count = len(canonical_target_collisions)
     conflict_count = native_conflict_count + canonical_collision_count
     ratio = round(joined / observed, 6) if observed else 0.0
-    if conflict_count or missing_native:
-        health = "RED"
+
+    # Keep the Wave-A coverage signal for backwards compatibility.
+    if conflict_count or missing_native or duplicate_native_records:
+        observed_health = "RED"
     elif observed and joined == observed:
-        health = "GREEN"
+        observed_health = "GREEN"
     elif observed and joined:
-        health = "AMBER"
+        observed_health = "AMBER"
     else:
-        health = "RED"
+        observed_health = "RED"
+
+    # Wave-B identity health is intentionally stricter: an observed provider
+    # entity that is still unmapped is a real unresolved identity defect.
+    if conflict_count or missing_native or duplicate_native_records or unmapped:
+        player_identity_health = "RED"
+    elif observed and joined == observed:
+        player_identity_health = "GREEN"
+    else:
+        player_identity_health = "NOT_ASSESSED"
+
+    classification_counts = {
+        "VERIFIED": sum(item["classification"] == "VERIFIED" for item in inventory),
+        "PROVIDER_ENTITY_EXISTS_BUT_UNMAPPED": sum(
+            item["classification"] == "PROVIDER_ENTITY_EXISTS_BUT_UNMAPPED" for item in inventory
+        ),
+        "NO_PROVIDER_ENTITY": 0,
+        "CONFLICT": sum(item["classification"] == "CONFLICT" for item in inventory),
+    }
 
     return {
         "observed_provider_player_count": observed,
         "observed_joined_player_count": joined,
         "observed_unmapped_player_count": unmapped,
         "observed_join_coverage_ratio": ratio,
-        "observed_join_health": health,
+        "observed_join_health": observed_health,
+        "player_identity_health": player_identity_health,
+        "wave_b_closure_ready": player_identity_health == "GREEN",
         "duplicate_observed_native_record_count": duplicate_native_records,
+        "duplicate_observed_native_ids": sorted(duplicate_native_ids),
         "missing_native_id_record_count": missing_native,
         "identity_conflict_count": conflict_count,
         "native_to_multiple_canonical_target_count": native_conflict_count,
         "canonical_target_collision_count": canonical_collision_count,
         "observed_unmapped_native_ids": sorted(unmapped_native),
-        "conflicting_native_ids": sorted(native_to_multiple_targets),
+        "conflicting_native_ids": sorted(native_to_multiple_targets | collision_native_ids | duplicate_native_ids),
         "canonical_target_collisions": {
             str(official_id): natives
             for official_id, natives in sorted(canonical_target_collisions.items())
         },
+        "provider_native_classification_counts": classification_counts,
+        "provider_native_inventory": inventory,
     }
 
 
@@ -213,6 +286,8 @@ def _source_integrity_errors(source_id: str, row: dict[str, Any]) -> list[str]:
         errors.append(f"{source_id}:duplicate_canonical_code")
     if int(row.get("configured_link_conflict_count") or 0):
         errors.append(f"{source_id}:configured_link_conflict")
+    if int(row.get("duplicate_observed_native_record_count") or 0):
+        errors.append(f"{source_id}:duplicate_observed_native_id")
     if int(row.get("missing_native_id_record_count") or 0):
         errors.append(f"{source_id}:observed_record_missing_native_id")
     if int(row.get("identity_conflict_count") or 0):
@@ -271,7 +346,10 @@ def build_player_identity_coverage_truth(
                 "observed_unmapped_player_count": max(0, canonical_count - canonical["canonical_mapped_player_count"]),
                 "observed_join_coverage_ratio": canonical["canonical_coverage_ratio"],
                 "observed_join_health": "GREEN" if canonical["canonical_coverage_health"] == "GREEN" else "RED",
+                "player_identity_health": "GREEN" if canonical["canonical_coverage_health"] == "GREEN" else "RED",
+                "wave_b_closure_ready": canonical["canonical_coverage_health"] == "GREEN",
                 "duplicate_observed_native_record_count": 0,
+                "duplicate_observed_native_ids": [],
                 "missing_native_id_record_count": 0,
                 "identity_conflict_count": canonical["actual_duplicate_native_id_count"],
                 "native_to_multiple_canonical_target_count": canonical["actual_duplicate_native_id_count"],
@@ -279,6 +357,13 @@ def build_player_identity_coverage_truth(
                 "observed_unmapped_native_ids": [],
                 "conflicting_native_ids": sorted(canonical["actual_duplicate_native_ids"]),
                 "canonical_target_collisions": {},
+                "provider_native_classification_counts": {
+                    "VERIFIED": canonical["canonical_mapped_player_count"],
+                    "PROVIDER_ENTITY_EXISTS_BUT_UNMAPPED": max(0, canonical_count - canonical["canonical_mapped_player_count"]),
+                    "NO_PROVIDER_ENTITY": 0,
+                    "CONFLICT": canonical["actual_duplicate_native_id_count"],
+                },
+                "provider_native_inventory": [],
             }
             absence_status = "PROVEN_BY_SHARED_NAMESPACE"
             no_provider_entity_count: int | None = 0
@@ -287,6 +372,14 @@ def build_player_identity_coverage_truth(
             absence_status = "NOT_PROVEN"
             no_provider_entity_count = None
 
+        unknown_provider_presence = (
+            None
+            if no_provider_entity_count is None
+            else max(0, canonical_count - canonical["canonical_mapped_player_count"] - no_provider_entity_count)
+        )
+        if no_provider_entity_count is None:
+            unknown_provider_presence = max(0, canonical_count - canonical["canonical_mapped_player_count"])
+
         sources[source_id] = {
             **canonical,
             **observed,
@@ -294,6 +387,13 @@ def build_player_identity_coverage_truth(
             "absence_classification_status": absence_status,
             "no_provider_entity_count": no_provider_entity_count,
             "provider_entity_exists_but_unmapped_count": observed["observed_unmapped_player_count"],
+            "canonical_classification_counts": {
+                "VERIFIED": canonical["canonical_mapped_player_count"],
+                "PROVIDER_ENTITY_EXISTS_BUT_UNMAPPED_OBSERVED": observed["observed_unmapped_player_count"],
+                "NO_PROVIDER_ENTITY": no_provider_entity_count,
+                "UNKNOWN_PROVIDER_PRESENCE": unknown_provider_presence,
+                "CONFLICT": observed["identity_conflict_count"],
+            },
             "fuzzy_or_name_join_used": False,
         }
 
@@ -320,6 +420,9 @@ def build_player_identity_coverage_truth(
             "no_provider_entity_requires_complete_provider_universe_proof": True,
             "canonical_mapping_count_is_reconciled_to_actual_joinable_links": True,
             "provider_native_to_canonical_mapping_is_one_to_one": True,
+            "wave_b_green_identity_requires_zero_observed_unmapped": True,
+            "wave_b_green_identity_does_not_require_657_canonical_mappings": True,
+            "provider_native_inventory_names_are_diagnostic_only": True,
         },
         "sources": sources,
         "evidence_posture": evidence_config,
@@ -333,8 +436,10 @@ def build_player_identity_coverage_truth(
             "partial_verified_coverage_is_truthful": True,
             "observed_unmapped_records_fail_closed": True,
             "identity_collisions_fail_closed": True,
+            "duplicate_native_ids_fail_closed": True,
             "canonical_and_observed_identity_counts_are_reconciled": True,
             "ffscout_public_identity_is_coverage_tracked": True,
             "reep_v1_overlay_is_not_runtime_join_authority": True,
+            "wave_b_health_is_provider_observation_based": True,
         },
     }

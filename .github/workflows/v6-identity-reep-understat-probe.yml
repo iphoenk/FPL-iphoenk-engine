@@ -1,0 +1,67 @@
+name: V6 Identity Reep Understat bridge probe
+
+on:
+  push:
+    branches:
+      - ops/v6-identity-reep-manifest-probe
+
+permissions:
+  contents: read
+
+jobs:
+  probe-understat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Download and inspect pinned bridges
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/reep-probe
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output /tmp/reep-probe/bridges.csv.gz \
+            https://data.reep.football/releases/20260907T201034Z/csv/bridges.csv.gz
+          printf '%s  %s\n' \
+            a03aef520a454bdcd181b5b332b91e7b41ee57f4914e6e2c456cf49a8b86a735 \
+            /tmp/reep-probe/bridges.csv.gz | sha256sum -c -
+          python - <<'PY'
+          import csv, gzip, json
+          from collections import Counter
+          from pathlib import Path
+
+          samples = {'8379', '10016', '14758', '1045', '212'}
+          namespaces = Counter()
+          found = []
+          understat_rows = 0
+          with gzip.open('/tmp/reep-probe/bridges.csv.gz', 'rt', encoding='utf-8', newline='') as handle:
+              reader = csv.DictReader(handle)
+              print('FIELDNAMES=' + json.dumps(reader.fieldnames))
+              for row in reader:
+                  if str(row.get('provider') or '').strip().lower() != 'understat':
+                      continue
+                  understat_rows += 1
+                  ns = str(row.get('namespace') or '').strip()
+                  namespaces[ns] += 1
+                  if str(row.get('external_id') or '').strip() in samples:
+                      found.append(row)
+          out = {
+              'understat_rows': understat_rows,
+              'namespaces': dict(namespaces),
+              'sample_rows': found,
+          }
+          print(json.dumps(out, indent=2, sort_keys=True))
+          Path('/tmp/reep-probe/understat_probe.json').write_text(
+              json.dumps(out, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+          )
+          PY
+
+      - name: Upload probe
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: reep-v1-understat-probe
+          path: /tmp/reep-probe/understat_probe.json
+          retention-days: 1

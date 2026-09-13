@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "model": "v5_dss_source_fusion_v3",
-  "generated_at": "2026-09-12T21:35:16.345584+00:00",
+  "generated_at": "2026-09-13T17:33:59.118079+00:00",
   "status": "ACTIVE",
   "season": {
     "season": "2026/27",
@@ -21,7 +21,7 @@
         "availability_class": null,
         "reason": null,
         "fetch_mode": "NETWORK",
-        "player_count": 401,
+        "player_count": 404,
         "fixture_count": 0,
         "credential_present": null,
         "network_requests": null,
@@ -56,7 +56,7 @@
     "understat": {
       "source": "understat",
       "status": "ACTIVE",
-      "generated_at": "2026-09-12T21:35:16.344275+00:00",
+      "generated_at": "2026-09-13T17:33:59.117027+00:00",
       "fetch_mode": "NETWORK",
       "season": {
         "season": "2026/27",
@@ -73,7 +73,7 @@
         "xg_chain",
         "xg_buildup"
       ],
-      "player_count": 401,
+      "player_count": 404,
       "players": [
         {
           "understat_id": "1228",
@@ -178,6 +178,19 @@
           "key_passes": "10",
           "xg_chain": "3.975085601210594",
           "xg_buildup": "1.1266748160123825"
+        },
+        {
+          "understat_id": "239",
+          "player_name": "Pascal Groß",
+          "team_title": "Brighton",
+          "games": "4",
+          "time": "360",
+          "shots": "8",
+          "xg": "1.6451362632215023",
+          "xa": "1.7084944173693657",
+          "key_passes": "13",
+          "xg_chain": "3.2404248118400574",
+          "xg_buildup": "1.2101942896842957"
         },
         {
           "understat_id": "2517",
@@ -349,17 +362,17 @@
           "xg_buildup": "0.041359830647706985"
         },
         {
-          "understat_id": "239",
-          "player_name": "Pascal Groß",
+          "understat_id": "14856",
+          "player_name": "Malick Yalcouyé",
           "team_title": "Brighton",
-          "games": "3",
-          "time": "270",
+          "games": "4",
+          "time": "233",
           "shots": "6",
-          "xg": "0.8598642610013485",
-          "xa": "1.052924208343029",
-          "key_passes": "7",
-          "xg_chain": "2.346773684024811",
-          "xg_buildup": "0.7643085420131683"
+          "xg": "1.2114141061902046",
+          "xa": "0.3851983742788434",
+          "key_passes": "4",
+          "xg_chain": "2.595173329114914",
+          "xg_buildup": "0.9985608346760273"
         },
         {
           "understat_id": "782",
@@ -451,6 +464,19 @@
           "key_passes": "2",
           "xg_chain": "1.6839188039302826",
           "xg_buildup": "0.5867712050676346"
+        },
+        {
+          "understat_id": "6048",
+          "player_name": "Lewis Dunk",
+          "team_title": "Brighton",
+          "games": "4",
+          "time": "360",
+          "shots": "1",
+          "xg": "0.020308176055550575",
+          "xa": "0",
+          "key_passes": "0",
+          "xg_chain": "3.1171372309327126",
+          "xg_buildup": "3.0968290343880653"
         },
         {
           "understat_id": "6382",
@@ -739,6 +765,19 @@
           "xg_buildup": "1.26644117385149"
         },
         {
+          "understat_id": "11385",
+          "player_name": "Yasin Ayari",
+          "team_title": "Brighton",
+          "games": "3",
+          "time": "249",
+          "shots": "8",
+          "xg": "0.4760674983263016",
+          "xa": "0.127756267786026",
+          "key_passes": "2",
+          "xg_chain": "0.9769507050514221",
+          "xg_buildup": "0.436286274343729"
+        },
+        {
           "understat_id": "11974",
           "player_name": "Benjamin Sesko",
           "team_title": "Manchester United",
@@ -846,27 +885,27 @@
           "understat_id": "13711",
           "player_name": "Maxim De Cuyper",
           "team_title": "Brighton",
-          "games": "3",
-          "time": "251",
-          "shots": "5",
-          "xg": "1.4233697280287743",
-          "xa": "0.5217526461929083",
-          "key_passes": "5",
-          "xg_chain": "3.0746456161141396",
-          "xg_buildup": "1.5699208155274391"
+          "games": "4",
+          "time": "341",
+          "shots": "6",
+          "xg": "1.4525893237441778",
+          "xa": "1.01721834205091",
+          "key_passes": "9",
+          "xg_chain": "3.8455430045723915",
+          "xg_buildup": "1.8817783668637276"
         },
         {
           "understat_id": "13725",
           "player_name": "Luka Vuskovic",
           "team_title": "Brighton",
-          "games": "3",
-          "time": "270",
-          "shots": "6",
-          "xg": "0.7777924984693527",
+          "games": "4",
+          "time": "349",
+          "shots": "8",
+          "xg": "0.9004770889878273",
           "xa": "0",
           "key_passes": "0",
-          "xg_chain": "1.6943230759352446",
-          "xg_buildup": "1.6643683016300201"
+          "xg_chain": "2.0522216986864805",
+          "xg_buildup": "1.9243549704551697"
         },
         {
           "understat_id": "13729",
@@ -893,6 +932,19 @@
           "key_passes": "2",
           "xg_chain": "2.6263430193066597",
           "xg_buildup": "0.9241030467674136"
+        },
+        {
+          "understat_id": "14118",
+          "player_name": "Charalampos Kostoulas",
+          "team_title": "Brighton",
+          "games": "4",
+          "time": "278",
+          "shots": "9",
+          "xg": "1.581597000360489",
+          "xa": "0.04384263604879379",
+          "key_passes": "1",
+          "xg_chain": "2.2145062386989594",
+          "xg_buildup": "0.7336919605731964"
         },
         {
           "understat_id": "14352",
@@ -958,19 +1010,6 @@
           "key_passes": "3",
           "xg_chain": "2.4759199917316437",
           "xg_buildup": "1.7117828205227852"
-        },
-        {
-          "understat_id": "14856",
-          "player_name": "Malick Yalcouyé",
-          "team_title": "Brighton",
-          "games": "3",
-          "time": "167",
-          "shots": "3",
-          "xg": "0.6808663085103035",
-          "xa": "0.3755188509821892",
-          "key_passes": "3",
-          "xg_chain": "2.0308428704738617",
-          "xg_buildup": "0.9744576811790466"
         },
         {
           "understat_id": "76",
@@ -1223,14 +1262,14 @@
           "understat_id": "1045",
           "player_name": "Matt Grimes",
           "team_title": "Coventry",
-          "games": "3",
-          "time": "270",
-          "shots": "2",
-          "xg": "0.0413955170661211",
+          "games": "4",
+          "time": "355",
+          "shots": "3",
+          "xg": "0.06974780559539795",
           "xa": "0.01105454657226801",
           "key_passes": "1",
-          "xg_chain": "0.910588588565588",
-          "xg_buildup": "0.883141279220581"
+          "xg_chain": "1.0098696164786816",
+          "xg_buildup": "0.9540700241923332"
         },
         {
           "understat_id": "1116",
@@ -1392,14 +1431,14 @@
           "understat_id": "3645",
           "player_name": "Olivier Boscagli",
           "team_title": "Brighton",
-          "games": "3",
-          "time": "270",
-          "shots": "1",
-          "xg": "0.043031834065914154",
-          "xa": "0.8013238906860352",
-          "key_passes": "6",
-          "xg_chain": "1.9031027406454086",
-          "xg_buildup": "1.7979080826044083"
+          "games": "4",
+          "time": "349",
+          "shots": "2",
+          "xg": "0.05271135736256838",
+          "xa": "0.8254270441830158",
+          "key_passes": "7",
+          "xg_chain": "2.0961445569992065",
+          "xg_buildup": "1.9668467491865158"
         },
         {
           "understat_id": "4391",
@@ -1660,19 +1699,6 @@
           "key_passes": "0",
           "xg_chain": "0.10466448217630386",
           "xg_buildup": "0.10466448217630386"
-        },
-        {
-          "understat_id": "6048",
-          "player_name": "Lewis Dunk",
-          "team_title": "Brighton",
-          "games": "3",
-          "time": "270",
-          "shots": "0",
-          "xg": "0",
-          "xa": "0",
-          "key_passes": "0",
-          "xg_chain": "2.539641298353672",
-          "xg_buildup": "2.539641298353672"
         },
         {
           "understat_id": "6055",
@@ -2237,14 +2263,14 @@
           "understat_id": "7814",
           "player_name": "Taiwo Awoniyi",
           "team_title": "Coventry",
-          "games": "3",
-          "time": "180",
-          "shots": "5",
-          "xg": "1.2343142330646515",
-          "xa": "0.05033963918685913",
-          "key_passes": "2",
-          "xg_chain": "1.355070322751999",
-          "xg_buildup": "0.09541922062635422"
+          "games": "4",
+          "time": "234",
+          "shots": "6",
+          "xg": "1.3279294669628143",
+          "xa": "0.15424899756908417",
+          "key_passes": "3",
+          "xg_chain": "1.688181221485138",
+          "xg_buildup": "0.324620746076107"
         },
         {
           "understat_id": "7904",
@@ -2523,14 +2549,14 @@
           "understat_id": "8483",
           "player_name": "Bobby Thomas",
           "team_title": "Coventry",
-          "games": "3",
-          "time": "260",
-          "shots": "6",
-          "xg": "0.15205327048897743",
+          "games": "4",
+          "time": "350",
+          "shots": "9",
+          "xg": "0.24822605773806572",
           "xa": "0.5729330964386463",
           "key_passes": "4",
-          "xg_chain": "0.818853821605444",
-          "xg_buildup": "0.29689574241638184"
+          "xg_chain": "1.030531670898199",
+          "xg_buildup": "0.4324820339679718"
         },
         {
           "understat_id": "8489",
@@ -2614,14 +2640,14 @@
           "understat_id": "8717",
           "player_name": "Pascal Struijk",
           "team_title": "Brighton",
-          "games": "1",
-          "time": "1",
+          "games": "2",
+          "time": "12",
           "shots": "0",
           "xg": "0",
           "xa": "0",
           "key_passes": "0",
-          "xg_chain": "0",
-          "xg_buildup": "0"
+          "xg_chain": "0.17199808359146118",
+          "xg_buildup": "0.17199808359146118"
         },
         {
           "understat_id": "8756",
@@ -3043,14 +3069,14 @@
           "understat_id": "9678",
           "player_name": "Ethan Pinnock",
           "team_title": "Coventry",
-          "games": "2",
-          "time": "100",
-          "shots": "1",
-          "xg": "0.0588291734457016",
+          "games": "3",
+          "time": "190",
+          "shots": "2",
+          "xg": "0.08637979440391064",
           "xa": "0",
           "key_passes": "0",
-          "xg_chain": "0.09541922062635422",
-          "xg_buildup": "0.09541922062635422"
+          "xg_chain": "0.2643091157078743",
+          "xg_buildup": "0.2643091157078743"
         },
         {
           "understat_id": "9679",
@@ -3069,14 +3095,14 @@
           "understat_id": "9681",
           "player_name": "Frank Onyeka",
           "team_title": "Coventry",
-          "games": "2",
-          "time": "154",
-          "shots": "0",
-          "xg": "0",
+          "games": "3",
+          "time": "228",
+          "shots": "1",
+          "xg": "0.04409420117735863",
           "xa": "0",
           "key_passes": "0",
-          "xg_chain": "0",
-          "xg_buildup": "0"
+          "xg_chain": "0.033303599804639816",
+          "xg_buildup": "0.033303599804639816"
         },
         {
           "understat_id": "9733",
@@ -3742,19 +3768,6 @@
           "xg_buildup": "0"
         },
         {
-          "understat_id": "11385",
-          "player_name": "Yasin Ayari",
-          "team_title": "Brighton",
-          "games": "2",
-          "time": "159",
-          "shots": "4",
-          "xg": "0.20963822305202484",
-          "xa": "0.127756267786026",
-          "key_passes": "2",
-          "xg_chain": "0.30785423517227173",
-          "xg_buildup": "0.03361907973885536"
-        },
-        {
           "understat_id": "11386",
           "player_name": "Lewis Miley",
           "team_title": "Newcastle United",
@@ -3849,14 +3862,14 @@
           "understat_id": "11711",
           "player_name": "Bart Verbruggen",
           "team_title": "Brighton",
-          "games": "3",
-          "time": "270",
+          "games": "4",
+          "time": "360",
           "shots": "0",
           "xg": "0",
           "xa": "0",
           "key_passes": "0",
-          "xg_chain": "1.6041431277990341",
-          "xg_buildup": "1.6041431277990341"
+          "xg_chain": "1.6697885766625404",
+          "xg_buildup": "1.6697885766625404"
         },
         {
           "understat_id": "11728",
@@ -4239,14 +4252,14 @@
           "understat_id": "12760",
           "player_name": "Carl Rushworth",
           "team_title": "Coventry",
-          "games": "3",
-          "time": "270",
+          "games": "4",
+          "time": "360",
           "shots": "0",
           "xg": "0",
           "xa": "0",
           "key_passes": "0",
-          "xg_chain": "0.12479092553257942",
-          "xg_buildup": "0.12479092553257942"
+          "xg_chain": "0.24872560426592827",
+          "xg_buildup": "0.24872560426592827"
         },
         {
           "understat_id": "12779",
@@ -4286,6 +4299,19 @@
           "key_passes": "2",
           "xg_chain": "1.0456818342208862",
           "xg_buildup": "0.9389395117759705"
+        },
+        {
+          "understat_id": "12847",
+          "player_name": "Sidiki Chérif",
+          "team_title": "Coventry",
+          "games": "1",
+          "time": "29",
+          "shots": "0",
+          "xg": "0",
+          "xa": "0",
+          "key_passes": "0",
+          "xg_chain": "0.030319441109895706",
+          "xg_buildup": "0.030319441109895706"
         },
         {
           "understat_id": "12911",
@@ -4330,14 +4356,14 @@
           "understat_id": "12955",
           "player_name": "Aurèle Amenda",
           "team_title": "Coventry",
-          "games": "3",
-          "time": "270",
+          "games": "4",
+          "time": "360",
           "shots": "1",
           "xg": "0.01105454657226801",
-          "xa": "0",
-          "key_passes": "0",
-          "xg_chain": "0.7644163966178894",
-          "xg_buildup": "0.753361850976944"
+          "xa": "0.07092874497175217",
+          "key_passes": "1",
+          "xg_chain": "0.8940168619155884",
+          "xg_buildup": "0.8120335824787617"
         },
         {
           "understat_id": "12963",
@@ -4369,14 +4395,27 @@
           "understat_id": "13066",
           "player_name": "Ferdi Kadioglu",
           "team_title": "Brighton",
-          "games": "2",
-          "time": "169",
+          "games": "3",
+          "time": "259",
           "shots": "3",
           "xg": "0.10027633793652058",
-          "xa": "0.029376802034676075",
-          "key_passes": "2",
-          "xg_chain": "0.3854578621685505",
-          "xg_buildup": "0.36583706736564636"
+          "xa": "0.14400533307343721",
+          "key_passes": "3",
+          "xg_chain": "0.5844462104141712",
+          "xg_buildup": "0.5648254156112671"
+        },
+        {
+          "understat_id": "13078",
+          "player_name": "Chema Andres",
+          "team_title": "Brighton",
+          "games": "1",
+          "time": "24",
+          "shots": "1",
+          "xg": "0.008933259174227715",
+          "xa": "0.020308176055550575",
+          "key_passes": "1",
+          "xg_chain": "0.20123952627182007",
+          "xg_buildup": "0.17199808359146118"
         },
         {
           "understat_id": "13080",
@@ -4429,6 +4468,19 @@
           "key_passes": "0",
           "xg_chain": "0.35039790719747543",
           "xg_buildup": "0.28336313366889954"
+        },
+        {
+          "understat_id": "13206",
+          "player_name": "Matt O&#039;Riley",
+          "team_title": "Brighton",
+          "games": "1",
+          "time": "5",
+          "shots": "0",
+          "xg": "0",
+          "xa": "0.029219595715403557",
+          "key_passes": "1",
+          "xg_chain": "0.029219595715403557",
+          "xg_buildup": "0"
         },
         {
           "understat_id": "13214",
@@ -4486,14 +4538,14 @@
           "understat_id": "13364",
           "player_name": "Diego Gómez",
           "team_title": "Brighton",
-          "games": "3",
-          "time": "270",
-          "shots": "12",
-          "xg": "1.0899070277810097",
+          "games": "4",
+          "time": "355",
+          "shots": "14",
+          "xg": "1.2188748344779015",
           "xa": "1.2043751403689384",
           "key_passes": "5",
-          "xg_chain": "2.3376478403806686",
-          "xg_buildup": "0.525440126657486"
+          "xg_chain": "2.66560398042202",
+          "xg_buildup": "0.7244284749031067"
         },
         {
           "understat_id": "13380",
@@ -4681,14 +4733,14 @@
           "understat_id": "13792",
           "player_name": "Ibrahim Osman",
           "team_title": "Brighton",
-          "games": "2",
-          "time": "21",
-          "shots": "0",
-          "xg": "0",
+          "games": "3",
+          "time": "32",
+          "shots": "2",
+          "xg": "0.1361042708158493",
           "xa": "0.02805580012500286",
           "key_passes": "1",
-          "xg_chain": "0.3119710683822632",
-          "xg_buildup": "0.3119710683822632"
+          "xg_chain": "0.4480753391981125",
+          "xg_buildup": "0.3776165172457695"
         },
         {
           "understat_id": "13834",
@@ -4795,19 +4847,6 @@
           "xg_buildup": "0.8553716540336609"
         },
         {
-          "understat_id": "14118",
-          "player_name": "Charalampos Kostoulas",
-          "team_title": "Brighton",
-          "games": "3",
-          "time": "193",
-          "shots": "6",
-          "xg": "0.807518869638443",
-          "xa": "0.04384263604879379",
-          "key_passes": "1",
-          "xg_chain": "1.395852655172348",
-          "xg_buildup": "0.5883338153362274"
-        },
-        {
           "understat_id": "14193",
           "player_name": "George Hemmings",
           "team_title": "Aston Villa",
@@ -4876,60 +4915,60 @@
           "understat_id": "14742",
           "player_name": "Milan van Ewijk",
           "team_title": "Coventry",
-          "games": "3",
-          "time": "270",
+          "games": "4",
+          "time": "360",
           "shots": "0",
           "xg": "0",
-          "xa": "0.12322550266981125",
-          "key_passes": "2",
-          "xg_chain": "0.7145981192588806",
-          "xg_buildup": "0.7145981192588806"
+          "xa": "0.1488154251128435",
+          "key_passes": "3",
+          "xg_chain": "0.7705074846744537",
+          "xg_buildup": "0.7449175603687763"
         },
         {
           "understat_id": "14743",
           "player_name": "Jay Dasilva",
           "team_title": "Coventry",
-          "games": "3",
-          "time": "266",
+          "games": "4",
+          "time": "356",
           "shots": "1",
           "xg": "0.09541922062635422",
-          "xa": "0.026868723332881927",
-          "key_passes": "1",
-          "xg_chain": "0.41694072261452675",
-          "xg_buildup": "0.41694072261452675"
+          "xa": "0.39414306730031967",
+          "key_passes": "3",
+          "xg_chain": "0.8145345188677311",
+          "xg_buildup": "0.44726016372442245"
         },
         {
           "understat_id": "14744",
           "player_name": "Caleb Yirenkyi",
           "team_title": "Coventry",
-          "games": "3",
-          "time": "163",
+          "games": "4",
+          "time": "179",
           "shots": "1",
           "xg": "0.029757032170891762",
-          "xa": "0.058165546506643295",
-          "key_passes": "1",
-          "xg_chain": "0.8569884300231934",
+          "xa": "0.088484987616539",
+          "key_passes": "2",
+          "xg_chain": "0.8873078711330891",
           "xg_buildup": "0.7988229095935822"
         },
         {
           "understat_id": "14745",
           "player_name": "Brandon Thomas-Asante",
           "team_title": "Coventry",
-          "games": "3",
-          "time": "120",
-          "shots": "0",
-          "xg": "0",
+          "games": "4",
+          "time": "136",
+          "shots": "2",
+          "xg": "0.10124818235635757",
           "xa": "0",
           "key_passes": "0",
-          "xg_chain": "0.09541922062635422",
+          "xg_chain": "0.1966674029827118",
           "xg_buildup": "0.09541922062635422"
         },
         {
           "understat_id": "14746",
           "player_name": "Victor Torp",
           "team_title": "Coventry",
-          "games": "2",
-          "time": "43",
+          "games": "3",
+          "time": "48",
           "shots": "0",
           "xg": "0",
           "xa": "0.5053454041481018",
@@ -4941,14 +4980,14 @@
           "understat_id": "14747",
           "player_name": "Jack Rudoni",
           "team_title": "Coventry",
-          "games": "3",
-          "time": "155",
-          "shots": "3",
-          "xg": "0.9692209623754025",
-          "xa": "0.22418856620788574",
-          "key_passes": "4",
-          "xg_chain": "1.1203882098197937",
-          "xg_buildup": "0.12307693064212799"
+          "games": "4",
+          "time": "229",
+          "shots": "5",
+          "xg": "1.3364953063428402",
+          "xa": "0.5503852069377899",
+          "key_passes": "8",
+          "xg_chain": "1.7937779426574707",
+          "xg_buildup": "0.1563805304467678"
         },
         {
           "understat_id": "14749",
@@ -5136,14 +5175,14 @@
           "understat_id": "14854",
           "player_name": "Costinha",
           "team_title": "Brighton",
-          "games": "3",
-          "time": "40",
+          "games": "4",
+          "time": "45",
           "shots": "2",
           "xg": "0.051982853561639786",
           "xa": "0.06985709071159363",
           "key_passes": "1",
-          "xg_chain": "0.4057552218437195",
-          "xg_buildup": "0.3119710683822632"
+          "xg_chain": "0.47086863964796066",
+          "xg_buildup": "0.37708448618650436"
         },
         {
           "understat_id": "14855",
@@ -5253,14 +5292,14 @@
           "understat_id": "14981",
           "player_name": "Ephron Mason-Clark",
           "team_title": "Coventry",
-          "games": "2",
-          "time": "132",
-          "shots": "0",
-          "xg": "0",
+          "games": "3",
+          "time": "193",
+          "shots": "3",
+          "xg": "0.31640952825546265",
           "xa": "0.029757032170891762",
           "key_passes": "1",
-          "xg_chain": "0.040811579674482346",
-          "xg_buildup": "0.01105454657226801"
+          "xg_chain": "0.48413996025919914",
+          "xg_buildup": "0.13797338400036097"
         },
         {
           "understat_id": "14982",

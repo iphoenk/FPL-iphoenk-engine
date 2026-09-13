@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "contract": "V5_EXTERNAL_CONSENSUS_V1",
-  "generated_at": "2026-09-12T21:35:20.103850+00:00",
+  "generated_at": "2026-09-13T17:34:02.354557+00:00",
   "owner": "evaluation.external_consensus",
   "native_conclusion_frozen_before_overlay": true,
   "native_snapshot": {
@@ -107,7 +107,7 @@
           "team_id": 5,
           "start_probability": 0.894,
           "dnp_probability": 0.0371,
-          "score": 3.9986,
+          "score": 4.102,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 1,
@@ -138,7 +138,7 @@
           "team_id": 5,
           "start_probability": 0.8036,
           "dnp_probability": 0.0687,
-          "score": 4.6298,
+          "score": 4.738,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 1,
@@ -283,7 +283,7 @@
           "team_id": 15,
           "start_probability": 0.8867,
           "dnp_probability": 0.0397,
-          "score": 4.8855,
+          "score": 4.9975,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 20,
@@ -316,7 +316,7 @@
           "team_id": 16,
           "start_probability": 0.894,
           "dnp_probability": 0.0371,
-          "score": 5.6716,
+          "score": 5.4808,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 10,
@@ -346,7 +346,7 @@
           "team_id": 1,
           "start_probability": 0.8004,
           "dnp_probability": 0.0699,
-          "score": 3.7102,
+          "score": 3.7172,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 5,
@@ -465,41 +465,13 @@
         }
       ],
       "captain": {
-        "element": 426,
-        "name": "B.Fernandes",
-        "position": "MID",
-        "team_id": 16,
-        "start_probability": 0.894,
-        "dnp_probability": 0.0371,
-        "score": 7.2961,
-        "tactical": {
-          "status": "READY",
-          "opponent_team_id": 10,
-          "player_role": null,
-          "player_return_routes": [],
-          "opponent_vulnerabilities": [],
-          "opponent_strengths": [
-            "final_third_progression",
-            "shot_volume"
-          ],
-          "route_vulnerability_overlap": [],
-          "highlights": [],
-          "tactical_key": [
-            0,
-            0,
-            0
-          ],
-          "advisory_only": true
-        }
-      },
-      "vice_captain": {
         "element": 411,
         "name": "Haaland",
         "position": "FWD",
         "team_id": 15,
         "start_probability": 0.8867,
         "dnp_probability": 0.0397,
-        "score": 5.7933,
+        "score": 6.5346,
         "tactical": {
           "status": "READY",
           "opponent_team_id": 20,
@@ -525,35 +497,35 @@
           "advisory_only": true
         }
       },
+      "vice_captain": {
+        "element": 426,
+        "name": "B.Fernandes",
+        "position": "MID",
+        "team_id": 16,
+        "start_probability": 0.894,
+        "dnp_probability": 0.0371,
+        "score": 6.4022,
+        "tactical": {
+          "status": "READY",
+          "opponent_team_id": 10,
+          "player_role": null,
+          "player_return_routes": [],
+          "opponent_vulnerabilities": [],
+          "opponent_strengths": [
+            "final_third_progression",
+            "shot_volume"
+          ],
+          "route_vulnerability_overlap": [],
+          "highlights": [],
+          "tactical_key": [
+            0,
+            0,
+            0
+          ],
+          "advisory_only": true
+        }
+      },
       "captain_safe_pool": [
-        {
-          "element": 426,
-          "name": "B.Fernandes",
-          "position": "MID",
-          "team_id": 16,
-          "start_probability": 0.894,
-          "dnp_probability": 0.0371,
-          "score": 7.2961,
-          "tactical": {
-            "status": "READY",
-            "opponent_team_id": 10,
-            "player_role": null,
-            "player_return_routes": [],
-            "opponent_vulnerabilities": [],
-            "opponent_strengths": [
-              "final_third_progression",
-              "shot_volume"
-            ],
-            "route_vulnerability_overlap": [],
-            "highlights": [],
-            "tactical_key": [
-              0,
-              0,
-              0
-            ],
-            "advisory_only": true
-          }
-        },
         {
           "element": 411,
           "name": "Haaland",
@@ -561,7 +533,7 @@
           "team_id": 15,
           "start_probability": 0.8867,
           "dnp_probability": 0.0397,
-          "score": 6.4076,
+          "score": 6.5346,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 20,
@@ -588,13 +560,72 @@
           }
         },
         {
+          "element": 426,
+          "name": "B.Fernandes",
+          "position": "MID",
+          "team_id": 16,
+          "start_probability": 0.894,
+          "dnp_probability": 0.0371,
+          "score": 7.0799,
+          "tactical": {
+            "status": "READY",
+            "opponent_team_id": 10,
+            "player_role": null,
+            "player_return_routes": [],
+            "opponent_vulnerabilities": [],
+            "opponent_strengths": [
+              "final_third_progression",
+              "shot_volume"
+            ],
+            "route_vulnerability_overlap": [],
+            "highlights": [],
+            "tactical_key": [
+              0,
+              0,
+              0
+            ],
+            "advisory_only": true
+          }
+        },
+        {
           "element": 115,
           "name": "De Cuyper",
           "position": "DEF",
           "team_id": 5,
           "start_probability": 0.8036,
           "dnp_probability": 0.0687,
-          "score": 6.1349,
+          "score": 6.2575,
+          "tactical": {
+            "status": "READY",
+            "opponent_team_id": 1,
+            "player_role": null,
+            "player_return_routes": [],
+            "opponent_vulnerabilities": [],
+            "opponent_strengths": [
+              "chance_creation",
+              "set_piece_activity",
+              "transition_threat"
+            ],
+            "route_vulnerability_overlap": [],
+            "highlights": [
+              "recent-GW lawan: ['long_range', 'close_central']"
+            ],
+            "tactical_key": [
+              0,
+              1,
+              1
+            ],
+            "advisory_only": true
+          }
+        },
+        {
+          "element": 109,
+          "name": "Verbruggen",
+          "position": "GK",
+          "team_id": 5,
+          "start_probability": 0.894,
+          "dnp_probability": 0.0371,
+          "score": 5.518,
           "tactical": {
             "status": "READY",
             "opponent_team_id": 1,
@@ -642,40 +673,11 @@
             ],
             "advisory_only": true
           }
-        },
-        {
-          "element": 88,
-          "name": "Kayode",
-          "position": "DEF",
-          "team_id": 4,
-          "start_probability": 0.894,
-          "dnp_probability": 0.0371,
-          "score": 5.7139,
-          "tactical": {
-            "status": "READY",
-            "opponent_team_id": 6,
-            "player_role": null,
-            "player_return_routes": [],
-            "opponent_vulnerabilities": [],
-            "opponent_strengths": [
-              "transition_threat",
-              "box_pressure",
-              "chance_creation"
-            ],
-            "route_vulnerability_overlap": [],
-            "highlights": [],
-            "tactical_key": [
-              0,
-              0,
-              0
-            ],
-            "advisory_only": true
-          }
         }
       ],
       "main_starting_xi_battle": {
         "status": "CLOSE",
-        "margin": 0.0977,
+        "margin": 0.0976,
         "starter_side": [
           {
             "element": 565,
@@ -713,9 +715,9 @@
         {
           "rank": 1,
           "formation": "3-4-3",
-          "selection_score": 45.7361,
-          "mean": 50.286,
-          "std": 8.626,
+          "selection_score": 45.869,
+          "mean": 50.426,
+          "std": 8.641,
           "element_ids": [
             40,
             88,
@@ -733,9 +735,9 @@
         {
           "rank": 2,
           "formation": "4-3-3",
-          "selection_score": 45.6384,
-          "mean": 50.166,
-          "std": 8.606,
+          "selection_score": 45.7714,
+          "mean": 50.306,
+          "std": 8.621,
           "element_ids": [
             8,
             40,
@@ -753,9 +755,9 @@
         {
           "rank": 3,
           "formation": "3-4-3",
-          "selection_score": 45.5555,
-          "mean": 50.097,
-          "std": 8.605,
+          "selection_score": 45.6951,
+          "mean": 50.244,
+          "std": 8.621,
           "element_ids": [
             15,
             40,
@@ -773,9 +775,9 @@
         {
           "rank": 4,
           "formation": "3-4-3",
-          "selection_score": 45.4793,
-          "mean": 49.998,
-          "std": 8.587,
+          "selection_score": 45.6123,
+          "mean": 50.138,
+          "std": 8.602,
           "element_ids": [
             8,
             40,
@@ -793,9 +795,9 @@
         {
           "rank": 5,
           "formation": "4-4-2",
-          "selection_score": 45.4399,
-          "mean": 50.004,
-          "std": 8.606,
+          "selection_score": 45.5729,
+          "mean": 50.144,
+          "std": 8.621,
           "element_ids": [
             8,
             40,
@@ -813,9 +815,9 @@
         {
           "rank": 6,
           "formation": "3-5-2",
-          "selection_score": 45.357,
-          "mean": 49.935,
-          "std": 8.605,
+          "selection_score": 45.4966,
+          "mean": 50.082,
+          "std": 8.621,
           "element_ids": [
             15,
             40,
@@ -831,8 +833,8 @@
           ]
         }
       ],
-      "expected_starting_xi_mean": 50.166,
-      "selection_score": 45.6384,
+      "expected_starting_xi_mean": 50.306,
+      "selection_score": 45.7714,
       "authority": "v5_decision_lineup_optimizer",
       "performance": {
         "projection_lookup": "indexed_o1",

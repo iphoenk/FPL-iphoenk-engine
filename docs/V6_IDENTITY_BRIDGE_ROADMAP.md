@@ -28,7 +28,7 @@ Two different coverage questions must be reported separately:
 1. **Canonical coverage**: verified provider identities divided by all current Official FPL players.
 2. **Observed join coverage**: verified joins divided by the unique provider-native player records actually observed by the current V6 acquisition surface.
 
-Observed join coverage is not automatically complete provider-universe coverage. For example, a leader table, a limited query result, or a current-season stats endpoint can observe only a subset of all entities the provider knows about.
+Observed join coverage is not automatically complete provider-universe coverage. For example, a leader table, a limited query result, a public Team News page, or a current-season stats endpoint can observe only a subset of all entities the provider knows about.
 
 An unobserved Official FPL player must therefore not be classified as `NO_PROVIDER_ENTITY` unless V6 has complete provider-universe evidence. Until then, absence is `NOT_PROVEN`. A player that is actually observed from a provider but has no deterministic crosswalk is a factual `PROVIDER_ENTITY_EXISTS_BUT_UNMAPPED` gap and remains fail-closed.
 
@@ -37,9 +37,28 @@ The current completeness labels are deliberately explicit:
 - Opta/The Analyst: `CANONICAL_SHARED_NAMESPACE_COMPLETE`;
 - Understat: `CURRENT_SEASON_STATS_OBSERVATION`;
 - FotMob: `PARTIAL_LEAGUE_STATS_OBSERVATION`;
-- StatMuse: `PARTIAL_QUERY_RESULT`.
+- StatMuse: `PARTIAL_QUERY_RESULT`;
+- FFScout public: `PARTIAL_PUBLIC_PAGE_REFERENCE_OBSERVATION`.
 
 A provider may therefore have partial canonical coverage while its observed join coverage is 100%. That is acceptable only when every currently observed provider-native player row is deterministically joined with zero identity conflicts. It is not permission to claim that the provider universe itself is complete.
+
+## Wave A hardening continuation
+
+Wave A does not stop at publishing percentages. The coverage artifact is an integrity control and must reconcile what the identity map declares with the links that actually exist.
+
+The hardening rules are:
+
+- every declared `mapped_player_count` is reconciled to the actual number of `EXACT` or `VERIFIED_MANUAL` links in the identity map;
+- a joinable link without a provider-native ID is a hard integrity failure;
+- one provider-native ID mapping to more than one Official FPL player is a hard identity conflict;
+- more than one provider-native ID resolving to the same Official FPL player in one observed provider surface is also treated as a one-to-one identity collision and fails closed;
+- configured crosswalk conflicts and duplicate Official FPL canonical codes remain hard failures;
+- observed unmapped rows remain non-fabricated gaps and do not by themselves block publication;
+- canonical coverage below 657/657 is not automatically a system failure when the provider does not expose enough deterministic evidence. The system must keep retrying or enriching exact evidence where available, but it must not manufacture the remainder;
+- FFScout public identity is now included in the same coverage-truth model as Opta, Understat, FotMob and StatMuse;
+- a normal acquisition must publish a valid coverage artifact before publication. A report-prefetch may temporarily preserve one legacy pre-Wave-A runtime snapshot so report delivery is not broken during migration; after the next normal acquisition, the artifact is validated on every publish.
+
+The practical target remains maximum deterministic canonical coverage, up to 657/657 where provider evidence supports it. Partial provider coverage is transparent and non-blocking only when there are zero hard identity conflicts or corrupt bridges.
 
 ## Reep v1 evidence posture
 

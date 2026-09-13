@@ -13,6 +13,7 @@ _PROVIDER_COMPLETENESS = {
     "understat": "CURRENT_SEASON_STATS_OBSERVATION",
     "fotmob": "PARTIAL_LEAGUE_STATS_OBSERVATION",
     "statmuse": "PARTIAL_QUERY_RESULT",
+    "ffscout": "PARTIAL_PUBLIC_PAGE_REFERENCE_OBSERVATION",
 }
 _EXPECTED_SOURCES = tuple(_PROVIDER_COMPLETENESS)
 
@@ -333,6 +334,7 @@ def build_player_identity_coverage_truth(
             "observed_unmapped_records_fail_closed": True,
             "identity_collisions_fail_closed": True,
             "canonical_and_observed_identity_counts_are_reconciled": True,
+            "ffscout_public_identity_is_coverage_tracked": True,
             "reep_v1_overlay_is_not_runtime_join_authority": True,
         },
     }

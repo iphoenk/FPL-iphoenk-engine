@@ -7,6 +7,37 @@
     "inactive_sources_must_not_have_overrides": true,
     "effective_registry_is_published_for_drift_review": true
   },
-  "lifecycle": {},
-  "sources": {}
+  "lifecycle": {
+    "understat": {
+      "temporary": true,
+      "reason": "Replace brittle landing-page plus POST transport with Understat's bounded single league JSON snapshot while preserving platform last-good-cache fallback.",
+      "review_by": "2026-09-20"
+    }
+  },
+  "sources": {
+    "understat": {
+      "requests": [
+        {
+          "id": "players_api",
+          "url": "https://understat.com/getLeagueData/{{season.competition}}/{{season.start_year}}",
+          "method": "GET",
+          "headers": {
+            "Referer": "https://understat.com/league/{{season.competition}}/{{season.start_year}}",
+            "X-Requested-With": "XMLHttpRequest"
+          },
+          "expect": "json",
+          "validation": {
+            "required_json_paths": [
+              "players",
+              "dates",
+              "teams"
+            ]
+          }
+        }
+      ],
+      "acquisition_kind": "rest_json",
+      "poll_interval_minutes": 60,
+      "content_hash_dedup": true
+    }
+  }
 }

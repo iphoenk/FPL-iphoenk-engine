@@ -47,6 +47,7 @@ def test_previous_run_freeze_does_not_block_new_acquisition(tmp_path: Path, monk
 
 
 def test_frozen_candidate_validator_is_read_only_and_detects_drift(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("GITHUB_RUN_ID", "1003")
     payload = tmp_path / "current" / "official_fpl.json"
     payload.parent.mkdir(parents=True, exist_ok=True)
     payload.write_text('{"source_id":"official_fpl","value":1}\n', encoding="utf-8")
@@ -58,9 +59,9 @@ def test_frozen_candidate_validator_is_read_only_and_detects_drift(tmp_path: Pat
         json.dumps(
             {
                 "candidate_state": "FROZEN",
-                "run_id": "local",
+                "run_id": "1003",
                 "run_attempt": "1",
-                "candidate_generation_id": "local:1:test",
+                "candidate_generation_id": "1003:1:test",
                 "candidate_tree_sha256": digest,
                 "artifact_count": count,
             }

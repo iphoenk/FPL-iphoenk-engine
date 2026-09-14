@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 NATURAL_SCHEDULE_KIND = "chatgpt_scheduler"
 NATURAL_EVENT_NAME = "issues"
+FIRST_GATE_CONSECUTIVE_SLOTS = 2
 CORE_STAGES = (
     "TRIGGERED",
     "ACQUIRED",
@@ -148,6 +149,7 @@ def build_slot_proof(
             "failed_candidate_can_be_counted": False,
             "source_publish_job_success_required": True,
             "proof_created_post_publish_without_runtime_tree_mutation": True,
+            "initial_natural_gate_consecutive_slots": FIRST_GATE_CONSECUTIVE_SLOTS,
             "production_green_requires_rolling_48_of_48": True,
             "production_green_requires_controlled_chaos_acceptance": True,
         },
@@ -229,6 +231,16 @@ def evaluate_proof_window(
         else:
             break
 
+    active_first_gate_keys = (
+        set(ordered_keys[-FIRST_GATE_CONSECUTIVE_SLOTS:])
+        if len(ordered_keys) >= FIRST_GATE_CONSECUTIVE_SLOTS
+        else set(ordered_keys)
+    )
+    duplicate_in_first_gate = sorted(set(duplicate_publication_slots) & active_first_gate_keys)
+    first_gate_complete = (
+        consecutive >= FIRST_GATE_CONSECUTIVE_SLOTS and not duplicate_in_first_gate
+    )
+
     active_six_keys = set(ordered_keys[-6:]) if len(ordered_keys) >= 6 else set(ordered_keys)
     duplicate_in_six = sorted(set(duplicate_publication_slots) & active_six_keys)
     six_complete = consecutive >= 6 and not duplicate_in_six
@@ -243,8 +255,8 @@ def evaluate_proof_window(
                 rolling_48 = False
                 break
 
-    if not six_complete:
-        phase = "6/6_IN_PROGRESS"
+    if not first_gate_complete:
+        phase = "2/2_IN_PROGRESS"
     elif not rolling_48:
         phase = "48/48_IN_PROGRESS"
     else:
@@ -257,11 +269,15 @@ def evaluate_proof_window(
         "phase": phase,
         "countable_proof_count": len(ordered),
         "consecutive_successful_natural_slots": consecutive,
+        "first_gate_target": FIRST_GATE_CONSECUTIVE_SLOTS,
+        "first_gate_complete": first_gate_complete,
+        "two_of_two_complete": first_gate_complete,
         "six_of_six_complete": six_complete,
         "rolling_48_of_48_complete": rolling_48,
         "duplicate_logical_slots": sorted(set(duplicate_publication_slots)),
         "duplicate_publication_slots": sorted(set(duplicate_publication_slots)),
         "duplicate_evidence_slots": sorted(set(duplicate_evidence_slots)),
+        "duplicate_publication_slots_in_active_first_gate": duplicate_in_first_gate,
         "duplicate_publication_slots_in_active_six": duplicate_in_six,
         "duplicate_publication_slots_in_rolling_48": duplicate_in_48,
         "natural_window_eligible": natural_window_eligible,

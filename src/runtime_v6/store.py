@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -51,7 +52,13 @@ def prune_inactive_sources(active_source_ids: list[str] | tuple[str, ...]) -> li
 
 def _candidate_is_frozen() -> bool:
     freeze = read_json(CANDIDATE_FREEZE) or {}
-    return freeze.get("candidate_state") == "FROZEN"
+    if freeze.get("candidate_state") != "FROZEN":
+        return False
+    frozen_run_id = str(freeze.get("run_id") or "")
+    current_run_id = str(os.environ.get("GITHUB_RUN_ID") or "")
+    if frozen_run_id and current_run_id and frozen_run_id != current_run_id:
+        return False
+    return True
 
 
 def _assert_post_freeze_write_allowed(path: Path) -> None:

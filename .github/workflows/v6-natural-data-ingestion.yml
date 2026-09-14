@@ -1,5 +1,8 @@
 name: FPL V6 hourly fresh-data acquisition
 
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch' && format('V6 {0} {1}', inputs.mode, inputs.reason) || github.event.issue.title }}
+
 on:
   workflow_dispatch:
     inputs:

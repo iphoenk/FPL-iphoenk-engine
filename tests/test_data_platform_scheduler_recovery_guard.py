@@ -64,6 +64,22 @@ def test_recent_recovery_dispatch_is_a_cooldown_blocker():
     assert result["reason_code"] == "RECOVERY_COOLDOWN_ACTIVE"
 
 
+def test_recovery_mode_prefix_wins_over_reason_text():
+    result = decide_safe_recovery(
+        _critical(),
+        [{
+            "id": 128,
+            "status": "completed",
+            "event": "workflow_dispatch",
+            "display_title": "V6 manual_recovery repair-report_prefetch-path",
+            "created_at": "2026-09-14T14:20:00Z",
+        }],
+        now=NOW,
+    )
+    assert result["should_recover"] is False
+    assert result["reason_code"] == "RECOVERY_COOLDOWN_ACTIVE"
+
+
 def test_recent_report_prefetch_dispatch_does_not_consume_recovery_cooldown():
     result = decide_safe_recovery(
         _critical(),
@@ -72,6 +88,22 @@ def test_recent_report_prefetch_dispatch_does_not_consume_recovery_cooldown():
             "status": "completed",
             "event": "workflow_dispatch",
             "display_title": "V6 report_prefetch full_master",
+            "created_at": "2026-09-14T14:20:00Z",
+        }],
+        now=NOW,
+    )
+    assert result["should_recover"] is True
+    assert result["reason_code"] == "CRITICAL_WITH_NO_ACTIVE_OR_RECENT_RECOVERY"
+
+
+def test_report_prefetch_mode_prefix_wins_over_reason_text():
+    result = decide_safe_recovery(
+        _critical(),
+        [{
+            "id": 129,
+            "status": "completed",
+            "event": "workflow_dispatch",
+            "display_title": "V6 report_prefetch manual_recovery-analysis",
             "created_at": "2026-09-14T14:20:00Z",
         }],
         now=NOW,

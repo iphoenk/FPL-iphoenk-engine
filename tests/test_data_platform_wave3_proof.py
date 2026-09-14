@@ -111,6 +111,7 @@ def test_post_publish_proof_contains_full_core_lifecycle_and_provenance(tmp_path
     assert proof["registry_fingerprint"] == "f" * 64
     assert proof["published_runtime_sha"] == "b" * 40
     assert proof["governance"]["proof_created_post_publish_without_runtime_tree_mutation"] is True
+    assert proof["governance"]["production_green_requires_controlled_chaos_acceptance"] is True
     for stage in (
         "TRIGGERED",
         "ACQUIRED",
@@ -215,21 +216,30 @@ def test_gap_resets_consecutive_natural_slot_count():
     assert result["six_of_six_complete"] is False
 
 
-def test_exact_rolling_48_natural_slots_are_required_for_production_green_eligibility():
+def test_exact_rolling_48_requires_chaos_acceptance_for_production_green_eligibility():
     start = datetime(2026, 9, 12, 0, tzinfo=timezone.utc)
     proofs = [_proof(start + timedelta(hours=i), run=i + 1) for i in range(48)]
-    result = evaluate_proof_window(proofs)
-    assert result["phase"] == "48/48_COMPLETE"
-    assert result["consecutive_successful_natural_slots"] == 48
-    assert result["rolling_48_of_48_complete"] is True
-    assert result["production_green_eligible"] is True
+
+    natural_only = evaluate_proof_window(proofs)
+    assert natural_only["phase"] == "48/48_COMPLETE"
+    assert natural_only["consecutive_successful_natural_slots"] == 48
+    assert natural_only["rolling_48_of_48_complete"] is True
+    assert natural_only["natural_window_eligible"] is True
+    assert natural_only["chaos_acceptance_pass"] is False
+    assert natural_only["production_green_eligible"] is False
+
+    combined = evaluate_proof_window(proofs, chaos_acceptance_pass=True)
+    assert combined["natural_window_eligible"] is True
+    assert combined["chaos_acceptance_pass"] is True
+    assert combined["production_green_eligible"] is True
 
 
 def test_duplicate_logical_slot_blocks_rolling_48_acceptance():
     start = datetime(2026, 9, 12, 0, tzinfo=timezone.utc)
     proofs = [_proof(start + timedelta(hours=i), run=i + 1) for i in range(48)]
     proofs.append(_proof(start + timedelta(hours=47), run=999))
-    result = evaluate_proof_window(proofs)
+    result = evaluate_proof_window(proofs, chaos_acceptance_pass=True)
     assert result["duplicate_logical_slots"] == [(start + timedelta(hours=47)).isoformat()]
     assert result["rolling_48_of_48_complete"] is False
+    assert result["natural_window_eligible"] is False
     assert result["production_green_eligible"] is False

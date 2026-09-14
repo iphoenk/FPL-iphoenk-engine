@@ -133,9 +133,6 @@ def resolve_scope(
     personal = bool(config.get("personal_team_enabled", True))
     mini = bool(config.get("mini_league_enabled", True))
     if report_kind == PRICE_REPORT:
-        # 05:30 is price-focused: do not refresh unrelated authenticated personal
-        # state. Mini-league price-impact inputs require the explicitly enabled
-        # priority full-picks capability; production consumer_context enables it.
         price_mini = mini and bool(config.get("priority_full_picks_enabled", False))
         return ReportScope(False, price_mini, False)
     if report_kind == "full_master":
@@ -230,8 +227,17 @@ def lineage(
 
 
 def freshness(generated: datetime, slot: datetime, maximum_age_minutes: int) -> tuple[float, bool]:
-    age = (slot.astimezone(timezone.utc) - generated.astimezone(timezone.utc)).total_seconds() / 60
-    return round(age, 3), 0.0 <= age <= maximum_age_minutes
+    """Return source age at the logical slot without misclassifying post-slot generation.
+
+    Report timeliness is a separate concern. A report generated after its logical slot
+    has zero source-age debt at that slot; its positive lateness belongs to the report
+    timing layer, not source freshness.
+    """
+    raw_age = (
+        slot.astimezone(timezone.utc) - generated.astimezone(timezone.utc)
+    ).total_seconds() / 60
+    age = max(0.0, raw_age)
+    return round(age, 3), age <= maximum_age_minutes
 
 
 def reusable(

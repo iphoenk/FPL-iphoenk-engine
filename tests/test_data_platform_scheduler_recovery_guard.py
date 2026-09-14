@@ -47,10 +47,42 @@ def test_active_ingestion_blocks_recovery():
     assert result["reason_code"] == "INGESTION_ALREADY_ACTIVE"
 
 
-def test_recent_manual_dispatch_is_a_cooldown_blocker():
+def test_recent_recovery_dispatch_is_a_cooldown_blocker():
     result = decide_safe_recovery(
         _critical(),
-        [{"id": 124, "status": "completed", "event": "workflow_dispatch", "created_at": "2026-09-14T14:20:00Z"}],
+        [{
+            "id": 124,
+            "status": "completed",
+            "event": "workflow_dispatch",
+            "display_title": "V6 manual_recovery WAVE2_SAFE_RECOVERY_CRITICAL",
+            "created_at": "2026-09-14T14:20:00Z",
+        }],
+        now=NOW,
+    )
+    assert result["should_recover"] is False
+    assert result["reason_code"] == "RECOVERY_COOLDOWN_ACTIVE"
+
+
+def test_recent_report_prefetch_dispatch_does_not_consume_recovery_cooldown():
+    result = decide_safe_recovery(
+        _critical(),
+        [{
+            "id": 126,
+            "status": "completed",
+            "event": "workflow_dispatch",
+            "display_title": "V6 report_prefetch full_master",
+            "created_at": "2026-09-14T14:20:00Z",
+        }],
+        now=NOW,
+    )
+    assert result["should_recover"] is True
+    assert result["reason_code"] == "CRITICAL_WITH_NO_ACTIVE_OR_RECENT_RECOVERY"
+
+
+def test_unknown_workflow_dispatch_remains_fail_closed_for_cooldown():
+    result = decide_safe_recovery(
+        _critical(),
+        [{"id": 127, "status": "completed", "event": "workflow_dispatch", "created_at": "2026-09-14T14:20:00Z"}],
         now=NOW,
     )
     assert result["should_recover"] is False

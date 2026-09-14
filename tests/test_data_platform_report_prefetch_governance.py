@@ -112,8 +112,7 @@ def test_report_prefetch_issue_title_transport_is_rejected_by_authorization():
         )
 
 
-def test_0530_is_explicit_no_personal_no_league_control_contract():
-    workflow = WORKFLOW.read_text(encoding="utf-8")
+def test_0530_requires_mini_league_facts_without_personal_refresh():
     policy = load_policy()
     env, summary = resolve_prefetch(
         policy,
@@ -130,13 +129,14 @@ def test_0530_is_explicit_no_personal_no_league_control_contract():
 
     assert summary["report_kind"] == "05:30_price"
     assert env["V6_PREFETCH_PERSONAL"] == "false"
-    assert env["V6_PREFETCH_MINI_LEAGUE"] == "false"
+    assert env["V6_PREFETCH_MINI_LEAGUE"] == "true"
     assert env["V6_PREFETCH_LIVE"] == "false"
     assert policy["report_prefetch"]["independent_cron"] is False
     assert policy["report_prefetch"]["counts_as_completed_operational_slot"] is False
     validator = (ROOT / "src/runtime_v6/production_validate.py").read_text(encoding="utf-8")
     assert 'if report_kind == "05:30_price":' in validator
-    assert 'prefetch["telemetry"]["request_count"] == 0' in validator
+    assert 'prefetch["telemetry"]["request_count"] > 0' in validator
+    assert 'prefetch["mini_league_requested"] is True' in validator
 
 
 def test_priority_league_id_is_not_hardcoded_in_executable_v6_code():

@@ -11,6 +11,11 @@ NORMALIZED = OUT / "normalized"
 EVIDENCE = OUT / "evidence"
 HEALTH = OUT / "health"
 MANIFEST = OUT / "manifest.json"
+CANDIDATE_FREEZE = HEALTH / "candidate_freeze.lock"
+_POST_FREEZE_WRITABLE = {
+    CANDIDATE_FREEZE,
+    HEALTH / "publish_integrity.json",
+}
 
 
 def read_json(path: Path) -> dict[str, Any] | None:
@@ -44,7 +49,25 @@ def prune_inactive_sources(active_source_ids: list[str] | tuple[str, ...]) -> li
     return sorted(removed)
 
 
+def _candidate_is_frozen() -> bool:
+    freeze = read_json(CANDIDATE_FREEZE) or {}
+    return freeze.get("candidate_state") == "FROZEN"
+
+
+def _assert_post_freeze_write_allowed(path: Path) -> None:
+    if not _candidate_is_frozen():
+        return
+    try:
+        path.resolve().relative_to(OUT.resolve())
+    except ValueError:
+        return
+    allowed = {candidate.resolve() for candidate in _POST_FREEZE_WRITABLE}
+    if path.resolve() not in allowed:
+        raise RuntimeError(f"candidate_frozen_write_rejected:{path.relative_to(OUT).as_posix()}")
+
+
 def write_json(path: Path, payload: Any, *, compact: bool = False) -> None:
+    _assert_post_freeze_write_allowed(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
     text = json.dumps(payload, ensure_ascii=False, separators=(",", ":")) if compact else json.dumps(payload, ensure_ascii=False, indent=2)

@@ -18,9 +18,9 @@ Use these names consistently:
 
 Current adoption state:
 
-- Wave 1: **IN PROGRESS** — current blocker is publish-tree integrity after successful acquisition.
-- Wave 2: **NOT ACCEPTED** — some foundations are already merged, especially core-title vs prefetch-comment separation and `V6 FAIL != REPORT FAIL`, but the wave is not complete.
-- Wave 3: **NOT STARTED**.
+- Wave 1: **ACCEPTED**.
+- Wave 2: **ACCEPTED**.
+- Wave 3: **48/48 IN PROGRESS** — the operator-approved initial natural gate is 2/2 genuine consecutive natural full-chain slots; the final Production Green gate remains rolling 48/48 plus controlled chaos acceptance.
 
 Do not declare a wave complete from a partial sub-feature. The exit criteria below are authoritative.
 
@@ -254,16 +254,19 @@ Include logical slot, observed timestamps, run ID, generation/publication ID, re
 
 ### Production proof sequence
 
-1. Obtain **>= 6 consecutive genuine natural core slots** with the expected full core chain passing.
-2. After 6/6, continue to a **rolling 48/48 genuine natural-slot** proof window.
+The earlier 6/6 intermediate threshold is superseded by the operator-approved **2/2 initial natural gate** dated 2026-09-14. This changes only the intermediate gate; the final Production Green requirement is not reduced.
+
+1. Obtain **>= 2 consecutive genuine natural core slots** with the expected full core chain passing.
+2. After 2/2, continue directly to a **rolling 48/48 genuine natural-slot** proof window.
 3. During both windows verify:
-   - no duplicate ownership/publication for the same logical slot
+   - no duplicate ownership/publication for the same logical slot inside the active acceptance window
    - candidate failures never mutate LAST_GOOD
    - scheduler proof timestamps/age are truthful
    - due report delivery remains correct
    - degraded states identify only affected layers/artifacts
+4. Controlled chaos/recovery acceptance must remain PASS for the mandatory scenario matrix. Manual/controlled chaos executions never increment the natural-slot counter.
 
-Declare **PRODUCTION GREEN** only after the 48/48 window passes, unless the acceptance contract is explicitly changed.
+Declare **PRODUCTION GREEN** only when **rolling 48/48 genuine natural slots PASS and controlled chaos acceptance PASS**. A clean 2/2 only advances Wave 3 into the rolling 48/48 phase; it is not Production Green.
 
 ---
 
@@ -274,7 +277,7 @@ Every recovery update should include all three operational waves to prevent cros
 ```text
 OPERATIONAL RECOVERY WAVE 1: <IN PROGRESS | ACCEPTED>
 OPERATIONAL RECOVERY WAVE 2: <NOT STARTED | IN PROGRESS | ACCEPTED>
-OPERATIONAL RECOVERY WAVE 3: <NOT STARTED | 6/6 IN PROGRESS | 48/48 IN PROGRESS | PRODUCTION GREEN>
+OPERATIONAL RECOVERY WAVE 3: <NOT STARTED | 2/2 IN PROGRESS | 48/48 IN PROGRESS | PRODUCTION GREEN>
 CURRENT BLOCKER: <stage / exact failure>
 LATEST NATURAL SLOT: <logical slot / run / result>
 ```

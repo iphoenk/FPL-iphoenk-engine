@@ -1,0 +1,145 @@
+name: FPL V6 Wave 3 natural proof
+
+on:
+  workflow_run:
+    workflows: ["FPL V6 hourly fresh-data acquisition"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  wave3-proof:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Detect source publication artifact
+        id: source_artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          SOURCE_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          expected="v6-runtime-publication-${SOURCE_RUN_ID}-${SOURCE_RUN_ATTEMPT}"
+          count="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/artifacts" \
+            --jq "[.artifacts[] | select(.name == \"${expected}\" and .expired == false)] | length")"
+          if [[ "$count" == "1" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "name=$expected" >> "$GITHUB_OUTPUT"
+          elif [[ "$count" == "0" ]]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "No verified runtime publication artifact for source run; idempotent/no-publication source is not countable."
+          else
+            echo "::error::Ambiguous source publication artifact count: $count"
+            exit 1
+          fi
+
+      - name: Download triggering verified runtime snapshot
+        if: steps.source_artifact.outputs.available == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: ${{ steps.source_artifact.outputs.name }}
+          path: ${{ runner.temp }}/v6-wave3-source
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Extract and classify triggering source run
+        if: steps.source_artifact.outputs.available == 'true'
+        id: classify
+        shell: bash
+        env:
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          SOURCE_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          source_root="$RUNNER_TEMP/v6-wave3-source-tree"
+          rm -rf "$source_root"
+          mkdir -p "$source_root"
+          tar -xf "$RUNNER_TEMP/v6-wave3-source/v6-runtime-data.tar" -C "$source_root"
+          SOURCE_ROOT="$source_root" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["SOURCE_ROOT"]) / "data" / "v6"
+          manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+          freeze = json.loads((root / "health" / "candidate_freeze.lock").read_text(encoding="utf-8"))
+          control = manifest.get("runtime_control") or {}
+          natural = (
+              control.get("schedule_kind") == "chatgpt_scheduler"
+              and control.get("chatgpt_scheduler_proof") is True
+              and control.get("counts_as_completed_operational_slot") is True
+              and str(freeze.get("run_id")) == os.environ["SOURCE_RUN_ID"]
+              and str(freeze.get("run_attempt")) == os.environ["SOURCE_RUN_ATTEMPT"]
+          )
+          output = os.environ["GITHUB_OUTPUT"]
+          with open(output, "a", encoding="utf-8") as handle:
+              handle.write(f"natural={'true' if natural else 'false'}\n")
+          print({
+              "schedule_kind": control.get("schedule_kind"),
+              "natural": natural,
+              "logical_slot": control.get("expected_cycle_at"),
+              "source_run_id": freeze.get("run_id"),
+          })
+          PY
+          echo "SOURCE_ROOT=$source_root" >> "$GITHUB_ENV"
+
+      - name: Verify promoted runtime still matches source run
+        if: steps.classify.outputs.natural == 'true'
+        shell: bash
+        env:
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          SOURCE_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "+refs/heads/runtime-data-v6:refs/remotes/origin/runtime-data-v6"
+          runtime_sha="$(git rev-parse refs/remotes/origin/runtime-data-v6)"
+          freeze_json="$(git show refs/remotes/origin/runtime-data-v6:data/v6/health/candidate_freeze.lock)"
+          RUNTIME_FREEZE="$freeze_json" python - <<'PY'
+          import json
+          import os
+          freeze = json.loads(os.environ["RUNTIME_FREEZE"])
+          assert str(freeze.get("run_id")) == os.environ["SOURCE_RUN_ID"], "runtime branch advanced or source run not promoted"
+          assert str(freeze.get("run_attempt")) == os.environ["SOURCE_RUN_ATTEMPT"], "runtime branch attempt mismatch"
+          PY
+          echo "RUNTIME_SHA=$runtime_sha" >> "$GITHUB_ENV"
+
+      - name: Build Wave 3 natural slot proof
+        if: steps.classify.outputs.natural == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m src.runtime_v6.wave3_proof \
+            --root "$SOURCE_ROOT/data/v6" \
+            --published-runtime-sha "$RUNTIME_SHA" \
+            --source-commit "${{ github.event.workflow_run.head_sha }}" \
+            --source-run-id "${{ github.event.workflow_run.id }}" \
+            --source-run-attempt "${{ github.event.workflow_run.run_attempt }}" \
+            --output "$RUNNER_TEMP/wave3-slot-proof.json" \
+            --production-validated
+
+      - name: Upload Wave 3 natural slot proof
+        if: steps.classify.outputs.natural == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-wave3-slot-proof-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+          path: ${{ runner.temp }}/wave3-slot-proof.json
+          retention-days: 14
+          if-no-files-found: error

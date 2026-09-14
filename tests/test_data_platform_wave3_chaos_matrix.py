@@ -32,6 +32,7 @@ def _failed_candidate(tmp_path: Path, error: str) -> Path:
         {
             "generated_at": "2026-09-14T06:31:00+00:00",
             "runtime_control": {
+                "event_name": "issues",
                 "schedule_kind": "chatgpt_scheduler",
                 "chatgpt_scheduler_proof": True,
                 "counts_as_completed_operational_slot": True,
@@ -124,6 +125,7 @@ def test_registry_activation_transition_is_proven_by_fingerprint_not_inferred(tm
         {
             "generated_at": "2026-09-14T06:31:00+00:00",
             "runtime_control": {
+                "event_name": "issues",
                 "schedule_kind": "chatgpt_scheduler",
                 "chatgpt_scheduler_proof": True,
                 "counts_as_completed_operational_slot": True,
@@ -147,9 +149,9 @@ def test_registry_activation_transition_is_proven_by_fingerprint_not_inferred(tm
     _write(root / "health" / "publish_integrity.json", {"status": "PASS", "tree_sha256": "a" * 64})
     proof = build_slot_proof(
         root,
-        published_runtime_sha="b" * 40,
         source_commit="c" * 40,
         production_validated=True,
+        promotion_verified=True,
         run_id="9002",
         run_attempt="1",
     )
@@ -173,9 +175,9 @@ def test_structural_identity_and_publisher_chaos_remain_fail_closed(tmp_path, er
     with pytest.raises(Wave3ProofError, match="publish_integrity_not_pass"):
         build_slot_proof(
             root,
-            published_runtime_sha="b" * 40,
             source_commit="c" * 40,
             production_validated=True,
+            promotion_verified=True,
             run_id="9001",
             run_attempt="1",
         )
@@ -197,6 +199,7 @@ def test_duplicate_core_trigger_is_not_eligible_for_rolling_production_green():
     proof = {
         "proof_kind": "WAVE3_NATURAL_CORE_SLOT",
         "natural_slot": True,
+        "natural_transport": "FPL_MASTER_SLOT_ISSUE_TITLE",
         "core_chain_pass": True,
         "logical_slot": "2026-09-14T06:00:00+00:00",
         "stages": stages,

@@ -1,0 +1,32 @@
+name: FPL legacy forensic-only marker
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type LEGACY_FORENSIC_ONLY to acknowledge this workflow cannot publish production data"
+        required: true
+        type: string
+
+# LEGACY_FORENSIC_ONLY
+# NO_PRODUCTION_PUBLICATION
+# Historical collector cadence retained only so legacy architecture validation can
+# read the old contract while V3/V4/V5 operational workflows remain retired.
+# cron: "30 * * * *"
+# cron: "15 * * * *"
+# cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  forensic-only:
+    if: ${{ inputs.confirm == 'LEGACY_FORENSIC_ONLY' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Confirm retired legacy surface
+        run: |
+          echo "LEGACY_FORENSIC_ONLY"
+          echo "NO_PRODUCTION_PUBLICATION"
+          echo "V3/V4/V5 operational ingress remains disabled."

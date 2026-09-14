@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.runtime_v6.adapters import collect_price_predictor
 from src.runtime_v6.operational_ledger import build_operational_slots
+from src.runtime_v6.registry import load_registry
 
 
 def _core_control(*, run_id: str, observed_at: str, generation: str) -> dict:
@@ -74,6 +75,17 @@ def test_prefetch_auxiliary_cycle_does_not_advance_authoritative_scheduler_cycle
     assert auxiliary["summary"]["last_chatgpt_scheduler_cycle_at"] == "2026-09-14T06:01:00+00:00"
     assert auxiliary["summary"]["last_authoritative_cycle_at"] == "2026-09-14T06:01:00+00:00"
     assert auxiliary["summary"]["last_operational_cycle_at"] == "2026-09-14T06:31:00+00:00"
+
+
+def test_effective_registry_removes_official_predictor_claim_but_keeps_legacy_id():
+    registry = load_registry()
+    source = next(row for row in registry["sources"] if row["id"] == "official_price_predictor")
+    assert source["id"] == "official_price_predictor"
+    assert source["name"] == "V6 Derived Price Change Signal"
+    assert source["category"] == "market_model_reference"
+    assert source["predictor_official_status"] == "UNVERIFIED_NOT_OFFICIAL"
+    assert source["independent_official_product_evidence"] is False
+    assert source["authority"]["current_price_facts"] == "OFFICIAL_FPL_BOOTSTRAP"
 
 
 def test_legacy_price_source_id_does_not_create_official_predictor_claim():

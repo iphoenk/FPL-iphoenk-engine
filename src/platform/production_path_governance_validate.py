@@ -13,7 +13,6 @@ RETIRED_OPERATIONAL_WORKFLOWS = (
     "v4-timing-probe.yml",
     "fpl-engine-recovery.yml",
     "v5-evidence-dispatcher.yml",
-    "fpl-engine.yml",
 )
 LEGACY_PREFIXES = ("v3-", "v4-", "v5-")
 AUTOMATIC_TRIGGER = re.compile(r"(?m)^\s*(schedule|workflow_run)\s*:")
@@ -38,6 +37,32 @@ def validate() -> None:
         path = WORKFLOW_DIR / name
         if path.exists():
             errors.append(f"retired operational workflow still present: {path.relative_to(ROOT)}")
+
+    forensic = WORKFLOW_DIR / "fpl-engine.yml"
+    if forensic.exists():
+        text = _workflow_text(forensic)
+        required = (
+            "LEGACY_FORENSIC_ONLY",
+            "workflow_dispatch:",
+            "forensic-only",
+            "NO_PRODUCTION_PUBLICATION",
+        )
+        for marker in required:
+            if marker not in text:
+                errors.append(f"legacy forensic marker missing hard-disable control: {marker}")
+        if AUTOMATIC_TRIGGER.search(text):
+            errors.append("legacy forensic marker must not have schedule/workflow_run")
+        for forbidden in (
+            "git push",
+            "runtime-data-v3",
+            "runtime-data-v4",
+            "runtime-data-v5",
+            "python -m src.runtime_v3",
+            "python -m src.runtime_v4",
+            "python -m src.runtime_v5",
+        ):
+            if forbidden in text:
+                errors.append(f"legacy forensic marker contains operational action: {forbidden}")
 
     for path in sorted(WORKFLOW_DIR.glob("*.yml")):
         text = _workflow_text(path)

@@ -261,6 +261,82 @@ jobs:
             cp "$target/wave3-slot-proof.json" "$RUNNER_TEMP/wave3-prior-proofs/proof-${artifact_id}.json"
           done < "$RUNNER_TEMP/wave3-artifact-index.txt"
 
+      - name: Resolve latest successful Wave 3 chaos acceptance
+        if: steps.promotion.outputs.countable == 'true'
+        id: chaos
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/wave3-chaos-evidence"
+          mkdir -p "$RUNNER_TEMP/wave3-chaos-evidence"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" > "$RUNNER_TEMP/wave3-chaos-artifacts.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads((Path(os.environ["RUNNER_TEMP"]) / "wave3-chaos-artifacts.json").read_text(encoding="utf-8"))
+          rows = []
+          for artifact in payload.get("artifacts", []):
+              name = str(artifact.get("name") or "")
+              workflow_run = artifact.get("workflow_run") or {}
+              if not name.startswith("v6-wave3-chaos-acceptance-") or artifact.get("expired"):
+                  continue
+              if str(workflow_run.get("head_branch") or "") != "main":
+                  continue
+              run_id = workflow_run.get("id")
+              head_sha = str(workflow_run.get("head_sha") or "")
+              if not run_id or len(head_sha) != 40:
+                  continue
+              rows.append((str(artifact.get("created_at") or ""), name, int(run_id), head_sha))
+          rows.sort(reverse=True)
+          rows = rows[:20]
+          output = Path(os.environ["RUNNER_TEMP"]) / "wave3-chaos-candidates.txt"
+          output.write_text("".join(f"{name}|{run_id}|{head_sha}\n" for _, name, run_id, head_sha in rows), encoding="utf-8")
+          print({"chaos_artifact_candidates": len(rows)})
+          PY
+          found="false"
+          while IFS='|' read -r artifact_name chaos_run_id chaos_head_sha; do
+            [[ -n "$artifact_name" ]] || continue
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${chaos_run_id}" > "$RUNNER_TEMP/wave3-chaos-run.json"
+            state="$(CHAOS_HEAD_SHA="$chaos_head_sha" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          run = json.loads((Path(os.environ["RUNNER_TEMP"]) / "wave3-chaos-run.json").read_text(encoding="utf-8"))
+          accepted = (
+              run.get("name") == "FPL V6 CI contracts"
+              and run.get("event") == "push"
+              and run.get("head_branch") == "main"
+              and run.get("status") == "completed"
+              and run.get("conclusion") == "success"
+              and run.get("head_sha") == os.environ["CHAOS_HEAD_SHA"]
+          )
+          print("ACCEPTED" if accepted else "REJECTED")
+          PY
+          )"
+            if [[ "$state" != "ACCEPTED" ]]; then
+              continue
+            fi
+            gh run download "$chaos_run_id" --repo "$GITHUB_REPOSITORY" --name "$artifact_name" --dir "$RUNNER_TEMP/wave3-chaos-evidence"
+            if [[ ! -f "$RUNNER_TEMP/wave3-chaos-evidence/wave3-chaos-acceptance.json" ]]; then
+              rm -rf "$RUNNER_TEMP/wave3-chaos-evidence"/*
+              continue
+            fi
+            echo "run_id=$chaos_run_id" >> "$GITHUB_OUTPUT"
+            echo "head_sha=$chaos_head_sha" >> "$GITHUB_OUTPUT"
+            echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
+            found="true"
+            break
+          done < "$RUNNER_TEMP/wave3-chaos-candidates.txt"
+          if [[ "$found" != "true" ]]; then
+            echo "::error::No successful main-branch Wave 3 chaos acceptance artifact is available"
+            exit 1
+          fi
+
       - name: Evaluate rolling Wave 3 proof window
         if: steps.promotion.outputs.countable == 'true'
         shell: bash
@@ -269,6 +345,10 @@ jobs:
           python -m src.runtime_v6.wave3_window \
             --proof-dir "$RUNNER_TEMP/wave3-prior-proofs" \
             --current "$RUNNER_TEMP/wave3-slot-proof.json" \
+            --chaos-acceptance "$RUNNER_TEMP/wave3-chaos-evidence/wave3-chaos-acceptance.json" \
+            --chaos-source-run-id "${{ steps.chaos.outputs.run_id }}" \
+            --chaos-source-head-sha "${{ steps.chaos.outputs.head_sha }}" \
+            --chaos-artifact-name "${{ steps.chaos.outputs.artifact_name }}" \
             --output "$RUNNER_TEMP/wave3-window-summary.json"
 
       - name: Upload Wave 3 natural slot proof

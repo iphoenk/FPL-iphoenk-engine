@@ -242,6 +242,17 @@ jobs:
         if: steps.slot_guard.outputs.skip != 'true'
         run: python -m src.runtime_v6.publish_integrity
 
+      - name: Persist V6 publish integrity diagnostics
+        if: always() && steps.slot_guard.outputs.skip != 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-publish-integrity-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            data/v6/health/publish_integrity.json
+            data/v6/health/candidate_freeze.json
+          retention-days: 14
+          if-no-files-found: warn
+
       - name: Validate publishable V6 manifest
         if: steps.slot_guard.outputs.skip != 'true'
         run: python -m src.runtime_v6.production_validate publishable

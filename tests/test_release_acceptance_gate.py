@@ -32,3 +32,7 @@ def test_composite_release_gate_preserves_all_underlying_integrations():
     assert any("equivalence_acceptance" in command for command in commands)
     assert any("production_path_governance_validate" in command for command in commands)
     assert not any("definition_of_done --scope candidate" in command for command in commands)
+
+    blocking = {gate.name: gate.blocking for gate in gates}
+    assert blocking["fast_slo_guard"] is False
+    assert all(blocking[name] is True for name in names if name != "fast_slo_guard")

@@ -1,0 +1,173 @@
+name: FPL V6 scheduler watchdog
+
+on:
+  schedule:
+    - cron: '50 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+concurrency:
+  group: fpl-v6-scheduler-watchdog
+  cancel-in-progress: true
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Read authoritative runtime scheduler proof
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "/repos/${GITHUB_REPOSITORY}/contents/data/v6/health/runtime_control.json?ref=runtime-data-v6" \
+            --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/runtime_control.json"
+
+      - name: Classify continuity
+        id: classify
+        shell: bash
+        run: |
+          set -euo pipefail
+          now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          python -m src.runtime_v6.scheduler_watchdog \
+            --runtime-control "$RUNNER_TEMP/runtime_control.json" \
+            --now "$now" \
+            --warning-minutes 90 \
+            --critical-minutes 135 \
+            --output "$RUNNER_TEMP/watchdog.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          row = json.loads((Path(os.environ["RUNNER_TEMP"]) / "watchdog.json").read_text())
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"state={row['state']}\n")
+              handle.write(f"reason_code={row['reason_code']}\n")
+              handle.write(f"proof_age_minutes={row.get('proof_age_minutes')}\n")
+              handle.write(f"proof_at={row.get('proof_at')}\n")
+          PY
+
+      - name: Collect incident diagnostics
+        if: steps.classify.outputs.state != 'HEALTHY'
+        id: diagnose
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          control_title="$(gh issue view 431 --repo "$GITHUB_REPOSITORY" --json title --jq '.title')"
+          latest_run="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/v6-natural-data-ingestion.yml/runs?event=issues&per_page=1" \
+            --jq '.workflow_runs[0] | {id,status,conclusion,display_title,created_at,updated_at,head_sha}')"
+          CONTROL_TITLE="$control_title" LATEST_RUN="$latest_run" python - <<'PY'
+          import json, os, re
+          from pathlib import Path
+
+          watch = json.loads((Path(os.environ["RUNNER_TEMP"]) / "watchdog.json").read_text())
+          runtime = json.loads((Path(os.environ["RUNNER_TEMP"]) / "runtime_control.json").read_text())
+          title = os.environ.get("CONTROL_TITLE", "")
+          latest = json.loads(os.environ.get("LATEST_RUN") or "{}")
+          match = re.search(r"logical_slot=([^ ]+)", title)
+          title_slot = match.group(1) if match else None
+          proof_slot = runtime.get("expected_cycle_at")
+          latest_title = str(latest.get("display_title") or "")
+          if title_slot and proof_slot and title_slot.startswith(str(proof_slot)[:13]):
+              diagnosis = "EXTERNAL_CONTROL_EVENT_MISSING"
+          elif title and latest_title == title and latest.get("status") == "completed" and latest.get("conclusion") != "success":
+              diagnosis = "ACQUISITION_OR_PUBLISH_FAILED"
+          elif title and latest_title != title:
+              diagnosis = "GITHUB_EVENT_NOT_STARTED"
+          elif latest.get("conclusion") == "success":
+              diagnosis = "PUBLICATION_PROOF_NOT_ADVANCED"
+          else:
+              diagnosis = "CONTROL_PATH_UNRESOLVED"
+          out = {
+              "watchdog": watch,
+              "diagnosis_code": diagnosis,
+              "control_issue_title": title,
+              "latest_acquisition_run": latest,
+              "runtime_expected_cycle_at": proof_slot,
+          }
+          (Path(os.environ["RUNNER_TEMP"]) / "diagnostics.json").write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"diagnosis_code={diagnosis}\n")
+          PY
+
+      - name: Open or update scheduler incident
+        if: steps.classify.outputs.state != 'HEALTHY'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WATCH_STATE: ${{ steps.classify.outputs.state }}
+          WATCH_REASON: ${{ steps.classify.outputs.reason_code }}
+          WATCH_AGE: ${{ steps.classify.outputs.proof_age_minutes }}
+          WATCH_PROOF_AT: ${{ steps.classify.outputs.proof_at }}
+          DIAGNOSIS_CODE: ${{ steps.diagnose.outputs.diagnosis_code }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          incident_title="[V6 WATCHDOG] Scheduler continuity incident"
+          incident="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search '"[V6 WATCHDOG] Scheduler continuity incident" in:title' --json number,title --jq '.[0].number // empty')"
+          body="$RUNNER_TEMP/incident.md"
+          {
+            echo "## V6 scheduler watchdog"
+            echo
+            echo "- state: \`$WATCH_STATE\`"
+            echo "- watchdog_reason: \`$WATCH_REASON\`"
+            echo "- diagnosis_code: \`$DIAGNOSIS_CODE\`"
+            echo "- scheduler_proof_at: \`$WATCH_PROOF_AT\`"
+            echo "- scheduler_proof_age_minutes: \`$WATCH_AGE\`"
+            echo "- observed_at_utc: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+            echo
+            echo "This workflow is monitoring-only. It cannot trigger V6 acquisition, cannot publish runtime-data-v6, and cannot advance scheduler proof."
+            echo
+            echo '<details><summary>Diagnostics</summary>'
+            echo
+            echo '```json'
+            cat "$RUNNER_TEMP/diagnostics.json"
+            echo '```'
+            echo '</details>'
+          } > "$body"
+          if [[ -z "$incident" ]]; then
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$incident_title" --body-file "$body"
+          else
+            gh issue edit "$incident" --repo "$GITHUB_REPOSITORY" --body-file "$body"
+          fi
+
+      - name: Close resolved scheduler incident
+        if: steps.classify.outputs.state == 'HEALTHY'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          incident="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search '"[V6 WATCHDOG] Scheduler continuity incident" in:title' --json number,title --jq '.[0].number // empty')"
+          if [[ -n "$incident" ]]; then
+            gh issue close "$incident" --repo "$GITHUB_REPOSITORY" --comment "Scheduler proof is fresh again. Watchdog closes the monitoring incident; no acquisition was triggered by the watchdog."
+          fi
+
+      - name: Enforce monitoring-only invariant
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          row = json.loads((Path(os.environ["RUNNER_TEMP"]) / "watchdog.json").read_text())
+          assert row["watchdog_is_authority"] is False
+          assert row["may_trigger_acquisition"] is False
+          assert row["may_publish_runtime"] is False
+          print("PASS: watchdog remains monitoring-only")
+          PY

@@ -7,6 +7,7 @@ from src.runtime_v6.wave3_proof import NATURAL_EVENT_NAME, NATURAL_SCHEDULE_KIND
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "v6-core-recovery-guard.yml"
+INGESTION_WORKFLOW = ROOT / ".github" / "workflows" / "v6-natural-data-ingestion.yml"
 CONFIG = ROOT / "config" / "v6" / "scheduler_recovery.json"
 SCHEDULE_POLICY = ROOT / "config" / "v6" / "schedule_policy.json"
 
@@ -97,6 +98,14 @@ def test_recent_governed_core_event_gets_settle_window_before_recovery():
     )
     assert result["should_recover"] is False
     assert result["reason_code"] == "RECENT_GOVERNED_CORE_EVENT_SETTLING"
+
+
+def test_workflow_dispatch_run_name_exposes_mode_without_changing_issue_title_proof():
+    text = INGESTION_WORKFLOW.read_text(encoding="utf-8")
+    assert "run-name:" in text
+    assert "inputs.mode" in text
+    assert "inputs.reason" in text
+    assert "github.event.issue.title" in text
 
 
 def test_recovery_workflow_is_dispatch_only_not_a_second_natural_scheduler():

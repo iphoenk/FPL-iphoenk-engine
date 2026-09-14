@@ -15,10 +15,18 @@ def test_legacy_service_scheduler_entry_fails_closed():
         orchestrator.run(mode="daily", stats=True, deep_stats=False, profile="fast_decision")
 
 
-def test_canonical_runtime_does_not_schedule_legacy_entry():
-    runtime_workflow = (ROOT / ".github/workflows/v3-runtime.yml").read_text(encoding="utf-8")
-    assert "python -m src.runtime_v3.domain_orchestrator" in runtime_workflow
-    assert "python -m src.runtime_v3.orchestrator" not in runtime_workflow
+def test_legacy_operational_workflows_are_absent_from_default_branch():
+    retired = (
+        "v3-runtime.yml",
+        "v3-package-precompute.yml",
+        "v4-prediction.yml",
+        "v4-timing-probe.yml",
+        "fpl-engine-recovery.yml",
+        "v5-evidence-dispatcher.yml",
+        "fpl-engine.yml",
+    )
+    for name in retired:
+        assert not (ROOT / ".github/workflows" / name).exists(), name
 
 
 def test_release_acceptance_does_not_reactivate_legacy_scheduler():
@@ -61,7 +69,7 @@ def test_supported_root_and_docker_surfaces_use_repaired_compatibility_facade():
     assert "except Exception:\n            pass" not in live_service
 
 
-def test_shared_primitives_remain_available_for_canonical_runtime():
+def test_shared_primitives_remain_available_for_nonproduction_legacy_compatibility():
     required = (
         "_load_profiles",
         "_default_profile",

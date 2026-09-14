@@ -130,10 +130,13 @@ def resolve_scope(
 ) -> ReportScope:
     if report_kind not in REPORT_KINDS:
         raise PrefetchContractError(f"unsupported report_kind={report_kind}")
-    if report_kind == PRICE_REPORT:
-        return ReportScope(False, False, False)
     personal = bool(config.get("personal_team_enabled", True))
     mini = bool(config.get("mini_league_enabled", True))
+    if report_kind == PRICE_REPORT:
+        # 05:30 is price-focused: do not refresh unrelated authenticated personal
+        # state, but fresh Official FPL + priority mini-league facts are mandatory
+        # inputs for the ICON+ price-impact/transfer-frontier report section.
+        return ReportScope(False, mini, False)
     if report_kind == "full_master":
         return ReportScope(personal, mini, False)
     if report_kind == "match_mode":

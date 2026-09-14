@@ -202,6 +202,7 @@ def build_status_view(
     )
     if "age_seconds" in last_good:
         last_good["last_good_age_seconds"] = last_good["age_seconds"]
+        last_good["generated_at"] = last_good["source_at"]
 
     scheduler_proof = status_entry(
         scheduler_proof_state,
@@ -210,6 +211,7 @@ def build_status_view(
     )
     if "age_seconds" in scheduler_proof:
         scheduler_proof["scheduler_proof_age_seconds"] = scheduler_proof["age_seconds"]
+        scheduler_proof["scheduler_proof_at"] = scheduler_proof["source_at"]
 
     view = {
         "CORE TRANSPORT": status_entry(core_transport, observed_at=observed_at),

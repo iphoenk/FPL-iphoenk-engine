@@ -19,16 +19,24 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
-def _runtime_tree(tmp_path: Path, *, schedule_kind: str = "chatgpt_scheduler", integrity: str = "PASS") -> Path:
+def _runtime_tree(
+    tmp_path: Path,
+    *,
+    schedule_kind: str = "chatgpt_scheduler",
+    event_name: str = "issues",
+    integrity: str = "PASS",
+) -> Path:
     root = tmp_path / "data" / "v6"
+    natural_kind = schedule_kind == "chatgpt_scheduler"
     _write_json(
         root / "manifest.json",
         {
             "generated_at": "2026-09-14T06:31:10+00:00",
             "runtime_control": {
+                "event_name": event_name,
                 "schedule_kind": schedule_kind,
-                "chatgpt_scheduler_proof": schedule_kind == "chatgpt_scheduler",
-                "counts_as_completed_operational_slot": schedule_kind == "chatgpt_scheduler",
+                "chatgpt_scheduler_proof": natural_kind,
+                "counts_as_completed_operational_slot": natural_kind,
                 "expected_cycle_at": "2026-09-14T06:00:00+00:00",
                 "cycle_observed_at": "2026-09-14T06:31:00+00:00",
             },
@@ -75,6 +83,7 @@ def _proof(slot: datetime, *, run: int = 1) -> dict:
     return {
         "proof_kind": "WAVE3_NATURAL_CORE_SLOT",
         "natural_slot": True,
+        "natural_transport": "FPL_MASTER_SLOT_ISSUE_TITLE",
         "core_chain_pass": True,
         "logical_slot": iso,
         "run_id": str(run),
@@ -89,14 +98,16 @@ def test_post_publish_proof_contains_full_core_lifecycle_and_provenance(tmp_path
         published_runtime_sha="b" * 40,
         source_commit="c" * 40,
         production_validated=True,
+        promotion_verified=True,
         run_id="12345",
         run_attempt="1",
         verified_at=datetime(2026, 9, 14, 6, 32, tzinfo=timezone.utc),
     )
     assert proof["natural_slot"] is True
+    assert proof["natural_transport"] == "FPL_MASTER_SLOT_ISSUE_TITLE"
     assert proof["core_chain_pass"] is True
     assert proof["candidate_generation_id"] == "12345:1:abcdef0123456789"
-    assert proof["publication_generation_id"] == f"runtime-data-v6:{'b' * 40}"
+    assert proof["publication_generation_id"] == "v6-publication:12345:1:12345:1:abcdef0123456789"
     assert proof["registry_fingerprint"] == "f" * 64
     assert proof["published_runtime_sha"] == "b" * 40
     assert proof["governance"]["proof_created_post_publish_without_runtime_tree_mutation"] is True
@@ -112,15 +123,28 @@ def test_post_publish_proof_contains_full_core_lifecycle_and_provenance(tmp_path
         assert proof["stages"][stage]["state"] == "PASS"
 
 
+def test_controlled_issue_comment_master_acquire_cannot_count_as_natural_proof(tmp_path):
+    root = _runtime_tree(tmp_path, schedule_kind="chatgpt_scheduler", event_name="issue_comment")
+    with pytest.raises(Wave3ProofError, match="not_genuine_natural_core_transport"):
+        build_slot_proof(
+            root,
+            source_commit="c" * 40,
+            production_validated=True,
+            promotion_verified=True,
+            run_id="12345",
+            run_attempt="1",
+        )
+
+
 def test_report_prefetch_and_manual_recovery_cannot_be_counted_as_natural_core_proof(tmp_path):
     for kind in ("report_prefetch", "manual_recovery"):
-        root = _runtime_tree(tmp_path / kind, schedule_kind=kind)
-        with pytest.raises(Wave3ProofError, match="not_genuine_natural_core_slot"):
+        root = _runtime_tree(tmp_path / kind, schedule_kind=kind, event_name="issue_comment")
+        with pytest.raises(Wave3ProofError, match="not_genuine_natural_core_transport"):
             build_slot_proof(
                 root,
-                published_runtime_sha="b" * 40,
                 source_commit="c" * 40,
                 production_validated=True,
+                promotion_verified=True,
                 run_id="12345",
                 run_attempt="1",
             )
@@ -131,9 +155,22 @@ def test_corrupt_candidate_cannot_receive_successful_wave3_proof(tmp_path):
     with pytest.raises(Wave3ProofError, match="publish_integrity_not_pass"):
         build_slot_proof(
             root,
-            published_runtime_sha="b" * 40,
             source_commit="c" * 40,
             production_validated=True,
+            promotion_verified=True,
+            run_id="12345",
+            run_attempt="1",
+        )
+
+
+def test_promotion_must_be_proven_by_successful_source_publish_job(tmp_path):
+    root = _runtime_tree(tmp_path)
+    with pytest.raises(Wave3ProofError, match="promotion_not_proven"):
+        build_slot_proof(
+            root,
+            source_commit="c" * 40,
+            production_validated=True,
+            promotion_verified=False,
             run_id="12345",
             run_attempt="1",
         )

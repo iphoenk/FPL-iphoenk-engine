@@ -21,7 +21,7 @@ SCHEDULE_TRIGGER = re.compile(r"(?m)^\s*schedule\s*:")
 LEGACY_RUNTIME_PUSH = re.compile(
     r"(?:HEAD:refs/heads/|refs/heads/|RUNTIME_BRANCH\s*[:=]\s*)runtime-data-v[345](?:\b|$)"
 )
-ALLOWED_V6_MONITORING_SCHEDULES = {"v6-scheduler-watchdog.yml"}
+ALLOWED_V6_CONTROL_SCHEDULES = {"v6-scheduler-watchdog.yml", "v6-core-recovery-guard.yml"}
 
 
 class ProductionPathGovernanceError(RuntimeError):
@@ -67,15 +67,14 @@ def _validate_v6_watchdog(errors: list[str]) -> None:
     authority = dict(config.get("authority") or {})
     if config.get("role") != "MONITORING_ONLY":
         errors.append("V6 watchdog role must be MONITORING_ONLY")
-    expected_false = (
+    for key in (
         "watchdog_is_scheduler_authority",
         "watchdog_may_trigger_acquisition",
         "watchdog_may_dispatch_ingestion",
         "watchdog_may_publish_runtime",
         "watchdog_may_advance_scheduler_proof",
         "watchdog_may_use_v6_publisher_credentials",
-    )
-    for key in expected_false:
+    ):
         if authority.get(key) is not False:
             errors.append(f"V6 watchdog authority must be false: {key}")
     if authority.get("core_scheduler") != "CHATGPT_FPL_MASTER_MONITOR":
@@ -86,6 +85,71 @@ def _validate_v6_watchdog(errors: list[str]) -> None:
         errors.append("GitHub natural acquisition schedule must remain disabled")
     if (schedule_policy.get("governance") or {}).get("chatgpt_scheduler_is_only_hourly_authority") is not True:
         errors.append("ChatGPT must remain the only hourly acquisition authority")
+
+
+def _validate_v6_recovery_guard(errors: list[str]) -> None:
+    workflow = WORKFLOW_DIR / "v6-core-recovery-guard.yml"
+    config_path = ROOT / "config" / "v6" / "scheduler_recovery.json"
+    schedule_policy_path = ROOT / "config" / "v6" / "schedule_policy.json"
+    if not workflow.exists():
+        errors.append("allowed V6 recovery schedule is missing: .github/workflows/v6-core-recovery-guard.yml")
+        return
+    if not config_path.exists():
+        errors.append("V6 safe-recovery governance config is missing")
+        return
+
+    text = _workflow_text(workflow)
+    for marker in (
+        "cron: '55 * * * *'",
+        "contents: read",
+        "actions: write",
+        "python -m src.runtime_v6.scheduler_watchdog",
+        "python -m src.runtime_v6.scheduler_recovery",
+        "inputs[mode]=manual_recovery",
+        "inputs[confirm]=RECOVER_V6",
+        "WAVE2_SAFE_RECOVERY_CRITICAL",
+        "actions/workflows/${RECOVERY_WORKFLOW}/dispatches",
+    ):
+        if marker not in text:
+            errors.append(f"V6 recovery guard missing required marker: {marker}")
+    for forbidden in (
+        "contents: write",
+        "issues: write",
+        "FPL_MASTER_SLOT",
+        "/v6-master-acquire",
+        "v6-runtime-publisher",
+        "V6_RUNTIME_APP_PRIVATE_KEY",
+    ):
+        if forbidden in text:
+            errors.append(f"V6 recovery guard contains forbidden authority: {forbidden}")
+
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    if config.get("role") != "SAFE_RECOVERY_ONLY":
+        errors.append("V6 recovery guard role must be SAFE_RECOVERY_ONLY")
+    if config.get("normal_scheduler_authority") != "CHATGPT_FPL_MASTER_MONITOR":
+        errors.append("V6 recovery guard must preserve ChatGPT FPL Master as normal scheduler authority")
+    for key in (
+        "recovery_counts_as_scheduler_proof",
+        "recovery_counts_as_natural_wave3_slot",
+        "recovery_counts_as_completed_scheduled_slot",
+        "may_edit_fpl_master_slot_title",
+        "may_publish_runtime_directly",
+        "may_use_v6_publisher_credentials_directly",
+        "github_natural_acquisition_schedule_enabled",
+    ):
+        if config.get(key) is not False:
+            errors.append(f"V6 recovery guard policy must be false: {key}")
+
+    schedule_policy = json.loads(schedule_policy_path.read_text(encoding="utf-8"))
+    manual = dict(schedule_policy.get("manual_recovery") or {})
+    if manual.get("enabled") is not True:
+        errors.append("governed V6 manual_recovery must remain enabled for recovery guard")
+    if manual.get("counts_as_completed_operational_slot") is not False:
+        errors.append("manual_recovery must not complete an operational core slot")
+    if manual.get("counts_as_completed_scheduled_slot") is not False:
+        errors.append("manual_recovery must not count as scheduled proof")
+    if (schedule_policy.get("github_natural_schedule") or {}).get("enabled") is not False:
+        errors.append("recovery guard must not re-enable GitHub natural acquisition schedule")
 
 
 def validate() -> None:
@@ -136,17 +200,18 @@ def validate() -> None:
         for path in sorted(WORKFLOW_DIR.glob("v6-*.yml"))
         if SCHEDULE_TRIGGER.search(_workflow_text(path))
     }
-    unexpected_scheduled = scheduled_v6 - ALLOWED_V6_MONITORING_SCHEDULES
-    missing_monitoring = ALLOWED_V6_MONITORING_SCHEDULES - scheduled_v6
+    unexpected_scheduled = scheduled_v6 - ALLOWED_V6_CONTROL_SCHEDULES
+    missing_controls = ALLOWED_V6_CONTROL_SCHEDULES - scheduled_v6
     if unexpected_scheduled:
         errors.append(
             "V6 GitHub acquisition/unknown cron is forbidden: " + ", ".join(sorted(unexpected_scheduled))
         )
-    if missing_monitoring:
+    if missing_controls:
         errors.append(
-            "declared monitoring-only V6 watchdog cron is missing: " + ", ".join(sorted(missing_monitoring))
+            "declared V6 control-plane cron is missing: " + ", ".join(sorted(missing_controls))
         )
     _validate_v6_watchdog(errors)
+    _validate_v6_recovery_guard(errors)
 
     ingestion = WORKFLOW_DIR / "v6-natural-data-ingestion.yml"
     if not ingestion.exists():

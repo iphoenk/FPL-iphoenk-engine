@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -11,9 +12,29 @@ from xml.etree import ElementTree
 
 SCHEMA_VERSION = 1
 EVIDENCE_SCOPE = "DETERMINISTIC_CI_READ_ONLY"
+EXPECTED_SCENARIO_IDS = frozenset(
+    {
+        "provider_timeout",
+        "provider_incomplete_amber",
+        "auth_expired",
+        "auth_not_requested",
+        "stale_optional_cache",
+        "registry_activation_transition",
+        "identity_conflict",
+        "duplicate_identity",
+        "broken_stable_id_bridge",
+        "malformed_candidate",
+        "corrupt_candidate",
+        "publisher_rejection",
+        "duplicate_core_trigger",
+        "duplicate_report_prefetch",
+        "delayed_scheduler_execution",
+        "last_good_recovery",
+    }
+)
 
 # The Wave 3 runbook intentionally names some slash-separated failure modes.
-# Keep them separate here so each mandatory condition has explicit evidence.
+# Keep them separate here so every mandatory condition has explicit evidence.
 CANONICAL_SCENARIOS: tuple[dict[str, str], ...] = (
     {
         "scenario_id": "provider_timeout",
@@ -102,6 +123,14 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _testcase_status(testcase: ElementTree.Element) -> tuple[str, str | None]:
     failure = testcase.find("failure")
     if failure is not None:
@@ -134,6 +163,13 @@ def validate_canonical_registry(scenarios: Iterable[dict[str, str]] = CANONICAL_
     duplicate_ids = sorted({value for value in ids if ids.count(value) > 1})
     if duplicate_ids:
         errors.append(f"duplicate_canonical_scenario_ids:{','.join(duplicate_ids)}")
+    actual_ids = frozenset(ids)
+    missing_ids = sorted(EXPECTED_SCENARIO_IDS - actual_ids)
+    unknown_ids = sorted(actual_ids - EXPECTED_SCENARIO_IDS)
+    if missing_ids:
+        errors.append(f"canonical_scenarios_missing:{','.join(missing_ids)}")
+    if unknown_ids:
+        errors.append(f"canonical_scenarios_unknown:{','.join(unknown_ids)}")
     for row in rows:
         if not row.get("runbook_scenario") or not row.get("testcase"):
             errors.append(f"canonical_scenario_mapping_incomplete:{row.get('scenario_id') or '<missing>'}")
@@ -184,6 +220,7 @@ def build_chaos_acceptance(
         "status": "PASS" if not errors and passed_count == len(results) else "FAIL",
         "evaluated_at": evaluated_at or _utc_now_iso(),
         "evidence_scope": EVIDENCE_SCOPE,
+        "junit_sha256": _sha256(junit_path),
         "runtime_write_authorized": False,
         "natural_slot_counter_affected": False,
         "canonical_scenario_count": len(results),

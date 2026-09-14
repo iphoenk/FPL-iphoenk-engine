@@ -5,6 +5,7 @@
   "schedule": {
     "owner": "GITHUB_ACTIONS_MONITOR",
     "cron_utc": "50 * * * *",
+    "proof_fresh_after_minutes": 75,
     "warning_after_minutes": 90,
     "critical_after_minutes": 135
   },
@@ -30,5 +31,5 @@
     "PUBLICATION_PROOF_NOT_ADVANCED",
     "CONTROL_PATH_UNRESOLVED"
   ],
-  "governance_note": "The GitHub cron in v6-scheduler-watchdog.yml is a monitoring exception only. config/v6/schedule_policy.json github_natural_schedule.enabled=false remains authoritative for acquisition: there is no GitHub acquisition cron and no second core scheduler."
+  "governance_note": "Scheduler proof is fresh through 75 minutes, telemetry is late after 75 minutes, watchdog warning begins after 90 minutes, and critical/stale begins after 135 minutes. The GitHub cron in v6-scheduler-watchdog.yml is a monitoring exception only. config/v6/schedule_policy.json github_natural_schedule.enabled=false remains authoritative for acquisition: there is no GitHub acquisition cron and no second core scheduler."
 }

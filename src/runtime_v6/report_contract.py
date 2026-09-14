@@ -54,6 +54,22 @@ def _parse_time(value: str | datetime) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
+def _display_time(value: str | datetime) -> str:
+    """Preserve the caller's timezone representation for user-facing evidence fields.
+
+    Arithmetic remains UTC-normalized through _parse_time. This helper exists so an
+    Asia/Jakarta scheduler proof is not rendered as a different-looking UTC clock time
+    even though both timestamps represent the same instant.
+    """
+    if isinstance(value, datetime):
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ReportContractError("timestamp must include timezone offset")
+        return value.isoformat()
+    text = str(value)
+    _parse_time(text)
+    return text
+
+
 def core_slot_key(schedule_kind: str, logical_slot: str) -> str:
     if not str(schedule_kind).strip():
         raise ReportContractError("schedule_kind is required")
@@ -200,16 +216,18 @@ def build_status_view(
         observed_at=observed_at,
         source_at=last_good_generated_at,
     )
-    if "age_seconds" in last_good:
+    if "age_seconds" in last_good and last_good_generated_at is not None:
         last_good["last_good_age_seconds"] = last_good["age_seconds"]
+        last_good["generated_at"] = _display_time(last_good_generated_at)
 
     scheduler_proof = status_entry(
         scheduler_proof_state,
         observed_at=observed_at,
         source_at=scheduler_proof_at,
     )
-    if "age_seconds" in scheduler_proof:
+    if "age_seconds" in scheduler_proof and scheduler_proof_at is not None:
         scheduler_proof["scheduler_proof_age_seconds"] = scheduler_proof["age_seconds"]
+        scheduler_proof["scheduler_proof_at"] = _display_time(scheduler_proof_at)
 
     view = {
         "CORE TRANSPORT": status_entry(core_transport, observed_at=observed_at),

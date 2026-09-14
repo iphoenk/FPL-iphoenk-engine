@@ -222,7 +222,7 @@ def test_report_kind_routing():
     assert resolve_scope("full_master", cfg).__dict__ == {"personal": True, "mini_league": True, "live": False}
     assert resolve_scope("match_mode", cfg).__dict__ == {"personal": True, "mini_league": True, "live": True}
     assert resolve_scope("deadline_review", cfg).__dict__ == {"personal": True, "mini_league": False, "live": False}
-    assert resolve_scope("05:30_price", cfg).__dict__ == {"personal": False, "mini_league": False, "live": False}
+    assert resolve_scope("05:30_price", cfg).__dict__ == {"personal": False, "mini_league": True, "live": False}
     assert resolve_scope("ad_hoc", cfg, ad_hoc_mini_league=True).__dict__ == {
         "personal": False, "mini_league": True, "live": False
     }
@@ -457,26 +457,32 @@ def test_priority_partial_coverage_is_explicit_in_atomic_manager_picks(tmp_path)
     assert not (tmp_path / "mini_leagues/99/gw_3_exposure.json").exists()
 
 
-class ExplodingClient:
-    calls = []
-    def __getattr__(self, name):
-        raise AssertionError(f"05:30 must not touch Official client: {name}")
-
-
-def test_0530_p0_cannot_fetch_personal_league_or_rival_picks(tmp_path):
+def test_0530_fetches_price_and_mini_league_facts_without_personal_refresh(tmp_path):
     personal = tmp_path / "personal/current_team.json"
     personal.parent.mkdir(parents=True)
     personal.write_text(json.dumps({"generated_at": "2026-09-04T20:00:00+00:00", "marker": "old"}))
     before = personal.read_text()
-    manifest = PrefetchService(config=config(), output_root=tmp_path, client=ExplodingClient(), now=NOW).run(
+    client = FakeClient(auth=True)
+    manifest = PrefetchService(config=config(), output_root=tmp_path, client=client, now=NOW).run(
         report_kind="05:30_price", logical_slot=SLOT
     )
-    assert manifest["telemetry"]["request_count"] == 0
+    assert manifest["telemetry"]["request_count"] > 0
     assert manifest["personal_requested"] is False
-    assert manifest["mini_league_requested"] is False
-    assert manifest["personal_status"] == "NOT_REFRESHED_FOR_05_30_PRICE_CHECKPOINT"
+    assert manifest["mini_league_requested"] is True
+    assert manifest["live_requested"] is False
+    assert manifest["auth_state"] == "NOT_REQUESTED"
+    assert manifest["mini_league_status"] == "AVAILABLE"
+    assert manifest["priority_league_id"] == 99
+    assert manifest["expected_manager_count"] == 2
+    assert manifest["submitted_picks_available_count"] == 2
+    assert manifest["governance"]["price_0530_requires_mini_league_facts"] is True
+    assert "bootstrap" in client.calls
+    assert "entry:3462711" in client.calls
+    assert "classic:99:1" in client.calls
+    assert not any(call == "me" or call.startswith("my-team:") for call in client.calls)
     assert personal.read_text() == before
-    assert not (tmp_path / "mini_leagues").exists()
+    assert (tmp_path / "mini_leagues/99/standings.json").exists()
+    assert (tmp_path / "mini_leagues/99/gw_3_manager_picks.json").exists()
 
 
 def test_security_blocks_sensitive_keys_and_secret_values(tmp_path):

@@ -134,9 +134,10 @@ def resolve_scope(
     mini = bool(config.get("mini_league_enabled", True))
     if report_kind == PRICE_REPORT:
         # 05:30 is price-focused: do not refresh unrelated authenticated personal
-        # state, but fresh Official FPL + priority mini-league facts are mandatory
-        # inputs for the ICON+ price-impact/transfer-frontier report section.
-        return ReportScope(False, mini, False)
+        # state. Mini-league price-impact inputs require the explicitly enabled
+        # priority full-picks capability; production consumer_context enables it.
+        price_mini = mini and bool(config.get("priority_full_picks_enabled", False))
+        return ReportScope(False, price_mini, False)
     if report_kind == "full_master":
         return ReportScope(personal, mini, False)
     if report_kind == "match_mode":

@@ -10,7 +10,7 @@
     "physical_minute": 31,
     "logical_slot_minute": 0,
     "control_issue_number": 431,
-    "issue_comment_command": "/v6-master-acquire",
+    "issue_comment_command": "",
     "required_reason": "chatgpt_hourly_master",
     "required_audit": "FPL_MASTER_HOURLY",
     "health_epoch": "CHATGPT_MASTER_V1",
@@ -23,9 +23,9 @@
     "issue_title_marker": "FPL_MASTER_SLOT",
     "preferred_transport": "ISSUE_TITLE_EDIT",
     "legacy_issue_comment_transport_enabled": false,
-    "transport_note": "ChatGPT edits issue #431 title with the current logical slot. GitHub remains executor-only. Dedicated issue-comment edit is disabled for ChatGPT transport because the connector blocks that mutation path.",
+    "transport_note": "ChatGPT edits issue #431 title with the current logical slot. GitHub remains executor-only. Master acquisition via issue comment is retired; report prefetch remains comment-driven.",
     "dedicated_control_comment_id": 5596106114,
-    "dedicated_control_comment_event": "DISABLED_FOR_CHATGPT_TRANSPORT",
+    "dedicated_control_comment_event": "RETIRED",
     "issue_title_transport_enabled": true
   },
   "github_natural_schedule": {
@@ -65,10 +65,10 @@
     "chatgpt_scheduler_health_is_current_epoch_authority": true,
     "legacy_github_scheduler_evidence_is_historical_only": true,
     "scheduler_migration_boundary_is_explicit": true,
-    "authoritative_runtime_triggers": ["issues:chatgpt_scheduler", "issue_comment:chatgpt_scheduler", "workflow_dispatch:master_orchestrated", "workflow_dispatch:report_prefetch", "issue_comment:report_prefetch"],
-    "authoritative_operational_triggers": ["issues:chatgpt_scheduler", "issue_comment:chatgpt_scheduler", "workflow_dispatch:master_orchestrated"],
-    "operational_slot_completing_triggers": ["issues:chatgpt_scheduler", "issue_comment:chatgpt_scheduler", "workflow_dispatch:master_orchestrated"],
-    "scheduler_health_proof_trigger": "issue_comment:chatgpt_scheduler",
+    "authoritative_runtime_triggers": ["issues:chatgpt_scheduler", "workflow_dispatch:report_prefetch", "issue_comment:report_prefetch"],
+    "authoritative_operational_triggers": ["issues:chatgpt_scheduler"],
+    "operational_slot_completing_triggers": ["issues:chatgpt_scheduler"],
+    "scheduler_health_proof_trigger": "issues:chatgpt_scheduler",
     "preferred_scheduler_health_proof_trigger": "issues:chatgpt_scheduler",
     "master_orchestrated_is_authoritative": true,
     "generic_master_dispatch_does_not_count_as_scheduler_health_proof": true,
@@ -85,14 +85,14 @@
     "identity_join_policy": {"silent_fuzzy_runtime_join_allowed": false, "allowed_statuses_for_canonical_join": ["EXACT", "VERIFIED_MANUAL"], "other_statuses": ["UNMAPPED", "AMBIGUOUS", "ORPHANED", "STALE"]},
     "scheduler_policy_is_single_runtime_authority": true,
     "scheduler_proof_age_is_read_time_observability": true,
-    "scheduler_health_proof_triggers": ["issue_comment:chatgpt_scheduler", "issues:chatgpt_scheduler"],
+    "scheduler_health_proof_triggers": ["issues:chatgpt_scheduler"],
     "issue_title_edit_is_preferred_scheduler_transport": true,
-    "issue_comment_is_legacy_scheduler_transport": true,
+    "issue_comment_is_legacy_scheduler_transport": false,
     "issue_comment_edit_is_preferred_scheduler_transport": false,
     "issue_title_edit_is_fallback_scheduler_transport": false
   },
   "master_orchestrated": {
-    "enabled": true, "schedule_kind": "master_orchestrated", "issue_schedule_kind": "chatgpt_scheduler", "authoritative_runtime_snapshot": true, "counts_as_completed_operational_slot": true, "counts_as_completed_scheduled_slot": false, "allowed_actor": "repository_owner", "reason_required": true, "control_issue_number": 431, "issue_comment_command": "/v6-master-acquire", "issue_title_marker": "FPL_MASTER_SLOT"
+    "enabled": true, "schedule_kind": "master_orchestrated", "issue_schedule_kind": "chatgpt_scheduler", "authoritative_runtime_snapshot": true, "counts_as_completed_operational_slot": true, "counts_as_completed_scheduled_slot": false, "allowed_actor": "repository_owner", "reason_required": true, "control_issue_number": 431, "issue_comment_command": "", "issue_title_marker": "FPL_MASTER_SLOT"
   },
   "report_prefetch": {
     "enabled": true, "schedule_kind": "report_prefetch", "report_driven": true, "independent_cron": false, "authoritative_runtime_snapshot": true, "counts_as_completed_operational_slot": false, "counts_as_completed_scheduled_slot": false, "counts_as_completed_report_slot": true, "allowed_actor": "repository_owner", "reason_required": true, "control_issue_number": 431, "issue_comment_command": "/v6-report-prefetch",

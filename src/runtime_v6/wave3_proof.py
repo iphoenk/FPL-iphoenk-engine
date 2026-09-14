@@ -9,6 +9,7 @@ from typing import Any, Iterable
 
 
 NATURAL_SCHEDULE_KIND = "chatgpt_scheduler"
+NATURAL_EVENT_NAME = "issues"
 CORE_STAGES = (
     "TRIGGERED",
     "ACQUIRED",
@@ -54,12 +55,13 @@ def _stage(state: str, *, at: str | None, evidence: str) -> dict[str, Any]:
 def build_slot_proof(
     root: Path,
     *,
-    published_runtime_sha: str,
     source_commit: str,
     production_validated: bool,
+    promotion_verified: bool,
     run_id: str | None = None,
     run_attempt: str | None = None,
     verified_at: datetime | None = None,
+    published_runtime_sha: str | None = None,
 ) -> dict[str, Any]:
     """Build immutable post-publish evidence without mutating the frozen runtime tree."""
     manifest = _read_json(root / "manifest.json")
@@ -71,6 +73,8 @@ def build_slot_proof(
     actual_run_attempt = str(run_attempt or os.getenv("GITHUB_RUN_ATTEMPT") or "1")
     if not actual_run_id:
         raise Wave3ProofError("run_id_required")
+    if control.get("event_name") != NATURAL_EVENT_NAME:
+        raise Wave3ProofError("not_genuine_natural_core_transport")
     if control.get("schedule_kind") != NATURAL_SCHEDULE_KIND:
         raise Wave3ProofError("not_genuine_natural_core_slot")
     if control.get("chatgpt_scheduler_proof") is not True:
@@ -87,8 +91,8 @@ def build_slot_proof(
         raise Wave3ProofError("candidate_run_attempt_mismatch")
     if not production_validated:
         raise Wave3ProofError("production_validation_not_proven")
-    if not published_runtime_sha or len(published_runtime_sha) < 7:
-        raise Wave3ProofError("published_runtime_sha_required")
+    if not promotion_verified:
+        raise Wave3ProofError("promotion_not_proven")
     if not source_commit or len(source_commit) < 7:
         raise Wave3ProofError("source_commit_required")
 
@@ -97,15 +101,21 @@ def build_slot_proof(
     _parse_time(str(logical_slot) if logical_slot else None)
     _parse_time(str(observed_at) if observed_at else None)
     verified = (verified_at or datetime.now(timezone.utc)).astimezone(timezone.utc).isoformat()
+    candidate_generation_id = freeze.get("candidate_generation_id")
+    if not candidate_generation_id:
+        raise Wave3ProofError("candidate_generation_id_missing")
+    publication_generation_id = (
+        f"v6-publication:{actual_run_id}:{actual_run_attempt}:{candidate_generation_id}"
+    )
 
     stages = {
-        "TRIGGERED": _stage("PASS", at=observed_at, evidence="runtime_control.chatgpt_scheduler_proof"),
-        "ACQUIRED": _stage("PASS", at=manifest.get("generated_at"), evidence="manifest"),
+        "TRIGGERED": _stage("PASS", at=observed_at, evidence="runtime_control.issue-title scheduler proof"),
+        "ACQUIRED": _stage("PASS", at=manifest.get("generated_at"), evidence="source publication artifact manifest"),
         "STAGED": _stage("PASS", at=freeze.get("frozen_at"), evidence="candidate_freeze.manifest_input_sha256"),
         "FROZEN": _stage("PASS", at=freeze.get("frozen_at"), evidence="candidate_freeze.lock"),
         "INTEGRITY_PASS": _stage("PASS", at=integrity.get("validated_at") or freeze.get("frozen_at"), evidence="publish_integrity.json"),
-        "VALIDATED": _stage("PASS", at=verified, evidence="workflow.production_validate.publishable+publisher_revalidation"),
-        "PROMOTED": _stage("PASS", at=verified, evidence="runtime-data-v6 exact-tree verification"),
+        "VALIDATED": _stage("PASS", at=verified, evidence="source workflow publishable validation + publisher revalidation"),
+        "PROMOTED": _stage("PASS", at=verified, evidence="source workflow publish job + exact-tree verification succeeded"),
         "PREFETCHED": _stage("N/A", at=None, evidence="not_required_for_core_slot"),
         "DELIVERED": _stage("N/A", at=None, evidence="report_delivery_is_separate_from_core_slot"),
     }
@@ -114,6 +124,7 @@ def build_slot_proof(
         "schema_version": 1,
         "proof_kind": "WAVE3_NATURAL_CORE_SLOT",
         "natural_slot": True,
+        "natural_transport": "FPL_MASTER_SLOT_ISSUE_TITLE",
         "logical_slot": logical_slot,
         "observed_at": observed_at,
         "verified_at": verified,
@@ -121,8 +132,8 @@ def build_slot_proof(
         "run_attempt": actual_run_attempt,
         "source_commit": source_commit,
         "published_runtime_sha": published_runtime_sha,
-        "candidate_generation_id": freeze.get("candidate_generation_id"),
-        "publication_generation_id": f"runtime-data-v6:{published_runtime_sha}",
+        "candidate_generation_id": candidate_generation_id,
+        "publication_generation_id": publication_generation_id,
         "registry_fingerprint": freeze.get("registry_fingerprint"),
         "registry_epoch": freeze.get("registry_epoch"),
         "candidate_tree_sha256": freeze.get("candidate_tree_sha256"),
@@ -132,14 +143,14 @@ def build_slot_proof(
         "core_chain_pass": all(stages[name]["state"] == "PASS" for name in CORE_STAGES),
         "governance": {
             "manual_or_controlled_recovery_counts": False,
+            "issue_comment_master_acquire_counts": False,
             "report_prefetch_counts_as_natural_core_slot": False,
             "failed_candidate_can_be_counted": False,
+            "source_publish_job_success_required": True,
             "proof_created_post_publish_without_runtime_tree_mutation": True,
             "production_green_requires_rolling_48_of_48": True,
         },
     }
-    if not proof["candidate_generation_id"]:
-        raise Wave3ProofError("candidate_generation_id_missing")
     if not proof["registry_fingerprint"]:
         raise Wave3ProofError("registry_fingerprint_missing")
     if not proof["core_chain_pass"]:
@@ -158,6 +169,8 @@ def proof_is_countable(proof: dict[str, Any]) -> bool:
     if proof.get("proof_kind") != "WAVE3_NATURAL_CORE_SLOT":
         return False
     if proof.get("natural_slot") is not True or proof.get("core_chain_pass") is not True:
+        return False
+    if proof.get("natural_transport") != "FPL_MASTER_SLOT_ISSUE_TITLE":
         return False
     stages = dict(proof.get("stages") or {})
     return all((stages.get(name) or {}).get("state") == "PASS" for name in CORE_STAGES)
@@ -227,20 +240,22 @@ def assert_rejected_candidate_did_not_move_runtime(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build Wave 3 post-publish natural-slot proof")
     parser.add_argument("--root", type=Path, required=True)
-    parser.add_argument("--published-runtime-sha", required=True)
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--source-run-id", required=True)
     parser.add_argument("--source-run-attempt", required=True)
+    parser.add_argument("--published-runtime-sha")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--production-validated", action="store_true")
+    parser.add_argument("--promotion-verified", action="store_true")
     args = parser.parse_args()
     proof = build_slot_proof(
         args.root,
-        published_runtime_sha=args.published_runtime_sha,
         source_commit=args.source_commit,
         production_validated=args.production_validated,
+        promotion_verified=args.promotion_verified,
         run_id=args.source_run_id,
         run_attempt=args.source_run_attempt,
+        published_runtime_sha=args.published_runtime_sha,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(proof, indent=2, sort_keys=True) + "\n", encoding="utf-8")

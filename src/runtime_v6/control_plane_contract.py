@@ -31,6 +31,8 @@ def validate_control_plane_contract(
         failures.append("recovery scheduler authority does not match schedule policy")
 
     control_issue = scheduler.get("control_issue_number")
+    if not isinstance(control_issue, int) or isinstance(control_issue, bool) or control_issue <= 0:
+        failures.append("scheduler control issue must be a positive integer")
     for label, value in (
         ("master", master.get("control_issue_number")),
         ("report_prefetch", report.get("control_issue_number")),
@@ -39,8 +41,10 @@ def validate_control_plane_contract(
         if value != control_issue:
             failures.append(f"{label} control issue does not match scheduler control issue")
 
-    marker = str(scheduler.get("issue_title_marker") or "")
-    if str(master.get("issue_title_marker") or "") != marker:
+    marker = str(scheduler.get("issue_title_marker") or "").strip()
+    if not marker:
+        failures.append("scheduler issue title marker is missing")
+    if str(master.get("issue_title_marker") or "").strip() != marker:
         failures.append("master issue title marker does not match scheduler issue title marker")
     if scheduler.get("issue_title_transport_enabled") is not True:
         failures.append("scheduler issue title transport must remain enabled")

@@ -450,7 +450,7 @@ def build_player_identity_coverage_truth(
     return {
         "schema_version": 2,
         "canonical": True,
-        "semantic_class": "IDENTITY_COVERAGE_TRUTH",
+        "semantic_class": "CONTROL_TELEMETRY",
         "authority": "V6_DETERMINISTIC_IDENTITY",
         "generated_at": utc_now(),
         "canonical_authority": "official_fpl",

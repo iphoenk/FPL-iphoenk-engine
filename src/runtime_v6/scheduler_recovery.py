@@ -30,6 +30,16 @@ def _run_time(run: Mapping[str, Any]) -> datetime | None:
 def _is_recovery_dispatch(run: Mapping[str, Any]) -> bool:
     if str(run.get("event") or "") != "workflow_dispatch":
         return False
+
+    display_title = str(run.get("display_title") or "").strip().lower()
+    if display_title == "v6 report_prefetch" or display_title.startswith("v6 report_prefetch "):
+        return False
+    if display_title == "v6 manual_recovery" or display_title.startswith("v6 manual_recovery "):
+        return True
+
+    # Legacy/ambiguous run metadata remains fail-closed. GitHub's workflow-runs API
+    # does not expose workflow_dispatch inputs, so only an explicit report-prefetch
+    # identity may bypass the recovery cooldown.
     title = " ".join(
         str(run.get(key) or "")
         for key in ("display_title", "name", "run_name")
@@ -38,8 +48,6 @@ def _is_recovery_dispatch(run: Mapping[str, Any]) -> bool:
         return False
     if "manual_recovery" in title or "manual recovery" in title or "wave2_safe_recovery_critical" in title:
         return True
-    # GitHub's workflow-runs API does not expose workflow_dispatch inputs. Unknown
-    # dispatches stay fail-closed so recovery cannot storm after ambiguous activity.
     return True
 
 

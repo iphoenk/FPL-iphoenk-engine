@@ -58,13 +58,25 @@ def test_wave3_observer_binds_proof_to_exact_immutable_source_publication_artifa
     assert "--promotion-verified" in text
 
 
+def test_wave3_observer_binds_source_generation_to_exact_published_runtime_commit():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert "Resolve exact published runtime commit" in text
+    assert "/branches/runtime-data-v6" in text
+    assert "candidate_freeze.lock?ref=${runtime_sha}" in text
+    assert 'freeze.get("run_id")' in text
+    assert 'freeze.get("run_attempt")' in text
+    assert "runtime branch no longer points to the source run generation" in text
+    assert "--published-runtime-sha \"${{ steps.runtime.outputs.sha }}\"" in text
+
+
 def test_wave3_observer_uploads_proof_but_never_mutates_runtime_tree():
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "Upload Wave 3 natural slot proof" in text
     assert "v6-wave3-slot-proof-${{ steps.source.outputs.run_id }}-${{ steps.source.outputs.run_attempt }}" in text
-    assert "runtime-data-v6" not in text
-    assert "git push" not in text
     assert "contents: write" not in text
+    assert "git push" not in text
+    assert "git commit" not in text
+    assert "git checkout runtime-data-v6" not in text
 
 
 def test_wave3_observer_noops_on_idempotent_source_publish_skip():

@@ -163,6 +163,48 @@ jobs:
           mkdir -p "$RUNNER_TEMP/v6-wave3-source-tree"
           tar -xf "$RUNNER_TEMP/v6-wave3-source/v6-runtime-data.tar" -C "$RUNNER_TEMP/v6-wave3-source-tree"
 
+      - name: Resolve exact published runtime commit
+        if: steps.promotion.outputs.countable == 'true'
+        id: runtime
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ steps.source.outputs.run_id }}
+          SOURCE_RUN_ATTEMPT: ${{ steps.source.outputs.run_attempt }}
+        run: |
+          set -euo pipefail
+          gh api "/repos/${GITHUB_REPOSITORY}/branches/runtime-data-v6" > "$RUNNER_TEMP/runtime-branch.json"
+          runtime_sha="$(python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          payload = json.loads((Path(os.environ["RUNNER_TEMP"]) / "runtime-branch.json").read_text(encoding="utf-8"))
+          print(str(((payload.get("commit") or {}).get("sha") or "")))
+          PY
+          )"
+          if [[ ! "$runtime_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::runtime-data-v6 did not resolve to a full commit SHA"
+            exit 1
+          fi
+          gh api "/repos/${GITHUB_REPOSITORY}/contents/data/v6/health/candidate_freeze.lock?ref=${runtime_sha}" > "$RUNNER_TEMP/runtime-freeze-content.json"
+          RUNTIME_SHA="$runtime_sha" python - <<'PY'
+          import base64
+          import json
+          import os
+          from pathlib import Path
+
+          envelope = json.loads((Path(os.environ["RUNNER_TEMP"]) / "runtime-freeze-content.json").read_text(encoding="utf-8"))
+          raw = base64.b64decode(str(envelope.get("content") or "").replace("\n", ""))
+          freeze = json.loads(raw.decode("utf-8"))
+          if str(freeze.get("run_id")) != str(os.environ["SOURCE_RUN_ID"]):
+              raise SystemExit("runtime branch no longer points to the source run generation")
+          if str(freeze.get("run_attempt")) != str(os.environ["SOURCE_RUN_ATTEMPT"]):
+              raise SystemExit("runtime branch run_attempt does not match source publication")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"sha={os.environ['RUNTIME_SHA']}\n")
+          print({"published_runtime_sha": os.environ["RUNTIME_SHA"], "run_id": freeze.get("run_id"), "run_attempt": freeze.get("run_attempt")})
+          PY
+
       - name: Build Wave 3 natural slot proof
         if: steps.promotion.outputs.countable == 'true'
         shell: bash
@@ -173,6 +215,7 @@ jobs:
             --source-commit "${{ steps.source.outputs.head_sha }}" \
             --source-run-id "${{ steps.source.outputs.run_id }}" \
             --source-run-attempt "${{ steps.source.outputs.run_attempt }}" \
+            --published-runtime-sha "${{ steps.runtime.outputs.sha }}" \
             --output "$RUNNER_TEMP/wave3-slot-proof.json" \
             --production-validated \
             --promotion-verified

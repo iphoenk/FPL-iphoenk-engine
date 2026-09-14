@@ -263,7 +263,7 @@ def build_operational_slots(
     )
 
     return {
-        "schema_version": 4,
+        "schema_version": 3,
         "generated_at": control.get("cycle_observed_at"),
         "window_size": limit,
         "epoch": epoch

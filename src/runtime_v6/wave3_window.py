@@ -90,9 +90,6 @@ def build_window_summary(
     chaos_source_head_sha: str | None = None,
     chaos_artifact_name: str | None = None,
 ) -> dict[str, Any]:
-    summary = evaluate_proof_window(collect_proofs(proof_dir, current))
-    natural_window_eligible = bool(summary.get("production_green_eligible"))
-
     chaos_payload: dict[str, Any] | None = None
     chaos_pass = False
     if chaos_acceptance is not None:
@@ -107,9 +104,10 @@ def build_window_summary(
         if not chaos_artifact_name or not chaos_artifact_name.startswith("v6-wave3-chaos-acceptance-"):
             raise Wave3ProofError("wave3_chaos_artifact_name_invalid")
 
-    summary["natural_window_eligible"] = natural_window_eligible
-    summary["chaos_acceptance_pass"] = chaos_pass
-    summary["production_green_eligible"] = natural_window_eligible and chaos_pass
+    summary = evaluate_proof_window(
+        collect_proofs(proof_dir, current),
+        chaos_acceptance_pass=chaos_pass,
+    )
     summary["proof_source"] = "IMMUTABLE_WAVE3_ACTION_ARTIFACTS_PLUS_CURRENT"
     summary["manual_or_controlled_runs_count"] = 0
     summary["future_slots_inferred"] = False

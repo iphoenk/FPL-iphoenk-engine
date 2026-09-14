@@ -31,7 +31,7 @@ def integration_gates() -> tuple[Gate, ...]:
         Gate("fast_runtime", (py, "-m", runtime, "--mode", "daily", "--stats", "--profile", "fast_decision")),
         Gate("fast_slo_guard", (py, "-m", "src.runtime_v3.performance_guard", "--profile", "fast_decision")),
         Gate("material_equivalence", (py, "-m", "src.runtime_v3.equivalence_acceptance")),
-        Gate("definition_of_done", (py, "-m", "src.runtime_v3.definition_of_done", "--scope", "candidate")),
+        Gate("production_path_governance", (py, "-m", "src.platform.production_path_governance_validate")),
     )
 
 
@@ -65,7 +65,12 @@ def run() -> dict:
             row["service_breakdown"] = _runtime_breakdown()
         results.append(row)
         if proc.returncode != 0:
-            result = {"status": "FAIL", "failed_gate": gate.name, "gates": results, "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3)}
+            result = {
+                "status": "FAIL",
+                "failed_gate": gate.name,
+                "gates": results,
+                "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3),
+            }
             print(json.dumps(result, ensure_ascii=False))
             raise SystemExit(proc.returncode or 1)
     result = {
@@ -81,7 +86,8 @@ def run() -> dict:
             "registry_owned_domain_runtime_required": True,
             "six_phase_runtime_required": True,
             "same_input_material_equivalence_required": True,
-            "definition_of_done_candidate_required": True,
+            "legacy_scheduler_definition_of_done_retired": True,
+            "production_path_governance_required": True,
             "per_capability_timing_is_release_observable": True,
         },
     }
@@ -90,7 +96,7 @@ def run() -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Composite V3 release integration acceptance gate")
+    parser = argparse.ArgumentParser(description="Composite V3 library release acceptance under V6-only production governance")
     parser.parse_args()
     run()
 

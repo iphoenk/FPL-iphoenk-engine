@@ -6,10 +6,9 @@ on:
       mode:
         description: "Governed V6 invocation mode"
         required: true
-        default: "master_orchestrated"
+        default: "manual_recovery"
         type: choice
         options:
-          - master_orchestrated
           - manual_recovery
           - report_prefetch
       reason:
@@ -46,7 +45,7 @@ on:
         default: false
         type: boolean
   issue_comment:
-    types: [created, edited]
+    types: [created]
   issues:
     types: [edited]
 
@@ -69,30 +68,15 @@ jobs:
         github.event_name == 'issue_comment' &&
         github.event.issue.number == 431 &&
         github.actor == github.repository_owner &&
-        (
-          (
-            github.event.action == 'edited' &&
-            github.event.comment.id == 5596106114 &&
-            startsWith(github.event.comment.body, '/v6-master-acquire')
-          ) ||
-          (
-            github.event.action == 'created' &&
-            (
-              startsWith(github.event.comment.body, '/v6-master-acquire') ||
-              startsWith(github.event.comment.body, '/v6-report-prefetch')
-            )
-          )
-        )
+        github.event.action == 'created' &&
+        startsWith(github.event.comment.body, '/v6-report-prefetch')
       ) ||
       (
         github.event_name == 'issues' &&
         github.event.issue.number == 431 &&
         github.actor == github.repository_owner &&
         github.event.changes.title &&
-        (
-          startsWith(github.event.issue.title, 'FPL_MASTER_SLOT ') ||
-          startsWith(github.event.issue.title, 'FPL_REPORT_PREFETCH ')
-        )
+        startsWith(github.event.issue.title, 'FPL_MASTER_SLOT ')
       )
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -452,30 +436,15 @@ jobs:
           github.event_name == 'issue_comment' &&
           github.event.issue.number == 431 &&
           github.actor == github.repository_owner &&
-          (
-            (
-              github.event.action == 'edited' &&
-              github.event.comment.id == 5596106114 &&
-              startsWith(github.event.comment.body, '/v6-master-acquire')
-            ) ||
-            (
-              github.event.action == 'created' &&
-              (
-                startsWith(github.event.comment.body, '/v6-master-acquire') ||
-                startsWith(github.event.comment.body, '/v6-report-prefetch')
-              )
-            )
-          )
+          github.event.action == 'created' &&
+          startsWith(github.event.comment.body, '/v6-report-prefetch')
         ) ||
         (
           github.event_name == 'issues' &&
           github.event.issue.number == 431 &&
           github.actor == github.repository_owner &&
           github.event.changes.title &&
-          (
-            startsWith(github.event.issue.title, 'FPL_MASTER_SLOT ') ||
-            startsWith(github.event.issue.title, 'FPL_REPORT_PREFETCH ')
-          )
+          startsWith(github.event.issue.title, 'FPL_MASTER_SLOT ')
         )
       )
     runs-on: ubuntu-latest

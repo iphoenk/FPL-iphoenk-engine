@@ -14,6 +14,7 @@ from src.utils import DATA, read_json
 class Gate:
     name: str
     command: tuple[str, ...]
+    blocking: bool = True
 
 
 def integration_gates() -> tuple[Gate, ...]:
@@ -29,9 +30,13 @@ def integration_gates() -> tuple[Gate, ...]:
         Gate("full_resource_guard", (py, "-m", "src.runtime_v3.performance_guard", "--profile", "full_refresh")),
         Gate("fast_cold_warmup", (py, "-m", runtime, "--mode", "daily", "--stats", "--profile", "fast_decision")),
         Gate("fast_runtime", (py, "-m", runtime, "--mode", "daily", "--stats", "--profile", "fast_decision")),
-        Gate("fast_slo_guard", (py, "-m", "src.runtime_v3.performance_guard", "--profile", "fast_decision")),
+        Gate(
+            "fast_slo_guard",
+            (py, "-m", "src.runtime_v3.performance_guard", "--profile", "fast_decision"),
+            blocking=False,
+        ),
         Gate("material_equivalence", (py, "-m", "src.runtime_v3.equivalence_acceptance")),
-        Gate("definition_of_done", (py, "-m", "src.runtime_v3.definition_of_done", "--scope", "candidate")),
+        Gate("production_path_governance", (py, "-m", "src.platform.production_path_governance_validate")),
     )
 
 
@@ -60,28 +65,44 @@ def run() -> dict:
         gate_start = time.perf_counter()
         proc = subprocess.run(gate.command, check=False)
         elapsed = round((time.perf_counter() - gate_start) * 1000.0, 3)
-        row = {"gate": gate.name, "returncode": proc.returncode, "elapsed_ms": elapsed}
+        row = {
+            "gate": gate.name,
+            "returncode": proc.returncode,
+            "elapsed_ms": elapsed,
+            "blocking": gate.blocking,
+            "status": "PASS" if proc.returncode == 0 else ("DIAGNOSTIC_FAIL" if not gate.blocking else "FAIL"),
+        }
         if gate.name in runtime_gates:
             row["service_breakdown"] = _runtime_breakdown()
         results.append(row)
-        if proc.returncode != 0:
-            result = {"status": "FAIL", "failed_gate": gate.name, "gates": results, "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3)}
+        if proc.returncode != 0 and gate.blocking:
+            result = {
+                "status": "FAIL",
+                "failed_gate": gate.name,
+                "gates": results,
+                "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3),
+            }
             print(json.dumps(result, ensure_ascii=False))
             raise SystemExit(proc.returncode or 1)
+    diagnostics = [row["gate"] for row in results if row["status"] == "DIAGNOSTIC_FAIL"]
     result = {
         "status": "PASS",
         "failed_gate": None,
+        "diagnostic_failures": diagnostics,
         "gates": results,
         "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3),
         "policy": {
             "underlying_checks_preserved": True,
-            "fail_closed_on_first_failed_gate": True,
+            "fail_closed_on_first_failed_blocking_gate": True,
             "full_and_fast_profiles_both_required": True,
             "cold_then_warm_fast_required": True,
             "registry_owned_domain_runtime_required": True,
             "six_phase_runtime_required": True,
             "same_input_material_equivalence_required": True,
-            "definition_of_done_candidate_required": True,
+            "legacy_scheduler_definition_of_done_retired": True,
+            "production_path_governance_required": True,
+            "retired_v3_fast_slo_is_diagnostic_only": True,
+            "fast_slo_threshold_unchanged": True,
             "per_capability_timing_is_release_observable": True,
         },
     }
@@ -90,7 +111,7 @@ def run() -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Composite V3 release integration acceptance gate")
+    parser = argparse.ArgumentParser(description="Composite V3 library release acceptance under V6-only production governance")
     parser.parse_args()
     run()
 

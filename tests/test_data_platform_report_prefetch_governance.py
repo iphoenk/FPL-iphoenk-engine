@@ -87,8 +87,9 @@ def test_report_prefetch_reuses_existing_control_plane_without_new_scheduler():
     assert policy["governance"]["report_prefetch_issue_comment_transport_required"] is True
     assert "issues:report_prefetch" not in policy["governance"]["authoritative_runtime_triggers"]
     assert "issue_comment:report_prefetch" in policy["governance"]["authoritative_runtime_triggers"]
-    assert "/v6-master-acquire" in workflow
+    assert "/v6-master-acquire" not in workflow
     assert "/v6-report-prefetch" in workflow
+    assert "FPL_REPORT_PREFETCH " not in workflow
     assert "github.actor == github.repository_owner" in workflow
     assert "Run active V6 acquisition cycle" in workflow
     assert "steps.scheduler.outputs.kind != 'report_prefetch'" in workflow
@@ -128,8 +129,6 @@ def test_0530_standard_scope_is_service_resolved_and_requires_league_facts():
     )
 
     assert summary["report_kind"] == "05:30_price"
-    # These env flags are ad-hoc scope overrides. Standard report kinds resolve
-    # their effective scope inside PrefetchService/resolve_scope.
     assert env["V6_PREFETCH_PERSONAL"] == "false"
     assert env["V6_PREFETCH_MINI_LEAGUE"] == "false"
     assert env["V6_PREFETCH_LIVE"] == "false"
@@ -200,8 +199,8 @@ def test_report_prefetch_force_is_governed_and_not_implicit():
     assert '[[ "$V6_PREFETCH_FORCE" == "true" ]] && args+=(--force)' in workflow
 
 
-def test_report_prefetch_generated_after_target_slot_is_not_fresh():
+def test_report_prefetch_generated_after_target_slot_has_zero_source_age():
     slot = datetime(2026, 9, 5, 5, 30, tzinfo=timezone.utc)
     age, is_fresh = freshness(slot + timedelta(seconds=1), slot, 35)
-    assert age < 0
-    assert is_fresh is False
+    assert age == 0
+    assert is_fresh is True

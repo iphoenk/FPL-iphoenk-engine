@@ -176,14 +176,17 @@ def test_production_policy_uses_chatgpt_and_removed_github_crons():
     assert policy["governance"]["github_schedule_events_are_removed"] is True
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
     assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True
-    assert policy["governance"]["scheduler_health_proof_trigger"] == "issue_comment:chatgpt_scheduler"
+    assert policy["governance"]["scheduler_health_proof_trigger"] == "issues:chatgpt_scheduler"
+    assert policy["scheduler_authority"]["legacy_issue_comment_transport_enabled"] is False
+    assert policy["scheduler_authority"]["issue_title_transport_enabled"] is True
     assert "workflow_dispatch:" in workflow
     assert "issue_comment:" in workflow
-    assert "types: [created, edited]" in workflow
-    assert "github.event.comment.id == 5596106114" in workflow
+    assert "types: [created]" in workflow
     assert "issues:" in workflow
+    assert "types: [edited]" in workflow
     assert "github.event.issue.number == 431" in workflow
-    assert "/v6-master-acquire" in workflow
+    assert "startsWith(github.event.comment.body, '/v6-report-prefetch')" in workflow
+    assert "startsWith(github.event.comment.body, '/v6-master-acquire')" not in workflow
     assert "FPL_MASTER_SLOT" in workflow
     assert "python -m src.runtime_v6.workflow_control authorize-issue" in workflow
     assert "python -m src.runtime_v6.workflow_control authorize-issue-edit" in workflow
@@ -308,7 +311,6 @@ def test_v6_ci_never_acquires_or_writes_runtime_branch():
     assert "detect-v6-change:" in workflow
     assert "v6-governance-gate:" in workflow
     assert "Non-V6 PR: V6 governance gate satisfied without running V6 suite" in workflow
-
 
 
 def test_operational_ledger_is_extracted_without_duplicate_implementation():

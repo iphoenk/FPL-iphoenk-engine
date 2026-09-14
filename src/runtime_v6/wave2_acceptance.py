@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from .adapters import collect_price_predictor
 from .registry import load_registry
 from .report_contract import (
     REPORT_MODES,
@@ -39,6 +40,41 @@ def _record(checks: dict[str, dict[str, Any]], name: str, passed: bool, **eviden
     checks[name] = {"status": "PASS" if passed else "FAIL", **evidence}
 
 
+def _price_runtime_payload() -> dict[str, Any]:
+    registry = load_registry()
+    source = next(
+        row for row in registry.get("sources") or [] if row.get("id") == "official_price_predictor"
+    )
+    upstream = {
+        "health": "GREEN",
+        "effective_state": "LIVE_CHANGED",
+        "official": {
+            "bootstrap": {
+                "elements": [
+                    {
+                        "id": 10,
+                        "web_name": "Acceptance",
+                        "team": 1,
+                        "element_type": 3,
+                        "now_cost": 55,
+                        "selected_by_percent": "10.0",
+                        "transfers_in_event": 100,
+                        "transfers_out_event": 20,
+                        "price_change_percent": "60.0",
+                        "price_change_hourly_rate": 5,
+                        "price_change_projections": [
+                            {"offset": 0, "projected_percent": "65.0", "likelihood": 3}
+                        ],
+                        "price_change_locked_until": None,
+                        "price_change_calibrating": False,
+                    }
+                ]
+            }
+        },
+    }
+    return collect_price_predictor(source, upstream)
+
+
 def run() -> dict[str, Any]:
     checks: dict[str, dict[str, Any]] = {}
 
@@ -72,7 +108,7 @@ def run() -> dict[str, Any]:
     )
 
     core_ledger = {
-        "schema_version": 4,
+        "schema_version": 3,
         "slots": [
             {
                 "slot": "2026-09-14T06:00:00+00:00",
@@ -158,20 +194,10 @@ def run() -> dict[str, Any]:
         == "DIRECT_FRESH",
     )
 
-    registry = load_registry()
-    price_source = next(
-        (row for row in registry.get("sources") or [] if row.get("id") == "official_price_predictor"),
-        {},
-    )
+    price_payload = _price_runtime_payload()
     price_contract = price_checkpoint_contract(
-        official_price_fact_count=658,
-        predictor={
-            "availability": "AVAILABLE",
-            "semantic_class": str(price_source.get("category") or ""),
-            "provenance_label": price_source.get("provenance_label"),
-            "predictor_official_status": price_source.get("predictor_official_status"),
-            "independent_official_product_evidence": price_source.get("independent_official_product_evidence"),
-        },
+        official_price_fact_count=1,
+        predictor=price_payload,
         mini_league_status="AVAILABLE",
         target_frontier_available=True,
         auth_requested=False,
@@ -179,16 +205,25 @@ def run() -> dict[str, Any]:
     _record(
         checks,
         "price_0530_provenance",
-        price_source.get("name") == "V6 Derived Price Change Signal"
-        and price_source.get("predictor_official_status") == "UNVERIFIED_NOT_OFFICIAL"
-        and price_source.get("independent_official_product_evidence") is False
+        price_payload.get("source_id") == "official_price_predictor"
+        and price_payload.get("source_name") == "V6 Derived Price Change Signal"
+        and price_payload.get("semantic_class") == "UPSTREAM_MODEL_SIGNAL"
+        and price_payload.get("authority_class") == "MODEL"
+        and price_payload.get("v6_computation") == "NONE"
+        and price_payload.get("predictor_official_status") == "UNVERIFIED_NOT_OFFICIAL_PRODUCT"
+        and price_payload.get("independent_official_product_evidence") is False
+        and price_payload.get("governance", {}).get("legacy_source_identifier_is_not_authority_proof") is True
+        and price_payload.get("governance", {}).get("may_be_described_as_official_fpl_predictor_product") is False
         and price_contract.get("status") == "PASS"
         and price_contract.get("predictor_may_be_called_official") is False,
-        registry_source={
-            "id": price_source.get("id"),
-            "name": price_source.get("name"),
-            "category": price_source.get("category"),
-            "predictor_official_status": price_source.get("predictor_official_status"),
+        runtime_artifact={
+            "id": price_payload.get("source_id"),
+            "name": price_payload.get("source_name"),
+            "legacy_name": price_payload.get("legacy_source_name"),
+            "semantic_class": price_payload.get("semantic_class"),
+            "authority_class": price_payload.get("authority_class"),
+            "predictor_official_status": price_payload.get("predictor_official_status"),
+            "v6_computation": price_payload.get("v6_computation"),
         },
         checkpoint=price_contract,
     )

@@ -41,7 +41,7 @@ jobs:
           fi
           changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
           printf '%s\n' "$changed"
-          if printf '%s\n' "$changed" | grep -Eq '^(config/v6/|docs/V6_.*\.md$|src/runtime_v6/|requirements-v6(-ci)?\.lock$|tests/test_data_ingestion_engine\.py$|tests/test_adaptive_polling\.py$|tests/test_data_platform_.*\.py$|\.github/workflows/v6-ci\.yml$|\.github/workflows/v6-natural-data-ingestion\.yml$|\.github/workflows/repository-governance\.yml$)'; then
+          if printf '%s\n' "$changed" | grep -Eq '^(config/v6/|docs/V6_.*\.md$|src/runtime_v6/|requirements-v6(-ci)?\.lock$|tests/test_data_ingestion_engine\.py$|tests/test_adaptive_polling\.py$|tests/test_data_platform_.*\.py$|\.github/workflows/v6-.*\.yml$|\.github/workflows/repository-governance\.yml$)'; then
             echo "v6_changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "v6_changed=false" >> "$GITHUB_OUTPUT"

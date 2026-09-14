@@ -15,7 +15,7 @@ def test_legacy_service_scheduler_entry_fails_closed():
         orchestrator.run(mode="daily", stats=True, deep_stats=False, profile="fast_decision")
 
 
-def test_legacy_operational_workflows_are_absent_from_default_branch():
+def test_legacy_automatic_operational_workflows_are_absent_from_default_branch():
     retired = (
         "v3-runtime.yml",
         "v3-package-precompute.yml",
@@ -23,10 +23,30 @@ def test_legacy_operational_workflows_are_absent_from_default_branch():
         "v4-timing-probe.yml",
         "fpl-engine-recovery.yml",
         "v5-evidence-dispatcher.yml",
-        "fpl-engine.yml",
     )
     for name in retired:
         assert not (ROOT / ".github/workflows" / name).exists(), name
+
+
+def test_legacy_compatibility_marker_is_forensic_only_and_cannot_publish():
+    marker = ROOT / ".github/workflows/fpl-engine.yml"
+    assert marker.exists()
+    text = marker.read_text(encoding="utf-8")
+    assert "LEGACY_FORENSIC_ONLY" in text
+    assert "NO_PRODUCTION_PUBLICATION" in text
+    assert "workflow_dispatch:" in text
+    assert "  schedule:" not in text
+    assert "workflow_run:" not in text
+    assert "git push" not in text
+    for forbidden in (
+        "runtime-data-v3",
+        "runtime-data-v4",
+        "runtime-data-v5",
+        "python -m src.runtime_v3",
+        "python -m src.runtime_v4",
+        "python -m src.runtime_v5",
+    ):
+        assert forbidden not in text
 
 
 def test_release_acceptance_does_not_reactivate_legacy_scheduler():

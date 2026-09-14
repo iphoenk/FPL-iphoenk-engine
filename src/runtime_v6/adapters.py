@@ -236,6 +236,13 @@ def collect_price_predictor(
     upstream_payload: dict[str, Any],
     previous: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Expose price-change model fields with truthful non-official provenance.
+
+    `official_price_predictor` is retained only as a legacy source identifier for
+    compatibility. Its name MUST NOT be interpreted as evidence that an Official FPL
+    predictor product exists. Official FPL remains authority only for factual fields
+    carried by bootstrap such as current price and transfer/ownership facts.
+    """
     started = time.perf_counter()
     bootstrap = ((upstream_payload.get("official") or {}).get("bootstrap") or {})
     elements = list(bootstrap.get("elements") or [])
@@ -264,10 +271,12 @@ def collect_price_predictor(
     changed = rows != previous_rows if action == "DERIVED" and previous_rows else None
 
     return {
-        "schema_version": 4,
+        "schema_version": 5,
         "source_id": source["id"],
-        "source_name": source["name"],
-        "category": source["category"],
+        "source_name": "V6 Derived Price Change Signal",
+        "legacy_source_name": source.get("name"),
+        "legacy_source_identifier": source.get("id"),
+        "category": "market_model_reference",
         "adapter": source["adapter"],
         "critical": bool(source.get("critical")),
         "independence_group": source.get("independence_group"),
@@ -279,10 +288,14 @@ def collect_price_predictor(
         "availability": availability,
         "effective_state": effective_state,
         "changed": changed,
-        "semantic_class": "UPSTREAM_MODEL_SIGNAL",
-        "model_author": "OFFICIAL_FPL",
-        "v6_computation": "NONE",
-        "v6_transformation": "FIELD_PROJECTION",
+        "semantic_class": "DERIVED_MARKET_SIGNAL",
+        "authority_class": "MODEL",
+        "model_author": "UNVERIFIED_DERIVED_SIGNAL",
+        "predictor_official_status": "UNVERIFIED_NOT_OFFICIAL",
+        "independent_official_product_evidence": False,
+        "provenance_label": "V6_DERIVED_FROM_OFFICIAL_FPL_BOOTSTRAP_FIELDS",
+        "v6_computation": "NONE_IN_ADAPTER",
+        "v6_transformation": "FIELD_PRESERVATION_AND_PROVENANCE_LABELING",
         "derived_from": source.get("derived_from"),
         "source_snapshot_ids": ["official_fpl"],
         "upstream_health": upstream_payload.get("health"),
@@ -294,18 +307,27 @@ def collect_price_predictor(
             "covered_player_count": covered,
             "coverage_ratio": round(covered / len(rows), 6) if rows else 0.0,
         },
+        "authority": {
+            "current_price_facts": "OFFICIAL_FPL_BOOTSTRAP",
+            "ownership_and_transfer_facts": "OFFICIAL_FPL_BOOTSTRAP",
+            "price_change_model_signal": "UNVERIFIED_DERIVED_MODEL",
+            "official_fpl_predictor_product_verified": False,
+        },
         "governance": {
             "data_only": True,
             "decision_authority": "NONE",
             "prediction_authority": "NONE",
             "optimizer_authority": "NONE",
-            "source": "OFFICIAL_FPL",
+            "source": "OFFICIAL_FPL_BOOTSTRAP_FIELDS",
             "ui_scraping": False,
             "auth_bypass_used": False,
             "values_not_invented": True,
             "inherits_upstream_freshness": True,
             "v6_authors_prediction": False,
             "current_run_action_is_truthful": True,
+            "legacy_source_identifier_is_not_authority_proof": True,
+            "may_be_described_as_official_fpl_predictor": False,
+            "consumer_must_label_model_vs_fact": True,
         },
     }
 

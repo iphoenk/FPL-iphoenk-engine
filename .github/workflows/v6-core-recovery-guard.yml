@@ -1,0 +1,91 @@
+name: FPL V6 core recovery guard
+
+on:
+  schedule:
+    - cron: '55 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: fpl-v6-core-recovery-guard
+  cancel-in-progress: false
+
+env:
+  RUNTIME_BRANCH: runtime-data-v6
+  RECOVERY_WORKFLOW: v6-natural-data-ingestion.yml
+
+jobs:
+  recovery-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Hydrate latest runtime control read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
+          git show "origin/${RUNTIME_BRANCH}:data/v6/health/runtime_control.json" > "$RUNNER_TEMP/runtime_control.json"
+          test -s "$RUNNER_TEMP/runtime_control.json"
+
+      - name: Classify independent scheduler watchdog state
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m src.runtime_v6.scheduler_watchdog \
+            --runtime-control "$RUNNER_TEMP/runtime_control.json" \
+            --output "$RUNNER_TEMP/watchdog.json"
+
+      - name: Read recent ingestion runs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/${RECOVERY_WORKFLOW}/runs?per_page=20" \
+            > "$RUNNER_TEMP/ingestion_runs.json"
+          test -s "$RUNNER_TEMP/ingestion_runs.json"
+
+      - name: Evaluate fail-closed recovery decision
+        id: recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m src.runtime_v6.scheduler_recovery \
+            --watchdog "$RUNNER_TEMP/watchdog.json" \
+            --runs "$RUNNER_TEMP/ingestion_runs.json" \
+            --config config/v6/scheduler_recovery.json \
+            --output "$RUNNER_TEMP/recovery_decision.json"
+          should_recover="$(python -c 'import json,sys; print(str(json.load(open(sys.argv[1]))["should_recover"]).lower())' "$RUNNER_TEMP/recovery_decision.json")"
+          reason_code="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["reason_code"])' "$RUNNER_TEMP/recovery_decision.json")"
+          echo "should_recover=${should_recover}" >> "$GITHUB_OUTPUT"
+          echo "reason_code=${reason_code}" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/recovery_decision.json"
+
+      - name: Dispatch one governed non-proof manual recovery
+        if: steps.recovery.outputs.should_recover == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/${RECOVERY_WORKFLOW}/dispatches" \
+            -f ref=main \
+            -f 'inputs[mode]=manual_recovery' \
+            -f 'inputs[reason]=WAVE2_SAFE_RECOVERY_CRITICAL' \
+            -f 'inputs[confirm]=RECOVER_V6'
+          echo "Governed manual_recovery dispatched. This is recovery-only evidence and MUST NOT count as ChatGPT scheduler proof or Wave-3 natural-slot proof."
+
+      - name: Recovery guard no-op evidence
+        if: steps.recovery.outputs.should_recover != 'true'
+        run: echo "Recovery guard NOOP reason=${{ steps.recovery.outputs.reason_code }}"

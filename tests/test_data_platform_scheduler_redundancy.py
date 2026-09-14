@@ -61,21 +61,21 @@ def test_disabled_github_schedule_arrival_is_noop_defense_in_depth():
         ) is True
 
 
-def test_chatgpt_issue_command_remains_supported_legacy_scheduler_classifier():
+def test_legacy_master_issue_comment_is_no_longer_a_scheduler_ingress():
     policy = _policy()
     event = {
         "comment": {
             "body": "/v6-master-acquire reason=chatgpt_hourly_master logical_slot=2026-09-08T10:00:00+07:00 audit=FPL_MASTER_HOURLY"
         }
     }
-    assert classify_invocation(policy, event_name="issue_comment", event=event) == "chatgpt_scheduler"
-    assert policy["scheduler_authority"]["kind"] == "CHATGPT_TASK"
-    assert policy["governance"]["scheduler_health_proof_trigger"] == "issue_comment:chatgpt_scheduler"
-    assert "issue_comment:chatgpt_scheduler" in policy["governance"]["scheduler_health_proof_triggers"]
+    assert classify_invocation(policy, event_name="issue_comment", event=event) == "governed_issue_command_unknown"
     assert policy["scheduler_authority"]["legacy_issue_comment_transport_enabled"] is False
+    assert policy["scheduler_authority"]["issue_comment_command"] == ""
+    assert "issue_comment:chatgpt_scheduler" not in policy["governance"]["scheduler_health_proof_triggers"]
+    assert policy["governance"]["scheduler_health_proof_trigger"] == "issues:chatgpt_scheduler"
 
 
-def test_chatgpt_issue_title_edit_is_preferred_scheduler_classifier():
+def test_chatgpt_issue_title_edit_is_the_scheduler_classifier():
     policy = _policy()
     event = {
         "issue": {
@@ -93,17 +93,17 @@ def test_chatgpt_issue_title_edit_is_preferred_scheduler_classifier():
     assert policy["scheduler_authority"]["issue_title_marker"] == "FPL_MASTER_SLOT"
 
 
-def test_dedicated_comment_edit_is_not_preferred_scheduler_transport():
+def test_dedicated_master_comment_transport_is_retired():
     policy = _policy()
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
     scheduler = policy["scheduler_authority"]
     assert scheduler["preferred_transport"] == "ISSUE_TITLE_EDIT"
     assert scheduler["dedicated_control_comment_id"] == 5596106114
-    assert scheduler["dedicated_control_comment_event"] == "DISABLED_FOR_CHATGPT_TRANSPORT"
+    assert scheduler["dedicated_control_comment_event"] == "RETIRED"
     assert policy["governance"]["issue_comment_edit_is_preferred_scheduler_transport"] is False
-    assert "types: [created, edited]" in workflow
-    assert "github.event.comment.id == 5596106114" in workflow
-    assert "github.event.action == 'edited'" in workflow
+    assert "types: [created]" in workflow
+    assert "github.event.comment.id == 5596106114" not in workflow
+    assert "/v6-master-acquire" not in workflow
 
 
 def test_chatgpt_scheduler_contract_is_single_hourly_authority():

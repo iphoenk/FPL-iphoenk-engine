@@ -3,6 +3,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from .delivery_integrity import (
+    RETRIEVAL_RECOVERY_CONDITIONS,
+    direct_fresh_allowed as source_allows_direct_fresh,
+)
+
 
 REPORT_MODES = frozenset(
     {
@@ -92,10 +97,22 @@ def choose_report_source(
     direct_fresh_available: bool,
     last_good_available: bool,
     field_is_volatile: bool,
+    v6_scope_state: str | None = None,
+    retrieval_state: str = "COMPLETE",
 ) -> str:
+    retrieval = str(retrieval_state or "COMPLETE").upper()
     if fresh_v6_available:
+        if retrieval in RETRIEVAL_RECOVERY_CONDITIONS:
+            return "V6_RETRIEVAL_RECOVERY"
+        if retrieval != "COMPLETE":
+            raise ReportContractError(f"unsupported V6 retrieval state: {retrieval}")
         return "FRESH_V6"
-    if direct_fresh_available:
+
+    scope_state = str(v6_scope_state or "V6_SCOPE_FAILED").upper()
+    if direct_fresh_available and source_allows_direct_fresh(
+        v6_scope_state=scope_state,
+        retrieval_state="COMPLETE",
+    ):
         return "DIRECT_FRESH"
     if last_good_available and not field_is_volatile:
         return "LAST_GOOD_NONVOLATILE"
@@ -119,6 +136,8 @@ def report_delivery_status(
     fresh_v6_available: bool,
     direct_fresh_available: bool,
     last_good_nonvolatile_available: bool,
+    v6_scope_state: str | None = None,
+    retrieval_state: str = "COMPLETE",
 ) -> str:
     if not due:
         return "N/A"
@@ -127,7 +146,11 @@ def report_delivery_status(
         direct_fresh_available=direct_fresh_available,
         last_good_available=last_good_nonvolatile_available,
         field_is_volatile=False,
+        v6_scope_state=v6_scope_state,
+        retrieval_state=retrieval_state,
     )
+    if source == "V6_RETRIEVAL_RECOVERY":
+        return "BLOCKED | SAME V6 RETRIEVAL RECOVERY"
     if source == "FRESH_V6":
         return "PASS | FRESH V6"
     if source == "DIRECT_FRESH":

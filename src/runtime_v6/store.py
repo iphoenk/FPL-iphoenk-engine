@@ -55,8 +55,19 @@ def _candidate_is_frozen() -> bool:
     if freeze.get("candidate_state") != "FROZEN":
         return False
     frozen_run_id = str(freeze.get("run_id") or "")
+    frozen_run_attempt = str(freeze.get("run_attempt") or "")
     current_run_id = str(os.environ.get("GITHUB_RUN_ID") or "")
+    current_run_attempt = str(os.environ.get("GITHUB_RUN_ATTEMPT") or "")
     if frozen_run_id and current_run_id and frozen_run_id != current_run_id:
+        return False
+    if (
+        frozen_run_id
+        and current_run_id
+        and frozen_run_id == current_run_id
+        and frozen_run_attempt
+        and current_run_attempt
+        and frozen_run_attempt != current_run_attempt
+    ):
         return False
     return True
 

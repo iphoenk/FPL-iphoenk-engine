@@ -32,3 +32,20 @@ def test_control_plane_contract_rejects_issue_marker_or_authority_drift():
     assert any("control issue" in failure.lower() for failure in failures)
     assert any("scheduler authority" in failure.lower() for failure in failures)
     assert any("issue title marker" in failure.lower() for failure in failures)
+
+
+def test_control_plane_contract_fails_closed_when_anchor_contract_is_missing():
+    schedule = _load("schedule_policy.json")
+    watchdog = _load("scheduler_watchdog.json")
+    recovery = _load("scheduler_recovery.json")
+
+    schedule["scheduler_authority"]["control_issue_number"] = None
+    schedule["master_orchestrated"]["control_issue_number"] = None
+    schedule["report_prefetch"]["control_issue_number"] = None
+    watchdog["incident"]["control_issue_number"] = None
+    schedule["scheduler_authority"]["issue_title_marker"] = ""
+    schedule["master_orchestrated"]["issue_title_marker"] = ""
+
+    failures = validate_control_plane_contract(schedule, watchdog, recovery)
+    assert any("control issue" in failure.lower() for failure in failures)
+    assert any("issue title marker" in failure.lower() for failure in failures)

@@ -204,7 +204,15 @@ def _validate_report_prefetch(root: Path, control: dict[str, Any]) -> None:
     assert prefetch["governance"]["independent_prefetch_cron"] is False
     assert health["fresh_for_target_report"] == prefetch["fresh_for_target_report"]
     if report_kind == "05:30_price":
-        assert prefetch["telemetry"]["request_count"] == 0
+        # Price report is deliberately narrow: no unrelated authenticated personal
+        # refresh, but Official price/bootstrap + mini-league factual retrieval must
+        # actually be attempted so price-impact/frontier analysis has fresh inputs.
+        assert prefetch["personal_requested"] is False
+        assert prefetch["mini_league_requested"] is True
+        assert prefetch["live_requested"] is False
+        assert prefetch["auth_state"] == "NOT_REQUESTED"
+        assert prefetch["telemetry"]["request_count"] > 0
+        assert prefetch["governance"]["price_0530_requires_mini_league_facts"] is True
 
 
 def _validate_chatgpt_scheduler(manifest: dict[str, Any], control: dict[str, Any]) -> None:

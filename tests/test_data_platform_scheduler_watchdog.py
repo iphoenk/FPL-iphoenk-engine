@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -5,6 +6,8 @@ from src.runtime_v6.scheduler_watchdog import classify_scheduler_watchdog
 
 ROOT = Path(__file__).resolve().parents[1]
 WATCHDOG = ROOT / ".github" / "workflows" / "v6-scheduler-watchdog.yml"
+WATCHDOG_CONFIG = ROOT / "config" / "v6" / "scheduler_watchdog.json"
+SCHEDULE_POLICY = ROOT / "config" / "v6" / "schedule_policy.json"
 
 
 def _control(slot: str = "2026-09-14T11:00:00Z") -> dict:
@@ -70,3 +73,16 @@ def test_watchdog_workflow_is_monitor_only_and_has_no_runtime_write_authority():
     assert "workflow_dispatch" in text
     assert "dispatches_url" not in text
     assert "actions/workflows/v6-natural-data-ingestion.yml/dispatches" not in text
+
+
+def test_watchdog_config_preserves_chatgpt_as_only_acquisition_scheduler():
+    watchdog = json.loads(WATCHDOG_CONFIG.read_text(encoding="utf-8"))
+    policy = json.loads(SCHEDULE_POLICY.read_text(encoding="utf-8"))
+    assert watchdog["role"] == "MONITORING_ONLY"
+    assert watchdog["authority"]["core_scheduler"] == "CHATGPT_FPL_MASTER_MONITOR"
+    assert watchdog["authority"]["watchdog_is_scheduler_authority"] is False
+    assert watchdog["authority"]["watchdog_may_trigger_acquisition"] is False
+    assert watchdog["authority"]["watchdog_may_dispatch_ingestion"] is False
+    assert watchdog["authority"]["watchdog_may_publish_runtime"] is False
+    assert policy["github_natural_schedule"]["enabled"] is False
+    assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True

@@ -149,6 +149,7 @@ def build_slot_proof(
             "source_publish_job_success_required": True,
             "proof_created_post_publish_without_runtime_tree_mutation": True,
             "production_green_requires_rolling_48_of_48": True,
+            "production_green_requires_controlled_chaos_acceptance": True,
         },
     }
     if not proof["registry_fingerprint"]:
@@ -176,8 +177,12 @@ def proof_is_countable(proof: dict[str, Any]) -> bool:
     return all((stages.get(name) or {}).get("state") == "PASS" for name in CORE_STAGES)
 
 
-def evaluate_proof_window(proofs: Iterable[dict[str, Any]]) -> dict[str, Any]:
-    """Evaluate only genuine successful natural proofs; never infer or future-fill slots."""
+def evaluate_proof_window(
+    proofs: Iterable[dict[str, Any]],
+    *,
+    chaos_acceptance_pass: bool = False,
+) -> dict[str, Any]:
+    """Evaluate genuine natural proofs and keep Production Green gated by chaos acceptance."""
     rows = [dict(proof) for proof in proofs if proof_is_countable(proof)]
     rows.sort(key=_proof_slot)
     duplicate_slots: list[str] = []
@@ -214,6 +219,8 @@ def evaluate_proof_window(proofs: Iterable[dict[str, Any]]) -> dict[str, Any]:
     else:
         phase = "48/48_COMPLETE"
 
+    natural_window_eligible = rolling_48 and not duplicate_slots
+    chaos_pass = bool(chaos_acceptance_pass)
     return {
         "schema_version": 1,
         "phase": phase,
@@ -222,7 +229,9 @@ def evaluate_proof_window(proofs: Iterable[dict[str, Any]]) -> dict[str, Any]:
         "six_of_six_complete": consecutive >= 6,
         "rolling_48_of_48_complete": rolling_48,
         "duplicate_logical_slots": sorted(set(duplicate_slots)),
-        "production_green_eligible": rolling_48 and not duplicate_slots,
+        "natural_window_eligible": natural_window_eligible,
+        "chaos_acceptance_pass": chaos_pass,
+        "production_green_eligible": natural_window_eligible and chaos_pass,
         "latest_logical_slot": _proof_slot(ordered[-1]).isoformat() if ordered else None,
     }
 

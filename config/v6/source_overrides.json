@@ -7,24 +7,6 @@
     "inactive_sources_must_not_have_overrides": true,
     "effective_registry_is_published_for_drift_review": true
   },
-  "lifecycle": {
-    "official_price_predictor": {
-      "temporary": true,
-      "reason": "Wave 2 provenance correction: legacy source id/name must not imply an independently verified Official FPL predictor product.",
-      "review_by": "2026-10-15"
-    }
-  },
-  "sources": {
-    "official_price_predictor": {
-      "name": "V6 Derived Price Change Signal",
-      "category": "market_model_reference",
-      "provenance_label": "V6_DERIVED_FROM_OFFICIAL_FPL_BOOTSTRAP_FIELDS",
-      "predictor_official_status": "UNVERIFIED_NOT_OFFICIAL",
-      "independent_official_product_evidence": false,
-      "authority": {
-        "current_price_facts": "OFFICIAL_FPL_BOOTSTRAP",
-        "price_change_model_signal": "UNVERIFIED_DERIVED_MODEL"
-      }
-    }
-  }
+  "lifecycle": {},
+  "sources": {}
 }

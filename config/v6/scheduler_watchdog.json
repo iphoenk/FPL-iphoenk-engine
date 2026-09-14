@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "enabled": true,
+  "role": "MONITORING_ONLY",
+  "schedule": {
+    "owner": "GITHUB_ACTIONS_MONITOR",
+    "cron_utc": "50 * * * *",
+    "warning_after_minutes": 90,
+    "critical_after_minutes": 135
+  },
+  "authority": {
+    "core_scheduler": "CHATGPT_FPL_MASTER_MONITOR",
+    "watchdog_is_scheduler_authority": false,
+    "watchdog_may_trigger_acquisition": false,
+    "watchdog_may_dispatch_ingestion": false,
+    "watchdog_may_publish_runtime": false,
+    "watchdog_may_advance_scheduler_proof": false,
+    "watchdog_may_use_v6_publisher_credentials": false
+  },
+  "incident": {
+    "control_issue_number": 431,
+    "title": "[V6 WATCHDOG] Scheduler continuity incident",
+    "deduplicate_open_incident": true,
+    "close_when_fresh": true
+  },
+  "diagnosis_codes": [
+    "EXTERNAL_CONTROL_EVENT_MISSING",
+    "GITHUB_EVENT_NOT_STARTED",
+    "ACQUISITION_OR_PUBLISH_FAILED",
+    "PUBLICATION_PROOF_NOT_ADVANCED",
+    "CONTROL_PATH_UNRESOLVED"
+  ],
+  "governance_note": "The GitHub cron in v6-scheduler-watchdog.yml is a monitoring exception only. config/v6/schedule_policy.json github_natural_schedule.enabled=false remains authoritative for acquisition: there is no GitHub acquisition cron and no second core scheduler."
+}

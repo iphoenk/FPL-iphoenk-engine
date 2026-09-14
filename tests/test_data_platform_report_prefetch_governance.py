@@ -112,7 +112,7 @@ def test_report_prefetch_issue_title_transport_is_rejected_by_authorization():
         )
 
 
-def test_0530_requires_mini_league_facts_without_personal_refresh():
+def test_0530_standard_scope_is_service_resolved_and_requires_league_facts():
     policy = load_policy()
     env, summary = resolve_prefetch(
         policy,
@@ -128,9 +128,14 @@ def test_0530_requires_mini_league_facts_without_personal_refresh():
     )
 
     assert summary["report_kind"] == "05:30_price"
+    # These env flags are ad-hoc scope overrides. Standard report kinds resolve
+    # their effective scope inside PrefetchService/resolve_scope.
     assert env["V6_PREFETCH_PERSONAL"] == "false"
-    assert env["V6_PREFETCH_MINI_LEAGUE"] == "true"
+    assert env["V6_PREFETCH_MINI_LEAGUE"] == "false"
     assert env["V6_PREFETCH_LIVE"] == "false"
+    consumer = json.loads(CONSUMER.read_text(encoding="utf-8"))
+    assert consumer["mini_league_enabled"] is True
+    assert consumer["priority_full_picks_enabled"] is True
     assert policy["report_prefetch"]["independent_cron"] is False
     assert policy["report_prefetch"]["counts_as_completed_operational_slot"] is False
     validator = (ROOT / "src/runtime_v6/production_validate.py").read_text(encoding="utf-8")

@@ -23,18 +23,19 @@ def _proof(slot: datetime, *, run_id: int, publication_id: str | None = None) ->
     return proof
 
 
-def test_duplicate_publication_inside_active_six_blocks_six_of_six():
+def test_duplicate_publication_inside_active_two_blocks_two_of_two():
     start = datetime(2026, 9, 14, 0, tzinfo=timezone.utc)
-    proofs = [_proof(start + timedelta(hours=i), run_id=i + 1) for i in range(6)]
-    proofs.append(_proof(start + timedelta(hours=5), run_id=999))
+    proofs = [_proof(start + timedelta(hours=i), run_id=i + 1) for i in range(2)]
+    proofs.append(_proof(start + timedelta(hours=1), run_id=999))
 
     result = evaluate_proof_window(proofs)
 
-    duplicate_slot = (start + timedelta(hours=5)).isoformat()
-    assert result["consecutive_successful_natural_slots"] == 6
-    assert result["six_of_six_complete"] is False
-    assert result["phase"] == "6/6_IN_PROGRESS"
-    assert result["duplicate_publication_slots_in_active_six"] == [duplicate_slot]
+    duplicate_slot = (start + timedelta(hours=1)).isoformat()
+    assert result["consecutive_successful_natural_slots"] == 2
+    assert result["first_gate_complete"] is False
+    assert result["two_of_two_complete"] is False
+    assert result["phase"] == "2/2_IN_PROGRESS"
+    assert result["duplicate_publication_slots_in_active_first_gate"] == [duplicate_slot]
     assert result["production_green_eligible"] is False
 
 
@@ -56,18 +57,18 @@ def test_duplicate_evidence_for_same_publication_is_deduplicated_not_treated_as_
     start = datetime(2026, 9, 14, 0, tzinfo=timezone.utc)
     proofs = [
         _proof(start + timedelta(hours=i), run_id=i + 1, publication_id=f"publication-{i + 1}")
-        for i in range(6)
+        for i in range(2)
     ]
     repeated = dict(proofs[-1])
     proofs.append(repeated)
 
     result = evaluate_proof_window(proofs)
 
-    duplicate_slot = (start + timedelta(hours=5)).isoformat()
-    assert result["countable_proof_count"] == 6
+    duplicate_slot = (start + timedelta(hours=1)).isoformat()
+    assert result["countable_proof_count"] == 2
     assert result["duplicate_publication_slots"] == []
     assert result["duplicate_evidence_slots"] == [duplicate_slot]
-    assert result["six_of_six_complete"] is True
+    assert result["two_of_two_complete"] is True
     assert result["phase"] == "48/48_IN_PROGRESS"
 
 

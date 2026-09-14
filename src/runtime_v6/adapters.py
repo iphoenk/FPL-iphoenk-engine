@@ -236,12 +236,12 @@ def collect_price_predictor(
     upstream_payload: dict[str, Any],
     previous: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Expose price-change model fields with truthful non-official provenance.
+    """Expose bootstrap-carried price-change model fields with truthful provenance.
 
-    `official_price_predictor` is retained only as a legacy source identifier for
-    compatibility. Its name MUST NOT be interpreted as evidence that an Official FPL
-    predictor product exists. Official FPL remains authority only for factual fields
-    carried by bootstrap such as current price and transfer/ownership facts.
+    The legacy source identifier is retained for compatibility. The fields originate
+    from Official FPL bootstrap, but that does not independently prove a separately
+    documented Official FPL predictor product. Consumers must keep factual current
+    price separate from model/predictor interpretation.
     """
     started = time.perf_counter()
     bootstrap = ((upstream_payload.get("official") or {}).get("bootstrap") or {})
@@ -271,12 +271,12 @@ def collect_price_predictor(
     changed = rows != previous_rows if action == "DERIVED" and previous_rows else None
 
     return {
-        "schema_version": 5,
+        "schema_version": 4,
         "source_id": source["id"],
         "source_name": "V6 Derived Price Change Signal",
         "legacy_source_name": source.get("name"),
         "legacy_source_identifier": source.get("id"),
-        "category": "market_model_reference",
+        "category": source.get("category") or "market",
         "adapter": source["adapter"],
         "critical": bool(source.get("critical")),
         "independence_group": source.get("independence_group"),
@@ -288,14 +288,14 @@ def collect_price_predictor(
         "availability": availability,
         "effective_state": effective_state,
         "changed": changed,
-        "semantic_class": "DERIVED_MARKET_SIGNAL",
+        "semantic_class": "UPSTREAM_MODEL_SIGNAL",
         "authority_class": "MODEL",
-        "model_author": "UNVERIFIED_DERIVED_SIGNAL",
-        "predictor_official_status": "UNVERIFIED_NOT_OFFICIAL",
+        "model_author": "OFFICIAL_FPL",
+        "predictor_official_status": "UNVERIFIED_NOT_OFFICIAL_PRODUCT",
         "independent_official_product_evidence": False,
-        "provenance_label": "V6_DERIVED_FROM_OFFICIAL_FPL_BOOTSTRAP_FIELDS",
-        "v6_computation": "NONE_IN_ADAPTER",
-        "v6_transformation": "FIELD_PRESERVATION_AND_PROVENANCE_LABELING",
+        "provenance_label": "OFFICIAL_FPL_BOOTSTRAP_MODEL_FIELDS",
+        "v6_computation": "NONE",
+        "v6_transformation": "SOURCE_NATIVE_PRESERVATION",
         "derived_from": source.get("derived_from"),
         "source_snapshot_ids": ["official_fpl"],
         "upstream_health": upstream_payload.get("health"),
@@ -310,7 +310,7 @@ def collect_price_predictor(
         "authority": {
             "current_price_facts": "OFFICIAL_FPL_BOOTSTRAP",
             "ownership_and_transfer_facts": "OFFICIAL_FPL_BOOTSTRAP",
-            "price_change_model_signal": "UNVERIFIED_DERIVED_MODEL",
+            "price_change_model_signal": "OFFICIAL_FPL_BOOTSTRAP_MODEL_FIELDS",
             "official_fpl_predictor_product_verified": False,
         },
         "governance": {
@@ -318,7 +318,7 @@ def collect_price_predictor(
             "decision_authority": "NONE",
             "prediction_authority": "NONE",
             "optimizer_authority": "NONE",
-            "source": "OFFICIAL_FPL_BOOTSTRAP_FIELDS",
+            "source": "OFFICIAL_FPL",
             "ui_scraping": False,
             "auth_bypass_used": False,
             "values_not_invented": True,
@@ -326,7 +326,7 @@ def collect_price_predictor(
             "v6_authors_prediction": False,
             "current_run_action_is_truthful": True,
             "legacy_source_identifier_is_not_authority_proof": True,
-            "may_be_described_as_official_fpl_predictor": False,
+            "may_be_described_as_official_fpl_predictor_product": False,
             "consumer_must_label_model_vs_fact": True,
         },
     }

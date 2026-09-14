@@ -229,6 +229,8 @@ def main() -> int:
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--published-runtime-sha", required=True)
     parser.add_argument("--source-commit", required=True)
+    parser.add_argument("--source-run-id", required=True)
+    parser.add_argument("--source-run-attempt", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--production-validated", action="store_true")
     args = parser.parse_args()
@@ -237,6 +239,8 @@ def main() -> int:
         published_runtime_sha=args.published_runtime_sha,
         source_commit=args.source_commit,
         production_validated=args.production_validated,
+        run_id=args.source_run_id,
+        run_attempt=args.source_run_attempt,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(proof, indent=2, sort_keys=True) + "\n", encoding="utf-8")

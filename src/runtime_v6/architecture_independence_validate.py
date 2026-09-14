@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import ast
+import json
 import re
 import sys
 from pathlib import Path
+
+from .control_plane_contract import validate_control_plane_contract
 
 ROOT = Path(__file__).resolve().parents[2]
 V6_SOURCE = ROOT / "src" / "runtime_v6"
@@ -22,6 +25,11 @@ def _python_import_roots(path: Path) -> set[str]:
         elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
             roots.add(node.module.split(".", 1)[0])
     return roots
+
+
+def _relative_import_escapes_runtime_v6(node: ast.ImportFrom) -> bool:
+    """Return True when a relative import climbs above src.runtime_v6."""
+    return node.level > 1
 
 
 def _forbidden_engine_modules() -> tuple[str, ...]:
@@ -72,7 +80,12 @@ def validate_repository(root: Path = ROOT) -> list[str]:
         text = path.read_text(encoding="utf-8")
         tree = ast.parse(text, filename=str(path))
         for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            if isinstance(node, ast.ImportFrom) and _relative_import_escapes_runtime_v6(node):
+                module = "." * node.level + str(node.module or "")
+                failures.append(
+                    f"V6 relative internal import escapes runtime_v6 boundary: {path.relative_to(root)} -> {module}"
+                )
+            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
                 module = node.module
                 if any(module == item or module.startswith(item + ".") for item in forbidden_modules):
                     failures.append(f"forbidden cross-version import: {path.relative_to(root)} -> {module}")
@@ -154,6 +167,13 @@ def validate_repository(root: Path = ROOT) -> list[str]:
             label=str(path.relative_to(root)),
             failures=failures,
         )
+
+    schedule_policy = json.loads((config_root / "schedule_policy.json").read_text(encoding="utf-8"))
+    watchdog_policy = json.loads((config_root / "scheduler_watchdog.json").read_text(encoding="utf-8"))
+    recovery_policy = json.loads((config_root / "scheduler_recovery.json").read_text(encoding="utf-8"))
+    failures.extend(
+        validate_control_plane_contract(schedule_policy, watchdog_policy, recovery_policy)
+    )
 
     runtime_lock = (root / "requirements-v6.lock").read_text(encoding="utf-8")
     for package in sorted(ALLOWED_THIRD_PARTY):

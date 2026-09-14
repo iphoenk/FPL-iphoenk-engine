@@ -229,28 +229,30 @@ jobs:
           set -euo pipefail
           rm -rf "$RUNNER_TEMP/wave3-prior-proofs"
           mkdir -p "$RUNNER_TEMP/wave3-prior-proofs"
-          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" > "$RUNNER_TEMP/wave3-artifacts.json"
+          gh api --paginate --slurp "/repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" > "$RUNNER_TEMP/wave3-artifacts.json"
           python - <<'PY'
           import json
           import os
           from pathlib import Path
 
           payload = json.loads((Path(os.environ["RUNNER_TEMP"]) / "wave3-artifacts.json").read_text(encoding="utf-8"))
+          pages = payload if isinstance(payload, list) else [payload]
           rows = []
-          for artifact in payload.get("artifacts", []):
-              name = str(artifact.get("name") or "")
-              workflow_run = artifact.get("workflow_run") or {}
-              if not name.startswith("v6-wave3-slot-proof-") or artifact.get("expired"):
-                  continue
-              run_id = workflow_run.get("id")
-              if not run_id:
-                  continue
-              rows.append((str(artifact.get("created_at") or ""), int(artifact["id"]), name, int(run_id)))
+          for page in pages:
+              for artifact in page.get("artifacts", []):
+                  name = str(artifact.get("name") or "")
+                  workflow_run = artifact.get("workflow_run") or {}
+                  if not name.startswith("v6-wave3-slot-proof-") or artifact.get("expired"):
+                      continue
+                  run_id = workflow_run.get("id")
+                  if not run_id:
+                      continue
+                  rows.append((str(artifact.get("created_at") or ""), int(artifact["id"]), name, int(run_id)))
           rows.sort(reverse=True)
           rows = rows[:64]
           output = Path(os.environ["RUNNER_TEMP"]) / "wave3-artifact-index.txt"
           output.write_text("".join(f"{artifact_id}|{name}|{run_id}\n" for _, artifact_id, name, run_id in rows), encoding="utf-8")
-          print({"prior_proof_artifacts": len(rows)})
+          print({"artifact_pages": len(pages), "prior_proof_artifacts": len(rows)})
           PY
           while IFS='|' read -r artifact_id artifact_name proof_run_id; do
             [[ -n "$artifact_id" ]] || continue
@@ -271,31 +273,33 @@ jobs:
           set -euo pipefail
           rm -rf "$RUNNER_TEMP/wave3-chaos-evidence"
           mkdir -p "$RUNNER_TEMP/wave3-chaos-evidence"
-          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" > "$RUNNER_TEMP/wave3-chaos-artifacts.json"
+          gh api --paginate --slurp "/repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" > "$RUNNER_TEMP/wave3-chaos-artifacts.json"
           python - <<'PY'
           import json
           import os
           from pathlib import Path
 
           payload = json.loads((Path(os.environ["RUNNER_TEMP"]) / "wave3-chaos-artifacts.json").read_text(encoding="utf-8"))
+          pages = payload if isinstance(payload, list) else [payload]
           rows = []
-          for artifact in payload.get("artifacts", []):
-              name = str(artifact.get("name") or "")
-              workflow_run = artifact.get("workflow_run") or {}
-              if not name.startswith("v6-wave3-chaos-acceptance-") or artifact.get("expired"):
-                  continue
-              if str(workflow_run.get("head_branch") or "") != "main":
-                  continue
-              run_id = workflow_run.get("id")
-              head_sha = str(workflow_run.get("head_sha") or "")
-              if not run_id or len(head_sha) != 40:
-                  continue
-              rows.append((str(artifact.get("created_at") or ""), name, int(run_id), head_sha))
+          for page in pages:
+              for artifact in page.get("artifacts", []):
+                  name = str(artifact.get("name") or "")
+                  workflow_run = artifact.get("workflow_run") or {}
+                  if not name.startswith("v6-wave3-chaos-acceptance-") or artifact.get("expired"):
+                      continue
+                  if str(workflow_run.get("head_branch") or "") != "main":
+                      continue
+                  run_id = workflow_run.get("id")
+                  head_sha = str(workflow_run.get("head_sha") or "")
+                  if not run_id or len(head_sha) != 40:
+                      continue
+                  rows.append((str(artifact.get("created_at") or ""), name, int(run_id), head_sha))
           rows.sort(reverse=True)
           rows = rows[:20]
           output = Path(os.environ["RUNNER_TEMP"]) / "wave3-chaos-candidates.txt"
           output.write_text("".join(f"{name}|{run_id}|{head_sha}\n" for _, name, run_id, head_sha in rows), encoding="utf-8")
-          print({"chaos_artifact_candidates": len(rows)})
+          print({"artifact_pages": len(pages), "chaos_artifact_candidates": len(rows)})
           PY
           found="false"
           while IFS='|' read -r artifact_name chaos_run_id chaos_head_sha; do

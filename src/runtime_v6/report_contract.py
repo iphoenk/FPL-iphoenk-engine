@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
@@ -173,22 +172,30 @@ def build_status_view(
     auth: str,
     report_delivery: str,
 ) -> dict[str, dict[str, Any]]:
+    last_good = status_entry(
+        last_good_state,
+        observed_at=observed_at,
+        source_at=last_good_generated_at,
+    )
+    if "age_seconds" in last_good:
+        last_good["last_good_age_seconds"] = last_good["age_seconds"]
+
+    scheduler_proof = status_entry(
+        scheduler_proof_state,
+        observed_at=observed_at,
+        source_at=scheduler_proof_at,
+    )
+    if "age_seconds" in scheduler_proof:
+        scheduler_proof["scheduler_proof_age_seconds"] = scheduler_proof["age_seconds"]
+
     view = {
         "CORE TRANSPORT": status_entry(core_transport, observed_at=observed_at),
         "ACQUISITION": status_entry(acquisition, observed_at=observed_at),
         "PUBLISH_INTEGRITY": status_entry(publish_integrity, observed_at=observed_at),
         "PUBLISH VALIDATION": status_entry(publish_validation, observed_at=observed_at),
         "NEW PUBLICATION": status_entry(new_publication, observed_at=observed_at),
-        "LAST-GOOD": status_entry(
-            last_good_state,
-            observed_at=observed_at,
-            source_at=last_good_generated_at,
-        ),
-        "SCHEDULER PROOF": status_entry(
-            scheduler_proof_state,
-            observed_at=observed_at,
-            source_at=scheduler_proof_at,
-        ),
+        "LAST-GOOD": last_good,
+        "SCHEDULER PROOF": scheduler_proof,
         "REPORT PREFETCH": status_entry(report_prefetch, observed_at=observed_at),
         "TARGET REPORT FRESHNESS": status_entry(target_report_freshness, observed_at=observed_at),
         "AUTH": status_entry(auth, observed_at=observed_at),

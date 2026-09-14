@@ -25,8 +25,12 @@ def _repoint_store(monkeypatch: pytest.MonkeyPatch, root: Path) -> Path:
 def test_current_run_freeze_rejects_post_freeze_data_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     freeze = _repoint_store(monkeypatch, tmp_path)
     monkeypatch.setenv("GITHUB_RUN_ID", "1001")
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "1")
 
-    store.write_json(freeze, {"candidate_state": "FROZEN", "run_id": "1001"})
+    store.write_json(
+        freeze,
+        {"candidate_state": "FROZEN", "run_id": "1001", "run_attempt": "1"},
+    )
 
     with pytest.raises(RuntimeError, match="candidate_frozen_write_rejected:manifest.json"):
         store.write_json(tmp_path / "manifest.json", {"should": "fail"})
@@ -38,16 +42,36 @@ def test_current_run_freeze_rejects_post_freeze_data_write(tmp_path: Path, monke
 def test_previous_run_freeze_does_not_block_new_acquisition(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     freeze = _repoint_store(monkeypatch, tmp_path)
     monkeypatch.setenv("GITHUB_RUN_ID", "1002")
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "1")
     freeze.parent.mkdir(parents=True, exist_ok=True)
-    freeze.write_text(json.dumps({"candidate_state": "FROZEN", "run_id": "1001"}), encoding="utf-8")
+    freeze.write_text(
+        json.dumps({"candidate_state": "FROZEN", "run_id": "1001", "run_attempt": "1"}),
+        encoding="utf-8",
+    )
 
     store.write_json(tmp_path / "manifest.json", {"new_run": True})
 
     assert store.read_json(tmp_path / "manifest.json") == {"new_run": True}
 
 
+def test_previous_attempt_freeze_does_not_block_rerun(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    freeze = _repoint_store(monkeypatch, tmp_path)
+    monkeypatch.setenv("GITHUB_RUN_ID", "1004")
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "2")
+    freeze.parent.mkdir(parents=True, exist_ok=True)
+    freeze.write_text(
+        json.dumps({"candidate_state": "FROZEN", "run_id": "1004", "run_attempt": "1"}),
+        encoding="utf-8",
+    )
+
+    store.write_json(tmp_path / "manifest.json", {"rerun": True})
+
+    assert store.read_json(tmp_path / "manifest.json") == {"rerun": True}
+
+
 def test_frozen_candidate_validator_is_read_only_and_detects_drift(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("GITHUB_RUN_ID", "1003")
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "1")
     payload = tmp_path / "current" / "official_fpl.json"
     payload.parent.mkdir(parents=True, exist_ok=True)
     payload.write_text('{"source_id":"official_fpl","value":1}\n', encoding="utf-8")

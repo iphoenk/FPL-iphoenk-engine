@@ -87,6 +87,8 @@ def _proof(slot: datetime, *, run: int = 1) -> dict:
         "core_chain_pass": True,
         "logical_slot": iso,
         "run_id": str(run),
+        "run_attempt": "1",
+        "publication_generation_id": f"publication-{run}",
         "stages": stages,
     }
 
@@ -111,6 +113,7 @@ def test_post_publish_proof_contains_full_core_lifecycle_and_provenance(tmp_path
     assert proof["registry_fingerprint"] == "f" * 64
     assert proof["published_runtime_sha"] == "b" * 40
     assert proof["governance"]["proof_created_post_publish_without_runtime_tree_mutation"] is True
+    assert proof["governance"]["initial_natural_gate_consecutive_slots"] == 2
     assert proof["governance"]["production_green_requires_controlled_chaos_acceptance"] is True
     for stage in (
         "TRIGGERED",
@@ -191,29 +194,32 @@ def test_publisher_rejection_must_leave_runtime_pointer_unchanged():
         )
 
 
-def test_six_consecutive_natural_slots_complete_first_gate():
+def test_two_consecutive_natural_slots_complete_first_gate():
     start = datetime(2026, 9, 14, 0, tzinfo=timezone.utc)
-    proofs = [_proof(start + timedelta(hours=i), run=i + 1) for i in range(6)]
+    proofs = [_proof(start + timedelta(hours=i), run=i + 1) for i in range(2)]
     result = evaluate_proof_window(proofs)
     assert result["phase"] == "48/48_IN_PROGRESS"
-    assert result["consecutive_successful_natural_slots"] == 6
-    assert result["six_of_six_complete"] is True
+    assert result["consecutive_successful_natural_slots"] == 2
+    assert result["first_gate_target"] == 2
+    assert result["first_gate_complete"] is True
+    assert result["two_of_two_complete"] is True
+    assert result["six_of_six_complete"] is False
     assert result["rolling_48_of_48_complete"] is False
     assert result["production_green_eligible"] is False
 
 
-def test_gap_resets_consecutive_natural_slot_count():
+def test_gap_resets_consecutive_natural_slot_count_before_two_of_two_gate():
     start = datetime(2026, 9, 14, 0, tzinfo=timezone.utc)
     proofs = [
         _proof(start, run=1),
         _proof(start + timedelta(hours=1), run=2),
         _proof(start + timedelta(hours=4), run=3),
-        _proof(start + timedelta(hours=5), run=4),
     ]
     result = evaluate_proof_window(proofs)
-    assert result["phase"] == "6/6_IN_PROGRESS"
-    assert result["consecutive_successful_natural_slots"] == 2
-    assert result["six_of_six_complete"] is False
+    assert result["phase"] == "2/2_IN_PROGRESS"
+    assert result["consecutive_successful_natural_slots"] == 1
+    assert result["first_gate_complete"] is False
+    assert result["two_of_two_complete"] is False
 
 
 def test_exact_rolling_48_requires_chaos_acceptance_for_production_green_eligibility():

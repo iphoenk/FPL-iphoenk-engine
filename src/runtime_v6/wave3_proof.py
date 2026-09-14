@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 NATURAL_SCHEDULE_KIND = "chatgpt_scheduler"
 NATURAL_EVENT_NAME = "issues"
+FIRST_GATE_CONSECUTIVE_SLOTS = 2
 CORE_STAGES = (
     "TRIGGERED",
     "ACQUIRED",
@@ -148,6 +149,7 @@ def build_slot_proof(
             "failed_candidate_can_be_counted": False,
             "source_publish_job_success_required": True,
             "proof_created_post_publish_without_runtime_tree_mutation": True,
+            "initial_natural_gate_consecutive_slots": FIRST_GATE_CONSECUTIVE_SLOTS,
             "production_green_requires_rolling_48_of_48": True,
             "production_green_requires_controlled_chaos_acceptance": True,
         },
@@ -166,6 +168,19 @@ def _proof_slot(proof: dict[str, Any]) -> datetime:
     return parsed
 
 
+def _proof_ownership_key(proof: dict[str, Any]) -> str:
+    publication_generation_id = str(proof.get("publication_generation_id") or "").strip()
+    if publication_generation_id:
+        return f"publication:{publication_generation_id}"
+    run_id = str(proof.get("run_id") or "").strip()
+    run_attempt = str(proof.get("run_attempt") or "").strip()
+    candidate_generation_id = str(proof.get("candidate_generation_id") or "").strip()
+    published_runtime_sha = str(proof.get("published_runtime_sha") or "").strip()
+    if run_id or run_attempt or candidate_generation_id or published_runtime_sha:
+        return "fallback:" + "|".join((run_id, run_attempt, candidate_generation_id, published_runtime_sha))
+    raise Wave3ProofError("proof_publication_ownership_missing")
+
+
 def proof_is_countable(proof: dict[str, Any]) -> bool:
     if proof.get("proof_kind") != "WAVE3_NATURAL_CORE_SLOT":
         return False
@@ -182,17 +197,29 @@ def evaluate_proof_window(
     *,
     chaos_acceptance_pass: bool = False,
 ) -> dict[str, Any]:
-    """Evaluate genuine natural proofs and keep Production Green gated by chaos acceptance."""
+    """Evaluate genuine natural proofs with duplicate-publication checks scoped to active windows."""
     rows = [dict(proof) for proof in proofs if proof_is_countable(proof)]
     rows.sort(key=_proof_slot)
-    duplicate_slots: list[str] = []
-    unique: dict[str, dict[str, Any]] = {}
+
+    grouped: dict[str, list[dict[str, Any]]] = {}
     for row in rows:
         key = _proof_slot(row).isoformat()
-        if key in unique:
-            duplicate_slots.append(key)
-        unique[key] = row
-    ordered = [unique[key] for key in sorted(unique)]
+        grouped.setdefault(key, []).append(row)
+
+    duplicate_publication_slots: list[str] = []
+    duplicate_evidence_slots: list[str] = []
+    unique: dict[str, dict[str, Any]] = {}
+    for key, slot_rows in grouped.items():
+        ownership_keys = {_proof_ownership_key(row) for row in slot_rows}
+        if len(slot_rows) > 1:
+            if len(ownership_keys) > 1:
+                duplicate_publication_slots.append(key)
+            else:
+                duplicate_evidence_slots.append(key)
+        unique[key] = slot_rows[-1]
+
+    ordered_keys = sorted(unique)
+    ordered = [unique[key] for key in ordered_keys]
 
     consecutive = 0
     expected: datetime | None = None
@@ -204,31 +231,55 @@ def evaluate_proof_window(
         else:
             break
 
-    last_48 = ordered[-48:]
-    rolling_48 = len(last_48) == 48 and not duplicate_slots
+    active_first_gate_keys = (
+        set(ordered_keys[-FIRST_GATE_CONSECUTIVE_SLOTS:])
+        if len(ordered_keys) >= FIRST_GATE_CONSECUTIVE_SLOTS
+        else set(ordered_keys)
+    )
+    duplicate_in_first_gate = sorted(set(duplicate_publication_slots) & active_first_gate_keys)
+    first_gate_complete = (
+        consecutive >= FIRST_GATE_CONSECUTIVE_SLOTS and not duplicate_in_first_gate
+    )
+
+    active_six_keys = set(ordered_keys[-6:]) if len(ordered_keys) >= 6 else set(ordered_keys)
+    duplicate_in_six = sorted(set(duplicate_publication_slots) & active_six_keys)
+    six_complete = consecutive >= 6 and not duplicate_in_six
+
+    last_48_keys = ordered_keys[-48:]
+    last_48 = [unique[key] for key in last_48_keys]
+    duplicate_in_48 = sorted(set(duplicate_publication_slots) & set(last_48_keys))
+    rolling_48 = len(last_48) == 48 and not duplicate_in_48
     if rolling_48:
         for left, right in zip(last_48, last_48[1:]):
             if _proof_slot(right) - _proof_slot(left) != timedelta(hours=1):
                 rolling_48 = False
                 break
 
-    if consecutive < 6:
-        phase = "6/6_IN_PROGRESS"
+    if not first_gate_complete:
+        phase = "2/2_IN_PROGRESS"
     elif not rolling_48:
         phase = "48/48_IN_PROGRESS"
     else:
         phase = "48/48_COMPLETE"
 
-    natural_window_eligible = rolling_48 and not duplicate_slots
+    natural_window_eligible = rolling_48
     chaos_pass = bool(chaos_acceptance_pass)
     return {
         "schema_version": 1,
         "phase": phase,
         "countable_proof_count": len(ordered),
         "consecutive_successful_natural_slots": consecutive,
-        "six_of_six_complete": consecutive >= 6,
+        "first_gate_target": FIRST_GATE_CONSECUTIVE_SLOTS,
+        "first_gate_complete": first_gate_complete,
+        "two_of_two_complete": first_gate_complete,
+        "six_of_six_complete": six_complete,
         "rolling_48_of_48_complete": rolling_48,
-        "duplicate_logical_slots": sorted(set(duplicate_slots)),
+        "duplicate_logical_slots": sorted(set(duplicate_publication_slots)),
+        "duplicate_publication_slots": sorted(set(duplicate_publication_slots)),
+        "duplicate_evidence_slots": sorted(set(duplicate_evidence_slots)),
+        "duplicate_publication_slots_in_active_first_gate": duplicate_in_first_gate,
+        "duplicate_publication_slots_in_active_six": duplicate_in_six,
+        "duplicate_publication_slots_in_rolling_48": duplicate_in_48,
         "natural_window_eligible": natural_window_eligible,
         "chaos_acceptance_pass": chaos_pass,
         "production_green_eligible": natural_window_eligible and chaos_pass,

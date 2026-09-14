@@ -1,0 +1,38 @@
+name: Repository naming policy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repository-naming-policy-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  naming-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-v6-ci.lock
+
+      - name: Install hash-locked CI dependencies
+        run: python -m pip install --require-hashes -r requirements-v6-ci.lock
+
+      - name: Execute repository naming policy test
+        run: python -m pytest -q tests/test_test_naming_policy.py
+
+      - name: Execute naming validator directly
+        run: python src/platform/repository_test_naming_validate.py

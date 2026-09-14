@@ -21,6 +21,36 @@ def _core_control(*, run_id: str, observed_at: str, generation: str) -> dict:
     }
 
 
+def _price_upstream() -> dict:
+    return {
+        "health": "GREEN",
+        "effective_state": "LIVE_CHANGED",
+        "official": {
+            "bootstrap": {
+                "elements": [
+                    {
+                        "id": 10,
+                        "web_name": "Test",
+                        "team": 1,
+                        "element_type": 3,
+                        "now_cost": 55,
+                        "selected_by_percent": "10.0",
+                        "transfers_in_event": 100,
+                        "transfers_out_event": 20,
+                        "price_change_percent": "60.0",
+                        "price_change_hourly_rate": 5,
+                        "price_change_projections": [
+                            {"offset": 0, "projected_percent": "65.0", "likelihood": 3}
+                        ],
+                        "price_change_locked_until": None,
+                        "price_change_calibrating": False,
+                    }
+                ]
+            }
+        },
+    }
+
+
 def test_duplicate_core_trigger_preserves_first_owner_and_provenance():
     first = build_operational_slots(
         None,
@@ -77,15 +107,19 @@ def test_prefetch_auxiliary_cycle_does_not_advance_authoritative_scheduler_cycle
     assert auxiliary["summary"]["last_operational_cycle_at"] == "2026-09-14T06:31:00+00:00"
 
 
-def test_effective_registry_removes_official_predictor_claim_but_keeps_legacy_id():
+def test_effective_registry_keeps_legacy_identifier_only_as_configuration_compatibility():
     registry = load_registry()
     source = next(row for row in registry["sources"] if row["id"] == "official_price_predictor")
     assert source["id"] == "official_price_predictor"
-    assert source["name"] == "V6 Derived Price Change Signal"
-    assert source["category"] == "market_model_reference"
-    assert source["predictor_official_status"] == "UNVERIFIED_NOT_OFFICIAL"
-    assert source["independent_official_product_evidence"] is False
-    assert source["authority"]["current_price_facts"] == "OFFICIAL_FPL_BOOTSTRAP"
+    assert source["adapter"] == "official_price_predictor"
+    assert source["derived_from"] == "official_fpl.bootstrap"
+    assert source["acquisition_kind"] == "derived"
+
+    payload = collect_price_predictor(source, _price_upstream())
+    assert payload["source_name"] == "V6 Derived Price Change Signal"
+    assert payload["legacy_source_name"] == source["name"]
+    assert payload["governance"]["legacy_source_identifier_is_not_authority_proof"] is True
+    assert payload["governance"]["may_be_described_as_official_fpl_predictor_product"] is False
 
 
 def test_legacy_price_source_id_does_not_create_official_predictor_claim():
@@ -100,44 +134,31 @@ def test_legacy_price_source_id_does_not_create_official_predictor_claim():
         "fields": [
             "id",
             "web_name",
+            "team",
+            "element_type",
             "now_cost",
             "selected_by_percent",
             "transfers_in_event",
             "transfers_out_event",
             "price_change_percent",
+            "price_change_hourly_rate",
             "price_change_projections",
+            "price_change_locked_until",
+            "price_change_calibrating",
         ],
     }
-    upstream = {
-        "health": "GREEN",
-        "effective_state": "LIVE_CHANGED",
-        "official": {
-            "bootstrap": {
-                "elements": [
-                    {
-                        "id": 10,
-                        "web_name": "Test",
-                        "now_cost": 55,
-                        "selected_by_percent": "10.0",
-                        "transfers_in_event": 100,
-                        "transfers_out_event": 20,
-                        "price_change_percent": "60.0",
-                        "price_change_projections": [{"offset": 0, "projected_percent": "65.0"}],
-                    }
-                ]
-            }
-        },
-    }
 
-    payload = collect_price_predictor(source, upstream)
+    payload = collect_price_predictor(source, _price_upstream())
     assert payload["source_id"] == "official_price_predictor"
     assert payload["source_name"] == "V6 Derived Price Change Signal"
     assert payload["legacy_source_name"] == "Official FPL Price Predictor"
-    assert payload["semantic_class"] == "DERIVED_MARKET_SIGNAL"
+    assert payload["semantic_class"] == "UPSTREAM_MODEL_SIGNAL"
     assert payload["authority_class"] == "MODEL"
-    assert payload["predictor_official_status"] == "UNVERIFIED_NOT_OFFICIAL"
+    assert payload["model_author"] == "OFFICIAL_FPL"
+    assert payload["v6_computation"] == "NONE"
+    assert payload["predictor_official_status"] == "UNVERIFIED_NOT_OFFICIAL_PRODUCT"
     assert payload["independent_official_product_evidence"] is False
     assert payload["authority"]["current_price_facts"] == "OFFICIAL_FPL_BOOTSTRAP"
     assert payload["authority"]["official_fpl_predictor_product_verified"] is False
     assert payload["governance"]["legacy_source_identifier_is_not_authority_proof"] is True
-    assert payload["governance"]["may_be_described_as_official_fpl_predictor"] is False
+    assert payload["governance"]["may_be_described_as_official_fpl_predictor_product"] is False

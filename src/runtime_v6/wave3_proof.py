@@ -10,7 +10,8 @@ from typing import Any, Iterable
 
 NATURAL_SCHEDULE_KIND = "chatgpt_scheduler"
 NATURAL_EVENT_NAME = "issues"
-FIRST_GATE_CONSECUTIVE_SLOTS = 2
+FIRST_GATE_CONSECUTIVE_SLOTS = 6
+LEGACY_TWO_SLOT_OBSERVATION = 2
 CORE_STAGES = (
     "TRIGGERED",
     "ACQUIRED",
@@ -231,6 +232,14 @@ def evaluate_proof_window(
         else:
             break
 
+    active_two_keys = (
+        set(ordered_keys[-LEGACY_TWO_SLOT_OBSERVATION:])
+        if len(ordered_keys) >= LEGACY_TWO_SLOT_OBSERVATION
+        else set(ordered_keys)
+    )
+    duplicate_in_two = sorted(set(duplicate_publication_slots) & active_two_keys)
+    two_complete = consecutive >= LEGACY_TWO_SLOT_OBSERVATION and not duplicate_in_two
+
     active_first_gate_keys = (
         set(ordered_keys[-FIRST_GATE_CONSECUTIVE_SLOTS:])
         if len(ordered_keys) >= FIRST_GATE_CONSECUTIVE_SLOTS
@@ -256,7 +265,7 @@ def evaluate_proof_window(
                 break
 
     if not first_gate_complete:
-        phase = "2/2_IN_PROGRESS"
+        phase = "6/6_IN_PROGRESS"
     elif not rolling_48:
         phase = "48/48_IN_PROGRESS"
     else:
@@ -271,12 +280,13 @@ def evaluate_proof_window(
         "consecutive_successful_natural_slots": consecutive,
         "first_gate_target": FIRST_GATE_CONSECUTIVE_SLOTS,
         "first_gate_complete": first_gate_complete,
-        "two_of_two_complete": first_gate_complete,
+        "two_of_two_complete": two_complete,
         "six_of_six_complete": six_complete,
         "rolling_48_of_48_complete": rolling_48,
         "duplicate_logical_slots": sorted(set(duplicate_publication_slots)),
         "duplicate_publication_slots": sorted(set(duplicate_publication_slots)),
         "duplicate_evidence_slots": sorted(set(duplicate_evidence_slots)),
+        "duplicate_publication_slots_in_active_two": duplicate_in_two,
         "duplicate_publication_slots_in_active_first_gate": duplicate_in_first_gate,
         "duplicate_publication_slots_in_active_six": duplicate_in_six,
         "duplicate_publication_slots_in_rolling_48": duplicate_in_48,

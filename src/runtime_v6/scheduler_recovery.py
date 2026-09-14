@@ -27,6 +27,22 @@ def _run_time(run: Mapping[str, Any]) -> datetime | None:
     return _parse_dt(run.get("run_started_at") or run.get("created_at") or run.get("updated_at"))
 
 
+def _is_recovery_dispatch(run: Mapping[str, Any]) -> bool:
+    if str(run.get("event") or "") != "workflow_dispatch":
+        return False
+    title = " ".join(
+        str(run.get(key) or "")
+        for key in ("display_title", "name", "run_name")
+    ).lower()
+    if "report_prefetch" in title or "report prefetch" in title:
+        return False
+    if "manual_recovery" in title or "manual recovery" in title or "wave2_safe_recovery_critical" in title:
+        return True
+    # GitHub's workflow-runs API does not expose workflow_dispatch inputs. Unknown
+    # dispatches stay fail-closed so recovery cannot storm after ambiguous activity.
+    return True
+
+
 def decide_safe_recovery(
     watchdog: Mapping[str, Any] | None,
     workflow_runs: Iterable[Mapping[str, Any]],
@@ -74,7 +90,7 @@ def decide_safe_recovery(
             "blocking_run_ids": [str(row.get("id") or "") for row in active],
         }
 
-    recent_manual: list[tuple[datetime, dict[str, Any]]] = []
+    recent_recovery: list[tuple[datetime, dict[str, Any]]] = []
     recent_core: list[tuple[datetime, dict[str, Any]]] = []
     for row in runs:
         when = _run_time(row)
@@ -82,8 +98,8 @@ def decide_safe_recovery(
             continue
         age_minutes = max(0.0, (current - when).total_seconds() / 60.0)
         event = str(row.get("event") or "")
-        if event == "workflow_dispatch" and age_minutes < cooldown_minutes:
-            recent_manual.append((when, row))
+        if _is_recovery_dispatch(row) and age_minutes < cooldown_minutes:
+            recent_recovery.append((when, row))
         if event in {"issues", "issue_comment"} and age_minutes < settle_minutes:
             recent_core.append((when, row))
 
@@ -97,14 +113,14 @@ def decide_safe_recovery(
             "blocking_run_id": str(recent_core[0][1].get("id") or ""),
         }
 
-    if recent_manual:
-        recent_manual.sort(key=lambda item: item[0], reverse=True)
+    if recent_recovery:
+        recent_recovery.sort(key=lambda item: item[0], reverse=True)
         return {
             **base,
             "should_recover": False,
             "decision": "NOOP",
             "reason_code": "RECOVERY_COOLDOWN_ACTIVE",
-            "blocking_run_id": str(recent_manual[0][1].get("id") or ""),
+            "blocking_run_id": str(recent_recovery[0][1].get("id") or ""),
         }
 
     return {

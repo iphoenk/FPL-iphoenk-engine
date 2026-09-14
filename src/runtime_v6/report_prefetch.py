@@ -27,7 +27,6 @@ from .personal_prefetch import (
 from .prefetch_contract import (
     DEFAULT_CONFIG,
     DEFAULT_OUTPUT,
-    PRICE_REPORT,
     REPORT_KINDS,
     PrefetchContractError,
     artifact_meta,
@@ -143,96 +142,6 @@ class PrefetchService:
         }
         write_json(self.output_root / "health/report_prefetch.json", health)
 
-    def _noop_price_manifest(
-        self,
-        *,
-        report_kind: str,
-        slot: datetime,
-        slot_identity: str,
-        requested_by: str,
-        requested_for_report: str,
-        started: float,
-    ) -> dict[str, Any]:
-        max_age = int(self.config["prefetch_max_age_minutes"])
-        age, fresh = freshness(self.now, slot, max_age)
-        personal_reference = read_json(self.output_root / "personal/current_team.json")
-        season = str(self.config.get("season") or "UNKNOWN")
-        manifest = {
-            "schema_version": 2,
-            "request_id": str(uuid.uuid4()),
-            "requested_at": iso(self.now),
-            "requested_by": requested_by,
-            "requested_for_report": requested_for_report,
-            "report_kind": report_kind,
-            "target_logical_report_slot": slot.isoformat(),
-            "slot_identity": slot_identity,
-            "slot_key": f"{season}|GW_NOT_APPLICABLE|{report_kind}|{slot.isoformat()}",
-            "prefetch_lead_minutes": int(self.config["prefetch_lead_minutes"]),
-            "generated_at": iso(self.now),
-            "age_target_minutes": age,
-            "prefetch_max_age_minutes": max_age,
-            "fresh_for_target_report": fresh,
-            "personal_requested": False,
-            "personal_status": "NOT_REFRESHED_FOR_05_30_PRICE_CHECKPOINT",
-            "public_personal_status": "NOT_REQUESTED",
-            "auth_state": "NOT_REQUESTED",
-            "auth_action_required": False,
-            "auth_action": "NONE",
-            "authenticated_personal_required_for_public_green": False,
-            "authenticated_personal_deferred": False,
-            "personal_reference_generated_at": (personal_reference or {}).get("generated_at"),
-            "mini_league_requested": False,
-            "mini_league_status": "NOT_REQUESTED",
-            "live_requested": False,
-            "live_status": "NOT_REQUESTED",
-            "gw": None,
-            "entry_id": int(self.config["entry_id"]),
-            "priority_league_id": None,
-            "priority_league_name": None,
-            "priority_leagues": [],
-            "standings_checked_at": None,
-            "submitted_picks_cache_gw": None,
-            "submitted_picks_cache_complete": None,
-            "submitted_picks_manager_count": None,
-            "league_manager_count": None,
-            "expected_manager_count": None,
-            "collected_manager_count": None,
-            "submitted_picks_available_count": None,
-            "submitted_picks_missing_count": None,
-            "coverage_percent": None,
-            "live_checked_at": None,
-            "source_failures": [],
-            "control_failures": [],
-            "public_control_failures": [],
-            "telemetry": {
-                "request_count": 0,
-                "failed_requests": 0,
-                "cache_hits": 0,
-                "cache_misses": 0,
-                "duration_ms": round((time.perf_counter() - started) * 1000),
-                "maximum_concurrency_used": 0,
-            },
-            "artifacts": [],
-            "complete": True,
-            "strict_complete": True,
-            "public_core_complete": True,
-            "idempotency": {"reused": False},
-            "governance": {
-                "data_only": True,
-                "decision_authority": "NONE",
-                "prediction_authority": "NONE",
-                "optimizer_authority": "NONE",
-                "price_0530_personal_refresh_prohibited": True,
-                "core_source_freshness_separate": True,
-                "report_prefetch_freshness_separate": True,
-                "public_core_acceptance_is_independent_of_deferred_authenticated_personal_state": True,
-                "independent_prefetch_cron": False,
-            },
-        }
-        write_json(self.output_root / "report_prefetch/latest.json", manifest)
-        self._publish_health(manifest)
-        return manifest
-
     def run(
         self,
         *,
@@ -282,16 +191,6 @@ class PrefetchService:
             return result
 
         requested_for_report = requested_for_report or report_kind
-        if report_kind == PRICE_REPORT:
-            return self._noop_price_manifest(
-                report_kind=report_kind,
-                slot=slot,
-                slot_identity=slot_identity,
-                requested_by=requested_by,
-                requested_for_report=requested_for_report,
-                started=started,
-            )
-
         generated_at = iso(self.now)
         source_failures: list[dict[str, Any]] = []
         control_failures: list[str] = []
@@ -736,6 +635,7 @@ class PrefetchService:
                 "public_official_fpl_facts_remain_available_without_authenticated_my_team": True,
                 "authenticated_personal_state_is_separate_from_public_core_acceptance": True,
                 "normal_hourly_personal_refresh": False,
+                "price_0530_requires_mini_league_facts": report_kind == "05:30_price",
                 "independent_prefetch_cron": False,
             },
         }

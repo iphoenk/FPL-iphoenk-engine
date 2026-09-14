@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "role": "SAFE_RECOVERY_ONLY",
+  "normal_scheduler_authority": "CHATGPT_FPL_MASTER_MONITOR",
+  "trigger_watchdog_state": "CRITICAL",
+  "recovery_workflow": "v6-natural-data-ingestion.yml",
+  "recovery_mode": "manual_recovery",
+  "recovery_reason": "WAVE2_SAFE_RECOVERY_CRITICAL",
+  "recovery_confirmation": "RECOVER_V6",
+  "recovery_cooldown_minutes": 60,
+  "governed_event_settle_minutes": 20,
+  "recovery_counts_as_scheduler_proof": false,
+  "recovery_counts_as_natural_wave3_slot": false,
+  "recovery_counts_as_completed_scheduled_slot": false,
+  "may_edit_fpl_master_slot_title": false,
+  "may_publish_runtime_directly": false,
+  "may_use_v6_publisher_credentials_directly": false,
+  "github_natural_acquisition_schedule_enabled": false,
+  "notes": "Emergency continuity only. Normal hourly acquisition remains owned by ChatGPT FPL Master Monitor. The recovery guard may dispatch the existing governed manual_recovery path only after watchdog CRITICAL and duplicate/cooldown guards pass."
+}

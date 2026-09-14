@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import pytest
+
 from src.runtime_v6.report_contract import (
     REPORT_MODES,
     build_status_view,
     choose_report_source,
     map_auth_status,
+    report_delivery_status,
 )
 from src.runtime_v6.wave2_control_plane import (
     WAVE2_FAILURE_MAPPINGS,
@@ -54,6 +57,41 @@ def test_wave2_report_mode_matrix_is_complete():
         "delayed_execution",
         "corrupt_candidate",
     }
+
+
+@pytest.mark.parametrize("mode", WAVE2_REPORT_MODES)
+def test_every_wave2_report_mode_keeps_full_visible_status_contract(mode):
+    view = build_status_view(
+        observed_at="2026-09-14T12:31:00+07:00",
+        core_transport="PASS",
+        acquisition="PASS",
+        publish_integrity="PASS",
+        publish_validation="PASS",
+        new_publication="PROMOTED",
+        last_good_state="AVAILABLE",
+        last_good_generated_at="2026-09-14T12:30:30+07:00",
+        scheduler_proof_state="CURRENT",
+        scheduler_proof_at="2026-09-14T12:00:00+07:00",
+        report_prefetch="PASS" if mode != "normal_hourly" else "N/A",
+        target_report_freshness="COMPLETE" if mode != "normal_hourly" else "N/A",
+        auth="NOT REQUESTED",
+        report_delivery="PASS | FRESH V6" if mode != "normal_hourly" else "N/A",
+    )
+    assert list(view) == [
+        "CORE TRANSPORT",
+        "ACQUISITION",
+        "PUBLISH_INTEGRITY",
+        "PUBLISH VALIDATION",
+        "NEW PUBLICATION",
+        "LAST-GOOD",
+        "SCHEDULER PROOF",
+        "REPORT PREFETCH",
+        "TARGET REPORT FRESHNESS",
+        "AUTH",
+        "REPORT DELIVERY",
+    ]
+    assert view["SCHEDULER PROOF"]["scheduler_proof_at"] == "2026-09-14T12:00:00+07:00"
+    assert view["LAST-GOOD"]["generated_at"] == "2026-09-14T12:30:30+07:00"
 
 
 def test_prefetch_does_not_advance_core_scheduler_proof():
@@ -170,6 +208,15 @@ def test_provider_amber_and_stale_predictor_remain_local_not_whole_system_stale(
     assert view["TARGET REPORT FRESHNESS"]["state"].startswith("PARTIAL")
     assert view["PUBLISH VALIDATION"]["state"] == "PASS"
     assert view["REPORT DELIVERY"]["state"] == "PASS | FRESH V6"
+
+
+def test_v6_failure_does_not_cancel_due_report_when_scoped_direct_fresh_exists():
+    assert report_delivery_status(
+        due=True,
+        fresh_v6_available=False,
+        direct_fresh_available=True,
+        last_good_nonvolatile_available=True,
+    ) == "PASS | DIRECT FRESH FALLBACK"
 
 
 def test_corrupt_candidate_keeps_last_good_and_allows_due_report_direct_fresh():

@@ -220,12 +220,72 @@ jobs:
             --production-validated \
             --promotion-verified
 
+      - name: Collect prior immutable Wave 3 slot proofs
+        if: steps.promotion.outputs.countable == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/wave3-prior-proofs"
+          mkdir -p "$RUNNER_TEMP/wave3-prior-proofs"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" > "$RUNNER_TEMP/wave3-artifacts.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads((Path(os.environ["RUNNER_TEMP"]) / "wave3-artifacts.json").read_text(encoding="utf-8"))
+          rows = []
+          for artifact in payload.get("artifacts", []):
+              name = str(artifact.get("name") or "")
+              workflow_run = artifact.get("workflow_run") or {}
+              if not name.startswith("v6-wave3-slot-proof-") or artifact.get("expired"):
+                  continue
+              run_id = workflow_run.get("id")
+              if not run_id:
+                  continue
+              rows.append((str(artifact.get("created_at") or ""), int(artifact["id"]), name, int(run_id)))
+          rows.sort(reverse=True)
+          rows = rows[:64]
+          output = Path(os.environ["RUNNER_TEMP"]) / "wave3-artifact-index.txt"
+          output.write_text("".join(f"{artifact_id}|{name}|{run_id}\n" for _, artifact_id, name, run_id in rows), encoding="utf-8")
+          print({"prior_proof_artifacts": len(rows)})
+          PY
+          while IFS='|' read -r artifact_id artifact_name proof_run_id; do
+            [[ -n "$artifact_id" ]] || continue
+            target="$RUNNER_TEMP/wave3-prior-download-${artifact_id}"
+            mkdir -p "$target"
+            gh run download "$proof_run_id" --repo "$GITHUB_REPOSITORY" --name "$artifact_name" --dir "$target"
+            test -f "$target/wave3-slot-proof.json"
+            cp "$target/wave3-slot-proof.json" "$RUNNER_TEMP/wave3-prior-proofs/proof-${artifact_id}.json"
+          done < "$RUNNER_TEMP/wave3-artifact-index.txt"
+
+      - name: Evaluate rolling Wave 3 proof window
+        if: steps.promotion.outputs.countable == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m src.runtime_v6.wave3_window \
+            --proof-dir "$RUNNER_TEMP/wave3-prior-proofs" \
+            --current "$RUNNER_TEMP/wave3-slot-proof.json" \
+            --output "$RUNNER_TEMP/wave3-window-summary.json"
+
       - name: Upload Wave 3 natural slot proof
         if: steps.promotion.outputs.countable == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: v6-wave3-slot-proof-${{ steps.source.outputs.run_id }}-${{ steps.source.outputs.run_attempt }}
           path: ${{ runner.temp }}/wave3-slot-proof.json
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload Wave 3 proof-window summary
+        if: steps.promotion.outputs.countable == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-wave3-window-${{ steps.source.outputs.run_id }}-${{ steps.source.outputs.run_attempt }}
+          path: ${{ runner.temp }}/wave3-window-summary.json
           retention-days: 14
           if-no-files-found: error
 

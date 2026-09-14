@@ -69,9 +69,21 @@ def test_wave3_observer_binds_source_generation_to_exact_published_runtime_commi
     assert "--published-runtime-sha \"${{ steps.runtime.outputs.sha }}\"" in text
 
 
+def test_wave3_observer_aggregates_only_immutable_prior_slot_proof_artifacts():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert "Collect prior immutable Wave 3 slot proofs" in text
+    assert 'name.startswith("v6-wave3-slot-proof-")' in text
+    assert "rows = rows[:64]" in text
+    assert "gh run download \"$proof_run_id\"" in text
+    assert "python -m src.runtime_v6.wave3_window" in text
+    assert "--current \"$RUNNER_TEMP/wave3-slot-proof.json\"" in text
+    assert "v6-wave3-window-${{ steps.source.outputs.run_id }}-${{ steps.source.outputs.run_attempt }}" in text
+
+
 def test_wave3_observer_uploads_proof_but_never_mutates_runtime_tree():
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "Upload Wave 3 natural slot proof" in text
+    assert "Upload Wave 3 proof-window summary" in text
     assert "v6-wave3-slot-proof-${{ steps.source.outputs.run_id }}-${{ steps.source.outputs.run_attempt }}" in text
     assert "contents: write" not in text
     assert "git push" not in text

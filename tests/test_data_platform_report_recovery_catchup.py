@@ -188,3 +188,13 @@ def test_catch_up_at_exact_logical_slot_is_regular_due_work_not_a_catch_up():
     assert result["start_build"] is False
     assert result["next_action"] == "REGULAR_SLOT_DUE"
     assert result["underlying_reason"] == "DUE_REPORT"
+
+
+def test_wave8_does_not_export_guessed_v6_data_plane_state():
+    same_run = _same_run()
+    catch_up = _catch_up()
+
+    assert "v6_already_published" not in same_run
+    assert "v6_already_published" not in catch_up
+    assert same_run["v6_data_plane_mutation_allowed"] is False
+    assert catch_up["v6_data_plane_mutation_allowed"] is False

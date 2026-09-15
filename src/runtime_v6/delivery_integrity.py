@@ -37,6 +37,13 @@ FINAL_UNAVAILABLE_REASONS = frozenset(
         "GOVERNED_RETRY_EXHAUSTED",
     }
 )
+EXACT_SCOPE_RECOVERY_STEPS = (
+    "CONTINUE_SAME_V6_SCOPE",
+    "PAGINATE_OR_INCREASE_LIMIT",
+    "CHUNK_BY_ROW_PLAYER_SECTION",
+    "REASSEMBLE",
+    "VALIDATE_COMPLETENESS",
+)
 
 MANDATORY_SECTIONS = tuple(
     [f"S{index:02d}" for index in range(1, 15)]
@@ -167,6 +174,97 @@ def retrieval_decision(*, v6_scope_state: str, retrieval_state: str) -> dict[str
             "final_unavailable_allowed": True,
         }
     raise DeliveryIntegrityError(f"invalid V6 scope state: {scope}")
+
+
+def _validate_v6_scope_id(v6_scope_id: str) -> str:
+    value = str(v6_scope_id or "").strip()
+    if not value:
+        raise DeliveryIntegrityError("v6_scope_id must be non-empty")
+    return value
+
+
+def plan_exact_scope_retrieval(
+    *,
+    v6_scope_id: str,
+    v6_scope_state: str,
+    retrieval_state: str,
+) -> dict[str, Any]:
+    scope_id = _validate_v6_scope_id(v6_scope_id)
+    decision = retrieval_decision(
+        v6_scope_state=v6_scope_state,
+        retrieval_state=retrieval_state,
+    )
+    exact_scope_recovery = decision["action"] == "SAME_V6_RETRIEVAL_RECOVERY"
+    scope_lock_required = decision["action"] in {
+        "READ_V6_ONLY",
+        "SAME_V6_RETRIEVAL_RECOVERY",
+    }
+    return {
+        "v6_scope_id": scope_id,
+        "v6_scope_state": str(v6_scope_state or "").upper(),
+        "retrieval_state": str(retrieval_state or "").upper(),
+        "action": decision["action"],
+        "scope_lock_required": scope_lock_required,
+        "recovery_steps": list(EXACT_SCOPE_RECOVERY_STEPS) if exact_scope_recovery else [],
+        "direct_fresh_allowed": bool(decision["direct_fresh_allowed"]),
+        "legacy_fallback_allowed": False,
+        "final_unavailable_allowed": bool(decision["final_unavailable_allowed"]),
+    }
+
+
+def validate_retrieval_reassembly(
+    *,
+    v6_scope_id: str,
+    expected_ids: Iterable[int | str],
+    retrieved_chunks: Sequence[Sequence[int | str]],
+) -> dict[str, Any]:
+    scope_id = _validate_v6_scope_id(v6_scope_id)
+    expected = list(expected_ids)
+    if not expected:
+        raise DeliveryIntegrityError("expected_ids must define the scope completeness denominator")
+    if any(item is None for item in expected):
+        raise DeliveryIntegrityError("expected_ids cannot contain missing identity")
+    if len(set(expected)) != len(expected):
+        raise DeliveryIntegrityError("expected_ids must be unique")
+
+    reassembled: list[int | str] = []
+    for chunk in retrieved_chunks:
+        reassembled.extend(chunk)
+
+    counts = Counter(reassembled)
+    expected_set = set(expected)
+    retrieved_set = set(reassembled)
+    missing = sorted(expected_set - retrieved_set, key=str)
+    duplicates = sorted(
+        (item for item, count in counts.items() if count > 1),
+        key=str,
+    )
+    unexpected = sorted(retrieved_set - expected_set, key=str)
+    complete = bool(
+        len(reassembled) == len(expected)
+        and not missing
+        and not duplicates
+        and not unexpected
+    )
+
+    return {
+        "v6_scope_id": scope_id,
+        "status": "PASS" if complete else "INCOMPLETE",
+        "complete": complete,
+        "expected_count": len(expected),
+        "retrieved_count": len(reassembled),
+        "retrieved_unique_count": len(retrieved_set),
+        "chunk_count": len(retrieved_chunks),
+        "missing_ids": missing,
+        "duplicate_ids": duplicates,
+        "unexpected_ids": unexpected,
+        "reassembled_ids": reassembled,
+        "action": "READ_REASSEMBLED_V6_SCOPE" if complete else "SAME_V6_RETRIEVAL_RECOVERY",
+        "scope_lock_required": True,
+        "direct_fresh_allowed": False,
+        "legacy_fallback_allowed": False,
+        "final_unavailable_allowed": False,
+    }
 
 
 def direct_fresh_allowed(*, v6_scope_state: str, retrieval_state: str = "COMPLETE") -> bool:

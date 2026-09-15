@@ -21,6 +21,11 @@ STARTING_XI_SIZE = int(LINEUP_RULES.get("starting_xi_size") or 0)
 STARTING_GK_COUNT = int(LINEUP_RULES.get("starting_goalkeepers") or 0)
 BENCH_RULES = dict(LINEUP_RULES.get("bench") or {})
 EXPECTED_COUNTS = {"dss_core": 50, "dss_extensions": 16, "enhancements": 8, "gate0": 16}
+XMINS_CONTRACT_VALIDATION = read_json(CONFIG / "intelligence" / "xmins_v2.json", {}).get("contract_validation") or {}
+PROJECTION_VALIDATION = read_json(CONFIG / "intelligence" / "projection.json", {}).get("validation") or {}
+XMINS_PROBABILITY_SUM_TOLERANCE = float(XMINS_CONTRACT_VALIDATION["probability_sum_tolerance"])
+MINIMUM_PLAYER_COVERAGE_RATIO = float(PROJECTION_VALIDATION["minimum_player_coverage_ratio"])
+
 REGISTRIES = {
     "dss_core": CONFIG / "dss_core_registry.json",
     "dss_extensions": CONFIG / "dss_extension_registry.json",
@@ -74,7 +79,7 @@ def _probe_availability() -> tuple[bool, dict]:
     players = list(read_json(DATA / "universe.json", {}).get("players") or [])
     covered = sum(1 for p in players if p.get("status") is not None)
     ratio = covered / max(1, len(players))
-    return bool(players) and ratio >= 0.95, {"coverage": round(ratio, 4), "players": len(players)}
+    return bool(players) and ratio >= MINIMUM_PLAYER_COVERAGE_RATIO, {"coverage": round(ratio, 4), "players": len(players)}
 
 
 def _probe_xmins() -> tuple[bool, dict]:
@@ -87,7 +92,7 @@ def _probe_xmins() -> tuple[bool, dict]:
         for p in players:
             d = xmins_distribution(p)
             total = float(d.get("start_probability", 0)) + float(d.get("bench_probability", 0)) + float(d.get("dnp_probability", 0))
-            if abs(total - 1.0) < 0.002 and 0 <= float(d.get("expected_minutes", -1)) <= 90:
+            if abs(total - 1.0) < XMINS_PROBABILITY_SUM_TOLERANCE and 0 <= float(d.get("expected_minutes", -1)) <= 90:
                 good += 1
         return good == len(players), {"sample": len(players), "valid": good}
     except Exception as exc:

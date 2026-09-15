@@ -9,7 +9,8 @@
     "transfermarkt": "DROP_AUTOMATION_RESTRICTED",
     "whoscored": "DROP_DUPLICATE_ACCESS_RESTRICTED",
     "football_data_org": "DROP_PAID_BY_OWNER_DECISION",
-    "football_data_uk": "TEMPORARY_DISABLE_FREE_PUBLIC_PROVIDER_RUNTIME_HTTP_503_REENABLE_AFTER_STABLE_REVALIDATION"
+    "football_data_uk": "TEMPORARY_DISABLE_FREE_PUBLIC_PROVIDER_RUNTIME_HTTP_503_REENABLE_AFTER_STABLE_REVALIDATION",
+    "open_meteo": "RETIRED_CHATGPT_REPORT_TIME_WEATHER_NOT_V6_DEPENDENCY"
   },
   "reference_only_sources": {
     "onside": "WAVE_B_MODEL_SOURCE_FPL_MASTER_ONLY",
@@ -21,7 +22,7 @@
     "ffscout": "WAVE_B_C_MODEL_EDITORIAL_SOURCE_FPL_MASTER_ONLY",
     "clubelo": "FREE_PUBLIC_REFERENCE_BUT_RUNTIME_HTTPS_CONNECT_TIMEOUT_AFTER_REPAIR_RETRY",
     "solio_analytics": "WAVE_B_MODEL_SOURCE_FPL_MASTER_ONLY",
-    "check_the_chance": "WAVE_B_MARKET_MODEL_SOURCE_FPL_MASTER_ONLY",
+    "check_the_chance": "WAVE_B_MARKET_MODEL_REFERENCE_FPL_MASTER_ONLY",
     "fantasy_football_pundit": "WAVE_B_C_MODEL_EDITORIAL_SOURCE_FPL_MASTER_ONLY",
     "bbc_team_news": "WAVE_C_EDITORIAL_TARGETED_DEADLINE_REFERENCE",
     "premier_injuries": "WAVE_C_INJURY_CONTEXT_REFERENCE_NO_DATASET_REPUBLISH",
@@ -31,12 +32,10 @@
   },
   "constraints": {
     "wikidata": "NO_AUTH_PUBLIC_ONLY",
-    "open_meteo": "NO_AUTH_PUBLIC_ONLY",
     "thesportsdb_v1": "NO_AUTH_PUBLIC_ONLY"
   },
   "tiers": {
     "wikidata": "core",
-    "open_meteo": "core",
     "thesportsdb_v1": "pilot"
   }
 }

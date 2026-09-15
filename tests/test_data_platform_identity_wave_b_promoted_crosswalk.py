@@ -6,6 +6,7 @@ from src.runtime_v6.verified_crosswalks import (
 )
 
 METHOD = "REEP_V1_OPTA_PERSON_NUMERIC_TO_UNDERSTAT"
+WAVE1_METHOD = "WAVE1_OFFICIAL_FPL_CODE_TO_OBSERVED_UNDERSTAT_NATIVE_ID"
 RELEASE = "20260907T201034Z"
 BRIDGES_SHA = "a03aef520a454bdcd181b5b332b91e7b41ee57f4914e6e2c456cf49a8b86a735"
 REVIEW_REFERENCE = "github-actions:run/34762762105"
@@ -40,6 +41,9 @@ EXPECTED_CODES = {
     637238,
 }
 EXPECTED_ELEMENT_IDS = {102, 184, 207, 372, 541, 558, 583, 589, 598, 616, 617, 619, 635}
+WAVE1_NATIVE_IDS = {"8190", "12847", "13078"}
+WAVE1_CODES = {437497, 601772, 627221}
+WAVE1_ELEMENT_IDS = {599, 636, 637}
 
 
 def test_reviewed_understat_wave_b_rows_are_exact_unique_and_provenance_complete():
@@ -47,14 +51,19 @@ def test_reviewed_understat_wave_b_rows_are_exact_unique_and_provenance_complete
     source = config["sources"]["understat"]
     rows = source["players"]
     wave = [row for row in rows if row.get("verification_method") == METHOD]
+    wave1 = [row for row in rows if row.get("verification_method") == WAVE1_METHOD]
 
-    assert len(rows) == 584
-    assert len({str(row["source_native_id"]) for row in rows}) == 584
-    assert len({int(row["official_fpl_code"]) for row in rows}) == 584
+    assert len(rows) == 587
+    assert len({str(row["source_native_id"]) for row in rows}) == 587
+    assert len({int(row["official_fpl_code"]) for row in rows}) == 587
     assert len(wave) == 13
     assert {str(row["source_native_id"]) for row in wave} == EXPECTED_NATIVE_IDS
     assert {int(row["official_fpl_code"]) for row in wave} == EXPECTED_CODES
     assert {int(row["official_fpl_element_id"]) for row in wave} == EXPECTED_ELEMENT_IDS
+    assert len(wave1) == 3
+    assert {str(row["source_native_id"]) for row in wave1} == WAVE1_NATIVE_IDS
+    assert {int(row["official_fpl_code"]) for row in wave1} == WAVE1_CODES
+    assert {int(row["official_fpl_element_id"]) for row in wave1} == WAVE1_ELEMENT_IDS
 
     for row in wave:
         assert row["review_status"] == "DETERMINISTIC_BRIDGE_REVIEWED"
@@ -68,6 +77,16 @@ def test_reviewed_understat_wave_b_rows_are_exact_unique_and_provenance_complete
         ]
         assert f"reep_v1_release:{RELEASE}" in row["evidence"]
         assert f"reep_v1_bridges_sha256:{BRIDGES_SHA}" in row["evidence"]
+        assert not any("name" in item.lower() or "fuzzy" in item.lower() for item in row["evidence"])
+
+    for row in wave1:
+        assert row["review_status"] == "DETERMINISTIC_BRIDGE_REVIEWED"
+        assert row["review_reference"] == "wave1-understat-identity-2026-09-15"
+        assert row["bridge_path"] == [
+            "official_fpl.bootstrap.elements.code",
+            "understat.observed_native_player_id",
+            "official_fpl.bootstrap.elements.id",
+        ]
         assert not any("name" in item.lower() or "fuzzy" in item.lower() for item in row["evidence"])
 
     extension = source["wave_b_extension"]

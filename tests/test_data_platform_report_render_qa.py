@@ -74,6 +74,10 @@ def _post_render(pre_render=None, **overrides):
     kwargs = {
         "pre_render_qa": pre,
         "rendered_section_ids": list(pre.get("expected_section_ids", MANDATORY_SECTIONS)),
+        "rendered_section_states": {
+            row["section_id"]: row["status"]
+            for row in pre.get("section_manifest", [])
+        },
         "rendered_compute_fingerprint": pre.get("compute_fingerprint"),
         "render_contract_token": pre.get("render_contract_token"),
         "rendered_counts": dict(pre.get("expected_counts", {})),

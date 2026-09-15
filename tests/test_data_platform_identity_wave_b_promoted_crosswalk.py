@@ -11,39 +11,15 @@ RELEASE = "20260907T201034Z"
 BRIDGES_SHA = "a03aef520a454bdcd181b5b332b91e7b41ee57f4914e6e2c456cf49a8b86a735"
 REVIEW_REFERENCE = "github-actions:run/34762762105"
 EXPECTED_NATIVE_IDS = {
-    "212",
-    "1045",
-    "5680",
-    "7783",
-    "8325",
-    "8372",
-    "8379",
-    "8685",
-    "9011",
-    "11087",
-    "11772",
-    "11911",
-    "12162",
+    "212", "1045", "5680", "7783", "8325", "8372", "8379", "8685", "9011", "11087", "11772", "11911", "12162",
 }
-EXPECTED_CODES = {
-    93605,
-    168144,
-    173774,
-    204561,
-    218543,
-    242313,
-    243016,
-    469266,
-    490884,
-    498444,
-    508395,
-    551050,
-    637238,
-}
+EXPECTED_CODES = {93605, 168144, 173774, 204561, 218543, 242313, 243016, 469266, 490884, 498444, 508395, 551050, 637238}
 EXPECTED_ELEMENT_IDS = {102, 184, 207, 372, 541, 558, 583, 589, 598, 616, 617, 619, 635}
-WAVE1_NATIVE_IDS = {"8190", "12847", "13078"}
-WAVE1_CODES = {437497, 601772, 627221}
-WAVE1_ELEMENT_IDS = {599, 636, 637}
+WAVE1_EXPECTED = {
+    "8190": (437497, 637, "wave1-understat-identity-2026-09-15"),
+    "12847": (627221, 599, "wave1-understat-identity-2026-09-15"),
+    "13078": (592984, 639, "wave1-understat-identity-chema-correction-2026-09-15"),
+}
 
 
 def test_reviewed_understat_wave_b_rows_are_exact_unique_and_provenance_complete():
@@ -61,9 +37,7 @@ def test_reviewed_understat_wave_b_rows_are_exact_unique_and_provenance_complete
     assert {int(row["official_fpl_code"]) for row in wave} == EXPECTED_CODES
     assert {int(row["official_fpl_element_id"]) for row in wave} == EXPECTED_ELEMENT_IDS
     assert len(wave1) == 3
-    assert {str(row["source_native_id"]) for row in wave1} == WAVE1_NATIVE_IDS
-    assert {int(row["official_fpl_code"]) for row in wave1} == WAVE1_CODES
-    assert {int(row["official_fpl_element_id"]) for row in wave1} == WAVE1_ELEMENT_IDS
+    assert {str(row["source_native_id"]) for row in wave1} == set(WAVE1_EXPECTED)
 
     for row in wave:
         assert row["review_status"] == "DETERMINISTIC_BRIDGE_REVIEWED"
@@ -80,8 +54,12 @@ def test_reviewed_understat_wave_b_rows_are_exact_unique_and_provenance_complete
         assert not any("name" in item.lower() or "fuzzy" in item.lower() for item in row["evidence"])
 
     for row in wave1:
+        native_id = str(row["source_native_id"])
+        expected_code, expected_element, expected_review = WAVE1_EXPECTED[native_id]
+        assert int(row["official_fpl_code"]) == expected_code
+        assert int(row["official_fpl_element_id"]) == expected_element
         assert row["review_status"] == "DETERMINISTIC_BRIDGE_REVIEWED"
-        assert row["review_reference"] == "wave1-understat-identity-2026-09-15"
+        assert row["review_reference"] == expected_review
         assert row["bridge_path"] == [
             "official_fpl.bootstrap.elements.code",
             "understat.observed_native_player_id",
@@ -110,12 +88,7 @@ def test_promoted_row_keeps_row_level_reep_v1_provenance_at_runtime():
         },
         "coverage": {},
     }
-    results = {
-        "understat": {
-            "health": "GREEN",
-            "effective_state": "LIVE_CHANGED",
-        }
-    }
+    results = {"understat": {"health": "GREEN", "effective_state": "LIVE_CHANGED"}}
 
     enriched = enrich_verified_external_crosswalks(identity_map, results)
     link = enriched["mappings"]["372"]["links"]["understat"]

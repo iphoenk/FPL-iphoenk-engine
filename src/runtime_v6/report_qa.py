@@ -298,7 +298,32 @@ def validate_post_render_qa(
         key=_section_sort_key,
     )
 
+    expected_compute_fingerprint = str(pre_render_qa.get("compute_fingerprint") or "")
+    expected_counts = dict(pre_render_qa.get("expected_counts", {}))
+    expected_fact_keys = sorted(str(key) for key in pre_render_qa.get("expected_fact_keys", []))
+    expected_model_keys = sorted(str(key) for key in pre_render_qa.get("expected_model_keys", []))
+    canonical_pre_manifest = [
+        {
+            "section_id": str(row.get("section_id") or "").strip().upper(),
+            "status": str(row.get("status") or "").strip().upper(),
+        }
+        for row in pre_render_qa.get("section_manifest", [])
+    ]
+    recomputed_pre_token = _render_contract_token(
+        compute_fingerprint=expected_compute_fingerprint,
+        canonical_manifest=canonical_pre_manifest,
+        mini_league_denominator_complete=bool(
+            pre_render_qa.get("mini_league_denominator_complete")
+        ),
+        expected_counts=expected_counts,
+        expected_fact_keys=expected_fact_keys,
+        expected_model_keys=expected_model_keys,
+    )
+    stored_pre_token = pre_render_qa.get("render_contract_token")
+
     failures: list[str] = []
+    if stored_pre_token != recomputed_pre_token:
+        failures.append("PRE_RENDER_CONTRACT_TOKEN_INVALID")
     if truncated:
         failures.append("RENDER_TRUNCATED")
     if missing_sections:
@@ -322,21 +347,16 @@ def validate_post_render_qa(
             f"SECTION_STATUS_UNEXPECTED={','.join(unexpected_state_sections)}"
         )
 
-    expected_compute_fingerprint = str(pre_render_qa.get("compute_fingerprint") or "")
     if rendered_compute_fingerprint != expected_compute_fingerprint:
         failures.append("COMPUTE_FINGERPRINT_MISMATCH")
-    expected_token = pre_render_qa.get("render_contract_token")
-    if render_contract_token != expected_token:
+    if render_contract_token != recomputed_pre_token:
         failures.append("RENDER_CONTRACT_TOKEN_MISMATCH")
 
-    expected_counts = dict(pre_render_qa.get("expected_counts", {}))
     for label, target in expected_counts.items():
         actual = rendered_counts.get(label)
         if actual != target:
             failures.append(f"COUNT_MISMATCH={label}:{actual}!={target}")
 
-    expected_fact_keys = sorted(str(key) for key in pre_render_qa.get("expected_fact_keys", []))
-    expected_model_keys = sorted(str(key) for key in pre_render_qa.get("expected_model_keys", []))
     actual_fact_keys = sorted(str(key) for key in rendered_fact_keys)
     actual_model_keys = sorted(str(key) for key in rendered_model_keys)
     if set(actual_fact_keys) & set(actual_model_keys):
@@ -360,7 +380,7 @@ def validate_post_render_qa(
         "legacy_fallback_allowed": False,
         "failures": failures,
         "compute_fingerprint": expected_compute_fingerprint,
-        "render_contract_token": expected_token,
+        "render_contract_token": recomputed_pre_token,
         "expected_section_ids": expected_sections,
         "rendered_section_ids": rendered_sections,
         "expected_section_states": expected_section_states,

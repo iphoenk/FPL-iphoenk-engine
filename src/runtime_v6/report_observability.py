@@ -155,14 +155,20 @@ def _delivery_view(
         or evidence.get("report_slot_id")
         or ""
     ).strip()
+    evidence_status = _upper(evidence.get("status"))
     same_slot_receipt = bool(
-        evidence.get("status") == "PASS"
+        evidence_status == "PASS"
         and evidence.get("delivery_proof_valid") is True
         and evidence.get("report_delivered") is True
         and evidence.get("report_state") == "DELIVERED"
         and delivered_slot == report_slot_id
     )
-    status = "DELIVERED" if same_slot_receipt else "FAIL"
+    if same_slot_receipt:
+        status = "DELIVERED"
+    elif evidence_status == "BLOCKED":
+        status = "BLOCKED"
+    else:
+        status = "FAIL"
     return {
         **_base_stage(status=status, observed_at=observed_at),
         "same_slot_receipt": same_slot_receipt,
@@ -234,12 +240,14 @@ def _report_plane_status(
         return "DELIVERED"
     if recovery.get("active") is True:
         return "RECOVERY_REQUIRED"
-    if delivery.get("status") == "FAIL":
-        return "DELIVERY_FAILED"
     if post_render_qa.get("status") in {"FAIL", "BLOCKED"}:
         return "QA_FAILED"
     if pre_render_qa.get("status") in {"FAIL", "BLOCKED"}:
         return "QA_FAILED"
+    if delivery.get("status") == "FAIL":
+        return "DELIVERY_FAILED"
+    if delivery.get("status") == "BLOCKED":
+        return "DELIVERY_BLOCKED"
     if compute.get("status") == "FAIL":
         return "COMPUTE_FAILED"
     if compute.get("status") == "BLOCKED":

@@ -12,6 +12,8 @@ from hashlib import sha256
 import json
 from typing import Any, Mapping
 
+from .delivery_integrity import build_report_slot_id
+
 
 _ACKNOWLEDGED = "ACKNOWLEDGED"
 
@@ -56,6 +58,14 @@ def _logical_slot_time(report_slot_id: str) -> datetime | None:
     if parsed is None or parsed.second != 0 or parsed.microsecond != 0:
         return None
     return parsed
+
+
+def _canonical_report_slot_id(report_slot_id: str, logical_slot: datetime) -> str:
+    _, report_type = report_slot_id.rsplit("|", 1)
+    return build_report_slot_id(
+        logical_slot=logical_slot.isoformat(),
+        report_type=report_type,
+    )
 
 
 def _canonical_timestamp(value: datetime) -> str:
@@ -137,6 +147,8 @@ def build_delivery_proof(
         failures.append("DELIVERED_AT_INVALID")
     if logical_slot is None:
         failures.append("REPORT_SLOT_ID_INVALID")
+    elif slot_id != _canonical_report_slot_id(slot_id, logical_slot):
+        failures.append("REPORT_SLOT_ID_NONCANONICAL")
     if delivered is not None and logical_slot is not None and delivered < logical_slot:
         failures.append("DELIVERY_BEFORE_LOGICAL_SLOT")
 

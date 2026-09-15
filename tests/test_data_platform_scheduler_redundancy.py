@@ -125,6 +125,8 @@ def test_workflow_hydration_is_fail_closed_and_fulfillment_is_explicit():
     assert "refusing empty-tree acquisition" in workflow
     assert "starting clean" not in workflow
     assert "orchestration-fulfillment:" in workflow
-    assert "IDEMPOTENT_NOOP_ALREADY_PUBLISHED" in workflow
+    assert "DATA_SLOT_ALREADY_PUBLISHED_REPORT_CONTINUES" in workflow
+    assert "IDEMPOTENT_NOOP_ALREADY_PUBLISHED" not in workflow
+    assert "continue_report_pipeline=$CONTINUE_REPORT_PIPELINE" in workflow
     assert "SNAPSHOT_PUBLISHED_VALIDATED" in workflow
     assert "ACQUISITION_COMPLETE_PUBLICATION_NOT_VALIDATED" in workflow

@@ -284,6 +284,18 @@ def test_post_render_rejects_section_status_drift_from_pre_render_contract():
     assert result["delivery_ready"] is False
 
 
+def test_post_render_rejects_tampered_pre_render_contract_payload():
+    pre = _pre_render()
+    pre["expected_counts"] = dict(pre["expected_counts"])
+    pre["expected_counts"]["WATCHLIST20"] = 19
+
+    result = _post_render(pre, rendered_counts=dict(pre["expected_counts"]))
+
+    assert result["status"] == "FAIL"
+    assert "PRE_RENDER_CONTRACT_TOKEN_INVALID" in result["failures"]
+    assert result["delivery_ready"] is False
+
+
 def test_post_render_cannot_bypass_failed_pre_render_gate():
     failed_pre = _pre_render(section_manifest=_section_manifest()[1:])
 

@@ -48,7 +48,7 @@ def test_dropped_and_reference_only_sources_never_enter_active_source_map():
     assert "clubelo" in registry.REFERENCE_ONLY_SOURCE_IDS
 
 
-def test_free_source_expansion_routes_models_out_and_keeps_factual_tiers_active():
+def test_free_source_expansion_routes_models_out_and_retires_weather_from_v6():
     cfg = registry.load_registry()
     sources = registry.source_map(cfg)
     reference_only = set(registry.REFERENCE_ONLY_SOURCE_IDS)
@@ -64,7 +64,8 @@ def test_free_source_expansion_routes_models_out_and_keeps_factual_tiers_active(
         assert source_id not in sources
 
     assert sources["wikidata"]["source_tier"] == "core"
-    assert sources["open_meteo"]["source_tier"] == "core"
+    assert "open_meteo" in registry.DROPPED_SOURCE_IDS
+    assert "open_meteo" not in sources
     assert sources["thesportsdb_v1"]["source_tier"] == "pilot"
     assert "open_meteo_weather" not in sources
     assert not Path("src/runtime_v6/weather.py").exists()
@@ -235,7 +236,7 @@ def test_price_predictor_inherits_cached_official_degradation():
                         "price_change_projections": [],
                     }
                 ]
-            }
+            },
         },
     }
     result = adapters.collect_price_predictor(source, official)

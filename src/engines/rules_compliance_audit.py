@@ -35,6 +35,7 @@ EXPECTED_SECTIONS = (
     "bonus_bps",
 )
 REMOTE_DRIFT_STALE_AFTER_HOURS = 36.0
+REMOTE_REFRESH_DUE_STATES = frozenset({"NOT_RUN", "STALE"})
 
 
 def _status(ok: bool) -> str:
@@ -113,8 +114,8 @@ def _semantic_checks() -> dict[str, dict[str, Any]]:
 
 
 def _source_text_fingerprint(html: str) -> str:
-    # Deliberately conservative normalisation. Remote checks are scheduled
-    # separately because editorial page changes can be unrelated to FPL rules.
+    # Deliberately conservative normalisation. Editorial/page-shell changes may
+    # trigger review, but can never auto-mutate the governed rules registry.
     text = re.sub(r"(?is)<script.*?</script>|<style.*?</style>", " ", html)
     text = re.sub(r"(?s)<[^>]+>", " ", text)
     text = re.sub(r"\s+", " ", text).strip().lower()
@@ -133,15 +134,31 @@ def _age_hours(iso_value: str | None) -> float | None:
         return None
 
 
+def _changed_source_evidence(sources: dict[str, Any], changed_sources: list[str]) -> dict[str, dict[str, Any]]:
+    evidence: dict[str, dict[str, Any]] = {}
+    for key in changed_sources:
+        row = sources.get(key) or {}
+        evidence[key] = {
+            "url": row.get("url"),
+            "http_status": row.get("http_status"),
+            "previous_fingerprint_sha256": row.get("previous_fingerprint_sha256"),
+            "current_fingerprint_sha256": row.get("fingerprint_sha256"),
+        }
+    return evidence
+
+
 def _cached_remote_drift_state() -> dict[str, Any]:
     prior = read_json(SOURCE_STATE, {})
     prior_sources = prior.get("sources") or {}
     if not prior_sources:
         return {
             "status": "NOT_RUN",
-            "policy": "scheduled remote check has not produced a persisted baseline yet; rules are never auto-mutated",
+            "policy": "governed remote baseline has not been persisted yet; rules are never auto-mutated",
             "cached": False,
             "auto_mutation": False,
+            "changed_sources": [],
+            "failed_sources": [],
+            "changed_source_evidence": {},
         }
 
     changes = list(prior.get("changed_sources") or [key for key, row in prior_sources.items() if (row or {}).get("changed")])
@@ -161,6 +178,7 @@ def _cached_remote_drift_state() -> dict[str, Any]:
         "cached": True,
         "changed_sources": changes,
         "failed_sources": failures,
+        "changed_source_evidence": _changed_source_evidence(prior_sources, changes),
         "auto_mutation": False,
     }
 
@@ -212,6 +230,7 @@ def remote_drift_check() -> dict[str, Any]:
         "cached": False,
         "changed_sources": changes,
         "failed_sources": failures,
+        "changed_source_evidence": _changed_source_evidence(current, changes),
         "auto_mutation": False,
     }
 
@@ -263,7 +282,7 @@ def audit(check_remote: bool = False) -> dict[str, Any]:
             "consumers_must_load_registry": True,
             "remote_change_never_auto_mutates_rules": True,
             "registry_integrity_failure_blocks_go": True,
-            "remote_drift_check_is_scheduled_not_hourly": True,
+            "remote_drift_refresh_is_freshness_driven": True,
             "persisted_remote_drift_state_is_reused_between_checks": True,
         },
     }
@@ -275,17 +294,89 @@ def audit(check_remote: bool = False) -> dict[str, Any]:
         "sections_pass": sum(1 for x in sections.values() if x.get("status") == "PASS"),
         "semantic_pass": sum(1 for x in semantic.values() if x.get("status") == "PASS"),
         "drift": drift.get("status"),
+        "changed_sources": drift.get("changed_sources") or [],
+        "failed_sources": drift.get("failed_sources") or [],
     }, ensure_ascii=False))
     if overall == "FAIL":
         raise SystemExit(2)
     return out
 
 
+def refresh_if_due() -> dict[str, Any]:
+    """Canonical rules capability freshness gate.
+
+    Thresholds, fingerprints and mutation policy remain owned by this auditor.
+    A remote request is made only when the persisted evidence is stale/missing.
+    REVIEW_REQUIRED is never auto-cleared and is surfaced with exact source and
+    fingerprint evidence so a human review can be specific and reproducible.
+    """
+    cached = audit(check_remote=False)
+    cached_drift = cached.get("drift") or {}
+    before = str(cached_drift.get("status") or "NOT_RUN")
+
+    if before == "REVIEW_REQUIRED":
+        return {
+            "status": "MANUAL_REVIEW_REQUIRED",
+            "remote_check_executed": False,
+            "drift_before": before,
+            "drift_after": before,
+            "rules_overall": cached.get("overall"),
+            "changed_sources": cached_drift.get("changed_sources") or [],
+            "failed_sources": cached_drift.get("failed_sources") or [],
+            "changed_source_evidence": cached_drift.get("changed_source_evidence") or {},
+        }
+
+    if before not in REMOTE_REFRESH_DUE_STATES:
+        return {
+            "status": "FRESH",
+            "remote_check_executed": False,
+            "drift_before": before,
+            "drift_after": before,
+            "rules_overall": cached.get("overall"),
+            "changed_sources": cached_drift.get("changed_sources") or [],
+            "failed_sources": cached_drift.get("failed_sources") or [],
+            "changed_source_evidence": cached_drift.get("changed_source_evidence") or {},
+        }
+
+    refreshed = audit(check_remote=True)
+    refreshed_drift = refreshed.get("drift") or {}
+    after = str(refreshed_drift.get("status") or "UNKNOWN")
+    status = "MANUAL_REVIEW_REQUIRED" if after == "REVIEW_REQUIRED" else "REFRESHED"
+    return {
+        "status": status,
+        "remote_check_executed": True,
+        "drift_before": before,
+        "drift_after": after,
+        "rules_overall": refreshed.get("overall"),
+        "changed_sources": refreshed_drift.get("changed_sources") or [],
+        "failed_sources": refreshed_drift.get("failed_sources") or [],
+        "changed_source_evidence": refreshed_drift.get("changed_source_evidence") or {},
+    }
+
+
 def run() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--check-remote", action="store_true", default=os.getenv("FPL_RULES_REMOTE_CHECK", "").lower() in {"1", "true", "yes"})
+    ap.add_argument("--cached-only", action="store_true", help="Read persisted rules drift state without a freshness-triggered remote check")
     args = ap.parse_args()
-    audit(check_remote=args.check_remote)
+    if args.check_remote and args.cached_only:
+        raise SystemExit("--check-remote and --cached-only are mutually exclusive")
+
+    if args.check_remote:
+        result = audit(check_remote=True)
+        if result.get("overall") == "REVIEW_REQUIRED":
+            raise SystemExit(3)
+        return
+    if args.cached_only:
+        result = audit(check_remote=False)
+        if result.get("overall") == "REVIEW_REQUIRED":
+            raise SystemExit(3)
+        return
+
+    result = refresh_if_due()
+    print("V3_RULES_REFRESH=" + json.dumps(result, ensure_ascii=False, separators=(",", ":")))
+    if result.get("status") == "MANUAL_REVIEW_REQUIRED":
+        raise SystemExit(3)
 
 
 if __name__ == "__main__":

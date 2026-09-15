@@ -7,6 +7,7 @@ from src.runtime_v6.wave3_proof import NATURAL_EVENT_NAME, NATURAL_SCHEDULE_KIND
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "v6-core-recovery-guard.yml"
+INGESTION_WORKFLOW = ROOT / ".github" / "workflows" / "v6-natural-data-ingestion.yml"
 CONFIG = ROOT / "config" / "v6" / "scheduler_recovery.json"
 SCHEDULE_POLICY = ROOT / "config" / "v6" / "schedule_policy.json"
 
@@ -47,10 +48,74 @@ def test_active_ingestion_blocks_recovery():
     assert result["reason_code"] == "INGESTION_ALREADY_ACTIVE"
 
 
-def test_recent_manual_dispatch_is_a_cooldown_blocker():
+def test_recent_recovery_dispatch_is_a_cooldown_blocker():
     result = decide_safe_recovery(
         _critical(),
-        [{"id": 124, "status": "completed", "event": "workflow_dispatch", "created_at": "2026-09-14T14:20:00Z"}],
+        [{
+            "id": 124,
+            "status": "completed",
+            "event": "workflow_dispatch",
+            "display_title": "V6 manual_recovery WAVE2_SAFE_RECOVERY_CRITICAL",
+            "created_at": "2026-09-14T14:20:00Z",
+        }],
+        now=NOW,
+    )
+    assert result["should_recover"] is False
+    assert result["reason_code"] == "RECOVERY_COOLDOWN_ACTIVE"
+
+
+def test_recovery_mode_prefix_wins_over_reason_text():
+    result = decide_safe_recovery(
+        _critical(),
+        [{
+            "id": 128,
+            "status": "completed",
+            "event": "workflow_dispatch",
+            "display_title": "V6 manual_recovery repair-report_prefetch-path",
+            "created_at": "2026-09-14T14:20:00Z",
+        }],
+        now=NOW,
+    )
+    assert result["should_recover"] is False
+    assert result["reason_code"] == "RECOVERY_COOLDOWN_ACTIVE"
+
+
+def test_recent_report_prefetch_dispatch_does_not_consume_recovery_cooldown():
+    result = decide_safe_recovery(
+        _critical(),
+        [{
+            "id": 126,
+            "status": "completed",
+            "event": "workflow_dispatch",
+            "display_title": "V6 report_prefetch full_master",
+            "created_at": "2026-09-14T14:20:00Z",
+        }],
+        now=NOW,
+    )
+    assert result["should_recover"] is True
+    assert result["reason_code"] == "CRITICAL_WITH_NO_ACTIVE_OR_RECENT_RECOVERY"
+
+
+def test_report_prefetch_mode_prefix_wins_over_reason_text():
+    result = decide_safe_recovery(
+        _critical(),
+        [{
+            "id": 129,
+            "status": "completed",
+            "event": "workflow_dispatch",
+            "display_title": "V6 report_prefetch manual_recovery-analysis",
+            "created_at": "2026-09-14T14:20:00Z",
+        }],
+        now=NOW,
+    )
+    assert result["should_recover"] is True
+    assert result["reason_code"] == "CRITICAL_WITH_NO_ACTIVE_OR_RECENT_RECOVERY"
+
+
+def test_unknown_workflow_dispatch_remains_fail_closed_for_cooldown():
+    result = decide_safe_recovery(
+        _critical(),
+        [{"id": 127, "status": "completed", "event": "workflow_dispatch", "created_at": "2026-09-14T14:20:00Z"}],
         now=NOW,
     )
     assert result["should_recover"] is False
@@ -65,6 +130,14 @@ def test_recent_governed_core_event_gets_settle_window_before_recovery():
     )
     assert result["should_recover"] is False
     assert result["reason_code"] == "RECENT_GOVERNED_CORE_EVENT_SETTLING"
+
+
+def test_workflow_dispatch_run_name_exposes_mode_without_changing_issue_title_proof():
+    text = INGESTION_WORKFLOW.read_text(encoding="utf-8")
+    assert "run-name:" in text
+    assert "inputs.mode" in text
+    assert "inputs.reason" in text
+    assert "github.event.issue.title" in text
 
 
 def test_recovery_workflow_is_dispatch_only_not_a_second_natural_scheduler():

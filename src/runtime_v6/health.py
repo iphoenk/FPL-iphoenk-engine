@@ -220,6 +220,34 @@ def _readiness(dimensions: dict[str, str]) -> dict[str, str]:
     }
 
 
+def _consumer_readiness_summary(sources: list[dict[str, Any]]) -> dict[str, str]:
+    if not sources:
+        return {
+            "source_native_readiness_overall": "GREEN",
+            "join_readiness_overall": "GREEN",
+            "consumer_readiness_overall": "GREEN",
+        }
+    source_native = _worst_state(
+        [
+            _worst_state(
+                [
+                    str((row.get("readiness") or {}).get("operational") or "AMBER"),
+                    str((row.get("readiness") or {}).get("data") or "AMBER"),
+                ]
+            )
+            for row in sources
+        ]
+    )
+    join = _worst_state(
+        [str((row.get("readiness") or {}).get("join") or "NOT_APPLICABLE") for row in sources]
+    )
+    return {
+        "source_native_readiness_overall": source_native,
+        "join_readiness_overall": join,
+        "consumer_readiness_overall": source_native,
+    }
+
+
 def _fallback_reason(dimensions: dict[str, str], payload: dict[str, Any]) -> str | None:
     if dimensions["transport_health"] != "GREEN" or payload.get("availability") == "UNAVAILABLE":
         return "TRANSPORT_UNAVAILABLE"
@@ -339,15 +367,13 @@ def build_source_health(
 
     overall = "RED" if counts.get("RED", 0) else ("AMBER" if counts.get("AMBER", 0) else "GREEN")
     public_core_status = _worst_state(critical_readiness) if critical_readiness else "GREEN"
-    consumer_readiness_overall = _worst_state(
-        [str(row["consumer_readiness"]) for row in sources]
-    ) if sources else "GREEN"
+    readiness_summary = _consumer_readiness_summary(sources)
     return {
         "schema_version": 5,
         "generated_at": utc_now(),
         "overall": overall,
         "public_core_status": public_core_status,
-        "consumer_readiness_overall": consumer_readiness_overall,
+        **readiness_summary,
         "fallback_recommended": bool(fallback_sources),
         "fallback_sources": fallback_sources,
         "counts": counts,
@@ -358,7 +384,9 @@ def build_source_health(
         "semantics": {
             "health": "Backward-compatible operational acquisition health; inspect readiness and dimensions for consumer usability.",
             "public_core_status": "Critical public V6 data-plane readiness only; authenticated personal state is a separate report-prefetch concern.",
-            "consumer_readiness_overall": "Worst operational/data readiness across all active public sources; identity is intentionally reported separately.",
+            "source_native_readiness_overall": "Worst operational/data readiness across all active public sources; deterministic join readiness is intentionally separate.",
+            "join_readiness_overall": "Worst deterministic identity/join readiness across active public sources; it does not block source-native factual readiness.",
+            "consumer_readiness_overall": "Backward-compatible alias of source_native_readiness_overall.",
             "fallback_recommended": "Machine-readable hint for FPL Master/report layer to refresh only degraded, stale, or unusable public resources directly. V6 itself never performs downstream fallback.",
             "transport_health": "Whether the current network/source acquisition attempt succeeded independently of cache freshness.",
             "freshness_health": "Age of the effective payload against the source-specific freshness target.",

@@ -5,8 +5,8 @@
 | Metric | Count |
 |---|---:|
 | Configured source definitions | 38 |
-| Active scheduled sources | 14 |
-| Disabled sources | 8 |
+| Active scheduled sources | 13 |
+| Disabled sources | 9 |
 | Reference-only sources | 16 |
 | Required active sources | 2 |
 | Temporary source overrides | 0 |
@@ -25,7 +25,6 @@
 - `espn`
 - `vaastav_fpl`
 - `wikidata`
-- `open_meteo`
 - `thesportsdb_v1`
 
 ## Disabled sources
@@ -38,6 +37,7 @@
 - `whoscored`: DROP_DUPLICATE_ACCESS_RESTRICTED
 - `football_data_org`: DROP_PAID_BY_OWNER_DECISION
 - `football_data_uk`: TEMPORARY_DISABLE_FREE_PUBLIC_PROVIDER_RUNTIME_HTTP_503_REENABLE_AFTER_STABLE_REVALIDATION
+- `open_meteo`: RETIRED_CHATGPT_REPORT_TIME_WEATHER_NOT_V6_DEPENDENCY
 
 ## Reference-only sources
 

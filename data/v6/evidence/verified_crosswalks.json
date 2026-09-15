@@ -1,0 +1,213 @@
+{
+  "schema_version": 2,
+  "canonical": true,
+  "semantic_class": "IDENTITY_CROSSWALK",
+  "authority": "V6_DETERMINISTIC_IDENTITY",
+  "generated_at": "2026-09-15T23:29:54.216511+00:00",
+  "effective_at": "2026-09-15T23:29:54.216514+00:00",
+  "normalization_version": "V6_VERIFIED_CROSSWALK_2",
+  "canonical_authority": "official_fpl",
+  "fuzzy_matching_allowed": false,
+  "record_count": 1921,
+  "primary_keys": [
+    "source_id",
+    "source_native_id"
+  ],
+  "sources": {
+    "fotmob": {
+      "verification_status": "VERIFIED_MANUAL",
+      "verification_method": "SOURCE_NATIVE_ID_TO_OFFICIAL_FPL_ID_CROSSWALK",
+      "player_verification_method": "REEP_V0_PINNED_OPTA_NUMERIC_TO_PROVIDER_ID",
+      "verified_at": "2026-09-06T15:25:38+00:00",
+      "evidence": [
+        "git_blob_sha256_contract:dc4441b1f94f05c36b807ed23f3a2b7dede5878d",
+        "github:withqwerty/reep@0ec59faa5d81615b7a8200ae6121023a3bc14ce3:data/people.csv",
+        "official_fpl:bootstrap.elements.code",
+        "reep_v0_release:2026.25",
+        "runtime-data-v6:data/v6/current/fotmob.json",
+        "runtime-data-v6:data/v6/normalized/canonical_teams.json"
+      ],
+      "configured_team_mapping_count": 20,
+      "configured_player_mapping_count": 352,
+      "current_team_identity_coverage": {
+        "strategy": "VERIFIED_MANUAL_SOURCE_NATIVE_TEAM_CROSSWALK",
+        "deterministic_bridge": true,
+        "identity_health": "GREEN",
+        "mapped_status": "VERIFIED_MANUAL",
+        "mapped_team_count": 20,
+        "canonical_team_count": 20,
+        "coverage_ratio": 1.0,
+        "unmapped_team_count": 0,
+        "configured_mapping_count": 20,
+        "observed_native_team_count": 20,
+        "join_allowed": true,
+        "applicable": true
+      },
+      "current_player_identity_coverage": {
+        "strategy": "REEP_V0_PINNED_OPTA_NUMERIC_TO_PROVIDER_ID",
+        "deterministic_bridge": true,
+        "identity_health": "AMBER",
+        "mapped_status": "VERIFIED_MANUAL",
+        "mapped_player_count": 352,
+        "canonical_player_count": 659,
+        "coverage_ratio": 0.534143,
+        "unmapped_player_count": 307,
+        "join_allowed": true,
+        "name_matching_used": false,
+        "configured_mapping_count": 352,
+        "canonical_anchor": "official_fpl.bootstrap.elements.code",
+        "duplicate_canonical_code_count": 0,
+        "conflicting_existing_link_count": 0,
+        "fail_closed_on_conflict": true,
+        "applicable": true
+      },
+      "current_source_health": "GREEN",
+      "current_source_effective_state": "LIVE_UNCHANGED"
+    },
+    "statmuse": {
+      "verification_status": "VERIFIED_MANUAL",
+      "verification_method": null,
+      "player_verification_method": "REEP_V0_PINNED_OPTA_NUMERIC_TO_PROVIDER_ID",
+      "verified_at": null,
+      "evidence": [
+        "git_blob_sha256_contract:dc4441b1f94f05c36b807ed23f3a2b7dede5878d",
+        "github:withqwerty/reep@0ec59faa5d81615b7a8200ae6121023a3bc14ce3:data/people.csv",
+        "official_fpl:bootstrap.elements.code",
+        "reep_v0_release:2026.25"
+      ],
+      "configured_team_mapping_count": 0,
+      "configured_player_mapping_count": 303,
+      "current_team_identity_coverage": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "identity_health": "RED",
+        "mapped_status": "UNMAPPED",
+        "mapped_team_count": 0,
+        "canonical_team_count": 20,
+        "coverage_ratio": 0.0,
+        "unmapped_team_count": 20,
+        "join_allowed": false,
+        "applicable": true
+      },
+      "current_player_identity_coverage": {
+        "strategy": "REEP_V0_PINNED_OPTA_NUMERIC_TO_PROVIDER_ID",
+        "deterministic_bridge": true,
+        "identity_health": "AMBER",
+        "mapped_status": "VERIFIED_MANUAL",
+        "mapped_player_count": 303,
+        "canonical_player_count": 659,
+        "coverage_ratio": 0.459788,
+        "unmapped_player_count": 356,
+        "join_allowed": true,
+        "name_matching_used": false,
+        "configured_mapping_count": 303,
+        "canonical_anchor": "official_fpl.bootstrap.elements.code",
+        "duplicate_canonical_code_count": 0,
+        "conflicting_existing_link_count": 0,
+        "fail_closed_on_conflict": true,
+        "applicable": true
+      },
+      "current_source_health": "GREEN",
+      "current_source_effective_state": "LIVE_CHANGED"
+    },
+    "understat": {
+      "verification_status": "VERIFIED_MANUAL",
+      "verification_method": null,
+      "player_verification_method": "REEP_V0_PINNED_OPTA_NUMERIC_TO_PROVIDER_ID",
+      "verified_at": null,
+      "evidence": [
+        "git_blob_sha256_contract:dc4441b1f94f05c36b807ed23f3a2b7dede5878d",
+        "github:withqwerty/reep@0ec59faa5d81615b7a8200ae6121023a3bc14ce3:data/people.csv",
+        "official_fpl:bootstrap.elements.code",
+        "reep_v0_release:2026.25"
+      ],
+      "configured_team_mapping_count": 0,
+      "configured_player_mapping_count": 587,
+      "current_team_identity_coverage": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "identity_health": "RED",
+        "mapped_status": "UNMAPPED",
+        "mapped_team_count": 0,
+        "canonical_team_count": 20,
+        "coverage_ratio": 0.0,
+        "unmapped_team_count": 20,
+        "join_allowed": false,
+        "applicable": true
+      },
+      "current_player_identity_coverage": {
+        "strategy": "REEP_V0_PINNED_OPTA_NUMERIC_TO_PROVIDER_ID",
+        "deterministic_bridge": true,
+        "identity_health": "AMBER",
+        "mapped_status": "VERIFIED_MANUAL",
+        "mapped_player_count": 587,
+        "canonical_player_count": 659,
+        "coverage_ratio": 0.890744,
+        "unmapped_player_count": 72,
+        "join_allowed": true,
+        "name_matching_used": false,
+        "configured_mapping_count": 587,
+        "canonical_anchor": "official_fpl.bootstrap.elements.code",
+        "duplicate_canonical_code_count": 0,
+        "conflicting_existing_link_count": 0,
+        "fail_closed_on_conflict": true,
+        "applicable": true
+      },
+      "current_source_health": "GREEN",
+      "current_source_effective_state": "LIVE_UNCHANGED"
+    },
+    "opta_the_analyst": {
+      "verification_status": "EXACT",
+      "verification_method": "OFFICIAL_FPL_CODE_SHARED_OPTA_NUMERIC_NAMESPACE",
+      "player_verification_method": "OFFICIAL_FPL_CODE_SHARED_OPTA_NUMERIC_NAMESPACE",
+      "verified_at": "2026-09-15T23:29:54.216488+00:00",
+      "evidence": [
+        "official_fpl:bootstrap.elements.code",
+        "https://github.com/withqwerty/reep/blob/0ec59faa5d81615b7a8200ae6121023a3bc14ce3/README.md"
+      ],
+      "configured_team_mapping_count": 0,
+      "configured_player_mapping_count": 0,
+      "current_team_identity_coverage": {
+        "strategy": "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE",
+        "deterministic_bridge": false,
+        "identity_health": "RED",
+        "mapped_status": "UNMAPPED",
+        "mapped_team_count": 0,
+        "canonical_team_count": 20,
+        "coverage_ratio": 0.0,
+        "unmapped_team_count": 20,
+        "join_allowed": false,
+        "applicable": true
+      },
+      "current_player_identity_coverage": {
+        "strategy": "OFFICIAL_FPL_CODE_SHARED_OPTA_NUMERIC_NAMESPACE",
+        "deterministic_bridge": true,
+        "identity_health": "GREEN",
+        "mapped_status": "EXACT",
+        "mapped_player_count": 659,
+        "canonical_player_count": 659,
+        "coverage_ratio": 1.0,
+        "unmapped_player_count": 0,
+        "join_allowed": true,
+        "name_matching_used": false,
+        "shared_namespace_field": "official_fpl.bootstrap.elements.code",
+        "duplicate_canonical_code_count": 0,
+        "fail_closed_on_duplicate_or_missing_code": true,
+        "applicable": true
+      },
+      "current_source_health": "GREEN",
+      "current_source_effective_state": "LIVE_UNCHANGED"
+    }
+  },
+  "governance": {
+    "data_only": true,
+    "decision_authority": "NONE",
+    "prediction_authority": "NONE",
+    "optimizer_authority": "NONE",
+    "silent_name_matching_allowed": false,
+    "unverified_records_remain_unmapped": true,
+    "shared_namespace_exact_bridge_allowed": true,
+    "configured_player_links_require_official_code_anchor": true,
+    "conflicting_player_links_fail_closed": true
+  }
+}

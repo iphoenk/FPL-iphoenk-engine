@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "normalization_version": "V6_NOAUTH_SOURCE_NATIVE_1",
+  "source_id": "thesportsdb_v1",
+  "generated_at": "2026-09-15T23:29:54.397277+00:00",
+  "effective_at": "2026-09-15T23:29:50.162817+00:00",
+  "canonical": true,
+  "semantic_class": "NORMALIZED_FACT",
+  "authority": "THESPORTSDB",
+  "source_snapshot_ids": [
+    "216f4a396f2e408e8fd7865a4ac23b18ad24bdaf69c312e3761a4b398989ef61",
+    "57549de7ea0aed4d4da3fa8cd4e233e5e670fe21755f052e680e057e26b37a45",
+    "c6848055684357109d222dafca5a24d50cff98fbbe71cffecb2473f37c67d65a"
+  ],
+  "source_health": "GREEN",
+  "source_effective_state": "LIVE_UNCHANGED",
+  "current_run_action": "FETCHED",
+  "normalization_status": "NORMALIZED",
+  "record_count": 3,
+  "record_groups": {
+    "competition": [
+      {
+        "source_native_id": "4328",
+        "name": "English Premier League",
+        "alternate_name": "Premier League, EPL, England",
+        "sport": "Soccer",
+        "country": "England"
+      }
+    ],
+    "events": [
+      {
+        "source_native_id": "2494047",
+        "source_native_league_id": "4328",
+        "event_name": "Brentford vs Chelsea",
+        "league_name": "English Premier League",
+        "season": "2026-2027",
+        "round": "5",
+        "timestamp": "2026-09-18T19:00:00",
+        "date_event": "2026-09-18",
+        "time_event": "19:00:00",
+        "home": {
+          "source_native_id": "134355",
+          "name": "Brentford"
+        },
+        "away": {
+          "source_native_id": "133610",
+          "name": "Chelsea"
+        },
+        "home_score": null,
+        "away_score": null,
+        "status": "NS",
+        "request_role": "UPCOMING",
+        "official_fixture_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "2494036",
+        "source_native_league_id": "4328",
+        "event_name": "Leeds United vs Newcastle United",
+        "league_name": "English Premier League",
+        "season": "2026-2027",
+        "round": "4",
+        "timestamp": "2026-09-14T19:00:00",
+        "date_event": "2026-09-14",
+        "time_event": "19:00:00",
+        "home": {
+          "source_native_id": "133635",
+          "name": "Leeds United"
+        },
+        "away": {
+          "source_native_id": "134777",
+          "name": "Newcastle United"
+        },
+        "home_score": "4",
+        "away_score": "1",
+        "status": "FT",
+        "request_role": "PAST",
+        "official_fixture_id": null,
+        "identity_status": "UNMAPPED"
+      }
+    ]
+  },
+  "governance": {
+    "data_only": true,
+    "source_native_records_preserved": true,
+    "cross_source_synthesis": false,
+    "silent_fuzzy_identity_join": false,
+    "decision_authority": "NONE",
+    "prediction_authority": "NONE",
+    "optimizer_authority": "NONE",
+    "may_override_official_fpl": false,
+    "no_auth_public_source": true,
+    "private_secret_required": false
+  },
+  "authority_ceiling": "SECONDARY",
+  "record_semantics": {
+    "competition": "SECONDARY_PROVIDER_METADATA",
+    "events": "SECONDARY_FIXTURE_EVENT_METADATA_REQUIRES_OFFICIAL_CROSSCHECK"
+  }
+}

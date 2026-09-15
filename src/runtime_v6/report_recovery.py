@@ -64,6 +64,27 @@ def _validate_recovery_action(recovery_action: str) -> str:
     return action
 
 
+def _resolve_report_plane_slot(
+    *,
+    logical_slot: str | datetime,
+    report_type: str,
+    report_state: str,
+    delivered_report_slot_id: str | None,
+    delivery_proof_valid: bool,
+) -> dict[str, Any]:
+    """Reuse Wave 2 state semantics without exporting an unproven V6 fact."""
+    decision = resolve_report_slot_decision(
+        logical_slot=logical_slot,
+        report_type=report_type,
+        report_state=report_state,
+        v6_already_published=False,
+        delivered_report_slot_id=delivered_report_slot_id,
+        delivery_proof_valid=delivery_proof_valid,
+    )
+    decision.pop("v6_already_published", None)
+    return decision
+
+
 def plan_same_run_recovery(
     *,
     logical_slot: str | datetime,
@@ -81,11 +102,10 @@ def plan_same_run_recovery(
         max_attempts=max_attempts,
     )
     action = _validate_recovery_action(recovery_action)
-    decision = resolve_report_slot_decision(
+    decision = _resolve_report_plane_slot(
         logical_slot=logical_slot,
         report_type=report_type,
         report_state=report_state,
-        v6_already_published=True,
         delivered_report_slot_id=delivered_report_slot_id,
         delivery_proof_valid=delivery_proof_valid,
     )
@@ -151,11 +171,10 @@ def plan_report_catch_up(
         logical_slot=logical_slot,
         report_type=report_type,
     )
-    decision = resolve_report_slot_decision(
+    decision = _resolve_report_plane_slot(
         logical_slot=logical_slot,
         report_type=report_type,
         report_state=report_state,
-        v6_already_published=True,
         delivered_report_slot_id=delivered_report_slot_id,
         delivery_proof_valid=delivery_proof_valid,
     )

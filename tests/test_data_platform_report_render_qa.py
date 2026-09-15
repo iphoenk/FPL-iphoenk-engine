@@ -1,0 +1,309 @@
+from __future__ import annotations
+
+from src.runtime_v6.delivery_integrity import MANDATORY_SECTIONS, PARTIAL_ALLOWED_SECTIONS
+from src.runtime_v6.report_compute import build_report_compute_contract
+from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_render_qa
+
+
+def _our15():
+    rows = []
+    for player_id in (1, 2):
+        rows.append({"element_id": player_id, "position": "GK"})
+    for player_id in range(3, 8):
+        rows.append({"element_id": player_id, "position": "DEF"})
+    for player_id in range(8, 13):
+        rows.append({"element_id": player_id, "position": "MID"})
+    for player_id in range(13, 16):
+        rows.append({"element_id": player_id, "position": "FWD"})
+    return rows
+
+
+def _watchlist20():
+    rows = []
+    start = 101
+    for position in ("GK", "DEF", "MID", "FWD"):
+        for offset in range(5):
+            rows.append({"element_id": start + offset, "position": position})
+        start += 10
+    return rows
+
+
+def _rank20(start: int):
+    return [{"element_id": start + offset} for offset in range(20)]
+
+
+def _compute_contract():
+    return build_report_compute_contract(
+        scope_matrix_report_ready=True,
+        our15_rows=_our15(),
+        starting_xi_ids=[1, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14],
+        bench_ids=[2, 7, 12, 15],
+        watchlist_rows=_watchlist20(),
+        rise_rows=_rank20(201),
+        fall_rows=_rank20(301),
+        facts={
+            "official_price": {"source": "OFFICIAL_FPL", "value": 75},
+            "ownership": {"source": "OFFICIAL_FPL", "value": 42.1},
+        },
+        models={
+            "price_rise_probability": {"model": "PRICE_PREDICTOR", "value": 0.71},
+            "expected_points": {"model": "BAYESIAN", "value": 6.8},
+        },
+    )
+
+
+def _section_manifest():
+    return [
+        {"section_id": section_id, "status": "COMPLETE"}
+        for section_id in MANDATORY_SECTIONS
+    ]
+
+
+def _pre_render(**overrides):
+    kwargs = {
+        "compute_contract": _compute_contract(),
+        "section_manifest": _section_manifest(),
+        "mini_league_denominator_complete": True,
+    }
+    kwargs.update(overrides)
+    return validate_pre_render_qa(**kwargs)
+
+
+def _post_render(pre_render=None, **overrides):
+    pre = pre_render or _pre_render()
+    kwargs = {
+        "pre_render_qa": pre,
+        "rendered_section_ids": list(pre.get("expected_section_ids", MANDATORY_SECTIONS)),
+        "rendered_section_states": {
+            row["section_id"]: row["status"]
+            for row in pre.get("section_manifest", [])
+        },
+        "rendered_compute_fingerprint": pre.get("compute_fingerprint"),
+        "render_contract_token": pre.get("render_contract_token"),
+        "rendered_counts": dict(pre.get("expected_counts", {})),
+        "rendered_fact_keys": list(pre.get("expected_fact_keys", [])),
+        "rendered_model_keys": list(pre.get("expected_model_keys", [])),
+        "rendered_mini_league_denominator_complete": True,
+        "truncated": False,
+    }
+    kwargs.update(overrides)
+    return validate_post_render_qa(**kwargs)
+
+
+def test_pre_render_pass_only_allows_render_and_never_delivery():
+    result = _pre_render()
+
+    assert result["status"] == "PASS"
+    assert result["qa_stage"] == "PRE_RENDER"
+    assert result["qa_passed"] is True
+    assert result["render_allowed"] is True
+    assert result["post_render_required"] is True
+    assert result["delivery_ready"] is False
+    assert result["report_state"] == "BUILDING"
+    assert result["next_action"] == "RENDER_REPORT"
+    assert result["legacy_fallback_allowed"] is False
+    assert result["failures"] == []
+    assert result["render_contract_token"]
+
+
+def test_pre_render_rejects_compute_that_is_not_exact_wave5_handoff():
+    compute = _compute_contract()
+    compute["next_action"] = "DELIVER"
+    compute["delivery_ready"] = True
+
+    result = _pre_render(compute_contract=compute)
+
+    assert result["status"] == "FAIL"
+    assert result["qa_passed"] is False
+    assert result["render_allowed"] is False
+    assert result["delivery_ready"] is False
+    assert result["report_state"] == "QA_FAILED"
+    assert result["next_action"] == "RECOMPUTE"
+    assert "COMPUTE_CONTRACT_NOT_READY" in result["failures"]
+
+
+def test_pre_render_rejects_missing_mandatory_section():
+    manifest = _section_manifest()[1:]
+
+    result = _pre_render(section_manifest=manifest)
+
+    assert result["status"] == "FAIL"
+    assert result["missing_sections"] == [MANDATORY_SECTIONS[0]]
+    assert result["render_allowed"] is False
+    assert result["next_action"] == "PRE_RENDER_RECOVERY"
+
+
+def test_pre_render_rejects_duplicate_section_identity():
+    manifest = _section_manifest() + [
+        {"section_id": MANDATORY_SECTIONS[0], "status": "COMPLETE"}
+    ]
+
+    result = _pre_render(section_manifest=manifest)
+
+    assert result["status"] == "FAIL"
+    assert result["duplicate_sections"] == [MANDATORY_SECTIONS[0]]
+    assert result["render_allowed"] is False
+
+
+def test_pre_render_rejects_partial_for_section_not_explicitly_partial_allowed():
+    manifest = _section_manifest()
+    section_id = next(
+        section_id
+        for section_id in MANDATORY_SECTIONS
+        if section_id not in PARTIAL_ALLOWED_SECTIONS
+    )
+    for row in manifest:
+        if row["section_id"] == section_id:
+            row["status"] = "PARTIAL"
+
+    result = _pre_render(section_manifest=manifest)
+
+    assert result["status"] == "FAIL"
+    assert result["partial_not_allowed_sections"] == [section_id]
+    assert result["render_allowed"] is False
+
+
+def test_pre_render_accepts_partial_only_for_explicit_partial_allowed_sections():
+    manifest = _section_manifest()
+    for row in manifest:
+        if row["section_id"] in PARTIAL_ALLOWED_SECTIONS:
+            row["status"] = "PARTIAL"
+
+    result = _pre_render(section_manifest=manifest)
+
+    assert result["status"] == "PASS"
+    assert result["partial_sections"] == sorted(PARTIAL_ALLOWED_SECTIONS)
+    assert result["render_allowed"] is True
+
+
+def test_pre_render_rejects_incomplete_authoritative_mini_league_denominator():
+    result = _pre_render(mini_league_denominator_complete=False)
+
+    assert result["status"] == "FAIL"
+    assert "MINI_LEAGUE_DENOMINATOR_INCOMPLETE" in result["failures"]
+    assert result["render_allowed"] is False
+    assert result["delivery_ready"] is False
+
+
+def test_post_render_pass_advances_only_to_wave7_delivery_proof():
+    result = _post_render()
+
+    assert result["status"] == "PASS"
+    assert result["qa_stage"] == "POST_RENDER"
+    assert result["qa_passed"] is True
+    assert result["delivery_ready"] is False
+    assert result["report_state"] == "BUILDING"
+    assert result["next_action"] == "BUILD_DELIVERY_PROOF"
+    assert result["legacy_fallback_allowed"] is False
+    assert result["failures"] == []
+
+
+def test_post_render_rejects_truncation_even_when_required_sections_are_listed():
+    result = _post_render(truncated=True)
+
+    assert result["status"] == "FAIL"
+    assert result["qa_passed"] is False
+    assert result["report_state"] == "QA_FAILED"
+    assert result["delivery_ready"] is False
+    assert "RENDER_TRUNCATED" in result["failures"]
+
+
+def test_post_render_rejects_missing_or_reordered_section_sequence():
+    expected = list(MANDATORY_SECTIONS)
+    rendered = expected[:-1]
+
+    result = _post_render(rendered_section_ids=rendered)
+
+    assert result["status"] == "FAIL"
+    assert result["missing_sections"] == [expected[-1]]
+    assert "SECTION_SEQUENCE_MISMATCH" in result["failures"]
+    assert result["delivery_ready"] is False
+
+
+def test_post_render_rejects_stale_compute_or_render_contract_token():
+    stale_compute = "0" * 64
+    stale_token = "1" * 64
+
+    result = _post_render(
+        rendered_compute_fingerprint=stale_compute,
+        render_contract_token=stale_token,
+    )
+
+    assert result["status"] == "FAIL"
+    assert "COMPUTE_FINGERPRINT_MISMATCH" in result["failures"]
+    assert "RENDER_CONTRACT_TOKEN_MISMATCH" in result["failures"]
+    assert result["delivery_ready"] is False
+
+
+def test_post_render_rejects_cardinality_drift_after_successful_compute():
+    pre = _pre_render()
+    counts = dict(pre["expected_counts"])
+    counts["WATCHLIST20"] = 19
+
+    result = _post_render(pre, rendered_counts=counts)
+
+    assert result["status"] == "FAIL"
+    assert "COUNT_MISMATCH=WATCHLIST20:19!=20" in result["failures"]
+    assert result["delivery_ready"] is False
+
+
+def test_post_render_rejects_fact_model_bleed_or_namespace_drift():
+    pre = _pre_render()
+    fact_keys = list(pre["expected_fact_keys"])
+    model_keys = list(pre["expected_model_keys"]) + [fact_keys[0]]
+
+    result = _post_render(
+        pre,
+        rendered_fact_keys=fact_keys,
+        rendered_model_keys=model_keys,
+    )
+
+    assert result["status"] == "FAIL"
+    assert "FACT_MODEL_BLEED" in result["failures"]
+    assert "MODEL_KEYS_MISMATCH" in result["failures"]
+    assert result["delivery_ready"] is False
+
+
+def test_post_render_rejects_section_status_drift_from_pre_render_contract():
+    pre = _pre_render()
+    section_states = {
+        row["section_id"]: row["status"]
+        for row in pre["section_manifest"]
+    }
+    section_id = next(
+        section_id
+        for section_id in MANDATORY_SECTIONS
+        if section_id not in PARTIAL_ALLOWED_SECTIONS
+    )
+    section_states[section_id] = "PARTIAL"
+
+    result = _post_render(pre, rendered_section_states=section_states)
+
+    assert result["status"] == "FAIL"
+    assert f"SECTION_STATUS_MISMATCH={section_id}:PARTIAL!=COMPLETE" in result["failures"]
+    assert result["delivery_ready"] is False
+
+
+def test_post_render_rejects_tampered_pre_render_contract_payload():
+    pre = _pre_render()
+    pre["expected_counts"] = dict(pre["expected_counts"])
+    pre["expected_counts"]["WATCHLIST20"] = 19
+
+    result = _post_render(pre, rendered_counts=dict(pre["expected_counts"]))
+
+    assert result["status"] == "FAIL"
+    assert "PRE_RENDER_CONTRACT_TOKEN_INVALID" in result["failures"]
+    assert result["delivery_ready"] is False
+
+
+def test_post_render_cannot_bypass_failed_pre_render_gate():
+    failed_pre = _pre_render(section_manifest=_section_manifest()[1:])
+
+    result = _post_render(failed_pre)
+
+    assert result["status"] == "BLOCKED"
+    assert result["qa_passed"] is False
+    assert result["delivery_ready"] is False
+    assert result["report_state"] == "QA_FAILED"
+    assert result["next_action"] == "PRE_RENDER_QA"
+    assert result["failures"] == ["PRE_RENDER_QA_NOT_PASSED"]

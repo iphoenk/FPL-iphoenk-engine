@@ -1,0 +1,43 @@
+name: Wave 1 normalize diff
+on:
+  push:
+    branches: [fix/wave1-understat-identity]
+permissions:
+  contents: write
+jobs:
+  normalize:
+    if: ${{ !contains(github.event.head_commit.message, '[wave1-minimal]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/wave1-understat-identity
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -q pytest
+      - name: Restore main config and append only Wave 1 rows
+        run: |
+          git show origin/main:config/v6/verified_crosswalks.json > config/v6/verified_crosswalks.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('config/v6/verified_crosswalks.json')
+          d=json.loads(p.read_text())
+          rows=d['sources']['understat']['players']
+          adds=[
+          {'official_fpl_code':627221,'official_fpl_element_id':599,'source_native_id':12847,'verification_method':'WAVE1_OFFICIAL_FPL_CODE_TO_OBSERVED_UNDERSTAT_NATIVE_ID','verified_at':'2026-09-15T20:06:00Z','review_status':'DETERMINISTIC_BRIDGE_REVIEWED','review_reference':'wave1-understat-identity-2026-09-15','bridge_path':['official_fpl.bootstrap.elements.code','understat.observed_native_player_id','official_fpl.bootstrap.elements.id'],'evidence':['official_fpl:bootstrap.elements.code:627221','official_fpl:bootstrap.elements.id:599','runtime-data-v6:understat.observed_native_player_id:12847']},
+          {'official_fpl_code':601772,'official_fpl_element_id':636,'source_native_id':13078,'verification_method':'WAVE1_OFFICIAL_FPL_CODE_TO_OBSERVED_UNDERSTAT_NATIVE_ID','verified_at':'2026-09-15T20:06:00Z','review_status':'DETERMINISTIC_BRIDGE_REVIEWED','review_reference':'wave1-understat-identity-2026-09-15','bridge_path':['official_fpl.bootstrap.elements.code','understat.observed_native_player_id','official_fpl.bootstrap.elements.id'],'evidence':['official_fpl:bootstrap.elements.code:601772','official_fpl:bootstrap.elements.id:636','runtime-data-v6:understat.observed_native_player_id:13078']},
+          {'official_fpl_code':437497,'official_fpl_element_id':637,'source_native_id':8190,'verification_method':'WAVE1_OFFICIAL_FPL_CODE_TO_OBSERVED_UNDERSTAT_NATIVE_ID','verified_at':'2026-09-15T20:06:00Z','review_status':'DETERMINISTIC_BRIDGE_REVIEWED','review_reference':'wave1-understat-identity-2026-09-15','bridge_path':['official_fpl.bootstrap.elements.code','understat.observed_native_player_id','official_fpl.bootstrap.elements.id'],'evidence':['official_fpl:bootstrap.elements.code:437497','official_fpl:bootstrap.elements.id:637','runtime-data-v6:understat.observed_native_player_id:8190']},]
+          rows.extend(adds)
+          p.write_text(json.dumps(d,indent=2,ensure_ascii=False)+'\n')
+          PY
+      - run: python -m pytest -q tests/test_wave1_understat_identity.py
+      - name: Commit minimal diff
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add config/v6/verified_crosswalks.json
+          git commit -m 'fix: keep Wave 1 crosswalk patch minimal [wave1-minimal]'
+          git push origin HEAD:fix/wave1-understat-identity

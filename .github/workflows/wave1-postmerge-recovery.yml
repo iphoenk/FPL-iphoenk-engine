@@ -1,0 +1,27 @@
+name: Wave 1 governed post-merge recovery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/wave1-postmerge-recovery.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch-recovery:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch governed V6 manual recovery
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh workflow run v6-natural-data-ingestion.yml \
+            --repo "$GH_REPO" \
+            --ref main \
+            -f mode=manual_recovery \
+            -f reason=wave1_postmerge_identity_recovery \
+            -f confirm=RECOVER_V6

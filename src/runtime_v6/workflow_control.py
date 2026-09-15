@@ -21,6 +21,16 @@ class WorkflowControlError(ValueError):
     pass
 
 
+def resolve_data_slot_decision(*, already_published: bool) -> dict[str, bool | str]:
+    """Return data-plane dedupe state without terminating the report plane."""
+    return {
+        "data_slot_status": "ALREADY_PUBLISHED" if already_published else "NEW",
+        "skip_new_acquisition": already_published,
+        "reuse_last_valid_publication": already_published,
+        "continue_report_pipeline": True,
+    }
+
+
 def scheduled_cron_kinds(policy: dict[str, Any]) -> dict[str, str]:
     github_schedule = dict(policy.get("github_natural_schedule") or {})
     if github_schedule.get("enabled") is False:
@@ -501,18 +511,28 @@ def main() -> int:
             from .runtime_control import scheduled_slot_already_completed
 
             if os.environ.get("V6_SCHEDULE_KIND") == "report_prefetch":
-                skip = False
+                already_published = False
             else:
                 previous_path = Path(os.environ.get("V6_PREVIOUS_MANIFEST") or "/tmp/v6-previous-manifest.json")
                 previous = json.loads(previous_path.read_text(encoding="utf-8")) if previous_path.exists() else {}
-                skip = scheduled_slot_already_completed(
+                already_published = scheduled_slot_already_completed(
                     previous,
                     scheduler_interval_minutes=SCHEDULE_POLICY.cadence_minutes,
                     event_name=os.environ.get("GITHUB_EVENT_NAME"),
                     schedule_kind=os.environ.get("V6_SCHEDULE_KIND"),
                 )
-            _append("GITHUB_OUTPUT", {"skip": "true" if skip else "false"})
-            print(f"logical scheduler slot already published: {skip}")
+            decision = resolve_data_slot_decision(already_published=already_published)
+            _append(
+                "GITHUB_OUTPUT",
+                {
+                    "skip": "true" if decision["skip_new_acquisition"] else "false",
+                    "data_slot_status": str(decision["data_slot_status"]),
+                    "skip_new_acquisition": "true" if decision["skip_new_acquisition"] else "false",
+                    "reuse_last_valid_publication": "true" if decision["reuse_last_valid_publication"] else "false",
+                    "continue_report_pipeline": "true" if decision["continue_report_pipeline"] else "false",
+                },
+            )
+            print(json.dumps(decision, ensure_ascii=False))
         else:
             event_name = str(os.environ.get("GITHUB_EVENT_NAME") or "")
             dispatch_values = {

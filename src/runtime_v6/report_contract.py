@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Mapping
 
 from .delivery_integrity import (
     RETRIEVAL_RECOVERY_CONDITIONS,
@@ -133,6 +133,176 @@ def choose_report_source(
     if last_good_available and not field_is_volatile:
         return "LAST_GOOD_NONVOLATILE"
     return "UNAVAILABLE"
+
+
+def _normalized_scope_id(scope_id: str) -> str:
+    value = str(scope_id or "").strip()
+    if not value:
+        raise ReportContractError("scope_id is required")
+    return value
+
+
+def _normalized_auth_status(auth_status: str | None) -> str:
+    value = str(auth_status or "NOT REQUESTED").strip().upper()
+    aliases = {
+        "AUTH_AVAILABLE": "OK",
+        "AVAILABLE": "OK",
+        "AUTH_EXPIRED": "EXPIRED",
+        "AUTH_UNAVAILABLE": "FAILED",
+    }
+    return aliases.get(value, value)
+
+
+def resolve_report_scope(
+    *,
+    scope_id: str,
+    required: bool,
+    auth_required: bool,
+    volatile: bool,
+    fresh_v6_available: bool,
+    v6_scope_state: str | None,
+    retrieval_state: str,
+    direct_fresh_available: bool,
+    last_good_available: bool,
+    auth_status: str | None,
+) -> dict[str, Any]:
+    """Resolve one report scope without allowing unrelated scopes to influence it."""
+    scope = _normalized_scope_id(scope_id)
+    auth = _normalized_auth_status(auth_status)
+
+    if auth_required and auth != "OK":
+        reason_auth = auth.replace(" ", "_")
+        return {
+            "scope_id": scope,
+            "required": bool(required),
+            "auth_required": True,
+            "volatile": bool(volatile),
+            "source": "PRIVATE_AUTH_UNAVAILABLE",
+            "action": "DISCLOSE_PRIVATE_AUTH_UNAVAILABLE",
+            "status": "DEGRADED",
+            "report_blocking": False,
+            "degraded": True,
+            "direct_fresh_allowed": False,
+            "legacy_fallback_allowed": False,
+            "reason": f"AUTH_{reason_auth}",
+        }
+
+    source = choose_report_source(
+        fresh_v6_available=bool(fresh_v6_available),
+        direct_fresh_available=bool(direct_fresh_available),
+        last_good_available=bool(last_good_available),
+        field_is_volatile=bool(volatile),
+        v6_scope_state=v6_scope_state,
+        retrieval_state=retrieval_state,
+    )
+
+    if source == "FRESH_V6":
+        action = "READ_V6"
+        status = "PASS"
+        report_blocking = False
+        degraded = False
+        reason = "FRESH_V6"
+        scoped_direct_fresh_allowed = False
+    elif source == "V6_RETRIEVAL_RECOVERY":
+        action = "SAME_V6_RETRIEVAL_RECOVERY"
+        status = "RECOVERY_REQUIRED"
+        report_blocking = bool(required)
+        degraded = not bool(required)
+        reason = f"RETRIEVAL_{str(retrieval_state or '').strip().upper()}"
+        scoped_direct_fresh_allowed = False
+    elif source == "DIRECT_FRESH":
+        action = "SCOPED_DIRECT_FRESH"
+        status = "PASS"
+        report_blocking = False
+        degraded = False
+        reason = "VERIFIED_V6_SCOPE_FAILURE"
+        scoped_direct_fresh_allowed = True
+    elif source == "LAST_GOOD_NONVOLATILE":
+        action = "READ_LAST_GOOD_NONVOLATILE"
+        status = "PASS"
+        report_blocking = False
+        degraded = False
+        reason = "NONVOLATILE_LAST_GOOD_RECOVERY"
+        scoped_direct_fresh_allowed = False
+    else:
+        report_blocking = bool(required)
+        degraded = not report_blocking
+        status = "BLOCKED" if report_blocking else "DEGRADED"
+        action = (
+            "DISCLOSE_REQUIRED_SCOPE_UNAVAILABLE"
+            if report_blocking
+            else "DISCLOSE_OPTIONAL_SCOPE_UNAVAILABLE"
+        )
+        reason = "NO_VALID_SCOPE_SOURCE"
+        scoped_direct_fresh_allowed = False
+
+    return {
+        "scope_id": scope,
+        "required": bool(required),
+        "auth_required": bool(auth_required),
+        "volatile": bool(volatile),
+        "source": source,
+        "action": action,
+        "status": status,
+        "report_blocking": report_blocking,
+        "degraded": degraded,
+        "direct_fresh_allowed": scoped_direct_fresh_allowed,
+        "legacy_fallback_allowed": False,
+        "reason": reason,
+    }
+
+
+def resolve_report_scope_matrix(
+    scopes: Mapping[str, Mapping[str, Any]],
+    *,
+    auth_status: str | None,
+) -> dict[str, Any]:
+    """Resolve every report scope independently and aggregate only delivery blockers."""
+    resolved: dict[str, dict[str, Any]] = {}
+    for scope_id, policy in scopes.items():
+        resolved[scope_id] = resolve_report_scope(
+            scope_id=scope_id,
+            required=bool(policy.get("required", True)),
+            auth_required=bool(policy.get("auth_required", False)),
+            volatile=bool(policy.get("volatile", True)),
+            fresh_v6_available=bool(policy.get("fresh_v6_available", False)),
+            v6_scope_state=policy.get("v6_scope_state"),
+            retrieval_state=str(policy.get("retrieval_state", "COMPLETE")),
+            direct_fresh_available=bool(policy.get("direct_fresh_available", False)),
+            last_good_available=bool(policy.get("last_good_available", False)),
+            auth_status=auth_status,
+        )
+
+    blocking_scopes = [
+        scope_id
+        for scope_id, result in resolved.items()
+        if result["report_blocking"]
+    ]
+    degraded_scopes = [
+        scope_id
+        for scope_id, result in resolved.items()
+        if result["degraded"]
+    ]
+    recovery_scopes = [
+        scope_id
+        for scope_id, result in resolved.items()
+        if result["status"] == "RECOVERY_REQUIRED"
+    ]
+    direct_fresh_scopes = [
+        scope_id
+        for scope_id, result in resolved.items()
+        if result["source"] == "DIRECT_FRESH"
+    ]
+
+    return {
+        "report_ready": not blocking_scopes,
+        "blocking_scopes": blocking_scopes,
+        "degraded_scopes": degraded_scopes,
+        "recovery_scopes": recovery_scopes,
+        "direct_fresh_scopes": direct_fresh_scopes,
+        "legacy_fallback_allowed": False,
+        "scopes": resolved,
+    }
 
 
 def map_auth_status(*, requested: bool, raw_state: str | None) -> str:

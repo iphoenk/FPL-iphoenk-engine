@@ -4,9 +4,10 @@ from pathlib import Path
 
 CONFIG = Path(__file__).resolve().parents[1] / "config" / "v6" / "verified_crosswalks.json"
 
+# Wave 1 acceptance is pinned to the current Official FPL canonical code + element id.
 EXPECTED = {
     12847: (627221, 599),  # Sidiki Cherif
-    13078: (601772, 636),  # Chema Andres
+    13078: (592984, 639),  # Chema Andres
     8190: (437497, 637),   # Melvin Bard
 }
 

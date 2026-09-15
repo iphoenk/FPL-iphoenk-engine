@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from copy import deepcopy
-
 from src.runtime_v6.delivery_integrity import MANDATORY_SECTIONS, PARTIAL_ALLOWED_SECTIONS
 from src.runtime_v6.report_compute import build_report_compute_contract
 from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_render_qa
@@ -259,6 +257,26 @@ def test_post_render_rejects_fact_model_bleed_or_namespace_drift():
     assert result["status"] == "FAIL"
     assert "FACT_MODEL_BLEED" in result["failures"]
     assert "MODEL_KEYS_MISMATCH" in result["failures"]
+    assert result["delivery_ready"] is False
+
+
+def test_post_render_rejects_section_status_drift_from_pre_render_contract():
+    pre = _pre_render()
+    section_states = {
+        row["section_id"]: row["status"]
+        for row in pre["section_manifest"]
+    }
+    section_id = next(
+        section_id
+        for section_id in MANDATORY_SECTIONS
+        if section_id not in PARTIAL_ALLOWED_SECTIONS
+    )
+    section_states[section_id] = "PARTIAL"
+
+    result = _post_render(pre, rendered_section_states=section_states)
+
+    assert result["status"] == "FAIL"
+    assert f"SECTION_STATUS_MISMATCH={section_id}:PARTIAL!=COMPLETE" in result["failures"]
     assert result["delivery_ready"] is False
 
 

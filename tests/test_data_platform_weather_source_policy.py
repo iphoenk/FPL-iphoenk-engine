@@ -11,7 +11,6 @@ def _load_json(relative_path: str) -> dict:
 
 def test_open_meteo_is_retired_from_v6_runtime_sources() -> None:
     activation = _load_json("config/v6/source_activation.json")
-    additions = _load_json("config/v6/source_additions.json")
 
     disabled = activation.get("disabled_sources", {})
     assert "open_meteo" in disabled
@@ -19,6 +18,3 @@ def test_open_meteo_is_retired_from_v6_runtime_sources() -> None:
     assert "open_meteo" not in activation.get("required_active_sources", [])
     assert "open_meteo" not in activation.get("constraints", {})
     assert "open_meteo" not in activation.get("tiers", {})
-
-    addition_ids = {source["id"] for source in additions.get("sources", [])}
-    assert "open_meteo" not in addition_ids

@@ -39,7 +39,15 @@ def _section_sort_key(section_id: str) -> tuple[int, int | str]:
 
 def _canonical_section_manifest(
     section_manifest: Sequence[Mapping[str, Any]],
-) -> tuple[list[dict[str, str]], list[str], list[str], list[str], list[str], list[str]]:
+) -> tuple[
+    list[dict[str, str]],
+    list[str],
+    list[str],
+    list[str],
+    list[str],
+    list[str],
+    list[str],
+]:
     rows: list[dict[str, str]] = []
     ids: list[str] = []
     invalid_states: list[str] = []
@@ -235,6 +243,7 @@ def validate_post_render_qa(
     *,
     pre_render_qa: Mapping[str, Any],
     rendered_section_ids: Sequence[str],
+    rendered_section_states: Mapping[str, str],
     rendered_compute_fingerprint: str | None,
     render_contract_token: str | None,
     rendered_counts: Mapping[str, int],
@@ -274,6 +283,21 @@ def validate_post_render_qa(
     missing_sections = sorted(expected_set - rendered_set, key=_section_sort_key)
     unexpected_sections = sorted(rendered_set - expected_set, key=_section_sort_key)
 
+    expected_section_states = {
+        str(row.get("section_id") or "").strip().upper():
+        str(row.get("status") or "").strip().upper()
+        for row in pre_render_qa.get("section_manifest", [])
+        if str(row.get("section_id") or "").strip()
+    }
+    actual_section_states = {
+        str(section_id or "").strip().upper(): str(status or "").strip().upper()
+        for section_id, status in rendered_section_states.items()
+    }
+    unexpected_state_sections = sorted(
+        set(actual_section_states) - expected_set,
+        key=_section_sort_key,
+    )
+
     failures: list[str] = []
     if truncated:
         failures.append("RENDER_TRUNCATED")
@@ -285,6 +309,18 @@ def validate_post_render_qa(
         failures.append(f"RENDER_SECTION_UNEXPECTED={','.join(unexpected_sections)}")
     if rendered_sections != expected_sections:
         failures.append("SECTION_SEQUENCE_MISMATCH")
+
+    for section_id in expected_sections:
+        expected_state = expected_section_states.get(section_id, "<missing>")
+        actual_state = actual_section_states.get(section_id, "<missing>")
+        if actual_state != expected_state:
+            failures.append(
+                f"SECTION_STATUS_MISMATCH={section_id}:{actual_state}!={expected_state}"
+            )
+    if unexpected_state_sections:
+        failures.append(
+            f"SECTION_STATUS_UNEXPECTED={','.join(unexpected_state_sections)}"
+        )
 
     expected_compute_fingerprint = str(pre_render_qa.get("compute_fingerprint") or "")
     if rendered_compute_fingerprint != expected_compute_fingerprint:
@@ -327,9 +363,12 @@ def validate_post_render_qa(
         "render_contract_token": expected_token,
         "expected_section_ids": expected_sections,
         "rendered_section_ids": rendered_sections,
+        "expected_section_states": expected_section_states,
+        "rendered_section_states": actual_section_states,
         "missing_sections": missing_sections,
         "duplicate_sections": duplicate_sections,
         "unexpected_sections": unexpected_sections,
+        "unexpected_state_sections": unexpected_state_sections,
         "expected_counts": expected_counts,
         "rendered_counts": dict(rendered_counts),
         "expected_fact_keys": expected_fact_keys,

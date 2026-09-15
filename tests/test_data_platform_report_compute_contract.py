@@ -85,7 +85,7 @@ def test_scope_resolver_failure_blocks_compute_before_any_report_math():
 def test_our15_requires_exact_unique_legal_fpl_squad_composition():
     kwargs = _valid_kwargs()
     kwargs["our15_rows"] = kwargs["our15_rows"][:-1] + [
-        {"element_id": 14, "position": "FWD"}
+        {"element_id": 7, "position": "DEF"}
     ]
 
     result = build_report_compute_contract(**kwargs)
@@ -93,6 +93,7 @@ def test_our15_requires_exact_unique_legal_fpl_squad_composition():
     assert result["compute_ready"] is False
     assert result["OUR15"]["status"] == "FAIL"
     assert "IDENTITY_DUPLICATE" in result["OUR15"]["failures"]
+    assert "DEF=6" in result["OUR15"]["failures"]
     assert "FWD=2" in result["OUR15"]["failures"]
     assert result["next_action"] == "RECOMPUTE"
 

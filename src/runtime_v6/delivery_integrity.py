@@ -46,6 +46,7 @@ MANDATORY_SECTIONS = tuple(
 PARTIAL_ALLOWED_SECTIONS = frozenset({"S02", "S13", "S14B", "S15"})
 POSITION_TARGET = {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}
 _POSITION_ALIASES = {"GKP": "GK", "GOALKEEPER": "GK"}
+REPORT_SLOT_STATES = frozenset({"NOT_STARTED", "BUILDING", "QA_FAILED", "DELIVERED"})
 
 
 class DeliveryIntegrityError(ValueError):
@@ -63,6 +64,82 @@ def _parse_time(value: str | datetime) -> datetime:
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise DeliveryIntegrityError("timestamp must include timezone offset")
     return parsed.astimezone(timezone.utc)
+
+
+def build_report_slot_id(*, logical_slot: str | datetime, report_type: str) -> str:
+    if isinstance(logical_slot, datetime):
+        slot = logical_slot
+    else:
+        try:
+            slot = datetime.fromisoformat(str(logical_slot).replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise DeliveryIntegrityError("report logical slot must be ISO-8601") from exc
+    if slot.tzinfo is None or slot.utcoffset() is None:
+        raise DeliveryIntegrityError("report logical slot must include timezone offset")
+    if slot.second != 0 or slot.microsecond != 0:
+        raise DeliveryIntegrityError("report logical slot must be minute-aligned")
+
+    kind = str(report_type or "").strip().upper()
+    if not kind or "|" in kind:
+        raise DeliveryIntegrityError("report type must be a non-empty slot-safe identifier")
+    return f"{slot.isoformat(timespec='minutes')}|{kind}"
+
+
+def resolve_report_slot_decision(
+    *,
+    logical_slot: str | datetime,
+    report_type: str,
+    report_state: str,
+    v6_already_published: bool,
+    delivered_report_slot_id: str | None,
+    delivery_proof_valid: bool,
+) -> dict[str, Any]:
+    report_slot_id = build_report_slot_id(
+        logical_slot=logical_slot,
+        report_type=report_type,
+    )
+    state = str(report_state or "").strip().upper()
+    if state not in REPORT_SLOT_STATES:
+        raise DeliveryIntegrityError(f"invalid report slot state: {state or '<empty>'}")
+
+    same_slot_delivery_proof = bool(
+        delivery_proof_valid
+        and delivered_report_slot_id
+        and delivered_report_slot_id == report_slot_id
+    )
+    report_delivered = state == "DELIVERED" and same_slot_delivery_proof
+
+    if report_delivered:
+        start_build = False
+        duplicate = True
+        reason = "SAME_SLOT_ALREADY_DELIVERED"
+    elif state == "BUILDING":
+        start_build = False
+        duplicate = False
+        reason = "SAME_SLOT_BUILD_IN_PROGRESS"
+    elif state == "QA_FAILED":
+        start_build = True
+        duplicate = False
+        reason = "SAME_SLOT_RECOVERY"
+    elif state == "DELIVERED":
+        start_build = True
+        duplicate = False
+        reason = "DELIVERY_PROOF_RECOVERY"
+    else:
+        start_build = True
+        duplicate = False
+        reason = "DUE_REPORT"
+
+    return {
+        "report_slot_id": report_slot_id,
+        "report_state": state,
+        "v6_already_published": bool(v6_already_published),
+        "report_delivered": report_delivered,
+        "report_required": not report_delivered,
+        "start_build": start_build,
+        "duplicate": duplicate,
+        "reason": reason,
+    }
 
 
 def retrieval_decision(*, v6_scope_state: str, retrieval_state: str) -> dict[str, Any]:

@@ -14,8 +14,8 @@ ACTIVATION = ROOT / "config" / "v6" / "source_activation.json"
 VENUES = ROOT / "config" / "v6" / "venue_geography.json"
 
 DECLARED_NO_AUTH_SOURCES = {"reep_register", "wikidata", "open_meteo", "thesportsdb_v1"}
-ACTIVE_NO_AUTH_SOURCES = {"wikidata", "open_meteo", "thesportsdb_v1"}
-ACTIVE_CORE = {"wikidata", "open_meteo"}
+ACTIVE_NO_AUTH_SOURCES = {"wikidata", "thesportsdb_v1"}
+ACTIVE_CORE = {"wikidata"}
 EXPECTED_2026_27_CLUBS = {
     "AFC Bournemouth",
     "Arsenal",
@@ -66,6 +66,9 @@ def test_all_additive_sources_are_zero_cost_no_account_no_login_no_private_secre
     for source_id in ACTIVE_NO_AUTH_SOURCES:
         assert activation["constraints"][source_id] == "NO_AUTH_PUBLIC_ONLY"
 
+    assert activation["disabled_sources"]["open_meteo"] == "RETIRED_CHATGPT_REPORT_TIME_WEATHER_NOT_V6_DEPENDENCY"
+    assert "open_meteo" not in activation["constraints"]
+    assert "open_meteo" not in activation["tiers"]
     assert activation["tiers"]["thesportsdb_v1"] == "pilot"
     assert {source_id for source_id in ACTIVE_CORE if activation["tiers"][source_id] == "core"} == ACTIVE_CORE
 
@@ -95,16 +98,20 @@ def test_additive_source_admission_fails_closed_on_paid_or_private_auth() -> Non
         )
 
 
-def test_resolved_registry_preserves_active_no_auth_contract_and_prunes_unstable_reep() -> None:
+def test_resolved_registry_preserves_active_no_auth_contract_and_prunes_retired_weather_and_unstable_reep() -> None:
     registry = load_registry()
     by_id = {str(row["id"]): row for row in registry["sources"]}
     assert ACTIVE_NO_AUTH_SOURCES.issubset(by_id)
+    assert "open_meteo" not in by_id
     assert "reep_register" not in by_id
     for source_id in ACTIVE_NO_AUTH_SOURCES:
         assert by_id[source_id]["activation_constraint"] == "NO_AUTH_PUBLIC_ONLY"
         assert by_id[source_id].get("auth") is None
         assert by_id[source_id]["access"]["cost"] == "ZERO"
         assert by_id[source_id]["access"]["login_required"] is False
+
+    disabled = (registry.get("activation") or {}).get("disabled_sources") or {}
+    assert disabled.get("open_meteo") == "RETIRED_CHATGPT_REPORT_TIME_WEATHER_NOT_V6_DEPENDENCY"
 
     reference_only = (registry.get("activation") or {}).get("reference_only_sources") or {}
     reason = str(reference_only.get("reep_register") or "")
@@ -130,7 +137,7 @@ def test_thesportsdb_only_uses_documented_public_v1_access_segment() -> None:
     assert all("/api/v1/json/123/" in str(request["url"]) for request in source["requests"])
 
 
-def test_venue_geography_is_single_coordinate_owner_and_materializes_open_meteo_order() -> None:
+def test_venue_geography_remains_valid_while_open_meteo_declaration_is_dormant() -> None:
     venue_payload = _json(VENUES)
     venues = venue_payload["venues"]
     assert venue_payload["season"] == "2026-2027"
@@ -151,18 +158,18 @@ def test_venue_geography_is_single_coordinate_owner_and_materializes_open_meteo_
     assert binding["fields"] == {"latitude": "latitude", "longitude": "longitude"}
 
     registry = load_registry()
-    resolved = next(row for row in registry["sources"] if row["id"] == "open_meteo")
-    params = resolved["requests"][0]["params"]
-    latitudes = [float(value) for value in params["latitude"].split(",")]
-    longitudes = [float(value) for value in params["longitude"].split(",")]
-    assert latitudes == [float(row["latitude"]) for row in venues]
-    assert longitudes == [float(row["longitude"]) for row in venues]
+    assert all(row["id"] != "open_meteo" for row in registry["sources"])
+    disabled = (registry.get("activation") or {}).get("disabled_sources") or {}
+    assert disabled.get("open_meteo") == "RETIRED_CHATGPT_REPORT_TIME_WEATHER_NOT_V6_DEPENDENCY"
 
 
-def test_weather_source_remains_raw_data_only() -> None:
+def test_weather_source_declaration_remains_raw_data_only_and_dormant() -> None:
     additions = _json(ADDITIONS)
     source = next(row for row in additions["sources"] if row["id"] == "open_meteo")
     notes = source["notes"].lower()
     assert "computes no fpl impact" in notes
     assert "xpts" in notes
     assert source["category"] == "fixture_weather_context"
+
+    activation = _json(ACTIVATION)
+    assert "open_meteo" in activation["disabled_sources"]

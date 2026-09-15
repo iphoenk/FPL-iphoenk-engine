@@ -46,6 +46,8 @@ jobs:
           else:
               assert old == (592984, 639), old
           PY
+      - name: Install targeted test dependency
+        run: python -m pip install --disable-pip-version-check -q pytest
       - name: Verify targeted Wave 1 regression
         run: python -m pytest -q tests/test_wave1_understat_identity.py
       - name: Commit correction to PR branch if changed

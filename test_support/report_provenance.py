@@ -94,6 +94,7 @@ def r5_partitions(
 def r5_section_payloads(our15_rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     sections = r4_section_payloads(our15_rows)
     sections["WEATHER"]["source_proof"] = {
+        "fact_ref": "weather_forecast",
         "source": "OPEN_METEO",
         "effective_at": "2026-09-16T21:30:00+00:00",
         "source_snapshot_ids": [source_snapshot_id("open_meteo", "weather")],

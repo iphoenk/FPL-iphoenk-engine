@@ -4,37 +4,7 @@ from copy import deepcopy
 
 from src.runtime_v6.delivery_integrity import validate_rank20
 from src.runtime_v6.report_compute import build_report_compute_contract
-
-
-_HASH = "a" * 64
-
-
-def _rank20(start: int, direction: str) -> list[dict]:
-    rows = []
-    for index in range(20):
-        rank = index + 1
-        rows.append(
-            {
-                "rank": rank,
-                "element_id": start + index,
-                "player_name": f"P{start + index}",
-                "current_price": 5.0 + (index / 10),
-                "ownership_percent": 1.0 + index,
-                "ownership_tag": "NON_OWNED",
-                "direction": direction,
-                "current_progress_percent": 70.0 if direction == "RISE" else -70.0,
-                "projection_offset_0_percent": 95.0 if direction == "RISE" else -95.0,
-                "predicted_change_cycle": "NEXT_UPDATE",
-                "predicted_change_at": "2026-09-17T06:00:00+07:00",
-                "eta_human": "next price cycle",
-                "model_urgency": "HIGH",
-                "confidence": "HIGH",
-                "source": "OFFICIAL_FPL",
-                "observed_at": "2026-09-16T20:00:00+07:00",
-                "raw_payload_hash": _HASH,
-            }
-        )
-    return rows
+from test_support.report_rank20 import rank20_rows
 
 
 def _our15() -> list[dict]:
@@ -67,8 +37,8 @@ def _compute_kwargs() -> dict:
         "starting_xi_ids": [1, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14],
         "bench_ids": [2, 7, 12, 15],
         "watchlist_rows": _watchlist20(),
-        "rise_rows": _rank20(201, "RISE"),
-        "fall_rows": _rank20(301, "FALL"),
+        "rise_rows": rank20_rows(201, "RISE"),
+        "fall_rows": rank20_rows(301, "FALL"),
         "facts": {"official_price": {"source": "OFFICIAL_FPL", "value": 7.5}},
         "models": {"price_signal": {"model": "PRICE_PREDICTOR", "value": 0.8}},
     }
@@ -84,7 +54,7 @@ def test_identity_only_exact_20_is_not_a_valid_rank20_contract():
 
 
 def test_missing_eta_and_snapshot_provenance_fail_with_row_field_evidence():
-    rows = _rank20(2000, "RISE")
+    rows = rank20_rows(2000, "RISE")
     del rows[4]["eta_human"]
     del rows[4]["raw_payload_hash"]
 
@@ -95,7 +65,7 @@ def test_missing_eta_and_snapshot_provenance_fail_with_row_field_evidence():
 
 
 def test_rank_and_direction_integrity_are_fail_closed():
-    rows = _rank20(3000, "RISE")
+    rows = rank20_rows(3000, "RISE")
     rows[0]["rank"] = 2
     rows[1]["direction"] = "FALL"
 
@@ -107,8 +77,8 @@ def test_rank_and_direction_integrity_are_fail_closed():
 
 
 def test_complete_exact_20_schema_passes_for_each_direction():
-    rise = validate_rank20(_rank20(4000, "RISE"), label="RISE20")
-    fall = validate_rank20(_rank20(5000, "FALL"), label="FALL20")
+    rise = validate_rank20(rank20_rows(4000, "RISE"), label="RISE20")
+    fall = validate_rank20(rank20_rows(5000, "FALL"), label="FALL20")
 
     assert rise["status"] == "PASS"
     assert fall["status"] == "PASS"

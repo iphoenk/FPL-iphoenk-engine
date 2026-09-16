@@ -188,13 +188,13 @@ def test_production_policy_uses_chatgpt_and_removed_github_crons():
     assert "startsWith(github.event.comment.body, '/v6-report-prefetch')" in workflow
     assert "startsWith(github.event.comment.body, '/v6-master-acquire')" not in workflow
     assert "FPL_MASTER_SLOT" in workflow
-    assert "python -m src.runtime_v6.workflow_control authorize-issue" in workflow
-    assert "python -m src.runtime_v6.workflow_control authorize-issue-edit" in workflow
-    assert "python -m src.runtime_v6.collector" in workflow
-    assert "python -m src.runtime_v6.runtime_control" in workflow
-    assert "python -m src.runtime_v6.workflow_control slot-guard" in workflow
-    assert "python -m src.runtime_v6.production_validate preflight" in workflow
-    assert "python -m src.runtime_v6.production_validate publishable" in workflow
+    assert "python -m src.runtime_v6.domains.control_plane.workflow_control authorize-issue" in workflow
+    assert "python -m src.runtime_v6.domains.control_plane.workflow_control authorize-issue-edit" in workflow
+    assert "python -m src.runtime_v6.domains.acquisition.collector" in workflow
+    assert "python -m src.runtime_v6.domains.control_plane.runtime_control" in workflow
+    assert "python -m src.runtime_v6.domains.control_plane.workflow_control slot-guard" in workflow
+    assert "python -m src.runtime_v6.domains.publication.production_validate preflight" in workflow
+    assert "python -m src.runtime_v6.domains.publication.production_validate publishable" in workflow
     assert "  schedule:" not in workflow
     assert "  push:" not in workflow
     assert "  pull_request:" not in workflow

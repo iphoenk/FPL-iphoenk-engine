@@ -40,6 +40,7 @@ def test_v6_github_schedules_are_control_plane_only_never_normal_acquisition_aut
     assert "contents: write" not in watchdog
     assert "RECOVER_V6" not in watchdog
     assert "actions/workflows/v6-natural-data-ingestion.yml/dispatches" not in watchdog
+    assert "python -m src.runtime_v6.domains.control_plane.scheduler_watchdog" in watchdog
 
     watchdog_authority = watchdog_config["authority"]
     assert watchdog_config["role"] == "MONITORING_ONLY"
@@ -58,6 +59,8 @@ def test_v6_github_schedules_are_control_plane_only_never_normal_acquisition_aut
     assert "FPL_MASTER_SLOT" not in recovery
     assert "inputs[mode]=manual_recovery" in recovery
     assert "inputs[confirm]=RECOVER_V6" in recovery
+    assert "python -m src.runtime_v6.domains.control_plane.scheduler_watchdog" in recovery
+    assert "python -m src.runtime_v6.domains.control_plane.scheduler_recovery" in recovery
     assert recovery_config["role"] == "SAFE_RECOVERY_ONLY"
     assert recovery_config["normal_scheduler_authority"] == "CHATGPT_FPL_MASTER_MONITOR"
     assert recovery_config["recovery_counts_as_scheduler_proof"] is False
@@ -86,6 +89,6 @@ def test_v6_ingestion_uses_single_hourly_master_transport() -> None:
     assert "FPL_REPORT_PREFETCH " not in text
     assert "github.event.issue.number == 431" in text
     assert "authorize-issue-edit" in text
-    assert "python -m src.runtime_v6.workflow_control slot-guard" in text
+    assert "python -m src.runtime_v6.domains.control_plane.workflow_control slot-guard" in text
     validator = Path("src/runtime_v6/domains/publication/production_validate.py").read_text(encoding="utf-8")
     assert "single_logical_acquisition_per_scheduler_slot" in validator

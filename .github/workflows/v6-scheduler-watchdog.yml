@@ -44,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          python -m src.runtime_v6.scheduler_watchdog \
+          python -m src.runtime_v6.domains.control_plane.scheduler_watchdog \
             --runtime-control "$RUNNER_TEMP/runtime_control.json" \
             --now "$now" \
             --warning-minutes 90 \

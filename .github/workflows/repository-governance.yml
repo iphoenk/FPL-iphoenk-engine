@@ -41,11 +41,15 @@ jobs:
           fi
           changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
           printf '%s\n' "$changed"
-          if printf '%s\n' "$changed" | grep -Eq '^(config/v6/|docs/V6_.*\.md$|src/runtime_v6/|requirements-v6(-ci)?\.lock$|tests/test_data_ingestion_engine\.py$|tests/test_adaptive_polling\.py$|tests/test_data_platform_.*\.py$|\.github/workflows/v6-ci\.yml$|\.github/workflows/v6-natural-data-ingestion\.yml$|\.github/workflows/repository-governance\.yml$)'; then
-            echo "v6_changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "v6_changed=false" >> "$GITHUB_OUTPUT"
-          fi
+          v6_changed="$(printf '%s\n' "$changed" | python src/platform/v6_ci_contract.py changed-paths)"
+          case "$v6_changed" in
+            true|false) ;;
+            *)
+              echo "::error::canonical V6 change classifier returned invalid value: $v6_changed"
+              exit 1
+              ;;
+          esac
+          echo "v6_changed=$v6_changed" >> "$GITHUB_OUTPUT"
 
   repository-policy:
     name: repository-policy
@@ -81,9 +85,9 @@ jobs:
       - name: Install V6 hash-locked CI dependencies
         run: python -m pip install --require-hashes -r requirements-v6-ci.lock
       - name: Prove V6 architecture independence
-        run: python -m src.runtime_v6.architecture_independence_validate
+        run: python -m src.runtime_v6.domains.governance.architecture_independence_validate
       - name: Enforce V6 zero-downstream-authority schema
-        run: python -m src.runtime_v6.authority_contract
+        run: python -m src.runtime_v6.domains.governance.authority_contract
       - name: Validate V6 contracts without network acquisition
         run: >-
           python -m pytest -q

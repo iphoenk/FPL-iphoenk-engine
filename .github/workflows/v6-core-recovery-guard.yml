@@ -39,7 +39,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m src.runtime_v6.scheduler_watchdog \
+          python -m src.runtime_v6.domains.control_plane.scheduler_watchdog \
             --runtime-control "$RUNNER_TEMP/runtime_control.json" \
             --output "$RUNNER_TEMP/watchdog.json"
 
@@ -60,7 +60,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m src.runtime_v6.scheduler_recovery \
+          python -m src.runtime_v6.domains.control_plane.scheduler_recovery \
             --watchdog "$RUNNER_TEMP/watchdog.json" \
             --runs "$RUNNER_TEMP/ingestion_runs.json" \
             --config config/v6/scheduler_recovery.json \

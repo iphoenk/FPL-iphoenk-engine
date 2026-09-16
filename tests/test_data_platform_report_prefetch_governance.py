@@ -94,7 +94,7 @@ def test_report_prefetch_reuses_existing_control_plane_without_new_scheduler():
     assert "Run active V6 acquisition cycle" in workflow
     assert "steps.scheduler.outputs.kind != 'report_prefetch'" in workflow
     assert "Run report-driven V6 personal and mini-league prefetch" in workflow
-    assert "python -m src.runtime_v6.workflow_control resolve-prefetch" in workflow
+    assert "python -m src.runtime_v6.domains.control_plane.workflow_control resolve-prefetch" in workflow
 
 
 def test_report_prefetch_issue_title_transport_is_rejected_by_authorization():

@@ -3,8 +3,13 @@ from __future__ import annotations
 from collections import OrderedDict
 
 from src.runtime_v6.report_compute import build_report_compute_contract
+from test_support.report_provenance import (
+    fact_row,
+    inference_row,
+    model_row,
+    r5_section_payloads,
+)
 from test_support.report_rank20 import rank20_rows
-from test_support.report_sections import r4_section_payloads
 
 
 def _our15():
@@ -32,6 +37,32 @@ def _watchlist20():
 
 def _valid_kwargs():
     our15 = _our15()
+    official_price = fact_row(source="OFFICIAL_FPL", token="official_price", value=75)
+    ownership = fact_row(source="OFFICIAL_FPL", token="ownership", value=42.1)
+    weather = fact_row(source="OPEN_METEO", token="weather", value="NORMAL")
+    facts = {
+        "official_price": official_price,
+        "ownership": ownership,
+        "weather_forecast": weather,
+    }
+    models = {
+        "price_rise_probability": model_row(
+            model="PRICE_PREDICTOR",
+            input_snapshot_ids=official_price["source_snapshot_ids"],
+            value=0.71,
+        ),
+        "expected_points": model_row(
+            model="BAYESIAN",
+            input_snapshot_ids=ownership["source_snapshot_ids"],
+            value=6.8,
+        ),
+    }
+    inferences = {
+        "decision": inference_row(
+            fact_refs=["official_price", "ownership"],
+            model_refs=["price_rise_probability", "expected_points"],
+        )
+    }
     return {
         "scope_matrix_report_ready": True,
         "our15_rows": our15,
@@ -40,15 +71,10 @@ def _valid_kwargs():
         "watchlist_rows": _watchlist20(),
         "rise_rows": rank20_rows(201, "RISE"),
         "fall_rows": rank20_rows(301, "FALL"),
-        "section_payloads": r4_section_payloads(our15),
-        "facts": {
-            "official_price": {"source": "OFFICIAL_FPL", "value": 75},
-            "ownership": {"source": "OFFICIAL_FPL", "value": 42.1},
-        },
-        "models": {
-            "price_rise_probability": {"model": "PRICE_PREDICTOR", "value": 0.71},
-            "expected_points": {"model": "BAYESIAN", "value": 6.8},
-        },
+        "section_payloads": r5_section_payloads(our15),
+        "facts": facts,
+        "models": models,
+        "inferences": inferences,
     }
 
 
@@ -68,6 +94,7 @@ def test_valid_compute_contract_is_ready_only_for_pre_render_qa():
     assert result["FALL20"]["status"] == "PASS"
     assert result["FACT_MODEL"]["status"] == "PASS"
     assert result["SECTION_CONTRACT"]["status"] == "PASS"
+    assert result["PROVENANCE"]["status"] == "PASS"
 
 
 def test_scope_resolver_failure_blocks_compute_before_any_report_math():
@@ -140,8 +167,12 @@ def test_watchlist_and_price_rank_sets_remain_fail_closed_at_exact_20_contract()
 def test_fact_and_model_namespaces_must_be_explicit_and_non_overlapping():
     kwargs = _valid_kwargs()
     kwargs["models"] = {
-        "official_price": {"model": "BAD_OVERLAP", "value": 76},
-        "expected_points": {"model": "BAYESIAN", "value": 6.8},
+        **kwargs["models"],
+        "official_price": model_row(
+            model="BAD_OVERLAP",
+            input_snapshot_ids=kwargs["facts"]["official_price"]["source_snapshot_ids"],
+            value=76,
+        ),
     }
 
     result = build_report_compute_contract(**kwargs)
@@ -149,7 +180,7 @@ def test_fact_and_model_namespaces_must_be_explicit_and_non_overlapping():
     assert result["compute_ready"] is False
     assert result["FACT_MODEL"]["status"] == "FAIL"
     assert result["FACT_MODEL"]["overlap"] == ["official_price"]
-    assert "FACT_MODEL_OVERLAP=official_price" in result["FACT_MODEL"]["failures"]
+    assert "PARTITION_OVERLAP=official_price" in result["FACT_MODEL"]["failures"]
 
 
 def test_compute_fingerprint_is_deterministic_for_equivalent_mapping_order():
@@ -157,6 +188,7 @@ def test_compute_fingerprint_is_deterministic_for_equivalent_mapping_order():
     kwargs_b = _valid_kwargs()
     kwargs_b["facts"] = OrderedDict(reversed(list(kwargs_b["facts"].items())))
     kwargs_b["models"] = OrderedDict(reversed(list(kwargs_b["models"].items())))
+    kwargs_b["inferences"] = OrderedDict(reversed(list(kwargs_b["inferences"].items())))
 
     result_a = build_report_compute_contract(**kwargs_a)
     result_b = build_report_compute_contract(**kwargs_b)

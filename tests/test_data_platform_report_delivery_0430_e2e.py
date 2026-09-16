@@ -12,6 +12,7 @@ from src.runtime_v6.report_contract import resolve_report_scope_matrix
 from src.runtime_v6.report_delivery import build_delivery_proof, validate_delivery_proof
 from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_render_qa
 from src.runtime_v6.workflow_control import resolve_data_slot_decision
+from test_support.report_rank20 import rank20_rows
 
 
 LOGICAL_SLOT = "2026-09-16T04:30:00+07:00"
@@ -56,13 +57,7 @@ def _watchlist20():
     return rows
 
 
-def _rank20(start: int):
-    return [{"element_id": start + offset} for offset in range(20)]
-
-
 def test_0430_already_published_v6_still_delivers_deep_report_exactly_once():
-    # Wave 1: the 04:00 V6 data slot is already published, but this must never
-    # terminate the independent 04:30 report pipeline.
     data_slot = resolve_data_slot_decision(already_published=True)
     assert data_slot == {
         "data_slot_status": "ALREADY_PUBLISHED",
@@ -71,7 +66,6 @@ def test_0430_already_published_v6_still_delivers_deep_report_exactly_once():
         "continue_report_pipeline": True,
     }
 
-    # Wave 2: no valid delivery receipt exists yet, so the 04:30 DEEP report is due.
     assert build_report_slot_id(logical_slot=LOGICAL_SLOT, report_type="DEEP") == REPORT_SLOT_ID
     initial_report = resolve_report_slot_decision(
         logical_slot=LOGICAL_SLOT,
@@ -86,9 +80,6 @@ def test_0430_already_published_v6_still_delivers_deep_report_exactly_once():
     assert initial_report["duplicate"] is False
     assert initial_report["reason"] == "DUE_REPORT"
 
-    # Wave 3: reproduce an AMBER transport symptom. Healthy V6 data must stay
-    # locked to the exact same V6 scope; transport truncation cannot trigger
-    # direct-fresh or any legacy fallback.
     retrieval = plan_exact_scope_retrieval(
         v6_scope_id="official_universe",
         v6_scope_state="CURRENT",
@@ -110,8 +101,6 @@ def test_0430_already_published_v6_still_delivers_deep_report_exactly_once():
     assert reassembled["direct_fresh_allowed"] is False
     assert reassembled["legacy_fallback_allowed"] is False
 
-    # Wave 4: expired private auth degrades only the private scope. Public
-    # official/fixture/price/mini-league scopes remain independently report-ready.
     scope_matrix = resolve_report_scope_matrix(
         {
             "official_universe": _scope(),
@@ -127,15 +116,14 @@ def test_0430_already_published_v6_still_delivers_deep_report_exactly_once():
     assert scope_matrix["degraded_scopes"] == ["private_ft_itb_sell_value"]
     assert scope_matrix["legacy_fallback_allowed"] is False
 
-    # Wave 5: deterministic computation must meet all cardinality and FACT/MODEL contracts.
     compute = build_report_compute_contract(
         scope_matrix_report_ready=scope_matrix["report_ready"],
         our15_rows=_our15(),
         starting_xi_ids=[1, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14],
         bench_ids=[2, 7, 12, 15],
         watchlist_rows=_watchlist20(),
-        rise_rows=_rank20(201),
-        fall_rows=_rank20(301),
+        rise_rows=rank20_rows(201, "RISE"),
+        fall_rows=rank20_rows(301, "FALL"),
         facts={
             "official_price": {"source": "OFFICIAL_FPL", "value": 75},
             "ownership": {"source": "OFFICIAL_FPL", "value": 42.1},
@@ -151,7 +139,6 @@ def test_0430_already_published_v6_still_delivers_deep_report_exactly_once():
     assert compute["delivery_ready"] is False
     assert compute["legacy_fallback_allowed"] is False
 
-    # Wave 6: both QA gates must pass without truncation, weather omission, or render drift.
     manifest = [
         {"section_id": section_id, "status": "COMPLETE"}
         for section_id in MANDATORY_SECTIONS
@@ -189,8 +176,6 @@ def test_0430_already_published_v6_still_delivers_deep_report_exactly_once():
     assert post["weather_direct_chat_present"] is True
     assert post["legacy_fallback_allowed"] is False
 
-    # Wave 7: only acknowledged receipt evidence may transition this exact slot
-    # to DELIVERED. The proof binds the Wave 5/6 fingerprints and delivery evidence.
     proof = build_delivery_proof(
         post_render_qa=post,
         report_slot_id=REPORT_SLOT_ID,
@@ -215,7 +200,6 @@ def test_0430_already_published_v6_still_delivers_deep_report_exactly_once():
     assert validated["delivery_proof_valid"] is True
     assert validated["delivered_report_slot_id"] == REPORT_SLOT_ID
 
-    # Exact-once closeout: only now may a repeated 04:30 invocation be suppressed.
     rerun = resolve_report_slot_decision(
         logical_slot=LOGICAL_SLOT,
         report_type="DEEP",

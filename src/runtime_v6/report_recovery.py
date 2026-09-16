@@ -164,14 +164,18 @@ def plan_report_catch_up(
 ) -> dict[str, Any]:
     """Plan late report work against the original canonical report-slot identity.
 
-    ``catch_up_deadline`` is caller-supplied so scheduling policy stays outside
-    the recovery primitive. When supplied, work after the deadline becomes a
+    Late catch-up is fail-closed: every invocation after the logical slot must
+    provide an explicit timezone-aware deadline. Work after that deadline is a
     truthful no-op while preserving the original report-slot identity.
     """
     logical = _parse_aware_timestamp(logical_slot, label="logical_slot")
     observed = _parse_aware_timestamp(observed_at, label="observed_at")
     if observed < logical:
         raise DeliveryIntegrityError("observed_at cannot precede logical_slot")
+    if observed > logical and catch_up_deadline is None:
+        raise DeliveryIntegrityError(
+            "late catch-up requires explicit catch_up_deadline"
+        )
 
     deadline: datetime | None = None
     if catch_up_deadline is not None:

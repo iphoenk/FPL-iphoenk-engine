@@ -9,22 +9,31 @@ from src.runtime_v6.domains.report_plane.delivery_integrity import resolve_repor
 
 WORKFLOW_DIR = Path(".github/workflows")
 FLAT_RUNTIME_COMMAND = re.compile(r"python\s+-m\s+src\.runtime_v6\.([A-Za-z0-9_]+)")
+CANONICAL_WORKFLOW_OWNERS = (
+    "v6-natural-data-ingestion.yml",
+    "v6-scheduler-watchdog.yml",
+    "v6-core-recovery-guard.yml",
+    "v6-ci.yml",
+    "repository-governance.yml",
+)
 
 
-def test_operational_v6_workflows_do_not_invoke_migrated_flat_facades() -> None:
+def test_operational_and_ci_workflows_do_not_invoke_migrated_flat_facades() -> None:
     offenders: list[str] = []
-    for path in sorted(WORKFLOW_DIR.glob("v6-*.yml")):
+    for workflow_name in CANONICAL_WORKFLOW_OWNERS:
+        path = WORKFLOW_DIR / workflow_name
         text = path.read_text(encoding="utf-8")
         for module_name in FLAT_RUNTIME_COMMAND.findall(text):
             if module_name in MODULE_DOMAIN:
                 offenders.append(f"{path.name}:{module_name}")
-    assert offenders == [], f"operational workflows still invoke flat facades: {offenders}"
+    assert offenders == [], f"operational/CI workflows still invoke flat facades: {offenders}"
 
 
 def test_canonical_v6_ci_contract_handles_cumulative_pr_surface() -> None:
     from src.platform.v6_ci_contract import is_v6_owned_path, requires_v6_verification
 
     assert is_v6_owned_path("src/runtime_v6/domains/report_plane/report_delivery.py") is True
+    assert is_v6_owned_path("src/platform/production_path_governance_validate.py") is True
     assert is_v6_owned_path("README.md") is False
     assert requires_v6_verification(
         [
@@ -40,6 +49,18 @@ def test_repository_governance_uses_canonical_cumulative_diff_classifier() -> No
     assert 'git diff --name-only "$BASE_SHA" "$HEAD_SHA"' in text
     assert "python src/platform/v6_ci_contract.py changed-paths" in text
     assert "grep -Eq '^(config/v6/" not in text
+
+
+def test_v6_ci_path_filters_cover_ci_contract_and_control_workflows() -> None:
+    text = (WORKFLOW_DIR / "v6-ci.yml").read_text(encoding="utf-8")
+    for marker in (
+        '"src/platform/v6_ci_contract.py"',
+        '"src/platform/production_path_governance_validate.py"',
+        '".github/workflows/v6-scheduler-watchdog.yml"',
+        '".github/workflows/v6-core-recovery-guard.yml"',
+        '".github/workflows/v6-wave3-proof.yml"',
+    ):
+        assert marker in text
 
 
 def test_pr_and_post_merge_verification_ownership_are_explicit() -> None:

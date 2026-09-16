@@ -40,6 +40,14 @@ def _all_closeout_evidence():
     return {key: True for key in CLOSEOUT_EVIDENCE_KEYS}
 
 
+def _provenance(regression, *, commit_sha: str = "a" * 40):
+    return {
+        "commit_sha": commit_sha,
+        "acceptance_fingerprint": regression["acceptance_fingerprint"],
+        "verified_at": "2026-09-16T08:00:00+07:00",
+    }
+
+
 def _our15():
     rows = []
     for player_id in range(1, 3):
@@ -127,6 +135,7 @@ def test_production_closeout_requires_regression_pass_and_every_e2e_evidence_key
     closeout = evaluate_production_closeout(
         regression_acceptance=regression,
         e2e_evidence=_all_closeout_evidence(),
+        provenance=_provenance(regression),
     )
 
     assert closeout["status"] == "PASS"
@@ -135,6 +144,7 @@ def test_production_closeout_requires_regression_pass_and_every_e2e_evidence_key
     assert closeout["required_evidence_count"] == len(CLOSEOUT_EVIDENCE_KEYS)
     assert closeout["e2e_evidence_passed"] == len(CLOSEOUT_EVIDENCE_KEYS)
     assert closeout["failures"] == []
+    assert closeout["provenance"] == _provenance(regression)
     assert closeout["legacy_fallback_allowed"] is False
 
 
@@ -148,10 +158,12 @@ def test_production_closeout_fails_closed_when_one_e2e_fact_is_missing_or_false(
     missing_result = evaluate_production_closeout(
         regression_acceptance=regression,
         e2e_evidence=missing,
+        provenance=_provenance(regression),
     )
     false_result = evaluate_production_closeout(
         regression_acceptance=regression,
         e2e_evidence=false_evidence,
+        provenance=_provenance(regression),
     )
 
     assert missing_result["status"] == "FAIL"
@@ -208,6 +220,8 @@ def test_0430_incident_reproduction_proves_report_continues_after_data_slot_noop
         compute_contract=compute,
         section_manifest=manifest,
         mini_league_denominator_complete=True,
+        weather_required=True,
+        weather_direct_chat_present=True,
     )
     post_qa = validate_post_render_qa(
         pre_render_qa=pre_qa,
@@ -219,6 +233,7 @@ def test_0430_incident_reproduction_proves_report_continues_after_data_slot_noop
         rendered_fact_keys=pre_qa["expected_fact_keys"],
         rendered_model_keys=pre_qa["expected_model_keys"],
         rendered_mini_league_denominator_complete=True,
+        rendered_weather_direct_chat_present=True,
         truncated=False,
     )
     proof = build_delivery_proof(
@@ -323,9 +338,11 @@ def test_0430_incident_reproduction_proves_report_continues_after_data_slot_noop
             )
         ),
     }
+    regression = evaluate_regression_acceptance(_scenario_results())
     closeout = evaluate_production_closeout(
-        regression_acceptance=evaluate_regression_acceptance(_scenario_results()),
+        regression_acceptance=regression,
         e2e_evidence=e2e_evidence,
+        provenance=_provenance(regression),
     )
 
     assert set(e2e_evidence) == set(CLOSEOUT_EVIDENCE_KEYS)

@@ -20,6 +20,9 @@ from .delivery_integrity import (
 
 
 _REPORT_TIMEZONE = ZoneInfo("Asia/Jakarta")
+_QA_REPORT_MODE_ALIASES = {
+    "POST_MATCH": "FULL",
+}
 
 
 def _parse_aware_timestamp(value: str | datetime, *, label: str) -> datetime:
@@ -113,6 +116,7 @@ def build_ad_hoc_report_context(
         "request_time_token": request_time_token,
         "logical_slot": logical.isoformat(timespec="seconds"),
         "report_type": kind,
+        "qa_report_mode": _QA_REPORT_MODE_ALIASES.get(kind, kind),
         "report_slot_id": report_slot_id,
         "scheduler_proof_required": False,
         "scheduler_proof_status": "N/A",

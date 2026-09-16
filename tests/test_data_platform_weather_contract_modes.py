@@ -4,6 +4,7 @@ from src.runtime_v6.delivery_integrity import MANDATORY_SECTIONS
 from src.runtime_v6.report_compute import build_report_compute_contract
 from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_render_qa
 from test_support.report_rank20 import rank20_rows
+from test_support.report_sections import r4_section_payloads
 
 
 def _our15():
@@ -30,14 +31,16 @@ def _watchlist20():
 
 
 def _compute():
+    our15 = _our15()
     return build_report_compute_contract(
         scope_matrix_report_ready=True,
-        our15_rows=_our15(),
+        our15_rows=our15,
         starting_xi_ids=[1, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14],
         bench_ids=[2, 7, 12, 15],
         watchlist_rows=_watchlist20(),
         rise_rows=rank20_rows(201, "RISE"),
         fall_rows=rank20_rows(301, "FALL"),
+        section_payloads=r4_section_payloads(our15),
         facts={"price_fact": {"source": "official_fpl"}},
         models={"price_model": {"model": "v6_price_model"}},
     )

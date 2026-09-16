@@ -130,17 +130,17 @@ def test_schedule_policy_declares_runtime_branch_for_control_plane_owner():
 
 def test_migrated_temporal_modules_do_not_own_iso_parsers_or_jakarta_zone_literals():
     migrated = (
-        "src/runtime_v6/scheduled_report_slot.py",
+        "src/runtime_v6/domains/control_plane/scheduled_report_slot.py",
         "src/runtime_v6/report_trigger.py",
         "src/runtime_v6/report_delivery.py",
         "src/runtime_v6/report_recovery.py",
         "src/runtime_v6/report_observability.py",
         "src/runtime_v6/delivery_integrity.py",
-        "src/runtime_v6/runtime_control.py",
-        "src/runtime_v6/workflow_control.py",
-        "src/runtime_v6/scheduler_watchdog.py",
-        "src/runtime_v6/scheduler_recovery.py",
-        "src/runtime_v6/schedule_policy.py",
+        "src/runtime_v6/domains/control_plane/runtime_control.py",
+        "src/runtime_v6/domains/control_plane/workflow_control.py",
+        "src/runtime_v6/domains/control_plane/scheduler_watchdog.py",
+        "src/runtime_v6/domains/control_plane/scheduler_recovery.py",
+        "src/runtime_v6/domains/control_plane/schedule_policy.py",
     )
     for path in migrated:
         text = Path(path).read_text(encoding="utf-8")
@@ -149,5 +149,5 @@ def test_migrated_temporal_modules_do_not_own_iso_parsers_or_jakarta_zone_litera
 
 
 def test_temporal_owner_contains_the_iso_parser_implementation():
-    temporal = Path("src/runtime_v6/temporal.py").read_text(encoding="utf-8")
+    temporal = Path("src/runtime_v6/domains/control_plane/temporal.py").read_text(encoding="utf-8")
     assert "datetime.fromisoformat" in temporal

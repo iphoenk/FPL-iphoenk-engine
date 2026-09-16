@@ -7,7 +7,9 @@ from pathlib import Path
 import pytest
 
 from src.runtime_v6.delivery_integrity import resolve_report_slot_decision
+from src.runtime_v6.schedule_policy import scheduler_proof_telemetry
 from src.runtime_v6.scheduled_report_slot import resolve_scheduled_report_slot
+from src.runtime_v6.scheduler_watchdog import classify_scheduler_watchdog
 
 
 def test_early_dispatch_maps_to_intended_half_hour_slot_without_rewriting_observed_at():
@@ -101,3 +103,24 @@ def test_schedule_policy_matches_canonical_half_hour_and_declares_tolerance():
 
     assert scheduler["physical_minute"] == 30
     assert scheduler["scheduled_dispatch_tolerance_seconds"] == 90
+
+
+def test_freshness_and_incident_dimensions_do_not_collapse_at_82_minutes():
+    proof_at = "2026-09-16T12:00:00+07:00"
+    observed_at = datetime.fromisoformat("2026-09-16T13:22:00+07:00")
+
+    freshness = scheduler_proof_telemetry(proof_at, now=observed_at)
+    incident = classify_scheduler_watchdog(
+        {
+            "expected_cycle_at": proof_at,
+            "schedule_kind": "chatgpt_scheduler",
+            "chatgpt_scheduler_proof": True,
+            "authoritative_runtime_snapshot": True,
+        },
+        now=observed_at,
+    )
+
+    assert freshness["scheduler_proof_freshness"] == "LATE"
+    assert freshness["scheduler_proof_health"] == "AMBER"
+    assert incident["state"] == "HEALTHY"
+    assert incident["reason_code"] == "SCHEDULER_PROOF_FRESH"

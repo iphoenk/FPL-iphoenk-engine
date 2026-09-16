@@ -6,20 +6,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
+from .temporal import age_seconds, classify_incident, try_parse_timestamp
+
 DEFAULT_WARNING_MINUTES = 90.0
 DEFAULT_CRITICAL_MINUTES = 135.0
 
 
 def _parse_dt(value: Any) -> datetime | None:
-    if value in {None, ""}:
-        return None
-    try:
-        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+    return try_parse_timestamp(
+        value,
+        naive_timezone=timezone.utc,
+        target_timezone=timezone.utc,
+    )
 
 
 def classify_scheduler_watchdog(
@@ -36,7 +34,12 @@ def classify_scheduler_watchdog(
     report-prefetch/manual-recovery evidence into a successful core slot.
     """
     control = dict(runtime_control or {})
-    now_utc = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    now_utc = try_parse_timestamp(
+        now or datetime.now(timezone.utc),
+        naive_timezone=timezone.utc,
+        target_timezone=timezone.utc,
+    )
+    assert now_utc is not None
 
     proof_at = _parse_dt(
         control.get("expected_cycle_at")
@@ -61,20 +64,26 @@ def classify_scheduler_watchdog(
             "may_publish_runtime": False,
         }
 
-    age_minutes = max(0.0, (now_utc - proof_at).total_seconds() / 60.0)
+    age_minutes = age_seconds(now=now_utc, earlier=proof_at) / 60.0
 
     if not proof_is_authoritative:
         state = "CRITICAL"
         reason = "AUTHORITATIVE_CHATGPT_PROOF_MISSING"
-    elif age_minutes > critical_minutes:
-        state = "CRITICAL"
-        reason = "SCHEDULER_PROOF_CRITICAL_AGE"
-    elif age_minutes > warning_minutes:
-        state = "WARNING"
-        reason = "SCHEDULER_PROOF_WARNING_AGE"
     else:
-        state = "HEALTHY"
-        reason = "SCHEDULER_PROOF_FRESH"
+        incident = classify_incident(
+            age_minutes=age_minutes,
+            warning_after_minutes=warning_minutes,
+            critical_after_minutes=critical_minutes,
+        ).state
+        if incident == "CRITICAL":
+            state = "CRITICAL"
+            reason = "SCHEDULER_PROOF_CRITICAL_AGE"
+        elif incident == "WARNING":
+            state = "WARNING"
+            reason = "SCHEDULER_PROOF_WARNING_AGE"
+        else:
+            state = "HEALTHY"
+            reason = "SCHEDULER_PROOF_FRESH"
 
     return {
         "state": state,

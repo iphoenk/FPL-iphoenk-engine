@@ -112,7 +112,7 @@ def test_chatgpt_scheduler_contract_is_single_hourly_authority():
     assert scheduler["name"] == "FPL Master Monitor"
     assert scheduler["timezone"] == "Asia/Jakarta"
     assert scheduler["cadence_minutes"] == 60
-    assert scheduler["physical_minute"] == 31
+    assert scheduler["physical_minute"] == 30
     assert scheduler["logical_slot_minute"] == 0
     assert scheduler["required_reason"] == "chatgpt_hourly_master"
     assert scheduler["required_audit"] == "FPL_MASTER_HOURLY"

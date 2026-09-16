@@ -6,10 +6,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
+from .control_plane import CONTROL_PLANE
 from .temporal import age_seconds, classify_incident, try_parse_timestamp
 
-DEFAULT_WARNING_MINUTES = 90.0
-DEFAULT_CRITICAL_MINUTES = 135.0
+DEFAULT_WARNING_MINUTES = CONTROL_PLANE.watchdog_warning_minutes
+DEFAULT_CRITICAL_MINUTES = CONTROL_PLANE.watchdog_critical_minutes
 
 
 def _parse_dt(value: Any) -> datetime | None:

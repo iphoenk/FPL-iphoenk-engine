@@ -10,6 +10,8 @@ from src.runtime_v6.report_qa import validate_pre_render_qa
 from src.runtime_v6.report_recovery import plan_report_catch_up
 from src.runtime_v6.report_recovery_closeout import REGRESSION_SCENARIO_IDS, evaluate_regression_acceptance
 from src.runtime_v6.workflow_control import resolve_data_slot_decision
+from test_support.report_rank20 import rank20_rows
+from test_support.report_sections import r4_section_payloads
 
 
 LOGICAL_SLOT = "2026-09-16T04:30:00+07:00"
@@ -51,10 +53,6 @@ def _watchlist20():
     return rows
 
 
-def _rank20(start_id: int):
-    return [{"id": start_id + offset} for offset in range(20)]
-
-
 def _compute(
     *,
     our15_rows=None,
@@ -64,9 +62,10 @@ def _compute(
     rise_rows=None,
     fall_rows=None,
 ):
+    resolved_our15 = _our15() if our15_rows is None else our15_rows
     return build_report_compute_contract(
         scope_matrix_report_ready=True,
-        our15_rows=_our15() if our15_rows is None else our15_rows,
+        our15_rows=resolved_our15,
         starting_xi_ids=(
             [1, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14]
             if starting_xi_ids is None
@@ -74,8 +73,9 @@ def _compute(
         ),
         bench_ids=[2, 7, 12, 15] if bench_ids is None else bench_ids,
         watchlist_rows=_watchlist20() if watchlist_rows is None else watchlist_rows,
-        rise_rows=_rank20(201) if rise_rows is None else rise_rows,
-        fall_rows=_rank20(301) if fall_rows is None else fall_rows,
+        rise_rows=rank20_rows(201, "RISE") if rise_rows is None else rise_rows,
+        fall_rows=rank20_rows(301, "FALL") if fall_rows is None else fall_rows,
+        section_payloads=r4_section_payloads(resolved_our15),
         facts={"price_fact": {"source": "official_fpl"}},
         models={"price_model": {"model": "v6_price_model"}},
     )
@@ -243,7 +243,10 @@ def _r10() -> bool:
 
 
 def _r11() -> bool:
-    result = _compute(rise_rows=_rank20(201)[:-1], fall_rows=_rank20(301)[:-1])
+    result = _compute(
+        rise_rows=rank20_rows(201, "RISE")[:-1],
+        fall_rows=rank20_rows(301, "FALL")[:-1],
+    )
     return bool(
         result["status"] == "FAIL"
         and "RISE20" in result["failures"]
@@ -258,8 +261,7 @@ def _r12() -> bool:
     )
     return bool(
         result["status"] == "FAIL"
-        and "XI" in result["failures"]
-        and "BENCH" in result["failures"]
+        and "XI_BENCH" in result["failures"]
     )
 
 

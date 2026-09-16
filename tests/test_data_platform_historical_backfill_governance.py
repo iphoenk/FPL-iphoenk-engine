@@ -45,7 +45,7 @@ def test_workflow_accepts_governed_range_and_routes_only_historical_mode():
     assert summary["scope"] == ["mini_league"]
     assert env["V6_PREFETCH_GW_FROM"] == "1"
     assert env["V6_PREFETCH_GW_TO"] == "3"
-    assert 'python -m src.runtime_v6.workflow_control resolve-prefetch' in workflow
+    assert 'python -m src.runtime_v6.domains.control_plane.workflow_control resolve-prefetch' in workflow
     assert 'python -m src.runtime_v6.historical_backfill' in workflow
     assert '--gw-from "$V6_PREFETCH_GW_FROM"' in workflow
     assert '--gw-to "$V6_PREFETCH_GW_TO"' in workflow

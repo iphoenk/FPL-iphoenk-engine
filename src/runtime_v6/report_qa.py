@@ -24,6 +24,12 @@ _COUNT_TARGETS = {
 }
 _VALID_SECTION_STATES = frozenset({"COMPLETE", "PARTIAL"})
 _MANDATORY_ORDER = {section_id: index for index, section_id in enumerate(MANDATORY_SECTIONS)}
+_DEEP_WEATHER_MODES = frozenset({"DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP"})
+_WEATHER_STATES_BY_MODE = {
+    **{mode: frozenset({"DIRECT_CHATGPT", "SOURCE_DEGRADED"}) for mode in _DEEP_WEATHER_MODES},
+    "MATCH": frozenset({"MATCH_CURRENT", "SOURCE_DEGRADED"}),
+    "PRICE": frozenset({"DIRECT_CHATGPT", "PRICE_NOT_IN_SCOPE"}),
+}
 
 
 def _is_sha256(value: Any) -> bool:
@@ -119,11 +125,45 @@ def _compute_handoff_failures(compute_contract: Mapping[str, Any]) -> list[str]:
     return failures
 
 
+def _normalize_weather_contract(
+    *,
+    report_mode: str | None,
+    weather_contract_state: str | None,
+    weather_required: bool,
+    weather_direct_chat_present: bool,
+) -> tuple[str, str, bool, bool, str | None]:
+    """Resolve new mode-aware weather semantics while preserving legacy callers."""
+    explicit_mode = report_mode is not None or weather_contract_state is not None
+    if not explicit_mode:
+        mode = "LEGACY"
+        if weather_direct_chat_present:
+            state = "DIRECT_CHATGPT"
+            valid = True
+        elif not weather_required:
+            state = "NOT_REQUIRED"
+            valid = True
+        else:
+            state = "MISSING"
+            valid = False
+        failure = None if valid else "MANDATORY_WEATHER_MISSING"
+        return mode, state, bool(weather_required), bool(weather_direct_chat_present), failure
+
+    mode = str(report_mode or "").strip().upper()
+    state = str(weather_contract_state or "MISSING").strip().upper() or "MISSING"
+    allowed = _WEATHER_STATES_BY_MODE.get(mode)
+    valid = bool(allowed and state in allowed)
+    failure = None if valid else f"WEATHER_CONTRACT_INVALID={mode or '<empty>'}:{state}"
+    direct_present = state in {"DIRECT_CHATGPT", "MATCH_CURRENT"}
+    return mode, state, True, direct_present, failure
+
+
 def _render_contract_token(
     *,
     compute_fingerprint: str,
     canonical_manifest: Sequence[Mapping[str, str]],
     mini_league_denominator_complete: bool,
+    report_mode: str,
+    weather_contract_state: str,
     weather_required: bool,
     weather_direct_chat_present: bool,
     expected_counts: Mapping[str, int],
@@ -134,6 +174,8 @@ def _render_contract_token(
         "compute_fingerprint": compute_fingerprint,
         "section_manifest": list(canonical_manifest),
         "mini_league_denominator_complete": bool(mini_league_denominator_complete),
+        "report_mode": report_mode,
+        "weather_contract_state": weather_contract_state,
         "weather_required": bool(weather_required),
         "weather_direct_chat_present": bool(weather_direct_chat_present),
         "expected_counts": dict(expected_counts),
@@ -156,6 +198,8 @@ def validate_pre_render_qa(
     mini_league_denominator_complete: bool,
     weather_required: bool = True,
     weather_direct_chat_present: bool = False,
+    report_mode: str | None = None,
+    weather_contract_state: str | None = None,
 ) -> dict[str, Any]:
     """Fail closed before rendering and mint an immutable render handoff token."""
     compute_failures = _compute_handoff_failures(compute_contract)
@@ -169,21 +213,32 @@ def validate_pre_render_qa(
         invalid_section_states,
     ) = _canonical_section_manifest(section_manifest)
 
+    (
+        resolved_report_mode,
+        resolved_weather_state,
+        resolved_weather_required,
+        resolved_weather_direct_present,
+        weather_failure,
+    ) = _normalize_weather_contract(
+        report_mode=report_mode,
+        weather_contract_state=weather_contract_state,
+        weather_required=weather_required,
+        weather_direct_chat_present=weather_direct_chat_present,
+    )
+
     failures = list(compute_failures)
     if missing_sections:
         failures.append(f"MANDATORY_SECTIONS_MISSING={','.join(missing_sections)}")
     if duplicate_sections:
         failures.append(f"SECTION_IDENTITY_DUPLICATE={','.join(duplicate_sections)}")
     if partial_not_allowed_sections:
-        failures.append(
-            f"PARTIAL_NOT_ALLOWED={','.join(partial_not_allowed_sections)}"
-        )
+        failures.append(f"PARTIAL_NOT_ALLOWED={','.join(partial_not_allowed_sections)}")
     if invalid_section_states:
         failures.append(f"SECTION_STATUS_INVALID={','.join(invalid_section_states)}")
     if not mini_league_denominator_complete:
         failures.append("MINI_LEAGUE_DENOMINATOR_INCOMPLETE")
-    if weather_required and not weather_direct_chat_present:
-        failures.append("MANDATORY_WEATHER_MISSING")
+    if weather_failure:
+        failures.append(weather_failure)
 
     fact_model = compute_contract.get("FACT_MODEL")
     expected_fact_keys = (
@@ -205,8 +260,10 @@ def validate_pre_render_qa(
             compute_fingerprint=compute_fingerprint,
             canonical_manifest=canonical_manifest,
             mini_league_denominator_complete=True,
-            weather_required=weather_required,
-            weather_direct_chat_present=weather_direct_chat_present,
+            report_mode=resolved_report_mode,
+            weather_contract_state=resolved_weather_state,
+            weather_required=resolved_weather_required,
+            weather_direct_chat_present=resolved_weather_direct_present,
             expected_counts=expected_counts,
             expected_fact_keys=expected_fact_keys,
             expected_model_keys=expected_model_keys,
@@ -243,8 +300,10 @@ def validate_pre_render_qa(
         "partial_not_allowed_sections": partial_not_allowed_sections,
         "invalid_section_states": invalid_section_states,
         "mini_league_denominator_complete": bool(mini_league_denominator_complete),
-        "weather_required": bool(weather_required),
-        "weather_direct_chat_present": bool(weather_direct_chat_present),
+        "report_mode": resolved_report_mode,
+        "weather_contract_state": resolved_weather_state,
+        "weather_required": resolved_weather_required,
+        "weather_direct_chat_present": resolved_weather_direct_present,
         "expected_counts": expected_counts,
         "expected_fact_keys": expected_fact_keys,
         "expected_model_keys": expected_model_keys,
@@ -263,6 +322,7 @@ def validate_post_render_qa(
     rendered_model_keys: Sequence[str],
     rendered_mini_league_denominator_complete: bool,
     rendered_weather_direct_chat_present: bool = False,
+    rendered_weather_contract_state: str | None = None,
     truncated: bool,
 ) -> dict[str, Any]:
     """Verify rendered output still matches the approved pre-render handoff."""
@@ -297,8 +357,7 @@ def validate_post_render_qa(
     unexpected_sections = sorted(rendered_set - expected_set, key=_section_sort_key)
 
     expected_section_states = {
-        str(row.get("section_id") or "").strip().upper():
-        str(row.get("status") or "").strip().upper()
+        str(row.get("section_id") or "").strip().upper(): str(row.get("status") or "").strip().upper()
         for row in pre_render_qa.get("section_manifest", [])
         if str(row.get("section_id") or "").strip()
     }
@@ -306,19 +365,20 @@ def validate_post_render_qa(
         str(section_id or "").strip().upper(): str(status or "").strip().upper()
         for section_id, status in rendered_section_states.items()
     }
-    unexpected_state_sections = sorted(
-        set(actual_section_states) - expected_set,
-        key=_section_sort_key,
-    )
+    unexpected_state_sections = sorted(set(actual_section_states) - expected_set, key=_section_sort_key)
 
     expected_compute_fingerprint = str(pre_render_qa.get("compute_fingerprint") or "")
     expected_counts = dict(pre_render_qa.get("expected_counts", {}))
     expected_fact_keys = sorted(str(key) for key in pre_render_qa.get("expected_fact_keys", []))
     expected_model_keys = sorted(str(key) for key in pre_render_qa.get("expected_model_keys", []))
+    expected_report_mode = str(pre_render_qa.get("report_mode") or "LEGACY").strip().upper()
+    expected_weather_state = str(
+        pre_render_qa.get("weather_contract_state")
+        or ("DIRECT_CHATGPT" if pre_render_qa.get("weather_direct_chat_present") else "MISSING")
+    ).strip().upper()
     expected_weather_required = bool(pre_render_qa.get("weather_required", True))
-    expected_weather_present = bool(
-        pre_render_qa.get("weather_direct_chat_present", False)
-    )
+    expected_weather_present = bool(pre_render_qa.get("weather_direct_chat_present", False))
+
     canonical_pre_manifest = [
         {
             "section_id": str(row.get("section_id") or "").strip().upper(),
@@ -329,9 +389,9 @@ def validate_post_render_qa(
     recomputed_pre_token = _render_contract_token(
         compute_fingerprint=expected_compute_fingerprint,
         canonical_manifest=canonical_pre_manifest,
-        mini_league_denominator_complete=bool(
-            pre_render_qa.get("mini_league_denominator_complete")
-        ),
+        mini_league_denominator_complete=bool(pre_render_qa.get("mini_league_denominator_complete")),
+        report_mode=expected_report_mode,
+        weather_contract_state=expected_weather_state,
         weather_required=expected_weather_required,
         weather_direct_chat_present=expected_weather_present,
         expected_counts=expected_counts,
@@ -339,6 +399,18 @@ def validate_post_render_qa(
         expected_model_keys=expected_model_keys,
     )
     stored_pre_token = pre_render_qa.get("render_contract_token")
+
+    if rendered_weather_contract_state is not None:
+        actual_weather_state = str(rendered_weather_contract_state or "MISSING").strip().upper() or "MISSING"
+    elif expected_report_mode == "LEGACY":
+        if rendered_weather_direct_chat_present:
+            actual_weather_state = "DIRECT_CHATGPT"
+        elif not expected_weather_required:
+            actual_weather_state = "NOT_REQUIRED"
+        else:
+            actual_weather_state = "MISSING"
+    else:
+        actual_weather_state = "DIRECT_CHATGPT" if rendered_weather_direct_chat_present else "MISSING"
 
     failures: list[str] = []
     if stored_pre_token != recomputed_pre_token:
@@ -358,13 +430,9 @@ def validate_post_render_qa(
         expected_state = expected_section_states.get(section_id, "<missing>")
         actual_state = actual_section_states.get(section_id, "<missing>")
         if actual_state != expected_state:
-            failures.append(
-                f"SECTION_STATUS_MISMATCH={section_id}:{actual_state}!={expected_state}"
-            )
+            failures.append(f"SECTION_STATUS_MISMATCH={section_id}:{actual_state}!={expected_state}")
     if unexpected_state_sections:
-        failures.append(
-            f"SECTION_STATUS_UNEXPECTED={','.join(unexpected_state_sections)}"
-        )
+        failures.append(f"SECTION_STATUS_UNEXPECTED={','.join(unexpected_state_sections)}")
 
     if rendered_compute_fingerprint != expected_compute_fingerprint:
         failures.append("COMPUTE_FINGERPRINT_MISMATCH")
@@ -387,8 +455,10 @@ def validate_post_render_qa(
 
     if not rendered_mini_league_denominator_complete:
         failures.append("MINI_LEAGUE_DENOMINATOR_INCOMPLETE")
-    if expected_weather_required and not rendered_weather_direct_chat_present:
-        failures.append("MANDATORY_WEATHER_MISSING")
+    if actual_weather_state != expected_weather_state:
+        failures.append(
+            f"WEATHER_CONTRACT_STATE_MISMATCH={actual_weather_state}!={expected_weather_state}"
+        )
 
     qa_passed = not failures
     return {
@@ -416,10 +486,10 @@ def validate_post_render_qa(
         "expected_model_keys": expected_model_keys,
         "rendered_fact_keys": actual_fact_keys,
         "rendered_model_keys": actual_model_keys,
-        "mini_league_denominator_complete": bool(
-            rendered_mini_league_denominator_complete
-        ),
+        "mini_league_denominator_complete": bool(rendered_mini_league_denominator_complete),
+        "report_mode": expected_report_mode,
+        "weather_contract_state": actual_weather_state,
         "weather_required": expected_weather_required,
-        "weather_direct_chat_present": bool(rendered_weather_direct_chat_present),
+        "weather_direct_chat_present": actual_weather_state in {"DIRECT_CHATGPT", "MATCH_CURRENT"},
         "truncated": bool(truncated),
     }

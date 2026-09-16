@@ -1,4 +1,4 @@
-# Wave 13 Runtime Module Consolidation — Design
+# Wave 14 Runtime Module Consolidation — Design
 
 ## Objective
 Consolidate the flat `src/runtime_v6` module surface into explicit canonical domain packages while preserving production behavior, public imports, CLI/module entrypoints, scheduler authority, publication semantics, report-slot state machines, registry semantics, and V6 isolation.
@@ -70,7 +70,7 @@ For each migrated module:
 9. Full regression, chaos, PR and post-merge closeout
 
 ## Acceptance Gates
-Wave 13 is complete only when all are true:
+Wave 14 is complete only when all are true:
 - Seven canonical domain packages exist under `src/runtime_v6/domains/`.
 - `DOMAIN_MODULE_MAP` has unique ownership and structural guards pass.
 - Flat compatibility imports continue to resolve existing public names.
@@ -95,5 +95,8 @@ Wave 13 is complete only when all are true:
 - No source-provider redesign.
 - No new application features.
 - No unrelated performance tuning.
-- No removal of supported flat import paths in Wave 13.
+- No removal of supported flat import paths in Wave 14.
 - No migration or fallback to V3/V4/V5.
+
+## Numbering Note
+This work was originally implemented under a provisional Wave 13 label. The revised canonical hardening sequence designates Runtime Module Consolidation as Wave 14. Historical branch and merge-commit labels are retained as immutable audit history; current documentation and PR metadata use Wave 14.

@@ -1,10 +1,10 @@
-# Wave 13 Runtime Module Consolidation Implementation Plan
+# Wave 14 Runtime Module Consolidation Implementation Plan
 
 **Goal:** Consolidate the flat V6 runtime into explicit canonical domain packages while preserving production behavior and legacy import/CLI entrypoints.
 
 **Canonical architecture:** `src/runtime_v6/domains/{acquisition,identity,publication,control_plane,report_plane,observability,governance}/`. Existing flat modules remain compatibility facades only. Cross-domain ports must resolve canonical-to-canonical when an owner has been migrated.
 
-**Spec:** `docs/superpowers/specs/2026-09-16-wave13-runtime-module-consolidation-design.md`
+**Spec:** `docs/superpowers/specs/2026-09-16-wave14-runtime-module-consolidation-design.md`
 
 ## Global Constraints
 - No V3/V4/V5 runtime fallback or dependency.
@@ -64,12 +64,17 @@
 - [x] Verify bridge-cleanup HEAD passes V6 CI, repository governance and naming policy.
 
 ### Task 10 — Final Verification and PR Closeout
-- [ ] Run/verify full V6 regression suite with zero failures on final documentation-sync HEAD.
-- [ ] Verify architecture independence and zero-downstream-authority contract.
-- [ ] Run Wave 3 chaos matrix and require canonical acceptance 16/16.
-- [ ] Verify PR #565 required pre-merge gates all PASS on exact final head.
-- [ ] Merge PR #565 with expected-head protection.
-- [ ] Verify post-merge `main` repeats full suite, chaos, architecture, authority, publisher configuration and repository governance with zero failures.
+- [x] Verify full V6 regression suite with zero failures on final head.
+- [x] Verify architecture independence and zero-downstream-authority contract.
+- [x] Run Wave 3 chaos matrix and require canonical acceptance 16/16.
+- [x] Verify PR #565 required pre-merge gates all PASS on exact final head `bcf06e81dc1252e727100107eb99809f7ddf0864`.
+- [x] Merge PR #565 with expected-head protection; merge commit `62998909b1edc66cacfd98ebe0df0c26ccaf52d8`.
+- [x] Verify post-merge `main` repeats the full suite, chaos, architecture, authority, publisher configuration, repository governance and naming policy with zero failures.
+- [x] Post-merge V6 regression: 647/647 PASS.
+- [x] Post-merge controlled-chaos acceptance: 16/16 PASS with zero missing/failed scenarios.
 
 ## Definition of GREEN
-Wave 13 is GREEN only after Task 10 is complete. Intermediate branch CI success is necessary but not sufficient.
+Wave 14 is GREEN only after Task 10 is complete. All implementation and final production-verification gates above are complete.
+
+## Numbering Note
+Runtime Module Consolidation was originally executed under a provisional Wave 13 label. The canonical revised sequence assigns it to Wave 14. Historical branch/merge labels remain untouched as audit history; this plan, the matching spec, and PR #565 metadata use the corrected Wave 14 designation.

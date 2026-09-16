@@ -49,7 +49,7 @@ def _validate_v6_watchdog(errors: list[str]) -> None:
         "contents: read",
         "actions: read",
         "issues: write",
-        "python -m src.runtime_v6.scheduler_watchdog",
+        "python -m src.runtime_v6.domains.control_plane.scheduler_watchdog",
     ):
         if marker not in text:
             errors.append(f"V6 monitoring watchdog missing required marker: {marker}")
@@ -59,6 +59,7 @@ def _validate_v6_watchdog(errors: list[str]) -> None:
         "RECOVER_V6",
         "/v6-master-acquire",
         "actions/workflows/v6-natural-data-ingestion.yml/dispatches",
+        "python -m src.runtime_v6.scheduler_watchdog",
     ):
         if forbidden in text:
             errors.append(f"V6 monitoring watchdog contains forbidden authority: {forbidden}")
@@ -103,8 +104,8 @@ def _validate_v6_recovery_guard(errors: list[str]) -> None:
         "cron: '55 * * * *'",
         "contents: read",
         "actions: write",
-        "python -m src.runtime_v6.scheduler_watchdog",
-        "python -m src.runtime_v6.scheduler_recovery",
+        "python -m src.runtime_v6.domains.control_plane.scheduler_watchdog",
+        "python -m src.runtime_v6.domains.control_plane.scheduler_recovery",
         "inputs[mode]=manual_recovery",
         "inputs[confirm]=RECOVER_V6",
         "WAVE2_SAFE_RECOVERY_CRITICAL",
@@ -119,6 +120,8 @@ def _validate_v6_recovery_guard(errors: list[str]) -> None:
         "/v6-master-acquire",
         "v6-runtime-publisher",
         "V6_RUNTIME_APP_PRIVATE_KEY",
+        "python -m src.runtime_v6.scheduler_watchdog",
+        "python -m src.runtime_v6.scheduler_recovery",
     ):
         if forbidden in text:
             errors.append(f"V6 recovery guard contains forbidden authority: {forbidden}")
@@ -224,6 +227,9 @@ def validate() -> None:
             "FPL_MASTER_SLOT ",
             "/v6-report-prefetch",
             "HEAD:refs/heads/${RUNTIME_BRANCH}",
+            "python -m src.runtime_v6.domains.control_plane.workflow_control slot-guard",
+            "python -m src.runtime_v6.domains.acquisition.collector",
+            "python -m src.runtime_v6.domains.publication.production_validate publishable",
         )
         for marker in required:
             if marker not in text:
@@ -231,6 +237,12 @@ def validate() -> None:
         forbidden = (
             "FPL_REPORT_PREFETCH ",
             "startsWith(github.event.comment.body, '/v6-master-acquire')",
+            "python -m src.runtime_v6.workflow_control",
+            "python -m src.runtime_v6.collector",
+            "python -m src.runtime_v6.runtime_control",
+            "python -m src.runtime_v6.report_prefetch",
+            "python -m src.runtime_v6.publish_integrity",
+            "python -m src.runtime_v6.production_validate",
         )
         for marker in forbidden:
             if marker in text:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Canonical ownership map for Wave 13 V6 runtime domains."""
+"""Canonical ownership map for Wave 14 V6 runtime domains."""
 
 DOMAIN_MODULE_MAP: dict[str, tuple[str, ...]] = {
     "acquisition": (

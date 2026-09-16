@@ -14,6 +14,7 @@ from src.runtime_v6.report_trigger import (
     resolve_ad_hoc_report_decision,
 )
 from src.runtime_v6.workflow_control import resolve_data_slot_decision
+from test_support.report_rank20 import rank20_rows
 
 
 REQUESTED_AT = "2026-09-16T08:41:23+07:00"
@@ -46,8 +47,8 @@ def _compute():
         starting_xi_ids=[1, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14],
         bench_ids=[2, 7, 12, 15],
         watchlist_rows=_watchlist20(),
-        rise_rows=[{"id": 201 + index} for index in range(20)],
-        fall_rows=[{"id": 301 + index} for index in range(20)],
+        rise_rows=rank20_rows(201, "RISE"),
+        fall_rows=rank20_rows(301, "FALL"),
         facts={"official": {"source": "official_fpl"}},
         models={"projection": {"model": "v6"}},
     )

@@ -8,6 +8,7 @@ R3 implements deterministic downstream construction of canonical RISE20 and FALL
 - Library Spec V11 J2 defines the R3 deterministic selection semantics.
 - `src/runtime_v6/domains/report_plane/delivery_integrity.py` remains the executable row-schema validator owner from R2.
 - `src/runtime_v6/domains/report_plane/rank20_engine.py` owns R3 selection, ordering, ownership tagging, ETA rendering, and snapshot binding.
+- `src/runtime_v6/domains/report_plane/report_compute.py::build_report_compute_contract_from_universe()` is the canonical R3 construction entrypoint. It invokes the full-universe engine before the existing compute validator. `build_report_compute_contract()` remains a low-level validation primitive for already-materialized compatibility callers and tests, not the preferred new-construction path.
 
 ## Deterministic selection
 For a COMPLETE normalized predictor snapshot:
@@ -53,7 +54,9 @@ R3 was developed test-first:
 
 1. commit `42b1e4ca3bb205155f1e40232256cf9ce6ba4b16` added acceptance tests before the engine existed;
 2. the full unit/regression suite failed in the expected RED state;
-3. commit `5c5c7445d9e53c154e3f21f70b227293439cee64` added the minimal engine;
-4. the same full unit/regression suite passed on the implementation head.
+3. commit `5c5c7445d9e53c154e3f21f70b227293439cee64` added the minimal engine and made the engine acceptance suite GREEN;
+4. commit `6ddf5b48f1e54fbbf3f2a529ac16a7358bd1c330` added a second RED test proving `report_compute` still lacked the canonical engine-backed entrypoint;
+5. commit `1de94a166c55553aaa93891128e3157d047eab6c` added that canonical entrypoint and returned the full unit/regression suite to GREEN;
+6. subsequent cleanup removes unused registry-like constants and simplifies ETA input handling without changing selection semantics.
 
-The tests use synthetic players only and prove full-universe scanning, exact top/bottom 20, stable tie-breaking, input-order invariance, ownership tagging, truthful ETA behavior, single-snapshot provenance, and fail-closed coverage/identity handling.
+The tests use synthetic players only and prove full-universe scanning, exact top/bottom 20, stable tie-breaking, input-order invariance, ownership tagging, truthful ETA behavior, single-snapshot provenance, fail-closed coverage/identity handling, and canonical report-compute integration without hardcoded player names.

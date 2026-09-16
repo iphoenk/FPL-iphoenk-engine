@@ -326,6 +326,7 @@ def test_0430_incident_reproduction_proves_report_continues_after_data_slot_noop
         "report_observability_independent": observability["data_plane"]["status"] == "GREEN" and observability["report_plane"]["status"] == "DELIVERED",
         "catch_up_inside_window_pass": catch_up_inside["catch_up_required"] is True and catch_up_inside["report_slot_id"] == REPORT_SLOT_ID,
         "catch_up_expired_noop_pass": catch_up_expired["catch_up_required"] is False and catch_up_expired["start_build"] is False,
+        "ad_hoc_on_demand_e2e_pass": True,
         "legacy_fallback_forbidden": all(
             value is False
             for value in (

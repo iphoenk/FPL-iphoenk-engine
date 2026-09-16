@@ -19,8 +19,8 @@ from src.runtime_v6.report_recovery_closeout import (
     evaluate_regression_acceptance,
 )
 from src.runtime_v6.workflow_control import resolve_data_slot_decision
+from test_support.report_provenance import r5_partitions, r5_section_payloads
 from test_support.report_rank20 import rank20_rows
-from test_support.report_sections import r4_section_payloads
 
 
 LOGICAL_SLOT = "2026-09-16T04:30:00+07:00"
@@ -75,6 +75,12 @@ def _watchlist20():
 
 def _valid_compute():
     our15 = _our15()
+    facts, models, inferences = r5_partitions(
+        fact_key="price_fact",
+        model_key="price_model",
+        fact_source="OFFICIAL_FPL",
+        model_name="V6_PRICE_MODEL",
+    )
     return build_report_compute_contract(
         scope_matrix_report_ready=True,
         our15_rows=our15,
@@ -83,9 +89,10 @@ def _valid_compute():
         watchlist_rows=_watchlist20(),
         rise_rows=rank20_rows(201, "RISE"),
         fall_rows=rank20_rows(301, "FALL"),
-        section_payloads=r4_section_payloads(our15),
-        facts={"price_fact": {"source": "official_fpl"}},
-        models={"price_model": {"model": "v6_price_model"}},
+        section_payloads=r5_section_payloads(our15),
+        facts=facts,
+        models=models,
+        inferences=inferences,
     )
 
 

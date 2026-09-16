@@ -1,16 +1,11 @@
 from __future__ import annotations
 
-"""Read-only observability projection for V6 data and report delivery planes.
+"""Read-only observability projection for V6 data and report delivery planes."""
 
-Wave 9 deliberately does not make pipeline decisions. It projects evidence
-already produced by the V6 data plane and Waves 3-8 into independently visible
-stages so data health can never be mistaken for report-delivery health.
-"""
-
-from datetime import datetime
 from typing import Any, Mapping
 
 from .delivery_integrity import DeliveryIntegrityError, FINAL_UNAVAILABLE_REASONS
+from .temporal import TemporalError, canonical_timestamp
 
 
 _STAGE_NAMES = (
@@ -28,12 +23,11 @@ def _canonical_timestamp(value: Any, *, label: str) -> str | None:
     if value is None:
         return None
     try:
-        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except ValueError as exc:
-        raise DeliveryIntegrityError(f"{label} must be ISO-8601") from exc
-    if parsed.tzinfo is None or parsed.utcoffset() is None:
-        raise DeliveryIntegrityError(f"{label} must include timezone offset")
-    return parsed.isoformat(timespec="seconds")
+        return canonical_timestamp(value, timespec="seconds")
+    except TemporalError as exc:
+        if "timezone-aware" in str(exc):
+            raise DeliveryIntegrityError(f"{label} must include timezone offset") from exc
+        raise DeliveryIntegrityError(str(exc)) from exc
 
 
 def _timestamp_map(stage_timestamps: Mapping[str, Any] | None) -> dict[str, str | None]:
@@ -62,11 +56,7 @@ def _base_stage(*, status: str, observed_at: str | None) -> dict[str, Any]:
     }
 
 
-def _data_plane_view(
-    evidence: Mapping[str, Any] | None,
-    *,
-    observed_at: str | None,
-) -> dict[str, Any]:
+def _data_plane_view(evidence: Mapping[str, Any] | None, *, observed_at: str | None) -> dict[str, Any]:
     if evidence is None:
         return _base_stage(status="UNKNOWN", observed_at=observed_at)
     result = _base_stage(status=_upper(evidence.get("status")), observed_at=observed_at)
@@ -84,23 +74,17 @@ def _data_plane_view(
     return result
 
 
-def _retrieval_view(
-    evidence: Mapping[str, Any] | None,
-    *,
-    observed_at: str | None,
-) -> dict[str, Any]:
+def _retrieval_view(evidence: Mapping[str, Any] | None, *, observed_at: str | None) -> dict[str, Any]:
     if evidence is None:
         return {
             **_base_stage(status="UNKNOWN", observed_at=observed_at),
             "source_failed": False,
             "action": None,
         }
-
     action = _upper(evidence.get("action"))
     scope_state = _upper(evidence.get("v6_scope_state"))
     retrieval_state = _upper(evidence.get("retrieval_state"))
     source_failed = scope_state in FINAL_UNAVAILABLE_REASONS
-
     if action == "SAME_V6_RETRIEVAL_RECOVERY":
         status = "RECOVERY_REQUIRED"
     elif action == "READ_V6_ONLY":
@@ -109,7 +93,6 @@ def _retrieval_view(
         status = "SOURCE_RECOVERY_REQUIRED"
     else:
         status = "UNKNOWN"
-
     return {
         **_base_stage(status=status, observed_at=observed_at),
         "v6_scope_id": evidence.get("v6_scope_id"),
@@ -149,7 +132,6 @@ def _delivery_view(
             "same_slot_receipt": False,
             "delivered": False,
         }
-
     delivered_slot = str(
         evidence.get("delivered_report_slot_id")
         or evidence.get("report_slot_id")
@@ -184,18 +166,13 @@ def _delivery_view(
     }
 
 
-def _recovery_view(
-    evidence: Mapping[str, Any] | None,
-    *,
-    observed_at: str | None,
-) -> dict[str, Any]:
+def _recovery_view(evidence: Mapping[str, Any] | None, *, observed_at: str | None) -> dict[str, Any]:
     if evidence is None:
         return {
             **_base_stage(status="UNKNOWN", observed_at=observed_at),
             "mode": None,
             "active": False,
         }
-
     mode = _upper(evidence.get("recovery_mode"))
     next_action = str(evidence.get("next_action") or "").upper()
     expired = next_action in {"AD_HOC_RECOVERY_EXPIRED", "CATCH_UP_WINDOW_EXPIRED"}
@@ -206,10 +183,7 @@ def _recovery_view(
             or evidence.get("catch_up_required") is True
             or (
                 evidence.get("start_build") is True
-                and (
-                    next_action.startswith("CATCH_UP")
-                    or next_action.startswith("AD_HOC")
-                )
+                and (next_action.startswith("CATCH_UP") or next_action.startswith("AD_HOC"))
             )
         )
     )
@@ -221,7 +195,6 @@ def _recovery_view(
         status = "INACTIVE"
     else:
         status = "PENDING"
-
     return {
         **_base_stage(status=status, observed_at=observed_at),
         "mode": None if mode == "UNKNOWN" else mode,
@@ -321,11 +294,9 @@ def build_report_observability(
     trigger_context: Mapping[str, Any] | None = None,
     stage_timestamps: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Project independent data/report-plane evidence without changing runtime state."""
     slot_id = str(report_slot_id or "").strip()
     if not slot_id:
         raise DeliveryIntegrityError("report_slot_id must be non-empty")
-
     timestamps = _timestamp_map(stage_timestamps)
     data_view = _data_plane_view(data_plane, observed_at=timestamps["data_plane"])
     retrieval_view = _retrieval_view(retrieval, observed_at=timestamps["retrieval"])
@@ -344,14 +315,9 @@ def build_report_observability(
         observed_at=timestamps["post_render_qa"],
         extra_keys=("qa_stage", "qa_passed", "report_state", "next_action", "failures"),
     )
-    delivery_view = _delivery_view(
-        delivery,
-        report_slot_id=slot_id,
-        observed_at=timestamps["delivery"],
-    )
+    delivery_view = _delivery_view(delivery, report_slot_id=slot_id, observed_at=timestamps["delivery"])
     recovery_view = _recovery_view(recovery, observed_at=timestamps["recovery"])
     trigger_view = _trigger_view(trigger_context, report_slot_id=slot_id)
-
     stages = {
         "retrieval": retrieval_view,
         "compute": compute_view,
@@ -362,14 +328,7 @@ def build_report_observability(
     }
     any_report_evidence = any(
         evidence is not None
-        for evidence in (
-            retrieval,
-            compute,
-            pre_render_qa,
-            post_render_qa,
-            delivery,
-            recovery,
-        )
+        for evidence in (retrieval, compute, pre_render_qa, post_render_qa, delivery, recovery)
     )
     report_status = _report_plane_status(
         retrieval=retrieval_view,
@@ -380,13 +339,9 @@ def build_report_observability(
         recovery=recovery_view,
         any_report_evidence=any_report_evidence,
     )
-
     result = {
         "report_slot_id": slot_id,
-        "data_plane": {
-            **data_view,
-            "legacy_fallback_allowed": False,
-        },
+        "data_plane": {**data_view, "legacy_fallback_allowed": False},
         "report_plane": {
             "status": report_status,
             "delivered": bool(delivery_view.get("delivered")),

@@ -197,12 +197,16 @@ def _recovery_view(
         }
 
     mode = _upper(evidence.get("recovery_mode"))
+    next_action = str(evidence.get("next_action") or "").upper()
     active = bool(
         evidence.get("retry_now") is True
         or evidence.get("catch_up_required") is True
         or (
             evidence.get("start_build") is True
-            and str(evidence.get("next_action") or "").upper().startswith("CATCH_UP")
+            and (
+                next_action.startswith("CATCH_UP")
+                or next_action.startswith("AD_HOC")
+            )
         )
     )
     if active:
@@ -223,6 +227,41 @@ def _recovery_view(
         "next_action": evidence.get("next_action"),
         "underlying_reason": evidence.get("underlying_reason") or evidence.get("reason"),
         "v6_data_plane_mutation_allowed": False,
+    }
+
+
+def _trigger_view(
+    trigger_context: Mapping[str, Any] | None,
+    *,
+    report_slot_id: str,
+) -> dict[str, Any] | None:
+    if trigger_context is None:
+        return None
+    trigger_kind = _upper(trigger_context.get("trigger_kind"))
+    trigger_slot_id = str(trigger_context.get("report_slot_id") or "").strip()
+    if trigger_slot_id and trigger_slot_id != report_slot_id:
+        raise DeliveryIntegrityError("trigger context report-slot identity mismatch")
+    if trigger_kind == "AD_HOC":
+        if not trigger_context.get("request_id"):
+            raise DeliveryIntegrityError("AD_HOC trigger context requires request_id")
+        return {
+            "trigger_kind": "AD_HOC",
+            "request_id": trigger_context.get("request_id"),
+            "requested_at": trigger_context.get("requested_at"),
+            "report_type": trigger_context.get("report_type"),
+            "report_slot_id": report_slot_id,
+            "scheduler_proof_required": False,
+            "scheduler_proof_status": "N/A",
+            "missed_cycle_status": "N/A",
+            "legacy_fallback_allowed": False,
+        }
+    return {
+        "trigger_kind": trigger_kind,
+        "report_slot_id": report_slot_id,
+        "scheduler_proof_required": trigger_context.get("scheduler_proof_required"),
+        "scheduler_proof_status": trigger_context.get("scheduler_proof_status"),
+        "missed_cycle_status": trigger_context.get("missed_cycle_status"),
+        "legacy_fallback_allowed": False,
     }
 
 
@@ -269,6 +308,7 @@ def build_report_observability(
     post_render_qa: Mapping[str, Any] | None,
     delivery: Mapping[str, Any] | None,
     recovery: Mapping[str, Any] | None,
+    trigger_context: Mapping[str, Any] | None = None,
     stage_timestamps: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Project independent data/report-plane evidence without changing runtime state."""
@@ -300,6 +340,7 @@ def build_report_observability(
         observed_at=timestamps["delivery"],
     )
     recovery_view = _recovery_view(recovery, observed_at=timestamps["recovery"])
+    trigger_view = _trigger_view(trigger_context, report_slot_id=slot_id)
 
     stages = {
         "retrieval": retrieval_view,
@@ -330,7 +371,7 @@ def build_report_observability(
         any_report_evidence=any_report_evidence,
     )
 
-    return {
+    result = {
         "report_slot_id": slot_id,
         "data_plane": {
             **data_view,
@@ -349,3 +390,6 @@ def build_report_observability(
         },
         "legacy_fallback_allowed": False,
     }
+    if trigger_view is not None:
+        result["trigger"] = trigger_view
+    return result

@@ -124,6 +124,8 @@ def _render_contract_token(
     compute_fingerprint: str,
     canonical_manifest: Sequence[Mapping[str, str]],
     mini_league_denominator_complete: bool,
+    weather_required: bool,
+    weather_direct_chat_present: bool,
     expected_counts: Mapping[str, int],
     expected_fact_keys: Sequence[str],
     expected_model_keys: Sequence[str],
@@ -132,6 +134,8 @@ def _render_contract_token(
         "compute_fingerprint": compute_fingerprint,
         "section_manifest": list(canonical_manifest),
         "mini_league_denominator_complete": bool(mini_league_denominator_complete),
+        "weather_required": bool(weather_required),
+        "weather_direct_chat_present": bool(weather_direct_chat_present),
         "expected_counts": dict(expected_counts),
         "expected_fact_keys": list(expected_fact_keys),
         "expected_model_keys": list(expected_model_keys),
@@ -150,6 +154,8 @@ def validate_pre_render_qa(
     compute_contract: Mapping[str, Any],
     section_manifest: Sequence[Mapping[str, Any]],
     mini_league_denominator_complete: bool,
+    weather_required: bool = True,
+    weather_direct_chat_present: bool = False,
 ) -> dict[str, Any]:
     """Fail closed before rendering and mint an immutable render handoff token."""
     compute_failures = _compute_handoff_failures(compute_contract)
@@ -176,6 +182,8 @@ def validate_pre_render_qa(
         failures.append(f"SECTION_STATUS_INVALID={','.join(invalid_section_states)}")
     if not mini_league_denominator_complete:
         failures.append("MINI_LEAGUE_DENOMINATOR_INCOMPLETE")
+    if weather_required and not weather_direct_chat_present:
+        failures.append("MANDATORY_WEATHER_MISSING")
 
     fact_model = compute_contract.get("FACT_MODEL")
     expected_fact_keys = (
@@ -197,6 +205,8 @@ def validate_pre_render_qa(
             compute_fingerprint=compute_fingerprint,
             canonical_manifest=canonical_manifest,
             mini_league_denominator_complete=True,
+            weather_required=weather_required,
+            weather_direct_chat_present=weather_direct_chat_present,
             expected_counts=expected_counts,
             expected_fact_keys=expected_fact_keys,
             expected_model_keys=expected_model_keys,
@@ -233,6 +243,8 @@ def validate_pre_render_qa(
         "partial_not_allowed_sections": partial_not_allowed_sections,
         "invalid_section_states": invalid_section_states,
         "mini_league_denominator_complete": bool(mini_league_denominator_complete),
+        "weather_required": bool(weather_required),
+        "weather_direct_chat_present": bool(weather_direct_chat_present),
         "expected_counts": expected_counts,
         "expected_fact_keys": expected_fact_keys,
         "expected_model_keys": expected_model_keys,
@@ -250,6 +262,7 @@ def validate_post_render_qa(
     rendered_fact_keys: Sequence[str],
     rendered_model_keys: Sequence[str],
     rendered_mini_league_denominator_complete: bool,
+    rendered_weather_direct_chat_present: bool = False,
     truncated: bool,
 ) -> dict[str, Any]:
     """Verify rendered output still matches the approved pre-render handoff."""
@@ -302,6 +315,10 @@ def validate_post_render_qa(
     expected_counts = dict(pre_render_qa.get("expected_counts", {}))
     expected_fact_keys = sorted(str(key) for key in pre_render_qa.get("expected_fact_keys", []))
     expected_model_keys = sorted(str(key) for key in pre_render_qa.get("expected_model_keys", []))
+    expected_weather_required = bool(pre_render_qa.get("weather_required", True))
+    expected_weather_present = bool(
+        pre_render_qa.get("weather_direct_chat_present", False)
+    )
     canonical_pre_manifest = [
         {
             "section_id": str(row.get("section_id") or "").strip().upper(),
@@ -315,6 +332,8 @@ def validate_post_render_qa(
         mini_league_denominator_complete=bool(
             pre_render_qa.get("mini_league_denominator_complete")
         ),
+        weather_required=expected_weather_required,
+        weather_direct_chat_present=expected_weather_present,
         expected_counts=expected_counts,
         expected_fact_keys=expected_fact_keys,
         expected_model_keys=expected_model_keys,
@@ -368,6 +387,8 @@ def validate_post_render_qa(
 
     if not rendered_mini_league_denominator_complete:
         failures.append("MINI_LEAGUE_DENOMINATOR_INCOMPLETE")
+    if expected_weather_required and not rendered_weather_direct_chat_present:
+        failures.append("MANDATORY_WEATHER_MISSING")
 
     qa_passed = not failures
     return {
@@ -398,5 +419,7 @@ def validate_post_render_qa(
         "mini_league_denominator_complete": bool(
             rendered_mini_league_denominator_complete
         ),
+        "weather_required": expected_weather_required,
+        "weather_direct_chat_present": bool(rendered_weather_direct_chat_present),
         "truncated": bool(truncated),
     }

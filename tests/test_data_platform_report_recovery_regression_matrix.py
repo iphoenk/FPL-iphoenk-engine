@@ -234,12 +234,22 @@ def _r08() -> bool:
 
 def _r09() -> bool:
     result = _compute(our15_rows=_our15()[:-1])
-    return bool(result["status"] == "FAIL" and "OUR15" in result["failures"])
+    checks = result["SECTION_CONTRACT"]["checks"]
+    return bool(
+        result["status"] == "FAIL"
+        and "SECTION_CONTRACT" in result["failures"]
+        and checks["OUR15"]["status"] == "FAIL"
+    )
 
 
 def _r10() -> bool:
     result = _compute(watchlist_rows=_watchlist20()[:-1])
-    return bool(result["status"] == "FAIL" and "WATCHLIST20" in result["failures"])
+    checks = result["SECTION_CONTRACT"]["checks"]
+    return bool(
+        result["status"] == "FAIL"
+        and "SECTION_CONTRACT" in result["failures"]
+        and checks["WATCHLIST20"]["status"] == "FAIL"
+    )
 
 
 def _r11() -> bool:
@@ -247,10 +257,12 @@ def _r11() -> bool:
         rise_rows=rank20_rows(201, "RISE")[:-1],
         fall_rows=rank20_rows(301, "FALL")[:-1],
     )
+    checks = result["SECTION_CONTRACT"]["checks"]
     return bool(
         result["status"] == "FAIL"
-        and "RISE20" in result["failures"]
-        and "FALL20" in result["failures"]
+        and "SECTION_CONTRACT" in result["failures"]
+        and checks["RISE20"]["status"] == "FAIL"
+        and checks["FALL20"]["status"] == "FAIL"
     )
 
 
@@ -259,9 +271,13 @@ def _r12() -> bool:
         starting_xi_ids=[1, 3, 4, 5, 8, 9, 10, 11, 13, 14],
         bench_ids=[2, 6, 7, 12, 15],
     )
+    xi_bench = result["SECTION_CONTRACT"]["checks"]["XI_BENCH"]
     return bool(
         result["status"] == "FAIL"
-        and "XI_BENCH" in result["failures"]
+        and "SECTION_CONTRACT" in result["failures"]
+        and xi_bench["status"] == "FAIL"
+        and xi_bench["XI"]["status"] == "FAIL"
+        and xi_bench["BENCH"]["status"] == "FAIL"
     )
 
 

@@ -1,2 +1,2 @@
-"""Temporary publication port to architecture governance during staged migration."""
-from ...architecture_independence_validate import *
+"""Canonical publication port to governance architecture validation."""
+from ..governance.architecture_independence_validate import *

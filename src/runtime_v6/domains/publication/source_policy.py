@@ -1,2 +1,2 @@
-"""Temporary publication port to source policy during staged governance migration."""
-from ...source_policy import *
+"""Canonical publication port to governance source policy."""
+from ..governance.source_policy import *

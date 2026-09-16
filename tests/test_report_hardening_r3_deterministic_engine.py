@@ -13,6 +13,7 @@ from src.runtime_v6.domains.report_plane.rank20_engine import (
 from src.runtime_v6.domains.report_plane.report_compute import (
     build_report_compute_contract_from_universe,
 )
+from test_support.report_sections import r4_section_payloads
 
 
 def _universe(count: int = 60) -> list[dict]:
@@ -190,21 +191,24 @@ def test_r3_rejects_mixed_snapshot_lineage_in_predictor_rows():
 
 
 def test_report_compute_canonical_entrypoint_builds_rank20_from_full_universe():
+    our15 = _our15()
     result = build_report_compute_contract_from_universe(
         scope_matrix_report_ready=True,
-        our15_rows=_our15(),
+        our15_rows=our15,
         starting_xi_ids=[1, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14],
         bench_ids=[2, 7, 12, 15],
         watchlist_rows=_watchlist20(),
         universe_rows=_universe(),
         predictor_rows=_predictor(),
         rank_snapshot=_snapshot(),
+        section_payloads=r4_section_payloads(our15),
         facts={"official_price": {"source": "OFFICIAL_FPL", "value": 7.5}},
         models={"price_signal": {"model": "PRICE_PREDICTOR", "value": 0.8}},
     )
 
     assert result["status"] == "PASS"
     assert result["compute_ready"] is True
+    assert result["SECTION_CONTRACT"]["status"] == "PASS"
     assert result["RANK20_ENGINE"]["full_universe_coverage"] is True
     assert result["RANK20_ENGINE"]["universe_count"] == 60
     assert [row["element_id"] for row in result["RISE20_ROWS"]] == list(range(60, 40, -1))

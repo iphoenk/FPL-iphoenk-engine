@@ -6,152 +6,27 @@ This module validates the shape and partitioning of already-resolved report inpu
 It does not acquire data, publish V6 artifacts, or implement FPL prediction models.
 """
 
-from collections import Counter
 from hashlib import sha256
 import json
 from typing import Any, Mapping, Sequence
 
-from .delivery_integrity import RANK20_REQUIRED_FIELDS, validate_rank20, validate_watchlist20
+from .delivery_integrity import RANK20_REQUIRED_FIELDS
 from .rank20_engine import build_rank20_tables
+from .section_contract import player_id, player_position, validate_report_sections
 
 
-_SQUAD_POSITION_TARGET = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}
-_POSITION_ALIASES = {"GKP": "GK", "GOALKEEPER": "GK"}
-
-
-def _player_id(row: Mapping[str, Any]) -> int | str | None:
-    for key in ("element_id", "player_id", "id"):
-        if row.get(key) is not None:
-            return row[key]
-    return None
-
-
-def _position(row: Mapping[str, Any]) -> str:
-    raw = str(row.get("position") or row.get("pos") or "").upper()
-    return _POSITION_ALIASES.get(raw, raw)
+_R4_EXTRA_SECTIONS = (
+    "WEATHER",
+    "ICON14B",
+    "ALL15_TACTICAL",
+    "OPTIMIZER",
+    "TRANSFER_STAGE",
+    "PRICE_RISK",
+)
 
 
 def _sort_ids(values: Sequence[int | str]) -> list[int | str]:
     return sorted(values, key=lambda value: (type(value).__name__, str(value)))
-
-
-def _validate_our15(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
-    ids = [_player_id(row) for row in rows]
-    positions = Counter(_position(row) for row in rows)
-    failures: list[str] = []
-
-    if len(rows) != 15:
-        failures.append(f"TOTAL={len(rows)}")
-    if any(player_id is None for player_id in ids):
-        failures.append("IDENTITY_MISSING")
-    concrete_ids = [player_id for player_id in ids if player_id is not None]
-    if len(set(concrete_ids)) != len(concrete_ids):
-        failures.append("IDENTITY_DUPLICATE")
-    for position, target in _SQUAD_POSITION_TARGET.items():
-        if positions.get(position, 0) != target:
-            failures.append(f"{position}={positions.get(position, 0)}")
-
-    return {
-        "status": "PASS" if not failures else "FAIL",
-        "failures": failures,
-        "total": len(rows),
-        "positions": {
-            position: positions.get(position, 0)
-            for position in _SQUAD_POSITION_TARGET
-        },
-        "ids": concrete_ids,
-    }
-
-
-def _validate_starting_xi(
-    starting_xi_ids: Sequence[int | str],
-    *,
-    our15_rows: Sequence[Mapping[str, Any]],
-) -> dict[str, Any]:
-    failures: list[str] = []
-    xi = list(starting_xi_ids)
-    our15_by_id = {
-        player_id: row
-        for row in our15_rows
-        if (player_id := _player_id(row)) is not None
-    }
-
-    if len(xi) != 11:
-        failures.append(f"TOTAL={len(xi)}")
-    if len(set(xi)) != len(xi):
-        failures.append("IDENTITY_DUPLICATE")
-
-    outside = sorted(set(xi) - set(our15_by_id), key=str)
-    if outside:
-        failures.append(f"NOT_OWNED={len(outside)}")
-
-    positions = Counter(
-        _position(our15_by_id[player_id])
-        for player_id in xi
-        if player_id in our15_by_id
-    )
-    if positions.get("GK", 0) != 1:
-        failures.append(f"GK={positions.get('GK', 0)}")
-    if not 3 <= positions.get("DEF", 0) <= 5:
-        failures.append(f"DEF={positions.get('DEF', 0)}")
-    if not 2 <= positions.get("MID", 0) <= 5:
-        failures.append(f"MID={positions.get('MID', 0)}")
-    if not 1 <= positions.get("FWD", 0) <= 3:
-        failures.append(f"FWD={positions.get('FWD', 0)}")
-
-    return {
-        "status": "PASS" if not failures else "FAIL",
-        "failures": failures,
-        "total": len(xi),
-        "positions": {
-            position: positions.get(position, 0)
-            for position in _SQUAD_POSITION_TARGET
-        },
-        "ids": xi,
-    }
-
-
-def _validate_bench(
-    bench_ids: Sequence[int | str],
-    *,
-    starting_xi_ids: Sequence[int | str],
-    our15_rows: Sequence[Mapping[str, Any]],
-) -> dict[str, Any]:
-    failures: list[str] = []
-    bench = list(bench_ids)
-    our15_by_id = {
-        player_id: row
-        for row in our15_rows
-        if (player_id := _player_id(row)) is not None
-    }
-    our15_ids = set(our15_by_id)
-    xi_ids = set(starting_xi_ids)
-
-    if len(bench) != 4:
-        failures.append(f"TOTAL={len(bench)}")
-    if len(set(bench)) != len(bench):
-        failures.append("IDENTITY_DUPLICATE")
-    if set(bench) != our15_ids - xi_ids:
-        failures.append("NOT_EXACT_OUR15_COMPLEMENT")
-    outside = sorted(set(bench) - our15_ids, key=str)
-    if outside:
-        failures.append(f"NOT_OWNED={len(outside)}")
-
-    bench_gk = sum(
-        1
-        for player_id in bench
-        if player_id in our15_by_id and _position(our15_by_id[player_id]) == "GK"
-    )
-    if bench_gk != 1:
-        failures.append(f"GK={bench_gk}")
-
-    return {
-        "status": "PASS" if not failures else "FAIL",
-        "failures": failures,
-        "total": len(bench),
-        "goalkeepers": bench_gk,
-        "ids": bench,
-    }
 
 
 def _validate_fact_model_partition(
@@ -190,6 +65,37 @@ def _rank20_fingerprint_rows(rows: Sequence[Mapping[str, Any]]) -> list[dict[str
     ]
 
 
+def _compose_section_payloads(
+    *,
+    our15_rows: Sequence[Mapping[str, Any]],
+    starting_xi_ids: Sequence[int | str],
+    bench_ids: Sequence[int | str],
+    watchlist_rows: Sequence[Mapping[str, Any]],
+    rise_rows: Sequence[Mapping[str, Any]],
+    fall_rows: Sequence[Mapping[str, Any]],
+    section_payloads: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Build one R4 validation payload without allowing callers to override core sections."""
+    result = {
+        section: section_payloads[section]
+        for section in _R4_EXTRA_SECTIONS
+        if section in section_payloads
+    }
+    result.update(
+        {
+            "OUR15": list(our15_rows),
+            "XI_BENCH": {
+                "starting_xi_ids": list(starting_xi_ids),
+                "bench_ids": list(bench_ids),
+            },
+            "WATCHLIST20": list(watchlist_rows),
+            "RISE20": list(rise_rows),
+            "FALL20": list(fall_rows),
+        }
+    )
+    return result
+
+
 def _compute_fingerprint(
     *,
     our15_rows: Sequence[Mapping[str, Any]],
@@ -198,23 +104,29 @@ def _compute_fingerprint(
     watchlist_rows: Sequence[Mapping[str, Any]],
     rise_rows: Sequence[Mapping[str, Any]],
     fall_rows: Sequence[Mapping[str, Any]],
+    section_payloads: Mapping[str, Any],
     facts: Mapping[str, Any],
     models: Mapping[str, Any],
 ) -> str:
     our15 = sorted(
         (
-            {"id": _player_id(row), "position": _position(row)}
+            {"id": player_id(row), "position": player_position(row)}
             for row in our15_rows
         ),
         key=lambda row: (str(row["id"]), row["position"]),
     )
+    r4_extras = {
+        section: section_payloads.get(section)
+        for section in _R4_EXTRA_SECTIONS
+    }
     payload = {
         "OUR15": our15,
         "XI": _sort_ids(list(starting_xi_ids)),
         "BENCH": _sort_ids(list(bench_ids)),
-        "WATCHLIST20": [_player_id(row) for row in watchlist_rows],
+        "WATCHLIST20": [player_id(row) for row in watchlist_rows],
         "RISE20": _rank20_fingerprint_rows(rise_rows),
         "FALL20": _rank20_fingerprint_rows(fall_rows),
+        "R4_EXTRA_SECTIONS": r4_extras,
         "FACT": dict(facts),
         "MODEL": dict(models),
     }
@@ -237,10 +149,16 @@ def build_report_compute_contract(
     watchlist_rows: Sequence[Mapping[str, Any]],
     rise_rows: Sequence[Mapping[str, Any]],
     fall_rows: Sequence[Mapping[str, Any]],
+    section_payloads: Mapping[str, Any],
     facts: Mapping[str, Any],
     models: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Validation primitive for an already-materialized report-compute payload."""
+    """Validation primitive for a materialized report-compute payload.
+
+    R4 makes section payloads mandatory here as well as in the canonical universe
+    entrypoint.  This prevents compatibility callers from bypassing section-level
+    hard contracts by supplying only declared section status strings.
+    """
     if not scope_matrix_report_ready:
         return {
             "status": "BLOCKED",
@@ -252,31 +170,35 @@ def build_report_compute_contract(
             "compute_fingerprint": None,
         }
 
-    our15 = _validate_our15(our15_rows)
-    xi = _validate_starting_xi(starting_xi_ids, our15_rows=our15_rows)
-    bench = _validate_bench(
-        bench_ids,
-        starting_xi_ids=starting_xi_ids,
+    full_section_payload = _compose_section_payloads(
         our15_rows=our15_rows,
+        starting_xi_ids=starting_xi_ids,
+        bench_ids=bench_ids,
+        watchlist_rows=watchlist_rows,
+        rise_rows=rise_rows,
+        fall_rows=fall_rows,
+        section_payloads=section_payloads,
     )
-    watchlist = validate_watchlist20(
-        watchlist_rows,
-        owned_ids=our15["ids"],
-    )
-    rise = validate_rank20(rise_rows, label="RISE20")
-    fall = validate_rank20(fall_rows, label="FALL20")
+    section_contract = validate_report_sections(full_section_payload)
     fact_model = _validate_fact_model_partition(facts, models)
 
-    checks = {
-        "OUR15": our15,
-        "XI": xi,
-        "BENCH": bench,
-        "WATCHLIST20": watchlist,
-        "RISE20": rise,
-        "FALL20": fall,
+    section_checks = section_contract["checks"]
+    xi_bench = section_checks["XI_BENCH"]
+    compatibility_checks = {
+        "OUR15": section_checks["OUR15"],
+        "XI": xi_bench["XI"],
+        "BENCH": xi_bench["BENCH"],
+        "WATCHLIST20": section_checks["WATCHLIST20"],
+        "RISE20": section_checks["RISE20"],
+        "FALL20": section_checks["FALL20"],
         "FACT_MODEL": fact_model,
+        "SECTION_CONTRACT": section_contract,
     }
-    failures = [name for name, result in checks.items() if result["status"] != "PASS"]
+    failures: list[str] = []
+    if section_contract["status"] != "PASS":
+        failures.append("SECTION_CONTRACT")
+    if fact_model["status"] != "PASS":
+        failures.append("FACT_MODEL")
     compute_ready = not failures
 
     return {
@@ -293,10 +215,11 @@ def build_report_compute_contract(
             watchlist_rows=watchlist_rows,
             rise_rows=rise_rows,
             fall_rows=fall_rows,
+            section_payloads=section_payloads,
             facts=facts,
             models=models,
         ),
-        **checks,
+        **compatibility_checks,
     }
 
 
@@ -310,15 +233,14 @@ def build_report_compute_contract_from_universe(
     universe_rows: Sequence[Mapping[str, Any]],
     predictor_rows: Sequence[Mapping[str, Any]],
     rank_snapshot: Mapping[str, Any],
+    section_payloads: Mapping[str, Any],
     facts: Mapping[str, Any],
     models: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Canonical R3 entrypoint: build RISE/FALL from the full universe, then validate.
+    """Canonical R3+R4 entrypoint for full report construction.
 
-    The older ``build_report_compute_contract`` remains a low-level validation
-    primitive for tests and already-materialized compatibility callers. New report
-    construction should enter here so canonical RISE20/FALL20 cannot bypass R3
-    selection, tie-breaking, ETA, ownership-tag and snapshot-provenance rules.
+    R3 deterministically builds RISE20/FALL20 from the full universe. R4 then
+    validates every mandatory section's content before compute can become ready.
     """
     if not scope_matrix_report_ready:
         blocked = build_report_compute_contract(
@@ -329,6 +251,7 @@ def build_report_compute_contract_from_universe(
             watchlist_rows=watchlist_rows,
             rise_rows=(),
             fall_rows=(),
+            section_payloads=section_payloads,
             facts=facts,
             models=models,
         )
@@ -344,9 +267,9 @@ def build_report_compute_contract_from_universe(
         }
 
     owned_ids = [
-        player_id
+        identity
         for row in our15_rows
-        if (player_id := _player_id(row)) is not None
+        if (identity := player_id(row)) is not None
     ]
     rank20 = build_rank20_tables(
         universe_rows=universe_rows,
@@ -362,6 +285,7 @@ def build_report_compute_contract_from_universe(
         watchlist_rows=watchlist_rows,
         rise_rows=rank20["RISE20"],
         fall_rows=rank20["FALL20"],
+        section_payloads=section_payloads,
         facts=facts,
         models=models,
     )

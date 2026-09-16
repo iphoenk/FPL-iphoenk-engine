@@ -456,9 +456,16 @@ def validate_post_render_qa(
     if not rendered_mini_league_denominator_complete:
         failures.append("MINI_LEAGUE_DENOMINATOR_INCOMPLETE")
     if actual_weather_state != expected_weather_state:
-        failures.append(
-            f"WEATHER_CONTRACT_STATE_MISMATCH={actual_weather_state}!={expected_weather_state}"
-        )
+        if (
+            expected_report_mode == "LEGACY"
+            and expected_weather_required
+            and actual_weather_state == "MISSING"
+        ):
+            failures.append("MANDATORY_WEATHER_MISSING")
+        else:
+            failures.append(
+                f"WEATHER_CONTRACT_STATE_MISMATCH={actual_weather_state}!={expected_weather_state}"
+            )
 
     qa_passed = not failures
     return {

@@ -54,10 +54,10 @@ def _compute():
     )
 
 
-def _weather_state(report_mode: str) -> str:
-    if report_mode == "PRICE":
+def _weather_state(qa_report_mode: str) -> str:
+    if qa_report_mode == "PRICE":
         return "PRICE_NOT_IN_SCOPE"
-    if report_mode == "MATCH":
+    if qa_report_mode == "MATCH":
         return "MATCH_CURRENT"
     return "DIRECT_CHATGPT"
 
@@ -74,16 +74,19 @@ def test_ad_hoc_canonical_mode_runs_through_qa_and_same_slot_receipt(report_mode
         {"section_id": section_id, "status": "COMPLETE"}
         for section_id in MANDATORY_SECTIONS
     ]
-    weather_state = _weather_state(report_mode)
+    qa_report_mode = context["qa_report_mode"]
+    weather_state = _weather_state(qa_report_mode)
     pre = validate_pre_render_qa(
         compute_contract=compute,
         section_manifest=manifest,
         mini_league_denominator_complete=True,
-        report_mode=report_mode,
+        report_mode=qa_report_mode,
         weather_contract_state=weather_state,
     )
 
     assert pre["status"] == "PASS", pre["failures"]
+    if report_mode == "POST_MATCH":
+        assert context["qa_report_mode"] == "FULL"
 
     post = validate_post_render_qa(
         pre_render_qa=pre,

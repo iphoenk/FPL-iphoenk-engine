@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from datetime import datetime, timezone
 from typing import Any, Iterable, Mapping, Sequence
+from zoneinfo import ZoneInfo
 
 ARTIFACT_SCOPES = (
     "bootstrap",
@@ -54,6 +55,7 @@ PARTIAL_ALLOWED_SECTIONS = frozenset({"S02", "S13", "S14B", "S15"})
 POSITION_TARGET = {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}
 _POSITION_ALIASES = {"GKP": "GK", "GOALKEEPER": "GK"}
 REPORT_SLOT_STATES = frozenset({"NOT_STARTED", "BUILDING", "QA_FAILED", "DELIVERED"})
+_REPORT_TIMEZONE = ZoneInfo("Asia/Jakarta")
 
 
 class DeliveryIntegrityError(ValueError):
@@ -86,6 +88,7 @@ def build_report_slot_id(*, logical_slot: str | datetime, report_type: str) -> s
     if slot.second != 0 or slot.microsecond != 0:
         raise DeliveryIntegrityError("report logical slot must be minute-aligned")
 
+    slot = slot.astimezone(_REPORT_TIMEZONE)
     kind = str(report_type or "").strip().upper()
     if not kind or "|" in kind:
         raise DeliveryIntegrityError("report type must be a non-empty slot-safe identifier")

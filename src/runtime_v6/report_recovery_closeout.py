@@ -28,6 +28,7 @@ CLOSEOUT_EVIDENCE_KEYS = (
     "report_observability_independent",
     "catch_up_inside_window_pass",
     "catch_up_expired_noop_pass",
+    "ad_hoc_on_demand_e2e_pass",
     "legacy_fallback_forbidden",
 )
 

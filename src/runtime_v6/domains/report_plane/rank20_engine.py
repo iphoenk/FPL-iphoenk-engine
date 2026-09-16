@@ -19,18 +19,6 @@ class Rank20EngineError(ValueError):
     pass
 
 
-_SNAPSHOT_FIELDS = ("source", "observed_at", "raw_payload_hash")
-_MODEL_FIELDS = (
-    "current_progress_percent",
-    "projection_offset_0_percent",
-    "predicted_change_cycle",
-    "predicted_change_at",
-    "eta_human",
-    "model_urgency",
-    "confidence",
-)
-
-
 def _require_element_id(row: Mapping[str, Any], *, scope: str, index: int) -> int | str:
     element_id = row.get("element_id")
     if element_id is None or isinstance(element_id, bool) or str(element_id).strip() == "":
@@ -133,7 +121,8 @@ def _stable_id_key(element_id: int | str) -> tuple[int, Any]:
 def _eta_human(row: Mapping[str, Any], *, element_id: int | str) -> tuple[Any, str]:
     predicted_change_at = row.get("predicted_change_at")
     eta_human = str(row.get("eta_human") or "").strip()
-    if predicted_change_at not in {None, ""}:
+    has_predicted_time = predicted_change_at is not None and str(predicted_change_at).strip() != ""
+    if has_predicted_time:
         try:
             parsed = parse_timestamp(
                 str(predicted_change_at),
@@ -213,11 +202,7 @@ def _rank(
     *,
     direction: str,
 ) -> list[dict[str, Any]]:
-    if direction not in {"RISE", "FALL"}:
-        raise Rank20EngineError(f"DIRECTION_INVALID:{direction}")
-
-    reverse_projection = direction == "RISE"
-    if reverse_projection:
+    if direction == "RISE":
         ordered = sorted(
             candidates,
             key=lambda row: (
@@ -225,7 +210,7 @@ def _rank(
                 _stable_id_key(row["element_id"]),
             ),
         )
-    else:
+    elif direction == "FALL":
         ordered = sorted(
             candidates,
             key=lambda row: (
@@ -233,11 +218,13 @@ def _rank(
                 _stable_id_key(row["element_id"]),
             ),
         )
+    else:
+        raise Rank20EngineError(f"DIRECTION_INVALID:{direction}")
 
-    ranked: list[dict[str, Any]] = []
-    for rank, candidate in enumerate(ordered[:20], start=1):
-        ranked.append({"rank": rank, **candidate, "direction": direction})
-    return ranked
+    return [
+        {"rank": rank, **candidate, "direction": direction}
+        for rank, candidate in enumerate(ordered[:20], start=1)
+    ]
 
 
 def build_rank20_tables(

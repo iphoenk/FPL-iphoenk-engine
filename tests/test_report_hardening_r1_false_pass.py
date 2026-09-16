@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from src.runtime_v6.report_compute import build_report_compute_contract
-from test_support.report_sections import r4_section_payloads
+from test_support.report_provenance import r5_partitions, r5_section_payloads
 
 
 _FIXTURE = (
@@ -43,6 +43,12 @@ def _watchlist20() -> list[dict]:
 
 def _compute_kwargs(incident: dict) -> dict:
     our15 = _our15()
+    facts, models, inferences = r5_partitions(
+        fact_key="fixture_fact",
+        model_key="fixture_model",
+        fact_source="R1_GOLDEN_FIXTURE",
+        model_name="R1_GOLDEN_FIXTURE",
+    )
     return {
         "scope_matrix_report_ready": True,
         "our15_rows": our15,
@@ -51,13 +57,10 @@ def _compute_kwargs(incident: dict) -> dict:
         "watchlist_rows": _watchlist20(),
         "rise_rows": incident["rise20"],
         "fall_rows": incident["fall20"],
-        "section_payloads": r4_section_payloads(our15),
-        "facts": {
-            "fixture_fact": {"source": "R1_GOLDEN_FIXTURE", "value": True},
-        },
-        "models": {
-            "fixture_model": {"model": "R1_GOLDEN_FIXTURE", "value": 1.0},
-        },
+        "section_payloads": r5_section_payloads(our15),
+        "facts": facts,
+        "models": models,
+        "inferences": inferences,
     }
 
 

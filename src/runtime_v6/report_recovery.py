@@ -160,12 +160,24 @@ def plan_report_catch_up(
     report_state: str,
     delivered_report_slot_id: str | None,
     delivery_proof_valid: bool,
+    catch_up_deadline: str | datetime | None = None,
 ) -> dict[str, Any]:
-    """Plan late report work against the original canonical report-slot identity."""
+    """Plan late report work against the original canonical report-slot identity.
+
+    ``catch_up_deadline`` is caller-supplied so scheduling policy stays outside
+    the recovery primitive. When supplied, work after the deadline becomes a
+    truthful no-op while preserving the original report-slot identity.
+    """
     logical = _parse_aware_timestamp(logical_slot, label="logical_slot")
     observed = _parse_aware_timestamp(observed_at, label="observed_at")
     if observed < logical:
         raise DeliveryIntegrityError("observed_at cannot precede logical_slot")
+
+    deadline: datetime | None = None
+    if catch_up_deadline is not None:
+        deadline = _parse_aware_timestamp(catch_up_deadline, label="catch_up_deadline")
+        if deadline < logical:
+            raise DeliveryIntegrityError("catch_up_deadline cannot precede logical_slot")
 
     report_slot_id = build_report_slot_id(
         logical_slot=logical_slot,
@@ -181,10 +193,13 @@ def plan_report_catch_up(
     if decision["report_slot_id"] != report_slot_id:
         raise DeliveryIntegrityError("catch-up report-slot identity drift")
 
+    window_open = None if deadline is None else observed <= deadline
     common = {
         **decision,
         "recovery_mode": "CATCH_UP",
         "observed_at": _canonical_timestamp(observed),
+        "catch_up_deadline": _canonical_timestamp(deadline) if deadline is not None else None,
+        "catch_up_window_open": window_open,
         "catch_up_required": False,
         "legacy_fallback_allowed": False,
         "v6_data_plane_mutation_allowed": False,
@@ -196,6 +211,13 @@ def plan_report_catch_up(
             **common,
             "start_build": False,
             "next_action": "NONE",
+        }
+
+    if deadline is not None and observed > deadline:
+        return {
+            **common,
+            "start_build": False,
+            "next_action": "CATCH_UP_WINDOW_EXPIRED",
         }
 
     if observed == logical:

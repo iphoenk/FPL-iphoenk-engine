@@ -198,10 +198,10 @@ def test_override_layer_is_temporary_active_only_and_bounded() -> None:
 
 def test_production_workflow_delegates_control_plane_to_tested_module() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
-    assert "python -m src.runtime_v6.workflow_control authorize-dispatch" in text
-    assert "python -m src.runtime_v6.workflow_control authorize-issue" in text
-    assert "python -m src.runtime_v6.workflow_control classify" in text
-    assert "python -m src.runtime_v6.workflow_control resolve-prefetch" in text
+    assert "python -m src.runtime_v6.domains.control_plane.workflow_control authorize-dispatch" in text
+    assert "python -m src.runtime_v6.domains.control_plane.workflow_control authorize-issue" in text
+    assert "python -m src.runtime_v6.domains.control_plane.workflow_control classify" in text
+    assert "python -m src.runtime_v6.domains.control_plane.workflow_control resolve-prefetch" in text
     assert "Apply V6 report-prefetch runtime control" in text
     assert "steps.scheduler.outputs.kind == 'report_prefetch'" in text
 

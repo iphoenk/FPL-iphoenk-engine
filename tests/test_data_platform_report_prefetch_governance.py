@@ -137,7 +137,7 @@ def test_0530_standard_scope_is_service_resolved_and_requires_league_facts():
     assert consumer["priority_full_picks_enabled"] is True
     assert policy["report_prefetch"]["independent_cron"] is False
     assert policy["report_prefetch"]["counts_as_completed_operational_slot"] is False
-    validator = (ROOT / "src/runtime_v6/production_validate.py").read_text(encoding="utf-8")
+    validator = (ROOT / "src/runtime_v6/domains/publication/production_validate.py").read_text(encoding="utf-8")
     assert 'if report_kind == "05:30_price":' in validator
     assert 'prefetch["telemetry"]["request_count"] > 0' in validator
     assert 'prefetch["mini_league_requested"] is True' in validator

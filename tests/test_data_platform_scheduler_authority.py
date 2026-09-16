@@ -87,5 +87,5 @@ def test_v6_ingestion_uses_single_hourly_master_transport() -> None:
     assert "github.event.issue.number == 431" in text
     assert "authorize-issue-edit" in text
     assert "python -m src.runtime_v6.workflow_control slot-guard" in text
-    validator = Path("src/runtime_v6/production_validate.py").read_text(encoding="utf-8")
+    validator = Path("src/runtime_v6/domains/publication/production_validate.py").read_text(encoding="utf-8")
     assert "single_logical_acquisition_per_scheduler_slot" in validator

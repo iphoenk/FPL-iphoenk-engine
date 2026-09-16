@@ -198,18 +198,24 @@ def _recovery_view(
 
     mode = _upper(evidence.get("recovery_mode"))
     next_action = str(evidence.get("next_action") or "").upper()
+    expired = next_action in {"AD_HOC_RECOVERY_EXPIRED", "CATCH_UP_WINDOW_EXPIRED"}
     active = bool(
-        evidence.get("retry_now") is True
-        or evidence.get("catch_up_required") is True
-        or (
-            evidence.get("start_build") is True
-            and (
-                next_action.startswith("CATCH_UP")
-                or next_action.startswith("AD_HOC")
+        not expired
+        and (
+            evidence.get("retry_now") is True
+            or evidence.get("catch_up_required") is True
+            or (
+                evidence.get("start_build") is True
+                and (
+                    next_action.startswith("CATCH_UP")
+                    or next_action.startswith("AD_HOC")
+                )
             )
         )
     )
-    if active:
+    if expired:
+        status = "EXPIRED"
+    elif active:
         status = "ACTIVE"
     elif evidence.get("report_delivered") is True or evidence.get("next_action") == "NONE":
         status = "INACTIVE"
@@ -220,6 +226,7 @@ def _recovery_view(
         **_base_stage(status=status, observed_at=observed_at),
         "mode": None if mode == "UNKNOWN" else mode,
         "active": active,
+        "expired": expired,
         "retry_now": bool(evidence.get("retry_now", False)),
         "retry_exhausted": bool(evidence.get("retry_exhausted", False)),
         "catch_up_required": bool(evidence.get("catch_up_required", False)),
@@ -248,6 +255,7 @@ def _trigger_view(
             "trigger_kind": "AD_HOC",
             "request_id": trigger_context.get("request_id"),
             "requested_at": trigger_context.get("requested_at"),
+            "request_time_token": trigger_context.get("request_time_token"),
             "report_type": trigger_context.get("report_type"),
             "report_slot_id": report_slot_id,
             "scheduler_proof_required": False,
@@ -277,6 +285,8 @@ def _report_plane_status(
 ) -> str:
     if delivery.get("delivered") is True:
         return "DELIVERED"
+    if recovery.get("status") == "EXPIRED":
+        return "RECOVERY_EXPIRED"
     if recovery.get("active") is True:
         return "RECOVERY_REQUIRED"
     if post_render_qa.get("status") in {"FAIL", "BLOCKED"}:

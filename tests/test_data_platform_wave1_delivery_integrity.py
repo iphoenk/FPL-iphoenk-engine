@@ -14,6 +14,7 @@ from src.runtime_v6.delivery_integrity import (
     validate_rank20,
     validate_watchlist20,
 )
+from test_support.report_rank20 import rank20_rows
 
 
 def _players(position: str, start: int, count: int = 5):
@@ -30,10 +31,6 @@ def _watchlist20():
         + _players("MID", 301)
         + _players("FWD", 401)
     )
-
-
-def _rank20(start: int):
-    return [{"element_id": player_id} for player_id in range(start, start + 20)]
 
 
 def _section_statuses():
@@ -150,10 +147,10 @@ def test_watchlist_owned_overlap_is_delivery_defect():
     assert result["owned_overlap"] == 1
 
 
-def test_rise20_and_fall20_are_exact_cardinality_gates():
-    assert validate_rank20(_rank20(1000), label="RISE20")["status"] == "PASS"
-    assert validate_rank20(_rank20(2000), label="FALL20")["status"] == "PASS"
-    broken = validate_rank20(_rank20(1000)[:8], label="RISE20")
+def test_rise20_and_fall20_are_exact_schema_complete_gates():
+    assert validate_rank20(rank20_rows(1000, "RISE"), label="RISE20")["status"] == "PASS"
+    assert validate_rank20(rank20_rows(2000, "FALL"), label="FALL20")["status"] == "PASS"
+    broken = validate_rank20(rank20_rows(1000, "RISE")[:8], label="RISE20")
     assert broken["status"] == "FAIL"
     assert broken["reason"] == "RETRIEVAL/COMPUTE_DEFECT"
 
@@ -162,8 +159,8 @@ def test_pre_delivery_matrix_blocks_missing_or_short_mandatory_sections():
     good = pre_delivery_gate(
         _section_statuses(),
         watchlist_rows=_watchlist20(),
-        rise_rows=_rank20(1000),
-        fall_rows=_rank20(2000),
+        rise_rows=rank20_rows(1000, "RISE"),
+        fall_rows=rank20_rows(2000, "FALL"),
         owned_ids={1, 2, 3},
         universe_ids={row["element_id"] for row in _watchlist20()},
     )
@@ -173,8 +170,8 @@ def test_pre_delivery_matrix_blocks_missing_or_short_mandatory_sections():
     bad = pre_delivery_gate(
         _section_statuses(),
         watchlist_rows=_watchlist20()[:16],
-        rise_rows=_rank20(1000)[:8],
-        fall_rows=_rank20(2000),
+        rise_rows=rank20_rows(1000, "RISE")[:8],
+        fall_rows=rank20_rows(2000, "FALL"),
     )
     assert bad["status"] == "FAIL"
     assert bad["report_ready"] is False
@@ -188,16 +185,16 @@ def test_reasoned_partial_is_only_allowed_for_declared_sections():
     assert pre_delivery_gate(
         statuses,
         watchlist_rows=_watchlist20(),
-        rise_rows=_rank20(1000),
-        fall_rows=_rank20(2000),
+        rise_rows=rank20_rows(1000, "RISE"),
+        fall_rows=rank20_rows(2000, "FALL"),
     )["status"] == "PASS"
 
     statuses["S09"] = "PARTIAL | price radar incomplete"
     assert pre_delivery_gate(
         statuses,
         watchlist_rows=_watchlist20(),
-        rise_rows=_rank20(1000),
-        fall_rows=_rank20(2000),
+        rise_rows=rank20_rows(1000, "RISE"),
+        fall_rows=rank20_rows(2000, "FALL"),
     )["status"] == "FAIL"
 
 

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from src.runtime_v6.domains.report_plane.section_contract import validate_report_sections
 from src.runtime_v6.domains.report_plane.report_compute import build_report_compute_contract
+from src.runtime_v6.domains.report_plane.section_contract import validate_report_sections
 from test_support.report_rank20 import rank20_rows
+from test_support.report_sections import r4_section_payloads
 
 
 def _our15() -> list[dict]:
@@ -38,189 +39,29 @@ def _watchlist20() -> list[dict]:
     return rows
 
 
-def _weather() -> dict:
-    return {
-        "content_state": "PASS",
-        "rows": [
-            {
-                "fixture": "AAA vs BBB",
-                "venue_kickoff": "AAA Stadium | 2026-09-19T15:00:00+01:00",
-                "forecast_time": "2026-09-19T15:00:00+01:00",
-                "temperature": 18.0,
-                "precipitation": "20%",
-                "wind_gust": "18 km/h",
-                "severity": "NORMAL",
-                "fpl_impact": "NO MATERIAL IMPACT",
-            }
-        ],
-    }
-
-
-def _icon14b() -> dict:
-    return {
-        "content_state": "PASS",
-        "current_rank": 4,
-        "total_points": 250,
-        "gap_to_first": 18,
-        "nearest_above": {"manager_id": 10, "gap": 3},
-        "nearest_below": {"manager_id": 12, "gap": 2},
-        "ownership_share": {"coverage": "COMPLETE"},
-        "starter_share": {"coverage": "COMPLETE"},
-        "captain_exposure": {"coverage": "COMPLETE"},
-        "vice_captain_exposure": {"coverage": "COMPLETE"},
-        "chip_exposure": {"coverage": "COMPLETE"},
-        "eo": {"coverage": "COMPLETE"},
-        "shared_core": [],
-        "shields": [],
-        "positive_differentials": [],
-        "dangers": [],
-        "direct_rival_equation": "current rival equation",
-        "rank_leverage": {},
-        "remaining_ammunition": {"ours": "AVAILABLE"},
-        "rival_divergences": [],
-        "support_oppose_by_match": [],
-        "scenario_paths": [],
-        "strategic_implication": "No forced move from mini-league context.",
-    }
-
-
-def _all15_tactical() -> list[dict]:
-    rows = []
-    for row in _our15():
-        rows.append(
-            {
-                "element_id": row["element_id"],
-                "opponent_h_a": "AAA (H)",
-                "next_gw_fdr": 3,
-                "own_team_shape": "4-3-3",
-                "opponent_shape": "4-2-3-1",
-                "role_archetype": "STARTER",
-                "direct_opponent_zone_channel": "left half-space",
-                "player_style_fit": "NEUTRAL",
-                "coach_system_interaction": "STABLE",
-                "set_piece_penalty_relevance": "NONE",
-                "rest_weather": "NO MATERIAL IMPACT",
-                "p_start": 0.9,
-                "xmins": 82,
-                "gw_plus_1_xpts": 4.5,
-                "matchup_grade": "B",
-                "decision_implication": "KEEP",
-            }
-        )
-    return rows
-
-
-def _optimizer() -> dict:
-    return {
-        "content_state": "PASS",
-        "routes": [
-            {
-                "route_id": "HOLD",
-                "category": "HOLD",
-                "outs": [],
-                "ins": [],
-                "transfer_count": 0,
-                "hit": 0,
-                "resulting_itb": 0.5,
-                "legality": "PASS",
-                "resulting_formation": "3-5-2",
-                "xi_changes": [],
-                "bench_changes": [],
-                "gross_projected_gain": 0.0,
-                "net_projected_gain": 0.0,
-                "xpts3_delta": 0.0,
-                "xpts5_delta": 0.0,
-                "uncertainty": "MEDIUM",
-                "price_impact": "NONE",
-                "optionality_impact": "PRESERVED",
-                "break_even_gw": "N/A",
-            }
-        ],
-    }
-
-
-def _transfer_stage() -> dict:
-    return {
-        "stage": "WAIT",
-        "route": "HOLD",
-        "trigger": "Reassess after team news.",
-        "information_value": "Waiting retains material information value.",
-        "reversal_conditions": ["Major injury or role change."],
-    }
-
-
-def _price_risk() -> dict:
-    owned_rows = []
-    for player_id in range(1, 16):
-        owned_rows.append(
-            {
-                "element_id": player_id,
-                "current_price": 7.0,
-                "direction": "STABLE",
-                "urgency": "LOW",
-                "affordability_impact": "NONE",
-                "decision_impact": "WAIT",
-            }
-        )
-    return {
-        "owned_rows": owned_rows,
-        "candidate_rows": [
-            {
-                "element_id": 101,
-                "current_price": 6.5,
-                "direction": "RISE",
-                "urgency": "WATCH",
-                "affordability_impact": "BUFFER_OK",
-                "decision_impact": "NO CHANGE",
-            }
-        ],
-        "package_affordability": "SAFE",
-        "price_optionality": "PRESERVED",
-        "source_freshness": "CURRENT",
-    }
-
-
 def _full_sections() -> dict:
+    our15 = _our15()
     return {
-        "OUR15": _our15(),
+        "OUR15": our15,
         "XI_BENCH": {"starting_xi_ids": _xi(), "bench_ids": _bench()},
         "WATCHLIST20": _watchlist20(),
         "RISE20": rank20_rows(201, "RISE"),
         "FALL20": rank20_rows(301, "FALL"),
-        "WEATHER": _weather(),
-        "ICON14B": _icon14b(),
-        "ALL15_TACTICAL": _all15_tactical(),
-        "OPTIMIZER": _optimizer(),
-        "TRANSFER_STAGE": _transfer_stage(),
-        "PRICE_RISK": _price_risk(),
-    }
-
-
-def _extra_sections() -> dict:
-    full = _full_sections()
-    return {
-        key: full[key]
-        for key in (
-            "WEATHER",
-            "ICON14B",
-            "ALL15_TACTICAL",
-            "OPTIMIZER",
-            "TRANSFER_STAGE",
-            "PRICE_RISK",
-        )
+        **r4_section_payloads(our15),
     }
 
 
 def _compute_kwargs() -> dict:
+    our15 = _our15()
     return {
         "scope_matrix_report_ready": True,
-        "our15_rows": _our15(),
+        "our15_rows": our15,
         "starting_xi_ids": _xi(),
         "bench_ids": _bench(),
         "watchlist_rows": _watchlist20(),
         "rise_rows": rank20_rows(201, "RISE"),
         "fall_rows": rank20_rows(301, "FALL"),
-        "section_payloads": _extra_sections(),
+        "section_payloads": r4_section_payloads(our15),
         "facts": {"official_price": {"source": "OFFICIAL_FPL", "value": 7.5}},
         "models": {"price_signal": {"model": "PRICE_PREDICTOR", "value": 0.8}},
     }

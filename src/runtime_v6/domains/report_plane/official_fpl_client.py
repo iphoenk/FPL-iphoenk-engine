@@ -1,2 +1,2 @@
-"""Temporary report-plane port to Official FPL client during staged migration."""
-from ...official_fpl_client import *
+"""Canonical report-plane port to acquisition Official FPL client."""
+from ..acquisition.official_fpl_client import *

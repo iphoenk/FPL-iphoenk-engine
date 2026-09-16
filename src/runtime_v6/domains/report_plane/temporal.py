@@ -1,2 +1,2 @@
-"""Report-plane port to canonical control-plane temporal primitives."""
+"""Canonical report-plane port to control-plane temporal utilities."""
 from ..control_plane.temporal import *

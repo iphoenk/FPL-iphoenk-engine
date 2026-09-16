@@ -1,2 +1,2 @@
-"""Temporary report-plane port to registry during staged migration."""
-from ...registry import *
+"""Canonical report-plane port to publication registry."""
+from ..publication.registry import *

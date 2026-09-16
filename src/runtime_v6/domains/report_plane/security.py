@@ -1,2 +1,2 @@
-"""Temporary report-plane port to security helpers during staged migration."""
-from ...security import *
+"""Canonical report-plane port to governance security."""
+from ..governance.security import *

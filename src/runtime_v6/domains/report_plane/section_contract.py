@@ -2,9 +2,8 @@ from __future__ import annotations
 
 """R4 section-level report-compute contract.
 
-This module validates deterministic *content shape* for mandatory FPL Master
-report sections before rendering.  It deliberately does not prove source
-truthfulness (R5) and does not parse the final visible body (R6).
+Validates deterministic content shape for mandatory FPL Master report sections
+before rendering. Source truthfulness belongs to R5 and visible-body parsing to R6.
 """
 
 from collections import Counter
@@ -19,7 +18,10 @@ SECTION_CONTRACT_REGISTRY: dict[str, Mapping[str, Any]] = {
         "positions": {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3},
     },
     "XI_BENCH": {"xi_count": 11, "bench_count": 4, "bench_gk": 1},
-    "WATCHLIST20": {"exact_count": 20, "positions": {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}},
+    "WATCHLIST20": {
+        "exact_count": 20,
+        "positions": {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5},
+    },
     "RISE20": {"exact_count": 20, "validator": "validate_rank20"},
     "FALL20": {"exact_count": 20, "validator": "validate_rank20"},
     "WEATHER": {
@@ -112,7 +114,13 @@ SECTION_CONTRACT_REGISTRY: dict[str, Mapping[str, Any]] = {
         "stages": ("WAIT", "PREPARE", "ACT"),
     },
     "PRICE_RISK": {
-        "fields": ("owned_rows", "candidate_rows", "package_affordability", "price_optionality", "source_freshness"),
+        "fields": (
+            "owned_rows",
+            "candidate_rows",
+            "package_affordability",
+            "price_optionality",
+            "source_freshness",
+        ),
         "row_fields": (
             "element_id",
             "current_price",
@@ -128,14 +136,18 @@ _REQUIRED_SECTIONS = tuple(SECTION_CONTRACT_REGISTRY)
 _POSITION_ALIASES = {"GKP": "GK", "GOALKEEPER": "GK"}
 
 
-def player_id(row: Mapping[str, Any]) -> int | str | None:
+def player_id(row: Any) -> int | str | None:
+    if not isinstance(row, Mapping):
+        return None
     for key in ("element_id", "player_id", "id"):
         if row.get(key) is not None:
             return row[key]
     return None
 
 
-def player_position(row: Mapping[str, Any]) -> str:
+def player_position(row: Any) -> str:
+    if not isinstance(row, Mapping):
+        return ""
     raw = str(row.get("position") or row.get("pos") or "").strip().upper()
     return _POSITION_ALIASES.get(raw, raw)
 
@@ -153,7 +165,7 @@ def _missing_keys(row: Mapping[str, Any], fields: Iterable[str]) -> list[str]:
 
 
 def _validate_row_schema(
-    rows: Sequence[Mapping[str, Any]],
+    rows: Sequence[Any],
     *,
     fields: Sequence[str],
     nonempty_fields: Iterable[str] = (),
@@ -161,6 +173,9 @@ def _validate_row_schema(
     failures: list[str] = []
     required_nonempty = set(nonempty_fields)
     for index, row in enumerate(rows, start=1):
+        if not isinstance(row, Mapping):
+            failures.append(f"ROW_INVALID={index}")
+            continue
         missing = _missing_keys(row, fields)
         if missing:
             failures.append(f"ROW_SCHEMA_MISSING={index}:{','.join(missing)}")
@@ -178,13 +193,12 @@ def _result(*, failures: Sequence[str], **details: Any) -> dict[str, Any]:
     }
 
 
-def validate_our15_section(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def validate_our15_section(rows: Sequence[Any]) -> dict[str, Any]:
     contract = SECTION_CONTRACT_REGISTRY["OUR15"]
     ids = [player_id(row) for row in rows]
     concrete_ids = [value for value in ids if value is not None]
     positions = Counter(player_position(row) for row in rows)
     failures: list[str] = []
-
     if len(rows) != contract["exact_count"]:
         failures.append(f"TOTAL={len(rows)}")
     if any(value is None for value in ids):
@@ -194,7 +208,6 @@ def validate_our15_section(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     for position, target in contract["positions"].items():
         if positions.get(position, 0) != target:
             failures.append(f"{position}={positions.get(position, 0)}")
-
     return _result(
         failures=failures,
         total=len(rows),
@@ -206,7 +219,7 @@ def validate_our15_section(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 def validate_xi_bench_section(
     payload: Mapping[str, Any],
     *,
-    our15_rows: Sequence[Mapping[str, Any]],
+    our15_rows: Sequence[Any],
 ) -> dict[str, Any]:
     contract = SECTION_CONTRACT_REGISTRY["XI_BENCH"]
     missing = _missing_keys(payload, ("starting_xi_ids", "bench_ids"))
@@ -216,7 +229,7 @@ def validate_xi_bench_section(
     our15_by_id = {
         identity: row
         for row in our15_rows
-        if (identity := player_id(row)) is not None
+        if isinstance(row, Mapping) and (identity := player_id(row)) is not None
     }
     owned_ids = set(our15_by_id)
 
@@ -286,7 +299,6 @@ def validate_weather_section(payload: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes)):
         failures.append("ROWS_INVALID")
         rows = []
-
     if state == "DEGRADED":
         if str(payload.get("source_status") or "").strip().upper() != "DEGRADED":
             failures.append("SOURCE_STATUS_NOT_DEGRADED")
@@ -294,12 +306,11 @@ def validate_weather_section(payload: Mapping[str, Any]) -> dict[str, Any]:
             failures.append("DEGRADATION_REASON_MISSING")
     elif state == "PASS" and not rows:
         failures.append("ROWS_EMPTY")
-
     failures.extend(
         _validate_row_schema(
             rows,
             fields=contract["row_fields"],
-            nonempty_fields=("fixture", "venue_kickoff", "forecast_time", "severity", "fpl_impact"),
+            nonempty_fields=contract["row_fields"],
         )
     )
     return _result(failures=failures, content_state=state, row_count=len(rows))
@@ -313,7 +324,7 @@ def validate_icon14b_section(payload: Mapping[str, Any]) -> dict[str, Any]:
         failures.append(f"CONTENT_STATE_INVALID={state or '<empty>'}")
     missing = _missing_keys(payload, contract["fields"])
     failures.extend(f"MISSING_FIELD={field}" for field in missing)
-    for field in ("direct_rival_equation", "strategic_implication"):
+    for field in contract["fields"]:
         if field in payload and not _nonempty(payload.get(field)):
             failures.append(f"FIELD_EMPTY={field}")
     if state == "PARTIAL":
@@ -326,7 +337,7 @@ def validate_icon14b_section(payload: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def validate_all15_tactical_section(
-    rows: Sequence[Mapping[str, Any]],
+    rows: Sequence[Any],
     *,
     owned_ids: Iterable[int | str],
 ) -> dict[str, Any]:
@@ -347,19 +358,7 @@ def validate_all15_tactical_section(
         _validate_row_schema(
             rows,
             fields=contract["row_fields"],
-            nonempty_fields=(
-                "opponent_h_a",
-                "own_team_shape",
-                "opponent_shape",
-                "role_archetype",
-                "direct_opponent_zone_channel",
-                "player_style_fit",
-                "coach_system_interaction",
-                "set_piece_penalty_relevance",
-                "rest_weather",
-                "matchup_grade",
-                "decision_implication",
-            ),
+            nonempty_fields=contract["row_fields"],
         )
     )
     return _result(failures=failures, total=len(rows), ids=concrete_ids)
@@ -380,24 +379,16 @@ def validate_optimizer_section(payload: Mapping[str, Any]) -> dict[str, Any]:
             failures.append("DEGRADATION_REASON_MISSING")
     elif state == "PASS" and not routes:
         failures.append("ROUTES_EMPTY")
-
     failures.extend(
         _validate_row_schema(
             routes,
             fields=contract["route_fields"],
-            nonempty_fields=(
-                "route_id",
-                "category",
-                "legality",
-                "resulting_formation",
-                "uncertainty",
-                "price_impact",
-                "optionality_impact",
-                "break_even_gw",
-            ),
+            nonempty_fields=contract["route_fields"],
         )
     )
     for index, route in enumerate(routes, start=1):
+        if not isinstance(route, Mapping):
+            continue
         transfer_count = route.get("transfer_count")
         if not isinstance(transfer_count, int) or isinstance(transfer_count, bool) or transfer_count < 0:
             failures.append(f"ROW_TRANSFER_COUNT_INVALID={index}")
@@ -450,16 +441,21 @@ def validate_price_risk_section(
     if not isinstance(candidate_rows, Sequence) or isinstance(candidate_rows, (str, bytes)):
         failures.append("CANDIDATE_ROWS_INVALID")
         candidate_rows = []
-
-    row_nonempty = ("direction", "urgency", "affordability_impact", "decision_impact")
     failures.extend(
-        _validate_row_schema(owned_rows, fields=contract["row_fields"], nonempty_fields=row_nonempty)
+        _validate_row_schema(
+            owned_rows,
+            fields=contract["row_fields"],
+            nonempty_fields=contract["row_fields"],
+        )
     )
     failures.extend(
         f"CANDIDATE_{failure}"
-        for failure in _validate_row_schema(candidate_rows, fields=contract["row_fields"], nonempty_fields=row_nonempty)
+        for failure in _validate_row_schema(
+            candidate_rows,
+            fields=contract["row_fields"],
+            nonempty_fields=contract["row_fields"],
+        )
     )
-
     owned_row_ids = [player_id(row) for row in owned_rows]
     concrete_owned = [value for value in owned_row_ids if value is not None]
     if any(value is None for value in owned_row_ids):
@@ -474,7 +470,6 @@ def validate_price_risk_section(
         failures.append("CANDIDATE_ID_MISSING")
     if len(set(concrete_candidates)) != len(concrete_candidates):
         failures.append("CANDIDATE_ID_DUPLICATE")
-
     for field in ("package_affordability", "price_optionality", "source_freshness"):
         if field in payload and not _nonempty(payload.get(field)):
             failures.append(f"FIELD_EMPTY={field}")

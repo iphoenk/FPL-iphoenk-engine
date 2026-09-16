@@ -164,7 +164,7 @@ def test_production_policy_uses_chatgpt_and_removed_github_crons():
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
     assert policy["scheduler_authority"]["kind"] == "CHATGPT_TASK"
     assert policy["scheduler_authority"]["name"] == "FPL Master Monitor"
-    assert policy["scheduler_authority"]["physical_minute"] == 31
+    assert policy["scheduler_authority"]["physical_minute"] == 30
     assert policy["scheduler_authority"]["logical_slot_minute"] == 0
     assert policy["github_natural_schedule"]["enabled"] is False
     assert policy["github_natural_schedule"]["authority"] == "NONE"

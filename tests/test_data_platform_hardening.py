@@ -35,7 +35,7 @@ def test_workflow_scheduler_matches_v6_chatgpt_authority_policy():
     assert policy["scheduler_authority"]["name"] == "FPL Master Monitor"
     assert policy["scheduler_authority"]["timezone"] == "Asia/Jakarta"
     assert policy["scheduler_authority"]["cadence_minutes"] == 60
-    assert policy["scheduler_authority"]["physical_minute"] == 31
+    assert policy["scheduler_authority"]["physical_minute"] == 30
     assert policy["scheduler_authority"]["logical_slot_minute"] == 0
     assert policy["scheduled_crons_utc"] == []
     assert policy["natural_schedule_redundancy_attempts_per_hour"] == 0

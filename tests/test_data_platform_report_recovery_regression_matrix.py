@@ -10,8 +10,8 @@ from src.runtime_v6.report_qa import validate_pre_render_qa
 from src.runtime_v6.report_recovery import plan_report_catch_up
 from src.runtime_v6.report_recovery_closeout import REGRESSION_SCENARIO_IDS, evaluate_regression_acceptance
 from src.runtime_v6.workflow_control import resolve_data_slot_decision
+from test_support.report_provenance import r5_partitions, r5_section_payloads
 from test_support.report_rank20 import rank20_rows
-from test_support.report_sections import r4_section_payloads
 
 
 LOGICAL_SLOT = "2026-09-16T04:30:00+07:00"
@@ -63,6 +63,12 @@ def _compute(
     fall_rows=None,
 ):
     resolved_our15 = _our15() if our15_rows is None else our15_rows
+    facts, models, inferences = r5_partitions(
+        fact_key="price_fact",
+        model_key="price_model",
+        fact_source="OFFICIAL_FPL",
+        model_name="V6_PRICE_MODEL",
+    )
     return build_report_compute_contract(
         scope_matrix_report_ready=True,
         our15_rows=resolved_our15,
@@ -75,9 +81,10 @@ def _compute(
         watchlist_rows=_watchlist20() if watchlist_rows is None else watchlist_rows,
         rise_rows=rank20_rows(201, "RISE") if rise_rows is None else rise_rows,
         fall_rows=rank20_rows(301, "FALL") if fall_rows is None else fall_rows,
-        section_payloads=r4_section_payloads(resolved_our15),
-        facts={"price_fact": {"source": "official_fpl"}},
-        models={"price_model": {"model": "v6_price_model"}},
+        section_payloads=r5_section_payloads(resolved_our15),
+        facts=facts,
+        models=models,
+        inferences=inferences,
     )
 
 

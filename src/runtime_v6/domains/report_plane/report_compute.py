@@ -2,8 +2,9 @@ from __future__ import annotations
 
 """Deterministic downstream report-compute integrity contract.
 
-This module validates the shape and partitioning of already-resolved report inputs.
-It does not acquire data, publish V6 artifacts, or implement FPL prediction models.
+This module validates already-resolved report inputs. R4 owns structural section
+completeness and R5 owns provenance/anti-fabrication. It does not acquire data,
+publish V6 artifacts, parse the final rendered body, or implement prediction models.
 """
 
 from hashlib import sha256
@@ -11,6 +12,7 @@ import json
 from typing import Any, Mapping, Sequence
 
 from .delivery_integrity import RANK20_REQUIRED_FIELDS
+from .provenance_guard import validate_report_provenance
 from .rank20_engine import build_rank20_tables
 from .section_contract import player_id, player_position, validate_report_sections
 
@@ -27,34 +29,6 @@ _R4_EXTRA_SECTIONS = (
 
 def _sort_ids(values: Sequence[int | str]) -> list[int | str]:
     return sorted(values, key=lambda value: (type(value).__name__, str(value)))
-
-
-def _validate_fact_model_partition(
-    facts: Mapping[str, Any],
-    models: Mapping[str, Any],
-) -> dict[str, Any]:
-    fact_keys = {str(key) for key in facts}
-    model_keys = {str(key) for key in models}
-    overlap = sorted(fact_keys & model_keys)
-    failures: list[str] = []
-
-    if overlap:
-        failures.append(f"FACT_MODEL_OVERLAP={','.join(overlap)}")
-
-    for key, value in facts.items():
-        if not isinstance(value, Mapping) or not str(value.get("source") or "").strip():
-            failures.append(f"FACT_SOURCE_MISSING={key}")
-    for key, value in models.items():
-        if not isinstance(value, Mapping) or not str(value.get("model") or "").strip():
-            failures.append(f"MODEL_ID_MISSING={key}")
-
-    return {
-        "status": "PASS" if not failures else "FAIL",
-        "failures": failures,
-        "fact_keys": sorted(fact_keys),
-        "model_keys": sorted(model_keys),
-        "overlap": overlap,
-    }
 
 
 def _rank20_fingerprint_rows(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -107,6 +81,7 @@ def _compute_fingerprint(
     section_payloads: Mapping[str, Any],
     facts: Mapping[str, Any],
     models: Mapping[str, Any],
+    inferences: Mapping[str, Any],
 ) -> str:
     our15 = sorted(
         (
@@ -129,6 +104,7 @@ def _compute_fingerprint(
         "R4_EXTRA_SECTIONS": r4_extras,
         "FACT": dict(facts),
         "MODEL": dict(models),
+        "INFERENCE": dict(inferences),
     }
     canonical = json.dumps(
         payload,
@@ -152,12 +128,12 @@ def build_report_compute_contract(
     section_payloads: Mapping[str, Any],
     facts: Mapping[str, Any],
     models: Mapping[str, Any],
+    inferences: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Validation primitive for a materialized report-compute payload.
+    """Validate materialized report-compute input through R4 and R5.
 
-    R4 makes section payloads mandatory here as well as in the canonical universe
-    entrypoint.  This prevents compatibility callers from bypassing section-level
-    hard contracts by supplying only declared section status strings.
+    ``section_payloads`` and ``inferences`` are mandatory. Compatibility callers
+    cannot bypass section completeness or provenance by omitting the new contracts.
     """
     if not scope_matrix_report_ready:
         return {
@@ -180,7 +156,12 @@ def build_report_compute_contract(
         section_payloads=section_payloads,
     )
     section_contract = validate_report_sections(full_section_payload)
-    fact_model = _validate_fact_model_partition(facts, models)
+    provenance = validate_report_provenance(
+        section_payloads=section_payloads,
+        facts=facts,
+        models=models,
+        inferences=inferences,
+    )
 
     section_checks = section_contract["checks"]
     xi_bench = section_checks["XI_BENCH"]
@@ -191,14 +172,15 @@ def build_report_compute_contract(
         "WATCHLIST20": section_checks["WATCHLIST20"],
         "RISE20": section_checks["RISE20"],
         "FALL20": section_checks["FALL20"],
-        "FACT_MODEL": fact_model,
+        "FACT_MODEL": provenance["partition"],
         "SECTION_CONTRACT": section_contract,
+        "PROVENANCE": provenance,
     }
     failures: list[str] = []
     if section_contract["status"] != "PASS":
         failures.append("SECTION_CONTRACT")
-    if fact_model["status"] != "PASS":
-        failures.append("FACT_MODEL")
+    if provenance["status"] != "PASS":
+        failures.append("PROVENANCE")
     compute_ready = not failures
 
     return {
@@ -218,6 +200,7 @@ def build_report_compute_contract(
             section_payloads=section_payloads,
             facts=facts,
             models=models,
+            inferences=inferences,
         ),
         **compatibility_checks,
     }
@@ -236,12 +219,9 @@ def build_report_compute_contract_from_universe(
     section_payloads: Mapping[str, Any],
     facts: Mapping[str, Any],
     models: Mapping[str, Any],
+    inferences: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Canonical R3+R4 entrypoint for full report construction.
-
-    R3 deterministically builds RISE20/FALL20 from the full universe. R4 then
-    validates every mandatory section's content before compute can become ready.
-    """
+    """Canonical R3+R4+R5 entrypoint for full report construction."""
     if not scope_matrix_report_ready:
         blocked = build_report_compute_contract(
             scope_matrix_report_ready=False,
@@ -254,6 +234,7 @@ def build_report_compute_contract_from_universe(
             section_payloads=section_payloads,
             facts=facts,
             models=models,
+            inferences=inferences,
         )
         return {
             **blocked,
@@ -288,6 +269,7 @@ def build_report_compute_contract_from_universe(
         section_payloads=section_payloads,
         facts=facts,
         models=models,
+        inferences=inferences,
     )
     engine_metadata = {
         key: value

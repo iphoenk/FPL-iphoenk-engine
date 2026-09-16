@@ -12,8 +12,8 @@ from src.runtime_v6.report_contract import resolve_report_scope_matrix
 from src.runtime_v6.report_delivery import build_delivery_proof, validate_delivery_proof
 from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_render_qa
 from src.runtime_v6.workflow_control import resolve_data_slot_decision
+from test_support.report_provenance import r5_partitions, r5_section_payloads
 from test_support.report_rank20 import rank20_rows
-from test_support.report_sections import r4_section_payloads
 
 
 LOGICAL_SLOT = "2026-09-16T04:30:00+07:00"
@@ -118,6 +118,12 @@ def test_0430_already_published_v6_still_delivers_deep_report_exactly_once():
     assert scope_matrix["legacy_fallback_allowed"] is False
 
     our15 = _our15()
+    facts, models, inferences = r5_partitions(
+        fact_key="official_price",
+        model_key="price_rise_probability",
+        fact_source="OFFICIAL_FPL",
+        model_name="PRICE_PREDICTOR",
+    )
     compute = build_report_compute_contract(
         scope_matrix_report_ready=scope_matrix["report_ready"],
         our15_rows=our15,
@@ -126,21 +132,17 @@ def test_0430_already_published_v6_still_delivers_deep_report_exactly_once():
         watchlist_rows=_watchlist20(),
         rise_rows=rank20_rows(201, "RISE"),
         fall_rows=rank20_rows(301, "FALL"),
-        section_payloads=r4_section_payloads(our15),
-        facts={
-            "official_price": {"source": "OFFICIAL_FPL", "value": 75},
-            "ownership": {"source": "OFFICIAL_FPL", "value": 42.1},
-        },
-        models={
-            "price_rise_probability": {"model": "PRICE_PREDICTOR", "value": 0.71},
-            "expected_points": {"model": "BAYESIAN", "value": 6.8},
-        },
+        section_payloads=r5_section_payloads(our15),
+        facts=facts,
+        models=models,
+        inferences=inferences,
     )
     assert compute["status"] == "PASS"
     assert compute["compute_ready"] is True
     assert compute["next_action"] == "PRE_RENDER_QA"
     assert compute["delivery_ready"] is False
     assert compute["legacy_fallback_allowed"] is False
+    assert compute["PROVENANCE"]["status"] == "PASS"
 
     manifest = [
         {"section_id": section_id, "status": "COMPLETE"}

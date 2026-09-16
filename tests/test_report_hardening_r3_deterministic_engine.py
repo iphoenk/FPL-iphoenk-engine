@@ -10,6 +10,9 @@ from src.runtime_v6.domains.report_plane.rank20_engine import (
     Rank20EngineError,
     build_rank20_tables,
 )
+from src.runtime_v6.domains.report_plane.report_compute import (
+    build_report_compute_contract_from_universe,
+)
 
 
 def _universe(count: int = 60) -> list[dict]:
@@ -58,6 +61,29 @@ def _build(*, universe=None, predictor=None, owned_ids=()):
         owned_ids=owned_ids,
         snapshot=_snapshot(),
     )
+
+
+def _our15() -> list[dict]:
+    rows = []
+    for player_id in (1, 2):
+        rows.append({"element_id": player_id, "position": "GK"})
+    for player_id in range(3, 8):
+        rows.append({"element_id": player_id, "position": "DEF"})
+    for player_id in range(8, 13):
+        rows.append({"element_id": player_id, "position": "MID"})
+    for player_id in range(13, 16):
+        rows.append({"element_id": player_id, "position": "FWD"})
+    return rows
+
+
+def _watchlist20() -> list[dict]:
+    rows = []
+    start = 101
+    for position in ("GK", "DEF", "MID", "FWD"):
+        for offset in range(5):
+            rows.append({"element_id": start + offset, "position": position})
+        start += 10
+    return rows
 
 
 def test_r3_scans_full_universe_and_returns_exact_top20_each_direction():
@@ -161,3 +187,26 @@ def test_r3_rejects_mixed_snapshot_lineage_in_predictor_rows():
 
     with pytest.raises(Rank20EngineError, match="SNAPSHOT_PROVENANCE_MISMATCH"):
         _build(predictor=predictor)
+
+
+def test_report_compute_canonical_entrypoint_builds_rank20_from_full_universe():
+    result = build_report_compute_contract_from_universe(
+        scope_matrix_report_ready=True,
+        our15_rows=_our15(),
+        starting_xi_ids=[1, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14],
+        bench_ids=[2, 7, 12, 15],
+        watchlist_rows=_watchlist20(),
+        universe_rows=_universe(),
+        predictor_rows=_predictor(),
+        rank_snapshot=_snapshot(),
+        facts={"official_price": {"source": "OFFICIAL_FPL", "value": 7.5}},
+        models={"price_signal": {"model": "PRICE_PREDICTOR", "value": 0.8}},
+    )
+
+    assert result["status"] == "PASS"
+    assert result["compute_ready"] is True
+    assert result["RANK20_ENGINE"]["full_universe_coverage"] is True
+    assert result["RANK20_ENGINE"]["universe_count"] == 60
+    assert [row["element_id"] for row in result["RISE20_ROWS"]] == list(range(60, 40, -1))
+    assert [row["element_id"] for row in result["FALL20_ROWS"]] == list(range(1, 21))
+    assert result["FALL20_ROWS"][0]["ownership_tag"] == "OWNED"

@@ -3,6 +3,7 @@ from __future__ import annotations
 from src.runtime_v6.delivery_integrity import MANDATORY_SECTIONS
 from src.runtime_v6.report_compute import build_report_compute_contract
 from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_render_qa
+from test_support.report_rank20 import rank20_rows
 
 
 def _our15():
@@ -28,10 +29,6 @@ def _watchlist20():
     return rows
 
 
-def _rank20(start_id: int):
-    return [{"id": start_id + offset} for offset in range(20)]
-
-
 def _compute():
     return build_report_compute_contract(
         scope_matrix_report_ready=True,
@@ -39,8 +36,8 @@ def _compute():
         starting_xi_ids=[1, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14],
         bench_ids=[2, 7, 12, 15],
         watchlist_rows=_watchlist20(),
-        rise_rows=_rank20(201),
-        fall_rows=_rank20(301),
+        rise_rows=rank20_rows(201, "RISE"),
+        fall_rows=rank20_rows(301, "FALL"),
         facts={"price_fact": {"source": "official_fpl"}},
         models={"price_model": {"model": "v6_price_model"}},
     )

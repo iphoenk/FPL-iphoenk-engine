@@ -1,0 +1,71 @@
+{
+  "fixture_version": 1,
+  "fixture_kind": "golden_failing_incident_reconstruction",
+  "incident_id": "report-false-pass-2026-09-16T17:29:51+07:00",
+  "observed_at": "2026-09-16T17:29:51+07:00",
+  "fidelity": {
+    "exact_visible_report_body_available": false,
+    "player_identity_values": "anonymized_test_ids",
+    "structural_defect_preserved": true,
+    "note": "The archived evidence preserves the false-PASS markers and the incomplete RISE20/FALL20 shape, but not the exact player rows. Test-only identities and prices are used so the production validator can be exercised without inventing historical player facts."
+  },
+  "observed_markers": {
+    "DATA_PUBLICATION_FRESH": true,
+    "VISIBLE_EMITTED": true,
+    "REPORT_CONTRACT_PASS": false,
+    "REPORT_CONTRACT_STATUS": "FAIL",
+    "REPORT_MISSING_SECTIONS": [],
+    "REPORT_INCOMPLETE_SECTIONS": [
+      "RISE20",
+      "FALL20"
+    ],
+    "REPORT_REASON": "missing_or_incomplete_contract_sections:incomplete=RISE20,FALL20",
+    "REPORT_ACTION_HINT": "rerun_or_recover_before_claiming_success",
+    "SURFACED_RUN_COMPLETE_STATUS": "PASS"
+  },
+  "r1_required_field_for_defect_proof": "eta",
+  "rise20": [
+    {"element_id": 910001, "name": "fixture-rise-01", "price": 5.1},
+    {"element_id": 910002, "name": "fixture-rise-02", "price": 5.2},
+    {"element_id": 910003, "name": "fixture-rise-03", "price": 5.3},
+    {"element_id": 910004, "name": "fixture-rise-04", "price": 5.4},
+    {"element_id": 910005, "name": "fixture-rise-05", "price": 5.5},
+    {"element_id": 910006, "name": "fixture-rise-06", "price": 5.6},
+    {"element_id": 910007, "name": "fixture-rise-07", "price": 5.7},
+    {"element_id": 910008, "name": "fixture-rise-08", "price": 5.8},
+    {"element_id": 910009, "name": "fixture-rise-09", "price": 5.9},
+    {"element_id": 910010, "name": "fixture-rise-10", "price": 6.0},
+    {"element_id": 910011, "name": "fixture-rise-11", "price": 6.1},
+    {"element_id": 910012, "name": "fixture-rise-12", "price": 6.2},
+    {"element_id": 910013, "name": "fixture-rise-13", "price": 6.3},
+    {"element_id": 910014, "name": "fixture-rise-14", "price": 6.4},
+    {"element_id": 910015, "name": "fixture-rise-15", "price": 6.5},
+    {"element_id": 910016, "name": "fixture-rise-16", "price": 6.6},
+    {"element_id": 910017, "name": "fixture-rise-17", "price": 6.7},
+    {"element_id": 910018, "name": "fixture-rise-18", "price": 6.8},
+    {"element_id": 910019, "name": "fixture-rise-19", "price": 6.9},
+    {"element_id": 910020, "name": "fixture-rise-20", "price": 7.0}
+  ],
+  "fall20": [
+    {"element_id": 920001, "name": "fixture-fall-01", "price": 5.1},
+    {"element_id": 920002, "name": "fixture-fall-02", "price": 5.2},
+    {"element_id": 920003, "name": "fixture-fall-03", "price": 5.3},
+    {"element_id": 920004, "name": "fixture-fall-04", "price": 5.4},
+    {"element_id": 920005, "name": "fixture-fall-05", "price": 5.5},
+    {"element_id": 920006, "name": "fixture-fall-06", "price": 5.6},
+    {"element_id": 920007, "name": "fixture-fall-07", "price": 5.7},
+    {"element_id": 920008, "name": "fixture-fall-08", "price": 5.8},
+    {"element_id": 920009, "name": "fixture-fall-09", "price": 5.9},
+    {"element_id": 920010, "name": "fixture-fall-10", "price": 6.0},
+    {"element_id": 920011, "name": "fixture-fall-11", "price": 6.1},
+    {"element_id": 920012, "name": "fixture-fall-12", "price": 6.2},
+    {"element_id": 920013, "name": "fixture-fall-13", "price": 6.3},
+    {"element_id": 920014, "name": "fixture-fall-14", "price": 6.4},
+    {"element_id": 920015, "name": "fixture-fall-15", "price": 6.5},
+    {"element_id": 920016, "name": "fixture-fall-16", "price": 6.6},
+    {"element_id": 920017, "name": "fixture-fall-17", "price": 6.7},
+    {"element_id": 920018, "name": "fixture-fall-18", "price": 6.8},
+    {"element_id": 920019, "name": "fixture-fall-19", "price": 6.9},
+    {"element_id": 920020, "name": "fixture-fall-20", "price": 7.0}
+  ]
+}

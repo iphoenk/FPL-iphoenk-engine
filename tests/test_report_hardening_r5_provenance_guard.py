@@ -84,8 +84,8 @@ def _valid_partitions():
 
 def _valid_sections(our15):
     sections = r4_section_payloads(our15)
-    weather_rows = sections["WEATHER"]["rows"]
     sections["WEATHER"]["source_proof"] = {
+        "fact_ref": "weather_forecast",
         "source": "OPEN_METEO",
         "effective_at": "2026-09-16T21:30:00+00:00",
         "source_snapshot_ids": [_snapshot("open_meteo", "weather")],
@@ -142,14 +142,17 @@ def _valid_compute_kwargs():
     }
 
 
-def test_r5_valid_provenance_contract_passes():
-    kwargs = _valid_compute_kwargs()
-    result = validate_report_provenance(
+def _validate(kwargs):
+    return validate_report_provenance(
         section_payloads=kwargs["section_payloads"],
         facts=kwargs["facts"],
         models=kwargs["models"],
         inferences=kwargs["inferences"],
     )
+
+
+def test_r5_valid_provenance_contract_passes():
+    result = _validate(_valid_compute_kwargs())
 
     assert result["status"] == "PASS"
     assert result["partition"]["status"] == "PASS"
@@ -161,43 +164,51 @@ def test_r5_fact_model_inference_namespaces_are_pairwise_disjoint():
     kwargs = _valid_compute_kwargs()
     kwargs["inferences"]["official_price"] = kwargs["inferences"].pop("transfer_implication")
 
-    result = validate_report_provenance(
-        section_payloads=kwargs["section_payloads"],
-        facts=kwargs["facts"],
-        models=kwargs["models"],
-        inferences=kwargs["inferences"],
-    )
+    result = _validate(kwargs)
 
     assert result["status"] == "FAIL"
     assert "PARTITION_OVERLAP=official_price" in result["partition"]["failures"]
+
+
+def test_r5_model_input_snapshots_must_be_grounded_in_current_fact_lineage():
+    kwargs = _valid_compute_kwargs()
+    kwargs["models"]["expected_points"]["input_snapshot_ids"] = [
+        _snapshot("unrelated_source", "fabricated-but-well-formed")
+    ]
+
+    result = _validate(kwargs)
+
+    assert result["status"] == "FAIL"
+    assert "MODEL_INPUT_PROVENANCE_UNLINKED=expected_points" in result["partition"]["failures"]
 
 
 def test_r5_weather_pass_without_immutable_source_proof_is_rejected():
     kwargs = _valid_compute_kwargs()
     kwargs["section_payloads"]["WEATHER"].pop("source_proof")
 
-    result = validate_report_provenance(
-        section_payloads=kwargs["section_payloads"],
-        facts=kwargs["facts"],
-        models=kwargs["models"],
-        inferences=kwargs["inferences"],
-    )
+    result = _validate(kwargs)
 
     assert result["status"] == "FAIL"
     assert result["weather"]["status"] == "FAIL"
     assert "WEATHER_SOURCE_PROOF_MISSING" in result["weather"]["failures"]
 
 
+def test_r5_weather_proof_must_bind_to_declared_weather_fact_not_any_fact_snapshot():
+    kwargs = _valid_compute_kwargs()
+    proof = kwargs["section_payloads"]["WEATHER"]["source_proof"]
+    proof["source_snapshot_ids"] = kwargs["facts"]["official_price"]["source_snapshot_ids"]
+
+    result = _validate(kwargs)
+
+    assert result["status"] == "FAIL"
+    assert "WEATHER_FACT_PROVENANCE_MISMATCH=weather_forecast" in result["weather"]["failures"]
+
+
 def test_r5_optimizer_claim_cannot_be_pass_without_execution_proof():
     kwargs = _valid_compute_kwargs()
     kwargs["section_payloads"]["OPTIMIZER"].pop("execution_proof")
 
-    result = validate_report_provenance(
-        section_payloads=kwargs["section_payloads"],
-        facts=kwargs["facts"],
-        models=kwargs["models"],
-        inferences=kwargs["inferences"],
-    )
+    result = _validate(kwargs)
 
     assert result["status"] == "FAIL"
     assert "OPTIMIZER_EXECUTION_PROOF_MISSING" in result["execution"]["failures"]
@@ -207,15 +218,21 @@ def test_r5_monte_carlo_executed_claim_requires_actual_path_count():
     kwargs = _valid_compute_kwargs()
     kwargs["section_payloads"]["OPTIMIZER"]["execution_proof"]["monte_carlo"].pop("actual_paths")
 
-    result = validate_report_provenance(
-        section_payloads=kwargs["section_payloads"],
-        facts=kwargs["facts"],
-        models=kwargs["models"],
-        inferences=kwargs["inferences"],
-    )
+    result = _validate(kwargs)
 
     assert result["status"] == "FAIL"
     assert "MONTE_CARLO_ACTUAL_PATHS_INVALID" in result["execution"]["failures"]
+
+
+def test_r5_optimizer_proof_requires_explicit_state_for_mc_and_frontier():
+    for component in ("monte_carlo", "frontier"):
+        kwargs = _valid_compute_kwargs()
+        kwargs["section_payloads"]["OPTIMIZER"]["execution_proof"].pop(component)
+
+        result = _validate(kwargs)
+
+        assert result["status"] == "FAIL", component
+        assert f"{component.upper()}_EXECUTION_PROOF_MISSING" in result["execution"]["failures"]
 
 
 def test_r5_truthful_not_run_monte_carlo_does_not_require_fake_run_identity():
@@ -225,34 +242,20 @@ def test_r5_truthful_not_run_monte_carlo_does_not_require_fake_run_identity():
         "reason": "NOT_REQUIRED_FOR_THIS_REPORT",
     }
 
-    result = validate_report_provenance(
-        section_payloads=kwargs["section_payloads"],
-        facts=kwargs["facts"],
-        models=kwargs["models"],
-        inferences=kwargs["inferences"],
-    )
+    result = _validate(kwargs)
 
     assert result["status"] == "PASS"
 
 
 def test_r5_optimizer_output_tampering_breaks_execution_binding():
     kwargs = _valid_compute_kwargs()
-    original = validate_report_provenance(
-        section_payloads=kwargs["section_payloads"],
-        facts=kwargs["facts"],
-        models=kwargs["models"],
-        inferences=kwargs["inferences"],
-    )
+    original = _validate(kwargs)
     assert original["status"] == "PASS"
 
     tampered = deepcopy(kwargs["section_payloads"])
     tampered["OPTIMIZER"]["routes"][0]["net_projected_gain"] = 99.0
-    result = validate_report_provenance(
-        section_payloads=tampered,
-        facts=kwargs["facts"],
-        models=kwargs["models"],
-        inferences=kwargs["inferences"],
-    )
+    kwargs["section_payloads"] = tampered
+    result = _validate(kwargs)
 
     assert result["status"] == "FAIL"
     assert "OPTIMIZER_OUTPUT_FINGERPRINT_MISMATCH" in result["execution"]["failures"]

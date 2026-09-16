@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from src.runtime_v6.delivery_integrity import validate_rank20
 from src.runtime_v6.report_compute import build_report_compute_contract
-from src.runtime_v6.report_delivery_integrity import validate_rank20
 
 
 _HASH = "a" * 64

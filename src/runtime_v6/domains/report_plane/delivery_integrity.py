@@ -62,6 +62,44 @@ POSITION_TARGET = {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}
 _POSITION_ALIASES = {"GKP": "GK", "GOALKEEPER": "GK"}
 REPORT_SLOT_STATES = frozenset({"NOT_STARTED", "BUILDING", "QA_FAILED", "DELIVERED"})
 
+# R2 executable authority: count-only RISE20/FALL20 is never sufficient.
+# Keep this as the single production schema registry; R3 owns how values are generated.
+RANK20_REQUIRED_FIELDS = (
+    "rank",
+    "element_id",
+    "player_name",
+    "current_price",
+    "ownership_percent",
+    "ownership_tag",
+    "direction",
+    "current_progress_percent",
+    "projection_offset_0_percent",
+    "predicted_change_cycle",
+    "predicted_change_at",
+    "eta_human",
+    "model_urgency",
+    "confidence",
+    "source",
+    "observed_at",
+    "raw_payload_hash",
+)
+_RANK20_NON_EMPTY_FIELDS = frozenset(
+    {
+        "player_name",
+        "ownership_tag",
+        "direction",
+        "predicted_change_cycle",
+        "eta_human",
+        "model_urgency",
+        "confidence",
+        "source",
+        "observed_at",
+        "raw_payload_hash",
+    }
+)
+_RANK20_OWNERSHIP_TAGS = frozenset({"OWNED", "NON_OWNED"})
+_RANK20_DIRECTION_BY_LABEL = {"RISE20": "RISE", "FALL20": "FALL"}
+
 
 class DeliveryIntegrityError(ValueError):
     pass
@@ -375,6 +413,11 @@ def _position(row: Mapping[str, Any]) -> str:
     return _POSITION_ALIASES.get(raw, raw)
 
 
+def _is_sha256(value: Any) -> bool:
+    text = str(value or "")
+    return len(text) == 64 and all(character in "0123456789abcdefABCDEF" for character in text)
+
+
 def validate_watchlist20(
     rows: Sequence[Mapping[str, Any]],
     *,
@@ -416,6 +459,9 @@ def validate_watchlist20(
 def validate_rank20(rows: Sequence[Mapping[str, Any]], *, label: str) -> dict[str, Any]:
     ids = [_player_id(row) for row in rows]
     failures: list[str] = []
+    normalized_label = str(label or "").strip().upper()
+    expected_direction = _RANK20_DIRECTION_BY_LABEL.get(normalized_label)
+
     if len(rows) != 20:
         failures.append(f"TOTAL={len(rows)}")
     if any(player_id is None for player_id in ids):
@@ -423,12 +469,50 @@ def validate_rank20(rows: Sequence[Mapping[str, Any]], *, label: str) -> dict[st
     concrete_ids = [player_id for player_id in ids if player_id is not None]
     if len(set(concrete_ids)) != len(concrete_ids):
         failures.append("IDENTITY_DUPLICATE")
+
+    ranks = [row.get("rank") for row in rows]
+    if ranks != list(range(1, 21)):
+        failures.append("RANK_SEQUENCE_INVALID")
+
+    for index, row in enumerate(rows, start=1):
+        missing = [field for field in RANK20_REQUIRED_FIELDS if field not in row]
+        if missing:
+            failures.append(f"ROW_SCHEMA_MISSING={index}:{','.join(missing)}")
+
+        for field in _RANK20_NON_EMPTY_FIELDS:
+            if field in row and not str(row.get(field) or "").strip():
+                failures.append(f"ROW_FIELD_EMPTY={index}:{field}")
+
+        if expected_direction and "direction" in row:
+            actual_direction = str(row.get("direction") or "").strip().upper()
+            if actual_direction != expected_direction:
+                failures.append(
+                    f"ROW_DIRECTION_MISMATCH={index}:{actual_direction or '<empty>'}!={expected_direction}"
+                )
+
+        if "ownership_tag" in row:
+            ownership_tag = str(row.get("ownership_tag") or "").strip().upper()
+            if ownership_tag not in _RANK20_OWNERSHIP_TAGS:
+                failures.append(f"ROW_OWNERSHIP_TAG_INVALID={index}:{ownership_tag or '<empty>'}")
+
+        if "raw_payload_hash" in row and not _is_sha256(row.get("raw_payload_hash")):
+            failures.append(f"ROW_PROVENANCE_HASH_INVALID={index}")
+
+        if "observed_at" in row and str(row.get("observed_at") or "").strip():
+            try:
+                _parse_time(str(row.get("observed_at")))
+            except DeliveryIntegrityError:
+                failures.append(f"ROW_OBSERVED_AT_INVALID={index}")
+
     return {
-        "label": label,
+        "label": normalized_label,
         "status": "PASS" if not failures else "FAIL",
         "reason": "OK" if not failures else "RETRIEVAL/COMPUTE_DEFECT",
         "failures": failures,
         "total": len(rows),
+        "row_schema_complete": not failures,
+        "required_fields": list(RANK20_REQUIRED_FIELDS),
+        "expected_direction": expected_direction,
     }
 
 

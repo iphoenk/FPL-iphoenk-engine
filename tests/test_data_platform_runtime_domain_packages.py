@@ -17,7 +17,7 @@ EXPECTED_DOMAINS = {
 
 def test_runtime_v6_domain_packages_exist_and_import():
     for domain in EXPECTED_DOMAINS:
-        module = importlib.import_module(f"src.runtime_v6.{domain}")
+        module = importlib.import_module(f"src.runtime_v6.domains.{domain}")
         assert module is not None
 
 
@@ -39,7 +39,7 @@ def test_domain_layout_owns_each_migrated_module_once():
 def test_domain_modules_must_not_import_their_flat_facades():
     from src.runtime_v6.domain_layout import DOMAIN_MODULE_MAP
 
-    root = Path("src/runtime_v6")
+    root = Path("src/runtime_v6/domains")
     for domain, modules in DOMAIN_MODULE_MAP.items():
         for module_name in modules:
             path = root / domain / f"{module_name}.py"
@@ -47,7 +47,7 @@ def test_domain_modules_must_not_import_their_flat_facades():
                 continue
             text = path.read_text(encoding="utf-8")
             forbidden_absolute = f"from src.runtime_v6.{module_name} import"
-            forbidden_relative = f"from ..{module_name} import"
+            forbidden_relative = f"from ...{module_name} import"
             assert forbidden_absolute not in text, str(path)
             assert forbidden_relative not in text, str(path)
 
@@ -55,13 +55,14 @@ def test_domain_modules_must_not_import_their_flat_facades():
 def test_flat_compatibility_facades_are_bounded_after_migration():
     from src.runtime_v6.domain_layout import DOMAIN_MODULE_MAP
 
-    root = Path("src/runtime_v6")
+    runtime_root = Path("src/runtime_v6")
+    domain_root = runtime_root / "domains"
     for domain, modules in DOMAIN_MODULE_MAP.items():
         for module_name in modules:
-            canonical = root / domain / f"{module_name}.py"
-            facade = root / f"{module_name}.py"
+            canonical = domain_root / domain / f"{module_name}.py"
+            facade = runtime_root / f"{module_name}.py"
             if not canonical.exists() or not facade.exists():
                 continue
             text = facade.read_text(encoding="utf-8")
             assert len(text.splitlines()) <= 24, str(facade)
-            assert f"runtime_v6.{domain}.{module_name}" in text or f".{domain}.{module_name}" in text, str(facade)
+            assert f".domains.{domain}.{module_name}" in text, str(facade)

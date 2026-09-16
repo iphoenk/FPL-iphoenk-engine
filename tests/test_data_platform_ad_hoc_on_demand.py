@@ -99,7 +99,7 @@ def test_ad_hoc_identity_is_stable_across_equivalent_timezones_and_retry():
     assert first["trigger_kind"] == "AD_HOC"
     assert first["requested_at"] == "2026-09-16T08:41:23+07:00"
     assert first["logical_slot"] == "2026-09-16T08:41:00+07:00"
-    assert first["report_slot_id"] == "2026-09-16T08:41+07:00|ADHOC:REQ-ABC-001:DEEP"
+    assert first["report_slot_id"] == "2026-09-16T08:41+07:00|ADHOC:REQ-ABC-001:S23:DEEP"
     assert first["scheduler_proof_required"] is False
     assert first["scheduler_proof_status"] == "N/A"
     assert first["missed_cycle_status"] == "N/A"

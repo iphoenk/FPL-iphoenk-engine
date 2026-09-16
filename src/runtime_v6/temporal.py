@@ -2,11 +2,12 @@ from __future__ import annotations
 
 """Canonical temporal primitives for the V6 runtime and report plane.
 
-This module is deliberately business-light. It owns timestamp parsing,
-normalization, canonical serialization, interval slot math, bounded scheduled
-occurrence resolution, freshness classification, incident classification, and
-basic temporal-window comparison. Callers may keep compatibility wrappers for
-legacy exception types, but must not reimplement ISO parsing or timezone math.
+Wave 12 owns temporal semantics here. This module is deliberately business-light.
+It owns timestamp parsing, normalization, canonical serialization, interval slot
+math, bounded scheduled occurrence resolution, freshness classification, incident
+classification, and basic temporal-window comparison. Callers may keep
+compatibility wrappers for legacy exception types, but must not reimplement ISO
+parsing or timezone math.
 """
 
 from dataclasses import dataclass

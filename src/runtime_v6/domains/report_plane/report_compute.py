@@ -12,6 +12,7 @@ import json
 from typing import Any, Mapping, Sequence
 
 from .delivery_integrity import RANK20_REQUIRED_FIELDS, validate_rank20, validate_watchlist20
+from .rank20_engine import build_rank20_tables
 
 
 _SQUAD_POSITION_TARGET = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}
@@ -239,7 +240,7 @@ def build_report_compute_contract(
     facts: Mapping[str, Any],
     models: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Validate deterministic report-compute output before pre-render QA."""
+    """Validation primitive for an already-materialized report-compute payload."""
     if not scope_matrix_report_ready:
         return {
             "status": "BLOCKED",
@@ -296,4 +297,82 @@ def build_report_compute_contract(
             models=models,
         ),
         **checks,
+    }
+
+
+def build_report_compute_contract_from_universe(
+    *,
+    scope_matrix_report_ready: bool,
+    our15_rows: Sequence[Mapping[str, Any]],
+    starting_xi_ids: Sequence[int | str],
+    bench_ids: Sequence[int | str],
+    watchlist_rows: Sequence[Mapping[str, Any]],
+    universe_rows: Sequence[Mapping[str, Any]],
+    predictor_rows: Sequence[Mapping[str, Any]],
+    rank_snapshot: Mapping[str, Any],
+    facts: Mapping[str, Any],
+    models: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Canonical R3 entrypoint: build RISE/FALL from the full universe, then validate.
+
+    The older ``build_report_compute_contract`` remains a low-level validation
+    primitive for tests and already-materialized compatibility callers. New report
+    construction should enter here so canonical RISE20/FALL20 cannot bypass R3
+    selection, tie-breaking, ETA, ownership-tag and snapshot-provenance rules.
+    """
+    if not scope_matrix_report_ready:
+        blocked = build_report_compute_contract(
+            scope_matrix_report_ready=False,
+            our15_rows=our15_rows,
+            starting_xi_ids=starting_xi_ids,
+            bench_ids=bench_ids,
+            watchlist_rows=watchlist_rows,
+            rise_rows=(),
+            fall_rows=(),
+            facts=facts,
+            models=models,
+        )
+        return {
+            **blocked,
+            "RANK20_ENGINE": {
+                "status": "BLOCKED",
+                "reason": "SCOPE_MATRIX_NOT_READY",
+                "full_universe_coverage": False,
+            },
+            "RISE20_ROWS": [],
+            "FALL20_ROWS": [],
+        }
+
+    owned_ids = [
+        player_id
+        for row in our15_rows
+        if (player_id := _player_id(row)) is not None
+    ]
+    rank20 = build_rank20_tables(
+        universe_rows=universe_rows,
+        predictor_rows=predictor_rows,
+        owned_ids=owned_ids,
+        snapshot=rank_snapshot,
+    )
+    result = build_report_compute_contract(
+        scope_matrix_report_ready=True,
+        our15_rows=our15_rows,
+        starting_xi_ids=starting_xi_ids,
+        bench_ids=bench_ids,
+        watchlist_rows=watchlist_rows,
+        rise_rows=rank20["RISE20"],
+        fall_rows=rank20["FALL20"],
+        facts=facts,
+        models=models,
+    )
+    engine_metadata = {
+        key: value
+        for key, value in rank20.items()
+        if key not in {"RISE20", "FALL20"}
+    }
+    return {
+        **result,
+        "RANK20_ENGINE": {"status": "PASS", **engine_metadata},
+        "RISE20_ROWS": rank20["RISE20"],
+        "FALL20_ROWS": rank20["FALL20"],
     }

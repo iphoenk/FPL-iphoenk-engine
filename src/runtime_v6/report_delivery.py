@@ -13,6 +13,7 @@ import json
 from typing import Any, Mapping
 
 from .delivery_integrity import build_report_slot_id
+from .temporal import canonical_timestamp, try_parse_timestamp
 
 
 _ACKNOWLEDGED = "ACKNOWLEDGED"
@@ -38,13 +39,7 @@ def _post_render_ready(post_render_qa: Mapping[str, Any]) -> bool:
 
 
 def _parse_aware_timestamp(value: Any) -> datetime | None:
-    try:
-        parsed = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if parsed.tzinfo is None or parsed.utcoffset() is None:
-        return None
-    return parsed
+    return try_parse_timestamp(value)
 
 
 def _logical_slot_time(report_slot_id: str) -> datetime | None:
@@ -69,7 +64,7 @@ def _canonical_report_slot_id(report_slot_id: str, logical_slot: datetime) -> st
 
 
 def _canonical_timestamp(value: datetime) -> str:
-    return value.isoformat(timespec="seconds")
+    return canonical_timestamp(value, timespec="seconds")
 
 
 def _proof_digest(payload: Mapping[str, Any]) -> str:

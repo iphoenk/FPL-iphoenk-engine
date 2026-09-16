@@ -1,6 +1,7 @@
 {
   "schema_version": 6,
   "engine": "V6_FRESH_DATA_PLATFORM",
+  "runtime_branch": "runtime-data-v6",
   "schedule_authority": true,
   "scheduler_authority": {
     "kind": "CHATGPT_TASK",

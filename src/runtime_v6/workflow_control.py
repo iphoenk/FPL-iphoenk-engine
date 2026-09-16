@@ -4,11 +4,13 @@ import argparse
 import json
 import os
 import shlex
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
+from .control_plane import CONTROL_PLANE
 from .schedule_policy import SCHEDULE_POLICY
+from .temporal import TemporalError, parse_timestamp
 
 DEFAULT_POLICY_PATH = Path("config/v6/schedule_policy.json")
 _ALLOWED_PREFETCH_SCOPES = {"personal", "mini_league", "live"}
@@ -22,7 +24,6 @@ class WorkflowControlError(ValueError):
 
 
 def resolve_data_slot_decision(*, already_published: bool) -> dict[str, bool | str]:
-    """Return data-plane dedupe state without terminating the report plane."""
     return {
         "data_slot_status": "ALREADY_PUBLISHED" if already_published else "NEW",
         "skip_new_acquisition": already_published,
@@ -35,7 +36,6 @@ def scheduled_cron_kinds(policy: dict[str, Any]) -> dict[str, str]:
     github_schedule = dict(policy.get("github_natural_schedule") or {})
     if github_schedule.get("enabled") is False:
         return {}
-
     configured = policy.get("scheduled_crons_utc")
     if configured is None:
         configured = [
@@ -44,7 +44,6 @@ def scheduled_cron_kinds(policy: dict[str, Any]) -> dict[str, str]:
         ]
     if not isinstance(configured, list) or not configured:
         raise WorkflowControlError("V6 schedule policy requires scheduled_crons_utc when GitHub schedule is enabled")
-
     scheduled: dict[str, str] = {}
     for entry in configured:
         if not isinstance(entry, dict):
@@ -56,7 +55,6 @@ def scheduled_cron_kinds(policy: dict[str, Any]) -> dict[str, str]:
         if cron in scheduled:
             raise WorkflowControlError(f"duplicate V6 scheduled cron: {cron}")
         scheduled[cron] = kind
-
     primary = str(policy.get("primary_cron_utc") or "").strip()
     recovery = str(policy.get("recovery_cron_utc") or "").strip()
     if primary and scheduled.get(primary) != "primary":
@@ -84,8 +82,7 @@ def load_policy(path: Path | str = DEFAULT_POLICY_PATH) -> dict[str, Any]:
 
 def authorize_dispatch(
     policy: dict[str, Any],
-    *,
-    actor: str,
+    *, actor: str,
     repository_owner: str,
     mode: str,
     reason: str,
@@ -95,7 +92,6 @@ def authorize_dispatch(
         raise WorkflowControlError("V6 governed dispatch is restricted to the repository owner")
     if not str(reason).strip():
         raise WorkflowControlError("V6 governed dispatch requires an audit reason")
-
     control = dict(policy.get(mode) or {})
     if mode == "master_orchestrated":
         if control.get("enabled") is not True or control.get("authoritative_runtime_snapshot") is not True:
@@ -141,6 +137,15 @@ def _parse_key_value_tokens(comment_body: str, *, label: str) -> dict[str, str]:
     return values
 
 
+def _strict_timestamp(value: str, *, label: str):
+    try:
+        return parse_timestamp(value, label=label)
+    except TemporalError as exc:
+        if "timezone-aware" in str(exc):
+            raise WorkflowControlError(f"{label} must include timezone offset") from exc
+        raise WorkflowControlError(str(exc)) from exc
+
+
 def parse_master_issue_values(policy: dict[str, Any], comment_body: str) -> dict[str, str]:
     values = _parse_key_value_tokens(comment_body, label="master-acquire")
     allowed = {"reason", "logical_slot", "audit"}
@@ -150,19 +155,12 @@ def parse_master_issue_values(policy: dict[str, Any], comment_body: str) -> dict
     missing = allowed - set(values)
     if missing:
         raise WorkflowControlError(f"Missing master-acquire arguments: {sorted(missing)}")
-
     scheduler = dict(policy.get("scheduler_authority") or {})
     if values["reason"] != str(scheduler.get("required_reason") or ""):
         raise WorkflowControlError("master-acquire reason does not identify ChatGPT hourly authority")
     if values["audit"] != str(scheduler.get("required_audit") or ""):
         raise WorkflowControlError("master-acquire audit does not identify FPL Master hourly scheduler")
-
-    try:
-        logical_slot = datetime.fromisoformat(values["logical_slot"])
-    except ValueError as exc:
-        raise WorkflowControlError("master-acquire logical_slot must be ISO-8601") from exc
-    if logical_slot.tzinfo is None or logical_slot.utcoffset() is None:
-        raise WorkflowControlError("master-acquire logical_slot must include timezone offset")
+    logical_slot = _strict_timestamp(values["logical_slot"], label="master-acquire logical_slot")
     if logical_slot.utcoffset() != timedelta(hours=7):
         raise WorkflowControlError("master-acquire logical_slot must use Asia/Jakarta +07:00 offset")
     if logical_slot.minute != 0 or logical_slot.second != 0 or logical_slot.microsecond != 0:
@@ -179,22 +177,20 @@ def parse_master_issue_title_values(policy: dict[str, Any], issue_title: str) ->
     missing = allowed - set(values)
     if missing:
         raise WorkflowControlError(f"Missing master-slot arguments: {sorted(missing)}")
-
     synthetic = (
-        "FPL_MASTER_SLOT "
+        f"{CONTROL_PLANE.issue_title_marker} "
         f"reason={values['reason']} "
         f"logical_slot={values['logical_slot']} "
         f"audit={values['audit']}"
     )
     parse_master_issue_values(policy, synthetic)
-
     try:
-        logical_slot = datetime.fromisoformat(values["logical_slot"])
-        observed_at = datetime.fromisoformat(values["observed_at"])
-    except ValueError as exc:
+        logical_slot = parse_timestamp(values["logical_slot"], label="master-slot logical_slot")
+        observed_at = parse_timestamp(values["observed_at"], label="master-slot observed_at")
+    except TemporalError as exc:
+        if "timezone-aware" in str(exc):
+            raise WorkflowControlError("master-slot observed_at must include timezone offset") from exc
         raise WorkflowControlError("master-slot timestamps must be ISO-8601") from exc
-    if observed_at.tzinfo is None or observed_at.utcoffset() is None:
-        raise WorkflowControlError("master-slot observed_at must include timezone offset")
     if observed_at.utcoffset() != timedelta(hours=7):
         raise WorkflowControlError("master-slot observed_at must use Asia/Jakarta +07:00 offset")
     if observed_at < logical_slot or observed_at >= logical_slot + timedelta(hours=1):
@@ -204,15 +200,13 @@ def parse_master_issue_title_values(policy: dict[str, Any], issue_title: str) ->
 
 def authorize_issue_edit(
     policy: dict[str, Any],
-    *,
-    actor: str,
+    *, actor: str,
     repository_owner: str,
     issue_number: int,
     issue_title: str,
 ) -> str:
     if actor != repository_owner:
         raise WorkflowControlError("V6 governed issue edit is restricted to repository owner")
-
     marker = _issue_command(issue_title)
     scheduler = dict(policy.get("scheduler_authority") or {})
     prefetch = dict(policy.get("report_prefetch") or {})
@@ -223,14 +217,12 @@ def authorize_issue_edit(
     mode = controls.get(marker)
     if not mode:
         raise WorkflowControlError("V6 governed issue title marker mismatch")
-
     control = dict(policy.get(mode) or {})
     if control.get("enabled") is not True:
         raise WorkflowControlError(f"V6 {mode} is disabled")
     expected_issue = int(control.get("control_issue_number") or scheduler.get("control_issue_number") or 0)
     if int(issue_number) != expected_issue:
         raise WorkflowControlError("V6 governed control issue number mismatch")
-
     if mode == "master_orchestrated":
         parse_master_issue_title_values(policy, issue_title)
     else:
@@ -240,8 +232,7 @@ def authorize_issue_edit(
 
 def authorize_issue(
     policy: dict[str, Any],
-    *,
-    actor: str,
+    *, actor: str,
     repository_owner: str,
     issue_number: int,
     comment_body: str,
@@ -266,17 +257,11 @@ def authorize_issue(
     return mode
 
 
-def classify_invocation(
-    policy: dict[str, Any],
-    *,
-    event_name: str,
-    event: dict[str, Any],
-) -> str:
+def classify_invocation(policy: dict[str, Any], *, event_name: str, event: dict[str, Any]) -> str:
     if event_name == "schedule":
         if dict(policy.get("github_natural_schedule") or {}).get("enabled") is False:
             return "schedule_disabled"
         return scheduled_cron_kinds(policy).get(str(event.get("schedule") or ""), "scheduled_unknown")
-
     if event_name == "issue_comment":
         body = str((event.get("comment") or {}).get("body") or "")
         command = _issue_command(body)
@@ -288,7 +273,6 @@ def classify_invocation(
         if command == str(prefetch.get("issue_comment_command") or ""):
             return str(prefetch.get("schedule_kind") or "report_prefetch")
         return "governed_issue_command_unknown"
-
     if event_name == "issues":
         title = str((event.get("issue") or {}).get("title") or "")
         marker = _issue_command(title)
@@ -302,14 +286,12 @@ def classify_invocation(
             _parse_issue_prefetch_values(title)
             return str(prefetch.get("schedule_kind") or "report_prefetch")
         return "governed_issue_edit_unknown"
-
     if event_name == "workflow_dispatch":
         mode = str((event.get("inputs") or {}).get("mode") or "")
         control = dict(policy.get(mode) or {})
         if mode in {"master_orchestrated", "manual_recovery", "report_prefetch"} and control.get("enabled") is True:
             return str(control.get("schedule_kind") or mode)
         return "governed_dispatch_unknown"
-
     return "non_production_local"
 
 
@@ -335,8 +317,7 @@ def _parse_bool(value: Any) -> bool:
 
 def resolve_prefetch(
     policy: dict[str, Any],
-    *,
-    event_name: str,
+    *, event_name: str,
     comment_body: str = "",
     issue_title: str = "",
     dispatch_values: dict[str, Any] | None = None,
@@ -346,7 +327,6 @@ def resolve_prefetch(
         raise WorkflowControlError("V6 report prefetch is disabled")
     if prefetch.get("counts_as_completed_operational_slot") is not False:
         raise WorkflowControlError("V6 report prefetch cannot complete the core operational slot")
-
     if event_name == "issue_comment":
         values = _parse_issue_prefetch_values(comment_body)
     elif event_name == "issues":
@@ -356,7 +336,6 @@ def resolve_prefetch(
     report_kind = str(values.get("report_kind") or "").strip()
     if report_kind not in set(prefetch.get("supported_report_kinds") or []):
         raise WorkflowControlError(f"Unsupported report_kind={report_kind}")
-
     historical = report_kind == "historical_backfill"
     logical_slot = str(values.get("logical_slot") or "").strip()
     scope_raw = str(values.get("scope") or "").strip()
@@ -366,7 +345,6 @@ def resolve_prefetch(
     unknown_scopes = set(scopes) - _ALLOWED_PREFETCH_SCOPES
     if unknown_scopes:
         raise WorkflowControlError(f"Unsupported report-prefetch scopes: {sorted(unknown_scopes)}")
-
     gw_from = ""
     gw_to = ""
     if historical:
@@ -388,16 +366,15 @@ def resolve_prefetch(
         if not logical_slot:
             raise WorkflowControlError("report-prefetch logical_slot is required")
         try:
-            parsed = datetime.fromisoformat(logical_slot)
-        except ValueError as exc:
+            parse_timestamp(logical_slot, label="report-prefetch logical_slot")
+        except TemporalError as exc:
+            if "timezone-aware" in str(exc):
+                raise WorkflowControlError("report-prefetch logical_slot must include timezone offset") from exc
             raise WorkflowControlError("report-prefetch logical_slot must be ISO-8601") from exc
-        if parsed.tzinfo is None or parsed.utcoffset() is None:
-            raise WorkflowControlError("report-prefetch logical_slot must include timezone offset")
         if report_kind != "ad_hoc" and scopes:
             raise WorkflowControlError("scope override is allowed only for ad_hoc report prefetch")
         if report_kind == "ad_hoc" and not scopes:
             raise WorkflowControlError("ad_hoc report prefetch requires a non-empty scope")
-
     force = _parse_bool(values.get("force"))
     env = {
         "V6_PREFETCH_REPORT_KIND": report_kind,
@@ -443,7 +420,6 @@ def main() -> int:
     parser.add_argument("--policy", default=str(DEFAULT_POLICY_PATH))
     args = parser.parse_args()
     policy = load_policy(args.policy)
-
     try:
         if args.command == "authorize-dispatch":
             mode = authorize_dispatch(
@@ -509,7 +485,6 @@ def main() -> int:
             print(f"V6 schedule kind: {kind}")
         elif args.command == "slot-guard":
             from .runtime_control import scheduled_slot_already_completed
-
             if os.environ.get("V6_SCHEDULE_KIND") == "report_prefetch":
                 already_published = False
             else:

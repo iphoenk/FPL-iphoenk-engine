@@ -3,7 +3,13 @@ from __future__ import annotations
 from collections import Counter
 from datetime import datetime, timezone
 from typing import Any, Iterable, Mapping, Sequence
-from zoneinfo import ZoneInfo
+
+from .temporal import (
+    DEFAULT_RUNTIME_TIMEZONE,
+    TemporalError,
+    age_seconds,
+    parse_timestamp,
+)
 
 ARTIFACT_SCOPES = (
     "bootstrap",
@@ -55,7 +61,6 @@ PARTIAL_ALLOWED_SECTIONS = frozenset({"S02", "S13", "S14B", "S15"})
 POSITION_TARGET = {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}
 _POSITION_ALIASES = {"GKP": "GK", "GOALKEEPER": "GK"}
 REPORT_SLOT_STATES = frozenset({"NOT_STARTED", "BUILDING", "QA_FAILED", "DELIVERED"})
-_REPORT_TIMEZONE = ZoneInfo("Asia/Jakarta")
 
 
 class DeliveryIntegrityError(ValueError):
@@ -63,32 +68,32 @@ class DeliveryIntegrityError(ValueError):
 
 
 def _parse_time(value: str | datetime) -> datetime:
-    if isinstance(value, datetime):
-        parsed = value
-    else:
-        try:
-            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-        except ValueError as exc:
-            raise DeliveryIntegrityError("timestamp must be ISO-8601") from exc
-    if parsed.tzinfo is None or parsed.utcoffset() is None:
-        raise DeliveryIntegrityError("timestamp must include timezone offset")
-    return parsed.astimezone(timezone.utc)
+    try:
+        return parse_timestamp(
+            value,
+            label="timestamp",
+            target_timezone=timezone.utc,
+        )
+    except TemporalError as exc:
+        if "timezone-aware" in str(exc):
+            raise DeliveryIntegrityError("timestamp must include timezone offset") from exc
+        raise DeliveryIntegrityError("timestamp must be ISO-8601") from exc
 
 
 def build_report_slot_id(*, logical_slot: str | datetime, report_type: str) -> str:
-    if isinstance(logical_slot, datetime):
-        slot = logical_slot
-    else:
-        try:
-            slot = datetime.fromisoformat(str(logical_slot).replace("Z", "+00:00"))
-        except ValueError as exc:
-            raise DeliveryIntegrityError("report logical slot must be ISO-8601") from exc
-    if slot.tzinfo is None or slot.utcoffset() is None:
-        raise DeliveryIntegrityError("report logical slot must include timezone offset")
+    try:
+        slot = parse_timestamp(
+            logical_slot,
+            label="report logical slot",
+            target_timezone=DEFAULT_RUNTIME_TIMEZONE,
+        )
+    except TemporalError as exc:
+        if "timezone-aware" in str(exc):
+            raise DeliveryIntegrityError("report logical slot must include timezone offset") from exc
+        raise DeliveryIntegrityError("report logical slot must be ISO-8601") from exc
     if slot.second != 0 or slot.microsecond != 0:
         raise DeliveryIntegrityError("report logical slot must be minute-aligned")
 
-    slot = slot.astimezone(_REPORT_TIMEZONE)
     kind = str(report_type or "").strip().upper()
     if not kind or "|" in kind:
         raise DeliveryIntegrityError("report type must be a non-empty slot-safe identifier")
@@ -238,10 +243,7 @@ def validate_retrieval_reassembly(
     expected_set = set(expected)
     retrieved_set = set(reassembled)
     missing = sorted(expected_set - retrieved_set, key=str)
-    duplicates = sorted(
-        (item for item, count in counts.items() if count > 1),
-        key=str,
-    )
+    duplicates = sorted((item for item, count in counts.items() if count > 1), key=str)
     unexpected = sorted(retrieved_set - expected_set, key=str)
     complete = bool(
         len(reassembled) == len(expected)
@@ -296,14 +298,14 @@ def assess_report_timing(
 ) -> dict[str, Any]:
     slot = _parse_time(logical_slot)
     generated = _parse_time(report_generated_at)
-    report_lateness = max(0.0, (generated - slot).total_seconds())
+    report_lateness = age_seconds(now=generated, earlier=slot)
     result: dict[str, Any] = {
         "report_timeliness": "ON_TIME" if report_lateness == 0 else "LATE",
         "report_lateness_seconds": round(report_lateness, 3),
     }
     if delivered_at is not None:
         delivered = _parse_time(delivered_at)
-        delivery_lateness = max(0.0, (delivered - generated).total_seconds())
+        delivery_lateness = age_seconds(now=delivered, earlier=generated)
         result.update(
             {
                 "delivery_timeliness": "IMMEDIATE" if delivery_lateness == 0 else "LATE",
@@ -327,7 +329,7 @@ def assess_artifact_freshness(
         raise DeliveryIntegrityError("maximum_age_minutes must be non-negative")
     source = _parse_time(source_generated_at)
     observed = _parse_time(observed_at)
-    age_minutes = max(0.0, (observed - source).total_seconds() / 60.0)
+    age_minutes = age_seconds(now=observed, earlier=source) / 60.0
     if immutable_gw_cache:
         if artifact != "submitted_picks":
             raise DeliveryIntegrityError(

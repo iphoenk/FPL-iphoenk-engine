@@ -15,6 +15,12 @@ from .delivery_integrity import (
     build_report_slot_id,
     resolve_report_slot_decision,
 )
+from .temporal import (
+    TemporalError,
+    canonical_timestamp,
+    compare_temporal_window,
+    parse_timestamp,
+)
 
 
 _ALLOWED_RECOVERY_ACTIONS = frozenset(
@@ -29,20 +35,16 @@ _ALLOWED_RECOVERY_ACTIONS = frozenset(
 
 
 def _parse_aware_timestamp(value: str | datetime, *, label: str) -> datetime:
-    if isinstance(value, datetime):
-        parsed = value
-    else:
-        try:
-            parsed = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
-        except ValueError as exc:
-            raise DeliveryIntegrityError(f"{label} must be ISO-8601") from exc
-    if parsed.tzinfo is None or parsed.utcoffset() is None:
-        raise DeliveryIntegrityError(f"{label} must include timezone offset")
-    return parsed
+    try:
+        return parse_timestamp(value, label=label)
+    except TemporalError as exc:
+        if "timezone-aware" in str(exc):
+            raise DeliveryIntegrityError(f"{label} must include timezone offset") from exc
+        raise DeliveryIntegrityError(str(exc)) from exc
 
 
 def _canonical_timestamp(value: datetime) -> str:
-    return value.isoformat(timespec="seconds")
+    return canonical_timestamp(value, timespec="seconds")
 
 
 def _validate_retry_budget(*, attempt_count: int, max_attempts: int) -> tuple[int, int]:
@@ -183,6 +185,11 @@ def plan_report_catch_up(
         if deadline < logical:
             raise DeliveryIntegrityError("catch_up_deadline cannot precede logical_slot")
 
+    window = compare_temporal_window(
+        logical_at=logical,
+        observed_at=observed,
+        deadline=deadline,
+    )
     report_slot_id = build_report_slot_id(
         logical_slot=logical_slot,
         report_type=report_type,
@@ -197,13 +204,12 @@ def plan_report_catch_up(
     if decision["report_slot_id"] != report_slot_id:
         raise DeliveryIntegrityError("catch-up report-slot identity drift")
 
-    window_open = None if deadline is None else observed <= deadline
     common = {
         **decision,
         "recovery_mode": "CATCH_UP",
         "observed_at": _canonical_timestamp(observed),
         "catch_up_deadline": _canonical_timestamp(deadline) if deadline is not None else None,
-        "catch_up_window_open": window_open,
+        "catch_up_window_open": window.window_open,
         "catch_up_required": False,
         "legacy_fallback_allowed": False,
         "v6_data_plane_mutation_allowed": False,
@@ -217,7 +223,7 @@ def plan_report_catch_up(
             "next_action": "NONE",
         }
 
-    if deadline is not None and observed > deadline:
+    if deadline is not None and window.window_open is False:
         return {
             **common,
             "start_build": False,

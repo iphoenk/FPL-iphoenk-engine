@@ -6,38 +6,41 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .control_plane import CONTROL_PLANE
 from .legacy_scheduler_compat import event_schedule_expression as _event_schedule_expression
 from .legacy_scheduler_compat import nominal_schedule_time, scheduled_invocation_slot
 from .operational_ledger import build_operational_slots
 from .schedule_policy import SCHEDULE_POLICY
 from .store import HEALTH, MANIFEST, write_json
+from .temporal import floor_interval_slot, parse_timestamp, try_parse_timestamp
 
-# Compatibility exports. Values come exclusively from config/v6/schedule_policy.json.
-CHATGPT_SCHEDULER_AUTHORITY = SCHEDULE_POLICY.runtime_authority_id
+# Compatibility exports. Values come exclusively from canonical V6 config owners.
+CHATGPT_SCHEDULER_AUTHORITY = CONTROL_PLANE.scheduler_authority_id
 CHATGPT_SCHEDULER_EPOCH = SCHEDULE_POLICY.health_epoch
 CHATGPT_GREEN_STREAK = SCHEDULE_POLICY.green_after_consecutive_slots
 
 
 def _parse_dt(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return parsed.astimezone(timezone.utc) if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+    return try_parse_timestamp(
+        value,
+        naive_timezone=timezone.utc,
+        target_timezone=timezone.utc,
+    )
 
 
 def _now(value: datetime | None = None) -> datetime:
-    current = value or datetime.now(timezone.utc)
-    return current.astimezone(timezone.utc) if current.tzinfo is not None else current.replace(tzinfo=timezone.utc)
+    return parse_timestamp(
+        value or datetime.now(timezone.utc),
+        naive_timezone=timezone.utc,
+        target_timezone=timezone.utc,
+    )
 
 
 def scheduler_slot_start(value: datetime, scheduler_interval_minutes: int) -> datetime:
-    current = _now(value)
-    seconds = max(60, int(scheduler_interval_minutes) * 60)
-    epoch = int(current.timestamp())
-    return datetime.fromtimestamp(epoch - (epoch % seconds), tz=timezone.utc)
+    return floor_interval_slot(
+        _now(value),
+        cadence_minutes=max(1, int(scheduler_interval_minutes)),
+    )
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -61,8 +64,7 @@ def _is_report_prefetch(event: str, kind: str) -> bool:
 
 def _chatgpt_logical_slot(explicit: str | None = None) -> datetime | None:
     value = explicit if explicit is not None else os.getenv("V6_MASTER_LOGICAL_SLOT")
-    parsed = _parse_dt(value)
-    return parsed
+    return _parse_dt(value)
 
 
 def scheduled_slot_already_completed(

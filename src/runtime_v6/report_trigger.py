@@ -10,38 +10,47 @@ observability and duplicate-suppression contracts.
 
 from datetime import datetime
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from .delivery_integrity import (
     DeliveryIntegrityError,
     build_report_slot_id,
     resolve_report_slot_decision,
 )
+from .temporal import (
+    DEFAULT_RUNTIME_TIMEZONE,
+    TemporalError,
+    canonical_timestamp,
+    parse_timestamp,
+)
 
 
-_REPORT_TIMEZONE = ZoneInfo("Asia/Jakarta")
 _QA_REPORT_MODE_ALIASES = {
     "POST_MATCH": "FULL",
 }
 
 
 def _parse_aware_timestamp(value: str | datetime, *, label: str) -> datetime:
-    if isinstance(value, datetime):
-        parsed = value
-    else:
-        try:
-            parsed = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
-        except ValueError as exc:
-            raise DeliveryIntegrityError(f"{label} must be ISO-8601") from exc
-    if parsed.tzinfo is None or parsed.utcoffset() is None:
-        raise DeliveryIntegrityError(f"{label} must include timezone offset")
-    return parsed
+    try:
+        return parse_timestamp(value, label=label)
+    except TemporalError as exc:
+        if "timezone-aware" in str(exc):
+            raise DeliveryIntegrityError(f"{label} must include timezone offset") from exc
+        raise DeliveryIntegrityError(str(exc)) from exc
 
 
 def _canonical_timestamp(value: datetime) -> str:
-    local = value.astimezone(_REPORT_TIMEZONE)
-    timespec = "microseconds" if local.microsecond else "seconds"
-    return local.isoformat(timespec=timespec)
+    return canonical_timestamp(
+        value,
+        timezone_name=DEFAULT_RUNTIME_TIMEZONE,
+    )
+
+
+def _local_timestamp(value: datetime) -> datetime:
+    return parse_timestamp(
+        value,
+        label="timestamp",
+        target_timezone=DEFAULT_RUNTIME_TIMEZONE,
+    )
 
 
 def _validate_request_id(request_id: str) -> str:
@@ -63,7 +72,7 @@ def _validate_report_type(report_type: str) -> str:
 
 
 def _request_time_token(requested_at: datetime) -> str:
-    local = requested_at.astimezone(_REPORT_TIMEZONE)
+    local = _local_timestamp(requested_at)
     token = f"S{local.second:02d}"
     if local.microsecond:
         token += f"U{local.microsecond:06d}"
@@ -95,8 +104,8 @@ def build_ad_hoc_report_context(
     """
     request = _validate_request_id(request_id)
     kind = _validate_report_type(report_type)
-    requested = _parse_aware_timestamp(requested_at, label="requested_at").astimezone(
-        _REPORT_TIMEZONE
+    requested = _local_timestamp(
+        _parse_aware_timestamp(requested_at, label="requested_at")
     )
     logical = requested.replace(second=0, microsecond=0)
     request_time_token = _request_time_token(requested)

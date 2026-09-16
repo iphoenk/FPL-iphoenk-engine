@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .store import ROOT
+from .temporal import age_seconds, classify_freshness, try_parse_timestamp
 
 
 @dataclass(frozen=True)
@@ -97,15 +98,11 @@ SCHEDULE_POLICY = load_schedule_policy()
 
 
 def _parse_dt(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
+    return try_parse_timestamp(
+        value,
+        naive_timezone=timezone.utc,
+        target_timezone=timezone.utc,
+    )
 
 
 def scheduler_proof_telemetry(
@@ -115,12 +112,14 @@ def scheduler_proof_telemetry(
     policy: SchedulerPolicy = SCHEDULE_POLICY,
 ) -> dict[str, Any]:
     proof = _parse_dt(last_proof_at)
-    if isinstance(now, str):
-        current = _parse_dt(now)
-    elif isinstance(now, datetime):
-        current = now.astimezone(timezone.utc) if now.tzinfo else now.replace(tzinfo=timezone.utc)
-    else:
+    if now is None:
         current = datetime.now(timezone.utc)
+    else:
+        current = try_parse_timestamp(
+            now,
+            naive_timezone=timezone.utc,
+            target_timezone=timezone.utc,
+        )
 
     if proof is None or current is None:
         return {
@@ -130,17 +129,15 @@ def scheduler_proof_telemetry(
             "scheduler_proof_health": "AMBER",
         }
 
-    age_seconds = max(0.0, (current - proof).total_seconds())
-    age_minutes = age_seconds / 60.0
-    if age_minutes <= policy.proof_fresh_after_minutes:
-        freshness, health = "FRESH", "GREEN"
-    elif age_minutes <= policy.proof_stale_after_minutes:
-        freshness, health = "LATE", "AMBER"
-    else:
-        freshness, health = "STALE", "RED"
+    proof_age_seconds = age_seconds(now=current, earlier=proof)
+    classification = classify_freshness(
+        age_minutes=proof_age_seconds / 60.0,
+        fresh_after_minutes=policy.proof_fresh_after_minutes,
+        stale_after_minutes=policy.proof_stale_after_minutes,
+    )
     return {
         "last_chatgpt_scheduler_proof_at": proof.isoformat(),
-        "scheduler_proof_age_seconds": round(age_seconds, 3),
-        "scheduler_proof_freshness": freshness,
-        "scheduler_proof_health": health,
+        "scheduler_proof_age_seconds": round(proof_age_seconds, 3),
+        "scheduler_proof_freshness": classification.freshness,
+        "scheduler_proof_health": classification.health,
     }

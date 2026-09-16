@@ -9,8 +9,8 @@ from typing import Any, Iterable, Mapping
 from .control_plane import CONTROL_PLANE
 from .temporal import age_seconds, try_parse_timestamp
 
-DEFAULT_COOLDOWN_MINUTES = 60.0
-DEFAULT_SETTLE_MINUTES = 20.0
+DEFAULT_COOLDOWN_MINUTES = CONTROL_PLANE.recovery_cooldown_minutes
+DEFAULT_SETTLE_MINUTES = CONTROL_PLANE.governed_event_settle_minutes
 ACTIVE_RUN_STATUSES = {"queued", "in_progress", "waiting", "requested", "pending"}
 
 
@@ -34,18 +34,10 @@ def decide_safe_recovery(
     cooldown_minutes: float = DEFAULT_COOLDOWN_MINUTES,
     settle_minutes: float = DEFAULT_SETTLE_MINUTES,
 ) -> dict[str, Any]:
-    """Decide whether a recovery-only manual acquisition may be dispatched.
-
-    This controller is deliberately not a scheduler-health authority. It can request one
-    governed manual recovery only after the independent watchdog is CRITICAL and after
-    duplicate/in-flight/cooldown guards pass. A recovery request never becomes a
-    ChatGPT scheduler proof and never repairs Wave-3 natural-slot evidence.
-    """
     current = _parse_dt(now or datetime.now(timezone.utc))
     assert current is not None
     watch = dict(watchdog or {})
     runs = [dict(row) for row in workflow_runs]
-
     base = {
         "controller_role": CONTROL_PLANE.recovery_role,
         "normal_scheduler_authority": CONTROL_PLANE.scheduler_authority_id,
@@ -57,14 +49,9 @@ def decide_safe_recovery(
         "watchdog_state": str(watch.get("state") or "UNKNOWN"),
         "watchdog_reason_code": str(watch.get("reason_code") or "UNKNOWN"),
     }
-
     if watch.get("state") != "CRITICAL":
         return {**base, "should_recover": False, "decision": "NOOP", "reason_code": "WATCHDOG_NOT_CRITICAL"}
-
-    active = [
-        row for row in runs
-        if str(row.get("status") or "").lower() in ACTIVE_RUN_STATUSES
-    ]
+    active = [row for row in runs if str(row.get("status") or "").lower() in ACTIVE_RUN_STATUSES]
     if active:
         return {
             **base,
@@ -73,7 +60,6 @@ def decide_safe_recovery(
             "reason_code": "INGESTION_ALREADY_ACTIVE",
             "blocking_run_ids": [str(row.get("id") or "") for row in active],
         }
-
     recent_manual: list[tuple[datetime, dict[str, Any]]] = []
     recent_core: list[tuple[datetime, dict[str, Any]]] = []
     for row in runs:
@@ -86,7 +72,6 @@ def decide_safe_recovery(
             recent_manual.append((when, row))
         if event in {"issues", "issue_comment"} and age_minutes < settle_minutes:
             recent_core.append((when, row))
-
     if recent_core:
         recent_core.sort(key=lambda item: item[0], reverse=True)
         return {
@@ -96,7 +81,6 @@ def decide_safe_recovery(
             "reason_code": "RECENT_GOVERNED_CORE_EVENT_SETTLING",
             "blocking_run_id": str(recent_core[0][1].get("id") or ""),
         }
-
     if recent_manual:
         recent_manual.sort(key=lambda item: item[0], reverse=True)
         return {
@@ -106,7 +90,6 @@ def decide_safe_recovery(
             "reason_code": "RECOVERY_COOLDOWN_ACTIVE",
             "blocking_run_id": str(recent_manual[0][1].get("id") or ""),
         }
-
     return {
         **base,
         "should_recover": True,
@@ -129,7 +112,6 @@ def main() -> int:
     parser.add_argument("--output", type=Path)
     parser.add_argument("--now")
     args = parser.parse_args()
-
     watchdog = json.loads(args.watchdog.read_text(encoding="utf-8"))
     runs = _load_runs(args.runs)
     config: dict[str, Any] = {}

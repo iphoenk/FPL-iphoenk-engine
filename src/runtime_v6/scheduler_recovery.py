@@ -6,21 +6,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+from .control_plane import CONTROL_PLANE
+from .temporal import age_seconds, try_parse_timestamp
+
 DEFAULT_COOLDOWN_MINUTES = 60.0
 DEFAULT_SETTLE_MINUTES = 20.0
 ACTIVE_RUN_STATUSES = {"queued", "in_progress", "waiting", "requested", "pending"}
 
 
 def _parse_dt(value: Any) -> datetime | None:
-    if value in {None, ""}:
-        return None
-    try:
-        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
+    return try_parse_timestamp(
+        value,
+        naive_timezone=timezone.utc,
+        target_timezone=timezone.utc,
+    )
 
 
 def _run_time(run: Mapping[str, Any]) -> datetime | None:
@@ -42,13 +41,14 @@ def decide_safe_recovery(
     duplicate/in-flight/cooldown guards pass. A recovery request never becomes a
     ChatGPT scheduler proof and never repairs Wave-3 natural-slot evidence.
     """
-    current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    current = _parse_dt(now or datetime.now(timezone.utc))
+    assert current is not None
     watch = dict(watchdog or {})
     runs = [dict(row) for row in workflow_runs]
 
     base = {
-        "controller_role": "SAFE_RECOVERY_ONLY",
-        "normal_scheduler_authority": "CHATGPT_FPL_MASTER_MONITOR",
+        "controller_role": CONTROL_PLANE.recovery_role,
+        "normal_scheduler_authority": CONTROL_PLANE.scheduler_authority_id,
         "recovery_mode": "manual_recovery",
         "recovery_is_scheduler_proof": False,
         "recovery_counts_as_natural_wave3_slot": False,
@@ -80,7 +80,7 @@ def decide_safe_recovery(
         when = _run_time(row)
         if when is None:
             continue
-        age_minutes = max(0.0, (current - when).total_seconds() / 60.0)
+        age_minutes = age_seconds(now=current, earlier=when) / 60.0
         event = str(row.get("event") or "")
         if event == "workflow_dispatch" and age_minutes < cooldown_minutes:
             recent_manual.append((when, row))

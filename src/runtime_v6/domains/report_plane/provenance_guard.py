@@ -32,7 +32,7 @@ PROVENANCE_CONTRACT_REGISTRY: dict[str, Mapping[str, Any]] = {
         "required_fields": ("basis", "fact_refs", "model_refs"),
     },
     "WEATHER": {
-        "proof_fields": ("source", "effective_at", "source_snapshot_ids"),
+        "proof_fields": ("fact_ref", "source", "effective_at", "source_snapshot_ids"),
     },
     "EXECUTION": {
         "proof_fields": (
@@ -100,6 +100,22 @@ def _mapping_rows(payload: Mapping[str, Any]) -> Iterable[tuple[str, Any]]:
         yield str(key), payload[key]
 
 
+def _all_fact_snapshot_ids(facts: Mapping[str, Any]) -> set[str]:
+    result: set[str] = set()
+    for row in facts.values():
+        if not isinstance(row, Mapping):
+            continue
+        snapshots = row.get("source_snapshot_ids")
+        if not isinstance(snapshots, Sequence) or isinstance(snapshots, (str, bytes)):
+            continue
+        result.update(
+            item
+            for item in snapshots
+            if isinstance(item, str) and is_immutable_snapshot_id(item)
+        )
+    return result
+
+
 def _validate_partition(
     facts: Mapping[str, Any],
     models: Mapping[str, Any],
@@ -129,6 +145,7 @@ def _validate_partition(
         if not _valid_snapshot_ids(row.get("source_snapshot_ids")):
             failures.append(f"FACT_SOURCE_SNAPSHOT_IDS_INVALID={key}")
 
+    fact_snapshot_ids = _all_fact_snapshot_ids(facts)
     for key, row in _mapping_rows(models):
         if not isinstance(row, Mapping):
             failures.append(f"MODEL_ROW_INVALID={key}")
@@ -137,8 +154,11 @@ def _validate_partition(
             failures.append(f"MODEL_ID_MISSING={key}")
         if not _timezone_aware(row.get("computed_at")):
             failures.append(f"MODEL_COMPUTED_AT_INVALID={key}")
-        if not _valid_snapshot_ids(row.get("input_snapshot_ids")):
+        input_snapshot_ids = row.get("input_snapshot_ids")
+        if not _valid_snapshot_ids(input_snapshot_ids):
             failures.append(f"MODEL_INPUT_SNAPSHOT_IDS_INVALID={key}")
+        elif not {str(item) for item in input_snapshot_ids}.issubset(fact_snapshot_ids):
+            failures.append(f"MODEL_INPUT_PROVENANCE_UNLINKED={key}")
 
     for key, row in _mapping_rows(inferences):
         if not isinstance(row, Mapping):
@@ -174,17 +194,6 @@ def _validate_partition(
     }
 
 
-def _all_fact_snapshot_ids(facts: Mapping[str, Any]) -> set[str]:
-    result: set[str] = set()
-    for row in facts.values():
-        if not isinstance(row, Mapping):
-            continue
-        snapshots = row.get("source_snapshot_ids")
-        if isinstance(snapshots, Sequence) and not isinstance(snapshots, (str, bytes)):
-            result.update(str(item) for item in snapshots if isinstance(item, str))
-    return result
-
-
 def _validate_source_proof(proof: Any, *, prefix: str) -> list[str]:
     if not isinstance(proof, Mapping):
         return [f"{prefix}_SOURCE_PROOF_MISSING"]
@@ -211,10 +220,28 @@ def _validate_weather(section_payloads: Mapping[str, Any], facts: Mapping[str, A
     proof = weather.get("source_proof")
     if proof_required:
         failures.extend(_validate_source_proof(proof, prefix="WEATHER"))
-        if isinstance(proof, Mapping) and _valid_snapshot_ids(proof.get("source_snapshot_ids")):
-            proof_ids = {str(item) for item in proof["source_snapshot_ids"]}
-            if not proof_ids.intersection(_all_fact_snapshot_ids(facts)):
-                failures.append("WEATHER_FACT_PROVENANCE_UNLINKED")
+        if isinstance(proof, Mapping):
+            fact_ref = str(proof.get("fact_ref") or "").strip()
+            if not fact_ref:
+                failures.append("WEATHER_FACT_REF_MISSING")
+            elif fact_ref not in facts:
+                failures.append(f"WEATHER_FACT_REF_UNKNOWN={fact_ref}")
+            else:
+                fact = facts[fact_ref]
+                if not isinstance(fact, Mapping):
+                    failures.append(f"WEATHER_FACT_REF_INVALID={fact_ref}")
+                else:
+                    proof_source = str(proof.get("source") or "").strip().casefold()
+                    fact_source = str(fact.get("source") or "").strip().casefold()
+                    if proof_source and fact_source and proof_source != fact_source:
+                        failures.append(f"WEATHER_FACT_SOURCE_MISMATCH={fact_ref}")
+                    proof_ids = proof.get("source_snapshot_ids")
+                    fact_ids = fact.get("source_snapshot_ids")
+                    if _valid_snapshot_ids(proof_ids) and _valid_snapshot_ids(fact_ids):
+                        if not {str(item) for item in proof_ids}.issubset(
+                            {str(item) for item in fact_ids}
+                        ):
+                            failures.append(f"WEATHER_FACT_PROVENANCE_MISMATCH={fact_ref}")
 
     return {
         "status": "PASS" if not failures else "FAIL",
@@ -317,21 +344,22 @@ def _validate_execution(section_payloads: Mapping[str, Any]) -> dict[str, Any]:
         route_summary_fingerprint = canonical_fingerprint(
             {"route_ids": [row.get("route_id") if isinstance(row, Mapping) else None for row in route_rows]}
         )
-        failures.extend(
-            _validate_optional_execution(
-                proof.get("monte_carlo"),
-                label="MONTE_CARLO",
-                expected_output_fingerprint=route_summary_fingerprint,
-                require_actual_paths=True,
-            )
+        optional_components = (
+            ("monte_carlo", "MONTE_CARLO", True),
+            ("frontier", "FRONTIER", False),
         )
-        failures.extend(
-            _validate_optional_execution(
-                proof.get("frontier"),
-                label="FRONTIER",
-                expected_output_fingerprint=route_summary_fingerprint,
+        for component, label, require_actual_paths in optional_components:
+            if component not in proof:
+                failures.append(f"{label}_EXECUTION_PROOF_MISSING")
+                continue
+            failures.extend(
+                _validate_optional_execution(
+                    proof.get(component),
+                    label=label,
+                    expected_output_fingerprint=route_summary_fingerprint,
+                    require_actual_paths=require_actual_paths,
+                )
             )
-        )
 
     return {
         "status": "PASS" if not failures else "FAIL",

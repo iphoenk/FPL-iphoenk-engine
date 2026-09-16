@@ -65,4 +65,4 @@ def test_flat_compatibility_facades_are_bounded_after_migration():
                 continue
             text = facade.read_text(encoding="utf-8")
             assert len(text.splitlines()) <= 24, str(facade)
-            assert f".domains.{domain}.{module_name}" in text, str(facade)
+            assert f"from .domains.{domain} import {module_name} as _impl" in text, str(facade)

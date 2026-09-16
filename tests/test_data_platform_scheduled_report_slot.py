@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from src.runtime_v6.report_delivery import should_continue_report_processing
+from src.runtime_v6.delivery_integrity import resolve_report_slot_decision
 from src.runtime_v6.scheduled_report_slot import resolve_scheduled_report_slot
 
 
@@ -79,11 +79,20 @@ def test_naive_observed_timestamp_is_rejected():
 
 
 def test_already_published_data_slot_does_not_close_due_report_slot():
-    assert should_continue_report_processing(
-        data_slot_status="ALREADY_PUBLISHED",
-        report_due=True,
-        report_slot_status=None,
-    ) is True
+    decision = resolve_report_slot_decision(
+        logical_slot="2026-09-16T12:30:00+07:00",
+        report_type="DEEP",
+        report_state="NOT_STARTED",
+        v6_already_published=True,
+        delivered_report_slot_id=None,
+        delivery_proof_valid=False,
+    )
+
+    assert decision["v6_already_published"] is True
+    assert decision["report_required"] is True
+    assert decision["start_build"] is True
+    assert decision["report_delivered"] is False
+    assert decision["reason"] == "DUE_REPORT"
 
 
 def test_schedule_policy_matches_canonical_half_hour_and_declares_tolerance():

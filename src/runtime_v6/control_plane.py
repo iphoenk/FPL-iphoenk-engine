@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Single Python owner for V6 control-plane identity and role configuration."""
+"""Single Python owner for V6 control-plane identity, roles and thresholds."""
 
 from dataclasses import dataclass
 import json
@@ -20,6 +20,10 @@ class ControlPlaneContract:
     scheduler_authority_id: str
     watchdog_role: str
     recovery_role: str
+    watchdog_warning_minutes: float
+    watchdog_critical_minutes: float
+    recovery_cooldown_minutes: float
+    governed_event_settle_minutes: float
 
 
 def _read_json(path: Path) -> dict:
@@ -27,6 +31,16 @@ def _read_json(path: Path) -> dict:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise RuntimeError(f"control-plane config unavailable: {path}") from exc
+
+
+def _positive_number(value, *, label: str) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"control-plane {label} must be numeric") from exc
+    if parsed <= 0:
+        raise ValueError(f"control-plane {label} must be positive")
+    return parsed
 
 
 def load_control_plane_contract(
@@ -46,6 +60,7 @@ def load_control_plane_contract(
     )
     scheduler = dict(schedule.get("scheduler_authority") or {})
     prefetch = dict(schedule.get("report_prefetch") or {})
+    watchdog_schedule = dict(watchdog.get("schedule") or {})
 
     runtime_branch = str(schedule.get("runtime_branch") or "").strip()
     issue_title_marker = str(scheduler.get("issue_title_marker") or "").strip()
@@ -59,6 +74,23 @@ def load_control_plane_contract(
         control_issue_number = int(scheduler.get("control_issue_number"))
     except (TypeError, ValueError) as exc:
         raise ValueError("control-plane control_issue_number must be an integer") from exc
+
+    watchdog_warning_minutes = _positive_number(
+        watchdog_schedule.get("warning_after_minutes"),
+        label="watchdog_warning_minutes",
+    )
+    watchdog_critical_minutes = _positive_number(
+        watchdog_schedule.get("critical_after_minutes"),
+        label="watchdog_critical_minutes",
+    )
+    recovery_cooldown_minutes = _positive_number(
+        recovery.get("recovery_cooldown_minutes"),
+        label="recovery_cooldown_minutes",
+    )
+    governed_event_settle_minutes = _positive_number(
+        recovery.get("governed_event_settle_minutes"),
+        label="governed_event_settle_minutes",
+    )
 
     required = {
         "runtime_branch": runtime_branch,
@@ -75,6 +107,8 @@ def load_control_plane_contract(
         raise ValueError("control-plane required field missing: " + ",".join(missing))
     if control_issue_number <= 0:
         raise ValueError("control-plane control_issue_number must be positive")
+    if watchdog_critical_minutes <= watchdog_warning_minutes:
+        raise ValueError("control-plane watchdog critical threshold must exceed warning threshold")
 
     return ControlPlaneContract(
         runtime_branch=runtime_branch,
@@ -86,6 +120,10 @@ def load_control_plane_contract(
         scheduler_authority_id=scheduler_authority_id,
         watchdog_role=watchdog_role,
         recovery_role=recovery_role,
+        watchdog_warning_minutes=watchdog_warning_minutes,
+        watchdog_critical_minutes=watchdog_critical_minutes,
+        recovery_cooldown_minutes=recovery_cooldown_minutes,
+        governed_event_settle_minutes=governed_event_settle_minutes,
     )
 
 

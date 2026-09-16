@@ -11,7 +11,7 @@ from hashlib import sha256
 import json
 from typing import Any, Mapping, Sequence
 
-from .delivery_integrity import validate_rank20, validate_watchlist20
+from .delivery_integrity import RANK20_REQUIRED_FIELDS, validate_rank20, validate_watchlist20
 
 
 _SQUAD_POSITION_TARGET = {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}
@@ -181,6 +181,14 @@ def _validate_fact_model_partition(
     }
 
 
+def _rank20_fingerprint_rows(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Bind the compute fingerprint to the R2 row contract, not identities alone."""
+    return [
+        {field: row.get(field) for field in RANK20_REQUIRED_FIELDS}
+        for row in rows
+    ]
+
+
 def _compute_fingerprint(
     *,
     our15_rows: Sequence[Mapping[str, Any]],
@@ -204,8 +212,8 @@ def _compute_fingerprint(
         "XI": _sort_ids(list(starting_xi_ids)),
         "BENCH": _sort_ids(list(bench_ids)),
         "WATCHLIST20": [_player_id(row) for row in watchlist_rows],
-        "RISE20": [_player_id(row) for row in rise_rows],
-        "FALL20": [_player_id(row) for row in fall_rows],
+        "RISE20": _rank20_fingerprint_rows(rise_rows),
+        "FALL20": _rank20_fingerprint_rows(fall_rows),
         "FACT": dict(facts),
         "MODEL": dict(models),
     }

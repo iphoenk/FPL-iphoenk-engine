@@ -7,8 +7,8 @@ from src.runtime_v6.report_compute import build_report_compute_contract
 from src.runtime_v6.report_delivery import build_delivery_proof, validate_delivery_proof
 from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_render_qa
 from src.runtime_v6.report_trigger import build_ad_hoc_report_context
+from test_support.report_provenance import r5_partitions, r5_section_payloads
 from test_support.report_rank20 import rank20_rows
-from test_support.report_sections import r4_section_payloads
 
 
 REPORT_MODES = (
@@ -44,6 +44,7 @@ def _watchlist20():
 
 def _compute():
     our15 = _our15()
+    facts, models, inferences = r5_partitions()
     return build_report_compute_contract(
         scope_matrix_report_ready=True,
         our15_rows=our15,
@@ -52,9 +53,10 @@ def _compute():
         watchlist_rows=_watchlist20(),
         rise_rows=rank20_rows(201, "RISE"),
         fall_rows=rank20_rows(301, "FALL"),
-        section_payloads=r4_section_payloads(our15),
-        facts={"official": {"source": "official_fpl"}},
-        models={"projection": {"model": "v6"}},
+        section_payloads=r5_section_payloads(our15),
+        facts=facts,
+        models=models,
+        inferences=inferences,
     )
 
 

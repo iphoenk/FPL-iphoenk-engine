@@ -4,9 +4,11 @@ from __future__ import annotations
 
 The closeout layer does not acquire, mutate, render, publish, retry, or deliver
 anything. It only evaluates explicit evidence produced by Waves 1-9 and fails
-closed when the locked regression matrix or E2E evidence is incomplete.
+closed when the locked regression matrix, E2E evidence, or verification
+provenance is incomplete.
 """
 
+from datetime import datetime
 from hashlib import sha256
 import json
 from typing import Any, Mapping
@@ -39,6 +41,21 @@ def _fingerprint(payload: Mapping[str, Any]) -> str:
         default=str,
     ).encode("utf-8")
     return sha256(canonical).hexdigest()
+
+
+def _is_hex(value: Any, *, length: int) -> bool:
+    text = str(value or "").strip()
+    return len(text) == length and all(
+        character in "0123456789abcdefABCDEF" for character in text
+    )
+
+
+def _is_aware_iso8601(value: Any) -> bool:
+    try:
+        parsed = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return parsed.tzinfo is not None and parsed.utcoffset() is not None
 
 
 def evaluate_regression_acceptance(
@@ -107,8 +124,9 @@ def evaluate_production_closeout(
     *,
     regression_acceptance: Mapping[str, Any],
     e2e_evidence: Mapping[str, Any],
+    provenance: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Close recovery only when regression and every locked E2E fact are proven."""
+    """Close recovery only when regression, E2E facts, and provenance are proven."""
     failures: list[str] = []
     regression_ready = bool(
         regression_acceptance.get("status") == "PASS"
@@ -138,11 +156,31 @@ def evaluate_production_closeout(
         elif key in supplied:
             failures.append(f"EVIDENCE_FAILED={key}")
 
+    raw_provenance = provenance if isinstance(provenance, Mapping) else {}
+    canonical_provenance = {
+        "commit_sha": str(raw_provenance.get("commit_sha") or "").strip().lower(),
+        "acceptance_fingerprint": str(
+            raw_provenance.get("acceptance_fingerprint") or ""
+        ).strip().lower(),
+        "verified_at": str(raw_provenance.get("verified_at") or "").strip(),
+    }
+    if not _is_hex(canonical_provenance["commit_sha"], length=40):
+        failures.append("PROVENANCE_COMMIT_SHA_INVALID")
+    if not _is_hex(canonical_provenance["acceptance_fingerprint"], length=64):
+        failures.append("PROVENANCE_ACCEPTANCE_FINGERPRINT_INVALID")
+    elif canonical_provenance["acceptance_fingerprint"] != str(
+        regression_acceptance.get("acceptance_fingerprint") or ""
+    ).lower():
+        failures.append("PROVENANCE_ACCEPTANCE_FINGERPRINT_MISMATCH")
+    if not _is_aware_iso8601(canonical_provenance["verified_at"]):
+        failures.append("PROVENANCE_VERIFIED_AT_INVALID")
+
     ready = not failures and evidence_passed == len(CLOSEOUT_EVIDENCE_KEYS)
     closeout_fingerprint = _fingerprint(
         {
             "regression_fingerprint": regression_acceptance.get("acceptance_fingerprint"),
             "e2e_evidence": canonical_evidence,
+            "provenance": canonical_provenance,
         }
     )
 
@@ -153,6 +191,7 @@ def evaluate_production_closeout(
         "required_evidence_count": len(CLOSEOUT_EVIDENCE_KEYS),
         "e2e_evidence_passed": evidence_passed,
         "e2e_evidence": canonical_evidence,
+        "provenance": canonical_provenance,
         "failures": failures,
         "regression_acceptance_fingerprint": regression_acceptance.get(
             "acceptance_fingerprint"

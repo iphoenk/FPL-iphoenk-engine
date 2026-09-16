@@ -64,6 +64,8 @@ def _pre_render(**overrides):
         "compute_contract": _compute_contract(),
         "section_manifest": _section_manifest(),
         "mini_league_denominator_complete": True,
+        "weather_required": True,
+        "weather_direct_chat_present": True,
     }
     kwargs.update(overrides)
     return validate_pre_render_qa(**kwargs)
@@ -84,6 +86,7 @@ def _post_render(pre_render=None, **overrides):
         "rendered_fact_keys": list(pre.get("expected_fact_keys", [])),
         "rendered_model_keys": list(pre.get("expected_model_keys", [])),
         "rendered_mini_league_denominator_complete": True,
+        "rendered_weather_direct_chat_present": True,
         "truncated": False,
     }
     kwargs.update(overrides)
@@ -104,6 +107,8 @@ def test_pre_render_pass_only_allows_render_and_never_delivery():
     assert result["legacy_fallback_allowed"] is False
     assert result["failures"] == []
     assert result["render_contract_token"]
+    assert result["weather_required"] is True
+    assert result["weather_direct_chat_present"] is True
 
 
 def test_pre_render_rejects_compute_that_is_not_exact_wave5_handoff():
@@ -196,6 +201,7 @@ def test_post_render_pass_advances_only_to_wave7_delivery_proof():
     assert result["next_action"] == "BUILD_DELIVERY_PROOF"
     assert result["legacy_fallback_allowed"] is False
     assert result["failures"] == []
+    assert result["weather_direct_chat_present"] is True
 
 
 def test_post_render_rejects_truncation_even_when_required_sections_are_listed():

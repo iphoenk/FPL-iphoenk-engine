@@ -151,7 +151,7 @@ def test_0430_already_published_v6_still_delivers_deep_report_exactly_once():
     assert compute["delivery_ready"] is False
     assert compute["legacy_fallback_allowed"] is False
 
-    # Wave 6: both QA gates must pass without truncation or render drift.
+    # Wave 6: both QA gates must pass without truncation, weather omission, or render drift.
     manifest = [
         {"section_id": section_id, "status": "COMPLETE"}
         for section_id in MANDATORY_SECTIONS
@@ -160,10 +160,13 @@ def test_0430_already_published_v6_still_delivers_deep_report_exactly_once():
         compute_contract=compute,
         section_manifest=manifest,
         mini_league_denominator_complete=True,
+        weather_required=True,
+        weather_direct_chat_present=True,
     )
     assert pre["status"] == "PASS"
     assert pre["next_action"] == "RENDER_REPORT"
     assert pre["delivery_ready"] is False
+    assert pre["weather_direct_chat_present"] is True
 
     post = validate_post_render_qa(
         pre_render_qa=pre,
@@ -177,11 +180,13 @@ def test_0430_already_published_v6_still_delivers_deep_report_exactly_once():
         rendered_fact_keys=list(pre["expected_fact_keys"]),
         rendered_model_keys=list(pre["expected_model_keys"]),
         rendered_mini_league_denominator_complete=True,
+        rendered_weather_direct_chat_present=True,
         truncated=False,
     )
     assert post["status"] == "PASS"
     assert post["next_action"] == "BUILD_DELIVERY_PROOF"
     assert post["delivery_ready"] is False
+    assert post["weather_direct_chat_present"] is True
     assert post["legacy_fallback_allowed"] is False
 
     # Wave 7: only acknowledged receipt evidence may transition this exact slot

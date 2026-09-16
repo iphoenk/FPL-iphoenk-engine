@@ -11,6 +11,7 @@ from src.runtime_v6.report_recovery import (
 
 LOGICAL_SLOT = "2026-09-16T04:30:00+07:00"
 REPORT_SLOT_ID = "2026-09-16T04:30+07:00|DEEP"
+CATCH_UP_DEADLINE = "2026-09-16T23:00:00+07:00"
 
 
 def _same_run(**overrides):
@@ -36,6 +37,7 @@ def _catch_up(**overrides):
         "report_state": "NOT_STARTED",
         "delivered_report_slot_id": None,
         "delivery_proof_valid": False,
+        "catch_up_deadline": CATCH_UP_DEADLINE,
     }
     values.update(overrides)
     return plan_report_catch_up(**values)
@@ -182,7 +184,7 @@ def test_catch_up_rejects_observation_before_logical_slot_and_never_rekeys_to_ob
 
 
 def test_catch_up_at_exact_logical_slot_is_regular_due_work_not_a_catch_up():
-    result = _catch_up(observed_at=LOGICAL_SLOT)
+    result = _catch_up(observed_at=LOGICAL_SLOT, catch_up_deadline=None)
 
     assert result["catch_up_required"] is False
     assert result["start_build"] is False

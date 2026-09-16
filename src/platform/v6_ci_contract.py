@@ -13,6 +13,7 @@ _EXACT_PATHS = frozenset(
         "tests/test_adaptive_polling.py",
         "tests/test_data_platform_production_acceptance.py",
         "src/platform/v6_ci_contract.py",
+        "src/platform/production_path_governance_validate.py",
         ".github/workflows/v6-ci.yml",
         ".github/workflows/v6-natural-data-ingestion.yml",
         ".github/workflows/v6-scheduler-watchdog.yml",
@@ -28,8 +29,13 @@ _PREFIXES = (
 )
 
 
+def _normalize_path(path: str) -> str:
+    value = str(path or "").strip()
+    return value[2:] if value.startswith("./") else value
+
+
 def is_v6_owned_path(path: str) -> bool:
-    value = str(path or "").strip().lstrip("./")
+    value = _normalize_path(path)
     if not value:
         return False
     if value in _EXACT_PATHS:

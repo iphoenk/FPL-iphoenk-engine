@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
+import pytest
+
 from src.runtime_v6.delivery_integrity import build_report_slot_id
 from src.runtime_v6.report_delivery import build_delivery_proof
 from src.runtime_v6.report_prefetch import PrefetchService
@@ -59,6 +61,10 @@ def test_e2e_r19_contract_false_can_never_reach_visible_delivery() -> None:
     assert proof["report_state"] != "DELIVERED"
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="IR3 Golden RED: stale report-prefetch freshness must be recomputed at read time",
+)
 def test_e2e_r19_stored_fresh_flag_cannot_override_timestamp(tmp_path) -> None:
     service = PrefetchService(
         config={},

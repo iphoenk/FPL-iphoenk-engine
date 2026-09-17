@@ -26,11 +26,14 @@ def test_wave3_observer_reuses_existing_governed_title_authorization():
     assert "workflow_control authorize-issue-edit" in text
 
 
-def test_wave3_observer_resolves_exact_source_run_from_unique_title():
+def test_wave3_observer_resolves_exact_source_run_from_immutable_event_fanout():
     text = WORKFLOW.read_text(encoding="utf-8")
-    assert "TARGET_TITLE: ${{ github.event.issue.title }}" in text
+    assert 'actions/runs/${GITHUB_RUN_ID}' in text
     assert "v6-natural-data-ingestion.yml/runs?event=issues" in text
-    assert 'run.get("display_title") == os.environ["TARGET_TITLE"]' in text
+    assert "resolve_natural_source_run" in text
+    assert 'expected_source_workflow_path=".github/workflows/v6-natural-data-ingestion.yml"' in text
+    assert "TARGET_TITLE" not in text
+    assert 'run.get("display_title") == ' not in text
     assert "run_id={run['id']}" in text
     assert "run_attempt={run.get('run_attempt', 1)}" in text
     assert "head_sha={run.get('head_sha', '')}" in text

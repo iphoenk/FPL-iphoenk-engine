@@ -11,6 +11,7 @@ R6 is downstream of R4 structural section validation and R5 provenance/anti-fabr
 - `src/runtime_v6/domains/report_plane/visible_body_contract.py` is the single parser/validator authority for actual visible-body content.
 - `src/runtime_v6/domains/report_plane/report_qa.py` owns pre-render and post-render orchestration.
 - Renderer-supplied metadata remains a secondary consistency check only. It cannot override failures found in the visible body.
+- Canonical visible presentation comes from the active FPL Master Runtime Contract and Spec V11 catalog; R6 accepts canonical numbered headings such as `1. ...`, `14B. ...`, `18. ...` and the explicit legacy `SECTION nn` form for compatibility.
 
 ## Fail-closed visible checks
 
@@ -18,14 +19,18 @@ The visible body must prove:
 
 - exact mandatory section presence, uniqueness, and order, including `S14B`;
 - non-empty material content for required sections;
-- exact visible counts for OUR15=15, XI=11, BENCH=4, WATCHLIST20=20, RISE20=20, FALL20=20;
-- ALL15 tactical visible row count=15;
-- exact FACT, MODEL, and INFERENCE key visibility from the pre-render handoff;
-- complete mini-league denominator marker;
-- the expected weather contract state;
+- OUR15=15 with visible stable identities;
+- XI=11 and BENCH=4 forming the visible OUR15 partition;
+- Watchlist20=20 with visible GK5/DEF5/MID5/FWD5 and `NON_OWNED` status;
+- RISE20=20 and FALL20=20 using the single `RANK20_REQUIRED_FIELDS` authority from R2/J1; count-only 20/20 cannot pass;
+- split mobile RISE/FALL tables may be used, but every rank must reconstruct all 17 canonical J1 fields, with truthful direction and visible provenance hash;
+- ALL15 tactical visible row count=15 and identity set consistent with visible OUR15;
+- visible FACT / MODEL / INFERENCE classification when the corresponding pre-render namespaces are active; exact internal keys remain cryptographically bound in the pre-render token and renderer metadata rather than being forced into user-facing prose;
+- explicit complete mini-league manager coverage/denominator evidence;
+- the expected canonical weather contract state, including `WEATHER — DIRECT CHATGPT`, `WEATHER SOURCE: DEGRADED`, `WEATHER: NOT IN SCOPE — PRICE-ONLY CHECKPOINT`, or current Match weather state as applicable;
 - absence of progress-only placeholders and explicit truncation markers.
 
-The parser also emits a SHA-256 digest of the body and parsed visible evidence for QA traceability.
+The parser also emits a SHA-256 digest of the actual body and parsed visible evidence for QA traceability.
 
 ## Render-token hardening
 
@@ -37,4 +42,6 @@ A successful post-render QA result still has `delivery_ready=false`. R6 can only
 
 ## TDD proof
 
-R6 began with golden failing fixtures where all renderer metadata was deliberately correct while the actual body was defective. The baseline failed only because `rendered_body` was not yet accepted by post-render QA, proving the gap before implementation. The final R6 suite must keep those fixtures green and the full repository regression suite green before merge.
+R6 began with golden failing fixtures where all renderer metadata was deliberately correct while the actual body was defective. The baseline failed only because `rendered_body` was not yet accepted by post-render QA, proving the gap before implementation.
+
+A later canonical-authority review added a second hardening proof: exact-count RISE20/FALL20 is insufficient when a visible J1 field is omitted. The final R6 suite therefore proves both actual-body presence and visible row-schema completeness before merge.

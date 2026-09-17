@@ -42,9 +42,9 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TARGET_TITLE: ${{ github.event.issue.title }}
         run: |
           set -euo pipefail
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" > "$RUNNER_TEMP/observer-run.json"
           found="false"
           for _ in $(seq 1 72); do
             gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/v6-natural-data-ingestion.yml/runs?event=issues&per_page=30" > "$RUNNER_TEMP/source-runs.json"
@@ -53,12 +53,26 @@ jobs:
           import os
           from pathlib import Path
 
+          from src.runtime_v6.wave3_artifact_provenance import (
+              NaturalProofProvenanceError,
+              resolve_natural_source_run,
+          )
+
+          observer = json.loads((Path(os.environ["RUNNER_TEMP"]) / "observer-run.json").read_text(encoding="utf-8"))
           payload = json.loads((Path(os.environ["RUNNER_TEMP"]) / "source-runs.json").read_text(encoding="utf-8"))
-          matches = [run for run in payload.get("workflow_runs", []) if run.get("display_title") == os.environ["TARGET_TITLE"]]
-          if not matches:
-              print("NOT_FOUND")
+          try:
+              run = resolve_natural_source_run(
+                  observer_run=observer,
+                  source_runs=payload.get("workflow_runs", []),
+                  expected_repository=os.environ["GITHUB_REPOSITORY"],
+                  expected_source_workflow_path=".github/workflows/v6-natural-data-ingestion.yml",
+              )
+          except NaturalProofProvenanceError as exc:
+              if str(exc).startswith("no exact"):
+                  print("NOT_FOUND")
+              else:
+                  print(f"FAILED:{exc}")
           else:
-              run = max(matches, key=lambda row: row.get("id", 0))
               status = str(run.get("status") or "")
               conclusion = str(run.get("conclusion") or "")
               if status != "completed":

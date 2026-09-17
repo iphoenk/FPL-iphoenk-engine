@@ -108,6 +108,34 @@ def test_visible_rise20_count_cannot_hide_missing_j1_schema_field():
     assert "VISIBLE_RANK20_SCHEMA_MISSING=RISE20:eta_human" in result["failures"]
 
 
+def test_visible_rise20_reuses_r2_identity_semantics():
+    body = _body().replace("| 2 | 202 | RISE02 |", "| 2 | 201 | RISE02 |", 1)
+    result = _post(body)
+
+    assert result["status"] == "FAIL"
+    assert "VISIBLE_RANK20_SEMANTIC_INVALID=RISE20:IDENTITY_DUPLICATE" in result["failures"]
+
+
+def test_visible_rise20_reuses_r2_ownership_semantics():
+    body = _body().replace("| 1 | 201 | RISE01 | 7.0 | 12.3 | NON_OWNED | RISE |", "| 1 | 201 | RISE01 | 7.0 | 12.3 | BROKEN | RISE |", 1)
+    result = _post(body)
+
+    assert result["status"] == "FAIL"
+    assert "VISIBLE_RANK20_SEMANTIC_INVALID=RISE20:ROW_OWNERSHIP_TAG_INVALID=1:BROKEN" in result["failures"]
+
+
+def test_visible_rise20_reuses_r2_timestamp_semantics():
+    body = _body().replace(
+        "| 1 | MEDIUM | V6_PRICE_MODEL | 2026-09-17T04:30:00+07:00 |",
+        "| 1 | MEDIUM | V6_PRICE_MODEL | not-a-time |",
+        1,
+    )
+    result = _post(body)
+
+    assert result["status"] == "FAIL"
+    assert "VISIBLE_RANK20_SEMANTIC_INVALID=RISE20:ROW_OBSERVED_AT_INVALID=1" in result["failures"]
+
+
 def test_visible_fact_model_inference_partition_cannot_drop_inference():
     result = _post(_body(include_inference=False))
 

@@ -3,8 +3,8 @@ from __future__ import annotations
 """Fail-closed provenance validation for Wave 3 natural proof artifacts.
 
 Artifact names are routing hints, not trust anchors. Natural-soak evidence is
-countable only when the repository artifact is cryptographically associated by
-GitHub metadata with the exact governed Wave 3 observer workflow run, and that
+countable only when GitHub-provided artifact/run metadata authoritatively binds
+the artifact to the exact governed Wave 3 observer workflow run, and that
 producer run is a completed successful natural issue event in this repository.
 """
 

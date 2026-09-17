@@ -249,11 +249,11 @@ jobs:
                       continue
                   rows.append((str(artifact.get("created_at") or ""), int(artifact["id"]), name, int(run_id)))
           rows.sort(reverse=True)
-          rows = rows[:64]
           output = Path(os.environ["RUNNER_TEMP"]) / "wave3-artifact-index.txt"
           output.write_text("".join(f"{artifact_id}|{name}|{run_id}\n" for _, artifact_id, name, run_id in rows), encoding="utf-8")
-          print({"artifact_pages": len(pages), "prior_proof_artifacts": len(rows)})
+          print({"artifact_pages": len(pages), "prior_proof_candidates": len(rows)})
           PY
+          accepted_proof_count=0
           while IFS='|' read -r artifact_id artifact_name proof_run_id; do
             [[ -n "$artifact_id" ]] || continue
             target="$RUNNER_TEMP/wave3-prior-download-${artifact_id}"
@@ -293,7 +293,12 @@ jobs:
             gh run download "$proof_run_id" --repo "$GITHUB_REPOSITORY" --name "$artifact_name" --dir "$target"
             test -f "$target/wave3-slot-proof.json"
             cp "$target/wave3-slot-proof.json" "$RUNNER_TEMP/wave3-prior-proofs/proof-${artifact_id}.json"
+            accepted_proof_count=$((accepted_proof_count + 1))
+            if (( accepted_proof_count >= 64 )); then
+              break
+            fi
           done < "$RUNNER_TEMP/wave3-artifact-index.txt"
+          echo "Accepted prior natural proofs: ${accepted_proof_count}"
 
       - name: Resolve latest successful Wave 3 chaos acceptance
         if: steps.promotion.outputs.countable == 'true'

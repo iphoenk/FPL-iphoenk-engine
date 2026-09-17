@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Tamper-evident report delivery proof and receipt validation.
 
-Wave 7 sits after Wave 6 POST_RENDER QA. It records externally acknowledged
+R7 sits after R6 POST_RENDER QA. It records externally acknowledged
 user-facing delivery evidence and is the only downstream contract in this
 module that may transition a report slot to DELIVERED.
 """
@@ -12,7 +12,7 @@ from hashlib import sha256
 import json
 from typing import Any, Mapping
 
-from .delivery_integrity import build_report_slot_id
+from .delivery_integrity import DeliveryIntegrityError, build_report_slot_id
 from .temporal import canonical_timestamp, try_parse_timestamp
 
 
@@ -36,6 +36,11 @@ def _post_render_ready(post_render_qa: Mapping[str, Any]) -> bool:
         and _is_sha256(post_render_qa.get("compute_fingerprint"))
         and _is_sha256(post_render_qa.get("render_contract_token"))
     )
+
+
+def is_post_render_delivery_ready(post_render_qa: Mapping[str, Any]) -> bool:
+    """Public R6->R7 handoff predicate; no caller-supplied shortcut is accepted."""
+    return _post_render_ready(post_render_qa)
 
 
 def _parse_aware_timestamp(value: Any) -> datetime | None:
@@ -80,6 +85,7 @@ def _proof_digest(payload: Mapping[str, Any]) -> str:
 def _blocked_post_render() -> dict[str, Any]:
     return {
         "status": "BLOCKED",
+        "delivery_state": "BLOCKED",
         "delivery_proof_valid": False,
         "report_delivered": False,
         "report_state": "QA_FAILED",
@@ -94,6 +100,7 @@ def _blocked_post_render() -> dict[str, Any]:
 def _invalid_delivery(*, failures: list[str], report_slot_id: str | None = None) -> dict[str, Any]:
     return {
         "status": "FAIL",
+        "delivery_state": "FAILED",
         "delivery_proof_valid": False,
         "report_delivered": False,
         "report_state": "BUILDING",
@@ -168,6 +175,7 @@ def build_delivery_proof(
 
     return {
         "status": "PASS",
+        "delivery_state": "ACKNOWLEDGED",
         "delivery_proof_valid": True,
         "report_delivered": True,
         "report_state": "DELIVERED",
@@ -235,6 +243,7 @@ def validate_delivery_proof(
 
     return {
         "status": "PASS",
+        "delivery_state": "ACKNOWLEDGED",
         "delivery_proof_valid": True,
         "report_delivered": True,
         "report_state": "DELIVERED",
@@ -252,4 +261,62 @@ def validate_delivery_proof(
         "provider_receipt_id": str(proof["provider_receipt_id"]),
         "delivered_at": str(proof["delivered_at"]),
         "failures": [],
+    }
+
+
+def finalize_delivery_outcome(
+    *,
+    validated_delivery: Mapping[str, Any],
+    expected_report_slot_id: str,
+    scope_matrix: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Project acknowledged delivery truth separately from report quality.
+
+    `status=PASS` means the exact report slot has a valid acknowledged receipt.
+    `report_quality=DEGRADED` only describes truthful non-blocking scope degradation;
+    it never weakens the receipt requirement and never creates `PASS_DEGRADED`.
+    """
+    expected_slot = str(expected_report_slot_id or "").strip()
+    if not expected_slot:
+        raise DeliveryIntegrityError("expected_report_slot_id is required")
+
+    blocking_scopes = list(scope_matrix.get("blocking_scopes") or [])
+    if scope_matrix.get("report_ready") is not True or blocking_scopes:
+        raise DeliveryIntegrityError("cannot finalize delivery with blocking scope")
+
+    scopes = scope_matrix.get("scopes")
+    if not isinstance(scopes, Mapping):
+        raise DeliveryIntegrityError("scope matrix is missing canonical scopes")
+
+    degraded_scopes = list(scope_matrix.get("degraded_scopes") or [])
+    for scope_id in degraded_scopes:
+        row = scopes.get(scope_id)
+        if not isinstance(row, Mapping) or row.get("degraded") is not True:
+            raise DeliveryIntegrityError("degraded scope matrix is inconsistent")
+
+    if not (
+        validated_delivery.get("status") == "PASS"
+        and validated_delivery.get("delivery_proof_valid") is True
+        and validated_delivery.get("report_delivered") is True
+        and validated_delivery.get("report_state") == "DELIVERED"
+    ):
+        raise DeliveryIntegrityError("validated acknowledged delivery proof is required")
+
+    delivered_slot = str(validated_delivery.get("delivered_report_slot_id") or "").strip()
+    if delivered_slot != expected_slot:
+        raise DeliveryIntegrityError("delivery proof must acknowledge the same report slot")
+
+    return {
+        "status": "PASS",
+        "delivery_status": "DELIVERED",
+        "delivery_state": "ACKNOWLEDGED",
+        "report_delivered": True,
+        "report_state": "DELIVERED",
+        "report_quality": "DEGRADED" if degraded_scopes else "COMPLETE",
+        "degraded_scopes": degraded_scopes,
+        "blocking_scopes": [],
+        "delivery_proof_id": str(validated_delivery.get("delivery_proof_id") or ""),
+        "delivered_report_slot_id": expected_slot,
+        "report_slot_id": expected_slot,
+        "legacy_fallback_allowed": False,
     }

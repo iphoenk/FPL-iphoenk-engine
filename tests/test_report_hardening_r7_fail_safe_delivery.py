@@ -76,21 +76,21 @@ def _valid_delivery():
     )
 
 
-def test_unacknowledged_delivery_becomes_explicit_delivery_failed_state():
+def test_unacknowledged_delivery_marks_delivery_failed_without_rewriting_report_state():
     failed = _delivery_failure()
 
     assert failed["status"] == "FAIL"
     assert failed["report_delivered"] is False
-    assert failed["report_state"] == "DELIVERY_FAILED"
+    assert failed["report_state"] == "BUILDING"
     assert failed["delivery_state"] == "FAILED"
     assert failed["next_action"] == "DELIVERY_PROOF_RECOVERY"
 
 
-def test_delivery_failed_slot_is_same_slot_recoverable_not_active_build():
+def test_report_slot_resolver_remains_independent_from_delivery_failure_state():
     decision = resolve_report_slot_decision(
         logical_slot=LOGICAL_SLOT,
         report_type="DEEP",
-        report_state="DELIVERY_FAILED",
+        report_state="BUILDING",
         v6_already_published=True,
         delivered_report_slot_id=None,
         delivery_proof_valid=False,
@@ -100,7 +100,7 @@ def test_delivery_failed_slot_is_same_slot_recoverable_not_active_build():
     assert decision["report_delivered"] is False
     assert decision["report_required"] is True
     assert decision["start_build"] is False
-    assert decision["reason"] == "DELIVERY_PROOF_RECOVERY"
+    assert decision["reason"] == "SAME_SLOT_BUILD_IN_PROGRESS"
 
 
 def test_fail_safe_planner_retries_same_r6_artifact_for_receipt_only_failure():

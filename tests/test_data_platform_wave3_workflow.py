@@ -73,7 +73,10 @@ def test_wave3_observer_aggregates_only_immutable_prior_slot_proof_artifacts():
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "Collect prior immutable Wave 3 slot proofs" in text
     assert 'name.startswith("v6-wave3-slot-proof-")' in text
-    assert "rows = rows[:64]" in text
+    assert "rows = rows[:64]" not in text
+    assert "accepted_proof_count=0" in text
+    assert "accepted_proof_count=$((accepted_proof_count + 1))" in text
+    assert "if (( accepted_proof_count >= 64 )); then" in text
     assert "gh run download \"$proof_run_id\"" in text
     assert "python -m src.runtime_v6.wave3_window" in text
     assert "--current \"$RUNNER_TEMP/wave3-slot-proof.json\"" in text
@@ -93,6 +96,15 @@ def test_wave3_observer_verifies_github_producer_run_before_downloading_prior_pr
     assert 'expected_workflow_path=".github/workflows/v6-wave3-proof.yml"' in text
     assert text.index(artifact_lookup) < text.index(guard) < text.index(download)
     assert text.index(run_lookup) < text.index(guard)
+
+
+def test_wave3_observer_caps_only_after_provenance_and_download_acceptance():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    guard = text.index("validate_natural_proof_artifact_provenance")
+    copy = text.index('cp "$target/wave3-slot-proof.json"')
+    increment = text.index("accepted_proof_count=$((accepted_proof_count + 1))")
+    cap = text.index("if (( accepted_proof_count >= 64 )); then")
+    assert guard < copy < increment < cap
 
 
 def test_wave3_observer_uploads_proof_but_never_mutates_runtime_tree():

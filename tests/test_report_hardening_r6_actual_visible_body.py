@@ -68,7 +68,7 @@ def _post(body: str, **overrides) -> dict:
     return validate_post_render_qa(**kwargs)
 
 
-def test_valid_visible_body_passes_r6_and_only_advances_to_delivery_proof():
+def test_valid_canonical_visible_body_passes_r6_and_only_advances_to_delivery_proof():
     result = _post(_body())
 
     assert result["status"] == "PASS"
@@ -99,6 +99,13 @@ def test_visible_rise20_must_really_have_twenty_rows():
 
     assert result["status"] == "FAIL"
     assert "VISIBLE_COUNT_MISMATCH=RISE20:19!=20" in result["failures"]
+
+
+def test_visible_rise20_count_cannot_hide_missing_j1_schema_field():
+    result = _post(_body(omit_rise_field="eta_human"))
+
+    assert result["status"] == "FAIL"
+    assert "VISIBLE_RANK20_SCHEMA_MISSING=RISE20:eta_human" in result["failures"]
 
 
 def test_visible_fact_model_inference_partition_cannot_drop_inference():

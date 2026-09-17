@@ -42,9 +42,9 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TARGET_TITLE: ${{ github.event.issue.title }}
         run: |
           set -euo pipefail
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" > "$RUNNER_TEMP/observer-run.json"
           found="false"
           for _ in $(seq 1 72); do
             gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/v6-natural-data-ingestion.yml/runs?event=issues&per_page=30" > "$RUNNER_TEMP/source-runs.json"
@@ -53,12 +53,26 @@ jobs:
           import os
           from pathlib import Path
 
+          from src.runtime_v6.wave3_artifact_provenance import (
+              NaturalProofProvenanceError,
+              resolve_natural_source_run,
+          )
+
+          observer = json.loads((Path(os.environ["RUNNER_TEMP"]) / "observer-run.json").read_text(encoding="utf-8"))
           payload = json.loads((Path(os.environ["RUNNER_TEMP"]) / "source-runs.json").read_text(encoding="utf-8"))
-          matches = [run for run in payload.get("workflow_runs", []) if run.get("display_title") == os.environ["TARGET_TITLE"]]
-          if not matches:
-              print("NOT_FOUND")
+          try:
+              run = resolve_natural_source_run(
+                  observer_run=observer,
+                  source_runs=payload.get("workflow_runs", []),
+                  expected_repository=os.environ["GITHUB_REPOSITORY"],
+                  expected_source_workflow_path=".github/workflows/v6-natural-data-ingestion.yml",
+              )
+          except NaturalProofProvenanceError as exc:
+              if str(exc).startswith("no exact"):
+                  print("NOT_FOUND")
+              else:
+                  print(f"FAILED:{exc}")
           else:
-              run = max(matches, key=lambda row: row.get("id", 0))
               status = str(run.get("status") or "")
               conclusion = str(run.get("conclusion") or "")
               if status != "completed":
@@ -249,19 +263,56 @@ jobs:
                       continue
                   rows.append((str(artifact.get("created_at") or ""), int(artifact["id"]), name, int(run_id)))
           rows.sort(reverse=True)
-          rows = rows[:64]
           output = Path(os.environ["RUNNER_TEMP"]) / "wave3-artifact-index.txt"
           output.write_text("".join(f"{artifact_id}|{name}|{run_id}\n" for _, artifact_id, name, run_id in rows), encoding="utf-8")
-          print({"artifact_pages": len(pages), "prior_proof_artifacts": len(rows)})
+          print({"artifact_pages": len(pages), "prior_proof_candidates": len(rows)})
           PY
+          accepted_proof_count=0
           while IFS='|' read -r artifact_id artifact_name proof_run_id; do
             [[ -n "$artifact_id" ]] || continue
             target="$RUNNER_TEMP/wave3-prior-download-${artifact_id}"
+            rm -rf "$target"
             mkdir -p "$target"
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}" > "$target/artifact.json"
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${proof_run_id}" > "$target/producer-run.json"
+            if ! ARTIFACT_JSON="$target/artifact.json" PRODUCER_RUN_JSON="$target/producer-run.json" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          from src.runtime_v6.wave3_artifact_provenance import (
+              NaturalProofProvenanceError,
+              validate_natural_proof_artifact_provenance,
+          )
+
+          artifact = json.loads(Path(os.environ["ARTIFACT_JSON"]).read_text(encoding="utf-8"))
+          producer_run = json.loads(Path(os.environ["PRODUCER_RUN_JSON"]).read_text(encoding="utf-8"))
+          try:
+              result = validate_natural_proof_artifact_provenance(
+                  artifact=artifact,
+                  producer_run=producer_run,
+                  expected_repository=os.environ["GITHUB_REPOSITORY"],
+                  expected_workflow_path=".github/workflows/v6-wave3-proof.yml",
+              )
+          except NaturalProofProvenanceError as exc:
+              print(f"REJECTED: {exc}")
+              raise SystemExit(1)
+          print({"accepted_prior_natural_proof": result})
+          PY
+            then
+              echo "::warning::Rejected untrusted prior Wave 3 proof artifact id=${artifact_id} run=${proof_run_id}"
+              rm -rf "$target"
+              continue
+            fi
             gh run download "$proof_run_id" --repo "$GITHUB_REPOSITORY" --name "$artifact_name" --dir "$target"
             test -f "$target/wave3-slot-proof.json"
             cp "$target/wave3-slot-proof.json" "$RUNNER_TEMP/wave3-prior-proofs/proof-${artifact_id}.json"
+            accepted_proof_count=$((accepted_proof_count + 1))
+            if (( accepted_proof_count >= 64 )); then
+              break
+            fi
           done < "$RUNNER_TEMP/wave3-artifact-index.txt"
+          echo "Accepted prior natural proofs: ${accepted_proof_count}"
 
       - name: Resolve latest successful Wave 3 chaos acceptance
         if: steps.promotion.outputs.countable == 'true'

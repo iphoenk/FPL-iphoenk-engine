@@ -406,7 +406,7 @@ def validate_visible_report_body(
     normalized_expected_weather = str(expected_weather_state or "MISSING").strip().upper()
     if visible_weather_state != normalized_expected_weather:
         failures.append(
-            f"VISIBLE_WEATHER_CONTRACT_STATE_MISMATCH={normalized_expected_weather}!={visible_weather_state}"
+            f"VISIBLE_WEATHER_CONTRACT_STATE_MISMATCH={visible_weather_state}!={normalized_expected_weather}"
         )
 
     mini_league_complete = _mini_league_denominator_complete(body)

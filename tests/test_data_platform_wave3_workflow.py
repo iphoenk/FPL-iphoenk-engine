@@ -80,6 +80,21 @@ def test_wave3_observer_aggregates_only_immutable_prior_slot_proof_artifacts():
     assert "v6-wave3-window-${{ steps.source.outputs.run_id }}-${{ steps.source.outputs.run_attempt }}" in text
 
 
+def test_wave3_observer_verifies_github_producer_run_before_downloading_prior_proof():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    artifact_lookup = 'gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"'
+    run_lookup = 'gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${proof_run_id}"'
+    guard = "validate_natural_proof_artifact_provenance"
+    download = 'gh run download "$proof_run_id"'
+    assert artifact_lookup in text
+    assert run_lookup in text
+    assert "from src.runtime_v6.wave3_artifact_provenance import" in text
+    assert guard in text
+    assert 'expected_workflow_path=".github/workflows/v6-wave3-proof.yml"' in text
+    assert text.index(artifact_lookup) < text.index(guard) < text.index(download)
+    assert text.index(run_lookup) < text.index(guard)
+
+
 def test_wave3_observer_uploads_proof_but_never_mutates_runtime_tree():
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "Upload Wave 3 natural slot proof" in text

@@ -1,20 +1,22 @@
 from __future__ import annotations
 
-"""Same-run report recovery and deterministic catch-up planning.
+"""Same-slot report recovery and deterministic catch-up planning.
 
-Wave 8 sits above the Wave 2 report-slot state resolver. It never changes the
-V6 data plane, never weakens Wave 6/7 QA or receipt requirements, and never
-creates a replacement report-slot identity for late work.
+R7 owns fail-safe report-plane recovery between R6 POST_RENDER QA and
+acknowledged delivery. It never changes the V6 data plane directly, never
+weakens QA or receipt requirements, and never creates a replacement report
+slot identity for failed or late work.
 """
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Mapping, Sequence
 
 from .delivery_integrity import (
     DeliveryIntegrityError,
     build_report_slot_id,
     resolve_report_slot_decision,
 )
+from .report_delivery import is_post_render_delivery_ready
 from .temporal import (
     TemporalError,
     canonical_timestamp,
@@ -74,7 +76,7 @@ def _resolve_report_plane_slot(
     delivered_report_slot_id: str | None,
     delivery_proof_valid: bool,
 ) -> dict[str, Any]:
-    """Reuse Wave 2 state semantics without exporting an unproven V6 fact."""
+    """Reuse the canonical report-slot resolver without exporting a V6 fact."""
     decision = resolve_report_slot_decision(
         logical_slot=logical_slot,
         report_type=report_type,
@@ -149,6 +151,192 @@ def plan_same_run_recovery(
         "max_attempts": maximum,
         "next_action": action if retry_now else "SCHEDULE_CATCH_UP",
         "catch_up_eligible": exhausted,
+        "legacy_fallback_allowed": False,
+        "v6_data_plane_mutation_allowed": False,
+    }
+
+
+def _normalize_failed_scopes(failed_healthy_scopes: Sequence[str]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw_scope in failed_healthy_scopes:
+        scope = str(raw_scope or "").strip()
+        if not scope:
+            raise DeliveryIntegrityError("failed healthy scope id must be non-empty")
+        if scope in seen:
+            raise DeliveryIntegrityError(f"duplicate failed healthy scope: {scope}")
+        seen.add(scope)
+        normalized.append(scope)
+    return normalized
+
+
+def _delivery_failure_is_recoverable(
+    *,
+    delivery_result: Mapping[str, Any],
+    expected_report_slot_id: str,
+) -> bool:
+    return bool(
+        delivery_result.get("status") == "FAIL"
+        and delivery_result.get("delivery_state") == "FAILED"
+        and delivery_result.get("delivery_proof_valid") is False
+        and delivery_result.get("report_delivered") is False
+        and delivery_result.get("report_state") == "BUILDING"
+        and delivery_result.get("next_action") == "DELIVERY_PROOF_RECOVERY"
+        and delivery_result.get("legacy_fallback_allowed") is False
+        and str(delivery_result.get("report_slot_id") or "").strip() == expected_report_slot_id
+    )
+
+
+def plan_fail_safe_recovery(
+    *,
+    logical_slot: str | datetime,
+    report_type: str,
+    report_state: str,
+    delivered_report_slot_id: str | None,
+    delivery_proof_valid: bool,
+    post_render_qa: Mapping[str, Any],
+    delivery_result: Mapping[str, Any] | None,
+    failed_healthy_scopes: Sequence[str],
+    attempt_count: int,
+    max_attempts: int,
+) -> dict[str, Any]:
+    """Derive the narrowest safe same-slot recovery path from actual evidence.
+
+    Precedence is strict:
+    1) failed healthy source assertions require exact-scope V6 recovery and a
+       full downstream rebuild/re-render/re-QA;
+    2) invalid R6 output requires rerender and post-render QA;
+    3) a receipt-only failure after valid R6 QA may retry the immutable artifact.
+    """
+    attempt, maximum = _validate_retry_budget(
+        attempt_count=attempt_count,
+        max_attempts=max_attempts,
+    )
+    failed_scopes = _normalize_failed_scopes(failed_healthy_scopes)
+    decision = _resolve_report_plane_slot(
+        logical_slot=logical_slot,
+        report_type=report_type,
+        report_state=report_state,
+        delivered_report_slot_id=delivered_report_slot_id,
+        delivery_proof_valid=delivery_proof_valid,
+    )
+    slot_id = str(decision["report_slot_id"])
+
+    if decision["report_delivered"]:
+        return {
+            **decision,
+            "recovery_mode": "SAME_RUN",
+            "retry_now": False,
+            "retry_exhausted": False,
+            "attempt_count": attempt,
+            "next_attempt_count": attempt,
+            "max_attempts": maximum,
+            "next_action": "NONE",
+            "catch_up_eligible": False,
+            "same_artifact_retry": False,
+            "exact_scope_recovery_required": False,
+            "failed_healthy_scopes": [],
+            "recovery_steps": [],
+            "compute_fingerprint": None,
+            "render_contract_token": None,
+            "legacy_fallback_allowed": False,
+            "v6_data_plane_mutation_allowed": False,
+        }
+
+    if failed_scopes:
+        base = plan_same_run_recovery(
+            logical_slot=logical_slot,
+            report_type=report_type,
+            report_state=report_state,
+            delivered_report_slot_id=delivered_report_slot_id,
+            delivery_proof_valid=delivery_proof_valid,
+            recovery_action="SAME_V6_RETRIEVAL_RECOVERY",
+            attempt_count=attempt,
+            max_attempts=maximum,
+        )
+        recovery_steps = [
+            "SAME_V6_RETRIEVAL_RECOVERY",
+            "RETRIEVE",
+            "RECOMPUTE",
+            "RERENDER",
+            "POST_RENDER_QA",
+            "BUILD_DELIVERY_PROOF",
+            "DELIVER",
+            "ACKNOWLEDGED_RECEIPT",
+        ]
+        return {
+            **base,
+            "same_artifact_retry": False,
+            "exact_scope_recovery_required": True,
+            "failed_healthy_scopes": failed_scopes,
+            "recovery_steps": recovery_steps,
+            "compute_fingerprint": None,
+            "render_contract_token": None,
+        }
+
+    post_render_ready = is_post_render_delivery_ready(post_render_qa)
+    if not post_render_ready:
+        base = plan_same_run_recovery(
+            logical_slot=logical_slot,
+            report_type=report_type,
+            report_state=report_state,
+            delivered_report_slot_id=delivered_report_slot_id,
+            delivery_proof_valid=delivery_proof_valid,
+            recovery_action="RENDER_RECOVERY",
+            attempt_count=attempt,
+            max_attempts=maximum,
+        )
+        return {
+            **base,
+            "same_artifact_retry": False,
+            "exact_scope_recovery_required": False,
+            "failed_healthy_scopes": [],
+            "recovery_steps": [
+                "RENDER_RECOVERY",
+                "POST_RENDER_QA",
+                "BUILD_DELIVERY_PROOF",
+                "DELIVER",
+                "ACKNOWLEDGED_RECEIPT",
+            ],
+            "compute_fingerprint": None,
+            "render_contract_token": None,
+        }
+
+    if delivery_result is None or not _delivery_failure_is_recoverable(
+        delivery_result=delivery_result,
+        expected_report_slot_id=slot_id,
+    ):
+        raise DeliveryIntegrityError(
+            "valid post-render artifact requires explicit recoverable delivery failure evidence"
+        )
+    if decision["reason"] != "SAME_SLOT_BUILD_IN_PROGRESS":
+        raise DeliveryIntegrityError(
+            "receipt-only retry requires the R6-approved report artifact to remain BUILDING"
+        )
+
+    exhausted = attempt >= maximum
+    retry_now = not exhausted
+    recovery_steps = [
+        "DELIVERY_PROOF_RECOVERY",
+        "DELIVER",
+        "ACKNOWLEDGED_RECEIPT",
+    ]
+    return {
+        **decision,
+        "recovery_mode": "SAME_RUN",
+        "retry_now": retry_now,
+        "retry_exhausted": exhausted,
+        "attempt_count": attempt,
+        "next_attempt_count": attempt + 1 if retry_now else attempt,
+        "max_attempts": maximum,
+        "next_action": "DELIVERY_PROOF_RECOVERY" if retry_now else "SCHEDULE_CATCH_UP",
+        "catch_up_eligible": exhausted,
+        "same_artifact_retry": True,
+        "exact_scope_recovery_required": False,
+        "failed_healthy_scopes": [],
+        "recovery_steps": recovery_steps,
+        "compute_fingerprint": str(post_render_qa["compute_fingerprint"]),
+        "render_contract_token": str(post_render_qa["render_contract_token"]),
         "legacy_fallback_allowed": False,
         "v6_data_plane_mutation_allowed": False,
     }

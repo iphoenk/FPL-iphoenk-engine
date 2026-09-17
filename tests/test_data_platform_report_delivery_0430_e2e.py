@@ -14,6 +14,7 @@ from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_rende
 from src.runtime_v6.workflow_control import resolve_data_slot_decision
 from test_support.report_provenance import r5_partitions, r5_section_payloads
 from test_support.report_rank20 import rank20_rows
+from test_support.report_visible_body import valid_visible_body
 
 
 LOGICAL_SLOT = "2026-09-16T04:30:00+07:00"
@@ -162,6 +163,7 @@ def test_0430_already_published_v6_still_delivers_deep_report_exactly_once():
 
     post = validate_post_render_qa(
         pre_render_qa=pre,
+        rendered_body=valid_visible_body(pre),
         rendered_section_ids=list(pre["expected_section_ids"]),
         rendered_section_states={
             row["section_id"]: row["status"] for row in pre["section_manifest"]
@@ -179,6 +181,7 @@ def test_0430_already_published_v6_still_delivers_deep_report_exactly_once():
     assert post["next_action"] == "BUILD_DELIVERY_PROOF"
     assert post["delivery_ready"] is False
     assert post["weather_direct_chat_present"] is True
+    assert post["visible_body_validated"] is True
     assert post["legacy_fallback_allowed"] is False
 
     proof = build_delivery_proof(

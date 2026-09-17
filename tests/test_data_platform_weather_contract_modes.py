@@ -5,6 +5,7 @@ from src.runtime_v6.report_compute import build_report_compute_contract
 from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_render_qa
 from test_support.report_provenance import r5_partitions, r5_section_payloads
 from test_support.report_rank20 import rank20_rows
+from test_support.report_visible_body import valid_visible_body
 
 
 def _our15():
@@ -70,6 +71,7 @@ def _pre(*, report_mode: str, weather_contract_state: str):
 def _post(pre, *, state: str):
     return validate_post_render_qa(
         pre_render_qa=pre,
+        rendered_body=valid_visible_body(pre, weather_state_override=state),
         rendered_section_ids=pre["expected_section_ids"],
         rendered_section_states={row["section_id"]: row["status"] for row in pre["section_manifest"]},
         rendered_compute_fingerprint=pre["compute_fingerprint"],
@@ -126,3 +128,4 @@ def test_post_render_rejects_weather_state_drift_from_approved_contract():
     assert pre["status"] == "PASS"
     assert post["status"] == "FAIL"
     assert "WEATHER_CONTRACT_STATE_MISMATCH=DIRECT_CHATGPT!=SOURCE_DEGRADED" in post["failures"]
+    assert "VISIBLE_WEATHER_CONTRACT_STATE_MISMATCH=DIRECT_CHATGPT!=SOURCE_DEGRADED" in post["failures"]

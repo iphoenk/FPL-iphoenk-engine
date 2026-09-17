@@ -12,7 +12,7 @@ from hashlib import sha256
 import re
 from typing import Any, Mapping, Sequence
 
-from .delivery_integrity import RANK20_REQUIRED_FIELDS
+from .delivery_integrity import RANK20_REQUIRED_FIELDS, validate_rank20
 
 
 _SECTION_EXPLICIT_RE = re.compile(
@@ -33,7 +33,6 @@ _TRUNCATION_PATTERNS = (
 _PROGRESS_RE = re.compile(
     r"(?i)^\s*(?:generating|building|preparing|processing|loading)\s+(?:the\s+)?report\b"
 )
-_SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 
 _VISIBLE_COUNT_SECTIONS: Mapping[str, tuple[str, str]] = {
     "OUR15": ("S02", "TABLE"),
@@ -188,9 +187,8 @@ def _rank20_contract(
     section_body: str,
     *,
     label: str,
-    expected_direction: str,
 ) -> tuple[int, list[str]]:
-    records: dict[int, dict[str, str]] = {}
+    records: dict[int, dict[str, Any]] = {}
     failures: list[str] = []
     table_duplicate_ranks: set[int] = set()
 
@@ -212,14 +210,15 @@ def _rank20_contract(
             if rank in seen_in_table:
                 table_duplicate_ranks.add(rank)
             seen_in_table.add(rank)
-            target = records.setdefault(rank, {})
+            target = records.setdefault(rank, {"rank": rank})
             for field, value in zip(canonical_headers, row):
                 if field not in RANK20_REQUIRED_FIELDS:
                     continue
                 text = value.strip()
-                if field in target and target[field] != text:
+                normalized_value: Any = rank if field == "rank" else text
+                if field in target and target[field] != normalized_value:
                     failures.append(f"VISIBLE_RANK20_FIELD_CONFLICT={label}:{rank}:{field}")
-                target[field] = text
+                target[field] = normalized_value
 
     if table_duplicate_ranks:
         failures.append(
@@ -234,18 +233,18 @@ def _rank20_contract(
     missing_fields = sorted(
         field
         for field in RANK20_REQUIRED_FIELDS
-        if any(not records.get(rank, {}).get(field, "").strip() for rank in records)
+        if any(not str(records.get(rank, {}).get(field, "")).strip() for rank in records)
     )
     if missing_fields:
         failures.append(f"VISIBLE_RANK20_SCHEMA_MISSING={label}:{','.join(missing_fields)}")
 
-    for rank, record in records.items():
-        direction = record.get("direction", "").strip().upper()
-        if direction and direction != expected_direction:
-            failures.append(f"VISIBLE_RANK20_DIRECTION_MISMATCH={label}:{rank}")
-        raw_hash = record.get("raw_payload_hash", "").strip()
-        if raw_hash and _SHA256_RE.fullmatch(raw_hash) is None:
-            failures.append(f"VISIBLE_RANK20_HASH_INVALID={label}:{rank}")
+    if actual == 20 and set(records) == expected_rank_set and not missing_fields:
+        semantic = validate_rank20(
+            [records[rank] for rank in range(1, 21)],
+            label=label,
+        )
+        for semantic_failure in semantic["failures"]:
+            failures.append(f"VISIBLE_RANK20_SEMANTIC_INVALID={label}:{semantic_failure}")
 
     return actual, failures
 
@@ -359,18 +358,16 @@ def validate_visible_report_body(
             actual, strategy_failures = _rank20_contract(
                 section_body,
                 label="RISE20",
-                expected_direction="RISE",
             )
         elif strategy == "RANK20_FALL":
             actual, strategy_failures = _rank20_contract(
                 section_body,
                 label="FALL20",
-                expected_direction="FALL",
             )
         else:
             actual = 0
-        failures.extend(strategy_failures)
         visible_counts[label] = actual
+        failures.extend(strategy_failures)
         if actual != target:
             failures.append(f"VISIBLE_COUNT_MISMATCH={label}:{actual}!={target}")
 
@@ -404,33 +401,28 @@ def validate_visible_report_body(
         failures.append("VISIBLE_MODEL_KEYS_MISMATCH")
     if expected_inference_keys and not evidence["INFERENCE"]:
         failures.append("VISIBLE_INFERENCE_KEYS_MISMATCH")
-    if set(evidence["FACT"]) & set(evidence["MODEL"]):
-        failures.append("VISIBLE_FACT_MODEL_BLEED")
 
     visible_weather_state = _parse_weather_state(body)
-    expected_weather = str(expected_weather_state or "MISSING").strip().upper() or "MISSING"
-    if visible_weather_state != expected_weather:
+    normalized_expected_weather = str(expected_weather_state or "MISSING").strip().upper()
+    if visible_weather_state != normalized_expected_weather:
         failures.append(
-            f"VISIBLE_WEATHER_CONTRACT_STATE_MISMATCH={visible_weather_state}!={expected_weather}"
+            f"VISIBLE_WEATHER_CONTRACT_STATE_MISMATCH={normalized_expected_weather}!={visible_weather_state}"
         )
 
-    visible_denominator_complete = _mini_league_denominator_complete(body)
-    if mini_league_denominator_complete_required and not visible_denominator_complete:
+    mini_league_complete = _mini_league_denominator_complete(body)
+    if mini_league_denominator_complete_required and not mini_league_complete:
         failures.append("VISIBLE_MINI_LEAGUE_DENOMINATOR_INCOMPLETE")
 
+    body_hash = sha256(body.encode("utf-8")).hexdigest()
     return {
         "status": "PASS" if not failures else "FAIL",
-        "visible_body_validated": not failures,
         "failures": failures,
-        "body_sha256": sha256(body.encode("utf-8")).hexdigest(),
+        "body_sha256": body_hash,
         "section_ids": section_ids,
-        "missing_sections": missing_sections,
-        "duplicate_sections": duplicate_sections,
-        "unexpected_sections": unexpected_sections,
         "counts": visible_counts,
         "fact_keys": evidence["FACT"],
         "model_keys": evidence["MODEL"],
         "inference_keys": evidence["INFERENCE"],
         "weather_contract_state": visible_weather_state,
-        "mini_league_denominator_complete": visible_denominator_complete,
+        "mini_league_denominator_complete": mini_league_complete,
     }

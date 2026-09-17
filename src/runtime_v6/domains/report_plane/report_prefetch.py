@@ -68,6 +68,151 @@ def _is_auth_control_failure(value: Any) -> bool:
     return str(value or "").upper().startswith("AUTH_")
 
 
+def _parse_prefetch_timestamp(value: Any) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed.astimezone(timezone.utc)
+
+
+def _derived_prefetch_currentness(
+    snapshot: dict[str, Any] | None,
+    *,
+    requested_logical_slot: str,
+    observed_at: str | datetime,
+    maximum_age_minutes: int,
+) -> tuple[float | None, bool, str]:
+    if not snapshot:
+        return None, False, "MISSING"
+    generated = _parse_prefetch_timestamp(snapshot.get("generated_at"))
+    if generated is None:
+        return None, False, "INVALID"
+    requested = parse_slot(requested_logical_slot).astimezone(timezone.utc)
+    observed = (
+        observed_at.astimezone(timezone.utc)
+        if isinstance(observed_at, datetime)
+        else parse_slot(str(observed_at)).astimezone(timezone.utc)
+    )
+    cutoff = max(requested, observed)
+    age, fresh = freshness(generated, cutoff, int(maximum_age_minutes))
+    return age, fresh, "CURRENT" if fresh else "STALE"
+
+
+def _canonical_prefetch_scope(scope: tuple[str, ...] | list[str] | None) -> tuple[str, ...]:
+    aliases = {"mini": "mini_league", "league": "mini_league"}
+    normalized = tuple(
+        aliases.get(str(item).strip(), str(item).strip())
+        for item in (scope or ())
+        if str(item).strip()
+    )
+    if len(normalized) != len(set(normalized)):
+        raise PrefetchContractError("report-prefetch recovery scope contains duplicates")
+    unknown = set(normalized) - {"personal", "mini_league", "live"}
+    if unknown:
+        raise PrefetchContractError(
+            f"unsupported report-prefetch recovery scopes: {sorted(unknown)}"
+        )
+    return normalized
+
+
+def evaluate_report_prefetch_readiness(
+    snapshot: dict[str, Any] | None,
+    *,
+    report_kind: str,
+    requested_logical_slot: str,
+    maximum_age_minutes: int,
+    refresh_attempt: int = 0,
+    max_refresh_attempts: int = 1,
+    reason: str = "fpl_master_report_prefetch_recovery",
+    scope: tuple[str, ...] | list[str] | None = None,
+    observed_at: str | datetime | None = None,
+) -> dict[str, Any]:
+    """Recompute report-prefetch currentness and plan only the governed existing refresh path.
+
+    Stored `fresh_for_target_report` is observability, never read-time truth. A stale,
+    missing or incomplete snapshot may request the existing issue #431
+    `/v6-report-prefetch` transport; this function never edits the core scheduler
+    title, creates a cron, or marks a core operational slot complete.
+    """
+    if report_kind not in REPORT_KINDS:
+        raise PrefetchContractError(f"unsupported report_kind={report_kind}")
+    if refresh_attempt < 0 or max_refresh_attempts < 1:
+        raise PrefetchContractError("report-prefetch recovery attempt bounds are invalid")
+    requested = parse_slot(requested_logical_slot)
+    observed = observed_at or requested
+    scopes = _canonical_prefetch_scope(scope)
+    if report_kind == "ad_hoc" and not scopes:
+        raise PrefetchContractError("ad_hoc report-prefetch recovery requires scope")
+
+    age, fresh, freshness_status = _derived_prefetch_currentness(
+        snapshot,
+        requested_logical_slot=requested.isoformat(),
+        observed_at=observed,
+        maximum_age_minutes=maximum_age_minutes,
+    )
+    complete = bool(
+        snapshot
+        and snapshot.get("public_core_complete", snapshot.get("complete")) is True
+    )
+    snapshot_kind = str((snapshot or {}).get("report_kind") or "").strip()
+    kind_match = not snapshot_kind or snapshot_kind == report_kind
+
+    if freshness_status == "CURRENT" and not complete:
+        freshness_status = "INCOMPLETE"
+    if freshness_status == "CURRENT" and not kind_match:
+        freshness_status = "MISMATCH"
+
+    ready = bool(fresh and complete and kind_match)
+    refresh_required = bool(not ready and refresh_attempt < max_refresh_attempts)
+    command = None
+    if refresh_required:
+        command_parts = [
+            "/v6-report-prefetch",
+            f"report_kind={report_kind}",
+            f"logical_slot={requested.isoformat()}",
+        ]
+        if report_kind == "ad_hoc":
+            command_parts.append(f"scope={','.join(scopes)}")
+        audit_reason = str(reason or "").strip()
+        if not audit_reason or any(character.isspace() for character in audit_reason):
+            raise PrefetchContractError("report-prefetch recovery reason must be one token")
+        command_parts.extend([f"reason={audit_reason}", "force=true"])
+        command = " ".join(command_parts)
+
+    return {
+        "ready": ready,
+        "freshness_status": freshness_status,
+        "fresh_for_target_report": bool(fresh),
+        "stored_fresh_for_target_report": (
+            (snapshot or {}).get("fresh_for_target_report")
+        ),
+        "age_target_minutes": age,
+        "public_core_complete": complete,
+        "report_kind_match": kind_match,
+        "requested_logical_slot": requested.isoformat(),
+        "refresh_attempt": int(refresh_attempt),
+        "max_refresh_attempts": int(max_refresh_attempts),
+        "refresh_required": refresh_required,
+        "refresh_transport": "ISSUE_431_COMMENT",
+        "refresh_command": command,
+        "refresh_identity": (
+            f"{report_kind}|{requested.isoformat()}|{','.join(scopes)}|{str(reason or '').strip()}"
+        ),
+        "next_action": (
+            "USE_REPORT_PREFETCH"
+            if ready
+            else "GOVERNED_REPORT_PREFETCH_REFRESH"
+            if refresh_required
+            else "REPORT_PREFETCH_RECOVERY_EXHAUSTED"
+        ),
+        "core_schedule_mutation_allowed": False,
+        "independent_cron_allowed": False,
+    }
+
+
 class PrefetchService:
     def __init__(
         self,
@@ -101,15 +246,30 @@ class PrefetchService:
             auth_state,
             personal_requested=bool(manifest.get("personal_requested")),
         )
+        target_slot = str(
+            manifest.get("target_logical_report_slot")
+            or manifest.get("logical_slot")
+            or iso(self.now)
+        )
+        maximum_age = int(
+            manifest.get("prefetch_max_age_minutes")
+            or self.config.get("prefetch_max_age_minutes", 35)
+        )
+        derived_age, derived_fresh, freshness_status = _derived_prefetch_currentness(
+            manifest,
+            requested_logical_slot=target_slot,
+            observed_at=self.now,
+            maximum_age_minutes=maximum_age,
+        )
         strict_status = (
             "GREEN"
-            if manifest.get("complete") and manifest.get("fresh_for_target_report")
+            if manifest.get("complete") and derived_fresh
             else ("AMBER" if manifest.get("source_failures") or not manifest.get("complete") else "STALE")
         )
         public_complete = bool(manifest.get("public_core_complete", manifest.get("complete")))
         public_status = (
             "GREEN"
-            if public_complete and manifest.get("fresh_for_target_report")
+            if public_complete and derived_fresh
             else ("AMBER" if not public_complete else "STALE")
         )
         health = {
@@ -137,7 +297,11 @@ class PrefetchService:
             "request_count": telemetry.get("request_count", 0),
             "failed_requests": telemetry.get("failed_requests", 0),
             "duration_ms": telemetry.get("duration_ms", 0),
-            "fresh_for_target_report": manifest.get("fresh_for_target_report"),
+            "fresh_for_target_report": derived_fresh,
+            "stored_fresh_for_target_report": manifest.get("fresh_for_target_report"),
+            "freshness_status": freshness_status,
+            "age_target_minutes": derived_age,
+            "freshness_evaluated_at": iso(self.now),
             "idempotent_reuse": bool((manifest.get("idempotency") or {}).get("reused")),
         }
         write_json(self.output_root / "health/report_prefetch.json", health)

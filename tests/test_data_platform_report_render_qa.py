@@ -5,6 +5,7 @@ from src.runtime_v6.report_compute import build_report_compute_contract
 from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_render_qa
 from test_support.report_provenance import r5_partitions, r5_section_payloads
 from test_support.report_rank20 import rank20_rows
+from test_support.report_visible_body import valid_visible_body
 
 
 def _our15():
@@ -76,6 +77,7 @@ def _post_render(pre_render=None, **overrides):
     pre = pre_render or _pre_render()
     kwargs = {
         "pre_render_qa": pre,
+        "rendered_body": valid_visible_body(pre),
         "rendered_section_ids": list(pre.get("expected_section_ids", MANDATORY_SECTIONS)),
         "rendered_section_states": {
             row["section_id"]: row["status"]
@@ -203,6 +205,7 @@ def test_post_render_pass_advances_only_to_wave7_delivery_proof():
     assert result["legacy_fallback_allowed"] is False
     assert result["failures"] == []
     assert result["weather_direct_chat_present"] is True
+    assert result["visible_body_validated"] is True
 
 
 def test_post_render_rejects_truncation_even_when_required_sections_are_listed():

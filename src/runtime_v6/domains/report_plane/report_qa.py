@@ -12,6 +12,7 @@ import json
 from typing import Any, Mapping, Sequence
 
 from .delivery_integrity import MANDATORY_SECTIONS, PARTIAL_ALLOWED_SECTIONS
+from .visible_body_contract import validate_visible_report_body
 
 
 _COUNT_TARGETS = {
@@ -169,6 +170,7 @@ def _render_contract_token(
     expected_counts: Mapping[str, int],
     expected_fact_keys: Sequence[str],
     expected_model_keys: Sequence[str],
+    expected_inference_keys: Sequence[str],
 ) -> str:
     payload = {
         "compute_fingerprint": compute_fingerprint,
@@ -181,6 +183,7 @@ def _render_contract_token(
         "expected_counts": dict(expected_counts),
         "expected_fact_keys": list(expected_fact_keys),
         "expected_model_keys": list(expected_model_keys),
+        "expected_inference_keys": list(expected_inference_keys),
     }
     canonical = json.dumps(
         payload,
@@ -251,6 +254,11 @@ def validate_pre_render_qa(
         if isinstance(fact_model, Mapping)
         else []
     )
+    expected_inference_keys = (
+        sorted(str(key) for key in fact_model.get("inference_keys", []))
+        if isinstance(fact_model, Mapping)
+        else []
+    )
     expected_counts = dict(_COUNT_TARGETS)
     compute_fingerprint = str(compute_contract.get("compute_fingerprint") or "")
 
@@ -267,6 +275,7 @@ def validate_pre_render_qa(
             expected_counts=expected_counts,
             expected_fact_keys=expected_fact_keys,
             expected_model_keys=expected_model_keys,
+            expected_inference_keys=expected_inference_keys,
         )
         if qa_passed
         else None
@@ -307,12 +316,14 @@ def validate_pre_render_qa(
         "expected_counts": expected_counts,
         "expected_fact_keys": expected_fact_keys,
         "expected_model_keys": expected_model_keys,
+        "expected_inference_keys": expected_inference_keys,
     }
 
 
 def validate_post_render_qa(
     *,
     pre_render_qa: Mapping[str, Any],
+    rendered_body: str,
     rendered_section_ids: Sequence[str],
     rendered_section_states: Mapping[str, str],
     rendered_compute_fingerprint: str | None,
@@ -325,7 +336,7 @@ def validate_post_render_qa(
     rendered_weather_contract_state: str | None = None,
     truncated: bool,
 ) -> dict[str, Any]:
-    """Verify rendered output still matches the approved pre-render handoff."""
+    """Verify both the actual visible body and renderer metadata against pre-render QA."""
     if not (
         pre_render_qa.get("status") == "PASS"
         and pre_render_qa.get("qa_stage") == "PRE_RENDER"
@@ -342,6 +353,7 @@ def validate_post_render_qa(
             "next_action": "PRE_RENDER_QA",
             "legacy_fallback_allowed": False,
             "failures": ["PRE_RENDER_QA_NOT_PASSED"],
+            "visible_body_validated": False,
         }
 
     expected_sections = list(pre_render_qa.get("expected_section_ids", []))
@@ -371,6 +383,7 @@ def validate_post_render_qa(
     expected_counts = dict(pre_render_qa.get("expected_counts", {}))
     expected_fact_keys = sorted(str(key) for key in pre_render_qa.get("expected_fact_keys", []))
     expected_model_keys = sorted(str(key) for key in pre_render_qa.get("expected_model_keys", []))
+    expected_inference_keys = sorted(str(key) for key in pre_render_qa.get("expected_inference_keys", []))
     expected_report_mode = str(pre_render_qa.get("report_mode") or "LEGACY").strip().upper()
     expected_weather_state = str(
         pre_render_qa.get("weather_contract_state")
@@ -397,6 +410,7 @@ def validate_post_render_qa(
         expected_counts=expected_counts,
         expected_fact_keys=expected_fact_keys,
         expected_model_keys=expected_model_keys,
+        expected_inference_keys=expected_inference_keys,
     )
     stored_pre_token = pre_render_qa.get("render_contract_token")
 
@@ -412,7 +426,20 @@ def validate_post_render_qa(
     else:
         actual_weather_state = "DIRECT_CHATGPT" if rendered_weather_direct_chat_present else "MISSING"
 
-    failures: list[str] = []
+    visible_body = validate_visible_report_body(
+        rendered_body=rendered_body,
+        expected_section_ids=expected_sections,
+        expected_counts=expected_counts,
+        expected_fact_keys=expected_fact_keys,
+        expected_model_keys=expected_model_keys,
+        expected_inference_keys=expected_inference_keys,
+        expected_weather_state=expected_weather_state,
+        mini_league_denominator_complete_required=bool(
+            pre_render_qa.get("mini_league_denominator_complete")
+        ),
+    )
+
+    failures: list[str] = list(visible_body["failures"])
     if stored_pre_token != recomputed_pre_token:
         failures.append("PRE_RENDER_CONTRACT_TOKEN_INVALID")
     if truncated:
@@ -491,6 +518,7 @@ def validate_post_render_qa(
         "rendered_counts": dict(rendered_counts),
         "expected_fact_keys": expected_fact_keys,
         "expected_model_keys": expected_model_keys,
+        "expected_inference_keys": expected_inference_keys,
         "rendered_fact_keys": actual_fact_keys,
         "rendered_model_keys": actual_model_keys,
         "mini_league_denominator_complete": bool(rendered_mini_league_denominator_complete),
@@ -499,4 +527,15 @@ def validate_post_render_qa(
         "weather_required": expected_weather_required,
         "weather_direct_chat_present": actual_weather_state in {"DIRECT_CHATGPT", "MATCH_CURRENT"},
         "truncated": bool(truncated),
+        "visible_body_validated": visible_body["status"] == "PASS",
+        "visible_body_sha256": visible_body["body_sha256"],
+        "visible_section_ids": visible_body["section_ids"],
+        "visible_counts": visible_body["counts"],
+        "visible_fact_keys": visible_body["fact_keys"],
+        "visible_model_keys": visible_body["model_keys"],
+        "visible_inference_keys": visible_body["inference_keys"],
+        "visible_weather_contract_state": visible_body["weather_contract_state"],
+        "visible_mini_league_denominator_complete": visible_body[
+            "mini_league_denominator_complete"
+        ],
     }

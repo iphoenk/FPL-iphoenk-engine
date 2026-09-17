@@ -21,6 +21,7 @@ from src.runtime_v6.report_recovery_closeout import (
 from src.runtime_v6.workflow_control import resolve_data_slot_decision
 from test_support.report_provenance import r5_partitions, r5_section_payloads
 from test_support.report_rank20 import rank20_rows
+from test_support.report_visible_body import valid_visible_body
 
 
 LOGICAL_SLOT = "2026-09-16T04:30:00+07:00"
@@ -232,6 +233,7 @@ def test_0430_incident_reproduction_proves_report_continues_after_data_slot_noop
     )
     post_qa = validate_post_render_qa(
         pre_render_qa=pre_qa,
+        rendered_body=valid_visible_body(pre_qa),
         rendered_section_ids=pre_qa["expected_section_ids"],
         rendered_section_states={row["section_id"]: row["status"] for row in pre_qa["section_manifest"]},
         rendered_compute_fingerprint=compute["compute_fingerprint"],
@@ -314,6 +316,7 @@ def test_0430_incident_reproduction_proves_report_continues_after_data_slot_noop
     assert compute["status"] == "PASS"
     assert pre_qa["status"] == "PASS"
     assert post_qa["status"] == "PASS"
+    assert post_qa["visible_body_validated"] is True
     assert delivery["status"] == "PASS"
     assert delivery["delivered_report_slot_id"] == REPORT_SLOT_ID
     assert observability["data_plane"]["status"] == "GREEN"

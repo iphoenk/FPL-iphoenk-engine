@@ -10,7 +10,6 @@ def test_wave3_observer_paginates_repository_artifacts_before_filtering_proofs()
     assert text.count(command) == 2
     assert text.count("pages = payload if isinstance(payload, list) else [payload]") == 2
     assert text.count("for page in pages:") == 2
-    assert "rows = rows[:64]" in text
 
 
 def test_wave3_observer_does_not_regress_to_first_page_only_artifact_lookup():

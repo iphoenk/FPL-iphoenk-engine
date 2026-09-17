@@ -18,6 +18,7 @@ def valid_visible_body(
     rise_count: int = 20,
     include_14b: bool = True,
     include_inference: bool = True,
+    weather_state_override: str | None = None,
 ) -> str:
     """Build a deterministic body that satisfies the R6 visible-body contract."""
     lines = ["# 04:30 MORNING DEEP REVIEW"]
@@ -85,7 +86,9 @@ def valid_visible_body(
             )
         elif section_id == "S16":
             weather_state = str(
-                pre_render_qa.get("weather_contract_state") or "MISSING"
+                weather_state_override
+                if weather_state_override is not None
+                else pre_render_qa.get("weather_contract_state") or "MISSING"
             ).strip().upper()
             lines.append(f"WEATHER: {weather_state}")
             lines.append("Source health current.")

@@ -16,6 +16,7 @@ from src.runtime_v6.report_trigger import (
 from src.runtime_v6.workflow_control import resolve_data_slot_decision
 from test_support.report_provenance import r5_partitions, r5_section_payloads
 from test_support.report_rank20 import rank20_rows
+from test_support.report_visible_body import valid_visible_body
 
 
 REQUESTED_AT = "2026-09-16T08:41:23+07:00"
@@ -75,6 +76,7 @@ def _qa(report_mode: str = "DEEP"):
     )
     post = validate_post_render_qa(
         pre_render_qa=pre,
+        rendered_body=valid_visible_body(pre),
         rendered_section_ids=pre["expected_section_ids"],
         rendered_section_states={row["section_id"]: row["status"] for row in pre["section_manifest"]},
         rendered_compute_fingerprint=compute["compute_fingerprint"],
@@ -102,6 +104,7 @@ def test_ad_hoc_identity_is_stable_across_equivalent_timezones_and_retry():
     )
 
     assert first == equivalent
+    assert first["report_type"] == "DEEP"
     assert first["trigger_kind"] == "AD_HOC"
     assert first["requested_at"] == "2026-09-16T08:41:23+07:00"
     assert first["logical_slot"] == "2026-09-16T08:41:00+07:00"

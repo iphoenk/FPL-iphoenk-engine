@@ -2,12 +2,14 @@ import pytest
 
 from src.runtime_v6.wave3_artifact_provenance import (
     NaturalProofProvenanceError,
+    resolve_natural_source_run,
     validate_natural_proof_artifact_provenance,
 )
 
 
 REPOSITORY = "iphoenk/FPL-iphoenk-engine"
 WORKFLOW_PATH = ".github/workflows/v6-wave3-proof.yml"
+SOURCE_WORKFLOW_PATH = ".github/workflows/v6-natural-data-ingestion.yml"
 
 
 def _artifact(**overrides):
@@ -39,6 +41,86 @@ def _producer_run(**overrides):
     }
     run.update(overrides)
     return run
+
+
+def _observer_run(**overrides):
+    run = {
+        "id": 8001,
+        "path": WORKFLOW_PATH,
+        "event": "issues",
+        "created_at": "2026-09-17T08:28:06Z",
+        "head_sha": "a" * 40,
+        "repository": {"full_name": REPOSITORY, "id": 123},
+        "head_repository": {"full_name": REPOSITORY, "id": 123},
+    }
+    run.update(overrides)
+    return run
+
+
+def _source_run(**overrides):
+    run = {
+        "id": 9001,
+        "path": SOURCE_WORKFLOW_PATH,
+        "event": "issues",
+        "created_at": "2026-09-17T08:28:06Z",
+        "head_sha": "a" * 40,
+        "status": "in_progress",
+        "conclusion": None,
+        "run_attempt": 1,
+        "display_title": "MUTABLE_CURRENT_ISSUE_TITLE",
+        "repository": {"full_name": REPOSITORY, "id": 123},
+        "head_repository": {"full_name": REPOSITORY, "id": 123},
+    }
+    run.update(overrides)
+    return run
+
+
+def test_resolves_source_by_immutable_event_fanout_not_mutable_display_title():
+    stale_same_title = _source_run(
+        id=8999,
+        created_at="2026-09-17T05:28:17Z",
+        display_title="MUTABLE_CURRENT_ISSUE_TITLE",
+    )
+    exact = _source_run(display_title="SOMETHING_ELSE_NOW")
+
+    result = resolve_natural_source_run(
+        observer_run=_observer_run(),
+        source_runs=[stale_same_title, exact],
+        expected_repository=REPOSITORY,
+        expected_source_workflow_path=SOURCE_WORKFLOW_PATH,
+    )
+
+    assert result["id"] == 9001
+    assert result["created_at"] == "2026-09-17T08:28:06Z"
+
+
+def test_source_resolution_fails_closed_when_event_fanout_is_ambiguous():
+    with pytest.raises(NaturalProofProvenanceError, match="ambiguous"):
+        resolve_natural_source_run(
+            observer_run=_observer_run(),
+            source_runs=[_source_run(id=9001), _source_run(id=9002)],
+            expected_repository=REPOSITORY,
+            expected_source_workflow_path=SOURCE_WORKFLOW_PATH,
+        )
+
+
+def test_source_resolution_rejects_wrong_event_repo_or_head_sha():
+    candidates = [
+        _source_run(id=9001, event="workflow_dispatch"),
+        _source_run(id=9002, head_sha="b" * 40),
+        _source_run(
+            id=9003,
+            repository={"full_name": "attacker/repo", "id": 999},
+            head_repository={"full_name": "attacker/repo", "id": 999},
+        ),
+    ]
+    with pytest.raises(NaturalProofProvenanceError, match="no exact"):
+        resolve_natural_source_run(
+            observer_run=_observer_run(),
+            source_runs=candidates,
+            expected_repository=REPOSITORY,
+            expected_source_workflow_path=SOURCE_WORKFLOW_PATH,
+        )
 
 
 def test_accepts_only_exact_governed_natural_producer_run():

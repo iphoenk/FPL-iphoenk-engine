@@ -15,6 +15,10 @@ def _stale_snapshot():
     return {
         "schema_version": 2,
         "report_kind": "full_master",
+        "target_logical_report_slot": REQUEST_SLOT,
+        "personal_requested": True,
+        "mini_league_requested": True,
+        "live_requested": False,
         "generated_at": "2026-09-16T17:26:00+07:00",
         "complete": True,
         "public_core_complete": True,

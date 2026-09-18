@@ -43,7 +43,7 @@ class ReportContractError(ValueError):
     pass
 
 
-_JAKARTA = ZoneInfo("Asia/Jakarta")
+_JAKARTA = ZoneInfo(SCHEDULE_POLICY.timezone)
 _ON_TIME_TOLERANCE_SECONDS = SCHEDULE_POLICY.scheduled_dispatch_tolerance_seconds
 _FINAL_WINDOW_STANDARD = timedelta(minutes=90)
 _FINAL_WINDOW_LATE_NIGHT = timedelta(hours=3)

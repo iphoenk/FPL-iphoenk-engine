@@ -155,12 +155,35 @@ def build_operational_slots(
         duplicate_core_attempts = [
             dict(row) for row in previous.get("duplicate_core_attempts") or [] if isinstance(row, dict)
         ]
+        legacy_duplicate_core_attempts = [
+            dict(row)
+            for row in previous.get("legacy_duplicate_core_attempts") or []
+            if isinstance(row, dict)
+        ]
     else:
         legacy_rows = [dict(row) for row in previous.get("slots") or [] if isinstance(row, dict)]
         active_rows = []
         auxiliary_rows = []
         epoch = {}
         duplicate_core_attempts = []
+        legacy_duplicate_core_attempts = []
+
+    current_epoch_id = str(control.get("scheduler_epoch") or CHATGPT_SCHEDULER_EPOCH)
+    previous_epoch_id = str(epoch.get("id") or "")
+    if previous_schema >= 3 and previous_epoch_id and previous_epoch_id != current_epoch_id:
+        for row in active_rows:
+            historical = dict(row)
+            historical["historical_epoch_id"] = previous_epoch_id
+            historical["historical_reason"] = "SCHEDULER_EPOCH_ROLLOVER"
+            legacy_rows.append(historical)
+        for row in duplicate_core_attempts:
+            historical = dict(row)
+            historical["historical_epoch_id"] = previous_epoch_id
+            historical["historical_reason"] = "SCHEDULER_EPOCH_ROLLOVER"
+            legacy_duplicate_core_attempts.append(historical)
+        active_rows = []
+        duplicate_core_attempts = []
+        epoch = {}
 
     if control.get("counts_as_completed_operational_slot") is True and control.get("expected_cycle_at"):
         slot = str(control["expected_cycle_at"])
@@ -205,7 +228,7 @@ def build_operational_slots(
                         "reason": "CORE_SLOT_ALREADY_OWNED_FIRST_OWNER_PRESERVED",
                     }
                 )
-            epoch.setdefault("id", CHATGPT_SCHEDULER_EPOCH)
+            epoch.setdefault("id", current_epoch_id)
             epoch.setdefault("authority", CHATGPT_SCHEDULER_AUTHORITY)
             epoch.setdefault("start_at", slot)
             epoch.setdefault("green_after_consecutive_slots", CHATGPT_GREEN_STREAK)
@@ -228,6 +251,10 @@ def build_operational_slots(
     legacy_rows = sorted(legacy_rows, key=lambda row: str(row.get("slot")))[-limit:]
     duplicate_core_attempts = sorted(
         duplicate_core_attempts,
+        key=lambda row: str(row.get("duplicate_observed_at") or ""),
+    )[-limit:]
+    legacy_duplicate_core_attempts = sorted(
+        legacy_duplicate_core_attempts,
         key=lambda row: str(row.get("duplicate_observed_at") or ""),
     )[-limit:]
 
@@ -268,7 +295,7 @@ def build_operational_slots(
         "window_size": limit,
         "epoch": epoch
         or {
-            "id": CHATGPT_SCHEDULER_EPOCH,
+            "id": current_epoch_id,
             "authority": CHATGPT_SCHEDULER_AUTHORITY,
             "start_at": None,
             "green_after_consecutive_slots": CHATGPT_GREEN_STREAK,
@@ -276,6 +303,7 @@ def build_operational_slots(
         "slots": active_rows,
         "auxiliary_operational_slots": auxiliary_rows,
         "duplicate_core_attempts": duplicate_core_attempts,
+        "legacy_duplicate_core_attempts": legacy_duplicate_core_attempts,
         "legacy_slots": legacy_rows,
         "legacy_summary": _legacy_summary(legacy_rows),
         "control_plane": control_plane,
@@ -283,7 +311,7 @@ def build_operational_slots(
             "health": health,
             "maturity": maturity,
             "scheduler_authority": CHATGPT_SCHEDULER_AUTHORITY,
-            "scheduler_epoch": CHATGPT_SCHEDULER_EPOCH,
+            "scheduler_epoch": current_epoch_id,
             "tracked_operational_slots": tracked,
             "fulfilled_operational_slots": fulfilled,
             "missing_operational_slots": missing,
@@ -326,5 +354,6 @@ def build_operational_slots(
             "scheduler_proof_age_does_not_fabricate_slots": True,
             "core_slot_first_owner_wins": True,
             "duplicate_core_trigger_does_not_replace_provenance": True,
+            "scheduler_epoch_rollover_preserves_history": True,
         },
     }

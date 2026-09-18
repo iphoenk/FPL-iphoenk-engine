@@ -251,6 +251,8 @@ def evaluate_report_prefetch_readiness(
     reason: str = "fpl_master_report_prefetch_recovery",
     scope: tuple[str, ...] | list[str] | None = None,
     observed_at: str | datetime | None = None,
+    occurrence_snapshots: list[dict[str, Any]] | tuple[dict[str, Any], ...] | None = None,
+    report_prefetch_identity: str | None = None,
 ) -> dict[str, Any]:
     """Recompute report-prefetch currentness and plan only the governed existing refresh path.
 

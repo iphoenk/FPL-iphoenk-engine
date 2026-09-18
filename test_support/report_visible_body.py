@@ -173,8 +173,12 @@ def valid_visible_body(
             if include_inference and pre_render_qa.get("expected_inference_keys"):
                 lines.append("INFERENCE: Decision implications are labelled as inference.")
         elif section_id == "S14B":
-            lines.append("MANAGER COVERAGE: COMPLETE")
-            lines.append("Current rank, gap, direct-rival equation and leverage are shown.")
+            if str(pre_render_qa.get("mini_league_contract_state") or "COMPLETE").upper() == "DEGRADED":
+                lines.append("MINI_LEAGUE SOURCE: DEGRADED")
+                lines.append("Current rank/gap unavailable; section retained truthfully without fabricated denominator.")
+            else:
+                lines.append("MANAGER COVERAGE: COMPLETE")
+                lines.append("Current rank, gap, direct-rival equation and leverage are shown.")
         elif section_id == "S15":
             lines.extend(
                 _table(

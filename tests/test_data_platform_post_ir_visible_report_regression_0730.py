@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.runtime_v6.domains.report_plane.delivery_integrity import MANDATORY_SECTIONS
 from src.runtime_v6.domains.report_plane.report_contract import (
+    classify_report_outcome,
     report_delivery_status,
     safety_net_decision,
 )
@@ -88,3 +89,17 @@ def test_0730_raw_delivery_or_prefetch_cannot_suppress_same_slot_recovery():
     assert decision["action"] == "RECOVER"
     assert decision["deduplicated"] is False
     assert "REPORT_CONTRACT" in decision["reason"] or "UNFULFILLED" in decision["reason"]
+
+
+def test_0730_expected_three_state_classification_is_explicit():
+    outcome = classify_report_outcome(
+        data_slot_fulfilled=True,
+        report_contract_pass=False,
+        visible_emitted=True,
+        delivery_proof_valid=False,
+    )
+
+    assert outcome["DATA_SLOT_FULFILLED"] is True
+    assert outcome["REPORT_DELIVERED"] is True
+    assert outcome["REPORT_SLOT_FULFILLED"] is False
+    assert outcome["REPORT_CONTRACT_PASS"] is False

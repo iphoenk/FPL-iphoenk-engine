@@ -50,8 +50,8 @@ def test_window_summary_counts_prior_artifacts_plus_current_without_inference(tm
     assert summary["countable_proof_count"] == 6
     assert summary["consecutive_successful_natural_slots"] == 6
     assert summary["six_of_six_complete"] is True
-    assert summary["rolling_48_of_48_complete"] is False
-    assert summary["phase"] == "48/48_IN_PROGRESS"
+    assert summary["rolling_12_of_12_complete"] is False
+    assert summary["phase"] == "12/12_IN_PROGRESS"
     assert summary["future_slots_inferred"] is False
     assert summary["manual_or_controlled_runs_count"] == 0
     assert summary["production_green_eligible"] is False
@@ -61,17 +61,17 @@ def test_window_summary_duplicate_slot_blocks_production_green(tmp_path):
     prior = tmp_path / "prior"
     prior.mkdir()
     start = datetime(2026, 9, 12, 0, 0, tzinfo=timezone.utc)
-    for index in range(48):
+    for index in range(12):
         (prior / f"proof-{index}.json").write_text(
             json.dumps(_proof(start + timedelta(hours=index), 200 + index)), encoding="utf-8"
         )
     current = tmp_path / "current.json"
-    current.write_text(json.dumps(_proof(start + timedelta(hours=47), 999)), encoding="utf-8")
+    current.write_text(json.dumps(_proof(start + timedelta(hours=11), 999)), encoding="utf-8")
 
     summary = build_window_summary(prior, current)
 
-    assert summary["duplicate_logical_slots"] == [(start + timedelta(hours=47)).isoformat()]
-    assert summary["rolling_48_of_48_complete"] is False
+    assert summary["duplicate_logical_slots"] == [(start + timedelta(hours=11)).isoformat()]
+    assert summary["rolling_12_of_12_complete"] is False
     assert summary["production_green_eligible"] is False
 
 

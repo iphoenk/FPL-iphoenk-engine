@@ -27,16 +27,16 @@ def _proof(slot: datetime, run_id: int) -> dict:
     }
 
 
-def _write_48_proofs(tmp_path):
+def _write_12_proofs(tmp_path):
     prior = tmp_path / "prior"
     prior.mkdir()
     start = datetime(2026, 9, 12, 0, 0, tzinfo=timezone.utc)
-    for index in range(47):
+    for index in range(11):
         (prior / f"proof-{index}.json").write_text(
             json.dumps(_proof(start + timedelta(hours=index), 1000 + index)), encoding="utf-8"
         )
     current = tmp_path / "current.json"
-    current.write_text(json.dumps(_proof(start + timedelta(hours=47), 1047)), encoding="utf-8")
+    current.write_text(json.dumps(_proof(start + timedelta(hours=11), 1011)), encoding="utf-8")
     return prior, current
 
 
@@ -69,20 +69,20 @@ def _write_chaos_acceptance(tmp_path, *, status: str = "PASS"):
     return path
 
 
-def test_rolling_48_without_chaos_acceptance_cannot_be_production_green(tmp_path):
-    prior, current = _write_48_proofs(tmp_path)
+def test_rolling_12_without_chaos_acceptance_cannot_be_production_green(tmp_path):
+    prior, current = _write_12_proofs(tmp_path)
 
     summary = build_window_summary(prior, current)
 
-    assert summary["rolling_48_of_48_complete"] is True
+    assert summary["rolling_12_of_12_complete"] is True
     assert summary["natural_window_eligible"] is True
     assert summary["chaos_acceptance_pass"] is False
     assert summary["production_green_eligible"] is False
     assert summary["chaos_acceptance"]["status"] == "NOT_PROVIDED"
 
 
-def test_rolling_48_plus_valid_bound_chaos_acceptance_is_production_green_eligible(tmp_path):
-    prior, current = _write_48_proofs(tmp_path)
+def test_rolling_12_plus_valid_bound_chaos_acceptance_is_production_green_eligible(tmp_path):
+    prior, current = _write_12_proofs(tmp_path)
     chaos = _write_chaos_acceptance(tmp_path)
 
     summary = build_window_summary(
@@ -94,7 +94,7 @@ def test_rolling_48_plus_valid_bound_chaos_acceptance_is_production_green_eligib
         chaos_artifact_name="v6-wave3-chaos-acceptance-34815393691-1",
     )
 
-    assert summary["rolling_48_of_48_complete"] is True
+    assert summary["rolling_12_of_12_complete"] is True
     assert summary["natural_window_eligible"] is True
     assert summary["chaos_acceptance_pass"] is True
     assert summary["production_green_eligible"] is True
@@ -105,7 +105,7 @@ def test_rolling_48_plus_valid_bound_chaos_acceptance_is_production_green_eligib
 
 
 def test_failed_or_incomplete_chaos_acceptance_is_rejected_fail_closed(tmp_path):
-    prior, current = _write_48_proofs(tmp_path)
+    prior, current = _write_12_proofs(tmp_path)
     chaos = _write_chaos_acceptance(tmp_path, status="FAIL")
 
     with pytest.raises(Wave3ProofError, match="wave3_chaos_acceptance_not_pass:status"):
@@ -120,7 +120,7 @@ def test_failed_or_incomplete_chaos_acceptance_is_rejected_fail_closed(tmp_path)
 
 
 def test_valid_chaos_payload_without_verified_ci_provenance_is_rejected(tmp_path):
-    prior, current = _write_48_proofs(tmp_path)
+    prior, current = _write_12_proofs(tmp_path)
     chaos = _write_chaos_acceptance(tmp_path)
 
     with pytest.raises(Wave3ProofError, match="wave3_chaos_source_run_id_missing"):

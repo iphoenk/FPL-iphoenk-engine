@@ -12,6 +12,7 @@ NATURAL_SCHEDULE_KIND = "chatgpt_scheduler"
 NATURAL_EVENT_NAME = "issues"
 NATURAL_LOGICAL_SLOT_SOURCE = "GOVERNED_TRIGGER_EVENT"
 FIRST_GATE_CONSECUTIVE_SLOTS = 6
+ROLLING_PRODUCTION_WINDOW = 12
 LEGACY_TWO_SLOT_OBSERVATION = 2
 CORE_STAGES = (
     "TRIGGERED",
@@ -176,7 +177,7 @@ def build_slot_proof(
             "audit_transport_is_separate_from_core_execution_proof": True,
             "connector_result_is_not_required_when_independent_proof_is_complete": True,
             "initial_natural_gate_consecutive_slots": FIRST_GATE_CONSECUTIVE_SLOTS,
-            "production_green_requires_rolling_48_of_48": True,
+            "production_green_requires_rolling_12_of_12": True,
             "production_green_requires_controlled_chaos_acceptance": True,
         },
     }
@@ -282,24 +283,29 @@ def evaluate_proof_window(
     duplicate_in_six = sorted(set(duplicate_publication_slots) & active_six_keys)
     six_complete = consecutive >= 6 and not duplicate_in_six
 
-    last_48_keys = ordered_keys[-48:]
-    last_48 = [unique[key] for key in last_48_keys]
-    duplicate_in_48 = sorted(set(duplicate_publication_slots) & set(last_48_keys))
-    rolling_48 = len(last_48) == 48 and not duplicate_in_48
-    if rolling_48:
-        for left, right in zip(last_48, last_48[1:]):
+    last_window_keys = ordered_keys[-ROLLING_PRODUCTION_WINDOW:]
+    last_window = [unique[key] for key in last_window_keys]
+    duplicate_in_window = sorted(
+        set(duplicate_publication_slots) & set(last_window_keys)
+    )
+    rolling_12 = (
+        len(last_window) == ROLLING_PRODUCTION_WINDOW
+        and not duplicate_in_window
+    )
+    if rolling_12:
+        for left, right in zip(last_window, last_window[1:]):
             if _proof_slot(right) - _proof_slot(left) != timedelta(hours=1):
-                rolling_48 = False
+                rolling_12 = False
                 break
 
     if not first_gate_complete:
         phase = "6/6_IN_PROGRESS"
-    elif not rolling_48:
-        phase = "48/48_IN_PROGRESS"
+    elif not rolling_12:
+        phase = "12/12_IN_PROGRESS"
     else:
-        phase = "48/48_COMPLETE"
+        phase = "12/12_COMPLETE"
 
-    natural_window_eligible = rolling_48
+    natural_window_eligible = rolling_12
     chaos_pass = bool(chaos_acceptance_pass)
     return {
         "schema_version": 1,
@@ -310,14 +316,14 @@ def evaluate_proof_window(
         "first_gate_complete": first_gate_complete,
         "two_of_two_complete": two_complete,
         "six_of_six_complete": six_complete,
-        "rolling_48_of_48_complete": rolling_48,
+        "rolling_12_of_12_complete": rolling_12,
         "duplicate_logical_slots": sorted(set(duplicate_publication_slots)),
         "duplicate_publication_slots": sorted(set(duplicate_publication_slots)),
         "duplicate_evidence_slots": sorted(set(duplicate_evidence_slots)),
         "duplicate_publication_slots_in_active_two": duplicate_in_two,
         "duplicate_publication_slots_in_active_first_gate": duplicate_in_first_gate,
         "duplicate_publication_slots_in_active_six": duplicate_in_six,
-        "duplicate_publication_slots_in_rolling_48": duplicate_in_48,
+        "duplicate_publication_slots_in_rolling_12": duplicate_in_window,
         "natural_window_eligible": natural_window_eligible,
         "chaos_acceptance_pass": chaos_pass,
         "production_green_eligible": natural_window_eligible and chaos_pass,

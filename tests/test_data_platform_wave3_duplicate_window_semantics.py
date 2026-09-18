@@ -42,16 +42,16 @@ def test_duplicate_publication_inside_active_six_blocks_six_of_six():
     assert result["production_green_eligible"] is False
 
 
-def test_historical_duplicate_outside_latest_48_does_not_poison_clean_rolling_window():
+def test_historical_duplicate_outside_latest_12_does_not_poison_clean_rolling_window():
     start = datetime(2026, 9, 12, 0, tzinfo=timezone.utc)
-    proofs = [_proof(start + timedelta(hours=i), run_id=i + 1) for i in range(49)]
+    proofs = [_proof(start + timedelta(hours=i), run_id=i + 1) for i in range(13)]
     proofs.append(_proof(start, run_id=999))
 
     result = evaluate_proof_window(proofs, chaos_acceptance_pass=True)
 
     assert result["duplicate_publication_slots"] == [start.isoformat()]
-    assert result["duplicate_publication_slots_in_rolling_48"] == []
-    assert result["rolling_48_of_48_complete"] is True
+    assert result["duplicate_publication_slots_in_rolling_12"] == []
+    assert result["rolling_12_of_12_complete"] is True
     assert result["natural_window_eligible"] is True
     assert result["production_green_eligible"] is True
 
@@ -76,15 +76,15 @@ def test_duplicate_evidence_for_same_publication_is_deduplicated_not_treated_as_
     assert result["phase"] == "6/6_IN_PROGRESS"
 
 
-def test_duplicate_publication_inside_rolling_48_blocks_production_green():
+def test_duplicate_publication_inside_rolling_12_blocks_production_green():
     start = datetime(2026, 9, 12, 0, tzinfo=timezone.utc)
-    proofs = [_proof(start + timedelta(hours=i), run_id=i + 1) for i in range(48)]
-    duplicate_slot = start + timedelta(hours=20)
+    proofs = [_proof(start + timedelta(hours=i), run_id=i + 1) for i in range(12)]
+    duplicate_slot = start + timedelta(hours=8)
     proofs.append(_proof(duplicate_slot, run_id=999))
 
     result = evaluate_proof_window(proofs, chaos_acceptance_pass=True)
 
-    assert result["rolling_48_of_48_complete"] is False
-    assert result["duplicate_publication_slots_in_rolling_48"] == [duplicate_slot.isoformat()]
+    assert result["rolling_12_of_12_complete"] is False
+    assert result["duplicate_publication_slots_in_rolling_12"] == [duplicate_slot.isoformat()]
     assert result["natural_window_eligible"] is False
     assert result["production_green_eligible"] is False

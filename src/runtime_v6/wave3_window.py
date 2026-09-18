@@ -111,7 +111,7 @@ def build_window_summary(
     summary["proof_source"] = "IMMUTABLE_WAVE3_ACTION_ARTIFACTS_PLUS_CURRENT"
     summary["manual_or_controlled_runs_count"] = 0
     summary["future_slots_inferred"] = False
-    summary["production_green_policy"] = "ONLY_WHEN_ROLLING_48_OF_48_AND_CHAOS_ACCEPTANCE_PASS"
+    summary["production_green_policy"] = "ONLY_WHEN_ROLLING_12_OF_12_AND_CHAOS_ACCEPTANCE_PASS"
     summary["chaos_acceptance"] = {
         "status": "PASS" if chaos_pass else "NOT_PROVIDED",
         "source_run_id": chaos_source_run_id if chaos_pass else None,

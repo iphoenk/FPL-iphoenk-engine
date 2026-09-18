@@ -88,6 +88,7 @@ jobs:
       skip_new_acquisition: ${{ steps.slot_guard.outputs.skip_new_acquisition }}
       reuse_last_valid_publication: ${{ steps.slot_guard.outputs.reuse_last_valid_publication }}
       continue_report_pipeline: ${{ steps.slot_guard.outputs.continue_report_pipeline }}
+      duplicate_natural_occurrence: ${{ steps.slot_guard.outputs.duplicate_natural_occurrence }}
       schedule_kind: ${{ steps.scheduler.outputs.kind }}
     env:
       V6_PREVIOUS_MANIFEST: /tmp/v6-previous-manifest.json
@@ -465,6 +466,7 @@ jobs:
           SKIP_NEW_ACQUISITION: ${{ needs.collect.outputs.skip_new_acquisition }}
           REUSE_LAST_VALID_PUBLICATION: ${{ needs.collect.outputs.reuse_last_valid_publication }}
           CONTINUE_REPORT_PIPELINE: ${{ needs.collect.outputs.continue_report_pipeline }}
+          DUPLICATE_NATURAL_OCCURRENCE: ${{ needs.collect.outputs.duplicate_natural_occurrence }}
           SCHEDULE_KIND: ${{ needs.collect.outputs.schedule_kind }}
         shell: bash
         run: |
@@ -477,11 +479,26 @@ jobs:
             exit 1
           fi
           if [[ "$SLOT_SKIP" == "true" ]]; then
-            if [[ "$DATA_SLOT_STATUS" != "ALREADY_PUBLISHED" || "$SKIP_NEW_ACQUISITION" != "true" || "$REUSE_LAST_VALID_PUBLICATION" != "true" || "$CONTINUE_REPORT_PIPELINE" != "true" ]]; then
-              echo "::error::already-published data slot must remain nonterminal for report delivery"
+            if [[ "$SKIP_NEW_ACQUISITION" != "true" || "$REUSE_LAST_VALID_PUBLICATION" != "true" || "$CONTINUE_REPORT_PIPELINE" != "true" ]]; then
+              echo "::error::skipped data slot must remain idempotent and nonterminal for report delivery"
               exit 1
             fi
-            state="DATA_SLOT_ALREADY_PUBLISHED_REPORT_CONTINUES"
+            case "$DATA_SLOT_STATUS" in
+              ALREADY_PUBLISHED)
+                state="DATA_SLOT_ALREADY_PUBLISHED_REPORT_CONTINUES"
+                ;;
+              DUPLICATE_NATURAL_OCCURRENCE)
+                if [[ "$DUPLICATE_NATURAL_OCCURRENCE" != "true" ]]; then
+                  echo "::error::duplicate natural occurrence status requires exact event-transition proof"
+                  exit 1
+                fi
+                state="DUPLICATE_NATURAL_OCCURRENCE_NOOP_REPORT_CONTINUES"
+                ;;
+              *)
+                echo "::error::unexpected skipped data-slot status: $DATA_SLOT_STATUS"
+                exit 1
+                ;;
+            esac
           elif [[ "$PUBLISH_RESULT" == "success" ]]; then
             state="SNAPSHOT_PUBLISHED_VALIDATED"
           else
@@ -497,6 +514,7 @@ jobs:
             echo "skip_new_acquisition=$SKIP_NEW_ACQUISITION"
             echo "reuse_last_valid_publication=$REUSE_LAST_VALID_PUBLICATION"
             echo "continue_report_pipeline=$CONTINUE_REPORT_PIPELINE"
+            echo "duplicate_natural_occurrence=$DUPLICATE_NATURAL_OCCURRENCE"
           } >> "$GITHUB_STEP_SUMMARY"
           echo "orchestration fulfillment: $state"
           if [[ "$state" == "ACQUISITION_COMPLETE_PUBLICATION_NOT_VALIDATED" ]]; then

@@ -9,7 +9,9 @@ from src.runtime_v6.domains.report_plane.report_contract import (
 from src.runtime_v6.domains.report_plane.visible_body_contract import (
     validate_visible_report_body,
 )
-from src.runtime_v6.domains.report_plane.report_qa import validate_pre_render_qa
+from src.runtime_v6.domains.report_plane.report_qa import validate_post_render_qa, validate_pre_render_qa
+from src.runtime_v6.domains.report_plane.prefetch_contract import resolve_scope
+from test_support.report_visible_body import valid_visible_body
 
 
 LOGICAL_SLOT = "2026-09-18T07:30:00+07:00"
@@ -168,3 +170,51 @@ def test_0730_deadline_catalog_is_not_reduced_by_degraded_source_state():
     assert result["status"] == "PASS"
     assert result["expected_section_ids"] == list(MANDATORY_SECTIONS)
     assert result["generated_section_ids"] == list(MANDATORY_SECTIONS)
+
+
+def test_deadline_icon_scope_flows_through_s14b_and_actual_body_qa():
+    scope = resolve_scope(
+        "deadline_review",
+        {
+            "personal_team_enabled": True,
+            "mini_league_enabled": True,
+            "deadline_review_mini_league_enabled": False,
+        },
+    )
+    assert scope.mini_league is True
+
+    manifest = [
+        {"section_id": section_id, "status": "COMPLETE"}
+        for section_id in MANDATORY_SECTIONS
+    ]
+    pre = validate_pre_render_qa(
+        compute_contract=_minimal_compute_contract(),
+        section_manifest=manifest,
+        mini_league_denominator_complete=True,
+        report_mode="DEADLINE",
+        weather_contract_state="DIRECT_CHATGPT",
+    )
+    assert pre["status"] == "PASS"
+    assert "S14B" in pre["expected_section_ids"]
+    assert pre["mini_league_contract_state"] == "COMPLETE"
+
+    body = valid_visible_body(pre)
+    post = validate_post_render_qa(
+        pre_render_qa=pre,
+        rendered_body=body,
+        rendered_section_ids=pre["expected_section_ids"],
+        rendered_section_states={
+            row["section_id"]: row["status"] for row in pre["section_manifest"]
+        },
+        rendered_compute_fingerprint=pre["compute_fingerprint"],
+        render_contract_token=pre["render_contract_token"],
+        rendered_counts=pre["expected_counts"],
+        rendered_fact_keys=pre["expected_fact_keys"],
+        rendered_model_keys=pre["expected_model_keys"],
+        rendered_mini_league_denominator_complete=True,
+        rendered_weather_direct_chat_present=True,
+        truncated=False,
+    )
+    assert post["status"] == "PASS"
+    assert post["visible_mini_league_contract_state"] == "COMPLETE"
+    assert "ICON+ MINI LEAGUE" in body

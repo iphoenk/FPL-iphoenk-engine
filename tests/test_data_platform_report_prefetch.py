@@ -221,7 +221,7 @@ def test_report_kind_routing():
     cfg = config()
     assert resolve_scope("full_master", cfg).__dict__ == {"personal": True, "mini_league": True, "live": False}
     assert resolve_scope("match_mode", cfg).__dict__ == {"personal": True, "mini_league": True, "live": True}
-    assert resolve_scope("deadline_review", cfg).__dict__ == {"personal": True, "mini_league": False, "live": False}
+    assert resolve_scope("deadline_review", cfg).__dict__ == {"personal": True, "mini_league": True, "live": False}
     assert resolve_scope("05:30_price", cfg).__dict__ == {"personal": False, "mini_league": True, "live": False}
     assert resolve_scope("ad_hoc", cfg, ad_hoc_mini_league=True).__dict__ == {
         "personal": False, "mini_league": True, "live": False
@@ -554,3 +554,18 @@ def test_priority_ambiguity_fails_closed_end_to_end(tmp_path):
     assert manifest["mini_league_status"] == "UNAVAILABLE"
     assert any("AMBIGUOUS" in failure for failure in manifest["control_failures"])
     assert not (tmp_path / "mini_leagues/99/standings.json").exists()
+
+
+def test_deadline_review_requests_icon_plus_even_when_legacy_toggle_is_false(tmp_path):
+    cfg = {**config(), "deadline_review_mini_league_enabled": False}
+    manifest = PrefetchService(
+        config=cfg,
+        output_root=tmp_path,
+        client=FakeClient(auth=True),
+        now=NOW,
+    ).run(report_kind="deadline_review", logical_slot=SLOT)
+
+    assert manifest["personal_requested"] is True
+    assert manifest["mini_league_requested"] is True
+    assert manifest["mini_league_status"] == "AVAILABLE"
+    assert manifest["priority_league_name"] == "ICON+ League"

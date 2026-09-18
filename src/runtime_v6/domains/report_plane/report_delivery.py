@@ -1040,3 +1040,96 @@ def evaluate_same_slot_completion_ledger(
         "idempotent_reuse": False,
         "failures": list(dict.fromkeys(failures)),
     }
+
+
+
+_P07_LEDGER_SCHEMA_VERSION = "P0_7_SAME_SLOT_COMPLETION_V1"
+
+
+def _p07_ledger_digest(payload: Mapping[str, Any]) -> str:
+    canonical = {
+        key: value
+        for key, value in dict(payload).items()
+        if key not in {"ledger_hash", "readback_valid", "idempotent_reuse"}
+    }
+    return _proof_digest(canonical)
+
+
+def seal_same_slot_completion_ledger(
+    evidence: Mapping[str, Any],
+    *,
+    existing_ledger: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Seal a same-slot completion ledger for persistence beside existing receipt evidence.
+
+    This deliberately reuses the report-delivery owner. It is not a second receipt
+    authority: canonical receipt truth remains owned by build_canonical_report_receipt.
+    """
+    evaluated = evaluate_same_slot_completion_ledger(
+        evidence,
+        existing_ledger=existing_ledger,
+    )
+    if evaluated.get("status") != "PASS":
+        return {
+            **evaluated,
+            "schema_version": _P07_LEDGER_SCHEMA_VERSION,
+            "immutable": False,
+            "ledger_hash": None,
+            "readback_valid": False,
+        }
+
+    sealed = {
+        **evaluated,
+        "schema_version": _P07_LEDGER_SCHEMA_VERSION,
+        "immutable": True,
+        "readback_valid": False,
+    }
+    sealed["ledger_hash"] = _p07_ledger_digest(sealed)
+    return sealed
+
+
+def validate_same_slot_completion_ledger_readback(
+    ledger: Mapping[str, Any] | None,
+    *,
+    expected_logical_report_slot: str,
+    expected_occurrence_identity: str,
+) -> dict[str, Any]:
+    """Fail closed unless persisted/read-back ledger bytes preserve exact-slot proof."""
+    if not isinstance(ledger, Mapping):
+        return {
+            "status": "FAIL",
+            "readback_valid": False,
+            "report_slot_fulfilled": False,
+            "failures": ["COMPLETION_LEDGER_MISSING"],
+        }
+
+    row = dict(ledger)
+    failures: list[str] = []
+    if row.get("schema_version") != _P07_LEDGER_SCHEMA_VERSION:
+        failures.append("COMPLETION_LEDGER_SCHEMA_MISMATCH")
+    if row.get("immutable") is not True:
+        failures.append("COMPLETION_LEDGER_NOT_IMMUTABLE")
+    if row.get("logical_report_slot") != expected_logical_report_slot:
+        failures.append("COMPLETION_LEDGER_REPORT_SLOT_MISMATCH")
+    if row.get("natural_occurrence_id") != expected_occurrence_identity:
+        failures.append("COMPLETION_LEDGER_OCCURRENCE_MISMATCH")
+    stored_hash = str(row.get("ledger_hash") or "")
+    if not _is_sha256(stored_hash) or stored_hash != _p07_ledger_digest(row):
+        failures.append("COMPLETION_LEDGER_HASH_MISMATCH")
+    if row.get("status") != "PASS" or row.get("report_slot_fulfilled") is not True:
+        failures.append("COMPLETION_LEDGER_NOT_FULFILLED")
+    if any(
+        state != "EXECUTED_AND_PROVEN"
+        for state in dict(row.get("edge_classification") or {}).values()
+    ):
+        failures.append("COMPLETION_LEDGER_EDGE_UNPROVEN")
+
+    return {
+        **row,
+        "status": "PASS" if not failures else "FAIL",
+        "readback_valid": not failures,
+        "report_slot_fulfilled": bool(
+            not failures and row.get("report_slot_fulfilled") is True
+        ),
+        "failures": list(dict.fromkeys(failures)),
+    }

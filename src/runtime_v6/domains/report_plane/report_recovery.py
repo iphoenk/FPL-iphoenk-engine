@@ -8,7 +8,7 @@ weakens QA or receipt requirements, and never creates a replacement report
 slot identity for failed or late work.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Mapping, Sequence
 
 from .delivery_integrity import (
@@ -20,6 +20,7 @@ from .delivery_integrity import (
     validate_retrieval_reassembly,
 )
 from .report_delivery import is_post_render_delivery_ready
+from ..control_plane.schedule_policy import SCHEDULE_POLICY
 from .temporal import (
     TemporalError,
     canonical_timestamp,
@@ -579,21 +580,22 @@ def plan_report_catch_up(
 ) -> dict[str, Any]:
     """Plan late report work against the original canonical report-slot identity.
 
-    Late catch-up is fail-closed: every invocation after the logical slot must
-    provide an explicit timezone-aware deadline. Work after that deadline is a
-    truthful no-op while preserving the original report-slot identity.
+    Scheduled catch-up is fail-operational but bounded. When a caller does not
+    supply a narrower explicit deadline, Runtime deterministically derives the
+    recovery deadline from the original logical slot plus one canonical Master
+    scheduler cadence. Work after that deadline is a truthful no-op while
+    preserving the original report-slot identity.
     """
     logical = _parse_aware_timestamp(logical_slot, label="logical_slot")
     observed = _parse_aware_timestamp(observed_at, label="observed_at")
     if observed < logical:
         raise DeliveryIntegrityError("observed_at cannot precede logical_slot")
-    if observed > logical and catch_up_deadline is None:
-        raise DeliveryIntegrityError(
-            "late catch-up requires explicit catch_up_deadline"
-        )
 
-    deadline: datetime | None = None
-    if catch_up_deadline is not None:
+    deadline_source = "EXPLICIT"
+    if catch_up_deadline is None:
+        deadline = logical + timedelta(minutes=SCHEDULE_POLICY.cadence_minutes)
+        deadline_source = "RUNTIME_MASTER_CADENCE"
+    else:
         deadline = _parse_aware_timestamp(catch_up_deadline, label="catch_up_deadline")
         if deadline < logical:
             raise DeliveryIntegrityError("catch_up_deadline cannot precede logical_slot")
@@ -621,7 +623,8 @@ def plan_report_catch_up(
         **decision,
         "recovery_mode": "CATCH_UP",
         "observed_at": _canonical_timestamp(observed),
-        "catch_up_deadline": _canonical_timestamp(deadline) if deadline is not None else None,
+        "catch_up_deadline": _canonical_timestamp(deadline),
+        "catch_up_deadline_source": deadline_source,
         "catch_up_window_open": window.window_open,
         "catch_up_required": False,
         "legacy_fallback_allowed": False,

@@ -5,6 +5,7 @@ from src.runtime_v6.report_contract import (
     VISIBLE_STATUS_LAYERS,
     build_status_view,
     choose_report_source,
+    classify_report_outcome,
     core_slot_key,
     map_auth_status,
     report_delivery_status,
@@ -34,19 +35,20 @@ def test_core_slot_idempotency_key_includes_schedule_kind_and_logical_slot():
     assert core_slot_key("report_prefetch", LOGICAL) != core_slot_key("chatgpt_scheduler", LOGICAL)
 
 
-def test_safety_net_is_noop_when_primary_owns_slot():
+def test_safety_net_primary_ownership_is_nonterminal_without_fulfillment():
     decision = safety_net_decision(
         logical_slot=LOGICAL,
         primary_owned=True,
         prefetched=False,
         delivered=False,
     )
-    assert decision["action"] == "NO_OP"
-    assert decision["deduplicated"] is True
-    assert "PRIMARY_OWNS_SLOT" in decision["reason"]
+    assert decision["action"] == "RECOVER"
+    assert decision["deduplicated"] is False
+    assert "PRIMARY_OWNS_SLOT_NONTERMINAL" in decision["reason"]
+    assert decision["report_slot_fulfilled"] is False
 
 
-def test_safety_net_is_noop_when_slot_was_prefetched_or_delivered():
+def test_safety_net_prefetch_or_raw_delivery_is_nonterminal_without_contract_proof():
     prefetched = safety_net_decision(
         logical_slot=LOGICAL,
         primary_owned=False,
@@ -59,23 +61,49 @@ def test_safety_net_is_noop_when_slot_was_prefetched_or_delivered():
         prefetched=False,
         delivered=True,
     )
-    assert prefetched["action"] == "NO_OP"
-    assert delivered["action"] == "NO_OP"
+    assert prefetched["action"] == "RECOVER"
+    assert delivered["action"] == "RECOVER"
+    assert "REPORT_PREFETCHED_NONTERMINAL" in prefetched["reason"]
+    assert "RAW_VISIBLE_DELIVERY_WITHOUT_FULFILLMENT" in delivered["reason"]
 
 
-def test_safety_net_recovers_only_unowned_unprefetched_undelivered_slot():
+def test_safety_net_noops_only_on_positive_report_slot_fulfillment():
     decision = safety_net_decision(
         logical_slot=LOGICAL,
-        primary_owned=False,
-        prefetched=False,
-        delivered=False,
+        primary_owned=True,
+        prefetched=True,
+        delivered=True,
+        report_contract_pass=True,
+        delivery_proof_valid=True,
+        report_slot_fulfilled=True,
     )
     assert decision == {
         "logical_slot": LOGICAL,
-        "action": "RECOVER",
-        "reason": "UNOWNED_UNPREFETCHED_UNDELIVERED_SLOT",
-        "deduplicated": False,
+        "action": "NO_OP",
+        "reason": "REPORT_SLOT_FULFILLED",
+        "deduplicated": True,
+        "report_slot_fulfilled": True,
     }
+
+
+def test_three_fulfillment_states_are_independent():
+    raw_only = classify_report_outcome(
+        data_slot_fulfilled=True,
+        report_contract_pass=False,
+        visible_emitted=True,
+        delivery_proof_valid=False,
+    )
+    assert raw_only["DATA_SLOT_FULFILLED"] is True
+    assert raw_only["REPORT_DELIVERED"] is True
+    assert raw_only["REPORT_SLOT_FULFILLED"] is False
+
+    fulfilled = classify_report_outcome(
+        data_slot_fulfilled=True,
+        report_contract_pass=True,
+        visible_emitted=True,
+        delivery_proof_valid=True,
+    )
+    assert fulfilled["REPORT_SLOT_FULFILLED"] is True
 
 
 def test_report_fallback_order_is_fresh_v6_then_direct_then_last_good_then_unavailable():
@@ -105,22 +133,48 @@ def test_report_fallback_order_is_fresh_v6_then_direct_then_last_good_then_unava
     ) == "UNAVAILABLE"
 
 
-def test_v6_failure_does_not_fail_due_report_when_direct_fresh_fallback_exists():
+def test_direct_fresh_source_readiness_does_not_claim_report_delivery():
     assert report_delivery_status(
         due=True,
         fresh_v6_available=False,
         direct_fresh_available=True,
         last_good_nonvolatile_available=True,
-    ) == "PASS | DIRECT FRESH FALLBACK"
+    ) == "PENDING | DIRECT FRESH | REPORT CONTRACT NOT PROVEN"
 
 
-def test_due_report_is_still_delivered_with_explicit_unavailable_fields_when_no_source_exists():
+def test_unavailable_source_is_degraded_without_claiming_report_delivery():
     assert report_delivery_status(
         due=True,
         fresh_v6_available=False,
         direct_fresh_available=False,
         last_good_nonvolatile_available=False,
-    ) == "PASS | UNAVAILABLE FIELDS DISCLOSED"
+    ) == "DEGRADED | UNAVAILABLE FIELDS DISCLOSED | REPORT CONTRACT NOT PROVEN"
+
+
+def test_raw_visible_delivery_without_contract_is_explicit_failure():
+    assert report_delivery_status(
+        due=True,
+        fresh_v6_available=True,
+        direct_fresh_available=False,
+        last_good_nonvolatile_available=False,
+        report_delivered=True,
+        report_contract_pass=False,
+        report_slot_fulfilled=False,
+        delivery_proof_valid=False,
+    ) == "FAIL | RAW DELIVERY WITHOUT CONTRACT FULFILLMENT"
+
+
+def test_report_delivery_pass_requires_contract_fulfillment_and_valid_proof():
+    assert report_delivery_status(
+        due=True,
+        fresh_v6_available=True,
+        direct_fresh_available=False,
+        last_good_nonvolatile_available=False,
+        report_delivered=True,
+        report_contract_pass=True,
+        report_slot_fulfilled=True,
+        delivery_proof_valid=True,
+    ) == "PASS | REPORT SLOT FULFILLED"
 
 
 def test_auth_not_requested_is_not_misreported_as_expired():

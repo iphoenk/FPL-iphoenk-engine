@@ -63,6 +63,9 @@ def build_slot_proof(
     promotion_verified: bool,
     run_id: str | None = None,
     run_attempt: str | None = None,
+    collect_job_id: str | None = None,
+    publish_job_id: str | None = None,
+    fulfillment_job_id: str | None = None,
     verified_at: datetime | None = None,
     published_runtime_sha: str | None = None,
 ) -> dict[str, Any]:
@@ -76,6 +79,14 @@ def build_slot_proof(
     actual_run_attempt = str(run_attempt or os.getenv("GITHUB_RUN_ATTEMPT") or "1")
     if not actual_run_id:
         raise Wave3ProofError("run_id_required")
+    immutable_job_ids = {
+        "acquisition_run_id": str(collect_job_id or "").strip(),
+        "publication_run_id": str(publish_job_id or "").strip(),
+        "orchestration_fulfillment_run_id": str(fulfillment_job_id or "").strip(),
+    }
+    missing_job_ids = [name for name, value in immutable_job_ids.items() if not value]
+    if missing_job_ids:
+        raise Wave3ProofError("immutable_source_job_ids_required:" + ",".join(missing_job_ids))
     if control.get("event_name") != NATURAL_EVENT_NAME:
         raise Wave3ProofError("not_genuine_natural_core_transport")
     if control.get("schedule_kind") != NATURAL_SCHEDULE_KIND:
@@ -139,6 +150,10 @@ def build_slot_proof(
         "observed_at": observed_at,
         "verified_at": verified,
         "run_id": actual_run_id,
+        "workflow_run_id": actual_run_id,
+        "acquisition_run_id": immutable_job_ids["acquisition_run_id"],
+        "publication_run_id": immutable_job_ids["publication_run_id"],
+        "orchestration_fulfillment_run_id": immutable_job_ids["orchestration_fulfillment_run_id"],
         "run_attempt": actual_run_attempt,
         "source_commit": source_commit,
         "published_runtime_sha": published_runtime_sha,
@@ -326,6 +341,9 @@ def main() -> int:
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--source-run-id", required=True)
     parser.add_argument("--source-run-attempt", required=True)
+    parser.add_argument("--collect-job-id", required=True)
+    parser.add_argument("--publish-job-id", required=True)
+    parser.add_argument("--fulfillment-job-id", required=True)
     parser.add_argument("--published-runtime-sha")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--production-validated", action="store_true")
@@ -338,6 +356,9 @@ def main() -> int:
         promotion_verified=args.promotion_verified,
         run_id=args.source_run_id,
         run_attempt=args.source_run_attempt,
+        collect_job_id=args.collect_job_id,
+        publish_job_id=args.publish_job_id,
+        fulfillment_job_id=args.fulfillment_job_id,
         published_runtime_sha=args.published_runtime_sha,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)

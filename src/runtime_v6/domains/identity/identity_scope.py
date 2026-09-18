@@ -25,6 +25,9 @@ def _not_applicable(row: dict[str, Any] | None = None) -> dict[str, Any]:
 def _mark_applicable(row: dict[str, Any] | None) -> dict[str, Any]:
     base = dict(row or {})
     base["applicable"] = True
+    base.setdefault("deterministic_bridge", False)
+    base.setdefault("join_allowed", False)
+    base.setdefault("strategy", "UNRESOLVED_NO_VERIFIED_DETERMINISTIC_BRIDGE")
     if str(base.get("identity_health") or "") not in {"GREEN", "AMBER", "RED"}:
         base["identity_health"] = "RED"
     return base

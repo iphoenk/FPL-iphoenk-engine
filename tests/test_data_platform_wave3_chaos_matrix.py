@@ -66,7 +66,7 @@ def test_provider_timeout_can_degrade_acquisition_without_cancelling_due_report(
         direct_fresh_available=True,
         last_good_nonvolatile_available=True,
     )
-    assert delivery == "PASS | DIRECT FRESH FALLBACK"
+    assert delivery == "PENDING | DIRECT FRESH | REPORT CONTRACT NOT PROVEN"
 
 
 def test_provider_incomplete_amber_is_local_when_core_integrity_remains_valid():
@@ -216,14 +216,31 @@ def test_duplicate_core_trigger_is_not_eligible_for_rolling_production_green():
 
 
 def test_duplicate_report_prefetch_is_safety_net_noop():
+    # Prefetch is preparation only and can never prove visible report fulfillment.
+    # Keep the canonical scenario id/name for Wave3 acceptance, but require
+    # same-slot recovery until report contract + delivery proof are positive.
     decision = safety_net_decision(
         logical_slot=LOGICAL,
         primary_owned=False,
         prefetched=True,
         delivered=False,
     )
-    assert decision["action"] == "NO_OP"
-    assert decision["deduplicated"] is True
+    assert decision["action"] == "RECOVER"
+    assert decision["deduplicated"] is False
+    assert decision["report_slot_fulfilled"] is False
+    assert "REPORT_PREFETCHED_NONTERMINAL" in decision["reason"]
+
+    fulfilled = safety_net_decision(
+        logical_slot=LOGICAL,
+        primary_owned=False,
+        prefetched=True,
+        delivered=True,
+        report_contract_pass=True,
+        delivery_proof_valid=True,
+        report_slot_fulfilled=True,
+    )
+    assert fulfilled["action"] == "NO_OP"
+    assert fulfilled["deduplicated"] is True
 
 
 def test_delayed_scheduler_execution_keeps_truthful_proof_age():

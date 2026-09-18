@@ -9,6 +9,7 @@ import pytest
 from src.runtime_v6.adapters import collect_price_predictor
 from src.runtime_v6.consumer import _control_failures
 from src.runtime_v6.registry import load_registry
+from src.runtime_v6.domains.publication.production_validate import _validate_chatgpt_scheduler
 from src.runtime_v6.runtime_control import build_runtime_control, scheduled_slot_already_completed
 from src.runtime_v6.workflow_control import (
     WorkflowControlError,
@@ -110,6 +111,34 @@ def test_report_prefetch_is_authoritative_but_never_completes_core_operational_s
         schedule_expression="53 * * * *",
     ) is False
 
+
+
+def test_publishable_scheduler_validator_accepts_truthful_governed_trigger_provenance(monkeypatch) -> None:
+    logical_slot = "2030-01-01T13:00:00+07:00"
+    monkeypatch.setenv("V6_MASTER_LOGICAL_SLOT", logical_slot)
+    control = build_runtime_control(
+        {},
+        scheduler_interval_minutes=60,
+        now=datetime(2030, 1, 1, 6, 9, tzinfo=timezone.utc),
+        event_name="issues",
+        run_id="natural-generic-001",
+        schedule_kind="chatgpt_scheduler",
+        logical_slot=logical_slot,
+    )
+    assert control["logical_slot_source"] == "GOVERNED_TRIGGER_EVENT"
+
+    manifest = {
+        "governance": {
+            "production_ingestion_schedule_only": False,
+            "chatgpt_scheduler_is_authority": True,
+        }
+    }
+    _validate_chatgpt_scheduler(manifest, control)
+
+    stale_claim = dict(control)
+    stale_claim["logical_slot_source"] = "CHATGPT_COMMAND"
+    with pytest.raises(AssertionError):
+        _validate_chatgpt_scheduler(manifest, stale_claim)
 
 def test_report_prefetch_policy_has_separate_snapshot_and_operational_authority() -> None:
     policy = load_policy()

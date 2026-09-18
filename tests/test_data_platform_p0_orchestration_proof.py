@@ -280,17 +280,21 @@ def test_16_missed_report_recovery_uses_original_slot_only_inside_explicit_deadl
     assert result["v6_data_plane_mutation_allowed"] is False
 
 
-def test_17_missed_report_recovery_without_explicit_deadline_fails_closed():
-    with pytest.raises(DeliveryIntegrityError, match="explicit catch_up_deadline"):
-        plan_report_catch_up(
-            logical_slot="2030-01-01T04:30:00+07:00",
-            report_type="DEEP",
-            observed_at="2030-01-01T04:45:00+07:00",
-            report_state="NOT_STARTED",
-            delivered_report_slot_id=None,
-            delivery_proof_valid=False,
-            catch_up_deadline=None,
-        )
+def test_17_missed_scheduled_report_derives_runtime_owned_recovery_deadline():
+    result = plan_report_catch_up(
+        logical_slot="2030-01-01T04:30:00+07:00",
+        report_type="DEEP",
+        observed_at="2030-01-01T04:45:00+07:00",
+        report_state="NOT_STARTED",
+        delivered_report_slot_id=None,
+        delivery_proof_valid=False,
+        catch_up_deadline=None,
+    )
+
+    assert result["catch_up_required"] is True
+    assert result["catch_up_deadline"] == "2030-01-01T05:30:00+07:00"
+    assert result["catch_up_deadline_source"] == "RUNTIME_MASTER_CADENCE"
+    assert result["next_action"] == "CATCH_UP_BUILD"
 
 
 def test_18_deadline_active_visible_occurrence_is_required_independently_of_audit_transport():

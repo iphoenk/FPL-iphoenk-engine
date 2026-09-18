@@ -83,7 +83,8 @@ jobs:
             -f ref=main \
             -f 'inputs[mode]=manual_recovery' \
             -f 'inputs[reason]=WAVE2_SAFE_RECOVERY_CRITICAL' \
-            -f 'inputs[confirm]=RECOVER_V6'
+            -f 'inputs[confirm]=RECOVER_V6' \
+            -f 'inputs[initiator]=recovery_guard'
           echo "Governed manual_recovery dispatched. This is recovery-only evidence and MUST NOT count as ChatGPT scheduler proof or Wave-3 natural-slot proof."
 
       - name: Recovery guard no-op evidence

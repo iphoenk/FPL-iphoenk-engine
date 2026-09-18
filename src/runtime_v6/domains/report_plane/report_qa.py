@@ -208,15 +208,21 @@ def validate_pre_render_qa(
 ) -> dict[str, Any]:
     """Fail closed before rendering and mint an immutable render handoff token."""
     compute_failures = _compute_handoff_failures(compute_contract)
+    generated_section_ids = [
+        str(row.get("section_id") or "").strip().upper()
+        for row in section_manifest
+        if str(row.get("section_id") or "").strip()
+    ]
     (
         canonical_manifest,
-        expected_section_ids,
+        canonical_section_ids,
         missing_sections,
         duplicate_sections,
         partial_sections,
         partial_not_allowed_sections,
         invalid_section_states,
     ) = _canonical_section_manifest(section_manifest)
+    expected_section_ids = list(MANDATORY_SECTIONS)
 
     (
         resolved_report_mode,
@@ -247,6 +253,10 @@ def validate_pre_render_qa(
         mini_league_contract_state = "INCOMPLETE"
 
     failures = list(compute_failures)
+    if generated_section_ids != expected_section_ids:
+        failures.append("VISIBLE_CATALOG_MISMATCH")
+    if canonical_section_ids != expected_section_ids and not missing_sections and not duplicate_sections:
+        failures.append("CANONICAL_CATALOG_MISMATCH")
     if missing_sections:
         failures.append(f"MANDATORY_SECTIONS_MISSING={','.join(missing_sections)}")
     if duplicate_sections:
@@ -320,6 +330,7 @@ def validate_pre_render_qa(
         "required_section_count": len(MANDATORY_SECTIONS),
         "manifest_section_count": len(section_manifest),
         "expected_section_ids": expected_section_ids,
+        "generated_section_ids": generated_section_ids,
         "section_manifest": canonical_manifest,
         "missing_sections": missing_sections,
         "duplicate_sections": duplicate_sections,

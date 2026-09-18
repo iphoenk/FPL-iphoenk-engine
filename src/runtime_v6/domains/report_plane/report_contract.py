@@ -65,10 +65,33 @@ def _parse_jakarta(value: str | datetime, *, label: str) -> datetime:
 
 
 
-_REPORT_DATA_READINESS_POLICY = {
+_REPORT_CONTINUATION_POLICY = {
     "maximum_wait_seconds": int(_ON_TIME_TOLERANCE_SECONDS),
     "poll_interval_seconds": 5,
 }
+# Backward-compatible alias: one Runtime-owned policy controls both freshness
+# waiting and workflow terminal continuation.
+_REPORT_DATA_READINESS_POLICY = _REPORT_CONTINUATION_POLICY
+
+REPORT_ACQUISITION_STATES = frozenset({
+    "ACQUISITION_NOT_STARTED",
+    "ACQUISITION_QUEUED",
+    "ACQUISITION_IN_PROGRESS",
+    "PUBLICATION_IN_PROGRESS",
+    "PUBLICATION_READY",
+    "ACQUISITION_FAILED",
+    "PUBLICATION_FAILED",
+})
+_TRANSITIONAL_REPORT_ACQUISITION_STATES = frozenset({
+    "ACQUISITION_QUEUED",
+    "ACQUISITION_IN_PROGRESS",
+    "PUBLICATION_IN_PROGRESS",
+})
+_TERMINAL_SUCCESS_REPORT_ACQUISITION_STATES = frozenset({"PUBLICATION_READY"})
+_TERMINAL_FAILURE_REPORT_ACQUISITION_STATES = frozenset({
+    "ACQUISITION_FAILED",
+    "PUBLICATION_FAILED",
+})
 _REPORT_DATA_FRESHNESS_LADDER = (
     "FRESH_CURRENT_PUBLICATION",
     "BOUNDED_WAIT_SAME_ACQUISITION",
@@ -78,6 +101,172 @@ _REPORT_DATA_FRESHNESS_LADDER = (
     "PERMITTED_NONVOLATILE_LAST_GOOD",
     "TRUTHFUL_FIELD_LEVEL_UNAVAILABLE",
 )
+
+
+
+def _normalize_report_acquisition_state(value: Any) -> str:
+    raw = str(value or "").strip().upper()
+    aliases = {
+        "NOT_STARTED": "ACQUISITION_NOT_STARTED",
+        "QUEUED": "ACQUISITION_QUEUED",
+        "PENDING": "ACQUISITION_QUEUED",
+        "IN_PROGRESS": "ACQUISITION_IN_PROGRESS",
+        "RUNNING": "ACQUISITION_IN_PROGRESS",
+        "STARTED": "ACQUISITION_IN_PROGRESS",
+        "PUBLISHING": "PUBLICATION_IN_PROGRESS",
+        "PUBLISH_IN_PROGRESS": "PUBLICATION_IN_PROGRESS",
+        "READY": "PUBLICATION_READY",
+        "COMPLETE": "PUBLICATION_READY",
+        "COMPLETED": "PUBLICATION_READY",
+        "PUBLISHED": "PUBLICATION_READY",
+        "SUCCESS": "PUBLICATION_READY",
+        "PASS": "PUBLICATION_READY",
+        "FAILED": "ACQUISITION_FAILED",
+        "ERROR": "ACQUISITION_FAILED",
+        "CANCELLED": "ACQUISITION_FAILED",
+        "PUBLISH_FAILED": "PUBLICATION_FAILED",
+        "PUBLICATION_FAILED": "PUBLICATION_FAILED",
+    }
+    normalized = aliases.get(raw, raw)
+    if normalized not in REPORT_ACQUISITION_STATES:
+        raise ReportContractError(f"unknown report acquisition state: {raw or '<empty>'}")
+    return normalized
+
+
+def resolve_terminal_continuation(
+    *,
+    report_slot_id: str,
+    workflow_run_id: str,
+    workflow_reads: Sequence[Mapping[str, Any]],
+    started_at: str | datetime,
+    evaluated_at: str | datetime,
+) -> dict[str, Any]:
+    """Enforce same-run continuation across transitional workflow states.
+
+    This function is intentionally report-plane only. It never triggers V6,
+    never changes workflow identity, and never permits a transitional status to
+    become the final scheduled user output.
+    """
+    slot_id = str(report_slot_id or "").strip()
+    run_id = str(workflow_run_id or "").strip()
+    if not slot_id:
+        raise ReportContractError("report_slot_id is required")
+    if not run_id:
+        raise ReportContractError("workflow_run_id is required")
+    if not workflow_reads:
+        raise ReportContractError("at least one workflow read is required")
+
+    started = _parse_jakarta(started_at, label="started_at")
+    evaluated = _parse_jakarta(evaluated_at, label="evaluated_at")
+    if evaluated < started:
+        raise ReportContractError("evaluated_at cannot precede started_at")
+
+    budget = int(_REPORT_CONTINUATION_POLICY["maximum_wait_seconds"])
+    poll_interval = int(_REPORT_CONTINUATION_POLICY["poll_interval_seconds"])
+    elapsed = (evaluated - started).total_seconds()
+    reads: list[dict[str, Any]] = []
+    final_state = None
+    for index, raw in enumerate(workflow_reads):
+        observed_run_id = str(raw.get("workflow_run_id") or run_id).strip()
+        if observed_run_id != run_id:
+            raise ReportContractError("workflow identity drift during continuation")
+        state = _normalize_report_acquisition_state(raw.get("state"))
+        read = {
+            "sequence": index + 1,
+            "workflow_run_id": run_id,
+            "state": state,
+            "observed_at": raw.get("observed_at"),
+        }
+        reads.append(read)
+        final_state = state
+        if state in _TERMINAL_SUCCESS_REPORT_ACQUISITION_STATES:
+            break
+        if state in _TERMINAL_FAILURE_REPORT_ACQUISITION_STATES:
+            break
+
+    assert final_state is not None
+    common = {
+        "report_slot_id": slot_id,
+        "workflow_run_id": run_id,
+        "reads": reads,
+        "final_observed_state": final_state,
+        "continuation_policy": dict(_REPORT_CONTINUATION_POLICY),
+        "elapsed_seconds": round(elapsed, 3),
+        "same_workflow_only": True,
+        "start_new_acquisition": False,
+        "replacement_report_slot_allowed": False,
+        "intermediate_user_output_allowed": False,
+        "status_only_final_output_allowed": False,
+        "legacy_fallback_allowed": False,
+        "v3_v4_v5_fallback_allowed": False,
+    }
+
+    if final_state in _TERMINAL_SUCCESS_REPORT_ACQUISITION_STATES:
+        return {
+            **common,
+            "status": "TERMINAL_SUCCESS",
+            "terminal": True,
+            "continue_same_run": True,
+            "resume_same_report_pipeline": True,
+            "next_action": "RESUME_CANONICAL_REPORT_PIPELINE",
+            "pipeline_resume_steps": [
+                "PUBLICATION_READBACK",
+                "FRESHNESS_COMPLETENESS_VERIFY",
+                "DECISION_CONTEXT_HYDRATE",
+                "REPORT_PREFETCH_IDENTITY_VERIFY",
+                "REPORT_PREFETCH_RECOVERY_IF_NEEDED",
+                "RETRIEVE",
+                "DOWNSTREAM_ANALYTICS",
+                "WEATHER",
+                "PRE_RENDER_QA",
+                "RENDER",
+                "POST_RENDER_QA",
+                "DELIVERY",
+                "SAME_SLOT_DELIVERY_RECEIPT",
+            ],
+        }
+
+    if final_state in _TERMINAL_FAILURE_REPORT_ACQUISITION_STATES:
+        return {
+            **common,
+            "status": "TERMINAL_FAILURE",
+            "terminal": True,
+            "continue_same_run": True,
+            "resume_same_report_pipeline": True,
+            "next_action": "FAIL_OPERATIONAL_REPORT_RECOVERY",
+            "pipeline_resume_steps": [
+                "FRESHEST_VALID_AUTHORITATIVE_SNAPSHOT",
+                "EXACT_SCOPE_GOVERNED_RECOVERY",
+                "EXACT_SCOPE_DIRECT_FRESH_IF_RUNTIME_PERMITS",
+                "TRUTHFUL_FIELD_LEVEL_UNAVAILABLE",
+                "DECISION_CONTEXT_HYDRATE",
+                "REPORT_PREFETCH_IDENTITY_VERIFY",
+                "RETRIEVE",
+                "DOWNSTREAM_ANALYTICS",
+                "WEATHER",
+                "PRE_RENDER_QA",
+                "RENDER",
+                "POST_RENDER_QA",
+                "DELIVERY",
+                "SAME_SLOT_DELIVERY_RECEIPT",
+            ],
+        }
+
+    budget_exhausted = elapsed >= budget
+    return {
+        **common,
+        "status": "CONTINUATION_BUDGET_EXHAUSTED" if budget_exhausted else "TRANSITIONAL",
+        "terminal": False,
+        "continue_same_run": True,
+        "resume_same_report_pipeline": budget_exhausted,
+        "next_action": (
+            "FAIL_OPERATIONAL_REPORT_RECOVERY"
+            if budget_exhausted
+            else "RE_READ_SAME_WORKFLOW"
+        ),
+        "poll_after_seconds": 0 if budget_exhausted else poll_interval,
+        "remaining_budget_seconds": max(0, round(budget - elapsed, 3)),
+    }
 
 
 def _publication_readiness(
@@ -183,15 +372,12 @@ def resolve_report_data_readiness(
         raise ReportContractError("waited_seconds must be non-negative")
 
     observed = _parse_jakarta(observed_at, label="observed_at")
-    state_raw = str(current_acquisition_state or "").strip().upper()
-    ready_states = {"READY", "COMPLETE", "COMPLETED", "PUBLISHED", "PASS"}
-    in_progress_states = {"IN_PROGRESS", "RUNNING", "STARTED"}
-    failed_states = {"FAILED", "ERROR", "CANCELLED"}
-    if state_raw in ready_states:
+    state = _normalize_report_acquisition_state(current_acquisition_state)
+    if state == "PUBLICATION_READY":
         readiness_state = "CURRENT_PUBLICATION_READY"
-    elif state_raw in in_progress_states:
+    elif state in _TRANSITIONAL_REPORT_ACQUISITION_STATES:
         readiness_state = "CURRENT_ACQUISITION_IN_PROGRESS"
-    elif state_raw in failed_states:
+    elif state in _TERMINAL_FAILURE_REPORT_ACQUISITION_STATES:
         readiness_state = "CURRENT_PUBLICATION_FAILED"
     else:
         readiness_state = "NO_VALID_FRESH_SNAPSHOT"
@@ -245,6 +431,7 @@ def resolve_report_data_readiness(
             **common,
             "status": "PASS",
             "source": "FRESH_CURRENT_PUBLICATION",
+            "evidence_class": "FRESH_CURRENT_PUBLICATION",
             "publication": dict(current_publication or {}),
             "publication_validation": current_validation,
             "poll_same_acquisition": False,
@@ -258,6 +445,7 @@ def resolve_report_data_readiness(
             **common,
             "status": "PASS",
             "source": "FRESHEST_VALID_AUTHORITATIVE_PUBLICATION_WITHIN_SLA",
+            "evidence_class": "FRESHEST_VALID_AUTHORITATIVE_SNAPSHOT",
             "publication": dict(publication),
             "publication_validation": validation,
             "poll_same_acquisition": readiness_state == "CURRENT_ACQUISITION_IN_PROGRESS" and remaining_wait > 0,

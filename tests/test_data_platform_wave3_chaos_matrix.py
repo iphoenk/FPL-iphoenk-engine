@@ -13,7 +13,7 @@ from src.runtime_v6.report_contract import (
     report_delivery_status,
     safety_net_decision,
 )
-from src.runtime_v6.wave3_proof import Wave3ProofError, build_slot_proof, evaluate_proof_window
+from src.runtime_v6.wave3_proof import NATURAL_PROOF_EPOCH, Wave3ProofError, build_slot_proof, evaluate_proof_window
 
 
 OBSERVED = "2026-09-14T13:31:00+07:00"
@@ -131,6 +131,7 @@ def test_registry_activation_transition_is_proven_by_fingerprint_not_inferred(tm
                 "counts_as_completed_operational_slot": True,
                 "authoritative_runtime_snapshot": True,
                 "logical_slot_source": "GOVERNED_TRIGGER_EVENT",
+                "scheduler_epoch": NATURAL_PROOF_EPOCH,
                 "expected_cycle_at": "2026-09-14T06:00:00+00:00",
                 "cycle_observed_at": "2026-09-14T06:31:00+00:00",
             },

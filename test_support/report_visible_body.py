@@ -189,3 +189,49 @@ def valid_visible_body(
         else:
             lines.append("Material section content.")
     return "\n".join(lines) + "\n"
+
+
+def valid_match_visible_body(
+    pre_render_qa: Mapping[str, Any],
+    *,
+    weather_state_override: str | None = None,
+) -> str:
+    """Build deterministic MATCH1-MATCH8 visible body for pure Match Mode."""
+    weather_state = str(
+        weather_state_override
+        if weather_state_override is not None
+        else pre_render_qa.get("weather_contract_state") or "MATCH_CURRENT"
+    ).strip().upper()
+    lines = ["# LIVE MATCH CHECKPOINT"]
+
+    for index in range(1, 9):
+        section_id = f"MATCH{index}"
+        lines.append(f"## MATCH {index} — Live block")
+        if section_id == "MATCH1":
+            lines.append("Current live decision state and biggest swing.")
+            lines.extend(_visible_weather_lines(weather_state))
+        elif section_id == "MATCH2":
+            positions = ["GK"] * 2 + ["DEF"] * 5 + ["MID"] * 5 + ["FWD"] * 3
+            rows = [
+                [str(i), str(i), f"OWN{i:02d}", pos]
+                for i, pos in enumerate(positions, 1)
+            ]
+            lines.extend(_table(["rank", "element_id", "player_name", "position"], rows))
+            lines.append("XI: " + ", ".join(f"OWN{i:02d}" for i in range(1, 12)))
+            lines.append("BENCH: " + ", ".join(f"OWN{i:02d}" for i in range(12, 16)))
+        elif section_id == "MATCH5":
+            if str(pre_render_qa.get("mini_league_contract_state") or "COMPLETE").upper() == "DEGRADED":
+                lines.append("MINI_LEAGUE SOURCE: DEGRADED")
+            else:
+                lines.append("MANAGER COVERAGE: COMPLETE")
+            lines.append("Current live ICON+ leverage and denominator state.")
+        elif section_id == "MATCH8":
+            if pre_render_qa.get("expected_fact_keys"):
+                lines.append("FACT: Live factual evidence is timestamped.")
+            if pre_render_qa.get("expected_model_keys"):
+                lines.append("MODEL: Live projection delta is model-labelled.")
+            if pre_render_qa.get("expected_inference_keys"):
+                lines.append("INFERENCE: Live decision implication is inference-labelled.")
+        else:
+            lines.append("Material live-match content.")
+    return "\n".join(lines) + "\n"

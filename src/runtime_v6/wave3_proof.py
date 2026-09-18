@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 NATURAL_SCHEDULE_KIND = "chatgpt_scheduler"
 NATURAL_EVENT_NAME = "issues"
+NATURAL_LOGICAL_SLOT_SOURCE = "GOVERNED_TRIGGER_EVENT"
 FIRST_GATE_CONSECUTIVE_SLOTS = 6
 LEGACY_TWO_SLOT_OBSERVATION = 2
 CORE_STAGES = (
@@ -83,6 +84,10 @@ def build_slot_proof(
         raise Wave3ProofError("scheduler_proof_missing")
     if control.get("counts_as_completed_operational_slot") is not True:
         raise Wave3ProofError("not_operational_slot")
+    if control.get("authoritative_runtime_snapshot") is not True:
+        raise Wave3ProofError("authoritative_runtime_snapshot_missing")
+    if control.get("logical_slot_source") != NATURAL_LOGICAL_SLOT_SOURCE:
+        raise Wave3ProofError("natural_logical_slot_source_invalid")
     if integrity.get("status") != "PASS":
         raise Wave3ProofError("publish_integrity_not_pass")
     if freeze.get("candidate_state") != "FROZEN":
@@ -111,7 +116,7 @@ def build_slot_proof(
     )
 
     stages = {
-        "TRIGGERED": _stage("PASS", at=observed_at, evidence="runtime_control.issue-title scheduler proof"),
+        "TRIGGERED": _stage("PASS", at=observed_at, evidence="runtime_control.governed trigger event proof"),
         "ACQUIRED": _stage("PASS", at=manifest.get("generated_at"), evidence="source publication artifact manifest"),
         "STAGED": _stage("PASS", at=freeze.get("frozen_at"), evidence="candidate_freeze.manifest_input_sha256"),
         "FROZEN": _stage("PASS", at=freeze.get("frozen_at"), evidence="candidate_freeze.lock"),
@@ -127,6 +132,9 @@ def build_slot_proof(
         "proof_kind": "WAVE3_NATURAL_CORE_SLOT",
         "natural_slot": True,
         "natural_transport": "FPL_MASTER_SLOT_ISSUE_TITLE",
+        "core_trigger_source": NATURAL_LOGICAL_SLOT_SOURCE,
+        "logical_slot_source": NATURAL_LOGICAL_SLOT_SOURCE,
+        "audit_transport_required_for_core_proof": False,
         "logical_slot": logical_slot,
         "observed_at": observed_at,
         "verified_at": verified,
@@ -150,6 +158,8 @@ def build_slot_proof(
             "failed_candidate_can_be_counted": False,
             "source_publish_job_success_required": True,
             "proof_created_post_publish_without_runtime_tree_mutation": True,
+            "audit_transport_is_separate_from_core_execution_proof": True,
+            "connector_result_is_not_required_when_independent_proof_is_complete": True,
             "initial_natural_gate_consecutive_slots": FIRST_GATE_CONSECUTIVE_SLOTS,
             "production_green_requires_rolling_48_of_48": True,
             "production_green_requires_controlled_chaos_acceptance": True,
@@ -188,6 +198,9 @@ def proof_is_countable(proof: dict[str, Any]) -> bool:
     if proof.get("natural_slot") is not True or proof.get("core_chain_pass") is not True:
         return False
     if proof.get("natural_transport") != "FPL_MASTER_SLOT_ISSUE_TITLE":
+        return False
+    trigger_source = proof.get("core_trigger_source")
+    if trigger_source is not None and trigger_source != NATURAL_LOGICAL_SLOT_SOURCE:
         return False
     stages = dict(proof.get("stages") or {})
     return all((stages.get(name) or {}).get("state") == "PASS" for name in CORE_STAGES)

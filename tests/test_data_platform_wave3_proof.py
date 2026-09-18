@@ -228,21 +228,21 @@ def test_five_consecutive_natural_slots_do_not_complete_six_slot_first_gate():
     assert result["first_gate_complete"] is False
     assert result["two_of_two_complete"] is True
     assert result["six_of_six_complete"] is False
-    assert result["rolling_48_of_48_complete"] is False
+    assert result["rolling_12_of_12_complete"] is False
     assert result["production_green_eligible"] is False
 
 
-def test_six_consecutive_natural_slots_complete_first_gate_and_enter_rolling_48():
+def test_six_consecutive_natural_slots_complete_first_gate_and_enter_rolling_12():
     start = datetime(2026, 9, 14, 0, tzinfo=timezone.utc)
     proofs = [_proof(start + timedelta(hours=i), run=i + 1) for i in range(6)]
     result = evaluate_proof_window(proofs)
-    assert result["phase"] == "48/48_IN_PROGRESS"
+    assert result["phase"] == "12/12_IN_PROGRESS"
     assert result["consecutive_successful_natural_slots"] == 6
     assert result["first_gate_target"] == 6
     assert result["first_gate_complete"] is True
     assert result["two_of_two_complete"] is True
     assert result["six_of_six_complete"] is True
-    assert result["rolling_48_of_48_complete"] is False
+    assert result["rolling_12_of_12_complete"] is False
     assert result["production_green_eligible"] is False
 
 
@@ -261,16 +261,16 @@ def test_gap_resets_consecutive_natural_slot_count_before_six_of_six_gate():
     assert result["six_of_six_complete"] is False
 
 
-def test_exact_rolling_48_requires_chaos_acceptance_for_production_green_eligibility():
+def test_exact_rolling_12_requires_chaos_acceptance_for_production_green_eligibility():
     start = datetime(2026, 9, 12, 0, tzinfo=timezone.utc)
-    proofs = [_proof(start + timedelta(hours=i), run=i + 1) for i in range(48)]
+    proofs = [_proof(start + timedelta(hours=i), run=i + 1) for i in range(12)]
 
     natural_only = evaluate_proof_window(proofs)
-    assert natural_only["phase"] == "48/48_COMPLETE"
-    assert natural_only["consecutive_successful_natural_slots"] == 48
+    assert natural_only["phase"] == "12/12_COMPLETE"
+    assert natural_only["consecutive_successful_natural_slots"] == 12
     assert natural_only["first_gate_complete"] is True
     assert natural_only["six_of_six_complete"] is True
-    assert natural_only["rolling_48_of_48_complete"] is True
+    assert natural_only["rolling_12_of_12_complete"] is True
     assert natural_only["natural_window_eligible"] is True
     assert natural_only["chaos_acceptance_pass"] is False
     assert natural_only["production_green_eligible"] is False
@@ -281,12 +281,12 @@ def test_exact_rolling_48_requires_chaos_acceptance_for_production_green_eligibi
     assert combined["production_green_eligible"] is True
 
 
-def test_duplicate_logical_slot_blocks_rolling_48_acceptance():
+def test_duplicate_logical_slot_blocks_rolling_12_acceptance():
     start = datetime(2026, 9, 12, 0, tzinfo=timezone.utc)
     proofs = [_proof(start + timedelta(hours=i), run=i + 1) for i in range(48)]
-    proofs.append(_proof(start + timedelta(hours=47), run=999))
+    proofs.append(_proof(start + timedelta(hours=11), run=999))
     result = evaluate_proof_window(proofs, chaos_acceptance_pass=True)
-    assert result["duplicate_logical_slots"] == [(start + timedelta(hours=47)).isoformat()]
+    assert result["duplicate_logical_slots"] == [(start + timedelta(hours=11)).isoformat()]
     assert result["rolling_48_of_48_complete"] is False
     assert result["natural_window_eligible"] is False
     assert result["production_green_eligible"] is False

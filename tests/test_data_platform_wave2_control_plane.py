@@ -107,7 +107,7 @@ def test_prefetch_does_not_advance_core_scheduler_proof():
     assert state["run_provenance"]["slot_key"] == "chatgpt_scheduler|2026-09-14T06:00:00+00:00"
 
 
-def test_report_slot_first_owner_wins_and_safety_net_noops_after_prefetch():
+def test_report_slot_first_owner_wins_and_prefetch_remains_nonterminal():
     ledger = advance_report_slot_ledger(
         None,
         report_kind="12:30_deep",
@@ -121,8 +121,9 @@ def test_report_slot_first_owner_wins_and_safety_net_noops_after_prefetch():
         report_kind="12:30_deep",
         logical_slot="2026-09-14T12:30:00+07:00",
     )
-    assert decision["action"] == "NO_OP"
-    assert decision["deduplicated"] is True
+    assert decision["action"] == "RECOVER"
+    assert decision["deduplicated"] is False
+    assert decision["report_slot_fulfilled"] is False
 
     second = advance_report_slot_ledger(
         ledger,
@@ -216,7 +217,7 @@ def test_v6_failure_does_not_cancel_due_report_when_scoped_direct_fresh_exists()
         fresh_v6_available=False,
         direct_fresh_available=True,
         last_good_nonvolatile_available=True,
-    ) == "PASS | DIRECT FRESH FALLBACK"
+    ) == "PENDING | DIRECT FRESH | REPORT CONTRACT NOT PROVEN"
 
 
 def test_corrupt_candidate_keeps_last_good_and_allows_due_report_direct_fresh():

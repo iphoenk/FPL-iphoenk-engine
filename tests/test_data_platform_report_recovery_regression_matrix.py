@@ -235,7 +235,9 @@ def _r08() -> bool:
         nonvolatile["source"] == "LAST_GOOD_NONVOLATILE"
         and nonvolatile["status"] == "PASS"
         and volatile["source"] == "UNAVAILABLE"
-        and volatile["status"] == "BLOCKED"
+        and volatile["status"] == "DEGRADED"
+        and volatile["report_blocking"] is False
+        and volatile["action"] == "RENDER_REQUIRED_SCOPE_UNAVAILABLE"
     )
 
 

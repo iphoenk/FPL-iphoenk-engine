@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import pytest
+
 from src.runtime_v6.delivery_integrity import MANDATORY_SECTIONS
 from src.runtime_v6.report_compute import build_report_compute_contract
 from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_render_qa
 from test_support.report_provenance import r5_partitions, r5_section_payloads
 from test_support.report_rank20 import rank20_rows
-from test_support.report_visible_body import valid_visible_body
+from test_support.report_visible_body import valid_match_visible_body, valid_visible_body
 
 
 def _our15():
@@ -54,14 +56,19 @@ def _compute():
     )
 
 
-def _manifest():
-    return [{"section_id": section_id, "status": "COMPLETE"} for section_id in MANDATORY_SECTIONS]
+def _manifest(report_mode: str):
+    section_ids = (
+        [f"MATCH{index}" for index in range(1, 9)]
+        if report_mode == "MATCH"
+        else list(MANDATORY_SECTIONS)
+    )
+    return [{"section_id": section_id, "status": "COMPLETE"} for section_id in section_ids]
 
 
 def _pre(*, report_mode: str, weather_contract_state: str):
     return validate_pre_render_qa(
         compute_contract=_compute(),
-        section_manifest=_manifest(),
+        section_manifest=_manifest(report_mode),
         mini_league_denominator_complete=True,
         report_mode=report_mode,
         weather_contract_state=weather_contract_state,
@@ -71,7 +78,11 @@ def _pre(*, report_mode: str, weather_contract_state: str):
 def _post(pre, *, state: str):
     return validate_post_render_qa(
         pre_render_qa=pre,
-        rendered_body=valid_visible_body(pre, weather_state_override=state),
+        rendered_body=(
+            valid_match_visible_body(pre, weather_state_override=state)
+            if pre.get("report_mode") == "MATCH"
+            else valid_visible_body(pre, weather_state_override=state)
+        ),
         rendered_section_ids=pre["expected_section_ids"],
         rendered_section_states={row["section_id"]: row["status"] for row in pre["section_manifest"]},
         rendered_compute_fingerprint=pre["compute_fingerprint"],
@@ -83,6 +94,17 @@ def _post(pre, *, state: str):
         rendered_weather_contract_state=state,
         truncated=False,
     )
+
+
+@pytest.mark.parametrize("report_mode", ["DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP"])
+def test_full_family_modes_share_canonical_actual_body_contract(report_mode):
+    pre = _pre(report_mode=report_mode, weather_contract_state="DIRECT_CHATGPT")
+    post = _post(pre, state="DIRECT_CHATGPT")
+
+    assert pre["status"] == "PASS"
+    assert post["status"] == "PASS"
+    assert post["visible_body_validated"] is True
+    assert post["rendered_section_ids"] == post["expected_section_ids"]
 
 
 def test_deep_accepts_visible_degraded_weather_block_when_tool_is_unavailable():

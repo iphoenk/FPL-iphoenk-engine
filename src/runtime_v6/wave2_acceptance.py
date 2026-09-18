@@ -154,7 +154,22 @@ def run() -> dict[str, Any]:
         owner="FPL_MASTER_MONITOR",
         prefetched=True,
     )
-    safety = safety_net_from_ledger(
+    prefetch_only = safety_net_from_ledger(
+        report_ledger,
+        report_kind="12:30_deep",
+        logical_slot="2026-09-14T12:30:00+07:00",
+    )
+    report_ledger = advance_report_slot_ledger(
+        report_ledger,
+        report_kind="12:30_deep",
+        logical_slot="2026-09-14T12:30:00+07:00",
+        observed_at="2026-09-14T12:31:00+07:00",
+        owner="FPL_MASTER_MONITOR",
+        delivered=True,
+        report_contract_pass=True,
+        delivery_proof_valid=True,
+    )
+    fulfilled = safety_net_from_ledger(
         report_ledger,
         report_kind="12:30_deep",
         logical_slot="2026-09-14T12:30:00+07:00",
@@ -162,8 +177,13 @@ def run() -> dict[str, Any]:
     _record(
         checks,
         "safety_net_dedupe",
-        safety.get("action") == "NO_OP" and safety.get("deduplicated") is True,
-        decision=safety,
+        prefetch_only.get("action") == "RECOVER"
+        and prefetch_only.get("deduplicated") is False
+        and fulfilled.get("action") == "NO_OP"
+        and fulfilled.get("deduplicated") is True
+        and fulfilled.get("report_slot_fulfilled") is True,
+        prefetch_only=prefetch_only,
+        fulfilled=fulfilled,
     )
 
     _record(
@@ -183,7 +203,7 @@ def run() -> dict[str, Any]:
             direct_fresh_available=True,
             last_good_nonvolatile_available=True,
         )
-        == "PASS | DIRECT FRESH FALLBACK"
+        == "PENDING | DIRECT FRESH | REPORT CONTRACT NOT PROVEN"
         and choose_report_source(
             fresh_v6_available=False,
             direct_fresh_available=True,

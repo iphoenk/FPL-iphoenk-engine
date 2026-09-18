@@ -258,8 +258,8 @@ def test_acknowledged_delivery_can_be_complete_or_degraded_without_pass_degraded
     assert degraded["status"] != "PASS_DEGRADED"
 
 
-def test_finalization_rejects_blocked_scope_even_with_valid_receipt():
-    blocked_matrix = resolve_report_scope_matrix(
+def test_finalization_keeps_required_unavailable_scope_visible_as_degraded():
+    degraded_matrix = resolve_report_scope_matrix(
         {
             "official_universe": _scope(
                 fresh_v6_available=False,
@@ -271,12 +271,19 @@ def test_finalization_rejects_blocked_scope_even_with_valid_receipt():
         auth_status="NOT REQUESTED",
     )
 
-    with pytest.raises(DeliveryIntegrityError, match="blocking scope"):
-        finalize_delivery_outcome(
-            validated_delivery=_valid_delivery(),
-            expected_report_slot_id=REPORT_SLOT_ID,
-            scope_matrix=blocked_matrix,
-        )
+    assert degraded_matrix["report_ready"] is True
+    assert degraded_matrix["blocking_scopes"] == []
+    assert degraded_matrix["degraded_scopes"] == ["official_universe"]
+    assert degraded_matrix["scopes"]["official_universe"]["action"] == "RENDER_REQUIRED_SCOPE_UNAVAILABLE"
+
+    outcome = finalize_delivery_outcome(
+        validated_delivery=_valid_delivery(),
+        expected_report_slot_id=REPORT_SLOT_ID,
+        scope_matrix=degraded_matrix,
+    )
+    assert outcome["status"] == "PASS"
+    assert outcome["report_quality"] == "DEGRADED"
+    assert outcome["degraded_scopes"] == ["official_universe"]
 
 
 def test_finalization_rejects_receipt_for_different_slot():

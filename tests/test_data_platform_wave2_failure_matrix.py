@@ -55,16 +55,17 @@ def test_stale_predictor_is_local_partial_not_whole_system_failure():
     assert view["REPORT DELIVERY"]["state"] == "PASS | FRESH V6"
 
 
-def test_duplicate_prefetch_safety_net_is_noop():
+def test_duplicate_prefetch_safety_net_recovers_until_fulfilled():
     decision = safety_net_decision(
         logical_slot=LOGICAL,
         primary_owned=False,
         prefetched=True,
         delivered=False,
     )
-    assert decision["action"] == "NO_OP"
-    assert decision["deduplicated"] is True
-    assert decision["reason"] == "REPORT_ALREADY_PREFETCHED"
+    assert decision["action"] == "RECOVER"
+    assert decision["deduplicated"] is False
+    assert decision["report_slot_fulfilled"] is False
+    assert "REPORT_PREFETCHED_NONTERMINAL" in decision["reason"]
 
 
 def test_delayed_execution_keeps_logical_slot_and_observed_time_distinct():
@@ -106,4 +107,4 @@ def test_corrupt_candidate_blocked_publication_does_not_auto_fail_due_report():
     assert view["PUBLISH_INTEGRITY"]["state"] == "FAIL | CORRUPT CANDIDATE"
     assert view["NEW PUBLICATION"]["state"] == "NOT PROMOTED"
     assert view["LAST-GOOD"]["state"] == "AVAILABLE"
-    assert view["REPORT DELIVERY"]["state"] == "PASS | DIRECT FRESH FALLBACK"
+    assert view["REPORT DELIVERY"]["state"] == "PENDING | DIRECT FRESH | REPORT CONTRACT NOT PROVEN"

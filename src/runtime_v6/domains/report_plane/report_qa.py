@@ -15,7 +15,7 @@ from .delivery_integrity import MANDATORY_SECTIONS, PARTIAL_ALLOWED_SECTIONS
 from .visible_body_contract import validate_visible_report_body
 
 
-_COUNT_TARGETS = {
+_FULL_COUNT_TARGETS = {
     "OUR15": 15,
     "XI": 11,
     "BENCH": 4,
@@ -23,14 +23,48 @@ _COUNT_TARGETS = {
     "RISE20": 20,
     "FALL20": 20,
 }
+_MATCH_COUNT_TARGETS = {
+    "OUR15": 15,
+    "XI": 11,
+    "BENCH": 4,
+}
+_MATCH_SECTION_IDS = tuple(f"MATCH{index}" for index in range(1, 9))
+_FULL_BACKBONE_CATALOG_MODES = frozenset(
+    {"LEGACY", "DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP", "POST_ALL_MATCH"}
+)
 _VALID_SECTION_STATES = frozenset({"COMPLETE", "PARTIAL"})
 _MANDATORY_ORDER = {section_id: index for index, section_id in enumerate(MANDATORY_SECTIONS)}
-_DEEP_WEATHER_MODES = frozenset({"DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP"})
+_DEEP_WEATHER_MODES = frozenset(
+    {"DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP", "POST_ALL_MATCH"}
+)
 _WEATHER_STATES_BY_MODE = {
     **{mode: frozenset({"DIRECT_CHATGPT", "SOURCE_DEGRADED"}) for mode in _DEEP_WEATHER_MODES},
     "MATCH": frozenset({"MATCH_CURRENT", "SOURCE_DEGRADED"}),
     "PRICE": frozenset({"DIRECT_CHATGPT", "PRICE_NOT_IN_SCOPE"}),
 }
+
+
+def _expected_visible_catalog(report_mode: str, generated_section_ids: Sequence[str]) -> list[str]:
+    mode = str(report_mode or "LEGACY").strip().upper() or "LEGACY"
+    if mode == "MATCH":
+        return list(_MATCH_SECTION_IDS)
+    if mode in _FULL_BACKBONE_CATALOG_MODES:
+        return list(MANDATORY_SECTIONS)
+    return list(generated_section_ids)
+
+
+def _expected_visible_counts(report_mode: str) -> dict[str, int]:
+    mode = str(report_mode or "LEGACY").strip().upper() or "LEGACY"
+    if mode == "MATCH":
+        return dict(_MATCH_COUNT_TARGETS)
+    return dict(_FULL_COUNT_TARGETS)
+
+
+def _required_visible_markers(report_mode: str) -> list[str]:
+    mode = str(report_mode or "").strip().upper()
+    if mode == "POST_ALL_MATCH":
+        return ["GW COMPLETED MATCH-BY-MATCH SCOUT"]
+    return []
 
 
 def _is_sha256(value: Any) -> bool:
@@ -46,6 +80,8 @@ def _section_sort_key(section_id: str) -> tuple[int, int | str]:
 
 def _canonical_section_manifest(
     section_manifest: Sequence[Mapping[str, Any]],
+    *,
+    expected_section_ids: Sequence[str],
 ) -> tuple[
     list[dict[str, str]],
     list[str],
@@ -60,6 +96,15 @@ def _canonical_section_manifest(
     invalid_states: list[str] = []
     partial_not_allowed: list[str] = []
     partial_sections: list[str] = []
+    expected_order = {
+        str(section_id).strip().upper(): index
+        for index, section_id in enumerate(expected_section_ids)
+    }
+
+    def sort_key(section_id: str) -> tuple[int, int | str]:
+        if section_id in expected_order:
+            return (0, expected_order[section_id])
+        return (1, section_id)
 
     for row in section_manifest:
         section_id = str(row.get("section_id") or "").strip().upper()
@@ -78,19 +123,23 @@ def _canonical_section_manifest(
     counts = Counter(ids)
     duplicates = sorted(
         (section_id for section_id, count in counts.items() if section_id and count > 1),
-        key=_section_sort_key,
+        key=sort_key,
     )
     present = set(ids)
-    missing = [section_id for section_id in MANDATORY_SECTIONS if section_id not in present]
-    canonical_rows = sorted(rows, key=lambda row: _section_sort_key(row["section_id"]))
+    missing = [
+        section_id
+        for section_id in expected_section_ids
+        if section_id not in present
+    ]
+    canonical_rows = sorted(rows, key=lambda row: sort_key(row["section_id"]))
     canonical_ids = [row["section_id"] for row in canonical_rows if row["section_id"]]
     return (
         canonical_rows,
         canonical_ids,
         missing,
         duplicates,
-        sorted(partial_sections, key=_section_sort_key),
-        sorted(partial_not_allowed, key=_section_sort_key),
+        sorted(partial_sections, key=sort_key),
+        sorted(partial_not_allowed, key=sort_key),
         invalid_states,
     )
 
@@ -110,7 +159,7 @@ def _compute_handoff_failures(compute_contract: Mapping[str, Any]) -> list[str]:
     if not _is_sha256(fingerprint):
         failures.append("COMPUTE_FINGERPRINT_INVALID")
 
-    for label, target in _COUNT_TARGETS.items():
+    for label, target in _FULL_COUNT_TARGETS.items():
         row = compute_contract.get(label)
         if not isinstance(row, Mapping) or row.get("status") != "PASS":
             failures.append(f"COMPUTE_CHECK_FAILED={label}")
@@ -163,6 +212,7 @@ def _render_contract_token(
     compute_fingerprint: str,
     canonical_manifest: Sequence[Mapping[str, str]],
     mini_league_denominator_complete: bool,
+    mini_league_contract_state: str,
     report_mode: str,
     weather_contract_state: str,
     weather_required: bool,
@@ -171,11 +221,13 @@ def _render_contract_token(
     expected_fact_keys: Sequence[str],
     expected_model_keys: Sequence[str],
     expected_inference_keys: Sequence[str],
+    required_visible_markers: Sequence[str],
 ) -> str:
     payload = {
         "compute_fingerprint": compute_fingerprint,
         "section_manifest": list(canonical_manifest),
         "mini_league_denominator_complete": bool(mini_league_denominator_complete),
+        "mini_league_contract_state": mini_league_contract_state,
         "report_mode": report_mode,
         "weather_contract_state": weather_contract_state,
         "weather_required": bool(weather_required),
@@ -184,6 +236,7 @@ def _render_contract_token(
         "expected_fact_keys": list(expected_fact_keys),
         "expected_model_keys": list(expected_model_keys),
         "expected_inference_keys": list(expected_inference_keys),
+        "required_visible_markers": list(required_visible_markers),
     }
     canonical = json.dumps(
         payload,
@@ -206,15 +259,11 @@ def validate_pre_render_qa(
 ) -> dict[str, Any]:
     """Fail closed before rendering and mint an immutable render handoff token."""
     compute_failures = _compute_handoff_failures(compute_contract)
-    (
-        canonical_manifest,
-        expected_section_ids,
-        missing_sections,
-        duplicate_sections,
-        partial_sections,
-        partial_not_allowed_sections,
-        invalid_section_states,
-    ) = _canonical_section_manifest(section_manifest)
+    generated_section_ids = [
+        str(row.get("section_id") or "").strip().upper()
+        for row in section_manifest
+        if str(row.get("section_id") or "").strip()
+    ]
 
     (
         resolved_report_mode,
@@ -228,8 +277,43 @@ def validate_pre_render_qa(
         weather_required=weather_required,
         weather_direct_chat_present=weather_direct_chat_present,
     )
+    expected_section_ids = _expected_visible_catalog(
+        resolved_report_mode,
+        generated_section_ids,
+    )
+    (
+        canonical_manifest,
+        canonical_section_ids,
+        missing_sections,
+        duplicate_sections,
+        partial_sections,
+        partial_not_allowed_sections,
+        invalid_section_states,
+    ) = _canonical_section_manifest(
+        section_manifest,
+        expected_section_ids=expected_section_ids,
+    )
+
+    s14b_state = next(
+        (
+            str(row.get("status") or "").strip().upper()
+            for row in canonical_manifest
+            if str(row.get("section_id") or "").strip().upper() == "S14B"
+        ),
+        "MISSING",
+    )
+    if mini_league_denominator_complete:
+        mini_league_contract_state = "COMPLETE"
+    elif s14b_state == "PARTIAL":
+        mini_league_contract_state = "DEGRADED"
+    else:
+        mini_league_contract_state = "INCOMPLETE"
 
     failures = list(compute_failures)
+    if generated_section_ids != expected_section_ids:
+        failures.append("VISIBLE_CATALOG_MISMATCH")
+    if canonical_section_ids != expected_section_ids and not missing_sections and not duplicate_sections:
+        failures.append("CANONICAL_CATALOG_MISMATCH")
     if missing_sections:
         failures.append(f"MANDATORY_SECTIONS_MISSING={','.join(missing_sections)}")
     if duplicate_sections:
@@ -238,7 +322,7 @@ def validate_pre_render_qa(
         failures.append(f"PARTIAL_NOT_ALLOWED={','.join(partial_not_allowed_sections)}")
     if invalid_section_states:
         failures.append(f"SECTION_STATUS_INVALID={','.join(invalid_section_states)}")
-    if not mini_league_denominator_complete:
+    if mini_league_contract_state == "INCOMPLETE":
         failures.append("MINI_LEAGUE_DENOMINATOR_INCOMPLETE")
     if weather_failure:
         failures.append(weather_failure)
@@ -259,7 +343,8 @@ def validate_pre_render_qa(
         if isinstance(fact_model, Mapping)
         else []
     )
-    expected_counts = dict(_COUNT_TARGETS)
+    expected_counts = _expected_visible_counts(resolved_report_mode)
+    required_visible_markers = _required_visible_markers(resolved_report_mode)
     compute_fingerprint = str(compute_contract.get("compute_fingerprint") or "")
 
     qa_passed = not failures
@@ -267,7 +352,8 @@ def validate_pre_render_qa(
         _render_contract_token(
             compute_fingerprint=compute_fingerprint,
             canonical_manifest=canonical_manifest,
-            mini_league_denominator_complete=True,
+            mini_league_denominator_complete=bool(mini_league_denominator_complete),
+            mini_league_contract_state=mini_league_contract_state,
             report_mode=resolved_report_mode,
             weather_contract_state=resolved_weather_state,
             weather_required=resolved_weather_required,
@@ -276,6 +362,7 @@ def validate_pre_render_qa(
             expected_fact_keys=expected_fact_keys,
             expected_model_keys=expected_model_keys,
             expected_inference_keys=expected_inference_keys,
+            required_visible_markers=required_visible_markers,
         )
         if qa_passed
         else None
@@ -299,9 +386,10 @@ def validate_pre_render_qa(
         "failures": failures,
         "compute_fingerprint": compute_fingerprint,
         "render_contract_token": token,
-        "required_section_count": len(MANDATORY_SECTIONS),
+        "required_section_count": len(expected_section_ids),
         "manifest_section_count": len(section_manifest),
         "expected_section_ids": expected_section_ids,
+        "generated_section_ids": generated_section_ids,
         "section_manifest": canonical_manifest,
         "missing_sections": missing_sections,
         "duplicate_sections": duplicate_sections,
@@ -309,6 +397,7 @@ def validate_pre_render_qa(
         "partial_not_allowed_sections": partial_not_allowed_sections,
         "invalid_section_states": invalid_section_states,
         "mini_league_denominator_complete": bool(mini_league_denominator_complete),
+        "mini_league_contract_state": mini_league_contract_state,
         "report_mode": resolved_report_mode,
         "weather_contract_state": resolved_weather_state,
         "weather_required": resolved_weather_required,
@@ -317,6 +406,7 @@ def validate_pre_render_qa(
         "expected_fact_keys": expected_fact_keys,
         "expected_model_keys": expected_model_keys,
         "expected_inference_keys": expected_inference_keys,
+        "required_visible_markers": required_visible_markers,
     }
 
 
@@ -384,7 +474,16 @@ def validate_post_render_qa(
     expected_fact_keys = sorted(str(key) for key in pre_render_qa.get("expected_fact_keys", []))
     expected_model_keys = sorted(str(key) for key in pre_render_qa.get("expected_model_keys", []))
     expected_inference_keys = sorted(str(key) for key in pre_render_qa.get("expected_inference_keys", []))
+    required_visible_markers = [
+        str(marker)
+        for marker in pre_render_qa.get("required_visible_markers", [])
+        if str(marker).strip()
+    ]
     expected_report_mode = str(pre_render_qa.get("report_mode") or "LEGACY").strip().upper()
+    expected_mini_league_state = str(
+        pre_render_qa.get("mini_league_contract_state")
+        or ("COMPLETE" if pre_render_qa.get("mini_league_denominator_complete") else "INCOMPLETE")
+    ).strip().upper()
     expected_weather_state = str(
         pre_render_qa.get("weather_contract_state")
         or ("DIRECT_CHATGPT" if pre_render_qa.get("weather_direct_chat_present") else "MISSING")
@@ -403,6 +502,7 @@ def validate_post_render_qa(
         compute_fingerprint=expected_compute_fingerprint,
         canonical_manifest=canonical_pre_manifest,
         mini_league_denominator_complete=bool(pre_render_qa.get("mini_league_denominator_complete")),
+        mini_league_contract_state=expected_mini_league_state,
         report_mode=expected_report_mode,
         weather_contract_state=expected_weather_state,
         weather_required=expected_weather_required,
@@ -411,6 +511,7 @@ def validate_post_render_qa(
         expected_fact_keys=expected_fact_keys,
         expected_model_keys=expected_model_keys,
         expected_inference_keys=expected_inference_keys,
+        required_visible_markers=required_visible_markers,
     )
     stored_pre_token = pre_render_qa.get("render_contract_token")
 
@@ -434,9 +535,9 @@ def validate_post_render_qa(
         expected_model_keys=expected_model_keys,
         expected_inference_keys=expected_inference_keys,
         expected_weather_state=expected_weather_state,
-        mini_league_denominator_complete_required=bool(
-            pre_render_qa.get("mini_league_denominator_complete")
-        ),
+        mini_league_denominator_complete_required=expected_mini_league_state == "COMPLETE",
+        expected_mini_league_state=expected_mini_league_state,
+        required_visible_markers=required_visible_markers,
     )
 
     failures: list[str] = list(visible_body["failures"])
@@ -480,8 +581,12 @@ def validate_post_render_qa(
     if actual_model_keys != expected_model_keys:
         failures.append("MODEL_KEYS_MISMATCH")
 
-    if not rendered_mini_league_denominator_complete:
-        failures.append("MINI_LEAGUE_DENOMINATOR_INCOMPLETE")
+    expected_mini_complete = expected_mini_league_state == "COMPLETE"
+    if bool(rendered_mini_league_denominator_complete) != expected_mini_complete:
+        failures.append(
+            "MINI_LEAGUE_METADATA_STATE_MISMATCH="
+            f"{bool(rendered_mini_league_denominator_complete)}!={expected_mini_complete}"
+        )
     if actual_weather_state != expected_weather_state:
         if (
             expected_report_mode == "LEGACY"
@@ -519,9 +624,11 @@ def validate_post_render_qa(
         "expected_fact_keys": expected_fact_keys,
         "expected_model_keys": expected_model_keys,
         "expected_inference_keys": expected_inference_keys,
+        "required_visible_markers": required_visible_markers,
         "rendered_fact_keys": actual_fact_keys,
         "rendered_model_keys": actual_model_keys,
         "mini_league_denominator_complete": bool(rendered_mini_league_denominator_complete),
+        "mini_league_contract_state": expected_mini_league_state,
         "report_mode": expected_report_mode,
         "weather_contract_state": actual_weather_state,
         "weather_required": expected_weather_required,
@@ -538,4 +645,5 @@ def validate_post_render_qa(
         "visible_mini_league_denominator_complete": visible_body[
             "mini_league_denominator_complete"
         ],
+        "visible_mini_league_contract_state": visible_body["mini_league_contract_state"],
     }

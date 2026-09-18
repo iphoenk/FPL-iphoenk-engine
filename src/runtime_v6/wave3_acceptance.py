@@ -191,7 +191,9 @@ def run_controlled_chaos_acceptance() -> dict[str, Any]:
         v6_scope_state="V6_SCOPE_FAILED",
     )
     results["provider_timeout"] = {
-        "status": "PASS" if provider_timeout.startswith("PASS") else "FAIL",
+        "status": "PASS"
+        if provider_timeout == "PENDING | DIRECT FRESH | REPORT CONTRACT NOT PROVEN"
+        else "FAIL",
         "evidence": provider_timeout,
     }
 
@@ -203,7 +205,9 @@ def run_controlled_chaos_acceptance() -> dict[str, Any]:
         v6_scope_state="CURRENT",
     )
     results["provider_incomplete_amber"] = {
-        "status": "PASS" if provider_amber == "PASS | FRESH V6" else "FAIL",
+        "status": "PASS"
+        if provider_amber == "PENDING | FRESH V6 | REPORT CONTRACT NOT PROVEN"
+        else "FAIL",
         "evidence": provider_amber,
     }
 
@@ -229,7 +233,10 @@ def run_controlled_chaos_acceptance() -> dict[str, Any]:
         v6_scope_state="CURRENT",
     )
     results["stale_optional_cache"] = {
-        "status": "PASS" if stale["source_freshness"] == "STALE" and stale_delivery.startswith("PASS") else "FAIL",
+        "status": "PASS"
+        if stale["source_freshness"] == "STALE"
+        and stale_delivery == "PENDING | FRESH V6 | REPORT CONTRACT NOT PROVEN"
+        else "FAIL",
         "evidence": {"artifact": stale, "delivery": stale_delivery},
     }
 
@@ -241,7 +248,9 @@ def run_controlled_chaos_acceptance() -> dict[str, Any]:
         v6_scope_state="CURRENT",
     )
     results["registry_activation_transition"] = {
-        "status": "PASS" if transition_delivery == "PASS | FRESH V6" else "FAIL",
+        "status": "PASS"
+        if transition_delivery == "PENDING | FRESH V6 | REPORT CONTRACT NOT PROVEN"
+        else "FAIL",
         "evidence": "OPTIONAL_REGISTRY_TRANSITION_DOES_NOT_BLOCK_OFFICIAL_CORE",
     }
 
@@ -264,7 +273,9 @@ def run_controlled_chaos_acceptance() -> dict[str, Any]:
         v6_scope_state="PUBLICATION_CORRUPT",
     )
     results["malformed_or_corrupt_candidate"] = {
-        "status": "PASS" if corrupt_delivery == "PASS | DIRECT FRESH FALLBACK" else "FAIL",
+        "status": "PASS"
+        if corrupt_delivery == "PENDING | DIRECT FRESH | REPORT CONTRACT NOT PROVEN"
+        else "FAIL",
         "evidence": {"last_good_mutated": False, "delivery": corrupt_delivery},
     }
 
@@ -276,7 +287,9 @@ def run_controlled_chaos_acceptance() -> dict[str, Any]:
         v6_scope_state="V6_SCOPE_FAILED",
     )
     results["publisher_rejection"] = {
-        "status": "PASS" if rejected_delivery == "PASS | LAST_GOOD NONVOLATILE FALLBACK" else "FAIL",
+        "status": "PASS"
+        if rejected_delivery == "PENDING | LAST_GOOD NONVOLATILE | REPORT CONTRACT NOT PROVEN"
+        else "FAIL",
         "evidence": {"last_good_mutated": False, "delivery": rejected_delivery},
     }
 
@@ -331,7 +344,11 @@ def run_controlled_chaos_acceptance() -> dict[str, Any]:
         logical_slot="2026-09-14T10:30:00+07:00",
     )
     results["duplicate_report_prefetch"] = {
-        "status": "PASS" if safety.get("action") == "NO_OP" and safety.get("deduplicated") is True else "FAIL",
+        "status": "PASS"
+        if safety.get("action") == "RECOVER"
+        and safety.get("deduplicated") is False
+        and safety.get("report_slot_fulfilled") is False
+        else "FAIL",
         "evidence": safety,
     }
 
@@ -364,7 +381,7 @@ def run_controlled_chaos_acceptance() -> dict[str, Any]:
         "status": "PASS"
         if float(delayed.get("scheduler_proof_age_seconds") or 0) > 0
         and delayed.get("last_processed_logical_slot") == "2026-09-14T08:00:00+00:00"
-        and delayed_delivery.startswith("PASS")
+        and delayed_delivery == "PENDING | FRESH V6 | REPORT CONTRACT NOT PROVEN"
         else "FAIL",
         "evidence": {"control_plane": delayed, "delivery": delayed_delivery},
     }
@@ -377,7 +394,9 @@ def run_controlled_chaos_acceptance() -> dict[str, Any]:
         v6_scope_state="V6_SCOPE_FAILED",
     )
     results["last_good_recovery"] = {
-        "status": "PASS" if last_good == "PASS | LAST_GOOD NONVOLATILE FALLBACK" else "FAIL",
+        "status": "PASS"
+        if last_good == "PENDING | LAST_GOOD NONVOLATILE | REPORT CONTRACT NOT PROVEN"
+        else "FAIL",
         "evidence": last_good,
     }
 

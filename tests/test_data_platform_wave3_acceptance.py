@@ -179,9 +179,10 @@ def test_mandatory_wave3_controlled_chaos_matrix_passes():
 
 def test_chaos_matrix_keeps_report_continuity_and_fail_closed_integrity_contracts():
     result = run_controlled_chaos_acceptance()
-    assert result["scenarios"]["provider_timeout"]["evidence"] == "PASS | DIRECT FRESH FALLBACK"
+    assert result["scenarios"]["provider_timeout"]["evidence"] == "PENDING | DIRECT FRESH | REPORT CONTRACT NOT PROVEN"
     assert result["scenarios"]["publisher_rejection"]["evidence"]["last_good_mutated"] is False
     assert result["scenarios"]["malformed_or_corrupt_candidate"]["evidence"]["last_good_mutated"] is False
-    assert result["scenarios"]["duplicate_report_prefetch"]["evidence"]["action"] == "NO_OP"
+    assert result["scenarios"]["duplicate_report_prefetch"]["evidence"]["action"] == "RECOVER"
+    assert result["scenarios"]["duplicate_report_prefetch"]["evidence"]["report_slot_fulfilled"] is False
     assert result["scenarios"]["auth_not_requested"]["evidence"] == "NOT REQUESTED"
     assert result["governance"]["chaos_does_not_increment_natural_counter"] is True

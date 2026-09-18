@@ -119,7 +119,7 @@ def test_nonvolatile_scope_may_use_last_good_only_after_v6_scope_is_unavailable(
     assert result["legacy_fallback_allowed"] is False
 
 
-def test_required_volatile_scope_without_valid_source_is_blocking_and_disclosed():
+def test_required_volatile_scope_without_valid_source_degrades_section_not_schema():
     result = resolve_report_scope(
         scope_id="live",
         auth_status="NOT REQUESTED",
@@ -132,9 +132,10 @@ def test_required_volatile_scope_without_valid_source_is_blocking_and_disclosed(
     )
 
     assert result["source"] == "UNAVAILABLE"
-    assert result["action"] == "DISCLOSE_REQUIRED_SCOPE_UNAVAILABLE"
-    assert result["status"] == "BLOCKED"
-    assert result["report_blocking"] is True
+    assert result["action"] == "RENDER_REQUIRED_SCOPE_UNAVAILABLE"
+    assert result["status"] == "DEGRADED"
+    assert result["report_blocking"] is False
+    assert result["degraded"] is True
     assert result["legacy_fallback_allowed"] is False
 
 
@@ -178,7 +179,7 @@ def test_matrix_keeps_scope_failures_independent_instead_of_blocking_unrelated_s
     assert matrix["scopes"]["icon_mini_league"]["source"] == "FRESH_V6"
 
 
-def test_matrix_is_not_ready_when_a_required_public_scope_remains_unavailable():
+def test_matrix_keeps_canonical_report_buildable_when_required_source_is_unavailable():
     matrix = resolve_report_scope_matrix(
         {
             "official_universe": _scope(),
@@ -193,7 +194,8 @@ def test_matrix_is_not_ready_when_a_required_public_scope_remains_unavailable():
         auth_status="EXPIRED",
     )
 
-    assert matrix["report_ready"] is False
-    assert matrix["blocking_scopes"] == ["fixtures"]
-    assert matrix["degraded_scopes"] == ["private_ft_itb_sell_value"]
+    assert matrix["report_ready"] is True
+    assert matrix["blocking_scopes"] == []
+    assert matrix["degraded_scopes"] == ["fixtures", "private_ft_itb_sell_value"]
+    assert matrix["scopes"]["fixtures"]["action"] == "RENDER_REQUIRED_SCOPE_UNAVAILABLE"
     assert matrix["legacy_fallback_allowed"] is False

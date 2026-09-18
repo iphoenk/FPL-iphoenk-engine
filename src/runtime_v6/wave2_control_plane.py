@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from .report_contract import ReportContractError, safety_net_decision
+from .report_contract import ReportContractError, classify_report_outcome, safety_net_decision
 
 WAVE2_REPORT_MODES = (
     "normal_hourly",
@@ -57,6 +57,8 @@ def advance_report_slot_ledger(
     owner: str,
     prefetched: bool = False,
     delivered: bool = False,
+    report_contract_pass: bool = False,
+    delivery_proof_valid: bool = False,
     maximum_slots: int = 96,
 ) -> dict[str, Any]:
     """Persist report-slot ownership without allowing a second owner to steal a slot.
@@ -86,6 +88,9 @@ def advance_report_slot_ledger(
             "owned_at": observed,
             "prefetched": False,
             "delivered": False,
+            "report_contract_pass": False,
+            "delivery_proof_valid": False,
+            "report_slot_fulfilled": False,
             "duplicate_attempts": 0,
         }
     elif ownership_conflict:
@@ -104,9 +109,21 @@ def advance_report_slot_ledger(
         if delivered:
             row["delivered"] = True
             row["delivered_at"] = observed
+        if report_contract_pass:
+            row["report_contract_pass"] = True
+        if delivery_proof_valid:
+            row["delivery_proof_valid"] = True
 
+    outcome = classify_report_outcome(
+        data_slot_fulfilled=False,
+        report_contract_pass=row.get("report_contract_pass") is True,
+        visible_emitted=row.get("delivered") is True,
+        delivery_proof_valid=row.get("delivery_proof_valid") is True,
+    )
+    row["report_slot_fulfilled"] = outcome["REPORT_SLOT_FULFILLED"]
     row["state"] = (
-        "DELIVERED" if row.get("delivered") is True
+        "FULFILLED" if row.get("report_slot_fulfilled") is True
+        else "DELIVERED_UNFULFILLED" if row.get("delivered") is True
         else "PREFETCHED" if row.get("prefetched") is True
         else "OWNED"
     )
@@ -123,12 +140,14 @@ def advance_report_slot_ledger(
             "tracked_report_slots": len(ordered),
             "prefetched_slots": sum(item.get("prefetched") is True for item in ordered),
             "delivered_slots": sum(item.get("delivered") is True for item in ordered),
+            "fulfilled_report_slots": sum(item.get("report_slot_fulfilled") is True for item in ordered),
             "ownership_conflicts": sum(item.get("ownership_conflict") is True for item in ordered),
         },
         "governance": {
             "core_scheduler_proof_independent": True,
             "first_owner_wins": True,
-            "safety_net_must_dedupe": True,
+            "safety_net_must_dedupe_only_fulfilled_slots": True,
+            "prefetch_and_raw_delivery_are_nonterminal": True,
         },
     }
 
@@ -154,6 +173,9 @@ def safety_net_from_ledger(
         primary_owned=str(row.get("owner") or "") == primary_owner,
         prefetched=row.get("prefetched") is True,
         delivered=row.get("delivered") is True,
+        report_contract_pass=row.get("report_contract_pass") is True,
+        delivery_proof_valid=row.get("delivery_proof_valid") is True,
+        report_slot_fulfilled=row.get("report_slot_fulfilled") is True,
     )
     return {**decision, "report_kind": report_kind, "slot_key": key, "slot_state": row.get("state")}
 

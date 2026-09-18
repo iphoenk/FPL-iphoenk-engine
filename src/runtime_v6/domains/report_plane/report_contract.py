@@ -77,33 +77,77 @@ def core_slot_key(schedule_kind: str, logical_slot: str) -> str:
     return f"{schedule_kind}|{logical_slot}"
 
 
+def classify_report_outcome(
+    *,
+    data_slot_fulfilled: bool,
+    report_contract_pass: bool,
+    visible_emitted: bool,
+    delivery_proof_valid: bool,
+) -> dict[str, bool]:
+    """Keep data, visible delivery and canonical report fulfillment independent."""
+    report_delivered = bool(visible_emitted)
+    report_slot_fulfilled = bool(
+        report_delivered
+        and report_contract_pass
+        and delivery_proof_valid
+    )
+    return {
+        "DATA_SLOT_FULFILLED": bool(data_slot_fulfilled),
+        "REPORT_SLOT_FULFILLED": report_slot_fulfilled,
+        "REPORT_DELIVERED": report_delivered,
+        "REPORT_CONTRACT_PASS": bool(report_contract_pass),
+        "DELIVERY_PROOF_VALID": bool(delivery_proof_valid),
+    }
+
+
 def safety_net_decision(
     *,
     logical_slot: str,
     primary_owned: bool,
     prefetched: bool,
     delivered: bool,
+    report_contract_pass: bool = False,
+    delivery_proof_valid: bool = False,
+    report_slot_fulfilled: bool | None = None,
 ) -> dict[str, Any]:
+    """Suppress recovery only for a positively fulfilled same-slot report.
+
+    Ownership, prefetch and even a raw visible message are observability signals,
+    never canonical delivery evidence on their own.
+    """
     _parse_time(logical_slot)
-    reasons = []
-    if primary_owned:
-        reasons.append("PRIMARY_OWNS_SLOT")
-    if prefetched:
-        reasons.append("REPORT_ALREADY_PREFETCHED")
-    if delivered:
-        reasons.append("REPORT_ALREADY_DELIVERED")
-    if reasons:
+    fulfilled = (
+        bool(report_slot_fulfilled)
+        if report_slot_fulfilled is not None
+        else bool(delivered and report_contract_pass and delivery_proof_valid)
+    )
+    if fulfilled:
         return {
             "logical_slot": logical_slot,
             "action": "NO_OP",
-            "reason": "+".join(reasons),
+            "reason": "REPORT_SLOT_FULFILLED",
             "deduplicated": True,
+            "report_slot_fulfilled": True,
         }
+
+    evidence: list[str] = []
+    if primary_owned:
+        evidence.append("PRIMARY_OWNS_SLOT_NONTERMINAL")
+    if prefetched:
+        evidence.append("REPORT_PREFETCHED_NONTERMINAL")
+    if delivered:
+        evidence.append("RAW_VISIBLE_DELIVERY_WITHOUT_FULFILLMENT")
+    if not report_contract_pass:
+        evidence.append("REPORT_CONTRACT_NOT_PASSED")
+    if not delivery_proof_valid:
+        evidence.append("DELIVERY_PROOF_NOT_VALID")
+
     return {
         "logical_slot": logical_slot,
         "action": "RECOVER",
-        "reason": "UNOWNED_UNPREFETCHED_UNDELIVERED_SLOT",
+        "reason": "+".join(evidence) if evidence else "REPORT_SLOT_UNFULFILLED",
         "deduplicated": False,
+        "report_slot_fulfilled": False,
     }
 
 
@@ -225,12 +269,17 @@ def resolve_report_scope(
         reason = "NONVOLATILE_LAST_GOOD_RECOVERY"
         scoped_direct_fresh_allowed = False
     else:
-        report_blocking = bool(required)
-        degraded = not report_blocking
-        status = "BLOCKED" if report_blocking else "DEGRADED"
+        # Source unavailability is a factual degradation, not permission to
+        # shrink or suppress the canonical visible-report schema. Retrieval
+        # partials remain blocking above until SAME-V6 recovery is exhausted;
+        # once no valid source exists, the affected section must still render
+        # truthfully as unavailable while unrelated report computation continues.
+        report_blocking = False
+        degraded = True
+        status = "DEGRADED"
         action = (
-            "DISCLOSE_REQUIRED_SCOPE_UNAVAILABLE"
-            if report_blocking
+            "RENDER_REQUIRED_SCOPE_UNAVAILABLE"
+            if required
             else "DISCLOSE_OPTIONAL_SCOPE_UNAVAILABLE"
         )
         reason = "NO_VALID_SCOPE_SOURCE"
@@ -324,9 +373,27 @@ def report_delivery_status(
     last_good_nonvolatile_available: bool,
     v6_scope_state: str | None = None,
     retrieval_state: str = "COMPLETE",
+    report_contract_pass: bool = False,
+    report_slot_fulfilled: bool = False,
+    report_delivered: bool = False,
+    delivery_proof_valid: bool = False,
 ) -> str:
+    """Report delivery truth is contract/proof truth, not source availability."""
     if not due:
         return "N/A"
+
+    if report_delivered and not (
+        report_contract_pass and report_slot_fulfilled and delivery_proof_valid
+    ):
+        return "FAIL | RAW DELIVERY WITHOUT CONTRACT FULFILLMENT"
+    if (
+        report_delivered
+        and report_contract_pass
+        and report_slot_fulfilled
+        and delivery_proof_valid
+    ):
+        return "PASS | REPORT SLOT FULFILLED"
+
     source = choose_report_source(
         fresh_v6_available=fresh_v6_available,
         direct_fresh_available=direct_fresh_available,
@@ -338,12 +405,12 @@ def report_delivery_status(
     if source == "V6_RETRIEVAL_RECOVERY":
         return "BLOCKED | SAME V6 RETRIEVAL RECOVERY"
     if source == "FRESH_V6":
-        return "PASS | FRESH V6"
+        return "PENDING | FRESH V6 | REPORT CONTRACT NOT PROVEN"
     if source == "DIRECT_FRESH":
-        return "PASS | DIRECT FRESH FALLBACK"
+        return "PENDING | DIRECT FRESH | REPORT CONTRACT NOT PROVEN"
     if source == "LAST_GOOD_NONVOLATILE":
-        return "PASS | LAST_GOOD NONVOLATILE FALLBACK"
-    return "PASS | UNAVAILABLE FIELDS DISCLOSED"
+        return "PENDING | LAST_GOOD NONVOLATILE | REPORT CONTRACT NOT PROVEN"
+    return "DEGRADED | UNAVAILABLE FIELDS DISCLOSED | REPORT CONTRACT NOT PROVEN"
 
 
 def status_entry(

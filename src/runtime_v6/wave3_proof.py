@@ -7,10 +7,13 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from .domains.control_plane.schedule_policy import SCHEDULE_POLICY
+
 
 NATURAL_SCHEDULE_KIND = "chatgpt_scheduler"
 NATURAL_EVENT_NAME = "issues"
 NATURAL_LOGICAL_SLOT_SOURCE = "GOVERNED_TRIGGER_EVENT"
+NATURAL_PROOF_EPOCH = SCHEDULE_POLICY.health_epoch
 FIRST_GATE_CONSECUTIVE_SLOTS = 6
 LEGACY_TWO_SLOT_OBSERVATION = 2
 CORE_STAGES = (
@@ -105,6 +108,9 @@ def build_slot_proof(
         raise Wave3ProofError("authoritative_runtime_snapshot_missing")
     if control.get("logical_slot_source") != NATURAL_LOGICAL_SLOT_SOURCE:
         raise Wave3ProofError("natural_logical_slot_source_invalid")
+    scheduler_epoch = str(control.get("scheduler_epoch") or "").strip()
+    if scheduler_epoch != NATURAL_PROOF_EPOCH:
+        raise Wave3ProofError("natural_scheduler_epoch_invalid")
     immutable_job_ids = {
         "acquisition_run_id": str(collect_job_id or "").strip(),
         "publication_run_id": str(publish_job_id or "").strip(),
@@ -145,6 +151,7 @@ def build_slot_proof(
         "natural_transport": "FPL_MASTER_SLOT_ISSUE_TITLE",
         "core_trigger_source": NATURAL_LOGICAL_SLOT_SOURCE,
         "logical_slot_source": NATURAL_LOGICAL_SLOT_SOURCE,
+        "scheduler_epoch": scheduler_epoch,
         "audit_transport_required_for_core_proof": False,
         "logical_slot": logical_slot,
         "observed_at": observed_at,
@@ -175,6 +182,7 @@ def build_slot_proof(
             "proof_created_post_publish_without_runtime_tree_mutation": True,
             "audit_transport_is_separate_from_core_execution_proof": True,
             "connector_result_is_not_required_when_independent_proof_is_complete": True,
+            "acceptance_scheduler_epoch": NATURAL_PROOF_EPOCH,
             "initial_natural_gate_consecutive_slots": FIRST_GATE_CONSECUTIVE_SLOTS,
             "production_green_requires_rolling_48_of_48": True,
             "production_green_requires_controlled_chaos_acceptance": True,
@@ -213,6 +221,8 @@ def proof_is_countable(proof: dict[str, Any]) -> bool:
     if proof.get("natural_slot") is not True or proof.get("core_chain_pass") is not True:
         return False
     if proof.get("natural_transport") != "FPL_MASTER_SLOT_ISSUE_TITLE":
+        return False
+    if str(proof.get("scheduler_epoch") or "") != NATURAL_PROOF_EPOCH:
         return False
     trigger_source = proof.get("core_trigger_source")
     if trigger_source is not None and trigger_source != NATURAL_LOGICAL_SLOT_SOURCE:
@@ -303,6 +313,7 @@ def evaluate_proof_window(
     chaos_pass = bool(chaos_acceptance_pass)
     return {
         "schema_version": 1,
+        "acceptance_scheduler_epoch": NATURAL_PROOF_EPOCH,
         "phase": phase,
         "countable_proof_count": len(ordered),
         "consecutive_successful_natural_slots": consecutive,

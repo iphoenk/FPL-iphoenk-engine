@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from src.runtime_v6.runtime_control import scheduled_slot_already_completed
+from src.runtime_v6.runtime_control import CHATGPT_SCHEDULER_EPOCH, scheduled_slot_already_completed
 from src.runtime_v6.workflow_control import classify_invocation, load_policy, scheduled_cron_kinds
 
 
@@ -116,7 +116,7 @@ def test_chatgpt_scheduler_contract_is_single_hourly_authority():
     assert scheduler["logical_slot_minute"] == 0
     assert scheduler["required_reason"] == "chatgpt_hourly_master"
     assert scheduler["required_audit"] == "FPL_MASTER_HOURLY"
-    assert scheduler["health_epoch"] == "CHATGPT_MASTER_V1"
+    assert scheduler["health_epoch"] == CHATGPT_SCHEDULER_EPOCH
     assert scheduler["green_after_consecutive_slots"] == 6
 
 

@@ -504,16 +504,37 @@ def evaluate_rolling_natural_acceptance(
     pass_count = 0
     for row in latest:
         visible_due = row.get("mandatory_visible_report") is True
-        core_pass = str(row.get("core_acceptance") or "").strip().upper() == "PASS"
+        core_pass = bool(
+            row.get("core_acceptance_pass") is True
+            or str(row.get("core_acceptance") or "").strip().upper() == "PASS"
+        )
         delivery_pass = True
         if visible_due:
-            delivery_pass = bool(
-                row.get("report_contract_pass") is True
-                and row.get("report_slot_fulfilled") is True
-                and row.get("delivery_proof_valid") is True
-                and row.get("visible_emitted") is True
-                and row.get("status_only") is not True
-            )
+            canonical_receipt = row.get("canonical_report_receipt")
+            if canonical_receipt is not None:
+                # Receipt validity stays owned by report_delivery. Runtime only
+                # consumes its exact same-slot acceptance predicate.
+                from .report_delivery import canonical_receipt_acceptance
+
+                delivery_pass = canonical_receipt_acceptance(
+                    canonical_receipt,
+                    expected_report_slot_id=(
+                        str(row.get("report_slot_id") or "").strip() or None
+                    ),
+                    expected_occurrence_identity=(
+                        str(row.get("occurrence_identity") or "").strip() or None
+                    ),
+                )
+            else:
+                # Backward-compatible historical rows remain truthful; P0.5 does
+                # not synthesize a receipt that was not present at occurrence time.
+                delivery_pass = bool(
+                    row.get("report_contract_pass") is True
+                    and row.get("report_slot_fulfilled") is True
+                    and row.get("delivery_proof_valid") is True
+                    and row.get("visible_emitted") is True
+                    and row.get("status_only") is not True
+                )
         accepted = core_pass and delivery_pass
         if accepted:
             pass_count += 1

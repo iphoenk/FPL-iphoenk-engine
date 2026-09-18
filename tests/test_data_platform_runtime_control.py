@@ -212,6 +212,40 @@ def _chatgpt_control(hour: int, run_id: str | None = None):
     )
 
 
+
+def test_scheduler_epoch_rollover_preserves_old_rows_as_historical_and_restarts_active_window():
+    previous = {
+        "schema_version": 3,
+        "epoch": {
+            "id": "PREVIOUS_ACCEPTANCE_EPOCH",
+            "authority": CHATGPT_SCHEDULER_AUTHORITY,
+            "start_at": "2026-09-08T01:00:00+00:00",
+            "green_after_consecutive_slots": CHATGPT_GREEN_STREAK,
+        },
+        "slots": [
+            {
+                "slot": "2026-09-08T01:00:00+00:00",
+                "fulfilled_by": "CHATGPT",
+                "fulfilled": True,
+                "run_id": "old-run",
+                "observed_at": "2026-09-08T01:31:00+00:00",
+                "schedule_kind": "chatgpt_scheduler",
+            }
+        ],
+        "legacy_slots": [],
+        "auxiliary_operational_slots": [],
+        "duplicate_core_attempts": [],
+    }
+
+    ledger = build_operational_slots(previous, _chatgpt_control(3, "new-epoch-run"), window_size=48)
+
+    assert ledger["epoch"]["id"] != "PREVIOUS_ACCEPTANCE_EPOCH"
+    assert ledger["summary"]["tracked_operational_slots"] == 1
+    assert ledger["summary"]["consecutive_successful_slots"] == 1
+    assert ledger["slots"][0]["run_id"] == "new-epoch-run"
+    assert any(row.get("run_id") == "old-run" for row in ledger["legacy_slots"])
+
+
 def test_ledger_migrates_old_github_history_out_of_current_health():
     legacy = {
         "schema_version": 2,

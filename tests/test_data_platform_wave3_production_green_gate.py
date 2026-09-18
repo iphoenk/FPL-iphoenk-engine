@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from src.runtime_v6.wave3_chaos_acceptance import EXPECTED_SCENARIO_IDS
-from src.runtime_v6.wave3_proof import CORE_STAGES, Wave3ProofError
+from src.runtime_v6.wave3_proof import CORE_STAGES, NATURAL_PROOF_EPOCH, Wave3ProofError
 from src.runtime_v6.wave3_window import build_window_summary
 
 
@@ -18,6 +18,7 @@ def _proof(slot: datetime, run_id: int) -> dict:
         "proof_kind": "WAVE3_NATURAL_CORE_SLOT",
         "natural_slot": True,
         "natural_transport": "FPL_MASTER_SLOT_ISSUE_TITLE",
+        "scheduler_epoch": NATURAL_PROOF_EPOCH,
         "logical_slot": iso,
         "observed_at": (slot + timedelta(minutes=31)).isoformat(),
         "run_id": str(run_id),

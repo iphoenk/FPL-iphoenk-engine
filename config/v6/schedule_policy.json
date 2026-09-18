@@ -15,7 +15,7 @@
     "issue_comment_command": "",
     "required_reason": "chatgpt_hourly_master",
     "required_audit": "FPL_MASTER_HOURLY",
-    "health_epoch": "CHATGPT_MASTER_V1",
+    "health_epoch": "CHATGPT_MASTER_P0_1_POST_SPOF_V2",
     "migration_started_at": "2026-09-08T10:35:31+07:00",
     "legacy_history_before": "2026-09-08T10:35:31+07:00",
     "green_after_consecutive_slots": 6,

@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from src.runtime_v6.wave3_proof import (
+    NATURAL_PROOF_EPOCH,
     Wave3ProofError,
     assert_rejected_candidate_did_not_move_runtime,
     build_slot_proof,
@@ -39,6 +40,7 @@ def _runtime_tree(
                 "counts_as_completed_operational_slot": natural_kind,
                 "authoritative_runtime_snapshot": natural_kind,
                 "logical_slot_source": "GOVERNED_TRIGGER_EVENT" if natural_kind else "RUNTIME_CLOCK",
+                "scheduler_epoch": NATURAL_PROOF_EPOCH,
                 "expected_cycle_at": "2026-09-14T06:00:00+00:00",
                 "cycle_observed_at": "2026-09-14T06:31:00+00:00",
             },
@@ -86,6 +88,7 @@ def _proof(slot: datetime, *, run: int = 1) -> dict:
         "proof_kind": "WAVE3_NATURAL_CORE_SLOT",
         "natural_slot": True,
         "natural_transport": "FPL_MASTER_SLOT_ISSUE_TITLE",
+        "scheduler_epoch": NATURAL_PROOF_EPOCH,
         "core_chain_pass": True,
         "logical_slot": iso,
         "run_id": str(run),
@@ -114,6 +117,7 @@ def test_post_publish_proof_contains_full_core_lifecycle_and_provenance(tmp_path
     assert proof["natural_transport"] == "FPL_MASTER_SLOT_ISSUE_TITLE"
     assert proof["core_trigger_source"] == "GOVERNED_TRIGGER_EVENT"
     assert proof["logical_slot_source"] == "GOVERNED_TRIGGER_EVENT"
+    assert proof["scheduler_epoch"] == NATURAL_PROOF_EPOCH
     assert proof["audit_transport_required_for_core_proof"] is False
     assert proof["core_chain_pass"] is True
     assert proof["candidate_generation_id"] == "12345:1:abcdef0123456789"

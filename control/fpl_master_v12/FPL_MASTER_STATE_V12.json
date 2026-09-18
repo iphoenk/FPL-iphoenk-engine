@@ -1,0 +1,167 @@
+{
+  "schema": "FPL_MASTER_STATE_V12",
+  "context_version": 12,
+  "architecture_authority": "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt",
+  "report_plane_state": true,
+  "non_authoritative_state_file": true,
+  "v6_factual_data_plane_owner": false,
+  "authority": false,
+  "updated_at": "2026-09-19T06:15:26+07:00",
+  "source": "migrated_from_library_ACTIVE_DECISION_CONTEXT_V2",
+  "latest_explicit_user_state_wins": true,
+  "confirmed_current_squad_state": {
+    "goalkeepers": [
+      {
+        "element_id": 572,
+        "display_name": "Tzolakis"
+      },
+      {
+        "element_id": 109,
+        "display_name": "Verbruggen"
+      }
+    ],
+    "defenders": [
+      {
+        "element_id": 115,
+        "display_name": "De Cuyper"
+      },
+      {
+        "element_id": 8,
+        "display_name": "Calafiori"
+      },
+      {
+        "element_id": 31,
+        "display_name": "Konsa"
+      },
+      {
+        "element_id": 391,
+        "display_name": "Gvardiol"
+      },
+      {
+        "element_id": 279,
+        "display_name": "Ajayi"
+      }
+    ],
+    "midfielders": [
+      {
+        "element_id": 426,
+        "display_name": "B.Fernandes"
+      },
+      {
+        "element_id": 565,
+        "display_name": "M.Sangaré"
+      },
+      {
+        "element_id": 40,
+        "display_name": "Rogers"
+      },
+      {
+        "element_id": 15,
+        "display_name": "Ødegaard"
+      },
+      {
+        "element_id": 68,
+        "display_name": "Tavernier"
+      }
+    ],
+    "forwards": [
+      {
+        "element_id": 411,
+        "display_name": "Haaland"
+      },
+      {
+        "element_id": 165,
+        "display_name": "João Pedro"
+      },
+      {
+        "element_id": 346,
+        "display_name": "Calvert-Lewin"
+      }
+    ],
+    "transfer_execution_state": "NO_TRANSFER_CONFIRMED",
+    "status": "MIGRATED_FROM_LAST_CONFIRMED_USER_EXPLICIT_STATE",
+    "note": "Any newer explicit screenshot/manual state supersedes this immediately."
+  },
+  "active_scenarios": [
+    {
+      "scenario_id": "HOLD_SANGARE",
+      "state": "CONTEMPLATED",
+      "execution_state": "NOT_EXECUTED",
+      "route_type": "HOLD"
+    },
+    {
+      "scenario_id": "TRANSFER_TO_BARNES",
+      "state": "CONTEMPLATED",
+      "execution_state": "NOT_EXECUTED",
+      "route_type": "ONE_GW_PUNT",
+      "out": {
+        "element_id": 565,
+        "display_name": "M.Sangaré"
+      },
+      "in": {
+        "element_id": 453,
+        "display_name": "Barnes"
+      },
+      "hit_points_assumption": -4
+    },
+    {
+      "scenario_id": "JOAO_PEDRO_AVAILABILITY",
+      "state": "CONTEMPLATED",
+      "execution_state": "NOT_EXECUTED",
+      "route_type": "AVAILABILITY_BRANCH",
+      "players": [
+        {
+          "element_id": 165,
+          "display_name": "João Pedro"
+        }
+      ]
+    },
+    {
+      "scenario_id": "BRUNO_KEEP_START",
+      "state": "CONTEMPLATED",
+      "execution_state": "NOT_EXECUTED",
+      "route_type": "KEEP_START",
+      "players": [
+        {
+          "element_id": 426,
+          "display_name": "B.Fernandes"
+        }
+      ]
+    },
+    {
+      "scenario_id": "XI_MARGINAL_SANGARE_DE_CUYPER_DCL",
+      "state": "CONTEMPLATED",
+      "execution_state": "NOT_EXECUTED",
+      "route_type": "XI_BENCH_BRANCH",
+      "players": [
+        {
+          "element_id": 565,
+          "display_name": "M.Sangaré"
+        },
+        {
+          "element_id": 115,
+          "display_name": "De Cuyper"
+        },
+        {
+          "element_id": 346,
+          "display_name": "Calvert-Lewin"
+        }
+      ]
+    }
+  ],
+  "guards": [
+    "CONTEMPLATED != EXECUTED",
+    "Latest explicit user state wins",
+    "Unresolved routes survive scheduler execution",
+    "Optimizer never erases active user route",
+    "State failure never mutates V6",
+    "State is never factual provider authority"
+  ],
+  "core_policy": {
+    "v6_only": true,
+    "issue_431_role": "OPTIONAL_GOVERNED_REFRESH_TRANSPORT",
+    "mutation_success_required_for_report": false,
+    "alternate_transport_allowed": false,
+    "v3_v4_v5_fallback_allowed": false
+  }
+}

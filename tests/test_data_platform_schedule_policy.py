@@ -21,6 +21,7 @@ def test_runtime_scheduler_constants_are_derived_from_single_policy() -> None:
     assert CHATGPT_SCHEDULER_EPOCH == authority["health_epoch"]
     assert CHATGPT_GREEN_STREAK == authority["green_after_consecutive_slots"]
     assert SCHEDULE_POLICY.cadence_minutes == authority["cadence_minutes"]
+    assert SCHEDULE_POLICY.scheduled_dispatch_tolerance_seconds == authority["scheduled_dispatch_tolerance_seconds"]
     assert SCHEDULE_POLICY.proof_fresh_after_minutes == authority["proof_fresh_after_minutes"]
     assert SCHEDULE_POLICY.proof_stale_after_minutes == authority["proof_stale_after_minutes"]
 

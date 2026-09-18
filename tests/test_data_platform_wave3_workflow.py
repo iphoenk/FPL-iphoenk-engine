@@ -41,9 +41,9 @@ def test_wave3_observer_resolves_exact_source_run_from_immutable_event_fanout():
 
 def test_wave3_observer_requires_successful_collect_publish_and_fulfillment_before_proof():
     text = WORKFLOW.read_text(encoding="utf-8")
-    assert 'collect = jobs.get("collect")' in text
-    assert 'publish = jobs.get("publish")' in text
-    assert 'fulfillment = jobs.get("orchestration-fulfillment")' in text
+    assert 'collect_row = jobs.get("collect") or {}' in text
+    assert 'publish_row = jobs.get("publish") or {}' in text
+    assert 'fulfillment_row = jobs.get("orchestration-fulfillment") or {}' in text
     assert 'collect != "success" or fulfillment != "success"' in text
     assert 'countable = publish == "success"' in text
     assert '"collect_job_id": collect_row.get("id")' in text

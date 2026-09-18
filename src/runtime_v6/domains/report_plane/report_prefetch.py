@@ -118,26 +118,6 @@ def _canonical_prefetch_scope(scope: tuple[str, ...] | list[str] | None) -> tupl
     return normalized
 
 
-
-_CANONICAL_SCOPE_BY_REPORT_KIND = {
-    "full_master": ("personal", "mini_league"),
-    "match_mode": ("personal", "mini_league", "live"),
-    "deadline_review": ("personal", "mini_league"),
-    "05:30_price": ("mini_league",),
-}
-
-
-def _required_prefetch_scope(
-    report_kind: str,
-    scope: tuple[str, ...] | list[str] | None,
-) -> tuple[str, ...]:
-    if scope:
-        return _canonical_prefetch_scope(scope)
-    if report_kind == "ad_hoc":
-        return ()
-    return _canonical_prefetch_scope(_CANONICAL_SCOPE_BY_REPORT_KIND.get(report_kind, ()))
-
-
 def _snapshot_prefetch_scope(snapshot: dict[str, Any]) -> tuple[str, ...]:
     explicit = snapshot.get("scope")
     if isinstance(explicit, (list, tuple)):
@@ -186,10 +166,10 @@ def select_report_prefetch_occurrence(
     if report_kind not in REPORT_KINDS:
         raise PrefetchContractError(f"unsupported report_kind={report_kind}")
     requested_slot = parse_slot(requested_logical_slot).isoformat()
-    required_scope = _required_prefetch_scope(report_kind, scope)
-    if report_kind == "ad_hoc" and not required_scope:
+    required_scope = _canonical_prefetch_scope(scope)
+    if not required_scope:
         raise PrefetchContractError(
-            "ad_hoc report-prefetch occurrence selection requires scope"
+            "report-prefetch occurrence selection requires exact scope"
         )
 
     explicit_identity = str(report_prefetch_identity or "").strip() or None
@@ -267,9 +247,11 @@ def evaluate_report_prefetch_readiness(
         raise PrefetchContractError("report-prefetch recovery attempt bounds are invalid")
     requested = parse_slot(requested_logical_slot)
     observed = observed_at or requested
-    scopes = _required_prefetch_scope(report_kind, scope)
-    if report_kind == "ad_hoc" and not scopes:
-        raise PrefetchContractError("ad_hoc report-prefetch recovery requires scope")
+    scopes = _canonical_prefetch_scope(scope)
+    if not scopes:
+        raise PrefetchContractError(
+            "report-prefetch readiness requires exact occurrence scope"
+        )
 
     selected = select_report_prefetch_occurrence(
         snapshot,

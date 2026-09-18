@@ -51,7 +51,7 @@ def test_historical_duplicate_outside_latest_12_does_not_poison_clean_rolling_wi
 
     assert result["duplicate_publication_slots"] == [start.isoformat()]
     assert result["duplicate_publication_slots_in_rolling_12"] == []
-    assert result["rolling_12_of_48_complete"] is True
+    assert result["rolling_12_of_12_complete"] is True
     assert result["natural_window_eligible"] is True
     assert result["production_green_eligible"] is True
 
@@ -84,7 +84,7 @@ def test_duplicate_publication_inside_rolling_12_blocks_production_green():
 
     result = evaluate_proof_window(proofs, chaos_acceptance_pass=True)
 
-    assert result["rolling_12_of_48_complete"] is False
+    assert result["rolling_12_of_12_complete"] is False
     assert result["duplicate_publication_slots_in_rolling_12"] == [duplicate_slot.isoformat()]
     assert result["natural_window_eligible"] is False
     assert result["production_green_eligible"] is False

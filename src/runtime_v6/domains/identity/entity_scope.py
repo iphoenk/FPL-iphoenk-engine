@@ -58,3 +58,30 @@ def source_scope_map(config: dict[str, Any]) -> dict[str, list[str]]:
         str(source["id"]): entity_scopes_for_source(source, policy)
         for source in config.get("sources") or []
     }
+
+
+def resolve_entity_scope_applicability(
+    source_id: str,
+    entity_type: str,
+    source_scopes: dict[str, list[str]],
+) -> dict[str, Any]:
+    """Resolve applicability from the canonical entity-scopes authority only."""
+    source_key = str(source_id)
+    entity = str(entity_type).strip().upper()
+    if not entity:
+        raise EntityScopePolicyError("entity type must be non-empty")
+    scopes = sorted(
+        dict.fromkeys(
+            str(scope).strip().upper()
+            for scope in (source_scopes.get(source_key) or [])
+            if str(scope).strip()
+        )
+    )
+    applicable = entity in scopes
+    return {
+        "source_id": source_key,
+        "entity_type": entity,
+        "entity_scopes": scopes,
+        "applicable": applicable,
+        "state": entity if applicable else "NOT_APPLICABLE",
+    }

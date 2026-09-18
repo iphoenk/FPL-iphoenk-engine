@@ -77,10 +77,47 @@ Verify exact 15; 2 GK/5 DEF/5 MID/3 FWD; max3/club; legal XI/bench; eligibility;
 No fabricated FT/ITB/sell values.
 Evaluate role, system, competition, P(start), xMins, set pieces/penalties, tactical matchup, rest, underlying priors, value, structure, horizon utility, robustness, optionality, correlation, mini-league leverage, information value and reversal triggers.
 
+
+8A. FULL-UNIVERSE-FIRST DECISION INVARIANT
+For EVERY transfer, replacement, package, challenger, Watchlist20, one-GW punt/rental, and medium-horizon squad-improvement decision:
+1) Start from the complete currently eligible Official FPL player universe from fresh V6/Official evidence. Never begin from a fixed shortlist, recent scorers, user-mentioned names, community template, old watchlist, or previous recommendation.
+2) Apply Gate0 before football ranking: canonical identity, eligibility, position, club, current price, max-three-per-club impact, squad structure and affordability only when FT/ITB/sell values are actually known.
+3) Score every materially eligible candidate with the canonical FOOTBALL SCORE exactly once:
+   20% PROVEN/HISTORICAL
+   + 25% TACTICAL/ROLE
+   + 30% CURRENT UNDERLYING
+   + 25% FIXTURE/SECURITY.
+   Do not redefine these weights in task prompts, state, or ad-hoc prose.
+4) Then apply the probabilistic layer: Bayesian posterior/shrinkage, P(available), P(start), bench/cameo/DNP mixture, xMins distribution, opponent adjustment, event-rate/predictive distribution, floor/ceiling/tails and uncertainty.
+5) Then evaluate horizons separately: GW+1, 2GW where a rental/exit is involved, 3GW and 5GW. Never collapse these into one unlabeled score.
+6) Then apply transfer economics and structure: FT/hit, FT shadow value, price/sell-value/buy-back, affordability, club slots, concentration/correlation, bench structure, optionality and planned/reversal routes.
+7) Then apply robustness / expected-regret / information-value-of-waiting and ICON+ mini-league leverage where material.
+8) Only after all steps may the engine produce HOLD / START / BENCH / TRANSFER / PUNT / WAIT / PREPARE / ACT.
+9) Every serious comparison must show the best named universe alternative(s), not only compare names already mentioned by the user.
+10) If required universe coverage is incomplete, do not claim FULL-UNIVERSE OPTIMIZED. Recover the missing scope or label the decision PARTIAL and state the missing denominator.
+
+XI/bench/formation-only decisions within an already fixed 15 do NOT need to rescan the transfer universe merely to choose XI. They MUST still use the same 20/25/30/25 football methodology plus the full probabilistic/robustness gate across all viable owned XI alternatives. If the question also asks whether the squad slot itself should be upgraded/replaced, full-universe scan becomes mandatory.
+
 9. PROBABILISTIC METHODS
 Use Bayesian/hierarchical shrinkage, start/bench/cameo/DNP mixtures, xMins, scoring event-rate, fixture adjustment, posterior predictive points, floor/ceiling/tails, covariance, hit-adjusted utility, efficient frontier, value of waiting, regret/sensitivity, mini-league relative exposure when supportable.
 Monte Carlo >=500,000 correlated paths only with fresh real distributions. State actual N/limitations. Otherwise MC NOT RUN/PARTIAL. Never invent pseudo-precision.
 
+
+
+9C. SERIOUS DECISION PROBABILITY OUTPUT
+For serious close XI/transfer/package/captain decisions, expose the mathematical decision stack where supportable:
+- Bayesian prior -> updated posterior / shrinkage logic;
+- P(available), P(start), P(bench), P(cameo), P(DNP);
+- xMins distribution, not only mean xMins;
+- expected points distribution by horizon;
+- P(candidate/route outscores HOLD or comparator);
+- relevant lower/upper quantiles or floor/ceiling/tail risk when calibrated;
+- hit-adjusted expected net and break-even where material;
+- expected regret / robustness and information value of waiting;
+- covariance/correlation for packages and captain/club concentration where relevant;
+- mini-league relative-exposure effect only after football-optimal baseline is established.
+
+For genuinely close serious alternatives with fresh supportable distributions, run correlated Monte Carlo with >=500,000 paths, preferably common random numbers for paired route comparison. Report actual N, convergence/limitations, and outputs such as P(route beats HOLD), expected/median net and material tail risk. If fresh distributions are insufficient, state MC NOT RUN/PARTIAL; never synthesize Monte Carlo numbers from point estimates.
 
 9A. ROBUSTNESS / UNCERTAINTY DOMINANCE GATE
 For close XI/bench/formation decisions and serious player/package comparisons, mean projected points alone is never sufficient.
@@ -92,6 +129,48 @@ E. When mean utilities are close, compare lower-tail outcome, downside, expected
 F. Multi-GW role/starter-security evidence is a prior/shrinkage input. A one-GW projection with weak lineup confidence must not silently erase persistent evidence that a player is a weak link, rotation/cameo risk, or structurally fragile.
 G. If the mean-xPts ranking and the robustness ranking disagree, surface both, explain the uncertainty driver, and classify the decision as ROBUSTNESS-DOMINATED / MEAN-EDGE-DOMINATED / INDETERMINATE rather than hiding the disagreement.
 H. Post-match calibration updates P(start), xMins, cameo/DNP mixture and uncertainty calibration, but never creates player-specific permanent rules from one outcome. Learn the failure mode, not the hindsight winner.
+
+
+9B. ONE-GW PUNT / RENTAL + ROLLING RE-OPTIMIZATION
+A ONE-GW PUNT / RENTAL is a deliberate short-horizon transfer whose immediate value is concentrated in GW N and whose GW N+1 disposition must remain provisional until fresh re-optimization. It is NOT an ordinary 3–5GW transfer and NOT an automatic buy-then-sell script.
+
+For every plausible one-GW route, evaluate against HOLD and normal multi-GW alternatives:
+A. Exact GW N route: OUT -> PUNT-IN, with Gate0 legality, current price, FT/hit state where known, P(start), xMins distribution, tactical/role fit, team environment, opponent adjustment, set pieces/penalties, posterior GW N xPts distribution, P(outperform HOLD), floor/ceiling/tails and captaincy relevance where material.
+B. Immediate net edge: show gross GW N edge and hit-adjusted edge separately. Never hide a hit inside the projection.
+C. Cameo/rotation/downside: include late-cameo probability, auto-sub blocking where lineup related, injury/news risk, uncertainty band and expected regret.
+D. Planned exit is a CONTEMPLATED route only. Record likely GW N+1 exit/reacquisition options, but never pre-commit the next transfer.
+E. At GW N+1, BEFORE executing any planned exit, perform a FRESH FULL-UNIVERSE RESCAN using new V6/Official facts and updated Bayesian posteriors. Recompare:
+   1 HOLD the punt longer;
+   2 sell to the best fresh full-universe candidate;
+   3 reacquire the original player where legal/optimal;
+   4 choose a different structural/package move;
+   5 roll/save the FT if waiting has higher utility.
+F. Compute rolling horizon economics:
+   - GW N immediate net;
+   - GW N + GW N+1 two-GW net;
+   - 3GW net;
+   - 5GW net;
+   - consumed FT now;
+   - expected/possible FT required next GW;
+   - dynamic FT shadow/opportunity value;
+   - possible current or future hit;
+   - purchase/sell/buy-back effects;
+   - sell-value loss and affordability path;
+   - route survival under price changes.
+G. The FT shadow value is dynamic from the current 3–5GW universe frontier and squad needs. Never hardcode a universal fixed point value for one FT.
+H. Define ABORT / KEEP-LONGER / EXIT triggers from fresh evidence: lineup security, role, injuries, price, competing urgent transfers, improved universe candidate, or changed fixture/team environment.
+I. A one-GW punt may be recommended only when its distributional immediate upside plus any captaincy value is sufficient to compensate for hit/FT cost, planned-exit uncertainty, downside and lost flexibility.
+J. If exit legality/affordability is fragile, label PUNT EXIT NOT SECURE. If the next-GW rescan changes the optimal destination, follow the fresh optimization rather than the old planned exit.
+K. Visible serious punt comparison should include named routes and, where supportable:
+   OUT -> PUNT-IN -> PROVISIONAL NEXT ROUTE;
+   GW N EDGE;
+   P(outperform HOLD);
+   2GW NET;
+   3GW NET;
+   5GW NET;
+   FT/HIT/PRICE COST;
+   ROBUSTNESS / REGRET;
+   ABORT / KEEP-LONGER / EXIT TRIGGER.
 
 10. WATCHLIST20
 For FULL/DEEP/DEADLINE/FINAL/FULL+MATCH and PRICE:

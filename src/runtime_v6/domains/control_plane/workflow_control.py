@@ -87,9 +87,15 @@ def authorize_dispatch(
     mode: str,
     reason: str,
     manual_confirm: str = "",
+    initiator: str = "",
 ) -> str:
-    if actor != repository_owner:
-        raise WorkflowControlError("V6 governed dispatch is restricted to the repository owner")
+    recovery_guard_actor = (
+        mode == "manual_recovery"
+        and actor == "github-actions[bot]"
+        and initiator == "recovery_guard"
+    )
+    if actor != repository_owner and not recovery_guard_actor:
+        raise WorkflowControlError("V6 governed dispatch is restricted to the repository owner or recovery guard")
     if not str(reason).strip():
         raise WorkflowControlError("V6 governed dispatch requires an audit reason")
     control = dict(policy.get(mode) or {})
@@ -429,6 +435,7 @@ def main() -> int:
                 mode=str(os.environ.get("V6_DISPATCH_MODE") or ""),
                 reason=str(os.environ.get("V6_DISPATCH_REASON") or ""),
                 manual_confirm=str(os.environ.get("V6_MANUAL_CONFIRM") or ""),
+                initiator=str(os.environ.get("V6_DISPATCH_INITIATOR") or ""),
             )
             print(f"Governed V6 {mode} dispatch authorized")
         elif args.command == "authorize-issue-edit":

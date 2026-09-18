@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from .entity_scope import entity_scopes_for_source
+from ..identity.entity_scope import entity_scopes_for_source
+from ..identity.identity_scope import source_identity_observability
 from .http_client import utc_now
 
 _DIMENSION_STATES = {"GREEN", "AMBER", "RED", "NOT_APPLICABLE"}
@@ -116,33 +117,6 @@ def _coverage_health(source: dict[str, Any], payload: dict[str, Any]) -> str:
     return "RED" if source.get("critical") else "AMBER"
 
 
-def _identity_scope_health(
-    source_id: str,
-    scopes: list[str],
-    identity_map: dict[str, Any],
-) -> tuple[str, dict[str, str]]:
-    applicable: dict[str, str] = {}
-    if "PLAYER" in scopes:
-        row = dict((identity_map.get("coverage") or {}).get(source_id) or {})
-        applicable["PLAYER"] = str(row.get("identity_health") or "RED")
-    bridges = dict(identity_map.get("entity_bridges") or {})
-    if "TEAM" in scopes:
-        row = dict(((bridges.get("team") or {}).get("coverage") or {}).get(source_id) or {})
-        applicable["TEAM"] = str(row.get("identity_health") or "RED")
-    if "FIXTURE" in scopes:
-        row = dict(((bridges.get("fixture") or {}).get("coverage") or {}).get(source_id) or {})
-        applicable["FIXTURE"] = str(row.get("identity_health") or "RED")
-
-    if not applicable:
-        return "NOT_APPLICABLE", {}
-    states = set(applicable.values())
-    if "RED" in states:
-        return "RED", applicable
-    if "AMBER" in states:
-        return "AMBER", applicable
-    return "GREEN", applicable
-
-
 def _provenance_health(payload: dict[str, Any]) -> str:
     if not payload.get("source_id") or not payload.get("checked_at"):
         return "RED"
@@ -216,7 +190,7 @@ def _readiness(dimensions: dict[str, str]) -> dict[str, str]:
     return {
         "operational": operational,
         "data": data,
-        "join": dimensions["identity_health"],
+        "join": dimensions["identity_join_health"],
     }
 
 
@@ -264,15 +238,21 @@ def build_source_health(
         coverage = payload.get("coverage") or {}
         polling = payload.get("polling") or {}
         scopes = entity_scopes_for_source(source)
-        identity_health, identity_by_scope = _identity_scope_health(
-            str(source["id"]), scopes, identity_map
+        identity = source_identity_observability(
+            identity_map,
+            str(source["id"]),
+            {str(source["id"]): scopes},
         )
+        identity_health = str(identity["identity_health"])
+        identity_join_health = str(identity["identity_join_health"])
+        identity_by_scope = dict(identity["identity_by_scope"])
         dimensions = {
             "transport_health": _transport_health(source, payload),
             "freshness_health": _freshness_health(source, payload),
             "schema_health": _schema_health(payload),
             "coverage_health": _coverage_health(source, payload),
             "identity_health": identity_health,
+            "identity_join_health": identity_join_health,
             "provenance_health": _provenance_health(payload),
             "payload_integrity": _payload_integrity(payload),
         }
@@ -307,13 +287,16 @@ def build_source_health(
                 "critical": bool(source.get("critical")),
                 "entity_scopes": scopes,
                 "health": health,
+                "source_runtime_health": readiness["operational"],
+                "identity_join_health": identity_join_health,
+                "overall_operational_health": consumer_state,
                 "dimensions": dimensions,
                 "readiness": readiness,
                 "consumer_readiness": consumer_state,
                 "fallback_recommended": fallback_recommended,
                 "fallback_reason": fallback_reason,
                 "identity_by_scope": identity_by_scope,
-                "join_ready": identity_health in {"GREEN", "NOT_APPLICABLE"},
+                "join_ready": identity_join_health in {"GREEN", "NOT_APPLICABLE"},
                 "availability": payload.get("availability"),
                 "effective_state": payload.get("effective_state"),
                 "changed": payload.get("changed"),
@@ -339,14 +322,25 @@ def build_source_health(
 
     overall = "RED" if counts.get("RED", 0) else ("AMBER" if counts.get("AMBER", 0) else "GREEN")
     public_core_status = _worst_state(critical_readiness) if critical_readiness else "GREEN"
-    consumer_readiness_overall = _worst_state(
-        [str(row["consumer_readiness"]) for row in sources]
+    source_runtime_health_overall = _worst_state(
+        [str(row["source_runtime_health"]) for row in sources]
     ) if sources else "GREEN"
+    identity_join_health_overall = _worst_state(
+        [str(row["identity_join_health"]) for row in sources]
+    ) if sources else "NOT_APPLICABLE"
+    overall_operational_health = _worst_state(
+        [str(row["overall_operational_health"]) for row in sources]
+    ) if sources else "GREEN"
+    consumer_readiness_overall = overall_operational_health
+
     return {
         "schema_version": 5,
         "generated_at": utc_now(),
         "overall": overall,
         "public_core_status": public_core_status,
+        "source_runtime_health_overall": source_runtime_health_overall,
+        "identity_join_health_overall": identity_join_health_overall,
+        "overall_operational_health": overall_operational_health,
         "consumer_readiness_overall": consumer_readiness_overall,
         "fallback_recommended": bool(fallback_sources),
         "fallback_sources": fallback_sources,
@@ -358,13 +352,16 @@ def build_source_health(
         "semantics": {
             "health": "Backward-compatible operational acquisition health; inspect readiness and dimensions for consumer usability.",
             "public_core_status": "Critical public V6 data-plane readiness only; authenticated personal state is a separate report-prefetch concern.",
-            "consumer_readiness_overall": "Worst operational/data readiness across all active public sources; identity is intentionally reported separately.",
+            "source_runtime_health": "Operational source/runtime state derived from transport, freshness, provenance and payload integrity; identity does not alter it.",
+            "identity_health": "Backward-compatible PLAYER identity dimension derived from canonical source_entity_identity.player truth; NOT_APPLICABLE is non-failure.",
+            "identity_join_health": "Deterministic join readiness aggregated across every applicable PLAYER, TEAM and FIXTURE identity scope from canonical source_entity_identity truth.",
+            "overall_operational_health": "Worst operational/data readiness across active public sources; identity is deliberately separate.",
+            "consumer_readiness_overall": "Compatibility alias for overall_operational_health.",
             "fallback_recommended": "Machine-readable hint for FPL Master/report layer to refresh only degraded, stale, or unusable public resources directly. V6 itself never performs downstream fallback.",
             "transport_health": "Whether the current network/source acquisition attempt succeeded independently of cache freshness.",
             "freshness_health": "Age of the effective payload against the source-specific freshness target.",
             "schema_health": "Whether the payload passed structural/validation checks without truncation or degraded successful reads.",
             "coverage_health": "Whether the expected source-native requests/records are materially covered.",
-            "identity_health": "Deterministic cross-source identity readiness only for entity scopes relevant to this source; unmapped identity does not make source-native public facts unavailable.",
             "provenance_health": "Whether source identity, timestamps, and upstream-model authorship lineage are explicit.",
             "payload_integrity": "Whether payload hashes/truncation/model-signal boundaries are internally consistent.",
         },

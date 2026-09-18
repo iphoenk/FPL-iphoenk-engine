@@ -468,7 +468,7 @@ def build_player_identity_coverage_truth(
             "wave_b_green_identity_requires_zero_actionable_observed_unmapped": True,
             "reviewed_provider_limitations_are_excluded_only_from_provider_max_join_denominator": True,
             "raw_observed_join_coverage_remains_visible": True,
-            "wave_b_green_identity_does_not_require_657_canonical_mappings": True,
+            "wave_b_green_identity_does_not_require_full_canonical_coverage": True,
             "provider_native_inventory_names_are_diagnostic_only": True,
         },
         "sources": sources,

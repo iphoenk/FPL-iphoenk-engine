@@ -11,7 +11,7 @@ from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_rende
 from src.runtime_v6.report_trigger import build_ad_hoc_report_context
 from test_support.report_provenance import r5_partitions, r5_section_payloads
 from test_support.report_rank20 import rank20_rows
-from test_support.report_visible_body import valid_visible_body
+from test_support.report_visible_body import valid_match_visible_body, valid_visible_body
 
 
 TAHAP3_SCENARIOS = (
@@ -278,6 +278,13 @@ def test_live_match_checkpoint_uses_match1_to_match8_catalog_not_full_backbone()
     assert pre["status"] == "PASS"
     assert pre["expected_section_ids"] == [f"MATCH{index}" for index in range(1, 9)]
     assert pre["generated_section_ids"] == pre["expected_section_ids"]
+    post = _post(
+        pre,
+        body=valid_match_visible_body(pre),
+        weather="MATCH_CURRENT",
+    )
+    assert post["status"] == "PASS"
+    assert post["visible_body_validated"] is True
 
 
 def test_post_all_match_inherits_full_backbone_and_requires_scout_marker():

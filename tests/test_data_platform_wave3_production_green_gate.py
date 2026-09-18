@@ -74,7 +74,7 @@ def test_rolling_12_without_chaos_acceptance_cannot_be_production_green(tmp_path
 
     summary = build_window_summary(prior, current)
 
-    assert summary["rolling_12_of_48_complete"] is True
+    assert summary["rolling_12_of_12_complete"] is True
     assert summary["natural_window_eligible"] is True
     assert summary["chaos_acceptance_pass"] is False
     assert summary["production_green_eligible"] is False
@@ -94,7 +94,7 @@ def test_rolling_12_plus_valid_bound_chaos_acceptance_is_production_green_eligib
         chaos_artifact_name="v6-wave3-chaos-acceptance-34815393691-1",
     )
 
-    assert summary["rolling_12_of_48_complete"] is True
+    assert summary["rolling_12_of_12_complete"] is True
     assert summary["natural_window_eligible"] is True
     assert summary["chaos_acceptance_pass"] is True
     assert summary["production_green_eligible"] is True

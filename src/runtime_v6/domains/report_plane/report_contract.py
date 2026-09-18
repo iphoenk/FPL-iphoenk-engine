@@ -64,6 +64,237 @@ def _parse_jakarta(value: str | datetime, *, label: str) -> datetime:
     return parsed.astimezone(_JAKARTA)
 
 
+
+_REPORT_DATA_READINESS_POLICY = {
+    "maximum_wait_seconds": int(_ON_TIME_TOLERANCE_SECONDS),
+    "poll_interval_seconds": 5,
+}
+_REPORT_DATA_FRESHNESS_LADDER = (
+    "FRESH_CURRENT_PUBLICATION",
+    "BOUNDED_WAIT_SAME_ACQUISITION",
+    "FRESHEST_VALID_AUTHORITATIVE_PUBLICATION_WITHIN_SLA",
+    "EXACT_SCOPE_GOVERNED_RECOVERY",
+    "EXACT_SCOPE_DIRECT_FRESH_IF_RUNTIME_PERMITS",
+    "PERMITTED_NONVOLATILE_LAST_GOOD",
+    "TRUTHFUL_FIELD_LEVEL_UNAVAILABLE",
+)
+
+
+def _publication_readiness(
+    publication: Mapping[str, Any] | None,
+    *,
+    observed_at: datetime,
+    maximum_age_minutes: float,
+    required_scope: str,
+) -> dict[str, Any]:
+    if not isinstance(publication, Mapping):
+        return {"valid": False, "reason": "PUBLICATION_MISSING"}
+
+    generated_raw = publication.get("generated_at")
+    try:
+        generated = _parse_jakarta(generated_raw, label="publication.generated_at")
+    except (ReportContractError, TypeError):
+        return {"valid": False, "reason": "PUBLICATION_GENERATED_AT_INVALID"}
+
+    age_minutes = (observed_at - generated).total_seconds() / 60.0
+    if age_minutes < 0:
+        return {"valid": False, "reason": "PUBLICATION_FROM_FUTURE"}
+    if age_minutes > float(maximum_age_minutes):
+        return {
+            "valid": False,
+            "reason": "PUBLICATION_STALE",
+            "age_minutes": round(age_minutes, 3),
+        }
+
+    integrity = publication.get("publish_integrity")
+    integrity_pass = bool(
+        integrity == "PASS"
+        or (isinstance(integrity, Mapping) and integrity.get("status") == "PASS")
+    )
+    provenance = publication.get("provenance")
+    provenance_valid = bool(
+        publication.get("provenance_valid") is True
+        or (
+            isinstance(provenance, Mapping)
+            and provenance.get("valid") is True
+        )
+    )
+    available_scopes = publication.get("available_scopes")
+    required_scope_available = bool(
+        publication.get("required_scope_available") is True
+        or (
+            isinstance(available_scopes, (list, tuple, set, frozenset))
+            and required_scope in available_scopes
+        )
+    )
+    publication_sha = str(
+        publication.get("publication_sha")
+        or publication.get("data_publication_sha")
+        or publication.get("tree_sha256")
+        or ""
+    ).strip()
+
+    checks = {
+        "authoritative_runtime_snapshot": publication.get("authoritative_runtime_snapshot") is True,
+        "publish_integrity_pass": integrity_pass,
+        "provenance_valid": provenance_valid,
+        "required_scope_available": required_scope_available,
+        "publication_sha_present": bool(publication_sha),
+        "within_freshness_sla": True,
+    }
+    valid = all(checks.values())
+    return {
+        "valid": valid,
+        "reason": "PASS" if valid else "PUBLICATION_CONTRACT_FAILED",
+        "generated_at": generated.isoformat(),
+        "age_minutes": round(age_minutes, 3),
+        "publication_sha": publication_sha or None,
+        "checks": checks,
+    }
+
+
+def resolve_report_data_readiness(
+    *,
+    current_acquisition_state: str,
+    current_acquisition_id: str,
+    current_publication: Mapping[str, Any] | None,
+    authoritative_publications: Sequence[Mapping[str, Any]],
+    observed_at: str | datetime,
+    maximum_age_minutes: float,
+    required_scope: str,
+    waited_seconds: int = 0,
+) -> dict[str, Any]:
+    """Resolve report-side freshness without starting a duplicate V6 acquisition.
+
+    CURRENT_ACQUISITION_IN_PROGRESS is an orchestration state, not a data-quality
+    verdict. While the same governed acquisition is still running, the report may
+    consume the freshest valid authoritative publication within Runtime freshness
+    limits and must re-read/recompute affected scopes when that acquisition completes.
+    """
+    acquisition_id = str(current_acquisition_id or "").strip()
+    if not acquisition_id:
+        raise ReportContractError("current_acquisition_id is required")
+    scope = str(required_scope or "").strip()
+    if not scope:
+        raise ReportContractError("required_scope is required")
+    if maximum_age_minutes < 0:
+        raise ReportContractError("maximum_age_minutes must be non-negative")
+    if isinstance(waited_seconds, bool) or int(waited_seconds) < 0:
+        raise ReportContractError("waited_seconds must be non-negative")
+
+    observed = _parse_jakarta(observed_at, label="observed_at")
+    state_raw = str(current_acquisition_state or "").strip().upper()
+    ready_states = {"READY", "COMPLETE", "COMPLETED", "PUBLISHED", "PASS"}
+    in_progress_states = {"IN_PROGRESS", "RUNNING", "STARTED"}
+    failed_states = {"FAILED", "ERROR", "CANCELLED"}
+    if state_raw in ready_states:
+        readiness_state = "CURRENT_PUBLICATION_READY"
+    elif state_raw in in_progress_states:
+        readiness_state = "CURRENT_ACQUISITION_IN_PROGRESS"
+    elif state_raw in failed_states:
+        readiness_state = "CURRENT_PUBLICATION_FAILED"
+    else:
+        readiness_state = "NO_VALID_FRESH_SNAPSHOT"
+
+    current_validation = _publication_readiness(
+        current_publication,
+        observed_at=observed,
+        maximum_age_minutes=maximum_age_minutes,
+        required_scope=scope,
+    )
+
+    valid_prior: list[tuple[datetime, dict[str, Any], Mapping[str, Any]]] = []
+    for candidate in authoritative_publications:
+        validation = _publication_readiness(
+            candidate,
+            observed_at=observed,
+            maximum_age_minutes=maximum_age_minutes,
+            required_scope=scope,
+        )
+        if not validation["valid"]:
+            continue
+        generated = _parse_jakarta(validation["generated_at"], label="publication.generated_at")
+        valid_prior.append((generated, validation, candidate))
+    valid_prior.sort(key=lambda item: item[0], reverse=True)
+    freshest_prior = valid_prior[0] if valid_prior else None
+
+    wait_budget = int(_REPORT_DATA_READINESS_POLICY["maximum_wait_seconds"])
+    poll_interval = int(_REPORT_DATA_READINESS_POLICY["poll_interval_seconds"])
+    remaining_wait = max(0, wait_budget - int(waited_seconds))
+
+    common = {
+        "readiness_state": readiness_state,
+        "current_acquisition_id": acquisition_id,
+        "required_scope": scope,
+        "observed_at": observed.isoformat(),
+        "maximum_age_minutes": float(maximum_age_minutes),
+        "freshness_ladder": list(_REPORT_DATA_FRESHNESS_LADDER),
+        "poll_policy": dict(_REPORT_DATA_READINESS_POLICY),
+        "waited_seconds": int(waited_seconds),
+        "remaining_wait_seconds": remaining_wait,
+        "start_new_acquisition": False,
+        "duplicate_acquisition_allowed": False,
+        "legacy_fallback_allowed": False,
+        "v3_v4_v5_fallback_allowed": False,
+        "blanket_degraded": False,
+        "current_publication_validation": current_validation,
+    }
+
+    if readiness_state == "CURRENT_PUBLICATION_READY" and current_validation["valid"]:
+        return {
+            **common,
+            "status": "PASS",
+            "source": "FRESH_CURRENT_PUBLICATION",
+            "publication": dict(current_publication or {}),
+            "publication_validation": current_validation,
+            "poll_same_acquisition": False,
+            "recompute_on_current_completion": False,
+            "next_action": "USE_CURRENT_PUBLICATION",
+        }
+
+    if freshest_prior is not None:
+        _, validation, publication = freshest_prior
+        return {
+            **common,
+            "status": "PASS",
+            "source": "FRESHEST_VALID_AUTHORITATIVE_PUBLICATION_WITHIN_SLA",
+            "publication": dict(publication),
+            "publication_validation": validation,
+            "poll_same_acquisition": readiness_state == "CURRENT_ACQUISITION_IN_PROGRESS" and remaining_wait > 0,
+            "poll_interval_seconds": poll_interval,
+            "recompute_on_current_completion": readiness_state == "CURRENT_ACQUISITION_IN_PROGRESS",
+            "next_action": (
+                "POLL_SAME_ACQUISITION_AND_USE_AUTHORITATIVE_SNAPSHOT"
+                if readiness_state == "CURRENT_ACQUISITION_IN_PROGRESS" and remaining_wait > 0
+                else "USE_AUTHORITATIVE_SNAPSHOT"
+            ),
+        }
+
+    if readiness_state == "CURRENT_ACQUISITION_IN_PROGRESS" and remaining_wait > 0:
+        return {
+            **common,
+            "status": "WAITING",
+            "source": None,
+            "publication": None,
+            "publication_validation": None,
+            "poll_same_acquisition": True,
+            "poll_interval_seconds": poll_interval,
+            "recompute_on_current_completion": True,
+            "next_action": "BOUNDED_WAIT_SAME_ACQUISITION",
+        }
+
+    return {
+        **common,
+        "status": "RECOVERY_REQUIRED",
+        "source": None,
+        "publication": None,
+        "publication_validation": None,
+        "poll_same_acquisition": False,
+        "recompute_on_current_completion": False,
+        "next_action": "EXACT_SCOPE_GOVERNED_RECOVERY",
+    }
+
+
 def _ceil_canonical_half_hour(value: datetime) -> datetime:
     local = value.astimezone(_JAKARTA)
     base = local.replace(

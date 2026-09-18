@@ -1,0 +1,68 @@
+{
+  "fixture_schema": "FPL_AUTHORITY_CONSOLIDATION_EXPECTED_V1",
+  "non_authoritative_test_fixture": true,
+  "active_txt_authority": [
+    "/FPL/FPL_MASTER_RUNTIME_CONTRACT.txt",
+    "/FPL/FPL_MASTER_SPEC_V11.txt"
+  ],
+  "state": {
+    "path": "/FPL/state/ACTIVE_DECISION_CONTEXT.json",
+    "schema": "FPL_REPORT_PLANE_DECISION_CONTEXT_V2",
+    "authority": false,
+    "v6_factual_authority": false
+  },
+  "timing_semantics": {
+    "dispatch": {"name": "dispatch_tolerance_seconds", "owner": "Runtime 1A", "value": 90},
+    "terminal": {"name": "terminal_continuation_budget_seconds", "owner": "Runtime 3C", "value": 90},
+    "terminal_poll": {"name": "terminal_continuation_poll_interval_seconds", "owner": "Runtime 3C", "value": 5}
+  },
+  "ownership": {
+    "terminal_continuation_owner": "Runtime 3C",
+    "report_prefetch_identity_owner": "Runtime 3B",
+    "report_prefetch_continuation_owner": "Runtime 3E",
+    "delivery_receipt_owner": "Runtime 8E",
+    "natural_acceptance_owner": "Runtime 8D"
+  },
+  "presentation_routes": {
+    "FULL": "Y2",
+    "PRICE": "Y3",
+    "MATCH": "Y4",
+    "DEADLINE": "Y6",
+    "FINAL": "Y7",
+    "AD_HOC": "Y9",
+    "CATCH_UP": "Y11"
+  },
+  "methodology_owners": ["E","E0","E1","E2","F","G","H","T","T1","Z"],
+  "final_execution_recall": [
+    "AUTHORITY LOAD",
+    "TRIGGER ROUTER",
+    "MODE ROUTER",
+    "DECISION CONTEXT HYDRATION",
+    "V6 CORE",
+    "ACQUISITION / TERMINAL CONTINUATION",
+    "FRESHNESS PREFLIGHT",
+    "RECOVER BAD SCOPES",
+    "RE-READ AUTHORITATIVE PUBLICATION",
+    "EXACT REPORT-PREFETCH CHECK / RECOVERY",
+    "COMPLETE RETRIEVAL",
+    "BUILD LATEST OUR15",
+    "FULL-UNIVERSE COMPUTE",
+    "MODEL / TACTICAL / PRICE / MINI-LEAGUE / WEATHER",
+    "PRE_RENDER_QA",
+    "RENDER",
+    "POST_RENDER_QA",
+    "CAN_EMIT",
+    "VISIBLE_EMITTED",
+    "DELIVERY_ACKNOWLEDGED",
+    "IMMUTABLE SAME-SLOT RECEIPT",
+    "REPORT_SLOT_FULFILLED"
+  ],
+  "natural_acceptance": {
+    "window": 12,
+    "natural_only": true,
+    "manual_counts": false,
+    "recovery_counts": false,
+    "historical_rewrite": false,
+    "legacy_48_revived": false
+  }
+}

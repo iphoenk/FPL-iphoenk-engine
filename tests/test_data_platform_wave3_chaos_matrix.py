@@ -206,6 +206,7 @@ def test_duplicate_core_trigger_is_not_eligible_for_rolling_production_green():
         "proof_kind": "WAVE3_NATURAL_CORE_SLOT",
         "natural_slot": True,
         "natural_transport": "FPL_MASTER_SLOT_ISSUE_TITLE",
+        "scheduler_epoch": NATURAL_PROOF_EPOCH,
         "core_chain_pass": True,
         "logical_slot": "2026-09-14T06:00:00+00:00",
         "run_id": "1001",

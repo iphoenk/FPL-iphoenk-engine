@@ -129,6 +129,8 @@ def test_registry_activation_transition_is_proven_by_fingerprint_not_inferred(tm
                 "schedule_kind": "chatgpt_scheduler",
                 "chatgpt_scheduler_proof": True,
                 "counts_as_completed_operational_slot": True,
+                "authoritative_runtime_snapshot": True,
+                "logical_slot_source": "GOVERNED_TRIGGER_EVENT",
                 "expected_cycle_at": "2026-09-14T06:00:00+00:00",
                 "cycle_observed_at": "2026-09-14T06:31:00+00:00",
             },
@@ -154,6 +156,9 @@ def test_registry_activation_transition_is_proven_by_fingerprint_not_inferred(tm
         promotion_verified=True,
         run_id="9002",
         run_attempt="1",
+        collect_job_id="9501",
+        publish_job_id="9502",
+        fulfillment_job_id="9503",
     )
     assert proof["registry_fingerprint"] == "1" * 64
     assert proof["registry_epoch"] == "registry-epoch-2"

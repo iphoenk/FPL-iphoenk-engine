@@ -283,11 +283,23 @@ def _parse_weather_state(body: str) -> str:
     return legacy.group(1).upper() if legacy else "MISSING"
 
 
-def _mini_league_denominator_complete(body: str) -> bool:
-    return bool(
+def _parse_mini_league_state(body: str) -> str:
+    if (
         re.search(r"(?mi)^\s*MINI[_ -]LEAGUE[_ -]DENOMINATOR\s*:\s*COMPLETE\s*$", body)
         or re.search(r"(?mi)^\s*MANAGER\s+COVERAGE\s*:\s*COMPLETE\s*$", body)
-    )
+    ):
+        return "COMPLETE"
+    if (
+        re.search(r"(?mi)^\s*MINI[_ -]LEAGUE\s+SOURCE\s*:\s*DEGRADED\s*$", body)
+        or re.search(r"(?mi)^\s*ICON\+?\s+SOURCE\s*:\s*DEGRADED\s*$", body)
+        or re.search(r"(?mi)^\s*MANAGER\s+COVERAGE\s*:\s*(?:UNAVAILABLE|DEGRADED)\s*$", body)
+    ):
+        return "DEGRADED"
+    return "MISSING"
+
+
+def _mini_league_denominator_complete(body: str) -> bool:
+    return _parse_mini_league_state(body) == "COMPLETE"
 
 
 def validate_visible_report_body(
@@ -300,6 +312,7 @@ def validate_visible_report_body(
     expected_inference_keys: Sequence[str],
     expected_weather_state: str,
     mini_league_denominator_complete_required: bool,
+    expected_mini_league_state: str | None = None,
 ) -> dict[str, Any]:
     """Validate what was actually rendered, not what renderer metadata claims."""
     body = rendered_body if isinstance(rendered_body, str) else ""
@@ -409,8 +422,18 @@ def validate_visible_report_body(
             f"VISIBLE_WEATHER_CONTRACT_STATE_MISMATCH={visible_weather_state}!={normalized_expected_weather}"
         )
 
-    mini_league_complete = _mini_league_denominator_complete(body)
-    if mini_league_denominator_complete_required and not mini_league_complete:
+    mini_league_state = _parse_mini_league_state(body)
+    mini_league_complete = mini_league_state == "COMPLETE"
+    normalized_expected_mini = (
+        str(expected_mini_league_state or "").strip().upper()
+        or ("COMPLETE" if mini_league_denominator_complete_required else "")
+    )
+    if normalized_expected_mini:
+        if mini_league_state != normalized_expected_mini:
+            failures.append(
+                f"VISIBLE_MINI_LEAGUE_STATE_MISMATCH={mini_league_state}!={normalized_expected_mini}"
+            )
+    elif mini_league_denominator_complete_required and not mini_league_complete:
         failures.append("VISIBLE_MINI_LEAGUE_DENOMINATOR_INCOMPLETE")
 
     body_hash = sha256(body.encode("utf-8")).hexdigest()
@@ -425,4 +448,5 @@ def validate_visible_report_body(
         "inference_keys": evidence["INFERENCE"],
         "weather_contract_state": visible_weather_state,
         "mini_league_denominator_complete": mini_league_complete,
+        "mini_league_contract_state": mini_league_state,
     }

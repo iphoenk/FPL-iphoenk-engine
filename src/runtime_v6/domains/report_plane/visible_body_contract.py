@@ -21,6 +21,9 @@ _SECTION_EXPLICIT_RE = re.compile(
 _SECTION_NUMBERED_RE = re.compile(
     r"(?mi)^\s{0,3}#{1,6}\s*(?P<section>\d{1,2}B?)\.\s+[^\n]+$"
 )
+_MATCH_SECTION_RE = re.compile(
+    r"(?mi)^\s{0,3}#{1,6}\s*MATCH\s+(?P<match>\d)\b[^\n]*$"
+)
 _TABLE_LINE_RE = re.compile(r"^\s*\|.*\|\s*$")
 _TABLE_SEPARATOR_CELL_RE = re.compile(r"^:?-{3,}:?$")
 _EVIDENCE_RE = re.compile(r"(?mi)^\s*(FACT|MODEL|INFERENCE)\s*:\s*(.+?)\s*$")
@@ -86,8 +89,19 @@ def _normalize_section_id(token: str) -> str:
 
 
 def _section_matches(body: str) -> list[re.Match[str]]:
-    matches = [*_SECTION_EXPLICIT_RE.finditer(body), *_SECTION_NUMBERED_RE.finditer(body)]
+    matches = [
+        *_SECTION_EXPLICIT_RE.finditer(body),
+        *_SECTION_NUMBERED_RE.finditer(body),
+        *_MATCH_SECTION_RE.finditer(body),
+    ]
     return sorted(matches, key=lambda match: match.start())
+
+
+def _matched_section_id(match: re.Match[str]) -> str:
+    groups = match.groupdict()
+    if groups.get("match"):
+        return f"MATCH{int(groups['match'])}"
+    return _normalize_section_id(groups.get("section") or "")
 
 
 def _parse_sections(body: str) -> tuple[list[str], dict[str, list[str]], int | None]:
@@ -95,7 +109,7 @@ def _parse_sections(body: str) -> tuple[list[str], dict[str, list[str]], int | N
     section_ids: list[str] = []
     content_by_id: dict[str, list[str]] = {}
     for index, match in enumerate(matches):
-        section_id = _normalize_section_id(match.group("section"))
+        section_id = _matched_section_id(match)
         section_ids.append(section_id)
         end = matches[index + 1].start() if index + 1 < len(matches) else len(body)
         content_by_id.setdefault(section_id, []).append(body[match.end():end].strip())
@@ -313,6 +327,7 @@ def validate_visible_report_body(
     expected_weather_state: str,
     mini_league_denominator_complete_required: bool,
     expected_mini_league_state: str | None = None,
+    required_visible_markers: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Validate what was actually rendered, not what renderer metadata claims."""
     body = rendered_body if isinstance(rendered_body, str) else ""
@@ -325,6 +340,10 @@ def validate_visible_report_body(
         failures.append("VISIBLE_BODY_PROGRESS_PLACEHOLDER")
     if any(pattern.search(body) for pattern in _TRUNCATION_PATTERNS):
         failures.append("VISIBLE_BODY_TRUNCATION_MARKER")
+    for marker in required_visible_markers:
+        marker_text = str(marker or "").strip()
+        if marker_text and marker_text.casefold() not in body.casefold():
+            failures.append(f"VISIBLE_REQUIRED_MARKER_MISSING={marker_text}")
 
     expected_sections = [str(section_id).strip().upper() for section_id in expected_section_ids]
     expected_set = set(expected_sections)
@@ -356,9 +375,22 @@ def validate_visible_report_body(
     if empty_sections:
         failures.append(f"VISIBLE_SECTION_EMPTY={','.join(empty_sections)}")
 
+    match_catalog = bool(expected_sections) and all(
+        section_id.startswith("MATCH") for section_id in expected_sections
+    )
+    visible_count_sections = dict(_VISIBLE_COUNT_SECTIONS)
+    if match_catalog:
+        visible_count_sections.update(
+            {
+                "OUR15": ("MATCH2", "TABLE"),
+                "XI": ("MATCH2", "XI"),
+                "BENCH": ("MATCH2", "BENCH"),
+            }
+        )
+
     visible_counts: dict[str, int] = {}
     for label, target in expected_counts.items():
-        section_id, strategy = _VISIBLE_COUNT_SECTIONS.get(label, ("", ""))
+        section_id, strategy = visible_count_sections.get(label, ("", ""))
         section_body = "\n".join(section_content.get(section_id, []))
         strategy_failures: list[str] = []
         if strategy == "TABLE":
@@ -385,27 +417,41 @@ def validate_visible_report_body(
             failures.append(f"VISIBLE_COUNT_MISMATCH={label}:{actual}!={target}")
 
     for label, (section_id, strategy, target) in _ADDITIONAL_VISIBLE_COUNTS.items():
+        if section_id not in expected_set:
+            continue
         section_body = "\n".join(section_content.get(section_id, []))
         actual = _count_markdown_table_rows(section_body) if strategy == "TABLE" else 0
         visible_counts[label] = actual
         if actual != target:
             failures.append(f"VISIBLE_COUNT_MISMATCH={label}:{actual}!={target}")
 
-    our15_body = "\n".join(section_content.get("S02", []))
+    our15_section_id = "MATCH2" if match_catalog else "S02"
+    xi_bench_section_id = "MATCH2" if match_catalog else "S05"
+    our15_body = "\n".join(section_content.get(our15_section_id, []))
     our15_ids = _extract_table_column(our15_body, "element_id")
     our15_names = _extract_table_column(our15_body, "player_name")
     if len(our15_ids) != 15 or len(set(our15_ids)) != 15:
         failures.append("VISIBLE_OUR15_IDENTITY_INVALID")
 
-    xi_count, xi_names = _count_label_list("\n".join(section_content.get("S05", [])), "XI")
-    bench_count, bench_names = _count_label_list("\n".join(section_content.get("S05", [])), "BENCH")
+    xi_count, xi_names = _count_label_list(
+        "\n".join(section_content.get(xi_bench_section_id, [])),
+        "XI",
+    )
+    bench_count, bench_names = _count_label_list(
+        "\n".join(section_content.get(xi_bench_section_id, [])),
+        "BENCH",
+    )
     if xi_count == 11 and bench_count == 4 and our15_names:
         if set(xi_names) & set(bench_names) or set(xi_names + bench_names) != set(our15_names):
             failures.append("VISIBLE_XI_BENCH_NOT_EXACT_OUR15")
 
-    tactical_ids = _extract_table_column("\n".join(section_content.get("S15", [])), "element_id")
-    if len(tactical_ids) == 15 and our15_ids and set(tactical_ids) != set(our15_ids):
-        failures.append("VISIBLE_ALL15_TACTICAL_ID_SET_MISMATCH")
+    if "S15" in expected_set:
+        tactical_ids = _extract_table_column(
+            "\n".join(section_content.get("S15", [])),
+            "element_id",
+        )
+        if len(tactical_ids) == 15 and our15_ids and set(tactical_ids) != set(our15_ids):
+            failures.append("VISIBLE_ALL15_TACTICAL_ID_SET_MISMATCH")
 
     evidence = _parse_evidence_labels(body)
     if expected_fact_keys and not evidence["FACT"]:
@@ -449,4 +495,5 @@ def validate_visible_report_body(
         "weather_contract_state": visible_weather_state,
         "mini_league_denominator_complete": mini_league_complete,
         "mini_league_contract_state": mini_league_state,
+        "required_visible_markers": list(required_visible_markers),
     }

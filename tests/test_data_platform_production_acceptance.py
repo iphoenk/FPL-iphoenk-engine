@@ -274,6 +274,9 @@ def test_production_workflow_delegates_control_plane_to_tested_module() -> None:
     assert "python -m src.runtime_v6.domains.control_plane.workflow_control resolve-prefetch" in text
     assert "Apply V6 report-prefetch runtime control" in text
     assert "steps.scheduler.outputs.kind == 'report_prefetch'" in text
+    assert "duplicate_natural_occurrence: ${{ steps.slot_guard.outputs.duplicate_natural_occurrence }}" in text
+    assert "DUPLICATE_NATURAL_OCCURRENCE_NOOP_REPORT_CONTINUES" in text
+    assert "duplicate natural occurrence status requires exact event-transition proof" in text
 
 
 def test_stable_provider_repairs_are_promoted_and_legacy_exposure_writer_is_removed() -> None:

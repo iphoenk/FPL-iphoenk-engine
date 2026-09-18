@@ -281,6 +281,19 @@ def test_exact_rolling_48_requires_chaos_acceptance_for_production_green_eligibi
     assert combined["production_green_eligible"] is True
 
 
+
+def test_previous_scheduler_epoch_proof_is_not_countable_in_current_acceptance_window():
+    proof = _proof(datetime(2030, 1, 1, 6, 0, tzinfo=timezone.utc), run=700)
+    proof["scheduler_epoch"] = "PREVIOUS_ACCEPTANCE_EPOCH"
+
+    result = evaluate_proof_window([proof], chaos_acceptance_pass=True)
+
+    assert result["countable_proof_count"] == 0
+    assert result["consecutive_successful_natural_slots"] == 0
+    assert result["first_gate_complete"] is False
+    assert result["production_green_eligible"] is False
+
+
 def test_duplicate_logical_slot_blocks_rolling_48_acceptance():
     start = datetime(2026, 9, 12, 0, tzinfo=timezone.utc)
     proofs = [_proof(start + timedelta(hours=i), run=i + 1) for i in range(48)]

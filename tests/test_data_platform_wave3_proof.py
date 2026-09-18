@@ -283,10 +283,10 @@ def test_exact_rolling_12_requires_chaos_acceptance_for_production_green_eligibi
 
 def test_duplicate_logical_slot_blocks_rolling_12_acceptance():
     start = datetime(2026, 9, 12, 0, tzinfo=timezone.utc)
-    proofs = [_proof(start + timedelta(hours=i), run=i + 1) for i in range(48)]
+    proofs = [_proof(start + timedelta(hours=i), run=i + 1) for i in range(12)]
     proofs.append(_proof(start + timedelta(hours=11), run=999))
     result = evaluate_proof_window(proofs, chaos_acceptance_pass=True)
     assert result["duplicate_logical_slots"] == [(start + timedelta(hours=11)).isoformat()]
-    assert result["rolling_48_of_48_complete"] is False
+    assert result["rolling_12_of_12_complete"] is False
     assert result["natural_window_eligible"] is False
     assert result["production_green_eligible"] is False

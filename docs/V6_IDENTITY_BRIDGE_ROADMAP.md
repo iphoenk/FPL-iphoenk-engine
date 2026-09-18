@@ -54,11 +54,11 @@ The hardening rules are:
 - more than one provider-native ID resolving to the same Official FPL player in one observed provider surface is also treated as a one-to-one identity collision and fails closed;
 - configured crosswalk conflicts and duplicate Official FPL canonical codes remain hard failures;
 - observed unmapped rows remain non-fabricated gaps and do not by themselves block publication;
-- canonical coverage below 657/657 is not automatically a system failure when the provider does not expose enough deterministic evidence. The system must keep retrying or enriching exact evidence where available, but it must not manufacture the remainder;
+- canonical coverage below the current Official FPL player universe is not automatically a system failure when the provider does not expose enough deterministic evidence. The system must keep retrying or enriching exact evidence where available, but it must not manufacture the remainder;
 - FFScout public identity is now included in the same coverage-truth model as Opta, Understat, FotMob and StatMuse;
 - a normal acquisition must publish a valid coverage artifact before publication. A report-prefetch may temporarily preserve one legacy pre-Wave-A runtime snapshot so report delivery is not broken during migration; after the next normal acquisition, the artifact is validated on every publish.
 
-The practical target remains maximum deterministic canonical coverage, up to 657/657 where provider evidence supports it. Partial provider coverage is transparent and non-blocking only when there are zero hard identity conflicts or corrupt bridges.
+The practical target remains maximum deterministic canonical coverage, up to the full current Official FPL player universe where provider evidence supports it. Partial provider coverage is transparent and non-blocking only when there are zero hard identity conflicts or corrupt bridges.
 
 ## Reep v1 evidence posture
 
@@ -101,7 +101,7 @@ A downstream consumer may join an external player record only when all of these 
 
 ## Wave B hand-off
 
-Wave B consumes the Wave A gap report. Its target is zero observed unresolved identities, not an artificial `657/657` score for providers that may not expose all 657 Official FPL players. It may add stronger deterministic bridges or reviewed exception crosswalks with explicit provenance. It must not use runtime fuzzy matching, names, DOB heuristics, hidden aliases, or cross-provider majority voting as identity authority.
+Wave B consumes the Wave A gap report. Its target is zero observed unresolved identities, not an artificial full-universe score for providers that may not expose every player in the current Official FPL universe. It may add stronger deterministic bridges or reviewed exception crosswalks with explicit provenance. It must not use runtime fuzzy matching, names, DOB heuristics, hidden aliases, or cross-provider majority voting as identity authority.
 
 ## Non-goals
 

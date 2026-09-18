@@ -2,8 +2,15 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
 from src.runtime_v6.scheduler_recovery import decide_safe_recovery
 from src.runtime_v6.wave3_proof import NATURAL_EVENT_NAME, NATURAL_SCHEDULE_KIND
+from src.runtime_v6.domains.control_plane.workflow_control import (
+    WorkflowControlError,
+    authorize_dispatch,
+    load_policy,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "v6-core-recovery-guard.yml"
@@ -77,6 +84,7 @@ def test_recovery_workflow_is_dispatch_only_not_a_second_natural_scheduler():
     assert "v6-runtime-publisher" not in text
     assert "FPL_MASTER_SLOT" not in text
     assert "inputs[mode]=manual_recovery" in text
+    assert "inputs[reason]=WAVE2_SAFE_RECOVERY_CRITICAL" in text
     assert "inputs[confirm]=RECOVER_V6" in text
     assert "actions/workflows/${RECOVERY_WORKFLOW}/dispatches" in text
 
@@ -95,3 +103,47 @@ def test_recovery_policy_cannot_claim_scheduler_or_wave3_proof():
     assert schedule["manual_recovery"]["counts_as_completed_scheduled_slot"] is False
     assert NATURAL_EVENT_NAME == "issues"
     assert NATURAL_SCHEDULE_KIND == "chatgpt_scheduler"
+
+def test_recovery_guard_bot_can_dispatch_only_exact_governed_manual_recovery():
+    policy = load_policy()
+
+    assert authorize_dispatch(
+        policy,
+        actor="github-actions[bot]",
+        repository_owner="iphoenk",
+        mode="manual_recovery",
+        reason="WAVE2_SAFE_RECOVERY_CRITICAL",
+        manual_confirm="RECOVER_V6",
+    ) == "manual_recovery"
+
+    with pytest.raises(WorkflowControlError):
+        authorize_dispatch(
+            policy,
+            actor="github-actions[bot]",
+            repository_owner="iphoenk",
+            mode="manual_recovery",
+            reason="UNSCOPED_RECOVERY",
+            manual_confirm="RECOVER_V6",
+        )
+
+    with pytest.raises(WorkflowControlError):
+        authorize_dispatch(
+            policy,
+            actor="github-actions[bot]",
+            repository_owner="iphoenk",
+            mode="master_orchestrated",
+            reason="WAVE2_SAFE_RECOVERY_CRITICAL",
+            manual_confirm="RECOVER_V6",
+        )
+
+
+def test_recovery_guard_dispatch_identity_is_config_owned_and_workflow_contract_is_exact():
+    recovery = json.loads(CONFIG.read_text(encoding="utf-8"))
+    text = WORKFLOW.read_text(encoding="utf-8")
+
+    assert recovery["recovery_dispatch_actor"] == "github-actions[bot]"
+    assert recovery["recovery_reason"] == "WAVE2_SAFE_RECOVERY_CRITICAL"
+    assert recovery["recovery_confirmation"] == "RECOVER_V6"
+    assert "inputs[mode]=manual_recovery" in text
+    assert "inputs[reason]=WAVE2_SAFE_RECOVERY_CRITICAL" in text
+    assert "inputs[confirm]=RECOVER_V6" in text

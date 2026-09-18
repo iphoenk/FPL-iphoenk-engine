@@ -24,6 +24,9 @@ class ControlPlaneContract:
     watchdog_critical_minutes: float
     recovery_cooldown_minutes: float
     governed_event_settle_minutes: float
+    recovery_dispatch_actor: str
+    recovery_reason: str
+    recovery_confirmation: str
 
 
 def _read_json(path: Path) -> dict:
@@ -70,6 +73,9 @@ def load_control_plane_contract(
     scheduler_authority_id = str(scheduler.get("runtime_authority_id") or "").strip()
     watchdog_role = str(watchdog.get("role") or "").strip()
     recovery_role = str(recovery.get("role") or "").strip()
+    recovery_dispatch_actor = str(recovery.get("recovery_dispatch_actor") or "").strip()
+    recovery_reason = str(recovery.get("recovery_reason") or "").strip()
+    recovery_confirmation = str(recovery.get("recovery_confirmation") or "").strip()
     try:
         control_issue_number = int(scheduler.get("control_issue_number"))
     except (TypeError, ValueError) as exc:
@@ -101,6 +107,9 @@ def load_control_plane_contract(
         "scheduler_authority_id": scheduler_authority_id,
         "watchdog_role": watchdog_role,
         "recovery_role": recovery_role,
+        "recovery_dispatch_actor": recovery_dispatch_actor,
+        "recovery_reason": recovery_reason,
+        "recovery_confirmation": recovery_confirmation,
     }
     missing = sorted(key for key, value in required.items() if not value)
     if missing:
@@ -109,6 +118,11 @@ def load_control_plane_contract(
         raise ValueError("control-plane control_issue_number must be positive")
     if watchdog_critical_minutes <= watchdog_warning_minutes:
         raise ValueError("control-plane watchdog critical threshold must exceed warning threshold")
+    manual_recovery = dict(schedule.get("manual_recovery") or {})
+    if str(recovery.get("recovery_mode") or "") != "manual_recovery":
+        raise ValueError("control-plane recovery_mode must remain manual_recovery")
+    if recovery_confirmation != str(manual_recovery.get("confirmation_phrase") or ""):
+        raise ValueError("control-plane recovery confirmation must match manual_recovery policy")
 
     return ControlPlaneContract(
         runtime_branch=runtime_branch,
@@ -124,6 +138,9 @@ def load_control_plane_contract(
         watchdog_critical_minutes=watchdog_critical_minutes,
         recovery_cooldown_minutes=recovery_cooldown_minutes,
         governed_event_settle_minutes=governed_event_settle_minutes,
+        recovery_dispatch_actor=recovery_dispatch_actor,
+        recovery_reason=recovery_reason,
+        recovery_confirmation=recovery_confirmation,
     )
 
 

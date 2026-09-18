@@ -10,6 +10,7 @@ from typing import Any
 from .architecture_independence_validate import validate_repository
 from .identity_coverage import validate_player_identity_coverage_truth
 from .registry import EXPECTED_SOURCE_IDS, dependency_layers, load_registry
+from ..control_plane.runtime_control import NATURAL_LOGICAL_SLOT_SOURCE
 
 
 ROOT = Path("data/v6")
@@ -223,7 +224,7 @@ def _validate_chatgpt_scheduler(manifest: dict[str, Any], control: dict[str, Any
     assert control["master_orchestrated"] is True
     assert control["authoritative_runtime_snapshot"] is True
     assert control["counts_as_completed_operational_slot"] is True
-    assert control["logical_slot_source"] == "CHATGPT_COMMAND"
+    assert control["logical_slot_source"] == NATURAL_LOGICAL_SLOT_SOURCE
     assert control["expected_cycle_at"] == requested.isoformat()
     assert manifest["governance"]["production_ingestion_schedule_only"] is False
     assert manifest["governance"]["chatgpt_scheduler_is_authority"] is True

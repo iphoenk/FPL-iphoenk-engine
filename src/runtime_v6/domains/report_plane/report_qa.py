@@ -647,3 +647,316 @@ def validate_post_render_qa(
         ],
         "visible_mini_league_contract_state": visible_body["mini_league_contract_state"],
     }
+
+
+# P0.5 strict Deadline/Final report-plane gates. These wrappers deliberately reuse
+# the existing R6 validators above rather than creating a second QA implementation.
+_P05_CONTRACT_VERSION = "P0.5"
+
+
+def _p05_timestamp(value: Any, *, label: str):
+    from .temporal import try_parse_timestamp
+    parsed = try_parse_timestamp(value)
+    if parsed is None:
+        raise ValueError(f"{label} must be timezone-aware ISO-8601")
+    return parsed
+
+
+def _p05_gate_token(payload: Mapping[str, Any]) -> str:
+    canonical = json.dumps(
+        dict(payload),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        default=str,
+    ).encode("utf-8")
+    return sha256(canonical).hexdigest()
+
+
+def _p05_weather_evidence(
+    weather_evidence: Mapping[str, Any],
+) -> tuple[bool, str, list[str], dict[str, Any]]:
+    evidence = dict(weather_evidence or {})
+    attempted = evidence.get("weather_attempted") is True
+    result = str(evidence.get("weather_result") or "").strip().upper()
+    source = str(evidence.get("source") or "").strip()
+    provenance = evidence.get("provenance")
+    evaluated_at = evidence.get("evaluated_at")
+    failures: list[str] = []
+    if not attempted:
+        failures.append("WEATHER_NOT_ATTEMPTED")
+    if result not in {"AVAILABLE", "DEGRADED_AFTER_ATTEMPT"}:
+        failures.append("WEATHER_RESULT_INVALID")
+    if not source:
+        failures.append("WEATHER_SOURCE_MISSING")
+    if provenance in (None, "", {}, []):
+        failures.append("WEATHER_PROVENANCE_MISSING")
+    try:
+        _p05_timestamp(evaluated_at, label="weather.evaluated_at")
+    except ValueError:
+        failures.append("WEATHER_EVALUATED_AT_INVALID")
+    state = "DIRECT_CHATGPT" if result == "AVAILABLE" else "SOURCE_DEGRADED"
+    return not failures, state, failures, {
+        "weather_attempted": attempted,
+        "weather_result": result or None,
+        "source": source or None,
+        "provenance": provenance,
+        "evaluated_at": evaluated_at,
+    }
+
+
+def validate_p05_pre_render_qa(
+    *,
+    report_slot_id: str,
+    evaluated_at: str,
+    compute_contract: Mapping[str, Any],
+    section_manifest: Sequence[Mapping[str, Any]],
+    mini_league_denominator_complete: bool,
+    report_mode: str,
+    decision_context: Mapping[str, Any],
+    prefetch_readiness: Mapping[str, Any],
+    weather_evidence: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Strict P0.5 PRE_RENDER_QA for canonical Deadline/Final report occurrences."""
+    slot_id = str(report_slot_id or "").strip()
+    failures: list[str] = []
+    try:
+        evaluated = _p05_timestamp(evaluated_at, label="evaluated_at")
+    except ValueError:
+        evaluated = None
+        failures.append("EVALUATED_AT_INVALID")
+    if not slot_id or "|" not in slot_id:
+        failures.append("REPORT_SLOT_ID_INVALID")
+
+    context = dict(decision_context or {})
+    context_pass = bool(
+        context.get("status") == "PASS"
+        and context.get("context_kind") == "CURRENT_DECISION_CONTEXT"
+        and context.get("report_slot_id") == slot_id
+        and context.get("context_fingerprint")
+    )
+    if not context_pass:
+        failures.append("DECISION_CONTEXT_GATE_FAILED")
+
+    prefetch = dict(prefetch_readiness or {})
+    prefetch_identity_pass = bool(
+        prefetch.get("ready") is True
+        and prefetch.get("report_kind_match") is True
+        and prefetch.get("target_logical_slot_match") is True
+        and prefetch.get("scope_match") is True
+        and str(prefetch.get("selected_report_prefetch_run_id") or "").strip()
+    )
+    if not prefetch_identity_pass:
+        failures.append("PREFETCH_IDENTITY_GATE_FAILED")
+
+    weather_pass, weather_state, weather_failures, normalized_weather = _p05_weather_evidence(
+        weather_evidence
+    )
+    failures.extend(weather_failures)
+
+    base = validate_pre_render_qa(
+        compute_contract=compute_contract,
+        section_manifest=section_manifest,
+        mini_league_denominator_complete=mini_league_denominator_complete,
+        weather_required=True,
+        weather_direct_chat_present=weather_state == "DIRECT_CHATGPT",
+        report_mode=report_mode,
+        weather_contract_state=weather_state,
+    )
+    failures.extend(
+        failure for failure in base.get("failures", []) if failure not in failures
+    )
+
+    mandatory_scope_pass = bool(
+        compute_contract.get("status") == "PASS"
+        and compute_contract.get("compute_ready") is True
+        and not base.get("missing_sections")
+        and not base.get("duplicate_sections")
+    )
+    input_completeness_pass = bool(
+        mandatory_scope_pass
+        and all(
+            isinstance(compute_contract.get(label), Mapping)
+            and compute_contract[label].get("status") == "PASS"
+            for label in ("OUR15", "XI", "BENCH", "WATCHLIST20", "RISE20", "FALL20")
+        )
+    )
+    if not mandatory_scope_pass:
+        failures.append("MANDATORY_SCOPE_GATE_FAILED")
+    if not input_completeness_pass:
+        failures.append("INPUT_COMPLETENESS_GATE_FAILED")
+    failures = list(dict.fromkeys(failures))
+    qa_passed = bool(base.get("status") == "PASS" and not failures)
+
+    gate_payload = {
+        "contract_version": _P05_CONTRACT_VERSION,
+        "report_slot_id": slot_id,
+        "evaluated_at": evaluated_at,
+        "base_render_contract_token": base.get("render_contract_token"),
+        "decision_context_fingerprint": context.get("context_fingerprint"),
+        "active_scenario_ids": list(context.get("active_scenario_ids") or []),
+        "prefetch_identity": prefetch.get("selected_report_prefetch_run_id"),
+        "prefetch_slot": prefetch.get("selected_target_logical_report_slot"),
+        "weather_attempt": normalized_weather,
+        "mandatory_scope_gate_pass": mandatory_scope_pass,
+        "input_completeness_pass": input_completeness_pass,
+    }
+    strict_token = _p05_gate_token(gate_payload) if qa_passed else None
+
+    return {
+        **base,
+        "status": "PASS" if qa_passed else "FAIL",
+        "qa_stage": "PRE_RENDER",
+        "qa_passed": qa_passed,
+        "render_allowed": qa_passed,
+        "can_render": qa_passed,
+        "can_emit": False,
+        "report_contract_pass": False,
+        "report_slot_id": slot_id,
+        "evaluated_at": evaluated_at,
+        "contract_version": _P05_CONTRACT_VERSION,
+        "mandatory_scope_gate": {"status": "PASS" if mandatory_scope_pass else "FAIL"},
+        "input_completeness": {"status": "PASS" if input_completeness_pass else "FAIL"},
+        "decision_context": context,
+        "prefetch_identity": {
+            "status": "PASS" if prefetch_identity_pass else "FAIL",
+            "report_prefetch_run_id": prefetch.get("selected_report_prefetch_run_id"),
+            "logical_slot": prefetch.get("selected_target_logical_report_slot"),
+        },
+        "weather_attempt": normalized_weather,
+        "failed_checks": failures,
+        "failures": failures,
+        "warnings": [],
+        "evidence": {
+            "compute_fingerprint": base.get("compute_fingerprint"),
+            "render_contract_token": base.get("render_contract_token"),
+            "decision_context_fingerprint": context.get("context_fingerprint"),
+            "prefetch_refresh_identity": prefetch.get("refresh_identity"),
+        },
+        "p05_gate_payload": gate_payload,
+        "p05_render_gate_token": strict_token,
+        "strict_report_plane_contract": True,
+        "next_action": "RENDER_REPORT" if qa_passed else "PRE_RENDER_RECOVERY",
+    }
+
+
+def validate_p05_post_render_qa(
+    *,
+    pre_render_qa: Mapping[str, Any],
+    report_slot_id: str,
+    evaluated_at: str,
+    render_completed_at: str,
+    rendered_report_mode: str,
+    rendered_body: str,
+    rendered_section_ids: Sequence[str],
+    rendered_section_states: Mapping[str, str],
+    rendered_compute_fingerprint: str | None,
+    render_contract_token: str | None,
+    rendered_counts: Mapping[str, int],
+    rendered_fact_keys: Sequence[str],
+    rendered_model_keys: Sequence[str],
+    rendered_mini_league_denominator_complete: bool,
+    rendered_weather_direct_chat_present: bool = False,
+    rendered_weather_contract_state: str | None = None,
+    truncated: bool = False,
+    status_only: bool = False,
+) -> dict[str, Any]:
+    """Strict P0.5 POST_RENDER_QA and the sole CAN_EMIT gate."""
+    base = validate_post_render_qa(
+        pre_render_qa=pre_render_qa,
+        rendered_body=rendered_body,
+        rendered_section_ids=rendered_section_ids,
+        rendered_section_states=rendered_section_states,
+        rendered_compute_fingerprint=rendered_compute_fingerprint,
+        render_contract_token=render_contract_token,
+        rendered_counts=rendered_counts,
+        rendered_fact_keys=rendered_fact_keys,
+        rendered_model_keys=rendered_model_keys,
+        rendered_mini_league_denominator_complete=rendered_mini_league_denominator_complete,
+        rendered_weather_direct_chat_present=rendered_weather_direct_chat_present,
+        rendered_weather_contract_state=rendered_weather_contract_state,
+        truncated=truncated,
+    )
+    failures = list(base.get("failures", []))
+    expected_slot = str(pre_render_qa.get("report_slot_id") or "").strip()
+    if str(report_slot_id or "").strip() != expected_slot:
+        failures.append("REPORT_SLOT_ID_MISMATCH")
+    expected_mode = str(pre_render_qa.get("report_mode") or "").strip().upper()
+    if str(rendered_report_mode or "").strip().upper() != expected_mode:
+        failures.append("REPORT_KIND_MISMATCH")
+    if status_only:
+        failures.append("STATUS_ONLY_NOT_CANONICAL_REPORT")
+
+    stored_payload = pre_render_qa.get("p05_gate_payload")
+    stored_token = pre_render_qa.get("p05_render_gate_token")
+    if not isinstance(stored_payload, Mapping) or not stored_token:
+        failures.append("P05_PRE_RENDER_GATE_MISSING")
+    elif _p05_gate_token(stored_payload) != stored_token:
+        failures.append("P05_PRE_RENDER_GATE_TAMPERED")
+
+    context = pre_render_qa.get("decision_context")
+    active_scenarios = (
+        list(context.get("active_scenarios") or [])
+        if isinstance(context, Mapping)
+        else []
+    )
+    body_lower = str(rendered_body or "").lower()
+    missing_active: list[str] = []
+    invalid_active: list[str] = []
+    for row in active_scenarios:
+        if str(row.get("state") or "").strip().upper() != "CONTEMPLATED":
+            invalid_active.append(str(row.get("scenario_id") or "<missing>"))
+            continue
+        marker = str(row.get("visible_marker") or row.get("scenario_id") or "").strip()
+        if not marker or marker.lower() not in body_lower:
+            missing_active.append(str(row.get("scenario_id") or marker or "<missing>"))
+    if invalid_active:
+        failures.append(f"ACTIVE_SCENARIO_STATE_INVALID={','.join(invalid_active)}")
+    if missing_active:
+        failures.append(f"ACTIVE_SCENARIOS_MISSING={','.join(missing_active)}")
+
+    try:
+        pre_time = _p05_timestamp(pre_render_qa.get("evaluated_at"), label="pre_render.evaluated_at")
+        render_time = _p05_timestamp(render_completed_at, label="render_completed_at")
+        post_time = _p05_timestamp(evaluated_at, label="evaluated_at")
+        if not (pre_time <= render_time <= post_time):
+            failures.append("RENDER_QA_CHRONOLOGY_INVALID")
+    except ValueError:
+        failures.append("RENDER_QA_TIMESTAMP_INVALID")
+
+    failures = list(dict.fromkeys(failures))
+    passed = bool(base.get("status") == "PASS" and not failures)
+    return {
+        **base,
+        "status": "PASS" if passed else "FAIL",
+        "qa_stage": "POST_RENDER",
+        "qa_passed": passed,
+        "report_slot_id": expected_slot,
+        "evaluated_at": evaluated_at,
+        "render_completed_at": render_completed_at,
+        "contract_version": _P05_CONTRACT_VERSION,
+        "failed_checks": failures,
+        "failures": failures,
+        "warnings": [],
+        "provenance": {
+            "compute_fingerprint": pre_render_qa.get("compute_fingerprint"),
+            "render_contract_token": pre_render_qa.get("render_contract_token"),
+            "p05_render_gate_token": stored_token,
+        },
+        "mandatory_scope_gate_pass": pre_render_qa.get("mandatory_scope_gate", {}).get("status") == "PASS",
+        "input_completeness_pass": pre_render_qa.get("input_completeness", {}).get("status") == "PASS",
+        "decision_context_gate_pass": pre_render_qa.get("decision_context", {}).get("status") == "PASS",
+        "prefetch_identity_pass": pre_render_qa.get("prefetch_identity", {}).get("status") == "PASS",
+        "weather_attempt_gate_pass": pre_render_qa.get("weather_attempt", {}).get("weather_attempted") is True,
+        "pre_render_qa_pass": pre_render_qa.get("status") == "PASS",
+        "post_render_qa_pass": passed,
+        "report_contract_pass": passed,
+        "can_emit": passed and not status_only,
+        "visible_emitted": False,
+        "status_only": bool(status_only),
+        "active_scenario_ids_expected": list(
+            pre_render_qa.get("decision_context", {}).get("active_scenario_ids") or []
+        ),
+        "active_scenario_ids_missing": missing_active,
+        "next_action": "BUILD_DELIVERY_PROOF" if passed else "RENDER_RECOVERY",
+    }

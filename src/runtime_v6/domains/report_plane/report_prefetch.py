@@ -118,6 +118,128 @@ def _canonical_prefetch_scope(scope: tuple[str, ...] | list[str] | None) -> tupl
     return normalized
 
 
+
+_CANONICAL_SCOPE_BY_REPORT_KIND = {
+    "full_master": ("personal", "mini_league"),
+    "match_mode": ("personal", "mini_league", "live"),
+    "deadline_review": ("personal", "mini_league"),
+    "05:30_price": ("mini_league",),
+}
+
+
+def _required_prefetch_scope(
+    report_kind: str,
+    scope: tuple[str, ...] | list[str] | None,
+) -> tuple[str, ...]:
+    if scope:
+        return _canonical_prefetch_scope(scope)
+    if report_kind == "ad_hoc":
+        return ()
+    return _canonical_prefetch_scope(_CANONICAL_SCOPE_BY_REPORT_KIND.get(report_kind, ()))
+
+
+def _snapshot_prefetch_scope(snapshot: dict[str, Any]) -> tuple[str, ...]:
+    explicit = snapshot.get("scope")
+    if isinstance(explicit, (list, tuple)):
+        return _canonical_prefetch_scope(list(explicit))
+    return tuple(
+        item
+        for item, field in (
+            ("personal", "personal_requested"),
+            ("mini_league", "mini_league_requested"),
+            ("live", "live_requested"),
+        )
+        if snapshot.get(field) is True
+    )
+
+
+def _snapshot_prefetch_identity(snapshot: dict[str, Any]) -> str | None:
+    for field in ("report_prefetch_run_id", "request_id", "refresh_identity"):
+        value = str(snapshot.get(field) or "").strip()
+        if value:
+            return value
+    return None
+
+
+def _snapshot_target_slot(snapshot: dict[str, Any]) -> str | None:
+    raw = snapshot.get("target_logical_report_slot") or snapshot.get("logical_slot")
+    if not raw:
+        return None
+    return parse_slot(str(raw)).isoformat()
+
+
+def select_report_prefetch_occurrence(
+    latest_snapshot: dict[str, Any] | None,
+    *,
+    occurrence_snapshots: list[dict[str, Any]] | tuple[dict[str, Any], ...] | None,
+    report_kind: str,
+    requested_logical_slot: str,
+    scope: tuple[str, ...] | list[str] | None = None,
+    report_prefetch_identity: str | None = None,
+) -> dict[str, Any] | None:
+    """Select only a snapshot bound to the exact governed report occurrence.
+
+    latest.json is a convenience pointer, never occurrence authority. A later
+    report may replace it, so recovery must match kind + logical slot +
+    canonical scope and, when supplied, the concrete prefetch identity.
+    """
+    if report_kind not in REPORT_KINDS:
+        raise PrefetchContractError(f"unsupported report_kind={report_kind}")
+    requested_slot = parse_slot(requested_logical_slot).isoformat()
+    required_scope = _required_prefetch_scope(report_kind, scope)
+    if report_kind == "ad_hoc" and not required_scope:
+        raise PrefetchContractError(
+            "ad_hoc report-prefetch occurrence selection requires scope"
+        )
+
+    explicit_identity = str(report_prefetch_identity or "").strip() or None
+    candidates: list[dict[str, Any]] = []
+    if isinstance(latest_snapshot, dict):
+        candidates.append(latest_snapshot)
+    candidates.extend(
+        item for item in (occurrence_snapshots or ()) if isinstance(item, dict)
+    )
+
+    matches: list[dict[str, Any]] = []
+    seen: set[tuple[str | None, str | None, str]] = set()
+    for candidate in candidates:
+        candidate_kind = str(candidate.get("report_kind") or "").strip()
+        if candidate_kind != report_kind:
+            continue
+        try:
+            candidate_slot = _snapshot_target_slot(candidate)
+        except PrefetchContractError:
+            continue
+        if candidate_slot != requested_slot:
+            continue
+        try:
+            candidate_scope = _snapshot_prefetch_scope(candidate)
+        except PrefetchContractError:
+            continue
+        if candidate_scope != required_scope:
+            continue
+        candidate_identity = _snapshot_prefetch_identity(candidate)
+        if explicit_identity is not None and candidate_identity != explicit_identity:
+            continue
+        generated_raw = str(candidate.get("generated_at") or "")
+        dedupe_key = (candidate_identity, candidate_slot, generated_raw)
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        matches.append(candidate)
+
+    if not matches:
+        return None
+
+    def order_key(candidate: dict[str, Any]) -> tuple[datetime, str]:
+        generated = _parse_prefetch_timestamp(candidate.get("generated_at"))
+        if generated is None:
+            generated = datetime.min.replace(tzinfo=timezone.utc)
+        return generated, _snapshot_prefetch_identity(candidate) or ""
+
+    return dict(max(matches, key=order_key))
+
+
 def evaluate_report_prefetch_readiness(
     snapshot: dict[str, Any] | None,
     *,
@@ -143,29 +265,66 @@ def evaluate_report_prefetch_readiness(
         raise PrefetchContractError("report-prefetch recovery attempt bounds are invalid")
     requested = parse_slot(requested_logical_slot)
     observed = observed_at or requested
-    scopes = _canonical_prefetch_scope(scope)
+    scopes = _required_prefetch_scope(report_kind, scope)
     if report_kind == "ad_hoc" and not scopes:
         raise PrefetchContractError("ad_hoc report-prefetch recovery requires scope")
 
-    age, fresh, freshness_status = _derived_prefetch_currentness(
+    selected = select_report_prefetch_occurrence(
         snapshot,
+        occurrence_snapshots=occurrence_snapshots,
+        report_kind=report_kind,
+        requested_logical_slot=requested.isoformat(),
+        scope=scopes,
+        report_prefetch_identity=report_prefetch_identity,
+    )
+    selection_source = "MISSING"
+    if selected is not None:
+        latest_identity = _snapshot_prefetch_identity(snapshot or {})
+        selected_identity = _snapshot_prefetch_identity(selected)
+        try:
+            latest_target = _snapshot_target_slot(snapshot or {})
+        except PrefetchContractError:
+            latest_target = None
+        selection_source = (
+            "LATEST"
+            if latest_target == requested.isoformat()
+            and latest_identity == selected_identity
+            else "EXACT_OCCURRENCE_HISTORY"
+        )
+
+    age, fresh, freshness_status = _derived_prefetch_currentness(
+        selected,
         requested_logical_slot=requested.isoformat(),
         observed_at=observed,
         maximum_age_minutes=maximum_age_minutes,
     )
     complete = bool(
-        snapshot
-        and snapshot.get("public_core_complete", snapshot.get("complete")) is True
+        selected
+        and selected.get("public_core_complete", selected.get("complete")) is True
     )
-    snapshot_kind = str((snapshot or {}).get("report_kind") or "").strip()
-    kind_match = not snapshot_kind or snapshot_kind == report_kind
+    snapshot_kind = str((selected or {}).get("report_kind") or "").strip()
+    kind_match = bool(selected and snapshot_kind == report_kind)
+    target_match = bool(
+        selected and _snapshot_target_slot(selected) == requested.isoformat()
+    )
+    scope_match = bool(
+        selected and _snapshot_prefetch_scope(selected) == scopes
+    )
 
+    if selected is None and snapshot is not None:
+        freshness_status = "MISMATCH"
     if freshness_status == "CURRENT" and not complete:
         freshness_status = "INCOMPLETE"
-    if freshness_status == "CURRENT" and not kind_match:
+    if freshness_status == "CURRENT" and not (kind_match and target_match and scope_match):
         freshness_status = "MISMATCH"
 
-    ready = bool(fresh and complete and kind_match)
+    ready = bool(
+        fresh
+        and complete
+        and kind_match
+        and target_match
+        and scope_match
+    )
     refresh_required = bool(not ready and refresh_attempt < max_refresh_attempts)
     command = None
     if refresh_required:
@@ -192,6 +351,15 @@ def evaluate_report_prefetch_readiness(
         "age_target_minutes": age,
         "public_core_complete": complete,
         "report_kind_match": kind_match,
+        "target_logical_slot_match": target_match,
+        "scope_match": scope_match,
+        "selection_source": selection_source,
+        "selected_target_logical_report_slot": (
+            _snapshot_target_slot(selected) if selected else None
+        ),
+        "selected_report_prefetch_run_id": (
+            _snapshot_prefetch_identity(selected) if selected else None
+        ),
         "requested_logical_slot": requested.isoformat(),
         "refresh_attempt": int(refresh_attempt),
         "max_refresh_attempts": int(max_refresh_attempts),

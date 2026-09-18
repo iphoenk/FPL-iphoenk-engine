@@ -116,3 +116,36 @@ def test_recovery_guard_bot_dispatch_is_explicitly_authorized_but_remains_non_pr
     )
 
     assert mode == "manual_recovery"
+
+
+def test_recovery_guard_bot_without_explicit_initiator_is_rejected():
+    import pytest
+    from src.runtime_v6.domains.control_plane.workflow_control import WorkflowControlError, authorize_dispatch
+    policy = json.loads(SCHEDULE_POLICY.read_text(encoding="utf-8"))
+
+    with pytest.raises(WorkflowControlError):
+        authorize_dispatch(
+            policy,
+            actor="github-actions[bot]",
+            repository_owner="iphoenk",
+            mode="manual_recovery",
+            reason="WAVE2_SAFE_RECOVERY_CRITICAL",
+            manual_confirm="RECOVER_V6",
+            initiator="",
+        )
+
+
+def test_recovery_guard_bot_cannot_dispatch_other_modes():
+    import pytest
+    from src.runtime_v6.domains.control_plane.workflow_control import WorkflowControlError, authorize_dispatch
+    policy = json.loads(SCHEDULE_POLICY.read_text(encoding="utf-8"))
+
+    with pytest.raises(WorkflowControlError):
+        authorize_dispatch(
+            policy,
+            actor="github-actions[bot]",
+            repository_owner="iphoenk",
+            mode="report_prefetch",
+            reason="not-allowed",
+            initiator="recovery_guard",
+        )

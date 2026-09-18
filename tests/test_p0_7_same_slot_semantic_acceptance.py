@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
+from pathlib import Path
 
 from src.runtime_v6.delivery_integrity import build_report_slot_id
-from src.runtime_v6.domains.report_plane.report_delivery import evaluate_same_slot_completion_ledger
+from src.runtime_v6.domains.report_plane.report_delivery import (
+    evaluate_same_slot_completion_ledger,
+    seal_same_slot_completion_ledger,
+    validate_same_slot_completion_ledger_readback,
+)
 from src.runtime_v6.domains.report_plane.section_contract import validate_p07_semantic_acceptance
 
 
@@ -263,3 +269,44 @@ def test_exact_observed_1930_semantic_escape_is_golden_fail():
     assert result["status"] == "FAIL"
     assert result["report_contract_pass"] is False
     assert result["can_emit"] is False
+
+
+
+def test_t14_persisted_same_slot_ledger_readback_is_authoritative():
+    sealed = seal_same_slot_completion_ledger(_ledger())
+    persisted = json.loads(json.dumps(sealed, sort_keys=True))
+    result = validate_same_slot_completion_ledger_readback(
+        persisted,
+        expected_logical_report_slot=SLOT,
+        expected_occurrence_identity="natural-1930",
+    )
+    assert result["status"] == "PASS"
+    assert result["readback_valid"] is True
+    assert result["report_slot_fulfilled"] is True
+
+
+def test_t15_persisted_ledger_tamper_or_cross_slot_readback_fails():
+    sealed = seal_same_slot_completion_ledger(_ledger())
+    tampered = deepcopy(sealed)
+    tampered["decision_context_slot"] = "2026-09-18T18:30:00+07:00"
+    result = validate_same_slot_completion_ledger_readback(
+        tampered,
+        expected_logical_report_slot=SLOT,
+        expected_occurrence_identity="natural-1930",
+    )
+    assert result["status"] == "FAIL"
+    assert "COMPLETION_LEDGER_HASH_MISMATCH" in result["failures"]
+
+
+def test_observed_1930_fixture_records_only_proven_historical_evidence():
+    fixture_path = Path(__file__).parent / "fixtures" / "p0_7_natural_1930_semantic_escape.json"
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    assert fixture["historical_occurrence"] == SLOT
+    assert fixture["historical_immutable"] is True
+    assert fixture["observed_visible_watchlist_count"] == 20
+    assert fixture["observed_visible_watchlist_positions"] == {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}
+    assert fixture["watchlist_full_universe_lineage_proven"] is False
+    assert fixture["rise20_exact20_structured_rows_present"] is False
+    assert fixture["fall20_exact20_structured_rows_present"] is False
+    assert fixture["report_reached_visible_delivery"] is True
+    assert fixture["canonical_same_slot_receipt_proven"] is False

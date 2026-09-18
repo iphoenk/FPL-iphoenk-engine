@@ -23,13 +23,62 @@ class WorkflowControlError(ValueError):
     pass
 
 
-def resolve_data_slot_decision(*, already_published: bool) -> dict[str, bool | str]:
+def resolve_data_slot_decision(
+    *,
+    already_published: bool,
+    duplicate_natural_occurrence: bool = False,
+) -> dict[str, bool | str]:
+    if duplicate_natural_occurrence:
+        return {
+            "data_slot_status": "DUPLICATE_NATURAL_OCCURRENCE",
+            "skip_new_acquisition": True,
+            "reuse_last_valid_publication": True,
+            "continue_report_pipeline": True,
+        }
     return {
         "data_slot_status": "ALREADY_PUBLISHED" if already_published else "NEW",
         "skip_new_acquisition": already_published,
         "reuse_last_valid_publication": already_published,
         "continue_report_pipeline": True,
     }
+
+
+def is_duplicate_natural_slot_transition(
+    policy: dict[str, Any],
+    *,
+    event_name: str,
+    event: dict[str, Any],
+) -> bool:
+    """Detect a repeated governed issue-title occurrence for the same logical slot.
+
+    This uses only immutable event transition data already delivered by GitHub.
+    It does not infer success, backfill a slot, or create alternate scheduler state.
+    """
+    if event_name != "issues":
+        return False
+    changes = event.get("changes")
+    issue = event.get("issue")
+    if not isinstance(changes, dict) or not isinstance(issue, dict):
+        return False
+    title_change = changes.get("title")
+    if not isinstance(title_change, dict):
+        return False
+    previous_title = str(title_change.get("from") or "").strip()
+    current_title = str(issue.get("title") or "").strip()
+    marker = "FPL_MASTER_SLOT "
+    if not previous_title.startswith(marker) or not current_title.startswith(marker):
+        return False
+    try:
+        previous = parse_master_issue_title_values(policy, previous_title)
+        current = parse_master_issue_title_values(policy, current_title)
+    except WorkflowControlError:
+        return False
+    try:
+        previous_slot = parse_timestamp(previous["logical_slot"], label="previous logical_slot")
+        current_slot = parse_timestamp(current["logical_slot"], label="current logical_slot")
+    except (TemporalError, KeyError):
+        return False
+    return previous_slot == current_slot
 
 
 def scheduled_cron_kinds(policy: dict[str, Any]) -> dict[str, str]:
@@ -485,7 +534,18 @@ def main() -> int:
             print(f"V6 schedule kind: {kind}")
         elif args.command == "slot-guard":
             from .runtime_control import scheduled_slot_already_completed
-            if os.environ.get("V6_SCHEDULE_KIND") == "report_prefetch":
+            event_name = str(os.environ.get("GITHUB_EVENT_NAME") or "")
+            event = _event()
+            schedule_kind = str(os.environ.get("V6_SCHEDULE_KIND") or "")
+            duplicate_natural_occurrence = (
+                schedule_kind == "chatgpt_scheduler"
+                and is_duplicate_natural_slot_transition(
+                    policy,
+                    event_name=event_name,
+                    event=event,
+                )
+            )
+            if schedule_kind == "report_prefetch":
                 already_published = False
             else:
                 previous_path = Path(os.environ.get("V6_PREVIOUS_MANIFEST") or "/tmp/v6-previous-manifest.json")
@@ -493,10 +553,13 @@ def main() -> int:
                 already_published = scheduled_slot_already_completed(
                     previous,
                     scheduler_interval_minutes=SCHEDULE_POLICY.cadence_minutes,
-                    event_name=os.environ.get("GITHUB_EVENT_NAME"),
-                    schedule_kind=os.environ.get("V6_SCHEDULE_KIND"),
+                    event_name=event_name,
+                    schedule_kind=schedule_kind,
                 )
-            decision = resolve_data_slot_decision(already_published=already_published)
+            decision = resolve_data_slot_decision(
+                already_published=already_published,
+                duplicate_natural_occurrence=duplicate_natural_occurrence,
+            )
             _append(
                 "GITHUB_OUTPUT",
                 {
@@ -505,6 +568,7 @@ def main() -> int:
                     "skip_new_acquisition": "true" if decision["skip_new_acquisition"] else "false",
                     "reuse_last_valid_publication": "true" if decision["reuse_last_valid_publication"] else "false",
                     "continue_report_pipeline": "true" if decision["continue_report_pipeline"] else "false",
+                    "duplicate_natural_occurrence": "true" if duplicate_natural_occurrence else "false",
                 },
             )
             print(json.dumps(decision, ensure_ascii=False))

@@ -163,6 +163,7 @@ def _render_contract_token(
     compute_fingerprint: str,
     canonical_manifest: Sequence[Mapping[str, str]],
     mini_league_denominator_complete: bool,
+    mini_league_contract_state: str,
     report_mode: str,
     weather_contract_state: str,
     weather_required: bool,
@@ -176,6 +177,7 @@ def _render_contract_token(
         "compute_fingerprint": compute_fingerprint,
         "section_manifest": list(canonical_manifest),
         "mini_league_denominator_complete": bool(mini_league_denominator_complete),
+        "mini_league_contract_state": mini_league_contract_state,
         "report_mode": report_mode,
         "weather_contract_state": weather_contract_state,
         "weather_required": bool(weather_required),
@@ -229,6 +231,21 @@ def validate_pre_render_qa(
         weather_direct_chat_present=weather_direct_chat_present,
     )
 
+    s14b_state = next(
+        (
+            str(row.get("status") or "").strip().upper()
+            for row in canonical_manifest
+            if str(row.get("section_id") or "").strip().upper() == "S14B"
+        ),
+        "MISSING",
+    )
+    if mini_league_denominator_complete:
+        mini_league_contract_state = "COMPLETE"
+    elif s14b_state == "PARTIAL":
+        mini_league_contract_state = "DEGRADED"
+    else:
+        mini_league_contract_state = "INCOMPLETE"
+
     failures = list(compute_failures)
     if missing_sections:
         failures.append(f"MANDATORY_SECTIONS_MISSING={','.join(missing_sections)}")
@@ -238,7 +255,7 @@ def validate_pre_render_qa(
         failures.append(f"PARTIAL_NOT_ALLOWED={','.join(partial_not_allowed_sections)}")
     if invalid_section_states:
         failures.append(f"SECTION_STATUS_INVALID={','.join(invalid_section_states)}")
-    if not mini_league_denominator_complete:
+    if mini_league_contract_state == "INCOMPLETE":
         failures.append("MINI_LEAGUE_DENOMINATOR_INCOMPLETE")
     if weather_failure:
         failures.append(weather_failure)
@@ -267,7 +284,8 @@ def validate_pre_render_qa(
         _render_contract_token(
             compute_fingerprint=compute_fingerprint,
             canonical_manifest=canonical_manifest,
-            mini_league_denominator_complete=True,
+            mini_league_denominator_complete=bool(mini_league_denominator_complete),
+            mini_league_contract_state=mini_league_contract_state,
             report_mode=resolved_report_mode,
             weather_contract_state=resolved_weather_state,
             weather_required=resolved_weather_required,
@@ -309,6 +327,7 @@ def validate_pre_render_qa(
         "partial_not_allowed_sections": partial_not_allowed_sections,
         "invalid_section_states": invalid_section_states,
         "mini_league_denominator_complete": bool(mini_league_denominator_complete),
+        "mini_league_contract_state": mini_league_contract_state,
         "report_mode": resolved_report_mode,
         "weather_contract_state": resolved_weather_state,
         "weather_required": resolved_weather_required,
@@ -385,6 +404,10 @@ def validate_post_render_qa(
     expected_model_keys = sorted(str(key) for key in pre_render_qa.get("expected_model_keys", []))
     expected_inference_keys = sorted(str(key) for key in pre_render_qa.get("expected_inference_keys", []))
     expected_report_mode = str(pre_render_qa.get("report_mode") or "LEGACY").strip().upper()
+    expected_mini_league_state = str(
+        pre_render_qa.get("mini_league_contract_state")
+        or ("COMPLETE" if pre_render_qa.get("mini_league_denominator_complete") else "INCOMPLETE")
+    ).strip().upper()
     expected_weather_state = str(
         pre_render_qa.get("weather_contract_state")
         or ("DIRECT_CHATGPT" if pre_render_qa.get("weather_direct_chat_present") else "MISSING")
@@ -403,6 +426,7 @@ def validate_post_render_qa(
         compute_fingerprint=expected_compute_fingerprint,
         canonical_manifest=canonical_pre_manifest,
         mini_league_denominator_complete=bool(pre_render_qa.get("mini_league_denominator_complete")),
+        mini_league_contract_state=expected_mini_league_state,
         report_mode=expected_report_mode,
         weather_contract_state=expected_weather_state,
         weather_required=expected_weather_required,
@@ -434,9 +458,8 @@ def validate_post_render_qa(
         expected_model_keys=expected_model_keys,
         expected_inference_keys=expected_inference_keys,
         expected_weather_state=expected_weather_state,
-        mini_league_denominator_complete_required=bool(
-            pre_render_qa.get("mini_league_denominator_complete")
-        ),
+        mini_league_denominator_complete_required=expected_mini_league_state == "COMPLETE",
+        expected_mini_league_state=expected_mini_league_state,
     )
 
     failures: list[str] = list(visible_body["failures"])
@@ -480,8 +503,12 @@ def validate_post_render_qa(
     if actual_model_keys != expected_model_keys:
         failures.append("MODEL_KEYS_MISMATCH")
 
-    if not rendered_mini_league_denominator_complete:
-        failures.append("MINI_LEAGUE_DENOMINATOR_INCOMPLETE")
+    expected_mini_complete = expected_mini_league_state == "COMPLETE"
+    if bool(rendered_mini_league_denominator_complete) != expected_mini_complete:
+        failures.append(
+            "MINI_LEAGUE_METADATA_STATE_MISMATCH="
+            f"{bool(rendered_mini_league_denominator_complete)}!={expected_mini_complete}"
+        )
     if actual_weather_state != expected_weather_state:
         if (
             expected_report_mode == "LEGACY"
@@ -522,6 +549,7 @@ def validate_post_render_qa(
         "rendered_fact_keys": actual_fact_keys,
         "rendered_model_keys": actual_model_keys,
         "mini_league_denominator_complete": bool(rendered_mini_league_denominator_complete),
+        "mini_league_contract_state": expected_mini_league_state,
         "report_mode": expected_report_mode,
         "weather_contract_state": actual_weather_state,
         "weather_required": expected_weather_required,
@@ -538,4 +566,5 @@ def validate_post_render_qa(
         "visible_mini_league_denominator_complete": visible_body[
             "mini_league_denominator_complete"
         ],
+        "visible_mini_league_contract_state": visible_body["mini_league_contract_state"],
     }

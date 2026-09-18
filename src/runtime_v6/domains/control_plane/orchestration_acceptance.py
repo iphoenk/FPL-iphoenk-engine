@@ -96,6 +96,8 @@ def _validate_independent_core(
 
     if occurrence.get("natural") is not True:
         failures.append("natural_occurrence.natural")
+    if occurrence.get("occurrence_count") != 1:
+        failures.append("natural_occurrence.occurrence_count")
     if not _truthy_id(occurrence.get("occurrence_id")):
         failures.append("natural_occurrence.occurrence_id")
     if str(occurrence.get("schedule_kind") or "") != NATURAL_SCHEDULE_KIND:
@@ -107,14 +109,12 @@ def _validate_independent_core(
             "acquisition_logical_slot",
             "publication_logical_slot",
         ):
-            value = core.get(field)
-            if field == "logical_slot" or value is not None:
-                _same_slot(
-                    occurrence_slot,
-                    value,
-                    field=f"core_execution.{field}",
-                    failures=failures,
-                )
+            _same_slot(
+                occurrence_slot,
+                core.get(field),
+                field=f"core_execution.{field}",
+                failures=failures,
+            )
 
     if str(core.get("schedule_kind") or "") != NATURAL_SCHEDULE_KIND:
         failures.append("core_execution.schedule_kind")
@@ -128,11 +128,21 @@ def _validate_independent_core(
     required_ids = (
         "workflow_run_id",
         "acquisition_run_id",
+        "publication_run_id",
+        "orchestration_fulfillment_run_id",
         "publication_generation_id",
     )
+    identity_values: list[str] = []
     for field in required_ids:
         if not _truthy_id(core.get(field)):
             failures.append(f"core_execution.{field}")
+        else:
+            identity_values.append(str(core.get(field)).strip())
+    if len(identity_values) != len(set(identity_values)):
+        failures.append("core_execution.identity_collision")
+
+    if str(core.get("trigger_event_name") or "").strip() != "issues":
+        failures.append("core_execution.trigger_event_name")
 
     required_true = (
         "chatgpt_scheduler_proof",
@@ -143,6 +153,11 @@ def _validate_independent_core(
     for field in required_true:
         if core.get(field) is not True:
             failures.append(f"core_execution.{field}")
+
+    due_set = str(core.get("due_source_set_id") or "").strip()
+    evaluated_due_set = str(core.get("source_freshness_due_set_id") or "").strip()
+    if not due_set or not evaluated_due_set or due_set != evaluated_due_set:
+        failures.append("core_execution.source_freshness_due_set_id")
 
     required_pass = (
         "publish_integrity",

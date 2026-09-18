@@ -63,7 +63,8 @@ def test_chatgpt_scheduler_uses_explicit_jakarta_logical_slot():
     assert control["github_schedule_event"] is False
     assert control["expected_cycle_at"] == "2026-09-08T03:00:00+00:00"
     assert control["last_chatgpt_scheduler_cycle_at"] == "2026-09-08T03:00:00+00:00"
-    assert control["logical_slot_source"] == "CHATGPT_COMMAND"
+    assert control["logical_slot_source"] == "GOVERNED_TRIGGER_EVENT"
+    assert control["logical_slot_source"] != "CHATGPT_COMMAND"
     assert control["counts_as_completed_scheduled_slot"] is True
     assert control["counts_as_completed_operational_slot"] is True
     assert control["scheduled_slot_uses_nominal_cron"] is False

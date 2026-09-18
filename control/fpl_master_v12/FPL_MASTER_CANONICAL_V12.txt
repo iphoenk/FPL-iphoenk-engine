@@ -1,0 +1,173 @@
+FPL MASTER CANONICAL V12 — FAIL-OPERATIONAL REPORT-PLANE ARCHITECTURE
+Effective: 2026-09-19T06:15:26+07:00
+Authority path: control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
+State path: control/fpl_master_v12/FPL_MASTER_STATE_V12.json
+
+0. NON-NEGOTIABLE
+- Production factual data plane = V6 ONLY. NEVER V3/V4/V5.
+- Preserve healthy V6; this rebuild changes ChatGPT report-plane architecture, not V6 internals.
+- Exactly one recurring FPL Master scheduler may be active.
+- No external write action may be a prerequisite for a due visible report.
+- Latest explicit user instruction/state wins over persisted state.
+
+1. ARCHITECTURE
+Official FPL/providers -> V6 -> runtime-data-v6 -> ChatGPT downstream analytics/report.
+ChatGPT owns Gate0, Bayesian/xMins/P(start), tactical/coach fit, fixture adjustment, price interpretation, mini-league, optimizer, Monte Carlo when supportable, XI/bench/CVC/chips and WAIT/PREPARE/ACT.
+DATA_SLOT != REPORT_SLOT != DELIVERY.
+
+2. SCHEDULE / REPORT_DUE
+Hourly :30 Asia/Jakarta.
+Mandatory visible outside deadline-active:
+04:30 DEEP; 05:30 PRICE; 12:30 DEEP; 21:30 DEEP; canonical Deadline/Final; scoring-GW live Match checkpoints; Post-All-Match/next applicable Deep.
+Deadline-active = first canonical :30 at/after T-24h of Official deadline until lock. EVERY hourly :30 inside this window is visible, even NO MATERIAL CHANGE.
+Other checkpoints silent unless routed visible.
+Determine REPORT_DUE from original occurrence before optional refresh. Once true, degradation never rewrites it to NOT_DUE.
+
+3. OCCURRENCE IDENTITY
+Preserve original scheduler-supplied Asia/Jakarta HH:30 slot and factual observed_at.
+Never rewrite/backfill/future-fill/mint replacement report slot.
+
+4. V6 READ-FIRST / NO HARD MUTATION BARRIER
+A. Read current authoritative V6 publication/runtime evidence first.
+B. If fresh/complete, reuse it; never duplicate acquisition.
+C. If missing/stale/incomplete and governed refresh is useful, issue #431 MAY be used as best-effort existing V6 refresh transport.
+D. #431 is OPTIONAL REFRESH TRANSPORT ONLY, not authority, occurrence identity, report acceptance or delivery barrier.
+E. If #431 write is safety-blocked/fails: record CORE REFRESH=DEGRADED; never fabricate PASS; at most one retry after genuine transient/readback mismatch; never alternate transport; never /v6-master-acquire; never duplicate acquisition; continue same occurrence.
+F. #431 failure != V6 unavailable.
+G. Never V3/V4/V5.
+
+5. FACTUAL EVIDENCE LADDER
+1 fresh valid current V6;
+2 freshest valid authoritative V6 within mode freshness;
+3 exact-scope governed V6 recovery only if already supported/safe;
+4 direct fresh Official FPL/club/competition/reputable report-time web evidence for affected scope;
+5 permitted nonvolatile last-good;
+6 truthful field-level DEGRADED/UNAVAILABLE.
+Deep volatile target <=45 min.
+Never blank healthy whole sections because one scope is degraded.
+Never fabricate completion, auth, finance, price ETA, picks, standings, provenance, weather or model precision.
+
+6. DURABLE STATE
+Read exact state path control/fpl_master_v12/FPL_MASTER_STATE_V12.json.
+Non-authoritative report-plane context only.
+Latest explicit app/screenshot/manual state wins.
+CONTEMPLATED != EXECUTED != REJECTED != SUPERSEDED != EXPIRED.
+Never infer transfer execution from discussion.
+Unresolved user routes survive scheduler runs.
+State failure never mutates V6 and never suppresses due report.
+
+7. PLAYER METHODOLOGY
+FOOTBALL SCORE:
+20% PROVEN/HISTORICAL
+25% TACTICAL/ROLE
+30% CURRENT UNDERLYING
+25% FIXTURE/SECURITY
+=100%.
+Historical = Bayesian prior/shrinkage.
+Tactical/role = coach/system, zones, set pieces/penalties, substitution pattern, hierarchy, role stability, opponent channel.
+Underlying = xG/npxG/xA/xGI, shots/SIB, big chances, chances created, shares, event-rate, recency/change-point with double-count control.
+Fixture/security = opponent H/A + P(available), P(start), start/bench/cameo/DNP mixture, xMins, rotation/rest/congestion.
+Transfer economics stay downstream: hit, FT/FT shadow value, buy-back, sell-value loss, price, ITB, structure, correlation, exit route.
+Chain: FOOTBALL SCORE -> EXPECTED POINTS/UNCERTAINTY -> TRANSFER ECONOMICS -> PACKAGE UTILITY -> ACTION.
+Keep 1GW, 3GW and 5GW distinct.
+
+8. FULL UNIVERSE / GATE0
+Serious decisions scan full currently eligible Official FPL universe.
+Verify exact 15; 2 GK/5 DEF/5 MID/3 FWD; max3/club; legal XI/bench; eligibility; current factual prices; affordability only when FT/ITB/sell values known.
+No fabricated FT/ITB/sell values.
+Evaluate role, system, competition, P(start), xMins, set pieces/penalties, tactical matchup, rest, underlying priors, value, structure, horizon utility, robustness, optionality, correlation, mini-league leverage, information value and reversal triggers.
+
+9. PROBABILISTIC METHODS
+Use Bayesian/hierarchical shrinkage, start/bench/cameo/DNP mixtures, xMins, scoring event-rate, fixture adjustment, posterior predictive points, floor/ceiling/tails, covariance, hit-adjusted utility, efficient frontier, value of waiting, regret/sensitivity, mini-league relative exposure when supportable.
+Monte Carlo >=500,000 correlated paths only with fresh real distributions. State actual N/limitations. Otherwise MC NOT RUN/PARTIAL. Never invent pseudo-precision.
+
+10. WATCHLIST20
+For FULL/DEEP/DEADLINE/FINAL/FULL+MATCH and PRICE:
+exactly 20 NON-OWNED = GK5 DEF5 MID5 FWD5.
+Derived from full current universe after OUR15 exclusion and canonical evaluation.
+Count alone insufficient; require unique canonical IDs, eligibility, full-universe/methodology lineage and current provenance.
+
+11. RISE20/FALL20
+Where required: RISE20 exact20; FALL20 exact20.
+Complete selection uses full current Official universe.
+RISE = projection_offset_0_percent DESC, tie element_id ASC.
+FALL = projection_offset_0_percent ASC, tie element_id ASC.
+Ownership never alters order.
+Every row: rank;element_id;player_name;current_price;ownership_percent;ownership_tag;direction;current_progress_percent;projection_offset_0_percent;predicted_change_cycle;predicted_change_at;eta_human;model_urgency;confidence;source;observed_at;raw_payload_hash.
+Unknown timing => NO RELIABLE ETA. Narrative/disclaimer never substitutes. Malformed/missing row => same-run recompute/re-render when recoverable.
+
+12. ICON+ MINI-LEAGUE
+Every visible report includes mode-appropriate ICON+ analysis using freshest authoritative available denominator.
+Where supportable: rank,total,gap #1,nearest rivals,ownership,starter share,CVC/chip,EO,overlap/core,shields,differentials,dangers,leverage,remaining ammunition,strategic implication.
+Never present stale standings as current.
+
+13. WEATHER
+Use direct fresh report-time weather after venue/kickoff resolution when mode requires.
+Low weight unless unusual conditions have plausible football mechanism.
+Never infer causation from coincidence.
+
+14. VISIBLE CONTRACTS
+FULL/DEEP order:
+1 Decision/status
+2 OUR15
+3 Changes
+4 Fixtures/rest/conditions
+5 Formation/XI/bench
+6 XI battle
+7 C/VC
+8 Chip
+9 Actionable Price Radar
+10 Watchlist20 exact20
+11 RISE20 exact20
+12 FALL20 exact20
+13 Package optimizer/frontier
+14 Evidence quality
+14B ICON+ mini-league
+15 ALL15 next-GW tactical
+16 Source health/freshness/lineage
+17 WAIT/PREPARE/ACT + trigger/reversal
+18 Final judgement.
+
+05:30 PRICE:
+1 Price decision
+2 Official price changes FACT
+3 Team-needs price alert
+4 Watchlist20 exact20
+5 RISE20 exact20
+6 FALL20 exact20
+7 Package/affordability impact
+8 ICON+ price impact
+9 Action board
+10 Source health.
+
+PURE MATCH: compact live mode; do not force Watchlist/Rise/Fall unless overlap with Full/Deadline/Final.
+Deadline/Final: Full backbone + exact deadline/countdown, legality, latest news, predicted XI/leak tier, xMins, legal routes, execution package, safe time, value of waiting, reversal/abort, ICON+ leverage.
+
+15. QA / DELIVERY
+PRE_RENDER_QA + POST_RENDER_QA mandatory when due.
+- due body cannot be replaced by plumbing/status;
+- exact-count blocks remain exact after render;
+- mandatory row fields survive render;
+- FACT/MODEL/INFERENCE/RUMOR separated;
+- truthful timestamps/provenance;
+- no V3/V4/V5;
+- no duplicate acquisition/report;
+- no fabricated delivery proof.
+When REPORT_DUE=true final output must be a complete best-truthful canonical report, possibly with clearly degraded fields, OR a truthful terminal report-build failure only after non-destructive recovery paths are exhausted.
+Forbidden terminal due outputs: CORE PASS only; CORE FAIL only; SAFETY BLOCKED only; CONTRACT DEGRADED only; IN_PROGRESS; WAITING; PREFETCHING; RENDERING; QA; status-only.
+
+16. FAIL-OPERATIONAL
+#431 failure, V6 refresh latency/failure, provider failure, prefetch degradation, one auth failure, predictor incompleteness NEVER equal NOT_DUE.
+If due, continue evidence ladder and render best truthful report.
+Degradation lowers confidence/availability; it must not erase report.
+
+17. LEGACY
+This replaces old mandatory #431-success barrier.
+Old Library Runtime/Spec/State are historical only for V12 task and remain untouched.
+
+18. ACCEPTANCE
+First natural occurrence proves implementation only.
+Production confidence requires a normal fresh-V6 due report plus a due report surviving degraded dependency, semantic exact-count QA, no duplicates and preserved same-slot identity.
+Historical failures remain immutable.
+
+END FPL MASTER CANONICAL V12

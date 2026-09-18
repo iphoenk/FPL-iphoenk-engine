@@ -266,6 +266,11 @@ def run() -> dict[str, Any]:
         "overall": "RED" if critical_failures else health["overall"],
         "health_counts": health["counts"],
         "health_dimension_counts": health.get("dimension_counts") or {},
+        "health_summary": {
+            "source_runtime_health": health["source_runtime_health_overall"],
+            "identity_join_health": health["identity_join_health_overall"],
+            "overall_operational_health": health["overall_operational_health"],
+        },
         "critical_failures": critical_failures,
         "performance": {
             "source_workers": peak_source_workers,
@@ -340,6 +345,8 @@ def run() -> dict[str, Any]:
             "artifact_catalog_required": True,
             "identity_mapping_is_deterministic_only": True,
             "identity_health_is_entity_scope_aware": True,
+            "identity_applicability_authority": "entity_scopes",
+            "identity_observability_uses_canonical_source_entity_truth": True,
             "verified_crosswalks_are_evidence_backed": True,
             "identity_coverage_uses_separate_canonical_and_observed_join_metrics": True,
             "unobserved_players_are_not_assumed_absent_from_provider": True,

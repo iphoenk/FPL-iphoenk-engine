@@ -80,6 +80,9 @@ def test_recovery_workflow_is_dispatch_only_not_a_second_natural_scheduler():
     assert "inputs[confirm]=RECOVER_V6" in text
     assert "actions/workflows/${RECOVERY_WORKFLOW}/dispatches" in text
     assert "inputs[initiator]=recovery_guard" in text
+    ingestion = (ROOT / ".github" / "workflows" / "v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
+    assert "initiator:" in ingestion
+    assert "V6_DISPATCH_INITIATOR: ${{ inputs.initiator }}" in ingestion
 
 
 def test_recovery_policy_cannot_claim_scheduler_or_wave3_proof():

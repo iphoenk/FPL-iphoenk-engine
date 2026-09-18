@@ -14,7 +14,12 @@ from typing import Any, Mapping, Sequence
 from .delivery_integrity import RANK20_REQUIRED_FIELDS
 from .provenance_guard import validate_report_provenance
 from .rank20_engine import build_rank20_tables
-from .section_contract import player_id, player_position, validate_report_sections
+from .section_contract import (
+    player_id,
+    player_position,
+    validate_p07_semantic_acceptance,
+    validate_report_sections,
+)
 
 
 _R4_EXTRA_SECTIONS = (
@@ -129,6 +134,8 @@ def build_report_compute_contract(
     facts: Mapping[str, Any],
     models: Mapping[str, Any],
     inferences: Mapping[str, Any],
+    semantic_proof: Mapping[str, Any] | None = None,
+    semantic_report_slot_id: str | None = None,
 ) -> dict[str, Any]:
     """Validate materialized report-compute input through R4 and R5.
 
@@ -176,11 +183,25 @@ def build_report_compute_contract(
         "SECTION_CONTRACT": section_contract,
         "PROVENANCE": provenance,
     }
+    semantic_acceptance = None
+    if semantic_proof is not None:
+        semantic_acceptance = validate_p07_semantic_acceptance(
+            section_checks=section_checks,
+            semantic_proof=semantic_proof,
+            expected_report_slot_id=(
+                str(semantic_report_slot_id or "").strip()
+                or str(semantic_proof.get("report_slot_id") or "").strip()
+            ),
+        )
+        compatibility_checks["MANDATORY_SEMANTIC"] = semantic_acceptance
+
     failures: list[str] = []
     if section_contract["status"] != "PASS":
         failures.append("SECTION_CONTRACT")
     if provenance["status"] != "PASS":
         failures.append("PROVENANCE")
+    if semantic_acceptance is not None and semantic_acceptance["status"] != "PASS":
+        failures.append("MANDATORY_SEMANTIC")
     compute_ready = not failures
 
     return {
@@ -220,6 +241,8 @@ def build_report_compute_contract_from_universe(
     facts: Mapping[str, Any],
     models: Mapping[str, Any],
     inferences: Mapping[str, Any],
+    semantic_proof: Mapping[str, Any] | None = None,
+    semantic_report_slot_id: str | None = None,
 ) -> dict[str, Any]:
     """Canonical R3+R4+R5 entrypoint for full report construction."""
     if not scope_matrix_report_ready:
@@ -270,6 +293,8 @@ def build_report_compute_contract_from_universe(
         facts=facts,
         models=models,
         inferences=inferences,
+        semantic_proof=semantic_proof,
+        semantic_report_slot_id=semantic_report_slot_id,
     )
     engine_metadata = {
         key: value

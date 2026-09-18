@@ -1,0 +1,26 @@
+{
+  "historical_occurrence": "2026-09-18T19:30:00+07:00",
+  "historical_immutable": true,
+  "evidence_scope": "OBSERVED_ONLY_NO_RETROACTIVE_RECONSTRUCTION",
+  "governed_v6_run_id": "35344991540",
+  "report_prefetch_run_id": "35345091828",
+  "report_prefetch_logical_slot": "2026-09-18T19:30:00+07:00",
+  "report_prefetch_fresh_for_target_report": true,
+  "report_prefetch_spawned_duplicate_core": false,
+  "observed_visible_watchlist_count": 20,
+  "observed_visible_watchlist_positions": {
+    "GK": 5,
+    "DEF": 5,
+    "MID": 5,
+    "FWD": 5
+  },
+  "watchlist_full_universe_lineage_proven": false,
+  "rise20_exact20_structured_rows_present": false,
+  "fall20_exact20_structured_rows_present": false,
+  "price_risk_narrative_substitution_observed": true,
+  "observed_exact_excerpt": "saya tidak akan menyalin Rise20/Fall20",
+  "report_reached_visible_delivery": true,
+  "canonical_same_slot_receipt_proven": false,
+  "report_slot_fulfilled_proven": false,
+  "notes": "Do not infer or reconstruct missing full report body. This fixture preserves only evidence actually observed/proven for the natural 19:30 occurrence."
+}

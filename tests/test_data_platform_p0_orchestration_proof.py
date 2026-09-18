@@ -10,6 +10,7 @@ from src.runtime_v6.domains.control_plane.orchestration_acceptance import (
     evaluate_occurrence_acceptance,
 )
 from src.runtime_v6.report_recovery import plan_report_catch_up
+from src.runtime_v6.domains.publication.production_validate import _validate_chatgpt_scheduler
 from src.runtime_v6.runtime_control import build_operational_slots, build_runtime_control
 
 
@@ -307,3 +308,17 @@ def test_18_deadline_active_visible_occurrence_is_required_independently_of_audi
     assert result["VISIBLE_REPORT_MODE"] == "deadline_mode"
     assert result["VISIBLE_REPORT_REQUIREMENT"] == "REQUIRED"
     assert result["CORE_EXECUTION"] == "PASS"
+
+
+def test_19_publishable_validator_accepts_canonical_governed_trigger_slot_source(monkeypatch):
+    logical_slot = "2030-01-01T06:00:00+00:00"
+    control = _natural_control(logical_hour_utc=6, run_id="run-publishable")
+    manifest = {
+        "governance": {
+            "production_ingestion_schedule_only": False,
+            "chatgpt_scheduler_is_authority": True,
+        }
+    }
+    monkeypatch.setenv("V6_MASTER_LOGICAL_SLOT", logical_slot)
+
+    _validate_chatgpt_scheduler(manifest, control)

@@ -223,7 +223,7 @@ def _validate_chatgpt_scheduler(manifest: dict[str, Any], control: dict[str, Any
     assert control["master_orchestrated"] is True
     assert control["authoritative_runtime_snapshot"] is True
     assert control["counts_as_completed_operational_slot"] is True
-    assert control["logical_slot_source"] == "CHATGPT_COMMAND"
+    assert control["logical_slot_source"] == "GOVERNED_TRIGGER_EVENT"
     assert control["expected_cycle_at"] == requested.isoformat()
     assert manifest["governance"]["production_ingestion_schedule_only"] is False
     assert manifest["governance"]["chatgpt_scheduler_is_authority"] is True

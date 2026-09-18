@@ -248,6 +248,10 @@ def test_01_1830_in_progress_then_success_requires_terminal_continuation():
     assert result["intermediate_user_output_allowed"] is False
     assert result["status_only_final_output_allowed"] is False
     assert result["next_action"] == "RESUME_CANONICAL_REPORT_PIPELINE"
+    assert result["continuation_policy"] == {
+        "maximum_wait_seconds": 90,
+        "poll_interval_seconds": 5,
+    }
     assert result["pipeline_resume_steps"][-2:] == ["DELIVERY", "SAME_SLOT_DELIVERY_RECEIPT"]
 
 

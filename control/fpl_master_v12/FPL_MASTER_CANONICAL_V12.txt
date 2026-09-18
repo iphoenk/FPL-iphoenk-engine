@@ -81,6 +81,18 @@ Evaluate role, system, competition, P(start), xMins, set pieces/penalties, tacti
 Use Bayesian/hierarchical shrinkage, start/bench/cameo/DNP mixtures, xMins, scoring event-rate, fixture adjustment, posterior predictive points, floor/ceiling/tails, covariance, hit-adjusted utility, efficient frontier, value of waiting, regret/sensitivity, mini-league relative exposure when supportable.
 Monte Carlo >=500,000 correlated paths only with fresh real distributions. State actual N/limitations. Otherwise MC NOT RUN/PARTIAL. Never invent pseudo-precision.
 
+
+9A. ROBUSTNESS / UNCERTAINTY DOMINANCE GATE
+For close XI/bench/formation decisions and serious player/package comparisons, mean projected points alone is never sufficient.
+A. Model the full availability/minutes mixture explicitly: P(available), P(start), bench-start state, P(cameo), P(DNP), late-cameo probability and the xMins distribution. Do not collapse these into one optimistic mean-minutes number.
+B. AUTO-SUB BLOCKING COST is an explicit decision term. A DNP may preserve auto-sub value; a short cameo can destroy that option. Estimate the expected value of the bench alternative forfeited under cameo scenarios and include it in lineup utility/regret. Never treat DNP risk and cameo risk as equivalent.
+C. Defensive-contribution/appearance floors are conditional on the minutes and role needed to earn them. Do not credit a nominal floor as if it were guaranteed when starter security or xMins is uncertain.
+D. A small mean xPts edge that lies inside the model's uncertainty/credible decision band is NOT decisive. The uncertainty band must come from the current predictive distributions/calibration; never hardcode a fixed threshold such as 1.0 point from one historical case.
+E. When mean utilities are close, compare lower-tail outcome, downside, expected regret, P(outperform), lineup optionality, auto-sub preservation and robustness to plausible lineup-news errors. Prefer the more robust structure unless the higher-upside route has enough evidence-adjusted edge to compensate for its extra downside.
+F. Multi-GW role/starter-security evidence is a prior/shrinkage input. A one-GW projection with weak lineup confidence must not silently erase persistent evidence that a player is a weak link, rotation/cameo risk, or structurally fragile.
+G. If the mean-xPts ranking and the robustness ranking disagree, surface both, explain the uncertainty driver, and classify the decision as ROBUSTNESS-DOMINATED / MEAN-EDGE-DOMINATED / INDETERMINATE rather than hiding the disagreement.
+H. Post-match calibration updates P(start), xMins, cameo/DNP mixture and uncertainty calibration, but never creates player-specific permanent rules from one outcome. Learn the failure mode, not the hindsight winner.
+
 10. WATCHLIST20
 For FULL/DEEP/DEADLINE/FINAL/FULL+MATCH and PRICE:
 exactly 20 NON-OWNED = GK5 DEF5 MID5 FWD5.

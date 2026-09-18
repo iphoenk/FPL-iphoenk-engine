@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 NATURAL_SCHEDULE_KIND = "chatgpt_scheduler"
 NATURAL_EVENT_NAME = "issues"
+NATURAL_LOGICAL_SLOT_SOURCE = "GOVERNED_TRIGGER_EVENT"
 FIRST_GATE_CONSECUTIVE_SLOTS = 6
 LEGACY_TWO_SLOT_OBSERVATION = 2
 CORE_STAGES = (
@@ -62,6 +63,9 @@ def build_slot_proof(
     promotion_verified: bool,
     run_id: str | None = None,
     run_attempt: str | None = None,
+    collect_job_id: str | None = None,
+    publish_job_id: str | None = None,
+    fulfillment_job_id: str | None = None,
     verified_at: datetime | None = None,
     published_runtime_sha: str | None = None,
 ) -> dict[str, Any]:
@@ -97,6 +101,18 @@ def build_slot_proof(
         raise Wave3ProofError("promotion_not_proven")
     if not source_commit or len(source_commit) < 7:
         raise Wave3ProofError("source_commit_required")
+    if control.get("authoritative_runtime_snapshot") is not True:
+        raise Wave3ProofError("authoritative_runtime_snapshot_missing")
+    if control.get("logical_slot_source") != NATURAL_LOGICAL_SLOT_SOURCE:
+        raise Wave3ProofError("natural_logical_slot_source_invalid")
+    immutable_job_ids = {
+        "acquisition_run_id": str(collect_job_id or "").strip(),
+        "publication_run_id": str(publish_job_id or "").strip(),
+        "orchestration_fulfillment_run_id": str(fulfillment_job_id or "").strip(),
+    }
+    missing_job_ids = [name for name, value in immutable_job_ids.items() if not value]
+    if missing_job_ids:
+        raise Wave3ProofError("immutable_source_job_ids_required:" + ",".join(missing_job_ids))
 
     logical_slot = control.get("expected_cycle_at") or freeze.get("logical_slot")
     observed_at = control.get("cycle_observed_at") or freeze.get("observed_at")
@@ -111,7 +127,7 @@ def build_slot_proof(
     )
 
     stages = {
-        "TRIGGERED": _stage("PASS", at=observed_at, evidence="runtime_control.issue-title scheduler proof"),
+        "TRIGGERED": _stage("PASS", at=observed_at, evidence="runtime_control.governed trigger event proof"),
         "ACQUIRED": _stage("PASS", at=manifest.get("generated_at"), evidence="source publication artifact manifest"),
         "STAGED": _stage("PASS", at=freeze.get("frozen_at"), evidence="candidate_freeze.manifest_input_sha256"),
         "FROZEN": _stage("PASS", at=freeze.get("frozen_at"), evidence="candidate_freeze.lock"),
@@ -127,10 +143,17 @@ def build_slot_proof(
         "proof_kind": "WAVE3_NATURAL_CORE_SLOT",
         "natural_slot": True,
         "natural_transport": "FPL_MASTER_SLOT_ISSUE_TITLE",
+        "core_trigger_source": NATURAL_LOGICAL_SLOT_SOURCE,
+        "logical_slot_source": NATURAL_LOGICAL_SLOT_SOURCE,
+        "audit_transport_required_for_core_proof": False,
         "logical_slot": logical_slot,
         "observed_at": observed_at,
         "verified_at": verified,
         "run_id": actual_run_id,
+        "workflow_run_id": actual_run_id,
+        "acquisition_run_id": immutable_job_ids["acquisition_run_id"],
+        "publication_run_id": immutable_job_ids["publication_run_id"],
+        "orchestration_fulfillment_run_id": immutable_job_ids["orchestration_fulfillment_run_id"],
         "run_attempt": actual_run_attempt,
         "source_commit": source_commit,
         "published_runtime_sha": published_runtime_sha,
@@ -150,6 +173,8 @@ def build_slot_proof(
             "failed_candidate_can_be_counted": False,
             "source_publish_job_success_required": True,
             "proof_created_post_publish_without_runtime_tree_mutation": True,
+            "audit_transport_is_separate_from_core_execution_proof": True,
+            "connector_result_is_not_required_when_independent_proof_is_complete": True,
             "initial_natural_gate_consecutive_slots": FIRST_GATE_CONSECUTIVE_SLOTS,
             "production_green_requires_rolling_48_of_48": True,
             "production_green_requires_controlled_chaos_acceptance": True,
@@ -188,6 +213,9 @@ def proof_is_countable(proof: dict[str, Any]) -> bool:
     if proof.get("natural_slot") is not True or proof.get("core_chain_pass") is not True:
         return False
     if proof.get("natural_transport") != "FPL_MASTER_SLOT_ISSUE_TITLE":
+        return False
+    trigger_source = proof.get("core_trigger_source")
+    if trigger_source is not None and trigger_source != NATURAL_LOGICAL_SLOT_SOURCE:
         return False
     stages = dict(proof.get("stages") or {})
     return all((stages.get(name) or {}).get("state") == "PASS" for name in CORE_STAGES)
@@ -313,6 +341,9 @@ def main() -> int:
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--source-run-id", required=True)
     parser.add_argument("--source-run-attempt", required=True)
+    parser.add_argument("--collect-job-id", required=True)
+    parser.add_argument("--publish-job-id", required=True)
+    parser.add_argument("--fulfillment-job-id", required=True)
     parser.add_argument("--published-runtime-sha")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--production-validated", action="store_true")
@@ -325,6 +356,9 @@ def main() -> int:
         promotion_verified=args.promotion_verified,
         run_id=args.source_run_id,
         run_attempt=args.source_run_attempt,
+        collect_job_id=args.collect_job_id,
+        publish_job_id=args.publish_job_id,
+        fulfillment_job_id=args.fulfillment_job_id,
         published_runtime_sha=args.published_runtime_sha,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)

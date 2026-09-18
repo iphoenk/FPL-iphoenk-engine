@@ -28,7 +28,8 @@
     "transport_note": "ChatGPT edits issue #431 title with the current logical slot. GitHub remains executor-only. Master acquisition via issue comment is retired; report prefetch remains comment-driven.",
     "dedicated_control_comment_id": 5596106114,
     "dedicated_control_comment_event": "RETIRED",
-    "issue_title_transport_enabled": true
+    "issue_title_transport_enabled": true,
+    "logical_slot_source": "GOVERNED_TRIGGER_EVENT"
   },
   "github_natural_schedule": {
     "enabled": false,
@@ -91,7 +92,9 @@
     "issue_title_edit_is_preferred_scheduler_transport": true,
     "issue_comment_is_legacy_scheduler_transport": false,
     "issue_comment_edit_is_preferred_scheduler_transport": false,
-    "issue_title_edit_is_fallback_scheduler_transport": false
+    "issue_title_edit_is_fallback_scheduler_transport": false,
+    "audit_transport_is_separate_from_core_execution_proof": true,
+    "independent_immutable_execution_proof_is_allowed": true
   },
   "master_orchestrated": {
     "enabled": true, "schedule_kind": "master_orchestrated", "issue_schedule_kind": "chatgpt_scheduler", "authoritative_runtime_snapshot": true, "counts_as_completed_operational_slot": true, "counts_as_completed_scheduled_slot": false, "allowed_actor": "repository_owner", "reason_required": true, "control_issue_number": 431, "issue_comment_command": "", "issue_title_marker": "FPL_MASTER_SLOT"

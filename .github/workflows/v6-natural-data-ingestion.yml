@@ -336,7 +336,7 @@ jobs:
           assert control["schedule_kind"] == os.environ["V6_EXPECTED_SCHEDULE_KIND"]
           if control["schedule_kind"] == "chatgpt_scheduler":
               assert control["chatgpt_scheduler_proof"] is True
-              assert control["logical_slot_source"] == "CHATGPT_COMMAND"
+              assert control["logical_slot_source"] == "GOVERNED_TRIGGER_EVENT"
           if control["schedule_kind"] == "report_prefetch":
               assert control["authoritative_runtime_snapshot"] is True
               assert control["counts_as_completed_operational_slot"] is False
@@ -412,7 +412,7 @@ jobs:
           assert control["schedule_kind"] == os.environ["V6_EXPECTED_SCHEDULE_KIND"]
           if control["schedule_kind"] == "chatgpt_scheduler":
               assert control["chatgpt_scheduler_proof"] is True
-              assert control["logical_slot_source"] == "CHATGPT_COMMAND"
+              assert control["logical_slot_source"] == "GOVERNED_TRIGGER_EVENT"
           assert integrity["status"] == "PASS", integrity
           assert integrity["resolved_registry_exact"] is True
           evidence = {

@@ -122,18 +122,30 @@ jobs:
           from pathlib import Path
 
           payload = json.loads((Path(os.environ["RUNNER_TEMP"]) / "source-jobs.json").read_text(encoding="utf-8"))
-          jobs = {str(job.get("name")): str(job.get("conclusion")) for job in payload.get("jobs", [])}
-          collect = jobs.get("collect")
-          publish = jobs.get("publish")
-          fulfillment = jobs.get("orchestration-fulfillment")
+          jobs = {str(job.get("name")): job for job in payload.get("jobs", [])}
+          collect_row = jobs.get("collect") or {}
+          publish_row = jobs.get("publish") or {}
+          fulfillment_row = jobs.get("orchestration-fulfillment") or {}
+          collect = str(collect_row.get("conclusion") or "")
+          publish = str(publish_row.get("conclusion") or "")
+          fulfillment = str(fulfillment_row.get("conclusion") or "")
           if collect != "success" or fulfillment != "success":
               raise SystemExit(f"source core jobs not successful: collect={collect} fulfillment={fulfillment}")
           countable = publish == "success"
           if publish not in {"success", "skipped"}:
               raise SystemExit(f"source publish job is not accepted: {publish}")
+          job_ids = {
+              "collect_job_id": collect_row.get("id"),
+              "publish_job_id": publish_row.get("id"),
+              "fulfillment_job_id": fulfillment_row.get("id"),
+          }
+          if countable and not all(str(value or "").isdigit() for value in job_ids.values()):
+              raise SystemExit(f"immutable source job identity missing: {job_ids}")
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
               handle.write(f"countable={'true' if countable else 'false'}\n")
-          print({"collect": collect, "publish": publish, "fulfillment": fulfillment, "countable": countable})
+              for key, value in job_ids.items():
+                  handle.write(f"{key}={value or ''}\n")
+          print({"collect": collect, "publish": publish, "fulfillment": fulfillment, "countable": countable, **job_ids})
           PY
 
       - name: Locate exact verified source publication artifact
@@ -229,6 +241,9 @@ jobs:
             --source-commit "${{ steps.source.outputs.head_sha }}" \
             --source-run-id "${{ steps.source.outputs.run_id }}" \
             --source-run-attempt "${{ steps.source.outputs.run_attempt }}" \
+            --collect-job-id "${{ steps.promotion.outputs.collect_job_id }}" \
+            --publish-job-id "${{ steps.promotion.outputs.publish_job_id }}" \
+            --fulfillment-job-id "${{ steps.promotion.outputs.fulfillment_job_id }}" \
             --published-runtime-sha "${{ steps.runtime.outputs.sha }}" \
             --output "$RUNNER_TEMP/wave3-slot-proof.json" \
             --production-validated \

@@ -18,6 +18,7 @@ from .temporal import floor_interval_slot, parse_timestamp, try_parse_timestamp
 CHATGPT_SCHEDULER_AUTHORITY = CONTROL_PLANE.scheduler_authority_id
 CHATGPT_SCHEDULER_EPOCH = SCHEDULE_POLICY.health_epoch
 CHATGPT_GREEN_STREAK = SCHEDULE_POLICY.green_after_consecutive_slots
+NATURAL_LOGICAL_SLOT_SOURCE = "GOVERNED_TRIGGER_EVENT"
 
 
 def _parse_dt(value: str | None) -> datetime | None:
@@ -257,7 +258,7 @@ def build_runtime_control(
         "schedule_expression": expression,
         "nominal_schedule_at": nominal.isoformat() if nominal else None,
         "nominal_schedule_resolved": nominal is not None if github_schedule_event else None,
-        "logical_slot_source": "CHATGPT_COMMAND" if chatgpt_scheduler else "RUNTIME_CLOCK",
+        "logical_slot_source": NATURAL_LOGICAL_SLOT_SOURCE if chatgpt_scheduler else "RUNTIME_CLOCK",
         "expected_cycle_at": expected.isoformat() if expected else None,
         "cycle_observed_at": current.isoformat(),
         "schedule_lag_seconds": round(max(0.0, (current - slot).total_seconds()), 3) if chatgpt_scheduler else None,

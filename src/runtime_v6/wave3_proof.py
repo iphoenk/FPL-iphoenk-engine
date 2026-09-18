@@ -79,14 +79,6 @@ def build_slot_proof(
     actual_run_attempt = str(run_attempt or os.getenv("GITHUB_RUN_ATTEMPT") or "1")
     if not actual_run_id:
         raise Wave3ProofError("run_id_required")
-    immutable_job_ids = {
-        "acquisition_run_id": str(collect_job_id or "").strip(),
-        "publication_run_id": str(publish_job_id or "").strip(),
-        "orchestration_fulfillment_run_id": str(fulfillment_job_id or "").strip(),
-    }
-    missing_job_ids = [name for name, value in immutable_job_ids.items() if not value]
-    if missing_job_ids:
-        raise Wave3ProofError("immutable_source_job_ids_required:" + ",".join(missing_job_ids))
     if control.get("event_name") != NATURAL_EVENT_NAME:
         raise Wave3ProofError("not_genuine_natural_core_transport")
     if control.get("schedule_kind") != NATURAL_SCHEDULE_KIND:
@@ -95,10 +87,6 @@ def build_slot_proof(
         raise Wave3ProofError("scheduler_proof_missing")
     if control.get("counts_as_completed_operational_slot") is not True:
         raise Wave3ProofError("not_operational_slot")
-    if control.get("authoritative_runtime_snapshot") is not True:
-        raise Wave3ProofError("authoritative_runtime_snapshot_missing")
-    if control.get("logical_slot_source") != NATURAL_LOGICAL_SLOT_SOURCE:
-        raise Wave3ProofError("natural_logical_slot_source_invalid")
     if integrity.get("status") != "PASS":
         raise Wave3ProofError("publish_integrity_not_pass")
     if freeze.get("candidate_state") != "FROZEN":
@@ -113,6 +101,18 @@ def build_slot_proof(
         raise Wave3ProofError("promotion_not_proven")
     if not source_commit or len(source_commit) < 7:
         raise Wave3ProofError("source_commit_required")
+    if control.get("authoritative_runtime_snapshot") is not True:
+        raise Wave3ProofError("authoritative_runtime_snapshot_missing")
+    if control.get("logical_slot_source") != NATURAL_LOGICAL_SLOT_SOURCE:
+        raise Wave3ProofError("natural_logical_slot_source_invalid")
+    immutable_job_ids = {
+        "acquisition_run_id": str(collect_job_id or "").strip(),
+        "publication_run_id": str(publish_job_id or "").strip(),
+        "orchestration_fulfillment_run_id": str(fulfillment_job_id or "").strip(),
+    }
+    missing_job_ids = [name for name, value in immutable_job_ids.items() if not value]
+    if missing_job_ids:
+        raise Wave3ProofError("immutable_source_job_ids_required:" + ",".join(missing_job_ids))
 
     logical_slot = control.get("expected_cycle_at") or freeze.get("logical_slot")
     observed_at = control.get("cycle_observed_at") or freeze.get("observed_at")

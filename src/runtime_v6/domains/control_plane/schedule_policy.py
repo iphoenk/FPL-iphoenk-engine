@@ -18,6 +18,7 @@ class SchedulerPolicy:
     timezone: str
     cadence_minutes: int
     physical_minute: int
+    scheduled_dispatch_tolerance_seconds: int
     logical_slot_minute: int
     health_epoch: str
     green_after_consecutive_slots: int
@@ -75,6 +76,10 @@ def load_schedule_policy(path: Path | None = None) -> SchedulerPolicy:
         raise ValueError("schedule_policy:scheduler_authority:required_identity_field_missing")
 
     physical_minute = int(authority.get("physical_minute"))
+    scheduled_dispatch_tolerance_seconds = _positive_int(
+        authority.get("scheduled_dispatch_tolerance_seconds"),
+        "scheduled_dispatch_tolerance_seconds",
+    )
     logical_slot_minute = int(authority.get("logical_slot_minute"))
     if not 0 <= physical_minute <= 59 or not 0 <= logical_slot_minute <= 59:
         raise ValueError("schedule_policy:scheduler_authority:minute_out_of_range")
@@ -86,6 +91,7 @@ def load_schedule_policy(path: Path | None = None) -> SchedulerPolicy:
         timezone=timezone_name,
         cadence_minutes=cadence,
         physical_minute=physical_minute,
+        scheduled_dispatch_tolerance_seconds=scheduled_dispatch_tolerance_seconds,
         logical_slot_minute=logical_slot_minute,
         health_epoch=health_epoch,
         green_after_consecutive_slots=green_streak,

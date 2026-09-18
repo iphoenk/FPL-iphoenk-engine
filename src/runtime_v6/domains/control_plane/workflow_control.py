@@ -137,8 +137,14 @@ def authorize_dispatch(
     reason: str,
     manual_confirm: str = "",
 ) -> str:
-    if actor != repository_owner:
-        raise WorkflowControlError("V6 governed dispatch is restricted to the repository owner")
+    recovery_guard_actor = (
+        mode == "manual_recovery"
+        and actor == CONTROL_PLANE.recovery_dispatch_actor
+        and reason == CONTROL_PLANE.recovery_reason
+        and manual_confirm == CONTROL_PLANE.recovery_confirmation
+    )
+    if actor != repository_owner and not recovery_guard_actor:
+        raise WorkflowControlError("V6 governed dispatch actor is not authorized")
     if not str(reason).strip():
         raise WorkflowControlError("V6 governed dispatch requires an audit reason")
     control = dict(policy.get(mode) or {})

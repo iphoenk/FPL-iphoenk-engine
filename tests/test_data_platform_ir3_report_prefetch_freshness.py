@@ -38,6 +38,7 @@ def _evaluate(snapshot, *, refresh_attempt=0):
         refresh_attempt=refresh_attempt,
         max_refresh_attempts=1,
         reason="fpl_master_report_prefetch_recovery",
+        scope=("personal", "mini_league"),
     )
 
 

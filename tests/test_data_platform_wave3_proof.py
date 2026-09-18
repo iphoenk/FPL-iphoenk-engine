@@ -37,6 +37,8 @@ def _runtime_tree(
                 "schedule_kind": schedule_kind,
                 "chatgpt_scheduler_proof": natural_kind,
                 "counts_as_completed_operational_slot": natural_kind,
+                "authoritative_runtime_snapshot": natural_kind,
+                "logical_slot_source": "GOVERNED_TRIGGER_EVENT" if natural_kind else "RUNTIME_CLOCK",
                 "expected_cycle_at": "2026-09-14T06:00:00+00:00",
                 "cycle_observed_at": "2026-09-14T06:31:00+00:00",
             },
@@ -107,6 +109,9 @@ def test_post_publish_proof_contains_full_core_lifecycle_and_provenance(tmp_path
     )
     assert proof["natural_slot"] is True
     assert proof["natural_transport"] == "FPL_MASTER_SLOT_ISSUE_TITLE"
+    assert proof["core_trigger_source"] == "GOVERNED_TRIGGER_EVENT"
+    assert proof["logical_slot_source"] == "GOVERNED_TRIGGER_EVENT"
+    assert proof["audit_transport_required_for_core_proof"] is False
     assert proof["core_chain_pass"] is True
     assert proof["candidate_generation_id"] == "12345:1:abcdef0123456789"
     assert proof["publication_generation_id"] == "v6-publication:12345:1:12345:1:abcdef0123456789"

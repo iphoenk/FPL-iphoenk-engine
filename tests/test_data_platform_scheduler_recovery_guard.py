@@ -79,6 +79,7 @@ def test_recovery_workflow_is_dispatch_only_not_a_second_natural_scheduler():
     assert "inputs[mode]=manual_recovery" in text
     assert "inputs[confirm]=RECOVER_V6" in text
     assert "actions/workflows/${RECOVERY_WORKFLOW}/dispatches" in text
+    assert "inputs[initiator]=recovery_guard" in text
 
 
 def test_recovery_policy_cannot_claim_scheduler_or_wave3_proof():
@@ -95,3 +96,20 @@ def test_recovery_policy_cannot_claim_scheduler_or_wave3_proof():
     assert schedule["manual_recovery"]["counts_as_completed_scheduled_slot"] is False
     assert NATURAL_EVENT_NAME == "issues"
     assert NATURAL_SCHEDULE_KIND == "chatgpt_scheduler"
+
+
+def test_recovery_guard_bot_dispatch_is_explicitly_authorized_but_remains_non_proof():
+    from src.runtime_v6.domains.control_plane.workflow_control import authorize_dispatch
+    policy = json.loads(SCHEDULE_POLICY.read_text(encoding="utf-8"))
+
+    mode = authorize_dispatch(
+        policy,
+        actor="github-actions[bot]",
+        repository_owner="iphoenk",
+        mode="manual_recovery",
+        reason="WAVE2_SAFE_RECOVERY_CRITICAL",
+        manual_confirm="RECOVER_V6",
+        initiator="recovery_guard",
+    )
+
+    assert mode == "manual_recovery"

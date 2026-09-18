@@ -547,3 +547,116 @@ def validate_report_sections(
         "checks": checks,
         "registry_sections": list(_REQUIRED_SECTIONS),
     }
+
+
+
+def validate_p07_semantic_acceptance(
+    *,
+    section_checks: Mapping[str, Mapping[str, Any]],
+    semantic_proof: Mapping[str, Any],
+    expected_report_slot_id: str,
+) -> dict[str, Any]:
+    """One reusable P0.7 semantic gate for Watchlist20 + RISE20 + FALL20.
+
+    Structural validators remain authoritative for row/cardinality semantics.
+    This layer only adds lineage/completeness proof that cannot be inferred from
+    a rendered heading or an exact row count.
+    """
+    proof = dict(semantic_proof or {})
+    expected_slot = str(expected_report_slot_id or "").strip()
+    global_failures: list[str] = []
+    proof_slot = str(proof.get("report_slot_id") or "").strip()
+    if not expected_slot:
+        global_failures.append("EXPECTED_REPORT_SLOT_ID_MISSING")
+    if proof_slot != expected_slot:
+        global_failures.append("SEMANTIC_PROOF_REPORT_SLOT_MISMATCH")
+
+    checks: dict[str, dict[str, Any]] = {}
+
+    def _positive_equal_counts(row: Mapping[str, Any]) -> tuple[bool, int | None, int | None]:
+        try:
+            universe_count = int(row.get("universe_count"))
+            evaluated_count = int(row.get("evaluated_count"))
+        except (TypeError, ValueError):
+            return False, None, None
+        return (
+            universe_count > 0 and universe_count == evaluated_count,
+            universe_count,
+            evaluated_count,
+        )
+
+    watch_structural = dict(section_checks.get("WATCHLIST20") or {})
+    watch = dict(proof.get("watchlist20") or {})
+    watch_failures: list[str] = []
+    if watch_structural.get("status") != "PASS":
+        watch_failures.append("STRUCTURAL_CONTRACT_FAIL")
+    if watch.get("status") != "PASS":
+        watch_failures.append("SEMANTIC_PROOF_STATUS_NOT_PASS")
+    counts_ok, universe_count, evaluated_count = _positive_equal_counts(watch)
+    if watch.get("full_universe_complete") is not True or not counts_ok:
+        watch_failures.append("FULL_UNIVERSE_LINEAGE_NOT_PROVEN")
+    if not str(watch.get("canonical_methodology_version") or "").strip():
+        watch_failures.append("CANONICAL_METHODOLOGY_VERSION_MISSING")
+    for key, failure in (
+        ("deterministic_ranking", "DETERMINISTIC_RANKING_NOT_PROVEN"),
+        ("eligibility_checked", "ELIGIBILITY_NOT_PROVEN"),
+        ("owned_exclusion_checked", "OWNED_EXCLUSION_NOT_PROVEN"),
+        ("provenance_valid", "PROVENANCE_NOT_PROVEN"),
+    ):
+        if watch.get(key) is not True:
+            watch_failures.append(failure)
+    if not str(watch.get("observed_at") or "").strip():
+        watch_failures.append("OBSERVED_AT_MISSING")
+    checks["WATCHLIST20"] = {
+        "status": "PASS" if not watch_failures else "FAIL",
+        "failures": watch_failures,
+        "structural_status": watch_structural.get("status"),
+        "universe_count": universe_count,
+        "evaluated_count": evaluated_count,
+        "canonical_methodology_version": watch.get("canonical_methodology_version"),
+    }
+
+    for label, proof_key in (("RISE20", "rise20"), ("FALL20", "fall20")):
+        structural = dict(section_checks.get(label) or {})
+        row = dict(proof.get(proof_key) or {})
+        failures: list[str] = []
+        if structural.get("status") != "PASS":
+            failures.append("STRUCTURAL_CONTRACT_FAIL")
+        if row.get("status") != "PASS":
+            failures.append("SEMANTIC_PROOF_STATUS_NOT_PASS")
+        counts_ok, universe_count, evaluated_count = _positive_equal_counts(row)
+        if row.get("full_universe_complete") is not True or not counts_ok:
+            failures.append("FULL_UNIVERSE_LINEAGE_NOT_PROVEN")
+        for key, failure in (
+            ("deterministic_ranking", "DETERMINISTIC_RANKING_NOT_PROVEN"),
+            ("transport_complete", "TRANSPORT_REASSEMBLY_NOT_PROVEN"),
+            ("schema_complete", "ROW_SCHEMA_NOT_PROVEN"),
+            ("provenance_valid", "PROVENANCE_NOT_PROVEN"),
+        ):
+            if row.get(key) is not True:
+                failures.append(failure)
+        if not str(row.get("observed_at") or "").strip():
+            failures.append("OBSERVED_AT_MISSING")
+        checks[label] = {
+            "status": "PASS" if not failures else "FAIL",
+            "failures": failures,
+            "structural_status": structural.get("status"),
+            "universe_count": universe_count,
+            "evaluated_count": evaluated_count,
+        }
+
+    failed_sections = [
+        label for label, result in checks.items() if result.get("status") != "PASS"
+    ]
+    failures = list(dict.fromkeys(global_failures + failed_sections))
+    passed = not failures
+    return {
+        "status": "PASS" if passed else "FAIL",
+        "report_slot_id": expected_slot or None,
+        "checks": checks,
+        "failures": failures,
+        "mandatory_semantic_sections": ["WATCHLIST20", "RISE20", "FALL20"],
+        "report_contract_pass": passed,
+        "can_emit": passed,
+        "narrative_substitution_allowed": False,
+    }

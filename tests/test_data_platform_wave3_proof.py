@@ -105,6 +105,9 @@ def test_post_publish_proof_contains_full_core_lifecycle_and_provenance(tmp_path
         promotion_verified=True,
         run_id="12345",
         run_attempt="1",
+        collect_job_id="501",
+        publish_job_id="502",
+        fulfillment_job_id="503",
         verified_at=datetime(2026, 9, 14, 6, 32, tzinfo=timezone.utc),
     )
     assert proof["natural_slot"] is True
@@ -117,6 +120,10 @@ def test_post_publish_proof_contains_full_core_lifecycle_and_provenance(tmp_path
     assert proof["publication_generation_id"] == "v6-publication:12345:1:12345:1:abcdef0123456789"
     assert proof["registry_fingerprint"] == "f" * 64
     assert proof["published_runtime_sha"] == "b" * 40
+    assert proof["workflow_run_id"] == "12345"
+    assert proof["acquisition_run_id"] == "501"
+    assert proof["publication_run_id"] == "502"
+    assert proof["orchestration_fulfillment_run_id"] == "503"
     assert proof["governance"]["proof_created_post_publish_without_runtime_tree_mutation"] is True
     assert proof["governance"]["initial_natural_gate_consecutive_slots"] == 6
     assert proof["governance"]["production_green_requires_controlled_chaos_acceptance"] is True
@@ -142,6 +149,9 @@ def test_controlled_issue_comment_master_acquire_cannot_count_as_natural_proof(t
             promotion_verified=True,
             run_id="12345",
             run_attempt="1",
+        collect_job_id="501",
+        publish_job_id="502",
+        fulfillment_job_id="503",
         )
 
 
@@ -156,6 +166,9 @@ def test_report_prefetch_and_manual_recovery_cannot_be_counted_as_natural_core_p
                 promotion_verified=True,
                 run_id="12345",
                 run_attempt="1",
+        collect_job_id="501",
+        publish_job_id="502",
+        fulfillment_job_id="503",
             )
 
 
@@ -169,6 +182,9 @@ def test_corrupt_candidate_cannot_receive_successful_wave3_proof(tmp_path):
             promotion_verified=True,
             run_id="12345",
             run_attempt="1",
+        collect_job_id="501",
+        publish_job_id="502",
+        fulfillment_job_id="503",
         )
 
 
@@ -182,6 +198,9 @@ def test_promotion_must_be_proven_by_successful_source_publish_job(tmp_path):
             promotion_verified=False,
             run_id="12345",
             run_attempt="1",
+        collect_job_id="501",
+        publish_job_id="502",
+        fulfillment_job_id="503",
         )
 
 

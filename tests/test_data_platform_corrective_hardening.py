@@ -98,17 +98,20 @@ def test_report_slot_identity_normalizes_same_instant_to_asia_jakarta():
     assert utc == wib
 
 
-def test_late_catch_up_without_explicit_deadline_fails_closed():
-    with pytest.raises(DeliveryIntegrityError, match="explicit catch_up_deadline"):
-        plan_report_catch_up(
-            logical_slot="2026-09-16T04:30:00+07:00",
-            report_type="DEEP",
-            observed_at="2026-09-16T04:45:00+07:00",
-            report_state="NOT_STARTED",
-            delivered_report_slot_id=None,
-            delivery_proof_valid=False,
-            catch_up_deadline=None,
-        )
+def test_late_scheduled_catch_up_derives_runtime_owned_deadline():
+    result = plan_report_catch_up(
+        logical_slot="2026-09-16T04:30:00+07:00",
+        report_type="DEEP",
+        observed_at="2026-09-16T04:45:00+07:00",
+        report_state="NOT_STARTED",
+        delivered_report_slot_id=None,
+        delivery_proof_valid=False,
+        catch_up_deadline=None,
+    )
+
+    assert result["catch_up_required"] is True
+    assert result["catch_up_deadline"] == "2026-09-16T05:30:00+07:00"
+    assert result["catch_up_deadline_source"] == "RUNTIME_MASTER_CADENCE"
 
 
 def test_pre_render_fails_closed_when_mandatory_direct_weather_is_missing():

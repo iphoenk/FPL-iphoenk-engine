@@ -56,6 +56,92 @@ _AUTH_ACTION_BY_STATE = {
 }
 
 
+
+def resolve_report_prefetch_continuation(
+    *,
+    report_slot_id: str,
+    initial_readiness: dict[str, Any],
+    refreshed_readiness: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Continue the same report occurrence through at most one governed prefetch refresh.
+
+    A skipped core-workflow prefetch step is not proof that report-prefetch is
+    satisfied. The report plane independently checks exact occurrence identity,
+    may request exactly one existing /v6-report-prefetch recovery, then resumes
+    the same report_slot_id.
+    """
+    slot_id = str(report_slot_id or "").strip()
+    if not slot_id:
+        raise PrefetchContractError("report_slot_id is required")
+
+    initial = dict(initial_readiness or {})
+    common = {
+        "report_slot_id": slot_id,
+        "same_report_slot": True,
+        "core_acquisition_satisfied_by_prefetch": False,
+        "natural_scheduler_completion_satisfied_by_prefetch": False,
+        "replacement_report_slot_allowed": False,
+        "intermediate_user_output_allowed": False,
+        "status_only_final_output_allowed": False,
+    }
+    if initial.get("ready") is True:
+        return {
+            **common,
+            "status": "PASS",
+            "refresh_count": 0,
+            "next_action": "RESUME_CANONICAL_REPORT_PIPELINE",
+            "prefetch_readiness": initial,
+        }
+
+    if initial.get("refresh_required") is not True:
+        return {
+            **common,
+            "status": "FAIL_OPERATIONAL",
+            "refresh_count": 0,
+            "next_action": "CONTINUE_WITH_TRUTHFUL_SCOPE_RECOVERY",
+            "prefetch_readiness": initial,
+        }
+
+    if initial.get("refresh_transport") != "ISSUE_431_COMMENT":
+        raise PrefetchContractError("report-prefetch recovery must use existing issue #431 comment transport")
+    command = str(initial.get("refresh_command") or "").strip()
+    if not command.startswith("/v6-report-prefetch "):
+        raise PrefetchContractError("invalid governed report-prefetch recovery command")
+
+    if refreshed_readiness is None:
+        return {
+            **common,
+            "status": "RECOVERY_IN_PROGRESS",
+            "refresh_count": 1,
+            "next_action": "WAIT_AND_RE_READ_PREFETCH_RECOVERY",
+            "refresh_command": command,
+            "prefetch_readiness": initial,
+        }
+
+    refreshed = dict(refreshed_readiness)
+    if refreshed.get("refresh_attempt") not in {1, "1"}:
+        raise PrefetchContractError("refreshed readiness must represent the single governed recovery attempt")
+    if refreshed.get("refresh_required") is True:
+        raise PrefetchContractError("second report-prefetch recovery attempt is forbidden")
+    if refreshed.get("ready") is True:
+        return {
+            **common,
+            "status": "PASS",
+            "refresh_count": 1,
+            "next_action": "RESUME_CANONICAL_REPORT_PIPELINE",
+            "refresh_command": command,
+            "prefetch_readiness": refreshed,
+        }
+    return {
+        **common,
+        "status": "FAIL_OPERATIONAL",
+        "refresh_count": 1,
+        "next_action": "CONTINUE_WITH_TRUTHFUL_SCOPE_RECOVERY",
+        "refresh_command": command,
+        "prefetch_readiness": refreshed,
+    }
+
+
 def _auth_observability(auth_state: Any, *, personal_requested: bool) -> tuple[str, bool, str]:
     if not personal_requested:
         return "NOT_REQUESTED", False, "NONE"

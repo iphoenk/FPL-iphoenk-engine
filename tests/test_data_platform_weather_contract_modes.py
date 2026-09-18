@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from src.runtime_v6.delivery_integrity import MANDATORY_SECTIONS
 from src.runtime_v6.report_compute import build_report_compute_contract
 from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_render_qa
@@ -83,6 +85,17 @@ def _post(pre, *, state: str):
         rendered_weather_contract_state=state,
         truncated=False,
     )
+
+
+@pytest.mark.parametrize("report_mode", ["DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP"])
+def test_full_family_modes_share_canonical_actual_body_contract(report_mode):
+    pre = _pre(report_mode=report_mode, weather_contract_state="DIRECT_CHATGPT")
+    post = _post(pre, state="DIRECT_CHATGPT")
+
+    assert pre["status"] == "PASS"
+    assert post["status"] == "PASS"
+    assert post["visible_body_validated"] is True
+    assert post["rendered_section_ids"] == post["expected_section_ids"]
 
 
 def test_deep_accepts_visible_degraded_weather_block_when_tool_is_unavailable():

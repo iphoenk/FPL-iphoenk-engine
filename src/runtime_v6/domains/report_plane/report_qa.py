@@ -773,8 +773,19 @@ def validate_p05_pre_render_qa(
         and not base.get("missing_sections")
         and not base.get("duplicate_sections")
     )
+    semantic_acceptance = compute_contract.get("MANDATORY_SEMANTIC")
+    semantic_required = isinstance(semantic_acceptance, Mapping)
+    semantic_acceptance_pass = bool(
+        not semantic_required
+        or (
+            semantic_acceptance.get("status") == "PASS"
+            and semantic_acceptance.get("report_contract_pass") is True
+            and semantic_acceptance.get("can_emit") is True
+        )
+    )
     input_completeness_pass = bool(
         mandatory_scope_pass
+        and semantic_acceptance_pass
         and all(
             isinstance(compute_contract.get(label), Mapping)
             and compute_contract[label].get("status") == "PASS"
@@ -783,6 +794,8 @@ def validate_p05_pre_render_qa(
     )
     if not mandatory_scope_pass:
         failures.append("MANDATORY_SCOPE_GATE_FAILED")
+    if semantic_required and not semantic_acceptance_pass:
+        failures.append("MANDATORY_SEMANTIC_ACCEPTANCE_FAILED")
     if not input_completeness_pass:
         failures.append("INPUT_COMPLETENESS_GATE_FAILED")
     failures = list(dict.fromkeys(failures))
@@ -800,6 +813,9 @@ def validate_p05_pre_render_qa(
         "weather_attempt": normalized_weather,
         "mandatory_scope_gate_pass": mandatory_scope_pass,
         "input_completeness_pass": input_completeness_pass,
+        "mandatory_semantic_acceptance": (
+            dict(semantic_acceptance) if semantic_required else {"status": "LEGACY_NOT_PROVIDED"}
+        ),
     }
     strict_token = _p05_gate_token(gate_payload) if qa_passed else None
 
@@ -817,6 +833,11 @@ def validate_p05_pre_render_qa(
         "contract_version": _P05_CONTRACT_VERSION,
         "mandatory_scope_gate": {"status": "PASS" if mandatory_scope_pass else "FAIL"},
         "input_completeness": {"status": "PASS" if input_completeness_pass else "FAIL"},
+        "mandatory_semantic_acceptance": (
+            dict(semantic_acceptance)
+            if semantic_required
+            else {"status": "LEGACY_NOT_PROVIDED", "report_contract_pass": None, "can_emit": None}
+        ),
         "decision_context": context,
         "prefetch_identity": {
             "status": "PASS" if prefetch_identity_pass else "FAIL",
@@ -887,6 +908,13 @@ def validate_p05_post_render_qa(
     if status_only:
         failures.append("STATUS_ONLY_NOT_CANONICAL_REPORT")
 
+    semantic_acceptance = pre_render_qa.get("mandatory_semantic_acceptance")
+    if (
+        isinstance(semantic_acceptance, Mapping)
+        and semantic_acceptance.get("status") not in {"PASS", "LEGACY_NOT_PROVIDED"}
+    ):
+        failures.append("MANDATORY_SEMANTIC_ACCEPTANCE_FAILED")
+
     stored_payload = pre_render_qa.get("p05_gate_payload")
     stored_token = pre_render_qa.get("p05_render_gate_token")
     if not isinstance(stored_payload, Mapping) or not stored_token:
@@ -945,6 +973,10 @@ def validate_p05_post_render_qa(
         },
         "mandatory_scope_gate_pass": pre_render_qa.get("mandatory_scope_gate", {}).get("status") == "PASS",
         "input_completeness_pass": pre_render_qa.get("input_completeness", {}).get("status") == "PASS",
+        "mandatory_semantic_acceptance_pass": (
+            not isinstance(semantic_acceptance, Mapping)
+            or semantic_acceptance.get("status") in {"PASS", "LEGACY_NOT_PROVIDED"}
+        ),
         "decision_context_gate_pass": pre_render_qa.get("decision_context", {}).get("status") == "PASS",
         "prefetch_identity_pass": pre_render_qa.get("prefetch_identity", {}).get("status") == "PASS",
         "weather_attempt_gate_pass": pre_render_qa.get("weather_attempt", {}).get("weather_attempted") is True,

@@ -16,7 +16,9 @@ from src.runtime_v6.workflow_control import (
     authorize_issue,
     classify_invocation,
     load_policy,
+    resolve_data_slot_decision,
     resolve_prefetch,
+    is_duplicate_natural_slot_transition,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -144,6 +146,74 @@ def test_workflow_control_authorizes_and_classifies_governed_triggers() -> None:
     ) == "report_prefetch"
 
 
+
+def test_same_slot_title_rewrite_is_duplicate_natural_occurrence_before_acquisition() -> None:
+    policy = load_policy()
+    event = {
+        "changes": {
+            "title": {
+                "from": (
+                    "FPL_MASTER_SLOT reason=chatgpt_hourly_master "
+                    "logical_slot=2030-01-01T13:00:00+07:00 "
+                    "audit=FPL_MASTER_HOURLY observed_at=2030-01-01T13:29:10+07:00"
+                )
+            }
+        },
+        "issue": {
+            "title": (
+                "FPL_MASTER_SLOT reason=chatgpt_hourly_master "
+                "logical_slot=2030-01-01T13:00:00+07:00 "
+                "audit=FPL_MASTER_HOURLY observed_at=2030-01-01T13:33:20+07:00"
+            )
+        },
+    }
+
+    assert is_duplicate_natural_slot_transition(
+        policy,
+        event_name="issues",
+        event=event,
+    ) is True
+
+    decision = resolve_data_slot_decision(
+        already_published=False,
+        duplicate_natural_occurrence=True,
+    )
+    assert decision == {
+        "data_slot_status": "DUPLICATE_NATURAL_OCCURRENCE",
+        "skip_new_acquisition": True,
+        "reuse_last_valid_publication": True,
+        "continue_report_pipeline": True,
+    }
+
+
+def test_different_slot_title_transition_is_not_duplicate_natural_occurrence() -> None:
+    policy = load_policy()
+    event = {
+        "changes": {
+            "title": {
+                "from": (
+                    "FPL_MASTER_SLOT reason=chatgpt_hourly_master "
+                    "logical_slot=2030-01-01T12:00:00+07:00 "
+                    "audit=FPL_MASTER_HOURLY observed_at=2030-01-01T12:30:00+07:00"
+                )
+            }
+        },
+        "issue": {
+            "title": (
+                "FPL_MASTER_SLOT reason=chatgpt_hourly_master "
+                "logical_slot=2030-01-01T13:00:00+07:00 "
+                "audit=FPL_MASTER_HOURLY observed_at=2030-01-01T13:30:00+07:00"
+            )
+        },
+    }
+
+    assert is_duplicate_natural_slot_transition(
+        policy,
+        event_name="issues",
+        event=event,
+    ) is False
+
+
 def test_workflow_control_prefetch_validation_is_fail_closed() -> None:
     policy = load_policy()
     env, summary = resolve_prefetch(
@@ -204,6 +274,9 @@ def test_production_workflow_delegates_control_plane_to_tested_module() -> None:
     assert "python -m src.runtime_v6.domains.control_plane.workflow_control resolve-prefetch" in text
     assert "Apply V6 report-prefetch runtime control" in text
     assert "steps.scheduler.outputs.kind == 'report_prefetch'" in text
+    assert "duplicate_natural_occurrence: ${{ steps.slot_guard.outputs.duplicate_natural_occurrence }}" in text
+    assert "DUPLICATE_NATURAL_OCCURRENCE_NOOP_REPORT_CONTINUES" in text
+    assert "duplicate natural occurrence status requires exact event-transition proof" in text
 
 
 def test_stable_provider_repairs_are_promoted_and_legacy_exposure_writer_is_removed() -> None:

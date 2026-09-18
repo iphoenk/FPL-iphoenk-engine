@@ -15,6 +15,10 @@ on:
         description: "Audit reason for governed V6 invocation"
         required: true
         type: string
+      initiator:
+        description: "Internal governed dispatcher provenance"
+        required: false
+        type: string
       confirm:
         description: "For manual_recovery only: type RECOVER_V6"
         required: false
@@ -102,6 +106,7 @@ jobs:
         env:
           V6_DISPATCH_MODE: ${{ inputs.mode }}
           V6_DISPATCH_REASON: ${{ inputs.reason }}
+          V6_DISPATCH_INITIATOR: ${{ inputs.initiator }}
           V6_MANUAL_CONFIRM: ${{ inputs.confirm }}
         run: python -m src.runtime_v6.domains.control_plane.workflow_control authorize-dispatch
 

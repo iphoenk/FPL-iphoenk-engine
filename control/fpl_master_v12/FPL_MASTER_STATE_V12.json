@@ -6,7 +6,7 @@
   "non_authoritative_state_file": true,
   "v6_factual_data_plane_owner": false,
   "authority": false,
-  "updated_at": "2026-09-19T06:15:26+07:00",
+  "updated_at": "2026-09-19T06:41:21+07:00",
   "source": "migrated_from_library_ACTIVE_DECISION_CONTEXT_V2",
   "latest_explicit_user_state_wins": true,
   "confirmed_current_squad_state": {
@@ -163,5 +163,71 @@
     "mutation_success_required_for_report": false,
     "alternate_transport_allowed": false,
     "v3_v4_v5_fallback_allowed": false
-  }
+  },
+  "decision_learning": [
+    {
+      "case_id": "GW5_2026_SANGARE_VS_KONSA_XI",
+      "source": "USER_EXPLICIT_POSTMORTEM",
+      "recorded_at": "2026-09-19T06:41:21+07:00",
+      "scope": "XI_FORMATION_ROBUSTNESS_CALIBRATION",
+      "ex_ante_routes": [
+        {
+          "formation": "4-4-2",
+          "starter": {
+            "element_id": 31,
+            "display_name": "Konsa"
+          },
+          "bench": {
+            "element_id": 565,
+            "display_name": "M.Sangaré"
+          }
+        },
+        {
+          "formation": "3-5-2",
+          "starter": {
+            "element_id": 565,
+            "display_name": "M.Sangaré"
+          },
+          "alternative": {
+            "element_id": 31,
+            "display_name": "Konsa"
+          }
+        }
+      ],
+      "prior_model_diagnosis": {
+        "approximate_mean_edge_points_for_sangare": "~+1 (user-described prior model estimate)",
+        "failure_modes": [
+          "P(start)/xMins for M.Sangaré was overestimated",
+          "cameo and late-cameo risk was underweighted",
+          "auto-sub blocking cost of a cameo was underweighted/omitted",
+          "DefCon/minutes floor was treated too optimistically under lineup uncertainty",
+          "one-GW mean projection overrode longer-horizon weak-link/starter-security evidence too aggressively"
+        ]
+      },
+      "observed_outcome_as_reported_by_user": {
+        "sangare": "did not start; late cameo; yellow card",
+        "lineup_consequence": "cameo blocked potential auto-sub of Konsa"
+      },
+      "methodological_lesson": [
+        "Do not choose XI from mean xPts alone.",
+        "A small point-estimate edge inside predictive uncertainty is not decisive.",
+        "Explicitly model start/bench/cameo/DNP and auto-sub blocking cost.",
+        "When expected values are close, prefer lower-regret, more robust structure unless upside clearly compensates downside.",
+        "Carry multi-GW role/start-security evidence as prior/shrinkage into one-GW decisions."
+      ],
+      "calibration_targets": [
+        "P(start) calibration",
+        "xMins distribution calibration",
+        "late-cameo probability",
+        "auto-sub blocking expected-value term",
+        "uncertainty-band / expected-regret decision gate"
+      ],
+      "guardrails": {
+        "player_specific_rule": false,
+        "hardcode_one_point_threshold": false,
+        "hindsight_winner_rule": false,
+        "learn_failure_mode_not_player": true
+      }
+    }
+  ]
 }

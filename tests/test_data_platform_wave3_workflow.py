@@ -46,6 +46,9 @@ def test_wave3_observer_requires_successful_collect_publish_and_fulfillment_befo
     assert 'fulfillment = jobs.get("orchestration-fulfillment")' in text
     assert 'collect != "success" or fulfillment != "success"' in text
     assert 'countable = publish == "success"' in text
+    assert '"collect_job_id": collect_row.get("id")' in text
+    assert '"publish_job_id": publish_row.get("id")' in text
+    assert '"fulfillment_job_id": fulfillment_row.get("id")' in text
     assert 'publish not in {"success", "skipped"}' in text
 
 
@@ -56,6 +59,9 @@ def test_wave3_observer_binds_proof_to_exact_immutable_source_publication_artifa
     assert "gh run download \"$SOURCE_RUN_ID\"" in text
     assert "--source-run-id \"${{ steps.source.outputs.run_id }}\"" in text
     assert "--source-run-attempt \"${{ steps.source.outputs.run_attempt }}\"" in text
+    assert "--collect-job-id \"${{ steps.promotion.outputs.collect_job_id }}\"" in text
+    assert "--publish-job-id \"${{ steps.promotion.outputs.publish_job_id }}\"" in text
+    assert "--fulfillment-job-id \"${{ steps.promotion.outputs.fulfillment_job_id }}\"" in text
     assert "--source-commit \"${{ steps.source.outputs.head_sha }}\"" in text
     assert "--production-validated" in text
     assert "--promotion-verified" in text

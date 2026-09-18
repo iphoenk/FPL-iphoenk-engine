@@ -14,7 +14,12 @@ from typing import Any, Mapping, Sequence
 from .delivery_integrity import RANK20_REQUIRED_FIELDS
 from .provenance_guard import validate_report_provenance
 from .rank20_engine import build_rank20_tables
-from .section_contract import (\n    player_id,\n    player_position,\n    validate_p07_semantic_acceptance,\n    validate_report_sections,\n)
+from .section_contract import (
+    player_id,
+    player_position,
+    validate_p07_semantic_acceptance,
+    validate_report_sections,
+)
 
 
 _R4_EXTRA_SECTIONS = (

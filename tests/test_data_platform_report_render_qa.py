@@ -193,6 +193,66 @@ def test_pre_render_rejects_incomplete_authoritative_mini_league_denominator():
     assert result["delivery_ready"] is False
 
 
+def test_pre_render_accepts_explicit_degraded_s14b_when_icon_source_unavailable():
+    manifest = _section_manifest()
+    for row in manifest:
+        if row["section_id"] == "S14B":
+            row["status"] = "PARTIAL"
+
+    result = _pre_render(
+        section_manifest=manifest,
+        mini_league_denominator_complete=False,
+    )
+
+    assert result["status"] == "PASS"
+    assert result["mini_league_contract_state"] == "DEGRADED"
+    assert "S14B" in result["partial_sections"]
+    assert result["render_allowed"] is True
+
+
+def test_post_render_accepts_visible_degraded_s14b_without_fabricated_denominator():
+    manifest = _section_manifest()
+    for row in manifest:
+        if row["section_id"] == "S14B":
+            row["status"] = "PARTIAL"
+    pre = _pre_render(
+        section_manifest=manifest,
+        mini_league_denominator_complete=False,
+    )
+
+    result = _post_render(
+        pre,
+        rendered_body=valid_visible_body(pre),
+        rendered_mini_league_denominator_complete=False,
+    )
+
+    assert result["status"] == "PASS"
+    assert result["mini_league_contract_state"] == "DEGRADED"
+    assert result["visible_mini_league_contract_state"] == "DEGRADED"
+    assert result["visible_mini_league_denominator_complete"] is False
+
+
+def test_post_render_rejects_s14b_missing_explicit_degraded_marker():
+    manifest = _section_manifest()
+    for row in manifest:
+        if row["section_id"] == "S14B":
+            row["status"] = "PARTIAL"
+    pre = _pre_render(
+        section_manifest=manifest,
+        mini_league_denominator_complete=False,
+    )
+    body = valid_visible_body(pre).replace("MINI_LEAGUE SOURCE: DEGRADED", "ICON+ status unavailable")
+
+    result = _post_render(
+        pre,
+        rendered_body=body,
+        rendered_mini_league_denominator_complete=False,
+    )
+
+    assert result["status"] == "FAIL"
+    assert "VISIBLE_MINI_LEAGUE_STATE_MISMATCH=MISSING!=DEGRADED" in result["failures"]
+
+
 def test_post_render_pass_advances_only_to_wave7_delivery_proof():
     result = _post_render()
 

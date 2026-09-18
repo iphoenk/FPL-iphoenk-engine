@@ -140,7 +140,9 @@ def resolve_scope(
     if report_kind == "match_mode":
         return ReportScope(personal, mini, True)
     if report_kind == "deadline_review":
-        return ReportScope(personal, mini and bool(config.get("deadline_review_mini_league_enabled")), False)
+        # Deadline/Final inherit the canonical Full report and mandatory S14B
+        # ICON+ scope. A legacy tuning toggle may not suppress required facts.
+        return ReportScope(personal, mini, False)
     return ReportScope(personal and ad_hoc_personal, mini and ad_hoc_mini_league, ad_hoc_live)
 
 

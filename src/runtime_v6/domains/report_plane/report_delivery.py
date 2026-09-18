@@ -17,11 +17,34 @@ from .temporal import canonical_timestamp, try_parse_timestamp
 
 
 _ACKNOWLEDGED = "ACKNOWLEDGED"
+_EMIT_CONTRACT_FIELDS = (
+    "mandatory_scope_gate_pass",
+    "input_completeness_pass",
+    "pre_render_qa_pass",
+    "post_render_qa_pass",
+    "report_contract_pass",
+)
 
 
 def _is_sha256(value: Any) -> bool:
     text = str(value or "")
     return len(text) == 64 and all(character in "0123456789abcdefABCDEF" for character in text)
+
+
+def _emit_contract_ready(post_render_qa: Mapping[str, Any]) -> bool:
+    """Fail closed on any explicit canonical emit-contract failure.
+
+    R6 POST_RENDER PASS is the canonical proof that compute, mandatory-scope,
+    input-completeness and pre/post-render QA gates ran in sequence. IR2 adds
+    explicit emit-contract evidence when present and forbids an inconsistent
+    caller from overriding that chain with a visible delivery. Legacy R6
+    fixtures without the newer evidence keys remain compatible until their
+    producer is migrated; they are still subject to the exact R6 handoff gate.
+    """
+    return all(
+        post_render_qa.get(field, True) is True
+        for field in _EMIT_CONTRACT_FIELDS
+    ) and post_render_qa.get("can_emit", True) is True
 
 
 def _post_render_ready(post_render_qa: Mapping[str, Any]) -> bool:
@@ -35,6 +58,7 @@ def _post_render_ready(post_render_qa: Mapping[str, Any]) -> bool:
         and post_render_qa.get("legacy_fallback_allowed") is False
         and _is_sha256(post_render_qa.get("compute_fingerprint"))
         and _is_sha256(post_render_qa.get("render_contract_token"))
+        and _emit_contract_ready(post_render_qa)
     )
 
 
@@ -93,6 +117,9 @@ def _blocked_post_render() -> dict[str, Any]:
         "next_action": "POST_RENDER_QA",
         "legacy_fallback_allowed": False,
         "delivery_proof_id": None,
+        "report_contract_pass": False,
+        "can_emit": False,
+        "visible_emitted": False,
         "failures": ["POST_RENDER_QA_NOT_PASSED"],
     }
 
@@ -110,6 +137,9 @@ def _invalid_delivery(*, failures: list[str], report_slot_id: str | None = None)
         "delivery_proof_id": None,
         "delivered_report_slot_id": None,
         "report_slot_id": report_slot_id,
+        "report_contract_pass": True,
+        "can_emit": True,
+        "visible_emitted": False,
         "failures": failures,
     }
 
@@ -184,6 +214,9 @@ def build_delivery_proof(
         "legacy_fallback_allowed": False,
         "delivery_proof_id": proof_id,
         "delivered_report_slot_id": slot_id,
+        "report_contract_pass": True,
+        "can_emit": True,
+        "visible_emitted": True,
         **payload,
         "failures": [],
     }
@@ -234,6 +267,9 @@ def validate_delivery_proof(
         "delivery_ready": False,
         "next_action": "NONE",
         "legacy_fallback_allowed": False,
+        "report_contract_pass": True,
+        "can_emit": True,
+        "visible_emitted": True,
     }
     if any(proof.get(key) != value for key, value in expected_control.items()):
         failures.append("DELIVERY_PROOF_STATE_INVALID")
@@ -253,6 +289,9 @@ def validate_delivery_proof(
         "delivery_proof_id": str(proof["delivery_proof_id"]),
         "delivered_report_slot_id": expected_slot,
         "report_slot_id": expected_slot,
+        "report_contract_pass": True,
+        "can_emit": True,
+        "visible_emitted": True,
         "compute_fingerprint": str(post_render_qa["compute_fingerprint"]),
         "render_contract_token": str(post_render_qa["render_contract_token"]),
         "delivery_status": str(proof["delivery_status"]),
@@ -299,6 +338,8 @@ def finalize_delivery_outcome(
         and validated_delivery.get("delivery_proof_valid") is True
         and validated_delivery.get("report_delivered") is True
         and validated_delivery.get("report_state") == "DELIVERED"
+        and validated_delivery.get("report_contract_pass") is True
+        and validated_delivery.get("visible_emitted") is True
     ):
         raise DeliveryIntegrityError("validated acknowledged delivery proof is required")
 
@@ -312,6 +353,9 @@ def finalize_delivery_outcome(
         "delivery_state": "ACKNOWLEDGED",
         "report_delivered": True,
         "report_state": "DELIVERED",
+        "report_contract_pass": True,
+        "can_emit": True,
+        "visible_emitted": True,
         "report_quality": "DEGRADED" if degraded_scopes else "COMPLETE",
         "degraded_scopes": degraded_scopes,
         "blocking_scopes": [],

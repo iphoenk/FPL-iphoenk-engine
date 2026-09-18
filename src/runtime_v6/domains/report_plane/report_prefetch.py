@@ -68,6 +68,281 @@ def _is_auth_control_failure(value: Any) -> bool:
     return str(value or "").upper().startswith("AUTH_")
 
 
+def _parse_prefetch_timestamp(value: Any) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed.astimezone(timezone.utc)
+
+
+def _derived_prefetch_currentness(
+    snapshot: dict[str, Any] | None,
+    *,
+    requested_logical_slot: str,
+    observed_at: str | datetime,
+    maximum_age_minutes: int,
+) -> tuple[float | None, bool, str]:
+    if not snapshot:
+        return None, False, "MISSING"
+    generated = _parse_prefetch_timestamp(snapshot.get("generated_at"))
+    if generated is None:
+        return None, False, "INVALID"
+    requested = parse_slot(requested_logical_slot).astimezone(timezone.utc)
+    observed = (
+        observed_at.astimezone(timezone.utc)
+        if isinstance(observed_at, datetime)
+        else parse_slot(str(observed_at)).astimezone(timezone.utc)
+    )
+    cutoff = max(requested, observed)
+    age, fresh = freshness(generated, cutoff, int(maximum_age_minutes))
+    return age, fresh, "CURRENT" if fresh else "STALE"
+
+
+def _canonical_prefetch_scope(scope: tuple[str, ...] | list[str] | None) -> tuple[str, ...]:
+    aliases = {"mini": "mini_league", "league": "mini_league"}
+    normalized = tuple(
+        aliases.get(str(item).strip(), str(item).strip())
+        for item in (scope or ())
+        if str(item).strip()
+    )
+    if len(normalized) != len(set(normalized)):
+        raise PrefetchContractError("report-prefetch recovery scope contains duplicates")
+    unknown = set(normalized) - {"personal", "mini_league", "live"}
+    if unknown:
+        raise PrefetchContractError(
+            f"unsupported report-prefetch recovery scopes: {sorted(unknown)}"
+        )
+    return normalized
+
+
+def evaluate_report_prefetch_readiness(
+    snapshot: dict[str, Any] | None,
+    *,
+    report_kind: str,
+    requested_logical_slot: str,
+    maximum_age_minutes: int,
+    refresh_attempt: int = 0,
+    max_refresh_attempts: int = 1,
+    reason: str = "fpl_master_report_prefetch_recovery",
+    scope: tuple[str, ...] | list[str] | None = None,
+    observed_at: str | datetime | None = None,
+) -> dict[str, Any]:
+    """Recompute report-prefetch currentness and plan only the governed existing refresh path.
+
+    Stored `fresh_for_target_report` is observability, never read-time truth. A stale,
+    missing or incomplete snapshot may request the existing issue #431
+    `/v6-report-prefetch` transport; this function never edits the core scheduler
+    title, creates a cron, or marks a core operational slot complete.
+    """
+    if report_kind not in REPORT_KINDS:
+        raise PrefetchContractError(f"unsupported report_kind={report_kind}")
+    if refresh_attempt < 0 or max_refresh_attempts < 1:
+        raise PrefetchContractError("report-prefetch recovery attempt bounds are invalid")
+    requested = parse_slot(requested_logical_slot)
+    observed = observed_at or requested
+    scopes = _canonical_prefetch_scope(scope)
+    if report_kind == "ad_hoc" and not scopes:
+        raise PrefetchContractError("ad_hoc report-prefetch recovery requires scope")
+
+    age, fresh, freshness_status = _derived_prefetch_currentness(
+        snapshot,
+        requested_logical_slot=requested.isoformat(),
+        observed_at=observed,
+        maximum_age_minutes=maximum_age_minutes,
+    )
+    complete = bool(
+        snapshot
+        and snapshot.get("public_core_complete", snapshot.get("complete")) is True
+    )
+    snapshot_kind = str((snapshot or {}).get("report_kind") or "").strip()
+    kind_match = not snapshot_kind or snapshot_kind == report_kind
+
+    if freshness_status == "CURRENT" and not complete:
+        freshness_status = "INCOMPLETE"
+    if freshness_status == "CURRENT" and not kind_match:
+        freshness_status = "MISMATCH"
+
+    ready = bool(fresh and complete and kind_match)
+    refresh_required = bool(not ready and refresh_attempt < max_refresh_attempts)
+    command = None
+    if refresh_required:
+        command_parts = [
+            "/v6-report-prefetch",
+            f"report_kind={report_kind}",
+            f"logical_slot={requested.isoformat()}",
+        ]
+        if report_kind == "ad_hoc":
+            command_parts.append(f"scope={','.join(scopes)}")
+        audit_reason = str(reason or "").strip()
+        if not audit_reason or any(character.isspace() for character in audit_reason):
+            raise PrefetchContractError("report-prefetch recovery reason must be one token")
+        command_parts.extend([f"reason={audit_reason}", "force=true"])
+        command = " ".join(command_parts)
+
+    return {
+        "ready": ready,
+        "freshness_status": freshness_status,
+        "fresh_for_target_report": bool(fresh),
+        "stored_fresh_for_target_report": (
+            (snapshot or {}).get("fresh_for_target_report")
+        ),
+        "age_target_minutes": age,
+        "public_core_complete": complete,
+        "report_kind_match": kind_match,
+        "requested_logical_slot": requested.isoformat(),
+        "refresh_attempt": int(refresh_attempt),
+        "max_refresh_attempts": int(max_refresh_attempts),
+        "refresh_required": refresh_required,
+        "refresh_transport": "ISSUE_431_COMMENT",
+        "refresh_command": command,
+        "refresh_identity": (
+            f"{report_kind}|{requested.isoformat()}|{','.join(scopes)}|{str(reason or '').strip()}"
+        ),
+        "next_action": (
+            "USE_REPORT_PREFETCH"
+            if ready
+            else "GOVERNED_REPORT_PREFETCH_REFRESH"
+            if refresh_required
+            else "REPORT_PREFETCH_RECOVERY_EXHAUSTED"
+        ),
+        "core_schedule_mutation_allowed": False,
+        "independent_cron_allowed": False,
+    }
+
+
+_REPORT_SCOPE_GOOD_STATES = frozenset({"GREEN", "PASS", "AVAILABLE", "CURRENT"})
+_REPORT_AUTH_FAILURE_STATES = frozenset({"AUTH_EXPIRED", "AUTH_FAILED"})
+
+
+def normalize_report_auth_state(auth_state: Any, *, requested: bool) -> str:
+    """Normalize provider/auth implementation states into the report contract."""
+    if not requested:
+        return "AUTH_NOT_REQUESTED"
+    state = str(auth_state or "").strip().upper()
+    if state in {"AUTH_OK", "AUTH_AVAILABLE", "AVAILABLE"}:
+        return "AUTH_OK"
+    if state == "AUTH_EXPIRED":
+        return "AUTH_EXPIRED"
+    return "AUTH_FAILED"
+
+
+def evaluate_report_scope_health(
+    scope_status: dict[str, Any],
+    *,
+    required_scopes: tuple[str, ...] | list[str],
+    public_report: bool,
+) -> dict[str, Any]:
+    """Evaluate health per scope; CORE green can never mask another required scope."""
+    normalized = {
+        str(scope).strip().upper(): str(status or "UNKNOWN").strip().upper()
+        for scope, status in dict(scope_status or {}).items()
+    }
+    requested_auth = normalized.get("AUTH") not in {None, "", "NOT_REQUESTED", "AUTH_NOT_REQUESTED"}
+    auth_state = normalize_report_auth_state(
+        normalized.get("AUTH"),
+        requested=requested_auth,
+    )
+    normalized["AUTH"] = auth_state
+
+    required = tuple(dict.fromkeys(str(scope).strip().upper() for scope in required_scopes))
+    blocking: list[str] = []
+    for scope in required:
+        state = normalized.get(scope, "MISSING")
+        if scope == "AUTH":
+            if public_report:
+                continue
+            if state != "AUTH_OK":
+                blocking.append(scope)
+            continue
+        if state not in _REPORT_SCOPE_GOOD_STATES:
+            blocking.append(scope)
+
+    return {
+        "scope_status": normalized,
+        "required_scopes": list(required),
+        "blocking_scopes": blocking,
+        "overall_status": "GREEN" if not blocking else "AMBER",
+        "auth_state": auth_state,
+        "auth_blocks_public_report": bool(public_report is False and "AUTH" in blocking),
+        "core_green_implies_report_green": False,
+    }
+
+
+def build_report_scope_lineage(
+    scope_records: list[dict[str, Any]] | tuple[dict[str, Any], ...],
+    *,
+    logical_slot: str,
+    observed_at: str | datetime,
+    maximum_age_minutes: int,
+) -> dict[str, Any]:
+    """Build report lineage and fail closed on mixed core/prefetch generations."""
+    slot = parse_slot(logical_slot)
+    observed = (
+        observed_at
+        if isinstance(observed_at, datetime)
+        else parse_slot(str(observed_at))
+    )
+    if observed.tzinfo is None or observed.utcoffset() is None:
+        raise PrefetchContractError("report lineage observed_at must be timezone-aware")
+
+    parsed_rows: list[tuple[datetime, str, dict[str, Any]]] = []
+    for raw in scope_records or ():
+        generated_raw = str(raw.get("generated_at") or "").strip()
+        generated = _parse_prefetch_timestamp(generated_raw)
+        if generated is None:
+            continue
+        parsed_rows.append((generated, generated_raw, dict(raw)))
+
+    if not parsed_rows:
+        return {
+            "min_generated_at": None,
+            "age_minutes": None,
+            "source_run_id": None,
+            "report_prefetch_run_id": None,
+            "logical_slot": slot.isoformat(),
+            "freshness_status": "MISSING",
+            "generation_coherent": False,
+            "cross_generation_mix_blocked": False,
+            "usable": False,
+        }
+
+    oldest_utc, oldest_raw, _ = min(parsed_rows, key=lambda row: row[0])
+    cutoff = max(slot.astimezone(timezone.utc), observed.astimezone(timezone.utc))
+    age_minutes = round(max(0.0, (cutoff - oldest_utc).total_seconds() / 60.0), 3)
+
+    source_run_ids = {
+        str(row.get("source_run_id")).strip()
+        for _, _, row in parsed_rows
+        if str(row.get("source_run_id") or "").strip()
+    }
+    prefetch_run_ids = {
+        str(row.get("report_prefetch_run_id")).strip()
+        for _, _, row in parsed_rows
+        if str(row.get("report_prefetch_run_id") or "").strip()
+    }
+    coherent = len(source_run_ids) <= 1 and len(prefetch_run_ids) <= 1
+    fresh = age_minutes <= int(maximum_age_minutes)
+    if not coherent:
+        freshness_status = "CROSS_GENERATION"
+    else:
+        freshness_status = "CURRENT" if fresh else "STALE"
+
+    return {
+        "min_generated_at": oldest_raw,
+        "age_minutes": age_minutes,
+        "source_run_id": next(iter(source_run_ids), None),
+        "report_prefetch_run_id": next(iter(prefetch_run_ids), None),
+        "logical_slot": slot.isoformat(),
+        "freshness_status": freshness_status,
+        "generation_coherent": coherent,
+        "cross_generation_mix_blocked": not coherent,
+        "usable": bool(coherent and fresh),
+    }
+
+
 class PrefetchService:
     def __init__(
         self,
@@ -101,15 +376,30 @@ class PrefetchService:
             auth_state,
             personal_requested=bool(manifest.get("personal_requested")),
         )
+        target_slot = str(
+            manifest.get("target_logical_report_slot")
+            or manifest.get("logical_slot")
+            or iso(self.now)
+        )
+        maximum_age = int(
+            manifest.get("prefetch_max_age_minutes")
+            or self.config.get("prefetch_max_age_minutes", 35)
+        )
+        derived_age, derived_fresh, freshness_status = _derived_prefetch_currentness(
+            manifest,
+            requested_logical_slot=target_slot,
+            observed_at=self.now,
+            maximum_age_minutes=maximum_age,
+        )
         strict_status = (
             "GREEN"
-            if manifest.get("complete") and manifest.get("fresh_for_target_report")
+            if manifest.get("complete") and derived_fresh
             else ("AMBER" if manifest.get("source_failures") or not manifest.get("complete") else "STALE")
         )
         public_complete = bool(manifest.get("public_core_complete", manifest.get("complete")))
         public_status = (
             "GREEN"
-            if public_complete and manifest.get("fresh_for_target_report")
+            if public_complete and derived_fresh
             else ("AMBER" if not public_complete else "STALE")
         )
         health = {
@@ -137,7 +427,11 @@ class PrefetchService:
             "request_count": telemetry.get("request_count", 0),
             "failed_requests": telemetry.get("failed_requests", 0),
             "duration_ms": telemetry.get("duration_ms", 0),
-            "fresh_for_target_report": manifest.get("fresh_for_target_report"),
+            "fresh_for_target_report": derived_fresh,
+            "stored_fresh_for_target_report": manifest.get("fresh_for_target_report"),
+            "freshness_status": freshness_status,
+            "age_target_minutes": derived_age,
+            "freshness_evaluated_at": iso(self.now),
             "idempotent_reuse": bool((manifest.get("idempotency") or {}).get("reused")),
         }
         write_json(self.output_root / "health/report_prefetch.json", health)
@@ -556,9 +850,83 @@ class PrefetchService:
             and not auth_required_for_public
             and personal_auth_state != "AUTH_AVAILABLE"
         )
+
+        report_prefetch_run_id = str(uuid.uuid4())
+        core_manifest = read_json(self.output_root / "manifest.json") or {}
+        core_control = dict(core_manifest.get("runtime_control") or {})
+        source_run_id = str(
+            core_control.get("run_id")
+            or core_manifest.get("source_run_id")
+            or core_manifest.get("run_id")
+            or ""
+        ).strip() or None
+        core_generated_at = core_manifest.get("generated_at")
+        report_auth_state = normalize_report_auth_state(
+            personal_auth_state,
+            requested=scope.personal,
+        )
+        scope_health = {
+            "CORE": str(core_manifest.get("overall") or "UNKNOWN").upper(),
+            "REPORT_PREFETCH": "GREEN" if public_core_complete and fresh else (
+                "STALE" if public_core_complete else "DEGRADED"
+            ),
+            "PERSONAL": personal_status,
+            "MINI_LEAGUE": mini_status,
+            "AUTH": report_auth_state,
+            "ICON+": (
+                mini_status
+                if primary_name and "ICON+" in str(primary_name).upper()
+                else "NOT_REQUESTED"
+            ),
+        }
+        lineage_records: list[dict[str, Any]] = []
+        if core_generated_at:
+            lineage_records.append(
+                {
+                    "scope": "CORE",
+                    "generated_at": core_generated_at,
+                    "source_run_id": source_run_id,
+                    "report_prefetch_run_id": None,
+                }
+            )
+        lineage_records.append(
+            {
+                "scope": "REPORT_PREFETCH",
+                "generated_at": generated_at,
+                "source_run_id": source_run_id,
+                "report_prefetch_run_id": report_prefetch_run_id,
+            }
+        )
+        if scope.personal:
+            lineage_records.append(
+                {
+                    "scope": "PERSONAL",
+                    "generated_at": generated_at,
+                    "source_run_id": source_run_id,
+                    "report_prefetch_run_id": report_prefetch_run_id,
+                }
+            )
+        if scope.mini_league:
+            lineage_records.append(
+                {
+                    "scope": "MINI_LEAGUE",
+                    "generated_at": generated_at,
+                    "source_run_id": source_run_id,
+                    "report_prefetch_run_id": report_prefetch_run_id,
+                }
+            )
+        scope_lineage = build_report_scope_lineage(
+            lineage_records,
+            logical_slot=slot.isoformat(),
+            observed_at=self.now,
+            maximum_age_minutes=max_age,
+        )
+
         manifest = {
             "schema_version": 2,
-            "request_id": str(uuid.uuid4()),
+            "request_id": report_prefetch_run_id,
+            "report_prefetch_run_id": report_prefetch_run_id,
+            "source_run_id": source_run_id,
             "requested_at": generated_at,
             "requested_by": requested_by,
             "requested_for_report": requested_for_report,
@@ -575,6 +943,7 @@ class PrefetchService:
             "personal_status": personal_status,
             "public_personal_status": public_personal_status,
             "auth_state": personal_auth_state,
+            "report_auth_state": report_auth_state,
             "auth_action_required": auth_action_required,
             "auth_action": auth_action,
             "authenticated_personal_required_for_public_green": auth_required_for_public,
@@ -609,6 +978,9 @@ class PrefetchService:
             "source_failures": source_failures,
             "control_failures": control_failures,
             "public_control_failures": public_control_failures,
+            "scope_health": scope_health,
+            "scope_lineage": scope_lineage,
+            "cross_generation_mix_blocked": bool(scope_lineage.get("cross_generation_mix_blocked")),
             "telemetry": {
                 **telemetry,
                 "cache_hits": cache_hits,

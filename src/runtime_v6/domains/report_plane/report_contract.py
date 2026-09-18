@@ -4,8 +4,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, Sequence
 from zoneinfo import ZoneInfo
 
-from ..control_plane.schedule_policy import SCHEDULE_POLICY
-
 from .delivery_integrity import (
     RETRIEVAL_RECOVERY_CONDITIONS,
     direct_fresh_allowed as source_allows_direct_fresh,
@@ -46,7 +44,7 @@ class ReportContractError(ValueError):
 
 
 _JAKARTA = ZoneInfo("Asia/Jakarta")
-_ON_TIME_TOLERANCE_SECONDS = 90
+_ON_TIME_TOLERANCE_SECONDS = SCHEDULE_POLICY.scheduled_dispatch_tolerance_seconds
 _FINAL_WINDOW_STANDARD = timedelta(minutes=90)
 _FINAL_WINDOW_LATE_NIGHT = timedelta(hours=3)
 _DEADLINE_ACTIVE_LOOKBACK = timedelta(hours=24)
@@ -68,22 +66,23 @@ def _parse_jakarta(value: str | datetime, *, label: str) -> datetime:
 
 def _ceil_canonical_half_hour(value: datetime) -> datetime:
     local = value.astimezone(_JAKARTA)
-    base = local.replace(minute=30, second=0, microsecond=0)
+    base = local.replace(
+        minute=SCHEDULE_POLICY.physical_minute,
+        second=0,
+        microsecond=0,
+    )
     if local <= base:
         return base
-    return (base + timedelta(hours=1)).replace(minute=30, second=0, microsecond=0)
+    return base + timedelta(minutes=SCHEDULE_POLICY.cadence_minutes)
 
 
 def _canonical_recovery_deadline(intended_report_slot: datetime) -> datetime:
-    """One scheduled-report recovery window: through the next natural cadence boundary."""
     return intended_report_slot + timedelta(minutes=SCHEDULE_POLICY.cadence_minutes)
 
 
 def _final_window_duration(official_deadline: datetime) -> timedelta:
     local = official_deadline.astimezone(_JAKARTA)
-    if local.hour in {0, 1}:
-        return _FINAL_WINDOW_LATE_NIGHT
-    return _FINAL_WINDOW_STANDARD
+    return _FINAL_WINDOW_LATE_NIGHT if local.hour in {0, 1} else _FINAL_WINDOW_STANDARD
 
 
 def resolve_master_report_occurrence(
@@ -97,16 +96,16 @@ def resolve_master_report_occurrence(
     transport_failed: bool = False,
     report_prefetch_state: str = "CURRENT",
 ) -> dict[str, Any]:
-    """Resolve one natural Master occurrence without conflating timing, mode, or delivery.
-
-    The canonical report slot is determined from the scheduler occurrence. Physical
-    lateness changes occurrence state, never the report identity. Mandatory visible
-    work remains due through the deterministic recovery boundary.
-    """
+    """Single Runtime-owned natural occurrence/recovery/final router."""
     intended = _parse_jakarta(intended_report_slot, label="intended_report_slot")
     observed = _parse_jakarta(observed_at, label="observed_at")
-    if intended.minute != 30 or intended.second != 0 or intended.microsecond != 0:
+    if (
+        intended.minute != SCHEDULE_POLICY.physical_minute
+        or intended.second != 0
+        or intended.microsecond != 0
+    ):
         raise ReportContractError("intended_report_slot must be canonical HH:30")
+
     delta_seconds = (observed - intended).total_seconds()
     if delta_seconds < -_ON_TIME_TOLERANCE_SECONDS:
         raise ReportContractError("observed_at precedes canonical occurrence tolerance")
@@ -140,11 +139,12 @@ def resolve_master_report_occurrence(
         deadline_active = deadline_active_start <= intended < deadline
         final_active = first_final_checkpoint <= intended < deadline
 
-    hour = intended.hour
-    fixed_deep = hour in _DEEP_CHECKPOINT_HOURS
-    price_checkpoint = hour == 5
+    fixed_deep = intended.hour in _DEEP_CHECKPOINT_HOURS
+    price_checkpoint = intended.hour == 5
 
-    if final_active:
+    if deadline_locked:
+        base_mode = "SILENT"
+    elif final_active:
         base_mode = "FINAL"
     elif deadline_active:
         base_mode = "DEADLINE"
@@ -163,7 +163,7 @@ def resolve_master_report_occurrence(
     if price_checkpoint and base_mode in {"DEADLINE", "FINAL"}:
         embedded_obligations.append("PRICE")
 
-    if match_live:
+    if match_live and not deadline_locked:
         if base_mode == "FINAL":
             route_mode = "FINAL+MATCH"
         elif base_mode == "DEADLINE":
@@ -232,14 +232,10 @@ def resolve_master_report_occurrence(
 
 
 def evaluate_rolling_natural_acceptance(
-    occurrences: list[Mapping[str, Any]],
-    *,
-    window_target: int = 12,
+    occurrences: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
-    """Canonical rolling natural acceptance for Master production health."""
-    if window_target != 12:
-        raise ReportContractError("Master natural acceptance window is fixed at 12")
-
+    """Latest 12 genuine natural occurrences; visible slots require delivery proof."""
+    target = 12
     forbidden_markers = (
         "manual",
         "recovery",
@@ -271,7 +267,7 @@ def evaluate_rolling_natural_acceptance(
         key for key, rows in grouped.items() if len(rows) > 1
     )
     unique_rows = [rows[-1] for _, rows in sorted(grouped.items())]
-    latest = unique_rows[-window_target:]
+    latest = unique_rows[-target:]
 
     rendered_window: list[dict[str, Any]] = []
     pass_count = 0
@@ -294,7 +290,7 @@ def evaluate_rolling_natural_acceptance(
         public["acceptance"] = "PASS" if accepted else "FAIL"
         rendered_window.append(public)
 
-    zero_misses = len(latest) == window_target
+    zero_misses = len(latest) == target
     if zero_misses:
         for left, right in zip(latest, latest[1:]):
             if right["_logical"] - left["_logical"] != timedelta(hours=1):
@@ -302,13 +298,13 @@ def evaluate_rolling_natural_acceptance(
                 break
 
     production_green = bool(
-        len(latest) == window_target
-        and pass_count == window_target
+        len(latest) == target
+        and pass_count == target
         and zero_misses
         and not duplicate_logical_slots
     )
     return {
-        "window_target": window_target,
+        "window_target": target,
         "countable_natural_count": len(unique_rows),
         "pass_count": pass_count,
         "zero_misses": zero_misses,
@@ -332,12 +328,6 @@ def _parse_time(value: str | datetime) -> datetime:
 
 
 def _display_time(value: str | datetime) -> str:
-    """Preserve the caller's timezone representation for user-facing evidence fields.
-
-    Arithmetic remains UTC-normalized through _parse_time. This helper exists so an
-    Asia/Jakarta scheduler proof is not rendered as a different-looking UTC clock time
-    even though both timestamps represent the same instant.
-    """
     if isinstance(value, datetime):
         if value.tzinfo is None or value.utcoffset() is None:
             raise ReportContractError("timestamp must include timezone offset")
@@ -361,12 +351,9 @@ def classify_report_outcome(
     visible_emitted: bool,
     delivery_proof_valid: bool,
 ) -> dict[str, bool]:
-    """Keep data, visible delivery and canonical report fulfillment independent."""
     report_delivered = bool(visible_emitted)
     report_slot_fulfilled = bool(
-        report_delivered
-        and report_contract_pass
-        and delivery_proof_valid
+        report_delivered and report_contract_pass and delivery_proof_valid
     )
     return {
         "DATA_SLOT_FULFILLED": bool(data_slot_fulfilled),
@@ -387,11 +374,6 @@ def safety_net_decision(
     delivery_proof_valid: bool = False,
     report_slot_fulfilled: bool | None = None,
 ) -> dict[str, Any]:
-    """Suppress recovery only for a positively fulfilled same-slot report.
-
-    Ownership, prefetch and even a raw visible message are observability signals,
-    never canonical delivery evidence on their own.
-    """
     _parse_time(logical_slot)
     fulfilled = (
         bool(report_slot_fulfilled)
@@ -487,7 +469,6 @@ def resolve_report_scope(
     last_good_available: bool,
     auth_status: str | None,
 ) -> dict[str, Any]:
-    """Resolve one report scope without allowing unrelated scopes to influence it."""
     scope = _normalized_scope_id(scope_id)
     auth = _normalized_auth_status(auth_status)
 
@@ -518,39 +499,34 @@ def resolve_report_scope(
     )
 
     if source == "FRESH_V6":
-        action = "READ_V6"
-        status = "PASS"
-        report_blocking = False
-        degraded = False
-        reason = "FRESH_V6"
+        action, status, report_blocking, degraded, reason = (
+            "READ_V6", "PASS", False, False, "FRESH_V6"
+        )
         scoped_direct_fresh_allowed = False
     elif source == "V6_RETRIEVAL_RECOVERY":
-        action = "SAME_V6_RETRIEVAL_RECOVERY"
-        status = "RECOVERY_REQUIRED"
-        report_blocking = bool(required)
-        degraded = not bool(required)
-        reason = f"RETRIEVAL_{str(retrieval_state or '').strip().upper()}"
+        action, status, report_blocking, degraded, reason = (
+            "SAME_V6_RETRIEVAL_RECOVERY",
+            "RECOVERY_REQUIRED",
+            bool(required),
+            not bool(required),
+            f"RETRIEVAL_{str(retrieval_state or '').strip().upper()}",
+        )
         scoped_direct_fresh_allowed = False
     elif source == "DIRECT_FRESH":
-        action = "SCOPED_DIRECT_FRESH"
-        status = "PASS"
-        report_blocking = False
-        degraded = False
-        reason = "VERIFIED_V6_SCOPE_FAILURE"
+        action, status, report_blocking, degraded, reason = (
+            "SCOPED_DIRECT_FRESH", "PASS", False, False, "VERIFIED_V6_SCOPE_FAILURE"
+        )
         scoped_direct_fresh_allowed = True
     elif source == "LAST_GOOD_NONVOLATILE":
-        action = "READ_LAST_GOOD_NONVOLATILE"
-        status = "PASS"
-        report_blocking = False
-        degraded = False
-        reason = "NONVOLATILE_LAST_GOOD_RECOVERY"
+        action, status, report_blocking, degraded, reason = (
+            "READ_LAST_GOOD_NONVOLATILE",
+            "PASS",
+            False,
+            False,
+            "NONVOLATILE_LAST_GOOD_RECOVERY",
+        )
         scoped_direct_fresh_allowed = False
     else:
-        # Source unavailability is a factual degradation, not permission to
-        # shrink or suppress the canonical visible-report schema. Retrieval
-        # partials remain blocking above until SAME-V6 recovery is exhausted;
-        # once no valid source exists, the affected section must still render
-        # truthfully as unavailable while unrelated report computation continues.
         report_blocking = False
         degraded = True
         status = "DEGRADED"
@@ -583,7 +559,6 @@ def resolve_report_scope_matrix(
     *,
     auth_status: str | None,
 ) -> dict[str, Any]:
-    """Resolve every report scope independently and aggregate only delivery blockers."""
     resolved: dict[str, dict[str, Any]] = {}
     for scope_id, policy in scopes.items():
         resolved[scope_id] = resolve_report_scope(
@@ -600,14 +575,10 @@ def resolve_report_scope_matrix(
         )
 
     blocking_scopes = [
-        scope_id
-        for scope_id, result in resolved.items()
-        if result["report_blocking"]
+        scope_id for scope_id, result in resolved.items() if result["report_blocking"]
     ]
     degraded_scopes = [
-        scope_id
-        for scope_id, result in resolved.items()
-        if result["degraded"]
+        scope_id for scope_id, result in resolved.items() if result["degraded"]
     ]
     recovery_scopes = [
         scope_id
@@ -655,7 +626,6 @@ def report_delivery_status(
     report_delivered: bool = False,
     delivery_proof_valid: bool = False,
 ) -> str:
-    """Report delivery truth is contract/proof truth, not source availability."""
     if not due:
         return "N/A"
 
@@ -688,311 +658,6 @@ def report_delivery_status(
     if source == "LAST_GOOD_NONVOLATILE":
         return "PENDING | LAST_GOOD NONVOLATILE | REPORT CONTRACT NOT PROVEN"
     return "DEGRADED | UNAVAILABLE FIELDS DISCLOSED | REPORT CONTRACT NOT PROVEN"
-
-
-def _parse_aware_preserve(value: str | datetime, *, label: str) -> datetime:
-    if isinstance(value, datetime):
-        parsed = value
-    else:
-        try:
-            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-        except ValueError as exc:
-            raise ReportContractError(f"{label} must be ISO-8601") from exc
-    if parsed.tzinfo is None or parsed.utcoffset() is None:
-        raise ReportContractError(f"{label} must include timezone offset")
-    return parsed
-
-
-def _canonical_checkpoint_at_or_after(value: datetime) -> datetime:
-    timezone_name = ZoneInfo(SCHEDULE_POLICY.timezone)
-    local = value.astimezone(timezone_name)
-    candidate = local.replace(
-        minute=SCHEDULE_POLICY.physical_minute,
-        second=0,
-        microsecond=0,
-    )
-    cadence = timedelta(minutes=SCHEDULE_POLICY.cadence_minutes)
-    while candidate < local:
-        candidate += cadence
-    return candidate
-
-
-def _deadline_windows(
-    official_deadline: str | datetime | None,
-) -> dict[str, datetime | None]:
-    if official_deadline is None:
-        return {
-            "official_deadline": None,
-            "deadline_active_start": None,
-            "final_window_raw_start": None,
-            "first_final_checkpoint": None,
-        }
-
-    deadline = _parse_aware_preserve(official_deadline, label="official_deadline")
-    deadline = deadline.astimezone(ZoneInfo(SCHEDULE_POLICY.timezone))
-    deadline_active_start = _canonical_checkpoint_at_or_after(
-        deadline - timedelta(hours=24)
-    )
-    if deadline.hour < 2:
-        final_window_raw_start = deadline - timedelta(hours=3)
-    else:
-        final_window_raw_start = deadline - timedelta(minutes=90)
-    first_final_checkpoint = _canonical_checkpoint_at_or_after(final_window_raw_start)
-    return {
-        "official_deadline": deadline,
-        "deadline_active_start": deadline_active_start,
-        "final_window_raw_start": final_window_raw_start,
-        "first_final_checkpoint": first_final_checkpoint,
-    }
-
-
-def resolve_master_report_occurrence(
-    *,
-    intended_report_slot: str | datetime,
-    observed_at: str | datetime,
-    official_deadline: str | datetime | None = None,
-    match_live: bool = False,
-    post_all_match_due: bool = False,
-    v6_degraded: bool = False,
-    transport_failed: bool = False,
-    report_prefetch_state: str = "CURRENT",
-) -> dict[str, Any]:
-    """Resolve one natural Master occurrence without rewriting its canonical identity.
-
-    Runtime scheduling, deadline/final routing and late recovery share this single
-    state transition so scheduler lateness cannot silently turn a mandatory report
-    into NOT_DUE.
-    """
-    intended = _parse_aware_preserve(
-        intended_report_slot,
-        label="intended_report_slot",
-    ).astimezone(ZoneInfo(SCHEDULE_POLICY.timezone))
-    observed = _parse_aware_preserve(observed_at, label="observed_at")
-    observed_local = observed.astimezone(ZoneInfo(SCHEDULE_POLICY.timezone))
-
-    tolerance = float(SCHEDULE_POLICY.scheduled_dispatch_tolerance_seconds)
-    delta_seconds = (observed_local - intended).total_seconds()
-    if delta_seconds < -tolerance:
-        raise ReportContractError(
-            "scheduled dispatch precedes intended occurrence beyond tolerance"
-        )
-
-    recovery_deadline = intended + timedelta(minutes=SCHEDULE_POLICY.cadence_minutes)
-    if abs(delta_seconds) <= tolerance:
-        occurrence_state = "ON_TIME"
-    elif observed_local <= recovery_deadline:
-        occurrence_state = "LATE_RECOVERABLE"
-    else:
-        occurrence_state = "LATE_EXPIRED"
-
-    windows = _deadline_windows(official_deadline)
-    official = windows["official_deadline"]
-    deadline_active_start = windows["deadline_active_start"]
-    first_final_checkpoint = windows["first_final_checkpoint"]
-
-    deadline_locked = bool(official is not None and intended >= official)
-    deadline_active = bool(
-        official is not None
-        and deadline_active_start is not None
-        and deadline_active_start <= intended < official
-    )
-    final_active = bool(
-        deadline_active
-        and first_final_checkpoint is not None
-        and intended >= first_final_checkpoint
-    )
-
-    is_deep = intended.minute == SCHEDULE_POLICY.physical_minute and intended.hour in {
-        4,
-        12,
-        21,
-    }
-    is_price = (
-        intended.minute == SCHEDULE_POLICY.physical_minute
-        and intended.hour == 5
-    )
-
-    if final_active:
-        base_mode = "FINAL"
-    elif deadline_active:
-        base_mode = "DEADLINE"
-    elif post_all_match_due:
-        base_mode = "POST_ALL_MATCH"
-    elif is_deep:
-        base_mode = "DEEP"
-    elif is_price:
-        base_mode = "PRICE"
-    else:
-        base_mode = "SILENT"
-
-    if match_live:
-        if base_mode == "FINAL":
-            route_mode = "FINAL+MATCH"
-        elif base_mode == "DEADLINE":
-            route_mode = "DEADLINE+MATCH"
-        elif base_mode == "DEEP":
-            route_mode = "FULL+MATCH"
-        elif base_mode in {"SILENT", "PRICE"}:
-            route_mode = "MATCH"
-        else:
-            route_mode = base_mode
-    else:
-        route_mode = base_mode
-
-    nominal_visible_due = route_mode != "SILENT"
-    visible_occurrence_due = bool(
-        nominal_visible_due and occurrence_state != "LATE_EXPIRED"
-    )
-    late_catch_up = bool(
-        nominal_visible_due and occurrence_state == "LATE_RECOVERABLE"
-    )
-
-    embedded_obligations: list[str] = []
-    if route_mode.startswith(("DEADLINE", "FINAL")) and is_price:
-        embedded_obligations.append("PRICE")
-    if "+MATCH" in route_mode:
-        embedded_obligations.append("MATCH")
-
-    prefetch_state = str(report_prefetch_state or "UNKNOWN").strip().upper()
-    if prefetch_state in {"STALE", "MISSING", "INCOMPLETE", "MISMATCH"}:
-        prefetch_action = "GOVERNED_REFRESH_THEN_CONTINUE"
-    elif prefetch_state == "CURRENT":
-        prefetch_action = "USE_CURRENT"
-    else:
-        prefetch_action = "VERIFY_THEN_CONTINUE"
-
-    return {
-        "occurrence_state": occurrence_state,
-        "intended_report_slot": intended.isoformat(),
-        "observed_at": observed.isoformat(),
-        "dispatch_delta_seconds": round(delta_seconds, 6),
-        "on_time_tolerance_seconds": int(tolerance),
-        "recovery_deadline": recovery_deadline.isoformat(),
-        "route_mode": route_mode,
-        "nominal_visible_occurrence_due": nominal_visible_due,
-        "visible_occurrence_due": visible_occurrence_due,
-        "delivery_required": visible_occurrence_due,
-        "late_catch_up": late_catch_up,
-        "late_label_required": late_catch_up,
-        "historical_delivery_state": (
-            "UNDELIVERED"
-            if nominal_visible_due and occurrence_state == "LATE_EXPIRED"
-            else None
-        ),
-        "deadline_active": deadline_active,
-        "deadline_locked": deadline_locked,
-        "deadline_active_start": (
-            deadline_active_start.isoformat()
-            if deadline_active_start is not None
-            else None
-        ),
-        "first_final_checkpoint": (
-            first_final_checkpoint.isoformat()
-            if first_final_checkpoint is not None
-            else None
-        ),
-        "official_deadline": official.isoformat() if official is not None else None,
-        "embedded_obligations": embedded_obligations,
-        "visible_report_count": 1 if visible_occurrence_due else 0,
-        "v6_degraded": bool(v6_degraded),
-        "transport_failed": bool(transport_failed),
-        "report_prefetch_state": prefetch_state,
-        "report_prefetch_action": prefetch_action,
-        "data_slot_report_slot_delivery_independent": True,
-        "replacement_report_slot_allowed": False,
-        "v6_data_plane_backfill_allowed": False,
-        "future_fill_allowed": False,
-    }
-
-
-def _is_genuine_natural_occurrence(row: Mapping[str, Any]) -> bool:
-    return bool(
-        row.get("natural") is True
-        and str(row.get("schedule_kind") or "") == "chatgpt_scheduler"
-        and row.get("manual") is not True
-        and row.get("recovery") is not True
-        and row.get("report_prefetch") is not True
-        and row.get("ad_hoc") is not True
-        and row.get("retro") is not True
-        and row.get("future_fill") is not True
-    )
-
-
-def _natural_acceptance(row: Mapping[str, Any]) -> str:
-    if str(row.get("core_acceptance") or "").upper() != "PASS":
-        return "FAIL"
-    if row.get("mandatory_visible_report") is True:
-        report_pass = bool(
-            row.get("report_contract_pass") is True
-            and row.get("report_slot_fulfilled") is True
-            and row.get("delivery_proof_valid") is True
-            and row.get("visible_emitted") is True
-            and row.get("status_only") is not True
-        )
-        return "PASS" if report_pass else "FAIL"
-    return "PASS"
-
-
-def evaluate_rolling_natural_acceptance(
-    occurrences: Sequence[Mapping[str, Any]],
-) -> dict[str, Any]:
-    """Evaluate the latest 12 genuine natural occurrences only.
-
-    Manual/recovery/prefetch/ad-hoc/retro/future-fill evidence is never countable.
-    A mandatory visible occurrence counts only with core PASS plus canonical
-    report contract and delivery proof.
-    """
-    target = 12
-    genuine: list[tuple[datetime, str, Mapping[str, Any]]] = []
-    slot_counts: dict[str, int] = {}
-    for row in occurrences:
-        if not _is_genuine_natural_occurrence(row):
-            continue
-        slot_raw = row.get("logical_slot")
-        if slot_raw is None:
-            continue
-        slot = _parse_time(str(slot_raw))
-        slot_key = slot.isoformat()
-        slot_counts[slot_key] = slot_counts.get(slot_key, 0) + 1
-        genuine.append((slot, slot_key, row))
-
-    genuine.sort(key=lambda item: item[0])
-    unique: dict[str, tuple[datetime, Mapping[str, Any]]] = {}
-    for slot, slot_key, row in genuine:
-        unique[slot_key] = (slot, row)
-
-    ordered_unique = sorted(unique.items(), key=lambda item: item[1][0])
-    latest = ordered_unique[-target:]
-    latest_keys = {key for key, _ in latest}
-    duplicates = sorted(
-        key
-        for key, count in slot_counts.items()
-        if count > 1 and key in latest_keys
-    )
-
-    latest_window: list[dict[str, Any]] = []
-    pass_count = 0
-    for slot_key, (_, row) in latest:
-        acceptance = _natural_acceptance(row)
-        if acceptance == "PASS":
-            pass_count += 1
-        rendered = dict(row)
-        rendered["logical_slot"] = slot_key
-        rendered["acceptance"] = acceptance
-        latest_window.append(rendered)
-
-    complete = len(latest_window) == target
-    zero_misses = complete and pass_count == target and not duplicates
-    return {
-        "window_target": target,
-        "countable_natural_count": len(ordered_unique),
-        "latest_window_size": len(latest_window),
-        "pass_count": pass_count,
-        "zero_misses": zero_misses,
-        "duplicate_logical_slots": duplicates,
-        "latest_window": latest_window,
-        "production_green": zero_misses,
-    }
 
 
 def status_entry(

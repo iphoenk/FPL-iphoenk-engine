@@ -18,6 +18,7 @@ from .temporal import floor_interval_slot, parse_timestamp, try_parse_timestamp
 CHATGPT_SCHEDULER_AUTHORITY = CONTROL_PLANE.scheduler_authority_id
 CHATGPT_SCHEDULER_EPOCH = SCHEDULE_POLICY.health_epoch
 CHATGPT_GREEN_STREAK = SCHEDULE_POLICY.green_after_consecutive_slots
+NATURAL_LOGICAL_SLOT_SOURCE = "GOVERNED_TRIGGER_EVENT"
 
 
 def _parse_dt(value: str | None) -> datetime | None:

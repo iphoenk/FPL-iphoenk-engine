@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from src.runtime_v6.wave3_proof import CORE_STAGES, evaluate_proof_window
+from src.runtime_v6.wave3_proof import CORE_STAGES, NATURAL_PROOF_EPOCH, evaluate_proof_window
 
 
 def _proof(slot: datetime, *, run_id: int, publication_id: str | None = None) -> dict:
@@ -12,6 +12,7 @@ def _proof(slot: datetime, *, run_id: int, publication_id: str | None = None) ->
         "proof_kind": "WAVE3_NATURAL_CORE_SLOT",
         "natural_slot": True,
         "natural_transport": "FPL_MASTER_SLOT_ISSUE_TITLE",
+        "scheduler_epoch": NATURAL_PROOF_EPOCH,
         "logical_slot": iso,
         "run_id": str(run_id),
         "run_attempt": "1",

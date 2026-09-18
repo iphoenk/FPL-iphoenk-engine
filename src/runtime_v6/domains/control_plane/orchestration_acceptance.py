@@ -212,6 +212,7 @@ def evaluate_occurrence_acceptance(evidence: Mapping[str, Any]) -> dict[str, Any
         "CORE_EXECUTION": "PASS" if core_pass else "UNVERIFIED",
         "SCHEDULER_PROOF": "PASS" if core_pass else "UNVERIFIED",
         "VISIBLE_REPORT_REQUIREMENT": "REQUIRED" if report_due else "N/A",
+        "VISIBLE_REPORT_MODE": str(payload.get("visible_report_mode") or "N/A"),
         "logical_slot": occurrence.get("logical_slot"),
         "occurrence_id": occurrence.get("occurrence_id"),
         "logical_slot_source": core.get("logical_slot_source"),

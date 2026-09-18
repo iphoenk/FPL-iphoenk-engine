@@ -845,3 +845,198 @@ def build_canonical_report_receipt(
     receipt["receipt_id"] = _proof_digest(receipt)
     receipt["status"] = "PASS"
     return receipt
+
+
+_P07_TERMINAL_V6_STATES = frozenset({
+    "PASS",
+    "SUCCESS",
+    "PUBLISHED",
+    "ALREADY_PUBLISHED",
+    "PUBLICATION_READY",
+    "PUBLIC_COMPLETE",
+    "PUBLIC_COMPLETE_AUTH_DEFERRED",
+})
+
+
+def evaluate_same_slot_completion_ledger(
+    evidence: Mapping[str, Any],
+    *,
+    existing_ledger: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Classify the P0.7 report-completion chain without inventing missing proof.
+
+    The ledger is an observability projection over the existing report lifecycle.
+    It does not mint delivery acknowledgements or receipts and it cannot rewrite
+    historical occurrences. Every report-plane identity is checked against the
+    original logical_report_slot.
+    """
+    row = dict(evidence or {})
+    report_slot = str(row.get("logical_report_slot") or "").strip()
+    occurrence_id = str(row.get("natural_occurrence_id") or "").strip()
+
+    if existing_ledger is not None:
+        prior = dict(existing_ledger)
+        if (
+            prior.get("status") == "PASS"
+            and prior.get("logical_report_slot") == report_slot
+            and prior.get("natural_occurrence_id") == occurrence_id
+            and prior.get("report_slot_fulfilled") is True
+        ):
+            prior["idempotent_reuse"] = True
+            return prior
+        return {
+            "status": "FAIL",
+            "logical_report_slot": report_slot or None,
+            "natural_occurrence_id": occurrence_id or None,
+            "report_slot_fulfilled": False,
+            "idempotent_reuse": False,
+            "terminal_status_only_allowed": False,
+            "first_broken_or_unproven_edge": "EXISTING_LEDGER_CONFLICT",
+            "edge_classification": {},
+            "failures": ["EXISTING_LEDGER_INVALID_OR_CONFLICTING"],
+        }
+
+    classifications: dict[str, str] = {}
+    failures: list[str] = []
+
+    def mark(edge: str, proven: bool, failure: str | None = None) -> None:
+        classifications[edge] = "EXECUTED_AND_PROVEN" if proven else "UNVERIFIED"
+        if not proven and failure:
+            failures.append(failure)
+
+    slot_valid = bool(report_slot and _parse_aware_timestamp(report_slot) is not None)
+    terminal_state = str(row.get("v6_terminal_state") or "").strip().upper()
+    terminal_valid = bool(
+        str(row.get("governed_v6_run_id") or "").strip()
+        and terminal_state in _P07_TERMINAL_V6_STATES
+    )
+    mark("V6_TERMINAL", terminal_valid, "V6_TERMINAL_NOT_PROVEN")
+    mark(
+        "TERMINAL_REREAD",
+        terminal_valid and row.get("publication_readback_pass") is True,
+        "PUBLICATION_READBACK_NOT_PROVEN",
+    )
+
+    context_slot = str(row.get("decision_context_slot") or "").strip()
+    context_ok = bool(
+        slot_valid
+        and row.get("decision_context_hydrated") is True
+        and context_slot == report_slot
+    )
+    mark(
+        "ACTIVE_DECISION_CONTEXT_HYDRATION",
+        context_ok,
+        "DECISION_CONTEXT_EXACT_SLOT_NOT_PROVEN",
+    )
+
+    prefetch_slot = str(row.get("report_prefetch_logical_slot") or "").strip()
+    freshness = str(row.get("report_prefetch_freshness") or "").strip().upper()
+    prefetch_ok = bool(
+        slot_valid
+        and row.get("report_prefetch_identity_match") is True
+        and prefetch_slot == report_slot
+        and freshness in {
+            "CURRENT",
+            "FRESH",
+            "PASS",
+            "AMBER",
+            "AMBER_NON_BLOCKING",
+            "DEGRADED_NON_BLOCKING",
+        }
+    )
+    mark(
+        "EXACT_REPORT_PREFETCH_BINDING",
+        prefetch_ok,
+        "REPORT_PREFETCH_EXACT_SLOT_NOT_PROVEN",
+    )
+
+    weather_ok = bool(
+        row.get("weather_attempted") is True
+        and str(row.get("weather_status") or "").strip().upper()
+        in {"PASS", "DEGRADED", "SOURCE_DEGRADED", "LOW_CONFIDENCE"}
+    )
+    mark("WEATHER_ATTEMPT", weather_ok, "WEATHER_ATTEMPT_NOT_PROVEN")
+    mark(
+        "PRE_RENDER_QA",
+        row.get("pre_render_qa_pass") is True,
+        "PRE_RENDER_QA_NOT_PASSED",
+    )
+
+    render_hash = str(row.get("canonical_render_hash") or "")
+    render_ok = bool(
+        row.get("canonical_render_completed") is True and _is_sha256(render_hash)
+    )
+    mark("CANONICAL_RENDER", render_ok, "CANONICAL_RENDER_NOT_PROVEN")
+    mark(
+        "POST_RENDER_QA",
+        row.get("post_render_qa_pass") is True,
+        "POST_RENDER_QA_NOT_PASSED",
+    )
+    mark(
+        "REPORT_CONTRACT_PASS",
+        row.get("report_contract_pass") is True,
+        "REPORT_CONTRACT_NOT_PASSED",
+    )
+    mark("CAN_EMIT", row.get("can_emit") is True, "CAN_EMIT_NOT_TRUE")
+    mark(
+        "VISIBLE_EMITTED",
+        row.get("visible_emitted") is True,
+        "VISIBLE_EMITTED_NOT_TRUE",
+    )
+    mark(
+        "DELIVERY_ACKNOWLEDGED",
+        row.get("delivery_acknowledged") is True,
+        "DELIVERY_ACKNOWLEDGED_NOT_TRUE",
+    )
+    mark(
+        "DELIVERY_PROOF_VALID",
+        row.get("delivery_proof_valid") is True,
+        "DELIVERY_PROOF_NOT_VALID",
+    )
+
+    receipt_slot = str(row.get("canonical_receipt_slot") or "").strip()
+    receipt_ok = bool(
+        slot_valid
+        and _is_sha256(row.get("canonical_receipt_id"))
+        and receipt_slot == report_slot
+    )
+    mark(
+        "IMMUTABLE_CANONICAL_RECEIPT",
+        receipt_ok,
+        "CANONICAL_RECEIPT_EXACT_SLOT_NOT_PROVEN",
+    )
+
+    fulfilled = bool(
+        row.get("report_slot_fulfilled") is True
+        and not failures
+        and all(state == "EXECUTED_AND_PROVEN" for state in classifications.values())
+    )
+    mark(
+        "REPORT_SLOT_FULFILLED",
+        fulfilled,
+        "REPORT_SLOT_FULFILLED_NOT_PROVEN",
+    )
+
+    first_unproven = next(
+        (edge for edge, state in classifications.items() if state != "EXECUTED_AND_PROVEN"),
+        None,
+    )
+    historical = row.get("historical_immutable") is True
+    if historical and row.get("report_slot_fulfilled") is not True:
+        fulfilled = False
+        if "HISTORICAL_TRUTH_IMMUTABLE" not in failures:
+            failures.append("HISTORICAL_TRUTH_IMMUTABLE")
+
+    return {
+        **row,
+        "status": "PASS" if fulfilled else "FAIL",
+        "historical_immutable": historical,
+        "logical_report_slot": report_slot or None,
+        "natural_occurrence_id": occurrence_id or None,
+        "report_slot_fulfilled": fulfilled,
+        "edge_classification": classifications,
+        "first_broken_or_unproven_edge": first_unproven,
+        "terminal_status_only_allowed": False,
+        "idempotent_reuse": False,
+        "failures": list(dict.fromkeys(failures)),
+    }

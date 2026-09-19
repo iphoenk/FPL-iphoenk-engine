@@ -166,6 +166,7 @@ def _scoring_context(cfg: dict[str, Any], planning_gw: int) -> dict[str, Any]:
         "captain_weight": _f(cfg.get("captain_bonus_weight"), 1.0),
         "risk_aversion": _f(cfg.get("risk_aversion"), 0.12),
         "change_penalty_points": _f(cfg.get("change_penalty_points"), 0.20),
+        "change_penalty_semantics": "LEGACY_OPTIMIZER_HEURISTIC_NOT_FT_SHADOW",
         "change_cap": change_cap,
         "change_guard": change_guard,
         "_compiled_player_cache": {},
@@ -310,6 +311,8 @@ def _score_compiled_rows(rows: list[dict[str, Any]], changes: int, context: dict
         "objective_mean": round(objective_mean, 3),
         "objective_std": round(objective_std, 3),
         "change_penalty_points": round(change_penalty, 3),
+        "change_penalty_semantics": context.get("change_penalty_semantics"),
+        "canonical_ft_shadow_value": False,
         "team_cluster_penalty_points": round(cluster_penalty, 3),
         "robust_score": round(robust, 3),
         "guardrails": guardrails,
@@ -355,12 +358,37 @@ def affordable_package(outs: list[dict[str, Any]], ins: list[dict[str, Any]], it
     }
 
 
-def simulate_objective(mean: float, std: float, simulations: int, seed: int) -> dict[str, float]:
+def simulate_objective(mean: float, std: float, simulations: int, seed: int) -> dict[str, Any]:
+    """Legacy independent-Gaussian diagnostic.
+
+    This function is intentionally NOT upgraded into V12 Monte Carlo. Canonical
+    V12 MC requires path-level correlated state/event sampling and separate
+    execution provenance; increasing this sample count would not satisfy it.
+    """
     rng = random.Random(seed)
-    samples = sorted(rng.gauss(mean, max(0.0001, std)) for _ in range(max(20, simulations)))
+    actual = max(20, int(simulations))
+    samples = sorted(
+        rng.gauss(mean, max(0.0001, std)) for _ in range(actual)
+    )
 
     def pct(q: float) -> float:
-        idx = min(len(samples) - 1, max(0, int(round((len(samples) - 1) * q))))
+        idx = min(
+            len(samples) - 1,
+            max(0, int(round((len(samples) - 1) * q))),
+        )
         return samples[idx]
 
-    return {"p25": round(pct(0.25), 3), "p50": round(pct(0.50), 3), "p75": round(pct(0.75), 3)}
+    return {
+        "p25": round(pct(0.25), 3),
+        "p50": round(pct(0.50), 3),
+        "p75": round(pct(0.75), 3),
+        "execution_state": "LEGACY_BASELINE_DIAGNOSTIC",
+        "actual_paths": actual,
+        "method": "independent_normal_aggregate_baseline",
+        "correlated": False,
+        "canonical_v12_pass": False,
+        "canonical_v12_reason": (
+            "aggregate independent Gaussian diagnostic does not sample "
+            "availability/start/cameo/DNP/minutes/scoring/shared-match states"
+        ),
+    }

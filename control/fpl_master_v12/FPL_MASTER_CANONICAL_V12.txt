@@ -190,14 +190,22 @@ exactly 20 NON-OWNED = GK5 DEF5 MID5 FWD5.
 Derived from full current universe after OUR15 exclusion and canonical evaluation.
 Count alone insufficient; require unique canonical IDs, eligibility, full-universe/methodology lineage and current provenance.
 
-11. RISE20/FALL20
+11. RISE20/FALL20 — OFFICIAL PRICE-CYCLE TIMING
 Where required: RISE20 exact20; FALL20 exact20.
-Complete selection uses full current Official universe.
+Complete selection uses the full current Official universe.
 RISE = projection_offset_0_percent DESC, tie element_id ASC.
 FALL = projection_offset_0_percent ASC, tie element_id ASC.
-Ownership never alters order.
-Every row: rank;element_id;player_name;current_price;ownership_percent;ownership_tag;direction;current_progress_percent;projection_offset_0_percent;predicted_change_cycle;predicted_change_at;eta_human;model_urgency;confidence;source;observed_at;raw_payload_hash.
-Unknown timing => NO RELIABLE ETA. Narrative/disclaimer never substitutes. Malformed/missing row => same-run recompute/re-render when recoverable.
+
+Official FPL 2026/27 player price changes execute DAILY at 00:00 UK local time. The official Price Change Predictor may update more frequently, currently every 15 minutes, but predictor-refresh cadence is NOT the official price-change execution cadence. Never say prices can change any hour merely because predictor observations refresh intraday.
+
+The immediately upcoming official cycle MUST be derived from 00:00 Europe/London for the relevant calendar date and converted timezone-aware to Asia/Jakarta. During BST this normally renders 06:00 WIB; during GMT it normally renders 07:00 WIB. Never permanently hardcode 06:00 WIB for the season.
+
+Every visible RISE20/FALL20 row carries:
+player;current_price;direction;official_or_provider_progress;prediction_strength;next_official_price_cycle_uk;next_official_price_cycle_wib;cycles_to_expected_change;estimated_change_window;estimate_source;evidence_timestamp;confidence;impact_on_our_decision.
+
+Estimated-change semantics use actual daily cycles, for example NEXT PRICE CYCLE — 06:00 WIB during BST, NEXT PRICE CYCLE — 07:00 WIB during GMT, 1 CYCLE / ~24H, 2 CYCLES / ~24–48H, 2 CYCLES, or UNAVAILABLE. A next-cycle label is used only when evidence supports it. Predictor likelihood/progress is not a guarantee.
+
+If Official Predictor and supporting providers disagree, surface each source signal and the disagreement explicitly; never manufacture consensus. Official FPL current price/factual price change remains authoritative. A RISE20/FALL20 section labelled COMPLETE requires every row to answer: direction; signal strength; target official cycle; that cycle's WIB time; and decision impact. Missing required timing semantics cannot be COMPLETE. Truthful timing UNAVAILABLE is permitted only under PARTIAL/DEGRADED/UNAVAILABLE with reason.
 
 12. ICON+ MINI-LEAGUE
 Every visible report includes mode-appropriate ICON+ analysis using freshest authoritative available denominator.
@@ -278,6 +286,8 @@ reconciliation corrected;repair applied;migration successful;test passed.
 Acceptance evidence may retain such language only in technical evidence/history, not normal FPL narrative.
 Stable user-facing wording includes MATCH MODE and LOCKED TEAM VERIFIED where applicable.
 
+OWNED PLAYER EMPHASIS: whenever a current OUR15 player appears anywhere in a visible report, render the player name in Markdown bold. This applies to OUR15, ALL15, formation/XI/bench, XI battle, captain/vice, Price Radar, RISE/FALL, Package Frontier, Match, Post-All-Match, ICON+/mini-league comparison and Decision Delta. Bold is presentation-only. Ownership identity is determined only by Official FPL element_id membership in current OUR15; never by name/bold matching.
+
 14E. OBSERVATION VS MODEL RECOMPUTATION
 Post-match evidence that has not triggered an actual model execution is CALIBRATION INPUT or MODEL UPDATE PENDING NEXT COMPUTE.
 Claims such as posterior updated, xMins recalibrated, probabilities changed, or P(start) changed require exact recomputation/execution proof with previous/current values and evidence timestamp.
@@ -347,8 +357,14 @@ B LIVE STANDINGS / RANK;
 C EO / CAPTAINCY where supportable;
 D RIVAL LIVE POINTS.
 A section may be overall DEGRADED while a healthy sub-scope remains COMPLETE. Never mix current-GW picks with stale prior-GW standings as if both were current.
-Where current submitted-picks denominator is complete, render ownership, starter share, captain share and vice share separately as numerator / denominator = percentage. EO is shown only when exact multiplier/chip inputs required for EO are supportable.
-Arithmetic must be consistent. Never collapse distinct metrics into one exposure number.
+
+Every supportable ownership/starter/captain/vice metric MUST render numerator / denominator = percentage, not percentage alone. Example: Ownership 17/58 = 29.3%; Starter 13/58 = 22.4%; Captain 4/58 = 6.9%; Vice 3/58 = 5.2%. Arithmetic must be internally consistent and each metric carries its own denominator when scopes differ.
+
+When current manager scope is complete, denominator is the exact current league manager count. When only part of the league is collected, do NOT relabel the collected denominator as league total. Render, for example, Observed ownership 17/54 collected = 31.5%; Coverage 54/58 managers; Scope DEGRADED. Partial denominator is a factual collected-scope denominator and never masquerades as full league denominator.
+
+EO is shown only when exact multiplier/chip/captain inputs required for EO are supportable across the required current scope. EO must never be reconstructed from ownership percentage alone. If inputs are insufficient, render EO: UNAVAILABLE while retaining healthy ownership/starter/captain/vice count metrics.
+
+For current OUR15 players, apply 14D owned-player bold presentation while retaining element_id as the sole ownership identity basis.
 Football-optimal baseline is first; ICON+ remains an overlay.
 
 14L. 05:30 PRICE INFORMATION-VALUE CONTRACT
@@ -364,6 +380,11 @@ Exact backbone:
 9 ICON+ price impact
 10 Action board
 11 Source health.
+
+PRICE timing header MUST state the immediately upcoming official daily cycle derived from 00:00 Europe/London and converted to WIB. During the current BST period this normally reads NEXT PRICE CYCLE: 06:00 WIB; during GMT it normally reads NEXT PRICE CYCLE: 07:00 WIB. Predictor observation/update time is shown separately from official cycle time.
+
+RISE20/FALL20 use the row timing contract in Section 11. Predictor progress/likelihood may update every 15 minutes but never converts into a guarantee. If a player is supportably projected for the immediately upcoming cycle, use ESTIMATED CHANGE: NEXT PRICE CYCLE — <derived WIB time>. If support is insufficient, show probability/progress and a later-cycle or UNAVAILABLE window truthfully.
+
 For material routes show:
 affordable_now;after_target_plus_0_1;after_owned_minus_0_1;sell_value_impact;route_survival;football_information_benefit_of_waiting.
 Price alone never overrides football-optimal decision without explicit downstream economics.
@@ -442,9 +463,10 @@ Source/data unavailability by itself is not a hard failure when represented trut
 
 The same COMPLETE-vs-degraded principle explicitly applies to:
 ALL15; WATCHLIST20; RISE20; FALL20; POST-ALL-MATCH fixture scout; GW LOCK PACKAGE; PACKAGE FRONTIER; ICON+.
+RISE20/FALL20 COMPLETE additionally requires every row's official daily-cycle timing semantics from Section 11; missing cycle target/WIB timing cannot be hidden behind a COMPLETE label.
 WATCHLIST20 COMPLETE requires exact20 and GK5/DEF5/MID5/FWD5. WATCHLIST20 DEGRADED may contain fewer than20 authoritative rows, but must show N/20 plus reason and must not fabricate rows.
 PACKAGE FRONTIER COMPLETE with serious comparison requires HOLD baseline. If optimizer/search scope is legitimately unavailable, label PACKAGE FRONTIER DEGRADED/UNAVAILABLE and do not fabricate HOLD calculations.
-ICON+ COMPLETE/FRESH requires internally consistent numerator/denominator/percentage and separate exposure metrics. ICON+ DEGRADED/UNAVAILABLE never presents stale rank/EO as current.
+ICON+ COMPLETE/FRESH requires internally consistent numerator/denominator/percentage for each supportable ownership/starter/captain/vice metric, exact current league denominator when scope is complete, and separate exposure metrics. Partial manager collection must show collected/expected coverage and cannot masquerade as full league denominator. EO COMPLETE additionally requires exact multiplier/chip/captain inputs; otherwise EO remains UNAVAILABLE without blanking healthy exposure metrics. ICON+ DEGRADED/UNAVAILABLE never presents stale rank/EO as current.
 POST-ALL-MATCH fixture scout COMPLETE represents every completed fixture exactly once. If fixture evidence is missing, the scout may be PARTIAL/DEGRADED with covered/expected count plus missing scope.
 GW LOCK PACKAGE COMPLETE requires the complete executable package. If a factual prerequisite is genuinely unavailable, render GW LOCK PACKAGE DEGRADED/UNAVAILABLE with exact missing field(s); never fabricate finance or transfer state.
 

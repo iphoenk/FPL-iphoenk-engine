@@ -375,3 +375,167 @@ def aggregate_settled_ledgers(records: Iterable[Mapping[str, Any]]) -> dict[str,
         values = [float(metric["value"]) for r in settled if (metric := ((((r.get("decision_calibration") or {}).get("metrics") or {}).get(name)) or {})).get("status") == SETTLED and metric.get("value") is not None]
         summary[name] = {"status": SETTLED if values else "NO_SETTLED_SAMPLE", "sample_size": len(values), "mean": _r(_avg(values))}
     return {"schema_version": SCHEMA_VERSION, "settled_record_count": len(settled), "prediction_sample_size": prediction_n, "decision_metrics": summary, "calibration_confidence": "LOW" if prediction_n < 50 else "MEDIUM" if prediction_n < 150 else "HIGH", "governance": {"updates_require_settled_samples": True, "explicit_sample_size_required": True, "automatic_methodology_weight_mutation": False}}
+
+
+OPERATIONAL_BINDING_FIELDS = (
+    "input_snapshot_id",
+    "factual_snapshot_timestamps",
+    "factual_artifact_fingerprints",
+    "model_version",
+    "feature_version",
+    "parameter_version",
+    "calibration_version",
+    "calibration_cutoff",
+    "planning_gw",
+    "canonical_v12_revision",
+    "input_fingerprint",
+    "model_fingerprint",
+    "parameter_fingerprint",
+    "calibration_fingerprint",
+    "run_fingerprint",
+    "generated_at",
+)
+OPERATIONAL_FINGERPRINT_FIELDS = (
+    "input_fingerprint",
+    "model_fingerprint",
+    "parameter_fingerprint",
+    "calibration_fingerprint",
+    "run_fingerprint",
+)
+
+
+def _is_sha256_text(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
+
+
+def validate_operational_model_evidence(
+    binding: Mapping[str, Any] | None,
+    *,
+    serious_decision: bool = True,
+    reproducibility_claimed: bool = False,
+    repository_python_executed: bool = False,
+    repository_python_execution_proof: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Validate actual-runtime model evidence without claiming repository execution.
+
+    This is a deterministic contract helper. Calling it in tests/CI is not proof
+    that the recurring ChatGPT Automation executed this Python module.
+    """
+    if not binding:
+        if reproducibility_claimed:
+            raise ModelEvidenceError("reproducibility cannot be claimed without MODEL_EVIDENCE_BINDING")
+        return {
+            "status": "DEGRADED" if serious_decision else "NOT_REQUIRED",
+            "serious_decision": bool(serious_decision),
+            "binding_present": False,
+            "reproducible": False,
+            "report_can_continue": True,
+            "authority": False,
+            "evidence_only": True,
+            "repository_python_executed": False,
+            "missing_fields": list(OPERATIONAL_BINDING_FIELDS),
+            "uncomputed_fingerprints": list(OPERATIONAL_FINGERPRINT_FIELDS),
+        }
+
+    row = dict(binding)
+    if row.get("authority") is not False:
+        raise ModelEvidenceError("MODEL_EVIDENCE_BINDING must be authority=false")
+    if row.get("evidence_only") is not True:
+        raise ModelEvidenceError("MODEL_EVIDENCE_BINDING must be evidence_only=true")
+    if row.get("raw_v6_payload") is not None or row.get("raw_factual_payload") is not None:
+        raise ModelEvidenceError("complete raw V6/factual payload must not be persisted in model evidence")
+    if row.get("raw_factual_inputs_persisted") not in (None, False):
+        raise ModelEvidenceError("raw_factual_inputs_persisted must be false")
+
+    missing = [field for field in OPERATIONAL_BINDING_FIELDS if field not in row]
+    uncomputed = [
+        field for field in OPERATIONAL_FINGERPRINT_FIELDS
+        if field not in row or not _is_sha256_text(row.get(field))
+    ]
+    if reproducibility_claimed and (missing or uncomputed):
+        raise ModelEvidenceError("reproducibility claim requires complete actually-computed model evidence fingerprints")
+
+    if repository_python_executed:
+        proof = dict(repository_python_execution_proof or {})
+        if not (
+            proof.get("occurrence_bound") is True
+            and str(proof.get("module") or "") == "src/engines/v12_model_evidence.py"
+            and str(proof.get("execution_id") or "").strip()
+        ):
+            raise ModelEvidenceError("repository Python execution claim requires exact occurrence-bound execution proof")
+
+    reproducible = not missing and not uncomputed
+    return {
+        "status": "PASS" if reproducible else "DEGRADED",
+        "serious_decision": bool(serious_decision),
+        "binding_present": True,
+        "reproducible": reproducible,
+        "report_can_continue": True,
+        "authority": False,
+        "evidence_only": True,
+        "repository_python_executed": bool(repository_python_executed),
+        "missing_fields": missing,
+        "uncomputed_fingerprints": uncomputed,
+    }
+
+
+def new_durable_state_evidence_surface() -> dict[str, Any]:
+    return {
+        "schema": "FPL_MASTER_V12_MODEL_EVIDENCE_STATE_V1",
+        "authority": False,
+        "evidence_only": True,
+        "raw_v6_payload_persisted": False,
+        "lifecycle": [FROZEN, SETTLED],
+        "records": {},
+        "automatic_methodology_weight_mutation": False,
+        "report_delivery_policy": "OPTIONAL_MODEL_EVIDENCE_DEGRADATION_NEVER_SUPPRESSES_DUE_REPORT",
+    }
+
+
+def persist_frozen_to_state(
+    evidence_state: Mapping[str, Any],
+    *,
+    record_id: str,
+    frozen_record: Mapping[str, Any],
+) -> dict[str, Any]:
+    out = deepcopy(dict(evidence_state))
+    if out.get("authority") is not False or out.get("evidence_only") is not True:
+        raise ModelEvidenceError("durable model evidence surface must remain non-authoritative evidence only")
+    if out.get("raw_v6_payload_persisted") is not False:
+        raise ModelEvidenceError("durable model evidence surface may not persist raw V6 payload")
+    key = _text(record_id, "record_id")
+    records = out.setdefault("records", {})
+    if key in records:
+        raise ModelEvidenceError("same frozen record cannot be silently replaced")
+    if frozen_record.get("status") != FROZEN:
+        raise ModelEvidenceError("durable evidence accepts only genuinely frozen records")
+    records[key] = deepcopy(dict(frozen_record))
+    return out
+
+
+def settle_durable_state_record(
+    evidence_state: Mapping[str, Any],
+    *,
+    record_id: str,
+    actual_rows: Sequence[Mapping[str, Any]],
+    decision_outcome_evidence: Mapping[str, Any] | None,
+    event_finished: bool,
+    settled_at: Any,
+) -> dict[str, Any]:
+    out = deepcopy(dict(evidence_state))
+    key = _text(record_id, "record_id")
+    current = out.setdefault("records", {}).get(key)
+    if current is None:
+        raise ModelEvidenceError("settlement cannot manufacture an old forecast; frozen record is required")
+    if current.get("status") != FROZEN:
+        raise ModelEvidenceError("only FROZEN_AWAITING_SETTLEMENT record may transition to SETTLED")
+    settled = settle_frozen_record(
+        current,
+        actual_rows=actual_rows,
+        decision_outcome_evidence=decision_outcome_evidence,
+        event_finished=event_finished,
+        settled_at=settled_at,
+    )
+    out["records"][key] = settled
+    return out

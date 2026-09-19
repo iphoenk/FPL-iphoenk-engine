@@ -1,5 +1,5 @@
 FPL MASTER CANONICAL V12 — FAIL-OPERATIONAL REPORT-PLANE ARCHITECTURE
-Effective: 2026-09-19T06:15:26+07:00
+Effective: 2026-09-19T20:12:35+07:00
 Authority path: control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
 State path: control/fpl_master_v12/FPL_MASTER_STATE_V12.json
 
@@ -218,6 +218,18 @@ K. Visible serious punt comparison should include named routes and, where suppor
    FT/HIT/PRICE COST;
    ROBUSTNESS / REGRET;
    ABORT / KEEP-LONGER / EXIT TRIGGER.
+
+9D. MODEL EVIDENCE EXECUTION BINDING
+For every serious V12 model/decision execution, create one MODEL_EVIDENCE_BINDING as execution evidence. It is authority=false, evidence_only=true and never overrides this Canonical authority.
+Required fields are: input_snapshot_id; factual_snapshot_timestamps; factual_artifact_fingerprints; model_version; feature_version; parameter_version; calibration_version; calibration_cutoff; planning_gw; canonical_v12_revision; input_fingerprint; model_fingerprint; parameter_fingerprint; calibration_fingerprint; run_fingerprint; generated_at.
+Do not persist complete raw V6 factual payloads in model evidence. Persist only compact factual references/timestamps/fingerprints plus the model/decision evidence needed for later settlement.
+A serious decision may claim deterministic reproducibility only when the required fingerprints were actually computed for that execution. Missing/uncomputed fingerprints make MODEL_EVIDENCE=DEGRADED/UNPROVEN, never fabricated. This degradation is fail-operational and MUST NOT suppress a due visible report.
+The actual recurring runtime is FPL Master Monitor V12 ChatGPT Automation. Repository Python modules, including src/engines/v12_model_evidence.py, are deterministic contracts/tests/evidence unless exact occurrence-bound execution proof shows they actually ran. Never infer repository_python_executed=true from code existence, CI success or imports.
+For genuine pre-deadline decision-grade forecast/decision evidence, freeze the exact binding plus compact forecast/decision snapshot before settlement. forecast_generated_at must be <= Official deadline; decision captured_at, when present, must be <= deadline. Allowed freeze transitions are PREDEADLINE_FREEZE or, only when the stored payload itself is proven pre-deadline, PROMOTED_LAST_PREDEADLINE_SNAPSHOT.
+Durable lifecycle evidence belongs under the existing non-authoritative control/fpl_master_v12/FPL_MASTER_STATE_V12.json model_evidence ledger. No second TXT authority or separate scheduler is created. State write failure degrades evidence persistence only and never mutates V6 or blocks a due report.
+At Post-All/finished-event settlement, use the exact previously frozen record; verify frozen_evidence_fingerprint unchanged; require event_finished=true; bind actual outcome separately; calculate prediction calibration and decision calibration; never reconstruct or replace an old forecast from hindsight.
+Prediction calibration includes xPts MAE/RMSE, xMins MAE, starter Brier, DNP Brier, clean-sheet Brier where valid and Spearman/rank calibration. Decision calibration includes transfer counterfactual regret, HOLD-vs-ACT realized regret, XI regret, bench-order regret, captain regret, vice consequence, cameo-block autosub regret and one-GW rental realized P&L where exact costs are available.
+Calibration is diagnostic learning evidence. It never automatically changes the canonical 20/25/30/25 weights and never creates a one-result/player-specific hindsight rule.
 
 10. WATCHLIST20
 For FULL/DEEP/DEADLINE/FINAL/FULL+MATCH and PRICE:

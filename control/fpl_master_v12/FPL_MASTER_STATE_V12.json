@@ -6,7 +6,7 @@
   "non_authoritative_state_file": true,
   "v6_factual_data_plane_owner": false,
   "authority": false,
-  "updated_at": "2026-09-19T12:57:00+07:00",
+  "updated_at": "2026-09-19T20:12:35+07:00",
   "source": "migrated_from_library_ACTIVE_DECISION_CONTEXT_V2",
   "latest_explicit_user_state_wins": true,
   "confirmed_current_squad_state": {
@@ -275,5 +275,24 @@
     "observed_at": "2026-09-19T12:57:00+07:00",
     "official_gw5_deadline": "2026-09-18T17:30:00+00:00",
     "rule": "GW-specific non-executed action expires when target-GW deadline passes; cross-GW monitoring remains only with explicit validity."
+  },
+  "model_evidence": {
+    "schema": "FPL_MASTER_V12_MODEL_EVIDENCE_STATE_V1",
+    "authority": false,
+    "evidence_only": true,
+    "canonical_authority": "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt",
+    "runtime_owner": "FPL Master Monitor V12 ChatGPT Automation",
+    "repository_python_role": "DETERMINISTIC_CONTRACT_TEST_EVIDENCE_ONLY_UNLESS_OCCURRENCE_BOUND_EXECUTION_PROOF",
+    "raw_v6_payload_persisted": false,
+    "lifecycle": [
+      "FROZEN_AWAITING_SETTLEMENT",
+      "SETTLED"
+    ],
+    "records": {},
+    "retention_policy": "Persist compact model/decision evidence required for immutable freeze and later settlement; do not persist complete raw V6 factual payloads.",
+    "reproducibility_policy": "Only actually computed fingerprints support reproducibility claims; unavailable fingerprints remain explicit null/uncomputed evidence.",
+    "report_delivery_policy": "OPTIONAL_MODEL_EVIDENCE_DEGRADATION_NEVER_SUPPRESSES_DUE_REPORT",
+    "automatic_methodology_weight_mutation": false,
+    "last_settlement": null
   }
 }

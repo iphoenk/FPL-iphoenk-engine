@@ -500,6 +500,226 @@ def format_exposure_metric(metric: Mapping[str, Any]) -> str:
     return f"{numerator}/{denominator} = {percentage:.1f}%"
 
 
+
+def _evidence_time(record: Mapping[str, Any], *, label: str) -> datetime | None:
+    value = record.get("evidence_timestamp")
+    if value in {None, ""}:
+        return None
+    return _parse_local_occurrence(str(value), label=label)
+
+
+def finalize_same_occurrence_alert_evidence(
+    *,
+    report_occurrence: str,
+    alert_triggered: bool,
+    preliminary_public_evidence: Mapping[str, Any],
+    post_publication_public_evidence: Mapping[str, Any] | None = None,
+    authenticated_personal_evidence: Mapping[str, Any] | None = None,
+    bound_core_run_id: Any | None = None,
+    core_acquisition_in_progress: bool = False,
+    publication_succeeded: bool = False,
+    second_full_core_acquisition_requested: bool = False,
+) -> dict[str, Any]:
+    """Finalize a routed alert from the freshest authoritative same-occurrence evidence."""
+    occurrence = _parse_local_occurrence(report_occurrence, label="report_occurrence")
+    preliminary = dict(preliminary_public_evidence or {})
+    final_public = dict(post_publication_public_evidence or {})
+    personal = dict(authenticated_personal_evidence or {})
+
+    if second_full_core_acquisition_requested:
+        raise RuntimeConformanceError(
+            "same-occurrence finalization must never launch a second full-core acquisition"
+        )
+
+    preliminary_time = _evidence_time(preliminary, label="preliminary evidence_timestamp")
+    final_time = _evidence_time(final_public, label="post-publication evidence_timestamp")
+    final_same_occurrence = (
+        not final_public.get("report_occurrence")
+        or str(final_public.get("report_occurrence")) == occurrence.isoformat()
+    )
+    final_authoritative = (
+        final_public.get("authoritative_runtime_snapshot") is True
+        and str(final_public.get("publish_integrity") or "").upper() == "PASS"
+        and publication_succeeded
+        and final_same_occurrence
+    )
+    newer_final = (
+        final_time is not None
+        and (preliminary_time is None or final_time >= preliminary_time)
+    )
+
+    if final_authoritative and newer_final:
+        rendered_public = final_public
+        public_evidence_state = "POST_PUBLICATION_SAME_OCCURRENCE"
+    else:
+        rendered_public = preliminary
+        public_evidence_state = "PRELIMINARY_BEST_AVAILABLE"
+
+    personal_time = _evidence_time(personal, label="personal evidence_timestamp")
+    personal_same_occurrence = (
+        not personal.get("report_occurrence")
+        or str(personal.get("report_occurrence")) == occurrence.isoformat()
+    )
+    personal_usable = (
+        bool(personal)
+        and personal_same_occurrence
+        and personal.get("authenticated") is True
+        and (
+            personal_time is None
+            or preliminary_time is None
+            or personal_time >= preliminary_time
+        )
+    )
+
+    return {
+        "report_occurrence": occurrence.isoformat(),
+        "alert_triggered": bool(alert_triggered),
+        "alert_visible": bool(alert_triggered),
+        "trigger_evidence_preserved": True,
+        "render_public_evidence": rendered_public,
+        "render_public_evidence_state": public_evidence_state,
+        "authenticated_personal_evidence": personal if personal_usable else None,
+        "authenticated_personal_evidence_state": (
+            "CURRENT_AUTHENTICATED" if personal_usable else "UNAVAILABLE_OR_STALE"
+        ),
+        "bound_core_run_id": bound_core_run_id,
+        "bounded_terminal_reread_required": bool(core_acquisition_in_progress),
+        "launch_second_full_core_acquisition": False,
+        "preliminary_values_may_trigger_visibility": True,
+        "preliminary_values_may_not_override_newer_same_occurrence_authoritative": True,
+    }
+
+
+def resolve_authenticated_affordability(
+    *,
+    target_current_price: float | int | None,
+    selling_price: float | int | None,
+    bank: float | int | None,
+    current_price: float | int | None = None,
+    purchase_price: float | int | None = None,
+    free_transfers: int | None = None,
+    hit_cost_points: int | None = None,
+) -> dict[str, Any]:
+    """Compute nominal affordability from authenticated selling value + bank only."""
+    missing = [
+        key
+        for key, value in (
+            ("target_current_price", target_current_price),
+            ("selling_price", selling_price),
+            ("bank", bank),
+        )
+        if value is None
+    ]
+    if missing:
+        return {
+            "affordability": "UNKNOWN",
+            "missing_fields": missing,
+            "ft_hit_economics": (
+                "KNOWN" if free_transfers is not None else "UNKNOWN"
+            ),
+        }
+
+    target = float(target_current_price)
+    sell = float(selling_price)
+    cash = float(bank)
+    budget = round(sell + cash, 1)
+    remaining = round(budget - target, 1)
+    affordable = remaining >= -1e-9
+    return {
+        "current_price": None if current_price is None else float(current_price),
+        "purchase_price": None if purchase_price is None else float(purchase_price),
+        "selling_price": sell,
+        "bank": cash,
+        "target_current_price": target,
+        "available_transfer_budget": budget,
+        "nominal_affordability": affordable,
+        "remaining_if_bought": remaining,
+        "affordability": "TRUE" if affordable else "FALSE",
+        "free_transfers": free_transfers,
+        "hit_cost_points": hit_cost_points,
+        "ft_hit_economics": (
+            "UNKNOWN"
+            if free_transfers is None
+            else "KNOWN"
+        ),
+    }
+
+
+def resolve_temporary_price_watch_lifecycle(
+    *,
+    target_match_date: str,
+    match_complete: bool,
+    immediate_post_match_evidence_available: bool,
+    final_assessment: str | None = None,
+) -> dict[str, Any]:
+    """Resolve one temporary standalone price-watch lifecycle without creating scheduling."""
+    action = str(final_assessment or "").strip().upper()
+    if action and action not in {"WAIT", "PREPARE", "ACT"}:
+        raise RuntimeConformanceError("final_assessment must be WAIT/PREPARE/ACT")
+    if not match_complete:
+        state = "ACTIVE"
+    elif not immediate_post_match_evidence_available:
+        state = "AWAITING_POST_MATCH_EVIDENCE"
+    elif not action:
+        state = "FINAL_ASSESSMENT_REQUIRED"
+    else:
+        state = "EXPIRED"
+    return {
+        "target_match_date": str(target_match_date),
+        "state": state,
+        "final_assessment": action or None,
+        "standalone_alerts_allowed": state != "EXPIRED",
+        "return_to_canonical_routing": state == "EXPIRED",
+        "new_scheduler_required": False,
+    }
+
+
+def validate_identity_production_acceptance(
+    *,
+    deployed_repair_sha: str,
+    production_run_head_sha: str,
+    production_run_contains_repair: bool,
+    branch_ci_green: bool,
+    publish_integrity: str | None = None,
+    authoritative_runtime_snapshot: bool = False,
+    official_fpl_identity_health: str | None = None,
+    official_price_predictor_join_health: str | None = None,
+    canonical_identity_health: str | None = None,
+    fuzzy_or_name_matching_used: bool = False,
+    silent_identity_conflict_accepted: bool = False,
+    duplicate_acquisition: bool = False,
+) -> dict[str, Any]:
+    failures: list[str] = []
+    if not production_run_contains_repair:
+        failures.append("PRODUCTION_RUN_DOES_NOT_CONTAIN_REPAIR")
+    if str(publish_integrity or "").upper() != "PASS":
+        failures.append("PUBLISH_INTEGRITY_NOT_PASS")
+    if not authoritative_runtime_snapshot:
+        failures.append("AUTHORITATIVE_RUNTIME_SNAPSHOT_FALSE")
+    if str(official_fpl_identity_health or "").upper() != "GREEN":
+        failures.append("OFFICIAL_FPL_IDENTITY_NOT_GREEN")
+    if str(official_price_predictor_join_health or "").upper() != "GREEN":
+        failures.append("OFFICIAL_PRICE_PREDICTOR_JOIN_NOT_GREEN")
+    if str(canonical_identity_health or "").upper() != "GREEN":
+        failures.append("CANONICAL_IDENTITY_NOT_GREEN")
+    if fuzzy_or_name_matching_used:
+        failures.append("FUZZY_OR_NAME_IDENTITY_JOIN_USED")
+    if silent_identity_conflict_accepted:
+        failures.append("IDENTITY_CONFLICT_SILENTLY_ACCEPTED")
+    if duplicate_acquisition:
+        failures.append("DUPLICATE_ACQUISITION")
+    if branch_ci_green and not production_run_contains_repair:
+        failures.append("BRANCH_CI_CANNOT_PROVE_PRODUCTION_ACCEPTANCE")
+    return {
+        "status": "PASS" if not failures else "FAIL",
+        "deployed_repair_sha": str(deployed_repair_sha),
+        "production_run_head_sha": str(production_run_head_sha),
+        "production_run_contains_repair": bool(production_run_contains_repair),
+        "branch_ci_green": bool(branch_ci_green),
+        "failures": failures,
+    }
+
+
 def plan_due_report_refresh(
     *,
     report_due: bool,

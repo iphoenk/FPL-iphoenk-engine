@@ -261,4 +261,69 @@ First natural occurrence proves implementation only.
 Production confidence requires a normal fresh-V6 due report plus a due report surviving degraded dependency, semantic exact-count QA, no duplicates and preserved same-slot identity.
 Historical failures remain immutable.
 
+
+19. DECISION-ENGINE CONFORMANCE BINDING
+This section binds deterministic code/tests/report QA to the existing V12 methodology. It does not create a second authority.
+
+A. TRANSIENT DECISION_PROOF
+Every serious V12 XI/transfer/package/captain decision must carry a transient DECISION_PROOF with:
+- this canonical authority path + content SHA/version;
+- Official FPL universe denominator + evaluated denominator;
+- Gate0;
+- exact 20/25/30/25 component scores;
+- Bayesian/shrinkage lineage;
+- hierarchical probability state including P(available), P(start), P(bench), P(cameo), P(late cameo), P(DNP);
+- xMins finite-state distribution and uncertainty, not mean only;
+- GW+1/3GW/5GW and 2GW for rental/exit;
+- transfer economics downstream of football score;
+- robustness, expected regret and information value of waiting;
+- covariance/correlation where material;
+- ICON+ overlay only after football-optimal baseline;
+- Monte Carlo execution state/provenance;
+- final WAIT/PREPARE/ACT or football action.
+DECISION_PROOF is evidence only, never authority or durable user state.
+
+B. PROBABILITY / MINUTES SEMANTICS
+Model conditionals hierarchically:
+P(available);
+P(start | available);
+P(bench | available, not start);
+P(cameo | bench);
+P(late cameo | cameo);
+P(no appearance | bench).
+Publish truthful unconditional P(start), P(bench), P(cameo), P(late cameo), P(DNP).
+Bench is an overlapping roster state. Never force START+BENCH+CAMEO+DNP to equal one.
+The mutually-exclusive appearance partition is START / CAMEO / DNP, with late cameo a subset of cameo.
+xMins must arise from start-minutes + regular-cameo + late-cameo + zero-minutes mixture.
+
+C. MONTE CARLO PROVENANCE
+Legacy independent_normal_aggregate_baseline sampling remains diagnostic only, regardless of sample count, and cannot be labelled canonical V12 PASS.
+If execution_state=EXECUTED for canonical V12 MC, require actual_paths>=500000, correlated=true, method, correlation model, seed/common-random-number policy, input snapshot IDs, input freshness, convergence evidence and output fingerprint.
+Canonical MC samples availability/start/cameo/DNP/minutes and relevant scoring-event distributions with shared team/match factors and material player/package/captain covariance.
+NOT_RUN is legal only with explicit reason. PARTIAL is legal only with explicit degradation reason. A truthful optional MC degradation does not suppress a due visible report.
+
+D. SEARCH / ECONOMICS TRUTH
+If lossy pruning occurs, search_authority=PARTIAL and visible language may say FULL UNIVERSE SCANNED, SEARCH PARTIAL AFTER PRUNING, but never FULL-UNIVERSE OPTIMIZED.
+Legacy change_penalty_points is a model heuristic only and is never canonical FT shadow value.
+Canonical FT shadow value = best future utility with FT minus best future utility with that FT consumed, bound to a future-frontier snapshot.
+
+E. LINEUP ROBUSTNESS
+For relevant close XI decisions distinguish START / CAMEO / DNP utility:
+START earns state-conditional player points;
+CAMEO earns cameo points and blocks auto-sub;
+DNP may admit the first legal bench auto-sub.
+Report conditional floor, upper tail, P(outperform), expected regret, lineup optionality, auto-sub preservation and cameo-blocking cost.
+Fixed close thresholds may be UI/candidate-preselection heuristics only; they are not canonical decision authority.
+
+F. RUNTIME TRUTH
+FPL Master Monitor V12 ChatGPT Automation remains the only recurring report scheduler/runtime.
+Repository Python modules provide deterministic contracts/tests/evidence unless actual execution provenance proves they ran for the report occurrence.
+No report may claim Python QA/optimizer/MC execution from repository existence alone.
+No second scheduler, duplicate acquisition or alternate #431 transport is introduced.
+
+G. SEMANTIC QA / FAIL-OPERATIONAL
+Existing PRE_RENDER_QA and POST_RENDER_QA own semantic validation; do not create parallel QA.
+A structurally complete serious decision is not mathematically V12-compliant without the DECISION_PROOF fields above.
+If an optional decision scope is truthfully PARTIAL/DEGRADED, preserve the due visible report and label only that scope degraded.
+
 END FPL MASTER CANONICAL V12

@@ -3,8 +3,10 @@ from __future__ import annotations
 from copy import deepcopy
 
 from src.runtime_v6.domains.report_plane.report_qa import (
+    _FULL_DEEP_VISIBLE_ORDER,
     _MATCH_VISIBLE_ORDER,
     _POST_ALL_MATCH_ORDER,
+    _PRICE_VISIBLE_ORDER,
     _validate_v12_rendered_body,
     validate_v12_visible_content_contract,
 )
@@ -142,6 +144,7 @@ def _base():
         "calibration_items": [{"status": "CALIBRATION_INPUT"}],
         "bench_presentation": _bench(),
         "icon": _icon(),
+        "football_optimal_baseline_before_icon": True,
         "report_due": True,
         "optional_scope_degraded": False,
         "visible_report_suppressed": False,
@@ -179,9 +182,12 @@ def _deep():
     payload = _base()
     payload.update(
         {
+            "visible_order": list(_FULL_DEEP_VISIBLE_ORDER),
             "all15": _all15(),
             "watchlist20": _watchlist20(),
+            "watchlist_full_universe_derived": True,
             "package_routes": _routes(),
+            "serious_comparison": True,
             "search_authority": "FULL",
             "search_authority_visible": True,
         }
@@ -427,6 +433,7 @@ def test_17_price_report_compares_price_risk_with_information_value_of_waiting()
     payload = _base()
     payload.update(
         {
+            "visible_order": list(_PRICE_VISIBLE_ORDER),
             "material_price_route_count": 1,
             "price_waiting_comparison": [
                 {
@@ -447,6 +454,7 @@ def test_17_price_report_compares_price_risk_with_information_value_of_waiting()
 def test_18_2130_deep_requires_overnight_risk_board():
     payload = _deep()
     payload["checkpoint_time"] = "21:30"
+    payload["deep_emphasis"] = "LATE_NEWS_OVERNIGHT_PRICE_DEADLINE_RISK"
     payload["overnight_risk_board"] = [
         {
             "player_or_route": "P8",

@@ -24,7 +24,7 @@ def _evidence() -> dict:
         "fuzzy_name_matching_allowed": False,
         "reviewed_provider_limitations": {
             "policy": "EXPLICIT_NATIVE_ID_ALLOWLIST_ONLY",
-            "classification": "NOT_APPLICABLE",
+            "classification": "REVIEWED_PROVIDER_LIMITATION",
             "sources": {
                 "fotmob": {
                     "source_native_ids": [22],
@@ -54,11 +54,12 @@ def test_reviewed_provider_limitation_is_visible_but_non_blocking_for_wave_b():
     assert row["provider_max_observed_join_coverage_ratio"] == 1.0
     assert row["observed_unmapped_player_count"] == 0
     assert row["observed_reviewed_provider_limitation_count"] == 1
-    assert row["player_identity_health"] == "GREEN"
-    assert row["wave_b_closure_ready"] is True
-    assert row["provider_native_classification_counts"]["NOT_APPLICABLE"] == 1
+    assert row["player_identity_health"] == "AMBER"
+    assert row["wave_b_closure_ready"] is False
+    assert row["provider_native_classification_counts"]["REVIEWED_PROVIDER_LIMITATION"] == 1
+    assert row["provider_native_classification_counts"]["NOT_APPLICABLE"] == 0
     item = next(v for v in row["provider_native_inventory"] if v["source_native_id"] == "22")
-    assert item["classification"] == "NOT_APPLICABLE"
+    assert item["classification"] == "REVIEWED_PROVIDER_LIMITATION"
     assert item["provider_limitation"]["review_status"] == "REVIEWED_PROVIDER_LIMITATION"
 
 
@@ -77,7 +78,7 @@ def test_production_reviewed_limitations_are_native_id_only_and_audited():
     evidence = load_identity_evidence_config()
     limitations = evidence["reviewed_provider_limitations"]
     assert limitations["policy"] == "EXPLICIT_NATIVE_ID_ALLOWLIST_ONLY"
-    assert limitations["classification"] == "NOT_APPLICABLE"
+    assert limitations["classification"] == "REVIEWED_PROVIDER_LIMITATION"
     assert len(limitations["sources"]["fotmob"]["source_native_ids"]) == 34
     assert limitations["sources"]["understat"]["source_native_ids"] == [15045]
     assert limitations["sources"]["statmuse"]["source_native_ids"] == [703]

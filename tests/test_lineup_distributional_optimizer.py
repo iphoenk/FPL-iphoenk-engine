@@ -940,3 +940,39 @@ def test_54_compact_route_does_not_materialize_publish_only_payload():
     assert "bench_alternatives" not in compact
     assert "captain_vice_alternatives" not in compact
     assert compact["expected_blocked_autosub_value"] is None
+
+
+def test_55_post_ranking_materialization_keeps_selected_and_best_alternative_exact(base_decision):
+    governance = base_decision["materialization_governance"]
+    assert governance["all_legal_routes_ranked_exactly"] is True
+    assert governance["selected_route_fully_materialized"] is True
+    assert governance["best_alternative_fully_materialized"] is True
+    assert governance["route_pruning_applied"] is False
+    assert governance["route_utility_changed"] is False
+
+    alternatives = base_decision["alternatives"]
+    assert len(alternatives) >= 3
+    assert alternatives[0].get("starters")
+    assert alternatives[1].get("starters")
+    for row in alternatives[2:]:
+        assert row["publish_materialization_status"] == "EXACT_RANKED_COMPACT_SUMMARY_NO_RECOMPUTE"
+        assert len(row["element_ids"]) == 11
+        assert len((row.get("bench") or {}).get("order") or []) == 3
+        pair = row.get("captain_vice") or {}
+        assert pair.get("captain_element") is not None
+        assert pair.get("vice_element") is not None
+        assert row["expected_regret"] >= 0.0
+
+
+def test_56_formation_comparison_uses_exact_ranked_compact_route_without_recompute(base_decision):
+    rows = base_decision["formation_comparison"]
+    assert rows
+    assert all(row["ranking_source"] == "EXACT_COMPACT_ROUTE" for row in rows)
+    assert all(
+        row["cameo_blocking_cost_status"]
+        in {
+            "MATERIALIZED_SELECTED_OR_BEST_ALTERNATIVE",
+            "NOT_REMATERIALIZED_FORMATION_SUMMARY",
+        }
+        for row in rows
+    )

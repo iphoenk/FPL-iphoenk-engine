@@ -249,3 +249,33 @@ compatibility by reading `squad_rows` first and accepting legacy
 These are execution/payload reductions only. Legal-XI enumeration, all six
 bench permutations, global autosub resolution, cameo blocking, distributional
 route scoring and ordered captain/vice evaluation are unchanged.
+
+
+## Post-ranking materialization hardening
+
+A second bounded performance repair separates **decision computation** from
+**publish-only explainability materialization**.
+
+Every legal XI is still enumerated and ranked. For every legal XI the engine
+still evaluates all six outfield bench permutations and the exact winning
+ordered captain/vice pair. No route pruning is introduced.
+
+After exact ranking:
+
+- the selected route is fully materialized;
+- the best alternative is fully materialized;
+- other published top routes retain their exact compact winner summary
+  (formation, XI, route utility, expected points, downside/upside, autosub
+  value, winning bench order, captain and vice);
+- formation comparison reads the exact best compact route for each legal
+  formation instead of re-running full publish-only bench slots and all
+  captain/vice alternatives.
+
+The selected-vs-best-alternative close-call proof therefore retains full
+cameo-blocking diagnostics, while non-selected formation summaries explicitly
+mark cameo-blocking cost as not re-materialized when it is not one of those
+two fully materialized routes.
+
+This optimization changes neither route utility nor route ordering. Existing
+compact-vs-full equality guards remain mandatory and block if the selected
+bench order or C/VC winner diverges.

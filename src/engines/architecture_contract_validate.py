@@ -453,6 +453,8 @@ def run() -> dict:
         "compact P1.7 route score diverged",
         "compact P1.7 bench winner diverged",
         "compact P1.7 C/VC winner diverged",
+        "def _compact_public_route(",
+        "EXACT_RANKED_COMPACT_SUMMARY_NO_RECOMPUTE",
     ):
         if marker not in p1_7_text:
             errors.append(f"P1.7 exact two-pass performance guard missing: {marker}")
@@ -469,6 +471,15 @@ def run() -> dict:
         errors.append("P1.7 production artifact must not duplicate squad_rows as player_surfaces")
     if (p1_7_policy.get("governance") or {}).get("legacy_oracle_executed_in_production") is not False:
         errors.append("P1.7 governance must declare legacy oracle absent from production hot path")
+    materialization_cfg = p1_7_policy.get("materialization") or {}
+    if materialization_cfg.get("ranking") != "ALL_LEGAL_ROUTES_EXACT_COMPACT":
+        errors.append("P1.7 must rank every legal route before post-ranking materialization")
+    if materialization_cfg.get("fully_materialized_routes") != ["SELECTED", "BEST_ALTERNATIVE"]:
+        errors.append("P1.7 full materialization scope drift")
+    if materialization_cfg.get("route_pruning") is not False:
+        errors.append("P1.7 post-ranking materialization must not prune legal routes")
+    if (p1_7_policy.get("governance") or {}).get("route_pruning_applied") is not False:
+        errors.append("P1.7 governance must preserve no-route-pruning invariant")
     for key in (
         "global_weights_20_25_30_25_unchanged",
         "p1_1_math_mutated",

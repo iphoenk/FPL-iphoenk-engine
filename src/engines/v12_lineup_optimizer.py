@@ -1029,6 +1029,45 @@ def _route_sort_key(route: Mapping[str, Any]) -> tuple[float, float, float, floa
     )
 
 
+def _compact_public_route(
+    route: Mapping[str, Any],
+    *,
+    selected_utility: float,
+) -> dict[str, Any]:
+    """Publish an exact ranked route summary without re-running full explainability.
+
+    The compact pass already evaluates the same legal XI, all six bench orders,
+    and the exact winning ordered captain/vice pair. This helper only omits
+    publish-only slot/counterfactual detail for non-selected routes.
+    """
+    public = {
+        key: deepcopy(value)
+        for key, value in route.items()
+        if not str(key).startswith("_")
+    }
+    public["bench"] = {
+        "order": list(route.get("_bench_order") or ()),
+        "slots": [],
+        "materialization_status": "EXACT_COMPACT_WINNER_SUMMARY",
+    }
+    public["captain_vice"] = {
+        "captain_element": int(route.get("_captain_element") or 0),
+        "vice_element": int(route.get("_vice_element") or 0),
+        "materialization_status": "EXACT_COMPACT_WINNER_SUMMARY",
+    }
+    public["bench_alternatives"] = []
+    public["captain_vice_alternatives"] = []
+    public["expected_regret"] = round(
+        max(0.0, float(selected_utility) - _f(route.get("route_utility"))),
+        6,
+    )
+    public["expected_regret_semantics"] = "DECISION_UTILITY_OPPORTUNITY_GAP"
+    public["publish_materialization_status"] = (
+        "EXACT_RANKED_COMPACT_SUMMARY_NO_RECOMPUTE"
+    )
+    return public
+
+
 def _decision_core(players: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     legal = enumerate_legal_xi(players)
     compact_routes = [_lineup_route(players, indices, compact=True) for indices in legal]
@@ -1075,28 +1114,69 @@ def _decision_core(players: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         return materialized[key]
 
     published_compact = compact_routes[:12]
-    published_routes = [full_route(route) for route in published_compact]
-    selected = published_routes[0]
-    alternative = published_routes[1] if len(published_routes) > 1 else None
+    selected = full_route(published_compact[0])
+    alternative = (
+        full_route(published_compact[1])
+        if len(published_compact) > 1
+        else None
+    )
+    published_routes: list[dict[str, Any]] = [selected]
+    if alternative is not None:
+        published_routes.append(alternative)
+    selected_utility = _f(selected.get("route_utility"))
+    for route in published_compact[len(published_routes):]:
+        published_routes.append(
+            _compact_public_route(
+                route,
+                selected_utility=selected_utility,
+            )
+        )
 
-    best_by_formation = {
-        formation: full_route(route)
-        for formation, route in compact_best_by_formation.items()
+    materialized_by_indices = {
+        tuple(int(value) for value in route.get("_xi_indices") or ()): row
+        for route, row in (
+            (published_compact[0], selected),
+            *(
+                [(published_compact[1], alternative)]
+                if alternative is not None and len(published_compact) > 1
+                else []
+            ),
+        )
+        if row is not None
     }
-    formation_comparison = [
-        {
+    formation_comparison = []
+    for formation, compact_row in sorted(compact_best_by_formation.items()):
+        key = tuple(
+            int(value) for value in compact_row.get("_xi_indices") or ()
+        )
+        detailed = materialized_by_indices.get(key)
+        formation_comparison.append({
             "formation": formation,
-            "element_ids": list(row.get("element_ids") or []),
-            "route_utility": row.get("route_utility"),
-            "expected_fpl_points_with_captain_vice": row.get("expected_fpl_points_with_captain_vice"),
-            "distributional_downside": row.get("distributional_downside"),
-            "supportable_upside": row.get("supportable_upside"),
-            "expected_autosub_value": row.get("expected_autosub_value"),
-            "cameo_blocking_cost": row.get("expected_blocked_autosub_value"),
+            "element_ids": list(compact_row.get("element_ids") or []),
+            "route_utility": compact_row.get("route_utility"),
+            "expected_fpl_points_with_captain_vice": compact_row.get(
+                "expected_fpl_points_with_captain_vice"
+            ),
+            "distributional_downside": compact_row.get(
+                "distributional_downside"
+            ),
+            "supportable_upside": compact_row.get("supportable_upside"),
+            "expected_autosub_value": compact_row.get(
+                "expected_autosub_value"
+            ),
+            "cameo_blocking_cost": (
+                detailed.get("expected_blocked_autosub_value")
+                if detailed is not None
+                else None
+            ),
+            "cameo_blocking_cost_status": (
+                "MATERIALIZED_SELECTED_OR_BEST_ALTERNATIVE"
+                if detailed is not None
+                else "NOT_REMATERIALIZED_FORMATION_SUMMARY"
+            ),
             "selected": formation == selected.get("formation"),
-        }
-        for formation, row in sorted(best_by_formation.items())
-    ]
+            "ranking_source": "EXACT_COMPACT_ROUTE",
+        })
     if alternative:
         delta_utility = _f(selected.get("route_utility")) - _f(alternative.get("route_utility"))
         selected_ids = set(int(x) for x in selected.get("element_ids") or [])
@@ -1159,7 +1239,16 @@ def _decision_core(players: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "close_call_proof": proof,
         "alternatives": published_routes,
         "legal_xi_count": len(legal),
-        "legal_formations_evaluated": sorted(best_by_formation),
+        "legal_formations_evaluated": sorted(compact_best_by_formation),
+        "materialization_governance": {
+            "all_legal_routes_ranked_exactly": True,
+            "selected_route_fully_materialized": True,
+            "best_alternative_fully_materialized": alternative is not None,
+            "other_published_routes": "EXACT_COMPACT_WINNER_SUMMARY",
+            "formation_comparison_source": "EXACT_COMPACT_ROUTE",
+            "route_pruning_applied": False,
+            "route_utility_changed": False,
+        },
     }
 
 
@@ -1309,6 +1398,7 @@ def optimize_lineup(
         "alternatives": core.get("alternatives"),
         "legal_xi_count": core.get("legal_xi_count"),
         "legal_formations_evaluated": core.get("legal_formations_evaluated"),
+        "materialization_governance": core.get("materialization_governance"),
         "governance": {
             "v12_native_owner": MODEL_OWNER,
             "all_legal_xi_enumerated": True,

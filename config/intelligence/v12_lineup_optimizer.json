@@ -119,12 +119,25 @@
     "automatic_retuning": false,
     "named_player_conditions_forbidden": true,
     "duplicate_player_surface_payload": false,
-    "legacy_oracle_executed_in_production": false
+    "legacy_oracle_executed_in_production": false,
+    "post_ranking_materialization_only": true,
+    "route_pruning_applied": false
   },
   "migration": {
     "production_legacy_oracle_execution": false,
     "oracle_status": "CI_REGRESSION_ORACLE_ONLY_AFTER_ACCEPTANCE",
     "acceptance_reference_sha": "f21b8398453faf36a37b06f87d4a3678ea5e3176",
     "semantics": "Legacy lineup logic remains callable for explicit migration/regression tests but is not re-executed on every production lineup occurrence after P1.7 ownership acceptance."
+  },
+  "materialization": {
+    "ranking": "ALL_LEGAL_ROUTES_EXACT_COMPACT",
+    "fully_materialized_routes": [
+      "SELECTED",
+      "BEST_ALTERNATIVE"
+    ],
+    "other_published_routes": "EXACT_COMPACT_WINNER_SUMMARY",
+    "formation_comparison": "EXACT_COMPACT_ROUTE",
+    "route_pruning": false,
+    "semantics": "Post-ranking payload/explainability optimization only; no legal route, bench permutation, captain/vice pair winner, or route utility is pruned or approximated."
   }
 }

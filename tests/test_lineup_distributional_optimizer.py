@@ -11,7 +11,12 @@ from src.engines.lineup_governance import build_lineup_decision
 from src.engines.v12_lineup_optimizer import (
     LineupOptimizerError,
     _appearance_mask_probabilities,
+    _best_captain_vice_pair,
     _dnp_count_distribution,
+    _lineup_route,
+    _resolve_outfield_pattern,
+    _resolver_mask_table,
+    _route_sort_key,
     build_player_surface,
     compare_legacy_decision,
     enumerate_legal_xi,
@@ -769,3 +774,69 @@ def test_52_cached_bench_appearance_masks_remain_exact():
     assert masks[7] == pytest.approx(
         probabilities[0] * probabilities[1] * probabilities[2]
     )
+
+
+
+def test_51_resolver_mask_table_is_exact_alias_of_canonical_resolver():
+    start_counts = (4, 4, 2)
+    dnp_counts = (2, 1, 1)
+    bench_positions = ("MID", "DEF", "FWD")
+    table = _resolver_mask_table(start_counts, dnp_counts, bench_positions)
+    assert len(table) == 8
+    for mask in range(8):
+        selected, reached, _ = _resolve_outfield_pattern(
+            start_counts,
+            dnp_counts,
+            bench_positions,
+            mask,
+        )
+        selected_bits = sum(1 << index for index in selected)
+        reached_bits = sum(1 << index for index in reached)
+        assert table[mask] == (selected_bits, reached_bits)
+
+
+def test_52_compact_route_scoring_matches_full_materialization_exactly():
+    surfaces = _surfaces()
+    legal = enumerate_legal_xi(surfaces)
+    sample_indices = sorted(
+        {
+            0,
+            1,
+            len(legal) // 7,
+            len(legal) // 3,
+            len(legal) // 2,
+            (2 * len(legal)) // 3,
+            len(legal) - 2,
+            len(legal) - 1,
+        }
+    )
+    for sample_index in sample_indices:
+        xi_indices = legal[sample_index]
+        compact = _lineup_route(surfaces, xi_indices, compact=True)
+        detailed = _lineup_route(surfaces, xi_indices, compact=False)
+        assert _route_sort_key(compact) == pytest.approx(
+            _route_sort_key(detailed), abs=1e-9
+        )
+        assert tuple(compact["_bench_order"]) == tuple(
+            detailed["bench"]["order"]
+        )
+        assert compact["_captain_element"] == detailed["captain_vice"]["captain_element"]
+        assert compact["_vice_element"] == detailed["captain_vice"]["vice_element"]
+
+
+def test_53_fast_best_cvc_matches_full_ordered_pair_ranking():
+    starters = _starters_343()
+    full = evaluate_captain_vice_pairs(starters)[0]
+    fast = _best_captain_vice_pair(starters)
+    assert fast == full
+
+
+def test_54_compact_route_does_not_materialize_publish_only_payload():
+    surfaces = _surfaces()
+    xi_indices = enumerate_legal_xi(surfaces)[0]
+    compact = _lineup_route(surfaces, xi_indices, compact=True)
+    assert "starters" not in compact
+    assert "bench" not in compact
+    assert "bench_alternatives" not in compact
+    assert "captain_vice_alternatives" not in compact
+    assert compact["expected_blocked_autosub_value"] is None

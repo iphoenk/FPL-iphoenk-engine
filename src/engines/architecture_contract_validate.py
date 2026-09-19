@@ -447,6 +447,15 @@ def run() -> dict:
     p1_7_text = (ROOT / "src" / "engines" / "v12_lineup_optimizer.py").read_text(encoding="utf-8")
     if p1_7_policy.get("contract") != "V12_DISTRIBUTIONAL_LINEUP_OPTIMIZER_V1":
         errors.append("P1.7 config contract drift")
+    for marker in (
+        "def _resolver_mask_table(",
+        "def _best_captain_vice_pair(",
+        "compact P1.7 route score diverged",
+        "compact P1.7 bench winner diverged",
+        "compact P1.7 C/VC winner diverged",
+    ):
+        if marker not in p1_7_text:
+            errors.append(f"P1.7 exact two-pass performance guard missing: {marker}")
     if p1_7_policy.get("model_owner") != "V12_LINEUP_OPTIMIZER":
         errors.append("P1.7 stable owner drift")
     if float((p1_7_policy.get("tactical") or {}).get("canonical_weight") or -1.0) != 0.25:

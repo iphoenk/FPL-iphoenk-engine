@@ -177,3 +177,26 @@ The optimized implementation remains exact:
 These changes alter computation reuse only. Autosub legality, cameo blocking,
 bench-order utility, captain/vice utility, and selected-route ordering are
 unchanged.
+
+
+## Exact two-pass route materialization
+
+The second performance hardening stage preserves the same exhaustive decision
+set while separating exact route scoring from publish-only payload materialization.
+
+- all legal XI remain enumerated and scored;
+- all six outfield bench permutations remain evaluated for every legal XI;
+- the canonical global formation-legal autosub resolver remains the only
+  substitution authority;
+- a cached resolver-mask table reuses the canonical result for all eight bench
+  appearance masks without changing any selected or reached substitute;
+- compact route scoring uses the same distributional utility, exact bench
+  winner and exact ordered captain/vice winner as the full route;
+- only the top published alternatives and best route per formation are expanded
+  into full bench-slot, cameo-block counterfactual and captain/vice-alternative
+  payloads;
+- compact and materialized sort keys, bench winner and captain/vice winner are
+  runtime-asserted identical before publication.
+
+This is lazy materialization, not route pruning. No legal XI, bench permutation,
+captain/vice pair or decision objective is removed from optimization.

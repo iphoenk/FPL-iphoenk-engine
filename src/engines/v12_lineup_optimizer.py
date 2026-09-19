@@ -436,6 +436,31 @@ def _resolve_outfield_pattern(
     return rec(0, current, remaining)
 
 
+@lru_cache(maxsize=8192)
+def _resolver_mask_table(
+    start_counts: tuple[int, int, int],
+    dnp_counts: tuple[int, int, int],
+    bench_positions: tuple[str, str, str],
+) -> tuple[tuple[int, int], ...]:
+    """Exact selected/reached bitmasks for all eight bench appearance masks.
+
+    This changes computation reuse only: every mask is delegated to the same
+    canonical formation-legal resolver used before the optimization.
+    """
+    rows: list[tuple[int, int]] = []
+    for appearance_mask in range(8):
+        selected, reached, _ = _resolve_outfield_pattern(
+            start_counts,
+            dnp_counts,
+            bench_positions,
+            appearance_mask,
+        )
+        selected_bits = sum(1 << index for index in selected)
+        reached_bits = sum(1 << index for index in reached)
+        rows.append((selected_bits, reached_bits))
+    return tuple(rows)
+
+
 def _expected_outfield_autosub(
     starters: Sequence[Mapping[str, Any]],
     bench_order: Sequence[Mapping[str, Any]],
@@ -472,6 +497,22 @@ def _expected_outfield_autosub(
         dict(row.get("appearance_conditioned") or {})
         for row in bench_order
     ]
+    expected_by_slot = tuple(
+        _f(row.get("expected_points")) for row in conditioned_rows
+    )
+    blank_by_slot = tuple(
+        None if row.get("p_fpl_blank") is None else _f(row.get("p_fpl_blank"))
+        for row in conditioned_rows
+    )
+    ge8_by_slot = tuple(
+        None if row.get("p_points_ge_8") is None else _f(row.get("p_points_ge_8"))
+        for row in conditioned_rows
+    )
+    ge10_by_slot = tuple(
+        None if row.get("p_points_ge_10") is None else _f(row.get("p_points_ge_10"))
+        for row in conditioned_rows
+    )
+
     expected_points = 0.0
     autosub_probability = 0.0
     selected_prob = [0.0, 0.0, 0.0]
@@ -479,42 +520,39 @@ def _expected_outfield_autosub(
     selected_blank = 0.0
     selected_ge8 = 0.0
     selected_ge10 = 0.0
-    resolver = _resolve_outfield_pattern
+
     for dnp_counts, starter_probability in resolved_count_states:
         if starter_probability <= 0.0:
             continue
+        mask_table = _resolver_mask_table(
+            start_counts,
+            dnp_counts,
+            bench_positions,
+        )
         for mask, bench_probability in enumerate(mask_probabilities):
             probability = starter_probability * bench_probability
             if probability <= 1e-15:
                 continue
-            selected, reached, _ = resolver(
-                start_counts,
-                dnp_counts,
-                bench_positions,
-                mask,
-            )
-            if selected:
+            selected_bits, reached_bits = mask_table[mask]
+            if selected_bits:
                 autosub_probability += probability
-            for index in reached:
-                reach_prob[index] += probability
-            for index in selected:
+            for index in range(3):
+                bit = 1 << index
+                if reached_bits & bit:
+                    reach_prob[index] += probability
+                if not (selected_bits & bit):
+                    continue
                 selected_prob[index] += probability
-                conditioned = conditioned_rows[index]
-                expected_points += probability * _f(
-                    conditioned.get("expected_points")
-                )
-                if conditioned.get("p_fpl_blank") is not None:
-                    selected_blank += probability * _f(
-                        conditioned.get("p_fpl_blank")
-                    )
-                if conditioned.get("p_points_ge_8") is not None:
-                    selected_ge8 += probability * _f(
-                        conditioned.get("p_points_ge_8")
-                    )
-                if conditioned.get("p_points_ge_10") is not None:
-                    selected_ge10 += probability * _f(
-                        conditioned.get("p_points_ge_10")
-                    )
+                expected_points += probability * expected_by_slot[index]
+                blank = blank_by_slot[index]
+                if blank is not None:
+                    selected_blank += probability * blank
+                ge8 = ge8_by_slot[index]
+                if ge8 is not None:
+                    selected_ge8 += probability * ge8
+                ge10 = ge10_by_slot[index]
+                if ge10 is not None:
+                    selected_ge10 += probability * ge10
     return {
         "expected_points": expected_points,
         "autosub_probability": autosub_probability,
@@ -556,6 +594,7 @@ def evaluate_bench_order(
     actual_count_states: Sequence[
         tuple[tuple[int, int, int], float]
     ] | None = None,
+    include_slots: bool = True,
 ) -> dict[str, Any]:
     if len(bench_order) != 3 or any(row.get("position") == "GK" for row in bench_order):
         raise LineupOptimizerError("outfield bench order must contain exactly three non-GK players")
@@ -617,29 +656,30 @@ def evaluate_bench_order(
         - blank_weight * actual["expected_selected_blank_probability_mass"]
         + upside_weight * actual["expected_selected_ge8_probability_mass"]
     )
-    slots = []
-    for index, row in enumerate(bench_order):
-        slots.append({
-            "slot": index + 1,
-            "element": row.get("element"),
-            "name": row.get("name"),
-            "position": row.get("position"),
-            "reach_probability": round(actual["slot_reach_probability"][index], 9),
-            "substitution_probability": round(actual["slot_selected_probability"][index], 9),
-            "expected_utility_contribution": round(
-                actual["slot_selected_probability"][index]
-                * _f((row.get("appearance_conditioned") or {}).get("expected_points")),
-                6,
-            ),
-            "bench_score": round(
-                actual["slot_selected_probability"][index]
-                * _f((row.get("appearance_conditioned") or {}).get("expected_points")),
-                6,
-            ),
-            "appearance_conditioned_p_blank": (row.get("appearance_conditioned") or {}).get("p_fpl_blank"),
-            "appearance_conditioned_p_ge_8": (row.get("appearance_conditioned") or {}).get("p_points_ge_8"),
-            "appearance_conditioned_p_ge_10": (row.get("appearance_conditioned") or {}).get("p_points_ge_10"),
-        })
+    slots: list[dict[str, Any]] = []
+    if include_slots:
+        for index, row in enumerate(bench_order):
+            slots.append({
+                "slot": index + 1,
+                "element": row.get("element"),
+                "name": row.get("name"),
+                "position": row.get("position"),
+                "reach_probability": round(actual["slot_reach_probability"][index], 9),
+                "substitution_probability": round(actual["slot_selected_probability"][index], 9),
+                "expected_utility_contribution": round(
+                    actual["slot_selected_probability"][index]
+                    * _f((row.get("appearance_conditioned") or {}).get("expected_points")),
+                    6,
+                ),
+                "bench_score": round(
+                    actual["slot_selected_probability"][index]
+                    * _f((row.get("appearance_conditioned") or {}).get("expected_points")),
+                    6,
+                ),
+                "appearance_conditioned_p_blank": (row.get("appearance_conditioned") or {}).get("p_fpl_blank"),
+                "appearance_conditioned_p_ge_8": (row.get("appearance_conditioned") or {}).get("p_points_ge_8"),
+                "appearance_conditioned_p_ge_10": (row.get("appearance_conditioned") or {}).get("p_points_ge_10"),
+            })
     return {
         "order": [int(row.get("element") or 0) for row in bench_order],
         "slots": slots,
@@ -648,15 +688,11 @@ def evaluate_bench_order(
             None if blocked_value is None else round(blocked_value, 6)
         ),
         "expected_late_cameo_blocked_autosub_value": (
-            None
-            if late_blocked_value is None
-            else round(late_blocked_value, 6)
+            None if late_blocked_value is None else round(late_blocked_value, 6)
         ),
         "autosub_probability": round(autosub_probability, 9),
         "blocked_autosub_probability": (
-            None
-            if blocked_probability is None
-            else round(blocked_probability, 9)
+            None if blocked_probability is None else round(blocked_probability, 9)
         ),
         "expected_selected_blank_probability_mass": round(actual["expected_selected_blank_probability_mass"], 9),
         "expected_selected_ge8_probability_mass": round(actual["expected_selected_ge8_probability_mass"], 9),
@@ -678,9 +714,7 @@ def evaluate_bench_order(
             "late_cameo_blocks_autosub": True,
             "dnp_only_triggers_autosub": True,
             "bench_points_not_treated_as_guaranteed": True,
-            "blocking_counterfactual_evaluated": bool(
-                include_blocking_counterfactual
-            ),
+            "blocking_counterfactual_evaluated": bool(include_blocking_counterfactual),
         },
     }
 
@@ -689,10 +723,12 @@ def optimize_bench_order(
     starters: Sequence[Mapping[str, Any]],
     reserve_gk: Mapping[str, Any],
     outfield_bench: Sequence[Mapping[str, Any]],
+    *,
+    include_winner_blocking_counterfactual: bool = True,
+    publish_alternatives: bool = True,
+    include_winner_slots: bool = True,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    outfield_starters = [
-        row for row in starters if row.get("position") in OUTFIELD
-    ]
+    outfield_starters = [row for row in starters if row.get("position") in OUTFIELD]
     actual_count_states = _dnp_count_distribution(outfield_starters)
     screened = [
         evaluate_bench_order(
@@ -701,6 +737,7 @@ def optimize_bench_order(
             permutation,
             include_blocking_counterfactual=False,
             actual_count_states=actual_count_states,
+            include_slots=publish_alternatives,
         )
         for permutation in itertools.permutations(list(outfield_bench), 3)
     ]
@@ -714,23 +751,87 @@ def optimize_bench_order(
         ),
         reverse=True,
     )
-    order_to_player = {
-        int(row.get("element") or 0): row for row in outfield_bench
-    }
-    winner_order = [
-        order_to_player[element] for element in screened[0]["order"]
-    ]
-    winner = evaluate_bench_order(
-        starters,
-        reserve_gk,
-        winner_order,
-        include_blocking_counterfactual=True,
-        actual_count_states=actual_count_states,
-    )
-    alternatives = [winner] + [
-        row for row in screened if row.get("order") != winner.get("order")
-    ]
+    order_to_player = {int(row.get("element") or 0): row for row in outfield_bench}
+    winner_order = [order_to_player[element] for element in screened[0]["order"]]
+    if (
+        not include_winner_blocking_counterfactual
+        and not include_winner_slots
+    ):
+        # Compact route scoring already evaluated this exact permutation.
+        # Reuse the exact screened metrics instead of running a seventh
+        # identical autosub expectation pass.
+        winner = dict(screened[0])
+    else:
+        winner = evaluate_bench_order(
+            starters,
+            reserve_gk,
+            winner_order,
+            include_blocking_counterfactual=include_winner_blocking_counterfactual,
+            actual_count_states=actual_count_states,
+            include_slots=include_winner_slots,
+        )
+    alternatives: list[dict[str, Any]] = []
+    if publish_alternatives:
+        alternatives = [winner] + [
+            row for row in screened if row.get("order") != winner.get("order")
+        ]
     return winner, alternatives
+
+
+def _captain_vice_pair_row(
+    captain: Mapping[str, Any],
+    vice: Mapping[str, Any],
+    *,
+    downside_weight: float,
+    upside_weight: float,
+) -> dict[str, Any]:
+    captain_downside = _f(captain.get("expected_shortfall"))
+    captain_upside = _f(captain.get("expected_excess_ge_8"))
+    captain_utility = (
+        _f(captain.get("xpts_mean"))
+        - downside_weight * captain_downside
+        + upside_weight * captain_upside
+    )
+    p_cap_dnp = _f(captain.get("p_dnp"))
+    vice_mean_fallback = p_cap_dnp * _f(vice.get("xpts_mean"))
+    vice_downside = p_cap_dnp * _f(vice.get("expected_shortfall"))
+    vice_upside = p_cap_dnp * _f(vice.get("expected_excess_ge_8"))
+    vice_utility = (
+        vice_mean_fallback
+        - downside_weight * vice_downside
+        + upside_weight * vice_upside
+    )
+    takeover_probability = p_cap_dnp * _f(vice.get("p_appearance"))
+    joint_failure = p_cap_dnp * _f(vice.get("p_dnp"))
+    return {
+        "captain_element": int(captain.get("element") or 0),
+        "vice_element": int(vice.get("element") or 0),
+        "captain_name": captain.get("name"),
+        "vice_name": vice.get("name"),
+        "pair_utility": round(captain_utility + vice_utility, 6),
+        "expected_captain_multiplier_value": round(_f(captain.get("xpts_mean")), 6),
+        "expected_vice_takeover_value": round(vice_mean_fallback, 6),
+        "vice_takeover_probability": round(takeover_probability, 9),
+        "joint_dnp_failure_probability": round(joint_failure, 9),
+        "joint_downside": round(captain_downside + vice_downside, 6),
+        "joint_upside": round(captain_upside + vice_upside, 6),
+        "captain_cameo_blocks_vice": True,
+        "captain_late_cameo_blocks_vice": True,
+        "covariance_status": "COVARIANCE_NOT_MODELLED_YET",
+        "dependence_assumption": "CAPTAIN_DNP_AND_VICE_OUTCOME_INDEPENDENCE_APPROXIMATION",
+    }
+
+
+def _captain_pair_sort_key(
+    row: Mapping[str, Any],
+) -> tuple[float, float, float, float, float]:
+    return (
+        _f(row.get("pair_utility")),
+        _f(row.get("expected_captain_multiplier_value")),
+        _f(row.get("joint_upside")),
+        -_f(row.get("joint_downside")),
+        _f(row.get("expected_vice_takeover_value")),
+    )
 
 
 def evaluate_captain_vice_pairs(starters: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -738,86 +839,102 @@ def evaluate_captain_vice_pairs(starters: Sequence[Mapping[str, Any]]) -> list[d
     objective = dict(cfg.get("objective") or {})
     downside_weight = _f(objective.get("captain_downside_weight"), 0.15)
     upside_weight = _f(objective.get("captain_upside_weight"), 0.10)
-    pairs: list[dict[str, Any]] = []
-    for captain in starters:
-        captain_downside = _f(captain.get("expected_shortfall"))
-        captain_upside = _f(captain.get("expected_excess_ge_8"))
-        captain_utility = (
-            _f(captain.get("xpts_mean"))
-            - downside_weight * captain_downside
-            + upside_weight * captain_upside
+    pairs = [
+        _captain_vice_pair_row(
+            captain,
+            vice,
+            downside_weight=downside_weight,
+            upside_weight=upside_weight,
         )
-        for vice in starters:
+        for captain in starters
+        for vice in starters
+        if int(vice.get("element") or -1) != int(captain.get("element") or -1)
+    ]
+    pairs.sort(key=_captain_pair_sort_key, reverse=True)
+    return pairs
+
+
+def _best_captain_vice_pair(
+    starters: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Exact best ordered pair without materializing/sorting all 110 rows."""
+    cfg = load_config()
+    objective = dict(cfg.get("objective") or {})
+    downside_weight = _f(objective.get("captain_downside_weight"), 0.15)
+    upside_weight = _f(objective.get("captain_upside_weight"), 0.10)
+    prepared = []
+    for row in starters:
+        mean = _f(row.get("xpts_mean"))
+        downside = _f(row.get("expected_shortfall"))
+        upside = _f(row.get("expected_excess_ge_8"))
+        base = mean - downside_weight * downside + upside_weight * upside
+        prepared.append((row, mean, downside, upside, base))
+
+    best_pair: tuple[Mapping[str, Any], Mapping[str, Any]] | None = None
+    best_key: tuple[float, float, float, float, float] | None = None
+    for captain, cap_mean, cap_downside, cap_upside, cap_base in prepared:
+        p_cap_dnp = _f(captain.get("p_dnp"))
+        for vice, vice_mean, vice_downside_base, vice_upside_base, vice_base in prepared:
             if int(vice.get("element") or -1) == int(captain.get("element") or -1):
                 continue
-            p_cap_dnp = _f(captain.get("p_dnp"))
-            vice_mean_fallback = p_cap_dnp * _f(vice.get("xpts_mean"))
-            vice_downside = p_cap_dnp * _f(vice.get("expected_shortfall"))
-            vice_upside = p_cap_dnp * _f(vice.get("expected_excess_ge_8"))
-            vice_utility = (
-                vice_mean_fallback
-                - downside_weight * vice_downside
-                + upside_weight * vice_upside
+            key = (
+                round(cap_base + p_cap_dnp * vice_base, 6),
+                round(cap_mean, 6),
+                round(cap_upside + p_cap_dnp * vice_upside_base, 6),
+                -round(cap_downside + p_cap_dnp * vice_downside_base, 6),
+                round(p_cap_dnp * vice_mean, 6),
             )
-            takeover_probability = p_cap_dnp * _f(vice.get("p_appearance"))
-            joint_failure = p_cap_dnp * _f(vice.get("p_dnp"))
-            pairs.append({
-                "captain_element": int(captain.get("element") or 0),
-                "vice_element": int(vice.get("element") or 0),
-                "captain_name": captain.get("name"),
-                "vice_name": vice.get("name"),
-                "pair_utility": round(captain_utility + vice_utility, 6),
-                "expected_captain_multiplier_value": round(_f(captain.get("xpts_mean")), 6),
-                "expected_vice_takeover_value": round(vice_mean_fallback, 6),
-                "vice_takeover_probability": round(takeover_probability, 9),
-                "joint_dnp_failure_probability": round(joint_failure, 9),
-                "joint_downside": round(captain_downside + vice_downside, 6),
-                "joint_upside": round(captain_upside + vice_upside, 6),
-                "captain_cameo_blocks_vice": True,
-                "captain_late_cameo_blocks_vice": True,
-                "covariance_status": "COVARIANCE_NOT_MODELLED_YET",
-                "dependence_assumption": "CAPTAIN_DNP_AND_VICE_OUTCOME_INDEPENDENCE_APPROXIMATION",
-            })
-    pairs.sort(
-        key=lambda row: (
-            _f(row.get("pair_utility")),
-            _f(row.get("expected_captain_multiplier_value")),
-            _f(row.get("joint_upside")),
-            -_f(row.get("joint_downside")),
-            _f(row.get("expected_vice_takeover_value")),
-        ),
-        reverse=True,
+            if best_key is None or key > best_key:
+                best_key = key
+                best_pair = (captain, vice)
+    if best_pair is None:
+        raise LineupOptimizerError("no legal captain/vice pair")
+    return _captain_vice_pair_row(
+        best_pair[0],
+        best_pair[1],
+        downside_weight=downside_weight,
+        upside_weight=upside_weight,
     )
-    return pairs
 
 
 def _lineup_route(
     players: Sequence[Mapping[str, Any]],
     xi_indices: Sequence[int],
+    *,
+    compact: bool = False,
 ) -> dict[str, Any]:
     cfg = load_config()
     objective = dict(cfg.get("objective") or {})
-    # Player surfaces are immutable read-only inputs throughout route
-    # evaluation; reuse references rather than copying 11 mappings per route.
     starters = [players[index] for index in xi_indices]
     formation = _formation(starters)
     if not formation:
         raise LineupOptimizerError("illegal XI entered route evaluation")
     starter_ids = {int(row.get("element") or 0) for row in starters}
     bench = [
-        row
-        for row in players
+        row for row in players
         if int(row.get("element") or 0) not in starter_ids
     ]
     reserve_gk_rows = [row for row in bench if row.get("position") == "GK"]
     outfield_bench = [row for row in bench if row.get("position") != "GK"]
     if len(reserve_gk_rows) != 1 or len(outfield_bench) != 3:
         raise LineupOptimizerError("legal XI must leave one reserve GK and three outfield substitutes")
-    bench_best, bench_alternatives = optimize_bench_order(starters, reserve_gk_rows[0], outfield_bench)
-    cvc_pairs = evaluate_captain_vice_pairs(starters)
-    if not cvc_pairs:
-        raise LineupOptimizerError("no legal captain/vice pair")
-    cvc = cvc_pairs[0]
+    bench_best, bench_alternatives = optimize_bench_order(
+        starters,
+        reserve_gk_rows[0],
+        outfield_bench,
+        include_winner_blocking_counterfactual=not compact,
+        publish_alternatives=not compact,
+        include_winner_slots=not compact,
+    )
+    if compact:
+        cvc = _best_captain_vice_pair(starters)
+        cvc_pairs: list[dict[str, Any]] = []
+    else:
+        cvc_pairs = evaluate_captain_vice_pairs(starters)
+        if not cvc_pairs:
+            raise LineupOptimizerError("no legal captain/vice pair")
+        cvc = cvc_pairs[0]
+
     expected_points = sum(_f(row.get("xpts_mean")) for row in starters)
     expected_shortfall = sum(_f(row.get("expected_shortfall")) for row in starters)
     expected_excess = sum(_f(row.get("expected_excess_ge_8")) for row in starters)
@@ -833,14 +950,10 @@ def _lineup_route(
     tactical_scores = [_f(row.get("score")) for row in tactical_rows if row.get("score") is not None]
     tactical_weighted = [_f(row.get("weighted_component_points")) for row in tactical_rows if row.get("weighted_component_points") is not None]
     pmf_ready = sum(1 for row in starters if (row.get("distribution_status") or {}).get("status") == "READY")
-    return {
+
+    route: dict[str, Any] = {
         "formation": formation,
         "element_ids": sorted(starter_ids),
-        "starters": starters,
-        "bench": bench_best,
-        "bench_alternatives": bench_alternatives,
-        "captain_vice": cvc,
-        "captain_vice_alternatives": cvc_pairs[: min(20, len(cvc_pairs))],
         "base_football_utility": round(base_distributional_utility, 6),
         "route_utility": round(route_utility, 6),
         "expected_fpl_points_before_captain": round(expected_points + _f(bench_best.get("expected_autosub_value")), 6),
@@ -886,6 +999,22 @@ def _lineup_route(
             "cameo_blocking_explicit": True,
         },
     }
+    if compact:
+        route.update({
+            "_xi_indices": tuple(int(index) for index in xi_indices),
+            "_bench_order": tuple(int(value) for value in bench_best.get("order") or []),
+            "_captain_element": int(cvc.get("captain_element") or 0),
+            "_vice_element": int(cvc.get("vice_element") or 0),
+        })
+        return route
+    route.update({
+        "starters": starters,
+        "bench": bench_best,
+        "bench_alternatives": bench_alternatives,
+        "captain_vice": cvc,
+        "captain_vice_alternatives": cvc_pairs[: min(20, len(cvc_pairs))],
+    })
+    return route
 
 
 def _route_sort_key(route: Mapping[str, Any]) -> tuple[float, float, float, float, float]:
@@ -901,17 +1030,58 @@ def _route_sort_key(route: Mapping[str, Any]) -> tuple[float, float, float, floa
 
 def _decision_core(players: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     legal = enumerate_legal_xi(players)
-    routes = [_lineup_route(players, indices) for indices in legal]
-    routes.sort(key=_route_sort_key, reverse=True)
-    if not routes:
+    compact_routes = [_lineup_route(players, indices, compact=True) for indices in legal]
+    compact_routes.sort(key=_route_sort_key, reverse=True)
+    if not compact_routes:
         raise LineupOptimizerError("no legal P1.7 route")
-    selected = routes[0]
-    alternative = routes[1] if len(routes) > 1 else None
-    best_by_formation: dict[str, dict[str, Any]] = {}
-    for route in routes:
+
+    compact_best_by_formation: dict[str, dict[str, Any]] = {}
+    for route in compact_routes:
         formation = str(route.get("formation"))
-        if formation not in best_by_formation:
-            best_by_formation[formation] = route
+        if formation not in compact_best_by_formation:
+            compact_best_by_formation[formation] = route
+
+    materialized: dict[tuple[int, ...], dict[str, Any]] = {}
+
+    def full_route(compact_route: Mapping[str, Any]) -> dict[str, Any]:
+        key = tuple(int(value) for value in compact_route.get("_xi_indices") or ())
+        if len(key) != 11:
+            raise LineupOptimizerError("compact P1.7 route lost XI identity")
+        if key not in materialized:
+            detailed = _lineup_route(players, key, compact=False)
+            compact_key = _route_sort_key(compact_route)
+            detailed_key = _route_sort_key(detailed)
+            if any(
+                not math.isclose(left, right, rel_tol=0.0, abs_tol=1e-9)
+                for left, right in zip(compact_key, detailed_key)
+            ):
+                raise LineupOptimizerError(
+                    "compact P1.7 route score diverged from exact materialized route"
+                )
+            if tuple(int(value) for value in (detailed.get("bench") or {}).get("order") or ()) != tuple(compact_route.get("_bench_order") or ()):
+                raise LineupOptimizerError(
+                    "compact P1.7 bench winner diverged during materialization"
+                )
+            pair = dict(detailed.get("captain_vice") or {})
+            if (
+                int(pair.get("captain_element") or 0) != int(compact_route.get("_captain_element") or 0)
+                or int(pair.get("vice_element") or 0) != int(compact_route.get("_vice_element") or 0)
+            ):
+                raise LineupOptimizerError(
+                    "compact P1.7 C/VC winner diverged during materialization"
+                )
+            materialized[key] = detailed
+        return materialized[key]
+
+    published_compact = compact_routes[:12]
+    published_routes = [full_route(route) for route in published_compact]
+    selected = published_routes[0]
+    alternative = published_routes[1] if len(published_routes) > 1 else None
+
+    best_by_formation = {
+        formation: full_route(route)
+        for formation, route in compact_best_by_formation.items()
+    }
     formation_comparison = [
         {
             "formation": formation,
@@ -930,12 +1100,7 @@ def _decision_core(players: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         delta_utility = _f(selected.get("route_utility")) - _f(alternative.get("route_utility"))
         selected_ids = set(int(x) for x in selected.get("element_ids") or [])
         alternative_ids = set(int(x) for x in alternative.get("element_ids") or [])
-        player_by_id = {
-            int(row.get("element") or 0): row
-            for row in selected.get("starters") or []
-        }
-        for row in alternative.get("starters") or []:
-            player_by_id.setdefault(int(row.get("element") or 0), row)
+        player_by_id = {int(row.get("element") or 0): row for row in players}
         proof = {
             "status": "CLOSE" if delta_utility <= _f((load_config().get("objective") or {}).get("close_call_utility_delta"), 0.35) else "CLEAR",
             "margin": round(delta_utility, 6),
@@ -983,7 +1148,7 @@ def _decision_core(players: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         }
     else:
         proof = {"status": "NO_ALTERNATIVE", "selected_xi": selected.get("element_ids")}
-    for index, route in enumerate(routes[:12]):
+    for route in published_routes:
         route["expected_regret"] = round(max(0.0, _f(selected.get("route_utility")) - _f(route.get("route_utility"))), 6)
         route["expected_regret_semantics"] = "DECISION_UTILITY_OPPORTUNITY_GAP"
     return {
@@ -991,7 +1156,7 @@ def _decision_core(players: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "best_alternative": alternative,
         "formation_comparison": formation_comparison,
         "close_call_proof": proof,
-        "alternatives": routes[:12],
+        "alternatives": published_routes,
         "legal_xi_count": len(legal),
         "legal_formations_evaluated": sorted(best_by_formation),
     }

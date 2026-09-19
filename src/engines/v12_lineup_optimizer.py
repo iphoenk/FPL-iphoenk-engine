@@ -1430,16 +1430,40 @@ def compare_legacy_decision(
         regressions.append("NATIVE_RESERVE_GK_MISSING")
     if native_c not in native_xi or native_v not in native_xi or native_c == native_v:
         regressions.append("NATIVE_CAPTAIN_VICE_ILLEGAL")
+    legacy_xi_legal = len(legacy_xi) == 11 and _formation(legacy.get("starting_xi") or []) is not None
+    legacy_reserve_gk = ((legacy.get("bench") or {}).get("gk") or {}).get("element")
+    legacy_cvc_legal = (
+        legacy_c in legacy_xi
+        and legacy_v in legacy_xi
+        and legacy_c != legacy_v
+    )
+    legacy_structurally_legal = bool(
+        legacy_xi_legal and legacy_reserve_gk and legacy_cvc_legal
+    )
+    native_blocked_value = _f(
+        (((native.get("bench") or {}).get("distributional_evaluation") or {}).get(
+            "expected_blocked_autosub_value"
+        ))
+    )
+
     if regressions:
         classification = "UNEXPECTED_REGRESSION"
+    elif not legacy_structurally_legal:
+        classification = "BUG_FIX"
     elif legacy_xi == native_xi and legacy_bench == native_bench and legacy_c == native_c and legacy_v == native_v:
         classification = "EXACT_EQUIVALENT"
     elif legacy_xi != native_xi:
-        classification = "AUTOSUB_OPTION_VALUE_IMPROVEMENT"
+        classification = "DISTRIBUTIONAL_IMPROVEMENT"
     elif legacy_bench != native_bench:
-        classification = "CAMEO_BLOCKING_IMPROVEMENT"
-    else:
+        classification = (
+            "CAMEO_BLOCKING_IMPROVEMENT"
+            if native_blocked_value > 0.0
+            else "AUTOSUB_OPTION_VALUE_IMPROVEMENT"
+        )
+    elif legacy_c != native_c or legacy_v != native_v:
         classification = "CAPTAIN_FALLBACK_IMPROVEMENT"
+    else:
+        classification = "AUTOSUB_OPTION_VALUE_IMPROVEMENT"
     return {
         "classification": classification,
         "unexpected_regressions": regressions,
@@ -1459,6 +1483,15 @@ def compare_legacy_decision(
             "vice": native_v,
         },
         "ownership_migration_blocked": bool(regressions),
+        "classification_taxonomy": [
+            "EXACT_EQUIVALENT",
+            "DISTRIBUTIONAL_IMPROVEMENT",
+            "AUTOSUB_OPTION_VALUE_IMPROVEMENT",
+            "CAMEO_BLOCKING_IMPROVEMENT",
+            "CAPTAIN_FALLBACK_IMPROVEMENT",
+            "BUG_FIX",
+            "UNEXPECTED_REGRESSION",
+        ],
     }
 
 
@@ -1485,6 +1518,24 @@ def freeze_lineup_decision(
                 "ge_10": row.get("p_points_ge_10"),
             },
         })
+    alternatives_considered = []
+    for route in decision.get("alternatives") or []:
+        pair = dict(route.get("captain_vice") or {})
+        bench = dict(route.get("bench") or {})
+        alternatives_considered.append({
+            "formation": route.get("formation"),
+            "xi": list(route.get("element_ids") or []),
+            "route_utility": route.get("route_utility"),
+            "expected_fpl_points_with_captain_vice": route.get(
+                "expected_fpl_points_with_captain_vice"
+            ),
+            "expected_autosub_value": route.get("expected_autosub_value"),
+            "cameo_blocking_cost": route.get("expected_blocked_autosub_value"),
+            "bench_order": list(bench.get("order") or []),
+            "captain": pair.get("captain_element"),
+            "vice_captain": pair.get("vice_element"),
+        })
+
     decision_snapshot = {
         "captured_at": decision.get("generated_at"),
         "decision_kind": "P1.7_XI_BENCH_CAPTAIN_VICE",
@@ -1494,7 +1545,11 @@ def freeze_lineup_decision(
         "bench_order": [row.get("element") for row in (decision.get("bench") or {}).get("order") or []],
         "captain": (decision.get("captain") or {}).get("element"),
         "vice_captain": (decision.get("vice_captain") or {}).get("element"),
+        "selected_route_summary": deepcopy(decision.get("lineup_score")),
         "main_starting_xi_battle": deepcopy(decision.get("main_starting_xi_battle")),
+        "formation_comparison": deepcopy(decision.get("formation_comparison")),
+        "alternatives_considered": alternatives_considered,
+        "migration_comparison": deepcopy(decision.get("migration_comparison")),
         "model_evidence_output_fingerprint": binding.get("output_fingerprint"),
     }
     return freeze_prediction(

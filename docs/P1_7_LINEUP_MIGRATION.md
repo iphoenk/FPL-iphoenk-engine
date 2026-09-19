@@ -200,3 +200,31 @@ set while separating exact route scoring from publish-only payload materializati
 
 This is lazy materialization, not route pruning. No legal XI, bench permutation,
 captain/vice pair or decision objective is removed from optimization.
+
+
+## Freeze completeness hardening
+
+The immutable pre-deadline decision snapshot now retains the selected route,
+formation comparison, close-call proof and every published alternative route
+that was considered at decision time. Each alternative stores XI identity,
+formation, route utility, expected points, autosub value, cameo-blocking cost,
+bench order and captain/vice pair. This prevents post-result reconstruction of
+which routes were actually considered.
+
+## Migration classification taxonomy
+
+The migration comparator uses the full bounded taxonomy:
+
+- `EXACT_EQUIVALENT`;
+- `DISTRIBUTIONAL_IMPROVEMENT`;
+- `AUTOSUB_OPTION_VALUE_IMPROVEMENT`;
+- `CAMEO_BLOCKING_IMPROVEMENT`;
+- `CAPTAIN_FALLBACK_IMPROVEMENT`;
+- `BUG_FIX`;
+- `UNEXPECTED_REGRESSION`.
+
+`UNEXPECTED_REGRESSION` is reserved for an illegal native XI, missing reserve
+goalkeeper or illegal captain/vice pair and blocks ownership migration.
+A structurally invalid legacy route corrected by the legal native owner is
+classified as `BUG_FIX`. Other legal differences are classified by the
+decision surface that changed; none of these labels alter the route objective.

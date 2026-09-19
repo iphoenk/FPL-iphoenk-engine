@@ -498,7 +498,18 @@ def test_29_predeadline_freeze_is_immutable(base_decision):
         frozen_at="2026-09-20T01:00:00Z",
     )
     assert frozen["status"] == "FROZEN_AWAITING_SETTLEMENT"
-    assert frozen["frozen_decision_snapshot"]["captain"] == base_decision["captain"]["element"]
+    snapshot = frozen["frozen_decision_snapshot"]
+    assert snapshot["captain"] == base_decision["captain"]["element"]
+    assert snapshot["vice_captain"] == base_decision["vice_captain"]["element"]
+    assert snapshot["selected_route_summary"] == base_decision["lineup_score"]
+    assert snapshot["formation_comparison"] == base_decision["formation_comparison"]
+    assert snapshot["alternatives_considered"]
+    assert len(snapshot["alternatives_considered"]) == len(base_decision["alternatives"])
+    first_alt = snapshot["alternatives_considered"][0]
+    assert set(first_alt["xi"]) == set(base_decision["alternatives"][0]["element_ids"])
+    assert first_alt["bench_order"]
+    assert first_alt["captain"] is not None
+    assert first_alt["vice_captain"] is not None
     with pytest.raises(ModelEvidenceError):
         freeze_lineup_decision(
             base_decision,
@@ -540,6 +551,7 @@ def test_30_postmatch_settlement_keeps_decision_error_separate(base_decision):
     assert metrics["xi_regret"]["value"] == 3.0
     assert metrics["bench_order_regret"]["value"] == 2.0
     assert metrics["captain_regret"]["value"] == 4.0
+    assert metrics["vice_captain_consequence"]["value"] == -4.0
     assert metrics["cameo_block_autosub_regret"]["value"] == 5.0
     assert settled["prediction_calibration"]["overall"]["sample_size"] == 15
 
@@ -686,6 +698,76 @@ def test_44_migration_comparator_blocks_only_real_legality_regression(base_decis
     legacy = deepcopy(base_decision)
     comparison = compare_legacy_decision(legacy, base_decision)
     assert comparison["classification"] == "EXACT_EQUIVALENT"
+    assert comparison["ownership_migration_blocked"] is False
+    assert set(comparison["classification_taxonomy"]) == {
+        "EXACT_EQUIVALENT",
+        "DISTRIBUTIONAL_IMPROVEMENT",
+        "AUTOSUB_OPTION_VALUE_IMPROVEMENT",
+        "CAMEO_BLOCKING_IMPROVEMENT",
+        "CAPTAIN_FALLBACK_IMPROVEMENT",
+        "BUG_FIX",
+        "UNEXPECTED_REGRESSION",
+    }
+
+
+def test_44b_migration_taxonomy_covers_distributional_bugfix_bench_and_cvc(base_decision):
+    native = deepcopy(base_decision)
+
+    legacy_distributional = deepcopy(base_decision)
+    outfield_bench = (legacy_distributional.get("bench") or {}).get("order") or []
+    swapped = False
+    for bench_row in outfield_bench:
+        for index, starter in enumerate(legacy_distributional["starting_xi"]):
+            if (
+                bench_row.get("position") == starter.get("position")
+                and int(starter.get("element") or 0)
+                not in {
+                    int((legacy_distributional.get("captain") or {}).get("element") or -1),
+                    int((legacy_distributional.get("vice_captain") or {}).get("element") or -1),
+                }
+            ):
+                replacement = deepcopy(bench_row)
+                displaced = deepcopy(starter)
+                legacy_distributional["starting_xi"][index] = replacement
+                bench_index = next(
+                    i
+                    for i, row in enumerate(legacy_distributional["bench"]["order"])
+                    if int(row.get("element") or 0) == int(bench_row.get("element") or -1)
+                )
+                legacy_distributional["bench"]["order"][bench_index] = displaced
+                swapped = True
+                break
+        if swapped:
+            break
+    assert swapped is True
+    comparison = compare_legacy_decision(legacy_distributional, native)
+    assert comparison["classification"] == "DISTRIBUTIONAL_IMPROVEMENT"
+
+    legacy_bench = deepcopy(base_decision)
+    legacy_bench["bench"]["order"] = list(reversed(legacy_bench["bench"]["order"]))
+    comparison = compare_legacy_decision(legacy_bench, native)
+    assert comparison["classification"] in {
+        "CAMEO_BLOCKING_IMPROVEMENT",
+        "AUTOSUB_OPTION_VALUE_IMPROVEMENT",
+    }
+
+    native_no_block = deepcopy(base_decision)
+    native_no_block["bench"]["distributional_evaluation"]["expected_blocked_autosub_value"] = 0.0
+    comparison = compare_legacy_decision(legacy_bench, native_no_block)
+    assert comparison["classification"] == "AUTOSUB_OPTION_VALUE_IMPROVEMENT"
+
+    legacy_cvc = deepcopy(base_decision)
+    legacy_cvc["captain"], legacy_cvc["vice_captain"] = (
+        deepcopy(legacy_cvc["vice_captain"]),
+        deepcopy(legacy_cvc["captain"]),
+    )
+    comparison = compare_legacy_decision(legacy_cvc, native)
+    assert comparison["classification"] == "CAPTAIN_FALLBACK_IMPROVEMENT"
+
+    legacy_bug = deepcopy(base_decision)
+    legacy_bug["starting_xi"] = legacy_bug["starting_xi"][:10]
+    comparison = compare_legacy_decision(legacy_bug, native)
+    assert comparison["classification"] == "BUG_FIX"
     assert comparison["ownership_migration_blocked"] is False
 
 

@@ -87,10 +87,10 @@ def _normalise_revision(
 
 def _canonical_subsection(canonical_text: str, tag: str) -> tuple[str, str]:
     """Return one Canonical 14x subsection title/body without duplicating its schema."""
-    heading = re.compile(rf"(?m)^{re.escape(tag)}\\.\\s+(?P<title>.+)$").search(canonical_text)
+    heading = re.compile(rf"(?m)^{re.escape(tag)}\.\s+(?P<title>.+)$").search(canonical_text)
     if not heading:
         raise VisibleContentProofError(f"Canonical {tag} subsection not found")
-    next_heading = re.compile(r"(?m)^14[A-Z](?:\\d+)?\\.\\s+").search(
+    next_heading = re.compile(r"(?m)^14[A-Z](?:\d+)?\.\s+").search(
         canonical_text, heading.end()
     )
     end = next_heading.start() if next_heading else len(canonical_text)
@@ -108,12 +108,12 @@ def _canonical_numbered_rows(
     _, block = _canonical_subsection(canonical_text, tag)
     rows: list[dict[str, str]] = []
     for raw in block.splitlines():
-        match = re.match(r"^(?P<ordinal>\\d+B?)\\s+(?P<label>.+?)\\.?$", raw.strip())
+        match = re.match(r"^(?P<ordinal>\d+B?)\s+(?P<label>.+?)\.?$", raw.strip())
         if not match:
             continue
         ordinal = match.group("ordinal").upper()
         label = match.group("label").strip().rstrip(".")
-        number_match = re.fullmatch(r"(?P<number>\\d+)(?P<suffix>B?)", ordinal)
+        number_match = re.fullmatch(r"(?P<number>\d+)(?P<suffix>B?)", ordinal)
         if not number_match:
             continue
         number = int(number_match.group("number"))
@@ -150,7 +150,7 @@ def canonical_mode_contract(canonical_text: str, report_mode: str) -> dict[str, 
         )
         if mode == "FINAL":
             final_title, final_body = _canonical_subsection(text, "14I")
-            lock_label = re.sub(r"^FINAL\\s+[—-]\\s*", "", final_title).strip().rstrip(".")
+            lock_label = re.sub(r"^FINAL\s+[—-]\s*", "", final_title).strip().rstrip(".")
             if not lock_label or "before alternatives" not in final_body.lower():
                 raise VisibleContentProofError(
                     "Canonical FINAL GW LOCK PACKAGE placement semantics not found"

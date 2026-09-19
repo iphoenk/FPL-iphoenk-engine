@@ -9,6 +9,10 @@ from statistics import NormalDist
 from typing import Any
 
 from src.engines.p0_decision_quality import resolve_locked_chip_context
+from src.engines.v12_lineup_optimizer import (
+    compare_legacy_decision,
+    optimize_lineup,
+)
 from src.engines.p1_decision_governance import (
     bench_battles,
     choose_close_call_lineup,
@@ -393,7 +397,7 @@ def _chip_context(lock: dict[str, Any], chips: dict[str, Any], planning_gw: int,
     return context
 
 
-def build_lineup_decision(
+def _build_legacy_lineup_decision(
     projections: dict[str, Any],
     lock: dict[str, Any],
     chips: dict[str, Any],
@@ -514,6 +518,69 @@ def build_lineup_decision(
         },
     }
     return decision
+
+
+
+def build_lineup_decision(
+    projections: dict[str, Any],
+    lock: dict[str, Any],
+    chips: dict[str, Any],
+    *,
+    team: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Production orchestration for the V12-native P1.7 lineup owner.
+
+    The pre-P1.7 implementation is retained as a migration/regression oracle.
+    It is not the production selection owner after this switch.
+    """
+    planning_gw = int(projections.get("planning_gw") or 1)
+    squad_rows, squad_authority, legacy_fixture_fallback = _authoritative_squad_rows(
+        team, lock
+    )
+    authoritative_ids = [int(row.get("element") or -1) for row in squad_rows]
+    native = optimize_lineup(
+        projections,
+        authoritative_ids,
+        planning_gw=planning_gw,
+        generated_at=_now(),
+    )
+    legacy = _build_legacy_lineup_decision(
+        projections,
+        lock,
+        chips,
+        team=team,
+    )
+    migration = compare_legacy_decision(legacy, native)
+    if migration.get("unexpected_regression_count"):
+        raise RuntimeError(
+            "P1.7 ownership migration blocked by unexpected regression: "
+            f"{migration.get('unexpected_regressions')}"
+        )
+    effective_lock = _effective_lock_context(
+        team, lock, legacy_fixture_fallback
+    )
+    native["squad_authority"] = squad_authority
+    native["chip_context"] = _chip_context(
+        effective_lock, chips, planning_gw, load_policy()
+    )
+    native["migration_comparison"] = migration
+    native.setdefault("governance", {}).update({
+        "production_owner": "V12_LINEUP_OPTIMIZER",
+        "legacy_lineup_governance_status": "MIGRATION_ORACLE",
+        "legacy_runtime_v3_dependency_added": False,
+        "team_state_authority_consumed": not legacy_fixture_fallback,
+        "legacy_lock_fixture_fallback": legacy_fixture_fallback,
+        "raw_user_lock_context_consumed": bool(effective_lock),
+        "rejected_user_lock_context_suppressed": (
+            not legacy_fixture_fallback
+            and bool(lock)
+            and not bool(effective_lock)
+        ),
+        "scheduler_changed": False,
+        "report_cadence_changed": False,
+        "authority_added": False,
+    })
+    return native
 
 
 def build_package_decision(

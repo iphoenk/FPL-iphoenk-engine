@@ -326,6 +326,26 @@
       "distinct_key_pass_field_proven": false,
       "action": "DO_NOT_ADD_KEY_PASSES_ALIAS_OR_DUPLICATE_FEATURE",
       "p1_6_formula_changed": false
+    },
+    "p1_7_parameter_registry": {
+      "model_id": "v12_distributional_lineup_optimizer",
+      "model_version": "p1.7-v12-lineup-v1",
+      "feature_version": "p1.7-distributional-xi-bench-cvc-v1",
+      "parameter_version": "p1.7-lineup-parameters-v1",
+      "calibration_version": "p1.7-structural-calibration-v1",
+      "calibration_cutoff": "2026-09-19T16:12:31Z",
+      "settled_predeadline_lineup_sample_size_at_introduction": 0,
+      "calibration_confidence": "LOW",
+      "automatic_retuning": false,
+      "covariance_status": "COVARIANCE_NOT_MODELLED_YET",
+      "monte_carlo_started": false,
+      "package_optimizer_started_by_p1_7": false,
+      "mini_league_overlay_started": false,
+      "p1_1_math_mutated": false,
+      "p1_3_math_mutated": false,
+      "p1_6_math_mutated": false,
+      "methodology_weights_20_25_30_25_unchanged": true,
+      "required_future_calibration_evidence": "IMMUTABLE_PREDEADLINE_P1_7_LINEUP_DECISIONS_SETTLED_AFTER_FINISHED_EVENTS"
     }
   }
 }

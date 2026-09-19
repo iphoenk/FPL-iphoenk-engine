@@ -12,6 +12,7 @@ COLLECTOR_POLICY = ROOT / "config" / "runtime" / "collector_policy.json"
 ARTIFACT_CONTRACTS = ROOT / "config" / "runtime" / "artifact_contracts.json"
 PROJECTION_POLICY = ROOT / "config" / "intelligence" / "projection.json"
 LINEUP_POLICY = ROOT / "config" / "intelligence" / "lineup_governance.json"
+P1_7_POLICY = ROOT / "config" / "intelligence" / "v12_lineup_optimizer.json"
 WEATHER_POLICY = ROOT / "config" / "intelligence" / "weather_context.json"
 VENUE_REGISTRY = ROOT / "config" / "venues" / "premier_league_2026_27.json"
 REPORT_REGISTRY = ROOT / "config" / "report_artifact_registry.json"
@@ -69,6 +70,7 @@ def run() -> dict:
     artifact_contracts = _load(ARTIFACT_CONTRACTS)
     projection = _load(PROJECTION_POLICY)
     lineup_policy = _load(LINEUP_POLICY)
+    p1_7_policy = _load(P1_7_POLICY)
     weather_policy = _load(WEATHER_POLICY)
     venues = _load(VENUE_REGISTRY)
     report_registry = _load(REPORT_REGISTRY)
@@ -442,6 +444,65 @@ def run() -> dict:
     lineup_text = (ROOT / "src" / "engines" / "lineup_governance.py").read_text(encoding="utf-8")
     if "margin < 0.75" in lineup_text:
         errors.append("lineup battle threshold is hardcoded instead of config-owned")
+    p1_7_text = (ROOT / "src" / "engines" / "v12_lineup_optimizer.py").read_text(encoding="utf-8")
+    if p1_7_policy.get("contract") != "V12_DISTRIBUTIONAL_LINEUP_OPTIMIZER_V1":
+        errors.append("P1.7 config contract drift")
+    if p1_7_policy.get("model_owner") != "V12_LINEUP_OPTIMIZER":
+        errors.append("P1.7 stable owner drift")
+    if float((p1_7_policy.get("tactical") or {}).get("canonical_weight") or -1.0) != 0.25:
+        errors.append("P1.7 must preserve exact P1.6 tactical component weight 0.25")
+    for key in (
+        "global_weights_20_25_30_25_unchanged",
+        "p1_1_math_mutated",
+        "p1_3_math_mutated",
+        "p1_6_math_mutated",
+        "v6_mutated",
+        "package_optimizer_started",
+        "monte_carlo_started",
+        "mini_league_overlay_started",
+    ):
+        expected = key == "global_weights_20_25_30_25_unchanged"
+        if (p1_7_policy.get("governance") or {}).get(key) is not expected:
+            errors.append(f"P1.7 governance drift for {key}")
+    for required in (
+        'MODEL_OWNER = "V12_LINEUP_OPTIMIZER"',
+        "def enumerate_legal_xi(",
+        "def evaluate_bench_order(",
+        "def optimize_bench_order(",
+        "def evaluate_captain_vice_pairs(",
+        "def optimize_lineup(",
+        "def freeze_lineup_decision(",
+        "def settle_lineup_decision(",
+        "CAMEO_BLOCKED_AUTOSUB",
+        "COVARIANCE_NOT_MODELLED_YET",
+    ):
+        if required not in p1_7_text:
+            errors.append(f"P1.7 owner missing capability marker: {required}")
+    for forbidden_dependency in (
+        "from src.runtime_v6",
+        "import src.runtime_v6",
+        "from src.runtime_v3",
+        "import src.runtime_v3",
+        "from src.runtime_v4",
+        "import src.runtime_v4",
+        "from src.runtime_v5",
+        "import src.runtime_v5",
+        "from src.engines.package_optimizer",
+        "import src.engines.package_optimizer",
+        "from src.engines.monte_carlo",
+        "import src.engines.monte_carlo",
+        "from src.engines.mini_league",
+        "import src.engines.mini_league",
+    ):
+        if forbidden_dependency in p1_7_text.lower():
+            errors.append(f"P1.7 owner has forbidden production dependency: {forbidden_dependency}")
+    if "from src.engines.v12_lineup_optimizer import" not in lineup_text:
+        errors.append("lineup_governance must consume V12-native P1.7 owner")
+    if "MIGRATION_ORACLE" not in lineup_text:
+        errors.append("legacy lineup path must be explicitly retained as migration oracle")
+    service_lineup = ((services.get("services") or {}).get("lineup_governance") or {})
+    if [command.get("module") for command in service_lineup.get("commands") or []] != ["src.engines.lineup_governance"]:
+        errors.append("P1.7 consumer switch must retain lineup_governance orchestration entrypoint")
 
     orchestrator_text = (ROOT / "src" / "runtime_v3" / "orchestrator.py").read_text(encoding="utf-8")
     if "_attempt_promotion" not in orchestrator_text or "failure_stage\"] = \"promotion\"" not in orchestrator_text:

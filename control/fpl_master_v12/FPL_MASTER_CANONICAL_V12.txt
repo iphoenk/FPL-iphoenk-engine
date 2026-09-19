@@ -169,6 +169,23 @@ N. Intrinsic event probabilities never consume hit cost, FT state, sell/buy pric
 O. Every new dependence, threshold, truncation/support and numerical-tolerance parameter is versioned/config-bound, registered through P1.5 governance with rationale/source/sample/confidence and automatic_retuning=false. No player-name, club-pair or one-match parameter patch is allowed.
 P. P1.7, package optimization, Monte Carlo and mini-league overlay remain outside P1.3B and must not be started by this stage.
 
+P1.7 V12-NATIVE DISTRIBUTIONAL XI / BENCH / CAPTAIN / VICE CONTRACT:
+A. P1.7 owns Starting XI, legal formation, reserve goalkeeper, outfield bench order, captain, vice captain, global autosub option value and cameo-blocking decision semantics. It consumes P1.1, P1.3B and P1.6 read-only.
+B. Enumerate every legal OUR15 Starting XI: exactly 11 starters, exactly 1 GK and only rules-registry formations 3-4-3, 3-5-2, 4-3-3, 4-4-2, 4-5-1, 5-2-3, 5-3-2 or 5-4-1. Formation is an outcome of utility, never a preferred label.
+C. Preserve START, REGULAR_CAMEO, LATE_CAMEO and DNP/ZERO_MINUTES. Regular and late cameo are appearances and therefore block autosub and vice takeover. Only DNP/ZERO_MINUTES permits replacement.
+D. Consume P1.3B PMF/tails/variance where supportable. If exact GW PMF is unavailable, publish PARTIAL/MOMENTS_ONLY and never fabricate tails. P1.3B PARTIAL_BONUS_RESIDUAL limitation carries through.
+E. Resolve autosubs globally at team level. Reserve GK is separate. Outfield bench candidates are processed in exact priority order and may replace only DNP starter slots while the resulting nominal formation stays legal. Multiple DNPs are resolved jointly.
+F. Publish expected_autosub_value, expected_blocked_autosub_value, autosub_probability and blocked_autosub_probability. CAMEO_BLOCKED_AUTOSUB is explicit decision-option evidence and never rewrites P1.3 xPts.
+G. Evaluate all six outfield bench permutations. Bench order consumes reach probability, legal-sub probability, expected autosub points and supportable distributional downside/upside. Raw mean sort alone is not canonical P1.7 bench ordering.
+H. Evaluate captain and vice as an ordered pair, not independently. Captain multiplier applies when captain appears. Vice takeover occurs only when captain DNPs and vice appears. Publish vice_takeover_probability, expected_vice_takeover_value and joint DNP failure probability.
+I. Cross-player covariance is COVARIANCE_NOT_MODELLED_YET. Any captain/vice or autosub appearance independence approximation must be labelled. Aggregate variance may use a zero-covariance sum approximation. Monte Carlo is not executed or claimed.
+J. Lineup route output includes expected points, deterministic distributional downside, supportable upside, autosub option value, cameo-block cost, captain multiplier value, vice fallback value, P1.6 tactical contribution, uncertainty, confidence, robustness and regret semantics. Mean xPts alone is insufficient.
+K. P1.6 is consumed read-only with TACTICAL_ROLE canonical weight exactly 0.25. P1.7 never recomputes or changes P1.6 coefficients and does not mutate global 20/25/30/25.
+L. For selected route publish best alternative XI and deltas for utility, mean, downside, upside, autosub value, cameo-block risk and tactical component plus reversal triggers. Compare the best route of every legal formation represented by the squad.
+M. Serious P1.7 decisions support MODEL_EVIDENCE_BINDING with input_snapshot_id, model_version, feature_version, parameter_version, calibration_version, calibration_cutoff, run_fingerprint and output_fingerprint; authority=false; raw V6 payload duplication=false.
+N. XI, bench order, captain and vice are eligible for immutable pre-deadline freeze through existing Phase 0/P1.5 evidence primitives. Settlement keeps prediction error separate from XI regret, bench-order regret, captain regret, vice-captain consequence and cameo-block autosub regret. No post-result reconstruction and no one-match permanent rule.
+O. No V6 mutation; no P1.1/P1.3/P1.6 mathematics mutation; no Gate0 mutation; no Package Optimizer implementation; no Monte Carlo implementation; no Mini-League Overlay; no scheduler/report cadence change; no new methodology authority.
+
 Keep 1GW, 3GW and 5GW distinct.
 
 8. FULL UNIVERSE / GATE0

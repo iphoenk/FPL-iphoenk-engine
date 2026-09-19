@@ -1,0 +1,711 @@
+from __future__ import annotations
+
+from copy import deepcopy
+import json
+from pathlib import Path
+
+import pytest
+
+from src.engines.canonical_decision_methodology import CANONICAL_WEIGHTS
+from src.engines.lineup_governance import build_lineup_decision
+from src.engines.v12_lineup_optimizer import (
+    LineupOptimizerError,
+    build_player_surface,
+    compare_legacy_decision,
+    enumerate_legal_xi,
+    evaluate_bench_order,
+    evaluate_captain_vice_pairs,
+    freeze_lineup_decision,
+    load_config,
+    optimize_bench_order,
+    optimize_lineup,
+    settle_lineup_decision,
+)
+from src.engines.v12_model_evidence import ModelEvidenceError
+from src.rules import LINEUP_RULES
+
+ROOT = Path(__file__).resolve().parents[1]
+GW = 6
+GENERATED = "2026-09-20T00:00:00Z"
+
+
+def _pmf(meanish: float, *, blank: float = 0.10, upside: float = 0.20) -> dict[int, float]:
+    blank = max(0.0, min(0.8, blank))
+    upside = max(0.0, min(0.8 - blank, upside))
+    middle = 1.0 - blank - upside
+    low = 2
+    high = max(8, int(round(meanish + 5)))
+    mid = max(3, int(round((meanish - blank * low - upside * high) / max(middle, 1e-9))))
+    return {0: blank, mid: middle, high: upside}
+
+
+def _projection(
+    element: int,
+    position: str,
+    *,
+    meanish: float,
+    p_start: float = 0.88,
+    p_regular: float = 0.05,
+    p_late: float = 0.02,
+    p_dnp: float = 0.05,
+    blank: float = 0.10,
+    upside: float = 0.20,
+    tactical: float = 60.0,
+) -> dict:
+    pmf = _pmf(meanish, blank=blank, upside=upside)
+    mean = sum(points * probability for points, probability in pmf.items())
+    second = sum(points * points * probability for points, probability in pmf.items())
+    variance = max(0.0, second - mean * mean)
+    probabilities = {str(points): probability for points, probability in pmf.items()}
+    return {
+        "element": element,
+        "name": f"P{element}",
+        "position": position,
+        "team_id": (element % 10) + 1,
+        "projection_confidence": "HIGH",
+        "xmins": {
+            "start_probability": p_start,
+            "cameo_probability": p_regular + p_late,
+            "late_cameo_probability": p_late,
+            "dnp_probability": p_dnp,
+            "availability": 1.0 - p_dnp,
+            "expected_minutes": 90 * p_start + 18 * p_regular + 7 * p_late,
+            "confidence": "HIGH",
+            "xmins_distribution": {
+                "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+                "mean": 90 * p_start + 18 * p_regular + 7 * p_late,
+                "std": 15.0,
+                "states": [
+                    {"state": "START", "probability": p_start, "minutes_mean": 90, "minutes_std": 0},
+                    {"state": "REGULAR_CAMEO", "probability": p_regular, "minutes_mean": 18, "minutes_std": 0},
+                    {"state": "LATE_CAMEO", "probability": p_late, "minutes_mean": 7, "minutes_std": 0},
+                    {"state": "ZERO_MINUTES", "probability": p_dnp, "minutes_mean": 0, "minutes_std": 0},
+                ],
+            },
+        },
+        "tactical_role_component": {
+            "canonical_tactical_role_score": tactical,
+            "confidence": 0.9,
+            "canonical_component": {
+                "name": "TACTICAL_ROLE",
+                "weight": 0.25,
+                "weighted_component_points": 0.25 * tactical,
+            },
+        },
+        "xpts_by_gw": [
+            {
+                "gw": GW,
+                "mean": mean,
+                "std": variance ** 0.5,
+                "points_variance": variance,
+                "point_distribution": {
+                    "model": "FINITE_STATE_CONDITIONAL_CORE_POINT_PMF_V1",
+                    "distribution_completeness": "PARTIAL_BONUS_RESIDUAL",
+                    "bonus_incorporation": "EXPECTATION_ONLY_NOT_STOCHASTIC",
+                    "probabilities": probabilities,
+                },
+                "fixtures": [],
+            }
+        ],
+    }
+
+
+def _squad() -> dict:
+    positions = ["GK", "GK"] + ["DEF"] * 5 + ["MID"] * 5 + ["FWD"] * 3
+    means = [4.8, 3.9, 5.4, 5.2, 5.0, 4.7, 4.3, 7.4, 7.0, 6.4, 5.8, 4.6, 8.1, 6.7, 5.9]
+    players = [
+        _projection(
+            index + 1,
+            position,
+            meanish=means[index],
+            blank=0.08 + (index % 4) * 0.03,
+            upside=0.18 + (index % 3) * 0.04,
+            tactical=55 + (index % 6) * 5,
+        )
+        for index, position in enumerate(positions)
+    ]
+    return {"planning_gw": GW, "generated_at": GENERATED, "players": players}
+
+
+def _surfaces(projections: dict | None = None) -> list[dict]:
+    payload = projections or _squad()
+    return [build_player_surface(row, GW) for row in payload["players"]]
+
+
+def _direct_surface(
+    element: int,
+    position: str,
+    *,
+    mean: float,
+    p_dnp: float = 0.0,
+    p_cameo: float = 0.0,
+    p_late: float = 0.0,
+    cond_blank: float = 0.2,
+    cond_ge8: float = 0.2,
+    cond_ge10: float = 0.1,
+) -> dict:
+    p_appear = max(0.0, 1.0 - p_dnp)
+    return {
+        "element": element,
+        "name": f"S{element}",
+        "position": position,
+        "team_id": element,
+        "xpts_mean": mean,
+        "xpts_variance": 2.0,
+        "xpts_std": 2.0 ** 0.5,
+        "distributional_utility": mean,
+        "expected_shortfall": cond_blank,
+        "expected_excess_ge_8": cond_ge8,
+        "p_fpl_blank": min(1.0, p_dnp + p_appear * cond_blank),
+        "p_points_ge_8": p_appear * cond_ge8,
+        "p_points_ge_10": p_appear * cond_ge10,
+        "states": {
+            "START": 1.0 - p_dnp - p_cameo,
+            "REGULAR_CAMEO": max(0.0, p_cameo - p_late),
+            "LATE_CAMEO": p_late,
+            "DNP": p_dnp,
+            "CAMEO_BLOCKED_AUTOSUB": p_cameo,
+        },
+        "p_start": 1.0 - p_dnp - p_cameo,
+        "p_cameo": p_cameo,
+        "p_late_cameo": p_late,
+        "p_dnp": p_dnp,
+        "p_appearance": p_appear,
+        "appearance_conditioned": {
+            "expected_points": mean / p_appear if p_appear else 0.0,
+            "variance": 1.0,
+            "p_fpl_blank": cond_blank,
+            "p_points_ge_8": cond_ge8,
+            "p_points_ge_10": cond_ge10,
+        },
+        "tactical_role": {
+            "status": "AVAILABLE",
+            "score": 60.0,
+            "canonical_weight": 0.25,
+            "weighted_component_points": 15.0,
+        },
+        "distribution_status": {"status": "READY"},
+        "confidence": "HIGH",
+    }
+
+
+def _starters_343(*, defender_dnp: float = 0.0, forward_dnp: float = 0.0) -> list[dict]:
+    rows = [_direct_surface(1, "GK", mean=4.0)]
+    element = 2
+    for index in range(3):
+        rows.append(_direct_surface(element, "DEF", mean=4.0, p_dnp=defender_dnp if index == 0 else 0.0))
+        element += 1
+    for _ in range(4):
+        rows.append(_direct_surface(element, "MID", mean=5.0))
+        element += 1
+    for index in range(3):
+        rows.append(_direct_surface(element, "FWD", mean=5.5, p_dnp=forward_dnp if index == 0 else 0.0))
+        element += 1
+    return rows
+
+
+@pytest.fixture(scope="module")
+def base_decision():
+    projections = _squad()
+    ids = [row["element"] for row in projections["players"]]
+    return optimize_lineup(projections, ids, planning_gw=GW, generated_at=GENERATED)
+
+
+def test_01_exact_550_legal_xi_for_standard_2_5_5_3_squad():
+    legal = enumerate_legal_xi(_surfaces())
+    assert len(legal) == 550
+
+
+def test_02_every_enumerated_xi_has_11_starters_and_legal_formation():
+    surfaces = _surfaces()
+    for indices in enumerate_legal_xi(surfaces):
+        rows = [surfaces[index] for index in indices]
+        assert len(rows) == 11
+        assert sum(row["position"] == "GK" for row in rows) == 1
+        counts = {pos: sum(row["position"] == pos for row in rows) for pos in ("DEF", "MID", "FWD")}
+        assert f"{counts['DEF']}-{counts['MID']}-{counts['FWD']}" in set(LINEUP_RULES["legal_formations"])
+
+
+def test_03_reserve_gk_is_separate_from_outfield_bench(base_decision):
+    assert base_decision["bench"]["gk"]["position"] == "GK"
+    assert len(base_decision["bench"]["order"]) == 3
+    assert all(row["position"] != "GK" for row in base_decision["bench"]["order"])
+    assert base_decision["bench"]["distributional_evaluation"]["reserve_gk"]["separate_from_outfield_priority"] is True
+
+
+def test_04_starter_dnp_triggers_autosub():
+    starters = _starters_343(defender_dnp=1.0)
+    reserve = _direct_surface(90, "GK", mean=3.0)
+    bench = [
+        _direct_surface(91, "DEF", mean=4.0),
+        _direct_surface(92, "MID", mean=6.0),
+        _direct_surface(93, "FWD", mean=5.0),
+    ]
+    out = evaluate_bench_order(starters, reserve, bench)
+    assert out["autosub_probability"] == pytest.approx(1.0)
+    assert out["slots"][0]["substitution_probability"] == pytest.approx(1.0)
+
+
+def test_05_regular_cameo_blocks_autosub():
+    starters = _starters_343()
+    starters[1] = _direct_surface(2, "DEF", mean=1.0, p_dnp=0.0, p_cameo=1.0)
+    reserve = _direct_surface(90, "GK", mean=3.0)
+    bench = [_direct_surface(91, "DEF", mean=6.0), _direct_surface(92, "MID", mean=5.0), _direct_surface(93, "FWD", mean=5.0)]
+    out = evaluate_bench_order(starters, reserve, bench)
+    assert out["autosub_probability"] == pytest.approx(0.0)
+    assert out["expected_blocked_autosub_value"] > 0.0
+
+
+def test_06_late_cameo_blocks_autosub():
+    starters = _starters_343()
+    starters[1] = _direct_surface(2, "DEF", mean=0.5, p_dnp=0.0, p_cameo=1.0, p_late=1.0)
+    reserve = _direct_surface(90, "GK", mean=3.0)
+    bench = [_direct_surface(91, "DEF", mean=6.0), _direct_surface(92, "MID", mean=5.0), _direct_surface(93, "FWD", mean=5.0)]
+    out = evaluate_bench_order(starters, reserve, bench)
+    assert out["autosub_probability"] == pytest.approx(0.0)
+    assert out["expected_late_cameo_blocked_autosub_value"] > 0.0
+
+
+def test_07_illegal_outfield_substitution_is_skipped():
+    starters = _starters_343(defender_dnp=1.0)
+    reserve = _direct_surface(90, "GK", mean=3.0)
+    bench = [
+        _direct_surface(91, "MID", mean=9.0),
+        _direct_surface(92, "DEF", mean=4.0),
+        _direct_surface(93, "FWD", mean=3.0),
+    ]
+    out = evaluate_bench_order(starters, reserve, bench)
+    assert out["slots"][0]["substitution_probability"] == pytest.approx(0.0)
+    assert out["slots"][1]["substitution_probability"] == pytest.approx(1.0)
+
+
+def test_08_next_legal_bench_player_is_used():
+    starters = _starters_343(defender_dnp=1.0)
+    reserve = _direct_surface(90, "GK", mean=3.0)
+    bench = [
+        _direct_surface(91, "MID", mean=9.0),
+        _direct_surface(92, "DEF", mean=4.0),
+        _direct_surface(93, "FWD", mean=3.0),
+    ]
+    out = evaluate_bench_order(starters, reserve, bench)
+    assert out["slots"][1]["reach_probability"] == pytest.approx(1.0)
+    assert out["expected_autosub_value"] == pytest.approx(4.0)
+
+
+def test_09_multiple_dnp_are_resolved_globally():
+    starters = _starters_343(defender_dnp=1.0, forward_dnp=1.0)
+    reserve = _direct_surface(90, "GK", mean=3.0)
+    bench = [
+        _direct_surface(91, "MID", mean=6.0),
+        _direct_surface(92, "DEF", mean=4.0),
+        _direct_surface(93, "FWD", mean=3.0),
+    ]
+    out = evaluate_bench_order(starters, reserve, bench)
+    assert out["slots"][0]["substitution_probability"] == pytest.approx(1.0)
+    assert out["slots"][1]["substitution_probability"] == pytest.approx(1.0)
+    assert out["expected_autosub_value"] == pytest.approx(10.0)
+
+
+def test_10_bench_reach_probability_respects_upstream_priority():
+    starters = _starters_343(defender_dnp=0.5)
+    reserve = _direct_surface(90, "GK", mean=3.0)
+    bench = [
+        _direct_surface(91, "DEF", mean=5.0, p_dnp=0.5),
+        _direct_surface(92, "DEF", mean=4.0),
+        _direct_surface(93, "MID", mean=3.0),
+    ]
+    out = evaluate_bench_order(starters, reserve, bench)
+    assert 0.0 < out["slots"][0]["reach_probability"] <= 1.0
+    assert out["slots"][1]["reach_probability"] <= out["slots"][0]["reach_probability"]
+
+
+def test_11_distributional_bench_order_can_differ_from_mean_sort():
+    starters = _starters_343(forward_dnp=1.0)
+    reserve = _direct_surface(90, "GK", mean=3.0)
+    high_mean_blank = _direct_surface(91, "MID", mean=5.0, cond_blank=0.95, cond_ge8=0.0)
+    lower_mean_upside = _direct_surface(92, "MID", mean=4.95, cond_blank=0.0, cond_ge8=1.0, cond_ge10=0.8)
+    third = _direct_surface(93, "DEF", mean=2.0)
+    best, _ = optimize_bench_order(starters, reserve, [high_mean_blank, lower_mean_upside, third])
+    assert best["order"][0] == lower_mean_upside["element"]
+    assert lower_mean_upside["xpts_mean"] < high_mean_blank["xpts_mean"]
+
+
+def test_12_autosub_option_value_is_nonzero_when_dnp_risk_exists():
+    starters = _starters_343(defender_dnp=0.4)
+    out = evaluate_bench_order(
+        starters,
+        _direct_surface(90, "GK", mean=3.0),
+        [_direct_surface(91, "DEF", mean=5.0), _direct_surface(92, "MID", mean=4.0), _direct_surface(93, "FWD", mean=4.0)],
+    )
+    assert out["expected_autosub_value"] > 0.0
+
+
+def test_13_cameo_blocking_cost_is_nonzero_when_bench_has_value():
+    starters = _starters_343()
+    starters[1] = _direct_surface(2, "DEF", mean=1.0, p_dnp=0.1, p_cameo=0.5, p_late=0.2)
+    out = evaluate_bench_order(
+        starters,
+        _direct_surface(90, "GK", mean=3.0),
+        [_direct_surface(91, "DEF", mean=6.0), _direct_surface(92, "MID", mean=4.0), _direct_surface(93, "FWD", mean=4.0)],
+    )
+    assert out["expected_blocked_autosub_value"] > 0.0
+    assert out["blocked_autosub_probability"] > 0.0
+
+
+def test_14_secure_starter_can_beat_slightly_higher_mean_cameo_risk():
+    projections = _squad()
+    mids = [row for row in projections["players"] if row["position"] == "MID"]
+    risky, secure = mids[-2], mids[-1]
+    risky.update(_projection(risky["element"], "MID", meanish=5.05, p_start=0.35, p_regular=0.45, p_late=0.15, p_dnp=0.05, blank=0.65, upside=0.05))
+    secure.update(_projection(secure["element"], "MID", meanish=5.00, p_start=0.94, p_regular=0.02, p_late=0.01, p_dnp=0.03, blank=0.05, upside=0.25))
+    decision = optimize_lineup(projections, [row["element"] for row in projections["players"]], generated_at=GENERATED)
+    xi = {row["element"] for row in decision["starting_xi"]}
+    assert secure["element"] in xi or risky["element"] not in xi
+
+
+def test_15_captain_dnp_triggers_vice_takeover_probability():
+    starters = _starters_343()
+    starters[5]["p_dnp"] = 0.20
+    starters[5]["p_appearance"] = 0.80
+    starters[6]["p_dnp"] = 0.10
+    starters[6]["p_appearance"] = 0.90
+    pairs = evaluate_captain_vice_pairs(starters)
+    pair = next(row for row in pairs if row["captain_element"] == starters[5]["element"] and row["vice_element"] == starters[6]["element"])
+    assert pair["vice_takeover_probability"] == pytest.approx(0.18)
+
+
+def test_16_captain_regular_cameo_blocks_vice_takeover():
+    captain = _direct_surface(100, "MID", mean=6.0, p_dnp=0.0, p_cameo=1.0)
+    vice = _direct_surface(101, "FWD", mean=7.0)
+    others = [_direct_surface(200 + i, "DEF" if i < 3 else "MID", mean=3.0) for i in range(9)]
+    starters = [captain, vice] + others
+    pairs = evaluate_captain_vice_pairs(starters)
+    pair = next(row for row in pairs if row["captain_element"] == 100 and row["vice_element"] == 101)
+    assert pair["vice_takeover_probability"] == 0.0
+    assert pair["captain_cameo_blocks_vice"] is True
+
+
+def test_17_captain_late_cameo_blocks_vice_takeover():
+    captain = _direct_surface(100, "MID", mean=1.0, p_dnp=0.0, p_cameo=1.0, p_late=1.0)
+    vice = _direct_surface(101, "FWD", mean=7.0)
+    others = [_direct_surface(200 + i, "DEF" if i < 3 else "MID", mean=3.0) for i in range(9)]
+    pair = next(row for row in evaluate_captain_vice_pairs([captain, vice] + others) if row["captain_element"] == 100 and row["vice_element"] == 101)
+    assert pair["vice_takeover_probability"] == 0.0
+    assert pair["captain_late_cameo_blocks_vice"] is True
+
+
+def test_18_vice_dnp_produces_no_takeover_multiplier():
+    captain = _direct_surface(100, "MID", mean=6.0, p_dnp=0.25)
+    vice = _direct_surface(101, "FWD", mean=0.0, p_dnp=1.0)
+    others = [_direct_surface(200 + i, "DEF" if i < 3 else "MID", mean=3.0) for i in range(9)]
+    pair = next(row for row in evaluate_captain_vice_pairs([captain, vice] + others) if row["captain_element"] == 100 and row["vice_element"] == 101)
+    assert pair["vice_takeover_probability"] == 0.0
+    assert pair["expected_vice_takeover_value"] == 0.0
+
+
+def test_19_captain_and_vice_are_evaluated_as_ordered_pairs():
+    starters = _starters_343()
+    pairs = evaluate_captain_vice_pairs(starters)
+    assert len(pairs) == 11 * 10
+    assert all(row["captain_element"] != row["vice_element"] for row in pairs)
+
+
+def test_20_captain_can_differ_from_highest_mean_for_distributional_reason():
+    starters = _starters_343()
+    high_mean = starters[5]
+    high_mean.update({"xpts_mean": 8.0, "expected_shortfall": 7.0, "expected_excess_ge_8": 0.0})
+    lower_mean = starters[6]
+    lower_mean.update({"xpts_mean": 7.8, "expected_shortfall": 0.0, "expected_excess_ge_8": 4.0})
+    pairs = evaluate_captain_vice_pairs(starters)
+    assert pairs[0]["captain_element"] == lower_mean["element"]
+
+
+def test_21_xi_decision_is_not_mean_only(base_decision):
+    assert base_decision["governance"]["mean_xpts_is_not_sole_objective"] is True
+    assert base_decision["lineup_score"]["distributional_downside"] is not None
+    assert base_decision["lineup_score"]["supportable_upside"] is not None
+
+
+def test_22_uncertainty_tails_are_not_fabricated_when_pmf_missing():
+    projection = _projection(999, "MID", meanish=5.0)
+    projection["xpts_by_gw"][0].pop("point_distribution")
+    surface = build_player_surface(projection, GW)
+    assert surface["distribution_status"]["status"] == "PARTIAL_MOMENTS_ONLY"
+    assert surface["p_fpl_blank"] is None
+    assert surface["p_points_ge_8"] is None
+
+
+def test_23_covariance_is_not_falsely_claimed(base_decision):
+    assert base_decision["lineup_score"]["covariance_status"] == "COVARIANCE_NOT_MODELLED_YET"
+    assert base_decision["captain"]["pair"]["covariance_status"] == "COVARIANCE_NOT_MODELLED_YET"
+
+
+def test_24_p1_1_state_probabilities_are_consumed_exactly():
+    projection = _projection(999, "MID", meanish=5.0, p_start=0.60, p_regular=0.20, p_late=0.10, p_dnp=0.10)
+    surface = build_player_surface(projection, GW)
+    assert surface["states"]["START"] == pytest.approx(0.60)
+    assert surface["states"]["REGULAR_CAMEO"] == pytest.approx(0.20)
+    assert surface["states"]["LATE_CAMEO"] == pytest.approx(0.10)
+    assert surface["states"]["DNP"] == pytest.approx(0.10)
+    assert surface["states"]["CAMEO_BLOCKED_AUTOSUB"] == pytest.approx(0.30)
+
+
+def test_25_p1_3_projection_inputs_are_not_mutated_by_p1_7():
+    projections = _squad()
+    before = deepcopy(projections)
+    optimize_lineup(projections, [row["element"] for row in projections["players"]], generated_at=GENERATED)
+    assert projections == before
+
+
+def test_26_p1_6_tactical_component_is_read_only_exact_25_percent():
+    projection = _projection(999, "MID", meanish=5.0, tactical=72.0)
+    before = deepcopy(projection["tactical_role_component"])
+    surface = build_player_surface(projection, GW)
+    assert surface["tactical_role"]["canonical_weight"] == 0.25
+    assert surface["tactical_role"]["weighted_component_points"] == pytest.approx(18.0)
+    assert projection["tactical_role_component"] == before
+
+
+def test_27_global_20_25_30_25_weights_are_unchanged():
+    assert CANONICAL_WEIGHTS == {
+        "PROVEN_HISTORICAL": 0.20,
+        "TACTICAL_ROLE": 0.25,
+        "CURRENT_UNDERLYING": 0.30,
+        "FIXTURE_SECURITY": 0.25,
+    }
+
+
+def test_28_phase0_fingerprints_are_deterministic_for_same_snapshot():
+    projections = _squad()
+    ids = [row["element"] for row in projections["players"]]
+    first = optimize_lineup(projections, ids, generated_at=GENERATED)
+    second = optimize_lineup(projections, ids, generated_at="2026-09-20T00:05:00Z")
+    assert first["model_evidence_binding"]["run_fingerprint"] == second["model_evidence_binding"]["run_fingerprint"]
+    assert first["model_evidence_binding"]["output_fingerprint"] == second["model_evidence_binding"]["output_fingerprint"]
+
+
+def test_29_predeadline_freeze_is_immutable(base_decision):
+    frozen = freeze_lineup_decision(
+        base_decision,
+        deadline_time="2026-09-21T10:00:00Z",
+        frozen_at="2026-09-20T01:00:00Z",
+    )
+    assert frozen["status"] == "FROZEN_AWAITING_SETTLEMENT"
+    assert frozen["frozen_decision_snapshot"]["captain"] == base_decision["captain"]["element"]
+    with pytest.raises(ModelEvidenceError):
+        freeze_lineup_decision(
+            base_decision,
+            deadline_time="2026-09-21T10:00:00Z",
+            frozen_at="2026-09-20T02:00:00Z",
+            existing_record=frozen,
+        )
+
+
+def test_30_postmatch_settlement_keeps_decision_error_separate(base_decision):
+    frozen = freeze_lineup_decision(
+        base_decision,
+        deadline_time="2026-09-21T10:00:00Z",
+        frozen_at="2026-09-20T01:00:00Z",
+    )
+    actuals = [
+        {"element": row["element"], "points": 5, "minutes": 90, "goals": 0, "assists": 0, "started": True}
+        for row in base_decision["player_surfaces"]
+    ]
+    settled = settle_lineup_decision(
+        frozen,
+        actual_rows=actuals,
+        decision_outcome_evidence={
+            "selected_xi_points": 55,
+            "best_legal_xi_points": 58,
+            "realized_bench_order_autosub_points": 3,
+            "best_legal_bench_autosub_points": 5,
+            "chosen_captain_points": 5,
+            "best_captain_candidate_points": 9,
+            "vice_takeover_points": 0,
+            "vice_counterfactual_points": 4,
+            "cameo_points": 1,
+            "blocked_legal_autosub_points": 6,
+        },
+        event_finished=True,
+        settled_at="2026-09-22T12:00:00Z",
+    )
+    metrics = settled["decision_calibration"]["metrics"]
+    assert metrics["xi_regret"]["value"] == 3.0
+    assert metrics["bench_order_regret"]["value"] == 2.0
+    assert metrics["captain_regret"]["value"] == 4.0
+    assert metrics["cameo_block_autosub_regret"]["value"] == 5.0
+    assert settled["prediction_calibration"]["overall"]["sample_size"] == 15
+
+
+@pytest.mark.parametrize(
+    "forbidden",
+    [
+        "from src.runtime_v6",
+        "import src.runtime_v6",
+        "from src.runtime_v3",
+        "import src.runtime_v3",
+    ],
+)
+def test_31_32_no_v6_or_runtime_v3_production_dependency(forbidden):
+    text = (ROOT / "src" / "engines" / "v12_lineup_optimizer.py").read_text(encoding="utf-8").lower()
+    assert forbidden not in text
+
+
+def test_33_no_package_optimizer_implementation_in_p1_7_owner():
+    text = (ROOT / "src" / "engines" / "v12_lineup_optimizer.py").read_text(encoding="utf-8").lower()
+    assert "from src.engines.package_optimizer" not in text
+    assert "import src.engines.package_optimizer" not in text
+
+
+def test_34_no_monte_carlo_implementation_in_p1_7_owner():
+    text = (ROOT / "src" / "engines" / "v12_lineup_optimizer.py").read_text(encoding="utf-8").lower()
+    assert "from src.engines.monte_carlo" not in text
+    assert "import src.engines.monte_carlo" not in text
+    assert load_config()["governance"]["monte_carlo_started"] is False
+
+
+def test_35_no_mini_league_overlay_in_p1_7_owner():
+    text = (ROOT / "src" / "engines" / "v12_lineup_optimizer.py").read_text(encoding="utf-8").lower()
+    assert "from src.engines.mini_league" not in text
+    assert "import src.engines.mini_league" not in text
+    assert load_config()["governance"]["mini_league_overlay_started"] is False
+
+
+def test_36_production_wrapper_switches_to_v12_owner_and_keeps_legacy_oracle():
+    projections = _squad()
+    lock = {
+        "authoritative_phase": "pre_deadline_locked",
+        "players": [
+            {"element": row["element"], "position": row["position"], "purchase_cost": 50}
+            for row in projections["players"]
+        ],
+    }
+    decision = build_lineup_decision(projections, lock, {"used": []})
+    assert decision["governance"]["production_owner"] == "V12_LINEUP_OPTIMIZER"
+    assert decision["governance"]["legacy_lineup_governance_status"] == "MIGRATION_ORACLE"
+    assert decision["migration_comparison"]["unexpected_regression_count"] == 0
+
+
+def test_37_captain_safe_pool_has_distinct_captain_candidates(base_decision):
+    pool = base_decision["captain_safe_pool"]
+    ids = [row["element"] for row in pool]
+    assert len(ids) == len(set(ids))
+    assert len(ids) >= 2
+    assert all(row.get("captain_score") is not None for row in pool)
+
+
+def test_38_close_call_proof_has_mandatory_distributional_deltas(base_decision):
+    proof = base_decision["main_starting_xi_battle"]
+    for key in (
+        "selected_xi",
+        "best_alternative_xi",
+        "delta_expected_utility",
+        "delta_mean",
+        "delta_downside",
+        "delta_upside",
+        "delta_autosub_value",
+        "delta_cameo_block_risk",
+        "delta_tactical_component",
+        "expected_regret_delta",
+        "reversal_triggers",
+    ):
+        assert key in proof
+
+
+def test_39_formation_comparison_is_distributional_and_label_neutral(base_decision):
+    rows = base_decision["formation_comparison"]
+    assert rows
+    assert {row["formation"] for row in rows}.issubset(set(LINEUP_RULES["legal_formations"]))
+    assert all(row.get("route_utility") is not None for row in rows)
+    assert sum(bool(row.get("selected")) for row in rows) == 1
+
+
+def test_40_reserve_gk_autosub_is_independent_of_outfield_priority():
+    starters = _starters_343()
+    starters[0] = _direct_surface(1, "GK", mean=1.0, p_dnp=1.0)
+    reserve = _direct_surface(90, "GK", mean=5.0)
+    bench = [_direct_surface(91, "DEF", mean=6.0), _direct_surface(92, "MID", mean=7.0), _direct_surface(93, "FWD", mean=8.0)]
+    out = evaluate_bench_order(starters, reserve, bench)
+    assert out["reserve_gk"]["autosub_probability"] == pytest.approx(1.0)
+    assert out["reserve_gk"]["expected_autosub_value"] == pytest.approx(5.0)
+
+
+def test_41_model_evidence_is_non_authoritative_and_no_raw_v6_duplication(base_decision):
+    binding = base_decision["model_evidence_binding"]
+    for key in (
+        "input_snapshot_id",
+        "model_version",
+        "feature_version",
+        "parameter_version",
+        "calibration_version",
+        "calibration_cutoff",
+        "run_fingerprint",
+        "output_fingerprint",
+    ):
+        assert binding.get(key)
+    assert binding["authority"] is False
+    assert binding["raw_v6_payload_duplicated"] is False
+
+
+def test_42_parameter_manifest_is_p1_5_governed_and_non_autotuning():
+    cfg = load_config()
+    assert cfg["parameter_manifest"]
+    for row in cfg["parameter_manifest"]:
+        assert row["parameter_id"].startswith("P1_7_")
+        assert row["version"] == cfg["parameter_version"]
+        assert row["calibration_sample_size"] == 0
+        assert row["calibration_confidence"] == "LOW"
+        assert row["automatic_retuning"] is False
+
+
+def test_43_no_named_player_or_club_special_case():
+    text = (
+        (ROOT / "src" / "engines" / "v12_lineup_optimizer.py").read_text(encoding="utf-8")
+        + (ROOT / "config" / "intelligence" / "v12_lineup_optimizer.json").read_text(encoding="utf-8")
+    ).casefold()
+    for forbidden in ("barry", "kostoulas", "groß", "gross", "brighton", "arsenal"):
+        assert forbidden not in text
+
+
+def test_44_migration_comparator_blocks_only_real_legality_regression(base_decision):
+    legacy = deepcopy(base_decision)
+    comparison = compare_legacy_decision(legacy, base_decision)
+    assert comparison["classification"] == "EXACT_EQUIVALENT"
+    assert comparison["ownership_migration_blocked"] is False
+
+
+def test_45_captain_pair_takeover_formula_is_explicit():
+    starters = _starters_343()
+    captain, vice = starters[5], starters[6]
+    captain["p_dnp"] = 0.2
+    vice["p_appearance"] = 0.8
+    vice["p_dnp"] = 0.2
+    pair = next(row for row in evaluate_captain_vice_pairs(starters) if row["captain_element"] == captain["element"] and row["vice_element"] == vice["element"])
+    assert pair["vice_takeover_probability"] == pytest.approx(0.16)
+    assert pair["dependence_assumption"] == "CAPTAIN_DNP_AND_VICE_OUTCOME_INDEPENDENCE_APPROXIMATION"
+
+
+def test_46_distributional_surface_preserves_p1_3_pmf_without_rewrite():
+    projection = _projection(999, "MID", meanish=5.0)
+    original = deepcopy(projection["xpts_by_gw"][0]["point_distribution"]["probabilities"])
+    surface = build_player_surface(projection, GW)
+    assert surface["point_distribution"] == {k: pytest.approx(v) for k, v in original.items()}
+    assert projection["xpts_by_gw"][0]["point_distribution"]["probabilities"] == original
+
+
+def test_47_lineup_route_reports_zero_covariance_variance_approximation(base_decision):
+    alternative = base_decision["alternatives"][0]
+    assert alternative["aggregate_variance_semantics"] == "SUM_OF_PLAYER_VARIANCES_ZERO_COVARIANCE_APPROXIMATION"
+    assert alternative["uncertainty"]["covariance_status"] == "COVARIANCE_NOT_MODELLED_YET"
+
+
+def test_48_global_governance_boundaries_are_explicit(base_decision):
+    gov = base_decision["governance"]
+    assert gov["p1_1_math_mutated"] is False
+    assert gov["p1_3_math_mutated"] is False
+    assert gov["p1_6_math_mutated"] is False
+    assert gov["methodology_weights_20_25_30_25_unchanged"] is True
+    assert gov["v6_mutated"] is False
+    assert gov["monte_carlo_applied"] is False
+    assert gov["package_optimizer_implemented"] is False
+    assert gov["mini_league_overlay_applied"] is False

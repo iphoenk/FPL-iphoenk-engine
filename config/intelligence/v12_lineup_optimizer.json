@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "contract": "V12_DISTRIBUTIONAL_LINEUP_OPTIMIZER_V1",
+  "model_id": "v12_distributional_lineup_optimizer",
+  "model_owner": "V12_LINEUP_OPTIMIZER",
+  "model_version": "p1.7-v12-lineup-v1",
+  "feature_version": "p1.7-distributional-xi-bench-cvc-v1",
+  "parameter_version": "p1.7-lineup-parameters-v1",
+  "calibration_version": "p1.7-structural-calibration-v1",
+  "calibration_cutoff": "2026-09-19T16:12:31Z",
+  "authority": "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt",
+  "objective": {
+    "downside_shortfall_threshold": 2,
+    "upside_excess_threshold": 8,
+    "lineup_downside_weight": 0.1,
+    "lineup_upside_weight": 0.05,
+    "bench_blank_probability_weight_points": 0.2,
+    "bench_ge8_probability_weight_points": 0.2,
+    "captain_downside_weight": 0.15,
+    "captain_upside_weight": 0.1,
+    "close_call_utility_delta": 0.35,
+    "semantics": "All coefficients are decision-only structural priors in FPL-point-equivalent utility units; xPts and upstream model mathematics are never mutated."
+  },
+  "covariance": {
+    "cross_player": "COVARIANCE_NOT_MODELLED_YET",
+    "captain_vice_appearance": "INDEPENDENCE_APPROXIMATION_PENDING_COVARIANCE_MODEL",
+    "autosub_appearance": "INDEPENDENCE_APPROXIMATION_PENDING_COVARIANCE_MODEL",
+    "aggregate_variance": "SUM_OF_PLAYER_VARIANCES_ZERO_COVARIANCE_APPROXIMATION",
+    "monte_carlo_used": false
+  },
+  "autosub": {
+    "resolver": "GLOBAL_PRIORITY_FORMATION_LEGAL_RESOLVER_V1",
+    "reserve_gk_separate": true,
+    "cameo_is_appearance": true,
+    "late_cameo_is_appearance": true,
+    "dnp_only_triggers_autosub": true,
+    "bench_order_permutations": 6
+  },
+  "distribution": {
+    "preferred_source": "P1.3B_FINITE_STATE_CONDITIONAL_CORE_POINT_PMF_V1",
+    "fallback": "MOMENTS_ONLY_NO_FABRICATED_TAILS",
+    "bonus_limitation": "PARTIAL_BONUS_RESIDUAL_INHERITED_FROM_P1.3B",
+    "state_joint_distribution_limitation": "P1.1_STATE_PROBABILITIES_PLUS_P1.3_OVERALL_PMF; PER_STATE_POINT_PMF_NOT_REMATERIALIZED_BY_P1.7"
+  },
+  "tactical": {
+    "source_owner": "V12_TACTICAL_ROLE",
+    "required_component": "TACTICAL_ROLE",
+    "canonical_weight": 0.25,
+    "consumption": "READ_ONLY_TIE_BREAK_AND_EXPLAINABILITY",
+    "formula_recomputed": false
+  },
+  "parameter_manifest": [
+    {
+      "parameter_id": "P1_7_LINEUP_DISTRIBUTIONAL_UTILITY_V1",
+      "version": "p1.7-lineup-parameters-v1",
+      "paths": [
+        "objective.downside_shortfall_threshold",
+        "objective.upside_excess_threshold",
+        "objective.lineup_downside_weight",
+        "objective.lineup_upside_weight"
+      ],
+      "rationale": "Give supportable PMF downside/upside non-zero decision influence while keeping expected points primary and upstream xPts unchanged.",
+      "source": "STRUCTURAL_PRIOR_PENDING_SETTLED_P1_5_LINEUP_SAMPLES",
+      "calibration_sample_size": 0,
+      "calibration_confidence": "LOW",
+      "automatic_retuning": false
+    },
+    {
+      "parameter_id": "P1_7_BENCH_DISTRIBUTIONAL_TIEBREAK_V1",
+      "version": "p1.7-lineup-parameters-v1",
+      "paths": [
+        "objective.bench_blank_probability_weight_points",
+        "objective.bench_ge8_probability_weight_points"
+      ],
+      "rationale": "Bench order uses exact expected autosub points plus appearance-conditioned blank/upside evidence rather than raw mean sort.",
+      "source": "STRUCTURAL_PRIOR_PENDING_SETTLED_P1_5_LINEUP_SAMPLES",
+      "calibration_sample_size": 0,
+      "calibration_confidence": "LOW",
+      "automatic_retuning": false
+    },
+    {
+      "parameter_id": "P1_7_CAPTAIN_DISTRIBUTIONAL_UTILITY_V1",
+      "version": "p1.7-lineup-parameters-v1",
+      "paths": [
+        "objective.captain_downside_weight",
+        "objective.captain_upside_weight"
+      ],
+      "rationale": "Captain/vice pair utility uses PMF downside/upside and DNP-conditioned vice fallback, not highest mean alone.",
+      "source": "STRUCTURAL_PRIOR_PENDING_SETTLED_P1_5_LINEUP_SAMPLES",
+      "calibration_sample_size": 0,
+      "calibration_confidence": "LOW",
+      "automatic_retuning": false
+    },
+    {
+      "parameter_id": "P1_7_CLOSE_CALL_PROOF_V1",
+      "version": "p1.7-lineup-parameters-v1",
+      "paths": [
+        "objective.close_call_utility_delta"
+      ],
+      "rationale": "Presentation/proof threshold only; route ranking itself uses the full deterministic utility.",
+      "source": "STRUCTURAL_PRIOR_PENDING_SETTLED_P1_5_LINEUP_SAMPLES",
+      "calibration_sample_size": 0,
+      "calibration_confidence": "LOW",
+      "automatic_retuning": false
+    }
+  ],
+  "governance": {
+    "global_weights_20_25_30_25_unchanged": true,
+    "gate0_unchanged": true,
+    "p1_1_math_mutated": false,
+    "p1_3_math_mutated": false,
+    "p1_6_math_mutated": false,
+    "v6_mutated": false,
+    "package_optimizer_started": false,
+    "monte_carlo_started": false,
+    "mini_league_overlay_started": false,
+    "transfer_economics_consumed": false,
+    "raw_v6_payload_persisted": false,
+    "automatic_retuning": false,
+    "named_player_conditions_forbidden": true
+  }
+}

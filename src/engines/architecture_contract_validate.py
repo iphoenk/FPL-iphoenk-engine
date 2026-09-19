@@ -498,6 +498,22 @@ def run() -> dict:
             errors.append(f"P1.7 owner has forbidden production dependency: {forbidden_dependency}")
     if "from src.engines.v12_lineup_optimizer import" not in lineup_text:
         errors.append("lineup_governance must consume V12-native P1.7 owner")
+    tactical_consumption_text = (
+        ROOT / "src" / "engines" / "tactical_decision_consumption.py"
+    ).read_text(encoding="utf-8")
+    for required in (
+        'lineup.get("native_model") == "v12_distributional_lineup_optimizer"',
+        '"P1_7_NATIVE_OWNER_PRESERVE"',
+        '"p1_7_post_owner_decision_mutation": False',
+    ):
+        if required not in tactical_consumption_text:
+            errors.append(
+                f"P1.7 tactical consumer switch missing native-owner preservation marker: {required}"
+            )
+    if '"selection_score": round(distributional_utility, 6)' not in p1_7_text:
+        errors.append(
+            "P1.7 owner must expose non-authoritative selection_score compatibility alias"
+        )
     if "MIGRATION_ORACLE" not in lineup_text:
         errors.append("legacy lineup path must be explicitly retained as migration oracle")
     service_lineup = ((services.get("services") or {}).get("lineup_governance") or {})

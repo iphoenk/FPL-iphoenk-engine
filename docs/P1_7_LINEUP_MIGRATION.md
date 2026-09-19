@@ -127,3 +127,29 @@ That orchestration calls the P1.7 owner for the production decision and calls
 the old implementation only as `MIGRATION_ORACLE`. An illegal native XI,
 missing reserve GK or illegal C/VC pair is an unexpected regression and blocks
 ownership migration.
+
+
+## Final consumer compatibility hardening
+
+The production tactical close-call overlay predates P1.7 and historically
+re-ranked XI, bench, captain and vice after lineup governance. After P1.7
+ownership migration that behavior would create a second decision owner and
+could overwrite the distributional bench/C/VC result.
+
+For a lineup artifact carrying
+`native_model=v12_distributional_lineup_optimizer` and
+`production_owner=V12_LINEUP_OPTIMIZER`, the tactical consumer runs in
+`P1_7_NATIVE_OWNER_PRESERVE` mode:
+
+- XI, formation, bench order, reserve GK, captain, vice and lineup utility are
+  immutable to the post-owner overlay;
+- P1.6 tactical/role evidence remains consumed by the native P1.7 route
+  decision itself;
+- the overlay only adds presentation/governance metadata and verifies the
+  selected formation row reconciles with the final XI;
+- legacy lineup artifacts retain old close-call behavior as migration oracles.
+
+P1.7 also publishes `selection_score` on each squad row as a
+non-authoritative compatibility alias of the already-computed
+`distributional_utility`. This satisfies report-transparency consumers
+without creating a second scoring formula or mutating upstream xPts.

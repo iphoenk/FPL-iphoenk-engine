@@ -717,3 +717,16 @@ def test_48_global_governance_boundaries_are_explicit(base_decision):
     assert gov["monte_carlo_applied"] is False
     assert gov["package_optimizer_implemented"] is False
     assert gov["mini_league_overlay_applied"] is False
+
+
+def test_49_squad_rows_publish_non_authoritative_selection_score_alias(base_decision):
+    assert base_decision["squad_rows"]
+    for row in base_decision["squad_rows"]:
+        assert row["selection_score"] == pytest.approx(row["distributional_utility"])
+        assert row["selection_score_semantics"] == "P1_7_DISTRIBUTIONAL_UTILITY_COMPATIBILITY_ALIAS"
+
+
+def test_50_captain_safe_pool_always_contains_selected_captain_and_vice(base_decision):
+    safe_ids = {int(row["element"]) for row in base_decision["captain_safe_pool"]}
+    assert int(base_decision["captain"]["element"]) in safe_ids
+    assert int(base_decision["vice_captain"]["element"]) in safe_ids

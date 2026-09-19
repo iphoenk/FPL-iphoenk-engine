@@ -261,6 +261,8 @@ def build_player_surface(projection: Mapping[str, Any], planning_gw: int) -> dic
         "xpts_variance": round(variance, 6),
         "xpts_std": round(std, 6),
         "distributional_utility": round(distributional_utility, 6),
+        "selection_score": round(distributional_utility, 6),
+        "selection_score_semantics": "P1_7_DISTRIBUTIONAL_UTILITY_COMPATIBILITY_ALIAS",
         "expected_shortfall": None if shortfall is None else round(shortfall, 6),
         "expected_excess_ge_8": None if excess is None else round(excess, 6),
         "p_fpl_blank": None if p_blank is None else round(p_blank, 9),
@@ -1070,6 +1072,51 @@ def optimize_lineup(
     }
     seen_captains: set[int] = set()
     captain_pool: list[dict[str, Any]] = []
+
+    # Compatibility surface only: health/report consumers historically expect
+    # both selected C and VC in captain_safe_pool. This does not re-run or
+    # override the joint distributional C/VC decision.
+    selected_pair = dict(selected.get("captain_vice") or {})
+    for required_element, required_role in (
+        (captain_id, "SELECTED_CAPTAIN"),
+        (vice_id, "SELECTED_VICE"),
+    ):
+        if required_element <= 0 or required_element in seen_captains:
+            continue
+        surface = by_id[required_element]
+        captain_pool.append({
+            "element": required_element,
+            "name": surface.get("name"),
+            "captain_score": (
+                selected_pair.get("pair_utility")
+                if required_role == "SELECTED_CAPTAIN"
+                else surface.get("distributional_utility")
+            ),
+            "vice_score": (
+                selected_pair.get("expected_vice_takeover_value")
+                if required_role == "SELECTED_VICE"
+                else 0.0
+            ),
+            "pair_utility": selected_pair.get("pair_utility"),
+            "expected_captain_multiplier_value": (
+                selected_pair.get("expected_captain_multiplier_value")
+                if required_role == "SELECTED_CAPTAIN"
+                else surface.get("xpts_mean")
+            ),
+            "expected_vice_takeover_value": (
+                selected_pair.get("expected_vice_takeover_value")
+                if required_role == "SELECTED_VICE"
+                else 0.0
+            ),
+            "vice_takeover_probability": (
+                selected_pair.get("vice_takeover_probability")
+                if required_role == "SELECTED_VICE"
+                else 0.0
+            ),
+            "compatibility_role": required_role,
+        })
+        seen_captains.add(required_element)
+
     for row in selected.get("captain_vice_alternatives") or []:
         element = int(row.get("captain_element") or 0)
         if element <= 0 or element in seen_captains:

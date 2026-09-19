@@ -168,38 +168,171 @@ def _formation_legal(positions: Sequence[str | None]) -> bool:
     )
 
 
-def _autosub_candidate(
+def _bench_availability(outcome: Mapping[str, Any] | None) -> str:
+    if not outcome:
+        return "PENDING"
+    state = str(outcome.get("appearance_state") or "")
+    if state == "DNP":
+        return "DNP"
+    if state in APPEARED or state == "APPEARED_START_STATUS_UNRESOLVED":
+        return "PLAYED"
+    return "PENDING"
+
+
+def _solve_autosub_world(
     *,
-    dnp_element: int,
+    locked: Mapping[str, Any],
+    dnp_elements: Sequence[int],
+    played_bench: set[int],
+) -> dict[int, int]:
+    """Resolve one fully-known bench-availability world in priority order.
+
+    A played bench candidate must be used when at least one remaining DNP slot
+    can accept that candidate without making the selected XI formation illegal.
+    If several DNP slots are legal, use global look-ahead to preserve the
+    maximum number of later legal substitutions, then prefer same-position and
+    earlier XI slots deterministically.
+    """
+    positions = {int(k): v for k, v in (locked.get("position_by_element") or {}).items()}
+    xi_order = [int(x) for x in locked.get("starting_xi") or []]
+    bench_order = [int(x) for x in locked.get("bench_order") or []]
+    dnp = tuple(eid for eid in xi_order if eid in {int(x) for x in dnp_elements})
+    xi_rank = {eid: index for index, eid in enumerate(xi_order)}
+    initial_slots = {eid: positions.get(eid) for eid in xi_order}
+
+    def score(mapping: Mapping[int, int]) -> tuple[Any, ...]:
+        same_position = sum(
+            positions.get(out_id) == positions.get(in_id)
+            for out_id, in_id in mapping.items()
+        )
+        assigned_out_rank = tuple(
+            -xi_rank[out_id]
+            for in_id in bench_order
+            for out_id, mapped_in in mapping.items()
+            if mapped_in == in_id
+        )
+        return (len(mapping), same_position, assigned_out_rank)
+
+    def walk(
+        bench_index: int,
+        slots: dict[int, str | None],
+        remaining: tuple[int, ...],
+        mapping: dict[int, int],
+    ) -> dict[int, int]:
+        if bench_index >= len(bench_order) or not remaining:
+            return dict(mapping)
+
+        candidate = bench_order[bench_index]
+        if candidate not in played_bench:
+            return walk(bench_index + 1, slots, remaining, mapping)
+
+        candidate_position = positions.get(candidate)
+        legal_outs: list[int] = []
+        for out_id in remaining:
+            out_position = positions.get(out_id)
+            if candidate_position == "GK":
+                if out_position != "GK":
+                    continue
+            elif out_position == "GK" or candidate_position not in {"DEF", "MID", "FWD"}:
+                continue
+            proposed = dict(slots)
+            proposed[out_id] = candidate_position
+            if _formation_legal(list(proposed.values())):
+                legal_outs.append(out_id)
+
+        if not legal_outs:
+            return walk(bench_index + 1, slots, remaining, mapping)
+
+        branches: list[dict[int, int]] = []
+        for out_id in legal_outs:
+            proposed = dict(slots)
+            proposed[out_id] = candidate_position
+            next_mapping = dict(mapping)
+            next_mapping[out_id] = candidate
+            branches.append(
+                walk(
+                    bench_index + 1,
+                    proposed,
+                    tuple(eid for eid in remaining if eid != out_id),
+                    next_mapping,
+                )
+            )
+        return max(branches, key=score)
+
+    return walk(0, initial_slots, dnp, {})
+
+
+def _resolve_global_autosubs(
+    *,
     locked: Mapping[str, Any],
     outcome_by_element: Mapping[int, Mapping[str, Any]],
-) -> dict[str, Any] | None:
-    positions = {int(k): v for k, v in (locked.get("position_by_element") or {}).items()}
-    xi = [int(x) for x in locked.get("starting_xi") or []]
-    bench = [int(x) for x in locked.get("bench_order") or []]
-    out_position = positions.get(int(dnp_element))
-    base = [eid for eid in xi if eid != int(dnp_element)]
+) -> dict[str, Any]:
+    """Resolve all confirmed XI DNPs as one global sequential substitution state."""
+    xi_order = [int(x) for x in locked.get("starting_xi") or []]
+    bench_order = [int(x) for x in locked.get("bench_order") or []]
+    dnp_elements = [
+        eid
+        for eid in xi_order
+        if str((outcome_by_element.get(eid) or {}).get("appearance_state") or "") == "DNP"
+    ]
+    if not dnp_elements:
+        return {
+            "status": "RESOLVED",
+            "substitution_map": {},
+            "consumed_bench": [],
+            "pending_bench": [],
+            "world_count": 1,
+        }
 
-    for candidate in bench:
-        candidate_position = positions.get(candidate)
-        outcome = outcome_by_element.get(candidate) or {}
-        state = str(outcome.get("appearance_state") or "")
-        fixture = str(outcome.get("fixture_status") or "").upper()
-        if out_position == "GK":
-            if candidate_position != "GK":
-                continue
-        elif candidate_position == "GK":
-            continue
+    bench_state = {
+        eid: _bench_availability(outcome_by_element.get(eid))
+        for eid in bench_order
+    }
+    fixed_played = {eid for eid, state in bench_state.items() if state == "PLAYED"}
+    pending = [eid for eid, state in bench_state.items() if state == "PENDING"]
 
-        if state in {"NOT_YET_RESOLVED", "APPEARED_START_STATUS_UNRESOLVED"} and fixture not in FINISHED:
-            return {"status": "PENDING_EARLIER_BENCH", "element_id": candidate}
-        if state not in APPEARED and state != "APPEARED_START_STATUS_UNRESOLVED":
-            continue
+    world_maps: list[dict[int, int]] = []
+    for mask in range(1 << len(pending)):
+        played = set(fixed_played)
+        for index, eid in enumerate(pending):
+            if mask & (1 << index):
+                played.add(eid)
+        world_maps.append(
+            _solve_autosub_world(
+                locked=locked,
+                dnp_elements=dnp_elements,
+                played_bench=played,
+            )
+        )
 
-        proposed = [positions.get(eid) for eid in base] + [candidate_position]
-        if _formation_legal(proposed):
-            return {"status": "ACTIVATES", "element_id": candidate}
-    return None
+    final_map: dict[str, int | str] = {}
+    for out_id in dnp_elements:
+        outcomes = {world.get(out_id) for world in world_maps}
+        if len(outcomes) == 1:
+            only = next(iter(outcomes))
+            final_map[str(out_id)] = only if only is not None else "no_legal_sub"
+        else:
+            final_map[str(out_id)] = "pending"
+
+    consumed = sorted(
+        {
+            int(value)
+            for value in final_map.values()
+            if isinstance(value, int)
+        },
+        key=lambda eid: bench_order.index(eid),
+    )
+    return {
+        "status": "PENDING" if any(value == "pending" for value in final_map.values()) else "RESOLVED",
+        "substitution_map": final_map,
+        "consumed_bench": consumed,
+        "pending_bench": pending,
+        "bench_state": {str(eid): bench_state[eid] for eid in bench_order},
+        "world_count": len(world_maps),
+        "sequential_global": True,
+        "bench_player_consumed_at_most_once": True,
+        "formation_checked_after_each_substitution": True,
+    }
 
 
 def reconcile_owned_match_events(
@@ -238,6 +371,12 @@ def reconcile_owned_match_events(
             "minutes": _int(row.get("minutes")),
         }
 
+    autosub_resolution = _resolve_global_autosubs(
+        locked=locked,
+        outcome_by_element=preliminary,
+    )
+    final_substitution_map = autosub_resolution.get("substitution_map") or {}
+
     reconciled: list[dict[str, Any]] = []
     for eid in sorted(preliminary):
         row = by_element[eid]
@@ -247,19 +386,17 @@ def reconcile_owned_match_events(
         autosub = None
 
         if in_xi and appearance == "DNP":
-            autosub = _autosub_candidate(
-                dnp_element=eid,
-                locked=locked,
-                outcome_by_element=preliminary,
-            )
-            personal_state = "DNP_WITH_AUTOSUB_POSSIBLE" if autosub else "DNP_NO_LEGAL_AUTOSUB"
+            resolved_sub = final_substitution_map.get(str(eid), "no_legal_sub")
+            if isinstance(resolved_sub, int):
+                autosub = {"status": "ACTIVATES", "element_id": resolved_sub}
+                personal_state = "DNP_WITH_AUTOSUB_POSSIBLE"
+            elif resolved_sub == "pending":
+                autosub = {"status": "PENDING"}
+                personal_state = "DNP_AUTOSUB_PENDING"
+            else:
+                personal_state = "DNP_NO_LEGAL_AUTOSUB"
         elif in_xi and appearance == "CAMEO":
-            blocked = _autosub_candidate(
-                dnp_element=eid,
-                locked=locked,
-                outcome_by_element=preliminary,
-            )
-            autosub = {"status": "BLOCKED_BY_APPEARANCE", "would_be_candidate": (blocked or {}).get("element_id")}
+            autosub = {"status": "BLOCKED_BY_APPEARANCE"}
             personal_state = "CAMEO_BLOCKED_AUTOSUB"
         elif in_xi and appearance == "STARTED":
             personal_state = "STARTED"
@@ -297,6 +434,7 @@ def reconcile_owned_match_events(
             0 if row["locked_role"] == "STARTING_XI" and row["personal_state"] in {
                 "CAMEO_BLOCKED_AUTOSUB",
                 "DNP_WITH_AUTOSUB_POSSIBLE",
+                "DNP_AUTOSUB_PENDING",
                 "DNP_NO_LEGAL_AUTOSUB",
             } else 1,
             row["element_id"],
@@ -315,12 +453,16 @@ def reconcile_owned_match_events(
         "completed_or_live_owned_expected": expected,
         "completed_or_live_owned_reconciled": len(reconciled),
         "coverage_complete": len(reconciled) == expected,
+        "autosub_resolution": autosub_resolution,
+        "final_substitution_map": final_substitution_map,
         "players": reconciled,
         "personal_impact_priority": priority,
         "governance": {
             "personal_consequences_before_generic_observations": True,
             "cameo_blocks_autosub": True,
             "dnp_may_enable_legal_autosub": True,
+            "autosubs_resolved_globally_in_bench_priority_order": True,
+            "bench_candidate_consumed_once": True,
             "benched_dnp_does_not_activate_autosub_for_itself": True,
             "name_guessing_for_identity_forbidden": True,
         },

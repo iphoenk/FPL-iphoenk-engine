@@ -39,7 +39,7 @@ def load_identity_evidence_config(path: Path = EVIDENCE_CONFIG) -> dict[str, Any
     if limitations:
         if limitations.get("policy") != "EXPLICIT_NATIVE_ID_ALLOWLIST_ONLY":
             raise IdentityCoverageError("reviewed provider limitation policy mismatch")
-        if limitations.get("classification") != "NOT_APPLICABLE":
+        if limitations.get("classification") != "REVIEWED_PROVIDER_LIMITATION":
             raise IdentityCoverageError("reviewed provider limitation classification mismatch")
         for source_id, source in ((limitations.get("sources") or {}).items()):
             native_ids = [str(value).strip() for value in source.get("source_native_ids") or []]
@@ -134,11 +134,11 @@ def _observed_truth(
             classification = "VERIFIED"
             reason = "DETERMINISTIC_JOIN"
         elif limitation:
-            classification = "NOT_APPLICABLE"
+            classification = "REVIEWED_PROVIDER_LIMITATION"
             reason = str(limitation.get("reason") or "REVIEWED_PROVIDER_LIMITATION_NO_TRUSTED_CROSS_ID")
         else:
-            classification = "PROVIDER_ENTITY_EXISTS_BUT_UNMAPPED"
-            reason = "OBSERVED_NATIVE_ENTITY_WITHOUT_DETERMINISTIC_JOIN"
+            classification = "ACTIONABLE_UNMAPPED"
+            reason = "OBSERVED_NATIVE_ENTITY_WITH_STABLE_ID_WITHOUT_DETERMINISTIC_CROSSWALK"
 
         diagnostic = _diagnostic_label(native_rows[0])
         inventory.append(
@@ -195,22 +195,28 @@ def _observed_truth(
     else:
         observed_health = "RED"
 
-    # Wave-B identity health is intentionally stricter: an observed provider
-    # entity that is still unmapped is a real unresolved identity defect.
+    # Identity health distinguishes unsafe actionable gaps from reviewed
+    # provider limitations. Reviewed limitations remain visible and AMBER;
+    # genuine NOT_APPLICABLE is owned only by entity-scope applicability.
     if conflict_count or missing_native or duplicate_native_records or unmapped:
         player_identity_health = "RED"
-    elif observed and joined + reviewed_nonjoinable == observed:
+    elif observed and reviewed_nonjoinable:
+        player_identity_health = "AMBER"
+    elif observed and joined == observed:
         player_identity_health = "GREEN"
     else:
         player_identity_health = "NOT_ASSESSED"
 
     classification_counts = {
         "VERIFIED": sum(item["classification"] == "VERIFIED" for item in inventory),
-        "PROVIDER_ENTITY_EXISTS_BUT_UNMAPPED": sum(
-            item["classification"] == "PROVIDER_ENTITY_EXISTS_BUT_UNMAPPED" for item in inventory
+        "ACTIONABLE_UNMAPPED": sum(
+            item["classification"] == "ACTIONABLE_UNMAPPED" for item in inventory
+        ),
+        "REVIEWED_PROVIDER_LIMITATION": sum(
+            item["classification"] == "REVIEWED_PROVIDER_LIMITATION" for item in inventory
         ),
         "NO_PROVIDER_ENTITY": 0,
-        "NOT_APPLICABLE": sum(item["classification"] == "NOT_APPLICABLE" for item in inventory),
+        "NOT_APPLICABLE": 0,
         "CONFLICT": sum(item["classification"] == "CONFLICT" for item in inventory),
     }
 
@@ -225,6 +231,7 @@ def _observed_truth(
         "observed_join_health": observed_health,
         "player_identity_health": player_identity_health,
         "wave_b_closure_ready": player_identity_health == "GREEN",
+        "stable_provider_identifier_available": observed > 0 and missing_native == 0,
         "duplicate_observed_native_record_count": duplicate_native_records,
         "duplicate_observed_native_ids": sorted(duplicate_native_ids),
         "missing_native_id_record_count": missing_native,
@@ -416,6 +423,21 @@ def build_player_identity_coverage_truth(
             absence_status = "NOT_PROVEN"
             no_provider_entity_count = None
 
+        provider_universe = _PROVIDER_COMPLETENESS[source_id]
+        if (
+            observed.get("player_identity_health") == "GREEN"
+            and provider_universe != "CANONICAL_SHARED_NAMESPACE_COMPLETE"
+        ):
+            observed["player_identity_health"] = "AMBER"
+            observed["wave_b_closure_ready"] = False
+            observed["identity_health_reason"] = "UNKNOWN_PROVIDER_PRESENCE_REMAINS"
+        elif observed.get("player_identity_health") == "AMBER":
+            observed["identity_health_reason"] = "REVIEWED_PROVIDER_LIMITATION_OR_UNKNOWN_PROVIDER_PRESENCE"
+        elif observed.get("player_identity_health") == "RED":
+            observed["identity_health_reason"] = "ACTIONABLE_UNMAPPED_OR_IDENTITY_CONFLICT"
+        elif observed.get("player_identity_health") == "GREEN":
+            observed["identity_health_reason"] = "ALL_OBSERVED_AND_CANONICAL_SHARED_NAMESPACE_IDENTITIES_RESOLVED"
+
         unknown_provider_presence = (
             None
             if no_provider_entity_count is None
@@ -427,14 +449,15 @@ def build_player_identity_coverage_truth(
         sources[source_id] = {
             **canonical,
             **observed,
-            "provider_universe_completeness": _PROVIDER_COMPLETENESS[source_id],
+            "provider_universe_completeness": provider_universe,
             "absence_classification_status": absence_status,
             "no_provider_entity_count": no_provider_entity_count,
             "provider_entity_exists_but_unmapped_count": observed["observed_unmapped_player_count"],
             "canonical_classification_counts": {
                 "VERIFIED": canonical["canonical_mapped_player_count"],
-                "PROVIDER_ENTITY_EXISTS_BUT_UNMAPPED_OBSERVED": observed["observed_unmapped_player_count"],
-                "NOT_APPLICABLE_OBSERVED": observed.get("observed_reviewed_provider_limitation_count", 0),
+                "ACTIONABLE_UNMAPPED_OBSERVED": observed["observed_unmapped_player_count"],
+                "REVIEWED_PROVIDER_LIMITATION_OBSERVED": observed.get("observed_reviewed_provider_limitation_count", 0),
+                "NOT_APPLICABLE_OBSERVED": 0,
                 "NO_PROVIDER_ENTITY": no_provider_entity_count,
                 "UNKNOWN_PROVIDER_PRESENCE": unknown_provider_presence,
                 "CONFLICT": observed["identity_conflict_count"],
@@ -466,6 +489,8 @@ def build_player_identity_coverage_truth(
             "canonical_mapping_count_is_reconciled_to_actual_joinable_links": True,
             "provider_native_to_canonical_mapping_is_one_to_one": True,
             "wave_b_green_identity_requires_zero_actionable_observed_unmapped": True,
+            "green_requires_no_reviewed_provider_limitation_and_no_unknown_provider_presence": True,
+            "reviewed_provider_limitation_is_distinct_from_not_applicable": True,
             "reviewed_provider_limitations_are_excluded_only_from_provider_max_join_denominator": True,
             "raw_observed_join_coverage_remains_visible": True,
             "wave_b_green_identity_does_not_require_full_canonical_coverage": True,
@@ -483,6 +508,7 @@ def build_player_identity_coverage_truth(
             "partial_verified_coverage_is_truthful": True,
             "unreviewed_observed_unmapped_records_fail_closed": True,
             "reviewed_provider_limitations_are_non_blocking": True,
+            "reviewed_provider_limitations_are_amber_not_not_applicable": True,
             "identity_collisions_fail_closed": True,
             "duplicate_native_ids_fail_closed": True,
             "canonical_and_observed_identity_counts_are_reconciled": True,

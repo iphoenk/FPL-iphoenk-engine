@@ -55,6 +55,478 @@ _WEATHER_STATES_BY_MODE = {
 }
 
 
+_MATCH_VISIBLE_ORDER = (
+    "MATCH CHECKPOINT / GW STATUS",
+    "LOCKED PERSONAL TEAM",
+    "PERSONAL IMPACT FIRST",
+    "GLOBAL AUTOSUB STATE",
+    "CAPTAIN / VICE CONSEQUENCE",
+    "OWNED LIVE/FINAL POINTS",
+    "BONUS/BPS",
+    "CARDS / INJURY / DEFCON / ROLE EVENTS",
+    "RELEVANT LEAGUE-WIDE SIGNALS",
+    "ICON+ LIVE",
+    "NEXT-GW LEARNING",
+    "NEXT CRITICAL OBSERVATION",
+    "SOURCE / FRESHNESS STATUS",
+)
+_POST_ALL_MATCH_ORDER = (
+    "GW RESULT SUMMARY",
+    "DECISION P&L / COUNTERFACTUAL",
+    "PREDICTION CALIBRATION",
+    "OWNED15 REVIEW",
+    "GW COMPLETED MATCH-BY-MATCH SCOUT",
+    "ROLE / SET-PIECE CHANGES",
+    "BAYESIAN CALIBRATION INPUT / ACTUAL UPDATE STATUS",
+    "ICON+ FINAL GW",
+    "PRICE OUTLOOK",
+    "FRESH FULL-UNIVERSE NEXT-GW SCAN",
+    "WATCHLIST20",
+    "EARLY HOLD / TRANSFER FRONTIER",
+    "LEARNING LOG",
+)
+_DEBUG_VISIBLE_PHRASES = (
+    "personal-team reconciliation corrected",
+    "reconciliation corrected",
+    "repair applied",
+    "migration successful",
+    "test passed",
+)
+_MODEL_UPDATE_CLAIMS = (
+    "posterior updated",
+    "xmins recalibrated",
+    "probabilities changed",
+    "p(start) changed",
+)
+_DECISION_DELTA_FIELDS = (
+    "decision_item",
+    "previous_state",
+    "current_state",
+    "material_change",
+    "reason",
+    "evidence_time",
+)
+_ALL15_VISIBLE_FIELDS = (
+    "player",
+    "opponent",
+    "recommended_or_locked_role",
+    "p_available",
+    "p_start",
+    "p_cameo",
+    "p_dnp",
+    "xmins",
+    "tactical_role",
+    "set_piece_penalty_role",
+    "matchup",
+    "gw_plus_1",
+    "three_gw",
+    "five_gw",
+    "uncertainty_floor_upside",
+    "action",
+)
+_WATCHLIST_VISIBLE_FIELDS = (
+    "rank",
+    "player",
+    "position",
+    "club",
+    "price",
+    "next_opponent",
+    "football_score",
+    "p_start",
+    "xmins",
+    "gw_plus_1",
+    "three_gw",
+    "five_gw",
+    "role_set_piece_note",
+    "main_upside",
+    "main_risk",
+    "action",
+)
+_PACKAGE_VISIBLE_FIELDS = (
+    "route",
+    "moves",
+    "transfer_cost",
+    "gw1_net",
+    "two_gw_if_relevant",
+    "three_gw",
+    "five_gw",
+    "p_beats_hold",
+    "expected_regret",
+    "robustness",
+    "price_risk",
+    "structure_effect",
+    "action_verdict",
+)
+_FINAL_LOCK_FIELDS = (
+    "target_gw",
+    "transfers_out",
+    "transfers_in",
+    "number_of_moves",
+    "ft_hit_treatment",
+    "bank_after_if_known",
+    "formation",
+    "xi_exact11",
+    "bench_gk",
+    "outfield_bench_priority_1_3",
+    "captain",
+    "vice_captain",
+    "chip",
+    "primary_action",
+    "abort_trigger",
+    "fallback",
+    "evidence_timestamp",
+    "canonical_authority_version",
+)
+_MATCH_SCOUT_FIELDS = (
+    "fixture_id",
+    "result",
+    "formation_system",
+    "coach_pattern",
+    "player_roles",
+    "minutes_substitution_pattern",
+    "xg_xa_xgi_shots_chances",
+    "set_pieces_penalties",
+    "defcon",
+    "opponent_channels",
+    "sustainable_vs_noisy",
+    "implication_for_our15",
+    "implication_for_next_opponent",
+    "posterior_calibration_implication",
+)
+_PRICE_WAIT_FIELDS = (
+    "route",
+    "affordable_now",
+    "after_target_plus_0_1",
+    "after_owned_minus_0_1",
+    "sell_value_impact",
+    "route_survival",
+    "football_information_benefit_of_waiting",
+)
+_OVERNIGHT_RISK_FIELDS = (
+    "player_or_route",
+    "current_action",
+    "possible_change_event",
+    "materiality",
+    "next_checkpoint",
+)
+_ICON_COUNT_METRICS = ("ownership", "starter_share", "captain_share", "vice_share")
+_ALLOWED_ALL15_ACTIONS = frozenset({"START", "BENCH", "HOLD", "WATCH", "SELL-CANDIDATE"})
+
+
+
+def _content_fingerprint(payload: Mapping[str, Any] | None) -> str:
+    if not isinstance(payload, Mapping):
+        return ""
+    canonical = json.dumps(
+        dict(payload),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        default=str,
+    ).encode("utf-8")
+    return sha256(canonical).hexdigest()
+
+
+def _missing_row_fields(rows: Sequence[Any], fields: Sequence[str], label: str) -> list[str]:
+    failures: list[str] = []
+    for index, row in enumerate(rows, start=1):
+        if not isinstance(row, Mapping):
+            failures.append(f"{label}_ROW_INVALID={index}")
+            continue
+        missing = [field for field in fields if field not in row]
+        if missing:
+            failures.append(f"{label}_ROW_SCHEMA_MISSING={index}:{','.join(missing)}")
+    return failures
+
+
+def _row_identity(row: Mapping[str, Any]) -> Any:
+    for key in ("element_id", "element", "player_id", "id", "player"):
+        if row.get(key) is not None:
+            return row.get(key)
+    return None
+
+
+def _validate_bench_presentation(payload: Mapping[str, Any]) -> list[str]:
+    failures: list[str] = []
+    bench = payload.get("bench_presentation")
+    if not isinstance(bench, Mapping):
+        return ["BENCH_PRESENTATION_MISSING"]
+    bench_gk = bench.get("bench_gk")
+    outfield = list(bench.get("outfield_autosub_priority") or [])
+    if bench_gk in (None, ""):
+        failures.append("BENCH_GK_MISSING")
+    if len(outfield) != 3:
+        failures.append(f"OUTFIELD_BENCH_PRIORITY_COUNT={len(outfield)}")
+    if bench_gk in outfield:
+        failures.append("BENCH_GK_RENDERED_AS_OUTFIELD_PRIORITY")
+    if len(set(map(str, outfield))) != len(outfield):
+        failures.append("OUTFIELD_BENCH_PRIORITY_DUPLICATE")
+    position_by_player = bench.get("position_by_player")
+    if isinstance(position_by_player, Mapping):
+        for candidate in outfield:
+            if str(position_by_player.get(str(candidate), position_by_player.get(candidate)) or "").upper() in {"GK", "GKP"}:
+                failures.append("GOALKEEPER_IN_OUTFIELD_AUTOSUB_PRIORITY")
+    return failures
+
+
+def _validate_decision_delta(payload: Mapping[str, Any]) -> list[str]:
+    if not payload.get("prior_visible_report"):
+        return []
+    delta = payload.get("decision_delta")
+    if not isinstance(delta, Mapping):
+        return ["DECISION_DELTA_MISSING"]
+    rows = list(delta.get("rows") or [])
+    no_change = bool(delta.get("no_material_decision_change"))
+    failures: list[str] = []
+    if rows and no_change:
+        failures.append("DECISION_DELTA_CONFLICT")
+    if not rows and not no_change:
+        failures.append("DECISION_DELTA_EMPTY_WITHOUT_NO_CHANGE")
+    failures.extend(_missing_row_fields(rows, _DECISION_DELTA_FIELDS, "DECISION_DELTA"))
+    for index, row in enumerate(rows, start=1):
+        if isinstance(row, Mapping) and row.get("material_change") is not True:
+            failures.append(f"DECISION_DELTA_NONMATERIAL_ROW={index}")
+    return failures
+
+
+def _validate_icon_contract(payload: Mapping[str, Any]) -> list[str]:
+    icon = payload.get("icon")
+    if not isinstance(icon, Mapping):
+        return []
+    if str(icon.get("status") or "").upper() not in {"FRESH", "COMPLETE"}:
+        return []
+    metrics = icon.get("metrics")
+    if not isinstance(metrics, Mapping):
+        return ["ICON_METRICS_MISSING"]
+    failures: list[str] = []
+    for label in _ICON_COUNT_METRICS:
+        row = metrics.get(label)
+        if not isinstance(row, Mapping):
+            failures.append(f"ICON_METRIC_MISSING={label}")
+            continue
+        try:
+            numerator = float(row["numerator"])
+            denominator = float(row["denominator"])
+            percentage = float(row["percentage"])
+        except (KeyError, TypeError, ValueError):
+            failures.append(f"ICON_METRIC_INVALID={label}")
+            continue
+        if denominator <= 0:
+            failures.append(f"ICON_DENOMINATOR_INVALID={label}")
+            continue
+        expected = numerator / denominator * 100.0
+        if abs(expected - percentage) > 0.11:
+            failures.append(f"ICON_ARITHMETIC_MISMATCH={label}")
+    if "eo" not in metrics:
+        failures.append("ICON_EO_MISSING")
+    return failures
+
+
+def _validate_model_update_semantics(payload: Mapping[str, Any]) -> list[str]:
+    failures: list[str] = []
+    rows = list(payload.get("calibration_items") or [])
+    for index, row in enumerate(rows, start=1):
+        if not isinstance(row, Mapping):
+            failures.append(f"CALIBRATION_ROW_INVALID={index}")
+            continue
+        state = str(row.get("status") or "").upper()
+        if state not in {"CALIBRATION_INPUT", "MODEL_UPDATE_PENDING_NEXT_COMPUTE", "ACTUAL_MODEL_UPDATE"}:
+            failures.append(f"CALIBRATION_STATUS_INVALID={index}:{state or '<empty>'}")
+            continue
+        if state == "ACTUAL_MODEL_UPDATE":
+            proof = row.get("execution_proof")
+            if not (
+                isinstance(proof, Mapping)
+                and proof.get("executed") is True
+                and proof.get("evidence_time")
+                and "previous_value" in proof
+                and "current_value" in proof
+            ):
+                failures.append(f"MODEL_UPDATE_EXECUTION_PROOF_MISSING={index}")
+    return failures
+
+
+def validate_v12_visible_content_contract(
+    *,
+    report_mode: str,
+    content_contract: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Mode-specific visible-content validation owned by existing PRE/POST QA."""
+    mode = str(report_mode or "").strip().upper()
+    payload = dict(content_contract or {})
+    failures: list[str] = []
+    failures.extend(_validate_decision_delta(payload))
+    failures.extend(_validate_model_update_semantics(payload))
+    failures.extend(_validate_icon_contract(payload))
+
+    if payload.get("report_due") is True and payload.get("optional_scope_degraded") is True and payload.get("visible_report_suppressed") is True:
+        failures.append("OPTIONAL_DEGRADED_SCOPE_SUPPRESSED_DUE_REPORT")
+
+    if mode in {"MATCH", "DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP", "POST_ALL_MATCH"}:
+        failures.extend(_validate_bench_presentation(payload))
+
+    if mode == "MATCH":
+        order = tuple(str(value).strip().upper() for value in payload.get("visible_order") or [])
+        if order != tuple(value.upper() for value in _MATCH_VISIBLE_ORDER):
+            failures.append("PURE_MATCH_VISIBLE_ORDER_INVALID")
+        required = (
+            "locked_team",
+            "personal_impact",
+            "global_autosub_state",
+            "captain_vice_consequence",
+            "owned_live_final_points",
+            "bonus_bps",
+            "cards_injury_defcon_role_events",
+            "league_wide_signals",
+            "next_gw_learning",
+            "next_critical_observation",
+            "source_freshness",
+        )
+        for key in required:
+            if key not in payload:
+                failures.append(f"PURE_MATCH_BLOCK_MISSING={key}")
+
+    if mode in {"DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP", "POST_ALL_MATCH"}:
+        all15 = list(payload.get("all15") or [])
+        if len(all15) != 15:
+            failures.append(f"ALL15_COUNT={len(all15)}")
+        all15_ids = [_row_identity(row) for row in all15 if isinstance(row, Mapping)]
+        if len(all15_ids) != 15 or any(value is None for value in all15_ids):
+            failures.append("ALL15_IDENTITY_MISSING")
+        elif len(set(map(str, all15_ids))) != 15:
+            failures.append("ALL15_IDENTITY_DUPLICATE")
+        failures.extend(_missing_row_fields(all15, _ALL15_VISIBLE_FIELDS, "ALL15"))
+        for index, row in enumerate(all15, start=1):
+            if isinstance(row, Mapping) and str(row.get("action") or "").upper() not in _ALLOWED_ALL15_ACTIONS:
+                failures.append(f"ALL15_ACTION_INVALID={index}")
+
+        watchlist = list(payload.get("watchlist20") or [])
+        if len(watchlist) != 20:
+            failures.append(f"WATCHLIST20_COUNT={len(watchlist)}")
+        failures.extend(_missing_row_fields(watchlist, _WATCHLIST_VISIBLE_FIELDS, "WATCHLIST20"))
+        positions = Counter(str(row.get("position") or "").upper() for row in watchlist if isinstance(row, Mapping))
+        for position in ("GK", "DEF", "MID", "FWD"):
+            if positions.get(position, 0) != 5:
+                failures.append(f"WATCHLIST20_{position}={positions.get(position, 0)}")
+        if any(bool(row.get("owned")) for row in watchlist if isinstance(row, Mapping)):
+            failures.append("WATCHLIST20_OWNED_PLAYER_PRESENT")
+
+        routes = list(payload.get("package_routes") or [])
+        failures.extend(_missing_row_fields(routes, _PACKAGE_VISIBLE_FIELDS, "PACKAGE"))
+        if routes and not any(str(row.get("route") or "").upper() == "HOLD" for row in routes if isinstance(row, Mapping)):
+            failures.append("PACKAGE_HOLD_BASELINE_MISSING")
+        if str(payload.get("search_authority") or "").upper() == "PARTIAL" and payload.get("search_authority_visible") is not True:
+            failures.append("PARTIAL_SEARCH_AUTHORITY_NOT_VISIBLE")
+
+    if mode == "FINAL":
+        lock = payload.get("gw_lock_package")
+        if not isinstance(lock, Mapping):
+            failures.append("GW_LOCK_PACKAGE_MISSING")
+        else:
+            missing = [field for field in _FINAL_LOCK_FIELDS if field not in lock]
+            if missing:
+                failures.append(f"GW_LOCK_PACKAGE_SCHEMA_MISSING={','.join(missing)}")
+            xi = list(lock.get("xi_exact11") or [])
+            outfield = list(lock.get("outfield_bench_priority_1_3") or [])
+            if len(xi) != 11 or len(set(map(str, xi))) != 11:
+                failures.append("GW_LOCK_PACKAGE_XI_INVALID")
+            if len(outfield) != 3 or len(set(map(str, outfield))) != 3:
+                failures.append("GW_LOCK_PACKAGE_OUTFIELD_BENCH_INVALID")
+            if lock.get("bench_gk") in outfield:
+                failures.append("GW_LOCK_PACKAGE_GK_IN_OUTFIELD_PRIORITY")
+            if lock.get("captain") not in xi or lock.get("vice_captain") not in xi or lock.get("captain") == lock.get("vice_captain"):
+                failures.append("GW_LOCK_PACKAGE_CVC_INVALID")
+            if payload.get("selected_package_unambiguous") is not True:
+                failures.append("GW_LOCK_PACKAGE_SELECTION_AMBIGUOUS")
+
+    if mode == "POST_ALL_MATCH":
+        order = tuple(str(value).strip().upper() for value in payload.get("visible_order") or [])
+        if order != tuple(value.upper() for value in _POST_ALL_MATCH_ORDER):
+            failures.append("POST_ALL_MATCH_VISIBLE_ORDER_INVALID")
+        completed = [str(value) for value in payload.get("completed_fixture_ids") or []]
+        scout = list(payload.get("match_scout") or [])
+        failures.extend(_missing_row_fields(scout, _MATCH_SCOUT_FIELDS, "MATCH_SCOUT"))
+        scout_ids = [str(row.get("fixture_id")) for row in scout if isinstance(row, Mapping)]
+        if len(scout_ids) != len(set(scout_ids)):
+            failures.append("MATCH_SCOUT_FIXTURE_DUPLICATE")
+        if set(scout_ids) != set(completed) or len(scout_ids) != len(completed):
+            failures.append("MATCH_SCOUT_FIXTURE_COVERAGE_MISMATCH")
+
+    if mode == "PRICE":
+        rows = list(payload.get("price_waiting_comparison") or [])
+        failures.extend(_missing_row_fields(rows, _PRICE_WAIT_FIELDS, "PRICE_WAITING"))
+        if payload.get("material_price_route_count") and not rows:
+            failures.append("PRICE_WAITING_COMPARISON_MISSING")
+
+    if mode in {"DEEP", "FULL"} and str(payload.get("checkpoint_time") or "") == "21:30":
+        rows = list(payload.get("overnight_risk_board") or [])
+        if not rows:
+            failures.append("OVERNIGHT_RISK_BOARD_MISSING")
+        failures.extend(_missing_row_fields(rows, _OVERNIGHT_RISK_FIELDS, "OVERNIGHT_RISK"))
+
+    if mode == "OVERLAP":
+        block_ids = [str(value) for value in payload.get("visible_block_ids") or []]
+        if len(block_ids) != len(set(block_ids)):
+            failures.append("FULL_MATCH_DUPLICATED_REPORT_BLOCK")
+
+    return {
+        "status": "PASS" if not failures else "FAIL",
+        "failures": failures,
+        "report_mode": mode,
+        "contract_fingerprint": _content_fingerprint(payload),
+    }
+
+
+def _validate_v12_rendered_body(
+    *,
+    report_mode: str,
+    rendered_body: str,
+    content_contract: Mapping[str, Any] | None,
+) -> list[str]:
+    if not isinstance(content_contract, Mapping):
+        return []
+    failures: list[str] = []
+    body = str(rendered_body or "")
+    lower = body.casefold()
+    for phrase in _DEBUG_VISIBLE_PHRASES:
+        if phrase.casefold() in lower:
+            failures.append(f"VISIBLE_DEBUG_LANGUAGE={phrase}")
+
+    has_actual_update = any(
+        isinstance(row, Mapping)
+        and str(row.get("status") or "").upper() == "ACTUAL_MODEL_UPDATE"
+        and isinstance(row.get("execution_proof"), Mapping)
+        and row["execution_proof"].get("executed") is True
+        for row in content_contract.get("calibration_items") or []
+    )
+    if not has_actual_update and any(claim.casefold() in lower for claim in _MODEL_UPDATE_CLAIMS):
+        failures.append("UNPROVEN_MODEL_RECOMPUTATION_CLAIM")
+
+    mode = str(report_mode or "").upper()
+    if mode == "MATCH":
+        positions = []
+        for marker in _MATCH_VISIBLE_ORDER:
+            needle = marker if marker != "ICON+ LIVE" else "ICON+"
+            positions.append(body.upper().find(needle.upper()))
+        if any(position < 0 for position in positions) or positions != sorted(positions):
+            failures.append("PURE_MATCH_RENDER_ORDER_INVALID")
+        if "BENCH GK" not in body.upper() or "OUTFIELD AUTOSUB PRIORITY" not in body.upper():
+            failures.append("VISIBLE_BENCH_SEPARATION_MISSING")
+
+    if content_contract.get("prior_visible_report"):
+        if "DECISION DELTA" not in body.upper() and "NO MATERIAL DECISION CHANGE" not in body.upper():
+            failures.append("VISIBLE_DECISION_DELTA_MISSING")
+
+    if mode == "FINAL" and "GW LOCK PACKAGE" not in body.upper():
+        failures.append("VISIBLE_GW_LOCK_PACKAGE_MISSING")
+    if mode == "POST_ALL_MATCH" and "GW COMPLETED MATCH-BY-MATCH SCOUT" not in body.upper():
+        failures.append("VISIBLE_MATCH_SCOUT_MISSING")
+    if str(content_contract.get("search_authority") or "").upper() == "PARTIAL":
+        if "SEARCH PARTIAL" not in body.upper():
+            failures.append("VISIBLE_PARTIAL_SEARCH_LABEL_MISSING")
+    return failures
+
+
 def _expected_visible_catalog(report_mode: str, generated_section_ids: Sequence[str]) -> list[str]:
     mode = str(report_mode or "LEGACY").strip().upper() or "LEGACY"
     if mode == "MATCH":
@@ -233,6 +705,7 @@ def _render_contract_token(
     expected_model_keys: Sequence[str],
     expected_inference_keys: Sequence[str],
     required_visible_markers: Sequence[str],
+    visible_content_contract_fingerprint: str = "",
 ) -> str:
     payload = {
         "compute_fingerprint": compute_fingerprint,
@@ -248,6 +721,7 @@ def _render_contract_token(
         "expected_model_keys": list(expected_model_keys),
         "expected_inference_keys": list(expected_inference_keys),
         "required_visible_markers": list(required_visible_markers),
+        "visible_content_contract_fingerprint": visible_content_contract_fingerprint,
     }
     canonical = json.dumps(
         payload,
@@ -267,6 +741,7 @@ def validate_pre_render_qa(
     weather_direct_chat_present: bool = False,
     report_mode: str | None = None,
     weather_contract_state: str | None = None,
+    visible_content_contract: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Fail closed before rendering and mint an immutable render handoff token."""
     compute_failures = _compute_handoff_failures(compute_contract)
@@ -358,6 +833,20 @@ def validate_pre_render_qa(
     required_visible_markers = _required_visible_markers(resolved_report_mode)
     compute_fingerprint = str(compute_contract.get("compute_fingerprint") or "")
 
+    visible_content_validation = None
+    visible_content_contract_fingerprint = ""
+    if visible_content_contract is not None:
+        visible_content_validation = validate_v12_visible_content_contract(
+            report_mode=resolved_report_mode,
+            content_contract=visible_content_contract,
+        )
+        visible_content_contract_fingerprint = str(visible_content_validation.get("contract_fingerprint") or "")
+        if visible_content_validation.get("status") != "PASS":
+            failures.extend(
+                f"VISIBLE_CONTENT_CONTRACT:{failure}"
+                for failure in visible_content_validation.get("failures", [])
+            )
+
     qa_passed = not failures
     token = (
         _render_contract_token(
@@ -374,6 +863,7 @@ def validate_pre_render_qa(
             expected_model_keys=expected_model_keys,
             expected_inference_keys=expected_inference_keys,
             required_visible_markers=required_visible_markers,
+            visible_content_contract_fingerprint=visible_content_contract_fingerprint,
         )
         if qa_passed
         else None
@@ -418,6 +908,9 @@ def validate_pre_render_qa(
         "expected_model_keys": expected_model_keys,
         "expected_inference_keys": expected_inference_keys,
         "required_visible_markers": required_visible_markers,
+        "visible_content_contract": dict(visible_content_contract) if isinstance(visible_content_contract, Mapping) else None,
+        "visible_content_contract_fingerprint": visible_content_contract_fingerprint,
+        "visible_content_validation": visible_content_validation,
     }
 
 
@@ -435,6 +928,7 @@ def validate_post_render_qa(
     rendered_mini_league_denominator_complete: bool,
     rendered_weather_direct_chat_present: bool = False,
     rendered_weather_contract_state: str | None = None,
+    rendered_visible_content_contract: Mapping[str, Any] | None = None,
     truncated: bool,
 ) -> dict[str, Any]:
     """Verify both the actual visible body and renderer metadata against pre-render QA."""
@@ -523,6 +1017,7 @@ def validate_post_render_qa(
         expected_model_keys=expected_model_keys,
         expected_inference_keys=expected_inference_keys,
         required_visible_markers=required_visible_markers,
+        visible_content_contract_fingerprint=str(pre_render_qa.get("visible_content_contract_fingerprint") or ""),
     )
     stored_pre_token = pre_render_qa.get("render_contract_token")
 
@@ -552,6 +1047,31 @@ def validate_post_render_qa(
     )
 
     failures: list[str] = list(visible_body["failures"])
+    expected_visible_contract = pre_render_qa.get("visible_content_contract")
+    if isinstance(expected_visible_contract, Mapping):
+        actual_visible_contract = (
+            rendered_visible_content_contract
+            if isinstance(rendered_visible_content_contract, Mapping)
+            else expected_visible_contract
+        )
+        rendered_contract_validation = validate_v12_visible_content_contract(
+            report_mode=expected_report_mode,
+            content_contract=actual_visible_contract,
+        )
+        if rendered_contract_validation.get("status") != "PASS":
+            failures.extend(
+                f"VISIBLE_CONTENT_CONTRACT:{failure}"
+                for failure in rendered_contract_validation.get("failures", [])
+            )
+        if _content_fingerprint(actual_visible_contract) != str(pre_render_qa.get("visible_content_contract_fingerprint") or ""):
+            failures.append("VISIBLE_CONTENT_CONTRACT_FINGERPRINT_MISMATCH")
+        failures.extend(
+            _validate_v12_rendered_body(
+                report_mode=expected_report_mode,
+                rendered_body=rendered_body,
+                content_contract=actual_visible_contract,
+            )
+        )
     if stored_pre_token != recomputed_pre_token:
         failures.append("PRE_RENDER_CONTRACT_TOKEN_INVALID")
     if truncated:

@@ -11,14 +11,20 @@ from hashlib import sha256
 import json
 from typing import Any, Mapping, Sequence
 
-from src.engines.canonical_decision_methodology import (
-    CANONICAL_AUTHORITY,
-    CANONICAL_WEIGHTS,
-)
-
 from .delivery_integrity import MANDATORY_SECTIONS, PARTIAL_ALLOWED_SECTIONS
 from .visible_body_contract import validate_visible_report_body
 
+
+# QA-only mirrors of Canonical V12 invariants. These values are validation
+# expectations, not methodology authority. V6 remains standalone and never
+# imports downstream decision engines.
+_V12_CANONICAL_AUTHORITY = "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt"
+_V12_CANONICAL_WEIGHTS = {
+    "PROVEN_HISTORICAL": 0.20,
+    "TACTICAL_ROLE": 0.25,
+    "CURRENT_UNDERLYING": 0.30,
+    "FIXTURE_SECURITY": 0.25,
+}
 
 _FULL_COUNT_TARGETS = {
     "OUR15": 15,
@@ -688,14 +694,14 @@ def validate_v12_decision_semantics(
 
     authority = proof.get("canonical_authority")
     if not isinstance(authority, Mapping):
-        failures.append("V12_CANONICAL_AUTHORITY_PROOF_MISSING")
+        failures.append("V12__V12_CANONICAL_AUTHORITY_PROOF_MISSING")
     else:
-        if authority.get("path") != CANONICAL_AUTHORITY:
-            failures.append("V12_CANONICAL_AUTHORITY_PATH_INVALID")
+        if authority.get("path") != _V12_CANONICAL_AUTHORITY:
+            failures.append("V12__V12_CANONICAL_AUTHORITY_PATH_INVALID")
         if not _is_sha256(authority.get("sha256")):
-            failures.append("V12_CANONICAL_AUTHORITY_SHA256_INVALID")
+            failures.append("V12__V12_CANONICAL_AUTHORITY_SHA256_INVALID")
         if not str(authority.get("version") or "").strip():
-            failures.append("V12_CANONICAL_AUTHORITY_VERSION_MISSING")
+            failures.append("V12__V12_CANONICAL_AUTHORITY_VERSION_MISSING")
 
     try:
         universe_n = int(proof.get("official_fpl_universe_denominator") or 0)
@@ -717,7 +723,7 @@ def validate_v12_decision_semantics(
         if not isinstance(weights, Mapping):
             failures.append("V12_20_25_30_25_WEIGHTS_MISSING")
         else:
-            for key, expected in CANONICAL_WEIGHTS.items():
+            for key, expected in _V12_CANONICAL_WEIGHTS.items():
                 try:
                     actual = float(weights.get(key))
                 except (TypeError, ValueError):
@@ -725,7 +731,7 @@ def validate_v12_decision_semantics(
                 if abs(actual - expected) > 1e-12:
                     failures.append(f"V12_WEIGHT_MISMATCH={key}")
         components = football.get("component_scores")
-        if not isinstance(components, Mapping) or set(components) != set(CANONICAL_WEIGHTS):
+        if not isinstance(components, Mapping) or set(components) != set(_V12_CANONICAL_WEIGHTS):
             failures.append("V12_COMPONENT_SCORE_PROOF_INVALID")
         if football.get("transfer_economics_included") is not False:
             failures.append("V12_ECONOMICS_DOUBLE_COUNT_RISK")

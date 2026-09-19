@@ -295,6 +295,41 @@ def run() -> dict:
     for forbidden in ("src.runtime_v6", "runtime_v3", "package_optimizer"):
         if forbidden in event_text:
             errors.append(f"V12 player event owner has forbidden production dependency: {forbidden}")
+    tactical_text = (ROOT / "src" / "engines" / "v12_tactical_role.py").read_text(encoding="utf-8")
+    if 'MODEL_OWNER = "V12_TACTICAL_ROLE"' not in tactical_text:
+        errors.append("V12 tactical/role capability must declare stable production ownership")
+    for forbidden in (
+        "from src.runtime_v6",
+        "import src.runtime_v6",
+        "from src.runtime_v3",
+        "import src.runtime_v3",
+        "from src.engines.package_optimizer",
+        "import src.engines.package_optimizer",
+        "from src.engines.monte_carlo",
+        "import src.engines.monte_carlo",
+        "from src.engines.mini_league",
+        "import src.engines.mini_league",
+        "from src.engines.lineup_optimizer",
+        "import src.engines.lineup_optimizer",
+    ):
+        if forbidden in tactical_text.lower():
+            errors.append(
+                f"V12 tactical/role owner has forbidden production dependency: {forbidden}"
+            )
+    if "v12_tactical_role" in event_text:
+        errors.append(
+            "P1.3 player event owner must remain mathematically separate from P1.6 tactical scorer"
+        )
+    prediction_text = (ROOT / "src" / "engines" / "prediction_service.py").read_text(encoding="utf-8")
+    if (
+        "from src.engines.v12_tactical_role import attach_tactical_role_scores"
+        not in prediction_text
+        or "attach_tactical_role_scores(projections, planning_gw)"
+        not in prediction_text
+    ):
+        errors.append(
+            "prediction service must consume the V12-native tactical/role owner"
+        )
 
     battle_threshold = ((lineup_policy.get("battle") or {}).get("close_margin_threshold"))
     try:

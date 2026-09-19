@@ -10,6 +10,7 @@ from src.engines.p0_decision_quality import (
     build_position_projection_diagnostics,
     projection_signature,
 )
+from src.engines.v12_tactical_role import attach_tactical_role_scores
 from src.models.historical_projection import build as build_player_projections
 from src.models.official_role_evidence import attach_official_role_evidence
 from src.models.prediction_quality import evaluate as evaluate_prediction_quality
@@ -120,6 +121,9 @@ def run() -> dict:
     projections = attach_tactical_matchups(projections, planning_gw)
     _annotate_tactical_effect(projections)
     assert_projection_signature_unchanged(pre_tactical_signature, projections)
+    pre_native_tactical_signature = projection_signature(projections)
+    tactical_role_component = attach_tactical_role_scores(projections, planning_gw)
+    assert_projection_signature_unchanged(pre_native_tactical_signature, projections)
     projection_diagnostics = build_position_projection_diagnostics(projections)
     projections["position_calibration_diagnostics"] = projection_diagnostics
     projections["generated_at"] = _now()
@@ -137,6 +141,10 @@ def run() -> dict:
         "tactical_matchup_never_directly_mutates_xpts": True,
         "tactical_double_count_guard_verified": True,
         "tactical_effect_field_explicit": True,
+        "v12_native_tactical_role_component": True,
+        "tactical_role_component_weight": 0.25,
+        "p1_3_event_math_unchanged_by_p1_6": True,
+        "p1_1_minutes_math_unchanged_by_p1_6": True,
         "position_projection_diagnostics_are_non_mutating": True,
         "v4_is_not_projection_calibration_truth": True,
     })
@@ -178,6 +186,7 @@ def run() -> dict:
             "advisory_only": True, "tactical_effect": "advisory", "tactical_delta_applied": 0.0, "xpts_mutation": False,
             "double_count_guard_verified": True, "report_policy": "material-highlights-only",
         },
+        "tactical_role_component": tactical_role_component,
         "player_feature_model": {"contract": projections.get("player_feature_contract"), "opt_in": projections.get("player_feature_model_opt_in"), "defensive_contribution_model": projections.get("defensive_contribution_model"), "advanced_defensive_evidence_players_used": projections.get("advanced_defensive_evidence_players_used")},
         "projection_calibration": {"status": projection_diagnostics.get("status"), "comparison_authority": projection_diagnostics.get("comparison_authority"), "mutates_xpts": False, "positions": projection_diagnostics.get("positions")},
         "risk_guardrails": {"team_cluster_penalty_enabled": package_governance.get("team_cluster_penalty_enabled"), "early_season_change_cap_enabled": package_governance.get("early_season_change_cap_enabled"), "effective_max_changes": package_governance.get("effective_max_changes")},

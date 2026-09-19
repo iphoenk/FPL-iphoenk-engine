@@ -460,6 +460,92 @@ def aggregate_settled_ledgers(records: Iterable[Mapping[str, Any]]) -> dict[str,
     return {"schema_version": SCHEMA_VERSION, "settled_record_count": len(settled), "prediction_sample_size": prediction_n, "decision_metrics": summary, "calibration_confidence": "LOW" if prediction_n < 50 else "MEDIUM" if prediction_n < 150 else "HIGH", "governance": {"updates_require_settled_samples": True, "explicit_sample_size_required": True, "automatic_methodology_weight_mutation": False}}
 
 
+def tactical_role_calibration_metrics(
+    samples: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Diagnostic P1.6 calibration hooks; never auto-retunes tactical weights."""
+    settled = [dict(row) for row in samples if row.get("settled") is True]
+    feature_values: dict[str, list[float]] = {}
+    score_errors: list[float] = []
+    direction_errors: list[float] = []
+    decision_errors: list[float] = []
+    confidence_errors: list[float] = []
+
+    for row in settled:
+        if (
+            row.get("tactical_role_score") is not None
+            and row.get("realized_tactical_score") is not None
+        ):
+            score_errors.append(
+                abs(
+                    _num(
+                        row["tactical_role_score"],
+                        "tactical_role_score",
+                    )
+                    - _num(
+                        row["realized_tactical_score"],
+                        "realized_tactical_score",
+                    )
+                )
+            )
+        if row.get("direction_correct") is not None:
+            correct = 1.0 if bool(row.get("direction_correct")) else 0.0
+            direction_errors.append(1.0 - correct)
+            if row.get("confidence") is not None:
+                confidence = _prob(row["confidence"], "confidence")
+                confidence_errors.append((confidence - correct) ** 2)
+        if row.get("decision_correct") is not None:
+            decision_errors.append(
+                0.0 if bool(row.get("decision_correct")) else 1.0
+            )
+
+        for feature in row.get("feature_decomposition") or []:
+            if not isinstance(feature, Mapping):
+                continue
+            name = str(feature.get("feature_name") or "").strip()
+            contribution = feature.get("canonical_tactical_contribution")
+            if name and contribution is not None:
+                feature_values.setdefault(name, []).append(
+                    _num(contribution, f"{name}.contribution")
+                )
+
+    sample_size = len(settled)
+    feature_usefulness = {
+        name: {
+            "sample_size": len(values),
+            "mean_signed_contribution": _r(_avg(values)),
+            "diagnostic_only": True,
+        }
+        for name, values in sorted(feature_values.items())
+    }
+    return {
+        "settled_sample_size": sample_size,
+        "feature_usefulness": feature_usefulness,
+        "score_calibration_mae": _r(_avg(score_errors)),
+        "score_calibration_sample_size": len(score_errors),
+        "direction_calibration_error_rate": _r(_avg(direction_errors)),
+        "direction_calibration_sample_size": len(direction_errors),
+        "decision_calibration_error_rate": _r(_avg(decision_errors)),
+        "decision_calibration_sample_size": len(decision_errors),
+        "confidence_calibration_brier": _r(_avg(confidence_errors)),
+        "confidence_calibration_sample_size": len(confidence_errors),
+        "calibration_confidence": (
+            "LOW"
+            if sample_size < 50
+            else "MEDIUM"
+            if sample_size < 150
+            else "HIGH"
+        ),
+        "governance": {
+            "explicit_settled_sample_size": True,
+            "automatic_retuning": False,
+            "canonical_weight_mutation": False,
+            "one_match_tactical_rule_forbidden": True,
+            "diagnostic_learning_only": True,
+        },
+    }
+
+
 OPERATIONAL_BINDING_FIELDS = (
     "input_snapshot_id",
     "factual_snapshot_timestamps",

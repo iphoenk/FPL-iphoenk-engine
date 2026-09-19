@@ -9,6 +9,7 @@ Canonical visible-content contract was applied by the actual runtime.
 
 from datetime import datetime
 from hashlib import sha256
+import re
 from typing import Any, Mapping, Sequence
 
 
@@ -28,6 +29,149 @@ def canonical_content_fingerprint(canonical_text: str) -> str:
     if not isinstance(canonical_text, str) or not canonical_text.strip():
         raise VisibleContentProofError("canonical text is required")
     return sha256(canonical_text.encode("utf-8")).hexdigest()
+
+
+def _git_revision(value: Any, *, label: str) -> str:
+    text = _nonempty(value, label=label)
+    if len(text) not in {40, 64} or any(ch not in "0123456789abcdefABCDEF" for ch in text):
+        raise VisibleContentProofError(f"{label} must be a Git revision hex digest")
+    return text.lower()
+
+
+def _normalise_revision(
+    *,
+    canonical_authority_path: str,
+    canonical_version: str,
+    canonical_revision: Mapping[str, Any] | None,
+    legacy_content_sha256: str | None,
+) -> dict[str, Any]:
+    if canonical_revision is None:
+        if legacy_content_sha256 is None:
+            raise VisibleContentProofError("canonical_revision or computed content SHA-256 is required")
+        return {
+            "path": canonical_authority_path,
+            "branch_or_ref": None,
+            "branch_head_sha": None,
+            "file_blob_sha": None,
+            "content_sha256": _sha256(legacy_content_sha256, label="canonical_content_fingerprint_sha256"),
+            "content_sha256_computed": True,
+            "canonical_version": canonical_version,
+        }
+    row = dict(canonical_revision)
+    if str(row.get("path") or "") != canonical_authority_path:
+        raise VisibleContentProofError("canonical_revision.path must match Canonical V12")
+    branch_or_ref = _nonempty(row.get("branch_or_ref"), label="canonical_revision.branch_or_ref")
+    branch_head = _git_revision(row.get("branch_head_sha"), label="canonical_revision.branch_head_sha")
+    blob = _git_revision(row.get("file_blob_sha"), label="canonical_revision.file_blob_sha")
+    computed = bool(row.get("content_sha256_computed"))
+    content_sha = row.get("content_sha256")
+    if computed:
+        content_sha = _sha256(content_sha, label="canonical_revision.content_sha256")
+    elif content_sha not in (None, ""):
+        raise VisibleContentProofError(
+            "content_sha256 must be null when content_sha256_computed=false"
+        )
+    else:
+        content_sha = None
+    version = _nonempty(row.get("canonical_version") or canonical_version, label="canonical_revision.canonical_version")
+    return {
+        "path": canonical_authority_path,
+        "branch_or_ref": branch_or_ref,
+        "branch_head_sha": branch_head,
+        "file_blob_sha": blob,
+        "content_sha256": content_sha,
+        "content_sha256_computed": computed,
+        "canonical_version": version,
+    }
+
+
+def canonical_mode_contract(canonical_text: str, report_mode: str) -> dict[str, Any]:
+    """Derive structural section identity/order directly from the current Canonical text."""
+    text = _nonempty(canonical_text, label="canonical_text")
+    mode = str(report_mode or "").strip().upper()
+    if mode in {"DEEP", "FULL", "DEADLINE", "FINAL"}:
+        start_marker = "14A. FULL / DEEP BACKBONE"
+        end_marker = "ALL15 identity completeness"
+        start = text.find(start_marker)
+        end = text.find(end_marker, start)
+        if start < 0 or end < 0:
+            raise VisibleContentProofError("Canonical Deep visible-order block not found")
+        block = text[start:end]
+        rows: list[dict[str, str]] = []
+        for raw in block.splitlines():
+            match = re.match(r"^(?P<ordinal>\d+B?)\s+(?P<label>.+?)\.?$", raw.strip())
+            if not match:
+                continue
+            ordinal = match.group("ordinal").upper()
+            label = match.group("label").strip().rstrip(".")
+            if ordinal.endswith("B"):
+                number = int(ordinal[:-1])
+                section_id = f"S{number:02d}B"
+            else:
+                section_id = f"S{int(ordinal):02d}"
+            rows.append({"section_id": section_id, "label": label})
+        if not rows:
+            raise VisibleContentProofError("Canonical Deep visible-order rows not found")
+        return {
+            "report_mode": mode,
+            "expected_section_ids": [row["section_id"] for row in rows],
+            "expected_visible_order": [row["label"] for row in rows],
+        }
+    if mode == "MATCH":
+        start_marker = "14B. PURE MATCH EXACT CONTENT CONTRACT"
+        end_marker = "Generic match story"
+        start = text.find(start_marker)
+        end = text.find(end_marker, start)
+        if start < 0 or end < 0:
+            raise VisibleContentProofError("Canonical Match visible-order block not found")
+        block = text[start:end]
+        rows = []
+        for raw in block.splitlines():
+            match = re.match(r"^(?P<ordinal>\d+)\s+(?P<label>.+?)\.?$", raw.strip())
+            if match:
+                rows.append(
+                    {
+                        "section_id": f"MATCH{int(match.group('ordinal'))}",
+                        "label": match.group("label").strip().rstrip("."),
+                    }
+                )
+        return {
+            "report_mode": mode,
+            "expected_section_ids": [row["section_id"] for row in rows],
+            "expected_visible_order": [row["label"] for row in rows],
+        }
+    return {"report_mode": mode, "expected_section_ids": [], "expected_visible_order": []}
+
+
+def _coverage(
+    *,
+    expected_section_ids: Sequence[str],
+    rendered_section_ids: Sequence[str],
+    expected_visible_order: Sequence[str],
+    rendered_visible_order: Sequence[str],
+) -> dict[str, Any]:
+    expected = [str(value) for value in expected_section_ids]
+    rendered = [str(value) for value in rendered_section_ids]
+    missing = [value for value in expected if value not in rendered]
+    unexpected = [value for value in rendered if value not in expected]
+    order_valid = rendered == expected and list(rendered_visible_order) == list(expected_visible_order)
+    failures: list[str] = []
+    if missing:
+        failures.append("MODE_SECTIONS_MISSING=" + ",".join(missing))
+    if unexpected:
+        failures.append("MODE_SECTIONS_UNEXPECTED=" + ",".join(unexpected))
+    if not order_valid:
+        failures.append("MODE_VISIBLE_ORDER_INVALID")
+    return {
+        "expected_section_ids": expected,
+        "rendered_section_ids": rendered,
+        "missing_section_ids": missing,
+        "unexpected_section_ids": unexpected,
+        "expected_visible_order": list(expected_visible_order),
+        "rendered_visible_order": list(rendered_visible_order),
+        "visible_order_valid": order_valid,
+        "hard_failures": failures,
+    }
 
 
 def _nonempty(value: Any, *, label: str) -> str:
@@ -148,7 +292,6 @@ def _python_runtime_provenance(
 def build_visible_content_proof(
     *,
     canonical_authority_path: str,
-    canonical_content_fingerprint_sha256: str,
     canonical_version: str,
     report_slot: str,
     report_mode: str,
@@ -162,15 +305,24 @@ def build_visible_content_proof(
     search_authority: str | None = None,
     repository_python_qa_executed: bool = False,
     python_execution_evidence: Mapping[str, Any] | None = None,
+    canonical_revision: Mapping[str, Any] | None = None,
+    canonical_content_fingerprint_sha256: str | None = None,
+    canonical_text: str | None = None,
+    expected_section_ids: Sequence[str] | None = None,
+    rendered_section_ids: Sequence[str] = (),
+    expected_visible_order: Sequence[str] | None = None,
+    rendered_visible_order: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Build one transient VISIBLE_CONTENT_PROOF for a due report occurrence."""
     if canonical_authority_path != CANONICAL_AUTHORITY:
         raise VisibleContentProofError("VISIBLE_CONTENT_PROOF must bind Canonical V12")
-    fingerprint = _sha256(
-        canonical_content_fingerprint_sha256,
-        label="canonical_content_fingerprint_sha256",
-    )
     version = _nonempty(canonical_version, label="canonical_version")
+    revision = _normalise_revision(
+        canonical_authority_path=canonical_authority_path,
+        canonical_version=version,
+        canonical_revision=canonical_revision,
+        legacy_content_sha256=canonical_content_fingerprint_sha256,
+    )
     slot = _nonempty(report_slot, label="report_slot")
     mode = _nonempty(report_mode, label="report_mode").upper()
     observed = _nonempty(observed_at, label="observed_at")
@@ -200,11 +352,43 @@ def build_visible_content_proof(
             "section_degradations must match degraded section_states exactly"
         )
 
+    derived = None
+    if canonical_text is not None:
+        derived = canonical_mode_contract(canonical_text, mode)
+    expected_ids = list(
+        expected_section_ids
+        if expected_section_ids is not None
+        else (derived or {}).get("expected_section_ids", [])
+    )
+    expected_order = list(
+        expected_visible_order
+        if expected_visible_order is not None
+        else (derived or {}).get("expected_visible_order", [])
+    )
+    coverage = _coverage(
+        expected_section_ids=expected_ids,
+        rendered_section_ids=rendered_section_ids,
+        expected_visible_order=expected_order,
+        rendered_visible_order=rendered_visible_order,
+    ) if expected_ids or rendered_section_ids or expected_order or rendered_visible_order else {
+        "expected_section_ids": [],
+        "rendered_section_ids": [],
+        "missing_section_ids": [],
+        "unexpected_section_ids": [],
+        "expected_visible_order": [],
+        "rendered_visible_order": [],
+        "visible_order_valid": True,
+        "hard_failures": [],
+    }
+    failures.extend(coverage["hard_failures"])
+    failures = list(dict.fromkeys(failures))
+
     due = bool(report_due)
     can_continue = bool(report_can_continue)
-    if due and can_continue != (not failures):
+    derived_continue = not failures
+    if due and can_continue != derived_continue:
         raise VisibleContentProofError(
-            "for REPORT_DUE, report_can_continue must be true iff there are no hard failures"
+            "for REPORT_DUE, report_can_continue must match hard/structural conformance"
         )
 
     search = None
@@ -234,14 +418,22 @@ def build_visible_content_proof(
         "persistence_forbidden": True,
         "canonical_authority": {
             "path": CANONICAL_AUTHORITY,
-            "content_sha256": fingerprint,
-            "version": version,
+            "content_sha256": revision.get("content_sha256"),
+            "version": revision.get("canonical_version"),
         },
+        "canonical_revision": revision,
         "report_slot": slot,
         "report_mode": mode,
         "report_due": due,
         "observed_at": observed,
         "section_states": normalised_sections,
+        "expected_section_ids": coverage["expected_section_ids"],
+        "rendered_section_ids": coverage["rendered_section_ids"],
+        "missing_section_ids": coverage["missing_section_ids"],
+        "unexpected_section_ids": coverage["unexpected_section_ids"],
+        "expected_visible_order": coverage["expected_visible_order"],
+        "rendered_visible_order": coverage["rendered_visible_order"],
+        "visible_order_valid": coverage["visible_order_valid"],
         "hard_failures": failures,
         "section_degradations": degradations,
         "warnings": [str(value) for value in warnings if str(value).strip()],
@@ -250,6 +442,21 @@ def build_visible_content_proof(
         "search_authority": search,
         "runtime_provenance": runtime,
     }
+
+
+def compact_content_proof_audit_line(proof: Mapping[str, Any]) -> str:
+    revision = proof.get("canonical_revision") if isinstance(proof.get("canonical_revision"), Mapping) else {}
+    runtime = proof.get("runtime_provenance") if isinstance(proof.get("runtime_provenance"), Mapping) else {}
+    canonical = str(revision.get("branch_head_sha") or revision.get("file_blob_sha") or "UNPROVEN")
+    python_state = str(runtime.get("python_qa_status") or "NOT_PROVEN")
+    contract = str(proof.get("content_contract_status") or "UNKNOWN")
+    slot = str(proof.get("report_slot") or "")
+    mode = str(proof.get("report_mode") or "")
+    return (
+        f"CONTENT PROOF slot={slot} mode={mode} Canonical={canonical} "
+        f"runtime=ChatGPT Automation Python QA={python_state} contract={contract}"
+    )
+
 
 
 def compact_visible_content_status(proof: Mapping[str, Any]) -> dict[str, Any]:

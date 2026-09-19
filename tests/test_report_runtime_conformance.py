@@ -16,7 +16,12 @@ from src.engines.v12_runtime_conformance import (
     content_contract_severity,
     future_transfer_economics_inputs,
     plan_due_report_refresh,
+    plan_hourly_core_upkeep,
     resolve_governed_refresh_result,
+    resolve_hourly_core_upkeep_result,
+    build_hourly_core_upkeep_proof,
+    validate_v12_authority_sources,
+    hydrate_v12_player_identities,
     split_bench_for_display,
     validate_1230_signal_delta,
     validate_decision_delta_rows,
@@ -713,3 +718,246 @@ def test_38_mode_contract_tracks_canonical_wording_instead_of_static_duplicate_s
     assert contract["expected_visible_order"][3] == (
         "Watchlist20 exact20 CANONICAL-MUTATION-PROBE"
     )
+
+
+def test_39_every_natural_hourly_occurrence_owns_core_upkeep_even_when_report_silent():
+    plan = plan_hourly_core_upkeep(
+        report_occurrence="2026-09-19T13:30:00+07:00",
+        observed_at="2026-09-19T13:30:05+07:00",
+        report_due=False,
+    )
+    assert plan["core_upkeep_due"] is True
+    assert plan["report_due"] is False
+    assert plan["core_logical_slot"] == "2026-09-19T13:00:00+07:00"
+    assert plan["attempt_governed_refresh"] is True
+
+
+def test_40_same_slot_natural_authoritative_fulfillment_prevents_duplicate_acquisition():
+    plan = plan_hourly_core_upkeep(
+        report_occurrence="2026-09-19T13:30:00+07:00",
+        observed_at="2026-09-19T13:30:05+07:00",
+        report_due=False,
+        same_slot_authoritative_fulfilled=True,
+        authoritative_runtime_snapshot=True,
+        fulfillment_reason="chatgpt_hourly_master",
+    )
+    assert plan["status"] == "ALREADY_FULFILLED"
+    assert plan["attempt_governed_refresh"] is False
+    assert plan["same_slot_fulfilled"] is True
+
+
+def test_41_current_slot_in_progress_requires_reread_not_duplicate():
+    plan = plan_hourly_core_upkeep(
+        report_occurrence="2026-09-19T14:30:00+07:00",
+        observed_at="2026-09-19T14:30:04+07:00",
+        report_due=True,
+        acquisition_in_progress=True,
+    )
+    assert plan["status"] == "RE_READ_CURRENT_SLOT_IN_PROGRESS"
+    assert plan["attempt_governed_refresh"] is False
+    assert plan["bounded_terminal_reread_required"] is True
+
+
+def test_42_missing_current_slot_uses_exactly_one_existing_431_attempt():
+    plan = plan_hourly_core_upkeep(
+        report_occurrence="2026-09-19T15:30:00+07:00",
+        observed_at="2026-09-19T15:30:06+07:00",
+        report_due=False,
+    )
+    assert plan["attempt_governed_refresh"] is True
+    assert plan["refresh_attempt_count"] == 1
+    assert plan["transport"] == "ISSUE_431_EXISTING_GOVERNED_TRANSPORT"
+    assert "reason=chatgpt_hourly_master" in plan["issue_431_title"]
+    assert "logical_slot=2026-09-19T15:00:00+07:00" in plan["issue_431_title"]
+
+
+def test_43_previous_same_slot_attempt_forbids_second_attempt():
+    plan = plan_hourly_core_upkeep(
+        report_occurrence="2026-09-19T15:30:00+07:00",
+        observed_at="2026-09-19T15:30:20+07:00",
+        report_due=True,
+        previous_core_attempts=1,
+    )
+    assert plan["status"] == "ATTEMPT_ALREADY_MADE"
+    assert plan["attempt_governed_refresh"] is False
+    assert plan["duplicate_acquisition_forbidden"] is True
+
+
+def test_44_failed_hourly_core_with_due_report_continues_degraded():
+    plan = plan_hourly_core_upkeep(
+        report_occurrence="2026-09-19T16:30:00+07:00",
+        observed_at="2026-09-19T16:30:03+07:00",
+        report_due=True,
+    )
+    result = resolve_hourly_core_upkeep_result(plan, result="FAILED")
+    assert result["core_upkeep"] == "DEGRADED"
+    assert result["report_can_continue"] is True
+    assert result["emit_visible_report"] is True
+
+
+def test_45_failed_hourly_core_with_silent_report_route_does_not_fake_report():
+    plan = plan_hourly_core_upkeep(
+        report_occurrence="2026-09-19T17:30:00+07:00",
+        observed_at="2026-09-19T17:30:03+07:00",
+        report_due=False,
+    )
+    result = resolve_hourly_core_upkeep_result(plan, result="TIMEOUT")
+    assert result["core_upkeep"] == "DEGRADED"
+    assert result["emit_visible_report"] is False
+    assert result["silent_occurrence_complete"] is True
+
+
+def test_46_report_prefetch_never_fulfills_core_operational_slot():
+    plan = plan_hourly_core_upkeep(
+        report_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:04+07:00",
+        report_due=True,
+        report_prefetch_complete=True,
+    )
+    assert plan["report_prefetch_fulfills_core_slot"] is False
+    assert plan["attempt_governed_refresh"] is True
+
+
+def test_47_manual_recovery_cannot_masquerade_as_natural_authoritative_slot_proof():
+    plan = plan_hourly_core_upkeep(
+        report_occurrence="2026-09-19T19:30:00+07:00",
+        observed_at="2026-09-19T19:30:04+07:00",
+        report_due=False,
+        same_slot_authoritative_fulfilled=True,
+        authoritative_runtime_snapshot=True,
+        fulfillment_reason="manual_recovery",
+    )
+    assert plan["status"] == "GOVERNED_CURRENT_SLOT_ATTEMPT_REQUIRED"
+    proof = build_hourly_core_upkeep_proof(
+        report_occurrence="2026-09-19T19:30:00+07:00",
+        core_logical_slot="2026-09-19T19:00:00+07:00",
+        observed_at="2026-09-19T19:30:04+07:00",
+        transport="ISSUE_431_EXISTING_GOVERNED_TRANSPORT",
+        mutation_readback_state="PASS",
+        acquisition_run_ids=["run1"],
+        publication_run_ids=["pub1"],
+        publish_integrity="PASS",
+        authoritative_runtime_snapshot=True,
+        fulfillment_reason="manual_recovery",
+    )
+    assert proof["same_slot_fulfilled"] is False
+    assert "NON_NATURAL_REASON_CANNOT_BE_AUTHORITATIVE_HOURLY_PROOF" in proof["hard_failures"]
+
+
+def test_48_backfill_and_future_fill_are_rejected():
+    with pytest.raises(RuntimeConformanceError):
+        plan_hourly_core_upkeep(
+            report_occurrence="2026-09-19T20:30:00+07:00",
+            observed_at="2026-09-19T20:30:04+07:00",
+            report_due=False,
+            supplied_core_logical_slot="2026-09-19T19:00:00+07:00",
+        )
+    with pytest.raises(RuntimeConformanceError):
+        plan_hourly_core_upkeep(
+            report_occurrence="2026-09-19T20:30:00+07:00",
+            observed_at="2026-09-19T20:30:04+07:00",
+            report_due=False,
+            supplied_core_logical_slot="2026-09-19T21:00:00+07:00",
+        )
+
+
+def test_49_duplicate_acquisition_or_publication_same_slot_is_hard_proof_failure():
+    proof = build_hourly_core_upkeep_proof(
+        report_occurrence="2026-09-19T21:30:00+07:00",
+        core_logical_slot="2026-09-19T21:00:00+07:00",
+        observed_at="2026-09-19T21:30:02+07:00",
+        transport="ISSUE_431_EXISTING_GOVERNED_TRANSPORT",
+        mutation_readback_state="PASS",
+        acquisition_run_ids=["a1", "a2"],
+        publication_run_ids=["p1", "p2"],
+        publish_integrity="PASS",
+        authoritative_runtime_snapshot=True,
+        fulfillment_reason="chatgpt_hourly_master",
+    )
+    assert proof["duplicate_acquisition"] is True
+    assert proof["duplicate_publication"] is True
+    assert "DUPLICATE_ACQUISITION_FOR_SLOT" in proof["hard_failures"]
+    assert "DUPLICATE_PUBLICATION_FOR_SLOT" in proof["hard_failures"]
+    assert proof["same_slot_fulfilled"] is False
+
+
+def test_50_current_natural_publication_can_prove_authoritative_runtime_snapshot():
+    proof = build_hourly_core_upkeep_proof(
+        report_occurrence="2026-09-19T22:30:00+07:00",
+        core_logical_slot="2026-09-19T22:00:00+07:00",
+        observed_at="2026-09-19T22:30:02+07:00",
+        transport="ISSUE_431_EXISTING_GOVERNED_TRANSPORT",
+        mutation_readback_state="EXACT_MATCH",
+        acquisition_run_ids=["a1"],
+        publication_run_ids=["p1"],
+        runtime_data_v6_publication_sha="abc123",
+        runtime_data_v6_generation=42,
+        publish_integrity="PASS",
+        authoritative_runtime_snapshot=True,
+        fulfillment_reason="chatgpt_hourly_master",
+    )
+    assert proof["hard_failures"] == []
+    assert proof["same_slot_fulfilled"] is True
+    assert proof["completion_result"] == "FULFILLED"
+
+
+def test_51_v12_authority_lookup_is_git_control_only_not_legacy_library():
+    result = validate_v12_authority_sources(
+        authority_path="control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt",
+        state_path="control/fpl_master_v12/FPL_MASTER_STATE_V12.json",
+    )
+    assert result["legacy_library_authority_allowed"] is False
+    with pytest.raises(RuntimeConformanceError):
+        validate_v12_authority_sources(
+            authority_path="FPL_MASTER_RUNTIME_CONTRACT.txt",
+            state_path="ACTIVE_DECISION_CONTEXT.json",
+        )
+
+
+def test_52_legacy_library_identity_cannot_hydrate_current_v12_identity():
+    result = hydrate_v12_player_identities(
+        [{"element_id": 565, "display_name": "M.Sangaré"}],
+        official_players=[{"element_id": 565, "web_name": "Sangaré"}],
+        legacy_library_players=[{"element_id": 488, "display_name": "Sangaré"}],
+    )
+    assert [row["element_id"] for row in result["rows"]] == [565]
+    assert result["legacy_library_input_ignored"] is True
+    assert result["legacy_library_identity_hydration_allowed"] is False
+    with pytest.raises(RuntimeConformanceError):
+        hydrate_v12_player_identities(
+            [{"element_id": 488, "display_name": "Sangaré"}],
+            official_players=[{"element_id": 565, "web_name": "Sangaré"}],
+            state_source="ACTIVE_DECISION_CONTEXT.json",
+        )
+
+
+def test_53_canonical_keeps_report_cadence_and_separates_hourly_core_upkeep():
+    canonical = _canonical()
+    assert "EVERY natural FPL Master Monitor V12 HH:30" in canonical
+    assert "CORE_UPKEEP_DUE and REPORT_DUE are independent" in canonical
+    assert "04:30 DEEP; 05:30 PRICE; 12:30 DEEP; 21:30 DEEP" in canonical
+    assert "report-prefetch remains report-driven and separate" in canonical
+
+
+def test_54_canonical_forbids_legacy_library_authority_and_identity_hydration():
+    canonical = _canonical()
+    assert "Old Library Runtime/Spec/ACTIVE_DECISION_CONTEXT files" in canonical
+    assert "MUST NOT be read as V12 authority/state" in canonical
+    assert "No legacy Library player identity may hydrate V12" in canonical
+
+
+def test_55_existing_due_report_refresh_remains_independent_and_unchanged_for_not_due():
+    plan = plan_due_report_refresh(
+        report_due=False,
+        report_mode="DEEP",
+        required_scope_age_minutes=999,
+        canonical_freshness_threshold_minutes=45,
+    )
+    assert plan["status"] == "NOT_DUE"
+    hourly = plan_hourly_core_upkeep(
+        report_occurrence="2026-09-19T23:30:00+07:00",
+        observed_at="2026-09-19T23:30:03+07:00",
+        report_due=False,
+    )
+    assert hourly["core_upkeep_due"] is True
+    assert hourly["attempt_governed_refresh"] is True

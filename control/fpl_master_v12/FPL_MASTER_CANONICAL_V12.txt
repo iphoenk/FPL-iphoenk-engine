@@ -44,6 +44,29 @@ K. manual_recovery or other non-natural provenance cannot masquerade as natural 
 L. Expected steady-state core freshness is approximately one hourly cycle. Mode-specific stricter freshness still applies. For Deep/Price/Deadline/Final, reuse the current occurrence's core result first; if a mandatory exact scope remains stale/incomplete, apply the existing bounded exact-scope recovery without starting a second full-core acquisition for the same HH:00.
 M. Due-report exact-scope refresh planning remains downstream of this hourly core upkeep. Refresh success is never a visible-report delivery prerequisite.
 
+4A. NATURAL_CORE_UPKEEP_GATE — OCCURRENCE TERMINATION BARRIER
+A. NATURAL_CORE_UPKEEP_GATE is a first-class mandatory execution gate for every natural FPL Master Monitor V12 HH:30 occurrence. It is not advisory report text.
+B. A natural occurrence MAY NOT COMPLETE until its current-HH:00 CORE_UPKEEP has reached one terminal resolution state: ALREADY_FULFILLED, BOUND_IN_PROGRESS_SUCCESS, ATTEMPT_SUCCESS, ATTEMPT_FAILED, or ATTEMPT_BLOCKED.
+C. Completed natural occurrences MUST NOT use NOT_EVALUATED, SKIPPED or UNKNOWN as a core resolution state.
+D. REPORT_DUE=false authorizes visible silence only after the gate terminalizes. Explicit invariant: SILENT REPORT ROUTING != SILENT CORE SKIP.
+E. The gate executes before same-occurrence evidence finalization, temporary price-watch evaluation/output, Match, Deep, Price, Deadline/Final, Post-All-Match, generic WAIT/PREPARE/ACT narrative, content QA, delivery or legitimate silence.
+F. Fixed occurrence order:
+   1 OCCURRENCE IDENTITY;
+   2 LOAD AUTHORITY / STATE;
+   3 DETERMINE REPORT_DUE;
+   4 NATURAL_CORE_UPKEEP_GATE;
+   5 SAME-OCCURRENCE FINALIZATION if needed;
+   6 REPORT / PRICE / MATCH / DEEP routing;
+   7 CONTENT QA / proof;
+   8 DELIVERY or legitimate silence.
+G. STATE A — ALREADY_FULFILLED: only provenance-valid same-slot natural chatgpt_hourly_master proof with authoritative_runtime_snapshot=true and publish_integrity=PASS may terminalize the gate without a new acquisition.
+H. STATE B — IN_PROGRESS: bind the exact same-slot governed run ID, perform bounded terminal reread and never duplicate. The occurrence may not complete while the bound run remains non-terminal.
+I. STATE C — ATTEMPT_REQUIRED: if no same-slot authoritative fulfillment and no same-slot governed run is active, perform exactly ONE existing issue #431 title mutation for CURRENT_HH:00, require exact readback, bind the triggered run if created, and never retry a second full-core acquisition in the same occurrence.
+J. STATE D — ATTEMPT_FAILED/BLOCKED: preserve exact attempted action, failure reason, mutation/readback state and duplicate_acquisition=false. REPORT_DUE=false may end visibly silent only after this failure proof is recorded. REPORT_DUE=true continues fail-operational report delivery from freshest valid evidence.
+K. Every natural occurrence retains one transient NATURAL_CORE_UPKEEP_GATE proof with scheduler_occurrence, logical_core_slot, observed_at, core_gate_executed=true, terminal resolution_state, same_slot_fulfilled, existing_run_bound, attempt_required, attempt_performed, mutation_result, readback_result, bound_v6_run_id, publish_integrity, authoritative_runtime_snapshot, duplicate_acquisition=false and terminal_core_result. This proof is evidence only and MUST NOT become durable authority/state.
+L. Temporary Sangaré -> Groß price-watch lifecycle remains unchanged but is strictly downstream of this gate. It may neither substitute for CORE_UPKEEP nor create another V6 acquisition.
+M. Any early-return or silent-completion path is legal only after NATURAL_CORE_UPKEEP_GATE terminalization.
+
 5. FACTUAL EVIDENCE LADDER
 1 fresh valid current V6;
 2 freshest valid authoritative V6 within mode freshness;

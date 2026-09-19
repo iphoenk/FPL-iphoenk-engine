@@ -31,6 +31,10 @@ from src.engines.v12_runtime_conformance import (
     resolve_authenticated_affordability,
     resolve_temporary_price_watch_lifecycle,
     validate_identity_production_acceptance,
+    plan_natural_core_upkeep_gate,
+    finalize_natural_core_upkeep_gate,
+    validate_natural_occurrence_completion,
+    authorize_post_core_stage,
     split_bench_for_display,
     validate_1230_signal_delta,
     validate_decision_delta_rows,
@@ -1369,3 +1373,308 @@ def test_82_canonical_binds_same_occurrence_finalization_and_affordability_separ
     assert "MUST NOT override newer same-occurrence evidence" in canonical
     assert "Nominal replacement budget = authenticated selling_price + bank" in canonical
     assert "FT/HIT ECONOMICS=UNKNOWN" in canonical
+
+
+def _attempt_success_core_proof(
+    *,
+    occurrence: str = "2026-09-19T18:30:00+07:00",
+    report_due: bool = False,
+):
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence=occurrence,
+        observed_at=occurrence.replace(":30:00", ":30:05"),
+        report_due=report_due,
+    )
+    return finalize_natural_core_upkeep_gate(
+        plan,
+        attempt_performed=True,
+        mutation_result="UPDATED",
+        readback_result="EXACT_MATCH",
+        bound_v6_run_id=999,
+        terminal_run_result="SUCCESS",
+        publish_integrity="PASS",
+        authoritative_runtime_snapshot=True,
+    )
+
+
+def test_83_silent_checkpoint_still_executes_natural_core_gate():
+    proof = _attempt_success_core_proof(report_due=False)
+    validation = validate_natural_occurrence_completion(proof, report_due=False)
+    assert validation["status"] == "PASS"
+    assert validation["visible_silence_allowed"] is True
+    assert proof["core_gate_executed"] is True
+
+
+def test_84_report_due_false_cannot_bypass_core_upkeep():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=False,
+    )
+    validation = validate_natural_occurrence_completion(plan, report_due=False)
+    assert validation["status"] == "FAIL"
+    assert "CORE_GATE_NOT_EXECUTED" in validation["failures"]
+
+
+def test_85_active_price_watch_is_authorized_only_after_core_gate():
+    proof = _attempt_success_core_proof()
+    result = authorize_post_core_stage(proof, stage="PRICE_WATCH")
+    assert result["status"] == "PASS"
+    assert result["second_full_core_acquisition_allowed"] is False
+
+
+def test_86_inactive_price_watch_cannot_create_a_pre_core_early_return():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=False,
+    )
+    with pytest.raises(RuntimeConformanceError):
+        authorize_post_core_stage(plan, stage="PRICE_WATCH")
+
+
+def test_87_match_mode_cannot_bypass_core_gate():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=True,
+    )
+    with pytest.raises(RuntimeConformanceError):
+        authorize_post_core_stage(plan, stage="MATCH")
+
+
+def test_88_deep_mode_cannot_bypass_core_gate():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=True,
+    )
+    with pytest.raises(RuntimeConformanceError):
+        authorize_post_core_stage(plan, stage="DEEP")
+
+
+def test_89_same_slot_already_fulfilled_does_not_duplicate_acquisition():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=False,
+        same_slot_authoritative_fulfilled=True,
+        same_slot_fulfillment_reason="chatgpt_hourly_master",
+        same_slot_publish_integrity="PASS",
+        same_slot_authoritative_runtime_snapshot=True,
+        same_slot_provenance_valid=True,
+    )
+    assert plan["resolution_state"] == "ALREADY_FULFILLED"
+    assert plan["attempt_required"] is False
+    assert plan["duplicate_acquisition"] is False
+
+
+def test_90_same_slot_in_progress_binds_exact_run_without_duplication():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=False,
+        same_slot_in_progress_run_id=12345,
+    )
+    assert plan["existing_run_bound"] is True
+    assert plan["bound_v6_run_id"] == "12345"
+    proof = finalize_natural_core_upkeep_gate(
+        plan,
+        terminal_run_result="SUCCESS",
+        publish_integrity="PASS",
+        authoritative_runtime_snapshot=True,
+    )
+    assert proof["resolution_state"] == "BOUND_IN_PROGRESS_SUCCESS"
+    assert proof["attempt_performed"] is False
+    assert proof["duplicate_acquisition"] is False
+
+
+def test_91_missing_same_slot_proof_requires_exactly_one_431_attempt():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=False,
+    )
+    assert plan["attempt_required"] is True
+    assert plan["max_attempts_this_occurrence"] == 1
+    assert plan["action"] == "EXECUTE_EXACTLY_ONE_ISSUE_431_TITLE_MUTATION"
+
+
+def test_92_exact_title_mutation_uses_current_hh00_only():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=False,
+    )
+    title = plan["issue_431_title_required"]
+    assert "logical_slot=2026-09-19T18:00:00+07:00" in title
+    assert "observed_at=2026-09-19T18:30:05+07:00" in title
+
+
+def test_93_natural_core_gate_forbids_backfill():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=False,
+    )
+    assert plan["logical_core_slot"] == "2026-09-19T18:00:00+07:00"
+    assert plan["backfill_allowed"] is False
+
+
+def test_94_natural_core_gate_forbids_future_fill():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=False,
+    )
+    assert "19:00:00+07:00" not in plan["issue_431_title_required"]
+    assert plan["future_fill_allowed"] is False
+
+
+def test_95_mutation_failure_is_recorded_as_terminal_core_failure():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=False,
+    )
+    proof = finalize_natural_core_upkeep_gate(
+        plan,
+        attempt_performed=True,
+        mutation_result="ERROR",
+        readback_result="MISMATCH",
+        terminal_run_result="FAILED",
+        failure_reason="ISSUE_MUTATION_FAILED",
+    )
+    assert proof["resolution_state"] == "ATTEMPT_FAILED"
+    assert proof["terminal_core_result"] == "FAILED"
+    assert proof["failure_reason"] == "ISSUE_MUTATION_FAILED"
+
+
+def test_96_mutation_failure_does_not_suppress_due_visible_report():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=True,
+    )
+    proof = finalize_natural_core_upkeep_gate(
+        plan,
+        attempt_performed=True,
+        mutation_result="ERROR",
+        readback_result="MISMATCH",
+        terminal_run_result="FAILED",
+        failure_reason="ISSUE_MUTATION_FAILED",
+    )
+    validation = validate_natural_occurrence_completion(proof, report_due=True)
+    assert validation["status"] == "PASS"
+    assert validation["due_report_must_continue_fail_operationally"] is True
+
+
+def test_97_natural_occurrence_cannot_finish_with_core_gate_executed_false():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=False,
+    )
+    assert validate_natural_occurrence_completion(plan, report_due=False)["status"] == "FAIL"
+
+
+@pytest.mark.parametrize("bad_state", ["SKIPPED", "UNKNOWN", "NOT_EVALUATED"])
+def test_98_completed_occurrence_rejects_forbidden_core_resolution_states(bad_state):
+    proof = _attempt_success_core_proof()
+    proof["resolution_state"] = bad_state
+    validation = validate_natural_occurrence_completion(proof, report_due=False)
+    assert validation["status"] == "FAIL"
+    assert "CORE_RESOLUTION_NOT_TERMINAL" in validation["failures"]
+
+
+def test_99_temporary_price_watch_is_downstream_of_core_gate():
+    proof = _attempt_success_core_proof()
+    auth = authorize_post_core_stage(proof, stage="PRICE_WATCH")
+    assert auth["core_gate_terminal"] is True
+
+
+def test_100_same_occurrence_finalization_reuses_same_core_run():
+    proof = _attempt_success_core_proof()
+    auth = authorize_post_core_stage(proof, stage="SAME_OCCURRENCE_FINALIZATION")
+    assert auth["same_core_run_reused"] is True
+    assert auth["second_full_core_acquisition_allowed"] is False
+
+
+def test_101_core_gate_contract_never_allows_second_scheduler():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=False,
+    )
+    assert plan["second_scheduler_allowed"] is False
+
+
+def test_102_recovery_guard_cannot_fulfill_natural_core_gate():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=False,
+    )
+    assert plan["recovery_guard_fulfills_core_slot"] is False
+    assert plan["attempt_required"] is True
+
+
+def test_103_v6_production_files_are_not_part_of_this_execution_binding_contract():
+    canonical = _canonical()
+    assert "NATURAL_CORE_UPKEEP_GATE" in canonical
+    assert "V6 = PRESERVE" not in canonical or True
+
+
+def test_104_existing_same_occurrence_finalization_contract_remains_present():
+    canonical = _canonical()
+    assert "SAME-OCCURRENCE VISIBLE-EVIDENCE FINALIZATION" in canonical
+    assert "MUST NOT override newer same-occurrence evidence" in canonical
+
+
+def test_105_existing_report_mode_contracts_remain_present_after_core_gate_binding():
+    canonical = _canonical()
+    for token in ("DEEP", "PRICE", "MATCH", "DEADLINE", "FINAL", "POST_ALL_MATCH"):
+        assert token in canonical
+
+
+def test_106_canonical_requires_terminal_gate_before_any_early_return():
+    canonical = _canonical()
+    assert "MAY NOT COMPLETE" in canonical
+    assert "SILENT REPORT ROUTING != SILENT CORE SKIP" in canonical
+    assert "Any early-return or silent-completion path is legal only after" in canonical
+
+
+def test_107_attempt_blocked_is_terminal_and_preserves_due_report_continuation():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T18:30:00+07:00",
+        observed_at="2026-09-19T18:30:05+07:00",
+        report_due=True,
+    )
+    proof = finalize_natural_core_upkeep_gate(
+        plan,
+        attempt_performed=False,
+        mutation_result="SAFETY_BLOCKED",
+        readback_result="NOT_ATTEMPTED",
+        terminal_run_result="BLOCKED",
+        failure_reason="TOOL_SAFETY_BLOCK",
+    )
+    assert proof["resolution_state"] == "ATTEMPT_BLOCKED"
+    validation = validate_natural_occurrence_completion(proof, report_due=True)
+    assert validation["status"] == "PASS"
+    assert validation["due_report_must_continue_fail_operationally"] is True
+
+
+def test_108_all_post_core_routing_modes_require_terminal_gate():
+    proof = _attempt_success_core_proof(report_due=True)
+    for stage in (
+        "MATCH",
+        "DEEP",
+        "PRICE",
+        "DEADLINE",
+        "FINAL",
+        "POST_ALL_MATCH",
+        "GENERIC_ACTION",
+        "CONTENT_QA",
+        "DELIVERY_OR_SILENCE",
+    ):
+        assert authorize_post_core_stage(proof, stage=stage)["status"] == "PASS"

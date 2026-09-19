@@ -273,6 +273,369 @@ def build_hourly_core_upkeep_proof(
     }
 
 
+
+NATURAL_CORE_TERMINAL_STATES = frozenset(
+    {
+        "ALREADY_FULFILLED",
+        "BOUND_IN_PROGRESS_SUCCESS",
+        "ATTEMPT_SUCCESS",
+        "ATTEMPT_FAILED",
+        "ATTEMPT_BLOCKED",
+    }
+)
+
+POST_CORE_ROUTING_STAGES = frozenset(
+    {
+        "SAME_OCCURRENCE_FINALIZATION",
+        "PRICE_WATCH",
+        "MATCH",
+        "DEEP",
+        "PRICE",
+        "DEADLINE",
+        "FINAL",
+        "POST_ALL_MATCH",
+        "GENERIC_ACTION",
+        "CONTENT_QA",
+        "DELIVERY_OR_SILENCE",
+    }
+)
+
+
+def plan_natural_core_upkeep_gate(
+    *,
+    scheduler_occurrence: str,
+    observed_at: str,
+    report_due: bool,
+    same_slot_authoritative_fulfilled: bool = False,
+    same_slot_fulfillment_reason: str | None = None,
+    same_slot_publish_integrity: str | None = None,
+    same_slot_authoritative_runtime_snapshot: bool = False,
+    same_slot_provenance_valid: bool = False,
+    same_slot_in_progress_run_id: Any | None = None,
+    issue_431_title_before: str | None = None,
+) -> dict[str, Any]:
+    """Plan the mandatory occurrence-level natural core gate before any terminal routing."""
+    occurrence = _parse_local_occurrence(
+        scheduler_occurrence, label="scheduler_occurrence"
+    )
+    observed = _parse_local_occurrence(observed_at, label="observed_at")
+    if occurrence.minute != 30 or occurrence.second != 0:
+        raise RuntimeConformanceError(
+            "natural FPL occurrence must preserve exact scheduler HH:30 identity"
+        )
+    logical_slot = occurrence.replace(minute=0, second=0, microsecond=0)
+    reason = str(same_slot_fulfillment_reason or "").strip().lower()
+    integrity = str(same_slot_publish_integrity or "").strip().upper()
+    fulfilled = bool(
+        same_slot_authoritative_fulfilled
+        and reason == CORE_REASON
+        and integrity == "PASS"
+        and same_slot_authoritative_runtime_snapshot
+        and same_slot_provenance_valid
+    )
+
+    base = {
+        "proof_kind": "TRANSIENT_NATURAL_CORE_UPKEEP_GATE",
+        "authoritative": False,
+        "durable_state": False,
+        "scheduler_occurrence": occurrence.isoformat(),
+        "logical_core_slot": logical_slot.isoformat(),
+        "observed_at": observed.isoformat(),
+        "report_due": bool(report_due),
+        "core_gate_executed": False,
+        "gate_terminal": False,
+        "resolution_state": None,
+        "same_slot_fulfilled": False,
+        "existing_run_bound": False,
+        "attempt_required": False,
+        "attempt_performed": False,
+        "mutation_result": None,
+        "readback_result": None,
+        "bound_v6_run_id": None,
+        "publish_integrity": same_slot_publish_integrity,
+        "authoritative_runtime_snapshot": bool(
+            same_slot_authoritative_runtime_snapshot
+        ),
+        "duplicate_acquisition": False,
+        "terminal_core_result": None,
+        "transport": CORE_TRANSPORT,
+        "issue_431_title_before": issue_431_title_before,
+        "backfill_allowed": False,
+        "future_fill_allowed": False,
+        "second_scheduler_allowed": False,
+        "report_prefetch_fulfills_core_slot": False,
+        "recovery_guard_fulfills_core_slot": False,
+        "post_core_routing_allowed": False,
+        "occurrence_may_complete": False,
+        "execution_order": [
+            "OCCURRENCE_IDENTITY",
+            "LOAD_AUTHORITY_STATE",
+            "DETERMINE_REPORT_DUE",
+            "NATURAL_CORE_UPKEEP_GATE",
+            "SAME_OCCURRENCE_FINALIZATION_IF_NEEDED",
+            "REPORT_PRICE_MATCH_DEEP_ROUTING",
+            "CONTENT_QA_PROOF",
+            "DELIVERY_OR_LEGITIMATE_SILENCE",
+        ],
+    }
+
+    if fulfilled:
+        return {
+            **base,
+            "core_gate_executed": True,
+            "gate_terminal": True,
+            "resolution_state": "ALREADY_FULFILLED",
+            "same_slot_fulfilled": True,
+            "readback_result": "EXISTING_SAME_SLOT_AUTHORITATIVE_PROOF",
+            "publish_integrity": "PASS",
+            "authoritative_runtime_snapshot": True,
+            "terminal_core_result": "PASS",
+            "post_core_routing_allowed": True,
+            "occurrence_may_complete": True,
+        }
+
+    if same_slot_in_progress_run_id is not None:
+        return {
+            **base,
+            "action": "BIND_EXISTING_RUN_AND_TERMINAL_REREAD",
+            "existing_run_bound": True,
+            "bound_v6_run_id": str(same_slot_in_progress_run_id),
+            "bounded_terminal_reread_required": True,
+        }
+
+    issue_title = (
+        "FPL_MASTER_SLOT "
+        f"reason={CORE_REASON} "
+        f"logical_slot={logical_slot.isoformat()} "
+        "audit=FPL_MASTER_HOURLY "
+        f"observed_at={observed.isoformat()}"
+    )
+    return {
+        **base,
+        "action": "EXECUTE_EXACTLY_ONE_ISSUE_431_TITLE_MUTATION",
+        "attempt_required": True,
+        "issue_431_title_required": issue_title,
+        "exact_readback_required": True,
+        "max_attempts_this_occurrence": 1,
+    }
+
+
+def finalize_natural_core_upkeep_gate(
+    plan: Mapping[str, Any],
+    *,
+    attempt_performed: bool = False,
+    mutation_result: str | None = None,
+    readback_result: str | None = None,
+    bound_v6_run_id: Any | None = None,
+    terminal_run_result: str | None = None,
+    publish_integrity: str | None = None,
+    authoritative_runtime_snapshot: bool = False,
+    failure_reason: str | None = None,
+    duplicate_acquisition: bool = False,
+) -> dict[str, Any]:
+    """Finalize the mandatory core gate into one allowed terminal resolution state."""
+    row = dict(plan or {})
+    if row.get("proof_kind") != "TRANSIENT_NATURAL_CORE_UPKEEP_GATE":
+        raise RuntimeConformanceError("natural core finalization requires gate plan")
+    if duplicate_acquisition:
+        raise RuntimeConformanceError(
+            "duplicate full-core acquisition is forbidden for one natural occurrence"
+        )
+
+    if row.get("gate_terminal") is True:
+        if row.get("resolution_state") != "ALREADY_FULFILLED":
+            raise RuntimeConformanceError("unexpected pre-terminal core gate state")
+        return row
+
+    action = str(row.get("action") or "")
+    mutation = str(mutation_result or "").strip().upper()
+    readback = str(readback_result or "").strip().upper()
+    run_result = str(terminal_run_result or "").strip().upper()
+    integrity = str(publish_integrity or "").strip().upper()
+    run_id = bound_v6_run_id
+    if run_id is None:
+        run_id = row.get("bound_v6_run_id")
+
+    success_terminal = run_result in {
+        "SUCCESS",
+        "PASS",
+        "COMPLETED",
+        "ALREADY_PUBLISHED",
+    }
+    failure_terminal = run_result in {
+        "FAILED",
+        "ERROR",
+        "TIMEOUT",
+        "CANCELLED",
+        "PUBLICATION_FAILED",
+    }
+    blocked = mutation in {"BLOCKED", "SAFETY_BLOCKED", "DENIED"} or run_result in {
+        "BLOCKED",
+        "SAFETY_BLOCKED",
+    }
+    mutation_ok = mutation in {"SUCCESS", "PASS", "UPDATED", "APPLIED"}
+    readback_ok = readback in {"PASS", "MATCH", "EXACT_MATCH"}
+
+    if action == "BIND_EXISTING_RUN_AND_TERMINAL_REREAD":
+        if run_id is None:
+            raise RuntimeConformanceError("in-progress binding requires exact run id")
+        if success_terminal and integrity == "PASS" and authoritative_runtime_snapshot:
+            resolution = "BOUND_IN_PROGRESS_SUCCESS"
+            terminal = "PASS"
+            fulfilled = True
+        elif blocked:
+            resolution = "ATTEMPT_BLOCKED"
+            terminal = "BLOCKED"
+            fulfilled = False
+        elif failure_terminal:
+            resolution = "ATTEMPT_FAILED"
+            terminal = "FAILED"
+            fulfilled = False
+        else:
+            raise RuntimeConformanceError(
+                "in-progress core run must reach a terminal reread result before occurrence completion"
+            )
+        return {
+            **row,
+            "core_gate_executed": True,
+            "gate_terminal": True,
+            "resolution_state": resolution,
+            "same_slot_fulfilled": fulfilled,
+            "existing_run_bound": True,
+            "attempt_required": False,
+            "attempt_performed": False,
+            "mutation_result": mutation or None,
+            "readback_result": readback or None,
+            "bound_v6_run_id": str(run_id),
+            "publish_integrity": publish_integrity,
+            "authoritative_runtime_snapshot": bool(authoritative_runtime_snapshot),
+            "duplicate_acquisition": False,
+            "terminal_core_result": terminal,
+            "failure_reason": failure_reason,
+            "post_core_routing_allowed": True,
+            "occurrence_may_complete": True,
+        }
+
+    if action != "EXECUTE_EXACTLY_ONE_ISSUE_431_TITLE_MUTATION":
+        raise RuntimeConformanceError("unsupported natural core gate action")
+
+    if blocked:
+        resolution = "ATTEMPT_BLOCKED"
+        terminal = "BLOCKED"
+        fulfilled = False
+    elif not attempt_performed:
+        raise RuntimeConformanceError(
+            "attempt-required core gate cannot terminate without an attempt or exact blocked proof"
+        )
+    elif not mutation_ok or not readback_ok or failure_terminal:
+        resolution = "ATTEMPT_FAILED"
+        terminal = "FAILED"
+        fulfilled = False
+    elif success_terminal and integrity == "PASS" and authoritative_runtime_snapshot:
+        resolution = "ATTEMPT_SUCCESS"
+        terminal = "PASS"
+        fulfilled = True
+    else:
+        raise RuntimeConformanceError(
+            "governed core attempt must have terminal workflow/publication evidence before completion"
+        )
+
+    return {
+        **row,
+        "core_gate_executed": True,
+        "gate_terminal": True,
+        "resolution_state": resolution,
+        "same_slot_fulfilled": fulfilled,
+        "existing_run_bound": False,
+        "attempt_required": True,
+        "attempt_performed": bool(attempt_performed),
+        "mutation_result": mutation or None,
+        "readback_result": readback or None,
+        "bound_v6_run_id": None if run_id is None else str(run_id),
+        "publish_integrity": publish_integrity,
+        "authoritative_runtime_snapshot": bool(authoritative_runtime_snapshot),
+        "duplicate_acquisition": False,
+        "terminal_core_result": terminal,
+        "failure_reason": failure_reason,
+        "post_core_routing_allowed": True,
+        "occurrence_may_complete": True,
+    }
+
+
+def validate_natural_occurrence_completion(
+    core_proof: Mapping[str, Any],
+    *,
+    report_due: bool,
+) -> dict[str, Any]:
+    """Fail closed if a completed natural occurrence has no terminal core resolution."""
+    proof = dict(core_proof or {})
+    failures: list[str] = []
+    if proof.get("core_gate_executed") is not True:
+        failures.append("CORE_GATE_NOT_EXECUTED")
+    state = str(proof.get("resolution_state") or "").strip().upper()
+    if state not in NATURAL_CORE_TERMINAL_STATES:
+        failures.append("CORE_RESOLUTION_NOT_TERMINAL")
+    if proof.get("gate_terminal") is not True:
+        failures.append("CORE_GATE_NOT_TERMINAL")
+    if proof.get("duplicate_acquisition") is not False:
+        failures.append("DUPLICATE_ACQUISITION_NOT_FALSE")
+    if proof.get("occurrence_may_complete") is not True:
+        failures.append("OCCURRENCE_COMPLETION_NOT_AUTHORIZED")
+    if state in {"ALREADY_FULFILLED", "BOUND_IN_PROGRESS_SUCCESS", "ATTEMPT_SUCCESS"}:
+        if proof.get("same_slot_fulfilled") is not True:
+            failures.append("SUCCESS_STATE_WITHOUT_SAME_SLOT_FULFILLMENT")
+        if str(proof.get("terminal_core_result") or "").upper() != "PASS":
+            failures.append("SUCCESS_STATE_WITHOUT_PASS_RESULT")
+    if state == "ATTEMPT_FAILED" and str(
+        proof.get("terminal_core_result") or ""
+    ).upper() != "FAILED":
+        failures.append("FAILED_STATE_WITHOUT_FAILED_RESULT")
+    if state == "ATTEMPT_BLOCKED" and str(
+        proof.get("terminal_core_result") or ""
+    ).upper() != "BLOCKED":
+        failures.append("BLOCKED_STATE_WITHOUT_BLOCKED_RESULT")
+
+    status = "PASS" if not failures else "FAIL"
+    return {
+        "status": status,
+        "failures": failures,
+        "occurrence_may_complete": status == "PASS",
+        "visible_silence_allowed": bool(status == "PASS" and not report_due),
+        "due_report_must_continue_fail_operationally": bool(
+            status == "PASS"
+            and report_due
+            and state in {"ATTEMPT_FAILED", "ATTEMPT_BLOCKED"}
+        ),
+    }
+
+
+def authorize_post_core_stage(
+    core_proof: Mapping[str, Any],
+    *,
+    stage: str,
+) -> dict[str, Any]:
+    """Authorize routing only after the mandatory natural core gate is terminal."""
+    route = str(stage or "").strip().upper()
+    if route not in POST_CORE_ROUTING_STAGES:
+        raise RuntimeConformanceError("unsupported post-core routing stage")
+    validation = validate_natural_occurrence_completion(
+        core_proof,
+        report_due=bool(core_proof.get("report_due")),
+    )
+    if validation["status"] != "PASS":
+        raise RuntimeConformanceError(
+            "post-core routing is forbidden until NATURAL_CORE_UPKEEP_GATE terminalizes"
+        )
+    return {
+        "status": "PASS",
+        "stage": route,
+        "core_gate_terminal": True,
+        "core_resolution_state": core_proof.get("resolution_state"),
+        "same_core_run_reused": True,
+        "second_full_core_acquisition_allowed": False,
+    }
+
+
 def validate_v12_authority_sources(*, authority_path: str, state_path: str) -> dict[str, Any]:
     """Allow only current GitHub V12 authority/state paths for V12 bootstrap."""
     if str(authority_path or "") != V12_CANONICAL_PATH:

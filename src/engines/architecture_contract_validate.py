@@ -292,9 +292,57 @@ def run() -> dict:
     event_text = (ROOT / "src" / "engines" / "v12_player_events.py").read_text(encoding="utf-8")
     if "MODEL_OWNER = \"V12_PLAYER_EVENTS\"" not in event_text:
         errors.append("V12 player event capability must declare stable production ownership")
-    for forbidden in ("src.runtime_v6", "runtime_v3", "package_optimizer"):
-        if forbidden in event_text:
-            errors.append(f"V12 player event owner has forbidden production dependency: {forbidden}")
+    for forbidden in (
+        "from src.runtime_v6",
+        "import src.runtime_v6",
+        "from src.runtime_v3",
+        "import src.runtime_v3",
+        "from src.runtime_v4",
+        "import src.runtime_v4",
+        "from src.runtime_v5",
+        "import src.runtime_v5",
+        "from src.engines.package_optimizer",
+        "import src.engines.package_optimizer",
+        "from src.engines.monte_carlo",
+        "import src.engines.monte_carlo",
+        "from src.engines.mini_league",
+        "import src.engines.mini_league",
+    ):
+        if forbidden in event_text.lower():
+            errors.append(
+                f"V12 player event owner has forbidden production dependency: {forbidden}"
+            )
+    event_cfg = _load(
+        ROOT / "config" / "intelligence" / "player_events.json"
+    )
+    if event_cfg.get("model_id") != "v12_player_events_joint_predictive_v2":
+        errors.append("P1.3B player-events config must use joint predictive V2 model")
+    if (event_cfg.get("joint_goal_assist") or {}).get("model") != "BIVARIATE_POISSON_SHARED_COMPONENT_V1":
+        errors.append("P1.3B must declare governed joint goal-assist dependence")
+    if (event_cfg.get("point_distribution") or {}).get("model") != "FINITE_STATE_CONDITIONAL_CORE_POINT_PMF_V1":
+        errors.append("P1.3B must declare deterministic finite-state point PMF")
+    if (event_cfg.get("governance") or {}).get("distribution_completeness") != "PARTIAL_BONUS_RESIDUAL":
+        errors.append("P1.3B must truthfully retain partial bonus-residual completeness")
+    for required in (
+        "def _joint_goal_assist_grid(",
+        "def _build_joint_predictive_surface(",
+        '"goal_assist_silent_independence": False',
+        '"monte_carlo_applied": False',
+    ):
+        if required not in event_text:
+            errors.append(f"P1.3B event owner missing capability marker: {required}")
+    for forbidden_name in (
+        "barry",
+        "kostoulas",
+        "groß",
+        "gross",
+        "brighton",
+        "arsenal",
+    ):
+        if forbidden_name in event_text.casefold():
+            errors.append(
+                "P1.3B event owner contains named-player/club special-case text"
+            )
     tactical_text = (ROOT / "src" / "engines" / "v12_tactical_role.py").read_text(encoding="utf-8")
     if 'MODEL_OWNER = "V12_TACTICAL_ROLE"' not in tactical_text:
         errors.append("V12 tactical/role capability must declare stable production ownership")

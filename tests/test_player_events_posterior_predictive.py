@@ -25,6 +25,14 @@ GOLDEN = json.loads(
         encoding="utf-8"
     )
 )
+P13B_GOLDEN = json.loads(
+    (
+        ROOT
+        / "tests"
+        / "fixtures"
+        / "player_events_p1_3b_golden.json"
+    ).read_text(encoding="utf-8")
+)
 
 
 def _case(name: str):
@@ -161,7 +169,7 @@ def test_A3_weighted_state_expectations_reconcile_and_variance_is_nonnegative():
     assert out["aggregate"]["points_variance"] >= 0.0
     assert out["aggregate"]["points_std"] >= 0.0
     assert out["aggregate"]["canonical_gaussian"] is False
-    assert out["aggregate"]["quantiles"] is None
+    assert set(out["aggregate"]["quantiles"]) >= {"P10", "P25", "P50", "P75", "P90"}
 
 
 def test_A4_low_sample_shrinks_to_prior_and_winsorizes_extreme_rate():
@@ -400,7 +408,9 @@ def test_A18_no_v6_runtime_v3_monte_carlo_covariance_or_p16_dependency():
     )
     assert "src.runtime_v6" not in source
     assert "runtime_v3" not in source
-    assert "package_optimizer" not in source
+    assert "from src.engines.package_optimizer" not in source
+    assert "import src.engines.package_optimizer" not in source
+    assert "package_optimizer(" not in source
     assert "simulate_objective" not in source
     assert "tactical_role_context" not in source
     assert '"monte_carlo_applied": true' not in source.lower()
@@ -508,3 +518,443 @@ def test_A18_full_projection_path_preserves_legacy_compatibility_fields():
     assert {"mean", "std", "components"} <= fixture.keys()
     assert fixture["aggregate"]["canonical_gaussian"] is False
     assert out["governance"]["monte_carlo_applied"] is False
+
+
+
+def _p13b_minutes(profile: str) -> dict:
+    profiles = {
+        "SECURE_90": [
+            ("START", 0.96, 86.0, 4.0),
+            ("REGULAR_CAMEO", 0.02, 18.0, 5.0),
+            ("LATE_CAMEO", 0.01, 7.0, 2.0),
+            ("ZERO_MINUTES", 0.01, 0.0, 0.0),
+        ],
+        "CAMEO_HEAVY": [
+            ("START", 0.15, 70.0, 10.0),
+            ("REGULAR_CAMEO", 0.55, 22.0, 6.0),
+            ("LATE_CAMEO", 0.20, 8.0, 3.0),
+            ("ZERO_MINUTES", 0.10, 0.0, 0.0),
+        ],
+        "ROTATION": [
+            ("START", 0.45, 70.0, 12.0),
+            ("REGULAR_CAMEO", 0.25, 20.0, 7.0),
+            ("LATE_CAMEO", 0.15, 8.0, 3.0),
+            ("ZERO_MINUTES", 0.15, 0.0, 0.0),
+        ],
+    }
+    states = profiles[profile]
+    mean = sum(probability * minutes for _, probability, minutes, _ in states)
+    return {
+        "xmins_distribution": {
+            "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+            "states": [
+                {
+                    "state": state,
+                    "probability": probability,
+                    "minutes_mean": minutes,
+                    "minutes_std": std,
+                }
+                for state, probability, minutes, std in states
+            ],
+        },
+        "expected_minutes": mean,
+    }
+
+
+def _p13b_synthetic_projection(name: str):
+    row = next(
+        scenario
+        for scenario in P13B_GOLDEN["scenarios"]
+        if scenario["name"] == name
+    )
+    player = {
+        "id": 7000 + P13B_GOLDEN["scenarios"].index(row),
+        "element_type": row["element_type"],
+        "position": row["position"],
+        "minutes": row["season_minutes"],
+        "expected_goals": row["expected_goals"],
+        "expected_assists": row["expected_assists"],
+        "bonus": row["bonus"],
+        "saves": row["saves"],
+    }
+    feature = {}
+    if row.get("dc_reconstructed_per90") is not None:
+        feature = {
+            "advanced_current": {
+                "minutes": row["season_minutes"],
+                "dc_reconstructed_per90": row["dc_reconstructed_per90"],
+                "sample_quality": "ESTABLISHED",
+            }
+        }
+    cfg = load_event_config()
+    rates = build_posterior_rates(
+        player,
+        position_prior=cfg["position_priors"][row["position"]],
+        feature=feature,
+    )
+    matchup = {
+        "event": 5,
+        "fixture": 9700 + P13B_GOLDEN["scenarios"].index(row),
+        "team_h": 1,
+        "team_a": 2,
+        "opponent": 2,
+        "team_expected_goals": row["team_expected_goals"],
+        "clean_sheet_probability": row["clean_sheet_probability"],
+    }
+    return project_player_fixture(
+        player,
+        _p13b_minutes(row["minutes_profile"]),
+        matchup,
+        home=True,
+        rates=rates,
+        league_baseline={"home_goals": 1.3, "away_goals": 1.3},
+    )
+
+
+def test_B01_probability_surface_reconciles_joint_attacking_return():
+    out = _p13b_synthetic_projection("balanced_goal_assist_attacker")
+    probs = out["event_probabilities"]
+    assert 0.0 <= probs["p_goal_return"] <= 1.0
+    assert 0.0 <= probs["p_assist_return"] <= 1.0
+    assert probs["p_attacking_return"] == pytest.approx(
+        1.0 - probs["p_no_attacking_return"], abs=2e-9
+    )
+    assert probs["p_goal_and_assist"] <= min(
+        probs["p_goal_return"], probs["p_assist_return"]
+    ) + 1e-9
+    assert probs["p_total_ga_ge_1"] == probs["p_attacking_return"]
+    assert probs["p_total_ga_ge_2"] >= probs["p_total_ga_ge_3"]
+
+
+def test_B02_goal_assist_dependence_is_explicit_and_not_silent_independence():
+    out = _p13b_synthetic_projection("balanced_goal_assist_attacker")
+    probs = out["event_probabilities"]
+    independence = 1.0 - (
+        1.0 - probs["p_goal_return"]
+    ) * (1.0 - probs["p_assist_return"])
+    assert out["dependence"]["goal_assist_model"] == "BIVARIATE_POISSON_SHARED_COMPONENT_V1"
+    assert out["dependence"]["dependence_parameter"] > 0.0
+    assert out["dependence"]["calibration_status"] == "LOW_CONFIDENCE_CONSERVATIVE"
+    assert out["dependence"]["calibration_sample_size"] == 0
+    assert out["dependence"]["assumptions"]["silent_independence"] is False
+    assert probs["p_attacking_return"] < independence
+
+
+def test_B03_point_pmf_is_normalized_nonnegative_and_deterministic():
+    a = _p13b_synthetic_projection("high_xg_low_xa_striker")
+    b = _p13b_synthetic_projection("high_xg_low_xa_striker")
+    pmf = a["point_distribution"]
+    values = list(pmf["probabilities"].values())
+    assert sum(values) == pytest.approx(1.0, abs=1e-9)
+    assert pmf["sum_probability"] == pytest.approx(1.0, abs=1e-9)
+    assert all(value >= 0.0 for value in values)
+    assert a == b
+
+
+def test_B04_pmf_mean_reconciles_to_existing_expectation_plus_bonus_residual():
+    out = _p13b_synthetic_projection("balanced_goal_assist_attacker")
+    rec = out["reconciliation"]["p1_3b"]
+    assert abs(rec["mean_delta"]) <= rec["mean_tolerance"]
+    assert rec["pmf_plus_bonus_expected_total"] == pytest.approx(
+        out["aggregate"]["expected_fpl_points"], abs=rec["mean_tolerance"]
+    )
+
+
+def test_B05_published_variance_is_pmf_variance_and_bonus_limit_is_truthful():
+    out = _p13b_synthetic_projection("balanced_goal_assist_attacker")
+    pmf = out["point_distribution"]
+    rec = out["reconciliation"]["p1_3b"]
+    assert out["aggregate"]["points_variance"] == pytest.approx(
+        pmf["variance"], abs=1e-6
+    )
+    assert rec["variance_reconciled_to_published"] is True
+    assert rec["bonus_variance_modelled"] is False
+    assert pmf["distribution_completeness"] == "PARTIAL_BONUS_RESIDUAL"
+    assert pmf["bonus_incorporation"] == "EXPECTATION_ONLY_NOT_STOCHASTIC"
+
+
+def test_B06_tail_probabilities_and_quantiles_are_monotonic():
+    out = _p13b_synthetic_projection("balanced_goal_assist_attacker")
+    tails = out["point_distribution"]["tails"]
+    assert tails["ge_5"] >= tails["ge_8"] >= tails["ge_10"] >= tails["ge_12"] >= tails["ge_15"]
+    assert all(0.0 <= value <= 1.0 for value in tails.values())
+    q = out["point_distribution"]["quantiles"]
+    assert q["P10"] <= q["P25"] <= q["P50"] <= q["P75"] <= q["P90"] <= q["P95"]
+
+
+def test_B07_fpl_blank_is_not_no_attacking_return():
+    out = _p13b_synthetic_projection("defender_cs_defcon_route")
+    assert out["point_distribution"]["blank_threshold"] == load_event_config()["point_distribution"]["blank"]["threshold"]
+    assert out["point_distribution"]["p_fpl_blank"] != pytest.approx(
+        out["event_probabilities"]["p_no_attacking_return"], abs=1e-6
+    )
+    assert "core stochastic" in out["point_distribution"]["blank_definition"].lower()
+
+
+def test_B08_dnp_is_exact_zero_point_state_and_blank():
+    out = _project(_case("dnp_zero_minutes"))
+    pmf = out["point_distribution"]
+    assert pmf["support"] == [0]
+    assert pmf["probabilities"] == {"0": 1.0}
+    assert pmf["p_fpl_blank"] == 1.0
+    assert out["event_probabilities"]["p_no_attacking_return"] == 1.0
+
+
+def _fixed_minutes(minutes: float) -> dict:
+    return {
+        "xmins_distribution": {
+            "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+            "states": [
+                {"state": "START", "probability": 1.0, "minutes_mean": minutes, "minutes_std": 0.0},
+                {"state": "REGULAR_CAMEO", "probability": 0.0, "minutes_mean": 20.0, "minutes_std": 0.0},
+                {"state": "LATE_CAMEO", "probability": 0.0, "minutes_mean": 8.0, "minutes_std": 0.0},
+                {"state": "ZERO_MINUTES", "probability": 0.0, "minutes_mean": 0.0, "minutes_std": 0.0},
+            ],
+        }
+    }
+
+
+def _fixed_rates(goal_rate: float = 0.4, assist_rate: float = 0.2, *, dc=None, saves=0.0):
+    return {
+        "goal": {"posterior_rate90": goal_rate},
+        "assist": {"posterior_rate90": assist_rate},
+        "bonus": {"posterior_rate90": 0.0},
+        "saves": {"posterior_rate90": saves, "confidence": "HIGH"},
+        "defcon": dc or {
+            "eligible": False,
+            "threshold": None,
+            "points": 0.0,
+            "posterior_count_rate90": 0.0,
+        },
+    }
+
+
+def test_B09_cameo_and_60_minute_clean_sheet_qualification_are_consistent():
+    player = {"id": 8801, "element_type": 2, "position": "DEF"}
+    matchup = {
+        "event": 5,
+        "fixture": 8801,
+        "team_h": 1,
+        "team_a": 2,
+        "team_expected_goals": 1.3,
+        "clean_sheet_probability": 0.6,
+    }
+    at_59 = project_player_fixture(
+        player,
+        _fixed_minutes(59.0),
+        matchup,
+        home=True,
+        rates=_fixed_rates(0.0, 0.0),
+        league_baseline={"home_goals": 1.3, "away_goals": 1.3},
+    )
+    at_60 = project_player_fixture(
+        player,
+        _fixed_minutes(60.0),
+        matchup,
+        home=True,
+        rates=_fixed_rates(0.0, 0.0),
+        league_baseline={"home_goals": 1.3, "away_goals": 1.3},
+    )
+    assert at_59["events"]["clean_sheet"]["P_points_awarded"] == 0.0
+    assert at_60["events"]["clean_sheet"]["P_points_awarded"] == pytest.approx(0.6)
+    assert at_60["point_distribution"]["p_fpl_blank"] < at_59["point_distribution"]["p_fpl_blank"]
+
+
+def test_B10_goal_scoring_points_remain_position_rule_compliant():
+    matchup = {
+        "event": 5,
+        "fixture": 8810,
+        "team_h": 1,
+        "team_a": 2,
+        "team_expected_goals": 1.3,
+        "clean_sheet_probability": 0.0,
+    }
+    outputs = {}
+    for position, element_type in (("DEF", 2), ("MID", 3), ("FWD", 4)):
+        outputs[position] = project_player_fixture(
+            {"id": 8810 + element_type, "element_type": element_type, "position": position},
+            _fixed_minutes(90.0),
+            matchup,
+            home=True,
+            rates=_fixed_rates(0.6, 0.0),
+            league_baseline={"home_goals": 1.3, "away_goals": 1.3},
+        )
+    assert outputs["DEF"]["point_distribution"]["expected_points"] > outputs["MID"]["point_distribution"]["expected_points"] > outputs["FWD"]["point_distribution"]["expected_points"]
+
+
+def test_B11_defcon_threshold_remains_position_rule_compliant():
+    defender = _p13b_synthetic_projection("defender_cs_defcon_route")
+    assert defender["events"]["defcon"]["eligible"] is True
+    assert defender["events"]["defcon"]["threshold"] == 10
+    assert 0.0 <= defender["events"]["defcon"]["P_threshold"] <= 1.0
+
+
+def test_B12_parameter_uncertainty_is_truthfully_partial_without_monte_carlo():
+    out = _p13b_synthetic_projection("high_rate_small_sample_shrinkage")
+    assert out["parameter_uncertainty"]["status"] == "PARTIAL"
+    assert out["parameter_uncertainty"]["posterior_rate_uncertainty"] == "SHRINKAGE_POINT_ESTIMATE_ONLY"
+    assert out["assumptions"]["monte_carlo_applied"] is False
+
+
+def test_B13_golden_scenarios_cover_all_required_general_archetypes():
+    assert P13B_GOLDEN["historical_claim"] is False
+    assert {row["name"] for row in P13B_GOLDEN["scenarios"]} == {
+        "high_xg_low_xa_striker",
+        "balanced_goal_assist_attacker",
+        "high_assist_low_goal_creator",
+        "low_minute_high_rate_cameo",
+        "secure_90_low_event_player",
+        "defender_cs_defcon_route",
+        "goalkeeper_save_heavy",
+        "penalty_taker_generic",
+        "set_piece_creator_generic",
+        "high_rate_small_sample_shrinkage",
+    }
+
+
+def test_B14_golden_directional_behavior_is_sensible_without_named_players():
+    striker = _p13b_synthetic_projection("high_xg_low_xa_striker")
+    creator = _p13b_synthetic_projection("high_assist_low_goal_creator")
+    balanced = _p13b_synthetic_projection("balanced_goal_assist_attacker")
+    low_event = _p13b_synthetic_projection("secure_90_low_event_player")
+    cameo = _p13b_synthetic_projection("low_minute_high_rate_cameo")
+    secure = _p13b_synthetic_projection("high_xg_low_xa_striker")
+    gk = _p13b_synthetic_projection("goalkeeper_save_heavy")
+    small = _p13b_synthetic_projection("high_rate_small_sample_shrinkage")
+
+    assert striker["event_probabilities"]["p_goal_return"] > creator["event_probabilities"]["p_goal_return"]
+    assert creator["event_probabilities"]["p_assist_return"] > striker["event_probabilities"]["p_assist_return"]
+    assert balanced["event_probabilities"]["p_attacking_return"] > low_event["event_probabilities"]["p_attacking_return"]
+    assert cameo["minutes"]["xMins"] < secure["minutes"]["xMins"]
+    assert gk["events"]["saves"]["expected_count"] > 0.0
+    assert small["events"]["goals"]["posterior"]["shrinkage"] > 0.5
+
+
+def test_B15_calibration_metrics_cover_return_blank_tails_and_quantile_coverage():
+    forecasts = [
+        {
+            "element": 1,
+            "position": "MID",
+            "xpts": 6.0,
+            "xmins": 80.0,
+            "start_probability": 0.9,
+            "dnp_probability": 0.05,
+            "p_attacking_return": 0.55,
+            "p_fpl_blank": 0.30,
+            "blank_threshold": 2,
+            "point_tails": {
+                "ge_5": 0.50,
+                "ge_8": 0.25,
+                "ge_10": 0.15,
+                "ge_12": 0.08,
+                "ge_15": 0.03,
+            },
+            "point_quantiles": {"P10": 1, "P90": 12},
+        }
+    ]
+    actuals = [
+        {
+            "element": 1,
+            "points": 8,
+            "minutes": 90,
+            "started": 1,
+            "dnp": 0,
+            "goals": 1,
+            "assists": 0,
+        }
+    ]
+    metrics = prediction_calibration_metrics(forecasts, actuals)["overall"]
+    assert metrics["attacking_return_sample_size"] == 1
+    assert metrics["fpl_blank_sample_size"] == 1
+    assert metrics["point_tail_sample_size"]["ge_8"] == 1
+    assert metrics["p10_p90_sample_size"] == 1
+
+
+def test_B16_no_named_player_legacy_v6_optimizer_or_mc_dependency():
+    source = (
+        ROOT / "src" / "engines" / "v12_player_events.py"
+    ).read_text(encoding="utf-8").casefold()
+    for forbidden in ("barry", "kostoulas", "groß", "gross", "brighton", "arsenal"):
+        assert forbidden not in source
+    for forbidden in (
+        "from src.runtime_v6",
+        "import src.runtime_v6",
+        "from src.runtime_v3",
+        "import src.runtime_v3",
+        "from src.runtime_v4",
+        "import src.runtime_v4",
+        "from src.runtime_v5",
+        "import src.runtime_v5",
+        "from src.engines.package_optimizer",
+        "import src.engines.package_optimizer",
+        "from src.engines.monte_carlo",
+        "import src.engines.monte_carlo",
+        "from src.engines.mini_league",
+        "import src.engines.mini_league",
+    ):
+        assert forbidden not in source
+
+
+def test_B17_p1_6_formula_contract_is_not_mutated_by_p1_3b():
+    tactical_cfg = json.loads(
+        (
+            ROOT
+            / "config"
+            / "intelligence"
+            / "tactical_role_canonical.json"
+        ).read_text(encoding="utf-8")
+    )
+    event_cfg = load_event_config()
+    assert tactical_cfg["parameter_version"] == "p1.6-contextual-role-v2"
+    assert event_cfg["governance"]["p1_6_formula_mutated"] is False
+    assert "v12_tactical_role" not in (
+        ROOT / "src" / "engines" / "v12_player_events.py"
+    ).read_text(encoding="utf-8")
+
+
+def test_B18_key_pass_audit_does_not_create_duplicate_feature():
+    cfg = load_event_config()
+    audit = cfg["key_pass_semantics_audit"]
+    assert audit["canonical_creation_metric"] == "chances_created"
+    assert audit["status"] == "NO_DISTINCT_CANONICAL_KEY_PASS_FIELD"
+    assert audit["p1_6_formula_changed"] is False
+    features = (
+        ROOT / "src" / "engines" / "player_features.py"
+    ).read_text(encoding="utf-8")
+    assert '"chances_created"' in features
+    assert '"key_passes"' not in features
+
+
+def test_B19_multi_gw_contract_keeps_1_3_5_and_does_not_fake_tails():
+    cfg = load_event_config()
+    assert {1, 3, 5}.issubset(set(cfg["published_horizons"]))
+    a = _project(_case("dgw_fixture_a"))
+    case_b = dict(_case("dgw_fixture_a"))
+    case_b["matchup"] = {
+        **case_b["matchup"],
+        "fixture": 9914,
+        "team_expected_goals": 1.1,
+    }
+    b = _project(case_b)
+    gw = aggregate_gameweek([a, b], gw=5)
+    assert gw["distribution_aggregation_status"] == "PARTIAL_CROSS_FIXTURE_DEPENDENCE_NOT_MODELLED"
+    assert gw["tail_aggregation_status"].startswith("PARTIAL")
+    assert gw["event_probabilities"] is None
+    assert gw["point_distribution"] is None
+
+
+def test_B20_no_genuine_settled_history_is_not_reconstructed_from_hindsight():
+    state = json.loads(
+        (
+            ROOT
+            / "control"
+            / "fpl_master_v12"
+            / "FPL_MASTER_STATE_V12.json"
+        ).read_text(encoding="utf-8")
+    )
+    evidence = state["model_evidence"]
+    assert evidence["records"] == {}
+    registry = evidence["p1_3b_parameter_registry"]
+    assert registry["settled_predeadline_sample_size"] == 0
+    assert registry["dependence_status"] == "LOW_CONFIDENCE_CONSERVATIVE"
+    assert registry["hindsight_reconstruction_forbidden"] is True

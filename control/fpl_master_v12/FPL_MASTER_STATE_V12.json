@@ -293,6 +293,39 @@
     "reproducibility_policy": "Only actually computed fingerprints support reproducibility claims; unavailable fingerprints remain explicit null/uncomputed evidence.",
     "report_delivery_policy": "OPTIONAL_MODEL_EVIDENCE_DEGRADATION_NEVER_SUPPRESSES_DUE_REPORT",
     "automatic_methodology_weight_mutation": false,
-    "last_settlement": null
+    "last_settlement": null,
+    "p1_3b_parameter_registry": {
+      "stage": "P1.3B",
+      "model_id": "v12_player_events_joint_predictive_v2",
+      "feature_version": "p1.3b-joint-event-point-distribution-v1",
+      "parameter_version": "p1.3b-player-events-v2",
+      "authority": false,
+      "calibration_authority": "P1.5_CALIBRATION_DECISION_LEDGER",
+      "settled_predeadline_sample_size": 0,
+      "calibration_confidence": "LOW",
+      "dependence_status": "LOW_CONFIDENCE_CONSERVATIVE",
+      "parameters": [
+        "P1_3B_GA_SHARED_FRACTION_V1",
+        "P1_3B_FPL_BLANK_THRESHOLD_V1",
+        "P1_3B_POINT_TAIL_THRESHOLDS_V1",
+        "P1_3B_DISCRETE_QUANTILES_V1",
+        "P1_3B_COUNT_SUPPORT_BOUNDS_V1"
+      ],
+      "automatic_retuning": false,
+      "hindsight_reconstruction_forbidden": true,
+      "named_player_parameter_tuning_forbidden": true,
+      "one_match_parameter_tuning_forbidden": true,
+      "global_methodology_weight_mutation": false,
+      "parameter_uncertainty_propagation": "PARTIAL",
+      "future_recalibration_requirement": "GENUINE_PREDEADLINE_FROZEN_P1_5_RECORDS_SETTLED_AFTER_EVENT"
+    },
+    "p1_3b_key_pass_semantics_audit": {
+      "audited_runtime_data_branch": "runtime-data-v6",
+      "audited_runtime_data_sha": "2e478b93dcfef4a91ab49e1208e9e9205852c920",
+      "canonical_creation_metric": "chances_created",
+      "distinct_key_pass_field_proven": false,
+      "action": "DO_NOT_ADD_KEY_PASSES_ALIAS_OR_DUPLICATE_FEATURE",
+      "p1_6_formula_changed": false
+    }
   }
 }

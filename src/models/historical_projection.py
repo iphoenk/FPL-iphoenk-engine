@@ -202,9 +202,30 @@ def build(
                 _f(row.get("points_variance"), _f(row.get("std")) ** 2)
                 for row in subset
             )
+            exact_distribution = None
+            exact_events = None
+            if published == 1 and len(subset) == 1:
+                exact_distribution = dict(
+                    subset[0].get("point_distribution") or {}
+                )
+                exact_events = dict(
+                    subset[0].get("event_probabilities") or {}
+                )
             horizons[str(published)] = {
                 "mean": round(mean, 3),
                 "std": round(math.sqrt(max(0.0, variance)), 3),
+                "event_probabilities": exact_events,
+                "point_distribution": exact_distribution,
+                "distribution_aggregation_status": (
+                    "EXACT_GW1_SINGLE_FIXTURE"
+                    if exact_distribution
+                    else "PARTIAL_CROSS_GW_COVARIANCE_NOT_MODELLED"
+                ),
+                "tail_aggregation_status": (
+                    "AVAILABLE_GW1_SINGLE_FIXTURE"
+                    if exact_distribution
+                    else "PARTIAL_NOT_AGGREGATED"
+                ),
                 "dependency_assumption": "ZERO_CROSS_GW_COVARIANCE_NOT_MODELLED_YET",
             }
 
@@ -309,7 +330,12 @@ def build(
             "p1_3_event_owner": "src/engines/v12_player_events.py",
             "legacy_projection_components_migration_oracle_only": True,
             "multi_fixture_dependency_assumption": "ZERO_CROSS_FIXTURE_COVARIANCE_NOT_MODELLED_YET",
+            "p1_3b_joint_event_distribution": True,
+            "multi_gw_tail_aggregation": "PARTIAL_UNTIL_CROSS_FIXTURE_DEPENDENCE_MODELLED",
             "p1_6_tactical_scorer_applied": False,
+            "p1_7_started": False,
+            "package_optimizer_started_by_p1_3b": False,
+            "mini_league_overlay_started_by_p1_3b": False,
             "monte_carlo_applied": False,
             "methodology_weights_20_25_30_25_unchanged": True,
         },

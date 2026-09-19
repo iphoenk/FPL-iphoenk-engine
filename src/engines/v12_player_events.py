@@ -34,7 +34,7 @@ from src.rules import (
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = ROOT / "config" / "intelligence" / "player_events.json"
 MODEL_OWNER = "V12_PLAYER_EVENTS"
-MODEL_ID = "v12_player_events_posterior_predictive_v1"
+MODEL_ID = "v12_player_events_joint_predictive_v2"
 DIRECT_EVENT_MODEL = "DIRECT_EVENT_MODEL"
 RESIDUAL_EXPECTATION_COMPONENT = "RESIDUAL_EXPECTATION_COMPONENT"
 
@@ -341,6 +341,11 @@ def build_posterior_rates(
             "tactical_role_evidence_used_for_rate_adjustment": False,
             "automatic_parameter_retuning": False,
             "methodology_weights_20_25_30_25_unchanged": True,
+            "p1_3b_joint_event_probability_complete": True,
+            "p1_6_formula_mutated": False,
+            "transfer_economics_consumed": False,
+            "named_player_conditioning": False,
+            "single_match_overfit": False,
         },
     }
 
@@ -582,6 +587,445 @@ def _attach_model_evidence(
     return result
 
 
+
+def _distribution_config() -> dict[str, Any]:
+    cfg = load_event_config()
+    block = dict(cfg.get("point_distribution") or {})
+    if block.get("model") != "FINITE_STATE_CONDITIONAL_CORE_POINT_PMF_V1":
+        raise RuntimeError("P1.3B point-distribution policy missing")
+    return block
+
+
+def _joint_ga_config() -> dict[str, Any]:
+    cfg = load_event_config()
+    block = dict(cfg.get("joint_goal_assist") or {})
+    if block.get("model") != "BIVARIATE_POISSON_SHARED_COMPONENT_V1":
+        raise RuntimeError("P1.3B joint goal-assist policy missing")
+    return block
+
+
+def _bounded_poisson_probabilities(
+    lam: float,
+    max_count: int,
+) -> tuple[list[float], float]:
+    lam = max(0.0, float(lam))
+    max_count = int(max_count)
+    if max_count < 0:
+        raise ValueError("max_count must be non-negative")
+    probs = [math.exp(-lam)]
+    for count in range(1, max_count + 1):
+        probs.append(probs[-1] * lam / count)
+    mass = sum(probs)
+    truncated = max(0.0, 1.0 - mass)
+    if mass <= 0.0:
+        raise RuntimeError("bounded Poisson support has no probability mass")
+    return [value / mass for value in probs], truncated
+
+
+def _joint_goal_assist_grid(
+    goal_lambda: float,
+    assist_lambda: float,
+) -> tuple[dict[tuple[int, int], float], dict[str, Any]]:
+    cfg = _joint_ga_config()
+    parameter = dict(cfg.get("dependence_parameter") or {})
+    fraction = clamp(
+        _f(parameter.get("value")),
+        _f(parameter.get("lower_bound"), 0.0),
+        _f(parameter.get("upper_bound"), 0.25),
+    )
+    goal_lambda = max(0.0, float(goal_lambda))
+    assist_lambda = max(0.0, float(assist_lambda))
+    shared = fraction * min(goal_lambda, assist_lambda)
+    goal_only = max(0.0, goal_lambda - shared)
+    assist_only = max(0.0, assist_lambda - shared)
+
+    dist_cfg = dict(_distribution_config().get("truncation") or {})
+    max_goal = int(dist_cfg.get("max_goal_count") or 15)
+    max_assist = int(dist_cfg.get("max_assist_count") or 15)
+    base = math.exp(-(goal_only + assist_only + shared))
+    grid: dict[tuple[int, int], float] = {}
+    for goals in range(max_goal + 1):
+        for assists in range(max_assist + 1):
+            total = 0.0
+            for common in range(min(goals, assists) + 1):
+                total += (
+                    (shared**common) / math.factorial(common)
+                    * (goal_only ** (goals - common))
+                    / math.factorial(goals - common)
+                    * (assist_only ** (assists - common))
+                    / math.factorial(assists - common)
+                )
+            grid[(goals, assists)] = base * total
+    represented = sum(grid.values())
+    if represented <= 0.0:
+        grid = {(0, 0): 1.0}
+        represented = 1.0
+    truncated = max(0.0, 1.0 - represented)
+    normalized = {key: value / represented for key, value in grid.items()}
+    return normalized, {
+        "model": cfg.get("model"),
+        "dependence_parameter_id": parameter.get("parameter_id"),
+        "dependence_parameter_version": parameter.get("version"),
+        "dependence_parameter": round(fraction, 6),
+        "lambda_goal": round(goal_lambda, 9),
+        "lambda_assist": round(assist_lambda, 9),
+        "lambda_shared": round(shared, 9),
+        "lambda_goal_only": round(goal_only, 9),
+        "lambda_assist_only": round(assist_only, 9),
+        "calibration_status": parameter.get("calibration_status"),
+        "calibration_sample_size": int(parameter.get("calibration_sample_size") or 0),
+        "calibration_confidence": parameter.get("calibration_confidence"),
+        "source": parameter.get("source"),
+        "automatic_retuning": False,
+        "truncated_probability_mass": truncated,
+        "silent_independence_assumption": False,
+    }
+
+
+def _convolve_integer_pmf(
+    left: Mapping[int, float],
+    right: Mapping[int, float],
+) -> dict[int, float]:
+    out: dict[int, float] = {}
+    for left_points, left_probability in left.items():
+        for right_points, right_probability in right.items():
+            points = int(left_points) + int(right_points)
+            out[points] = out.get(points, 0.0) + float(left_probability) * float(
+                right_probability
+            )
+    return out
+
+
+def _bernoulli_reward_pmf(probability: float, reward: float) -> dict[int, float]:
+    p = clamp(float(probability), 0.0, 1.0)
+    reward_int = int(round(float(reward)))
+    if reward_int <= 0 or p <= 0.0:
+        return {0: 1.0}
+    if p >= 1.0:
+        return {reward_int: 1.0}
+    return {0: 1.0 - p, reward_int: p}
+
+
+def _save_reward_pmf(lam: float) -> tuple[dict[int, float], float]:
+    cfg = dict(_distribution_config().get("truncation") or {})
+    max_count = int(cfg.get("max_save_count") or 30)
+    probabilities, truncated = _bounded_poisson_probabilities(lam, max_count)
+    out: dict[int, float] = {}
+    for count, probability in enumerate(probabilities):
+        reward = (count // SAVE_INTERVAL) * SAVE_POINTS_PER_INTERVAL
+        out[int(reward)] = out.get(int(reward), 0.0) + probability
+    return out, truncated
+
+
+def _pmf_moments(pmf: Mapping[int, float]) -> tuple[float, float]:
+    mean = sum(float(points) * float(probability) for points, probability in pmf.items())
+    second = sum(
+        float(points) * float(points) * float(probability)
+        for points, probability in pmf.items()
+    )
+    return mean, max(0.0, second - mean * mean)
+
+
+def _discrete_quantile(pmf: Mapping[int, float], probability: float) -> int:
+    target = clamp(float(probability), 0.0, 1.0)
+    cumulative = 0.0
+    support = sorted(int(points) for points in pmf)
+    if not support:
+        return 0
+    for points in support:
+        cumulative += float(pmf.get(points, 0.0))
+        if cumulative + 1e-15 >= target:
+            return points
+    return support[-1]
+
+
+def _build_joint_predictive_surface(
+    minute_atoms: list[Mapping[str, Any]],
+    *,
+    element_type: int,
+    position: str,
+    goal_rate: float,
+    assist_rate: float,
+    clean_sheet_probability: float,
+    dc: Mapping[str, Any],
+    dc_rate: float,
+    dc_threshold: Any,
+    dc_points: float,
+    save_rate: float,
+    bonus_residual_expectation: float,
+    legacy_expected_total: float,
+    legacy_moment_variance: float,
+) -> dict[str, Any]:
+    dist_cfg = _distribution_config()
+    trunc_cfg = dict(dist_cfg.get("truncation") or {})
+    blank_cfg = dict(dist_cfg.get("blank") or {})
+    tail_cfg = dict(dist_cfg.get("tails") or {})
+    quantile_cfg = dict(dist_cfg.get("quantiles") or {})
+
+    core_pmf: dict[int, float] = {}
+    p_goal = p_assist = p_both = p_attack = p_multiple = p_ga2 = p_ga3 = 0.0
+    max_joint_truncated = 0.0
+    max_save_truncated = 0.0
+    dependence_rows: list[dict[str, Any]] = []
+
+    for atom in minute_atoms:
+        atom_probability = float(atom.get("joint_probability") or 0.0)
+        if atom_probability <= 0.0:
+            continue
+        minutes = max(0.0, float(atom.get("minutes") or 0.0))
+        lg = max(0.0, goal_rate * minutes / 90.0)
+        la = max(0.0, assist_rate * minutes / 90.0)
+        ga_grid, dependence = _joint_goal_assist_grid(lg, la)
+        max_joint_truncated = max(
+            max_joint_truncated,
+            float(dependence.get("truncated_probability_mass") or 0.0),
+        )
+        dependence_rows.append(
+            {
+                "state": atom.get("state"),
+                "minutes": round(minutes, 6),
+                "weight": round(atom_probability, 9),
+                **dependence,
+            }
+        )
+        p_goal_atom = 1.0 - math.exp(-lg)
+        p_assist_atom = 1.0 - math.exp(-la)
+        p00_atom = ga_grid.get((0, 0), 0.0)
+        p_both_atom = max(
+            0.0,
+            min(1.0, p_goal_atom + p_assist_atom - (1.0 - p00_atom)),
+        )
+        p_goal += atom_probability * p_goal_atom
+        p_assist += atom_probability * p_assist_atom
+        p_both += atom_probability * p_both_atom
+        p_attack += atom_probability * (1.0 - p00_atom)
+        p_multiple += atom_probability * sum(
+            probability
+            for (goals, assists), probability in ga_grid.items()
+            if goals + assists >= 2
+        )
+        p_ga2 += atom_probability * sum(
+            probability
+            for (goals, assists), probability in ga_grid.items()
+            if goals + assists >= 2
+        )
+        p_ga3 += atom_probability * sum(
+            probability
+            for (goals, assists), probability in ga_grid.items()
+            if goals + assists >= 3
+        )
+
+        ga_points: dict[int, float] = {}
+        for (goals, assists), probability in ga_grid.items():
+            points = int(GOAL_POINTS[element_type]) * int(goals) + int(ASSIST_POINTS) * int(assists)
+            ga_points[points] = ga_points.get(points, 0.0) + probability
+
+        appearance_points = (
+            0
+            if minutes <= 0.0
+            else int(APPEARANCE_POINTS_60_PLUS)
+            if minutes >= 60.0
+            else int(APPEARANCE_POINTS_UNDER_60)
+        )
+        conditional_pmf: dict[int, float] = {appearance_points: 1.0}
+        conditional_pmf = _convolve_integer_pmf(conditional_pmf, ga_points)
+
+        cs_points = float(CLEAN_SHEET_POINTS.get(element_type, 0))
+        cs_qualified = minutes >= 60.0 and cs_points > 0.0
+        conditional_pmf = _convolve_integer_pmf(
+            conditional_pmf,
+            _bernoulli_reward_pmf(
+                clean_sheet_probability if cs_qualified else 0.0,
+                cs_points,
+            ),
+        )
+
+        dc_probability = 0.0
+        if (
+            minutes > 0.0
+            and dc.get("eligible")
+            and dc_threshold is not None
+            and dc_points > 0.0
+        ):
+            dc_probability = _poisson_tail_at_least(
+                int(dc_threshold), dc_rate * minutes / 90.0
+            )
+        conditional_pmf = _convolve_integer_pmf(
+            conditional_pmf,
+            _bernoulli_reward_pmf(dc_probability, dc_points),
+        )
+
+        if position == "GK" and minutes > 0.0:
+            save_pmf, save_truncated = _save_reward_pmf(save_rate * minutes / 90.0)
+            max_save_truncated = max(max_save_truncated, save_truncated)
+            conditional_pmf = _convolve_integer_pmf(conditional_pmf, save_pmf)
+
+        for points, probability in conditional_pmf.items():
+            core_pmf[int(points)] = core_pmf.get(int(points), 0.0) + atom_probability * float(probability)
+
+    sum_probability = sum(core_pmf.values())
+    tolerance = max(0.0, _f(trunc_cfg.get("normalization_tolerance"), 1e-9))
+    if sum_probability <= 0.0:
+        core_pmf = {0: 1.0}
+        sum_probability = 1.0
+    if not math.isclose(sum_probability, 1.0, rel_tol=0.0, abs_tol=tolerance):
+        core_pmf = {
+            points: probability / sum_probability
+            for points, probability in core_pmf.items()
+        }
+        sum_probability = sum(core_pmf.values())
+
+    core_mean, core_variance = _pmf_moments(core_pmf)
+    adjusted_expected_total = core_mean + max(0.0, float(bonus_residual_expectation))
+    mean_delta = adjusted_expected_total - float(legacy_expected_total)
+
+    tail_thresholds = [int(value) for value in tail_cfg.get("thresholds") or []]
+    tails = {
+        f"ge_{threshold}": clamp(
+            sum(
+                probability
+                for points, probability in core_pmf.items()
+                if int(points) >= threshold
+            ),
+            0.0,
+            1.0,
+        )
+        for threshold in tail_thresholds
+    }
+    quantile_probabilities = [
+        float(value) for value in quantile_cfg.get("probabilities") or []
+    ]
+    quantiles = {
+        f"P{int(round(probability * 100))}": _discrete_quantile(
+            core_pmf, probability
+        )
+        for probability in quantile_probabilities
+    }
+    blank_threshold = int(blank_cfg.get("threshold") or 2)
+    p_blank = clamp(
+        sum(
+            probability
+            for points, probability in core_pmf.items()
+            if int(points) <= blank_threshold
+        ),
+        0.0,
+        1.0,
+    )
+    probabilities = {
+        str(points): round(core_pmf[points], 12)
+        for points in sorted(core_pmf)
+    }
+    dependence_cfg = _joint_ga_config()
+    dependence_parameter = dict(
+        dependence_cfg.get("dependence_parameter") or {}
+    )
+
+    return {
+        "event_probabilities": {
+            "p_goal_return": round(clamp(p_goal, 0.0, 1.0), 9),
+            "p_assist_return": round(clamp(p_assist, 0.0, 1.0), 9),
+            "p_goal_and_assist": round(clamp(p_both, 0.0, 1.0), 9),
+            "p_attacking_return": round(clamp(p_attack, 0.0, 1.0), 9),
+            "p_no_attacking_return": round(clamp(1.0 - p_attack, 0.0, 1.0), 9),
+            "p_multiple_attacking_returns": round(clamp(p_multiple, 0.0, 1.0), 9),
+            "p_total_ga_ge_1": round(clamp(p_attack, 0.0, 1.0), 9),
+            "p_total_ga_ge_2": round(clamp(p_ga2, 0.0, 1.0), 9),
+            "p_total_ga_ge_3": round(clamp(p_ga3, 0.0, 1.0), 9),
+        },
+        "point_distribution": {
+            "status": "READY_PARTIAL_BONUS_RESIDUAL",
+            "model": dist_cfg.get("model"),
+            "distribution_completeness": dist_cfg.get("distribution_completeness"),
+            "support": sorted(int(points) for points in core_pmf),
+            "probabilities": probabilities,
+            "sum_probability": round(sum(core_pmf.values()), 12),
+            "expected_points": round(core_mean, 9),
+            "variance": round(core_variance, 9),
+            "std": round(math.sqrt(max(0.0, core_variance)), 9),
+            "quantiles": quantiles,
+            "quantile_semantics": quantile_cfg.get("semantics"),
+            "blank_threshold": blank_threshold,
+            "blank_definition": blank_cfg.get("definition"),
+            "p_fpl_blank": round(p_blank, 9),
+            "tails": {key: round(value, 9) for key, value in tails.items()},
+            "p_haul_10_plus": (
+                round(tails.get("ge_10"), 9)
+                if tails.get("ge_10") is not None
+                else None
+            ),
+            "bonus_residual_expectation": round(
+                max(0.0, float(bonus_residual_expectation)), 9
+            ),
+            "adjusted_expected_total": round(adjusted_expected_total, 9),
+            "bonus_incorporation": "EXPECTATION_ONLY_NOT_STOCHASTIC",
+            "tail_probability_scope": "CORE_STOCHASTIC_POINTS_EXCLUDES_BONUS_RESIDUAL",
+            "blank_probability_scope": "CORE_STOCHASTIC_POINTS_EXCLUDES_BONUS_RESIDUAL",
+            "truncation": {
+                "max_goal_count": int(trunc_cfg.get("max_goal_count") or 15),
+                "max_assist_count": int(trunc_cfg.get("max_assist_count") or 15),
+                "max_save_count": int(trunc_cfg.get("max_save_count") or 30),
+                "max_joint_truncated_probability_mass": round(max_joint_truncated, 12),
+                "max_save_truncated_probability_mass": round(max_save_truncated, 12),
+                "renormalized": True,
+            },
+            "provenance": {
+                "minutes": "P1.1 FINITE_STATE_MINUTES_MIXTURE + bounded quadrature",
+                "goal_assist": dependence_cfg.get("model"),
+                "clean_sheet": "fixture clean-sheet probability conditional on >=60 minutes",
+                "defcon": "P1.3 Poisson threshold process",
+                "saves": "P1.3 Poisson save-count interval reward",
+                "bonus": "P1.3 residual expectation only",
+            },
+        },
+        "dependence": {
+            "goal_assist_model": dependence_cfg.get("model"),
+            "dependence_parameter_id": dependence_parameter.get("parameter_id"),
+            "dependence_parameter": dependence_parameter.get("value"),
+            "parameter_version": dependence_parameter.get("version"),
+            "calibration_status": dependence_parameter.get("calibration_status"),
+            "calibration_sample_size": int(
+                dependence_parameter.get("calibration_sample_size") or 0
+            ),
+            "calibration_confidence": dependence_parameter.get(
+                "calibration_confidence"
+            ),
+            "assumptions": {
+                "goal_assist_jointly_modelled": True,
+                "silent_independence": False,
+                "other_event_blocks_conditionally_factorized_given_minutes": True,
+                "shared_minutes_dependence": True,
+                "cross_player_correlation": "NOT_MODELLED_YET",
+                "cross_fixture_correlation": "NOT_MODELLED_YET",
+            },
+            "minute_atom_diagnostics": dependence_rows,
+        },
+        "reconciliation": {
+            "core_pmf_expected_points": round(core_mean, 9),
+            "bonus_residual_expectation": round(
+                max(0.0, float(bonus_residual_expectation)), 9
+            ),
+            "pmf_plus_bonus_expected_total": round(adjusted_expected_total, 9),
+            "legacy_expected_total": round(float(legacy_expected_total), 9),
+            "mean_delta": round(mean_delta, 12),
+            "mean_tolerance": _f(
+                trunc_cfg.get("mean_reconciliation_tolerance"), 0.0005
+            ),
+            "core_pmf_variance": round(core_variance, 9),
+            "legacy_moment_variance_before_joint_dependence": round(
+                max(0.0, float(legacy_moment_variance)), 9
+            ),
+            "variance_delta_due_joint_dependence_and_truncation": round(
+                core_variance - max(0.0, float(legacy_moment_variance)), 9
+            ),
+            "published_variance_source": "CORE_POINT_PMF",
+            "variance_reconciled_to_published": True,
+            "bonus_variance_modelled": False,
+        },
+        "parameter_uncertainty": dict(
+            load_event_config().get("parameter_uncertainty") or {}
+        ),
+    }
+
 def project_player_fixture(
     player: Mapping[str, Any],
     minutes_projection: Mapping[str, Any],
@@ -752,7 +1196,28 @@ def project_player_fixture(
                 within * cs_prob if cs_qualified else 0.0
             )
 
-    total_variance = max(0.0, total_second - total_mean * total_mean)
+    legacy_moment_variance = max(
+        0.0, total_second - total_mean * total_mean
+    )
+    predictive_surface = _build_joint_predictive_surface(
+        joint,
+        element_type=element_type,
+        position=position,
+        goal_rate=goal_rate,
+        assist_rate=assist_rate,
+        clean_sheet_probability=cs_prob,
+        dc=dc,
+        dc_rate=dc_rate,
+        dc_threshold=dc_threshold,
+        dc_points=dc_points,
+        save_rate=save_rate,
+        bonus_residual_expectation=component_mean["bonus"],
+        legacy_expected_total=total_mean,
+        legacy_moment_variance=legacy_moment_variance,
+    )
+    event_probabilities = predictive_surface["event_probabilities"]
+    point_distribution = predictive_surface["point_distribution"]
+    total_variance = float(point_distribution["variance"])
     component_variance = {
         name: max(0.0, component_second[name] - component_mean[name] ** 2)
         for name in component_names
@@ -844,7 +1309,7 @@ def project_player_fixture(
                     _f((rates.get("goal") or {}).get("posterior_rate90")), 6
                 ),
                 "fixture_adjusted_rate90": round(goal_rate, 6),
-                "P_at_least_1": round(goal_p1, 6),
+                "P_at_least_1": round(event_probabilities["p_goal_return"], 6),
                 "expected_count": round(goal_count_mean, 6),
                 "count_variance": round(
                     max(0.0, goal_count_second - goal_count_mean**2), 6
@@ -861,7 +1326,7 @@ def project_player_fixture(
                     _f((rates.get("assist") or {}).get("posterior_rate90")), 6
                 ),
                 "fixture_adjusted_rate90": round(assist_rate, 6),
-                "P_at_least_1": round(assist_p1, 6),
+                "P_at_least_1": round(event_probabilities["p_assist_return"], 6),
                 "expected_count": round(assist_count_mean, 6),
                 "count_variance": round(
                     max(0.0, assist_count_second - assist_count_mean**2), 6
@@ -922,13 +1387,21 @@ def project_player_fixture(
                 "points_variance": round(component_variance["appearance"], 6),
             },
         },
+        "event_probabilities": dict(event_probabilities),
+        "point_distribution": dict(point_distribution),
+        "dependence": predictive_surface["dependence"],
+        "parameter_uncertainty": predictive_surface["parameter_uncertainty"],
         "aggregate": {
             "expected_fpl_points": round(total_mean, 6),
             "points_variance": round(total_variance, 6),
             "points_std": round(math.sqrt(total_variance), 6),
-            "distribution_semantics": "FINITE_STATE_EVENT_MIXTURE_MOMENTS",
+            "distribution_semantics": "FINITE_STATE_CONDITIONAL_CORE_POINT_PMF_V1",
+            "distribution_completeness": point_distribution["distribution_completeness"],
             "canonical_gaussian": False,
-            "quantiles": None,
+            "quantiles": dict(point_distribution["quantiles"]),
+            "p_fpl_blank": point_distribution["p_fpl_blank"],
+            "blank_threshold": point_distribution["blank_threshold"],
+            "tails": dict(point_distribution["tails"]),
         },
         "mean": round(total_mean, 3),
         "std": round(math.sqrt(total_variance), 3),
@@ -954,19 +1427,28 @@ def project_player_fixture(
                 total_variance - component_variance_sum, 6
             ),
             "bonus_counted_once": True,
+            "p1_3b": predictive_surface["reconciliation"],
         },
         "assumptions": {
             "poisson_goal_count": True,
             "poisson_assist_count": True,
             "poisson_defcon_count_threshold": bool(dc.get("eligible")),
             "poisson_save_count": position == "GK",
-            "conditional_event_independence_given_state_and_minutes": True,
+            "conditional_event_independence_given_state_and_minutes": "PARTIAL_BLOCK_FACTORISATION_AFTER_JOINT_GOAL_ASSIST",
             "shared_minutes_mixture_creates_component_dependence": True,
-            "goal_assist_dependence": "NOT_MODELLED_YET",
+            "goal_assist_dependence": predictive_surface["dependence"]["goal_assist_model"],
+            "goal_assist_dependence_parameter": predictive_surface["dependence"]["dependence_parameter"],
+            "goal_assist_dependence_calibration_status": predictive_surface["dependence"]["calibration_status"],
+            "goal_assist_silent_independence": False,
             "cross_player_correlation": "NOT_MODELLED_YET",
             "cross_fixture_correlation": "NOT_MODELLED_YET",
+            "parameter_uncertainty_propagation": "PARTIAL",
+            "point_distribution_completeness": point_distribution["distribution_completeness"],
             "p1_4_capability_claimed": False,
             "p1_6_tactical_scorer_applied": False,
+            "p1_7_started": False,
+            "package_optimizer_started": False,
+            "mini_league_overlay_started": False,
             "monte_carlo_applied": False,
         },
         "calibration_hook": _calibration_hook(calibration_summary),
@@ -986,12 +1468,37 @@ def aggregate_gameweek(
     *,
     gw: int,
 ) -> dict[str, Any]:
-    """Aggregate separate fixture moments under explicit zero cross-fixture covariance."""
-    mean = sum(_f((row.get("aggregate") or {}).get("expected_fpl_points"), _f(row.get("mean"))) for row in fixtures)
-    variance = sum(_f((row.get("aggregate") or {}).get("points_variance"), _f(row.get("std")) ** 2) for row in fixtures)
+    """Aggregate fixture moments without inventing cross-fixture tail dependence."""
+    mean = sum(
+        _f(
+            (row.get("aggregate") or {}).get("expected_fpl_points"),
+            _f(row.get("mean")),
+        )
+        for row in fixtures
+    )
+    variance = sum(
+        _f(
+            (row.get("aggregate") or {}).get("points_variance"),
+            _f(row.get("std")) ** 2,
+        )
+        for row in fixtures
+    )
     no_clean_sheet = 1.0
     for row in fixtures:
-        no_clean_sheet *= 1.0 - clamp(_f(row.get("clean_sheet_probability")), 0.0, 1.0)
+        no_clean_sheet *= 1.0 - clamp(
+            _f(row.get("clean_sheet_probability")), 0.0, 1.0
+        )
+
+    single_fixture_distribution = None
+    single_fixture_events = None
+    if len(fixtures) == 1:
+        single_fixture_distribution = dict(
+            fixtures[0].get("point_distribution") or {}
+        )
+        single_fixture_events = dict(
+            fixtures[0].get("event_probabilities") or {}
+        )
+
     return {
         "gw": int(gw),
         "mean": round(mean, 3),
@@ -1000,6 +1507,26 @@ def aggregate_gameweek(
         "clean_sheet_probability": round(1.0 - no_clean_sheet, 4)
         if fixtures
         else 0.0,
+        "event_probabilities": single_fixture_events,
+        "point_distribution": single_fixture_distribution,
+        "distribution_aggregation_status": (
+            "EXACT_SINGLE_FIXTURE"
+            if len(fixtures) == 1 and single_fixture_distribution
+            else "PARTIAL_CROSS_FIXTURE_DEPENDENCE_NOT_MODELLED"
+            if len(fixtures) > 1
+            else "NO_FIXTURE"
+        ),
+        "tail_aggregation_status": (
+            "AVAILABLE_SINGLE_FIXTURE"
+            if len(fixtures) == 1 and single_fixture_distribution
+            else "PARTIAL_NOT_AGGREGATED_WITHOUT_CROSS_FIXTURE_DEPENDENCE"
+        ),
+        "return_probability_aggregation_status": (
+            "AVAILABLE_SINGLE_FIXTURE"
+            if len(fixtures) == 1 and single_fixture_events
+            else "PARTIAL_NOT_AGGREGATED_WITHOUT_CROSS_FIXTURE_DEPENDENCE"
+        ),
         "fixtures": [dict(row) for row in fixtures],
         "dependency_assumption": "ZERO_CROSS_FIXTURE_COVARIANCE_NOT_MODELLED_YET",
+        "monte_carlo_applied": False,
     }

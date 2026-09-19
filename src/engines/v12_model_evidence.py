@@ -295,6 +295,39 @@ def _metrics(pairs) -> dict[str, Any]:
         and len(f.get("xpts_interval")) == 2
         and a.get("points") is not None
     ]
+    attacking_return = [
+        (f, a)
+        for f, a in pairs
+        if f.get("p_attacking_return") is not None
+        and a.get("goals") is not None
+        and a.get("assists") is not None
+    ]
+    fpl_blank = [
+        (f, a)
+        for f, a in pairs
+        if f.get("p_fpl_blank") is not None
+        and f.get("blank_threshold") is not None
+        and a.get("points") is not None
+    ]
+    tail_thresholds = (5, 8, 10, 12, 15)
+    tail_samples = {
+        threshold: [
+            (f, a)
+            for f, a in pairs
+            if isinstance(f.get("point_tails"), Mapping)
+            and f["point_tails"].get(f"ge_{threshold}") is not None
+            and a.get("points") is not None
+        ]
+        for threshold in tail_thresholds
+    }
+    quantile_samples = [
+        (f, a)
+        for f, a in pairs
+        if isinstance(f.get("point_quantiles"), Mapping)
+        and f["point_quantiles"].get("P10") is not None
+        and f["point_quantiles"].get("P90") is not None
+        and a.get("points") is not None
+    ]
     save_errors = [
         _num(a["saves"], "saves") - _num(f["expected_saves"], "expected_saves")
         for f, a in saves
@@ -330,6 +363,64 @@ def _metrics(pairs) -> dict[str, Any]:
             for f, a in assist
         ])),
         "assist_sample_size": len(assist),
+        "attacking_return_brier": _r(_avg([
+            (
+                _prob(f["p_attacking_return"], "p_attacking_return")
+                - (
+                    1.0
+                    if _num(a["goals"], "goals") + _num(a["assists"], "assists") >= 1
+                    else 0.0
+                )
+            )
+            ** 2
+            for f, a in attacking_return
+        ])),
+        "attacking_return_sample_size": len(attacking_return),
+        "fpl_blank_brier": _r(_avg([
+            (
+                _prob(f["p_fpl_blank"], "p_fpl_blank")
+                - (
+                    1.0
+                    if _num(a["points"], "points")
+                    <= _num(f["blank_threshold"], "blank_threshold")
+                    else 0.0
+                )
+            )
+            ** 2
+            for f, a in fpl_blank
+        ])),
+        "fpl_blank_sample_size": len(fpl_blank),
+        "point_tail_brier": {
+            f"ge_{threshold}": _r(_avg([
+                (
+                    _prob(
+                        f["point_tails"][f"ge_{threshold}"],
+                        f"point_tails.ge_{threshold}",
+                    )
+                    - (
+                        1.0
+                        if _num(a["points"], "points") >= threshold
+                        else 0.0
+                    )
+                )
+                ** 2
+                for f, a in tail_samples[threshold]
+            ]))
+            for threshold in tail_thresholds
+        },
+        "point_tail_sample_size": {
+            f"ge_{threshold}": len(tail_samples[threshold])
+            for threshold in tail_thresholds
+        },
+        "p10_p90_coverage": _r(_avg([
+            1.0
+            if _num(f["point_quantiles"]["P10"], "point_quantiles.P10")
+            <= _num(a["points"], "points")
+            <= _num(f["point_quantiles"]["P90"], "point_quantiles.P90")
+            else 0.0
+            for f, a in quantile_samples
+        ])),
+        "p10_p90_sample_size": len(quantile_samples),
         "defcon_brier": _r(_avg([
             (_prob(f["defcon_probability"], "defcon_probability") - _num(a["defcon_hit"], "defcon_hit")) ** 2
             for f, a in defcon
@@ -363,7 +454,14 @@ def prediction_calibration_metrics(forecasts: Sequence[Mapping[str, Any]], actua
         "overall": _metrics(pairs),
         "by_confidence_bucket": by_conf,
         "by_sample_size_bucket": by_sample,
-        "governance": {"prediction_error_separate_from_decision_error": True, "bucket_metrics_are_diagnostic_only": True, "one_result_rule_creation_forbidden": True},
+        "governance": {
+            "prediction_error_separate_from_decision_error": True,
+            "bucket_metrics_are_diagnostic_only": True,
+            "one_result_rule_creation_forbidden": True,
+            "p1_3b_distribution_metrics_diagnostic_only": True,
+            "dependence_parameter_automatic_retuning": False,
+            "blank_threshold_taken_from_frozen_forecast_not_hardcoded": True,
+        },
     }
 
 

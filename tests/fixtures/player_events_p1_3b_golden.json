@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "kind": "P1_3B_SYNTHETIC_GOLDEN_SCENARIOS",
+  "historical_claim": false,
+  "purpose": "Directional deterministic regression coverage only; never named-player or one-match tuning.",
+  "scenarios": [
+    {
+      "name": "high_xg_low_xa_striker",
+      "position": "FWD",
+      "element_type": 4,
+      "season_minutes": 900,
+      "expected_goals": 7,
+      "expected_assists": 1,
+      "bonus": 8,
+      "saves": 0,
+      "minutes_profile": "SECURE_90",
+      "team_expected_goals": 1.6,
+      "clean_sheet_probability": 0.24,
+      "tags": [
+        "HIGH_XG",
+        "LOW_XA"
+      ]
+    },
+    {
+      "name": "balanced_goal_assist_attacker",
+      "position": "MID",
+      "element_type": 3,
+      "season_minutes": 900,
+      "expected_goals": 4,
+      "expected_assists": 4,
+      "bonus": 9,
+      "saves": 0,
+      "minutes_profile": "SECURE_90",
+      "team_expected_goals": 1.6,
+      "clean_sheet_probability": 0.32,
+      "tags": [
+        "BALANCED_GA"
+      ]
+    },
+    {
+      "name": "high_assist_low_goal_creator",
+      "position": "MID",
+      "element_type": 3,
+      "season_minutes": 900,
+      "expected_goals": 1,
+      "expected_assists": 7,
+      "bonus": 9,
+      "saves": 0,
+      "minutes_profile": "SECURE_90",
+      "team_expected_goals": 1.6,
+      "clean_sheet_probability": 0.32,
+      "tags": [
+        "LOW_XG",
+        "HIGH_XA"
+      ]
+    },
+    {
+      "name": "low_minute_high_rate_cameo",
+      "position": "FWD",
+      "element_type": 4,
+      "season_minutes": 120,
+      "expected_goals": 1.8,
+      "expected_assists": 0.8,
+      "bonus": 3,
+      "saves": 0,
+      "minutes_profile": "CAMEO_HEAVY",
+      "team_expected_goals": 1.5,
+      "clean_sheet_probability": 0.22,
+      "tags": [
+        "HIGH_RATE",
+        "LOW_MINUTES"
+      ]
+    },
+    {
+      "name": "secure_90_low_event_player",
+      "position": "MID",
+      "element_type": 3,
+      "season_minutes": 900,
+      "expected_goals": 0.5,
+      "expected_assists": 0.5,
+      "bonus": 2,
+      "saves": 0,
+      "minutes_profile": "SECURE_90",
+      "team_expected_goals": 1.2,
+      "clean_sheet_probability": 0.36,
+      "tags": [
+        "LOW_EVENT",
+        "SECURE_MINUTES"
+      ]
+    },
+    {
+      "name": "defender_cs_defcon_route",
+      "position": "DEF",
+      "element_type": 2,
+      "season_minutes": 900,
+      "expected_goals": 0.8,
+      "expected_assists": 1,
+      "bonus": 6,
+      "saves": 0,
+      "minutes_profile": "SECURE_90",
+      "team_expected_goals": 1.2,
+      "clean_sheet_probability": 0.6,
+      "dc_reconstructed_per90": 13,
+      "tags": [
+        "CLEAN_SHEET",
+        "DEFCON"
+      ]
+    },
+    {
+      "name": "goalkeeper_save_heavy",
+      "position": "GK",
+      "element_type": 1,
+      "season_minutes": 900,
+      "expected_goals": 0,
+      "expected_assists": 0,
+      "bonus": 6,
+      "saves": 55,
+      "minutes_profile": "SECURE_90",
+      "team_expected_goals": 0.9,
+      "clean_sheet_probability": 0.42,
+      "tags": [
+        "SAVES"
+      ]
+    },
+    {
+      "name": "penalty_taker_generic",
+      "position": "FWD",
+      "element_type": 4,
+      "season_minutes": 900,
+      "expected_goals": 5.5,
+      "expected_assists": 1,
+      "bonus": 8,
+      "saves": 0,
+      "minutes_profile": "SECURE_90",
+      "team_expected_goals": 1.7,
+      "clean_sheet_probability": 0.2,
+      "tags": [
+        "PENALTY_ROLE_CONTEXT",
+        "MODEL_CONSUMES_RESULTING_XG_NOT_NAME"
+      ]
+    },
+    {
+      "name": "set_piece_creator_generic",
+      "position": "MID",
+      "element_type": 3,
+      "season_minutes": 900,
+      "expected_goals": 1.2,
+      "expected_assists": 5.5,
+      "bonus": 9,
+      "saves": 0,
+      "minutes_profile": "SECURE_90",
+      "team_expected_goals": 1.5,
+      "clean_sheet_probability": 0.34,
+      "tags": [
+        "SET_PIECE_ROLE_CONTEXT",
+        "MODEL_CONSUMES_RESULTING_XA_NOT_NAME"
+      ]
+    },
+    {
+      "name": "high_rate_small_sample_shrinkage",
+      "position": "FWD",
+      "element_type": 4,
+      "season_minutes": 45,
+      "expected_goals": 1.6,
+      "expected_assists": 0.7,
+      "bonus": 2,
+      "saves": 0,
+      "minutes_profile": "ROTATION",
+      "team_expected_goals": 1.5,
+      "clean_sheet_probability": 0.2,
+      "tags": [
+        "HIGH_RATE",
+        "SMALL_SAMPLE",
+        "SHRINKAGE_REQUIRED"
+      ]
+    }
+  ]
+}

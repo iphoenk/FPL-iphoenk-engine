@@ -715,8 +715,13 @@ def _severity_manifest():
 def _degraded_watchlist_body(pre, *, include_label=True):
     body = valid_visible_body(pre)
     output = []
+    in_watchlist = False
     for line in body.splitlines():
-        if any(line.startswith(f"| {rank} |") for rank in (18, 19, 20)):
+        if line.startswith("## 10."):
+            in_watchlist = True
+        elif line.startswith("## 11."):
+            in_watchlist = False
+        if in_watchlist and any(line.startswith(f"| {rank} |") for rank in (18, 19, 20)):
             continue
         output.append(line)
         if include_label and line.startswith("## 10."):

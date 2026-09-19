@@ -20,13 +20,6 @@ from typing import Any, Mapping, Sequence
 CANONICAL_AUTHORITY = "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt"
 # Compatibility alias for older imports. It intentionally resolves to V12 now.
 SPEC_AUTHORITY = CANONICAL_AUTHORITY
-LEGACY_AUTHORITIES = frozenset(
-    {
-        "/FPL/FPL_MASTER_SPEC_V11.txt",
-        "/FPL/FPL_MASTER_RUNTIME_CONTRACT.txt",
-        "/FPL/state/ACTIVE_DECISION_CONTEXT.json",
-    }
-)
 FOOTBALL_COMPONENTS = (
     "PROVEN_HISTORICAL",
     "TACTICAL_ROLE",
@@ -87,8 +80,6 @@ def validate_methodology_weights(
     authority: str,
 ) -> dict[str, float]:
     """Fail closed on legacy authority or any V12 weight drift."""
-    if authority in LEGACY_AUTHORITIES:
-        raise MethodologyContractError("legacy Library authority is historical-only under V12")
     if authority != CANONICAL_AUTHORITY:
         raise MethodologyContractError(
             "methodology authority must be FPL_MASTER_CANONICAL_V12.txt"

@@ -27,14 +27,15 @@ Determine REPORT_DUE from original occurrence before optional refresh. Once true
 Preserve original scheduler-supplied Asia/Jakarta HH:30 slot and factual observed_at.
 Never rewrite/backfill/future-fill/mint replacement report slot.
 
-4. V6 READ-FIRST / NO HARD MUTATION BARRIER
-A. Read current authoritative V6 publication/runtime evidence first.
-B. If fresh/complete, reuse it; never duplicate acquisition.
-C. If missing/stale/incomplete and governed refresh is useful, issue #431 MAY be used as best-effort existing V6 refresh transport.
-D. #431 is OPTIONAL REFRESH TRANSPORT ONLY, not authority, occurrence identity, report acceptance or delivery barrier.
-E. If #431 write is safety-blocked/fails: record CORE REFRESH=DEGRADED; never fabricate PASS; at most one retry after genuine transient/readback mismatch; never alternate transport; never /v6-master-acquire; never duplicate acquisition; continue same occurrence.
-F. #431 failure != V6 unavailable.
-G. Never V3/V4/V5.
+4. V6 READ-FIRST / DETERMINISTIC ONE-ATTEMPT STALE REFRESH
+A. Determine REPORT_DUE first, then read current authoritative V6 publication/runtime evidence.
+B. If the volatile/full-universe scope required by the current due mode is within that mode's freshness threshold, reuse it and do not refresh.
+C. If the required scope is stale beyond the Canonical mode threshold, inspect governed acquisition/refresh state before any write. If relevant acquisition is already IN_PROGRESS, just completed/recent enough, or the same logical data slot is already fulfilled, do not duplicate acquisition; re-read/reuse that result.
+D. Otherwise make AT MOST ONE governed refresh attempt through the EXISTING issue #431 transport appropriate to that report mode. No second transport, no /v6-master-acquire, no backfill/future-fill, no duplicate acquisition.
+E. REFRESH ATTEMPT is deterministic when stale and useful. REFRESH SUCCESS is NEVER a report-delivery prerequisite.
+F. If the one governed refresh attempt is safety-blocked, fails or times out: record CORE REFRESH=DEGRADED and continue the SAME original report occurrence through the Canonical evidence ladder. REPORT_DUE=true never becomes NOT_DUE because refresh failed or ran long.
+G. #431 remains refresh transport only, never authority, occurrence identity, report acceptance or delivery barrier.
+H. Never V3/V4/V5.
 
 5. FACTUAL EVIDENCE LADDER
 1 fresh valid current V6;
@@ -47,13 +48,17 @@ Deep volatile target <=45 min.
 Never blank healthy whole sections because one scope is degraded.
 Never fabricate completion, auth, finance, price ETA, picks, standings, provenance, weather or model precision.
 
-6. DURABLE STATE
+6. DURABLE STATE / SCENARIO LIFECYCLE
 Read exact state path control/fpl_master_v12/FPL_MASTER_STATE_V12.json.
 Non-authoritative report-plane context only.
 Latest explicit app/screenshot/manual state wins.
 CONTEMPLATED != EXECUTED != REJECTED != SUPERSEDED != EXPIRED.
 Never infer transfer execution from discussion.
-Unresolved user routes survive scheduler runs.
+Scenario lifecycle metadata may include target_gw, valid_from, valid_until_deadline, execution_window, expired_at and expiry_reason.
+If a scenario is an action executable only for GW N, the Official GW N deadline has passed, and the scenario was not EXECUTED, its execution route becomes EXPIRED with reason TARGET_GW_EXECUTION_WINDOW_CLOSED_NOT_EXECUTED. Historical evidence is retained; execution is never inferred.
+Only scenarios that are CONTEMPLATED and currently_valid enter the active-user-scenario merge. EXPIRED routes remain available for historical review, counterfactual and Post-All-Match learning.
+A prior-GW hit/price/economics assumption attached to an expired route is historical only and must not flow into a new-GW economics calculation. A fresh full-universe scan is required for the new GW; the same player may reappear only if independently selected from that fresh universe.
+Cross-GW monitoring branches may remain CONTEMPLATED only when their scope/validity is explicit and they remain legally actionable.
 State failure never mutates V6 and never suppresses due report.
 
 7. PLAYER METHODOLOGY
@@ -223,6 +228,11 @@ Exact visible order:
 18 WAIT/PREPARE/ACT + trigger/reversal
 19 Final judgement.
 
+For DEEP, every structural section above MUST be visibly materialized in this exact order. Data unavailability never authorizes structural omission. A section without authoritative data remains visible as PARTIAL / DEGRADED / UNAVAILABLE with reason and counts where meaningful. "NOT RENDERED" is not a Canonical section state.
+Post-deadline closed-decision sections remain structural: XI BATTLE may say GW locked/no executable XI change; C/VC and Chip show locked/current state; Actionable Price Radar may be DEGRADED/UNAVAILABLE rather than omitted.
+Evidence Quality is a distinct visible section before ICON+ and should separate authority/source, observed_at, freshness, status and decision use by scope.
+
+ALL15 identity completeness and model completeness are separate dimensions. When authenticated locked-team evidence proves the exact owned 15, ALL15 MUST render all 15 unique owned identities even if fresh model fields are unavailable. Model-dependent fields use UNAVAILABLE or MODEL UPDATE PENDING NEXT COMPUTE rather than omitting the player or fabricating values.
 ALL15 visible row schema, exactly 15 unique owned players where supportable:
 player;opponent;recommended_or_locked_role;p_available;p_start;p_cameo;p_dnp;xmins;tactical_role;set_piece_penalty_role;matchup;gw_plus_1;three_gw;five_gw;uncertainty_floor_upside;action.
 Allowed action: START;BENCH;HOLD;WATCH;SELL-CANDIDATE.
@@ -273,6 +283,14 @@ decision_item;previous_state;current_state;material_change;reason;evidence_time.
 Typical items include XI status, bench position, transfer route, captain, chip, price action and WAIT/PREPARE/ACT.
 If nothing material changed, render exactly NO MATERIAL DECISION CHANGE.
 A due report is never suppressed because the delta is empty.
+Match-event reconciliation is separate evidence and must never substitute for DECISION DELTA.
+
+14F2. 12:30 SIGNAL DELTA
+The 12:30 DEEP must explicitly materialize delta since 04:30 plus material press/news/P(start)/xMins changes.
+Compact row semantics:
+signal;04:30_or_baseline_state;12:30_state;change;evidence;decision_effect.
+Cover material availability, P(start), xMins, role, injury/news, price, fixture/weather and decision route where relevant.
+If the 04:30 baseline is unavailable, render BASELINE UNAVAILABLE. If no model recomputation occurred, never invent numerical P(start)/xMins movement; use CALIBRATION INPUT or MODEL UPDATE PENDING NEXT COMPUTE.
 
 14G. WATCHLIST20 VISIBLE SCHEMA
 Exactly 20 non-owned: GK5 DEF5 MID5 FWD5, full-universe derived.
@@ -315,8 +333,14 @@ result;formation_system;coach_pattern;player_roles;minutes_substitution_pattern;
 Never reduce the scout to scorer recap.
 
 14K. ICON+ VISIBLE CONTRACT
-Where denominator is available, ownership, starter share, captain share, vice share and EO remain separate.
-For count-based shares show numerator / denominator = percentage, for example Owned 51/58 = 87.9%.
+ICON+ is fail-operational by sub-scope. Do not blank healthy current-GW submitted-picks evidence merely because live standings/rank is stale.
+Separate at least:
+A SUBMITTED PICKS / EXPOSURE;
+B LIVE STANDINGS / RANK;
+C EO / CAPTAINCY where supportable;
+D RIVAL LIVE POINTS.
+A section may be overall DEGRADED while a healthy sub-scope remains COMPLETE. Never mix current-GW picks with stale prior-GW standings as if both were current.
+Where current submitted-picks denominator is complete, render ownership, starter share, captain share and vice share separately as numerator / denominator = percentage. EO is shown only when exact multiplier/chip inputs required for EO are supportable.
 Arithmetic must be consistent. Never collapse distinct metrics into one exposure number.
 Football-optimal baseline is first; ICON+ remains an overlay.
 
@@ -343,6 +367,17 @@ Price alone never overrides football-optimal decision without explicit downstrea
 21:30 = late news, overnight risk, price risk, deadline proximity.
 21:30 includes OVERNIGHT RISK BOARD:
 player_or_route;current_action;possible_change_event;materiality;next_checkpoint.
+
+14M2. ACTION SEMANTICS
+Keep football action separate from operational action.
+Football action examples: HOLD, LOCKED, START, BENCH, TRANSFER.
+Operational action is exactly WAIT / PREPARE / ACT and carries trigger, reversal/abort condition and next checkpoint.
+Do not use MONITOR as a replacement operational state.
+After a GW deadline, football action may be LOCKED / NO EXECUTABLE ACTION while the next-GW operational action is PREPARE for a fresh full-universe rescan.
+
+14M3. CONTENT CONTRACT STATUS
+VISIBLE_CONTENT_PROOF content severity is exactly PASS / DEGRADED / FAIL.
+FAIL-OPERATIONAL describes delivery behavior, not content-contract severity. Never render PARTIAL or FAIL-OPERATIONAL as the CONTENT CONTRACT severity token.
 
 14N. FULL+MATCH / OVERLAP
 Use one coherent report. Do not duplicate semantic blocks. Match personal-impact sections are embedded into the Full backbone once; Watchlist/RISE/FALL/ALL15 remain single instances.
@@ -423,12 +458,33 @@ Minimum content:
 - search_authority where relevant;
 - runtime_provenance.
 
+VISIBLE_CONTENT_PROOF must also bind structural mode coverage:
+- expected_section_ids derived from the current Canonical mode contract;
+- rendered_section_ids;
+- missing_section_ids;
+- unexpected_section_ids;
+- expected_visible_order;
+- rendered_visible_order;
+- visible_order_valid.
+Every structurally required section appears even when its data state is PARTIAL/DEGRADED/UNAVAILABLE. Data unavailability is not structural omission. Missing mandatory sections or wrong visible order are hard structural conformance failures requiring same-run repair/re-render before delivery.
+
+Canonical revision provenance uses:
+canonical_revision.path;
+canonical_revision.branch_or_ref;
+canonical_revision.branch_head_sha;
+canonical_revision.file_blob_sha;
+canonical_revision.content_sha256 optional;
+canonical_revision.content_sha256_computed true/false;
+canonical_revision.canonical_version.
+Never label a Git commit/blob SHA as SHA-256. If content SHA-256 was not actually calculated, set content_sha256=null and content_sha256_computed=false.
+
 runtime_provenance must identify runtime=FPL Master Monitor V12 ChatGPT Automation and explicitly state repository_python_qa_executed=true/false.
 Repository Python PRE_RENDER_QA / POST_RENDER_QA may be claimed executed only when exact occurrence-bound execution evidence exists. Repository code existence, CI success, tests or GitHub availability do not prove Python QA executed for a report occurrence.
 If repository_python_qa_executed=false or execution is not proven, Python QA status must be NOT_PROVEN/NOT_EXECUTED, never PASS.
 If repository_python_qa_executed=true, runtime_provenance must include exact execution evidence bound to the report slot, module/path, execution time, PRE/POST result and evidence fingerprint.
 
 Normal user-facing output does not dump the full VISIBLE_CONTENT_PROOF. It shows compact truthful status such as CONTENT CONTRACT: PASS or CONTENT CONTRACT: DEGRADED with material degraded sections. Detailed proof remains transient audit evidence.
+Every normal due report also includes one compact auditable CONTENT PROOF line binding report slot, mode, Canonical branch-head/blob revision, runtime, Python QA truth state and contract severity. Never claim Python QA PASS without occurrence-bound execution evidence.
 
 16. FAIL-OPERATIONAL
 #431 failure, V6 refresh latency/failure, provider failure, prefetch degradation, one auth failure, predictor incompleteness NEVER equal NOT_DUE.

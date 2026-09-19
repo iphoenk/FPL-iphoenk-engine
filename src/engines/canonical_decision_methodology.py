@@ -787,11 +787,20 @@ def merge_active_and_optimizer_scenarios(
     active_user_scenarios: Sequence[Mapping[str, Any]],
     optimizer_alternatives: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
-    """Preserve contemplated routes while exposing universe alternatives."""
+    """Merge only currently-valid contemplated routes; retain expired routes historically."""
+    user_rows = [dict(row) for row in active_user_scenarios]
     active = [
-        dict(row)
-        for row in active_user_scenarios
-        if row.get("scenario_state") == "CONTEMPLATED"
+        row
+        for row in user_rows
+        if str(row.get("scenario_state") or row.get("state") or "").upper() == "CONTEMPLATED"
+        and row.get("currently_valid", True) is True
+    ]
+    historical = [
+        row
+        for row in user_rows
+        if str(row.get("scenario_state") or row.get("state") or "").upper()
+        in {"EXPIRED", "REJECTED", "SUPERSEDED"}
+        or row.get("currently_valid") is False
     ]
     optimizer = [dict(row) for row in optimizer_alternatives]
     by_id: dict[str, dict[str, Any]] = {}
@@ -806,11 +815,15 @@ def merge_active_and_optimizer_scenarios(
     return {
         "status": "PASS",
         "active_user_scenario_ids": [row.get("scenario_id") for row in active],
+        "historical_user_scenario_ids": [row.get("scenario_id") for row in historical],
+        "historical_user_scenarios": historical,
         "optimizer_alternative_ids": [
             row.get("scenario_id") for row in optimizer
         ],
         "scenarios": list(by_id.values()),
         "active_user_routes_preserved": True,
+        "expired_routes_excluded_from_active_merge": True,
+        "expired_routes_retained_for_history": True,
         "full_universe_alternatives_preserved": bool(optimizer),
         "user_mention_forces_recommendation": False,
     }

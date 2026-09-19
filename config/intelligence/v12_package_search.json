@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "contract": "V12_EXACT_PACKAGE_SEARCH_V1",
+  "model_id": "v12_exact_package_search",
+  "model_owner": "V12_PACKAGE_SEARCH",
+  "default_max_transfers": 2,
+  "maximum_supported_transfers": 3,
+  "candidate_eligibility": {
+    "require_explicit_eligible_flag_when_present": true,
+    "allowed_statuses": ["a", "d"],
+    "status_filter_is_factual_eligibility_not_decision_score": true
+  },
+  "search_authority": {
+    "full_requires_complete_universe": true,
+    "full_requires_no_lossy_pruning": true,
+    "full_requires_searched_universe_equals_eligible_universe": true,
+    "partial_on_incomplete_coverage": true,
+    "partial_on_lossy_pruning": true
+  },
+  "acceleration": {
+    "batch_is_execution_only": true,
+    "scalar_is_reference": true,
+    "sharding_default_enabled": false,
+    "sharding_is_execution_only": true,
+    "frontier_is_representation_only": true
+  },
+  "lossless_pruning": [
+    {
+      "rule": "POSITION_MULTISET_PRESERVATION",
+      "proof": "A legal final 2/5/5/3 squad formed by k outs and k ins must preserve the outgoing positional multiset in the incoming set."
+    },
+    {
+      "rule": "OWNED_INCOMING_EXCLUSION",
+      "proof": "An incoming player already retained in the current squad would violate 15 unique players."
+    },
+    {
+      "rule": "FINAL_SQUAD_RULES",
+      "proof": "Final squads violating size, position composition, uniqueness, or max-three-per-club are illegal and cannot be a legal route."
+    }
+  ],
+  "governance": {
+    "search_decision_utility_separated": true,
+    "hold_always_generated": true,
+    "decision_scores_forbidden": true,
+    "horizon_utility_forbidden": true,
+    "ft_shadow_forbidden": true,
+    "canonical_weights_forbidden": true,
+    "mini_league_forbidden": true,
+    "monte_carlo_forbidden": true,
+    "legacy_fixed_change_penalty_forbidden": true,
+    "v6_mutated": false,
+    "authority_added": false,
+    "scheduler_changed": false
+  }
+}

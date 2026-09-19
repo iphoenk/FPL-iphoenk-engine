@@ -355,8 +355,8 @@ FINAL additionally MUST satisfy 14I GW LOCK PACKAGE.
 15. QA / DELIVERY
 PRE_RENDER_QA + POST_RENDER_QA mandatory when due.
 - due body cannot be replaced by plumbing/status;
-- exact-count blocks remain exact after render;
-- mandatory row fields survive render;
+- exact-count blocks remain exact after render when their section state is COMPLETE;
+- mandatory row fields survive render where authoritative evidence exists;
 - FACT/MODEL/INFERENCE/RUMOR separated;
 - truthful timestamps/provenance;
 - no V3/V4/V5;
@@ -364,6 +364,71 @@ PRE_RENDER_QA + POST_RENDER_QA mandatory when due.
 - no fabricated delivery proof.
 When REPORT_DUE=true final output must be a complete best-truthful canonical report, possibly with clearly degraded fields, OR a truthful terminal report-build failure only after non-destructive recovery paths are exhausted.
 Forbidden terminal due outputs: CORE PASS only; CORE FAIL only; SAFETY BLOCKED only; CONTRACT DEGRADED only; IN_PROGRESS; WAITING; PREFETCHING; RENDERING; QA; status-only.
+
+15A. SECTION-LEVEL FAIL-OPERATIONAL SEMANTICS
+Source-dependent visible sections use one of:
+COMPLETE; PARTIAL; DEGRADED; UNAVAILABLE.
+
+COMPLETE means the section claims canonical completeness. Exact count, exact schema, canonical identity, arithmetic and provenance semantics apply strictly. A malformed or incomplete section labelled COMPLETE is a semantic correctness HARD FAILURE. Example: WATCHLIST20 state COMPLETE with only 17 rows is a hard failure.
+
+PARTIAL / DEGRADED / UNAVAILABLE mean authoritative scope remains incomplete after bounded recovery. In that state:
+- never fabricate missing rows/data;
+- never add placeholder rows merely to satisfy an exact count;
+- never suppress a due report solely because the section is incomplete;
+- visibly label the section state;
+- state degradation_reason;
+- show available_count / expected_count where meaningful;
+- identify missing_scope when known;
+- keep provenance/freshness truthful.
+For REPORT_DUE=true, truthful section degradation is not whole-report failure. The report continues when no correctness/fabrication hard failure remains.
+
+HARD FAILURE includes semantic contradiction/corruption such as:
+- claims COMPLETE but exact count/schema is wrong;
+- duplicate canonical identity;
+- fabricated/placeholder row;
+- owned player inside a NON-OWNED Watchlist;
+- invalid captain/vice semantics;
+- impossible auto-sub consequence;
+- false FULL-UNIVERSE OPTIMIZED claim when search_authority=PARTIAL;
+- arithmetic inconsistency;
+- stale/degraded ICON+ presented as current;
+- unproven model recomputation claim;
+- duplicate/mixed report blocks;
+- provenance contradiction;
+- a degraded visible section not labelled truthfully.
+Source/data unavailability by itself is not a hard failure when represented truthfully.
+
+The same COMPLETE-vs-degraded principle explicitly applies to:
+ALL15; WATCHLIST20; RISE20; FALL20; POST-ALL-MATCH fixture scout; GW LOCK PACKAGE; PACKAGE FRONTIER; ICON+.
+WATCHLIST20 COMPLETE requires exact20 and GK5/DEF5/MID5/FWD5. WATCHLIST20 DEGRADED may contain fewer than20 authoritative rows, but must show N/20 plus reason and must not fabricate rows.
+PACKAGE FRONTIER COMPLETE with serious comparison requires HOLD baseline. If optimizer/search scope is legitimately unavailable, label PACKAGE FRONTIER DEGRADED/UNAVAILABLE and do not fabricate HOLD calculations.
+ICON+ COMPLETE/FRESH requires internally consistent numerator/denominator/percentage and separate exposure metrics. ICON+ DEGRADED/UNAVAILABLE never presents stale rank/EO as current.
+POST-ALL-MATCH fixture scout COMPLETE represents every completed fixture exactly once. If fixture evidence is missing, the scout may be PARTIAL/DEGRADED with covered/expected count plus missing scope.
+GW LOCK PACKAGE COMPLETE requires the complete executable package. If a factual prerequisite is genuinely unavailable, render GW LOCK PACKAGE DEGRADED/UNAVAILABLE with exact missing field(s); never fabricate finance or transfer state.
+
+15B. TRANSIENT VISIBLE_CONTENT_PROOF
+Every REPORT_DUE occurrence creates one transient VISIBLE_CONTENT_PROOF for audit. It is evidence only, never authority and never durable user/state storage.
+Minimum content:
+- canonical_authority_path;
+- canonical_content_fingerprint/version;
+- report_slot;
+- report_mode;
+- report_due;
+- observed_at;
+- section_states containing section_id, state, available_count, expected_count, degradation_reason and missing_scope where applicable;
+- hard_failures;
+- section_degradations;
+- warnings;
+- report_can_continue;
+- search_authority where relevant;
+- runtime_provenance.
+
+runtime_provenance must identify runtime=FPL Master Monitor V12 ChatGPT Automation and explicitly state repository_python_qa_executed=true/false.
+Repository Python PRE_RENDER_QA / POST_RENDER_QA may be claimed executed only when exact occurrence-bound execution evidence exists. Repository code existence, CI success, tests or GitHub availability do not prove Python QA executed for a report occurrence.
+If repository_python_qa_executed=false or execution is not proven, Python QA status must be NOT_PROVEN/NOT_EXECUTED, never PASS.
+If repository_python_qa_executed=true, runtime_provenance must include exact execution evidence bound to the report slot, module/path, execution time, PRE/POST result and evidence fingerprint.
+
+Normal user-facing output does not dump the full VISIBLE_CONTENT_PROOF. It shows compact truthful status such as CONTENT CONTRACT: PASS or CONTENT CONTRACT: DEGRADED with material degraded sections. Detailed proof remains transient audit evidence.
 
 16. FAIL-OPERATIONAL
 #431 failure, V6 refresh latency/failure, provider failure, prefetch degradation, one auth failure, predictor incompleteness NEVER equal NOT_DUE.

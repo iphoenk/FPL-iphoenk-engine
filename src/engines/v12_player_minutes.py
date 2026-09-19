@@ -4,10 +4,16 @@ import json
 import math
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
+
+from src.engines.p0_decision_quality import enrich_xmins_contract
+from src.engines.v12_model_evidence import bind_deterministic_output, validate_operational_model_evidence
 
 ROOT = Path(__file__).resolve().parents[2]
-CONFIG_PATH = ROOT / "config" / "intelligence" / "xmins_v2.json"
+CONFIG_PATH = ROOT / "config" / "intelligence" / "player_minutes.json"
+HISTORICAL_POLICY_PATH = ROOT / "config" / "intelligence" / "historical_priors.json"
+MODEL_OWNER = "V12_PLAYER_MINUTES"
+MODEL_ID = "v12_player_minutes_finite_state"
 
 
 def _f(value: Any, default: float = 0.0) -> float:
@@ -35,6 +41,11 @@ def load_config() -> dict[str, Any]:
     return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
 
 
+@lru_cache(maxsize=1)
+def load_historical_policy() -> dict[str, Any]:
+    return json.loads(HISTORICAL_POLICY_PATH.read_text(encoding="utf-8"))
+
+
 def _availability(player: dict[str, Any], cfg: dict[str, Any]) -> tuple[float, str]:
     """Official FPL availability remains factual authority."""
     chance = player.get("chance_of_playing_next_round")
@@ -59,7 +70,7 @@ def _mixture_mean_variance(
     return mean, max(0.0, second - mean * mean)
 
 
-def estimate_xmins(
+def _estimate_core(
     player: dict[str, Any],
     context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -391,3 +402,223 @@ def estimate_xmins(
             "xmins_derived_from_start_cameo_zero_mixture": True,
         },
     }
+
+
+def _i(value: Any, default: int = 0) -> int:
+    try:
+        return int(default if value is None else value)
+    except (TypeError, ValueError):
+        return int(default)
+
+
+def _calibration_hook(summary: Mapping[str, Any] | None) -> dict[str, Any]:
+    raw = dict(summary or {})
+    overall = dict(raw.get("overall") or raw.get("prediction_overall") or {})
+    sample_size = _i(
+        raw.get("prediction_sample_size"),
+        _i(overall.get("sample_size"), _i(raw.get("sample_size"), 0)),
+    )
+    confidence = str(raw.get("calibration_confidence") or "").upper()
+    if confidence not in {"LOW", "MEDIUM", "HIGH"}:
+        confidence = "LOW" if sample_size < 50 else "MEDIUM" if sample_size < 150 else "HIGH"
+
+    def metric(name: str) -> Any:
+        return overall.get(name) if name in overall else raw.get(name)
+
+    return {
+        "status": "AVAILABLE" if sample_size > 0 else "NO_SETTLED_SAMPLE",
+        "calibration_confidence": confidence,
+        "sample_size": sample_size,
+        "metrics": {
+            "starter_brier": metric("starter_brier"),
+            "dnp_brier": metric("dnp_brier"),
+            "xmins_mae": metric("xmins_mae"),
+            "cameo_calibration": raw.get("cameo_calibration"),
+            "late_cameo_calibration": raw.get("late_cameo_calibration"),
+            "interval_coverage": raw.get("interval_coverage"),
+        },
+        "parameters_mutated": False,
+        "automatic_retuning": False,
+        "conservative_parameters_retained": confidence == "LOW",
+        "governance": {
+            "settled_evidence_required_for_future_tuning": True,
+            "insufficient_sample_retains_current_parameters": True,
+            "methodology_weights_20_25_30_25_unchanged": True,
+        },
+    }
+
+
+def _attach_model_evidence(
+    result: dict[str, Any],
+    binding: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if binding is None:
+        result["model_evidence"] = {
+            "status": "UNBOUND",
+            "authority": False,
+            "evidence_only": True,
+            "repository_python_execution_proven": False,
+            "raw_v6_payload_persisted": False,
+            "run_fingerprint": None,
+            "output_fingerprint": None,
+        }
+        return result
+
+    validation = validate_operational_model_evidence(
+        binding,
+        serious_decision=True,
+        reproducibility_claimed=False,
+        repository_python_executed=False,
+    )
+    fields = (
+        "input_snapshot_id",
+        "model_version",
+        "feature_version",
+        "parameter_version",
+        "calibration_version",
+        "calibration_cutoff",
+        "input_fingerprint",
+        "model_fingerprint",
+        "parameter_fingerprint",
+        "calibration_fingerprint",
+        "run_fingerprint",
+    )
+    compact = {name: binding.get(name) for name in fields}
+    output_fingerprint = None
+    if validation.get("reproducible"):
+        output_fingerprint = bind_deterministic_output(binding, result)["output_fingerprint"]
+    result["model_evidence"] = {
+        "status": validation["status"],
+        "authority": False,
+        "evidence_only": True,
+        "repository_python_execution_proven": False,
+        "raw_v6_payload_persisted": False,
+        **compact,
+        "output_fingerprint": output_fingerprint,
+    }
+    return result
+
+
+def estimate_player_minutes(
+    player: dict[str, Any],
+    context: dict[str, Any] | None = None,
+    *,
+    calibration_summary: Mapping[str, Any] | None = None,
+    model_evidence_binding: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    context = dict(context or {})
+    out = _estimate_core(player, context)
+
+    policy = load_historical_policy()
+    conf = policy.get("confidence") or {}
+    prior_probability = context.get("prior_start_probability")
+    prior_minutes = max(0.0, _f(context.get("prior_evidence_minutes")))
+    current_starts = max(0.0, _f(player.get("starts")))
+
+    confidence = str(out.get("confidence") or "LOW")
+    medium_prior = max(0.0, _f(conf.get("medium_prior_minutes"), 900.0))
+    high_prior = max(medium_prior, _f(conf.get("high_prior_minutes"), 1800.0))
+    if prior_probability is not None and prior_minutes >= medium_prior:
+        confidence = "MEDIUM" if confidence == "LOW" else confidence
+    if (
+        prior_probability is not None
+        and prior_minutes >= high_prior
+        and current_starts >= (1.0 if conf.get("high_requires_current_start", True) else 0.0)
+        and current_starts >= 2.0
+    ):
+        confidence = "HIGH"
+
+    states = list((out.get("xmins_distribution") or {}).get("states") or [])
+    regular_cameo = 0.0
+    mixture_mean = 0.0
+    mixture_second = 0.0
+    for row in states:
+        if row.get("state") == "CAMEO":
+            regular_cameo = round(_f(row.get("probability")), 4)
+            row["appearance_state"] = "REGULAR_CAMEO"
+        else:
+            row["appearance_state"] = row.get("state")
+        p = _f(row.get("probability"))
+        mean = _f(row.get("minutes_mean"))
+        std = _f(row.get("minutes_std"))
+        mixture_mean += p * mean
+        mixture_second += p * (std * std + mean * mean)
+    mixture_variance = max(0.0, mixture_second - mixture_mean * mixture_mean)
+    total_std = _f((out.get("xmins_distribution") or {}).get("std"))
+    total_variance = total_std * total_std
+
+    out["model"] = MODEL_ID
+    out["model_owner"] = MODEL_OWNER
+    out["confidence"] = confidence
+    out["regular_cameo_probability"] = regular_cameo
+    out["derived_probabilities"] = {
+        "p_start": out.get("start_probability"),
+        "p_bench": out.get("bench_probability"),
+        "p_cameo": out.get("cameo_probability"),
+        "p_regular_cameo": regular_cameo,
+        "p_late_cameo": out.get("late_cameo_probability"),
+        "p_dnp": out.get("dnp_probability"),
+    }
+    out["historical_prior"] = {
+        "available": prior_probability is not None,
+        "start_probability": round(_f(prior_probability), 4) if prior_probability is not None else None,
+        "evidence_minutes": round(prior_minutes, 1),
+        "source": context.get("prior_source"),
+        "identity_match": context.get("prior_identity_match"),
+        "starter_minutes_prior": context.get("starter_minutes_prior"),
+    }
+    out["evidence_lineage"] = {
+        "official_availability": {
+            "available": True,
+            "source": out.get("availability_source"),
+        },
+        "current_season_start_rate": {
+            "available": _f(context.get("team_matches_played")) > 0,
+            "team_matches_played": round(max(0.0, _f(context.get("team_matches_played"))), 1),
+        },
+        "historical_prior": {
+            "available": prior_probability is not None,
+            "source": context.get("prior_source"),
+            "identity_match": context.get("prior_identity_match"),
+            "evidence_minutes": round(prior_minutes, 1),
+        },
+        "role_start_probability": {
+            "available": context.get("role_start_probability") is not None,
+        },
+        "manager_start_probability": {
+            "available": context.get("manager_start_probability") is not None,
+        },
+    }
+    out["calibration_hook"] = _calibration_hook(calibration_summary)
+    out["minutes_variance"] = round(_f(out.get("minutes_std")) ** 2, 4)
+    distribution = out.setdefault("xmins_distribution", {})
+    distribution["variance"] = round(total_variance, 6)
+    distribution["mixture_only_variance"] = round(mixture_variance, 6)
+    distribution["states"] = states
+    out.setdefault("governance", {}).update({
+        "production_owner": MODEL_OWNER,
+        "current_official_availability_is_authority": True,
+        "historical_prior_is_shrinkage_evidence": True,
+        "missing_historical_prior_is_not_fabricated": True,
+        "legacy_xmins_v2_v3_are_migration_oracles_only": True,
+        "automatic_parameter_retuning": False,
+        "methodology_weights_20_25_30_25_unchanged": True,
+    })
+    out = enrich_xmins_contract(out)
+    return _attach_model_evidence(out, model_evidence_binding)
+
+
+def estimate_xmins(
+    player: dict[str, Any],
+    context: dict[str, Any] | None = None,
+    *,
+    calibration_summary: Mapping[str, Any] | None = None,
+    model_evidence_binding: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Compatibility entry point for current V12/shared consumers."""
+    return estimate_player_minutes(
+        player,
+        context,
+        calibration_summary=calibration_summary,
+        model_evidence_binding=model_evidence_binding,
+    )

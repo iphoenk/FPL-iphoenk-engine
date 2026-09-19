@@ -1,6 +1,10 @@
 {
-  "schema_version": 2,
-  "model_id": "xmins_v2_hierarchical_state_mixture",
+  "schema_version": 1,
+  "model_id": "v12_player_minutes_finite_state",
+  "migration_oracle": [
+    "src/models/xmins_v2.py",
+    "src/models/xmins_v3.py"
+  ],
   "neutral_start_prior": 0.72,
   "signal_weights": {
     "neutral_prior": 0.8,
@@ -46,11 +50,14 @@
     "official_fpl_availability_is_factual_authority": true,
     "hierarchical_probability_semantics": true,
     "bench_is_overlapping_state": true,
-    "appearance_outcomes": [
+    "mutually_exclusive_appearance_states": [
       "START",
-      "CAMEO",
-      "DNP"
+      "REGULAR_CAMEO",
+      "LATE_CAMEO",
+      "ZERO_MINUTES"
     ],
-    "xmins_from_state_mixture": true
+    "xmins_from_state_mixture": true,
+    "automatic_parameter_retuning": false,
+    "methodology_weights_20_25_30_25_unchanged": true
   }
 }

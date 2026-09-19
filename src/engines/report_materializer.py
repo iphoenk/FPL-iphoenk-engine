@@ -8,6 +8,11 @@ from typing import Any
 
 from src.engines.gameweek_lifecycle_intelligence import build_gameweek_lifecycle
 from src.engines.personal_gameweek_context import build_personal_gameweek_context
+from src.engines.post_deadline_locked_team import (
+    build_post_deadline_locked_team_view,
+    deadline_passed_for_gw,
+    reconcile_owned_match_events,
+)
 from src.utils import DATA, ROOT, atomic_json, read_json
 
 REGISTRY_PATH = ROOT / "config" / "report_artifact_registry.json"
@@ -379,6 +384,48 @@ def _official_partition(full: dict[str, Any], ids: set[int]) -> dict[str, Any]:
     }
 
 
+def _post_deadline_personal_match_context(
+    current_team: dict[str, Any],
+    official_snapshot: dict[str, Any],
+    live: dict[str, Any],
+) -> dict[str, Any]:
+    target_gw = int(current_team.get("gw") or live.get("scoring_gw") or 0)
+    if not current_team or target_gw <= 0:
+        return {"status": "UNAVAILABLE", "reason": "authenticated_current_team_missing"}
+    if not deadline_passed_for_gw(official_snapshot, target_gw):
+        return {"status": "PRE_DEADLINE", "gw": target_gw}
+    volatile_status = str(
+        live.get("freshness_status")
+        or live.get("status")
+        or "UNKNOWN"
+    )
+    try:
+        locked = build_post_deadline_locked_team_view(
+            current_team,
+            target_gw=target_gw,
+            deadline_passed=True,
+            volatile_scope_status=volatile_status,
+        )
+        reconciliation = reconcile_owned_match_events(
+            locked,
+            list(live.get("players") or []),
+        )
+    except RuntimeError as exc:
+        return {
+            "status": "PARTIAL",
+            "gw": target_gw,
+            "reason": str(exc),
+            "fail_operational": True,
+        }
+    return {
+        "status": "PASS" if reconciliation.get("status") == "PASS" else "PARTIAL",
+        "gw": target_gw,
+        "locked_team": locked,
+        "owned_match_reconciliation": reconciliation,
+        "fail_operational": True,
+    }
+
+
 def _size(path: Path) -> int:
     return path.stat().st_size if path.exists() else 0
 
@@ -413,6 +460,7 @@ def run() -> dict[str, Any]:
     live = read_json(DATA / "live.json", {})
     prediction_accuracy = read_json(DATA / "prediction_accuracy.json", {})
     auth = read_json(DATA / "auth.json", {})
+    current_team = read_json(DATA / "v6" / "personal" / "current_team.json", {})
 
     owned = _owned_rows(user, team, projections)
     watch_summary = _watchlist_summary(watchlist, deep=False)
@@ -427,6 +475,11 @@ def run() -> dict[str, Any]:
         auth=auth,
         price_model_health=latest.get("price_model_health") or {},
     )
+    personal_match_context = _post_deadline_personal_match_context(
+        current_team,
+        official_snapshot,
+        live,
+    )
     serving_contract = {
         "owned": len(owned),
         "watchlist": watch_summary["count"],
@@ -436,6 +489,7 @@ def run() -> dict[str, Any]:
         "counterfactual_pnl": True,
         "actual_vs_predicted_learning": True,
         "authenticated_official_readiness": True,
+        "post_deadline_locked_team_view": personal_match_context.get("status"),
         "price_calibration_readiness": True,
         "fast_context_compacted": True,
         "deep_context_full_fidelity": True,
@@ -447,6 +501,7 @@ def run() -> dict[str, Any]:
     user["external_watchlist"] = {"status": watch_summary["status"], "decision": "WATCH", "count": watch_summary["count"], "positions": watch_summary["positions"]}
     user["gameweek_context"] = gameweek_context
     user["gameweek_lifecycle"] = gameweek_lifecycle
+    user["personal_match_context"] = personal_match_context
     user["serving_contract"] = serving_contract
     atomic_json(USER_OUT, user)
 
@@ -457,6 +512,7 @@ def run() -> dict[str, Any]:
         "serving_contract": serving_contract,
         "gameweek_context": _compact_gameweek_context(gameweek_context),
         "gameweek_lifecycle": _compact_gameweek_lifecycle(gameweek_lifecycle),
+        "personal_match_context": personal_match_context,
         "finance": _finance(team),
         "owned_15": owned,
         "changes_since_last_report": user.get("changes_since_last_report"),
@@ -474,6 +530,7 @@ def run() -> dict[str, Any]:
         "payload_type": "DEEP_REVIEW_PAYLOAD_V2",
         "gameweek_context": gameweek_context,
         "gameweek_lifecycle": gameweek_lifecycle,
+        "personal_match_context": personal_match_context,
         "watchlist_20": watch_deep["positions"],
         "captaincy": _captain(user, deep=True),
         "starting_xi": user.get("starting_xi"),
@@ -487,6 +544,7 @@ def run() -> dict[str, Any]:
             "official_detail_watchlist": "data/official_detail_watchlist.json",
             "prediction_accuracy": "data/prediction_accuracy.json",
             "authenticated_official": "data/auth.json",
+            "authenticated_current_team": "data/v6/personal/current_team.json",
             "price_model_health": "data/latest.json#price_model_health",
         },
     }
@@ -520,6 +578,7 @@ def run() -> dict[str, Any]:
         "counterfactual_pnl": True,
         "actual_vs_predicted_learning": True,
         "authenticated_official_readiness": True,
+        "post_deadline_locked_team_view": personal_match_context.get("status"),
         "price_calibration_readiness": True,
         "report_time_intelligence": True,
         "technical_lazy_load": True,
@@ -534,6 +593,7 @@ def run() -> dict[str, Any]:
         "watchlist_summary": watch_summary,
         "gameweek_context": gameweek_context,
         "gameweek_lifecycle": gameweek_lifecycle,
+        "personal_match_context": personal_match_context,
         "artifact_sizes": sizes,
     }
 

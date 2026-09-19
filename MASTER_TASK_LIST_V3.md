@@ -1,3 +1,8 @@
+> FROZEN LEGACY NOTICE
+>
+> This V3 task list is retained for historical, migration-oracle, regression-oracle and capability-mining purposes only. V3 is not production authority, not the production data plane, not the production decision engine, and not a production fallback target. No new features or independent methodology evolution belong here. Current architecture: V6 factual production data plane; Canonical V12 model / decision / optimization / report plane.
+>
+> See docs/LEGACY_V3_V4_V5_FREEZE_V12_PORTING_ASSESSMENT.md.
 # FPL iphoenk Engine V3 Master Task List
 
 Status: **ACTIVE production operational stream**  

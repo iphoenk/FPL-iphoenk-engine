@@ -27,10 +27,58 @@ def _projection_probe() -> tuple[bool, dict[str, Any]]:
     horizon15 = 0
     for p in players:
         x = p.get("xmins") or {}
-        probs = sum(float(x.get(k) or 0) for k in ("start_probability", "bench_probability", "dnp_probability"))
+        hierarchical = (
+            str(x.get("probability_semantics") or "").upper()
+            == "V12_HIERARCHICAL"
+            or x.get("cameo_probability") is not None
+        )
+        if hierarchical:
+            start = float(x.get("start_probability") or 0.0)
+            cameo = float(x.get("cameo_probability") or 0.0)
+            late_cameo = float(x.get("late_cameo_probability") or 0.0)
+            bench = float(x.get("bench_probability") or 0.0)
+            dnp = float(x.get("dnp_probability") or 0.0)
+            probs_ok = (
+                abs((start + cameo + dnp) - 1.0) < 0.002
+                and 0.0 <= bench <= 1.0
+                and bench + 0.002 >= cameo
+                and 0.0 <= late_cameo <= cameo + 0.002
+            )
+            distribution = x.get("xmins_distribution") or {}
+            states = {
+                str(row.get("state") or "").upper()
+                for row in distribution.get("states") or []
+                if isinstance(row, dict)
+            }
+            distribution_ok = (
+                distribution.get("distribution")
+                == "FINITE_STATE_MINUTES_MIXTURE"
+                and {
+                    "START",
+                    "CAMEO",
+                    "LATE_CAMEO",
+                    "ZERO_MINUTES",
+                }
+                <= states
+            )
+        else:
+            probs = sum(
+                float(x.get(k) or 0)
+                for k in (
+                    "start_probability",
+                    "bench_probability",
+                    "dnp_probability",
+                )
+            )
+            probs_ok = abs(probs - 1.0) < 0.002
+            distribution_ok = True
         interval = x.get("expected_minutes_interval") or []
         rows = p.get("xpts_by_gw") or []
-        if abs(probs - 1.0) < 0.002 and 0 <= float(x.get("expected_minutes") or 0) <= 90:
+        if (
+            probs_ok
+            and distribution_ok
+            and 0 <= float(x.get("expected_minutes") or 0) <= 90
+        ):
             valid += 1
         if len(interval) == 2 and all(r.get("std") is not None for r in rows):
             uncertainty += 1
@@ -48,6 +96,9 @@ def _projection_probe() -> tuple[bool, dict[str, Any]]:
         "small_sample_guard_coverage": small_sample,
         "horizon15_coverage": horizon15,
         "coverage": round(coverage, 4),
+        "probability_semantics": "V12_HIERARCHICAL_OR_LEGACY_COMPAT",
+        "v12_appearance_partition": "START+CAMEO+DNP",
+        "v12_bench_is_overlapping": True,
         "model": projections.get("model"),
     }
 

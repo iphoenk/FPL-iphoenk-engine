@@ -1,5 +1,10 @@
 # FPL iphoenk Engine v3.39.0
 
+> CURRENT GOVERNANCE: V3 / V4 / V5 are FROZEN LEGACY. No new features, no production authority, no production fallback target, and no new scheduler may be added to them. Current architecture is V6 as the existing factual production data plane and Canonical V12 as the model / decision / optimization / report plane. See docs/LEGACY_V3_V4_V5_FREEZE_V12_PORTING_ASSESSMENT.md.
+>
+> Historical V3 architecture/status sections below are retained as migration and audit evidence only. They are not current production authority.
+
+
 Production-oriented personal FPL decision engine and persisted Official-FPL-derived bridge for the FPL Master Monitor.
 
 ## Current-state authority

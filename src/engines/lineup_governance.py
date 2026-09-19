@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import itertools
 import json
+import math
 from datetime import datetime, timezone
 from functools import lru_cache
+from statistics import NormalDist
 from typing import Any
 
 from src.engines.p0_decision_quality import resolve_locked_chip_context
@@ -12,6 +14,7 @@ from src.engines.p1_decision_governance import (
     choose_close_call_lineup,
     decision_scores,
     lineup_risk_adjustment,
+    state_conditional_slot_utility,
     uncertainty_fields,
     vice_rank,
 )
@@ -147,9 +150,15 @@ def _player_row(proj: dict[str, Any], gw: int, policy: dict[str, Any]) -> dict[s
         "defensive_route_proxy": _defensive_route_proxy(gw_row),
         "start_probability": round(_f(xmins.get("start_probability")), 4),
         "bench_probability": uncertainty.get("bench_probability"),
+        "cameo_probability": uncertainty.get("cameo_probability"),
+        "late_cameo_probability": uncertainty.get("late_cameo_probability"),
         "dnp_probability": uncertainty.get("dnp_probability"),
         "availability": uncertainty.get("availability"),
         "expected_minutes": round(_f(xmins.get("expected_minutes")), 2),
+        "starter_minutes_if_start": _f(xmins.get("starter_minutes_if_start")),
+        "cameo_minutes_if_used": _f(xmins.get("cameo_minutes_if_used", xmins.get("bench_minutes_if_used"))),
+        "late_cameo_minutes_if_used": _f(xmins.get("late_cameo_minutes_if_used")),
+        "xmins_distribution": dict(xmins.get("xmins_distribution") or {}),
         "projection_confidence": proj.get("projection_confidence"),
     }
 
@@ -158,6 +167,55 @@ def _formation(rows: list[dict[str, Any]]) -> str | None:
     counts = {pos: sum(1 for p in rows if p.get("position") == pos) for pos in ("DEF", "MID", "FWD")}
     form = f"{counts['DEF']}-{counts['MID']}-{counts['FWD']}"
     return form if form in set(LINEUP_RULES.get("legal_formations") or []) else None
+
+
+def _legal_auto_sub_value(
+    starter: dict[str, Any],
+    starters: list[dict[str, Any]],
+    bench_rows: list[dict[str, Any]],
+) -> tuple[float, int | None]:
+    """Return first legal prospective bench substitute under FPL formation rules."""
+    ordered = sorted(
+        bench_rows,
+        key=lambda row: (_f(row.get("bench_score")), _f(row.get("xpts_mean"))),
+        reverse=True,
+    )
+    starter_id = int(starter.get("element") or -1)
+    for substitute in ordered:
+        if starter.get("position") == "GK":
+            if substitute.get("position") != "GK":
+                continue
+        elif substitute.get("position") == "GK":
+            continue
+        replaced = [
+            substitute if int(row.get("element") or -1) == starter_id else row
+            for row in starters
+        ]
+        if starter.get("position") == "GK" or _formation(replaced):
+            return max(0.0, _f(substitute.get("xpts_mean"))), int(
+                substitute.get("element") or -1
+            )
+    return 0.0, None
+
+
+def _pairwise_regret(
+    candidate: dict[str, Any],
+    comparator: dict[str, Any],
+) -> tuple[float, float]:
+    mu = _f(candidate.get("xpts_mean")) - _f(comparator.get("xpts_mean"))
+    sigma = math.sqrt(
+        max(0.0, _f(candidate.get("xpts_std")) ** 2)
+        + max(0.0, _f(comparator.get("xpts_std")) ** 2)
+    )
+    if sigma <= 1e-12:
+        return (1.0 if mu > 0 else 0.5 if mu == 0 else 0.0, max(0.0, -mu))
+    z = mu / sigma
+    p_outperform = NormalDist(mu=mu, sigma=sigma).cdf(0.0)
+    # P(D > 0), where D = candidate - comparator.
+    p_outperform = 1.0 - p_outperform
+    phi = math.exp(-0.5 * z * z) / math.sqrt(2.0 * math.pi)
+    expected_regret = sigma * phi - mu * NormalDist().cdf(-z)
+    return p_outperform, max(0.0, expected_regret)
 
 
 def _lineup_candidates(players: list[dict[str, Any]], policy: dict[str, Any]) -> list[dict[str, Any]]:
@@ -173,12 +231,37 @@ def _lineup_candidates(players: list[dict[str, Any]], policy: dict[str, Any]) ->
         if not form:
             continue
         ids = sorted(int(p["element"]) for p in rows)
-        bench_rows = [p for p in players if int(p["element"]) in all_ids - set(ids)]
+        bench_rows = [
+            p for p in players if int(p["element"]) in all_ids - set(ids)
+        ]
         base_score = sum(_f(p.get("selection_score")) for p in rows)
         mean = sum(_f(p.get("xpts_mean")) for p in rows)
         variance = sum(_f(p.get("xpts_std")) ** 2 for p in rows)
         risk = lineup_risk_adjustment(rows, bench_rows, policy)
         decision_score = base_score + _f(risk.get("adjustment"))
+
+        slot_rows: list[dict[str, Any]] = []
+        for starter in rows:
+            auto_sub_value, auto_sub_element = _legal_auto_sub_value(
+                starter, rows, bench_rows
+            )
+            slot = state_conditional_slot_utility(
+                starter, legal_auto_sub_value=auto_sub_value
+            )
+            slot_rows.append({
+                "element": starter.get("element"),
+                "auto_sub_element": auto_sub_element,
+                **slot,
+            })
+        expected_utility = sum(_f(row.get("expected_utility")) for row in slot_rows)
+        conditional_floor = sum(_f(row.get("lower80")) for row in rows)
+        upper_tail = sum(_f(row.get("upper80")) for row in rows)
+        auto_sub_preservation = sum(
+            _f(row.get("auto_sub_preservation_value")) for row in slot_rows
+        )
+        cameo_blocking_cost = sum(
+            _f(row.get("cameo_auto_sub_blocking_cost")) for row in slot_rows
+        )
         candidates.append({
             "formation": form,
             "score": round(decision_score, 4),
@@ -188,7 +271,50 @@ def _lineup_candidates(players: list[dict[str, Any]], policy: dict[str, Any]) ->
             "xpts_mean": round(mean, 3),
             "xpts_std": round(variance ** 0.5, 3),
             "element_ids": ids,
+            "v12_expected_utility": round(expected_utility, 4),
+            "conditional_floor": round(conditional_floor, 4),
+            "upper_tail": round(upper_tail, 4),
+            "auto_sub_preservation_value": round(auto_sub_preservation, 4),
+            "cameo_auto_sub_blocking_cost": round(cameo_blocking_cost, 4),
+            "lineup_optionality": round(
+                auto_sub_preservation - cameo_blocking_cost, 4
+            ),
+            "slot_state_utility": slot_rows,
+            "robustness_method": "STATE_CONDITIONAL_WITH_LEGAL_AUTOSUB",
         })
+
+    if not candidates:
+        return []
+    comparator = max(
+        candidates,
+        key=lambda row: (_f(row.get("xpts_mean")), -_f(row.get("xpts_std"))),
+    )
+    for row in candidates:
+        p_outperform, regret = _pairwise_regret(row, comparator)
+        row["p_outperform_mean_comparator"] = round(p_outperform, 6)
+        row["expected_regret"] = round(regret, 6)
+        row["uncertainty_overlap_with_mean_comparator"] = not (
+            _f(row.get("upper_tail")) < _f(comparator.get("conditional_floor"))
+            or _f(comparator.get("upper_tail")) < _f(row.get("conditional_floor"))
+        )
+        if row is comparator:
+            classification = "MEAN-EDGE-DOMINATED"
+        elif (
+            _f(row.get("v12_expected_utility"))
+            > _f(comparator.get("v12_expected_utility"))
+            and _f(row.get("xpts_mean")) < _f(comparator.get("xpts_mean"))
+        ):
+            classification = "ROBUSTNESS-DOMINATED"
+        elif (
+            _f(row.get("v12_expected_utility"))
+            >= _f(comparator.get("v12_expected_utility"))
+            and _f(row.get("xpts_mean")) >= _f(comparator.get("xpts_mean"))
+        ):
+            classification = "MEAN-EDGE-DOMINATED"
+        else:
+            classification = "INDETERMINATE"
+        row["robustness_classification"] = classification
+
     return choose_close_call_lineup(candidates, policy)
 
 
@@ -206,9 +332,6 @@ def _safe_captain_pool(starters: list[dict[str, Any]], policy: dict[str, Any]) -
 def _battle(best: dict[str, Any], second: dict[str, Any] | None, pmap: dict[int, dict[str, Any]]) -> dict[str, Any]:
     if not second:
         return {"status": "NO_ALTERNATIVE", "margin": None, "starter_side": [], "bench_side": []}
-    threshold = _f((load_policy().get("battle") or {}).get("close_margin_threshold"))
-    if threshold <= 0:
-        raise RuntimeError("lineup battle close_margin_threshold must be positive")
     best_ids = set(best.get("element_ids") or [])
     second_ids = set(second.get("element_ids") or [])
     starter_side = [pmap[e] for e in sorted(best_ids - second_ids) if e in pmap]
@@ -218,14 +341,49 @@ def _battle(best: dict[str, Any], second: dict[str, Any] | None, pmap: dict[int,
     best_base = _f(best.get("base_score"), _f(best.get("score")))
     second_base = _f(second.get("base_score"), _f(second.get("score")))
     margin = round(best_decision - second_decision, 4)
+    intervals_overlap = not (
+        _f(best.get("upper_tail")) < _f(second.get("conditional_floor"))
+        or _f(second.get("upper_tail")) < _f(best.get("conditional_floor"))
+    )
+    p_outperform, regret = _pairwise_regret(best, second)
+    if (
+        _f(best.get("xpts_mean")) < _f(second.get("xpts_mean"))
+        and _f(best.get("v12_expected_utility")) > _f(second.get("v12_expected_utility"))
+    ):
+        classification = "ROBUSTNESS-DOMINATED"
+    elif (
+        _f(best.get("xpts_mean")) >= _f(second.get("xpts_mean"))
+        and _f(best.get("v12_expected_utility")) >= _f(second.get("v12_expected_utility"))
+    ):
+        classification = "MEAN-EDGE-DOMINATED"
+    else:
+        classification = "INDETERMINATE"
+    threshold = _f((load_policy().get("battle") or {}).get("close_margin_threshold"))
+    if threshold <= 0:
+        raise RuntimeError("lineup battle close_margin_threshold must be positive")
     return {
         "status": "CLOSE" if abs(margin) < threshold else "CLEAR",
+        "distribution_status": "UNCERTAINTY_OVERLAP" if intervals_overlap else "DISTRIBUTIONALLY_SEPARATED",
         "margin": margin,
         "base_score_margin": round(best_base - second_base, 4),
+        "p_selected_outperforms_alternative": round(p_outperform, 6),
+        "expected_regret": round(regret, 6),
+        "robustness_classification": classification,
+        "fixed_close_threshold_is_decision_authority": False,
         "starter_side": [{"element": p["element"], "name": p["name"], "position": p["position"], "selection_score": p["selection_score"]} for p in starter_side],
         "bench_side": [{"element": p["element"], "name": p["name"], "position": p["position"], "selection_score": p["selection_score"]} for p in bench_side],
         "alternative_formation": second.get("formation"),
         "risk_adjustment": {"selected": best.get("risk_adjustment"), "alternative": second.get("risk_adjustment")},
+        "v12_robustness": {
+            "selected_expected_utility": best.get("v12_expected_utility"),
+            "alternative_expected_utility": second.get("v12_expected_utility"),
+            "selected_conditional_floor": best.get("conditional_floor"),
+            "alternative_conditional_floor": second.get("conditional_floor"),
+            "selected_upper_tail": best.get("upper_tail"),
+            "alternative_upper_tail": second.get("upper_tail"),
+            "selected_auto_sub_preservation": best.get("auto_sub_preservation_value"),
+            "selected_cameo_blocking_cost": best.get("cameo_auto_sub_blocking_cost"),
+        },
     }
 
 

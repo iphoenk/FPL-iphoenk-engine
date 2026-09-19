@@ -58,15 +58,63 @@ def activate_canonical_probe_contracts() -> tuple[str, ...]:
         if not players:
             return False, {"reason": "no canonical projection sample"}
         good = 0
+        semantics = {"v12_hierarchical": 0, "legacy_flat": 0}
         for player in players:
             xmins = player.get("xmins") or {}
             start = float(xmins.get("start_probability") or 0.0)
             bench = float(xmins.get("bench_probability") or 0.0)
+            cameo = xmins.get("cameo_probability")
+            late_cameo = xmins.get("late_cameo_probability")
             dnp = float(xmins.get("dnp_probability") or 0.0)
             expected = float(xmins.get("expected_minutes") or 0.0)
-            availability = float(xmins.get("availability", xmins.get("overall_availability", 1.0)) or 0.0)
+            availability = float(
+                xmins.get(
+                    "availability",
+                    xmins.get("overall_availability", 1.0),
+                )
+                or 0.0
+            )
+            hierarchical = (
+                str(xmins.get("probability_semantics") or "").upper()
+                == "V12_HIERARCHICAL"
+                or cameo is not None
+            )
+            if hierarchical:
+                cameo_f = float(cameo or 0.0)
+                late_f = float(late_cameo or 0.0)
+                distribution = xmins.get("xmins_distribution") or {}
+                states = {
+                    str(row.get("state") or "").upper()
+                    for row in distribution.get("states") or []
+                    if isinstance(row, dict)
+                }
+                valid_probability = (
+                    abs((start + cameo_f + dnp) - 1.0) < 0.002
+                    and 0.0 <= bench <= 1.0
+                    and bench + 0.002 >= cameo_f
+                    and 0.0 <= late_f <= cameo_f + 0.002
+                )
+                valid_distribution = (
+                    distribution.get("distribution")
+                    == "FINITE_STATE_MINUTES_MIXTURE"
+                    and {
+                        "START",
+                        "CAMEO",
+                        "LATE_CAMEO",
+                        "ZERO_MINUTES",
+                    }
+                    <= states
+                )
+                semantics["v12_hierarchical"] += 1
+            else:
+                # Compatibility for historical hydrated artifacts only. Active
+                # V12 projections are expected to use hierarchical semantics.
+                valid_probability = abs((start + bench + dnp) - 1.0) < 0.002
+                valid_distribution = True
+                semantics["legacy_flat"] += 1
             if (
-                abs((start + bench + dnp) - 1.0) < 0.002
+                valid_probability
+                and valid_distribution
                 and 0.0 <= expected <= 90.0
                 and 0.0 <= availability <= 1.0
             ):
@@ -75,6 +123,9 @@ def activate_canonical_probe_contracts() -> tuple[str, ...]:
             "source": "data/projections.json",
             "sample": len(players),
             "valid": good,
+            "probability_semantics": semantics,
+            "bench_is_overlapping_in_v12": True,
+            "appearance_partition": "START+CAMEO+DNP",
             "recomputed_formula": False,
         }
 

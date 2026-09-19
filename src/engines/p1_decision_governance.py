@@ -29,7 +29,10 @@ def uncertainty_fields(gw_row: dict[str, Any], xmins: dict[str, Any], policy: di
         "interval_width": round(upper - lower, 3),
         "dnp_probability": round(_f(xmins.get("dnp_probability")), 4),
         "bench_probability": round(_f(xmins.get("bench_probability")), 4),
+        "cameo_probability": round(_f(xmins.get("cameo_probability")), 4),
+        "late_cameo_probability": round(_f(xmins.get("late_cameo_probability")), 4),
         "availability": round(_f(xmins.get("availability", xmins.get("overall_availability", 1.0)), 1.0), 4),
+        "xmins_distribution": dict(xmins.get("xmins_distribution") or {}),
     }
 
 
@@ -112,6 +115,75 @@ def decision_scores(
     }
 
 
+def state_conditional_slot_utility(
+    starter: dict[str, Any],
+    *,
+    legal_auto_sub_value: float,
+) -> dict[str, Any]:
+    """V12 lineup utility: cameo blocks auto-sub while DNP preserves it.
+
+    Conditional point values are transparent minutes-scaled proxies used only
+    for close-lineup robustness. They do not mutate the machine xPts baseline.
+    """
+    mean = max(0.0, _f(starter.get("xpts_mean")))
+    expected_minutes = max(0.0, _f(starter.get("expected_minutes")))
+    start = max(0.0, _f(starter.get("start_probability")))
+    cameo = max(0.0, _f(starter.get("cameo_probability")))
+    late = max(0.0, min(cameo, _f(starter.get("late_cameo_probability"))))
+    dnp = max(0.0, _f(starter.get("dnp_probability")))
+    regular_cameo = max(0.0, cameo - late)
+
+    distribution = starter.get("xmins_distribution") or {}
+    state_minutes = {
+        str(row.get("state") or ""): _f(row.get("minutes_mean"))
+        for row in distribution.get("states") or []
+        if isinstance(row, dict)
+    }
+    start_minutes = state_minutes.get(
+        "START", _f(starter.get("starter_minutes_if_start"), 70.0)
+    )
+    cameo_minutes = state_minutes.get(
+        "CAMEO", _f(starter.get("cameo_minutes_if_used"), 18.0)
+    )
+    late_minutes = state_minutes.get(
+        "LATE_CAMEO", _f(starter.get("late_cameo_minutes_if_used"), 8.0)
+    )
+    points_per_minute_proxy = mean / max(1.0, expected_minutes)
+    start_points = points_per_minute_proxy * start_minutes
+    cameo_points = points_per_minute_proxy * cameo_minutes
+    late_points = points_per_minute_proxy * late_minutes
+    auto_sub = max(0.0, float(legal_auto_sub_value))
+    expected = (
+        start * start_points
+        + regular_cameo * cameo_points
+        + late * late_points
+        + dnp * auto_sub
+    )
+    return {
+        "expected_utility": round(expected, 4),
+        "start_state_utility": round(start * start_points, 4),
+        "cameo_state_utility": round(
+            regular_cameo * cameo_points + late * late_points, 4
+        ),
+        "dnp_auto_sub_utility": round(dnp * auto_sub, 4),
+        "legal_auto_sub_value": round(auto_sub, 4),
+        "cameo_auto_sub_blocking_cost": round(cameo * auto_sub, 4),
+        "auto_sub_preservation_value": round(dnp * auto_sub, 4),
+        "conditional_points_proxy": {
+            "start": round(start_points, 4),
+            "cameo": round(cameo_points, 4),
+            "late_cameo": round(late_points, 4),
+        },
+        "governance": {
+            "cameo_is_not_dnp": True,
+            "dnp_may_preserve_legal_auto_sub": True,
+            "cameo_blocks_auto_sub": True,
+            "raw_xpts_unchanged": True,
+            "minutes_scaled_conditional_points_are_robustness_proxy_only": True,
+        },
+    }
+
+
 def lineup_risk_adjustment(
     starters: list[dict[str, Any]],
     bench_rows: list[dict[str, Any]],
@@ -151,14 +223,57 @@ def lineup_risk_adjustment(
 
 
 def choose_close_call_lineup(candidates: list[dict[str, Any]], policy: dict[str, Any]) -> list[dict[str, Any]]:
+    """Rank all legal XI by current distributional robustness semantics.
+
+    The legacy fixed gap is retained only as presentation metadata. It does not
+    decide which candidate may win the canonical V12 ranking.
+    """
     if not candidates:
         return []
-    base_sorted = sorted(candidates, key=lambda row: (_f(row.get("base_score")), _f(row.get("xpts_mean"))), reverse=True)
+    base_sorted = sorted(
+        candidates,
+        key=lambda row: (_f(row.get("base_score")), _f(row.get("xpts_mean"))),
+        reverse=True,
+    )
     anchor = _f(base_sorted[0].get("base_score"))
-    gap = _f((policy.get("selection") or {}).get("close_call_rerank_gap"), 0.75)
-    close = [row for row in base_sorted if anchor - _f(row.get("base_score")) <= gap + 1e-9]
+    ui_gap = _f(
+        (policy.get("selection") or {}).get("close_call_rerank_gap"), 0.75
+    )
+    for row in candidates:
+        row["legacy_ui_close_candidate"] = (
+            anchor - _f(row.get("base_score")) <= ui_gap + 1e-9
+        )
+        row["legacy_close_gap_is_decision_authority"] = False
+
+    if all(row.get("v12_expected_utility") is not None for row in candidates):
+        return sorted(
+            candidates,
+            key=lambda row: (
+                _f(row.get("v12_expected_utility")),
+                _f(row.get("conditional_floor"), -1e9),
+                -_f(row.get("expected_regret"), 0.0),
+                _f(row.get("decision_score")),
+                _f(row.get("xpts_mean")),
+            ),
+            reverse=True,
+        )
+
+    # Compatibility only for isolated legacy unit fixtures that do not carry
+    # V12 robustness evidence. Production lineup candidates always do.
+    close = [
+        row
+        for row in base_sorted
+        if anchor - _f(row.get("base_score")) <= ui_gap + 1e-9
+    ]
     distant = [row for row in base_sorted if row not in close]
-    close.sort(key=lambda row: (_f(row.get("decision_score")), _f(row.get("base_score")), _f(row.get("xpts_mean"))), reverse=True)
+    close.sort(
+        key=lambda row: (
+            _f(row.get("decision_score")),
+            _f(row.get("base_score")),
+            _f(row.get("xpts_mean")),
+        ),
+        reverse=True,
+    )
     return close + distant
 
 

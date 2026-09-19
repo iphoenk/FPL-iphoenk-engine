@@ -17,6 +17,55 @@ def load_config(path: str):
     return json.loads((ROOT / path).read_text(encoding="utf-8"))
 
 
+def _validate_xmins_probability_contract(xm: dict) -> dict:
+    """Validate published xMins semantics without recomputing the model."""
+    hierarchical = (
+        str(xm.get("probability_semantics") or "").upper()
+        == "V12_HIERARCHICAL"
+        or xm.get("cameo_probability") is not None
+    )
+    if hierarchical:
+        start = float(xm.get("start_probability") or 0.0)
+        bench = float(xm.get("bench_probability") or 0.0)
+        cameo = float(xm.get("cameo_probability") or 0.0)
+        late_cameo = float(xm.get("late_cameo_probability") or 0.0)
+        dnp = float(xm.get("dnp_probability") or 0.0)
+        assert abs((start + cameo + dnp) - 1.0) < 0.002, xm
+        assert 0.0 <= bench <= 1.0, xm
+        assert bench + 0.002 >= cameo, xm
+        assert 0.0 <= late_cameo <= cameo + 0.002, xm
+        distribution = xm.get("xmins_distribution") or {}
+        assert distribution.get("distribution") == "FINITE_STATE_MINUTES_MIXTURE", xm
+        states = {
+            str(row.get("state") or "").upper()
+            for row in distribution.get("states") or []
+            if isinstance(row, dict)
+        }
+        assert {
+            "START",
+            "CAMEO",
+            "LATE_CAMEO",
+            "ZERO_MINUTES",
+        } <= states, xm
+        return {
+            "semantics": "V12_HIERARCHICAL",
+            "appearance_partition": "START+CAMEO+DNP",
+            "bench_overlapping": True,
+        }
+
+    # Historical hydrated artifacts remain readable during bounded rollout.
+    prob = sum(
+        float(xm.get(k, 0))
+        for k in ("start_probability", "bench_probability", "dnp_probability")
+    )
+    assert abs(prob - 1.0) < 0.002, xm
+    return {
+        "semantics": "LEGACY_FLAT_COMPATIBILITY",
+        "appearance_partition": "START+BENCH+DNP",
+        "bench_overlapping": False,
+    }
+
+
 def _validate_runtime_service_states(runtime_performance: dict) -> None:
     services = runtime_performance.get("services", {})
     reusable = set(((runtime_performance.get("profile_config") or {}).get("reuse_services") or {}).keys())
@@ -288,8 +337,7 @@ def run() -> dict:
     assert int(pr.get("historical_prior_players_used") or 0) > 0
     for row in pr.get("players", []):
         xm = row.get("xmins", {})
-        prob = sum(float(xm.get(k, 0)) for k in ("start_probability", "bench_probability", "dnp_probability"))
-        assert abs(prob - 1.0) < 0.002
+        _validate_xmins_probability_contract(xm)
         assert len(row.get("xpts_by_gw", [])) == STRATEGIC_HORIZON_GWS
         assert len(xm.get("expected_minutes_interval", [])) == 2
 

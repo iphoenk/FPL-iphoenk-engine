@@ -165,36 +165,87 @@ def build_position_projection_diagnostics(projections: dict[str, Any]) -> dict[s
 
 
 def enrich_xmins_contract(out: dict[str, Any]) -> dict[str, Any]:
-    """Expose the existing probability decomposition explicitly without changing its model."""
+    """Expose xMins state semantics without flattening overlapping bench state."""
     start = _f(out.get("start_probability"))
     bench = _f(out.get("bench_probability"))
+    cameo = _f(out.get("cameo_probability"))
+    late_cameo = _f(out.get("late_cameo_probability"))
     dnp = _f(out.get("dnp_probability"))
-    probability_sum = start + bench + dnp
-    if abs(probability_sum - 1.0) > 0.002:
-        raise RuntimeError(f"xMins probability decomposition invalid: sum={probability_sum:.6f}")
+    hierarchical = str(out.get("probability_semantics") or "").upper() == "V12_HIERARCHICAL"
 
-    start_minutes = _f(out.get("starter_minutes_if_start"))
-    bench_minutes = _f(out.get("bench_minutes_if_used"))
-    expected = start * start_minutes + bench * bench_minutes
-    published = _f(out.get("expected_minutes"))
-    if abs(expected - published) > 0.2:
-        raise RuntimeError(
-            "xMins expected_minutes is not derived from explicit start/bench probabilities: "
-            f"derived={expected:.3f} published={published:.3f}"
+    if hierarchical:
+        appearance_sum = start + cameo + dnp
+        if abs(appearance_sum - 1.0) > 0.002:
+            raise RuntimeError(
+                "xMins mutually-exclusive appearance outcomes invalid: "
+                f"start+cameo+dnp={appearance_sum:.6f}"
+            )
+        if late_cameo > cameo + 0.002:
+            raise RuntimeError("late-cameo probability cannot exceed cameo probability")
+
+        distribution = out.get("xmins_distribution") or {}
+        if distribution.get("distribution") != "FINITE_STATE_MINUTES_MIXTURE":
+            raise RuntimeError("V12 xMins distribution missing finite-state mixture")
+        states = distribution.get("states") or []
+        if not states:
+            raise RuntimeError("V12 xMins distribution has no states")
+        derived = sum(
+            _f(row.get("probability")) * _f(row.get("minutes_mean"))
+            for row in states
+            if isinstance(row, dict)
         )
+        published = _f(out.get("expected_minutes"))
+        if abs(derived - published) > 0.25:
+            raise RuntimeError(
+                "xMins expected_minutes is not derived from state mixture: "
+                f"derived={derived:.3f} published={published:.3f}"
+            )
+        out["probability_sum"] = round(appearance_sum, 4)
+        out["probability_sum_semantics"] = "START+CAMEO+DNP_ONLY"
+        out["expected_minutes_components"] = {
+            str(row.get("state") or "UNKNOWN").lower(): round(
+                _f(row.get("probability")) * _f(row.get("minutes_mean")), 2
+            )
+            for row in states
+            if isinstance(row, dict)
+        }
+        out.setdefault("governance", {}).update({
+            "expected_minutes_derived_from_explicit_probabilities": True,
+            "start_cameo_dnp_are_mutually_exclusive_appearance_outcomes": True,
+            "bench_is_overlapping_state": True,
+            "start_bench_dnp_flat_normalization_forbidden": True,
+            "availability_published_separately": True,
+            "compatibility_expected_minutes_preserved": True,
+        })
+    else:
+        probability_sum = start + bench + dnp
+        if abs(probability_sum - 1.0) > 0.002:
+            raise RuntimeError(
+                f"legacy xMins probability decomposition invalid: sum={probability_sum:.6f}"
+            )
+        start_minutes = _f(out.get("starter_minutes_if_start"))
+        bench_minutes = _f(out.get("bench_minutes_if_used"))
+        expected = start * start_minutes + bench * bench_minutes
+        published = _f(out.get("expected_minutes"))
+        if abs(expected - published) > 0.2:
+            raise RuntimeError(
+                "legacy xMins expected_minutes mismatch: "
+                f"derived={expected:.3f} published={published:.3f}"
+            )
+        out["probability_sum"] = round(probability_sum, 4)
+        out["probability_sum_semantics"] = "LEGACY_START+BENCH+DNP"
+        out["expected_minutes_components"] = {
+            "start_minutes_contribution": round(start * start_minutes, 2),
+            "bench_minutes_contribution": round(bench * bench_minutes, 2),
+            "dnp_minutes_contribution": 0.0,
+        }
+        out.setdefault("governance", {}).update({
+            "legacy_flat_probability_compatibility": True,
+            "canonical_v12_probability_proof": False,
+        })
 
-    out["expected_minutes_if_start"] = round(start_minutes, 1)
+    out["expected_minutes_if_start"] = round(
+        _f(out.get("starter_minutes_if_start")), 1
+    )
     out["overall_availability"] = round(_f(out.get("availability")), 4)
-    out["probability_sum"] = round(probability_sum, 4)
-    out["expected_minutes_components"] = {
-        "start_minutes_contribution": round(start * start_minutes, 2),
-        "bench_minutes_contribution": round(bench * bench_minutes, 2),
-        "dnp_minutes_contribution": 0.0,
-    }
-    out.setdefault("governance", {}).update({
-        "expected_minutes_derived_from_explicit_probabilities": True,
-        "start_bench_dnp_probabilities_are_mutually_exclusive": True,
-        "availability_published_separately": True,
-        "compatibility_expected_minutes_preserved": True,
-    })
     return out

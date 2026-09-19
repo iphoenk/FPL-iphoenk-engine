@@ -13,8 +13,10 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_p02_xmins_distribution_is_normalized_and_uncertain():
     player = {"status": "a", "starts": 1, "minutes": 90, "chance_of_playing_next_round": 100}
     out = estimate_xmins(player, {"team_matches_played": 1})
-    total = out["start_probability"] + out["bench_probability"] + out["dnp_probability"]
+    total = out["start_probability"] + out["cameo_probability"] + out["dnp_probability"]
     assert abs(total - 1.0) < 0.002
+    assert out["bench_probability"] >= out["cameo_probability"]
+    assert out["bench_is_overlapping_state"] is True
     assert 0 <= out["expected_minutes"] <= 90
     assert out["small_sample_guard"] is True
     assert len(out["expected_minutes_interval"]) == 2

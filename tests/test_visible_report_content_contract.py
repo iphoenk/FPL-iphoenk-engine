@@ -468,3 +468,212 @@ def test_18_2130_deep_requires_overnight_risk_board():
     payload["overnight_risk_board"] = []
     result = validate_v12_visible_content_contract(report_mode="DEEP", content_contract=payload)
     assert "OVERNIGHT_RISK_BOARD_MISSING" in result["failures"]
+
+
+def _degraded(section, available, expected, reason="authoritative source incomplete", **extra):
+    return {
+        "state": "DEGRADED",
+        "available_count": available,
+        "expected_count": expected,
+        "degradation_reason": reason,
+        **extra,
+    }
+
+
+def test_19_watchlist_complete_17_of_20_is_hard_failure():
+    payload = _deep()
+    payload["watchlist20"] = payload["watchlist20"][:17]
+    result = validate_v12_visible_content_contract(report_mode="DEEP", content_contract=payload)
+    assert result["report_can_continue"] is False
+    assert result["severity"] == "FAIL"
+    assert "WATCHLIST20_COUNT=17" in result["hard_failures"]
+
+
+def test_20_watchlist_degraded_17_of_20_continues_truthfully():
+    payload = _deep()
+    payload["watchlist20"] = payload["watchlist20"][:17]
+    payload["section_states"] = {
+        "WATCHLIST20": _degraded("WATCHLIST20", 17, 20, "3 candidates lack valid current canonical evaluation")
+    }
+    result = validate_v12_visible_content_contract(report_mode="DEEP", content_contract=payload)
+    assert result["hard_failures"] == []
+    assert result["report_can_continue"] is True
+    assert result["severity"] == "DEGRADED"
+    assert result["section_degradations"][0]["available_count"] == 17
+    assert result["section_degradations"][0]["expected_count"] == 20
+
+
+def test_21_rise_fall_partial_provider_coverage_continues():
+    payload = _deep()
+    payload["section_states"] = {
+        "RISE20": _degraded("RISE20", 13, 20, "price provider partial"),
+        "FALL20": _degraded("FALL20", 11, 20, "price provider partial"),
+    }
+    payload["rise20"] = [{"element_id": index} for index in range(201, 214)]
+    payload["fall20"] = [{"element_id": index} for index in range(301, 312)]
+    result = validate_v12_visible_content_contract(report_mode="DEEP", content_contract=payload)
+    assert result["hard_failures"] == []
+    assert result["report_can_continue"] is True
+    assert {row["section"] for row in result["section_degradations"]} >= {"RISE20", "FALL20"}
+
+
+def test_22_all15_personal_scope_unavailable_continues_without_fabrication():
+    payload = _deep()
+    payload["all15"] = []
+    payload["section_states"] = {
+        "ALL15": _degraded("ALL15", 0, 15, "authenticated personal scope unavailable")
+    }
+    result = validate_v12_visible_content_contract(report_mode="DEEP", content_contract=payload)
+    assert result["hard_failures"] == []
+    assert result["report_can_continue"] is True
+    assert payload["all15"] == []
+
+
+def test_23_icon_unavailable_continues_without_current_rank_or_eo_requirement():
+    payload = _match()
+    payload["icon"] = {"status": "UNAVAILABLE", "freshness": "UNAVAILABLE"}
+    payload["section_states"] = {
+        "ICON+": {
+            "state": "UNAVAILABLE",
+            "degradation_reason": "mini-league source unavailable",
+        }
+    }
+    result = validate_v12_visible_content_contract(report_mode="MATCH", content_contract=payload)
+    assert result["hard_failures"] == []
+    assert result["report_can_continue"] is True
+    assert result["severity"] == "DEGRADED"
+
+
+def test_24_final_missing_ft_state_degrades_package_but_report_continues():
+    payload = _final()
+    del payload["gw_lock_package"]["ft_hit_treatment"]
+    payload["section_states"] = {
+        "GW_LOCK_PACKAGE": {
+            "state": "DEGRADED",
+            "degradation_reason": "authoritative FT state unavailable after bounded recovery",
+            "missing_fields": ["ft_hit_treatment"],
+        }
+    }
+    result = validate_v12_visible_content_contract(report_mode="FINAL", content_contract=payload)
+    assert result["hard_failures"] == []
+    assert result["report_can_continue"] is True
+    assert any(row["section"] == "GW_LOCK_PACKAGE" for row in result["section_degradations"])
+
+
+def test_25_final_complete_with_malformed_xi_is_hard_failure():
+    payload = _final()
+    payload["gw_lock_package"]["xi_exact11"] = payload["gw_lock_package"]["xi_exact11"][:10]
+    result = validate_v12_visible_content_contract(report_mode="FINAL", content_contract=payload)
+    assert result["report_can_continue"] is False
+    assert "GW_LOCK_PACKAGE_XI_INVALID" in result["hard_failures"]
+
+
+def test_26_post_all_match_complete_missing_fixture_is_hard_failure():
+    payload = _post_all_match()
+    payload["match_scout"] = payload["match_scout"][:1]
+    result = validate_v12_visible_content_contract(report_mode="POST_ALL_MATCH", content_contract=payload)
+    assert result["report_can_continue"] is False
+    assert "MATCH_SCOUT_FIXTURE_COVERAGE_MISMATCH" in result["hard_failures"]
+
+
+def test_27_post_all_match_degraded_missing_fixture_continues():
+    payload = _post_all_match()
+    payload["match_scout"] = payload["match_scout"][:1]
+    payload["section_states"] = {
+        "MATCH_SCOUT": _degraded(
+            "MATCH_SCOUT",
+            1,
+            2,
+            "fixture 102 source unavailable",
+            missing_scope=["fixture:102"],
+        )
+    }
+    result = validate_v12_visible_content_contract(report_mode="POST_ALL_MATCH", content_contract=payload)
+    assert result["hard_failures"] == []
+    assert result["report_can_continue"] is True
+    scout = next(row for row in result["section_degradations"] if row["section"] == "MATCH_SCOUT")
+    assert scout["missing_scope"] == ["fixture:102"]
+
+
+def test_28_package_optimizer_unavailable_continues_without_fabricated_hold():
+    payload = _deep()
+    payload["package_routes"] = []
+    payload["section_states"] = {
+        "PACKAGE_FRONTIER": {
+            "state": "UNAVAILABLE",
+            "degradation_reason": "optimizer/search scope unavailable after bounded recovery",
+        }
+    }
+    result = validate_v12_visible_content_contract(report_mode="DEEP", content_contract=payload)
+    assert result["hard_failures"] == []
+    assert result["report_can_continue"] is True
+    assert payload["package_routes"] == []
+
+
+def test_29_package_complete_without_hold_is_hard_failure():
+    payload = _deep()
+    payload["package_routes"] = payload["package_routes"][1:]
+    result = validate_v12_visible_content_contract(report_mode="DEEP", content_contract=payload)
+    assert result["report_can_continue"] is False
+    assert "PACKAGE_HOLD_BASELINE_MISSING" in result["hard_failures"]
+
+
+def test_30_multiple_degraded_optional_scopes_still_allow_due_report():
+    payload = _deep()
+    payload["watchlist20"] = payload["watchlist20"][:17]
+    payload["package_routes"] = []
+    payload["icon"] = {"status": "UNAVAILABLE", "freshness": "UNAVAILABLE"}
+    payload["section_states"] = {
+        "WATCHLIST20": _degraded("WATCHLIST20", 17, 20, "canonical evaluation partial"),
+        "PACKAGE_FRONTIER": {
+            "state": "UNAVAILABLE",
+            "degradation_reason": "optimizer unavailable",
+        },
+        "ICON+": {
+            "state": "UNAVAILABLE",
+            "degradation_reason": "mini-league source unavailable",
+        },
+    }
+    result = validate_v12_visible_content_contract(report_mode="DEEP", content_contract=payload)
+    assert result["hard_failures"] == []
+    assert result["report_can_continue"] is True
+    assert result["severity"] == "DEGRADED"
+    assert len(result["section_degradations"]) >= 3
+
+
+def test_31_rendered_body_must_visibly_label_every_degraded_section():
+    payload = _deep()
+    payload["watchlist20"] = payload["watchlist20"][:17]
+    payload["section_states"] = {
+        "WATCHLIST20": _degraded("WATCHLIST20", 17, 20, "canonical evaluation partial")
+    }
+    failures = _validate_v12_rendered_body(
+        report_mode="DEEP",
+        rendered_body="WATCHLIST20\n17 rows available",
+        content_contract=payload,
+    )
+    assert "VISIBLE_DEGRADATION_LABEL_MISSING=WATCHLIST20:DEGRADED" in failures
+    failures = _validate_v12_rendered_body(
+        report_mode="DEEP",
+        rendered_body="WATCHLIST20\nSTATE=DEGRADED\nAVAILABLE=17 EXPECTED=20",
+        content_contract=payload,
+    )
+    assert "VISIBLE_DEGRADATION_LABEL_MISSING=WATCHLIST20:DEGRADED" not in failures
+
+
+def test_32_placeholder_rows_are_hard_failure_even_in_degraded_section():
+    payload = _deep()
+    payload["watchlist20"] = payload["watchlist20"][:17]
+    payload["watchlist20"].append(
+        {
+            **_watchlist20()[17],
+            "placeholder": True,
+            "row_origin": "QA_FILL",
+        }
+    )
+    payload["section_states"] = {
+        "WATCHLIST20": _degraded("WATCHLIST20", 18, 20, "canonical evaluation partial")
+    }
+    result = validate_v12_visible_content_contract(report_mode="DEEP", content_contract=payload)
+    assert result["report_can_continue"] is False
+    assert "WATCHLIST20_FABRICATED_PLACEHOLDER_ROW=18" in result["hard_failures"]

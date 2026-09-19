@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "normalization_version": "V6_NOAUTH_SOURCE_NATIVE_1",
+  "source_id": "thesportsdb_v1",
+  "generated_at": "2026-09-19T17:32:17.646773+00:00",
+  "effective_at": "2026-09-19T17:32:14.138599+00:00",
+  "canonical": true,
+  "semantic_class": "NORMALIZED_FACT",
+  "authority": "THESPORTSDB",
+  "source_snapshot_ids": [
+    "0f9d9bdb6e518ef77d1f5aa8306075624fef69825a9a095681c2fcbf909008f5",
+    "368d1e5de041fb77d1575f1fb9f9a8c1f7bfac37f3d124eb3ca5c1bff4efcad4",
+    "57549de7ea0aed4d4da3fa8cd4e233e5e670fe21755f052e680e057e26b37a45"
+  ],
+  "source_health": "GREEN",
+  "source_effective_state": "LIVE_CHANGED",
+  "current_run_action": "FETCHED",
+  "normalization_status": "NORMALIZED",
+  "record_count": 3,
+  "record_groups": {
+    "competition": [
+      {
+        "source_native_id": "4328",
+        "name": "English Premier League",
+        "alternate_name": "Premier League, EPL, England",
+        "sport": "Soccer",
+        "country": "England"
+      }
+    ],
+    "events": [
+      {
+        "source_native_id": "2494041",
+        "source_native_league_id": "4328",
+        "event_name": "Bournemouth vs Liverpool",
+        "league_name": "English Premier League",
+        "season": "2026-2027",
+        "round": "5",
+        "timestamp": "2026-09-20T13:00:00",
+        "date_event": "2026-09-20",
+        "time_event": "13:00:00",
+        "home": {
+          "source_native_id": "134301",
+          "name": "Bournemouth"
+        },
+        "away": {
+          "source_native_id": "133602",
+          "name": "Liverpool"
+        },
+        "home_score": null,
+        "away_score": null,
+        "status": "NS",
+        "request_role": "UPCOMING",
+        "official_fixture_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "2494049",
+        "source_native_league_id": "4328",
+        "event_name": "Nottingham Forest vs Coventry City",
+        "league_name": "English Premier League",
+        "season": "2026-2027",
+        "round": "5",
+        "timestamp": "2026-09-19T16:30:00",
+        "date_event": "2026-09-19",
+        "time_event": "16:30:00",
+        "home": {
+          "source_native_id": "133720",
+          "name": "Nottingham Forest"
+        },
+        "away": {
+          "source_native_id": "133625",
+          "name": "Coventry City"
+        },
+        "home_score": "0",
+        "away_score": "0",
+        "status": "HT",
+        "request_role": "PAST",
+        "official_fixture_id": null,
+        "identity_status": "UNMAPPED"
+      }
+    ]
+  },
+  "governance": {
+    "data_only": true,
+    "source_native_records_preserved": true,
+    "cross_source_synthesis": false,
+    "silent_fuzzy_identity_join": false,
+    "decision_authority": "NONE",
+    "prediction_authority": "NONE",
+    "optimizer_authority": "NONE",
+    "may_override_official_fpl": false,
+    "no_auth_public_source": true,
+    "private_secret_required": false
+  },
+  "authority_ceiling": "SECONDARY",
+  "record_semantics": {
+    "competition": "SECONDARY_PROVIDER_METADATA",
+    "events": "SECONDARY_FIXTURE_EVENT_METADATA_REQUIRES_OFFICIAL_CROSSCHECK"
+  }
+}

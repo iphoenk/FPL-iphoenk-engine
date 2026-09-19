@@ -1,0 +1,297 @@
+{
+  "auth_state": "AUTH_AVAILABLE",
+  "authority": "OFFICIAL_FPL",
+  "availability": {
+    "authenticated_state": "AUTH_AVAILABLE",
+    "bank": "AVAILABLE",
+    "chips": "AVAILABLE",
+    "free_transfers": "NOT_SUPPORTED",
+    "purchase_price": "AVAILABLE",
+    "selling_price": "AVAILABLE"
+  },
+  "bank": 5,
+  "canonical": true,
+  "chips": [
+    {
+      "name": "bboost",
+      "played_by_entry": [
+        1
+      ],
+      "status_for_entry": "played"
+    },
+    {
+      "name": "3xc",
+      "played_by_entry": [
+        3
+      ],
+      "status_for_entry": "played"
+    },
+    {
+      "name": "wildcard",
+      "played_by_entry": [
+        2
+      ],
+      "status_for_entry": "played"
+    },
+    {
+      "name": "freehit",
+      "played_by_entry": [],
+      "status_for_entry": "available"
+    }
+  ],
+  "entry_id": 3462711,
+  "free_transfers": null,
+  "generated_at": "2026-09-19T09:34:14.134976+00:00",
+  "governance": {
+    "auth_bypass_used": false,
+    "data_only": true,
+    "finance_is_upstream_fact_only": true,
+    "free_transfers_are_not_derived": true,
+    "squad_value_aggregates_not_authored": true
+  },
+  "gw": 5,
+  "hit_cost": 4,
+  "lineage": {
+    "authenticated": [
+      {
+        "authority": "OFFICIAL_FPL",
+        "checked_at": "2026-09-19T09:34:14.680769+00:00",
+        "endpoint_class": "me",
+        "entry_id": 3462711,
+        "gw": null,
+        "http_status": 200,
+        "league_id": null,
+        "normalization_version": "v6-report-prefetch-1",
+        "origin": "LIVE_FETCHED",
+        "pagination_coverage": null,
+        "payload_digest": "5ab55853b8491b18cdc8e9050cec45359ccdb7795da5dc01f19fd1e6903fd98b"
+      },
+      {
+        "authority": "OFFICIAL_FPL",
+        "checked_at": "2026-09-19T09:34:14.810007+00:00",
+        "endpoint_class": "my_team",
+        "entry_id": 3462711,
+        "gw": null,
+        "http_status": 200,
+        "league_id": null,
+        "normalization_version": "v6-report-prefetch-1",
+        "origin": "LIVE_FETCHED",
+        "pagination_coverage": null,
+        "payload_digest": "d2fc7fcb62b120899015f1405406e7158b2b57761ac5aba6627e7103cdae4257"
+      }
+    ],
+    "bootstrap_static": {
+      "authority": "OFFICIAL_FPL",
+      "checked_at": "2026-09-19T09:34:14.390059+00:00",
+      "endpoint_class": "bootstrap_static",
+      "entry_id": null,
+      "gw": 5,
+      "http_status": 200,
+      "league_id": null,
+      "normalization_version": "v6-report-prefetch-1",
+      "origin": "LIVE_FETCHED",
+      "pagination_coverage": null,
+      "payload_digest": "2e96cc4be9f5c6c13dbf826cbb7a0af198885449131d495fb9ab1e73847ad440"
+    },
+    "normalization_version": "v6-report-prefetch-1",
+    "submitted_picks": {
+      "authority": "OFFICIAL_FPL",
+      "checked_at": "2026-09-19T09:34:14.554965+00:00",
+      "endpoint_class": "submitted_picks",
+      "entry_id": 3462711,
+      "gw": 5,
+      "http_status": 200,
+      "league_id": null,
+      "normalization_version": "v6-report-prefetch-1",
+      "origin": "LIVE_FETCHED_CURRENT_GW",
+      "pagination_coverage": null,
+      "payload_digest": "982d9d3e92b21b2125ca51c03e535948f33ffa759a9491108f9ec67c02c71e02"
+    }
+  },
+  "players": [
+    {
+      "bench_order": null,
+      "captain": false,
+      "current_price": 46,
+      "element_id": 572,
+      "multiplier": 1,
+      "position": "GKP",
+      "purchase_price": 45,
+      "selling_price": 45,
+      "squad_position": 1,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "current_price": 49,
+      "element_id": 115,
+      "multiplier": 1,
+      "position": "DEF",
+      "purchase_price": 45,
+      "selling_price": 47,
+      "squad_position": 2,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "current_price": 58,
+      "element_id": 8,
+      "multiplier": 1,
+      "position": "DEF",
+      "purchase_price": 55,
+      "selling_price": 56,
+      "squad_position": 3,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "current_price": 57,
+      "element_id": 391,
+      "multiplier": 1,
+      "position": "DEF",
+      "purchase_price": 56,
+      "selling_price": 56,
+      "squad_position": 4,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "current_price": 120,
+      "element_id": 426,
+      "multiplier": 1,
+      "position": "MID",
+      "purchase_price": 120,
+      "selling_price": 120,
+      "squad_position": 5,
+      "vice_captain": true
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "current_price": 61,
+      "element_id": 68,
+      "multiplier": 1,
+      "position": "MID",
+      "purchase_price": 60,
+      "selling_price": 60,
+      "squad_position": 6,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "current_price": 77,
+      "element_id": 40,
+      "multiplier": 1,
+      "position": "MID",
+      "purchase_price": 75,
+      "selling_price": 76,
+      "squad_position": 7,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "current_price": 68,
+      "element_id": 15,
+      "multiplier": 1,
+      "position": "MID",
+      "purchase_price": 65,
+      "selling_price": 66,
+      "squad_position": 8,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "current_price": 56,
+      "element_id": 565,
+      "multiplier": 1,
+      "position": "MID",
+      "purchase_price": 55,
+      "selling_price": 55,
+      "squad_position": 9,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": true,
+      "current_price": 156,
+      "element_id": 411,
+      "multiplier": 2,
+      "position": "FWD",
+      "purchase_price": 155,
+      "selling_price": 155,
+      "squad_position": 10,
+      "vice_captain": false
+    },
+    {
+      "bench_order": null,
+      "captain": false,
+      "current_price": 60,
+      "element_id": 346,
+      "multiplier": 1,
+      "position": "FWD",
+      "purchase_price": 60,
+      "selling_price": 60,
+      "squad_position": 11,
+      "vice_captain": false
+    },
+    {
+      "bench_order": 1,
+      "captain": false,
+      "current_price": 45,
+      "element_id": 109,
+      "multiplier": 0,
+      "position": "GKP",
+      "purchase_price": 45,
+      "selling_price": 45,
+      "squad_position": 12,
+      "vice_captain": false
+    },
+    {
+      "bench_order": 2,
+      "captain": false,
+      "current_price": 46,
+      "element_id": 31,
+      "multiplier": 0,
+      "position": "DEF",
+      "purchase_price": 44,
+      "selling_price": 45,
+      "squad_position": 13,
+      "vice_captain": false
+    },
+    {
+      "bench_order": 3,
+      "captain": false,
+      "current_price": 78,
+      "element_id": 165,
+      "multiplier": 0,
+      "position": "FWD",
+      "purchase_price": 75,
+      "selling_price": 76,
+      "squad_position": 14,
+      "vice_captain": false
+    },
+    {
+      "bench_order": 4,
+      "captain": false,
+      "current_price": 42,
+      "element_id": 279,
+      "multiplier": 0,
+      "position": "DEF",
+      "purchase_price": 40,
+      "selling_price": 41,
+      "squad_position": 15,
+      "vice_captain": false
+    }
+  ],
+  "schema_version": 1,
+  "semantic_class": "NORMALIZED_FACT",
+  "squad_state": "AUTHENTICATED_CURRENT_TEAM",
+  "transfers_made": 0
+}

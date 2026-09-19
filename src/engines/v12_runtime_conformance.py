@@ -7,8 +7,9 @@ change methodology, or become authority. Canonical V12 remains authoritative.
 """
 
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, Sequence
+from zoneinfo import ZoneInfo
 
 ALLOWED_OPERATIONAL_ACTIONS = frozenset({"WAIT", "PREPARE", "ACT"})
 CONTENT_SEVERITIES = frozenset({"PASS", "DEGRADED", "FAIL"})
@@ -330,6 +331,173 @@ def hydrate_v12_player_identities(
         "legacy_library_input_ignored": True,
         "legacy_library_identity_hydration_allowed": False,
     }
+
+
+PRICE_ROW_REQUIRED_FIELDS = (
+    "player",
+    "current_price",
+    "direction",
+    "official_or_provider_progress",
+    "prediction_strength",
+    "next_official_price_cycle_uk",
+    "next_official_price_cycle_wib",
+    "cycles_to_expected_change",
+    "estimated_change_window",
+    "estimate_source",
+    "evidence_timestamp",
+    "confidence",
+    "impact_on_our_decision",
+)
+LONDON_TZ = ZoneInfo("Europe/London")
+JAKARTA_TZ = ZoneInfo("Asia/Jakarta")
+
+
+def derive_next_official_price_cycle(observed_at: str) -> dict[str, Any]:
+    """Derive the strictly next daily 00:00 Europe/London price cycle in London and WIB."""
+    observed = _parse_local_occurrence(observed_at, label="observed_at")
+    london_observed = observed.astimezone(LONDON_TZ)
+    next_date = london_observed.date() + timedelta(days=1)
+    uk_cycle = datetime(
+        next_date.year,
+        next_date.month,
+        next_date.day,
+        0,
+        0,
+        0,
+        tzinfo=LONDON_TZ,
+    )
+    wib_cycle = uk_cycle.astimezone(JAKARTA_TZ)
+    return {
+        "official_price_change_cadence": "DAILY_AT_00:00_EUROPE_LONDON",
+        "predictor_refresh_cadence_minutes": 15,
+        "predictor_refresh_is_price_change_cycle": False,
+        "next_official_price_cycle_uk": uk_cycle.isoformat(),
+        "next_official_price_cycle_wib": wib_cycle.isoformat(),
+        "next_price_cycle_uk_label": uk_cycle.strftime("%H:%M %Z"),
+        "next_price_cycle_wib_label": wib_cycle.strftime("%H:%M WIB"),
+        "uk_utc_offset": uk_cycle.strftime("%z"),
+    }
+
+
+def validate_rise_fall_visible_row(
+    row: Mapping[str, Any],
+    *,
+    section_state: str,
+) -> dict[str, Any]:
+    """Validate visible RISE/FALL timing semantics without converting predictions into guarantees."""
+    data = dict(row or {})
+    state = str(section_state or "").strip().upper()
+    if state not in {"COMPLETE", "PARTIAL", "DEGRADED", "UNAVAILABLE"}:
+        raise RuntimeConformanceError("RISE/FALL section state must be COMPLETE/PARTIAL/DEGRADED/UNAVAILABLE")
+
+    missing = [
+        field
+        for field in PRICE_ROW_REQUIRED_FIELDS
+        if field not in data or data.get(field) in {None, ""}
+    ]
+    unavailable = [
+        field
+        for field in PRICE_ROW_REQUIRED_FIELDS
+        if str(data.get(field) or "").strip().upper() == "UNAVAILABLE"
+    ]
+    failures: list[str] = []
+    if state == "COMPLETE" and missing:
+        failures.append("COMPLETE_PRICE_ROW_MISSING=" + ",".join(missing))
+    if state == "COMPLETE" and unavailable:
+        failures.append("COMPLETE_PRICE_ROW_UNAVAILABLE=" + ",".join(unavailable))
+    if state == "COMPLETE":
+        for field in ("next_official_price_cycle_uk", "next_official_price_cycle_wib"):
+            value = data.get(field)
+            if value:
+                try:
+                    parsed = _parse_local_occurrence(value, label=field)
+                except RuntimeConformanceError:
+                    failures.append(f"{field.upper()}_NOT_ISO_TIMEZONE_AWARE")
+                else:
+                    if field.endswith("_uk"):
+                        london = parsed.astimezone(LONDON_TZ)
+                        if (london.hour, london.minute, london.second) != (0, 0, 0):
+                            failures.append("UK_CYCLE_NOT_00_00_EUROPE_LONDON")
+
+    if data.get("change_guaranteed") is True:
+        failures.append("PRICE_PREDICTION_MUST_NOT_BE_GUARANTEED")
+    if "GUARANTEED" in str(data.get("prediction_strength") or "").upper():
+        failures.append("PRICE_PREDICTION_MUST_NOT_BE_GUARANTEED")
+
+    provider_signals = [
+        dict(signal)
+        for signal in data.get("provider_signals") or []
+        if isinstance(signal, Mapping)
+    ]
+    stances = {
+        str(signal.get("stance") or "").strip().upper()
+        for signal in provider_signals
+        if str(signal.get("stance") or "").strip()
+    }
+    disagreement = len(stances) > 1
+    if disagreement and data.get("predictor_disagreement") is not True:
+        failures.append("PREDICTOR_DISAGREEMENT_NOT_VISIBLE")
+
+    if state in {"PARTIAL", "DEGRADED", "UNAVAILABLE"} and (missing or unavailable):
+        degradation_ok = bool(data.get("degradation_reason"))
+        if not degradation_ok:
+            failures.append("DEGRADED_PRICE_ROW_REQUIRES_REASON")
+
+    return {
+        "status": "PASS" if not failures else "FAIL",
+        "section_state": state,
+        "missing_fields": missing,
+        "unavailable_fields": unavailable,
+        "predictor_disagreement": disagreement,
+        "failures": failures,
+    }
+
+
+def apply_owned_player_presentation(
+    *,
+    element_id: int,
+    display_name: str,
+    our15_element_ids: Sequence[int],
+) -> dict[str, Any]:
+    """Presentation-only bolding driven strictly by Official FPL element_id membership."""
+    owned_ids = {int(value) for value in our15_element_ids}
+    owned = int(element_id) in owned_ids
+    name = str(display_name or "")
+    return {
+        "element_id": int(element_id),
+        "is_owned": owned,
+        "rendered_player_name": f"**{name}**" if owned else name,
+        "identity_basis": "OFFICIAL_FPL_ELEMENT_ID",
+        "name_matching_used_for_identity": False,
+    }
+
+
+def validate_exposure_metric(metric: Mapping[str, Any]) -> dict[str, Any]:
+    data = dict(metric or {})
+    failures: list[str] = []
+    try:
+        numerator = float(data["numerator"])
+        denominator = float(data["denominator"])
+        percentage = float(data["percentage"])
+    except (KeyError, TypeError, ValueError):
+        return {"status": "FAIL", "failures": ["NUMERATOR_DENOMINATOR_PERCENTAGE_REQUIRED"]}
+    if denominator <= 0:
+        failures.append("DENOMINATOR_MUST_BE_POSITIVE")
+    else:
+        expected = round(numerator * 100.0 / denominator, 1)
+        if abs(percentage - expected) > 0.05:
+            failures.append("PERCENTAGE_ARITHMETIC_MISMATCH")
+    return {"status": "PASS" if not failures else "FAIL", "failures": failures}
+
+
+def format_exposure_metric(metric: Mapping[str, Any]) -> str:
+    validation = validate_exposure_metric(metric)
+    if validation["status"] != "PASS":
+        raise RuntimeConformanceError("invalid exposure metric arithmetic")
+    numerator = metric["numerator"]
+    denominator = metric["denominator"]
+    percentage = float(metric["percentage"])
+    return f"{numerator}/{denominator} = {percentage:.1f}%"
 
 
 def plan_due_report_refresh(
@@ -745,12 +913,20 @@ def compute_pick_exposure(
     manager_pick_entries: Mapping[str, Mapping[str, Any]],
     *,
     element_id: int,
+    expected_manager_count: int | None = None,
+    eo_effective_numerator: float | int | None = None,
+    eo_inputs_complete: bool = False,
 ) -> dict[str, Any]:
-    """Compute submitted-picks exposure only from a complete manager-picks denominator."""
+    """Compute exposure with explicit collected-vs-league denominator discipline."""
     entries = [dict(row) for row in manager_pick_entries.values() if isinstance(row, Mapping)]
     denominator = len(entries)
     if denominator <= 0:
         raise RuntimeConformanceError("manager-picks denominator must be positive")
+    expected = denominator if expected_manager_count is None else int(expected_manager_count)
+    if expected <= 0 or expected < denominator:
+        raise RuntimeConformanceError("expected_manager_count must be >= collected manager count")
+    coverage_complete = denominator == expected
+
     owned = started = captain = vice = 0
     for entry in entries:
         picks = [dict(row) for row in entry.get("picks") or [] if isinstance(row, Mapping)]
@@ -765,20 +941,37 @@ def compute_pick_exposure(
         if target.get("vice_captain") is True:
             vice += 1
 
-    def metric(value: int) -> dict[str, Any]:
+    def metric(value: float | int) -> dict[str, Any]:
         return {
             "numerator": value,
             "denominator": denominator,
-            "percentage": round(value * 100.0 / denominator, 1),
+            "percentage": round(float(value) * 100.0 / denominator, 1),
         }
 
+    if eo_effective_numerator is not None and not eo_inputs_complete:
+        raise RuntimeConformanceError("EO cannot be claimed without complete multiplier/chip inputs")
+    if eo_effective_numerator is not None and not coverage_complete:
+        raise RuntimeConformanceError("EO requires complete current mini-league manager coverage")
+
+    eo = metric(eo_effective_numerator) if eo_inputs_complete and eo_effective_numerator is not None else None
+    eo_status = "COMPLETE" if eo is not None else "UNAVAILABLE"
+
     return {
-        "state": "COMPLETE",
+        "state": "COMPLETE" if coverage_complete else "DEGRADED",
         "denominator": denominator,
+        "expected_manager_count": expected,
+        "coverage": {
+            "collected": denominator,
+            "expected": expected,
+            "complete": coverage_complete,
+            "label": f"{denominator}/{expected} managers",
+        },
+        "metric_denominator_scope": "FULL_LEAGUE" if coverage_complete else "COLLECTED_MANAGERS",
         "ownership": metric(owned),
         "starter_share": metric(started),
         "captain_share": metric(captain),
         "vice_share": metric(vice),
-        "eo": None,
-        "eo_status": "UNAVAILABLE_UNLESS_EXACT_MULTIPLIER_CHIP_INPUTS_SUPPORT_IT",
+        "eo": eo,
+        "eo_status": eo_status,
+        "eo_requires_multiplier_chip_inputs": True,
     }

@@ -993,6 +993,7 @@ def optimize_lineup(
         "ruleset_id": RULESET_ID,
         "planning_gw": gw,
         "formation": selected.get("formation"),
+        "squad_rows": players,
         "starting_xi": selected.get("starters"),
         "captain": {
             **{k: v for k, v in by_id[captain_id].items() if k != "point_distribution"},

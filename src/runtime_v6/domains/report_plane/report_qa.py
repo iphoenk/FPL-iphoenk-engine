@@ -935,6 +935,16 @@ def _validate_v12_rendered_body(
     if str(content_contract.get("search_authority") or "").upper() == "PARTIAL":
         if "SEARCH PARTIAL" not in body.upper():
             failures.append("VISIBLE_PARTIAL_SEARCH_LABEL_MISSING")
+    contract_validation = validate_v12_visible_content_contract(
+        report_mode=report_mode,
+        content_contract=content_contract,
+    )
+    failures.extend(
+        _validate_visible_degradation_labels(
+            rendered_body=body,
+            section_degradations=contract_validation.get("section_degradations", []),
+        )
+    )
     return failures
 
 
@@ -1038,16 +1048,16 @@ def _canonical_section_manifest(
     )
 
 
-def _compute_handoff_failures(compute_contract: Mapping[str, Any]) -> list[str]:
+def _compute_handoff_failures(
+    compute_contract: Mapping[str, Any],
+    *,
+    degradable_count_labels: Sequence[str] = (),
+    degradable_compute_sections: Sequence[str] = (),
+) -> list[str]:
+    """Hard-fail only non-degradable compute contradictions for a due report."""
     failures: list[str] = []
-    if not (
-        compute_contract.get("status") == "PASS"
-        and compute_contract.get("compute_ready") is True
-        and compute_contract.get("next_action") == "PRE_RENDER_QA"
-        and compute_contract.get("delivery_ready") is False
-        and compute_contract.get("legacy_fallback_allowed") is False
-    ):
-        failures.append("COMPUTE_CONTRACT_NOT_READY")
+    soft_count = {str(value).upper() for value in degradable_count_labels}
+    soft_sections = {str(value).upper() for value in degradable_compute_sections}
 
     fingerprint = compute_contract.get("compute_fingerprint")
     if not _is_sha256(fingerprint):
@@ -1055,6 +1065,8 @@ def _compute_handoff_failures(compute_contract: Mapping[str, Any]) -> list[str]:
 
     for label, target in _FULL_COUNT_TARGETS.items():
         row = compute_contract.get(label)
+        if label in soft_count:
+            continue
         if not isinstance(row, Mapping) or row.get("status") != "PASS":
             failures.append(f"COMPUTE_CHECK_FAILED={label}")
             continue
@@ -1066,7 +1078,50 @@ def _compute_handoff_failures(compute_contract: Mapping[str, Any]) -> list[str]:
         failures.append("FACT_MODEL_CONTRACT_FAILED")
     elif fact_model.get("overlap"):
         failures.append("FACT_MODEL_CONTRACT_OVERLAP")
-    return failures
+
+    section_contract = compute_contract.get("SECTION_CONTRACT")
+    if isinstance(section_contract, Mapping) and section_contract.get("status") != "PASS":
+        failed_sections = {
+            str(value).upper()
+            for value in section_contract.get("failures", [])
+            if str(value).strip()
+        }
+        hard_sections = sorted(failed_sections - soft_sections)
+        if hard_sections:
+            failures.append(f"SECTION_CONTRACT_HARD_FAIL={','.join(hard_sections)}")
+
+    underlying = {
+        str(value).upper()
+        for value in compute_contract.get("failures", [])
+        if str(value).strip()
+    }
+    if underlying & {"PROVENANCE", "MANDATORY_SEMANTIC"}:
+        failures.append(
+            "COMPUTE_HARD_FAILURE="
+            + ",".join(sorted(underlying & {"PROVENANCE", "MANDATORY_SEMANTIC"}))
+        )
+
+    ready_contract = (
+        compute_contract.get("status") == "PASS"
+        and compute_contract.get("compute_ready") is True
+        and compute_contract.get("next_action") == "PRE_RENDER_QA"
+        and compute_contract.get("delivery_ready") is False
+        and compute_contract.get("legacy_fallback_allowed") is False
+    )
+    if not ready_contract:
+        soft_only_underlying = bool(underlying) and underlying <= {"SECTION_CONTRACT"}
+        section_soft_only = (
+            isinstance(section_contract, Mapping)
+            and {
+                str(value).upper()
+                for value in section_contract.get("failures", [])
+                if str(value).strip()
+            }
+            <= soft_sections
+        )
+        if not (soft_only_underlying and section_soft_only and not failures):
+            failures.append("COMPUTE_CONTRACT_NOT_READY")
+    return list(dict.fromkeys(failures))
 
 
 def _normalize_weather_contract(

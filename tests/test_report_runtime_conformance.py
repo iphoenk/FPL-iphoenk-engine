@@ -475,3 +475,241 @@ def test_27_migrated_state_expires_barnes_only_and_binds_other_scenarios():
         assert rows[scenario_id]["state"] == "CONTEMPLATED"
         assert rows[scenario_id]["currently_valid"] is True
         assert rows[scenario_id]["scope_type"].startswith("CROSS_GW_")
+
+
+
+def _mode_proof(
+    mode: str,
+    *,
+    rendered_ids: list[str] | None = None,
+    rendered_order: list[str] | None = None,
+    overrides: dict[str, dict] | None = None,
+    report_can_continue: bool = True,
+):
+    contract = canonical_mode_contract(_canonical(), mode)
+    states = _section_states(contract, overrides)
+    degradations = []
+    for row in states:
+        if row["state"] in {"PARTIAL", "DEGRADED", "UNAVAILABLE"}:
+            degradations.append(
+                {
+                    "section": row["section_id"],
+                    "state": row["state"],
+                    "available_count": row.get("available_count"),
+                    "expected_count": row.get("expected_count"),
+                    "degradation_reason": row.get("degradation_reason"),
+                    "missing_scope": list(row.get("missing_scope") or []),
+                }
+            )
+    return build_visible_content_proof(
+        canonical_authority_path=CANONICAL_AUTHORITY,
+        canonical_version="FPL MASTER CANONICAL V12",
+        canonical_revision=_revision(),
+        canonical_text=_canonical(),
+        report_slot="2026-09-19T12:30:00+07:00",
+        report_mode=mode,
+        report_due=True,
+        observed_at="2026-09-19T12:30:08+07:00",
+        section_states=states,
+        hard_failures=[],
+        section_degradations=degradations,
+        warnings=[],
+        report_can_continue=report_can_continue,
+        search_authority="PARTIAL",
+        repository_python_qa_executed=False,
+        python_execution_evidence=None,
+        rendered_section_ids=(
+            list(contract["expected_section_ids"])
+            if rendered_ids is None
+            else rendered_ids
+        ),
+        rendered_visible_order=(
+            list(contract["expected_visible_order"])
+            if rendered_order is None
+            else rendered_order
+        ),
+    )
+
+
+def _omit_contract_section(contract: dict, section_id: str) -> tuple[list[str], list[str]]:
+    kept = [
+        (sid, label)
+        for sid, label in zip(
+            contract["expected_section_ids"],
+            contract["expected_visible_order"],
+        )
+        if sid != section_id
+    ]
+    return [sid for sid, _ in kept], [label for _, label in kept]
+
+
+def test_28_price_mode_contract_is_canonical_derived_and_non_empty():
+    contract = canonical_mode_contract(_canonical(), "PRICE")
+    assert contract["expected_section_ids"] == [f"PRICE{i}" for i in range(1, 12)]
+    assert len(contract["expected_visible_order"]) == 11
+    assert contract["expected_visible_order"][3] == "Watchlist20 exact20"
+    assert contract["expected_visible_order"][4] == "RISE20 exact20"
+    assert contract["expected_visible_order"][5] == "FALL20 exact20"
+    assert contract["expected_visible_order"][-1] == "Source health"
+
+
+def test_29_price_missing_mandatory_section_is_structural_failure():
+    contract = canonical_mode_contract(_canonical(), "PRICE")
+    rendered_ids, rendered_order = _omit_contract_section(contract, "PRICE4")
+    proof = _mode_proof(
+        "PRICE",
+        rendered_ids=rendered_ids,
+        rendered_order=rendered_order,
+        report_can_continue=False,
+    )
+    assert proof["missing_section_ids"] == ["PRICE4"]
+    assert proof["content_contract_status"] == "FAIL"
+    assert any("MODE_SECTIONS_MISSING=PRICE4" == failure for failure in proof["hard_failures"])
+
+
+def test_30_price_degraded_rendered_section_remains_structurally_valid():
+    proof = _mode_proof(
+        "PRICE",
+        overrides={
+            "PRICE4": {
+                "state": "DEGRADED",
+                "available_count": 17,
+                "expected_count": 20,
+                "degradation_reason": "authoritative watchlist scope incomplete",
+                "missing_scope": ["3 canonical candidates"],
+            }
+        },
+    )
+    assert proof["content_contract_status"] == "DEGRADED"
+    assert proof["missing_section_ids"] == []
+    assert proof["visible_order_valid"] is True
+    assert proof["report_can_continue"] is True
+
+
+def test_31_post_all_match_contract_is_explicit_and_non_empty():
+    contract = canonical_mode_contract(_canonical(), "POST_ALL_MATCH")
+    assert contract["expected_section_ids"] == [
+        f"POST_ALL_MATCH{i}" for i in range(1, 14)
+    ]
+    assert contract["expected_visible_order"][4] == "GW COMPLETED MATCH-BY-MATCH SCOUT"
+    assert contract["expected_visible_order"][3] == "OWNED15 REVIEW"
+    assert contract["expected_visible_order"][6] == (
+        "BAYESIAN CALIBRATION INPUT / ACTUAL UPDATE STATUS"
+    )
+    assert contract["expected_visible_order"][7] == "ICON+ FINAL GW"
+    assert contract["expected_visible_order"][9] == "FRESH FULL-UNIVERSE NEXT-GW SCAN"
+    assert contract["expected_visible_order"][-1] == "LEARNING LOG"
+
+
+def test_32_post_all_match_missing_or_duplicate_scout_is_structural_failure():
+    contract = canonical_mode_contract(_canonical(), "POST_ALL_MATCH")
+    scout_id = "POST_ALL_MATCH5"
+    rendered_ids, rendered_order = _omit_contract_section(contract, scout_id)
+    missing = _mode_proof(
+        "POST_ALL_MATCH",
+        rendered_ids=rendered_ids,
+        rendered_order=rendered_order,
+        report_can_continue=False,
+    )
+    assert missing["missing_section_ids"] == [scout_id]
+
+    scout_index = contract["expected_section_ids"].index(scout_id)
+    duplicate_ids = list(contract["expected_section_ids"])
+    duplicate_order = list(contract["expected_visible_order"])
+    duplicate_ids.insert(scout_index + 1, scout_id)
+    duplicate_order.insert(
+        scout_index + 1,
+        contract["expected_visible_order"][scout_index],
+    )
+    duplicated = _mode_proof(
+        "POST_ALL_MATCH",
+        rendered_ids=duplicate_ids,
+        rendered_order=duplicate_order,
+        report_can_continue=False,
+    )
+    assert duplicated["visible_order_valid"] is False
+    assert "MODE_VISIBLE_ORDER_INVALID" in duplicated["hard_failures"]
+
+
+def test_33_post_all_match_degraded_scout_stays_structurally_present():
+    proof = _mode_proof(
+        "POST_ALL_MATCH",
+        overrides={
+            "POST_ALL_MATCH5": {
+                "state": "DEGRADED",
+                "available_count": 9,
+                "expected_count": 10,
+                "degradation_reason": "one completed fixture lacks authoritative scout evidence",
+                "missing_scope": ["fixture_10"],
+            }
+        },
+    )
+    assert proof["content_contract_status"] == "DEGRADED"
+    assert "POST_ALL_MATCH5" in proof["rendered_section_ids"]
+    assert proof["missing_section_ids"] == []
+    assert proof["visible_order_valid"] is True
+    assert proof["report_can_continue"] is True
+
+
+def test_34_final_contract_adds_gw_lock_package_before_alternatives():
+    deep = canonical_mode_contract(_canonical(), "DEEP")
+    final = canonical_mode_contract(_canonical(), "FINAL")
+    assert len(final["expected_section_ids"]) == len(deep["expected_section_ids"]) + 1
+    assert "GW_LOCK_PACKAGE" in final["expected_section_ids"]
+    assert all(section_id in final["expected_section_ids"] for section_id in deep["expected_section_ids"])
+    lock_index = final["expected_section_ids"].index("GW_LOCK_PACKAGE")
+    alternatives_index = final["expected_section_ids"].index("S14")
+    assert lock_index < alternatives_index
+    assert final["expected_visible_order"][lock_index] == "GW LOCK PACKAGE"
+
+
+def test_35_final_missing_gw_lock_package_is_structural_failure():
+    contract = canonical_mode_contract(_canonical(), "FINAL")
+    rendered_ids, rendered_order = _omit_contract_section(contract, "GW_LOCK_PACKAGE")
+    proof = _mode_proof(
+        "FINAL",
+        rendered_ids=rendered_ids,
+        rendered_order=rendered_order,
+        report_can_continue=False,
+    )
+    assert proof["missing_section_ids"] == ["GW_LOCK_PACKAGE"]
+    assert proof["content_contract_status"] == "FAIL"
+
+
+def test_36_final_degraded_gw_lock_package_is_structurally_valid():
+    proof = _mode_proof(
+        "FINAL",
+        overrides={
+            "GW_LOCK_PACKAGE": {
+                "state": "DEGRADED",
+                "available_count": 15,
+                "expected_count": 17,
+                "degradation_reason": "finance prerequisites incomplete",
+                "missing_scope": ["bank_after_if_known", "ft_hit_treatment"],
+            }
+        },
+    )
+    assert proof["content_contract_status"] == "DEGRADED"
+    assert proof["missing_section_ids"] == []
+    assert proof["visible_order_valid"] is True
+    assert proof["report_can_continue"] is True
+
+
+def test_37_deadline_requires_no_invented_additive_structural_block():
+    deep = canonical_mode_contract(_canonical(), "DEEP")
+    deadline = canonical_mode_contract(_canonical(), "DEADLINE")
+    assert deadline["expected_section_ids"] == deep["expected_section_ids"]
+    assert deadline["expected_visible_order"] == deep["expected_visible_order"]
+
+
+def test_38_mode_contract_tracks_canonical_wording_instead_of_static_duplicate_schema():
+    canonical = _canonical()
+    mutated = canonical.replace(
+        "4 Watchlist20 exact20",
+        "4 Watchlist20 exact20 CANONICAL-MUTATION-PROBE",
+        1,
+    )
+    contract = canonical_mode_contract(mutated, "PRICE")
+    assert contract["expected_visible_order"][3] == (
+        "Watchlist20 exact20 CANONICAL-MUTATION-PROBE"
+    )

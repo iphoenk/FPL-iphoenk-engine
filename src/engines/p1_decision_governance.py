@@ -245,17 +245,36 @@ def choose_close_call_lineup(candidates: list[dict[str, Any]], policy: dict[str,
         )
         row["legacy_close_gap_is_decision_authority"] = False
 
-    return sorted(
-        candidates,
+    if all(row.get("v12_expected_utility") is not None for row in candidates):
+        return sorted(
+            candidates,
+            key=lambda row: (
+                _f(row.get("v12_expected_utility")),
+                _f(row.get("conditional_floor"), -1e9),
+                -_f(row.get("expected_regret"), 0.0),
+                _f(row.get("decision_score")),
+                _f(row.get("xpts_mean")),
+            ),
+            reverse=True,
+        )
+
+    # Compatibility only for isolated legacy unit fixtures that do not carry
+    # V12 robustness evidence. Production lineup candidates always do.
+    close = [
+        row
+        for row in base_sorted
+        if anchor - _f(row.get("base_score")) <= ui_gap + 1e-9
+    ]
+    distant = [row for row in base_sorted if row not in close]
+    close.sort(
         key=lambda row: (
-            _f(row.get("v12_expected_utility"), _f(row.get("decision_score"))),
-            _f(row.get("conditional_floor"), -1e9),
-            -_f(row.get("expected_regret"), 0.0),
             _f(row.get("decision_score")),
+            _f(row.get("base_score")),
             _f(row.get("xpts_mean")),
         ),
         reverse=True,
     )
+    return close + distant
 
 
 def vice_rank(starters: list[dict[str, Any]], captain_element: int, policy: dict[str, Any]) -> list[dict[str, Any]]:

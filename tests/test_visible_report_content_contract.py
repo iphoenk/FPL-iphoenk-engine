@@ -2,14 +2,18 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from src.runtime_v6.domains.report_plane.delivery_integrity import MANDATORY_SECTIONS
 from src.runtime_v6.domains.report_plane.report_qa import (
     _FULL_DEEP_VISIBLE_ORDER,
     _MATCH_VISIBLE_ORDER,
     _POST_ALL_MATCH_ORDER,
     _PRICE_VISIBLE_ORDER,
     _validate_v12_rendered_body,
+    validate_post_render_qa,
+    validate_pre_render_qa,
     validate_v12_visible_content_contract,
 )
+from test_support.report_visible_body import valid_visible_body
 
 
 def _bench():
@@ -677,3 +681,140 @@ def test_32_placeholder_rows_are_hard_failure_even_in_degraded_section():
     result = validate_v12_visible_content_contract(report_mode="DEEP", content_contract=payload)
     assert result["report_can_continue"] is False
     assert "WATCHLIST20_FABRICATED_PLACEHOLDER_ROW=18" in result["hard_failures"]
+
+def _fake_compute_contract_for_severity():
+    return {
+        "status": "PASS",
+        "compute_ready": True,
+        "next_action": "PRE_RENDER_QA",
+        "delivery_ready": False,
+        "legacy_fallback_allowed": False,
+        "compute_fingerprint": "a" * 64,
+        "OUR15": {"status": "PASS", "total": 15},
+        "XI": {"status": "PASS", "total": 11},
+        "BENCH": {"status": "PASS", "total": 4},
+        "WATCHLIST20": {"status": "PASS", "total": 20},
+        "RISE20": {"status": "PASS", "total": 20},
+        "FALL20": {"status": "PASS", "total": 20},
+        "FACT_MODEL": {
+            "status": "PASS",
+            "overlap": [],
+            "fact_keys": ["official_price"],
+            "model_keys": ["projection"],
+            "inference_keys": ["decision"],
+        },
+        "SECTION_CONTRACT": {"status": "PASS", "failures": []},
+        "failures": [],
+    }
+
+
+def _severity_manifest():
+    return [{"section_id": section_id, "status": "COMPLETE"} for section_id in MANDATORY_SECTIONS]
+
+
+def _degraded_watchlist_body(pre, *, include_label=True):
+    body = valid_visible_body(pre)
+    output = []
+    for line in body.splitlines():
+        if any(line.startswith(f"| {rank} |") for rank in (18, 19, 20)):
+            continue
+        output.append(line)
+        if include_label and line.startswith("## 10."):
+            output.extend([
+                "WATCHLIST20 STATE=DEGRADED",
+                "AVAILABLE=17 EXPECTED=20",
+                "REASON=canonical evaluation partial",
+            ])
+    output.extend(["DECISION DELTA", "NO MATERIAL DECISION CHANGE"])
+    return "\n".join(output) + "\n"
+
+
+def test_33_pre_render_allows_matching_compute_count_failure_when_section_is_truthfully_degraded():
+    payload = _deep()
+    payload["watchlist20"] = payload["watchlist20"][:17]
+    payload["section_states"] = {
+        "WATCHLIST20": _degraded("WATCHLIST20", 17, 20, "canonical evaluation partial")
+    }
+    compute = _fake_compute_contract_for_severity()
+    compute.update(
+        {
+            "status": "FAIL",
+            "compute_ready": False,
+            "next_action": "RECOMPUTE",
+            "WATCHLIST20": {"status": "FAIL", "total": 17},
+            "SECTION_CONTRACT": {"status": "FAIL", "failures": ["WATCHLIST20"]},
+            "failures": ["SECTION_CONTRACT"],
+        }
+    )
+    pre = validate_pre_render_qa(
+        compute_contract=compute,
+        section_manifest=_severity_manifest(),
+        mini_league_denominator_complete=True,
+        report_mode="DEEP",
+        weather_contract_state="DIRECT_CHATGPT",
+        visible_content_contract=payload,
+    )
+    assert pre["status"] == "PASS"
+    assert pre["qa_severity"] == "DEGRADED"
+    assert pre["report_can_continue"] is True
+    assert pre["hard_failures"] == []
+    assert "WATCHLIST20" not in pre["expected_counts"]
+
+
+def test_34_pre_and_post_render_agree_on_truthful_degradation_and_visible_label():
+    payload = _deep()
+    payload["watchlist20"] = payload["watchlist20"][:17]
+    payload["section_states"] = {
+        "WATCHLIST20": _degraded("WATCHLIST20", 17, 20, "canonical evaluation partial")
+    }
+    pre = validate_pre_render_qa(
+        compute_contract=_fake_compute_contract_for_severity(),
+        section_manifest=_severity_manifest(),
+        mini_league_denominator_complete=True,
+        report_mode="DEEP",
+        weather_contract_state="DIRECT_CHATGPT",
+        visible_content_contract=payload,
+    )
+    assert pre["status"] == "PASS"
+    assert pre["qa_severity"] == "DEGRADED"
+    rendered_counts = dict(pre["expected_counts"])
+    rendered_counts["WATCHLIST20"] = 17
+
+    post = validate_post_render_qa(
+        pre_render_qa=pre,
+        rendered_body=_degraded_watchlist_body(pre, include_label=True),
+        rendered_section_ids=list(pre["expected_section_ids"]),
+        rendered_section_states={row["section_id"]: row["status"] for row in pre["section_manifest"]},
+        rendered_compute_fingerprint=pre["compute_fingerprint"],
+        render_contract_token=pre["render_contract_token"],
+        rendered_counts=rendered_counts,
+        rendered_fact_keys=list(pre["expected_fact_keys"]),
+        rendered_model_keys=list(pre["expected_model_keys"]),
+        rendered_mini_league_denominator_complete=True,
+        rendered_weather_direct_chat_present=True,
+        rendered_visible_content_contract=payload,
+        truncated=False,
+    )
+    assert post["status"] == "PASS"
+    assert post["qa_severity"] == "DEGRADED"
+    assert post["report_can_continue"] is True
+    assert post["hard_failures"] == []
+
+    post_missing = validate_post_render_qa(
+        pre_render_qa=pre,
+        rendered_body=_degraded_watchlist_body(pre, include_label=False),
+        rendered_section_ids=list(pre["expected_section_ids"]),
+        rendered_section_states={row["section_id"]: row["status"] for row in pre["section_manifest"]},
+        rendered_compute_fingerprint=pre["compute_fingerprint"],
+        render_contract_token=pre["render_contract_token"],
+        rendered_counts=rendered_counts,
+        rendered_fact_keys=list(pre["expected_fact_keys"]),
+        rendered_model_keys=list(pre["expected_model_keys"]),
+        rendered_mini_league_denominator_complete=True,
+        rendered_weather_direct_chat_present=True,
+        rendered_visible_content_contract=payload,
+        truncated=False,
+    )
+    assert post_missing["status"] == "FAIL"
+    assert "VISIBLE_DEGRADATION_LABEL_MISSING=WATCHLIST20:DEGRADED" in post_missing["hard_failures"]
+

@@ -386,6 +386,28 @@ def validate_v12_visible_content_contract(
             if key not in payload:
                 failures.append(f"PURE_MATCH_BLOCK_MISSING={key}")
 
+        impact_rows = list(payload.get("personal_impact") or [])
+        substitution_map = (
+            (payload.get("global_autosub_state") or {}).get("final_substitution_map")
+            if isinstance(payload.get("global_autosub_state"), Mapping)
+            else {}
+        ) or {}
+        for index, row in enumerate(impact_rows, start=1):
+            if not isinstance(row, Mapping):
+                failures.append(f"PERSONAL_IMPACT_ROW_INVALID={index}")
+                continue
+            state = str(row.get("personal_state") or "").upper()
+            element = row.get("element_id")
+            mapped = substitution_map.get(str(element)) if element is not None else None
+            if state == "DNP_WITH_AUTOSUB_POSSIBLE" and (mapped in (None, "no_legal_sub", "pending")):
+                failures.append(f"DNP_AUTOSUB_VISIBLE_STATE_MISMATCH={index}")
+            if state == "DNP_AUTOSUB_PENDING" and mapped != "pending":
+                failures.append(f"DNP_AUTOSUB_PENDING_MISMATCH={index}")
+            if state == "BENCH_DNP_NO_DIRECT_XI_AUTOSUB_EFFECT" and row.get("autosub_activates") is True:
+                failures.append(f"BENCH_DNP_FALSE_AUTOSUB_ACTIVATION={index}")
+            if state == "CAMEO_BLOCKED_AUTOSUB" and mapped not in (None, "no_legal_sub"):
+                failures.append(f"CAMEO_SHOULD_NOT_BE_IN_SUBSTITUTION_MAP={index}")
+
     if mode in {"DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP", "POST_ALL_MATCH"}:
         all15 = list(payload.get("all15") or [])
         if len(all15) != 15:

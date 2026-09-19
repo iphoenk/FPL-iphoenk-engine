@@ -33,6 +33,305 @@ def _parse_iso(value: Any, *, label: str) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
+V12_CANONICAL_PATH = "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt"
+V12_STATE_PATH = "control/fpl_master_v12/FPL_MASTER_STATE_V12.json"
+CORE_TRANSPORT = "ISSUE_431_EXISTING_GOVERNED_TRANSPORT"
+CORE_REASON = "chatgpt_hourly_master"
+LEGACY_LIBRARY_AUTHORITY_BASENAMES = frozenset(
+    {
+        "FPL_MASTER_RUNTIME_CONTRACT.txt",
+        "FPL_MASTER_RUNTIME_CONTRACT_P04_FINAL.txt",
+        "FPL_MASTER_SPEC_V11.txt",
+        "FPL_MASTER_SPEC_V11(1).txt",
+        "FPL_MASTER_SPEC_V11_P04_FINAL.txt",
+        "ACTIVE_DECISION_CONTEXT.json",
+    }
+)
+
+
+def _parse_local_occurrence(value: Any, *, label: str) -> datetime:
+    text = str(value or "").strip()
+    if not text:
+        raise RuntimeConformanceError(f"{label} is required")
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise RuntimeConformanceError(f"{label} must be ISO-8601") from exc
+    if parsed.tzinfo is None:
+        raise RuntimeConformanceError(f"{label} must be timezone-aware")
+    return parsed
+
+
+def plan_hourly_core_upkeep(
+    *,
+    report_occurrence: str,
+    observed_at: str,
+    report_due: bool,
+    same_slot_authoritative_fulfilled: bool = False,
+    authoritative_runtime_snapshot: bool = False,
+    fulfillment_reason: str | None = None,
+    acquisition_in_progress: bool = False,
+    previous_core_attempts: int = 0,
+    supplied_core_logical_slot: str | None = None,
+    report_prefetch_complete: bool = False,
+) -> dict[str, Any]:
+    """Plan mandatory natural-hourly V6 core upkeep independently from report routing."""
+    occurrence = _parse_local_occurrence(report_occurrence, label="report_occurrence")
+    observed = _parse_local_occurrence(observed_at, label="observed_at")
+    if occurrence.minute != 30 or occurrence.second != 0:
+        raise RuntimeConformanceError("natural FPL Master occurrence must be an exact HH:30 slot")
+    attempts = int(previous_core_attempts)
+    if attempts < 0 or attempts > 1:
+        raise RuntimeConformanceError("previous_core_attempts must be 0 or 1")
+
+    logical_slot = occurrence.replace(minute=0, second=0, microsecond=0)
+    if supplied_core_logical_slot is not None:
+        supplied = _parse_local_occurrence(
+            supplied_core_logical_slot,
+            label="supplied_core_logical_slot",
+        )
+        if supplied != logical_slot:
+            raise RuntimeConformanceError(
+                "core logical slot must equal the current occurrence HH:00; backfill/future-fill forbidden"
+            )
+
+    logical_slot_text = logical_slot.isoformat()
+    observed_text = observed.isoformat()
+    reason = str(fulfillment_reason or "").strip().lower()
+    valid_existing = bool(
+        same_slot_authoritative_fulfilled
+        and authoritative_runtime_snapshot
+        and reason == CORE_REASON
+    )
+    base = {
+        "report_occurrence": occurrence.isoformat(),
+        "core_logical_slot": logical_slot_text,
+        "observed_at": observed_text,
+        "core_upkeep_due": True,
+        "report_due": bool(report_due),
+        "transport": CORE_TRANSPORT,
+        "transport_reason": CORE_REASON,
+        "report_prefetch_fulfills_core_slot": False,
+        "report_prefetch_observed_complete": bool(report_prefetch_complete),
+        "duplicate_acquisition_forbidden": True,
+        "duplicate_publication_forbidden": True,
+        "backfill_future_fill_allowed": False,
+        "v6_master_acquire_allowed": False,
+        "alternate_transport_allowed": False,
+        "refresh_attempt_count": attempts,
+    }
+
+    if valid_existing:
+        return {
+            **base,
+            "status": "ALREADY_FULFILLED",
+            "same_slot_fulfilled": True,
+            "attempt_governed_refresh": False,
+            "authoritative_runtime_snapshot": True,
+        }
+    if acquisition_in_progress:
+        return {
+            **base,
+            "status": "RE_READ_CURRENT_SLOT_IN_PROGRESS",
+            "same_slot_fulfilled": False,
+            "attempt_governed_refresh": False,
+            "bounded_terminal_reread_required": True,
+        }
+    if attempts >= 1:
+        return {
+            **base,
+            "status": "ATTEMPT_ALREADY_MADE",
+            "same_slot_fulfilled": False,
+            "attempt_governed_refresh": False,
+            "core_upkeep": "DEGRADED",
+        }
+
+    mutation_title = (
+        "FPL_MASTER_SLOT "
+        f"reason={CORE_REASON} "
+        f"logical_slot={logical_slot_text} "
+        "audit=FPL_MASTER_HOURLY "
+        f"observed_at={observed_text}"
+    )
+    return {
+        **base,
+        "status": "GOVERNED_CURRENT_SLOT_ATTEMPT_REQUIRED",
+        "same_slot_fulfilled": False,
+        "attempt_governed_refresh": True,
+        "refresh_attempt_count": 1,
+        "issue_431_title": mutation_title,
+        "exact_readback_required": True,
+        "bounded_terminal_reread_required": True,
+    }
+
+
+def resolve_hourly_core_upkeep_result(
+    plan: Mapping[str, Any],
+    *,
+    result: str,
+) -> dict[str, Any]:
+    """Resolve one core-upkeep attempt without turning it into a report-delivery barrier."""
+    row = dict(plan or {})
+    if row.get("attempt_governed_refresh") is not True:
+        raise RuntimeConformanceError("core-upkeep result requires an actual governed attempt")
+    outcome = str(result or "").strip().upper()
+    if outcome in {"SUCCESS", "PASS", "COMPLETED", "ALREADY_PUBLISHED"}:
+        row.update(
+            {
+                "completion_result": "SUCCESS",
+                "core_upkeep": "PASS",
+                "same_slot_fulfilled": True,
+            }
+        )
+    elif outcome in {"FAILED", "BLOCKED", "TIMEOUT", "ERROR", "PUBLICATION_FAILED"}:
+        row.update(
+            {
+                "completion_result": outcome,
+                "core_upkeep": "DEGRADED",
+                "same_slot_fulfilled": False,
+            }
+        )
+    else:
+        raise RuntimeConformanceError("unsupported core-upkeep result")
+    row["report_can_continue"] = bool(row.get("report_due"))
+    row["emit_visible_report"] = bool(row.get("report_due"))
+    row["silent_occurrence_complete"] = not bool(row.get("report_due"))
+    return row
+
+
+def build_hourly_core_upkeep_proof(
+    *,
+    report_occurrence: str,
+    core_logical_slot: str,
+    observed_at: str,
+    transport: str,
+    mutation_readback_state: str,
+    acquisition_run_ids: Sequence[Any] = (),
+    publication_run_ids: Sequence[Any] = (),
+    runtime_data_v6_publication_sha: str | None = None,
+    runtime_data_v6_generation: str | int | None = None,
+    publish_integrity: str | None = None,
+    authoritative_runtime_snapshot: bool = False,
+    fulfillment_reason: str | None = None,
+) -> dict[str, Any]:
+    """Package transient same-slot core evidence and reject duplicate/manual-recovery proof."""
+    occurrence = _parse_local_occurrence(report_occurrence, label="report_occurrence")
+    logical_slot = _parse_local_occurrence(core_logical_slot, label="core_logical_slot")
+    observed = _parse_local_occurrence(observed_at, label="observed_at")
+    expected_slot = occurrence.replace(minute=0, second=0, microsecond=0)
+    failures: list[str] = []
+    if occurrence.minute != 30 or occurrence.second != 0:
+        failures.append("REPORT_OCCURRENCE_NOT_HH30")
+    if logical_slot != expected_slot:
+        failures.append("CORE_SLOT_NOT_CURRENT_HH00")
+    if str(transport or "") != CORE_TRANSPORT:
+        failures.append("INVALID_CORE_TRANSPORT")
+
+    acquisition_ids = [str(v) for v in acquisition_run_ids if str(v).strip()]
+    publication_ids = [str(v) for v in publication_run_ids if str(v).strip()]
+    if len(set(acquisition_ids)) > 1:
+        failures.append("DUPLICATE_ACQUISITION_FOR_SLOT")
+    if len(set(publication_ids)) > 1:
+        failures.append("DUPLICATE_PUBLICATION_FOR_SLOT")
+
+    reason = str(fulfillment_reason or "").strip().lower()
+    mutation_ok = str(mutation_readback_state or "").strip().upper() in {"PASS", "MATCH", "EXACT_MATCH"}
+    integrity_ok = str(publish_integrity or "").strip().upper() == "PASS"
+    natural_reason = reason == CORE_REASON
+    same_slot_fulfilled = bool(
+        not failures
+        and mutation_ok
+        and integrity_ok
+        and authoritative_runtime_snapshot
+        and natural_reason
+    )
+    if authoritative_runtime_snapshot and not natural_reason:
+        failures.append("NON_NATURAL_REASON_CANNOT_BE_AUTHORITATIVE_HOURLY_PROOF")
+
+    return {
+        "proof_kind": "TRANSIENT_HOURLY_CORE_UPKEEP_PROOF",
+        "authoritative": False,
+        "durable_state": False,
+        "report_occurrence": occurrence.isoformat(),
+        "core_logical_slot": logical_slot.isoformat(),
+        "observed_at": observed.isoformat(),
+        "transport": str(transport or ""),
+        "mutation_readback_state": str(mutation_readback_state or ""),
+        "acquisition_run_id": acquisition_ids[0] if len(set(acquisition_ids)) == 1 else None,
+        "publication_run_id": publication_ids[0] if len(set(publication_ids)) == 1 else None,
+        "runtime_data_v6_publication_sha": runtime_data_v6_publication_sha,
+        "runtime_data_v6_generation": runtime_data_v6_generation,
+        "publish_integrity": publish_integrity,
+        "authoritative_runtime_snapshot": bool(authoritative_runtime_snapshot),
+        "same_slot_fulfilled": same_slot_fulfilled,
+        "duplicate_acquisition": len(set(acquisition_ids)) > 1,
+        "duplicate_publication": len(set(publication_ids)) > 1,
+        "fulfillment_reason": reason or None,
+        "hard_failures": failures,
+        "completion_result": "FULFILLED" if same_slot_fulfilled else "NOT_AUTHORITATIVE",
+    }
+
+
+def validate_v12_authority_sources(*, authority_path: str, state_path: str) -> dict[str, Any]:
+    """Allow only current GitHub V12 authority/state paths for V12 bootstrap."""
+    if str(authority_path or "") != V12_CANONICAL_PATH:
+        raise RuntimeConformanceError("V12 authority must be the GitHub Canonical V12 path")
+    if str(state_path or "") != V12_STATE_PATH:
+        raise RuntimeConformanceError("V12 durable state must be the GitHub State V12 path")
+    return {
+        "status": "PASS",
+        "authority_path": V12_CANONICAL_PATH,
+        "state_path": V12_STATE_PATH,
+        "legacy_library_authority_allowed": False,
+    }
+
+
+def hydrate_v12_player_identities(
+    state_players: Sequence[Mapping[str, Any]],
+    *,
+    official_players: Sequence[Mapping[str, Any]],
+    state_source: str = V12_STATE_PATH,
+    legacy_library_players: Sequence[Mapping[str, Any]] = (),
+) -> dict[str, Any]:
+    """Hydrate identities only from current V12 state/latest explicit state plus Official FPL/V6."""
+    if state_source not in {V12_STATE_PATH, "LATEST_EXPLICIT_USER_STATE"}:
+        raise RuntimeConformanceError("legacy Library state cannot hydrate V12 player identities")
+    official_by_id = {
+        int(row["element_id"]): dict(row)
+        for row in official_players
+        if row.get("element_id") is not None
+    }
+    rows: list[dict[str, Any]] = []
+    for raw in state_players:
+        row = dict(raw)
+        if row.get("element_id") is None:
+            raise RuntimeConformanceError("V12 state player identity requires element_id")
+        element_id = int(row["element_id"])
+        official = official_by_id.get(element_id)
+        if official is None:
+            raise RuntimeConformanceError(
+                f"V12 state element_id {element_id} missing from current Official FPL/V6 universe"
+            )
+        rows.append(
+            {
+                **row,
+                "element_id": element_id,
+                "official_identity": official,
+            }
+        )
+    ids = [row["element_id"] for row in rows]
+    if len(ids) != len(set(ids)):
+        raise RuntimeConformanceError("V12 identity hydration contains duplicate element_id")
+    return {
+        "status": "PASS",
+        "rows": rows,
+        "identity_source": "OFFICIAL_FPL_V6_PLUS_CURRENT_V12_STATE",
+        "legacy_library_input_count": len(list(legacy_library_players)),
+        "legacy_library_input_ignored": True,
+        "legacy_library_identity_hydration_allowed": False,
+    }
+
+
 def plan_due_report_refresh(
     *,
     report_due: bool,

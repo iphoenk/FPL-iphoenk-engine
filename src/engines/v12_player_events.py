@@ -688,14 +688,13 @@ def _joint_goal_assist_point_surface(
     *,
     goal_points: int,
     assist_points: int,
-) -> tuple[dict[int, float], dict[str, float], dict[str, Any]]:
-    cfg = _joint_ga_config()
-    parameter = dict(cfg.get("dependence_parameter") or {})
-    fraction = clamp(
-        _f(parameter.get("value")),
-        _f(parameter.get("lower_bound"), 0.0),
-        _f(parameter.get("upper_bound"), 0.25),
-    )
+    shared_fraction: float,
+    max_goal_count: int,
+    max_assist_count: int,
+    tolerance: float,
+) -> tuple[dict[int, float], dict[str, float], float]:
+    """Return GA point PMF + exact return probabilities for one minute atom."""
+    fraction = clamp(float(shared_fraction), 0.0, 1.0)
     goal_lambda = max(0.0, float(goal_lambda))
     assist_lambda = max(0.0, float(assist_lambda))
     shared = fraction * min(goal_lambda, assist_lambda)
@@ -722,12 +721,9 @@ def _joint_goal_assist_point_surface(
         1.0,
     )
 
-    dist_cfg = dict(_distribution_config().get("truncation") or {})
-    max_goal = int(dist_cfg.get("max_goal_count") or 15)
-    max_assist = int(dist_cfg.get("max_assist_count") or 15)
-    max_points = max_goal * int(goal_points) + max_assist * int(assist_points)
-    tolerance = max(
-        0.0, _f(dist_cfg.get("normalization_tolerance"), 1e-9)
+    max_points = (
+        int(max_goal_count) * int(goal_points)
+        + int(max_assist_count) * int(assist_points)
     )
     point_pmf, truncated = _compound_poisson_point_pmf(
         (
@@ -738,39 +734,18 @@ def _joint_goal_assist_point_surface(
         max_points=max_points,
         tolerance=tolerance,
     )
-    events = {
-        "p_goal": clamp(p_goal, 0.0, 1.0),
-        "p_assist": clamp(p_assist, 0.0, 1.0),
-        "p_both": clamp(p_both, 0.0, 1.0),
-        "p_attack": clamp(p_attack, 0.0, 1.0),
-        "p_ge_2": p_ge_2,
-        "p_ge_3": p_ge_3,
-    }
-    diagnostics = {
-        "model": cfg.get("model"),
-        "computational_form": "LATENT_BIVARIATE_POISSON_ANALYTIC_RETURNS_PLUS_COMPOUND_POISSON_PGF_RECURSION",
-        "dependence_parameter_id": parameter.get("parameter_id"),
-        "dependence_parameter_version": parameter.get("version"),
-        "dependence_parameter": round(fraction, 6),
-        "lambda_goal": round(goal_lambda, 9),
-        "lambda_assist": round(assist_lambda, 9),
-        "lambda_shared": round(shared, 9),
-        "lambda_goal_only": round(goal_only, 9),
-        "lambda_assist_only": round(assist_only, 9),
-        "calibration_status": parameter.get("calibration_status"),
-        "calibration_sample_size": int(
-            parameter.get("calibration_sample_size") or 0
-        ),
-        "calibration_confidence": parameter.get("calibration_confidence"),
-        "source": parameter.get("source"),
-        "automatic_retuning": False,
-        "point_support_upper_bound": max_points,
-        "truncated_probability_mass": truncated,
-        "silent_independence_assumption": False,
-        "mathematical_model_unchanged_by_computational_optimization": True,
-    }
-    return point_pmf, events, diagnostics
-
+    return (
+        point_pmf,
+        {
+            "p_goal": clamp(p_goal, 0.0, 1.0),
+            "p_assist": clamp(p_assist, 0.0, 1.0),
+            "p_both": clamp(p_both, 0.0, 1.0),
+            "p_attack": clamp(p_attack, 0.0, 1.0),
+            "p_ge_2": p_ge_2,
+            "p_ge_3": p_ge_3,
+        },
+        truncated,
+    )
 
 
 def _convolve_integer_pmf(
@@ -803,6 +778,38 @@ def _bernoulli_reward_pmf(probability: float, reward: float) -> dict[int, float]
     if p >= 1.0:
         return {reward_int: 1.0}
     return {0: 1.0 - p, reward_int: p}
+
+
+def _apply_bernoulli_reward(
+    pmf: Mapping[int, float],
+    probability: float,
+    reward: float,
+) -> dict[int, float]:
+    p = clamp(float(probability), 0.0, 1.0)
+    reward_int = int(round(float(reward)))
+    if reward_int <= 0 or p <= 0.0:
+        return dict(pmf)
+    if p >= 1.0:
+        return {
+            int(points) + reward_int: float(mass)
+            for points, mass in pmf.items()
+            if float(mass) > 0.0
+        }
+    no_reward = 1.0 - p
+    out: dict[int, float] = {}
+    for points, mass_value in pmf.items():
+        mass = float(mass_value)
+        if mass <= 0.0:
+            continue
+        base_points = int(points)
+        base_mass = mass * no_reward
+        reward_mass = mass * p
+        if base_mass > 0.0:
+            out[base_points] = out.get(base_points, 0.0) + base_mass
+        if reward_mass > 0.0:
+            rewarded = base_points + reward_int
+            out[rewarded] = out.get(rewarded, 0.0) + reward_mass
+    return out
 
 
 def _save_reward_pmf(lam: float) -> tuple[dict[int, float], float]:
@@ -860,12 +867,28 @@ def _build_joint_predictive_surface(
     blank_cfg = dict(dist_cfg.get("blank") or {})
     tail_cfg = dict(dist_cfg.get("tails") or {})
     quantile_cfg = dict(dist_cfg.get("quantiles") or {})
+    dependence_cfg = _joint_ga_config()
+    dependence_parameter = dict(
+        dependence_cfg.get("dependence_parameter") or {}
+    )
+    shared_fraction = clamp(
+        _f(dependence_parameter.get("value")),
+        _f(dependence_parameter.get("lower_bound"), 0.0),
+        _f(dependence_parameter.get("upper_bound"), 0.25),
+    )
+    max_goal_count = int(trunc_cfg.get("max_goal_count") or 15)
+    max_assist_count = int(trunc_cfg.get("max_assist_count") or 15)
+    normalization_tolerance = max(
+        0.0, _f(trunc_cfg.get("normalization_tolerance"), 1e-9)
+    )
+    goal_points_value = int(GOAL_POINTS[element_type])
+    assist_points_value = int(ASSIST_POINTS)
 
     core_pmf: dict[int, float] = {}
     p_goal = p_assist = p_both = p_attack = p_multiple = p_ga2 = p_ga3 = 0.0
     max_joint_truncated = 0.0
     max_save_truncated = 0.0
-    dependence_rows: list[dict[str, Any]] = []
+    evaluated_minute_atom_count = 0
 
     for atom in minute_atoms:
         atom_probability = float(atom.get("joint_probability") or 0.0)
@@ -874,24 +897,18 @@ def _build_joint_predictive_surface(
         minutes = max(0.0, float(atom.get("minutes") or 0.0))
         lg = max(0.0, goal_rate * minutes / 90.0)
         la = max(0.0, assist_rate * minutes / 90.0)
-        ga_points, ga_events, dependence = _joint_goal_assist_point_surface(
+        ga_points, ga_events, ga_truncated = _joint_goal_assist_point_surface(
             lg,
             la,
-            goal_points=int(GOAL_POINTS[element_type]),
-            assist_points=int(ASSIST_POINTS),
+            goal_points=goal_points_value,
+            assist_points=assist_points_value,
+            shared_fraction=shared_fraction,
+            max_goal_count=max_goal_count,
+            max_assist_count=max_assist_count,
+            tolerance=normalization_tolerance,
         )
-        max_joint_truncated = max(
-            max_joint_truncated,
-            float(dependence.get("truncated_probability_mass") or 0.0),
-        )
-        dependence_rows.append(
-            {
-                "state": atom.get("state"),
-                "minutes": round(minutes, 6),
-                "weight": round(atom_probability, 9),
-                **dependence,
-            }
-        )
+        evaluated_minute_atom_count += 1
+        max_joint_truncated = max(max_joint_truncated, ga_truncated)
         p_goal += atom_probability * ga_events["p_goal"]
         p_assist += atom_probability * ga_events["p_assist"]
         p_both += atom_probability * ga_events["p_both"]
@@ -907,17 +924,18 @@ def _build_joint_predictive_surface(
             if minutes >= 60.0
             else int(APPEARANCE_POINTS_UNDER_60)
         )
-        conditional_pmf: dict[int, float] = {appearance_points: 1.0}
-        conditional_pmf = _convolve_integer_pmf(conditional_pmf, ga_points)
+        conditional_pmf: dict[int, float] = {
+            int(points) + appearance_points: float(probability)
+            for points, probability in ga_points.items()
+            if float(probability) > 0.0
+        }
 
         cs_points = float(CLEAN_SHEET_POINTS.get(element_type, 0))
         cs_qualified = minutes >= 60.0 and cs_points > 0.0
-        conditional_pmf = _convolve_integer_pmf(
+        conditional_pmf = _apply_bernoulli_reward(
             conditional_pmf,
-            _bernoulli_reward_pmf(
-                clean_sheet_probability if cs_qualified else 0.0,
-                cs_points,
-            ),
+            clean_sheet_probability if cs_qualified else 0.0,
+            cs_points,
         )
 
         dc_probability = 0.0
@@ -930,9 +948,8 @@ def _build_joint_predictive_surface(
             dc_probability = _poisson_tail_at_least(
                 int(dc_threshold), dc_rate * minutes / 90.0
             )
-        conditional_pmf = _convolve_integer_pmf(
-            conditional_pmf,
-            _bernoulli_reward_pmf(dc_probability, dc_points),
+        conditional_pmf = _apply_bernoulli_reward(
+            conditional_pmf, dc_probability, dc_points
         )
 
         if position == "GK" and minutes > 0.0:
@@ -1000,11 +1017,6 @@ def _build_joint_predictive_surface(
         str(points): round(core_pmf[points], 12)
         for points in sorted(core_pmf)
     }
-    dependence_cfg = _joint_ga_config()
-    dependence_parameter = dict(
-        dependence_cfg.get("dependence_parameter") or {}
-    )
-
     return {
         "event_probabilities": {
             "p_goal_return": round(clamp(p_goal, 0.0, 1.0), 9),
@@ -1082,7 +1094,13 @@ def _build_joint_predictive_surface(
                 "cross_player_correlation": "NOT_MODELLED_YET",
                 "cross_fixture_correlation": "NOT_MODELLED_YET",
             },
-            "minute_atom_diagnostics": dependence_rows,
+            "computational_form": "LATENT_BIVARIATE_POISSON_ANALYTIC_RETURNS_PLUS_COMPOUND_POISSON_PGF_RECURSION",
+            "evaluated_minute_atom_count": evaluated_minute_atom_count,
+            "max_joint_truncated_probability_mass": round(
+                max_joint_truncated, 12
+            ),
+            "minute_atom_diagnostics_materialized": False,
+            "mathematical_model_unchanged_by_performance_optimization": True,
         },
         "reconciliation": {
             "core_pmf_expected_points": round(core_mean, 9),

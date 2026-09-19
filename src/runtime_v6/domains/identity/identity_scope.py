@@ -195,6 +195,108 @@ def apply_entity_scope_identity_semantics(
     return out
 
 
+
+
+def apply_observed_player_identity_truth(
+    identity_map: dict[str, Any],
+    coverage_truth: dict[str, Any],
+) -> dict[str, Any]:
+    """Bind post-normalization observed PLAYER truth back into canonical health.
+
+    This changes health/observability only. Verified identity links remain the
+    only rows consumers may join; no crosswalk is created by this function.
+    """
+    out = deepcopy(identity_map)
+    canonical_source = str(out.get("canonical_authority") or "official_fpl")
+    player_coverage = dict(out.get("coverage") or {})
+    bridges = dict(out.get("entity_bridges") or {})
+    player_bridge = dict(bridges.get("player") or {})
+    player_bridge_coverage = dict(player_bridge.get("coverage") or {})
+    per_source = dict(out.get("source_entity_identity") or {})
+    truth_sources = dict(coverage_truth.get("sources") or {})
+
+    for source_id, truth_raw in truth_sources.items():
+        if source_id == canonical_source or source_id not in per_source:
+            continue
+        truth = dict(truth_raw or {})
+        source_row = dict(per_source.get(source_id) or {})
+        player = dict(source_row.get("player") or {})
+        if player.get("applicable") is not True:
+            continue
+
+        state = str(truth.get("player_identity_health") or "")
+        if state not in {"GREEN", "AMBER", "RED"}:
+            continue
+
+        telemetry = {
+            "canonical_coverage_ratio": truth.get("canonical_coverage_ratio"),
+            "observed_provider_count": truth.get("observed_provider_player_count"),
+            "observed_join_eligible_count": truth.get("observed_join_eligible_player_count"),
+            "observed_joined_count": truth.get("observed_joined_player_count"),
+            "observed_actionable_unmapped_count": truth.get("observed_unmapped_player_count"),
+            "observed_reviewed_provider_limitation_count": truth.get(
+                "observed_reviewed_provider_limitation_count"
+            ),
+            "observed_join_coverage_ratio": truth.get("observed_join_coverage_ratio"),
+            "provider_max_observed_join_coverage_ratio": truth.get(
+                "provider_max_observed_join_coverage_ratio"
+            ),
+            "provider_universe_completeness": truth.get("provider_universe_completeness"),
+            "absence_classification_status": truth.get("absence_classification_status"),
+            "identity_classification_counts": truth.get(
+                "provider_native_classification_counts"
+            ),
+            "identity_health_reason": truth.get("identity_health_reason"),
+            "observed_identity_truth_applied": True,
+            "join_permission_scope": "VERIFIED_ROWS_ONLY",
+        }
+        player.update(telemetry)
+        player["identity_health"] = state
+
+        player_coverage[source_id] = dict(player)
+        player_bridge_coverage[source_id] = dict(player)
+        source_row["player"] = dict(player)
+        source_row["identity_health"] = _aggregate(
+            [
+                dict(source_row.get("player") or {}),
+                dict(source_row.get("team") or {}),
+                dict(source_row.get("fixture") or {}),
+            ]
+        )
+        per_source[source_id] = source_row
+
+    external_player_rows = [
+        dict(row.get("player") or {})
+        for source_id, row in per_source.items()
+        if source_id != canonical_source
+    ]
+    external_entity_rows = [
+        dict(entity)
+        for source_id, row in per_source.items()
+        if source_id != canonical_source
+        for entity in (
+            row.get("player") or {},
+            row.get("team") or {},
+            row.get("fixture") or {},
+        )
+    ]
+
+    player_bridge["coverage"] = player_bridge_coverage
+    player_bridge["identity_health"] = _aggregate(external_player_rows)
+    bridges["player"] = player_bridge
+    out["coverage"] = player_coverage
+    out["entity_bridges"] = bridges
+    out["source_entity_identity"] = per_source
+    out["identity_health"] = _aggregate(external_player_rows)
+    out["bridge_identity_health"] = _aggregate(external_entity_rows)
+    out.setdefault("governance", {})[
+        "observed_player_identity_truth_propagates_to_health"
+    ] = True
+    out["governance"]["observed_truth_does_not_create_identity_links"] = True
+    out["governance"]["consumer_join_permission_remains_verified_rows_only"] = True
+    return out
+
+
 def source_identity_observability(
     identity_map: dict[str, Any],
     source_id: str,

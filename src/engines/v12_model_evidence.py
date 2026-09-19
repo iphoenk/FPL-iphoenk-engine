@@ -247,26 +247,109 @@ def _pairs(forecasts: Sequence[Mapping[str, Any]], actuals: Sequence[Mapping[str
 def _metrics(pairs) -> dict[str, Any]:
     if not pairs:
         return {"status": "NO_SETTLED_SAMPLE", "sample_size": 0}
-    pp, ap = [_num(f["xpts"], "xpts") for f, _ in pairs], [_num(a["points"], "points") for _, a in pairs]
-    pm, am = [_num(f["xmins"], "xmins") for f, _ in pairs], [_num(a["minutes"], "minutes") for _, a in pairs]
-    starter = [(f, a) for f, a in pairs if f.get("start_probability") is not None and a.get("started") is not None]
-    dnp = [(f, a) for f, a in pairs if f.get("dnp_probability") is not None and a.get("dnp") is not None]
-    cs = [(f, a) for f, a in pairs if str(f.get("position") or "") in {"GK", "DEF", "MID"} and f.get("clean_sheet_probability") is not None and a.get("clean_sheet") is not None]
+    pp = [_num(f["xpts"], "xpts") for f, _ in pairs]
+    ap = [_num(a["points"], "points") for _, a in pairs]
+    pm = [_num(f["xmins"], "xmins") for f, _ in pairs]
+    am = [_num(a["minutes"], "minutes") for _, a in pairs]
+    starter = [
+        (f, a)
+        for f, a in pairs
+        if f.get("start_probability") is not None and a.get("started") is not None
+    ]
+    dnp = [
+        (f, a)
+        for f, a in pairs
+        if f.get("dnp_probability") is not None and a.get("dnp") is not None
+    ]
+    cs = [
+        (f, a)
+        for f, a in pairs
+        if str(f.get("position") or "") in {"GK", "DEF", "MID"}
+        and f.get("clean_sheet_probability") is not None
+        and a.get("clean_sheet") is not None
+    ]
+    goal = [
+        (f, a)
+        for f, a in pairs
+        if f.get("goal_probability") is not None and a.get("goals") is not None
+    ]
+    assist = [
+        (f, a)
+        for f, a in pairs
+        if f.get("assist_probability") is not None and a.get("assists") is not None
+    ]
+    defcon = [
+        (f, a)
+        for f, a in pairs
+        if f.get("defcon_probability") is not None and a.get("defcon_hit") is not None
+    ]
+    saves = [
+        (f, a)
+        for f, a in pairs
+        if f.get("expected_saves") is not None and a.get("saves") is not None
+    ]
+    intervals = [
+        (f, a)
+        for f, a in pairs
+        if isinstance(f.get("xpts_interval"), (list, tuple))
+        and len(f.get("xpts_interval")) == 2
+        and a.get("points") is not None
+    ]
+    save_errors = [
+        _num(a["saves"], "saves") - _num(f["expected_saves"], "expected_saves")
+        for f, a in saves
+    ]
     return {
         "status": SETTLED,
         "sample_size": len(pairs),
         "xpts_mae": _r(_avg([abs(a - p) for p, a in zip(pp, ap)])),
         "xpts_rmse": _r(math.sqrt(_avg([(a - p) ** 2 for p, a in zip(pp, ap)]))),
         "xmins_mae": _r(_avg([abs(a - p) for p, a in zip(pm, am)])),
-        "starter_brier": _r(_avg([(_prob(f["start_probability"], "start_probability") - _num(a["started"], "started")) ** 2 for f, a in starter])),
+        "starter_brier": _r(_avg([
+            (_prob(f["start_probability"], "start_probability") - _num(a["started"], "started")) ** 2
+            for f, a in starter
+        ])),
         "starter_sample_size": len(starter),
-        "dnp_brier": _r(_avg([(_prob(f["dnp_probability"], "dnp_probability") - _num(a["dnp"], "dnp")) ** 2 for f, a in dnp])),
+        "dnp_brier": _r(_avg([
+            (_prob(f["dnp_probability"], "dnp_probability") - _num(a["dnp"], "dnp")) ** 2
+            for f, a in dnp
+        ])),
         "dnp_sample_size": len(dnp),
-        "clean_sheet_brier": _r(_avg([(_prob(f["clean_sheet_probability"], "clean_sheet_probability") - _num(a["clean_sheet"], "clean_sheet")) ** 2 for f, a in cs])),
+        "clean_sheet_brier": _r(_avg([
+            (_prob(f["clean_sheet_probability"], "clean_sheet_probability") - _num(a["clean_sheet"], "clean_sheet")) ** 2
+            for f, a in cs
+        ])),
         "clean_sheet_sample_size": len(cs),
+        "goal_brier": _r(_avg([
+            (_prob(f["goal_probability"], "goal_probability") - (1.0 if _num(a["goals"], "goals") >= 1 else 0.0)) ** 2
+            for f, a in goal
+        ])),
+        "goal_sample_size": len(goal),
+        "assist_brier": _r(_avg([
+            (_prob(f["assist_probability"], "assist_probability") - (1.0 if _num(a["assists"], "assists") >= 1 else 0.0)) ** 2
+            for f, a in assist
+        ])),
+        "assist_sample_size": len(assist),
+        "defcon_brier": _r(_avg([
+            (_prob(f["defcon_probability"], "defcon_probability") - _num(a["defcon_hit"], "defcon_hit")) ** 2
+            for f, a in defcon
+        ])),
+        "defcon_sample_size": len(defcon),
+        "save_mae": _r(_avg([abs(error) for error in save_errors])),
+        "save_rmse": _r(math.sqrt(_avg([error * error for error in save_errors])))
+        if save_errors else None,
+        "save_sample_size": len(saves),
+        "predictive_interval_coverage": _r(_avg([
+            1.0
+            if _num(f["xpts_interval"][0], "xpts_interval low")
+            <= _num(a["points"], "points")
+            <= _num(f["xpts_interval"][1], "xpts_interval high")
+            else 0.0
+            for f, a in intervals
+        ])),
+        "predictive_interval_sample_size": len(intervals),
         "spearman_rank": _r(_spearman(pp, ap)),
     }
-
 
 def prediction_calibration_metrics(forecasts: Sequence[Mapping[str, Any]], actuals: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     pairs = _pairs(forecasts, actuals)

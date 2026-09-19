@@ -285,8 +285,16 @@ def run() -> dict:
         if forbidden in decision_text:
             errors.append(f"legacy projection/direct-fetch path reintroduced in decision_intelligence: {forbidden}")
     historical_text = (ROOT / "src" / "models" / "historical_projection.py").read_text(encoding="utf-8")
-    if "from src.models.projection_components import" not in historical_text:
-        errors.append("historical projection must consume neutral projection_components")
+    if "from src.engines.v12_player_events import" not in historical_text:
+        errors.append("historical projection must consume V12-native player event owner")
+    if "from src.models.projection_components import" in historical_text:
+        errors.append("historical projection must not retain legacy projection_components as production event owner")
+    event_text = (ROOT / "src" / "engines" / "v12_player_events.py").read_text(encoding="utf-8")
+    if "MODEL_OWNER = \"V12_PLAYER_EVENTS\"" not in event_text:
+        errors.append("V12 player event capability must declare stable production ownership")
+    for forbidden in ("src.runtime_v6", "runtime_v3", "package_optimizer"):
+        if forbidden in event_text:
+            errors.append(f"V12 player event owner has forbidden production dependency: {forbidden}")
 
     battle_threshold = ((lineup_policy.get("battle") or {}).get("close_margin_threshold"))
     try:

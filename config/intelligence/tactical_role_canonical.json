@@ -1,18 +1,18 @@
 {
-  "schema_version": 1,
-  "contract": "V12_TACTICAL_ROLE_CANONICAL_V1",
+  "schema_version": 2,
+  "contract": "V12_TACTICAL_ROLE_CANONICAL_V2",
   "model_id": "v12_tactical_role_canonical",
   "model_owner": "V12_TACTICAL_ROLE",
-  "model_version": "v12-tactical-role-canonical-v1",
-  "feature_version": "tactical-role-features-v1",
-  "parameter_version": "p1.6-tactical-role-v1",
+  "model_version": "v12-tactical-role-canonical-v2",
+  "feature_version": "tactical-role-contextual-features-v2",
+  "parameter_version": "p1.6-contextual-role-v2",
   "canonical_component": "TACTICAL_ROLE",
   "canonical_component_weight": 0.25,
   "normalization": {
-    "prior_center": 50.0,
-    "minimum_score": 0.0,
-    "maximum_score": 100.0,
-    "observed_authority_factor": 1.0,
+    "prior_center": 50,
+    "minimum_score": 0,
+    "maximum_score": 100,
+    "observed_authority_factor": 1,
     "inferred_authority_factor": 0.65,
     "score_formula": "50 + 50 * directional_signal * scoreable_feature_coverage",
     "missing_evidence_semantics": "PRIOR_CENTER_SHRINKAGE_NOT_NEUTRAL_FACT",
@@ -69,31 +69,106 @@
     ]
   },
   "features": {
-    "actual_positional_deployment": {"group": "ROLE_DEPLOYMENT", "score_weight": 1.0},
-    "nominal_fpl_vs_actual_role": {"group": "ROLE_DEPLOYMENT", "score_weight": 1.0},
-    "central_wide_half_space_deployment": {"group": "ROLE_DEPLOYMENT", "score_weight": 1.0},
-    "attacking_freedom": {"group": "ROLE_DEPLOYMENT", "score_weight": 1.0},
-    "defensive_burden": {"group": "ROLE_DEPLOYMENT", "score_weight": 1.0},
-    "box_occupation": {"group": "ROLE_DEPLOYMENT", "score_weight": 1.0},
-    "progression_route": {"group": "ROLE_DEPLOYMENT", "score_weight": 1.0},
-    "overlap_underlap": {"group": "ROLE_DEPLOYMENT", "score_weight": 1.0},
-    "set_piece_hierarchy": {"group": "HIERARCHY_USAGE", "score_weight": 1.0},
-    "penalty_hierarchy": {"group": "HIERARCHY_USAGE", "score_weight": 1.0},
-    "substitution_pattern": {"group": "HIERARCHY_USAGE", "score_weight": 1.0},
-    "starter_role_stability": {"group": "HIERARCHY_USAGE", "score_weight": 1.0},
-    "coach_selection_consistency": {"group": "HIERARCHY_USAGE", "score_weight": 1.0},
-    "system_formation_fit": {"group": "SYSTEM_FIT", "score_weight": 1.0},
-    "pressing_compatibility": {"group": "SYSTEM_FIT", "score_weight": 1.0},
-    "transition_attacking_role": {"group": "SYSTEM_FIT", "score_weight": 1.0},
-    "transition_defensive_burden": {"group": "SYSTEM_FIT", "score_weight": 1.0},
-    "opponent_wide_vulnerability": {"group": "OPPONENT_CHANNEL", "score_weight": 1.0},
-    "opponent_half_space_vulnerability": {"group": "OPPONENT_CHANNEL", "score_weight": 1.0},
-    "opponent_central_channel_vulnerability": {"group": "OPPONENT_CHANNEL", "score_weight": 1.0},
-    "opponent_transition_weakness": {"group": "OPPONENT_CHANNEL", "score_weight": 1.0},
-    "opponent_set_piece_weakness": {"group": "OPPONENT_CHANNEL", "score_weight": 1.0},
-    "opponent_pressing_behavior": {"group": "OPPONENT_CHANNEL", "score_weight": 1.0},
-    "opponent_defensive_line": {"group": "OPPONENT_CHANNEL", "score_weight": 1.0},
-    "rest_congestion_interaction": {"group": "REST_CONGESTION", "score_weight": 1.0}
+    "actual_positional_deployment": {
+      "group": "ROLE_DEPLOYMENT",
+      "score_weight": 1
+    },
+    "nominal_fpl_vs_actual_role": {
+      "group": "ROLE_DEPLOYMENT",
+      "score_weight": 1
+    },
+    "central_wide_half_space_deployment": {
+      "group": "ROLE_DEPLOYMENT",
+      "score_weight": 1
+    },
+    "attacking_freedom": {
+      "group": "ROLE_DEPLOYMENT",
+      "score_weight": 1
+    },
+    "defensive_burden": {
+      "group": "ROLE_DEPLOYMENT",
+      "score_weight": 1
+    },
+    "box_occupation": {
+      "group": "ROLE_DEPLOYMENT",
+      "score_weight": 1
+    },
+    "progression_route": {
+      "group": "ROLE_DEPLOYMENT",
+      "score_weight": 1
+    },
+    "overlap_underlap": {
+      "group": "ROLE_DEPLOYMENT",
+      "score_weight": 1
+    },
+    "set_piece_hierarchy": {
+      "group": "HIERARCHY_USAGE",
+      "score_weight": 1
+    },
+    "penalty_hierarchy": {
+      "group": "HIERARCHY_USAGE",
+      "score_weight": 1
+    },
+    "substitution_pattern": {
+      "group": "HIERARCHY_USAGE",
+      "score_weight": 1
+    },
+    "starter_role_stability": {
+      "group": "HIERARCHY_USAGE",
+      "score_weight": 1
+    },
+    "coach_selection_consistency": {
+      "group": "HIERARCHY_USAGE",
+      "score_weight": 1
+    },
+    "system_formation_fit": {
+      "group": "SYSTEM_FIT",
+      "score_weight": 1
+    },
+    "pressing_compatibility": {
+      "group": "SYSTEM_FIT",
+      "score_weight": 1
+    },
+    "transition_attacking_role": {
+      "group": "SYSTEM_FIT",
+      "score_weight": 1
+    },
+    "transition_defensive_burden": {
+      "group": "SYSTEM_FIT",
+      "score_weight": 1
+    },
+    "opponent_wide_vulnerability": {
+      "group": "OPPONENT_CHANNEL",
+      "score_weight": 1
+    },
+    "opponent_half_space_vulnerability": {
+      "group": "OPPONENT_CHANNEL",
+      "score_weight": 1
+    },
+    "opponent_central_channel_vulnerability": {
+      "group": "OPPONENT_CHANNEL",
+      "score_weight": 1
+    },
+    "opponent_transition_weakness": {
+      "group": "OPPONENT_CHANNEL",
+      "score_weight": 1
+    },
+    "opponent_set_piece_weakness": {
+      "group": "OPPONENT_CHANNEL",
+      "score_weight": 1
+    },
+    "opponent_pressing_behavior": {
+      "group": "OPPONENT_CHANNEL",
+      "score_weight": 1
+    },
+    "opponent_defensive_line": {
+      "group": "OPPONENT_CHANNEL",
+      "score_weight": 1
+    },
+    "rest_congestion_interaction": {
+      "group": "REST_CONGESTION",
+      "score_weight": 1
+    }
   },
   "calibration": {
     "automatic_retuning": false,
@@ -115,6 +190,112 @@
     "package_optimizer_started": false,
     "monte_carlo_started": false,
     "mini_league_overlay_started": false,
-    "automatic_parameter_retuning": false
+    "automatic_parameter_retuning": false,
+    "fixture_difficulty_is_suppressor_not_veto": true,
+    "contextual_feature_contract": "P1_6_CONTEXTUAL_PLAYER_FIXTURE_V1",
+    "home_context_applied_once": true,
+    "player_quality_separate_from_transfer_action_cost": true,
+    "named_player_special_cases_forbidden": true,
+    "single_match_overfit_forbidden": true
+  },
+  "contextual_feature_contract": {
+    "contract_id": "P1_6_CONTEXTUAL_PLAYER_FIXTURE_V1",
+    "model_owner": "V12_TACTICAL_ROLE",
+    "required_output_fields": [
+      "home_attack_context",
+      "attacking_involvement_score",
+      "role_security_score",
+      "scoring_channel_vector",
+      "scoring_channel_diversity",
+      "tactical_role_fit",
+      "fixture_suppression_raw",
+      "role_resilience",
+      "fixture_suppression_effective",
+      "canonical_tactical_role_score"
+    ],
+    "scoring_channels": [
+      "GOAL",
+      "ASSIST",
+      "SET_PIECE",
+      "PENALTY",
+      "DEFENSIVE_CONTRIBUTION",
+      "CLEAN_SHEET",
+      "BONUS"
+    ],
+    "dependency_groups": {
+      "ATTACK_OPEN_PLAY": [
+        "GOAL",
+        "ASSIST"
+      ],
+      "DEAD_BALL": [
+        "SET_PIECE",
+        "PENALTY"
+      ],
+      "DEFENSIVE": [
+        "DEFENSIVE_CONTRIBUTION",
+        "CLEAN_SHEET"
+      ],
+      "BONUS": [
+        "BONUS"
+      ]
+    },
+    "formulas": {
+      "bounded_ratio": "x/(x+reference), reference>0",
+      "home_ratio_transform": "venue_ratio/(1+venue_ratio)",
+      "involvement_shrinkage": "0.5 + reliability * (raw_involvement - 0.5)",
+      "involvement_reliability": "evidence_minutes/(evidence_minutes + p1.3_rate_shrinkage_minutes)",
+      "role_security": "arithmetic mean of available bounded P1.1/start-usage signals",
+      "channel_diversity": "normalized Shannon entropy across dependency-group strengths multiplied by strongest group strength",
+      "tactical_fit": "route-edge share shrunk toward 0.5 by evidence-confidence rank",
+      "raw_fixture_suppression": "channel-exposure weighted max(0, 1 - 1/opponent_neutral_strength_index)",
+      "role_resilience": "0.5 + evidence_completeness * (mean_available_context - 0.5)",
+      "resilience_adjustment": "1/(1+role_resilience)",
+      "effective_fixture_suppression": "fixture_suppression_raw * resilience_adjustment",
+      "pre_suppression_role_quality": "sqrt(evidence_role_score_0_1 * role_resilience)",
+      "final_tactical_role_score": "100 * pre_suppression_role_quality * (1 - fixture_suppression_effective)"
+    },
+    "missing_data": {
+      "optional_context": "EXPLICIT_UNAVAILABLE_AND_OMITTED_FROM_AVAILABLE_MEAN",
+      "missing_fixture_suppression": "CONTEXTUAL_SCORE_UNSCORABLE_FALLBACK_TO_EVIDENCE_ROLE_SCORE_WITH_DIAGNOSTIC",
+      "missing_is_zero": false,
+      "missing_is_neutral_fact": false
+    },
+    "double_count_guards": {
+      "home_context": "VENUE_SPECIFIC_DELTAS_ONLY; GENERIC OPPONENT STRENGTH EXCLUDED",
+      "attacking_involvement": "INTERACTION_RESILIENCE_ONLY; NOT RE-ADDED AS EVENT EXPECTATION",
+      "role_security": "P1.1_CONSUMED_NOT_OWNED; INTERACTION_ONLY",
+      "scoring_channels": "P1.3_EVENT_SURFACE_CONSUMED_READ_ONLY; NO POSTERIOR REWRITE",
+      "fixture_suppression": "NEUTRAL_OPPONENT_STRENGTH_ONLY; VENUE DELTA EXCLUDED",
+      "transfer_cost": "FORBIDDEN_FROM_INTRINSIC_TACTICAL_ROLE_SCORE"
+    },
+    "parameter_binding": {
+      "parameter_set_id": "P1_6_CONTEXTUAL_BOUNDED_STRUCTURAL_V1",
+      "parameter_version": "p1.6-contextual-role-v2",
+      "calibration_authority": "P1.5_CALIBRATION_DECISION_LEDGER",
+      "calibration_provenance": "control/fpl_master_v12/FPL_MASTER_STATE_V12.json#model_evidence.records",
+      "settled_sample_size_at_introduction": 0,
+      "calibration_confidence_at_introduction": "LOW",
+      "rationale": "Use monotonic bounded structural transforms and donor-owned priors/thresholds; do not fit coefficients to one match or named player.",
+      "automatic_retuning": false,
+      "outcome_fitted_coefficients": false,
+      "named_player_conditioning": false
+    },
+    "donor_parameter_sources": {
+      "p1_3_rate_shrinkage_minutes": "config/intelligence/player_events.json#rate_shrinkage_minutes",
+      "p1_3_position_priors": "config/intelligence/player_events.json#position_priors",
+      "tactical_role_thresholds": "config/intelligence/tactical_role_context.json#role_thresholds",
+      "p1_1_minutes": "src/engines/v12_player_minutes.py",
+      "team_strength": "src/models/team_strength.py"
+    },
+    "governance": {
+      "fixture_difficulty_is_suppressor_not_veto": true,
+      "strong_role_retains_measurable_upside_under_difficult_fixture": true,
+      "home_is_not_automatic_bonus": true,
+      "multi_channel_is_not_linear_bonus": true,
+      "opponent_strength_is_never_erased": true,
+      "no_named_player_runtime_special_case": true,
+      "no_single_match_overfit": true,
+      "no_transfer_action_cost_in_intrinsic_score": true
+    }
   }
 }

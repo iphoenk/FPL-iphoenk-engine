@@ -18,7 +18,10 @@ from src.engines.v12_tactical_role import (
     CANONICAL_WEIGHT,
     TacticalRoleContractError,
     attach_tactical_role_scores,
+    bounded_counterfactual_validation,
+    compose_contextual_tactical_score,
     migration_comparison,
+    score_player_fixture_context,
     score_tactical_role,
 )
 
@@ -507,3 +510,405 @@ def test_30_calibration_hooks_are_diagnostic_only():
     assert output["calibration_confidence"] == "LOW"
     assert output["governance"]["automatic_retuning"] is False
     assert output["governance"]["canonical_weight_mutation"] is False
+
+
+
+def contextual_player():
+    return {
+        "element": 901,
+        "team_id": 1,
+        "position": "MID",
+        "element_type": 3,
+        "current_season": {"starts": 4, "minutes": 360},
+        "xmins": {
+            "start_probability": 0.90,
+            "expected_minutes": 78.0,
+            "starter_minutes_if_start": 82.0,
+        },
+        "posterior_rates": {
+            "goal": {
+                "posterior_rate90": 0.40,
+                "prior": 0.20,
+            },
+            "assist": {
+                "posterior_rate90": 0.30,
+                "prior": 0.20,
+            },
+            "bonus": {
+                "posterior_rate90": 0.35,
+                "prior": 0.28,
+            },
+            "defcon": {
+                "eligible": True,
+                "posterior_count_rate90": 8.0,
+                "threshold": 12,
+            },
+        },
+        "tactical_role": {
+            "evidence_minutes": 360,
+            "metrics": {
+                "xg_per90": 0.40,
+                "xa_per90": 0.30,
+                "shots_per90": 2.8,
+                "touches_opposition_box_per90": 5.5,
+                "chances_created_per90": 2.5,
+            },
+        },
+        "tactical_matchup": {
+            "opponent_team_id": 2,
+            "tactical_edge": ["wide_delivery", "chance_creation"],
+            "tactical_risk": ["box_pressure"],
+            "tactical_matchup_label": "MIXED",
+            "evidence_confidence": "HIGH",
+        },
+    }
+
+
+def contextual_fixture(home=True):
+    return {
+        "event": 5,
+        "fixture": "gw5:1:2",
+        "home": home,
+        "opponent": 2,
+    }
+
+
+def contextual_strength(opponent_scale=1.0):
+    return {
+        "baseline": {
+            "home_goals": 1.55,
+            "away_goals": 1.25,
+        },
+        "teams": [
+            {
+                "team_id": 1,
+                "matches_played": 4,
+                "attack_home_index": 1.20,
+                "attack_away_index": 1.00,
+                "defence_home_index": 1.10,
+                "defence_away_index": 1.00,
+            },
+            {
+                "team_id": 2,
+                "matches_played": 4,
+                "attack_home_index": 1.25 * opponent_scale,
+                "attack_away_index": 1.15 * opponent_scale,
+                "defence_home_index": 1.30 * opponent_scale,
+                "defence_away_index": 1.10 * opponent_scale,
+            },
+        ],
+    }
+
+
+def contextual_roles():
+    return (
+        {
+            "state": "OBSERVED",
+            "source": "OFFICIAL_FPL_BOOTSTRAP",
+            "corners": "PRIMARY",
+            "direct_free_kick": "SECONDARY",
+            "indirect_free_kick": "PRIMARY",
+        },
+        {
+            "state": "OBSERVED",
+            "source": "OFFICIAL_FPL_BOOTSTRAP",
+            "hierarchy": "PRIMARY",
+            "penalty_primary": True,
+        },
+    )
+
+
+def compose_case(**overrides):
+    payload = {
+        "evidence_role_score": 75.0,
+        "home_attack_context": 0.65,
+        "attacking_involvement_score": 0.75,
+        "role_security_score": 0.80,
+        "scoring_channel_diversity": 0.65,
+        "tactical_role_fit": 0.70,
+        "fixture_suppression_raw": 0.35,
+    }
+    payload.update(overrides)
+    return compose_contextual_tactical_score(**payload)
+
+
+def test_31_strong_role_difficult_fixture_is_not_automatic_rejection():
+    strong = compose_case(
+        evidence_role_score=80.0,
+        home_attack_context=0.80,
+        attacking_involvement_score=0.90,
+        role_security_score=0.90,
+        scoring_channel_diversity=0.80,
+        tactical_role_fit=0.80,
+        fixture_suppression_raw=0.50,
+    )
+    weak = compose_case(
+        evidence_role_score=35.0,
+        home_attack_context=0.50,
+        attacking_involvement_score=0.30,
+        role_security_score=0.30,
+        scoring_channel_diversity=0.20,
+        tactical_role_fit=0.30,
+        fixture_suppression_raw=0.50,
+    )
+    assert strong["canonical_tactical_role_score"] > weak["canonical_tactical_role_score"]
+    assert strong["fixture_suppression_effective"] > 0.0
+    assert strong["canonical_tactical_role_score"] > 0.0
+
+
+def test_32_weak_role_easy_fixture_is_not_automatic_recommendation():
+    weak_easy = compose_case(
+        evidence_role_score=35.0,
+        home_attack_context=0.50,
+        attacking_involvement_score=0.30,
+        role_security_score=0.30,
+        scoring_channel_diversity=0.20,
+        tactical_role_fit=0.30,
+        fixture_suppression_raw=0.0,
+    )
+    strong_easy = compose_case(
+        evidence_role_score=80.0,
+        home_attack_context=0.50,
+        attacking_involvement_score=0.90,
+        role_security_score=0.90,
+        scoring_channel_diversity=0.80,
+        tactical_role_fit=0.80,
+        fixture_suppression_raw=0.0,
+    )
+    assert weak_easy["canonical_tactical_role_score"] < strong_easy["canonical_tactical_role_score"]
+
+
+def test_33_meaningful_channel_diversity_can_improve_score():
+    single = compose_case(scoring_channel_diversity=0.10)
+    multi = compose_case(scoring_channel_diversity=0.80)
+    assert multi["canonical_tactical_role_score"] > single["canonical_tactical_role_score"]
+
+
+def test_34_fixture_suppression_is_bounded():
+    result = compose_case(fixture_suppression_raw=5.0)
+    assert result["fixture_suppression_raw"] == 1.0
+    assert 0.0 <= result["fixture_suppression_effective"] <= 1.0
+
+
+def test_35_resilience_reduces_but_never_erases_suppression():
+    low = compose_case(
+        home_attack_context=0.10,
+        attacking_involvement_score=0.10,
+        role_security_score=0.10,
+        scoring_channel_diversity=0.10,
+        tactical_role_fit=0.10,
+        fixture_suppression_raw=0.80,
+    )
+    high = compose_case(
+        home_attack_context=1.0,
+        attacking_involvement_score=1.0,
+        role_security_score=1.0,
+        scoring_channel_diversity=1.0,
+        tactical_role_fit=1.0,
+        fixture_suppression_raw=0.80,
+    )
+    assert high["fixture_suppression_effective"] < low["fixture_suppression_effective"]
+    assert high["fixture_suppression_effective"] > 0.0
+    assert high["fixture_suppression_effective"] <= high["fixture_suppression_raw"]
+
+
+def test_36_home_context_is_applied_once_and_separated_from_raw_suppression():
+    set_piece, penalty = contextual_roles()
+    output = score_player_fixture_context(
+        player=contextual_player(),
+        fixture=contextual_fixture(home=True),
+        evidence_role_score=70.0,
+        team_strength=contextual_strength(),
+        set_piece_role=set_piece,
+        penalty_role=penalty,
+    )
+    home = output["feature_evidence"]["home_attack_context"]
+    suppression = output["feature_evidence"]["fixture_suppression_raw"]
+    assert home["application_count"] == 1
+    assert home["generic_opponent_strength_consumed"] is False
+    assert suppression["venue_specific_delta_excluded"] is True
+    assert output["double_count_diagnostics"]["home_context_application_count"] == 1
+
+
+def test_37_transfer_cost_is_not_part_of_intrinsic_tactical_score():
+    set_piece, penalty = contextual_roles()
+    base_player = contextual_player()
+    expensive = deepcopy(base_player)
+    expensive.update(
+        {
+            "now_cost": 150,
+            "hit_points": 4,
+            "bank": 0,
+            "free_transfers": 0,
+            "package_constraint": "DIFFERENT",
+        }
+    )
+    cheap = deepcopy(base_player)
+    cheap.update(
+        {
+            "now_cost": 40,
+            "hit_points": 0,
+            "bank": 100,
+            "free_transfers": 5,
+            "package_constraint": "OTHER",
+        }
+    )
+    kwargs = {
+        "fixture": contextual_fixture(),
+        "evidence_role_score": 70.0,
+        "team_strength": contextual_strength(),
+        "set_piece_role": set_piece,
+        "penalty_role": penalty,
+    }
+    left = score_player_fixture_context(player=expensive, **kwargs)
+    right = score_player_fixture_context(player=cheap, **kwargs)
+    assert left["canonical_tactical_role_score"] == right["canonical_tactical_role_score"]
+    assert left["double_count_diagnostics"]["transfer_action_cost_present"] is False
+
+
+def test_38_increasing_role_security_cannot_reduce_score_all_else_equal():
+    low = compose_case(role_security_score=0.20)
+    high = compose_case(role_security_score=0.90)
+    assert high["canonical_tactical_role_score"] >= low["canonical_tactical_role_score"]
+
+
+def test_39_increasing_attacking_involvement_cannot_reduce_score_all_else_equal():
+    low = compose_case(attacking_involvement_score=0.20)
+    high = compose_case(attacking_involvement_score=0.90)
+    assert high["canonical_tactical_role_score"] >= low["canonical_tactical_role_score"]
+
+
+def test_40_worse_opponent_cannot_improve_score_all_else_equal():
+    easier = compose_case(fixture_suppression_raw=0.10)
+    harder = compose_case(fixture_suppression_raw=0.70)
+    assert harder["canonical_tactical_role_score"] <= easier["canonical_tactical_role_score"]
+
+
+def test_41_same_snapshot_and_model_inputs_are_exactly_deterministic():
+    set_piece, penalty = contextual_roles()
+    kwargs = {
+        "player": contextual_player(),
+        "fixture": contextual_fixture(),
+        "evidence_role_score": 70.0,
+        "team_strength": contextual_strength(),
+        "set_piece_role": set_piece,
+        "penalty_role": penalty,
+    }
+    assert score_player_fixture_context(**deepcopy(kwargs)) == score_player_fixture_context(**deepcopy(kwargs))
+
+
+def test_42_missing_optional_tactical_evidence_is_explicit_not_silent_zero():
+    player = contextual_player()
+    player.pop("tactical_matchup")
+    set_piece, penalty = contextual_roles()
+    output = score_player_fixture_context(
+        player=player,
+        fixture=contextual_fixture(),
+        evidence_role_score=70.0,
+        team_strength=contextual_strength(),
+        set_piece_role=set_piece,
+        penalty_role=penalty,
+    )
+    assert output["tactical_role_fit"] is None
+    assert output["feature_evidence"]["tactical_role_fit"]["state"] == "UNAVAILABLE"
+    assert output["missing_data"]["missing_is_zero"] is False
+    assert output["canonical_tactical_role_score"] is not None
+
+
+def test_43_no_legacy_v3_v4_v5_fallback_in_p1_6_owner():
+    text = Path("src/engines/v12_tactical_role.py").read_text(encoding="utf-8").lower()
+    for forbidden in (
+        "from src.runtime_v3",
+        "from src.runtime_v4",
+        "from src.runtime_v5",
+        "import src.runtime_v3",
+        "import src.runtime_v4",
+        "import src.runtime_v5",
+    ):
+        assert forbidden not in text
+
+
+def test_44_no_v6_mutation_or_import_in_p1_6_owner():
+    text = Path("src/engines/v12_tactical_role.py").read_text(encoding="utf-8").lower()
+    assert "from src.runtime_v6" not in text
+    assert "import src.runtime_v6" not in text
+    assert "atomic_json(" not in text
+
+
+def test_45_no_package_optimizer_invocation_from_p1_6_owner():
+    text = Path("src/engines/v12_tactical_role.py").read_text(encoding="utf-8").lower()
+    assert "from src.engines.package_optimizer" not in text
+    assert "import src.engines.package_optimizer" not in text
+    assert "package_optimizer(" not in text
+
+
+def test_46_no_monte_carlo_invocation_from_p1_6_owner():
+    text = Path("src/engines/v12_tactical_role.py").read_text(encoding="utf-8").lower()
+    assert "from src.engines.monte_carlo" not in text
+    assert "import src.engines.monte_carlo" not in text
+    assert "monte_carlo(" not in text
+
+
+def test_47_no_player_or_club_specific_runtime_patch():
+    text = Path("src/engines/v12_tactical_role.py").read_text(encoding="utf-8").casefold()
+    for forbidden in ("pascal", "groß", "gross", "brighton", "arsenal"):
+        assert forbidden not in text
+
+
+def test_48_counterfactual_matrix_covers_required_representative_cases():
+    result = bounded_counterfactual_validation()
+    assert result["historical_outcomes_used"] is False
+    assert result["named_player_examples_used"] is False
+    assert set(result["scenarios"]) == {
+        "difficult_fixture_strong_role",
+        "difficult_fixture_weak_role",
+        "easy_fixture_strong_role",
+        "easy_fixture_weak_role",
+        "home_strong_role",
+        "away_strong_role",
+        "multi_channel_role",
+        "single_channel_role",
+    }
+    assert all(result["hypotheses"].values())
+    assert (
+        result["historical_support_status"]
+        == "UNPROVEN_UNTIL_SETTLED_PREDEADLINE_P1_5_SAMPLES_EXIST"
+    )
+
+
+def test_49_contextual_feature_contract_exposes_required_fields():
+    set_piece, penalty = contextual_roles()
+    output = score_player_fixture_context(
+        player=contextual_player(),
+        fixture=contextual_fixture(),
+        evidence_role_score=70.0,
+        team_strength=contextual_strength(),
+        set_piece_role=set_piece,
+        penalty_role=penalty,
+    )
+    required = {
+        "home_attack_context",
+        "attacking_involvement_score",
+        "role_security_score",
+        "scoring_channel_vector",
+        "scoring_channel_diversity",
+        "tactical_role_fit",
+        "fixture_suppression_raw",
+        "role_resilience",
+        "fixture_suppression_effective",
+        "canonical_tactical_role_score",
+    }
+    assert required <= set(output)
+    assert 0.0 <= output["canonical_tactical_role_score"] <= 100.0
+    assert output["model_version"] == "v12-tactical-role-canonical-v2"
+    assert output["feature_version"] == "tactical-role-contextual-features-v2"
+    assert output["parameter_version"] == "p1.6-contextual-role-v2"
+
+
+def test_50_contextual_calibration_hook_remains_low_without_settled_history():
+    output = tactical_role_calibration_metrics([])
+    assert output["settled_sample_size"] == 0
+    assert output["calibration_confidence"] == "LOW"
+    assert output["parameter_binding"]["parameter_set_id"] == "P1_6_CONTEXTUAL_BOUNDED_STRUCTURAL_V1"
+    assert output["governance"]["automatic_retuning"] is False
+    assert output["governance"]["named_player_parameter_tuning_forbidden"] is True

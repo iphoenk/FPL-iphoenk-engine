@@ -133,6 +133,23 @@ Underlying = xG/npxG/xA/xGI, shots/SIB, big chances, chances created, shares, ev
 Fixture/security = opponent H/A + P(available), P(start), start/bench/cameo/DNP mixture, xMins, rotation/rest/congestion.
 Transfer economics stay downstream: hit, FT/FT shadow value, buy-back, sell-value loss, price, ITB, structure, correlation, exit route.
 Chain: FOOTBALL SCORE -> EXPECTED POINTS/UNCERTAINTY -> TRANSFER ECONOMICS -> PACKAGE UTILITY -> ACTION.
+
+P1.6 V12-NATIVE TACTICAL / ROLE CONTEXTUAL CONTRACT:
+A. Fixture difficulty is a suppressor, not an overriding veto. Strong, secure, multi-channel attacking roles must retain measurable upside against difficult opponents, particularly when supported by favorable home and tactical context.
+B. This principle never means HOME=automatic bonus, multi-channel=automatic superiority, or difficult opponent=ignored. Opponent strength remains a negative suppressor when evidence supports it.
+C. The canonical player-fixture feature contract is: home_attack_context; attacking_involvement_score; role_security_score; scoring_channel_vector; scoring_channel_diversity; tactical_role_fit; fixture_suppression_raw; role_resilience; fixture_suppression_effective; canonical_tactical_role_score.
+D. home_attack_context uses venue-specific deltas only and is applied exactly once inside P1.6. Neutral/generic opponent strength is excluded from home context and belongs to fixture suppression / FIXTURE-SECURITY evidence. Never add a second flat home bonus.
+E. attacking_involvement_score may consume current xG/xA/shots/box/chance evidence only as bounded interaction/resilience evidence. It does not re-add raw CURRENT UNDERLYING expected points or event expectation to the 25% tactical component.
+F. role_security_score consumes P1.1 P(start), xMins, starter duration and factual start-usage evidence without taking ownership of P1.1 mathematics. It is not a replacement xMins model.
+G. scoring_channel_vector minimally exposes GOAL, ASSIST, SET_PIECE, PENALTY, DEFENSIVE_CONTRIBUTION, CLEAN_SHEET and BONUS. Diversity uses strength-aware dependency groups, not a linear count of channels.
+H. tactical_role_fit is numeric only when reproducible player-role × opponent-context evidence exists. Missing coach/system/shape/channel evidence remains explicit UNAVAILABLE and narrative text is not numeric authority.
+I. fixture_suppression_raw is bounded [0,1], venue-neutral inside P1.6 and decomposable into opponent attacking/defensive strength weighted by the player's evidenced scoring-channel exposure. Easy fixtures do not create an automatic tactical bonus.
+J. role_resilience is bounded [0,1] and is the completeness-shrunk mean of available home context, attacking involvement, role security, scoring-channel diversity and tactical fit. Missing optional evidence is explicit and is never silently treated as factual zero.
+K. resilience_adjustment = 1 / (1 + role_resilience). fixture_suppression_effective = fixture_suppression_raw × resilience_adjustment. Therefore 0 <= effective <= raw; positive opponent suppression can be reduced but never erased or turned into a bonus.
+L. pre_suppression_role_quality = sqrt(evidence_role_score_0_1 × role_resilience). canonical_tactical_role_score = 100 × pre_suppression_role_quality × (1 - fixture_suppression_effective), bounded to [0,100].
+M. P1.6 contextual interaction does not mutate P1.1 probabilities or P1.3 goal/assist/clean-sheet/DefCon/save posteriors. Future coupling of tactical context into those posterior distributions requires a separately governed change.
+N. PLAYER QUALITY != TRANSFER ACTION COST. Hit, FT state, FT shadow value, price, bank, affordability, package constraints, exit cost and opportunity cost are forbidden from canonical_tactical_role_score and remain downstream.
+O. No named-player, club-pair, opponent-specific or one-match hindsight special case may alter P1.6 runtime logic. Any future parameter change requires settled P1.5 calibration evidence with explicit sample size; one result never creates a tactical rule.
 Keep 1GW, 3GW and 5GW distinct.
 
 8. FULL UNIVERSE / GATE0

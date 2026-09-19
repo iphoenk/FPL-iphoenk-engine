@@ -298,11 +298,37 @@ def run() -> dict:
     tactical_text = (ROOT / "src" / "engines" / "v12_tactical_role.py").read_text(encoding="utf-8")
     if 'MODEL_OWNER = "V12_TACTICAL_ROLE"' not in tactical_text:
         errors.append("V12 tactical/role capability must declare stable production ownership")
+    tactical_cfg = _load(ROOT / "config" / "intelligence" / "tactical_role_canonical.json")
+    if tactical_cfg.get("contract") != "V12_TACTICAL_ROLE_CANONICAL_V2":
+        errors.append("V12 tactical/role canonical config must use contextual V2 contract")
+    if float(tactical_cfg.get("canonical_component_weight") or -1.0) != 0.25:
+        errors.append("V12 tactical/role canonical component weight must remain exactly 0.25")
+    contextual_cfg = tactical_cfg.get("contextual_feature_contract") or {}
+    required_contextual_fields = {
+        "home_attack_context",
+        "attacking_involvement_score",
+        "role_security_score",
+        "scoring_channel_vector",
+        "scoring_channel_diversity",
+        "tactical_role_fit",
+        "fixture_suppression_raw",
+        "role_resilience",
+        "fixture_suppression_effective",
+        "canonical_tactical_role_score",
+    }
+    if set(contextual_cfg.get("required_output_fields") or []) != required_contextual_fields:
+        errors.append("P1.6 contextual player-fixture feature contract field set drift")
+    if (contextual_cfg.get("governance") or {}).get("fixture_difficulty_is_suppressor_not_veto") is not True:
+        errors.append("P1.6 contextual contract must preserve fixture suppressor-not-veto semantics")
     for forbidden in (
         "from src.runtime_v6",
         "import src.runtime_v6",
         "from src.runtime_v3",
         "import src.runtime_v3",
+        "from src.runtime_v4",
+        "import src.runtime_v4",
+        "from src.runtime_v5",
+        "import src.runtime_v5",
         "from src.engines.package_optimizer",
         "import src.engines.package_optimizer",
         "from src.engines.monte_carlo",
@@ -316,6 +342,19 @@ def run() -> dict:
             errors.append(
                 f"V12 tactical/role owner has forbidden production dependency: {forbidden}"
             )
+    for forbidden_name in ("pascal", "groß", "gross", "brighton", "arsenal"):
+        if forbidden_name in tactical_text.casefold():
+            errors.append("V12 tactical/role owner contains named-player/club special-case text")
+    if "atomic_json(" in tactical_text:
+        errors.append("V12 tactical/role owner must not mutate factual/runtime artifacts")
+    for required in (
+        "def score_player_fixture_context(",
+        "def compose_contextual_tactical_score(",
+        "fixture_difficulty_is_suppressor_not_veto",
+        "player_quality_separate_from_transfer_action_cost",
+    ):
+        if required not in tactical_text:
+            errors.append(f"V12 tactical/role owner missing contextual capability marker: {required}")
     if "v12_tactical_role" in event_text:
         errors.append(
             "P1.3 player event owner must remain mathematically separate from P1.6 tactical scorer"
@@ -324,12 +363,22 @@ def run() -> dict:
     if (
         "from src.engines.v12_tactical_role import attach_tactical_role_scores"
         not in prediction_text
-        or "attach_tactical_role_scores(projections, planning_gw)"
+        or "attach_tactical_role_scores(projections, planning_gw, team_strength=strength)"
         not in prediction_text
     ):
         errors.append(
-            "prediction service must consume the V12-native tactical/role owner"
+            "prediction service must consume contextual V12-native tactical/role owner with read-only team strength"
         )
+    canonical_text = (
+        ROOT / "control" / "fpl_master_v12" / "FPL_MASTER_CANONICAL_V12.txt"
+    ).read_text(encoding="utf-8")
+    if (
+        "Fixture difficulty is a suppressor, not an overriding veto."
+        not in canonical_text
+    ):
+        errors.append("Canonical V12 must state fixture difficulty suppressor-not-veto principle")
+    if "PLAYER QUALITY != TRANSFER ACTION COST." not in canonical_text:
+        errors.append("Canonical V12 must separate player quality from transfer action cost")
 
     battle_threshold = ((lineup_policy.get("battle") or {}).get("close_margin_threshold"))
     try:

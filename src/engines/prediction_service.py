@@ -122,7 +122,7 @@ def run() -> dict:
     _annotate_tactical_effect(projections)
     assert_projection_signature_unchanged(pre_tactical_signature, projections)
     pre_native_tactical_signature = projection_signature(projections)
-    tactical_role_component = attach_tactical_role_scores(projections, planning_gw)
+    tactical_role_component = attach_tactical_role_scores(projections, planning_gw, team_strength=strength)
     assert_projection_signature_unchanged(pre_native_tactical_signature, projections)
     projection_diagnostics = build_position_projection_diagnostics(projections)
     projections["position_calibration_diagnostics"] = projection_diagnostics
@@ -145,6 +145,8 @@ def run() -> dict:
         "tactical_role_component_weight": 0.25,
         "p1_3_event_math_unchanged_by_p1_6": True,
         "p1_1_minutes_math_unchanged_by_p1_6": True,
+        "p1_6_contextual_fixture_suppression_uses_team_strength_read_only": True,
+        "p1_6_player_quality_excludes_transfer_action_cost": True,
         "position_projection_diagnostics_are_non_mutating": True,
         "v4_is_not_projection_calibration_truth": True,
     })

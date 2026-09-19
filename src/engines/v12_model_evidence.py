@@ -470,6 +470,20 @@ def tactical_role_calibration_metrics(
     direction_errors: list[float] = []
     decision_errors: list[float] = []
     confidence_errors: list[float] = []
+    contextual_names = (
+        "home_attack_context",
+        "attacking_involvement_score",
+        "role_security_score",
+        "scoring_channel_diversity",
+        "tactical_role_fit",
+        "fixture_suppression_raw",
+        "role_resilience",
+        "fixture_suppression_effective",
+        "canonical_tactical_role_score",
+    )
+    contextual_values: dict[str, list[float]] = {
+        name: [] for name in contextual_names
+    }
 
     for row in settled:
         if (
@@ -508,6 +522,12 @@ def tactical_role_calibration_metrics(
                 feature_values.setdefault(name, []).append(
                     _num(contribution, f"{name}.contribution")
                 )
+        for name in contextual_names:
+            value = row.get(name)
+            if value is not None:
+                contextual_values[name].append(
+                    _num(value, f"contextual.{name}")
+                )
 
     sample_size = len(settled)
     feature_usefulness = {
@@ -521,6 +541,20 @@ def tactical_role_calibration_metrics(
     return {
         "settled_sample_size": sample_size,
         "feature_usefulness": feature_usefulness,
+        "contextual_feature_diagnostics": {
+            name: {
+                "sample_size": len(values),
+                "mean": _r(_avg(values)),
+                "diagnostic_only": True,
+            }
+            for name, values in contextual_values.items()
+        },
+        "parameter_binding": {
+            "parameter_set_id": "P1_6_CONTEXTUAL_BOUNDED_STRUCTURAL_V1",
+            "parameter_version": "p1.6-contextual-role-v2",
+            "requires_settled_samples_for_future_change": True,
+            "outcome_fitted_coefficients_at_introduction": False,
+        },
         "score_calibration_mae": _r(_avg(score_errors)),
         "score_calibration_sample_size": len(score_errors),
         "direction_calibration_error_rate": _r(_avg(direction_errors)),
@@ -542,6 +576,9 @@ def tactical_role_calibration_metrics(
             "canonical_weight_mutation": False,
             "one_match_tactical_rule_forbidden": True,
             "diagnostic_learning_only": True,
+            "fixture_suppression_parameter_change_requires_settled_samples": True,
+            "role_resilience_parameter_change_requires_settled_samples": True,
+            "named_player_parameter_tuning_forbidden": True,
         },
     }
 

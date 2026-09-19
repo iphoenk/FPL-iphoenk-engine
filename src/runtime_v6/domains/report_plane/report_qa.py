@@ -397,6 +397,13 @@ _SECTION_TO_COUNT_LABEL = {
     "RISE20": "RISE20",
     "FALL20": "FALL20",
 }
+_SECTION_TO_RENDER_COUNT_LABEL = {
+    "ALL15": "ALL15_TACTICAL",
+    "WATCHLIST20": "WATCHLIST20",
+    "RISE20": "RISE20",
+    "FALL20": "FALL20",
+}
+
 
 
 def _section_state(
@@ -1660,6 +1667,24 @@ def validate_post_render_qa(
         actual = rendered_counts.get(label)
         if actual != target:
             failures.append(f"COUNT_MISMATCH={label}:{actual}!={target}")
+
+    for degradation in section_degradations:
+        section = str(degradation.get("section") or "")
+        label = _SECTION_TO_RENDER_COUNT_LABEL.get(section)
+        if not label:
+            continue
+        expected_available = degradation.get("available_count")
+        actual_available = rendered_counts.get(label)
+        if actual_available is None:
+            failures.append(f"DEGRADED_RENDER_COUNT_MISSING={section}")
+            continue
+        try:
+            if int(actual_available) != int(expected_available):
+                failures.append(
+                    f"DEGRADED_RENDER_COUNT_MISMATCH={section}:{actual_available}!={expected_available}"
+                )
+        except (TypeError, ValueError):
+            failures.append(f"DEGRADED_RENDER_COUNT_INVALID={section}")
 
     actual_fact_keys = sorted(str(key) for key in rendered_fact_keys)
     actual_model_keys = sorted(str(key) for key in rendered_model_keys)

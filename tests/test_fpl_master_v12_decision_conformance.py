@@ -27,6 +27,9 @@ from src.runtime_v6.domains.report_plane.report_qa import (
     _expected_visible_counts,
     validate_v12_decision_semantics,
 )
+from src.engines.production_contract_validate import (
+    _validate_xmins_probability_contract,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -442,3 +445,27 @@ def test_repository_python_execution_claim_requires_actual_evidence():
     }
     qa = validate_v12_decision_semantics(proof, serious_decision_required=True)
     assert "V12_PYTHON_EXECUTION_CLAIM_UNPROVEN" in qa["failures"]
+
+
+def test_production_contract_accepts_v12_hierarchical_probability_partition():
+    xm = {
+        "probability_semantics": "V12_HIERARCHICAL",
+        "start_probability": 0.60,
+        "bench_probability": 0.28,
+        "cameo_probability": 0.20,
+        "late_cameo_probability": 0.08,
+        "dnp_probability": 0.20,
+        "xmins_distribution": {
+            "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+            "states": [
+                {"state": "START"},
+                {"state": "CAMEO"},
+                {"state": "LATE_CAMEO"},
+                {"state": "ZERO_MINUTES"},
+            ],
+        },
+    }
+    result = _validate_xmins_probability_contract(xm)
+    assert result["semantics"] == "V12_HIERARCHICAL"
+    assert result["appearance_partition"] == "START+CAMEO+DNP"
+    assert result["bench_overlapping"] is True

@@ -1472,6 +1472,10 @@ def validate_post_render_qa(
             "next_action": "PRE_RENDER_QA",
             "legacy_fallback_allowed": False,
             "failures": ["PRE_RENDER_QA_NOT_PASSED"],
+            "hard_failures": ["PRE_RENDER_QA_NOT_PASSED"],
+            "section_degradations": [],
+            "warnings": [],
+            "report_can_continue": False,
             "visible_body_validated": False,
         }
 
@@ -1570,7 +1574,28 @@ def validate_post_render_qa(
         required_visible_markers=required_visible_markers,
     )
 
-    failures: list[str] = list(visible_body["failures"])
+    section_degradations = [
+        dict(row)
+        for row in pre_render_qa.get("section_degradations", [])
+        if isinstance(row, Mapping)
+    ]
+    degraded_sections = {
+        str(row.get("section") or "")
+        for row in section_degradations
+    }
+    visible_body_failures: list[str] = []
+    for failure in visible_body["failures"]:
+        if (
+            "ALL15" in degraded_sections
+            and str(failure).startswith("VISIBLE_COUNT_MISMATCH=ALL15_TACTICAL:")
+        ):
+            continue
+        visible_body_failures.append(str(failure))
+    failures: list[str] = visible_body_failures
+    warnings = [
+        str(value)
+        for value in pre_render_qa.get("warnings", [])
+    ]
     expected_visible_contract = pre_render_qa.get("visible_content_contract")
     if isinstance(expected_visible_contract, Mapping):
         actual_visible_contract = (
@@ -1585,8 +1610,17 @@ def validate_post_render_qa(
         if rendered_contract_validation.get("status") != "PASS":
             failures.extend(
                 f"VISIBLE_CONTENT_CONTRACT:{failure}"
-                for failure in rendered_contract_validation.get("failures", [])
+                for failure in rendered_contract_validation.get("hard_failures", [])
             )
+        section_degradations = [
+            dict(row)
+            for row in rendered_contract_validation.get("section_degradations", [])
+            if isinstance(row, Mapping)
+        ]
+        warnings = [
+            str(value)
+            for value in rendered_contract_validation.get("warnings", [])
+        ]
         if _content_fingerprint(actual_visible_contract) != str(pre_render_qa.get("visible_content_contract_fingerprint") or ""):
             failures.append("VISIBLE_CONTENT_CONTRACT_FINGERPRINT_MISMATCH")
         failures.extend(
@@ -1654,16 +1688,30 @@ def validate_post_render_qa(
                 f"WEATHER_CONTRACT_STATE_MISMATCH={actual_weather_state}!={expected_weather_state}"
             )
 
-    qa_passed = not failures
+    hard_failures = list(dict.fromkeys(failures))
+    qa_passed = not hard_failures
+    report_can_continue = qa_passed
+    qa_severity = (
+        "FAIL"
+        if hard_failures
+        else "DEGRADED"
+        if section_degradations
+        else "PASS"
+    )
     return {
         "status": "PASS" if qa_passed else "FAIL",
+        "qa_severity": qa_severity,
         "qa_stage": "POST_RENDER",
         "qa_passed": qa_passed,
+        "report_can_continue": report_can_continue,
         "delivery_ready": False,
-        "report_state": "BUILDING" if qa_passed else "QA_FAILED",
-        "next_action": "BUILD_DELIVERY_PROOF" if qa_passed else "RENDER_RECOVERY",
+        "report_state": "BUILDING" if report_can_continue else "QA_FAILED",
+        "next_action": "BUILD_DELIVERY_PROOF" if report_can_continue else "RENDER_RECOVERY",
         "legacy_fallback_allowed": False,
-        "failures": failures,
+        "failures": hard_failures,
+        "hard_failures": hard_failures,
+        "section_degradations": section_degradations,
+        "warnings": warnings,
         "compute_fingerprint": expected_compute_fingerprint,
         "render_contract_token": recomputed_pre_token,
         "expected_section_ids": expected_sections,

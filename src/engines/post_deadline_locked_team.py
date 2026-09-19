@@ -161,9 +161,9 @@ def _formation_legal(positions: Sequence[str | None]) -> bool:
     counts = Counter(pos for pos in positions if pos)
     return (
         counts.get("GK", 0) == 1
-        and counts.get("DEF", 0) >= 3
-        and counts.get("MID", 0) >= 2
-        and counts.get("FWD", 0) >= 1
+        and 3 <= counts.get("DEF", 0) <= 5
+        and 2 <= counts.get("MID", 0) <= 5
+        and 1 <= counts.get("FWD", 0) <= 3
         and sum(counts.values()) == 11
     )
 

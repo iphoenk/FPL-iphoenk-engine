@@ -27,6 +27,10 @@ from src.engines.v12_runtime_conformance import (
     apply_owned_player_presentation,
     validate_exposure_metric,
     format_exposure_metric,
+    finalize_same_occurrence_alert_evidence,
+    resolve_authenticated_affordability,
+    resolve_temporary_price_watch_lifecycle,
+    validate_identity_production_acceptance,
     split_bench_for_display,
     validate_1230_signal_delta,
     validate_decision_delta_rows,
@@ -1168,3 +1172,200 @@ def test_72_canonical_price_and_icon_contracts_bind_new_visible_semantics():
     assert "Partial denominator is a factual collected-scope denominator" in canonical
     assert "No legacy Library player identity may hydrate V12" in canonical
     assert "render the player name in Markdown bold" in canonical
+
+
+def test_73_newer_same_occurrence_authoritative_evidence_supersedes_preliminary_alert_values():
+    occurrence = "2026-09-19T17:30:00+07:00"
+    preliminary = {
+        "report_occurrence": occurrence,
+        "evidence_timestamp": "2026-09-19T17:29:50+07:00",
+        "sangare_predictor": -1.0,
+        "gross_predictor": 35.0,
+    }
+    final = {
+        "report_occurrence": occurrence,
+        "evidence_timestamp": "2026-09-19T17:30:29+07:00",
+        "authoritative_runtime_snapshot": True,
+        "publish_integrity": "PASS",
+        "sangare_predictor": -2.0,
+        "gross_predictor": 42.0,
+    }
+    result = finalize_same_occurrence_alert_evidence(
+        report_occurrence=occurrence,
+        alert_triggered=True,
+        preliminary_public_evidence=preliminary,
+        post_publication_public_evidence=final,
+        bound_core_run_id=35437571837,
+        publication_succeeded=True,
+    )
+    assert result["alert_visible"] is True
+    assert result["render_public_evidence_state"] == "POST_PUBLICATION_SAME_OCCURRENCE"
+    assert result["render_public_evidence"]["gross_predictor"] == 42.0
+    assert result["render_public_evidence"]["sangare_predictor"] == -2.0
+
+
+def test_74_in_progress_same_occurrence_binds_run_and_forbids_second_full_core_acquisition():
+    occurrence = "2026-09-19T17:30:00+07:00"
+    result = finalize_same_occurrence_alert_evidence(
+        report_occurrence=occurrence,
+        alert_triggered=True,
+        preliminary_public_evidence={"evidence_timestamp": "2026-09-19T17:29:50+07:00"},
+        bound_core_run_id=35437571837,
+        core_acquisition_in_progress=True,
+    )
+    assert result["bound_core_run_id"] == 35437571837
+    assert result["bounded_terminal_reread_required"] is True
+    assert result["launch_second_full_core_acquisition"] is False
+    with pytest.raises(RuntimeConformanceError):
+        finalize_same_occurrence_alert_evidence(
+            report_occurrence=occurrence,
+            alert_triggered=True,
+            preliminary_public_evidence={},
+            second_full_core_acquisition_requested=True,
+        )
+
+
+def test_75_authenticated_selling_price_and_bank_finalize_nominal_affordability_separately_from_ft_hit():
+    result = resolve_authenticated_affordability(
+        current_price=5.6,
+        purchase_price=5.5,
+        selling_price=5.5,
+        bank=0.5,
+        target_current_price=5.7,
+        free_transfers=None,
+        hit_cost_points=None,
+    )
+    assert result["available_transfer_budget"] == 6.0
+    assert result["nominal_affordability"] is True
+    assert result["remaining_if_bought"] == 0.3
+    assert result["affordability"] == "TRUE"
+    assert result["ft_hit_economics"] == "UNKNOWN"
+
+
+def test_76_stale_personal_evidence_is_not_preferred_over_current_same_occurrence_personal_evidence_contract():
+    occurrence = "2026-09-19T17:30:00+07:00"
+    result = finalize_same_occurrence_alert_evidence(
+        report_occurrence=occurrence,
+        alert_triggered=True,
+        preliminary_public_evidence={
+            "evidence_timestamp": "2026-09-19T17:30:00+07:00"
+        },
+        authenticated_personal_evidence={
+            "authenticated": True,
+            "report_occurrence": occurrence,
+            "evidence_timestamp": "2026-09-19T17:30:10+07:00",
+            "selling_price": 5.5,
+            "bank": 0.5,
+        },
+    )
+    assert result["authenticated_personal_evidence_state"] == "CURRENT_AUTHENTICATED"
+    assert result["authenticated_personal_evidence"]["selling_price"] == 5.5
+
+
+def test_77_routed_alert_remains_visible_after_trigger_when_final_numbers_change():
+    occurrence = "2026-09-19T17:30:00+07:00"
+    result = finalize_same_occurrence_alert_evidence(
+        report_occurrence=occurrence,
+        alert_triggered=True,
+        preliminary_public_evidence={
+            "report_occurrence": occurrence,
+            "evidence_timestamp": "2026-09-19T17:29:59+07:00",
+            "gross_predictor": 60.0,
+        },
+        post_publication_public_evidence={
+            "report_occurrence": occurrence,
+            "evidence_timestamp": "2026-09-19T17:30:29+07:00",
+            "authoritative_runtime_snapshot": True,
+            "publish_integrity": "PASS",
+            "gross_predictor": 42.0,
+        },
+        publication_succeeded=True,
+    )
+    assert result["alert_triggered"] is True
+    assert result["alert_visible"] is True
+    assert result["trigger_evidence_preserved"] is True
+    assert result["render_public_evidence"]["gross_predictor"] == 42.0
+
+
+def test_78_temporary_sangare_gross_watch_expires_only_after_20_sep_match_post_match_evidence_and_final_assessment():
+    active = resolve_temporary_price_watch_lifecycle(
+        target_match_date="2026-09-20",
+        match_complete=False,
+        immediate_post_match_evidence_available=False,
+    )
+    assert active["state"] == "ACTIVE"
+    due = resolve_temporary_price_watch_lifecycle(
+        target_match_date="2026-09-20",
+        match_complete=True,
+        immediate_post_match_evidence_available=True,
+    )
+    assert due["state"] == "FINAL_ASSESSMENT_REQUIRED"
+    expired = resolve_temporary_price_watch_lifecycle(
+        target_match_date="2026-09-20",
+        match_complete=True,
+        immediate_post_match_evidence_available=True,
+        final_assessment="WAIT",
+    )
+    assert expired["state"] == "EXPIRED"
+    assert expired["standalone_alerts_allowed"] is False
+    assert expired["return_to_canonical_routing"] is True
+    assert expired["new_scheduler_required"] is False
+
+
+def test_79_identity_natural_acceptance_requires_production_run_containing_deployed_repair():
+    result = validate_identity_production_acceptance(
+        deployed_repair_sha="repair",
+        production_run_head_sha="old-main",
+        production_run_contains_repair=False,
+        branch_ci_green=True,
+        publish_integrity="PASS",
+        authoritative_runtime_snapshot=True,
+        official_fpl_identity_health="GREEN",
+        official_price_predictor_join_health="GREEN",
+        canonical_identity_health="GREEN",
+    )
+    assert result["status"] == "FAIL"
+    assert "PRODUCTION_RUN_DOES_NOT_CONTAIN_REPAIR" in result["failures"]
+    assert "BRANCH_CI_CANNOT_PROVE_PRODUCTION_ACCEPTANCE" in result["failures"]
+
+
+def test_80_branch_ci_alone_never_claims_production_natural_acceptance():
+    result = validate_identity_production_acceptance(
+        deployed_repair_sha="repair",
+        production_run_head_sha="repair",
+        production_run_contains_repair=False,
+        branch_ci_green=True,
+        publish_integrity="PASS",
+        authoritative_runtime_snapshot=True,
+        official_fpl_identity_health="GREEN",
+        official_price_predictor_join_health="GREEN",
+        canonical_identity_health="GREEN",
+    )
+    assert result["status"] == "FAIL"
+    assert "BRANCH_CI_CANNOT_PROVE_PRODUCTION_ACCEPTANCE" in result["failures"]
+
+
+def test_81_identity_production_acceptance_allows_truthful_secondary_provider_red_outside_canonical_health():
+    result = validate_identity_production_acceptance(
+        deployed_repair_sha="repair",
+        production_run_head_sha="repair",
+        production_run_contains_repair=True,
+        branch_ci_green=True,
+        publish_integrity="PASS",
+        authoritative_runtime_snapshot=True,
+        official_fpl_identity_health="GREEN",
+        official_price_predictor_join_health="GREEN",
+        canonical_identity_health="GREEN",
+        fuzzy_or_name_matching_used=False,
+        silent_identity_conflict_accepted=False,
+        duplicate_acquisition=False,
+    )
+    assert result["status"] == "PASS"
+
+
+def test_82_canonical_binds_same_occurrence_finalization_and_affordability_separation():
+    canonical = _canonical()
+    assert "SAME-OCCURRENCE VISIBLE-EVIDENCE FINALIZATION" in canonical
+    assert "MUST NOT override newer same-occurrence evidence" in canonical
+    assert "Nominal replacement budget = authenticated selling_price + bank" in canonical
+    assert "FT/HIT ECONOMICS=UNKNOWN" in canonical

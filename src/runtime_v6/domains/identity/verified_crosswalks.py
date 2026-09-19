@@ -145,14 +145,15 @@ def _utc_key(value: Any) -> str | None:
 def _fotmob_fixture_rows(results: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     raw = _fotmob_json(results)
     rows: list[dict[str, Any]] = []
-    matches = raw.get("matches")
-    if isinstance(matches, list):
-        rows.extend(row for row in matches if isinstance(row, dict))
-    elif isinstance(matches, dict):
-        for key in ("allMatches", "matches", "fixtures"):
-            value = matches.get(key)
-            if isinstance(value, list):
-                rows.extend(row for row in value if isinstance(row, dict))
+    for container_key in ("matches", "fixtures"):
+        container = raw.get(container_key)
+        if isinstance(container, list):
+            rows.extend(row for row in container if isinstance(row, dict))
+        elif isinstance(container, dict):
+            for key in ("allMatches", "matches", "fixtures"):
+                value = container.get(key)
+                if isinstance(value, list):
+                    rows.extend(row for row in value if isinstance(row, dict))
     for block in raw.get("table") or []:
         if not isinstance(block, dict):
             continue

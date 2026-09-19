@@ -628,10 +628,67 @@ def _bounded_poisson_probabilities(
     return [value / mass for value in probs], truncated
 
 
-def _joint_goal_assist_grid(
+def _compound_poisson_point_pmf(
+    jumps: Sequence[tuple[int, float]],
+    *,
+    max_points: int,
+    tolerance: float,
+) -> tuple[dict[int, float], float]:
+    """Exact compound-Poisson recursion on bounded integer point support."""
+    active = [
+        (int(reward), max(0.0, float(rate)))
+        for reward, rate in jumps
+        if int(reward) > 0 and float(rate) > 0.0
+    ]
+    if not active:
+        return {0: 1.0}, 0.0
+    upper = max(0, int(max_points))
+    if upper <= 0:
+        return {0: 1.0}, 0.0
+    tol = max(0.0, min(1.0, float(tolerance)))
+    total_rate = sum(rate for _, rate in active)
+    probabilities = [0.0] * (upper + 1)
+    probabilities[0] = math.exp(-total_rate)
+    represented = probabilities[0]
+    max_jump = max(reward for reward, _ in active)
+    last = 0
+    for points in range(1, upper + 1):
+        numerator = 0.0
+        for reward, rate in active:
+            previous = points - reward
+            if previous >= 0:
+                numerator += rate * reward * probabilities[previous]
+        probability = numerator / points
+        probabilities[points] = probability
+        represented += probability
+        last = points
+        if points >= max_jump and represented >= 1.0 - tol:
+            break
+    pmf = {
+        points: probability
+        for points, probability in enumerate(probabilities[: last + 1])
+        if probability > 0.0
+    }
+    represented = sum(pmf.values())
+    if represented <= 0.0:
+        return {0: 1.0}, 0.0
+    truncated = max(0.0, 1.0 - represented)
+    return (
+        {
+            points: probability / represented
+            for points, probability in pmf.items()
+        },
+        truncated,
+    )
+
+
+def _joint_goal_assist_point_surface(
     goal_lambda: float,
     assist_lambda: float,
-) -> tuple[dict[tuple[int, int], float], dict[str, Any]]:
+    *,
+    goal_points: int,
+    assist_points: int,
+) -> tuple[dict[int, float], dict[str, float], dict[str, Any]]:
     cfg = _joint_ga_config()
     parameter = dict(cfg.get("dependence_parameter") or {})
     fraction = clamp(
@@ -645,31 +702,53 @@ def _joint_goal_assist_grid(
     goal_only = max(0.0, goal_lambda - shared)
     assist_only = max(0.0, assist_lambda - shared)
 
+    p_goal = 1.0 - math.exp(-goal_lambda)
+    p_assist = 1.0 - math.exp(-assist_lambda)
+    p00 = math.exp(-(goal_only + assist_only + shared))
+    p_attack = 1.0 - p00
+    p_both = max(0.0, min(1.0, p_goal + p_assist - p_attack))
+    independent_single_rate = goal_only + assist_only
+    p_exactly_one_total_return = p00 * independent_single_rate
+    p_exactly_two_total_returns = p00 * (
+        independent_single_rate * independent_single_rate / 2.0 + shared
+    )
+    p_ge_2 = clamp(1.0 - p00 - p_exactly_one_total_return, 0.0, 1.0)
+    p_ge_3 = clamp(
+        1.0
+        - p00
+        - p_exactly_one_total_return
+        - p_exactly_two_total_returns,
+        0.0,
+        1.0,
+    )
+
     dist_cfg = dict(_distribution_config().get("truncation") or {})
     max_goal = int(dist_cfg.get("max_goal_count") or 15)
     max_assist = int(dist_cfg.get("max_assist_count") or 15)
-    base = math.exp(-(goal_only + assist_only + shared))
-    grid: dict[tuple[int, int], float] = {}
-    for goals in range(max_goal + 1):
-        for assists in range(max_assist + 1):
-            total = 0.0
-            for common in range(min(goals, assists) + 1):
-                total += (
-                    (shared**common) / math.factorial(common)
-                    * (goal_only ** (goals - common))
-                    / math.factorial(goals - common)
-                    * (assist_only ** (assists - common))
-                    / math.factorial(assists - common)
-                )
-            grid[(goals, assists)] = base * total
-    represented = sum(grid.values())
-    if represented <= 0.0:
-        grid = {(0, 0): 1.0}
-        represented = 1.0
-    truncated = max(0.0, 1.0 - represented)
-    normalized = {key: value / represented for key, value in grid.items()}
-    return normalized, {
+    max_points = max_goal * int(goal_points) + max_assist * int(assist_points)
+    tolerance = max(
+        0.0, _f(dist_cfg.get("normalization_tolerance"), 1e-9)
+    )
+    point_pmf, truncated = _compound_poisson_point_pmf(
+        (
+            (int(goal_points), goal_only),
+            (int(assist_points), assist_only),
+            (int(goal_points) + int(assist_points), shared),
+        ),
+        max_points=max_points,
+        tolerance=tolerance,
+    )
+    events = {
+        "p_goal": clamp(p_goal, 0.0, 1.0),
+        "p_assist": clamp(p_assist, 0.0, 1.0),
+        "p_both": clamp(p_both, 0.0, 1.0),
+        "p_attack": clamp(p_attack, 0.0, 1.0),
+        "p_ge_2": p_ge_2,
+        "p_ge_3": p_ge_3,
+    }
+    diagnostics = {
         "model": cfg.get("model"),
+        "computational_form": "LATENT_BIVARIATE_POISSON_ANALYTIC_RETURNS_PLUS_COMPOUND_POISSON_PGF_RECURSION",
         "dependence_parameter_id": parameter.get("parameter_id"),
         "dependence_parameter_version": parameter.get("version"),
         "dependence_parameter": round(fraction, 6),
@@ -679,13 +758,19 @@ def _joint_goal_assist_grid(
         "lambda_goal_only": round(goal_only, 9),
         "lambda_assist_only": round(assist_only, 9),
         "calibration_status": parameter.get("calibration_status"),
-        "calibration_sample_size": int(parameter.get("calibration_sample_size") or 0),
+        "calibration_sample_size": int(
+            parameter.get("calibration_sample_size") or 0
+        ),
         "calibration_confidence": parameter.get("calibration_confidence"),
         "source": parameter.get("source"),
         "automatic_retuning": False,
+        "point_support_upper_bound": max_points,
         "truncated_probability_mass": truncated,
         "silent_independence_assumption": False,
+        "mathematical_model_unchanged_by_computational_optimization": True,
     }
+    return point_pmf, events, diagnostics
+
 
 
 def _convolve_integer_pmf(
@@ -789,7 +874,12 @@ def _build_joint_predictive_surface(
         minutes = max(0.0, float(atom.get("minutes") or 0.0))
         lg = max(0.0, goal_rate * minutes / 90.0)
         la = max(0.0, assist_rate * minutes / 90.0)
-        ga_grid, dependence = _joint_goal_assist_grid(lg, la)
+        ga_points, ga_events, dependence = _joint_goal_assist_point_surface(
+            lg,
+            la,
+            goal_points=int(GOAL_POINTS[element_type]),
+            assist_points=int(ASSIST_POINTS),
+        )
         max_joint_truncated = max(
             max_joint_truncated,
             float(dependence.get("truncated_probability_mass") or 0.0),
@@ -802,37 +892,13 @@ def _build_joint_predictive_surface(
                 **dependence,
             }
         )
-        p_goal_atom = 1.0 - math.exp(-lg)
-        p_assist_atom = 1.0 - math.exp(-la)
-        p00_atom = ga_grid.get((0, 0), 0.0)
-        p_both_atom = max(
-            0.0,
-            min(1.0, p_goal_atom + p_assist_atom - (1.0 - p00_atom)),
-        )
-        p_goal += atom_probability * p_goal_atom
-        p_assist += atom_probability * p_assist_atom
-        p_both += atom_probability * p_both_atom
-        p_attack += atom_probability * (1.0 - p00_atom)
-        p_multiple += atom_probability * sum(
-            probability
-            for (goals, assists), probability in ga_grid.items()
-            if goals + assists >= 2
-        )
-        p_ga2 += atom_probability * sum(
-            probability
-            for (goals, assists), probability in ga_grid.items()
-            if goals + assists >= 2
-        )
-        p_ga3 += atom_probability * sum(
-            probability
-            for (goals, assists), probability in ga_grid.items()
-            if goals + assists >= 3
-        )
-
-        ga_points: dict[int, float] = {}
-        for (goals, assists), probability in ga_grid.items():
-            points = int(GOAL_POINTS[element_type]) * int(goals) + int(ASSIST_POINTS) * int(assists)
-            ga_points[points] = ga_points.get(points, 0.0) + probability
+        p_goal += atom_probability * ga_events["p_goal"]
+        p_assist += atom_probability * ga_events["p_assist"]
+        p_both += atom_probability * ga_events["p_both"]
+        p_attack += atom_probability * ga_events["p_attack"]
+        p_multiple += atom_probability * ga_events["p_ge_2"]
+        p_ga2 += atom_probability * ga_events["p_ge_2"]
+        p_ga3 += atom_probability * ga_events["p_ge_3"]
 
         appearance_points = (
             0

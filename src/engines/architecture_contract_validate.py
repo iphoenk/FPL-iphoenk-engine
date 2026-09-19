@@ -328,7 +328,7 @@ def run() -> dict:
     if (event_cfg.get("governance") or {}).get("distribution_completeness") != "PARTIAL_BONUS_RESIDUAL":
         errors.append("P1.3B must truthfully retain partial bonus-residual completeness")
     for required in (
-        "def _joint_goal_assist_grid(",
+        "def _joint_goal_assist_point_surface(",
         "def _build_joint_predictive_surface(",
         '"goal_assist_silent_independence": False',
         '"monte_carlo_applied": False',

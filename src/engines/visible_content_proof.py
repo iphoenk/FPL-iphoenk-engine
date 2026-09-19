@@ -160,7 +160,8 @@ def canonical_mode_contract(canonical_text: str, report_mode: str) -> dict[str, 
                 (
                     index
                     for index, row in enumerate(rows)
-                    if "OPTIONS" in row["label"].upper()
+                    if "PACKAGE" in row["label"].upper()
+                    and "FRONTIER" in row["label"].upper()
                 ),
                 None,
             )

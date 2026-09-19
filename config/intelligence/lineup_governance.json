@@ -1,49 +1,55 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "model_id": "governed_lineup_v2",
   "selection": {
     "risk_aversion_std": 0.12,
-    "dnp_penalty_points": 2.0,
+    "dnp_penalty_points": 2,
     "enumerate_all_legal_xi": true,
     "publish_alternative_lineups": 6,
     "close_call_rerank_gap": 0.75,
     "same_team_defensive_cluster_penalty": 0.08,
     "defensive_route_concentration_penalty": 0.06,
     "bench_utility_weight": 0.03,
-    "maximum_close_call_adjustment": 0.30
+    "maximum_close_call_adjustment": 0.3,
+    "close_call_rerank_gap_semantics": "UI_CANDIDATE_PRESELECTION_ONLY_NOT_DECISION_AUTHORITY"
   },
   "uncertainty": {
-    "interval": 0.80,
+    "interval": 0.8,
     "z_value": 1.2815515655,
-    "close_decision_margin": 0.75
+    "close_decision_margin": 0.75,
+    "close_decision_margin_semantics": "LEGACY_UI_ONLY_NOT_CANONICAL_DECISION_AUTHORITY"
   },
   "captaincy": {
-    "risk_aversion_std": 0.10,
-    "dnp_penalty_points": 4.0,
-    "minimum_start_probability": 0.70,
+    "risk_aversion_std": 0.1,
+    "dnp_penalty_points": 4,
+    "minimum_start_probability": 0.7,
     "maximum_dnp_probability": 0.15,
     "safe_pool_size": 5,
     "vice_attack_ceiling_weight": 0.08,
     "vice_focality_weight": 0.12,
     "vice_penalty_role_bonus": 0.08,
     "vice_set_piece_role_bonus": 0.04,
-    "vice_defender_small_edge_guard": 0.30,
+    "vice_defender_small_edge_guard": 0.3,
     "maximum_vice_context_adjustment": 0.35
   },
   "bench": {
-    "risk_aversion_std": 0.10,
+    "risk_aversion_std": 0.1,
     "dnp_penalty_points": 1.5,
-    "start_probability_weight": 0.20,
+    "start_probability_weight": 0.2,
     "ceiling_weight": 0.05,
     "maximum_context_adjustment": 0.25,
     "close_battle_threshold": 0.35
   },
   "battle": {
-    "close_margin_threshold": 0.75
+    "close_margin_threshold": 0.75,
+    "close_margin_threshold_semantics": "LEGACY_UI_ONLY_NOT_CANONICAL_DECISION_AUTHORITY"
   },
   "package_governance": {
     "freeze_locked_composition_when_authoritative": true,
-    "authoritative_phases": ["pre_deadline_wc", "pre_deadline_locked"],
+    "authoritative_phases": [
+      "pre_deadline_wc",
+      "pre_deadline_locked"
+    ],
     "auto_accept_optimizer_package": false,
     "optimizer_is_candidate_generator_only": true
   },
@@ -59,6 +65,10 @@
     "gate0_postflight_revalidation_required": true,
     "raw_xpts_is_preserved": true,
     "risk_adjustments_are_bounded_and_decision_only": true,
-    "no_artificial_attacking_formation_preference": true
+    "no_artificial_attacking_formation_preference": true,
+    "cameo_and_dnp_are_distinct": true,
+    "legal_auto_sub_preservation_modeled": true,
+    "cameo_auto_sub_blocking_cost_modeled": true,
+    "canonical_close_decision_uses_predictive_distribution_not_fixed_gap": true
   }
 }

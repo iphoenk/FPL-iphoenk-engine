@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from src.engines import framework_health_audit as audit_engine
+from src.engines import framework_health_service
 from src.engines import p0_framework_health_overlay as p0_overlay
 from src.engines.framework_health_audit import EXPECTED_COUNTS, REGISTRIES, _gate0, _registry_integrity
 from src.utils import read_json
@@ -115,3 +116,39 @@ def test_challenger_health_fails_closed_on_registry_provider_mismatch(tmp_path, 
     status, detail = p0_overlay._challenger_probe()
     assert status == "FAILED"
     assert detail["missing"] == ["ffhub"]
+
+
+def test_active_framework_health_accepts_v12_hierarchical_xmins_without_flattening_bench(tmp_path, monkeypatch):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    xmins = {
+        "probability_semantics": "V12_HIERARCHICAL",
+        "start_probability": 0.60,
+        "bench_probability": 0.28,
+        "cameo_probability": 0.20,
+        "late_cameo_probability": 0.08,
+        "dnp_probability": 0.20,
+        "expected_minutes": 47.0,
+        "availability": 0.90,
+        "xmins_distribution": {
+            "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+            "states": [
+                {"state": "START", "probability": 0.60, "minutes_mean": 72.0},
+                {"state": "CAMEO", "probability": 0.12, "minutes_mean": 18.0},
+                {"state": "LATE_CAMEO", "probability": 0.08, "minutes_mean": 8.0},
+                {"state": "ZERO_MINUTES", "probability": 0.20, "minutes_mean": 0.0},
+            ],
+        },
+    }
+    (data_dir / "projections.json").write_text(
+        json.dumps({"players": [{"element": 1, "xmins": xmins}]}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(framework_health_service, "DATA", data_dir)
+    framework_health_service.activate_canonical_probe_contracts()
+    ok, detail = audit_engine._probe_xmins()
+    assert ok is True
+    assert detail["valid"] == 1
+    assert detail["probability_semantics"]["v12_hierarchical"] == 1
+    assert detail["appearance_partition"] == "START+CAMEO+DNP"
+    assert detail["bench_is_overlapping_in_v12"] is True

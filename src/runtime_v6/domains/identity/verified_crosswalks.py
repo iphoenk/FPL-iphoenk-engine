@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -125,6 +126,245 @@ def _observed_fotmob_team_ids(results: dict[str, dict[str, Any]]) -> set[int]:
             if team_id is not None:
                 observed.add(team_id)
     return observed
+
+
+
+def _utc_key(value: Any) -> str | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(timezone.utc).isoformat()
+
+
+def _fotmob_fixture_rows(results: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    raw = _fotmob_json(results)
+    rows: list[dict[str, Any]] = []
+    matches = raw.get("matches")
+    if isinstance(matches, list):
+        rows.extend(row for row in matches if isinstance(row, dict))
+    elif isinstance(matches, dict):
+        for key in ("allMatches", "matches", "fixtures"):
+            value = matches.get(key)
+            if isinstance(value, list):
+                rows.extend(row for row in value if isinstance(row, dict))
+    for block in raw.get("table") or []:
+        if not isinstance(block, dict):
+            continue
+        data = block.get("data") if isinstance(block.get("data"), dict) else {}
+        ongoing = data.get("ongoing")
+        if isinstance(ongoing, list):
+            rows.extend(row for row in ongoing if isinstance(row, dict))
+    return rows
+
+
+def _fotmob_side_id(row: dict[str, Any], side: str) -> int | None:
+    value = row.get(side)
+    if isinstance(value, dict):
+        return _int(value.get("id"))
+    prefix = "h" if side == "home" else "a"
+    return _int(row.get(f"{prefix}Id"))
+
+
+def _fotmob_kickoff(row: dict[str, Any]) -> str | None:
+    status = row.get("status") if isinstance(row.get("status"), dict) else {}
+    return _utc_key(
+        row.get("utcTime")
+        or status.get("utcTime")
+        or row.get("time")
+    )
+
+
+def _verified_team_reverse(identity_map: dict[str, Any], source_id: str) -> dict[int, int]:
+    bridge = ((identity_map.get("entity_bridges") or {}).get("team") or {})
+    out: dict[int, int] = {}
+    for mapping in (bridge.get("mappings") or {}).values():
+        if not isinstance(mapping, dict):
+            continue
+        official_id = _int(mapping.get("official_fpl_team_id"))
+        link = ((mapping.get("links") or {}).get(source_id) or {})
+        native_id = _int(link.get("source_native_id", link.get("external_id")))
+        if (
+            official_id is None
+            or native_id is None
+            or str(link.get("status") or link.get("verification_status") or "") not in _JOINABLE
+        ):
+            continue
+        if native_id in out and out[native_id] != official_id:
+            raise VerifiedCrosswalkError(
+                f"{source_id}: one native team id maps to multiple Official FPL teams: {native_id}"
+            )
+        out[native_id] = official_id
+    return out
+
+
+def _enrich_fotmob_fixture_bridge(
+    identity_map: dict[str, Any],
+    results: dict[str, dict[str, Any]],
+) -> None:
+    """Join FotMob event IDs only through verified team IDs + exact UTC kickoff.
+
+    Display names are deliberately ignored. The provider event ID is retained as
+    the source-native key; Official FPL remains canonical.
+    """
+    if "fotmob" not in results:
+        return
+    raw = _fotmob_json(results)
+    details = raw.get("details") if isinstance(raw.get("details"), dict) else {}
+    if _int(details.get("id")) != 47:
+        return
+
+    fixture_bridge = ((identity_map.get("entity_bridges") or {}).get("fixture") or {})
+    mappings = fixture_bridge.get("mappings") or {}
+    canonical_count = int(fixture_bridge.get("canonical_fixture_count") or len(mappings))
+    team_reverse = _verified_team_reverse(identity_map, "fotmob")
+
+    canonical_index: dict[tuple[int, int, str], list[int]] = {}
+    for mapping in mappings.values():
+        if not isinstance(mapping, dict):
+            continue
+        fixture_id = _int(mapping.get("official_fpl_fixture_id"))
+        team_h = _int(mapping.get("official_fpl_team_h_id"))
+        team_a = _int(mapping.get("official_fpl_team_a_id"))
+        kickoff = _utc_key(mapping.get("kickoff_time"))
+        if None in {fixture_id, team_h, team_a} or kickoff is None:
+            continue
+        canonical_index.setdefault((team_h, team_a, kickoff), []).append(fixture_id)
+
+    canonical_key_collisions = {
+        key: values for key, values in canonical_index.items() if len(set(values)) != 1
+    }
+    provider_rows = _fotmob_fixture_rows(results)
+    by_native: dict[int, list[dict[str, Any]]] = {}
+    missing_native = 0
+    for row in provider_rows:
+        native_id = _int(row.get("id"))
+        if native_id is None:
+            missing_native += 1
+            continue
+        by_native.setdefault(native_id, []).append(row)
+
+    duplicate_native_ids = {native for native, rows in by_native.items() if len(rows) > 1}
+    candidate_targets: dict[int, int] = {}
+    unresolved_native_ids: set[int] = set()
+    for native_id, rows in by_native.items():
+        if native_id in duplicate_native_ids:
+            continue
+        row = rows[0]
+        native_h = _fotmob_side_id(row, "home")
+        native_a = _fotmob_side_id(row, "away")
+        kickoff = _fotmob_kickoff(row)
+        official_h = team_reverse.get(native_h or -1)
+        official_a = team_reverse.get(native_a or -1)
+        if official_h is None or official_a is None or kickoff is None:
+            unresolved_native_ids.add(native_id)
+            continue
+        key = (official_h, official_a, kickoff)
+        targets = canonical_index.get(key) or []
+        if len(targets) != 1 or key in canonical_key_collisions:
+            unresolved_native_ids.add(native_id)
+            continue
+        candidate_targets[native_id] = targets[0]
+
+    target_to_natives: dict[int, list[int]] = {}
+    for native_id, target in candidate_targets.items():
+        target_to_natives.setdefault(target, []).append(native_id)
+    target_collisions = {
+        target: natives
+        for target, natives in target_to_natives.items()
+        if len(natives) > 1
+    }
+    conflicted_natives = {
+        native for natives in target_collisions.values() for native in natives
+    } | duplicate_native_ids
+    mapped = 0
+    for native_id, target in candidate_targets.items():
+        if native_id in conflicted_natives:
+            continue
+        mapping = mappings.get(str(target))
+        if not isinstance(mapping, dict):
+            unresolved_native_ids.add(native_id)
+            continue
+        row = by_native[native_id][0]
+        links = mapping.setdefault("links", {})
+        links["fotmob"] = {
+            "source_id": "fotmob",
+            "source_native_id": native_id,
+            "external_id": native_id,
+            "mapping_method": "FOTMOB_EVENT_ID_VERIFIED_TEAM_IDS_EXACT_UTC_KICKOFF_UNIQUE",
+            "method": "FOTMOB_EVENT_ID_VERIFIED_TEAM_IDS_EXACT_UTC_KICKOFF_UNIQUE",
+            "verification_status": STATUS,
+            "status": STATUS,
+            "confidence": 1.0,
+            "verified": True,
+            "joinable": True,
+            "verified_at": utc_now(),
+            "provenance": {
+                "source_id": "fotmob",
+                "provider_competition_id": 47,
+                "source_native_event_id": native_id,
+                "home_source_native_team_id": _fotmob_side_id(row, "home"),
+                "away_source_native_team_id": _fotmob_side_id(row, "away"),
+                "home_team_bridge_verified": True,
+                "away_team_bridge_verified": True,
+                "kickoff_utc_exact": _fotmob_kickoff(row),
+                "canonical_match_key_unique": True,
+                "provider_event_id_unique": True,
+                "name_matching_used": False,
+                "fuzzy_matching_used": False,
+            },
+        }
+        mapped += 1
+
+    observed = len(by_native)
+    conflicts = (
+        len(duplicate_native_ids)
+        + len(target_collisions)
+        + len(canonical_key_collisions)
+        + missing_native
+    )
+    actionable = max(0, observed - mapped - len(conflicted_natives))
+    if conflicts or actionable:
+        health = "RED"
+    elif observed and mapped == observed and canonical_count and mapped == canonical_count:
+        health = "GREEN"
+    elif mapped:
+        health = "AMBER"
+    else:
+        health = "RED"
+
+    fixture_bridge.setdefault("coverage", {})["fotmob"] = {
+        "strategy": "FOTMOB_EVENT_ID_VERIFIED_TEAM_IDS_EXACT_UTC_KICKOFF_UNIQUE",
+        "deterministic_bridge": True,
+        "identity_health": health,
+        "mapped_status": STATUS if mapped else "UNMAPPED",
+        "mapped_fixture_count": mapped,
+        "canonical_fixture_count": canonical_count,
+        "coverage_ratio": round(mapped / canonical_count, 6) if canonical_count else 0.0,
+        "unmapped_fixture_count": max(0, canonical_count - mapped),
+        "observed_provider_fixture_count": observed,
+        "observed_joined_fixture_count": mapped,
+        "observed_actionable_unmapped_count": actionable,
+        "duplicate_native_id_count": len(duplicate_native_ids),
+        "missing_native_id_record_count": missing_native,
+        "canonical_target_collision_count": len(target_collisions),
+        "canonical_match_key_collision_count": len(canonical_key_collisions),
+        "unresolved_native_ids": sorted(unresolved_native_ids),
+        "join_allowed": mapped > 0,
+        "provider_universe_completeness": (
+            "CURRENT_SEASON_FIXTURE_OBSERVATION_COMPLETE"
+            if canonical_count and observed == canonical_count
+            else "CURRENT_PROVIDER_FIXTURE_OBSERVATION_PARTIAL"
+        ),
+        "stable_provider_identifier_available": True,
+        "name_matching_used": False,
+        "fuzzy_matching_used": False,
+    }
 
 
 def _link(source_id: str, native_id: int, config_source: dict[str, Any]) -> dict[str, Any]:
@@ -411,6 +651,8 @@ def enrich_verified_external_crosswalks(
             "join_allowed": mapped > 0,
         }
 
+    _enrich_fotmob_fixture_bridge(out, results)
+
     out.setdefault("governance", {}).update(
         {
             "verified_manual_crosswalk_requires_current_native_observation": True,
@@ -433,6 +675,7 @@ def build_verified_crosswalk_report(
 ) -> dict[str, Any]:
     config = config or load_verified_crosswalks()
     team_coverage = (((identity_map.get("entity_bridges") or {}).get("team") or {}).get("coverage") or {})
+    fixture_coverage = (((identity_map.get("entity_bridges") or {}).get("fixture") or {}).get("coverage") or {})
     player_coverage = identity_map.get("coverage") or {}
     source_report: dict[str, Any] = {}
     for source_id, source in (config.get("sources") or {}).items():
@@ -445,6 +688,7 @@ def build_verified_crosswalk_report(
             "configured_team_mapping_count": len(source.get("teams") or []),
             "configured_player_mapping_count": len(source.get("players") or []),
             "current_team_identity_coverage": team_coverage.get(source_id),
+            "current_fixture_identity_coverage": fixture_coverage.get(source_id),
             "current_player_identity_coverage": player_coverage.get(source_id),
             "current_source_health": (results.get(source_id) or {}).get("health"),
             "current_source_effective_state": (results.get(source_id) or {}).get("effective_state"),
@@ -460,6 +704,7 @@ def build_verified_crosswalk_report(
             "configured_team_mapping_count": 0,
             "configured_player_mapping_count": 0,
             "current_team_identity_coverage": team_coverage.get("opta_the_analyst"),
+            "current_fixture_identity_coverage": fixture_coverage.get("opta_the_analyst"),
             "current_player_identity_coverage": player_coverage.get("opta_the_analyst"),
             "current_source_health": (results.get("opta_the_analyst") or {}).get("health"),
             "current_source_effective_state": (results.get("opta_the_analyst") or {}).get("effective_state"),
@@ -467,6 +712,10 @@ def build_verified_crosswalk_report(
 
     team_records = sum(len(source.get("teams") or []) for source in (config.get("sources") or {}).values())
     player_records = sum(len(source.get("players") or []) for source in (config.get("sources") or {}).values())
+    fixture_records = sum(
+        int((fixture_coverage.get(source_id) or {}).get("mapped_fixture_count") or 0)
+        for source_id in (config.get("sources") or {})
+    )
     opta_records = int((player_coverage.get("opta_the_analyst") or {}).get("mapped_player_count") or 0)
     return {
         "schema_version": 2,
@@ -478,7 +727,7 @@ def build_verified_crosswalk_report(
         "normalization_version": "V6_VERIFIED_CROSSWALK_2",
         "canonical_authority": "official_fpl",
         "fuzzy_matching_allowed": False,
-        "record_count": team_records + player_records + opta_records,
+        "record_count": team_records + player_records + fixture_records + opta_records,
         "primary_keys": ["source_id", "source_native_id"],
         "sources": source_report,
         "governance": {

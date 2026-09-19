@@ -382,32 +382,216 @@ def _validate_model_update_semantics(payload: Mapping[str, Any]) -> list[str]:
     return failures
 
 
+_VISIBLE_SECTION_STATES = frozenset({"COMPLETE", "PARTIAL", "DEGRADED", "UNAVAILABLE"})
+_DEGRADED_STATES = frozenset({"PARTIAL", "DEGRADED", "UNAVAILABLE"})
+_SECTION_TO_COMPUTE_SECTION = {
+    "WATCHLIST20": "WATCHLIST20",
+    "RISE20": "RISE20",
+    "FALL20": "FALL20",
+    "ALL15": "ALL15_TACTICAL",
+    "PACKAGE_FRONTIER": "OPTIMIZER",
+    "ICON+": "ICON14B",
+}
+_SECTION_TO_COUNT_LABEL = {
+    "WATCHLIST20": "WATCHLIST20",
+    "RISE20": "RISE20",
+    "FALL20": "FALL20",
+}
+
+
+def _section_state(
+    payload: Mapping[str, Any],
+    section: str,
+    *,
+    default: str = "COMPLETE",
+) -> dict[str, Any]:
+    raw_states = payload.get("section_states")
+    raw = raw_states.get(section) if isinstance(raw_states, Mapping) else None
+    if isinstance(raw, Mapping):
+        meta = dict(raw)
+        state = str(meta.get("state") or default).strip().upper()
+    elif raw is not None:
+        meta = {}
+        state = str(raw or default).strip().upper()
+    else:
+        meta = {}
+        state = default
+    meta["state"] = state
+    return meta
+
+
+def _section_degradation(
+    *,
+    section: str,
+    meta: Mapping[str, Any],
+    actual_count: int | None = None,
+    expected_count: int | None = None,
+    require_count: bool = False,
+) -> tuple[dict[str, Any], list[str]]:
+    state = str(meta.get("state") or "").strip().upper()
+    hard: list[str] = []
+    if state not in _VISIBLE_SECTION_STATES:
+        return {}, [f"SECTION_STATE_INVALID={section}:{state or '<empty>'}"]
+    if state == "COMPLETE":
+        return {}, []
+    reason = str(meta.get("degradation_reason") or "").strip()
+    if not reason:
+        hard.append(f"SECTION_DEGRADATION_REASON_MISSING={section}")
+    available = meta.get("available_count", actual_count)
+    expected = meta.get("expected_count", expected_count)
+    if require_count:
+        try:
+            available_int = int(available)
+            expected_int = int(expected)
+        except (TypeError, ValueError):
+            hard.append(f"SECTION_DEGRADATION_COUNT_METADATA_INVALID={section}")
+            available_int = actual_count
+            expected_int = expected_count
+        else:
+            if actual_count is not None and available_int != actual_count:
+                hard.append(
+                    f"SECTION_AVAILABLE_COUNT_MISMATCH={section}:{available_int}!={actual_count}"
+                )
+            if expected_count is not None and expected_int != expected_count:
+                hard.append(
+                    f"SECTION_EXPECTED_COUNT_MISMATCH={section}:{expected_int}!={expected_count}"
+                )
+    else:
+        available_int = available
+        expected_int = expected
+    degradation = {
+        "section": section,
+        "state": state,
+        "degradation_reason": reason or None,
+        "available_count": available_int,
+        "expected_count": expected_int,
+        "missing_fields": list(meta.get("missing_fields") or []),
+        "missing_scope": list(meta.get("missing_scope") or []),
+        "provenance": meta.get("provenance"),
+        "freshness": meta.get("freshness"),
+    }
+    return degradation, hard
+
+
+def _placeholder_rows(rows: Sequence[Any], label: str) -> list[str]:
+    failures: list[str] = []
+    for index, row in enumerate(rows, start=1):
+        if not isinstance(row, Mapping):
+            continue
+        if (
+            row.get("fabricated") is True
+            or row.get("placeholder") is True
+            or row.get("synthetic_fill") is True
+            or str(row.get("row_origin") or "").strip().upper()
+            in {"PLACEHOLDER", "FABRICATED", "QA_FILL", "SYNTHETIC_FILL"}
+        ):
+            failures.append(f"{label}_FABRICATED_PLACEHOLDER_ROW={index}")
+    return failures
+
+
+def _duplicate_id_failure(rows: Sequence[Any], label: str) -> list[str]:
+    ids = [_row_identity(row) for row in rows if isinstance(row, Mapping)]
+    concrete = [str(value) for value in ids if value is not None]
+    failures: list[str] = []
+    if len(concrete) != len(ids):
+        failures.append(f"{label}_IDENTITY_MISSING")
+    if len(set(concrete)) != len(concrete):
+        failures.append(f"{label}_IDENTITY_DUPLICATE")
+    return failures
+
+
+def _degradation_label_visible(body: str, section: str, state: str) -> bool:
+    upper = str(body or "").upper()
+    section_upper = section.upper()
+    start = upper.find(section_upper)
+    if start < 0:
+        return False
+    window = upper[start : start + 420]
+    state_upper = state.upper()
+    return any(
+        marker in window
+        for marker in (
+            f"STATE={state_upper}",
+            f"STATE: {state_upper}",
+            f"STATE {state_upper}",
+            f"— {state_upper}",
+            f"- {state_upper}",
+        )
+    )
+
+
+def _validate_visible_degradation_labels(
+    *,
+    rendered_body: str,
+    section_degradations: Sequence[Mapping[str, Any]],
+) -> list[str]:
+    failures: list[str] = []
+    for row in section_degradations:
+        section = str(row.get("section") or "").strip()
+        state = str(row.get("state") or "").strip().upper()
+        if section and state and not _degradation_label_visible(rendered_body, section, state):
+            failures.append(f"VISIBLE_DEGRADATION_LABEL_MISSING={section}:{state}")
+    return failures
+
+
 def validate_v12_visible_content_contract(
     *,
     report_mode: str,
     content_contract: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Mode-specific visible-content validation owned by existing PRE/POST QA."""
+    """Validate correctness separately from truthful section-level degradation."""
     mode = str(report_mode or "").strip().upper()
     payload = dict(content_contract or {})
-    failures: list[str] = []
-    failures.extend(_validate_decision_delta(payload))
-    failures.extend(_validate_model_update_semantics(payload))
-    failures.extend(_validate_icon_contract(payload))
-    if isinstance(payload.get("icon"), Mapping) and str((payload.get("icon") or {}).get("status") or "").upper() in {"FRESH", "COMPLETE"}:
-        if payload.get("football_optimal_baseline_before_icon") is not True:
-            failures.append("ICON_OVERLAY_PRECEDENCE_INVALID")
+    hard_failures: list[str] = []
+    section_degradations: list[dict[str, Any]] = []
+    warnings: list[str] = []
 
-    if payload.get("report_due") is True and payload.get("optional_scope_degraded") is True and payload.get("visible_report_suppressed") is True:
-        failures.append("OPTIONAL_DEGRADED_SCOPE_SUPPRESSED_DUE_REPORT")
+    hard_failures.extend(_validate_decision_delta(payload))
+    hard_failures.extend(_validate_model_update_semantics(payload))
+
+    icon = payload.get("icon") if isinstance(payload.get("icon"), Mapping) else None
+    icon_default_state = (
+        "COMPLETE"
+        if isinstance(icon, Mapping) and str(icon.get("status") or "").upper() in {"FRESH", "COMPLETE"}
+        else str((icon or {}).get("status") or "UNAVAILABLE").upper()
+        if isinstance(icon, Mapping)
+        else "UNAVAILABLE"
+    )
+    icon_meta = _section_state(payload, "ICON+", default=icon_default_state)
+    icon_state = str(icon_meta.get("state") or "").upper()
+    if icon_state == "COMPLETE":
+        hard_failures.extend(_validate_icon_contract(payload))
+        if payload.get("football_optimal_baseline_before_icon") is not True:
+            hard_failures.append("ICON_OVERLAY_PRECEDENCE_INVALID")
+    else:
+        degradation, meta_hard = _section_degradation(
+            section="ICON+",
+            meta=icon_meta,
+            require_count=False,
+        )
+        hard_failures.extend(meta_hard)
+        if degradation:
+            section_degradations.append(degradation)
+        if isinstance(icon, Mapping) and (
+            icon.get("presented_as_current") is True
+            or str(icon.get("freshness") or "").upper() == "CURRENT"
+        ):
+            hard_failures.append("ICON_DEGRADED_PRESENTED_AS_CURRENT")
+
+    if (
+        payload.get("report_due") is True
+        and payload.get("optional_scope_degraded") is True
+        and payload.get("visible_report_suppressed") is True
+    ):
+        hard_failures.append("OPTIONAL_DEGRADED_SCOPE_SUPPRESSED_DUE_REPORT")
 
     if mode in {"MATCH", "DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP", "POST_ALL_MATCH"}:
-        failures.extend(_validate_bench_presentation(payload))
+        hard_failures.extend(_validate_bench_presentation(payload))
 
     if mode == "MATCH":
         order = tuple(str(value).strip().upper() for value in payload.get("visible_order") or [])
         if order != tuple(value.upper() for value in _MATCH_VISIBLE_ORDER):
-            failures.append("PURE_MATCH_VISIBLE_ORDER_INVALID")
+            hard_failures.append("PURE_MATCH_VISIBLE_ORDER_INVALID")
         required = (
             "locked_team",
             "personal_impact",
@@ -423,7 +607,7 @@ def validate_v12_visible_content_contract(
         )
         for key in required:
             if key not in payload:
-                failures.append(f"PURE_MATCH_BLOCK_MISSING={key}")
+                hard_failures.append(f"PURE_MATCH_BLOCK_MISSING={key}")
 
         impact_rows = list(payload.get("personal_impact") or [])
         substitution_map = (
@@ -433,129 +617,273 @@ def validate_v12_visible_content_contract(
         ) or {}
         for index, row in enumerate(impact_rows, start=1):
             if not isinstance(row, Mapping):
-                failures.append(f"PERSONAL_IMPACT_ROW_INVALID={index}")
+                hard_failures.append(f"PERSONAL_IMPACT_ROW_INVALID={index}")
                 continue
             state = str(row.get("personal_state") or "").upper()
             element = row.get("element_id")
             mapped = substitution_map.get(str(element)) if element is not None else None
-            if state == "DNP_WITH_AUTOSUB_POSSIBLE" and (mapped in (None, "no_legal_sub", "pending")):
-                failures.append(f"DNP_AUTOSUB_VISIBLE_STATE_MISMATCH={index}")
+            if state == "DNP_WITH_AUTOSUB_POSSIBLE" and mapped in (None, "no_legal_sub", "pending"):
+                hard_failures.append(f"DNP_AUTOSUB_VISIBLE_STATE_MISMATCH={index}")
             if state == "DNP_AUTOSUB_PENDING" and mapped != "pending":
-                failures.append(f"DNP_AUTOSUB_PENDING_MISMATCH={index}")
+                hard_failures.append(f"DNP_AUTOSUB_PENDING_MISMATCH={index}")
             if state == "BENCH_DNP_NO_DIRECT_XI_AUTOSUB_EFFECT" and row.get("autosub_activates") is True:
-                failures.append(f"BENCH_DNP_FALSE_AUTOSUB_ACTIVATION={index}")
+                hard_failures.append(f"BENCH_DNP_FALSE_AUTOSUB_ACTIVATION={index}")
             if state == "CAMEO_BLOCKED_AUTOSUB" and mapped not in (None, "no_legal_sub"):
-                failures.append(f"CAMEO_SHOULD_NOT_BE_IN_SUBSTITUTION_MAP={index}")
+                hard_failures.append(f"CAMEO_SHOULD_NOT_BE_IN_SUBSTITUTION_MAP={index}")
 
     if mode in {"DEEP", "FULL", "DEADLINE", "FINAL"}:
         order = tuple(str(value).strip().upper() for value in payload.get("visible_order") or [])
         if order != tuple(value.upper() for value in _FULL_DEEP_VISIBLE_ORDER):
-            failures.append("FULL_DEEP_VISIBLE_ORDER_INVALID")
+            hard_failures.append("FULL_DEEP_VISIBLE_ORDER_INVALID")
 
     if mode in {"DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP", "POST_ALL_MATCH"}:
         all15 = list(payload.get("all15") or [])
-        if len(all15) != 15:
-            failures.append(f"ALL15_COUNT={len(all15)}")
-        all15_ids = [_row_identity(row) for row in all15 if isinstance(row, Mapping)]
-        if len(all15_ids) != 15 or any(value is None for value in all15_ids):
-            failures.append("ALL15_IDENTITY_MISSING")
-        elif len(set(map(str, all15_ids))) != 15:
-            failures.append("ALL15_IDENTITY_DUPLICATE")
-        failures.extend(_missing_row_fields(all15, _ALL15_VISIBLE_FIELDS, "ALL15"))
-        for index, row in enumerate(all15, start=1):
-            if isinstance(row, Mapping) and str(row.get("action") or "").upper() not in _ALLOWED_ALL15_ACTIONS:
-                failures.append(f"ALL15_ACTION_INVALID={index}")
+        all15_meta = _section_state(payload, "ALL15")
+        all15_state = str(all15_meta.get("state") or "").upper()
+        hard_failures.extend(_duplicate_id_failure(all15, "ALL15"))
+        hard_failures.extend(_placeholder_rows(all15, "ALL15"))
+        if all15_state == "COMPLETE":
+            if len(all15) != 15:
+                hard_failures.append(f"ALL15_COUNT={len(all15)}")
+            hard_failures.extend(_missing_row_fields(all15, _ALL15_VISIBLE_FIELDS, "ALL15"))
+            for index, row in enumerate(all15, start=1):
+                if isinstance(row, Mapping) and str(row.get("action") or "").upper() not in _ALLOWED_ALL15_ACTIONS:
+                    hard_failures.append(f"ALL15_ACTION_INVALID={index}")
+        else:
+            degradation, meta_hard = _section_degradation(
+                section="ALL15",
+                meta=all15_meta,
+                actual_count=len(all15),
+                expected_count=15,
+                require_count=True,
+            )
+            hard_failures.extend(meta_hard)
+            if degradation:
+                section_degradations.append(degradation)
 
         watchlist = list(payload.get("watchlist20") or [])
-        if len(watchlist) != 20:
-            failures.append(f"WATCHLIST20_COUNT={len(watchlist)}")
-        failures.extend(_missing_row_fields(watchlist, _WATCHLIST_VISIBLE_FIELDS, "WATCHLIST20"))
-        positions = Counter(str(row.get("position") or "").upper() for row in watchlist if isinstance(row, Mapping))
-        for position in ("GK", "DEF", "MID", "FWD"):
-            if positions.get(position, 0) != 5:
-                failures.append(f"WATCHLIST20_{position}={positions.get(position, 0)}")
+        watch_meta = _section_state(payload, "WATCHLIST20")
+        watch_state = str(watch_meta.get("state") or "").upper()
+        hard_failures.extend(_duplicate_id_failure(watchlist, "WATCHLIST20"))
+        hard_failures.extend(_placeholder_rows(watchlist, "WATCHLIST20"))
         if any(bool(row.get("owned")) for row in watchlist if isinstance(row, Mapping)):
-            failures.append("WATCHLIST20_OWNED_PLAYER_PRESENT")
-        if payload.get("watchlist_full_universe_derived") is not True:
-            failures.append("WATCHLIST20_FULL_UNIVERSE_LINEAGE_MISSING")
+            hard_failures.append("WATCHLIST20_OWNED_PLAYER_PRESENT")
+        if watch_state == "COMPLETE":
+            if len(watchlist) != 20:
+                hard_failures.append(f"WATCHLIST20_COUNT={len(watchlist)}")
+            hard_failures.extend(_missing_row_fields(watchlist, _WATCHLIST_VISIBLE_FIELDS, "WATCHLIST20"))
+            positions = Counter(
+                str(row.get("position") or "").upper()
+                for row in watchlist
+                if isinstance(row, Mapping)
+            )
+            for position in ("GK", "DEF", "MID", "FWD"):
+                if positions.get(position, 0) != 5:
+                    hard_failures.append(f"WATCHLIST20_{position}={positions.get(position, 0)}")
+            if payload.get("watchlist_full_universe_derived") is not True:
+                hard_failures.append("WATCHLIST20_FULL_UNIVERSE_LINEAGE_MISSING")
+        else:
+            degradation, meta_hard = _section_degradation(
+                section="WATCHLIST20",
+                meta=watch_meta,
+                actual_count=len(watchlist),
+                expected_count=20,
+                require_count=True,
+            )
+            hard_failures.extend(meta_hard)
+            if degradation:
+                section_degradations.append(degradation)
+
+        for section, key in (("RISE20", "rise20"), ("FALL20", "fall20")):
+            rows = list(payload.get(key) or [])
+            meta = _section_state(payload, section)
+            state = str(meta.get("state") or "").upper()
+            hard_failures.extend(_duplicate_id_failure(rows, section))
+            hard_failures.extend(_placeholder_rows(rows, section))
+            if state == "COMPLETE":
+                if key in payload and len(rows) != 20:
+                    hard_failures.append(f"{section}_COUNT={len(rows)}")
+            else:
+                degradation, meta_hard = _section_degradation(
+                    section=section,
+                    meta=meta,
+                    actual_count=len(rows),
+                    expected_count=20,
+                    require_count=True,
+                )
+                hard_failures.extend(meta_hard)
+                if degradation:
+                    section_degradations.append(degradation)
 
         routes = list(payload.get("package_routes") or [])
-        failures.extend(_missing_row_fields(routes, _PACKAGE_VISIBLE_FIELDS, "PACKAGE"))
-        if payload.get("serious_comparison") is True and not routes:
-            failures.append("PACKAGE_SERIOUS_COMPARISON_MISSING")
-        if routes and not any(str(row.get("route") or "").upper() == "HOLD" for row in routes if isinstance(row, Mapping)):
-            failures.append("PACKAGE_HOLD_BASELINE_MISSING")
-        if str(payload.get("search_authority") or "").upper() == "PARTIAL" and payload.get("search_authority_visible") is not True:
-            failures.append("PARTIAL_SEARCH_AUTHORITY_NOT_VISIBLE")
+        package_meta = _section_state(payload, "PACKAGE_FRONTIER")
+        package_state = str(package_meta.get("state") or "").upper()
+        route_names = [str(row.get("route") or "") for row in routes if isinstance(row, Mapping)]
+        if len(route_names) != len(set(route_names)):
+            hard_failures.append("PACKAGE_ROUTE_DUPLICATE")
+        hard_failures.extend(_placeholder_rows(routes, "PACKAGE"))
+        if package_state == "COMPLETE":
+            hard_failures.extend(_missing_row_fields(routes, _PACKAGE_VISIBLE_FIELDS, "PACKAGE"))
+            if payload.get("serious_comparison") is True and not routes:
+                hard_failures.append("PACKAGE_SERIOUS_COMPARISON_MISSING")
+            if routes and not any(name.upper() == "HOLD" for name in route_names):
+                hard_failures.append("PACKAGE_HOLD_BASELINE_MISSING")
+        else:
+            degradation, meta_hard = _section_degradation(
+                section="PACKAGE_FRONTIER",
+                meta=package_meta,
+                actual_count=len(routes),
+                expected_count=None,
+                require_count=False,
+            )
+            hard_failures.extend(meta_hard)
+            if degradation:
+                section_degradations.append(degradation)
+        if (
+            str(payload.get("search_authority") or "").upper() == "PARTIAL"
+            and payload.get("search_authority_visible") is not True
+        ):
+            hard_failures.append("PARTIAL_SEARCH_AUTHORITY_NOT_VISIBLE")
 
     if mode == "FINAL":
         lock = payload.get("gw_lock_package")
-        if not isinstance(lock, Mapping):
-            failures.append("GW_LOCK_PACKAGE_MISSING")
+        lock_meta = _section_state(payload, "GW_LOCK_PACKAGE")
+        lock_state = str(lock_meta.get("state") or "").upper()
+        if lock_state == "COMPLETE":
+            if not isinstance(lock, Mapping):
+                hard_failures.append("GW_LOCK_PACKAGE_MISSING")
+            else:
+                missing = [field for field in _FINAL_LOCK_FIELDS if field not in lock]
+                if missing:
+                    hard_failures.append(f"GW_LOCK_PACKAGE_SCHEMA_MISSING={','.join(missing)}")
         else:
-            missing = [field for field in _FINAL_LOCK_FIELDS if field not in lock]
-            if missing:
-                failures.append(f"GW_LOCK_PACKAGE_SCHEMA_MISSING={','.join(missing)}")
+            degradation, meta_hard = _section_degradation(
+                section="GW_LOCK_PACKAGE",
+                meta=lock_meta,
+                require_count=False,
+            )
+            hard_failures.extend(meta_hard)
+            if degradation:
+                section_degradations.append(degradation)
+            if not list(lock_meta.get("missing_fields") or []):
+                hard_failures.append("GW_LOCK_PACKAGE_DEGRADED_MISSING_FIELDS_UNDECLARED")
+
+        if isinstance(lock, Mapping):
+            xi_present = "xi_exact11" in lock
             xi = list(lock.get("xi_exact11") or [])
+            outfield_present = "outfield_bench_priority_1_3" in lock
             outfield = list(lock.get("outfield_bench_priority_1_3") or [])
-            if len(xi) != 11 or len(set(map(str, xi))) != 11:
-                failures.append("GW_LOCK_PACKAGE_XI_INVALID")
-            if len(outfield) != 3 or len(set(map(str, outfield))) != 3:
-                failures.append("GW_LOCK_PACKAGE_OUTFIELD_BENCH_INVALID")
-            if lock.get("bench_gk") in outfield:
-                failures.append("GW_LOCK_PACKAGE_GK_IN_OUTFIELD_PRIORITY")
-            if lock.get("captain") not in xi or lock.get("vice_captain") not in xi or lock.get("captain") == lock.get("vice_captain"):
-                failures.append("GW_LOCK_PACKAGE_CVC_INVALID")
-            if payload.get("selected_package_unambiguous") is not True:
-                failures.append("GW_LOCK_PACKAGE_SELECTION_AMBIGUOUS")
+            if xi_present and (len(xi) != 11 or len(set(map(str, xi))) != 11):
+                hard_failures.append("GW_LOCK_PACKAGE_XI_INVALID")
+            if outfield_present and (len(outfield) != 3 or len(set(map(str, outfield))) != 3):
+                hard_failures.append("GW_LOCK_PACKAGE_OUTFIELD_BENCH_INVALID")
+            if outfield_present and lock.get("bench_gk") in outfield:
+                hard_failures.append("GW_LOCK_PACKAGE_GK_IN_OUTFIELD_PRIORITY")
+            if (
+                xi_present
+                and lock.get("captain") is not None
+                and lock.get("vice_captain") is not None
+                and (
+                    lock.get("captain") not in xi
+                    or lock.get("vice_captain") not in xi
+                    or lock.get("captain") == lock.get("vice_captain")
+                )
+            ):
+                hard_failures.append("GW_LOCK_PACKAGE_CVC_INVALID")
+        if lock_state == "COMPLETE" and payload.get("selected_package_unambiguous") is not True:
+            hard_failures.append("GW_LOCK_PACKAGE_SELECTION_AMBIGUOUS")
 
     if mode == "POST_ALL_MATCH":
         order = tuple(str(value).strip().upper() for value in payload.get("visible_order") or [])
         if order != tuple(value.upper() for value in _POST_ALL_MATCH_ORDER):
-            failures.append("POST_ALL_MATCH_VISIBLE_ORDER_INVALID")
+            hard_failures.append("POST_ALL_MATCH_VISIBLE_ORDER_INVALID")
         completed = [str(value) for value in payload.get("completed_fixture_ids") or []]
         scout = list(payload.get("match_scout") or [])
-        failures.extend(_missing_row_fields(scout, _MATCH_SCOUT_FIELDS, "MATCH_SCOUT"))
-        scout_ids = [str(row.get("fixture_id")) for row in scout if isinstance(row, Mapping)]
+        scout_meta = _section_state(payload, "MATCH_SCOUT")
+        scout_state = str(scout_meta.get("state") or "").upper()
+        scout_ids = [
+            str(row.get("fixture_id"))
+            for row in scout
+            if isinstance(row, Mapping) and row.get("fixture_id") is not None
+        ]
+        if len(scout_ids) != len(scout):
+            hard_failures.append("MATCH_SCOUT_IDENTITY_MISSING")
         if len(scout_ids) != len(set(scout_ids)):
-            failures.append("MATCH_SCOUT_FIXTURE_DUPLICATE")
-        if set(scout_ids) != set(completed) or len(scout_ids) != len(completed):
-            failures.append("MATCH_SCOUT_FIXTURE_COVERAGE_MISMATCH")
+            hard_failures.append("MATCH_SCOUT_FIXTURE_DUPLICATE")
+        hard_failures.extend(_placeholder_rows(scout, "MATCH_SCOUT"))
+        if scout_state == "COMPLETE":
+            hard_failures.extend(_missing_row_fields(scout, _MATCH_SCOUT_FIELDS, "MATCH_SCOUT"))
+            if set(scout_ids) != set(completed) or len(scout_ids) != len(completed):
+                hard_failures.append("MATCH_SCOUT_FIXTURE_COVERAGE_MISMATCH")
+        else:
+            degradation, meta_hard = _section_degradation(
+                section="MATCH_SCOUT",
+                meta=scout_meta,
+                actual_count=len(scout),
+                expected_count=len(completed),
+                require_count=True,
+            )
+            hard_failures.extend(meta_hard)
+            if degradation:
+                section_degradations.append(degradation)
 
     if mode == "PRICE":
         order = tuple(str(value).strip().upper() for value in payload.get("visible_order") or [])
         if order != tuple(value.upper() for value in _PRICE_VISIBLE_ORDER):
-            failures.append("PRICE_VISIBLE_ORDER_INVALID")
+            hard_failures.append("PRICE_VISIBLE_ORDER_INVALID")
         rows = list(payload.get("price_waiting_comparison") or [])
-        failures.extend(_missing_row_fields(rows, _PRICE_WAIT_FIELDS, "PRICE_WAITING"))
+        hard_failures.extend(_missing_row_fields(rows, _PRICE_WAIT_FIELDS, "PRICE_WAITING"))
         if payload.get("material_price_route_count") and not rows:
-            failures.append("PRICE_WAITING_COMPARISON_MISSING")
+            hard_failures.append("PRICE_WAITING_COMPARISON_MISSING")
 
     if mode in {"DEEP", "FULL"} and str(payload.get("checkpoint_time") or "") == "04:30":
         if str(payload.get("deep_emphasis") or "").upper() != "OVERNIGHT_RESET_BASELINE":
-            failures.append("0430_DEEP_EMPHASIS_INVALID")
+            hard_failures.append("0430_DEEP_EMPHASIS_INVALID")
     if mode in {"DEEP", "FULL"} and str(payload.get("checkpoint_time") or "") == "12:30":
         if str(payload.get("deep_emphasis") or "").upper() != "DELTA_SINCE_04:30":
-            failures.append("1230_DEEP_EMPHASIS_INVALID")
+            hard_failures.append("1230_DEEP_EMPHASIS_INVALID")
         if "press_news_probability_changes" not in payload:
-            failures.append("1230_PRESS_NEWS_DELTA_MISSING")
+            hard_failures.append("1230_PRESS_NEWS_DELTA_MISSING")
     if mode in {"DEEP", "FULL"} and str(payload.get("checkpoint_time") or "") == "21:30":
         if str(payload.get("deep_emphasis") or "").upper() != "LATE_NEWS_OVERNIGHT_PRICE_DEADLINE_RISK":
-            failures.append("2130_DEEP_EMPHASIS_INVALID")
+            hard_failures.append("2130_DEEP_EMPHASIS_INVALID")
         rows = list(payload.get("overnight_risk_board") or [])
         if not rows:
-            failures.append("OVERNIGHT_RISK_BOARD_MISSING")
-        failures.extend(_missing_row_fields(rows, _OVERNIGHT_RISK_FIELDS, "OVERNIGHT_RISK"))
+            hard_failures.append("OVERNIGHT_RISK_BOARD_MISSING")
+        hard_failures.extend(_missing_row_fields(rows, _OVERNIGHT_RISK_FIELDS, "OVERNIGHT_RISK"))
 
     if mode == "OVERLAP":
         block_ids = [str(value) for value in payload.get("visible_block_ids") or []]
         if len(block_ids) != len(set(block_ids)):
-            failures.append("FULL_MATCH_DUPLICATED_REPORT_BLOCK")
+            hard_failures.append("FULL_MATCH_DUPLICATED_REPORT_BLOCK")
 
+    degraded_count_labels = sorted(
+        {
+            _SECTION_TO_COUNT_LABEL[row["section"]]
+            for row in section_degradations
+            if row.get("section") in _SECTION_TO_COUNT_LABEL
+        }
+    )
+    degraded_compute_sections = sorted(
+        {
+            _SECTION_TO_COMPUTE_SECTION[row["section"]]
+            for row in section_degradations
+            if row.get("section") in _SECTION_TO_COMPUTE_SECTION
+        }
+    )
+    report_can_continue = not hard_failures
+    severity = "FAIL" if hard_failures else "DEGRADED" if section_degradations else "PASS"
     return {
-        "status": "PASS" if not failures else "FAIL",
-        "failures": failures,
+        "status": "FAIL" if hard_failures else "PASS",
+        "severity": severity,
+        "failures": hard_failures,
+        "hard_failures": hard_failures,
+        "section_degradations": section_degradations,
+        "warnings": warnings,
+        "report_can_continue": report_can_continue,
         "report_mode": mode,
+        "degraded_count_labels": degraded_count_labels,
+        "degraded_compute_sections": degraded_compute_sections,
         "contract_fingerprint": _content_fingerprint(payload),
     }
 

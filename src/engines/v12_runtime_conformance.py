@@ -194,9 +194,14 @@ def resolve_hourly_core_upkeep_result(
         )
     else:
         raise RuntimeConformanceError("unsupported core-upkeep result")
-    row["report_can_continue"] = bool(row.get("report_due"))
-    row["emit_visible_report"] = bool(row.get("report_due"))
-    row["silent_occurrence_complete"] = not bool(row.get("report_due"))
+    preliminary_due = bool(row.get("report_due"))
+    row["preliminary_report_due"] = preliminary_due
+    row["report_can_continue"] = True
+    row["emit_visible_report"] = preliminary_due
+    row["preliminary_silence_candidate"] = not preliminary_due
+    row["silent_occurrence_complete"] = False
+    row["final_report_due_required"] = True
+    row["same_occurrence_dynamic_evaluation_required"] = True
     return row
 
 
@@ -293,7 +298,9 @@ POST_CORE_ROUTING_STAGES = frozenset(
         "PRICE",
         "DEADLINE",
         "FINAL",
+        "POST_MATCH",
         "POST_ALL_MATCH",
+        "FULL",
         "GENERIC_ACTION",
         "CONTENT_QA",
         "DELIVERY_OR_SILENCE",
@@ -342,6 +349,7 @@ def plan_natural_core_upkeep_gate(
         "logical_core_slot": logical_slot.isoformat(),
         "observed_at": observed.isoformat(),
         "report_due": bool(report_due),
+        "preliminary_report_due": bool(report_due),
         "core_gate_executed": False,
         "gate_terminal": False,
         "resolution_state": None,
@@ -370,9 +378,10 @@ def plan_natural_core_upkeep_gate(
         "execution_order": [
             "OCCURRENCE_IDENTITY",
             "LOAD_AUTHORITY_STATE",
-            "DETERMINE_REPORT_DUE",
+            "DETERMINE_PRELIMINARY_REPORT_DUE",
             "NATURAL_CORE_UPKEEP_GATE",
-            "SAME_OCCURRENCE_FINALIZATION_IF_NEEDED",
+            "FINALIZE_REPORT_DUE_FROM_SAME_OCCURRENCE_DYNAMIC_EVIDENCE",
+            "SAME_OCCURRENCE_VISIBLE_EVIDENCE_FINALIZATION_IF_DUE",
             "REPORT_PRICE_MATCH_DEEP_ROUTING",
             "CONTENT_QA_PROOF",
             "DELIVERY_OR_LEGITIMATE_SILENCE",
@@ -596,14 +605,19 @@ def validate_natural_occurrence_completion(
         failures.append("BLOCKED_STATE_WITHOUT_BLOCKED_RESULT")
 
     status = "PASS" if not failures else "FAIL"
+    preliminary_due = bool(report_due)
     return {
         "status": status,
         "failures": failures,
         "occurrence_may_complete": status == "PASS",
-        "visible_silence_allowed": bool(status == "PASS" and not report_due),
+        "preliminary_report_due": preliminary_due,
+        "preliminary_silence_candidate": bool(status == "PASS" and not preliminary_due),
+        "visible_silence_allowed": False,
+        "final_report_due_required": status == "PASS",
+        "same_occurrence_dynamic_evaluation_required": status == "PASS",
         "due_report_must_continue_fail_operationally": bool(
             status == "PASS"
-            and report_due
+            and preliminary_due
             and state in {"ATTEMPT_FAILED", "ATTEMPT_BLOCKED"}
         ),
     }
@@ -634,6 +648,366 @@ def authorize_post_core_stage(
         "same_core_run_reused": True,
         "second_full_core_acquisition_allowed": False,
     }
+
+
+
+STATIC_REPORT_SLOT_MODES = {
+    (4, 30): "DEEP",
+    (5, 30): "PRICE",
+    (12, 30): "DEEP",
+    (21, 30): "DEEP",
+}
+REPORT_MODE_ORDER = (
+    "FINAL",
+    "DEADLINE",
+    "DEEP",
+    "PRICE",
+    "FULL",
+    "MATCH",
+    "POST_MATCH",
+    "POST_ALL_MATCH",
+)
+
+
+def _normalize_report_modes(value: Sequence[str] | str | None) -> list[str]:
+    raw: list[str] = []
+    if value is None:
+        return []
+    if isinstance(value, str):
+        raw = [part for part in value.replace(",", "+").split("+") if part.strip()]
+    else:
+        for item in value:
+            raw.extend(
+                part for part in str(item or "").replace(",", "+").split("+")
+                if part.strip()
+            )
+    out: list[str] = []
+    for item in raw:
+        mode = item.strip().upper().replace("-", "_")
+        if mode == "POST_ALL_MATCH":
+            canonical_mode = "POST_ALL_MATCH"
+        elif mode == "POST_MATCH":
+            canonical_mode = "POST_MATCH"
+        else:
+            canonical_mode = mode
+        if canonical_mode and canonical_mode not in out:
+            out.append(canonical_mode)
+    order = {mode: index for index, mode in enumerate(REPORT_MODE_ORDER)}
+    return sorted(out, key=lambda mode: (order.get(mode, len(order)), mode))
+
+
+def determine_preliminary_report_due(
+    *,
+    report_occurrence: str,
+    deadline_active: bool = False,
+    deadline_mode: str = "DEADLINE",
+    known_modes: Sequence[str] | str | None = None,
+) -> dict[str, Any]:
+    """Determine only the pre-core/static report route for one natural occurrence."""
+    occurrence = _parse_local_occurrence(report_occurrence, label="report_occurrence")
+    if occurrence.minute != 30 or occurrence.second != 0:
+        raise RuntimeConformanceError("preliminary report due requires an exact HH:30 occurrence")
+    modes = _normalize_report_modes(known_modes)
+    slot_mode = STATIC_REPORT_SLOT_MODES.get((occurrence.hour, occurrence.minute))
+    reasons: list[str] = []
+    if slot_mode and slot_mode not in modes:
+        modes.append(slot_mode)
+        reasons.append(f"STATIC_SLOT_{slot_mode}")
+    if deadline_active:
+        mode = str(deadline_mode or "DEADLINE").strip().upper()
+        if mode not in {"DEADLINE", "FINAL"}:
+            raise RuntimeConformanceError("deadline_mode must be DEADLINE or FINAL")
+        if mode not in modes:
+            modes.append(mode)
+        reasons.append("DEADLINE_ACTIVE")
+    modes = _normalize_report_modes(modes)
+    if known_modes:
+        reasons.append("PRE_CORE_KNOWN_ROUTE")
+    due = bool(modes)
+    return {
+        "proof_kind": "TRANSIENT_PRELIMINARY_REPORT_DUE",
+        "authoritative": False,
+        "durable_state": False,
+        "report_occurrence": occurrence.isoformat(),
+        "preliminary_report_due": due,
+        "preliminary_reason": "+".join(reasons) if reasons else "NO_STATIC_OR_PRE_CORE_TRIGGER",
+        "preliminary_modes": modes,
+        "final_report_due": None,
+        "same_occurrence_dynamic_recheck_required": True,
+    }
+
+
+def _fixture_id(row: Mapping[str, Any]) -> str:
+    for key in ("fixture", "id", "code"):
+        value = row.get(key)
+        if value not in {None, ""}:
+            return str(value)
+    return "UNKNOWN_FIXTURE"
+
+
+def _fixture_summary(
+    fixtures: Sequence[Mapping[str, Any]] | None,
+    *,
+    scoring_gw: int | None,
+) -> dict[str, Any] | None:
+    if fixtures is None or scoring_gw is None:
+        return None
+    rows = [
+        dict(row)
+        for row in fixtures
+        if int(row.get("event") or row.get("gw") or -1) == int(scoring_gw)
+    ]
+    if not rows:
+        return {
+            "scoring_gw": int(scoring_gw),
+            "fixture_count": 0,
+            "live_fixture_ids": [],
+            "finished_fixture_ids": [],
+            "unstarted_fixture_ids": [],
+            "all_finished": False,
+            "scope_complete": False,
+        }
+    live = [
+        _fixture_id(row)
+        for row in rows
+        if row.get("started") is True and row.get("finished") is False
+    ]
+    finished = [_fixture_id(row) for row in rows if row.get("finished") is True]
+    unstarted = [
+        _fixture_id(row)
+        for row in rows
+        if row.get("started") is not True and row.get("finished") is not True
+    ]
+    return {
+        "scoring_gw": int(scoring_gw),
+        "fixture_count": len(rows),
+        "live_fixture_ids": live,
+        "finished_fixture_ids": finished,
+        "unstarted_fixture_ids": unstarted,
+        "all_finished": len(finished) == len(rows),
+        "scope_complete": True,
+    }
+
+
+def finalize_report_due_after_core(
+    core_proof: Mapping[str, Any],
+    *,
+    preliminary_report_due: bool,
+    preliminary_reason: str | None,
+    preliminary_modes: Sequence[str] | str | None,
+    scoring_gw: int | None,
+    preliminary_fixture_evidence: Sequence[Mapping[str, Any]] | None = None,
+    post_core_fixture_evidence: Sequence[Mapping[str, Any]] | None = None,
+    evidence_generated_at: str | None = None,
+    dynamic_evidence_authority: str = "AUTHORITATIVE_SAME_OCCURRENCE",
+) -> dict[str, Any]:
+    """Promote/refine REPORT_DUE only after NATURAL_CORE_UPKEEP_GATE terminalizes.
+
+    False->true is allowed when fresh same-occurrence lifecycle evidence creates a
+    dynamic Match/Post-Match/Post-All-Match trigger. True->false is forbidden.
+    """
+    authorize_post_core_stage(core_proof, stage="SAME_OCCURRENCE_FINALIZATION")
+    preliminary_due = bool(preliminary_report_due)
+    core_preliminary = bool(
+        core_proof.get("preliminary_report_due", core_proof.get("report_due"))
+    )
+    if core_preliminary != preliminary_due:
+        raise RuntimeConformanceError(
+            "preliminary REPORT_DUE must remain bound to the value used by the core gate"
+        )
+
+    authority = str(dynamic_evidence_authority or "").strip().upper()
+    authority_ok = authority in {
+        "AUTHORITATIVE_SAME_OCCURRENCE",
+        "FRESHEST_VALID_FALLBACK",
+    }
+    evidence_checked = True
+    timestamp = None
+    if evidence_generated_at not in {None, ""}:
+        timestamp = _parse_local_occurrence(
+            evidence_generated_at, label="evidence_generated_at"
+        ).isoformat()
+
+    pre_summary = _fixture_summary(
+        preliminary_fixture_evidence, scoring_gw=scoring_gw
+    )
+    post_summary = _fixture_summary(
+        post_core_fixture_evidence, scoring_gw=scoring_gw
+    )
+    dynamic_trigger = "FALSE"
+    dynamic_reason = "NO_DYNAMIC_LIFECYCLE_TRANSITION"
+    dynamic_mode: str | None = None
+
+    if (
+        not authority_ok
+        or post_summary is None
+        or post_summary.get("scope_complete") is not True
+        or timestamp is None
+    ):
+        dynamic_trigger = "UNRESOLVED"
+        dynamic_reason = "DYNAMIC_EVIDENCE_UNRESOLVED_AFTER_CORE"
+    else:
+        live_ids = list(post_summary.get("live_fixture_ids") or [])
+        if live_ids:
+            dynamic_trigger = "TRUE"
+            dynamic_reason = "SCORING_GW_LIVE_MATCH_AFTER_CORE"
+            dynamic_mode = "MATCH"
+        else:
+            pre_live = bool((pre_summary or {}).get("live_fixture_ids"))
+            pre_all_finished = bool((pre_summary or {}).get("all_finished"))
+            post_all_finished = bool(post_summary.get("all_finished"))
+            pre_finished_count = len((pre_summary or {}).get("finished_fixture_ids") or [])
+            post_finished_count = len(post_summary.get("finished_fixture_ids") or [])
+            preliminary_has_match = "MATCH" in _normalize_report_modes(preliminary_modes)
+            if post_all_finished and (
+                preliminary_has_match
+                or (pre_summary is not None and not pre_all_finished)
+            ):
+                dynamic_trigger = "TRUE"
+                dynamic_reason = "POST_ALL_MATCH_TRANSITION_AFTER_CORE"
+                dynamic_mode = "POST_ALL_MATCH"
+            elif (
+                post_finished_count > pre_finished_count
+                and (pre_live or preliminary_has_match)
+            ):
+                dynamic_trigger = "TRUE"
+                dynamic_reason = "MATCH_COMPLETION_TRANSITION_AFTER_CORE"
+                dynamic_mode = "POST_MATCH"
+
+    final_due = bool(preliminary_due or dynamic_trigger == "TRUE")
+    if preliminary_due and not final_due:
+        raise RuntimeConformanceError("PRELIMINARY_REPORT_DUE=true may never become false")
+
+    modes = _normalize_report_modes(preliminary_modes)
+    previous_modes = list(modes)
+    if dynamic_mode == "MATCH":
+        modes = [
+            mode for mode in modes
+            if mode not in {"POST_MATCH", "POST_ALL_MATCH"}
+        ]
+        if "MATCH" not in modes:
+            modes.append("MATCH")
+    elif dynamic_mode in {"POST_MATCH", "POST_ALL_MATCH"}:
+        modes = [mode for mode in modes if mode != "MATCH"]
+        if dynamic_mode not in modes:
+            modes.append(dynamic_mode)
+    modes = _normalize_report_modes(modes)
+    if not final_due:
+        modes = []
+
+    final_mode = "+".join(modes) if modes else None
+    visible_silence = bool(
+        not preliminary_due
+        and dynamic_trigger == "FALSE"
+        and not final_due
+    )
+    next_action = (
+        "ROUTE_ONE_COHERENT_VISIBLE_REPORT"
+        if final_due
+        else "LEGITIMATE_SILENCE"
+        if visible_silence
+        else "CONTINUE_EXISTING_FRESHEST_VALID_EVIDENCE_LADDER"
+    )
+    return {
+        "proof_kind": "TRANSIENT_TWO_STAGE_REPORT_DUE_FINALIZATION",
+        "authoritative": False,
+        "durable_state": False,
+        "preliminary_report_due": preliminary_due,
+        "preliminary_reason": str(preliminary_reason or ""),
+        "preliminary_modes": previous_modes,
+        "core_gate_resolution": core_proof.get("resolution_state"),
+        "core_terminal_result": core_proof.get("terminal_core_result"),
+        "same_core_run_reused": True,
+        "second_full_core_acquisition_allowed": False,
+        "dynamic_evidence_checked": evidence_checked,
+        "dynamic_evidence_authority": authority,
+        "dynamic_trigger": dynamic_trigger,
+        "dynamic_trigger_reason": dynamic_reason,
+        "dynamic_report_due": dynamic_trigger == "TRUE",
+        "final_report_due": final_due,
+        "final_modes": modes,
+        "final_mode": final_mode,
+        "due_monotonicity": {
+            "false_to_false_allowed": True,
+            "false_to_true_allowed": True,
+            "true_to_true_required": True,
+            "true_to_false_forbidden": True,
+        },
+        "mode_transition": {
+            "preliminary_modes": previous_modes,
+            "final_modes": modes,
+            "due_sticky_not_mode_sticky": True,
+        },
+        "evidence_snapshot": {
+            "preliminary": pre_summary,
+            "post_core": post_summary,
+            "raw_v6_payload_duplicated": False,
+        },
+        "evidence_generated_at": timestamp,
+        "visible_silence_allowed": visible_silence,
+        "visible_report_count": 1 if final_due else 0,
+        "combined_report": bool(final_due and len(modes) > 1),
+        "next_action": next_action,
+    }
+
+
+def validate_final_report_routing(
+    core_proof: Mapping[str, Any],
+    finalization: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Final termination guard: preliminary false alone can never authorize silence."""
+    core = validate_natural_occurrence_completion(
+        core_proof,
+        report_due=bool(
+            finalization.get(
+                "preliminary_report_due",
+                core_proof.get("preliminary_report_due", core_proof.get("report_due")),
+            )
+        ),
+    )
+    failures: list[str] = []
+    if core.get("status") != "PASS":
+        failures.append("CORE_GATE_NOT_TERMINAL")
+    if finalization.get("proof_kind") != "TRANSIENT_TWO_STAGE_REPORT_DUE_FINALIZATION":
+        failures.append("FINAL_REPORT_DUE_PROOF_MISSING")
+    if finalization.get("dynamic_evidence_checked") is not True:
+        failures.append("DYNAMIC_EVIDENCE_NOT_CHECKED")
+    preliminary = bool(finalization.get("preliminary_report_due"))
+    final_due = bool(finalization.get("final_report_due"))
+    trigger = str(finalization.get("dynamic_trigger") or "").upper()
+    if preliminary and not final_due:
+        failures.append("TRUE_TO_FALSE_REPORT_DUE_FORBIDDEN")
+    if trigger == "TRUE" and not final_due:
+        failures.append("DYNAMIC_TRIGGER_TRUE_WITH_FINAL_DUE_FALSE")
+    if trigger not in {"TRUE", "FALSE", "UNRESOLVED"}:
+        failures.append("INVALID_DYNAMIC_TRIGGER_STATE")
+    silence = bool(
+        not failures
+        and not preliminary
+        and trigger == "FALSE"
+        and not final_due
+    )
+    if finalization.get("visible_silence_allowed") is True and not silence:
+        failures.append("SILENCE_AUTHORIZED_WITHOUT_FINAL_FALSE_PROOF")
+    unresolved = trigger == "UNRESOLVED"
+    return {
+        "status": "PASS" if not failures else "FAIL",
+        "failures": failures,
+        "final_report_due": final_due,
+        "final_mode": finalization.get("final_mode"),
+        "visible_silence_allowed": silence,
+        "dynamic_trigger_unresolved": unresolved,
+        "report_can_continue": bool(final_due or unresolved),
+        "next_action": (
+            "ROUTE_ONE_COHERENT_VISIBLE_REPORT"
+            if final_due
+            else "CONTINUE_EXISTING_FRESHEST_VALID_EVIDENCE_LADDER"
+            if unresolved
+            else "LEGITIMATE_SILENCE"
+        ),
+        "second_full_core_acquisition_allowed": False,
+    }
+
 
 
 def validate_v12_authority_sources(*, authority_path: str, state_path: str) -> dict[str, Any]:

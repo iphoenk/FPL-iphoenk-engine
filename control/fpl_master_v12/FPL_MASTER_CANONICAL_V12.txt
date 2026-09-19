@@ -21,7 +21,10 @@ Mandatory visible outside deadline-active:
 04:30 DEEP; 05:30 PRICE; 12:30 DEEP; 21:30 DEEP; canonical Deadline/Final; scoring-GW live Match checkpoints; Post-All-Match/next applicable Deep.
 Deadline-active = first canonical :30 at/after T-24h of Official deadline until lock. EVERY hourly :30 inside this window is visible, even NO MATERIAL CHANGE.
 Other checkpoints silent unless routed visible.
-Determine REPORT_DUE from original occurrence before optional refresh. Once true, degradation never rewrites it to NOT_DUE.
+REPORT_DUE is TWO-STAGE. PRELIMINARY_REPORT_DUE is determined before core from schedule-known/static facts plus any already-known factual trigger. FINAL_REPORT_DUE is finalized only after NATURAL_CORE_UPKEEP_GATE terminalizes and same-occurrence dynamic evidence is re-evaluated.
+FINAL_REPORT_DUE = PRELIMINARY_REPORT_DUE OR SAME_OCCURRENCE_DYNAMIC_TRIGGER.
+Monotonicity is mandatory: false->false allowed; false->true allowed; true->true required; true->false forbidden.
+PRELIMINARY_REPORT_DUE=true is sticky. PRELIMINARY_REPORT_DUE=false is never sufficient to authorize visible silence.
 
 3. OCCURRENCE IDENTITY
 Preserve original scheduler-supplied Asia/Jakarta HH:30 slot and factual observed_at.
@@ -48,24 +51,38 @@ M. Due-report exact-scope refresh planning remains downstream of this hourly cor
 A. NATURAL_CORE_UPKEEP_GATE is a first-class mandatory execution gate for every natural FPL Master Monitor V12 HH:30 occurrence. It is not advisory report text.
 B. A natural occurrence MAY NOT COMPLETE until its current-HH:00 CORE_UPKEEP has reached one terminal resolution state: ALREADY_FULFILLED, BOUND_IN_PROGRESS_SUCCESS, ATTEMPT_SUCCESS, ATTEMPT_FAILED, or ATTEMPT_BLOCKED.
 C. Completed natural occurrences MUST NOT use NOT_EVALUATED, SKIPPED or UNKNOWN as a core resolution state.
-D. REPORT_DUE=false authorizes visible silence only after the gate terminalizes. Explicit invariant: SILENT REPORT ROUTING != SILENT CORE SKIP.
+D. PRELIMINARY_REPORT_DUE=false never authorizes visible silence by itself. Core terminalization is necessary but not sufficient; FINAL_REPORT_DUE must also be finalized false after same-occurrence dynamic evaluation. Explicit invariant: SILENT REPORT ROUTING != SILENT CORE SKIP.
 E. The gate executes before same-occurrence evidence finalization, temporary price-watch evaluation/output, Match, Deep, Price, Deadline/Final, Post-All-Match, generic WAIT/PREPARE/ACT narrative, content QA, delivery or legitimate silence.
 F. Fixed occurrence order:
    1 OCCURRENCE IDENTITY;
    2 LOAD AUTHORITY / STATE;
-   3 DETERMINE REPORT_DUE;
+   3 DETERMINE PRELIMINARY_REPORT_DUE;
    4 NATURAL_CORE_UPKEEP_GATE;
-   5 SAME-OCCURRENCE FINALIZATION if needed;
-   6 REPORT / PRICE / MATCH / DEEP routing;
-   7 CONTENT QA / proof;
-   8 DELIVERY or legitimate silence.
+   5 FINALIZE FINAL_REPORT_DUE from same-occurrence dynamic evidence;
+   6 SAME-OCCURRENCE VISIBLE-EVIDENCE FINALIZATION for the final routed mode;
+   7 REPORT / PRICE / MATCH / DEEP routing;
+   8 CONTENT QA / proof;
+   9 DELIVERY or legitimate silence.
 G. STATE A — ALREADY_FULFILLED: only provenance-valid same-slot natural chatgpt_hourly_master proof with authoritative_runtime_snapshot=true and publish_integrity=PASS may terminalize the gate without a new acquisition.
 H. STATE B — IN_PROGRESS: bind the exact same-slot governed run ID, perform bounded terminal reread and never duplicate. The occurrence may not complete while the bound run remains non-terminal.
 I. STATE C — ATTEMPT_REQUIRED: if no same-slot authoritative fulfillment and no same-slot governed run is active, perform exactly ONE existing issue #431 title mutation for CURRENT_HH:00, require exact readback, bind the triggered run if created, and never retry a second full-core acquisition in the same occurrence.
 J. STATE D — ATTEMPT_FAILED/BLOCKED: preserve exact attempted action, failure reason, mutation/readback state and duplicate_acquisition=false. REPORT_DUE=false may end visibly silent only after this failure proof is recorded. REPORT_DUE=true continues fail-operational report delivery from freshest valid evidence.
 K. Every natural occurrence retains one transient NATURAL_CORE_UPKEEP_GATE proof with scheduler_occurrence, logical_core_slot, observed_at, core_gate_executed=true, terminal resolution_state, same_slot_fulfilled, existing_run_bound, attempt_required, attempt_performed, mutation_result, readback_result, bound_v6_run_id, publish_integrity, authoritative_runtime_snapshot, duplicate_acquisition=false and terminal_core_result. This proof is evidence only and MUST NOT become durable authority/state.
 L. Temporary Sangaré -> Groß price-watch lifecycle remains unchanged but is strictly downstream of this gate. It may neither substitute for CORE_UPKEEP nor create another V6 acquisition.
-M. Any early-return or silent-completion path is legal only after NATURAL_CORE_UPKEEP_GATE terminalization.
+M. Any early-return or silent-completion path is legal only after NATURAL_CORE_UPKEEP_GATE terminalization AND FINAL_REPORT_DUE finalization.
+
+4B. SAME-OCCURRENCE DYNAMIC REPORT_DUE FINALIZATION
+A. Static/schedule-known triggers such as 04:30 Deep, 05:30 Price, 12:30 Deep, 21:30 Deep, deadline-active slots and known Deadline/Final belong to PRELIMINARY_REPORT_DUE.
+B. Dynamic triggers whose truth may change because of the current occurrence core refresh MUST be evaluated only after NATURAL_CORE_UPKEEP_GATE reaches a terminal state. These include scoring-GW LIVE Match, match-completion transition and Post-All-Match transition.
+C. A scoring-GW Match dynamic trigger is TRUE when freshest valid same-occurrence fixture evidence has started=true AND finished=false for one or more scoring-GW fixtures. Multiple live fixtures still produce one coherent Match report.
+D. If PRELIMINARY_REPORT_DUE=false and the post-core dynamic Match trigger becomes TRUE, FINAL_REPORT_DUE MUST promote false->true and FINAL_MODE MUST include MATCH.
+E. PRELIMINARY_REPORT_DUE=true can never become false. However mode is not sticky: if preliminary Match evidence is superseded by fresh completion evidence, the due report remains due while mode may refine to POST_MATCH or POST_ALL_MATCH according to the factual lifecycle.
+F. Overlap such as DEEP+MATCH, DEADLINE+MATCH, PRICE+MATCH or FULL+MATCH produces one coherent visible report, never duplicate visible reports and never suppresses Match merely because another mode is already due.
+G. Legitimate visible silence requires all of: PRELIMINARY_REPORT_DUE=false; dynamic evidence checked after core; DYNAMIC_REPORT_DUE=false; FINAL_REPORT_DUE=false. Preliminary false alone is insufficient.
+H. If core refresh fails, a known PRELIMINARY_REPORT_DUE=true remains true and continues fail-operationally. If preliminary is false and the dynamic trigger cannot be established from current/freshest-valid evidence, do not fabricate Match: DYNAMIC_TRIGGER=UNRESOLVED and continue the existing freshest-valid evidence ladder. UNRESOLVED does not authorize silent completion and does not authorize a second full-core acquisition.
+I. Every natural occurrence retains transient evidence-only TWO-STAGE REPORT_DUE proof containing preliminary_report_due, preliminary_reason, core_gate_resolution, dynamic_evidence_checked, dynamic_trigger, dynamic_trigger_reason, final_report_due, final_mode, evidence_snapshot and evidence_generated_at. This proof is never authority or durable methodology state.
+J. DUE stickiness and MODE stickiness are distinct. A due occurrence stays due; its mode may refine when fresher same-occurrence factual lifecycle evidence changes.
+K. NATURAL_CORE_UPKEEP_GATE itself remains unchanged: no new acquisition, no second issue #431 mutation, no backfill, no scheduler change and no alternate transport.
 
 5. FACTUAL EVIDENCE LADDER
 1 fresh valid current V6;
@@ -79,7 +96,7 @@ Never blank healthy whole sections because one scope is degraded.
 Never fabricate completion, auth, finance, price ETA, picks, standings, provenance, weather or model precision.
 
 5A. SAME-OCCURRENCE VISIBLE-EVIDENCE FINALIZATION
-A routed visible alert may be triggered from preliminary evidence, but trigger evidence and final visible evidence are separate concerns.
+After FINAL_REPORT_DUE routing, a visible alert may retain preliminary trigger evidence, but trigger evidence and final visible evidence are separate concerns. This section finalizes values for an already-finalized route; it does not replace Section 4B REPORT_DUE finalization.
 If the governed current-slot V6 acquisition/publication is still IN_PROGRESS, bind that exact run, never launch a second full-core acquisition, and perform the existing bounded terminal reread.
 After same-occurrence publication SUCCESS, reread the current official_price_predictor and every relevant current public factual artifact for the routed alert. If personal affordability/economics are discussed, reread the current authenticated personal artifact as well.
 The final visible values MUST use the freshest authoritative evidence available from the same original occurrence. Older preliminary values may preserve why the alert was routed, but MUST NOT override newer same-occurrence evidence with authoritative_runtime_snapshot=true and publish_integrity=PASS.

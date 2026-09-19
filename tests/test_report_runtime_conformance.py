@@ -28,6 +28,9 @@ from src.engines.v12_runtime_conformance import (
     validate_exposure_metric,
     format_exposure_metric,
     finalize_same_occurrence_alert_evidence,
+    determine_preliminary_report_due,
+    finalize_report_due_after_core,
+    validate_final_report_routing,
     resolve_authenticated_affordability,
     resolve_temporary_price_watch_lifecycle,
     validate_identity_production_acceptance,
@@ -817,7 +820,8 @@ def test_45_failed_hourly_core_with_silent_report_route_does_not_fake_report():
     result = resolve_hourly_core_upkeep_result(plan, result="TIMEOUT")
     assert result["core_upkeep"] == "DEGRADED"
     assert result["emit_visible_report"] is False
-    assert result["silent_occurrence_complete"] is True
+    assert result["silent_occurrence_complete"] is False
+    assert result["final_report_due_required"] is True
 
 
 def test_46_report_prefetch_never_fulfills_core_operational_slot():
@@ -1401,7 +1405,9 @@ def test_83_silent_checkpoint_still_executes_natural_core_gate():
     proof = _attempt_success_core_proof(report_due=False)
     validation = validate_natural_occurrence_completion(proof, report_due=False)
     assert validation["status"] == "PASS"
-    assert validation["visible_silence_allowed"] is True
+    assert validation["visible_silence_allowed"] is False
+    assert validation["preliminary_silence_candidate"] is True
+    assert validation["final_report_due_required"] is True
     assert proof["core_gate_executed"] is True
 
 
@@ -1679,3 +1685,355 @@ def test_108_all_post_core_routing_modes_require_terminal_gate():
         "DELIVERY_OR_SILENCE",
     ):
         assert authorize_post_core_stage(proof, stage=stage)["status"] == "PASS"
+
+
+def _fixture(*, fixture=500, started=False, finished=False, event=5, kickoff="2026-09-19T11:30:00Z"):
+    return {
+        "fixture": fixture,
+        "event": event,
+        "kickoff_time": kickoff,
+        "started": started,
+        "finished": finished,
+    }
+
+
+def _finalize_due(
+    *,
+    preliminary_due=False,
+    preliminary_modes=(),
+    preliminary_fixtures=None,
+    post_fixtures=None,
+    occurrence="2026-09-19T19:30:00+07:00",
+    authority="AUTHORITATIVE_SAME_OCCURRENCE",
+):
+    core = _attempt_success_core_proof(
+        occurrence=occurrence,
+        report_due=preliminary_due,
+    )
+    return core, finalize_report_due_after_core(
+        core,
+        preliminary_report_due=preliminary_due,
+        preliminary_reason="TEST_PRELIMINARY",
+        preliminary_modes=preliminary_modes,
+        scoring_gw=5,
+        preliminary_fixture_evidence=preliminary_fixtures,
+        post_core_fixture_evidence=post_fixtures,
+        evidence_generated_at="2026-09-19T19:31:20+07:00",
+        dynamic_evidence_authority=authority,
+    )
+
+
+def test_109_pre_false_post_no_live_final_false_and_legitimate_silence():
+    core, final = _finalize_due(
+        preliminary_fixtures=[_fixture(started=False, finished=False)],
+        post_fixtures=[_fixture(started=False, finished=False)],
+    )
+    assert final["dynamic_trigger"] == "FALSE"
+    assert final["final_report_due"] is False
+    routing = validate_final_report_routing(core, final)
+    assert routing["status"] == "PASS"
+    assert routing["visible_silence_allowed"] is True
+
+
+def test_110_proven_1930_false_to_true_match_promotion_after_same_occurrence_core():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T19:30:00+07:00",
+        observed_at="2026-09-19T19:30:05+07:00",
+        report_due=False,
+    )
+    core = finalize_natural_core_upkeep_gate(
+        plan,
+        attempt_performed=True,
+        mutation_result="UPDATED",
+        readback_result="EXACT_MATCH",
+        bound_v6_run_id=35442926265,
+        terminal_run_result="SUCCESS",
+        publish_integrity="PASS",
+        authoritative_runtime_snapshot=True,
+    )
+    final = finalize_report_due_after_core(
+        core,
+        preliminary_report_due=False,
+        preliminary_reason="PRE_CORE_FIXTURE_NOT_YET_LIVE",
+        preliminary_modes=[],
+        scoring_gw=5,
+        preliminary_fixture_evidence=[
+            _fixture(started=False, finished=False, kickoff="2026-09-19T11:30:00Z")
+        ],
+        post_core_fixture_evidence=[
+            _fixture(started=True, finished=False, kickoff="2026-09-19T11:30:00Z")
+        ],
+        evidence_generated_at="2026-09-19T19:31:20+07:00",
+    )
+    assert core["bound_v6_run_id"] == "35442926265"
+    assert final["dynamic_trigger"] == "TRUE"
+    assert final["dynamic_trigger_reason"] == "SCORING_GW_LIVE_MATCH_AFTER_CORE"
+    assert final["final_report_due"] is True
+    assert final["final_mode"] == "MATCH"
+    assert final["visible_report_count"] == 1
+    assert final["second_full_core_acquisition_allowed"] is False
+    assert validate_final_report_routing(core, final)["visible_silence_allowed"] is False
+
+
+def test_111_preliminary_true_is_sticky_and_cannot_become_false():
+    core, final = _finalize_due(
+        preliminary_due=True,
+        preliminary_modes=["DEEP"],
+        preliminary_fixtures=[_fixture(started=False, finished=False)],
+        post_fixtures=[_fixture(started=False, finished=False)],
+    )
+    assert final["final_report_due"] is True
+    assert final["final_mode"] == "DEEP"
+    assert validate_final_report_routing(core, final)["status"] == "PASS"
+
+
+def test_112_live_pre_and_live_post_remains_match():
+    core, final = _finalize_due(
+        preliminary_due=True,
+        preliminary_modes=["MATCH"],
+        preliminary_fixtures=[_fixture(started=True, finished=False)],
+        post_fixtures=[_fixture(started=True, finished=False)],
+    )
+    assert final["final_report_due"] is True
+    assert final["final_mode"] == "MATCH"
+
+
+def test_113_not_live_pre_then_live_post_promotes_match():
+    _, final = _finalize_due(
+        preliminary_fixtures=[_fixture(started=False, finished=False)],
+        post_fixtures=[_fixture(started=True, finished=False)],
+    )
+    assert final["preliminary_report_due"] is False
+    assert final["dynamic_report_due"] is True
+    assert final["final_mode"] == "MATCH"
+
+
+def test_114_live_pre_finished_post_keeps_due_but_refines_mode_to_post_match():
+    _, final = _finalize_due(
+        preliminary_due=True,
+        preliminary_modes=["MATCH"],
+        preliminary_fixtures=[
+            _fixture(fixture=1, started=True, finished=False),
+            _fixture(fixture=2, started=False, finished=False),
+        ],
+        post_fixtures=[
+            _fixture(fixture=1, started=True, finished=True),
+            _fixture(fixture=2, started=False, finished=False),
+        ],
+    )
+    assert final["final_report_due"] is True
+    assert final["final_mode"] == "POST_MATCH"
+    assert final["mode_transition"]["due_sticky_not_mode_sticky"] is True
+
+
+def test_115_post_all_match_transition_is_dynamic_and_due():
+    _, final = _finalize_due(
+        preliminary_due=True,
+        preliminary_modes=["MATCH"],
+        preliminary_fixtures=[_fixture(started=True, finished=False)],
+        post_fixtures=[_fixture(started=True, finished=True)],
+    )
+    assert final["dynamic_trigger_reason"] == "POST_ALL_MATCH_TRANSITION_AFTER_CORE"
+    assert final["final_mode"] == "POST_ALL_MATCH"
+    assert final["final_report_due"] is True
+
+
+def test_116_multiple_live_fixtures_produce_one_match_report():
+    _, final = _finalize_due(
+        preliminary_fixtures=[
+            _fixture(fixture=1, started=False, finished=False),
+            _fixture(fixture=2, started=False, finished=False),
+        ],
+        post_fixtures=[
+            _fixture(fixture=1, started=True, finished=False),
+            _fixture(fixture=2, started=True, finished=False),
+        ],
+    )
+    assert final["final_mode"] == "MATCH"
+    assert final["visible_report_count"] == 1
+    assert len(final["evidence_snapshot"]["post_core"]["live_fixture_ids"]) == 2
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected"),
+    [
+        ("DEEP", "DEEP+MATCH"),
+        ("DEADLINE", "DEADLINE+MATCH"),
+        ("PRICE", "PRICE+MATCH"),
+        ("FULL", "FULL+MATCH"),
+    ],
+)
+def test_117_overlap_with_match_is_combined_once(mode, expected):
+    _, final = _finalize_due(
+        preliminary_due=True,
+        preliminary_modes=[mode],
+        preliminary_fixtures=[_fixture(started=False, finished=False)],
+        post_fixtures=[_fixture(started=True, finished=False)],
+    )
+    assert final["final_mode"] == expected
+    assert final["combined_report"] is True
+    assert final["visible_report_count"] == 1
+
+
+def test_118_dynamic_evaluation_is_forbidden_before_core_gate_terminalizes():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T19:30:00+07:00",
+        observed_at="2026-09-19T19:30:05+07:00",
+        report_due=False,
+    )
+    with pytest.raises(RuntimeConformanceError, match="post-core routing is forbidden"):
+        finalize_report_due_after_core(
+            plan,
+            preliminary_report_due=False,
+            preliminary_reason="NONE",
+            preliminary_modes=[],
+            scoring_gw=5,
+            post_core_fixture_evidence=[_fixture(started=True, finished=False)],
+            evidence_generated_at="2026-09-19T19:31:20+07:00",
+        )
+
+
+def test_119_silence_requires_final_false_not_preliminary_false_alone():
+    core = _attempt_success_core_proof(
+        occurrence="2026-09-19T19:30:00+07:00",
+        report_due=False,
+    )
+    preliminary_only = validate_natural_occurrence_completion(core, report_due=False)
+    assert preliminary_only["visible_silence_allowed"] is False
+    _, final = _finalize_due(
+        preliminary_fixtures=[_fixture(started=False, finished=False)],
+        post_fixtures=[_fixture(started=False, finished=False)],
+    )
+    assert final["visible_silence_allowed"] is True
+
+
+def test_120_dynamic_unresolved_does_not_fabricate_match_or_authorize_silence():
+    core, final = _finalize_due(
+        preliminary_due=False,
+        preliminary_modes=[],
+        preliminary_fixtures=[_fixture(started=False, finished=False)],
+        post_fixtures=None,
+    )
+    assert final["dynamic_trigger"] == "UNRESOLVED"
+    assert final["final_report_due"] is False
+    routing = validate_final_report_routing(core, final)
+    assert routing["visible_silence_allowed"] is False
+    assert routing["dynamic_trigger_unresolved"] is True
+    assert routing["next_action"] == "CONTINUE_EXISTING_FRESHEST_VALID_EVIDENCE_LADDER"
+
+
+def test_121_core_failure_preserves_preliminary_true_fail_operationally():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-19T21:30:00+07:00",
+        observed_at="2026-09-19T21:30:05+07:00",
+        report_due=True,
+    )
+    core = finalize_natural_core_upkeep_gate(
+        plan,
+        attempt_performed=True,
+        mutation_result="ERROR",
+        readback_result="MISMATCH",
+        terminal_run_result="FAILED",
+        failure_reason="TRANSPORT_FAILURE",
+    )
+    final = finalize_report_due_after_core(
+        core,
+        preliminary_report_due=True,
+        preliminary_reason="STATIC_SLOT_DEEP",
+        preliminary_modes=["DEEP"],
+        scoring_gw=5,
+        post_core_fixture_evidence=None,
+        evidence_generated_at=None,
+        dynamic_evidence_authority="UNAVAILABLE",
+    )
+    assert final["dynamic_trigger"] == "UNRESOLVED"
+    assert final["final_report_due"] is True
+    assert final["final_mode"] == "DEEP"
+    assert validate_final_report_routing(core, final)["report_can_continue"] is True
+
+
+def test_122_no_second_acquisition_or_scheduler_is_introduced_by_finalization():
+    core, final = _finalize_due(
+        preliminary_fixtures=[_fixture(started=False, finished=False)],
+        post_fixtures=[_fixture(started=True, finished=False)],
+    )
+    assert final["same_core_run_reused"] is True
+    assert final["second_full_core_acquisition_allowed"] is False
+    assert core["second_scheduler_allowed"] is False
+
+
+def test_123_static_preliminary_slots_remain_schedule_known():
+    expected = {
+        4: "DEEP",
+        5: "PRICE",
+        12: "DEEP",
+        21: "DEEP",
+    }
+    for hour, mode in expected.items():
+        proof = determine_preliminary_report_due(
+            report_occurrence=f"2026-09-19T{hour:02d}:30:00+07:00"
+        )
+        assert proof["preliminary_report_due"] is True
+        assert proof["preliminary_modes"] == [mode]
+    silent = determine_preliminary_report_due(
+        report_occurrence="2026-09-19T19:30:00+07:00"
+    )
+    assert silent["preliminary_report_due"] is False
+
+
+def test_124_deadline_active_is_preliminary_due_and_stays_due():
+    preliminary = determine_preliminary_report_due(
+        report_occurrence="2026-09-19T19:30:00+07:00",
+        deadline_active=True,
+    )
+    assert preliminary["preliminary_report_due"] is True
+    assert preliminary["preliminary_modes"] == ["DEADLINE"]
+
+
+def test_125_stage_b_transient_proof_is_evidence_only_and_compact():
+    _, final = _finalize_due(
+        preliminary_fixtures=[_fixture(started=False, finished=False)],
+        post_fixtures=[_fixture(started=True, finished=False)],
+    )
+    for field in (
+        "preliminary_report_due",
+        "preliminary_reason",
+        "core_gate_resolution",
+        "dynamic_evidence_checked",
+        "dynamic_trigger",
+        "dynamic_trigger_reason",
+        "final_report_due",
+        "final_mode",
+        "evidence_snapshot",
+        "evidence_generated_at",
+    ):
+        assert field in final
+    assert final["authoritative"] is False
+    assert final["durable_state"] is False
+    assert final["evidence_snapshot"]["raw_v6_payload_duplicated"] is False
+
+
+def test_126_canonical_binds_two_stage_report_due_without_methodology_change():
+    canonical = _canonical()
+    assert "REPORT_DUE is TWO-STAGE" in canonical
+    assert "FINAL_REPORT_DUE = PRELIMINARY_REPORT_DUE OR SAME_OCCURRENCE_DYNAMIC_TRIGGER" in canonical
+    assert "false->true allowed" in canonical
+    assert "true->false forbidden" in canonical
+    assert "20% PROVEN/HISTORICAL" in canonical
+    assert "25% TACTICAL/ROLE" in canonical
+    assert "30% CURRENT UNDERLYING" in canonical
+    assert "25% FIXTURE/SECURITY" in canonical
+
+
+def test_127_finalization_owner_has_no_v6_import_or_event_model_mutation():
+    source = (ROOT / "src" / "engines" / "v12_runtime_conformance.py").read_text()
+    assert "from src.runtime_v6" not in source
+    event_source = (ROOT / "src" / "engines" / "v12_player_events.py").read_text()
+    assert "TWO_STAGE_REPORT_DUE" not in event_source
+
+
+def test_128_post_core_authorization_supports_completion_modes():
+    proof = _attempt_success_core_proof(report_due=True)
+    assert authorize_post_core_stage(proof, stage="POST_MATCH")["status"] == "PASS"
+    assert authorize_post_core_stage(proof, stage="POST_ALL_MATCH")["status"] == "PASS"
+    assert authorize_post_core_stage(proof, stage="FULL")["status"] == "PASS"

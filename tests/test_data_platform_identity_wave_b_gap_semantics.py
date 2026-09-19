@@ -61,7 +61,7 @@ def _evidence() -> dict:
     }
 
 
-def test_wave_b_green_does_not_require_full_canonical_coverage() -> None:
+def test_partial_provider_universe_stays_amber_even_when_observed_rows_are_joined() -> None:
     datasets = {
         "understat": {
             "record_groups": {
@@ -80,11 +80,13 @@ def test_wave_b_green_does_not_require_full_canonical_coverage() -> None:
     assert row["canonical_coverage_ratio"] == 0.25
     assert row["canonical_coverage_health"] == "AMBER"
     assert row["observed_join_coverage_ratio"] == 1.0
-    assert row["player_identity_health"] == "GREEN"
-    assert row["wave_b_closure_ready"] is True
+    assert row["player_identity_health"] == "AMBER"
+    assert row["wave_b_closure_ready"] is False
+    assert row["identity_health_reason"] == "UNKNOWN_PROVIDER_PRESENCE_REMAINS"
     assert row["provider_native_classification_counts"] == {
         "VERIFIED": 1,
-        "PROVIDER_ENTITY_EXISTS_BUT_UNMAPPED": 0,
+        "ACTIONABLE_UNMAPPED": 0,
+        "REVIEWED_PROVIDER_LIMITATION": 0,
         "NO_PROVIDER_ENTITY": 0,
         "NOT_APPLICABLE": 0,
         "CONFLICT": 0,
@@ -120,9 +122,9 @@ def test_observed_unmapped_is_red_for_wave_b_but_not_integrity_corruption() -> N
     assert row["player_identity_health"] == "RED"
     assert row["wave_b_closure_ready"] is False
     assert row["provider_entity_exists_but_unmapped_count"] == 1
-    assert row["provider_native_classification_counts"]["PROVIDER_ENTITY_EXISTS_BUT_UNMAPPED"] == 1
+    assert row["provider_native_classification_counts"]["ACTIONABLE_UNMAPPED"] == 1
     gap = next(item for item in row["provider_native_inventory"] if item["source_native_id"] == "12")
-    assert gap["classification"] == "PROVIDER_ENTITY_EXISTS_BUT_UNMAPPED"
+    assert gap["classification"] == "ACTIONABLE_UNMAPPED"
     assert gap["diagnostic_display_is_not_identity_evidence"] is True
 
 

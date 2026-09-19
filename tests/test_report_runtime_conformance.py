@@ -1,0 +1,477 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from src.engines.canonical_decision_methodology import merge_active_and_optimizer_scenarios
+from src.engines.v12_runtime_conformance import (
+    RuntimeConformanceError,
+    apply_scenario_lifecycle,
+    build_all15_identity_rows,
+    compose_icon_subscopes,
+    compose_operational_action,
+    compute_pick_exposure,
+    content_contract_severity,
+    future_transfer_economics_inputs,
+    plan_due_report_refresh,
+    resolve_governed_refresh_result,
+    split_bench_for_display,
+    validate_1230_signal_delta,
+    validate_decision_delta_rows,
+)
+from src.engines.visible_content_proof import (
+    CANONICAL_AUTHORITY,
+    VisibleContentProofError,
+    build_visible_content_proof,
+    canonical_mode_contract,
+)
+
+
+ROOT = Path(__file__).resolve().parents[1]
+CANONICAL_PATH = ROOT / CANONICAL_AUTHORITY
+STATE_PATH = ROOT / "control/fpl_master_v12/FPL_MASTER_STATE_V12.json"
+
+
+def _canonical() -> str:
+    return CANONICAL_PATH.read_text(encoding="utf-8")
+
+
+def _deep_contract() -> dict:
+    return canonical_mode_contract(_canonical(), "DEEP")
+
+
+def _revision() -> dict:
+    return {
+        "path": CANONICAL_AUTHORITY,
+        "branch_or_ref": "fpl-master-v12-rebuild",
+        "branch_head_sha": "a" * 40,
+        "file_blob_sha": "b" * 40,
+        "content_sha256": None,
+        "content_sha256_computed": False,
+        "canonical_version": "FPL MASTER CANONICAL V12",
+    }
+
+
+def _section_states(
+    contract: dict,
+    overrides: dict[str, dict] | None = None,
+) -> list[dict]:
+    override = overrides or {}
+    rows = []
+    for section_id in contract["expected_section_ids"]:
+        row = {"section_id": section_id, "state": "COMPLETE"}
+        row.update(override.get(section_id, {}))
+        rows.append(row)
+    return rows
+
+
+def _proof(
+    *,
+    rendered_ids: list[str] | None = None,
+    rendered_order: list[str] | None = None,
+    section_states: list[dict] | None = None,
+    degradations: list[dict] | None = None,
+    report_can_continue: bool = True,
+    hard_failures: list[str] | None = None,
+):
+    contract = _deep_contract()
+    return build_visible_content_proof(
+        canonical_authority_path=CANONICAL_AUTHORITY,
+        canonical_version="FPL MASTER CANONICAL V12",
+        canonical_revision=_revision(),
+        canonical_text=_canonical(),
+        report_slot="2026-09-19T12:30:00+07:00",
+        report_mode="DEEP",
+        report_due=True,
+        observed_at="2026-09-19T12:30:08+07:00",
+        section_states=section_states or _section_states(contract),
+        hard_failures=hard_failures or [],
+        section_degradations=degradations or [],
+        warnings=[],
+        report_can_continue=report_can_continue,
+        search_authority="PARTIAL",
+        repository_python_qa_executed=False,
+        python_execution_evidence=None,
+        rendered_section_ids=rendered_ids or list(contract["expected_section_ids"]),
+        rendered_visible_order=rendered_order or list(contract["expected_visible_order"]),
+    )
+
+
+def test_01_stale_deep_plans_exactly_one_governed_refresh_attempt():
+    plan = plan_due_report_refresh(
+        report_due=True,
+        report_mode="DEEP",
+        required_scope_age_minutes=46,
+        canonical_freshness_threshold_minutes=45,
+    )
+    assert plan["attempt_governed_refresh"] is True
+    assert plan["refresh_attempt_count"] == 1
+    assert plan["transport"] == "ISSUE_431_EXISTING_GOVERNED_TRANSPORT"
+    assert plan["alternate_transport_allowed"] is False
+
+
+def test_02_fresh_deep_plans_zero_refresh():
+    plan = plan_due_report_refresh(
+        report_due=True,
+        report_mode="DEEP",
+        required_scope_age_minutes=44.9,
+        canonical_freshness_threshold_minutes=45,
+    )
+    assert plan["attempt_governed_refresh"] is False
+    assert plan["status"] == "REUSE_CURRENT"
+
+
+def test_03_refresh_in_progress_prevents_duplicate_attempt():
+    plan = plan_due_report_refresh(
+        report_due=True,
+        report_mode="DEEP",
+        required_scope_age_minutes=80,
+        canonical_freshness_threshold_minutes=45,
+        acquisition_in_progress=True,
+    )
+    assert plan["attempt_governed_refresh"] is False
+    assert plan["status"] == "RE_READ_EXISTING_RESULT"
+    assert plan["reason"] == "RELEVANT_ACQUISITION_IN_PROGRESS"
+
+
+def test_04_refresh_failure_keeps_original_report_deliverable_degraded():
+    plan = plan_due_report_refresh(
+        report_due=True,
+        report_mode="DEEP",
+        required_scope_age_minutes=80,
+        canonical_freshness_threshold_minutes=45,
+    )
+    result = resolve_governed_refresh_result(plan, result="FAILED")
+    assert result["core_refresh"] == "DEGRADED"
+    assert result["report_can_continue"] is True
+    assert result["next_action"] == "CONTINUE_CANONICAL_EVIDENCE_LADDER_SAME_REPORT_SLOT"
+
+
+def test_05_gw_specific_unexecuted_route_expires_after_official_deadline():
+    scenario = {
+        "scenario_id": "PUNT",
+        "state": "CONTEMPLATED",
+        "execution_state": "NOT_EXECUTED",
+        "route_type": "ONE_GW_PUNT",
+        "target_gw": 5,
+        "execution_window": "UNTIL_TARGET_GW_DEADLINE",
+    }
+    resolved = apply_scenario_lifecycle(
+        scenario,
+        observed_at="2026-09-19T12:30:00+07:00",
+        official_deadlines={5: "2026-09-18T17:30:00+00:00"},
+    )
+    assert resolved["state"] == "EXPIRED"
+    assert resolved["currently_valid"] is False
+    assert resolved["expiry_reason"] == "TARGET_GW_EXECUTION_WINDOW_CLOSED_NOT_EXECUTED"
+
+
+def test_06_expired_route_is_excluded_from_active_scenario_merge():
+    merged = merge_active_and_optimizer_scenarios(
+        active_user_scenarios=[
+            {"scenario_id": "EXPIRED", "state": "EXPIRED", "currently_valid": False},
+            {"scenario_id": "ACTIVE", "state": "CONTEMPLATED", "currently_valid": True},
+        ],
+        optimizer_alternatives=[],
+    )
+    assert merged["active_user_scenario_ids"] == ["ACTIVE"]
+    assert "EXPIRED" not in [row["scenario_id"] for row in merged["scenarios"]]
+
+
+def test_07_expired_route_remains_queryable_for_history_and_learning():
+    merged = merge_active_and_optimizer_scenarios(
+        active_user_scenarios=[
+            {"scenario_id": "EXPIRED", "state": "EXPIRED", "currently_valid": False}
+        ],
+        optimizer_alternatives=[],
+    )
+    assert merged["historical_user_scenario_ids"] == ["EXPIRED"]
+    assert merged["historical_user_scenarios"][0]["scenario_id"] == "EXPIRED"
+
+
+def test_08_stale_gw5_hit_assumption_never_flows_into_gw6_economics():
+    scenario = {
+        "scenario_id": "TRANSFER_TO_BARNES",
+        "state": "EXPIRED",
+        "historical_assumptions": {"target_gw": 5, "hit_points_assumption": -4},
+    }
+    economics = future_transfer_economics_inputs(scenario, target_gw=6)
+    assert economics["carried_hit_points_assumption"] is None
+    assert economics["fresh_full_universe_rescan_required"] is True
+    assert economics["historical_assumptions_excluded"] is True
+
+
+def test_09_deep_expected_section_catalog_is_derived_from_canonical_exact_order():
+    contract = _deep_contract()
+    assert contract["expected_section_ids"] == [
+        "S01", "S02", "S03", "S04", "S05", "S06", "S07", "S08", "S09",
+        "S10", "S11", "S12", "S13", "S14", "S15", "S15B", "S16", "S17",
+        "S18", "S19",
+    ]
+    assert contract["expected_visible_order"][0] == "Decision/status"
+    assert "ALL15" in contract["expected_visible_order"][16]
+    assert contract["expected_visible_order"][-1] == "Final judgement"
+
+
+def test_10_missing_all15_section_is_structural_failure_requiring_rerender():
+    contract = _deep_contract()
+    all15_id = "S16"
+    rendered = [sid for sid in contract["expected_section_ids"] if sid != all15_id]
+    with pytest.raises(VisibleContentProofError):
+        _proof(rendered_ids=rendered, report_can_continue=True)
+    proof = _proof(rendered_ids=rendered, report_can_continue=False)
+    assert all15_id in proof["missing_section_ids"]
+    assert any("MODE_SECTIONS_MISSING" in failure for failure in proof["hard_failures"])
+
+
+def test_11_all15_keeps_15_owned_identities_when_model_fields_are_unavailable():
+    players = [
+        {"element_id": i, "display_name": f"P{i}", "locked_role": "XI" if i <= 11 else "BENCH"}
+        for i in range(1, 16)
+    ]
+    result = build_all15_identity_rows(players, model_by_element={})
+    assert result["identity_state"] == "COMPLETE"
+    assert result["identity_available_count"] == 15
+    assert len(result["rows"]) == 15
+    assert len({row["element_id"] for row in result["rows"]}) == 15
+    assert result["model_state"] == "DEGRADED"
+    assert all(row["p_start"] == "MODEL UPDATE PENDING NEXT COMPUTE" for row in result["rows"])
+
+
+def test_12_decision_delta_requires_exact_previous_current_material_reason_time_schema():
+    good = [{
+        "decision_item": "Barnes GW5 route",
+        "previous_state": "CONTEMPLATED",
+        "current_state": "EXPIRED",
+        "material_change": True,
+        "reason": "GW5 deadline passed, not executed",
+        "evidence_time": "2026-09-19T12:30:00+07:00",
+    }]
+    assert validate_decision_delta_rows(good)["status"] == "PASS"
+    bad = [{**good[0]}]
+    bad[0].pop("previous_state")
+    assert validate_decision_delta_rows(bad)["status"] == "FAIL"
+
+
+def test_13_1230_signal_delta_supports_truthful_baseline_unavailable_without_fake_model_move():
+    rows = [{
+        "signal": "P(start)",
+        "baseline_state": "BASELINE UNAVAILABLE",
+        "current_state": "MODEL UPDATE PENDING NEXT COMPUTE",
+        "change": "MODEL UPDATE PENDING NEXT COMPUTE",
+        "evidence": "CALIBRATION INPUT from actual role/minutes",
+        "decision_effect": "reduce future starter-security confidence at next compute",
+    }]
+    assert validate_1230_signal_delta(rows, baseline_available=False)["status"] == "PASS"
+
+
+def test_14_watchlist_unavailable_zero_of_20_remains_rendered_and_report_continues():
+    contract = _deep_contract()
+    overrides = {
+        "S11": {
+            "state": "UNAVAILABLE",
+            "available_count": 0,
+            "expected_count": 20,
+            "degradation_reason": "no fresh occurrence-bound canonical full-universe evaluation",
+        }
+    }
+    states = _section_states(contract, overrides)
+    degradation = [{
+        "section": "S11",
+        "state": "UNAVAILABLE",
+        "available_count": 0,
+        "expected_count": 20,
+        "degradation_reason": "no fresh occurrence-bound canonical full-universe evaluation",
+    }]
+    proof = _proof(section_states=states, degradations=degradation)
+    assert proof["report_can_continue"] is True
+    assert "S11" in proof["rendered_section_ids"]
+    assert proof["content_contract_status"] == "DEGRADED"
+
+
+def test_15_watchlist_section_omitted_entirely_is_structural_failure():
+    contract = _deep_contract()
+    rendered = [sid for sid in contract["expected_section_ids"] if sid != "S11"]
+    proof = _proof(rendered_ids=rendered, report_can_continue=False)
+    assert proof["missing_section_ids"] == ["S11"]
+
+
+def test_16_rise_and_fall_have_independent_section_states():
+    contract = _deep_contract()
+    overrides = {
+        "S12": {
+            "state": "DEGRADED",
+            "available_count": 7,
+            "expected_count": 20,
+            "degradation_reason": "partial predictor coverage",
+        },
+        "S13": {
+            "state": "UNAVAILABLE",
+            "available_count": 0,
+            "expected_count": 20,
+            "degradation_reason": "no schema-complete fresh predictor set",
+        },
+    }
+    states = _section_states(contract, overrides)
+    degradations = [
+        {"section": "S12", **{k: v for k, v in overrides["S12"].items()}},
+        {"section": "S13", **{k: v for k, v in overrides["S13"].items()}},
+    ]
+    proof = _proof(section_states=states, degradations=degradations)
+    mapped = {row["section_id"]: row["state"] for row in proof["section_states"]}
+    assert mapped["S12"] == "DEGRADED"
+    assert mapped["S13"] == "UNAVAILABLE"
+
+
+def test_17_bench_gk_is_separate_from_outfield_autosub_priority():
+    bench = [
+        {"element_id": 109, "display_name": "Verbruggen", "position": "GK", "bench_order": 1},
+        {"element_id": 31, "display_name": "Konsa", "position": "DEF", "bench_order": 1},
+        {"element_id": 165, "display_name": "Joao Pedro", "position": "FWD", "bench_order": 2},
+        {"element_id": 279, "display_name": "Ajayi", "position": "DEF", "bench_order": 3},
+    ]
+    result = split_bench_for_display(bench)
+    assert result["bench_gk"]["element_id"] == 109
+    assert [row["element_id"] for row in result["outfield_autosub_priority"]] == [31, 165, 279]
+    assert result["gk_in_outfield_queue"] is False
+
+
+def test_18_icon_current_picks_survive_while_stale_standings_remain_degraded():
+    entries = {
+        "1": {
+            "picks": [
+                {"element_id": 411, "multiplier": 2, "captain": True, "vice_captain": False}
+            ]
+        },
+        "2": {
+            "picks": [
+                {"element_id": 411, "multiplier": 1, "captain": False, "vice_captain": True}
+            ]
+        },
+    }
+    exposure = compute_pick_exposure(entries, element_id=411)
+    icon = compose_icon_subscopes(
+        picks_scope={"state": "COMPLETE", "gw": 5, "coverage": "2/2", "metrics": exposure},
+        standings_scope={"state": "STALE", "gw": 4, "reason": "prior-GW standings"},
+        eo_scope={"state": "UNAVAILABLE", "reason": "EO inputs incomplete"},
+        rival_live_scope={"state": "UNAVAILABLE", "reason": "live totals unavailable"},
+    )
+    assert icon["state"] == "DEGRADED"
+    assert icon["subscopes"]["SUBMITTED_PICKS_EXPOSURE"]["state"] == "COMPLETE"
+    assert exposure["ownership"] == {"numerator": 2, "denominator": 2, "percentage": 100.0}
+    assert icon["subscopes"]["LIVE_STANDINGS_RANK"]["state"] == "STALE"
+
+
+def test_19_content_contract_severity_is_only_pass_degraded_fail():
+    for state in ("PASS", "DEGRADED", "FAIL"):
+        assert content_contract_severity(state) == state
+    with pytest.raises(RuntimeConformanceError):
+        content_contract_severity("PARTIAL")
+
+
+def test_20_fail_operational_cannot_masquerade_as_content_severity():
+    with pytest.raises(RuntimeConformanceError):
+        content_contract_severity("FAIL-OPERATIONAL")
+
+
+def test_21_visible_content_proof_detects_missing_mode_sections():
+    contract = _deep_contract()
+    rendered = contract["expected_section_ids"][:-1]
+    proof = _proof(rendered_ids=rendered, report_can_continue=False)
+    assert proof["missing_section_ids"] == ["S19"]
+    assert proof["report_can_continue"] is False
+
+
+def test_22_visible_content_proof_detects_wrong_visible_order():
+    contract = _deep_contract()
+    wrong = list(contract["expected_visible_order"])
+    wrong[0], wrong[1] = wrong[1], wrong[0]
+    proof = _proof(rendered_order=wrong, report_can_continue=False)
+    assert proof["visible_order_valid"] is False
+    assert "MODE_VISIBLE_ORDER_INVALID" in proof["hard_failures"]
+
+
+def test_23_rendered_degraded_section_with_state_count_reason_can_continue():
+    contract = _deep_contract()
+    overrides = {
+        "S11": {
+            "state": "DEGRADED",
+            "available_count": 17,
+            "expected_count": 20,
+            "degradation_reason": "3 candidates lack valid canonical evaluation",
+        }
+    }
+    degradation = [{
+        "section": "S11",
+        "state": "DEGRADED",
+        "available_count": 17,
+        "expected_count": 20,
+        "degradation_reason": "3 candidates lack valid canonical evaluation",
+    }]
+    proof = _proof(
+        section_states=_section_states(contract, overrides),
+        degradations=degradation,
+    )
+    assert proof["content_contract_status"] == "DEGRADED"
+    assert proof["report_can_continue"] is True
+    assert proof["visible_order_valid"] is True
+
+
+def test_24_revision_proof_accepts_commit_and_blob_without_fake_content_sha256():
+    proof = _proof()
+    revision = proof["canonical_revision"]
+    assert revision["branch_head_sha"] == "a" * 40
+    assert revision["file_blob_sha"] == "b" * 40
+    assert revision["content_sha256"] is None
+    assert revision["content_sha256_computed"] is False
+
+
+def test_25_python_qa_not_proven_remains_truthful_without_execution_evidence():
+    proof = _proof()
+    runtime = proof["runtime_provenance"]
+    assert runtime["repository_python_qa_executed"] is False
+    assert runtime["python_qa_status"] == "NOT_PROVEN"
+    assert runtime["python_execution_evidence"] is None
+
+
+def test_26_football_hold_and_operational_wait_prepare_act_are_distinct():
+    result = compose_operational_action(
+        football_action="LOCKED / NO EXECUTABLE ACTION",
+        operational_action="PREPARE",
+        trigger="fresh GW6 full-universe evidence",
+        reversal_or_abort="new injury or role evidence changes route",
+        next_checkpoint="21:30",
+    )
+    assert result["football_action"] == "LOCKED / NO EXECUTABLE ACTION"
+    assert result["operational_action"] == "PREPARE"
+    assert result["football_and_operational_actions_separate"] is True
+    with pytest.raises(RuntimeConformanceError):
+        compose_operational_action(
+            football_action="HOLD",
+            operational_action="MONITOR",
+            trigger="x",
+            reversal_or_abort="y",
+            next_checkpoint="z",
+        )
+
+
+def test_27_migrated_state_expires_barnes_only_and_binds_other_scenarios():
+    state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
+    rows = {row["scenario_id"]: row for row in state["active_scenarios"]}
+    barnes = rows["TRANSFER_TO_BARNES"]
+    assert barnes["state"] == "EXPIRED"
+    assert barnes["target_gw"] == 5
+    assert barnes["expiry_reason"] == "TARGET_GW_EXECUTION_WINDOW_CLOSED_NOT_EXECUTED"
+    assert barnes["historical_assumptions"]["hit_points_assumption"] == -4
+    assert barnes["historical_assumptions"]["excluded_from_future_gw_economics"] is True
+    for scenario_id in (
+        "HOLD_SANGARE",
+        "JOAO_PEDRO_AVAILABILITY",
+        "BRUNO_KEEP_START",
+        "XI_MARGINAL_SANGARE_DE_CUYPER_DCL",
+    ):
+        assert rows[scenario_id]["state"] == "CONTEMPLATED"
+        assert rows[scenario_id]["currently_valid"] is True
+        assert rows[scenario_id]["scope_type"].startswith("CROSS_GW_")

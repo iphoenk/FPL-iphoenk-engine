@@ -152,3 +152,49 @@ def test_active_framework_health_accepts_v12_hierarchical_xmins_without_flatteni
     assert detail["probability_semantics"]["v12_hierarchical"] == 1
     assert detail["appearance_partition"] == "START+CAMEO+DNP"
     assert detail["bench_is_overlapping_in_v12"] is True
+
+
+def test_p0_projection_probe_accepts_v12_hierarchical_xmins_and_keeps_bench_overlapping(tmp_path, monkeypatch):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    xmins = {
+        "probability_semantics": "V12_HIERARCHICAL",
+        "start_probability": 0.60,
+        "bench_probability": 0.28,
+        "cameo_probability": 0.20,
+        "late_cameo_probability": 0.08,
+        "dnp_probability": 0.20,
+        "expected_minutes": 47.0,
+        "expected_minutes_interval": [20.0, 80.0],
+        "small_sample_guard": False,
+        "xmins_distribution": {
+            "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+            "states": [
+                {"state": "START", "probability": 0.60, "minutes_mean": 72.0},
+                {"state": "CAMEO", "probability": 0.12, "minutes_mean": 18.0},
+                {"state": "LATE_CAMEO", "probability": 0.08, "minutes_mean": 8.0},
+                {"state": "ZERO_MINUTES", "probability": 0.20, "minutes_mean": 0.0},
+            ],
+        },
+    }
+    player = {
+        "element": 1,
+        "xmins": xmins,
+        "xpts_by_gw": [{"gw": gw, "mean": 3.0, "std": 1.0} for gw in range(1, 16)],
+    }
+    (data_dir / "projections.json").write_text(
+        json.dumps({"model": "synthetic-v12", "players": [player]}),
+        encoding="utf-8",
+    )
+    (data_dir / "universe.json").write_text(
+        json.dumps({"players": [{"element": 1}]}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(p0_overlay, "DATA", data_dir)
+    ok, detail = p0_overlay._projection_probe()
+    assert ok is True
+    assert detail["valid_xmins"] == 1
+    assert detail["uncertainty_coverage"] == 1
+    assert detail["horizon15_coverage"] == 1
+    assert detail["v12_appearance_partition"] == "START+CAMEO+DNP"
+    assert detail["v12_bench_is_overlapping"] is True

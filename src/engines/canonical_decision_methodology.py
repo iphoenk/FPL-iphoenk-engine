@@ -715,6 +715,7 @@ def build_decision_proof(
         "icon_overlay": overlay,
         "monte_carlo": mc,
         "search_authority": search,
+        "route_type": str(route_type or "NORMAL").upper(),
         "optimization_claim": (
             claim
             or (

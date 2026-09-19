@@ -30,7 +30,7 @@ Never rewrite/backfill/future-fill/mint replacement report slot.
 4. V6 READ-FIRST / DETERMINISTIC ONE-ATTEMPT STALE REFRESH
 A. Determine REPORT_DUE first, then read current authoritative V6 publication/runtime evidence.
 B. If the volatile/full-universe scope required by the current due mode is within that mode's freshness threshold, reuse it and do not refresh.
-C. If the required scope is stale beyond the Canonical mode threshold, inspect governed acquisition/refresh state before any write. If relevant acquisition is already IN_PROGRESS, just completed/recent enough, or the same logical data slot is already fulfilled, do not duplicate acquisition; re-read/reuse that result.
+C. If the required scope is stale beyond the Canonical mode threshold, inspect governed acquisition/refresh state before any write. If relevant acquisition is already IN_PROGRESS, just completed/recent enough, or the same logical data slot is already fulfilled, never duplicate acquisition; re-read/reuse that result.
 D. Otherwise make AT MOST ONE governed refresh attempt through the EXISTING issue #431 transport appropriate to that report mode. No second transport, no /v6-master-acquire, no backfill/future-fill, no duplicate acquisition.
 E. REFRESH ATTEMPT is deterministic when stale and useful. REFRESH SUCCESS is NEVER a report-delivery prerequisite.
 F. If the one governed refresh attempt is safety-blocked, fails or times out: record CORE REFRESH=DEGRADED and continue the SAME original report occurrence through the Canonical evidence ladder. REPORT_DUE=true never becomes NOT_DUE because refresh failed or ran long.

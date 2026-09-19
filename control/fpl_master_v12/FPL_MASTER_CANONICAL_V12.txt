@@ -55,6 +55,18 @@ Deep volatile target <=45 min.
 Never blank healthy whole sections because one scope is degraded.
 Never fabricate completion, auth, finance, price ETA, picks, standings, provenance, weather or model precision.
 
+5A. SAME-OCCURRENCE VISIBLE-EVIDENCE FINALIZATION
+A routed visible alert may be triggered from preliminary evidence, but trigger evidence and final visible evidence are separate concerns.
+If the governed current-slot V6 acquisition/publication is still IN_PROGRESS, bind that exact run, never launch a second full-core acquisition, and perform the existing bounded terminal reread.
+After same-occurrence publication SUCCESS, reread the current official_price_predictor and every relevant current public factual artifact for the routed alert. If personal affordability/economics are discussed, reread the current authenticated personal artifact as well.
+The final visible values MUST use the freshest authoritative evidence available from the same original occurrence. Older preliminary values may preserve why the alert was routed, but MUST NOT override newer same-occurrence evidence with authoritative_runtime_snapshot=true and publish_integrity=PASS.
+A material preliminary trigger remains visible after finalization even if the final values differ; do not silently suppress the routed alert merely because newer numbers are less or more severe.
+
+AUTHENTICATED AFFORDABILITY FINALIZATION:
+When current authenticated personal evidence contains current_price, purchase_price, selling_price and bank, use those exact fields. Nominal replacement budget = authenticated selling_price + bank. Compare the target's current market price to that budget and show remaining cash.
+Affordability and FT/HIT economics are distinct. If selling_price and bank establish nominal affordability but free-transfer/hit state is unknown, state AFFORDABILITY=TRUE/FALSE and FT/HIT ECONOMICS=UNKNOWN. Never claim exact affordability is unavailable when authenticated selling_price is already present.
+Stale personal/public evidence must not be preferred over newer same-occurrence evidence.
+
 6. DURABLE STATE / SCENARIO LIFECYCLE
 Read exact state path control/fpl_master_v12/FPL_MASTER_STATE_V12.json.
 Non-authoritative report-plane context only.

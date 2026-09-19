@@ -11,6 +11,11 @@ from hashlib import sha256
 import json
 from typing import Any, Mapping, Sequence
 
+from src.engines.canonical_decision_methodology import (
+    CANONICAL_AUTHORITY,
+    CANONICAL_WEIGHTS,
+)
+
 from .delivery_integrity import MANDATORY_SECTIONS, PARTIAL_ALLOWED_SECTIONS
 from .visible_body_contract import validate_visible_report_body
 
@@ -649,6 +654,247 @@ def validate_post_render_qa(
     }
 
 
+def validate_v12_decision_semantics(
+    decision_proof: Mapping[str, Any] | None,
+    *,
+    serious_decision_required: bool,
+) -> dict[str, Any]:
+    """Validate V12 mathematics in the existing report-plane QA subsystem.
+
+    A semantic failure degrades the affected decision scope but remains
+    fail-operational for the due visible report.
+    """
+    if not serious_decision_required and not decision_proof:
+        return {
+            "status": "NOT_REQUIRED",
+            "canonical_v12_compliant": None,
+            "report_can_continue": True,
+            "failures": [],
+            "warnings": [],
+        }
+
+    proof = dict(decision_proof or {})
+    failures: list[str] = []
+    warnings: list[str] = []
+    if not proof:
+        failures.append("V12_DECISION_PROOF_MISSING")
+        return {
+            "status": "PARTIAL",
+            "canonical_v12_compliant": False,
+            "report_can_continue": True,
+            "failures": failures,
+            "warnings": ["SERIOUS_DECISION_SCOPE_MUST_RENDER_DEGRADED"],
+        }
+
+    authority = proof.get("canonical_authority")
+    if not isinstance(authority, Mapping):
+        failures.append("V12_CANONICAL_AUTHORITY_PROOF_MISSING")
+    else:
+        if authority.get("path") != CANONICAL_AUTHORITY:
+            failures.append("V12_CANONICAL_AUTHORITY_PATH_INVALID")
+        if not _is_sha256(authority.get("sha256")):
+            failures.append("V12_CANONICAL_AUTHORITY_SHA256_INVALID")
+        if not str(authority.get("version") or "").strip():
+            failures.append("V12_CANONICAL_AUTHORITY_VERSION_MISSING")
+
+    try:
+        universe_n = int(proof.get("official_fpl_universe_denominator") or 0)
+        evaluated_n = int(proof.get("evaluated_denominator") or -1)
+    except (TypeError, ValueError):
+        universe_n, evaluated_n = 0, -1
+    if universe_n <= 0 or evaluated_n < 0 or evaluated_n > universe_n:
+        failures.append("V12_UNIVERSE_DENOMINATOR_INVALID")
+
+    gate0 = proof.get("gate0")
+    if not isinstance(gate0, Mapping) or gate0.get("status") != "PASS":
+        failures.append("V12_GATE0_NOT_PASS")
+
+    football = proof.get("football_score")
+    if not isinstance(football, Mapping):
+        failures.append("V12_FOOTBALL_SCORE_PROOF_MISSING")
+    else:
+        weights = football.get("weights")
+        if not isinstance(weights, Mapping):
+            failures.append("V12_20_25_30_25_WEIGHTS_MISSING")
+        else:
+            for key, expected in CANONICAL_WEIGHTS.items():
+                try:
+                    actual = float(weights.get(key))
+                except (TypeError, ValueError):
+                    actual = -1.0
+                if abs(actual - expected) > 1e-12:
+                    failures.append(f"V12_WEIGHT_MISMATCH={key}")
+        components = football.get("component_scores")
+        if not isinstance(components, Mapping) or set(components) != set(CANONICAL_WEIGHTS):
+            failures.append("V12_COMPONENT_SCORE_PROOF_INVALID")
+        if football.get("transfer_economics_included") is not False:
+            failures.append("V12_ECONOMICS_DOUBLE_COUNT_RISK")
+
+    lineage = proof.get("bayesian_shrinkage_lineage")
+    if not isinstance(lineage, Mapping) or not lineage:
+        failures.append("V12_BAYESIAN_SHRINKAGE_LINEAGE_MISSING")
+
+    probability = proof.get("probability_state")
+    if not isinstance(probability, Mapping):
+        failures.append("V12_PROBABILITY_STATE_MISSING")
+    else:
+        unconditional = probability.get("unconditional")
+        conditional = probability.get("conditional")
+        if not isinstance(unconditional, Mapping) or not isinstance(conditional, Mapping):
+            failures.append("V12_HIERARCHICAL_PROBABILITY_SEMANTICS_MISSING")
+        else:
+            for key in (
+                "p_available",
+                "p_start",
+                "p_bench",
+                "p_cameo",
+                "p_late_cameo",
+                "p_dnp",
+            ):
+                if unconditional.get(key) is None:
+                    failures.append(f"V12_{key.upper()}_MISSING")
+            for key in (
+                "p_start_given_available",
+                "p_bench_given_available_not_start",
+                "p_cameo_given_bench",
+                "p_late_cameo_given_cameo",
+            ):
+                if conditional.get(key) is None:
+                    failures.append(f"V12_{key.upper()}_MISSING")
+        if probability.get("bench_is_overlapping_state") is not True:
+            failures.append("V12_BENCH_OVERLAP_SEMANTICS_MISSING")
+
+    xmins = proof.get("xmins_distribution")
+    if not isinstance(xmins, Mapping) or xmins.get("mean") is None:
+        failures.append("V12_XMINS_DISTRIBUTION_MISSING")
+    else:
+        states = {
+            str(row.get("state") or "").upper()
+            for row in xmins.get("states") or []
+            if isinstance(row, Mapping)
+        }
+        if not {"START", "CAMEO", "LATE_CAMEO", "ZERO_MINUTES"} <= states:
+            failures.append("V12_XMINS_STATE_MIXTURE_INCOMPLETE")
+
+    horizons = proof.get("horizons")
+    horizon_rows = (
+        horizons.get("horizons")
+        if isinstance(horizons, Mapping)
+        else None
+    )
+    if not isinstance(horizon_rows, Mapping):
+        failures.append("V12_HORIZON_PROOF_MISSING")
+    else:
+        if not {"GW+1", "3GW", "5GW"} <= set(horizon_rows):
+            failures.append("V12_GW1_3_5_HORIZONS_MISSING")
+        route_type = str(proof.get("route_type") or "").upper()
+        if route_type in {"ONE_GW_PUNT", "RENTAL", "EXIT"} and "2GW" not in horizon_rows:
+            failures.append("V12_2GW_RENTAL_EXIT_HORIZON_MISSING")
+
+    economics = proof.get("transfer_economics")
+    if not isinstance(economics, Mapping):
+        failures.append("V12_TRANSFER_ECONOMICS_MISSING")
+    else:
+        if economics.get("decision_chain_stage") != "TRANSFER_ECONOMICS":
+            failures.append("V12_TRANSFER_ECONOMICS_STAGE_INVALID")
+        if economics.get("included_in_football_score") is not False:
+            failures.append("V12_TRANSFER_ECONOMICS_NOT_DOWNSTREAM")
+        if economics.get("ft_shadow_semantics") == "LEGACY_HEURISTIC_NOT_CANONICAL":
+            warnings.append("LEGACY_FT_HEURISTIC_PRESENT_NOT_CANONICAL_FT_SHADOW")
+
+    robustness = proof.get("robustness")
+    if not isinstance(robustness, Mapping) or not robustness:
+        failures.append("V12_ROBUSTNESS_PROOF_MISSING")
+    else:
+        if robustness.get("expected_regret") is None and proof.get("expected_regret") is None:
+            failures.append("V12_EXPECTED_REGRET_MISSING")
+        if robustness.get("lineup_relevant") is True:
+            for key in (
+                "conditional_floor",
+                "upper_tail",
+                "p_outperform",
+                "lineup_optionality",
+                "auto_sub_preservation_value",
+                "cameo_auto_sub_blocking_cost",
+            ):
+                if robustness.get(key) is None:
+                    failures.append(f"V12_LINEUP_{key.upper()}_MISSING")
+    if proof.get("information_value_of_waiting") is None:
+        failures.append("V12_INFORMATION_VALUE_OF_WAITING_MISSING")
+
+    overlay = proof.get("icon_overlay")
+    if isinstance(overlay, Mapping) and overlay:
+        if overlay.get("applied_after_football_optimal_baseline") is not True:
+            failures.append("V12_ICON_OVERLAY_ORDER_INVALID")
+
+    search_authority = str(proof.get("search_authority") or "").upper()
+    optimization_claim = str(proof.get("optimization_claim") or "").upper()
+    if search_authority not in {"FULL", "PARTIAL"}:
+        failures.append("V12_SEARCH_AUTHORITY_INVALID")
+    if search_authority == "PARTIAL" and optimization_claim == "FULL_UNIVERSE_OPTIMIZED":
+        failures.append("V12_PARTIAL_SEARCH_FALSE_FULL_OPTIMIZATION_CLAIM")
+
+    mc = proof.get("monte_carlo")
+    if not isinstance(mc, Mapping):
+        failures.append("V12_MONTE_CARLO_STATE_MISSING")
+    else:
+        state = str(mc.get("execution_state") or "").upper()
+        if state == "EXECUTED":
+            if mc.get("canonical_pass") is not True:
+                failures.append("V12_MC_EXECUTED_WITHOUT_CANONICAL_PASS")
+            try:
+                actual_paths = int(mc.get("actual_paths") or 0)
+            except (TypeError, ValueError):
+                actual_paths = 0
+            if actual_paths < 500000:
+                failures.append("V12_MC_ACTUAL_PATHS_LT_500000")
+            if mc.get("correlated") is not True:
+                failures.append("V12_MC_CORRELATED_FLAG_MISSING")
+            for key in (
+                "method",
+                "correlation_model",
+                "seed_policy",
+                "input_snapshot_ids",
+                "input_freshness",
+                "convergence_evidence",
+                "output_fingerprint",
+            ):
+                if mc.get(key) in (None, "", {}, []):
+                    failures.append(f"V12_MC_{key.upper()}_MISSING")
+        elif state == "NOT_RUN":
+            if not str(mc.get("reason") or "").strip():
+                failures.append("V12_MC_NOT_RUN_REASON_MISSING")
+        elif state == "PARTIAL":
+            if not str(mc.get("degradation_reason") or "").strip():
+                failures.append("V12_MC_PARTIAL_REASON_MISSING")
+        else:
+            failures.append("V12_MC_EXECUTION_STATE_INVALID")
+
+    execution = proof.get("execution_provenance")
+    if not isinstance(execution, Mapping) or not execution:
+        failures.append("V12_EXECUTION_PROVENANCE_MISSING")
+    elif execution.get("repository_python_executed") is True:
+        if not execution.get("actual_execution_evidence"):
+            failures.append("V12_PYTHON_EXECUTION_CLAIM_UNPROVEN")
+
+    if failures:
+        warnings.append("SERIOUS_DECISION_SCOPE_MUST_RENDER_PARTIAL_OR_DEGRADED")
+    return {
+        "status": "PASS" if not failures else "PARTIAL",
+        "canonical_v12_compliant": not failures,
+        "report_can_continue": True,
+        "failures": list(dict.fromkeys(failures)),
+        "warnings": list(dict.fromkeys(warnings)),
+        "search_authority": search_authority or None,
+        "optimization_claim": optimization_claim or None,
+        "mc_execution_state": (
+            str(mc.get("execution_state") or "").upper()
+            if isinstance(mc, Mapping)
+            else None
+        ),
+    }
+
+
 # P0.5 strict Deadline/Final report-plane gates. These wrappers deliberately reuse
 # the existing R6 validators above rather than creating a second QA implementation.
 _P05_CONTRACT_VERSION = "P0.5"
@@ -783,9 +1029,21 @@ def validate_p05_pre_render_qa(
             and semantic_acceptance.get("can_emit") is True
         )
     )
+    decision_proof = compute_contract.get("DECISION_PROOF")
+    serious_decision_required = bool(
+        compute_contract.get("serious_decision_required")
+        or context.get("serious_decision_required")
+        or isinstance(decision_proof, Mapping)
+    )
+    v12_semantic = validate_v12_decision_semantics(
+        decision_proof if isinstance(decision_proof, Mapping) else None,
+        serious_decision_required=serious_decision_required,
+    )
+    v12_report_continuation_pass = v12_semantic.get("report_can_continue") is True
     input_completeness_pass = bool(
         mandatory_scope_pass
         and semantic_acceptance_pass
+        and v12_report_continuation_pass
         and all(
             isinstance(compute_contract.get(label), Mapping)
             and compute_contract[label].get("status") == "PASS"
@@ -796,6 +1054,12 @@ def validate_p05_pre_render_qa(
         failures.append("MANDATORY_SCOPE_GATE_FAILED")
     if semantic_required and not semantic_acceptance_pass:
         failures.append("MANDATORY_SEMANTIC_ACCEPTANCE_FAILED")
+    semantic_warnings = list(v12_semantic.get("warnings") or [])
+    if v12_semantic.get("status") == "PARTIAL":
+        semantic_warnings.extend(
+            f"V12_SEMANTIC:{failure}"
+            for failure in (v12_semantic.get("failures") or [])
+        )
     if not input_completeness_pass:
         failures.append("INPUT_COMPLETENESS_GATE_FAILED")
     failures = list(dict.fromkeys(failures))
@@ -816,6 +1080,7 @@ def validate_p05_pre_render_qa(
         "mandatory_semantic_acceptance": (
             dict(semantic_acceptance) if semantic_required else {"status": "LEGACY_NOT_PROVIDED"}
         ),
+        "v12_decision_semantic": dict(v12_semantic),
     }
     strict_token = _p05_gate_token(gate_payload) if qa_passed else None
 
@@ -838,6 +1103,8 @@ def validate_p05_pre_render_qa(
             if semantic_required
             else {"status": "LEGACY_NOT_PROVIDED", "report_contract_pass": None, "can_emit": None}
         ),
+        "v12_decision_semantic": dict(v12_semantic),
+        "v12_decision_canonical_pass": v12_semantic.get("canonical_v12_compliant") is True,
         "decision_context": context,
         "prefetch_identity": {
             "status": "PASS" if prefetch_identity_pass else "FAIL",
@@ -847,7 +1114,7 @@ def validate_p05_pre_render_qa(
         "weather_attempt": normalized_weather,
         "failed_checks": failures,
         "failures": failures,
-        "warnings": [],
+        "warnings": list(dict.fromkeys(semantic_warnings)),
         "evidence": {
             "compute_fingerprint": base.get("compute_fingerprint"),
             "render_contract_token": base.get("render_contract_token"),
@@ -907,6 +1174,12 @@ def validate_p05_post_render_qa(
         failures.append("REPORT_KIND_MISMATCH")
     if status_only:
         failures.append("STATUS_ONLY_NOT_CANONICAL_REPORT")
+
+    v12_semantic = pre_render_qa.get("v12_decision_semantic")
+    if isinstance(v12_semantic, Mapping) and v12_semantic.get("status") == "PARTIAL":
+        body_upper = str(rendered_body or "").upper()
+        if "PARTIAL" not in body_upper and "DEGRADED" not in body_upper:
+            failures.append("V12_PARTIAL_DECISION_SCOPE_NOT_VISIBLY_LABELLED")
 
     semantic_acceptance = pre_render_qa.get("mandatory_semantic_acceptance")
     if (
@@ -976,6 +1249,13 @@ def validate_p05_post_render_qa(
         "mandatory_semantic_acceptance_pass": (
             not isinstance(semantic_acceptance, Mapping)
             or semantic_acceptance.get("status") in {"PASS", "LEGACY_NOT_PROVIDED"}
+        ),
+        "v12_decision_semantic": (
+            dict(v12_semantic) if isinstance(v12_semantic, Mapping) else {"status": "NOT_REQUIRED"}
+        ),
+        "v12_decision_canonical_pass": (
+            isinstance(v12_semantic, Mapping)
+            and v12_semantic.get("canonical_v12_compliant") is True
         ),
         "decision_context_gate_pass": pre_render_qa.get("decision_context", {}).get("status") == "PASS",
         "prefetch_identity_pass": pre_render_qa.get("prefetch_identity", {}).get("status") == "PASS",

@@ -162,3 +162,127 @@ def test_h_identity_join_uses_element_id_and_never_name_guessing():
     assert [row["element_id"] for row in result["players"]] == [8]
     assert result["players"][0]["identity_join"] == "CANONICAL_ELEMENT_ID"
     assert result["identity_join"] == "CANONICAL_ELEMENT_ID_ONLY"
+
+def test_two_xi_dnp_cannot_consume_same_bench_player():
+    result = reconcile_owned_match_events(
+        _locked(),
+        [
+            _row(2, minutes=0),
+            _row(8, minutes=0),
+            _row(12, minutes=0),
+            _row(13, minutes=90, started=True, points=6),
+            _row(14, minutes=0),
+            _row(15, minutes=0),
+        ],
+    )
+    subs = result["final_substitution_map"]
+    assert subs["2"] == 13
+    assert subs["8"] == "no_legal_sub"
+    assert result["autosub_resolution"]["consumed_bench"] == [13]
+
+
+def test_two_dnp_receive_two_distinct_legal_bench_replacements():
+    result = reconcile_owned_match_events(
+        _locked(),
+        [
+            _row(2, minutes=0),
+            _row(8, minutes=0),
+            _row(12, minutes=0),
+            _row(13, minutes=90, started=True, points=6),
+            _row(14, minutes=70, started=True, points=4),
+            _row(15, minutes=0),
+        ],
+    )
+    subs = result["final_substitution_map"]
+    assert subs == {"2": 13, "8": 14}
+    assert result["autosub_resolution"]["consumed_bench"] == [13, 14]
+
+
+def test_formation_constraint_changes_second_substitution_result():
+    result = reconcile_owned_match_events(
+        _locked(),
+        [
+            _row(2, minutes=0),
+            _row(8, minutes=0),
+            _row(12, minutes=0),
+            _row(13, minutes=0),
+            _row(14, minutes=80, started=True, points=5),
+            _row(15, minutes=80, started=True, points=5),
+        ],
+    )
+    subs = result["final_substitution_map"]
+    assert subs["8"] == 14
+    assert subs["2"] == "no_legal_sub"
+    assert result["autosub_resolution"]["consumed_bench"] == [14]
+
+
+def test_first_unavailable_bench_is_skipped_and_next_eligible_is_used():
+    result = reconcile_owned_match_events(
+        _locked(),
+        [
+            _row(8, minutes=0),
+            _row(12, minutes=0),
+            _row(13, minutes=0),
+            _row(14, minutes=75, started=True, points=3),
+            _row(15, minutes=0),
+        ],
+    )
+    assert result["final_substitution_map"]["8"] == 14
+    player = next(row for row in result["players"] if row["element_id"] == 8)
+    assert player["autosub"] == {"status": "ACTIVATES", "element_id": 14}
+
+
+def test_simultaneous_gk_and_outfield_dnp_use_distinct_legal_replacements():
+    result = reconcile_owned_match_events(
+        _locked(),
+        [
+            _row(1, minutes=0),
+            _row(8, minutes=0),
+            _row(12, minutes=90, started=True, points=4),
+            _row(13, minutes=90, started=True, points=6),
+            _row(14, minutes=0),
+            _row(15, minutes=0),
+        ],
+    )
+    assert result["final_substitution_map"] == {"1": 12, "8": 13}
+    assert result["autosub_resolution"]["consumed_bench"] == [12, 13]
+
+
+def test_cameo_starter_blocks_only_itself_while_other_dnp_resolves_normally():
+    result = reconcile_owned_match_events(
+        _locked(),
+        [
+            _row(8, minutes=21, started=False, points=0, yellow=1),
+            _row(11, minutes=0),
+            _row(12, minutes=0),
+            _row(13, minutes=90, started=True, points=5),
+            _row(14, minutes=0),
+            _row(15, minutes=0),
+        ],
+    )
+    cameo = next(row for row in result["players"] if row["element_id"] == 8)
+    dnp = next(row for row in result["players"] if row["element_id"] == 11)
+    assert cameo["personal_state"] == "CAMEO_BLOCKED_AUTOSUB"
+    assert "8" not in result["final_substitution_map"]
+    assert result["final_substitution_map"]["11"] == 13
+    assert dnp["personal_state"] == "DNP_WITH_AUTOSUB_POSSIBLE"
+
+
+def test_pending_earlier_bench_does_not_finalize_later_replacement():
+    result = reconcile_owned_match_events(
+        _locked(),
+        [
+            _row(8, minutes=0),
+            _row(12, minutes=0),
+            # element 13 has not finished/appeared yet and is intentionally absent.
+            _row(14, minutes=90, started=True, points=5),
+            _row(15, minutes=0),
+        ],
+    )
+    assert result["final_substitution_map"]["8"] == "pending"
+    assert result["autosub_resolution"]["status"] == "PENDING"
+    assert 13 in result["autosub_resolution"]["pending_bench"]
+    player = next(row for row in result["players"] if row["element_id"] == 8)
+    assert player["personal_state"] == "DNP_AUTOSUB_PENDING"
+    assert player["autosub"] == {"status": "PENDING"}
+

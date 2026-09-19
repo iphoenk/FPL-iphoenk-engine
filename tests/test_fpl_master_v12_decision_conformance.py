@@ -316,15 +316,16 @@ def test_L_300_path_independent_mc_can_never_claim_v12_canonical_pass():
     assert legacy["actual_paths"] == 300
     assert legacy["correlated"] is False
     assert legacy["canonical_v12_pass"] is False
-    with pytest.raises(MethodologyContractError):
-        validate_monte_carlo_provenance(
-            {
-                "execution_state": "EXECUTED",
-                "actual_paths": 300,
-                "correlated": False,
-                "method": "independent_normal_aggregate_baseline",
-            }
-        )
+    guard = validate_monte_carlo_provenance(
+        {
+            "execution_state": "EXECUTED",
+            "actual_paths": 300,
+            "correlated": False,
+            "method": "independent_normal_aggregate_baseline",
+        }
+    )
+    assert guard["status"] == "FAIL"
+    assert guard["canonical_pass"] is False
 
 
 def test_M_correlated_mc_execution_requires_actual_n_at_least_500k_and_metadata():

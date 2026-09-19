@@ -197,29 +197,131 @@ Use direct fresh report-time weather after venue/kickoff resolution when mode re
 Low weight unless unusual conditions have plausible football mechanism.
 Never infer causation from coincidence.
 
-14. VISIBLE CONTRACTS
-FULL/DEEP order:
+14. VISIBLE REPORT CONTENT CONTRACTS
+Visible reports are decision-first user surfaces. Internal implementation/debug language never substitutes for football intelligence. Existing methodology, data authority and fail-operational rules remain unchanged.
+
+14A. FULL / DEEP BACKBONE
+Exact visible order:
 1 Decision/status
 2 OUR15
-3 Changes
-4 Fixtures/rest/conditions
-5 Formation/XI/bench
-6 XI battle
-7 C/VC
-8 Chip
-9 Actionable Price Radar
-10 Watchlist20 exact20
-11 RISE20 exact20
-12 FALL20 exact20
-13 Package optimizer/frontier
-14 Evidence quality
-14B ICON+ mini-league
-15 ALL15 next-GW tactical
-16 Source health/freshness/lineage
-17 WAIT/PREPARE/ACT + trigger/reversal
-18 Final judgement.
+3 DECISION DELTA
+4 Changes
+5 Fixtures/rest/conditions
+6 Formation/XI/bench
+7 XI battle
+8 C/VC
+9 Chip
+10 Actionable Price Radar
+11 Watchlist20 exact20
+12 RISE20 exact20 where required
+13 FALL20 exact20 where required
+14 Package optimizer/frontier including HOLD baseline
+15 Evidence quality
+15B ICON+ mini-league
+16 ALL15 exact15 next-GW tactical/probability table
+17 Source health/freshness/lineage
+18 WAIT/PREPARE/ACT + trigger/reversal
+19 Final judgement.
 
-05:30 PRICE:
+ALL15 visible row schema, exactly 15 unique owned players where supportable:
+player;opponent;recommended_or_locked_role;p_available;p_start;p_cameo;p_dnp;xmins;tactical_role;set_piece_penalty_role;matchup;gw_plus_1;three_gw;five_gw;uncertainty_floor_upside;action.
+Allowed action: START;BENCH;HOLD;WATCH;SELL-CANDIDATE.
+Unknown probability/model fields stay explicitly unavailable; never fabricate.
+
+14B. PURE MATCH EXACT CONTENT CONTRACT
+PURE MATCH exact visible order:
+1 MATCH CHECKPOINT / GW STATUS
+2 LOCKED PERSONAL TEAM
+3 PERSONAL IMPACT FIRST
+4 GLOBAL AUTOSUB STATE
+5 CAPTAIN / VICE CONSEQUENCE
+6 OWNED LIVE/FINAL POINTS
+7 BONUS/BPS — PROVISIONAL when applicable
+8 CARDS / INJURY / DEFCON / ROLE EVENTS
+9 RELEVANT LEAGUE-WIDE SIGNALS
+10 ICON+ LIVE if fresh
+11 NEXT-GW LEARNING
+12 NEXT CRITICAL OBSERVATION
+13 SOURCE / FRESHNESS STATUS.
+Generic match story MUST NEVER precede a material owned-player consequence.
+Pure Match does not force Watchlist20/RISE20/FALL20 unless overlapped with Full/Deadline/Final.
+
+14C. BENCH PRESENTATION SEMANTICS
+Visible bench rendering MUST separate:
+BENCH GK: goalkeeper reserve.
+OUTFIELD AUTOSUB PRIORITY:
+1 first outfield bench
+2 second outfield bench
+3 third outfield bench.
+Never render all four bench players as one misleading #1-#4 autosub queue. Raw Official squad_position/bench_order may remain in technical evidence. Goalkeeper reserve is never visually represented as first outfield autosub candidate.
+
+14D. USER-FACING LANGUAGE
+Normal report body MUST NOT expose implementation/repair language such as:
+reconciliation corrected;repair applied;migration successful;test passed.
+Acceptance evidence may retain such language only in technical evidence/history, not normal FPL narrative.
+Stable user-facing wording includes MATCH MODE and LOCKED TEAM VERIFIED where applicable.
+
+14E. OBSERVATION VS MODEL RECOMPUTATION
+Post-match evidence that has not triggered an actual model execution is CALIBRATION INPUT or MODEL UPDATE PENDING NEXT COMPUTE.
+Claims such as posterior updated, xMins recalibrated, probabilities changed, or P(start) changed require exact recomputation/execution proof with previous/current values and evidence timestamp.
+An observation alone may say it should reduce/increase future confidence; it may not claim the posterior already changed.
+
+14F. DECISION DELTA
+Every sequential visible report after a previous visible occurrence includes DECISION DELTA.
+Each changed row:
+decision_item;previous_state;current_state;material_change;reason;evidence_time.
+Typical items include XI status, bench position, transfer route, captain, chip, price action and WAIT/PREPARE/ACT.
+If nothing material changed, render exactly NO MATERIAL DECISION CHANGE.
+A due report is never suppressed because the delta is empty.
+
+14G. WATCHLIST20 VISIBLE SCHEMA
+Exactly 20 non-owned: GK5 DEF5 MID5 FWD5, full-universe derived.
+Visible fields:
+rank;player;position;club;price;next_opponent;football_score;p_start;xmins;gw_plus_1;three_gw;five_gw;role_set_piece_note;main_upside;main_risk;action.
+Watchlist is output, never optimizer input.
+
+14H. PACKAGE OPTIMIZER VISIBLE SCHEMA
+Every serious route comparison includes HOLD.
+Visible fields:
+route;moves;transfer_cost;gw1_net;two_gw_if_relevant;three_gw;five_gw;p_beats_hold;expected_regret;robustness;price_risk;structure_effect;action_verdict.
+Never show candidate A vs candidate B without HOLD.
+If search_authority=PARTIAL, label it visibly and never claim FULL-UNIVERSE OPTIMIZED.
+
+14I. FINAL — GW LOCK PACKAGE
+FINAL contains one unmistakable GW LOCK PACKAGE before alternatives.
+Fields:
+target_gw;transfers_out;transfers_in;number_of_moves;ft_hit_treatment;bank_after_if_known;formation;xi_exact11;bench_gk;outfield_bench_priority_1_3;captain;vice_captain;chip;primary_action;abort_trigger;fallback;evidence_timestamp;canonical_authority_version.
+Unknown finance remains explicitly UNKNOWN/UNAVAILABLE.
+Selected package is unambiguous; alternatives may appear only below it.
+
+14J. POST-ALL-MATCH
+POST-ALL-MATCH is an explicit contract, not generic Deep:
+1 GW RESULT SUMMARY
+2 DECISION P&L / COUNTERFACTUAL
+3 PREDICTION CALIBRATION
+4 OWNED15 REVIEW
+5 GW COMPLETED MATCH-BY-MATCH SCOUT
+6 ROLE / SET-PIECE CHANGES
+7 BAYESIAN CALIBRATION INPUT / ACTUAL UPDATE STATUS
+8 ICON+ FINAL GW
+9 PRICE OUTLOOK
+10 FRESH FULL-UNIVERSE NEXT-GW SCAN
+11 WATCHLIST20
+12 EARLY HOLD / TRANSFER FRONTIER
+13 LEARNING LOG.
+GW COMPLETED MATCH-BY-MATCH SCOUT represents every completed fixture exactly once.
+For every match where supportable include:
+result;formation_system;coach_pattern;player_roles;minutes_substitution_pattern;xg_xa_xgi_shots_chances;set_pieces_penalties;defcon;opponent_channels;sustainable_vs_noisy;implication_for_our15;implication_for_next_opponent;posterior_calibration_implication.
+Never reduce the scout to scorer recap.
+
+14K. ICON+ VISIBLE CONTRACT
+Where denominator is available, ownership, starter share, captain share, vice share and EO remain separate.
+For count-based shares show numerator / denominator = percentage, for example Owned 51/58 = 87.9%.
+Arithmetic must be consistent. Never collapse distinct metrics into one exposure number.
+Football-optimal baseline is first; ICON+ remains an overlay.
+
+14L. 05:30 PRICE INFORMATION-VALUE CONTRACT
+Exact backbone:
 1 Price decision
 2 Official price changes FACT
 3 Team-needs price alert
@@ -227,12 +329,28 @@ FULL/DEEP order:
 5 RISE20 exact20
 6 FALL20 exact20
 7 Package/affordability impact
-8 ICON+ price impact
-9 Action board
-10 Source health.
+8 PRICE RISK vs VALUE OF WAITING FOR FOOTBALL INFORMATION
+9 ICON+ price impact
+10 Action board
+11 Source health.
+For material routes show:
+affordable_now;after_target_plus_0_1;after_owned_minus_0_1;sell_value_impact;route_survival;football_information_benefit_of_waiting.
+Price alone never overrides football-optimal decision without explicit downstream economics.
 
-PURE MATCH: compact live mode; do not force Watchlist/Rise/Fall unless overlap with Full/Deadline/Final.
-Deadline/Final: Full backbone + exact deadline/countdown, legality, latest news, predicted XI/leak tier, xMins, legal routes, execution package, safe time, value of waiting, reversal/abort, ICON+ leverage.
+14M. TIME-SPECIFIC DEEP EMPHASIS
+04:30 = overnight reset / baseline.
+12:30 = delta since 04:30 plus press/news/P(start)/xMins changes.
+21:30 = late news, overnight risk, price risk, deadline proximity.
+21:30 includes OVERNIGHT RISK BOARD:
+player_or_route;current_action;possible_change_event;materiality;next_checkpoint.
+
+14N. FULL+MATCH / OVERLAP
+Use one coherent report. Do not duplicate semantic blocks. Match personal-impact sections are embedded into the Full backbone once; Watchlist/RISE/FALL/ALL15 remain single instances.
+
+14O. DEADLINE / FINAL
+Deadline/Final use Full backbone plus exact deadline/countdown, legality, latest news, predicted-XI/leak tier, xMins, legal routes, value of waiting, reversal/abort and ICON+ leverage.
+FINAL additionally MUST satisfy 14I GW LOCK PACKAGE.
+
 
 15. QA / DELIVERY
 PRE_RENDER_QA + POST_RENDER_QA mandatory when due.

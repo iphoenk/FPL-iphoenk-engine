@@ -310,8 +310,9 @@ def test_vaastav_shared_fixture_id_survives_kickoff_reschedule_without_name_join
     assert coverage["kickoff_time_is_mutable_not_identity_key"] is True
     link = repaired["entity_bridges"]["fixture"]["mappings"]["10"]["links"]["vaastav_fpl"]
     assert link["status"] == "EXACT"
-    assert link["provenance"]["kickoff_matches_current_official"] is False
-    assert link["provenance"]["kickoff_time_is_mutable_not_identity_key"] is True
+    verification = link["provenance"]["verification"]
+    assert verification["kickoff_matches_current_official"] is False
+    assert verification["kickoff_time_is_mutable_not_identity_key"] is True
 
     dataset = build_source_native_datasets(
         {"vaastav_fpl": vaastav}, repaired

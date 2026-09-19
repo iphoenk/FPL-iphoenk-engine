@@ -85,61 +85,119 @@ def _normalise_revision(
     }
 
 
+def _canonical_subsection(canonical_text: str, tag: str) -> tuple[str, str]:
+    """Return one Canonical 14x subsection title/body without duplicating its schema."""
+    heading = re.compile(rf"(?m)^{re.escape(tag)}\\.\\s+(?P<title>.+)$").search(canonical_text)
+    if not heading:
+        raise VisibleContentProofError(f"Canonical {tag} subsection not found")
+    next_heading = re.compile(r"(?m)^14[A-Z](?:\\d+)?\\.\\s+").search(
+        canonical_text, heading.end()
+    )
+    end = next_heading.start() if next_heading else len(canonical_text)
+    return heading.group("title").strip(), canonical_text[heading.end():end]
+
+
+def _canonical_numbered_rows(
+    canonical_text: str,
+    *,
+    tag: str,
+    section_prefix: str,
+    zero_pad: bool = False,
+) -> list[dict[str, str]]:
+    """Parse the numbered visible structure owned by one Canonical subsection."""
+    _, block = _canonical_subsection(canonical_text, tag)
+    rows: list[dict[str, str]] = []
+    for raw in block.splitlines():
+        match = re.match(r"^(?P<ordinal>\\d+B?)\\s+(?P<label>.+?)\\.?$", raw.strip())
+        if not match:
+            continue
+        ordinal = match.group("ordinal").upper()
+        label = match.group("label").strip().rstrip(".")
+        number_match = re.fullmatch(r"(?P<number>\\d+)(?P<suffix>B?)", ordinal)
+        if not number_match:
+            continue
+        number = int(number_match.group("number"))
+        suffix = number_match.group("suffix")
+        if zero_pad:
+            section_id = f"{section_prefix}{number:02d}{suffix}"
+        else:
+            section_id = f"{section_prefix}{number}{suffix}"
+        rows.append({"section_id": section_id, "label": label})
+    if not rows:
+        raise VisibleContentProofError(f"Canonical {tag} numbered visible-order rows not found")
+    return rows
+
+
+def _contract_from_rows(mode: str, rows: Sequence[Mapping[str, str]]) -> dict[str, Any]:
+    return {
+        "report_mode": mode,
+        "expected_section_ids": [str(row["section_id"]) for row in rows],
+        "expected_visible_order": [str(row["label"]) for row in rows],
+    }
+
+
 def canonical_mode_contract(canonical_text: str, report_mode: str) -> dict[str, Any]:
     """Derive structural section identity/order directly from the current Canonical text."""
     text = _nonempty(canonical_text, label="canonical_text")
     mode = str(report_mode or "").strip().upper()
+
     if mode in {"DEEP", "FULL", "DEADLINE", "FINAL"}:
-        start_marker = "14A. FULL / DEEP BACKBONE"
-        end_marker = "ALL15 identity completeness"
-        start = text.find(start_marker)
-        end = text.find(end_marker, start)
-        if start < 0 or end < 0:
-            raise VisibleContentProofError("Canonical Deep visible-order block not found")
-        block = text[start:end]
-        rows: list[dict[str, str]] = []
-        for raw in block.splitlines():
-            match = re.match(r"^(?P<ordinal>\d+B?)\s+(?P<label>.+?)\.?$", raw.strip())
-            if not match:
-                continue
-            ordinal = match.group("ordinal").upper()
-            label = match.group("label").strip().rstrip(".")
-            if ordinal.endswith("B"):
-                number = int(ordinal[:-1])
-                section_id = f"S{number:02d}B"
-            else:
-                section_id = f"S{int(ordinal):02d}"
-            rows.append({"section_id": section_id, "label": label})
-        if not rows:
-            raise VisibleContentProofError("Canonical Deep visible-order rows not found")
-        return {
-            "report_mode": mode,
-            "expected_section_ids": [row["section_id"] for row in rows],
-            "expected_visible_order": [row["label"] for row in rows],
-        }
-    if mode == "MATCH":
-        start_marker = "14B. PURE MATCH EXACT CONTENT CONTRACT"
-        end_marker = "Generic match story"
-        start = text.find(start_marker)
-        end = text.find(end_marker, start)
-        if start < 0 or end < 0:
-            raise VisibleContentProofError("Canonical Match visible-order block not found")
-        block = text[start:end]
-        rows = []
-        for raw in block.splitlines():
-            match = re.match(r"^(?P<ordinal>\d+)\s+(?P<label>.+?)\.?$", raw.strip())
-            if match:
-                rows.append(
-                    {
-                        "section_id": f"MATCH{int(match.group('ordinal'))}",
-                        "label": match.group("label").strip().rstrip("."),
-                    }
+        rows = _canonical_numbered_rows(
+            text,
+            tag="14A",
+            section_prefix="S",
+            zero_pad=True,
+        )
+        if mode == "FINAL":
+            final_title, final_body = _canonical_subsection(text, "14I")
+            lock_label = re.sub(r"^FINAL\\s+[—-]\\s*", "", final_title).strip().rstrip(".")
+            if not lock_label or "before alternatives" not in final_body.lower():
+                raise VisibleContentProofError(
+                    "Canonical FINAL GW LOCK PACKAGE placement semantics not found"
                 )
-        return {
-            "report_mode": mode,
-            "expected_section_ids": [row["section_id"] for row in rows],
-            "expected_visible_order": [row["label"] for row in rows],
-        }
+            lock_section_id = re.sub(r"[^A-Z0-9]+", "_", lock_label.upper()).strip("_")
+            alternatives_index = next(
+                (
+                    index
+                    for index, row in enumerate(rows)
+                    if "OPTIONS" in row["label"].upper()
+                ),
+                None,
+            )
+            if alternatives_index is None:
+                raise VisibleContentProofError(
+                    "Canonical Full/Deep alternatives section not found for FINAL insertion"
+                )
+            rows.insert(
+                alternatives_index,
+                {"section_id": lock_section_id, "label": lock_label},
+            )
+        return _contract_from_rows(mode, rows)
+
+    if mode == "MATCH":
+        rows = _canonical_numbered_rows(
+            text,
+            tag="14B",
+            section_prefix="MATCH",
+        )
+        return _contract_from_rows(mode, rows)
+
+    if mode == "POST_ALL_MATCH":
+        rows = _canonical_numbered_rows(
+            text,
+            tag="14J",
+            section_prefix="POST_ALL_MATCH",
+        )
+        return _contract_from_rows(mode, rows)
+
+    if mode == "PRICE":
+        rows = _canonical_numbered_rows(
+            text,
+            tag="14L",
+            section_prefix="PRICE",
+        )
+        return _contract_from_rows(mode, rows)
+
     return {"report_mode": mode, "expected_section_ids": [], "expected_visible_order": []}
 
 

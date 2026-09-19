@@ -55,6 +55,42 @@ _WEATHER_STATES_BY_MODE = {
 }
 
 
+_FULL_DEEP_VISIBLE_ORDER = (
+    "DECISION/STATUS",
+    "OUR15",
+    "DECISION DELTA",
+    "CHANGES",
+    "FIXTURES/REST/CONDITIONS",
+    "FORMATION/XI/BENCH",
+    "XI BATTLE",
+    "C/VC",
+    "CHIP",
+    "ACTIONABLE PRICE RADAR",
+    "WATCHLIST20",
+    "RISE20",
+    "FALL20",
+    "PACKAGE OPTIMIZER/FRONTIER",
+    "EVIDENCE QUALITY",
+    "ICON+ MINI-LEAGUE",
+    "ALL15 NEXT-GW TACTICAL/PROBABILITY",
+    "SOURCE HEALTH/FRESHNESS/LINEAGE",
+    "WAIT/PREPARE/ACT + TRIGGER/REVERSAL",
+    "FINAL JUDGEMENT",
+)
+_PRICE_VISIBLE_ORDER = (
+    "PRICE DECISION",
+    "OFFICIAL PRICE CHANGES FACT",
+    "TEAM-NEEDS PRICE ALERT",
+    "WATCHLIST20",
+    "RISE20",
+    "FALL20",
+    "PACKAGE/AFFORDABILITY IMPACT",
+    "PRICE RISK VS VALUE OF WAITING FOR FOOTBALL INFORMATION",
+    "ICON+ PRICE IMPACT",
+    "ACTION BOARD",
+    "SOURCE HEALTH",
+)
+
 _MATCH_VISIBLE_ORDER = (
     "MATCH CHECKPOINT / GW STATUS",
     "LOCKED PERSONAL TEAM",
@@ -358,6 +394,9 @@ def validate_v12_visible_content_contract(
     failures.extend(_validate_decision_delta(payload))
     failures.extend(_validate_model_update_semantics(payload))
     failures.extend(_validate_icon_contract(payload))
+    if isinstance(payload.get("icon"), Mapping) and str((payload.get("icon") or {}).get("status") or "").upper() in {"FRESH", "COMPLETE"}:
+        if payload.get("football_optimal_baseline_before_icon") is not True:
+            failures.append("ICON_OVERLAY_PRECEDENCE_INVALID")
 
     if payload.get("report_due") is True and payload.get("optional_scope_degraded") is True and payload.get("visible_report_suppressed") is True:
         failures.append("OPTIONAL_DEGRADED_SCOPE_SUPPRESSED_DUE_REPORT")
@@ -408,6 +447,11 @@ def validate_v12_visible_content_contract(
             if state == "CAMEO_BLOCKED_AUTOSUB" and mapped not in (None, "no_legal_sub"):
                 failures.append(f"CAMEO_SHOULD_NOT_BE_IN_SUBSTITUTION_MAP={index}")
 
+    if mode in {"DEEP", "FULL", "DEADLINE", "FINAL"}:
+        order = tuple(str(value).strip().upper() for value in payload.get("visible_order") or [])
+        if order != tuple(value.upper() for value in _FULL_DEEP_VISIBLE_ORDER):
+            failures.append("FULL_DEEP_VISIBLE_ORDER_INVALID")
+
     if mode in {"DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP", "POST_ALL_MATCH"}:
         all15 = list(payload.get("all15") or [])
         if len(all15) != 15:
@@ -432,9 +476,13 @@ def validate_v12_visible_content_contract(
                 failures.append(f"WATCHLIST20_{position}={positions.get(position, 0)}")
         if any(bool(row.get("owned")) for row in watchlist if isinstance(row, Mapping)):
             failures.append("WATCHLIST20_OWNED_PLAYER_PRESENT")
+        if payload.get("watchlist_full_universe_derived") is not True:
+            failures.append("WATCHLIST20_FULL_UNIVERSE_LINEAGE_MISSING")
 
         routes = list(payload.get("package_routes") or [])
         failures.extend(_missing_row_fields(routes, _PACKAGE_VISIBLE_FIELDS, "PACKAGE"))
+        if payload.get("serious_comparison") is True and not routes:
+            failures.append("PACKAGE_SERIOUS_COMPARISON_MISSING")
         if routes and not any(str(row.get("route") or "").upper() == "HOLD" for row in routes if isinstance(row, Mapping)):
             failures.append("PACKAGE_HOLD_BASELINE_MISSING")
         if str(payload.get("search_authority") or "").upper() == "PARTIAL" and payload.get("search_authority_visible") is not True:
@@ -475,12 +523,25 @@ def validate_v12_visible_content_contract(
             failures.append("MATCH_SCOUT_FIXTURE_COVERAGE_MISMATCH")
 
     if mode == "PRICE":
+        order = tuple(str(value).strip().upper() for value in payload.get("visible_order") or [])
+        if order != tuple(value.upper() for value in _PRICE_VISIBLE_ORDER):
+            failures.append("PRICE_VISIBLE_ORDER_INVALID")
         rows = list(payload.get("price_waiting_comparison") or [])
         failures.extend(_missing_row_fields(rows, _PRICE_WAIT_FIELDS, "PRICE_WAITING"))
         if payload.get("material_price_route_count") and not rows:
             failures.append("PRICE_WAITING_COMPARISON_MISSING")
 
+    if mode in {"DEEP", "FULL"} and str(payload.get("checkpoint_time") or "") == "04:30":
+        if str(payload.get("deep_emphasis") or "").upper() != "OVERNIGHT_RESET_BASELINE":
+            failures.append("0430_DEEP_EMPHASIS_INVALID")
+    if mode in {"DEEP", "FULL"} and str(payload.get("checkpoint_time") or "") == "12:30":
+        if str(payload.get("deep_emphasis") or "").upper() != "DELTA_SINCE_04:30":
+            failures.append("1230_DEEP_EMPHASIS_INVALID")
+        if "press_news_probability_changes" not in payload:
+            failures.append("1230_PRESS_NEWS_DELTA_MISSING")
     if mode in {"DEEP", "FULL"} and str(payload.get("checkpoint_time") or "") == "21:30":
+        if str(payload.get("deep_emphasis") or "").upper() != "LATE_NEWS_OVERNIGHT_PRICE_DEADLINE_RISK":
+            failures.append("2130_DEEP_EMPHASIS_INVALID")
         rows = list(payload.get("overnight_risk_board") or [])
         if not rows:
             failures.append("OVERNIGHT_RISK_BOARD_MISSING")

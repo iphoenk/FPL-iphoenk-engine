@@ -620,7 +620,12 @@ def test_39_formation_comparison_is_distributional_and_label_neutral(base_decisi
     assert rows
     assert {row["formation"] for row in rows}.issubset(set(LINEUP_RULES["legal_formations"]))
     assert all(row.get("route_utility") is not None for row in rows)
+    assert all(len(row.get("element_ids") or []) == 11 for row in rows)
     assert sum(bool(row.get("selected")) for row in rows) == 1
+    selected = next(row for row in rows if row.get("selected") is True)
+    assert set(selected["element_ids"]) == {
+        int(row["element"]) for row in base_decision["starting_xi"]
+    }
 
 
 def test_40_reserve_gk_autosub_is_independent_of_outfield_priority():

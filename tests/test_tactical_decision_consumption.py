@@ -138,3 +138,150 @@ def test_report_decoration_covers_owned_watchlist_battle_and_captain():
     assert result["starting_xi"]["model"]["battle"]["leader_metrics"]["tactical_matchup"]
     assert result["captaincy"]["model"]["captain"]["tactical_matchup"]
     assert result["tactical_context"]["decision_usage"]["direct_xpts_mutation"] is False
+
+
+def test_p17_formation_comparison_reconciles_by_xi_identity_not_row_index():
+    positions = {
+        1: "GK", 15: "GK",
+        2: "DEF", 3: "DEF", 4: "DEF", 5: "DEF", 6: "DEF",
+        7: "MID", 8: "MID", 9: "MID", 10: "MID", 11: "MID",
+        12: "FWD", 13: "FWD", 14: "FWD",
+    }
+    squad = [_squad_row(e, positions[e]) for e in range(1, 16)]
+    selected_ids = [1, 2, 3, 4, 7, 8, 9, 10, 12, 13, 14]
+    other_formation_ids = [1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13]
+    lineup = {
+        "formation": "3-4-3",
+        "squad_rows": squad,
+        "starting_xi": [
+            next(row for row in squad if row["element"] == e)
+            for e in selected_ids
+        ],
+        "captain": {"element": 12, "name": "P12"},
+        "vice_captain": {"element": 13, "name": "P13"},
+        "captain_safe_pool": [],
+        "bench": {
+            "gk": {"element": 15},
+            "order": [{"element": 5}, {"element": 6}, {"element": 11}],
+        },
+        "lineup_score": {"robust": 50.0, "xpts_mean": 55.0, "xpts_std": 8.0},
+        "alternatives": [
+            {
+                "formation": "3-4-3",
+                "score": 50.0,
+                "route_utility": 50.0,
+                "element_ids": selected_ids,
+            },
+            {
+                "formation": "4-5-1",
+                "score": 49.0,
+                "route_utility": 49.0,
+                "element_ids": other_formation_ids,
+            },
+        ],
+        # Formation rows are intentionally sorted independently from
+        # alternatives, matching the P1.7 contract that exposed the CI bug.
+        "formation_comparison": [
+            {
+                "formation": "4-5-1",
+                "element_ids": other_formation_ids,
+                "route_utility": 49.0,
+                "selected": False,
+            },
+            {
+                "formation": "3-4-3",
+                "element_ids": selected_ids,
+                "route_utility": 50.0,
+                "selected": True,
+            },
+        ],
+        "main_starting_xi_battle": {"status": "CLEAR", "margin": 1.0},
+        "chip_context": {"single_chip_rule_respected": True},
+        "governance": {},
+    }
+    projections = {"players": [_projection(e) for e in range(1, 16)]}
+    result = apply_lineup_overlay(lineup, projections, persist=False)
+    selected_rows = [
+        row
+        for row in result["formation_comparison"]
+        if row.get("selected") is True
+    ]
+    assert len(selected_rows) == 1
+    assert selected_rows[0]["formation"] == result["formation"] == "3-4-3"
+    assert set(selected_rows[0]["element_ids"]) == set(selected_ids)
+
+
+def test_p17_tactical_overlay_can_reconcile_same_formation_alternative_route():
+    positions = {
+        1: "GK", 15: "GK",
+        2: "DEF", 3: "DEF", 4: "DEF", 5: "DEF", 6: "DEF",
+        7: "MID", 8: "MID", 9: "MID", 10: "MID", 11: "MID",
+        12: "FWD", 13: "FWD", 14: "FWD",
+    }
+    squad = [_squad_row(e, positions[e]) for e in range(1, 16)]
+    base_ids = [1, 2, 3, 4, 7, 8, 9, 10, 12, 13, 14]
+    alt_ids = [1, 2, 3, 5, 7, 8, 9, 10, 12, 13, 14]
+    lineup = {
+        "formation": "3-4-3",
+        "squad_rows": squad,
+        "starting_xi": [
+            next(row for row in squad if row["element"] == e)
+            for e in base_ids
+        ],
+        "captain": {"element": 12, "name": "P12"},
+        "vice_captain": {"element": 13, "name": "P13"},
+        "captain_safe_pool": [],
+        "bench": {
+            "gk": {"element": 15},
+            "order": [{"element": 5}, {"element": 6}, {"element": 11}],
+        },
+        "lineup_score": {"robust": 50.0, "xpts_mean": 55.0, "xpts_std": 8.0},
+        "alternatives": [
+            {
+                "formation": "3-4-3",
+                "score": 50.0,
+                "route_utility": 50.0,
+                "xpts_mean": 55.0,
+                "xpts_std": 8.0,
+                "element_ids": base_ids,
+            },
+            {
+                "formation": "3-4-3",
+                "score": 49.95,
+                "route_utility": 49.95,
+                "xpts_mean": 54.95,
+                "xpts_std": 8.0,
+                "element_ids": alt_ids,
+            },
+        ],
+        "formation_comparison": [
+            {
+                "formation": "3-4-3",
+                "element_ids": base_ids,
+                "route_utility": 50.0,
+                "selected": True,
+            }
+        ],
+        "main_starting_xi_battle": {"status": "CLOSE", "margin": 0.05},
+        "chip_context": {"single_chip_rule_respected": True},
+        "governance": {},
+    }
+    projections = {
+        "players": [
+            _projection(e, edge=(e == 5))
+            for e in range(1, 16)
+        ]
+    }
+    result = apply_lineup_overlay(lineup, projections, persist=False)
+    selected_ids = {
+        int(row["element"]) for row in result["starting_xi"]
+    }
+    assert selected_ids == set(alt_ids)
+    selected_row = next(
+        row
+        for row in result["formation_comparison"]
+        if row.get("selected") is True
+    )
+    assert selected_row["formation"] == "3-4-3"
+    assert set(selected_row["element_ids"]) == set(alt_ids)
+    assert selected_row["selected_route_reconciled_after_tactical_overlay"] is True

@@ -817,6 +817,7 @@ def _decision_core(players: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     formation_comparison = [
         {
             "formation": formation,
+            "element_ids": list(row.get("element_ids") or []),
             "route_utility": row.get("route_utility"),
             "expected_fpl_points_with_captain_vice": row.get("expected_fpl_points_with_captain_vice"),
             "distributional_downside": row.get("distributional_downside"),

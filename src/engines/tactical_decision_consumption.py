@@ -135,14 +135,59 @@ def _sync_formation_comparison(
     if not raw_rows:
         return
     selected_set = set(selected_ids)
+    selected_alternative = next(
+        (
+            dict(row)
+            for row in alternatives
+            if {int(value) for value in row.get("element_ids") or []}
+            == selected_set
+        ),
+        None,
+    )
     rows: list[dict[str, Any]] = []
     for index, raw in enumerate(raw_rows):
         row = dict(raw)
-        alternative = alternatives[index] if index < len(alternatives) else {}
-        alternative_ids = {int(value) for value in alternative.get("element_ids") or []}
-        row["selected"] = bool(alternative_ids) and alternative_ids == selected_set
+        row_ids = {int(value) for value in row.get("element_ids") or []}
+        if row_ids:
+            row["selected"] = row_ids == selected_set
+        else:
+            # Legacy formation rows predate explicit XI identity and remain
+            # index-aligned with the alternatives surface.
+            alternative = alternatives[index] if index < len(alternatives) else {}
+            alternative_ids = {
+                int(value) for value in alternative.get("element_ids") or []
+            }
+            row["selected"] = bool(alternative_ids) and alternative_ids == selected_set
         rows.append(row)
+
     selected_rows = [row for row in rows if row.get("selected") is True]
+    if not selected_rows and selected_alternative is not None:
+        # P1.7 formation_comparison is one best route per formation, while the
+        # tactical close-call overlay may select another legal route from that
+        # same formation. Reconcile by the final formation and refresh the row
+        # with the selected route rather than relying on positional indexing.
+        formation_rows = [
+            row for row in rows if row.get("formation") == lineup.get("formation")
+        ]
+        if len(formation_rows) == 1:
+            row = formation_rows[0]
+            row["element_ids"] = list(selected_ids)
+            for source_key, target_key in (
+                ("route_utility", "route_utility"),
+                (
+                    "expected_fpl_points_with_captain_vice",
+                    "expected_fpl_points_with_captain_vice",
+                ),
+                ("distributional_downside", "distributional_downside"),
+                ("supportable_upside", "supportable_upside"),
+                ("expected_autosub_value", "expected_autosub_value"),
+                ("expected_blocked_autosub_value", "cameo_blocking_cost"),
+            ):
+                if selected_alternative.get(source_key) is not None:
+                    row[target_key] = selected_alternative.get(source_key)
+            row["selected"] = True
+            row["selected_route_reconciled_after_tactical_overlay"] = True
+            selected_rows = [row]
     if len(selected_rows) != 1:
         raise RuntimeError(
             "tactical lineup overlay could not reconcile formation comparison with final XI: "

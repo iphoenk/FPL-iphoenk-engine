@@ -319,6 +319,10 @@ def run() -> dict:
         errors.append("P1.3B player-events config must use joint predictive V2 model")
     if (event_cfg.get("joint_goal_assist") or {}).get("model") != "BIVARIATE_POISSON_SHARED_COMPONENT_V1":
         errors.append("P1.3B must declare governed joint goal-assist dependence")
+    if (event_cfg.get("governance") or {}).get("conditional_event_independence_except_shared_minutes") is not False:
+        errors.append("P1.3B config must not claim conditional goal-assist independence after joint modelling")
+    if "GOAL_ASSIST_JOINT" not in str((event_cfg.get("governance") or {}).get("conditional_factorization_semantics") or ""):
+        errors.append("P1.3B config must state joint goal-assist factorisation semantics")
     if (event_cfg.get("point_distribution") or {}).get("model") != "FINITE_STATE_CONDITIONAL_CORE_POINT_PMF_V1":
         errors.append("P1.3B must declare deterministic finite-state point PMF")
     if (event_cfg.get("governance") or {}).get("distribution_completeness") != "PARTIAL_BONUS_RESIDUAL":

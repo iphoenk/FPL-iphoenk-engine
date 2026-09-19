@@ -520,6 +520,10 @@ def _calibration_hook(summary: Mapping[str, Any] | None) -> dict[str, Any]:
             "xpts_rmse": metric("xpts_rmse"),
             "goal_brier": metric("goal_brier"),
             "assist_brier": metric("assist_brier"),
+            "attacking_return_brier": metric("attacking_return_brier"),
+            "fpl_blank_brier": metric("fpl_blank_brier"),
+            "point_tail_brier": metric("point_tail_brier"),
+            "p10_p90_coverage": metric("p10_p90_coverage"),
             "clean_sheet_brier": metric("clean_sheet_brier"),
             "defcon_brier": metric("defcon_brier"),
             "save_mae": metric("save_mae"),
@@ -530,6 +534,8 @@ def _calibration_hook(summary: Mapping[str, Any] | None) -> dict[str, Any]:
         "automatic_retuning": False,
         "governance": {
             "future_settlement_hook_only": True,
+            "p1_3b_distribution_metrics_diagnostic_only": True,
+            "dependence_parameter_automatic_retuning": False,
             "methodology_weights_20_25_30_25_unchanged": True,
         },
     }

@@ -391,6 +391,10 @@ def test_A15_calibration_hooks_include_event_metrics_without_retuning():
         calibration={"prediction_sample_size": 1, "overall": metrics},
     )
     assert out["calibration_hook"]["automatic_retuning"] is False
+    assert "attacking_return_brier" in out["calibration_hook"]["metrics"]
+    assert "fpl_blank_brier" in out["calibration_hook"]["metrics"]
+    assert "point_tail_brier" in out["calibration_hook"]["metrics"]
+    assert "p10_p90_coverage" in out["calibration_hook"]["metrics"]
 
 
 def test_A17_historical_projection_switches_to_v12_native_event_owner():
@@ -624,6 +628,12 @@ def test_B01_probability_surface_reconciles_joint_attacking_return():
     ) + 1e-9
     assert probs["p_total_ga_ge_1"] == probs["p_attacking_return"]
     assert probs["p_total_ga_ge_2"] >= probs["p_total_ga_ge_3"]
+
+
+def test_B01b_config_governance_does_not_claim_goal_assist_independence():
+    governance = load_event_config()["governance"]
+    assert governance["conditional_event_independence_except_shared_minutes"] is False
+    assert "GOAL_ASSIST_JOINT" in governance["conditional_factorization_semantics"]
 
 
 def test_B02_goal_assist_dependence_is_explicit_and_not_silent_independence():

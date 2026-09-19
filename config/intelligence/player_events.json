@@ -90,7 +90,7 @@
     "canonical_final_gaussian_forbidden": true,
     "cross_player_correlation": "NOT_MODELLED_YET",
     "cross_fixture_correlation": "NOT_MODELLED_YET",
-    "conditional_event_independence_except_shared_minutes": true,
+    "conditional_event_independence_except_shared_minutes": false,
     "bonus_semantics": "RESIDUAL_EXPECTATION_COMPONENT",
     "p1_6_tactical_scorer_applied": false,
     "monte_carlo_applied": false,
@@ -104,7 +104,8 @@
     "p1_6_formula_mutated": false,
     "package_optimizer_started": false,
     "mini_league_overlay_started": false,
-    "p1_7_started": false
+    "p1_7_started": false,
+    "conditional_factorization_semantics": "GOAL_ASSIST_JOINT; CLEAN_SHEET_DEFCON_SAVES_FACTORIZED_GIVEN_STATE_AND_MINUTES"
   },
   "feature_version": "p1.3b-joint-event-point-distribution-v1",
   "joint_goal_assist": {

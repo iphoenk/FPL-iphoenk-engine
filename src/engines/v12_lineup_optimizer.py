@@ -306,6 +306,7 @@ def build_player_surface(projection: Mapping[str, Any], planning_gw: int) -> dic
             "per_state_point_pmf_rematerialized": False,
             "tails_fabricated": False,
             "transfer_economics_consumed": False,
+            "duplicate_player_surface_payload": False,
         },
     }
 
@@ -1306,7 +1307,6 @@ def optimize_lineup(
         "main_starting_xi_battle": core.get("close_call_proof"),
         "formation_comparison": core.get("formation_comparison"),
         "alternatives": core.get("alternatives"),
-        "player_surfaces": players,
         "legal_xi_count": core.get("legal_xi_count"),
         "legal_formations_evaluated": core.get("legal_formations_evaluated"),
         "governance": {
@@ -1504,7 +1504,8 @@ def freeze_lineup_decision(
 ) -> dict[str, Any]:
     binding = dict(decision.get("model_evidence_binding") or {})
     players = []
-    for row in decision.get("player_surfaces") or []:
+    frozen_player_rows = decision.get("squad_rows") or decision.get("player_surfaces") or []
+    for row in frozen_player_rows:
         players.append({
             "element": row.get("element"),
             "xpts": row.get("xpts_mean"),

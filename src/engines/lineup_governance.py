@@ -11,6 +11,7 @@ from typing import Any
 from src.engines.p0_decision_quality import resolve_locked_chip_context
 from src.engines.v12_lineup_optimizer import (
     compare_legacy_decision,
+    load_config as load_v12_lineup_config,
     optimize_lineup,
 )
 from src.engines.p1_decision_governance import (
@@ -544,18 +545,47 @@ def build_lineup_decision(
         planning_gw=planning_gw,
         generated_at=_now(),
     )
-    legacy = _build_legacy_lineup_decision(
-        projections,
-        lock,
-        chips,
-        team=team,
+    migration_cfg = dict(load_v12_lineup_config().get("migration") or {})
+    execute_legacy_oracle = (
+        migration_cfg.get("production_legacy_oracle_execution") is True
     )
-    migration = compare_legacy_decision(legacy, native)
-    if migration.get("unexpected_regression_count"):
-        raise RuntimeError(
-            "P1.7 ownership migration blocked by unexpected regression: "
-            f"{migration.get('unexpected_regressions')}"
+    if execute_legacy_oracle:
+        legacy = _build_legacy_lineup_decision(
+            projections,
+            lock,
+            chips,
+            team=team,
         )
+        migration = compare_legacy_decision(legacy, native)
+        if migration.get("unexpected_regression_count"):
+            raise RuntimeError(
+                "P1.7 ownership migration blocked by unexpected regression: "
+                f"{migration.get('unexpected_regressions')}"
+            )
+    else:
+        migration = {
+            "status": "NOT_EXECUTED_PRODUCTION_POST_ACCEPTANCE",
+            "classification": None,
+            "unexpected_regressions": [],
+            "unexpected_regression_count": 0,
+            "ownership_migration_blocked": False,
+            "oracle_status": migration_cfg.get(
+                "oracle_status",
+                "CI_REGRESSION_ORACLE_ONLY_AFTER_ACCEPTANCE",
+            ),
+            "acceptance_reference_sha": migration_cfg.get(
+                "acceptance_reference_sha"
+            ),
+            "classification_taxonomy": [
+                "EXACT_EQUIVALENT",
+                "DISTRIBUTIONAL_IMPROVEMENT",
+                "AUTOSUB_OPTION_VALUE_IMPROVEMENT",
+                "CAMEO_BLOCKING_IMPROVEMENT",
+                "CAPTAIN_FALLBACK_IMPROVEMENT",
+                "BUG_FIX",
+                "UNEXPECTED_REGRESSION",
+            ],
+        }
     effective_lock = _effective_lock_context(
         team, lock, legacy_fixture_fallback
     )
@@ -566,7 +596,12 @@ def build_lineup_decision(
     native["migration_comparison"] = migration
     native.setdefault("governance", {}).update({
         "production_owner": "V12_LINEUP_OPTIMIZER",
-        "legacy_lineup_governance_status": "MIGRATION_ORACLE",
+        "legacy_lineup_governance_status": (
+            "MIGRATION_ORACLE"
+            if execute_legacy_oracle
+            else "REGRESSION_ORACLE_CI_ONLY"
+        ),
+        "legacy_oracle_executed_in_production": execute_legacy_oracle,
         "legacy_runtime_v3_dependency_added": False,
         "team_state_authority_consumed": not legacy_fixture_fallback,
         "legacy_lock_fixture_fallback": legacy_fixture_fallback,

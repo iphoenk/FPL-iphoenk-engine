@@ -117,6 +117,14 @@
     "transfer_economics_consumed": false,
     "raw_v6_payload_persisted": false,
     "automatic_retuning": false,
-    "named_player_conditions_forbidden": true
+    "named_player_conditions_forbidden": true,
+    "duplicate_player_surface_payload": false,
+    "legacy_oracle_executed_in_production": false
+  },
+  "migration": {
+    "production_legacy_oracle_execution": false,
+    "oracle_status": "CI_REGRESSION_ORACLE_ONLY_AFTER_ACCEPTANCE",
+    "acceptance_reference_sha": "f21b8398453faf36a37b06f87d4a3678ea5e3176",
+    "semantics": "Legacy lineup logic remains callable for explicit migration/regression tests but is not re-executed on every production lineup occurrence after P1.7 ownership acceptance."
   }
 }

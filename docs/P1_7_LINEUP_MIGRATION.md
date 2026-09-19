@@ -228,3 +228,24 @@ goalkeeper or illegal captain/vice pair and blocks ownership migration.
 A structurally invalid legacy route corrected by the legal native owner is
 classified as `BUG_FIX`. Other legal differences are classified by the
 decision surface that changed; none of these labels alter the route objective.
+
+
+## Post-acceptance production hot-path hardening
+
+After P1.7 ownership migration has passed exact regression/release acceptance,
+the legacy lineup implementation remains available only as a CI/regression
+oracle. It is no longer re-executed on every production lineup occurrence.
+Production therefore publishes a truthful migration status of
+`NOT_EXECUTED_PRODUCTION_POST_ACCEPTANCE` with
+`oracle_status=CI_REGRESSION_ORACLE_ONLY_AFTER_ACCEPTANCE`; it never fabricates
+an `EXACT_EQUIVALENT` comparison when the oracle was not executed.
+
+The canonical owned-player decision surface is `squad_rows`. The prior
+`player_surfaces` output was a byte-for-byte semantic duplicate and had no
+production consumer; it is removed from new artifacts. Freeze retains backward
+compatibility by reading `squad_rows` first and accepting legacy
+`player_surfaces` only for older already-materialized artifacts.
+
+These are execution/payload reductions only. Legal-XI enumeration, all six
+bench permutations, global autosub resolution, cameo blocking, distributional
+route scoring and ordered captain/vice evaluation are unchanged.

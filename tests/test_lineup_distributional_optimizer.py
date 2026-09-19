@@ -527,7 +527,7 @@ def test_30_postmatch_settlement_keeps_decision_error_separate(base_decision):
     )
     actuals = [
         {"element": row["element"], "points": 5, "minutes": 90, "goals": 0, "assists": 0, "started": True}
-        for row in base_decision["player_surfaces"]
+        for row in base_decision["squad_rows"]
     ]
     settled = settle_lineup_decision(
         frozen,
@@ -590,7 +590,14 @@ def test_35_no_mini_league_overlay_in_p1_7_owner():
     assert load_config()["governance"]["mini_league_overlay_started"] is False
 
 
-def test_36_production_wrapper_switches_to_v12_owner_and_keeps_legacy_oracle():
+def test_36_production_wrapper_switches_to_v12_owner_and_keeps_legacy_oracle(monkeypatch):
+    def forbidden_production_oracle(*args, **kwargs):
+        raise AssertionError("legacy lineup oracle must not execute in production after acceptance")
+
+    monkeypatch.setattr(
+        "src.engines.lineup_governance._build_legacy_lineup_decision",
+        forbidden_production_oracle,
+    )
     projections = _squad()
     lock = {
         "authoritative_phase": "pre_deadline_locked",
@@ -604,8 +611,12 @@ def test_36_production_wrapper_switches_to_v12_owner_and_keeps_legacy_oracle():
     assert decision["native_model"] == "v12_distributional_lineup_optimizer"
     assert decision["model_owner"] == "V12_LINEUP_OPTIMIZER"
     assert decision["governance"]["production_owner"] == "V12_LINEUP_OPTIMIZER"
-    assert decision["governance"]["legacy_lineup_governance_status"] == "MIGRATION_ORACLE"
+    assert decision["governance"]["legacy_lineup_governance_status"] == "REGRESSION_ORACLE_CI_ONLY"
+    assert decision["governance"]["legacy_oracle_executed_in_production"] is False
+    assert decision["migration_comparison"]["status"] == "NOT_EXECUTED_PRODUCTION_POST_ACCEPTANCE"
+    assert decision["migration_comparison"]["classification"] is None
     assert decision["migration_comparison"]["unexpected_regression_count"] == 0
+    assert decision["migration_comparison"]["oracle_status"] == "CI_REGRESSION_ORACLE_ONLY_AFTER_ACCEPTANCE"
 
 
 def test_37_captain_safe_pool_has_distinct_captain_candidates(base_decision):
@@ -806,6 +817,13 @@ def test_48_global_governance_boundaries_are_explicit(base_decision):
     assert gov["monte_carlo_applied"] is False
     assert gov["package_optimizer_implemented"] is False
     assert gov["mini_league_overlay_applied"] is False
+
+
+def test_48b_production_output_does_not_duplicate_player_surfaces(base_decision):
+    assert "player_surfaces" not in base_decision
+    assert len(base_decision["squad_rows"]) == 15
+    assert load_config()["governance"]["duplicate_player_surface_payload"] is False
+    assert load_config()["migration"]["production_legacy_oracle_execution"] is False
 
 
 def test_49_squad_rows_publish_non_authoritative_selection_score_alias(base_decision):

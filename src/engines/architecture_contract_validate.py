@@ -460,6 +460,15 @@ def run() -> dict:
         errors.append("P1.7 stable owner drift")
     if float((p1_7_policy.get("tactical") or {}).get("canonical_weight") or -1.0) != 0.25:
         errors.append("P1.7 must preserve exact P1.6 tactical component weight 0.25")
+    migration_cfg = p1_7_policy.get("migration") or {}
+    if migration_cfg.get("production_legacy_oracle_execution") is not False:
+        errors.append("P1.7 accepted owner must not re-execute legacy lineup oracle in production")
+    if migration_cfg.get("oracle_status") != "CI_REGRESSION_ORACLE_ONLY_AFTER_ACCEPTANCE":
+        errors.append("P1.7 legacy lineup path must remain explicit CI regression oracle after acceptance")
+    if (p1_7_policy.get("governance") or {}).get("duplicate_player_surface_payload") is not False:
+        errors.append("P1.7 production artifact must not duplicate squad_rows as player_surfaces")
+    if (p1_7_policy.get("governance") or {}).get("legacy_oracle_executed_in_production") is not False:
+        errors.append("P1.7 governance must declare legacy oracle absent from production hot path")
     for key in (
         "global_weights_20_25_30_25_unchanged",
         "p1_1_math_mutated",
@@ -507,6 +516,15 @@ def run() -> dict:
             errors.append(f"P1.7 owner has forbidden production dependency: {forbidden_dependency}")
     if "from src.engines.v12_lineup_optimizer import" not in lineup_text:
         errors.append("lineup_governance must consume V12-native P1.7 owner")
+    for marker in (
+        "REGRESSION_ORACLE_CI_ONLY",
+        "NOT_EXECUTED_PRODUCTION_POST_ACCEPTANCE",
+        "production_legacy_oracle_execution",
+    ):
+        if marker not in lineup_text:
+            errors.append(f"P1.7 post-acceptance production oracle guard missing: {marker}")
+    if '"player_surfaces": players' in p1_7_text:
+        errors.append("P1.7 owner must not publish duplicate player_surfaces payload")
     tactical_consumption_text = (
         ROOT / "src" / "engines" / "tactical_decision_consumption.py"
     ).read_text(encoding="utf-8")

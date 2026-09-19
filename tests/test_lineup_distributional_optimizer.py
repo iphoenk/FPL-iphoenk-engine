@@ -581,6 +581,9 @@ def test_36_production_wrapper_switches_to_v12_owner_and_keeps_legacy_oracle():
         ],
     }
     decision = build_lineup_decision(projections, lock, {"used": []})
+    assert decision["model"] == "governed_lineup_v2"
+    assert decision["native_model"] == "v12_distributional_lineup_optimizer"
+    assert decision["model_owner"] == "V12_LINEUP_OPTIMIZER"
     assert decision["governance"]["production_owner"] == "V12_LINEUP_OPTIMIZER"
     assert decision["governance"]["legacy_lineup_governance_status"] == "MIGRATION_ORACLE"
     assert decision["migration_comparison"]["unexpected_regression_count"] == 0

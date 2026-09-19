@@ -988,7 +988,8 @@ def optimize_lineup(
     vice_id = int((selected.get("captain_vice") or {}).get("vice_element") or 0)
     by_id = {int(row.get("element") or 0): row for row in players}
     output_core = {
-        "model": cfg.get("model_id"),
+        "model": "governed_lineup_v2",
+        "native_model": cfg.get("model_id"),
         "model_owner": MODEL_OWNER,
         "ruleset_id": RULESET_ID,
         "planning_gw": gw,

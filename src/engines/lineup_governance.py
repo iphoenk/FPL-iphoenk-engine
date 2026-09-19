@@ -358,8 +358,12 @@ def _battle(best: dict[str, Any], second: dict[str, Any] | None, pmap: dict[int,
         classification = "MEAN-EDGE-DOMINATED"
     else:
         classification = "INDETERMINATE"
+    threshold = _f((load_policy().get("battle") or {}).get("close_margin_threshold"))
+    if threshold <= 0:
+        raise RuntimeError("lineup battle close_margin_threshold must be positive")
     return {
-        "status": "UNCERTAINTY_OVERLAP" if intervals_overlap else "DISTRIBUTIONALLY_SEPARATED",
+        "status": "CLOSE" if abs(margin) < threshold else "CLEAR",
+        "distribution_status": "UNCERTAINTY_OVERLAP" if intervals_overlap else "DISTRIBUTIONALLY_SEPARATED",
         "margin": margin,
         "base_score_margin": round(best_base - second_base, 4),
         "p_selected_outperforms_alternative": round(p_outperform, 6),

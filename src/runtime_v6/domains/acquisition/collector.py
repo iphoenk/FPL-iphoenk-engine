@@ -12,7 +12,10 @@ from .health import build_source_health
 from .http_client import AcquisitionClient, utc_now
 from .identity import build_player_identity_map
 from .identity_coverage import build_player_identity_coverage_truth
-from .identity_scope import apply_entity_scope_identity_semantics
+from .identity_scope import (
+    apply_entity_scope_identity_semantics,
+    apply_observed_player_identity_truth,
+)
 from .noauth_source_native import build_noauth_source_native_datasets
 from .player_observation import augment_source_native_datasets
 from .normalizer import (
@@ -215,16 +218,26 @@ def run() -> dict[str, Any]:
         scopes,
     )
 
+    write_json(NORMALIZED / "canonical_teams.json", build_canonical_teams(official))
+    write_json(NORMALIZED / "canonical_fixtures.json", build_canonical_fixtures(official))
+    normalized_source_artifacts, normalized_source_datasets = _publish_source_native_datasets(
+        results, identity_map
+    )
+    identity_coverage_truth = build_player_identity_coverage_truth(
+        identity_map, normalized_source_datasets
+    )
+    identity_map = apply_observed_player_identity_truth(
+        identity_map, identity_coverage_truth
+    )
     write_json(EVIDENCE / "player_identity_map.json", identity_map)
-    write_json(EVIDENCE / "verified_crosswalks.json", build_verified_crosswalk_report(identity_map, results))
+    write_json(
+        EVIDENCE / "verified_crosswalks.json",
+        build_verified_crosswalk_report(identity_map, results),
+    )
     write_json(
         NORMALIZED / "canonical_players.json",
         build_canonical_players(official, source_ids, identity_map),
     )
-    write_json(NORMALIZED / "canonical_teams.json", build_canonical_teams(official))
-    write_json(NORMALIZED / "canonical_fixtures.json", build_canonical_fixtures(official))
-    normalized_source_artifacts, normalized_source_datasets = _publish_source_native_datasets(results, identity_map)
-    identity_coverage_truth = build_player_identity_coverage_truth(identity_map, normalized_source_datasets)
     write_json(EVIDENCE / "player_identity_coverage.json", identity_coverage_truth)
     write_json(EVIDENCE / "lineage.json", build_lineage_catalog(config))
     write_json(EVIDENCE / "latest_index.json", build_evidence_index(results))
@@ -349,6 +362,8 @@ def run() -> dict[str, Any]:
             "identity_observability_uses_canonical_source_entity_truth": True,
             "verified_crosswalks_are_evidence_backed": True,
             "identity_coverage_uses_separate_canonical_and_observed_join_metrics": True,
+            "observed_player_identity_truth_propagates_to_source_health": True,
+            "reviewed_provider_limitation_is_distinct_from_not_applicable": True,
             "unobserved_players_are_not_assumed_absent_from_provider": True,
             "fuzzy_identity_matching": False,
             "source_specific_normalization_is_data_only": True,

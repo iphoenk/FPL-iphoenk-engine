@@ -69,12 +69,13 @@
     "no_provider_entity_requires_complete_provider_universe_proof": true,
     "data_only": true,
     "prediction_authority": "NONE",
-    "optimizer_authority": "NONE"
+    "optimizer_authority": "NONE",
+    "reviewed_provider_limitation_is_distinct_from_scope_not_applicable": true
   },
   "reviewed_provider_limitations": {
     "policy": "EXPLICIT_NATIVE_ID_ALLOWLIST_ONLY",
-    "classification": "NOT_APPLICABLE",
-    "meaning": "Observed provider entity is real, but deterministic V6 joining is not applicable until the provider or a trusted registry exposes a stable cross-ID. It remains visible as a reviewed limitation and must never be name/fuzzy joined.",
+    "classification": "REVIEWED_PROVIDER_LIMITATION",
+    "meaning": "Observed provider entity is real, but no trustworthy deterministic external binding has been established after explicit native-ID review. It remains visible and non-actionable for joining; it is not a genuine entity-scope NOT_APPLICABLE state and must never be name/fuzzy joined.",
     "sources": {
       "fotmob": {
         "source_native_ids": [

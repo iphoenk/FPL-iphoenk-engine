@@ -14,6 +14,24 @@ from src.runtime_v6.verified_crosswalks import (
 
 
 def _identity_teams() -> dict:
+    config = load_verified_crosswalks()
+    team_rows = config["sources"]["fotmob"]["teams"]
+    fixture_mappings = {}
+    for pair_index, index in enumerate(range(0, len(team_rows), 2), start=1):
+        home = team_rows[index]
+        away = team_rows[index + 1]
+        fixture_mappings[str(pair_index)] = {
+            "official_fpl_fixture_id": pair_index,
+            "official_fpl_team_h_id": home["official_fpl_team_id"],
+            "official_fpl_team_a_id": away["official_fpl_team_id"],
+            "kickoff_time": "2026-09-12T12:30:00Z",
+            "links": {
+                "official_fpl": {
+                    "status": "EXACT",
+                    "source_native_id": pair_index,
+                }
+            },
+        }
     return {
         "entity_bridges": {
             "team": {
@@ -26,7 +44,12 @@ def _identity_teams() -> dict:
                     for team_id in range(1, 21)
                 },
                 "coverage": {},
-            }
+            },
+            "fixture": {
+                "canonical_fixture_count": len(fixture_mappings),
+                "mappings": fixture_mappings,
+                "coverage": {},
+            },
         },
         "governance": {"fuzzy_name_matching_allowed": False},
     }
@@ -63,7 +86,7 @@ def _fotmob_result() -> dict:
                 "json": {
                     "details": {"id": 47, "name": "Premier League", "selectedSeason": "2026/2027"},
                     "table": [{"data": {"table": {"all": rows}}}],
-                    "matches": {"allMatches": matches},
+                    "fixtures": {"allMatches": matches},
                 },
             }
         },
@@ -93,6 +116,24 @@ def test_fotmob_crosswalk_requires_current_native_ids_and_reaches_green_at_20_of
     assert enriched["governance"]["verified_manual_crosswalk_name_matching"] is False
 
 
+def test_fotmob_fixture_bridge_uses_native_event_verified_team_ids_and_unique_utc_key():
+    results = {"fotmob": _fotmob_result()}
+    identity = enrich_verified_external_crosswalks(_identity_teams(), results)
+    coverage = identity["entity_bridges"]["fixture"]["coverage"]["fotmob"]
+    assert coverage["mapped_fixture_count"] == 10
+    assert coverage["canonical_fixture_count"] == 10
+    assert coverage["observed_provider_fixture_count"] == 10
+    assert coverage["observed_actionable_unmapped_count"] == 0
+    assert coverage["duplicate_native_id_count"] == 0
+    assert coverage["canonical_target_collision_count"] == 0
+    assert coverage["identity_health"] == "GREEN"
+    assert coverage["name_matching_used"] is False
+    link = identity["entity_bridges"]["fixture"]["mappings"]["1"]["links"]["fotmob"]
+    assert link["source_native_id"] == 1000
+    assert link["provenance"]["canonical_match_key_unique"] is True
+    assert link["provenance"]["name_matching_used"] is False
+
+
 def test_fotmob_source_native_normalizer_consumes_verified_team_links_without_name_matching():
     results = {"fotmob": _fotmob_result()}
     identity = enrich_verified_external_crosswalks(_identity_teams(), results)
@@ -114,6 +155,9 @@ def test_verified_crosswalk_report_is_identity_only_and_preserves_zero_decision_
         len(source.get("teams") or []) + len(source.get("players") or [])
         for source in config["sources"].values()
     )
+    configured_records += identity["entity_bridges"]["fixture"]["coverage"]["fotmob"][
+        "mapped_fixture_count"
+    ]
     assert report["schema_version"] == 2
     assert report["semantic_class"] == "IDENTITY_CROSSWALK"
     assert report["record_count"] == configured_records

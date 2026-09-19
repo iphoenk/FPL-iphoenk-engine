@@ -155,13 +155,18 @@ def test_vaastav_shared_team_and_fixture_ids_require_cross_field_proof():
     assert identity["governance"]["name_only_bridge_allowed"] is False
 
 
-def test_vaastav_fixture_mismatch_fails_closed_instead_of_force_joining():
+def test_vaastav_shared_fixture_id_keeps_identity_when_only_kickoff_is_rescheduled():
     results = _results(fixture_kickoff="2026-09-12T15:00:00Z")
     identity = _identity(results)
 
     fixture = identity["entity_bridges"]["fixture"]
-    assert fixture["coverage"]["vaastav_fpl"]["mapped_fixture_count"] == 0
-    assert fixture["mappings"]["10"]["links"].get("vaastav_fpl") is None
+    coverage = fixture["coverage"]["vaastav_fpl"]
+    assert coverage["mapped_fixture_count"] == 1
+    assert coverage["kickoff_mismatch_count"] == 1
+    assert coverage["kickoff_time_is_mutable_not_identity_key"] is True
+    link = fixture["mappings"]["10"]["links"]["vaastav_fpl"]
+    assert link["status"] == "EXACT"
+    assert link["provenance"]["verification"]["kickoff_matches_current_official"] is False
 
 
 def test_source_specific_normalizers_publish_typed_source_native_records():

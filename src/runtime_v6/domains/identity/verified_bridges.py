@@ -116,13 +116,21 @@ def _verified_vaastav_team_ids(
 def _verified_vaastav_fixture_ids(
     official_snapshot: dict[str, Any],
     payload: dict[str, Any],
-) -> set[int]:
+) -> tuple[set[int], set[int]]:
+    """Verify Vaastav's shared Official FPL fixture namespace.
+
+    Fixture ID, home/away team IDs and event are identity keys here. Kickoff is a
+    mutable scheduling attribute and may legitimately drift after rescheduling;
+    a kickoff mismatch is retained as evidence but never silently used to break
+    an otherwise exact shared-ID identity.
+    """
     official_fixtures = {
         int(row["id"]): row
         for row in (official_snapshot.get("official") or {}).get("fixtures") or []
         if row.get("id") is not None
     }
     verified: set[int] = set()
+    kickoff_mismatches: set[int] = set()
     for row in _csv_rows(payload, "fixtures"):
         fixture_id = _int(row.get("id"))
         team_h = _int(row.get("team_h"))
@@ -141,9 +149,9 @@ def _verified_vaastav_fixture_ids(
         provider_kickoff = str(row.get("kickoff_time") or "").strip()
         official_kickoff = str(official.get("kickoff_time") or "").strip()
         if provider_kickoff and official_kickoff and provider_kickoff != official_kickoff:
-            continue
+            kickoff_mismatches.add(fixture_id)
         verified.add(fixture_id)
-    return verified
+    return verified, kickoff_mismatches
 
 
 def enrich_shared_identity_bridges(
@@ -203,7 +211,9 @@ def enrich_shared_identity_bridges(
         team_bridge.setdefault("coverage", {})["vaastav_fpl"] = row
 
     fixture_mappings = fixture_bridge.get("mappings") or {}
-    verified_fixture_ids = _verified_vaastav_fixture_ids(official_snapshot, vaastav)
+    verified_fixture_ids, kickoff_mismatch_ids = _verified_vaastav_fixture_ids(
+        official_snapshot, vaastav
+    )
     for fixture_id in sorted(verified_fixture_ids):
         mapping = fixture_mappings.get(str(fixture_id))
         if not isinstance(mapping, dict):
@@ -212,14 +222,15 @@ def enrich_shared_identity_bridges(
         links["vaastav_fpl"] = _exact_link(
             source_id="vaastav_fpl",
             source_native_id=fixture_id,
-            method="FPL_SHARED_FIXTURE_ID_WITH_TEAM_EVENT_KICKOFF_PROOF",
+            method="FPL_SHARED_FIXTURE_ID_WITH_TEAM_EVENT_PROOF_KICKOFF_MUTABLE",
             request_id="fixtures",
             evidence={
                 "shared_fixture_id": True,
                 "home_team_id_exact": True,
                 "away_team_id_exact": True,
                 "event_checked_when_present": True,
-                "kickoff_checked_when_present": True,
+                "kickoff_time_is_mutable_not_identity_key": True,
+                "kickoff_matches_current_official": fixture_id not in kickoff_mismatch_ids,
             },
         )
     if isinstance(fixture_bridge, dict):
@@ -229,7 +240,7 @@ def enrich_shared_identity_bridges(
         row = _coverage(
             len(verified_fixture_ids),
             canonical_fixture_count,
-            strategy="FPL_SHARED_FIXTURE_ID_WITH_TEAM_EVENT_KICKOFF_PROOF",
+            strategy="FPL_SHARED_FIXTURE_ID_WITH_TEAM_EVENT_PROOF_KICKOFF_MUTABLE",
         )
         row.update(
             {
@@ -238,6 +249,9 @@ def enrich_shared_identity_bridges(
                 "unmapped_fixture_count": max(
                     0, canonical_fixture_count - len(verified_fixture_ids)
                 ),
+                "kickoff_mismatch_count": len(kickoff_mismatch_ids),
+                "kickoff_mismatch_fixture_ids": sorted(kickoff_mismatch_ids),
+                "kickoff_time_is_mutable_not_identity_key": True,
             }
         )
         fixture_bridge.setdefault("coverage", {})["vaastav_fpl"] = row

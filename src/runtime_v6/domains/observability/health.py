@@ -333,6 +333,39 @@ def build_source_health(
     ) if sources else "GREEN"
     consumer_readiness_overall = overall_operational_health
 
+    official_identity_row = next(
+        (row for row in sources if row.get("source_id") == "official_fpl"),
+        None,
+    )
+    canonical_identity_health = (
+        str(official_identity_row.get("identity_join_health") or "RED")
+        if official_identity_row
+        else "RED"
+    )
+    identity_join_red_sources = [
+        str(row["source_id"])
+        for row in sources
+        if row.get("identity_join_health") == "RED"
+    ]
+    critical_identity_red_sources = [
+        str(row["source_id"])
+        for row in sources
+        if row.get("identity_join_health") == "RED" and row.get("critical") is True
+    ]
+    if identity_join_health_overall == "RED":
+        if canonical_identity_health == "GREEN" and not critical_identity_red_sources:
+            identity_join_overall_classification = (
+                "RED_TRUTHFUL_NONBLOCKING_SECONDARY_PROVIDER_GAPS"
+            )
+        else:
+            identity_join_overall_classification = (
+                "RED_CANONICAL_OR_CRITICAL_IDENTITY_FAILURE"
+            )
+    elif identity_join_health_overall == "AMBER":
+        identity_join_overall_classification = "AMBER_PROVIDER_LIMITATIONS_OR_INCOMPLETE_EVIDENCE"
+    else:
+        identity_join_overall_classification = identity_join_health_overall
+
     return {
         "schema_version": 5,
         "generated_at": utc_now(),
@@ -340,6 +373,11 @@ def build_source_health(
         "public_core_status": public_core_status,
         "source_runtime_health_overall": source_runtime_health_overall,
         "identity_join_health_overall": identity_join_health_overall,
+        "canonical_identity_health": canonical_identity_health,
+        "canonical_identity_corruption": canonical_identity_health == "RED",
+        "identity_join_health_overall_classification": identity_join_overall_classification,
+        "identity_join_red_sources": identity_join_red_sources,
+        "critical_identity_red_sources": critical_identity_red_sources,
         "overall_operational_health": overall_operational_health,
         "consumer_readiness_overall": consumer_readiness_overall,
         "fallback_recommended": bool(fallback_sources),
@@ -355,6 +393,8 @@ def build_source_health(
             "source_runtime_health": "Operational source/runtime state derived from transport, freshness, provenance and payload integrity; identity does not alter it.",
             "identity_health": "Backward-compatible PLAYER identity dimension derived from canonical source_entity_identity.player truth; NOT_APPLICABLE is non-failure.",
             "identity_join_health": "Deterministic join readiness aggregated across every applicable PLAYER, TEAM and FIXTURE identity scope from canonical source_entity_identity truth.",
+            "canonical_identity_health": "Official FPL canonical PLAYER/TEAM/FIXTURE identity health only; secondary-provider join RED cannot rewrite it.",
+            "identity_join_health_overall_classification": "Explains whether aggregate RED is canonical/critical corruption or truthful nonblocking secondary-provider join gaps.",
             "overall_operational_health": "Worst operational/data readiness across active public sources; identity is deliberately separate.",
             "consumer_readiness_overall": "Compatibility alias for overall_operational_health.",
             "fallback_recommended": "Machine-readable hint for FPL Master/report layer to refresh only degraded, stale, or unusable public resources directly. V6 itself never performs downstream fallback.",

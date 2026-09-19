@@ -6,7 +6,7 @@
   "non_authoritative_state_file": true,
   "v6_factual_data_plane_owner": false,
   "authority": false,
-  "updated_at": "2026-09-19T06:41:21+07:00",
+  "updated_at": "2026-09-19T12:57:00+07:00",
   "source": "migrated_from_library_ACTIVE_DECISION_CONTEXT_V2",
   "latest_explicit_user_state_wins": true,
   "confirmed_current_squad_state": {
@@ -87,11 +87,16 @@
       "scenario_id": "HOLD_SANGARE",
       "state": "CONTEMPLATED",
       "execution_state": "NOT_EXECUTED",
-      "route_type": "HOLD"
+      "route_type": "HOLD",
+      "target_gw": null,
+      "scope_type": "CROSS_GW_SQUAD_MONITORING",
+      "execution_window": "ROLLING_UNTIL_SUPERSEDED_OR_EXPLICIT_TARGET_GW",
+      "currently_valid": true,
+      "validity_reason": "HOLD route remains a legally actionable future-GW squad branch."
     },
     {
       "scenario_id": "TRANSFER_TO_BARNES",
-      "state": "CONTEMPLATED",
+      "state": "EXPIRED",
       "execution_state": "NOT_EXECUTED",
       "route_type": "ONE_GW_PUNT",
       "out": {
@@ -102,7 +107,24 @@
         "element_id": 453,
         "display_name": "Barnes"
       },
-      "hit_points_assumption": -4
+      "target_gw": 5,
+      "valid_from": null,
+      "valid_until_deadline": "2026-09-18T17:30:00+00:00",
+      "execution_window": "UNTIL_TARGET_GW_DEADLINE",
+      "expired_at": "2026-09-18T17:30:00+00:00",
+      "expiry_reason": "TARGET_GW_EXECUTION_WINDOW_CLOSED_NOT_EXECUTED",
+      "currently_valid": false,
+      "active_for_merge": false,
+      "historical_review_available": true,
+      "counterfactual_available": true,
+      "post_all_match_learning_available": true,
+      "fresh_full_universe_rescan_required_for_next_gw": true,
+      "historical_assumptions": {
+        "target_gw": 5,
+        "hit_points_assumption": -4,
+        "historical_only": true,
+        "excluded_from_future_gw_economics": true
+      }
     },
     {
       "scenario_id": "JOAO_PEDRO_AVAILABILITY",
@@ -114,7 +136,12 @@
           "element_id": 165,
           "display_name": "João Pedro"
         }
-      ]
+      ],
+      "target_gw": null,
+      "scope_type": "CROSS_GW_AVAILABILITY_MONITORING",
+      "execution_window": "ROLLING_UNTIL_SUPERSEDED_OR_EXPLICIT_TARGET_GW",
+      "currently_valid": true,
+      "validity_reason": "Availability monitoring remains relevant across future GWs until superseded."
     },
     {
       "scenario_id": "BRUNO_KEEP_START",
@@ -126,7 +153,12 @@
           "element_id": 426,
           "display_name": "B.Fernandes"
         }
-      ]
+      ],
+      "target_gw": null,
+      "scope_type": "CROSS_GW_LINEUP_MONITORING",
+      "execution_window": "ROLLING_UNTIL_SUPERSEDED_OR_EXPLICIT_TARGET_GW",
+      "currently_valid": true,
+      "validity_reason": "Keep/start branch remains a future-GW lineup decision, not a confirmed GW5 execution."
     },
     {
       "scenario_id": "XI_MARGINAL_SANGARE_DE_CUYPER_DCL",
@@ -146,7 +178,12 @@
           "element_id": 346,
           "display_name": "Calvert-Lewin"
         }
-      ]
+      ],
+      "target_gw": null,
+      "scope_type": "CROSS_GW_LINEUP_CALIBRATION",
+      "execution_window": "ROLLING_UNTIL_SUPERSEDED_OR_EXPLICIT_TARGET_GW",
+      "currently_valid": true,
+      "validity_reason": "Marginal-XI branch remains useful for future lineup calibration and is not treated as executed."
     }
   ],
   "guards": [
@@ -155,7 +192,10 @@
     "Unresolved routes survive scheduler execution",
     "Optimizer never erases active user route",
     "State failure never mutates V6",
-    "State is never factual provider authority"
+    "State is never factual provider authority",
+    "Only CONTEMPLATED + currently_valid scenarios enter active merge",
+    "Expired prior-GW economics never flow into a new-GW decision",
+    "EXPIRED scenarios remain historical/counterfactual evidence"
   ],
   "core_policy": {
     "v6_only": true,
@@ -229,5 +269,11 @@
         "learn_failure_mode_not_player": true
       }
     }
-  ]
+  ],
+  "lifecycle_migration": {
+    "source": "NATURAL_12_30_CONFORMANCE_REPAIR",
+    "observed_at": "2026-09-19T12:57:00+07:00",
+    "official_gw5_deadline": "2026-09-18T17:30:00+00:00",
+    "rule": "GW-specific non-executed action expires when target-GW deadline passes; cross-GW monitoring remains only with explicit validity."
+  }
 }

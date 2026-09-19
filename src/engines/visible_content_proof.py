@@ -381,6 +381,11 @@ def build_visible_content_proof(
         "hard_failures": [],
     }
     failures.extend(coverage["hard_failures"])
+    missing_state_ids = [
+        section_id for section_id in expected_ids if section_id not in state_by_id
+    ]
+    if missing_state_ids:
+        failures.append("MODE_SECTION_STATE_MISSING=" + ",".join(missing_state_ids))
     failures = list(dict.fromkeys(failures))
 
     due = bool(report_due)

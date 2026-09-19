@@ -86,7 +86,7 @@ def _fotmob_result() -> dict:
                 "json": {
                     "details": {"id": 47, "name": "Premier League", "selectedSeason": "2026/2027"},
                     "table": [{"data": {"table": {"all": rows}}}],
-                    "matches": {"allMatches": matches},
+                    "fixtures": {"allMatches": matches},
                 },
             }
         },

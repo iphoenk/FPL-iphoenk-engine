@@ -4,7 +4,7 @@ import math
 from typing import Any
 
 from src.models.projection_components import _blended_rate, _f, _project_fixture, defensive_contribution_rate_bundle, load_projection_config, robust_attack_rate
-from src.models.xmins_v3 import estimate_xmins
+from src.engines.v12_player_minutes import estimate_xmins
 from src.rules import ELEMENT_TYPE_TO_POSITION, RULESET_ID
 
 

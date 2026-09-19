@@ -1,0 +1,320 @@
+{
+  "schema": "PLAYER_MINUTES_GOLDEN_BASELINE_V1",
+  "source_oracle": "src.models.xmins_v3.estimate_xmins",
+  "frozen_from_baseline_sha": "247979ece6e6d0ebf652cf3c9c3f176d90fb6d3c",
+  "cases": [
+    {
+      "name": "nailed_starter",
+      "player": {
+        "starts": 8,
+        "minutes": 700,
+        "status": "a",
+        "chance_of_playing_next_round": 100
+      },
+      "context": {
+        "team_matches_played": 8,
+        "prior_start_probability": 0.94,
+        "prior_evidence_minutes": 2200,
+        "starter_minutes_prior": 86,
+        "role_start_probability": 0.95,
+        "manager_start_probability": 0.96
+      },
+      "expected": {
+        "start_probability": 0.9255,
+        "bench_probability": 0.0484,
+        "cameo_probability": 0.0349,
+        "late_cameo_probability": 0.0122,
+        "dnp_probability": 0.0396,
+        "expected_minutes": 80.1,
+        "minutes_std": 27.73,
+        "confidence": "HIGH",
+        "small_sample_guard": false
+      }
+    },
+    {
+      "name": "uncertain_starter",
+      "player": {
+        "starts": 3,
+        "minutes": 230,
+        "status": "a",
+        "chance_of_playing_next_round": 100
+      },
+      "context": {
+        "team_matches_played": 6,
+        "prior_start_probability": 0.62,
+        "prior_evidence_minutes": 1000,
+        "role_start_probability": 0.58,
+        "manager_start_probability": 0.6
+      },
+      "expected": {
+        "start_probability": 0.6153,
+        "bench_probability": 0.2501,
+        "cameo_probability": 0.1801,
+        "late_cameo_probability": 0.063,
+        "dnp_probability": 0.2047,
+        "expected_minutes": 48.1,
+        "minutes_std": 42.05,
+        "confidence": "MEDIUM",
+        "small_sample_guard": false
+      }
+    },
+    {
+      "name": "rotation_risk",
+      "player": {
+        "starts": 6,
+        "minutes": 500,
+        "status": "a",
+        "chance_of_playing_next_round": 100
+      },
+      "context": {
+        "team_matches_played": 7,
+        "prior_start_probability": 0.84,
+        "prior_evidence_minutes": 1800,
+        "rotation_risk": 0.75,
+        "congestion_factor": 0.9
+      },
+      "expected": {
+        "start_probability": 0.4239,
+        "bench_probability": 0.3744,
+        "cameo_probability": 0.2696,
+        "late_cameo_probability": 0.0944,
+        "dnp_probability": 0.3065,
+        "expected_minutes": 37.3,
+        "minutes_std": 45.82,
+        "confidence": "HIGH",
+        "small_sample_guard": false
+      }
+    },
+    {
+      "name": "availability_reduction",
+      "player": {
+        "starts": 7,
+        "minutes": 590,
+        "status": "d",
+        "chance_of_playing_next_round": 50
+      },
+      "context": {
+        "team_matches_played": 7,
+        "prior_start_probability": 0.9,
+        "prior_evidence_minutes": 2000
+      },
+      "expected": {
+        "start_probability": 0.4346,
+        "bench_probability": 0.0425,
+        "cameo_probability": 0.0306,
+        "late_cameo_probability": 0.0107,
+        "dnp_probability": 0.5348,
+        "expected_minutes": 35.1,
+        "minutes_std": 45.35,
+        "confidence": "HIGH",
+        "small_sample_guard": false
+      }
+    },
+    {
+      "name": "likely_bench_cameo",
+      "player": {
+        "starts": 1,
+        "minutes": 140,
+        "status": "a",
+        "chance_of_playing_next_round": 100
+      },
+      "context": {
+        "team_matches_played": 7,
+        "prior_start_probability": 0.28,
+        "prior_evidence_minutes": 850,
+        "role_start_probability": 0.25,
+        "manager_start_probability": 0.3,
+        "bench_minutes_prior": 22
+      },
+      "expected": {
+        "start_probability": 0.3521,
+        "bench_probability": 0.4212,
+        "cameo_probability": 0.3032,
+        "late_cameo_probability": 0.1061,
+        "dnp_probability": 0.3447,
+        "expected_minutes": 35.3,
+        "minutes_std": 47.46,
+        "confidence": "LOW",
+        "small_sample_guard": false
+      }
+    },
+    {
+      "name": "late_cameo_profile",
+      "player": {
+        "starts": 1,
+        "minutes": 100,
+        "status": "a",
+        "chance_of_playing_next_round": 100
+      },
+      "context": {
+        "team_matches_played": 7,
+        "prior_start_probability": 0.22,
+        "prior_evidence_minutes": 700,
+        "role_start_probability": 0.2,
+        "manager_start_probability": 0.2,
+        "bench_minutes_prior": 15,
+        "late_cameo_minutes_prior": 5
+      },
+      "expected": {
+        "start_probability": 0.2991,
+        "bench_probability": 0.4556,
+        "cameo_probability": 0.328,
+        "late_cameo_probability": 0.1148,
+        "dnp_probability": 0.3729,
+        "expected_minutes": 27,
+        "minutes_std": 44.14,
+        "confidence": "LOW",
+        "small_sample_guard": false
+      }
+    },
+    {
+      "name": "likely_dnp",
+      "player": {
+        "starts": 0,
+        "minutes": 25,
+        "status": "i",
+        "chance_of_playing_next_round": 0
+      },
+      "context": {
+        "team_matches_played": 7,
+        "prior_start_probability": 0.15,
+        "prior_evidence_minutes": 300
+      },
+      "expected": {
+        "start_probability": 0,
+        "bench_probability": 0,
+        "cameo_probability": 0,
+        "late_cameo_probability": 0,
+        "dnp_probability": 1,
+        "expected_minutes": 0,
+        "minutes_std": 11,
+        "confidence": "LOW",
+        "small_sample_guard": false
+      }
+    },
+    {
+      "name": "early_season_low_sample",
+      "player": {
+        "starts": 1,
+        "minutes": 82,
+        "status": "a",
+        "chance_of_playing_next_round": 100
+      },
+      "context": {
+        "team_matches_played": 1
+      },
+      "expected": {
+        "start_probability": 0.7566,
+        "bench_probability": 0.1582,
+        "cameo_probability": 0.1139,
+        "late_cameo_probability": 0.0399,
+        "dnp_probability": 0.1295,
+        "expected_minutes": 57.6,
+        "minutes_std": 42.29,
+        "confidence": "LOW",
+        "small_sample_guard": true
+      }
+    },
+    {
+      "name": "strong_historical_prior",
+      "player": {
+        "starts": 1,
+        "minutes": 90,
+        "status": "a",
+        "chance_of_playing_next_round": 100
+      },
+      "context": {
+        "team_matches_played": 2,
+        "prior_start_probability": 0.93,
+        "prior_evidence_minutes": 2400,
+        "prior_source": "prev",
+        "prior_identity_match": true,
+        "starter_minutes_prior": 84
+      },
+      "expected": {
+        "start_probability": 0.7996,
+        "bench_probability": 0.1302,
+        "cameo_probability": 0.0938,
+        "late_cameo_probability": 0.0328,
+        "dnp_probability": 0.1066,
+        "expected_minutes": 68.5,
+        "minutes_std": 42.9,
+        "confidence": "MEDIUM",
+        "small_sample_guard": true
+      }
+    },
+    {
+      "name": "missing_historical_prior",
+      "player": {
+        "starts": 1,
+        "minutes": 90,
+        "status": "a",
+        "chance_of_playing_next_round": 100
+      },
+      "context": {
+        "team_matches_played": 2
+      },
+      "expected": {
+        "start_probability": 0.6744,
+        "bench_probability": 0.2117,
+        "cameo_probability": 0.1524,
+        "late_cameo_probability": 0.0533,
+        "dnp_probability": 0.1732,
+        "expected_minutes": 53.2,
+        "minutes_std": 46.04,
+        "confidence": "LOW",
+        "small_sample_guard": true
+      }
+    },
+    {
+      "name": "role_evidence_available",
+      "player": {
+        "starts": 2,
+        "minutes": 170,
+        "status": "a",
+        "chance_of_playing_next_round": 100
+      },
+      "context": {
+        "team_matches_played": 4,
+        "role_start_probability": 0.88
+      },
+      "expected": {
+        "start_probability": 0.747,
+        "bench_probability": 0.1644,
+        "cameo_probability": 0.1184,
+        "late_cameo_probability": 0.0414,
+        "dnp_probability": 0.1346,
+        "expected_minutes": 58.7,
+        "minutes_std": 38.42,
+        "confidence": "MEDIUM",
+        "small_sample_guard": false
+      }
+    },
+    {
+      "name": "manager_evidence_unavailable",
+      "player": {
+        "starts": 2,
+        "minutes": 170,
+        "status": "a",
+        "chance_of_playing_next_round": 100
+      },
+      "context": {
+        "team_matches_played": 4,
+        "prior_start_probability": 0.7,
+        "prior_evidence_minutes": 1000,
+        "role_start_probability": 0.75
+      },
+      "expected": {
+        "start_probability": 0.6903,
+        "bench_probability": 0.2013,
+        "cameo_probability": 0.1449,
+        "late_cameo_probability": 0.0507,
+        "dnp_probability": 0.1648,
+        "expected_minutes": 54.8,
+        "minutes_std": 40.72,
+        "confidence": "MEDIUM",
+        "small_sample_guard": false
+      }
+    }
+  ]
+}

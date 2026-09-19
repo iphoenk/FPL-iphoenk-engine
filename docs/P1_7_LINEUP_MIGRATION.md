@@ -153,3 +153,27 @@ P1.7 also publishes `selection_score` on each squad row as a
 non-authoritative compatibility alias of the already-computed
 `distributional_utility`. This satisfies report-transparency consumers
 without creating a second scoring formula or mutating upstream xPts.
+
+
+## Exact performance hardening
+
+P1.7 release acceptance exposed a runtime cost from repeatedly rebuilding the
+same positional Poisson-binomial DNP count distributions and bench appearance
+mask probabilities while enumerating all legal XI routes.
+
+The optimized implementation remains exact:
+
+- all legal XI are still enumerated;
+- all six outfield bench permutations are still evaluated;
+- no route pruning, stochastic sampling, Monte Carlo, or approximation was
+  introduced;
+- per-position DNP count probabilities are cached by the exact positional
+  probability subset and then combined deterministically;
+- the eight three-player bench appearance-mask probabilities are computed once
+  per exact probability tuple rather than inside every DNP-count state;
+- immutable player surfaces are reused by reference during route evaluation
+  instead of shallow-copying them for every route.
+
+These changes alter computation reuse only. Autosub legality, cameo blocking,
+bench-order utility, captain/vice utility, and selected-route ordering are
+unchanged.

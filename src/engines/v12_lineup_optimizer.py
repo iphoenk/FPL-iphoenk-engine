@@ -37,6 +37,7 @@ CANONICAL_PATH = ROOT / CANONICAL_AUTHORITY
 MODEL_OWNER = "V12_LINEUP_OPTIMIZER"
 POSITIONS = ("GK", "DEF", "MID", "FWD")
 OUTFIELD = ("DEF", "MID", "FWD")
+LEGAL_FORMATIONS = frozenset(LINEUP_RULES.get("legal_formations") or [])
 
 
 class LineupOptimizerError(ValueError):
@@ -72,7 +73,7 @@ def _formation_from_counts(counts: Mapping[str, int]) -> str | None:
     if int(counts.get("GK", 0)) != 1:
         return None
     formation = f"{int(counts.get('DEF', 0))}-{int(counts.get('MID', 0))}-{int(counts.get('FWD', 0))}"
-    return formation if formation in set(LINEUP_RULES.get("legal_formations") or []) else None
+    return formation if formation in LEGAL_FORMATIONS else None
 
 
 def _formation(rows: Sequence[Mapping[str, Any]]) -> str | None:
@@ -309,34 +310,79 @@ def build_player_surface(projection: Mapping[str, Any], planning_gw: int) -> dic
     }
 
 
+@lru_cache(maxsize=4096)
+def _poisson_binomial_count_probabilities(
+    probabilities: tuple[float, ...],
+) -> tuple[float, ...]:
+    """Exact Poisson-binomial count probabilities for one position group."""
+    dist = [1.0]
+    for raw_probability in probabilities:
+        p = max(0.0, min(1.0, float(raw_probability)))
+        nxt = [0.0] * (len(dist) + 1)
+        for count, probability in enumerate(dist):
+            nxt[count] += probability * (1.0 - p)
+            nxt[count + 1] += probability * p
+        dist = nxt
+    return tuple(dist)
+
+
 def _dnp_count_distribution(
     starters: Sequence[Mapping[str, Any]],
     *,
     cameo_as_dnp: bool = False,
     late_cameo_as_dnp: bool = False,
 ) -> list[tuple[tuple[int, int, int], float]]:
-    dist: dict[tuple[int, int, int], float] = {(0, 0, 0): 1.0}
-    pos_index = {"DEF": 0, "MID": 1, "FWD": 2}
+    """Exact position-count DNP distribution with reusable subset caches."""
+    grouped: dict[str, list[float]] = {position: [] for position in OUTFIELD}
     for row in starters:
         position = str(row.get("position"))
-        if position not in pos_index:
+        if position not in grouped:
             continue
         p = _f(row.get("p_dnp"))
         if cameo_as_dnp:
             p += _f(row.get("p_cameo"))
         elif late_cameo_as_dnp:
             p += _f(row.get("p_late_cameo"))
-        p = max(0.0, min(1.0, p))
-        idx = pos_index[position]
-        nxt: dict[tuple[int, int, int], float] = {}
-        for key, probability in dist.items():
-            nxt[key] = nxt.get(key, 0.0) + probability * (1.0 - p)
-            inc = list(key)
-            inc[idx] += 1
-            inc_key = tuple(inc)
-            nxt[inc_key] = nxt.get(inc_key, 0.0) + probability * p
-        dist = nxt
-    return [(key, probability) for key, probability in dist.items() if probability > 1e-15]
+        grouped[position].append(max(0.0, min(1.0, p)))
+
+    # Count probabilities are exchangeable within a position; sorting makes
+    # equivalent positional subsets share the cache without changing exact math.
+    per_position = {
+        position: _poisson_binomial_count_probabilities(
+            tuple(sorted(grouped[position]))
+        )
+        for position in OUTFIELD
+    }
+    out: list[tuple[tuple[int, int, int], float]] = []
+    for def_count, def_probability in enumerate(per_position["DEF"]):
+        for mid_count, mid_probability in enumerate(per_position["MID"]):
+            for fwd_count, fwd_probability in enumerate(per_position["FWD"]):
+                probability = def_probability * mid_probability * fwd_probability
+                if probability > 1e-15:
+                    out.append(((def_count, mid_count, fwd_count), probability))
+    return out
+
+
+@lru_cache(maxsize=4096)
+def _appearance_mask_probabilities(
+    probabilities: tuple[float, float, float],
+) -> tuple[float, ...]:
+    """Exact probability of each three-player bench appearance mask."""
+    p0, p1, p2 = (
+        max(0.0, min(1.0, float(probability)))
+        for probability in probabilities
+    )
+    q0, q1, q2 = 1.0 - p0, 1.0 - p1, 1.0 - p2
+    return (
+        q0 * q1 * q2,
+        p0 * q1 * q2,
+        q0 * p1 * q2,
+        p0 * p1 * q2,
+        q0 * q1 * p2,
+        p0 * q1 * p2,
+        q0 * p1 * p2,
+        p0 * p1 * p2,
+    )
 
 
 @lru_cache(maxsize=4096)
@@ -350,7 +396,7 @@ def _resolve_outfield_pattern(
     remaining = {"DEF": dnp_counts[0], "MID": dnp_counts[1], "FWD": dnp_counts[2]}
 
     def legal_counts(counts: Mapping[str, int]) -> bool:
-        return f"{counts['DEF']}-{counts['MID']}-{counts['FWD']}" in set(LINEUP_RULES.get("legal_formations") or [])
+        return f"{counts['DEF']}-{counts['MID']}-{counts['FWD']}" in LEGAL_FORMATIONS
 
     def rec(
         index: int,
@@ -396,16 +442,36 @@ def _expected_outfield_autosub(
     *,
     cameo_as_dnp: bool = False,
     late_cameo_as_dnp: bool = False,
+    count_states: Sequence[tuple[tuple[int, int, int], float]] | None = None,
 ) -> dict[str, Any]:
     outfield_starters = [row for row in starters if row.get("position") in OUTFIELD]
-    start_counts = tuple(sum(1 for row in outfield_starters if row.get("position") == position) for position in OUTFIELD)
-    bench_positions = tuple(str(row.get("position")) for row in bench_order)
-    count_states = _dnp_count_distribution(
-        outfield_starters,
-        cameo_as_dnp=cameo_as_dnp,
-        late_cameo_as_dnp=late_cameo_as_dnp,
+    start_counts = tuple(
+        sum(
+            1
+            for row in outfield_starters
+            if row.get("position") == position
+        )
+        for position in OUTFIELD
     )
-    appear = [max(0.0, min(1.0, _f(row.get("p_appearance")))) for row in bench_order]
+    bench_positions = tuple(str(row.get("position")) for row in bench_order)
+    resolved_count_states = (
+        list(count_states)
+        if count_states is not None
+        else _dnp_count_distribution(
+            outfield_starters,
+            cameo_as_dnp=cameo_as_dnp,
+            late_cameo_as_dnp=late_cameo_as_dnp,
+        )
+    )
+    appear = tuple(
+        max(0.0, min(1.0, _f(row.get("p_appearance"))))
+        for row in bench_order
+    )
+    mask_probabilities = _appearance_mask_probabilities(appear)
+    conditioned_rows = [
+        dict(row.get("appearance_conditioned") or {})
+        for row in bench_order
+    ]
     expected_points = 0.0
     autosub_probability = 0.0
     selected_prob = [0.0, 0.0, 0.0]
@@ -413,31 +479,42 @@ def _expected_outfield_autosub(
     selected_blank = 0.0
     selected_ge8 = 0.0
     selected_ge10 = 0.0
-    for dnp_counts, starter_probability in count_states:
+    resolver = _resolve_outfield_pattern
+    for dnp_counts, starter_probability in resolved_count_states:
         if starter_probability <= 0.0:
             continue
-        for mask in range(8):
-            bench_probability = 1.0
-            for index, p_appear in enumerate(appear):
-                bench_probability *= p_appear if mask & (1 << index) else 1.0 - p_appear
+        for mask, bench_probability in enumerate(mask_probabilities):
             probability = starter_probability * bench_probability
             if probability <= 1e-15:
                 continue
-            selected, reached, _ = _resolve_outfield_pattern(start_counts, dnp_counts, bench_positions, mask)
+            selected, reached, _ = resolver(
+                start_counts,
+                dnp_counts,
+                bench_positions,
+                mask,
+            )
             if selected:
                 autosub_probability += probability
             for index in reached:
                 reach_prob[index] += probability
             for index in selected:
                 selected_prob[index] += probability
-                conditioned = dict(bench_order[index].get("appearance_conditioned") or {})
-                expected_points += probability * _f(conditioned.get("expected_points"))
+                conditioned = conditioned_rows[index]
+                expected_points += probability * _f(
+                    conditioned.get("expected_points")
+                )
                 if conditioned.get("p_fpl_blank") is not None:
-                    selected_blank += probability * _f(conditioned.get("p_fpl_blank"))
+                    selected_blank += probability * _f(
+                        conditioned.get("p_fpl_blank")
+                    )
                 if conditioned.get("p_points_ge_8") is not None:
-                    selected_ge8 += probability * _f(conditioned.get("p_points_ge_8"))
+                    selected_ge8 += probability * _f(
+                        conditioned.get("p_points_ge_8")
+                    )
                 if conditioned.get("p_points_ge_10") is not None:
-                    selected_ge10 += probability * _f(conditioned.get("p_points_ge_10"))
+                    selected_ge10 += probability * _f(
+                        conditioned.get("p_points_ge_10")
+                    )
     return {
         "expected_points": expected_points,
         "autosub_probability": autosub_probability,
@@ -476,12 +553,19 @@ def evaluate_bench_order(
     bench_order: Sequence[Mapping[str, Any]],
     *,
     include_blocking_counterfactual: bool = True,
+    actual_count_states: Sequence[
+        tuple[tuple[int, int, int], float]
+    ] | None = None,
 ) -> dict[str, Any]:
     if len(bench_order) != 3 or any(row.get("position") == "GK" for row in bench_order):
         raise LineupOptimizerError("outfield bench order must contain exactly three non-GK players")
     cfg = load_config()
     objective = dict(cfg.get("objective") or {})
-    actual = _expected_outfield_autosub(starters, bench_order)
+    actual = _expected_outfield_autosub(
+        starters,
+        bench_order,
+        count_states=actual_count_states,
+    )
     starter_gk = next(row for row in starters if row.get("position") == "GK")
     actual_gk = _expected_gk_autosub(starter_gk, reserve_gk)
 
@@ -606,12 +690,17 @@ def optimize_bench_order(
     reserve_gk: Mapping[str, Any],
     outfield_bench: Sequence[Mapping[str, Any]],
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    outfield_starters = [
+        row for row in starters if row.get("position") in OUTFIELD
+    ]
+    actual_count_states = _dnp_count_distribution(outfield_starters)
     screened = [
         evaluate_bench_order(
             starters,
             reserve_gk,
             permutation,
             include_blocking_counterfactual=False,
+            actual_count_states=actual_count_states,
         )
         for permutation in itertools.permutations(list(outfield_bench), 3)
     ]
@@ -636,6 +725,7 @@ def optimize_bench_order(
         reserve_gk,
         winner_order,
         include_blocking_counterfactual=True,
+        actual_count_states=actual_count_states,
     )
     alternatives = [winner] + [
         row for row in screened if row.get("order") != winner.get("order")
@@ -707,12 +797,18 @@ def _lineup_route(
 ) -> dict[str, Any]:
     cfg = load_config()
     objective = dict(cfg.get("objective") or {})
-    starters = [dict(players[index]) for index in xi_indices]
+    # Player surfaces are immutable read-only inputs throughout route
+    # evaluation; reuse references rather than copying 11 mappings per route.
+    starters = [players[index] for index in xi_indices]
     formation = _formation(starters)
     if not formation:
         raise LineupOptimizerError("illegal XI entered route evaluation")
     starter_ids = {int(row.get("element") or 0) for row in starters}
-    bench = [dict(row) for row in players if int(row.get("element") or 0) not in starter_ids]
+    bench = [
+        row
+        for row in players
+        if int(row.get("element") or 0) not in starter_ids
+    ]
     reserve_gk_rows = [row for row in bench if row.get("position") == "GK"]
     outfield_bench = [row for row in bench if row.get("position") != "GK"]
     if len(reserve_gk_rows) != 1 or len(outfield_bench) != 3:
@@ -733,7 +829,7 @@ def _lineup_route(
     lineup_utility = base_distributional_utility + _f(bench_best.get("bench_order_utility"))
     route_utility = lineup_utility + _f(cvc.get("pair_utility"))
     variance = sum(_f(row.get("xpts_variance")) for row in starters)
-    tactical_rows = [dict(row.get("tactical_role") or {}) for row in starters]
+    tactical_rows = [row.get("tactical_role") or {} for row in starters]
     tactical_scores = [_f(row.get("score")) for row in tactical_rows if row.get("score") is not None]
     tactical_weighted = [_f(row.get("weighted_component_points")) for row in tactical_rows if row.get("weighted_component_points") is not None]
     pmf_ready = sum(1 for row in starters if (row.get("distribution_status") or {}).get("status") == "READY")

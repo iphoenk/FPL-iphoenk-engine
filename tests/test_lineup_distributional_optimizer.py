@@ -10,6 +10,8 @@ from src.engines.canonical_decision_methodology import CANONICAL_WEIGHTS
 from src.engines.lineup_governance import build_lineup_decision
 from src.engines.v12_lineup_optimizer import (
     LineupOptimizerError,
+    _appearance_mask_probabilities,
+    _dnp_count_distribution,
     build_player_surface,
     compare_legacy_decision,
     enumerate_legal_xi,
@@ -730,3 +732,40 @@ def test_50_captain_safe_pool_always_contains_selected_captain_and_vice(base_dec
     safe_ids = {int(row["element"]) for row in base_decision["captain_safe_pool"]}
     assert int(base_decision["captain"]["element"]) in safe_ids
     assert int(base_decision["vice_captain"]["element"]) in safe_ids
+
+
+def test_51_exact_position_count_distribution_preserves_probability_and_moments():
+    starters = _starters_343()
+    probabilities_by_position = {"DEF": [], "MID": [], "FWD": []}
+    for index, row in enumerate(starters):
+        if row["position"] not in probabilities_by_position:
+            continue
+        row["p_dnp"] = 0.01 * (index + 1)
+        probabilities_by_position[row["position"]].append(row["p_dnp"])
+
+    distribution = _dnp_count_distribution(starters)
+    assert sum(probability for _, probability in distribution) == pytest.approx(1.0)
+
+    for position_index, position in enumerate(("DEF", "MID", "FWD")):
+        expected_count = sum(probabilities_by_position[position])
+        observed_count = sum(
+            counts[position_index] * probability
+            for counts, probability in distribution
+        )
+        assert observed_count == pytest.approx(expected_count)
+
+
+def test_52_cached_bench_appearance_masks_remain_exact():
+    probabilities = (0.91, 0.73, 0.42)
+    masks = _appearance_mask_probabilities(probabilities)
+    assert len(masks) == 8
+    assert all(value >= 0.0 for value in masks)
+    assert sum(masks) == pytest.approx(1.0)
+    assert masks[0] == pytest.approx(
+        (1.0 - probabilities[0])
+        * (1.0 - probabilities[1])
+        * (1.0 - probabilities[2])
+    )
+    assert masks[7] == pytest.approx(
+        probabilities[0] * probabilities[1] * probabilities[2]
+    )

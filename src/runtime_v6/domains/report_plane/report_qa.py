@@ -1209,8 +1209,7 @@ def validate_pre_render_qa(
     weather_contract_state: str | None = None,
     visible_content_contract: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Fail closed before rendering and mint an immutable render handoff token."""
-    compute_failures = _compute_handoff_failures(compute_contract)
+    """Validate hard correctness while allowing truthful section degradation to render."""
     generated_section_ids = [
         str(row.get("section_id") or "").strip().upper()
         for row in section_manifest
@@ -1246,6 +1245,53 @@ def validate_pre_render_qa(
         expected_section_ids=expected_section_ids,
     )
 
+    visible_content_validation = None
+    visible_content_contract_fingerprint = ""
+    section_degradations: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    degraded_count_labels: list[str] = []
+    degraded_compute_sections: list[str] = []
+    visible_hard_failures: list[str] = []
+    if visible_content_contract is not None:
+        visible_content_validation = validate_v12_visible_content_contract(
+            report_mode=resolved_report_mode,
+            content_contract=visible_content_contract,
+        )
+        visible_content_contract_fingerprint = str(
+            visible_content_validation.get("contract_fingerprint") or ""
+        )
+        section_degradations = [
+            dict(row)
+            for row in visible_content_validation.get("section_degradations", [])
+            if isinstance(row, Mapping)
+        ]
+        warnings = [
+            str(value)
+            for value in visible_content_validation.get("warnings", [])
+        ]
+        degraded_count_labels = [
+            str(value)
+            for value in visible_content_validation.get("degraded_count_labels", [])
+        ]
+        degraded_compute_sections = [
+            str(value)
+            for value in visible_content_validation.get("degraded_compute_sections", [])
+        ]
+        visible_hard_failures = [
+            f"VISIBLE_CONTENT_CONTRACT:{failure}"
+            for failure in visible_content_validation.get("hard_failures", [])
+        ]
+
+    compute_failures = _compute_handoff_failures(
+        compute_contract,
+        degradable_count_labels=degraded_count_labels,
+        degradable_compute_sections=degraded_compute_sections,
+    )
+
+    icon_degraded = any(
+        str(row.get("section") or "") == "ICON+"
+        for row in section_degradations
+    )
     s14b_state = next(
         (
             str(row.get("status") or "").strip().upper()
@@ -1254,30 +1300,34 @@ def validate_pre_render_qa(
         ),
         "MISSING",
     )
-    if mini_league_denominator_complete:
+    if icon_degraded:
+        mini_league_contract_state = "DEGRADED"
+    elif mini_league_denominator_complete:
         mini_league_contract_state = "COMPLETE"
     elif s14b_state == "PARTIAL":
         mini_league_contract_state = "DEGRADED"
     else:
         mini_league_contract_state = "INCOMPLETE"
 
-    failures = list(compute_failures)
+    hard_failures = list(compute_failures)
     if generated_section_ids != expected_section_ids:
-        failures.append("VISIBLE_CATALOG_MISMATCH")
+        hard_failures.append("VISIBLE_CATALOG_MISMATCH")
     if canonical_section_ids != expected_section_ids and not missing_sections and not duplicate_sections:
-        failures.append("CANONICAL_CATALOG_MISMATCH")
+        hard_failures.append("CANONICAL_CATALOG_MISMATCH")
     if missing_sections:
-        failures.append(f"MANDATORY_SECTIONS_MISSING={','.join(missing_sections)}")
+        hard_failures.append(f"MANDATORY_SECTIONS_MISSING={','.join(missing_sections)}")
     if duplicate_sections:
-        failures.append(f"SECTION_IDENTITY_DUPLICATE={','.join(duplicate_sections)}")
+        hard_failures.append(f"SECTION_IDENTITY_DUPLICATE={','.join(duplicate_sections)}")
     if partial_not_allowed_sections:
-        failures.append(f"PARTIAL_NOT_ALLOWED={','.join(partial_not_allowed_sections)}")
+        hard_failures.append(f"PARTIAL_NOT_ALLOWED={','.join(partial_not_allowed_sections)}")
     if invalid_section_states:
-        failures.append(f"SECTION_STATUS_INVALID={','.join(invalid_section_states)}")
+        hard_failures.append(f"SECTION_STATUS_INVALID={','.join(invalid_section_states)}")
     if mini_league_contract_state == "INCOMPLETE":
-        failures.append("MINI_LEAGUE_DENOMINATOR_INCOMPLETE")
+        hard_failures.append("MINI_LEAGUE_DENOMINATOR_INCOMPLETE")
     if weather_failure:
-        failures.append(weather_failure)
+        hard_failures.append(weather_failure)
+    hard_failures.extend(visible_hard_failures)
+    hard_failures = list(dict.fromkeys(hard_failures))
 
     fact_model = compute_contract.get("FACT_MODEL")
     expected_fact_keys = (
@@ -1296,24 +1346,20 @@ def validate_pre_render_qa(
         else []
     )
     expected_counts = _expected_visible_counts(resolved_report_mode)
+    for label in degraded_count_labels:
+        expected_counts.pop(label, None)
     required_visible_markers = _required_visible_markers(resolved_report_mode)
     compute_fingerprint = str(compute_contract.get("compute_fingerprint") or "")
 
-    visible_content_validation = None
-    visible_content_contract_fingerprint = ""
-    if visible_content_contract is not None:
-        visible_content_validation = validate_v12_visible_content_contract(
-            report_mode=resolved_report_mode,
-            content_contract=visible_content_contract,
-        )
-        visible_content_contract_fingerprint = str(visible_content_validation.get("contract_fingerprint") or "")
-        if visible_content_validation.get("status") != "PASS":
-            failures.extend(
-                f"VISIBLE_CONTENT_CONTRACT:{failure}"
-                for failure in visible_content_validation.get("failures", [])
-            )
-
-    qa_passed = not failures
+    qa_passed = not hard_failures
+    report_can_continue = qa_passed
+    qa_severity = (
+        "FAIL"
+        if hard_failures
+        else "DEGRADED"
+        if section_degradations
+        else "PASS"
+    )
     token = (
         _render_contract_token(
             compute_fingerprint=compute_fingerprint,
@@ -1337,20 +1383,27 @@ def validate_pre_render_qa(
     next_action = (
         "RECOMPUTE"
         if compute_failures
-        else "RENDER_REPORT" if qa_passed else "PRE_RENDER_RECOVERY"
+        else "RENDER_REPORT"
+        if qa_passed
+        else "PRE_RENDER_RECOVERY"
     )
 
     return {
         "status": "PASS" if qa_passed else "FAIL",
+        "qa_severity": qa_severity,
         "qa_stage": "PRE_RENDER",
         "qa_passed": qa_passed,
-        "render_allowed": qa_passed,
-        "post_render_required": qa_passed,
+        "report_can_continue": report_can_continue,
+        "render_allowed": report_can_continue,
+        "post_render_required": report_can_continue,
         "delivery_ready": False,
-        "report_state": "BUILDING" if qa_passed else "QA_FAILED",
+        "report_state": "BUILDING" if report_can_continue else "QA_FAILED",
         "next_action": next_action,
         "legacy_fallback_allowed": False,
-        "failures": failures,
+        "failures": hard_failures,
+        "hard_failures": hard_failures,
+        "section_degradations": section_degradations,
+        "warnings": warnings,
         "compute_fingerprint": compute_fingerprint,
         "render_contract_token": token,
         "required_section_count": len(expected_section_ids),
@@ -1370,11 +1423,16 @@ def validate_pre_render_qa(
         "weather_required": resolved_weather_required,
         "weather_direct_chat_present": resolved_weather_direct_present,
         "expected_counts": expected_counts,
+        "degraded_count_labels": degraded_count_labels,
         "expected_fact_keys": expected_fact_keys,
         "expected_model_keys": expected_model_keys,
         "expected_inference_keys": expected_inference_keys,
         "required_visible_markers": required_visible_markers,
-        "visible_content_contract": dict(visible_content_contract) if isinstance(visible_content_contract, Mapping) else None,
+        "visible_content_contract": (
+            dict(visible_content_contract)
+            if isinstance(visible_content_contract, Mapping)
+            else None
+        ),
         "visible_content_contract_fingerprint": visible_content_contract_fingerprint,
         "visible_content_validation": visible_content_validation,
     }

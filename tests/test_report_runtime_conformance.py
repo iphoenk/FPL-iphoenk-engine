@@ -1633,8 +1633,9 @@ def test_104_existing_same_occurrence_finalization_contract_remains_present():
 
 def test_105_existing_report_mode_contracts_remain_present_after_core_gate_binding():
     canonical = _canonical()
-    for token in ("DEEP", "PRICE", "MATCH", "DEADLINE", "FINAL", "POST_ALL_MATCH"):
+    for token in ("DEEP", "PRICE", "MATCH", "DEADLINE", "FINAL"):
         assert token in canonical
+    assert "Post-All-Match" in canonical
 
 
 def test_106_canonical_requires_terminal_gate_before_any_early_return():

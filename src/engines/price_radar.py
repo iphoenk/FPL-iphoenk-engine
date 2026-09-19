@@ -9,7 +9,7 @@ from typing import Any, Iterable
 from zoneinfo import ZoneInfo
 
 from src.settings import PRICE_PRESSURE_LIST_SIZE, PRICE_SUMMARY_LIST_SIZE
-from src.utils import ROOT
+from src.utils import ROOT, atomic_json
 
 CONFIG_PATH = ROOT / "config" / "intelligence" / "price_radar.json"
 
@@ -670,10 +670,10 @@ def patch_files(data_dir: str | Path = "data") -> None:
         },
     })
     filtered = apply_to_payload(prices)
-    prices_path.write_text(json.dumps(filtered, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    atomic_json(prices_path, filtered)
     new_state["contract"] = "official_price_predictor_state_v3"
     new_state["raw_payload_hash"] = raw_hash
-    trajectory_path.write_text(json.dumps(new_state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    atomic_json(trajectory_path, new_state)
 
     team = json.loads((root / "team.json").read_text(encoding="utf-8")) if (root / "team.json").exists() else {}
     owned_ids = {int(row["element"]) for row in team.get("squad", []) if isinstance(row, dict) and row.get("element") is not None}
@@ -703,7 +703,7 @@ def patch_files(data_dir: str | Path = "data") -> None:
         "alerts": alerts,
         "market_watch_candidates": market_watch,
     }
-    alerts_path.write_text(json.dumps(alert_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    atomic_json(alerts_path, alert_payload)
 
     if latest_path.exists():
         latest = json.loads(latest_path.read_text(encoding="utf-8"))
@@ -731,7 +731,7 @@ def patch_files(data_dir: str | Path = "data") -> None:
         }
         latest.setdefault("files", {})["price_trajectory"] = "data/price_trajectory.json"
         latest.setdefault("files", {})["price_alerts"] = "data/price_alerts.json"
-        latest_path.write_text(json.dumps(latest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        atomic_json(latest_path, latest)
 
 
 if __name__ == "__main__":

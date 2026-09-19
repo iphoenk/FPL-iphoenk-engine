@@ -4,7 +4,7 @@ from typing import Any
 
 from src.engines.decision_arbitration import arbitrate_decisions, assert_decision_consistency
 from src.engines.report_time_intelligence import run as run_report_time_intelligence
-from src.utils import DATA, atomic_json, read_json
+from src.utils import CONFIG, DATA, atomic_json, read_json
 
 
 def _f(value: Any, default: float = 0.0) -> float:
@@ -40,15 +40,19 @@ def _battle_metrics(element: int | None, projections: dict[str, Any], planning_g
 
 
 def _battle_reasons(leader: dict[str, Any], challenger: dict[str, Any]) -> list[str]:
+    thresholds = (read_json(CONFIG / "intelligence" / "reporting.json", {}).get("battle_reason_thresholds") or {})
+    required = ("xpts_delta", "xmins_delta", "start_probability_delta")
+    if any(_f(thresholds.get(key), -1.0) <= 0 for key in required):
+        raise RuntimeError("reporting battle reason thresholds must be positive and config-owned")
     reasons: list[str] = []
     xpts_delta = _f(leader.get("xpts")) - _f(challenger.get("xpts"))
     xmins_delta = _f(leader.get("xmins")) - _f(challenger.get("xmins"))
     start_delta = _f(leader.get("start_probability")) - _f(challenger.get("start_probability"))
-    if abs(xpts_delta) >= 0.10:
+    if abs(xpts_delta) >= _f(thresholds["xpts_delta"]):
         reasons.append(f"projected points {'+' if xpts_delta >= 0 else ''}{xpts_delta:.2f}")
-    if abs(xmins_delta) >= 2.0:
+    if abs(xmins_delta) >= _f(thresholds["xmins_delta"]):
         reasons.append(f"xMins {'+' if xmins_delta >= 0 else ''}{xmins_delta:.1f}")
-    if abs(start_delta) >= 0.03:
+    if abs(start_delta) >= _f(thresholds["start_probability_delta"]):
         reasons.append(f"starter probability {'+' if start_delta >= 0 else ''}{start_delta * 100:.1f}pp")
     if not reasons:
         reasons.append("model margin sangat tipis; belum ada pembeda kuat")

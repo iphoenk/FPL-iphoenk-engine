@@ -688,12 +688,20 @@ def _convolve_integer_pmf(
 ) -> dict[int, float]:
     out: dict[int, float] = {}
     for left_points, left_probability in left.items():
+        left_mass = float(left_probability)
+        if left_mass <= 0.0:
+            continue
         for right_points, right_probability in right.items():
+            right_mass = float(right_probability)
+            if right_mass <= 0.0:
+                continue
             points = int(left_points) + int(right_points)
-            out[points] = out.get(points, 0.0) + float(left_probability) * float(
-                right_probability
-            )
-    return out
+            out[points] = out.get(points, 0.0) + left_mass * right_mass
+    return {
+        points: probability
+        for points, probability in out.items()
+        if probability > 0.0
+    }
 
 
 def _bernoulli_reward_pmf(probability: float, reward: float) -> dict[int, float]:
@@ -911,6 +919,11 @@ def _build_joint_predictive_surface(
         0.0,
         1.0,
     )
+    core_pmf = {
+        int(points): float(probability)
+        for points, probability in core_pmf.items()
+        if float(probability) > 0.0
+    }
     probabilities = {
         str(points): round(core_pmf[points], 12)
         for points in sorted(core_pmf)

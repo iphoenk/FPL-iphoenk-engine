@@ -22,6 +22,11 @@ from src.engines.v12_runtime_conformance import (
     build_hourly_core_upkeep_proof,
     validate_v12_authority_sources,
     hydrate_v12_player_identities,
+    derive_next_official_price_cycle,
+    validate_rise_fall_visible_row,
+    apply_owned_player_presentation,
+    validate_exposure_metric,
+    format_exposure_metric,
     split_bench_for_display,
     validate_1230_signal_delta,
     validate_decision_delta_rows,
@@ -961,3 +966,205 @@ def test_55_existing_due_report_refresh_remains_independent_and_unchanged_for_no
     )
     assert hourly["core_upkeep_due"] is True
     assert hourly["attempt_governed_refresh"] is True
+
+
+def _complete_price_row(observed_at: str = "2026-09-19T16:17:00+07:00") -> dict:
+    timing = derive_next_official_price_cycle(observed_at)
+    return {
+        "player": "Example Player",
+        "current_price": 6.5,
+        "direction": "RISE",
+        "official_or_provider_progress": "94%",
+        "prediction_strength": "LIKELY",
+        "next_official_price_cycle_uk": timing["next_official_price_cycle_uk"],
+        "next_official_price_cycle_wib": timing["next_official_price_cycle_wib"],
+        "cycles_to_expected_change": 1,
+        "estimated_change_window": f"NEXT PRICE CYCLE — {timing['next_price_cycle_wib_label']}",
+        "estimate_source": "Official FPL Price Change Predictor",
+        "evidence_timestamp": observed_at,
+        "confidence": "MEDIUM",
+        "impact_on_our_decision": "WAIT unless affordability route is threatened",
+        "predictor_refresh_cadence_minutes": 15,
+        "official_price_change_cadence": timing["official_price_change_cadence"],
+        "change_guaranteed": False,
+    }
+
+
+def test_56_official_price_cycle_is_derived_from_midnight_europe_london():
+    timing = derive_next_official_price_cycle("2026-09-19T16:17:00+07:00")
+    assert timing["official_price_change_cadence"] == "DAILY_AT_00:00_EUROPE_LONDON"
+    assert timing["next_price_cycle_uk_label"].startswith("00:00")
+
+
+def test_57_bst_next_official_price_cycle_resolves_to_0600_wib():
+    timing = derive_next_official_price_cycle("2026-09-19T16:17:00+07:00")
+    assert timing["next_official_price_cycle_wib"].startswith("2026-09-20T06:00:00+07:00")
+    assert timing["next_price_cycle_wib_label"] == "06:00 WIB"
+    assert timing["uk_utc_offset"] == "+0100"
+
+
+def test_58_gmt_next_official_price_cycle_resolves_to_0700_wib():
+    timing = derive_next_official_price_cycle("2026-11-01T16:17:00+07:00")
+    assert timing["next_official_price_cycle_wib"].startswith("2026-11-02T07:00:00+07:00")
+    assert timing["next_price_cycle_wib_label"] == "07:00 WIB"
+    assert timing["uk_utc_offset"] == "+0000"
+
+
+def test_59_predictor_refresh_cadence_cannot_masquerade_as_price_change_cycle():
+    timing = derive_next_official_price_cycle("2026-09-19T16:17:00+07:00")
+    assert timing["predictor_refresh_cadence_minutes"] == 15
+    assert timing["predictor_refresh_is_price_change_cycle"] is False
+    assert timing["official_price_change_cadence"] == "DAILY_AT_00:00_EUROPE_LONDON"
+
+
+def test_60_rise_fall_complete_requires_next_official_price_cycle_semantics():
+    row = _complete_price_row()
+    assert validate_rise_fall_visible_row(row, section_state="COMPLETE")["status"] == "PASS"
+    row.pop("next_official_price_cycle_wib")
+    failed = validate_rise_fall_visible_row(row, section_state="COMPLETE")
+    assert failed["status"] == "FAIL"
+    assert any("COMPLETE_PRICE_ROW_MISSING" in item for item in failed["failures"])
+
+
+def test_61_truthful_unavailable_timing_is_only_legal_under_degraded_state():
+    row = _complete_price_row()
+    row["next_official_price_cycle_wib"] = "UNAVAILABLE"
+    row["estimated_change_window"] = "UNAVAILABLE"
+    row["degradation_reason"] = "predictor timing evidence unavailable"
+    assert validate_rise_fall_visible_row(row, section_state="DEGRADED")["status"] == "PASS"
+    assert validate_rise_fall_visible_row(row, section_state="COMPLETE")["status"] == "FAIL"
+
+
+def test_62_price_prediction_cannot_claim_exact_guarantee():
+    row = _complete_price_row()
+    row["change_guaranteed"] = True
+    result = validate_rise_fall_visible_row(row, section_state="COMPLETE")
+    assert result["status"] == "FAIL"
+    assert "PRICE_PREDICTION_MUST_NOT_BE_GUARANTEED" in result["failures"]
+
+
+def test_63_predictor_disagreement_must_remain_visible():
+    row = _complete_price_row()
+    row["provider_signals"] = [
+        {"source": "Official Predictor", "stance": "LIKELY_RISE_NEXT_CYCLE"},
+        {"source": "Provider A", "stance": "LIKELY_RISE_NEXT_CYCLE"},
+        {"source": "Provider B", "stance": "BORDERLINE"},
+    ]
+    row["predictor_disagreement"] = True
+    result = validate_rise_fall_visible_row(row, section_state="COMPLETE")
+    assert result["status"] == "PASS"
+    assert result["predictor_disagreement"] is True
+    row["predictor_disagreement"] = False
+    assert validate_rise_fall_visible_row(row, section_state="COMPLETE")["status"] == "FAIL"
+
+
+def test_64_current_our15_player_gets_bold_presentation_by_element_id():
+    rendered = apply_owned_player_presentation(
+        element_id=565,
+        display_name="M.Sangaré",
+        our15_element_ids=[565, 411, 426],
+    )
+    assert rendered["is_owned"] is True
+    assert rendered["rendered_player_name"] == "**M.Sangaré**"
+    assert rendered["identity_basis"] == "OFFICIAL_FPL_ELEMENT_ID"
+    assert rendered["name_matching_used_for_identity"] is False
+
+
+def test_65_non_owned_player_is_not_incorrectly_marked_owned():
+    rendered = apply_owned_player_presentation(
+        element_id=999,
+        display_name="M.Sangaré",
+        our15_element_ids=[565, 411, 426],
+    )
+    assert rendered["is_owned"] is False
+    assert rendered["rendered_player_name"] == "M.Sangaré"
+
+
+def test_66_icon_metric_requires_numerator_denominator_and_percentage():
+    assert validate_exposure_metric({"percentage": 29.3})["status"] == "FAIL"
+    good = {"numerator": 17, "denominator": 58, "percentage": 29.3}
+    assert validate_exposure_metric(good)["status"] == "PASS"
+    assert format_exposure_metric(good) == "17/58 = 29.3%"
+
+
+def test_67_icon_metric_arithmetic_must_be_consistent():
+    bad = {"numerator": 17, "denominator": 58, "percentage": 50.0}
+    result = validate_exposure_metric(bad)
+    assert result["status"] == "FAIL"
+    assert "PERCENTAGE_ARITHMETIC_MISMATCH" in result["failures"]
+
+
+def test_68_incomplete_mini_league_coverage_keeps_collected_and_expected_counts():
+    entries = {
+        str(i): {"picks": [{"element_id": 411, "multiplier": 1, "captain": False, "vice_captain": False}]}
+        for i in range(54)
+    }
+    result = compute_pick_exposure(entries, element_id=411, expected_manager_count=58)
+    assert result["state"] == "DEGRADED"
+    assert result["denominator"] == 54
+    assert result["expected_manager_count"] == 58
+    assert result["coverage"] == {
+        "collected": 54,
+        "expected": 58,
+        "complete": False,
+        "label": "54/58 managers",
+    }
+    assert result["ownership"]["denominator"] == 54
+
+
+def test_69_partial_denominator_cannot_masquerade_as_full_league_denominator():
+    entries = {
+        str(i): {"picks": [{"element_id": 411, "multiplier": 1, "captain": False, "vice_captain": False}]}
+        for i in range(54)
+    }
+    result = compute_pick_exposure(entries, element_id=411, expected_manager_count=58)
+    assert result["metric_denominator_scope"] == "COLLECTED_MANAGERS"
+    assert result["ownership"]["percentage"] == 100.0
+    assert result["coverage"]["complete"] is False
+
+
+def test_70_eo_cannot_be_claimed_without_multiplier_chip_inputs():
+    entries = {
+        "1": {"picks": [{"element_id": 411, "multiplier": 2, "captain": True, "vice_captain": False}]},
+        "2": {"picks": [{"element_id": 411, "multiplier": 1, "captain": False, "vice_captain": True}]},
+    }
+    result = compute_pick_exposure(entries, element_id=411)
+    assert result["eo"] is None
+    assert result["eo_status"] == "UNAVAILABLE"
+    with pytest.raises(RuntimeConformanceError):
+        compute_pick_exposure(
+            entries,
+            element_id=411,
+            eo_effective_numerator=3,
+            eo_inputs_complete=False,
+        )
+
+
+def test_71_complete_icon_metrics_preserve_exact_count_denominator_percentage():
+    entries = {}
+    for i in range(58):
+        picks = []
+        if i < 17:
+            picks.append({
+                "element_id": 411,
+                "multiplier": 1 if i >= 4 else 2,
+                "captain": i < 4,
+                "vice_captain": 4 <= i < 7,
+            })
+        entries[str(i)] = {"picks": picks}
+    result = compute_pick_exposure(entries, element_id=411, expected_manager_count=58)
+    assert result["state"] == "COMPLETE"
+    assert result["ownership"] == {"numerator": 17, "denominator": 58, "percentage": 29.3}
+    assert result["captain_share"] == {"numerator": 4, "denominator": 58, "percentage": 6.9}
+    assert result["vice_share"] == {"numerator": 3, "denominator": 58, "percentage": 5.2}
+
+
+def test_72_canonical_price_and_icon_contracts_bind_new_visible_semantics():
+    canonical = _canonical()
+    assert "Official FPL 2026/27 player price changes execute DAILY at 00:00 UK local time" in canonical
+    assert "predictor-refresh cadence is NOT the official price-change execution cadence" in canonical
+    assert "During BST this normally renders 06:00 WIB; during GMT it normally renders 07:00 WIB" in canonical
+    assert "numerator / denominator = percentage" in canonical
+    assert "Partial denominator is a factual collected-scope denominator" in canonical
+    assert "No legacy Library player identity may hydrate V12" in canonical
+    assert "render the player name in Markdown bold" in canonical

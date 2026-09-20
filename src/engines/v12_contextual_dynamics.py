@@ -730,8 +730,14 @@ def build_post_match_universe_scan(
             latest_returns >= spike_returns
             or latest_points >= spike_points
         )
+        pre_latest_rows = matches[:-1][-4:]
+        pre_latest_xgi90 = _match_metric_rate90(
+            pre_latest_rows, "xgi"
+        )
         poor_prior_process = (
-            prior_xgi90 is not None and prior_xgi90 <= weak_latest_xgi
+            pre_latest_xgi90 is not None
+            and pre_latest_xgi90 <= weak_latest_xgi
+            and not sustained_process
         )
         declining_context = (
             trajectory_class in {"DECLINING", "MINUTES_ROLE_DECLINING"}
@@ -881,6 +887,9 @@ def build_post_match_universe_scan(
                     "latest_xgi": round(latest_xgi, 4),
                     "recent_returns": round(recent_returns, 4),
                     "prior_process_strong": prior_process_strong,
+                    "pre_latest_xgi90": None
+                    if pre_latest_xgi90 is None
+                    else round(pre_latest_xgi90, 6),
                 },
                 "team_attacking_environment": projection.get(
                     "system_context"

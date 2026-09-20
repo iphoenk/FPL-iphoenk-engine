@@ -7,6 +7,7 @@ import math
 from datetime import datetime, timezone
 from functools import lru_cache
 from statistics import NormalDist
+from pathlib import Path
 from typing import Any
 
 from src.engines.canonical_decision_methodology import validate_monte_carlo_provenance
@@ -25,7 +26,12 @@ from src.engines.p1_decision_governance import (
     uncertainty_fields,
     vice_rank,
 )
-from src.engines.v12_mini_league_overlay import MODEL_OWNER as MINI_LEAGUE_OWNER
+from src.engines.v12_mini_league_overlay import (
+    MODEL_OWNER as MINI_LEAGUE_OWNER,
+    attach_mini_league_overlay,
+    build_mini_league_snapshot,
+    evaluate_mini_league_overlay,
+)
 from src.engines.v12_monte_carlo import mc_invocation_policy
 from src.engines.v12_package_search import legal_squad as v12_package_legal_squad
 from src.rules import LINEUP_RULES, RULESET_ID, SQUAD_RULES
@@ -45,6 +51,111 @@ def _f(value: Any, default: float = 0.0) -> float:
         return float(default if value is None else value)
     except (TypeError, ValueError):
         return float(default)
+
+
+def _materialize_native_mini_league_overlay(
+    package_optimizer: dict[str, Any],
+    lock: dict[str, Any],
+    *,
+    data_root: Path = DATA,
+) -> dict[str, Any]:
+    """Bind P1.8 to already-published V6 mini-league facts.
+
+    This is a downstream consumer only: it reads V6 artifacts but never imports
+    or mutates the V6 runtime/data plane. Missing, stale, or mismatched league
+    evidence degrades the overlay without suppressing the football baseline.
+    """
+    if package_optimizer.get("model_owner") != "V12_PACKAGE_UTILITY":
+        return package_optimizer
+
+    planning_gw = int(package_optimizer.get("planning_gw") or 0)
+    expected_entry_id = int(lock.get("team_id") or 0)
+    manifest = read_json(data_root / "v6" / "report_prefetch" / "latest.json", {})
+    manifest_gw = int(manifest.get("gw") or 0) if isinstance(manifest, dict) else 0
+    manifest_entry_id = (
+        int(manifest.get("entry_id") or 0) if isinstance(manifest, dict) else 0
+    )
+    league_id = (
+        int(manifest.get("priority_league_id") or 0)
+        if isinstance(manifest, dict)
+        else 0
+    )
+
+    occurrence_matches = bool(
+        planning_gw > 0
+        and manifest_gw == planning_gw
+        and expected_entry_id > 0
+        and manifest_entry_id == expected_entry_id
+        and league_id > 0
+    )
+    standings: dict[str, Any] = {}
+    manager_picks: dict[str, Any] = {}
+    if occurrence_matches:
+        standings = read_json(
+            data_root / "v6" / "mini_leagues" / str(league_id) / "standings.json",
+            {},
+        )
+        manager_picks = read_json(
+            data_root
+            / "v6"
+            / "mini_leagues"
+            / str(league_id)
+            / f"gw_{planning_gw}_manager_picks.json",
+            {},
+        )
+
+    snapshot = build_mini_league_snapshot(
+        standings,
+        manager_picks,
+        our_entry_id=expected_entry_id,
+        planning_gw=max(1, planning_gw),
+        league_scope="FULL_LEAGUE",
+    )
+    snapshot["runtime_binding"] = {
+        "source": "PUBLISHED_V6_REPORT_PREFETCH_FACTS",
+        "occurrence_matches": occurrence_matches,
+        "manifest_request_id": (
+            manifest.get("request_id") if isinstance(manifest, dict) else None
+        ),
+        "manifest_gw": manifest_gw or None,
+        "manifest_entry_id": manifest_entry_id or None,
+        "priority_league_id": league_id or None,
+        "raw_v6_payload_duplicated": False,
+    }
+    football_mc = package_optimizer.get("monte_carlo")
+    if not isinstance(football_mc, dict):
+        football_mc = None
+    binding = package_optimizer.get("model_evidence_binding") or {}
+    input_snapshot_id = str(
+        binding.get("input_snapshot_id")
+        or (
+            manifest.get("request_id")
+            if isinstance(manifest, dict)
+            else None
+        )
+        or "P1_8_RUNTIME_PACKAGE_DECISION"
+    )
+    overlay = evaluate_mini_league_overlay(
+        package_optimizer,
+        snapshot,
+        monte_carlo=football_mc,
+        relative_mc=None,
+        input_snapshot_id=input_snapshot_id,
+        generated_at=(
+            manifest.get("generated_at")
+            if isinstance(manifest, dict) and manifest.get("generated_at")
+            else package_optimizer.get("generated_at")
+        ),
+    )
+    overlay["runtime_materialization"] = {
+        "producer": "src.engines.lineup_governance",
+        "source": "PUBLISHED_V6_REPORT_PREFETCH_FACTS",
+        "occurrence_matches": occurrence_matches,
+        "football_report_fail_operational": True,
+        "scheduler_added": False,
+        "v6_mutated": False,
+    }
+    return attach_mini_league_overlay(package_optimizer, overlay)
 
 
 @lru_cache(maxsize=1)
@@ -985,6 +1096,11 @@ def run() -> dict[str, Any]:
     chips = read_json(DATA / "chips.json", {})
     team = read_json(DATA / "team.json", {})
     lineup = build_lineup_decision(projections, lock, chips, team=team)
+    package_optimizer = _materialize_native_mini_league_overlay(
+        package_optimizer,
+        lock,
+        data_root=DATA,
+    )
     package = build_package_decision(package_optimizer, projections, lock, team)
     if not lineup.get("formation") or len(lineup.get("starting_xi") or []) != int(LINEUP_RULES.get("starting_xi_size") or 11):
         raise RuntimeError("lineup governance failed legal XI contract")

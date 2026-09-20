@@ -34,6 +34,21 @@ LEGACY_LIBRARY_BASENAMES = (
     "ACTIVE_DECISION_CONTEXT.json",
 )
 
+FORBIDDEN_CANONICAL_LEGACY_EXECUTION_PATTERNS = (
+    (
+        "migration_oracle_execution_permission",
+        re.compile(r"\bmay\s+execute\s+as\s+MIGRATION_ORACLE\b", re.IGNORECASE),
+    ),
+    (
+        "regression_oracle_execution_permission",
+        re.compile(r"\bremains\s+CI\s+REGRESSION_ORACLE\b", re.IGNORECASE),
+    ),
+    (
+        "generic_legacy_execution_permission",
+        re.compile(r"\blegacy\b.{0,96}\bmay\s+execute\b", re.IGNORECASE),
+    ),
+)
+
 
 def _git_blob_sha(path: Path) -> str:
     data = path.read_bytes()
@@ -128,6 +143,25 @@ def validate(root: Path = ROOT) -> list[str]:
     state_path = root / STATE_PATH
     if not canonical.is_file():
         errors.append(f"Canonical V12 authority missing: {CANONICAL_PATH}")
+    else:
+        canonical_text = canonical.read_text(encoding="utf-8")
+        for label, pattern in FORBIDDEN_CANONICAL_LEGACY_EXECUTION_PATTERNS:
+            if pattern.search(canonical_text):
+                errors.append(
+                    f"Canonical V12 contains prohibited legacy execution permission: {label}"
+                )
+        required_static_tokens = (
+            "STATIC HISTORICAL REFERENCE",
+            "STATIC DESIGN REFERENCE",
+            "STATIC FROZEN SPECIFICATION/FINGERPRINT COMPARISON",
+            "MIGRATION_ORACLE execution is forbidden",
+            "CI REGRESSION_ORACLE execution is forbidden",
+        )
+        for token in required_static_tokens:
+            if token not in canonical_text:
+                errors.append(
+                    f"Canonical V12 missing static-only legacy guard token: {token}"
+                )
     if not state_path.is_file():
         errors.append(f"V12 state missing: {STATE_PATH}")
     else:

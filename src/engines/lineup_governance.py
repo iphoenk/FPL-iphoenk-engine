@@ -25,6 +25,7 @@ from src.engines.p1_decision_governance import (
     uncertainty_fields,
     vice_rank,
 )
+from src.engines.v12_mini_league_overlay import MODEL_OWNER as MINI_LEAGUE_OWNER
 from src.engines.v12_monte_carlo import mc_invocation_policy
 from src.engines.v12_package_search import legal_squad as v12_package_legal_squad
 from src.rules import LINEUP_RULES, RULESET_ID, SQUAD_RULES
@@ -699,7 +700,44 @@ def build_package_decision(
             raise RuntimeError(
                 "P1.2B package artifact missing HOLD or selected native route"
             )
-        selected = hold if freeze else native_selected
+        raw_overlay = package_optimizer.get("mini_league_overlay")
+        overlay_payload = (
+            deepcopy(raw_overlay)
+            if isinstance(raw_overlay, dict)
+            and raw_overlay.get("model_owner") == MINI_LEAGUE_OWNER
+            else {
+                "status": "NOT_RUN",
+                "reason": "NO_OCCURRENCE_BOUND_V12_MINI_LEAGUE_OVERLAY",
+            }
+        )
+        adjusted_id = native_selected_id
+        overlay_changed = False
+        if overlay_payload.get("model_owner") == MINI_LEAGUE_OWNER:
+            baseline_route_id = str(
+                (overlay_payload.get("football_baseline") or {}).get("route_id")
+                or ""
+            )
+            delta = dict(overlay_payload.get("decision_delta") or {})
+            candidate_adjusted = str(
+                (overlay_payload.get("adjusted_decision") or {}).get("route_id")
+                or native_selected_id
+            )
+            if baseline_route_id != native_selected_id:
+                raise RuntimeError(
+                    "P1.8 overlay football baseline does not match P1.2 selection"
+                )
+            if candidate_adjusted not in by_id:
+                raise RuntimeError("P1.8 adjusted route is not a P1.2 legal route")
+            overlay_changed = bool(delta.get("changed"))
+            if overlay_changed and (
+                (overlay_payload.get("coverage") or {}).get("state") != "FULL"
+            ):
+                raise RuntimeError(
+                    "P1.8 partial/unavailable league evidence cannot switch route"
+                )
+            adjusted_id = candidate_adjusted
+        adjusted_selected = by_id.get(adjusted_id) or native_selected
+        selected = hold if freeze else adjusted_selected
         selected_id = str(selected.get("route_id") or "")
         selected_package = {"id": selected_id, **selected}
         final_ids = [
@@ -734,6 +772,21 @@ def build_package_decision(
                 "P1.2 native package decision failed Gate0 revalidation"
             )
         decision = dict(package_optimizer.get("decision") or {})
+        football_baseline_decision = deepcopy(decision)
+        if overlay_changed and not freeze:
+            decision = {
+                **decision,
+                "football_action": (
+                    "HOLD"
+                    if selected.get("classification") == "HOLD"
+                    else "CHANGE"
+                ),
+                "operational_action": "PREPARE",
+                "reason": "P1_8_DOWNSTREAM_OVERLAY_SWITCH_REQUIRES_EXISTING_EXECUTION_GATES",
+                "mini_league_overlay_state": (
+                    overlay_payload.get("decision_delta") or {}
+                ).get("state"),
+            }
         if freeze:
             decision = {
                 "football_action": "HOLD",
@@ -766,12 +819,21 @@ def build_package_decision(
             "selected_package": selected_package,
             "selected_package_id": selected_id,
             "optimizer_best_candidate_id": native_selected_id,
+            "football_baseline_selected_package_id": native_selected_id,
+            "mini_league_adjusted_package_id": adjusted_id,
             "manual_authority_override": freeze,
             "current_squad_legal": current_legal,
             "current_squad_legality_reason": current_legality_reason,
             "selected_squad_legality_reason": final_legality_reason,
             "gate0_revalidated": gate0_revalidated,
             "decision": decision,
+            "football_baseline_decision": football_baseline_decision,
+            "mini_league_overlay": overlay_payload,
+            "decision_delta": deepcopy(
+                overlay_payload.get("decision_delta")
+                if isinstance(overlay_payload, dict)
+                else None
+            ),
             "model_evidence_binding": deepcopy(
                 package_optimizer.get("model_evidence_binding")
             ),
@@ -804,6 +866,10 @@ def build_package_decision(
                 "monte_carlo_owner": "V12_MONTE_CARLO",
                 "mc_code_existence_is_not_execution": True,
                 "mc_does_not_change_p1_2_action_logic": True,
+                "mini_league_overlay_owner": MINI_LEAGUE_OWNER,
+                "mini_league_overlay_downstream_only": True,
+                "football_baseline_preserved": True,
+                "mini_league_overlay_changed_route": overlay_changed,
             },
         }
 

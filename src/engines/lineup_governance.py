@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+from copy import deepcopy
 import json
 import math
 from datetime import datetime, timezone
@@ -765,6 +766,7 @@ def build_package_decision(
                 "legacy_package_optimizer_status": (
                     "MIGRATION_REGRESSION_PERFORMANCE_REFERENCE_ONLY"
                 ),
+                "optimizer_is_candidate_generator_only": False,
                 "locked_composition_preserved": freeze,
                 "manual_authority_wins": True,
                 "team_state_authority_consumed": not legacy_fixture_fallback,
@@ -825,6 +827,7 @@ def build_package_decision(
                 "MIGRATION_REGRESSION_PERFORMANCE_REFERENCE_ONLY"
             ),
             "legacy_candidate_can_trigger_change_action": False,
+            "optimizer_is_candidate_generator_only": True,
             "locked_composition_preserved": freeze,
             "manual_authority_wins": True,
             "team_state_authority_consumed": not legacy_fixture_fallback,

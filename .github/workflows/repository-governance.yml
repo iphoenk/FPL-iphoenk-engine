@@ -112,7 +112,7 @@ jobs:
               print("::error::PR description must contain 'Change timestamp: <ISO-8601 timestamp with timezone>'")
               sys.exit(1)
           if not sync:
-              print("::error::PR description must contain 'Documentation sync: UPDATED' or 'Documentation sync: NOT_APPLICABLE'")
+              print("::error::PR description must contain 'Documentation sync: UPDATED'")
               sys.exit(1)
 
           base = os.environ["BASE_SHA"]
@@ -147,30 +147,45 @@ jobs:
               or p == ".github/PULL_REQUEST_TEMPLATE.md"
               for p in changed
           )
+          readme_changed = "README.md" in changed
 
           status = sync.group(1)
-          if runtime_relevant:
-              if status != "UPDATED":
-                  print("::error::Runtime/architecture/governance changes require 'Documentation sync: UPDATED'")
-                  sys.exit(1)
-              if not doc_changed:
-                  print("::error::Runtime/architecture/governance changes must update README.md, docs/, or the PR documentation template in the same PR")
-                  sys.exit(1)
+          if status != "UPDATED":
+              print("::error::Every PR requires 'Documentation sync: UPDATED'")
+              sys.exit(1)
+          if not doc_ts:
+              print("::error::Every PR requires 'Documentation timestamp: <ISO-8601 timestamp with timezone>'")
+              sys.exit(1)
+          if not readme_changed:
+              print("::error::Every repository change must update README.md in the same PR")
+              sys.exit(1)
+          if not doc_changed:
+              print("::error::Documentation sync UPDATED requires an actual repository documentation change")
+              sys.exit(1)
 
-          if status == "UPDATED":
-              if not doc_ts:
-                  print("::error::Documentation sync UPDATED requires 'Documentation timestamp: <ISO-8601 timestamp with timezone>'")
-                  sys.exit(1)
-              if not doc_changed:
-                  print("::error::Documentation sync UPDATED requires an actual repository documentation change")
-                  sys.exit(1)
+          readme_text = open("README.md", encoding="utf-8").read()
+          readme_ts = re.search(
+              rf"(?m)^> \*\*Last runtime/documentation sync:\*\* `({iso})`\s*$",
+              readme_text,
+          )
+          if not readme_ts:
+              print("::error::README.md must contain the visible Last runtime/documentation sync timestamp")
+              sys.exit(1)
+          if readme_ts.group(1) != doc_ts.group(1):
+              print(
+                  "::error::README Last runtime/documentation sync must exactly match "
+                  "the PR Documentation timestamp"
+              )
+              sys.exit(1)
 
           print({
               "change_timestamp": change.group(1),
               "documentation_sync": status,
-              "documentation_timestamp": doc_ts.group(1) if doc_ts else None,
+              "documentation_timestamp": doc_ts.group(1),
+              "readme_timestamp": readme_ts.group(1),
               "runtime_relevant": runtime_relevant,
               "documentation_changed": doc_changed,
+              "readme_changed": readme_changed,
               "changed_files": changed,
           })
           PY

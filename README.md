@@ -1,5 +1,9 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
+> **Last runtime/documentation sync:** `2026-09-20T23:40:01+07:00`  
+> **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
+> This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
+
 > **CURRENT ACTIVE ARCHITECTURE**
 >
 > **V6** is the only factual production data plane.  
@@ -317,6 +321,12 @@ The active system enforces these architectural boundaries:
 - Current runtime truth is never inferred from historical README text.
 
 Repository governance and V6 CI must remain GREEN before a bounded repair is treated as accepted.
+
+### Documentation synchronization contract
+
+Every pull request must include an ISO-8601 `Change timestamp` in its description and explicitly state `Documentation sync: UPDATED` or `Documentation sync: NOT_APPLICABLE`. Any runtime-, architecture-, control-plane-, methodology-, scheduler-, or production-governance change must use `UPDATED`, must change the relevant repository documentation in the same PR, and must include a matching `Documentation timestamp`. Documentation-only or genuinely non-runtime changes may use `NOT_APPLICABLE` only when no runtime-facing documentation becomes stale.
+
+The machine-enforced contract lives in `.github/workflows/repository-governance.yml`; the human-readable policy is `docs/REPOSITORY_DOCUMENTATION_SYNC_POLICY.md`. PR authors should start from `.github/PULL_REQUEST_TEMPLATE.md`.
 
 ## Legacy
 

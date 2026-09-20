@@ -1329,30 +1329,14 @@ def settle_mini_league_decision(
     baseline = settle_frozen_record(
         baseline_record,
         actual_rows=[],
-        decision_outcome_evidence={
-            "hold_vs_act_realized_regret": {
-                "value": max(
-                    0.0,
-                    _f(adjusted_relative_points) - _f(baseline_relative_points),
-                ),
-                "settled": True,
-            }
-        },
+        decision_outcome_evidence=None,
         event_finished=event_finished,
         settled_at=settled_at,
     )
     adjusted = settle_frozen_record(
         adjusted_record,
         actual_rows=[],
-        decision_outcome_evidence={
-            "hold_vs_act_realized_regret": {
-                "value": max(
-                    0.0,
-                    _f(baseline_relative_points) - _f(adjusted_relative_points),
-                ),
-                "settled": True,
-            }
-        },
+        decision_outcome_evidence=None,
         event_finished=event_finished,
         settled_at=settled_at,
     )

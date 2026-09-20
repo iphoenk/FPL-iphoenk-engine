@@ -129,6 +129,8 @@ def run() -> dict:
         horizon=STRATEGIC_HORIZON_GWS,
         player_features_payload=player_features,
         player_match_rows=player_match_rows,
+        opponent_history_rows=[],
+        opponent_history_scope="CURRENT-SEASON ONLY",
     )
     pre_role_signature = projection_signature(projections)
     official_role_evidence = attach_official_role_evidence(projections, bootstrap)
@@ -168,6 +170,13 @@ def run() -> dict:
         "v12_contextual_dynamics_match_row_count": len(player_match_rows),
         "v12_contextual_dynamics_direct_connection_rows": "UNAVAILABLE_NOT_FABRICATED",
         "v12_contextual_dynamics_optional_enrichment": True,
+        "v12_multi_player_chain_runtime_wired": True,
+        "opponent_history_scope": "CURRENT-SEASON ONLY",
+        "prior_season_matchup": (
+            "UNAVAILABLE — NO GOVERNED MATCH-LEVEL FACTUAL SOURCE"
+        ),
+        "trajectory_window": "CURRENT_SEASON_GW1_TO_LATEST_COMPLETED",
+        "opponent_history_window_separate": True,
         "v4_is_not_projection_calibration_truth": True,
     })
     atomic_json(DATA / "projections.json", projections)
@@ -216,6 +225,11 @@ def run() -> dict:
             "dataset": player_match_stats.get("dataset"),
             "row_count": len(player_match_rows),
             "direct_player_connection_evidence": "UNAVAILABLE_NOT_FABRICATED",
+            "multi_player_chain_runtime_wired": True,
+            "opponent_history_scope": "CURRENT-SEASON ONLY",
+            "prior_season_matchup": (
+                "UNAVAILABLE — NO GOVERNED MATCH-LEVEL FACTUAL SOURCE"
+            ),
             "optional_enrichment_never_blocks_projection": True,
         },
         "projection_calibration": {"status": projection_diagnostics.get("status"), "comparison_authority": projection_diagnostics.get("comparison_authority"), "mutates_xpts": False, "positions": projection_diagnostics.get("positions")},

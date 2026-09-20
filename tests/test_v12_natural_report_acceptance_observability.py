@@ -5,6 +5,7 @@ from copy import deepcopy
 from src.runtime_v6.domains.report_plane.report_delivery import (
     build_natural_report_acceptance_proof,
     seal_natural_report_acceptance_proof,
+    seal_same_slot_completion_ledger,
     validate_natural_report_acceptance_proof_readback,
 )
 
@@ -364,3 +365,77 @@ def test_28_evidence_proof_does_not_become_authority():
         "scheduler_authority",
     ):
         assert proof[key] is False
+
+
+def _completion_ledger_evidence(**overrides):
+    row = {
+        "natural_occurrence_id": "natural-0030",
+        "logical_data_slot": "2026-09-21T00:00:00+07:00",
+        "logical_report_slot": OCCURRENCE,
+        "v6_terminal_state": "PASS",
+        "governed_v6_run_id": "run-123",
+        "publication_readback_pass": True,
+        "decision_context_hydrated": True,
+        "decision_context_slot": OCCURRENCE,
+        "report_prefetch_identity_match": True,
+        "report_prefetch_logical_slot": OCCURRENCE,
+        "report_prefetch_freshness": "CURRENT",
+        "weather_attempted": True,
+        "weather_status": "PASS",
+        "pre_render_qa_pass": True,
+        "canonical_render_completed": True,
+        "canonical_render_hash": "c" * 64,
+        "post_render_qa_pass": True,
+        "report_contract_pass": True,
+        "can_emit": True,
+        "visible_emitted": True,
+        "delivery_acknowledged": True,
+        "delivery_proof_valid": True,
+        "canonical_receipt_id": "d" * 64,
+        "canonical_receipt_slot": OCCURRENCE,
+        "report_slot_fulfilled": True,
+        "natural_report_acceptance_evidence": _evidence(),
+    }
+    row.update(overrides)
+    return row
+
+
+def test_29_same_slot_ledger_attaches_one_sealed_acceptance_proof():
+    ledger = seal_same_slot_completion_ledger(_completion_ledger_evidence())
+    proof = ledger["natural_report_acceptance_proof"]
+    assert ledger["status"] == "PASS"
+    assert proof["immutable"] is True
+    assert len(proof["proof_hash"]) == 64
+    assert proof["acceptance"]["routing_acceptance"] == "PASS"
+    assert proof["acceptance"]["render_acceptance"] == "PASS"
+
+
+def test_30_missing_ui_delivery_does_not_erase_sealed_routing_render_proof():
+    ledger = seal_same_slot_completion_ledger(
+        _completion_ledger_evidence(
+            delivery_acknowledged=False,
+            delivery_proof_valid=False,
+            report_slot_fulfilled=False,
+        )
+    )
+    proof = ledger["natural_report_acceptance_proof"]
+    assert ledger["status"] == "FAIL"
+    assert proof["immutable"] is True
+    assert proof["acceptance"]["routing_acceptance"] == "PASS"
+    assert proof["acceptance"]["render_acceptance"] == "PASS"
+    assert proof["acceptance"]["ui_delivery_ack"] == "UNAVAILABLE"
+
+
+def test_31_acceptance_attachment_does_not_change_completion_ledger_semantics():
+    without = seal_same_slot_completion_ledger(
+        {
+            key: value
+            for key, value in _completion_ledger_evidence().items()
+            if key != "natural_report_acceptance_evidence"
+        }
+    )
+    with_proof = seal_same_slot_completion_ledger(_completion_ledger_evidence())
+    assert without["status"] == with_proof["status"] == "PASS"
+    assert without["report_slot_fulfilled"] is True
+    assert with_proof["report_slot_fulfilled"] is True
+

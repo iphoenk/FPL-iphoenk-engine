@@ -419,7 +419,6 @@ def _visible_price_contract(
 
 
 def _offset_zero_projection(row: Mapping[str, Any]) -> Mapping[str, Any] | None:
-def _offset_zero_projection(row: Mapping[str, Any]) -> Mapping[str, Any] | None:
     projections = row.get("price_change_projections")
     if not isinstance(projections, list):
         return None

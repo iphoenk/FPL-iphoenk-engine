@@ -314,3 +314,60 @@ targets may reuse the same upstream relationship.
 
 The final contextual cap remains unchanged and is explicitly not considered an
 anti-double-count mechanism.
+
+
+## Default post-match universe methodology
+
+Post-match detection is now universe-wide by default. It is not scorer-first,
+OUR15-first, watchlist-first or narrative-first.
+
+The runtime consumes the existing projection universe and current-season
+player-match rows to build a cheap broad scan for every eligible player. The
+scan compares GW1-current trajectory, recent process, prior role, previous
+P1.1 xMins/P(start), previous event rate and current/previous link-up state.
+
+Evidence classes are descriptive only:
+
+- BREAKOUT_PROCESS
+- ROLE_BREAKOUT / ROLE_DECLINE
+- MINUTES_BREAKOUT / MINUTES_DECLINE
+- LINKUP_BREAKOUT / LINKUP_BROKEN
+- SET_PIECE_GAIN
+- UNDERLYING_IMPROVING_NO_RETURN
+- OUTPUT_CONFIRMING_PROCESS
+- OUTPUT_WITHOUT_PROCESS
+- REGRESSION_RISK
+- NO_MATERIAL_CHANGE
+
+A materiality gate decides which rows require deep post-match detail. It does
+not create a new player-quality score or a new action state.
+
+After the broad scan, the detector consumes the existing package optimizer's
+fresh full-universe evidence. It does not rescore the universe independently.
+For each material player it records whether the player appears in the existing
+published position pool, appears in a published package route, or remains
+outside the published pool. This ensures a genuine breakout can still lose the
+relative full-universe comparison and therefore does not automatically become
+a transfer recommendation.
+
+The scan is wired into `prediction_service.py`. The previous
+`data/projections.json` snapshot is read before current projections are
+materialized so previous P1.1 xMins/P(start), event-rate and link-up state can
+be compared without creating another durable state authority.
+
+The visible V12 helper `build_post_match_universe_movers` renders a compact
+nested `UNIVERSE MOVERS` block with:
+
+- BREAKOUT / CONFIRMATION
+- PROCESS UP — RETURNS NOT YET ARRIVED
+- ROLE / MINUTES RISERS
+- LINK-UP RISERS
+- REGRESSION / SELL-RISK
+- NOISE / DO NOT CHASE
+
+Non-scorers are eligible for every stage. A two-point player with rising xGI,
+box access, xMins/P(start) and a secure role can surface ahead of a high-FPL-
+point output spike when the process evidence warrants it.
+
+The post-match detector never writes WAIT/PREPARE/ACT. Existing downstream
+decision owners remain authoritative, and 20/25/30/25 is unchanged.

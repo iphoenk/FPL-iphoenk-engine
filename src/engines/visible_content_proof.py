@@ -348,6 +348,48 @@ def _python_runtime_provenance(
     }
 
 
+def _chatgpt_analytic_runtime_provenance(
+    *,
+    chatgpt_v12_analytic_executed: bool,
+    analytic_execution_evidence: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    executed = bool(chatgpt_v12_analytic_executed)
+    evidence = dict(analytic_execution_evidence or {})
+    if not executed:
+        if evidence:
+            raise VisibleContentProofError(
+                "analytic_execution_evidence is forbidden when ChatGPT V12 analytic execution is not proven"
+            )
+        return {
+            "chatgpt_v12_analytic_executed": False,
+            "analytic_status": "NOT_RUN",
+            "analytic_execution_evidence": None,
+        }
+
+    required = (
+        "model_timestamp",
+        "scope",
+        "input_snapshot_ids",
+        "output_fingerprint",
+    )
+    missing = [
+        field
+        for field in required
+        if evidence.get(field) in (None, "", [], {})
+    ]
+    if missing:
+        raise VisibleContentProofError(
+            "ChatGPT V12 analytic execution requires exact evidence: "
+            + ",".join(missing)
+        )
+    _sha256(evidence.get("output_fingerprint"), label="analytic.output_fingerprint")
+    return {
+        "chatgpt_v12_analytic_executed": True,
+        "analytic_status": "CURRENT",
+        "analytic_execution_evidence": evidence,
+    }
+
+
 def build_visible_content_proof(
     *,
     canonical_authority_path: str,
@@ -364,6 +406,8 @@ def build_visible_content_proof(
     search_authority: str | None = None,
     repository_python_qa_executed: bool = False,
     python_execution_evidence: Mapping[str, Any] | None = None,
+    chatgpt_v12_analytic_executed: bool = False,
+    analytic_execution_evidence: Mapping[str, Any] | None = None,
     canonical_revision: Mapping[str, Any] | None = None,
     canonical_content_fingerprint_sha256: str | None = None,
     canonical_text: str | None = None,
@@ -465,6 +509,10 @@ def build_visible_content_proof(
         repository_python_qa_executed=repository_python_qa_executed,
         python_execution_evidence=python_execution_evidence,
     )
+    analytic_runtime = _chatgpt_analytic_runtime_provenance(
+        chatgpt_v12_analytic_executed=chatgpt_v12_analytic_executed,
+        analytic_execution_evidence=analytic_execution_evidence,
+    )
     if runtime["repository_python_qa_executed"]:
         evidence_slot = str(
             (runtime.get("python_execution_evidence") or {}).get("report_slot") or ""
@@ -504,7 +552,12 @@ def build_visible_content_proof(
         "report_can_continue": can_continue,
         "content_contract_status": severity,
         "search_authority": search,
-        "runtime_provenance": runtime,
+        "runtime_provenance": {
+            **runtime,
+            **analytic_runtime,
+            "repository_python_and_chatgpt_analytics_are_separate": True,
+            "repository_python_nonexecution_suppresses_analytics": False,
+        },
     }
 
 

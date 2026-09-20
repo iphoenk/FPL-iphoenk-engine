@@ -28,7 +28,8 @@
     "low_confidence_cap": 0.35,
     "minimum_chain_edge_confidence": 0.05,
     "maximum_qualified_incoming_edges_per_node": 3,
-    "max_chain_length_semantics": "PLAYERS_IN_CHAIN"
+    "max_chain_length_semantics": "PLAYERS_IN_CHAIN",
+    "maximum_runtime_chains_per_target": 5
   },
   "combined": {
     "minimum_multiplier": 0.72,

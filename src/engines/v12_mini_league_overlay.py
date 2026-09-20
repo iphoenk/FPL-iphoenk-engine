@@ -1075,6 +1075,35 @@ def evaluate_mini_league_overlay(
     else:
         state = "BASELINE_PRESERVED"
 
+    relevant_ids = set(int(x) for x in baseline.get("starting_xi") or [])
+    adjusted_route = routes.get(adjusted["route_id"]) or {}
+    adjusted_lineup = _first_lineup(adjusted_route)
+    relevant_ids.update(int(x) for x in adjusted_lineup.get("starting_xi") or [])
+    for value in (
+        baseline.get("captain"),
+        baseline.get("vice_captain"),
+        adjusted_lineup.get("captain"),
+        adjusted_lineup.get("vice_captain"),
+    ):
+        if value is not None:
+            relevant_ids.add(_i(value))
+    relevant_exposure = [
+        dict(row)
+        for row in league_snapshot.get("exposures") or []
+        if _i((row or {}).get("element_id"), -1) in relevant_ids
+    ]
+    relevant_exposure.sort(
+        key=lambda row: (
+            -_i(row.get("captain_count"), 0),
+            -_i(row.get("starter_count"), 0),
+            -_i(row.get("ownership_count"), 0),
+            _i(row.get("element_id"), 10**9),
+        )
+    )
+    relevant_exposure = relevant_exposure[
+        : _i(load_config()["report"].get("max_relevant_exposures"), 8)
+    ]
+
     decision_delta = {
         "football_baseline_route_id": baseline["route_id"],
         "mini_league_adjusted_route_id": adjusted["route_id"],
@@ -1134,6 +1163,7 @@ def evaluate_mini_league_overlay(
             ),
         },
         "risk_posture": posture,
+        "relevant_rival_exposure": relevant_exposure,
         "route_overlays": route_rows,
         "adjusted_decision": {
             "route_id": adjusted["route_id"],

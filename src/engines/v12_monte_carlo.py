@@ -1088,6 +1088,14 @@ def run_correlated_monte_carlo(
                 hold_arrays[horizon],
                 material_upside_threshold=upside_threshold,
             )
+            route_def = next(item for item in route_defs if str(item.get("route_id")) == rid)
+            execution_cost = route_def.get("execution_cost_points")
+            row["execution_cost_points"] = execution_cost
+            row["mean_gross_points"] = (
+                None
+                if row.get("mean_net_utility") is None or execution_cost is None
+                else float(row["mean_net_utility"]) + float(execution_cost)
+            )
             row["expected_regret"] = regret_by_horizon[horizon].get(rid)
             metrics.setdefault(rid, {})[str(horizon)] = row
         for i, a in enumerate(route_ids):

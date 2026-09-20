@@ -5,6 +5,7 @@ import pytest
 from src.engines.v12_contextual_dynamics import (
     build_contextual_dynamics,
     build_player_trajectory,
+    construct_directional_chains,
     data_capability_audit,
     enrich_match_rows,
     evaluate_linkup,
@@ -55,6 +56,43 @@ def row(
         "goals": goals,
         "assists": assists,
         "fpl_points": 8 if goals or assists else 2,
+    }
+
+
+def strong_edge(
+    source: int,
+    target: int,
+    *,
+    modifier: float = 1.15,
+    confidence: float = 0.8,
+    shared_minutes: float = 360.0,
+    target_role: str = "FINISHER",
+    source_role: str = "CREATOR",
+) -> dict:
+    return {
+        "source_player_id": source,
+        "teammate_player_id": source,
+        "target_player_id": target,
+        "direction": [source, target],
+        "confidence": confidence,
+        "dependency_strength": confidence,
+        "dependency_direction": (
+            "POSITIVE" if modifier > 1.0 else "NEGATIVE"
+        ),
+        "shared_matches": 4,
+        "shared_minutes": shared_minutes,
+        "role_complementarity": 1.0,
+        "tactical_role_relevance": 1.0,
+        "target_role": target_role,
+        "teammate_role": source_role,
+        "with_player_modifier": modifier,
+        "without_player_modifier": max(0.01, 2.0 - modifier),
+        "direct_connection_evidence": {
+            "status": "AVAILABLE",
+            "rows": 4,
+            "weighted_connection_count": 4.0,
+            "score": 0.8,
+        },
     }
 
 
@@ -377,16 +415,8 @@ def test_case_H_co_returns_without_process_connection_remain_weak():
 
 def test_case_I_multi_player_chain_weakens_when_middle_creator_is_absent():
     edges = [
-        {
-            "teammate_player_id": 30,
-            "confidence": 0.8,
-            "with_player_modifier": 1.10,
-        },
-        {
-            "teammate_player_id": 31,
-            "confidence": 0.8,
-            "with_player_modifier": 1.15,
-        },
+        strong_edge(30, 31, modifier=1.10),
+        strong_edge(31, 32, modifier=1.15),
     ]
     intact = evaluate_multi_player_chain(edges, {30: 1.0, 31: 1.0})
     broken = evaluate_multi_player_chain(edges, {30: 1.0, 31: 0.0})
@@ -693,3 +723,362 @@ def test_canonical_methodology_authority_contains_contextual_governance():
     )
     for token in required:
         assert token in canonical
+
+
+
+def _chain_projection(chain: dict) -> dict:
+    target_rows = [
+        row(
+            player=103,
+            gw=gw,
+            match=f"chain-target-{gw}",
+            opponent=70 + gw,
+            xg=0.45,
+            xa=0.10,
+            role="FINISHER",
+        )
+        for gw in range(1, 5)
+    ]
+    context = build_contextual_dynamics(
+        target_rows,
+        player_id=103,
+        current_gw=4,
+        opponent_team_id=99,
+        current_context={"manager_id": "M1", "formation": "4-3-3"},
+        linkups=[],
+        chains=[chain] if chain.get("status") == "AVAILABLE" else [],
+        teammate_start_probabilities={101: 1.0, 102: 1.0},
+        opponent_history_rows=[],
+        opponent_history_scope="CURRENT-SEASON ONLY",
+    )
+    projection = project_player_fixture(
+        {"id": 103, "element_type": 4, "position": "FWD"},
+        full_start_minutes(),
+        fixture(),
+        home=True,
+        rates=rates(),
+        league_baseline={"home_goals": 1.6, "away_goals": 1.2},
+        contextual_dynamics=context,
+    )
+    return {"context": context, "projection": projection}
+
+
+def test_K_strong_three_player_chain_reaches_p13_distribution():
+    edges = [
+        strong_edge(101, 102, modifier=1.12),
+        strong_edge(102, 103, modifier=1.15),
+    ]
+    chain = evaluate_multi_player_chain(
+        edges,
+        {101: 1.0, 102: 1.0},
+    )
+    assert chain["status"] == "AVAILABLE"
+    assert chain["multiplier"] > 1.0
+
+    with_chain = _chain_projection(chain)
+    neutral = _chain_projection(
+        {
+            "status": "AVAILABLE",
+            "edges": edges,
+            "confidence": chain["confidence"],
+            "multiplier": 1.0,
+        }
+    )
+    a = with_chain["projection"]
+    b = neutral["projection"]
+    assert a["event_probabilities"]["p_goal_return"] > b["event_probabilities"]["p_goal_return"]
+    assert a["event_probabilities"]["p_attacking_return"] > b["event_probabilities"]["p_attacking_return"]
+    assert a["event_probabilities"]["p_total_ga_ge_2"] > b["event_probabilities"]["p_total_ga_ge_2"]
+    assert a["point_distribution"]["p_haul_10_plus"] >= b["point_distribution"]["p_haul_10_plus"]
+    assert a["point_distribution"]["p_fpl_blank"] < b["point_distribution"]["p_fpl_blank"]
+    assert a["mean"] > b["mean"]
+    assert a["std"] != b["std"]
+
+
+def test_L_middle_node_absent_materially_weakens_chain_and_projection():
+    edges = [
+        strong_edge(101, 102, modifier=1.12),
+        strong_edge(102, 103, modifier=1.15),
+    ]
+    intact = evaluate_multi_player_chain(edges, {101: 1.0, 102: 1.0})
+    broken = evaluate_multi_player_chain(edges, {101: 1.0, 102: 0.0})
+    assert intact["multiplier"] > broken["multiplier"]
+    assert broken["multiplier"] == pytest.approx(1.0)
+    assert broken["chain_intact_probability"] == pytest.approx(0.0)
+
+    intact_projection = _chain_projection(intact)["projection"]
+    broken_projection = _chain_projection(broken)["projection"]
+    assert (
+        intact_projection["event_probabilities"]["p_goal_return"]
+        > broken_projection["event_probabilities"]["p_goal_return"]
+    )
+    assert intact_projection["mean"] > broken_projection["mean"]
+
+
+def test_M_half_start_middle_node_lies_between_intact_and_broken():
+    edges = [
+        strong_edge(101, 102, modifier=1.12),
+        strong_edge(102, 103, modifier=1.15),
+    ]
+    intact = evaluate_multi_player_chain(edges, {101: 1.0, 102: 1.0})
+    half = evaluate_multi_player_chain(edges, {101: 1.0, 102: 0.5})
+    broken = evaluate_multi_player_chain(edges, {101: 1.0, 102: 0.0})
+    assert broken["multiplier"] < half["multiplier"] < intact["multiplier"]
+
+    p_intact = _chain_projection(intact)["projection"]
+    p_half = _chain_projection(half)["projection"]
+    p_broken = _chain_projection(broken)["projection"]
+    assert (
+        p_broken["event_probabilities"]["p_attacking_return"]
+        < p_half["event_probabilities"]["p_attacking_return"]
+        < p_intact["event_probabilities"]["p_attacking_return"]
+    )
+
+
+def test_N_incompatible_direction_does_not_form_chain():
+    edges = [
+        strong_edge(101, 102),
+        strong_edge(104, 103),
+    ]
+    out = evaluate_multi_player_chain(edges, {101: 1.0, 104: 1.0})
+    assert out["status"] == "REJECTED_INCOMPATIBLE_DIRECTION"
+    constructed = construct_directional_chains(
+        edges,
+        target_player_id=103,
+        teammate_start_probabilities={101: 1.0, 104: 1.0},
+    )
+    assert constructed == []
+
+
+def test_O_cycle_is_rejected():
+    edges = [
+        strong_edge(101, 102),
+        strong_edge(102, 101),
+    ]
+    out = evaluate_multi_player_chain(edges, {101: 1.0, 102: 1.0})
+    assert out["status"] == "REJECTED_CYCLE"
+
+
+def test_P_chain_confidence_is_weakest_meaningful_link():
+    edges = [
+        strong_edge(101, 102, confidence=0.80),
+        strong_edge(102, 103, confidence=0.10),
+    ]
+    out = evaluate_multi_player_chain(edges, {101: 1.0, 102: 1.0})
+    assert out["status"] == "AVAILABLE"
+    assert out["confidence"] == pytest.approx(0.10)
+    assert out["weakest_link_confidence"] == pytest.approx(0.10)
+
+
+def test_Q_chain_beyond_governed_max_length_is_rejected():
+    # Config governs max players in a chain. At the current max=4,
+    # a five-player / four-edge candidate must fail closed.
+    edges = [
+        strong_edge(101, 102),
+        strong_edge(102, 103),
+        strong_edge(103, 104),
+        strong_edge(104, 105),
+    ]
+    out = evaluate_multi_player_chain(
+        edges,
+        {101: 1.0, 102: 1.0, 103: 1.0, 104: 1.0},
+    )
+    assert out["status"] == "REJECTED_MAX_CHAIN_LENGTH"
+    assert out["multiplier"] == pytest.approx(1.0)
+
+
+def test_R_pairwise_only_runtime_remains_numerically_stable():
+    target, creator, connections = target_and_creator_rows()
+    link = evaluate_linkup(
+        target,
+        creator,
+        target_player_id=20,
+        teammate_player_id=21,
+        target_role="FINISHER",
+        teammate_role="CREATOR",
+        connection_rows=connections,
+    )
+    kwargs = dict(
+        match_rows=target,
+        player_id=20,
+        current_gw=6,
+        opponent_team_id=86,
+        current_context={"manager_id": "M1", "formation": "4-3-3"},
+        linkups=[{**link, "target_role": "FINISHER"}],
+        teammate_start_probabilities={21: 0.5},
+        opponent_history_rows=[],
+        opponent_history_scope="CURRENT-SEASON ONLY",
+    )
+    legacy_pairwise = build_contextual_dynamics(**kwargs)
+    explicit_no_chain = build_contextual_dynamics(**kwargs, chains=[])
+    assert legacy_pairwise["event_multipliers"] == explicit_no_chain["event_multipliers"]
+    assert legacy_pairwise["linkup_network"]["chain_count"] == 0
+
+
+def test_S_prior_season_matchup_affects_history_not_current_trajectory():
+    current = [
+        row(
+            player=201,
+            gw=gw,
+            match=f"s-current-{gw}",
+            opponent=60 + gw,
+            xg=0.30,
+            role="STRIKER",
+        )
+        for gw in range(1, 6)
+    ]
+    prior = row(
+        player=201,
+        gw=38,
+        match="s-prior-opponent",
+        opponent=99,
+        xg=0.80,
+        role="STRIKER",
+        manager="M1",
+        formation="4-3-3",
+    )
+    prior["season_age"] = 1
+    context = build_contextual_dynamics(
+        current,
+        player_id=201,
+        current_gw=5,
+        opponent_team_id=99,
+        current_context={
+            "manager_id": "M1",
+            "formation": "4-3-3",
+            "player_role": "STRIKER",
+        },
+        opponent_history_rows=[prior],
+        opponent_history_scope="MULTI-SEASON GOVERNED",
+    )
+    assert context["trajectory"]["sample_size"] == 5
+    matchup = context["opponent_specific_matchup"]
+    assert matchup["historical_meetings"] == 1
+    assert matchup["prior_season_meetings"] == 1
+    assert matchup["opponent_history_scope"] == "MULTI-SEASON GOVERNED"
+
+
+def test_T_old_meeting_system_change_is_heavily_discounted():
+    current = [
+        row(
+            player=202,
+            gw=gw,
+            match=f"t-current-{gw}",
+            opponent=60 + gw,
+            xg=0.60,
+            role="STRIKER",
+        )
+        for gw in range(1, 5)
+    ]
+    prior = row(
+        player=202,
+        gw=38,
+        match="t-prior",
+        opponent=99,
+        xg=0.05,
+        role="STRIKER",
+        manager="OLD",
+        formation="5-4-1",
+    )
+    prior["season_age"] = 2
+    same = build_contextual_dynamics(
+        current,
+        player_id=202,
+        current_gw=4,
+        opponent_team_id=99,
+        current_context={
+            "manager_id": "OLD",
+            "formation": "5-4-1",
+            "player_role": "STRIKER",
+        },
+        opponent_history_rows=[prior],
+        opponent_history_scope="MULTI-SEASON GOVERNED",
+    )["opponent_specific_matchup"]
+    changed = build_contextual_dynamics(
+        current,
+        player_id=202,
+        current_gw=4,
+        opponent_team_id=99,
+        current_context={
+            "manager_id": "NEW",
+            "formation": "4-3-3",
+            "player_role": "STRIKER",
+        },
+        opponent_history_rows=[prior],
+        opponent_history_scope="MULTI-SEASON GOVERNED",
+    )["opponent_specific_matchup"]
+    assert changed["tactical_similarity"] < same["tactical_similarity"]
+    assert abs(changed["posterior_rate_modifier"] - 1.0) <= abs(
+        same["posterior_rate_modifier"] - 1.0
+    )
+
+
+def test_U_zero_goals_strong_prior_xg_is_not_adverse_from_result_alone():
+    current = [
+        row(
+            player=203,
+            gw=gw,
+            match=f"u-current-{gw}",
+            opponent=60 + gw,
+            xg=0.70,
+            role="STRIKER",
+        )
+        for gw in range(1, 5)
+    ]
+    prior = row(
+        player=203,
+        gw=38,
+        match="u-prior",
+        opponent=99,
+        xg=1.20,
+        goals=0,
+        role="STRIKER",
+        manager="M1",
+        formation="4-3-3",
+    )
+    prior["season_age"] = 1
+    matchup = build_contextual_dynamics(
+        current,
+        player_id=203,
+        current_gw=4,
+        opponent_team_id=99,
+        current_context={
+            "manager_id": "M1",
+            "formation": "4-3-3",
+            "player_role": "STRIKER",
+        },
+        opponent_history_rows=[prior],
+        opponent_history_scope="MULTI-SEASON GOVERNED",
+    )["opponent_specific_matchup"]
+    assert matchup["result_process"]["result_evidence"]["goals"] == 0
+    assert matchup["result_process"]["process_evidence"]["xg"] == pytest.approx(1.2)
+    assert matchup["classification"] != "ADVERSE"
+
+
+def test_V_missing_prior_season_source_is_explicit_and_non_fabricated():
+    current = [
+        row(
+            player=204,
+            gw=gw,
+            match=f"v-current-{gw}",
+            opponent=60 + gw,
+            xg=0.40,
+            role="STRIKER",
+        )
+        for gw in range(1, 5)
+    ]
+    matchup = build_contextual_dynamics(
+        current,
+        player_id=204,
+        current_gw=4,
+        opponent_team_id=99,
+        current_context={"manager_id": "M1", "formation": "4-3-3"},
+        opponent_history_rows=[],
+        opponent_history_scope="CURRENT-SEASON ONLY",
+    )["opponent_specific_matchup"]
+    assert matchup["opponent_history_scope"] == "CURRENT-SEASON ONLY"
+    assert (
+        matchup["prior_season_matchup_status"]
+        == "UNAVAILABLE — NO GOVERNED MATCH-LEVEL FACTUAL SOURCE"
+    )
+    assert matchup["prior_season_meetings"] == 0

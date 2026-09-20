@@ -8,7 +8,10 @@ from pathlib import Path
 import pytest
 
 from src.engines.canonical_decision_methodology import CANONICAL_WEIGHTS
-from src.engines.lineup_governance import build_package_decision
+from src.engines.lineup_governance import (
+    _materialize_native_mini_league_overlay,
+    build_package_decision,
+)
 from src.engines.report_enrichment import _mini_league_overlay_user_block
 from src.engines.v12_mini_league_overlay import (
     MiniLeagueOverlayError,
@@ -879,3 +882,125 @@ def test_69_partial_coverage_eo_is_not_claimed():
 def test_70_hold_baseline_still_exists_after_overlay():
     attached = attach_mini_league_overlay(_package(), _overlay())
     assert any(row["route_id"] == "HOLD" for row in attached["routes"])
+
+
+def test_71_runtime_consumer_materializes_native_overlay_from_published_v6_facts(tmp_path):
+    root = tmp_path
+    manifest = {
+        "request_id": "prefetch-test-1",
+        "generated_at": "2026-09-20T02:00:00Z",
+        "gw": 36,
+        "entry_id": 100,
+        "priority_league_id": 999,
+        "mini_league_status": "AVAILABLE",
+    }
+    manifest_path = root / "v6" / "report_prefetch" / "latest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    league_root = root / "v6" / "mini_leagues" / "999"
+    league_root.mkdir(parents=True, exist_ok=True)
+    (league_root / "standings.json").write_text(
+        json.dumps(_standings()), encoding="utf-8"
+    )
+    (league_root / "gw_36_manager_picks.json").write_text(
+        json.dumps(_picks()), encoding="utf-8"
+    )
+
+    materialized = _materialize_native_mini_league_overlay(
+        _package(),
+        {"team_id": 100},
+        data_root=root,
+    )
+    overlay = materialized["mini_league_overlay"]
+    assert overlay["model_owner"] == "V12_MINI_LEAGUE_OVERLAY"
+    assert overlay["status"] == "READY"
+    assert overlay["coverage"]["state"] == "FULL"
+    assert (
+        overlay["mini_league_evidence_provenance"]["runtime_binding"][
+            "occurrence_matches"
+        ]
+        is True
+    )
+    assert (
+        overlay["mini_league_evidence_provenance"]["runtime_binding"]["source"]
+        == "PUBLISHED_V6_REPORT_PREFETCH_FACTS"
+    )
+
+
+def test_72_stale_v6_occurrence_degrades_overlay_without_switching_baseline(tmp_path):
+    root = tmp_path
+    manifest = {
+        "request_id": "prefetch-stale",
+        "generated_at": "2026-09-20T02:00:00Z",
+        "gw": 35,
+        "entry_id": 100,
+        "priority_league_id": 999,
+        "mini_league_status": "AVAILABLE",
+    }
+    manifest_path = root / "v6" / "report_prefetch" / "latest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    materialized = _materialize_native_mini_league_overlay(
+        _package(),
+        {"team_id": 100},
+        data_root=root,
+    )
+    overlay = materialized["mini_league_overlay"]
+    assert overlay["status"] == "UNAVAILABLE"
+    assert overlay["decision_delta"]["changed"] is False
+    assert overlay["adjusted_decision"]["route_id"] == "A"
+    assert (
+        overlay["mini_league_evidence_provenance"]["runtime_binding"][
+            "occurrence_matches"
+        ]
+        is False
+    )
+
+
+def test_73_runtime_overlay_materializer_does_not_touch_legacy_package_artifact(tmp_path):
+    legacy = {"model_owner": "LEGACY_PACKAGE_OPTIMIZER", "packages": []}
+    result = _materialize_native_mini_league_overlay(
+        legacy,
+        {"team_id": 100},
+        data_root=tmp_path,
+    )
+    assert result is legacy
+    assert "mini_league_overlay" not in result
+
+
+def test_74_runtime_materialization_is_bound_inside_output_fingerprint(tmp_path):
+    root = tmp_path
+    manifest = {
+        "request_id": "prefetch-test-fingerprint",
+        "generated_at": "2026-09-20T02:00:00Z",
+        "gw": 36,
+        "entry_id": 100,
+        "priority_league_id": 999,
+    }
+    manifest_path = root / "v6" / "report_prefetch" / "latest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    league_root = root / "v6" / "mini_leagues" / "999"
+    league_root.mkdir(parents=True, exist_ok=True)
+    (league_root / "standings.json").write_text(
+        json.dumps(_standings()), encoding="utf-8"
+    )
+    (league_root / "gw_36_manager_picks.json").write_text(
+        json.dumps(_picks()), encoding="utf-8"
+    )
+    first = _materialize_native_mini_league_overlay(
+        _package(), {"team_id": 100}, data_root=root
+    )["mini_league_overlay"]
+
+    manifest["request_id"] = "prefetch-test-fingerprint-2"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    second = _materialize_native_mini_league_overlay(
+        _package(), {"team_id": 100}, data_root=root
+    )["mini_league_overlay"]
+
+    assert first["output_fingerprint"] != second["output_fingerprint"]
+    assert (
+        first["model_evidence_binding"]["output_fingerprint"]
+        == first["output_fingerprint"]
+    )

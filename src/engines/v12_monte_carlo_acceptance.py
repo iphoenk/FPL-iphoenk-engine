@@ -80,36 +80,38 @@ def build_acceptance_fixture() -> tuple[dict, dict]:
             "team_id": team_id,
             "xmins": xmins,
         }
-        fixture = project_player_fixture(
-            player,
-            xmins,
-            {
-                "event": 6,
-                "fixture": fixture_ids[team_id],
-                "opponent": opponents[team_id],
-                "team_expected_goals": 1.42 + 0.03 * (team_id % 3),
-                "clean_sheet_probability": 0.34 + 0.02 * (team_id % 2),
-            },
-            home=team_id % 2 == 1,
-            rates=_rates(position, upgrade=element == 16),
-        )
-        player["xpts_by_gw"] = [
-            {
-                "gw": 6,
-                "mean": fixture["mean"],
-                "std": fixture["std"],
-                "fixtures": [fixture],
-            }
-        ]
+        player["xpts_by_gw"] = []
+        for offset, gw in enumerate(range(6, 11)):
+            fixture = project_player_fixture(
+                player,
+                xmins,
+                {
+                    "event": gw,
+                    "fixture": fixture_ids[team_id] + offset * 10,
+                    "opponent": opponents[team_id],
+                    "team_expected_goals": 1.42 + 0.03 * (team_id % 3) + 0.01 * offset,
+                    "clean_sheet_probability": 0.34 + 0.02 * (team_id % 2),
+                },
+                home=(team_id + offset) % 2 == 1,
+                rates=_rates(position, upgrade=element == 16),
+            )
+            player["xpts_by_gw"].append(
+                {
+                    "gw": gw,
+                    "mean": fixture["mean"],
+                    "std": fixture["std"],
+                    "fixtures": [fixture],
+                }
+            )
         players.append(player)
 
     hold_xi = [1, 3, 4, 5, 8, 9, 10, 11, 12, 13, 14]
     change_xi = [1, 3, 4, 5, 8, 16, 10, 11, 12, 13, 14]
 
-    def lineup(xi: list[int]) -> dict:
+    def lineup(xi: list[int], gw: int) -> dict:
         return {
             "status": "READY",
-            "gw": 6,
+            "gw": gw,
             "starting_xi": xi,
             "bench_gk": 2,
             "bench_order": [15, 6, 7],
@@ -128,7 +130,7 @@ def build_acceptance_fixture() -> tuple[dict, dict]:
                 "route_id": "HOLD",
                 "classification": "HOLD",
                 "final_squad_elements": list(range(1, 16)),
-                "football_route_utility": {"per_gw": [lineup(hold_xi)]},
+                "football_route_utility": {"per_gw": [lineup(hold_xi, gw) for gw in range(6, 11)]},
                 "horizons": {"GW+1": {"status": "READY", "net_delta_vs_hold": 0.0}},
                 "transfer_economics": {
                     "status": "PASS",
@@ -141,7 +143,7 @@ def build_acceptance_fixture() -> tuple[dict, dict]:
                 "route_id": "R1",
                 "classification": "CHANGE",
                 "final_squad_elements": [x for x in range(1, 16) if x != 9] + [16],
-                "football_route_utility": {"per_gw": [lineup(change_xi)]},
+                "football_route_utility": {"per_gw": [lineup(change_xi, gw) for gw in range(6, 11)]},
                 "horizons": {"GW+1": {"status": "READY", "net_delta_vs_hold": 0.45}},
                 "transfer_economics": {
                     "status": "PASS",

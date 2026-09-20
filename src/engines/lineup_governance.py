@@ -147,14 +147,6 @@ def _materialize_native_mini_league_overlay(
             else package_optimizer.get("generated_at")
         ),
     )
-    overlay["runtime_materialization"] = {
-        "producer": "src.engines.lineup_governance",
-        "source": "PUBLISHED_V6_REPORT_PREFETCH_FACTS",
-        "occurrence_matches": occurrence_matches,
-        "football_report_fail_operational": True,
-        "scheduler_added": False,
-        "v6_mutated": False,
-    }
     return attach_mini_league_overlay(package_optimizer, overlay)
 
 

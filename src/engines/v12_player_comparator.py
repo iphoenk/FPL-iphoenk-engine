@@ -79,6 +79,217 @@ def _owner(mapping: Mapping[str, Any], expected: str, label: str) -> None:
 def _unavailable(reason: str) -> dict[str, Any]:
     return {"value": "UNAVAILABLE", "reason": reason}
 
+def _nested(mapping: Mapping[str, Any], key: str) -> Mapping[str, Any]:
+    value = mapping.get(key)
+    return value if isinstance(value, Mapping) else {}
+
+
+def _normalize_minutes(minutes: Mapping[str, Any]) -> dict[str, Any]:
+    """Read-only adapter for native P1.1 output plus legacy compact fixtures."""
+    _owner(minutes, MINUTES_OWNER, "fixture.minutes")
+    conditional = _nested(minutes, "conditional_probabilities")
+    derived = _nested(minutes, "derived_probabilities")
+    distribution = _nested(minutes, "xmins_distribution")
+    native = bool(conditional or derived or distribution or "start_probability" in minutes)
+
+    p_available_raw = conditional.get("p_available")
+    if p_available_raw is None:
+        p_available_raw = minutes.get("p_available")
+    p_start_raw = derived.get("p_start")
+    if p_start_raw is None:
+        p_start_raw = minutes.get("start_probability")
+    if p_start_raw is None:
+        p_start_raw = minutes.get("p_start")
+    p_dnp_raw = derived.get("p_dnp")
+    if p_dnp_raw is None:
+        p_dnp_raw = minutes.get("dnp_probability")
+    if p_dnp_raw is None:
+        p_dnp_raw = minutes.get("p_dnp")
+    p_cameo_raw = derived.get("p_cameo")
+    if p_cameo_raw is None:
+        p_cameo_raw = minutes.get("cameo_probability")
+    if p_cameo_raw is None:
+        p_cameo_raw = minutes.get("p_cameo")
+    p_late_raw = derived.get("p_late_cameo")
+    if p_late_raw is None:
+        p_late_raw = minutes.get("late_cameo_probability")
+    if p_late_raw is None:
+        p_late_raw = minutes.get("p_late_cameo")
+    xmins_raw = distribution.get("mean")
+    if xmins_raw is None:
+        xmins_raw = minutes.get("expected_minutes")
+    if xmins_raw is None:
+        xmins_raw = minutes.get("xmins")
+
+    p_available = _prob(p_available_raw, "p_available")
+    p_start = _prob(p_start_raw, "p_start")
+    p_dnp = _prob(p_dnp_raw, "p_dnp")
+    p_cameo = None if p_cameo_raw is None else _prob(p_cameo_raw, "p_cameo")
+    p_late = None if p_late_raw is None else _prob(p_late_raw, "p_late_cameo")
+    xmins = _finite(xmins_raw, "xmins")
+    if xmins < 0.0:
+        raise ComparatorContractError("xmins must be >= 0")
+
+    return {
+        "model_owner": MINUTES_OWNER,
+        "source_schema": "NATIVE_P1_1" if native else "COMPACT_COMPAT",
+        "p_available": p_available,
+        "p_start": p_start,
+        "p_dnp": p_dnp,
+        "p_cameo": p_cameo,
+        "p_late_cameo": p_late,
+        "xmins": xmins,
+        "xmins_distribution": minutes.get("xmins_distribution"),
+        "provenance": (
+            minutes.get("provenance")
+            or minutes.get("evidence_lineage")
+            or minutes.get("model_evidence")
+        ),
+        "raw_owner_output": minutes,
+    }
+
+
+def _quantile_items(point_distribution: Mapping[str, Any]) -> list[tuple[float, Any, str]]:
+    quantiles = point_distribution.get("quantiles")
+    if not isinstance(quantiles, Mapping):
+        return []
+    out: list[tuple[float, Any, str]] = []
+    for key, value in quantiles.items():
+        token = str(key).strip().upper()
+        if not token.startswith("P"):
+            continue
+        try:
+            percentile = float(token[1:])
+            numeric = _finite(value, f"point_distribution.quantiles.{key}")
+        except (ValueError, ComparatorContractError):
+            continue
+        out.append((percentile, numeric, str(key)))
+    return sorted(out, key=lambda row: row[0])
+
+
+def _normalize_events(events: Mapping[str, Any]) -> dict[str, Any]:
+    """Read-only adapter for native P1.3/P1.3B output plus compact fixtures."""
+    _owner(events, EVENTS_OWNER, "fixture.events")
+    aggregate = _nested(events, "aggregate")
+    event_probabilities = _nested(events, "event_probabilities")
+    point_distribution_raw = events.get("point_distribution")
+    point_distribution = (
+        point_distribution_raw if isinstance(point_distribution_raw, Mapping) else {}
+    )
+    native = bool(aggregate or event_probabilities or point_distribution)
+
+    xpts_raw = aggregate.get("expected_fpl_points")
+    if xpts_raw is None and events.get("mean") is not None:
+        # P1.3 native top-level mean is the same fixture expected-points moment.
+        xpts_raw = events.get("mean")
+    if xpts_raw is None:
+        xpts_raw = events.get("xpts")
+    xpts = _finite(xpts_raw, "xpts")
+
+    p_return_raw = event_probabilities.get("p_attacking_return")
+    if p_return_raw is None:
+        p_return_raw = events.get("p_return")
+    p_blank_raw = point_distribution.get("p_fpl_blank")
+    if p_blank_raw is None:
+        p_blank_raw = events.get("p_blank")
+    p_return = None if p_return_raw is None else _prob(p_return_raw, "p_return")
+    p_blank = None if p_blank_raw is None else _prob(p_blank_raw, "p_blank")
+
+    uncertainty_raw = aggregate.get("points_std")
+    if uncertainty_raw is None:
+        uncertainty_raw = events.get("std")
+    if uncertainty_raw is None:
+        uncertainty_raw = events.get("uncertainty")
+    uncertainty = (
+        "UNAVAILABLE"
+        if uncertainty_raw is None
+        else _finite(uncertainty_raw, "points_std")
+    )
+
+    quantiles = _quantile_items(point_distribution)
+    if quantiles:
+        floor = {
+            "value": quantiles[0][1],
+            "quantile": quantiles[0][2],
+            "source": "P1.3B_NATIVE_POINT_DISTRIBUTION",
+        }
+        ceiling = {
+            "value": quantiles[-1][1],
+            "quantile": quantiles[-1][2],
+            "source": "P1.3B_NATIVE_POINT_DISTRIBUTION",
+        }
+    elif native:
+        floor = _unavailable("P1.3B native point distribution exposes no governed lower quantile")
+        ceiling = _unavailable("P1.3B native point distribution exposes no governed upper quantile")
+    else:
+        floor = events.get("floor", "UNAVAILABLE")
+        ceiling = events.get("ceiling", "UNAVAILABLE")
+
+    return {
+        "model_owner": EVENTS_OWNER,
+        "source_schema": "NATIVE_P1_3" if native else "COMPACT_COMPAT",
+        "xpts": xpts,
+        "p_return": p_return,
+        "p_blank": p_blank,
+        "point_distribution": point_distribution_raw,
+        "floor": floor,
+        "ceiling": ceiling,
+        "uncertainty": uncertainty,
+        "provenance": (
+            events.get("provenance")
+            or events.get("model_evidence")
+            or point_distribution.get("provenance")
+        ),
+        "raw_owner_output": events,
+    }
+
+
+def _normalize_tactical(
+    tactical: Mapping[str, Any],
+    profile: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Bind native P1.6 score output separately from optional tactical narrative."""
+    _owner(tactical, TACTICAL_OWNER, "fixture.tactical")
+    native_fields = (
+        "canonical_tactical_role_score",
+        "scoring_channel_vector",
+        "scoring_channel_diversity",
+        "tactical_role_fit",
+        "role_resilience",
+        "fixture_suppression_raw",
+        "fixture_suppression_effective",
+        "feature_evidence",
+    )
+    native = any(key in tactical for key in native_fields)
+    model_output = {key: tactical.get(key) for key in native_fields if key in tactical}
+    if "score_decomposition" in tactical:
+        model_output["score_decomposition"] = tactical.get("score_decomposition")
+
+    profile_row = dict(profile or {})
+    # Legacy compact fixtures put explanatory profile fields beside the score owner.
+    # Native owner output never requires those non-owner fields.
+    if not profile_row and not native:
+        profile_row = dict(tactical)
+
+    evidence_class = str(profile_row.get("evidence_class") or "UNKNOWN").strip().upper()
+    if evidence_class not in TACTICAL_CLASSES:
+        raise ComparatorContractError("fixture tactical evidence class is invalid")
+
+    return {
+        "model_owner": TACTICAL_OWNER,
+        "source_schema": "NATIVE_P1_6" if native else "COMPACT_COMPAT",
+        "model_output": model_output if native else dict(tactical),
+        "profile_context": profile_row or None,
+        "evidence_class": evidence_class,
+        "role_summary": profile_row.get("role_summary") or "UNAVAILABLE",
+        "route_to_points": profile_row.get("route_to_points") or "UNAVAILABLE",
+        "provenance": {
+            "model": tactical.get("provenance") or tactical.get("model_evidence"),
+            "profile": profile_row.get("provenance") if profile_row else None,
+        },
+    }
+
+
 
 def _p60(minutes: Mapping[str, Any]) -> dict[str, Any]:
     """Carry P(60+) only when existing P1.1 evidence explicitly supports it."""
@@ -143,66 +354,88 @@ def _fixture_row(row: Mapping[str, Any]) -> dict[str, Any]:
     minutes = row.get("minutes")
     events = row.get("events")
     tactical = row.get("tactical")
+    tactical_profile = row.get("tactical_profile") or row.get("tactical_profile_context")
     if not isinstance(minutes, Mapping):
         raise ComparatorContractError("fixture.minutes P1.1 output is required")
     if not isinstance(events, Mapping):
         raise ComparatorContractError("fixture.events P1.3 output is required")
     if not isinstance(tactical, Mapping):
         raise ComparatorContractError("fixture.tactical P1.6 output is required")
-    _owner(minutes, MINUTES_OWNER, "fixture.minutes")
-    _owner(events, EVENTS_OWNER, "fixture.events")
-    _owner(tactical, TACTICAL_OWNER, "fixture.tactical")
+    if tactical_profile is not None and not isinstance(tactical_profile, Mapping):
+        raise ComparatorContractError("fixture tactical profile must be a mapping when supplied")
 
-    p_available = _prob(minutes.get("p_available"), "p_available")
-    p_start = _prob(minutes.get("p_start"), "p_start")
-    p_dnp = _prob(minutes.get("p_dnp"), "p_dnp")
-    xmins = _finite(minutes.get("xmins"), "xmins")
-    xpts = _finite(events.get("xpts"), "xpts")
-    tactical_class = str(tactical.get("evidence_class") or "").strip().upper()
-    if tactical_class not in TACTICAL_CLASSES:
-        raise ComparatorContractError("fixture tactical evidence class is invalid")
+    minutes_bound = _normalize_minutes(minutes)
+    events_bound = _normalize_events(events)
+    tactical_bound = _normalize_tactical(tactical, tactical_profile)
+
+    profile = tactical_bound.get("profile_context") or {}
+
+    def profile_value(name: str) -> Any:
+        return profile.get(name) if profile.get(name) is not None else "UNAVAILABLE"
 
     return {
         "gw": gw,
         "opponent": row.get("opponent") or "UNAVAILABLE",
         "home_away": row.get("home_away") or "UNAVAILABLE",
         "venue": row.get("venue") or "UNAVAILABLE",
-        "xpts": round(xpts, 8),
-        "xmins": round(xmins, 8),
-        "p_available": round(p_available, 8),
-        "p_start": round(p_start, 8),
+        "xpts": round(events_bound["xpts"], 8),
+        "xmins": round(minutes_bound["xmins"], 8),
+        "p_available": round(minutes_bound["p_available"], 8),
+        "p_start": round(minutes_bound["p_start"], 8),
         "p_60_plus": _p60(minutes),
-        "p_dnp": round(p_dnp, 8),
-        "p_return": events.get("p_return"),
-        "p_blank": events.get("p_blank"),
-        "point_distribution": events.get("point_distribution"),
-        "floor": events.get("floor"),
-        "ceiling": events.get("ceiling"),
-        "uncertainty": events.get("uncertainty"),
-        "tactical_evidence_class": tactical_class,
-        "role_summary": tactical.get("role_summary") or "UNAVAILABLE",
-        "route_to_points": tactical.get("route_to_points") or "UNAVAILABLE",
-        "coach": tactical.get("coach") or "UNAVAILABLE",
-        "base_formation": tactical.get("base_formation") or "UNAVAILABLE",
-        "formation_variants": tactical.get("formation_variants") or "UNAVAILABLE",
-        "build_up": tactical.get("build_up") or "UNAVAILABLE",
-        "pressing": tactical.get("pressing") or "UNAVAILABLE",
-        "defensive_line": tactical.get("defensive_line") or "UNAVAILABLE",
-        "width": tactical.get("width") or "UNAVAILABLE",
-        "transition": tactical.get("transition") or "UNAVAILABLE",
-        "opponent_strengths": tactical.get("opponent_strengths") or "UNAVAILABLE",
-        "opponent_vulnerabilities": tactical.get("opponent_vulnerabilities") or "UNAVAILABLE",
-        "relevant_channel": tactical.get("relevant_channel") or "UNAVAILABLE",
-        "set_piece_aerial_context": tactical.get("set_piece_aerial_context") or "UNAVAILABLE",
-        "set_piece_penalty_role": tactical.get("set_piece_penalty_role") or "UNAVAILABLE",
+        "p_dnp": round(minutes_bound["p_dnp"], 8),
+        "p_cameo": (
+            None
+            if minutes_bound["p_cameo"] is None
+            else round(minutes_bound["p_cameo"], 8)
+        ),
+        "p_late_cameo": (
+            None
+            if minutes_bound["p_late_cameo"] is None
+            else round(minutes_bound["p_late_cameo"], 8)
+        ),
+        "p_return": events_bound["p_return"],
+        "p_blank": events_bound["p_blank"],
+        "point_distribution": events_bound["point_distribution"],
+        "floor": events_bound["floor"],
+        "ceiling": events_bound["ceiling"],
+        "uncertainty": events_bound["uncertainty"],
+        "tactical_evidence_class": tactical_bound["evidence_class"],
+        "canonical_tactical_role_score": tactical_bound["model_output"].get(
+            "canonical_tactical_role_score"
+        ),
+        "p1_6_model_output": tactical_bound["model_output"],
+        "tactical_profile_context": tactical_bound["profile_context"],
+        "role_summary": tactical_bound["role_summary"],
+        "route_to_points": tactical_bound["route_to_points"],
+        "coach": profile_value("coach"),
+        "base_formation": profile_value("base_formation"),
+        "formation_variants": profile_value("formation_variants"),
+        "build_up": profile_value("build_up"),
+        "pressing": profile_value("pressing"),
+        "defensive_line": profile_value("defensive_line"),
+        "width": profile_value("width"),
+        "transition": profile_value("transition"),
+        "opponent_strengths": profile_value("opponent_strengths"),
+        "opponent_vulnerabilities": profile_value("opponent_vulnerabilities"),
+        "relevant_channel": profile_value("relevant_channel"),
+        "set_piece_aerial_context": profile_value("set_piece_aerial_context"),
+        "set_piece_penalty_role": profile_value("set_piece_penalty_role"),
         "rest_congestion": row.get("rest_congestion") or "UNAVAILABLE",
         "midweek_competition_context": row.get("midweek_competition_context") or "UNAVAILABLE",
         "fixture_confidence": row.get("fixture_confidence") or "UNAVAILABLE",
         "data_quality": row.get("data_quality") or "UNAVAILABLE",
+        "owner_schema_binding": {
+            "minutes": minutes_bound["source_schema"],
+            "events": events_bound["source_schema"],
+            "tactical": tactical_bound["source_schema"],
+            "normalization": "READ_ONLY_DETERMINISTIC_NON_AUTHORITATIVE",
+        },
         "provenance": {
-            "minutes": minutes.get("provenance"),
-            "events": events.get("provenance"),
-            "tactical": tactical.get("provenance"),
+            "minutes": minutes_bound["provenance"],
+            "events": events_bound["provenance"],
+            "tactical_model": tactical_bound["provenance"]["model"],
+            "tactical_profile": tactical_bound["provenance"]["profile"],
             "fixture": row.get("provenance"),
         },
     }

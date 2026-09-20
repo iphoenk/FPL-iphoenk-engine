@@ -140,6 +140,18 @@ def _valid_proof(**overrides) -> dict:
         monte_carlo=_not_run_mc(),
         final_action="WAIT",
         search_authority="FULL",
+        search_proof={
+            "owned_expected": 15,
+            "owned_evaluated": 15,
+            "eligible_universe_expected": 657,
+            "eligible_universe_evaluated": 657,
+            "outgoing_candidate_count": 15,
+            "outgoing_combination_count": 120,
+            "legal_route_count": 1,
+            "hold_included": True,
+            "lossy_pruning": False,
+            "search_authority": "FULL",
+        },
         execution_provenance={
             "runtime": "CHATGPT_AUTOMATION",
             "repository_python_executed": False,

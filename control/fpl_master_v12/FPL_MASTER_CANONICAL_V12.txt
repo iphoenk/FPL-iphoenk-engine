@@ -1,5 +1,5 @@
 FPL MASTER CANONICAL V12 — FAIL-OPERATIONAL REPORT-PLANE ARCHITECTURE
-Effective: 2026-09-21T05:24:14+07:00
+Effective: 2026-09-21T05:45:00+07:00
 Authority path: control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
 State path: control/fpl_master_v12/FPL_MASTER_STATE_V12.json
 
@@ -403,9 +403,9 @@ Every real-schema row terminates in exactly one truthful DATE STATE:
 A EXPECTED_CHANGE_DATE — estimated_change_date_uk;estimated_change_date_wib;projection_offset;evidence_timestamp.
 B NO_CROSSING_WITHIN_GOVERNED_HORIZON — estimated date remains null; expose last_supported_projection_date_uk;last_supported_projection_date_wib;horizon_cycles;latest_supported_projection;evidence_timestamp. Preserve concise horizon context such as Belum terdeteksi berubah sampai 23 Sep 2026 • 06:00 WIB, but cycles_to_expected_change and estimated_change_window remain UNAVAILABLE because no governed expected-change cycle is proven.
 C DATE_UNAVAILABLE — only for genuinely missing/invalid evidence, with exact degradation_reason.
-NO_CROSSING is a truthful terminal evidence state and not permission to invent a later date; however it does not satisfy the mandatory ETA timing contract for a COMPLETE RISE20/FALL20 section.
+NO_CROSSING is a truthful, healthy terminal evidence state and not permission to invent a later date. When the source is current/healthy, exact20 selection is complete, official cycle clocks are derivable, and the row has a valid governed horizon, NO_CROSSING_WITHIN_GOVERNED_HORIZON satisfies the row timing contract for a COMPLETE RISE20/FALL20 section even though cycles_to_expected_change and estimated_change_window truthfully remain UNAVAILABLE because no crossing exists.
 
-If Official Predictor and supporting providers disagree, surface each source signal and the disagreement explicitly; never manufacture consensus. Official FPL current price/factual price change remains authoritative. A healthy exact20 RISE20/FALL20 section is COMPLETE only when every row has the mandatory visible timing/action fields with a governed expected-change cycle and WIB timing. Rows with truthful but unsupported ETA stay visible with UNAVAILABLE + exact reason, and the section is DEGRADED rather than falsely COMPLETE. Price timing is context only and NEVER creates ACT without the football decision case.
+If Official Predictor and supporting providers disagree, surface each source signal and the disagreement explicitly; never manufacture consensus. Official FPL current price/factual price change remains authoritative and its factual scope does not inherit predictor degradation merely because a model field is unavailable. A healthy exact20 RISE20/FALL20 section is COMPLETE when the Official universe/current-price facts are valid, predictor health is current/healthy, offset-0 coverage supports exact20 selection, official cycle clocks are derivable, and each selected row terminates truthfully as EXPECTED_CHANGE_DATE or NO_CROSSING_WITHIN_GOVERNED_HORIZON. A valid NO_CROSSING row is healthy evidence, not degradation. DEGRADED is reserved for factual source problems such as missing/stale/invalid predictor evidence, insufficient offset-0 coverage, schema/identity failure, unavailable evidence timestamp or official cycle clock, DATE_UNAVAILABLE, or explicit source inconsistency. Degrade only the affected source/field/scope; unrelated core, repository-Python, workflow, QA, or plumbing status must not downgrade current healthy Official FPL facts or a current healthy official_price_predictor artifact. Price timing is context only and NEVER creates ACT without the football decision case.
 
 12. ICON+ MINI-LEAGUE
 Every visible report includes mode-appropriate ICON+ analysis using freshest authoritative available denominator.

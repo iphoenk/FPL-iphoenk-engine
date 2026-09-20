@@ -882,4 +882,195 @@ Existing PRE_RENDER_QA and POST_RENDER_QA own semantic validation; do not create
 A structurally complete serious decision is not mathematically V12-compliant without the DECISION_PROOF fields above.
 If an optional decision scope is truthfully PARTIAL/DEGRADED, preserve the due visible report and label only that scope degraded.
 
+
+20. GW1-TO-CURRENT TRAJECTORY / OPPONENT MATCHUP / LINK-UP DEPENDENCY
+This section is Canonical V12 methodology authority. It refines the existing
+P1.1/P1.3/P1.6/P1.7/P1.8 path and MUST NOT create a second probability engine,
+a second methodology authority, a new factual provider or another scheduler.
+
+20A. DATA-PLANE BOUNDARY / EVIDENCE AVAILABILITY
+A. V6 remains the ONLY factual production data plane. Reuse existing
+playermatchstats/Official/tactical owner evidence before considering any new
+provider. Missing optional contextual evidence degrades only the affected
+field/model component.
+B. Every required contextual field is classified AVAILABLE, PARTIAL or
+UNAVAILABLE from proven provenance. Do not alias chances_created to a distinct
+key_pass field; do not fabricate cutbacks, heatmaps, direct player-to-player
+passes or direct chance-recipient links when not proven.
+C. Match/opponent/home-away identity may be deterministically derived only
+from existing row identity/team presence when uniquely supportable. GW is never
+inferred from arbitrary match ordering. If an exact GW cannot be bound, mark
+that trajectory field PARTIAL/UNAVAILABLE rather than manufacturing sequence.
+D. Contextual state is derived evidence only. FPL_MASTER_STATE_V12.json may
+persist compact trajectory class, role confidence, matchup class/posterior
+modifier/sample size, link relationship/strength/confidence, linked-player
+P(start), last evaluated GW and current WAIT/PREPARE/ACT state. State never
+becomes methodology or factual authority and never stores raw V6 payloads.
+
+20B. GW1 -> CURRENT MATCH-BY-MATCH PLAYER TRAJECTORY
+A. For every relevant player, retain every supportable COMPLETED league match
+from GW1 through latest completed GW. Do not replace this history with only
+season aggregate or last-N.
+B. Per-match trajectory uses supportable minutes, start/sub state, role,
+xG/xA/xGI, xGI/90, shots/SoT, big chances, opposition-box touches, chances
+created, set-piece/penalty evidence, defensive contribution and actual FPL
+output. Unsupported fields stay explicit.
+C. GW1 remains part of the prior. Recent evidence receives bounded recency
+weight using a global governed decay policy, never named-player weights:
+weighted_metric = sum(weight_gw * metric_gw) / sum(weight_gw).
+D. Recency-weighted rates are shrunk toward the full GW1-current baseline.
+One-match spikes cannot reset the posterior. Sustained multi-match role/minutes
+changes may move the posterior faster than isolated output.
+E. Publish sample size/effective sample and classify improving, declining,
+stable/noisy, role transition or minutes-role transition only when evidence
+supports the label.
+
+20C. RESULT EVIDENCE != PROCESS EVIDENCE
+A. Historical goals/assists/FPL returns are RESULT EVIDENCE.
+B. xG/xA/xGI, shots, SoT, big chances, box access, chances created, service and
+role evidence are PROCESS EVIDENCE.
+C. A blank or poor scoreline with strong repeatable process is not automatically
+an adverse matchup. Repeated low process plus tactically coherent suppression
+may increase an adverse posterior.
+D. A haul unsupported by process is a regression/variance candidate and never
+automatically creates ACT.
+
+20D. OPPONENT-SPECIFIC MATCHUP HISTORY
+A. Retrieve supportable historical meetings against the current opponent and
+evaluate minutes/start status/role/result/process/set pieces/service/game
+context where available.
+B. Raw H2H result is a feature, never main authority. Never implement
+"never scored versus X -> avoid", "always hauls versus X -> captain", or any
+named opponent/player shortcut.
+C. Shrink matchup evidence toward the player's current baseline according to
+sample size. One meeting is very weak; two are weak; repeated tactically
+comparable process may earn more influence.
+D. Compare current versus historical manager/system/formation/block/press,
+defensive personnel/midfield structure and player role only when reproducible.
+Missing dimensions do not become assumed similarity.
+E. Manager/system/personnel/role changes reduce the tactical relevance
+coefficient. Historical rate adjustment is bounded and multiplied by both
+sample confidence and tactical relevance.
+F. Allowed visible classification is exactly SUPPORTIVE, NEUTRAL, ADVERSE or
+INSUFFICIENT SAMPLE. Classification reflects process + context, not goals alone.
+
+20E. INTER-PLAYER LINK-UP / DEPENDENCY NETWORK
+A. Model directional two-player links and bounded multi-player chains such as
+progressor->creator->finisher, fullback->winger->striker, set-piece
+taker->target, defensive-midfielder->fullback licence and substitution-created
+late-game combinations.
+B. Co-returns/correlation alone are insufficient. Evidence may include shared
+minutes, direct passes/chance creation to a teammate, xA->xG connection,
+progressive pass/reception, crosses/cutbacks, box-entry connection, set-piece
+targeting, with/without splits, team attacking output and role
+complementarity, only when those fields are actually supported.
+C. When direct player-to-player evidence is unavailable, confidence is capped.
+If neither a direct process bridge nor reproducible tactical role bridge exists,
+correlation-only dependency receives zero decision authority.
+D. For meaningful links compare target output when partner STARTS, DOES NOT
+START, is SUBBED OFF, ABSENT or CHANGES ROLE where sample allows. Apply strong
+small-sample Bayesian shrinkage.
+E. Historical dependency is discounted when current roles are no longer
+tactically comparable, even when the old shared-minute sample is large.
+F. Each link publishes direction, strength, confidence, sample size, recency,
+tactical relevance, shared minutes, with/without process and evidence
+availability. No player-specific coefficient is permitted.
+
+20F. PROBABILISTIC TEAMMATE AVAILABILITY / MULTI-PLAYER CHAINS
+A. Dependency is never only binary plays/absent. Marginalize with the existing
+P1.1 teammate probability:
+P(event_B) = P(A starts)*P(event_B|A starts)
+           + P(A not start)*P(event_B|A not start).
+B. Linked teammate P(start) comes from existing P1.1/xMins semantics. This
+contextual layer never creates a second minutes model.
+C. Multi-player chains use a bounded confidence/intact-probability
+approximation and a governed maximum chain length. Do not enumerate an
+unbounded 2^N availability state space.
+D. If a critical middle node is unlikely to start, the chain modifier moves
+toward neutral/without-player evidence according to the probability and
+confidence.
+
+20G. INTEGRATION INTO EXISTING P1.3 DISTRIBUTION
+A. Contextual dynamics is a bounded conditional refinement to the existing
+P1.3 posterior goal/assist rates before the existing joint event/point PMF is
+formed. It is not a parallel prediction engine.
+B. No contextual evidence means exact neutral multiplier 1.0 and preserves
+existing P1.3 numerics.
+C. Contextual evidence may alter P(goal), P(assist), P(return), P(2+ returns),
+P(haul), P(blank), xPts, variance, ceiling and downside through the existing
+joint predictive distribution. Never adjust only headline mean xPts.
+D. P1.1 finite-state xMins, P1.3 Bayesian core, P1.4 Monte Carlo methodology,
+P1.6 tactical scorer, P1.7 lineup/captain optimizer and P1.8 mini-league
+overlay retain ownership. 20/25/30/25 stays exactly unchanged.
+E. Prevent double counting: contextual trajectory/matchup/link evidence is a
+conditional rate refinement, not a fifth football-score component. The
+Canonical 20/25/30/25 composer remains the decision-score authority.
+
+20H. CAPTAINCY / TRANSFER / MINI-LEAGUE CONSUMPTION
+A. Captaincy consumes the resulting distribution together with existing xMins,
+P(start), role, penalties/set pieces, fixture, ceiling/haul/blank and variance.
+A historical matchup remains bounded. A low-P(start) critical creator may
+reduce the linked player's captaincy distribution only to the extent supported
+by dependency evidence.
+B. Transfer/watchlist logic requires full-universe-first evaluation and
+compares GW1-current trajectory, latest process, role stability, P1.1 security,
+matchup, link-up availability, 1GW/3GW/5GW, price, EO/ownership where relevant,
+mini-league leverage and opportunity cost. One-match haul never bypasses this.
+C. Operational action remains exactly WAIT / PREPARE / ACT. ACT must state
+PLAYER IN, PLAYER OUT, FT/hit, affordability, expected gain, downside,
+alternative and invalidation/reversal trigger.
+D. Mini-league remains an overlay after the football-optimal baseline. Link-up
+or H2H evidence must not be reverse-engineered to justify a rival-chasing move.
+
+20I. POST-MATCH HYPOTHESIS VALIDATION / FULL-UNIVERSE RESCAN
+A. Every completed match tests the pre-match hypothesis: actual shot quality,
+box access, role/minutes, expected link-up, direct service where supported,
+with/without changes and whether blank/haul came from process or finishing
+variance.
+B. Update posterior only after separating result from process. Learn the
+failure mode, not the hindsight winner.
+C. After completed matches rescan the relevant eligible universe, not only
+scorers/assisters, for emerging starters, role changes, rising xMins, strong
+underlying without returns, overperformance, new set-piece roles, tactical
+shifts, new/broken combinations and material price risk.
+
+20J. VISIBLE PLAYER DETAIL
+A. Do NOT add another DEEP top-level section or scheduler. Preserve the
+Canonical 19-section FULL/DEEP backbone.
+B. Where material, nest two player-detail blocks inside existing
+OUR15/comparator/Watchlist/Post-Match surfaces:
+1) OPPONENT-SPECIFIC MATCHUP: meetings, result evidence, process evidence,
+tactical similarity, sample size, Bayesian confidence/current relevance and
+SUPPORTIVE/NEUTRAL/ADVERSE/INSUFFICIENT SAMPLE classification.
+2) LINK-UP / COMBINATION NETWORK: strongest evidence-supported pair/chain,
+relationship type, shared minutes, direct connection/xA->xG where available,
+role complementarity, with/without split, strength, sample, confidence, linked
+P(start), injury/bench sensitivity and projection impact.
+C. Suppress meaningless/zero-confidence pair listings. Missing direct link
+evidence must be visible rather than inferred.
+
+20K. POST-MATCH PLAYER REPORT CONTRACT
+For every important owned/candidate player where supportable, show GW1->latest
+trajectory; latest match evidence; role/minutes evolution; underlying trend;
+opponent-specific matchup; link-up dependency; linked teammate availability
+risk; Bayesian interpretation; P(goal); P(assist); P(return); P(haul);
+P(blank); xPts/variance; 1GW/3GW/5GW; price risk; mini-league impact; and final
+WAIT/PREPARE/ACT. Unsupported values remain explicitly unavailable.
+
+20L. GOVERNANCE / ACCEPTANCE FIXTURES
+A. Haaland-v-Sunderland is a named acceptance fixture only, never a runtime
+named-player rule. A historical zero-goal result may appear in RESULT EVIDENCE,
+but modifier/classification is determined by xG/process, sample size, tactical
+comparability and current context.
+B. Brobbey/Le Fee is a named link-up acceptance fixture only. One completed
+match cannot establish strong dependency by itself. Shared minutes, process,
+direct connection evidence where available, with/without sample, current roles
+and Le Fee P(start) determine confidence and Brobbey's marginalized projection.
+C. Deterministic acceptance must cover: high-process blanks; repeated process
+suppression; system change; isolated haul; sustained role change; creator
+absence; 50% creator P(start); correlation without process; broken multi-player
+chain; and stale-role dependency.
+D. No V6 mutation, no V7, no extra scheduler, no V3/V4/V5 runtime, no
+player-specific hardcode, no temporary acceptance harness in production.
+
 END FPL MASTER CANONICAL V12

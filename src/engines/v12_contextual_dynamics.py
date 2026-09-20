@@ -531,7 +531,10 @@ def evaluate_linkup(
         + _f(cfg.get("role_complementarity_weight"), 0.15) * role_score
     )
     confidence = sample_strength * evidence_strength
-    if not connections:
+    if not connections and role_score <= 0.0:
+        # With/without co-movement without a process bridge is correlation only.
+        confidence = 0.0
+    elif not connections:
         confidence = min(confidence, _f(cfg.get("low_confidence_cap"), 0.35))
     if shared_minutes < _f(cfg.get("minimum_shared_minutes"), 90.0):
         confidence *= shared_minutes / max(1.0, _f(cfg.get("minimum_shared_minutes"), 90.0))

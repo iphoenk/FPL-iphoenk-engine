@@ -167,8 +167,8 @@ def marginalize_teammate(base_rate: float, edge: Mapping[str, Any], p_start: flo
     """P(B)=P(A starts)P(B|A starts)+P(A not)P(B|A not)."""
     p = _clamp(float(p_start), 0.0, 1.0)
     effect = _f(edge.get("signed_effect_xgi90"))
-    present = max(0.0, base_rate + effect * (1.0 - p))
-    absent = max(0.0, base_rate - effect * p)
+    present = max(0.0, base_rate + effect)
+    absent = max(0.0, base_rate - effect)
     marginal = p * present + (1.0 - p) * absent
     return {"with_linked_starter": present, "without_linked_starter": absent, "marginal_rate": marginal, "linked_p_start": p}
 

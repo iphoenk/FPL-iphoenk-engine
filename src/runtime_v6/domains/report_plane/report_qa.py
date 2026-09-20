@@ -247,6 +247,19 @@ _OVERNIGHT_RISK_FIELDS = (
 )
 _ICON_COUNT_METRICS = ("ownership", "starter_share", "captain_share", "vice_share")
 _ALLOWED_ALL15_ACTIONS = frozenset({"START", "BENCH", "HOLD", "WATCH", "SELL-CANDIDATE"})
+_PROHIBITED_OPERATIONAL_ACTION_LABELS = (
+    "ACT-CANDIDATE",
+    "NEAR-ACT",
+    "STRONG-ACT-CANDIDATE",
+)
+_MONITOR_AS_OPERATIONAL_MARKERS = (
+    "OPERATIONAL STATE: MONITOR",
+    "OPERATIONAL STATE = MONITOR",
+    "OPERATIONAL ACTION: MONITOR",
+    "OPERATIONAL ACTION = MONITOR",
+    "ACTION STATE: MONITOR",
+    "ACTION STATE = MONITOR",
+)
 
 
 
@@ -895,6 +908,19 @@ def validate_v12_visible_content_contract(
     }
 
 
+def _validate_operational_action_labels(rendered_body: str) -> list[str]:
+    """Reject non-canonical visible operational states without banning football prose."""
+    upper = str(rendered_body or "").upper()
+    failures = [
+        f"PROHIBITED_OPERATIONAL_ACTION={label}"
+        for label in _PROHIBITED_OPERATIONAL_ACTION_LABELS
+        if label in upper
+    ]
+    if any(marker in upper for marker in _MONITOR_AS_OPERATIONAL_MARKERS):
+        failures.append("PROHIBITED_OPERATIONAL_ACTION=MONITOR")
+    return list(dict.fromkeys(failures))
+
+
 def _validate_v12_rendered_body(
     *,
     report_mode: str,
@@ -909,6 +935,7 @@ def _validate_v12_rendered_body(
     for phrase in _DEBUG_VISIBLE_PHRASES:
         if phrase.casefold() in lower:
             failures.append(f"VISIBLE_DEBUG_LANGUAGE={phrase}")
+    failures.extend(_validate_operational_action_labels(body))
 
     has_actual_update = any(
         isinstance(row, Mapping)

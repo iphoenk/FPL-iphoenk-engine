@@ -1,0 +1,51 @@
+{
+  "contract": "V12_CONTEXTUAL_DYNAMICS_V1",
+  "model_owner": "V12_CONTEXTUAL_DYNAMICS",
+  "model_id": "v12_gw1_matchup_linkup_dynamics_v1",
+  "recency": {
+    "half_life_gws": 2.5,
+    "recent_window_matches": 3,
+    "posterior_shrinkage_equivalent_matches": 4,
+    "trend_ratio_threshold": 0.18,
+    "role_change_min_matches": 2
+  },
+  "matchup": {
+    "sample_shrinkage_k": 3,
+    "minimum_process_minutes": 60,
+    "maximum_log_rate_adjustment": 0.1823215568,
+    "supportive_ratio": 1.12,
+    "adverse_ratio": 0.88,
+    "prior_season_decay": 0.65
+  },
+  "linkup": {
+    "sample_shrinkage_k": 4,
+    "minimum_shared_minutes": 90,
+    "maximum_log_rate_adjustment": 0.2231435513,
+    "direct_connection_weight": 0.55,
+    "with_without_weight": 0.3,
+    "role_complementarity_weight": 0.15,
+    "max_chain_length": 4,
+    "low_confidence_cap": 0.35,
+    "minimum_chain_edge_confidence": 0.05,
+    "maximum_qualified_incoming_edges_per_node": 3,
+    "max_chain_length_semantics": "PLAYERS_IN_CHAIN",
+    "maximum_runtime_chains_per_target": 5
+  },
+  "combined": {
+    "minimum_multiplier": 0.72,
+    "maximum_multiplier": 1.35
+  },
+  "governance": {
+    "automatic_retuning": false,
+    "player_specific_parameters": false,
+    "one_match_rule_creation": false,
+    "historical_matchup_is_bounded_modifier": true,
+    "correlation_is_not_dependency": true,
+    "missing_direct_link_evidence_caps_confidence": true,
+    "methodology_weights_20_25_30_25_unchanged": true,
+    "pairwise_chain_anti_double_count": true,
+    "pairwise_edge_owns_direct_target_effect": true,
+    "chain_owns_incremental_higher_order_effect": true,
+    "final_cap_is_not_anti_double_count": true
+  }
+}

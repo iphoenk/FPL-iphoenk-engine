@@ -115,6 +115,7 @@ jobs:
           tests/test_model_evidence_calibration.py
           tests/test_package_search_exact.py
           tests/test_tactical_role_canonical_scorer.py
+          tests/test_contextual_player_dynamics.py
           tests/test_monte_carlo_engine.py
           tests/test_report_runtime_conformance.py
           tests/test_visible_content_proof.py

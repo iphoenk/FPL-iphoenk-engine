@@ -939,6 +939,109 @@ def build_icon_subscopes(
     }
 
 
+def build_contextual_player_blocks(
+    player_projection: Mapping[str, Any],
+    *,
+    fixture: Any | None = None,
+) -> dict[str, Any]:
+    """Nested human-facing player detail without changing DEEP top-level count."""
+    contextual = dict(player_projection.get("contextual_dynamics") or {})
+    fixture_contexts = [
+        dict(row)
+        for row in contextual.get("fixture_contexts") or []
+        if isinstance(row, Mapping)
+    ]
+    selected = None
+    if fixture is not None:
+        selected = next(
+            (
+                row
+                for row in fixture_contexts
+                if str(row.get("fixture")) == str(fixture)
+            ),
+            None,
+        )
+    if selected is None and fixture_contexts:
+        selected = fixture_contexts[0]
+    if selected is None:
+        return {
+            "state": "UNAVAILABLE",
+            "degradation_reason": "contextual trajectory/matchup evidence unavailable",
+            "blocks": {},
+        }
+
+    matchup = dict(selected.get("matchup") or {})
+    network = dict(selected.get("linkup_network") or {})
+    relationships = [
+        dict(row)
+        for row in network.get("relationships") or []
+        if isinstance(row, Mapping)
+        and float(row.get("confidence") or 0.0) > 0.0
+    ]
+    relationships.sort(
+        key=lambda row: (
+            float(row.get("confidence") or 0.0),
+            float(row.get("dependency_strength") or 0.0),
+        ),
+        reverse=True,
+    )
+    chains = [
+        dict(row)
+        for row in network.get("multi_player_chains") or []
+        if isinstance(row, Mapping)
+        and row.get("status") == "AVAILABLE"
+        and float(row.get("confidence") or 0.0) > 0.0
+    ]
+    chains.sort(
+        key=lambda row: (
+            float(row.get("confidence") or 0.0),
+            abs(float(row.get("multiplier") or 1.0) - 1.0),
+        ),
+        reverse=True,
+    )
+    return {
+        "state": "COMPLETE",
+        "fixture": selected.get("fixture"),
+        "trajectory_classification": selected.get(
+            "trajectory_classification"
+        ),
+        "latest_match_evidence": selected.get("latest_match_evidence"),
+        "blocks": {
+            "OPPONENT-SPECIFIC MATCHUP": {
+                "historical_meetings": matchup.get("historical_meetings"),
+                "result_evidence": (
+                    matchup.get("result_process") or {}
+                ).get("result_evidence"),
+                "process_evidence": (
+                    matchup.get("result_process") or {}
+                ).get("process_evidence"),
+                "tactical_similarity": matchup.get("tactical_similarity"),
+                "sample_size": matchup.get("sample_size"),
+                "bayesian_confidence": matchup.get("sample_shrinkage"),
+                "current_relevance": matchup.get("tactical_similarity"),
+                "classification": matchup.get("classification"),
+                "opponent_history_scope": matchup.get("opponent_history_scope"),
+                "prior_season_matchup_status": matchup.get(
+                    "prior_season_matchup_status"
+                ),
+                "prior_season_meetings": matchup.get(
+                    "prior_season_meetings"
+                ),
+            },
+            "LINK-UP / COMBINATION NETWORK": {
+                "PAIRWISE LINKS": relationships,
+                "relationships": relationships,
+                "relationship_count": len(relationships),
+                "MULTI-PLAYER CHAINS": chains,
+                "multi_player_chains": chains,
+                "chain_count": len(chains),
+                "insufficient_pairs_suppressed": True,
+                "low_confidence_chains_suppressed": True,
+            },
+        },
+    }
+
+
 def materialize_all15(
     *,
     owned15: Sequence[Mapping[str, Any]],

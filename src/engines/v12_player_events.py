@@ -1139,6 +1139,7 @@ def project_player_fixture(
     league_baseline: Mapping[str, Any] | None = None,
     calibration_summary: Mapping[str, Any] | None = None,
     model_evidence_binding: Mapping[str, Any] | None = None,
+    contextual_dynamics: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Posterior predictive fixture projection from state/event uncertainty."""
     element_type = int(player.get("element_type") or 4)
@@ -1162,12 +1163,24 @@ def project_player_fixture(
     attack_multiplier = fixture["fixture_attack_multiplier"]
     cs_prob = fixture["clean_sheet_probability"]
 
-    goal_rate = max(
-        0.0, _f((rates.get("goal") or {}).get("posterior_rate90"))
-    ) * attack_multiplier
-    assist_rate = max(
-        0.0, _f((rates.get("assist") or {}).get("posterior_rate90"))
-    ) * attack_multiplier
+    contextual = dict(contextual_dynamics or {})
+    contextual_multipliers = dict(contextual.get("event_multipliers") or {})
+    contextual_goal_multiplier = clamp(
+        _f(contextual_multipliers.get("goal"), 1.0), 0.01, 10.0
+    )
+    contextual_assist_multiplier = clamp(
+        _f(contextual_multipliers.get("assist"), 1.0), 0.01, 10.0
+    )
+    goal_rate = (
+        max(0.0, _f((rates.get("goal") or {}).get("posterior_rate90")))
+        * attack_multiplier
+        * contextual_goal_multiplier
+    )
+    assist_rate = (
+        max(0.0, _f((rates.get("assist") or {}).get("posterior_rate90")))
+        * attack_multiplier
+        * contextual_assist_multiplier
+    )
     bonus_rate = max(
         0.0, _f((rates.get("bonus") or {}).get("posterior_rate90"))
     )
@@ -1374,6 +1387,25 @@ def project_player_fixture(
         "home": bool(home),
         "team_expected_goals": round(fixture["team_expected_goals"], 6),
         "fixture_attack_multiplier": round(attack_multiplier, 6),
+        "contextual_dynamics": {
+            "applied": bool(contextual),
+            "model": contextual.get("model"),
+            "model_owner": contextual.get("model_owner"),
+            "goal_multiplier": round(contextual_goal_multiplier, 6),
+            "assist_multiplier": round(contextual_assist_multiplier, 6),
+            "trajectory_classification": (
+                (contextual.get("trajectory") or {}).get("trajectory_classification")
+            ),
+            "matchup_classification": (
+                (contextual.get("opponent_specific_matchup") or {}).get("classification")
+            ),
+            "matchup_sample_size": (
+                (contextual.get("opponent_specific_matchup") or {}).get("sample_size")
+            ),
+            "linkup_relationship_count": (
+                (contextual.get("linkup_network") or {}).get("relationship_count")
+            ),
+        },
         "clean_sheet_probability": round(cs_prob, 6),
         "minutes": {
             "Pstart": round(
@@ -1558,7 +1590,11 @@ def project_player_fixture(
             "goal_assist_dependence_parameter": predictive_surface["dependence"]["dependence_parameter"],
             "goal_assist_dependence_calibration_status": predictive_surface["dependence"]["calibration_status"],
             "goal_assist_silent_independence": False,
-            "cross_player_correlation": "NOT_MODELLED_YET",
+            "cross_player_correlation": (
+                "CONTEXTUAL_LINKUP_DEPENDENCY_BOUND"
+                if contextual
+                else "NOT_MODELLED_YET"
+            ),
             "cross_fixture_correlation": "NOT_MODELLED_YET",
             "parameter_uncertainty_propagation": "PARTIAL",
             "point_distribution_completeness": point_distribution["distribution_completeness"],
@@ -1576,6 +1612,9 @@ def project_player_fixture(
             "raw_v6_payload_persisted": False,
             "automatic_parameter_retuning": False,
             "methodology_weights_20_25_30_25_unchanged": True,
+            "contextual_dynamics_applied": bool(contextual),
+            "contextual_dynamics_is_bounded_modifier": True,
+            "existing_bayesian_core_replaced": False,
         },
     }
     return _attach_model_evidence(result, model_evidence_binding)

@@ -33,6 +33,7 @@ CANONICAL_COMPONENT = "TACTICAL_ROLE"
 CANONICAL_WEIGHT = 0.25
 
 EVIDENCE_STATES = {"OBSERVED", "INFERRED", "UNAVAILABLE"}
+TACTICAL_EVIDENCE_CLASSES = frozenset({"OBSERVED_ROLE", "INFERRED_ROLE", "FPL_POSITION_ONLY", "UNKNOWN"})
 DIRECTIONS = {"POSITIVE": 1.0, "NEUTRAL": 0.0, "NEGATIVE": -1.0, "MIXED": 0.0, "UNKNOWN": 0.0}
 AUTHORITY_FACTOR = {"OBSERVED": 1.0, "INFERRED": 0.65, "UNAVAILABLE": 0.0}
 SCOREABLE_DOUBLE_COUNT = {"TACTICAL_DISTINCT", "TACTICAL_INTERACTION_ROLE_MATCHED"}
@@ -73,6 +74,54 @@ def _token(value: Any, label: str) -> str:
     if not TOKEN_RE.match(text):
         raise TacticalRoleContractError(f"{label} must be a bounded canonical token")
     return text
+
+
+def classify_tactical_evidence(
+    *,
+    element_id: int,
+    evidence_class: str,
+    tactical_numeric_evidence: float | None = None,
+    provenance: str | None = None,
+    fingerprint: str | None = None,
+) -> dict[str, Any]:
+    """Classify tactical evidence quality without changing P1.6 mathematics."""
+    try:
+        element = int(element_id)
+    except (TypeError, ValueError) as exc:
+        raise TacticalRoleContractError("element_id must be a positive integer") from exc
+    if element <= 0:
+        raise TacticalRoleContractError("element_id must be a positive integer")
+    classification = str(evidence_class or "").strip().upper()
+    if classification not in TACTICAL_EVIDENCE_CLASSES:
+        raise TacticalRoleContractError(
+            "evidence_class must be one of OBSERVED_ROLE/INFERRED_ROLE/"
+            "FPL_POSITION_ONLY/UNKNOWN"
+        )
+    provenance_text = str(provenance or "").strip() or None
+    fingerprint_text = str(fingerprint or "").strip() or None
+    if classification in {"OBSERVED_ROLE", "INFERRED_ROLE"} and provenance_text is None:
+        raise TacticalRoleContractError(
+            f"{classification} requires explicit provenance"
+        )
+    numeric = tactical_numeric_evidence
+    if classification in {"FPL_POSITION_ONLY", "UNKNOWN"} and numeric is not None:
+        raise TacticalRoleContractError(
+            f"{classification} cannot silently become numeric tactical evidence"
+        )
+    if numeric is not None:
+        numeric = _bounded(numeric, "tactical_numeric_evidence")
+    return {
+        "element_id": element,
+        "evidence_class": classification,
+        "provenance": provenance_text,
+        "fingerprint": fingerprint_text,
+        "tactical_numeric_evidence": numeric,
+        "authority": False,
+        "evidence_only": True,
+        "changes_canonical_score": False,
+        "changes_p1_6_math": False,
+        "fpl_position_is_tactical_role_proof": False,
+    }
 
 
 @lru_cache(maxsize=1)

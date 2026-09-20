@@ -207,7 +207,14 @@ def main() -> int:
         "crn_validation": result["crn_validation"],
     }
     print(json.dumps(summary, sort_keys=True))
-    return 0 if result["status"] == "PASS" and result["actual_paths"] >= 500_000 else 2
+    crn = result["crn_validation"]
+    accepted = (
+        result["status"] == "PASS"
+        and result["actual_paths"] >= 500_000
+        and crn["expected_difference_statistically_compatible"] is True
+        and crn["variance_reduced_or_not_materially_increased"] is True
+    )
+    return 0 if accepted else 2
 
 
 if __name__ == "__main__":

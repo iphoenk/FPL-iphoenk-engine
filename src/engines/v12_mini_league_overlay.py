@@ -793,6 +793,7 @@ def leverage_utility(
     cfg = load_config()
     weights = cfg["leverage"]["posture_weights"][posture]
     exposure = route_exposure(route, league_snapshot)
+    baseline_exposure = route_exposure(baseline_route, league_snapshot)
     mc = _mc_route_metrics(monte_carlo, str(route.get("route_id")))
     leader = (league_snapshot.get("current_league_context") or {}).get(
         "leader_entry_id"
@@ -809,13 +810,27 @@ def leverage_utility(
     )
     quality = 1.0 if str(route.get("route_id")) == str(baseline_route.get("route_id")) else _quality_factor(gate)
 
-    defensive = _f(exposure.get("defensive_coverage_index"), 0.0) - 0.5
+    # Mini-league leverage is relative to the frozen football baseline,
+    # not to an arbitrary 50% ownership threshold. This prevents a genuinely
+    # more-differential close route from being penalized merely because most
+    # of the unchanged XI remains commonly owned.
+    defensive = (
+        _f(exposure.get("defensive_coverage_index"), 0.0)
+        - _f(baseline_exposure.get("defensive_coverage_index"), 0.0)
+    )
     captain_coverage = (
         _f((exposure.get("captain_leverage") or {}).get("rival_captain_pct"), 0.0)
-        / 100.0
-        - 0.5
+        - _f(
+            (baseline_exposure.get("captain_leverage") or {}).get(
+                "rival_captain_pct"
+            ),
+            0.0,
+        )
+    ) / 100.0
+    differential = (
+        _f(exposure.get("mean_differential_exposure"), 0.0)
+        - _f(baseline_exposure.get("mean_differential_exposure"), 0.0)
     )
-    differential = _f(exposure.get("mean_differential_exposure"), 0.0) - 0.5
     mc_upside = (
         _f(mc.get("material_upside_probability"), 0.5) - 0.5
         if mc.get("status") == "AVAILABLE"
@@ -863,9 +878,9 @@ def leverage_utility(
             None if final is None else round(final, 6)
         ),
         "components": {
-            "defensive_coverage_centered": defensive,
-            "captain_coverage_centered": captain_coverage,
-            "differential_upside_centered": differential,
+            "defensive_coverage_delta_vs_football_baseline": defensive,
+            "captain_coverage_delta_vs_football_baseline": captain_coverage,
+            "differential_upside_delta_vs_football_baseline": differential,
             "mc_upside_centered": mc_upside,
             "mc_downside_centered": mc_downside,
             "relative_mc_edge": relative_edge,

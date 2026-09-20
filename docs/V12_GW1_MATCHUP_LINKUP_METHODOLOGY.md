@@ -171,3 +171,106 @@ not produce a strong adverse rule from scoreline alone.
 
 The Brobbey / Le Fee fixture asserts that a single shared match cannot create a
 strong dependency even when a creator-finisher connection is observed.
+
+
+## Runtime completion audit
+
+The bounded completion wires qualified multi-player chains into the same
+contextual path already consumed by P1.3. It does not create another model
+owner.
+
+Runtime flow:
+
+```text
+existing qualified directional pairwise edges
+  -> bounded directional chain construction
+  -> existing P1.1 upstream P(start)
+  -> chain intact probability
+  -> weakest-link confidence
+  -> bounded chain multiplier
+  -> existing pairwise + chain contextual multiplier
+  -> existing P1.3 goal/assist rates
+  -> existing joint event/point PMF
+  -> probabilities, xPts, variance
+  -> existing downstream XI/captain/transfer/MC/mini-league consumers
+```
+
+Chains are constructed only from qualified edges, with a configured maximum
+number of incoming edges per node, maximum chain length and maximum chains per
+target. Direction discontinuity, cycles, weak/incompatible edges and candidates
+beyond the governed maximum fail closed.
+
+For A -> B -> C, chain availability uses the existing P1.1 probabilities of A
+and B. A low or zero P(start) on B therefore weakens the higher-order effect on
+C rather than treating the chain as intact.
+
+The visible LINK-UP / COMBINATION NETWORK block keeps the existing DEEP
+structure and now distinguishes PAIRWISE LINKS from MULTI-PLAYER CHAINS.
+
+## Prior-season factual artifact audit
+
+The runtime V6 artifact catalog and effective source registry were audited
+before any source change.
+
+Evidence observed in the governed `runtime-data-v6` publication:
+
+- `data/v6/evidence/artifact_catalog.json` contains no prior-season EPL
+  player-match artifact suitable for opponent-specific player H2H.
+- `data/v6/current/statsbomb.json` is the StatsBomb Open Data catalogue lane;
+  the registered request is the competitions catalogue, not prior-season
+  Premier League player-match events.
+- `data/v6/normalized/sources/understat.json` is current-season EPL player
+  aggregation. At the audited snapshot it contains 416 player records and zero
+  fixture records, not prior-season player-match observations.
+- `data/v6/normalized/sources/vaastav_fpl.json` is the configured 2026-27
+  mirror. It contains current-season player aggregates and 380 fixture rows,
+  but no prior-season player-match history.
+- `data/v6/health/historical_backfill.json` is mini-league/manager history for
+  the current season and is not player-match factual evidence.
+- Other artifact-catalog history paths are mini-league history, not historical
+  EPL player performance rows.
+
+Therefore no new provider was added and current runtime truth is:
+
+```text
+OPPONENT HISTORY SCOPE: CURRENT-SEASON ONLY
+PRIOR-SEASON MATCHUP:
+UNAVAILABLE — NO GOVERNED MATCH-LEVEL FACTUAL SOURCE
+```
+
+The code keeps a separate `opponent_history_rows` input for a future governed
+artifact. Those rows are never included in the GW1-current trajectory. When
+present, older rows receive additional season-age decay and tactical relevance
+discount before sample shrinkage.
+
+## Current Sunderland factual evidence posture
+
+The governed current V6 Understat normalization resolves Brian Brobbey to
+Official element 552 and Enzo Le Fée to Official element 542. The audited
+current-season aggregate snapshot has match/minute/xG/xA evidence for both.
+Those aggregate rows do not by themselves prove direct creator-recipient
+linkage or prior-season H2H.
+
+Accordingly the runtime may use actual current-season player-match rows when the
+existing `playermatchstats_current` consumer surface supplies them, but it
+must retain the direct-link confidence cap when recipient-level evidence is not
+available. A latest haul alone cannot promote Brobbey-Le Fée to a strong
+dependency.
+
+## Completion acceptance
+
+Permanent deterministic coverage now extends through K-V:
+
+- K: strong A -> B -> C chain reaches P1.3 distribution;
+- L: middle node P(start)=0 materially weakens downstream projection;
+- M: P(start)=0.5 lies between intact and broken states;
+- N: incompatible direction cannot form a chain;
+- O: cycles are rejected;
+- P: chain confidence is governed by the weakest meaningful edge;
+- Q: candidates beyond the configured maximum chain length fail closed;
+- R: pairwise-only behavior remains numerically stable;
+- S: prior-season H2H may affect matchup history but not current trajectory;
+- T: old system/manager mismatch is discounted;
+- U: zero goals with strong xG is not adverse from result alone;
+- V: absent prior-season factual data produces explicit CURRENT-SEASON ONLY /
+  UNAVAILABLE scope.

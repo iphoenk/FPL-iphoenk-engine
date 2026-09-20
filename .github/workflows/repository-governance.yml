@@ -71,6 +71,110 @@ jobs:
         run: python src/platform/repository_test_naming_validate.py
 
 
+  documentation-sync:
+    name: documentation-sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce change timestamp and documentation synchronization
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" != "pull_request" ]]; then
+            echo "Push/main: PR description synchronization metadata is not applicable"
+            exit 0
+          fi
+
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+
+          payload = json.load(open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8"))
+          body = (payload.get("pull_request") or {}).get("body") or ""
+
+          iso = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})"
+          change = re.search(rf"(?mi)^Change timestamp:\s*({iso})\s*$", body)
+          sync = re.search(r"(?mi)^Documentation sync:\s*(UPDATED|NOT_APPLICABLE)\s*$", body)
+          doc_ts = re.search(rf"(?mi)^Documentation timestamp:\s*({iso})\s*$", body)
+
+          if not change:
+              print("::error::PR description must contain 'Change timestamp: <ISO-8601 timestamp with timezone>'")
+              sys.exit(1)
+          if not sync:
+              print("::error::PR description must contain 'Documentation sync: UPDATED' or 'Documentation sync: NOT_APPLICABLE'")
+              sys.exit(1)
+
+          base = os.environ["BASE_SHA"]
+          head = os.environ["HEAD_SHA"]
+          changed = subprocess.check_output(
+              ["git", "diff", "--name-only", base, head],
+              text=True,
+          ).splitlines()
+
+          runtime_prefixes = (
+              "src/runtime_v6/",
+              "src/engines/",
+              "src/models/",
+              "config/v6/",
+              "config/intelligence/",
+              "control/fpl_master_v12/",
+              ".github/workflows/",
+          )
+          runtime_exact = {
+              "README.md",
+              "requirements-v6.lock",
+              "requirements-v6-ci.lock",
+              "requirements-ci.lock",
+          }
+          runtime_relevant = any(
+              p in runtime_exact or any(p.startswith(prefix) for prefix in runtime_prefixes)
+              for p in changed
+          )
+          doc_changed = any(
+              p == "README.md"
+              or p.startswith("docs/")
+              or p == ".github/PULL_REQUEST_TEMPLATE.md"
+              for p in changed
+          )
+
+          status = sync.group(1)
+          if runtime_relevant:
+              if status != "UPDATED":
+                  print("::error::Runtime/architecture/governance changes require 'Documentation sync: UPDATED'")
+                  sys.exit(1)
+              if not doc_changed:
+                  print("::error::Runtime/architecture/governance changes must update README.md, docs/, or the PR documentation template in the same PR")
+                  sys.exit(1)
+
+          if status == "UPDATED":
+              if not doc_ts:
+                  print("::error::Documentation sync UPDATED requires 'Documentation timestamp: <ISO-8601 timestamp with timezone>'")
+                  sys.exit(1)
+              if not doc_changed:
+                  print("::error::Documentation sync UPDATED requires an actual repository documentation change")
+                  sys.exit(1)
+
+          print({
+              "change_timestamp": change.group(1),
+              "documentation_sync": status,
+              "documentation_timestamp": doc_ts.group(1) if doc_ts else None,
+              "runtime_relevant": runtime_relevant,
+              "documentation_changed": doc_changed,
+              "changed_files": changed,
+          })
+          PY
+
   v12-verify:
     name: v12-required-verify
     runs-on: ubuntu-latest
@@ -256,7 +360,7 @@ jobs:
 
   verify:
     name: verify
-    needs: [detect-v6-change, repository-policy, v12-verify, v6-verify, v6-publisher-config]
+    needs: [detect-v6-change, repository-policy, documentation-sync, v12-verify, v6-verify, v6-publisher-config]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -267,6 +371,7 @@ jobs:
           DETECT_RESULT: ${{ needs.detect-v6-change.result }}
           V6_CHANGED: ${{ needs.detect-v6-change.outputs.v6_changed }}
           REPOSITORY_POLICY_RESULT: ${{ needs.repository-policy.result }}
+          DOCUMENTATION_SYNC_RESULT: ${{ needs.documentation-sync.result }}
           V12_VERIFY_RESULT: ${{ needs.v12-verify.result }}
           V6_VERIFY_RESULT: ${{ needs.v6-verify.result }}
           V6_PUBLISHER_RESULT: ${{ needs.v6-publisher-config.result }}
@@ -279,6 +384,10 @@ jobs:
           fi
           if [[ "$REPOSITORY_POLICY_RESULT" != "success" ]]; then
             echo "Repository governance failed: repository policy=$REPOSITORY_POLICY_RESULT"
+            exit 1
+          fi
+          if [[ "$DOCUMENTATION_SYNC_RESULT" != "success" ]]; then
+            echo "Repository governance failed: documentation sync=$DOCUMENTATION_SYNC_RESULT"
             exit 1
           fi
           if [[ "$V12_VERIFY_RESULT" != "success" ]]; then

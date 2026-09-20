@@ -961,8 +961,18 @@ def lineup_summary(lineup: dict[str, Any]) -> dict[str, Any]:
 
 
 def package_summary(package: dict[str, Any]) -> dict[str, Any]:
+    overlay = package.get("mini_league_overlay") or {}
+    delta = overlay.get("decision_delta") or {}
     return {
         "selected_package_id": package.get("selected_package_id"),
+        "football_baseline_selected_package_id": package.get(
+            "football_baseline_selected_package_id"
+        ),
+        "mini_league_adjusted_package_id": package.get(
+            "mini_league_adjusted_package_id"
+        ),
+        "mini_league_overlay_status": overlay.get("status"),
+        "mini_league_decision_delta": delta.get("state"),
         "manual_authority_override": package.get("manual_authority_override"),
         "gate0_revalidated": package.get("gate0_revalidated"),
     }

@@ -274,3 +274,43 @@ Permanent deterministic coverage now extends through K-V:
 - U: zero goals with strong xG is not adverse from result alone;
 - V: absent prior-season factual data produces explicit CURRENT-SEASON ONLY /
   UNAVAILABLE scope.
+
+
+## Pairwise vs chain anti-double-count completion
+
+Pairwise and chain now have explicit ownership.
+
+For a terminal edge B -> C, the existing pairwise path owns the direct
+P(start)-marginalized effect on C. A higher-order chain A -> B -> C may use
+B -> C as evidence and as its terminal continuity bridge, but it does not
+multiply the direct B -> C effect again.
+
+Runtime decomposition exposes:
+
+- `raw_chain_multiplier`;
+- `overlapping_pairwise_multiplier`;
+- `incremental_chain_multiplier`;
+- `effective_chain_multiplier`;
+- `anti_double_count_applied`;
+- `overlap_edge_ids` / `overlapping_edges`;
+- `chain_incremental_confidence`;
+- per-channel raw, overlap-removed and incremental contributions.
+
+The effective chain contribution is the neutral-relative upstream residual.
+For a finisher target the pairwise goal contribution is applied once, while
+the chain goal contribution is only the residual upstream interaction. Assist
+uses the existing secondary-channel square-root semantics. Creator targets
+retain assist-primary semantics.
+
+Chain-intact P(start) remains authoritative. When a required middle node has
+P(start)=0 the higher-order residual becomes neutral, but the existing pairwise
+present/absent marginalization remains intact. Thus absence is not penalized
+twice.
+
+Within one target context, upstream edge IDs already consumed by a stronger
+chain are not blindly multiplied again by another overlapping chain. Different
+upstream evidence may still contribute through separate chains, and different
+targets may reuse the same upstream relationship.
+
+The final contextual cap remains unchanged and is explicitly not considered an
+anti-double-count mechanism.

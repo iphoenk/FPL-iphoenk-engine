@@ -13,6 +13,8 @@ from src.engines.p0_decision_quality import (
 from src.engines.v12_tactical_role import attach_tactical_role_scores
 from src.engines.v12_contextual_dynamics import (
     apply_post_match_universe_comparison,
+    attach_post_match_deep_details,
+    build_post_match_deep_details,
     build_post_match_universe_scan,
 )
 from src.models.historical_projection import build as build_player_projections
@@ -237,7 +239,35 @@ def run() -> dict:
         post_match_universe_scan,
         package_optimizer=packages,
     )
+    post_match_deep_analysis = build_post_match_deep_details(
+        deep_analysis_element_ids=(
+            post_match_universe_scan.get("deep_analysis_element_ids") or []
+        ),
+        current_projection_players=projections.get("players") or [],
+        player_match_rows=player_match_rows,
+        post_match_universe_scan=post_match_universe_scan,
+        current_gw=latest_completed_gw,
+    )
+    post_match_universe_scan = attach_post_match_deep_details(
+        post_match_universe_scan,
+        post_match_deep_analysis,
+    )
     projections["post_match_universe_scan"] = post_match_universe_scan
+    projections["post_match_deep_analysis"] = post_match_deep_analysis
+    projections.setdefault("governance", {}).update({
+        "post_match_deep_targets_from_scan_only": True,
+        "post_match_deep_requested_count": (
+            post_match_deep_analysis.get("deep_requested_count")
+        ),
+        "post_match_deep_executed_count": (
+            post_match_deep_analysis.get("deep_executed_count")
+        ),
+        "post_match_deep_execution_scope": (
+            post_match_deep_analysis.get("deep_execution_scope")
+        ),
+        "post_match_display_limit_controls_deep_execution": False,
+        "full_universe_base_projection_materiality_gated": False,
+    })
     atomic_json(DATA / "projections.json", projections)
 
     quality = evaluate_prediction_quality(projections, prior)
@@ -284,6 +314,18 @@ def run() -> dict:
                 "material_count": post_match_universe_scan.get("material_count"),
                 "deep_analysis_count": len(
                     post_match_universe_scan.get("deep_analysis_element_ids") or []
+                ),
+                "deep_requested_count": post_match_deep_analysis.get(
+                    "deep_requested_count"
+                ),
+                "deep_executed_count": post_match_deep_analysis.get(
+                    "deep_executed_count"
+                ),
+                "deep_deferred_count": post_match_deep_analysis.get(
+                    "deep_deferred_count"
+                ),
+                "deep_execution_scope": post_match_deep_analysis.get(
+                    "deep_execution_scope"
                 ),
                 "full_universe_comparison": post_match_universe_scan.get(
                     "universe_comparison"

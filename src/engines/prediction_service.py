@@ -11,6 +11,10 @@ from src.engines.p0_decision_quality import (
     projection_signature,
 )
 from src.engines.v12_tactical_role import attach_tactical_role_scores
+from src.engines.v12_contextual_dynamics import (
+    apply_post_match_universe_comparison,
+    build_post_match_universe_scan,
+)
 from src.models.historical_projection import build as build_player_projections
 from src.models.official_role_evidence import attach_official_role_evidence
 from src.models.prediction_quality import evaluate as evaluate_prediction_quality
@@ -112,6 +116,8 @@ def run() -> dict:
         raise RuntimeError("REC-01 player feature model opt-in is not active")
 
     latest = read_json(DATA / "latest.json", {})
+    previous_projections = read_json(DATA / "projections.json", {})
+    team_payload = read_json(DATA / "team.json", {})
     planning_gw = int((latest.get("phase") or {}).get("planning_gw") or 1)
     execution_profile = str(os.getenv("FPL_EXECUTION_PROFILE") or "standard")
 
@@ -179,9 +185,42 @@ def run() -> dict:
         "opponent_history_window_separate": True,
         "v4_is_not_projection_calibration_truth": True,
     })
+    latest_completed_gw = max(
+        [
+            int(
+                row.get("gw")
+                or row.get("event")
+                or row.get("gameweek")
+                or row.get("round")
+                or 0
+            )
+            for row in player_match_rows
+            if float(row.get("minutes_played") or row.get("minutes") or 0) >= 0
+        ]
+        or [max(1, planning_gw - 1)]
+    )
+    owned_element_ids = [
+        int(row.get("element"))
+        for row in team_payload.get("team_value_ledger") or []
+        if row.get("element") is not None
+    ]
+    post_match_universe_scan = build_post_match_universe_scan(
+        current_projection_players=projections.get("players") or [],
+        previous_projection_players=previous_projections.get("players") or [],
+        player_match_rows=player_match_rows,
+        current_gw=latest_completed_gw,
+        owned_element_ids=owned_element_ids,
+    )
+    projections["post_match_universe_scan"] = post_match_universe_scan
+    projections.setdefault("governance", {}).update({
+        "default_post_match_full_universe_scan": True,
+        "post_match_scorer_assister_only_forbidden": True,
+        "post_match_deep_analysis_materiality_gated": True,
+        "post_match_action_enum_unchanged": "WAIT_PREPARE_ACT",
+    })
     atomic_json(DATA / "projections.json", projections)
 
-    packages = _build_packages(projections, read_json(DATA / "team.json", {}))
+    packages = _build_packages(projections, team_payload)
     hold_guardrails = (((packages.get("hold") or {}).get("score") or {}).get("guardrails") or {})
     packages.setdefault("governance", {}).update({
         "team_cluster_penalty_enabled": hold_guardrails.get("team_cluster_penalty_enabled") is True,
@@ -193,6 +232,13 @@ def run() -> dict:
         "tactical_matchup_never_directly_mutates_xpts": True,
     })
     atomic_json(DATA / "package_optimizer.json", packages)
+
+    post_match_universe_scan = apply_post_match_universe_comparison(
+        post_match_universe_scan,
+        package_optimizer=packages,
+    )
+    projections["post_match_universe_scan"] = post_match_universe_scan
+    atomic_json(DATA / "projections.json", projections)
 
     quality = evaluate_prediction_quality(projections, prior)
     atomic_json(DATA / "prediction_quality.json", quality)
@@ -231,6 +277,20 @@ def run() -> dict:
                 "UNAVAILABLE — NO GOVERNED MATCH-LEVEL FACTUAL SOURCE"
             ),
             "optional_enrichment_never_blocks_projection": True,
+            "post_match_universe_scan": {
+                "scope": post_match_universe_scan.get("scope"),
+                "eligible_count": post_match_universe_scan.get("eligible_count"),
+                "scanned_count": post_match_universe_scan.get("scanned_count"),
+                "material_count": post_match_universe_scan.get("material_count"),
+                "deep_analysis_count": len(
+                    post_match_universe_scan.get("deep_analysis_element_ids") or []
+                ),
+                "full_universe_comparison": post_match_universe_scan.get(
+                    "universe_comparison"
+                ),
+                "scorer_assister_only_filter": False,
+                "operational_action_owner": "WAIT_PREPARE_ACT",
+            },
         },
         "projection_calibration": {"status": projection_diagnostics.get("status"), "comparison_authority": projection_diagnostics.get("comparison_authority"), "mutates_xpts": False, "positions": projection_diagnostics.get("positions")},
         "risk_guardrails": {"team_cluster_penalty_enabled": package_governance.get("team_cluster_penalty_enabled"), "early_season_change_cap_enabled": package_governance.get("early_season_change_cap_enabled"), "effective_max_changes": package_governance.get("effective_max_changes")},

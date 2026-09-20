@@ -12,6 +12,12 @@ from src.engines.v12_player_comparator import (
     ComparatorContractError,
     compare_player_to_candidates,
 )
+from src.engines.v12_player_minutes import estimate_player_minutes
+from src.engines.v12_player_events import (
+    build_posterior_rates,
+    load_event_config,
+    project_player_fixture,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -603,3 +609,45 @@ def test_generic_native_schema_comparator_acceptance():
     assert battle["duplicate_xpts_model"] is False
     assert battle["duplicate_xmins_model"] is False
     assert battle["duplicate_tactical_scorer"] is False
+
+
+def test_native_p13_owner_exposes_governed_p60_without_new_minutes_model():
+    player = {
+        "id": 9901,
+        "element_type": 3,
+        "position": "MID",
+        "status": "a",
+        "minutes": 450,
+        "starts": 5,
+        "expected_goals": 2.1,
+        "expected_assists": 1.8,
+        "bonus": 7,
+        "saves": 0,
+    }
+    minutes = estimate_player_minutes(player, {"team_matches_played": 5})
+    rates = build_posterior_rates(
+        player,
+        position_prior=load_event_config()["position_priors"]["MID"],
+    )
+    events = project_player_fixture(
+        player,
+        minutes,
+        {
+            "event": 6,
+            "fixture": 9991,
+            "team_h": 1,
+            "team_a": 2,
+            "opponent": 2,
+            "team_expected_goals": 1.55,
+            "clean_sheet_probability": 0.30,
+        },
+        home=True,
+        rates=rates,
+    )
+    evidence = events["minutes_threshold_probabilities"]
+    assert evidence["threshold_minutes"] == 60
+    assert 0.0 <= evidence["p_60_plus"] <= 1.0
+    assert evidence["source"] == (
+        "P1.1_FINITE_STATE_PLUS_P1.3_GOVERNED_BOUNDED_QUADRATURE"
+    )
+    assert evidence["new_minutes_model_created"] is False

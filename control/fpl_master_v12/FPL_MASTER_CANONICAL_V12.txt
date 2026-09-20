@@ -1073,4 +1073,54 @@ chain; and stale-role dependency.
 D. No V6 mutation, no V7, no extra scheduler, no V3/V4/V5 runtime, no
 player-specific hardcode, no temporary acceptance harness in production.
 
+
+20M. RUNTIME COMPLETION — CHAINS + HISTORICAL WINDOW SEPARATION
+A. Production contextual runtime MUST consume pairwise edges as before and MAY
+construct multi-player chains only from already-qualified directional edges.
+Chain construction requires governed minimum confidence/shared evidence, a
+direct or tactical-role process bridge, no repeated player, direction
+continuity, bounded incoming edges per node and the configured maximum number
+of players in a chain. It MUST NOT enumerate unrestricted player permutations.
+B. A chain is represented as ordered source->...->target edges. Its confidence
+is bounded by the weakest meaningful edge. Chain intact probability uses the
+existing P1.1 P(start) for each upstream node. For A->B->C:
+P(chain intact)=P(A starts)*P(B starts), with the existing P1.1 probabilities.
+If B has P(start)=0, the higher-order chain effect moves to neutral. If
+P(start)=0.5, the chain effect lies between intact and broken states.
+C. Chain multiplier is an additional bounded higher-order contextual modifier
+combined with the existing pairwise modifier before the P1.3 joint event/point
+PMF. It therefore must reach P(goal), P(assist), P(return), P(2+ returns),
+P(haul), P(no attacking return)/P(blank under existing exact semantics), xPts
+and variance. Metadata-only chain output is non-compliant.
+D. LINK-UP / COMBINATION NETWORK keeps one existing nested report surface and
+separates PAIRWISE LINKS from MULTI-PLAYER CHAINS. For each supportable chain,
+show player IDs/names when available, direction, relationship type, edge count,
+intact probability, weakest-link confidence, upstream P(start), multiplier,
+main dependency risk and middle-node-absence effect. Suppress low-confidence
+noise. Do not add a DEEP top-level section.
+E. PLAYER TRAJECTORY remains strictly current-season GW1 through latest
+completed GW. OPPONENT-SPECIFIC HISTORY is a separate evidence window and may
+include prior seasons only when a governed match-level factual artifact exists.
+Prior-season rows MUST NOT enter the current-season trajectory sample.
+F. Prior-season opponent meetings receive additional season-age decay before
+sample shrinkage and remain subject to manager/system/formation/block/press,
+CB/FB personnel, midfield structure, player-role and team-strength-regime
+relevance. Old low-similarity H2H approaches neutral.
+G. As of the audited V6 runtime artifact catalog on 2026-09-20, no governed
+prior-season EPL player-match artifact is published that can support
+opponent-specific match-level H2H. StatsBomb runtime publishes only the open
+catalogue surface; current Understat normalization publishes current-season
+player aggregate records and no match fixtures; current Vaastav normalization
+publishes current-season player aggregates plus fixtures but no player-match
+history. Mini-league historical_backfill is manager/league history, not player
+match evidence. Therefore the current runtime contract is:
+OPPONENT HISTORY SCOPE = CURRENT-SEASON ONLY.
+PRIOR-SEASON MATCHUP = UNAVAILABLE — NO GOVERNED MATCH-LEVEL FACTUAL SOURCE.
+No new provider may be added merely to hide this limitation.
+H. If a future existing governed V6 artifact supplies prior-season player-match
+rows with deterministic player/opponent identity and provenance, V12 may bind
+those rows into the opponent-history window only. That binding never changes
+V6 authority, never changes trajectory scope, and never promotes State JSON to
+methodology authority.
+
 END FPL MASTER CANONICAL V12

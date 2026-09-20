@@ -107,7 +107,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          acceptance_commit="$(git log --all --format=%H -- tools/v12_live_full_owner_acceptance.py | head -n 1)"
+          acceptance_commit="$(git log -1 --all --format=%H -- tools/v12_live_full_owner_acceptance.py)"
           if [[ -z "$acceptance_commit" ]]; then
             echo "::error::historical full-owner acceptance harness not found"
             exit 1

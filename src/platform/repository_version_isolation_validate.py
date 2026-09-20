@@ -6,48 +6,55 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = ROOT / ".github" / "workflows"
 
-V6_OWNED_PATH_MARKERS = (
-    "src/runtime_v6/**",
-    "config/v6/**",
-    "docs/V6_*.md",
-    "tests/test_data_ingestion_engine.py",
-    "tests/test_adaptive_polling.py",
-    "tests/test_weather_context.py",
-    "tests/test_data_platform_*.py",
-    "requirements-v6.lock",
-    "requirements-v6-ci.lock",
-    ".github/workflows/v6-ci.yml",
-    ".github/workflows/v6-hourly-data-ingestion.yml",
-)
-
 
 def validate_repository(root: Path = ROOT) -> list[str]:
     failures: list[str] = []
     workflows = root / ".github" / "workflows"
-    v3_ci = (workflows / "v3-ci.yml").read_text(encoding="utf-8")
-    v6_ci = (workflows / "v6-ci.yml").read_text(encoding="utf-8")
+    names = sorted(
+        path.name
+        for path in list(workflows.glob("*.yml")) + list(workflows.glob("*.yaml"))
+    )
 
-    if not re.search(r"(?m)^  v3-verify:\s*$", v3_ci):
-        failures.append("V3 CI must expose version-unique job id v3-verify")
-    if not re.search(r"(?m)^  v6-verify:\s*$", v6_ci):
+    legacy_workflows = [
+        name for name in names
+        if re.match(r"^v[345]-", name)
+    ]
+    if legacy_workflows:
+        failures.append(
+            "active workflow tree must contain zero V3/V4/V5 workflows; "
+            f"found={legacy_workflows}"
+        )
+
+    v6_ci_path = workflows / "v6-ci.yml"
+    governance_path = workflows / "repository-governance.yml"
+    if not v6_ci_path.is_file():
+        failures.append("active V6 CI workflow missing")
+        return failures
+    if not governance_path.is_file():
+        failures.append("neutral repository governance workflow missing")
+        return failures
+
+    v6_ci = v6_ci_path.read_text(encoding="utf-8")
+    governance = governance_path.read_text(encoding="utf-8")
+
+    if not re.search(r"(?m)^  v6-verify:\\s*$", v6_ci):
         failures.append("V6 CI must expose version-unique job id v6-verify")
+    if not re.search(r"(?m)^  v12-verify:\\s*$", governance):
+        failures.append("repository governance must expose active V12 job id v12-verify")
+    if "legacy_execution_isolation_validate.py" not in governance:
+        failures.append("repository governance must execute static legacy isolation validator")
 
-    for marker in V6_OWNED_PATH_MARKERS:
-        if v3_ci.count(marker) < 2:
-            failures.append(
-                f"V3 CI must ignore V6-owned path on both pull_request and push: {marker}"
-            )
-
-    v6_workflows = sorted(workflows.glob("v6-*.yml"))
-    for path in v6_workflows:
+    for path in sorted(workflows.glob("v6-*.yml")):
         text = path.read_text(encoding="utf-8")
         if "workflow_run:" in text:
-            failures.append(f"V6 workflow must not use cross-engine workflow_run chaining: {path.name}")
+            failures.append(
+                f"V6 workflow must not use cross-engine workflow_run chaining: {path.name}"
+            )
 
     generic_verify_owners: list[str] = []
     for path in sorted(workflows.glob("*.yml")):
         text = path.read_text(encoding="utf-8")
-        if re.search(r"(?m)^  verify:\s*$", text):
+        if re.search(r"(?m)^  verify:\\s*$", text):
             generic_verify_owners.append(path.name)
     if generic_verify_owners != ["repository-governance.yml"]:
         failures.append(
@@ -55,9 +62,12 @@ def validate_repository(root: Path = ROOT) -> list[str]:
             f"found={generic_verify_owners}"
         )
 
-    repository_governance = (workflows / "repository-governance.yml").read_text(encoding="utf-8")
-    if "repository_version_isolation_validate.py" not in repository_governance:
+    if "repository_version_isolation_validate.py" not in governance:
         failures.append("neutral repository governance must execute version-isolation validator")
+
+    for token in ("src.runtime_v3", "src.runtime_v4", "src.runtime_v5"):
+        if token in governance:
+            failures.append(f"active repository governance must not execute legacy runtime: {token}")
 
     return failures
 
@@ -68,7 +78,7 @@ def main() -> int:
         for failure in failures:
             print(f"FAIL: {failure}")
         return 1
-    print("PASS: repository CI/workflow ownership is version-isolated")
+    print("PASS: active CI ownership is isolated to V6 + V12 with static legacy freeze")
     return 0
 
 

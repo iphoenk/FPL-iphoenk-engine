@@ -518,6 +518,37 @@ def evaluate_linkup(
     direct_score = 1.0 - math.exp(-max(0.0, direct_count) / 3.0) if direct_count > 0 else 0.0
     role_score = _role_complementarity(target_role, teammate_role)
 
+    def role_relevance(
+        rows: Sequence[Mapping[str, Any]],
+        current_role: Any,
+    ) -> tuple[float, str]:
+        current = str(current_role or "").strip().upper()
+        observed = [
+            str(_role_label(row) or "").strip().upper()
+            for row in rows
+            if _role_label(row)
+        ]
+        if not current or not observed:
+            return 1.0, "UNAVAILABLE_NO_DISCOUNT"
+        matches = sum(1 for role in observed if role == current)
+        relevance = matches / len(observed)
+        return relevance, "AVAILABLE"
+
+    target_role_relevance, target_role_relevance_status = role_relevance(
+        with_rows, target_role
+    )
+    teammate_role_relevance, teammate_role_relevance_status = role_relevance(
+        [
+            teammate[match_id]
+            for match_id in target
+            if match_id in teammate and _minutes(teammate[match_id]) > 0
+        ],
+        teammate_role,
+    )
+    tactical_role_relevance = min(
+        target_role_relevance, teammate_role_relevance
+    )
+
     cfg = load_config().get("linkup") or {}
     k = max(0.1, _f(cfg.get("sample_shrinkage_k"), 4.0))
     sample_n = len(with_rows)
@@ -530,7 +561,7 @@ def evaluate_linkup(
         + _f(cfg.get("with_without_weight"), 0.30) * with_without_score
         + _f(cfg.get("role_complementarity_weight"), 0.15) * role_score
     )
-    confidence = sample_strength * evidence_strength
+    confidence = sample_strength * evidence_strength * tactical_role_relevance
     if not connections and role_score <= 0.0:
         # With/without co-movement without a process bridge is correlation only.
         confidence = 0.0
@@ -560,6 +591,11 @@ def evaluate_linkup(
             "score": round(direct_score, 6),
         },
         "role_complementarity": round(role_score, 6),
+        "tactical_role_relevance": round(tactical_role_relevance, 6),
+        "tactical_role_relevance_status": {
+            "target": target_role_relevance_status,
+            "teammate": teammate_role_relevance_status,
+        },
         "dependency_strength": round(abs(signed_log) / max(log_cap, 1e-9), 6) if log_cap else 0.0,
         "dependency_direction": direction,
         "confidence": round(_clamp(confidence, 0.0, 1.0), 6),
@@ -570,6 +606,7 @@ def evaluate_linkup(
             "correlation_alone_is_insufficient": True,
             "missing_direct_link_evidence_caps_confidence": not bool(connections),
             "small_sample_bayesian_shrinkage": True,
+            "historical_role_change_discounted": True,
         },
     }
 

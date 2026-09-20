@@ -433,7 +433,7 @@ def _simulate_player_gw(
 
         defcon_hits = np.zeros(n, dtype=bool)
         if params["defcon_eligible"] and params["defcon_threshold"] > 0 and params["defcon_points"] > 0.0:
-            dc_lam = params["defcon_rate90"] * scale * pressure_factor
+            dc_lam = params["defcon_rate90"] * scale
             dc_counts = rng.poisson(np.maximum(0.0, dc_lam))
             defcon_hits = dc_counts >= params["defcon_threshold"]
             points = points + defcon_hits.astype(np.float64) * params["defcon_points"]

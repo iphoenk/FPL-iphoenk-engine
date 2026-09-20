@@ -371,6 +371,8 @@ def test_canonical_contains_new_analytic_execution_and_anti_blanking_semantics()
     assert "REPOSITORY PYTHON EXECUTION TRUTH and CHATGPT V12 ANALYTIC EXECUTION TRUTH are separate" in text
     assert "repository_python_qa_executed=false alone can never justify Watchlist20=0/20" in text
     assert "official_price_predictor artifact" in text
+    assert "A valid NO_CROSSING row is healthy evidence, not degradation." in text
+    assert "unrelated core, repository-Python, workflow, QA, or plumbing status must not downgrade" in text
     assert "Weather is REPORT-TIME evidence and does not belong in V6" in text
 
 

@@ -1290,4 +1290,55 @@ WHOSE PROBABILITY DISTRIBUTION HAS MATERIALLY CHANGED?
 It is explicitly NOT:
 WHO SCORED THE MOST POINTS TODAY?
 
+
+20P. POST-MATCH VISIBLE WIRING / TRUE MATERIALITY-GATED DEEP EXECUTION
+A. The normal V12 full-universe base projection remains mandatory and MUST NOT
+be restricted by post-match materiality. It continues to support baseline
+probabilities, comparator, package search, next-GW/3GW/5GW and all legal
+full-universe decision comparisons.
+B. The post-match materiality gate applies ONLY to expensive diagnostic detail.
+The explicit execution target list is:
+post_match_universe_scan.deep_analysis_element_ids.
+No target list means zero post-match deep-detail execution.
+C. Bounded deep diagnostics consume existing V12 outputs only: GW1-current
+trajectory; role; P1.1 xMins/P(start); match-by-match underlying; result/process;
+tactical role/system; opponent matchup; pairwise and anti-double-counted chain
+evidence; linked-player availability; existing Bayesian posterior; 1GW/3GW/5GW;
+price-risk evidence where supportable; existing full-universe comparison; and
+OUR15 relevance. No duplicate mathematics, score, optimizer or ACT owner may be
+created.
+D. Deep execution proof must expose at least:
+eligible_count;scanned_count;material_count;deep_requested_count;
+deep_executed_count;deep_deferred_count;deep_execution_scope.
+Normally deep_executed_count <= material_count << scanned_count.
+E. A governed maximum material deep-player count bounds diagnostic compute.
+When material_count exceeds that bound, retain broad scan coverage, preserve the
+existing material/universe ordering, execute only the bounded prefix, expose all
+deferred IDs/counts and label deep execution PARTIAL. No silent drop.
+F. Visible category limits are presentation-only and MUST NOT control materiality
+or deep execution. A material player may receive deep analysis while not
+appearing in a top-N visible category.
+G. Natural rendering MUST consume projections.post_match_universe_scan and
+projections.post_match_deep_analysis through the existing V12 report
+orchestration. UNIVERSE MOVERS is nested exactly once:
+- POST_MATCH / completed MATCH context: RELEVANT LEAGUE-WIDE SIGNALS;
+- POST_ALL_MATCH: GW COMPLETED MATCH-BY-MATCH SCOUT;
+- FULL+MATCH / DEEP+MATCH / equivalent overlap: Changes.
+Do not create a new top-level report backbone or numbered section.
+H. Natural visible UNIVERSE MOVERS rows remain compact: player, position,
+classification, latest FPL points, latest xGI, xMins delta, P(start) delta,
+universe-comparison state, owned/non-owned and deep-detail flag. Internal
+probability math remains in deep evidence, not default visible rows.
+I. If scan evidence is unavailable, render UNAVAILABLE with reason. If scan is
+valid but material_count=0, render NO MATERIAL MOVERS. If scan/universe search
+coverage is partial, expose scanned/eligible counts, search authority and
+missing scope and do not claim full completeness.
+J. Overlap reports attach UNIVERSE MOVERS once only. Pure PRICE or other
+non-match-only modes MUST NOT force the block merely because an old post-match
+artifact exists.
+K. Universe scan and post-match deep diagnostics remain evidence layers. They
+never emit ACT independently. Existing WAIT / PREPARE / ACT, package/comparator
+authority, 20/25/30/25, P1.1, P1.3, Monte Carlo, V6, scheduler and legacy
+isolation remain unchanged.
+
 END FPL MASTER CANONICAL V12

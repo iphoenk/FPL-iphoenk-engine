@@ -1,12 +1,16 @@
 # V6 Fresh Data Platform
 
+> **Documentation sync:** 2026-09-20 23:34 WIB (Asia/Jakarta)  
+> **Runtime baseline:** production `main` at `ff89271d45353105e001b2f1f3328229d6323c45` and current V6 scheduler policy.  
+> **Maintenance rule:** every runtime/governance change that affects this document MUST update the affected description in the same bounded change and refresh this timestamp. Runtime/config/code remains authoritative if prose ever drifts.
+
 ## Mission and authority
 
 V6 is the repository's dedicated fresh-data acquisition, validation, provenance, identity, health, and evidence-publication layer. It is data-only. V6 has no transfer, captaincy, chip, optimizer, xPts, xMins, Monte Carlo, tactical, recommendation, or decision authority.
 
 Official FPL is the factual and canonical authority for player, team, fixture, and current FPL state. External providers remain separate evidence sources. V6 never averages providers into a hidden consensus and never fabricates missing values.
 
-Consumers such as reporting and the Master Monitor may read a published V6 snapshot. The FPL Master Monitor is also a governed V6 acquisition orchestrator: its hourly task may invoke V6 through the explicit `master_orchestrated` workflow-dispatch mode. Other consumers must not trigger V6 refresh. All consumers must evaluate snapshot freshness and integrity at read time. A stale, missing, invalid, or broken V6 snapshot may permit a minimum-scope direct fallback by the consumer.
+Consumers such as reporting and the Master Monitor may read a published V6 snapshot. **FPL Master Monitor V12 is the only recurring FPL acquisition/report scheduler authority.** Its hourly ChatGPT occurrence uses the governed Issue #431 control path: an `issues:edited` event with the `FPL_MASTER_SLOT` title marker is classified as `chatgpt_scheduler` and may complete one logical hourly core slot. Report-driven personal/mini-league/live refresh remains a separate `report_prefetch` path and does not complete a core operational slot. Other consumers must not trigger V6 core refresh. All consumers must evaluate snapshot freshness and integrity at read time. A stale, missing, invalid, or broken V6 snapshot may permit only the documented minimum-scope direct external-source fallback by the consumer.
 
 V6 never reads V3/V4/V5 runtime branches, data trees, caches, manifests, or engine artifacts. Those engines are downstream consumers only. Any permitted consumer fallback is external-source retrieval owned by that consumer; it is never a fallback from V6 into another engine's runtime data.
 
@@ -95,24 +99,53 @@ New additive sources must default to zero cost, no account creation, no login, a
 
 ## Production cadence and trigger authority
 
-V6 supports two independent authoritative operational triggers. The preferred operational path is the hourly FPL Master Monitor invoking `workflow_dispatch: master_orchestrated`; the repository natural scheduler remains a separate recovery/observability path and its health is tracked independently.
+The current production model has **one recurring FPL scheduler authority**: ChatGPT **FPL Master Monitor V12**, scheduled hourly at `:30` Asia/Jakarta. For each natural occurrence, the Canonical V12 core gate binds to the corresponding `HH:00` logical slot. If the slot is not already authoritatively fulfilled and no governed in-progress run can be bound, the scheduler performs at most one Issue #431 title mutation using the `FPL_MASTER_SLOT` control contract.
 
-The natural scheduler cadence remains intentionally offset from other repository cron traffic and from GitHub's high-load start-of-hour window:
+That Issue #431 `issues:edited` event is the normal core acquisition trigger. The ingestion workflow classifies it as `chatgpt_scheduler`, runs V6 acquisition/validation, and may publish an authoritative `runtime-data-v6` snapshot through the dedicated V6 publisher app. Duplicate full-core attempts for the same logical slot are forbidden.
 
-- primary acquisition: minute `23` of every UTC hour;
-- idempotent recovery acquisition: minute `53` of every UTC hour.
+GitHub natural acquisition cron is **disabled**. Historical `:13/:28/:43/:58` cron expressions are retained only as migration evidence in scheduler policy; they are not runtime triggers. The older `:23/:53` natural-acquisition description is retired and MUST NOT be used as current architecture.
 
-The Master-orchestrated invocation and both natural scheduled invocations belong to the same logical hourly operational slot. If an authoritative V6 cycle already published that slot, a later natural primary/recovery invocation exits without a second acquisition. Normal pushes and pull requests never trigger production acquisition. CI is a separate read-only workflow.
+The only scheduled V6 GitHub control workflow is `v6-scheduler-watchdog.yml` at minute `:50`. It is **monitoring-only**: it may classify continuity and open/update/close an incident, but it cannot trigger acquisition, publish `runtime-data-v6`, mutate Issue #431, or advance scheduler proof.
 
-The schedule expressions and emergency-recovery policy are declared in `config/v6/schedule_policy.json`. GitHub's `on.schedule` expressions must remain literal in the workflow, so contract tests verify that those trigger expressions exactly match the policy file. The classifier reads the policy file instead of duplicating cron literals in executable logic. The contract also requires both schedule minutes to stay away from the top of the hour and keeps recovery 30 minutes behind primary without hard-coding a second schedule registry.
+`v6-core-recovery-guard.yml` is explicit `workflow_dispatch` only. There is no recurring recovery automation. A permitted manual recovery is non-authoritative for scheduler continuity and does not complete a normal core slot.
 
-`runtime_control` records the logical slot, GitHub run ID, trigger kind, schedule lag, duplicate detection, authoritative operational-cycle state, and natural missed-cycle state. `master_orchestrated` is authoritative for V6 runtime freshness but does not count as a natural scheduled cycle. Missed natural scheduler cycles therefore remain explicit evidence and are never hidden by Master orchestration or emergency manual recovery.
+`report_prefetch` is report-driven and separate from core upkeep. It may refresh public/authenticated personal, mini-league, live, or historical-backfill evidence as requested by a due report, but it does not complete the hourly core operational slot and does not substitute for scheduler proof.
+
+`runtime_control` and `operational_slots` are the runtime evidence for logical-slot fulfillment, duplicate detection, continuity, provenance, and current scheduler proof. Historical gaps remain explicit; later successful slots must not silently rewrite them.
 
 ## Governed FPL Master orchestration
 
-`workflow_dispatch` with `mode: master_orchestrated` is the governed hourly acquisition path used by the FPL Master Monitor. It requires a non-empty audit reason, is restricted to the repository owner, uses the same isolated dedicated V6 GitHub App publisher, publishes `schedule_kind: master_orchestrated`, and may set `authoritative_runtime_snapshot: true` only after the normal V6 source-health, lineage, identity, publish-integrity, and isolation checks pass.
+The normal governed core path is:
 
-A Master-orchestrated cycle counts as a completed operational slot but not as a completed natural scheduled slot. It never advances `last_scheduled_cycle_at`, never rewrites historical natural-scheduler evidence, and never uses V3/V4/V5 runtime data as fallback.
+```text
+FPL Master Monitor V12 (:30 Asia/Jakarta)
+        │
+        ▼
+Canonical V12 NATURAL_CORE_UPKEEP_GATE
+        │
+        ├─ reuse same-slot authoritative fulfillment, or
+        ├─ bind governed in-progress run, or
+        └─ exactly one Issue #431 FPL_MASTER_SLOT title mutation
+                │
+                ▼
+        GitHub issues:edited
+                │
+                ▼
+        v6-natural-data-ingestion.yml
+                │
+                ▼
+        acquire → runtime control → publish integrity
+                │
+                ▼
+        dedicated V6 GitHub App publisher
+                │
+                ▼
+        runtime-data-v6 authoritative snapshot
+```
+
+The issue-title control event is restricted to the repository owner and Issue #431 by workflow authorization. A successful `chatgpt_scheduler` publication counts as a completed operational slot and scheduler proof. V3/V4/V5 runtime data is never eligible as fallback.
+
+A separate `report_prefetch` invocation may be issued for a due report. It reuses the governed publication plane but remains report-scoped rather than core-slot authority.
 
 ## Governed manual recovery
 
@@ -172,11 +205,11 @@ Independent sources execute concurrently within topological dependency layers. I
 
 Premature service fragmentation is explicitly avoided because it would increase orchestration, duplication, and operational failure surface without improving the current acquisition workload.
 
-## Open-Meteo ownership
+## Weather ownership
 
-`open_meteo` is a native V6 source. V6 retrieves raw forecast fields directly from `api.open-meteo.com` through the V6 acquisition client. Venue coordinates and ordering are governed by `config/v6/venue_geography.json`, not duplicated in interpretation logic.
+`open_meteo` is currently **disabled as a V6 scheduled dependency** by `config/v6/source_activation.json` (`RETIRED_CHATGPT_REPORT_TIME_WEATHER_NOT_V6_DEPENDENCY`). Weather needed by a visible report is therefore a report-time evidence concern, not part of V6 core freshness or publication authority.
 
-Open-Meteo is environmental provider evidence, not FPL intelligence. V6 stores source-native forecast fields and provenance only. Fixture binding and any downstream interpretation must preserve Official FPL fixture authority. V6 does not calculate a weather impact score, xPts multiplier, tactical adjustment, or transfer decision from the forecast.
+Historical V6 weather adapters/configuration may remain in the repository, but documentation must not present Open-Meteo as an active scheduled V6 source while activation policy disables it. Any future reactivation must update activation policy, runtime acceptance, and this document together.
 
 ## Persistent last-good state
 
@@ -219,7 +252,7 @@ Fuzzy player-name matching is not allowed in V6 identity publication. Partial de
 
 The Master Monitor and other consumers apply a hard V6 freshness threshold of 90 minutes unless a stricter consumer contract is explicitly supplied. A static historical manifest that says GREEN is not sufficient. The consumer must verify current age, runtime-control provenance, exact source set, exact resolved registry, identity consistency, stored tree digest, recomputed tree digest, every zero-authority dimension, and control/critical failures.
 
-A snapshot may become V6 consumer authority only when its governed provenance is `primary`, `recovery`, or `master_orchestrated`, `authoritative_runtime_snapshot` is true, publish integrity passes, freshness is valid, and no disqualifying control/source failures exist. A governed `manual_recovery` snapshot remains invalid for that role by design. Natural scheduler health is a separate operational signal and must not be inferred from a Master-orchestrated publication. If the latest V6 snapshot is stale or invalid, only the documented minimum-scope external-source fallback is eligible. Fallback into another engine's runtime artifacts is forbidden.
+A snapshot may become V6 consumer authority only when it comes from a governed authoritative runtime trigger, `authoritative_runtime_snapshot` is true, publish integrity passes, freshness is valid, and no disqualifying control/source failures exist. The normal core authority is `chatgpt_scheduler`; report-driven `report_prefetch` may publish an authoritative report snapshot but does not complete or prove the core operational slot. A governed `manual_recovery` snapshot remains non-authoritative for normal scheduler continuity by design. If the latest V6 snapshot is stale or invalid, only the documented minimum-scope external-source fallback is eligible. Fallback into another engine's runtime artifacts is forbidden.
 
 ## Runtime branch governance
 

@@ -98,6 +98,14 @@ def run() -> dict:
         raise RuntimeError("historical prior artifact unavailable for prediction service")
 
     player_features = read_json(DATA / "player_features.json", {})
+    player_match_stats = read_json(
+        DATA / "stats" / "playermatchstats_current.json", {}
+    )
+    player_match_rows = [
+        row
+        for row in (player_match_stats.get("rows") or [])
+        if isinstance(row, dict)
+    ]
     if player_features.get("contract") != "PLAYER_FEATURE_CONTRACT_V1" or not player_features.get("players"):
         raise RuntimeError("REC-01 player feature artifact unavailable or invalid for prediction service")
     if player_features.get("decision_neutral") is not False or player_features.get("model_opt_in") != "REC-01":
@@ -113,7 +121,15 @@ def run() -> dict:
     strength.setdefault("governance", {})["official_snapshot_reused"] = True
     atomic_json(DATA / "team_strength.json", strength)
 
-    projections = build_player_projections(bootstrap, strength, planning_gw, prior, horizon=STRATEGIC_HORIZON_GWS, player_features_payload=player_features)
+    projections = build_player_projections(
+        bootstrap,
+        strength,
+        planning_gw,
+        prior,
+        horizon=STRATEGIC_HORIZON_GWS,
+        player_features_payload=player_features,
+        player_match_rows=player_match_rows,
+    )
     pre_role_signature = projection_signature(projections)
     official_role_evidence = attach_official_role_evidence(projections, bootstrap)
     assert_projection_signature_unchanged(pre_role_signature, projections)
@@ -148,6 +164,10 @@ def run() -> dict:
         "p1_6_contextual_fixture_suppression_uses_team_strength_read_only": True,
         "p1_6_player_quality_excludes_transfer_action_cost": True,
         "position_projection_diagnostics_are_non_mutating": True,
+        "v12_contextual_dynamics_reuses_existing_player_match_rows": True,
+        "v12_contextual_dynamics_match_row_count": len(player_match_rows),
+        "v12_contextual_dynamics_direct_connection_rows": "UNAVAILABLE_NOT_FABRICATED",
+        "v12_contextual_dynamics_optional_enrichment": True,
         "v4_is_not_projection_calibration_truth": True,
     })
     atomic_json(DATA / "projections.json", projections)
@@ -190,6 +210,14 @@ def run() -> dict:
         },
         "tactical_role_component": tactical_role_component,
         "player_feature_model": {"contract": projections.get("player_feature_contract"), "opt_in": projections.get("player_feature_model_opt_in"), "defensive_contribution_model": projections.get("defensive_contribution_model"), "advanced_defensive_evidence_players_used": projections.get("advanced_defensive_evidence_players_used")},
+        "contextual_dynamics": {
+            "status": "AVAILABLE" if player_match_rows else "UNAVAILABLE",
+            "source": player_match_stats.get("source"),
+            "dataset": player_match_stats.get("dataset"),
+            "row_count": len(player_match_rows),
+            "direct_player_connection_evidence": "UNAVAILABLE_NOT_FABRICATED",
+            "optional_enrichment_never_blocks_projection": True,
+        },
         "projection_calibration": {"status": projection_diagnostics.get("status"), "comparison_authority": projection_diagnostics.get("comparison_authority"), "mutates_xpts": False, "positions": projection_diagnostics.get("positions")},
         "risk_guardrails": {"team_cluster_penalty_enabled": package_governance.get("team_cluster_penalty_enabled"), "early_season_change_cap_enabled": package_governance.get("early_season_change_cap_enabled"), "effective_max_changes": package_governance.get("effective_max_changes")},
     }

@@ -109,7 +109,7 @@ def test_dedicated_master_comment_transport_is_retired():
 def test_chatgpt_scheduler_contract_is_single_hourly_authority():
     policy = _policy()
     scheduler = policy["scheduler_authority"]
-    assert scheduler["name"] == "FPL Master Monitor"
+    assert scheduler["name"] == "FPL Master Monitor V12"
     assert scheduler["timezone"] == "Asia/Jakarta"
     assert scheduler["cadence_minutes"] == 60
     assert scheduler["physical_minute"] == 30

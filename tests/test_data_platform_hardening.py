@@ -32,7 +32,7 @@ def test_workflow_scheduler_matches_v6_chatgpt_authority_policy():
     assert policy["schema_version"] == 6
     assert policy["engine"] == "V6_FRESH_DATA_PLATFORM"
     assert policy["scheduler_authority"]["kind"] == "CHATGPT_TASK"
-    assert policy["scheduler_authority"]["name"] == "FPL Master Monitor"
+    assert policy["scheduler_authority"]["name"] == "FPL Master Monitor V12"
     assert policy["scheduler_authority"]["timezone"] == "Asia/Jakarta"
     assert policy["scheduler_authority"]["cadence_minutes"] == 60
     assert policy["scheduler_authority"]["physical_minute"] == 30
@@ -50,7 +50,7 @@ def test_workflow_scheduler_matches_v6_chatgpt_authority_policy():
         "58 * * * *",
     ]
     assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
-    assert policy["governance"]["single_schedule_owner"] == "CHATGPT:FPL Master Monitor"
+    assert policy["governance"]["single_schedule_owner"] == "CHATGPT:FPL Master Monitor V12"
     assert policy["governance"]["github_schedule_events_are_removed"] is True
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
     assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True

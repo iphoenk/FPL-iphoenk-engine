@@ -145,6 +145,9 @@ def build_runtime_control(
 
     github_schedule_event = event == "schedule"
     github_schedule_disabled = github_schedule_event and kind == "schedule_disabled"
+    github_natural_acquisition_schedule_disabled = (
+        SCHEDULE_POLICY.github_natural_acquisition_schedule_disabled
+    )
     chatgpt_scheduler = _is_chatgpt_scheduler(event, kind)
     master_orchestrated = _is_master(event, kind)
     report_prefetch = _is_report_prefetch(event, kind)
@@ -246,6 +249,7 @@ def build_runtime_control(
         "chatgpt_scheduler_proof": chatgpt_scheduler,
         "github_schedule_event": github_schedule_event,
         "github_schedule_disabled": github_schedule_disabled,
+        "github_natural_acquisition_schedule_disabled": github_natural_acquisition_schedule_disabled,
         "scheduled_cycle": chatgpt_scheduler,
         "master_orchestrated": master_orchestrated,
         "report_prefetch": report_prefetch,
@@ -329,6 +333,9 @@ def apply_runtime_control(
             "scheduler_authority": CHATGPT_SCHEDULER_AUTHORITY,
             "scheduler_epoch": CHATGPT_SCHEDULER_EPOCH,
             "github_natural_scheduler_is_authority": False,
+            "github_natural_acquisition_schedule_disabled": (
+                SCHEDULE_POLICY.github_natural_acquisition_schedule_disabled
+            ),
             "chatgpt_scheduler_is_authority": True,
             "authoritative_trigger_kinds": ["chatgpt_scheduler", "master_orchestrated", "report_prefetch"],
             "operational_slot_completing_trigger_kinds": ["chatgpt_scheduler", "master_orchestrated"],

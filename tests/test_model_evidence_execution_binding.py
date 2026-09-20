@@ -203,3 +203,47 @@ def test_phase0c_adds_no_v6_or_legacy_production_dependency():
     assert "src.runtime_v3" not in source
     assert "src.models.xmins_v3" not in source
     assert "src.engines.prediction_evaluation" not in source
+
+
+def test_state_revision_metadata_and_historical_migration_provenance_are_explicit():
+    import json
+
+    state = json.loads((ROOT / "control/fpl_master_v12/FPL_MASTER_STATE_V12.json").read_text(encoding="utf-8"))
+    assert state["updated_at"] == "2026-09-20T17:16:08+07:00"
+    assert state["updated_at_basis"] == "FINAL_MICRO_BOUNDED_STABILIZATION_REQUEST_AT_2026-09-20T10:16:08Z"
+    assert state["authority"] is False
+    assert state["non_authoritative_state_file"] is True
+    assert state["latest_explicit_user_state_wins"] is True
+    assert state["source"] == "migrated_from_library_ACTIVE_DECISION_CONTEXT_V2"
+    assert state["source_provenance_class"] == "HISTORICAL_MIGRATION_ONLY"
+
+
+def test_p1_7_introduction_state_cannot_masquerade_as_current_capability_or_execution():
+    import json
+
+    state = json.loads((ROOT / "control/fpl_master_v12/FPL_MASTER_STATE_V12.json").read_text(encoding="utf-8"))
+    registry = state["model_evidence"]["p1_7_parameter_registry"]
+
+    for stale_live_key in (
+        "covariance_status",
+        "monte_carlo_started",
+        "package_optimizer_started_by_p1_7",
+        "mini_league_overlay_started",
+    ):
+        assert stale_live_key not in registry
+
+    intro = registry["introduction_state"]
+    assert intro["semantic_scope"] == "HISTORICAL_P1_7_INTRODUCTION_ONLY"
+    assert intro["covariance_status"] == "COVARIANCE_NOT_MODELLED_YET"
+    assert intro["monte_carlo_started"] is False
+    assert intro["package_optimizer_started_by_p1_7"] is False
+    assert intro["mini_league_overlay_started"] is False
+    assert intro["occurrence_execution_proof"] is False
+
+    capabilities = registry["current_capability_references"]
+    assert capabilities["monte_carlo_owner"] == "src/engines/v12_monte_carlo.py"
+    assert capabilities["package_search_owner"] == "src/engines/v12_package_search.py"
+    assert capabilities["mini_league_overlay_stage"] == "P1.8"
+    assert capabilities["capability_exists_not_occurrence_execution_proof"] is True
+    assert (ROOT / capabilities["monte_carlo_owner"]).exists()
+    assert (ROOT / capabilities["package_search_owner"]).exists()

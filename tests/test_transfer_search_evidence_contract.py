@@ -315,7 +315,7 @@ def test_20_canonical_20_25_30_25_is_unchanged():
             "FIXTURE_SECURITY": 50,
         }
     )
-    assert score["score"] == 50.0
+    assert score["football_score"] == 50.0
 
 
 def test_21_tactical_taxonomy_does_not_change_p1_6_math():

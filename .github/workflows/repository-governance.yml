@@ -108,7 +108,7 @@ jobs:
           tests/test_legacy_execution_isolation.py
           tests/test_active_native_p1_isolation.py
           tests/test_fpl_master_v12_decision_conformance.py
-          tests/test_v12_owned15_pairwise_searchproof_guard.py
+          tests/test_transfer_search_evidence_contract.py
           tests/test_model_evidence_execution_binding.py
           tests/test_model_evidence_calibration.py
           tests/test_package_search_exact.py

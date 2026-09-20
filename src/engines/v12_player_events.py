@@ -1149,6 +1149,15 @@ def project_player_fixture(
     )
     states = _finite_states(minutes_projection)
     joint = _joint_support(minutes_projection)
+    p_60_plus = clamp(
+        sum(
+            float(row["joint_probability"])
+            for row in joint
+            if float(row["minutes"]) >= 60.0
+        ),
+        0.0,
+        1.0,
+    )
     fixture = _fixture_context(matchup, home, league_baseline)
     attack_multiplier = fixture["fixture_attack_multiplier"]
     cs_prob = fixture["clean_sheet_probability"]
@@ -1491,6 +1500,12 @@ def project_player_fixture(
             },
         },
         "event_probabilities": dict(event_probabilities),
+        "minutes_threshold_probabilities": {
+            "p_60_plus": round(p_60_plus, 9),
+            "threshold_minutes": 60,
+            "source": "P1.1_FINITE_STATE_PLUS_P1.3_GOVERNED_BOUNDED_QUADRATURE",
+            "new_minutes_model_created": False,
+        },
         "point_distribution": dict(point_distribution),
         "dependence": predictive_surface["dependence"],
         "parameter_uncertainty": predictive_surface["parameter_uncertainty"],

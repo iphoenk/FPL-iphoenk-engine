@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-20T23:40:01+07:00`  
+> **Last runtime/documentation sync:** `2026-09-20T23:49:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -27,6 +27,7 @@ This repository powers a governed personal Fantasy Premier League decision syste
 | Package/search layer | `src/engines/v12_package_search.py` |
 | Correlated Monte Carlo | `src/engines/v12_monte_carlo.py` |
 | Visible DEEP/PRICE/report orchestration | `src/engines/v12_report_orchestration.py` |
+| Natural report acceptance observability | existing `src/runtime_v6/domains/report_plane/report_delivery.py` same-slot evidence owner; durable evidence only, **not** authority |
 | FPL recurring orchestration | **FPL Master Monitor V12** — only recurring FPL acquisition/report scheduler authority; methodology remains in Canonical TXT |
 | GitHub continuity watchdog | `v6-scheduler-watchdog.yml` — scheduled monitoring only; cannot acquire, publish, mutate #431, or advance scheduler proof |
 | Emergency V6 recovery | `v6-core-recovery-guard.yml` — explicit `workflow_dispatch` only; non-recurring, non-authoritative, non-natural-slot recovery |
@@ -289,6 +290,8 @@ Canonical routing includes static and dynamic report modes such as:
 - Post-All-Match.
 
 Dynamic Match routing is evaluated from actual scoring-GW fixture state. “Matchday” by itself does not mean every hourly occurrence must render a visible Match report.
+
+Prospective natural occurrences also retain one bounded, machine-readable acceptance proof on the existing same-slot report-delivery evidence surface. It records the executed two-stage REPORT_DUE result, fixture evidence, render structure/digest, locked-team source/status, ICON+ coverage metadata, and a separate UI-delivery-ack state. This proof is observability only: `RENDER_PROVEN=true` never means the client UI acknowledged delivery, and `DELIVERY_UI_ACK=UNAVAILABLE` does not invalidate a proven routing/render pass. Historical occurrences are not retrofitted.
 
 A scoring GW still in progress is not a reason to suppress supportable next-GW analytics.
 

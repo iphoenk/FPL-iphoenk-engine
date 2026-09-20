@@ -209,8 +209,8 @@ def test_state_revision_metadata_and_historical_migration_provenance_are_explici
     import json
 
     state = json.loads((ROOT / "control/fpl_master_v12/FPL_MASTER_STATE_V12.json").read_text(encoding="utf-8"))
-    assert state["updated_at"] == "2026-09-20T17:16:08+07:00"
-    assert state["updated_at_basis"] == "FINAL_MICRO_BOUNDED_STABILIZATION_REQUEST_AT_2026-09-20T10:16:08Z"
+    assert state["updated_at"] == "2026-09-20T17:19:58+07:00"
+    assert state["updated_at_basis"] == "STATE_SEMANTIC_REVISION_COMMIT_ec2d5880e70eafd0bf1de2c28be768abd55ec740_AT_2026-09-20T10:19:58Z"
     assert state["authority"] is False
     assert state["non_authoritative_state_file"] is True
     assert state["latest_explicit_user_state_wins"] is True

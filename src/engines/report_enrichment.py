@@ -638,7 +638,23 @@ def run() -> dict[str, Any]:
     tech["report_time_intelligence"] = report_time
     tech["external_consensus"] = external_consensus
     tech["owned_challenger_decision"] = comparator
-    tech["mini_league_overlay"] = package_decision.get("mini_league_overlay")
+    overlay = package_decision.get("mini_league_overlay") or {}
+    evidence = overlay.get("model_evidence_binding") or {}
+    tech["mini_league_overlay"] = {
+        "summary": _mini_league_overlay_user_block(package_decision),
+        "model_owner": overlay.get("model_owner"),
+        "model_version": overlay.get("model_version"),
+        "run_fingerprint": overlay.get("run_fingerprint"),
+        "output_fingerprint": overlay.get("output_fingerprint"),
+        "mini_league_snapshot_id": evidence.get("mini_league_snapshot_id"),
+        "denominator_fingerprint": evidence.get("denominator_fingerprint"),
+        "football_baseline_fingerprint": evidence.get(
+            "football_baseline_fingerprint"
+        ),
+        "mc_output_fingerprint": evidence.get("mc_output_fingerprint"),
+        "governance": overlay.get("governance"),
+        "full_overlay_remains_in_package_decision": bool(overlay),
+    }
     tech["price_radar_serving_coverage"] = price_coverage
     tech["runtime"] = {
         "current_run_ref": "data/runtime_performance.json",

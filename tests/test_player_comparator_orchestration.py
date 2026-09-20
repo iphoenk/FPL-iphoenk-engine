@@ -391,3 +391,207 @@ def test_comparator_preserves_canonical_weights_without_defining_new_ones():
     assert "0.25" not in source
     assert "0.30" not in source
     assert "CANONICAL_WEIGHTS =" not in source
+
+
+def _native_minutes_fixture(*, p_start=0.81, p_dnp=0.09, xmins=68.4):
+    return {
+        "model_owner": "V12_PLAYER_MINUTES",
+        "conditional_probabilities": {
+            "p_available": 0.94,
+            "p_start_given_available": 0.8617,
+        },
+        "start_probability": p_start,
+        "cameo_probability": 0.10,
+        "late_cameo_probability": 0.03,
+        "dnp_probability": p_dnp,
+        "derived_probabilities": {
+            "p_start": p_start,
+            "p_cameo": 0.10,
+            "p_late_cameo": 0.03,
+            "p_dnp": p_dnp,
+        },
+        "expected_minutes": 67.0,
+        "xmins_distribution": {
+            "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+            "mean": xmins,
+            "std": 18.2,
+            "states": [
+                {"state": "START", "probability": p_start, "minutes_mean": 78.0, "minutes_std": 9.0},
+                {"state": "CAMEO", "probability": 0.07, "minutes_mean": 22.0, "minutes_std": 7.0},
+                {"state": "LATE_CAMEO", "probability": 0.03, "minutes_mean": 8.0, "minutes_std": 4.0},
+                {"state": "ZERO_MINUTES", "probability": p_dnp, "minutes_mean": 0.0, "minutes_std": 0.0},
+            ],
+        },
+        "evidence_lineage": {"source": "native-p1.1-test-shape"},
+    }
+
+
+def _native_events_fixture(xpts=5.25):
+    point_distribution = {
+        "status": "READY_PARTIAL_BONUS_RESIDUAL",
+        "model": "FINITE_STATE_CONDITIONAL_CORE_POINT_PMF_V1",
+        "probabilities": {"0": 0.20, "2": 0.25, "5": 0.30, "10": 0.25},
+        "expected_points": xpts,
+        "variance": 7.84,
+        "std": 2.8,
+        "quantiles": {"P10": 0, "P50": 5, "P90": 10},
+        "p_fpl_blank": 0.45,
+        "tails": {"ge_10": 0.25},
+        "provenance": {"owner": "P1.3B"},
+    }
+    return {
+        "model_owner": "V12_PLAYER_EVENTS",
+        "event_probabilities": {"p_attacking_return": 0.39},
+        "point_distribution": point_distribution,
+        "aggregate": {
+            "expected_fpl_points": xpts,
+            "points_variance": 7.84,
+            "points_std": 2.8,
+            "canonical_gaussian": False,
+            "quantiles": dict(point_distribution["quantiles"]),
+            "p_fpl_blank": 0.45,
+            "tails": {"ge_10": 0.25},
+        },
+        "mean": xpts,
+        "std": 2.8,
+    }
+
+
+def _native_tactical_fixture(score=72.5):
+    return {
+        "model_owner": "V12_TACTICAL_ROLE",
+        "canonical_tactical_role_score": score,
+        "scoring_channel_vector": {"GOAL": 0.7, "ASSIST": 0.6, "SET_PIECE": 0.2},
+        "scoring_channel_diversity": 0.68,
+        "tactical_role_fit": 0.74,
+        "role_resilience": 0.79,
+        "fixture_suppression_raw": 0.22,
+        "fixture_suppression_effective": 0.14,
+        "feature_evidence": {
+            "tactical_role_fit": {"evidence_state": "OBSERVED"},
+        },
+        "score_decomposition": {"FINAL_TACTICAL_ROLE_SCORE": score},
+    }
+
+
+def _native_profile_fixture():
+    return {
+        "evidence_class": "OBSERVED_ROLE",
+        "role_summary": "advanced-8 / right half-space",
+        "route_to_points": ["GOAL", "ASSIST", "BONUS"],
+        "coach": "verified-current-coach",
+        "base_formation": "4-3-3",
+        "pressing": "verified-profile-context",
+        "opponent_vulnerabilities": ["right half-space"],
+        "provenance": "verified-tactical-profile",
+    }
+
+
+def _native_player(element, name, *, club_id, xpts_offset=0.0):
+    player = _player(element, name, club_id=club_id, xpts_offset=xpts_offset)
+    for index, fixture in enumerate(player["fixtures"]):
+        fixture["minutes"] = _native_minutes_fixture(
+            p_start=0.81 - index * 0.01,
+            p_dnp=0.09 + index * 0.005,
+            xmins=68.4 - index,
+        )
+        fixture["events"] = _native_events_fixture(
+            xpts=5.25 + xpts_offset + index * 0.1
+        )
+        fixture["tactical"] = _native_tactical_fixture(score=72.5 - index)
+        fixture["tactical_profile"] = _native_profile_fixture()
+    return player
+
+
+def test_native_p11_shape_maps_without_flattened_aliases():
+    owned = _native_player(301, "Native Owned", club_id=1)
+    challenger = _native_player(302, "Native Challenger", club_id=2, xpts_offset=0.4)
+    result = _compare(owned=owned, challenger=challenger, context=_context(302))
+    row = result["comparisons"][0]["fixture_by_fixture"][0]["player_out"][0]
+    assert row["owner_schema_binding"]["minutes"] == "NATIVE_P1_1"
+    assert row["p_available"] == pytest.approx(0.94)
+    assert row["p_start"] == pytest.approx(0.81)
+    assert row["p_dnp"] == pytest.approx(0.09)
+    assert row["p_cameo"] == pytest.approx(0.10)
+    assert row["p_late_cameo"] == pytest.approx(0.03)
+    assert row["xmins"] == pytest.approx(68.4)
+    assert row["p_60_plus"]["value"] == "UNAVAILABLE"
+    assert "governed P(60+)" in row["p_60_plus"]["reason"]
+
+
+def test_native_p13_shape_maps_distribution_quantiles_and_uncertainty():
+    owned = _native_player(311, "Native Owned", club_id=1)
+    challenger = _native_player(312, "Native Challenger", club_id=2, xpts_offset=0.4)
+    result = _compare(owned=owned, challenger=challenger, context=_context(312))
+    row = result["comparisons"][0]["fixture_by_fixture"][0]["player_out"][0]
+    assert row["owner_schema_binding"]["events"] == "NATIVE_P1_3"
+    assert row["xpts"] == pytest.approx(5.25)
+    assert row["p_return"] == pytest.approx(0.39)
+    assert row["p_blank"] == pytest.approx(0.45)
+    assert row["point_distribution"]["model"] == "FINITE_STATE_CONDITIONAL_CORE_POINT_PMF_V1"
+    assert row["floor"] == {
+        "value": 0.0,
+        "quantile": "P10",
+        "source": "P1.3B_NATIVE_POINT_DISTRIBUTION",
+    }
+    assert row["ceiling"] == {
+        "value": 10.0,
+        "quantile": "P90",
+        "source": "P1.3B_NATIVE_POINT_DISTRIBUTION",
+    }
+    assert row["uncertainty"] == pytest.approx(2.8)
+
+
+def test_native_p16_output_is_preserved_and_profile_is_separate():
+    owned = _native_player(321, "Native Owned", club_id=1)
+    challenger = _native_player(322, "Native Challenger", club_id=2, xpts_offset=0.4)
+    result = _compare(owned=owned, challenger=challenger, context=_context(322))
+    row = result["comparisons"][0]["fixture_by_fixture"][0]["player_out"][0]
+    assert row["owner_schema_binding"]["tactical"] == "NATIVE_P1_6"
+    assert row["canonical_tactical_role_score"] == pytest.approx(72.5)
+    assert row["p1_6_model_output"]["scoring_channel_diversity"] == pytest.approx(0.68)
+    assert row["p1_6_model_output"]["tactical_role_fit"] == pytest.approx(0.74)
+    assert row["tactical_profile_context"]["coach"] == "verified-current-coach"
+    assert row["tactical_evidence_class"] == "OBSERVED_ROLE"
+    assert row["role_summary"] == "advanced-8 / right half-space"
+    assert "coach" not in row["p1_6_model_output"]
+    assert result["comparisons"][0]["duplicate_tactical_scorer"] is False
+
+
+def test_native_p16_without_profile_does_not_fabricate_observed_role():
+    owned = _native_player(331, "Native Owned", club_id=1)
+    challenger = _native_player(332, "Native Challenger", club_id=2, xpts_offset=0.4)
+    for fixture in owned["fixtures"]:
+        fixture.pop("tactical_profile", None)
+    result = _compare(owned=owned, challenger=challenger, context=_context(332))
+    row = result["comparisons"][0]["fixture_by_fixture"][0]["player_out"][0]
+    assert row["tactical_evidence_class"] == "UNKNOWN"
+    assert row["role_summary"] == "UNAVAILABLE"
+    assert row["canonical_tactical_role_score"] is not None
+
+
+def test_generic_native_schema_comparator_acceptance():
+    owned = _native_player(341, "Owned Generic Native", club_id=1)
+    challenger = _native_player(
+        342, "Challenger Generic Native", club_id=2, xpts_offset=0.55
+    )
+    result = _compare(owned=owned, challenger=challenger, context=_context(342))
+    battle = result["comparisons"][0]
+    assert battle["player_out"]["element_id"] == 341
+    assert battle["player_in"]["element_id"] == 342
+    assert battle["planning_gw"] == 6
+    assert len(battle["fixture_by_fixture"]) == 5
+    assert battle["raw_gain_1gw"] > 0
+    assert battle["raw_gain_2gw"] > 0
+    assert battle["raw_gain_3gw"] > 0
+    assert battle["raw_gain_5gw"] > 0
+    assert battle["affordability"]["status"] == "PASS"
+    assert battle["structural_impact"]["formation_options_preserved"] is True
+    assert battle["robustness"]["status"] == "PASS"
+    assert battle["expected_regret"] == pytest.approx(0.4)
+    assert battle["information_value_of_waiting"] == pytest.approx(0.25)
+    assert battle["operational_action"] == "WAIT"
+    assert battle["reversal_triggers"] == ["material P(start) change"]
+    assert battle["duplicate_xpts_model"] is False
+    assert battle["duplicate_xmins_model"] is False
+    assert battle["duplicate_tactical_scorer"] is False

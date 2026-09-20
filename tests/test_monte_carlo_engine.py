@@ -14,6 +14,7 @@ from src.engines.v12_monte_carlo import (
     _projection_map,
     _resolve_route_chunk,
     attach_monte_carlo_to_package_utility,
+    compare_legacy_monte_carlo,
     correlation_structure_diagnostic,
     crn_variance_benchmark,
     legacy_simulation_inventory,
@@ -619,3 +620,28 @@ def test_70_no_nan_or_infinite_core_metrics():
         row["mean_difference_vs_hold"], row["paired_difference_standard_error"],
     ]
     assert all(math.isfinite(float(value)) for value in numeric)
+
+
+
+def test_71_migration_negative_oracle_has_bounded_taxonomy():
+    native = {
+        "execution_state": "EXECUTED",
+        "actual_paths": 500_000,
+        "canonical_pass": True,
+        "correlated": True,
+        "common_random_numbers": True,
+        "method": "PATH_LEVEL_SHARED_MATCH_TEAM_STATE_EVENT_SIMULATION",
+    }
+    legacy = {
+        "method": "independent_normal_aggregate_baseline",
+        "correlated": False,
+        "canonical_v12_pass": False,
+    }
+    comparison = compare_legacy_monte_carlo(native, legacy)
+    assert comparison["unexpected_regression_count"] == 0
+    assert comparison["legacy_numerical_equality_required"] is False
+    assert "CANONICAL_DISTRIBUTIONAL_IMPROVEMENT" in comparison["classifications"]
+    assert "CORRELATION_IMPROVEMENT" in comparison["classifications"]
+    assert "STATE_SAMPLING_IMPROVEMENT" in comparison["classifications"]
+    assert "AUTOSUB_PATH_IMPROVEMENT" in comparison["classifications"]
+    assert "CRN_IMPROVEMENT" in comparison["classifications"]

@@ -433,8 +433,8 @@ def test_real_price_artifact_data_players_produces_exact20_with_visible_directio
     artifact = _real_price_predictor()
     rise = build_price20(predictor_artifact=artifact, direction="RISE")
     fall = build_price20(predictor_artifact=artifact, direction="FALL")
-    assert rise["state"] == "COMPLETE"
-    assert fall["state"] == "COMPLETE"
+    assert rise["state"] == "DEGRADED"
+    assert fall["state"] == "DEGRADED"
     assert rise["available_count"] == 20
     assert fall["available_count"] == 20
     assert rise["artifact_adapter"] == "V6_DATA_PLAYERS_OFFSET0"
@@ -648,17 +648,19 @@ def test_predictor_observation_is_separate_from_official_execution_cycle() -> No
 
 
 # PRICE 13
-def test_no_crossing_is_truthful_complete_terminal_date_state() -> None:
+def test_unsupported_cycle_eta_remains_unavailable_and_prevents_complete() -> None:
     art = _contract_price_artifact([_contract_price_row(i, 50.0, offset1=60.0, offset2=70.0) for i in range(1, 25)])
     result = build_price20(predictor_artifact=art, direction="RISE")
-    assert result["state"] == "COMPLETE"
+    assert result["state"] == "DEGRADED"
     assert result["date_state_complete_count"] == 20
     assert result["expected_change_date_count"] == 0
     assert result["no_crossing_count"] == 20
     assert all(row["date_state"] == "NO_CROSSING_WITHIN_GOVERNED_HORIZON" for row in result["rows"])
-    assert all(row["estimated_change_date_wib"] is None for row in result["rows"])
-    assert all(row["last_supported_projection_date_wib"] == "23 Sep 2026 • 06:00 WIB" for row in result["rows"])
-    assert all(row["estimated_change_window"].startswith("Belum terdeteksi berubah sampai") for row in result["rows"])
+    assert all(row["cycles_to_expected_change"] == "UNAVAILABLE" for row in result["rows"])
+    assert all(row["estimated_change_window"] == "UNAVAILABLE" for row in result["rows"])
+    assert all(row["eta_reason"] == "NO_EXISTING_PREDICTOR_CYCLE_CROSSES_GOVERNED_THRESHOLD" for row in result["rows"])
+    assert all(row["eta_context"].startswith("Belum terdeteksi berubah sampai") for row in result["rows"])
+    assert "ETA remains UNAVAILABLE" in result["degradation_reason"]
 
 
 # PRICE 14
@@ -719,6 +721,8 @@ def test_all15_price_radar_stays_exact15() -> None:
     result = build_actionable_price_radar(owned15=_contract_owned15(), predictor_artifact=_crossing_contract_price_artifact())
     assert result["available_count"] == 15
     assert result["identity_complete"] is True
+    assert all("cycles_to_expected_change" in row for row in result["rows"])
+    assert all("estimated_change_window" in row for row in result["rows"])
 
 
 # PRICE 19
@@ -821,12 +825,42 @@ def test_stale_authenticated_sell_value_is_classified_not_refreshed_or_fabricate
     assert all(row["authenticated_sell_value"] != "UNAVAILABLE" for row in result["rows"])
 
 
-def test_visible_contract_is_date_first_not_cycle_label_first() -> None:
+def test_visible_price_contract_retains_cycle_eta_and_date_state_fields() -> None:
     result = build_price20(predictor_artifact=_crossing_contract_price_artifact(), direction="RISE")
     fields = set(result["visible_contract_fields"])
+    assert "next_official_price_cycle_uk" in fields
+    assert "next_official_price_cycle_wib" in fields
+    assert "cycles_to_expected_change" in fields
+    assert "estimated_change_window" in fields
     assert "estimated_change_date_wib" in fields
     assert "date_state" in fields
-    assert "cycles_to_expected_change" not in fields
+
+
+
+def test_missing_timing_semantics_prevents_price_section_complete() -> None:
+    art = _contract_price_artifact([
+        _contract_price_row(i, 75.0, offset1=80.0, offset2=85.0)
+        for i in range(1, 25)
+    ])
+    result = build_price20(predictor_artifact=art, direction="RISE")
+    assert result["available_count"] == 20
+    assert result["state"] == "DEGRADED"
+    assert all(row["cycles_to_expected_change"] == "UNAVAILABLE" for row in result["rows"])
+    assert all(row["estimated_change_window"] == "UNAVAILABLE" for row in result["rows"])
+
+
+def test_all15_real_schema_exposes_direction_progress_strength_cycle_and_eta() -> None:
+    result = build_actionable_price_radar(
+        owned15=_contract_owned15(),
+        predictor_artifact=_crossing_contract_price_artifact(),
+    )
+    assert result["available_count"] == 15
+    assert all(row["predictor_direction"] == "RISE" for row in result["rows"])
+    assert all(row["predictor_progress"] != "UNAVAILABLE" for row in result["rows"])
+    assert all(row["prediction_strength"] != "UNAVAILABLE" for row in result["rows"])
+    assert all(row["next_official_price_cycle_wib"] != "UNAVAILABLE" for row in result["rows"])
+    assert all(row["cycles_to_expected_change"] != "UNAVAILABLE" for row in result["rows"])
+    assert all(row["estimated_change_window"] != "UNAVAILABLE" for row in result["rows"])
 
 
 def _weather_payload(impact: str = "NORMAL") -> dict:
@@ -837,6 +871,7 @@ def _weather_payload(impact: str = "NORMAL") -> dict:
         "precipitation_chance_pct": 20,
         "wind_kmh": 14,
         "fpl_impact": impact,
+        "impact_reason": "no material FPL adjustment" if impact == "NORMAL" else "advisory weather context",
         "weather_evidence_timestamp": "2026-09-20T10:30:00+00:00",
     }
 
@@ -941,9 +976,16 @@ def test_visible_weather_row_has_required_fields() -> None:
         "kickoff",
         "condition",
         "temperature_c",
+        "temperature",
+        "precipitation_probability",
         "precipitation_chance_pct",
+        "wind_kph",
         "wind_kmh",
         "fpl_impact",
+        "impact_class",
+        "impact_reason",
+        "evidence_timestamp",
+        "weather_evidence_timestamp",
     }
     assert required <= set(result["visible_row"])
     assert result["state"] == "COMPLETE"
@@ -959,3 +1001,29 @@ def test_visible_weather_row_hides_raw_provider_plumbing() -> None:
     assert result["raw_provider_plumbing_visible"] is False
     assert {"provider", "latitude", "longitude", "raw"}.isdisjoint(visible)
 
+
+
+def test_weather_does_not_mutate_p1_6_tactical_score() -> None:
+    result = weather_report_time_evidence(
+        fixture="AAA-BBB",
+        venue="Example Ground",
+        kickoff="K",
+        weather=_weather_payload(),
+        lookup_accessible=True,
+    )
+    assert result["weather_mutates_p1_6_tactical_score"] is False
+
+
+def test_weather_unavailable_visible_row_carries_reason_without_v6_dependency() -> None:
+    result = weather_report_time_evidence(
+        fixture="AAA-BBB",
+        venue="Example Ground",
+        kickoff="K",
+        weather=None,
+        lookup_accessible=False,
+        failure_reason="forecast horizon unavailable",
+    )
+    assert result["state"] == "UNAVAILABLE"
+    assert result["visible_row"]["impact_reason"] == "forecast horizon unavailable"
+    assert result["v6_weather_required"] is False
+    assert result["weather_failure_isolated_to_weather"] is True

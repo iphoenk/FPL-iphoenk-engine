@@ -61,6 +61,7 @@ def test_chatgpt_scheduler_uses_explicit_jakarta_logical_slot():
     assert control["chatgpt_scheduler_proof"] is True
     assert control["scheduled_cycle"] is True
     assert control["github_schedule_event"] is False
+    assert control["github_natural_acquisition_schedule_disabled"] is True
     assert control["expected_cycle_at"] == "2026-09-08T03:00:00+00:00"
     assert control["last_chatgpt_scheduler_cycle_at"] == "2026-09-08T03:00:00+00:00"
     assert control["logical_slot_source"] == "GOVERNED_TRIGGER_EVENT"
@@ -164,7 +165,9 @@ def test_production_policy_uses_chatgpt_and_removed_github_crons():
     policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
     assert policy["scheduler_authority"]["kind"] == "CHATGPT_TASK"
-    assert policy["scheduler_authority"]["name"] == "FPL Master Monitor"
+    assert policy["scheduler_authority"]["name"] == "FPL Master Monitor V12"
+    assert policy["scheduler_authority"]["runtime_authority_id"] == "CHATGPT_FPL_MASTER_MONITOR"
+    assert policy["governance"]["single_schedule_owner"] == "CHATGPT:FPL Master Monitor V12"
     assert policy["scheduler_authority"]["physical_minute"] == 30
     assert policy["scheduler_authority"]["logical_slot_minute"] == 0
     assert policy["github_natural_schedule"]["enabled"] is False
@@ -322,3 +325,35 @@ def test_operational_ledger_is_extracted_without_duplicate_implementation():
     assert "def _densify_chatgpt_rows(" not in runtime
     assert "def build_operational_slots(" in ledger
     assert "scheduler_observability_only" in ledger
+
+
+def test_runtime_scheduler_metadata_agrees_with_schedule_policy():
+    policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
+    control = build_runtime_control(
+        {},
+        scheduler_interval_minutes=60,
+        now=datetime(2026, 9, 20, 10, 31, tzinfo=timezone.utc),
+        event_name="issues",
+        run_id="natural-post-merge-contract",
+        schedule_kind="chatgpt_scheduler",
+        logical_slot="2026-09-20T17:00:00+07:00",
+    )
+    assert policy["github_natural_schedule"]["enabled"] is False
+    assert control["github_schedule_event"] is False
+    assert control["github_natural_acquisition_schedule_disabled"] is True
+    assert control["scheduler_authority"] == policy["scheduler_authority"]["runtime_authority_id"]
+    assert control["single_logical_acquisition_per_scheduler_slot"] is True
+    assert control["report_prefetch_cannot_complete_core_operational_slot"] is True
+
+    manifest = {"overall": "GREEN", "polling": {"scheduler_interval_minutes": 60}, "paths": {}, "governance": {}}
+    updated, _ = apply_runtime_control(
+        manifest,
+        {},
+        now=datetime(2026, 9, 20, 10, 31, tzinfo=timezone.utc),
+        event_name="issues",
+        run_id="natural-post-merge-contract",
+        schedule_kind="chatgpt_scheduler",
+        logical_slot="2026-09-20T17:00:00+07:00",
+    )
+    assert updated["governance"]["github_natural_acquisition_schedule_disabled"] is True
+    assert updated["governance"]["github_natural_scheduler_is_authority"] is False

@@ -24,6 +24,7 @@ class SchedulerPolicy:
     green_after_consecutive_slots: int
     proof_fresh_after_minutes: int
     proof_stale_after_minutes: int
+    github_natural_acquisition_schedule_disabled: bool
 
 
 def _positive_int(value: Any, field: str) -> int:
@@ -97,6 +98,7 @@ def load_schedule_policy(path: Path | None = None) -> SchedulerPolicy:
         green_after_consecutive_slots=green_streak,
         proof_fresh_after_minutes=proof_fresh,
         proof_stale_after_minutes=proof_stale,
+        github_natural_acquisition_schedule_disabled=(github.get("enabled") is False),
     )
 
 

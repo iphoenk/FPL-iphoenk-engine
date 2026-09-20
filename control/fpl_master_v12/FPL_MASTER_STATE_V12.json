@@ -6,7 +6,7 @@
   "non_authoritative_state_file": true,
   "v6_factual_data_plane_owner": false,
   "authority": false,
-  "updated_at": "2026-09-19T20:12:35+07:00",
+  "updated_at": "2026-09-20T17:16:08+07:00",
   "source": "migrated_from_library_ACTIVE_DECISION_CONTEXT_V2",
   "latest_explicit_user_state_wins": true,
   "confirmed_current_squad_state": {
@@ -340,15 +340,27 @@
       "settled_predeadline_lineup_sample_size_at_introduction": 0,
       "calibration_confidence": "LOW",
       "automatic_retuning": false,
-      "covariance_status": "COVARIANCE_NOT_MODELLED_YET",
-      "monte_carlo_started": false,
-      "package_optimizer_started_by_p1_7": false,
-      "mini_league_overlay_started": false,
       "p1_1_math_mutated": false,
       "p1_3_math_mutated": false,
       "p1_6_math_mutated": false,
       "methodology_weights_20_25_30_25_unchanged": true,
-      "required_future_calibration_evidence": "IMMUTABLE_PREDEADLINE_P1_7_LINEUP_DECISIONS_SETTLED_AFTER_FINISHED_EVENTS"
+      "required_future_calibration_evidence": "IMMUTABLE_PREDEADLINE_P1_7_LINEUP_DECISIONS_SETTLED_AFTER_FINISHED_EVENTS",
+      "introduction_state": {
+        "semantic_scope": "HISTORICAL_P1_7_INTRODUCTION_ONLY",
+        "covariance_status": "COVARIANCE_NOT_MODELLED_YET",
+        "monte_carlo_started": false,
+        "package_optimizer_started_by_p1_7": false,
+        "mini_league_overlay_started": false,
+        "occurrence_execution_proof": false
+      },
+      "current_capability_references": {
+        "monte_carlo_owner": "src/engines/v12_monte_carlo.py",
+        "package_search_owner": "src/engines/v12_package_search.py",
+        "mini_league_overlay_stage": "P1.8",
+        "capability_exists_not_occurrence_execution_proof": true
+      }
     }
-  }
+  },
+  "updated_at_basis": "FINAL_MICRO_BOUNDED_STABILIZATION_REQUEST_AT_2026-09-20T10:16:08Z",
+  "source_provenance_class": "HISTORICAL_MIGRATION_ONLY"
 }

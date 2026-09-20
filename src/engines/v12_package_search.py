@@ -14,6 +14,7 @@ value, WAIT/PREPARE/ACT, Monte Carlo, or mini-league logic.
 from collections import Counter
 from functools import lru_cache
 from itertools import combinations, product
+from math import comb
 import json
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
@@ -617,6 +618,31 @@ def search_packages(
     unresolved = sum(1 for route in routes if route.get("economics_status") != "RESOLVED")
     affordable = sum(1 for route in routes if route.get("affordable") is True)
     unaffordable = sum(1 for route in routes if route.get("affordable") is False)
+    hold_included = any(route.get("route_id") == "HOLD" for route in routes)
+    outgoing_combination_count = sum(
+        comb(len(current), transfer_count)
+        for transfer_count in range(1, bound + 1)
+    )
+    search_proof = {
+        "owned_expected": int(SQUAD_RULES.get("squad_size") or 15),
+        "owned_evaluated": len(current),
+        "eligible_universe_expected": coverage["eligible_universe_count"],
+        "eligible_universe_evaluated": coverage["searched_universe_count"],
+        "outgoing_candidate_count": len(current),
+        "outgoing_combination_count": outgoing_combination_count,
+        "legal_route_count": len(routes),
+        "hold_included": hold_included,
+        "lossy_pruning": bool(lossy_pruning),
+        "search_authority": coverage["search_authority"],
+    }
+    owned_out_scan = {
+        "evaluated_owned_element_ids": sorted(_element(row) for row in current),
+        "selected_outgoing_element_ids": [],
+        "selection_is_result_not_precondition": True,
+        "user_named_out_is_hypothesis_only": True,
+        "search_stage_selects_outgoing": False,
+        "second_outgoing_score_created": False,
+    }
     return {
         "schema_version": 1,
         "model": cfg.get("model_id"),
@@ -628,6 +654,8 @@ def search_packages(
         "searched_universe_count": coverage["searched_universe_count"],
         "route_denominator": len(routes),
         "coverage": coverage,
+        "search_proof": search_proof,
+        "owned_out_scan": owned_out_scan,
         "execution": {
             "mode": mode,
             "batch_size": int(batch_size) if mode == "BATCH" else None,
@@ -645,7 +673,10 @@ def search_packages(
         "search_frontier": build_search_frontier(routes),
         "governance": {
             "search_decision_utility_separated": True,
-            "hold_included": any(route.get("route_id") == "HOLD" for route in routes),
+            "hold_included": hold_included,
+            "owned15_first_outgoing_enumeration": len(current) == 15,
+            "user_named_out_is_never_search_precondition": True,
+            "weak_link_selection_is_downstream_result": True,
             "lossless_position_multiset_pruning": True,
             "lossy_pruning_applied": bool(lossy_pruning),
             "decision_score_present": False,

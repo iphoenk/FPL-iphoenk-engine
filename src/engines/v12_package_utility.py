@@ -376,6 +376,7 @@ def _build_resolved_transfer_economics(
     *,
     hit: Mapping[str, Any],
     shadow: Mapping[str, Any],
+    projection_by_id: Mapping[int, Mapping[str, Any]],
 ) -> dict[str, Any]:
     transfer_count = int(route.get("transfer_count") or 0)
     if (
@@ -395,11 +396,19 @@ def _build_resolved_transfer_economics(
             "affordable": route.get("affordable"),
             "reason": "UNRESOLVED_EXECUTION_ECONOMICS",
         }
-    return build_transfer_economics(
+    reacquisition_now = 0.0
+    sell_total = 0.0
+    for outgoing in route.get("players_out") or []:
+        element = int(outgoing.get("element") or 0)
+        projection = projection_by_id.get(element) or {}
+        reacquisition_now += _f(projection.get("now_cost"))
+        sell_total += _f(outgoing.get("sell_value"))
+    buy_back_gap = max(0.0, reacquisition_now - sell_total)
+    economics = build_transfer_economics(
         ft_used=int(hit.get("ft_consumed") or 0),
         hit_points=float(hit.get("hit_points") or 0.0),
-        buy_back_cost=0.0,
-        sell_value_loss=0.0,
+        buy_back_cost=buy_back_gap,
+        sell_value_loss=buy_back_gap,
         price_movement_effect=0.0,
         affordability_after=True,
         itb_after=route.get("bank_after"),
@@ -412,6 +421,13 @@ def _build_resolved_transfer_economics(
         possible_future_hit=None,
         exit_security="NOT_ASSESSED",
     )
+    economics["buy_back_cost_semantics"] = (
+        "CURRENT_OFFICIAL_REACQUISITION_PRICE_MINUS_AUTHENTICATED_SELL_VALUE"
+    )
+    economics["price_movement_effect_semantics"] = (
+        "NO_FUTURE_PRICE_PREDICTION_EMBEDDED"
+    )
+    return economics
 
 
 def _route_net_horizons(
@@ -823,6 +839,7 @@ def evaluate_packages(
 
     hold_route = next(row for row in routes if row.get("route_id") == "HOLD")
     hold_squad = _route_squad(hold_route)
+    projection_by_id = _projection_map(projections)
     lineup_cache: dict[tuple[tuple[int, ...], int], dict[str, Any]] = {}
 
     def route_lineups(route: Mapping[str, Any]) -> dict[str, Any]:
@@ -896,6 +913,7 @@ def evaluate_packages(
             route,
             hit=hit,
             shadow=shadow,
+            projection_by_id=projection_by_id,
         )
         rental = route_id in rentals
         horizons, canonical_horizon_analysis = _route_net_horizons(
@@ -922,6 +940,8 @@ def evaluate_packages(
             "hit_status": hit.get("status"),
             "bank_after": route.get("bank_after"),
             "affordable": route.get("affordable"),
+            "legal": route.get("legal"),
+            "final_squad_elements": list(route.get("final_squad_elements") or []),
             "search_authority": route.get("search_authority"),
             "football_route_utility": {
                 "source": "P1.7_V12_LINEUP_OPTIMIZER",

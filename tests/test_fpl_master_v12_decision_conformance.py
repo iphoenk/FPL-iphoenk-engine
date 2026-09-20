@@ -295,6 +295,13 @@ def test_J_one_gw_rental_exit_is_provisional_and_reoptimized():
     proof = _valid_proof(
         route_type="ONE_GW_PUNT",
         horizons=_horizons(rental=True),
+        owned_out_scan={
+            "evaluated_owned_element_ids": list(range(1, 16)),
+            "selected_outgoing_element_ids": [],
+            "user_named_outgoing_element_ids": [],
+            "selection_is_result_not_precondition": True,
+            "user_named_out_is_hypothesis_only": True,
+        },
     )
     assert proof["route_type"] == "ONE_GW_PUNT"
     assert "2GW" in proof["horizons"]["horizons"]

@@ -453,10 +453,10 @@ def test_42_legacy_simulator_not_promoted_by_path_count():
 
 def test_43_weights_20_25_30_25_unchanged():
     assert CANONICAL_WEIGHTS == {
-        "LAST_SEASON": 0.20,
-        "PRESEASON": 0.25,
-        "CURRENT_SEASON": 0.30,
-        "FIXTURE_ROLE": 0.25,
+        "PROVEN_HISTORICAL": 0.20,
+        "TACTICAL_ROLE": 0.25,
+        "CURRENT_UNDERLYING": 0.30,
+        "FIXTURE_SECURITY": 0.25,
     }
 
 

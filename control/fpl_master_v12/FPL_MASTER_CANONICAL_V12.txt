@@ -385,6 +385,7 @@ Where required: RISE20 exact20; FALL20 exact20.
 Complete selection uses the full current Official universe.
 RISE = projection_offset_0_percent DESC, tie element_id ASC.
 FALL = projection_offset_0_percent ASC, tie element_id ASC.
+SECTION MEMBERSHIP != SIGNAL DIRECTION. Visible direction is deterministic presentation of the selected row's actual offset-0 projected_percent: >0 RISE; <0 FALL; =0 NEUTRAL. Never label a row RISE/FALL merely because it appears in the RISE20/FALL20 section.
 
 Official FPL 2026/27 player price changes execute DAILY at 00:00 UK local time. The official Price Change Predictor may update more frequently, currently every 15 minutes, but predictor-refresh cadence is NOT the official price-change execution cadence. Never say prices can change any hour merely because predictor observations refresh intraday.
 
@@ -404,9 +405,12 @@ Never present stale standings as current.
 
 13. WEATHER
 Weather is REPORT-TIME evidence and does not belong in V6.
-Use direct fresh report-time weather after venue/kickoff resolution when mode requires and access is available.
-Low weight unless unusual conditions have plausible football mechanism.
-If lookup is unavailable, render DEGRADED/UNAVAILABLE with the actual access/source reason. Never say weather is unavailable merely because V6 does not carry it.
+Use direct fresh report-time weather after fixture/venue/kickoff resolution when mode requires and access is available.
+For DEEP / Deadline / Final Review, render one compact visible WEATHER block for relevant upcoming Premier League fixtures involving OUR15 plus serious current transfer/challenger routes where weather could materially affect the comparison. For MATCH mode, render weather only when materially relevant to the current fixture. Do not flood the report with irrelevant venues.
+Minimum visible WEATHER row: fixture;venue;kickoff;condition;temperature;precipitation_chance;wind;FPL impact. Retain weather_evidence_timestamp for freshness. Normal visible output must not expose raw API payloads, provider plumbing, latitude/longitude internals or weather-model jargon.
+Visible FPL impact class is exactly NORMAL / LOW / MATERIAL. NORMAL means no meaningful football adjustment. LOW is advisory context that does not alter a recommendation by itself. MATERIAL is reserved for unusual conditions with a plausible football mechanism. Do not create generic rules such as rain=fewer goals or wind=avoid goalkeeper.
+Weather is context/confidence evidence only unless an already-governed calibrated model explicitly supports an adjustment. Weather alone must not mutate xPts, P(start), xMins, 20/25/30/25, tactical score or operational WAIT/PREPARE/ACT.
+If lookup is unavailable, render WEATHER: UNAVAILABLE with the actual access/source/venue/forecast-horizon reason. Weather failure degrades WEATHER only and must not collapse the surrounding DEEP/Deadline/Final report. Never say weather is unavailable merely because V6 does not carry it.
 Never infer causation from coincidence.
 
 14. VISIBLE REPORT CONTENT CONTRACTS

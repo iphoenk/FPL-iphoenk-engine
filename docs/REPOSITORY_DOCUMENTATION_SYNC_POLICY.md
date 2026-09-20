@@ -1,6 +1,7 @@
 # Repository Documentation Synchronization Policy
 
-> **Policy introduced:** `2026-09-20T23:34:18+07:00`
+> **Policy introduced:** `2026-09-20T23:34:18+07:00`  
+> **Last revised:** `2026-09-21T05:24:14+07:00`
 
 ## Purpose
 
@@ -14,17 +15,19 @@ Every pull request must include these lines:
 
 ```text
 Change timestamp: YYYY-MM-DDTHH:MM:SS+07:00
-Documentation sync: UPDATED | NOT_APPLICABLE
+Documentation sync: UPDATED
 Documentation timestamp: YYYY-MM-DDTHH:MM:SS+07:00
 ```
 
 Rules:
 
 1. `Change timestamp` is mandatory for every PR and must include a timezone.
-2. `Documentation sync: UPDATED` is mandatory when runtime, architecture, control plane, methodology authority, scheduler, source activation, production workflow, or governance behavior changes.
-3. When `UPDATED` is used, at least one relevant repository documentation file must change in the same PR and `Documentation timestamp` is mandatory.
-4. `NOT_APPLICABLE` is allowed only when the change cannot make runtime-facing documentation stale.
-5. A stale document must never be preserved merely to avoid broadening a bounded repair. The documentation change may remain concise, but it must describe the resulting runtime truth.
+2. `Documentation sync: UPDATED` is mandatory for every PR. `NOT_APPLICABLE` is not accepted.
+3. Every PR must change `README.md` in the same PR, regardless of whether the implementation change is runtime-facing, test-only, documentation-only, or governance-only.
+4. `Documentation timestamp` is mandatory for every PR and must exactly match the visible `Last runtime/documentation sync` timestamp in `README.md`.
+5. Runtime, architecture, control-plane, methodology authority, scheduler, source activation, production workflow, or governance changes must additionally update every deeper documentation surface made stale by the change.
+6. The mandatory README edit should be concise and update the relevant current-truth section rather than accumulate a noisy chronological changelog.
+7. A stale document must never be preserved merely to keep a bounded repair artificially narrow.
 
 ## Runtime-relevant paths
 
@@ -40,7 +43,7 @@ Repository governance treats changes under these surfaces as runtime/documentati
 - dependency lock files used by V6/V12 CI/runtime
 - `README.md`
 
-When those surfaces change, update the relevant architecture/runtime documentation in the same PR.
+Every PR updates `README.md`. When the runtime-relevant surfaces above change, also update every deeper architecture/runtime document affected by the resulting behavior.
 
 ## Timestamp placement in documents
 
@@ -70,8 +73,10 @@ If documentation and runtime conflict, treat it as documentation drift and repai
 `.github/workflows/repository-governance.yml` enforces:
 
 - PR description change timestamp;
-- documentation-sync declaration;
-- documentation timestamp when updated;
-- same-PR documentation change for runtime/architecture/governance modifications.
+- `Documentation sync: UPDATED` on every PR;
+- documentation timestamp on every PR;
+- mandatory same-PR `README.md` change;
+- exact equality between the README visible synchronization timestamp and the PR `Documentation timestamp`;
+- additional same-PR documentation changes whenever runtime/architecture/governance truth would otherwise become stale.
 
 The PR template includes the required fields.

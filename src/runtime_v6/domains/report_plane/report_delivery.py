@@ -10,7 +10,8 @@ module that may transition a report slot to DELIVERED.
 from datetime import datetime
 from hashlib import sha256
 import json
-from typing import Any, Mapping
+import re
+from typing import Any, Mapping, Sequence
 
 from .delivery_integrity import DeliveryIntegrityError, build_report_slot_id
 from .temporal import canonical_timestamp, try_parse_timestamp

@@ -39,6 +39,8 @@ SCENARIO_STATES = frozenset(
 ACTION_STATES = frozenset({"WAIT", "PREPARE", "ACT"})
 MC_STATES = frozenset({"EXECUTED", "NOT_RUN", "PARTIAL"})
 SEARCH_AUTHORITIES = frozenset({"FULL", "PARTIAL"})
+DECISION_SEARCH_SCOPES = frozenset({"FIXED_SQUAD", "TRANSFER", "PACKAGE"})
+PAIRWISE_EMPTY_REASONS = frozenset({"NO_MATERIAL_CHALLENGER", "HOLD_DOMINATES_ALL_MATERIAL_ROUTES"})
 
 
 class MethodologyContractError(ValueError):
@@ -704,9 +706,81 @@ def validate_owned_out_scan(
     }
 
 
+PAIRWISE_SEMANTIC_FIELDS = (
+    "football_score_delta",
+    "component_comparison",
+    "p_available_comparison",
+    "p_start_comparison",
+    "xmins_comparison",
+    "p_return_comparison",
+    "p_blank_comparison",
+    "material_tail_comparison",
+    "expected_points_comparison",
+    "tactical_role_comparison",
+    "tactical_evidence_class",
+    "set_piece_penalty_comparison",
+    "gw_plus_1",
+    "three_gw",
+    "five_gw",
+    "price_economic_delta",
+    "robustness_delta",
+    "expected_regret",
+    "information_value_of_waiting",
+    "mini_league_leverage",
+)
+
+
+def _pairwise_semantic_value(
+    battle: Mapping[str, Any],
+    key: str,
+    unavailable_reasons: Mapping[str, Any],
+) -> Any:
+    if key not in battle:
+        raise MethodologyContractError(
+            f"pairwise battle missing required semantic field: {key}"
+        )
+    value = battle.get(key)
+    unavailable = value is None or (
+        isinstance(value, str) and value.strip().upper() == "UNAVAILABLE"
+    )
+    if unavailable:
+        reason = str(unavailable_reasons.get(key) or "").strip()
+        if not reason:
+            raise MethodologyContractError(
+                f"pairwise battle {key} is unavailable without truthful reason"
+            )
+        return None
+    return value
+
+
+def _validate_pairwise_tactical_class(value: Any) -> Any:
+    allowed = {"OBSERVED_ROLE", "INFERRED_ROLE", "FPL_POSITION_ONLY", "UNKNOWN"}
+    if isinstance(value, Mapping):
+        normalized: dict[str, str] = {}
+        if not value:
+            raise MethodologyContractError(
+                "pairwise tactical_evidence_class comparison cannot be empty"
+            )
+        for side, raw in value.items():
+            token = str(raw or "").strip().upper()
+            if token not in allowed:
+                raise MethodologyContractError(
+                    "pairwise tactical_evidence_class contains invalid enum"
+                )
+            normalized[str(side)] = token
+        return normalized
+    token = str(value or "").strip().upper()
+    if token not in allowed:
+        raise MethodologyContractError(
+            "pairwise tactical_evidence_class contains invalid enum"
+        )
+    return token
+
+
 def validate_pairwise_battles(
     battles: Sequence[Mapping[str, Any]] | None,
 ) -> list[dict[str, Any]]:
+    """Validate diagnostic OWNED -> CHALLENGER proof without scoring it."""
     out: list[dict[str, Any]] = []
     for battle in battles or ():
         if not isinstance(battle, Mapping):
@@ -714,32 +788,92 @@ def validate_pairwise_battles(
         owned = int(battle.get("owned_element_id") or 0)
         challenger = int(battle.get("challenger_element_id") or 0)
         if owned <= 0 or challenger <= 0 or owned == challenger:
-            raise MethodologyContractError("pairwise battle requires distinct owned/challenger IDs")
-        deltas = dict(battle.get("material_deltas") or {})
-        if not deltas:
-            raise MethodologyContractError("pairwise battle requires material deltas")
+            raise MethodologyContractError(
+                "pairwise battle requires distinct owned/challenger IDs"
+            )
+        unavailable_reasons = dict(battle.get("unavailable_reasons") or {})
+        normalized = {
+            key: _pairwise_semantic_value(battle, key, unavailable_reasons)
+            for key in PAIRWISE_SEMANTIC_FIELDS
+        }
+        if normalized["tactical_evidence_class"] is not None:
+            normalized["tactical_evidence_class"] = _validate_pairwise_tactical_class(
+                normalized["tactical_evidence_class"]
+            )
         action = str(battle.get("operational_action") or "").upper()
         if action not in ACTION_STATES:
-            raise MethodologyContractError("pairwise battle action must be WAIT/PREPARE/ACT")
+            raise MethodologyContractError(
+                "pairwise battle action must be WAIT/PREPARE/ACT"
+            )
         reversal = str(battle.get("reversal_trigger") or "").strip()
         if not reversal:
-            raise MethodologyContractError("pairwise battle requires reversal trigger")
-        if battle.get("decision_authority") is True or battle.get("ranking_authority") is True:
-            raise MethodologyContractError("pairwise evidence cannot become ranking/decision authority")
+            raise MethodologyContractError(
+                "pairwise battle requires reversal trigger"
+            )
+        if battle.get("diagnostic_evidence_only") is not True:
+            raise MethodologyContractError(
+                "pairwise battle must declare diagnostic_evidence_only=true"
+            )
+        if battle.get("decision_authority") is not False:
+            raise MethodologyContractError(
+                "pairwise battle decision_authority must be false"
+            )
+        if battle.get("ranking_authority") is not False:
+            raise MethodologyContractError(
+                "pairwise battle ranking_authority must be false"
+            )
         out.append(
             {
-                **dict(battle),
                 "owned_element_id": owned,
                 "challenger_element_id": challenger,
-                "material_deltas": deltas,
+                **normalized,
+                "unavailable_reasons": unavailable_reasons,
                 "operational_action": action,
                 "reversal_trigger": reversal,
+                "diagnostic_evidence_only": True,
                 "decision_authority": False,
                 "ranking_authority": False,
-                "diagnostic_evidence_only": True,
+                "material_deltas": dict(battle.get("material_deltas") or {}),
+                "decision_delta_or_fingerprint": battle.get(
+                    "decision_delta_or_fingerprint"
+                ),
             }
         )
     return out
+
+
+def validate_tactical_evidence_bindings(
+    rows: Sequence[Mapping[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    """Fail closed on tactical provenance metadata without recomputing P1.6."""
+    from src.engines.v12_tactical_role import (
+        TacticalRoleContractError,
+        classify_tactical_evidence,
+    )
+
+    validated: list[dict[str, Any]] = []
+    for row in rows or ():
+        if not isinstance(row, Mapping):
+            raise MethodologyContractError(
+                "tactical evidence binding row must be a mapping"
+            )
+        try:
+            validated.append(
+                classify_tactical_evidence(
+                    element_id=row.get("element_id"),
+                    evidence_class=row.get("evidence_class"),
+                    tactical_numeric_evidence=row.get(
+                        "tactical_numeric_evidence"
+                    ),
+                    provenance=row.get("provenance"),
+                    fingerprint=row.get("fingerprint"),
+                )
+            )
+        except TacticalRoleContractError as exc:
+            raise MethodologyContractError(
+                f"invalid tactical evidence binding: {exc}"
+            ) from exc
+    return validated
 
 
 def build_decision_proof(
@@ -774,6 +908,11 @@ def build_decision_proof(
     pairwise_battles: Sequence[Mapping[str, Any]] | None = None,
     tactical_evidence_classes: Sequence[Mapping[str, Any]] | None = None,
     serious_transfer_decision: bool = False,
+    decision_scope: str | None = None,
+    material_challenger_present: bool = False,
+    selected_change_route: bool = False,
+    pairwise_battle_claimed: bool = False,
+    pairwise_empty_reason: str | None = None,
 ) -> dict[str, Any]:
     """Build transient proof for one serious V12 decision.
 
@@ -827,41 +966,98 @@ def build_decision_proof(
     search = str(search_authority or "").strip().upper()
     if search not in SEARCH_AUTHORITIES:
         raise MethodologyContractError("search_authority must be FULL/PARTIAL")
+
+    if decision_scope is None:
+        scope = "TRANSFER" if serious_transfer_decision else "FIXED_SQUAD"
+    else:
+        scope = str(decision_scope or "").strip().upper()
+    if scope not in DECISION_SEARCH_SCOPES:
+        raise MethodologyContractError(
+            "decision_scope must be FIXED_SQUAD/TRANSFER/PACKAGE"
+        )
+    if serious_transfer_decision and scope == "FIXED_SQUAD":
+        raise MethodologyContractError(
+            "serious_transfer_decision cannot use FIXED_SQUAD scope"
+        )
+
     claim = str(optimization_claim or "").strip().upper()
-    effective_claim = claim or (
-        "FULL_UNIVERSE_OPTIMIZED"
-        if search == "FULL"
-        else "FULL_UNIVERSE_SCANNED_SEARCH_PARTIAL_AFTER_PRUNING"
+    transfer_universe_scope = scope in {"TRANSFER", "PACKAGE"}
+    explicit_full_claim = claim == "FULL_UNIVERSE_OPTIMIZED"
+    requires_search_proof = (
+        bool(serious_transfer_decision)
+        or transfer_universe_scope
+        or explicit_full_claim
     )
+    if claim:
+        effective_claim = claim
+    elif transfer_universe_scope:
+        effective_claim = (
+            "FULL_UNIVERSE_OPTIMIZED"
+            if search == "FULL"
+            else "FULL_UNIVERSE_SCANNED_SEARCH_PARTIAL_AFTER_PRUNING"
+        )
+    else:
+        effective_claim = "FIXED_SQUAD_NO_TRANSFER_UNIVERSE_CLAIM"
+
     if search == "PARTIAL" and effective_claim == "FULL_UNIVERSE_OPTIMIZED":
         raise MethodologyContractError(
             "lossy/PARTIAL search cannot claim FULL_UNIVERSE_OPTIMIZED"
         )
+    if scope == "FIXED_SQUAD" and not explicit_full_claim and claim in {
+        "FULL_UNIVERSE_SCANNED_SEARCH_PARTIAL_AFTER_PRUNING",
+        "TRANSFER_UNIVERSE_OPTIMIZED",
+        "PACKAGE_UNIVERSE_OPTIMIZED",
+    }:
+        raise MethodologyContractError(
+            "FIXED_SQUAD cannot claim transfer/package universe optimization"
+        )
+
     validated_search_proof = None
     if search_proof is not None:
         validated_search_proof = validate_search_proof(
             search_proof,
             search_authority=search,
         )
-    if effective_claim == "FULL_UNIVERSE_OPTIMIZED" and validated_search_proof is None:
+    if requires_search_proof and validated_search_proof is None:
         raise MethodologyContractError(
-            "FULL_UNIVERSE_OPTIMIZED requires compact SEARCH_PROOF"
+            "transfer/package/full-universe decision requires compact SEARCH_PROOF"
         )
+
     validated_owned_scan = None
     if owned_out_scan is not None:
         validated_owned_scan = validate_owned_out_scan(
             owned_out_scan,
-            require_complete=search == "FULL",
+            require_complete=search == "FULL" and transfer_universe_scope,
         )
-    if serious_transfer_decision and validated_owned_scan is None:
+    if transfer_universe_scope and validated_owned_scan is None:
         raise MethodologyContractError(
-            "serious transfer decision requires OWNED15-first outgoing scan"
+            "transfer/package decision requires OWNED15-first outgoing scan"
         )
-    if serious_transfer_decision and validated_search_proof is None:
-        raise MethodologyContractError(
-            "serious transfer decision requires SEARCH_PROOF"
-        )
+
+    validated_tactical_evidence = validate_tactical_evidence_bindings(
+        tactical_evidence_classes
+    )
     validated_pairwise = validate_pairwise_battles(pairwise_battles)
+    empty_reason = str(pairwise_empty_reason or "").strip().upper() or None
+    pairwise_required = (
+        bool(material_challenger_present)
+        or bool(selected_change_route)
+        or bool(pairwise_battle_claimed)
+    )
+    if pairwise_required and not validated_pairwise:
+        raise MethodologyContractError(
+            "material owned-vs-challenger change decision requires pairwise battle evidence"
+        )
+    if serious_transfer_decision and not validated_pairwise:
+        if empty_reason not in PAIRWISE_EMPTY_REASONS:
+            raise MethodologyContractError(
+                "serious transfer decision with empty pairwise battles requires "
+                "NO_MATERIAL_CHALLENGER or HOLD_DOMINATES_ALL_MATERIAL_ROUTES"
+            )
+    if validated_pairwise and empty_reason is not None:
+        raise MethodologyContractError(
+            "pairwise_empty_reason is only valid when pairwise_battles is empty"
+        )
     overlay = dict(icon_overlay or {})
     if overlay and overlay.get("applied_after_football_optimal_baseline") is not True:
         raise MethodologyContractError(
@@ -905,13 +1101,17 @@ def build_decision_proof(
         "covariance_correlation": dict(covariance or {}),
         "icon_overlay": overlay,
         "monte_carlo": mc,
+        "decision_scope": scope,
         "search_authority": search,
+        "search_authority_applies": requires_search_proof,
         "search_proof": validated_search_proof,
         "owned_out_scan": validated_owned_scan,
         "pairwise_battles": validated_pairwise,
-        "tactical_evidence_classes": [
-            dict(row) for row in (tactical_evidence_classes or ())
-        ],
+        "pairwise_empty_reason": empty_reason,
+        "material_challenger_present": bool(material_challenger_present),
+        "selected_change_route": bool(selected_change_route),
+        "pairwise_battle_claimed": bool(pairwise_battle_claimed),
+        "tactical_evidence_classes": validated_tactical_evidence,
         "serious_transfer_decision": bool(serious_transfer_decision),
         "route_type": str(route_type or "NORMAL").upper(),
         "optimization_claim": effective_claim,

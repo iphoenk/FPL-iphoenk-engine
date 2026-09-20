@@ -665,10 +665,11 @@ def test_predictor_observation_is_separate_from_official_execution_cycle() -> No
 
 
 # PRICE 13
-def test_unsupported_cycle_eta_remains_unavailable_and_prevents_complete() -> None:
+def test_unsupported_cycle_eta_remains_unavailable_but_healthy_no_crossing_is_complete() -> None:
     art = _contract_price_artifact([_contract_price_row(i, 50.0, offset1=60.0, offset2=70.0) for i in range(1, 25)])
     result = build_price20(predictor_artifact=art, direction="RISE")
-    assert result["state"] == "DEGRADED"
+    assert result["state"] == "COMPLETE"
+    assert result["degradation_reason"] is None
     assert result["date_state_complete_count"] == 20
     assert result["expected_change_date_count"] == 0
     assert result["no_crossing_count"] == 20
@@ -677,7 +678,6 @@ def test_unsupported_cycle_eta_remains_unavailable_and_prevents_complete() -> No
     assert all(row["estimated_change_window"] == "UNAVAILABLE" for row in result["rows"])
     assert all(row["eta_reason"] == "NO_EXISTING_PREDICTOR_CYCLE_CROSSES_GOVERNED_THRESHOLD" for row in result["rows"])
     assert all(row["eta_context"].startswith("Belum terdeteksi berubah sampai") for row in result["rows"])
-    assert "ETA remains UNAVAILABLE" in result["degradation_reason"]
 
 
 # PRICE 14
@@ -854,14 +854,16 @@ def test_visible_price_contract_retains_cycle_eta_and_date_state_fields() -> Non
 
 
 
-def test_missing_timing_semantics_prevents_price_section_complete() -> None:
+def test_no_crossing_keeps_price_section_complete_with_truthful_unavailable_eta() -> None:
     art = _contract_price_artifact([
         _contract_price_row(i, 75.0, offset1=80.0, offset2=85.0)
         for i in range(1, 25)
     ])
     result = build_price20(predictor_artifact=art, direction="RISE")
     assert result["available_count"] == 20
-    assert result["state"] == "DEGRADED"
+    assert result["state"] == "COMPLETE"
+    assert result["degradation_reason"] is None
+    assert all(row["date_state"] == "NO_CROSSING_WITHIN_GOVERNED_HORIZON" for row in result["rows"])
     assert all(row["cycles_to_expected_change"] == "UNAVAILABLE" for row in result["rows"])
     assert all(row["estimated_change_window"] == "UNAVAILABLE" for row in result["rows"])
 

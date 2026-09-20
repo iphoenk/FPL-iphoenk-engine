@@ -740,7 +740,7 @@ def build_package_decision(
             }
         return {
             "generated_at": _now(),
-            "model": "package_governance_v12",
+            "model": "package_governance_v1",
             "ruleset_id": RULESET_ID,
             "planning_gw": int(projections.get("planning_gw") or 1),
             "selected_package": selected_package,
@@ -801,7 +801,7 @@ def build_package_decision(
     gate0_revalidated = bool(current_legal and selected_legal)
     return {
         "generated_at": _now(),
-        "model": "package_governance_v12",
+        "model": "package_governance_v1",
         "ruleset_id": RULESET_ID,
         "planning_gw": int(projections.get("planning_gw") or 1),
         "selected_package": selected,

@@ -7,6 +7,12 @@ import json
 import os
 import urllib.parse
 import urllib.request
+from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from src.engines.v12_player_minutes import estimate_player_minutes
 from src.engines.v12_player_events import (

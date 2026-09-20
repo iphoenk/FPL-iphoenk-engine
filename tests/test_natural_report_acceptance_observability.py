@@ -439,3 +439,9 @@ def test_31_acceptance_attachment_does_not_change_completion_ledger_semantics():
     assert without["report_slot_fulfilled"] is True
     assert with_proof["report_slot_fulfilled"] is True
 
+
+def test_32_same_slot_ledger_persists_only_sealed_acceptance_proof():
+    ledger = seal_same_slot_completion_ledger(_completion_ledger_evidence())
+    assert "natural_report_acceptance_evidence" not in ledger
+    assert ledger["natural_report_acceptance_proof"]["immutable"] is True
+

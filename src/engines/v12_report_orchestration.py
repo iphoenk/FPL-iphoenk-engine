@@ -337,11 +337,11 @@ def _governed_expected_cycle(
             cycle_label = "NEXT CYCLE"
             window = f"NEXT PRICE CYCLE — {wib_label}"
         elif offset == 1:
-            cycle_label = "1 CYCLE AFTER NEXT"
-            window = "1 CYCLE AFTER NEXT / ~24H"
+            cycle_label = "1 CYCLE"
+            window = "1 CYCLE / ~24H"
         else:
-            cycle_label = "2 CYCLES AFTER NEXT"
-            window = "2 CYCLES AFTER NEXT / ~24–48H"
+            cycle_label = "2 CYCLES"
+            window = "2 CYCLES / ~24–48H"
         base.update(
             {
                 "cycles_to_expected_change": cycle_label,

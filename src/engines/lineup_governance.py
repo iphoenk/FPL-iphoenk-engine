@@ -26,12 +26,6 @@ from src.engines.p1_decision_governance import (
     uncertainty_fields,
     vice_rank,
 )
-from src.engines.v12_mini_league_overlay import (
-    MODEL_OWNER as MINI_LEAGUE_OWNER,
-    attach_mini_league_overlay,
-    build_mini_league_snapshot,
-    evaluate_mini_league_overlay,
-)
 from src.engines.v12_monte_carlo import mc_invocation_policy
 from src.engines.v12_package_search import legal_squad as v12_package_legal_squad
 from src.rules import LINEUP_RULES, RULESET_ID, SQUAD_RULES
@@ -40,6 +34,7 @@ from src.utils import CONFIG, DATA, ROOT, atomic_json, read_json
 POLICY_PATH = ROOT / "config" / "intelligence" / "lineup_governance.json"
 LINEUP_OUT = DATA / "lineup_decision.json"
 PACKAGE_DECISION_OUT = DATA / "package_decision.json"
+MINI_LEAGUE_OWNER = "V12_MINI_LEAGUE_OVERLAY"
 
 
 def _now() -> str:
@@ -67,6 +62,14 @@ def _materialize_native_mini_league_overlay(
     """
     if package_optimizer.get("model_owner") != "V12_PACKAGE_UTILITY":
         return package_optimizer
+
+    # Keep legacy/current runtime cold path cheap. Import the P1.8 stack only
+    # when a native P1.2 package artifact actually requires the overlay.
+    from src.engines.v12_mini_league_overlay import (
+        attach_mini_league_overlay,
+        build_mini_league_snapshot,
+        evaluate_mini_league_overlay,
+    )
 
     planning_gw = int(package_optimizer.get("planning_gw") or 0)
     expected_entry_id = int(lock.get("team_id") or 0)

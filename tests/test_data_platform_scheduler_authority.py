@@ -8,11 +8,11 @@ from pathlib import Path
 WORKFLOW_DIR = Path(".github/workflows")
 V6_WORKFLOW_GLOB = "v6-*.yml"
 SCHEDULE_KEY = re.compile(r"(?m)^\s*schedule\s*:")
-ALLOWED_CONTROL_SCHEDULES = {"v6-scheduler-watchdog.yml", "v6-core-recovery-guard.yml"}
+ALLOWED_CONTROL_SCHEDULES = {"v6-scheduler-watchdog.yml"}
 
 
 def test_v6_github_schedules_are_control_plane_only_never_normal_acquisition_authority() -> None:
-    """Only watchdog + guarded recovery may use cron; normal acquisition remains ChatGPT-owned."""
+    """Only the monitoring watchdog may use cron; all acquisition initiation remains ChatGPT/manual-owned."""
     workflows = sorted(WORKFLOW_DIR.glob(V6_WORKFLOW_GLOB))
     assert workflows, "expected at least one V6 workflow"
 
@@ -23,7 +23,7 @@ def test_v6_github_schedules_are_control_plane_only_never_normal_acquisition_aut
             scheduled.add(workflow.name)
 
     assert scheduled == ALLOWED_CONTROL_SCHEDULES, (
-        "scheduled V6 workflow set must be exactly watchdog + recovery guard; got "
+        "scheduled V6 workflow set must be exactly monitoring watchdog; got "
         + repr(sorted(scheduled))
     )
 
@@ -51,7 +51,9 @@ def test_v6_github_schedules_are_control_plane_only_never_normal_acquisition_aut
     assert watchdog_authority["watchdog_may_publish_runtime"] is False
     assert watchdog_authority["watchdog_may_advance_scheduler_proof"] is False
 
-    assert "cron: '55 * * * *'" in recovery
+    assert "schedule:" not in recovery
+    assert "cron:" not in recovery
+    assert "workflow_dispatch:" in recovery
     assert "contents: read" in recovery
     assert "actions: write" in recovery
     assert "contents: write" not in recovery
@@ -65,8 +67,13 @@ def test_v6_github_schedules_are_control_plane_only_never_normal_acquisition_aut
     assert recovery_config["normal_scheduler_authority"] == "CHATGPT_FPL_MASTER_MONITOR"
     assert recovery_config["recovery_counts_as_scheduler_proof"] is False
     assert recovery_config["recovery_counts_as_natural_wave3_slot"] is False
+    assert recovery_config["automatic_schedule_enabled"] is False
+    assert recovery_config["invocation_mode"] == "WORKFLOW_DISPATCH_ONLY"
+    assert recovery_config["recurring_automated_initiator"] is False
 
     assert schedule_policy["github_natural_schedule"]["enabled"] is False
+    assert schedule_policy["github_control_schedules"]["only_scheduled_v6_control_workflow"] == "v6-scheduler-watchdog.yml"
+    assert schedule_policy["github_control_schedules"]["recurring_recovery_guard_enabled"] is False
     assert schedule_policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True
     assert schedule_policy["manual_recovery"]["counts_as_completed_operational_slot"] is False
     assert schedule_policy["manual_recovery"]["counts_as_completed_scheduled_slot"] is False

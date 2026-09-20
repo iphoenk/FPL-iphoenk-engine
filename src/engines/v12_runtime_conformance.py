@@ -1241,6 +1241,8 @@ def format_exposure_metric(metric: Mapping[str, Any]) -> str:
 def _evidence_time(record: Mapping[str, Any], *, label: str) -> datetime | None:
     value = record.get("evidence_timestamp")
     if value in {None, ""}:
+        value = record.get("generated_at")
+    if value in {None, ""}:
         return None
     return _parse_local_occurrence(str(value), label=label)
 
@@ -1297,16 +1299,48 @@ def finalize_same_occurrence_alert_evidence(
         not personal.get("report_occurrence")
         or str(personal.get("report_occurrence")) == occurrence.isoformat()
     )
-    personal_usable = (
-        bool(personal)
-        and personal_same_occurrence
-        and personal.get("authenticated") is True
-        and (
-            personal_time is None
-            or preliminary_time is None
-            or personal_time >= preliminary_time
-        )
+    personal_auth_state = str(
+        personal.get("auth_state")
+        or personal.get("authenticated_state")
+        or ""
+    ).strip().upper()
+    personal_authenticated = bool(personal) and (
+        personal.get("authenticated") is True
+        or personal_auth_state in {"AUTH_AVAILABLE", "AUTHENTICATED", "AVAILABLE"}
     )
+    personal_current = (
+        personal_authenticated
+        and personal_same_occurrence
+        and personal_time is not None
+        and (preliminary_time is None or personal_time >= preliminary_time)
+    )
+    personal_age_minutes = None
+    if personal_time is not None:
+        personal_age_minutes = max(
+            0.0,
+            round(
+                (
+                    occurrence.astimezone(timezone.utc)
+                    - personal_time.astimezone(timezone.utc)
+                ).total_seconds()
+                / 60.0,
+                3,
+            ),
+        )
+    if personal_current:
+        personal_render = personal
+        personal_state = "CURRENT_AUTHENTICATED"
+    elif personal_authenticated and personal_time is not None:
+        personal_render = personal
+        personal_state = "STALE_AUTHENTICATED_FALLBACK"
+    elif personal_authenticated:
+        personal_render = personal
+        personal_state = "AUTHENTICATED_FRESHNESS_UNKNOWN_FALLBACK"
+    else:
+        personal_render = None
+        personal_state = "UNAVAILABLE"
+
+    personal_refresh_required = bool(alert_triggered and not personal_current)
 
     return {
         "report_occurrence": occurrence.isoformat(),
@@ -1315,10 +1349,26 @@ def finalize_same_occurrence_alert_evidence(
         "trigger_evidence_preserved": True,
         "render_public_evidence": rendered_public,
         "render_public_evidence_state": public_evidence_state,
-        "authenticated_personal_evidence": personal if personal_usable else None,
-        "authenticated_personal_evidence_state": (
-            "CURRENT_AUTHENTICATED" if personal_usable else "UNAVAILABLE_OR_STALE"
+        "authenticated_personal_evidence": personal_render,
+        "authenticated_personal_evidence_state": personal_state,
+        "authenticated_personal_evidence_age_minutes": personal_age_minutes,
+        "authenticated_personal_refresh_required": personal_refresh_required,
+        "authenticated_personal_refresh_transport": (
+            "EXISTING_REPORT_PREFETCH_AD_HOC_PERSONAL"
+            if personal_refresh_required
+            else None
         ),
+        "authenticated_personal_refresh_command": (
+            "/v6-report-prefetch report_kind=ad_hoc scope=personal"
+            if personal_refresh_required
+            else None
+        ),
+        "authenticated_personal_refresh_attempt_max": 1 if personal_refresh_required else 0,
+        "authenticated_personal_refresh_success_required_for_report": False,
+        "stale_authenticated_personal_may_support_known_fields": bool(
+            personal_render is not None and not personal_current
+        ),
+        "unknown_personal_fields_must_remain_unknown": True,
         "bound_core_run_id": bound_core_run_id,
         "bounded_terminal_reread_required": bool(core_acquisition_in_progress),
         "launch_second_full_core_acquisition": False,

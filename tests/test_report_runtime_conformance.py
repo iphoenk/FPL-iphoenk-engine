@@ -2037,3 +2037,64 @@ def test_128_post_core_authorization_supports_completion_modes():
     assert authorize_post_core_stage(proof, stage="POST_MATCH")["status"] == "PASS"
     assert authorize_post_core_stage(proof, stage="POST_ALL_MATCH")["status"] == "PASS"
     assert authorize_post_core_stage(proof, stage="FULL")["status"] == "PASS"
+
+
+def test_129_issue_431_policy_is_required_only_for_attempt_required_and_never_for_report_success():
+    canonical = _canonical()
+    state = json.loads((ROOT / "control" / "fpl_master_v12" / "FPL_MASTER_STATE_V12.json").read_text())
+    core = state["core_policy"]
+    assert core["core_attempt_transport"] == "ISSUE_431_ONLY"
+    assert core["issue_431_attempt_required_when"] == "NO_SAME_SLOT_AUTHORITATIVE_FULFILLMENT_AND_NO_BOUND_IN_PROGRESS_RUN"
+    assert core["issue_431_attempt_count_per_occurrence_max"] == 1
+    assert core["mutation_success_required_for_report"] is False
+    assert core["alternate_transport_allowed"] is False
+    assert core["duplicate_full_core_attempt_allowed"] is False
+    assert "OPTIONAL_GOVERNED_REFRESH_TRANSPORT" not in json.dumps(core)
+    assert "CORE EXECUTION: #431 is MANDATORY only when the occurrence is ATTEMPT_REQUIRED" in canonical
+    assert "REPORT DELIVERY: #431 mutation/workflow/publication SUCCESS is NEVER mandatory for a due visible report" in canonical
+
+
+def test_130_stale_authenticated_personal_is_field_level_fallback_and_never_blanks_due_report():
+    result = finalize_same_occurrence_alert_evidence(
+        report_occurrence="2026-09-20T16:30:00+07:00",
+        alert_triggered=True,
+        preliminary_public_evidence={
+            "evidence_timestamp": "2026-09-20T16:29:00+07:00",
+            "authoritative_runtime_snapshot": True,
+            "publish_integrity": "PASS",
+        },
+        authenticated_personal_evidence={
+            "generated_at": "2026-09-19T16:34:14+07:00",
+            "auth_state": "AUTH_AVAILABLE",
+            "authority": "OFFICIAL_FPL",
+            "selling_price": 5.5,
+            "bank": 0.5,
+            "free_transfers": None,
+        },
+    )
+    assert result["alert_visible"] is True
+    assert result["authenticated_personal_evidence_state"] == "STALE_AUTHENTICATED_FALLBACK"
+    assert result["authenticated_personal_evidence"]["selling_price"] == 5.5
+    assert result["authenticated_personal_evidence_age_minutes"] > 1000
+    assert result["authenticated_personal_refresh_required"] is True
+    assert result["authenticated_personal_refresh_transport"] == "EXISTING_REPORT_PREFETCH_AD_HOC_PERSONAL"
+    assert result["authenticated_personal_refresh_attempt_max"] == 1
+    assert result["authenticated_personal_refresh_success_required_for_report"] is False
+    assert result["unknown_personal_fields_must_remain_unknown"] is True
+
+
+def test_131_nonterminal_bound_core_states_cannot_complete_occurrence():
+    plan = plan_natural_core_upkeep_gate(
+        scheduler_occurrence="2026-09-20T16:30:00+07:00",
+        observed_at="2026-09-20T16:30:05+07:00",
+        report_due=True,
+        same_slot_in_progress_run_id=35502480795,
+    )
+    for nonterminal in ("QUEUED", "IN_PROGRESS", "WAITING", "UNKNOWN"):
+        with pytest.raises(RuntimeConformanceError, match="must reach a terminal reread result"):
+            finalize_natural_core_upkeep_gate(
+                plan,
+                terminal_run_result=nonterminal,
+                publish_integrity=None,
+                authoritative_runtime_snapshot=False,
+            )

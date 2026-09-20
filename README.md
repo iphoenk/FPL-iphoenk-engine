@@ -23,7 +23,9 @@ This repository powers a governed personal Fantasy Premier League decision syste
 | Package/search layer | `src/engines/v12_package_search.py` |
 | Correlated Monte Carlo | `src/engines/v12_monte_carlo.py` |
 | Visible DEEP/PRICE/report orchestration | `src/engines/v12_report_orchestration.py` |
-| FPL recurring orchestration | **FPL Master Monitor V12** — single scheduler, methodology remains in Canonical TXT |
+| FPL recurring orchestration | **FPL Master Monitor V12** — only recurring FPL acquisition/report scheduler authority; methodology remains in Canonical TXT |
+| GitHub continuity watchdog | `v6-scheduler-watchdog.yml` — scheduled monitoring only; cannot acquire, publish, mutate #431, or advance scheduler proof |
+| Emergency V6 recovery | `v6-core-recovery-guard.yml` — explicit `workflow_dispatch` only; non-recurring, non-authoritative, non-natural-slot recovery |
 
 The README is a human-readable projection of the architecture. It is **not** a second methodology or mutable runtime authority.
 
@@ -302,7 +304,10 @@ The active system enforces these architectural boundaries:
 - V12 owns modeling and decision logic.
 - V3/V4/V5 have zero active production execution.
 - No legacy fallback is permitted.
-- No second scheduler is permitted.
+- No second FPL acquisition scheduler is permitted.
+- The only scheduled V6 GitHub control workflow is the monitoring-only watchdog at :50; it cannot initiate acquisition.
+- Emergency recovery is explicit/manual-only via workflow_dispatch and can never count as natural scheduler proof.
+- Issue #431 is the only normal full-core attempt transport and is mandatory only in ATTEMPT_REQUIRED; its success is never a prerequisite for a due visible report.
 - No second xPts model is permitted.
 - No second xMins model is permitted.
 - No second tactical scorer is permitted.

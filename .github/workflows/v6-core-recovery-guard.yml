@@ -1,8 +1,6 @@
 name: FPL V6 core recovery guard
 
 on:
-  schedule:
-    - cron: '55 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -29,13 +27,14 @@ jobs:
 
       - name: Hydrate latest runtime control read-only
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
-          git show "origin/${RUNTIME_BRANCH}:data/v6/health/runtime_control.json" > "$RUNNER_TEMP/runtime_control.json"
+          gh api "/repos/${GITHUB_REPOSITORY}/contents/data/v6/health/runtime_control.json?ref=${RUNTIME_BRANCH}"             --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/runtime_control.json"
           test -s "$RUNNER_TEMP/runtime_control.json"
 
-      - name: Classify independent scheduler watchdog state
+      - name: Classify explicit emergency-recovery eligibility
         shell: bash
         run: |
           set -euo pipefail
@@ -55,7 +54,7 @@ jobs:
             > "$RUNNER_TEMP/ingestion_runs.json"
           test -s "$RUNNER_TEMP/ingestion_runs.json"
 
-      - name: Evaluate fail-closed recovery decision
+      - name: Evaluate fail-closed explicit recovery decision
         id: recovery
         shell: bash
         run: |
@@ -71,7 +70,7 @@ jobs:
           echo "reason_code=${reason_code}" >> "$GITHUB_OUTPUT"
           cat "$RUNNER_TEMP/recovery_decision.json"
 
-      - name: Dispatch one governed non-proof manual recovery
+      - name: Dispatch one governed non-proof manual recovery from explicit invocation
         if: steps.recovery.outputs.should_recover == 'true'
         shell: bash
         env:
@@ -86,6 +85,6 @@ jobs:
             -f 'inputs[confirm]=RECOVER_V6'
           echo "Governed manual_recovery dispatched. This is recovery-only evidence and MUST NOT count as ChatGPT scheduler proof or Wave-3 natural-slot proof."
 
-      - name: Recovery guard no-op evidence
+      - name: Explicit recovery no-op evidence
         if: steps.recovery.outputs.should_recover != 'true'
         run: echo "Recovery guard NOOP reason=${{ steps.recovery.outputs.reason_code }}"

@@ -199,9 +199,12 @@
   ],
   "core_policy": {
     "v6_only": true,
-    "issue_431_role": "OPTIONAL_GOVERNED_REFRESH_TRANSPORT",
+    "core_attempt_transport": "ISSUE_431_ONLY",
+    "issue_431_attempt_required_when": "NO_SAME_SLOT_AUTHORITATIVE_FULFILLMENT_AND_NO_BOUND_IN_PROGRESS_RUN",
+    "issue_431_attempt_count_per_occurrence_max": 1,
     "mutation_success_required_for_report": false,
     "alternate_transport_allowed": false,
+    "duplicate_full_core_attempt_allowed": false,
     "v3_v4_v5_fallback_allowed": false
   },
   "decision_learning": [

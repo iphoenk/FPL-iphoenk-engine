@@ -21,7 +21,7 @@ SCHEDULE_TRIGGER = re.compile(r"(?m)^\s*schedule\s*:")
 LEGACY_RUNTIME_PUSH = re.compile(
     r"(?:HEAD:refs/heads/|refs/heads/|RUNTIME_BRANCH\s*[:=]\s*)runtime-data-v[345](?:\b|$)"
 )
-ALLOWED_V6_CONTROL_SCHEDULES = {"v6-scheduler-watchdog.yml", "v6-core-recovery-guard.yml"}
+ALLOWED_V6_CONTROL_SCHEDULES = {"v6-scheduler-watchdog.yml"}
 
 
 class ProductionPathGovernanceError(RuntimeError):
@@ -53,6 +53,11 @@ def _validate_v6_watchdog(errors: list[str]) -> None:
     ):
         if marker not in text:
             errors.append(f"V6 monitoring watchdog missing required marker: {marker}")
+    if SCHEDULE_TRIGGER.search(text):
+        errors.append("V6 recovery guard must be workflow_dispatch-only; recurring recovery cron is forbidden")
+    if re.search(r"(?m)^\s*workflow_run\s*:", text):
+        errors.append("V6 recovery guard must not have workflow_run auto-trigger")
+
     for forbidden in (
         "contents: write",
         "v6-runtime-publisher",
@@ -93,7 +98,7 @@ def _validate_v6_recovery_guard(errors: list[str]) -> None:
     config_path = ROOT / "config" / "v6" / "scheduler_recovery.json"
     schedule_policy_path = ROOT / "config" / "v6" / "schedule_policy.json"
     if not workflow.exists():
-        errors.append("allowed V6 recovery schedule is missing: .github/workflows/v6-core-recovery-guard.yml")
+        errors.append("explicit V6 manual recovery workflow is missing: .github/workflows/v6-core-recovery-guard.yml")
         return
     if not config_path.exists():
         errors.append("V6 safe-recovery governance config is missing")
@@ -101,7 +106,7 @@ def _validate_v6_recovery_guard(errors: list[str]) -> None:
 
     text = _workflow_text(workflow)
     for marker in (
-        "cron: '55 * * * *'",
+        "workflow_dispatch:",
         "contents: read",
         "actions: write",
         "python -m src.runtime_v6.domains.control_plane.scheduler_watchdog",
@@ -129,6 +134,12 @@ def _validate_v6_recovery_guard(errors: list[str]) -> None:
     config = json.loads(config_path.read_text(encoding="utf-8"))
     if config.get("role") != "SAFE_RECOVERY_ONLY":
         errors.append("V6 recovery guard role must be SAFE_RECOVERY_ONLY")
+    if config.get("automatic_schedule_enabled") is not False:
+        errors.append("V6 recovery guard automatic schedule must be disabled")
+    if config.get("invocation_mode") != "WORKFLOW_DISPATCH_ONLY":
+        errors.append("V6 recovery guard invocation must be WORKFLOW_DISPATCH_ONLY")
+    if config.get("recurring_automated_initiator") is not False:
+        errors.append("V6 recovery guard must not be a recurring automated initiator")
     if config.get("normal_scheduler_authority") != "CHATGPT_FPL_MASTER_MONITOR":
         errors.append("V6 recovery guard must preserve ChatGPT FPL Master as normal scheduler authority")
     for key in (
@@ -249,6 +260,8 @@ def validate() -> None:
                 errors.append(f"V6 ingestion contains forbidden control path: {marker}")
         if SCHEDULE_TRIGGER.search(text):
             errors.append("V6 production ingestion workflow must not have a GitHub cron")
+        if re.search(r"(?m)^\s*workflow_run\s*:", text):
+            errors.append("V6 production ingestion workflow must not have workflow_run auto-trigger")
         if re.search(r"HEAD:refs/heads/runtime-data-(?!v6\b)", text):
             errors.append("V6 publisher targets a branch other than runtime-data-v6")
 

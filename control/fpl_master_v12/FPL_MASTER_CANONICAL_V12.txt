@@ -38,6 +38,8 @@ D. If that exact current slot is already authoritatively fulfilled, do not acqui
 E. Otherwise make exactly ONE governed current-slot attempt through the EXISTING issue #431 transport using:
 FPL_MASTER_SLOT reason=chatgpt_hourly_master logical_slot=<CURRENT_HH:00> audit=FPL_MASTER_HOURLY observed_at=<CURRENT_TIME>
 Immediate exact mutation/readback evidence remains required. No alternate transport. Never /v6-master-acquire.
+E1. CORE EXECUTION: #431 is MANDATORY only when the occurrence is ATTEMPT_REQUIRED: there is no same-slot authoritative fulfillment and no bound same-slot governed run IN_PROGRESS. Per occurrence, at most one #431 full-core attempt is allowed.
+E2. REPORT DELIVERY: #431 mutation/workflow/publication SUCCESS is NEVER mandatory for a due visible report. A failed or blocked required core attempt is recorded truthfully and the due report continues through the fail-operational evidence ladder. MANDATORY CORE ATTEMPT WHEN REQUIRED != MANDATORY SUCCESS FOR REPORT.
 F. A prior same-slot attempt exhausts this occurrence's full-core attempt allowance. Do not start a second acquisition/publication for the same logical slot. Explicit invariant: never duplicate acquisition for the same logical slot.
 G. CORE_UPKEEP_DUE and REPORT_DUE are independent. REPORT_DUE continues to follow Canonical report routing. A silent checkpoint may perform core upkeep and finish with no visible report. Silent report routing never authorizes skipping core upkeep.
 H. Core failure/safety block/transport failure/workflow failure/publication failure/timeout is recorded truthfully as CORE_UPKEEP=DEGRADED/FAILED. Preserve V6 fail-closed publication. If REPORT_DUE=false, finish silently with factual failure evidence. If REPORT_DUE=true, continue the existing fail-operational evidence ladder; CORE ACQUISITION FAILURE != REPORT DELIVERY FAILURE.
@@ -115,6 +117,12 @@ AUTHENTICATED AFFORDABILITY FINALIZATION:
 When current authenticated personal evidence contains current_price, purchase_price, selling_price and bank, use those exact fields. Nominal replacement budget = authenticated selling_price + bank. Compare the target's current market price to that budget and show remaining cash.
 Affordability and FT/HIT economics are distinct. If selling_price and bank establish nominal affordability but free-transfer/hit state is unknown, state AFFORDABILITY=TRUE/FALSE and FT/HIT ECONOMICS=UNKNOWN. Never claim exact affordability is unavailable when authenticated selling_price is already present.
 Stale personal/public evidence must not be preferred over newer same-occurrence evidence.
+AUTHENTICATED PERSONAL FRESHNESS:
+- Personal auth freshness is field/scope-level and is NEVER a blocker for the public factual report.
+- When authenticated personal evidence required by the routed report is CURRENT, use its exact current fields.
+- When authenticated personal evidence is STALE, make at most ONE bounded existing report-prefetch attempt for exact scope personal using the existing /v6-report-prefetch ad_hoc path. This refresh is report-driven, never fulfills a core slot, never creates another full-core acquisition, and never becomes scheduler proof.
+- If that bounded personal refresh fails, is blocked, or remains stale, the due report STILL renders. Use the freshest valid authenticated personal artifact as STALE_AUTHENTICATED_FALLBACK, expose its generated/evidence timestamp plus age/status, and degrade only claims that require unavailable current fields.
+- Never fabricate FT count, exact hit state, transfer execution, chip state, current squad/picks, or affordability inputs. If authenticated selling_price + bank are valid, nominal affordability may still be calculated while FT/HIT ECONOMICS remains UNKNOWN.
 
 6. DURABLE STATE / SCENARIO LIFECYCLE
 Read exact state path control/fpl_master_v12/FPL_MASTER_STATE_V12.json.

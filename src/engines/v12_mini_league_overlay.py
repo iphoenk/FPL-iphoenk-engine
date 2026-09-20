@@ -1023,7 +1023,20 @@ def evaluate_mini_league_overlay(
     # evidence no switch is permitted, so only baseline/HOLD need full overlay
     # materialization.
     route_rows = []
-    for route_id, route in sorted(routes.items()):
+    ordered_routes = sorted(routes.items())
+    if coverage == "FULL":
+        overlay_route_items = ordered_routes
+    else:
+        # Incomplete league evidence is explicitly forbidden from switching
+        # the football baseline. Avoid traversing the entire P1.2 universe in
+        # this degraded path; retain only the frozen baseline and HOLD.
+        keep_ids = {baseline["route_id"], "HOLD"}
+        overlay_route_items = [
+            (route_id, route)
+            for route_id, route in ordered_routes
+            if route_id in keep_ids
+        ]
+    for route_id, route in overlay_route_items:
         gate = close_decision_gate(
             baseline_route,
             route,
@@ -1236,6 +1249,13 @@ def evaluate_mini_league_overlay(
         },
         "risk_posture": posture,
         "relevant_rival_exposure": relevant_exposure,
+        "route_screening_summary": {
+            "p1_2_route_count": len(routes),
+            "overlay_route_count": len(route_rows),
+            "coverage_degraded_short_circuit": coverage != "FULL",
+            "skipped_route_count": max(0, len(routes) - len(route_rows)),
+            "skipped_routes_cannot_switch_baseline": coverage != "FULL",
+        },
         "route_overlays": route_rows,
         "adjusted_decision": {
             "route_id": adjusted["route_id"],

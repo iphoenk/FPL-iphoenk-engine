@@ -1066,25 +1066,34 @@ def seal_same_slot_completion_ledger(
     This deliberately reuses the report-delivery owner. It is not a second receipt
     authority: canonical receipt truth remains owned by build_canonical_report_receipt.
     """
+    acceptance_input = (
+        evidence.get("natural_report_acceptance_evidence")
+        if isinstance(evidence, Mapping)
+        else None
+    )
+    existing_acceptance = None
+    if isinstance(existing_ledger, Mapping) and isinstance(
+        existing_ledger.get("natural_report_acceptance_proof"), Mapping
+    ):
+        existing_acceptance = existing_ledger.get(
+            "natural_report_acceptance_proof"
+        )
+
     evaluated = evaluate_same_slot_completion_ledger(
         evidence,
         existing_ledger=existing_ledger,
     )
+    # Persist only the sealed bounded proof, never the unsealed input envelope.
+    evaluated.pop("natural_report_acceptance_evidence", None)
 
-    acceptance_input = evaluated.get("natural_report_acceptance_evidence")
     acceptance_proof = None
     if isinstance(acceptance_input, Mapping):
-        existing_acceptance = None
-        if isinstance(existing_ledger, Mapping) and isinstance(
-            existing_ledger.get("natural_report_acceptance_proof"), Mapping
-        ):
-            existing_acceptance = existing_ledger.get(
-                "natural_report_acceptance_proof"
-            )
         acceptance_proof = seal_natural_report_acceptance_proof(
             acceptance_input,
             existing_proof=existing_acceptance,
         )
+    elif isinstance(existing_acceptance, Mapping):
+        acceptance_proof = dict(existing_acceptance)
 
     acceptance_attachment = (
         {"natural_report_acceptance_proof": acceptance_proof}

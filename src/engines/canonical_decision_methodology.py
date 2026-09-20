@@ -577,6 +577,171 @@ def validate_monte_carlo_provenance(
     }
 
 
+def validate_search_proof(
+    proof: Mapping[str, Any],
+    *,
+    search_authority: str,
+) -> dict[str, Any]:
+    """Validate compact search-completeness evidence without becoming search authority."""
+    if not isinstance(proof, Mapping):
+        raise MethodologyContractError("SEARCH_PROOF is required")
+    required = (
+        "owned_expected",
+        "owned_evaluated",
+        "eligible_universe_expected",
+        "eligible_universe_evaluated",
+        "outgoing_candidate_count",
+        "outgoing_combination_count",
+        "legal_route_count",
+        "hold_included",
+        "lossy_pruning",
+        "search_authority",
+    )
+    missing = [key for key in required if key not in proof]
+    if missing:
+        raise MethodologyContractError(
+            "SEARCH_PROOF missing fields: " + ",".join(missing)
+        )
+
+    def _count(key: str) -> int | None:
+        value = proof.get(key)
+        if value is None:
+            return None
+        try:
+            out = int(value)
+        except (TypeError, ValueError) as exc:
+            raise MethodologyContractError(f"SEARCH_PROOF {key} must be integer/null") from exc
+        if out < 0:
+            raise MethodologyContractError(f"SEARCH_PROOF {key} must be >=0")
+        return out
+
+    normalized = {
+        "owned_expected": _count("owned_expected"),
+        "owned_evaluated": _count("owned_evaluated"),
+        "eligible_universe_expected": _count("eligible_universe_expected"),
+        "eligible_universe_evaluated": _count("eligible_universe_evaluated"),
+        "outgoing_candidate_count": _count("outgoing_candidate_count"),
+        "outgoing_combination_count": _count("outgoing_combination_count"),
+        "legal_route_count": _count("legal_route_count"),
+        "hold_included": proof.get("hold_included"),
+        "lossy_pruning": proof.get("lossy_pruning"),
+        "search_authority": str(proof.get("search_authority") or "").upper(),
+    }
+    requested = str(search_authority or "").upper()
+    if normalized["search_authority"] not in SEARCH_AUTHORITIES:
+        raise MethodologyContractError("SEARCH_PROOF authority must be FULL/PARTIAL")
+    if normalized["search_authority"] != requested:
+        raise MethodologyContractError("SEARCH_PROOF authority disagrees with decision proof")
+    if normalized["hold_included"] not in {True, False}:
+        raise MethodologyContractError("SEARCH_PROOF hold_included must be boolean")
+    if normalized["lossy_pruning"] not in {True, False}:
+        raise MethodologyContractError("SEARCH_PROOF lossy_pruning must be boolean")
+
+    if requested == "FULL":
+        checks = (
+            normalized["owned_expected"] == 15,
+            normalized["owned_evaluated"] == 15,
+            normalized["outgoing_candidate_count"] == 15,
+            normalized["eligible_universe_expected"] is not None,
+            normalized["eligible_universe_evaluated"] is not None,
+            normalized["eligible_universe_expected"]
+            == normalized["eligible_universe_evaluated"],
+            normalized["outgoing_combination_count"] is not None,
+            normalized["legal_route_count"] is not None,
+            normalized["hold_included"] is True,
+            normalized["lossy_pruning"] is False,
+        )
+        if not all(checks):
+            raise MethodologyContractError(
+                "FULL SEARCH_AUTHORITY requires exact 15/15 owned scan, exact "
+                "universe denominator agreement, route/combination proof, HOLD, "
+                "and zero lossy pruning"
+            )
+    return {
+        **normalized,
+        "authority": False,
+        "evidence_only": True,
+        "denominator_complete": (
+            normalized["eligible_universe_expected"] is not None
+            and normalized["eligible_universe_expected"]
+            == normalized["eligible_universe_evaluated"]
+        ),
+    }
+
+
+def validate_owned_out_scan(
+    scan: Mapping[str, Any],
+    *,
+    require_complete: bool,
+) -> dict[str, Any]:
+    if not isinstance(scan, Mapping):
+        raise MethodologyContractError("OWNED15 outgoing scan evidence is required")
+    evaluated = [int(value) for value in (scan.get("evaluated_owned_element_ids") or [])]
+    selected = [int(value) for value in (scan.get("selected_outgoing_element_ids") or [])]
+    user_named = [int(value) for value in (scan.get("user_named_outgoing_element_ids") or [])]
+    if len(evaluated) != len(set(evaluated)):
+        raise MethodologyContractError("OWNED15 evaluated IDs must be unique")
+    if len(selected) != len(set(selected)):
+        raise MethodologyContractError("selected outgoing IDs must be unique")
+    if not set(selected) <= set(evaluated):
+        raise MethodologyContractError("selected outgoing IDs must emerge from evaluated OUR15")
+    if require_complete and len(evaluated) != 15:
+        raise MethodologyContractError("FULL serious transfer scan requires 15/15 owned evaluation")
+    if scan.get("selection_is_result_not_precondition") is not True:
+        raise MethodologyContractError("weak-link selection must be a result, not precondition")
+    if scan.get("user_named_out_is_hypothesis_only") is not True:
+        raise MethodologyContractError("user-named OUT must remain hypothesis/comparator only")
+    return {
+        "evaluated_owned_element_ids": evaluated,
+        "selected_outgoing_element_ids": selected,
+        "user_named_outgoing_element_ids": user_named,
+        "selection_is_result_not_precondition": True,
+        "user_named_out_is_hypothesis_only": True,
+        "hold_baseline_required": True,
+        "second_outgoing_score_created": False,
+        "authority": False,
+        "evidence_only": True,
+    }
+
+
+def validate_pairwise_battles(
+    battles: Sequence[Mapping[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for battle in battles or ():
+        if not isinstance(battle, Mapping):
+            raise MethodologyContractError("pairwise battle must be a mapping")
+        owned = int(battle.get("owned_element_id") or 0)
+        challenger = int(battle.get("challenger_element_id") or 0)
+        if owned <= 0 or challenger <= 0 or owned == challenger:
+            raise MethodologyContractError("pairwise battle requires distinct owned/challenger IDs")
+        deltas = dict(battle.get("material_deltas") or {})
+        if not deltas:
+            raise MethodologyContractError("pairwise battle requires material deltas")
+        action = str(battle.get("operational_action") or "").upper()
+        if action not in ACTION_STATES:
+            raise MethodologyContractError("pairwise battle action must be WAIT/PREPARE/ACT")
+        reversal = str(battle.get("reversal_trigger") or "").strip()
+        if not reversal:
+            raise MethodologyContractError("pairwise battle requires reversal trigger")
+        if battle.get("decision_authority") is True or battle.get("ranking_authority") is True:
+            raise MethodologyContractError("pairwise evidence cannot become ranking/decision authority")
+        out.append(
+            {
+                **dict(battle),
+                "owned_element_id": owned,
+                "challenger_element_id": challenger,
+                "material_deltas": deltas,
+                "operational_action": action,
+                "reversal_trigger": reversal,
+                "decision_authority": False,
+                "ranking_authority": False,
+                "diagnostic_evidence_only": True,
+            }
+        )
+    return out
+
+
 def build_decision_proof(
     *,
     authority_path: str,
@@ -604,6 +769,11 @@ def build_decision_proof(
     route_type: str = "NORMAL",
     optimization_claim: str | None = None,
     mc_required: bool = False,
+    search_proof: Mapping[str, Any] | None = None,
+    owned_out_scan: Mapping[str, Any] | None = None,
+    pairwise_battles: Sequence[Mapping[str, Any]] | None = None,
+    tactical_evidence_classes: Sequence[Mapping[str, Any]] | None = None,
+    serious_transfer_decision: bool = False,
 ) -> dict[str, Any]:
     """Build transient proof for one serious V12 decision.
 
@@ -658,10 +828,40 @@ def build_decision_proof(
     if search not in SEARCH_AUTHORITIES:
         raise MethodologyContractError("search_authority must be FULL/PARTIAL")
     claim = str(optimization_claim or "").strip().upper()
-    if search == "PARTIAL" and claim == "FULL_UNIVERSE_OPTIMIZED":
+    effective_claim = claim or (
+        "FULL_UNIVERSE_OPTIMIZED"
+        if search == "FULL"
+        else "FULL_UNIVERSE_SCANNED_SEARCH_PARTIAL_AFTER_PRUNING"
+    )
+    if search == "PARTIAL" and effective_claim == "FULL_UNIVERSE_OPTIMIZED":
         raise MethodologyContractError(
             "lossy/PARTIAL search cannot claim FULL_UNIVERSE_OPTIMIZED"
         )
+    validated_search_proof = None
+    if search_proof is not None:
+        validated_search_proof = validate_search_proof(
+            search_proof,
+            search_authority=search,
+        )
+    if effective_claim == "FULL_UNIVERSE_OPTIMIZED" and validated_search_proof is None:
+        raise MethodologyContractError(
+            "FULL_UNIVERSE_OPTIMIZED requires compact SEARCH_PROOF"
+        )
+    validated_owned_scan = None
+    if owned_out_scan is not None:
+        validated_owned_scan = validate_owned_out_scan(
+            owned_out_scan,
+            require_complete=search == "FULL",
+        )
+    if serious_transfer_decision and validated_owned_scan is None:
+        raise MethodologyContractError(
+            "serious transfer decision requires OWNED15-first outgoing scan"
+        )
+    if serious_transfer_decision and validated_search_proof is None:
+        raise MethodologyContractError(
+            "serious transfer decision requires SEARCH_PROOF"
+        )
+    validated_pairwise = validate_pairwise_battles(pairwise_battles)
     overlay = dict(icon_overlay or {})
     if overlay and overlay.get("applied_after_football_optimal_baseline") is not True:
         raise MethodologyContractError(
@@ -706,15 +906,15 @@ def build_decision_proof(
         "icon_overlay": overlay,
         "monte_carlo": mc,
         "search_authority": search,
+        "search_proof": validated_search_proof,
+        "owned_out_scan": validated_owned_scan,
+        "pairwise_battles": validated_pairwise,
+        "tactical_evidence_classes": [
+            dict(row) for row in (tactical_evidence_classes or ())
+        ],
+        "serious_transfer_decision": bool(serious_transfer_decision),
         "route_type": str(route_type or "NORMAL").upper(),
-        "optimization_claim": (
-            claim
-            or (
-                "FULL_UNIVERSE_OPTIMIZED"
-                if search == "FULL"
-                else "FULL_UNIVERSE_SCANNED_SEARCH_PARTIAL_AFTER_PRUNING"
-            )
-        ),
+        "optimization_claim": effective_claim,
         "execution_provenance": execution,
         "final_action": action,
         "failures": failures,

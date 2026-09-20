@@ -664,6 +664,16 @@ def test_eta_uses_existing_governed_threshold_not_new_threshold() -> None:
     assert row["governed_threshold_percent"] == MODEL_THRESHOLD
     assert row["estimated_change_window"] == "UNAVAILABLE"
 
+    one_cycle = _contract_price_artifact([_contract_price_row(i, 90.0, offset1=105.0, offset2=110.0) for i in range(1, 25)])
+    one_row = build_price20(predictor_artifact=one_cycle, direction="RISE")["rows"][0]
+    assert one_row["cycles_to_expected_change"] == "1 CYCLE"
+    assert one_row["estimated_change_window"] == "1 CYCLE / ~24H"
+
+    two_cycles = _contract_price_artifact([_contract_price_row(i, 90.0, offset1=95.0, offset2=105.0) for i in range(1, 25)])
+    two_row = build_price20(predictor_artifact=two_cycles, direction="RISE")["rows"][0]
+    assert two_row["cycles_to_expected_change"] == "2 CYCLES"
+    assert two_row["estimated_change_window"] == "2 CYCLES / ~24–48H"
+
 
 # PRICE 15
 def test_complete_rise20_rows_have_full_visible_contract() -> None:

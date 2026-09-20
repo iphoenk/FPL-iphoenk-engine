@@ -1,0 +1,173 @@
+# V12 GW1 Trajectory, Opponent Matchup, and Link-Up Dependency
+
+Baseline: `f47947a8f6489598bdb2672e94e22b436e08b9c4`
+
+Implementation branch: `v12-gw1-matchup-linkup-dynamics`
+
+Authority remains `control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt`. This
+document is implementation/audit evidence only.
+
+## Architecture
+
+The change is V12-native and consumes already-published factual evidence. V6
+remains the only factual production data plane. P1.1 remains the minutes/start
+owner. P1.3 remains the event and point-distribution owner. P1.6 remains the
+tactical-role scorer. Existing lineup/captain, package, Monte Carlo and
+mini-league owners remain downstream consumers.
+
+No V7, scheduler, provider, methodology authority, named-player parameter or
+parallel probability engine is introduced.
+
+## Existing factual capability audit
+
+| Required feature | Status | Existing evidence / treatment |
+| --- | --- | --- |
+| match ID | AVAILABLE | player-match rows |
+| GW per player-match row | PARTIAL | used only when `gw/event/gameweek/round` is actually present; never inferred from arbitrary ordering |
+| opponent | AVAILABLE when two teams are uniquely identifiable | deterministic team-presence derivation |
+| home / away | PARTIAL | direct `home/is_home` when supplied |
+| minutes | AVAILABLE | `minutes_played/minutes` |
+| starter / substitute | AVAILABLE | `start_min/started` |
+| substitution timing | PARTIAL | upstream timing may exist; no fabricated exact off-minute |
+| actual role / position | PARTIAL | only direct role/deployment evidence when present |
+| xG | AVAILABLE | player-match stats |
+| xA | AVAILABLE | player-match stats |
+| xGI | DERIVED AVAILABLE | xG + xA |
+| shots | AVAILABLE | `total_shots` |
+| shots on target | AVAILABLE | `shots_on_target` |
+| big chances | PARTIAL | provider-dependent; missing stays missing |
+| touches | AVAILABLE | player-match stats |
+| opposition-box touches | AVAILABLE | `touches_opposition_box` |
+| key passes as a distinct field | UNAVAILABLE | existing P1.3 audit explicitly forbids aliasing `chances_created` |
+| chances created | AVAILABLE | player-match stats |
+| progressive passes / receptions | PARTIAL | final-third/progression evidence can exist; no false direct-reception mapping |
+| crosses | AVAILABLE | `accurate_crosses` where supplied |
+| cutbacks | UNAVAILABLE | no canonical distinct field proven |
+| set-piece involvement | AVAILABLE | corners/set-piece route evidence where supplied |
+| penalty involvement | AVAILABLE | penalty fields / Official role hierarchy |
+| defensive contribution | AVAILABLE | tackles/interceptions/blocks/clearances/recoveries and existing reconstruction |
+| FPL points | AVAILABLE | Official/player-match output where supplied |
+| score / game state | PARTIAL | no fabricated match-state sequence |
+| team attacking metrics | AVAILABLE | existing observed tactical/team-strength owners |
+| injury / suspension / availability | AVAILABLE | existing Official/current evidence |
+| teammate presence | AVAILABLE | player-match identity/shared minutes |
+| direct player-to-player pass | UNAVAILABLE | no canonical direct recipient data proven |
+| direct creator-to-finisher chance recipient | UNAVAILABLE | no canonical recipient mapping proven |
+| heatmap / true positional deployment | UNAVAILABLE | existing tactical audit already marks unavailable |
+
+Unavailable direct link fields are not a blocker. They cap link confidence. If
+there is neither direct process evidence nor a reproducible tactical role
+bridge, co-return correlation has zero dependency authority.
+
+## GW1-to-current trajectory
+
+`build_player_trajectory` retains supportable completed player matches from
+GW1 through the current completed GW. It publishes match rows, latest-match
+evidence, role/minutes evolution, result-vs-process evidence and recency-aware
+posterior rates.
+
+Recency weights use a global exponential half-life. Recent rates are shrunk
+toward the full GW1-current rate with a global equivalent-match prior. The
+result is deliberately resistant to a one-match haul while allowing repeated
+role/minutes changes to move the posterior more quickly.
+
+## Result versus process
+
+Result evidence is goals, assists, returns and FPL output.
+
+Process evidence is minutes, xG/xA/xGI, shots, shots on target, box touches and
+chance creation, with additional supported contextual fields retained when
+available.
+
+A blank with strong xG is therefore not automatically an adverse matchup. A
+haul with weak process is not automatically an ACT signal.
+
+## Opponent-specific matchup
+
+`evaluate_opponent_matchup` compares the player's current recency-shrunk
+baseline against historical meetings with the current opponent.
+
+The H2H rate modifier is shrunk by:
+1. historical meeting sample size; and
+2. tactical similarity/relevance.
+
+Manager, formation, block/pressing, defensive personnel, midfield structure
+and player role are only used when present. Missing fields reduce coverage
+rather than becoming assumed similarity.
+
+The modifier is bounded. Visible classification is exactly SUPPORTIVE,
+NEUTRAL, ADVERSE or INSUFFICIENT SAMPLE.
+
+## Link-up dependency
+
+`evaluate_linkup` supports directional teammate dependency using:
+- shared matches/minutes;
+- with-player versus without-player xGI process;
+- direct connection rows when a governed source eventually supplies them;
+- tactical role complementarity;
+- current-vs-historical role relevance.
+
+A large old sample is discounted if current roles are different. Direct-link
+absence caps confidence, and pure correlation without a process/tactical bridge
+gets zero authority.
+
+`probability_weighted_link_modifier` marginalizes the link with the existing
+teammate P(start), rather than treating the teammate as certainly present or
+absent.
+
+`evaluate_multi_player_chain` uses a bounded chain/intact-probability
+approximation with a governed maximum length. It does not enumerate an
+unbounded availability state space.
+
+## P1.3 integration
+
+`project_player_fixture` retains P1.3 ownership. Contextual dynamics supplies
+optional bounded goal and assist rate multipliers before the existing joint
+event/point PMF is built.
+
+When contextual evidence is absent, both multipliers are exactly 1.0 and the
+old numerical path is preserved.
+
+Because the adjustment happens before the PMF, it propagates coherently into
+goal/assist/return/2+ return/haul/blank probabilities, xPts, variance and
+downstream captain/transfer/mini-league decisions rather than changing only a
+headline mean.
+
+## Production routing
+
+`prediction_service.py` passes the already-existing
+`data/stats/playermatchstats_current.json` rows into the projection consumer.
+Missing player-match rows remain optional enrichment and never block the base
+projection.
+
+No new provider is created. Direct player-to-player connection rows are
+explicitly unavailable in current production routing and are not fabricated.
+
+## Visible reporting
+
+The existing 19-section DEEP backbone is unchanged.
+
+Where player-level detail is material,
+`build_contextual_player_blocks` exposes nested:
+- `OPPONENT-SPECIFIC MATCHUP`
+- `LINK-UP / COMBINATION NETWORK`
+
+Zero-confidence pairs are suppressed.
+
+## Post-match validation
+
+Post-match review must compare the pre-match hypothesis to observed process:
+shot quality, box access, role/minutes, expected combination behavior,
+with/without change and result-vs-process divergence. The next scan remains
+full-universe-first and is not limited to scorers/assisters.
+
+## Acceptance fixtures
+
+Haaland versus Sunderland and Brobbey / Le Fee are test fixtures, not runtime
+special cases.
+
+The Haaland fixture asserts that zero historical goals plus strong process does
+not produce a strong adverse rule from scoreline alone.
+
+The Brobbey / Le Fee fixture asserts that a single shared match cannot create a
+strong dependency even when a creator-finisher connection is observed.

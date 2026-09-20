@@ -1,6 +1,6 @@
 # V6 Fresh Data Platform
 
-> **Last runtime/documentation sync:** `2026-09-20T23:34:18+07:00`  
+> **Last runtime/documentation sync:** `2026-09-20T23:38:36+07:00`  
 > **Runtime contract basis:** `config/v6/schedule_policy.json` schema v6, `config/v6/source_activation.json` schema v4, `.github/workflows/v6-natural-data-ingestion.yml`, and the active `runtime-data-v6` publication model.
 
 ## Mission and authority
@@ -124,6 +124,10 @@ The `collect` job is read-only against the repository and:
 The `publish` job is the only runtime writer. It uses the protected `v6-runtime-publisher` environment and a dedicated V6 GitHub App token, publishes atomically to `runtime-data-v6`, and verifies the exact published tree.
 
 There is no generic workflow-token publication fallback.
+
+## Dependency ownership
+
+V6 runtime dependencies are pinned in `requirements-v6.lock` and installed with hash verification on the production acquisition path. V6 CI/test dependencies are pinned separately in `requirements-v6-ci.lock`. The V12/repository CI surface uses its own governed lock where applicable. Documentation must name these owned lock files explicitly because dependency ownership is part of V6 isolation and reproducibility.
 
 ## Effective source membership
 

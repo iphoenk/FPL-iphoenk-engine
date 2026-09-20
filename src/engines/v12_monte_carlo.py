@@ -1280,6 +1280,41 @@ def attach_monte_carlo_to_package_utility(
     return output
 
 
+
+def correlation_structure_diagnostic(
+    *,
+    seed: int = 1409,
+    actual_paths: int = 100000,
+    clean_sheet_probability: float = 0.35,
+) -> dict[str, Any]:
+    """Measure the implemented shared-factor dependence without pairwise tuning."""
+    rng = np.random.Generator(np.random.PCG64(int(seed)))
+    catalog = {
+        "fixture": {
+            "teams": (1, 2),
+            "team_cs": {
+                1: _validate_probability(float(clean_sheet_probability), "clean_sheet_probability"),
+                2: _validate_probability(float(clean_sheet_probability), "clean_sheet_probability"),
+            },
+            "gw": 1,
+        }
+    }
+    world = _world_factors(rng, catalog, int(actual_paths), load_config())["fixture"]
+    team1 = np.asarray(world["teams"][1]["attack_factor"], dtype=np.float64)
+    team2 = np.asarray(world["teams"][2]["attack_factor"], dtype=np.float64)
+    # Two same-team player intensities share the exact team factor but retain
+    # different native P1.3 marginal rates.
+    intensity_a = 0.20 * team1
+    intensity_b = 0.45 * team1
+    cs1 = np.asarray(world["clean_sheet"][1], dtype=np.float64)
+    return {
+        "actual_paths": int(actual_paths),
+        "same_team_intensity_correlation": float(np.corrcoef(intensity_a, intensity_b)[0, 1]),
+        "opponent_attack_vs_clean_sheet_correlation": float(np.corrcoef(team2, cs1)[0, 1]),
+        "same_team_dependence_expected_positive": True,
+        "opponent_attack_clean_sheet_dependence_expected_negative": True,
+    }
+
 def crn_variance_benchmark(
     projections: Mapping[str, Any],
     route_a: Mapping[str, Any],

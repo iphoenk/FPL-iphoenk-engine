@@ -1112,6 +1112,301 @@ def apply_post_match_universe_comparison(
     return out
 
 
+def _build_post_match_deep_player_detail(
+    *,
+    element_id: int,
+    projection: Mapping[str, Any],
+    scan_row: Mapping[str, Any],
+    match_rows: Sequence[Mapping[str, Any]],
+    current_gw: int,
+) -> dict[str, Any]:
+    """Assemble existing V12 evidence for one material player only."""
+    trajectory = build_player_trajectory(
+        match_rows,
+        player_id=element_id,
+        current_gw=current_gw,
+    )
+    contexts = [
+        dict(row)
+        for row in (
+            ((projection.get("contextual_dynamics") or {}).get(
+                "fixture_contexts"
+            ))
+            or []
+        )
+        if isinstance(row, Mapping)
+    ]
+    primary_context = contexts[0] if contexts else {}
+    horizons = dict(projection.get("horizons") or {})
+    xmins = dict(projection.get("xmins") or {})
+    latest = dict(trajectory.get("latest_match_evidence") or {})
+    role = dict(trajectory.get("role_minutes_evolution") or {})
+    classifications = list(scan_row.get("classifications") or [])
+    materiality_reasons = list(scan_row.get("materiality_reasons") or [])
+    return {
+        "element_id": int(element_id),
+        "name": projection.get("name"),
+        "position": projection.get("position"),
+        "team_id": projection.get("team_id"),
+        "evidence_classification": classifications,
+        "primary_classification": scan_row.get("primary_classification"),
+        "trajectory": trajectory,
+        "role": {
+            "trajectory": role,
+            "current_tactical_role": projection.get("tactical_role"),
+            "system_context": projection.get("system_context"),
+        },
+        "minutes": {
+            "xmins": xmins.get("expected_minutes"),
+            "p_start": xmins.get("start_probability"),
+            "p_cameo": xmins.get("cameo_probability"),
+            "p_dnp": xmins.get("dnp_probability"),
+            "distribution": xmins.get("xmins_distribution"),
+        },
+        "underlying": {
+            "latest_xg": latest.get("xg"),
+            "latest_xa": latest.get("xa"),
+            "latest_xgi": latest.get("xgi"),
+            "latest_shots": latest.get("shots"),
+            "latest_sot": latest.get("shots_on_target"),
+            "latest_big_chances": latest.get("big_chances"),
+            "latest_box_touches": latest.get("box_touches"),
+            "latest_chances_created": latest.get("chances_created"),
+            "latest_set_piece_involvement": latest.get(
+                "set_piece_involvement"
+            ),
+            "latest_penalty_involvement": latest.get(
+                "penalty_involvement"
+            ),
+            "match_by_match": list(trajectory.get("matches") or []),
+        },
+        "result_vs_process": trajectory.get("result_vs_process"),
+        "opponent_matchup": primary_context.get("matchup"),
+        "linkup": primary_context.get("linkup_network"),
+        "linked_player_availability": [
+            dict(row)
+            for row in (
+                (primary_context.get("linkup_network") or {}).get(
+                    "marginalized"
+                )
+                or []
+            )
+            if isinstance(row, Mapping)
+        ],
+        "bayesian_posterior": projection.get("posterior_rates"),
+        "horizon_1gw": horizons.get("1"),
+        "horizon_3gw": horizons.get("3"),
+        "horizon_5gw": horizons.get("5"),
+        "price_risk": (
+            "MATERIAL"
+            if "PRICE_RISK" in materiality_reasons
+            else "UNAVAILABLE"
+        ),
+        "universe_comparison": scan_row.get("universe_comparison"),
+        "our15_relevance": bool(scan_row.get("owned")),
+        "materiality_score": scan_row.get("materiality_score"),
+        "operational_action_created": False,
+        "new_probability_math_created": False,
+        "raw_provider_payload_persisted": False,
+    }
+
+
+def build_post_match_deep_details(
+    *,
+    deep_analysis_element_ids: Sequence[int],
+    current_projection_players: Sequence[Mapping[str, Any]],
+    player_match_rows: Sequence[Mapping[str, Any]],
+    post_match_universe_scan: Mapping[str, Any],
+    current_gw: int,
+    maximum_material_deep_players: int | None = None,
+) -> dict[str, Any]:
+    """Execute expensive post-match detail only for material target IDs.
+
+    Base full-universe projections remain untouched. This function consumes the
+    materiality target list explicitly and creates no ranking/action owner.
+    """
+    requested = list(
+        dict.fromkeys(
+            int(value)
+            for value in deep_analysis_element_ids
+            if _i(value, -1) > 0
+        )
+    )
+    cfg = load_config().get("post_match_scan") or {}
+    cap = max(
+        1,
+        _i(
+            maximum_material_deep_players,
+            _i(cfg.get("maximum_material_deep_players"), 20),
+        ),
+    )
+    scan = dict(post_match_universe_scan or {})
+    material_rows = [
+        dict(row)
+        for row in scan.get("material_players") or []
+        if isinstance(row, Mapping)
+    ]
+    scan_by_id = {
+        _i(row.get("element_id"), -1): row
+        for row in material_rows
+        if _i(row.get("element_id"), -1) > 0
+    }
+    projection_by_id = _projection_map(current_projection_players)
+    match_rows_by_id: dict[int, list[dict[str, Any]]] = {}
+    for raw in player_match_rows:
+        if not isinstance(raw, Mapping):
+            continue
+        element = _i(raw.get("player_id"), _i(raw.get("element"), -1))
+        if element > 0:
+            match_rows_by_id.setdefault(element, []).append(dict(raw))
+
+    if not requested:
+        return {
+            "status": "COMPLETE",
+            "deep_execution_scope": "NO_MATERIAL_TARGETS",
+            "eligible_count": _i(scan.get("eligible_count")),
+            "scanned_count": _i(scan.get("scanned_count")),
+            "material_count": _i(scan.get("material_count")),
+            "deep_requested_count": 0,
+            "deep_executed_count": 0,
+            "deep_deferred_count": 0,
+            "maximum_material_deep_players": cap,
+            "requested_element_ids": [],
+            "executed_element_ids": [],
+            "deferred_element_ids": [],
+            "details": [],
+            "governance": {
+                "explicit_target_list_consumed": True,
+                "full_universe_base_projection_unchanged": True,
+                "display_limit_controls_execution": False,
+                "new_ranking_owner_created": False,
+                "new_action_owner_created": False,
+            },
+        }
+
+    ranked_requested = [
+        element
+        for element in requested
+        if element in scan_by_id
+    ]
+    # deep_analysis_element_ids is already ordered by the existing materiality
+    # + full-universe comparison path. Preserve that order; do not rescore.
+    selected = ranked_requested[:cap]
+    deferred = ranked_requested[cap:]
+    details: list[dict[str, Any]] = []
+    missing_projection: list[int] = []
+    for element in selected:
+        projection = projection_by_id.get(element)
+        if not projection:
+            missing_projection.append(element)
+            continue
+        details.append(
+            _build_post_match_deep_player_detail(
+                element_id=element,
+                projection=projection,
+                scan_row=scan_by_id[element],
+                match_rows=match_rows_by_id.get(element, []),
+                current_gw=current_gw,
+            )
+        )
+
+    executed_ids = [int(row["element_id"]) for row in details]
+    if deferred or missing_projection or len(ranked_requested) != len(requested):
+        scope = "PARTIAL"
+        status = "DEGRADED"
+    else:
+        scope = "COMPLETE"
+        status = "COMPLETE"
+    unbound_requested = [
+        element for element in requested if element not in scan_by_id
+    ]
+    return {
+        "status": status,
+        "deep_execution_scope": scope,
+        "eligible_count": _i(scan.get("eligible_count")),
+        "scanned_count": _i(scan.get("scanned_count")),
+        "material_count": _i(scan.get("material_count")),
+        "deep_requested_count": len(requested),
+        "deep_executed_count": len(details),
+        "deep_deferred_count": len(deferred),
+        "maximum_material_deep_players": cap,
+        "requested_element_ids": requested,
+        "executed_element_ids": executed_ids,
+        "deferred_element_ids": deferred,
+        "unbound_requested_element_ids": unbound_requested,
+        "missing_projection_element_ids": missing_projection,
+        "details": details,
+        "governance": {
+            "explicit_target_list_consumed": True,
+            "full_universe_base_projection_unchanged": True,
+            "materiality_gate_controls_deep_execution": True,
+            "display_limit_controls_execution": False,
+            "existing_universe_comparison_reused": True,
+            "new_ranking_owner_created": False,
+            "new_action_owner_created": False,
+            "operational_action_owner": "WAIT_PREPARE_ACT",
+            "methodology_weights_20_25_30_25_unchanged": True,
+        },
+    }
+
+
+def attach_post_match_deep_details(
+    scan: Mapping[str, Any],
+    deep_payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Attach bounded deep diagnostic availability to existing material rows."""
+    out = dict(scan)
+    detail_map = {
+        _i(row.get("element_id"), -1): dict(row)
+        for row in deep_payload.get("details") or []
+        if isinstance(row, Mapping)
+        and _i(row.get("element_id"), -1) > 0
+    }
+
+    def attach(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+        attached = []
+        for raw in rows:
+            row = dict(raw)
+            element = _i(row.get("element_id"), -1)
+            detail = detail_map.get(element)
+            row["deep_detail_available"] = detail is not None
+            row["post_match_deep_analysis"] = detail
+            attached.append(row)
+        return attached
+
+    out["players"] = attach(
+        [
+            row
+            for row in out.get("players") or []
+            if isinstance(row, Mapping)
+        ]
+    )
+    out["material_players"] = attach(
+        [
+            row
+            for row in out.get("material_players") or []
+            if isinstance(row, Mapping)
+        ]
+    )
+    out["deep_execution"] = {
+        key: deep_payload.get(key)
+        for key in (
+            "status",
+            "deep_execution_scope",
+            "eligible_count",
+            "scanned_count",
+            "material_count",
+            "deep_requested_count",
+            "deep_executed_count",
+            "deep_deferred_count",
+            "maximum_material_deep_players",
+            "executed_element_ids",
+            "deferred_element_ids",
+        )
+    }
+    return out
+
+
 def _similarity_component(old: Any, current: Any) -> float | None:
     if old in {None, ""} or current in {None, ""}:
         return None

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 from src.engines.v12_monte_carlo import (
+    crn_variance_benchmark,
     package_route_definitions,
     run_correlated_monte_carlo,
 )
@@ -177,6 +178,16 @@ def run_acceptance() -> dict:
         generated_at="2026-09-20T01:09:04Z",
         factual_snapshot_timestamps={"acceptance_fixture": "2026-09-20T01:09:04Z"},
     )
+    hold, change = route_defs
+    result["crn_validation"] = crn_variance_benchmark(
+        projections,
+        change,
+        hold,
+        seed=SEED + 1,
+        replications=8,
+        paths_per_replication=5000,
+        horizon=1,
+    )
     return result
 
 
@@ -193,6 +204,7 @@ def main() -> int:
         "convergence_evidence": result["convergence_evidence"],
         "selected_metrics": result["metrics"]["R1"]["1"],
         "performance": result["performance"],
+        "crn_validation": result["crn_validation"],
     }
     print(json.dumps(summary, sort_keys=True))
     return 0 if result["status"] == "PASS" and result["actual_paths"] >= 500_000 else 2

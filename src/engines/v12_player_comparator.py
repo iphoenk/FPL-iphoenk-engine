@@ -231,6 +231,11 @@ def _normalize_events(events: Mapping[str, Any]) -> dict[str, Any]:
         "xpts": xpts,
         "p_return": p_return,
         "p_blank": p_blank,
+        "minutes_threshold_probabilities": (
+            dict(events.get("minutes_threshold_probabilities") or {})
+            if isinstance(events.get("minutes_threshold_probabilities"), Mapping)
+            else {}
+        ),
         "point_distribution": point_distribution_raw,
         "floor": floor,
         "ceiling": ceiling,
@@ -291,25 +296,39 @@ def _normalize_tactical(
 
 
 
-def _p60(minutes: Mapping[str, Any]) -> dict[str, Any]:
-    """Carry P(60+) only when existing P1.1 evidence explicitly supports it."""
+def _p60(
+    minutes: Mapping[str, Any],
+    events_bound: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Carry governed P(60+) only; never create a second minutes model."""
     supported = minutes.get("p_60_plus_supported") is True
     value = minutes.get("p_60_plus")
     provenance = str(minutes.get("p_60_plus_provenance") or "").strip()
-    if not supported:
-        return _unavailable(
-            str(
-                minutes.get("p_60_plus_reason")
-                or "P1.1 does not expose governed P(60+) evidence"
-            )
-        )
-    if value is None or not provenance:
+    if supported and value is not None and provenance:
+        return {
+            "value": round(_prob(value, "p_60_plus"), 8),
+            "reason": None,
+            "provenance": provenance,
+        }
+
+    event_evidence = dict((events_bound or {}).get("minutes_threshold_probabilities") or {})
+    event_value = event_evidence.get("p_60_plus")
+    event_source = str(event_evidence.get("source") or "").strip()
+    if event_value is not None and event_source:
+        return {
+            "value": round(_prob(event_value, "p_60_plus"), 8),
+            "reason": None,
+            "provenance": event_source,
+        }
+
+    if supported and (value is None or not provenance):
         return _unavailable("P1.1 P(60+) support flag lacks value/provenance")
-    return {
-        "value": round(_prob(value, "p_60_plus"), 8),
-        "reason": None,
-        "provenance": provenance,
-    }
+    return _unavailable(
+        str(
+            minutes.get("p_60_plus_reason")
+            or "No governed P(60+) evidence exposed by P1.1/P1.3"
+        )
+    )
 
 
 def _validate_competition_schedule(
@@ -382,7 +401,7 @@ def _fixture_row(row: Mapping[str, Any]) -> dict[str, Any]:
         "xmins": round(minutes_bound["xmins"], 8),
         "p_available": round(minutes_bound["p_available"], 8),
         "p_start": round(minutes_bound["p_start"], 8),
-        "p_60_plus": _p60(minutes),
+        "p_60_plus": _p60(minutes, events_bound),
         "p_dnp": round(minutes_bound["p_dnp"], 8),
         "p_cameo": (
             None

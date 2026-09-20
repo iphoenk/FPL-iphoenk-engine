@@ -749,7 +749,6 @@ def build_actionable_price_radar(
 
 
 def build_icon_subscopes(
-def build_icon_subscopes(
     *,
     submitted_picks: Sequence[Mapping[str, Any]] | None,
     submitted_denominator: int | None,

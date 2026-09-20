@@ -122,11 +122,14 @@ jobs:
 
       - name: Hydrate previous V6 last-good snapshot fail-closed
         shell: bash
+        env:
+          V6_RUNTIME_READ_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           rm -rf data/v6
           mkdir -p data
-          if ! git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"; then
+          read_auth="$(printf 'x-access-token:%s' "$V6_RUNTIME_READ_TOKEN" | base64 -w0)"
+          if ! git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $read_auth" fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"; then
             echo "::error::Unable to fetch ${RUNTIME_BRANCH}; refusing empty-tree acquisition"
             exit 1
           fi
@@ -348,9 +351,12 @@ jobs:
 
       - name: Capture runtime branch lease
         shell: bash
+        env:
+          V6_RUNTIME_READ_TOKEN: ${{ steps.runtime_app_token.outputs.token }}
         run: |
           set -euo pipefail
-          git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
+          read_auth="$(printf 'x-access-token:%s' "$V6_RUNTIME_READ_TOKEN" | base64 -w0)"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $read_auth" fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
           runtime_base="$(git rev-parse "refs/remotes/origin/${RUNTIME_BRANCH}")"
           echo "RUNTIME_BASE_SHA=$runtime_base" >> "$GITHUB_ENV"
 
@@ -383,9 +389,11 @@ jobs:
         shell: bash
         env:
           V6_EXPECTED_SCHEDULE_KIND: ${{ needs.collect.outputs.schedule_kind }}
+          V6_RUNTIME_READ_TOKEN: ${{ steps.runtime_app_token.outputs.token }}
         run: |
           set -euo pipefail
-          git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
+          read_auth="$(printf 'x-access-token:%s' "$V6_RUNTIME_READ_TOKEN" | base64 -w0)"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $read_auth" fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
           published_head="$(git rev-parse "refs/remotes/origin/${RUNTIME_BRANCH}")"
           test "$published_head" = "$PUBLISHED_RUNTIME_SHA"
           verify_tree="$RUNNER_TEMP/v6-runtime-verify"

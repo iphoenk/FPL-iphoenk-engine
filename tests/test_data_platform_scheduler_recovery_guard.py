@@ -76,7 +76,9 @@ def test_recent_governed_core_event_gets_settle_window_before_recovery():
 
 def test_recovery_workflow_is_dispatch_only_not_a_second_natural_scheduler():
     text = WORKFLOW.read_text(encoding="utf-8")
-    assert "cron: '55 * * * *'" in text
+    assert "schedule:" not in text
+    assert "cron:" not in text
+    assert "workflow_dispatch:" in text
     assert "contents: read" in text
     assert "actions: write" in text
     assert "contents: write" not in text
@@ -97,6 +99,9 @@ def test_recovery_policy_cannot_claim_scheduler_or_wave3_proof():
     assert recovery["recovery_mode"] == "manual_recovery"
     assert recovery["recovery_counts_as_scheduler_proof"] is False
     assert recovery["recovery_counts_as_natural_wave3_slot"] is False
+    assert recovery["automatic_schedule_enabled"] is False
+    assert recovery["invocation_mode"] == "WORKFLOW_DISPATCH_ONLY"
+    assert recovery["recurring_automated_initiator"] is False
     assert recovery["may_edit_fpl_master_slot_title"] is False
     assert schedule["github_natural_schedule"]["enabled"] is False
     assert schedule["manual_recovery"]["counts_as_completed_operational_slot"] is False

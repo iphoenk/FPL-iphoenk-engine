@@ -16,6 +16,9 @@
   "may_publish_runtime_directly": false,
   "may_use_v6_publisher_credentials_directly": false,
   "github_natural_acquisition_schedule_enabled": false,
-  "notes": "Emergency continuity only. Normal hourly acquisition remains owned by ChatGPT FPL Master Monitor. The recovery guard may dispatch the existing governed manual_recovery path only after watchdog CRITICAL and duplicate/cooldown guards pass.",
-  "recovery_dispatch_actor": "github-actions[bot]"
+  "notes": "Explicit emergency recovery only. Normal hourly acquisition remains owned by ChatGPT FPL Master Monitor. This workflow may be invoked manually and may dispatch the existing governed manual_recovery path only after fail-closed watchdog/duplicate/cooldown checks pass. It is non-authoritative, non-recurring, not scheduler proof, not a natural slot, and never mutates issue #431.",
+  "recovery_dispatch_actor": "github-actions[bot]",
+  "automatic_schedule_enabled": false,
+  "invocation_mode": "WORKFLOW_DISPATCH_ONLY",
+  "recurring_automated_initiator": false
 }

@@ -280,4 +280,5 @@ def test_legacy_direct_fetch_projection_path_is_removed():
     assert "from src.sources.official_fpl import get_json" not in decision_source
     assert "def build_player_projections(" not in decision_source
     assert "def run()" not in decision_source
-    assert "src.models.projection_components" in historical_source
+    assert "from src.engines.v12_player_events import" in historical_source
+    assert "src.models.projection_components" not in historical_source

@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "contract": "V12_MINI_LEAGUE_DECISION_OVERLAY_V1",
+  "model_id": "v12_mini_league_decision_overlay",
+  "model_owner": "V12_MINI_LEAGUE_OVERLAY",
+  "model_version": "p1.8-v12-mini-league-overlay-v1",
+  "feature_version": "p1.8-exposure-risk-close-call-relative-v1",
+  "parameter_version": "p1.8-overlay-parameters-v1",
+  "calibration_version": "p1.8-structural-calibration-v1",
+  "calibration_cutoff": "2026-09-20T02:01:16Z",
+  "authority": "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt",
+  "coverage": {
+    "states": [
+      "FULL",
+      "PARTIAL",
+      "UNAVAILABLE"
+    ],
+    "scope_states": [
+      "FULL_LEAGUE",
+      "TOP_N_RELEVANT_RIVALS",
+      "SELECTED_RIVALS",
+      "PARTIAL_FETCH"
+    ],
+    "eo_requires_full_pick_coverage": true,
+    "eo_requires_numeric_multiplier_for_every_pick": true,
+    "ordinary_ownership_must_not_be_labelled_eo": true
+  },
+  "risk_posture": {
+    "default": "BALANCED",
+    "allowed": [
+      "PROTECT",
+      "BALANCED",
+      "CHASE"
+    ],
+    "late_horizon_gws_remaining_at_most": 5,
+    "protect_min_points_ahead_nearest": 15,
+    "chase_min_points_to_leader": 20,
+    "explicit_preference_allowed": true
+  },
+  "close_decision_gate": {
+    "version": "P1_8_CLOSE_DECISION_GATE_V1",
+    "max_absolute_gap": {
+      "GW+1": 1,
+      "3GW": 2,
+      "5GW": 3
+    },
+    "max_expected_regret_gap": 0.75,
+    "paired_probability_close_low": 0.4,
+    "paired_probability_close_high": 0.6,
+    "large_edge_preservation_mandatory": true
+  },
+  "leverage": {
+    "version": "P1_8_RELATIVE_LEVERAGE_UTILITY_V1",
+    "max_absolute_overlay_adjustment_points": 0.75,
+    "posture_weights": {
+      "PROTECT": {
+        "defensive_coverage": 0.45,
+        "captain_coverage": 0.3,
+        "differential_upside": -0.1,
+        "mc_upside": 0.05,
+        "mc_downside_penalty": 0.15
+      },
+      "BALANCED": {
+        "defensive_coverage": 0.25,
+        "captain_coverage": 0.05,
+        "differential_upside": 0.2,
+        "mc_upside": 0.15,
+        "mc_downside_penalty": 0.15
+      },
+      "CHASE": {
+        "defensive_coverage": -0.1,
+        "captain_coverage": -0.2,
+        "differential_upside": 0.45,
+        "mc_upside": 0.35,
+        "mc_downside_penalty": 0.1
+      }
+    }
+  },
+  "report": {
+    "max_relevant_exposures": 8,
+    "show_numerator_denominator": true,
+    "show_decision_delta": true,
+    "show_reversal_triggers": true
+  },
+  "governance": {
+    "downstream_overlay_only": true,
+    "football_baseline_must_exist_first": true,
+    "football_baseline_immutable": true,
+    "raw_football_scores_mutated": false,
+    "gate0_unchanged": true,
+    "weights_20_25_30_25_unchanged": true,
+    "p1_1_read_only": true,
+    "p1_3_read_only": true,
+    "p1_6_read_only": true,
+    "p1_7_read_only": true,
+    "p1_2_read_only": true,
+    "p1_4_read_only": true,
+    "dynamic_ft_shadow_unchanged": true,
+    "no_second_mini_league_monte_carlo": true,
+    "rank_forecast_forbidden_without_full_manager_future_simulation": true,
+    "raw_v6_payload_persisted": false,
+    "scheduler_changed": false,
+    "authority_added": false
+  }
+}

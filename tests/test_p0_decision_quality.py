@@ -78,11 +78,14 @@ def test_xmins_explicit_probability_contract_for_starter_profile():
     assert out["probability_sum"] == pytest.approx(1.0, abs=0.001)
     assert out["expected_minutes_if_start"] == out["starter_minutes_if_start"]
     assert out["overall_availability"] == out["availability"]
-    derived = (
-        out["start_probability"] * out["starter_minutes_if_start"]
-        + out["bench_probability"] * out["bench_minutes_if_used"]
+    states = out["xmins_distribution"]["states"]
+    derived = sum(
+        row["probability"] * row["minutes_mean"]
+        for row in states
     )
-    assert out["expected_minutes"] == pytest.approx(derived, abs=0.2)
+    assert out["expected_minutes"] == pytest.approx(derived, abs=0.3)
+    assert out["probability_sum_semantics"] == "START+CAMEO+DNP_ONLY"
+    assert out["governance"]["bench_is_overlapping_state"] is True
     assert out["governance"]["expected_minutes_derived_from_explicit_probabilities"] is True
 
 

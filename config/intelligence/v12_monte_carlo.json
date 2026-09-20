@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "contract": "V12_CORRELATED_MONTE_CARLO_V1",
+  "model_id": "v12_correlated_monte_carlo",
+  "model_owner": "V12_MONTE_CARLO",
+  "model_version": "p1.4-v12-correlated-mc-v1",
+  "feature_version": "p1.4-path-state-event-autosub-cvc-crn-v1",
+  "parameter_version": "p1.4-correlation-parameters-v1",
+  "calibration_version": "p1.4-structural-correlation-v1",
+  "calibration_cutoff": "2026-09-20T01:09:04Z",
+  "authority": "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt",
+  "canonical": {
+    "minimum_actual_paths": 500000,
+    "checkpoints": [50000, 100000, 250000, 500000],
+    "max_material_routes": 8,
+    "chunk_size": 25000,
+    "quantile_method": "NUMPY_LINEAR_EMPIRICAL_QUANTILE_STORED_ROUTE_TOTALS",
+    "tail_definition_version": "P1_4_ROUTE_DELTA_TAILS_V1",
+    "downside_definition": "P(route_net_utility < HOLD_net_utility)",
+    "material_upside_definition": "P(route_net_utility - HOLD_net_utility >= threshold_points)",
+    "material_upside_threshold_points": 5.0
+  },
+  "rng": {
+    "implementation": "numpy.random.Generator",
+    "bit_generator": "PCG64",
+    "seed_policy": "EXPLICIT_FIXED_INTEGER_PER_EXECUTION",
+    "common_random_numbers": true
+  },
+  "correlation": {
+    "correlation_model_version": "P1_4_SHARED_MATCH_TEAM_FACTORS_V1",
+    "match_attack_sigma": 0.18,
+    "team_attack_sigma": 0.28,
+    "same_team_attack_dependence": "MEAN_ONE_LOGNORMAL_SHARED_MATCH_AND_TEAM_RATE_FACTORS",
+    "same_team_clean_sheet_dependence": "ONE_SHARED_BERNOULLI_CLEAN_SHEET_STATE_PER_TEAM_FIXTURE",
+    "opponent_attack_clean_sheet_interaction": "CLEAN_SHEET_THRESHOLD_ON_STANDARDIZED_OPPONENT_ATTACK_LATENT",
+    "defcon_pressure": "NOT_MODELLED_P1_3_STATE_CONDITIONAL_POISSON_MARGINAL_PRESERVED",
+    "gk_save_pressure": "OPPONENT_ATTACK_FACTOR_MULTIPLIES_STATE_CONDITIONAL_POISSON_RATE",
+    "within_player_goal_assist": "P1_3_BIVARIATE_POISSON_SHARED_COMPONENT",
+    "availability_cross_player": "NOT_MODELLED",
+    "injury_cluster": "NOT_MODELLED",
+    "manager_rotation_cluster": "NOT_MODELLED",
+    "set_piece_event_cross_player": "NOT_MODELLED",
+    "bonus_stochastic_process": "NOT_MODELLED_EXPECTATION_ONLY_RESIDUAL",
+    "cross_gw_temporal_state": "CONDITIONALLY_INDEPENDENT_GIVEN_CURRENT_MODEL",
+    "future_price_process": "NOT_MODELLED"
+  },
+  "convergence": {
+    "mean_delta_absolute_tolerance": 0.10,
+    "outperform_probability_absolute_tolerance": 0.005,
+    "median_delta_absolute_tolerance": 0.25,
+    "mean_delta_mcse_multiplier": 2.0,
+    "requires_final_two_checkpoints": true
+  },
+  "invocation": {
+    "required_absolute_gw1_net_delta_at_most": 1.0,
+    "optional_absolute_gw1_net_delta_at_most": 2.5,
+    "required_when_captain_changes": true,
+    "required_when_bench_changes": true,
+    "required_when_material_covariance": true,
+    "states": ["MC_REQUIRED", "MC_OPTIONAL", "MC_NOT_REQUIRED"]
+  },
+  "governance": {
+    "v6_mutated": false,
+    "runtime_v3_dependency_forbidden": true,
+    "legacy_gaussian_noncanonical": true,
+    "p1_1_read_only": true,
+    "p1_3_read_only": true,
+    "p1_6_read_only": true,
+    "p1_7_read_only": true,
+    "p1_2_read_only": true,
+    "gate0_unchanged": true,
+    "weights_20_25_30_25_unchanged": true,
+    "dynamic_ft_shadow_unchanged": true,
+    "mini_league_forbidden": true,
+    "raw_v6_payload_persisted": false,
+    "mc_code_existence_is_not_execution": true,
+    "visible_mc_claim_requires_execution_evidence": true
+  }
+}

@@ -1,0 +1,1113 @@
+{
+  "schema_version": 1,
+  "baseline_sha": "e4ae01512e87e53d605dbbf94d6302bce2f57bd6",
+  "baseline_kind": "P1.3_DONOR_NUMERICAL_FREEZE",
+  "league_baseline": {
+    "home_goals": 1.3,
+    "away_goals": 1.3
+  },
+  "cases": [
+    {
+      "name": "nailed_attacking_mid",
+      "position": "MID",
+      "player": {
+        "id": 1,
+        "element_type": 3,
+        "minutes": 540,
+        "expected_goals": 2.4,
+        "expected_assists": 1.8,
+        "bonus": 5,
+        "saves": 0
+      },
+      "feature": {},
+      "xmins": {
+        "start_probability": 0.9,
+        "bench_probability": 0.060000000000000005,
+        "cameo_probability": 0.060000000000000005,
+        "late_cameo_probability": 0.01,
+        "dnp_probability": 0.04,
+        "expected_minutes": 74.88,
+        "starter_minutes_if_start": 82,
+        "minutes_std": 22.906672,
+        "xmins_distribution": {
+          "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+          "states": [
+            {
+              "state": "START",
+              "probability": 0.9,
+              "minutes_mean": 82,
+              "minutes_std": 8
+            },
+            {
+              "state": "CAMEO",
+              "probability": 0.05,
+              "minutes_mean": 20,
+              "minutes_std": 6
+            },
+            {
+              "state": "LATE_CAMEO",
+              "probability": 0.01,
+              "minutes_mean": 8,
+              "minutes_std": 3
+            },
+            {
+              "state": "ZERO_MINUTES",
+              "probability": 0.04,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            }
+          ]
+        }
+      },
+      "matchup": {
+        "event": 5,
+        "fixture": 501,
+        "team_h": 1,
+        "team_a": 2,
+        "home": true,
+        "opponent": 2,
+        "team_expected_goals": 1.3,
+        "clean_sheet_probability": 0.35
+      },
+      "small_sample": false,
+      "donor_expected": {
+        "xG90": 0.318182,
+        "xA90": 0.254545,
+        "bonus90": 0.581818,
+        "saves90": 0,
+        "DefCon_rate": 8.484278,
+        "fixture_attack_multiplier": 1,
+        "clean_sheet_probability": 0.35,
+        "legacy_mean": 4.75425,
+        "legacy_std": 2.798519,
+        "xg_winsorized": false,
+        "xa_winsorized": false
+      }
+    },
+    {
+      "name": "uncertain_rotation_mid",
+      "position": "MID",
+      "player": {
+        "id": 2,
+        "element_type": 3,
+        "minutes": 360,
+        "expected_goals": 1,
+        "expected_assists": 1.2,
+        "bonus": 3,
+        "saves": 0
+      },
+      "feature": {},
+      "xmins": {
+        "start_probability": 0.5,
+        "bench_probability": 0.32,
+        "cameo_probability": 0.32,
+        "late_cameo_probability": 0.1,
+        "dnp_probability": 0.18,
+        "expected_minutes": 41.66,
+        "starter_minutes_if_start": 74,
+        "minutes_std": 34.10285,
+        "xmins_distribution": {
+          "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+          "states": [
+            {
+              "state": "START",
+              "probability": 0.5,
+              "minutes_mean": 74,
+              "minutes_std": 12
+            },
+            {
+              "state": "CAMEO",
+              "probability": 0.22,
+              "minutes_mean": 18,
+              "minutes_std": 7
+            },
+            {
+              "state": "LATE_CAMEO",
+              "probability": 0.1,
+              "minutes_mean": 7,
+              "minutes_std": 4
+            },
+            {
+              "state": "ZERO_MINUTES",
+              "probability": 0.18,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            }
+          ]
+        }
+      },
+      "matchup": {
+        "event": 5,
+        "fixture": 502,
+        "team_h": 1,
+        "team_a": 2,
+        "home": true,
+        "opponent": 2,
+        "team_expected_goals": 1.3,
+        "clean_sheet_probability": 0.35
+      },
+      "small_sample": false,
+      "donor_expected": {
+        "xG90": 0.232203,
+        "xA90": 0.240678,
+        "bonus90": 0.488889,
+        "saves90": 0,
+        "DefCon_rate": 8.484278,
+        "fixture_attack_multiplier": 1,
+        "clean_sheet_probability": 0.35,
+        "legacy_mean": 2.59938,
+        "legacy_std": 2.285339,
+        "xg_winsorized": false,
+        "xa_winsorized": false
+      }
+    },
+    {
+      "name": "high_xg_fwd",
+      "position": "FWD",
+      "player": {
+        "id": 3,
+        "element_type": 4,
+        "minutes": 630,
+        "expected_goals": 5.6,
+        "expected_assists": 1.1,
+        "bonus": 8,
+        "saves": 0
+      },
+      "feature": {},
+      "xmins": {
+        "start_probability": 0.92,
+        "bench_probability": 0.05,
+        "cameo_probability": 0.05,
+        "late_cameo_probability": 0.01,
+        "dnp_probability": 0.03,
+        "expected_minutes": 78.07,
+        "starter_minutes_if_start": 84,
+        "minutes_std": 21.36949,
+        "xmins_distribution": {
+          "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+          "states": [
+            {
+              "state": "START",
+              "probability": 0.92,
+              "minutes_mean": 84,
+              "minutes_std": 7
+            },
+            {
+              "state": "CAMEO",
+              "probability": 0.04,
+              "minutes_mean": 18,
+              "minutes_std": 6
+            },
+            {
+              "state": "LATE_CAMEO",
+              "probability": 0.01,
+              "minutes_mean": 7,
+              "minutes_std": 3
+            },
+            {
+              "state": "ZERO_MINUTES",
+              "probability": 0.03,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            }
+          ]
+        }
+      },
+      "matchup": {
+        "event": 5,
+        "fixture": 503,
+        "team_h": 1,
+        "team_a": 2,
+        "home": true,
+        "opponent": 2,
+        "team_expected_goals": 1.55,
+        "clean_sheet_probability": 0.28
+      },
+      "small_sample": false,
+      "donor_expected": {
+        "xG90": 0.625,
+        "xA90": 0.145833,
+        "bonus90": 0.791667,
+        "saves90": 0,
+        "DefCon_rate": 7.512925,
+        "fixture_attack_multiplier": 1.192308,
+        "clean_sheet_probability": 0.28,
+        "legacy_mean": 5.695653,
+        "legacy_std": 3.140106,
+        "xg_winsorized": false,
+        "xa_winsorized": false
+      }
+    },
+    {
+      "name": "creative_mid",
+      "position": "MID",
+      "player": {
+        "id": 4,
+        "element_type": 3,
+        "minutes": 720,
+        "expected_goals": 1.2,
+        "expected_assists": 4.8,
+        "bonus": 10,
+        "saves": 0
+      },
+      "feature": {},
+      "xmins": {
+        "start_probability": 0.94,
+        "bench_probability": 0.04,
+        "cameo_probability": 0.04,
+        "late_cameo_probability": 0.01,
+        "dnp_probability": 0.02,
+        "expected_minutes": 80.44,
+        "starter_minutes_if_start": 85,
+        "minutes_std": 19.067679,
+        "xmins_distribution": {
+          "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+          "states": [
+            {
+              "state": "START",
+              "probability": 0.94,
+              "minutes_mean": 85,
+              "minutes_std": 6
+            },
+            {
+              "state": "CAMEO",
+              "probability": 0.03,
+              "minutes_mean": 16,
+              "minutes_std": 5
+            },
+            {
+              "state": "LATE_CAMEO",
+              "probability": 0.01,
+              "minutes_mean": 6,
+              "minutes_std": 2
+            },
+            {
+              "state": "ZERO_MINUTES",
+              "probability": 0.02,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            }
+          ]
+        }
+      },
+      "matchup": {
+        "event": 5,
+        "fixture": 504,
+        "team_h": 1,
+        "team_a": 2,
+        "home": true,
+        "opponent": 2,
+        "team_expected_goals": 1.45,
+        "clean_sheet_probability": 0.4
+      },
+      "small_sample": false,
+      "donor_expected": {
+        "xG90": 0.176923,
+        "xA90": 0.446154,
+        "bonus90": 0.876923,
+        "saves90": 0,
+        "DefCon_rate": 8.484278,
+        "fixture_attack_multiplier": 1.115385,
+        "clean_sheet_probability": 0.4,
+        "legacy_mean": 5.480081,
+        "legacy_std": 2.969003,
+        "xg_winsorized": false,
+        "xa_winsorized": false
+      }
+    },
+    {
+      "name": "low_sample_attacker",
+      "position": "FWD",
+      "player": {
+        "id": 5,
+        "element_type": 4,
+        "minutes": 45,
+        "expected_goals": 1.4,
+        "expected_assists": 0.6,
+        "bonus": 3,
+        "saves": 0
+      },
+      "feature": {},
+      "xmins": {
+        "start_probability": 0.62,
+        "bench_probability": 0.26,
+        "cameo_probability": 0.26,
+        "late_cameo_probability": 0.08,
+        "dnp_probability": 0.12,
+        "expected_minutes": 47.2,
+        "starter_minutes_if_start": 70,
+        "minutes_std": 31.463948,
+        "xmins_distribution": {
+          "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+          "states": [
+            {
+              "state": "START",
+              "probability": 0.62,
+              "minutes_mean": 70,
+              "minutes_std": 13
+            },
+            {
+              "state": "CAMEO",
+              "probability": 0.18,
+              "minutes_mean": 18,
+              "minutes_std": 8
+            },
+            {
+              "state": "LATE_CAMEO",
+              "probability": 0.08,
+              "minutes_mean": 7,
+              "minutes_std": 4
+            },
+            {
+              "state": "ZERO_MINUTES",
+              "probability": 0.12,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            }
+          ]
+        }
+      },
+      "matchup": {
+        "event": 5,
+        "fixture": 505,
+        "team_h": 1,
+        "team_a": 2,
+        "home": true,
+        "opponent": 2,
+        "team_expected_goals": 1.6,
+        "clean_sheet_probability": 0.2
+      },
+      "small_sample": true,
+      "donor_expected": {
+        "xG90": 0.433333,
+        "xA90": 0.180952,
+        "bonus90": 0.818182,
+        "saves90": 0,
+        "DefCon_rate": 7.512925,
+        "fixture_attack_multiplier": 1.230769,
+        "clean_sheet_probability": 0.2,
+        "legacy_mean": 3.402368,
+        "legacy_std": 2.980233,
+        "xg_winsorized": true,
+        "xa_winsorized": false
+      }
+    },
+    {
+      "name": "attacking_def",
+      "position": "DEF",
+      "player": {
+        "id": 6,
+        "element_type": 2,
+        "minutes": 600,
+        "expected_goals": 1.4,
+        "expected_assists": 2,
+        "bonus": 6,
+        "saves": 0
+      },
+      "feature": {
+        "advanced_current": {
+          "minutes": 600,
+          "dc_reconstructed_per90": 7,
+          "sample_quality": "ESTABLISHED"
+        }
+      },
+      "xmins": {
+        "start_probability": 0.88,
+        "bench_probability": 0.08,
+        "cameo_probability": 0.08,
+        "late_cameo_probability": 0.02,
+        "dnp_probability": 0.04,
+        "expected_minutes": 73.38,
+        "starter_minutes_if_start": 82,
+        "minutes_std": 24.730055,
+        "xmins_distribution": {
+          "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+          "states": [
+            {
+              "state": "START",
+              "probability": 0.88,
+              "minutes_mean": 82,
+              "minutes_std": 8
+            },
+            {
+              "state": "CAMEO",
+              "probability": 0.06,
+              "minutes_mean": 18,
+              "minutes_std": 6
+            },
+            {
+              "state": "LATE_CAMEO",
+              "probability": 0.02,
+              "minutes_mean": 7,
+              "minutes_std": 3
+            },
+            {
+              "state": "ZERO_MINUTES",
+              "probability": 0.04,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            }
+          ]
+        }
+      },
+      "matchup": {
+        "event": 5,
+        "fixture": 506,
+        "team_h": 1,
+        "team_a": 2,
+        "home": true,
+        "opponent": 2,
+        "team_expected_goals": 1.45,
+        "clean_sheet_probability": 0.42
+      },
+      "small_sample": false,
+      "donor_expected": {
+        "xG90": 0.154286,
+        "xA90": 0.214286,
+        "bonus90": 0.621429,
+        "saves90": 0,
+        "DefCon_rate": 7.399515,
+        "fixture_attack_multiplier": 1.115385,
+        "clean_sheet_probability": 0.42,
+        "legacy_mean": 5.452944,
+        "legacy_std": 3.155788,
+        "xg_winsorized": false,
+        "xa_winsorized": false
+      }
+    },
+    {
+      "name": "defcon_heavy_def",
+      "position": "DEF",
+      "player": {
+        "id": 7,
+        "element_type": 2,
+        "minutes": 720,
+        "expected_goals": 0.4,
+        "expected_assists": 0.5,
+        "bonus": 5,
+        "saves": 0
+      },
+      "feature": {
+        "advanced_current": {
+          "minutes": 720,
+          "dc_reconstructed_per90": 14,
+          "sample_quality": "ESTABLISHED"
+        }
+      },
+      "xmins": {
+        "start_probability": 0.95,
+        "bench_probability": 0.03,
+        "cameo_probability": 0.03,
+        "late_cameo_probability": 0.01,
+        "dnp_probability": 0.02,
+        "expected_minutes": 82.05,
+        "starter_minutes_if_start": 86,
+        "minutes_std": 17.973244,
+        "xmins_distribution": {
+          "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+          "states": [
+            {
+              "state": "START",
+              "probability": 0.95,
+              "minutes_mean": 86,
+              "minutes_std": 5
+            },
+            {
+              "state": "CAMEO",
+              "probability": 0.02,
+              "minutes_mean": 15,
+              "minutes_std": 5
+            },
+            {
+              "state": "LATE_CAMEO",
+              "probability": 0.01,
+              "minutes_mean": 5,
+              "minutes_std": 2
+            },
+            {
+              "state": "ZERO_MINUTES",
+              "probability": 0.02,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            }
+          ]
+        }
+      },
+      "matchup": {
+        "event": 5,
+        "fixture": 507,
+        "team_h": 1,
+        "team_a": 2,
+        "home": true,
+        "opponent": 2,
+        "team_expected_goals": 1.1,
+        "clean_sheet_probability": 0.5
+      },
+      "small_sample": false,
+      "donor_expected": {
+        "xG90": 0.061538,
+        "xA90": 0.076923,
+        "bonus90": 0.480769,
+        "saves90": 0,
+        "DefCon_rate": 11.666231,
+        "fixture_attack_multiplier": 0.846154,
+        "clean_sheet_probability": 0.5,
+        "legacy_mean": 5.992015,
+        "legacy_std": 3.14571,
+        "xg_winsorized": false,
+        "xa_winsorized": false
+      }
+    },
+    {
+      "name": "subthreshold_defcon_def",
+      "position": "DEF",
+      "player": {
+        "id": 8,
+        "element_type": 2,
+        "minutes": 720,
+        "expected_goals": 0.3,
+        "expected_assists": 0.4,
+        "bonus": 3,
+        "saves": 0
+      },
+      "feature": {
+        "advanced_current": {
+          "minutes": 720,
+          "dc_reconstructed_per90": 5,
+          "sample_quality": "ESTABLISHED"
+        }
+      },
+      "xmins": {
+        "start_probability": 0.9,
+        "bench_probability": 0.07,
+        "cameo_probability": 0.07,
+        "late_cameo_probability": 0.02,
+        "dnp_probability": 0.03,
+        "expected_minutes": 76.64,
+        "starter_minutes_if_start": 84,
+        "minutes_std": 23.237263,
+        "xmins_distribution": {
+          "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+          "states": [
+            {
+              "state": "START",
+              "probability": 0.9,
+              "minutes_mean": 84,
+              "minutes_std": 7
+            },
+            {
+              "state": "CAMEO",
+              "probability": 0.05,
+              "minutes_mean": 18,
+              "minutes_std": 6
+            },
+            {
+              "state": "LATE_CAMEO",
+              "probability": 0.02,
+              "minutes_mean": 7,
+              "minutes_std": 3
+            },
+            {
+              "state": "ZERO_MINUTES",
+              "probability": 0.03,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            }
+          ]
+        }
+      },
+      "matchup": {
+        "event": 5,
+        "fixture": 508,
+        "team_h": 1,
+        "team_a": 2,
+        "home": true,
+        "opponent": 2,
+        "team_expected_goals": 1.15,
+        "clean_sheet_probability": 0.46
+      },
+      "small_sample": false,
+      "donor_expected": {
+        "xG90": 0.053846,
+        "xA90": 0.069231,
+        "bonus90": 0.326923,
+        "saves90": 0,
+        "DefCon_rate": 6.12777,
+        "fixture_attack_multiplier": 0.884615,
+        "clean_sheet_probability": 0.46,
+        "legacy_mean": 4.296888,
+        "legacy_std": 2.617997,
+        "xg_winsorized": false,
+        "xa_winsorized": false
+      }
+    },
+    {
+      "name": "save_heavy_gk",
+      "position": "GK",
+      "player": {
+        "id": 9,
+        "element_type": 1,
+        "minutes": 720,
+        "expected_goals": 0,
+        "expected_assists": 0,
+        "bonus": 7,
+        "saves": 40
+      },
+      "feature": {},
+      "xmins": {
+        "start_probability": 0.97,
+        "bench_probability": 0.01,
+        "cameo_probability": 0.01,
+        "late_cameo_probability": 0,
+        "dnp_probability": 0.02,
+        "expected_minutes": 87.4,
+        "starter_minutes_if_start": 90,
+        "minutes_std": 14.940214,
+        "xmins_distribution": {
+          "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+          "states": [
+            {
+              "state": "START",
+              "probability": 0.97,
+              "minutes_mean": 90,
+              "minutes_std": 2
+            },
+            {
+              "state": "CAMEO",
+              "probability": 0.01,
+              "minutes_mean": 10,
+              "minutes_std": 3
+            },
+            {
+              "state": "LATE_CAMEO",
+              "probability": 0,
+              "minutes_mean": 5,
+              "minutes_std": 2
+            },
+            {
+              "state": "ZERO_MINUTES",
+              "probability": 0.02,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            }
+          ]
+        }
+      },
+      "matchup": {
+        "event": 5,
+        "fixture": 509,
+        "team_h": 1,
+        "team_a": 2,
+        "home": true,
+        "opponent": 2,
+        "team_expected_goals": 0.95,
+        "clean_sheet_probability": 0.44
+      },
+      "small_sample": false,
+      "donor_expected": {
+        "xG90": 0.003846,
+        "xA90": 0.003846,
+        "bonus90": 0.615385,
+        "saves90": 4.230769,
+        "DefCon_rate": 0,
+        "fixture_attack_multiplier": 0.730769,
+        "clean_sheet_probability": 0.44,
+        "legacy_mean": 5.659805,
+        "legacy_std": 2.900026,
+        "xg_winsorized": false,
+        "xa_winsorized": false
+      }
+    },
+    {
+      "name": "strong_cs_def",
+      "position": "DEF",
+      "player": {
+        "id": 10,
+        "element_type": 2,
+        "minutes": 540,
+        "expected_goals": 0.5,
+        "expected_assists": 0.7,
+        "bonus": 4,
+        "saves": 0
+      },
+      "feature": {
+        "advanced_current": {
+          "minutes": 540,
+          "dc_reconstructed_per90": 8,
+          "sample_quality": "ESTABLISHED"
+        }
+      },
+      "xmins": {
+        "start_probability": 0.93,
+        "bench_probability": 0.04,
+        "cameo_probability": 0.04,
+        "late_cameo_probability": 0.01,
+        "dnp_probability": 0.03,
+        "expected_minutes": 79.59,
+        "starter_minutes_if_start": 85,
+        "minutes_std": 20.663782,
+        "xmins_distribution": {
+          "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+          "states": [
+            {
+              "state": "START",
+              "probability": 0.93,
+              "minutes_mean": 85,
+              "minutes_std": 6
+            },
+            {
+              "state": "CAMEO",
+              "probability": 0.03,
+              "minutes_mean": 16,
+              "minutes_std": 5
+            },
+            {
+              "state": "LATE_CAMEO",
+              "probability": 0.01,
+              "minutes_mean": 6,
+              "minutes_std": 2
+            },
+            {
+              "state": "ZERO_MINUTES",
+              "probability": 0.03,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            }
+          ]
+        }
+      },
+      "matchup": {
+        "event": 5,
+        "fixture": 510,
+        "team_h": 1,
+        "team_a": 2,
+        "home": true,
+        "opponent": 2,
+        "team_expected_goals": 1.2,
+        "clean_sheet_probability": 0.68
+      },
+      "small_sample": false,
+      "donor_expected": {
+        "xG90": 0.081818,
+        "xA90": 0.109091,
+        "bonus90": 0.477273,
+        "saves90": 0,
+        "DefCon_rate": 7.969183,
+        "fixture_attack_multiplier": 0.923077,
+        "clean_sheet_probability": 0.68,
+        "legacy_mean": 5.902514,
+        "legacy_std": 3.202288,
+        "xg_winsorized": false,
+        "xa_winsorized": false
+      }
+    },
+    {
+      "name": "bad_fixture_attacker",
+      "position": "MID",
+      "player": {
+        "id": 11,
+        "element_type": 3,
+        "minutes": 600,
+        "expected_goals": 2.5,
+        "expected_assists": 2,
+        "bonus": 6,
+        "saves": 0
+      },
+      "feature": {},
+      "xmins": {
+        "start_probability": 0.9,
+        "bench_probability": 0.060000000000000005,
+        "cameo_probability": 0.060000000000000005,
+        "late_cameo_probability": 0.01,
+        "dnp_probability": 0.04,
+        "expected_minutes": 74.77,
+        "starter_minutes_if_start": 82,
+        "minutes_std": 23.17816,
+        "xmins_distribution": {
+          "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+          "states": [
+            {
+              "state": "START",
+              "probability": 0.9,
+              "minutes_mean": 82,
+              "minutes_std": 8
+            },
+            {
+              "state": "CAMEO",
+              "probability": 0.05,
+              "minutes_mean": 18,
+              "minutes_std": 6
+            },
+            {
+              "state": "LATE_CAMEO",
+              "probability": 0.01,
+              "minutes_mean": 7,
+              "minutes_std": 3
+            },
+            {
+              "state": "ZERO_MINUTES",
+              "probability": 0.04,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            }
+          ]
+        }
+      },
+      "matchup": {
+        "event": 5,
+        "fixture": 511,
+        "team_h": 1,
+        "team_a": 2,
+        "home": true,
+        "opponent": 2,
+        "team_expected_goals": 0.7,
+        "clean_sheet_probability": 0.18
+      },
+      "small_sample": false,
+      "donor_expected": {
+        "xG90": 0.308571,
+        "xA90": 0.257143,
+        "bonus90": 0.634286,
+        "saves90": 0,
+        "DefCon_rate": 8.484278,
+        "fixture_attack_multiplier": 0.55,
+        "clean_sheet_probability": 0.18,
+        "legacy_mean": 3.74148,
+        "legacy_std": 2.382657,
+        "xg_winsorized": false,
+        "xa_winsorized": false
+      }
+    },
+    {
+      "name": "good_fixture_attacker",
+      "position": "MID",
+      "player": {
+        "id": 12,
+        "element_type": 3,
+        "minutes": 600,
+        "expected_goals": 2.5,
+        "expected_assists": 2,
+        "bonus": 6,
+        "saves": 0
+      },
+      "feature": {},
+      "xmins": {
+        "start_probability": 0.9,
+        "bench_probability": 0.060000000000000005,
+        "cameo_probability": 0.060000000000000005,
+        "late_cameo_probability": 0.01,
+        "dnp_probability": 0.04,
+        "expected_minutes": 74.77,
+        "starter_minutes_if_start": 82,
+        "minutes_std": 23.17816,
+        "xmins_distribution": {
+          "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+          "states": [
+            {
+              "state": "START",
+              "probability": 0.9,
+              "minutes_mean": 82,
+              "minutes_std": 8
+            },
+            {
+              "state": "CAMEO",
+              "probability": 0.05,
+              "minutes_mean": 18,
+              "minutes_std": 6
+            },
+            {
+              "state": "LATE_CAMEO",
+              "probability": 0.01,
+              "minutes_mean": 7,
+              "minutes_std": 3
+            },
+            {
+              "state": "ZERO_MINUTES",
+              "probability": 0.04,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            }
+          ]
+        }
+      },
+      "matchup": {
+        "event": 5,
+        "fixture": 512,
+        "team_h": 1,
+        "team_a": 2,
+        "home": true,
+        "opponent": 2,
+        "team_expected_goals": 2.2,
+        "clean_sheet_probability": 0.55
+      },
+      "small_sample": false,
+      "donor_expected": {
+        "xG90": 0.308571,
+        "xA90": 0.257143,
+        "bonus90": 0.634286,
+        "saves90": 0,
+        "DefCon_rate": 8.484278,
+        "fixture_attack_multiplier": 1.692308,
+        "clean_sheet_probability": 0.55,
+        "legacy_mean": 6.270746,
+        "legacy_std": 3.444949,
+        "xg_winsorized": false,
+        "xa_winsorized": false
+      }
+    },
+    {
+      "name": "dgw_fixture_a",
+      "position": "MID",
+      "player": {
+        "id": 13,
+        "element_type": 3,
+        "minutes": 500,
+        "expected_goals": 2,
+        "expected_assists": 2.2,
+        "bonus": 5,
+        "saves": 0
+      },
+      "feature": {},
+      "xmins": {
+        "start_probability": 0.86,
+        "bench_probability": 0.09000000000000001,
+        "cameo_probability": 0.09000000000000001,
+        "late_cameo_probability": 0.02,
+        "dnp_probability": 0.05,
+        "expected_minutes": 70.2,
+        "starter_minutes_if_start": 80,
+        "minutes_std": 25.922577,
+        "xmins_distribution": {
+          "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+          "states": [
+            {
+              "state": "START",
+              "probability": 0.86,
+              "minutes_mean": 80,
+              "minutes_std": 9
+            },
+            {
+              "state": "CAMEO",
+              "probability": 0.07,
+              "minutes_mean": 18,
+              "minutes_std": 6
+            },
+            {
+              "state": "LATE_CAMEO",
+              "probability": 0.02,
+              "minutes_mean": 7,
+              "minutes_std": 3
+            },
+            {
+              "state": "ZERO_MINUTES",
+              "probability": 0.05,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            }
+          ]
+        }
+      },
+      "matchup": {
+        "event": 5,
+        "fixture": 513,
+        "team_h": 1,
+        "team_a": 2,
+        "home": true,
+        "opponent": 2,
+        "team_expected_goals": 1.4,
+        "clean_sheet_probability": 0.36
+      },
+      "small_sample": false,
+      "donor_expected": {
+        "xG90": 0.293684,
+        "xA90": 0.303158,
+        "bonus90": 0.606316,
+        "saves90": 0,
+        "DefCon_rate": 8.484278,
+        "fixture_attack_multiplier": 1.076923,
+        "clean_sheet_probability": 0.36,
+        "legacy_mean": 4.688436,
+        "legacy_std": 2.876433,
+        "xg_winsorized": false,
+        "xa_winsorized": false
+      }
+    },
+    {
+      "name": "dnp_zero_minutes",
+      "position": "FWD",
+      "player": {
+        "id": 14,
+        "element_type": 4,
+        "minutes": 200,
+        "expected_goals": 1.2,
+        "expected_assists": 0.4,
+        "bonus": 2,
+        "saves": 0
+      },
+      "feature": {},
+      "xmins": {
+        "start_probability": 0,
+        "bench_probability": 0,
+        "cameo_probability": 0,
+        "late_cameo_probability": 0,
+        "dnp_probability": 1,
+        "expected_minutes": 0,
+        "starter_minutes_if_start": 0,
+        "minutes_std": 0,
+        "xmins_distribution": {
+          "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+          "states": [
+            {
+              "state": "START",
+              "probability": 0,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            },
+            {
+              "state": "CAMEO",
+              "probability": 0,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            },
+            {
+              "state": "LATE_CAMEO",
+              "probability": 0,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            },
+            {
+              "state": "ZERO_MINUTES",
+              "probability": 1,
+              "minutes_mean": 0,
+              "minutes_std": 0
+            }
+          ]
+        }
+      },
+      "matchup": {
+        "event": 5,
+        "fixture": 515,
+        "team_h": 1,
+        "team_a": 2,
+        "home": true,
+        "opponent": 2,
+        "team_expected_goals": 1.8,
+        "clean_sheet_probability": 0.25
+      },
+      "small_sample": false,
+      "donor_expected": {
+        "xG90": 0.416571,
+        "xA90": 0.141429,
+        "bonus90": 0.484615,
+        "saves90": 0,
+        "DefCon_rate": 7.512925,
+        "fixture_attack_multiplier": 1.384615,
+        "clean_sheet_probability": 0.25,
+        "legacy_mean": 0,
+        "legacy_std": 1.15,
+        "xg_winsorized": false,
+        "xa_winsorized": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,354 @@
+{
+  "schema": "FPL_MASTER_STATE_V12",
+  "context_version": 12,
+  "architecture_authority": "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt",
+  "report_plane_state": true,
+  "non_authoritative_state_file": true,
+  "v6_factual_data_plane_owner": false,
+  "authority": false,
+  "updated_at": "2026-09-19T20:12:35+07:00",
+  "source": "migrated_from_library_ACTIVE_DECISION_CONTEXT_V2",
+  "latest_explicit_user_state_wins": true,
+  "confirmed_current_squad_state": {
+    "goalkeepers": [
+      {
+        "element_id": 572,
+        "display_name": "Tzolakis"
+      },
+      {
+        "element_id": 109,
+        "display_name": "Verbruggen"
+      }
+    ],
+    "defenders": [
+      {
+        "element_id": 115,
+        "display_name": "De Cuyper"
+      },
+      {
+        "element_id": 8,
+        "display_name": "Calafiori"
+      },
+      {
+        "element_id": 31,
+        "display_name": "Konsa"
+      },
+      {
+        "element_id": 391,
+        "display_name": "Gvardiol"
+      },
+      {
+        "element_id": 279,
+        "display_name": "Ajayi"
+      }
+    ],
+    "midfielders": [
+      {
+        "element_id": 426,
+        "display_name": "B.Fernandes"
+      },
+      {
+        "element_id": 565,
+        "display_name": "M.Sangaré"
+      },
+      {
+        "element_id": 40,
+        "display_name": "Rogers"
+      },
+      {
+        "element_id": 15,
+        "display_name": "Ødegaard"
+      },
+      {
+        "element_id": 68,
+        "display_name": "Tavernier"
+      }
+    ],
+    "forwards": [
+      {
+        "element_id": 411,
+        "display_name": "Haaland"
+      },
+      {
+        "element_id": 165,
+        "display_name": "João Pedro"
+      },
+      {
+        "element_id": 346,
+        "display_name": "Calvert-Lewin"
+      }
+    ],
+    "transfer_execution_state": "NO_TRANSFER_CONFIRMED",
+    "status": "MIGRATED_FROM_LAST_CONFIRMED_USER_EXPLICIT_STATE",
+    "note": "Any newer explicit screenshot/manual state supersedes this immediately."
+  },
+  "active_scenarios": [
+    {
+      "scenario_id": "HOLD_SANGARE",
+      "state": "CONTEMPLATED",
+      "execution_state": "NOT_EXECUTED",
+      "route_type": "HOLD",
+      "target_gw": null,
+      "scope_type": "CROSS_GW_SQUAD_MONITORING",
+      "execution_window": "ROLLING_UNTIL_SUPERSEDED_OR_EXPLICIT_TARGET_GW",
+      "currently_valid": true,
+      "validity_reason": "HOLD route remains a legally actionable future-GW squad branch."
+    },
+    {
+      "scenario_id": "TRANSFER_TO_BARNES",
+      "state": "EXPIRED",
+      "execution_state": "NOT_EXECUTED",
+      "route_type": "ONE_GW_PUNT",
+      "out": {
+        "element_id": 565,
+        "display_name": "M.Sangaré"
+      },
+      "in": {
+        "element_id": 453,
+        "display_name": "Barnes"
+      },
+      "target_gw": 5,
+      "valid_from": null,
+      "valid_until_deadline": "2026-09-18T17:30:00+00:00",
+      "execution_window": "UNTIL_TARGET_GW_DEADLINE",
+      "expired_at": "2026-09-18T17:30:00+00:00",
+      "expiry_reason": "TARGET_GW_EXECUTION_WINDOW_CLOSED_NOT_EXECUTED",
+      "currently_valid": false,
+      "active_for_merge": false,
+      "historical_review_available": true,
+      "counterfactual_available": true,
+      "post_all_match_learning_available": true,
+      "fresh_full_universe_rescan_required_for_next_gw": true,
+      "historical_assumptions": {
+        "target_gw": 5,
+        "hit_points_assumption": -4,
+        "historical_only": true,
+        "excluded_from_future_gw_economics": true
+      }
+    },
+    {
+      "scenario_id": "JOAO_PEDRO_AVAILABILITY",
+      "state": "CONTEMPLATED",
+      "execution_state": "NOT_EXECUTED",
+      "route_type": "AVAILABILITY_BRANCH",
+      "players": [
+        {
+          "element_id": 165,
+          "display_name": "João Pedro"
+        }
+      ],
+      "target_gw": null,
+      "scope_type": "CROSS_GW_AVAILABILITY_MONITORING",
+      "execution_window": "ROLLING_UNTIL_SUPERSEDED_OR_EXPLICIT_TARGET_GW",
+      "currently_valid": true,
+      "validity_reason": "Availability monitoring remains relevant across future GWs until superseded."
+    },
+    {
+      "scenario_id": "BRUNO_KEEP_START",
+      "state": "CONTEMPLATED",
+      "execution_state": "NOT_EXECUTED",
+      "route_type": "KEEP_START",
+      "players": [
+        {
+          "element_id": 426,
+          "display_name": "B.Fernandes"
+        }
+      ],
+      "target_gw": null,
+      "scope_type": "CROSS_GW_LINEUP_MONITORING",
+      "execution_window": "ROLLING_UNTIL_SUPERSEDED_OR_EXPLICIT_TARGET_GW",
+      "currently_valid": true,
+      "validity_reason": "Keep/start branch remains a future-GW lineup decision, not a confirmed GW5 execution."
+    },
+    {
+      "scenario_id": "XI_MARGINAL_SANGARE_DE_CUYPER_DCL",
+      "state": "CONTEMPLATED",
+      "execution_state": "NOT_EXECUTED",
+      "route_type": "XI_BENCH_BRANCH",
+      "players": [
+        {
+          "element_id": 565,
+          "display_name": "M.Sangaré"
+        },
+        {
+          "element_id": 115,
+          "display_name": "De Cuyper"
+        },
+        {
+          "element_id": 346,
+          "display_name": "Calvert-Lewin"
+        }
+      ],
+      "target_gw": null,
+      "scope_type": "CROSS_GW_LINEUP_CALIBRATION",
+      "execution_window": "ROLLING_UNTIL_SUPERSEDED_OR_EXPLICIT_TARGET_GW",
+      "currently_valid": true,
+      "validity_reason": "Marginal-XI branch remains useful for future lineup calibration and is not treated as executed."
+    }
+  ],
+  "guards": [
+    "CONTEMPLATED != EXECUTED",
+    "Latest explicit user state wins",
+    "Unresolved routes survive scheduler execution",
+    "Optimizer never erases active user route",
+    "State failure never mutates V6",
+    "State is never factual provider authority",
+    "Only CONTEMPLATED + currently_valid scenarios enter active merge",
+    "Expired prior-GW economics never flow into a new-GW decision",
+    "EXPIRED scenarios remain historical/counterfactual evidence"
+  ],
+  "core_policy": {
+    "v6_only": true,
+    "core_attempt_transport": "ISSUE_431_ONLY",
+    "issue_431_attempt_required_when": "NO_SAME_SLOT_AUTHORITATIVE_FULFILLMENT_AND_NO_BOUND_IN_PROGRESS_RUN",
+    "issue_431_attempt_count_per_occurrence_max": 1,
+    "mutation_success_required_for_report": false,
+    "alternate_transport_allowed": false,
+    "duplicate_full_core_attempt_allowed": false,
+    "v3_v4_v5_fallback_allowed": false
+  },
+  "decision_learning": [
+    {
+      "case_id": "GW5_2026_SANGARE_VS_KONSA_XI",
+      "source": "USER_EXPLICIT_POSTMORTEM",
+      "recorded_at": "2026-09-19T06:41:21+07:00",
+      "scope": "XI_FORMATION_ROBUSTNESS_CALIBRATION",
+      "ex_ante_routes": [
+        {
+          "formation": "4-4-2",
+          "starter": {
+            "element_id": 31,
+            "display_name": "Konsa"
+          },
+          "bench": {
+            "element_id": 565,
+            "display_name": "M.Sangaré"
+          }
+        },
+        {
+          "formation": "3-5-2",
+          "starter": {
+            "element_id": 565,
+            "display_name": "M.Sangaré"
+          },
+          "alternative": {
+            "element_id": 31,
+            "display_name": "Konsa"
+          }
+        }
+      ],
+      "prior_model_diagnosis": {
+        "approximate_mean_edge_points_for_sangare": "~+1 (user-described prior model estimate)",
+        "failure_modes": [
+          "P(start)/xMins for M.Sangaré was overestimated",
+          "cameo and late-cameo risk was underweighted",
+          "auto-sub blocking cost of a cameo was underweighted/omitted",
+          "DefCon/minutes floor was treated too optimistically under lineup uncertainty",
+          "one-GW mean projection overrode longer-horizon weak-link/starter-security evidence too aggressively"
+        ]
+      },
+      "observed_outcome_as_reported_by_user": {
+        "sangare": "did not start; late cameo; yellow card",
+        "lineup_consequence": "cameo blocked potential auto-sub of Konsa"
+      },
+      "methodological_lesson": [
+        "Do not choose XI from mean xPts alone.",
+        "A small point-estimate edge inside predictive uncertainty is not decisive.",
+        "Explicitly model start/bench/cameo/DNP and auto-sub blocking cost.",
+        "When expected values are close, prefer lower-regret, more robust structure unless upside clearly compensates downside.",
+        "Carry multi-GW role/start-security evidence as prior/shrinkage into one-GW decisions."
+      ],
+      "calibration_targets": [
+        "P(start) calibration",
+        "xMins distribution calibration",
+        "late-cameo probability",
+        "auto-sub blocking expected-value term",
+        "uncertainty-band / expected-regret decision gate"
+      ],
+      "guardrails": {
+        "player_specific_rule": false,
+        "hardcode_one_point_threshold": false,
+        "hindsight_winner_rule": false,
+        "learn_failure_mode_not_player": true
+      }
+    }
+  ],
+  "lifecycle_migration": {
+    "source": "NATURAL_12_30_CONFORMANCE_REPAIR",
+    "observed_at": "2026-09-19T12:57:00+07:00",
+    "official_gw5_deadline": "2026-09-18T17:30:00+00:00",
+    "rule": "GW-specific non-executed action expires when target-GW deadline passes; cross-GW monitoring remains only with explicit validity."
+  },
+  "model_evidence": {
+    "schema": "FPL_MASTER_V12_MODEL_EVIDENCE_STATE_V1",
+    "authority": false,
+    "evidence_only": true,
+    "canonical_authority": "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt",
+    "runtime_owner": "FPL Master Monitor V12 ChatGPT Automation",
+    "repository_python_role": "DETERMINISTIC_CONTRACT_TEST_EVIDENCE_ONLY_UNLESS_OCCURRENCE_BOUND_EXECUTION_PROOF",
+    "raw_v6_payload_persisted": false,
+    "lifecycle": [
+      "FROZEN_AWAITING_SETTLEMENT",
+      "SETTLED"
+    ],
+    "records": {},
+    "retention_policy": "Persist compact model/decision evidence required for immutable freeze and later settlement; do not persist complete raw V6 factual payloads.",
+    "reproducibility_policy": "Only actually computed fingerprints support reproducibility claims; unavailable fingerprints remain explicit null/uncomputed evidence.",
+    "report_delivery_policy": "OPTIONAL_MODEL_EVIDENCE_DEGRADATION_NEVER_SUPPRESSES_DUE_REPORT",
+    "automatic_methodology_weight_mutation": false,
+    "last_settlement": null,
+    "p1_3b_parameter_registry": {
+      "stage": "P1.3B",
+      "model_id": "v12_player_events_joint_predictive_v2",
+      "feature_version": "p1.3b-joint-event-point-distribution-v1",
+      "parameter_version": "p1.3b-player-events-v2",
+      "authority": false,
+      "calibration_authority": "P1.5_CALIBRATION_DECISION_LEDGER",
+      "settled_predeadline_sample_size": 0,
+      "calibration_confidence": "LOW",
+      "dependence_status": "LOW_CONFIDENCE_CONSERVATIVE",
+      "parameters": [
+        "P1_3B_GA_SHARED_FRACTION_V1",
+        "P1_3B_FPL_BLANK_THRESHOLD_V1",
+        "P1_3B_POINT_TAIL_THRESHOLDS_V1",
+        "P1_3B_DISCRETE_QUANTILES_V1",
+        "P1_3B_COUNT_SUPPORT_BOUNDS_V1"
+      ],
+      "automatic_retuning": false,
+      "hindsight_reconstruction_forbidden": true,
+      "named_player_parameter_tuning_forbidden": true,
+      "one_match_parameter_tuning_forbidden": true,
+      "global_methodology_weight_mutation": false,
+      "parameter_uncertainty_propagation": "PARTIAL",
+      "future_recalibration_requirement": "GENUINE_PREDEADLINE_FROZEN_P1_5_RECORDS_SETTLED_AFTER_EVENT"
+    },
+    "p1_3b_key_pass_semantics_audit": {
+      "audited_runtime_data_branch": "runtime-data-v6",
+      "audited_runtime_data_sha": "2e478b93dcfef4a91ab49e1208e9e9205852c920",
+      "canonical_creation_metric": "chances_created",
+      "distinct_key_pass_field_proven": false,
+      "action": "DO_NOT_ADD_KEY_PASSES_ALIAS_OR_DUPLICATE_FEATURE",
+      "p1_6_formula_changed": false
+    },
+    "p1_7_parameter_registry": {
+      "model_id": "v12_distributional_lineup_optimizer",
+      "model_version": "p1.7-v12-lineup-v1",
+      "feature_version": "p1.7-distributional-xi-bench-cvc-v1",
+      "parameter_version": "p1.7-lineup-parameters-v1",
+      "calibration_version": "p1.7-structural-calibration-v1",
+      "calibration_cutoff": "2026-09-19T16:12:31Z",
+      "settled_predeadline_lineup_sample_size_at_introduction": 0,
+      "calibration_confidence": "LOW",
+      "automatic_retuning": false,
+      "covariance_status": "COVARIANCE_NOT_MODELLED_YET",
+      "monte_carlo_started": false,
+      "package_optimizer_started_by_p1_7": false,
+      "mini_league_overlay_started": false,
+      "p1_1_math_mutated": false,
+      "p1_3_math_mutated": false,
+      "p1_6_math_mutated": false,
+      "methodology_weights_20_25_30_25_unchanged": true,
+      "required_future_calibration_evidence": "IMMUTABLE_PREDEADLINE_P1_7_LINEUP_DECISIONS_SETTLED_AFTER_FINISHED_EVENTS"
+    }
+  }
+}

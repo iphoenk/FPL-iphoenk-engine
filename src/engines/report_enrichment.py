@@ -526,12 +526,71 @@ def _apply_readiness_and_actionability(
     tech["audit"]["fact_and_model_actionability_are_separate"] = True
 
 
+def _mini_league_overlay_user_block(package: dict[str, Any]) -> dict[str, Any]:
+    overlay = package.get("mini_league_overlay") or {}
+    if overlay.get("model_owner") != "V12_MINI_LEAGUE_OVERLAY":
+        return {
+            "status": "UNAVAILABLE",
+            "reason": "NO_OCCURRENCE_BOUND_V12_MINI_LEAGUE_OVERLAY",
+            "football_baseline_preserved": True,
+        }
+    delta = overlay.get("decision_delta") or {}
+    coverage = overlay.get("coverage") or {}
+    posture = overlay.get("risk_posture") or {}
+    adjusted_id = (overlay.get("adjusted_decision") or {}).get("route_id")
+    route = next(
+        (
+            row
+            for row in overlay.get("route_overlays") or []
+            if row.get("route_id") == adjusted_id
+        ),
+        {},
+    )
+    relative = route.get("relative_mc") or {}
+    return {
+        "status": overlay.get("status"),
+        "league_context": overlay.get("league_context"),
+        "coverage": {
+            "state": coverage.get("state"),
+            "scope": coverage.get("scope"),
+            "available_managers": coverage.get("submitted_picks_available_count"),
+            "expected_managers": coverage.get("expected_manager_count"),
+            "rival_denominator": coverage.get("rival_exposure_denominator"),
+        },
+        "relevant_rival_exposure": list(
+            overlay.get("relevant_rival_exposure") or []
+        ),
+        "football_baseline_route_id": delta.get("football_baseline_route_id"),
+        "mini_league_adjusted_route_id": delta.get(
+            "mini_league_adjusted_route_id"
+        ),
+        "decision_delta": {
+            "changed": delta.get("changed"),
+            "state": delta.get("state"),
+            "reason": delta.get("reason"),
+        },
+        "risk_posture": posture.get("posture"),
+        "relative_upside_downside": {
+            "expected_relative_points_vs_leader": relative.get(
+                "expected_relative_points"
+            ),
+            "p_gain_points_on_leader": relative.get("p_gain_points_on_leader"),
+            "p_lose_points_to_leader": relative.get("p_lose_points_to_leader"),
+            "scope": relative.get("scope"),
+        },
+        "reversal_triggers": overlay.get("reversal_triggers"),
+        "football_baseline_preserved": True,
+        "raw_football_score_mutated": False,
+    }
+
+
 def run() -> dict[str, Any]:
     user = read_json(DATA / "user_report.json", {})
     tech = read_json(DATA / "technical_appendix.json", {})
     latest = read_json(DATA / "latest.json", {})
     team = read_json(DATA / "team.json", {})
     lineup = read_json(DATA / "lineup_decision.json", {})
+    package_decision = read_json(DATA / "package_decision.json", {})
     projections = read_json(DATA / "projections.json", {})
     watchlist = read_json(DATA / "dss_watchlist.json", {})
     prices = read_json(DATA / "prices.json", {})
@@ -564,6 +623,9 @@ def run() -> dict[str, Any]:
     user["report_time_intelligence"] = _report_time_user_block(report_time)
     user["external_consensus"] = _external_consensus_user_block(external_consensus)
     user["owned_vs_challenger"] = _comparator_user_block(comparator)
+    user["mini_league_overlay"] = _mini_league_overlay_user_block(
+        package_decision
+    )
     user["main_transfer_battles"] = [_serving_battle(row) for row in (comparator.get("main_transfer_battles") or [])[:10]]
     tech["source_capability_health"] = {
         "source_overall": source_health.get("overall"),
@@ -576,6 +638,23 @@ def run() -> dict[str, Any]:
     tech["report_time_intelligence"] = report_time
     tech["external_consensus"] = external_consensus
     tech["owned_challenger_decision"] = comparator
+    overlay = package_decision.get("mini_league_overlay") or {}
+    evidence = overlay.get("model_evidence_binding") or {}
+    tech["mini_league_overlay"] = {
+        "summary": _mini_league_overlay_user_block(package_decision),
+        "model_owner": overlay.get("model_owner"),
+        "model_version": overlay.get("model_version"),
+        "run_fingerprint": overlay.get("run_fingerprint"),
+        "output_fingerprint": overlay.get("output_fingerprint"),
+        "mini_league_snapshot_id": evidence.get("mini_league_snapshot_id"),
+        "denominator_fingerprint": evidence.get("denominator_fingerprint"),
+        "football_baseline_fingerprint": evidence.get(
+            "football_baseline_fingerprint"
+        ),
+        "mc_output_fingerprint": evidence.get("mc_output_fingerprint"),
+        "governance": overlay.get("governance"),
+        "full_overlay_remains_in_package_decision": bool(overlay),
+    }
     tech["price_radar_serving_coverage"] = price_coverage
     tech["runtime"] = {
         "current_run_ref": "data/runtime_performance.json",
@@ -597,6 +676,10 @@ def run() -> dict[str, Any]:
     tech["audit"]["owned_challenger_decision_reuses_governed_watchlist"] = int(comparator.get("governed_watchlist_count") or 0) == 20
     tech["audit"]["owned_challenger_reporting_recomputation_forbidden"] = True
     tech["audit"]["challenger_user_serving_is_bounded_summary"] = True
+    tech["audit"]["mini_league_overlay_is_downstream_only"] = True
+    tech["audit"]["mini_league_overlay_preserves_football_baseline"] = True
+    tech["audit"]["mini_league_exposure_uses_element_ids"] = True
+    tech["audit"]["mini_league_percentages_require_denominators"] = True
     tech["audit"]["livefpl_retired_from_v3_serving"] = True
     _apply_readiness_and_actionability(user, tech, latest, report_time)
 

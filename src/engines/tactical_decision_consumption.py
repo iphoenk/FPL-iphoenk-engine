@@ -135,14 +135,59 @@ def _sync_formation_comparison(
     if not raw_rows:
         return
     selected_set = set(selected_ids)
+    selected_alternative = next(
+        (
+            dict(row)
+            for row in alternatives
+            if {int(value) for value in row.get("element_ids") or []}
+            == selected_set
+        ),
+        None,
+    )
     rows: list[dict[str, Any]] = []
     for index, raw in enumerate(raw_rows):
         row = dict(raw)
-        alternative = alternatives[index] if index < len(alternatives) else {}
-        alternative_ids = {int(value) for value in alternative.get("element_ids") or []}
-        row["selected"] = bool(alternative_ids) and alternative_ids == selected_set
+        row_ids = {int(value) for value in row.get("element_ids") or []}
+        if row_ids:
+            row["selected"] = row_ids == selected_set
+        else:
+            # Legacy formation rows predate explicit XI identity and remain
+            # index-aligned with the alternatives surface.
+            alternative = alternatives[index] if index < len(alternatives) else {}
+            alternative_ids = {
+                int(value) for value in alternative.get("element_ids") or []
+            }
+            row["selected"] = bool(alternative_ids) and alternative_ids == selected_set
         rows.append(row)
+
     selected_rows = [row for row in rows if row.get("selected") is True]
+    if not selected_rows and selected_alternative is not None:
+        # P1.7 formation_comparison is one best route per formation, while the
+        # tactical close-call overlay may select another legal route from that
+        # same formation. Reconcile by the final formation and refresh the row
+        # with the selected route rather than relying on positional indexing.
+        formation_rows = [
+            row for row in rows if row.get("formation") == lineup.get("formation")
+        ]
+        if len(formation_rows) == 1:
+            row = formation_rows[0]
+            row["element_ids"] = list(selected_ids)
+            for source_key, target_key in (
+                ("route_utility", "route_utility"),
+                (
+                    "expected_fpl_points_with_captain_vice",
+                    "expected_fpl_points_with_captain_vice",
+                ),
+                ("distributional_downside", "distributional_downside"),
+                ("supportable_upside", "supportable_upside"),
+                ("expected_autosub_value", "expected_autosub_value"),
+                ("expected_blocked_autosub_value", "cameo_blocking_cost"),
+            ):
+                if selected_alternative.get(source_key) is not None:
+                    row[target_key] = selected_alternative.get(source_key)
+            row["selected"] = True
+            row["selected_route_reconciled_after_tactical_overlay"] = True
+            selected_rows = [row]
     if len(selected_rows) != 1:
         raise RuntimeError(
             "tactical lineup overlay could not reconcile formation comparison with final XI: "
@@ -151,6 +196,68 @@ def _sync_formation_comparison(
     if selected_rows[0].get("formation") != lineup.get("formation"):
         raise RuntimeError("tactical lineup overlay formation comparison disagrees with final formation")
     lineup["formation_comparison"] = rows
+
+
+def _apply_v12_native_lineup_overlay(
+    lineup: dict[str, Any],
+    *,
+    persist: bool,
+) -> dict[str, Any]:
+    """Preserve P1.7 decisions while satisfying legacy presentation contracts."""
+    xi_ids = {
+        int(row.get("element") or -1)
+        for row in lineup.get("starting_xi") or []
+        if row.get("element") is not None
+    }
+    comparison = [dict(row) for row in lineup.get("formation_comparison") or []]
+    selected_rows = [row for row in comparison if row.get("selected") is True]
+    if len(xi_ids) != 11:
+        raise RuntimeError("P1.7 tactical presentation overlay requires 11 final starters")
+    if len(selected_rows) != 1:
+        raise RuntimeError(
+            "P1.7 tactical presentation overlay requires exactly one selected formation row"
+        )
+    selected_row = selected_rows[0]
+    selected_row_ids = {
+        int(value) for value in selected_row.get("element_ids") or []
+    }
+    if selected_row.get("formation") != lineup.get("formation"):
+        raise RuntimeError(
+            "P1.7 tactical presentation overlay formation disagrees with final formation"
+        )
+    if selected_row_ids and selected_row_ids != xi_ids:
+        raise RuntimeError(
+            "P1.7 tactical presentation overlay selected formation row disagrees with final XI"
+        )
+
+    battle = dict(lineup.get("main_starting_xi_battle") or {})
+    battle["tactical_tiebreak"] = {
+        "eligible": battle.get("status") == "CLOSE",
+        "applied_to_xi": False,
+        "selected_formation": lineup.get("formation"),
+        "policy": (
+            "P1.7 native owner consumes P1.6 tactical-role evidence; "
+            "post-owner tactical decision mutation is forbidden"
+        ),
+    }
+    lineup["main_starting_xi_battle"] = battle
+    lineup["formation_comparison"] = comparison
+    lineup.setdefault("governance", {}).update({
+        "tactical_close_call_tiebreak_enabled": True,
+        "tactical_direct_xpts_mutation": False,
+        "tactical_xi_tiebreak_applied": False,
+        "tactical_captain_tiebreak_applied": False,
+        "tactical_vice_tiebreak_applied": False,
+        "tactical_consumption_contract": "TACTICAL_DECISION_CONSUMPTION_V1",
+        "tactical_overlay_mode": "P1_7_NATIVE_OWNER_PRESERVE",
+        "p1_7_post_owner_decision_mutation": False,
+        "p1_6_tactical_role_consumed_upstream_by_p1_7": True,
+        "tactical_overlay_preserves_decision_transparency": True,
+        "formation_comparison_reconciled_to_final_xi": True,
+    })
+    if persist:
+        atomic_json(DATA / "lineup_decision.json", lineup)
+    return lineup
 
 
 def apply_lineup_overlay(
@@ -163,6 +270,12 @@ def apply_lineup_overlay(
     projections = projections or read_json(DATA / "projections.json", {})
     if not lineup or not projections:
         raise RuntimeError("tactical lineup overlay requires lineup_decision and projections")
+    if (
+        lineup.get("native_model") == "v12_distributional_lineup_optimizer"
+        and (lineup.get("governance") or {}).get("production_owner")
+        == "V12_LINEUP_OPTIMIZER"
+    ):
+        return _apply_v12_native_lineup_overlay(lineup, persist=persist)
     pmap = _projection_map(projections)
     alternatives = list(lineup.get("alternatives") or [])
     squad_rows = [dict(row) for row in lineup.get("squad_rows") or []]

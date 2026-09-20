@@ -1,0 +1,872 @@
+FPL MASTER CANONICAL V12 — FAIL-OPERATIONAL REPORT-PLANE ARCHITECTURE
+Effective: 2026-09-19T20:12:35+07:00
+Authority path: control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
+State path: control/fpl_master_v12/FPL_MASTER_STATE_V12.json
+
+0. NON-NEGOTIABLE
+- Production factual data plane = V6 ONLY. NEVER V3/V4/V5.
+- Preserve healthy V6; this rebuild changes ChatGPT report-plane architecture, not V6 internals.
+- Exactly one recurring FPL Master scheduler may be active.
+- No external write action may be a prerequisite for a due visible report.
+- Latest explicit user instruction/state wins over persisted state.
+
+1. ARCHITECTURE
+Official FPL/providers -> V6 -> runtime-data-v6 -> ChatGPT downstream analytics/report.
+ChatGPT owns Gate0, Bayesian/xMins/P(start), tactical/coach fit, fixture adjustment, price interpretation, mini-league, optimizer, Monte Carlo when supportable, XI/bench/CVC/chips and WAIT/PREPARE/ACT.
+DATA_SLOT != REPORT_SLOT != DELIVERY.
+
+2. SCHEDULE / REPORT_DUE
+Hourly :30 Asia/Jakarta.
+Mandatory visible outside deadline-active:
+04:30 DEEP; 05:30 PRICE; 12:30 DEEP; 21:30 DEEP; canonical Deadline/Final; scoring-GW live Match checkpoints; Post-All-Match/next applicable Deep.
+Deadline-active = first canonical :30 at/after T-24h of Official deadline until lock. EVERY hourly :30 inside this window is visible, even NO MATERIAL CHANGE.
+Other checkpoints silent unless routed visible.
+REPORT_DUE is TWO-STAGE. PRELIMINARY_REPORT_DUE is determined before core from schedule-known/static facts plus any already-known factual trigger. FINAL_REPORT_DUE is finalized only after NATURAL_CORE_UPKEEP_GATE terminalizes and same-occurrence dynamic evidence is re-evaluated.
+FINAL_REPORT_DUE = PRELIMINARY_REPORT_DUE OR SAME_OCCURRENCE_DYNAMIC_TRIGGER.
+Monotonicity is mandatory: false->false allowed; false->true allowed; true->true required; true->false forbidden.
+PRELIMINARY_REPORT_DUE=true is sticky. PRELIMINARY_REPORT_DUE=false is never sufficient to authorize visible silence.
+
+3. OCCURRENCE IDENTITY
+Preserve original scheduler-supplied Asia/Jakarta HH:30 slot and factual observed_at.
+Never rewrite/backfill/future-fill/mint replacement report slot.
+
+4. HOURLY V6 CORE UPKEEP / REPORT REFRESH SEPARATION
+A. EVERY natural FPL Master Monitor V12 HH:30 Asia/Jakarta occurrence owns current-HH:00 V6 CORE UPKEEP, regardless of REPORT_DUE.
+B. Preserve the exact scheduler-supplied report occurrence HH:30 and factual observed_at. Derive core_logical_slot only as that occurrence's current HH:00. Never backfill an older slot, future-fill a later slot, or mint a replacement occurrence.
+C. Inspect runtime-data-v6, runtime_control and operational-slot evidence for that exact core slot before any write. A current slot is already fulfilled only when its same-slot natural hourly evidence is provenance-valid, publish_integrity=PASS and authoritative_runtime_snapshot=true.
+D. If that exact current slot is already authoritatively fulfilled, do not acquire again: CORE_UPKEEP=ALREADY_FULFILLED. If its governed acquisition/publication is already IN_PROGRESS, do not duplicate; bind the exact run and perform the existing bounded terminal re-read/continuation.
+E. Otherwise make exactly ONE governed current-slot attempt through the EXISTING issue #431 transport using:
+FPL_MASTER_SLOT reason=chatgpt_hourly_master logical_slot=<CURRENT_HH:00> audit=FPL_MASTER_HOURLY observed_at=<CURRENT_TIME>
+Immediate exact mutation/readback evidence remains required. No alternate transport. Never /v6-master-acquire.
+E1. CORE EXECUTION: #431 is MANDATORY only when the occurrence is ATTEMPT_REQUIRED: there is no same-slot authoritative fulfillment and no bound same-slot governed run IN_PROGRESS. Per occurrence, at most one #431 full-core attempt is allowed.
+E2. REPORT DELIVERY: #431 mutation/workflow/publication SUCCESS is NEVER mandatory for a due visible report. A failed or blocked required core attempt is recorded truthfully and the due report continues through the fail-operational evidence ladder. MANDATORY CORE ATTEMPT WHEN REQUIRED != MANDATORY SUCCESS FOR REPORT.
+F. A prior same-slot attempt exhausts this occurrence's full-core attempt allowance. Do not start a second acquisition/publication for the same logical slot. Explicit invariant: never duplicate acquisition for the same logical slot.
+G. CORE_UPKEEP_DUE and REPORT_DUE are independent. REPORT_DUE continues to follow Canonical report routing. A silent checkpoint may perform core upkeep and finish with no visible report. Silent report routing never authorizes skipping core upkeep.
+H. Core failure/safety block/transport failure/workflow failure/publication failure/timeout is recorded truthfully as CORE_UPKEEP=DEGRADED/FAILED. Preserve V6 fail-closed publication. If REPORT_DUE=false, finish silently with factual failure evidence. If REPORT_DUE=true, continue the existing fail-operational evidence ladder; CORE ACQUISITION FAILURE != REPORT DELIVERY FAILURE.
+I. Every natural hourly occurrence retains transient core proof binding scheduler occurrence, current core logical slot, observed_at, transport, mutation/readback state, acquisition/publication run identity where present, runtime-data-v6 publication SHA/generation where available, publish_integrity, authoritative_runtime_snapshot, same_slot_fulfilled, duplicate_acquisition=false and completion/result state. This proof is evidence only, never authority or durable state.
+J. report-prefetch remains report-driven and separate. It may refresh authenticated personal/ICON+/report scopes but NEVER fulfills a core operational slot and NEVER substitutes for the hourly core acquisition.
+K. manual_recovery or other non-natural provenance cannot masquerade as natural authoritative hourly slot proof. Current natural hourly acceptance requires the chatgpt_hourly_master same-slot lineage.
+L. Expected steady-state core freshness is approximately one hourly cycle. Mode-specific stricter freshness still applies. For Deep/Price/Deadline/Final, reuse the current occurrence's core result first; if a mandatory exact scope remains stale/incomplete, apply the existing bounded exact-scope recovery without starting a second full-core acquisition for the same HH:00.
+M. Due-report exact-scope refresh planning remains downstream of this hourly core upkeep. Refresh success is never a visible-report delivery prerequisite.
+
+4A. NATURAL_CORE_UPKEEP_GATE — OCCURRENCE TERMINATION BARRIER
+A. NATURAL_CORE_UPKEEP_GATE is a first-class mandatory execution gate for every natural FPL Master Monitor V12 HH:30 occurrence. It is not advisory report text.
+B. A natural occurrence MAY NOT COMPLETE until its current-HH:00 CORE_UPKEEP has reached one terminal resolution state: ALREADY_FULFILLED, BOUND_IN_PROGRESS_SUCCESS, ATTEMPT_SUCCESS, ATTEMPT_FAILED, or ATTEMPT_BLOCKED.
+C. Completed natural occurrences MUST NOT use NOT_EVALUATED, SKIPPED or UNKNOWN as a core resolution state.
+D. PRELIMINARY_REPORT_DUE=false never authorizes visible silence by itself. Core terminalization is necessary but not sufficient; FINAL_REPORT_DUE must also be finalized false after same-occurrence dynamic evaluation. Explicit invariant: SILENT REPORT ROUTING != SILENT CORE SKIP.
+E. The gate executes before same-occurrence evidence finalization, temporary price-watch evaluation/output, Match, Deep, Price, Deadline/Final, Post-All-Match, generic WAIT/PREPARE/ACT narrative, content QA, delivery or legitimate silence.
+F. Fixed occurrence order:
+   1 OCCURRENCE IDENTITY;
+   2 LOAD AUTHORITY / STATE;
+   3 DETERMINE PRELIMINARY_REPORT_DUE;
+   4 NATURAL_CORE_UPKEEP_GATE;
+   5 FINALIZE FINAL_REPORT_DUE from same-occurrence dynamic evidence;
+   6 SAME-OCCURRENCE VISIBLE-EVIDENCE FINALIZATION for the final routed mode;
+   7 REPORT / PRICE / MATCH / DEEP routing;
+   8 CONTENT QA / proof;
+   9 DELIVERY or legitimate silence.
+G. STATE A — ALREADY_FULFILLED: only provenance-valid same-slot natural chatgpt_hourly_master proof with authoritative_runtime_snapshot=true and publish_integrity=PASS may terminalize the gate without a new acquisition.
+H. STATE B — IN_PROGRESS: bind the exact same-slot governed run ID, perform bounded terminal reread and never duplicate. The occurrence may not complete while the bound run remains non-terminal.
+I. STATE C — ATTEMPT_REQUIRED: if no same-slot authoritative fulfillment and no same-slot governed run is active, perform exactly ONE existing issue #431 title mutation for CURRENT_HH:00, require exact readback, bind the triggered run if created, and never retry a second full-core acquisition in the same occurrence.
+J. STATE D — ATTEMPT_FAILED/BLOCKED: preserve exact attempted action, failure reason, mutation/readback state and duplicate_acquisition=false. REPORT_DUE=false may end visibly silent only after this failure proof is recorded. REPORT_DUE=true continues fail-operational report delivery from freshest valid evidence.
+K. Every natural occurrence retains one transient NATURAL_CORE_UPKEEP_GATE proof with scheduler_occurrence, logical_core_slot, observed_at, core_gate_executed=true, terminal resolution_state, same_slot_fulfilled, existing_run_bound, attempt_required, attempt_performed, mutation_result, readback_result, bound_v6_run_id, publish_integrity, authoritative_runtime_snapshot, duplicate_acquisition=false and terminal_core_result. This proof is evidence only and MUST NOT become durable authority/state.
+M. Any early-return or silent-completion path is legal only after NATURAL_CORE_UPKEEP_GATE terminalization AND FINAL_REPORT_DUE finalization.
+
+4B. SAME-OCCURRENCE DYNAMIC REPORT_DUE FINALIZATION
+A. Static/schedule-known triggers such as 04:30 Deep, 05:30 Price, 12:30 Deep, 21:30 Deep, deadline-active slots and known Deadline/Final belong to PRELIMINARY_REPORT_DUE.
+B. Dynamic triggers whose truth may change because of the current occurrence core refresh MUST be evaluated only after NATURAL_CORE_UPKEEP_GATE reaches a terminal state. These include scoring-GW LIVE Match, match-completion transition and Post-All-Match transition.
+C. A scoring-GW Match dynamic trigger is TRUE when freshest valid same-occurrence fixture evidence has started=true AND finished=false for one or more scoring-GW fixtures. Multiple live fixtures still produce one coherent Match report.
+D. If PRELIMINARY_REPORT_DUE=false and the post-core dynamic Match trigger becomes TRUE, FINAL_REPORT_DUE MUST promote false->true and FINAL_MODE MUST include MATCH.
+E. PRELIMINARY_REPORT_DUE=true can never become false. However mode is not sticky: if preliminary Match evidence is superseded by fresh completion evidence, the due report remains due while mode may refine to POST_MATCH or POST_ALL_MATCH according to the factual lifecycle.
+F. Overlap such as DEEP+MATCH, DEADLINE+MATCH, PRICE+MATCH or FULL+MATCH produces one coherent visible report, never duplicate visible reports and never suppresses Match merely because another mode is already due.
+G. Legitimate visible silence requires all of: PRELIMINARY_REPORT_DUE=false; dynamic evidence checked after core; DYNAMIC_REPORT_DUE=false; FINAL_REPORT_DUE=false. Preliminary false alone is insufficient.
+H. If core refresh fails, a known PRELIMINARY_REPORT_DUE=true remains true and continues fail-operationally. If preliminary is false and the dynamic trigger cannot be established from current/freshest-valid evidence, do not fabricate Match: DYNAMIC_TRIGGER=UNRESOLVED and continue the existing freshest-valid evidence ladder. UNRESOLVED does not authorize silent completion and does not authorize a second full-core acquisition.
+I. Every natural occurrence retains transient evidence-only TWO-STAGE REPORT_DUE proof containing preliminary_report_due, preliminary_reason, core_gate_resolution, dynamic_evidence_checked, dynamic_trigger, dynamic_trigger_reason, final_report_due, final_mode, evidence_snapshot and evidence_generated_at. This proof is never authority or durable methodology state.
+J. DUE stickiness and MODE stickiness are distinct. A due occurrence stays due; its mode may refine when fresher same-occurrence factual lifecycle evidence changes.
+K. NATURAL_CORE_UPKEEP_GATE itself remains unchanged: no new acquisition, no second issue #431 mutation, no backfill, no scheduler change and no alternate transport.
+
+4C. SCHEDULER PAUSE / RELIABILITY INTERPRETATION
+A. Scheduler observability distinguishes exactly these interpretation states: ACTIVE_FULFILLED, ACTIVE_MISSED, INTENTIONALLY_PAUSED, HISTORICAL_UNKNOWN.
+B. ACTIVE_FULFILLED requires an enabled scheduler occurrence with the corresponding natural current-slot terminal proof. ACTIVE_MISSED applies only when the scheduler was enabled for that occurrence and the expected natural occurrence was not fulfilled.
+C. INTENTIONALLY_PAUSED requires evidence that the recurring scheduler was intentionally disabled/paused by the user or authorized control at that time. A paused slot is not an implementation failure and MUST NOT be backfilled merely to improve reliability metrics.
+D. Old missing slots whose pause-vs-failure cause cannot be proven remain HISTORICAL_UNKNOWN. Preserve the factual gap. If broader evidence establishes a user-pause period but not exact slot attribution, surface HISTORICAL GAP / USER-PAUSE CONTEXT KNOWN without silently reclassifying the individual slot.
+E. Current scheduler acceptance is evaluated from post-resume natural continuity. Historical known user-pause gaps do not prove a scheduler implementation defect and do not invalidate a healthy post-resume acceptance window.
+F. Never rewrite factual history, fabricate fulfillment, reset counters merely to make health GREEN, or manufacture natural-slot proof. Preserve historical ledgers and counters as factual evidence.
+G. Do not backfill intentionally paused historical slots. Resumption starts with the next naturally scheduled occurrence and its current logical slot.
+H. If the V6 operational reliability schema cannot represent pause state without changing production data-plane semantics, do not redesign V6. Keep V6 factual evidence unchanged and apply pause/failure interpretation only in the V12 report/observability layer.
+
+5. FACTUAL EVIDENCE LADDER
+1 fresh valid current V6;
+2 freshest valid authoritative V6 within mode freshness;
+3 exact-scope governed V6 recovery only if already supported/safe;
+4 direct fresh Official FPL/club/competition/reputable report-time web evidence for affected scope;
+5 permitted nonvolatile last-good;
+6 truthful field-level DEGRADED/UNAVAILABLE.
+Deep volatile target <=45 min.
+Never blank healthy whole sections because one scope is degraded.
+Never fabricate completion, auth, finance, price ETA, picks, standings, provenance, weather or model precision.
+
+5A. SAME-OCCURRENCE VISIBLE-EVIDENCE FINALIZATION
+After FINAL_REPORT_DUE routing, a visible alert may retain preliminary trigger evidence, but trigger evidence and final visible evidence are separate concerns. This section finalizes values for an already-finalized route; it does not replace Section 4B REPORT_DUE finalization.
+If the governed current-slot V6 acquisition/publication is still IN_PROGRESS, bind that exact run, never launch a second full-core acquisition, and perform the existing bounded terminal reread.
+After same-occurrence publication SUCCESS, reread the current official_price_predictor and every relevant current public factual artifact for the routed alert. If personal affordability/economics are discussed, reread the current authenticated personal artifact as well.
+The final visible values MUST use the freshest authoritative evidence available from the same original occurrence. Older preliminary values may preserve why the alert was routed, but MUST NOT override newer same-occurrence evidence with authoritative_runtime_snapshot=true and publish_integrity=PASS.
+A material preliminary trigger remains visible after finalization even if the final values differ; do not silently suppress the routed alert merely because newer numbers are less or more severe.
+
+AUTHENTICATED AFFORDABILITY FINALIZATION:
+When current authenticated personal evidence contains current_price, purchase_price, selling_price and bank, use those exact fields. Nominal replacement budget = authenticated selling_price + bank. Compare the target's current market price to that budget and show remaining cash.
+Affordability and FT/HIT economics are distinct. If selling_price and bank establish nominal affordability but free-transfer/hit state is unknown, state AFFORDABILITY=TRUE/FALSE and FT/HIT ECONOMICS=UNKNOWN. Never claim exact affordability is unavailable when authenticated selling_price is already present.
+Stale personal/public evidence must not be preferred over newer same-occurrence evidence.
+AUTHENTICATED PERSONAL FRESHNESS:
+- Personal auth freshness is field/scope-level and is NEVER a blocker for the public factual report.
+- When authenticated personal evidence required by the routed report is CURRENT, use its exact current fields.
+- When authenticated personal evidence is STALE, make at most ONE bounded existing report-prefetch attempt for exact scope personal using the existing /v6-report-prefetch ad_hoc path. This refresh is report-driven, never fulfills a core slot, never creates another full-core acquisition, and never becomes scheduler proof.
+- If that bounded personal refresh fails, is blocked, or remains stale, the due report STILL renders. Use the freshest valid authenticated personal artifact as STALE_AUTHENTICATED_FALLBACK, expose its generated/evidence timestamp plus age/status, and degrade only claims that require unavailable current fields.
+- Never fabricate FT count, exact hit state, transfer execution, chip state, current squad/picks, or affordability inputs. If authenticated selling_price + bank are valid, nominal affordability may still be calculated while FT/HIT ECONOMICS remains UNKNOWN.
+
+6. DURABLE STATE / SCENARIO LIFECYCLE
+Read exact state path control/fpl_master_v12/FPL_MASTER_STATE_V12.json.
+Non-authoritative report-plane context only.
+Latest explicit app/screenshot/manual state wins.
+CONTEMPLATED != EXECUTED != REJECTED != SUPERSEDED != EXPIRED.
+Never infer transfer execution from discussion.
+Scenario lifecycle metadata may include target_gw, valid_from, valid_until_deadline, execution_window, expired_at and expiry_reason.
+If a scenario is an action executable only for GW N, the Official GW N deadline has passed, and the scenario was not EXECUTED, its execution route becomes EXPIRED with reason TARGET_GW_EXECUTION_WINDOW_CLOSED_NOT_EXECUTED. Historical evidence is retained; execution is never inferred.
+Only scenarios that are CONTEMPLATED and currently_valid enter the active-user-scenario merge. EXPIRED routes remain available for historical review, counterfactual and Post-All-Match learning.
+A prior-GW hit/price/economics assumption attached to an expired route is historical only and must not flow into a new-GW economics calculation. A fresh full-universe scan is required for the new GW; the same player may reappear only if independently selected from that fresh universe.
+Cross-GW monitoring branches may remain CONTEMPLATED only when their scope/validity is explicit and they remain legally actionable.
+State failure never mutates V6 and never suppresses due report.
+
+7. PLAYER METHODOLOGY
+FOOTBALL SCORE:
+20% PROVEN/HISTORICAL
+25% TACTICAL/ROLE
+30% CURRENT UNDERLYING
+25% FIXTURE/SECURITY
+=100%.
+Historical = Bayesian prior/shrinkage.
+Tactical/role = coach/system, zones, set pieces/penalties, substitution pattern, hierarchy, role stability, opponent channel.
+Underlying = xG/npxG/xA/xGI, shots/SIB, big chances, chances created, shares, event-rate, recency/change-point with double-count control.
+Fixture/security = opponent H/A + P(available), P(start), start/bench/cameo/DNP mixture, xMins, rotation/rest/congestion.
+Transfer economics stay downstream: hit, FT/FT shadow value, buy-back, sell-value loss, price, ITB, structure, correlation, exit route.
+Chain: FOOTBALL SCORE -> EXPECTED POINTS/UNCERTAINTY -> TRANSFER ECONOMICS -> PACKAGE UTILITY -> ACTION.
+
+P1.6 V12-NATIVE TACTICAL / ROLE CONTEXTUAL CONTRACT:
+A. Fixture difficulty is a suppressor, not an overriding veto. Strong, secure, multi-channel attacking roles must retain measurable upside against difficult opponents, particularly when supported by favorable home and tactical context.
+B. This principle never means HOME=automatic bonus, multi-channel=automatic superiority, or difficult opponent=ignored. Opponent strength remains a negative suppressor when evidence supports it.
+C. The canonical player-fixture feature contract is: home_attack_context; attacking_involvement_score; role_security_score; scoring_channel_vector; scoring_channel_diversity; tactical_role_fit; fixture_suppression_raw; role_resilience; fixture_suppression_effective; canonical_tactical_role_score.
+D. home_attack_context uses venue-specific deltas only and is applied exactly once inside P1.6. Neutral/generic opponent strength is excluded from home context and belongs to fixture suppression / FIXTURE-SECURITY evidence. Never add a second flat home bonus.
+E. attacking_involvement_score may consume current xG/xA/shots/box/chance evidence only as bounded interaction/resilience evidence. It does not re-add raw CURRENT UNDERLYING expected points or event expectation to the 25% tactical component.
+F. role_security_score consumes P1.1 P(start), xMins, starter duration and factual start-usage evidence without taking ownership of P1.1 mathematics. It is not a replacement xMins model.
+G. scoring_channel_vector minimally exposes GOAL, ASSIST, SET_PIECE, PENALTY, DEFENSIVE_CONTRIBUTION, CLEAN_SHEET and BONUS. Diversity uses strength-aware dependency groups, not a linear count of channels.
+H. tactical_role_fit is numeric only when reproducible player-role × opponent-context evidence exists. Missing coach/system/shape/channel evidence remains explicit UNAVAILABLE and narrative text is not numeric authority.
+I. fixture_suppression_raw is bounded [0,1], venue-neutral inside P1.6 and decomposable into opponent attacking/defensive strength weighted by the player's evidenced scoring-channel exposure. Easy fixtures do not create an automatic tactical bonus.
+J. role_resilience is bounded [0,1] and is the completeness-shrunk mean of available home context, attacking involvement, role security, scoring-channel diversity and tactical fit. Missing optional evidence is explicit and is never silently treated as factual zero.
+K. resilience_adjustment = 1 / (1 + role_resilience). fixture_suppression_effective = fixture_suppression_raw × resilience_adjustment. Therefore 0 <= effective <= raw; positive opponent suppression can be reduced but never erased or turned into a bonus.
+L. pre_suppression_role_quality = sqrt(evidence_role_score_0_1 × role_resilience). canonical_tactical_role_score = 100 × pre_suppression_role_quality × (1 - fixture_suppression_effective), bounded to [0,100].
+M. P1.6 contextual interaction does not mutate P1.1 probabilities or P1.3 goal/assist/clean-sheet/DefCon/save posteriors. Future coupling of tactical context into those posterior distributions requires a separately governed change.
+N. PLAYER QUALITY != TRANSFER ACTION COST. Hit, FT state, FT shadow value, price, bank, affordability, package constraints, exit cost and opportunity cost are forbidden from canonical_tactical_role_score and remain downstream.
+O. No named-player, club-pair, opponent-specific or one-match hindsight special case may alter P1.6 runtime logic. Any future parameter change requires settled P1.5 calibration evidence with explicit sample size; one result never creates a tactical rule.
+P. TACTICAL_EVIDENCE_CLASS is an evidence taxonomy only and has exactly four values: OBSERVED_ROLE, INFERRED_ROLE, FPL_POSITION_ONLY, UNKNOWN.
+Q. OBSERVED_ROLE requires reproducible direct tactical/role evidence. INFERRED_ROLE is a bounded inference from factual evidence and must retain explicit provenance/fingerprint where available.
+R. FPL_POSITION_ONLY means only the Official FPL position is proven. It MUST NOT be treated as observed tactical formation/role evidence. UNKNOWN means tactical evidence is insufficient or conflicting and MUST remain unavailable rather than becoming fabricated numeric precision.
+S. TACTICAL_EVIDENCE_CLASS does not independently change canonical_tactical_role_score, 20/25/30/25, P1.6 coefficients or anti-double-count controls. It classifies evidence quality only; existing P1.6 evidence availability and double-count rules remain authoritative.
+
+P1.3B V12-NATIVE JOINT EVENT PROBABILITY + POINT-DISTRIBUTION CONTRACT:
+A. P1.1 remains sole owner of P(available), START/REGULAR_CAMEO/LATE_CAMEO/DNP and finite-state xMins. P1.3/P1.3B owns player-fixture event probabilities and point-distribution construction. P1.6 remains tactical/role owner and is read-only with respect to P1.3B outputs.
+B. Canonical attacking-event vocabulary is exact: P_GOAL_RETURN=P(goals>=1); P_ASSIST_RETURN=P(assists>=1); P_ATTACKING_RETURN=P(goals>=1 OR assists>=1); P_NO_ATTACKING_RETURN=1-P_ATTACKING_RETURN. Never call P_NO_ATTACKING_RETURN “blank”.
+C. Goal and assist counts are modelled jointly conditional on P1.1 state/minute atoms. Silent independence is forbidden. The bounded P1.3B fallback is a versioned bivariate-Poisson shared-component model preserving marginal goal/assist rates. Until genuine settled pre-deadline P1.5 evidence exists, dependence status is LOW_CONFIDENCE_CONSERVATIVE with explicit sample_size=0 and no automatic retuning.
+D. Canonical joint outputs additionally expose P_GOAL_AND_ASSIST, P_MULTIPLE_ATTACKING_RETURNS, P_TOTAL_GA_GE_1, P_TOTAL_GA_GE_2 and P_TOTAL_GA_GE_3. All probabilities remain [0,1] and P_ATTACKING_RETURN=1-P(G=0,A=0).
+E. Build a deterministic integer PMF for stochastic core FPL points conditional on minutes state/minute atom before mixture aggregation. Current stochastic contributors are appearance, joint goals+assists, clean-sheet qualification, DefCon threshold reward and goalkeeper save-interval rewards.
+F. Bonus remains an expectation-only residual until a separately calibrated stochastic bonus model exists. Therefore canonical distribution_completeness is PARTIAL_BONUS_RESIDUAL. Publish the core stochastic PMF, bonus residual expectation, adjusted expected total and this limitation. Never pretend the PMF is a fully complete FPL outcome distribution.
+G. P_FPL_BLANK is distinct from no attacking return and means P(core stochastic total points <= governed blank_threshold). The canonical threshold is config-bound, published with every output and not silently hardcoded. Because bonus is residual-only, blank probability scope must state that bonus is not stochastically incorporated.
+H. Canonical point-tail surface publishes exact configured thresholds at minimum P(points>=5), >=8, >=10, >=12 and >=15. A human-facing “haul” alias may map to 10+ only when the threshold is shown. Tail probabilities are monotone non-increasing in threshold.
+I. Discrete quantiles publish at minimum P10/P25/P50/P75/P90 from the PMF using the smallest support value whose CDF reaches the requested probability. No Gaussian assumption is permitted; canonical_gaussian remains false.
+J. PMF mass must reconcile to 1 within governed numerical tolerance. PMF expected core points + bonus residual expectation must reconcile with published expected FPL points within governed tolerance. Published stochastic variance comes from the PMF; the prior moment variance is retained only as reconciliation evidence because joint goal-assist covariance changes variance by design. Bonus variance remains unmodelled and must be stated.
+K. P1.3B propagates finite-state minutes and event/process uncertainty deterministically. Posterior goal/assist rates continue to use current robust prior/historical shrinkage/winsorisation. Full posterior parameter uncertainty is not claimed: parameter_uncertainty_propagation=PARTIAL until a separately justified analytic posterior or later correlated method exists.
+L. Key-pass/chances-created semantics are evidence-gated. Current canonical enrichment owns chances_created; runtime-data-v6 currently proves expected_assists but does not prove a distinct canonical key_pass field. Do not add a duplicate key_passes feature or alias without provider-level semantic/provenance proof. P1.6 coefficients remain unchanged.
+M. For double fixtures and multi-GW horizons, preserve mean/variance zero-cross-fixture-covariance approximation explicitly. Do not fabricate multi-fixture/multi-GW tails or return probabilities when cross-fixture dependence is unavailable; mark them PARTIAL/NOT_AGGREGATED. Monte Carlo is not part of P1.3B.
+N. Intrinsic event probabilities never consume hit cost, FT state, sell/buy price, budget, EO, rival teams, captaincy, package constraints or mini-league data. Those stay downstream.
+O. Every new dependence, threshold, truncation/support and numerical-tolerance parameter is versioned/config-bound, registered through P1.5 governance with rationale/source/sample/confidence and automatic_retuning=false. No player-name, club-pair or one-match parameter patch is allowed.
+P. P1.7, package optimization, Monte Carlo and mini-league overlay remain outside P1.3B and must not be started by this stage.
+
+P1.7 V12-NATIVE DISTRIBUTIONAL XI / BENCH / CAPTAIN / VICE CONTRACT:
+A. P1.7 owns Starting XI, legal formation, reserve goalkeeper, outfield bench order, captain, vice captain, global autosub option value and cameo-blocking decision semantics. It consumes P1.1, P1.3B and P1.6 read-only.
+B. Enumerate every legal OUR15 Starting XI: exactly 11 starters, exactly 1 GK and only rules-registry formations 3-4-3, 3-5-2, 4-3-3, 4-4-2, 4-5-1, 5-2-3, 5-3-2 or 5-4-1. Formation is an outcome of utility, never a preferred label.
+C. Preserve START, REGULAR_CAMEO, LATE_CAMEO and DNP/ZERO_MINUTES. Regular and late cameo are appearances and therefore block autosub and vice takeover. Only DNP/ZERO_MINUTES permits replacement.
+D. Consume P1.3B PMF/tails/variance where supportable. If exact GW PMF is unavailable, publish PARTIAL/MOMENTS_ONLY and never fabricate tails. P1.3B PARTIAL_BONUS_RESIDUAL limitation carries through.
+E. Resolve autosubs globally at team level. Reserve GK is separate. Outfield bench candidates are processed in exact priority order and may replace only DNP starter slots while the resulting nominal formation stays legal. Multiple DNPs are resolved jointly.
+F. Publish expected_autosub_value, expected_blocked_autosub_value, autosub_probability and blocked_autosub_probability. CAMEO_BLOCKED_AUTOSUB is explicit decision-option evidence and never rewrites P1.3 xPts.
+G. Evaluate all six outfield bench permutations. Bench order consumes reach probability, legal-sub probability, expected autosub points and supportable distributional downside/upside. Raw mean sort alone is not canonical P1.7 bench ordering.
+H. Evaluate captain and vice as an ordered pair, not independently. Captain multiplier applies when captain appears. Vice takeover occurs only when captain DNPs and vice appears. Publish vice_takeover_probability, expected_vice_takeover_value and joint DNP failure probability.
+I. Cross-player covariance is COVARIANCE_NOT_MODELLED_YET. Any captain/vice or autosub appearance independence approximation must be labelled. Aggregate variance may use a zero-covariance sum approximation. Monte Carlo is not executed or claimed.
+J. Lineup route output includes expected points, deterministic distributional downside, supportable upside, autosub option value, cameo-block cost, captain multiplier value, vice fallback value, P1.6 tactical contribution, uncertainty, confidence, robustness and regret semantics. Mean xPts alone is insufficient.
+K. P1.6 is consumed read-only with TACTICAL_ROLE canonical weight exactly 0.25. P1.7 never recomputes or changes P1.6 coefficients and does not mutate global 20/25/30/25.
+L. For selected route publish best alternative XI and deltas for utility, mean, downside, upside, autosub value, cameo-block risk and tactical component plus reversal triggers. Compare the best route of every legal formation represented by the squad.
+M. Serious P1.7 decisions support MODEL_EVIDENCE_BINDING with input_snapshot_id, model_version, feature_version, parameter_version, calibration_version, calibration_cutoff, run_fingerprint and output_fingerprint; authority=false; raw V6 payload duplication=false.
+N. XI, bench order, captain and vice are eligible for immutable pre-deadline freeze through existing Phase 0/P1.5 evidence primitives. The frozen decision snapshot must retain the selected route plus the published alternatives considered, formation comparison, close-call proof and bound model-evidence fingerprint so the route cannot be reconstructed after results are known. Settlement keeps prediction error separate from XI regret, bench-order regret, captain regret, vice-captain consequence and cameo-block autosub regret. No post-result reconstruction and no one-match permanent rule.
+O. Migration/equivalence evidence is STATIC ONLY. Permitted evidence is frozen static specifications, frozen fingerprints, historical artifacts already produced, V12-native tests and deterministic static comparison. V3/V4/V5 runtime execution is forbidden. MIGRATION_ORACLE execution is forbidden. CI REGRESSION_ORACLE execution is forbidden. Never execute a legacy optimizer, migration oracle, regression oracle, benchmark or performance test to establish equivalence. Publish an equivalence classification only when the frozen/static and V12-native evidence actually supports it; otherwise mark the comparison UNAVAILABLE/PARTIAL rather than fabricating a classification.
+P. No V6 mutation; no P1.1/P1.3/P1.6 mathematics mutation; no Gate0 mutation; no Package Optimizer implementation; no Monte Carlo implementation; no Mini-League Overlay; no scheduler/report cadence change; no new methodology authority.
+
+Keep 1GW, 3GW and 5GW distinct.
+
+8. FULL UNIVERSE / GATE0
+Serious decisions scan full currently eligible Official FPL universe.
+Verify exact 15; 2 GK/5 DEF/5 MID/3 FWD; max3/club; legal XI/bench; eligibility; current factual prices; affordability only when FT/ITB/sell values known.
+No fabricated FT/ITB/sell values.
+Evaluate role, system, competition, P(start), xMins, set pieces/penalties, tactical matchup, rest, underlying priors, value, structure, horizon utility, robustness, optionality, correlation, mini-league leverage, information value and reversal triggers.
+
+
+8A. FULL-UNIVERSE-FIRST DECISION INVARIANT
+For EVERY transfer, replacement, package, challenger, Watchlist20, one-GW punt/rental, and medium-horizon squad-improvement decision:
+1) Start from the complete currently eligible Official FPL player universe from fresh V6/Official evidence. Never begin from a fixed shortlist, recent scorers, user-mentioned names, community template, old watchlist, or previous recommendation.
+2) Apply Gate0 before football ranking: canonical identity, eligibility, position, club, current price, max-three-per-club impact, squad structure and affordability only when FT/ITB/sell values are actually known.
+3) Score every materially eligible candidate with the canonical FOOTBALL SCORE exactly once:
+   20% PROVEN/HISTORICAL
+   + 25% TACTICAL/ROLE
+   + 30% CURRENT UNDERLYING
+   + 25% FIXTURE/SECURITY.
+   Do not redefine these weights in task prompts, state, or ad-hoc prose.
+4) Then apply the probabilistic layer: Bayesian posterior/shrinkage, P(available), P(start), bench/cameo/DNP mixture, xMins distribution, opponent adjustment, event-rate/predictive distribution, floor/ceiling/tails and uncertainty.
+5) Then evaluate horizons separately: GW+1, 2GW where a rental/exit is involved, 3GW and 5GW. Never collapse these into one unlabeled score.
+6) Then apply transfer economics and structure: FT/hit, FT shadow value, price/sell-value/buy-back, affordability, club slots, concentration/correlation, bench structure, optionality and planned/reversal routes.
+7) Then apply robustness / expected-regret / information-value-of-waiting and ICON+ mini-league leverage where material.
+8) Only after all steps may the engine produce HOLD / START / BENCH / TRANSFER / PUNT / WAIT / PREPARE / ACT.
+9) Every serious comparison must show the best named universe alternative(s), not only compare names already mentioned by the user.
+10) If required universe coverage is incomplete, do not claim FULL-UNIVERSE OPTIMIZED. Recover the missing scope or label the decision PARTIAL and state the missing denominator.
+
+8B. OWNED15-FIRST OUTGOING DISCOVERY
+For every serious transfer/package/squad-improvement decision:
+1) Verify current OUR15 exactly before selecting any outgoing player.
+2) Evaluate ALL 15 owned players as possible structural weak-link/outgoing candidates wherever legally relevant. Never begin from a hardcoded OUT player.
+3) A player named by the user as a possible OUT is a hypothesis/requested comparator only and never becomes outgoing authority.
+4) Outgoing player(s) must emerge from the same Canonical decision chain already defined here: exact 20/25/30/25 football evidence; P(available); P(start); finite-state xMins; role/starter security; posterior/event distribution; P1.6 tactical-role evidence; GW+1; 3GW; 5GW; then downstream price/sell-value/structure economics; robustness/regret; optionality; and mini-league overlay only after the football-optimal baseline.
+5) HOLD remains the mandatory baseline. Do not force a transfer because a challenger or possible OUT was requested.
+6) For multi-transfer/package search, evaluate the legal outgoing combinations produced from OUR15, not merely routes containing one predetermined player.
+7) Do not create a second outgoing score. Weak-link/outgoing discovery consumes the existing Canonical evidence stack and package utility only.
+
+8C. WEAK-LINK-AS-RESULT GUARD
+WEAK-LINK DISCOVERY != USER-HARDCODED OUT.
+The process must be able to conclude any of: the user-mentioned OUT is genuinely the weakest; another owned player is weaker; no owned player should currently be sold; or HOLD is superior. Weak-link identity is a decision result, never an input precondition.
+
+8D. OWNED -> CHALLENGER PAIRWISE BATTLE
+For every material transfer battle, retain and expose diagnostic pairwise evidence for OWNED -> CHALLENGER.
+Minimum surface where supportable:
+owned_element_id;challenger_element_id;football_score_and_20_25_30_25_decomposition;p_available;p_start;xmins_distribution;p_return;p_blank;material_point_tails_or_haul_probability;expected_points_distribution;tactical_role_evidence;tactical_evidence_class;set_piece_penalty_role;gw_plus_1;three_gw;five_gw;price_economics;robustness;expected_regret;information_value_of_waiting;mini_league_leverage_after_football_baseline;operational_action_WAIT_PREPARE_ACT;reversal_trigger;decision_delta_or_fingerprint.
+A pairwise battle is explanatory/diagnostic evidence only. It MUST NOT become a second player score, second ranking authority or override HOLD/package utility.
+
+8E. SEARCH COMPLETENESS PROOF
+Every serious transfer/package decision retains one compact SEARCH_PROOF with exactly the search truth needed to substantiate the claim:
+OUR15_EXPECTED;
+OUR15_EVALUATED;
+ELIGIBLE_UNIVERSE_EXPECTED;
+ELIGIBLE_UNIVERSE_EVALUATED;
+OUTGOING_CANDIDATES_EVALUATED;
+OUTGOING_COMBINATIONS_EVALUATED where relevant;
+LEGAL_ROUTES_EVALUATED;
+HOLD_INCLUDED;
+LOSSY_PRUNING;
+SEARCH_AUTHORITY.
+For a complete serious transfer scan, OUR15_EXPECTED=15 and OUR15_EVALUATED=15. HOLD_INCLUDED=true is mandatory.
+SEARCH_AUTHORITY is exactly FULL or PARTIAL. FULL may be claimed only when every required denominator is proven, OUR15 is 15/15, expected/evaluated universe denominators agree, HOLD is present, and LOSSY_PRUNING=false. If any required denominator is unavailable or incomplete, SEARCH_AUTHORITY=PARTIAL.
+Never invent denominator/route counts. Unknown proof fields remain UNAVAILABLE/null. Never render FULL-UNIVERSE OPTIMIZED unless FULL authority is proven by this exact compact proof.
+
+XI/bench/formation-only decisions within an already fixed 15 do NOT need to rescan the transfer universe merely to choose XI. They MUST still use the same 20/25/30/25 football methodology plus the full probabilistic/robustness gate across all viable owned XI alternatives. If the question also asks whether the squad slot itself should be upgraded/replaced, full-universe scan becomes mandatory.
+
+8F. GENERIC PLAYER-vs-PLAYER COMPARATOR ORCHESTRATION
+The V12 comparator is a reusable diagnostic orchestrator for one owned player versus one or more external candidates of the same FPL position. It is NOT a new xPts model, xMins model, tactical scorer, fixture model, price predictor, package optimizer, ranking authority or decision authority.
+A. INPUT OWNERSHIP. Comparator minutes evidence comes only from P1.1; event/xPts distributions only from P1.3/P1.3B; tactical-role evidence only from P1.6; lineup consequence only from P1.7 where material; legality/search only from P1.2A; transfer economics/package utility only from P1.2B; mini-league only from P1.8 after the football-optimal baseline; competitive workload and price evidence remain factual inputs with their existing authority.
+B. REQUIRED HORIZONS. Every material comparison separates NEXT GW, 2GW, 3GW and 5GW. The 2GW comparator surface is diagnostic only and does not replace the existing package-selection GW+1/3GW/5GW mapping or the Canonical special 2GW rental/exit rule. Never create a hidden weighted horizon aggregate.
+C. EXPECTED STARTS. Per-GW P(start) remains a probability. Across a horizon, sum per-fixture/per-GW P(start) only as EXPECTED STARTS OVER HORIZON. Never label that sum cumulative start probability.
+D. P(60+). p_60_plus may be numeric only when current governed P1.1 minute-state/distribution evidence explicitly supports a >=60-minute probability without a new assumption. Otherwise render p_60_plus=UNAVAILABLE with reason. Never add a Gaussian or player-specific fallback merely to create P(60+).
+E. FIXTURE-BY-FIXTURE. Materialize the next five scheduled PL GWs where supportable with gw, opponent, home/away, verified venue, existing xPts, xMins, P(start), evidence-gated P(60+), P(DNP), tactical evidence class, role summary, routes to points, rest/congestion, midweek competition context, fixture confidence and data quality. Richer coach/system/shape/pressing/block/FB-WB/box/second-ball/goalkeeper context is shown only when reproducible; otherwise UNAVAILABLE.
+F. TACTICAL RECENCY. Current coach + current season + recent 2-5 match evidence outranks historical team DNA, while historical style remains prior/context. One recent match never erases stronger prior evidence. Existing Bayesian/shrinkage and P1.6 anti-double-count discipline remains unchanged.
+G. COMPETITIVE WORKLOAD MAP. For the player team and opponent where relevant, map verified Premier League, UEFA competitions, domestic cups, international duty and other verified first-team competition between PL GWs. Future status is exactly CONFIRMED, TBD or UNVERIFIED. Never invent an undrawn cup opponent. Competitive load is evidence/confidence/rotation review only and MUST NOT directly rewrite xPts through a blanket fatigue penalty.
+H. TRANSFER VALUE. Raw football gain is projected points IN minus projected points OUT separately for GW+1/2GW/3GW/5GW. Net transfer value reuses existing Canonical economics: FT/hit, dynamic FT shadow, authenticated sell value, purchase price, bank, affordability, club/position legality, buy-back difficulty, optionality/flexibility and evaluated exit/secondary routes. Unknown finance stays unknown. An active Wildcard never receives an irrelevant hit cost.
+I. OUTPUT AUTHORITY. Comparator output retains decision_authority=false, ranking_authority=false and diagnostic_evidence_only=true. Operational action remains exactly WAIT/PREPARE/ACT. Descriptive football labels such as HOLD, CHALLENGER, TRANSFER-CANDIDATE or SELL-CANDIDATE never replace the operational enum.
+J. PAIRWISE BINDING. Comparator output may feed the existing OWNED -> CHALLENGER pairwise battle contract. It never creates a second composite score or overrides HOLD/package utility.
+K. MATERIAL TRIGGERS. Re-evaluate the comparator when material evidence changes through Watchlist publication, live/post-match challenger signal, xMins/P(start)/start-security, injury/suspension, role/manager tactical change, confirmed Europe/cup schedule, international call-up/minutes/travel, material price route movement, fixture rearrangement, owned deterioration, challenger improvement, Deep Review, Deadline Day or explicit user comparison. The single FPL Master Monitor V12 owns routing; never create another scheduler.
+L. DEFAULT PERSISTENCE. Comparator output is transient by default. A genuine frozen pre-deadline serious decision may retain only compact IDs, planning GW, horizon deltas, selected decision/reversal trigger and evidence fingerprint/provenance inside the existing frozen_decision_snapshot mechanism. Never persist raw V6, full-universe matrices or provider payloads merely for comparator history.
+
+9. PROBABILISTIC METHODS
+Use Bayesian/hierarchical shrinkage, start/bench/cameo/DNP mixtures, xMins, scoring event-rate, fixture adjustment, posterior predictive points, floor/ceiling/tails, covariance, hit-adjusted utility, efficient frontier, value of waiting, regret/sensitivity, mini-league relative exposure when supportable.
+Monte Carlo >=500,000 correlated paths only with fresh real distributions. State actual N/limitations. Otherwise MC NOT RUN/PARTIAL. Never invent pseudo-precision.
+
+
+
+9C. SERIOUS DECISION PROBABILITY OUTPUT
+For serious close XI/transfer/package/captain decisions, expose the mathematical decision stack where supportable:
+- Bayesian prior -> updated posterior / shrinkage logic;
+- P(available), P(start), P(bench), P(cameo), P(DNP);
+- xMins distribution, not only mean xMins;
+- expected points distribution by horizon;
+- P(candidate/route outscores HOLD or comparator);
+- relevant lower/upper quantiles or floor/ceiling/tail risk when calibrated;
+- hit-adjusted expected net and break-even where material;
+- expected regret / robustness and information value of waiting;
+- covariance/correlation for packages and captain/club concentration where relevant;
+- mini-league relative-exposure effect only after football-optimal baseline is established.
+
+For genuinely close serious alternatives with fresh supportable distributions, run correlated Monte Carlo with >=500,000 paths, preferably common random numbers for paired route comparison. Report actual N, convergence/limitations, and outputs such as P(route beats HOLD), expected/median net and material tail risk. If fresh distributions are insufficient, state MC NOT RUN/PARTIAL; never synthesize Monte Carlo numbers from point estimates.
+
+9A. ROBUSTNESS / UNCERTAINTY DOMINANCE GATE
+For close XI/bench/formation decisions and serious player/package comparisons, mean projected points alone is never sufficient.
+A. Model the full availability/minutes mixture explicitly: P(available), P(start), bench-start state, P(cameo), P(DNP), late-cameo probability and the xMins distribution. Do not collapse these into one optimistic mean-minutes number.
+B. AUTO-SUB BLOCKING COST is an explicit decision term. A DNP may preserve auto-sub value; a short cameo can destroy that option. Estimate the expected value of the bench alternative forfeited under cameo scenarios and include it in lineup utility/regret. Never treat DNP risk and cameo risk as equivalent.
+C. Defensive-contribution/appearance floors are conditional on the minutes and role needed to earn them. Do not credit a nominal floor as if it were guaranteed when starter security or xMins is uncertain.
+D. A small mean xPts edge that lies inside the model's uncertainty/credible decision band is NOT decisive. The uncertainty band must come from the current predictive distributions/calibration; never hardcode a fixed threshold such as 1.0 point from one historical case.
+E. When mean utilities are close, compare lower-tail outcome, downside, expected regret, P(outperform), lineup optionality, auto-sub preservation and robustness to plausible lineup-news errors. Prefer the more robust structure unless the higher-upside route has enough evidence-adjusted edge to compensate for its extra downside.
+F. Multi-GW role/starter-security evidence is a prior/shrinkage input. A one-GW projection with weak lineup confidence must not silently erase persistent evidence that a player is a weak link, rotation/cameo risk, or structurally fragile.
+G. If the mean-xPts ranking and the robustness ranking disagree, surface both, explain the uncertainty driver, and classify the decision as ROBUSTNESS-DOMINATED / MEAN-EDGE-DOMINATED / INDETERMINATE rather than hiding the disagreement.
+H. Post-match calibration updates P(start), xMins, cameo/DNP mixture and uncertainty calibration, but never creates player-specific permanent rules from one outcome. Learn the failure mode, not the hindsight winner.
+
+
+9B. ONE-GW PUNT / RENTAL + ROLLING RE-OPTIMIZATION
+A ONE-GW PUNT / RENTAL is a deliberate short-horizon transfer whose immediate value is concentrated in GW N and whose GW N+1 disposition must remain provisional until fresh re-optimization. It is NOT an ordinary 3–5GW transfer and NOT an automatic buy-then-sell script.
+
+For every plausible one-GW route, evaluate against HOLD and normal multi-GW alternatives:
+A. Exact GW N route: OUT -> PUNT-IN, with Gate0 legality, current price, FT/hit state where known, P(start), xMins distribution, tactical/role fit, team environment, opponent adjustment, set pieces/penalties, posterior GW N xPts distribution, P(outperform HOLD), floor/ceiling/tails and captaincy relevance where material.
+B. Immediate net edge: show gross GW N edge and hit-adjusted edge separately. Never hide a hit inside the projection.
+C. Cameo/rotation/downside: include late-cameo probability, auto-sub blocking where lineup related, injury/news risk, uncertainty band and expected regret.
+D. Planned exit is a CONTEMPLATED route only. Record likely GW N+1 exit/reacquisition options, but never pre-commit the next transfer.
+E. At GW N+1, BEFORE executing any planned exit, perform a FRESH FULL-UNIVERSE RESCAN using new V6/Official facts and updated Bayesian posteriors. Recompare:
+   1 HOLD the punt longer;
+   2 sell to the best fresh full-universe candidate;
+   3 reacquire the original player where legal/optimal;
+   4 choose a different structural/package move;
+   5 roll/save the FT if waiting has higher utility.
+F. Compute rolling horizon economics:
+   - GW N immediate net;
+   - GW N + GW N+1 two-GW net;
+   - 3GW net;
+   - 5GW net;
+   - consumed FT now;
+   - expected/possible FT required next GW;
+   - dynamic FT shadow/opportunity value;
+   - possible current or future hit;
+   - purchase/sell/buy-back effects;
+   - sell-value loss and affordability path;
+   - route survival under price changes.
+G. The FT shadow value is dynamic from the current 3–5GW universe frontier and squad needs. Never hardcode a universal fixed point value for one FT.
+H. Define ABORT / KEEP-LONGER / EXIT triggers from fresh evidence: lineup security, role, injuries, price, competing urgent transfers, improved universe candidate, or changed fixture/team environment.
+I. A one-GW punt may be recommended only when its distributional immediate upside plus any captaincy value is sufficient to compensate for hit/FT cost, planned-exit uncertainty, downside and lost flexibility.
+J. If exit legality/affordability is fragile, label PUNT EXIT NOT SECURE. If the next-GW rescan changes the optimal destination, follow the fresh optimization rather than the old planned exit.
+K. Visible serious punt comparison should include named routes and, where supportable:
+   OUT -> PUNT-IN -> PROVISIONAL NEXT ROUTE;
+   GW N EDGE;
+   P(outperform HOLD);
+   2GW NET;
+   3GW NET;
+   5GW NET;
+   FT/HIT/PRICE COST;
+   ROBUSTNESS / REGRET;
+   ABORT / KEEP-LONGER / EXIT TRIGGER.
+
+9D. MODEL EVIDENCE EXECUTION BINDING
+For every serious V12 model/decision execution, create one MODEL_EVIDENCE_BINDING as execution evidence. It is authority=false, evidence_only=true and never overrides this Canonical authority.
+Required fields are: input_snapshot_id; factual_snapshot_timestamps; factual_artifact_fingerprints; model_version; feature_version; parameter_version; calibration_version; calibration_cutoff; planning_gw; canonical_v12_revision; input_fingerprint; model_fingerprint; parameter_fingerprint; calibration_fingerprint; run_fingerprint; generated_at.
+Do not persist complete raw V6 factual payloads in model evidence. Persist only compact factual references/timestamps/fingerprints plus the model/decision evidence needed for later settlement.
+A serious decision may claim deterministic reproducibility only when the required fingerprints were actually computed for that execution. Missing/uncomputed fingerprints make MODEL_EVIDENCE=DEGRADED/UNPROVEN, never fabricated. This degradation is fail-operational and MUST NOT suppress a due visible report.
+The actual recurring runtime is FPL Master Monitor V12 ChatGPT Automation. Repository Python modules, including src/engines/v12_model_evidence.py, are deterministic contracts/tests/evidence unless exact occurrence-bound execution proof shows they actually ran. Never infer repository_python_executed=true from code existence, CI success or imports.
+For genuine pre-deadline decision-grade forecast/decision evidence, freeze the exact binding plus compact forecast/decision snapshot before settlement. forecast_generated_at must be <= Official deadline; decision captured_at, when present, must be <= deadline. Allowed freeze transitions are PREDEADLINE_FREEZE or, only when the stored payload itself is proven pre-deadline, PROMOTED_LAST_PREDEADLINE_SNAPSHOT.
+Durable lifecycle evidence belongs under the existing non-authoritative control/fpl_master_v12/FPL_MASTER_STATE_V12.json model_evidence ledger. No second TXT authority or separate scheduler is created. State write failure degrades evidence persistence only and never mutates V6 or blocks a due report.
+At Post-All/finished-event settlement, use the exact previously frozen record; verify frozen_evidence_fingerprint unchanged; require event_finished=true; bind actual outcome separately; calculate prediction calibration and decision calibration; never reconstruct or replace an old forecast from hindsight.
+Prediction calibration includes xPts MAE/RMSE, xMins MAE, starter Brier, DNP Brier, clean-sheet Brier where valid and Spearman/rank calibration. Decision calibration includes transfer counterfactual regret, HOLD-vs-ACT realized regret, XI regret, bench-order regret, captain regret, vice consequence, cameo-block autosub regret and one-GW rental realized P&L where exact costs are available.
+Calibration is diagnostic learning evidence. It never automatically changes the canonical 20/25/30/25 weights and never creates a one-result/player-specific hindsight rule.
+
+10. WATCHLIST20
+For FULL/DEEP/DEADLINE/FINAL/FULL+MATCH and PRICE:
+exactly 20 NON-OWNED = GK5 DEF5 MID5 FWD5.
+Derived from full current universe after OUR15 exclusion and canonical evaluation.
+Count alone insufficient; require unique canonical IDs, eligibility, full-universe/methodology lineage and current provenance.
+
+11. RISE20/FALL20 — OFFICIAL PRICE-CYCLE TIMING
+Where required: RISE20 exact20; FALL20 exact20.
+Complete selection uses the full current Official universe.
+RISE = projection_offset_0_percent DESC, tie element_id ASC.
+FALL = projection_offset_0_percent ASC, tie element_id ASC.
+
+Official FPL 2026/27 player price changes execute DAILY at 00:00 UK local time. The official Price Change Predictor may update more frequently, currently every 15 minutes, but predictor-refresh cadence is NOT the official price-change execution cadence. Never say prices can change any hour merely because predictor observations refresh intraday.
+
+The immediately upcoming official cycle MUST be derived from 00:00 Europe/London for the relevant calendar date and converted timezone-aware to Asia/Jakarta. During BST this normally renders 06:00 WIB; during GMT it normally renders 07:00 WIB. Never permanently hardcode 06:00 WIB for the season.
+
+Every visible RISE20/FALL20 row carries:
+player;current_price;direction;official_or_provider_progress;prediction_strength;next_official_price_cycle_uk;next_official_price_cycle_wib;cycles_to_expected_change;estimated_change_window;estimate_source;evidence_timestamp;confidence;impact_on_our_decision.
+
+Estimated-change semantics use actual daily cycles, for example NEXT PRICE CYCLE — 06:00 WIB during BST, NEXT PRICE CYCLE — 07:00 WIB during GMT, 1 CYCLE / ~24H, 2 CYCLES / ~24–48H, 2 CYCLES, or UNAVAILABLE. A next-cycle label is used only when evidence supports it. Predictor likelihood/progress is not a guarantee.
+
+If Official Predictor and supporting providers disagree, surface each source signal and the disagreement explicitly; never manufacture consensus. Official FPL current price/factual price change remains authoritative. A RISE20/FALL20 section labelled COMPLETE requires every row to answer: direction; signal strength; target official cycle; that cycle's WIB time; and decision impact. Missing required timing semantics cannot be COMPLETE. Truthful timing UNAVAILABLE is permitted only under PARTIAL/DEGRADED/UNAVAILABLE with reason.
+
+12. ICON+ MINI-LEAGUE
+Every visible report includes mode-appropriate ICON+ analysis using freshest authoritative available denominator.
+Where supportable: rank,total,gap #1,nearest rivals,ownership,starter share,CVC/chip,EO,overlap/core,shields,differentials,dangers,leverage,remaining ammunition,strategic implication.
+Never present stale standings as current.
+
+13. WEATHER
+Weather is REPORT-TIME evidence and does not belong in V6.
+Use direct fresh report-time weather after venue/kickoff resolution when mode requires and access is available.
+Low weight unless unusual conditions have plausible football mechanism.
+If lookup is unavailable, render DEGRADED/UNAVAILABLE with the actual access/source reason. Never say weather is unavailable merely because V6 does not carry it.
+Never infer causation from coincidence.
+
+14. VISIBLE REPORT CONTENT CONTRACTS
+Visible reports are decision-first user surfaces. Internal implementation/debug language never substitutes for football intelligence. Existing methodology, data authority and fail-operational rules remain unchanged.
+
+GLOBAL VISIBLE PRESENTATION CONTRACT — ALL VISIBLE MODES
+This is a presentation layer only. It does not replace any mode-specific Canonical structure, exact count, methodology, probability model, optimization rule, or evidence requirement.
+
+A. DECISION-FIRST
+- The first visible block answers current decision/status, operational state WAIT/PREPARE/ACT, material change since the prior visible report, and the next actionable trigger.
+- The user must not need to read technical or narrative paragraphs before finding the decision state.
+
+B. POINTER / TABLE FIRST
+- Default to short headings, bullets, compact tables, explicit numbers and short analytical notes.
+- Continuous essay-style prose is exceptional. Normal analytical paragraphs should be short and must not become a narrative wall.
+- Exact-count sections remain exact. Presentation compaction never authorizes row omission.
+
+C. STANDARD SEMANTIC FLOW
+Where relevant, organize the existing mode sections so the user can scan in this semantic flow without changing the mode's Canonical section identities/order:
+1 DECISION / STATUS
+2 DECISION DELTA
+3 KEY NUMBERS
+4 TEAM / PLAYER CONSEQUENCE
+5 FOOTBALL EVIDENCE
+6 PROBABILITY / MODEL
+7 HORIZON 1GW / 3GW / 5GW
+8 PRICE / FINANCE
+9 ICON+ / MINI-LEAGUE
+10 ACTION BOARD
+11 ENGINE / SOURCE STATUS.
+For DEEP/PRICE/MATCH/DEADLINE/FINAL/POST-ALL-MATCH, the exact mode-specific sections below remain authoritative for structural order and counts.
+
+D. ACTION BOARD
+Every decision-bearing visible report ends its actionable analysis with a compact board containing exactly these semantic fields:
+NOW
+TRIGGER TO ACT
+ABORT / REVERSAL
+NEXT CHECKPOINT.
+When no executable action is justified, NOW is WAIT or PREPARE. Do not manufacture urgency.
+For FULL/DEEP/DEADLINE/FINAL, Section 18 WAIT/PREPARE/ACT + trigger/reversal is the Action Board surface and must carry these fields. For PRICE, Section 10 is the Action Board. Other modes use their existing action/next-critical-observation surface without adding a duplicate top-level section.
+
+E. FACT / MODEL / INFERENCE / RUMOR
+Keep FACT, MODEL, INFERENCE and RUMOR visibly separable where mixed evidence could confuse the decision. An observed match event cannot be described as a changed Bayesian posterior, xMins or P(start) unless exact recomputation/execution evidence exists.
+
+F. COMPACT ENGINE / DATA STATUS
+Technical proof is demoted to one compact near-end sub-block named ENGINE / DATA STATUS, embedded in the mode's existing source/source-health section or immediately adjacent without creating a new top-level structural count.
+Normal fields:
+- V6 core: GREEN / DEGRADED / FAILED
+- Publication: PASS / FAIL / UNKNOWN
+- Universe authority: FULL / PARTIAL
+- Personal auth: AVAILABLE / DEGRADED / UNAVAILABLE
+- Model snapshot: <id/version or UNAVAILABLE>
+- MC: RUN / PARTIAL / NOT RUN
+- ICON+: FULL / PARTIAL / UNAVAILABLE
+- Data timestamp: <timestamp>.
+Do not let #431 mutation/readback, workflow IDs, core upkeep narration, authority fingerprints, QA internals or similar plumbing dominate the main decision body. Surface low-level plumbing only when a material failure affects decision quality; keep the detailed proof transient/audit-only otherwise.
+
+14A. FULL / DEEP BACKBONE
+Exact visible order:
+1 Decision/status
+2 OUR15
+3 DECISION DELTA
+4 Changes
+5 Fixtures/rest/conditions
+6 Formation/XI/bench
+7 XI battle
+8 C/VC
+9 Chip
+10 Actionable Price Radar
+11 Watchlist20 exact20
+12 RISE20 exact20 where required
+13 FALL20 exact20 where required
+14 Package optimizer/frontier including HOLD baseline
+15 Evidence quality
+15B ICON+ mini-league
+16 ALL15 exact15 next-GW tactical/probability table
+17 Source health/freshness/lineage
+18 WAIT/PREPARE/ACT + trigger/reversal
+19 Final judgement.
+
+For DEEP, every structural section above MUST be visibly materialized in this exact order. Data unavailability never authorizes structural omission. A section without authoritative data remains visible as PARTIAL / DEGRADED / UNAVAILABLE with reason and counts where meaningful. "NOT RENDERED" is not a Canonical section state.
+Post-deadline closed-decision sections remain structural: XI BATTLE may say GW locked/no executable XI change; C/VC and Chip show locked/current state; Actionable Price Radar may be DEGRADED/UNAVAILABLE rather than omitted.
+Evidence Quality is a distinct visible section before ICON+ and should separate authority/source, observed_at, freshness, status and decision use by scope.
+
+ALL15 identity completeness and model completeness are separate dimensions. When authenticated locked-team evidence proves the exact owned 15, ALL15 MUST render all 15 unique owned identities even if fresh model fields are unavailable. Model-dependent fields use UNAVAILABLE or MODEL UPDATE PENDING NEXT COMPUTE rather than omitting the player or fabricating values.
+ALL15 visible row schema, exactly 15 unique owned players where supportable:
+player;opponent;recommended_or_locked_role;p_available;p_start;p_cameo;p_dnp;xmins;tactical_role;set_piece_penalty_role;matchup;gw_plus_1;three_gw;five_gw;uncertainty_floor_upside;action.
+Allowed action: START;BENCH;HOLD;WATCH;SELL-CANDIDATE.
+Unknown probability/model fields stay explicitly unavailable; never fabricate.
+
+14B. PURE MATCH EXACT CONTENT CONTRACT
+PURE MATCH exact visible order:
+1 MATCH CHECKPOINT / GW STATUS
+2 LOCKED PERSONAL TEAM
+3 PERSONAL IMPACT FIRST
+4 GLOBAL AUTOSUB STATE
+5 CAPTAIN / VICE CONSEQUENCE
+6 OWNED LIVE/FINAL POINTS
+7 BONUS/BPS — PROVISIONAL when applicable
+8 CARDS / INJURY / DEFCON / ROLE EVENTS
+9 RELEVANT LEAGUE-WIDE SIGNALS
+10 ICON+ LIVE if fresh
+11 NEXT-GW LEARNING
+12 NEXT CRITICAL OBSERVATION
+13 SOURCE / FRESHNESS STATUS.
+Generic match story MUST NEVER precede a material owned-player consequence.
+Pure Match does not force Watchlist20/RISE20/FALL20 unless overlapped with Full/Deadline/Final.
+
+14C. BENCH PRESENTATION SEMANTICS
+Visible bench rendering MUST separate:
+BENCH GK: goalkeeper reserve.
+OUTFIELD AUTOSUB PRIORITY:
+1 first outfield bench
+2 second outfield bench
+3 third outfield bench.
+Never render all four bench players as one misleading #1-#4 autosub queue. Raw Official squad_position/bench_order may remain in technical evidence. Goalkeeper reserve is never visually represented as first outfield autosub candidate.
+
+14D. USER-FACING LANGUAGE
+Normal report body MUST NOT expose implementation/repair language such as:
+reconciliation corrected;repair applied;migration successful;test passed.
+Healthy normal reports also demote low-level orchestration/audit plumbing including issue #431, mutation/readback, logical slot, bound run/workflow IDs, NATURAL_CORE_UPKEEP_GATE, authoritative_runtime_snapshot, raw branch SHA and low-level state-machine narration. These remain transient audit evidence and may surface only when a material technical failure directly explains decision degradation.
+Acceptance evidence may retain such language only in technical evidence/history, not normal FPL narrative.
+Stable user-facing wording includes MATCH MODE and LOCKED TEAM VERIFIED where applicable.
+Normal technical status is compact: V6 data; Publication; Universe; Personal squad data; Model refresh; MC; ICON+; Data time. Detailed content proof remains audit-only; normal user-facing quality may be one compact DATA / REPORT QUALITY line.
+
+OWNED PLAYER EMPHASIS: whenever a current OUR15 player appears anywhere in a visible report, render the player name in Markdown bold. This applies to OUR15, ALL15, formation/XI/bench, XI battle, captain/vice, Price Radar, RISE/FALL, Package Frontier, Match, Post-All-Match, ICON+/mini-league comparison and Decision Delta. Bold is presentation-only. Ownership identity is determined only by Official FPL element_id membership in current OUR15; never by name/bold matching.
+
+14E. OBSERVATION VS MODEL RECOMPUTATION
+Post-match evidence that has not triggered an actual model execution is CALIBRATION INPUT or MODEL UPDATE PENDING NEXT COMPUTE.
+Claims such as posterior updated, xMins recalibrated, probabilities changed, or P(start) changed require exact recomputation/execution proof with previous/current values and evidence timestamp.
+An observation alone may say it should reduce/increase future confidence; it may not claim the posterior already changed.
+
+14E2. NATURAL CHATGPT V12 ANALYTIC EXECUTION
+REPOSITORY PYTHON EXECUTION TRUTH and CHATGPT V12 ANALYTIC EXECUTION TRUTH are separate.
+A. repository_python_qa_executed=false means only that repository Python QA/modules were not proven to execute for that occurrence. It MUST NOT by itself suppress Canonical V12 analytics that the ChatGPT FPL Master Monitor can perform from valid current factual inputs.
+B. For decision-bearing DEEP / DEADLINE / FINAL / POST-ALL-MATCH scopes, after factual refresh and before render, the ChatGPT V12 runtime executes the current Canonical analytic path where valid inputs support it: OUR15; P(available)/P(start)/cameo/DNP; xMins; tactical-role evidence; next-GW probabilities/xPts; GW+1/3GW/5GW; comparator 2GW diagnostic where a material pairwise exists; full-universe candidate evaluation; Watchlist20; package/frontier; price decision surfaces; and ICON+ overlay where supportable.
+C. A scoring Gameweek still in progress never by itself authorizes blank next-GW analytics. Use the evidence available at the checkpoint with explicit uncertainty.
+D. If same-occurrence fresh evidence is actually consumed by a new V12 analytic refresh, updated P(start), xMins, xPts/probabilities may be published with current timestamp/provenance. If required factual/model inputs are genuinely insufficient, use MODEL UPDATE PENDING or field-level UNAVAILABLE.
+E. Missing one optional/enrichment provider degrades only the affected field/component. It MUST NOT collapse Watchlist20, ALL15, package/frontier or another independently supportable section. Player removal from the eligible universe requires actual Gate0/identity/eligibility failure, not missing optional enrichment.
+F. Repository Python execution must never be falsely claimed. ChatGPT analytic execution must likewise never be claimed unless the occurrence actually performed the governed analytic evaluation.
+G. Natural Deep rendering never treats Python QA, optimizer-module execution, MC or other plumbing success as a prerequisite for user-visible delivery.
+
+14F. DECISION DELTA
+Every sequential visible report after a previous visible occurrence includes DECISION DELTA.
+Each changed row:
+decision_item;previous_state;current_state;material_change;reason;evidence_time.
+Typical items include XI status, bench position, transfer route, captain, chip, price action and WAIT/PREPARE/ACT.
+If nothing material changed, render exactly NO MATERIAL DECISION CHANGE.
+A due report is never suppressed because the delta is empty.
+Match-event reconciliation is separate evidence and must never substitute for DECISION DELTA.
+
+14F2. 12:30 SIGNAL DELTA
+The 12:30 DEEP must explicitly materialize delta since 04:30 plus material press/news/P(start)/xMins changes.
+Compact row semantics:
+signal;04:30_or_baseline_state;12:30_state;change;evidence;decision_effect.
+Cover material availability, P(start), xMins, role, injury/news, price, fixture/weather and decision route where relevant.
+If the 04:30 baseline is unavailable, render BASELINE UNAVAILABLE. If no model recomputation occurred, never invent numerical P(start)/xMins movement; use CALIBRATION INPUT or MODEL UPDATE PENDING NEXT COMPUTE.
+
+14G. WATCHLIST20 VISIBLE SCHEMA
+Exactly 20 non-owned: GK5 DEF5 MID5 FWD5, full-universe derived.
+Visible fields:
+rank;player;position;club;price;next_opponent;football_score;p_start;xmins;gw_plus_1;three_gw;five_gw;role_set_piece_note;main_upside;main_risk;action.
+Watchlist is output, never optimizer input.
+For DEEP, current full-universe V12 evaluation is required where supportable. repository_python_qa_executed=false alone can never justify Watchlist20=0/20. When authority is incomplete, use every supportable current candidate and render exact available_count/expected_count/missing_scope/reason with PARTIAL/DEGRADED status rather than blanking the section.
+
+14G2. RISE20 / FALL20 + ACTIONABLE PRICE RADAR
+The current same-occurrence official_price_predictor artifact is factual/model input from the existing V6 source and MUST be read before RISE20/FALL20 is declared unavailable. If current/healthy and it contains enough eligible rows, render exact RISE20 and FALL20 using the existing predictor's direction/rank/timing evidence; never require repository Python execution merely to read the published artifact and never create a second price predictor.
+If the current artifact is absent/invalid/incomplete, degrade truthfully with exact counts/reason. A healthy sufficient predictor artifact cannot result in 0/20 without a concrete evidence reason.
+ACTIONABLE PRICE RADAR remains mandatory in DEEP and carries ALL15 where Official current price evidence exists. Keep FACT current/confirmed price separate from MODEL predictor direction.
+
+14H. PACKAGE OPTIMIZER VISIBLE SCHEMA
+Every serious route comparison includes HOLD.
+Visible fields:
+route;moves;transfer_cost;gw1_net;two_gw_if_relevant;three_gw;five_gw;p_beats_hold;expected_regret;robustness;price_risk;structure_effect;action_verdict.
+Never show candidate A vs candidate B without HOLD.
+If search_authority=PARTIAL, label it visibly and never claim FULL-UNIVERSE OPTIMIZED.
+For serious transfer/package routes, integrate one compact Search Proof into this existing surface: OUR15 evaluated/expected; eligible universe evaluated/expected; outgoing candidate/combinations count; legal route count; HOLD included; lossy pruning; FULL/PARTIAL authority. Material transfer alternatives show the leading OWNED -> CHALLENGER pairwise rows rather than hiding the choice behind one composite score. ALL15/OUR15 evidence must demonstrate 15/15 owned scan for FULL transfer authority. Tactical evidence class is shown only where material and does not create a new top-level report section.
+
+14I. FINAL — GW LOCK PACKAGE
+FINAL contains one unmistakable GW LOCK PACKAGE before alternatives.
+Fields:
+target_gw;transfers_out;transfers_in;number_of_moves;ft_hit_treatment;bank_after_if_known;formation;xi_exact11;bench_gk;outfield_bench_priority_1_3;captain;vice_captain;chip;primary_action;abort_trigger;fallback;evidence_timestamp;canonical_authority_version.
+Unknown finance remains explicitly UNKNOWN/UNAVAILABLE.
+Selected package is unambiguous; alternatives may appear only below it.
+
+14J. POST-ALL-MATCH
+POST-ALL-MATCH is an explicit contract, not generic Deep:
+1 GW RESULT SUMMARY
+2 DECISION P&L / COUNTERFACTUAL
+3 PREDICTION CALIBRATION
+4 OWNED15 REVIEW
+5 GW COMPLETED MATCH-BY-MATCH SCOUT
+6 ROLE / SET-PIECE CHANGES
+7 BAYESIAN CALIBRATION INPUT / ACTUAL UPDATE STATUS
+8 ICON+ FINAL GW
+9 PRICE OUTLOOK
+10 FRESH FULL-UNIVERSE NEXT-GW SCAN
+11 WATCHLIST20
+12 EARLY HOLD / TRANSFER FRONTIER
+13 LEARNING LOG.
+GW COMPLETED MATCH-BY-MATCH SCOUT represents every completed fixture exactly once.
+For every match where supportable include:
+result;formation_system;coach_pattern;player_roles;minutes_substitution_pattern;xg_xa_xgi_shots_chances;set_pieces_penalties;defcon;opponent_channels;sustainable_vs_noisy;implication_for_our15;implication_for_next_opponent;posterior_calibration_implication.
+Never reduce the scout to scorer recap.
+
+14K. ICON+ VISIBLE CONTRACT
+ICON+ is fail-operational by sub-scope. Do not blank healthy current-GW submitted-picks evidence merely because live standings/rank is stale.
+Separate at least:
+A SUBMITTED PICKS / EXPOSURE;
+B LIVE STANDINGS / RANK;
+C EO / CAPTAINCY where supportable;
+D RIVAL LIVE POINTS.
+A section may be overall DEGRADED while a healthy sub-scope remains COMPLETE. Never mix current-GW picks with stale prior-GW standings as if both were current.
+
+Every supportable ownership/starter/captain/vice metric MUST render numerator / denominator = percentage, not percentage alone. Example: Ownership 17/58 = 29.3%; Starter 13/58 = 22.4%; Captain 4/58 = 6.9%; Vice 3/58 = 5.2%. Arithmetic must be internally consistent and each metric carries its own denominator when scopes differ.
+
+When current manager scope is complete, denominator is the exact current league manager count. When only part of the league is collected, do NOT relabel the collected denominator as league total. Render, for example, Observed ownership 17/54 collected = 31.5%; Coverage 54/58 managers; Scope DEGRADED. Partial denominator is a factual collected-scope denominator and never masquerades as full league denominator.
+
+EO is shown only when exact multiplier/chip/captain inputs required for EO are supportable across the required current scope. EO must never be reconstructed from ownership percentage alone. If inputs are insufficient, render EO: UNAVAILABLE while retaining healthy ownership/starter/captain/vice count metrics.
+
+For current OUR15 players, apply 14D owned-player bold presentation while retaining element_id as the sole ownership identity basis.
+Football-optimal baseline is first; ICON+ remains an overlay.
+
+14L. 05:30 PRICE INFORMATION-VALUE CONTRACT
+Exact backbone:
+1 Price decision
+2 Official price changes FACT
+3 Team-needs price alert
+4 Watchlist20 exact20
+5 RISE20 exact20
+6 FALL20 exact20
+7 Package/affordability impact
+8 PRICE RISK vs VALUE OF WAITING FOR FOOTBALL INFORMATION
+9 ICON+ price impact
+10 Action board
+11 Source health.
+
+PRICE timing header MUST state the immediately upcoming official daily cycle derived from 00:00 Europe/London and converted to WIB. During the current BST period this normally reads NEXT PRICE CYCLE: 06:00 WIB; during GMT it normally reads NEXT PRICE CYCLE: 07:00 WIB. Predictor observation/update time is shown separately from official cycle time.
+
+RISE20/FALL20 use the row timing contract in Section 11. Predictor progress/likelihood may update every 15 minutes but never converts into a guarantee. If a player is supportably projected for the immediately upcoming cycle, use ESTIMATED CHANGE: NEXT PRICE CYCLE — <derived WIB time>. If support is insufficient, show probability/progress and a later-cycle or UNAVAILABLE window truthfully.
+
+For material routes show:
+affordable_now;after_target_plus_0_1;after_owned_minus_0_1;sell_value_impact;route_survival;football_information_benefit_of_waiting.
+Price alone never overrides football-optimal decision without explicit downstream economics.
+
+14M. TIME-SPECIFIC DEEP EMPHASIS
+04:30 = overnight reset / baseline.
+12:30 = delta since 04:30 plus press/news/P(start)/xMins changes.
+21:30 = late news, overnight risk, price risk, deadline proximity.
+21:30 includes OVERNIGHT RISK BOARD:
+player_or_route;current_action;possible_change_event;materiality;next_checkpoint.
+
+14M2. ACTION SEMANTICS
+Keep football evaluation labels separate from operational action.
+Football labels may include HIGH-PRIORITY CHALLENGER, SELL-CANDIDATE, HOLD, START, BENCH, LOCKED or TRANSFER where their own evidence supports them.
+Operational action enum is EXACTLY WAIT / PREPARE / ACT. No fourth operational state exists.
+Forbidden operational aliases include ACT-CANDIDATE, NEAR-ACT, STRONG-ACT-CANDIDATE and MONITOR.
+A candidate/challenger label never mutates operational action by itself. A strong post-match observation without the required fresh full-universe/model/economics execution normally remains PREPARE.
+ACT is permitted only when the Canonical decision path has actually executed with sufficient current evidence for immediate action. Price movement alone cannot convert PREPARE to ACT.
+Operational action carries trigger to act, abort/reversal condition and next checkpoint.
+After a GW deadline, football action may be LOCKED / NO EXECUTABLE ACTION while the next-GW operational action is PREPARE for a fresh full-universe rescan.
+
+14M3. CONTENT CONTRACT STATUS
+VISIBLE_CONTENT_PROOF content severity is exactly PASS / DEGRADED / FAIL.
+FAIL-OPERATIONAL describes delivery behavior, not content-contract severity. Never render PARTIAL or FAIL-OPERATIONAL as the CONTENT CONTRACT severity token.
+
+14N. FULL+MATCH / OVERLAP
+Use one coherent report. Do not duplicate semantic blocks. Match personal-impact sections are embedded into the Full backbone once; Watchlist/RISE/FALL/ALL15 remain single instances.
+
+14O. DEADLINE / FINAL
+Deadline/Final use Full backbone plus exact deadline/countdown, legality, latest news, predicted-XI/leak tier, xMins, legal routes, value of waiting, reversal/abort and ICON+ leverage.
+FINAL additionally MUST satisfy 14I GW LOCK PACKAGE.
+
+
+15. QA / DELIVERY
+PRE_RENDER_QA + POST_RENDER_QA mandatory when due.
+- due body cannot be replaced by plumbing/status;
+- first visible block is decision/status rather than technical plumbing;
+- pointer/table-first presentation must not collapse required structured sections into a narrative wall;
+- operational action is exactly WAIT/PREPARE/ACT; prohibited aliases are render failures when used as operational state;
+- decision-bearing modes materialize the Action Board semantics NOW / TRIGGER TO ACT / ABORT-REVERSAL / NEXT CHECKPOINT;
+- ENGINE / DATA STATUS is compact and near end inside the existing source/source-health structural surface;
+- exact-count blocks remain exact after render when their section state is COMPLETE;
+- mandatory row fields survive render where authoritative evidence exists;
+- FACT/MODEL/INFERENCE/RUMOR separated;
+- truthful timestamps/provenance;
+- no V3/V4/V5;
+- no duplicate acquisition/report;
+- no fabricated delivery proof.
+When REPORT_DUE=true final output must be a complete best-truthful canonical report, possibly with clearly degraded fields, OR a truthful terminal report-build failure only after non-destructive recovery paths are exhausted.
+Forbidden terminal due outputs: CORE PASS only; CORE FAIL only; SAFETY BLOCKED only; CONTRACT DEGRADED only; IN_PROGRESS; WAITING; PREFETCHING; RENDERING; QA; status-only.
+
+15A. SECTION-LEVEL FAIL-OPERATIONAL SEMANTICS
+Source-dependent visible sections use one of:
+COMPLETE; PARTIAL; DEGRADED; UNAVAILABLE.
+
+COMPLETE means the section claims canonical completeness. Exact count, exact schema, canonical identity, arithmetic and provenance semantics apply strictly. A malformed or incomplete section labelled COMPLETE is a semantic correctness HARD FAILURE. Example: WATCHLIST20 state COMPLETE with only 17 rows is a hard failure.
+
+PARTIAL / DEGRADED / UNAVAILABLE mean authoritative scope remains incomplete after bounded recovery. In that state:
+- never fabricate missing rows/data;
+- never add placeholder rows merely to satisfy an exact count;
+- never suppress a due report solely because the section is incomplete;
+- visibly label the section state;
+- state degradation_reason;
+- show available_count / expected_count where meaningful;
+- identify missing_scope when known;
+- keep provenance/freshness truthful.
+For REPORT_DUE=true, truthful section degradation is not whole-report failure. The report continues when no correctness/fabrication hard failure remains.
+
+HARD FAILURE includes semantic contradiction/corruption such as:
+- claims COMPLETE but exact count/schema is wrong;
+- duplicate canonical identity;
+- fabricated/placeholder row;
+- owned player inside a NON-OWNED Watchlist;
+- invalid captain/vice semantics;
+- impossible auto-sub consequence;
+- false FULL-UNIVERSE OPTIMIZED claim when search_authority=PARTIAL;
+- arithmetic inconsistency;
+- stale/degraded ICON+ presented as current;
+- unproven model recomputation claim;
+- duplicate/mixed report blocks;
+- provenance contradiction;
+- a degraded visible section not labelled truthfully.
+Source/data unavailability by itself is not a hard failure when represented truthfully.
+
+The same COMPLETE-vs-degraded principle explicitly applies to:
+ALL15; WATCHLIST20; RISE20; FALL20; POST-ALL-MATCH fixture scout; GW LOCK PACKAGE; PACKAGE FRONTIER; ICON+.
+RISE20/FALL20 COMPLETE additionally requires every row's official daily-cycle timing semantics from Section 11; missing cycle target/WIB timing cannot be hidden behind a COMPLETE label.
+WATCHLIST20 COMPLETE requires exact20 and GK5/DEF5/MID5/FWD5. WATCHLIST20 DEGRADED may contain fewer than20 authoritative rows, but must show N/20 plus reason and must not fabricate rows.
+PACKAGE FRONTIER COMPLETE with serious comparison requires HOLD baseline. If optimizer/search scope is legitimately unavailable, label PACKAGE FRONTIER DEGRADED/UNAVAILABLE and do not fabricate HOLD calculations.
+ICON+ COMPLETE/FRESH requires internally consistent numerator/denominator/percentage for each supportable ownership/starter/captain/vice metric, exact current league denominator when scope is complete, and separate exposure metrics. Partial manager collection must show collected/expected coverage and cannot masquerade as full league denominator. EO COMPLETE additionally requires exact multiplier/chip/captain inputs; otherwise EO remains UNAVAILABLE without blanking healthy exposure metrics. ICON+ DEGRADED/UNAVAILABLE never presents stale rank/EO as current.
+POST-ALL-MATCH fixture scout COMPLETE represents every completed fixture exactly once. If fixture evidence is missing, the scout may be PARTIAL/DEGRADED with covered/expected count plus missing scope.
+GW LOCK PACKAGE COMPLETE requires the complete executable package. If a factual prerequisite is genuinely unavailable, render GW LOCK PACKAGE DEGRADED/UNAVAILABLE with exact missing field(s); never fabricate finance or transfer state.
+
+15B. TRANSIENT VISIBLE_CONTENT_PROOF
+Every REPORT_DUE occurrence creates one transient VISIBLE_CONTENT_PROOF for audit. It is evidence only, never authority and never durable user/state storage.
+Minimum content:
+- canonical_authority_path;
+- canonical_content_fingerprint/version;
+- report_slot;
+- report_mode;
+- report_due;
+- observed_at;
+- section_states containing section_id, state, available_count, expected_count, degradation_reason and missing_scope where applicable;
+- hard_failures;
+- section_degradations;
+- warnings;
+- report_can_continue;
+- search_authority where relevant;
+- runtime_provenance.
+
+VISIBLE_CONTENT_PROOF must also bind structural mode coverage:
+- expected_section_ids derived from the current Canonical mode contract;
+- rendered_section_ids;
+- missing_section_ids;
+- unexpected_section_ids;
+- expected_visible_order;
+- rendered_visible_order;
+- visible_order_valid.
+Every structurally required section appears even when its data state is PARTIAL/DEGRADED/UNAVAILABLE. Data unavailability is not structural omission. Missing mandatory sections or wrong visible order are hard structural conformance failures requiring same-run repair/re-render before delivery.
+
+Canonical revision provenance uses:
+canonical_revision.path;
+canonical_revision.branch_or_ref;
+canonical_revision.branch_head_sha;
+canonical_revision.file_blob_sha;
+canonical_revision.content_sha256 optional;
+canonical_revision.content_sha256_computed true/false;
+canonical_revision.canonical_version.
+Never label a Git commit/blob SHA as SHA-256. If content SHA-256 was not actually calculated, set content_sha256=null and content_sha256_computed=false.
+
+runtime_provenance must identify runtime=FPL Master Monitor V12 ChatGPT Automation and explicitly state repository_python_qa_executed=true/false.
+Repository Python PRE_RENDER_QA / POST_RENDER_QA may be claimed executed only when exact occurrence-bound execution evidence exists. Repository code existence, CI success, tests or GitHub availability do not prove Python QA executed for a report occurrence.
+If repository_python_qa_executed=false or execution is not proven, Python QA status must be NOT_PROVEN/NOT_EXECUTED, never PASS.
+If repository_python_qa_executed=true, runtime_provenance must include exact execution evidence bound to the report slot, module/path, execution time, PRE/POST result and evidence fingerprint.
+
+Normal user-facing output does not dump the full VISIBLE_CONTENT_PROOF. It shows compact truthful status such as CONTENT CONTRACT: PASS or CONTENT CONTRACT: DEGRADED with material degraded sections. Detailed proof remains transient audit evidence.
+Every normal due report also includes one compact auditable CONTENT PROOF line binding report slot, mode, Canonical branch-head/blob revision, runtime, Python QA truth state and contract severity. Never claim Python QA PASS without occurrence-bound execution evidence.
+
+16. FAIL-OPERATIONAL
+#431 failure, V6 refresh latency/failure, provider failure, prefetch degradation, one auth failure, predictor incompleteness NEVER equal NOT_DUE.
+If due, continue evidence ladder and render best truthful report.
+Degradation lowers confidence/availability; it must not erase report.
+
+17. LEGACY / AUTHORITY-SOURCE GUARD
+V12 authority is only control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt.
+V12 durable non-authoritative state is only control/fpl_master_v12/FPL_MASTER_STATE_V12.json, superseded by newer explicit user state.
+Old Library Runtime/Spec/ACTIVE_DECISION_CONTEXT files and their clear duplicate/final copies are obsolete for V12 and MUST NOT be read as V12 authority/state. They may be deleted from Library once exact file identity is proven.
+Do not mirror Canonical V12 or State V12 into Library as mutable authority.
+No legacy Library player identity may hydrate V12. Current Official FPL/V6 canonical element_id plus current V12 State/latest explicit user state are the only permitted identity inputs. Historical Library identity values may be retained only as historical evidence outside active V12 hydration.
+V3/V4/V5 are FROZEN and may be inspected only as STATIC HISTORICAL REFERENCE, STATIC DESIGN REFERENCE or STATIC FROZEN SPECIFICATION/FINGERPRINT COMPARISON. Do not import or execute runtime_v3/runtime_v4/runtime_v5, legacy optimizers, migration oracles, regression oracles, benchmarks or performance tests. Migration/equivalence proof uses only frozen static specifications/fingerprints, historical artifacts already produced, V12-native tests and deterministic static comparison. No legacy fallback is permitted.
+
+18. ACCEPTANCE
+First natural occurrence proves implementation only.
+Production confidence requires a normal fresh-V6 due report plus a due report surviving degraded dependency, semantic exact-count QA, no duplicates and preserved same-slot identity.
+Historical failures remain immutable.
+
+
+19. DECISION-ENGINE CONFORMANCE BINDING
+This section binds deterministic code/tests/report QA to the existing V12 methodology. It does not create a second authority.
+
+A. TRANSIENT DECISION_PROOF
+Every serious V12 XI/transfer/package/captain decision must carry a transient DECISION_PROOF with:
+- this canonical authority path + content SHA/version;
+- Official FPL universe denominator + evaluated denominator;
+- Gate0;
+- exact 20/25/30/25 component scores;
+- Bayesian/shrinkage lineage;
+- hierarchical probability state including P(available), P(start), P(bench), P(cameo), P(late cameo), P(DNP);
+- xMins finite-state distribution and uncertainty, not mean only;
+- GW+1/3GW/5GW and 2GW for rental/exit;
+- transfer economics downstream of football score;
+- robustness, expected regret and information value of waiting;
+- covariance/correlation where material;
+- ICON+ overlay only after football-optimal baseline;
+- Monte Carlo execution state/provenance;
+- final WAIT/PREPARE/ACT or football action.
+DECISION_PROOF is evidence only, never authority or durable user state.
+
+B. PROBABILITY / MINUTES SEMANTICS
+Model conditionals hierarchically:
+P(available);
+P(start | available);
+P(bench | available, not start);
+P(cameo | bench);
+P(late cameo | cameo);
+P(no appearance | bench).
+Publish truthful unconditional P(start), P(bench), P(cameo), P(late cameo), P(DNP).
+Bench is an overlapping roster state. Never force START+BENCH+CAMEO+DNP to equal one.
+The mutually-exclusive appearance partition is START / CAMEO / DNP, with late cameo a subset of cameo.
+xMins must arise from start-minutes + regular-cameo + late-cameo + zero-minutes mixture.
+
+C. MONTE CARLO PROVENANCE
+Legacy independent_normal_aggregate_baseline sampling remains diagnostic only, regardless of sample count, and cannot be labelled canonical V12 PASS.
+If execution_state=EXECUTED for canonical V12 MC, require actual_paths>=500000, correlated=true, method, correlation model, seed/common-random-number policy, input snapshot IDs, input freshness, convergence evidence and output fingerprint.
+Canonical MC samples availability/start/cameo/DNP/minutes and relevant scoring-event distributions with shared team/match factors and material player/package/captain covariance.
+NOT_RUN is legal only with explicit reason. PARTIAL is legal only with explicit degradation reason. A truthful optional MC degradation does not suppress a due visible report.
+
+D. SEARCH / ECONOMICS TRUTH
+If lossy pruning occurs, search_authority=PARTIAL and visible language may say FULL UNIVERSE SCANNED, SEARCH PARTIAL AFTER PRUNING, but never FULL-UNIVERSE OPTIMIZED.
+Legacy change_penalty_points is a model heuristic only and is never canonical FT shadow value.
+Canonical FT shadow value = best future utility with FT minus best future utility with that FT consumed, bound to a future-frontier snapshot.
+
+E. LINEUP ROBUSTNESS
+For relevant close XI decisions distinguish START / CAMEO / DNP utility:
+START earns state-conditional player points;
+CAMEO earns cameo points and blocks auto-sub;
+DNP may admit the first legal bench auto-sub.
+Report conditional floor, upper tail, P(outperform), expected regret, lineup optionality, auto-sub preservation and cameo-blocking cost.
+Fixed close thresholds may be UI/candidate-preselection heuristics only; they are not canonical decision authority.
+
+F. RUNTIME TRUTH
+FPL Master Monitor V12 ChatGPT Automation remains the only recurring report scheduler/runtime.
+Repository Python modules provide deterministic contracts/tests/evidence unless actual execution provenance proves they ran for the report occurrence.
+No report may claim Python QA/optimizer/MC execution from repository existence alone.
+No second scheduler, duplicate acquisition or alternate #431 transport is introduced.
+
+G. SEMANTIC QA / FAIL-OPERATIONAL
+Existing PRE_RENDER_QA and POST_RENDER_QA own semantic validation; do not create parallel QA.
+A structurally complete serious decision is not mathematically V12-compliant without the DECISION_PROOF fields above.
+If an optional decision scope is truthfully PARTIAL/DEGRADED, preserve the due visible report and label only that scope degraded.
+
+END FPL MASTER CANONICAL V12

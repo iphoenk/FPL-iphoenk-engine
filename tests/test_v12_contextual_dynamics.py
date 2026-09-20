@@ -13,6 +13,7 @@ from src.engines.v12_contextual_dynamics import (
     probability_weighted_link_modifier,
 )
 from src.engines.v12_player_events import project_player_fixture
+from src.engines.v12_report_orchestration import build_contextual_player_blocks
 
 
 def row(
@@ -622,3 +623,73 @@ def test_contextual_bundle_exposes_trajectory_matchup_linkup_and_bounded_rates()
     assert 0.72 <= context["event_multipliers"]["goal"] <= 1.35
     assert 0.72 <= context["event_multipliers"]["assist"] <= 1.35
     assert context["governance"]["methodology_weights_20_25_30_25_unchanged"] is True
+
+
+def test_nested_report_blocks_preserve_deep_top_level_contract():
+    projection = {
+        "contextual_dynamics": {
+            "fixture_contexts": [
+                {
+                    "fixture": 700,
+                    "trajectory_classification": "IMPROVING",
+                    "latest_match_evidence": {"gw": 5, "xg": 0.7},
+                    "matchup": {
+                        "historical_meetings": 2,
+                        "result_process": {
+                            "result_evidence": {"goals": 0},
+                            "process_evidence": {"xg": 1.6},
+                        },
+                        "tactical_similarity": 0.75,
+                        "sample_size": 2,
+                        "sample_shrinkage": 0.4,
+                        "classification": "NEUTRAL",
+                    },
+                    "linkup_network": {
+                        "relationships": [
+                            {
+                                "teammate_player_id": 701,
+                                "confidence": 0.25,
+                                "dependency_strength": 0.30,
+                            },
+                            {
+                                "teammate_player_id": 702,
+                                "confidence": 0.0,
+                                "dependency_strength": 0.80,
+                            },
+                        ]
+                    },
+                }
+            ]
+        }
+    }
+    out = build_contextual_player_blocks(projection, fixture=700)
+    assert out["state"] == "COMPLETE"
+    assert set(out["blocks"]) == {
+        "OPPONENT-SPECIFIC MATCHUP",
+        "LINK-UP / COMBINATION NETWORK",
+    }
+    network = out["blocks"]["LINK-UP / COMBINATION NETWORK"]
+    assert network["relationship_count"] == 1
+    assert network["relationships"][0]["teammate_player_id"] == 701
+
+
+def test_canonical_methodology_authority_contains_contextual_governance():
+    from pathlib import Path
+
+    canonical = (
+        Path(__file__).resolve().parents[1]
+        / "control"
+        / "fpl_master_v12"
+        / "FPL_MASTER_CANONICAL_V12.txt"
+    ).read_text(encoding="utf-8")
+    required = (
+        "GW1-TO-CURRENT TRAJECTORY / OPPONENT MATCHUP / LINK-UP DEPENDENCY",
+        "RESULT EVIDENCE != PROCESS EVIDENCE",
+        "P(event_B) = P(A starts)*P(event_B|A starts)",
+        "SUPPORTIVE, NEUTRAL, ADVERSE or",
+        "Haaland-v-Sunderland",
+        "Brobbey/Le Fee",
+        "20/25/30/25 stays exactly unchanged",
+    )
+    for token in required:
+        assert token in canonical

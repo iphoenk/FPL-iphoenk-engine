@@ -37,7 +37,7 @@ LEGACY_LIBRARY_BASENAMES = (
 
 def _git_blob_sha(path: Path) -> str:
     data = path.read_bytes()
-    header = f"blob {len(data)}\\0".encode("utf-8")
+    header = b"blob " + str(len(data)).encode("ascii") + bytes((0,))
     return hashlib.sha1(header + data).hexdigest()
 
 

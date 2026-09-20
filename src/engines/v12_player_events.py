@@ -1594,7 +1594,11 @@ def project_player_fixture(
             "goal_assist_dependence_parameter": predictive_surface["dependence"]["dependence_parameter"],
             "goal_assist_dependence_calibration_status": predictive_surface["dependence"]["calibration_status"],
             "goal_assist_silent_independence": False,
-            "cross_player_correlation": "NOT_MODELLED_YET",
+            "cross_player_correlation": (
+                "CONTEXTUAL_LINKUP_DEPENDENCY_BOUND"
+                if contextual
+                else "NOT_MODELLED_YET"
+            ),
             "cross_fixture_correlation": "NOT_MODELLED_YET",
             "parameter_uncertainty_propagation": "PARTIAL",
             "point_distribution_completeness": point_distribution["distribution_completeness"],

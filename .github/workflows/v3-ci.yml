@@ -97,6 +97,9 @@ jobs:
         run: python -m src.runtime_v3.fast_lane_contract_validate
       - name: Full unit and regression suite
         run: python -m pytest -q
+      - name: Execute canonical V12 MC 500k acceptance
+        if: github.event_name == 'pull_request'
+        run: python -m src.engines.v12_monte_carlo_acceptance
       - name: Hydrate operational LKG for release acceptance
         if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         shell: bash

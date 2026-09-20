@@ -51,9 +51,10 @@ def load_config() -> dict[str, Any]:
 def data_capability_audit() -> dict[str, str]:
     """Canonical availability proven by existing V6/owner code paths."""
     return {
-        "gw_match_id": "AVAILABLE",
-        "opponent": "AVAILABLE",
-        "home_away": "AVAILABLE",
+        "match_id": "AVAILABLE",
+        "gw": "PARTIAL",
+        "opponent": "AVAILABLE_DERIVED_WHEN_TWO_TEAMS_IDENTIFIABLE",
+        "home_away": "PARTIAL",
         "minutes": "AVAILABLE",
         "starter_substitute": "AVAILABLE",
         "substitution_timing": "PARTIAL",
@@ -86,11 +87,57 @@ def data_capability_audit() -> dict[str, str]:
 
 
 def _gw(row: Mapping[str, Any]) -> int:
-    return _i(row.get("gw"), _i(row.get("event"), 0))
+    return _i(
+        row.get("gw"),
+        _i(
+            row.get("event"),
+            _i(row.get("gameweek"), _i(row.get("round"), 0)),
+        ),
+    )
 
 
 def _match_id(row: Mapping[str, Any]) -> str:
     return str(row.get("match_id") or row.get("fixture") or row.get("id") or "")
+
+
+def enrich_match_rows(
+    match_rows: Sequence[Mapping[str, Any]],
+    *,
+    player_team: Mapping[int, int] | None = None,
+) -> list[dict[str, Any]]:
+    """Derive only identities that are provable from the existing row set."""
+    team_map = {int(k): int(v) for k, v in dict(player_team or {}).items()}
+    prepared: list[dict[str, Any]] = []
+    teams_by_match: dict[str, set[int]] = {}
+    for raw in match_rows:
+        row = dict(raw)
+        player_id = _i(row.get("player_id"), _i(row.get("element"), -1))
+        team_id = _i(row.get("team_id"), team_map.get(player_id, -1))
+        if team_id > 0:
+            row["team_id"] = team_id
+        gw = _gw(row)
+        if gw > 0:
+            row["gw"] = gw
+        match_id = _match_id(row)
+        if match_id and team_id > 0:
+            teams_by_match.setdefault(match_id, set()).add(team_id)
+        prepared.append(row)
+
+    for row in prepared:
+        match_id = _match_id(row)
+        team_id = _i(row.get("team_id"), -1)
+        if (
+            row.get("opponent_team_id") is None
+            and match_id
+            and team_id > 0
+        ):
+            candidates = teams_by_match.get(match_id) or set()
+            others = sorted(candidates - {team_id})
+            if len(others) == 1:
+                row["opponent_team_id"] = others[0]
+        if row.get("home") is None and row.get("is_home") is not None:
+            row["home"] = bool(row.get("is_home"))
+    return prepared
 
 
 def _minutes(row: Mapping[str, Any]) -> float:

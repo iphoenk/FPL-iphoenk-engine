@@ -1042,6 +1042,141 @@ def build_contextual_player_blocks(
     }
 
 
+def build_post_match_universe_movers(
+    post_match_scan: Mapping[str, Any] | None,
+    *,
+    limit_per_category: int = 5,
+) -> dict[str, Any]:
+    """Compact POST-MATCH Universe Movers block from the V12 broad scan.
+
+    The block is descriptive evidence only. It does not create a transfer or
+    mutate WAIT/PREPARE/ACT.
+    """
+    scan = dict(post_match_scan or {})
+    players = [
+        dict(row)
+        for row in scan.get("material_players") or []
+        if isinstance(row, Mapping)
+    ]
+    limit = max(1, int(limit_per_category))
+
+    category_rules = (
+        (
+            "BREAKOUT / CONFIRMATION",
+            {"BREAKOUT_PROCESS", "OUTPUT_CONFIRMING_PROCESS"},
+        ),
+        (
+            "PROCESS UP — RETURNS NOT YET ARRIVED",
+            {"UNDERLYING_IMPROVING_NO_RETURN"},
+        ),
+        (
+            "ROLE / MINUTES RISERS",
+            {"ROLE_BREAKOUT", "MINUTES_BREAKOUT", "SET_PIECE_GAIN"},
+        ),
+        (
+            "LINK-UP RISERS",
+            {"LINKUP_BREAKOUT"},
+        ),
+        (
+            "REGRESSION / SELL-RISK",
+            {
+                "REGRESSION_RISK",
+                "ROLE_DECLINE",
+                "MINUTES_DECLINE",
+                "LINKUP_BROKEN",
+            },
+        ),
+        (
+            "NOISE / DO NOT CHASE",
+            {"OUTPUT_WITHOUT_PROCESS"},
+        ),
+    )
+
+    def compact(row: Mapping[str, Any]) -> dict[str, Any]:
+        latest = dict(row.get("latest_match") or {})
+        comparison = dict(row.get("universe_comparison") or {})
+        return {
+            "element_id": row.get("element_id"),
+            "name": row.get("name"),
+            "position": row.get("position"),
+            "owned": bool(row.get("owned")),
+            "primary_classification": row.get("primary_classification"),
+            "classifications": list(row.get("classifications") or []),
+            "materiality_score": row.get("materiality_score"),
+            "latest_fpl_points": latest.get("fpl_points"),
+            "latest_xgi": latest.get("xgi"),
+            "xmins_delta": (row.get("xmins") or {}).get("delta"),
+            "p_start_delta": (row.get("p_start") or {}).get("delta"),
+            "universe_comparison_state": comparison.get("state"),
+            "published_position_pool_rank": comparison.get(
+                "published_position_pool_rank"
+            ),
+            "beats_hold_in_any_published_package": comparison.get(
+                "beats_hold_in_any_published_package"
+            ),
+            "automatic_transfer_recommendation": False,
+        }
+
+    categories: dict[str, list[dict[str, Any]]] = {}
+    for label, accepted in category_rules:
+        rows = [
+            row
+            for row in players
+            if accepted.intersection(set(row.get("classifications") or []))
+        ]
+        rows.sort(
+            key=lambda row: (
+                float(row.get("materiality_score") or 0.0),
+                bool(
+                    (row.get("universe_comparison") or {}).get(
+                        "beats_hold_in_any_published_package"
+                    )
+                ),
+                -int(
+                    (row.get("universe_comparison") or {}).get(
+                        "published_position_pool_rank"
+                    )
+                    or 999
+                ),
+            ),
+            reverse=True,
+        )
+        categories[label] = [compact(row) for row in rows[:limit]]
+
+    if not scan:
+        state = "UNAVAILABLE"
+        reason = "post-match full-universe scan unavailable"
+    elif scan.get("scanned_count", 0) <= 0:
+        state = "DEGRADED"
+        reason = "eligible universe scan returned zero supportable players"
+    else:
+        state = "COMPLETE"
+        reason = None
+
+    return {
+        "state": state,
+        "degradation_reason": reason,
+        "title": "UNIVERSE MOVERS",
+        "scope": scan.get("scope"),
+        "scanned_count": scan.get("scanned_count"),
+        "eligible_count": scan.get("eligible_count"),
+        "material_count": scan.get("material_count"),
+        "categories": categories,
+        "deep_detail_element_ids": list(
+            scan.get("deep_analysis_element_ids") or []
+        ),
+        "full_universe_comparison": scan.get("universe_comparison"),
+        "governance": {
+            "scorer_assister_only_scouting_prohibited": True,
+            "non_scorers_can_surface": True,
+            "one_match_haul_never_creates_act": True,
+            "deep_detail_materiality_gated": True,
+            "full_universe_comparison_required_before_transfer": True,
+            "operational_action_enum_unchanged": "WAIT_PREPARE_ACT",
+        },
+    }
+
+
 def materialize_all15(
     *,
     owned15: Sequence[Mapping[str, Any]],

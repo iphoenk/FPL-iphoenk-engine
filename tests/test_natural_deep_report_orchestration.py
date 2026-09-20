@@ -435,8 +435,12 @@ def test_real_price_artifact_data_players_produces_exact20_with_visible_directio
     artifact = _real_price_predictor()
     rise = build_price20(predictor_artifact=artifact, direction="RISE")
     fall = build_price20(predictor_artifact=artifact, direction="FALL")
-    assert rise["state"] == "DEGRADED"
-    assert fall["state"] == "DEGRADED"
+    assert rise["state"] == "COMPLETE"
+    assert fall["state"] == "COMPLETE"
+    assert rise["degradation_reason"] is None
+    assert fall["degradation_reason"] is None
+    assert rise["no_crossing_count"] > 0
+    assert fall["no_crossing_count"] > 0
     assert rise["available_count"] == 20
     assert fall["available_count"] == 20
     assert rise["artifact_adapter"] == "V6_DATA_PLAYERS_OFFSET0"
@@ -450,6 +454,15 @@ def test_real_price_artifact_data_players_produces_exact20_with_visible_directio
     assert all("rank" not in row for row in rise["rows"] + fall["rows"])
     assert all("next_official_price_cycle_uk" in row for row in rise["rows"] + fall["rows"])
     assert all("next_official_price_cycle_wib" in row for row in rise["rows"] + fall["rows"])
+
+
+def test_real_price_artifact_with_failed_source_health_still_degrades_truthfully():
+    artifact = _real_price_predictor()
+    artifact["health"] = "FAIL"
+    rise = build_price20(predictor_artifact=artifact, direction="RISE")
+    assert rise["state"] == "DEGRADED"
+    assert rise["available_count"] == 20
+    assert "health=FAIL" in rise["degradation_reason"]
 
 
 def test_real_price_artifact_offset_zero_is_required_not_substituted():

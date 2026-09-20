@@ -9,6 +9,7 @@ from functools import lru_cache
 from statistics import NormalDist
 from typing import Any
 
+from src.engines.canonical_decision_methodology import validate_monte_carlo_provenance
 from src.engines.p0_decision_quality import resolve_locked_chip_context
 from src.engines.v12_lineup_optimizer import (
     compare_legacy_decision,
@@ -24,6 +25,7 @@ from src.engines.p1_decision_governance import (
     uncertainty_fields,
     vice_rank,
 )
+from src.engines.v12_monte_carlo import mc_invocation_policy
 from src.engines.v12_package_search import legal_squad as v12_package_legal_squad
 from src.rules import LINEUP_RULES, RULESET_ID, SQUAD_RULES
 from src.utils import CONFIG, DATA, ROOT, atomic_json, read_json
@@ -738,6 +740,24 @@ def build_package_decision(
                 "operational_action": "WAIT",
                 "reason": "AUTHORITATIVE_LOCK_FREEZE",
             }
+        mc_policy = mc_invocation_policy(
+            package_optimizer,
+            route_id=native_selected_id,
+        )
+        raw_mc = package_optimizer.get("monte_carlo")
+        if isinstance(raw_mc, dict):
+            mc_payload = deepcopy(raw_mc)
+        else:
+            mc_payload = {
+                "execution_state": "NOT_RUN",
+                "reason": "NO_OCCURRENCE_BOUND_V12_MC_ARTIFACT",
+            }
+        mc_validation = validate_monte_carlo_provenance(
+            mc_payload,
+            required_for_close_decision=(
+                mc_policy.get("status") == "MC_REQUIRED"
+            ),
+        )
         return {
             "generated_at": _now(),
             "model": "package_governance_v1",
@@ -758,6 +778,9 @@ def build_package_decision(
             "package_frontier": deepcopy(
                 package_optimizer.get("package_frontier")
             ),
+            "monte_carlo": mc_payload,
+            "monte_carlo_validation": mc_validation,
+            "monte_carlo_invocation_policy": mc_policy,
             "governance": {
                 "production_package_decision_owner": "V12_PACKAGE_UTILITY",
                 "p1_2a_search_owner": "V12_PACKAGE_SEARCH",
@@ -778,6 +801,9 @@ def build_package_decision(
                 "scheduler_changed": False,
                 "report_cadence_changed": False,
                 "authority_added": False,
+                "monte_carlo_owner": "V12_MONTE_CARLO",
+                "mc_code_existence_is_not_execution": True,
+                "mc_does_not_change_p1_2_action_logic": True,
             },
         }
 
@@ -815,6 +841,20 @@ def build_package_decision(
             "football_action": "HOLD",
             "operational_action": "PREPARE",
             "reason": "NATIVE_P1_2B_UTILITY_ARTIFACT_REQUIRED_FOR_CHANGE_ACTION",
+        },
+        "monte_carlo": {
+            "execution_state": "NOT_RUN",
+            "reason": "LEGACY_PACKAGE_ARTIFACT_IS_NONCANONICAL_MC_SOURCE",
+        },
+        "monte_carlo_validation": {
+            "status": "PARTIAL",
+            "execution_state": "NOT_RUN",
+            "canonical_pass": False,
+            "truthful_non_execution": True,
+        },
+        "monte_carlo_invocation_policy": {
+            "status": "MC_NOT_REQUIRED",
+            "reason": "LEGACY_PACKAGE_ARTIFACT_CANNOT_AUTHORIZE_V12_DECISION",
         },
         "governance": {
             "production_package_decision_owner": "V12_PACKAGE_UTILITY",

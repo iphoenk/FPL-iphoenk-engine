@@ -796,10 +796,62 @@ def validate_pairwise_battles(
             key: _pairwise_semantic_value(battle, key, unavailable_reasons)
             for key in PAIRWISE_SEMANTIC_FIELDS
         }
+        if normalized["football_score_delta"] is not None:
+            normalized["football_score_delta"] = _finite_number(
+                normalized["football_score_delta"],
+                label="pairwise.football_score_delta",
+            )
+        component_comparison = normalized["component_comparison"]
+        if component_comparison is not None:
+            if not isinstance(component_comparison, Mapping):
+                raise MethodologyContractError(
+                    "pairwise component_comparison must be a mapping"
+                )
+            missing_components = [
+                key for key in FOOTBALL_COMPONENTS
+                if key not in component_comparison
+            ]
+            if missing_components:
+                raise MethodologyContractError(
+                    "pairwise component_comparison missing canonical components: "
+                    + ",".join(missing_components)
+                )
+        for comparison_key in (
+            "p_available_comparison",
+            "p_start_comparison",
+            "xmins_comparison",
+            "p_return_comparison",
+            "p_blank_comparison",
+            "material_tail_comparison",
+            "expected_points_comparison",
+            "price_economic_delta",
+            "robustness_delta",
+        ):
+            value = normalized[comparison_key]
+            if value is not None and not isinstance(value, Mapping):
+                raise MethodologyContractError(
+                    f"pairwise {comparison_key} must be a comparison mapping"
+                )
+        for horizon_key in ("gw_plus_1", "three_gw", "five_gw"):
+            value = normalized[horizon_key]
+            if value is not None and not isinstance(value, Mapping):
+                raise MethodologyContractError(
+                    f"pairwise {horizon_key} must be a horizon comparison mapping"
+                )
         if normalized["tactical_evidence_class"] is not None:
             normalized["tactical_evidence_class"] = _validate_pairwise_tactical_class(
                 normalized["tactical_evidence_class"]
             )
+        leverage = normalized["mini_league_leverage"]
+        if leverage is not None:
+            if not isinstance(leverage, Mapping):
+                raise MethodologyContractError(
+                    "pairwise mini_league_leverage must be a mapping"
+                )
+            if leverage.get("applied_after_football_baseline") is not True:
+                raise MethodologyContractError(
+                    "pairwise mini-league leverage must be downstream of football baseline"
+                )
         action = str(battle.get("operational_action") or "").upper()
         if action not in ACTION_STATES:
             raise MethodologyContractError(

@@ -364,6 +364,9 @@ def build(
                     "midfield_structure": matchup.get(
                         "opponent_midfield_structure"
                     ),
+                    "team_strength_regime": matchup.get(
+                        "opponent_team_strength_regime"
+                    ),
                     "player_role": tactical_role.get("profile"),
                 }
                 contextual_by_fixture[fixture_key(matchup)] = (

@@ -3,8 +3,10 @@ from __future__ import annotations
 import pytest
 
 from src.engines.v12_contextual_dynamics import (
+    apply_post_match_universe_comparison,
     build_contextual_dynamics,
     build_player_trajectory,
+    build_post_match_universe_scan,
     construct_directional_chains,
     data_capability_audit,
     enrich_match_rows,
@@ -14,7 +16,10 @@ from src.engines.v12_contextual_dynamics import (
     probability_weighted_link_modifier,
 )
 from src.engines.v12_player_events import project_player_fixture
-from src.engines.v12_report_orchestration import build_contextual_player_blocks
+from src.engines.v12_report_orchestration import (
+    build_contextual_player_blocks,
+    build_post_match_universe_movers,
+)
 
 
 def row(
@@ -34,6 +39,10 @@ def row(
     formation: str | None = "4-3-3",
     team: int = 1,
     home: bool = True,
+    fpl_points: int | None = None,
+    shots: int | None = None,
+    box_touches: int | None = None,
+    set_pieces: int = 0,
 ) -> dict:
     return {
         "player_id": player,
@@ -49,13 +58,22 @@ def row(
         "formation": formation,
         "xg": xg,
         "xa": xa,
-        "total_shots": 4 if xg >= 0.5 else 1,
+        "total_shots": shots if shots is not None else (4 if xg >= 0.5 else 1),
         "shots_on_target": 2 if xg >= 0.5 else 0,
-        "touches_opposition_box": 8 if xg >= 0.5 else 2,
+        "touches_opposition_box": (
+            box_touches
+            if box_touches is not None
+            else (8 if xg >= 0.5 else 2)
+        ),
         "chances_created": 2 if xa >= 0.2 else 0,
         "goals": goals,
         "assists": assists,
-        "fpl_points": 8 if goals or assists else 2,
+        "corners": set_pieces,
+        "fpl_points": (
+            fpl_points
+            if fpl_points is not None
+            else (8 if goals or assists else 2)
+        ),
     }
 
 
@@ -1501,3 +1519,390 @@ def test_AF_residual_chain_still_propagates_through_p13_distribution():
     )
     assert with_chain["mean"] > pairwise_only["mean"]
     assert with_chain["std"] != pairwise_only["std"]
+
+
+
+def post_match_projection(
+    element: int,
+    *,
+    name: str = "Player",
+    position: str = "FWD",
+    xmins: float = 80.0,
+    p_start: float = 0.9,
+    link_source: int | None = None,
+    dependency_goal: float = 1.0,
+    dependency_assist: float = 1.0,
+) -> dict:
+    relationships = []
+    if link_source is not None:
+        relationships = [
+            {
+                "source_player_id": link_source,
+                "teammate_player_id": link_source,
+                "target_player_id": element,
+                "confidence": 0.6,
+                "dependency_strength": 0.5,
+            }
+        ]
+    return {
+        "element": element,
+        "name": name,
+        "team_id": 1,
+        "position": position,
+        "now_cost": 60,
+        "status": "a",
+        "xmins": {
+            "expected_minutes": xmins,
+            "start_probability": p_start,
+        },
+        "rates": {"xg90": 0.4, "xa90": 0.15},
+        "system_context": {"dominant_shape": "4-3-3"},
+        "contextual_dynamics": {
+            "fixture_contexts": [
+                {
+                    "fixture": 999,
+                    "linkup_network": {
+                        "relationships": relationships,
+                    },
+                    "event_multipliers": {
+                        "final_dependency_goal": dependency_goal,
+                        "final_dependency_assist": dependency_assist,
+                    },
+                }
+            ]
+        },
+    }
+
+
+def _scan_single(
+    rows: list[dict],
+    *,
+    current: dict,
+    previous: dict | None = None,
+    owned: bool = False,
+) -> dict:
+    scan = build_post_match_universe_scan(
+        current_projection_players=[current],
+        previous_projection_players=[previous] if previous else [],
+        player_match_rows=rows,
+        current_gw=max(row["gw"] for row in rows),
+        owned_element_ids=[current["element"]] if owned else [],
+    )
+    assert scan["scanned_count"] == 1
+    return scan["players"][0]
+
+
+def test_post_match_A_hat_trick_after_poor_process_is_output_spike_not_act():
+    player = 1001
+    rows = [
+        row(player=player, gw=1, match="pa1", opponent=2, xg=0.05),
+        row(player=player, gw=2, match="pa2", opponent=3, xg=0.05),
+        row(player=player, gw=3, match="pa3", opponent=4, xg=0.08),
+        row(player=player, gw=4, match="pa4", opponent=5, xg=0.05),
+        row(
+            player=player,
+            gw=5,
+            match="pa5",
+            opponent=6,
+            xg=0.10,
+            goals=3,
+            fpl_points=17,
+        ),
+    ]
+    result = _scan_single(rows, current=post_match_projection(player))
+    assert "OUTPUT_WITHOUT_PROCESS" in result["classifications"]
+    assert "REGRESSION_RISK" in result["classifications"]
+    assert "OUTPUT_CONFIRMING_PROCESS" not in result["classifications"]
+    assert result["operational_action_created"] is False
+
+
+def test_post_match_B_hat_trick_after_improving_process_is_confirmation():
+    player = 1002
+    rows = [
+        row(player=player, gw=1, match="pb1", opponent=2, xg=0.10),
+        row(player=player, gw=2, match="pb2", opponent=3, xg=0.20),
+        row(player=player, gw=3, match="pb3", opponent=4, xg=0.35),
+        row(player=player, gw=4, match="pb4", opponent=5, xg=0.50),
+        row(
+            player=player,
+            gw=5,
+            match="pb5",
+            opponent=6,
+            xg=0.70,
+            goals=3,
+            fpl_points=18,
+        ),
+    ]
+    result = _scan_single(rows, current=post_match_projection(player))
+    assert "BREAKOUT_PROCESS" in result["classifications"]
+    assert "OUTPUT_CONFIRMING_PROCESS" in result["classifications"]
+    assert "OUTPUT_WITHOUT_PROCESS" not in result["classifications"]
+
+
+def test_post_match_C_three_blanks_with_rising_underlying_surface_early():
+    player = 1003
+    rows = [
+        row(
+            player=player,
+            gw=1,
+            match="pc1",
+            opponent=2,
+            xg=0.08,
+            box_touches=2,
+        ),
+        row(
+            player=player,
+            gw=2,
+            match="pc2",
+            opponent=3,
+            xg=0.10,
+            box_touches=2,
+        ),
+        row(
+            player=player,
+            gw=3,
+            match="pc3",
+            opponent=4,
+            xg=0.30,
+            box_touches=5,
+        ),
+        row(
+            player=player,
+            gw=4,
+            match="pc4",
+            opponent=5,
+            xg=0.50,
+            box_touches=8,
+        ),
+        row(
+            player=player,
+            gw=5,
+            match="pc5",
+            opponent=6,
+            xg=0.70,
+            box_touches=10,
+        ),
+    ]
+    current = post_match_projection(player, xmins=82, p_start=0.92)
+    previous = post_match_projection(player, xmins=55, p_start=0.68)
+    result = _scan_single(rows, current=current, previous=previous)
+    assert "MINUTES_BREAKOUT" in result["classifications"]
+    assert "UNDERLYING_IMPROVING_NO_RETURN" in result["classifications"]
+    assert result["deep_analysis_required"] is True
+
+
+def test_post_match_D_low_xg_goal_after_declining_role_is_not_breakout():
+    player = 1004
+    rows = [
+        row(
+            player=player,
+            gw=1,
+            match="pd1",
+            opponent=2,
+            xg=0.55,
+            role="STRIKER",
+        ),
+        row(
+            player=player,
+            gw=2,
+            match="pd2",
+            opponent=3,
+            xg=0.45,
+            role="STRIKER",
+        ),
+        row(
+            player=player,
+            gw=3,
+            match="pd3",
+            opponent=4,
+            xg=0.20,
+            role="WINGER",
+        ),
+        row(
+            player=player,
+            gw=4,
+            match="pd4",
+            opponent=5,
+            xg=0.10,
+            role="WINGER",
+        ),
+        row(
+            player=player,
+            gw=5,
+            match="pd5",
+            opponent=6,
+            xg=0.05,
+            goals=1,
+            role="WINGER",
+            fpl_points=8,
+        ),
+    ]
+    current = post_match_projection(player, xmins=55, p_start=0.58)
+    previous = post_match_projection(player, xmins=78, p_start=0.84)
+    result = _scan_single(rows, current=current, previous=previous)
+    assert "OUTPUT_WITHOUT_PROCESS" in result["classifications"]
+    assert "REGRESSION_RISK" in result["classifications"]
+    assert "MINUTES_DECLINE" in result["classifications"]
+    assert "BREAKOUT_PROCESS" not in result["classifications"]
+
+
+def test_post_match_E_xmins_45_to_82_is_minutes_breakout():
+    player = 1005
+    rows = [
+        row(player=player, gw=1, match="pe1", opponent=2, xg=0.2),
+        row(player=player, gw=2, match="pe2", opponent=3, xg=0.2),
+        row(player=player, gw=3, match="pe3", opponent=4, xg=0.2),
+    ]
+    current = post_match_projection(player, xmins=82, p_start=0.90)
+    previous = post_match_projection(player, xmins=45, p_start=0.52)
+    result = _scan_single(rows, current=current, previous=previous)
+    assert "MINUTES_BREAKOUT" in result["classifications"]
+    assert result["xmins"]["delta"] == pytest.approx(37.0)
+
+
+def test_post_match_F_creator_return_restores_striker_linkup():
+    player = 1006
+    rows = [
+        row(player=player, gw=1, match="pf1", opponent=2, xg=0.3),
+        row(player=player, gw=2, match="pf2", opponent=3, xg=0.3),
+        row(player=player, gw=3, match="pf3", opponent=4, xg=0.3),
+    ]
+    current = post_match_projection(
+        player,
+        link_source=1100,
+        dependency_goal=1.10,
+        dependency_assist=1.05,
+    )
+    previous = post_match_projection(
+        player,
+        dependency_goal=1.0,
+        dependency_assist=1.0,
+    )
+    result = _scan_single(rows, current=current, previous=previous)
+    assert "LINKUP_BREAKOUT" in result["classifications"]
+    assert result["linkup_change"]["new_links"] == ["1100->1006"]
+
+
+def test_post_match_G_creator_absence_breaks_link_and_flags_target():
+    player = 1007
+    rows = [
+        row(player=player, gw=1, match="pg1", opponent=2, xg=0.3),
+        row(player=player, gw=2, match="pg2", opponent=3, xg=0.3),
+        row(player=player, gw=3, match="pg3", opponent=4, xg=0.3),
+    ]
+    current = post_match_projection(
+        player,
+        dependency_goal=0.93,
+        dependency_assist=0.96,
+    )
+    previous = post_match_projection(
+        player,
+        link_source=1101,
+        dependency_goal=1.10,
+        dependency_assist=1.05,
+    )
+    result = _scan_single(rows, current=current, previous=previous)
+    assert "LINKUP_BROKEN" in result["classifications"]
+    assert result["linkup_change"]["lost_links"] == ["1101->1007"]
+
+
+def test_post_match_H_individual_breakout_can_lose_full_universe_comparison():
+    player = 1008
+    rows = [
+        row(player=player, gw=1, match="ph1", opponent=2, xg=0.1),
+        row(player=player, gw=2, match="ph2", opponent=3, xg=0.2),
+        row(player=player, gw=3, match="ph3", opponent=4, xg=0.4),
+        row(player=player, gw=4, match="ph4", opponent=5, xg=0.7),
+    ]
+    scan = build_post_match_universe_scan(
+        current_projection_players=[post_match_projection(player)],
+        previous_projection_players=[],
+        player_match_rows=rows,
+        current_gw=4,
+    )
+    enriched = apply_post_match_universe_comparison(
+        scan,
+        package_optimizer={
+            "candidate_pool": {
+                "FWD": [
+                    {
+                        "element": 2001,
+                        "name": "Better FWD",
+                        "now_cost": 55,
+                        "candidate_score": 25.0,
+                    }
+                ]
+            },
+            "candidate_pool_is_preview_only": True,
+            "packages": [
+                {
+                    "id": "HOLD",
+                    "ins": [],
+                    "outs": [],
+                    "score": {"robust_score": 100.0},
+                }
+            ],
+            "hold": {"score": {"robust_score": 100.0}},
+            "search_diagnostics": {
+                "search_authority": "FULL",
+                "candidate_origin": "COMPLETE_ELIGIBLE_OFFICIAL_FPL_UNIVERSE",
+                "official_projection_universe_count": 667,
+                "eligible_universe_count": 600,
+            },
+            "governance": {
+                "official_fpl_full_universe_scanned_before_pruning": True
+            },
+        },
+    )
+    material = enriched["material_players"][0]
+    comparison = material["universe_comparison"]
+    assert comparison["state"] == "OUTSIDE_PUBLISHED_POSITION_POOL"
+    assert comparison["automatic_transfer_recommendation"] is False
+    assert comparison["beats_hold_in_any_published_package"] is False
+
+
+def test_post_match_I_non_scorer_appears_in_universe_movers():
+    player = 1009
+    rows = [
+        row(
+            player=player,
+            gw=1,
+            match="pi1",
+            opponent=2,
+            xg=0.10,
+            box_touches=2,
+        ),
+        row(
+            player=player,
+            gw=2,
+            match="pi2",
+            opponent=3,
+            xg=0.15,
+            box_touches=3,
+        ),
+        row(
+            player=player,
+            gw=3,
+            match="pi3",
+            opponent=4,
+            xg=0.80,
+            box_touches=12,
+            fpl_points=2,
+        ),
+    ]
+    current = post_match_projection(player, xmins=82, p_start=0.93)
+    previous = post_match_projection(player, xmins=58, p_start=0.66)
+    scan = build_post_match_universe_scan(
+        current_projection_players=[current],
+        previous_projection_players=[previous],
+        player_match_rows=rows,
+        current_gw=3,
+    )
+    block = build_post_match_universe_movers(scan)
+    process_rows = block["categories"][
+        "PROCESS UP — RETURNS NOT YET ARRIVED"
+    ]
+    assert any(row["element_id"] == player for row in process_rows)
+    found = next(row for row in process_rows if row["element_id"] == player)
+    assert found["latest_fpl_points"] == pytest.approx(2.0)
+    assert found["latest_xgi"] == pytest.approx(0.8)

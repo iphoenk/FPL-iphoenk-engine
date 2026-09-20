@@ -517,7 +517,7 @@ def _monotonic_process_improving(
     increases = sum(
         1 for left, right in zip(values, values[1:]) if right > left + 1e-9
     )
-    return increases >= max(2, len(values) - 2) and values[-1] > values[0]
+    return increases == len(values) - 1 and values[-1] > values[0]
 
 
 def build_post_match_universe_scan(

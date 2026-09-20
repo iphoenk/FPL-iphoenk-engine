@@ -386,3 +386,106 @@ def test_optional_provider_failure_does_not_force_whole_report_collapse():
     by_id = {row["section_id"]: row for row in report["sections"]}
     assert by_id["S11"]["state"] == "COMPLETE"
     assert by_id["S15B"]["state"] == "DEGRADED"
+
+
+def _real_price_predictor():
+    players = []
+    for index in range(30):
+        projected = round(-75.0 + index * 5.0, 2)
+        players.append(
+            {
+                "id": 900 + index,
+                "web_name": f"Real-{index}",
+                "team": (index % 20) + 1,
+                "element_type": (index % 4) + 1,
+                "now_cost": 45 + index,
+                "selected_by_percent": str(round(1.0 + index / 10, 1)),
+                "transfers_in_event": 1000 + index,
+                "transfers_out_event": 500 + index,
+                "price_change_percent": round(projected / 2.0, 2),
+                "price_change_hourly_rate": round(projected / 24.0, 4),
+                "price_change_projections": [
+                    {"offset": 0, "projected_percent": projected, "likelihood": "MEDIUM"},
+                    {"offset": 1, "projected_percent": projected + 10.0, "likelihood": "LOW"},
+                ],
+                "price_change_locked_until": None,
+                "price_change_calibrating": False,
+            }
+        )
+    return {"health": "GREEN", "data": {"players": players}}
+
+
+def test_real_price_artifact_data_players_produces_exact20_without_direction_rank():
+    artifact = _real_price_predictor()
+    rise = build_price20(predictor_artifact=artifact, direction="RISE")
+    fall = build_price20(predictor_artifact=artifact, direction="FALL")
+    assert rise["state"] == "COMPLETE"
+    assert fall["state"] == "COMPLETE"
+    assert rise["available_count"] == 20
+    assert fall["available_count"] == 20
+    assert rise["artifact_adapter"] == "V6_DATA_PLAYERS_OFFSET0"
+    assert fall["artifact_adapter"] == "V6_DATA_PLAYERS_OFFSET0"
+    assert rise["sort_contract"] == "projected_percent DESC, id ASC"
+    assert fall["sort_contract"] == "projected_percent ASC, id ASC"
+    assert all(row["projection_offset"] == 0 for row in rise["rows"] + fall["rows"])
+    assert all(row["price_fact"] == "FACT" for row in rise["rows"] + fall["rows"])
+    assert all(row["predictor_classification"] == "MODEL" for row in rise["rows"] + fall["rows"])
+    assert all("direction" not in row and "rank" not in row for row in rise["rows"] + fall["rows"])
+
+
+def test_real_price_artifact_offset_zero_is_required_not_substituted():
+    artifact = _real_price_predictor()
+    for row in artifact["data"]["players"][:15]:
+        row["price_change_projections"] = [
+            {"offset": 1, "projected_percent": 99.0, "likelihood": "HIGH"}
+        ]
+    rise = build_price20(predictor_artifact=artifact, direction="RISE")
+    assert rise["state"] == "DEGRADED"
+    assert rise["available_count"] == 15
+    assert rise["usable_eligible_rows"] == 15
+    assert "offset-0" in rise["degradation_reason"]
+
+
+def test_real_price_sort_tie_uses_lower_element_id_for_rise_and_fall():
+    artifact = _real_price_predictor()
+    rows = artifact["data"]["players"]
+    # Make all rows neutral then create top/bottom ties with reversed input IDs.
+    for row in rows:
+        row["price_change_projections"][0]["projected_percent"] = 0.0
+    rows[0]["id"] = 1202
+    rows[1]["id"] = 1201
+    rows[0]["price_change_projections"][0]["projected_percent"] = 80.0
+    rows[1]["price_change_projections"][0]["projected_percent"] = 80.0
+    rows[2]["id"] = 1102
+    rows[3]["id"] = 1101
+    rows[2]["price_change_projections"][0]["projected_percent"] = -80.0
+    rows[3]["price_change_projections"][0]["projected_percent"] = -80.0
+
+    rise = build_price20(predictor_artifact=artifact, direction="RISE")
+    fall = build_price20(predictor_artifact=artifact, direction="FALL")
+    assert [row["element_id"] for row in rise["rows"][:2]] == [1201, 1202]
+    assert [row["element_id"] for row in fall["rows"][:2]] == [1101, 1102]
+
+
+def test_real_price_output_preserves_required_fact_and_model_fields():
+    rise = build_price20(predictor_artifact=_real_price_predictor(), direction="RISE")
+    row = rise["rows"][0]
+    assert set(
+        (
+            "element_id",
+            "player",
+            "current_price",
+            "projected_percent",
+            "likelihood",
+            "price_change_percent",
+            "price_change_hourly_rate",
+            "selected_by_percent",
+            "transfers_in_event",
+            "transfers_out_event",
+            "locked_until",
+            "calibrating",
+        )
+    ).issubset(row)
+    assert row["current_price"] != "UNAVAILABLE"
+    assert row["price_fact"] == "FACT"
+    assert row["predictor_classification"] == "MODEL"

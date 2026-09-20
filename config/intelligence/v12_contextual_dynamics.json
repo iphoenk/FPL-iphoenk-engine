@@ -42,6 +42,10 @@
     "historical_matchup_is_bounded_modifier": true,
     "correlation_is_not_dependency": true,
     "missing_direct_link_evidence_caps_confidence": true,
-    "methodology_weights_20_25_30_25_unchanged": true
+    "methodology_weights_20_25_30_25_unchanged": true,
+    "pairwise_chain_anti_double_count": true,
+    "pairwise_edge_owns_direct_target_effect": true,
+    "chain_owns_incremental_higher_order_effect": true,
+    "final_cap_is_not_anti_double_count": true
   }
 }

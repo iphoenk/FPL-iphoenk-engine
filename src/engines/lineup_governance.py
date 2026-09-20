@@ -699,7 +699,29 @@ def build_package_decision(
         selected = hold if freeze else native_selected
         selected_id = str(selected.get("route_id") or "")
         selected_package = {"id": selected_id, **selected}
-        selected_legal = selected.get("legal") is True
+        final_ids = [
+            int(value)
+            for value in selected.get("final_squad_elements") or []
+        ]
+        final_rows = []
+        for element in final_ids:
+            proj = pmap.get(element)
+            if not proj:
+                continue
+            final_rows.append(
+                {
+                    "element": element,
+                    "position": proj.get("position"),
+                    "team_id": int(proj.get("team_id") or -1),
+                    "now_cost": int(proj.get("now_cost") or 0),
+                }
+            )
+        final_legal, final_legality_reason = v12_package_legal_squad(
+            final_rows
+        )
+        selected_legal = (
+            selected.get("legal") is True and final_legal
+        )
         selected_affordable = selected.get("affordable") is not False
         gate0_revalidated = bool(
             current_legal and selected_legal and selected_affordable
@@ -726,6 +748,7 @@ def build_package_decision(
             "manual_authority_override": freeze,
             "current_squad_legal": current_legal,
             "current_squad_legality_reason": current_legality_reason,
+            "selected_squad_legality_reason": final_legality_reason,
             "gate0_revalidated": gate0_revalidated,
             "decision": decision,
             "model_evidence_binding": deepcopy(

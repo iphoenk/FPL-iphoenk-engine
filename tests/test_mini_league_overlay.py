@@ -160,7 +160,8 @@ def _pick_row(element: int, position: int, *, captain=False, vice=False, tc=Fals
 
 
 def _entry(entry_id: int, *, captain: int = 12, chip=None, include_multiplier=True):
-    order = list(range(1, 16))
+    # Legal 3-5-2 submitted order: 11 starters followed by reserve GK + outfield bench.
+    order = [1, 3, 4, 5, 8, 9, 10, 11, 12, 13, 14, 2, 15, 6, 7]
     rows = []
     for position, element in enumerate(order, start=1):
         row = _pick_row(

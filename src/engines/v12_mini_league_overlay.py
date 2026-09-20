@@ -1016,34 +1016,84 @@ def evaluate_mini_league_overlay(
         league_snapshot,
         explicit_posture=explicit_risk_posture,
     )
+    # Screen the full P1.2 universe cheaply first. P1.8 is allowed to
+    # alter preference only for the frozen baseline, HOLD, or genuinely close
+    # alternatives. Non-close routes remain inspectable but do not pay the
+    # expensive exposure/MC-enrichment cost. With PARTIAL/UNAVAILABLE league
+    # evidence no switch is permitted, so only baseline/HOLD need full overlay
+    # materialization.
     route_rows = []
     for route_id, route in sorted(routes.items()):
-        lev = leverage_utility(
+        gate = close_decision_gate(
+            baseline_route,
             route,
-            baseline_route=baseline_route,
-            league_snapshot=league_snapshot,
-            posture=posture["posture"],
             monte_carlo=monte_carlo,
-            relative_mc=relative_mc,
         )
-        route_rows.append(
-            {
-                "route_id": route_id,
-                "classification": route.get("classification"),
-                "football_baseline_utility": lev["football_baseline_utility"],
-                "mini_league_overlay_utility": lev[
-                    "mini_league_overlay_utility"
-                ],
-                "final_relative_decision_utility": lev[
-                    "final_relative_decision_utility"
-                ],
-                "close_decision_gate": lev["close_decision_gate"],
-                "league_exposure": lev["exposure"],
-                "football_mc": lev["football_mc"],
-                "relative_mc": lev["relative_mc"],
-                "components": lev["components"],
-            }
+        material = (
+            route_id == baseline["route_id"]
+            or route_id == "HOLD"
+            or (coverage == "FULL" and gate["status"] == "CLOSE")
         )
+        if material:
+            lev = leverage_utility(
+                route,
+                baseline_route=baseline_route,
+                league_snapshot=league_snapshot,
+                posture=posture["posture"],
+                monte_carlo=monte_carlo,
+                relative_mc=relative_mc,
+            )
+            route_rows.append(
+                {
+                    "route_id": route_id,
+                    "classification": route.get("classification"),
+                    "football_baseline_utility": lev["football_baseline_utility"],
+                    "mini_league_overlay_utility": lev[
+                        "mini_league_overlay_utility"
+                    ],
+                    "final_relative_decision_utility": lev[
+                        "final_relative_decision_utility"
+                    ],
+                    "close_decision_gate": lev["close_decision_gate"],
+                    "league_exposure": lev["exposure"],
+                    "football_mc": lev["football_mc"],
+                    "relative_mc": lev["relative_mc"],
+                    "components": lev["components"],
+                    "material_overlay_evaluated": True,
+                }
+            )
+        else:
+            football = _horizon_value(route, "GW+1")
+            route_rows.append(
+                {
+                    "route_id": route_id,
+                    "classification": route.get("classification"),
+                    "football_baseline_utility": football,
+                    "mini_league_overlay_utility": 0.0,
+                    "final_relative_decision_utility": football,
+                    "close_decision_gate": gate,
+                    "league_exposure": {
+                        "status": "NOT_MATERIAL_FOR_OVERLAY",
+                        "reason": (
+                            "LEAGUE_EVIDENCE_CANNOT_SWITCH_BASELINE"
+                            if coverage != "FULL"
+                            else "OUTSIDE_CLOSE_DECISION_GATE"
+                        ),
+                    },
+                    "football_mc": {
+                        "status": "NOT_REEVALUATED_BY_P1_8",
+                        "p1_4_distribution_unchanged": True,
+                    },
+                    "relative_mc": {
+                        "status": "NOT_REQUIRED_NONMATERIAL_ROUTE",
+                    },
+                    "components": {
+                        "football_quality_factor": 0.0,
+                        "screened_out_before_expensive_overlay": True,
+                    },
+                    "material_overlay_evaluated": False,
+                }
+            )
 
     if fingerprint(baseline) != baseline_immutable_fp:
         raise MiniLeagueOverlayError("football baseline mutated by overlay")

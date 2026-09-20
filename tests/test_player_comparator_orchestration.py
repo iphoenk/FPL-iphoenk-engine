@@ -442,6 +442,12 @@ def _native_events_fixture(xpts=5.25):
     return {
         "model_owner": "V12_PLAYER_EVENTS",
         "event_probabilities": {"p_attacking_return": 0.39},
+        "minutes_threshold_probabilities": {
+            "p_60_plus": 0.77,
+            "threshold_minutes": 60,
+            "source": "P1.1_FINITE_STATE_PLUS_P1.3_GOVERNED_BOUNDED_QUADRATURE",
+            "new_minutes_model_created": False,
+        },
         "point_distribution": point_distribution,
         "aggregate": {
             "expected_fpl_points": xpts,
@@ -515,8 +521,10 @@ def test_native_p11_shape_maps_without_flattened_aliases():
     assert row["p_cameo"] == pytest.approx(0.10)
     assert row["p_late_cameo"] == pytest.approx(0.03)
     assert row["xmins"] == pytest.approx(68.4)
-    assert row["p_60_plus"]["value"] == "UNAVAILABLE"
-    assert "governed P(60+)" in row["p_60_plus"]["reason"]
+    assert row["p_60_plus"]["value"] == pytest.approx(0.77)
+    assert row["p_60_plus"]["provenance"] == (
+        "P1.1_FINITE_STATE_PLUS_P1.3_GOVERNED_BOUNDED_QUADRATURE"
+    )
 
 
 def test_native_p13_shape_maps_distribution_quantiles_and_uncertainty():

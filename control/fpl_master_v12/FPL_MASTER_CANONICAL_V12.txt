@@ -1,5 +1,5 @@
 FPL MASTER CANONICAL V12 — FAIL-OPERATIONAL REPORT-PLANE ARCHITECTURE
-Effective: 2026-09-20T23:49:00+07:00
+Effective: 2026-09-21T05:24:14+07:00
 Authority path: control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
 State path: control/fpl_master_v12/FPL_MASTER_STATE_V12.json
 
@@ -559,6 +559,7 @@ B. For decision-bearing DEEP / DEADLINE / FINAL / POST-ALL-MATCH scopes, after f
 C. A scoring Gameweek still in progress never by itself authorizes blank next-GW analytics. Use the evidence available at the checkpoint with explicit uncertainty.
 D. If same-occurrence fresh evidence is actually consumed by a new V12 analytic refresh, updated P(start), xMins, xPts/probabilities may be published with current timestamp/provenance. If required factual/model inputs are genuinely insufficient, use MODEL UPDATE PENDING or field-level UNAVAILABLE.
 E. Missing one optional/enrichment provider degrades only the affected field/component. It MUST NOT collapse Watchlist20, ALL15, package/frontier or another independently supportable section. Player removal from the eligible universe requires actual Gate0/identity/eligibility failure, not missing optional enrichment.
+F. HEALTHY-V6 REPORT QUALITY INVARIANT: when the current occurrence has fresh/within-mode V6 factual evidence for the routed report, publish_integrity=PASS and authoritative_runtime_snapshot=true, the ChatGPT FPL Master MUST consume those facts and execute every supportable Canonical downstream analytic needed by that report. repository_python_qa_executed=false, absence of a precomputed repository-model artifact, or unrelated plumbing evidence MUST NOT by itself make the whole report, full-universe evaluation, Watchlist20, RISE20/FALL20, or ICON+ broadly DEGRADED. Degrade only the exact field/scope whose required factual or analytic inputs are genuinely unsupported, preserve healthy sibling scopes, and state the exact missing prerequisite.
 F. Repository Python execution must never be falsely claimed. ChatGPT analytic execution must likewise never be claimed unless the occurrence actually performed the governed analytic evaluation.
 G. Natural Deep rendering never treats Python QA, optimizer-module execution, MC or other plumbing success as a prerequisite for user-visible delivery.
 

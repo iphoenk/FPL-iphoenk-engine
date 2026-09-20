@@ -46,6 +46,43 @@
     "pairwise_chain_anti_double_count": true,
     "pairwise_edge_owns_direct_target_effect": true,
     "chain_owns_incremental_higher_order_effect": true,
-    "final_cap_is_not_anti_double_count": true
+    "final_cap_is_not_anti_double_count": true,
+    "full_universe_post_match_scan": true,
+    "scorer_assister_only_post_match_forbidden": true,
+    "post_match_classes_are_evidence_not_action": true
+  },
+  "post_match_scan": {
+    "recent_window_matches": 3,
+    "minimum_trajectory_matches": 2,
+    "xgi_trend_ratio": 1.18,
+    "box_touch_trend_ratio": 1.2,
+    "shots_trend_ratio": 1.15,
+    "xmins_breakout_delta": 15,
+    "pstart_breakout_delta": 0.15,
+    "xmins_decline_delta": -15,
+    "pstart_decline_delta": -0.15,
+    "strong_latest_xgi": 0.55,
+    "weak_latest_xgi": 0.2,
+    "output_spike_return_count": 2,
+    "output_spike_fpl_points": 10,
+    "linkup_material_delta": 0.05,
+    "set_piece_gain_min_latest": 1,
+    "materiality_min_score": 1,
+    "universe_movers_limit_per_category": 5,
+    "class_priority": [
+      "OUTPUT_CONFIRMING_PROCESS",
+      "BREAKOUT_PROCESS",
+      "ROLE_BREAKOUT",
+      "MINUTES_BREAKOUT",
+      "LINKUP_BREAKOUT",
+      "SET_PIECE_GAIN",
+      "UNDERLYING_IMPROVING_NO_RETURN",
+      "REGRESSION_RISK",
+      "OUTPUT_WITHOUT_PROCESS",
+      "ROLE_DECLINE",
+      "MINUTES_DECLINE",
+      "LINKUP_BROKEN",
+      "NO_MATERIAL_CHANGE"
+    ]
   }
 }

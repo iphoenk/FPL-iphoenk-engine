@@ -8,8 +8,10 @@ def test_v6_production_checkout_is_shallow_and_never_fetches_other_engine_branch
     workflow = WORKFLOW.read_text(encoding="utf-8")
     assert "fetch-depth: 0" not in workflow
     assert workflow.count("fetch-depth: 1") == 2
-    runtime_fetch = 'git fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"'
+    runtime_fetch = 'fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"'
     assert workflow.count(runtime_fetch) == 3
+    assert workflow.count('AUTHORIZATION: basic $read_auth') >= 3
+    assert 'V6_RUNTIME_READ_TOKEN: ${{ github.token }}' in workflow
     for token in ("runtime-data-v3", "runtime-data-v4", "runtime-data-v5"):
         assert token not in workflow
 

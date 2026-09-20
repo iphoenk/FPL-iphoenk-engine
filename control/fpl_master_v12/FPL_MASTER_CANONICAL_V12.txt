@@ -265,6 +265,21 @@ Never invent denominator/route counts. Unknown proof fields remain UNAVAILABLE/n
 
 XI/bench/formation-only decisions within an already fixed 15 do NOT need to rescan the transfer universe merely to choose XI. They MUST still use the same 20/25/30/25 football methodology plus the full probabilistic/robustness gate across all viable owned XI alternatives. If the question also asks whether the squad slot itself should be upgraded/replaced, full-universe scan becomes mandatory.
 
+8F. GENERIC PLAYER-vs-PLAYER COMPARATOR ORCHESTRATION
+The V12 comparator is a reusable diagnostic orchestrator for one owned player versus one or more external candidates of the same FPL position. It is NOT a new xPts model, xMins model, tactical scorer, fixture model, price predictor, package optimizer, ranking authority or decision authority.
+A. INPUT OWNERSHIP. Comparator minutes evidence comes only from P1.1; event/xPts distributions only from P1.3/P1.3B; tactical-role evidence only from P1.6; lineup consequence only from P1.7 where material; legality/search only from P1.2A; transfer economics/package utility only from P1.2B; mini-league only from P1.8 after the football-optimal baseline; competitive workload and price evidence remain factual inputs with their existing authority.
+B. REQUIRED HORIZONS. Every material comparison separates NEXT GW, 2GW, 3GW and 5GW. The 2GW comparator surface is diagnostic only and does not replace the existing package-selection GW+1/3GW/5GW mapping or the Canonical special 2GW rental/exit rule. Never create a hidden weighted horizon aggregate.
+C. EXPECTED STARTS. Per-GW P(start) remains a probability. Across a horizon, sum per-fixture/per-GW P(start) only as EXPECTED STARTS OVER HORIZON. Never label that sum cumulative start probability.
+D. P(60+). p_60_plus may be numeric only when current governed P1.1 minute-state/distribution evidence explicitly supports a >=60-minute probability without a new assumption. Otherwise render p_60_plus=UNAVAILABLE with reason. Never add a Gaussian or player-specific fallback merely to create P(60+).
+E. FIXTURE-BY-FIXTURE. Materialize the next five scheduled PL GWs where supportable with gw, opponent, home/away, verified venue, existing xPts, xMins, P(start), evidence-gated P(60+), P(DNP), tactical evidence class, role summary, routes to points, rest/congestion, midweek competition context, fixture confidence and data quality. Richer coach/system/shape/pressing/block/FB-WB/box/second-ball/goalkeeper context is shown only when reproducible; otherwise UNAVAILABLE.
+F. TACTICAL RECENCY. Current coach + current season + recent 2-5 match evidence outranks historical team DNA, while historical style remains prior/context. One recent match never erases stronger prior evidence. Existing Bayesian/shrinkage and P1.6 anti-double-count discipline remains unchanged.
+G. COMPETITIVE WORKLOAD MAP. For the player team and opponent where relevant, map verified Premier League, UEFA competitions, domestic cups, international duty and other verified first-team competition between PL GWs. Future status is exactly CONFIRMED, TBD or UNVERIFIED. Never invent an undrawn cup opponent. Competitive load is evidence/confidence/rotation review only and MUST NOT directly rewrite xPts through a blanket fatigue penalty.
+H. TRANSFER VALUE. Raw football gain is projected points IN minus projected points OUT separately for GW+1/2GW/3GW/5GW. Net transfer value reuses existing Canonical economics: FT/hit, dynamic FT shadow, authenticated sell value, purchase price, bank, affordability, club/position legality, buy-back difficulty, optionality/flexibility and evaluated exit/secondary routes. Unknown finance stays unknown. An active Wildcard never receives an irrelevant hit cost.
+I. OUTPUT AUTHORITY. Comparator output retains decision_authority=false, ranking_authority=false and diagnostic_evidence_only=true. Operational action remains exactly WAIT/PREPARE/ACT. Descriptive football labels such as HOLD, CHALLENGER, TRANSFER-CANDIDATE or SELL-CANDIDATE never replace the operational enum.
+J. PAIRWISE BINDING. Comparator output may feed the existing OWNED -> CHALLENGER pairwise battle contract. It never creates a second composite score or overrides HOLD/package utility.
+K. MATERIAL TRIGGERS. Re-evaluate the comparator when material evidence changes through Watchlist publication, live/post-match challenger signal, xMins/P(start)/start-security, injury/suspension, role/manager tactical change, confirmed Europe/cup schedule, international call-up/minutes/travel, material price route movement, fixture rearrangement, owned deterioration, challenger improvement, Deep Review, Deadline Day or explicit user comparison. The single FPL Master Monitor V12 owns routing; never create another scheduler.
+L. DEFAULT PERSISTENCE. Comparator output is transient by default. A genuine frozen pre-deadline serious decision may retain only compact IDs, planning GW, horizon deltas, selected decision/reversal trigger and evidence fingerprint/provenance inside the existing frozen_decision_snapshot mechanism. Never persist raw V6, full-universe matrices or provider payloads merely for comparator history.
+
 9. PROBABILISTIC METHODS
 Use Bayesian/hierarchical shrinkage, start/bench/cameo/DNP mixtures, xMins, scoring event-rate, fixture adjustment, posterior predictive points, floor/ceiling/tails, covariance, hit-adjusted utility, efficient frontier, value of waiting, regret/sensitivity, mini-league relative exposure when supportable.
 Monte Carlo >=500,000 correlated paths only with fresh real distributions. State actual N/limitations. Otherwise MC NOT RUN/PARTIAL. Never invent pseudo-precision.
@@ -380,8 +395,10 @@ Where supportable: rank,total,gap #1,nearest rivals,ownership,starter share,CVC/
 Never present stale standings as current.
 
 13. WEATHER
-Use direct fresh report-time weather after venue/kickoff resolution when mode requires.
+Weather is REPORT-TIME evidence and does not belong in V6.
+Use direct fresh report-time weather after venue/kickoff resolution when mode requires and access is available.
 Low weight unless unusual conditions have plausible football mechanism.
+If lookup is unavailable, render DEGRADED/UNAVAILABLE with the actual access/source reason. Never say weather is unavailable merely because V6 does not carry it.
 Never infer causation from coincidence.
 
 14. VISIBLE REPORT CONTENT CONTRACTS
@@ -502,8 +519,10 @@ Never render all four bench players as one misleading #1-#4 autosub queue. Raw O
 14D. USER-FACING LANGUAGE
 Normal report body MUST NOT expose implementation/repair language such as:
 reconciliation corrected;repair applied;migration successful;test passed.
+Healthy normal reports also demote low-level orchestration/audit plumbing including issue #431, mutation/readback, logical slot, bound run/workflow IDs, NATURAL_CORE_UPKEEP_GATE, authoritative_runtime_snapshot, raw branch SHA and low-level state-machine narration. These remain transient audit evidence and may surface only when a material technical failure directly explains decision degradation.
 Acceptance evidence may retain such language only in technical evidence/history, not normal FPL narrative.
 Stable user-facing wording includes MATCH MODE and LOCKED TEAM VERIFIED where applicable.
+Normal technical status is compact: V6 data; Publication; Universe; Personal squad data; Model refresh; MC; ICON+; Data time. Detailed content proof remains audit-only; normal user-facing quality may be one compact DATA / REPORT QUALITY line.
 
 OWNED PLAYER EMPHASIS: whenever a current OUR15 player appears anywhere in a visible report, render the player name in Markdown bold. This applies to OUR15, ALL15, formation/XI/bench, XI battle, captain/vice, Price Radar, RISE/FALL, Package Frontier, Match, Post-All-Match, ICON+/mini-league comparison and Decision Delta. Bold is presentation-only. Ownership identity is determined only by Official FPL element_id membership in current OUR15; never by name/bold matching.
 
@@ -511,6 +530,16 @@ OWNED PLAYER EMPHASIS: whenever a current OUR15 player appears anywhere in a vis
 Post-match evidence that has not triggered an actual model execution is CALIBRATION INPUT or MODEL UPDATE PENDING NEXT COMPUTE.
 Claims such as posterior updated, xMins recalibrated, probabilities changed, or P(start) changed require exact recomputation/execution proof with previous/current values and evidence timestamp.
 An observation alone may say it should reduce/increase future confidence; it may not claim the posterior already changed.
+
+14E2. NATURAL CHATGPT V12 ANALYTIC EXECUTION
+REPOSITORY PYTHON EXECUTION TRUTH and CHATGPT V12 ANALYTIC EXECUTION TRUTH are separate.
+A. repository_python_qa_executed=false means only that repository Python QA/modules were not proven to execute for that occurrence. It MUST NOT by itself suppress Canonical V12 analytics that the ChatGPT FPL Master Monitor can perform from valid current factual inputs.
+B. For decision-bearing DEEP / DEADLINE / FINAL / POST-ALL-MATCH scopes, after factual refresh and before render, the ChatGPT V12 runtime executes the current Canonical analytic path where valid inputs support it: OUR15; P(available)/P(start)/cameo/DNP; xMins; tactical-role evidence; next-GW probabilities/xPts; GW+1/3GW/5GW; comparator 2GW diagnostic where a material pairwise exists; full-universe candidate evaluation; Watchlist20; package/frontier; price decision surfaces; and ICON+ overlay where supportable.
+C. A scoring Gameweek still in progress never by itself authorizes blank next-GW analytics. Use the evidence available at the checkpoint with explicit uncertainty.
+D. If same-occurrence fresh evidence is actually consumed by a new V12 analytic refresh, updated P(start), xMins, xPts/probabilities may be published with current timestamp/provenance. If required factual/model inputs are genuinely insufficient, use MODEL UPDATE PENDING or field-level UNAVAILABLE.
+E. Missing one optional/enrichment provider degrades only the affected field/component. It MUST NOT collapse Watchlist20, ALL15, package/frontier or another independently supportable section. Player removal from the eligible universe requires actual Gate0/identity/eligibility failure, not missing optional enrichment.
+F. Repository Python execution must never be falsely claimed. ChatGPT analytic execution must likewise never be claimed unless the occurrence actually performed the governed analytic evaluation.
+G. Natural Deep rendering never treats Python QA, optimizer-module execution, MC or other plumbing success as a prerequisite for user-visible delivery.
 
 14F. DECISION DELTA
 Every sequential visible report after a previous visible occurrence includes DECISION DELTA.
@@ -533,6 +562,12 @@ Exactly 20 non-owned: GK5 DEF5 MID5 FWD5, full-universe derived.
 Visible fields:
 rank;player;position;club;price;next_opponent;football_score;p_start;xmins;gw_plus_1;three_gw;five_gw;role_set_piece_note;main_upside;main_risk;action.
 Watchlist is output, never optimizer input.
+For DEEP, current full-universe V12 evaluation is required where supportable. repository_python_qa_executed=false alone can never justify Watchlist20=0/20. When authority is incomplete, use every supportable current candidate and render exact available_count/expected_count/missing_scope/reason with PARTIAL/DEGRADED status rather than blanking the section.
+
+14G2. RISE20 / FALL20 + ACTIONABLE PRICE RADAR
+The current same-occurrence official_price_predictor artifact is factual/model input from the existing V6 source and MUST be read before RISE20/FALL20 is declared unavailable. If current/healthy and it contains enough eligible rows, render exact RISE20 and FALL20 using the existing predictor's direction/rank/timing evidence; never require repository Python execution merely to read the published artifact and never create a second price predictor.
+If the current artifact is absent/invalid/incomplete, degrade truthfully with exact counts/reason. A healthy sufficient predictor artifact cannot result in 0/20 without a concrete evidence reason.
+ACTIONABLE PRICE RADAR remains mandatory in DEEP and carries ALL15 where Official current price evidence exists. Keep FACT current/confirmed price separate from MODEL predictor direction.
 
 14H. PACKAGE OPTIMIZER VISIBLE SCHEMA
 Every serious route comparison includes HOLD.

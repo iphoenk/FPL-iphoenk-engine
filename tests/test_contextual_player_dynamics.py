@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import pytest
+import src.engines.v12_contextual_dynamics as contextual_dynamics
 
 from src.engines.v12_contextual_dynamics import (
     apply_post_match_universe_comparison,
+    attach_post_match_deep_details,
     build_contextual_dynamics,
+    build_post_match_deep_details,
     build_player_trajectory,
     build_post_match_universe_scan,
     construct_directional_chains,
@@ -1943,3 +1946,254 @@ def test_canonical_defaults_to_probability_distribution_movers_not_scorers():
     )
     for token in required:
         assert token in canonical
+
+
+
+def _synthetic_deep_projection(element: int, *, owned: bool = False) -> dict:
+    return {
+        "element": element,
+        "name": f"P{element}",
+        "position": "MID",
+        "team_id": 1,
+        "now_cost": 60,
+        "status": "a",
+        "xmins": {
+            "expected_minutes": 80.0,
+            "start_probability": 0.9,
+            "cameo_probability": 0.08,
+            "dnp_probability": 0.02,
+            "xmins_distribution": {"distribution": "FINITE_STATE_MINUTES_MIXTURE"},
+        },
+        "rates": {"xg90": 0.30, "xa90": 0.25},
+        "posterior_rates": {
+            "goal": {"posterior_rate90": 0.30},
+            "assist": {"posterior_rate90": 0.25},
+        },
+        "horizons": {
+            "1": {"mean": 5.0, "std": 2.0},
+            "3": {"mean": 15.0, "std": 4.0},
+            "5": {"mean": 25.0, "std": 6.0},
+        },
+        "tactical_role": {"profile": "CREATOR"},
+        "system_context": {"dominant_shape": "4-3-3"},
+        "contextual_dynamics": {
+            "fixture_contexts": [
+                {
+                    "fixture": 999,
+                    "matchup": {"classification": "NEUTRAL"},
+                    "linkup_network": {
+                        "relationships": [],
+                        "marginalized": [],
+                        "multi_player_chains": [],
+                    },
+                    "event_multipliers": {
+                        "final_dependency_goal": 1.0,
+                        "final_dependency_assist": 1.0,
+                    },
+                }
+            ]
+        },
+    }
+
+
+def _material_scan(total: int, material_ids: list[int], *, owned_ids: set[int] | None = None) -> dict:
+    owned_ids = set(owned_ids or set())
+    players = []
+    for element in range(1, total + 1):
+        material = element in set(material_ids)
+        players.append(
+            {
+                "element_id": element,
+                "name": f"P{element}",
+                "position": "MID",
+                "owned": element in owned_ids,
+                "materiality_score": 3.0 if material else 0.0,
+                "deep_analysis_required": material,
+                "classifications": (
+                    ["BREAKOUT_PROCESS"] if material else ["NO_MATERIAL_CHANGE"]
+                ),
+                "primary_classification": (
+                    "BREAKOUT_PROCESS" if material else "NO_MATERIAL_CHANGE"
+                ),
+                "materiality_reasons": (
+                    ["BREAKOUT_PROCESS"] if material else []
+                ),
+                "universe_comparison": {
+                    "state": (
+                        "OWNED_PLAYER_REVIEW"
+                        if element in owned_ids
+                        else "FULL_UNIVERSE_PACKAGE_CHALLENGER"
+                    ),
+                    "beats_hold_in_any_published_package": material and element % 2 == 0,
+                },
+            }
+        )
+    material_rows = [row for row in players if row["deep_analysis_required"]]
+    return {
+        "scope": "FULL_ELIGIBLE_FPL_PLAYER_UNIVERSE",
+        "eligible_count": total,
+        "scanned_count": total,
+        "material_count": len(material_rows),
+        "players": players,
+        "material_players": material_rows,
+        "deep_analysis_element_ids": list(material_ids),
+        "universe_comparison": {"search_authority": "FULL"},
+    }
+
+
+def test_post_match_deep_materiality_executes_only_four_of_100(monkeypatch):
+    scan = _material_scan(100, [2, 4, 6, 8])
+    projections = [_synthetic_deep_projection(i) for i in range(1, 101)]
+    calls = []
+    original = contextual_dynamics._build_post_match_deep_player_detail
+
+    def counted(**kwargs):
+        calls.append(kwargs["element_id"])
+        return original(**kwargs)
+
+    monkeypatch.setattr(
+        contextual_dynamics,
+        "_build_post_match_deep_player_detail",
+        counted,
+    )
+    deep = build_post_match_deep_details(
+        deep_analysis_element_ids=scan["deep_analysis_element_ids"],
+        current_projection_players=projections,
+        player_match_rows=[],
+        post_match_universe_scan=scan,
+        current_gw=5,
+        maximum_material_deep_players=20,
+    )
+    assert deep["eligible_count"] == 100
+    assert deep["scanned_count"] == 100
+    assert deep["material_count"] == 4
+    assert deep["deep_requested_count"] == 4
+    assert deep["deep_executed_count"] == 4
+    assert deep["deep_deferred_count"] == 0
+    assert calls == [2, 4, 6, 8]
+
+
+def test_post_match_deep_zero_materiality_executes_zero_times(monkeypatch):
+    scan = _material_scan(100, [])
+    calls = []
+
+    def forbidden(**kwargs):
+        calls.append(kwargs["element_id"])
+        raise AssertionError("deep player detail must not execute")
+
+    monkeypatch.setattr(
+        contextual_dynamics,
+        "_build_post_match_deep_player_detail",
+        forbidden,
+    )
+    deep = build_post_match_deep_details(
+        deep_analysis_element_ids=[],
+        current_projection_players=[
+            _synthetic_deep_projection(i) for i in range(1, 101)
+        ],
+        player_match_rows=[],
+        post_match_universe_scan=scan,
+        current_gw=5,
+    )
+    assert deep["scanned_count"] == 100
+    assert deep["material_count"] == 0
+    assert deep["deep_requested_count"] == 0
+    assert deep["deep_executed_count"] == 0
+    assert calls == []
+
+
+def test_post_match_deep_cap_is_truthful_for_30_material_of_100():
+    material_ids = list(range(1, 31))
+    scan = _material_scan(100, material_ids)
+    deep = build_post_match_deep_details(
+        deep_analysis_element_ids=material_ids,
+        current_projection_players=[
+            _synthetic_deep_projection(i) for i in range(1, 101)
+        ],
+        player_match_rows=[],
+        post_match_universe_scan=scan,
+        current_gw=5,
+        maximum_material_deep_players=7,
+    )
+    assert deep["scanned_count"] == 100
+    assert deep["material_count"] == 30
+    assert deep["deep_requested_count"] == 30
+    assert deep["deep_executed_count"] == 7
+    assert deep["deep_deferred_count"] == 23
+    assert deep["deep_execution_scope"] == "PARTIAL"
+    assert deep["deferred_element_ids"] == material_ids[7:]
+
+
+def test_post_match_deep_preserves_owned_and_challenger_universe_states():
+    scan = _material_scan(2, [1, 2], owned_ids={1})
+    projections = [_synthetic_deep_projection(1), _synthetic_deep_projection(2)]
+    deep = build_post_match_deep_details(
+        deep_analysis_element_ids=[1, 2],
+        current_projection_players=projections,
+        player_match_rows=[],
+        post_match_universe_scan=scan,
+        current_gw=5,
+    )
+    states = {
+        row["element_id"]: (row.get("universe_comparison") or {}).get("state")
+        for row in deep["details"]
+    }
+    assert states[1] == "OWNED_PLAYER_REVIEW"
+    assert states[2] == "FULL_UNIVERSE_PACKAGE_CHALLENGER"
+    assert all(row["operational_action_created"] is False for row in deep["details"])
+
+
+def test_post_match_linkup_broken_blank_can_execute_deep_diagnostic():
+    player = 3001
+    rows = [
+        row(player=player, gw=1, match="lk1", opponent=2, xg=0.30),
+        row(player=player, gw=2, match="lk2", opponent=3, xg=0.30),
+        row(player=player, gw=3, match="lk3", opponent=4, xg=0.30, fpl_points=2),
+    ]
+    current = post_match_projection(
+        player,
+        dependency_goal=0.92,
+        dependency_assist=0.96,
+    )
+    previous = post_match_projection(
+        player,
+        link_source=3100,
+        dependency_goal=1.10,
+        dependency_assist=1.05,
+    )
+    scan = build_post_match_universe_scan(
+        current_projection_players=[current],
+        previous_projection_players=[previous],
+        player_match_rows=rows,
+        current_gw=3,
+    )
+    scan = apply_post_match_universe_comparison(
+        scan,
+        package_optimizer={
+            "candidate_pool": {"FWD": []},
+            "candidate_pool_is_preview_only": True,
+            "packages": [{"id": "HOLD", "ins": [], "outs": [], "score": {"robust_score": 0.0}}],
+            "hold": {"score": {"robust_score": 0.0}},
+            "search_diagnostics": {
+                "search_authority": "FULL",
+                "candidate_origin": "COMPLETE_ELIGIBLE_OFFICIAL_FPL_UNIVERSE",
+                "official_projection_universe_count": 1,
+                "eligible_universe_count": 1,
+            },
+            "governance": {
+                "official_fpl_full_universe_scanned_before_pruning": True
+            },
+        },
+    )
+    assert "LINKUP_BROKEN" in scan["material_players"][0]["classifications"]
+    deep = build_post_match_deep_details(
+        deep_analysis_element_ids=scan["deep_analysis_element_ids"],
+        current_projection_players=[current],
+        player_match_rows=rows,
+        post_match_universe_scan=scan,
+        current_gw=3,
+    )
+    assert deep["deep_executed_count"] == 1
+    attached = attach_post_match_deep_details(scan, deep)
+    assert attached["material_players"][0]["deep_detail_available"] is True
+    assert attached["material_players"][0]["post_match_deep_analysis"]["our15_relevance"] is False

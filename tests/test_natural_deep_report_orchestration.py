@@ -1189,7 +1189,18 @@ def test_natural_post_match_poor_process_haul_renders_noise_and_regression():
     assert "NOISE / DO NOT CHASE" in body
     assert "REGRESSION / SELL-RISK" in body
     assert "Low Process Haul" in body
-    assert "ACT" not in body
+    assert "Action: ACT" not in body
+    mover_rows = [
+        row
+        for rows in report["post_match_universe_movers"]["categories"].values()
+        for row in rows
+        if row["element_id"] == 9001
+    ]
+    assert mover_rows
+    assert all(
+        row["automatic_transfer_recommendation"] is False
+        for row in mover_rows
+    )
 
 
 def test_natural_post_match_zero_materiality_renders_no_material_movers():

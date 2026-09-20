@@ -5,6 +5,7 @@ from typing import Any, Mapping
 
 from src.engines.v12_contextual_dynamics import (
     build_contextual_dynamics,
+    construct_directional_chains,
     enrich_match_rows,
     evaluate_linkup,
 )
@@ -34,6 +35,8 @@ def build(
     player_features_payload: dict[str, Any] | None = None,
     player_match_rows: list[Mapping[str, Any]] | None = None,
     player_connection_rows: list[Mapping[str, Any]] | None = None,
+    opponent_history_rows: list[Mapping[str, Any]] | None = None,
+    opponent_history_scope: str | None = None,
     *,
     calibration_summary: Mapping[str, Any] | None = None,
     model_evidence_binding: Mapping[str, Any] | None = None,
@@ -95,6 +98,63 @@ def build(
         player_id = int(row.get("player_id") or row.get("element") or -1)
         if player_id > 0:
             match_rows_by_player.setdefault(player_id, []).append(row)
+
+    historical_matchup_rows = enrich_match_rows(
+        [
+            dict(row)
+            for row in (opponent_history_rows or [])
+            if isinstance(row, Mapping)
+        ],
+        player_team=player_team,
+    )
+    opponent_history_by_player: dict[int, list[dict[str, Any]]] = {}
+    for row in historical_matchup_rows:
+        player_id = int(row.get("player_id") or row.get("element") or -1)
+        if player_id > 0:
+            opponent_history_by_player.setdefault(player_id, []).append(row)
+
+    players_by_team: dict[int, list[dict[str, Any]]] = {}
+    for row in bootstrap.get("elements") or []:
+        players_by_team.setdefault(int(row.get("team") or -1), []).append(row)
+
+    team_pairwise_edges: dict[int, list[dict[str, Any]]] = {}
+    if match_rows:
+        for edge_team_id, members in players_by_team.items():
+            edges: list[dict[str, Any]] = []
+            for target in members:
+                target_id = int(target.get("id") or -1)
+                target_feature = feature_map.get(str(target_id)) or {}
+                target_role = (
+                    target_feature.get("tactical_role") or {}
+                ).get("profile")
+                for source in members:
+                    source_id = int(source.get("id") or -1)
+                    if source_id <= 0 or source_id == target_id:
+                        continue
+                    source_feature = feature_map.get(str(source_id)) or {}
+                    source_role = (
+                        source_feature.get("tactical_role") or {}
+                    ).get("profile")
+                    link = evaluate_linkup(
+                        match_rows_by_player.get(target_id, []),
+                        match_rows_by_player.get(source_id, []),
+                        target_player_id=target_id,
+                        teammate_player_id=source_id,
+                        target_role=target_role,
+                        teammate_role=source_role,
+                        connection_rows=connection_rows,
+                    )
+                    if (
+                        _f(link.get("confidence")) > 0.0
+                        and int(link.get("shared_matches") or 0) > 0
+                    ):
+                        link["target_role"] = target_role
+                        link["teammate_role"] = source_role
+                        link["source_name"] = source.get("web_name")
+                        link["target_name"] = target.get("web_name")
+                        edges.append(link)
+            team_pairwise_edges[edge_team_id] = edges
+
     latest_completed_gw = max(
         [
             int(row.get("gw") or row.get("event") or 0)
@@ -217,34 +277,26 @@ def build(
 
         teammate_links: list[dict[str, Any]] = []
         teammate_start_probabilities: dict[int, float] = {}
+        multi_player_chains: list[dict[str, Any]] = []
         if match_rows:
-            target_role = tactical_role.get("profile")
-            for teammate in bootstrap.get("elements") or []:
+            teammate_links = [
+                dict(link)
+                for link in team_pairwise_edges.get(team_id, [])
+                if int(link.get("target_player_id") or -1) == element
+            ]
+            teammate_links.sort(
+                key=lambda row: (
+                    _f(row.get("confidence")),
+                    _f(row.get("dependency_strength")),
+                ),
+                reverse=True,
+            )
+            teammate_links = teammate_links[:5]
+
+            for teammate in players_by_team.get(team_id, []):
                 teammate_id = int(teammate.get("id") or -1)
                 if teammate_id <= 0 or teammate_id == element:
                     continue
-                if int(teammate.get("team") or -2) != team_id:
-                    continue
-                teammate_feature = feature_map.get(str(teammate_id)) or {}
-                teammate_role = (
-                    teammate_feature.get("tactical_role") or {}
-                ).get("profile")
-                link = evaluate_linkup(
-                    match_rows_by_player.get(element, []),
-                    match_rows_by_player.get(teammate_id, []),
-                    target_player_id=element,
-                    teammate_player_id=teammate_id,
-                    target_role=target_role,
-                    teammate_role=teammate_role,
-                    connection_rows=connection_rows,
-                )
-                if (
-                    _f(link.get("confidence")) > 0.0
-                    and int(link.get("shared_matches") or 0) > 0
-                ):
-                    link["target_role"] = target_role
-                    link["teammate_role"] = teammate_role
-                    teammate_links.append(link)
                 teammate_matches = int(
                     (team_rows.get(team_id) or {}).get("matches_played") or 0
                 )
@@ -275,14 +327,12 @@ def build(
                 teammate_start_probabilities[teammate_id] = _f(
                     teammate_xmins.get("start_probability")
                 )
-            teammate_links.sort(
-                key=lambda row: (
-                    _f(row.get("confidence")),
-                    _f(row.get("dependency_strength")),
-                ),
-                reverse=True,
+
+            multi_player_chains = construct_directional_chains(
+                team_pairwise_edges.get(team_id, []),
+                target_player_id=element,
+                teammate_start_probabilities=teammate_start_probabilities,
             )
-            teammate_links = teammate_links[:5]
 
         def fixture_key(matchup: Mapping[str, Any]) -> str:
             gw_value = int(matchup.get("event") or matchup.get("gw") or 0)
@@ -324,8 +374,20 @@ def build(
                         opponent_team_id=opponent_id,
                         current_context=current_context,
                         linkups=teammate_links,
+                        chains=multi_player_chains,
                         teammate_start_probabilities=(
                             teammate_start_probabilities
+                        ),
+                        opponent_history_rows=opponent_history_by_player.get(
+                            element, []
+                        ),
+                        opponent_history_scope=(
+                            opponent_history_scope
+                            or (
+                                "MULTI-SEASON GOVERNED"
+                                if opponent_history_by_player.get(element)
+                                else "CURRENT-SEASON ONLY"
+                            )
                         ),
                     )
                 )
@@ -521,6 +583,22 @@ def build(
             ),
             "contextual_dynamics_reuses_existing_v6_player_match_rows": True,
             "contextual_dynamics_player_match_indexed": True,
+            "multi_player_chain_runtime_wired": True,
+            "opponent_history_scope": (
+                opponent_history_scope
+                or (
+                    "MULTI-SEASON GOVERNED"
+                    if historical_matchup_rows
+                    else "CURRENT-SEASON ONLY"
+                )
+            ),
+            "prior_season_matchup_rows": len(historical_matchup_rows),
+            "prior_season_matchup_unavailable_reason": (
+                None
+                if historical_matchup_rows
+                else "NO_GOVERNED_MATCH_LEVEL_FACTUAL_SOURCE"
+            ),
+            "trajectory_excludes_prior_season_rows": True,
             "legacy_projection_components_migration_oracle_only": True,
             "multi_fixture_dependency_assumption": "ZERO_CROSS_FIXTURE_COVARIANCE_NOT_MODELLED_YET",
             "p1_3b_joint_event_distribution": True,

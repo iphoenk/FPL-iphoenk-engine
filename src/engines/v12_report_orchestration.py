@@ -9,8 +9,15 @@ from ChatGPT/V12 analytic execution truth.
 """
 
 import re
+from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, Sequence
+from zoneinfo import ZoneInfo
 
+from src.engines.price_radar import (
+    DISPLAY_TIMEZONE,
+    MODEL_THRESHOLD as EXISTING_PRICE_MODEL_THRESHOLD,
+    OFFICIAL_UPDATE_TIMEZONE,
+)
 from src.engines.visible_content_proof import canonical_mode_contract
 
 
@@ -239,6 +246,178 @@ def _official_current_price(now_cost: Any) -> Any:
     return round(value / 10.0, 1) if value >= 20.0 else round(value, 1)
 
 
+def _parse_price_dt(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+
+
+_PRICE_UK = ZoneInfo(OFFICIAL_UPDATE_TIMEZONE)
+_PRICE_WIB = ZoneInfo(DISPLAY_TIMEZONE)
+
+
+def _next_official_price_cycle(evidence_timestamp: Any, *, offset: int = 0) -> tuple[str, str] | tuple[None, None]:
+    """Return the governed daily 00:00 Europe/London cycle and the same instant in WIB."""
+    observed = _parse_price_dt(evidence_timestamp)
+    if observed is None:
+        return None, None
+    local = observed.astimezone(_PRICE_UK)
+    target_date = local.date() + timedelta(days=1 + max(0, int(offset)))
+    uk_cycle = datetime(target_date.year, target_date.month, target_date.day, 0, 0, tzinfo=_PRICE_UK)
+    return uk_cycle.isoformat(), uk_cycle.astimezone(_PRICE_WIB).isoformat()
+
+
+def _visible_price_direction(projected_percent: Any) -> str:
+    value = _finite_price_number(projected_percent)
+    if value is None:
+        return "UNAVAILABLE"
+    if value > 0:
+        return "RISE"
+    if value < 0:
+        return "FALL"
+    return "NEUTRAL"
+
+
+def _governed_expected_cycle(
+    projections: Any,
+    *,
+    evidence_timestamp: Any,
+    locked_until: Any,
+) -> dict[str, Any]:
+    """Expose existing predictor cycle semantics without creating a second ETA model."""
+    next_uk, next_wib = _next_official_price_cycle(evidence_timestamp, offset=0)
+    base = {
+        "next_official_price_cycle_uk": next_uk or "UNAVAILABLE",
+        "next_official_price_cycle_wib": next_wib or "UNAVAILABLE",
+        "cycles_to_expected_change": "UNAVAILABLE",
+        "estimated_change_window": "UNAVAILABLE",
+        "eta_reason": None,
+        "eta_uses_existing_threshold": True,
+        "governed_threshold_percent": EXISTING_PRICE_MODEL_THRESHOLD,
+    }
+    if next_uk is None or next_wib is None:
+        base["eta_reason"] = "EVIDENCE_TIMESTAMP_UNAVAILABLE"
+        return base
+    if not isinstance(projections, list):
+        base["eta_reason"] = "PREDICTOR_PROJECTIONS_UNAVAILABLE"
+        return base
+
+    locked = _parse_price_dt(locked_until)
+    candidates: list[tuple[int, float]] = []
+    for item in projections:
+        if not isinstance(item, Mapping):
+            continue
+        try:
+            offset = int(item.get("offset"))
+        except (TypeError, ValueError):
+            continue
+        if offset not in {0, 1, 2}:
+            continue
+        projected = _finite_price_number(item.get("projected_percent"))
+        if projected is None:
+            continue
+        candidates.append((offset, projected))
+
+    for offset, projected in sorted(candidates):
+        if abs(projected) < EXISTING_PRICE_MODEL_THRESHOLD:
+            continue
+        cycle_uk, cycle_wib = _next_official_price_cycle(evidence_timestamp, offset=offset)
+        if cycle_uk is None or cycle_wib is None:
+            continue
+        cycle_dt = _parse_price_dt(cycle_uk)
+        if locked is not None and cycle_dt is not None and cycle_dt.astimezone(timezone.utc) < locked.astimezone(timezone.utc):
+            continue
+        wib_dt = _parse_price_dt(cycle_wib)
+        wib_label = wib_dt.strftime("%H:%M WIB") if wib_dt is not None else cycle_wib
+        if offset == 0:
+            cycle_label = "NEXT CYCLE"
+            window = f"NEXT PRICE CYCLE — {wib_label}"
+        elif offset == 1:
+            cycle_label = "1 CYCLE AFTER NEXT"
+            window = "1 CYCLE AFTER NEXT / ~24H"
+        else:
+            cycle_label = "2 CYCLES AFTER NEXT"
+            window = "2 CYCLES AFTER NEXT / ~24–48H"
+        base.update(
+            {
+                "cycles_to_expected_change": cycle_label,
+                "estimated_change_window": window,
+                "eta_reason": None,
+            }
+        )
+        return base
+
+    base["eta_reason"] = "NO_EXISTING_PREDICTOR_CYCLE_CROSSES_GOVERNED_THRESHOLD"
+    return base
+
+
+def _price_decision_impact(
+    *,
+    element_id: int,
+    direction: str,
+    owned_ids: set[int],
+    target_ids: set[int],
+) -> str:
+    if element_id in owned_ids:
+        if direction == "FALL":
+            return "OWNED — FALL MAY REDUCE SELL VALUE"
+        if direction == "RISE":
+            return "OWNED — RISE; MONITOR SELL-VALUE / AFFORDABILITY EFFECT"
+        return "OWNED — NEUTRAL PRICE SIGNAL"
+    if element_id in target_ids:
+        if direction == "RISE":
+            return "TARGET — RISE MAY REMOVE AFFORDABILITY"
+        if direction == "FALL":
+            return "TARGET — FALL MAY IMPROVE AFFORDABILITY"
+        return "TARGET — NEUTRAL PRICE SIGNAL"
+    return "WATCH ONLY — NO BOUND PERSONAL ROUTE"
+
+
+def _visible_price_contract(
+    row: Mapping[str, Any],
+    *,
+    evidence_timestamp: Any,
+    predictor_health: str,
+    owned_ids: set[int],
+    target_ids: set[int],
+) -> dict[str, Any]:
+    out = dict(row)
+    direction = _visible_price_direction(out.get("projected_percent"))
+    timing = _governed_expected_cycle(
+        out.get("price_change_projections"),
+        evidence_timestamp=evidence_timestamp,
+        locked_until=out.get("locked_until"),
+    )
+    likelihood = out.get("likelihood")
+    out.update(
+        {
+            "direction": direction,
+            "official_or_provider_progress": out.get("price_change_percent", "UNAVAILABLE"),
+            "prediction_strength": likelihood if likelihood is not None else "UNAVAILABLE",
+            **timing,
+            "estimate_source": "official_price_predictor",
+            "evidence_timestamp": evidence_timestamp or "UNAVAILABLE",
+            "confidence": {
+                "predictor_health": predictor_health,
+                "native_likelihood": likelihood if likelihood is not None else "UNAVAILABLE",
+                "calibrating": bool(out.get("calibrating")),
+                "locked_until": out.get("locked_until"),
+            },
+            "impact_on_our_decision": _price_decision_impact(
+                element_id=int(out["element_id"]),
+                direction=direction,
+                owned_ids=owned_ids,
+                target_ids=target_ids,
+            ),
+        }
+    )
+    return out
+
+
 def _offset_zero_projection(row: Mapping[str, Any]) -> Mapping[str, Any] | None:
     projections = row.get("price_change_projections")
     if not isinstance(projections, list):
@@ -286,6 +465,11 @@ def _normalize_real_price_row(row: Mapping[str, Any]) -> dict[str, Any] | None:
         "calibrating": row.get("price_change_calibrating"),
         "team": row.get("team"),
         "element_type": row.get("element_type"),
+        "price_change_projections": [
+            dict(item)
+            for item in (row.get("price_change_projections") or [])
+            if isinstance(item, Mapping)
+        ],
     }
 
 
@@ -293,6 +477,8 @@ def build_price20(
     *,
     predictor_artifact: Mapping[str, Any] | None,
     direction: str,
+    owned_element_ids: Sequence[int] | None = None,
+    target_element_ids: Sequence[int] | None = None,
 ) -> dict[str, Any]:
     """Consume current official_price_predictor output; never predict price itself."""
     if not predictor_artifact:
@@ -310,6 +496,9 @@ def build_price20(
         or artifact.get("source_health")
         or "UNKNOWN"
     ).upper()
+    evidence_timestamp = artifact.get("checked_at") or artifact.get("generated_at")
+    owned_ids = {int(value) for value in (owned_element_ids or ())}
+    target_ids = {int(value) for value in (target_element_ids or ())}
     direction_token = str(direction or "").upper()
     if direction_token not in {"RISE", "FALL"}:
         raise ReportOrchestrationError("direction must be RISE/FALL")
@@ -317,7 +506,13 @@ def build_price20(
 
     if _real_predictor_schema(artifact):
         normalized = [
-            bound
+            _visible_price_contract(
+                bound,
+                evidence_timestamp=evidence_timestamp,
+                predictor_health=health,
+                owned_ids=owned_ids,
+                target_ids=target_ids,
+            )
             for row in rows
             if (bound := _normalize_real_price_row(row)) is not None
         ]
@@ -366,16 +561,46 @@ def build_price20(
 
     enough = len(selected) == 20
     healthy = health in {"GREEN", "HEALTHY", "PASS", "CURRENT", "OK"}
-    state = "COMPLETE" if enough and healthy else ("DEGRADED" if selected else "UNAVAILABLE")
+    timing_unsupported = (
+        adapter == "V6_DATA_PLAYERS_OFFSET0"
+        and any(row.get("cycles_to_expected_change") == "UNAVAILABLE" for row in selected)
+    )
+    missing_cycle_clock = (
+        adapter == "V6_DATA_PLAYERS_OFFSET0"
+        and any(
+            row.get("next_official_price_cycle_uk") == "UNAVAILABLE"
+            or row.get("next_official_price_cycle_wib") == "UNAVAILABLE"
+            for row in selected
+        )
+    )
+    if enough and healthy and not timing_unsupported and not missing_cycle_clock:
+        state = "COMPLETE"
+    elif selected:
+        state = "DEGRADED"
+    else:
+        state = "UNAVAILABLE"
+
     reason = None
     if state != "COMPLETE":
-        reason = (
-            f"official_price_predictor health={health}; "
-            f"usable offset-0 {direction_token.lower()} rows={len(selected)}/20"
-            if adapter == "V6_DATA_PLAYERS_OFFSET0"
-            else f"official_price_predictor health={health}; "
-            f"{direction_token.lower()} rows={len(selected)}/20"
-        )
+        if adapter == "V6_DATA_PLAYERS_OFFSET0" and enough and healthy and timing_unsupported:
+            unsupported = sum(
+                row.get("cycles_to_expected_change") == "UNAVAILABLE" for row in selected
+            )
+            reason = (
+                f"exact20 selected from healthy official_price_predictor; "
+                f"expected-change cycle unsupported for {unsupported}/20 rows, "
+                "so ETA remains UNAVAILABLE rather than invented"
+            )
+        elif adapter == "V6_DATA_PLAYERS_OFFSET0" and missing_cycle_clock:
+            reason = "official_price_predictor evidence timestamp unavailable; official cycle timing cannot be derived"
+        else:
+            reason = (
+                f"official_price_predictor health={health}; "
+                f"usable offset-0 {direction_token.lower()} rows={len(selected)}/20"
+                if adapter == "V6_DATA_PLAYERS_OFFSET0"
+                else f"official_price_predictor health={health}; "
+                f"{direction_token.lower()} rows={len(selected)}/20"
+            )
     return {
         "state": state,
         "available_count": len(selected),
@@ -394,7 +619,24 @@ def build_price20(
         ),
         "current_price_classification": "FACT",
         "projection_classification": "MODEL",
+        "visible_contract_fields": (
+            "player",
+            "current_price",
+            "direction",
+            "official_or_provider_progress",
+            "prediction_strength",
+            "next_official_price_cycle_uk",
+            "next_official_price_cycle_wib",
+            "cycles_to_expected_change",
+            "estimated_change_window",
+            "estimate_source",
+            "evidence_timestamp",
+            "confidence",
+            "impact_on_our_decision",
+        ),
         "uses_existing_predictor_only": True,
+        "existing_eta_threshold_source": "config/intelligence/price_radar.json:model_interpretation.threshold_percent",
+        "new_price_threshold_model_created": False,
         "new_price_predictor_created": False,
     }
 
@@ -404,11 +646,17 @@ def build_actionable_price_radar(
     owned15: Sequence[Mapping[str, Any]],
     predictor_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Always preserve owned identity; predictor direction is optional evidence."""
-    identities: list[dict[str, Any]] = []
-    seen: set[int] = set()
-    predictor = {}
-    for row in _predictor_rows(dict(predictor_artifact or {})):
+    """Always preserve owned identity; predictor evidence enriches but never removes OUR15."""
+    artifact = dict(predictor_artifact or {})
+    predictor_health = str(
+        artifact.get("health")
+        or artifact.get("status")
+        or artifact.get("source_health")
+        or "UNKNOWN"
+    ).upper()
+    evidence_timestamp = artifact.get("checked_at") or artifact.get("generated_at")
+    predictor: dict[int, dict[str, Any]] = {}
+    for row in _predictor_rows(artifact):
         raw_id = row.get("element_id", row.get("element", row.get("id")))
         if raw_id is None:
             continue
@@ -416,6 +664,9 @@ def build_actionable_price_radar(
             predictor[int(raw_id)] = row
         except (TypeError, ValueError):
             continue
+
+    identities: list[dict[str, Any]] = []
+    seen: set[int] = set()
     for raw in owned15:
         if not isinstance(raw, Mapping):
             continue
@@ -426,33 +677,74 @@ def build_actionable_price_radar(
         if element in seen:
             continue
         seen.add(element)
-        price = raw.get("current_price", raw.get("price"))
-        pred = dict(predictor.get(element) or {})
+
+        pred_raw = dict(predictor.get(element) or {})
+        normalized = _normalize_real_price_row(pred_raw) if pred_raw.get("price_change_projections") is not None else None
+        visible = (
+            _visible_price_contract(
+                normalized,
+                evidence_timestamp=evidence_timestamp,
+                predictor_health=predictor_health,
+                owned_ids={element},
+                target_ids=set(),
+            )
+            if normalized is not None
+            else None
+        )
+        raw_current = raw.get("current_price", raw.get("price"))
+        current_price = (
+            visible.get("current_price")
+            if visible is not None and visible.get("current_price") != "UNAVAILABLE"
+            else _official_current_price(raw_current)
+            if raw_current is not None
+            else "UNAVAILABLE"
+        )
+        raw_sell = raw.get("authenticated_sell_value", raw.get("selling_price"))
+        sell_value = _official_current_price(raw_sell) if raw_sell is not None else "UNAVAILABLE"
+
         identities.append(
             {
                 "element_id": element,
-                "name": raw.get("name"),
-                "current_price": price if price is not None else "UNAVAILABLE",
-                "price_fact": "FACT" if price is not None else "UNAVAILABLE",
-                "predictor_direction": pred.get("risk_direction")
-                or pred.get("direction")
-                or "UNAVAILABLE",
-                "predictor_projected_percent": (
-                    (_normalize_real_price_row(pred) or {}).get("projected_percent")
-                    if pred.get("price_change_projections") is not None
-                    else "UNAVAILABLE"
+                "name": raw.get("name") or (visible or {}).get("player"),
+                "current_price": current_price,
+                "price_fact": "FACT" if current_price != "UNAVAILABLE" else "UNAVAILABLE",
+                "authenticated_sell_value": sell_value,
+                "predictor_direction": (visible or {}).get("direction", "UNAVAILABLE"),
+                "predictor_progress": (visible or {}).get("official_or_provider_progress", "UNAVAILABLE"),
+                "prediction_strength": (visible or {}).get("prediction_strength", "UNAVAILABLE"),
+                "next_official_price_cycle_uk": (visible or {}).get("next_official_price_cycle_uk", "UNAVAILABLE"),
+                "next_official_price_cycle_wib": (visible or {}).get("next_official_price_cycle_wib", "UNAVAILABLE"),
+                "cycles_to_expected_change": (visible or {}).get("cycles_to_expected_change", "UNAVAILABLE"),
+                "estimated_change_window": (visible or {}).get("estimated_change_window", "UNAVAILABLE"),
+                "estimate_source": (visible or {}).get("estimate_source", "official_price_predictor" if pred_raw else "UNAVAILABLE"),
+                "evidence_timestamp": (visible or {}).get("evidence_timestamp", evidence_timestamp or "UNAVAILABLE"),
+                "confidence": (visible or {}).get("confidence", "UNAVAILABLE"),
+                "sell_value_affordability_impact": (visible or {}).get(
+                    "impact_on_our_decision",
+                    "OWNED — PREDICTOR EVIDENCE UNAVAILABLE; DO NOT FABRICATE PRICE ACTION",
                 ),
-                "predictor_classification": "MODEL" if pred else "UNAVAILABLE",
-                "predictor_evidence": pred or None,
+                "decision_implication": (visible or {}).get(
+                    "impact_on_our_decision",
+                    "OWNED — PREDICTOR EVIDENCE UNAVAILABLE; FOOTBALL DECISION CONTINUES",
+                ),
+                "predictor_projected_percent": (visible or {}).get("projected_percent", "UNAVAILABLE"),
+                "predictor_classification": "MODEL" if pred_raw else "UNAVAILABLE",
+                "predictor_evidence": pred_raw or None,
             }
         )
+
     complete = len(identities) == 15
     return {
         "state": "COMPLETE" if complete else ("DEGRADED" if identities else "UNAVAILABLE"),
         "available_count": len(identities),
         "expected_count": 15,
         "rows": identities,
+        "identity_complete": complete,
+        "predictor_complete_count": sum(
+            row.get("predictor_direction") != "UNAVAILABLE" for row in identities
+        ),
         "degradation_reason": None if complete else "owned price identity coverage is not exact15",
+        "price_alone_may_create_act": False,
     }
 
 
@@ -777,16 +1069,68 @@ def weather_report_time_evidence(
     weather: Mapping[str, Any] | None,
     lookup_accessible: bool,
     failure_reason: str | None = None,
+    fixture: str | None = None,
 ) -> dict[str, Any]:
-    """Weather is report-time evidence outside V6; absence from V6 is never the reason."""
+    """Normalize SIMPLE visible weather evidence without creating a weather model."""
     if weather:
+        payload = dict(weather)
+        impact = str(
+            payload.get("fpl_impact")
+            or payload.get("impact")
+            or payload.get("impact_classification")
+            or ""
+        ).strip().upper()
+        if impact not in {"NORMAL", "LOW", "MATERIAL"}:
+            impact = "UNAVAILABLE"
+        visible_row = {
+            "fixture": fixture or payload.get("fixture") or "UNAVAILABLE",
+            "venue": venue or payload.get("venue") or "UNAVAILABLE",
+            "kickoff": kickoff or payload.get("kickoff") or "UNAVAILABLE",
+            "condition": payload.get("condition") or payload.get("weather_condition") or "UNAVAILABLE",
+            "temperature_c": payload.get("temperature_c", "UNAVAILABLE"),
+            "precipitation_chance_pct": payload.get(
+                "precipitation_chance_pct",
+                payload.get("precipitation_probability_pct", "UNAVAILABLE"),
+            ),
+            "wind_kmh": payload.get(
+                "wind_kmh",
+                payload.get("wind_speed_kmh", "UNAVAILABLE"),
+            ),
+            "fpl_impact": impact,
+            "weather_evidence_timestamp": payload.get(
+                "weather_evidence_timestamp",
+                payload.get("evidence_timestamp", payload.get("checked_at", "UNAVAILABLE")),
+            ),
+        }
+        required = (
+            "fixture",
+            "venue",
+            "kickoff",
+            "condition",
+            "temperature_c",
+            "precipitation_chance_pct",
+            "wind_kmh",
+            "fpl_impact",
+        )
+        missing = [
+            key for key in required
+            if visible_row.get(key) in {None, "", "UNAVAILABLE"}
+        ]
         return {
-            "state": "COMPLETE",
-            "venue": venue,
-            "kickoff": kickoff,
-            "weather": dict(weather),
+            "state": "COMPLETE" if not missing else "PARTIAL",
+            "venue": visible_row["venue"],
+            "kickoff": visible_row["kickoff"],
+            "weather": payload,
+            "visible_row": visible_row,
+            "missing_visible_fields": missing,
             "source_layer": "REPORT_TIME",
             "v6_weather_required": False,
+            "new_weather_model_created": False,
+            "weather_adjusted_xpts": False,
+            "weather_mutates_p_start": False,
+            "weather_mutates_xmins": False,
+            "weather_may_independently_create_action": False,
+            "raw_provider_plumbing_visible": False,
         }
     reason = str(failure_reason or "").strip()
     if not reason:
@@ -800,7 +1144,25 @@ def weather_report_time_evidence(
         "venue": venue,
         "kickoff": kickoff,
         "weather": None,
+        "visible_row": {
+            "fixture": fixture or "UNAVAILABLE",
+            "venue": venue or "UNAVAILABLE",
+            "kickoff": kickoff or "UNAVAILABLE",
+            "condition": "UNAVAILABLE",
+            "temperature_c": "UNAVAILABLE",
+            "precipitation_chance_pct": "UNAVAILABLE",
+            "wind_kmh": "UNAVAILABLE",
+            "fpl_impact": "UNAVAILABLE",
+            "weather_evidence_timestamp": "UNAVAILABLE",
+        },
         "source_layer": "REPORT_TIME",
         "v6_weather_required": False,
         "degradation_reason": reason,
+        "new_weather_model_created": False,
+        "weather_adjusted_xpts": False,
+        "weather_mutates_p_start": False,
+        "weather_mutates_xmins": False,
+        "weather_may_independently_create_action": False,
+        "raw_provider_plumbing_visible": False,
     }
+

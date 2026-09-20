@@ -406,6 +406,11 @@ def tactical_similarity(
         ("cb_personnel", historical_row.get("cb_personnel"), current.get("cb_personnel")),
         ("fb_personnel", historical_row.get("fb_personnel"), current.get("fb_personnel")),
         ("midfield_structure", historical_row.get("midfield_structure"), current.get("midfield_structure")),
+        (
+            "team_strength_regime",
+            historical_row.get("team_strength_regime"),
+            current.get("team_strength_regime"),
+        ),
         ("player_role", _role_label(historical_row), current.get("player_role")),
     )
     observed = [(name, _similarity_component(old, now)) for name, old, now in fields]
@@ -824,10 +829,25 @@ def evaluate_multi_player_chain(
     middle_players = players[1:-1]
     middle_absent_probability = 0.0 if middle_players else None
     middle_absence_multiplier = 1.0 if middle_players else None
+    player_name_map: dict[int, Any] = {}
+    for edge in ordered_edges:
+        source = _i(
+            edge.get("source_player_id"),
+            _i(edge.get("teammate_player_id"), -1),
+        )
+        target = _i(edge.get("target_player_id"), -1)
+        if source > 0 and edge.get("source_name"):
+            player_name_map[source] = edge.get("source_name")
+        if target > 0 and edge.get("target_name"):
+            player_name_map[target] = edge.get("target_name")
     return {
         "status": "AVAILABLE",
         "players": players,
         "direction": players,
+        "player_ids": players,
+        "player_names": [
+            player_name_map.get(player_id) for player_id in players
+        ],
         "relationship_type": "BOUNDED_MULTI_PLAYER_DEPENDENCY_CHAIN",
         "edge_count": len(ordered_edges),
         "edges": ordered_edges,

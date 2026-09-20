@@ -686,7 +686,27 @@ def test_nested_report_blocks_preserve_deep_top_level_contract():
                                 "confidence": 0.0,
                                 "dependency_strength": 0.80,
                             },
-                        ]
+                        ],
+                        "multi_player_chains": [
+                            {
+                                "status": "AVAILABLE",
+                                "player_ids": [700, 701, 703],
+                                "player_names": ["A", "B", "C"],
+                                "direction": [700, 701, 703],
+                                "relationship_type": "BOUNDED_MULTI_PLAYER_DEPENDENCY_CHAIN",
+                                "edge_count": 2,
+                                "chain_intact_probability": 0.5,
+                                "weakest_link_confidence": 0.2,
+                                "confidence": 0.2,
+                                "linked_player_p_start": {
+                                    "700": 1.0,
+                                    "701": 0.5,
+                                },
+                                "multiplier": 1.04,
+                                "main_dependency_risk": "MIDDLE_NODE_START_RISK",
+                                "middle_absence_multiplier": 1.0,
+                            }
+                        ],
                     },
                 }
             ]
@@ -701,6 +721,12 @@ def test_nested_report_blocks_preserve_deep_top_level_contract():
     network = out["blocks"]["LINK-UP / COMBINATION NETWORK"]
     assert network["relationship_count"] == 1
     assert network["relationships"][0]["teammate_player_id"] == 701
+    assert network["chain_count"] == 1
+    assert network["MULTI-PLAYER CHAINS"][0]["player_ids"] == [700, 701, 703]
+    assert (
+        network["MULTI-PLAYER CHAINS"][0]["middle_absence_multiplier"]
+        == pytest.approx(1.0)
+    )
 
 
 def test_canonical_methodology_authority_contains_contextual_governance():
@@ -1082,3 +1108,31 @@ def test_V_missing_prior_season_source_is_explicit_and_non_fabricated():
         == "UNAVAILABLE — NO GOVERNED MATCH-LEVEL FACTUAL SOURCE"
     )
     assert matchup["prior_season_meetings"] == 0
+
+
+
+def test_runtime_projection_path_calls_chain_constructor_before_p13():
+    from pathlib import Path
+
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "models"
+        / "historical_projection.py"
+    ).read_text(encoding="utf-8")
+    assert "construct_directional_chains(" in source
+    assert "chains=multi_player_chains" in source
+    assert "contextual_dynamics=contextual_by_fixture.get(" in source
+
+
+def test_prediction_service_declares_truthful_current_season_history_scope():
+    from pathlib import Path
+
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "engines"
+        / "prediction_service.py"
+    ).read_text(encoding="utf-8")
+    assert 'opponent_history_scope="CURRENT-SEASON ONLY"' in source
+    assert "NO GOVERNED MATCH-LEVEL FACTUAL SOURCE" in source

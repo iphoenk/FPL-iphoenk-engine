@@ -304,6 +304,7 @@ def _governed_expected_cycle(
         "next_official_price_cycle_wib": next_wib or "UNAVAILABLE",
         "cycles_to_expected_change": "UNAVAILABLE",
         "estimated_change_window": "UNAVAILABLE",
+        "eta_context": None,
         "estimated_change_date_uk": None,
         "estimated_change_date_wib": None,
         "estimated_change_at_uk": None,
@@ -388,6 +389,7 @@ def _governed_expected_cycle(
             {
                 "cycles_to_expected_change": cycle_label,
                 "estimated_change_window": wib_display or "UNAVAILABLE",
+                "eta_context": wib_display,
                 "estimated_change_date_uk": _format_price_cycle(cycle_uk, wib=False),
                 "estimated_change_date_wib": wib_display,
                 "estimated_change_at_uk": cycle_uk,
@@ -406,7 +408,8 @@ def _governed_expected_cycle(
         {
             "date_state": "NO_CROSSING_WITHIN_GOVERNED_HORIZON",
             "date_state_complete": True,
-            "estimated_change_window": (
+            "estimated_change_window": "UNAVAILABLE",
+            "eta_context": (
                 f"Belum terdeteksi berubah sampai {last_display}"
                 if last_display
                 else "NO EXPECTED CHANGE WITHIN GOVERNED HORIZON"
@@ -636,7 +639,15 @@ def build_price20(
             for row in selected
         )
     )
-    if enough and healthy and date_state_complete and not missing_cycle_clock:
+    unsupported_eta = (
+        adapter == "V6_DATA_PLAYERS_OFFSET0"
+        and any(
+            row.get("cycles_to_expected_change") == "UNAVAILABLE"
+            or row.get("estimated_change_window") == "UNAVAILABLE"
+            for row in selected
+        )
+    )
+    if enough and healthy and date_state_complete and not missing_cycle_clock and not unsupported_eta:
         state = "COMPLETE"
     elif selected:
         state = "DEGRADED"
@@ -645,17 +656,30 @@ def build_price20(
 
     reason = None
     if state != "COMPLETE":
-        if adapter == "V6_DATA_PLAYERS_OFFSET0" and not date_state_complete:
+        if adapter == "V6_DATA_PLAYERS_OFFSET0" and not enough:
+            reason = (
+                f"official_price_predictor health={health}; "
+                f"usable offset-0 {direction_token.lower()} rows={len(selected)}/20"
+            )
+        elif adapter == "V6_DATA_PLAYERS_OFFSET0" and not date_state_complete:
             incomplete = sum(not bool(row.get("date_state_complete")) for row in selected)
             reason = f"date-state terminal contract incomplete for {incomplete}/20 rows"
         elif adapter == "V6_DATA_PLAYERS_OFFSET0" and missing_cycle_clock:
             reason = "official_price_predictor evidence timestamp unavailable; official cycle timing cannot be derived"
+        elif adapter == "V6_DATA_PLAYERS_OFFSET0" and unsupported_eta:
+            unsupported = sum(
+                row.get("cycles_to_expected_change") == "UNAVAILABLE"
+                or row.get("estimated_change_window") == "UNAVAILABLE"
+                for row in selected
+            )
+            reason = (
+                f"exact20 selected from healthy official_price_predictor; "
+                f"governed expected-change cycle unsupported for {unsupported}/20 rows, "
+                "so ETA remains UNAVAILABLE rather than inferred"
+            )
         else:
             reason = (
                 f"official_price_predictor health={health}; "
-                f"usable offset-0 {direction_token.lower()} rows={len(selected)}/20"
-                if adapter == "V6_DATA_PLAYERS_OFFSET0"
-                else f"official_price_predictor health={health}; "
                 f"{direction_token.lower()} rows={len(selected)}/20"
             )
     return {
@@ -684,13 +708,14 @@ def build_price20(
             "prediction_strength",
             "next_official_price_cycle_uk",
             "next_official_price_cycle_wib",
+            "cycles_to_expected_change",
+            "estimated_change_window",
             "estimated_change_date_uk",
             "estimated_change_date_wib",
             "date_state",
             "last_supported_projection_date_wib",
             "horizon_cycles",
             "latest_supported_projection",
-            "estimated_change_window",
             "estimate_source",
             "evidence_timestamp",
             "confidence",
@@ -802,6 +827,7 @@ def build_actionable_price_radar(
                 "prediction_strength": (visible or {}).get("prediction_strength", "UNAVAILABLE"),
                 "next_official_price_cycle_uk": (visible or {}).get("next_official_price_cycle_uk", "UNAVAILABLE"),
                 "next_official_price_cycle_wib": (visible or {}).get("next_official_price_cycle_wib", "UNAVAILABLE"),
+                "cycles_to_expected_change": (visible or {}).get("cycles_to_expected_change", "UNAVAILABLE"),
                 "estimated_change_date_uk": (visible or {}).get("estimated_change_date_uk"),
                 "estimated_change_date_wib": (visible or {}).get("estimated_change_date_wib"),
                 "date_state": (visible or {}).get("date_state", "DATE_UNAVAILABLE"),
@@ -815,7 +841,12 @@ def build_actionable_price_radar(
                 "latest_supported_projection": (visible or {}).get("latest_supported_projection"),
                 "estimated_change_window": (visible or {}).get(
                     "estimated_change_window",
-                    "Tanggal belum tersedia — predictor evidence unavailable",
+                    "UNAVAILABLE",
+                ),
+                "eta_context": (visible or {}).get("eta_context"),
+                "eta_reason": (visible or {}).get(
+                    "eta_reason",
+                    "PREDICTOR_EVIDENCE_UNAVAILABLE" if visible is None else None,
                 ),
                 "estimate_source": (visible or {}).get("estimate_source", "official_price_predictor" if pred_raw else "UNAVAILABLE"),
                 "evidence_timestamp": (visible or {}).get("evidence_timestamp", evidence_timestamp or "UNAVAILABLE"),
@@ -1186,25 +1217,41 @@ def weather_report_time_evidence(
         ).strip().upper()
         if impact not in {"NORMAL", "LOW", "MATERIAL"}:
             impact = "UNAVAILABLE"
+        precipitation = payload.get(
+            "precipitation_probability",
+            payload.get(
+                "precipitation_chance_pct",
+                payload.get("precipitation_probability_pct", "UNAVAILABLE"),
+            ),
+        )
+        wind = payload.get(
+            "wind_kph",
+            payload.get(
+                "wind_kmh",
+                payload.get("wind_speed_kmh", "UNAVAILABLE"),
+            ),
+        )
+        evidence_timestamp = payload.get(
+            "weather_evidence_timestamp",
+            payload.get("evidence_timestamp", payload.get("checked_at", "UNAVAILABLE")),
+        )
+        impact_reason = payload.get("impact_reason", payload.get("fpl_impact_reason", "UNAVAILABLE"))
         visible_row = {
             "fixture": fixture or payload.get("fixture") or "UNAVAILABLE",
             "venue": venue or payload.get("venue") or "UNAVAILABLE",
             "kickoff": kickoff or payload.get("kickoff") or "UNAVAILABLE",
             "condition": payload.get("condition") or payload.get("weather_condition") or "UNAVAILABLE",
             "temperature_c": payload.get("temperature_c", "UNAVAILABLE"),
-            "precipitation_chance_pct": payload.get(
-                "precipitation_chance_pct",
-                payload.get("precipitation_probability_pct", "UNAVAILABLE"),
-            ),
-            "wind_kmh": payload.get(
-                "wind_kmh",
-                payload.get("wind_speed_kmh", "UNAVAILABLE"),
-            ),
+            "temperature": payload.get("temperature_c", "UNAVAILABLE"),
+            "precipitation_probability": precipitation,
+            "precipitation_chance_pct": precipitation,
+            "wind_kph": wind,
+            "wind_kmh": wind,
             "fpl_impact": impact,
-            "weather_evidence_timestamp": payload.get(
-                "weather_evidence_timestamp",
-                payload.get("evidence_timestamp", payload.get("checked_at", "UNAVAILABLE")),
-            ),
+            "impact_class": impact,
+            "impact_reason": impact_reason,
+            "evidence_timestamp": evidence_timestamp,
+            "weather_evidence_timestamp": evidence_timestamp,
         }
         required = (
             "fixture",
@@ -1212,9 +1259,10 @@ def weather_report_time_evidence(
             "kickoff",
             "condition",
             "temperature_c",
-            "precipitation_chance_pct",
-            "wind_kmh",
+            "precipitation_probability",
+            "wind_kph",
             "fpl_impact",
+            "weather_evidence_timestamp",
         )
         missing = [
             key for key in required
@@ -1233,6 +1281,8 @@ def weather_report_time_evidence(
             "weather_adjusted_xpts": False,
             "weather_mutates_p_start": False,
             "weather_mutates_xmins": False,
+            "weather_mutates_p1_6_tactical_score": False,
+            "weather_failure_isolated_to_weather": True,
             "weather_may_independently_create_action": False,
             "raw_provider_plumbing_visible": False,
         }
@@ -1254,9 +1304,15 @@ def weather_report_time_evidence(
             "kickoff": kickoff or "UNAVAILABLE",
             "condition": "UNAVAILABLE",
             "temperature_c": "UNAVAILABLE",
+            "temperature": "UNAVAILABLE",
+            "precipitation_probability": "UNAVAILABLE",
             "precipitation_chance_pct": "UNAVAILABLE",
+            "wind_kph": "UNAVAILABLE",
             "wind_kmh": "UNAVAILABLE",
             "fpl_impact": "UNAVAILABLE",
+            "impact_class": "UNAVAILABLE",
+            "impact_reason": reason,
+            "evidence_timestamp": "UNAVAILABLE",
             "weather_evidence_timestamp": "UNAVAILABLE",
         },
         "source_layer": "REPORT_TIME",
@@ -1266,6 +1322,8 @@ def weather_report_time_evidence(
         "weather_adjusted_xpts": False,
         "weather_mutates_p_start": False,
         "weather_mutates_xmins": False,
+        "weather_mutates_p1_6_tactical_score": False,
+        "weather_failure_isolated_to_weather": True,
         "weather_may_independently_create_action": False,
         "raw_provider_plumbing_visible": False,
     }

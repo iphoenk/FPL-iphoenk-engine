@@ -1070,9 +1070,32 @@ def seal_same_slot_completion_ledger(
         evidence,
         existing_ledger=existing_ledger,
     )
+
+    acceptance_input = evaluated.get("natural_report_acceptance_evidence")
+    acceptance_proof = None
+    if isinstance(acceptance_input, Mapping):
+        existing_acceptance = None
+        if isinstance(existing_ledger, Mapping) and isinstance(
+            existing_ledger.get("natural_report_acceptance_proof"), Mapping
+        ):
+            existing_acceptance = existing_ledger.get(
+                "natural_report_acceptance_proof"
+            )
+        acceptance_proof = seal_natural_report_acceptance_proof(
+            acceptance_input,
+            existing_proof=existing_acceptance,
+        )
+
+    acceptance_attachment = (
+        {"natural_report_acceptance_proof": acceptance_proof}
+        if acceptance_proof is not None
+        else {}
+    )
+
     if evaluated.get("status") != "PASS":
         return {
             **evaluated,
+            **acceptance_attachment,
             "schema_version": _P07_LEDGER_SCHEMA_VERSION,
             "immutable": False,
             "ledger_hash": None,
@@ -1081,6 +1104,7 @@ def seal_same_slot_completion_ledger(
 
     sealed = {
         **evaluated,
+        **acceptance_attachment,
         "schema_version": _P07_LEDGER_SCHEMA_VERSION,
         "immutable": True,
         "readback_valid": False,

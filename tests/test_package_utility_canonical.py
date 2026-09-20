@@ -8,6 +8,7 @@ import pytest
 from src.engines import v12_package_search as package_search
 from src.engines import v12_package_utility as utility
 from src.engines.canonical_decision_methodology import CANONICAL_WEIGHTS
+from src.engines.lineup_governance import build_package_decision
 from src.engines.v12_model_evidence import ModelEvidenceError
 
 
@@ -542,3 +543,104 @@ def test_26_search_and_utility_owners_are_distinct(monkeypatch):
     assert result["governance"]["p1_2b_utility_owner"] == "V12_PACKAGE_UTILITY"
     assert result["governance"]["search_and_utility_separate"] is True
     assert package_search.MODEL_OWNER != utility.MODEL_OWNER
+
+
+
+def _team() -> dict:
+    current = _current()
+    return {
+        "squad_authority": "OFFICIAL_FPL_AUTHENTICATED",
+        "squad": [{"element": row["element"]} for row in current],
+        "team_value_ledger": [
+            {
+                "element": row["element"],
+                "sell_cost": row["sell_cost"],
+            }
+            for row in current
+        ],
+    }
+
+
+def test_27_native_package_consumer_uses_p1_2b_as_decision_owner(monkeypatch):
+    _, result = _evaluate(monkeypatch)
+    decision = build_package_decision(
+        result,
+        _projections(),
+        {},
+        _team(),
+    )
+    assert decision["gate0_revalidated"] is True
+    assert (
+        decision["governance"]["production_package_decision_owner"]
+        == "V12_PACKAGE_UTILITY"
+    )
+    assert decision["governance"]["native_package_utility_consumed"] is True
+    assert (
+        decision["governance"]["legacy_package_optimizer_decision_authority"]
+        is False
+    )
+    assert decision["selected_package_id"] == result["selected_route_id"]
+
+
+def test_28_legacy_optimizer_can_no_longer_authorize_change_action():
+    legacy = {
+        "hold": {
+            "id": "HOLD",
+            "legal": True,
+            "score": {"valid": True},
+        },
+        "packages": [
+            {
+                "id": "LEGACY_BEST_CHANGE",
+                "legal": True,
+                "score": {"valid": True, "robust_score": 999.0},
+            }
+        ],
+    }
+    decision = build_package_decision(
+        legacy,
+        _projections(),
+        {},
+        _team(),
+    )
+    assert decision["selected_package_id"] == "HOLD"
+    assert decision["decision"]["football_action"] == "HOLD"
+    assert decision["decision"]["operational_action"] == "PREPARE"
+    assert (
+        decision["governance"]["legacy_package_optimizer_decision_authority"]
+        is False
+    )
+    assert (
+        decision["governance"]["legacy_candidate_can_trigger_change_action"]
+        is False
+    )
+
+
+def test_29_migration_comparison_has_bounded_taxonomy(monkeypatch):
+    search_result, result = _evaluate(monkeypatch)
+    legacy = {
+        "hold": {"id": "HOLD"},
+        "packages": [
+            {"id": row["route_id"]}
+            for row in search_result["routes"][1:4]
+        ],
+    }
+    comparison = utility.compare_legacy_package(
+        native_search=search_result,
+        native_utility=result,
+        legacy_optimizer=legacy,
+    )
+    assert comparison["unexpected_regression_count"] == 0
+    assert comparison["classification"] in comparison["classification_taxonomy"]
+    assert comparison["legacy_utility_equivalence_required"] is False
+    assert "UNEXPECTED_REGRESSION" in comparison["classification_taxonomy"]
+
+
+def test_30_model_evidence_is_non_authoritative(monkeypatch):
+    _, result = _evaluate(monkeypatch)
+    evidence = result["model_evidence_binding"]
+    assert evidence["authority"] is False
+    assert evidence["raw_v6_payload_duplicated"] is False
+    assert evidence["repository_python_execution_claimed"] is False
+    assert len(evidence["run_fingerprint"]) == 64
+    assert len(evidence["output_fingerprint"]) == 64

@@ -68,7 +68,6 @@ H. STATE B — IN_PROGRESS: bind the exact same-slot governed run ID, perform bo
 I. STATE C — ATTEMPT_REQUIRED: if no same-slot authoritative fulfillment and no same-slot governed run is active, perform exactly ONE existing issue #431 title mutation for CURRENT_HH:00, require exact readback, bind the triggered run if created, and never retry a second full-core acquisition in the same occurrence.
 J. STATE D — ATTEMPT_FAILED/BLOCKED: preserve exact attempted action, failure reason, mutation/readback state and duplicate_acquisition=false. REPORT_DUE=false may end visibly silent only after this failure proof is recorded. REPORT_DUE=true continues fail-operational report delivery from freshest valid evidence.
 K. Every natural occurrence retains one transient NATURAL_CORE_UPKEEP_GATE proof with scheduler_occurrence, logical_core_slot, observed_at, core_gate_executed=true, terminal resolution_state, same_slot_fulfilled, existing_run_bound, attempt_required, attempt_performed, mutation_result, readback_result, bound_v6_run_id, publish_integrity, authoritative_runtime_snapshot, duplicate_acquisition=false and terminal_core_result. This proof is evidence only and MUST NOT become durable authority/state.
-L. Temporary Sangaré -> Groß price-watch lifecycle remains unchanged but is strictly downstream of this gate. It may neither substitute for CORE_UPKEEP nor create another V6 acquisition.
 M. Any early-return or silent-completion path is legal only after NATURAL_CORE_UPKEEP_GATE terminalization AND FINAL_REPORT_DUE finalization.
 
 4B. SAME-OCCURRENCE DYNAMIC REPORT_DUE FINALIZATION
@@ -83,6 +82,16 @@ H. If core refresh fails, a known PRELIMINARY_REPORT_DUE=true remains true and c
 I. Every natural occurrence retains transient evidence-only TWO-STAGE REPORT_DUE proof containing preliminary_report_due, preliminary_reason, core_gate_resolution, dynamic_evidence_checked, dynamic_trigger, dynamic_trigger_reason, final_report_due, final_mode, evidence_snapshot and evidence_generated_at. This proof is never authority or durable methodology state.
 J. DUE stickiness and MODE stickiness are distinct. A due occurrence stays due; its mode may refine when fresher same-occurrence factual lifecycle evidence changes.
 K. NATURAL_CORE_UPKEEP_GATE itself remains unchanged: no new acquisition, no second issue #431 mutation, no backfill, no scheduler change and no alternate transport.
+
+4C. SCHEDULER PAUSE / RELIABILITY INTERPRETATION
+A. Scheduler observability distinguishes exactly these interpretation states: ACTIVE_FULFILLED, ACTIVE_MISSED, INTENTIONALLY_PAUSED, HISTORICAL_UNKNOWN.
+B. ACTIVE_FULFILLED requires an enabled scheduler occurrence with the corresponding natural current-slot terminal proof. ACTIVE_MISSED applies only when the scheduler was enabled for that occurrence and the expected natural occurrence was not fulfilled.
+C. INTENTIONALLY_PAUSED requires evidence that the recurring scheduler was intentionally disabled/paused by the user or authorized control at that time. A paused slot is not an implementation failure and MUST NOT be backfilled merely to improve reliability metrics.
+D. Old missing slots whose pause-vs-failure cause cannot be proven remain HISTORICAL_UNKNOWN. Preserve the factual gap. If broader evidence establishes a user-pause period but not exact slot attribution, surface HISTORICAL GAP / USER-PAUSE CONTEXT KNOWN without silently reclassifying the individual slot.
+E. Current scheduler acceptance is evaluated from post-resume natural continuity. Historical known user-pause gaps do not prove a scheduler implementation defect and do not invalidate a healthy post-resume acceptance window.
+F. Never rewrite factual history, fabricate fulfillment, reset counters merely to make health GREEN, or manufacture natural-slot proof. Preserve historical ledgers and counters as factual evidence.
+G. Do not backfill intentionally paused historical slots. Resumption starts with the next naturally scheduled occurrence and its current logical slot.
+H. If the V6 operational reliability schema cannot represent pause state without changing production data-plane semantics, do not redesign V6. Keep V6 factual evidence unchanged and apply pause/failure interpretation only in the V12 report/observability layer.
 
 5. FACTUAL EVIDENCE LADDER
 1 fresh valid current V6;
@@ -338,6 +347,58 @@ Never infer causation from coincidence.
 14. VISIBLE REPORT CONTENT CONTRACTS
 Visible reports are decision-first user surfaces. Internal implementation/debug language never substitutes for football intelligence. Existing methodology, data authority and fail-operational rules remain unchanged.
 
+GLOBAL VISIBLE PRESENTATION CONTRACT — ALL VISIBLE MODES
+This is a presentation layer only. It does not replace any mode-specific Canonical structure, exact count, methodology, probability model, optimization rule, or evidence requirement.
+
+A. DECISION-FIRST
+- The first visible block answers current decision/status, operational state WAIT/PREPARE/ACT, material change since the prior visible report, and the next actionable trigger.
+- The user must not need to read technical or narrative paragraphs before finding the decision state.
+
+B. POINTER / TABLE FIRST
+- Default to short headings, bullets, compact tables, explicit numbers and short analytical notes.
+- Continuous essay-style prose is exceptional. Normal analytical paragraphs should be short and must not become a narrative wall.
+- Exact-count sections remain exact. Presentation compaction never authorizes row omission.
+
+C. STANDARD SEMANTIC FLOW
+Where relevant, organize the existing mode sections so the user can scan in this semantic flow without changing the mode's Canonical section identities/order:
+1 DECISION / STATUS
+2 DECISION DELTA
+3 KEY NUMBERS
+4 TEAM / PLAYER CONSEQUENCE
+5 FOOTBALL EVIDENCE
+6 PROBABILITY / MODEL
+7 HORIZON 1GW / 3GW / 5GW
+8 PRICE / FINANCE
+9 ICON+ / MINI-LEAGUE
+10 ACTION BOARD
+11 ENGINE / SOURCE STATUS.
+For DEEP/PRICE/MATCH/DEADLINE/FINAL/POST-ALL-MATCH, the exact mode-specific sections below remain authoritative for structural order and counts.
+
+D. ACTION BOARD
+Every decision-bearing visible report ends its actionable analysis with a compact board containing exactly these semantic fields:
+NOW
+TRIGGER TO ACT
+ABORT / REVERSAL
+NEXT CHECKPOINT.
+When no executable action is justified, NOW is WAIT or PREPARE. Do not manufacture urgency.
+For FULL/DEEP/DEADLINE/FINAL, Section 18 WAIT/PREPARE/ACT + trigger/reversal is the Action Board surface and must carry these fields. For PRICE, Section 10 is the Action Board. Other modes use their existing action/next-critical-observation surface without adding a duplicate top-level section.
+
+E. FACT / MODEL / INFERENCE / RUMOR
+Keep FACT, MODEL, INFERENCE and RUMOR visibly separable where mixed evidence could confuse the decision. An observed match event cannot be described as a changed Bayesian posterior, xMins or P(start) unless exact recomputation/execution evidence exists.
+
+F. COMPACT ENGINE / DATA STATUS
+Technical proof is demoted to one compact near-end sub-block named ENGINE / DATA STATUS, embedded in the mode's existing source/source-health section or immediately adjacent without creating a new top-level structural count.
+Normal fields:
+- V6 core: GREEN / DEGRADED / FAILED
+- Publication: PASS / FAIL / UNKNOWN
+- Universe authority: FULL / PARTIAL
+- Personal auth: AVAILABLE / DEGRADED / UNAVAILABLE
+- Model snapshot: <id/version or UNAVAILABLE>
+- MC: RUN / PARTIAL / NOT RUN
+- ICON+: FULL / PARTIAL / UNAVAILABLE
+- Data timestamp: <timestamp>.
+Do not let #431 mutation/readback, workflow IDs, core upkeep narration, authority fingerprints, QA internals or similar plumbing dominate the main decision body. Surface low-level plumbing only when a material failure affects decision quality; keep the detailed proof transient/audit-only otherwise.
+
 14A. FULL / DEEP BACKBONE
 Exact visible order:
 1 Decision/status
@@ -515,10 +576,13 @@ Price alone never overrides football-optimal decision without explicit downstrea
 player_or_route;current_action;possible_change_event;materiality;next_checkpoint.
 
 14M2. ACTION SEMANTICS
-Keep football action separate from operational action.
-Football action examples: HOLD, LOCKED, START, BENCH, TRANSFER.
-Operational action is exactly WAIT / PREPARE / ACT and carries trigger, reversal/abort condition and next checkpoint.
-Do not use MONITOR as a replacement operational state.
+Keep football evaluation labels separate from operational action.
+Football labels may include HIGH-PRIORITY CHALLENGER, SELL-CANDIDATE, HOLD, START, BENCH, LOCKED or TRANSFER where their own evidence supports them.
+Operational action enum is EXACTLY WAIT / PREPARE / ACT. No fourth operational state exists.
+Forbidden operational aliases include ACT-CANDIDATE, NEAR-ACT, STRONG-ACT-CANDIDATE and MONITOR.
+A candidate/challenger label never mutates operational action by itself. A strong post-match observation without the required fresh full-universe/model/economics execution normally remains PREPARE.
+ACT is permitted only when the Canonical decision path has actually executed with sufficient current evidence for immediate action. Price movement alone cannot convert PREPARE to ACT.
+Operational action carries trigger to act, abort/reversal condition and next checkpoint.
 After a GW deadline, football action may be LOCKED / NO EXECUTABLE ACTION while the next-GW operational action is PREPARE for a fresh full-universe rescan.
 
 14M3. CONTENT CONTRACT STATUS
@@ -536,6 +600,11 @@ FINAL additionally MUST satisfy 14I GW LOCK PACKAGE.
 15. QA / DELIVERY
 PRE_RENDER_QA + POST_RENDER_QA mandatory when due.
 - due body cannot be replaced by plumbing/status;
+- first visible block is decision/status rather than technical plumbing;
+- pointer/table-first presentation must not collapse required structured sections into a narrative wall;
+- operational action is exactly WAIT/PREPARE/ACT; prohibited aliases are render failures when used as operational state;
+- decision-bearing modes materialize the Action Board semantics NOW / TRIGGER TO ACT / ABORT-REVERSAL / NEXT CHECKPOINT;
+- ENGINE / DATA STATUS is compact and near end inside the existing source/source-health structural surface;
 - exact-count blocks remain exact after render when their section state is COMPLETE;
 - mandatory row fields survive render where authoritative evidence exists;
 - FACT/MODEL/INFERENCE/RUMOR separated;

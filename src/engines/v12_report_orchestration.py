@@ -282,28 +282,55 @@ def _visible_price_direction(projected_percent: Any) -> str:
     return "NEUTRAL"
 
 
+def _format_price_cycle(value: Any, *, wib: bool) -> str | None:
+    parsed = _parse_price_dt(value)
+    if parsed is None:
+        return None
+    local = parsed.astimezone(_PRICE_WIB if wib else _PRICE_UK)
+    zone = "WIB" if wib else (local.tzname() or "UK")
+    return f"{local.strftime('%d %b %Y • %H:%M')} {zone}"
+
+
 def _governed_expected_cycle(
     projections: Any,
     *,
     evidence_timestamp: Any,
     locked_until: Any,
 ) -> dict[str, Any]:
-    """Expose existing predictor cycle semantics without creating a second ETA model."""
+    """Map the existing 0/1/2 predictor horizon to truthful calendar date states."""
     next_uk, next_wib = _next_official_price_cycle(evidence_timestamp, offset=0)
     base = {
         "next_official_price_cycle_uk": next_uk or "UNAVAILABLE",
         "next_official_price_cycle_wib": next_wib or "UNAVAILABLE",
         "cycles_to_expected_change": "UNAVAILABLE",
         "estimated_change_window": "UNAVAILABLE",
+        "estimated_change_date_uk": None,
+        "estimated_change_date_wib": None,
+        "estimated_change_at_uk": None,
+        "estimated_change_at_wib": None,
+        "last_supported_projection_date_uk": None,
+        "last_supported_projection_date_wib": None,
+        "last_supported_projection_at_uk": None,
+        "last_supported_projection_at_wib": None,
+        "horizon_cycles": 0,
+        "latest_supported_projection": None,
+        "projection_offset": None,
+        "date_state": "DATE_UNAVAILABLE",
+        "date_state_complete": True,
+        "degradation_reason": None,
         "eta_reason": None,
         "eta_uses_existing_threshold": True,
         "governed_threshold_percent": EXISTING_PRICE_MODEL_THRESHOLD,
+        "horizon_extension_used": False,
+        "governed_projection_offsets": (0, 1, 2),
     }
     if next_uk is None or next_wib is None:
-        base["eta_reason"] = "EVIDENCE_TIMESTAMP_UNAVAILABLE"
+        reason = "EVIDENCE_TIMESTAMP_UNAVAILABLE"
+        base.update({"eta_reason": reason, "degradation_reason": reason})
         return base
     if not isinstance(projections, list):
-        base["eta_reason"] = "PREDICTOR_PROJECTIONS_UNAVAILABLE"
+        reason = "PREDICTOR_PROJECTIONS_UNAVAILABLE"
+        base.update({"eta_reason": reason, "degradation_reason": reason})
         return base
 
     locked = _parse_price_dt(locked_until)
@@ -315,6 +342,7 @@ def _governed_expected_cycle(
             offset = int(item.get("offset"))
         except (TypeError, ValueError):
             continue
+        # The existing governed predictor contract exposes only these offsets.
         if offset not in {0, 1, 2}:
             continue
         projected = _finite_price_number(item.get("projected_percent"))
@@ -322,36 +350,71 @@ def _governed_expected_cycle(
             continue
         candidates.append((offset, projected))
 
-    for offset, projected in sorted(candidates):
+    candidates.sort()
+    if not candidates:
+        reason = "NO_VALID_GOVERNED_PROJECTION_OFFSETS"
+        base.update({"eta_reason": reason, "degradation_reason": reason})
+        return base
+
+    max_offset, latest_projection = candidates[-1]
+    last_uk, last_wib = _next_official_price_cycle(evidence_timestamp, offset=max_offset)
+    base.update(
+        {
+            "horizon_cycles": max_offset + 1,
+            "latest_supported_projection": latest_projection,
+            "last_supported_projection_at_uk": last_uk,
+            "last_supported_projection_at_wib": last_wib,
+            "last_supported_projection_date_uk": _format_price_cycle(last_uk, wib=False),
+            "last_supported_projection_date_wib": _format_price_cycle(last_wib, wib=True),
+        }
+    )
+
+    for offset, projected in candidates:
         if abs(projected) < EXISTING_PRICE_MODEL_THRESHOLD:
             continue
         cycle_uk, cycle_wib = _next_official_price_cycle(evidence_timestamp, offset=offset)
         if cycle_uk is None or cycle_wib is None:
             continue
         cycle_dt = _parse_price_dt(cycle_uk)
-        if locked is not None and cycle_dt is not None and cycle_dt.astimezone(timezone.utc) < locked.astimezone(timezone.utc):
+        if (
+            locked is not None
+            and cycle_dt is not None
+            and cycle_dt.astimezone(timezone.utc) < locked.astimezone(timezone.utc)
+        ):
             continue
-        wib_dt = _parse_price_dt(cycle_wib)
-        wib_label = wib_dt.strftime("%H:%M WIB") if wib_dt is not None else cycle_wib
-        if offset == 0:
-            cycle_label = "NEXT CYCLE"
-            window = f"NEXT PRICE CYCLE — {wib_label}"
-        elif offset == 1:
-            cycle_label = "1 CYCLE"
-            window = "1 CYCLE / ~24H"
-        else:
-            cycle_label = "2 CYCLES"
-            window = "2 CYCLES / ~24–48H"
+        cycle_label = "NEXT CYCLE" if offset == 0 else f"{offset} CYCLE" if offset == 1 else f"{offset} CYCLES"
+        wib_display = _format_price_cycle(cycle_wib, wib=True)
         base.update(
             {
                 "cycles_to_expected_change": cycle_label,
-                "estimated_change_window": window,
+                "estimated_change_window": wib_display or "UNAVAILABLE",
+                "estimated_change_date_uk": _format_price_cycle(cycle_uk, wib=False),
+                "estimated_change_date_wib": wib_display,
+                "estimated_change_at_uk": cycle_uk,
+                "estimated_change_at_wib": cycle_wib,
+                "projection_offset": offset,
+                "date_state": "EXPECTED_CHANGE_DATE",
+                "date_state_complete": True,
                 "eta_reason": None,
+                "degradation_reason": None,
             }
         )
         return base
 
-    base["eta_reason"] = "NO_EXISTING_PREDICTOR_CYCLE_CROSSES_GOVERNED_THRESHOLD"
+    last_display = base["last_supported_projection_date_wib"]
+    base.update(
+        {
+            "date_state": "NO_CROSSING_WITHIN_GOVERNED_HORIZON",
+            "date_state_complete": True,
+            "estimated_change_window": (
+                f"Belum terdeteksi berubah sampai {last_display}"
+                if last_display
+                else "NO EXPECTED CHANGE WITHIN GOVERNED HORIZON"
+            ),
+            "eta_reason": "NO_EXISTING_PREDICTOR_CYCLE_CROSSES_GOVERNED_THRESHOLD",
+            "degradation_reason": None,
+        }
+    )
     return base
 
 
@@ -561,9 +624,9 @@ def build_price20(
 
     enough = len(selected) == 20
     healthy = health in {"GREEN", "HEALTHY", "PASS", "CURRENT", "OK"}
-    timing_unsupported = (
-        adapter == "V6_DATA_PLAYERS_OFFSET0"
-        and any(row.get("cycles_to_expected_change") == "UNAVAILABLE" for row in selected)
+    date_state_complete = (
+        adapter != "V6_DATA_PLAYERS_OFFSET0"
+        or all(bool(row.get("date_state_complete")) for row in selected)
     )
     missing_cycle_clock = (
         adapter == "V6_DATA_PLAYERS_OFFSET0"
@@ -573,7 +636,7 @@ def build_price20(
             for row in selected
         )
     )
-    if enough and healthy and not timing_unsupported and not missing_cycle_clock:
+    if enough and healthy and date_state_complete and not missing_cycle_clock:
         state = "COMPLETE"
     elif selected:
         state = "DEGRADED"
@@ -582,15 +645,9 @@ def build_price20(
 
     reason = None
     if state != "COMPLETE":
-        if adapter == "V6_DATA_PLAYERS_OFFSET0" and enough and healthy and timing_unsupported:
-            unsupported = sum(
-                row.get("cycles_to_expected_change") == "UNAVAILABLE" for row in selected
-            )
-            reason = (
-                f"exact20 selected from healthy official_price_predictor; "
-                f"expected-change cycle unsupported for {unsupported}/20 rows, "
-                "so ETA remains UNAVAILABLE rather than invented"
-            )
+        if adapter == "V6_DATA_PLAYERS_OFFSET0" and not date_state_complete:
+            incomplete = sum(not bool(row.get("date_state_complete")) for row in selected)
+            reason = f"date-state terminal contract incomplete for {incomplete}/20 rows"
         elif adapter == "V6_DATA_PLAYERS_OFFSET0" and missing_cycle_clock:
             reason = "official_price_predictor evidence timestamp unavailable; official cycle timing cannot be derived"
         else:
@@ -627,7 +684,12 @@ def build_price20(
             "prediction_strength",
             "next_official_price_cycle_uk",
             "next_official_price_cycle_wib",
-            "cycles_to_expected_change",
+            "estimated_change_date_uk",
+            "estimated_change_date_wib",
+            "date_state",
+            "last_supported_projection_date_wib",
+            "horizon_cycles",
+            "latest_supported_projection",
             "estimated_change_window",
             "estimate_source",
             "evidence_timestamp",
@@ -638,6 +700,17 @@ def build_price20(
         "existing_eta_threshold_source": "config/intelligence/price_radar.json:model_interpretation.threshold_percent",
         "new_price_threshold_model_created": False,
         "new_price_predictor_created": False,
+        "horizon_extension_used": False,
+        "governed_projection_offsets": (0, 1, 2),
+        "date_state_complete_count": sum(
+            bool(row.get("date_state_complete")) for row in selected
+        ) if adapter == "V6_DATA_PLAYERS_OFFSET0" else None,
+        "expected_change_date_count": sum(
+            row.get("date_state") == "EXPECTED_CHANGE_DATE" for row in selected
+        ) if adapter == "V6_DATA_PLAYERS_OFFSET0" else None,
+        "no_crossing_count": sum(
+            row.get("date_state") == "NO_CROSSING_WITHIN_GOVERNED_HORIZON" for row in selected
+        ) if adapter == "V6_DATA_PLAYERS_OFFSET0" else None,
     }
 
 
@@ -701,6 +774,20 @@ def build_actionable_price_radar(
         )
         raw_sell = raw.get("authenticated_sell_value", raw.get("selling_price"))
         sell_value = _official_current_price(raw_sell) if raw_sell is not None else "UNAVAILABLE"
+        raw_sell_state = str(
+            raw.get("sell_value_evidence_state")
+            or raw.get("authenticated_evidence_state")
+            or raw.get("authenticated_state")
+            or ""
+        ).upper()
+        if sell_value == "UNAVAILABLE":
+            sell_value_evidence_state = "UNAVAILABLE"
+        elif raw_sell_state in {"CURRENT_AUTHENTICATED", "AUTH_CURRENT", "CURRENT"}:
+            sell_value_evidence_state = "CURRENT_AUTHENTICATED"
+        elif raw_sell_state in {"STALE_AUTHENTICATED_FALLBACK", "AUTH_STALE", "STALE"}:
+            sell_value_evidence_state = "STALE_AUTHENTICATED_FALLBACK"
+        else:
+            sell_value_evidence_state = "AUTHENTICATED_FRESHNESS_UNPROVEN"
 
         identities.append(
             {
@@ -709,13 +796,27 @@ def build_actionable_price_radar(
                 "current_price": current_price,
                 "price_fact": "FACT" if current_price != "UNAVAILABLE" else "UNAVAILABLE",
                 "authenticated_sell_value": sell_value,
+                "sell_value_evidence_state": sell_value_evidence_state,
                 "predictor_direction": (visible or {}).get("direction", "UNAVAILABLE"),
                 "predictor_progress": (visible or {}).get("official_or_provider_progress", "UNAVAILABLE"),
                 "prediction_strength": (visible or {}).get("prediction_strength", "UNAVAILABLE"),
                 "next_official_price_cycle_uk": (visible or {}).get("next_official_price_cycle_uk", "UNAVAILABLE"),
                 "next_official_price_cycle_wib": (visible or {}).get("next_official_price_cycle_wib", "UNAVAILABLE"),
-                "cycles_to_expected_change": (visible or {}).get("cycles_to_expected_change", "UNAVAILABLE"),
-                "estimated_change_window": (visible or {}).get("estimated_change_window", "UNAVAILABLE"),
+                "estimated_change_date_uk": (visible or {}).get("estimated_change_date_uk"),
+                "estimated_change_date_wib": (visible or {}).get("estimated_change_date_wib"),
+                "date_state": (visible or {}).get("date_state", "DATE_UNAVAILABLE"),
+                "date_state_complete": bool((visible or {}).get("date_state_complete", True)),
+                "date_state_reason": (
+                    (visible or {}).get("degradation_reason")
+                    or (None if visible is not None else "PREDICTOR_EVIDENCE_UNAVAILABLE")
+                ),
+                "last_supported_projection_date_wib": (visible or {}).get("last_supported_projection_date_wib"),
+                "horizon_cycles": (visible or {}).get("horizon_cycles", 0),
+                "latest_supported_projection": (visible or {}).get("latest_supported_projection"),
+                "estimated_change_window": (visible or {}).get(
+                    "estimated_change_window",
+                    "Tanggal belum tersedia — predictor evidence unavailable",
+                ),
                 "estimate_source": (visible or {}).get("estimate_source", "official_price_predictor" if pred_raw else "UNAVAILABLE"),
                 "evidence_timestamp": (visible or {}).get("evidence_timestamp", evidence_timestamp or "UNAVAILABLE"),
                 "confidence": (visible or {}).get("confidence", "UNAVAILABLE"),
@@ -742,6 +843,9 @@ def build_actionable_price_radar(
         "identity_complete": complete,
         "predictor_complete_count": sum(
             row.get("predictor_direction") != "UNAVAILABLE" for row in identities
+        ),
+        "date_state_complete_count": sum(
+            bool(row.get("date_state_complete")) for row in identities
         ),
         "degradation_reason": None if complete else "owned price identity coverage is not exact15",
         "price_alone_may_create_act": False,

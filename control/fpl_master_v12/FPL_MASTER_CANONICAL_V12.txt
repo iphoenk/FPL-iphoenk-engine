@@ -392,11 +392,20 @@ Official FPL 2026/27 player price changes execute DAILY at 00:00 UK local time. 
 The immediately upcoming official cycle MUST be derived from 00:00 Europe/London for the relevant calendar date and converted timezone-aware to Asia/Jakarta. During BST this normally renders 06:00 WIB; during GMT it normally renders 07:00 WIB. Never permanently hardcode 06:00 WIB for the season.
 
 Every visible RISE20/FALL20 row carries:
-player;current_price;direction;official_or_provider_progress;prediction_strength;next_official_price_cycle_uk;next_official_price_cycle_wib;cycles_to_expected_change;estimated_change_window;estimate_source;evidence_timestamp;confidence;impact_on_our_decision.
+player;current_price;direction;official_or_provider_progress;prediction_strength;estimated_change_date_wib;date_state;last_supported_projection_date_wib;horizon_cycles;latest_supported_projection;estimate_source;evidence_timestamp;confidence;impact_on_our_decision.
+Supporting evidence may retain next_official_price_cycle_uk;next_official_price_cycle_wib;cycles_to_expected_change;projection_offset and exact ISO timestamps, but cycle labels are not the primary user-facing ETA.
 
-Estimated-change semantics use actual daily cycles, for example NEXT PRICE CYCLE — 06:00 WIB during BST, NEXT PRICE CYCLE — 07:00 WIB during GMT, 1 CYCLE / ~24H, 2 CYCLES / ~24–48H, 2 CYCLES, or UNAVAILABLE. A next-cycle label is used only when evidence supports it. Predictor likelihood/progress is not a guarantee.
+DATE-FIRST is mandatory. When an existing governed projection first crosses the existing governed threshold, render the exact calendar date/time of that official daily cycle, derived from 00:00 Europe/London and converted to Asia/Jakarta. Examples: 21 Sep 2026 • 06:00 WIB during BST or the DST-correct equivalent during GMT. FIRST VALID CROSSING WINS. Never prefer a stronger later projection; never interpolate between cycles; never linearly/hourly extrapolate a future threshold crossing.
 
-If Official Predictor and supporting providers disagree, surface each source signal and the disagreement explicitly; never manufacture consensus. Official FPL current price/factual price change remains authoritative. A RISE20/FALL20 section labelled COMPLETE requires every row to answer: direction; signal strength; target official cycle; that cycle's WIB time; and decision impact. Missing required timing semantics cannot be COMPLETE. Truthful timing UNAVAILABLE is permitted only under PARTIAL/DEGRADED/UNAVAILABLE with reason.
+The current governed predictor horizon is exactly the offsets actually supplied and accepted by the existing predictor contract. As of this Canonical revision the governed offsets are 0/1/2 only. Do not extend to 3+ merely to manufacture an ETA. A horizon extension is legal only if separately proven to be native to the same existing predictor mathematics, threshold, authority and update cadence; otherwise preserve 0/1/2.
+
+Every real-schema row terminates in exactly one truthful DATE STATE:
+A EXPECTED_CHANGE_DATE — estimated_change_date_uk;estimated_change_date_wib;projection_offset;evidence_timestamp.
+B NO_CROSSING_WITHIN_GOVERNED_HORIZON — estimated date remains null; expose last_supported_projection_date_uk;last_supported_projection_date_wib;horizon_cycles;latest_supported_projection;evidence_timestamp. Visible wording should be concise, e.g. Belum terdeteksi berubah sampai 23 Sep 2026 • 06:00 WIB.
+C DATE_UNAVAILABLE — only for genuinely missing/invalid evidence, with exact degradation_reason.
+NO_CROSSING is a complete truthful state, not a failure and not permission to invent a later date.
+
+If Official Predictor and supporting providers disagree, surface each source signal and the disagreement explicitly; never manufacture consensus. Official FPL current price/factual price change remains authoritative. A healthy exact20 RISE20/FALL20 section may be COMPLETE when all 20 rows have a truthful terminal DATE STATE and the official cycle clock is derivable. COMPLETE does NOT require 20 predicted change dates. Missing/invalid official cycle timing still degrades the section with exact reason. Price timing is context only and NEVER creates ACT without the football decision case.
 
 12. ICON+ MINI-LEAGUE
 Every visible report includes mode-appropriate ICON+ analysis using freshest authoritative available denominator.

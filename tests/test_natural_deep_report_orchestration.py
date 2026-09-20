@@ -433,15 +433,15 @@ def test_real_price_artifact_data_players_produces_exact20_with_visible_directio
     artifact = _real_price_predictor()
     rise = build_price20(predictor_artifact=artifact, direction="RISE")
     fall = build_price20(predictor_artifact=artifact, direction="FALL")
-    assert rise["state"] == "DEGRADED"
-    assert fall["state"] == "DEGRADED"
+    assert rise["state"] == "COMPLETE"
+    assert fall["state"] == "COMPLETE"
     assert rise["available_count"] == 20
     assert fall["available_count"] == 20
     assert rise["artifact_adapter"] == "V6_DATA_PLAYERS_OFFSET0"
     assert fall["artifact_adapter"] == "V6_DATA_PLAYERS_OFFSET0"
     assert rise["sort_contract"] == "projected_percent DESC, id ASC"
     assert fall["sort_contract"] == "projected_percent ASC, id ASC"
-    assert all(row["projection_offset"] == 0 for row in rise["rows"] + fall["rows"])
+    assert all(row["date_state"] in {"EXPECTED_CHANGE_DATE", "NO_CROSSING_WITHIN_GOVERNED_HORIZON"} for row in rise["rows"] + fall["rows"])
     assert all(row["price_fact"] == "FACT" for row in rise["rows"] + fall["rows"])
     assert all(row["predictor_classification"] == "MODEL" for row in rise["rows"] + fall["rows"])
     assert all(row["direction"] in {"RISE", "FALL", "NEUTRAL"} for row in rise["rows"] + fall["rows"])
@@ -648,31 +648,41 @@ def test_predictor_observation_is_separate_from_official_execution_cycle() -> No
 
 
 # PRICE 13
-def test_unsupported_eta_remains_unavailable() -> None:
+def test_no_crossing_is_truthful_complete_terminal_date_state() -> None:
     art = _contract_price_artifact([_contract_price_row(i, 50.0, offset1=60.0, offset2=70.0) for i in range(1, 25)])
     result = build_price20(predictor_artifact=art, direction="RISE")
-    assert result["state"] == "DEGRADED"
-    assert all(row["estimated_change_window"] == "UNAVAILABLE" for row in result["rows"])
-    assert all(row["eta_reason"] for row in result["rows"])
+    assert result["state"] == "COMPLETE"
+    assert result["date_state_complete_count"] == 20
+    assert result["expected_change_date_count"] == 0
+    assert result["no_crossing_count"] == 20
+    assert all(row["date_state"] == "NO_CROSSING_WITHIN_GOVERNED_HORIZON" for row in result["rows"])
+    assert all(row["estimated_change_date_wib"] is None for row in result["rows"])
+    assert all(row["last_supported_projection_date_wib"] == "23 Sep 2026 • 06:00 WIB" for row in result["rows"])
+    assert all(row["estimated_change_window"].startswith("Belum terdeteksi berubah sampai") for row in result["rows"])
 
 
 # PRICE 14
-def test_eta_uses_existing_governed_threshold_not_new_threshold() -> None:
+def test_eta_uses_existing_governed_threshold_and_calendar_dates() -> None:
     assert MODEL_THRESHOLD == 100.0
     art = _contract_price_artifact([_contract_price_row(i, 99.9, offset1=99.9, offset2=99.9) for i in range(1, 25)])
     row = build_price20(predictor_artifact=art, direction="RISE")["rows"][0]
     assert row["governed_threshold_percent"] == MODEL_THRESHOLD
-    assert row["estimated_change_window"] == "UNAVAILABLE"
+    assert row["date_state"] == "NO_CROSSING_WITHIN_GOVERNED_HORIZON"
+    assert row["estimated_change_date_wib"] is None
 
     one_cycle = _contract_price_artifact([_contract_price_row(i, 90.0, offset1=105.0, offset2=110.0) for i in range(1, 25)])
     one_row = build_price20(predictor_artifact=one_cycle, direction="RISE")["rows"][0]
     assert one_row["cycles_to_expected_change"] == "1 CYCLE"
-    assert one_row["estimated_change_window"] == "1 CYCLE / ~24H"
+    assert one_row["projection_offset"] == 1
+    assert one_row["estimated_change_date_uk"] == "22 Sep 2026 • 00:00 BST"
+    assert one_row["estimated_change_date_wib"] == "22 Sep 2026 • 06:00 WIB"
+    assert one_row["estimated_change_window"] == "22 Sep 2026 • 06:00 WIB"
 
     two_cycles = _contract_price_artifact([_contract_price_row(i, 90.0, offset1=95.0, offset2=105.0) for i in range(1, 25)])
     two_row = build_price20(predictor_artifact=two_cycles, direction="RISE")["rows"][0]
     assert two_row["cycles_to_expected_change"] == "2 CYCLES"
-    assert two_row["estimated_change_window"] == "2 CYCLES / ~24–48H"
+    assert two_row["projection_offset"] == 2
+    assert two_row["estimated_change_date_wib"] == "23 Sep 2026 • 06:00 WIB"
 
 
 # PRICE 15
@@ -694,12 +704,14 @@ def test_complete_fall20_rows_have_full_visible_contract() -> None:
 
 
 # PRICE 17
-def test_missing_cycle_timestamp_degrades_even_with_exact20() -> None:
+def test_missing_cycle_timestamp_degrades_with_exact_date_unavailable_reason() -> None:
     art = _crossing_contract_price_artifact()
     art.pop("checked_at")
     result = build_price20(predictor_artifact=art, direction="RISE")
     assert result["available_count"] == 20
     assert result["state"] == "DEGRADED"
+    assert all(row["date_state"] == "DATE_UNAVAILABLE" for row in result["rows"])
+    assert all(row["degradation_reason"] == "EVIDENCE_TIMESTAMP_UNAVAILABLE" for row in result["rows"])
 
 
 # PRICE 18
@@ -720,6 +732,101 @@ def test_price_movement_alone_cannot_create_act() -> None:
     result = build_actionable_price_radar(owned15=_contract_owned15(), predictor_artifact=_crossing_contract_price_artifact())
     assert result["price_alone_may_create_act"] is False
     assert all("ACT" not in str(row["decision_implication"]) for row in result["rows"])
+
+
+# DATE-ETA COMPLETION REGRESSIONS
+def test_first_governed_crossing_wins_over_stronger_later_projection() -> None:
+    art = _contract_price_artifact([
+        _contract_price_row(i, 98.0, offset1=101.0, offset2=140.0)
+        for i in range(1, 25)
+    ])
+    row = build_price20(predictor_artifact=art, direction="RISE")["rows"][0]
+    assert row["date_state"] == "EXPECTED_CHANGE_DATE"
+    assert row["projection_offset"] == 1
+    assert row["estimated_change_date_wib"] == "22 Sep 2026 • 06:00 WIB"
+
+
+def test_offset_zero_crossing_maps_to_first_official_calendar_cycle() -> None:
+    row = build_price20(
+        predictor_artifact=_contract_price_artifact([
+            _contract_price_row(i, 105.0, offset1=120.0, offset2=140.0)
+            for i in range(1, 25)
+        ]),
+        direction="RISE",
+    )["rows"][0]
+    assert row["projection_offset"] == 0
+    assert row["estimated_change_date_uk"] == "21 Sep 2026 • 00:00 BST"
+    assert row["estimated_change_date_wib"] == "21 Sep 2026 • 06:00 WIB"
+
+
+def test_non_crossing_never_linearly_extrapolates_a_fourth_cycle() -> None:
+    art = _contract_price_artifact([
+        _contract_price_row(i, 90.0, offset1=95.0, offset2=99.9)
+        for i in range(1, 25)
+    ])
+    row = build_price20(predictor_artifact=art, direction="RISE")["rows"][0]
+    assert row["date_state"] == "NO_CROSSING_WITHIN_GOVERNED_HORIZON"
+    assert row["estimated_change_date_wib"] is None
+    assert row["last_supported_projection_date_wib"] == "23 Sep 2026 • 06:00 WIB"
+    assert row["horizon_cycles"] == 3
+    assert row["latest_supported_projection"] == 99.9
+    assert row["horizon_extension_used"] is False
+
+
+def test_existing_horizon_remains_exactly_offsets_zero_one_two() -> None:
+    result = build_price20(predictor_artifact=_crossing_contract_price_artifact(), direction="RISE")
+    assert tuple(result["governed_projection_offsets"]) == (0, 1, 2)
+    assert result["horizon_extension_used"] is False
+    assert result["new_price_predictor_created"] is False
+    assert result["new_price_threshold_model_created"] is False
+
+
+def test_dst_boundary_maps_each_london_midnight_to_same_instant_wib() -> None:
+    rows = [_contract_price_row(i, 90.0, offset1=105.0, offset2=120.0) for i in range(1, 25)]
+    art = _contract_price_artifact(rows, checked_at="2026-10-24T21:00:00+00:00")
+    row = build_price20(predictor_artifact=art, direction="RISE")["rows"][0]
+    assert row["estimated_change_at_uk"] == "2026-10-26T00:00:00+00:00"
+    assert row["estimated_change_at_wib"] == "2026-10-26T07:00:00+07:00"
+    assert row["estimated_change_date_wib"] == "26 Oct 2026 • 07:00 WIB"
+
+
+def test_all15_predictor_supported_rows_have_terminal_date_state() -> None:
+    result = build_actionable_price_radar(
+        owned15=_contract_owned15(),
+        predictor_artifact=_crossing_contract_price_artifact(),
+    )
+    assert result["available_count"] == 15
+    assert result["date_state_complete_count"] == 15
+    assert all(row["date_state"] == "EXPECTED_CHANGE_DATE" for row in result["rows"])
+
+
+def test_all15_without_predictor_keeps_identity_and_truthful_date_unavailable() -> None:
+    result = build_actionable_price_radar(owned15=_contract_owned15(), predictor_artifact=None)
+    assert result["available_count"] == 15
+    assert result["identity_complete"] is True
+    assert result["date_state_complete_count"] == 15
+    assert all(row["date_state"] == "DATE_UNAVAILABLE" for row in result["rows"])
+    assert all(row["date_state_reason"] == "PREDICTOR_EVIDENCE_UNAVAILABLE" for row in result["rows"])
+
+
+def test_stale_authenticated_sell_value_is_classified_not_refreshed_or_fabricated() -> None:
+    owned = _contract_owned15()
+    for row in owned:
+        row["authenticated_evidence_state"] = "STALE"
+    result = build_actionable_price_radar(
+        owned15=owned,
+        predictor_artifact=_crossing_contract_price_artifact(),
+    )
+    assert all(row["sell_value_evidence_state"] == "STALE_AUTHENTICATED_FALLBACK" for row in result["rows"])
+    assert all(row["authenticated_sell_value"] != "UNAVAILABLE" for row in result["rows"])
+
+
+def test_visible_contract_is_date_first_not_cycle_label_first() -> None:
+    result = build_price20(predictor_artifact=_crossing_contract_price_artifact(), direction="RISE")
+    fields = set(result["visible_contract_fields"])
+    assert "estimated_change_date_wib" in fields
+    assert "date_state" in fields
+    assert "cycles_to_expected_change" not in fields
 
 
 def _weather_payload(impact: str = "NORMAL") -> dict:

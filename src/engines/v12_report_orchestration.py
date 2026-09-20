@@ -201,11 +201,92 @@ def build_watchlist20(
 
 
 def _predictor_rows(artifact: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Return predictor player rows; real V6 data.players is first-class."""
+    data = artifact.get("data")
+    if isinstance(data, Mapping) and isinstance(data.get("players"), list):
+        return [
+            dict(row)
+            for row in data.get("players") or []
+            if isinstance(row, Mapping)
+        ]
     for key in ("rows", "players", "predictions"):
         value = artifact.get(key)
         if isinstance(value, list):
             return [dict(row) for row in value if isinstance(row, Mapping)]
     return []
+
+
+def _real_predictor_schema(artifact: Mapping[str, Any]) -> bool:
+    data = artifact.get("data")
+    return isinstance(data, Mapping) and isinstance(data.get("players"), list)
+
+
+def _finite_price_number(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if number != number or number in (float("inf"), float("-inf")):
+        return None
+    return number
+
+
+def _official_current_price(now_cost: Any) -> Any:
+    value = _finite_price_number(now_cost)
+    if value is None:
+        return "UNAVAILABLE"
+    # Official FPL now_cost uses tenths of £m; retain normalized FACT price.
+    return round(value / 10.0, 1) if value >= 20.0 else round(value, 1)
+
+
+def _offset_zero_projection(row: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    projections = row.get("price_change_projections")
+    if not isinstance(projections, list):
+        return None
+    for projection in projections:
+        if not isinstance(projection, Mapping):
+            continue
+        offset = projection.get("offset")
+        try:
+            is_zero = float(offset) == 0.0
+        except (TypeError, ValueError):
+            is_zero = False
+        if is_zero:
+            return projection
+    return None
+
+
+def _normalize_real_price_row(row: Mapping[str, Any]) -> dict[str, Any] | None:
+    projection = _offset_zero_projection(row)
+    if projection is None:
+        return None
+    projected = _finite_price_number(projection.get("projected_percent"))
+    element = row.get("id")
+    if projected is None or element is None:
+        return None
+    try:
+        element_id = int(element)
+    except (TypeError, ValueError):
+        return None
+    return {
+        "element_id": element_id,
+        "player": row.get("web_name") or f"element:{element_id}",
+        "current_price": _official_current_price(row.get("now_cost")),
+        "price_fact": "FACT",
+        "projected_percent": projected,
+        "likelihood": projection.get("likelihood"),
+        "predictor_classification": "MODEL",
+        "projection_offset": 0,
+        "price_change_percent": row.get("price_change_percent"),
+        "price_change_hourly_rate": row.get("price_change_hourly_rate"),
+        "selected_by_percent": row.get("selected_by_percent"),
+        "transfers_in_event": row.get("transfers_in_event"),
+        "transfers_out_event": row.get("transfers_out_event"),
+        "locked_until": row.get("price_change_locked_until"),
+        "calibrating": row.get("price_change_calibrating"),
+        "team": row.get("team"),
+        "element_type": row.get("element_type"),
+    }
 
 
 def build_price20(
@@ -230,36 +311,58 @@ def build_price20(
         or "UNKNOWN"
     ).upper()
     direction_token = str(direction or "").upper()
-    wanted = PRICE_UP if direction_token == "RISE" else PRICE_DOWN
+    if direction_token not in {"RISE", "FALL"}:
+        raise ReportOrchestrationError("direction must be RISE/FALL")
     rows = _predictor_rows(artifact)
 
-    selected: list[dict[str, Any]] = []
-    for index, row in enumerate(rows):
-        token = str(
-            row.get("risk_direction")
-            or row.get("direction")
-            or row.get("prediction")
-            or ""
-        ).upper()
-        if token not in wanted:
-            continue
-        copied = dict(row)
-        copied["_artifact_index"] = index
-        selected.append(copied)
+    if _real_predictor_schema(artifact):
+        normalized = [
+            bound
+            for row in rows
+            if (bound := _normalize_real_price_row(row)) is not None
+        ]
+        if direction_token == "RISE":
+            normalized.sort(
+                key=lambda row: (-float(row["projected_percent"]), int(row["element_id"]))
+            )
+        else:
+            normalized.sort(
+                key=lambda row: (float(row["projected_percent"]), int(row["element_id"]))
+            )
+        selected = normalized[:20]
+        usable_count = len(normalized)
+        adapter = "V6_DATA_PLAYERS_OFFSET0"
+    else:
+        wanted = PRICE_UP if direction_token == "RISE" else PRICE_DOWN
+        selected: list[dict[str, Any]] = []
+        for index, row in enumerate(rows):
+            token = str(
+                row.get("risk_direction")
+                or row.get("direction")
+                or row.get("prediction")
+                or ""
+            ).upper()
+            if token not in wanted:
+                continue
+            copied = dict(row)
+            copied["_artifact_index"] = index
+            selected.append(copied)
 
-    def key(row: Mapping[str, Any]):
-        for name in ("rank", "predictor_rank", "direction_rank"):
-            if row.get(name) is not None:
-                try:
-                    return (0, float(row[name]), int(row["_artifact_index"]))
-                except (TypeError, ValueError):
-                    pass
-        return (1, 0.0, int(row["_artifact_index"]))
+        def legacy_key(row: Mapping[str, Any]):
+            for name in ("rank", "predictor_rank", "direction_rank"):
+                if row.get(name) is not None:
+                    try:
+                        return (0, float(row[name]), int(row["_artifact_index"]))
+                    except (TypeError, ValueError):
+                        pass
+            return (1, 0.0, int(row["_artifact_index"]))
 
-    selected.sort(key=key)
-    selected = selected[:20]
-    for row in selected:
-        row.pop("_artifact_index", None)
+        selected.sort(key=legacy_key)
+        selected = selected[:20]
+        for row in selected:
+            row.pop("_artifact_index", None)
+        usable_count = len(selected)
+        adapter = "COMPACT_COMPAT"
 
     enough = len(selected) == 20
     healthy = health in {"GREEN", "HEALTHY", "PASS", "CURRENT", "OK"}
@@ -268,15 +371,29 @@ def build_price20(
     if state != "COMPLETE":
         reason = (
             f"official_price_predictor health={health}; "
+            f"usable offset-0 {direction_token.lower()} rows={len(selected)}/20"
+            if adapter == "V6_DATA_PLAYERS_OFFSET0"
+            else f"official_price_predictor health={health}; "
             f"{direction_token.lower()} rows={len(selected)}/20"
         )
     return {
         "state": state,
         "available_count": len(selected),
         "expected_count": 20,
+        "usable_eligible_rows": usable_count,
         "rows": selected,
         "predictor_health": health,
         "degradation_reason": reason,
+        "artifact_adapter": adapter,
+        "sort_contract": (
+            "projected_percent DESC, id ASC"
+            if direction_token == "RISE" and adapter == "V6_DATA_PLAYERS_OFFSET0"
+            else "projected_percent ASC, id ASC"
+            if direction_token == "FALL" and adapter == "V6_DATA_PLAYERS_OFFSET0"
+            else "legacy compact predictor order"
+        ),
+        "current_price_classification": "FACT",
+        "projection_classification": "MODEL",
         "uses_existing_predictor_only": True,
         "new_price_predictor_created": False,
     }
@@ -290,11 +407,15 @@ def build_actionable_price_radar(
     """Always preserve owned identity; predictor direction is optional evidence."""
     identities: list[dict[str, Any]] = []
     seen: set[int] = set()
-    predictor = {
-        int(row.get("element_id") or row.get("element") or -1): row
-        for row in _predictor_rows(dict(predictor_artifact or {}))
-        if row.get("element_id") is not None or row.get("element") is not None
-    }
+    predictor = {}
+    for row in _predictor_rows(dict(predictor_artifact or {})):
+        raw_id = row.get("element_id", row.get("element", row.get("id")))
+        if raw_id is None:
+            continue
+        try:
+            predictor[int(raw_id)] = row
+        except (TypeError, ValueError):
+            continue
     for raw in owned15:
         if not isinstance(raw, Mapping):
             continue
@@ -316,6 +437,12 @@ def build_actionable_price_radar(
                 "predictor_direction": pred.get("risk_direction")
                 or pred.get("direction")
                 or "UNAVAILABLE",
+                "predictor_projected_percent": (
+                    (_normalize_real_price_row(pred) or {}).get("projected_percent")
+                    if pred.get("price_change_projections") is not None
+                    else "UNAVAILABLE"
+                ),
+                "predictor_classification": "MODEL" if pred else "UNAVAILABLE",
                 "predictor_evidence": pred or None,
             }
         )

@@ -6,7 +6,7 @@
   "non_authoritative_state_file": true,
   "v6_factual_data_plane_owner": false,
   "authority": false,
-  "updated_at": "2026-09-20T17:16:08+07:00",
+  "updated_at": "2026-09-20T17:19:58+07:00",
   "source": "migrated_from_library_ACTIVE_DECISION_CONTEXT_V2",
   "latest_explicit_user_state_wins": true,
   "confirmed_current_squad_state": {
@@ -361,6 +361,6 @@
       }
     }
   },
-  "updated_at_basis": "FINAL_MICRO_BOUNDED_STABILIZATION_REQUEST_AT_2026-09-20T10:16:08Z",
+  "updated_at_basis": "STATE_SEMANTIC_REVISION_COMMIT_ec2d5880e70eafd0bf1de2c28be768abd55ec740_AT_2026-09-20T10:19:58Z",
   "source_provenance_class": "HISTORICAL_MIGRATION_ONLY"
 }

@@ -882,4 +882,51 @@ Existing PRE_RENDER_QA and POST_RENDER_QA own semantic validation; do not create
 A structurally complete serious decision is not mathematically V12-compliant without the DECISION_PROOF fields above.
 If an optional decision scope is truthfully PARTIAL/DEGRADED, preserve the due visible report and label only that scope degraded.
 
+
+20. GW1-TO-CURRENT TRAJECTORY / OPPONENT MATCHUP / LINK-UP DEPENDENCY
+This section extends existing V12 methodology; it does not create a second prediction engine, factual provider, scheduler or authority.
+
+A. PLAYER TRAJECTORY
+For every serious player/candidate retain match-by-match evidence from GW1 through latest COMPLETED match. Preserve GW/match identity, opponent/H-A, minutes/start/substitution evidence, role, xG/xA/xGI and available shot/box/chance/set-piece/penalty/defensive/FPL-output context. Season aggregate and last-N may summarize but never replace the trajectory.
+Recency weighting is bounded and generic: old matches remain prior evidence with non-zero weight; recent evidence receives greater weight. Apply Bayesian shrinkage so one-match spikes cannot reset the posterior, while sustained multi-match role/minutes/process change adapts faster. Always expose sample size and distinguish role transition from one-match noise.
+
+B. RESULT VS PROCESS
+RESULT EVIDENCE (goals, assists, FPL returns, scoreline) and PROCESS EVIDENCE (xG/xA/xGI, shots/SoT, big chances, box access, chances created, service, set pieces and role) are separate. Raw blanks or hauls never independently classify a matchup or trigger ACT. A blank with strong repeatable process is finishing variance evidence unless stronger tactical evidence proves suppression; a haul with weak process is a regression candidate.
+
+C. OPPONENT-SPECIFIC MATCHUP
+Historical meetings against the current opponent are a bounded feature, never primary authority. Evaluate minutes, start state, role, result and process evidence, then shrink toward the current player baseline according to effective sample size. One meeting is very weak evidence; small samples cannot create a strong modifier.
+Historical relevance is discounted by tactical similarity. Where evidence exists compare manager, formation/system, defensive block/press, relevant personnel/structure, width/central congestion/transition exposure, conceded channels and player role then vs now. Manager/system/personnel or role change reduces historical relevance.
+Visible classification is exactly SUPPORTIVE / NEUTRAL / ADVERSE / INSUFFICIENT SAMPLE and must expose sample size, process-vs-result interpretation, tactical similarity/relevance and confidence. Never implement 'never scored against X => avoid'.
+
+D. INTER-PLAYER LINK-UP / DEPENDENCY NETWORK
+Support directional pair links and bounded multi-player chains: creator->finisher, progressor->creator->finisher, fullback->winger->striker, set-piece taker->target, defensive-structure->attacking-licence and substitution links.
+Correlation/co-returns alone are insufficient. Evidence may include shared minutes, direct chances to teammate, xA->xG connection, progressive pass/reception links, crosses/cutbacks, complementary zones, set-piece targeting, assist-chain evidence, with/without splits, team output and tactical role complementarity.
+Every edge carries direction, relationship type, strength, confidence, sample size, recency/tactical relevance. Small samples shrink strongly. Role changes discount old dependency. Do not print low-evidence meaningless pairs.
+
+E. WITH/WITHOUT + PROBABILISTIC AVAILABILITY
+Where sample allows evaluate linked target output when source STARTS / DOES NOT START / SUBBED OFF / ABSENT / CHANGES ROLE. Compare xG/xA/xGI, shots, box access, chance quality, xMins/event probability/xPts and shrink to baseline.
+Never model teammate presence as binary when P(start) is uncertain. Marginalize:
+P(event_B)=P(A starts)*P(event_B|A starts)+P(A not start)*P(event_B|A not start).
+For multi-player chains use bounded factorization/approximation with explicit confidence rather than combinatorial explosion. Linked teammate xMins/P(start) comes from existing V12 P1.1; this layer must not replace it.
+
+F. EXISTING EVENT ENGINE INTEGRATION
+Required order:
+GW1-current trajectory -> existing xMins/P(start) -> current role -> team environment -> opponent current profile -> opponent-specific history -> tactical relevance -> link-up network -> teammate availability marginalization -> Bayesian shrinkage -> EXISTING P1.3/P1.3B posterior event distribution -> existing xPts/variance -> existing XI/bench/captain/transfer/mini-league decision.
+Adjust coherent event distributions where evidence supports it: P(goal), P(assist), P(return), P(2+ returns), P(haul), P(blank), xPts, variance/ceiling/downside. Do not adjust mean xPts alone. Existing Bayesian core, xMins, Monte Carlo and 20/25/30/25 remain unchanged.
+
+G. CAPTAIN / TRANSFER / MINI-LEAGUE
+Captaincy consumes xMins/P(start), trajectory, penalties/set pieces, fixture/tactical matchup, bounded opponent history, link-up availability, ceiling/haul/blank/variance. Historical matchup remains a bounded modifier.
+Transfer/watchlist compares prior trajectory, latest evidence, role stability, process, matchup, link-up and linked-player availability across 1GW/3GW/5GW, then downstream price/EO/mini-league/opportunity cost. Final operational state remains WAIT/PREPARE/ACT. ACT must state IN/OUT, FT/hit if known, affordability, expected gain, downside, alternative and invalidation trigger.
+
+H. POST-MATCH VALIDATION + FULL-UNIVERSE RESCAN
+After every completed match test the pre-match hypothesis before updating posterior: process suppression/support, box/shot quality, predicted link-up, change after linked player leaves, and variance-vs-repeatable process. Rescan the relevant full universe, not only scorers/assisters, for emerging starters, xMins/role/set-piece changes, suppressed strong process, unsustainable finishing, new/broken link-ups and price risk.
+
+I. VISIBLE REPORT CONTRACT
+When relevant, OPPONENT-SPECIFIC MATCHUP shows meetings, RESULT EVIDENCE, PROCESS EVIDENCE, tactical similarity, sample size, Bayesian confidence/current relevance and allowed classification.
+LINK-UP / COMBINATION NETWORK shows strongest evidence-supported pair/chain, relationship type, shared minutes, direct chance/xA->xG evidence where available, role complementarity, with/without split, strength/confidence/sample, linked-player P(start), sensitivity and projection impact.
+Important player/candidate reporting retains GW1->latest trajectory, latest evidence, role/minutes evolution, underlying trend, matchup, link-up risk, Bayesian interpretation, P(goal)/P(assist)/P(return)/P(haul)/P(blank), xPts/variance, 1GW/3GW/5GW, price/mini-league impact and WAIT/PREPARE/ACT.
+
+J. DATA AVAILABILITY GOVERNANCE
+Audit required factual features before use and label each AVAILABLE / PARTIAL / UNAVAILABLE. Reuse V6/owner evidence first. Missing optional pass-network, progressive, cross/cutback, shape or personnel detail degrades only that feature/confidence; never fabricate it and never create a new provider merely to satisfy this section. State JSON may persist compact derived trajectory/matchup/link-up classifications and confidence, never methodology.
+
 END FPL MASTER CANONICAL V12

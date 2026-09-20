@@ -10,15 +10,28 @@
   "calibration_cutoff": "2026-09-20T02:01:16Z",
   "authority": "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt",
   "coverage": {
-    "states": ["FULL", "PARTIAL", "UNAVAILABLE"],
-    "scope_states": ["FULL_LEAGUE", "TOP_N_RELEVANT_RIVALS", "SELECTED_RIVALS", "PARTIAL_FETCH"],
+    "states": [
+      "FULL",
+      "PARTIAL",
+      "UNAVAILABLE"
+    ],
+    "scope_states": [
+      "FULL_LEAGUE",
+      "TOP_N_RELEVANT_RIVALS",
+      "SELECTED_RIVALS",
+      "PARTIAL_FETCH"
+    ],
     "eo_requires_full_pick_coverage": true,
     "eo_requires_numeric_multiplier_for_every_pick": true,
     "ordinary_ownership_must_not_be_labelled_eo": true
   },
   "risk_posture": {
     "default": "BALANCED",
-    "allowed": ["PROTECT", "BALANCED", "CHASE"],
+    "allowed": [
+      "PROTECT",
+      "BALANCED",
+      "CHASE"
+    ],
     "late_horizon_gws_remaining_at_most": 5,
     "protect_min_points_ahead_nearest": 15,
     "chase_min_points_to_leader": 20,
@@ -27,13 +40,13 @@
   "close_decision_gate": {
     "version": "P1_8_CLOSE_DECISION_GATE_V1",
     "max_absolute_gap": {
-      "GW+1": 1.0,
-      "3GW": 2.0,
-      "5GW": 3.0
+      "GW+1": 1,
+      "3GW": 2,
+      "5GW": 3
     },
     "max_expected_regret_gap": 0.75,
-    "paired_probability_close_low": 0.40,
-    "paired_probability_close_high": 0.60,
+    "paired_probability_close_low": 0.4,
+    "paired_probability_close_high": 0.6,
     "large_edge_preservation_mandatory": true
   },
   "leverage": {
@@ -42,24 +55,24 @@
     "posture_weights": {
       "PROTECT": {
         "defensive_coverage": 0.45,
-        "captain_coverage": 0.30,
-        "differential_upside": 0.05,
+        "captain_coverage": 0.3,
+        "differential_upside": -0.1,
         "mc_upside": 0.05,
         "mc_downside_penalty": 0.15
       },
       "BALANCED": {
         "defensive_coverage": 0.25,
-        "captain_coverage": 0.20,
-        "differential_upside": 0.25,
+        "captain_coverage": 0.05,
+        "differential_upside": 0.2,
         "mc_upside": 0.15,
         "mc_downside_penalty": 0.15
       },
       "CHASE": {
-        "defensive_coverage": 0.05,
-        "captain_coverage": 0.05,
+        "defensive_coverage": -0.1,
+        "captain_coverage": -0.2,
         "differential_upside": 0.45,
         "mc_upside": 0.35,
-        "mc_downside_penalty": 0.10
+        "mc_downside_penalty": 0.1
       }
     }
   },

@@ -23,7 +23,7 @@ from src.engines.p1_decision_governance import (
     uncertainty_fields,
     vice_rank,
 )
-from src.models.package_optimizer_v2 import legal_squad
+from src.engines.v12_package_search import legal_squad as v12_package_legal_squad
 from src.rules import LINEUP_RULES, RULESET_ID, SQUAD_RULES
 from src.utils import CONFIG, DATA, ROOT, atomic_json, read_json
 
@@ -624,11 +624,22 @@ def build_package_decision(
     lock: dict[str, Any],
     team: dict[str, Any],
 ) -> dict[str, Any]:
+    """Consume P1.2B package utility as the only V12 package decision owner.
+
+    Legacy optimizer artifacts remain migration/regression/performance
+    references. They are fail-safe HOLD inputs and cannot authorize a V12
+    transfer action after P1.2 ownership migration.
+    """
     policy = load_policy()
     package_cfg = policy.get("package_governance") or {}
     pmap = {int(p["element"]): p for p in projections.get("players") or []}
-    ledger_by_id = {int(p.get("element") or -1): p for p in team.get("team_value_ledger") or []}
-    squad_rows, _, legacy_fixture_fallback = _authoritative_squad_rows(team, lock)
+    ledger_by_id = {
+        int(p.get("element") or -1): p
+        for p in team.get("team_value_ledger") or []
+    }
+    squad_rows, _, legacy_fixture_fallback = _authoritative_squad_rows(
+        team, lock
+    )
     current = []
     for owned in squad_rows:
         element = int(owned.get("element") or -1)
@@ -636,39 +647,172 @@ def build_package_decision(
         if not proj:
             continue
         ledger = ledger_by_id.get(element) or {}
-        current.append({
-            "element": element,
-            "name": proj.get("name"),
-            "position": proj.get("position"),
-            "team_id": int(proj.get("team_id") or -1),
-            "now_cost": int(proj.get("now_cost") or 0),
-            "sell_cost": int(ledger.get("sell_cost") or proj.get("now_cost") or 0),
-        })
-    current_legal = legal_squad(current)
-    baseline = team.get("projection_baseline") if isinstance(team.get("projection_baseline"), dict) else {}
-    phase_authoritative = lock.get("authoritative_phase") in set(package_cfg.get("authoritative_phases") or [])
-    authoritative = phase_authoritative and (baseline.get("override_applied") is True if baseline else True)
-    freeze = bool(package_cfg.get("freeze_locked_composition_when_authoritative")) and authoritative
-    optimizer_packages = list(package_optimizer.get("packages") or [])
-    optimizer_best = optimizer_packages[0] if optimizer_packages else package_optimizer.get("hold")
-    selected = package_optimizer.get("hold") if freeze or not package_cfg.get("auto_accept_optimizer_package") else optimizer_best
-    if not selected:
-        raise RuntimeError("package optimizer did not provide a selectable package")
-    selected_is_hold = selected.get("id") == "HOLD"
-    selected_legal = bool(selected.get("legal")) and bool((selected.get("score") or {}).get("valid"))
-    gate0_revalidated = current_legal and selected_legal and (selected_is_hold if freeze else True)
+        current.append(
+            {
+                "element": element,
+                "name": proj.get("name"),
+                "position": proj.get("position"),
+                "team_id": int(proj.get("team_id") or -1),
+                "now_cost": int(proj.get("now_cost") or 0),
+                "sell_cost": (
+                    int(ledger.get("sell_cost"))
+                    if ledger.get("sell_cost") is not None
+                    else None
+                ),
+            }
+        )
+    current_legal, current_legality_reason = v12_package_legal_squad(current)
+
+    baseline = (
+        team.get("projection_baseline")
+        if isinstance(team.get("projection_baseline"), dict)
+        else {}
+    )
+    phase_authoritative = lock.get("authoritative_phase") in set(
+        package_cfg.get("authoritative_phases") or []
+    )
+    authoritative = phase_authoritative and (
+        baseline.get("override_applied") is True if baseline else True
+    )
+    freeze = (
+        bool(package_cfg.get("freeze_locked_composition_when_authoritative"))
+        and authoritative
+    )
+
+    native = package_optimizer.get("model_owner") == "V12_PACKAGE_UTILITY"
+    if native:
+        routes = list(package_optimizer.get("routes") or [])
+        by_id = {
+            str(row.get("route_id")): dict(row)
+            for row in routes
+            if row.get("route_id") is not None
+        }
+        hold = by_id.get("HOLD")
+        native_selected_id = str(
+            package_optimizer.get("selected_route_id") or ""
+        )
+        native_selected = by_id.get(native_selected_id)
+        if hold is None or native_selected is None:
+            raise RuntimeError(
+                "P1.2B package artifact missing HOLD or selected native route"
+            )
+        selected = hold if freeze else native_selected
+        selected_id = str(selected.get("route_id") or "")
+        selected_package = {"id": selected_id, **selected}
+        selected_legal = selected.get("legal") is True
+        selected_affordable = selected.get("affordable") is not False
+        gate0_revalidated = bool(
+            current_legal and selected_legal and selected_affordable
+        )
+        if not gate0_revalidated:
+            raise RuntimeError(
+                "P1.2 native package decision failed Gate0 revalidation"
+            )
+        decision = dict(package_optimizer.get("decision") or {})
+        if freeze:
+            decision = {
+                "football_action": "HOLD",
+                "operational_action": "WAIT",
+                "reason": "AUTHORITATIVE_LOCK_FREEZE",
+            }
+        return {
+            "generated_at": _now(),
+            "model": "package_governance_v12",
+            "ruleset_id": RULESET_ID,
+            "planning_gw": int(projections.get("planning_gw") or 1),
+            "selected_package": selected_package,
+            "selected_package_id": selected_id,
+            "optimizer_best_candidate_id": native_selected_id,
+            "manual_authority_override": freeze,
+            "current_squad_legal": current_legal,
+            "current_squad_legality_reason": current_legality_reason,
+            "gate0_revalidated": gate0_revalidated,
+            "decision": decision,
+            "model_evidence_binding": deepcopy(
+                package_optimizer.get("model_evidence_binding")
+            ),
+            "package_frontier": deepcopy(
+                package_optimizer.get("package_frontier")
+            ),
+            "governance": {
+                "production_package_decision_owner": "V12_PACKAGE_UTILITY",
+                "p1_2a_search_owner": "V12_PACKAGE_SEARCH",
+                "native_package_utility_consumed": True,
+                "legacy_package_optimizer_decision_authority": False,
+                "legacy_package_optimizer_status": (
+                    "MIGRATION_REGRESSION_PERFORMANCE_REFERENCE_ONLY"
+                ),
+                "locked_composition_preserved": freeze,
+                "manual_authority_wins": True,
+                "team_state_authority_consumed": not legacy_fixture_fallback,
+                "legacy_lock_fixture_fallback": legacy_fixture_fallback,
+                "rejected_user_lock_cannot_freeze_package": (
+                    bool(baseline)
+                    and baseline.get("override_applied") is not True
+                ),
+                "scheduler_changed": False,
+                "report_cadence_changed": False,
+                "authority_added": False,
+            },
+        }
+
+    # Non-native optimizer artifacts can remain operational performance inputs
+    # only. They never authorize a transfer decision after P1.2.
+    legacy_packages = list(package_optimizer.get("packages") or [])
+    legacy_best = (
+        legacy_packages[0]
+        if legacy_packages
+        else package_optimizer.get("hold")
+    )
+    hold = package_optimizer.get("hold")
+    if not hold:
+        raise RuntimeError(
+            "legacy package reference did not provide mandatory HOLD"
+        )
+    selected = hold
+    selected_legal = bool(selected.get("legal")) and bool(
+        (selected.get("score") or {}).get("valid")
+    )
+    gate0_revalidated = bool(current_legal and selected_legal)
     return {
-        "generated_at": _now(), "model": "package_governance_v1", "ruleset_id": RULESET_ID,
-        "planning_gw": int(projections.get("planning_gw") or 1), "selected_package": selected,
-        "selected_package_id": selected.get("id"), "optimizer_best_candidate_id": (optimizer_best or {}).get("id"),
-        "manual_authority_override": freeze, "current_squad_legal": current_legal, "gate0_revalidated": gate0_revalidated,
+        "generated_at": _now(),
+        "model": "package_governance_v12",
+        "ruleset_id": RULESET_ID,
+        "planning_gw": int(projections.get("planning_gw") or 1),
+        "selected_package": selected,
+        "selected_package_id": selected.get("id"),
+        "optimizer_best_candidate_id": (legacy_best or {}).get("id"),
+        "manual_authority_override": freeze,
+        "current_squad_legal": current_legal,
+        "current_squad_legality_reason": current_legality_reason,
+        "gate0_revalidated": gate0_revalidated,
+        "decision": {
+            "football_action": "HOLD",
+            "operational_action": "PREPARE",
+            "reason": "NATIVE_P1_2B_UTILITY_ARTIFACT_REQUIRED_FOR_CHANGE_ACTION",
+        },
         "governance": {
-            "optimizer_is_candidate_generator_only": bool(package_cfg.get("optimizer_is_candidate_generator_only", True)),
+            "production_package_decision_owner": "V12_PACKAGE_UTILITY",
+            "native_package_utility_consumed": False,
+            "native_package_utility_status": (
+                "NOT_MATERIALIZED_THIS_OCCURRENCE"
+            ),
+            "legacy_package_optimizer_decision_authority": False,
+            "legacy_package_optimizer_status": (
+                "MIGRATION_REGRESSION_PERFORMANCE_REFERENCE_ONLY"
+            ),
+            "legacy_candidate_can_trigger_change_action": False,
             "locked_composition_preserved": freeze,
             "manual_authority_wins": True,
             "team_state_authority_consumed": not legacy_fixture_fallback,
             "legacy_lock_fixture_fallback": legacy_fixture_fallback,
-            "rejected_user_lock_cannot_freeze_package": bool(baseline) and baseline.get("override_applied") is not True,
+            "rejected_user_lock_cannot_freeze_package": (
+                bool(baseline)
+                and baseline.get("override_applied") is not True
+            ),
+            "scheduler_changed": False,
+            "report_cadence_changed": False,
+            "authority_added": False,
         },
     }
 

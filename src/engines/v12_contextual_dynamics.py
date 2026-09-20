@@ -724,6 +724,15 @@ def probability_weighted_link_modifier(link: Mapping[str, Any], teammate_p_start
     }
 
 
+def _edge_id(edge: Mapping[str, Any]) -> str:
+    source = _i(
+        edge.get("source_player_id"),
+        _i(edge.get("teammate_player_id"), -1),
+    )
+    target = _i(edge.get("target_player_id"), -1)
+    return f"{source}->{target}"
+
+
 def _chain_edge_eligible(edge: Mapping[str, Any]) -> bool:
     cfg = load_config().get("linkup") or {}
     min_confidence = max(
@@ -859,6 +868,15 @@ def evaluate_multi_player_chain(
             for player_id, probability in linked_start.items()
         },
         "edge_product_modifier": round(edge_multiplier, 6),
+        "raw_chain_multiplier": round(multiplier, 6),
+        "legacy_full_edge_raw_multiplier": round(multiplier, 6),
+        "overlapping_pairwise_multiplier": None,
+        "incremental_chain_multiplier": None,
+        "effective_chain_multiplier": None,
+        "anti_double_count_applied": False,
+        "overlap_edge_ids": [],
+        "overlapping_edges": [],
+        "chain_incremental_confidence": round(confidence, 6),
         "multiplier": round(multiplier, 6),
         "middle_players": middle_players,
         "middle_absence_multiplier": middle_absence_multiplier,
@@ -939,6 +957,165 @@ def construct_directional_chains(
     return evaluated[:max_chains]
 
 
+def resolve_incremental_chain_effects(
+    chains: Sequence[Mapping[str, Any]],
+    pairwise_contributions: Mapping[str, Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """Remove pairwise-owned terminal effects from higher-order chains.
+
+    Pairwise owns direct source->target conditional effects. A chain may use
+    that terminal edge as evidence, but runtime chain multiplication owns only
+    the upstream interaction that remains after the terminal direct effect.
+    """
+    resolved: list[dict[str, Any]] = []
+    consumed_upstream_edge_ids: set[str] = set()
+    ordered = sorted(
+        [dict(row) for row in chains if isinstance(row, Mapping)],
+        key=lambda row: (
+            _f(row.get("confidence")),
+            abs(_f(row.get("raw_chain_multiplier"), _f(row.get("multiplier"), 1.0)) - 1.0),
+            _i(row.get("edge_count")),
+        ),
+        reverse=True,
+    )
+    for chain in ordered:
+        edges = [
+            dict(edge)
+            for edge in chain.get("edges") or []
+            if isinstance(edge, Mapping)
+        ]
+        if len(edges) < 2:
+            continue
+        terminal = edges[-1]
+        terminal_id = _edge_id(terminal)
+        pairwise = dict(pairwise_contributions.get(terminal_id) or {})
+        if not pairwise:
+            # A higher-order chain is incremental to an actually applied
+            # terminal pairwise owner. Without that owner, fail closed rather
+            # than silently changing chain semantics.
+            chain.update(
+                {
+                    "status": "REJECTED_TERMINAL_PAIRWISE_NOT_APPLIED",
+                    "anti_double_count_applied": True,
+                    "overlap_edge_ids": [],
+                    "overlapping_edges": [],
+                    "overlapping_pairwise_multiplier": 1.0,
+                    "incremental_chain_multiplier": 1.0,
+                    "effective_chain_multiplier": 1.0,
+                    "multiplier": 1.0,
+                    "chain_incremental_confidence": 0.0,
+                }
+            )
+            resolved.append(chain)
+            continue
+
+        upstream_edges = edges[:-1]
+        unique_upstream = [
+            edge
+            for edge in upstream_edges
+            if _edge_id(edge) not in consumed_upstream_edge_ids
+        ]
+        for edge in unique_upstream:
+            consumed_upstream_edge_ids.add(_edge_id(edge))
+
+        intact = _clamp(_f(chain.get("chain_intact_probability")), 0.0, 1.0)
+        confidence = _clamp(_f(chain.get("confidence")), 0.0, 1.0)
+        upstream_product = math.prod(
+            max(0.01, _f(edge.get("with_player_modifier"), 1.0))
+            for edge in unique_upstream
+        )
+        residual = 1.0 + intact * confidence * (upstream_product - 1.0)
+
+        final_role = str(terminal.get("target_role") or "").upper()
+        creator_target = any(
+            token in final_role for token in ("CREATOR", "PLAYMAKER")
+        )
+        if creator_target:
+            incremental_goal = 1.0
+            incremental_assist = residual
+            overlap_goal = 1.0
+            overlap_assist = max(
+                0.01, _f(pairwise.get("assist_multiplier"), 1.0)
+            )
+        else:
+            incremental_goal = residual
+            incremental_assist = math.exp(math.log(max(0.01, residual)) * 0.5)
+            overlap_goal = max(
+                0.01, _f(pairwise.get("goal_multiplier"), 1.0)
+            )
+            overlap_assist = max(
+                0.01, _f(pairwise.get("assist_multiplier"), 1.0)
+            )
+
+        primary_overlap = overlap_assist if creator_target else overlap_goal
+        primary_incremental = (
+            incremental_assist if creator_target else incremental_goal
+        )
+        raw_primary = primary_overlap * primary_incremental
+
+        chain.update(
+            {
+                "status": "AVAILABLE",
+                "raw_chain_multiplier": round(raw_primary, 6),
+                "overlapping_pairwise_multiplier": round(primary_overlap, 6),
+                "incremental_chain_multiplier": round(
+                    primary_incremental, 6
+                ),
+                "effective_chain_multiplier": round(
+                    primary_incremental, 6
+                ),
+                "anti_double_count_applied": True,
+                "overlap_edge_ids": [terminal_id],
+                "overlapping_edges": [
+                    {
+                        "edge_id": terminal_id,
+                        "source_player_id": terminal.get(
+                            "source_player_id",
+                            terminal.get("teammate_player_id"),
+                        ),
+                        "target_player_id": terminal.get("target_player_id"),
+                    }
+                ],
+                "upstream_incremental_edge_ids": [
+                    _edge_id(edge) for edge in unique_upstream
+                ],
+                "deduplicated_upstream_edge_ids": [
+                    _edge_id(edge)
+                    for edge in upstream_edges
+                    if _edge_id(edge) not in {
+                        _edge_id(item) for item in unique_upstream
+                    }
+                ],
+                "chain_incremental_confidence": round(confidence, 6),
+                "channel_effects": {
+                    "goal": {
+                        "raw_chain_contribution": round(
+                            overlap_goal * incremental_goal, 6
+                        ),
+                        "overlap_removed": round(overlap_goal, 6),
+                        "incremental_chain_contribution": round(
+                            incremental_goal, 6
+                        ),
+                    },
+                    "assist": {
+                        "raw_chain_contribution": round(
+                            overlap_assist * incremental_assist, 6
+                        ),
+                        "overlap_removed": round(overlap_assist, 6),
+                        "incremental_chain_contribution": round(
+                            incremental_assist, 6
+                        ),
+                    },
+                },
+                # Backward-facing multiplier now means the runtime-effective
+                # residual, not the pre-repair full-edge product.
+                "multiplier": round(primary_incremental, 6),
+            }
+        )
+        resolved.append(chain)
+    return resolved
+
+
 def build_contextual_dynamics(
     match_rows: Sequence[Mapping[str, Any]],
     *,
@@ -988,45 +1165,85 @@ def build_contextual_dynamics(
     link_rows = list(linkups or [])
     teammate_probs = dict(teammate_start_probabilities or {})
     marginal_rows = []
+    pairwise_contributions: dict[str, dict[str, Any]] = {}
     link_goal = 1.0
     link_assist = 1.0
     for link in link_rows:
         teammate = _i(link.get("teammate_player_id"), -1)
-        marginal = probability_weighted_link_modifier(link, teammate_probs.get(teammate, 1.0))
-        marginal_rows.append({**marginal, "teammate_player_id": teammate, "confidence": link.get("confidence")})
+        target = _i(link.get("target_player_id"), int(player_id))
+        marginal = probability_weighted_link_modifier(
+            link, teammate_probs.get(teammate, 1.0)
+        )
         confidence = _clamp(_f(link.get("confidence")), 0.0, 1.0)
-        safe = max(0.01, _f(marginal.get("marginal_modifier"), 1.0))
+        safe = max(
+            0.01, _f(marginal.get("marginal_modifier"), 1.0)
+        )
         role_hint = str(link.get("target_role") or "").upper()
         if any(token in role_hint for token in ("CREATOR", "PLAYMAKER")):
-            link_assist *= math.exp(math.log(safe) * confidence)
+            goal_effect = 1.0
+            assist_effect = math.exp(math.log(safe) * confidence)
         else:
-            link_goal *= math.exp(math.log(safe) * confidence)
-            link_assist *= math.exp(math.log(safe) * confidence * 0.5)
+            goal_effect = math.exp(math.log(safe) * confidence)
+            assist_effect = math.exp(math.log(safe) * confidence * 0.5)
+        edge_id = f"{teammate}->{target}"
+        pairwise_contributions[edge_id] = {
+            "edge_id": edge_id,
+            "source_player_id": teammate,
+            "target_player_id": target,
+            "teammate_p_start": marginal.get("teammate_p_start"),
+            "marginal_modifier": round(safe, 6),
+            "confidence": round(confidence, 6),
+            "goal_multiplier": round(goal_effect, 6),
+            "assist_multiplier": round(assist_effect, 6),
+        }
+        marginal_rows.append(
+            {
+                **marginal,
+                "edge_id": edge_id,
+                "teammate_player_id": teammate,
+                "target_player_id": target,
+                "confidence": link.get("confidence"),
+                "applied_goal_multiplier": round(goal_effect, 6),
+                "applied_assist_multiplier": round(assist_effect, 6),
+            }
+        )
+        link_goal *= goal_effect
+        link_assist *= assist_effect
 
-    chain_rows = [
+    raw_chain_rows = [
         dict(row)
         for row in (chains or [])
         if isinstance(row, Mapping)
         and row.get("status") == "AVAILABLE"
     ]
+    chain_rows = resolve_incremental_chain_effects(
+        raw_chain_rows,
+        pairwise_contributions,
+    )
     chain_goal = 1.0
     chain_assist = 1.0
     for chain in chain_rows:
-        safe = max(0.01, _f(chain.get("multiplier"), 1.0))
-        edge_rows = [
-            dict(edge)
-            for edge in chain.get("edges") or []
-            if isinstance(edge, Mapping)
-        ]
-        final_role = (
-            str((edge_rows[-1] if edge_rows else {}).get("target_role") or "")
-            .upper()
+        if chain.get("status") != "AVAILABLE":
+            continue
+        effects = dict(chain.get("channel_effects") or {})
+        chain_goal *= max(
+            0.01,
+            _f(
+                (effects.get("goal") or {}).get(
+                    "incremental_chain_contribution"
+                ),
+                1.0,
+            ),
         )
-        if any(token in final_role for token in ("CREATOR", "PLAYMAKER")):
-            chain_assist *= safe
-        else:
-            chain_goal *= safe
-            chain_assist *= math.exp(math.log(safe) * 0.5)
+        chain_assist *= max(
+            0.01,
+            _f(
+                (effects.get("assist") or {}).get(
+                    "incremental_chain_contribution"
+                ),
+                1.0,
+            ),
+        )
 
     combined_cfg = load_config().get("combined") or {}
     low = _f(combined_cfg.get("minimum_multiplier"), 0.72)
@@ -1063,8 +1280,63 @@ def build_contextual_dynamics(
             "matchup": round(matchup_mod, 6),
             "linkup_goal": round(link_goal, 6),
             "linkup_assist": round(link_assist, 6),
+            "pairwise_contribution": {
+                "goal": round(link_goal, 6),
+                "assist": round(link_assist, 6),
+            },
+            "raw_chain_contribution": {
+                "goal": round(
+                    math.prod(
+                        max(
+                            0.01,
+                            _f(
+                                ((row.get("channel_effects") or {}).get(
+                                    "goal"
+                                ) or {}).get("raw_chain_contribution"),
+                                1.0,
+                            ),
+                        )
+                        for row in chain_rows
+                        if row.get("status") == "AVAILABLE"
+                    ),
+                    6,
+                ),
+                "assist": round(
+                    math.prod(
+                        max(
+                            0.01,
+                            _f(
+                                ((row.get("channel_effects") or {}).get(
+                                    "assist"
+                                ) or {}).get("raw_chain_contribution"),
+                                1.0,
+                            ),
+                        )
+                        for row in chain_rows
+                        if row.get("status") == "AVAILABLE"
+                    ),
+                    6,
+                ),
+            },
+            "overlap_removed": {
+                "terminal_pairwise_edge_ids": sorted(
+                    {
+                        edge_id
+                        for row in chain_rows
+                        for edge_id in row.get("overlap_edge_ids") or []
+                    }
+                ),
+            },
+            "incremental_chain_contribution": {
+                "goal": round(chain_goal, 6),
+                "assist": round(chain_assist, 6),
+            },
             "chain_goal": round(chain_goal, 6),
             "chain_assist": round(chain_assist, 6),
+            "final_dependency_goal": round(link_goal * chain_goal, 6),
+            "final_dependency_assist": round(
+                link_assist * chain_assist, 6
+            ),
         },
         "governance": {
             "v6_factual_plane_mutated": False,
@@ -1075,6 +1347,9 @@ def build_contextual_dynamics(
             "named_player_rules": False,
             "raw_h2h_result_is_not_sufficient": True,
             "multi_player_chain_runtime_wired": bool(chain_rows),
+            "pairwise_chain_anti_double_count": True,
+            "terminal_pairwise_owned_once": True,
+            "final_cap_is_not_anti_double_count": True,
             "trajectory_window_current_season_only": True,
             "opponent_history_window_separate": True,
         },

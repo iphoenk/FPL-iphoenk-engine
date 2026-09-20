@@ -1,6 +1,6 @@
 # V6 Fresh Data Platform
 
-> **Last runtime/documentation sync:** `2026-09-20T23:38:36+07:00`  
+> **Last runtime/documentation sync:** `2026-09-20T23:40:01+07:00`  
 > **Runtime contract basis:** `config/v6/schedule_policy.json` schema v6, `config/v6/source_activation.json` schema v4, `.github/workflows/v6-natural-data-ingestion.yml`, and the active `runtime-data-v6` publication model.
 
 ## Mission and authority
@@ -9,7 +9,7 @@ V6 is the repository's factual fresh-data plane. It acquires, normalizes, valida
 
 Official FPL is the canonical authority for Official-FPL-native player, team, fixture, price, scoring, rule, and submitted-picks facts. External providers remain separate evidence sources. V6 never averages them into hidden consensus and never fabricates missing values.
 
-V6 must never import, execute, hydrate, or fall back to V3/V4/V5 runtime data, caches, manifests, or engines.
+V6 never reads V3/V4/V5 runtime branches, data trees, caches, manifests, or engine artifacts. It must never import, execute, hydrate, or fall back to V3/V4/V5 runtime data.
 
 ## Current production control plane
 

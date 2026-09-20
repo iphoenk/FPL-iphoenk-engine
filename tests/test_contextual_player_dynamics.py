@@ -765,15 +765,29 @@ def _chain_projection(chain: dict) -> dict:
         )
         for gw in range(1, 5)
     ]
+    edges = [
+        dict(edge)
+        for edge in chain.get("edges") or []
+        if isinstance(edge, dict)
+    ]
+    terminal = edges[-1] if edges else None
+    linked = {
+        int(player_id): float(probability)
+        for player_id, probability in (
+            chain.get("linked_player_p_start") or {}
+        ).items()
+    }
     context = build_contextual_dynamics(
         target_rows,
         player_id=103,
         current_gw=4,
         opponent_team_id=99,
         current_context={"manager_id": "M1", "formation": "4-3-3"},
-        linkups=[],
+        linkups=[terminal] if terminal else [],
         chains=[chain] if chain.get("status") == "AVAILABLE" else [],
-        teammate_start_probabilities={101: 1.0, 102: 1.0},
+        teammate_start_probabilities=(
+            linked or {101: 1.0, 102: 1.0}
+        ),
         opponent_history_rows=[],
         opponent_history_scope="CURRENT-SEASON ONLY",
     )
@@ -1136,3 +1150,354 @@ def test_prediction_service_declares_truthful_current_season_history_scope():
     ).read_text(encoding="utf-8")
     assert 'opponent_history_scope="CURRENT-SEASON ONLY"' in source
     assert "NO GOVERNED MATCH-LEVEL FACTUAL SOURCE" in source
+
+
+
+def _anti_double_context(
+    *,
+    terminal_modifier: float,
+    upstream_modifiers: list[float],
+    terminal_without: float | None = None,
+    p_starts: dict[int, float] | None = None,
+    target_id: int = 303,
+) -> dict:
+    p_starts = dict(p_starts or {})
+    edges = []
+    source = 300
+    for index, upstream_modifier in enumerate(upstream_modifiers):
+        target = source + 1
+        edges.append(
+            strong_edge(
+                source,
+                target,
+                modifier=upstream_modifier,
+                confidence=1.0,
+            )
+        )
+        source = target
+    terminal = strong_edge(
+        source,
+        target_id,
+        modifier=terminal_modifier,
+        confidence=1.0,
+    )
+    if terminal_without is not None:
+        terminal["without_player_modifier"] = terminal_without
+    edges.append(terminal)
+
+    default_probs = {
+        int(edge["source_player_id"]): 1.0 for edge in edges
+    }
+    default_probs.update(p_starts)
+    chain = evaluate_multi_player_chain(edges, default_probs)
+    assert chain["status"] == "AVAILABLE"
+
+    target_rows = [
+        row(
+            player=target_id,
+            gw=gw,
+            match=f"adc-{target_id}-{gw}",
+            opponent=80 + gw,
+            xg=0.45,
+            xa=0.12,
+            role="FINISHER",
+        )
+        for gw in range(1, 5)
+    ]
+    context = build_contextual_dynamics(
+        target_rows,
+        player_id=target_id,
+        current_gw=4,
+        opponent_team_id=99,
+        current_context={"manager_id": "M1", "formation": "4-3-3"},
+        linkups=[terminal],
+        chains=[chain],
+        teammate_start_probabilities=default_probs,
+        opponent_history_rows=[],
+        opponent_history_scope="CURRENT-SEASON ONLY",
+    )
+    return {
+        "edges": edges,
+        "terminal": terminal,
+        "chain": chain,
+        "context": context,
+    }
+
+
+def test_W_positive_terminal_overlap_is_not_multiplied_twice():
+    # Pairwise B->C = 1.10; upstream residual chosen so raw joint = 1.16.
+    upstream = 1.16 / 1.10
+    out = _anti_double_context(
+        terminal_modifier=1.10,
+        upstream_modifiers=[upstream],
+    )
+    context = out["context"]
+    chain = context["linkup_network"]["multi_player_chains"][0]
+    assert context["event_multipliers"]["linkup_goal"] == pytest.approx(1.10)
+    assert chain["raw_chain_multiplier"] == pytest.approx(1.16, abs=1e-6)
+    assert chain["overlapping_pairwise_multiplier"] == pytest.approx(1.10)
+    assert chain["incremental_chain_multiplier"] == pytest.approx(
+        upstream, abs=1e-6
+    )
+    assert chain["anti_double_count_applied"] is True
+    assert context["event_multipliers"]["final_dependency_goal"] == pytest.approx(
+        1.16, abs=1e-6
+    )
+    assert context["event_multipliers"]["final_dependency_goal"] != pytest.approx(
+        1.10 * 1.16, abs=1e-6
+    )
+
+
+def test_X_negative_terminal_overlap_is_not_multiplied_twice():
+    upstream = 0.86 / 0.92
+    out = _anti_double_context(
+        terminal_modifier=0.92,
+        upstream_modifiers=[upstream],
+    )
+    context = out["context"]
+    chain = context["linkup_network"]["multi_player_chains"][0]
+    assert context["event_multipliers"]["linkup_goal"] == pytest.approx(0.92)
+    assert chain["raw_chain_multiplier"] == pytest.approx(0.86, abs=1e-6)
+    assert chain["incremental_chain_multiplier"] == pytest.approx(
+        upstream, abs=1e-6
+    )
+    assert context["event_multipliers"]["final_dependency_goal"] == pytest.approx(
+        0.86, abs=1e-6
+    )
+    assert context["event_multipliers"]["final_dependency_goal"] != pytest.approx(
+        0.92 * 0.86, abs=1e-6
+    )
+
+
+def test_Y_neutral_higher_order_effect_leaves_pairwise_unchanged():
+    out = _anti_double_context(
+        terminal_modifier=1.10,
+        upstream_modifiers=[1.0],
+    )
+    context = out["context"]
+    chain = context["linkup_network"]["multi_player_chains"][0]
+    assert chain["incremental_chain_multiplier"] == pytest.approx(1.0)
+    assert chain["effective_chain_multiplier"] == pytest.approx(1.0)
+    assert context["event_multipliers"]["final_dependency_goal"] == pytest.approx(
+        1.10
+    )
+
+
+def test_Z_real_higher_order_positive_effect_survives_residualization():
+    upstream = 1.18 / 1.08
+    out = _anti_double_context(
+        terminal_modifier=1.08,
+        upstream_modifiers=[upstream],
+    )
+    context = out["context"]
+    chain = context["linkup_network"]["multi_player_chains"][0]
+    assert chain["incremental_chain_multiplier"] > 1.0
+    assert context["event_multipliers"]["final_dependency_goal"] == pytest.approx(
+        1.18, abs=1e-6
+    )
+
+
+def test_AA_middle_node_absent_neutralizes_chain_not_pairwise_absence_state():
+    upstream = 1.16 / 1.10
+    out = _anti_double_context(
+        terminal_modifier=1.10,
+        terminal_without=0.90,
+        upstream_modifiers=[upstream],
+        p_starts={301: 0.0},
+    )
+    context = out["context"]
+    chain = context["linkup_network"]["multi_player_chains"][0]
+    assert chain["chain_intact_probability"] == pytest.approx(0.0)
+    assert chain["incremental_chain_multiplier"] == pytest.approx(1.0)
+    # Pairwise B->C separately owns the B-absent state.
+    assert context["event_multipliers"]["linkup_goal"] == pytest.approx(0.90)
+    assert context["event_multipliers"]["final_dependency_goal"] == pytest.approx(
+        0.90
+    )
+
+
+def test_AB_half_start_is_between_intact_and_broken_without_double_penalty():
+    upstream = 1.16 / 1.10
+    intact = _anti_double_context(
+        terminal_modifier=1.10,
+        terminal_without=0.90,
+        upstream_modifiers=[upstream],
+        p_starts={301: 1.0},
+    )["context"]
+    half = _anti_double_context(
+        terminal_modifier=1.10,
+        terminal_without=0.90,
+        upstream_modifiers=[upstream],
+        p_starts={301: 0.5},
+    )["context"]
+    broken = _anti_double_context(
+        terminal_modifier=1.10,
+        terminal_without=0.90,
+        upstream_modifiers=[upstream],
+        p_starts={301: 0.0},
+    )["context"]
+    broken_final = broken["event_multipliers"]["final_dependency_goal"]
+    half_final = half["event_multipliers"]["final_dependency_goal"]
+    intact_final = intact["event_multipliers"]["final_dependency_goal"]
+    assert broken_final < half_final < intact_final
+    assert (
+        half["linkup_network"]["multi_player_chains"][0][
+            "incremental_chain_multiplier"
+        ]
+        > 1.0
+    )
+
+
+def test_AC_two_chains_sharing_terminal_edge_apply_pairwise_once():
+    terminal = strong_edge(
+        402,
+        404,
+        modifier=1.10,
+        confidence=1.0,
+    )
+    edge_a = strong_edge(
+        401,
+        402,
+        modifier=1.05,
+        confidence=1.0,
+    )
+    edge_c = strong_edge(
+        403,
+        402,
+        modifier=1.04,
+        confidence=1.0,
+    )
+    probs = {401: 1.0, 402: 1.0, 403: 1.0}
+    chain_a = evaluate_multi_player_chain([edge_a, terminal], probs)
+    chain_c = evaluate_multi_player_chain([edge_c, terminal], probs)
+    target_rows = [
+        row(
+            player=404,
+            gw=gw,
+            match=f"ac-{gw}",
+            opponent=60 + gw,
+            xg=0.50,
+            role="FINISHER",
+        )
+        for gw in range(1, 5)
+    ]
+    context = build_contextual_dynamics(
+        target_rows,
+        player_id=404,
+        current_gw=4,
+        opponent_team_id=99,
+        current_context={"manager_id": "M1", "formation": "4-3-3"},
+        linkups=[terminal],
+        chains=[chain_a, chain_c],
+        teammate_start_probabilities=probs,
+        opponent_history_rows=[],
+        opponent_history_scope="CURRENT-SEASON ONLY",
+    )
+    assert context["event_multipliers"]["linkup_goal"] == pytest.approx(1.10)
+    assert context["event_multipliers"]["chain_goal"] == pytest.approx(
+        1.05 * 1.04, abs=1e-6
+    )
+    assert context["event_multipliers"]["final_dependency_goal"] == pytest.approx(
+        1.10 * 1.05 * 1.04, abs=1e-6
+    )
+    assert context["event_multipliers"]["overlap_removed"][
+        "terminal_pairwise_edge_ids"
+    ] == ["402->404"]
+
+
+def test_AD_pairwise_only_numerics_are_exactly_unchanged():
+    target, creator, connections = target_and_creator_rows()
+    link = evaluate_linkup(
+        target,
+        creator,
+        target_player_id=20,
+        teammate_player_id=21,
+        target_role="FINISHER",
+        teammate_role="CREATOR",
+        connection_rows=connections,
+    )
+    common = dict(
+        match_rows=target,
+        player_id=20,
+        current_gw=6,
+        opponent_team_id=86,
+        current_context={"manager_id": "M1", "formation": "4-3-3"},
+        linkups=[{**link, "target_role": "FINISHER"}],
+        teammate_start_probabilities={21: 0.5},
+        opponent_history_rows=[],
+        opponent_history_scope="CURRENT-SEASON ONLY",
+    )
+    before_semantics = build_contextual_dynamics(**common)
+    explicit_no_chain = build_contextual_dynamics(**common, chains=[])
+    assert before_semantics["event_multipliers"] == explicit_no_chain[
+        "event_multipliers"
+    ]
+    assert before_semantics["linkup_network"]["chain_count"] == 0
+
+
+def test_AE_neutral_terminal_pairwise_still_allows_chain_interaction():
+    out = _anti_double_context(
+        terminal_modifier=1.0,
+        terminal_without=1.0,
+        upstream_modifiers=[1.12],
+    )
+    context = out["context"]
+    chain = context["linkup_network"]["multi_player_chains"][0]
+    assert context["event_multipliers"]["linkup_goal"] == pytest.approx(1.0)
+    assert chain["incremental_chain_multiplier"] == pytest.approx(1.12)
+    assert context["event_multipliers"]["final_dependency_goal"] == pytest.approx(
+        1.12
+    )
+
+
+def test_AF_residual_chain_still_propagates_through_p13_distribution():
+    upstream = 1.18 / 1.08
+    with_chain_context = _anti_double_context(
+        terminal_modifier=1.08,
+        upstream_modifiers=[upstream],
+    )["context"]
+    pairwise_only_context = _anti_double_context(
+        terminal_modifier=1.08,
+        upstream_modifiers=[1.0],
+    )["context"]
+
+    kwargs = dict(
+        player={"id": 303, "element_type": 4, "position": "FWD"},
+        minutes_projection=full_start_minutes(),
+        matchup=fixture(),
+        home=True,
+        rates=rates(),
+        league_baseline={"home_goals": 1.6, "away_goals": 1.2},
+    )
+    with_chain = project_player_fixture(
+        **kwargs, contextual_dynamics=with_chain_context
+    )
+    pairwise_only = project_player_fixture(
+        **kwargs, contextual_dynamics=pairwise_only_context
+    )
+    assert (
+        with_chain["event_probabilities"]["p_goal_return"]
+        > pairwise_only["event_probabilities"]["p_goal_return"]
+    )
+    assert (
+        with_chain["event_probabilities"]["p_assist_return"]
+        > pairwise_only["event_probabilities"]["p_assist_return"]
+    )
+    assert (
+        with_chain["event_probabilities"]["p_attacking_return"]
+        > pairwise_only["event_probabilities"]["p_attacking_return"]
+    )
+    assert (
+        with_chain["event_probabilities"]["p_total_ga_ge_2"]
+        > pairwise_only["event_probabilities"]["p_total_ga_ge_2"]
+    )
+    assert (
+        with_chain["point_distribution"]["p_haul_10_plus"]
+        >= pairwise_only["point_distribution"]["p_haul_10_plus"]
+    )
+    assert (
+        with_chain["point_distribution"]["p_fpl_blank"]
+        < pairwise_only["point_distribution"]["p_fpl_blank"]
+    )
+    assert with_chain["mean"] > pairwise_only["mean"]
+    assert with_chain["std"] != pairwise_only["std"]

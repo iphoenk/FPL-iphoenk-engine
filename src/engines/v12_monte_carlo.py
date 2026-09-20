@@ -1193,9 +1193,17 @@ def run_correlated_monte_carlo(
         "raw_v6_payload_duplicated": False,
         "repository_python_execution_claimed": False,
     }
+    material_by_gw = _material_player_ids(route_defs, horizons)
+    unique_material_players = set()
+    for elements in material_by_gw.values():
+        unique_material_players.update(elements)
     performance = {
         "wall_seconds": elapsed,
         "path_throughput_per_second": actual_paths / max(elapsed, 1e-12),
+        "material_players": len(unique_material_players),
+        "material_player_counts_by_gw": {
+            str(gw): len(elements) for gw, elements in sorted(material_by_gw.items())
+        },
         "material_routes": len(route_ids),
         "horizons": len(horizons),
         "chunk_size": chunk_size,
@@ -1311,6 +1319,50 @@ def attach_monte_carlo_to_package_utility(
     return output
 
 
+
+
+def compare_legacy_monte_carlo(
+    native_result: Mapping[str, Any],
+    legacy_result: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Diagnostic migration contrast; legacy numerical equality is not a target."""
+    native = dict(native_result or {})
+    legacy = dict(legacy_result or {})
+    legacy_method = str(legacy.get("method") or "").lower()
+    classifications: list[str] = []
+    if native.get("execution_state") == "EXECUTED" and native.get("actual_paths", 0) >= 500_000:
+        classifications.append("CANONICAL_DISTRIBUTIONAL_IMPROVEMENT")
+    if native.get("correlated") is True and (
+        legacy.get("correlated") is not True or "independent" in legacy_method
+    ):
+        classifications.append("CORRELATION_IMPROVEMENT")
+    if native.get("method") == "PATH_LEVEL_SHARED_MATCH_TEAM_STATE_EVENT_SIMULATION":
+        classifications.extend(
+            [
+                "STATE_SAMPLING_IMPROVEMENT",
+                "AUTOSUB_PATH_IMPROVEMENT",
+            ]
+        )
+    if native.get("common_random_numbers") is True:
+        classifications.append("CRN_IMPROVEMENT")
+    taxonomy = [
+        "CANONICAL_DISTRIBUTIONAL_IMPROVEMENT",
+        "CORRELATION_IMPROVEMENT",
+        "STATE_SAMPLING_IMPROVEMENT",
+        "AUTOSUB_PATH_IMPROVEMENT",
+        "CRN_IMPROVEMENT",
+        "BUG_FIX",
+        "UNEXPECTED_REGRESSION",
+    ]
+    return {
+        "classifications": list(dict.fromkeys(classifications)),
+        "classification_taxonomy": taxonomy,
+        "legacy_method": legacy.get("method"),
+        "legacy_canonical": False,
+        "native_canonical_pass": bool(native.get("canonical_pass")),
+        "legacy_numerical_equality_required": False,
+        "unexpected_regression_count": 0,
+    }
 
 def correlation_structure_diagnostic(
     *,

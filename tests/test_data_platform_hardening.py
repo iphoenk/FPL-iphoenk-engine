@@ -32,7 +32,7 @@ def test_workflow_scheduler_matches_v6_chatgpt_authority_policy():
     assert policy["schema_version"] == 6
     assert policy["engine"] == "V6_FRESH_DATA_PLATFORM"
     assert policy["scheduler_authority"]["kind"] == "CHATGPT_TASK"
-    assert policy["scheduler_authority"]["name"] == "FPL Master Monitor"
+    assert policy["scheduler_authority"]["name"] == "FPL Master Monitor V12"
     assert policy["scheduler_authority"]["timezone"] == "Asia/Jakarta"
     assert policy["scheduler_authority"]["cadence_minutes"] == 60
     assert policy["scheduler_authority"]["physical_minute"] == 30

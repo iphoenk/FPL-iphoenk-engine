@@ -90,6 +90,11 @@ def build(
         for row in (player_connection_rows or [])
         if isinstance(row, Mapping)
     ]
+    match_rows_by_player: dict[int, list[dict[str, Any]]] = {}
+    for row in match_rows:
+        player_id = int(row.get("player_id") or row.get("element") or -1)
+        if player_id > 0:
+            match_rows_by_player.setdefault(player_id, []).append(row)
     latest_completed_gw = max(
         [
             int(row.get("gw") or row.get("event") or 0)
@@ -225,8 +230,8 @@ def build(
                     teammate_feature.get("tactical_role") or {}
                 ).get("profile")
                 link = evaluate_linkup(
-                    match_rows,
-                    match_rows,
+                    match_rows_by_player.get(element, []),
+                    match_rows_by_player.get(teammate_id, []),
                     target_player_id=element,
                     teammate_player_id=teammate_id,
                     target_role=target_role,
@@ -313,7 +318,7 @@ def build(
                 }
                 contextual_by_fixture[fixture_key(matchup)] = (
                     build_contextual_dynamics(
-                        match_rows,
+                        match_rows_by_player.get(element, []),
                         player_id=element,
                         current_gw=latest_completed_gw,
                         opponent_team_id=opponent_id,
@@ -515,6 +520,7 @@ def build(
                 "src/engines/v12_contextual_dynamics.py"
             ),
             "contextual_dynamics_reuses_existing_v6_player_match_rows": True,
+            "contextual_dynamics_player_match_indexed": True,
             "legacy_projection_components_migration_oracle_only": True,
             "multi_fixture_dependency_assumption": "ZERO_CROSS_FIXTURE_COVARIANCE_NOT_MODELLED_YET",
             "p1_3b_joint_event_distribution": True,

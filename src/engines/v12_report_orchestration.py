@@ -656,7 +656,12 @@ def build_price20(
 
     reason = None
     if state != "COMPLETE":
-        if adapter == "V6_DATA_PLAYERS_OFFSET0" and not date_state_complete:
+        if adapter == "V6_DATA_PLAYERS_OFFSET0" and not enough:
+            reason = (
+                f"official_price_predictor health={health}; "
+                f"usable offset-0 {direction_token.lower()} rows={len(selected)}/20"
+            )
+        elif adapter == "V6_DATA_PLAYERS_OFFSET0" and not date_state_complete:
             incomplete = sum(not bool(row.get("date_state_complete")) for row in selected)
             reason = f"date-state terminal contract incomplete for {incomplete}/20 rows"
         elif adapter == "V6_DATA_PLAYERS_OFFSET0" and missing_cycle_clock:
@@ -675,9 +680,6 @@ def build_price20(
         else:
             reason = (
                 f"official_price_predictor health={health}; "
-                f"usable offset-0 {direction_token.lower()} rows={len(selected)}/20"
-                if adapter == "V6_DATA_PLAYERS_OFFSET0"
-                else f"official_price_predictor health={health}; "
                 f"{direction_token.lower()} rows={len(selected)}/20"
             )
     return {

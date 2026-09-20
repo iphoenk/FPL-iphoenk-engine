@@ -112,8 +112,12 @@ jobs:
             echo "::error::historical full-owner acceptance harness not found"
             exit 1
           fi
-          echo "Historical acceptance harness commit: $acceptance_commit"
-          git show "$acceptance_commit:tools/v12_live_full_owner_acceptance.py" > "$RUNNER_TEMP/v12_live_full_owner_acceptance.py"
+          source_commit="$acceptance_commit"
+          if ! git cat-file -e "$source_commit:tools/v12_live_full_owner_acceptance.py" 2>/dev/null; then
+            source_commit="$acceptance_commit^"
+          fi
+          echo "Historical acceptance harness source commit: $source_commit"
+          git show "$source_commit:tools/v12_live_full_owner_acceptance.py" > "$RUNNER_TEMP/v12_live_full_owner_acceptance.py"
           PYTHONPATH=. python "$RUNNER_TEMP/v12_live_full_owner_acceptance.py"
       - name: Prove zero legacy execution statically
         run: python src/platform/legacy_execution_isolation_validate.py

@@ -318,6 +318,34 @@ def _relative_mc():
     }
 
 
+def _acceptance_rival_entry(entry_id: int = 200) -> dict:
+    starters = [1, 3, 4, 5, 8, 9, 10, 11, 12, 13, 14]
+    bench = [2, 15, 6, 7]
+    rows = []
+    for position, element in enumerate(starters, start=1):
+        rows.append({
+            "element_id": element,
+            "squad_position": position,
+            "multiplier": 2 if element == 13 else 1,
+            "captain": element == 13,
+            "vice_captain": element == 8,
+        })
+    for offset, element in enumerate(bench, start=12):
+        rows.append({
+            "element_id": element,
+            "squad_position": offset,
+            "multiplier": 0,
+            "captain": False,
+            "vice_captain": False,
+        })
+    return {
+        "entry_id": entry_id,
+        "status": "AVAILABLE",
+        "active_chip": None,
+        "picks": rows,
+    }
+
+
 def _overlay(*, posture=None, snapshot=None):
     return evaluate_mini_league_overlay(
         _package(),
@@ -770,11 +798,7 @@ def test_62_calibration_summary_has_no_one_gw_rule_creation():
 
 def test_63_rival_route_definitions_use_exact_element_ids():
     projections, _ = build_acceptance_fixture()
-    picks = {
-        "entries": {
-            "200": _entry(200, captain=13),
-        }
-    }
+    picks = {"entries": {"200": _acceptance_rival_entry(200)}}
     defs = build_rival_route_definitions(
         picks, projections, entry_ids=[200], planning_gw=6
     )
@@ -784,7 +808,7 @@ def test_63_rival_route_definitions_use_exact_element_ids():
 
 def test_64_relative_mc_reuses_p1_4_engine_not_second_mc():
     projections, package = build_acceptance_fixture()
-    picks = {"entries": {"200": _entry(200, captain=13)}}
+    picks = {"entries": {"200": _acceptance_rival_entry(200)}}
     result = run_relative_mini_league_mc(
         projections,
         package,
@@ -805,7 +829,7 @@ def test_64_relative_mc_reuses_p1_4_engine_not_second_mc():
 
 def test_65_relative_mc_scope_does_not_claim_final_rank():
     projections, package = build_acceptance_fixture()
-    picks = {"entries": {"200": _entry(200, captain=13)}}
+    picks = {"entries": {"200": _acceptance_rival_entry(200)}}
     result = run_relative_mini_league_mc(
         projections,
         package,

@@ -1091,11 +1091,7 @@ def _build_joint_predictive_surface(
                 "silent_independence": False,
                 "other_event_blocks_conditionally_factorized_given_minutes": True,
                 "shared_minutes_dependence": True,
-                "cross_player_correlation": (
-                "CONTEXTUAL_LINKUP_DEPENDENCY_BOUND"
-                if contextual
-                else "NOT_MODELLED_YET"
-            ),
+                "cross_player_correlation": "NOT_MODELLED_YET",
                 "cross_fixture_correlation": "NOT_MODELLED_YET",
             },
             "computational_form": "LATENT_BIVARIATE_POISSON_ANALYTIC_RETURNS_PLUS_COMPOUND_POISSON_PGF_RECURSION",

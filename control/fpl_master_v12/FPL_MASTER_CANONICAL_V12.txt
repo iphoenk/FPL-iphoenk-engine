@@ -1123,4 +1123,48 @@ those rows into the opponent-history window only. That binding never changes
 V6 authority, never changes trajectory scope, and never promotes State JSON to
 methodology authority.
 
+
+20N. PAIRWISE vs MULTI-PLAYER CHAIN OWNERSHIP / ANTI-DOUBLE-COUNT
+A. PAIRWISE EDGE OWNER: a direct source->target edge, for example B->C, owns
+the conditional target effect of B availability relative to C baseline after
+existing P1.1 P(start) marginalization. That direct contribution is applied
+once in the pairwise runtime path.
+B. MULTI-PLAYER CHAIN OWNER: a chain such as A->B->C owns ONLY the
+higher-order/incremental upstream interaction that remains after the direct
+terminal B->C contribution already owned by pairwise has been removed. Chain
+effect MUST NOT equal a second multiplication of every raw edge effect.
+C. A terminal edge may be used as evidence and as the confidence/continuity
+bridge that makes a chain valid, but its direct target contribution may not be
+multiplied twice. Runtime decomposition must expose raw chain contribution,
+overlapping pairwise contribution, overlap edge IDs, incremental/residual chain
+contribution, incremental confidence and effective chain multiplier.
+D. Anti-double-count is performed before the existing final contextual bound.
+The global combined multiplier cap is only a safety bound and MUST NOT be
+treated as an anti-double-count mechanism.
+E. Positive and negative dependencies use the same neutral-relative residual
+semantics. If pairwise=1.10 and raw joint chain=1.16, incremental chain is
+approximately 1.16/1.10. If pairwise=0.92 and raw joint chain=0.86,
+incremental chain is approximately 0.86/0.92.
+F. P1.1 availability remains authoritative. The incremental chain interaction
+is gated by the existing chain-intact probability. If a required middle node
+has P(start)=0, the higher-order residual approaches neutral while the pairwise
+owner independently preserves its own present/absent marginalization.
+G. For multiple chains to the same target that share the same terminal edge,
+the terminal pairwise contribution remains applied once. Each chain may add
+only its distinct upstream residual. Repeated upstream edge evidence inside one
+target context must be deduplicated rather than multiplied blindly.
+H. If no valid chain exists, pairwise-only runtime numerics remain exactly
+unchanged. If the terminal pairwise contribution is neutral but qualified
+upstream interaction is non-neutral, the chain may still contribute a genuine
+higher-order residual.
+I. Order of operations is:
+trajectory modifier
+x opponent-matchup modifier
+x pairwise dependency modifier
+x incremental multi-player-chain modifier
+-> bounded contextual goal/assist rate
+-> existing P1.3 joint event/point PMF.
+The repair does not alter V6, P1.1, P1.3 ownership, P1.4 Monte Carlo, P1.6,
+P1.7, P1.8, the scheduler, State authority or 20/25/30/25.
+
 END FPL MASTER CANONICAL V12

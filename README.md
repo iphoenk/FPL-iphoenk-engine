@@ -1,5 +1,9 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
+> **Repository architecture sync:** 2026-09-20 23:34 WIB (Asia/Jakarta)  
+> **Runtime baseline:** `main` at `ff89271d45353105e001b2f1f3328229d6323c45` at the start of this documentation sync.  
+> **Documentation rule:** every accepted runtime, scheduler, authority, model-owner, source-activation, or report-contract change MUST update the affected repository documentation in the same bounded change and refresh its visible change timestamp. Runtime/config/code remains authoritative over stale prose.
+
 > **CURRENT ACTIVE ARCHITECTURE**
 >
 > **V6** is the only factual production data plane.  
@@ -273,7 +277,7 @@ Visible reporting is governed by:
 
 `control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt`
 
-The scheduler is intentionally a minimal bootstrap. It reads Canonical authority rather than duplicating methodology in its prompt.
+The scheduler is intentionally a minimal bootstrap. It reads Canonical authority rather than duplicating methodology in its prompt. The active recurring scheduler is FPL Master Monitor V12 at `:30` Asia/Jakarta; normal core acquisition is bound to the `HH:00` logical slot through the governed Issue #431 `FPL_MASTER_SLOT` title-edit path. GitHub natural acquisition cron is disabled. The scheduled `:50` GitHub watchdog is monitoring-only, while report-prefetch is report-driven and does not complete the core slot.
 
 Canonical routing includes static and dynamic report modes such as:
 

@@ -441,7 +441,7 @@ def test_real_price_artifact_data_players_produces_exact20_with_visible_directio
     assert fall["artifact_adapter"] == "V6_DATA_PLAYERS_OFFSET0"
     assert rise["sort_contract"] == "projected_percent DESC, id ASC"
     assert fall["sort_contract"] == "projected_percent ASC, id ASC"
-    assert all(row["projection_offset"] == 0 for row in rise["rows"] + fall["rows"])
+    assert all(row["date_state"] in {"EXPECTED_CHANGE_DATE", "NO_CROSSING_WITHIN_GOVERNED_HORIZON"} for row in rise["rows"] + fall["rows"])
     assert all(row["price_fact"] == "FACT" for row in rise["rows"] + fall["rows"])
     assert all(row["predictor_classification"] == "MODEL" for row in rise["rows"] + fall["rows"])
     assert all(row["direction"] in {"RISE", "FALL", "NEUTRAL"} for row in rise["rows"] + fall["rows"])

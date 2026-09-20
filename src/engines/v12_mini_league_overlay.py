@@ -1158,6 +1158,13 @@ def evaluate_mini_league_overlay(
         "league_context": deepcopy(
             league_snapshot.get("current_league_context") or {}
         ),
+        "mini_league_evidence_provenance": {
+            "snapshot_id": league_snapshot.get("snapshot_id"),
+            "provenance": deepcopy(league_snapshot.get("provenance") or {}),
+            "runtime_binding": deepcopy(
+                league_snapshot.get("runtime_binding") or {}
+            ),
+        },
         "coverage": {
             "state": coverage,
             "scope": league_snapshot.get("league_scope"),

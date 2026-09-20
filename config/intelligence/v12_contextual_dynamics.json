@@ -83,6 +83,9 @@
       "MINUTES_DECLINE",
       "LINKUP_BROKEN",
       "NO_MATERIAL_CHANGE"
-    ]
+    ],
+    "maximum_material_deep_players": 20,
+    "deep_execution_scope_semantics": "MATERIALITY_GATED_DIAGNOSTIC_ONLY",
+    "visible_limit_separate_from_deep_limit": true
   }
 }

@@ -644,12 +644,15 @@ def build_post_match_universe_scan(
         )
         sustained_process = (
             _monotonic_process_improving(matches)
-            or trajectory_class == "IMPROVING"
             or (
                 xgi_ratio is not None
                 and xgi_ratio >= xgi_threshold
                 and len(recent) >= 2
-                and sum(1 for row in recent if _f(row.get("xgi")) >= 0.25)
+                and sum(
+                    1
+                    for row in recent
+                    if _f(row.get("xgi")) >= 0.25
+                )
                 >= 2
             )
         )

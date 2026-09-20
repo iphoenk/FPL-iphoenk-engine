@@ -349,9 +349,15 @@ def build_player_trajectory(
                 "xg": round(_metric(row, "xg"), 4),
                 "xa": round(_metric(row, "xa"), 4),
                 "xgi": round(_metric(row, "xgi"), 4),
+                "goals": round(_metric(row, "goals"), 4),
+                "assists": round(_metric(row, "assists"), 4),
+                "returns": round(
+                    _metric(row, "goals") + _metric(row, "assists"), 4
+                ),
                 "shots": round(_metric(row, "shots"), 4),
                 "shots_on_target": round(_metric(row, "sot"), 4),
                 "big_chances": round(_metric(row, "big_chances"), 4),
+                "touches": round(_metric(row, "touches"), 4),
                 "box_touches": round(_metric(row, "box_touches"), 4),
                 "chances_created": round(_metric(row, "chances_created"), 4),
                 "set_piece_involvement": round(_metric(row, "corners"), 4),
@@ -359,6 +365,7 @@ def build_player_trajectory(
                     _metric(row, "penalties_scored") + _metric(row, "penalties_missed"),
                     4,
                 ),
+                "defensive_contribution": round(_metric(row, "defensive"), 4),
                 "fpl_points": round(_metric(row, "fpl_points"), 4),
             }
         )
@@ -383,6 +390,1021 @@ def build_player_trajectory(
         "trajectory_classification": classification,
         "result_vs_process": _result_vs_process(rows),
     }
+
+
+POST_MATCH_EVIDENCE_CLASSES = frozenset(
+    {
+        "BREAKOUT_PROCESS",
+        "ROLE_BREAKOUT",
+        "MINUTES_BREAKOUT",
+        "LINKUP_BREAKOUT",
+        "SET_PIECE_GAIN",
+        "UNDERLYING_IMPROVING_NO_RETURN",
+        "OUTPUT_CONFIRMING_PROCESS",
+        "OUTPUT_WITHOUT_PROCESS",
+        "REGRESSION_RISK",
+        "ROLE_DECLINE",
+        "MINUTES_DECLINE",
+        "LINKUP_BROKEN",
+        "NO_MATERIAL_CHANGE",
+    }
+)
+
+
+def _match_metric_rate90(
+    rows: Sequence[Mapping[str, Any]],
+    metric: str,
+) -> float | None:
+    minutes = sum(max(0.0, _f(row.get("minutes"))) for row in rows)
+    if minutes <= 0.0:
+        return None
+    return 90.0 * sum(_f(row.get(metric)) for row in rows) / minutes
+
+
+def _safe_ratio(current: float | None, prior: float | None) -> float | None:
+    if current is None or prior is None or prior <= 1e-9:
+        return None
+    return current / prior
+
+
+def _projection_map(
+    rows: Sequence[Mapping[str, Any]] | None,
+) -> dict[int, dict[str, Any]]:
+    out: dict[int, dict[str, Any]] = {}
+    for row in rows or []:
+        if not isinstance(row, Mapping):
+            continue
+        element = _i(row.get("element"), _i(row.get("element_id"), -1))
+        if element > 0:
+            out[element] = dict(row)
+    return out
+
+
+def _projection_xmins(row: Mapping[str, Any] | None) -> tuple[float | None, float | None]:
+    payload = dict((row or {}).get("xmins") or {})
+    expected = payload.get("expected_minutes")
+    p_start = payload.get("start_probability")
+    return (
+        None if expected is None else _f(expected),
+        None if p_start is None else _f(p_start),
+    )
+
+
+def _linkup_snapshot(row: Mapping[str, Any] | None) -> dict[str, Any]:
+    contexts = (
+        ((row or {}).get("contextual_dynamics") or {}).get("fixture_contexts")
+        or []
+    )
+    context = next(
+        (dict(item) for item in contexts if isinstance(item, Mapping)),
+        {},
+    )
+    network = dict(context.get("linkup_network") or {})
+    relationships = [
+        dict(item)
+        for item in network.get("relationships") or []
+        if isinstance(item, Mapping)
+        and _f(item.get("confidence")) > 0.0
+    ]
+    edge_ids = sorted(
+        {
+            _edge_id(item)
+            for item in relationships
+            if _i(
+                item.get("source_player_id"),
+                _i(item.get("teammate_player_id"), -1),
+            )
+            > 0
+            and _i(item.get("target_player_id"), -1) > 0
+        }
+    )
+    multipliers = dict(context.get("event_multipliers") or {})
+    goal = _f(
+        multipliers.get(
+            "final_dependency_goal",
+            multipliers.get("linkup_goal"),
+        ),
+        1.0,
+    )
+    assist = _f(
+        multipliers.get(
+            "final_dependency_assist",
+            multipliers.get("linkup_assist"),
+        ),
+        1.0,
+    )
+    score = math.sqrt(max(0.01, goal) * max(0.01, assist))
+    return {
+        "relationship_count": len(relationships),
+        "edge_ids": edge_ids,
+        "dependency_score": round(score, 6),
+        "goal_multiplier": round(goal, 6),
+        "assist_multiplier": round(assist, 6),
+    }
+
+
+def _monotonic_process_improving(
+    rows: Sequence[Mapping[str, Any]],
+) -> bool:
+    played = [row for row in rows if _f(row.get("minutes")) > 0.0]
+    if len(played) < 3:
+        return False
+    tail = played[-4:]
+    values = []
+    for row in tail:
+        minutes = max(1.0, _f(row.get("minutes")))
+        values.append(90.0 * _f(row.get("xgi")) / minutes)
+    increases = sum(
+        1 for left, right in zip(values, values[1:]) if right > left + 1e-9
+    )
+    return increases == len(values) - 1 and values[-1] > values[0]
+
+
+def build_post_match_universe_scan(
+    *,
+    current_projection_players: Sequence[Mapping[str, Any]],
+    previous_projection_players: Sequence[Mapping[str, Any]] | None,
+    player_match_rows: Sequence[Mapping[str, Any]],
+    current_gw: int,
+    owned_element_ids: Sequence[int] | None = None,
+    price_risk_by_player: Mapping[int, bool] | None = None,
+    fixture_swing_by_player: Mapping[int, bool] | None = None,
+) -> dict[str, Any]:
+    """Cheap full-universe post-match evidence scan before deep reporting.
+
+    This is evidence classification only. It never creates WAIT/PREPARE/ACT
+    and it never replaces the existing full-universe optimizer/comparator.
+    """
+    cfg = load_config().get("post_match_scan") or {}
+    recent_n = max(2, _i(cfg.get("recent_window_matches"), 3))
+    min_matches = max(1, _i(cfg.get("minimum_trajectory_matches"), 2))
+    xgi_threshold = max(1.0, _f(cfg.get("xgi_trend_ratio"), 1.18))
+    box_threshold = max(1.0, _f(cfg.get("box_touch_trend_ratio"), 1.20))
+    shot_threshold = max(1.0, _f(cfg.get("shots_trend_ratio"), 1.15))
+    xmins_up = _f(cfg.get("xmins_breakout_delta"), 15.0)
+    pstart_up = _f(cfg.get("pstart_breakout_delta"), 0.15)
+    xmins_down = _f(cfg.get("xmins_decline_delta"), -15.0)
+    pstart_down = _f(cfg.get("pstart_decline_delta"), -0.15)
+    strong_latest_xgi = _f(cfg.get("strong_latest_xgi"), 0.55)
+    weak_latest_xgi = _f(cfg.get("weak_latest_xgi"), 0.20)
+    spike_returns = max(1, _i(cfg.get("output_spike_return_count"), 2))
+    spike_points = max(1.0, _f(cfg.get("output_spike_fpl_points"), 10.0))
+    link_delta_threshold = max(
+        0.0, _f(cfg.get("linkup_material_delta"), 0.05)
+    )
+    set_piece_min = max(
+        0.0, _f(cfg.get("set_piece_gain_min_latest"), 1.0)
+    )
+    material_min = max(
+        0.0, _f(cfg.get("materiality_min_score"), 1.0)
+    )
+    class_priority = [
+        str(value)
+        for value in cfg.get("class_priority") or []
+        if str(value) in POST_MATCH_EVIDENCE_CLASSES
+    ]
+
+    current_map = _projection_map(current_projection_players)
+    previous_map = _projection_map(previous_projection_players)
+    owned = {int(value) for value in owned_element_ids or []}
+    price_flags = {
+        int(key): bool(value)
+        for key, value in dict(price_risk_by_player or {}).items()
+    }
+    fixture_flags = {
+        int(key): bool(value)
+        for key, value in dict(fixture_swing_by_player or {}).items()
+    }
+    match_rows_by_player: dict[int, list[dict[str, Any]]] = {}
+    for raw in player_match_rows:
+        if not isinstance(raw, Mapping):
+            continue
+        element = _i(raw.get("player_id"), _i(raw.get("element"), -1))
+        if element > 0:
+            match_rows_by_player.setdefault(element, []).append(dict(raw))
+
+    scanned: list[dict[str, Any]] = []
+    for element, projection in sorted(current_map.items()):
+        position = str(projection.get("position") or "").upper()
+        if position not in {"GK", "DEF", "MID", "FWD"}:
+            continue
+        if str(projection.get("status") or "").lower() == "u":
+            continue
+
+        trajectory = build_player_trajectory(
+            match_rows_by_player.get(element, []),
+            player_id=element,
+            current_gw=current_gw,
+        )
+        matches = [
+            dict(row)
+            for row in trajectory.get("matches") or []
+            if _f(row.get("minutes")) > 0.0
+        ]
+        recent = matches[-recent_n:]
+        prior = matches[:-recent_n] if len(matches) > recent_n else matches[:-1]
+        latest = matches[-1] if matches else {}
+
+        recent_xgi90 = _match_metric_rate90(recent, "xgi")
+        prior_xgi90 = _match_metric_rate90(prior, "xgi")
+        recent_box90 = _match_metric_rate90(recent, "box_touches")
+        prior_box90 = _match_metric_rate90(prior, "box_touches")
+        recent_shots90 = _match_metric_rate90(recent, "shots")
+        prior_shots90 = _match_metric_rate90(prior, "shots")
+        xgi_ratio = _safe_ratio(recent_xgi90, prior_xgi90)
+        box_ratio = _safe_ratio(recent_box90, prior_box90)
+        shots_ratio = _safe_ratio(recent_shots90, prior_shots90)
+
+        current_xmins, current_pstart = _projection_xmins(projection)
+        previous_projection = previous_map.get(element) or {}
+        previous_xmins, previous_pstart = _projection_xmins(
+            previous_projection
+        )
+        xmins_delta = (
+            None
+            if current_xmins is None or previous_xmins is None
+            else current_xmins - previous_xmins
+        )
+        pstart_delta = (
+            None
+            if current_pstart is None or previous_pstart is None
+            else current_pstart - previous_pstart
+        )
+
+        role = dict(trajectory.get("role_minutes_evolution") or {})
+        trajectory_class = str(
+            trajectory.get("trajectory_classification") or ""
+        )
+        latest_returns = _f(latest.get("returns"))
+        latest_points = _f(latest.get("fpl_points"))
+        latest_xgi = _f(latest.get("xgi"))
+        recent_returns = sum(_f(row.get("returns")) for row in recent)
+        prior_process_strong = (
+            prior_xgi90 is not None and prior_xgi90 >= 0.30
+        )
+        sustained_process = (
+            _monotonic_process_improving(matches)
+            or (
+                xgi_ratio is not None
+                and xgi_ratio >= xgi_threshold
+                and len(recent) >= 2
+                and sum(
+                    1
+                    for row in recent
+                    if _f(row.get("xgi")) >= 0.25
+                )
+                >= 2
+            )
+        )
+
+        current_link = _linkup_snapshot(projection)
+        previous_link = _linkup_snapshot(previous_projection)
+        link_delta = (
+            _f(current_link.get("dependency_score"), 1.0)
+            - _f(previous_link.get("dependency_score"), 1.0)
+        )
+        new_links = sorted(
+            set(current_link.get("edge_ids") or [])
+            - set(previous_link.get("edge_ids") or [])
+        )
+        lost_links = sorted(
+            set(previous_link.get("edge_ids") or [])
+            - set(current_link.get("edge_ids") or [])
+        )
+
+        classes: list[str] = []
+        if sustained_process and len(matches) >= min_matches:
+            classes.append("BREAKOUT_PROCESS")
+
+        if role.get("sustained_role_change"):
+            decline_context = (
+                (xmins_delta is not None and xmins_delta <= xmins_down)
+                or (pstart_delta is not None and pstart_delta <= pstart_down)
+                or trajectory_class == "DECLINING"
+            )
+            classes.append(
+                "ROLE_DECLINE" if decline_context else "ROLE_BREAKOUT"
+            )
+
+        if (
+            (xmins_delta is not None and xmins_delta >= xmins_up)
+            or (pstart_delta is not None and pstart_delta >= pstart_up)
+            or trajectory_class == "MINUTES_ROLE_IMPROVING"
+        ):
+            classes.append("MINUTES_BREAKOUT")
+        if (
+            (xmins_delta is not None and xmins_delta <= xmins_down)
+            or (pstart_delta is not None and pstart_delta <= pstart_down)
+            or trajectory_class == "MINUTES_ROLE_DECLINING"
+        ):
+            classes.append("MINUTES_DECLINE")
+
+        latest_set_piece = _f(latest.get("set_piece_involvement"))
+        prior_set_piece = (
+            sum(_f(row.get("set_piece_involvement")) for row in prior)
+            / len(prior)
+            if prior
+            else 0.0
+        )
+        if (
+            latest_set_piece >= set_piece_min
+            and latest_set_piece > prior_set_piece + 0.5
+        ):
+            classes.append("SET_PIECE_GAIN")
+
+        if (
+            new_links
+            or (
+                previous_link.get("relationship_count", 0) > 0
+                and link_delta >= link_delta_threshold
+            )
+        ):
+            classes.append("LINKUP_BREAKOUT")
+        if (
+            lost_links
+            or (
+                previous_link.get("relationship_count", 0) > 0
+                and link_delta <= -link_delta_threshold
+            )
+        ):
+            classes.append("LINKUP_BROKEN")
+
+        haul = (
+            latest_returns >= spike_returns
+            or latest_points >= spike_points
+        )
+        pre_latest_rows = matches[:-1][-4:]
+        pre_latest_xgi90 = _match_metric_rate90(
+            pre_latest_rows, "xgi"
+        )
+        poor_prior_process = (
+            pre_latest_xgi90 is not None
+            and pre_latest_xgi90 <= weak_latest_xgi
+            and not sustained_process
+        )
+        declining_context = (
+            trajectory_class in {"DECLINING", "MINUTES_ROLE_DECLINING"}
+            or "ROLE_DECLINE" in classes
+            or "MINUTES_DECLINE" in classes
+        )
+        if haul:
+            if sustained_process and not poor_prior_process:
+                classes.append("OUTPUT_CONFIRMING_PROCESS")
+            elif (
+                poor_prior_process
+                or latest_xgi <= weak_latest_xgi
+                or declining_context
+            ):
+                classes.extend(
+                    ["OUTPUT_WITHOUT_PROCESS", "REGRESSION_RISK"]
+                )
+        elif (
+            latest_returns > 0
+            and latest_xgi <= weak_latest_xgi
+            and declining_context
+        ):
+            classes.extend(["OUTPUT_WITHOUT_PROCESS", "REGRESSION_RISK"])
+
+        process_up = (
+            (
+                xgi_ratio is not None and xgi_ratio >= xgi_threshold
+            )
+            or (
+                box_ratio is not None and box_ratio >= box_threshold
+            )
+            or (
+                shots_ratio is not None and shots_ratio >= shot_threshold
+            )
+            or latest_xgi >= strong_latest_xgi
+        )
+        if (
+            recent
+            and recent_returns <= 0.0
+            and process_up
+            and (
+                "MINUTES_BREAKOUT" in classes
+                or sustained_process
+                or (
+                    current_pstart is not None
+                    and current_pstart >= 0.65
+                )
+            )
+        ):
+            classes.append("UNDERLYING_IMPROVING_NO_RETURN")
+
+        # Preserve deterministic order and remove duplicate labels.
+        classes = list(dict.fromkeys(classes))
+        materiality_reasons = list(classes)
+        if element in owned:
+            materiality_reasons.append("OUR15_RELEVANCE")
+        if price_flags.get(element):
+            materiality_reasons.append("PRICE_RISK")
+        if fixture_flags.get(element):
+            materiality_reasons.append("FIXTURE_SWING")
+
+        materiality_score = float(
+            len([value for value in classes if value != "NO_MATERIAL_CHANGE"])
+        )
+        materiality_score += 1.0 if element in owned else 0.0
+        materiality_score += 1.0 if price_flags.get(element) else 0.0
+        materiality_score += 1.0 if fixture_flags.get(element) else 0.0
+        deep_required = materiality_score >= material_min
+
+        if not classes:
+            classes = ["NO_MATERIAL_CHANGE"]
+        primary = next(
+            (value for value in class_priority if value in classes),
+            classes[0],
+        )
+
+        posterior_xgi90 = (
+            ((trajectory.get("rates") or {}).get("xgi") or {}).get(
+                "posterior_rate90"
+            )
+        )
+        previous_event_rate = (
+            _f((previous_projection.get("rates") or {}).get("xg90"))
+            + _f((previous_projection.get("rates") or {}).get("xa90"))
+            if previous_projection
+            else None
+        )
+        scanned.append(
+            {
+                "element_id": element,
+                "name": projection.get("name"),
+                "team_id": projection.get("team_id"),
+                "position": position,
+                "now_cost": projection.get("now_cost"),
+                "owned": element in owned,
+                "sample_size": trajectory.get("sample_size"),
+                "trajectory_classification": trajectory_class,
+                "latest_match": latest or None,
+                "role_trajectory": role,
+                "xmins": {
+                    "current": None
+                    if current_xmins is None
+                    else round(current_xmins, 3),
+                    "previous": None
+                    if previous_xmins is None
+                    else round(previous_xmins, 3),
+                    "delta": None
+                    if xmins_delta is None
+                    else round(xmins_delta, 3),
+                },
+                "p_start": {
+                    "current": None
+                    if current_pstart is None
+                    else round(current_pstart, 6),
+                    "previous": None
+                    if previous_pstart is None
+                    else round(previous_pstart, 6),
+                    "delta": None
+                    if pstart_delta is None
+                    else round(pstart_delta, 6),
+                },
+                "process_trend": {
+                    "recent_xgi90": None
+                    if recent_xgi90 is None
+                    else round(recent_xgi90, 6),
+                    "prior_xgi90": None
+                    if prior_xgi90 is None
+                    else round(prior_xgi90, 6),
+                    "xgi_ratio": None
+                    if xgi_ratio is None
+                    else round(xgi_ratio, 6),
+                    "box_touch_ratio": None
+                    if box_ratio is None
+                    else round(box_ratio, 6),
+                    "shots_ratio": None
+                    if shots_ratio is None
+                    else round(shots_ratio, 6),
+                    "posterior_xgi90": posterior_xgi90,
+                    "previous_event_rate90": None
+                    if previous_event_rate is None
+                    else round(previous_event_rate, 6),
+                    "sustained_process_improvement": sustained_process,
+                },
+                "result_vs_process": {
+                    "latest_returns": round(latest_returns, 4),
+                    "latest_fpl_points": round(latest_points, 4),
+                    "latest_xgi": round(latest_xgi, 4),
+                    "recent_returns": round(recent_returns, 4),
+                    "prior_process_strong": prior_process_strong,
+                    "pre_latest_xgi90": None
+                    if pre_latest_xgi90 is None
+                    else round(pre_latest_xgi90, 6),
+                },
+                "team_attacking_environment": projection.get(
+                    "system_context"
+                ),
+                "linkup_change": {
+                    "current": current_link,
+                    "previous": previous_link,
+                    "dependency_delta": round(link_delta, 6),
+                    "new_links": new_links,
+                    "lost_links": lost_links,
+                },
+                "classifications": classes,
+                "primary_classification": primary,
+                "materiality_score": round(materiality_score, 3),
+                "materiality_reasons": materiality_reasons,
+                "deep_analysis_required": deep_required,
+                "evidence_classification_only": True,
+                "operational_action_created": False,
+            }
+        )
+
+    material = [row for row in scanned if row["deep_analysis_required"]]
+    material.sort(
+        key=lambda row: (
+            _f(row.get("materiality_score")),
+            _f(
+                ((row.get("process_trend") or {}).get("posterior_xgi90"))
+            ),
+            -int(row.get("element_id") or 0),
+        ),
+        reverse=True,
+    )
+    return {
+        "model": MODEL_ID,
+        "scope": "FULL_ELIGIBLE_FPL_PLAYER_UNIVERSE",
+        "current_gw": int(current_gw),
+        "eligible_count": len(scanned),
+        "scanned_count": len(scanned),
+        "material_count": len(material),
+        "no_material_count": len(scanned) - len(material),
+        "players": scanned,
+        "material_players": material,
+        "deep_analysis_element_ids": [
+            int(row["element_id"]) for row in material
+        ],
+        "governance": {
+            "full_universe_scan": True,
+            "scorer_assister_only_filter": False,
+            "our15_only_filter": False,
+            "watchlist_only_filter": False,
+            "gw1_current_trajectory_required": True,
+            "result_interpreted_against_process": True,
+            "breakout_before_returns_supported": True,
+            "one_match_haul_never_creates_act": True,
+            "deep_analysis_gated_by_materiality": True,
+            "linkup_changes_participate": True,
+            "operational_action_owner_unchanged": "WAIT_PREPARE_ACT",
+            "methodology_weights_20_25_30_25_unchanged": True,
+        },
+    }
+
+
+def apply_post_match_universe_comparison(
+    scan: Mapping[str, Any],
+    *,
+    package_optimizer: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Attach existing full-universe optimizer evidence without new scoring."""
+    out = dict(scan)
+    players = [dict(row) for row in out.get("players") or []]
+    diagnostics = dict(package_optimizer.get("search_diagnostics") or {})
+    candidate_pool = dict(package_optimizer.get("candidate_pool") or {})
+    pool_rank: dict[int, dict[str, Any]] = {}
+    for position, rows in candidate_pool.items():
+        for rank, raw in enumerate(rows or [], start=1):
+            if not isinstance(raw, Mapping):
+                continue
+            element = _i(raw.get("element"), -1)
+            if element > 0:
+                pool_rank[element] = {
+                    "position": str(position),
+                    "published_position_pool_rank": rank,
+                    "candidate_score": raw.get("candidate_score"),
+                }
+
+    packages = [
+        dict(row)
+        for row in package_optimizer.get("packages") or []
+        if isinstance(row, Mapping)
+    ]
+    hold_robust = _f(
+        (((package_optimizer.get("hold") or {}).get("score") or {}).get(
+            "robust_score"
+        ))
+    )
+    incoming_routes: dict[int, list[dict[str, Any]]] = {}
+    outgoing_routes: dict[int, list[dict[str, Any]]] = {}
+    for package_rank, package in enumerate(packages, start=1):
+        robust = _f((package.get("score") or {}).get("robust_score"))
+        for incoming in package.get("ins") or []:
+            if not isinstance(incoming, Mapping):
+                continue
+            element = _i(incoming.get("element"), -1)
+            if element > 0:
+                incoming_routes.setdefault(element, []).append(
+                    {
+                        "package_rank": package_rank,
+                        "package_id": package.get("id"),
+                        "robust_delta_vs_hold": round(
+                            robust - hold_robust, 6
+                        ),
+                    }
+                )
+        for outgoing in package.get("outs") or []:
+            if not isinstance(outgoing, Mapping):
+                continue
+            element = _i(outgoing.get("element"), -1)
+            if element > 0:
+                outgoing_routes.setdefault(element, []).append(
+                    {
+                        "package_rank": package_rank,
+                        "package_id": package.get("id"),
+                        "robust_delta_vs_hold": round(
+                            robust - hold_robust, 6
+                        ),
+                    }
+                )
+
+    priority_map = {
+        "BREAKOUT_PROCESS": "BREAKOUT CANDIDATE",
+        "OUTPUT_CONFIRMING_PROCESS": "CONFIRMATION CANDIDATE",
+        "UNDERLYING_IMPROVING_NO_RETURN": "EARLY PROCESS CANDIDATE",
+        "REGRESSION_RISK": "REGRESSION CANDIDATE",
+        "ROLE_BREAKOUT": "ROLE-CHANGE CANDIDATE",
+        "ROLE_DECLINE": "ROLE-CHANGE CANDIDATE",
+        "MINUTES_BREAKOUT": "MINUTES-CHANGE CANDIDATE",
+        "MINUTES_DECLINE": "MINUTES-CHANGE CANDIDATE",
+        "LINKUP_BREAKOUT": "LINK-UP-DEPENDENCY CANDIDATE",
+        "LINKUP_BROKEN": "LINK-UP-DEPENDENCY CANDIDATE",
+    }
+    for row in players:
+        element = int(row["element_id"])
+        pool = dict(pool_rank.get(element) or {})
+        ins = list(incoming_routes.get(element) or [])
+        outs = list(outgoing_routes.get(element) or [])
+        if row.get("owned"):
+            comparison_state = "OWNED_PLAYER_REVIEW"
+        elif ins:
+            comparison_state = "FULL_UNIVERSE_PACKAGE_CHALLENGER"
+        elif pool:
+            comparison_state = "PUBLISHED_POSITION_POOL_ONLY"
+        else:
+            comparison_state = "OUTSIDE_PUBLISHED_POSITION_POOL"
+        labels = list(
+            dict.fromkeys(
+                priority_map[value]
+                for value in row.get("classifications") or []
+                if value in priority_map
+            )
+        )
+        row["universe_comparison"] = {
+            "state": comparison_state,
+            **pool,
+            "incoming_package_routes": ins,
+            "outgoing_package_routes": outs,
+            "beats_hold_in_any_published_package": any(
+                _f(route.get("robust_delta_vs_hold")) > 0.0
+                for route in ins
+            ),
+            "priority_candidate_labels": labels,
+            "automatic_transfer_recommendation": False,
+        }
+
+    material = [row for row in players if row.get("deep_analysis_required")]
+    material.sort(
+        key=lambda row: (
+            1
+            if (row.get("universe_comparison") or {}).get(
+                "beats_hold_in_any_published_package"
+            )
+            else 0,
+            -_i(
+                (row.get("universe_comparison") or {}).get(
+                    "published_position_pool_rank"
+                ),
+                999,
+            ),
+            _f(row.get("materiality_score")),
+        ),
+        reverse=True,
+    )
+    out["players"] = players
+    out["material_players"] = material
+    out["deep_analysis_element_ids"] = [
+        int(row["element_id"]) for row in material
+    ]
+    out["universe_comparison"] = {
+        "search_authority": diagnostics.get("search_authority"),
+        "candidate_origin": diagnostics.get("candidate_origin"),
+        "official_projection_universe_count": diagnostics.get(
+            "official_projection_universe_count"
+        ),
+        "eligible_universe_count": diagnostics.get("eligible_universe_count"),
+        "candidate_pool_is_preview_only": package_optimizer.get(
+            "candidate_pool_is_preview_only"
+        ),
+        "full_universe_scanned_before_pruning": (
+            (package_optimizer.get("governance") or {}).get(
+                "official_fpl_full_universe_scanned_before_pruning"
+            )
+            is True
+        ),
+        "fresh_ranking_rebuilt_from_existing_optimizer": True,
+        "new_scoring_authority_created": False,
+        "transfer_action_created_by_scan": False,
+    }
+    return out
+
+
+def _build_post_match_deep_player_detail(
+    *,
+    element_id: int,
+    projection: Mapping[str, Any],
+    scan_row: Mapping[str, Any],
+    match_rows: Sequence[Mapping[str, Any]],
+    current_gw: int,
+) -> dict[str, Any]:
+    """Assemble existing V12 evidence for one material player only."""
+    trajectory = build_player_trajectory(
+        match_rows,
+        player_id=element_id,
+        current_gw=current_gw,
+    )
+    contexts = [
+        dict(row)
+        for row in (
+            ((projection.get("contextual_dynamics") or {}).get(
+                "fixture_contexts"
+            ))
+            or []
+        )
+        if isinstance(row, Mapping)
+    ]
+    primary_context = contexts[0] if contexts else {}
+    horizons = dict(projection.get("horizons") or {})
+    xmins = dict(projection.get("xmins") or {})
+    latest = dict(trajectory.get("latest_match_evidence") or {})
+    role = dict(trajectory.get("role_minutes_evolution") or {})
+    classifications = list(scan_row.get("classifications") or [])
+    materiality_reasons = list(scan_row.get("materiality_reasons") or [])
+    return {
+        "element_id": int(element_id),
+        "name": projection.get("name"),
+        "position": projection.get("position"),
+        "team_id": projection.get("team_id"),
+        "evidence_classification": classifications,
+        "primary_classification": scan_row.get("primary_classification"),
+        "trajectory": trajectory,
+        "role": {
+            "trajectory": role,
+            "current_tactical_role": projection.get("tactical_role"),
+            "system_context": projection.get("system_context"),
+        },
+        "minutes": {
+            "xmins": xmins.get("expected_minutes"),
+            "p_start": xmins.get("start_probability"),
+            "p_cameo": xmins.get("cameo_probability"),
+            "p_dnp": xmins.get("dnp_probability"),
+            "distribution": xmins.get("xmins_distribution"),
+        },
+        "underlying": {
+            "latest_xg": latest.get("xg"),
+            "latest_xa": latest.get("xa"),
+            "latest_xgi": latest.get("xgi"),
+            "latest_shots": latest.get("shots"),
+            "latest_sot": latest.get("shots_on_target"),
+            "latest_big_chances": latest.get("big_chances"),
+            "latest_box_touches": latest.get("box_touches"),
+            "latest_chances_created": latest.get("chances_created"),
+            "latest_set_piece_involvement": latest.get(
+                "set_piece_involvement"
+            ),
+            "latest_penalty_involvement": latest.get(
+                "penalty_involvement"
+            ),
+            "match_by_match": list(trajectory.get("matches") or []),
+        },
+        "result_vs_process": trajectory.get("result_vs_process"),
+        "opponent_matchup": primary_context.get("matchup"),
+        "linkup": primary_context.get("linkup_network"),
+        "linked_player_availability": [
+            dict(row)
+            for row in (
+                (primary_context.get("linkup_network") or {}).get(
+                    "marginalized"
+                )
+                or []
+            )
+            if isinstance(row, Mapping)
+        ],
+        "bayesian_posterior": projection.get("posterior_rates"),
+        "horizon_1gw": horizons.get("1"),
+        "horizon_3gw": horizons.get("3"),
+        "horizon_5gw": horizons.get("5"),
+        "price_risk": (
+            "MATERIAL"
+            if "PRICE_RISK" in materiality_reasons
+            else "UNAVAILABLE"
+        ),
+        "universe_comparison": scan_row.get("universe_comparison"),
+        "our15_relevance": bool(scan_row.get("owned")),
+        "materiality_score": scan_row.get("materiality_score"),
+        "operational_action_created": False,
+        "new_probability_math_created": False,
+        "raw_provider_payload_persisted": False,
+    }
+
+
+def build_post_match_deep_details(
+    *,
+    deep_analysis_element_ids: Sequence[int],
+    current_projection_players: Sequence[Mapping[str, Any]],
+    player_match_rows: Sequence[Mapping[str, Any]],
+    post_match_universe_scan: Mapping[str, Any],
+    current_gw: int,
+    maximum_material_deep_players: int | None = None,
+) -> dict[str, Any]:
+    """Execute expensive post-match detail only for material target IDs.
+
+    Base full-universe projections remain untouched. This function consumes the
+    materiality target list explicitly and creates no ranking/action owner.
+    """
+    requested = list(
+        dict.fromkeys(
+            int(value)
+            for value in deep_analysis_element_ids
+            if _i(value, -1) > 0
+        )
+    )
+    cfg = load_config().get("post_match_scan") or {}
+    cap = max(
+        1,
+        _i(
+            maximum_material_deep_players,
+            _i(cfg.get("maximum_material_deep_players"), 20),
+        ),
+    )
+    scan = dict(post_match_universe_scan or {})
+    material_rows = [
+        dict(row)
+        for row in scan.get("material_players") or []
+        if isinstance(row, Mapping)
+    ]
+    scan_by_id = {
+        _i(row.get("element_id"), -1): row
+        for row in material_rows
+        if _i(row.get("element_id"), -1) > 0
+    }
+    projection_by_id = _projection_map(current_projection_players)
+    match_rows_by_id: dict[int, list[dict[str, Any]]] = {}
+    for raw in player_match_rows:
+        if not isinstance(raw, Mapping):
+            continue
+        element = _i(raw.get("player_id"), _i(raw.get("element"), -1))
+        if element > 0:
+            match_rows_by_id.setdefault(element, []).append(dict(raw))
+
+    if not requested:
+        return {
+            "status": "COMPLETE",
+            "deep_execution_scope": "NO_MATERIAL_TARGETS",
+            "eligible_count": _i(scan.get("eligible_count")),
+            "scanned_count": _i(scan.get("scanned_count")),
+            "material_count": _i(scan.get("material_count")),
+            "deep_requested_count": 0,
+            "deep_executed_count": 0,
+            "deep_deferred_count": 0,
+            "maximum_material_deep_players": cap,
+            "requested_element_ids": [],
+            "executed_element_ids": [],
+            "deferred_element_ids": [],
+            "details": [],
+            "governance": {
+                "explicit_target_list_consumed": True,
+                "full_universe_base_projection_unchanged": True,
+                "display_limit_controls_execution": False,
+                "new_ranking_owner_created": False,
+                "new_action_owner_created": False,
+            },
+        }
+
+    ranked_requested = [
+        element
+        for element in requested
+        if element in scan_by_id
+    ]
+    # deep_analysis_element_ids is already ordered by the existing materiality
+    # + full-universe comparison path. Preserve that order; do not rescore.
+    selected = ranked_requested[:cap]
+    deferred = ranked_requested[cap:]
+    details: list[dict[str, Any]] = []
+    missing_projection: list[int] = []
+    for element in selected:
+        projection = projection_by_id.get(element)
+        if not projection:
+            missing_projection.append(element)
+            continue
+        details.append(
+            _build_post_match_deep_player_detail(
+                element_id=element,
+                projection=projection,
+                scan_row=scan_by_id[element],
+                match_rows=match_rows_by_id.get(element, []),
+                current_gw=current_gw,
+            )
+        )
+
+    executed_ids = [int(row["element_id"]) for row in details]
+    if deferred or missing_projection or len(ranked_requested) != len(requested):
+        scope = "PARTIAL"
+        status = "DEGRADED"
+    else:
+        scope = "COMPLETE"
+        status = "COMPLETE"
+    unbound_requested = [
+        element for element in requested if element not in scan_by_id
+    ]
+    return {
+        "status": status,
+        "deep_execution_scope": scope,
+        "eligible_count": _i(scan.get("eligible_count")),
+        "scanned_count": _i(scan.get("scanned_count")),
+        "material_count": _i(scan.get("material_count")),
+        "deep_requested_count": len(requested),
+        "deep_executed_count": len(details),
+        "deep_deferred_count": len(deferred),
+        "maximum_material_deep_players": cap,
+        "requested_element_ids": requested,
+        "executed_element_ids": executed_ids,
+        "deferred_element_ids": deferred,
+        "unbound_requested_element_ids": unbound_requested,
+        "missing_projection_element_ids": missing_projection,
+        "details": details,
+        "governance": {
+            "explicit_target_list_consumed": True,
+            "full_universe_base_projection_unchanged": True,
+            "materiality_gate_controls_deep_execution": True,
+            "display_limit_controls_execution": False,
+            "existing_universe_comparison_reused": True,
+            "new_ranking_owner_created": False,
+            "new_action_owner_created": False,
+            "operational_action_owner": "WAIT_PREPARE_ACT",
+            "methodology_weights_20_25_30_25_unchanged": True,
+        },
+    }
+
+
+def attach_post_match_deep_details(
+    scan: Mapping[str, Any],
+    deep_payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Attach bounded deep diagnostic availability to existing material rows."""
+    out = dict(scan)
+    detail_map = {
+        _i(row.get("element_id"), -1): dict(row)
+        for row in deep_payload.get("details") or []
+        if isinstance(row, Mapping)
+        and _i(row.get("element_id"), -1) > 0
+    }
+
+    def attach(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+        attached = []
+        for raw in rows:
+            row = dict(raw)
+            element = _i(row.get("element_id"), -1)
+            detail = detail_map.get(element)
+            row["deep_detail_available"] = detail is not None
+            row["post_match_deep_analysis"] = detail
+            attached.append(row)
+        return attached
+
+    out["players"] = attach(
+        [
+            row
+            for row in out.get("players") or []
+            if isinstance(row, Mapping)
+        ]
+    )
+    out["material_players"] = attach(
+        [
+            row
+            for row in out.get("material_players") or []
+            if isinstance(row, Mapping)
+        ]
+    )
+    out["deep_execution"] = {
+        key: deep_payload.get(key)
+        for key in (
+            "status",
+            "deep_execution_scope",
+            "eligible_count",
+            "scanned_count",
+            "material_count",
+            "deep_requested_count",
+            "deep_executed_count",
+            "deep_deferred_count",
+            "maximum_material_deep_players",
+            "executed_element_ids",
+            "deferred_element_ids",
+        )
+    }
+    return out
 
 
 def _similarity_component(old: Any, current: Any) -> float | None:

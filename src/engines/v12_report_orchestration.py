@@ -1042,6 +1042,184 @@ def build_contextual_player_blocks(
     }
 
 
+def build_post_match_universe_movers(
+    post_match_scan: Mapping[str, Any] | None,
+    *,
+    post_match_deep_analysis: Mapping[str, Any] | None = None,
+    limit_per_category: int = 5,
+) -> dict[str, Any]:
+    """Compact POST-MATCH Universe Movers block from the V12 broad scan.
+
+    The block is descriptive evidence only. It does not create a transfer or
+    mutate WAIT/PREPARE/ACT.
+    """
+    scan = dict(post_match_scan or {})
+    deep = dict(post_match_deep_analysis or scan.get("deep_execution") or {})
+    executed_ids = {
+        int(value)
+        for value in deep.get("executed_element_ids") or []
+        if value is not None
+    }
+    players = [
+        dict(row)
+        for row in scan.get("material_players") or []
+        if isinstance(row, Mapping)
+    ]
+    limit = max(1, int(limit_per_category))
+
+    category_rules = (
+        (
+            "BREAKOUT / CONFIRMATION",
+            {"BREAKOUT_PROCESS", "OUTPUT_CONFIRMING_PROCESS"},
+        ),
+        (
+            "PROCESS UP — RETURNS NOT YET ARRIVED",
+            {"UNDERLYING_IMPROVING_NO_RETURN"},
+        ),
+        (
+            "ROLE / MINUTES RISERS",
+            {"ROLE_BREAKOUT", "MINUTES_BREAKOUT", "SET_PIECE_GAIN"},
+        ),
+        (
+            "LINK-UP RISERS",
+            {"LINKUP_BREAKOUT"},
+        ),
+        (
+            "REGRESSION / SELL-RISK",
+            {
+                "REGRESSION_RISK",
+                "ROLE_DECLINE",
+                "MINUTES_DECLINE",
+                "LINKUP_BROKEN",
+            },
+        ),
+        (
+            "NOISE / DO NOT CHASE",
+            {"OUTPUT_WITHOUT_PROCESS"},
+        ),
+    )
+
+    def compact(row: Mapping[str, Any]) -> dict[str, Any]:
+        latest = dict(row.get("latest_match") or {})
+        comparison = dict(row.get("universe_comparison") or {})
+        return {
+            "element_id": row.get("element_id"),
+            "name": row.get("name"),
+            "position": row.get("position"),
+            "owned": bool(row.get("owned")),
+            "primary_classification": row.get("primary_classification"),
+            "classifications": list(row.get("classifications") or []),
+            "materiality_score": row.get("materiality_score"),
+            "latest_fpl_points": latest.get("fpl_points"),
+            "latest_xgi": latest.get("xgi"),
+            "xmins_delta": (row.get("xmins") or {}).get("delta"),
+            "p_start_delta": (row.get("p_start") or {}).get("delta"),
+            "universe_comparison_state": comparison.get("state"),
+            "published_position_pool_rank": comparison.get(
+                "published_position_pool_rank"
+            ),
+            "beats_hold_in_any_published_package": comparison.get(
+                "beats_hold_in_any_published_package"
+            ),
+            "deep_detail": (
+                bool(row.get("deep_detail_available"))
+                or int(row.get("element_id") or -1) in executed_ids
+            ),
+            "automatic_transfer_recommendation": False,
+        }
+
+    categories: dict[str, list[dict[str, Any]]] = {}
+    for label, accepted in category_rules:
+        rows = [
+            row
+            for row in players
+            if accepted.intersection(set(row.get("classifications") or []))
+        ]
+        rows.sort(
+            key=lambda row: (
+                float(row.get("materiality_score") or 0.0),
+                bool(
+                    (row.get("universe_comparison") or {}).get(
+                        "beats_hold_in_any_published_package"
+                    )
+                ),
+                -int(
+                    (row.get("universe_comparison") or {}).get(
+                        "published_position_pool_rank"
+                    )
+                    or 999
+                ),
+            ),
+            reverse=True,
+        )
+        categories[label] = [compact(row) for row in rows[:limit]]
+
+    comparison = dict(scan.get("universe_comparison") or {})
+    scanned_count = int(scan.get("scanned_count") or 0)
+    eligible_count = int(scan.get("eligible_count") or 0)
+    search_authority = str(comparison.get("search_authority") or "").upper()
+    if not scan:
+        state = "UNAVAILABLE"
+        reason = "post-match full-universe scan unavailable"
+    elif scanned_count <= 0:
+        state = "DEGRADED"
+        reason = "eligible universe scan returned zero supportable players"
+    elif (
+        (eligible_count > 0 and scanned_count < eligible_count)
+        or search_authority == "PARTIAL"
+    ):
+        state = "DEGRADED"
+        reason = (
+            "post-match universe coverage/search authority is partial; "
+            f"scanned={scanned_count}/{eligible_count or 'UNKNOWN'} "
+            f"search_authority={search_authority or 'UNAVAILABLE'}"
+        )
+    else:
+        state = "COMPLETE"
+        reason = None
+
+    return {
+        "state": state,
+        "degradation_reason": reason,
+        "title": "UNIVERSE MOVERS",
+        "scope": scan.get("scope"),
+        "scanned_count": scan.get("scanned_count"),
+        "eligible_count": scan.get("eligible_count"),
+        "material_count": scan.get("material_count"),
+        "summary": (
+            "NO MATERIAL MOVERS"
+            if scan and int(scan.get("material_count") or 0) == 0
+            else None
+        ),
+        "search_authority": comparison.get("search_authority"),
+        "missing_scope": (
+            comparison.get("missing_scope")
+            or (
+                None
+                if state == "COMPLETE"
+                else "PARTIAL_OR_UNAVAILABLE_UNIVERSE_EVIDENCE"
+            )
+        ),
+        "deep_requested_count": deep.get("deep_requested_count"),
+        "deep_executed_count": deep.get("deep_executed_count"),
+        "deep_deferred_count": deep.get("deep_deferred_count"),
+        "deep_execution_scope": deep.get("deep_execution_scope"),
+        "categories": categories,
+        "deep_detail_element_ids": list(
+            scan.get("deep_analysis_element_ids") or []
+        ),
+        "full_universe_comparison": scan.get("universe_comparison"),
+        "governance": {
+            "scorer_assister_only_scouting_prohibited": True,
+            "non_scorers_can_surface": True,
+            "one_match_haul_never_creates_act": True,
+            "deep_detail_materiality_gated": True,
+            "full_universe_comparison_required_before_transfer": True,
+            "operational_action_enum_unchanged": "WAIT_PREPARE_ACT",
+        },
+    }
+
+
 def materialize_all15(
     *,
     owned15: Sequence[Mapping[str, Any]],
@@ -1179,20 +1357,25 @@ def _locked_default(label: str, locked_state: Mapping[str, Any]) -> dict[str, An
     return None
 
 
-def materialize_deep_report(
+def _materialize_canonical_report(
     *,
     canonical_text: str,
+    structural_mode: str,
+    reported_mode: str,
     section_payloads: Mapping[str, Mapping[str, Any]] | None,
     checkpoint_time: str | None = None,
     signal_delta: Mapping[str, Any] | None = None,
     current_gw_locked: bool = False,
     locked_state: Mapping[str, Any] | None = None,
+    universe_movers: Mapping[str, Any] | None = None,
+    universe_movers_target_label: str | None = None,
 ) -> dict[str, Any]:
-    """Materialize every Canonical DEEP block; unavailable data never omits a section."""
-    contract = canonical_mode_contract(canonical_text, "DEEP")
+    """One existing V12 structural materializer used by DEEP and post-match."""
+    contract = canonical_mode_contract(canonical_text, structural_mode)
     payloads = dict(section_payloads or {})
     sections: list[dict[str, Any]] = []
     locked = dict(locked_state or {})
+    mover_attachments = 0
 
     for section_id, label in zip(
         contract["expected_section_ids"],
@@ -1209,7 +1392,9 @@ def materialize_deep_report(
             }
         row = dict(raw)
         state = _status(row.get("state"), label=section_id)
-        if state != "COMPLETE" and not str(row.get("degradation_reason") or "").strip():
+        if state != "COMPLETE" and not str(
+            row.get("degradation_reason") or ""
+        ).strip():
             raise ReportOrchestrationError(
                 f"{section_id} degraded/unavailable section requires reason"
             )
@@ -1223,6 +1408,19 @@ def materialize_deep_report(
                     "rows": [],
                 }
             )
+        if (
+            universe_movers is not None
+            and universe_movers_target_label
+            and str(label).upper()
+            == str(universe_movers_target_label).upper()
+        ):
+            content = dict(content or {})
+            if "universe_movers" in content:
+                raise ReportOrchestrationError(
+                    "UNIVERSE MOVERS may be attached only once"
+                )
+            content["universe_movers"] = dict(universe_movers)
+            mover_attachments += 1
         sections.append(
             {
                 "section_id": section_id,
@@ -1235,16 +1433,180 @@ def materialize_deep_report(
             }
         )
 
+    if universe_movers is not None and mover_attachments != 1:
+        raise ReportOrchestrationError(
+            "natural post-match report must attach UNIVERSE MOVERS exactly once"
+        )
     return {
-        "report_mode": "DEEP",
+        "report_mode": reported_mode,
+        "structural_mode": structural_mode,
         "sections": sections,
         "rendered_section_ids": [row["section_id"] for row in sections],
         "rendered_visible_order": [row["label"] for row in sections],
         "exact_canonical_order": [row["section_id"] for row in sections]
         == contract["expected_section_ids"],
-        "numbered_headings": 19,
+        "numbered_headings": 19 if structural_mode == "DEEP" else len(sections),
         "rendered_blocks_including_15B": len(sections),
+        "universe_movers_attachment_count": mover_attachments,
+        "universe_movers_visible": mover_attachments == 1,
     }
+
+
+def materialize_deep_report(
+    *,
+    canonical_text: str,
+    section_payloads: Mapping[str, Mapping[str, Any]] | None,
+    checkpoint_time: str | None = None,
+    signal_delta: Mapping[str, Any] | None = None,
+    current_gw_locked: bool = False,
+    locked_state: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Materialize every Canonical DEEP block; unavailable data never omits a section."""
+    return _materialize_canonical_report(
+        canonical_text=canonical_text,
+        structural_mode="DEEP",
+        reported_mode="DEEP",
+        section_payloads=section_payloads,
+        checkpoint_time=checkpoint_time,
+        signal_delta=signal_delta,
+        current_gw_locked=current_gw_locked,
+        locked_state=locked_state,
+    )
+
+
+def _post_match_structural_route(
+    report_mode: str,
+    *,
+    post_match_context: bool,
+) -> tuple[str, str | None]:
+    mode = str(report_mode or "").strip().upper()
+    if mode == "POST_ALL_MATCH":
+        return "POST_ALL_MATCH", "GW COMPLETED MATCH-BY-MATCH SCOUT"
+    if mode == "POST_MATCH":
+        return "MATCH", "RELEVANT LEAGUE-WIDE SIGNALS"
+    if mode == "MATCH" and post_match_context:
+        return "MATCH", "RELEVANT LEAGUE-WIDE SIGNALS"
+    if mode in {
+        "OVERLAP",
+        "FULL+MATCH",
+        "MATCH+FULL",
+        "DEEP+MATCH",
+        "MATCH+DEEP",
+    }:
+        return "DEEP", "Changes"
+    return mode, None
+
+
+def materialize_natural_post_match_report(
+    *,
+    canonical_text: str,
+    report_mode: str,
+    projections_payload: Mapping[str, Any] | None,
+    section_payloads: Mapping[str, Mapping[str, Any]] | None,
+    post_match_context: bool = True,
+    checkpoint_time: str | None = None,
+    signal_delta: Mapping[str, Any] | None = None,
+    current_gw_locked: bool = False,
+    locked_state: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Natural V12 post-match renderer binding projections -> movers -> report.
+
+    No new top-level backbone is created. Universe Movers is nested exactly
+    once in the existing MATCH, POST-ALL-MATCH or overlap surface.
+    """
+    mode = str(report_mode or "").strip().upper()
+    structural_mode, target_label = _post_match_structural_route(
+        mode,
+        post_match_context=post_match_context,
+    )
+    if target_label is None:
+        raise ReportOrchestrationError(
+            f"UNIVERSE MOVERS not applicable for pure mode {mode or '<empty>'}"
+        )
+    projections = dict(projections_payload or {})
+    scan = projections.get("post_match_universe_scan")
+    deep = projections.get("post_match_deep_analysis")
+    movers = build_post_match_universe_movers(
+        scan if isinstance(scan, Mapping) else None,
+        post_match_deep_analysis=(
+            deep if isinstance(deep, Mapping) else None
+        ),
+    )
+    report = _materialize_canonical_report(
+        canonical_text=canonical_text,
+        structural_mode=structural_mode,
+        reported_mode=mode,
+        section_payloads=section_payloads,
+        checkpoint_time=checkpoint_time,
+        signal_delta=signal_delta,
+        current_gw_locked=current_gw_locked,
+        locked_state=locked_state,
+        universe_movers=movers,
+        universe_movers_target_label=target_label,
+    )
+    report["post_match_universe_movers"] = movers
+    report["post_match_source"] = "projections.post_match_universe_scan"
+    report["post_match_deep_source"] = (
+        "projections.post_match_deep_analysis"
+    )
+    return report
+
+
+def render_natural_post_match_text(report: Mapping[str, Any]) -> str:
+    """Compact visible renderer proving natural post-match mover placement."""
+    blocks: list[str] = []
+    for section in report.get("sections") or []:
+        label = str(section.get("label") or "")
+        state = str(section.get("state") or "")
+        lines = [f"## {label}", f"Status: {state}"]
+        content = section.get("content")
+        movers = (
+            dict(content.get("universe_movers") or {})
+            if isinstance(content, Mapping)
+            else {}
+        )
+        if movers:
+            lines.append("### UNIVERSE MOVERS")
+            mover_state = str(movers.get("state") or "UNAVAILABLE")
+            if mover_state != "COMPLETE":
+                lines.append(
+                    f"{mover_state} — "
+                    f"{movers.get('degradation_reason') or 'evidence unavailable'}"
+                )
+            elif movers.get("summary") == "NO MATERIAL MOVERS":
+                lines.append("NO MATERIAL MOVERS")
+            else:
+                for category, rows in (
+                    movers.get("categories") or {}
+                ).items():
+                    if not rows:
+                        continue
+                    lines.append(f"**{category}**")
+                    for row in rows:
+                        owner = "OWNED" if row.get("owned") else "NON-OWNED"
+                        deep = "DEEP" if row.get("deep_detail") else "BROAD"
+                        lines.append(
+                            "- "
+                            f"{row.get('name') or row.get('element_id')} "
+                            f"({row.get('position') or 'NA'}) | "
+                            f"{row.get('primary_classification')} | "
+                            f"Pts {row.get('latest_fpl_points')} | "
+                            f"xGI {row.get('latest_xgi')} | "
+                            f"xMins Δ {row.get('xmins_delta')} | "
+                            f"P(start) Δ {row.get('p_start_delta')} | "
+                            f"{row.get('universe_comparison_state') or 'UNAVAILABLE'} | "
+                            f"{owner} | {deep}"
+                        )
+            lines.append(
+                "Coverage: "
+                f"{movers.get('scanned_count')}/{movers.get('eligible_count')} | "
+                f"Material {movers.get('material_count')} | "
+                f"Deep {movers.get('deep_executed_count')}/"
+                f"{movers.get('deep_requested_count')} | "
+                f"Authority {movers.get('search_authority') or 'UNAVAILABLE'}"
+            )
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
 
 
 def render_deep_text(report: Mapping[str, Any]) -> str:

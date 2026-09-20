@@ -16,7 +16,9 @@ from src.engines.v12_report_orchestration import (
     compact_engine_data_status,
     materialize_all15,
     materialize_deep_report,
+    materialize_natural_post_match_report,
     render_deep_text,
+    render_natural_post_match_text,
     validate_human_facing_body,
     weather_report_time_evidence,
 )
@@ -1027,3 +1029,290 @@ def test_weather_unavailable_visible_row_carries_reason_without_v6_dependency() 
     assert result["visible_row"]["impact_reason"] == "forecast horizon unavailable"
     assert result["v6_weather_required"] is False
     assert result["weather_failure_isolated_to_weather"] is True
+
+
+
+def _post_match_projection_payload(
+    *,
+    classifications,
+    name="Mover",
+    points=2,
+    xgi=0.8,
+    owned=False,
+    material_count=1,
+    scanned_count=100,
+    eligible_count=100,
+    search_authority="FULL",
+    deep_executed=True,
+):
+    material_rows = []
+    if material_count:
+        material_rows.append(
+            {
+                "element_id": 9001,
+                "name": name,
+                "position": "FWD",
+                "owned": owned,
+                "primary_classification": classifications[0],
+                "classifications": list(classifications),
+                "materiality_score": 3.0,
+                "latest_match": {
+                    "fpl_points": points,
+                    "xgi": xgi,
+                },
+                "xmins": {"delta": 24.0},
+                "p_start": {"delta": 0.22},
+                "universe_comparison": {
+                    "state": (
+                        "OWNED_PLAYER_REVIEW"
+                        if owned
+                        else "FULL_UNIVERSE_PACKAGE_CHALLENGER"
+                    ),
+                    "published_position_pool_rank": 2,
+                    "beats_hold_in_any_published_package": not owned,
+                },
+                "deep_analysis_required": True,
+                "deep_detail_available": deep_executed,
+            }
+        )
+    scan = {
+        "scope": "FULL_ELIGIBLE_FPL_PLAYER_UNIVERSE",
+        "scanned_count": scanned_count,
+        "eligible_count": eligible_count,
+        "material_count": material_count,
+        "material_players": material_rows,
+        "deep_analysis_element_ids": [9001] if material_count else [],
+        "universe_comparison": {
+            "search_authority": search_authority,
+            "eligible_universe_count": eligible_count,
+        },
+    }
+    deep = {
+        "status": "COMPLETE",
+        "deep_execution_scope": (
+            "COMPLETE" if material_count else "NO_MATERIAL_TARGETS"
+        ),
+        "deep_requested_count": material_count,
+        "deep_executed_count": material_count if deep_executed else 0,
+        "deep_deferred_count": 0,
+        "executed_element_ids": (
+            [9001] if material_count and deep_executed else []
+        ),
+        "details": [],
+    }
+    return {
+        "post_match_universe_scan": scan,
+        "post_match_deep_analysis": deep,
+    }
+
+
+def test_natural_post_match_materializer_wires_universe_movers_not_helper_only():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    projections = _post_match_projection_payload(
+        classifications=["BREAKOUT_PROCESS", "OUTPUT_CONFIRMING_PROCESS"],
+        name="Confirmed Mover",
+        points=15,
+        xgi=1.1,
+    )
+    report = materialize_natural_post_match_report(
+        canonical_text=canonical,
+        report_mode="POST_MATCH",
+        projections_payload=projections,
+        section_payloads={
+            "RELEVANT LEAGUE-WIDE SIGNALS": {
+                "state": "COMPLETE",
+                "content": {"existing_signal": "preserved"},
+            }
+        },
+    )
+    assert report["universe_movers_attachment_count"] == 1
+    target = next(
+        row
+        for row in report["sections"]
+        if row["label"] == "RELEVANT LEAGUE-WIDE SIGNALS"
+    )
+    assert target["content"]["existing_signal"] == "preserved"
+    assert target["content"]["universe_movers"]["title"] == "UNIVERSE MOVERS"
+    body = render_natural_post_match_text(report)
+    assert "UNIVERSE MOVERS" in body
+    assert "BREAKOUT / CONFIRMATION" in body
+    assert "Confirmed Mover" in body
+
+
+def test_natural_post_match_non_scorer_renders_process_up_category():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    projections = _post_match_projection_payload(
+        classifications=["UNDERLYING_IMPROVING_NO_RETURN"],
+        name="Two Point Process Riser",
+        points=2,
+        xgi=0.8,
+    )
+    report = materialize_natural_post_match_report(
+        canonical_text=canonical,
+        report_mode="POST_MATCH",
+        projections_payload=projections,
+        section_payloads={
+            "RELEVANT LEAGUE-WIDE SIGNALS": {
+                "state": "COMPLETE",
+                "content": {},
+            }
+        },
+    )
+    body = render_natural_post_match_text(report)
+    assert "PROCESS UP — RETURNS NOT YET ARRIVED" in body
+    assert "Two Point Process Riser" in body
+    assert "Pts 2" in body
+    assert "xGI 0.8" in body
+    assert "DEEP" in body
+
+
+def test_natural_post_match_poor_process_haul_renders_noise_and_regression():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    projections = _post_match_projection_payload(
+        classifications=["OUTPUT_WITHOUT_PROCESS", "REGRESSION_RISK"],
+        name="Low Process Haul",
+        points=17,
+        xgi=0.10,
+    )
+    report = materialize_natural_post_match_report(
+        canonical_text=canonical,
+        report_mode="POST_MATCH",
+        projections_payload=projections,
+        section_payloads={
+            "RELEVANT LEAGUE-WIDE SIGNALS": {
+                "state": "COMPLETE",
+                "content": {},
+            }
+        },
+    )
+    body = render_natural_post_match_text(report)
+    assert "NOISE / DO NOT CHASE" in body
+    assert "REGRESSION / SELL-RISK" in body
+    assert "Low Process Haul" in body
+    assert "Action: ACT" not in body
+    mover_rows = [
+        row
+        for rows in report["post_match_universe_movers"]["categories"].values()
+        for row in rows
+        if row["element_id"] == 9001
+    ]
+    assert mover_rows
+    assert all(
+        row["automatic_transfer_recommendation"] is False
+        for row in mover_rows
+    )
+
+
+def test_natural_post_match_zero_materiality_renders_no_material_movers():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    projections = _post_match_projection_payload(
+        classifications=[],
+        material_count=0,
+    )
+    report = materialize_natural_post_match_report(
+        canonical_text=canonical,
+        report_mode="POST_MATCH",
+        projections_payload=projections,
+        section_payloads={
+            "RELEVANT LEAGUE-WIDE SIGNALS": {
+                "state": "COMPLETE",
+                "content": {},
+            }
+        },
+    )
+    body = render_natural_post_match_text(report)
+    assert "UNIVERSE MOVERS" in body
+    assert "NO MATERIAL MOVERS" in body
+
+
+def test_natural_post_all_match_nests_movers_in_existing_scout_surface():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    projections = _post_match_projection_payload(
+        classifications=["LINKUP_BREAKOUT"],
+        name="Link Riser",
+    )
+    report = materialize_natural_post_match_report(
+        canonical_text=canonical,
+        report_mode="POST_ALL_MATCH",
+        projections_payload=projections,
+        section_payloads={
+            "GW COMPLETED MATCH-BY-MATCH SCOUT": {
+                "state": "COMPLETE",
+                "content": {"fixtures": [101, 102]},
+            }
+        },
+    )
+    target = next(
+        row
+        for row in report["sections"]
+        if row["label"] == "GW COMPLETED MATCH-BY-MATCH SCOUT"
+    )
+    assert "universe_movers" in target["content"]
+    assert report["universe_movers_attachment_count"] == 1
+    assert render_natural_post_match_text(report).count("UNIVERSE MOVERS") == 1
+
+
+@pytest.mark.parametrize("mode", ["FULL+MATCH", "DEEP+MATCH", "MATCH+FULL", "MATCH+DEEP", "OVERLAP"])
+def test_natural_overlap_modes_attach_universe_movers_exactly_once(mode):
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    projections = _post_match_projection_payload(
+        classifications=["MINUTES_BREAKOUT"],
+        name="Minutes Riser",
+    )
+    report = materialize_natural_post_match_report(
+        canonical_text=canonical,
+        report_mode=mode,
+        projections_payload=projections,
+        section_payloads={
+            "Changes": {
+                "state": "COMPLETE",
+                "content": {"existing_changes": ["role"]},
+            }
+        },
+    )
+    assert report["universe_movers_attachment_count"] == 1
+    body = render_natural_post_match_text(report)
+    assert body.count("UNIVERSE MOVERS") == 1
+    assert "Minutes Riser" in body
+
+
+def test_natural_post_match_partial_universe_is_visibly_degraded():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    projections = _post_match_projection_payload(
+        classifications=["BREAKOUT_PROCESS"],
+        scanned_count=90,
+        eligible_count=100,
+        search_authority="PARTIAL",
+    )
+    report = materialize_natural_post_match_report(
+        canonical_text=canonical,
+        report_mode="POST_MATCH",
+        projections_payload=projections,
+        section_payloads={
+            "RELEVANT LEAGUE-WIDE SIGNALS": {
+                "state": "COMPLETE",
+                "content": {},
+            }
+        },
+    )
+    movers = report["post_match_universe_movers"]
+    assert movers["state"] == "DEGRADED"
+    assert movers["scanned_count"] == 90
+    assert movers["eligible_count"] == 100
+    assert movers["search_authority"] == "PARTIAL"
+    body = render_natural_post_match_text(report)
+    assert "DEGRADED" in body
+    assert "Coverage: 90/100" in body
+
+
+def test_pure_price_cannot_force_universe_movers():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    with pytest.raises(ReportOrchestrationError):
+        materialize_natural_post_match_report(
+            canonical_text=canonical,
+            report_mode="PRICE",
+            projections_payload=_post_match_projection_payload(
+                classifications=["BREAKOUT_PROCESS"]
+            ),
+            section_payloads={},
+        )

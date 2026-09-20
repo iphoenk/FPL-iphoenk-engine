@@ -5,6 +5,7 @@ from typing import Any, Mapping
 
 from src.engines.v12_contextual_dynamics import (
     build_contextual_dynamics,
+    enrich_match_rows,
     evaluate_linkup,
 )
 from src.engines.v12_player_events import (
@@ -71,11 +72,19 @@ def build(
         int(team["team_id"]): team for team in strength.get("teams") or []
     }
     historical_map = prior_payload.get("players") or {}
-    match_rows = [
-        dict(row)
-        for row in (player_match_rows or [])
-        if isinstance(row, Mapping)
-    ]
+    player_team = {
+        int(row.get("id") or -1): int(row.get("team") or -1)
+        for row in bootstrap.get("elements") or []
+        if int(row.get("id") or -1) > 0
+    }
+    match_rows = enrich_match_rows(
+        [
+            dict(row)
+            for row in (player_match_rows or [])
+            if isinstance(row, Mapping)
+        ],
+        player_team=player_team,
+    )
     connection_rows = [
         dict(row)
         for row in (player_connection_rows or [])

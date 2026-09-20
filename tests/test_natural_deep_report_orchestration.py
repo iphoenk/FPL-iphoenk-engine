@@ -412,15 +412,19 @@ def _real_price_predictor():
                 "price_change_calibrating": False,
             }
         )
-    return {"health": "GREEN", "data": {"players": players}}
+    return {
+        "health": "GREEN",
+        "checked_at": "2026-09-20T10:28:23.609531+00:00",
+        "data": {"players": players},
+    }
 
 
-def test_real_price_artifact_data_players_produces_exact20_without_direction_rank():
+def test_real_price_artifact_data_players_produces_exact20_with_visible_direction_contract():
     artifact = _real_price_predictor()
     rise = build_price20(predictor_artifact=artifact, direction="RISE")
     fall = build_price20(predictor_artifact=artifact, direction="FALL")
-    assert rise["state"] == "COMPLETE"
-    assert fall["state"] == "COMPLETE"
+    assert rise["state"] == "DEGRADED"
+    assert fall["state"] == "DEGRADED"
     assert rise["available_count"] == 20
     assert fall["available_count"] == 20
     assert rise["artifact_adapter"] == "V6_DATA_PLAYERS_OFFSET0"
@@ -430,7 +434,10 @@ def test_real_price_artifact_data_players_produces_exact20_without_direction_ran
     assert all(row["projection_offset"] == 0 for row in rise["rows"] + fall["rows"])
     assert all(row["price_fact"] == "FACT" for row in rise["rows"] + fall["rows"])
     assert all(row["predictor_classification"] == "MODEL" for row in rise["rows"] + fall["rows"])
-    assert all("direction" not in row and "rank" not in row for row in rise["rows"] + fall["rows"])
+    assert all(row["direction"] in {"RISE", "FALL", "NEUTRAL"} for row in rise["rows"] + fall["rows"])
+    assert all("rank" not in row for row in rise["rows"] + fall["rows"])
+    assert all("next_official_price_cycle_uk" in row for row in rise["rows"] + fall["rows"])
+    assert all("next_official_price_cycle_wib" in row for row in rise["rows"] + fall["rows"])
 
 
 def test_real_price_artifact_offset_zero_is_required_not_substituted():

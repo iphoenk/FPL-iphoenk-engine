@@ -1167,4 +1167,127 @@ x incremental multi-player-chain modifier
 The repair does not alter V6, P1.1, P1.3 ownership, P1.4 Monte Carlo, P1.6,
 P1.7, P1.8, the scheduler, State authority or 20/25/30/25.
 
+
+20O. DEFAULT POST-MATCH — UNIVERSE-WIDE TRAJECTORY / BREAKOUT / REGRESSION
+A. SCOPE / NON-SPECIAL-CASE RULE
+After each supportable completed Premier League match or completed match set,
+run a broad scan over the entire eligible Official-FPL player universe. No
+named player, scorer, assister, hauler, OUR15 member, prior watchlist member or
+popular discussion target may receive special eligibility. Brobbey and any
+other named example are acceptance examples only. Scorer/assister-only scouting
+is prohibited.
+
+B. STAGE 1 — BROAD FULL-UNIVERSE FAST SCAN
+For every eligible player update supportable GW1->latest-completed evidence:
+minutes; start/sub; existing P1.1 xMins/P(start); role/deployment; xG/xA/xGI
+and xGI/90; shots/SoT/big chances; touches/box touches; chances created;
+set-piece/penalty evidence; defensive contribution; FPL points; team attacking
+environment; opponent; H/A; and pairwise/multi-player link context.
+Unsupported fields remain explicit. This scan is broad evidence detection and
+MUST NOT create a second xMins, Bayesian, probability or decision model.
+
+C. STAGE 2 — CHANGE CLASSIFICATION
+Compare latest/recent evidence against the full GW1-current baseline, recency-
+weighted trajectory, existing Bayesian posterior, previous role, previous
+P1.1 xMins/P(start), previous event rate and previous link-up state.
+Allowed evidence classifications include:
+BREAKOUT_PROCESS; ROLE_BREAKOUT; MINUTES_BREAKOUT; LINKUP_BREAKOUT;
+SET_PIECE_GAIN; UNDERLYING_IMPROVING_NO_RETURN;
+OUTPUT_CONFIRMING_PROCESS; OUTPUT_WITHOUT_PROCESS; REGRESSION_RISK;
+ROLE_DECLINE; MINUTES_DECLINE; LINKUP_BROKEN; NO_MATERIAL_CHANGE.
+These are evidence labels only. They never replace the exact operational
+WAIT / PREPARE / ACT action enum.
+
+D. RESULT vs PROCESS
+Latest FPL output is interpreted against prior process. Return != automatically
+good process. Blank != automatically bad process. A haul after sustained
+improving xGI/role/minutes may become OUTPUT_CONFIRMING_PROCESS. A haul after
+weak process, low-quality finishing opportunity or declining role may become
+OUTPUT_WITHOUT_PROCESS / REGRESSION_RISK. Repeated blanks with rising xGI,
+box access, role security and P1.1 minutes may become
+UNDERLYING_IMPROVING_NO_RETURN. A one-match haul never creates ACT.
+
+E. MATERIALITY GATE
+NO_MATERIAL_CHANGE players may stop after broad screening. Deep analysis is
+reserved for players crossing supportable materiality through trajectory,
+role, xMins/P(start), event-rate/process, repeated high-quality chance, set
+piece/penalty, pairwise/multi-player link, tactical, fixture, price or OUR15
+relevance. The materiality gate is a compute/report routing decision, not a
+new player-quality score.
+
+F. STAGE 5 — DEEP ANALYSIS FOR FLAGGED PLAYERS
+For every material player, execute the existing V12 path where factual support
+exists: GW1-current trajectory; role; P1.1 xMins/P(start); match-by-match
+xG/xA/xGI; shot quality/volume; box access; creation; set pieces/penalties;
+tactical role and coach/system fit; opponent matchup; pairwise dependency;
+anti-double-counted multi-player combination network; linked-player P(start);
+next-GW/3GW/5GW; existing Bayesian posterior; P(goal), P(assist), P(return),
+P(2+ returns), P(haul), P(blank), xPts, variance/floor/ceiling; price;
+ownership/EO/mini-league where supportable; and existing downstream
+WAIT/PREPARE/ACT ownership.
+
+G. FULL-UNIVERSE RELATIVITY
+A player's improvement is never sufficient by itself for a transfer
+recommendation. Before transfer action, compare it through the existing
+full-universe optimizer/comparator against legal same-position alternatives,
+relevant price bands, OUR15 replacement routes, formation/package alternatives
+and opportunity cost. Rebuild from current universe evidence; do not append a
+new name to an old watchlist. Existing optimizer scoring/search authority
+remains the ranking/route owner; this post-match detector creates no competing
+score or action authority.
+
+H. OWNED15 IMPACT
+After broad detection, map material findings into OUR15 and existing package
+routes. Ask whether a new candidate actually improves the starter, bench,
+weakest slot, planned route or HOLD. Breakout existence alone never forces a
+move.
+
+I. LINK-UP NETWORK RE-EVALUATION
+For clubs in completed matches, re-evaluate evidence-supported pairwise and
+multi-player combinations and detect NEW/STRENGTHENING/WEAKENING/BROKEN link
+or role-dependency change. A teammate role/minutes/availability change may
+materially alter another player's distribution even when the affected target
+did not personally score or play well. Existing P1.1 teammate availability,
+pairwise ownership and multi-player anti-double-count semantics remain
+authoritative.
+
+J. PRIORITY ANALYTICAL LABELS
+Material rows may surface as BREAKOUT CANDIDATE, EARLY PROCESS CANDIDATE,
+CONFIRMATION CANDIDATE, REGRESSION CANDIDATE, ROLE-CHANGE CANDIDATE,
+MINUTES-CHANGE CANDIDATE or LINK-UP-DEPENDENCY CANDIDATE. These labels are
+analytical only and never become operational action aliases.
+
+K. VISIBLE POST-MATCH — UNIVERSE MOVERS
+Inside the existing POST-ALL-MATCH / GW COMPLETED MATCH-BY-MATCH SCOUT and/or
+fresh full-universe surface, render a compact nested UNIVERSE MOVERS block where
+supportable. Categories include:
+BREAKOUT / CONFIRMATION;
+PROCESS UP — RETURNS NOT YET ARRIVED;
+ROLE / MINUTES RISERS;
+LINK-UP RISERS;
+REGRESSION / SELL-RISK;
+NOISE / DO NOT CHASE.
+Deep-detail only materially relevant players. Do not add another POST-ALL-MATCH
+top-level section merely for this block.
+
+L. MANDATORY GOVERNANCE
+1. Full-universe post-match scan is mandatory where factual coverage supports it.
+2. Scorer/assister-only scouting is prohibited.
+3. GW1-current trajectory is required.
+4. Latest result must be interpreted against prior process.
+5. Breakout may be detected before FPL returns.
+6. One-match haul never creates ACT automatically.
+7. Full-universe comparison is required before transfer recommendation.
+8. Deep computation/reporting is gated by materiality after broad screening.
+9. Pairwise/multi-player link changes participate in breakout detection.
+10. Operational action remains exactly WAIT / PREPARE / ACT.
+No V6, scheduler, Bayesian, P1.1, P1.3, Monte Carlo, 20/25/30/25, State
+authority or legacy-runtime ownership changes are authorized by this section.
+
+M. FINAL POST-MATCH QUESTION
+The default question is:
+WHOSE PROBABILITY DISTRIBUTION HAS MATERIALLY CHANGED?
+It is explicitly NOT:
+WHO SCORED THE MOST POINTS TODAY?
+
 END FPL MASTER CANONICAL V12

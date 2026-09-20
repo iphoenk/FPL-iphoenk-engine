@@ -1282,6 +1282,29 @@ def attach_monte_carlo_to_package_utility(
     output["monte_carlo"] = mc
     output["monte_carlo_execution_state"] = mc.get("execution_state")
     output["monte_carlo_canonical_pass"] = bool(mc.get("canonical_pass"))
+    metrics = dict(mc.get("metrics") or {})
+    for route in output.get("routes") or []:
+        rid = str(route.get("route_id") or "")
+        mc_row = dict((metrics.get(rid) or {}).get("1") or {})
+        uncertainty = route.setdefault("uncertainty", {})
+        if mc_row and mc.get("execution_state") == "EXECUTED":
+            uncertainty["p_beats_hold"] = mc_row.get("p_route_gt_hold")
+            uncertainty["monte_carlo"] = {
+                "execution_state": mc.get("execution_state"),
+                "canonical_pass": bool(mc.get("canonical_pass")),
+                "actual_paths": mc.get("actual_paths"),
+                "seed": mc.get("seed"),
+                "mean_difference_vs_hold": mc_row.get("mean_difference_vs_hold"),
+                "paired_difference_standard_error": mc_row.get("paired_difference_standard_error"),
+                "expected_regret": mc_row.get("expected_regret"),
+                "output_fingerprint": mc.get("output_fingerprint"),
+            }
+        else:
+            uncertainty["monte_carlo"] = {
+                "execution_state": mc.get("execution_state"),
+                "canonical_pass": False,
+                "reason": mc.get("degradation_reason") or "MC_NOT_EXECUTED_FOR_ROUTE",
+            }
     output.setdefault("governance", {})["monte_carlo_owner"] = MODEL_OWNER
     output["governance"]["mc_code_existence_is_not_execution"] = True
     output["governance"]["mini_league_consumed"] = False

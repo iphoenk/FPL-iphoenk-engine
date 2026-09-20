@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-21T05:24:14+07:00`  
+> **Last runtime/documentation sync:** `2026-09-21T05:45:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -241,6 +241,8 @@ FALL20: projected_percent ASC,  id ASC
 Current Official price is a **FACT**. Projected movement is a **MODEL / PREDICTION**. They must never be conflated.
 
 If a healthy artifact contains at least 20 usable offset-0 rows, both RISE20 and FALL20 must render exactly 20 rows. No padding is allowed.
+
+A healthy predictor does **not** need to predict a threshold crossing for every selected row. `NO_CROSSING_WITHIN_GOVERNED_HORIZON` is a valid healthy terminal result and does not by itself make RISE20/FALL20 DEGRADED. DEGRADED is reserved for actual source/evidence problems such as stale or missing predictor data, insufficient offset-0 coverage, invalid schema/identity, unavailable cycle timing evidence, or `DATE_UNAVAILABLE`. Official FPL current-price facts remain independently authoritative and do not inherit degradation from unrelated predictor/model/workflow plumbing.
 
 ## Decision methodology
 

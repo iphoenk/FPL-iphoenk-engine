@@ -371,6 +371,8 @@ def test_canonical_contains_new_analytic_execution_and_anti_blanking_semantics()
     assert "REPOSITORY PYTHON EXECUTION TRUTH and CHATGPT V12 ANALYTIC EXECUTION TRUTH are separate" in text
     assert "repository_python_qa_executed=false alone can never justify Watchlist20=0/20" in text
     assert "official_price_predictor artifact" in text
+    assert "A valid NO_CROSSING row is healthy evidence, not degradation." in text
+    assert "unrelated core, repository-Python, workflow, QA, or plumbing status must not downgrade" in text
     assert "Weather is REPORT-TIME evidence and does not belong in V6" in text
 
 
@@ -435,8 +437,12 @@ def test_real_price_artifact_data_players_produces_exact20_with_visible_directio
     artifact = _real_price_predictor()
     rise = build_price20(predictor_artifact=artifact, direction="RISE")
     fall = build_price20(predictor_artifact=artifact, direction="FALL")
-    assert rise["state"] == "DEGRADED"
-    assert fall["state"] == "DEGRADED"
+    assert rise["state"] == "COMPLETE"
+    assert fall["state"] == "COMPLETE"
+    assert rise["degradation_reason"] is None
+    assert fall["degradation_reason"] is None
+    assert rise["no_crossing_count"] > 0
+    assert fall["no_crossing_count"] > 0
     assert rise["available_count"] == 20
     assert fall["available_count"] == 20
     assert rise["artifact_adapter"] == "V6_DATA_PLAYERS_OFFSET0"
@@ -450,6 +456,15 @@ def test_real_price_artifact_data_players_produces_exact20_with_visible_directio
     assert all("rank" not in row for row in rise["rows"] + fall["rows"])
     assert all("next_official_price_cycle_uk" in row for row in rise["rows"] + fall["rows"])
     assert all("next_official_price_cycle_wib" in row for row in rise["rows"] + fall["rows"])
+
+
+def test_real_price_artifact_with_failed_source_health_still_degrades_truthfully():
+    artifact = _real_price_predictor()
+    artifact["health"] = "FAIL"
+    rise = build_price20(predictor_artifact=artifact, direction="RISE")
+    assert rise["state"] == "DEGRADED"
+    assert rise["available_count"] == 20
+    assert "health=FAIL" in rise["degradation_reason"]
 
 
 def test_real_price_artifact_offset_zero_is_required_not_substituted():
@@ -650,10 +665,11 @@ def test_predictor_observation_is_separate_from_official_execution_cycle() -> No
 
 
 # PRICE 13
-def test_unsupported_cycle_eta_remains_unavailable_and_prevents_complete() -> None:
+def test_unsupported_cycle_eta_remains_unavailable_but_healthy_no_crossing_is_complete() -> None:
     art = _contract_price_artifact([_contract_price_row(i, 50.0, offset1=60.0, offset2=70.0) for i in range(1, 25)])
     result = build_price20(predictor_artifact=art, direction="RISE")
-    assert result["state"] == "DEGRADED"
+    assert result["state"] == "COMPLETE"
+    assert result["degradation_reason"] is None
     assert result["date_state_complete_count"] == 20
     assert result["expected_change_date_count"] == 0
     assert result["no_crossing_count"] == 20
@@ -662,7 +678,6 @@ def test_unsupported_cycle_eta_remains_unavailable_and_prevents_complete() -> No
     assert all(row["estimated_change_window"] == "UNAVAILABLE" for row in result["rows"])
     assert all(row["eta_reason"] == "NO_EXISTING_PREDICTOR_CYCLE_CROSSES_GOVERNED_THRESHOLD" for row in result["rows"])
     assert all(row["eta_context"].startswith("Belum terdeteksi berubah sampai") for row in result["rows"])
-    assert "ETA remains UNAVAILABLE" in result["degradation_reason"]
 
 
 # PRICE 14
@@ -839,14 +854,16 @@ def test_visible_price_contract_retains_cycle_eta_and_date_state_fields() -> Non
 
 
 
-def test_missing_timing_semantics_prevents_price_section_complete() -> None:
+def test_no_crossing_keeps_price_section_complete_with_truthful_unavailable_eta() -> None:
     art = _contract_price_artifact([
         _contract_price_row(i, 75.0, offset1=80.0, offset2=85.0)
         for i in range(1, 25)
     ])
     result = build_price20(predictor_artifact=art, direction="RISE")
     assert result["available_count"] == 20
-    assert result["state"] == "DEGRADED"
+    assert result["state"] == "COMPLETE"
+    assert result["degradation_reason"] is None
+    assert all(row["date_state"] == "NO_CROSSING_WITHIN_GOVERNED_HORIZON" for row in result["rows"])
     assert all(row["cycles_to_expected_change"] == "UNAVAILABLE" for row in result["rows"])
     assert all(row["estimated_change_window"] == "UNAVAILABLE" for row in result["rows"])
 

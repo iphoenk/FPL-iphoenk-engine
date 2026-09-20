@@ -60,3 +60,11 @@ R3 was developed test-first:
 6. subsequent cleanup removes unused registry-like constants and simplifies ETA input handling without changing selection semantics.
 
 The tests use synthetic players only and prove full-universe scanning, exact top/bottom 20, stable tie-breaking, input-order invariance, ownership tagging, truthful ETA behavior, single-snapshot provenance, fail-closed coverage/identity handling, and canonical report-compute integration without hardcoded player names.
+
+## V12 source-health semantics — 2026-09-21T05:45:00+07:00
+
+A healthy predictor result does not require a threshold crossing. `NO_CROSSING_WITHIN_GOVERNED_HORIZON` is a valid terminal result when the current predictor snapshot is healthy, exact-20 selection is supportable, official cycle clocks are derivable, and the governed horizon is valid. In that state, expected-change-cycle fields remain truthfully unavailable because no crossing is predicted; the section remains COMPLETE rather than being marked DEGRADED merely for the absence of a crossing.
+
+DEGRADED is reserved for actual evidence defects such as stale/missing/invalid predictor data, insufficient offset-0 coverage, schema or identity failure, unavailable evidence timestamps/cycle clocks, or `DATE_UNAVAILABLE`. Official FPL factual prices remain independently authoritative and do not inherit degradation from an unrelated predictor/model/plumbing scope.
+
+This amendment changes report-health classification only. It does not change the predictor mathematics, threshold, projection horizon, selection ordering, V6 acquisition, or factual-source ownership.

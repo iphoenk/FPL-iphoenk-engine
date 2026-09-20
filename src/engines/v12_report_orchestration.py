@@ -639,15 +639,18 @@ def build_price20(
             for row in selected
         )
     )
-    unsupported_eta = (
+    invalid_eta_state = (
         adapter == "V6_DATA_PLAYERS_OFFSET0"
         and any(
-            row.get("cycles_to_expected_change") == "UNAVAILABLE"
-            or row.get("estimated_change_window") == "UNAVAILABLE"
+            row.get("date_state") == "DATE_UNAVAILABLE"
+            or bool(row.get("degradation_reason"))
             for row in selected
         )
     )
-    if enough and healthy and date_state_complete and not missing_cycle_clock and not unsupported_eta:
+    # NO_CROSSING_WITHIN_GOVERNED_HORIZON is a healthy terminal predictor
+    # outcome. It intentionally leaves expected-change-cycle fields unavailable
+    # because no governed threshold crossing exists; that is not degradation.
+    if enough and healthy and date_state_complete and not missing_cycle_clock and not invalid_eta_state:
         state = "COMPLETE"
     elif selected:
         state = "DEGRADED"
@@ -666,16 +669,15 @@ def build_price20(
             reason = f"date-state terminal contract incomplete for {incomplete}/20 rows"
         elif adapter == "V6_DATA_PLAYERS_OFFSET0" and missing_cycle_clock:
             reason = "official_price_predictor evidence timestamp unavailable; official cycle timing cannot be derived"
-        elif adapter == "V6_DATA_PLAYERS_OFFSET0" and unsupported_eta:
-            unsupported = sum(
-                row.get("cycles_to_expected_change") == "UNAVAILABLE"
-                or row.get("estimated_change_window") == "UNAVAILABLE"
+        elif adapter == "V6_DATA_PLAYERS_OFFSET0" and invalid_eta_state:
+            invalid = sum(
+                row.get("date_state") == "DATE_UNAVAILABLE"
+                or bool(row.get("degradation_reason"))
                 for row in selected
             )
             reason = (
-                f"exact20 selected from healthy official_price_predictor; "
-                f"governed expected-change cycle unsupported for {unsupported}/20 rows, "
-                "so ETA remains UNAVAILABLE rather than inferred"
+                f"official_price_predictor has genuinely unavailable/invalid ETA evidence "
+                f"for {invalid}/20 rows"
             )
         else:
             reason = (

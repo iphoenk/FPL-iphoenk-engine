@@ -1133,3 +1133,494 @@ def validate_same_slot_completion_ledger_readback(
         ),
         "failures": list(dict.fromkeys(failures)),
     }
+
+# V12 natural-report acceptance observability.
+#
+# This deliberately extends the existing report-delivery / same-slot evidence owner.
+# It is acceptance evidence only. It does not change Canonical routing, V6 factual
+# acquisition/publication, scheduler cadence, delivery acknowledgement semantics,
+# or the immutable canonical-receipt predicate above.
+_V12_NATURAL_ACCEPTANCE_SCHEMA_VERSION = "V12_NATURAL_REPORT_ACCEPTANCE_V1"
+_V12_UI_ACK_STATES = frozenset({"PROVEN", "UNAVAILABLE", "NOT_SUPPORTED"})
+_V12_ACCEPTANCE_STATES = frozenset({"PASS", "FAIL", "NOT_APPLICABLE", "UNRESOLVED"})
+
+
+def _v12_nonempty(value: Any) -> str | None:
+    text = str(value or "").strip()
+    return text or None
+
+
+def _v12_dynamic_trigger(value: Any) -> bool | str:
+    if value is True or value is False:
+        return bool(value)
+    text = str(value or "").strip().upper()
+    if text in {"TRUE", "PASS", "TRIGGERED"}:
+        return True
+    if text in {"FALSE", "NO", "NOT_TRIGGERED"}:
+        return False
+    return "UNRESOLVED"
+
+
+def _v12_mode_tokens(value: Any) -> tuple[str, ...]:
+    text = str(value or "").strip().upper()
+    if not text:
+        return ()
+    return tuple(
+        token
+        for token in re.split(r"[+\s,/|]+", text)
+        if token
+    )
+
+
+def _v12_optional_bool(value: Any) -> bool | None:
+    if value is None:
+        return None
+    return bool(value)
+
+
+def _v12_fixture_rows(rows: Any) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes, bytearray)):
+        return out
+    for raw in rows:
+        if not isinstance(raw, Mapping):
+            continue
+        out.append(
+            {
+                "fixture_id": raw.get("fixture_id"),
+                "event": raw.get("event", raw.get("gw")),
+                "kickoff_time": raw.get("kickoff_time"),
+                "started": _v12_optional_bool(raw.get("started")),
+                "finished": _v12_optional_bool(raw.get("finished")),
+                "finished_provisional": _v12_optional_bool(
+                    raw.get("finished_provisional")
+                ),
+                "minutes": raw.get("minutes"),
+                "status": raw.get("status"),
+                "evidence_source": raw.get("evidence_source", raw.get("source")),
+                "evidence_generated_at": raw.get(
+                    "evidence_generated_at", raw.get("generated_at")
+                ),
+                "checked_at": raw.get("checked_at"),
+                "freshness_classification": raw.get(
+                    "freshness_classification", raw.get("freshness")
+                ),
+            }
+        )
+    return out
+
+
+def _v12_icon_coverage(
+    manager_count_expected: Any,
+    manager_picks_covered: Any,
+) -> tuple[str, str]:
+    try:
+        expected = int(manager_count_expected)
+        covered = int(manager_picks_covered)
+    except (TypeError, ValueError):
+        return "UNAVAILABLE", "UNAVAILABLE"
+    if expected <= 0 or covered < 0:
+        return "UNAVAILABLE", "UNAVAILABLE"
+    ratio = f"{covered}/{expected}"
+    if covered == expected:
+        return ratio, "COMPLETE"
+    if covered < expected:
+        return ratio, "PARTIAL"
+    return ratio, "INVALID"
+
+
+def _v12_acceptance_digest(payload: Mapping[str, Any]) -> str:
+    canonical = {
+        key: value
+        for key, value in dict(payload).items()
+        if key not in {"proof_hash", "readback_valid", "idempotent_reuse"}
+    }
+    return _proof_digest(canonical)
+
+
+def build_natural_report_acceptance_proof(
+    evidence: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Build occurrence-bound V12 routing/render acceptance evidence.
+
+    The result is intentionally orthogonal to UI delivery acknowledgement.
+    RENDER_PROVEN never implies DELIVERY_UI_ACK=PROVEN. This builder records
+    factual execution evidence supplied by the natural occurrence; it does not
+    re-route reports, reinterpret fixture lifecycle, acquire data, or mint a
+    provider/client acknowledgement.
+    """
+    row = dict(evidence or {})
+    failures: list[str] = []
+
+    occurrence_id = _v12_nonempty(
+        row.get("scheduler_occurrence", row.get("natural_occurrence_id"))
+    )
+    timezone_name = _v12_nonempty(row.get("timezone"))
+    observed_at = row.get("observed_at")
+    core_slot = row.get("core_logical_slot", row.get("logical_core_slot"))
+    scheduler_identity = _v12_nonempty(row.get("scheduler_identity"))
+
+    if not occurrence_id:
+        failures.append("SCHEDULER_OCCURRENCE_MISSING")
+    if not timezone_name:
+        failures.append("TIMEZONE_MISSING")
+    if _parse_aware_timestamp(observed_at) is None:
+        failures.append("OBSERVED_AT_INVALID")
+    if _parse_aware_timestamp(core_slot) is None:
+        failures.append("CORE_LOGICAL_SLOT_INVALID")
+    if not scheduler_identity:
+        failures.append("SCHEDULER_IDENTITY_MISSING")
+
+    core_gate_executed = row.get("core_gate_executed") is True
+    core_gate_resolution = _v12_nonempty(row.get("core_gate_resolution"))
+    if not core_gate_executed:
+        failures.append("CORE_GATE_EXECUTION_NOT_PROVEN")
+    if not core_gate_resolution:
+        failures.append("CORE_GATE_RESOLUTION_MISSING")
+
+    preliminary_due = row.get("preliminary_report_due")
+    final_due = row.get("final_report_due")
+    dynamic_checked = row.get("dynamic_evidence_checked") is True
+    dynamic_trigger = _v12_dynamic_trigger(row.get("dynamic_trigger"))
+    final_mode = _v12_nonempty(row.get("final_mode"))
+    if preliminary_due not in {True, False}:
+        failures.append("PRELIMINARY_REPORT_DUE_MISSING")
+    if final_due not in {True, False}:
+        failures.append("FINAL_REPORT_DUE_MISSING")
+    if not dynamic_checked:
+        failures.append("DYNAMIC_EVIDENCE_NOT_CHECKED")
+    if final_due is True and not final_mode:
+        failures.append("FINAL_MODE_MISSING")
+
+    fixture_rows = _v12_fixture_rows(row.get("dynamic_fixture_evidence"))
+    mode_tokens = _v12_mode_tokens(final_mode)
+    match_in_final_mode = "MATCH" in mode_tokens
+
+    if dynamic_trigger is True:
+        routing_acceptance = (
+            "PASS" if final_due is True and match_in_final_mode else "FAIL"
+        )
+    elif dynamic_trigger == "UNRESOLVED":
+        routing_acceptance = "UNRESOLVED"
+    else:
+        routing_acceptance = "NOT_APPLICABLE"
+
+    render_attempted = row.get("render_attempted") is True
+    render_completed = row.get("render_completed") is True
+    rendered_mode = _v12_nonempty(row.get("rendered_mode"))
+    section_ids = [
+        str(value)
+        for value in (row.get("rendered_section_ids") or [])
+        if str(value or "").strip()
+    ]
+    section_names = [
+        str(value)
+        for value in (row.get("rendered_section_names") or [])
+        if str(value or "").strip()
+    ]
+    section_count = row.get("section_count")
+    try:
+        section_count_value = int(section_count)
+    except (TypeError, ValueError):
+        section_count_value = len(section_ids or section_names)
+    critical_sections_present = row.get("critical_sections_present") is True
+    render_digest = _v12_nonempty(
+        row.get("render_content_digest", row.get("visible_body_sha256"))
+    )
+    render_completed_at = row.get("render_completed_at")
+    report_instance_count = row.get("report_instance_count", 1 if final_due else 0)
+    try:
+        report_instance_count = int(report_instance_count)
+    except (TypeError, ValueError):
+        report_instance_count = -1
+
+    render_shape_consistent = (
+        section_count_value >= 0
+        and (
+            not section_ids
+            or section_count_value == len(section_ids)
+        )
+        and (
+            not section_names
+            or section_count_value == len(section_names)
+        )
+    )
+    render_proven = bool(
+        render_attempted
+        and render_completed
+        and rendered_mode
+        and critical_sections_present
+        and render_shape_consistent
+        and _is_sha256(render_digest)
+        and _parse_aware_timestamp(render_completed_at) is not None
+        and report_instance_count == 1
+    )
+
+    if final_due is True and not render_attempted:
+        failures.append("RENDER_NOT_ATTEMPTED")
+    if render_completed and not render_attempted:
+        failures.append("RENDER_COMPLETED_WITHOUT_ATTEMPT")
+    if render_completed and not render_shape_consistent:
+        failures.append("RENDER_SECTION_COUNT_MISMATCH")
+    if final_due is True and report_instance_count != 1:
+        failures.append("REPORT_INSTANCE_COUNT_INVALID")
+
+    if routing_acceptance == "PASS":
+        render_acceptance = "PASS" if render_proven else "FAIL"
+    elif routing_acceptance == "FAIL":
+        render_acceptance = "FAIL"
+    elif routing_acceptance == "UNRESOLVED":
+        render_acceptance = "UNRESOLVED"
+    else:
+        render_acceptance = (
+            "PASS" if final_due is True and render_proven else "NOT_APPLICABLE"
+        )
+
+    delivery_ui_ack = str(row.get("delivery_ui_ack") or "UNAVAILABLE").strip().upper()
+    if delivery_ui_ack not in _V12_UI_ACK_STATES:
+        failures.append("DELIVERY_UI_ACK_STATE_INVALID")
+        delivery_ui_ack = "UNAVAILABLE"
+    ui_ack_evidence = dict(row.get("ui_ack_evidence") or {})
+    if delivery_ui_ack == "PROVEN":
+        ack_id = _v12_nonempty(
+            ui_ack_evidence.get(
+                "provider_receipt_id", ui_ack_evidence.get("delivery_ack_id")
+            )
+        )
+        ack_time = ui_ack_evidence.get(
+            "acknowledged_at", ui_ack_evidence.get("delivered_at")
+        )
+        if not ack_id or _parse_aware_timestamp(ack_time) is None:
+            failures.append("DELIVERY_UI_ACK_PROOF_INCOMPLETE")
+            delivery_ui_ack = "UNAVAILABLE"
+            ui_ack_evidence = {}
+    elif ui_ack_evidence:
+        # Do not retain pseudo-ACK payloads when the channel is unavailable.
+        ui_ack_evidence = {}
+
+    locked = {
+        "locked_team_source": row.get("locked_team_source"),
+        "locked_team_status": row.get("locked_team_status"),
+        "submitted_15_available": _v12_optional_bool(
+            row.get("submitted_15_available")
+        ),
+        "xi_available": _v12_optional_bool(row.get("xi_available")),
+        "bench_available": _v12_optional_bool(row.get("bench_available")),
+        "captain_available": _v12_optional_bool(row.get("captain_available")),
+        "vice_available": _v12_optional_bool(row.get("vice_available")),
+    }
+
+    picks_coverage, coverage_status = _v12_icon_coverage(
+        row.get("manager_count_expected"), row.get("manager_picks_covered")
+    )
+    icon_plus = {
+        "league_id": row.get("league_id"),
+        "league_name": row.get("league_name"),
+        "icon_live_requested": _v12_optional_bool(row.get("icon_live_requested")),
+        "icon_live_status": row.get("icon_live_status"),
+        "manager_count_expected": row.get("manager_count_expected"),
+        "manager_picks_covered": row.get("manager_picks_covered"),
+        "picks_coverage": picks_coverage,
+        "picks_coverage_status": coverage_status,
+        "ownership_available": _v12_optional_bool(row.get("ownership_available")),
+        "starter_available": _v12_optional_bool(row.get("starter_available")),
+        "captain_available": _v12_optional_bool(
+            row.get("icon_captain_available", row.get("captain_coverage_available"))
+        ),
+        "vice_available": _v12_optional_bool(
+            row.get("icon_vice_available", row.get("vice_coverage_available"))
+        ),
+        "eo_status": row.get("eo_status"),
+        "live_points_status": row.get("live_points_status"),
+    }
+
+    proof = {
+        "schema_version": _V12_NATURAL_ACCEPTANCE_SCHEMA_VERSION,
+        "proof_kind": "V12_NATURAL_REPORT_ACCEPTANCE_PROOF",
+        "authoritative": False,
+        "factual_authority": False,
+        "report_authority": False,
+        "methodology_authority": False,
+        "decision_authority": False,
+        "scheduler_authority": False,
+        "durable_acceptance_evidence": True,
+        "persistence_owner": (
+            "src/runtime_v6/domains/report_plane/report_delivery.py"
+            "::same_slot_completion_evidence"
+        ),
+        "occurrence": {
+            "scheduler_occurrence": occurrence_id,
+            "timezone": timezone_name,
+            "observed_at": observed_at,
+            "core_logical_slot": core_slot,
+            "scheduler_identity": scheduler_identity,
+        },
+        "core": {
+            "core_gate_executed": core_gate_executed,
+            "core_gate_resolution": core_gate_resolution,
+            "same_slot_fulfilled": _v12_optional_bool(
+                row.get("same_slot_fulfilled")
+            ),
+            "bound_v6_run_id": row.get("bound_v6_run_id"),
+            "v6_publication_sha": row.get(
+                "v6_publication_sha", row.get("data_publication_sha")
+            ),
+            "v6_generation": row.get("v6_generation"),
+            "publish_integrity": row.get("publish_integrity"),
+            "authoritative_runtime_snapshot": _v12_optional_bool(
+                row.get("authoritative_runtime_snapshot")
+            ),
+            "duplicate_acquisition": _v12_optional_bool(
+                row.get("duplicate_acquisition")
+            ),
+        },
+        "report_due": {
+            "preliminary_report_due": preliminary_due,
+            "preliminary_reason": row.get("preliminary_reason"),
+            "dynamic_evidence_checked": dynamic_checked,
+            "dynamic_trigger": dynamic_trigger,
+            "dynamic_trigger_reason": row.get("dynamic_trigger_reason"),
+            "final_report_due": final_due,
+            "final_mode": final_mode,
+        },
+        "dynamic_fixture_evidence": fixture_rows,
+        "render": {
+            "render_attempted": render_attempted,
+            "render_completed": render_completed,
+            "render_proven": render_proven,
+            "rendered_mode": rendered_mode,
+            "rendered_section_ids": section_ids,
+            "rendered_section_names": section_names,
+            "section_count": section_count_value,
+            "critical_sections_present": critical_sections_present,
+            "render_content_digest": render_digest,
+            "render_completed_at": render_completed_at,
+            "report_instance_count": report_instance_count,
+        },
+        "locked_team": locked,
+        "icon_plus": icon_plus,
+        "delivery": {
+            "delivery_ui_ack": delivery_ui_ack,
+            "ui_ack_evidence": ui_ack_evidence or None,
+            "rendering_implies_ui_delivery": False,
+        },
+        "acceptance": {
+            "routing_acceptance": routing_acceptance,
+            "render_acceptance": render_acceptance,
+            "ui_delivery_ack": delivery_ui_ack,
+        },
+        "historical_immutable": row.get("historical_immutable") is True,
+        "proof_existed_at_occurrence": row.get("proof_existed_at_occurrence") is True,
+        "evidence_integrity": "PASS" if not failures else "FAIL",
+        "failures": list(dict.fromkeys(failures)),
+        "immutable": False,
+        "readback_valid": False,
+        "proof_hash": None,
+        "idempotent_reuse": False,
+    }
+    return proof
+
+
+def seal_natural_report_acceptance_proof(
+    evidence: Mapping[str, Any],
+    *,
+    existing_proof: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Seal prospective acceptance evidence without fabricating historical receipts."""
+    built = build_natural_report_acceptance_proof(evidence)
+    occurrence_id = built["occurrence"]["scheduler_occurrence"]
+
+    if existing_proof is not None:
+        prior = dict(existing_proof)
+        prior_occurrence = (
+            prior.get("occurrence", {}).get("scheduler_occurrence")
+            if isinstance(prior.get("occurrence"), Mapping)
+            else None
+        )
+        if (
+            prior.get("schema_version") == _V12_NATURAL_ACCEPTANCE_SCHEMA_VERSION
+            and prior.get("immutable") is True
+            and prior_occurrence == occurrence_id
+            and _is_sha256(prior.get("proof_hash"))
+            and prior.get("proof_hash") == _v12_acceptance_digest(prior)
+        ):
+            prior["idempotent_reuse"] = True
+            return prior
+        return {
+            **built,
+            "evidence_integrity": "FAIL",
+            "failures": list(
+                dict.fromkeys(
+                    [*built.get("failures", []), "EXISTING_ACCEPTANCE_PROOF_CONFLICT"]
+                )
+            ),
+        }
+
+    if (
+        built.get("historical_immutable") is True
+        and built.get("proof_existed_at_occurrence") is not True
+    ):
+        return {
+            **built,
+            "evidence_integrity": "FAIL",
+            "failures": list(
+                dict.fromkeys(
+                    [
+                        *built.get("failures", []),
+                        "HISTORICAL_ACCEPTANCE_PROOF_BACKFILL_FORBIDDEN",
+                    ]
+                )
+            ),
+        }
+
+    sealed = {
+        **built,
+        "immutable": True,
+        "readback_valid": False,
+    }
+    sealed["proof_hash"] = _v12_acceptance_digest(sealed)
+    return sealed
+
+
+def validate_natural_report_acceptance_proof_readback(
+    proof: Mapping[str, Any] | None,
+    *,
+    expected_scheduler_occurrence: str,
+) -> dict[str, Any]:
+    """Verify persisted bytes/identity; acceptance PASS/FAIL remains orthogonal."""
+    if not isinstance(proof, Mapping):
+        return {
+            "status": "FAIL",
+            "readback_valid": False,
+            "failures": ["NATURAL_ACCEPTANCE_PROOF_MISSING"],
+        }
+    row = dict(proof)
+    failures: list[str] = []
+    occurrence = (
+        dict(row.get("occurrence") or {})
+        if isinstance(row.get("occurrence"), Mapping)
+        else {}
+    )
+    if row.get("schema_version") != _V12_NATURAL_ACCEPTANCE_SCHEMA_VERSION:
+        failures.append("NATURAL_ACCEPTANCE_PROOF_SCHEMA_MISMATCH")
+    if row.get("immutable") is not True:
+        failures.append("NATURAL_ACCEPTANCE_PROOF_NOT_IMMUTABLE")
+    if occurrence.get("scheduler_occurrence") != expected_scheduler_occurrence:
+        failures.append("NATURAL_ACCEPTANCE_PROOF_OCCURRENCE_MISMATCH")
+    stored_hash = str(row.get("proof_hash") or "")
+    if not _is_sha256(stored_hash) or stored_hash != _v12_acceptance_digest(row):
+        failures.append("NATURAL_ACCEPTANCE_PROOF_HASH_MISMATCH")
+    acceptance = dict(row.get("acceptance") or {})
+    for key in ("routing_acceptance", "render_acceptance"):
+        if acceptance.get(key) not in _V12_ACCEPTANCE_STATES:
+            failures.append(f"NATURAL_ACCEPTANCE_{key.upper()}_INVALID")
+    if acceptance.get("ui_delivery_ack") not in _V12_UI_ACK_STATES:
+        failures.append("NATURAL_ACCEPTANCE_UI_ACK_INVALID")
+
+    return {
+        **row,
+        "status": "PASS" if not failures else "FAIL",
+        "readback_valid": not failures,
+        "failures": list(dict.fromkeys([*row.get("failures", []), *failures])),
+    }
+

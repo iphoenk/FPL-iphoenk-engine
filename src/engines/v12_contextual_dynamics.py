@@ -428,6 +428,7 @@ def evaluate_opponent_matchup(
     player_id: int,
     opponent_team_id: int,
     current_context: Mapping[str, Any] | None = None,
+    history_scope: str | None = None,
 ) -> dict[str, Any]:
     player_rows = [
         dict(row)
@@ -441,13 +442,40 @@ def evaluate_opponent_matchup(
         and _minutes(row) > 0
     ]
     baseline_xgi90 = ((trajectory.get("rates") or {}).get("xgi") or {}).get("posterior_rate90")
-    matchup_xgi90 = _rate90(meetings, "xgi")
     cfg = load_config().get("matchup") or {}
+    prior_decay = _clamp(_f(cfg.get("prior_season_decay"), 0.65), 0.0, 1.0)
+
+    def season_age(row: Mapping[str, Any]) -> int:
+        return max(
+            0,
+            _i(
+                row.get("season_age"),
+                _i(row.get("season_offset"), 0),
+            ),
+        )
+
+    season_weights = [prior_decay ** season_age(row) for row in meetings]
+    matchup_xgi90 = _rate90(meetings, "xgi", season_weights)
     k = max(0.1, _f(cfg.get("sample_shrinkage_k"), 3.0))
-    sample_strength = len(meetings) / (len(meetings) + k) if meetings else 0.0
+    effective_sample = sum(season_weights)
+    sample_strength = (
+        effective_sample / (effective_sample + k)
+        if effective_sample > 0.0
+        else 0.0
+    )
     similarities = [tactical_similarity(row, current_context) for row in meetings]
-    usable_similarity = [row["coefficient"] for row in similarities if row.get("status") != "UNAVAILABLE"]
-    relevance = sum(usable_similarity) / len(usable_similarity) if usable_similarity else 0.0
+    similarity_weight_pairs = [
+        (similarity["coefficient"], season_weight)
+        for similarity, season_weight in zip(similarities, season_weights)
+        if similarity.get("status") != "UNAVAILABLE"
+    ]
+    relevance_denominator = sum(weight for _, weight in similarity_weight_pairs)
+    relevance = (
+        sum(value * weight for value, weight in similarity_weight_pairs)
+        / relevance_denominator
+        if relevance_denominator > 0.0
+        else 0.0
+    )
     ratio = None
     if matchup_xgi90 is not None and baseline_xgi90 not in {None, 0}:
         ratio = max(0.05, matchup_xgi90 / float(baseline_xgi90))
@@ -471,6 +499,23 @@ def evaluate_opponent_matchup(
         "opponent_team_id": int(opponent_team_id),
         "historical_meetings": len(meetings),
         "sample_size": len(meetings),
+        "effective_sample_size": round(effective_sample, 6),
+        "current_season_meetings": sum(1 for row in meetings if season_age(row) == 0),
+        "prior_season_meetings": sum(1 for row in meetings if season_age(row) > 0),
+        "opponent_history_scope": (
+            history_scope
+            or (
+                "MULTI-SEASON GOVERNED"
+                if any(season_age(row) > 0 for row in meetings)
+                else "CURRENT-SEASON ONLY"
+            )
+        ),
+        "prior_season_matchup_status": (
+            "AVAILABLE"
+            if any(season_age(row) > 0 for row in meetings)
+            else "UNAVAILABLE — NO GOVERNED MATCH-LEVEL FACTUAL SOURCE"
+        ),
+        "prior_season_decay": round(prior_decay, 6),
         "process_minutes": round(process_minutes, 1),
         "result_process": _result_vs_process(meetings),
         "matchup_xgi90": None if matchup_xgi90 is None else round(matchup_xgi90, 6),
@@ -624,7 +669,9 @@ def evaluate_linkup(
     return {
         "model": MODEL_ID,
         "target_player_id": int(target_player_id),
+        "source_player_id": int(teammate_player_id),
         "teammate_player_id": int(teammate_player_id),
+        "direction": [int(teammate_player_id), int(target_player_id)],
         "relationship_type": "EVIDENCE_DERIVED_DIRECTIONAL_DEPENDENCY",
         "shared_matches": sample_n,
         "shared_minutes": round(shared_minutes, 1),
@@ -672,31 +719,204 @@ def probability_weighted_link_modifier(link: Mapping[str, Any], teammate_p_start
     }
 
 
+def _chain_edge_eligible(edge: Mapping[str, Any]) -> bool:
+    cfg = load_config().get("linkup") or {}
+    min_confidence = max(
+        0.0, _f(cfg.get("minimum_chain_edge_confidence"), 0.05)
+    )
+    min_shared = max(0.0, _f(cfg.get("minimum_shared_minutes"), 90.0))
+    direct_available = (
+        (edge.get("direct_connection_evidence") or {}).get("status")
+        == "AVAILABLE"
+    )
+    role_compatible = (
+        _f(edge.get("role_complementarity")) > 0.1 or direct_available
+    )
+    return (
+        _i(edge.get("source_player_id"), _i(edge.get("teammate_player_id"), -1))
+        > 0
+        and _i(edge.get("target_player_id"), -1) > 0
+        and _f(edge.get("confidence")) >= min_confidence
+        and _f(edge.get("shared_minutes")) >= min_shared
+        and str(edge.get("dependency_direction") or "") != "WEAK_OR_NONE"
+        and role_compatible
+    )
+
+
 def evaluate_multi_player_chain(
     edges: Sequence[Mapping[str, Any]],
     teammate_start_probabilities: Mapping[int, float],
 ) -> dict[str, Any]:
     cfg = load_config().get("linkup") or {}
-    bounded_edges = list(edges)[: max(2, _i(cfg.get("max_chain_length"), 4))]
-    if len(bounded_edges) < 2:
-        return {"status": "INSUFFICIENT_CHAIN", "multiplier": 1.0, "confidence": 0.0}
-    confidence = min(_f(edge.get("confidence")) for edge in bounded_edges)
-    intact_probability = 1.0
-    edge_multiplier = 1.0
-    for edge in bounded_edges:
-        source = _i(edge.get("teammate_player_id"), -1)
-        intact_probability *= _clamp(_f(teammate_start_probabilities.get(source), 1.0), 0.0, 1.0)
-        edge_multiplier *= max(0.01, _f(edge.get("with_player_modifier"), 1.0))
-    multiplier = 1.0 + intact_probability * confidence * (edge_multiplier - 1.0)
+    max_players = max(3, _i(cfg.get("max_chain_length"), 4))
+    ordered_edges = [dict(edge) for edge in edges]
+    if len(ordered_edges) < 2:
+        return {
+            "status": "INSUFFICIENT_CHAIN",
+            "multiplier": 1.0,
+            "confidence": 0.0,
+        }
+    if not all(_chain_edge_eligible(edge) for edge in ordered_edges):
+        return {
+            "status": "REJECTED_LOW_CONFIDENCE_OR_INCOMPATIBLE_EDGE",
+            "multiplier": 1.0,
+            "confidence": 0.0,
+        }
+
+    players = [
+        _i(
+            ordered_edges[0].get("source_player_id"),
+            _i(ordered_edges[0].get("teammate_player_id"), -1),
+        )
+    ]
+    valid_direction = True
+    for edge in ordered_edges:
+        source = _i(
+            edge.get("source_player_id"),
+            _i(edge.get("teammate_player_id"), -1),
+        )
+        target = _i(edge.get("target_player_id"), -1)
+        if players[-1] != source:
+            valid_direction = False
+            break
+        players.append(target)
+    if not valid_direction:
+        return {
+            "status": "REJECTED_INCOMPATIBLE_DIRECTION",
+            "multiplier": 1.0,
+            "confidence": 0.0,
+        }
+    if len(set(players)) != len(players):
+        return {
+            "status": "REJECTED_CYCLE",
+            "players": players,
+            "multiplier": 1.0,
+            "confidence": 0.0,
+        }
+    if len(players) > max_players:
+        return {
+            "status": "REJECTED_MAX_CHAIN_LENGTH",
+            "players": players,
+            "max_chain_length": max_players,
+            "multiplier": 1.0,
+            "confidence": 0.0,
+        }
+
+    confidence = min(_f(edge.get("confidence")) for edge in ordered_edges)
+    upstream_players = players[:-1]
+    linked_start = {
+        player_id: _clamp(
+            _f(teammate_start_probabilities.get(player_id), 1.0),
+            0.0,
+            1.0,
+        )
+        for player_id in upstream_players
+    }
+    intact_probability = math.prod(linked_start.values())
+    edge_multiplier = math.prod(
+        max(0.01, _f(edge.get("with_player_modifier"), 1.0))
+        for edge in ordered_edges
+    )
+    multiplier = 1.0 + intact_probability * confidence * (
+        edge_multiplier - 1.0
+    )
+
+    middle_players = players[1:-1]
+    middle_absent_probability = 0.0 if middle_players else None
+    middle_absence_multiplier = 1.0 if middle_players else None
     return {
         "status": "AVAILABLE",
-        "edge_count": len(bounded_edges),
+        "players": players,
+        "direction": players,
+        "relationship_type": "BOUNDED_MULTI_PLAYER_DEPENDENCY_CHAIN",
+        "edge_count": len(ordered_edges),
+        "edges": ordered_edges,
         "chain_intact_probability": round(intact_probability, 6),
         "confidence": round(confidence, 6),
+        "weakest_link_confidence": round(confidence, 6),
+        "linked_player_p_start": {
+            str(player_id): round(probability, 6)
+            for player_id, probability in linked_start.items()
+        },
+        "edge_product_modifier": round(edge_multiplier, 6),
         "multiplier": round(multiplier, 6),
+        "middle_players": middle_players,
+        "middle_absence_multiplier": middle_absence_multiplier,
+        "main_dependency_risk": (
+            "MIDDLE_NODE_START_RISK"
+            if middle_players
+            and any(linked_start.get(player_id, 1.0) < 0.8 for player_id in middle_players)
+            else "CHAIN_AVAILABILITY"
+        ),
         "bounded_approximation": True,
         "combinatorial_expansion_used": False,
+        "max_chain_length": max_players,
     }
+
+
+def construct_directional_chains(
+    edges: Sequence[Mapping[str, Any]],
+    *,
+    target_player_id: int,
+    teammate_start_probabilities: Mapping[int, float],
+) -> list[dict[str, Any]]:
+    cfg = load_config().get("linkup") or {}
+    max_players = max(3, _i(cfg.get("max_chain_length"), 4))
+    max_incoming = max(
+        1,
+        _i(cfg.get("maximum_qualified_incoming_edges_per_node"), 3),
+    )
+    max_chains = max(1, _i(cfg.get("maximum_runtime_chains_per_target"), 5))
+    qualified = [dict(edge) for edge in edges if _chain_edge_eligible(edge)]
+
+    incoming: dict[int, list[dict[str, Any]]] = {}
+    for edge in qualified:
+        incoming.setdefault(_i(edge.get("target_player_id"), -1), []).append(edge)
+    for rows in incoming.values():
+        rows.sort(
+            key=lambda edge: (
+                _f(edge.get("confidence")),
+                _f(edge.get("dependency_strength")),
+            ),
+            reverse=True,
+        )
+        del rows[max_incoming:]
+
+    candidates: list[list[dict[str, Any]]] = []
+
+    def walk(node: int, reverse_path: list[dict[str, Any]], used: set[int]) -> None:
+        if len(reverse_path) >= 2:
+            candidates.append(list(reversed(reverse_path)))
+        if len(used) >= max_players:
+            return
+        for edge in incoming.get(node, []):
+            source = _i(
+                edge.get("source_player_id"),
+                _i(edge.get("teammate_player_id"), -1),
+            )
+            if source <= 0 or source in used:
+                continue
+            walk(
+                source,
+                reverse_path + [edge],
+                used | {source},
+            )
+
+    walk(int(target_player_id), [], {int(target_player_id)})
+    evaluated = [
+        evaluate_multi_player_chain(path, teammate_start_probabilities)
+        for path in candidates
+    ]
+    evaluated = [row for row in evaluated if row.get("status") == "AVAILABLE"]
+    evaluated.sort(
+        key=lambda row: (
+            _f(row.get("confidence")),
+            abs(_f(row.get("multiplier"), 1.0) - 1.0),
+            _i(row.get("edge_count")),
+        ),
+        reverse=True,
+    )
+    return evaluated[:max_chains]
 
 
 def build_contextual_dynamics(
@@ -707,15 +927,23 @@ def build_contextual_dynamics(
     opponent_team_id: int,
     current_context: Mapping[str, Any] | None = None,
     linkups: Sequence[Mapping[str, Any]] | None = None,
+    chains: Sequence[Mapping[str, Any]] | None = None,
     teammate_start_probabilities: Mapping[int, float] | None = None,
+    opponent_history_rows: Sequence[Mapping[str, Any]] | None = None,
+    opponent_history_scope: str | None = None,
 ) -> dict[str, Any]:
     trajectory = build_player_trajectory(match_rows, player_id=player_id, current_gw=current_gw)
+    historical_rows = [
+        dict(row) for row in (opponent_history_rows or [])
+    ]
+    matchup_rows = list(match_rows) + historical_rows
     matchup = evaluate_opponent_matchup(
         trajectory,
-        match_rows,
+        matchup_rows,
         player_id=player_id,
         opponent_team_id=opponent_team_id,
         current_context=current_context,
+        history_scope=opponent_history_scope,
     )
     xg_rates = ((trajectory.get("rates") or {}).get("xg") or {})
     xa_rates = ((trajectory.get("rates") or {}).get("xa") or {})
@@ -755,11 +983,44 @@ def build_contextual_dynamics(
             link_goal *= math.exp(math.log(safe) * confidence)
             link_assist *= math.exp(math.log(safe) * confidence * 0.5)
 
+    chain_rows = [
+        dict(row)
+        for row in (chains or [])
+        if isinstance(row, Mapping)
+        and row.get("status") == "AVAILABLE"
+    ]
+    chain_goal = 1.0
+    chain_assist = 1.0
+    for chain in chain_rows:
+        safe = max(0.01, _f(chain.get("multiplier"), 1.0))
+        edge_rows = [
+            dict(edge)
+            for edge in chain.get("edges") or []
+            if isinstance(edge, Mapping)
+        ]
+        final_role = (
+            str((edge_rows[-1] if edge_rows else {}).get("target_role") or "")
+            .upper()
+        )
+        if any(token in final_role for token in ("CREATOR", "PLAYMAKER")):
+            chain_assist *= safe
+        else:
+            chain_goal *= safe
+            chain_assist *= math.exp(math.log(safe) * 0.5)
+
     combined_cfg = load_config().get("combined") or {}
     low = _f(combined_cfg.get("minimum_multiplier"), 0.72)
     high = _f(combined_cfg.get("maximum_multiplier"), 1.35)
-    goal_multiplier = _clamp(trajectory_goal * matchup_mod * link_goal, low, high)
-    assist_multiplier = _clamp(trajectory_assist * matchup_mod * link_assist, low, high)
+    goal_multiplier = _clamp(
+        trajectory_goal * matchup_mod * link_goal * chain_goal,
+        low,
+        high,
+    )
+    assist_multiplier = _clamp(
+        trajectory_assist * matchup_mod * link_assist * chain_assist,
+        low,
+        high,
+    )
     return {
         "model": MODEL_ID,
         "model_owner": MODEL_OWNER,
@@ -768,8 +1029,11 @@ def build_contextual_dynamics(
         "opponent_specific_matchup": matchup,
         "linkup_network": {
             "relationships": link_rows,
+            "pairwise_links": link_rows,
             "marginalized": marginal_rows,
             "relationship_count": len(link_rows),
+            "multi_player_chains": chain_rows,
+            "chain_count": len(chain_rows),
         },
         "event_multipliers": {
             "goal": round(goal_multiplier, 6),
@@ -779,6 +1043,8 @@ def build_contextual_dynamics(
             "matchup": round(matchup_mod, 6),
             "linkup_goal": round(link_goal, 6),
             "linkup_assist": round(link_assist, 6),
+            "chain_goal": round(chain_goal, 6),
+            "chain_assist": round(chain_assist, 6),
         },
         "governance": {
             "v6_factual_plane_mutated": False,
@@ -788,6 +1054,9 @@ def build_contextual_dynamics(
             "methodology_weights_20_25_30_25_unchanged": True,
             "named_player_rules": False,
             "raw_h2h_result_is_not_sufficient": True,
+            "multi_player_chain_runtime_wired": bool(chain_rows),
+            "trajectory_window_current_season_only": True,
+            "opponent_history_window_separate": True,
         },
     }
 
@@ -812,8 +1081,21 @@ def report_blocks(contextual: Mapping[str, Any]) -> dict[str, Any]:
             "classification": matchup.get("classification"),
         },
         "LINK-UP / COMBINATION NETWORK": {
+            "pairwise_links": relationships,
             "relationships": relationships,
             "relationship_count": len(relationships),
+            "multi_player_chains": [
+                row
+                for row in network.get("multi_player_chains") or []
+                if _f(row.get("confidence")) > 0.0
+            ],
+            "chain_count": len(
+                [
+                    row
+                    for row in network.get("multi_player_chains") or []
+                    if _f(row.get("confidence")) > 0.0
+                ]
+            ),
             "insufficient_pairs_suppressed": True,
         },
     }

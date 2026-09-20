@@ -582,16 +582,20 @@ def test_zero_projected_percent_maps_to_neutral() -> None:
 
 # PRICE 4
 def test_rise_sort_desc_then_element_id_asc() -> None:
-    rows = [_contract_price_row(i, 110.0) for i in range(1, 25)]
+    rows = [_contract_price_row(i, 80.0) for i in range(1, 25)]
     rows[0]["id"], rows[1]["id"] = 99, 98
+    rows[0]["price_change_projections"][0]["projected_percent"] = 110.0
+    rows[1]["price_change_projections"][0]["projected_percent"] = 110.0
     result = build_price20(predictor_artifact=_contract_price_artifact(rows), direction="RISE")
     assert [row["element_id"] for row in result["rows"][:2]] == [98, 99]
 
 
 # PRICE 5
 def test_fall_sort_asc_then_element_id_asc() -> None:
-    rows = [_contract_price_row(i, -110.0) for i in range(1, 25)]
+    rows = [_contract_price_row(i, -80.0) for i in range(1, 25)]
     rows[0]["id"], rows[1]["id"] = 99, 98
+    rows[0]["price_change_projections"][0]["projected_percent"] = -110.0
+    rows[1]["price_change_projections"][0]["projected_percent"] = -110.0
     result = build_price20(predictor_artifact=_contract_price_artifact(rows), direction="FALL")
     assert [row["element_id"] for row in result["rows"][:2]] == [98, 99]
 

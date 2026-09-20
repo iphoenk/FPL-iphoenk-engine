@@ -37,9 +37,9 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     v6_ci = v6_ci_path.read_text(encoding="utf-8")
     governance = governance_path.read_text(encoding="utf-8")
 
-    if not re.search(r"(?m)^  v6-verify:\\s*$", v6_ci):
+    if not re.search(r"(?m)^  v6-verify:\s*$", v6_ci):
         failures.append("V6 CI must expose version-unique job id v6-verify")
-    if not re.search(r"(?m)^  v12-verify:\\s*$", governance):
+    if not re.search(r"(?m)^  v12-verify:\s*$", governance):
         failures.append("repository governance must expose active V12 job id v12-verify")
     if "legacy_execution_isolation_validate.py" not in governance:
         failures.append("repository governance must execute static legacy isolation validator")
@@ -54,7 +54,7 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     generic_verify_owners: list[str] = []
     for path in sorted(workflows.glob("*.yml")):
         text = path.read_text(encoding="utf-8")
-        if re.search(r"(?m)^  verify:\\s*$", text):
+        if re.search(r"(?m)^  verify:\s*$", text):
             generic_verify_owners.append(path.name)
     if generic_verify_owners != ["repository-governance.yml"]:
         failures.append(

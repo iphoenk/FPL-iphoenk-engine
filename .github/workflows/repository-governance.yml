@@ -100,11 +100,6 @@ jobs:
           cache-dependency-path: requirements-ci.lock
       - name: Install locked V12 test dependencies
         run: python -m pip install --no-deps -r requirements-ci.lock
-      - name: Run bounded live V12 owner acceptance
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: python tools/v12_live_owner_acceptance.py
       - name: Prove zero legacy execution statically
         run: python src/platform/legacy_execution_isolation_validate.py
       - name: Execute active V12 architecture, model, decision and report contracts

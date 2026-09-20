@@ -985,6 +985,20 @@ def build_contextual_player_blocks(
         ),
         reverse=True,
     )
+    chains = [
+        dict(row)
+        for row in network.get("multi_player_chains") or []
+        if isinstance(row, Mapping)
+        and row.get("status") == "AVAILABLE"
+        and float(row.get("confidence") or 0.0) > 0.0
+    ]
+    chains.sort(
+        key=lambda row: (
+            float(row.get("confidence") or 0.0),
+            abs(float(row.get("multiplier") or 1.0) - 1.0),
+        ),
+        reverse=True,
+    )
     return {
         "state": "COMPLETE",
         "fixture": selected.get("fixture"),
@@ -1006,11 +1020,23 @@ def build_contextual_player_blocks(
                 "bayesian_confidence": matchup.get("sample_shrinkage"),
                 "current_relevance": matchup.get("tactical_similarity"),
                 "classification": matchup.get("classification"),
+                "opponent_history_scope": matchup.get("opponent_history_scope"),
+                "prior_season_matchup_status": matchup.get(
+                    "prior_season_matchup_status"
+                ),
+                "prior_season_meetings": matchup.get(
+                    "prior_season_meetings"
+                ),
             },
             "LINK-UP / COMBINATION NETWORK": {
+                "PAIRWISE LINKS": relationships,
                 "relationships": relationships,
                 "relationship_count": len(relationships),
+                "MULTI-PLAYER CHAINS": chains,
+                "multi_player_chains": chains,
+                "chain_count": len(chains),
                 "insufficient_pairs_suppressed": True,
+                "low_confidence_chains_suppressed": True,
             },
         },
     }

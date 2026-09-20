@@ -16,7 +16,7 @@ Documentation timestamp: YYYY-MM-DDTHH:MM:SS+07:00
 
 ## Documentation synchronized
 
-List the README/docs/control descriptions updated to match the resulting implementation.
+README.md update is mandatory for every PR. List the README section updated and any additional docs/control descriptions synchronized to the resulting implementation. The README `Last runtime/documentation sync` timestamp must equal `Documentation timestamp` above.
 
 ## Verification
 

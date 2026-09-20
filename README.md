@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-20T23:49:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-21T05:24:14+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -295,6 +295,8 @@ Prospective natural occurrences also retain one bounded, machine-readable accept
 
 A scoring GW still in progress is not a reason to suppress supportable next-GW analytics.
 
+When the current V6 factual plane is fresh and healthy for the routed report, with `publish_integrity=PASS` and an authoritative runtime snapshot, V12 must consume those facts and execute every supportable Canonical analytic path needed by the report. A missing proof of repository Python execution, missing precomputed repository-model artifact, or unrelated plumbing status may not by itself collapse a healthy report into broad `DEGRADED`. Only the exact unsupported field or scope may degrade, with its reason stated explicitly.
+
 ## State semantics
 
 `FPL_MASTER_STATE_V12.json` is durable context/evidence only.
@@ -327,9 +329,9 @@ Repository governance and V6 CI must remain GREEN before a bounded repair is tre
 
 ### Documentation synchronization contract
 
-Every pull request must include an ISO-8601 `Change timestamp` in its description and explicitly state `Documentation sync: UPDATED` or `Documentation sync: NOT_APPLICABLE`. Any runtime-, architecture-, control-plane-, methodology-, scheduler-, or production-governance change must use `UPDATED`, must change the relevant repository documentation in the same PR, and must include a matching `Documentation timestamp`. Documentation-only or genuinely non-runtime changes may use `NOT_APPLICABLE` only when no runtime-facing documentation becomes stale.
+Every pull request must include an ISO-8601 `Change timestamp`, `Documentation sync: UPDATED`, and a matching `Documentation timestamp` in its description. **Every repository change must update `README.md` in the same PR**, even when the implementation change is small or otherwise documentation-neutral. The README's visible `Last runtime/documentation sync` timestamp must equal the PR's `Documentation timestamp`. Relevant deeper documentation must also be updated whenever runtime, architecture, control-plane, methodology, scheduler, source activation, workflow, or governance behavior changes. `Documentation sync: NOT_APPLICABLE` is no longer accepted.
 
-The machine-enforced contract lives in `.github/workflows/repository-governance.yml`; the human-readable policy is `docs/REPOSITORY_DOCUMENTATION_SYNC_POLICY.md`. PR authors should start from `.github/PULL_REQUEST_TEMPLATE.md`.
+The README update should remain concise and describe the resulting repository/runtime truth in the relevant section; it must not become a second authority or a noisy commit log. The machine-enforced contract lives in `.github/workflows/repository-governance.yml`; the human-readable policy is `docs/REPOSITORY_DOCUMENTATION_SYNC_POLICY.md`. PR authors should start from `.github/PULL_REQUEST_TEMPLATE.md`.
 
 ## Legacy
 

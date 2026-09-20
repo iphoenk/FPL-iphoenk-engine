@@ -159,6 +159,10 @@ L. pre_suppression_role_quality = sqrt(evidence_role_score_0_1 × role_resilienc
 M. P1.6 contextual interaction does not mutate P1.1 probabilities or P1.3 goal/assist/clean-sheet/DefCon/save posteriors. Future coupling of tactical context into those posterior distributions requires a separately governed change.
 N. PLAYER QUALITY != TRANSFER ACTION COST. Hit, FT state, FT shadow value, price, bank, affordability, package constraints, exit cost and opportunity cost are forbidden from canonical_tactical_role_score and remain downstream.
 O. No named-player, club-pair, opponent-specific or one-match hindsight special case may alter P1.6 runtime logic. Any future parameter change requires settled P1.5 calibration evidence with explicit sample size; one result never creates a tactical rule.
+P. TACTICAL_EVIDENCE_CLASS is an evidence taxonomy only and has exactly four values: OBSERVED_ROLE, INFERRED_ROLE, FPL_POSITION_ONLY, UNKNOWN.
+Q. OBSERVED_ROLE requires reproducible direct tactical/role evidence. INFERRED_ROLE is a bounded inference from factual evidence and must retain explicit provenance/fingerprint where available.
+R. FPL_POSITION_ONLY means only the Official FPL position is proven. It MUST NOT be treated as observed tactical formation/role evidence. UNKNOWN means tactical evidence is insufficient or conflicting and MUST remain unavailable rather than becoming fabricated numeric precision.
+S. TACTICAL_EVIDENCE_CLASS does not independently change canonical_tactical_role_score, 20/25/30/25, P1.6 coefficients or anti-double-count controls. It classifies evidence quality only; existing P1.6 evidence availability and double-count rules remain authoritative.
 
 P1.3B V12-NATIVE JOINT EVENT PROBABILITY + POINT-DISTRIBUTION CONTRACT:
 A. P1.1 remains sole owner of P(available), START/REGULAR_CAMEO/LATE_CAMEO/DNP and finite-state xMins. P1.3/P1.3B owns player-fixture event probabilities and point-distribution construction. P1.6 remains tactical/role owner and is read-only with respect to P1.3B outputs.
@@ -193,8 +197,8 @@ K. P1.6 is consumed read-only with TACTICAL_ROLE canonical weight exactly 0.25. 
 L. For selected route publish best alternative XI and deltas for utility, mean, downside, upside, autosub value, cameo-block risk and tactical component plus reversal triggers. Compare the best route of every legal formation represented by the squad.
 M. Serious P1.7 decisions support MODEL_EVIDENCE_BINDING with input_snapshot_id, model_version, feature_version, parameter_version, calibration_version, calibration_cutoff, run_fingerprint and output_fingerprint; authority=false; raw V6 payload duplication=false.
 N. XI, bench order, captain and vice are eligible for immutable pre-deadline freeze through existing Phase 0/P1.5 evidence primitives. The frozen decision snapshot must retain the selected route plus the published alternatives considered, formation comparison, close-call proof and bound model-evidence fingerprint so the route cannot be reconstructed after results are known. Settlement keeps prediction error separate from XI regret, bench-order regret, captain regret, vice-captain consequence and cameo-block autosub regret. No post-result reconstruction and no one-match permanent rule.
-O. Migration comparison taxonomy is EXACT_EQUIVALENT, DISTRIBUTIONAL_IMPROVEMENT, AUTOSUB_OPTION_VALUE_IMPROVEMENT, CAMEO_BLOCKING_IMPROVEMENT, CAPTAIN_FALLBACK_IMPROVEMENT, BUG_FIX or UNEXPECTED_REGRESSION. Any UNEXPECTED_REGRESSION blocks ownership migration. Before ownership acceptance the legacy lineup implementation may execute as MIGRATION_ORACLE; after exact acceptance it remains CI REGRESSION_ORACLE only and must not be re-executed on every production occurrence. A production occurrence where the legacy oracle is intentionally not executed must say so truthfully and must not fabricate an equivalence classification.
-O. No V6 mutation; no P1.1/P1.3/P1.6 mathematics mutation; no Gate0 mutation; no Package Optimizer implementation; no Monte Carlo implementation; no Mini-League Overlay; no scheduler/report cadence change; no new methodology authority.
+O. Migration/equivalence evidence is STATIC ONLY. Permitted evidence is frozen static specifications, frozen fingerprints, historical artifacts already produced, V12-native tests and deterministic static comparison. V3/V4/V5 runtime execution is forbidden. MIGRATION_ORACLE execution is forbidden. CI REGRESSION_ORACLE execution is forbidden. Never execute a legacy optimizer, migration oracle, regression oracle, benchmark or performance test to establish equivalence. Publish an equivalence classification only when the frozen/static and V12-native evidence actually supports it; otherwise mark the comparison UNAVAILABLE/PARTIAL rather than fabricating a classification.
+P. No V6 mutation; no P1.1/P1.3/P1.6 mathematics mutation; no Gate0 mutation; no Package Optimizer implementation; no Monte Carlo implementation; no Mini-League Overlay; no scheduler/report cadence change; no new methodology authority.
 
 Keep 1GW, 3GW and 5GW distinct.
 
@@ -222,6 +226,42 @@ For EVERY transfer, replacement, package, challenger, Watchlist20, one-GW punt/r
 8) Only after all steps may the engine produce HOLD / START / BENCH / TRANSFER / PUNT / WAIT / PREPARE / ACT.
 9) Every serious comparison must show the best named universe alternative(s), not only compare names already mentioned by the user.
 10) If required universe coverage is incomplete, do not claim FULL-UNIVERSE OPTIMIZED. Recover the missing scope or label the decision PARTIAL and state the missing denominator.
+
+8B. OWNED15-FIRST OUTGOING DISCOVERY
+For every serious transfer/package/squad-improvement decision:
+1) Verify current OUR15 exactly before selecting any outgoing player.
+2) Evaluate ALL 15 owned players as possible structural weak-link/outgoing candidates wherever legally relevant. Never begin from a hardcoded OUT player.
+3) A player named by the user as a possible OUT is a hypothesis/requested comparator only and never becomes outgoing authority.
+4) Outgoing player(s) must emerge from the same Canonical decision chain already defined here: exact 20/25/30/25 football evidence; P(available); P(start); finite-state xMins; role/starter security; posterior/event distribution; P1.6 tactical-role evidence; GW+1; 3GW; 5GW; then downstream price/sell-value/structure economics; robustness/regret; optionality; and mini-league overlay only after the football-optimal baseline.
+5) HOLD remains the mandatory baseline. Do not force a transfer because a challenger or possible OUT was requested.
+6) For multi-transfer/package search, evaluate the legal outgoing combinations produced from OUR15, not merely routes containing one predetermined player.
+7) Do not create a second outgoing score. Weak-link/outgoing discovery consumes the existing Canonical evidence stack and package utility only.
+
+8C. WEAK-LINK-AS-RESULT GUARD
+WEAK-LINK DISCOVERY != USER-HARDCODED OUT.
+The process must be able to conclude any of: the user-mentioned OUT is genuinely the weakest; another owned player is weaker; no owned player should currently be sold; or HOLD is superior. Weak-link identity is a decision result, never an input precondition.
+
+8D. OWNED -> CHALLENGER PAIRWISE BATTLE
+For every material transfer battle, retain and expose diagnostic pairwise evidence for OWNED -> CHALLENGER.
+Minimum surface where supportable:
+owned_element_id;challenger_element_id;football_score_and_20_25_30_25_decomposition;p_available;p_start;xmins_distribution;p_return;p_blank;material_point_tails_or_haul_probability;expected_points_distribution;tactical_role_evidence;tactical_evidence_class;set_piece_penalty_role;gw_plus_1;three_gw;five_gw;price_economics;robustness;expected_regret;information_value_of_waiting;mini_league_leverage_after_football_baseline;operational_action_WAIT_PREPARE_ACT;reversal_trigger;decision_delta_or_fingerprint.
+A pairwise battle is explanatory/diagnostic evidence only. It MUST NOT become a second player score, second ranking authority or override HOLD/package utility.
+
+8E. SEARCH COMPLETENESS PROOF
+Every serious transfer/package decision retains one compact SEARCH_PROOF with exactly the search truth needed to substantiate the claim:
+OUR15_EXPECTED;
+OUR15_EVALUATED;
+ELIGIBLE_UNIVERSE_EXPECTED;
+ELIGIBLE_UNIVERSE_EVALUATED;
+OUTGOING_CANDIDATES_EVALUATED;
+OUTGOING_COMBINATIONS_EVALUATED where relevant;
+LEGAL_ROUTES_EVALUATED;
+HOLD_INCLUDED;
+LOSSY_PRUNING;
+SEARCH_AUTHORITY.
+For a complete serious transfer scan, OUR15_EXPECTED=15 and OUR15_EVALUATED=15. HOLD_INCLUDED=true is mandatory.
+SEARCH_AUTHORITY is exactly FULL or PARTIAL. FULL may be claimed only when every required denominator is proven, OUR15 is 15/15, expected/evaluated universe denominators agree, HOLD is present, and LOSSY_PRUNING=false. If any required denominator is unavailable or incomplete, SEARCH_AUTHORITY=PARTIAL.
+Never invent denominator/route counts. Unknown proof fields remain UNAVAILABLE/null. Never render FULL-UNIVERSE OPTIMIZED unless FULL authority is proven by this exact compact proof.
 
 XI/bench/formation-only decisions within an already fixed 15 do NOT need to rescan the transfer universe merely to choose XI. They MUST still use the same 20/25/30/25 football methodology plus the full probabilistic/robustness gate across all viable owned XI alternatives. If the question also asks whether the squad slot itself should be upgraded/replaced, full-universe scan becomes mandatory.
 
@@ -500,6 +540,7 @@ Visible fields:
 route;moves;transfer_cost;gw1_net;two_gw_if_relevant;three_gw;five_gw;p_beats_hold;expected_regret;robustness;price_risk;structure_effect;action_verdict.
 Never show candidate A vs candidate B without HOLD.
 If search_authority=PARTIAL, label it visibly and never claim FULL-UNIVERSE OPTIMIZED.
+For serious transfer/package routes, integrate one compact Search Proof into this existing surface: OUR15 evaluated/expected; eligible universe evaluated/expected; outgoing candidate/combinations count; legal route count; HOLD included; lossy pruning; FULL/PARTIAL authority. Material transfer alternatives show the leading OWNED -> CHALLENGER pairwise rows rather than hiding the choice behind one composite score. ALL15/OUR15 evidence must demonstrate 15/15 owned scan for FULL transfer authority. Tactical evidence class is shown only where material and does not create a new top-level report section.
 
 14I. FINAL — GW LOCK PACKAGE
 FINAL contains one unmistakable GW LOCK PACKAGE before alternatives.
@@ -713,6 +754,7 @@ V12 durable non-authoritative state is only control/fpl_master_v12/FPL_MASTER_ST
 Old Library Runtime/Spec/ACTIVE_DECISION_CONTEXT files and their clear duplicate/final copies are obsolete for V12 and MUST NOT be read as V12 authority/state. They may be deleted from Library once exact file identity is proven.
 Do not mirror Canonical V12 or State V12 into Library as mutable authority.
 No legacy Library player identity may hydrate V12. Current Official FPL/V6 canonical element_id plus current V12 State/latest explicit user state are the only permitted identity inputs. Historical Library identity values may be retained only as historical evidence outside active V12 hydration.
+V3/V4/V5 are FROZEN and may be inspected only as STATIC HISTORICAL REFERENCE, STATIC DESIGN REFERENCE or STATIC FROZEN SPECIFICATION/FINGERPRINT COMPARISON. Do not import or execute runtime_v3/runtime_v4/runtime_v5, legacy optimizers, migration oracles, regression oracles, benchmarks or performance tests. Migration/equivalence proof uses only frozen static specifications/fingerprints, historical artifacts already produced, V12-native tests and deterministic static comparison. No legacy fallback is permitted.
 
 18. ACCEPTANCE
 First natural occurrence proves implementation only.

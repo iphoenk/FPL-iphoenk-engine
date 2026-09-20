@@ -215,6 +215,7 @@ jobs:
           tests/test_transfer_search_evidence_contract.py
           tests/test_player_comparator_orchestration.py
           tests/test_natural_deep_report_orchestration.py
+          tests/test_natural_report_acceptance_observability.py
           tests/test_model_evidence_execution_binding.py
           tests/test_model_evidence_calibration.py
           tests/test_package_search_exact.py

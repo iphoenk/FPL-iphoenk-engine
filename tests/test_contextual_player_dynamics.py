@@ -1906,3 +1906,40 @@ def test_post_match_I_non_scorer_appears_in_universe_movers():
     found = next(row for row in process_rows if row["element_id"] == player)
     assert found["latest_fpl_points"] == pytest.approx(2.0)
     assert found["latest_xgi"] == pytest.approx(0.8)
+
+
+
+def test_post_match_runtime_is_wired_without_new_action_owner():
+    from pathlib import Path
+
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "engines"
+        / "prediction_service.py"
+    ).read_text(encoding="utf-8")
+    assert "build_post_match_universe_scan(" in source
+    assert "apply_post_match_universe_comparison(" in source
+    assert '"post_match_scorer_assister_only_forbidden": True' in source
+    assert '"post_match_action_enum_unchanged": "WAIT_PREPARE_ACT"' in source
+
+
+def test_canonical_defaults_to_probability_distribution_movers_not_scorers():
+    from pathlib import Path
+
+    canonical = (
+        Path(__file__).resolve().parents[1]
+        / "control"
+        / "fpl_master_v12"
+        / "FPL_MASTER_CANONICAL_V12.txt"
+    ).read_text(encoding="utf-8")
+    required = (
+        "DEFAULT POST-MATCH — UNIVERSE-WIDE TRAJECTORY / BREAKOUT / REGRESSION",
+        "Scorer/assister-only scouting is prohibited.",
+        "UNDERLYING_IMPROVING_NO_RETURN",
+        "UNIVERSE MOVERS",
+        "WHOSE PROBABILITY DISTRIBUTION HAS MATERIALLY CHANGED?",
+        "WAIT / PREPARE / ACT",
+    )
+    for token in required:
+        assert token in canonical

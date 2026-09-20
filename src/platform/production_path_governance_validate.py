@@ -53,11 +53,6 @@ def _validate_v6_watchdog(errors: list[str]) -> None:
     ):
         if marker not in text:
             errors.append(f"V6 monitoring watchdog missing required marker: {marker}")
-    if SCHEDULE_TRIGGER.search(text):
-        errors.append("V6 recovery guard must be workflow_dispatch-only; recurring recovery cron is forbidden")
-    if re.search(r"(?m)^\s*workflow_run\s*:", text):
-        errors.append("V6 recovery guard must not have workflow_run auto-trigger")
-
     for forbidden in (
         "contents: write",
         "v6-runtime-publisher",
@@ -118,6 +113,11 @@ def _validate_v6_recovery_guard(errors: list[str]) -> None:
     ):
         if marker not in text:
             errors.append(f"V6 recovery guard missing required marker: {marker}")
+    if SCHEDULE_TRIGGER.search(text):
+        errors.append("V6 recovery guard must be workflow_dispatch-only; recurring recovery cron is forbidden")
+    if re.search(r"(?m)^\s*workflow_run\s*:", text):
+        errors.append("V6 recovery guard must not have workflow_run auto-trigger")
+
     for forbidden in (
         "contents: write",
         "issues: write",

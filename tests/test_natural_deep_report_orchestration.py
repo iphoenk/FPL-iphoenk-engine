@@ -336,7 +336,16 @@ def test_weather_is_report_time_evidence_not_v6_dependency():
     available = weather_report_time_evidence(
         venue="Verified Venue",
         kickoff="2026-09-26T15:00:00+01:00",
-        weather={"temperature_c": 18, "wind_kph": 15},
+        weather={
+            "fixture": "AAA-BBB",
+            "condition": "Cloudy",
+            "temperature_c": 18,
+            "precipitation_chance_pct": 20,
+            "wind_kmh": 15,
+            "fpl_impact": "NORMAL",
+            "weather_evidence_timestamp": "2026-09-20T10:30:00+00:00",
+        },
+        fixture="AAA-BBB",
         lookup_accessible=True,
     )
     assert available["state"] == "COMPLETE"

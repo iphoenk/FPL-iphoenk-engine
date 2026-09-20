@@ -967,8 +967,20 @@ def build_decision_proof(
     if search not in SEARCH_AUTHORITIES:
         raise MethodologyContractError("search_authority must be FULL/PARTIAL")
 
+    route_type_token = str(route_type or "NORMAL").strip().upper()
+    route_implies_transfer_scope = route_type_token in {
+        "ONE_GW_PUNT",
+        "RENTAL",
+        "EXIT",
+        "TRANSFER",
+        "CHANGE",
+    }
     if decision_scope is None:
-        scope = "TRANSFER" if serious_transfer_decision else "FIXED_SQUAD"
+        scope = (
+            "TRANSFER"
+            if serious_transfer_decision or route_implies_transfer_scope
+            else "FIXED_SQUAD"
+        )
     else:
         scope = str(decision_scope or "").strip().upper()
     if scope not in DECISION_SEARCH_SCOPES:
@@ -978,6 +990,10 @@ def build_decision_proof(
     if serious_transfer_decision and scope == "FIXED_SQUAD":
         raise MethodologyContractError(
             "serious_transfer_decision cannot use FIXED_SQUAD scope"
+        )
+    if route_implies_transfer_scope and scope == "FIXED_SQUAD":
+        raise MethodologyContractError(
+            "transfer/change route_type cannot use FIXED_SQUAD scope"
         )
 
     claim = str(optimization_claim or "").strip().upper()
@@ -1113,7 +1129,7 @@ def build_decision_proof(
         "pairwise_battle_claimed": bool(pairwise_battle_claimed),
         "tactical_evidence_classes": validated_tactical_evidence,
         "serious_transfer_decision": bool(serious_transfer_decision),
-        "route_type": str(route_type or "NORMAL").upper(),
+        "route_type": route_type_token,
         "optimization_claim": effective_claim,
         "execution_provenance": execution,
         "final_action": action,

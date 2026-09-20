@@ -3,6 +3,10 @@ from __future__ import annotations
 import math
 from typing import Any, Mapping
 
+from src.engines.v12_contextual_dynamics import (
+    build_contextual_dynamics,
+    evaluate_linkup,
+)
 from src.engines.v12_player_events import (
     aggregate_gameweek,
     build_posterior_rates,
@@ -27,6 +31,8 @@ def build(
     prior_payload: dict[str, Any],
     horizon: int | None = None,
     player_features_payload: dict[str, Any] | None = None,
+    player_match_rows: list[Mapping[str, Any]] | None = None,
+    player_connection_rows: list[Mapping[str, Any]] | None = None,
     *,
     calibration_summary: Mapping[str, Any] | None = None,
     model_evidence_binding: Mapping[str, Any] | None = None,
@@ -65,6 +71,24 @@ def build(
         int(team["team_id"]): team for team in strength.get("teams") or []
     }
     historical_map = prior_payload.get("players") or {}
+    match_rows = [
+        dict(row)
+        for row in (player_match_rows or [])
+        if isinstance(row, Mapping)
+    ]
+    connection_rows = [
+        dict(row)
+        for row in (player_connection_rows or [])
+        if isinstance(row, Mapping)
+    ]
+    latest_completed_gw = max(
+        [
+            int(row.get("gw") or row.get("event") or 0)
+            for row in match_rows
+            if _f(row.get("minutes_played"), _f(row.get("minutes"))) > 0
+        ]
+        or [max(1, planning_gw - 1)]
+    )
     matchups_by_team: dict[int, list[dict[str, Any]]] = {}
     for matchup in strength.get("matchups") or []:
         for team_id in (int(matchup["team_h"]), int(matchup["team_a"])):
@@ -176,6 +200,122 @@ def build(
             <= int(matchup.get("event") or -1)
             < planning_gw + horizon
         ]
+
+        teammate_links: list[dict[str, Any]] = []
+        teammate_start_probabilities: dict[int, float] = {}
+        if match_rows:
+            target_role = tactical_role.get("profile")
+            for teammate in bootstrap.get("elements") or []:
+                teammate_id = int(teammate.get("id") or -1)
+                if teammate_id <= 0 or teammate_id == element:
+                    continue
+                if int(teammate.get("team") or -2) != team_id:
+                    continue
+                teammate_feature = feature_map.get(str(teammate_id)) or {}
+                teammate_role = (
+                    teammate_feature.get("tactical_role") or {}
+                ).get("profile")
+                link = evaluate_linkup(
+                    match_rows,
+                    match_rows,
+                    target_player_id=element,
+                    teammate_player_id=teammate_id,
+                    target_role=target_role,
+                    teammate_role=teammate_role,
+                    connection_rows=connection_rows,
+                )
+                if (
+                    _f(link.get("confidence")) > 0.0
+                    and int(link.get("shared_matches") or 0) > 0
+                ):
+                    link["target_role"] = target_role
+                    link["teammate_role"] = teammate_role
+                    teammate_links.append(link)
+                teammate_matches = int(
+                    (team_rows.get(team_id) or {}).get("matches_played") or 0
+                )
+                teammate_historical = historical_map.get(str(teammate_id)) or {}
+                teammate_context: dict[str, Any] = {
+                    "team_matches_played": teammate_matches
+                }
+                if teammate_historical:
+                    teammate_context.update(
+                        {
+                            "prior_start_probability": teammate_historical.get(
+                                "start_probability"
+                            ),
+                            "starter_minutes_prior": teammate_historical.get(
+                                "avg_minutes_when_start"
+                            ),
+                            "prior_evidence_minutes": teammate_historical.get(
+                                "minutes"
+                            ),
+                        }
+                    )
+                teammate_xmins = estimate_xmins(
+                    teammate,
+                    teammate_context,
+                    calibration_summary=calibration_summary,
+                    model_evidence_binding=model_evidence_binding,
+                )
+                teammate_start_probabilities[teammate_id] = _f(
+                    teammate_xmins.get("start_probability")
+                )
+            teammate_links.sort(
+                key=lambda row: (
+                    _f(row.get("confidence")),
+                    _f(row.get("dependency_strength")),
+                ),
+                reverse=True,
+            )
+            teammate_links = teammate_links[:5]
+
+        def fixture_key(matchup: Mapping[str, Any]) -> str:
+            gw_value = int(matchup.get("event") or matchup.get("gw") or 0)
+            return str(
+                matchup.get("fixture")
+                or matchup.get("id")
+                or (
+                    f"gw{gw_value}:{matchup.get('team_h')}:"
+                    f"{matchup.get('team_a')}:"
+                    f"{matchup.get('kickoff_time') or 'unknown'}"
+                )
+            )
+
+        contextual_by_fixture: dict[str, dict[str, Any]] = {}
+        if match_rows:
+            for matchup in fixtures:
+                opponent_id = (
+                    int(matchup.get("team_a") or -1)
+                    if int(matchup.get("team_h") or -1) == team_id
+                    else int(matchup.get("team_h") or -1)
+                )
+                current_context = {
+                    "manager_id": matchup.get("opponent_manager_id"),
+                    "formation": matchup.get("opponent_formation"),
+                    "block_height": matchup.get("opponent_block_height"),
+                    "pressing_style": matchup.get("opponent_pressing_style"),
+                    "cb_personnel": matchup.get("opponent_cb_personnel"),
+                    "fb_personnel": matchup.get("opponent_fb_personnel"),
+                    "midfield_structure": matchup.get(
+                        "opponent_midfield_structure"
+                    ),
+                    "player_role": tactical_role.get("profile"),
+                }
+                contextual_by_fixture[fixture_key(matchup)] = (
+                    build_contextual_dynamics(
+                        match_rows,
+                        player_id=element,
+                        current_gw=latest_completed_gw,
+                        opponent_team_id=opponent_id,
+                        current_context=current_context,
+                        linkups=teammate_links,
+                        teammate_start_probabilities=(
+                            teammate_start_probabilities
+                        ),
+                    )
+                )
+
         by_gw = []
         for gw in range(planning_gw, planning_gw + horizon):
             details = [
@@ -188,6 +328,9 @@ def build(
                     league_baseline=strength.get("baseline") or {},
                     calibration_summary=calibration_summary,
                     model_evidence_binding=model_evidence_binding,
+                    contextual_dynamics=contextual_by_fixture.get(
+                        fixture_key(matchup)
+                    ),
                 )
                 for matchup in fixtures
                 if int(matchup.get("event") or -1) == gw
@@ -295,6 +438,37 @@ def build(
                 "xpts_by_gw": by_gw,
                 "horizons": horizons,
                 "projection_confidence": xmins.get("confidence"),
+                "contextual_dynamics": {
+                    "status": (
+                        "AVAILABLE"
+                        if contextual_by_fixture
+                        else "UNAVAILABLE"
+                    ),
+                    "latest_completed_gw": latest_completed_gw,
+                    "fixture_contexts": [
+                        {
+                            "fixture": key,
+                            "trajectory_classification": (
+                                (value.get("trajectory") or {}).get(
+                                    "trajectory_classification"
+                                )
+                            ),
+                            "latest_match_evidence": (
+                                (value.get("trajectory") or {}).get(
+                                    "latest_match_evidence"
+                                )
+                            ),
+                            "matchup": value.get(
+                                "opponent_specific_matchup"
+                            ),
+                            "linkup_network": value.get("linkup_network"),
+                            "event_multipliers": value.get(
+                                "event_multipliers"
+                            ),
+                        }
+                        for key, value in contextual_by_fixture.items()
+                    ],
+                },
             }
         )
 
@@ -328,6 +502,10 @@ def build(
             "v12_native_event_engine": True,
             "p1_1_minutes_owner": "src/engines/v12_player_minutes.py",
             "p1_3_event_owner": "src/engines/v12_player_events.py",
+            "contextual_dynamics_owner": (
+                "src/engines/v12_contextual_dynamics.py"
+            ),
+            "contextual_dynamics_reuses_existing_v6_player_match_rows": True,
             "legacy_projection_components_migration_oracle_only": True,
             "multi_fixture_dependency_assumption": "ZERO_CROSS_FIXTURE_COVARIANCE_NOT_MODELLED_YET",
             "p1_3b_joint_event_distribution": True,

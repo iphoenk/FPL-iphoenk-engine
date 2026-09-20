@@ -990,7 +990,7 @@ def evaluate_mini_league_overlay(
     # Critical ordering: baseline exists and is fingerprinted before league
     # exposure is allowed into route preference.
     baseline = build_football_baseline(package_utility, monte_carlo)
-    baseline_fp_before = baseline["football_baseline_fingerprint"]
+    baseline_immutable_fp = fingerprint(baseline)
     routes = _route_map(package_utility)
     baseline_route = routes[baseline["route_id"]]
 
@@ -1030,7 +1030,7 @@ def evaluate_mini_league_overlay(
             }
         )
 
-    if fingerprint(baseline) != baseline_fp_before:
+    if fingerprint(baseline) != baseline_immutable_fp:
         raise MiniLeagueOverlayError("football baseline mutated by overlay")
 
     baseline_row = next(

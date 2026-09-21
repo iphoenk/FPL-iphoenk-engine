@@ -492,3 +492,17 @@ def test_integrated_runner_requires_match_level_foundation_before_projection():
 def test_integrated_runner_source_compiles():
     source = Path(runner.__file__).read_text(encoding="utf-8")
     compile(source, str(runner.__file__), "exec")
+
+
+
+def test_stage1_complete_universe_keeps_s14_truthfully_degraded_for_stage2():
+    source = Path(runner.__file__).read_text(encoding="utf-8")
+    assert (
+        "Stage 1 canonical universe is complete; Stage 2 "
+        in source
+    )
+    assert (
+        "STAGE_2_PACKAGE_FRONTIER_AND_MATERIAL_MONTE_CARLO_"
+        in source
+    )
+    assert '"S14": _section(' in source

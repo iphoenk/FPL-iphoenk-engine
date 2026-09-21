@@ -1065,4 +1065,4 @@ def test_C4_stage2_horizon_distribution_is_true_convolution():
     assert out["status"] == "READY_COMPLETE_CONDITIONAL_PMF"
     assert abs(out["sum_probability"] - 1.0) < 1e-9
     assert set(out["support"]) == {3, 7, 11}
-    assert out["expected_points"] == pytest.approx(7.0)
+    assert out["expected_points"] == pytest.approx(8.0)

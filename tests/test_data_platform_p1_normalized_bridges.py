@@ -217,3 +217,102 @@ def test_no_name_matching_turns_understat_or_fotmob_green():
 
     assert datasets["understat"]["record_groups"]["players"][0]["identity_status"] == "UNMAPPED"
     assert all(row["identity_status"] == "UNMAPPED" for row in datasets["fotmob"]["record_groups"]["teams"])
+
+
+
+def test_official_fpl_event_live_history_normalizes_exact_match_rows():
+    results = {
+        "official_fpl": {
+            "source_id": "official_fpl",
+            "health": "GREEN",
+            "effective_state": "LIVE_CHANGED",
+            "checked_at": "2026-09-21T14:00:00Z",
+            "current_run_action": "FETCHED",
+            "official_history": {
+                "status": "GREEN",
+                "finished_gws": [1],
+                "available_gws": [1],
+                "missing_gws": [],
+            },
+            "official": {
+                "bootstrap": {
+                    "elements": [
+                        {
+                            "id": 1,
+                            "team": 1,
+                            "element_type": 3,
+                        }
+                    ]
+                },
+                "fixtures": [
+                    {
+                        "id": 10,
+                        "event": 1,
+                        "team_h": 1,
+                        "team_a": 2,
+                        "team_h_score": 2,
+                        "team_a_score": 0,
+                        "kickoff_time": "2026-08-15T19:00:00Z",
+                    }
+                ],
+                "event_live": {
+                    "1": {
+                        "elements": [
+                            {
+                                "id": 1,
+                                "stats": {
+                                    "minutes": 90,
+                                    "starts": 1,
+                                    "goals_scored": 1,
+                                    "assists": 0,
+                                    "expected_goals": "0.72",
+                                    "expected_assists": "0.15",
+                                    "expected_goal_involvements": "0.87",
+                                    "expected_goals_conceded": "0.55",
+                                    "clean_sheets": 1,
+                                    "goals_conceded": 0,
+                                    "saves": 0,
+                                    "penalties_saved": 0,
+                                    "penalties_missed": 0,
+                                    "yellow_cards": 0,
+                                    "red_cards": 0,
+                                    "bonus": 2,
+                                    "bps": 30,
+                                    "defensive_contribution": 6,
+                                    "clearances_blocks_interceptions": 5,
+                                    "recoveries": 7,
+                                    "tackles": 2,
+                                    "creativity": "18.0",
+                                    "influence": "34.0",
+                                    "threat": "52.0",
+                                    "total_points": 8,
+                                },
+                                "explain": [{"fixture": 10, "stats": []}],
+                            }
+                        ]
+                    }
+                },
+            },
+        }
+    }
+
+    dataset = build_source_native_datasets(results, {})["official_fpl"]
+    assert dataset["normalization_status"] == "NORMALIZED"
+    assert dataset["authority"] == "OFFICIAL_FPL"
+    assert dataset["history_coverage"]["finished_gws"] == [1]
+    assert dataset["history_coverage"]["missing_gws"] == []
+    row = dataset["record_groups"]["player_matches"][0]
+    assert row["official_element_id"] == 1
+    assert row["official_fixture_id"] == 10
+    assert row["official_opponent_team_id"] == 2
+    assert row["identity_status"] == "EXACT"
+    assert row["fixture_identity_status"] == "EXACT"
+    assert row["opponent_identity_status"] == "EXACT"
+    assert row["gw"] == 1
+    assert row["home"] is True
+    assert row["minutes"] == 90
+    assert row["starter"] is True
+    assert row["xg"] == 0.72
+    assert row["xgi"] == 0.87
+    assert row["fpl_points"] == 8
+    assert row["fixture_resolution_method"] == "OFFICIAL_EXPLAIN_FIXTURE"

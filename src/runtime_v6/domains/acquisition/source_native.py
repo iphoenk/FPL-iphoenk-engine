@@ -138,6 +138,173 @@ def _dataset(
     return out
 
 
+def _official_fpl(
+    payload: dict[str, Any],
+    identity_map: dict[str, Any],
+) -> dict[str, Any]:
+    del identity_map
+    official = payload.get("official") or {}
+    bootstrap = official.get("bootstrap")
+    fixtures = official.get("fixtures")
+    event_live = official.get("event_live")
+    bootstrap = bootstrap if isinstance(bootstrap, dict) else {}
+    fixtures = fixtures if isinstance(fixtures, list) else []
+    event_live = event_live if isinstance(event_live, dict) else {}
+
+    players = {
+        int(row.get("id")): row
+        for row in bootstrap.get("elements") or []
+        if isinstance(row, dict) and _int(row.get("id")) is not None
+    }
+    fixtures_by_id = {
+        int(row.get("id")): row
+        for row in fixtures
+        if isinstance(row, dict) and _int(row.get("id")) is not None
+    }
+    position_map = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
+    rows: list[dict[str, Any]] = []
+    skipped = {
+        "missing_player": 0,
+        "missing_exact_fixture": 0,
+        "team_not_in_fixture": 0,
+    }
+
+    for gw_text, live in sorted(
+        event_live.items(),
+        key=lambda item: _int(item[0]) or 0,
+    ):
+        gw = _int(gw_text)
+        if gw is None or not isinstance(live, dict):
+            continue
+        for element in live.get("elements") or []:
+            if not isinstance(element, dict):
+                continue
+            element_id = _int(element.get("id"))
+            player = players.get(element_id or -1)
+            if player is None:
+                skipped["missing_player"] += 1
+                continue
+            stats = element.get("stats")
+            stats = stats if isinstance(stats, dict) else {}
+            fixture_ids = sorted(
+                {
+                    fixture_id
+                    for row in element.get("explain") or []
+                    if isinstance(row, dict)
+                    and (fixture_id := _int(row.get("fixture"))) is not None
+                }
+            )
+            if len(fixture_ids) != 1:
+                skipped["missing_exact_fixture"] += 1
+                continue
+            fixture_id = fixture_ids[0]
+            fixture = fixtures_by_id.get(fixture_id)
+            if not isinstance(fixture, dict):
+                skipped["missing_exact_fixture"] += 1
+                continue
+
+            team_id = _int(player.get("team"))
+            team_h = _int(fixture.get("team_h"))
+            team_a = _int(fixture.get("team_a"))
+            if team_id is None or team_id not in {team_h, team_a}:
+                skipped["team_not_in_fixture"] += 1
+                continue
+            home = team_id == team_h
+            opponent = team_a if home else team_h
+            if opponent is None:
+                skipped["missing_exact_fixture"] += 1
+                continue
+
+            rows.append(
+                {
+                    "source_native_player_id": element_id,
+                    "source_native_fixture_id": fixture_id,
+                    "source_native_opponent_team_id": opponent,
+                    "official_element_id": element_id,
+                    "identity_status": "EXACT",
+                    "official_fixture_id": fixture_id,
+                    "fixture_identity_status": "EXACT",
+                    "official_opponent_team_id": opponent,
+                    "opponent_identity_status": "EXACT",
+                    "gw": gw,
+                    "position": position_map.get(
+                        _int(player.get("element_type"))
+                    ),
+                    "team_id": team_id,
+                    "minutes": _int(stats.get("minutes")) or 0,
+                    "starts": _int(stats.get("starts")) or 0,
+                    "starter": (_int(stats.get("starts")) or 0) > 0,
+                    "home": home,
+                    "kickoff_time": fixture.get("kickoff_time"),
+                    "team_h_score": _int(fixture.get("team_h_score")),
+                    "team_a_score": _int(fixture.get("team_a_score")),
+                    "goals": _int(stats.get("goals_scored")) or 0,
+                    "assists": _int(stats.get("assists")) or 0,
+                    "xg": _float(stats.get("expected_goals")),
+                    "xa": _float(stats.get("expected_assists")),
+                    "xgi": _float(
+                        stats.get("expected_goal_involvements")
+                    ),
+                    "xgc": _float(
+                        stats.get("expected_goals_conceded")
+                    ),
+                    "clean_sheets": _int(stats.get("clean_sheets")) or 0,
+                    "goals_conceded": _int(stats.get("goals_conceded")) or 0,
+                    "saves": _int(stats.get("saves")) or 0,
+                    "penalties_saved": _int(stats.get("penalties_saved")) or 0,
+                    "penalties_missed": _int(stats.get("penalties_missed")) or 0,
+                    "yellow_cards": _int(stats.get("yellow_cards")) or 0,
+                    "red_cards": _int(stats.get("red_cards")) or 0,
+                    "bonus": _int(stats.get("bonus")) or 0,
+                    "bps": _int(stats.get("bps")) or 0,
+                    "defensive": _float(
+                        stats.get("defensive_contribution")
+                    ),
+                    "clearances_blocks_interceptions": _float(
+                        stats.get("clearances_blocks_interceptions")
+                    ),
+                    "recoveries": _float(stats.get("recoveries")),
+                    "tackles": _float(stats.get("tackles")),
+                    "creativity": _float(stats.get("creativity")),
+                    "influence": _float(stats.get("influence")),
+                    "threat": _float(stats.get("threat")),
+                    "fpl_points": _int(stats.get("total_points")) or 0,
+                    "source": "official_fpl",
+                    "dataset": "event_live",
+                    "fixture_resolution_method": "OFFICIAL_EXPLAIN_FIXTURE",
+                    "source_checked_at": payload.get("checked_at"),
+                }
+            )
+
+    history = payload.get("official_history") or {}
+    status = (
+        "NORMALIZED"
+        if rows and history.get("status") == "GREEN"
+        else "PARTIAL"
+        if rows
+        else "EMPTY_OR_SCHEMA_UNAVAILABLE"
+    )
+    dataset = _dataset(
+        source_id="official_fpl",
+        payload=payload,
+        semantic_class="NORMALIZED_FACT",
+        authority="OFFICIAL_FPL",
+        record_groups={"player_matches": rows},
+        normalization_status=status,
+    )
+    dataset["history_coverage"] = {
+        "finished_gws": list(history.get("finished_gws") or []),
+        "available_gws": list(history.get("available_gws") or []),
+        "missing_gws": list(history.get("missing_gws") or []),
+        "normalized_match_rows": len(rows),
+        "skipped_rows": skipped,
+        "fixture_resolution": "OFFICIAL_EXPLAIN_FIXTURE_ONLY",
+        "aggregate_gw_stats_split_across_dgw": False,
+        "ambiguous_fixture_rows_fabricated": False,
+    }
+    return dataset
+
+
 def _vaastav(payload: dict[str, Any], identity_map: dict[str, Any]) -> dict[str, Any]:
     player_reverse = _reverse_links(identity_map, "vaastav_fpl", "player")
     team_reverse = _reverse_links(identity_map, "vaastav_fpl", "team")
@@ -575,6 +742,7 @@ def build_source_native_datasets(
     results: dict[str, dict[str, Any]], identity_map: dict[str, Any]
 ) -> dict[str, dict[str, Any]]:
     parsers = {
+        "official_fpl": _official_fpl,
         "vaastav_fpl": _vaastav,
         "understat": _understat,
         "fotmob": _fotmob,

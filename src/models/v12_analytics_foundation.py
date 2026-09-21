@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-"""Read-only V12 analytics foundation over normalized V6 factual artifacts.
-
-This module is not a factual authority, source adapter, scheduler, model owner,
-or runner.  It consumes only V6-published normalized facts and fails closed
-when the match-level contract is incomplete.
-"""
+"""Read-only V12 analytics foundation over normalized V6 factual artifacts."""
 
 from pathlib import Path
 from typing import Any, Mapping
 import json
 
+from src.models.v12_stage1_analytics import (
+    build_hierarchical_priors,
+    distribution_selection_matrix,
+    opponent_adjust_match_rows,
+    probabilistic_tactical_states,
+    walk_forward_validate,
+)
 
 JOINABLE = {"EXACT", "VERIFIED", "VERIFIED_MANUAL"}
 
@@ -28,7 +30,8 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _latest_completed_gw(
-    bootstrap: Mapping[str, Any], planning_gw: int
+    bootstrap: Mapping[str, Any],
+    planning_gw: int,
 ) -> int:
     finished = [
         int(row.get("id") or 0)
@@ -50,7 +53,10 @@ def _row_is_joinable(row: Mapping[str, Any]) -> bool:
 
 
 def _feature_status(
-    rows: list[dict[str, Any]], field: str, *, required: bool
+    rows: list[dict[str, Any]],
+    field: str,
+    *,
+    required: bool,
 ) -> dict[str, Any]:
     populated = sum(row.get(field) is not None for row in rows)
     total = len(rows)
@@ -75,10 +81,10 @@ def load_v6_analytics_foundation(
     *,
     bootstrap: Mapping[str, Any],
     planning_gw: int,
+    strength: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     normalized = _read_json(
-        runtime_data_root
-        / "data/v6/normalized/sources/vaastav_fpl.json"
+        runtime_data_root / "data/v6/normalized/sources/vaastav_fpl.json"
     )
     groups = normalized.get("record_groups") or {}
     raw_rows = [
@@ -98,6 +104,11 @@ def load_v6_analytics_foundation(
     )
     max_gw = max(observed_gws or [0])
     rejected = len(raw_rows) - len(rows)
+    official = {
+        int(row.get("id")): dict(row)
+        for row in bootstrap.get("elements") or []
+        if int(row.get("id") or 0) > 0
+    }
 
     required_core = (
         "official_element_id",
@@ -152,23 +163,27 @@ def load_v6_analytics_foundation(
         "set_piece_style",
         "substitution_tendencies",
     )
-    matrix = [
-        _feature_status(rows, field, required=True)
-        for field in required_core
-    ] + [
-        _feature_status(rows, field, required=False)
-        for field in optional_known
-    ] + [
-        {
-            "feature": field,
-            "available_rows": 0,
-            "total_rows": len(rows),
-            "coverage": 0.0,
-            "required": False,
-            "status": "UNAVAILABLE_REQUIRES_OTHER_FACTUAL_SOURCE",
-        }
-        for field in explicitly_unavailable
-    ]
+    matrix = (
+        [
+            _feature_status(rows, field, required=True)
+            for field in required_core
+        ]
+        + [
+            _feature_status(rows, field, required=False)
+            for field in optional_known
+        ]
+        + [
+            {
+                "feature": field,
+                "available_rows": 0,
+                "total_rows": len(rows),
+                "coverage": 0.0,
+                "required": False,
+                "status": "UNAVAILABLE_REQUIRES_OTHER_FACTUAL_SOURCE",
+            }
+            for field in explicitly_unavailable
+        ]
+    )
 
     blockers: list[str] = []
     if str(normalized.get("source_health") or "").upper() != "GREEN":
@@ -186,80 +201,114 @@ def load_v6_analytics_foundation(
     missing_core = [
         row["feature"]
         for row in matrix
-        if row.get("required")
-        and row.get("status") != "AVAILABLE"
+        if row.get("required") and row.get("status") != "AVAILABLE"
     ]
     if missing_core:
         blockers.append(
-            "REQUIRED_MATCH_FEATURES_INCOMPLETE=" + ",".join(missing_core)
+            "REQUIRED_MATCH_FEATURES_INCOMPLETE="
+            + ",".join(missing_core)
         )
 
-    match_rows = [
-        {
-            "player_id": int(row["official_element_id"]),
-            "element": int(row["official_element_id"]),
-            "fixture": int(row["official_fixture_id"]),
-            "match_id": int(row["official_fixture_id"]),
-            "opponent_team_id": int(row["official_opponent_team_id"]),
-            "opponent": int(row["official_opponent_team_id"]),
-            "gw": int(row.get("gw") or 0),
-            "home": bool(row.get("home")),
-            "minutes": row.get("minutes"),
-            "minutes_played": row.get("minutes"),
-            "starter": bool(row.get("starter")),
-            "position": row.get("position"),
-            "goals": row.get("goals"),
-            "assists": row.get("assists"),
-            "xg": row.get("xg"),
-            "xa": row.get("xa"),
-            "xgi": row.get("xgi"),
-            "xgc": row.get("xgc"),
-            "clean_sheets": row.get("clean_sheets"),
-            "goals_conceded": row.get("goals_conceded"),
-            "saves": row.get("saves"),
-            "penalties_saved": row.get("penalties_saved"),
-            "penalties_missed": row.get("penalties_missed"),
-            "bonus": row.get("bonus"),
-            "bps": row.get("bps"),
-            "defensive": row.get("defensive"),
-            "clearances_blocks_interceptions": row.get(
-                "clearances_blocks_interceptions"
-            ),
-            "recoveries": row.get("recoveries"),
-            "tackles": row.get("tackles"),
-            "fpl_points": row.get("fpl_points"),
-            "source": row.get("source") or "vaastav_fpl",
-            "dataset": row.get("dataset") or "merged_gw",
-            "freshness": normalized.get("effective_at"),
-            "provenance": {
-                "source_id": normalized.get("source_id"),
-                "source_snapshot_ids": normalized.get("source_snapshot_ids"),
-                "normalization_version": normalized.get(
-                    "normalization_version"
+    match_rows = []
+    for row in rows:
+        gw = int(row.get("gw") or 0)
+        if not 1 <= gw <= completed_gw:
+            continue
+        element = int(row["official_element_id"])
+        player = official.get(element) or {}
+        position = row.get("position") or {
+            1: "GK",
+            2: "DEF",
+            3: "MID",
+            4: "FWD",
+        }.get(int(player.get("element_type") or 0))
+        match_rows.append(
+            {
+                "player_id": element,
+                "element": element,
+                "team_id": int(player.get("team") or 0),
+                "fixture": int(row["official_fixture_id"]),
+                "match_id": int(row["official_fixture_id"]),
+                "opponent_team_id": int(
+                    row["official_opponent_team_id"]
                 ),
-                "identity_status": row.get("identity_status"),
-                "fixture_identity_status": row.get(
-                    "fixture_identity_status"
+                "opponent": int(row["official_opponent_team_id"]),
+                "gw": gw,
+                "home": bool(row.get("home")),
+                "minutes": row.get("minutes"),
+                "minutes_played": row.get("minutes"),
+                "starter": bool(row.get("starter")),
+                "position": position,
+                "actual_role": None,
+                "goals": row.get("goals"),
+                "assists": row.get("assists"),
+                "xg": row.get("xg"),
+                "xa": row.get("xa"),
+                "xgi": row.get("xgi"),
+                "xgc": row.get("xgc"),
+                "clean_sheets": row.get("clean_sheets"),
+                "goals_conceded": row.get("goals_conceded"),
+                "saves": row.get("saves"),
+                "penalties_saved": row.get("penalties_saved"),
+                "penalties_missed": row.get("penalties_missed"),
+                "bonus": row.get("bonus"),
+                "bps": row.get("bps"),
+                "defensive": row.get("defensive"),
+                "clearances_blocks_interceptions": row.get(
+                    "clearances_blocks_interceptions"
                 ),
-                "opponent_identity_status": row.get(
-                    "opponent_identity_status"
-                ),
-            },
-        }
-        for row in rows
-        if 1 <= int(row.get("gw") or 0) <= completed_gw
-    ]
+                "recoveries": row.get("recoveries"),
+                "tackles": row.get("tackles"),
+                "fpl_points": row.get("fpl_points"),
+                "source": row.get("source") or "vaastav_fpl",
+                "dataset": row.get("dataset") or "merged_gw",
+                "freshness": normalized.get("effective_at"),
+                "provenance": {
+                    "source_id": normalized.get("source_id"),
+                    "source_snapshot_ids": normalized.get(
+                        "source_snapshot_ids"
+                    ),
+                    "normalization_version": normalized.get(
+                        "normalization_version"
+                    ),
+                    "identity_status": row.get("identity_status"),
+                    "fixture_identity_status": row.get(
+                        "fixture_identity_status"
+                    ),
+                    "opponent_identity_status": row.get(
+                        "opponent_identity_status"
+                    ),
+                },
+            }
+        )
 
-    status = "MATCH_FOUNDATION_READY" if not blockers else "BLOCKED"
+    adjusted = opponent_adjust_match_rows(match_rows, strength or {})
+    hierarchy = build_hierarchical_priors(adjusted)
+    distributions = distribution_selection_matrix(adjusted)
+    validation = walk_forward_validate(adjusted)
+    tactical_states = probabilistic_tactical_states(
+        bootstrap,
+        adjusted,
+    )
+
+    match_ready = not blockers
+    stage1_ready = bool(
+        match_ready
+        and validation.get("status") == "PASS"
+        and hierarchy.get("players")
+        and distributions.get("matrix")
+    )
     return {
-        "contract": "V12_ANALYTICS_FOUNDATION_V1",
-        "status": status,
-        "stage1_full_foundation_ready": False,
+        "contract": "V12_ANALYTICS_FOUNDATION_V2",
+        "status": "MATCH_FOUNDATION_READY" if match_ready else "BLOCKED",
+        "stage1_full_foundation_ready": stage1_ready,
         "stage1_full_foundation_reason": (
-            "Advanced player/tactical/GK features, formal opponent-strength "
-            "adjustment, distribution-selection validation, hierarchical "
-            "posterior uncertainty and full xMins state split remain separate "
-            "Stage-1 gaps until validated; they are never fabricated here."
+            None
+            if stage1_ready
+            else (
+                "required match facts or walk-forward/statistical "
+                "diagnostics are not execution-ready"
+            )
         ),
         "planning_gw": int(planning_gw),
         "latest_completed_gw": completed_gw,
@@ -269,26 +318,63 @@ def load_v6_analytics_foundation(
         "rejected_identity_rows": rejected,
         "blockers": blockers,
         "feature_matrix": matrix,
-        "player_match_rows": match_rows,
-        "opponent_history_rows": match_rows,
+        "player_match_rows": adjusted,
+        "opponent_history_rows": adjusted,
         "opponent_history_scope": "CURRENT-SEASON ONLY",
-        "historical_prior": {"model": None, "season": None, "players": {}},
-        "player_features_payload": {},
+        "historical_prior": {
+            "model": None,
+            "season": None,
+            "players": {},
+        },
+        "player_features_payload": {
+            "contract": "V12_STAGE1_FOUNDATION_V2",
+            "model_opt_in": True,
+            "stage1_hierarchical_priors": hierarchy.get("players") or {},
+            "stage1_distribution_selection": distributions,
+            "stage1_walk_forward_validation": validation,
+            "stage1_tactical_states": tactical_states,
+        },
+        "opponent_adjustment": {
+            "status": "AVAILABLE" if adjusted else "UNAVAILABLE",
+            "attack_strength": "SUPPORTED",
+            "defence_strength": "SUPPORTED",
+            "home_advantage": "SUPPORTED_VENUE_SPECIFIC",
+            "set_piece_attack": "UNAVAILABLE",
+            "set_piece_defence": "UNAVAILABLE",
+            "transition_attack": "UNAVAILABLE",
+            "transition_defence": "UNAVAILABLE",
+            "aerial_attack": "UNAVAILABLE",
+            "aerial_defence": "UNAVAILABLE",
+            "league_position_primary": False,
+        },
+        "hierarchical_bayesian": hierarchy,
+        "distribution_selection": distributions,
+        "walk_forward_validation": validation,
+        "probabilistic_tactical_states": tactical_states,
         "governance": {
             "v6_only_factual_input": True,
             "name_or_fuzzy_join_forbidden": True,
             "season_aggregate_only_forbidden": True,
             "missing_features_fabricated": False,
+            "unknown_tactical_state_explicit": True,
             "new_model_owner_created": False,
         },
     }
 
 
-def require_match_foundation(payload: Mapping[str, Any]) -> dict[str, Any]:
+def require_match_foundation(
+    payload: Mapping[str, Any],
+) -> dict[str, Any]:
     if str(payload.get("status") or "") != "MATCH_FOUNDATION_READY":
-        blockers = payload.get("blockers") or ["UNKNOWN_FOUNDATION_BLOCKER"]
+        blockers = payload.get("blockers") or [
+            "UNKNOWN_FOUNDATION_BLOCKER"
+        ]
         raise AnalyticsFoundationError(
             "match-by-match factual foundation unavailable: "
             + ";".join(str(value) for value in blockers)
+        )
+    if payload.get("stage1_full_foundation_ready") is not True:
+        raise AnalyticsFoundationError(
+            "Stage-1 statistical foundation diagnostics are not green"
         )
     return dict(payload)

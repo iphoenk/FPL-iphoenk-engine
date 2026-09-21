@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "audit_id": "V12_STAGE1_ANALYTICS_COMPLETION_2026_09_21",
-  "observed_at": "2026-09-21T20:07:00+07:00",
+  "observed_at": "2026-09-21T21:08:00+07:00",
   "authority": "EVIDENCE_ONLY_NON_AUTHORITATIVE",
   "baseline": {
     "main_sha": "4955f91ab2ba560a0221a4d42a6fd672eafcd277",
@@ -128,33 +128,26 @@
     ]
   ],
   "capability_classification": {
-    "full_universe": "B/C: producer exists; occurrence wiring/foundation incomplete",
-    "match_by_match": "F->B after merged_gw publication: V6 request/normalizer added; current runtime artifact not yet published",
-    "opponent_adjustment": "D: existing team_strength is regularized score/Official-strength blend, not requested latent attack/defence/set-piece/transition/aerial model",
-    "recency": "A/B: explicit exponential recency exists in contextual dynamics but is not combined with opponent weight per match",
-    "coach_formation_role": "C/F: observed-context code exists; production factual payload not governed/wired for full universe",
-    "change_point": "D: heuristic sustained-role/start-rate regime detection exists; no formal posterior/CUSUM/LR and no P(role stable)",
-    "weights_20_25_30_25": "A authority / C producer: weights locked; full numeric universe component producer incomplete",
-    "bayesian_posterior": "D: shrinkage/posterior-rate machinery exists; parameter uncertainty is point-estimate/partial, not requested hierarchical full posterior with credible intervals",
-    "distribution_selection": "D: governed Poisson/bivariate-Poisson structures exist but no target-by-target data-driven overdispersion/zero-rate candidate selection matrix",
-    "p1_1_xmins": "C/D: native owner exists; states do not yet split START_FULL/START_SUBBED/EARLY_SUB and runner lacked match-row context",
-    "horizons": "A owner / B runner fixed: owner publishes 1/3/5/10/15; runner short-horizon pin removed",
-    "package_frontier": "B/C downstream blocked by canonical universe",
-    "monte_carlo": "A governance / C execution prerequisites unavailable; no fabrication",
-    "renderer": "A: catalog rendered; correctly does not rescue incomplete analytics",
-    "pre_render": "A gate: correctly failed controlled run"
+    "full_universe": "A implementation: exact Canonical 20/25/30/25 producer consumes existing owner outputs only; runtime acceptance pending",
+    "match_by_match": "A implementation / runtime pending: V6 merged_gw request + deterministic player/fixture/opponent normalization implemented",
+    "opponent_adjustment": "A supported core: venue-specific attack/defence team-strength weights applied to historical observations; unsupported set-piece/transition/aerial dimensions remain explicit UNAVAILABLE",
+    "recency": "A: historical weight is recency × opponent-strength × regime weight",
+    "coach_formation_role": "A/F by evidence: explicit probabilistic UNKNOWN state when factual coach/formation/role data is unavailable; no FPL-position-as-role fabrication",
+    "change_point": "A: Beta-Binomial Bayes-factor regime diagnostic publishes P(change), P(role stable), old-regime weight, and forbids hard reset",
+    "weights_20_25_30_25": "A: exact 20/25/30/25 canonical producer with anti-double-count guards",
+    "bayesian_posterior": "A bounded implementation: hierarchical empirical-Bayes priors feed the existing P1.3 owner; credible intervals/sample exposure published; no second posterior owner",
+    "distribution_selection": "A: per-position/target diagnostics select among governed candidate families; generic Erlang use forbidden",
+    "p1_1_xmins": "A: six-state START_FULL/START_SUBBED/EARLY_SUB/CAMEO/LATE_CAMEO/DNP with P(60+); prior-only split preserves legacy moments/exposure exactly",
+    "horizons": "A: P1.3 remains sole horizon owner and publishes 1/3/5/10/15; runner no longer pins a shorter horizon",
+    "package_frontier": "Stage 2 only; intentionally not started by Stage 1",
+    "monte_carlo": "A compatibility only: existing MC consumer understands six-state P1.1; Stage 2 material MC execution remains not started",
+    "renderer": "A: renderer remains downstream and cannot mask analytics gaps",
+    "pre_render": "A gate: required tests prove runner source compilation and Stage 1 contracts"
   },
   "exact_gaps_to_finish_stage1": [
-    "publish and validate V6 Vaastav merged_gw through current completed GW with deterministic identity coverage",
-    "add/validate factual advanced per-match features required for shots/SoT/box touches/big chances/key passes/crosses/team shares and GK PSxG/xGOT/errors where supportable",
-    "wire governed coach/formation/role factual state for both teams without inferring unavailable tactics",
-    "implement opponent-weighted historical normalization with home advantage and validated latent strength dimensions",
-    "replace heuristic-only change detection with validated regime probability and P(role stable)",
-    "add data-driven distribution diagnostics/selection and preserve simple model when complex model does not improve walk-forward metrics",
-    "upgrade posterior uncertainty to hierarchical priors where evidence supports and expose credible intervals/sample exposure",
-    "extend P1.1 finite states to requested START_FULL/START_SUBBED/EARLY_SUB/CAMEO/LATE_CAMEO/DNP semantics with validated substitution timing",
-    "run walk-forward calibration/backtest and compare naive/aggregate/recency/opponent-adjusted/Bayesian variants",
-    "complete V12-native numeric 20/25/30/25 full-universe producer without double counting"
+    "merge the CI-GREEN Stage 1 implementation to main",
+    "publish a fresh V6 runtime snapshot containing normalized vaastav_fpl player_matches through the current completed GW",
+    "run one controlled DEEP integrated-report acceptance on the published runtime and require the Stage 1 analytics ledger / canonical universe / PRE_RENDER / POST_RENDER / HUMAN_FACING gates to pass"
   ],
   "stage1_green": false,
   "stage2_started": false,
@@ -165,6 +158,11 @@
     "new_scheduler": false,
     "new_methodology_authority": false,
     "qa_relaxed": false,
-    "renderer_used_to_mask_analytics": false
-  }
+    "renderer_used_to_mask_analytics": false,
+    "p1_1_legacy_moments_preserved_without_substitution_evidence": true,
+    "stage2_execution_started": false
+  },
+  "stage1_implementation_green": true,
+  "required_ci_green": true,
+  "runtime_acceptance_pending": true
 }

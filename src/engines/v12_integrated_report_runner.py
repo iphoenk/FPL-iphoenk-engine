@@ -290,6 +290,10 @@ def _extract_squad(
         if sum(formation_counts.values()) == 10
         else "UNAVAILABLE"
     )
+    name_by_id = {
+        int(row["element_id"]): str(row.get("player_name") or row["element_id"])
+        for row in rows
+    }
     return {
         "status": "COMPLETE",
         "source": source,
@@ -300,6 +304,7 @@ def _extract_squad(
         "captain": captain,
         "vice": vice,
         "formation": formation,
+        "name_by_id": name_by_id,
     }
 
 
@@ -392,6 +397,7 @@ def _package_stage(
     squad: Mapping[str, Any],
     universe: Sequence[Mapping[str, Any]],
     current_team: Mapping[str, Any],
+    canonical_universe_count: int | None,
 ) -> dict[str, Any]:
     if squad.get("status") != "COMPLETE":
         return {
@@ -439,13 +445,23 @@ def _package_stage(
         bank = int(bank_raw) if bank_raw is not None else 0
     except (TypeError, ValueError):
         bank = 0
+    observed_universe_count = len(candidate_rows)
+    expected_source_count = (
+        int(canonical_universe_count)
+        if canonical_universe_count is not None
+        else observed_universe_count
+    )
+    source_universe_complete = (
+        expected_source_count > 0
+        and observed_universe_count == expected_source_count
+    )
     try:
         result = search_packages(
             current_squad=squad_rows,
             candidate_universe=candidate_rows,
             bank=bank,
             max_transfers=1,
-            universe_complete=len(candidate_rows) >= 15,
+            universe_complete=source_universe_complete,
             expected_eligible_universe_count=None,
             lossy_pruning=False,
             execution_mode="BATCH",
@@ -457,12 +473,23 @@ def _package_stage(
             "reason": f"{type(exc).__name__}:{exc}",
             "search_result": None,
         }
+    search_authority = str(result.get("search_authority") or "").upper()
     return {
-        "status": "PARTIAL",
+        "status": "PASS" if search_authority == "FULL" else "PARTIAL",
         "reason": (
-            "P1.2A full-universe one-transfer route search executed; "
+            None
+            if search_authority == "FULL"
+            else (
+                "P1.2A source universe is not proven complete; "
+                f"observed={observed_universe_count} expected={expected_source_count}"
+            )
+        ),
+        "utility_reason": (
             "P1.2B utility ranking requires occurrence-bound P1.1/P1.3/P1.7 projections"
         ),
+        "source_universe_count": observed_universe_count,
+        "expected_source_universe_count": expected_source_count,
+        "source_universe_complete": source_universe_complete,
         "search_result": result,
     }
 
@@ -501,6 +528,10 @@ def _section_payloads(
     by_id = {int(row["element_id"]): row for row in owned_rows}
     xi_ids = list(squad.get("xi_ids") or [])
     bench_ids = list(squad.get("bench_ids") or [])
+    name_by_id = {
+        int(key): str(value)
+        for key, value in dict(squad.get("name_by_id") or {}).items()
+    }
     bench_gk = next(
         (
             element
@@ -557,6 +588,7 @@ def _section_payloads(
             "state": "DEGRADED",
             "degradation_reason": "direct-chat weather/news enrichment occurs after runner bundle",
             "content": {
+                "WEATHER_SOURCE": "DEGRADED",
                 "fixture_scope": "V6 factual fixture evidence available; direct weather/news enrichment is external to repository runner.",
             },
         },
@@ -568,10 +600,13 @@ def _section_payloads(
             ),
             "content": {
                 "formation": squad.get("formation"),
-                "XI": ", ".join(str(value) for value in xi_ids),
-                "BENCH": ", ".join(str(value) for value in bench_ids),
-                "bench_gk": bench_gk,
-                "outfield_autosub_priority": outfield_bench,
+                "XI": ", ".join(name_by_id.get(int(value), str(value)) for value in xi_ids),
+                "BENCH": ", ".join(name_by_id.get(int(value), str(value)) for value in bench_ids),
+                "bench_gk": name_by_id.get(int(bench_gk), str(bench_gk)) if bench_gk is not None else "UNAVAILABLE",
+                "outfield_autosub_priority": [
+                    name_by_id.get(int(value), str(value))
+                    for value in outfield_bench
+                ],
             },
         },
         "S07": {
@@ -648,6 +683,7 @@ def _section_payloads(
             "state": "DEGRADED",
             "degradation_reason": mini.get("reason") or "mini-league evidence unavailable",
             "content": {
+                "MINI_LEAGUE_SOURCE": "DEGRADED",
                 "standings_generated_at": mini.get("generated_at") or "UNAVAILABLE",
                 "top10": top_rows,
             },
@@ -904,13 +940,27 @@ def run(
     rise = {**rise_native, "rank20_rows": rise_rows}
     fall = {**fall_native, "rank20_rows": fall_rows}
 
+    publish_integrity = dict(_json(root / "data/v6/health/publish_integrity.json", {}) or {})
+    identity = publish_integrity.get("identity")
+    canonical_universe_count = None
+    if isinstance(identity, Mapping):
+        players_identity = identity.get("players")
+        if isinstance(players_identity, Mapping):
+            for key in ("canonical_count", "canonical", "count"):
+                value = players_identity.get(key)
+                try:
+                    canonical_universe_count = int(value)
+                except (TypeError, ValueError):
+                    continue
+                else:
+                    break
     package = _package_stage(
         squad=squad,
         universe=universe,
         current_team=current_team,
+        canonical_universe_count=canonical_universe_count,
     )
     mini = _mini_league_stage(root)
-    publish_integrity = dict(_json(root / "data/v6/health/publish_integrity.json", {}) or {})
     report_prefetch = dict(_json(root / "data/v6/health/report_prefetch.json", {}) or {})
 
     section_payloads, visible_contract, evidence = _section_payloads(
@@ -1002,6 +1052,9 @@ def run(
             reason=package.get("reason"),
             evidence={
                 "search_proof": ((package.get("search_result") or {}).get("search_proof") if isinstance(package.get("search_result"), Mapping) else None),
+                "source_universe_count": package.get("source_universe_count"),
+                "expected_source_universe_count": package.get("expected_source_universe_count"),
+                "source_universe_complete": package.get("source_universe_complete"),
             },
         ),
         _runner_stage(

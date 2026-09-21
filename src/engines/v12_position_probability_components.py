@@ -1541,3 +1541,79 @@ def select_scoreline_model(
         ),
         "sophistication_not_forced": True,
     }
+
+
+def scoreline_clean_sheet_probabilities(
+    selection: Mapping[str, Any],
+    home_xg: float,
+    away_xg: float,
+    *,
+    max_goals: int = 10,
+) -> dict[str, float]:
+    """Return CS marginals from the empirically selected scoreline family."""
+    model = str(selection.get("selected") or "POISSON")
+    home_xg = max(0.01, float(home_xg))
+    away_xg = max(0.01, float(away_xg))
+    candidate = dict((selection.get("candidates") or {}).get(model) or {})
+    parameter = _f(candidate.get("parameter"), 0.0)
+
+    def pois(lam: float, value: int) -> float:
+        return math.exp(-lam) * lam ** value / math.factorial(value)
+
+    def joint(h: int, a: int) -> float:
+        if model == "DIXON_COLES":
+            rho = parameter
+            tau = 1.0
+            if h == 0 and a == 0:
+                tau = 1.0 - home_xg * away_xg * rho
+            elif h == 0 and a == 1:
+                tau = 1.0 + home_xg * rho
+            elif h == 1 and a == 0:
+                tau = 1.0 + away_xg * rho
+            elif h == 1 and a == 1:
+                tau = 1.0 - rho
+            return max(
+                0.0,
+                pois(home_xg, h) * pois(away_xg, a) * max(1e-6, tau),
+            )
+        if model == "BIVARIATE_POISSON":
+            shared = min(
+                max(0.0, parameter),
+                home_xg * 0.8,
+                away_xg * 0.8,
+            )
+            lh = max(1e-6, home_xg - shared)
+            la = max(1e-6, away_xg - shared)
+            total = 0.0
+            for k in range(0, min(h, a) + 1):
+                total += (
+                    lh ** (h - k)
+                    / math.factorial(h - k)
+                    * la ** (a - k)
+                    / math.factorial(a - k)
+                    * shared ** k
+                    / math.factorial(k)
+                )
+            return math.exp(-(lh + la + shared)) * total
+        return pois(home_xg, h) * pois(away_xg, a)
+
+    grid = {
+        (h, a): joint(h, a)
+        for h in range(max_goals + 1)
+        for a in range(max_goals + 1)
+    }
+    total = sum(grid.values()) or 1.0
+    home_cs = sum(
+        probability
+        for (h, a), probability in grid.items()
+        if a == 0
+    ) / total
+    away_cs = sum(
+        probability
+        for (h, a), probability in grid.items()
+        if h == 0
+    ) / total
+    return {
+        "home_clean_sheet_probability": _clamp(home_cs, 0.0, 1.0),
+        "away_clean_sheet_probability": _clamp(away_cs, 0.0, 1.0),
+    }

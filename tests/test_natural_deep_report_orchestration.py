@@ -151,6 +151,8 @@ def test_watchlist_full_universe_produces_exact_5_5_5_5_not_zero():
     assert result["state"] == "COMPLETE"
     assert result["available_count"] == 20
     assert result["position_counts"] == {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}
+    assert [row["display_rank"] for row in result["rows"]] == list(range(1, 21))
+    assert all(row["ownership_tag"] == "NON_OWNED" for row in result["rows"])
 
 
 def test_watchlist_partial_degrades_at_field_level_instead_of_blank_collapse():
@@ -465,7 +467,16 @@ def test_real_price_artifact_data_players_produces_exact20_with_visible_directio
     assert all(row["price_fact"] == "FACT" for row in rise["rows"] + fall["rows"])
     assert all(row["predictor_classification"] == "MODEL" for row in rise["rows"] + fall["rows"])
     assert all(row["direction"] in {"RISE", "FALL", "NEUTRAL"} for row in rise["rows"] + fall["rows"])
-    assert all("rank" not in row for row in rise["rows"] + fall["rows"])
+    assert [row["rank"] for row in rise["rows"]] == list(range(1, 21))
+    assert [row["rank"] for row in fall["rows"]] == list(range(1, 21))
+    assert all(
+        row["ownership_tag"] in {"OWNED", "NON_OWNED"}
+        for row in rise["rows"] + fall["rows"]
+    )
+    assert all(
+        len(row["raw_payload_hash"]) == 64
+        for row in rise["rows"] + fall["rows"]
+    )
     assert all("next_official_price_cycle_uk" in row for row in rise["rows"] + fall["rows"])
     assert all("next_official_price_cycle_wib" in row for row in rise["rows"] + fall["rows"])
 
@@ -1702,3 +1713,95 @@ def test_price_signal_visible_identity_is_verified_official_fpl_predictor_guidan
     assert row["estimate_source"] == "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR"
     assert "Official FPL Price Change Predictor" in row["visible_source_label"]
     assert "not a guarantee" in row["visible_source_label"]
+
+
+
+def test_deep_renderer_emits_actual_r6_visible_contract_surfaces():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    our15 = [
+        {
+            "element_id": index,
+            "player": f"Owned-{index}",
+            "opponent": 20,
+            "p_available": 1.0,
+            "p_start": 0.9,
+            "p_cameo": 0.05,
+            "p_dnp": 0.05,
+            "xmins": 80,
+            "tactical_role": 60,
+            "gw_plus_1": 5,
+            "three_gw": 15,
+            "five_gw": 25,
+            "action": "HOLD",
+        }
+        for index in range(1, 16)
+    ]
+    xi = [
+        {"element": index, "name": f"Owned-{index}"}
+        for index in range(1, 12)
+    ]
+    bench = {
+        "gk": {"element": 12, "name": "Owned-12"},
+        "order": [
+            {"element": 13, "name": "Owned-13"},
+            {"element": 14, "name": "Owned-14"},
+            {"element": 15, "name": "Owned-15"},
+        ],
+    }
+    watch = build_watchlist20(
+        evaluated_universe=_universe(),
+        owned_element_ids=list(range(1, 16)),
+        universe_authority="FULL",
+    )
+    price_artifact = _crossing_contract_price_artifact()
+    rise = build_price20(
+        predictor_artifact=price_artifact,
+        direction="RISE",
+    )
+    fall = build_price20(
+        predictor_artifact=price_artifact,
+        direction="FALL",
+    )
+    sections = {
+        "S02": {"state": "COMPLETE", "content": {"rows": our15}},
+        "S05": {
+            "state": "COMPLETE",
+            "content": {"weather_source": "DEGRADED"},
+        },
+        "S06": {
+            "state": "COMPLETE",
+            "content": {
+                "formation": "5-3-2",
+                "starting_xi": xi,
+                "bench": bench,
+            },
+        },
+        "S11": {"state": "COMPLETE", "content": {"rows": watch["rows"]}},
+        "S12": {"state": "COMPLETE", "content": rise},
+        "S13": {"state": "COMPLETE", "content": fall},
+        "S15": {
+            "state": "COMPLETE",
+            "content": {
+                "FACT": "OFFICIAL_FPL_OCCURRENCE_FACTS",
+                "MODEL": "V12_OCCURRENCE_MODEL_OUTPUTS",
+                "INFERENCE": "V12_DECISION_INFERENCE",
+            },
+        },
+        "S15B": {
+            "state": "COMPLETE",
+            "content": {"mini_league_denominator": "COMPLETE"},
+        },
+        "S16": {"state": "COMPLETE", "content": {"rows": our15}},
+    }
+    report = materialize_deep_report(
+        canonical_text=canonical,
+        section_payloads=sections,
+    )
+    body = render_deep_text(report)
+    assert "XI: " in body
+    assert "BENCH: " in body
+    assert "WEATHER SOURCE: DEGRADED" in body
+    assert "MINI LEAGUE DENOMINATOR: COMPLETE" in body
+    assert "FACT: OFFICIAL_FPL_OCCURRENCE_FACTS" in body
+    assert "| raw_payload_hash |" in body
+    assert "| ownership_tag |" in body

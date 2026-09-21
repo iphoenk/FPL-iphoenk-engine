@@ -760,6 +760,16 @@ def run_deep(
             "reason": universe_gap["reason"],
         }
     )
+    _skip_stage(
+        ledger,
+        "P1_2_PACKAGE_UTILITY",
+        "full canonical 20/25/30/25 ranking is prerequisite for utility-ranked packages",
+    )
+    _skip_stage(
+        ledger,
+        "P1_4_MONTE_CARLO",
+        "supportable material route distributions are unavailable until canonical universe/package utility is complete",
+    )
 
     lineup_state = "COMPLETE" if lineup else "DEGRADED"
     lineup_reason = None if lineup else "P1.7 owner did not produce a supportable route"
@@ -902,8 +912,16 @@ def run_deep(
             mini_reason,
         ),
         "S16": _section(
-            "COMPLETE",
+            "COMPLETE" if projections else "DEGRADED",
             {"rows": (all15 or {}).get("rows", [])},
+            (
+                None
+                if projections
+                else (
+                    "P1.1/P1.3 occurrence projection unavailable: "
+                    + (projection_failure or "UNKNOWN_PROJECTION_FAILURE")
+                )
+            ),
             available_count=len((all15 or {}).get("rows", [])),
             expected_count=15,
         ),

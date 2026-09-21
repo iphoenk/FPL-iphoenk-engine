@@ -8,7 +8,9 @@ report structures while keeping repository-Python execution truth separate
 from ChatGPT/V12 analytic execution truth.
 """
 
+import json
 import re
+from hashlib import sha256
 from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, Sequence
 from zoneinfo import ZoneInfo
@@ -178,10 +180,13 @@ def build_watchlist20(
         counts[position] = len(chosen)
         selected.extend(chosen)
 
-    for row in selected:
+    for display_rank, row in enumerate(selected, start=1):
         row.pop("_input_index", None)
         row.pop("_canonical_rank", None)
         row.pop("_football_score", None)
+        row["display_rank"] = display_rank
+        row["owned"] = False
+        row["ownership_tag"] = "NON_OWNED"
 
     complete = len(selected) == 20 and all(counts.get(pos) == 5 for pos in POSITIONS)
     if authority == "FULL" and complete:
@@ -629,6 +634,78 @@ def build_price20(
             row.pop("_artifact_index", None)
         usable_count = len(selected)
         adapter = "COMPACT_COMPAT"
+
+    payload_hash = sha256(
+        json.dumps(
+            artifact.get("data") or artifact,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            default=str,
+        ).encode("utf-8")
+    ).hexdigest()
+    for rank, row in enumerate(selected, start=1):
+        confidence = row.get("confidence")
+        if isinstance(confidence, Mapping):
+            confidence_visible = ";".join(
+                f"{key}={value}"
+                for key, value in confidence.items()
+                if value is not None
+            )
+        else:
+            confidence_visible = str(confidence or "UNAVAILABLE")
+        row.update(
+            {
+                "rank": rank,
+                "player_name": row.get("player"),
+                "ownership_percent": row.get(
+                    "selected_by_percent",
+                    "UNAVAILABLE",
+                ),
+                "ownership_tag": (
+                    "OWNED"
+                    if int(row.get("element_id") or -1) in owned_ids
+                    else "NON_OWNED"
+                ),
+                "current_progress_percent": row.get(
+                    "official_or_provider_progress",
+                    "UNAVAILABLE",
+                ),
+                "projection_offset_0_percent": row.get(
+                    "projected_percent",
+                    "UNAVAILABLE",
+                ),
+                "predicted_change_cycle": row.get(
+                    "cycles_to_expected_change",
+                    "UNAVAILABLE",
+                ),
+                "predicted_change_at": row.get(
+                    "estimated_change_at_wib",
+                    "UNAVAILABLE",
+                ),
+                "eta_human": row.get(
+                    "eta_context",
+                    row.get(
+                        "estimated_change_window",
+                        "UNAVAILABLE",
+                    ),
+                ),
+                "model_urgency": row.get(
+                    "prediction_strength",
+                    "UNAVAILABLE",
+                ),
+                "confidence_visible": confidence_visible,
+                "source": row.get(
+                    "artifact_source",
+                    "official_price_predictor",
+                ),
+                "observed_at": row.get(
+                    "evidence_timestamp",
+                    evidence_timestamp or "UNAVAILABLE",
+                ),
+                "raw_payload_hash": payload_hash,
+            }
+        )
 
     enough = len(selected) == 20
     healthy = health in {"GREEN", "HEALTHY", "PASS", "CURRENT", "OK"}
@@ -2037,6 +2114,171 @@ def _human_label(value: Any) -> str:
     return str(value or "").strip().replace("_", " ").upper()
 
 
+def _visible_cell(value: Any) -> str:
+    if value is None:
+        return "UNAVAILABLE"
+    if isinstance(value, Mapping):
+        compact = [
+            f"{key}={subvalue}"
+            for key, subvalue in value.items()
+            if subvalue is not None
+        ]
+        value = ";".join(compact) if compact else "UNAVAILABLE"
+    text = str(value).replace("|", "/").replace("\n", " ").strip()
+    return text or "UNAVAILABLE"
+
+
+def _render_visible_table(
+    rows: Sequence[Mapping[str, Any]],
+    columns: Sequence[tuple[str, str]],
+) -> list[str]:
+    headers = [header for header, _ in columns]
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join("---" for _ in headers) + " |",
+    ]
+    for row in rows:
+        lines.append(
+            "| "
+            + " | ".join(
+                _visible_cell(row.get(field))
+                for _, field in columns
+            )
+            + " |"
+        )
+    return lines
+
+
+_OUR15_VISIBLE_COLUMNS = (
+    ("element_id", "element_id"),
+    ("player", "player"),
+    ("opponent", "opponent"),
+    ("p_available", "p_available"),
+    ("p_start", "p_start"),
+    ("p_cameo", "p_cameo"),
+    ("p_dnp", "p_dnp"),
+    ("xmins", "xmins"),
+    ("tactical_role", "tactical_role"),
+    ("gw_plus_1", "gw_plus_1"),
+    ("three_gw", "three_gw"),
+    ("five_gw", "five_gw"),
+    ("action", "action"),
+)
+
+_WATCHLIST_VISIBLE_COLUMNS = (
+    ("rank", "display_rank"),
+    ("element_id", "element_id"),
+    ("player", "name"),
+    ("position", "position"),
+    ("team_id", "team_id"),
+    ("price", "now_cost"),
+    ("football_score", "football_score"),
+    ("ownership_tag", "ownership_tag"),
+)
+
+_PRICE20_VISIBLE_COLUMNS = (
+    ("rank", "rank"),
+    ("element_id", "element_id"),
+    ("player_name", "player_name"),
+    ("current_price", "current_price"),
+    ("ownership_percent", "ownership_percent"),
+    ("ownership_tag", "ownership_tag"),
+    ("direction", "direction"),
+    ("current_progress_percent", "current_progress_percent"),
+    ("projection_offset_0_percent", "projection_offset_0_percent"),
+    ("predicted_change_cycle", "predicted_change_cycle"),
+    ("predicted_change_at", "predicted_change_at"),
+    ("eta_human", "eta_human"),
+    ("model_urgency", "model_urgency"),
+    ("confidence", "confidence_visible"),
+    ("source", "source"),
+    ("observed_at", "observed_at"),
+    ("raw_payload_hash", "raw_payload_hash"),
+)
+
+
+def _render_deep_contract_surface(
+    section_id: str,
+    content: Mapping[str, Any],
+) -> tuple[list[str], set[str]]:
+    section = str(section_id or "").upper()
+    payload = dict(content or {})
+    if section in {"S02", "S16"}:
+        rows = [
+            dict(row)
+            for row in payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        return (
+            _render_visible_table(rows, _OUR15_VISIBLE_COLUMNS),
+            {"rows"},
+        )
+    if section == "S06":
+        xi = [
+            dict(row)
+            for row in payload.get("starting_xi") or []
+            if isinstance(row, Mapping)
+        ]
+        bench = dict(payload.get("bench") or {})
+        reserve = (
+            dict(bench.get("gk") or {})
+            if isinstance(bench.get("gk"), Mapping)
+            else {}
+        )
+        outfield = [
+            dict(row)
+            for row in bench.get("order") or []
+            if isinstance(row, Mapping)
+        ]
+        xi_names = [
+            str(row.get("name") or row.get("element"))
+            for row in xi
+        ]
+        bench_names = []
+        if reserve:
+            bench_names.append(
+                str(reserve.get("name") or reserve.get("element"))
+            )
+        bench_names.extend(
+            str(row.get("name") or row.get("element"))
+            for row in outfield
+        )
+        return (
+            [
+                "XI: " + ", ".join(xi_names),
+                "BENCH: " + ", ".join(bench_names),
+            ],
+            {"starting_xi", "bench"},
+        )
+    if section == "S11":
+        rows = [
+            dict(row)
+            for row in payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        return (
+            _render_visible_table(
+                rows,
+                _WATCHLIST_VISIBLE_COLUMNS,
+            ),
+            {"rows"},
+        )
+    if section in {"S12", "S13"}:
+        rows = [
+            dict(row)
+            for row in payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        return (
+            _render_visible_table(
+                rows,
+                _PRICE20_VISIBLE_COLUMNS,
+            ),
+            {"rows"},
+        )
+    return [], set()
+
+
 def _render_generic_human_content(
     content: Mapping[str, Any] | None,
     *,
@@ -2237,9 +2479,18 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
                     section_state=state,
                 )
             )
+        contract_lines, contract_excluded = (
+            _render_deep_contract_surface(
+                str(section_id or ""),
+                content_map,
+            )
+        )
+        if contract_lines:
+            lines.extend(contract_lines)
         generic = _render_generic_human_content(
             content_map,
             excluded_keys=(
+                *contract_excluded,
                 "post_match_match_by_match_scout",
                 "mathematical_decision_stack",
                 "package_search_proof",

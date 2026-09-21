@@ -327,3 +327,66 @@ def test_ad_hoc_e2e_reuses_v6_and_requires_receipt_without_scheduler_proof():
 
 def test_wave10_closeout_requires_ad_hoc_on_demand_e2e_evidence():
     assert "ad_hoc_on_demand_e2e_pass" in CLOSEOUT_EVIDENCE_KEYS
+
+def test_ad_hoc_deep_serious_decision_rejects_missing_visible_mathematical_stack():
+    compute = _compute()
+    compute["serious_decision_required"] = True
+    manifest = [
+        {"section_id": section_id, "status": "COMPLETE"}
+        for section_id in MANDATORY_SECTIONS
+    ]
+    pre = validate_pre_render_qa(
+        compute_contract=compute,
+        section_manifest=manifest,
+        mini_league_denominator_complete=True,
+        report_mode="DEEP",
+        weather_contract_state="DIRECT_CHATGPT",
+    )
+    assert pre["status"] == "PASS"
+    assert pre["serious_decision_required"] is True
+    assert "MATHEMATICAL DECISION STACK" in pre["required_visible_markers"]
+
+    missing_body = valid_visible_body(pre, include_serious_math=False)
+    failed = validate_post_render_qa(
+        pre_render_qa=pre,
+        rendered_body=missing_body,
+        rendered_section_ids=pre["expected_section_ids"],
+        rendered_section_states={
+            row["section_id"]: row["status"]
+            for row in pre["section_manifest"]
+        },
+        rendered_compute_fingerprint=compute["compute_fingerprint"],
+        render_contract_token=pre["render_contract_token"],
+        rendered_counts=pre["expected_counts"],
+        rendered_fact_keys=pre["expected_fact_keys"],
+        rendered_model_keys=pre["expected_model_keys"],
+        rendered_mini_league_denominator_complete=True,
+        rendered_weather_contract_state="DIRECT_CHATGPT",
+        truncated=False,
+    )
+    assert failed["status"] == "FAIL"
+    assert any(
+        "VISIBLE_REQUIRED_MARKER_MISSING=MATHEMATICAL DECISION STACK" in failure
+        for failure in failed["failures"]
+    )
+
+    complete_body = valid_visible_body(pre, include_serious_math=True)
+    passed = validate_post_render_qa(
+        pre_render_qa=pre,
+        rendered_body=complete_body,
+        rendered_section_ids=pre["expected_section_ids"],
+        rendered_section_states={
+            row["section_id"]: row["status"]
+            for row in pre["section_manifest"]
+        },
+        rendered_compute_fingerprint=compute["compute_fingerprint"],
+        render_contract_token=pre["render_contract_token"],
+        rendered_counts=pre["expected_counts"],
+        rendered_fact_keys=pre["expected_fact_keys"],
+        rendered_model_keys=pre["expected_model_keys"],
+        rendered_mini_league_denominator_complete=True,
+        rendered_weather_contract_state="DIRECT_CHATGPT",
+        truncated=False,
+    )
+    assert passed["status"] == "PASS"
+

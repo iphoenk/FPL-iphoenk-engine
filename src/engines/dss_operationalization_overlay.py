@@ -307,7 +307,7 @@ def _price_intelligence(spec: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
         and contract.get("current_progress_field") == "price_change_percent"
         and contract.get("projected_progress_field") == "price_change_projections"
         and contract.get("likelihood_preserved_raw") is True
-        and contract.get("threshold_is_official_rule") is False
+        and contract.get("threshold_is_official_rule") is True
         and contract.get("no_intra_cycle_crossing_eta") is True
     )
     health_status = str(health.get("status") or "FAIL")

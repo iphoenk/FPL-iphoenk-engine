@@ -308,6 +308,274 @@ def select_count_distribution(
     }
 
 
+def _binomial_pmf(
+    trials: int,
+    probability: float,
+) -> dict[int, float]:
+    n = max(0, int(trials))
+    p = _clamp(float(probability), 0.0, 1.0)
+    if n == 0:
+        return {0: 1.0}
+    if p <= 0.0:
+        return {0: 1.0}
+    if p >= 1.0:
+        return {n: 1.0}
+    q = 1.0 - p
+    return {
+        k: math.comb(n, k) * p ** k * q ** (n - k)
+        for k in range(n + 1)
+    }
+
+
+def _beta_binomial_pmf(
+    trials: int,
+    alpha: float,
+    beta: float,
+) -> dict[int, float]:
+    n = max(0, int(trials))
+    a = max(1e-6, float(alpha))
+    b = max(1e-6, float(beta))
+    if n == 0:
+        return {0: 1.0}
+    log_beta_ab = math.lgamma(a) + math.lgamma(b) - math.lgamma(a + b)
+    out: dict[int, float] = {}
+    for k in range(n + 1):
+        log_choose = (
+            math.lgamma(n + 1)
+            - math.lgamma(k + 1)
+            - math.lgamma(n - k + 1)
+        )
+        log_beta_post = (
+            math.lgamma(k + a)
+            + math.lgamma(n - k + b)
+            - math.lgamma(n + a + b)
+        )
+        out[k] = math.exp(log_choose + log_beta_post - log_beta_ab)
+    return _normalize_pmf(out)
+
+
+def _gk_save_pmf_from_model(
+    model: Mapping[str, Any],
+    projected_sot_mean: float,
+    *,
+    max_sot: int = 35,
+) -> dict[int, float]:
+    sot_model = dict(model.get("sot_count_model") or {})
+    sot_pmf = _count_pmf_from_model(
+        sot_model,
+        max(0.0, projected_sot_mean),
+        max_count=max_sot,
+    )
+    conditional = dict(model.get("conditional_save_model") or {})
+    family = str(conditional.get("family") or "BINOMIAL")
+    save_probability = _clamp(
+        _f(conditional.get("posterior_save_probability"), 0.70),
+        0.0,
+        1.0,
+    )
+    alpha = _f(conditional.get("posterior_alpha"), 0.5)
+    beta = _f(conditional.get("posterior_beta"), 0.5)
+    out: dict[int, float] = {}
+    for sot, sot_mass in sot_pmf.items():
+        save_given_sot = (
+            _beta_binomial_pmf(int(sot), alpha, beta)
+            if family == "BETA_BINOMIAL"
+            else _binomial_pmf(int(sot), save_probability)
+        )
+        for saves, conditional_mass in save_given_sot.items():
+            out[int(saves)] = (
+                out.get(int(saves), 0.0)
+                + float(sot_mass) * float(conditional_mass)
+            )
+    return _normalize_pmf(out)
+
+
+def _gk_sot_save_model(
+    match_rows: Sequence[Mapping[str, Any]],
+    *,
+    xmins: float,
+    opponent_volume_multiplier: float,
+    fallback_save_rate90: float,
+) -> dict[str, Any]:
+    rows = [
+        dict(row)
+        for row in match_rows
+        if _f(row.get("minutes")) > 0.0
+        and row.get("saves") is not None
+        and row.get("goals_conceded") is not None
+    ]
+    sot_observations = [
+        max(0.0, _f(row.get("saves")) + _f(row.get("goals_conceded")))
+        for row in rows
+    ]
+    save_observations = [
+        max(0.0, _f(row.get("saves")))
+        for row in rows
+    ]
+    total_minutes = sum(_f(row.get("minutes")) for row in rows)
+    total_saves = sum(save_observations)
+    total_conceded = sum(
+        max(0.0, _f(row.get("goals_conceded"))) for row in rows
+    )
+    total_sot = total_saves + total_conceded
+
+    posterior_alpha = 0.5 + total_saves
+    posterior_beta = 0.5 + total_conceded
+    posterior_save_probability = (
+        posterior_alpha / (posterior_alpha + posterior_beta)
+    )
+    if total_minutes > 0.0 and total_sot > 0.0:
+        sot_rate90 = 90.0 * total_sot / total_minutes
+        sot_rate_source = "OFFICIAL_SAVES_PLUS_GOALS_CONCEDED"
+    else:
+        sot_rate90 = max(
+            0.0,
+            fallback_save_rate90 / max(0.20, posterior_save_probability),
+        )
+        sot_rate_source = "INFERRED_FROM_P1_3_SAVE_RATE_AND_SHRUNK_SAVE_PCT"
+
+    projected_sot_mean = (
+        sot_rate90
+        * max(0.0, xmins)
+        / 90.0
+        * max(0.0, opponent_volume_multiplier)
+    )
+    sot_model = select_count_distribution(
+        sot_observations,
+        projected_sot_mean,
+        max_count=35,
+        label="GK_SHOTS_ON_TARGET_FACED",
+    )
+
+    ratios = [
+        _f(row.get("saves"))
+        / max(
+            1e-9,
+            _f(row.get("saves")) + _f(row.get("goals_conceded")),
+        )
+        for row in rows
+        if _f(row.get("saves")) + _f(row.get("goals_conceded")) > 0.0
+    ]
+    ratio_variance = _sample_variance(ratios)
+    mean_sot_nonzero = _safe_mean(
+        [
+            value
+            for value in sot_observations
+            if value > 0.0
+        ]
+    )
+    binomial_ratio_variance = (
+        posterior_save_probability
+        * (1.0 - posterior_save_probability)
+        / max(1.0, mean_sot_nonzero)
+    )
+    use_beta_binomial = bool(
+        len(ratios) >= 4
+        and ratio_variance > binomial_ratio_variance * 1.15
+    )
+    conditional_family = (
+        "BETA_BINOMIAL" if use_beta_binomial else "BINOMIAL"
+    )
+
+    model: dict[str, Any] = {
+        "model": "GK_SOT_THEN_CONDITIONAL_SAVE_V1",
+        "sot_count_model": sot_model,
+        "conditional_save_model": {
+            "family": conditional_family,
+            "selection_rule": (
+                "BETA_BINOMIAL_IF_N_GE_4_AND_SAVE_RATIO_VARIANCE_GT_"
+                "1_15_X_BINOMIAL_EXPECTATION_ELSE_BINOMIAL"
+            ),
+            "sample_size": len(ratios),
+            "posterior_alpha": round(posterior_alpha, 6),
+            "posterior_beta": round(posterior_beta, 6),
+            "posterior_save_probability": round(
+                posterior_save_probability, 6
+            ),
+            "observed_save_ratio_variance": round(ratio_variance, 6),
+            "binomial_expected_ratio_variance": round(
+                binomial_ratio_variance, 6
+            ),
+            "selected_by_empirical_dispersion": True,
+        },
+        "sot_rate90": round(sot_rate90, 6),
+        "sot_rate_source": sot_rate_source,
+        "projected_sot_mean": round(projected_sot_mean, 6),
+        "empirical": {
+            "match_count": len(rows),
+            "total_saves": round(total_saves, 6),
+            "total_goals_conceded": round(total_conceded, 6),
+            "sot_faced_proxy_total": round(total_sot, 6),
+            "save_percentage": (
+                round(total_saves / total_sot, 6)
+                if total_sot > 0.0
+                else None
+            ),
+            "sot_faced_definition": "official_saves_plus_goals_conceded",
+            "psxg_xgot": None,
+            "goals_prevented": None,
+            "psxg_xgot_status": "UNAVAILABLE_IN_CURRENT_V6_FACTUAL_SURFACE",
+            "goals_prevented_status": "UNAVAILABLE_IN_CURRENT_V6_FACTUAL_SURFACE",
+        },
+    }
+    full_save_pmf = _gk_save_pmf_from_model(
+        model, projected_sot_mean
+    )
+    replicated_mean, replicated_variance = _pmf_moments(full_save_pmf)
+    actual_mean = _safe_mean(save_observations)
+    actual_variance = _sample_variance(save_observations)
+    actual_zero = (
+        sum(value <= 1e-12 for value in save_observations)
+        / len(save_observations)
+        if save_observations
+        else None
+    )
+    model["posterior_predictive"] = {
+        "actual_mean": (
+            round(actual_mean, 6) if save_observations else None
+        ),
+        "replicated_mean": round(replicated_mean, 6),
+        "actual_variance": (
+            round(actual_variance, 6)
+            if len(save_observations) >= 2
+            else None
+        ),
+        "replicated_variance": round(replicated_variance, 6),
+        "actual_zero_rate": (
+            None if actual_zero is None else round(actual_zero, 6)
+        ),
+        "replicated_zero_rate": round(
+            float(full_save_pmf.get(0, 0.0)), 6
+        ),
+        "actual_threshold_rates": {
+            str(threshold): (
+                round(
+                    sum(value >= threshold for value in save_observations)
+                    / len(save_observations),
+                    6,
+                )
+                if save_observations
+                else None
+            )
+            for threshold in (3, 6, 9, 12)
+        },
+        "replicated_threshold_rates": {
+            str(threshold): round(
+                _pmf_tail(full_save_pmf, threshold), 6
+            )
+            for threshold in (3, 6, 9, 12)
+        },
+        "status": (
+            "CALIBRATED"
+            if len(save_observations) >= 3
+            and abs(actual_mean - replicated_mean)
+            <= max(1.0, actual_mean * 0.60)
+            else "NOT_CALIBRATED_INSUFFICIENT_OR_MISMATCH"
+        ),
+    }
+    return model
+
+
 def _count_pmf_from_model(
     model: Mapping[str, Any],
     mean_count: float,

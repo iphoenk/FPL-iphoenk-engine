@@ -1,5 +1,5 @@
 FPL MASTER CANONICAL V12 — FAIL-OPERATIONAL REPORT-PLANE ARCHITECTURE
-Effective: 2026-09-21T11:30:00+07:00
+Effective: 2026-09-21T12:50:00+07:00
 Authority path: control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
 State path: control/fpl_master_v12/FPL_MASTER_STATE_V12.json
 
@@ -619,8 +619,12 @@ Watchlist is output, never optimizer input.
 For DEEP, current full-universe V12 evaluation is required where supportable. repository_python_qa_executed=false alone can never justify Watchlist20=0/20. When authority is incomplete, use every supportable current candidate and render exact available_count/expected_count/missing_scope/reason with PARTIAL/DEGRADED status rather than blanking the section.
 
 14G2. RISE20 / FALL20 + ACTIONABLE PRICE RADAR
-The current same-occurrence official_price_predictor artifact is factual/model input from the existing V6 source and MUST be read before RISE20/FALL20 is declared unavailable. The string official_price_predictor is an INTERNAL ARTIFACT IDENTIFIER only. It is NOT an Official FPL predictor/product and MUST NOT be described to the user as one. Official FPL owns current/confirmed price FACT. Rise/fall progress, projection, timing likelihood and threshold-crossing estimates from this artifact are V6-DERIVED MODEL SIGNALS using Official FPL factual inputs. Visible source wording must preserve that distinction.
-If current/healthy and it contains enough eligible rows, render exact RISE20 and FALL20 using the existing model signal's direction/rank/timing evidence; never require repository Python execution merely to read the published artifact and never create a second price predictor.
+The current same-occurrence official_price_predictor artifact represents the verified 2026/27 Official FPL Price Change Predictor and MUST be read before RISE20/FALL20 is declared unavailable. Premier League/FPL officially documents this predictor as a Fantasy feature that uses official FPL data, tracks transfer activity for every player, updates every 15 minutes, and shows current/predicted progress toward a daily price rise or fall. The predictor itself is OFFICIAL FPL MODEL/GUIDANCE, while the eventual overnight price rise/fall remains a separate confirmed FACT. Never describe the official predictor as a third-party, unverified, or merely V6-derived product. Never describe predictor guidance as guaranteed outcome.
+Visible classification:
+- current price and confirmed overnight price change = OFFICIAL FPL FACT;
+- current progress, predicted progress, official likelihood/status and official threshold guidance from the Price Change Predictor = OFFICIAL FPL PREDICTOR / MODEL;
+- any extra V12 interpretation, urgency, affordability consequence, or decision impact = INFERENCE / DECISION LAYER.
+If current/healthy and it contains enough eligible rows, render exact RISE20 and FALL20 using the official predictor's direction/rank/timing evidence; never require repository Python execution merely to read the published artifact and never create a second price predictor.
 If the current artifact is absent/invalid/incomplete, degrade truthfully with exact counts/reason. A healthy sufficient predictor artifact cannot result in 0/20 without a concrete evidence reason.
 ACTIONABLE PRICE RADAR remains mandatory in DEEP and carries ALL15 where Official current price evidence exists. Keep FACT current/confirmed price separate from MODEL predictor direction.
 

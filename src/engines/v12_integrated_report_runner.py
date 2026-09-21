@@ -956,10 +956,20 @@ def run_deep(
                 "package_routes": [],
                 "monte_carlo": {
                     "execution_state": "NOT_RUN",
-                    "reason": "FULL_20_25_30_25_UNIVERSE_EVALUATION_REQUIRED_FIRST",
+                    "reason": (
+                        "STAGE_2_PACKAGE_FRONTIER_AND_MATERIAL_MONTE_CARLO_"
+                        "NOT_STARTED"
+                    ),
                 },
             },
-            universe_gap["reason"],
+            (
+                universe_gap["reason"]
+                or (
+                    "Stage 1 canonical universe is complete; Stage 2 "
+                    "package/frontier and material Monte Carlo execution "
+                    "are intentionally not started yet"
+                )
+            ),
         ),
         "S15": _section(
             "COMPLETE",

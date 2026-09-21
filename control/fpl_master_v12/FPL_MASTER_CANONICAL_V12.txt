@@ -1,5 +1,5 @@
 FPL MASTER CANONICAL V12 — FAIL-OPERATIONAL REPORT-PLANE ARCHITECTURE
-Effective: 2026-09-21T08:22:00+07:00
+Effective: 2026-09-21T09:45:00+07:00
 Authority path: control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
 State path: control/fpl_master_v12/FPL_MASTER_STATE_V12.json
 
@@ -526,6 +526,18 @@ ALL15 visible row schema, exactly 15 unique owned players where supportable:
 player;opponent;recommended_or_locked_role;p_available;p_start;p_cameo;p_dnp;xmins;tactical_role;set_piece_penalty_role;matchup;gw_plus_1;three_gw;five_gw;uncertainty_floor_upside;action.
 Allowed action: START;BENCH;HOLD;WATCH;SELL-CANDIDATE.
 Unknown probability/model fields stay explicitly unavailable; never fabricate.
+
+14A2. PACKAGE OPTIMIZER / FRONTIER — FULL-UNIVERSE TEAM-IMPACT VISIBLE CONTRACT
+Section 14 is a fresh full-universe squad-improvement search surface, not a shortlist comparator and not a place to restate names already discussed.
+For every DEEP/FULL/DEADLINE/FINAL occurrence where squad improvement is supportable:
+A. Start from the complete fresh currently eligible Official FPL universe and evaluate ALL15 owned players as possible outgoing/weak-link candidates under Sections 8/8A/8B. User-mentioned OUT/IN names are hypotheses only.
+B. The visible Section 14 MUST expose one SEARCH PROOF containing at least: OUR15_EXPECTED; OUR15_EVALUATED; ELIGIBLE_UNIVERSE_EXPECTED; ELIGIBLE_UNIVERSE_EVALUATED; OUTGOING_CANDIDATES_EVALUATED; LEGAL_ROUTES_EVALUATED; HOLD_INCLUDED; LOSSY_PRUNING; SEARCH_AUTHORITY. FULL requires 15/15 OUR15, equal non-zero universe expected/evaluated denominators, all 15 owned outgoing candidates evaluated where legally relevant, HOLD_INCLUDED=true, LOSSY_PRUNING=false and SEARCH_AUTHORITY=FULL.
+C. After the full scan, visibly publish the highest-impact external challengers and package routes selected BY THE SCAN. Do not begin from a hand-picked shortlist, recent scorers, user-mentioned players, previous recommendations or mini-league templates.
+D. Every published universe challenger should retain, where supportable: rank; element/player/position/club; best outgoing counterpart or package route; exact 20/25/30/25 football score decomposition; P(available)/P(start)/cameo/DNP; xMins distribution; P(return)/P(blank)/P(haul) and expected-points distribution; tactical/role and set-piece/penalty evidence; GW+1/3GW/5GW and 2GW when relevant; package utility delta versus HOLD; price/affordability/sell-value effects; squad structure/club-slot/correlation effect; robustness/expected regret/information value of waiting; and ICON+ leverage only after the football-optimal baseline.
+E. The purpose of the visible challenger list is TEAM IMPACT: identify which players/packages most improve the current 15 and XI/bench/captain structure, not merely which individual players have the highest standalone projection.
+F. HOLD remains mandatory and may win. Even when HOLD wins, publish the strongest scan-derived challengers that were tested against it so the user can see what the universe scan found.
+G. Section 14 may claim COMPLETE / FULL-UNIVERSE OPTIMIZED only when the SEARCH PROOF substantiates the full scan and the visible challenger/package rows are scan-derived. If required scope is incomplete, render PARTIAL/DEGRADED with exact missing denominator/scope; never silently substitute a shortlist.
+H. The visible marker for this block is exactly: UNIVERSE SCAN / OPTIMAL TEAM IMPACT. The marker and its coverage/result must survive final rendering and post-render QA.
 
 14B. PURE MATCH EXACT CONTENT CONTRACT
 PURE MATCH exact visible order:

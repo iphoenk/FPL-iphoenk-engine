@@ -1,0 +1,146 @@
+name: V12 Integrated Report Runner
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "Exact /v12-report-run command"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v12-integrated-report-${{ github.event_name == 'issue_comment' && github.event.comment.id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  run-report:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.number == 431 &&
+        github.actor == github.repository_owner &&
+        github.event.action == 'created' &&
+        startsWith(github.event.comment.body, '/v12-report-run')
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Hydrate latest authoritative V6 runtime snapshot
+        shell: bash
+        env:
+          V12_RUNTIME_READ_TOKEN: ${{ github.token }}
+          RUNTIME_BRANCH: runtime-data-v6
+        run: |
+          set -euo pipefail
+          rm -rf data/v6
+          mkdir -p data
+          read_auth="$(printf 'x-access-token:%s' "$V12_RUNTIME_READ_TOKEN" | base64 -w0)"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $read_auth"             fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
+          git cat-file -e "origin/${RUNTIME_BRANCH}:data/v6/manifest.json"
+          git archive "origin/${RUNTIME_BRANCH}" data/v6 | tar -x -C .
+          test -s data/v6/manifest.json
+          echo "Hydrated runtime-data-v6 read-only; no V6 publication mutation performed."
+
+      - name: Resolve governed V12 report command
+        id: command
+        shell: bash
+        env:
+          COMMENT_COMMAND: ${{ github.event.comment.body }}
+          DISPATCH_COMMAND: ${{ inputs.command }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "issue_comment" ]]; then
+            command="$COMMENT_COMMAND"
+          else
+            command="$DISPATCH_COMMAND"
+          fi
+          [[ "$command" == /v12-report-run* ]]
+          {
+            echo "command<<EOF"
+            echo "$command"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Execute integrated V12 DEEP runner
+        id: runner
+        continue-on-error: true
+        shell: bash
+        env:
+          V12_COMMAND: ${{ steps.command.outputs.command }}
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/v12-report"
+          mkdir -p "$RUNNER_TEMP/v12-report"
+          set +e
+          python -m src.engines.v12_integrated_report_runner             --command "$V12_COMMAND"             --output-dir "$RUNNER_TEMP/v12-report"
+          rc=$?
+          set -e
+          echo "exit_code=$rc" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Require occurrence-bound report artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$RUNNER_TEMP/v12-report/report_bundle.json"
+          test -s "$RUNNER_TEMP/v12-report/report_body.md"
+          test -s "$RUNNER_TEMP/v12-report/execution_proof.json"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import os
+
+          root = Path(os.environ["RUNNER_TEMP"]) / "v12-report"
+          proof = json.loads((root / "execution_proof.json").read_text(encoding="utf-8"))
+          assert proof["runner"] == "V12_INTEGRATED_REPORT_RUNNER", proof
+          assert proof["report_mode"] == "DEEP", proof
+          assert proof["canonical_catalog_complete"] is True, proof
+          assert proof["no_silent_stage_skip"] is True, proof
+          assert proof["monte_carlo_fabricated"] is False, proof
+          print({
+              "runner_status": proof.get("runner_status"),
+              "report_slot": proof.get("report_slot"),
+              "pre_render": proof.get("pre_render_qa_status"),
+              "post_render": proof.get("post_render_qa_status"),
+              "human_facing": proof.get("human_facing_qa_status"),
+          })
+          PY
+
+      - name: Upload integrated V12 report bundle
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v12-report-DEEP-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/v12-report/report_bundle.json
+            ${{ runner.temp }}/v12-report/report_body.md
+            ${{ runner.temp }}/v12-report/execution_proof.json
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Fail workflow if integrated runner did not pass
+        shell: bash
+        env:
+          V12_RUNNER_EXIT_CODE: ${{ steps.runner.outputs.exit_code }}
+        run: |
+          set -euo pipefail
+          if [[ "$V12_RUNNER_EXIT_CODE" != "0" ]]; then
+            echo "::error::Integrated V12 report runner returned $V12_RUNNER_EXIT_CODE"
+            exit 1
+          fi

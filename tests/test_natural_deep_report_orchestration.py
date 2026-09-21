@@ -1423,13 +1423,24 @@ def test_deep_renderer_exposes_post_match_carryover_and_mathematical_decision_st
                 {"state": "ZERO_MINUTES", "probability": 0.04},
             ],
         },
-        "event_probabilities": {
-            "p_goal": 0.31,
-            "p_assist": 0.24,
-            "p_return": 0.48,
-            "p_two_plus_returns": 0.14,
-            "p_haul": 0.11,
-            "p_blank": 0.52,
+        "posterior_predictive": {
+            "source_contract": "P1.3/P1.3B_POSTERIOR_PREDICTIVE",
+            "event_probabilities": {
+                "p_goal_return": 0.31,
+                "p_assist_return": 0.24,
+                "p_attacking_return": 0.48,
+                "p_total_ga_ge_2": 0.14,
+                "p_no_attacking_return": 0.52,
+            },
+            "point_distribution": {
+                "p_fpl_blank": 0.44,
+                "p_haul_10_plus": 0.11,
+                "expected_points": 5.8,
+                "variance": 8.41,
+                "std": 2.9,
+                "quantiles": {"p10": 2, "p50": 5, "p90": 10},
+                "tails": {"ge_10": 0.11, "ge_15": 0.03},
+            },
         },
         "horizons": {
             "GW+1": {"xpts": 5.8},
@@ -1467,7 +1478,11 @@ def test_deep_renderer_exposes_post_match_carryover_and_mathematical_decision_st
     assert "P(GOAL)=0.31" in body
     assert "P(RETURN)=0.48" in body
     assert "P(HAUL)=0.11" in body
-    assert "P(BLANK)=0.52" in body
+    assert "P(BLANK)=0.44" in body
+    assert "P(NO ATTACK RETURN)=0.52" in body
+    assert "P1.3B POINT DISTRIBUTION:" in body
+    assert "E[xPts]=5.8" in body
+    assert "variance=8.41" in body
     assert "HORIZONS 1GW / 3GW / 5GW:" in body
     assert "EXPECTED REGRET: 0.7" in body
     assert "MONTE CARLO: state=EXECUTED | N=500000 | correlated=True" in body

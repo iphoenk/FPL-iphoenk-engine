@@ -304,29 +304,37 @@ def _estimate_core(
             59.0,
         )
     else:
-        # Preserve the existing aggregate xMins when factual substitution
-        # timing is unavailable. State probability is still explicit, while
-        # within-start timing remains prior-only rather than fabricated.
+        # With no factual substitution timing, keep the six-state labels but
+        # make the three starter substates moment-equivalent to the historical
+        # single START state. This prevents prior-only semantics from changing
+        # xMins or downstream P1.3 numerics.
         full_minutes = subbed_minutes = early_minutes = starter_minutes
+
+    if starter_rows:
+        full_std = max(4.0, starter_std * 0.55)
+        subbed_std = max(5.0, starter_std * 0.70)
+        early_std = max(7.0, starter_std)
+    else:
+        full_std = subbed_std = early_std = starter_std
 
     states = [
         (
             "START_FULL",
             start_probability * conditional_start["START_FULL"],
             full_minutes,
-            max(4.0, starter_std * 0.55),
+            full_std,
         ),
         (
             "START_SUBBED",
             start_probability * conditional_start["START_SUBBED"],
             subbed_minutes,
-            max(5.0, starter_std * 0.70),
+            subbed_std,
         ),
         (
             "EARLY_SUB",
             start_probability * conditional_start["EARLY_SUB"],
             early_minutes,
-            max(7.0, starter_std),
+            early_std,
         ),
         (
             "CAMEO",
@@ -349,10 +357,22 @@ def _estimate_core(
     small_sample = matches < small_sample_limit
     uncertainty = cfg.get("uncertainty") or {}
     entropy = 0.0
-    for _, probability, _, _ in states:
+    entropy_probabilities = (
+        [probability for _, probability, _, _ in states]
+        if starter_rows
+        else [
+            start_probability,
+            regular_cameo_probability,
+            late_cameo_probability,
+            dnp_probability,
+        ]
+    )
+    for probability in entropy_probabilities:
         if probability > 0:
             entropy -= probability * math.log(probability)
-    entropy /= math.log(6)
+    entropy /= math.log(
+        6 if starter_rows else 4
+    )
     probability_half_width = _f(
         uncertainty.get("base_start_probability_half_width"), 0.12
     )
@@ -464,6 +484,11 @@ def _estimate_core(
                     "probability": round(weight, 6),
                     "minutes_mean": round(state_mean, 3),
                     "minutes_std": round(state_std, 3),
+                    "timing_evidence": (
+                        "MATCH_MINUTES_DERIVED"
+                        if starter_rows
+                        else "PRIOR_ONLY_NO_MATCH_LEVEL_START_MINUTES"
+                    ),
                 }
                 for name, weight, state_mean, state_std in states
             ],

@@ -76,15 +76,14 @@ def _feature_status(
     }
 
 
-def load_v6_analytics_foundation(
+def _match_source_candidate(
     runtime_data_root: Path,
-    *,
-    bootstrap: Mapping[str, Any],
-    planning_gw: int,
-    strength: Mapping[str, Any] | None = None,
+    source_id: str,
+    completed_gw: int,
 ) -> dict[str, Any]:
     normalized = _read_json(
-        runtime_data_root / "data/v6/normalized/sources/vaastav_fpl.json"
+        runtime_data_root
+        / f"data/v6/normalized/sources/{source_id}.json"
     )
     groups = normalized.get("record_groups") or {}
     raw_rows = [
@@ -93,8 +92,6 @@ def load_v6_analytics_foundation(
         if isinstance(row, Mapping)
     ]
     rows = [row for row in raw_rows if _row_is_joinable(row)]
-
-    completed_gw = _latest_completed_gw(bootstrap, planning_gw)
     observed_gws = sorted(
         {
             int(row.get("gw") or 0)
@@ -103,7 +100,105 @@ def load_v6_analytics_foundation(
         }
     )
     max_gw = max(observed_gws or [0])
+    history = normalized.get("history_coverage") or {}
+    missing_gws = [
+        int(value)
+        for value in history.get("missing_gws") or []
+        if int(value or 0) > 0
+    ]
+    source_green = (
+        str(normalized.get("source_health") or "").upper() == "GREEN"
+    )
+    normalized_ok = (
+        str(normalized.get("normalization_status") or "").upper()
+        == "NORMALIZED"
+    )
+    complete = bool(
+        source_green
+        and normalized_ok
+        and rows
+        and max_gw >= completed_gw
+        and not missing_gws
+    )
+    return {
+        "source_id": source_id,
+        "normalized": normalized,
+        "raw_rows": raw_rows,
+        "rows": rows,
+        "observed_gws": observed_gws,
+        "max_gw": max_gw,
+        "missing_gws": missing_gws,
+        "complete": complete,
+    }
+
+
+def _select_match_source(
+    runtime_data_root: Path,
+    completed_gw: int,
+) -> dict[str, Any]:
+    official = _match_source_candidate(
+        runtime_data_root,
+        "official_fpl",
+        completed_gw,
+    )
+    vaastav = _match_source_candidate(
+        runtime_data_root,
+        "vaastav_fpl",
+        completed_gw,
+    )
+    if official["complete"]:
+        selected = official
+        selection_reason = "OFFICIAL_FPL_COMPLETE_PRIMARY"
+    elif vaastav["complete"]:
+        selected = vaastav
+        selection_reason = "COMPLETE_MIRROR_FALLBACK"
+    else:
+        selected = official if official["raw_rows"] else vaastav
+        selection_reason = "NO_COMPLETE_MATCH_HISTORY_SOURCE"
+    return {
+        **selected,
+        "selection_reason": selection_reason,
+        "candidates": {
+            "official_fpl": {
+                "complete": official["complete"],
+                "max_gw": official["max_gw"],
+                "missing_gws": official["missing_gws"],
+                "row_count": len(official["rows"]),
+            },
+            "vaastav_fpl": {
+                "complete": vaastav["complete"],
+                "max_gw": vaastav["max_gw"],
+                "missing_gws": vaastav["missing_gws"],
+                "row_count": len(vaastav["rows"]),
+            },
+        },
+    }
+
+
+def load_v6_analytics_foundation(
+    runtime_data_root: Path,
+    *,
+    bootstrap: Mapping[str, Any],
+    planning_gw: int,
+    strength: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    completed_gw = _latest_completed_gw(
+        bootstrap,
+        planning_gw,
+    )
+    selected_source = _select_match_source(
+        runtime_data_root,
+        completed_gw,
+    )
+    normalized = dict(selected_source.get("normalized") or {})
+    raw_rows = list(selected_source.get("raw_rows") or [])
+    rows = list(selected_source.get("rows") or [])
+    observed_gws = list(selected_source.get("observed_gws") or [])
+    max_gw = int(selected_source.get("max_gw") or 0)
     rejected = len(raw_rows) - len(rows)
+    selected_source_id = str(
+        selected_source.get("source_id") or "UNAVAILABLE"
+    )
     official = {
         int(row.get("id")): dict(row)
         for row in bootstrap.get("elements") or []
@@ -186,10 +281,16 @@ def load_v6_analytics_foundation(
     )
 
     blockers: list[str] = []
+    if selected_source.get("complete") is not True:
+        blockers.append("NO_COMPLETE_MATCH_HISTORY_SOURCE")
     if str(normalized.get("source_health") or "").upper() != "GREEN":
-        blockers.append("VAASTAV_NORMALIZED_SOURCE_NOT_GREEN")
+        blockers.append(
+            f"{selected_source_id.upper()}_NORMALIZED_SOURCE_NOT_GREEN"
+        )
     if not raw_rows:
-        blockers.append("VAASTAV_MERGED_GW_NOT_PUBLISHED")
+        blockers.append(
+            f"{selected_source_id.upper()}_PLAYER_MATCHES_NOT_PUBLISHED"
+        )
     if rejected:
         blockers.append(
             f"NON_DETERMINISTIC_IDENTITY_ROWS_REJECTED={rejected}"
@@ -260,8 +361,8 @@ def load_v6_analytics_foundation(
                 "recoveries": row.get("recoveries"),
                 "tackles": row.get("tackles"),
                 "fpl_points": row.get("fpl_points"),
-                "source": row.get("source") or "vaastav_fpl",
-                "dataset": row.get("dataset") or "merged_gw",
+                "source": row.get("source") or selected_source_id,
+                "dataset": row.get("dataset") or "player_matches",
                 "freshness": normalized.get("effective_at"),
                 "provenance": {
                     "source_id": normalized.get("source_id"),
@@ -312,6 +413,11 @@ def load_v6_analytics_foundation(
         ),
         "planning_gw": int(planning_gw),
         "latest_completed_gw": completed_gw,
+        "selected_match_source": selected_source_id,
+        "match_source_selection_reason": selected_source.get(
+            "selection_reason"
+        ),
+        "match_source_candidates": selected_source.get("candidates") or {},
         "observed_gws": observed_gws,
         "raw_match_rows": len(raw_rows),
         "joinable_match_rows": len(rows),
@@ -353,6 +459,9 @@ def load_v6_analytics_foundation(
         "probabilistic_tactical_states": tactical_states,
         "governance": {
             "v6_only_factual_input": True,
+            "official_fpl_match_history_primary": True,
+            "mirror_fallback_requires_complete_current_gw": True,
+            "stale_mirror_rejected": True,
             "name_or_fuzzy_join_forbidden": True,
             "season_aggregate_only_forbidden": True,
             "missing_features_fabricated": False,

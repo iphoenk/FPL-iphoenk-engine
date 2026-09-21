@@ -12,6 +12,7 @@ from src.engines.v12_report_orchestration import (
     build_icon_subscopes,
     build_price20,
     build_signal_delta,
+    build_visible_mathematical_decision_stack,
     build_watchlist20,
     compact_engine_data_status,
     materialize_all15,
@@ -1335,3 +1336,139 @@ def test_pure_price_cannot_force_universe_movers():
             ),
             section_payloads={},
         )
+
+def _complete_match_scout_rows():
+    common = {
+        "formation_system": "4-2-3-1 vs 4-3-3",
+        "coach_pattern": "high press / mid-block transitions",
+        "player_roles": "key role changes captured",
+        "minutes_substitution_pattern": "starters and substitutions captured",
+        "xg_xa_xgi_shots_chances": "team/player process summary",
+        "set_pieces_penalties": "takers and targets captured",
+        "defcon": "defensive contribution context",
+        "opponent_channels": "left/right/central channel evidence",
+        "sustainable_vs_noisy": "process-led with noise separated",
+        "implication_for_our15": "owned-player impact",
+        "implication_for_next_opponent": "next-GW matchup implication",
+        "posterior_calibration_implication": "Bayesian calibration input only",
+    }
+    return [
+        {"fixture_id": 501, "result": "HOME 2-1 AWAY", **common},
+        {"fixture_id": 502, "result": "HOME 0-0 AWAY", **common},
+    ]
+
+
+def test_post_all_match_renderer_exposes_every_fixture_detail_not_only_movers():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    scout = _complete_match_scout_rows()
+    report = materialize_natural_post_match_report(
+        canonical_text=canonical,
+        report_mode="POST_ALL_MATCH",
+        projections_payload=_post_match_projection_payload(
+            classifications=["BREAKOUT_PROCESS"],
+        ),
+        section_payloads={
+            "GW COMPLETED MATCH-BY-MATCH SCOUT": {
+                "state": "COMPLETE",
+                "content": {"match_scout": scout},
+            }
+        },
+    )
+    body = render_natural_post_match_text(report)
+    assert body.count("#### FIXTURE ID:") == 2
+    for fixture in ("501", "502"):
+        assert f"#### FIXTURE ID: {fixture}" in body
+    for label in (
+        "RESULT:",
+        "FORMATION/SYSTEM:",
+        "COACH PATTERN:",
+        "PLAYER ROLES:",
+        "MINUTES/SUBS:",
+        "xG/xA/xGI/SHOTS/CHANCES:",
+        "SET PIECES/PENALTIES:",
+        "DEFCON:",
+        "OPPONENT CHANNELS:",
+        "SUSTAINABLE VS NOISE:",
+        "OUR15 IMPLICATION:",
+        "NEXT OPPONENT IMPLICATION:",
+        "POSTERIOR CALIBRATION IMPLICATION:",
+    ):
+        assert body.count(label) == 2
+
+
+def test_deep_renderer_exposes_post_match_carryover_and_mathematical_decision_stack():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    decision_proof = {
+        "bayesian_shrinkage_lineage": {
+            "prior": "role/minutes prior",
+            "posterior": "updated posterior",
+            "shrinkage": "small-sample shrinkage",
+        },
+        "probability_state": {
+            "unconditional": {
+                "p_available": 0.96,
+                "p_start": 0.84,
+                "p_bench": 0.12,
+                "p_cameo": 0.09,
+                "p_late_cameo": 0.03,
+                "p_dnp": 0.04,
+            }
+        },
+        "xmins_distribution": {
+            "mean": 72.0,
+            "states": [
+                {"state": "START", "probability": 0.84},
+                {"state": "CAMEO", "probability": 0.09},
+                {"state": "LATE_CAMEO", "probability": 0.03},
+                {"state": "ZERO_MINUTES", "probability": 0.04},
+            ],
+        },
+        "event_probabilities": {
+            "p_goal": 0.31,
+            "p_assist": 0.24,
+            "p_return": 0.48,
+            "p_two_plus_returns": 0.14,
+            "p_haul": 0.11,
+            "p_blank": 0.52,
+        },
+        "horizons": {
+            "GW+1": {"xpts": 5.8},
+            "3GW": {"xpts": 17.1},
+            "5GW": {"xpts": 27.2},
+        },
+        "robustness": {
+            "p_outperform": 0.61,
+            "expected_regret": 0.7,
+            "conditional_floor": 2.0,
+            "upper_tail": 12.0,
+        },
+        "information_value_of_waiting": 0.9,
+        "covariance_correlation": {"same_club": 0.18},
+        "monte_carlo": {
+            "execution_state": "EXECUTED",
+            "actual_paths": 500000,
+            "correlated": True,
+            "convergence_evidence": "stable paired-route delta",
+        },
+    }
+    stack = build_visible_mathematical_decision_stack(decision_proof)
+    report = materialize_deep_report(
+        canonical_text=canonical,
+        section_payloads={},
+        post_all_match_scout=_complete_match_scout_rows(),
+        mathematical_decision_stack=stack,
+    )
+    body = render_deep_text(report)
+    assert "### POST-MATCH MATCH-BY-MATCH SCOUT" in body
+    assert body.count("#### FIXTURE ID:") == 2
+    assert "### MATHEMATICAL DECISION STACK" in body
+    assert "BAYESIAN PRIOR -> POSTERIOR / SHRINKAGE:" in body
+    assert "P(AVAILABLE)=0.96" in body
+    assert "P(GOAL)=0.31" in body
+    assert "P(RETURN)=0.48" in body
+    assert "P(HAUL)=0.11" in body
+    assert "P(BLANK)=0.52" in body
+    assert "HORIZONS 1GW / 3GW / 5GW:" in body
+    assert "EXPECTED REGRET: 0.7" in body
+    assert "MONTE CARLO: state=EXECUTED | N=500000 | correlated=True" in body
+

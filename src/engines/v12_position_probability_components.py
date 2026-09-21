@@ -874,6 +874,45 @@ def build_dynamic_matchup_vector(
             "opponent_expected_goals": round(opponent_xg, 6),
             "clean_sheet_probability": round(cs_probability, 6),
         },
+        "tactical_input_evidence": {
+            "own_coach_formation_style": context.get(
+                "own_team_tactical_state"
+            ),
+            "opponent_coach_formation_style": context.get(
+                "opponent_team_tactical_state"
+            ),
+            "own_role": str(role or "UNAVAILABLE"),
+            "venue": context.get("venue"),
+            "expected_personnel": context.get("expected_personnel"),
+            "availability": context.get("player_availability"),
+            "channel_matchup": {
+                key: context.get(key)
+                for key in (
+                    "opponent_high_line",
+                    "high_line_vulnerability",
+                    "opponent_central_cb_weakness",
+                    "central_cb_weakness",
+                    "opponent_aerial_weakness",
+                    "aerial_weakness",
+                    "opponent_central_press_weakness",
+                    "central_press_weakness",
+                    "opponent_fullback_vulnerability",
+                    "fullback_vulnerability",
+                    "opponent_narrow_defence",
+                    "narrow_defence",
+                    "opponent_set_piece_weakness",
+                    "set_piece_defence_weakness",
+                    "opponent_transition_weakness",
+                    "transition_weakness",
+                    "opponent_pressure",
+                    "pressure_index",
+                    "opponent_shot_volume",
+                    "shot_volume_index",
+                )
+                if context.get(key) is not None
+            },
+            "missing_evidence_is_explicit_not_neutral": True,
+        },
         "same_opponent_player_specific": True,
         "arbitrary_final_point_bonus": False,
     }

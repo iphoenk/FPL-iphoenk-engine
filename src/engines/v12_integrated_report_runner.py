@@ -27,14 +27,22 @@ from typing import Any, Callable, Mapping, Sequence
 
 from src.engines.v12_lineup_optimizer import optimize_lineup
 from src.engines.v12_mini_league_overlay import build_mini_league_snapshot
+from src.engines.visible_content_proof import canonical_mode_contract
 from src.engines.v12_report_orchestration import (
     build_actionable_price_radar,
     build_price20,
+    build_visible_mathematical_decision_stack,
     build_watchlist20,
     materialize_all15,
     materialize_deep_report,
     render_deep_text,
+    validate_human_facing_body,
 )
+from src.runtime_v6.domains.report_plane.report_qa import (
+    validate_post_render_qa,
+    validate_pre_render_qa,
+)
+from src.runtime_v6.domains.report_plane.visible_body_contract import _parse_sections
 from src.engines.v12_tactical_role import attach_tactical_role_scores
 from src.models.historical_projection import build as build_player_projections
 from src.models.official_role_evidence import attach_official_role_evidence
@@ -101,40 +109,96 @@ def _stage(
     return value
 
 
+def _parse_aware(value: Any) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed
+
+
+def _stage_failure_reason(ledger: Sequence[Mapping[str, Any]], name: str) -> str | None:
+    for row in reversed(list(ledger)):
+        if str(row.get("stage") or "") == name and str(row.get("status") or "") == "FAILED":
+            return f"{row.get('error_class')}: {row.get('error')}"
+    return None
+
+
+def _skip_stage(
+    ledger: list[dict[str, Any]],
+    name: str,
+    reason: str,
+    *,
+    required: bool = False,
+) -> None:
+    ledger.append(
+        {
+            "stage": name,
+            "status": "NOT_RUN",
+            "required": bool(required),
+            "reason": reason,
+        }
+    )
+
+
 def _require_report_prefetch(
     runtime_root: Path,
     *,
     report_slot: str,
 ) -> dict[str, Any]:
-    proof = _read_json(
+    """Bind DEEP to the exact full_master occurrence, never merely a fresh health summary."""
+    latest = _read_json(
+        runtime_root / "data/v6/report_prefetch/latest.json",
+        {},
+    ) or {}
+    health = _read_json(
         runtime_root / "data/v6/health/report_prefetch.json",
         {},
     ) or {}
-    if proof.get("fresh_for_target_report") is not True:
+    requested = _parse_aware(report_slot)
+    target = _parse_aware(
+        latest.get("target_logical_report_slot")
+        or latest.get("logical_slot")
+    )
+    generated = _parse_aware(latest.get("generated_at"))
+    if requested is None:
+        raise IntegratedRunnerError("report_slot must be timezone-aware ISO-8601")
+    checks = {
+        "report_kind_full_master": str(latest.get("report_kind") or "") == "full_master",
+        "target_report_slot_match": bool(
+            target is not None
+            and target.astimezone(requested.tzinfo) == requested
+        ),
+        "personal_requested": latest.get("personal_requested") is True,
+        "mini_league_requested": latest.get("mini_league_requested") is True,
+        "public_core_complete": latest.get("public_core_complete") is True,
+        "fresh_for_target_report": latest.get("fresh_for_target_report") is True,
+        "health_green": str(health.get("prefetch_status") or "").upper() == "GREEN",
+    }
+    failed = [key for key, value in checks.items() if not value]
+    if failed:
         raise IntegratedRunnerError(
-            "same-occurrence report-prefetch is not fresh_for_target_report"
+            "same-occurrence full_master prefetch mismatch: " + ",".join(failed)
         )
-    generated = str(proof.get("generated_at") or "")
-    if not generated:
+    if generated is None:
         raise IntegratedRunnerError("report-prefetch generated_at unavailable")
-    try:
-        generated_dt = datetime.fromisoformat(generated.replace("Z", "+00:00"))
-        slot_dt = datetime.fromisoformat(str(report_slot).replace("Z", "+00:00"))
-    except ValueError as exc:
-        raise IntegratedRunnerError("invalid report-prefetch/report-slot timestamp") from exc
-    if generated_dt.tzinfo is None or slot_dt.tzinfo is None:
-        raise IntegratedRunnerError("report-prefetch/report-slot timestamps must be timezone-aware")
-    age_minutes = abs((slot_dt - generated_dt.astimezone(slot_dt.tzinfo)).total_seconds()) / 60.0
-    # Prefetch may finish immediately before or shortly after an HH:30 occurrence.
+    age_minutes = abs(
+        (requested - generated.astimezone(requested.tzinfo)).total_seconds()
+    ) / 60.0
     if age_minutes > 15.0:
         raise IntegratedRunnerError(
             f"report-prefetch is not same-occurrence current: age_minutes={age_minutes:.2f}"
         )
     return {
-        **proof,
+        **latest,
+        "prefetch_health": health,
         "same_occurrence_bound": True,
         "report_slot": report_slot,
         "age_minutes": round(age_minutes, 3),
+        "scope_checks": checks,
+        "live_required_for_deep": False,
     }
 
 

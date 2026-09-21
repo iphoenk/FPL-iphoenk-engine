@@ -7,6 +7,7 @@ import pytest
 
 from src.engines import v12_integrated_report_runner as runner
 from src.engines.visible_content_proof import canonical_mode_contract
+from src.engines.v12_report_orchestration import _render_math_stack_lines
 
 
 def _write(path: Path, value) -> None:
@@ -413,6 +414,23 @@ def test_integrated_deep_runner_keeps_bundle_when_projection_stage_fails(
     assert (tmp_path / "out-failed-projection/report_bundle.json").exists()
     assert (tmp_path / "out-failed-projection/report_body.md").exists()
     assert (tmp_path / "out-failed-projection/execution_proof.json").exists()
+
+
+
+def test_math_stack_renderer_is_type_safe_for_degraded_scalar_placeholders():
+    lines = _render_math_stack_lines(
+        {
+            "availability_mixture": "UNAVAILABLE",
+            "event_probabilities": "UNAVAILABLE",
+            "point_distribution": "UNAVAILABLE",
+            "monte_carlo": "NOT_RUN",
+        }
+    )
+    body = "\n".join(lines)
+    assert "MATHEMATICAL DECISION STACK" in body
+    assert "E[xPts]=UNAVAILABLE" in body
+    assert "P(START)=UNAVAILABLE" in body
+    assert "state=UNAVAILABLE" in body
 
 
 def test_runner_source_has_no_legacy_runtime_imports():

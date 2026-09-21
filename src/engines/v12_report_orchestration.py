@@ -1643,9 +1643,14 @@ def _render_match_scout_lines(rows: Sequence[Mapping[str, Any]]) -> list[str]:
 
 def _render_math_stack_lines(stack: Mapping[str, Any]) -> list[str]:
     payload = dict(stack or {})
-    availability = dict(payload.get("availability_mixture") or {})
-    events = dict(payload.get("event_probabilities") or {})
-    mc = dict(payload.get("monte_carlo") or {})
+
+    def mapping_or_empty(value: Any) -> dict[str, Any]:
+        return dict(value) if isinstance(value, Mapping) else {}
+
+    availability = mapping_or_empty(payload.get("availability_mixture"))
+    events = mapping_or_empty(payload.get("event_probabilities"))
+    point_distribution = mapping_or_empty(payload.get("point_distribution"))
+    mc = mapping_or_empty(payload.get("monte_carlo"))
     lines = [
         "### MATHEMATICAL DECISION STACK",
         "BAYESIAN PRIOR -> POSTERIOR / SHRINKAGE: "
@@ -1668,11 +1673,11 @@ def _render_math_stack_lines(stack: Mapping[str, Any]) -> list[str]:
         f"P(NO ATTACK RETURN)={events.get('p_no_attacking_return', 'UNAVAILABLE')}",
         "P1.3B POINT DISTRIBUTION: "
         f"source={payload.get('posterior_predictive_source', 'UNAVAILABLE')} | "
-        f"E[xPts]={dict(payload.get('point_distribution') or {}).get('expected_points', 'UNAVAILABLE')} | "
-        f"variance={dict(payload.get('point_distribution') or {}).get('variance', 'UNAVAILABLE')} | "
-        f"std={dict(payload.get('point_distribution') or {}).get('std', 'UNAVAILABLE')} | "
-        f"quantiles={dict(payload.get('point_distribution') or {}).get('quantiles', 'UNAVAILABLE')} | "
-        f"tails={dict(payload.get('point_distribution') or {}).get('tails', 'UNAVAILABLE')}",
+        f"E[xPts]={point_distribution.get('expected_points', 'UNAVAILABLE')} | "
+        f"variance={point_distribution.get('variance', 'UNAVAILABLE')} | "
+        f"std={point_distribution.get('std', 'UNAVAILABLE')} | "
+        f"quantiles={point_distribution.get('quantiles', 'UNAVAILABLE')} | "
+        f"tails={point_distribution.get('tails', 'UNAVAILABLE')}",
         f"HORIZONS 1GW / 3GW / 5GW: {payload.get('horizons', 'UNAVAILABLE')}",
         f"P(OUTPERFORM HOLD/COMPARATOR): {payload.get('p_outperform', 'UNAVAILABLE')}",
         f"EXPECTED REGRET: {payload.get('expected_regret', 'UNAVAILABLE')}",

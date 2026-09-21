@@ -477,41 +477,73 @@ def run_deep(
         ),
         required=True,
     )
-    if not projections:
-        raise IntegratedRunnerError("full-universe V12 projection stage unavailable")
-
-    _stage(
-        ledger,
-        "OFFICIAL_ROLE_EVIDENCE",
-        lambda: attach_official_role_evidence(projections, bootstrap),
-    )
-    _stage(
-        ledger,
-        "P1_6_TACTICAL_ROLE",
-        lambda: attach_tactical_role_scores(
-            projections,
-            planning_gw,
-            team_strength=strength or {},
-        ),
+    projection_failure = _stage_failure_reason(
+        ledger, "P1_1_P1_3_FULL_UNIVERSE"
     )
 
     owned_ids = {int(row["element_id"]) for row in owned}
-    model_rows = _projection_model_rows(projections, owned_ids)
-    all15 = _stage(
-        ledger,
-        "ALL15_MATERIALIZATION",
-        lambda: materialize_all15(owned15=owned, model_rows=model_rows),
-        required=True,
-    )
-    lineup = _stage(
-        ledger,
-        "P1_7_LINEUP",
-        lambda: optimize_lineup(
-            projections,
-            sorted(owned_ids),
-            planning_gw=planning_gw,
-        ),
-    )
+    if projections:
+        _stage(
+            ledger,
+            "OFFICIAL_ROLE_EVIDENCE",
+            lambda: attach_official_role_evidence(projections, bootstrap),
+        )
+        _stage(
+            ledger,
+            "P1_6_TACTICAL_ROLE",
+            lambda: attach_tactical_role_scores(
+                projections,
+                planning_gw,
+                team_strength=strength or {},
+            ),
+        )
+        model_rows = _projection_model_rows(projections, owned_ids)
+        all15 = _stage(
+            ledger,
+            "ALL15_MATERIALIZATION",
+            lambda: materialize_all15(owned15=owned, model_rows=model_rows),
+            required=True,
+        )
+        lineup = _stage(
+            ledger,
+            "P1_7_LINEUP",
+            lambda: optimize_lineup(
+                projections,
+                sorted(owned_ids),
+                planning_gw=planning_gw,
+            ),
+        )
+    else:
+        reason = (
+            "P1.1/P1.3 prerequisite failed: "
+            + (projection_failure or "UNKNOWN_PROJECTION_FAILURE")
+        )
+        _skip_stage(ledger, "OFFICIAL_ROLE_EVIDENCE", reason)
+        _skip_stage(ledger, "P1_6_TACTICAL_ROLE", reason)
+        _skip_stage(ledger, "ALL15_MATERIALIZATION", reason, required=True)
+        _skip_stage(ledger, "P1_7_LINEUP", reason)
+        all15 = {
+            "rows": [
+                {
+                    "element_id": row.get("element_id"),
+                    "name": row.get("name"),
+                    "position": row.get("position"),
+                    "p_available": "UNAVAILABLE",
+                    "p_start": "UNAVAILABLE",
+                    "p_cameo": "UNAVAILABLE",
+                    "p_dnp": "UNAVAILABLE",
+                    "xmins": "UNAVAILABLE",
+                    "gw_plus_1": "UNAVAILABLE",
+                    "three_gw": "UNAVAILABLE",
+                    "five_gw": "UNAVAILABLE",
+                    "action": "WAIT",
+                }
+                for row in owned
+            ],
+            "degradation_reason": reason,
+        }
+        lineup = None
+
 
     predictor = _read_json(
         runtime_data_root / "data/v6/current/official_price_predictor.json",
@@ -544,7 +576,7 @@ def run_deep(
         ),
     )
 
-    universe = _candidate_universe(projections)
+    universe = _candidate_universe(projections or {})
     watchlist = _stage(
         ledger,
         "WATCHLIST20",
@@ -583,14 +615,21 @@ def run_deep(
         ),
     )
 
-    universe_gap = {
-        "status": "PARTIAL",
-        "reason": (
+    if projections:
+        universe_gap_reason = (
             "P1.1/P1.3/P1.6 executed for full universe, but the current repository "
             "does not yet expose V12-native numeric producers for all four "
             "20/25/30/25 components. Full football_score/ranking is therefore "
             "fail-closed instead of reconstructed ad hoc."
-        ),
+        )
+    else:
+        universe_gap_reason = (
+            "P1.1/P1.3 full-universe projection did not execute for this occurrence: "
+            + (projection_failure or "UNKNOWN_PROJECTION_FAILURE")
+        )
+    universe_gap = {
+        "status": "PARTIAL",
+        "reason": universe_gap_reason,
         "scanned_players": len(universe),
         "required_component_weights": {
             "PROVEN_HISTORICAL": 0.20,
@@ -735,8 +774,8 @@ def run_deep(
             {
                 "evidence_quality": {
                     "official_fpl": "CURRENT_INPUT_READ",
-                    "p1_1_p1_3": "EXECUTED",
-                    "p1_6": "EXECUTED",
+                    "p1_1_p1_3": "EXECUTED" if projections else "FAILED",
+                    "p1_6": "EXECUTED" if projections else "NOT_RUN",
                     "p1_7": "EXECUTED" if lineup else "PARTIAL",
                     "price_predictor": (rise or {}).get("predictor_health"),
                     "universe_20_25_30_25": "PARTIAL",
@@ -760,7 +799,7 @@ def run_deep(
                 "engine_data_status": {
                     "runner": "V12_INTEGRATED_REPORT_RUNNER",
                     "planning_gw": planning_gw,
-                    "projection_players": len(projections.get("players") or []),
+                    "projection_players": len((projections or {}).get("players") or []),
                     "our15": len(owned),
                     "mini_league_coverage": (mini or {}).get("coverage_state"),
                     "stage_ledger": ledger,

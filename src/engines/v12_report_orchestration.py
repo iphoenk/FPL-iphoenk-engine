@@ -465,7 +465,12 @@ def _visible_price_contract(
             "official_or_provider_progress": out.get("price_change_percent", "UNAVAILABLE"),
             "prediction_strength": likelihood if likelihood is not None else "UNAVAILABLE",
             **timing,
-            "estimate_source": "official_price_predictor",
+            "estimate_source": "V6_DERIVED_PRICE_SIGNAL",
+            "artifact_source": "official_price_predictor",
+            "visible_source_label": (
+                "V6-derived price signal using Official FPL factual inputs; "
+                "not an Official FPL predictor/product"
+            ),
             "evidence_timestamp": evidence_timestamp or "UNAVAILABLE",
             "confidence": {
                 "predictor_health": predictor_health,
@@ -850,7 +855,14 @@ def build_actionable_price_radar(
                     "eta_reason",
                     "PREDICTOR_EVIDENCE_UNAVAILABLE" if visible is None else None,
                 ),
-                "estimate_source": (visible or {}).get("estimate_source", "official_price_predictor" if pred_raw else "UNAVAILABLE"),
+                "estimate_source": (visible or {}).get("estimate_source", "V6_DERIVED_PRICE_SIGNAL" if pred_raw else "UNAVAILABLE"),
+                "artifact_source": (visible or {}).get("artifact_source", "official_price_predictor" if pred_raw else "UNAVAILABLE"),
+                "visible_source_label": (visible or {}).get(
+                    "visible_source_label",
+                    "V6-derived price signal using Official FPL factual inputs; not an Official FPL predictor/product"
+                    if pred_raw
+                    else "UNAVAILABLE",
+                ),
                 "evidence_timestamp": (visible or {}).get("evidence_timestamp", evidence_timestamp or "UNAVAILABLE"),
                 "confidence": (visible or {}).get("confidence", "UNAVAILABLE"),
                 "sell_value_affordability_impact": (visible or {}).get(
@@ -1401,6 +1413,16 @@ def _materialize_canonical_report(
                 f"{section_id} degraded/unavailable section requires reason"
             )
         content = row.get("content")
+        if state == "COMPLETE" and (
+            content is None
+            or content == ""
+            or content == {}
+            or content == []
+        ):
+            state = "DEGRADED"
+            row["degradation_reason"] = (
+                "section declared COMPLETE but no human-facing content was materialized"
+            )
         if section_id == "S03" and str(checkpoint_time or "") == "12:30":
             content = dict(content or {})
             content["signal_delta_since_0430"] = dict(
@@ -1985,13 +2007,111 @@ def materialize_natural_post_match_report(
     return report
 
 
+def _visible_section_heading(section_id: Any, label: Any) -> str:
+    """Render a heading shape that the visible-body validator can parse."""
+    section = str(section_id or "").strip().upper()
+    title = str(label or "Report Section").strip()
+    match = re.fullmatch(r"S(\d{1,2})(B?)", section)
+    if match:
+        return f"## {int(match.group(1))}{match.group(2)}. {title}"
+    match = re.fullmatch(r"MATCH(\d{1,2})", section)
+    if match:
+        return f"## MATCH {int(match.group(1))} — {title}"
+    match = re.fullmatch(r"PRICE(\d{1,2})", section)
+    if match:
+        return f"## PRICE {int(match.group(1))} — {title}"
+    match = re.fullmatch(r"POST_ALL_MATCH(\d{1,2})", section)
+    if match:
+        return f"## POST-ALL-MATCH {int(match.group(1))} — {title}"
+    if section == "GW_LOCK_PACKAGE":
+        return "## GW LOCK PACKAGE"
+    return f"## {title}"
+
+
+def _human_label(value: Any) -> str:
+    return str(value or "").strip().replace("_", " ").upper()
+
+
+def _render_generic_human_content(
+    content: Mapping[str, Any] | None,
+    *,
+    excluded_keys: Sequence[str] = (),
+) -> list[str]:
+    """Render user-facing structured content without dumping runtime internals."""
+    payload = dict(content or {})
+    excluded = {str(key) for key in excluded_keys}
+    lines: list[str] = []
+    hidden_tokens = (
+        "fingerprint",
+        "sha",
+        "run_id",
+        "workflow",
+        "issue_431",
+        "mutation",
+        "readback",
+        "raw_payload",
+    )
+    for key, value in payload.items():
+        key_text = str(key)
+        lower = key_text.lower()
+        if key_text in excluded or any(token in lower for token in hidden_tokens):
+            continue
+        if value is None:
+            lines.append(f"{_human_label(key_text)}: UNAVAILABLE")
+            continue
+        if isinstance(value, (str, int, float, bool)):
+            lines.append(f"{_human_label(key_text)}: {value}")
+            continue
+        if isinstance(value, Mapping):
+            compact = []
+            for subkey, subvalue in value.items():
+                if isinstance(subvalue, (str, int, float, bool)) or subvalue is None:
+                    compact.append(
+                        f"{_human_label(subkey)}={subvalue if subvalue is not None else 'UNAVAILABLE'}"
+                    )
+            if compact:
+                lines.append(f"{_human_label(key_text)}: " + " | ".join(compact))
+            continue
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+            items = list(value)
+            if not items:
+                lines.append(f"{_human_label(key_text)}: NONE")
+                continue
+            scalar_items = [
+                item for item in items
+                if isinstance(item, (str, int, float, bool))
+            ]
+            if len(scalar_items) == len(items):
+                lines.append(
+                    f"{_human_label(key_text)}: "
+                    + ", ".join(str(item) for item in scalar_items)
+                )
+                continue
+            for index, item in enumerate(items, start=1):
+                if not isinstance(item, Mapping):
+                    continue
+                compact = []
+                for subkey, subvalue in item.items():
+                    if isinstance(subvalue, (str, int, float, bool)) or subvalue is None:
+                        compact.append(
+                            f"{_human_label(subkey)}={subvalue if subvalue is not None else 'UNAVAILABLE'}"
+                        )
+                if compact:
+                    lines.append(f"- {index}. " + " | ".join(compact))
+    return lines
+
+
 def render_natural_post_match_text(report: Mapping[str, Any]) -> str:
     """Visible natural post-match renderer including fixture scout and movers."""
     blocks: list[str] = []
     for section in report.get("sections") or []:
         label = str(section.get("label") or "")
         state = str(section.get("state") or "")
-        lines = [f"## {label}", f"Status: {state}"]
+        section_id = section.get("section_id")
+        lines = [_visible_section_heading(section_id, label), f"Status: {state}"]
+        reason = str(section.get("degradation_reason") or "").strip()
+        if state != "COMPLETE" and reason:
+            lines.append(f"Reason: {reason}")
         content = section.get("content")
         content_map = dict(content or {}) if isinstance(content, Mapping) else {}
 
@@ -2060,6 +2180,24 @@ def render_natural_post_match_text(report: Mapping[str, Any]) -> str:
                 f"{movers.get('deep_requested_count')} | "
                 f"Authority {movers.get('search_authority') or 'UNAVAILABLE'}"
             )
+        generic = _render_generic_human_content(
+            content_map,
+            excluded_keys=(
+                "match_scout",
+                "post_match_match_by_match_scout",
+                "mathematical_decision_stack",
+                "universe_movers",
+                "package_search_proof",
+                "search_proof",
+                "package_universe_challengers",
+                "universe_challengers",
+                "package_routes",
+                "routes",
+                "frontier",
+            ),
+        )
+        if generic:
+            lines.extend(generic)
         blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
 
@@ -2070,7 +2208,11 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
     for row in report.get("sections") or []:
         label = str(row.get("label") or "")
         state = str(row.get("state") or "")
-        lines = [f"## {label}", f"Status: {state}"]
+        section_id = row.get("section_id")
+        lines = [_visible_section_heading(section_id, label), f"Status: {state}"]
+        reason = str(row.get("degradation_reason") or "").strip()
+        if state != "COMPLETE" and reason:
+            lines.append(f"Reason: {reason}")
         content = row.get("content")
         content_map = dict(content or {}) if isinstance(content, Mapping) else {}
         scout = [
@@ -2090,6 +2232,22 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
                     section_state=state,
                 )
             )
+        generic = _render_generic_human_content(
+            content_map,
+            excluded_keys=(
+                "post_match_match_by_match_scout",
+                "mathematical_decision_stack",
+                "package_search_proof",
+                "search_proof",
+                "package_universe_challengers",
+                "universe_challengers",
+                "package_routes",
+                "routes",
+                "frontier",
+            ),
+        )
+        if generic:
+            lines.extend(generic)
         blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
 

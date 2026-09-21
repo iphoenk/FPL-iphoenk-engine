@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from src.runtime_v6.delivery_integrity import MANDATORY_SECTIONS
+from src.runtime_v6.delivery_integrity import (
+    DEEP_MANDATORY_SECTIONS,
+    FINAL_MANDATORY_SECTIONS,
+    MATCH_MANDATORY_SECTIONS,
+    PRICE_MANDATORY_SECTIONS,
+)
 from src.runtime_v6.report_compute import build_report_compute_contract
 from src.runtime_v6.report_delivery import build_delivery_proof, validate_delivery_proof
 from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_render_qa
@@ -78,10 +83,14 @@ def test_ad_hoc_canonical_mode_runs_through_qa_and_same_slot_receipt(report_mode
     )
     compute = _compute()
     qa_report_mode = context["qa_report_mode"]
-    manifest_ids = (
-        [f"MATCH{index}" for index in range(1, 9)]
+    manifest_ids = list(
+        MATCH_MANDATORY_SECTIONS
         if qa_report_mode == "MATCH"
-        else list(MANDATORY_SECTIONS)
+        else PRICE_MANDATORY_SECTIONS
+        if qa_report_mode == "PRICE"
+        else FINAL_MANDATORY_SECTIONS
+        if qa_report_mode == "FINAL"
+        else DEEP_MANDATORY_SECTIONS
     )
     manifest = [
         {"section_id": section_id, "status": "COMPLETE"}

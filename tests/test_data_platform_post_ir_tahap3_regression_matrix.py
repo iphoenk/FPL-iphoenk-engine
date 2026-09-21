@@ -4,7 +4,13 @@ from copy import deepcopy
 
 import pytest
 
-from src.runtime_v6.delivery_integrity import MANDATORY_SECTIONS, plan_exact_scope_retrieval
+from src.runtime_v6.delivery_integrity import (
+    DEEP_MANDATORY_SECTIONS,
+    FINAL_MANDATORY_SECTIONS,
+    MATCH_MANDATORY_SECTIONS,
+    POST_ALL_MATCH_MANDATORY_SECTIONS,
+    plan_exact_scope_retrieval,
+)
 from src.runtime_v6.report_compute import build_report_compute_contract
 from src.runtime_v6.report_contract import resolve_report_scope_matrix
 from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_render_qa
@@ -70,20 +76,35 @@ def _compute(*, mutate_sections=None) -> dict:
     )
 
 
-def _full_manifest(*, s14b_status: str = "COMPLETE") -> list[dict]:
+def _catalog(mode: str):
+    token = str(mode).upper()
+    if token == "MATCH":
+        return MATCH_MANDATORY_SECTIONS
+    if token == "POST_ALL_MATCH":
+        return POST_ALL_MATCH_MANDATORY_SECTIONS
+    if token == "FINAL":
+        return FINAL_MANDATORY_SECTIONS
+    return DEEP_MANDATORY_SECTIONS
+
+
+def _full_manifest(*, s15b_status: str = "COMPLETE") -> list[dict]:
     return [
         {
             "section_id": section_id,
-            "status": s14b_status if section_id == "S14B" else "COMPLETE",
+            "status": s15b_status if section_id == "S15B" else "COMPLETE",
         }
-        for section_id in MANDATORY_SECTIONS
+        for section_id in DEEP_MANDATORY_SECTIONS
     ]
 
 
 def _pre(*, mode: str, weather: str, manifest=None, mini_complete: bool = True, compute=None):
+    selected_manifest = manifest or [
+        {"section_id": section_id, "status": "COMPLETE"}
+        for section_id in _catalog(mode)
+    ]
     return validate_pre_render_qa(
         compute_contract=compute or _compute(),
-        section_manifest=manifest or _full_manifest(),
+        section_manifest=selected_manifest,
         mini_league_denominator_complete=mini_complete,
         report_mode=mode,
         weather_contract_state=weather,
@@ -202,7 +223,7 @@ def test_icon_unavailable_keeps_s14b_visible_with_explicit_degraded_state():
     pre = _pre(
         mode="DEEP",
         weather="DIRECT_CHATGPT",
-        manifest=_full_manifest(s14b_status="PARTIAL"),
+        manifest=_full_manifest(s15b_status="PARTIAL"),
         mini_complete=False,
     )
     assert pre["status"] == "PASS"
@@ -244,31 +265,36 @@ def test_optimizer_mc_failure_must_degrade_truthfully_and_fake_pass_still_fails(
 def test_normal_deep_keeps_full_canonical_backbone_and_actual_body_passes():
     pre = _pre(mode="DEEP", weather="DIRECT_CHATGPT")
     assert pre["status"] == "PASS"
-    assert pre["expected_section_ids"] == list(MANDATORY_SECTIONS)
+    assert pre["expected_section_ids"] == list(DEEP_MANDATORY_SECTIONS)
     assert _post(pre)["status"] == "PASS"
 
 
 def test_deadline_active_hourly_uses_full_backbone_not_progress_only():
     pre = _pre(mode="DEADLINE", weather="DIRECT_CHATGPT")
     assert pre["status"] == "PASS"
-    assert pre["expected_section_ids"] == list(MANDATORY_SECTIONS)
+    assert pre["expected_section_ids"] == list(DEEP_MANDATORY_SECTIONS)
     post = _post(pre)
     assert post["status"] == "PASS"
     assert post["visible_body_validated"] is True
 
 
 @pytest.mark.parametrize("mode", ["DEADLINE", "FINAL"])
-def test_final_and_deadline_modes_keep_full_backbone(mode: str):
+def test_final_and_deadline_modes_keep_canonical_backbone(mode: str):
     pre = _pre(mode=mode, weather="DIRECT_CHATGPT")
     assert pre["status"] == "PASS"
-    assert pre["expected_section_ids"] == list(MANDATORY_SECTIONS)
+    expected = (
+        list(FINAL_MANDATORY_SECTIONS)
+        if mode == "FINAL"
+        else list(DEEP_MANDATORY_SECTIONS)
+    )
+    assert pre["expected_section_ids"] == expected
     assert _post(pre)["status"] == "PASS"
 
 
-def test_live_match_checkpoint_uses_match1_to_match8_catalog_not_full_backbone():
+def test_live_match_checkpoint_uses_match1_to_match13_catalog_not_full_backbone():
     manifest = [
-        {"section_id": f"MATCH{index}", "status": "COMPLETE"}
-        for index in range(1, 9)
+        {"section_id": section_id, "status": "COMPLETE"}
+        for section_id in MATCH_MANDATORY_SECTIONS
     ]
     pre = _pre(
         mode="MATCH",
@@ -276,7 +302,7 @@ def test_live_match_checkpoint_uses_match1_to_match8_catalog_not_full_backbone()
         manifest=manifest,
     )
     assert pre["status"] == "PASS"
-    assert pre["expected_section_ids"] == [f"MATCH{index}" for index in range(1, 9)]
+    assert pre["expected_section_ids"] == list(MATCH_MANDATORY_SECTIONS)
     assert pre["generated_section_ids"] == pre["expected_section_ids"]
     post = _post(
         pre,
@@ -287,7 +313,7 @@ def test_live_match_checkpoint_uses_match1_to_match8_catalog_not_full_backbone()
     assert post["visible_body_validated"] is True
 
 
-def test_post_all_match_inherits_full_backbone_and_requires_scout_marker():
+def test_post_all_match_uses_own_canonical_backbone_and_requires_scout_marker():
     context = build_ad_hoc_report_context(
         request_id="req-post-all-match",
         requested_at="2026-09-18T11:45:00+07:00",
@@ -297,16 +323,21 @@ def test_post_all_match_inherits_full_backbone_and_requires_scout_marker():
 
     pre = _pre(mode="POST_ALL_MATCH", weather="DIRECT_CHATGPT")
     assert pre["status"] == "PASS"
-    assert pre["expected_section_ids"] == list(MANDATORY_SECTIONS)
+    assert pre["expected_section_ids"] == list(POST_ALL_MATCH_MANDATORY_SECTIONS)
 
     body = valid_visible_body(pre)
-    assert _post(pre, body=body)["status"] == "FAIL"
-
-    body = body.replace(
-        "# 04:30 MORNING DEEP REVIEW",
-        "# 04:30 MORNING DEEP REVIEW\nGW COMPLETED MATCH-BY-MATCH SCOUT",
-        1,
+    missing_marker = (
+        body.replace(
+            "GW COMPLETED MATCH-BY-MATCH SCOUT",
+            "MATCH-BY-MATCH REVIEW",
+        )
+        .replace(
+            "GW Completed Match-by-Match Scout",
+            "Match-by-Match Review",
+        )
     )
+    assert _post(pre, body=missing_marker)["status"] == "FAIL"
+
     post = _post(pre, body=body)
     assert post["status"] == "PASS"
     assert post["visible_body_validated"] is True

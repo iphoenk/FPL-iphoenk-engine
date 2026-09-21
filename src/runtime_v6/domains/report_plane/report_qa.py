@@ -12,7 +12,15 @@ import re
 import json
 from typing import Any, Mapping, Sequence
 
-from .delivery_integrity import MANDATORY_SECTIONS, PARTIAL_ALLOWED_SECTIONS
+from .delivery_integrity import (
+    DEEP_MANDATORY_SECTIONS,
+    FINAL_MANDATORY_SECTIONS,
+    MANDATORY_SECTIONS,
+    MATCH_MANDATORY_SECTIONS,
+    PARTIAL_ALLOWED_SECTIONS,
+    POST_ALL_MATCH_MANDATORY_SECTIONS,
+    PRICE_MANDATORY_SECTIONS,
+)
 from .visible_body_contract import validate_visible_report_body
 
 
@@ -40,12 +48,36 @@ _MATCH_COUNT_TARGETS = {
     "XI": 11,
     "BENCH": 4,
 }
-_MATCH_SECTION_IDS = tuple(f"MATCH{index}" for index in range(1, 9))
+_PRICE_COUNT_TARGETS = {
+    "WATCHLIST20": 20,
+    "RISE20": 20,
+    "FALL20": 20,
+}
+_POST_ALL_MATCH_COUNT_TARGETS = {
+    "OUR15": 15,
+    "WATCHLIST20": 20,
+}
+_MATCH_SECTION_IDS = MATCH_MANDATORY_SECTIONS
+_PRICE_SECTION_IDS = PRICE_MANDATORY_SECTIONS
+_POST_ALL_MATCH_SECTION_IDS = POST_ALL_MATCH_MANDATORY_SECTIONS
+_FULL_SECTION_IDS = DEEP_MANDATORY_SECTIONS
+_FINAL_SECTION_IDS = FINAL_MANDATORY_SECTIONS
 _FULL_BACKBONE_CATALOG_MODES = frozenset(
-    {"LEGACY", "DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP", "POST_ALL_MATCH"}
+    {"LEGACY", "DEEP", "FULL", "DEADLINE", "OVERLAP"}
 )
-_VALID_SECTION_STATES = frozenset({"COMPLETE", "PARTIAL"})
-_MANDATORY_ORDER = {section_id: index for index, section_id in enumerate(MANDATORY_SECTIONS)}
+_VALID_SECTION_STATES = frozenset(
+    {"COMPLETE", "PARTIAL", "DEGRADED", "UNAVAILABLE"}
+)
+_ALL_SECTION_ORDER = (
+    list(_FULL_SECTION_IDS)
+    + [section for section in _FINAL_SECTION_IDS if section not in _FULL_SECTION_IDS]
+    + list(_MATCH_SECTION_IDS)
+    + list(_PRICE_SECTION_IDS)
+    + list(_POST_ALL_MATCH_SECTION_IDS)
+)
+_MANDATORY_ORDER = {
+    section_id: index for index, section_id in enumerate(_ALL_SECTION_ORDER)
+}
 _DEEP_WEATHER_MODES = frozenset(
     {"DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP", "POST_ALL_MATCH"}
 )
@@ -324,6 +356,13 @@ _SERIOUS_DECISION_VISIBLE_MARKERS = (
     "COVARIANCE / CORRELATION",
     "MONTE CARLO",
     "UNIVERSE SCAN / OPTIMAL TEAM IMPACT",
+)
+
+_ACTION_BOARD_VISIBLE_MARKERS = (
+    "NOW:",
+    "TRIGGER TO ACT:",
+    "ABORT / REVERSAL:",
+    "NEXT CHECKPOINT:",
 )
 _PRICE_WAIT_FIELDS = (
     "route",
@@ -619,10 +658,23 @@ def _duplicate_id_failure(rows: Sequence[Any], label: str) -> list[str]:
 def _degradation_label_visible(body: str, section: str, state: str) -> bool:
     upper = str(body or "").upper()
     section_upper = section.upper()
-    start = upper.find(section_upper)
-    if start < 0:
+    aliases = {
+        "PACKAGE_FRONTIER": ("PACKAGE OPTIMIZER/FRONTIER", "PACKAGE FRONTIER"),
+        "WATCHLIST20": ("WATCHLIST20",),
+        "RISE20": ("RISE20",),
+        "FALL20": ("FALL20",),
+        "ALL15": ("ALL15",),
+        "ICON+": ("ICON+",),
+        "MATCH_SCOUT": ("MATCH-BY-MATCH SCOUT",),
+        "GW_LOCK_PACKAGE": ("GW LOCK PACKAGE",),
+    }
+    candidates = aliases.get(section_upper, (section_upper,))
+    starts = [upper.find(candidate) for candidate in candidates]
+    starts = [start for start in starts if start >= 0]
+    if not starts:
         return False
-    window = upper[start : start + 420]
+    start = min(starts)
+    window = upper[start : start + 520]
     state_upper = state.upper()
     return any(
         marker in window
@@ -630,6 +682,9 @@ def _degradation_label_visible(body: str, section: str, state: str) -> bool:
             f"STATE={state_upper}",
             f"STATE: {state_upper}",
             f"STATE {state_upper}",
+            f"STATUS={state_upper}",
+            f"STATUS: {state_upper}",
+            f"STATUS {state_upper}",
             f"— {state_upper}",
             f"- {state_upper}",
         )
@@ -1255,8 +1310,14 @@ def _expected_visible_catalog(report_mode: str, generated_section_ids: Sequence[
     mode = str(report_mode or "LEGACY").strip().upper() or "LEGACY"
     if mode == "MATCH":
         return list(_MATCH_SECTION_IDS)
+    if mode == "PRICE":
+        return list(_PRICE_SECTION_IDS)
+    if mode == "POST_ALL_MATCH":
+        return list(_POST_ALL_MATCH_SECTION_IDS)
+    if mode == "FINAL":
+        return list(_FINAL_SECTION_IDS)
     if mode in _FULL_BACKBONE_CATALOG_MODES:
-        return list(MANDATORY_SECTIONS)
+        return list(_FULL_SECTION_IDS)
     return list(generated_section_ids)
 
 
@@ -1264,14 +1325,21 @@ def _expected_visible_counts(report_mode: str) -> dict[str, int]:
     mode = str(report_mode or "LEGACY").strip().upper() or "LEGACY"
     if mode == "MATCH":
         return dict(_MATCH_COUNT_TARGETS)
+    if mode == "PRICE":
+        return dict(_PRICE_COUNT_TARGETS)
+    if mode == "POST_ALL_MATCH":
+        return dict(_POST_ALL_MATCH_COUNT_TARGETS)
     return dict(_FULL_COUNT_TARGETS)
 
 
 def _required_visible_markers(report_mode: str) -> list[str]:
     mode = str(report_mode or "").strip().upper()
+    markers: list[str] = []
     if mode == "POST_ALL_MATCH":
-        return ["GW COMPLETED MATCH-BY-MATCH SCOUT"]
-    return []
+        markers.append("GW COMPLETED MATCH-BY-MATCH SCOUT")
+    if mode in {"DEEP", "FULL", "DEADLINE", "FINAL", "PRICE"}:
+        markers.extend(_ACTION_BOARD_VISIBLE_MARKERS)
+    return markers
 
 
 def _is_sha256(value: Any) -> bool:
@@ -1618,11 +1686,11 @@ def validate_pre_render_qa(
         str(row.get("section") or "") == "ICON+"
         for row in section_degradations
     )
-    s14b_state = next(
+    icon_section_state = next(
         (
             str(row.get("status") or "").strip().upper()
             for row in canonical_manifest
-            if str(row.get("section_id") or "").strip().upper() == "S14B"
+            if str(row.get("section_id") or "").strip().upper() == "S15B"
         ),
         "MISSING",
     )
@@ -1630,7 +1698,7 @@ def validate_pre_render_qa(
         mini_league_contract_state = "DEGRADED"
     elif mini_league_denominator_complete:
         mini_league_contract_state = "COMPLETE"
-    elif s14b_state == "PARTIAL":
+    elif icon_section_state in {"PARTIAL", "DEGRADED", "UNAVAILABLE"}:
         mini_league_contract_state = "DEGRADED"
     else:
         mini_league_contract_state = "INCOMPLETE"

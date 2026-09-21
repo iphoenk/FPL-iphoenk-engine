@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from src.runtime_v6.delivery_integrity import MANDATORY_SECTIONS
+from src.runtime_v6.delivery_integrity import (
+    DEEP_MANDATORY_SECTIONS,
+    FINAL_MANDATORY_SECTIONS,
+    MATCH_MANDATORY_SECTIONS,
+    PRICE_MANDATORY_SECTIONS,
+)
 from src.runtime_v6.report_compute import build_report_compute_contract
 from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_render_qa
 from test_support.report_provenance import r5_partitions, r5_section_payloads
@@ -57,10 +62,15 @@ def _compute():
 
 
 def _manifest(report_mode: str):
+    mode = str(report_mode).upper()
     section_ids = (
-        [f"MATCH{index}" for index in range(1, 9)]
-        if report_mode == "MATCH"
-        else list(MANDATORY_SECTIONS)
+        MATCH_MANDATORY_SECTIONS
+        if mode == "MATCH"
+        else PRICE_MANDATORY_SECTIONS
+        if mode == "PRICE"
+        else FINAL_MANDATORY_SECTIONS
+        if mode == "FINAL"
+        else DEEP_MANDATORY_SECTIONS
     )
     return [{"section_id": section_id, "status": "COMPLETE"} for section_id in section_ids]
 

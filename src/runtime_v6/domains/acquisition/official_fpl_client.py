@@ -264,6 +264,9 @@ class OfficialFPLClient:
     def bootstrap(self) -> dict[str, Any]:
         return self._request("bootstrap_static", "bootstrap-static/")
 
+    def fixtures(self) -> dict[str, Any]:
+        return self._request("fixtures", "fixtures/")
+
     def entry(self, entry_id: int) -> dict[str, Any]:
         return self._request("entry", f"entry/{int(entry_id)}/")
 

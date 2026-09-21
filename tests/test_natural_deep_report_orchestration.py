@@ -1487,3 +1487,145 @@ def test_deep_renderer_exposes_post_match_carryover_and_mathematical_decision_st
     assert "EXPECTED REGRET: 0.7" in body
     assert "MONTE CARLO: state=EXECUTED | N=500000 | correlated=True" in body
 
+
+
+def _complete_universe_package_content():
+    return {
+        "package_search_proof": {
+            "owned_expected": 15,
+            "owned_evaluated": 15,
+            "eligible_universe_expected": 667,
+            "eligible_universe_evaluated": 667,
+            "outgoing_candidate_count": 15,
+            "legal_route_count": 42,
+            "hold_included": True,
+            "lossy_pruning": False,
+            "search_authority": "FULL",
+        },
+        "package_universe_challengers": [
+            {
+                "rank": 1,
+                "element_id": 901,
+                "player": "Candidate A",
+                "position": "MID",
+                "club": "AAA",
+                "best_outgoing": "Owned Weak Link",
+                "package_route": "Owned Weak Link -> Candidate A",
+                "football_score": 82.4,
+                "football_score_components": {
+                    "PROVEN_HISTORICAL": 78,
+                    "TACTICAL_ROLE": 84,
+                    "CURRENT_UNDERLYING": 86,
+                    "FIXTURE_SECURITY": 80,
+                },
+                "p_available": 0.99,
+                "p_start": 0.91,
+                "p_cameo": 0.05,
+                "p_dnp": 0.04,
+                "xmins": {"mean": 78.2},
+                "p_return": 0.47,
+                "p_blank": 0.43,
+                "p_haul": 0.14,
+                "expected_points_distribution": {"mean": 6.1, "p90": 11},
+                "tactical_role": "secure multi-channel creator",
+                "set_piece_penalty_role": "set pieces",
+                "gw_plus_1": 6.1,
+                "three_gw": 18.0,
+                "five_gw": 29.2,
+                "package_utility_delta_vs_hold": 3.4,
+                "price_economics": "affordable",
+                "structure_effect": "improves starting XI and bench optionality",
+                "expected_regret": 0.7,
+                "information_value_of_waiting": 0.5,
+                "mini_league_leverage": "downstream overlay only",
+                "main_upside": "role + underlying + fixtures",
+                "main_risk": "fixture swing",
+                "action": "PREPARE",
+            }
+        ],
+        "package_routes": [
+            {
+                "route": "HOLD",
+                "moves": [],
+                "transfer_cost": 0,
+                "gw1_net": 0.0,
+                "two_gw_if_relevant": None,
+                "three_gw": 0.0,
+                "five_gw": 0.0,
+                "p_beats_hold": 0.5,
+                "expected_regret": 1.1,
+                "robustness": "baseline",
+                "price_risk": "none",
+                "structure_effect": "current squad",
+                "action_verdict": "WAIT",
+            },
+            {
+                "route": "Owned Weak Link -> Candidate A",
+                "moves": ["OUT Owned Weak Link", "IN Candidate A"],
+                "transfer_cost": 0,
+                "gw1_net": 1.2,
+                "two_gw_if_relevant": None,
+                "three_gw": 2.5,
+                "five_gw": 3.4,
+                "p_beats_hold": 0.61,
+                "expected_regret": 0.7,
+                "robustness": "positive",
+                "price_risk": "manageable",
+                "structure_effect": "improves XI",
+                "action_verdict": "PREPARE",
+            },
+        ],
+    }
+
+
+def test_deep_package_frontier_complete_requires_full_universe_search_proof():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    label = "Package optimizer/frontier including HOLD baseline"
+
+    incomplete = materialize_deep_report(
+        canonical_text=canonical,
+        section_payloads={
+            label: {
+                "state": "COMPLETE",
+                "content": {
+                    "package_routes": [
+                        {
+                            "route": "HOLD",
+                            "moves": [],
+                        }
+                    ]
+                },
+            }
+        },
+    )
+    incomplete_row = next(
+        row
+        for row in incomplete["sections"]
+        if "PACKAGE OPTIMIZER" in str(row.get("label") or "").upper()
+    )
+    assert incomplete_row["state"] == "DEGRADED"
+    assert "SEARCH_PROOF_MISSING" in incomplete_row["degradation_reason"]
+    assert "SCAN_DERIVED_CHALLENGERS_MISSING" in incomplete_row["degradation_reason"]
+
+    complete = materialize_deep_report(
+        canonical_text=canonical,
+        section_payloads={
+            label: {
+                "state": "COMPLETE",
+                "content": _complete_universe_package_content(),
+            }
+        },
+    )
+    complete_row = next(
+        row
+        for row in complete["sections"]
+        if "PACKAGE OPTIMIZER" in str(row.get("label") or "").upper()
+    )
+    assert complete_row["state"] == "COMPLETE"
+    body = render_deep_text(complete)
+    assert "### UNIVERSE SCAN / OPTIMAL TEAM IMPACT" in body
+    assert "UNIVERSE 667/667" in body
+    assert "OUTGOING 15/15" in body
+    assert "Candidate A" in body
+    assert "UTILITY ΔHOLD 3.4" in body
+    assert "Owned Weak Link -> Candidate A" in body

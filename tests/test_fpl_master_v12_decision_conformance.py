@@ -555,3 +555,34 @@ def test_serious_decision_semantics_marks_missing_p13_posterior_predictive_parti
     assert qa["status"] == "PARTIAL"
     assert "V12_POSTERIOR_PREDICTIVE_EVENT_PROOF_MISSING" in qa["failures"]
 
+
+
+def test_transfer_scope_search_semantics_require_complete_full_universe_proof():
+    proof = _valid_proof(
+        decision_scope="TRANSFER",
+        serious_transfer_decision=True,
+        selected_change_route=False,
+        pairwise_empty_reason="NO_MATERIAL_CHALLENGER",
+        owned_out_scan={
+            "evaluated_owned_element_ids": list(range(1, 16)),
+            "selected_outgoing_element_ids": [],
+            "user_named_outgoing_element_ids": [],
+            "selection_is_result_not_precondition": True,
+            "user_named_out_is_hypothesis_only": True,
+        },
+    )
+    passed = validate_v12_decision_semantics(
+        proof,
+        serious_decision_required=True,
+    )
+    assert passed["status"] == "PASS"
+
+    broken = dict(proof)
+    broken["search_proof"] = dict(proof["search_proof"])
+    broken["search_proof"]["eligible_universe_evaluated"] = 656
+    failed = validate_v12_decision_semantics(
+        broken,
+        serious_decision_required=True,
+    )
+    assert failed["status"] == "PARTIAL"
+    assert "V12_SEARCH_PROOF_UNIVERSE_INCOMPLETE" in failed["failures"]

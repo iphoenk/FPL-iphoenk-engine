@@ -126,6 +126,68 @@ def _routes():
     ]
 
 
+def _package_search_proof():
+    return {
+        "owned_expected": 15,
+        "owned_evaluated": 15,
+        "eligible_universe_expected": 667,
+        "eligible_universe_evaluated": 667,
+        "outgoing_candidate_count": 15,
+        "legal_route_count": len(_routes()),
+        "hold_included": True,
+        "lossy_pruning": False,
+        "search_authority": "FULL",
+    }
+
+
+def _package_universe_challengers():
+    return [
+        {
+            "rank": 1,
+            "element_id": 901,
+            "player": "Universe Candidate A",
+            "position": "MID",
+            "club": "CLUB",
+            "best_outgoing": "P8",
+            "package_route": "A_TO_B",
+            "football_score": 82.4,
+            "football_score_components": {
+                "PROVEN_HISTORICAL": 78.0,
+                "TACTICAL_ROLE": 84.0,
+                "CURRENT_UNDERLYING": 86.0,
+                "FIXTURE_SECURITY": 80.0,
+            },
+            "p_available": 0.99,
+            "p_start": 0.91,
+            "p_cameo": 0.05,
+            "p_dnp": 0.04,
+            "xmins": {"mean": 78.2},
+            "p_return": 0.47,
+            "p_blank": 0.43,
+            "p_haul": 0.14,
+            "expected_points_distribution": {
+                "mean": 6.1,
+                "variance": 8.0,
+                "quantiles": {"p10": 2, "p50": 5, "p90": 11},
+            },
+            "tactical_role": "secure multi-channel creator",
+            "set_piece_penalty_role": "set pieces",
+            "gw_plus_1": 6.1,
+            "three_gw": 18.0,
+            "five_gw": 29.2,
+            "package_utility_delta_vs_hold": 3.4,
+            "price_economics": "affordable",
+            "structure_effect": "improves XI and bench optionality",
+            "expected_regret": 0.7,
+            "information_value_of_waiting": 0.5,
+            "mini_league_leverage": "downstream overlay only",
+            "main_upside": "role + process + fixtures",
+            "main_risk": "fixture swing",
+            "action": "PREPARE",
+        }
+    ]
+
+
 def _icon():
     def metric(n, d):
         return {"numerator": n, "denominator": d, "percentage": round(n / d * 100.0, 1)}
@@ -191,6 +253,9 @@ def _deep():
             "watchlist20": _watchlist20(),
             "watchlist_full_universe_derived": True,
             "package_routes": _routes(),
+            "package_full_universe_derived": True,
+            "package_search_proof": _package_search_proof(),
+            "package_universe_challengers": _package_universe_challengers(),
             "serious_comparison": True,
             "search_authority": "FULL",
             "search_authority_visible": True,

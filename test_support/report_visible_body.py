@@ -197,6 +197,15 @@ def valid_visible_body(
                         "MONTE CARLO: NOT RUN — synthetic QA fixture",
                     ]
                 )
+            if include_serious_math and "UNIVERSE SCAN / OPTIMAL TEAM IMPACT" in required_markers:
+                lines.extend(
+                    [
+                        "### UNIVERSE SCAN / OPTIMAL TEAM IMPACT",
+                        "SEARCH PROOF: OUR15 15/15 | UNIVERSE 667/667 | OUTGOING 15/15 | LEGAL ROUTES 42 | HOLD True | LOSSY PRUNING False | AUTHORITY FULL",
+                        "SCAN-DERIVED CHALLENGERS: Candidate A, Candidate B, Candidate C",
+                        "PACKAGE FRONTIER: HOLD plus scan-derived legal routes with 1GW/3GW/5GW team-impact deltas.",
+                    ]
+                )
         elif section_id == "S14":
             if pre_render_qa.get("expected_fact_keys"):
                 lines.append("FACT: Official factual evidence is separated and timestamped.")

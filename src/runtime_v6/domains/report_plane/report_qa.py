@@ -194,6 +194,51 @@ _PACKAGE_VISIBLE_FIELDS = (
     "structure_effect",
     "action_verdict",
 )
+_PACKAGE_SEARCH_PROOF_FIELDS = (
+    "owned_expected",
+    "owned_evaluated",
+    "eligible_universe_expected",
+    "eligible_universe_evaluated",
+    "outgoing_candidate_count",
+    "legal_route_count",
+    "hold_included",
+    "lossy_pruning",
+    "search_authority",
+)
+_PACKAGE_UNIVERSE_CHALLENGER_FIELDS = (
+    "rank",
+    "element_id",
+    "player",
+    "position",
+    "club",
+    "best_outgoing",
+    "package_route",
+    "football_score",
+    "football_score_components",
+    "p_available",
+    "p_start",
+    "p_cameo",
+    "p_dnp",
+    "xmins",
+    "p_return",
+    "p_blank",
+    "p_haul",
+    "expected_points_distribution",
+    "tactical_role",
+    "set_piece_penalty_role",
+    "gw_plus_1",
+    "three_gw",
+    "five_gw",
+    "package_utility_delta_vs_hold",
+    "price_economics",
+    "structure_effect",
+    "expected_regret",
+    "information_value_of_waiting",
+    "mini_league_leverage",
+    "main_upside",
+    "main_risk",
+    "action",
+)
 _FINAL_LOCK_FIELDS = (
     "target_gw",
     "transfers_out",
@@ -278,6 +323,7 @@ _SERIOUS_DECISION_VISIBLE_MARKERS = (
     "INFORMATION VALUE OF WAITING",
     "COVARIANCE / CORRELATION",
     "MONTE CARLO",
+    "UNIVERSE SCAN / OPTIMAL TEAM IMPACT",
 )
 _PRICE_WAIT_FIELDS = (
     "route",
@@ -786,18 +832,86 @@ def validate_v12_visible_content_contract(
                     section_degradations.append(degradation)
 
         routes = list(payload.get("package_routes") or [])
+        challengers = list(payload.get("package_universe_challengers") or [])
+        package_search_proof = payload.get("package_search_proof")
         package_meta = _section_state(payload, "PACKAGE_FRONTIER")
         package_state = str(package_meta.get("state") or "").upper()
         route_names = [str(row.get("route") or "") for row in routes if isinstance(row, Mapping)]
         if len(route_names) != len(set(route_names)):
             hard_failures.append("PACKAGE_ROUTE_DUPLICATE")
         hard_failures.extend(_placeholder_rows(routes, "PACKAGE"))
+        hard_failures.extend(_duplicate_id_failure(challengers, "PACKAGE_UNIVERSE_CHALLENGERS"))
+        hard_failures.extend(_placeholder_rows(challengers, "PACKAGE_UNIVERSE_CHALLENGERS"))
         if package_state == "COMPLETE":
             hard_failures.extend(_missing_row_fields(routes, _PACKAGE_VISIBLE_FIELDS, "PACKAGE"))
             if payload.get("serious_comparison") is True and not routes:
                 hard_failures.append("PACKAGE_SERIOUS_COMPARISON_MISSING")
             if routes and not any(name.upper() == "HOLD" for name in route_names):
                 hard_failures.append("PACKAGE_HOLD_BASELINE_MISSING")
+            if payload.get("package_full_universe_derived") is not True:
+                hard_failures.append("PACKAGE_FULL_UNIVERSE_LINEAGE_MISSING")
+            if not isinstance(package_search_proof, Mapping):
+                hard_failures.append("PACKAGE_SEARCH_PROOF_MISSING")
+            else:
+                missing = [
+                    field
+                    for field in _PACKAGE_SEARCH_PROOF_FIELDS
+                    if field not in package_search_proof
+                ]
+                if missing:
+                    hard_failures.append(
+                        "PACKAGE_SEARCH_PROOF_SCHEMA_MISSING=" + ",".join(missing)
+                    )
+                else:
+                    try:
+                        owned_expected = int(package_search_proof.get("owned_expected"))
+                        owned_evaluated = int(package_search_proof.get("owned_evaluated"))
+                        universe_expected = int(
+                            package_search_proof.get("eligible_universe_expected")
+                        )
+                        universe_evaluated = int(
+                            package_search_proof.get("eligible_universe_evaluated")
+                        )
+                        outgoing_candidates = int(
+                            package_search_proof.get("outgoing_candidate_count")
+                        )
+                        legal_routes = int(package_search_proof.get("legal_route_count"))
+                    except (TypeError, ValueError):
+                        hard_failures.append("PACKAGE_SEARCH_PROOF_NUMERIC_INVALID")
+                    else:
+                        if owned_expected != 15 or owned_evaluated != 15:
+                            hard_failures.append(
+                                f"PACKAGE_OUR15_SEARCH_INCOMPLETE={owned_evaluated}/{owned_expected}"
+                            )
+                        if universe_expected <= 0 or universe_evaluated != universe_expected:
+                            hard_failures.append(
+                                "PACKAGE_UNIVERSE_SEARCH_INCOMPLETE="
+                                f"{universe_evaluated}/{universe_expected}"
+                            )
+                        if outgoing_candidates != 15:
+                            hard_failures.append(
+                                f"PACKAGE_OUTGOING_SCAN_INCOMPLETE={outgoing_candidates}/15"
+                            )
+                        if legal_routes <= 0:
+                            hard_failures.append("PACKAGE_LEGAL_ROUTE_COUNT_INVALID")
+                    if package_search_proof.get("hold_included") is not True:
+                        hard_failures.append("PACKAGE_SEARCH_PROOF_HOLD_MISSING")
+                    if package_search_proof.get("lossy_pruning") is not False:
+                        hard_failures.append("PACKAGE_SEARCH_PROOF_LOSSY_PRUNING")
+                    if str(package_search_proof.get("search_authority") or "").upper() != "FULL":
+                        hard_failures.append("PACKAGE_SEARCH_PROOF_NOT_FULL")
+            if str(payload.get("search_authority") or "").upper() != "FULL":
+                hard_failures.append("PACKAGE_VISIBLE_SEARCH_AUTHORITY_NOT_FULL")
+            if not challengers:
+                hard_failures.append("PACKAGE_UNIVERSE_CHALLENGERS_MISSING")
+            else:
+                hard_failures.extend(
+                    _missing_row_fields(
+                        challengers,
+                        _PACKAGE_UNIVERSE_CHALLENGER_FIELDS,
+                        "PACKAGE_UNIVERSE_CHALLENGERS",
+                    )
+                )
         else:
             degradation, meta_hard = _section_degradation(
                 section="PACKAGE_FRONTIER",
@@ -2217,6 +2331,43 @@ def validate_v12_decision_semantics(
         failures.append("V12_SEARCH_AUTHORITY_INVALID")
     if search_authority == "PARTIAL" and optimization_claim == "FULL_UNIVERSE_OPTIMIZED":
         failures.append("V12_PARTIAL_SEARCH_FALSE_FULL_OPTIMIZATION_CLAIM")
+
+    decision_scope = str(proof.get("decision_scope") or "").upper()
+    route_type = str(proof.get("route_type") or "").upper()
+    transfer_scope = (
+        decision_scope in {"TRANSFER", "PACKAGE"}
+        or route_type in {"TRANSFER", "CHANGE", "ONE_GW_PUNT", "RENTAL", "EXIT"}
+        or optimization_claim == "FULL_UNIVERSE_OPTIMIZED"
+    )
+    if transfer_scope:
+        search_proof = proof.get("search_proof")
+        if not isinstance(search_proof, Mapping):
+            failures.append("V12_SEARCH_PROOF_MISSING")
+        else:
+            try:
+                owned_expected = int(search_proof.get("owned_expected"))
+                owned_evaluated = int(search_proof.get("owned_evaluated"))
+                universe_expected = int(search_proof.get("eligible_universe_expected"))
+                universe_evaluated = int(search_proof.get("eligible_universe_evaluated"))
+                outgoing_count = int(search_proof.get("outgoing_candidate_count"))
+                legal_route_count = int(search_proof.get("legal_route_count"))
+            except (TypeError, ValueError):
+                failures.append("V12_SEARCH_PROOF_NUMERIC_INVALID")
+            else:
+                if owned_expected != 15 or owned_evaluated != 15:
+                    failures.append("V12_SEARCH_PROOF_OUR15_INCOMPLETE")
+                if universe_expected <= 0 or universe_evaluated != universe_expected:
+                    failures.append("V12_SEARCH_PROOF_UNIVERSE_INCOMPLETE")
+                if outgoing_count != 15:
+                    failures.append("V12_SEARCH_PROOF_OUTGOING_SCAN_INCOMPLETE")
+                if legal_route_count <= 0:
+                    failures.append("V12_SEARCH_PROOF_LEGAL_ROUTES_INVALID")
+            if search_proof.get("hold_included") is not True:
+                failures.append("V12_SEARCH_PROOF_HOLD_MISSING")
+            if search_proof.get("lossy_pruning") is not False:
+                failures.append("V12_SEARCH_PROOF_LOSSY_PRUNING")
+            if str(search_proof.get("search_authority") or "").upper() != search_authority:
+                failures.append("V12_SEARCH_PROOF_AUTHORITY_MISMATCH")
 
     mc = proof.get("monte_carlo")
     if not isinstance(mc, Mapping):

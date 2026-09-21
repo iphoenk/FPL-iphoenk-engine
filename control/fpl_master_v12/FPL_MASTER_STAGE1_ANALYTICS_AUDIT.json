@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "audit_id": "V12_STAGE1_ANALYTICS_COMPLETION_2026_09_21",
-  "observed_at": "2026-09-21T21:34:04+07:00",
+  "observed_at": "2026-09-22T04:57:18+07:00",
   "authority": "EVIDENCE_ONLY_NON_AUTHORITATIVE",
   "baseline": {
     "main_sha": "4955f91ab2ba560a0221a4d42a6fd672eafcd277",
@@ -128,8 +128,8 @@
     ]
   ],
   "capability_classification": {
-    "full_universe": "A implementation: exact Canonical 20/25/30/25 producer consumes existing owner outputs only; runtime acceptance pending",
-    "match_by_match": "A implementation / final runtime acceptance pending: Official FPL finalized event-live history is primary; stale Vaastav mirror is rejected and fallback requires complete latest-finished-GW coverage",
+    "full_universe": "A FINAL GREEN: exact Canonical 20/25/30/25 full-universe producer executed and passed controlled occurrence acceptance",
+    "match_by_match": "A FINAL GREEN: Official FPL finalized event-live GW1→current history is primary, exact identity/provenance enforced, stale mirror rejected",
     "opponent_adjustment": "A supported core: venue-specific attack/defence team-strength weights applied to historical observations; unsupported set-piece/transition/aerial dimensions remain explicit UNAVAILABLE",
     "recency": "A: historical weight is recency × opponent-strength × regime weight",
     "coach_formation_role": "A/F by evidence: explicit probabilistic UNKNOWN state when factual coach/formation/role data is unavailable; no FPL-position-as-role fabrication",
@@ -141,16 +141,11 @@
     "horizons": "A: P1.3 remains sole horizon owner and publishes 1/3/5/10/15; runner no longer pins a shorter horizon",
     "package_frontier": "Stage 2 only; intentionally not started by Stage 1",
     "monte_carlo": "A compatibility only: existing MC consumer understands six-state P1.1; Stage 2 material MC execution remains not started",
-    "renderer": "A: renderer remains downstream and cannot mask analytics gaps",
-    "pre_render": "A gate: required tests prove runner source compilation and Stage 1 contracts"
+    "renderer": "A FINAL GREEN: canonical renderer exposes required visible-body contract and passed POST_RENDER/HUMAN_FACING acceptance",
+    "pre_render": "A FINAL GREEN: PRE_RENDER and POST_RENDER both PASS on controlled DEEP acceptance"
   },
-  "exact_gaps_to_finish_stage1": [
-    "merge Official FPL finalized-history freshness repair to main with all required V6/V12/governance CI GREEN",
-    "publish a fresh runtime-data-v6 snapshot with normalized official_fpl player_matches through every finished GW",
-    "run one controlled DEEP integrated-report acceptance and require Stage 1 foundation, canonical universe, PRE_RENDER, POST_RENDER and HUMAN_FACING gates to PASS",
-    "update durable Stage 1 audit to stage1_green=true only after the controlled acceptance proof exists"
-  ],
-  "stage1_green": false,
+  "exact_gaps_to_finish_stage1": [],
+  "stage1_green": true,
   "stage2_started": false,
   "governance": {
     "v6_only": true,
@@ -161,14 +156,16 @@
     "qa_relaxed": false,
     "renderer_used_to_mask_analytics": false,
     "p1_1_legacy_moments_preserved_without_substitution_evidence": true,
-    "stage2_execution_started": false
+    "stage2_execution_started": false,
+    "stage1_closed": true,
+    "stage2_handoff_ready": true
   },
   "stage1_implementation_green": true,
   "required_ci_green": true,
-  "runtime_acceptance_pending": true,
-  "implementation_ci_green_head": "ca9f5129732e14cd2e0782946d0be68acccd98d8",
+  "runtime_acceptance_pending": false,
+  "implementation_ci_green_head": "e20313c497d27e0cc9e800ab9de6280a7781510c",
   "implementation_ci_green_repository_governance_run_id": 35609817302,
-  "documentation_event_retrigger": "PR body timestamp was updated after prior push event; evidence-only commit retriggers checks with synchronized PR body + README timestamp",
+  "documentation_event_retrigger": "Stage 1 closure is evidence-only: final controlled DEEP proof recorded after all required runtime, analytics, canonical, PRE_RENDER, POST_RENDER and HUMAN_FACING gates passed.",
   "final_history_policy": {
     "primary": "official_fpl.finalized_event_live_history",
     "fallback": "vaastav_fpl.merged_gw only if complete through latest finished GW",
@@ -176,5 +173,60 @@
     "official_fixture_resolution": "OFFICIAL_EXPLAIN_FIXTURE_ONLY",
     "dgw_aggregate_split_fabrication": false
   },
-  "stage1_official_history_repair_branch": "v12-stage1-official-history-freshness"
+  "stage1_official_history_repair_branch": "v12-stage1-official-history-freshness",
+  "stage2_handoff_ready": true,
+  "final_acceptance": {
+    "status": "PASS",
+    "stage1_green": true,
+    "report_mode": "DEEP",
+    "report_slot": "2026-09-22T05:00:00+07:00",
+    "planning_gw": 6,
+    "workflow_run_id": 35659879299,
+    "artifact_id": 10667026143,
+    "artifact_name": "v12-report-DEEP-35659879299",
+    "artifact_digest": "sha256:9b8c16fce1088eefe44ff1751075ebdb565542d8cb35ebfee710c8c5adcc0881",
+    "main_sha": "e20313c497d27e0cc9e800ab9de6280a7781510c",
+    "runtime_data_v6_sha": "b851d72f7183395c8d632e8d8f14e6c9282b17f0",
+    "report_prefetch_run_id": "22098ecb-4c96-4924-bc5e-2cf96691f7c6",
+    "runner_status": "PASS",
+    "canonical_catalog_complete": true,
+    "core_slot_binding": "PASS",
+    "report_prefetch_binding": "PASS",
+    "v6_official_facts": "PASS",
+    "our15_identity": "PASS",
+    "team_strength": "PASS",
+    "v12_analytics_foundation": "PASS",
+    "p1_1_p1_3_full_universe": "PASS",
+    "official_role_evidence": "PASS",
+    "p1_6_tactical_role": "PASS",
+    "all15_materialization": "PASS",
+    "p1_7_lineup": "PASS",
+    "rise20": "PASS",
+    "fall20": "PASS",
+    "our15_price_radar": "PASS",
+    "watchlist20": "PASS",
+    "p1_8_mini_league_snapshot": "PASS",
+    "canonical_universe_20_25_30_25": "PASS",
+    "canonical_render": "PASS",
+    "pre_render_qa": "PASS",
+    "post_render_qa": "PASS",
+    "human_facing_qa": "PASS",
+    "stage2_package_utility": {
+      "status": "NOT_RUN",
+      "required_for_stage1": false,
+      "reason": "Stage 2 package/frontier execution intentionally not started by Stage 1"
+    },
+    "stage2_material_monte_carlo": {
+      "status": "NOT_RUN",
+      "required_for_stage1": false,
+      "reason": "Stage 2 material Monte Carlo execution intentionally not started by Stage 1"
+    },
+    "required_stage_failures": [],
+    "evidence_note": "All Stage 1 required stages passed in one occurrence-bound DEEP run with exact hourly core-slot alignment and same-occurrence full_master prefetch."
+  },
+  "final_acceptance_runtime_data_v6_sha": "b851d72f7183395c8d632e8d8f14e6c9282b17f0",
+  "final_acceptance_workflow_run_id": 35659879299,
+  "final_acceptance_artifact_id": 10667026143,
+  "final_acceptance_artifact_digest": "sha256:9b8c16fce1088eefe44ff1751075ebdb565542d8cb35ebfee710c8c5adcc0881",
+  "final_acceptance_report_slot": "2026-09-22T05:00:00+07:00"
 }

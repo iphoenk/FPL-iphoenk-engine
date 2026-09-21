@@ -71,7 +71,14 @@
       "acquisition_kind": "rest_json",
       "poll_interval_minutes": 60,
       "required_for_platform": true,
-      "max_body_bytes": 4000000
+      "max_body_bytes": 4000000,
+      "finalized_event_live_history": {
+        "enabled": true,
+        "max_backfill_requests_per_cycle": 8,
+        "endpoint_template": "https://fantasy.premierleague.com/api/event/{gw}/live/",
+        "finalized_only": true,
+        "authority": "OFFICIAL_FPL"
+      }
     },
     {
       "id": "official_price_predictor",

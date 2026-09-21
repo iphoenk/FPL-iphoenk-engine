@@ -17,6 +17,7 @@ from .league_prefetch import (
     standings_artifact,
 )
 from .official_fpl_client import OfficialFPLClient
+from .official_match_history import build_official_match_history
 from .personal_prefetch import (
     discover_memberships,
     normalise_submitted_picks,
@@ -728,7 +729,21 @@ class PrefetchService:
         control_failures: list[str] = []
         artifacts: list[dict[str, Any]] = []
         cache_hits = cache_misses = max_rival_concurrency = 0
-        client = self._client() if (scope.personal or scope.mini_league or scope.live) else None
+        match_history_required = report_kind in {
+            "full_master",
+            "deadline_review",
+            "match_mode",
+        }
+        client = (
+            self._client()
+            if (
+                scope.personal
+                or scope.mini_league
+                or scope.live
+                or match_history_required
+            )
+            else None
+        )
         secrets = tuple(getattr(client, "secret_values", ()) or ()) if client else ()
 
         bootstrap_result = client.bootstrap() if client else None
@@ -745,6 +760,39 @@ class PrefetchService:
                         "domain": "official_fpl",
                         "endpoint_class": "bootstrap_static",
                         "status": (bootstrap_result or {}).get("status", "UNAVAILABLE"),
+                    }
+                )
+
+        match_history_status = "NOT_REQUESTED"
+        match_history = None
+        if match_history_required:
+            match_history = build_official_match_history(
+                client,
+                bootstrap_result=bootstrap_result or {},
+                generated_at=generated_at,
+            )
+            match_history_status = str(
+                match_history.get("status") or "BLOCKED"
+            )
+            relative_history = (
+                "normalized/sources/"
+                "official_fpl_match_history.json"
+            )
+            write_json(
+                self.output_root / relative_history,
+                match_history,
+                secrets=secrets,
+            )
+            artifacts.append(
+                artifact_meta(self.output_root, relative_history)
+            )
+            if match_history_status != "COMPLETE":
+                source_failures.append(
+                    {
+                        "domain": "official_fpl",
+                        "endpoint_class": "completed_event_history",
+                        "status": match_history_status,
+                        "blockers": match_history.get("blockers") or [],
                     }
                 )
 
@@ -1057,6 +1105,10 @@ class PrefetchService:
             and (not scope.personal or personal_status == "AVAILABLE")
             and (not scope.mini_league or mini_status == "AVAILABLE")
             and (not scope.live or live_status == "AVAILABLE")
+            and (
+                not match_history_required
+                or match_history_status == "COMPLETE"
+            )
         )
         auth_required_for_public = bool(
             self.config.get("authenticated_personal_required_for_public_green", False)
@@ -1078,6 +1130,10 @@ class PrefetchService:
             )
             and (not scope.mini_league or mini_status == "AVAILABLE")
             and (not scope.live or live_status == "AVAILABLE")
+            and (
+                not match_history_required
+                or match_history_status == "COMPLETE"
+            )
         )
         personal_auth_state, auth_action_required, auth_action = _auth_observability(
             personal_auth_state,
@@ -1213,6 +1269,20 @@ class PrefetchService:
                 else None
             ),
             "live_checked_at": live_checked_at,
+            "match_history_required": match_history_required,
+            "match_history_status": match_history_status,
+            "match_history_completed_gws": (
+                (match_history or {}).get("completed_gws_available") or []
+            ),
+            "match_history_expected_gws": (
+                (match_history or {}).get("completed_gws_expected") or []
+            ),
+            "match_history_record_count": (
+                (match_history or {}).get("record_count") or 0
+            ),
+            "match_history_ambiguous_fixture_rows": (
+                (match_history or {}).get("ambiguous_fixture_rows") or 0
+            ),
             "source_failures": source_failures,
             "control_failures": control_failures,
             "public_control_failures": public_control_failures,

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-21T09:58:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-21T11:30:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -298,6 +298,10 @@ Interactive mode-equivalent requests use the same report-plane contract. A user 
 DEEP is also an analytic report, not a thin summary surface. After a completed GW, the next applicable DEEP carries the full completed-fixture match-by-match scout inside the existing Changes section. For every serious XI/transfer/package/captain decision, a visible **MATHEMATICAL DECISION STACK** must expose Bayesian/shrinkage, availability and xMins mixtures, event probabilities, horizon distributions, regret/robustness/covariance, and Monte Carlo execution state. If Monte Carlo is not actually run, the report must say NOT RUN/PARTIAL with the reason rather than silently omitting it.
 
 Visible event probabilities are bound directly to the existing V12 P1.3/P1.3B posterior-predictive outputs. Goal, assist, attacking-return, multiple-return, FPL-blank and haul probabilities must not be reconstructed by the report renderer from xG/xA or mean xPts. The report plane exposes the native distribution and labels unavailable evidence truthfully.
+
+A 21 Sep 2026 report-plane audit hardened mode/section conformance end to end. Runtime QA catalogs now match the Canonical V12 backbones for DEEP/FULL/DEADLINE/OVERLAP, MATCH 1–13, PRICE 1–11, POST-ALL-MATCH 1–13, and FINAL with the inserted GW LOCK PACKAGE. Visible parsing now supports two-digit mode sections and uses the current DEEP section mapping (XI/bench S06, Watchlist20 S11, RISE20 S12, FALL20 S13, ALL15 S16). Mode-specific count contracts prevent PRICE or POST-ALL-MATCH from inheriting unrelated Full-report counts. COMPLETE sections cannot silently render without human-facing content, degraded/unavailable sections retain a visible reason, and decision-bearing DEEP/FULL/Deadline/Final/PRICE reports require the Canonical NOW / TRIGGER TO ACT / ABORT-REVERSAL / NEXT CHECKPOINT action board.
+
+The internal artifact identifier `official_price_predictor` is not an Official FPL predictor/product. Official FPL remains FACT authority for current and confirmed price changes; rise/fall progress, threshold-crossing timing and related forecasts from that artifact are labelled as V6-derived MODEL signals using Official FPL factual inputs.
 
 Section 14 **Package Optimizer / Frontier** is explicitly full-universe-first. A serious DEEP/FULL/Deadline/Final squad-improvement report must evaluate all 15 owned players as possible outgoing weak links and scan the complete currently eligible Official FPL universe before publishing challengers. The visible block `UNIVERSE SCAN / OPTIMAL TEAM IMPACT` must show search coverage, scan-derived candidate players, their best outgoing/package pairing, canonical 20/25/30/25 and probability/horizon evidence, package utility versus HOLD, economics/structure/regret/information-value effects, and then the legal package frontier. A hand-picked shortlist or user-mentioned names cannot masquerade as a full optimizer result; incomplete scope remains visibly PARTIAL/DEGRADED.
 

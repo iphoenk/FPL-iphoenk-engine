@@ -474,7 +474,9 @@ def build(
                 league_baseline=strength.get("baseline") or {},
                 calibration_summary=calibration_summary,
                 model_evidence_binding=model_evidence_binding,
-                contextual_dynamics=contextual,
+                contextual_dynamics=contextual_by_fixture.get(
+                    fixture_key(matchup)
+                ),
             )
             return enhance_fixture_projection(
                 base_projection,

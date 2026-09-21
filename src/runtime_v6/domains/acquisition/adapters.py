@@ -215,18 +215,175 @@ def collect_http(
     }
 
 
+def _usable_event_live(row: dict[str, Any] | None) -> bool:
+    payload = (row or {}).get("json")
+    return bool(
+        isinstance(payload, dict)
+        and isinstance(payload.get("elements"), list)
+    )
+
+
+def _finalized_event_live_request(
+    source: dict[str, Any],
+    gw: int,
+) -> dict[str, Any]:
+    history = dict(source.get("finalized_event_live_history") or {})
+    template = str(
+        history.get("endpoint_template")
+        or "https://fantasy.premierleague.com/api/event/{gw}/live/"
+    )
+    return {
+        "id": f"event_live_gw{int(gw)}",
+        "url": template.format(gw=int(gw)),
+        "expect": "json",
+        "validation": {"required_json_paths": ["elements"]},
+        "max_body_bytes": int(source.get("max_body_bytes") or 4000000),
+    }
+
+
+def _attach_finalized_event_live_history(
+    source: dict[str, Any],
+    client: AcquisitionClient,
+    payload: dict[str, Any],
+    previous: dict[str, Any] | None,
+) -> None:
+    history_cfg = dict(source.get("finalized_event_live_history") or {})
+    if history_cfg.get("enabled") is not True:
+        return
+
+    data = payload.setdefault("data", {})
+    previous_data = _previous_data(previous)
+    bootstrap = (data.get("bootstrap") or {}).get("json")
+    bootstrap = bootstrap if isinstance(bootstrap, dict) else {}
+    finished_gws = sorted(
+        int(row.get("id") or 0)
+        for row in bootstrap.get("events") or []
+        if isinstance(row, dict)
+        and row.get("finished") is True
+        and int(row.get("id") or 0) > 0
+    )
+    max_backfill = max(
+        1,
+        int(history_cfg.get("max_backfill_requests_per_cycle") or 8),
+    )
+
+    fetched = 0
+    reused = 0
+    missing: list[int] = []
+    attempts: list[dict[str, Any]] = []
+    missing_to_fetch: list[int] = []
+
+    for gw in finished_gws:
+        request_id = f"event_live_gw{gw}"
+        previous_row = previous_data.get(request_id)
+        if (
+            isinstance(previous_row, dict)
+            and previous_row.get("finalized_gw") is True
+            and _usable_event_live(previous_row)
+        ):
+            row = dict(previous_row)
+            row["data_origin"] = "FINALIZED_IMMUTABLE_CACHE"
+            row["latest_attempt_status"] = "FINALIZED_CACHE_REUSE"
+            data[request_id] = row
+            reused += 1
+        else:
+            missing_to_fetch.append(gw)
+
+    for gw in missing_to_fetch[:max_backfill]:
+        request_cfg = _finalized_event_live_request(source, gw)
+        request_id = str(request_cfg["id"])
+        attempt = client.fetch(
+            source,
+            request_cfg,
+            previous=previous_data.get(request_id),
+        )
+        attempt["gw"] = int(gw)
+        attempts.append(attempt)
+        if attempt.get("status") == "AVAILABLE" and _usable_event_live(attempt):
+            row = dict(attempt)
+            row["data_origin"] = "CURRENT_CYCLE"
+            row["finalized_gw"] = True
+            row["finalized_at"] = payload.get("checked_at") or utc_now()
+            data[request_id] = row
+            fetched += 1
+        elif (
+            isinstance(previous_data.get(request_id), dict)
+            and _usable_event_live(previous_data.get(request_id))
+        ):
+            row = dict(previous_data[request_id])
+            row["data_origin"] = "LAST_GOOD_CACHE"
+            row["latest_attempt_status"] = attempt.get("status")
+            row["latest_attempt_checked_at"] = attempt.get("checked_at")
+            data[request_id] = row
+        else:
+            missing.append(gw)
+
+    for gw in missing_to_fetch[max_backfill:]:
+        missing.append(gw)
+
+    available_gws = sorted(
+        gw
+        for gw in finished_gws
+        if _usable_event_live(data.get(f"event_live_gw{gw}"))
+    )
+    missing = sorted(set(finished_gws) - set(available_gws))
+    complete = available_gws == finished_gws
+
+    payload["history_attempts"] = attempts
+    payload["official_history"] = {
+        "authority": "OFFICIAL_FPL",
+        "surface": "EVENT_LIVE_FINALIZED_GW",
+        "status": "GREEN" if complete else "AMBER",
+        "finished_gws": finished_gws,
+        "available_gws": available_gws,
+        "missing_gws": missing,
+        "fetched_this_cycle": fetched,
+        "reused_finalized_cache": reused,
+        "max_backfill_requests_per_cycle": max_backfill,
+        "future_gws_requested": False,
+        "finalized_payloads_are_immutable_cache": True,
+    }
+    payload.setdefault("coverage", {}).update(
+        {
+            "finalized_event_live_expected_gws": len(finished_gws),
+            "finalized_event_live_available_gws": len(available_gws),
+            "finalized_event_live_missing_gws": missing,
+            "finalized_event_live_complete": complete,
+        }
+    )
+    if any(
+        row.get("status") == "AVAILABLE"
+        and row.get("content_changed") is True
+        for row in attempts
+    ):
+        payload["changed"] = True
+
+
 def collect_official(
     source: dict[str, Any],
     client: AcquisitionClient,
     previous: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload = collect_http(source, client, previous)
+    _attach_finalized_event_live_history(
+        source,
+        client,
+        payload,
+        previous,
+    )
     data = payload.get("data") or {}
+    event_live = {
+        str(gw): (data.get(f"event_live_gw{gw}") or {}).get("json")
+        for gw in (payload.get("official_history") or {}).get(
+            "available_gws"
+        )
+    }
     payload["semantic_class"] = "FACT"
     payload["official"] = {
         "bootstrap": (data.get("bootstrap") or {}).get("json"),
         "fixtures": (data.get("fixtures") or {}).get("json"),
         "event_status": (data.get("event_status") or {}).get("json"),
+        "event_live": event_live,
     }
     return payload
 

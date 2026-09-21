@@ -83,9 +83,26 @@ def load_v6_analytics_foundation(
     planning_gw: int,
     strength: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    normalized = _read_json(
+    official_history = _read_json(
+        runtime_data_root
+        / "data/v6/normalized/sources/official_fpl_match_history.json"
+    )
+    vaastav_history = _read_json(
         runtime_data_root / "data/v6/normalized/sources/vaastav_fpl.json"
     )
+    official_rows = (
+        (official_history.get("record_groups") or {}).get("player_matches")
+        or []
+    )
+    if (
+        official_history.get("status") == "COMPLETE"
+        and official_rows
+    ):
+        normalized = official_history
+        factual_history_source = "official_fpl"
+    else:
+        normalized = vaastav_history
+        factual_history_source = "vaastav_fpl"
     groups = normalized.get("record_groups") or {}
     raw_rows = [
         dict(row)
@@ -187,16 +204,29 @@ def load_v6_analytics_foundation(
 
     blockers: list[str] = []
     if str(normalized.get("source_health") or "").upper() != "GREEN":
-        blockers.append("VAASTAV_NORMALIZED_SOURCE_NOT_GREEN")
+        blockers.append(
+            f"{factual_history_source.upper()}_NORMALIZED_SOURCE_NOT_GREEN"
+        )
     if not raw_rows:
-        blockers.append("VAASTAV_MERGED_GW_NOT_PUBLISHED")
+        blockers.append(
+            f"{factual_history_source.upper()}_MATCH_HISTORY_NOT_PUBLISHED"
+        )
     if rejected:
         blockers.append(
             f"NON_DETERMINISTIC_IDENTITY_ROWS_REJECTED={rejected}"
         )
+    expected_gws = list(range(1, completed_gw + 1))
+    missing_observed_gws = sorted(
+        set(expected_gws) - set(observed_gws)
+    )
     if max_gw < completed_gw:
         blockers.append(
             f"MATCH_ROWS_STALE_MAX_GW={max_gw}_COMPLETED_GW={completed_gw}"
+        )
+    if missing_observed_gws:
+        blockers.append(
+            "MATCH_HISTORY_MISSING_GWS="
+            + ",".join(str(gw) for gw in missing_observed_gws)
         )
     missing_core = [
         row["feature"]
@@ -260,14 +290,19 @@ def load_v6_analytics_foundation(
                 "recoveries": row.get("recoveries"),
                 "tackles": row.get("tackles"),
                 "fpl_points": row.get("fpl_points"),
-                "source": row.get("source") or "vaastav_fpl",
-                "dataset": row.get("dataset") or "merged_gw",
+                "source": row.get("source") or factual_history_source,
+                "dataset": row.get("dataset") or (
+                    "event_live"
+                    if factual_history_source == "official_fpl"
+                    else "merged_gw"
+                ),
                 "freshness": normalized.get("effective_at"),
                 "provenance": {
                     "source_id": normalized.get("source_id"),
                     "source_snapshot_ids": normalized.get(
                         "source_snapshot_ids"
                     ),
+                    "lineage": normalized.get("lineage"),
                     "normalization_version": normalized.get(
                         "normalization_version"
                     ),
@@ -313,6 +348,9 @@ def load_v6_analytics_foundation(
         "planning_gw": int(planning_gw),
         "latest_completed_gw": completed_gw,
         "observed_gws": observed_gws,
+        "expected_gws": expected_gws,
+        "missing_observed_gws": missing_observed_gws,
+        "factual_history_source": factual_history_source,
         "raw_match_rows": len(raw_rows),
         "joinable_match_rows": len(rows),
         "rejected_identity_rows": rejected,

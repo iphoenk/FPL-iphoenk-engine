@@ -1518,33 +1518,68 @@ def plan_due_report_refresh(
     recent_result_reusable: bool = False,
     same_logical_data_slot_fulfilled: bool = False,
     previous_refresh_attempts: int = 0,
+    report_slot: str | None = None,
 ) -> dict[str, Any]:
-    """Plan at most one existing #431 refresh for a stale due-report scope."""
+    """Plan at most one report-prefetch comment for stale due-report scopes.
+
+    Core-slot fulfillment is intentionally NOT a substitute for report-specific
+    personal/mini-league/live freshness. The argument is retained for call-site
+    compatibility and is exposed only as audit evidence.
+    """
     mode = str(report_mode or "").strip().upper()
     attempts = int(previous_refresh_attempts)
     if attempts < 0 or attempts > 1:
         raise RuntimeConformanceError("previous_refresh_attempts must be 0 or 1")
+
+    kind_by_mode = {
+        "DEEP": "full_master",
+        "FULL": "full_master",
+        "MATCH": "match_mode",
+        "DEADLINE": "deadline_review",
+        "FINAL": "deadline_review",
+        "PRICE": "05:30_price",
+    }
+    report_kind = kind_by_mode.get(mode, "ad_hoc")
+    slot_text = None
+    if report_slot is not None:
+        slot_text = _parse_local_occurrence(
+            report_slot,
+            label="report_slot",
+        ).isoformat()
+
+    base = {
+        "report_mode": mode,
+        "report_prefetch_kind": report_kind,
+        "report_prefetch_logical_slot": slot_text,
+        "transport": "ISSUE_431_REPORT_PREFETCH_COMMENT",
+        "issue_comment_command": "/v6-report-prefetch",
+        "report_prefetch_fulfills_core_slot": False,
+        "core_slot_fulfilled_observed": bool(same_logical_data_slot_fulfilled),
+        "core_slot_fulfillment_does_not_satisfy_report_scope_refresh": True,
+        "full_core_acquisition_allowed": False,
+        "duplicate_acquisition_forbidden": True,
+    }
+
     if not report_due:
         return {
+            **base,
             "status": "NOT_DUE",
-            "report_mode": mode,
             "attempt_governed_refresh": False,
+            "attempt_report_prefetch": False,
             "refresh_attempt_count": attempts,
-            "transport": "ISSUE_431_EXISTING_GOVERNED_TRANSPORT",
             "report_can_continue": False,
-            "duplicate_acquisition_forbidden": True,
         }
     if required_scope_age_minutes is None or canonical_freshness_threshold_minutes is None:
         return {
+            **base,
             "status": "FRESHNESS_UNRESOLVED",
-            "report_mode": mode,
             "attempt_governed_refresh": False,
+            "attempt_report_prefetch": False,
             "refresh_attempt_count": attempts,
-            "transport": "ISSUE_431_EXISTING_GOVERNED_TRANSPORT",
             "report_can_continue": True,
-            "core_refresh": "DEGRADED",
-            "reason": "required scope age/threshold unavailable; continue evidence ladder",
-            "duplicate_acquisition_forbidden": True,
+            "report_scope_refresh": "DEGRADED",
+            "core_refresh": "UNCHANGED",
+            "reason": "required report-scope age/threshold unavailable; continue evidence ladder",
         }
 
     age = float(required_scope_age_minutes)
@@ -1552,79 +1587,78 @@ def plan_due_report_refresh(
     stale = age > threshold
     if not stale:
         return {
+            **base,
             "status": "REUSE_CURRENT",
-            "report_mode": mode,
             "scope_age_minutes": age,
             "freshness_threshold_minutes": threshold,
             "attempt_governed_refresh": False,
+            "attempt_report_prefetch": False,
             "refresh_attempt_count": attempts,
             "report_can_continue": True,
-            "duplicate_acquisition_forbidden": True,
         }
 
     reuse_reason = None
     if acquisition_in_progress:
-        reuse_reason = "RELEVANT_ACQUISITION_IN_PROGRESS"
+        reuse_reason = "REPORT_PREFETCH_IN_PROGRESS"
     elif acquisition_just_completed:
-        reuse_reason = "RELEVANT_ACQUISITION_JUST_COMPLETED"
+        reuse_reason = "REPORT_PREFETCH_JUST_COMPLETED"
     elif recent_result_reusable:
-        reuse_reason = "RECENT_RESULT_REUSABLE"
-    elif same_logical_data_slot_fulfilled:
-        reuse_reason = "SAME_LOGICAL_DATA_SLOT_FULFILLED"
+        reuse_reason = "RECENT_REPORT_PREFETCH_REUSABLE"
 
     if reuse_reason:
         return {
+            **base,
             "status": "RE_READ_EXISTING_RESULT",
-            "report_mode": mode,
             "scope_age_minutes": age,
             "freshness_threshold_minutes": threshold,
             "attempt_governed_refresh": False,
+            "attempt_report_prefetch": False,
             "refresh_attempt_count": attempts,
             "reason": reuse_reason,
             "report_can_continue": True,
-            "duplicate_acquisition_forbidden": True,
         }
 
     if attempts >= 1:
         return {
+            **base,
             "status": "REFRESH_ATTEMPT_EXHAUSTED",
-            "report_mode": mode,
             "scope_age_minutes": age,
             "freshness_threshold_minutes": threshold,
             "attempt_governed_refresh": False,
+            "attempt_report_prefetch": False,
             "refresh_attempt_count": attempts,
-            "core_refresh": "DEGRADED",
+            "report_scope_refresh": "DEGRADED",
+            "core_refresh": "UNCHANGED",
             "report_can_continue": True,
-            "duplicate_acquisition_forbidden": True,
         }
 
     return {
-        "status": "GOVERNED_REFRESH_REQUIRED",
-        "report_mode": mode,
+        **base,
+        "status": "GOVERNED_REPORT_PREFETCH_REQUIRED",
         "scope_age_minutes": age,
         "freshness_threshold_minutes": threshold,
         "attempt_governed_refresh": True,
+        "attempt_report_prefetch": True,
         "refresh_attempt_count": 1,
-        "transport": "ISSUE_431_EXISTING_GOVERNED_TRANSPORT",
         "alternate_transport_allowed": False,
         "v6_master_acquire_allowed": False,
         "backfill_future_fill_allowed": False,
         "report_can_continue": True,
-        "duplicate_acquisition_forbidden": True,
     }
 
 
 def resolve_governed_refresh_result(plan: Mapping[str, Any], *, result: str) -> dict[str, Any]:
-    """Bind refresh outcome without turning refresh success into a report barrier."""
+    """Bind report-prefetch outcome without changing core-slot fulfillment."""
     row = dict(plan or {})
     outcome = str(result or "").strip().upper()
-    if row.get("attempt_governed_refresh") is not True:
-        raise RuntimeConformanceError("refresh result requires an actual planned attempt")
+    if row.get("attempt_report_prefetch") is not True:
+        raise RuntimeConformanceError("refresh result requires an actual report-prefetch attempt")
     if outcome in {"SUCCESS", "PASS", "COMPLETED"}:
         row.update(
             {
                 "refresh_result": "SUCCESS",
-                "core_refresh": "PASS",
+                "report_scope_refresh": "PASS",
+                "core_refresh": "UNCHANGED",
                 "next_action": "RE_READ_AND_CONTINUE_ORIGINAL_REPORT_SLOT",
                 "report_can_continue": True,
             }
@@ -1633,7 +1667,8 @@ def resolve_governed_refresh_result(plan: Mapping[str, Any], *, result: str) -> 
         row.update(
             {
                 "refresh_result": outcome,
-                "core_refresh": "DEGRADED",
+                "report_scope_refresh": "DEGRADED",
+                "core_refresh": "UNCHANGED",
                 "next_action": "CONTINUE_CANONICAL_EVIDENCE_LADDER_SAME_REPORT_SLOT",
                 "report_can_continue": True,
             }

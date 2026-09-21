@@ -59,7 +59,7 @@ def test_v6_price_predictor_is_verified_official_fpl_product_not_local_model():
 
     assert payload["health"] == "GREEN"
     assert payload["source_name"] == "Official FPL Price Change Predictor"
-    assert payload["semantic_class"] == "OFFICIAL_FPL_PREDICTOR_MODEL"
+    assert payload["semantic_class"] == "UPSTREAM_MODEL_SIGNAL"
     assert payload["authority_class"] == "OFFICIAL_FPL_MODEL"
     assert payload["model_author"] == "OFFICIAL_FPL"
     assert payload["predictor_official_status"] == "VERIFIED_OFFICIAL_FPL_PRODUCT"

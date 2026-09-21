@@ -1,5 +1,5 @@
 FPL MASTER CANONICAL V12 — FAIL-OPERATIONAL REPORT-PLANE ARCHITECTURE
-Effective: 2026-09-21T12:50:00+07:00
+Effective: 2026-09-21T13:35:00+07:00
 Authority path: control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
 State path: control/fpl_master_v12/FPL_MASTER_STATE_V12.json
 
@@ -66,6 +66,7 @@ F. Fixed occurrence order:
    8 CONTENT QA / proof;
    9 DELIVERY or legitimate silence.
 G. STATE A — ALREADY_FULFILLED: only provenance-valid same-slot natural chatgpt_hourly_master proof with authoritative_runtime_snapshot=true and publish_integrity=PASS may terminalize the gate without a new acquisition.
+G1. SAME-SLOT is exact-instant equality, never "fresh enough" or "previous hourly snapshot". Let REPORT_SLOT be the scheduler-bound natural HH:30 Asia/Jakarta occurrence. TARGET_CORE_SLOT is exactly REPORT_SLOT floored to HH:00 in Asia/Jakarta. ALREADY_FULFILLED requires the authoritative V6 logical_slot/expected_cycle_at to represent that same instant after timezone normalization. Example: REPORT_SLOT=2026-09-21T12:30:00+07:00 => TARGET_CORE_SLOT=2026-09-21T12:00:00+07:00 = 2026-09-21T05:00:00Z. A V6 logical_slot of 2026-09-21T04:00:00Z is 11:00 WIB and MUST NOT satisfy the 12:30 occurrence.
 H. STATE B — IN_PROGRESS: bind the exact same-slot governed run ID, perform bounded terminal reread and never duplicate. The occurrence may not complete while the bound run remains non-terminal.
 I. STATE C — ATTEMPT_REQUIRED: if no same-slot authoritative fulfillment and no same-slot governed run is active, perform exactly ONE existing issue #431 title mutation for CURRENT_HH:00, require exact readback, bind the triggered run if created, and never retry a second full-core acquisition in the same occurrence.
 J. STATE D — ATTEMPT_FAILED/BLOCKED: preserve exact attempted action, failure reason, mutation/readback state and duplicate_acquisition=false. REPORT_DUE=false may end visibly silent only after this failure proof is recorded. REPORT_DUE=true continues fail-operational report delivery from freshest valid evidence.
@@ -123,6 +124,15 @@ AUTHENTICATED PERSONAL FRESHNESS:
 - When authenticated personal evidence is STALE, make at most ONE bounded existing report-prefetch attempt for exact scope personal using the existing /v6-report-prefetch ad_hoc path. This refresh is report-driven, never fulfills a core slot, never creates another full-core acquisition, and never becomes scheduler proof.
 - If that bounded personal refresh fails, is blocked, or remains stale, the due report STILL renders. Use the freshest valid authenticated personal artifact as STALE_AUTHENTICATED_FALLBACK, expose its generated/evidence timestamp plus age/status, and degrade only claims that require unavailable current fields.
 - Never fabricate FT count, exact hit state, transfer execution, chip state, current squad/picks, or affordability inputs. If authenticated selling_price + bank are valid, nominal affordability may still be calculated while FT/HIT ECONOMICS remains UNKNOWN.
+
+5B. MANDATORY DEEP REPORT-SCOPE REFRESH BARRIER
+For every natural mandatory DEEP occurrence, including 04:30, 12:30 and 21:30 Asia/Jakarta:
+A. After NATURAL_CORE_UPKEEP_GATE terminalizes, inspect report-prefetch evidence for the exact REPORT_SLOT, not a prior occurrence.
+B. If no CURRENT same-REPORT_SLOT full_master report-prefetch exists for the report-specific public/personal/mini-league/live scopes, make at most ONE existing owner-authorized issue #431 comment using /v6-report-prefetch report_kind=full_master logical_slot=<REPORT_SLOT_WITH_OFFSET> force=false reason=FPL_MASTER_<REPORT_SLOT>_DEEP. Do not pass scope for full_master.
+C. This refresh is report-driven only. It never completes or substitutes for TARGET_CORE_SLOT, never creates a second scheduler, and never changes V6 factual/decision authority boundaries.
+D. Bind and reread the exact report-prefetch occurrence when it can terminalize within the report occurrence. If it fails, is blocked, or personal auth remains expired, continue fail-operationally: preserve healthy public/mini/live subscopes and degrade only the affected field/scope.
+E. A prior-day or prior-report-slot prefetch may be used only as explicitly labelled stale fallback. It MUST NOT be called CURRENT, occurrence-bound, or same-slot.
+F. DEEP content computation starts only after core-slot identity is proven and the report-scope refresh decision is resolved (CURRENT/ATTEMPTED/FAILED/NOT_REQUIRED). Report-prefetch success itself is not a delivery prerequisite.
 
 6. DURABLE STATE / SCENARIO LIFECYCLE
 Read exact state path control/fpl_master_v12/FPL_MASTER_STATE_V12.json.
@@ -520,6 +530,14 @@ Exact visible order:
 
 For DEEP, every structural section above MUST be visibly materialized in this exact order. Data unavailability never authorizes structural omission. A section without authoritative data remains visible as PARTIAL / DEGRADED / UNAVAILABLE with reason and counts where meaningful. "NOT RENDERED" is not a Canonical section state.
 
+NATURAL DEEP EXECUTION BARRIER:
+- Before composing any user-visible prose, materialize one section manifest from this exact 14A catalog: S01,S02,S03,S04,S05,S06,S07,S08,S09,S10,S11,S12,S13,S14,S15,S15B,S16,S17,S18,S19.
+- Natural DEEP MUST traverse: exact occurrence/core-slot validation -> report-scope refresh decision -> Canonical analytic execution for every supportable model scope -> section payload materialization -> pre-render QA -> Canonical render -> actual visible-body post-render QA -> human-facing QA -> delivery.
+- Freeform/manual prose is not a legal substitute for the section manifest. A compact summary may precede sections but may not replace them.
+- critical_sections_present=true, a non-empty body, or an Engine/Data Status block is never sufficient proof. Acceptance requires actual rendered section IDs to match this Canonical catalog and actual post-render/human-facing QA PASS.
+- Healthy core/publication alone MUST NOT be used as justification to stop before Watchlist20, RISE20/FALL20, Package Frontier, ALL15, probability/Bayesian surfaces, or ICON+ evidence that is supportable from current inputs.
+- Conversely, never fabricate owner execution. Monte Carlo may be labelled EXECUTED only with occurrence-bound native V12 MC evidence. If the integrated native compute owner cannot execute, expose the exact compute-layer blocker in the affected section while preserving all other structural sections.
+
 AD_HOC MODE-EQUIVALENCE IS MANDATORY. When the user explicitly requests a Canonical report mode outside its natural scheduler occurrence, including wording such as "DEEP sekarang", "PRICE sekarang", or "format 04:30 tapi mode sekarang", treat it as an actual AD_HOC occurrence of that requested Canonical mode, not as a prose imitation of the layout. The AD_HOC occurrence MUST traverse the same mode contract, compute/retrieval semantics, pre-render QA, actual visible-body post-render QA and same-request recovery semantics as the scheduled mode, except that scheduler proof is N/A. Manual/chat composition MUST NOT bypass visible-body QA merely because the request is interactive. For DEEP/PRICE, a visible RISE20/FALL20 row missing required cycle/ETA fields is a post-render QA failure and MUST be re-rendered on the same request identity rather than delivered as COMPLETE. Fail-operational delivery still applies to truthful source degradation; it does not permit omission of supported mandatory visible fields.
 Post-deadline closed-decision sections remain structural: XI BATTLE may say GW locked/no executable XI change; C/VC and Chip show locked/current state; Actionable Price Radar may be DEGRADED/UNAVAILABLE rather than omitted.
 Evidence Quality is a distinct visible section before ICON+ and should separate authority/source, observed_at, freshness, status and decision use by scope.
@@ -846,6 +864,9 @@ C. The durable proof records the bounded core result projection: core_gate_execu
 D. The durable proof records TWO-STAGE REPORT_DUE exactly as executed: preliminary_report_due, preliminary_reason, dynamic_evidence_checked, dynamic_trigger, dynamic_trigger_reason, final_report_due and final_mode. It observes the existing Dynamic Match result and MUST NOT recompute, repair or replace Dynamic Match routing logic.
 E. Match-related proof retains factual fixture evidence sufficient for later diagnosis: fixture ID, event/GW, kickoff_time, started, finished, finished_provisional where available, minutes/status where available, evidence source, generated_at/checked_at and freshness classification. The proof MUST NOT reinterpret the lifecycle predicate. In particular, started=true plus finished=false is recorded as evidence, not independently promoted to LIVE by this observability layer.
 F. When FINAL_REPORT_DUE=true, render proof records render_attempted, render_completed, rendered_mode, rendered section IDs/names, section_count, critical_sections_present, report_instance_count, render/content digest where available and render_completed_at. RENDER_PROVEN=true requires actual render completion plus structural proof and a bound content digest. DEEP+MATCH / FULL+MATCH / other overlap remains one coherent report with report_instance_count=1.
+F1. For every pure Canonical mode, RENDER_PROVEN additionally requires the actual rendered section IDs/order to equal that mode's current Canonical catalog. For overlap modes, every required component catalog must be present in the coherent single report. Caller-supplied critical_sections_present=true never overrides a missing section.
+F2. RENDER_PROVEN additionally requires actual POST_RENDER QA PASS and HUMAN_FACING QA PASS. A section-heading-only or status-only report cannot be proven.
+F3. Natural acceptance proves occurrence/core-slot relation: core_logical_slot must equal scheduler_occurrence floored to HH:00 in the declared timezone. Any mismatch is acceptance FAIL even when a prior V6 snapshot is healthy.
 G. Locked-team proof records source/status plus submitted_15_available, XI_available, bench_available, captain_available and vice_available. It does not duplicate the personal payload.
 H. ICON+ proof records league identity where already available, icon_live_requested/status, manager_count_expected N, manager_picks_covered M, picks_coverage=M/N, ownership/starter/captain/vice availability, EO status and live-points status. PARTIAL coverage remains PARTIAL. One failed subscope, including EO, MUST NOT erase healthy ownership/start/C/VC proof.
 I. Rendering and client delivery acknowledgement are separate facts. RENDER_PROVEN MUST NEVER imply visible client delivery. DELIVERY_UI_ACK is exactly PROVEN, UNAVAILABLE or NOT_SUPPORTED. PROVEN requires trustworthy platform/provider acknowledgement evidence bound to the occurrence. If no such acknowledgement channel exists, DELIVERY_UI_ACK=UNAVAILABLE is correct and MUST NOT downgrade a proven routing/render acceptance to UNRESOLVED.

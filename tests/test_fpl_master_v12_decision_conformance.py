@@ -11,6 +11,7 @@ from src.engines.canonical_decision_methodology import (
     build_decision_proof,
     build_horizon_analysis,
     build_probability_state,
+    bind_posterior_predictive_decision_evidence,
     build_transfer_economics,
     compute_football_score,
     derive_dynamic_ft_shadow_value,
@@ -111,6 +112,37 @@ def _not_run_mc() -> dict:
     return {"execution_state": "NOT_RUN", "reason": "synthetic inputs intentionally do not support calibrated correlated event paths"}
 
 
+def _posterior_predictive_fixture() -> dict:
+    return {
+        "fixture_id": 9001,
+        "event_probabilities": {
+            "p_goal_return": 0.31,
+            "p_assist_return": 0.24,
+            "p_attacking_return": 0.48,
+            "p_total_ga_ge_2": 0.14,
+            "p_no_attacking_return": 0.52,
+        },
+        "point_distribution": {
+            "p_fpl_blank": 0.44,
+            "p_haul_10_plus": 0.11,
+            "expected_points": 5.8,
+            "variance": 8.41,
+            "std": 2.9,
+            "quantiles": {"p10": 2, "p50": 5, "p90": 10},
+            "tails": {"ge_10": 0.11, "ge_15": 0.03},
+        },
+        "dependence": {
+            "goal_assist_model": "BIVARIATE_POISSON_SHARED_COMPONENT_V1",
+        },
+        "reconciliation": {
+            "published_variance_source": "CORE_POINT_PMF",
+        },
+        "model_evidence": {
+            "status": "CURRENT",
+        },
+    }
+
+
 def _valid_proof(**overrides) -> dict:
     payload = dict(
         authority_path=CANONICAL_AUTHORITY,
@@ -125,6 +157,9 @@ def _valid_proof(**overrides) -> dict:
         probability_state=_probability_state(),
         xmins_distribution=_xmins_distribution(),
         horizons=_horizons(),
+        posterior_predictive=bind_posterior_predictive_decision_evidence(
+            _posterior_predictive_fixture()
+        ),
         transfer_economics=_dynamic_economics(),
         robustness={
             "expected_regret": 0.4,
@@ -488,3 +523,35 @@ def test_production_contract_accepts_v12_hierarchical_probability_partition():
     assert result["semantics"] == "V12_HIERARCHICAL"
     assert result["appearance_partition"] == "START+CAMEO+DNP"
     assert result["bench_overlapping"] is True
+
+def test_v12_decision_proof_binds_native_p13_event_and_point_distribution():
+    proof = _valid_proof()
+    pp = proof["posterior_predictive"]
+    assert pp["source_owner"] == "V12_PLAYER_EVENTS"
+    assert pp["source_contract"] == "P1.3/P1.3B_POSTERIOR_PREDICTIVE"
+    assert pp["event_probabilities"]["p_goal_return"] == 0.31
+    assert pp["event_probabilities"]["p_assist_return"] == 0.24
+    assert pp["event_probabilities"]["p_attacking_return"] == 0.48
+    assert pp["event_probabilities"]["p_total_ga_ge_2"] == 0.14
+    assert pp["point_distribution"]["p_fpl_blank"] == 0.44
+    assert pp["point_distribution"]["p_haul_10_plus"] == 0.11
+    assert pp["point_distribution"]["variance"] == 8.41
+    assert pp["recomputed"] is False
+    assert pp["duplicate_math_created"] is False
+    qa = validate_v12_decision_semantics(
+        proof,
+        serious_decision_required=True,
+    )
+    assert qa["status"] == "PASS"
+
+
+def test_serious_decision_semantics_marks_missing_p13_posterior_predictive_partial():
+    proof = _valid_proof()
+    proof.pop("posterior_predictive")
+    qa = validate_v12_decision_semantics(
+        proof,
+        serious_decision_required=True,
+    )
+    assert qa["status"] == "PARTIAL"
+    assert "V12_POSTERIOR_PREDICTIVE_EVENT_PROOF_MISSING" in qa["failures"]
+

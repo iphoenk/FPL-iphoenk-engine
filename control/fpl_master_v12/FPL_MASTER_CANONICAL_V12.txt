@@ -1,5 +1,5 @@
 FPL MASTER CANONICAL V12 — FAIL-OPERATIONAL REPORT-PLANE ARCHITECTURE
-Effective: 2026-09-21T07:50:33+07:00
+Effective: 2026-09-21T08:22:00+07:00
 Authority path: control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
 State path: control/fpl_master_v12/FPL_MASTER_STATE_V12.json
 
@@ -308,6 +308,21 @@ For serious close XI/transfer/package/captain decisions, expose the mathematical
 - mini-league relative-exposure effect only after football-optimal baseline is established.
 
 For genuinely close serious alternatives with fresh supportable distributions, run correlated Monte Carlo with >=500,000 paths, preferably common random numbers for paired route comparison. Report actual N, convergence/limitations, and outputs such as P(route beats HOLD), expected/median net and material tail risk. If fresh distributions are insufficient, state MC NOT RUN/PARTIAL; never synthesize Monte Carlo numbers from point estimates.
+
+9C2. VISIBLE MATHEMATICAL DECISION STACK — MANDATORY WIRING
+For every report occurrence where serious_decision_required=true, the visible body MUST expose one nested MATHEMATICAL DECISION STACK inside the existing relevant XI BATTLE, C/VC, PACKAGE OPTIMIZER/FRONTIER, ALL15, comparator or post-match surface. Do not create a new top-level DEEP section.
+The visible block must retain supportable values, and explicit UNAVAILABLE/NOT RUN states where unsupported, for:
+- BAYESIAN PRIOR -> POSTERIOR / SHRINKAGE;
+- AVAILABILITY MIXTURE: P(available), P(start), P(bench), P(cameo), P(late cameo), P(DNP);
+- xMins DISTRIBUTION including state mixture rather than only mean;
+- EVENT PROBABILITIES: P(goal), P(assist), P(return), P(2+ returns where available), P(haul), P(blank/no attacking return under existing semantics);
+  These values MUST bind to existing V12 P1.3/P1.3B posterior-predictive evidence where available: p_goal_return; p_assist_return; p_attacking_return; p_total_ga_ge_2 / p_multiple_attacking_returns; P1.3B p_haul_10_plus; P1.3B p_fpl_blank; and p_no_attacking_return as a separate attacking-blank semantic. Renderer/report logic MUST NOT reconstruct these probabilities from xG/xA, mean xPts, heuristics or a second model.
+- HORIZON DISTRIBUTIONS: 1GW, 3GW, 5GW and 2GW where rental/exit relevant;
+- P(outperform HOLD/comparator), lower/upper quantiles or floor/ceiling/tail risk where calibrated;
+- EXPECTED REGRET / ROBUSTNESS / INFORMATION VALUE OF WAITING;
+- COVARIANCE / CORRELATION where package, captaincy or same-club concentration is material;
+- MONTE CARLO execution state. EXECUTED requires actual correlated N>=500,000 plus convergence/limitations; otherwise visibly render MC NOT RUN or PARTIAL with the exact reason.
+A report that merely says a model exists, or gives a mean xPts/rank without this visible stack for a serious decision, is under-rendered and must fail visible-body acceptance.
 
 9A. ROBUSTNESS / UNCERTAINTY DOMINANCE GATE
 For close XI/bench/formation decisions and serious player/package comparisons, mean projected points alone is never sufficient.
@@ -627,6 +642,8 @@ GW COMPLETED MATCH-BY-MATCH SCOUT represents every completed fixture exactly onc
 For every match where supportable include:
 result;formation_system;coach_pattern;player_roles;minutes_substitution_pattern;xg_xa_xgi_shots_chances;set_pieces_penalties;defcon;opponent_channels;sustainable_vs_noisy;implication_for_our15;implication_for_next_opponent;posterior_calibration_implication.
 Never reduce the scout to scorer recap.
+
+NEXT-APPLICABLE-DEEP CARRYOVER IS MANDATORY. When a GW has become fully completed and its POST-ALL-MATCH review has not yet been visibly delivered in the current decision context, the next DEEP/FULL occurrence, including AD_HOC DEEP current-mode, MUST carry the complete match-by-match scout as a nested POST-MATCH MATCH-BY-MATCH SCOUT inside the existing Changes surface. Preserve the 19-section DEEP backbone; do not create a duplicate top-level section. Every completed fixture still appears exactly once and retains the same fixture field contract above. UNIVERSE MOVERS may be nested alongside the scout but never substitutes for the per-fixture analysis.
 
 14K. ICON+ VISIBLE CONTRACT
 ICON+ is fail-operational by sub-scope. Do not blank healthy current-GW submitted-picks evidence merely because live standings/rank is stale.

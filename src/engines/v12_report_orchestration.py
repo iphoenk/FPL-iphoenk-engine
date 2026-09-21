@@ -1454,6 +1454,210 @@ def _materialize_canonical_report(
     }
 
 
+def build_visible_mathematical_decision_stack(
+    decision_proof: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Expose existing V12 decision evidence without recomputing any model."""
+    proof = dict(decision_proof or {})
+    probability = dict(proof.get("probability_state") or {})
+    unconditional = dict(probability.get("unconditional") or {})
+    xmins = dict(proof.get("xmins_distribution") or {})
+    horizons = dict(proof.get("horizons") or {})
+    robustness = dict(proof.get("robustness") or {})
+    posterior_predictive = dict(proof.get("posterior_predictive") or {})
+    event_probabilities = dict(
+        posterior_predictive.get("event_probabilities")
+        or proof.get("event_probabilities")
+        or proof.get("posterior_predictive_event_probabilities")
+        or {}
+    )
+    point_distribution = dict(
+        posterior_predictive.get("point_distribution") or {}
+    )
+    mc = dict(proof.get("monte_carlo") or {})
+    missing: list[str] = []
+    if not proof.get("bayesian_shrinkage_lineage"):
+        missing.append("bayesian_shrinkage_lineage")
+    if not unconditional:
+        missing.append("availability_mixture")
+    if not xmins:
+        missing.append("xmins_distribution")
+    if not event_probabilities:
+        missing.append("event_probabilities")
+    if not horizons:
+        missing.append("horizons")
+    if not robustness:
+        missing.append("robustness")
+    if not mc:
+        missing.append("monte_carlo")
+
+    def event_value(*keys: str) -> Any:
+        for key in keys:
+            if key in event_probabilities:
+                return event_probabilities.get(key)
+        return "UNAVAILABLE"
+
+    def distribution_value(*keys: str) -> Any:
+        for key in keys:
+            if key in point_distribution:
+                return point_distribution.get(key)
+        return "UNAVAILABLE"
+
+    return {
+        "state": "COMPLETE" if not missing else ("PARTIAL" if proof else "UNAVAILABLE"),
+        "missing_scope": missing,
+        "bayesian_prior_posterior_shrinkage": (
+            proof.get("bayesian_shrinkage_lineage") or "UNAVAILABLE"
+        ),
+        "availability_mixture": {
+            "p_available": unconditional.get("p_available", "UNAVAILABLE"),
+            "p_start": unconditional.get("p_start", "UNAVAILABLE"),
+            "p_bench": unconditional.get("p_bench", "UNAVAILABLE"),
+            "p_cameo": unconditional.get("p_cameo", "UNAVAILABLE"),
+            "p_late_cameo": unconditional.get("p_late_cameo", "UNAVAILABLE"),
+            "p_dnp": unconditional.get("p_dnp", "UNAVAILABLE"),
+        },
+        "xmins_distribution": xmins or "UNAVAILABLE",
+        "event_probabilities": {
+            "p_goal": event_value(
+                "p_goal_return", "p_goal", "goal"
+            ),
+            "p_assist": event_value(
+                "p_assist_return", "p_assist", "assist"
+            ),
+            "p_return": event_value(
+                "p_attacking_return", "p_return", "return"
+            ),
+            "p_two_plus_returns": event_value(
+                "p_total_ga_ge_2",
+                "p_multiple_attacking_returns",
+                "p_two_plus_returns",
+                "p_2_plus_returns",
+                "two_plus_returns",
+            ),
+            "p_haul": distribution_value(
+                "p_haul_10_plus", "p_haul", "haul"
+            ),
+            "p_blank": distribution_value(
+                "p_fpl_blank", "p_blank", "blank"
+            ),
+            "p_no_attacking_return": event_value(
+                "p_no_attacking_return"
+            ),
+        },
+        "point_distribution": point_distribution or "UNAVAILABLE",
+        "posterior_predictive_source": (
+            posterior_predictive.get("source_contract")
+            or "UNAVAILABLE"
+        ),
+        "horizons": horizons or "UNAVAILABLE",
+        "p_outperform": robustness.get(
+            "p_outperform",
+            proof.get("p_outperform", "UNAVAILABLE"),
+        ),
+        "expected_regret": robustness.get(
+            "expected_regret",
+            proof.get("expected_regret", "UNAVAILABLE"),
+        ),
+        "tail_risk": {
+            "conditional_floor": robustness.get(
+                "conditional_floor", "UNAVAILABLE"
+            ),
+            "upper_tail": robustness.get("upper_tail", "UNAVAILABLE"),
+        },
+        "information_value_of_waiting": proof.get(
+            "information_value_of_waiting", "UNAVAILABLE"
+        ),
+        "covariance_correlation": (
+            proof.get("covariance_correlation")
+            or proof.get("correlation")
+            or "UNAVAILABLE"
+        ),
+        "monte_carlo": mc or {
+            "execution_state": "UNAVAILABLE",
+            "reason": "NO OCCURRENCE-BOUND MONTE CARLO EVIDENCE",
+        },
+    }
+
+
+def _render_match_scout_lines(rows: Sequence[Mapping[str, Any]]) -> list[str]:
+    lines = ["### POST-MATCH MATCH-BY-MATCH SCOUT"]
+    labels = (
+        ("result", "RESULT"),
+        ("formation_system", "FORMATION/SYSTEM"),
+        ("coach_pattern", "COACH PATTERN"),
+        ("player_roles", "PLAYER ROLES"),
+        ("minutes_substitution_pattern", "MINUTES/SUBS"),
+        ("xg_xa_xgi_shots_chances", "xG/xA/xGI/SHOTS/CHANCES"),
+        ("set_pieces_penalties", "SET PIECES/PENALTIES"),
+        ("defcon", "DEFCON"),
+        ("opponent_channels", "OPPONENT CHANNELS"),
+        ("sustainable_vs_noisy", "SUSTAINABLE VS NOISE"),
+        ("implication_for_our15", "OUR15 IMPLICATION"),
+        ("implication_for_next_opponent", "NEXT OPPONENT IMPLICATION"),
+        (
+            "posterior_calibration_implication",
+            "POSTERIOR CALIBRATION IMPLICATION",
+        ),
+    )
+    for row in rows:
+        fixture_id = row.get("fixture_id", "UNAVAILABLE")
+        lines.append(f"#### FIXTURE ID: {fixture_id}")
+        for field, label in labels:
+            value = row.get(field, "UNAVAILABLE")
+            lines.append(f"{label}: {value}")
+    return lines
+
+
+def _render_math_stack_lines(stack: Mapping[str, Any]) -> list[str]:
+    payload = dict(stack or {})
+    availability = dict(payload.get("availability_mixture") or {})
+    events = dict(payload.get("event_probabilities") or {})
+    mc = dict(payload.get("monte_carlo") or {})
+    lines = [
+        "### MATHEMATICAL DECISION STACK",
+        "BAYESIAN PRIOR -> POSTERIOR / SHRINKAGE: "
+        f"{payload.get('bayesian_prior_posterior_shrinkage', 'UNAVAILABLE')}",
+        "AVAILABILITY MIXTURE: "
+        f"P(AVAILABLE)={availability.get('p_available', 'UNAVAILABLE')} | "
+        f"P(START)={availability.get('p_start', 'UNAVAILABLE')} | "
+        f"P(BENCH)={availability.get('p_bench', 'UNAVAILABLE')} | "
+        f"P(CAMEO)={availability.get('p_cameo', 'UNAVAILABLE')} | "
+        f"P(LATE CAMEO)={availability.get('p_late_cameo', 'UNAVAILABLE')} | "
+        f"P(DNP)={availability.get('p_dnp', 'UNAVAILABLE')}",
+        f"XMINS DISTRIBUTION: {payload.get('xmins_distribution', 'UNAVAILABLE')}",
+        "EVENT PROBABILITIES: "
+        f"P(GOAL)={events.get('p_goal', 'UNAVAILABLE')} | "
+        f"P(ASSIST)={events.get('p_assist', 'UNAVAILABLE')} | "
+        f"P(RETURN)={events.get('p_return', 'UNAVAILABLE')} | "
+        f"P(2+ RETURNS)={events.get('p_two_plus_returns', 'UNAVAILABLE')} | "
+        f"P(HAUL)={events.get('p_haul', 'UNAVAILABLE')} | "
+        f"P(BLANK)={events.get('p_blank', 'UNAVAILABLE')} | "
+        f"P(NO ATTACK RETURN)={events.get('p_no_attacking_return', 'UNAVAILABLE')}",
+        "P1.3B POINT DISTRIBUTION: "
+        f"source={payload.get('posterior_predictive_source', 'UNAVAILABLE')} | "
+        f"E[xPts]={dict(payload.get('point_distribution') or {}).get('expected_points', 'UNAVAILABLE')} | "
+        f"variance={dict(payload.get('point_distribution') or {}).get('variance', 'UNAVAILABLE')} | "
+        f"std={dict(payload.get('point_distribution') or {}).get('std', 'UNAVAILABLE')} | "
+        f"quantiles={dict(payload.get('point_distribution') or {}).get('quantiles', 'UNAVAILABLE')} | "
+        f"tails={dict(payload.get('point_distribution') or {}).get('tails', 'UNAVAILABLE')}",
+        f"HORIZONS 1GW / 3GW / 5GW: {payload.get('horizons', 'UNAVAILABLE')}",
+        f"P(OUTPERFORM HOLD/COMPARATOR): {payload.get('p_outperform', 'UNAVAILABLE')}",
+        f"EXPECTED REGRET: {payload.get('expected_regret', 'UNAVAILABLE')}",
+        f"TAIL / FLOOR / CEILING: {payload.get('tail_risk', 'UNAVAILABLE')}",
+        "INFORMATION VALUE OF WAITING: "
+        f"{payload.get('information_value_of_waiting', 'UNAVAILABLE')}",
+        f"COVARIANCE / CORRELATION: {payload.get('covariance_correlation', 'UNAVAILABLE')}",
+        "MONTE CARLO: "
+        f"state={mc.get('execution_state', 'UNAVAILABLE')} | "
+        f"N={mc.get('actual_paths', 'UNAVAILABLE')} | "
+        f"correlated={mc.get('correlated', 'UNAVAILABLE')} | "
+        f"reason={mc.get('reason', mc.get('degradation_reason', 'UNAVAILABLE'))} | "
+        f"convergence={mc.get('convergence_evidence', 'UNAVAILABLE')}",
+    ]
+    return lines
+
+
 def materialize_deep_report(
     *,
     canonical_text: str,
@@ -1462,9 +1666,11 @@ def materialize_deep_report(
     signal_delta: Mapping[str, Any] | None = None,
     current_gw_locked: bool = False,
     locked_state: Mapping[str, Any] | None = None,
+    post_all_match_scout: Sequence[Mapping[str, Any]] | None = None,
+    mathematical_decision_stack: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Materialize every Canonical DEEP block; unavailable data never omits a section."""
-    return _materialize_canonical_report(
+    """Materialize Canonical DEEP plus nested post-match/math evidence when due."""
+    report = _materialize_canonical_report(
         canonical_text=canonical_text,
         structural_mode="DEEP",
         reported_mode="DEEP",
@@ -1474,6 +1680,51 @@ def materialize_deep_report(
         current_gw_locked=current_gw_locked,
         locked_state=locked_state,
     )
+    scout = [
+        dict(row)
+        for row in (post_all_match_scout or ())
+        if isinstance(row, Mapping)
+    ]
+    if scout:
+        target = next(
+            (
+                row
+                for row in report["sections"]
+                if str(row.get("label") or "").strip().upper() == "CHANGES"
+            ),
+            None,
+        )
+        if target is None:
+            raise ReportOrchestrationError(
+                "DEEP Changes surface required for post-match scout carryover"
+            )
+        content = dict(target.get("content") or {})
+        content["post_match_match_by_match_scout"] = scout
+        target["content"] = content
+        report["post_all_match_context"] = True
+        report["completed_fixture_ids"] = [
+            str(row.get("fixture_id")) for row in scout
+        ]
+    if mathematical_decision_stack:
+        target = next(
+            (
+                row
+                for row in report["sections"]
+                if "PACKAGE OPTIMIZER" in str(row.get("label") or "").upper()
+            ),
+            None,
+        )
+        if target is None:
+            raise ReportOrchestrationError(
+                "DEEP package surface required for mathematical decision stack"
+            )
+        content = dict(target.get("content") or {})
+        content["mathematical_decision_stack"] = dict(
+            mathematical_decision_stack
+        )
+        target["content"] = content
+        report["serious_decision_required"] = True
+    return report
 
 
 def _post_match_structural_route(
@@ -1555,18 +1806,32 @@ def materialize_natural_post_match_report(
 
 
 def render_natural_post_match_text(report: Mapping[str, Any]) -> str:
-    """Compact visible renderer proving natural post-match mover placement."""
+    """Visible natural post-match renderer including fixture scout and movers."""
     blocks: list[str] = []
     for section in report.get("sections") or []:
         label = str(section.get("label") or "")
         state = str(section.get("state") or "")
         lines = [f"## {label}", f"Status: {state}"]
         content = section.get("content")
-        movers = (
-            dict(content.get("universe_movers") or {})
-            if isinstance(content, Mapping)
-            else {}
-        )
+        content_map = dict(content or {}) if isinstance(content, Mapping) else {}
+
+        scout = [
+            dict(row)
+            for row in (
+                content_map.get("match_scout")
+                or content_map.get("post_match_match_by_match_scout")
+                or ()
+            )
+            if isinstance(row, Mapping)
+        ]
+        if scout:
+            lines.extend(_render_match_scout_lines(scout))
+
+        math_stack = content_map.get("mathematical_decision_stack")
+        if isinstance(math_stack, Mapping):
+            lines.extend(_render_math_stack_lines(math_stack))
+
+        movers = dict(content_map.get("universe_movers") or {})
         if movers:
             lines.append("### UNIVERSE MOVERS")
             mover_state = str(movers.get("state") or "UNAVAILABLE")
@@ -1612,12 +1877,25 @@ def render_natural_post_match_text(report: Mapping[str, Any]) -> str:
 
 
 def render_deep_text(report: Mapping[str, Any]) -> str:
-    """Simple human-facing structural renderer for conformance tests."""
-    blocks = []
+    """Human-facing DEEP renderer retaining nested analytic evidence."""
+    blocks: list[str] = []
     for row in report.get("sections") or []:
         label = str(row.get("label") or "")
         state = str(row.get("state") or "")
-        blocks.append(f"## {label}\nStatus: {state}")
+        lines = [f"## {label}", f"Status: {state}"]
+        content = row.get("content")
+        content_map = dict(content or {}) if isinstance(content, Mapping) else {}
+        scout = [
+            dict(item)
+            for item in content_map.get("post_match_match_by_match_scout") or ()
+            if isinstance(item, Mapping)
+        ]
+        if scout:
+            lines.extend(_render_match_scout_lines(scout))
+        math_stack = content_map.get("mathematical_decision_stack")
+        if isinstance(math_stack, Mapping):
+            lines.extend(_render_math_stack_lines(math_stack))
+        blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
 
 

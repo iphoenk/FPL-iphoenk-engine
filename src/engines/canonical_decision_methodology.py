@@ -928,6 +928,110 @@ def validate_tactical_evidence_bindings(
     return validated
 
 
+_P1_3_EVENT_FIELDS = (
+    "p_goal_return",
+    "p_assist_return",
+    "p_attacking_return",
+    "p_total_ga_ge_2",
+    "p_no_attacking_return",
+)
+_P1_3_DISTRIBUTION_FIELDS = (
+    "p_fpl_blank",
+    "p_haul_10_plus",
+    "expected_points",
+    "variance",
+    "std",
+    "quantiles",
+    "tails",
+)
+
+
+def bind_posterior_predictive_decision_evidence(
+    fixture_projection: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Bind existing P1.3/P1.3B outputs into decision evidence without recomputation."""
+    row = dict(fixture_projection or {})
+    events = dict(row.get("event_probabilities") or {})
+    distribution = dict(row.get("point_distribution") or {})
+    missing_events = [
+        field for field in _P1_3_EVENT_FIELDS
+        if events.get(field) is None
+    ]
+    missing_distribution = [
+        field for field in _P1_3_DISTRIBUTION_FIELDS
+        if distribution.get(field) is None
+    ]
+    if missing_events or missing_distribution:
+        raise MethodologyContractError(
+            "posterior predictive decision evidence missing native P1.3/P1.3B fields: "
+            + ",".join(missing_events + missing_distribution)
+        )
+
+    for field in _P1_3_EVENT_FIELDS:
+        value = _finite_number(events.get(field), label=f"posterior_predictive.{field}")
+        if value < 0.0 or value > 1.0:
+            raise MethodologyContractError(
+                f"posterior predictive probability outside [0,1]: {field}"
+            )
+    for field in ("p_fpl_blank", "p_haul_10_plus"):
+        value = _finite_number(
+            distribution.get(field),
+            label=f"posterior_predictive.{field}",
+        )
+        if value < 0.0 or value > 1.0:
+            raise MethodologyContractError(
+                f"posterior predictive probability outside [0,1]: {field}"
+            )
+    _finite_number(
+        distribution.get("expected_points"),
+        label="posterior_predictive.expected_points",
+    )
+    variance = _finite_number(
+        distribution.get("variance"),
+        label="posterior_predictive.variance",
+    )
+    if variance < 0.0:
+        raise MethodologyContractError(
+            "posterior predictive variance must be non-negative"
+        )
+    std = _finite_number(
+        distribution.get("std"),
+        label="posterior_predictive.std",
+    )
+    if std < 0.0:
+        raise MethodologyContractError(
+            "posterior predictive std must be non-negative"
+        )
+    if not isinstance(distribution.get("quantiles"), Mapping):
+        raise MethodologyContractError(
+            "posterior predictive quantiles must be a mapping"
+        )
+    if not isinstance(distribution.get("tails"), Mapping):
+        raise MethodologyContractError(
+            "posterior predictive tails must be a mapping"
+        )
+    return {
+        "status": "PASS",
+        "source_owner": "V12_PLAYER_EVENTS",
+        "source_contract": "P1.3/P1.3B_POSTERIOR_PREDICTIVE",
+        "fixture_id": row.get("fixture")
+        or row.get("fixture_id")
+        or row.get("id"),
+        "event_probabilities": {
+            field: events.get(field) for field in _P1_3_EVENT_FIELDS
+        },
+        "point_distribution": {
+            field: distribution.get(field)
+            for field in _P1_3_DISTRIBUTION_FIELDS
+        },
+        "dependence": dict(row.get("dependence") or {}),
+        "reconciliation": dict(row.get("reconciliation") or {}),
+        "model_evidence": dict(row.get("model_evidence") or {}),
+        "recomputed": False,
+        "duplicate_math_created": False,
+    }
+
+
 def build_decision_proof(
     *,
     authority_path: str,
@@ -942,6 +1046,7 @@ def build_decision_proof(
     probability_state: Mapping[str, Any],
     xmins_distribution: Mapping[str, Any],
     horizons: Mapping[str, Any],
+    posterior_predictive: Mapping[str, Any] | None = None,
     transfer_economics: Mapping[str, Any],
     robustness: Mapping[str, Any],
     expected_regret: Any,
@@ -991,6 +1096,25 @@ def build_decision_proof(
         raise MethodologyContractError("xMins distribution is required, not only a mean")
     if not isinstance(bayesian_lineage, Mapping) or not bayesian_lineage:
         raise MethodologyContractError("Bayesian/shrinkage lineage is required")
+    validated_posterior_predictive = None
+    if posterior_predictive is not None:
+        raw_pp = dict(posterior_predictive)
+        if raw_pp.get("source_contract") == "P1.3/P1.3B_POSTERIOR_PREDICTIVE":
+            native = {
+                "event_probabilities": raw_pp.get("event_probabilities"),
+                "point_distribution": raw_pp.get("point_distribution"),
+                "dependence": raw_pp.get("dependence"),
+                "reconciliation": raw_pp.get("reconciliation"),
+                "model_evidence": raw_pp.get("model_evidence"),
+                "fixture_id": raw_pp.get("fixture_id"),
+            }
+            validated_posterior_predictive = bind_posterior_predictive_decision_evidence(
+                native
+            )
+        else:
+            validated_posterior_predictive = bind_posterior_predictive_decision_evidence(
+                raw_pp
+            )
     if not isinstance(horizons, Mapping) or horizons.get("status") != "PASS":
         raise MethodologyContractError("canonical horizon proof is required")
     horizon_keys = set((horizons.get("horizons") or {}).keys())
@@ -1161,6 +1285,7 @@ def build_decision_proof(
         "bayesian_shrinkage_lineage": dict(bayesian_lineage),
         "probability_state": probability,
         "xmins_distribution": dict(xmins_distribution),
+        "posterior_predictive": validated_posterior_predictive,
         "horizons": dict(horizons),
         "transfer_economics": dict(transfer_economics),
         "robustness": dict(robustness),

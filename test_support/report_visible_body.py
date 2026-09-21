@@ -96,6 +96,7 @@ def valid_visible_body(
     weather_state_override: str | None = None,
     omit_rise_field: str | None = None,
     omit_fall_field: str | None = None,
+    include_serious_math: bool = True,
 ) -> str:
     """Build a deterministic body matching the canonical visible Full skeleton."""
     lines = ["# 04:30 MORNING DEEP REVIEW"]
@@ -172,6 +173,30 @@ def valid_visible_body(
                     omit_field=omit_fall_field,
                 )
             )
+        elif section_id == "S13":
+            lines.append("Material section content.")
+            required_markers = {
+                str(value).upper()
+                for value in pre_render_qa.get("required_visible_markers", [])
+            }
+            if include_serious_math and "MATHEMATICAL DECISION STACK" in required_markers:
+                lines.extend(
+                    [
+                        "### MATHEMATICAL DECISION STACK",
+                        "BAYESIAN PRIOR -> POSTERIOR / SHRINKAGE: governed evidence",
+                        "AVAILABILITY MIXTURE: P(AVAILABLE)=0.95 | P(START)=0.85 | P(BENCH)=0.10 | P(CAMEO)=0.08 | P(LATE CAMEO)=0.02 | P(DNP)=0.05",
+                        "XMINS DISTRIBUTION: START/CAMEO/LATE_CAMEO/ZERO_MINUTES",
+                        "EVENT PROBABILITIES: P(GOAL)=0.25 | P(ASSIST)=0.20 | P(RETURN)=0.40 | P(2+ RETURNS)=0.10 | P(HAUL)=0.12 | P(BLANK)=0.60 | P(NO ATTACK RETURN)=0.60",
+                        "P1.3B POINT DISTRIBUTION: source=P1.3/P1.3B_POSTERIOR_PREDICTIVE | E[xPts]=5.8 | variance=8.4 | std=2.9 | quantiles={'p10': 2, 'p50': 5, 'p90': 10} | tails={'ge_10': 0.12}",
+                        "HORIZONS 1GW / 3GW / 5GW: available",
+                        "P(OUTPERFORM HOLD/COMPARATOR): 0.55",
+                        "EXPECTED REGRET: 0.4",
+                        "TAIL / FLOOR / CEILING: calibrated",
+                        "INFORMATION VALUE OF WAITING: positive",
+                        "COVARIANCE / CORRELATION: accounted",
+                        "MONTE CARLO: NOT RUN — synthetic QA fixture",
+                    ]
+                )
         elif section_id == "S14":
             if pre_render_qa.get("expected_fact_keys"):
                 lines.append("FACT: Official factual evidence is separated and timestamped.")

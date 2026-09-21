@@ -8,6 +8,8 @@ report structures while keeping repository-Python execution truth separate
 from ChatGPT/V12 analytic execution truth.
 """
 
+import hashlib
+import json
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, Sequence
@@ -629,6 +631,72 @@ def build_price20(
             row.pop("_artifact_index", None)
         usable_count = len(selected)
         adapter = "COMPACT_COMPAT"
+
+    artifact_payload_hash = hashlib.sha256(
+        json.dumps(
+            artifact,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            default=str,
+        ).encode("utf-8")
+    ).hexdigest()
+    for rank, row in enumerate(selected, start=1):
+        element_id = int(row.get("element_id") or 0)
+        row.update(
+            {
+                "rank": rank,
+                "player_name": row.get("player")
+                or f"element:{element_id}",
+                "ownership_percent": row.get(
+                    "selected_by_percent",
+                    "UNAVAILABLE",
+                ),
+                "ownership_tag": (
+                    "OWNED"
+                    if element_id in owned_ids
+                    else "NON_OWNED"
+                ),
+                "current_progress_percent": row.get(
+                    "official_or_provider_progress",
+                    "UNAVAILABLE",
+                ),
+                "projection_offset_0_percent": row.get(
+                    "projected_percent",
+                    "UNAVAILABLE",
+                ),
+                "predicted_change_cycle": (
+                    row.get("cycles_to_expected_change")
+                    or row.get("date_state")
+                    or "UNAVAILABLE"
+                ),
+                "predicted_change_at": (
+                    row.get("estimated_change_at_wib")
+                    or row.get("date_state")
+                    or "UNAVAILABLE"
+                ),
+                "eta_human": (
+                    row.get("eta_context")
+                    or row.get("estimated_change_window")
+                    or row.get("date_state")
+                    or "UNAVAILABLE"
+                ),
+                "model_urgency": (
+                    row.get("impact_on_our_decision")
+                    or "WATCH"
+                ),
+                "source": (
+                    row.get("estimate_source")
+                    or "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR"
+                ),
+                "observed_at": (
+                    row.get("evidence_timestamp")
+                    or evidence_timestamp
+                    or "UNAVAILABLE"
+                ),
+                "raw_payload_hash": artifact_payload_hash,
+            }
+        )
 
     enough = len(selected) == 20
     healthy = health in {"GREEN", "HEALTHY", "PASS", "CURRENT", "OK"}
@@ -2207,29 +2275,318 @@ def render_natural_post_match_text(report: Mapping[str, Any]) -> str:
     return "\n\n".join(blocks)
 
 
+
+def _markdown_cell(value: Any) -> str:
+    text = str("UNAVAILABLE" if value is None else value)
+    return text.replace("|", "/").replace("\n", " ").strip()
+
+
+def _markdown_table(
+    headers: Sequence[str],
+    rows: Sequence[Sequence[Any]],
+) -> list[str]:
+    header = "| " + " | ".join(headers) + " |"
+    separator = "| " + " | ".join("---" for _ in headers) + " |"
+    body = [
+        "| " + " | ".join(_markdown_cell(value) for value in row) + " |"
+        for row in rows
+    ]
+    return [header, separator, *body]
+
+
+def _render_deep_visible_contract_lines(
+    *,
+    section_id: str,
+    content: Mapping[str, Any],
+    owned_ids: set[int],
+) -> tuple[list[str], tuple[str, ...]]:
+    """Render the existing DEEP content into the visible-body QA contract.
+
+    This is presentation only. It does not recompute xPts, xMins, posterior,
+    tactical scores, price predictions, ownership, or mini-league facts.
+    """
+    payload = dict(content or {})
+    lines: list[str] = []
+    excluded: list[str] = []
+
+    if section_id == "S02":
+        rows = [
+            dict(row)
+            for row in payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.extend(
+            _markdown_table(
+                (
+                    "element_id",
+                    "player_name",
+                    "opponent",
+                    "p_available",
+                    "p_start",
+                    "p_cameo",
+                    "p_dnp",
+                    "xmins",
+                    "tactical_role",
+                    "1gw",
+                    "3gw",
+                    "5gw",
+                    "action",
+                ),
+                [
+                    (
+                        row.get("element_id"),
+                        row.get("player") or row.get("name"),
+                        row.get("opponent"),
+                        row.get("p_available"),
+                        row.get("p_start"),
+                        row.get("p_cameo"),
+                        row.get("p_dnp"),
+                        row.get("xmins"),
+                        row.get("tactical_role"),
+                        row.get("gw_plus_1"),
+                        row.get("three_gw"),
+                        row.get("five_gw"),
+                        row.get("action"),
+                    )
+                    for row in rows
+                ],
+            )
+        )
+        excluded.append("rows")
+
+    elif section_id == "S05":
+        lines.append("WEATHER SOURCE: DEGRADED")
+
+    elif section_id == "S06":
+        xi = [
+            dict(row)
+            for row in payload.get("starting_xi") or []
+            if isinstance(row, Mapping)
+        ]
+        bench = dict(payload.get("bench") or {})
+        reserve_gk = dict(bench.get("gk") or {})
+        outfield = [
+            dict(row)
+            for row in bench.get("order") or []
+            if isinstance(row, Mapping)
+        ]
+        xi_names = [
+            str(row.get("name") or row.get("element"))
+            for row in xi
+        ]
+        bench_names = []
+        if reserve_gk:
+            bench_names.append(
+                str(reserve_gk.get("name") or reserve_gk.get("element"))
+            )
+        bench_names.extend(
+            str(row.get("name") or row.get("element"))
+            for row in outfield
+        )
+        lines.append("XI: " + ", ".join(xi_names))
+        lines.append("BENCH: " + ", ".join(bench_names))
+        excluded.extend(("starting_xi", "bench"))
+
+    elif section_id == "S11":
+        rows = [
+            dict(row)
+            for row in payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.extend(
+            _markdown_table(
+                (
+                    "rank",
+                    "element_id",
+                    "player_name",
+                    "position",
+                    "ownership_tag",
+                    "football_score",
+                ),
+                [
+                    (
+                        rank,
+                        row.get("element_id", row.get("element")),
+                        row.get("name"),
+                        row.get("position"),
+                        "NON_OWNED",
+                        row.get("football_score"),
+                    )
+                    for rank, row in enumerate(rows, start=1)
+                ],
+            )
+        )
+        excluded.append("rows")
+
+    elif section_id in {"S12", "S13"}:
+        rows = [
+            dict(row)
+            for row in payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        fields = (
+            "rank",
+            "element_id",
+            "player_name",
+            "current_price",
+            "ownership_percent",
+            "ownership_tag",
+            "direction",
+            "current_progress_percent",
+            "projection_offset_0_percent",
+            "predicted_change_cycle",
+            "predicted_change_at",
+            "eta_human",
+            "model_urgency",
+            "confidence",
+            "source",
+            "observed_at",
+            "raw_payload_hash",
+        )
+        lines.extend(
+            _markdown_table(
+                fields,
+                [
+                    tuple(
+                        (
+                            "OWNED"
+                            if field == "ownership_tag"
+                            and int(row.get("element_id") or 0) in owned_ids
+                            else "NON_OWNED"
+                            if field == "ownership_tag"
+                            else row.get(field)
+                        )
+                        for field in fields
+                    )
+                    for row in rows
+                ],
+            )
+        )
+        excluded.append("rows")
+
+    elif section_id == "S15B":
+        coverage = str(payload.get("coverage_state") or "").upper()
+        lines.append(
+            "MINI_LEAGUE_DENOMINATOR: "
+            + ("COMPLETE" if coverage == "FULL" else "DEGRADED")
+        )
+
+    elif section_id == "S16":
+        rows = [
+            dict(row)
+            for row in payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.extend(
+            _markdown_table(
+                (
+                    "element_id",
+                    "player_name",
+                    "opponent",
+                    "p_start",
+                    "xmins",
+                    "tactical_role",
+                    "1gw",
+                    "3gw",
+                    "5gw",
+                    "action",
+                ),
+                [
+                    (
+                        row.get("element_id"),
+                        row.get("player") or row.get("name"),
+                        row.get("opponent"),
+                        row.get("p_start"),
+                        row.get("xmins"),
+                        row.get("tactical_role"),
+                        row.get("gw_plus_1"),
+                        row.get("three_gw"),
+                        row.get("five_gw"),
+                        row.get("action"),
+                    )
+                    for row in rows
+                ],
+            )
+        )
+        excluded.append("rows")
+
+    elif section_id == "S17":
+        lines.extend(
+            (
+                "FACT: OFFICIAL_FPL_OCCURRENCE_FACTS",
+                "MODEL: V12_OCCURRENCE_MODEL_OUTPUTS",
+                "INFERENCE: V12_DECISION_INFERENCE",
+            )
+        )
+
+    return lines, tuple(excluded)
+
+
 def render_deep_text(report: Mapping[str, Any]) -> str:
     """Human-facing DEEP renderer retaining nested analytic evidence."""
+    sections = [
+        dict(row)
+        for row in report.get("sections") or []
+        if isinstance(row, Mapping)
+    ]
+    owned_ids = {
+        int(item.get("element_id"))
+        for section in sections
+        if str(section.get("section_id") or "") == "S02"
+        for item in (
+            (section.get("content") or {}).get("rows") or []
+            if isinstance(section.get("content"), Mapping)
+            else []
+        )
+        if isinstance(item, Mapping)
+        and item.get("element_id") is not None
+    }
+
     blocks: list[str] = []
-    for row in report.get("sections") or []:
+    for row in sections:
         label = str(row.get("label") or "")
         state = str(row.get("state") or "")
-        section_id = row.get("section_id")
-        lines = [_visible_section_heading(section_id, label), f"Status: {state}"]
+        section_id = str(row.get("section_id") or "")
+        lines = [
+            _visible_section_heading(section_id, label),
+            f"Status: {state}",
+        ]
         reason = str(row.get("degradation_reason") or "").strip()
         if state != "COMPLETE" and reason:
             lines.append(f"Reason: {reason}")
         content = row.get("content")
-        content_map = dict(content or {}) if isinstance(content, Mapping) else {}
+        content_map = (
+            dict(content or {})
+            if isinstance(content, Mapping)
+            else {}
+        )
+
+        visible_lines, visible_excluded = (
+            _render_deep_visible_contract_lines(
+                section_id=section_id,
+                content=content_map,
+                owned_ids=owned_ids,
+            )
+        )
+        lines.extend(visible_lines)
+
         scout = [
             dict(item)
-            for item in content_map.get("post_match_match_by_match_scout") or ()
+            for item in content_map.get(
+                "post_match_match_by_match_scout"
+            )
+            or ()
             if isinstance(item, Mapping)
         ]
         if scout:
             lines.extend(_render_match_scout_lines(scout))
-        math_stack = content_map.get("mathematical_decision_stack")
+
+        math_stack = content_map.get(
+            "mathematical_decision_stack"
+        )
         if isinstance(math_stack, Mapping):
             lines.extend(_render_math_stack_lines(math_stack))
+
         if "PACKAGE OPTIMIZER" in label.upper():
             lines.extend(
                 _render_package_frontier_lines(
@@ -2237,6 +2594,7 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
                     section_state=state,
                 )
             )
+
         generic = _render_generic_human_content(
             content_map,
             excluded_keys=(
@@ -2249,6 +2607,7 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
                 "package_routes",
                 "routes",
                 "frontier",
+                *visible_excluded,
             ),
         )
         if generic:

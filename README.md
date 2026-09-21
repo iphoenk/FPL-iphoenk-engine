@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T04:44:06+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T05:10:10+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -375,52 +375,59 @@ Facts, probability models, tactics, optimization, decisions, and reports remain 
 
 ## Stage 1 analytics completion status
 
-Stage 1 model/analytics implementation is already merged on `main` and its
-required CI is GREEN. The final factual-history repair now makes normalized
-**Official FPL finalized event-live history** the primary GW1→current
-match-by-match source for V12. The older Vaastav `merged_gw` path remains a
-mirror/fallback only when it independently proves complete coverage through
-the latest finished GW. A stale mirror is rejected.
+**Stage 1 is CLOSED / GREEN. Stage 2 is ready to start but has not started.**
 
-The Stage 1 chain includes:
+Final controlled acceptance:
+
+- integrated DEEP workflow run: `35659879299`;
+- artifact: `v12-report-DEEP-35659879299` (artifact id `10667026143`);
+- report slot: `2026-09-22T05:00:00+07:00`;
+- accepted `main`: `e20313c497d27e0cc9e800ab9de6280a7781510c`;
+- accepted `runtime-data-v6`: `b851d72f7183395c8d632e8d8f14e6c9282b17f0`;
+- same-occurrence `full_master` prefetch id:
+  `22098ecb-4c96-4924-bc5e-2cf96691f7c6`;
+- runner: **PASS**;
+- canonical catalog: **PASS**;
+- PRE_RENDER: **PASS**;
+- POST_RENDER: **PASS**;
+- HUMAN_FACING: **PASS**.
+
+The accepted factual history is normalized **Official FPL finalized event-live**
+history for GW1→GW5 with 3,191 normalized player-match rows, 3,191 exact
+element/fixture/opponent identities, no missing finished GW, exact Official
+fixture resolution, and no fabricated DGW aggregate splitting.
+
+Stage 1 now includes and has acceptance proof for:
 
 - exact root-cause repair for controlled run `35597594711`;
 - P1.3-owned horizons with no runner-private shorter horizon;
-- finalized Official FPL GW history with exact element/fixture/opponent/H-A
-  identity and provenance;
-- opponent-adjusted historical recency with venue-specific team strength;
-- recency × opponent × regime weighting without hard history reset;
-- Bayesian change-point evidence with `P(role stable)`;
+- finalized Official FPL GW1→current match-by-match facts;
+- opponent-adjusted historical recency with venue-specific strength;
+- recency × opponent × regime weighting without hard reset;
+- Bayesian change-point evidence and `P(role stable)`;
 - empirical-Bayes league → position → factual-role-if-available → team
   leave-one-player-out priors feeding the existing P1.3 owner;
-- explicit credible intervals and sample exposure;
-- target-specific distribution diagnostics/selection with generic Erlang use
-  forbidden;
+- credible intervals and sample exposure;
+- target-specific distribution diagnostics/selection;
 - P1.1 six-state minutes:
   `START_FULL / START_SUBBED / EARLY_SUB / CAMEO / LATE_CAMEO / DNP`;
-- expanding-window GW walk-forward validation with future leakage forbidden;
-- exact Canonical 20/25/30/25 full-universe materialization from existing
-  owner outputs only;
-- required CI coverage across P1.1, P1.3, integrated runner, Stage 1
-  analytics, V6, governance, documentation and naming.
+- expanding-window GW walk-forward validation with no future leakage;
+- exact Canonical 20/25/30/25 full-universe materialization;
+- full OUR15, XI/bench, Watchlist20, price radar and mini-league visible
+  acceptance;
+- actual visible DEEP render validation.
 
-Unsupported optional factual features remain explicit `UNAVAILABLE`; they
-are never silently zero-filled. Stage 2 remains not started. Final
-`stage1_green=true` is allowed only after this repair is merged, a fresh V6
-runtime snapshot contains complete Official FPL match history through the
-latest finished GW, and one controlled DEEP run passes the Stage 1 analytics,
-canonical universe, PRE_RENDER, POST_RENDER and HUMAN_FACING acceptance gates.
+Stage 2 boundaries remain explicit. `P1_2_PACKAGE_UTILITY` and material
+`P1_4_MONTE_CARLO` are intentionally `NOT_RUN` in the Stage 1 acceptance;
+they were not fabricated or silently executed. Unsupported optional factual
+features remain explicit `UNAVAILABLE`, never silently zero-filled.
 
 ### Controlled Stage 1 runtime recovery
 
-For bounded acceptance work only, the existing V6 `manual_recovery` mode can
-also be invoked by the repository owner through issue #431 with
-`/v6-manual-recovery reason=<ONE_TOKEN> confirm=RECOVER_V6`. This is a
-controlled, non-natural recovery transport. It is never scheduler proof, never
-completes an operational or scheduled slot, never changes the single ChatGPT
-scheduler authority, and never creates a second recurring acquisition path.
-Manual recovery may bypass only the ordinary same-slot polling cadence so the
-provider can actually be retried; verification and request-budget gates remain
-in force.
-The existing workflow-dispatch recovery guard remains unchanged.
+The existing V6 `manual_recovery` mode remains available as a bounded,
+owner-only, non-natural recovery transport through issue #431. It is never
+scheduler proof, never completes an operational/scheduled slot, never changes
+the single ChatGPT scheduler authority, and never creates a second recurring
+acquisition path. It may bypass only ordinary same-slot polling cadence while
+verification and request-budget gates remain enforced.
 

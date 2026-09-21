@@ -15,7 +15,7 @@ Silently skipping an owner stage is forbidden.
 """
 
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -907,8 +907,8 @@ def _core_slot_binding(
             "actual_core_slot": publish_integrity.get("logical_slot"),
         }
     expected_dt = report_dt.replace(minute=0, second=0, microsecond=0)
-    expected_utc = expected_dt.astimezone(__import__("datetime").timezone.utc)
-    actual_utc = actual_dt.astimezone(__import__("datetime").timezone.utc) if actual_dt else None
+    expected_utc = expected_dt.astimezone(timezone.utc)
+    actual_utc = actual_dt.astimezone(timezone.utc) if actual_dt else None
     matched = actual_utc == expected_utc
     return {
         "status": "PASS" if matched else "PARTIAL",
@@ -930,8 +930,8 @@ def _report_prefetch_binding(
         report_prefetch.get("target_logical_report_slot")
         or report_prefetch.get("logical_slot")
     )
-    requested_utc = requested.astimezone(__import__("datetime").timezone.utc) if requested else None
-    target_utc = target.astimezone(__import__("datetime").timezone.utc) if target else None
+    requested_utc = requested.astimezone(timezone.utc) if requested else None
+    target_utc = target.astimezone(timezone.utc) if target else None
     checks = {
         "report_kind_full_master": str(report_prefetch.get("report_kind") or "") == "full_master",
         "target_report_slot_match": bool(

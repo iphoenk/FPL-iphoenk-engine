@@ -234,3 +234,72 @@ def test_daily_budget_is_counted_from_real_provider_attempts():
     assert result["budget"]["requests_used"] == 2
     assert result["budget"]["remaining"] == 1
     assert result["polling"]["provider_calls_this_poll"] == 2
+
+
+
+def test_manual_recovery_force_retry_bypasses_cadence_only():
+    now = datetime(2026, 9, 21, 14, 51, tzinfo=timezone.utc)
+    source = {
+        "id": "official_fpl",
+        "poll_interval_minutes": 60,
+        "requests": [{"id": "bootstrap"}],
+    }
+    previous = {
+        "polling": {
+            "last_polled_at": "2026-09-21T14:17:00+00:00",
+            "last_polled_scheduler_slot": "2026-09-21T14:00:00+00:00",
+        }
+    }
+
+    normal = poll_decision(
+        source,
+        previous,
+        now=now,
+        scheduler_interval_minutes=60,
+    )
+    recovery = poll_decision(
+        source,
+        previous,
+        now=now,
+        scheduler_interval_minutes=60,
+        force_poll=True,
+    )
+
+    assert normal["due"] is False
+    assert normal["reason"] == "ALREADY_POLLED_THIS_SLOT"
+    assert recovery["due"] is True
+    assert recovery["reason"] == "MANUAL_RECOVERY_FORCE_RETRY"
+
+
+def test_manual_recovery_force_retry_does_not_bypass_budget_or_verification():
+    now = datetime(2026, 9, 21, 14, 51, tzinfo=timezone.utc)
+    unverified = {
+        "id": "provider",
+        "verification_required": True,
+        "verification_status": "PENDING",
+        "requests": [{"id": "one"}],
+    }
+    assert poll_decision(
+        unverified,
+        None,
+        now=now,
+        force_poll=True,
+    )["reason"] == "VERIFICATION_REQUIRED"
+
+    budgeted = {
+        "id": "provider",
+        "daily_request_budget": 1,
+        "requests": [{"id": "one"}],
+    }
+    previous = {
+        "budget": {
+            "date_wib": "2026-09-21",
+            "requests_used": 1,
+        }
+    }
+    assert poll_decision(
+        budgeted,
+        previous,
+        now=now,
+        force_poll=True,
+    )["reason"] == "BUDGET_EXHAUSTED"

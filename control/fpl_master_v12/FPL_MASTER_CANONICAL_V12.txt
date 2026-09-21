@@ -1,5 +1,5 @@
 FPL MASTER CANONICAL V12 — FAIL-OPERATIONAL REPORT-PLANE ARCHITECTURE
-Effective: 2026-09-21T05:45:00+07:00
+Effective: 2026-09-21T07:50:33+07:00
 Authority path: control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
 State path: control/fpl_master_v12/FPL_MASTER_STATE_V12.json
 
@@ -501,6 +501,8 @@ Exact visible order:
 19 Final judgement.
 
 For DEEP, every structural section above MUST be visibly materialized in this exact order. Data unavailability never authorizes structural omission. A section without authoritative data remains visible as PARTIAL / DEGRADED / UNAVAILABLE with reason and counts where meaningful. "NOT RENDERED" is not a Canonical section state.
+
+AD_HOC MODE-EQUIVALENCE IS MANDATORY. When the user explicitly requests a Canonical report mode outside its natural scheduler occurrence, including wording such as "DEEP sekarang", "PRICE sekarang", or "format 04:30 tapi mode sekarang", treat it as an actual AD_HOC occurrence of that requested Canonical mode, not as a prose imitation of the layout. The AD_HOC occurrence MUST traverse the same mode contract, compute/retrieval semantics, pre-render QA, actual visible-body post-render QA and same-request recovery semantics as the scheduled mode, except that scheduler proof is N/A. Manual/chat composition MUST NOT bypass visible-body QA merely because the request is interactive. For DEEP/PRICE, a visible RISE20/FALL20 row missing required cycle/ETA fields is a post-render QA failure and MUST be re-rendered on the same request identity rather than delivered as COMPLETE. Fail-operational delivery still applies to truthful source degradation; it does not permit omission of supported mandatory visible fields.
 Post-deadline closed-decision sections remain structural: XI BATTLE may say GW locked/no executable XI change; C/VC and Chip show locked/current state; Actionable Price Radar may be DEGRADED/UNAVAILABLE rather than omitted.
 Evidence Quality is a distinct visible section before ICON+ and should separate authority/source, observed_at, freshness, status and decision use by scope.
 

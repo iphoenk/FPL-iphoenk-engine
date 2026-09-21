@@ -68,3 +68,11 @@ A healthy predictor result does not require a threshold crossing. `NO_CROSSING_W
 DEGRADED is reserved for actual evidence defects such as stale/missing/invalid predictor data, insufficient offset-0 coverage, schema or identity failure, unavailable evidence timestamps/cycle clocks, or `DATE_UNAVAILABLE`. Official FPL factual prices remain independently authoritative and do not inherit degradation from an unrelated predictor/model/plumbing scope.
 
 This amendment changes report-health classification only. It does not change the predictor mathematics, threshold, projection horizon, selection ordering, V6 acquisition, or factual-source ownership.
+## AD_HOC mode-equivalent visible rendering — 2026-09-21T07:50:33+07:00
+
+Interactive requests for a Canonical report mode are not presentation-only shortcuts. Requests such as `DEEP sekarang`, `PRICE sekarang`, or a scheduled-format report using current evidence must use the existing AD_HOC report identity and traverse the same pre-render and actual visible-body post-render QA as the equivalent scheduled mode. Scheduler proof is N/A for AD_HOC; visible-content correctness is not.
+
+The R6 visible-body parser remains authoritative for what the user actually sees. RISE20/FALL20 therefore cannot be accepted merely because 20 identities were computed: the rendered rows must expose the governed Rank20 schema, including cycle/ETA fields such as `predicted_change_cycle`, `predicted_change_at`, and `eta_human`. If a supported field disappears during interactive/manual rendering, post-render QA must fail and the same AD_HOC request must be re-rendered rather than delivered as COMPLETE.
+
+This guard changes routing/render conformance only. It does not alter V6, price predictor mathematics, the ±100 model threshold, 0/1/2 projection horizon, daily official price-change cadence, or RISE20/FALL20 ordering.
+

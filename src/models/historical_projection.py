@@ -16,6 +16,12 @@ from src.engines.v12_player_events import (
     project_player_fixture,
 )
 from src.engines.v12_player_minutes import estimate_xmins
+from src.engines.v12_position_probability_components import (
+    build_dynamic_matchup_vector,
+    build_global_position_calibration,
+    convolve_point_distributions,
+    enhance_fixture_projection,
+)
 from src.rules import ELEMENT_TYPE_TO_POSITION, RULESET_ID
 
 
@@ -98,6 +104,10 @@ def build(
         player_id = int(row.get("player_id") or row.get("element") or -1)
         if player_id > 0:
             match_rows_by_player.setdefault(player_id, []).append(row)
+
+    global_position_calibration = build_global_position_calibration(
+        match_rows
+    )
 
     historical_matchup_rows = enrich_match_rows(
         [
@@ -376,89 +386,210 @@ def build(
                     ),
                     "player_role": tactical_role.get("profile"),
                 }
-                contextual_by_fixture[fixture_key(matchup)] = (
-                    build_contextual_dynamics(
-                        match_rows_by_player.get(element, []),
-                        player_id=element,
-                        current_gw=latest_completed_gw,
-                        opponent_team_id=opponent_id,
-                        current_context=current_context,
-                        linkups=teammate_links,
-                        chains=multi_player_chains,
-                        teammate_start_probabilities=(
-                            teammate_start_probabilities
-                        ),
-                        opponent_history_rows=opponent_history_by_player.get(
-                            element, []
-                        ),
-                        opponent_history_scope=(
-                            opponent_history_scope
-                            or (
-                                "MULTI-SEASON GOVERNED"
-                                if opponent_history_by_player.get(element)
-                                else "CURRENT-SEASON ONLY"
-                            )
-                        ),
-                    )
+                contextual = build_contextual_dynamics(
+                    match_rows_by_player.get(element, []),
+                    player_id=element,
+                    current_gw=latest_completed_gw,
+                    opponent_team_id=opponent_id,
+                    current_context=current_context,
+                    linkups=teammate_links,
+                    chains=multi_player_chains,
+                    teammate_start_probabilities=(
+                        teammate_start_probabilities
+                    ),
+                    opponent_history_rows=opponent_history_by_player.get(
+                        element, []
+                    ),
+                    opponent_history_scope=(
+                        opponent_history_scope
+                        or (
+                            "MULTI-SEASON GOVERNED"
+                            if opponent_history_by_player.get(element)
+                            else "CURRENT-SEASON ONLY"
+                        )
+                    ),
                 )
+                dynamic_matchup = build_dynamic_matchup_vector(
+                    position=position,
+                    role=tactical_role.get("profile"),
+                    matchup=matchup,
+                    home=int(matchup["team_h"]) == team_id,
+                    current_context=current_context,
+                )
+                contextual["matchup_vector"] = dynamic_matchup
+                # Apply only mechanism-specific residuals here. Base team/
+                # opponent strength is already applied by P1.3 fixture context.
+                interactions = list(
+                    dynamic_matchup.get(
+                        "football_mechanism_interactions"
+                    )
+                    or []
+                )
+                goal_residual = math.prod(
+                    _f(row.get("factor"), 1.0)
+                    for row in interactions
+                    if row.get("component") == "goal"
+                )
+                creation_residual = math.prod(
+                    _f(row.get("factor"), 1.0)
+                    for row in interactions
+                    if row.get("component") == "creation"
+                )
+                contextual.setdefault("event_multipliers", {})["goal"] = (
+                    _f(
+                        contextual.get("event_multipliers", {}).get(
+                            "goal"
+                        ),
+                        1.0,
+                    )
+                    * goal_residual
+                )
+                contextual.setdefault("event_multipliers", {})["assist"] = (
+                    _f(
+                        contextual.get("event_multipliers", {}).get(
+                            "assist"
+                        ),
+                        1.0,
+                    )
+                    * creation_residual
+                )
+                contextual["governance"]["dynamic_fdr_vector_applied"] = True
+                contextual["governance"][
+                    "official_fdr_is_sanity_prior_only"
+                ] = True
+                contextual_by_fixture[fixture_key(matchup)] = contextual
+
+        def project_stage2_fixture(
+            matchup: Mapping[str, Any],
+        ) -> dict[str, Any]:
+            contextual = contextual_by_fixture.get(
+                fixture_key(matchup)
+            )
+            base_projection = project_player_fixture(
+                player,
+                xmins,
+                matchup,
+                home=int(matchup["team_h"]) == team_id,
+                rates=rates,
+                league_baseline=strength.get("baseline") or {},
+                calibration_summary=calibration_summary,
+                model_evidence_binding=model_evidence_binding,
+                contextual_dynamics=contextual,
+            )
+            return enhance_fixture_projection(
+                base_projection,
+                player={**player, "position": position},
+                minutes_projection=xmins,
+                match_rows=match_rows_by_player.get(element, []),
+                advanced_current=feature.get("advanced_current") or {},
+                contextual_dynamics=contextual,
+                global_calibration=global_position_calibration,
+            )
 
         by_gw = []
         for gw in range(planning_gw, planning_gw + horizon):
             details = [
-                project_player_fixture(
-                    player,
-                    xmins,
-                    matchup,
-                    home=int(matchup["team_h"]) == team_id,
-                    rates=rates,
-                    league_baseline=strength.get("baseline") or {},
-                    calibration_summary=calibration_summary,
-                    model_evidence_binding=model_evidence_binding,
-                    contextual_dynamics=contextual_by_fixture.get(
-                        fixture_key(matchup)
-                    ),
-                )
+                project_stage2_fixture(matchup)
                 for matchup in fixtures
                 if int(matchup.get("event") or -1) == gw
             ]
-            by_gw.append(aggregate_gameweek(details, gw=gw))
+            gw_row = aggregate_gameweek(details, gw=gw)
+            gw_distribution = convolve_point_distributions(
+                [
+                    detail.get("point_distribution") or {}
+                    for detail in details
+                ]
+            )
+            if gw_distribution:
+                gw_row["point_distribution"] = gw_distribution
+                gw_row["mean"] = round(
+                    _f(gw_distribution.get("expected_points")), 3
+                )
+                gw_row["points_variance"] = round(
+                    _f(gw_distribution.get("variance")), 6
+                )
+                gw_row["std"] = round(
+                    _f(gw_distribution.get("std")), 3
+                )
+                gw_row["distribution_aggregation_status"] = (
+                    "EXACT_CONDITIONAL_DISCRETE_CONVOLUTION"
+                )
+                gw_row["tail_aggregation_status"] = (
+                    "AVAILABLE_COMPLETE_CONDITIONAL_PMF"
+                )
+                gw_row["dependency_assumption"] = (
+                    "CONDITIONAL_INDEPENDENCE_GIVEN_CURRENT_POSTERIOR"
+                )
+            by_gw.append(gw_row)
 
         horizons = {}
         for published in published_horizons:
             subset = by_gw[:published]
-            mean = sum(_f(row.get("mean")) for row in subset)
-            variance = sum(
-                _f(row.get("points_variance"), _f(row.get("std")) ** 2)
+            horizon_distribution = convolve_point_distributions(
+                [
+                    row.get("point_distribution") or {}
+                    for row in subset
+                ]
+            )
+            fallback_mean = sum(
+                _f(row.get("mean")) for row in subset
+            )
+            fallback_variance = sum(
+                _f(
+                    row.get("points_variance"),
+                    _f(row.get("std")) ** 2,
+                )
                 for row in subset
             )
-            exact_distribution = None
-            exact_events = None
-            if published == 1 and len(subset) == 1:
-                exact_distribution = dict(
-                    subset[0].get("point_distribution") or {}
-                )
-                exact_events = dict(
-                    subset[0].get("event_probabilities") or {}
-                )
+            exact_events = (
+                dict(subset[0].get("event_probabilities") or {})
+                if published == 1 and len(subset) == 1
+                else None
+            )
             horizons[str(published)] = {
-                "mean": round(mean, 3),
-                "std": round(math.sqrt(max(0.0, variance)), 3),
+                "mean": round(
+                    _f(
+                        (horizon_distribution or {}).get(
+                            "expected_points"
+                        ),
+                        fallback_mean,
+                    ),
+                    3,
+                ),
+                "std": round(
+                    _f(
+                        (horizon_distribution or {}).get("std"),
+                        math.sqrt(max(0.0, fallback_variance)),
+                    ),
+                    3,
+                ),
                 "event_probabilities": exact_events,
-                "point_distribution": exact_distribution,
+                "point_distribution": horizon_distribution,
                 "distribution_aggregation_status": (
-                    "EXACT_GW1_SINGLE_FIXTURE"
-                    if exact_distribution
-                    else "PARTIAL_CROSS_GW_COVARIANCE_NOT_MODELLED"
+                    "EXACT_CONDITIONAL_HORIZON_PMF"
+                    if horizon_distribution
+                    else "UNAVAILABLE_INCOMPLETE_GW_PMF"
                 ),
                 "tail_aggregation_status": (
-                    "AVAILABLE_GW1_SINGLE_FIXTURE"
-                    if exact_distribution
-                    else "PARTIAL_NOT_AGGREGATED"
+                    "AVAILABLE_COMPLETE_CONDITIONAL_PMF"
+                    if horizon_distribution
+                    else "UNAVAILABLE"
                 ),
-                "dependency_assumption": "ZERO_CROSS_GW_COVARIANCE_NOT_MODELLED_YET",
+                "dependency_assumption": (
+                    "CONDITIONAL_INDEPENDENCE_GIVEN_CURRENT_POSTERIOR;"
+                    "ALEATORIC_AND_EPISTEMIC_REPORTED_SEPARATELY"
+                ),
             }
 
         defcon = dict(rates.get("defcon") or {})
+        primary_fixture_projection = next(
+            (
+                dict(fixture)
+                for gw_row in by_gw
+                for fixture in gw_row.get("fixtures") or []
+            ),
+            {},
+        )
         players.append(
             {
                 "element": element,
@@ -478,6 +609,17 @@ def build(
                 "tactical_role": tactical_role,
                 "system_context": system_context,
                 "xmins": xmins,
+                "position_engine": primary_fixture_projection.get(
+                    "position_engine"
+                ),
+                "complete_player_distribution": primary_fixture_projection.get(
+                    "complete_player_distribution"
+                ),
+                "dynamic_matchup_vector": (
+                    (primary_fixture_projection.get("position_engine") or {}).get(
+                        "matchup_vector"
+                    )
+                ),
                 "rates": {
                     "xg90": round(
                         _f((rates.get("goal") or {}).get("posterior_rate90")),
@@ -615,7 +757,11 @@ def build(
             "legacy_projection_components_migration_oracle_only": True,
             "multi_fixture_dependency_assumption": "ZERO_CROSS_FIXTURE_COVARIANCE_NOT_MODELLED_YET",
             "p1_3b_joint_event_distribution": True,
-            "multi_gw_tail_aggregation": "PARTIAL_UNTIL_CROSS_FIXTURE_DEPENDENCE_MODELLED",
+            "stage2_position_specific_probability_engine": True,
+            "dynamic_fdr_vector": True,
+            "posterior_predictive_count_checks": True,
+            "genuine_1_3_5gw_distributions": True,
+            "multi_gw_tail_aggregation": "COMPLETE_CONDITIONAL_PMF_WITH_EXPLICIT_DEPENDENCE_SEMANTICS",
             "p1_6_tactical_scorer_applied": False,
             "p1_7_started": False,
             "package_optimizer_started_by_p1_3b": False,

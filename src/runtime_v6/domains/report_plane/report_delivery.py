@@ -1526,9 +1526,10 @@ def build_natural_report_acceptance_proof(
     elif routing_acceptance == "UNRESOLVED":
         render_acceptance = "UNRESOLVED"
     else:
-        render_acceptance = (
-            "PASS" if final_due is True and render_proven else "NOT_APPLICABLE"
-        )
+        if final_due is True:
+            render_acceptance = "PASS" if render_proven else "FAIL"
+        else:
+            render_acceptance = "NOT_APPLICABLE"
 
     delivery_ui_ack = str(row.get("delivery_ui_ack") or "UNAVAILABLE").strip().upper()
     if delivery_ui_ack not in _V12_UI_ACK_STATES:

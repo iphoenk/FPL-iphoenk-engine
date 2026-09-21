@@ -1219,7 +1219,7 @@ def estimate_live_threshold_probability(
             )
     expected_remaining = rate_per_minute * remaining_minutes
     probability = _poisson_tail_at_least(
-        expected_remaining, remaining_events
+        remaining_events, expected_remaining
     )
     return {
         "probability": round(_clamp(probability, 0.0, 1.0), 9),

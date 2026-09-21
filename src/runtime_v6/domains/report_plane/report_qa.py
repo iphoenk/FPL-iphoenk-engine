@@ -357,6 +357,13 @@ _SERIOUS_DECISION_VISIBLE_MARKERS = (
     "MONTE CARLO",
     "UNIVERSE SCAN / OPTIMAL TEAM IMPACT",
 )
+
+_ACTION_BOARD_VISIBLE_MARKERS = (
+    "NOW:",
+    "TRIGGER TO ACT:",
+    "ABORT / REVERSAL:",
+    "NEXT CHECKPOINT:",
+)
 _PRICE_WAIT_FIELDS = (
     "route",
     "affordable_now",
@@ -651,10 +658,23 @@ def _duplicate_id_failure(rows: Sequence[Any], label: str) -> list[str]:
 def _degradation_label_visible(body: str, section: str, state: str) -> bool:
     upper = str(body or "").upper()
     section_upper = section.upper()
-    start = upper.find(section_upper)
-    if start < 0:
+    aliases = {
+        "PACKAGE_FRONTIER": ("PACKAGE OPTIMIZER/FRONTIER", "PACKAGE FRONTIER"),
+        "WATCHLIST20": ("WATCHLIST20",),
+        "RISE20": ("RISE20",),
+        "FALL20": ("FALL20",),
+        "ALL15": ("ALL15",),
+        "ICON+": ("ICON+",),
+        "MATCH_SCOUT": ("MATCH-BY-MATCH SCOUT",),
+        "GW_LOCK_PACKAGE": ("GW LOCK PACKAGE",),
+    }
+    candidates = aliases.get(section_upper, (section_upper,))
+    starts = [upper.find(candidate) for candidate in candidates]
+    starts = [start for start in starts if start >= 0]
+    if not starts:
         return False
-    window = upper[start : start + 420]
+    start = min(starts)
+    window = upper[start : start + 520]
     state_upper = state.upper()
     return any(
         marker in window
@@ -662,6 +682,9 @@ def _degradation_label_visible(body: str, section: str, state: str) -> bool:
             f"STATE={state_upper}",
             f"STATE: {state_upper}",
             f"STATE {state_upper}",
+            f"STATUS={state_upper}",
+            f"STATUS: {state_upper}",
+            f"STATUS {state_upper}",
             f"— {state_upper}",
             f"- {state_upper}",
         )
@@ -1311,9 +1334,12 @@ def _expected_visible_counts(report_mode: str) -> dict[str, int]:
 
 def _required_visible_markers(report_mode: str) -> list[str]:
     mode = str(report_mode or "").strip().upper()
+    markers: list[str] = []
     if mode == "POST_ALL_MATCH":
-        return ["GW COMPLETED MATCH-BY-MATCH SCOUT"]
-    return []
+        markers.append("GW COMPLETED MATCH-BY-MATCH SCOUT")
+    if mode in {"DEEP", "FULL", "DEADLINE", "FINAL", "PRICE"}:
+        markers.extend(_ACTION_BOARD_VISIBLE_MARKERS)
+    return markers
 
 
 def _is_sha256(value: Any) -> bool:

@@ -45,14 +45,6 @@ CANONICAL_PATH = ROOT / "control" / "fpl_master_v12" / "FPL_MASTER_CANONICAL_V12
 STATE_PATH = ROOT / "control" / "fpl_master_v12" / "FPL_MASTER_STATE_V12.json"
 
 SUPPORTED_MODES = {"DEEP"}
-LEGACY_RUNTIME_TOKENS = (
-    "runtime_v3",
-    "runtime_v4",
-    "runtime_v5",
-    "full_authority_cache",
-    "legacy optimizer",
-)
-
 
 class IntegratedRunnerError(RuntimeError):
     pass

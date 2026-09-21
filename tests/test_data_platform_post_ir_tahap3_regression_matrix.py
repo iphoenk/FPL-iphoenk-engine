@@ -326,13 +326,13 @@ def test_post_all_match_uses_own_canonical_backbone_and_requires_scout_marker():
     assert pre["expected_section_ids"] == list(POST_ALL_MATCH_MANDATORY_SECTIONS)
 
     body = valid_visible_body(pre)
-    assert _post(pre, body=body)["status"] == "FAIL"
-
-    body = body.replace(
-        "# 04:30 MORNING DEEP REVIEW",
-        "# 04:30 MORNING DEEP REVIEW\nGW COMPLETED MATCH-BY-MATCH SCOUT",
+    missing_marker = body.replace(
+        "GW COMPLETED MATCH-BY-MATCH SCOUT",
+        "MATCH-BY-MATCH REVIEW",
         1,
     )
+    assert _post(pre, body=missing_marker)["status"] == "FAIL"
+
     post = _post(pre, body=body)
     assert post["status"] == "PASS"
     assert post["visible_body_validated"] is True

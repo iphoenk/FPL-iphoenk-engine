@@ -561,10 +561,11 @@ def test_transfer_scope_search_semantics_require_complete_full_universe_proof():
     proof = _valid_proof(
         decision_scope="TRANSFER",
         serious_transfer_decision=True,
-        selected_change_route=True,
+        selected_change_route=False,
+        pairwise_empty_reason="NO_MATERIAL_CHALLENGER",
         owned_out_scan={
             "evaluated_owned_element_ids": list(range(1, 16)),
-            "selected_outgoing_element_ids": [1],
+            "selected_outgoing_element_ids": [],
             "user_named_outgoing_element_ids": [],
             "selection_is_result_not_precondition": True,
             "user_named_out_is_hypothesis_only": True,

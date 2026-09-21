@@ -158,7 +158,7 @@ def test_03_refresh_in_progress_prevents_duplicate_attempt():
     )
     assert plan["attempt_governed_refresh"] is False
     assert plan["status"] == "RE_READ_EXISTING_RESULT"
-    assert plan["reason"] == "RELEVANT_ACQUISITION_IN_PROGRESS"
+    assert plan["reason"] == "REPORT_PREFETCH_IN_PROGRESS"
 
 
 def test_04_refresh_failure_keeps_original_report_deliverable_degraded():

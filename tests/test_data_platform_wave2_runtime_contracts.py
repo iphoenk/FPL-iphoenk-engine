@@ -154,7 +154,7 @@ def test_price_source_id_preserves_verified_official_predictor_claim():
     assert payload["source_id"] == "official_price_predictor"
     assert payload["source_name"] == "Official FPL Price Change Predictor"
     assert payload["legacy_source_name"] == "Official FPL Price Predictor"
-    assert payload["semantic_class"] == "OFFICIAL_FPL_PREDICTOR_MODEL"
+    assert payload["semantic_class"] == "UPSTREAM_MODEL_SIGNAL"
     assert payload["authority_class"] == "OFFICIAL_FPL_MODEL"
     assert payload["model_author"] == "OFFICIAL_FPL"
     assert payload["v6_computation"] == "NONE"

@@ -151,7 +151,7 @@ def build_runtime_control(
     chatgpt_scheduler = _is_chatgpt_scheduler(event, kind)
     master_orchestrated = _is_master(event, kind)
     report_prefetch = _is_report_prefetch(event, kind)
-    manual_recovery = event == "workflow_dispatch" and kind == "manual_recovery"
+    manual_recovery = kind == "manual_recovery"
 
     if chatgpt_scheduler:
         requested_slot = _chatgpt_logical_slot(logical_slot)

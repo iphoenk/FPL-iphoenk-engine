@@ -1139,41 +1139,38 @@ def enhance_fixture_projection(
         matchup_vector=matchup_vector,
     )
     creation_process = _creation_process(advanced, assist_rate90)
-    penalty_share = (
-        goal_process["lambda_penalty90"]
-        / max(1e-9, goal_process["lambda_goal_total90"])
-        if goal_process["lambda_goal_total90"] > 0.0
-        else 0.0
+    team_penalty_rate = advanced.get(
+        "team_penalty_attempt_rate_per_match"
     )
-    penalty_take_probability = _clamp(
-        penalty_share * 1.45, 0.0, 1.0
-    )
+    taker_share = advanced.get("player_penalty_taker_share")
     penalty_score_probability = 0.78
     penalty_process = {
         "P_team_penalty": (
             None
-            if goal_process["penalty_evidence_status"].startswith(
-                "UNAVAILABLE"
-            )
+            if team_penalty_rate is None
             else round(
-                1.0 - math.exp(
-                    -goal_process["lambda_penalty90"]
-                    / max(0.01, penalty_score_probability)
-                ),
+                1.0 - math.exp(-max(0.0, _f(team_penalty_rate))),
                 6,
             )
         ),
         "P_player_takes_given_on_pitch": (
             None
-            if goal_process["penalty_evidence_status"].startswith(
-                "UNAVAILABLE"
-            )
-            else round(penalty_take_probability, 6)
+            if taker_share is None
+            else round(_clamp(_f(taker_share), 0.0, 1.0), 6)
         ),
         "P_score_given_taken": penalty_score_probability,
         "P_miss_points": round(penalty_miss_mass, 6),
         "penalty_attempt_rate90": round(penalty_attempt_rate90, 6),
         "attempt_evidence_status": penalty_attempt_status,
+        "team_taker_chain_evidence_status": (
+            "AVAILABLE_FROM_TEAM_XG_MINUS_NPXG"
+            if team_penalty_rate is not None and taker_share is not None
+            else "UNAVAILABLE_NO_TEAM_PENALTY_FACT"
+        ),
+        "chain": (
+            "P(team penalty) x P(player on pitch) x "
+            "P(player takes | on pitch) x P(score)"
+        ),
         "taker_uncertainty_probabilistic": True,
         "not_hardcoded_player": True,
     }

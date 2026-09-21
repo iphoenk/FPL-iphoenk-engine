@@ -172,6 +172,27 @@ def valid_visible_body(
                     omit_field=omit_fall_field,
                 )
             )
+        elif section_id == "S13":
+            lines.append("Material section content.")
+            required_markers = {
+                str(value).upper()
+                for value in pre_render_qa.get("required_visible_markers", [])
+            }
+            if "MATHEMATICAL DECISION STACK" in required_markers:
+                lines.extend(
+                    [
+                        "### MATHEMATICAL DECISION STACK",
+                        "BAYESIAN PRIOR -> POSTERIOR / SHRINKAGE: governed evidence",
+                        "AVAILABILITY MIXTURE: P(AVAILABLE)=0.95 | P(START)=0.85 | P(BENCH)=0.10 | P(CAMEO)=0.08 | P(DNP)=0.05",
+                        "XMINS DISTRIBUTION: START/CAMEO/LATE_CAMEO/ZERO_MINUTES",
+                        "EVENT PROBABILITIES: P(GOAL)=0.25 | P(ASSIST)=0.20 | P(RETURN)=0.40 | P(HAUL)=0.12 | P(BLANK)=0.60",
+                        "HORIZONS 1GW / 3GW / 5GW: available",
+                        "P(OUTPERFORM HOLD/COMPARATOR): 0.55",
+                        "EXPECTED REGRET: 0.4",
+                        "INFORMATION VALUE OF WAITING: positive",
+                        "MONTE CARLO: NOT RUN — synthetic QA fixture",
+                    ]
+                )
         elif section_id == "S14":
             if pre_render_qa.get("expected_fact_keys"):
                 lines.append("FACT: Official factual evidence is separated and timestamped.")

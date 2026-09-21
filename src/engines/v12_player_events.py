@@ -441,9 +441,22 @@ def _finite_states(minutes_projection: Mapping[str, Any]) -> list[dict[str, Any]
         rows.append(
             {
                 "state": name,
-                "probability": clamp(_f(raw.get("probability")), 0.0, 1.0),
-                "minutes_mean": max(0.0, _f(raw.get("minutes_mean"))),
-                "minutes_std": max(0.0, _f(raw.get("minutes_std"))),
+                "probability": clamp(
+                    _f(raw.get("probability")),
+                    0.0,
+                    1.0,
+                ),
+                "minutes_mean": max(
+                    0.0,
+                    _f(raw.get("minutes_mean")),
+                ),
+                "minutes_std": max(
+                    0.0,
+                    _f(raw.get("minutes_std")),
+                ),
+                "timing_evidence": str(
+                    raw.get("timing_evidence") or ""
+                ),
             }
         )
     names = {row["state"] for row in rows}
@@ -480,7 +493,17 @@ def _minute_support(state: Mapping[str, Any]) -> list[tuple[float, float]]:
     std = max(0.0, _f(state.get("minutes_std")))
     if name == "DNP" or mean <= 0.0:
         return [(1.0, 0.0)]
-    if name in {"START", "START_FULL"}:
+    timing_evidence = str(state.get("timing_evidence") or "")
+    if (
+        name in {"START_FULL", "START_SUBBED", "EARLY_SUB"}
+        and timing_evidence
+        != "MATCH_MINUTES_DERIVED"
+    ):
+        # Prior-only split must be mathematically equivalent to legacy START.
+        # State labels are exposed for schema completeness, but semantic minute
+        # truncation is only allowed when factual match-level timing exists.
+        low, high = 1.0, 90.0
+    elif name in {"START", "START_FULL"}:
         low, high = (
             (60.0, 90.0)
             if name == "START_FULL"

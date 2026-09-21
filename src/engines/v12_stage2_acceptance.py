@@ -464,17 +464,53 @@ def run_acceptance(
         int(row.get("element_id") or 0)
         for row in canonical_rows
     }
+    def stage2_lineage_complete(row: Mapping[str, Any]) -> bool:
+        lineage = dict(row.get("stage2_lineage") or {})
+        p1_1 = dict(lineage.get("p1_1") or {})
+        posterior = dict(lineage.get("posterior") or {})
+        position_engine = dict(lineage.get("position_engine") or {})
+        horizons = dict(lineage.get("horizons") or {})
+        return bool(
+            lineage.get("contract")
+            == "V12_CANONICAL_STAGE2_SINGLE_CHAIN_V1"
+            and lineage.get("same_projection_row") is True
+            and lineage.get("lineage_complete") is True
+            and p1_1.get("owner") == "V12_PLAYER_MINUTES"
+            and p1_1.get("present") is True
+            and posterior.get("owner") == "V12_PLAYER_EVENTS"
+            and posterior.get("present") is True
+            and position_engine.get("owner") == "V12_PLAYER_EVENTS"
+            and position_engine.get("present") is True
+            and all(
+                (horizons.get(horizon) or {}).get("distribution_status")
+                == "READY_COMPLETE_CONDITIONAL_PMF"
+                for horizon in ("1", "3", "5")
+            )
+            and lineage.get("duplicate_model_created") is False
+        )
+
     watch_same_lineage = bool(
         watch_ids
         and watch_ids <= canonical_ids
         and canonical.get("weights") == CANONICAL_WEIGHTS
+        and canonical.get("stage2_lineage_contract")
+        == "V12_CANONICAL_STAGE2_SINGLE_CHAIN_V1"
         and all(
             (canonical_by_id.get(element) or {}).get(
                 "canonical_components"
             )
             is not None
+            and stage2_lineage_complete(
+                canonical_by_id.get(element) or {}
+            )
             for element in watch_ids
         )
+    )
+    full_universe_lineage = all(
+        stage2_lineage_complete(row)
+        for row in canonical_rows
+        if row.get("eligible") is not False
+        and row.get("canonical_evaluation_complete") is True
     )
 
     scoreline_selection = dict(
@@ -576,6 +612,9 @@ def run_acceptance(
         "full_universe_same_chain": (
             len(players) == len(bootstrap.get("elements") or [])
             and canonical.get("status") == "COMPLETE"
+            and canonical.get("stage2_lineage_contract")
+            == "V12_CANONICAL_STAGE2_SINGLE_CHAIN_V1"
+            and full_universe_lineage
         ),
         "watchlist20_same_lineage": (
             watchlist.get("state") == "COMPLETE"
@@ -684,6 +723,16 @@ def run_acceptance(
             "count": len(watchlist.get("rows") or []),
             "position_counts": watchlist.get("position_counts"),
             "same_lineage": watch_same_lineage,
+            "lineage_contract": canonical.get(
+                "stage2_lineage_contract"
+            ),
+            "lineage_complete_rows": sum(
+                1
+                for element in watch_ids
+                if stage2_lineage_complete(
+                    canonical_by_id.get(element) or {}
+                )
+            ),
         },
         "checks": checks,
         "acceptance_cases": named,

@@ -373,6 +373,8 @@ def test_canonical_contains_new_analytic_execution_and_anti_blanking_semantics()
     assert "official_price_predictor artifact" in text
     assert "A valid NO_CROSSING row is healthy evidence, not degradation." in text
     assert "unrelated core, repository-Python, workflow, QA, or plumbing status must not downgrade" in text
+    assert "AD_HOC MODE-EQUIVALENCE IS MANDATORY." in text
+    assert "Manual/chat composition MUST NOT bypass visible-body QA" in text
     assert "Weather is REPORT-TIME evidence and does not belong in V6" in text
 
 

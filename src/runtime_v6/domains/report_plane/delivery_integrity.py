@@ -52,12 +52,36 @@ EXACT_SCOPE_RECOVERY_STEPS = (
     "VALIDATE_COMPLETENESS",
 )
 
-MANDATORY_SECTIONS = tuple(
-    [f"S{index:02d}" for index in range(1, 15)]
-    + ["S14B"]
-    + [f"S{index:02d}" for index in range(15, 19)]
+DEEP_MANDATORY_SECTIONS = tuple(
+    [f"S{index:02d}" for index in range(1, 16)]
+    + ["S15B"]
+    + [f"S{index:02d}" for index in range(16, 20)]
 )
-PARTIAL_ALLOWED_SECTIONS = frozenset({"S02", "S13", "S14B", "S15"})
+MATCH_MANDATORY_SECTIONS = tuple(f"MATCH{index}" for index in range(1, 14))
+PRICE_MANDATORY_SECTIONS = tuple(f"PRICE{index}" for index in range(1, 12))
+POST_ALL_MATCH_MANDATORY_SECTIONS = tuple(
+    f"POST_ALL_MATCH{index}" for index in range(1, 14)
+)
+FINAL_MANDATORY_SECTIONS = tuple(
+    list(DEEP_MANDATORY_SECTIONS[:13])
+    + ["GW_LOCK_PACKAGE"]
+    + list(DEEP_MANDATORY_SECTIONS[13:])
+)
+
+# Backward-compatible name used by full/DEEP report-plane callers.
+MANDATORY_SECTIONS = DEEP_MANDATORY_SECTIONS
+
+# Canonical V12 explicitly permits structural sections to remain visible as
+# PARTIAL / DEGRADED / UNAVAILABLE when authoritative evidence is incomplete.
+# Keep this set broad; per-section validators remain responsible for proving
+# the degradation reason, counts, missing scope, and anti-fabrication semantics.
+PARTIAL_ALLOWED_SECTIONS = frozenset(
+    DEEP_MANDATORY_SECTIONS
+    + MATCH_MANDATORY_SECTIONS
+    + PRICE_MANDATORY_SECTIONS
+    + POST_ALL_MATCH_MANDATORY_SECTIONS
+    + FINAL_MANDATORY_SECTIONS
+)
 POSITION_TARGET = {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}
 _POSITION_ALIASES = {"GKP": "GK", "GOALKEEPER": "GK"}
 REPORT_SLOT_STATES = frozenset({"NOT_STARTED", "BUILDING", "QA_FAILED", "DELIVERED"})

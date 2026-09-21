@@ -247,6 +247,7 @@ def test_integrated_deep_runner_executes_owner_stages_and_materializes_full_cata
         "load_v6_analytics_foundation",
         lambda *a, **k: {
             "status": "MATCH_FOUNDATION_READY",
+            "stage1_full_foundation_ready": True,
             "historical_prior": {"players": {}},
             "player_features_payload": {},
             "player_match_rows": [{"element": 1, "gw": 5, "minutes": 90}],
@@ -365,6 +366,7 @@ def test_integrated_deep_runner_keeps_bundle_when_projection_stage_fails(
         "load_v6_analytics_foundation",
         lambda *a, **k: {
             "status": "MATCH_FOUNDATION_READY",
+            "stage1_full_foundation_ready": True,
             "historical_prior": {"players": {}},
             "player_features_payload": {},
             "player_match_rows": [{"element": 1, "gw": 5, "minutes": 90}],

@@ -109,6 +109,43 @@ def _stage(
     return value
 
 
+def _require_report_prefetch(
+    runtime_root: Path,
+    *,
+    report_slot: str,
+) -> dict[str, Any]:
+    proof = _read_json(
+        runtime_root / "data/v6/health/report_prefetch.json",
+        {},
+    ) or {}
+    if proof.get("fresh_for_target_report") is not True:
+        raise IntegratedRunnerError(
+            "same-occurrence report-prefetch is not fresh_for_target_report"
+        )
+    generated = str(proof.get("generated_at") or "")
+    if not generated:
+        raise IntegratedRunnerError("report-prefetch generated_at unavailable")
+    try:
+        generated_dt = datetime.fromisoformat(generated.replace("Z", "+00:00"))
+        slot_dt = datetime.fromisoformat(str(report_slot).replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise IntegratedRunnerError("invalid report-prefetch/report-slot timestamp") from exc
+    if generated_dt.tzinfo is None or slot_dt.tzinfo is None:
+        raise IntegratedRunnerError("report-prefetch/report-slot timestamps must be timezone-aware")
+    age_minutes = abs((slot_dt - generated_dt.astimezone(slot_dt.tzinfo)).total_seconds()) / 60.0
+    # Prefetch may finish immediately before or shortly after an HH:30 occurrence.
+    if age_minutes > 15.0:
+        raise IntegratedRunnerError(
+            f"report-prefetch is not same-occurrence current: age_minutes={age_minutes:.2f}"
+        )
+    return {
+        **proof,
+        "same_occurrence_bound": True,
+        "report_slot": report_slot,
+        "age_minutes": round(age_minutes, 3),
+    }
+
+
 def _official_payload(runtime_root: Path) -> dict[str, Any]:
     payload = _read_json(runtime_root / "data/v6/current/official_fpl.json", {}) or {}
     official = payload.get("official") or {}
@@ -327,6 +364,20 @@ def run_deep(
     ledger: list[dict[str, Any]] = []
     canonical = CANONICAL_PATH.read_text(encoding="utf-8")
     state = _read_json(STATE_PATH, {}) or {}
+
+    prefetch = _stage(
+        ledger,
+        "V6_REPORT_PREFETCH_BINDING",
+        lambda: _require_report_prefetch(
+            runtime_data_root,
+            report_slot=report_slot,
+        ),
+        required=True,
+    )
+    if not prefetch:
+        raise IntegratedRunnerError(
+            "DEEP integrated runner requires fresh same-occurrence V6 report-prefetch"
+        )
 
     official = _stage(
         ledger,
@@ -698,6 +749,7 @@ def run_deep(
         "report": report,
         "visible_body": body,
         "source_fingerprints": {
+            "report_prefetch": _fingerprint(prefetch),
             "official_fpl": _fingerprint(official["payload"]),
             "state": _fingerprint(state),
             "predictor": _fingerprint(predictor),

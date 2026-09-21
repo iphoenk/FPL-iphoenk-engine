@@ -465,7 +465,12 @@ def _visible_price_contract(
             "official_or_provider_progress": out.get("price_change_percent", "UNAVAILABLE"),
             "prediction_strength": likelihood if likelihood is not None else "UNAVAILABLE",
             **timing,
-            "estimate_source": "official_price_predictor",
+            "estimate_source": "V6_DERIVED_PRICE_SIGNAL",
+            "artifact_source": "official_price_predictor",
+            "visible_source_label": (
+                "V6-derived price signal using Official FPL factual inputs; "
+                "not an Official FPL predictor/product"
+            ),
             "evidence_timestamp": evidence_timestamp or "UNAVAILABLE",
             "confidence": {
                 "predictor_health": predictor_health,
@@ -850,7 +855,14 @@ def build_actionable_price_radar(
                     "eta_reason",
                     "PREDICTOR_EVIDENCE_UNAVAILABLE" if visible is None else None,
                 ),
-                "estimate_source": (visible or {}).get("estimate_source", "official_price_predictor" if pred_raw else "UNAVAILABLE"),
+                "estimate_source": (visible or {}).get("estimate_source", "V6_DERIVED_PRICE_SIGNAL" if pred_raw else "UNAVAILABLE"),
+                "artifact_source": (visible or {}).get("artifact_source", "official_price_predictor" if pred_raw else "UNAVAILABLE"),
+                "visible_source_label": (visible or {}).get(
+                    "visible_source_label",
+                    "V6-derived price signal using Official FPL factual inputs; not an Official FPL predictor/product"
+                    if pred_raw
+                    else "UNAVAILABLE",
+                ),
                 "evidence_timestamp": (visible or {}).get("evidence_timestamp", evidence_timestamp or "UNAVAILABLE"),
                 "confidence": (visible or {}).get("confidence", "UNAVAILABLE"),
                 "sell_value_affordability_impact": (visible or {}).get(

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-21T08:24:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-21T09:45:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -298,6 +298,8 @@ Interactive mode-equivalent requests use the same report-plane contract. A user 
 DEEP is also an analytic report, not a thin summary surface. After a completed GW, the next applicable DEEP carries the full completed-fixture match-by-match scout inside the existing Changes section. For every serious XI/transfer/package/captain decision, a visible **MATHEMATICAL DECISION STACK** must expose Bayesian/shrinkage, availability and xMins mixtures, event probabilities, horizon distributions, regret/robustness/covariance, and Monte Carlo execution state. If Monte Carlo is not actually run, the report must say NOT RUN/PARTIAL with the reason rather than silently omitting it.
 
 Visible event probabilities are bound directly to the existing V12 P1.3/P1.3B posterior-predictive outputs. Goal, assist, attacking-return, multiple-return, FPL-blank and haul probabilities must not be reconstructed by the report renderer from xG/xA or mean xPts. The report plane exposes the native distribution and labels unavailable evidence truthfully.
+
+Section 14 **Package Optimizer / Frontier** is explicitly full-universe-first. A serious DEEP/FULL/Deadline/Final squad-improvement report must evaluate all 15 owned players as possible outgoing weak links and scan the complete currently eligible Official FPL universe before publishing challengers. The visible block `UNIVERSE SCAN / OPTIMAL TEAM IMPACT` must show search coverage, scan-derived candidate players, their best outgoing/package pairing, canonical 20/25/30/25 and probability/horizon evidence, package utility versus HOLD, economics/structure/regret/information-value effects, and then the legal package frontier. A hand-picked shortlist or user-mentioned names cannot masquerade as a full optimizer result; incomplete scope remains visibly PARTIAL/DEGRADED.
 
 Prospective natural occurrences also retain one bounded, machine-readable acceptance proof on the existing same-slot report-delivery evidence surface. It records the executed two-stage REPORT_DUE result, fixture evidence, render structure/digest, locked-team source/status, ICON+ coverage metadata, and a separate UI-delivery-ack state. This proof is observability only: `RENDER_PROVEN=true` never means the client UI acknowledged delivery, and `DELIVERY_UI_ACK=UNAVAILABLE` does not invalidate a proven routing/render pass. Historical occurrences are not retrofitted.
 

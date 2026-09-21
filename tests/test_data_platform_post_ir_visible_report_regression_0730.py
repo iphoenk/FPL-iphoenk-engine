@@ -172,7 +172,7 @@ def test_0730_deadline_catalog_is_not_reduced_by_degraded_source_state():
     assert result["generated_section_ids"] == list(MANDATORY_SECTIONS)
 
 
-def test_deadline_icon_scope_flows_through_s14b_and_actual_body_qa():
+def test_deadline_icon_scope_flows_through_s15b_and_actual_body_qa():
     scope = resolve_scope(
         "deadline_review",
         {
@@ -195,7 +195,7 @@ def test_deadline_icon_scope_flows_through_s14b_and_actual_body_qa():
         weather_contract_state="DIRECT_CHATGPT",
     )
     assert pre["status"] == "PASS"
-    assert "S14B" in pre["expected_section_ids"]
+    assert "S15B" in pre["expected_section_ids"]
     assert pre["mini_league_contract_state"] == "COMPLETE"
 
     body = valid_visible_body(pre)
@@ -217,4 +217,4 @@ def test_deadline_icon_scope_flows_through_s14b_and_actual_body_qa():
     )
     assert post["status"] == "PASS"
     assert post["visible_mini_league_contract_state"] == "COMPLETE"
-    assert "ICON+ MINI LEAGUE" in body
+    assert "ICON+ Mini-League" in body

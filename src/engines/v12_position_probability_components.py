@@ -345,6 +345,26 @@ def _normalize_pmf(pmf: Mapping[int, float]) -> dict[int, float]:
     }
 
 
+def _apply_signed_bernoulli_reward(
+    pmf: Mapping[int, float],
+    probability: float,
+    reward: int,
+) -> dict[int, float]:
+    p = _clamp(float(probability), 0.0, 1.0)
+    reward = int(reward)
+    if p <= 0.0 or reward == 0:
+        return dict(pmf)
+    out: dict[int, float] = {}
+    for points, mass in pmf.items():
+        base = float(mass)
+        if base <= 0.0:
+            continue
+        out[int(points)] = out.get(int(points), 0.0) + base * (1.0 - p)
+        shifted = int(points) + reward
+        out[shifted] = out.get(shifted, 0.0) + base * p
+    return out
+
+
 def convolve_point_distributions(
     distributions: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any] | None:
@@ -829,8 +849,14 @@ def enhance_fixture_projection(
     )
 
     xmins = _f((result.get("minutes") or {}).get("xMins"))
-    p60 = _f(
-        (result.get("minutes_threshold_probabilities") or {}).get("p_60_plus")
+    p60 = _clamp(
+        sum(
+            _f(atom.get("joint_probability"))
+            for atom in atoms
+            if _f(atom.get("minutes")) >= 60.0
+        ),
+        0.0,
+        1.0,
     )
 
     save_mean_full = max(
@@ -916,6 +942,26 @@ def enhance_fixture_projection(
             ),
         )
     )
+    advanced_minutes = max(
+        0.0, _f(advanced.get("minutes"))
+    )
+    advanced_xg = _advanced_value(advanced, "xg")
+    advanced_npxg = _advanced_value(advanced, "npxg")
+    penalty_attempt_rate90 = 0.0
+    penalty_attempt_status = "UNAVAILABLE_NO_NPXG"
+    if (
+        advanced_minutes > 0.0
+        and advanced_xg is not None
+        and advanced_npxg is not None
+        and advanced_xg > advanced_npxg
+    ):
+        penalty_xg90 = (
+            max(0.0, advanced_xg - advanced_npxg)
+            * 90.0
+            / advanced_minutes
+        )
+        penalty_attempt_rate90 = penalty_xg90 / 0.78
+        penalty_attempt_status = "AVAILABLE_FROM_XG_MINUS_NPXG"
 
     cfg = load_event_config()
     ga_cfg = dict(cfg.get("joint_goal_assist") or {})
@@ -940,6 +986,7 @@ def enhance_fixture_projection(
     save_threshold_mass = {3: 0.0, 6: 0.0, 9: 0.0, 12: 0.0}
     card_mass = 0.0
     penalty_save_mass = 0.0
+    penalty_miss_mass = 0.0
     for atom in atoms:
         mass = _f(atom.get("joint_probability"))
         minutes = max(0.0, _f(atom.get("minutes")))
@@ -1050,15 +1097,28 @@ def enhance_fixture_projection(
             card_mass += mass * (
                 1.0 - (1.0 - yellow_p) * (1.0 - red_p)
             )
-            conditional = _apply_bernoulli_reward(
+            conditional = _apply_signed_bernoulli_reward(
                 conditional, yellow_p, int(YELLOW_CARD_POINTS)
             )
-            conditional = _apply_bernoulli_reward(
+            conditional = _apply_signed_bernoulli_reward(
                 conditional, red_p, int(RED_CARD_POINTS)
             )
-            conditional = _apply_bernoulli_reward(
+            conditional = _apply_signed_bernoulli_reward(
                 conditional, own_goal_p, int(OWN_GOAL_POINTS)
             )
+            if penalty_attempt_rate90 > 0.0 and position in {"MID", "FWD", "DEF"}:
+                p_penalty_miss = 1.0 - math.exp(
+                    -penalty_attempt_rate90
+                    * minutes
+                    / 90.0
+                    * (1.0 - 0.78)
+                )
+                penalty_miss_mass += mass * p_penalty_miss
+                conditional = _apply_signed_bernoulli_reward(
+                    conditional,
+                    p_penalty_miss,
+                    int(PENALTY_MISS_POINTS),
+                )
 
         for points, probability in conditional.items():
             complete_core[int(points)] = (
@@ -1111,6 +1171,9 @@ def enhance_fixture_projection(
             else round(penalty_take_probability, 6)
         ),
         "P_score_given_taken": penalty_score_probability,
+        "P_miss_points": round(penalty_miss_mass, 6),
+        "penalty_attempt_rate90": round(penalty_attempt_rate90, 6),
+        "attempt_evidence_status": penalty_attempt_status,
         "taker_uncertainty_probabilistic": True,
         "not_hardcoded_player": True,
     }

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T05:10:10+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T06:45:01+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -11,6 +11,28 @@
 > **V3 / V4 / V5 are frozen legacy**: no production execution, no production fallback, no new features, and no scheduler authority.
 
 This repository powers a governed personal Fantasy Premier League decision system. The active design deliberately separates **facts** from **models and decisions** so that factual acquisition can remain stable while V12 analytics evolve without creating duplicate authorities.
+
+
+## V12 Stage 2 position-specific probabilistic engine
+
+Status: **PR #639 IN PROGRESS / CI PENDING**.
+
+Stage 2 starts from the exact GREEN Stage-1 head `d8a286a9428d8114125abb9093639de00c82103b` and preserves that commit as the immutable V6 behavior comparison baseline. V6 acquisition, source adapters, publisher, identity governance, scheduler, recovery transport, schedule policy, runtime-control, health semantics, schema, and `runtime-data-v6` are frozen and are not modified by Stage 2.
+
+Stage-2 analytics work is confined to the V12 producer layer:
+
+- dynamic position/role-specific matchup vector for goal, creation, attack, clean sheet, DefCon, save, set piece, aerial, transition, minutes, and bonus;
+- Official FDR retained only as an external prior/sanity check, never as the final generic matchup number;
+- tactical football-mechanism interactions that change event intensities without arbitrary final-point bonuses;
+- empirically selected Poisson versus negative-binomial count models for save and defensive-contribution processes;
+- settled-scoreline comparison of Poisson, Dixon-Coles, and bivariate Poisson, with the simplest calibrated family selected;
+- stochastic conditional bonus/BPS layer, penalty and negative-event deductions, and posterior-predictive checks;
+- position-specific complete discrete FPL point distributions;
+- genuine per-GW and 1GW/3GW/5GW PMF aggregation rather than multiplying current xPts by horizon length;
+- read-only consumption of already-normalized V6 Understat, Statmuse, and Rotowire evidence where exact identity joins are available;
+- full-universe and Watchlist20 remain on the same canonical 20/25/30/25 lineage.
+
+Stage 3 remains **NOT STARTED** until Stage 2 acceptance is GREEN.
 
 ## Active authority map
 

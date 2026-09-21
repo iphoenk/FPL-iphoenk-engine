@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
@@ -127,6 +128,10 @@ def run() -> dict[str, Any]:
         previous,
         hours=int(config["policy"].get("deadline_window_hours") or 48),
     )
+    manual_recovery = (
+        str(os.environ.get("V6_SCHEDULE_KIND") or "")
+        == "manual_recovery"
+    )
 
     decisions = {
         source["id"]: poll_decision(
@@ -135,6 +140,7 @@ def run() -> dict[str, Any]:
             deadline_window=deadline_window,
             max_attempts_per_request=client.retry_attempts,
             scheduler_interval_minutes=scheduler_interval_minutes,
+            force_poll=manual_recovery,
         )
         for source in sources
     }
@@ -298,6 +304,8 @@ def run() -> dict[str, Any]:
             "adaptive": True,
             "evaluate_every_source_each_cycle": True,
             "fetch_only_when_due": True,
+            "manual_recovery_force_retry": manual_recovery,
+            "manual_recovery_bypasses_verification_or_budget": False,
             "scheduler_interval_minutes": scheduler_interval_minutes,
             "deadline_window_active": deadline_window,
             "deadline_window_hours": int(policy.get("deadline_window_hours") or 48),

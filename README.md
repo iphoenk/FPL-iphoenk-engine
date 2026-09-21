@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-21T21:46:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-21T21:53:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -419,5 +419,8 @@ also be invoked by the repository owner through issue #431 with
 controlled, non-natural recovery transport. It is never scheduler proof, never
 completes an operational or scheduled slot, never changes the single ChatGPT
 scheduler authority, and never creates a second recurring acquisition path.
+Manual recovery may bypass only the ordinary same-slot polling cadence so the
+provider can actually be retried; verification and request-budget gates remain
+in force.
 The existing workflow-dispatch recovery guard remains unchanged.
 

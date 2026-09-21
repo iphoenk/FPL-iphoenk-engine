@@ -151,6 +151,7 @@ def poll_decision(
     now: datetime | None = None,
     max_attempts_per_request: int = 1,
     scheduler_interval_minutes: int = 60,
+    force_poll: bool = False,
 ) -> dict[str, Any]:
     current = _now(now)
     interval = effective_poll_interval_minutes(source, deadline_window=deadline_window)
@@ -192,6 +193,18 @@ def poll_decision(
 
     previous_polling = dict((previous or {}).get("polling") or {})
     cadence_reference = _poll_cadence_reference(previous, previous_polling)
+
+    if force_poll:
+        return _decision_payload(
+            due=True,
+            reason="MANUAL_RECOVERY_FORCE_RETRY",
+            current=current,
+            interval=interval,
+            scheduler_interval=scheduler_interval,
+            deadline_window=deadline_window,
+            source=source,
+            budget=budget,
+        )
 
     if previous is None or cadence_reference is None:
         due = True

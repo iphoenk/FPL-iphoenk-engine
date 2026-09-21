@@ -152,12 +152,19 @@ def validate_publishable(root: Path = ROOT) -> dict[str, Any]:
         assert control["counts_as_completed_operational_slot"] is True
         assert control["manual_recovery"] is False
         assert "NON_AUTHORITATIVE_MANUAL_RECOVERY" not in manifest["control_failures"]
-    elif event_name == "workflow_dispatch" and schedule_kind == "manual_recovery":
+    elif (
+        event_name in {"workflow_dispatch", "issue_comment"}
+        and schedule_kind == "manual_recovery"
+    ):
         assert control["scheduled_cycle"] is False
         assert control["authoritative_runtime_snapshot"] is False
         assert control["counts_as_completed_operational_slot"] is False
+        assert control["counts_as_completed_scheduled_slot"] is False
         assert control["manual_recovery"] is True
-        assert "NON_AUTHORITATIVE_MANUAL_RECOVERY" in manifest["control_failures"]
+        assert (
+            "NON_AUTHORITATIVE_MANUAL_RECOVERY"
+            in manifest["control_failures"]
+        )
     else:
         raise AssertionError(f"unexpected V6 production event: {event_name}/{schedule_kind}")
 

@@ -1127,22 +1127,23 @@ def enhance_fixture_projection(
         1.0,
     )
 
-    save_mean_full = max(
-        0.0,
-        _f(saves.get("posterior_rate90")) * xmins / 90.0,
-    )
     save_mult = _f(
         (((matchup_vector.get("vector") or {}).get("save") or {}).get(
             "multiplier"
         )),
         1.0,
     )
-    save_model = select_count_distribution(
-        _event_observations(match_rows, "saves"),
-        save_mean_full * save_mult,
-        thresholds=(3, 6, 9, 12),
-        max_count=35,
-        label="GK_SAVES",
+    gk_save_model = (
+        _gk_sot_save_model(
+            match_rows,
+            xmins=xmins,
+            opponent_volume_multiplier=save_mult,
+            fallback_save_rate90=max(
+                0.0, _f(saves.get("posterior_rate90"))
+            ),
+        )
+        if position == "GK"
+        else None
     )
 
     dc_rate90 = max(0.0, _f(defcon.get("posterior_count_rate90")))
@@ -1255,6 +1256,7 @@ def enhance_fixture_projection(
     card_mass = 0.0
     penalty_save_mass = 0.0
     penalty_miss_mass = 0.0
+    expected_save_points_mass = 0.0
     for atom in atoms:
         mass = _f(atom.get("joint_probability"))
         minutes = max(0.0, _f(atom.get("minutes")))
@@ -1310,13 +1312,16 @@ def enhance_fixture_projection(
             )
 
         if position == "GK" and minutes > 0.0:
-            save_mean = (
-                _f(saves.get("posterior_rate90"))
+            projected_sot_mean = (
+                _f((gk_save_model or {}).get("sot_rate90"))
                 * minutes
                 / 90.0
                 * save_mult
             )
-            save_count = _count_pmf_from_model(save_model, save_mean)
+            save_count = _gk_save_pmf_from_model(
+                gk_save_model or {},
+                projected_sot_mean,
+            )
             save_reward = _reward_pmf_from_count(
                 save_count,
                 lambda count: (count // int(SAVE_INTERVAL))
@@ -1324,6 +1329,14 @@ def enhance_fixture_projection(
             )
             conditional = _convolve_integer_pmf(
                 conditional, save_reward
+            )
+            expected_save_points_mass += mass * sum(
+                (
+                    (count // int(SAVE_INTERVAL))
+                    * int(SAVE_POINTS_PER_INTERVAL)
+                )
+                * probability
+                for count, probability in save_count.items()
             )
             for threshold in save_threshold_mass:
                 save_threshold_mass[threshold] += mass * _pmf_tail(
@@ -1557,22 +1570,44 @@ def enhance_fixture_projection(
 
     result.setdefault("events", {})["saves"] = {
         **saves,
-        "count_model": save_model,
+        "model": (
+            (gk_save_model or {}).get("model")
+            if position == "GK"
+            else "NOT_APPLICABLE_NON_GK"
+        ),
+        "count_model": (
+            (gk_save_model or {}).get("sot_count_model")
+            if position == "GK"
+            else None
+        ),
+        "sot_count_model": (
+            (gk_save_model or {}).get("sot_count_model")
+            if position == "GK"
+            else None
+        ),
+        "conditional_save_model": (
+            (gk_save_model or {}).get("conditional_save_model")
+            if position == "GK"
+            else None
+        ),
+        "shot_stopping": (
+            (gk_save_model or {}).get("empirical")
+            if position == "GK"
+            else None
+        ),
         "P_saves_ge_3": round(save_threshold_mass[3], 6),
         "P_saves_ge_6": round(save_threshold_mass[6], 6),
         "P_saves_ge_9": round(save_threshold_mass[9], 6),
         "P_saves_ge_12": round(save_threshold_mass[12], 6),
         "expected_save_points_from_complete_distribution": round(
-            sum(
-                ((count // int(SAVE_INTERVAL)) * int(SAVE_POINTS_PER_INTERVAL))
-                * probability
-                for count, probability in _count_pmf_from_model(
-                    save_model,
-                    save_mean_full * save_mult,
-                ).items()
-            ),
-            6,
+            expected_save_points_mass, 6
         ),
+        "posterior_predictive": (
+            (gk_save_model or {}).get("posterior_predictive")
+            if position == "GK"
+            else None
+        ),
+        "two_stage_sot_then_save": position == "GK",
     }
     result.setdefault("events", {})["defcon"] = {
         **defcon,
@@ -1685,7 +1720,11 @@ def enhance_fixture_projection(
             ],
         }.get(position, []),
         "posterior_predictive": {
-            "saves": save_model.get("posterior_predictive"),
+            "saves": (
+                (gk_save_model or {}).get("posterior_predictive")
+                if position == "GK"
+                else None
+            ),
             "defcon": dc_model.get("posterior_predictive"),
         },
         "uncertainty": {

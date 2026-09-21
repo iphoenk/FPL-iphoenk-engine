@@ -63,6 +63,12 @@ def build(
 
     feature_payload = player_features_payload or {}
     feature_map = feature_payload.get("players") or {}
+    stage1_tactical_states = (
+        feature_payload.get("stage1_tactical_states") or {}
+    )
+    team_tactical_states = (
+        stage1_tactical_states.get("teams") or {}
+    )
     tactical_policy = feature_payload.get("tactical_role_policy") or {}
     if (
         tactical_policy
@@ -385,6 +391,27 @@ def build(
                         "opponent_team_strength_regime"
                     ),
                     "player_role": tactical_role.get("profile"),
+                    "own_team_tactical_state": team_tactical_states.get(
+                        str(team_id)
+                    ),
+                    "opponent_team_tactical_state": team_tactical_states.get(
+                        str(opponent_id)
+                    ),
+                    "player_availability": feature.get("availability"),
+                    "expected_personnel": {
+                        "own_availability": feature.get("availability"),
+                        "opponent_cb": matchup.get(
+                            "opponent_cb_personnel"
+                        ),
+                        "opponent_fb": matchup.get(
+                            "opponent_fb_personnel"
+                        ),
+                    },
+                    "venue": (
+                        "HOME"
+                        if int(matchup["team_h"]) == team_id
+                        else "AWAY"
+                    ),
                 }
                 contextual = build_contextual_dynamics(
                     match_rows_by_player.get(element, []),

@@ -184,13 +184,15 @@ def valid_visible_body(
                     [
                         "### MATHEMATICAL DECISION STACK",
                         "BAYESIAN PRIOR -> POSTERIOR / SHRINKAGE: governed evidence",
-                        "AVAILABILITY MIXTURE: P(AVAILABLE)=0.95 | P(START)=0.85 | P(BENCH)=0.10 | P(CAMEO)=0.08 | P(DNP)=0.05",
+                        "AVAILABILITY MIXTURE: P(AVAILABLE)=0.95 | P(START)=0.85 | P(BENCH)=0.10 | P(CAMEO)=0.08 | P(LATE CAMEO)=0.02 | P(DNP)=0.05",
                         "XMINS DISTRIBUTION: START/CAMEO/LATE_CAMEO/ZERO_MINUTES",
-                        "EVENT PROBABILITIES: P(GOAL)=0.25 | P(ASSIST)=0.20 | P(RETURN)=0.40 | P(HAUL)=0.12 | P(BLANK)=0.60",
+                        "EVENT PROBABILITIES: P(GOAL)=0.25 | P(ASSIST)=0.20 | P(RETURN)=0.40 | P(2+ RETURNS)=0.10 | P(HAUL)=0.12 | P(BLANK)=0.60",
                         "HORIZONS 1GW / 3GW / 5GW: available",
                         "P(OUTPERFORM HOLD/COMPARATOR): 0.55",
                         "EXPECTED REGRET: 0.4",
+                        "TAIL / FLOOR / CEILING: calibrated",
                         "INFORMATION VALUE OF WAITING: positive",
+                        "COVARIANCE / CORRELATION: accounted",
                         "MONTE CARLO: NOT RUN — synthetic QA fixture",
                     ]
                 )

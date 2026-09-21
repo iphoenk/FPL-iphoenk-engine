@@ -585,9 +585,9 @@ def run_acceptance(
         "v6_publish_health": v6_publish.get("status") == "PASS",
         "legacy_isolation_declared": (
             (projections.get("governance") or {}).get(
-                "runtime_v3_imported"
+                "legacy_projection_components_migration_oracle_only"
             )
-            is False
+            is True
         ),
     }
 

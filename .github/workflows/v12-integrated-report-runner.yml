@@ -1,0 +1,172 @@
+name: V12 integrated report runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      report_mode:
+        description: Canonical report mode
+        required: true
+        default: DEEP
+        type: string
+      report_slot:
+        description: Exact Asia/Jakarta report occurrence ISO-8601
+        required: true
+        type: string
+      checkpoint_time:
+        description: Optional visible checkpoint HH:MM
+        required: false
+        default: ""
+        type: string
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+concurrency:
+  group: v12-report-${{ github.event_name }}-${{ github.event.issue.number || inputs.report_slot }}
+  cancel-in-progress: false
+
+jobs:
+  parse:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.number == 431 &&
+        github.event.comment.user.login == github.repository_owner &&
+        startsWith(github.event.comment.body, '/v12-report-run')
+      )
+    runs-on: ubuntu-latest
+    outputs:
+      report_mode: ${{ steps.args.outputs.report_mode }}
+      report_slot: ${{ steps.args.outputs.report_slot }}
+      checkpoint_time: ${{ steps.args.outputs.checkpoint_time }}
+    steps:
+      - id: args
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ inputs.report_mode }}
+          INPUT_SLOT: ${{ inputs.report_slot }}
+          INPUT_CHECKPOINT: ${{ inputs.checkpoint_time }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          python - <<'PY'
+          import os, re
+          from pathlib import Path
+
+          if os.environ["EVENT_NAME"] == "workflow_dispatch":
+              mode = os.environ.get("INPUT_MODE") or "DEEP"
+              slot = os.environ.get("INPUT_SLOT") or ""
+              checkpoint = os.environ.get("INPUT_CHECKPOINT") or ""
+          else:
+              body = os.environ.get("COMMENT_BODY") or ""
+              def arg(name, default=""):
+                  m = re.search(rf"(?:^|\s){re.escape(name)}=([^\s]+)", body)
+                  return m.group(1) if m else default
+              mode = arg("report_mode", "DEEP")
+              slot = arg("report_slot")
+              checkpoint = arg("checkpoint_time")
+          if not slot:
+              raise SystemExit("report_slot is required")
+          out = Path(os.environ["GITHUB_OUTPUT"])
+          with out.open("a", encoding="utf-8") as fh:
+              fh.write(f"report_mode={mode.upper()}\n")
+              fh.write(f"report_slot={slot}\n")
+              fh.write(f"checkpoint_time={checkpoint}\n")
+          PY
+
+  run:
+    needs: parse
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout current production main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: app
+
+      - name: Checkout factual runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          ref: runtime-data-v6
+          path: runtime-data
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install runtime dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Enforce active V12-only execution boundary
+        working-directory: app
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          src = Path("src/engines/v12_integrated_report_runner.py").read_text(encoding="utf-8")
+          forbidden = (
+              "from src.runtime_v3",
+              "import src.runtime_v3",
+              "from src.runtime_v4",
+              "import src.runtime_v4",
+              "from src.runtime_v5",
+              "import src.runtime_v5",
+              "full_authority_cache",
+          )
+          bad = [token for token in forbidden if token in src]
+          if bad:
+              raise SystemExit(f"legacy execution boundary violated: {bad}")
+          PY
+
+      - name: Execute occurrence-bound integrated report
+        id: report
+        working-directory: app
+        env:
+          REPORT_MODE: ${{ needs.parse.outputs.report_mode }}
+          REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
+          CHECKPOINT_TIME: ${{ needs.parse.outputs.checkpoint_time }}
+        run: |
+          args=(
+            --runtime-data-root "../runtime-data"
+            --report-mode "$REPORT_MODE"
+            --report-slot "$REPORT_SLOT"
+            --output-dir "artifacts/v12-report"
+          )
+          if [ -n "$CHECKPOINT_TIME" ]; then
+            args+=(--checkpoint-time "$CHECKPOINT_TIME")
+          fi
+          python -m src.engines.v12_integrated_report_runner "${args[@]}"
+
+      - name: Upload immutable occurrence bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-report-${{ needs.parse.outputs.report_mode }}-${{ github.run_id }}
+          path: |
+            app/artifacts/v12-report/report_bundle.json
+            app/artifacts/v12-report/report_body.md
+            app/artifacts/v12-report/execution_proof.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish compact completion proof to issue 431
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPORT_MODE: ${{ needs.parse.outputs.report_mode }}
+          REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
+          RUN_STATUS: ${{ job.status }}
+        run: |
+          if [ "$RUN_STATUS" = "success" ]; then
+            status="PASS"
+          else
+            status="FAIL"
+          fi
+          gh issue comment 431 --repo "${GITHUB_REPOSITORY}" --body             "V12_REPORT_RUN | status=${status} | report_mode=${REPORT_MODE} | report_slot=${REPORT_SLOT} | run_id=${GITHUB_RUN_ID} | artifact=v12-report-${REPORT_MODE}-${GITHUB_RUN_ID} | integrated_runner=true | v6_mutated=false"

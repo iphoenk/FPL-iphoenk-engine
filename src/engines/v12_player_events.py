@@ -81,6 +81,34 @@ def _historical_prior(
     )
 
 
+def _gamma_rate_interval90(
+    prior_rate90: float,
+    prior_minutes: float,
+    observed_rate90: float | None,
+    observed_minutes: float,
+) -> list[float]:
+    prior_exposure = max(1e-6, float(prior_minutes) / 90.0)
+    shape = max(
+        1e-6,
+        max(0.0, float(prior_rate90)) * prior_exposure,
+    )
+    rate = prior_exposure
+    if observed_rate90 is not None and observed_minutes > 0.0:
+        observed_exposure = observed_minutes / 90.0
+        shape += max(0.0, float(observed_rate90)) * observed_exposure
+        rate += observed_exposure
+    z = 1.6448536269514722
+    values = []
+    for quantile in (-z, z):
+        base = max(
+            1e-9,
+            1.0 - 1.0 / (9.0 * shape)
+            + quantile / (3.0 * math.sqrt(shape)),
+        )
+        values.append(max(0.0, shape * base**3 / rate))
+    return [round(values[0], 6), round(values[1], 6)]
+
+
 def _robust_rate_posterior(
     player: Mapping[str, Any],
     cumulative_field: str,
@@ -102,6 +130,13 @@ def _robust_rate_posterior(
             "observed_rate90": None,
             "bounded_observed_rate90": None,
             "posterior_rate90": round(max(0.0, prior), 6),
+            "credible_interval90": _gamma_rate_interval90(
+                prior,
+                450.0,
+                None,
+                minutes,
+            ),
+            "sample_exposure_minutes": round(minutes, 1),
             "evidence_minutes": round(minutes, 1),
             "shrinkage": 1.0,
             "shrinkage_minutes": None,
@@ -137,6 +172,13 @@ def _robust_rate_posterior(
         "observed_rate90": round(observed, 6),
         "bounded_observed_rate90": round(bounded, 6),
         "posterior_rate90": round(max(0.0, posterior), 6),
+        "credible_interval90": _gamma_rate_interval90(
+            prior,
+            shrink_minutes,
+            bounded,
+            minutes,
+        ),
+        "sample_exposure_minutes": round(minutes, 1),
         "evidence_minutes": round(minutes, 1),
         "shrinkage": round(
             shrink_minutes / max(1e-9, minutes + shrink_minutes), 6
@@ -292,6 +334,7 @@ def build_posterior_rates(
     position_prior: Mapping[str, Any],
     historical: Mapping[str, Any] | None = None,
     feature: Mapping[str, Any] | None = None,
+    hierarchical_prior: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build V12-owned posterior scoring rates without tactical P1.6 input."""
     cfg = load_event_config()
@@ -301,12 +344,32 @@ def build_posterior_rates(
         or ELEMENT_TYPE_TO_POSITION.get(element_type)
         or "FWD"
     )
+    hierarchy = dict(hierarchical_prior or {})
+    variables = dict(hierarchy.get("variables") or {})
+    xg_group = dict(variables.get("xg90") or {})
+    xa_group = dict(variables.get("xa90") or {})
+    xg_base = _f(
+        xg_group.get("prior_rate90"),
+        _f(position_prior.get("xg90")),
+    )
+    xa_base = _f(
+        xa_group.get("prior_rate90"),
+        _f(position_prior.get("xa90")),
+    )
     xg_prior, xg_prior_source, historical_weight = _historical_prior(
-        _f(position_prior.get("xg90")), historical, "xg90"
+        xg_base, historical, "xg90"
     )
     xa_prior, xa_prior_source, _ = _historical_prior(
-        _f(position_prior.get("xa90")), historical, "xa90"
+        xa_base, historical, "xa90"
     )
+    if xg_group:
+        xg_prior_source = str(
+            xg_group.get("prior_source") or xg_prior_source
+        )
+    if xa_group:
+        xa_prior_source = str(
+            xa_group.get("prior_source") or xa_prior_source
+        )
     goal = _robust_rate_posterior(
         player, "expected_goals", xg_prior, xg_prior_source, cfg
     )
@@ -336,6 +399,7 @@ def build_posterior_rates(
         "saves": saves,
         "defcon": defcon,
         "historical_attacking_prior_weight": round(historical_weight, 6),
+        "hierarchical_prior": hierarchy or None,
         "governance": {
             "p1_6_tactical_scorer_applied": False,
             "tactical_role_evidence_used_for_rate_adjustment": False,
@@ -355,13 +419,25 @@ def _finite_states(minutes_projection: Mapping[str, Any]) -> list[dict[str, Any]
     if dist.get("distribution") != "FINITE_STATE_MINUTES_MIXTURE":
         raise ValueError("P1.3 requires P1.1 FINITE_STATE_MINUTES_MIXTURE")
     rows: list[dict[str, Any]] = []
-    allowed = {"START", "CAMEO", "REGULAR_CAMEO", "LATE_CAMEO", "ZERO_MINUTES"}
+    allowed = {
+        "START",
+        "START_FULL",
+        "START_SUBBED",
+        "EARLY_SUB",
+        "CAMEO",
+        "REGULAR_CAMEO",
+        "LATE_CAMEO",
+        "ZERO_MINUTES",
+        "DNP",
+    }
     for raw in dist.get("states") or []:
         name = str(raw.get("state") or raw.get("appearance_state") or "")
         if name not in allowed:
             raise ValueError(f"unsupported minutes state: {name}")
         if name == "CAMEO":
             name = "REGULAR_CAMEO"
+        if name == "ZERO_MINUTES":
+            name = "DNP"
         rows.append(
             {
                 "state": name,
@@ -370,9 +446,21 @@ def _finite_states(minutes_projection: Mapping[str, Any]) -> list[dict[str, Any]
                 "minutes_std": max(0.0, _f(raw.get("minutes_std"))),
             }
         )
-    required = {"START", "REGULAR_CAMEO", "LATE_CAMEO", "ZERO_MINUTES"}
-    if {row["state"] for row in rows} != required:
-        raise ValueError("P1.3 requires START/REGULAR_CAMEO/LATE_CAMEO/ZERO_MINUTES")
+    names = {row["state"] for row in rows}
+    legacy = {"START", "REGULAR_CAMEO", "LATE_CAMEO", "DNP"}
+    stage1 = {
+        "START_FULL",
+        "START_SUBBED",
+        "EARLY_SUB",
+        "REGULAR_CAMEO",
+        "LATE_CAMEO",
+        "DNP",
+    }
+    if names not in {frozenset(legacy), frozenset(stage1)}:
+        raise ValueError(
+            "P1.3 requires legacy four-state or Stage-1 six-state "
+            "minutes contract"
+        )
     total = sum(row["probability"] for row in rows)
     if not math.isclose(total, 1.0, rel_tol=0.0, abs_tol=0.002):
         raise ValueError("finite-state minutes probabilities must sum to one")
@@ -387,10 +475,18 @@ def _minute_support(state: Mapping[str, Any]) -> list[tuple[float, float]]:
     name = str(state.get("state"))
     mean = max(0.0, _f(state.get("minutes_mean")))
     std = max(0.0, _f(state.get("minutes_std")))
-    if name == "ZERO_MINUTES" or mean <= 0.0:
+    if name == "DNP" or mean <= 0.0:
         return [(1.0, 0.0)]
-    if name == "START":
-        low, high = 1.0, 90.0
+    if name in {"START", "START_FULL"}:
+        low, high = (
+            (60.0, 90.0)
+            if name == "START_FULL"
+            else (1.0, 90.0)
+        )
+    elif name == "START_SUBBED":
+        low, high = 60.0, 89.0
+    elif name == "EARLY_SUB":
+        low, high = 1.0, 59.0
     elif name == "REGULAR_CAMEO":
         low, high = 1.0, 59.0
     else:
@@ -1409,7 +1505,17 @@ def project_player_fixture(
         "clean_sheet_probability": round(cs_prob, 6),
         "minutes": {
             "Pstart": round(
-                next(r["probability"] for r in states if r["state"] == "START"),
+                sum(
+                    row["probability"]
+                    for row in states
+                    if row["state"]
+                    in {
+                        "START",
+                        "START_FULL",
+                        "START_SUBBED",
+                        "EARLY_SUB",
+                    }
+                ),
                 6,
             ),
             "Pregular_cameo": round(
@@ -1432,7 +1538,7 @@ def project_player_fixture(
                 next(
                     r["probability"]
                     for r in states
-                    if r["state"] == "ZERO_MINUTES"
+                    if r["state"] == "DNP"
                 ),
                 6,
             ),

@@ -882,6 +882,83 @@ def _compute_contract(
     }
 
 
+def _parse_slot(value: Any) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed
+
+
+def _core_slot_binding(
+    *,
+    report_slot: str,
+    publish_integrity: Mapping[str, Any],
+) -> dict[str, Any]:
+    report_dt = _parse_slot(report_slot)
+    actual_dt = _parse_slot(publish_integrity.get("logical_slot"))
+    if report_dt is None:
+        return {
+            "status": "FAIL",
+            "reason": "REPORT_SLOT_INVALID",
+            "expected_core_slot": None,
+            "actual_core_slot": publish_integrity.get("logical_slot"),
+        }
+    expected_dt = report_dt.replace(minute=0, second=0, microsecond=0)
+    expected_utc = expected_dt.astimezone(__import__("datetime").timezone.utc)
+    actual_utc = actual_dt.astimezone(__import__("datetime").timezone.utc) if actual_dt else None
+    matched = actual_utc == expected_utc
+    return {
+        "status": "PASS" if matched else "PARTIAL",
+        "reason": None if matched else "CORE_SLOT_MISMATCH",
+        "expected_core_slot": expected_dt.isoformat(),
+        "expected_core_slot_utc": expected_utc.isoformat(),
+        "actual_core_slot": actual_dt.isoformat() if actual_dt else None,
+        "actual_core_slot_utc": actual_utc.isoformat() if actual_utc else None,
+    }
+
+
+def _report_prefetch_binding(
+    *,
+    report_slot: str,
+    report_prefetch: Mapping[str, Any],
+) -> dict[str, Any]:
+    requested = _parse_slot(report_slot)
+    target = _parse_slot(
+        report_prefetch.get("target_logical_report_slot")
+        or report_prefetch.get("logical_slot")
+    )
+    requested_utc = requested.astimezone(__import__("datetime").timezone.utc) if requested else None
+    target_utc = target.astimezone(__import__("datetime").timezone.utc) if target else None
+    checks = {
+        "report_kind_full_master": str(report_prefetch.get("report_kind") or "") == "full_master",
+        "target_report_slot_match": bool(
+            requested_utc is not None
+            and target_utc is not None
+            and requested_utc == target_utc
+        ),
+        "personal_requested": report_prefetch.get("personal_requested") is True,
+        "mini_league_requested": report_prefetch.get("mini_league_requested") is True,
+        "live_requested": report_prefetch.get("live_requested") is True,
+        "public_core_complete": report_prefetch.get("public_core_complete") is True,
+        "fresh_for_target_report": report_prefetch.get("fresh_for_target_report") is True,
+    }
+    passed = all(checks.values())
+    failed = [key for key, value in checks.items() if not value]
+    return {
+        "status": "PASS" if passed else "PARTIAL",
+        "reason": None if passed else "REPORT_PREFETCH_OCCURRENCE_MISMATCH:" + ",".join(failed),
+        "requested_report_slot": report_slot,
+        "target_logical_report_slot": report_prefetch.get("target_logical_report_slot"),
+        "report_kind": report_prefetch.get("report_kind"),
+        "report_prefetch_run_id": report_prefetch.get("report_prefetch_run_id"),
+        "generated_at": report_prefetch.get("generated_at"),
+        "checks": checks,
+    }
+
+
 def _runner_stage(
     *,
     owner: str,
@@ -961,7 +1038,21 @@ def run(
         canonical_universe_count=canonical_universe_count,
     )
     mini = _mini_league_stage(root)
-    report_prefetch = dict(_json(root / "data/v6/health/report_prefetch.json", {}) or {})
+    report_prefetch_health = dict(_json(root / "data/v6/health/report_prefetch.json", {}) or {})
+    report_prefetch = dict(_json(root / "data/v6/report_prefetch/latest.json", {}) or {})
+    core_binding = _core_slot_binding(
+        report_slot=report_slot,
+        publish_integrity=publish_integrity,
+    )
+    prefetch_binding = _report_prefetch_binding(
+        report_slot=report_slot,
+        report_prefetch={
+            **report_prefetch_health,
+            "prefetch_status": report_prefetch_health.get("prefetch_status"),
+            "occurrence_binding_status": prefetch_binding.get("status"),
+            "occurrence_binding_reason": prefetch_binding.get("reason"),
+        },
+    )
 
     section_payloads, visible_contract, evidence = _section_payloads(
         checkpoint_time=checkpoint_time,
@@ -1030,6 +1121,18 @@ def run(
 
     contract = canonical_mode_contract(canonical_text, "DEEP")
     stages = [
+        _runner_stage(
+            owner="CORE_SLOT_BINDING",
+            status=core_binding["status"],
+            reason=core_binding.get("reason"),
+            evidence=core_binding,
+        ),
+        _runner_stage(
+            owner="REPORT_PREFETCH_BINDING",
+            status=prefetch_binding["status"],
+            reason=prefetch_binding.get("reason"),
+            evidence=prefetch_binding,
+        ),
         _runner_stage(
             owner="V6_FACTUAL_BINDING",
             status="PASS" if publish_integrity.get("status") == "PASS" else "PARTIAL",
@@ -1102,7 +1205,9 @@ def run(
     ]
 
     runner_pass = (
-        report.get("rendered_section_ids") == contract.get("expected_section_ids")
+        core_binding.get("status") == "PASS"
+        and prefetch_binding.get("status") == "PASS"
+        and report.get("rendered_section_ids") == contract.get("expected_section_ids")
         and post.get("status") == "PASS"
         and not human_failures
     )
@@ -1115,6 +1220,8 @@ def run(
         "canonical_expected_section_ids": contract.get("expected_section_ids"),
         "rendered_section_ids": report.get("rendered_section_ids"),
         "canonical_catalog_complete": report.get("rendered_section_ids") == contract.get("expected_section_ids"),
+        "core_slot_binding": core_binding,
+        "report_prefetch_binding": prefetch_binding,
         "pre_render_qa_status": pre.get("status"),
         "post_render_qa_status": post.get("status"),
         "human_facing_qa_status": "PASS" if not human_failures else "FAIL",

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-21T05:45:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-21T07:50:33+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -292,6 +292,8 @@ Canonical routing includes static and dynamic report modes such as:
 - Post-All-Match.
 
 Dynamic Match routing is evaluated from actual scoring-GW fixture state. “Matchday” by itself does not mean every hourly occurrence must render a visible Match report.
+
+Interactive mode-equivalent requests use the same report-plane contract. A user request such as “DEEP sekarang”, “PRICE sekarang”, or “format 04:30 tapi mode sekarang” is an **AD_HOC occurrence of that Canonical mode**, not a request to imitate its headings manually. It must pass the same pre-render and actual visible-body post-render QA as the scheduled mode; for RISE20/FALL20, supported cycle/ETA fields must be visibly rendered or the same-request render is rejected and rebuilt.
 
 Prospective natural occurrences also retain one bounded, machine-readable acceptance proof on the existing same-slot report-delivery evidence surface. It records the executed two-stage REPORT_DUE result, fixture evidence, render structure/digest, locked-team source/status, ICON+ coverage metadata, and a separate UI-delivery-ack state. This proof is observability only: `RENDER_PROVEN=true` never means the client UI acknowledged delivery, and `DELIVERY_UI_ACK=UNAVAILABLE` does not invalidate a proven routing/render pass. Historical occurrences are not retrofitted.
 

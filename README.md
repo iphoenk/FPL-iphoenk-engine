@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-21T19:06:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-21T21:09:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -372,3 +372,45 @@ The intended invariant is simple:
 > **V6 tells V12 what is factually true. V12 decides what those facts mean for FPL.**
 
 Facts, probability models, tactics, optimization, decisions, and reports remain separately owned and auditable.
+
+## Stage 1 analytics completion status
+
+Stage 1 implementation is now **CI GREEN** on the bounded branch. The
+integrated DEEP runner delegates projection-horizon ownership to P1.3 and
+consumes match-by-match facts only through V6-published normalized artifacts.
+The Vaastav source contract includes season `merged_gw` and the V6 normalizer
+publishes deterministic player/fixture/opponent-linked `player_matches`.
+
+The Stage 1 analytics chain now includes:
+
+- opponent-adjusted historical recency with venue-specific team strength;
+- Bayesian regime/change-point evidence with `P(role stable)` and no hard
+  reset of older history;
+- empirical-Bayes league -> position -> factual-role-if-available -> team
+  leave-one-player-out priors feeding the existing P1.3 owner;
+- explicit credible intervals and sample exposure on supported event-rate
+  surfaces;
+- target-specific distribution diagnostics/selection, with generic Erlang use
+  explicitly forbidden;
+- P1.1 six-state minutes:
+  `START_FULL / START_SUBBED / EARLY_SUB / CAMEO / LATE_CAMEO / DNP`;
+- exact legacy-moment preservation when factual substitution timing is absent,
+  with state-specific minute truncation activated only when match-level starter
+  timing is factual;
+- expanding-window GW walk-forward validation with future leakage forbidden;
+- an exact Canonical 20/25/30/25 full-universe producer that consumes existing
+  owner outputs only and does not create duplicate xPts/xMins/FDR/posteriors;
+- required CI coverage for P1.1, P1.3 posterior predictive, the integrated
+  runner, Stage 1 analytics, Monte Carlo compatibility, V6, governance,
+  documentation and naming contracts.
+
+Unsupported optional factual features such as actual tactical role, formation,
+coach state, shots/SoT/box-touch detail, PSxG/xGOT and similar advanced match
+features remain explicit `UNAVAILABLE` when V6 does not publish them. They are
+not silently zero-filled and they are not Stage 1 blockers by themselves.
+
+**Current acceptance state:** implementation + required CI are GREEN.
+`stage1_green` remains false only until the new V6 `merged_gw` runtime
+artifact is published from main and one controlled DEEP acceptance proves the
+occurrence-bound analytics chain end to end. Stage 2 remains not started.
+

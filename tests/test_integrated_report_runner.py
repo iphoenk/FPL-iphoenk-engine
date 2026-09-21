@@ -242,6 +242,19 @@ def test_integrated_deep_runner_executes_owner_stages_and_materializes_full_cata
         lambda _: {"payload": {"health": "GREEN"}, "bootstrap": bootstrap, "fixtures": [{"id": 1}]},
     )
     monkeypatch.setattr(runner, "build_team_strength", lambda *a, **k: {"teams": [], "matchups": []})
+    monkeypatch.setattr(
+        runner,
+        "load_v6_analytics_foundation",
+        lambda *a, **k: {
+            "status": "MATCH_FOUNDATION_READY",
+            "stage1_full_foundation_ready": True,
+            "historical_prior": {"players": {}},
+            "player_features_payload": {},
+            "player_match_rows": [{"element": 1, "gw": 5, "minutes": 90}],
+            "opponent_history_rows": [],
+            "opponent_history_scope": "CURRENT-SEASON ONLY",
+        },
+    )
     projections = _fake_projections()
     monkeypatch.setattr(runner, "build_player_projections", lambda *a, **k: projections)
     monkeypatch.setattr(runner, "attach_official_role_evidence", lambda *a, **k: {"status": "PASS"})
@@ -348,6 +361,19 @@ def test_integrated_deep_runner_keeps_bundle_when_projection_stage_fails(
         "build_team_strength",
         lambda *a, **k: {"teams": [], "matchups": []},
     )
+    monkeypatch.setattr(
+        runner,
+        "load_v6_analytics_foundation",
+        lambda *a, **k: {
+            "status": "MATCH_FOUNDATION_READY",
+            "stage1_full_foundation_ready": True,
+            "historical_prior": {"players": {}},
+            "player_features_payload": {},
+            "player_match_rows": [{"element": 1, "gw": 5, "minutes": 90}],
+            "opponent_history_rows": [],
+            "opponent_history_scope": "CURRENT-SEASON ONLY",
+        },
+    )
 
     def projection_failure(*args, **kwargs):
         raise RuntimeError("projection boom")
@@ -446,3 +472,23 @@ def test_runner_source_has_no_legacy_runtime_imports():
         "from src.engines.decision_intelligence",
     )
     assert not [token for token in forbidden_imports if token in source]
+
+
+def test_integrated_runner_does_not_hardcode_short_projection_horizon():
+    source = Path(runner.__file__).read_text(encoding="utf-8")
+    assert "horizon=5" not in source
+    assert "published_horizons" not in source
+    assert "build_player_projections(" in source
+
+
+def test_integrated_runner_requires_match_level_foundation_before_projection():
+    source = Path(runner.__file__).read_text(encoding="utf-8")
+    assert "V12_ANALYTICS_FOUNDATION" in source
+    assert "require_match_foundation" in source
+    assert "player_match_rows=[]" not in source
+    assert 'opponent_history_rows=[]' not in source
+
+
+def test_integrated_runner_source_compiles():
+    source = Path(runner.__file__).read_text(encoding="utf-8")
+    compile(source, str(runner.__file__), "exec")

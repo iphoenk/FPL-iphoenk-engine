@@ -96,6 +96,13 @@ def _results(*, fixture_kickoff: str = "2026-09-12T14:00:00Z") -> dict:
                         f"10,4,{fixture_kickoff},1,2,,,False\r\n"
                     ),
                 },
+                "merged_gw": {
+                    "sha256": "merged-gw-sha",
+                    "body": (
+                        "element,fixture,opponent_team,GW,position,team,minutes,starts,was_home,kickoff_time,total_points,goals_scored,assists,expected_goals,expected_assists,expected_goal_involvements,expected_goals_conceded,clean_sheets,goals_conceded,saves,penalties_saved,penalties_missed,yellow_cards,red_cards,bonus,bps,defensive_contribution,clearances_blocks_interceptions,recoveries,tackles,creativity,influence,threat,team_h_score,team_a_score\r\n"
+                        f"1,10,2,3,MID,Alpha FC,90,1,True,{fixture_kickoff},8,1,0,0.72,0.15,0.87,0.55,1,0,0,0,0,0,0,2,30,6,5,7,2,18.0,34.0,52.0,2,0\r\n"
+                    ),
+                },
             },
         },
         "understat": {
@@ -180,6 +187,15 @@ def test_source_specific_normalizers_publish_typed_source_native_records():
     assert vaastav["record_groups"]["players"][0]["official_element_id"] == 1
     assert vaastav["record_groups"]["players"][0]["identity_status"] == "EXACT"
     assert vaastav["record_groups"]["fixtures"][0]["official_fixture_id"] == 10
+    match = vaastav["record_groups"]["player_matches"][0]
+    assert match["official_element_id"] == 1
+    assert match["official_fixture_id"] == 10
+    assert match["official_opponent_team_id"] == 2
+    assert match["gw"] == 3
+    assert match["minutes"] == 90
+    assert match["xg"] == 0.72
+    assert match["xgi"] == 0.87
+    assert match["fpl_points"] == 8
 
     understat = datasets["understat"]
     assert understat["semantic_class"] == "UPSTREAM_MODEL_SIGNAL"

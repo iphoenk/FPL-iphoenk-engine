@@ -52,7 +52,15 @@ CONFIG_PATH = ROOT / "config" / "intelligence" / "v12_monte_carlo.json"
 CANONICAL_PATH = ROOT / CANONICAL_AUTHORITY
 MODEL_OWNER = "V12_MONTE_CARLO"
 MODEL_ID = "v12_correlated_monte_carlo"
-STATE_NAMES = ("START", "REGULAR_CAMEO", "LATE_CAMEO", "ZERO_MINUTES")
+LEGACY_STATE_NAMES = ("START", "REGULAR_CAMEO", "LATE_CAMEO", "DNP")
+STAGE1_STATE_NAMES = (
+    "START_FULL",
+    "START_SUBBED",
+    "EARLY_SUB",
+    "REGULAR_CAMEO",
+    "LATE_CAMEO",
+    "DNP",
+)
 POSITIONS = ("GK", "DEF", "MID", "FWD")
 OUTFIELD = ("DEF", "MID", "FWD")
 
@@ -175,7 +183,10 @@ def _state_rows(player: Mapping[str, Any]) -> list[dict[str, Any]]:
     xmins = player.get("xmins") or {}
     rows = _finite_states(xmins)
     names = {str(row.get("state")) for row in rows}
-    if names != set(STATE_NAMES):
+    if frozenset(names) not in {
+        frozenset(LEGACY_STATE_NAMES),
+        frozenset(STAGE1_STATE_NAMES),
+    }:
         raise MonteCarloError("P1.1 state set drift")
     return rows
 
@@ -236,6 +247,18 @@ def sample_state_minutes(
         mask = states == idx
         frequencies[name] = float(mask.mean())
         minute_means[name] = float(minutes[mask].mean()) if np.any(mask) else None
+    if set(frequencies) == set(STAGE1_STATE_NAMES):
+        start_names = ("START_FULL", "START_SUBBED", "EARLY_SUB")
+        start_mass = sum(frequencies[name] for name in start_names)
+        frequencies["START"] = start_mass
+        if start_mass > 0.0:
+            minute_means["START"] = sum(
+                frequencies[name] * float(minute_means[name] or 0.0)
+                for name in start_names
+            ) / start_mass
+    if "DNP" in frequencies:
+        frequencies["ZERO_MINUTES"] = frequencies["DNP"]
+        minute_means["ZERO_MINUTES"] = minute_means["DNP"]
     return {
         "actual_paths": int(actual_paths),
         "state_frequencies": frequencies,
@@ -381,7 +404,8 @@ def _simulate_player_gw(
     team_id = _i(player.get("team_id") or player.get("team"), -1)
     total_points = np.zeros(n, dtype=np.float64)
     appeared = np.zeros(n, dtype=bool)
-    state_counts = np.zeros(4, dtype=np.int64)
+    state_rows = _state_rows(player)
+    state_counts = np.zeros(len(state_rows), dtype=np.int64)
     event_sums = {"goals": 0.0, "assists": 0.0, "clean_sheets": 0.0, "defcon_hits": 0.0, "saves": 0.0}
     fixtures = _fixture_rows(player, gw)
     for index, fixture in enumerate(fixtures):
@@ -402,9 +426,11 @@ def _simulate_player_gw(
         )
 
         state_idx, minutes = _sample_state_minutes(rng, player, n)
-        for idx in range(4):
-            state_counts[idx] += int(np.count_nonzero(state_idx == idx))
-        fixture_appeared = state_idx != 3
+        for idx in range(len(state_rows)):
+            state_counts[idx] += int(
+                np.count_nonzero(state_idx == idx)
+            )
+        fixture_appeared = minutes > 0.0
         appeared |= fixture_appeared
 
         params = _fixture_event_parameters(player, fixture)
@@ -760,7 +786,13 @@ def _simulate_route_arrays(
                 )
                 player_world[element] = simulated
                 key = f"{element}:gw{gw}"
-                state_counts.setdefault(key, np.zeros(4, dtype=np.int64))
+                state_counts.setdefault(
+                    key,
+                    np.zeros(
+                        len(_state_rows(pmap[element])),
+                        dtype=np.int64,
+                    ),
+                )
                 state_counts[key] += simulated["state_counts"]
                 state_draws[key] = state_draws.get(key, 0) + int(simulated["state_draws"])
                 row = event_sums.setdefault(
@@ -792,11 +824,30 @@ def _simulate_route_arrays(
     }
     for key, counts in state_counts.items():
         draws = max(1, state_draws[key])
-        diagnostics["state_frequencies"][key] = {
-            STATE_NAMES[idx]: float(counts[idx]) / draws for idx in range(4)
+        element = int(key.split(":", 1)[0])
+        names = [
+            str(row.get("state"))
+            for row in _state_rows(pmap[element])
+        ]
+        frequencies = {
+            names[idx]: float(counts[idx]) / draws
+            for idx in range(len(names))
         }
+        if set(names) == set(STAGE1_STATE_NAMES):
+            frequencies["START"] = sum(
+                frequencies[name]
+                for name in (
+                    "START_FULL",
+                    "START_SUBBED",
+                    "EARLY_SUB",
+                )
+            )
+        if "DNP" in frequencies:
+            frequencies["ZERO_MINUTES"] = frequencies["DNP"]
+        diagnostics["state_frequencies"][key] = frequencies
         diagnostics["event_means"][key] = {
-            name: float(value) / draws for name, value in event_sums[key].items()
+            name: float(value) / draws
+            for name, value in event_sums[key].items()
         }
     denom = actual_paths * len(ordered_gws)
     for rid, row in route_diag.items():

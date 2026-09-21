@@ -16,6 +16,8 @@ import math
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from src.models.v12_stage1_analytics import regime_change_evidence
+
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = ROOT / "config" / "intelligence" / "v12_contextual_dynamics.json"
 MODEL_OWNER = "V12_CONTEXTUAL_DYNAMICS"
@@ -145,6 +147,8 @@ def _minutes(row: Mapping[str, Any]) -> float:
 
 
 def _starter(row: Mapping[str, Any]) -> bool:
+    if row.get("starter") is not None:
+        return bool(row.get("starter"))
     if row.get("started") is not None:
         return bool(row.get("started"))
     return _i(row.get("start_min"), -1) == 0
@@ -190,12 +194,42 @@ def _rate90(rows: Sequence[Mapping[str, Any]], metric: str, weights: Sequence[fl
     return 90.0 * total / weighted_minutes
 
 
-def _recency_weights(rows: Sequence[Mapping[str, Any]], current_gw: int) -> list[float]:
-    half_life = max(0.25, _f((load_config().get("recency") or {}).get("half_life_gws"), 2.5))
+def _recency_weights(
+    rows: Sequence[Mapping[str, Any]],
+    current_gw: int,
+    regime: Mapping[str, Any] | None = None,
+) -> list[float]:
+    half_life = max(
+        0.25,
+        _f(
+            (load_config().get("recency") or {}).get(
+                "half_life_gws"
+            ),
+            2.5,
+        ),
+    )
+    split = (regime or {}).get("change_after_match_index")
+    old_regime_weight = _f(
+        (regime or {}).get("old_regime_weight"),
+        1.0,
+    )
     out = []
-    for row in rows:
+    for index, row in enumerate(rows):
         age = max(0, current_gw - max(1, _gw(row)))
-        out.append(0.5 ** (age / half_life))
+        recency = 0.5 ** (age / half_life)
+        opponent = max(
+            0.5,
+            min(
+                1.5,
+                _f(row.get("opponent_strength_weight"), 1.0),
+            ),
+        )
+        regime_weight = (
+            old_regime_weight
+            if split is not None and index < int(split)
+            else 1.0
+        )
+        out.append(recency * opponent * regime_weight)
     return out
 
 
@@ -203,10 +237,11 @@ def _posterior_recent_rate(
     rows: Sequence[Mapping[str, Any]],
     metric: str,
     current_gw: int,
+    regime: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not rows:
         return {"season_rate90": None, "weighted_rate90": None, "posterior_rate90": None, "effective_sample": 0.0}
-    weights = _recency_weights(rows, current_gw)
+    weights = _recency_weights(rows, current_gw, regime)
     season = _rate90(rows, metric)
     weighted = _rate90(rows, metric, weights)
     effective_sample = sum(weights)
@@ -289,10 +324,30 @@ def build_player_trajectory(
     ]
     rows.sort(key=lambda row: (_gw(row), _match_id(row)))
     recency_cfg = load_config().get("recency") or {}
-    recent_n = max(1, _i(recency_cfg.get("recent_window_matches"), 3))
+    recent_n = max(
+        1,
+        _i(recency_cfg.get("recent_window_matches"), 3),
+    )
     recent = rows[-recent_n:]
-    rate_metrics = ("xg", "xa", "xgi", "shots", "sot", "box_touches", "chances_created")
-    rates = {metric: _posterior_recent_rate(rows, metric, current_gw) for metric in rate_metrics}
+    regime = regime_change_evidence(rows)
+    rate_metrics = (
+        "xg",
+        "xa",
+        "xgi",
+        "shots",
+        "sot",
+        "box_touches",
+        "chances_created",
+    )
+    rates = {
+        metric: _posterior_recent_rate(
+            rows,
+            metric,
+            current_gw,
+            regime,
+        )
+        for metric in rate_metrics
+    }
     xgi = rates["xgi"]
     season = xgi.get("season_rate90")
     posterior = xgi.get("posterior_rate90")
@@ -386,6 +441,12 @@ def build_player_trajectory(
             "recent_role": recent_role,
             "prior_role": prior_role,
             "sustained_role_change": sustained_role_change,
+            "change_point": regime,
+            "p_role_stable": regime.get("p_role_stable"),
+            "role_uncertainty": round(
+                1.0 - _f(regime.get("p_role_stable"), 1.0),
+                6,
+            ),
         },
         "trajectory_classification": classification,
         "result_vs_process": _result_vs_process(rows),

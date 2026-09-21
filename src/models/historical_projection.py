@@ -214,11 +214,15 @@ def build(
         )
         system_context_used += int(bool(system_context.get("dominant_shape")))
 
+        hierarchical_prior = (
+            feature_payload.get("stage1_hierarchical_priors") or {}
+        ).get(str(element)) or {}
         rates = build_posterior_rates(
             player,
             position_prior=base,
             historical=historical,
             feature=feature,
+            hierarchical_prior=hierarchical_prior,
         )
         robust_winsorized_players += int(
             bool((rates.get("goal") or {}).get("winsorized"))
@@ -232,7 +236,10 @@ def build(
         matches_played = int(
             (team_rows.get(team_id) or {}).get("matches_played") or 0
         )
-        context: dict[str, Any] = {"team_matches_played": matches_played}
+        context: dict[str, Any] = {
+            "team_matches_played": matches_played,
+            "player_match_rows": match_rows_by_player.get(element, []),
+        }
         if historical:
             context.update(
                 {
@@ -514,6 +521,9 @@ def build(
                     ),
                 },
                 "posterior_rates": rates,
+                "stage1_hierarchical_prior": (
+                    hierarchical_prior or None
+                ),
                 "xpts_by_gw": by_gw,
                 "horizons": horizons,
                 "projection_confidence": xmins.get("confidence"),

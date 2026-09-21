@@ -193,13 +193,90 @@ def _vaastav(payload: dict[str, Any], identity_map: dict[str, Any]) -> dict[str,
             }
         )
 
-    status = "NORMALIZED" if players or fixtures else "EMPTY_OR_SCHEMA_UNAVAILABLE"
+    player_matches: list[dict[str, Any]] = []
+    for row in _csv_rows(payload, "merged_gw"):
+        native_player_id = _int(row.get("element"))
+        native_fixture_id = _int(row.get("fixture"))
+        native_opponent_team_id = _int(row.get("opponent_team"))
+        player_identity = _identity_fields(
+            player_reverse, native_player_id, "official_element_id"
+        )
+        fixture_identity = _identity_fields(
+            fixture_reverse, native_fixture_id, "official_fixture_id"
+        )
+        opponent_identity = _identity_fields(
+            team_reverse, native_opponent_team_id, "official_opponent_team_id"
+        )
+        player_matches.append(
+            {
+                "source_native_player_id": native_player_id,
+                "source_native_fixture_id": native_fixture_id,
+                "source_native_opponent_team_id": native_opponent_team_id,
+                "official_element_id": player_identity["official_element_id"],
+                "identity_status": player_identity["identity_status"],
+                "official_fixture_id": fixture_identity["official_fixture_id"],
+                "fixture_identity_status": fixture_identity["identity_status"],
+                "official_opponent_team_id": opponent_identity[
+                    "official_opponent_team_id"
+                ],
+                "opponent_identity_status": opponent_identity["identity_status"],
+                "gw": _int(row.get("GW") or row.get("round")),
+                "position": row.get("position"),
+                "team": row.get("team"),
+                "minutes": _int(row.get("minutes")),
+                "starts": _int(row.get("starts")),
+                "starter": _int(row.get("starts")) > 0,
+                "home": str(row.get("was_home") or "").strip().lower()
+                == "true",
+                "kickoff_time": row.get("kickoff_time"),
+                "team_h_score": _int(row.get("team_h_score")),
+                "team_a_score": _int(row.get("team_a_score")),
+                "goals": _int(row.get("goals_scored")),
+                "assists": _int(row.get("assists")),
+                "xg": _float(row.get("expected_goals")),
+                "xa": _float(row.get("expected_assists")),
+                "xgi": _float(row.get("expected_goal_involvements")),
+                "xgc": _float(row.get("expected_goals_conceded")),
+                "clean_sheets": _int(row.get("clean_sheets")),
+                "goals_conceded": _int(row.get("goals_conceded")),
+                "saves": _int(row.get("saves")),
+                "penalties_saved": _int(row.get("penalties_saved")),
+                "penalties_missed": _int(row.get("penalties_missed")),
+                "yellow_cards": _int(row.get("yellow_cards")),
+                "red_cards": _int(row.get("red_cards")),
+                "bonus": _int(row.get("bonus")),
+                "bps": _int(row.get("bps")),
+                "defensive": _float(row.get("defensive_contribution")),
+                "clearances_blocks_interceptions": _float(
+                    row.get("clearances_blocks_interceptions")
+                ),
+                "recoveries": _float(row.get("recoveries")),
+                "tackles": _float(row.get("tackles")),
+                "creativity": _float(row.get("creativity")),
+                "influence": _float(row.get("influence")),
+                "threat": _float(row.get("threat")),
+                "fpl_points": _int(row.get("total_points")),
+                "source": "vaastav_fpl",
+                "dataset": "merged_gw",
+                "source_checked_at": payload.get("checked_at"),
+            }
+        )
+
+    status = (
+        "NORMALIZED"
+        if players or fixtures or player_matches
+        else "EMPTY_OR_SCHEMA_UNAVAILABLE"
+    )
     return _dataset(
         source_id="vaastav_fpl",
         payload=payload,
         semantic_class="NORMALIZED_FACT",
         authority="VAASTAV_FPL",
-        record_groups={"players": players, "fixtures": fixtures},
+        record_groups={
+            "players": players,
+            "fixtures": fixtures,
+            "player_matches": player_matches,
+        },
         normalization_status=status,
     )
 

@@ -1429,3 +1429,51 @@ authority, 20/25/30/25, P1.1, P1.3, Monte Carlo, V6, scheduler and legacy
 isolation remain unchanged.
 
 END FPL MASTER CANONICAL V12
+
+==================================================
+V12 STAGE 1 ANALYTICS FOUNDATION / DEPENDENCY DAG
+Effective: 2026-09-21T20:07:00+07:00
+==================================================
+
+This section is methodology authority. It does not make incomplete factual
+evidence complete and it does not relax any report QA gate.
+
+Single governed downstream chain:
+FRESH V6
+-> MATCH-BY-MATCH GW1->CURRENT
+-> OPPONENT-STRENGTH ADJUSTMENT
+-> COACH / FORMATION / ROLE / TACTICAL STATE
+-> DYNAMIC OPPONENT MATCHUP / FDR
+-> 20 / 25 / 30 / 25
+-> BAYESIAN POSTERIOR
+-> P1.1 xMINS / P(START) + POSITION EVENT MODEL
+-> PLAYER POINT DISTRIBUTIONS
+-> 1GW / 3GW / 5GW
+-> FULL UNIVERSE
+-> WATCHLIST20 + PACKAGE / FRONTIER
+-> MONTE CARLO WHEN MATERIAL
+-> TRANSFER ECONOMICS
+-> DECISION
+-> RENDERER
+-> PRE_RENDER
+-> POST_RENDER
+-> HUMAN_FACING.
+
+Hard invariants:
+- No section may calculate an alternative xMins, FDR, xPts, posterior,
+  horizon or player universe.
+- V6 is the only factual production data plane. V12 consumers may normalize
+  only facts already published by V6 and must preserve provenance/freshness.
+- Season aggregate alone is insufficient for GW1-current trajectory,
+  opponent adjustment, role stability or change-point claims.
+- Missing match-level or tactical features remain UNAVAILABLE/BLOCKED.
+  They are never replaced with zeros, name joins, fabricated probabilities
+  or renderer fallbacks.
+- 20/25/30/25 macro weights remain exactly 20% HISTORICAL/PROVEN,
+  25% TACTICAL/ROLE, 30% CURRENT UNDERLYING, 25% FIXTURE/SECURITY.
+- P1.3 owns published projection horizons. Occurrence runners MUST NOT pin a
+  shorter private runtime horizon.
+- Stage 1 acceptance requires walk-forward evidence and factual/model
+  completeness for the claimed surface. A green renderer cannot compensate
+  for incomplete analytics.
+

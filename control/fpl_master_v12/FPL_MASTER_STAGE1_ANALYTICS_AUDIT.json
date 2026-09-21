@@ -164,5 +164,8 @@
   },
   "stage1_implementation_green": true,
   "required_ci_green": true,
-  "runtime_acceptance_pending": true
+  "runtime_acceptance_pending": true,
+  "implementation_ci_green_head": "ca9f5129732e14cd2e0782946d0be68acccd98d8",
+  "implementation_ci_green_repository_governance_run_id": 35609817302,
+  "documentation_event_retrigger": "PR body timestamp was updated after prior push event; evidence-only commit retriggers checks with synchronized PR body + README timestamp"
 }

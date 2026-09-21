@@ -553,7 +553,7 @@ def pre_delivery_gate(
     missing = [section for section in MANDATORY_SECTIONS if section not in section_statuses]
     failures.extend(f"MISSING_{section}" for section in missing)
     for section in MANDATORY_SECTIONS:
-        if section in {"S10", "S11", "S12"} or section not in section_statuses:
+        if section in {"S11", "S12", "S13"} or section not in section_statuses:
             continue
         state = str(section_statuses[section]).upper()
         if state == "PASS":
@@ -569,7 +569,7 @@ def pre_delivery_gate(
     )
     rise = validate_rank20(rise_rows, label="RISE20")
     fall = validate_rank20(fall_rows, label="FALL20")
-    for section, result in (("S10", watchlist), ("S11", rise), ("S12", fall)):
+    for section, result in (("S11", watchlist), ("S12", rise), ("S13", fall)):
         if result["status"] != "PASS":
             failures.append(f"{section}_{result['reason']}")
         declared = str(section_statuses.get(section, "MISSING")).upper()
@@ -580,9 +580,9 @@ def pre_delivery_gate(
         "report_ready": not failures,
         "status": "PASS" if not failures else "FAIL",
         "failures": failures,
-        "S10": watchlist,
-        "S11": rise,
-        "S12": fall,
+        "S11": watchlist,
+        "S12": rise,
+        "S13": fall,
     }
 
 

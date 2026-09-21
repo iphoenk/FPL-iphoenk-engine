@@ -247,13 +247,15 @@ def price_checkpoint_contract(
     target_frontier_available: bool,
     auth_requested: bool,
 ) -> dict[str, Any]:
-    """Evaluate 05:30 factual readiness without pretending a model is Official FPL."""
+    """Evaluate 05:30 readiness while preserving official predictor vs confirmed-fact semantics."""
     model = dict(predictor or {})
     provenance_label = str(model.get("provenance_label") or model.get("semantic_class") or "UNAVAILABLE")
     predictor_available = bool(model) and str(model.get("availability") or "").upper() in {"AVAILABLE", "PARTIAL"}
+    official_status = str(model.get("predictor_official_status") or "").upper()
+    product_evidence = model.get("independent_official_product_evidence") is True
     official_claim_forbidden = bool(
-        str(model.get("predictor_official_status") or "").upper() in {"OFFICIAL", "VERIFIED_OFFICIAL"}
-        and str(model.get("independent_official_product_evidence") or "").upper() not in {"TRUE", "VERIFIED"}
+        official_status.startswith("VERIFIED_OFFICIAL")
+        and not product_evidence
     )
     reasons: list[str] = []
     if int(official_price_fact_count) <= 0:
@@ -274,7 +276,9 @@ def price_checkpoint_contract(
         "official_price_fact_count": int(official_price_fact_count),
         "predictor": "AVAILABLE" if predictor_available else "UNAVAILABLE",
         "predictor_provenance": provenance_label,
-        "predictor_may_be_called_official": False if not model.get("independent_official_product_evidence") else True,
+        "predictor_may_be_called_official": bool(
+            product_evidence and official_status.startswith("VERIFIED_OFFICIAL")
+        ),
         "mini_league_exposure": str(mini_league_status).upper(),
         "target_frontier": "AVAILABLE" if target_frontier_available else "UNAVAILABLE",
         "auth": "REQUESTED" if auth_requested else "NOT REQUESTED",

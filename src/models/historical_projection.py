@@ -525,14 +525,29 @@ def build(
             by_gw.append(gw_row)
 
         horizons = {}
-        for published in published_horizons:
-            subset = by_gw[:published]
-            horizon_distribution = convolve_point_distributions(
-                [
-                    row.get("point_distribution") or {}
-                    for row in subset
-                ]
+        stage2_distribution_horizons = {1, 2, 3, 5}
+        cumulative_distributions: dict[int, dict[str, Any]] = {}
+        cumulative_distribution: dict[str, Any] | None = None
+        for index, gw_row in enumerate(by_gw[:5], 1):
+            components = []
+            if cumulative_distribution:
+                components.append(cumulative_distribution)
+            components.append(gw_row.get("point_distribution") or {})
+            cumulative_distribution = convolve_point_distributions(
+                components
             )
+            if (
+                index in stage2_distribution_horizons
+                and cumulative_distribution
+            ):
+                cumulative_distributions[index] = cumulative_distribution
+
+        requested_horizons = sorted(
+            set(published_horizons) | stage2_distribution_horizons
+        )
+        for published in requested_horizons:
+            subset = by_gw[:published]
+            horizon_distribution = cumulative_distributions.get(published)
             fallback_mean = sum(
                 _f(row.get("mean")) for row in subset
             )
@@ -548,6 +563,7 @@ def build(
                 if published == 1 and len(subset) == 1
                 else None
             )
+            stage2_required = published in stage2_distribution_horizons
             horizons[str(published)] = {
                 "mean": round(
                     _f(
@@ -570,16 +586,22 @@ def build(
                 "distribution_aggregation_status": (
                     "EXACT_CONDITIONAL_HORIZON_PMF"
                     if horizon_distribution
+                    else "SUMMARY_ONLY_OUTSIDE_STAGE2_REQUIRED_HORIZONS"
+                    if not stage2_required
                     else "UNAVAILABLE_INCOMPLETE_GW_PMF"
                 ),
                 "tail_aggregation_status": (
                     "AVAILABLE_COMPLETE_CONDITIONAL_PMF"
                     if horizon_distribution
+                    else "SUMMARY_ONLY_OUTSIDE_STAGE2_REQUIRED_HORIZONS"
+                    if not stage2_required
                     else "UNAVAILABLE"
                 ),
                 "dependency_assumption": (
                     "CONDITIONAL_INDEPENDENCE_GIVEN_CURRENT_POSTERIOR;"
                     "ALEATORIC_AND_EPISTEMIC_REPORTED_SEPARATELY"
+                    if horizon_distribution
+                    else "ZERO_CROSS_GW_COVARIANCE_FOR_SUMMARY_ONLY"
                 ),
             }
 
@@ -762,7 +784,7 @@ def build(
             "stage2_position_specific_probability_engine": True,
             "dynamic_fdr_vector": True,
             "posterior_predictive_count_checks": True,
-            "genuine_1_3_5gw_distributions": True,
+            "genuine_1_2_3_5gw_distributions": True,
             "multi_gw_tail_aggregation": "COMPLETE_CONDITIONAL_PMF_WITH_EXPLICIT_DEPENDENCE_SEMANTICS",
             "p1_6_tactical_scorer_applied": False,
             "p1_7_started": False,

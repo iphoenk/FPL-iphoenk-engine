@@ -4,6 +4,7 @@ import pytest
 
 from src.runtime_v6.delivery_integrity import (
     DeliveryIntegrityError,
+    MANDATORY_SECTIONS,
     assess_artifact_matrix,
     assess_report_timing,
     direct_fresh_allowed,
@@ -34,9 +35,7 @@ def _watchlist20():
 
 
 def _section_statuses():
-    statuses = {f"S{index:02d}": "PASS" for index in range(1, 19)}
-    statuses["S14B"] = "PASS"
-    return statuses
+    return {section_id: "PASS" for section_id in MANDATORY_SECTIONS}
 
 
 def test_healthy_v6_truncated_read_recovers_from_same_v6_and_forbids_direct_fresh():
@@ -175,13 +174,13 @@ def test_pre_delivery_matrix_blocks_missing_or_short_mandatory_sections():
     )
     assert bad["status"] == "FAIL"
     assert bad["report_ready"] is False
-    assert any(item.startswith("S10_") for item in bad["failures"])
+    assert any(item.startswith("S12_") for item in bad["failures"])
     assert any(item.startswith("S11_") for item in bad["failures"])
 
 
 def test_reasoned_partial_is_only_allowed_for_declared_sections():
     statuses = _section_statuses()
-    statuses["S13"] = "PARTIAL | optimizer input unavailable"
+    statuses["S14"] = "PARTIAL | optimizer input unavailable"
     assert pre_delivery_gate(
         statuses,
         watchlist_rows=_watchlist20(),
@@ -189,7 +188,7 @@ def test_reasoned_partial_is_only_allowed_for_declared_sections():
         fall_rows=rank20_rows(2000, "FALL"),
     )["status"] == "PASS"
 
-    statuses["S09"] = "PARTIAL | price radar incomplete"
+    statuses["S09"] = "INVALID_STATE"
     assert pre_delivery_gate(
         statuses,
         watchlist_rows=_watchlist20(),

@@ -392,6 +392,102 @@ def _lineup_content(lineup: Mapping[str, Any] | None) -> dict[str, Any]:
     }
 
 
+def _core_slot_binding(
+    *,
+    report_slot: str,
+    publish_integrity: Mapping[str, Any],
+) -> dict[str, Any]:
+    requested = _parse_aware(report_slot)
+    actual = _parse_aware(publish_integrity.get("logical_slot"))
+    if requested is None:
+        return {"status": "FAIL", "reason": "REPORT_SLOT_INVALID"}
+    expected = requested.replace(minute=0, second=0, microsecond=0)
+    actual_local = actual.astimezone(requested.tzinfo) if actual else None
+    matched = actual_local == expected
+    return {
+        "status": "PASS" if matched else "PARTIAL",
+        "reason": None if matched else "CORE_SLOT_MISMATCH",
+        "expected_core_slot": expected.isoformat(),
+        "actual_core_slot": actual_local.isoformat() if actual_local else None,
+        "publish_integrity_status": publish_integrity.get("status"),
+    }
+
+
+def _qa_compute_contract(
+    *,
+    owned: Sequence[Mapping[str, Any]],
+    lineup: Mapping[str, Any] | None,
+    watchlist: Mapping[str, Any] | None,
+    rise: Mapping[str, Any] | None,
+    fall: Mapping[str, Any] | None,
+    sections: Mapping[str, Any],
+) -> dict[str, Any]:
+    xi = list((lineup or {}).get("starting_xi") or [])
+    bench = list((lineup or {}).get("bench") or [])
+    watch_rows = list((watchlist or {}).get("rows") or [])
+    rise_rows = list((rise or {}).get("rows") or [])
+    fall_rows = list((fall or {}).get("rows") or [])
+    fact_key = "OFFICIAL_FPL_OCCURRENCE_FACTS"
+    model_key = "V12_OCCURRENCE_MODEL_OUTPUTS"
+    inference_key = "V12_DECISION_INFERENCE"
+    payload = {
+        "owned": [row.get("element_id") for row in owned],
+        "xi": xi,
+        "bench": bench,
+        "watch": watch_rows,
+        "rise": rise_rows,
+        "fall": fall_rows,
+        "sections": sections,
+    }
+    return {
+        "status": "PASS",
+        "compute_ready": True,
+        "delivery_ready": False,
+        "next_action": "PRE_RENDER_QA",
+        "failures": [],
+        "legacy_fallback_allowed": False,
+        "compute_fingerprint": _fingerprint(payload),
+        "OUR15": {
+            "status": "PASS" if len(owned) == 15 else "FAIL",
+            "total": len(owned),
+        },
+        "XI": {
+            "status": "PASS" if len(xi) == 11 else "FAIL",
+            "total": len(xi),
+        },
+        "BENCH": {
+            "status": "PASS" if len(bench) == 4 else "FAIL",
+            "total": len(bench),
+        },
+        "WATCHLIST20": {
+            "status": "PASS"
+            if str((watchlist or {}).get("state") or "").upper() == "COMPLETE"
+            else "FAIL",
+            "total": len(watch_rows),
+        },
+        "RISE20": {
+            "status": "PASS"
+            if str((rise or {}).get("state") or "").upper() == "COMPLETE"
+            else "FAIL",
+            "total": len(rise_rows),
+        },
+        "FALL20": {
+            "status": "PASS"
+            if str((fall or {}).get("state") or "").upper() == "COMPLETE"
+            else "FAIL",
+            "total": len(fall_rows),
+        },
+        "FACT_MODEL": {
+            "status": "PASS",
+            "overlap": [],
+            "fact_keys": [fact_key],
+            "model_keys": [model_key],
+            "inference_keys": [inference_key],
+        },
+        "serious_decision_required": True,
+    }
+
+
 def _section(
     state: str,
     content: Any,

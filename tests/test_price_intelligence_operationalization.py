@@ -9,7 +9,7 @@ def _prices(status="PASS", **contract_overrides):
         "current_progress_field": "price_change_percent",
         "projected_progress_field": "price_change_projections",
         "likelihood_preserved_raw": True,
-        "threshold_is_official_rule": False,
+        "threshold_is_official_rule": True,
         "no_intra_cycle_crossing_eta": True,
     }
     contract.update(contract_overrides)

@@ -107,7 +107,7 @@ def test_prefetch_auxiliary_cycle_does_not_advance_authoritative_scheduler_cycle
     assert auxiliary["summary"]["last_operational_cycle_at"] == "2026-09-14T06:31:00+00:00"
 
 
-def test_effective_registry_keeps_legacy_identifier_only_as_configuration_compatibility():
+def test_effective_registry_exposes_verified_official_fpl_price_predictor():
     registry = load_registry()
     source = next(row for row in registry["sources"] if row["id"] == "official_price_predictor")
     assert source["id"] == "official_price_predictor"
@@ -116,13 +116,15 @@ def test_effective_registry_keeps_legacy_identifier_only_as_configuration_compat
     assert source["acquisition_kind"] == "derived"
 
     payload = collect_price_predictor(source, _price_upstream())
-    assert payload["source_name"] == "V6 Derived Price Change Signal"
+    assert payload["source_name"] == "Official FPL Price Change Predictor"
     assert payload["legacy_source_name"] == source["name"]
-    assert payload["governance"]["legacy_source_identifier_is_not_authority_proof"] is True
-    assert payload["governance"]["may_be_described_as_official_fpl_predictor_product"] is False
+    assert payload["predictor_official_status"] == "VERIFIED_OFFICIAL_FPL_PRODUCT"
+    assert payload["independent_official_product_evidence"] is True
+    assert payload["governance"]["official_product_documented_by_premierleague_com"] is True
+    assert payload["governance"]["may_be_described_as_official_fpl_predictor_product"] is True
 
 
-def test_legacy_price_source_id_does_not_create_official_predictor_claim():
+def test_price_source_id_preserves_verified_official_predictor_claim():
     source = {
         "id": "official_price_predictor",
         "name": "Official FPL Price Predictor",
@@ -150,15 +152,15 @@ def test_legacy_price_source_id_does_not_create_official_predictor_claim():
 
     payload = collect_price_predictor(source, _price_upstream())
     assert payload["source_id"] == "official_price_predictor"
-    assert payload["source_name"] == "V6 Derived Price Change Signal"
+    assert payload["source_name"] == "Official FPL Price Change Predictor"
     assert payload["legacy_source_name"] == "Official FPL Price Predictor"
     assert payload["semantic_class"] == "UPSTREAM_MODEL_SIGNAL"
-    assert payload["authority_class"] == "MODEL"
+    assert payload["authority_class"] == "OFFICIAL_FPL_MODEL"
     assert payload["model_author"] == "OFFICIAL_FPL"
     assert payload["v6_computation"] == "NONE"
-    assert payload["predictor_official_status"] == "UNVERIFIED_NOT_OFFICIAL_PRODUCT"
-    assert payload["independent_official_product_evidence"] is False
+    assert payload["predictor_official_status"] == "VERIFIED_OFFICIAL_FPL_PRODUCT"
+    assert payload["independent_official_product_evidence"] is True
     assert payload["authority"]["current_price_facts"] == "OFFICIAL_FPL_BOOTSTRAP"
-    assert payload["authority"]["official_fpl_predictor_product_verified"] is False
-    assert payload["governance"]["legacy_source_identifier_is_not_authority_proof"] is True
-    assert payload["governance"]["may_be_described_as_official_fpl_predictor_product"] is False
+    assert payload["authority"]["official_fpl_predictor_product_verified"] is True
+    assert payload["governance"]["official_product_documented_by_premierleague_com"] is True
+    assert payload["governance"]["may_be_described_as_official_fpl_predictor_product"] is True

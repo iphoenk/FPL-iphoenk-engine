@@ -465,11 +465,11 @@ def _visible_price_contract(
             "official_or_provider_progress": out.get("price_change_percent", "UNAVAILABLE"),
             "prediction_strength": likelihood if likelihood is not None else "UNAVAILABLE",
             **timing,
-            "estimate_source": "V6_DERIVED_PRICE_SIGNAL",
+            "estimate_source": "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR",
             "artifact_source": "official_price_predictor",
             "visible_source_label": (
-                "V6-derived price signal using Official FPL factual inputs; "
-                "not an Official FPL predictor/product"
+                "Official FPL Price Change Predictor — official predictor guidance; "
+                "not a guarantee of the next confirmed price change"
             ),
             "evidence_timestamp": evidence_timestamp or "UNAVAILABLE",
             "confidence": {
@@ -855,11 +855,11 @@ def build_actionable_price_radar(
                     "eta_reason",
                     "PREDICTOR_EVIDENCE_UNAVAILABLE" if visible is None else None,
                 ),
-                "estimate_source": (visible or {}).get("estimate_source", "V6_DERIVED_PRICE_SIGNAL" if pred_raw else "UNAVAILABLE"),
+                "estimate_source": (visible or {}).get("estimate_source", "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR" if pred_raw else "UNAVAILABLE"),
                 "artifact_source": (visible or {}).get("artifact_source", "official_price_predictor" if pred_raw else "UNAVAILABLE"),
                 "visible_source_label": (visible or {}).get(
                     "visible_source_label",
-                    "V6-derived price signal using Official FPL factual inputs; not an Official FPL predictor/product"
+                    "Official FPL Price Change Predictor — official predictor guidance; not a guarantee of the next confirmed price change"
                     if pred_raw
                     else "UNAVAILABLE",
                 ),

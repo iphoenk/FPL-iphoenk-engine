@@ -106,7 +106,7 @@ def _model_signal_metadata(source: dict[str, Any]) -> dict[str, Any]:
     if str(source.get("category") or "") not in _MODEL_SIGNAL_CATEGORIES:
         return {}
     return {
-        "semantic_class": "UPSTREAM_MODEL_SIGNAL",
+        "semantic_class": "OFFICIAL_FPL_PREDICTOR_MODEL",
         "model_author": str(source.get("name") or source.get("id") or "UPSTREAM_SOURCE"),
         "v6_computation": "NONE",
         "v6_transformation": "SOURCE_NATIVE_PRESERVATION",
@@ -236,12 +236,13 @@ def collect_price_predictor(
     upstream_payload: dict[str, Any],
     previous: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Expose bootstrap-carried price-change model fields with truthful provenance.
+    """Expose the verified 2026/27 Official FPL Price Change Predictor fields.
 
-    The legacy source identifier is retained for compatibility. The fields originate
-    from Official FPL bootstrap, but that does not independently prove a separately
-    documented Official FPL predictor product. Consumers must keep factual current
-    price separate from model/predictor interpretation.
+    Premier League/FPL officially documents the Price Change Predictor as a Fantasy
+    feature. The predictor fields are source-native Official FPL model outputs carried
+    in the Official FPL payload. Consumers must still distinguish predictor guidance
+    from confirmed overnight price-change facts because the predictor is explicitly
+    a guide and does not guarantee a price change.
     """
     started = time.perf_counter()
     bootstrap = ((upstream_payload.get("official") or {}).get("bootstrap") or {})
@@ -273,7 +274,7 @@ def collect_price_predictor(
     return {
         "schema_version": 4,
         "source_id": source["id"],
-        "source_name": "V6 Derived Price Change Signal",
+        "source_name": "Official FPL Price Change Predictor",
         "legacy_source_name": source.get("name"),
         "legacy_source_identifier": source.get("id"),
         "category": source.get("category") or "market",
@@ -289,11 +290,11 @@ def collect_price_predictor(
         "effective_state": effective_state,
         "changed": changed,
         "semantic_class": "UPSTREAM_MODEL_SIGNAL",
-        "authority_class": "MODEL",
+        "authority_class": "OFFICIAL_FPL_MODEL",
         "model_author": "OFFICIAL_FPL",
-        "predictor_official_status": "UNVERIFIED_NOT_OFFICIAL_PRODUCT",
-        "independent_official_product_evidence": False,
-        "provenance_label": "OFFICIAL_FPL_BOOTSTRAP_MODEL_FIELDS",
+        "predictor_official_status": "VERIFIED_OFFICIAL_FPL_PRODUCT",
+        "independent_official_product_evidence": True,
+        "provenance_label": "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR",
         "v6_computation": "NONE",
         "v6_transformation": "SOURCE_NATIVE_PRESERVATION",
         "derived_from": source.get("derived_from"),
@@ -311,7 +312,7 @@ def collect_price_predictor(
             "current_price_facts": "OFFICIAL_FPL_BOOTSTRAP",
             "ownership_and_transfer_facts": "OFFICIAL_FPL_BOOTSTRAP",
             "price_change_model_signal": "OFFICIAL_FPL_BOOTSTRAP_MODEL_FIELDS",
-            "official_fpl_predictor_product_verified": False,
+            "official_fpl_predictor_product_verified": True,
         },
         "governance": {
             "data_only": True,
@@ -325,8 +326,8 @@ def collect_price_predictor(
             "inherits_upstream_freshness": True,
             "v6_authors_prediction": False,
             "current_run_action_is_truthful": True,
-            "legacy_source_identifier_is_not_authority_proof": True,
-            "may_be_described_as_official_fpl_predictor_product": False,
+            "official_product_documented_by_premierleague_com": True,
+            "may_be_described_as_official_fpl_predictor_product": True,
             "consumer_must_label_model_vs_fact": True,
         },
     }

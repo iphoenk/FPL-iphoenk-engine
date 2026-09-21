@@ -16,6 +16,13 @@ from src.engines.v12_player_events import (
     project_player_fixture,
 )
 from src.engines.v12_player_minutes import estimate_player_minutes
+from src.engines.v12_position_probability_components import (
+    build_dynamic_matchup_vector,
+    convolve_point_distributions,
+    scoreline_clean_sheet_probabilities,
+    select_count_distribution,
+    select_scoreline_model,
+)
 from src.models import projection_components as legacy
 from src.models.historical_projection import build as build_projection
 
@@ -968,3 +975,94 @@ def test_B20_no_genuine_settled_history_is_not_reconstructed_from_hindsight():
     assert registry["settled_predeadline_sample_size"] == 0
     assert registry["dependence_status"] == "LOW_CONFIDENCE_CONSERVATIVE"
     assert registry["hindsight_reconstruction_forbidden"] is True
+
+
+
+def test_C1_stage2_count_family_selects_overdispersion():
+    model = select_count_distribution(
+        [0, 0, 0, 1, 1, 2, 3, 12],
+        3.5,
+        thresholds=(3, 6, 9),
+        label="TEST_COUNT",
+    )
+    assert model["family"] == "NEGATIVE_BINOMIAL"
+    assert 0.0 <= model["threshold_probabilities"]["3"] <= 1.0
+    assert model["posterior_predictive"]["replicated_variance"] > 0.0
+
+
+def test_C2_stage2_dynamic_fdr_is_position_specific_and_mechanistic():
+    matchup = {
+        "home_expected_goals": 2.0,
+        "away_expected_goals": 0.9,
+        "home_clean_sheet_probability": 0.42,
+        "official_fdr_home": 3,
+    }
+    context = {
+        "opponent_high_line": 0.8,
+        "opponent_fullback_vulnerability": 0.7,
+        "opponent_pressure": 0.8,
+    }
+    winger = build_dynamic_matchup_vector(
+        position="MID",
+        role="LW WINGER",
+        matchup=matchup,
+        home=True,
+        current_context=context,
+    )
+    centre_back = build_dynamic_matchup_vector(
+        position="DEF",
+        role="CB",
+        matchup=matchup,
+        home=True,
+        current_context=context,
+    )
+    assert set(winger["vector"]) == {
+        "goal",
+        "creation",
+        "attack",
+        "clean_sheet",
+        "defcon",
+        "save",
+        "set_piece",
+        "aerial",
+        "transition",
+        "minutes",
+        "bonus",
+    }
+    assert winger["vector"]["goal"]["multiplier"] != centre_back["vector"]["goal"]["multiplier"]
+    assert winger["football_mechanism_interactions"]
+    assert winger["official_fdr"]["applied_as_final_matchup"] is False
+    assert winger["arbitrary_final_point_bonus"] is False
+
+
+def test_C3_stage2_scoreline_family_is_selected_by_settled_sample():
+    fixtures = [
+        {"team_h_score": h, "team_a_score": a}
+        for h, a in [
+            (1, 0), (0, 0), (2, 1), (1, 1), (3, 1),
+            (0, 1), (2, 0), (1, 2), (0, 0), (2, 2),
+        ]
+    ]
+    selection = select_scoreline_model(fixtures)
+    assert selection["selected"] in {
+        "POISSON", "DIXON_COLES", "BIVARIATE_POISSON"
+    }
+    assert selection["sample_size"] == len(fixtures)
+    cs = scoreline_clean_sheet_probabilities(selection, 1.6, 1.1)
+    assert 0.0 <= cs["home_clean_sheet_probability"] <= 1.0
+    assert 0.0 <= cs["away_clean_sheet_probability"] <= 1.0
+
+
+def test_C4_stage2_horizon_distribution_is_true_convolution():
+    one = {
+        "probabilities": {"2": 0.5, "6": 0.5}
+    }
+    two = {
+        "probabilities": {"1": 0.25, "5": 0.75}
+    }
+    out = convolve_point_distributions([one, two])
+    assert out is not None
+    assert out["status"] == "READY_COMPLETE_CONDITIONAL_PMF"
+    assert abs(out["sum_probability"] - 1.0) < 1e-9
+    assert set(out["support"]) == {3, 7, 11}
+    assert out["expected_points"] == pytest.approx(7.0)

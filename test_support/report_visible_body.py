@@ -95,6 +95,7 @@ def valid_visible_body(
     include_inference: bool = True,
     weather_state_override: str | None = None,
     omit_rise_field: str | None = None,
+    omit_fall_field: str | None = None,
 ) -> str:
     """Build a deterministic body matching the canonical visible Full skeleton."""
     lines = ["# 04:30 MORNING DEEP REVIEW"]
@@ -164,7 +165,13 @@ def valid_visible_body(
                 )
             )
         elif section_id == "S12":
-            lines.extend(_rank20_tables(direction="FALL", count=20))
+            lines.extend(
+                _rank20_tables(
+                    direction="FALL",
+                    count=20,
+                    omit_field=omit_fall_field,
+                )
+            )
         elif section_id == "S14":
             if pre_render_qa.get("expected_fact_keys"):
                 lines.append("FACT: Official factual evidence is separated and timestamped.")

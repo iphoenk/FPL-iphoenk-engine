@@ -518,11 +518,17 @@ def validate_visible_report_body(
             failures.append("VISIBLE_ALL15_TACTICAL_ID_SET_MISMATCH")
 
     evidence = _parse_evidence_labels(body)
-    if expected_fact_keys and not evidence["FACT"]:
+    if sorted(evidence["FACT"]) != sorted(
+        str(value) for value in expected_fact_keys
+    ):
         failures.append("VISIBLE_FACT_KEYS_MISMATCH")
-    if expected_model_keys and not evidence["MODEL"]:
+    if sorted(evidence["MODEL"]) != sorted(
+        str(value) for value in expected_model_keys
+    ):
         failures.append("VISIBLE_MODEL_KEYS_MISMATCH")
-    if expected_inference_keys and not evidence["INFERENCE"]:
+    if sorted(evidence["INFERENCE"]) != sorted(
+        str(value) for value in expected_inference_keys
+    ):
         failures.append("VISIBLE_INFERENCE_KEYS_MISMATCH")
 
     visible_weather_state = _parse_weather_state(body)

@@ -1464,10 +1464,15 @@ def build_visible_mathematical_decision_stack(
     xmins = dict(proof.get("xmins_distribution") or {})
     horizons = dict(proof.get("horizons") or {})
     robustness = dict(proof.get("robustness") or {})
+    posterior_predictive = dict(proof.get("posterior_predictive") or {})
     event_probabilities = dict(
-        proof.get("event_probabilities")
+        posterior_predictive.get("event_probabilities")
+        or proof.get("event_probabilities")
         or proof.get("posterior_predictive_event_probabilities")
         or {}
+    )
+    point_distribution = dict(
+        posterior_predictive.get("point_distribution") or {}
     )
     mc = dict(proof.get("monte_carlo") or {})
     missing: list[str] = []
@@ -1492,6 +1497,12 @@ def build_visible_mathematical_decision_stack(
                 return event_probabilities.get(key)
         return "UNAVAILABLE"
 
+    def distribution_value(*keys: str) -> Any:
+        for key in keys:
+            if key in point_distribution:
+                return point_distribution.get(key)
+        return "UNAVAILABLE"
+
     return {
         "state": "COMPLETE" if not missing else ("PARTIAL" if proof else "UNAVAILABLE"),
         "missing_scope": missing,
@@ -1508,17 +1519,37 @@ def build_visible_mathematical_decision_stack(
         },
         "xmins_distribution": xmins or "UNAVAILABLE",
         "event_probabilities": {
-            "p_goal": event_value("p_goal", "goal"),
-            "p_assist": event_value("p_assist", "assist"),
-            "p_return": event_value("p_return", "return"),
-            "p_two_plus_returns": event_value(
-                "p_two_plus_returns", "p_2_plus_returns", "two_plus_returns"
+            "p_goal": event_value(
+                "p_goal_return", "p_goal", "goal"
             ),
-            "p_haul": event_value("p_haul", "haul"),
-            "p_blank": event_value(
-                "p_blank", "p_no_attacking_return", "blank"
+            "p_assist": event_value(
+                "p_assist_return", "p_assist", "assist"
+            ),
+            "p_return": event_value(
+                "p_attacking_return", "p_return", "return"
+            ),
+            "p_two_plus_returns": event_value(
+                "p_total_ga_ge_2",
+                "p_multiple_attacking_returns",
+                "p_two_plus_returns",
+                "p_2_plus_returns",
+                "two_plus_returns",
+            ),
+            "p_haul": distribution_value(
+                "p_haul_10_plus", "p_haul", "haul"
+            ),
+            "p_blank": distribution_value(
+                "p_fpl_blank", "p_blank", "blank"
+            ),
+            "p_no_attacking_return": event_value(
+                "p_no_attacking_return"
             ),
         },
+        "point_distribution": point_distribution or "UNAVAILABLE",
+        "posterior_predictive_source": (
+            posterior_predictive.get("source_contract")
+            or "UNAVAILABLE"
+        ),
         "horizons": horizons or "UNAVAILABLE",
         "p_outperform": robustness.get(
             "p_outperform",

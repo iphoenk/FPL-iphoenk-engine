@@ -7,7 +7,9 @@ import pytest
 
 from src.engines.v12_integrated_report_runner import (
     IntegratedRunnerError,
+    _core_slot_binding,
     _rank20_rows,
+    _report_prefetch_binding,
     parse_command,
 )
 
@@ -79,6 +81,8 @@ def test_integrated_runner_source_exposes_every_owner_stage_without_silent_skip(
         .read_text(encoding="utf-8")
     )
     required = (
+        "CORE_SLOT_BINDING",
+        "REPORT_PREFETCH_BINDING",
         "V6_FACTUAL_BINDING",
         "P1.1_XMINS",
         "P1.3_P1.3B_PLAYER_EVENTS",
@@ -113,3 +117,50 @@ def test_integrated_runner_workflow_is_executor_only_and_artifact_bound():
     assert "report_body.md" in text
     assert "execution_proof.json" in text
     assert "issue title" not in text.lower()
+
+
+
+def test_integrated_runner_binds_1230_report_to_1200_same_hour_core_slot():
+    result = _core_slot_binding(
+        report_slot="2026-09-21T12:30:00+07:00",
+        publish_integrity={"logical_slot": "2026-09-21T05:00:00+00:00"},
+    )
+    assert result["status"] == "PASS"
+    assert result["expected_core_slot"] == "2026-09-21T12:00:00+07:00"
+    assert result["actual_core_slot_utc"] == "2026-09-21T05:00:00+00:00"
+
+    stale = _core_slot_binding(
+        report_slot="2026-09-21T12:30:00+07:00",
+        publish_integrity={"logical_slot": "2026-09-21T04:00:00+00:00"},
+    )
+    assert stale["status"] == "PARTIAL"
+    assert stale["reason"] == "CORE_SLOT_MISMATCH"
+
+
+def test_integrated_runner_requires_exact_full_master_prefetch_occurrence():
+    snapshot = {
+        "report_kind": "full_master",
+        "target_logical_report_slot": "2026-09-21T12:30:00+07:00",
+        "personal_requested": True,
+        "mini_league_requested": True,
+        "live_requested": True,
+        "public_core_complete": True,
+        "fresh_for_target_report": True,
+        "report_prefetch_run_id": "prefetch-1230",
+        "generated_at": "2026-09-21T12:25:00+07:00",
+    }
+    passed = _report_prefetch_binding(
+        report_slot="2026-09-21T12:30:00+07:00",
+        report_prefetch=snapshot,
+    )
+    assert passed["status"] == "PASS"
+    assert all(passed["checks"].values())
+
+    stale = dict(snapshot)
+    stale["target_logical_report_slot"] = "2026-09-21T11:30:00+07:00"
+    failed = _report_prefetch_binding(
+        report_slot="2026-09-21T12:30:00+07:00",
+        report_prefetch=stale,
+    )
+    assert failed["status"] == "PARTIAL"
+    assert "target_report_slot_match" in failed["reason"]

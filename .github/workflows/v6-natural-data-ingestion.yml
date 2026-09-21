@@ -69,7 +69,10 @@ jobs:
         github.event.issue.number == 431 &&
         github.actor == github.repository_owner &&
         github.event.action == 'created' &&
-        startsWith(github.event.comment.body, '/v6-report-prefetch')
+        (
+          startsWith(github.event.comment.body, '/v6-report-prefetch') ||
+          startsWith(github.event.comment.body, '/v6-manual-recovery')
+        )
       ) ||
       (
         github.event_name == 'issues' &&
@@ -450,7 +453,10 @@ jobs:
           github.event.issue.number == 431 &&
           github.actor == github.repository_owner &&
           github.event.action == 'created' &&
-          startsWith(github.event.comment.body, '/v6-report-prefetch')
+          (
+            startsWith(github.event.comment.body, '/v6-report-prefetch') ||
+            startsWith(github.event.comment.body, '/v6-manual-recovery')
+          )
         ) ||
         (
           github.event_name == 'issues' &&

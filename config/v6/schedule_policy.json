@@ -81,7 +81,12 @@
     "counts_as_completed_operational_slot": false,
     "counts_as_completed_scheduled_slot": false,
     "allowed_actor": "repository_owner",
-    "confirmation_phrase": "RECOVER_V6"
+    "confirmation_phrase": "RECOVER_V6",
+    "control_issue_number": 431,
+    "issue_comment_command": "/v6-manual-recovery",
+    "issue_comment_transport_enabled": true,
+    "issue_comment_requires_confirmation": true,
+    "transport_role": "CONTROLLED_NON_NATURAL_RECOVERY_ONLY"
   },
   "governance": {
     "scheduled_runtime_is_primary_authority": false,

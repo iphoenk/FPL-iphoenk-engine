@@ -92,6 +92,7 @@ def test_v6_ingestion_uses_single_hourly_master_transport() -> None:
     assert not SCHEDULE_KEY.search(text)
     assert "/v6-master-acquire" not in text
     assert "/v6-report-prefetch" in text
+    assert "/v6-manual-recovery" in text
     assert "FPL_MASTER_SLOT" in text
     assert "FPL_REPORT_PREFETCH " not in text
     assert "github.event.issue.number == 431" in text

@@ -296,8 +296,24 @@ def authorize_issue(
         raise WorkflowControlError("V6 governed issue command is restricted to repository owner")
     command = _issue_command(comment_body)
     controls = {
-        str((policy.get("master_orchestrated") or {}).get("issue_comment_command") or ""): "master_orchestrated",
-        str((policy.get("report_prefetch") or {}).get("issue_comment_command") or ""): "report_prefetch",
+        str(
+            (policy.get("master_orchestrated") or {}).get(
+                "issue_comment_command"
+            )
+            or ""
+        ): "master_orchestrated",
+        str(
+            (policy.get("report_prefetch") or {}).get(
+                "issue_comment_command"
+            )
+            or ""
+        ): "report_prefetch",
+        str(
+            (policy.get("manual_recovery") or {}).get(
+                "issue_comment_command"
+            )
+            or ""
+        ): "manual_recovery",
     }
     mode = controls.get(command)
     if not mode:
@@ -305,10 +321,16 @@ def authorize_issue(
     control = dict(policy.get(mode) or {})
     if control.get("enabled") is not True:
         raise WorkflowControlError(f"V6 {mode} is disabled")
-    if int(issue_number) != int(control.get("control_issue_number") or 0):
-        raise WorkflowControlError("V6 governed control issue number mismatch")
+    if int(issue_number) != int(
+        control.get("control_issue_number") or 0
+    ):
+        raise WorkflowControlError(
+            "V6 governed control issue number mismatch"
+        )
     if mode == "master_orchestrated":
         parse_master_issue_values(policy, comment_body)
+    elif mode == "manual_recovery":
+        _parse_manual_recovery_values(policy, comment_body)
     return mode
 
 
@@ -326,7 +348,15 @@ def classify_invocation(policy: dict[str, Any], *, event_name: str, event: dict[
             return str(master.get("issue_schedule_kind") or "chatgpt_scheduler")
         prefetch = dict(policy.get("report_prefetch") or {})
         if command == str(prefetch.get("issue_comment_command") or ""):
-            return str(prefetch.get("schedule_kind") or "report_prefetch")
+            return str(
+                prefetch.get("schedule_kind") or "report_prefetch"
+            )
+        recovery = dict(policy.get("manual_recovery") or {})
+        if command == str(recovery.get("issue_comment_command") or ""):
+            _parse_manual_recovery_values(policy, body)
+            return str(
+                recovery.get("schedule_kind") or "manual_recovery"
+            )
         return "governed_issue_command_unknown"
     if event_name == "issues":
         title = str((event.get("issue") or {}).get("title") or "")
@@ -358,6 +388,40 @@ def _parse_issue_prefetch_values(comment_body: str) -> dict[str, str]:
         raise WorkflowControlError(f"Unsupported report-prefetch arguments: {sorted(unknown)}")
     if not str(values.get("reason") or "").strip():
         raise WorkflowControlError("Issue-command report prefetch requires reason=<audit reason>")
+    return values
+
+
+def _parse_manual_recovery_values(
+    policy: dict[str, Any],
+    comment_body: str,
+) -> dict[str, str]:
+    values = _parse_key_value_tokens(
+        comment_body,
+        label="manual-recovery",
+    )
+    allowed = {"reason", "confirm"}
+    unknown = set(values) - allowed
+    if unknown:
+        raise WorkflowControlError(
+            f"Unsupported manual-recovery arguments: {sorted(unknown)}"
+        )
+    missing = allowed - set(values)
+    if missing:
+        raise WorkflowControlError(
+            f"Missing manual-recovery arguments: {sorted(missing)}"
+        )
+    reason = str(values.get("reason") or "").strip()
+    if not reason or any(character.isspace() for character in reason):
+        raise WorkflowControlError(
+            "manual-recovery reason must be one non-empty token"
+        )
+    control = dict(policy.get("manual_recovery") or {})
+    if values.get("confirm") != str(
+        control.get("confirmation_phrase") or ""
+    ):
+        raise WorkflowControlError(
+            "V6 manual recovery confirmation phrase mismatch"
+        )
     return values
 
 
@@ -526,6 +590,18 @@ def main() -> int:
                         "V6_MASTER_REASON": values["reason"],
                         "V6_MASTER_AUDIT": values["audit"],
                         "V6_CHATGPT_SCHEDULER_PROOF": "true",
+                    },
+                )
+            elif mode == "manual_recovery":
+                values = _parse_manual_recovery_values(
+                    policy,
+                    comment_body,
+                )
+                _append(
+                    "GITHUB_ENV",
+                    {
+                        "V6_MANUAL_RECOVERY_REASON": values["reason"],
+                        "V6_MANUAL_CONFIRM": values["confirm"],
                     },
                 )
             print(f"Governed V6 {mode} issue-command authorized")

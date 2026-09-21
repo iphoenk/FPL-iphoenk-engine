@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-21T21:34:04+07:00`  
+> **Last runtime/documentation sync:** `2026-09-21T21:46:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -410,3 +410,14 @@ are never silently zero-filled. Stage 2 remains not started. Final
 runtime snapshot contains complete Official FPL match history through the
 latest finished GW, and one controlled DEEP run passes the Stage 1 analytics,
 canonical universe, PRE_RENDER, POST_RENDER and HUMAN_FACING acceptance gates.
+
+### Controlled Stage 1 runtime recovery
+
+For bounded acceptance work only, the existing V6 `manual_recovery` mode can
+also be invoked by the repository owner through issue #431 with
+`/v6-manual-recovery reason=<ONE_TOKEN> confirm=RECOVER_V6`. This is a
+controlled, non-natural recovery transport. It is never scheduler proof, never
+completes an operational or scheduled slot, never changes the single ChatGPT
+scheduler authority, and never creates a second recurring acquisition path.
+The existing workflow-dispatch recovery guard remains unchanged.
+

@@ -5,6 +5,15 @@ from pathlib import Path
 import pytest
 
 from src.engines.price_radar import MODEL_THRESHOLD
+from src.engines.visible_content_proof import canonical_mode_contract
+from src.runtime_v6.domains.report_plane.delivery_integrity import (
+    DEEP_MANDATORY_SECTIONS,
+    FINAL_MANDATORY_SECTIONS,
+    MATCH_MANDATORY_SECTIONS,
+    POST_ALL_MATCH_MANDATORY_SECTIONS,
+    PRICE_MANDATORY_SECTIONS,
+)
+from src.runtime_v6.domains.report_plane.visible_body_contract import _parse_sections
 from src.engines.v12_report_orchestration import (
     ReportOrchestrationError,
     analytic_execution_truth,
@@ -1629,3 +1638,66 @@ def test_deep_package_frontier_complete_requires_full_universe_search_proof():
     assert "Candidate A" in body
     assert "UTILITY ΔHOLD 3.4" in body
     assert "Owned Weak Link -> Candidate A" in body
+
+
+
+def test_report_plane_mode_catalogs_cannot_drift_from_canonical_v12():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    expected = {
+        "DEEP": DEEP_MANDATORY_SECTIONS,
+        "MATCH": MATCH_MANDATORY_SECTIONS,
+        "PRICE": PRICE_MANDATORY_SECTIONS,
+        "POST_ALL_MATCH": POST_ALL_MATCH_MANDATORY_SECTIONS,
+        "FINAL": FINAL_MANDATORY_SECTIONS,
+    }
+    for mode, runtime_catalog in expected.items():
+        contract = canonical_mode_contract(canonical, mode)
+        assert list(runtime_catalog) == contract["expected_section_ids"], mode
+
+
+def test_visible_section_parser_supports_all_current_two_digit_mode_sections():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    bodies = {
+        "MATCH": "\n".join(
+            f"## MATCH {index} — section"
+            for index in range(1, 14)
+        ),
+        "PRICE": "\n".join(
+            f"## PRICE {index} — section"
+            for index in range(1, 12)
+        ),
+        "POST_ALL_MATCH": "\n".join(
+            f"## POST-ALL-MATCH {index} — section"
+            for index in range(1, 14)
+        ),
+    }
+    for mode, body in bodies.items():
+        parsed, _, _ = _parse_sections(body)
+        assert parsed == canonical_mode_contract(
+            canonical, mode
+        )["expected_section_ids"], mode
+
+
+def test_deep_renderer_headings_are_visible_qa_parseable_and_canonical_ordered():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    report = materialize_deep_report(
+        canonical_text=canonical,
+        section_payloads={},
+    )
+    body = render_deep_text(report)
+    parsed, _, _ = _parse_sections(body)
+    assert parsed == canonical_mode_contract(
+        canonical, "DEEP"
+    )["expected_section_ids"]
+
+
+def test_price_signal_visible_identity_is_not_misrepresented_as_official_product():
+    row = build_price20(
+        predictor_artifact=_crossing_contract_price_artifact(),
+        direction="RISE",
+    )["rows"][0]
+    assert row["price_fact"] == "FACT"
+    assert row["predictor_classification"] == "MODEL"
+    assert row["artifact_source"] == "official_price_predictor"
+    assert row["estimate_source"] == "V6_DERIVED_PRICE_SIGNAL"
+    assert "not an Official FPL predictor/product" in row["visible_source_label"]

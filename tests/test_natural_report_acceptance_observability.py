@@ -59,10 +59,12 @@ def _evidence(**overrides):
         "render_attempted": True,
         "render_completed": True,
         "rendered_mode": "MATCH",
-        "rendered_section_ids": ["MATCH1", "MATCH2", "MATCH3"],
-        "rendered_section_names": ["Live state", "Our team", "League impact"],
-        "section_count": 3,
+        "rendered_section_ids": [f"MATCH{index}" for index in range(1, 14)],
+        "rendered_section_names": [f"Match section {index}" for index in range(1, 14)],
+        "section_count": 13,
         "critical_sections_present": True,
+        "post_render_qa_pass": True,
+        "human_facing_qa_pass": True,
         "render_content_digest": "b" * 64,
         "render_completed_at": "2026-09-21T00:30:20+07:00",
         "report_instance_count": 1,
@@ -281,8 +283,22 @@ def test_20_one_icon_subscope_failure_does_not_erase_other_fields():
 
 
 def test_21_deep_match_is_one_coherent_report():
+    deep_sections = (
+        [f"S{index:02d}" for index in range(1, 16)]
+        + ["S15B"]
+        + [f"S{index:02d}" for index in range(16, 20)]
+    )
+    match_sections = [f"MATCH{index}" for index in range(1, 14)]
+    section_ids = deep_sections + match_sections
     proof = build_natural_report_acceptance_proof(
-        _evidence(final_mode="DEEP+MATCH", rendered_mode="DEEP+MATCH", report_instance_count=1)
+        _evidence(
+            final_mode="DEEP+MATCH",
+            rendered_mode="DEEP+MATCH",
+            rendered_section_ids=section_ids,
+            rendered_section_names=[f"Section {index}" for index in range(len(section_ids))],
+            section_count=len(section_ids),
+            report_instance_count=1,
+        )
     )
     assert proof["acceptance"]["routing_acceptance"] == "PASS"
     assert proof["acceptance"]["render_acceptance"] == "PASS"
@@ -445,3 +461,119 @@ def test_32_same_slot_ledger_persists_only_sealed_acceptance_proof():
     assert "natural_report_acceptance_evidence" not in ledger
     assert ledger["natural_report_acceptance_proof"]["immutable"] is True
 
+
+
+
+def test_33_natural_1230_cannot_reuse_1100_core_as_same_slot():
+    proof = build_natural_report_acceptance_proof(
+        _evidence(
+            scheduler_occurrence="2026-09-21T12:30:00+07:00",
+            observed_at="2026-09-21T12:33:05+07:00",
+            core_logical_slot="2026-09-21T11:00:00+07:00",
+            core_gate_resolution="ALREADY_FULFILLED",
+            same_slot_fulfilled=True,
+        )
+    )
+    assert proof["core"]["core_slot_relation"]["valid"] is False
+    assert (
+        proof["core"]["core_slot_relation"]["expected_core_logical_slot"]
+        == "2026-09-21T12:00:00+07:00"
+    )
+    assert "CORE_LOGICAL_SLOT_MISMATCH" in proof["failures"]
+    assert proof["evidence_integrity"] == "FAIL"
+
+
+def test_34_natural_1230_exact_1200_core_passes_slot_relation():
+    proof = build_natural_report_acceptance_proof(
+        _evidence(
+            scheduler_occurrence="2026-09-21T12:30:00+07:00",
+            observed_at="2026-09-21T12:33:05+07:00",
+            core_logical_slot="2026-09-21T05:00:00+00:00",
+        )
+    )
+    relation = proof["core"]["core_slot_relation"]
+    assert relation["valid"] is True
+    assert relation["expected_core_logical_slot"] == "2026-09-21T12:00:00+07:00"
+
+
+def test_35_under_rendered_deep_like_broken_1230_report_is_rejected():
+    partial_sections = [
+        "S01",
+        "S11",
+        "S12",
+        "S13",
+        "S15B",
+        "S17",
+        "S18",
+        "S19",
+    ]
+    proof = build_natural_report_acceptance_proof(
+        _evidence(
+            preliminary_report_due=True,
+            final_report_due=True,
+            final_mode="DEEP",
+            dynamic_trigger=False,
+            rendered_mode="DEEP",
+            rendered_section_ids=partial_sections,
+            rendered_section_names=[f"Section {value}" for value in partial_sections],
+            section_count=len(partial_sections),
+        )
+    )
+    assert proof["render"]["render_proven"] is False
+    assert proof["acceptance"]["render_acceptance"] == "FAIL"
+    assert "S02" in proof["render"]["section_catalog"]["missing_section_ids"]
+    assert "S14" in proof["render"]["section_catalog"]["missing_section_ids"]
+    assert "S16" in proof["render"]["section_catalog"]["missing_section_ids"]
+    assert any(
+        failure.startswith("RENDER_SECTION_CATALOG_MISSING=")
+        for failure in proof["failures"]
+    )
+
+
+def test_36_complete_deep_catalog_with_post_render_and_human_qa_is_render_proven():
+    deep_sections = (
+        [f"S{index:02d}" for index in range(1, 16)]
+        + ["S15B"]
+        + [f"S{index:02d}" for index in range(16, 20)]
+    )
+    proof = build_natural_report_acceptance_proof(
+        _evidence(
+            preliminary_report_due=True,
+            final_report_due=True,
+            final_mode="DEEP",
+            dynamic_trigger=False,
+            rendered_mode="DEEP",
+            rendered_section_ids=deep_sections,
+            rendered_section_names=[f"Section {value}" for value in deep_sections],
+            section_count=len(deep_sections),
+        )
+    )
+    assert proof["render"]["section_catalog"]["catalog_complete"] is True
+    assert proof["render"]["section_catalog"]["catalog_order_exact"] is True
+    assert proof["render"]["render_proven"] is True
+    assert proof["acceptance"]["render_acceptance"] == "PASS"
+
+
+def test_37_render_proof_requires_post_render_and_human_facing_qa():
+    deep_sections = (
+        [f"S{index:02d}" for index in range(1, 16)]
+        + ["S15B"]
+        + [f"S{index:02d}" for index in range(16, 20)]
+    )
+    proof = build_natural_report_acceptance_proof(
+        _evidence(
+            preliminary_report_due=True,
+            final_report_due=True,
+            final_mode="DEEP",
+            dynamic_trigger=False,
+            rendered_mode="DEEP",
+            rendered_section_ids=deep_sections,
+            rendered_section_names=[f"Section {value}" for value in deep_sections],
+            section_count=len(deep_sections),
+            post_render_qa_pass=False,
+            human_facing_qa_pass=False,
+        )
+    )
+    assert proof["render"]["render_proven"] is False
+    assert "POST_RENDER_QA_NOT_PROVEN" in proof["failures"]
+    assert "HUMAN_FACING_QA_NOT_PROVEN" in proof["failures"]

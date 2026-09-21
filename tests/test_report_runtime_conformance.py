@@ -129,7 +129,11 @@ def test_01_stale_deep_plans_exactly_one_governed_refresh_attempt():
     )
     assert plan["attempt_governed_refresh"] is True
     assert plan["refresh_attempt_count"] == 1
-    assert plan["transport"] == "ISSUE_431_EXISTING_GOVERNED_TRANSPORT"
+    assert plan["transport"] == "ISSUE_431_REPORT_PREFETCH_COMMENT"
+    assert plan["issue_comment_command"] == "/v6-report-prefetch"
+    assert plan["report_prefetch_kind"] == "full_master"
+    assert plan["attempt_report_prefetch"] is True
+    assert plan["full_core_acquisition_allowed"] is False
     assert plan["alternate_transport_allowed"] is False
 
 
@@ -165,9 +169,28 @@ def test_04_refresh_failure_keeps_original_report_deliverable_degraded():
         canonical_freshness_threshold_minutes=45,
     )
     result = resolve_governed_refresh_result(plan, result="FAILED")
-    assert result["core_refresh"] == "DEGRADED"
+    assert result["report_scope_refresh"] == "DEGRADED"
+    assert result["core_refresh"] == "UNCHANGED"
     assert result["report_can_continue"] is True
     assert result["next_action"] == "CONTINUE_CANONICAL_EVIDENCE_LADDER_SAME_REPORT_SLOT"
+
+
+def test_04b_core_slot_fulfillment_does_not_satisfy_stale_report_scope_refresh():
+    plan = plan_due_report_refresh(
+        report_due=True,
+        report_mode="DEEP",
+        required_scope_age_minutes=80,
+        canonical_freshness_threshold_minutes=45,
+        same_logical_data_slot_fulfilled=True,
+        report_slot="2026-09-21T12:30:00+07:00",
+    )
+    assert plan["status"] == "GOVERNED_REPORT_PREFETCH_REQUIRED"
+    assert plan["attempt_report_prefetch"] is True
+    assert plan["report_prefetch_kind"] == "full_master"
+    assert plan["report_prefetch_logical_slot"] == "2026-09-21T12:30:00+07:00"
+    assert plan["core_slot_fulfilled_observed"] is True
+    assert plan["core_slot_fulfillment_does_not_satisfy_report_scope_refresh"] is True
+    assert plan["report_prefetch_fulfills_core_slot"] is False
 
 
 def test_05_gw_specific_unexecuted_route_expires_after_official_deadline():

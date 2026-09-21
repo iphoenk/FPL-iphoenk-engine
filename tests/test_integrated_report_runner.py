@@ -485,3 +485,8 @@ def test_integrated_runner_requires_match_level_foundation_before_projection():
     assert "require_match_foundation" in source
     assert "player_match_rows=[]" not in source
     assert 'opponent_history_rows=[]' not in source
+
+
+def test_integrated_runner_source_compiles():
+    source = Path(runner.__file__).read_text(encoding="utf-8")
+    compile(source, str(runner.__file__), "exec")

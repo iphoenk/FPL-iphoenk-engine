@@ -654,7 +654,7 @@ def build_global_position_calibration(
         "bps_baseline": round(y_mean - slope * x_mean, 6),
         "tier_stats": tier_stats,
         "full_optadata_bps_reconstruction": False,
-        "authority": "EMPIRICAL_CURRENT_SEASON_BPS_BONUS_RELATIONSHIP",
+        "authority": "EMPIRICAL_CURRENT_SEASON_BPS_VS_CORE_POINTS_EXCLUDING_BONUS",
     }
 
 

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-21T22:09:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-21T22:26:43+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -423,4 +423,7 @@ Manual recovery may bypass only the ordinary same-slot polling cadence so the
 provider can actually be retried; verification and request-budget gates remain
 in force.
 The existing workflow-dispatch recovery guard remains unchanged.
+
+
+The final controlled DEEP acceptance has now proven every Stage 1 analytics/compute gate through PRE_RENDER. The remaining bounded repair is visible post-render proof wiring only: DEEP must render actual OUR15/ALL15 tables, exact XI/bench labels, Watchlist20 5/5/5/5 with explicit NON_OWNED evidence, RISE20/FALL20 canonical visible schema, exact FACT/MODEL/INFERENCE partition markers, weather source state, and mini-league denominator state. R6 remains fail-closed and is not relaxed; visible FACT/MODEL/INFERENCE labels must exactly match the PRE_RENDER partition.
 

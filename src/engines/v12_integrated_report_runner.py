@@ -45,7 +45,11 @@ from src.runtime_v6.domains.report_plane.report_qa import (
 from src.runtime_v6.domains.report_plane.visible_body_contract import _parse_sections
 from src.engines.v12_tactical_role import attach_tactical_role_scores
 from src.models.historical_projection import build as build_player_projections
-from src.models.v12_analytics_foundation import (\n    load_v6_analytics_foundation,\n    require_match_foundation,\n)\nfrom src.models.official_role_evidence import attach_official_role_evidence
+from src.models.v12_analytics_foundation import (
+    load_v6_analytics_foundation,
+    require_match_foundation,
+)
+from src.models.official_role_evidence import attach_official_role_evidence
 from src.models.team_strength import build_team_strength
 
 ROOT = Path(__file__).resolve().parents[2]

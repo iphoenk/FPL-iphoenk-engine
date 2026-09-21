@@ -6,7 +6,11 @@ from src.runtime_v6.delivery_integrity import DeliveryIntegrityError, MANDATORY_
 from src.runtime_v6.report_compute import build_report_compute_contract
 from src.runtime_v6.report_delivery import build_delivery_proof, validate_delivery_proof
 from src.runtime_v6.report_observability import build_report_observability
-from src.runtime_v6.report_qa import validate_post_render_qa, validate_pre_render_qa
+from src.runtime_v6.report_qa import (
+    _validate_visible_match_scout_blocks,
+    validate_post_render_qa,
+    validate_pre_render_qa,
+)
 from src.runtime_v6.report_recovery_closeout import CLOSEOUT_EVIDENCE_KEYS
 from src.runtime_v6.report_trigger import (
     build_ad_hoc_report_context,
@@ -389,4 +393,48 @@ def test_ad_hoc_deep_serious_decision_rejects_missing_visible_mathematical_stack
         truncated=False,
     )
     assert passed["status"] == "PASS"
+
+def test_visible_match_scout_requires_every_fixture_and_every_detail_field():
+    contract = {
+        "completed_fixture_ids": ["501", "502"],
+        "match_scout": [
+            {"fixture_id": 501},
+            {"fixture_id": 502},
+        ],
+    }
+    complete_block = """#### FIXTURE ID: {fixture}
+RESULT: 2-1
+FORMATION/SYSTEM: 4-2-3-1 vs 4-3-3
+COACH PATTERN: press / mid-block
+PLAYER ROLES: role evidence
+MINUTES/SUBS: substitution pattern
+XG/XA/XGI/SHOTS/CHANCES: process evidence
+SET PIECES/PENALTIES: set-piece evidence
+DEFCON: defensive contribution
+OPPONENT CHANNELS: channel evidence
+SUSTAINABLE VS NOISE: sustainable process
+OUR15 IMPLICATION: owned impact
+NEXT OPPONENT IMPLICATION: next matchup
+POSTERIOR CALIBRATION IMPLICATION: calibration input
+"""
+    complete = (
+        "### POST-MATCH MATCH-BY-MATCH SCOUT\n"
+        + complete_block.format(fixture=501)
+        + complete_block.format(fixture=502)
+    )
+    assert _validate_visible_match_scout_blocks(
+        rendered_body=complete,
+        content_contract=contract,
+    ) == []
+
+    missing = complete.replace(
+        "POSTERIOR CALIBRATION IMPLICATION: calibration input\n",
+        "",
+        1,
+    )
+    failures = _validate_visible_match_scout_blocks(
+        rendered_body=missing,
+        content_contract=contract,
+    )
+    assert "VISIBLE_MATCH_SCOUT_FIELD_MISSING=501:POSTERIOR CALIBRATION IMPLICATION" in failures
 

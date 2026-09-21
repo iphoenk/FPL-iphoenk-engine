@@ -153,21 +153,17 @@ def test_pre_render_rejects_duplicate_section_identity():
     assert result["render_allowed"] is False
 
 
-def test_pre_render_rejects_partial_for_section_not_explicitly_partial_allowed():
+def test_pre_render_rejects_invalid_section_state_even_when_fail_operational_states_are_allowed():
     manifest = _section_manifest()
-    section_id = next(
-        section_id
-        for section_id in MANDATORY_SECTIONS
-        if section_id not in PARTIAL_ALLOWED_SECTIONS
-    )
+    section_id = MANDATORY_SECTIONS[0]
     for row in manifest:
         if row["section_id"] == section_id:
-            row["status"] = "PARTIAL"
+            row["status"] = "NOT_RENDERED"
 
     result = _pre_render(section_manifest=manifest)
 
     assert result["status"] == "FAIL"
-    assert result["partial_not_allowed_sections"] == [section_id]
+    assert any(section_id in item for item in result["invalid_section_states"])
     assert result["render_allowed"] is False
 
 
@@ -180,7 +176,10 @@ def test_pre_render_accepts_partial_only_for_explicit_partial_allowed_sections()
     result = _pre_render(section_manifest=manifest)
 
     assert result["status"] == "PASS"
-    assert result["partial_sections"] == sorted(PARTIAL_ALLOWED_SECTIONS)
+    assert result["partial_sections"] == sorted(
+        section_id for section_id in MANDATORY_SECTIONS
+        if section_id in PARTIAL_ALLOWED_SECTIONS
+    )
     assert result["render_allowed"] is True
 
 
@@ -193,10 +192,10 @@ def test_pre_render_rejects_incomplete_authoritative_mini_league_denominator():
     assert result["delivery_ready"] is False
 
 
-def test_pre_render_accepts_explicit_degraded_s14b_when_icon_source_unavailable():
+def test_pre_render_accepts_explicit_degraded_s15b_when_icon_source_unavailable():
     manifest = _section_manifest()
     for row in manifest:
-        if row["section_id"] == "S14B":
+        if row["section_id"] == "S15B":
             row["status"] = "PARTIAL"
 
     result = _pre_render(
@@ -206,14 +205,14 @@ def test_pre_render_accepts_explicit_degraded_s14b_when_icon_source_unavailable(
 
     assert result["status"] == "PASS"
     assert result["mini_league_contract_state"] == "DEGRADED"
-    assert "S14B" in result["partial_sections"]
+    assert "S15B" in result["partial_sections"]
     assert result["render_allowed"] is True
 
 
-def test_post_render_accepts_visible_degraded_s14b_without_fabricated_denominator():
+def test_post_render_accepts_visible_degraded_s15b_without_fabricated_denominator():
     manifest = _section_manifest()
     for row in manifest:
-        if row["section_id"] == "S14B":
+        if row["section_id"] == "S15B":
             row["status"] = "PARTIAL"
     pre = _pre_render(
         section_manifest=manifest,
@@ -232,10 +231,10 @@ def test_post_render_accepts_visible_degraded_s14b_without_fabricated_denominato
     assert result["visible_mini_league_denominator_complete"] is False
 
 
-def test_post_render_rejects_s14b_missing_explicit_degraded_marker():
+def test_post_render_rejects_s15b_missing_explicit_degraded_marker():
     manifest = _section_manifest()
     for row in manifest:
-        if row["section_id"] == "S14B":
+        if row["section_id"] == "S15B":
             row["status"] = "PARTIAL"
     pre = _pre_render(
         section_manifest=manifest,
@@ -340,11 +339,7 @@ def test_post_render_rejects_section_status_drift_from_pre_render_contract():
         row["section_id"]: row["status"]
         for row in pre["section_manifest"]
     }
-    section_id = next(
-        section_id
-        for section_id in MANDATORY_SECTIONS
-        if section_id not in PARTIAL_ALLOWED_SECTIONS
-    )
+    section_id = MANDATORY_SECTIONS[0]
     section_states[section_id] = "PARTIAL"
 
     result = _post_render(pre, rendered_section_states=section_states)

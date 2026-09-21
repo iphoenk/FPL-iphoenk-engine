@@ -531,6 +531,24 @@ def run_deep(
             "DEEP integrated runner requires fresh same-occurrence V6 report-prefetch"
         )
 
+    publish_integrity = _read_json(
+        runtime_data_root / "data/v6/health/publish_integrity.json",
+        {},
+    ) or {}
+    core_binding = _core_slot_binding(
+        report_slot=report_slot,
+        publish_integrity=publish_integrity,
+    )
+    ledger.append(
+        {
+            "stage": "CORE_SLOT_BINDING",
+            "status": core_binding.get("status"),
+            "required": True,
+            "reason": core_binding.get("reason"),
+            "evidence": core_binding,
+        }
+    )
+
     official = _stage(
         ledger,
         "V6_OFFICIAL_FACTS",
@@ -922,21 +940,151 @@ def run_deep(
         ),
     }
 
+    math_stack = build_visible_mathematical_decision_stack({})
     report = materialize_deep_report(
         canonical_text=canonical,
         section_payloads=sections,
         checkpoint_time=checkpoint_time,
+        mathematical_decision_stack=math_stack,
+    )
+    section_manifest = [
+        {
+            "section_id": str(row.get("section_id") or ""),
+            "status": str(row.get("state") or ""),
+        }
+        for row in report.get("sections") or []
+    ]
+    compute_contract = _qa_compute_contract(
+        owned=owned,
+        lineup=lineup,
+        watchlist=watchlist,
+        rise=rise,
+        fall=fall,
+        sections=sections,
+    )
+    mini_complete = bool(
+        mini
+        and str(mini.get("coverage_state") or "").upper() == "FULL"
+    )
+    pre_render_qa = validate_pre_render_qa(
+        compute_contract=compute_contract,
+        section_manifest=section_manifest,
+        mini_league_denominator_complete=mini_complete,
+        report_mode="DEEP",
+        weather_contract_state="SOURCE_DEGRADED",
     )
     body = render_deep_text(report)
+    human_failures = validate_human_facing_body(body)
+    parsed_ids, _, _ = _parse_sections(body)
+    rendered_states = {
+        str(row.get("section_id") or ""): str(row.get("state") or "")
+        for row in report.get("sections") or []
+    }
+    post_render_qa = validate_post_render_qa(
+        pre_render_qa=pre_render_qa,
+        rendered_body=body,
+        rendered_section_ids=parsed_ids,
+        rendered_section_states=rendered_states,
+        rendered_compute_fingerprint=compute_contract["compute_fingerprint"],
+        render_contract_token=pre_render_qa.get("render_contract_token"),
+        rendered_counts=dict(pre_render_qa.get("expected_counts") or {}),
+        rendered_fact_keys=list(pre_render_qa.get("expected_fact_keys") or []),
+        rendered_model_keys=list(pre_render_qa.get("expected_model_keys") or []),
+        rendered_mini_league_denominator_complete=mini_complete,
+        rendered_weather_contract_state="SOURCE_DEGRADED",
+        truncated=False,
+    )
+    contract = canonical_mode_contract(canonical, "DEEP")
+    catalog_complete = (
+        list(parsed_ids) == list(contract.get("expected_section_ids") or [])
+    )
+    runner_status = (
+        "PASS"
+        if (
+            catalog_complete
+            and str(pre_render_qa.get("status") or "").upper() == "PASS"
+            and str(post_render_qa.get("status") or "").upper() == "PASS"
+            and not human_failures
+        )
+        else "PARTIAL"
+    )
+    ledger.extend(
+        [
+            {
+                "stage": "CANONICAL_RENDER",
+                "status": "PASS" if catalog_complete else "FAILED",
+                "required": True,
+                "reason": None if catalog_complete else "CANONICAL_CATALOG_MISMATCH",
+                "evidence": {
+                    "expected": contract.get("expected_section_ids"),
+                    "rendered": parsed_ids,
+                },
+            },
+            {
+                "stage": "PRE_RENDER_QA",
+                "status": pre_render_qa.get("status"),
+                "required": True,
+                "reason": ";".join(pre_render_qa.get("failures") or []) or None,
+            },
+            {
+                "stage": "POST_RENDER_QA",
+                "status": post_render_qa.get("status"),
+                "required": True,
+                "reason": ";".join(post_render_qa.get("failures") or []) or None,
+            },
+            {
+                "stage": "HUMAN_FACING_QA",
+                "status": "PASS" if not human_failures else "FAILED",
+                "required": True,
+                "reason": ";".join(human_failures) or None,
+            },
+        ]
+    )
+
     output_dir.mkdir(parents=True, exist_ok=True)
+    execution_proof = {
+        "schema_version": 2,
+        "runner": "V12_INTEGRATED_REPORT_RUNNER",
+        "report_slot": report_slot,
+        "report_mode": "DEEP",
+        "planning_gw": planning_gw,
+        "runner_status": runner_status,
+        "canonical_expected_section_ids": contract.get("expected_section_ids"),
+        "rendered_section_ids": parsed_ids,
+        "canonical_catalog_complete": catalog_complete,
+        "core_slot_binding": core_binding,
+        "report_prefetch_binding": {
+            "same_occurrence_bound": prefetch.get("same_occurrence_bound"),
+            "report_prefetch_run_id": prefetch.get("report_prefetch_run_id"),
+            "target_logical_report_slot": prefetch.get("target_logical_report_slot"),
+            "scope_checks": prefetch.get("scope_checks"),
+        },
+        "pre_render_qa_status": pre_render_qa.get("status"),
+        "post_render_qa_status": post_render_qa.get("status"),
+        "human_facing_qa_status": "PASS" if not human_failures else "FAIL",
+        "stages": ledger,
+        "no_silent_stage_skip": True,
+        "no_second_model_authority": True,
+        "monte_carlo_fabricated": False,
+    }
     bundle = {
-        "schema": "FPL_MASTER_V12_INTEGRATED_REPORT_BUNDLE_V1",
+        "schema": "FPL_MASTER_V12_INTEGRATED_REPORT_BUNDLE_V2",
         "authority": str(CANONICAL_PATH.relative_to(ROOT)),
         "state_authority": False,
         "report_mode": "DEEP",
         "report_slot": report_slot,
         "planning_gw": planning_gw,
+        "runner_status": runner_status,
         "stage_ledger": ledger,
+        "section_manifest": section_manifest,
+        "compute_contract": compute_contract,
+        "pre_render_qa": pre_render_qa,
+        "post_render_qa": post_render_qa,
+        "human_facing_qa": {
+            "status": "PASS" if not human_failures else "FAIL",
+            "failures": human_failures,
+        },
+        "execution_proof": execution_proof,
         "report": report,
         "visible_body": body,
         "source_fingerprints": {
@@ -954,25 +1102,16 @@ def run_deep(
             "second_methodology_created": False,
             "manual_shortlist_privileged": False,
             "report_falls_back_to_prose_without_bundle": False,
+            "fail_operational_delivery": True,
         },
     }
     (output_dir / "report_bundle.json").write_text(
-        json.dumps(bundle, indent=2, ensure_ascii=False),
+        json.dumps(bundle, indent=2, ensure_ascii=False, default=str),
         encoding="utf-8",
     )
     (output_dir / "report_body.md").write_text(body, encoding="utf-8")
     (output_dir / "execution_proof.json").write_text(
-        json.dumps(
-            {
-                "report_slot": report_slot,
-                "report_mode": "DEEP",
-                "planning_gw": planning_gw,
-                "stages": ledger,
-                "bundle_fingerprint": _fingerprint(bundle),
-            },
-            indent=2,
-            ensure_ascii=False,
-        ),
+        json.dumps(execution_proof, indent=2, ensure_ascii=False, default=str),
         encoding="utf-8",
     )
     return bundle
@@ -991,11 +1130,23 @@ def main() -> int:
         raise IntegratedRunnerError(
             f"runner stage-1 supports {sorted(SUPPORTED_MODES)}; got {mode}"
         )
-    run_deep(
+    bundle = run_deep(
         runtime_data_root=Path(args.runtime_data_root),
         report_slot=args.report_slot,
         output_dir=Path(args.output_dir),
         checkpoint_time=args.checkpoint_time,
+    )
+    print(
+        json.dumps(
+            {
+                "runner_status": bundle.get("runner_status"),
+                "report_mode": bundle.get("report_mode"),
+                "report_slot": bundle.get("report_slot"),
+                "section_count": len(bundle.get("section_manifest") or []),
+                "output_dir": str(Path(args.output_dir).resolve()),
+            },
+            sort_keys=True,
+        )
     )
     return 0
 

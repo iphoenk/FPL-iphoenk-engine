@@ -48,6 +48,15 @@ _MATCH_COUNT_TARGETS = {
     "XI": 11,
     "BENCH": 4,
 }
+_PRICE_COUNT_TARGETS = {
+    "WATCHLIST20": 20,
+    "RISE20": 20,
+    "FALL20": 20,
+}
+_POST_ALL_MATCH_COUNT_TARGETS = {
+    "OUR15": 15,
+    "WATCHLIST20": 20,
+}
 _MATCH_SECTION_IDS = MATCH_MANDATORY_SECTIONS
 _PRICE_SECTION_IDS = PRICE_MANDATORY_SECTIONS
 _POST_ALL_MATCH_SECTION_IDS = POST_ALL_MATCH_MANDATORY_SECTIONS
@@ -1293,6 +1302,10 @@ def _expected_visible_counts(report_mode: str) -> dict[str, int]:
     mode = str(report_mode or "LEGACY").strip().upper() or "LEGACY"
     if mode == "MATCH":
         return dict(_MATCH_COUNT_TARGETS)
+    if mode == "PRICE":
+        return dict(_PRICE_COUNT_TARGETS)
+    if mode == "POST_ALL_MATCH":
+        return dict(_POST_ALL_MATCH_COUNT_TARGETS)
     return dict(_FULL_COUNT_TARGETS)
 
 

@@ -375,6 +375,44 @@ def load_v6_analytics_foundation(
     supplemental_players = _supplemental_player_evidence(
         runtime_data_root
     )
+    team_penalty_xg: dict[int, float] = {}
+    player_penalty_xg: dict[str, float] = {}
+    for element_key, evidence in supplemental_players.items():
+        element = int(element_key)
+        official_row = official.get(element) or {}
+        team_id = int(official_row.get("team") or 0)
+        evidence["team_id"] = team_id
+        advanced = evidence.get("advanced_current") or {}
+        xg = advanced.get("xg")
+        npxg = advanced.get("npxg")
+        penalty_xg = (
+            max(0.0, float(xg) - float(npxg))
+            if xg is not None and npxg is not None
+            else 0.0
+        )
+        player_penalty_xg[element_key] = penalty_xg
+        if team_id > 0:
+            team_penalty_xg[team_id] = (
+                team_penalty_xg.get(team_id, 0.0) + penalty_xg
+            )
+    for element_key, evidence in supplemental_players.items():
+        team_id = int(evidence.get("team_id") or 0)
+        advanced = evidence.get("advanced_current") or {}
+        team_total = team_penalty_xg.get(team_id, 0.0)
+        player_total = player_penalty_xg.get(element_key, 0.0)
+        if team_total > 0.0 and completed_gw > 0:
+            advanced["team_penalty_attempt_rate_per_match"] = round(
+                team_total / 0.78 / max(1, completed_gw),
+                6,
+            )
+            advanced["player_penalty_taker_share"] = round(
+                player_total / team_total,
+                6,
+            )
+            advanced["penalty_chain_source"] = (
+                "UNDERSTAT_XG_MINUS_NPXG_EXACT_IDENTITY"
+            )
+        evidence["advanced_current"] = advanced
 
     required_core = (
         "official_element_id",

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "audit_id": "V12_STAGE1_ANALYTICS_COMPLETION_2026_09_21",
-  "observed_at": "2026-09-21T21:34:04+07:00",
+  "observed_at": "2026-09-22T05:10:10+07:00",
   "authority": "EVIDENCE_ONLY_NON_AUTHORITATIVE",
   "baseline": {
     "main_sha": "4955f91ab2ba560a0221a4d42a6fd672eafcd277",
@@ -142,15 +142,11 @@
     "package_frontier": "Stage 2 only; intentionally not started by Stage 1",
     "monte_carlo": "A compatibility only: existing MC consumer understands six-state P1.1; Stage 2 material MC execution remains not started",
     "renderer": "A: renderer remains downstream and cannot mask analytics gaps",
-    "pre_render": "A gate: required tests prove runner source compilation and Stage 1 contracts"
+    "pre_render": "A gate: required tests prove runner source compilation and Stage 1 contracts",
+    "stage1_final_acceptance": "A: controlled DEEP run 35659879299 PASS with same-occurrence full_master prefetch, exact core-slot binding, Stage 1 analytics/canonical/render gates all PASS"
   },
-  "exact_gaps_to_finish_stage1": [
-    "merge Official FPL finalized-history freshness repair to main with all required V6/V12/governance CI GREEN",
-    "publish a fresh runtime-data-v6 snapshot with normalized official_fpl player_matches through every finished GW",
-    "run one controlled DEEP integrated-report acceptance and require Stage 1 foundation, canonical universe, PRE_RENDER, POST_RENDER and HUMAN_FACING gates to PASS",
-    "update durable Stage 1 audit to stage1_green=true only after the controlled acceptance proof exists"
-  ],
-  "stage1_green": false,
+  "exact_gaps_to_finish_stage1": [],
+  "stage1_green": true,
   "stage2_started": false,
   "governance": {
     "v6_only": true,
@@ -161,11 +157,13 @@
     "qa_relaxed": false,
     "renderer_used_to_mask_analytics": false,
     "p1_1_legacy_moments_preserved_without_substitution_evidence": true,
-    "stage2_execution_started": false
+    "stage2_execution_started": false,
+    "stage1_closed_on_evidence": true,
+    "stage2_may_start_after_stage1": true
   },
   "stage1_implementation_green": true,
   "required_ci_green": true,
-  "runtime_acceptance_pending": true,
+  "runtime_acceptance_pending": false,
   "implementation_ci_green_head": "ca9f5129732e14cd2e0782946d0be68acccd98d8",
   "implementation_ci_green_repository_governance_run_id": 35609817302,
   "documentation_event_retrigger": "PR body timestamp was updated after prior push event; evidence-only commit retriggers checks with synchronized PR body + README timestamp",
@@ -176,5 +174,103 @@
     "official_fixture_resolution": "OFFICIAL_EXPLAIN_FIXTURE_ONLY",
     "dgw_aggregate_split_fabrication": false
   },
-  "stage1_official_history_repair_branch": "v12-stage1-official-history-freshness"
+  "stage1_official_history_repair_branch": "v12-stage1-official-history-freshness",
+  "final_acceptance": {
+    "status": "PASS",
+    "stage1_closed": true,
+    "stage2_ready": true,
+    "stage2_started": false,
+    "workflow_run_id": 35659879299,
+    "artifact_id": 10667026143,
+    "artifact_name": "v12-report-DEEP-35659879299",
+    "report_mode": "DEEP",
+    "report_slot": "2026-09-22T05:00:00+07:00",
+    "main_sha": "e20313c497d27e0cc9e800ab9de6280a7781510c",
+    "runtime_data_v6_sha": "b851d72f7183395c8d632e8d8f14e6c9282b17f0",
+    "report_prefetch_run_id": "22098ecb-4c96-4924-bc5e-2cf96691f7c6",
+    "runner_status": "PASS",
+    "canonical_catalog_complete": true,
+    "pre_render_qa_status": "PASS",
+    "post_render_qa_status": "PASS",
+    "human_facing_qa_status": "PASS",
+    "core_slot_binding": {
+      "status": "PASS",
+      "expected_core_slot": "2026-09-22T05:00:00+07:00",
+      "actual_core_slot": "2026-09-22T05:00:00+07:00",
+      "publish_integrity_status": "PASS"
+    },
+    "report_prefetch_binding": {
+      "same_occurrence_bound": true,
+      "target_logical_report_slot": "2026-09-22T05:00:00+07:00",
+      "report_kind_full_master": true,
+      "target_report_slot_match": true,
+      "personal_requested": true,
+      "mini_league_requested": true,
+      "public_core_complete": true,
+      "fresh_for_target_report": true,
+      "prefetch_health_acceptable": true
+    },
+    "required_stage_results": {
+      "V6_REPORT_PREFETCH_BINDING": "PASS",
+      "CORE_SLOT_BINDING": "PASS",
+      "V6_OFFICIAL_FACTS": "PASS",
+      "OUR15_IDENTITY": "PASS",
+      "TEAM_STRENGTH": "PASS",
+      "V12_ANALYTICS_FOUNDATION": "PASS",
+      "P1_1_P1_3_FULL_UNIVERSE": "PASS",
+      "ALL15_MATERIALIZATION": "PASS",
+      "CANONICAL_UNIVERSE_20_25_30_25": "PASS",
+      "CANONICAL_RENDER": "PASS",
+      "PRE_RENDER_QA": "PASS",
+      "POST_RENDER_QA": "PASS",
+      "HUMAN_FACING_QA": "PASS"
+    },
+    "optional_stage_results": {
+      "OFFICIAL_ROLE_EVIDENCE": "PASS",
+      "P1_6_TACTICAL_ROLE": "PASS",
+      "P1_7_LINEUP": "PASS",
+      "OFFICIAL_FPL_PREDICTOR_RISE20": "PASS",
+      "OFFICIAL_FPL_PREDICTOR_FALL20": "PASS",
+      "OUR15_PRICE_RADAR": "PASS",
+      "WATCHLIST20": "PASS",
+      "P1_8_MINI_LEAGUE_SNAPSHOT": "PASS"
+    },
+    "intentional_stage2_boundary": {
+      "P1_2_PACKAGE_UTILITY": "NOT_RUN",
+      "P1_4_MONTE_CARLO": "NOT_RUN",
+      "reason": "Stage 2 package/frontier and material Monte Carlo execution intentionally not started by Stage 1"
+    },
+    "official_history_proof": {
+      "source_id": "official_fpl",
+      "source_health": "GREEN",
+      "normalization_status": "NORMALIZED",
+      "finished_gws": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "available_gws": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "missing_gws": [],
+      "normalized_match_rows": 3191,
+      "exact_identity_rows": 3191,
+      "fixture_resolution": "OFFICIAL_EXPLAIN_FIXTURE_ONLY",
+      "aggregate_gw_stats_split_across_dgw": false,
+      "ambiguous_fixture_rows_fabricated": false
+    },
+    "governance": {
+      "no_second_model_authority": true,
+      "monte_carlo_fabricated": false,
+      "no_silent_stage_skip": true,
+      "scheduler_created": false,
+      "v6_mutated_by_report_runner": false
+    }
+  }
 }

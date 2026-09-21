@@ -183,7 +183,7 @@ def _state_rows(player: Mapping[str, Any]) -> list[dict[str, Any]]:
     xmins = player.get("xmins") or {}
     rows = _finite_states(xmins)
     names = {str(row.get("state")) for row in rows}
-    if names not in {
+    if frozenset(names) not in {
         frozenset(LEGACY_STATE_NAMES),
         frozenset(STAGE1_STATE_NAMES),
     }:

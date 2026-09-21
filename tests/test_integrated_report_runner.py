@@ -166,6 +166,68 @@ def test_prefetch_binding_rejects_stale_occurrence(tmp_path: Path):
         )
 
 
+
+def test_prefetch_binding_accepts_public_first_amber_when_only_private_auth_is_expired(tmp_path: Path):
+    slot = "2026-09-21T18:57:00+07:00"
+    runtime = tmp_path / "runtime"
+    _write(
+        runtime / "data/v6/report_prefetch/latest.json",
+        {
+            "report_kind": "full_master",
+            "target_logical_report_slot": slot,
+            "personal_requested": True,
+            "mini_league_requested": True,
+            "public_core_complete": True,
+            "fresh_for_target_report": True,
+            "generated_at": "2026-09-21T11:57:20+00:00",
+            "authenticated_personal_required_for_public_green": False,
+            "public_personal_status": "AVAILABLE",
+            "mini_league_status": "AVAILABLE",
+            "public_control_failures": [],
+            "auth_state": "AUTH_EXPIRED",
+            "personal_status": "DEGRADED",
+        },
+    )
+    _write(
+        runtime / "data/v6/health/report_prefetch.json",
+        {
+            "prefetch_status": "AMBER",
+            "public_core_status": "GREEN",
+            "auth_state": "AUTH_EXPIRED",
+        },
+    )
+    bound = runner._require_report_prefetch(runtime, report_slot=slot)
+    assert bound["same_occurrence_bound"] is True
+    assert bound["scope_checks"]["prefetch_health_acceptable"] is True
+
+
+def test_prefetch_binding_rejects_amber_when_public_scope_is_incomplete(tmp_path: Path):
+    slot = "2026-09-21T18:57:00+07:00"
+    runtime = tmp_path / "runtime"
+    _write(
+        runtime / "data/v6/report_prefetch/latest.json",
+        {
+            "report_kind": "full_master",
+            "target_logical_report_slot": slot,
+            "personal_requested": True,
+            "mini_league_requested": True,
+            "public_core_complete": True,
+            "fresh_for_target_report": True,
+            "generated_at": "2026-09-21T11:57:20+00:00",
+            "authenticated_personal_required_for_public_green": False,
+            "public_personal_status": "AVAILABLE",
+            "mini_league_status": "DEGRADED",
+            "public_control_failures": [],
+        },
+    )
+    _write(
+        runtime / "data/v6/health/report_prefetch.json",
+        {"prefetch_status": "AMBER", "public_core_status": "GREEN"},
+    )
+    with pytest.raises(runner.IntegratedRunnerError, match="prefetch_health_acceptable"):
+        runner._require_report_prefetch(runtime, report_slot=slot)
+
+
 def test_integrated_deep_runner_executes_owner_stages_and_materializes_full_catalog(
     monkeypatch,
     tmp_path: Path,

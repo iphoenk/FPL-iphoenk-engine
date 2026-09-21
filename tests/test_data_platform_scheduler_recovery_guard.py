@@ -9,6 +9,8 @@ from src.runtime_v6.wave3_proof import NATURAL_EVENT_NAME, NATURAL_SCHEDULE_KIND
 from src.runtime_v6.domains.control_plane.workflow_control import (
     WorkflowControlError,
     authorize_dispatch,
+    authorize_issue,
+    classify_invocation,
     load_policy,
 )
 
@@ -152,3 +154,55 @@ def test_recovery_guard_dispatch_identity_is_config_owned_and_workflow_contract_
     assert "inputs[mode]=manual_recovery" in text
     assert "inputs[reason]=WAVE2_SAFE_RECOVERY_CRITICAL" in text
     assert "inputs[confirm]=RECOVER_V6" in text
+
+
+
+def test_owner_manual_recovery_issue_transport_is_controlled_non_natural():
+    policy = load_policy()
+    command = (
+        "/v6-manual-recovery "
+        "reason=STAGE1_FINAL_ACCEPTANCE "
+        "confirm=RECOVER_V6"
+    )
+
+    assert authorize_issue(
+        policy,
+        actor="iphoenk",
+        repository_owner="iphoenk",
+        issue_number=431,
+        comment_body=command,
+    ) == "manual_recovery"
+    assert classify_invocation(
+        policy,
+        event_name="issue_comment",
+        event={"comment": {"body": command}},
+    ) == "manual_recovery"
+
+    with pytest.raises(WorkflowControlError):
+        authorize_issue(
+            policy,
+            actor="someone-else",
+            repository_owner="iphoenk",
+            issue_number=431,
+            comment_body=command,
+        )
+    with pytest.raises(WorkflowControlError):
+        authorize_issue(
+            policy,
+            actor="iphoenk",
+            repository_owner="iphoenk",
+            issue_number=431,
+            comment_body=(
+                "/v6-manual-recovery "
+                "reason=STAGE1_FINAL_ACCEPTANCE "
+                "confirm=WRONG"
+            ),
+        )
+
+    manual = policy["manual_recovery"]
+    assert manual["authoritative_runtime_snapshot"] is False
+    assert manual["counts_as_completed_operational_slot"] is False
+    assert manual["counts_as_completed_scheduled_slot"] is False
+    assert manual["transport_role"] == (
+        "CONTROLLED_NON_NATURAL_RECOVERY_ONLY"
+    )

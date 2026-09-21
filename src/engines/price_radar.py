@@ -605,7 +605,7 @@ def _overall_health(rows: list[dict[str, Any]], transport: dict[str, Any]) -> di
         "ui_scraping": False,
         "dedicated_predictor_endpoint": False,
         "model_threshold_percent": MODEL_THRESHOLD,
-        "threshold_is_official_rule": False,
+        "threshold_is_official_rule": True,
         "no_intra_cycle_crossing_eta": True,
     }
 

@@ -46,12 +46,37 @@ def _bootstrap():
 
 def _runtime_root(tmp_path: Path, report_slot: str) -> Path:
     runtime = tmp_path / "runtime"
+    prefetch = {
+        "report_kind": "full_master",
+        "target_logical_report_slot": report_slot,
+        "personal_requested": True,
+        "mini_league_requested": True,
+        "live_requested": False,
+        "public_core_complete": True,
+        "fresh_for_target_report": True,
+        "generated_at": "2026-09-21T05:30:00+00:00",
+        "report_prefetch_run_id": "prefetch-test",
+    }
+    _write(runtime / "data/v6/report_prefetch/latest.json", prefetch)
     _write(
         runtime / "data/v6/health/report_prefetch.json",
         {
+            "prefetch_status": "GREEN",
             "fresh_for_target_report": True,
             "generated_at": "2026-09-21T05:30:00+00:00",
             "public_core_status": "GREEN",
+        },
+    )
+    _write(
+        runtime / "data/v6/health/publish_integrity.json",
+        {
+            "status": "PASS",
+            "logical_slot": "2026-09-21T05:00:00+00:00",
+            "identity": {
+                "players": {"canonical_count": 15},
+                "teams": {"canonical_count": 5},
+                "fixtures": {"canonical_count": 1},
+            },
         },
     )
     _write(
@@ -114,8 +139,22 @@ def _fake_projections():
 def test_prefetch_binding_rejects_stale_occurrence(tmp_path: Path):
     runtime = tmp_path / "runtime"
     _write(
+        runtime / "data/v6/report_prefetch/latest.json",
+        {
+            "report_kind": "full_master",
+            "target_logical_report_slot": "2026-09-21T12:30:00+07:00",
+            "personal_requested": True,
+            "mini_league_requested": True,
+            "live_requested": False,
+            "public_core_complete": True,
+            "fresh_for_target_report": True,
+            "generated_at": "2026-09-21T00:00:00+00:00",
+        },
+    )
+    _write(
         runtime / "data/v6/health/report_prefetch.json",
         {
+            "prefetch_status": "GREEN",
             "fresh_for_target_report": True,
             "generated_at": "2026-09-21T00:00:00+00:00",
         },
@@ -214,9 +253,104 @@ def test_integrated_deep_runner_executes_owner_stages_and_materializes_full_cata
     assert stages["OFFICIAL_FPL_PREDICTOR_RISE20"] == "PASS"
     assert stages["P1_8_MINI_LEAGUE_SNAPSHOT"] == "PASS"
     assert stages["CANONICAL_UNIVERSE_20_25_30_25"] == "PARTIAL"
+    assert stages["CORE_SLOT_BINDING"] == "PASS"
+    assert "PRE_RENDER_QA" in stages
+    assert "POST_RENDER_QA" in stages
+    assert "HUMAN_FACING_QA" in stages
+    assert out["execution_proof"]["canonical_catalog_complete"] is True
+    assert out["runner_status"] in {"PASS", "PARTIAL"}
     assert (tmp_path / "out/report_bundle.json").exists()
     assert (tmp_path / "out/report_body.md").exists()
     assert (tmp_path / "out/execution_proof.json").exists()
+
+
+def test_integrated_deep_runner_keeps_bundle_when_projection_stage_fails(
+    monkeypatch,
+    tmp_path: Path,
+):
+    slot = "2026-09-21T12:30:00+07:00"
+    runtime = _runtime_root(tmp_path, slot)
+    bootstrap = _bootstrap()
+    monkeypatch.setattr(
+        runner,
+        "_official_payload",
+        lambda _: {
+            "payload": {"health": "GREEN"},
+            "bootstrap": bootstrap,
+            "fixtures": [{"id": 1}],
+        },
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_team_strength",
+        lambda *a, **k: {"teams": [], "matchups": []},
+    )
+
+    def projection_failure(*args, **kwargs):
+        raise RuntimeError("projection boom")
+
+    monkeypatch.setattr(runner, "build_player_projections", projection_failure)
+    monkeypatch.setattr(
+        runner,
+        "build_price20",
+        lambda **kwargs: {
+            "state": "DEGRADED",
+            "available_count": 0,
+            "expected_count": 20,
+            "rows": [],
+            "predictor_health": "GREEN",
+            "degradation_reason": "synthetic fixture",
+        },
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_actionable_price_radar",
+        lambda **kwargs: {"state": "COMPLETE", "rows": []},
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_watchlist20",
+        lambda **kwargs: {
+            "state": "DEGRADED",
+            "available_count": 0,
+            "expected_count": 20,
+            "rows": [],
+            "degradation_reason": "projection prerequisite unavailable",
+        },
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_mini_league_snapshot",
+        lambda *a, **k: {
+            "coverage_state": "FULL",
+            "current_context": {"our_rank": 7},
+        },
+    )
+
+    out = runner.run_deep(
+        runtime_data_root=runtime,
+        report_slot=slot,
+        output_dir=tmp_path / "out-failed-projection",
+        checkpoint_time="12:30",
+    )
+
+    stages = {row["stage"]: row for row in out["stage_ledger"]}
+    assert stages["P1_1_P1_3_FULL_UNIVERSE"]["status"] == "FAILED"
+    assert "projection boom" in stages["P1_1_P1_3_FULL_UNIVERSE"]["error"]
+    assert stages["P1_6_TACTICAL_ROLE"]["status"] == "NOT_RUN"
+    assert stages["P1_7_LINEUP"]["status"] == "NOT_RUN"
+    assert stages["P1_2_PACKAGE_UTILITY"]["status"] == "NOT_RUN"
+    assert stages["P1_4_MONTE_CARLO"]["status"] == "NOT_RUN"
+    assert out["runner_status"] == "PARTIAL"
+    section16 = next(
+        row for row in out["report"]["sections"] if row["section_id"] == "S16"
+    )
+    assert section16["state"] == "DEGRADED"
+    assert "projection boom" in section16["degradation_reason"]
+    assert out["execution_proof"]["canonical_catalog_complete"] is True
+    assert (tmp_path / "out-failed-projection/report_bundle.json").exists()
+    assert (tmp_path / "out-failed-projection/report_body.md").exists()
+    assert (tmp_path / "out-failed-projection/execution_proof.json").exists()
 
 
 def test_runner_source_has_no_legacy_runtime_imports():

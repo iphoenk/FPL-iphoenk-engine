@@ -694,13 +694,80 @@ def build_canonical_universe(
         )
         horizons = dict(player.get("horizons") or {})
         future = []
+        horizon_lineage: dict[str, Any] = {}
         for horizon, weight in ((1, 0.45), (3, 0.30), (5, 0.25)):
             data = dict(horizons.get(str(horizon)) or {})
+            distribution = dict(data.get("point_distribution") or {})
+            horizon_lineage[str(horizon)] = {
+                "mean": data.get("mean"),
+                "distribution_status": distribution.get("status"),
+                "distribution_model": distribution.get("model"),
+                "sum_probability": distribution.get("sum_probability"),
+            }
             if data.get("mean") is None:
                 future = []
                 break
             future.append(weight * _f(data.get("mean")) / horizon)
         fixture = sum(future) if future else None
+
+        xmins = dict(player.get("xmins") or {})
+        position_engine = dict(player.get("position_engine") or {})
+        matchup_vector = dict(
+            position_engine.get("matchup_vector")
+            or player.get("dynamic_matchup_vector")
+            or {}
+        )
+        p1_1_present = bool(
+            xmins
+            and (
+                xmins.get("expected_minutes") is not None
+                or xmins.get("xmins_distribution")
+            )
+        )
+        posterior_present = bool(rates and goal and assist)
+        position_engine_present = bool(
+            position_engine and matchup_vector.get("vector")
+        )
+        horizon_distributions_complete = all(
+            (horizon_lineage.get(str(horizon)) or {}).get(
+                "distribution_status"
+            )
+            == "READY_COMPLETE_CONDITIONAL_PMF"
+            for horizon in (1, 3, 5)
+        )
+        stage2_lineage = {
+            "contract": "V12_CANONICAL_STAGE2_SINGLE_CHAIN_V1",
+            "same_projection_row": True,
+            "snapshot_lineage": "SAME_GOVERNED_PROJECTION_SNAPSHOT",
+            "p1_1": {
+                "owner": "V12_PLAYER_MINUTES",
+                "present": p1_1_present,
+                "xMins": xmins.get("expected_minutes"),
+                "Pstart": xmins.get("start_probability"),
+                "P60": xmins.get("p_60_plus"),
+            },
+            "posterior": {
+                "owner": "V12_PLAYER_EVENTS",
+                "present": posterior_present,
+                "goal_rate90": goal.get("posterior_rate90"),
+                "assist_rate90": assist.get("posterior_rate90"),
+            },
+            "position_engine": {
+                "owner": "V12_PLAYER_EVENTS",
+                "present": position_engine_present,
+                "model": position_engine.get("model"),
+                "matchup_model": matchup_vector.get("model"),
+            },
+            "horizons": horizon_lineage,
+            "horizon_distributions_complete": horizon_distributions_complete,
+            "lineage_complete": bool(
+                p1_1_present
+                and posterior_present
+                and position_engine_present
+                and horizon_distributions_complete
+            ),
+            "duplicate_model_created": False,
+        }
         rows.append(
             {
                 "element_id": _i(player.get("element")),
@@ -715,6 +782,7 @@ def build_canonical_universe(
                 "_current": current,
                 "_tactical": None if tactical is None else _f(tactical),
                 "_fixture": fixture,
+                "stage2_lineage": stage2_lineage,
             }
         )
 
@@ -783,6 +851,13 @@ def build_canonical_universe(
         ),
         "players": rows,
         "complete_players": len(complete_rows),
+        "stage2_lineage_contract": "V12_CANONICAL_STAGE2_SINGLE_CHAIN_V1",
+        "stage2_lineage_complete_players": sum(
+            1
+            for row in complete_rows
+            if (row.get("stage2_lineage") or {}).get("lineage_complete")
+            is True
+        ),
         "position_counts": counts,
         "weights": {
             "PROVEN_HISTORICAL": 0.20,

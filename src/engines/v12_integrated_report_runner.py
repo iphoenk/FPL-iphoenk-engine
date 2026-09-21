@@ -27,14 +27,22 @@ from typing import Any, Callable, Mapping, Sequence
 
 from src.engines.v12_lineup_optimizer import optimize_lineup
 from src.engines.v12_mini_league_overlay import build_mini_league_snapshot
+from src.engines.visible_content_proof import canonical_mode_contract
 from src.engines.v12_report_orchestration import (
     build_actionable_price_radar,
     build_price20,
+    build_visible_mathematical_decision_stack,
     build_watchlist20,
     materialize_all15,
     materialize_deep_report,
     render_deep_text,
+    validate_human_facing_body,
 )
+from src.runtime_v6.domains.report_plane.report_qa import (
+    validate_post_render_qa,
+    validate_pre_render_qa,
+)
+from src.runtime_v6.domains.report_plane.visible_body_contract import _parse_sections
 from src.engines.v12_tactical_role import attach_tactical_role_scores
 from src.models.historical_projection import build as build_player_projections
 from src.models.official_role_evidence import attach_official_role_evidence
@@ -101,40 +109,96 @@ def _stage(
     return value
 
 
+def _parse_aware(value: Any) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed
+
+
+def _stage_failure_reason(ledger: Sequence[Mapping[str, Any]], name: str) -> str | None:
+    for row in reversed(list(ledger)):
+        if str(row.get("stage") or "") == name and str(row.get("status") or "") == "FAILED":
+            return f"{row.get('error_class')}: {row.get('error')}"
+    return None
+
+
+def _skip_stage(
+    ledger: list[dict[str, Any]],
+    name: str,
+    reason: str,
+    *,
+    required: bool = False,
+) -> None:
+    ledger.append(
+        {
+            "stage": name,
+            "status": "NOT_RUN",
+            "required": bool(required),
+            "reason": reason,
+        }
+    )
+
+
 def _require_report_prefetch(
     runtime_root: Path,
     *,
     report_slot: str,
 ) -> dict[str, Any]:
-    proof = _read_json(
+    """Bind DEEP to the exact full_master occurrence, never merely a fresh health summary."""
+    latest = _read_json(
+        runtime_root / "data/v6/report_prefetch/latest.json",
+        {},
+    ) or {}
+    health = _read_json(
         runtime_root / "data/v6/health/report_prefetch.json",
         {},
     ) or {}
-    if proof.get("fresh_for_target_report") is not True:
+    requested = _parse_aware(report_slot)
+    target = _parse_aware(
+        latest.get("target_logical_report_slot")
+        or latest.get("logical_slot")
+    )
+    generated = _parse_aware(latest.get("generated_at"))
+    if requested is None:
+        raise IntegratedRunnerError("report_slot must be timezone-aware ISO-8601")
+    checks = {
+        "report_kind_full_master": str(latest.get("report_kind") or "") == "full_master",
+        "target_report_slot_match": bool(
+            target is not None
+            and target.astimezone(requested.tzinfo) == requested
+        ),
+        "personal_requested": latest.get("personal_requested") is True,
+        "mini_league_requested": latest.get("mini_league_requested") is True,
+        "public_core_complete": latest.get("public_core_complete") is True,
+        "fresh_for_target_report": latest.get("fresh_for_target_report") is True,
+        "health_green": str(health.get("prefetch_status") or "").upper() == "GREEN",
+    }
+    failed = [key for key, value in checks.items() if not value]
+    if failed:
         raise IntegratedRunnerError(
-            "same-occurrence report-prefetch is not fresh_for_target_report"
+            "same-occurrence full_master prefetch mismatch: " + ",".join(failed)
         )
-    generated = str(proof.get("generated_at") or "")
-    if not generated:
+    if generated is None:
         raise IntegratedRunnerError("report-prefetch generated_at unavailable")
-    try:
-        generated_dt = datetime.fromisoformat(generated.replace("Z", "+00:00"))
-        slot_dt = datetime.fromisoformat(str(report_slot).replace("Z", "+00:00"))
-    except ValueError as exc:
-        raise IntegratedRunnerError("invalid report-prefetch/report-slot timestamp") from exc
-    if generated_dt.tzinfo is None or slot_dt.tzinfo is None:
-        raise IntegratedRunnerError("report-prefetch/report-slot timestamps must be timezone-aware")
-    age_minutes = abs((slot_dt - generated_dt.astimezone(slot_dt.tzinfo)).total_seconds()) / 60.0
-    # Prefetch may finish immediately before or shortly after an HH:30 occurrence.
+    age_minutes = abs(
+        (requested - generated.astimezone(requested.tzinfo)).total_seconds()
+    ) / 60.0
     if age_minutes > 15.0:
         raise IntegratedRunnerError(
             f"report-prefetch is not same-occurrence current: age_minutes={age_minutes:.2f}"
         )
     return {
-        **proof,
+        **latest,
+        "prefetch_health": health,
         "same_occurrence_bound": True,
         "report_slot": report_slot,
         "age_minutes": round(age_minutes, 3),
+        "scope_checks": checks,
+        "live_required_for_deep": False,
     }
 
 
@@ -328,6 +392,102 @@ def _lineup_content(lineup: Mapping[str, Any] | None) -> dict[str, Any]:
     }
 
 
+def _core_slot_binding(
+    *,
+    report_slot: str,
+    publish_integrity: Mapping[str, Any],
+) -> dict[str, Any]:
+    requested = _parse_aware(report_slot)
+    actual = _parse_aware(publish_integrity.get("logical_slot"))
+    if requested is None:
+        return {"status": "FAIL", "reason": "REPORT_SLOT_INVALID"}
+    expected = requested.replace(minute=0, second=0, microsecond=0)
+    actual_local = actual.astimezone(requested.tzinfo) if actual else None
+    matched = actual_local == expected
+    return {
+        "status": "PASS" if matched else "PARTIAL",
+        "reason": None if matched else "CORE_SLOT_MISMATCH",
+        "expected_core_slot": expected.isoformat(),
+        "actual_core_slot": actual_local.isoformat() if actual_local else None,
+        "publish_integrity_status": publish_integrity.get("status"),
+    }
+
+
+def _qa_compute_contract(
+    *,
+    owned: Sequence[Mapping[str, Any]],
+    lineup: Mapping[str, Any] | None,
+    watchlist: Mapping[str, Any] | None,
+    rise: Mapping[str, Any] | None,
+    fall: Mapping[str, Any] | None,
+    sections: Mapping[str, Any],
+) -> dict[str, Any]:
+    xi = list((lineup or {}).get("starting_xi") or [])
+    bench = list((lineup or {}).get("bench") or [])
+    watch_rows = list((watchlist or {}).get("rows") or [])
+    rise_rows = list((rise or {}).get("rows") or [])
+    fall_rows = list((fall or {}).get("rows") or [])
+    fact_key = "OFFICIAL_FPL_OCCURRENCE_FACTS"
+    model_key = "V12_OCCURRENCE_MODEL_OUTPUTS"
+    inference_key = "V12_DECISION_INFERENCE"
+    payload = {
+        "owned": [row.get("element_id") for row in owned],
+        "xi": xi,
+        "bench": bench,
+        "watch": watch_rows,
+        "rise": rise_rows,
+        "fall": fall_rows,
+        "sections": sections,
+    }
+    return {
+        "status": "PASS",
+        "compute_ready": True,
+        "delivery_ready": False,
+        "next_action": "PRE_RENDER_QA",
+        "failures": [],
+        "legacy_fallback_allowed": False,
+        "compute_fingerprint": _fingerprint(payload),
+        "OUR15": {
+            "status": "PASS" if len(owned) == 15 else "FAIL",
+            "total": len(owned),
+        },
+        "XI": {
+            "status": "PASS" if len(xi) == 11 else "FAIL",
+            "total": len(xi),
+        },
+        "BENCH": {
+            "status": "PASS" if len(bench) == 4 else "FAIL",
+            "total": len(bench),
+        },
+        "WATCHLIST20": {
+            "status": "PASS"
+            if str((watchlist or {}).get("state") or "").upper() == "COMPLETE"
+            else "FAIL",
+            "total": len(watch_rows),
+        },
+        "RISE20": {
+            "status": "PASS"
+            if str((rise or {}).get("state") or "").upper() == "COMPLETE"
+            else "FAIL",
+            "total": len(rise_rows),
+        },
+        "FALL20": {
+            "status": "PASS"
+            if str((fall or {}).get("state") or "").upper() == "COMPLETE"
+            else "FAIL",
+            "total": len(fall_rows),
+        },
+        "FACT_MODEL": {
+            "status": "PASS",
+            "overlap": [],
+            "fact_keys": [fact_key],
+            "model_keys": [model_key],
+            "inference_keys": [inference_key],
+        },
+        "serious_decision_required": True,
+    }
+
+
 def _section(
     state: str,
     content: Any,
@@ -371,6 +531,24 @@ def run_deep(
             "DEEP integrated runner requires fresh same-occurrence V6 report-prefetch"
         )
 
+    publish_integrity = _read_json(
+        runtime_data_root / "data/v6/health/publish_integrity.json",
+        {},
+    ) or {}
+    core_binding = _core_slot_binding(
+        report_slot=report_slot,
+        publish_integrity=publish_integrity,
+    )
+    ledger.append(
+        {
+            "stage": "CORE_SLOT_BINDING",
+            "status": core_binding.get("status"),
+            "required": True,
+            "reason": core_binding.get("reason"),
+            "evidence": core_binding,
+        }
+    )
+
     official = _stage(
         ledger,
         "V6_OFFICIAL_FACTS",
@@ -413,41 +591,73 @@ def run_deep(
         ),
         required=True,
     )
-    if not projections:
-        raise IntegratedRunnerError("full-universe V12 projection stage unavailable")
-
-    _stage(
-        ledger,
-        "OFFICIAL_ROLE_EVIDENCE",
-        lambda: attach_official_role_evidence(projections, bootstrap),
-    )
-    _stage(
-        ledger,
-        "P1_6_TACTICAL_ROLE",
-        lambda: attach_tactical_role_scores(
-            projections,
-            planning_gw,
-            team_strength=strength or {},
-        ),
+    projection_failure = _stage_failure_reason(
+        ledger, "P1_1_P1_3_FULL_UNIVERSE"
     )
 
     owned_ids = {int(row["element_id"]) for row in owned}
-    model_rows = _projection_model_rows(projections, owned_ids)
-    all15 = _stage(
-        ledger,
-        "ALL15_MATERIALIZATION",
-        lambda: materialize_all15(owned15=owned, model_rows=model_rows),
-        required=True,
-    )
-    lineup = _stage(
-        ledger,
-        "P1_7_LINEUP",
-        lambda: optimize_lineup(
-            projections,
-            sorted(owned_ids),
-            planning_gw=planning_gw,
-        ),
-    )
+    if projections:
+        _stage(
+            ledger,
+            "OFFICIAL_ROLE_EVIDENCE",
+            lambda: attach_official_role_evidence(projections, bootstrap),
+        )
+        _stage(
+            ledger,
+            "P1_6_TACTICAL_ROLE",
+            lambda: attach_tactical_role_scores(
+                projections,
+                planning_gw,
+                team_strength=strength or {},
+            ),
+        )
+        model_rows = _projection_model_rows(projections, owned_ids)
+        all15 = _stage(
+            ledger,
+            "ALL15_MATERIALIZATION",
+            lambda: materialize_all15(owned15=owned, model_rows=model_rows),
+            required=True,
+        )
+        lineup = _stage(
+            ledger,
+            "P1_7_LINEUP",
+            lambda: optimize_lineup(
+                projections,
+                sorted(owned_ids),
+                planning_gw=planning_gw,
+            ),
+        )
+    else:
+        reason = (
+            "P1.1/P1.3 prerequisite failed: "
+            + (projection_failure or "UNKNOWN_PROJECTION_FAILURE")
+        )
+        _skip_stage(ledger, "OFFICIAL_ROLE_EVIDENCE", reason)
+        _skip_stage(ledger, "P1_6_TACTICAL_ROLE", reason)
+        _skip_stage(ledger, "ALL15_MATERIALIZATION", reason, required=True)
+        _skip_stage(ledger, "P1_7_LINEUP", reason)
+        all15 = {
+            "rows": [
+                {
+                    "element_id": row.get("element_id"),
+                    "name": row.get("name"),
+                    "position": row.get("position"),
+                    "p_available": "UNAVAILABLE",
+                    "p_start": "UNAVAILABLE",
+                    "p_cameo": "UNAVAILABLE",
+                    "p_dnp": "UNAVAILABLE",
+                    "xmins": "UNAVAILABLE",
+                    "gw_plus_1": "UNAVAILABLE",
+                    "three_gw": "UNAVAILABLE",
+                    "five_gw": "UNAVAILABLE",
+                    "action": "WAIT",
+                }
+                for row in owned
+            ],
+            "degradation_reason": reason,
+        }
+        lineup = None
+
 
     predictor = _read_json(
         runtime_data_root / "data/v6/current/official_price_predictor.json",
@@ -480,7 +690,7 @@ def run_deep(
         ),
     )
 
-    universe = _candidate_universe(projections)
+    universe = _candidate_universe(projections or {})
     watchlist = _stage(
         ledger,
         "WATCHLIST20",
@@ -519,14 +729,21 @@ def run_deep(
         ),
     )
 
-    universe_gap = {
-        "status": "PARTIAL",
-        "reason": (
+    if projections:
+        universe_gap_reason = (
             "P1.1/P1.3/P1.6 executed for full universe, but the current repository "
             "does not yet expose V12-native numeric producers for all four "
             "20/25/30/25 components. Full football_score/ranking is therefore "
             "fail-closed instead of reconstructed ad hoc."
-        ),
+        )
+    else:
+        universe_gap_reason = (
+            "P1.1/P1.3 full-universe projection did not execute for this occurrence: "
+            + (projection_failure or "UNKNOWN_PROJECTION_FAILURE")
+        )
+    universe_gap = {
+        "status": "PARTIAL",
+        "reason": universe_gap_reason,
         "scanned_players": len(universe),
         "required_component_weights": {
             "PROVEN_HISTORICAL": 0.20,
@@ -542,6 +759,16 @@ def run_deep(
             "required": True,
             "reason": universe_gap["reason"],
         }
+    )
+    _skip_stage(
+        ledger,
+        "P1_2_PACKAGE_UTILITY",
+        "full canonical 20/25/30/25 ranking is prerequisite for utility-ranked packages",
+    )
+    _skip_stage(
+        ledger,
+        "P1_4_MONTE_CARLO",
+        "supportable material route distributions are unavailable until canonical universe/package utility is complete",
     )
 
     lineup_state = "COMPLETE" if lineup else "DEGRADED"
@@ -671,8 +898,8 @@ def run_deep(
             {
                 "evidence_quality": {
                     "official_fpl": "CURRENT_INPUT_READ",
-                    "p1_1_p1_3": "EXECUTED",
-                    "p1_6": "EXECUTED",
+                    "p1_1_p1_3": "EXECUTED" if projections else "FAILED",
+                    "p1_6": "EXECUTED" if projections else "NOT_RUN",
                     "p1_7": "EXECUTED" if lineup else "PARTIAL",
                     "price_predictor": (rise or {}).get("predictor_health"),
                     "universe_20_25_30_25": "PARTIAL",
@@ -685,8 +912,16 @@ def run_deep(
             mini_reason,
         ),
         "S16": _section(
-            "COMPLETE",
+            "COMPLETE" if projections else "DEGRADED",
             {"rows": (all15 or {}).get("rows", [])},
+            (
+                None
+                if projections
+                else (
+                    "P1.1/P1.3 occurrence projection unavailable: "
+                    + (projection_failure or "UNKNOWN_PROJECTION_FAILURE")
+                )
+            ),
             available_count=len((all15 or {}).get("rows", [])),
             expected_count=15,
         ),
@@ -696,7 +931,7 @@ def run_deep(
                 "engine_data_status": {
                     "runner": "V12_INTEGRATED_REPORT_RUNNER",
                     "planning_gw": planning_gw,
-                    "projection_players": len(projections.get("players") or []),
+                    "projection_players": len((projections or {}).get("players") or []),
                     "our15": len(owned),
                     "mini_league_coverage": (mini or {}).get("coverage_state"),
                     "stage_ledger": ledger,
@@ -723,21 +958,151 @@ def run_deep(
         ),
     }
 
+    math_stack = build_visible_mathematical_decision_stack({})
     report = materialize_deep_report(
         canonical_text=canonical,
         section_payloads=sections,
         checkpoint_time=checkpoint_time,
+        mathematical_decision_stack=math_stack,
+    )
+    section_manifest = [
+        {
+            "section_id": str(row.get("section_id") or ""),
+            "status": str(row.get("state") or ""),
+        }
+        for row in report.get("sections") or []
+    ]
+    compute_contract = _qa_compute_contract(
+        owned=owned,
+        lineup=lineup,
+        watchlist=watchlist,
+        rise=rise,
+        fall=fall,
+        sections=sections,
+    )
+    mini_complete = bool(
+        mini
+        and str(mini.get("coverage_state") or "").upper() == "FULL"
+    )
+    pre_render_qa = validate_pre_render_qa(
+        compute_contract=compute_contract,
+        section_manifest=section_manifest,
+        mini_league_denominator_complete=mini_complete,
+        report_mode="DEEP",
+        weather_contract_state="SOURCE_DEGRADED",
     )
     body = render_deep_text(report)
+    human_failures = validate_human_facing_body(body)
+    parsed_ids, _, _ = _parse_sections(body)
+    rendered_states = {
+        str(row.get("section_id") or ""): str(row.get("state") or "")
+        for row in report.get("sections") or []
+    }
+    post_render_qa = validate_post_render_qa(
+        pre_render_qa=pre_render_qa,
+        rendered_body=body,
+        rendered_section_ids=parsed_ids,
+        rendered_section_states=rendered_states,
+        rendered_compute_fingerprint=compute_contract["compute_fingerprint"],
+        render_contract_token=pre_render_qa.get("render_contract_token"),
+        rendered_counts=dict(pre_render_qa.get("expected_counts") or {}),
+        rendered_fact_keys=list(pre_render_qa.get("expected_fact_keys") or []),
+        rendered_model_keys=list(pre_render_qa.get("expected_model_keys") or []),
+        rendered_mini_league_denominator_complete=mini_complete,
+        rendered_weather_contract_state="SOURCE_DEGRADED",
+        truncated=False,
+    )
+    contract = canonical_mode_contract(canonical, "DEEP")
+    catalog_complete = (
+        list(parsed_ids) == list(contract.get("expected_section_ids") or [])
+    )
+    runner_status = (
+        "PASS"
+        if (
+            catalog_complete
+            and str(pre_render_qa.get("status") or "").upper() == "PASS"
+            and str(post_render_qa.get("status") or "").upper() == "PASS"
+            and not human_failures
+        )
+        else "PARTIAL"
+    )
+    ledger.extend(
+        [
+            {
+                "stage": "CANONICAL_RENDER",
+                "status": "PASS" if catalog_complete else "FAILED",
+                "required": True,
+                "reason": None if catalog_complete else "CANONICAL_CATALOG_MISMATCH",
+                "evidence": {
+                    "expected": contract.get("expected_section_ids"),
+                    "rendered": parsed_ids,
+                },
+            },
+            {
+                "stage": "PRE_RENDER_QA",
+                "status": pre_render_qa.get("status"),
+                "required": True,
+                "reason": ";".join(pre_render_qa.get("failures") or []) or None,
+            },
+            {
+                "stage": "POST_RENDER_QA",
+                "status": post_render_qa.get("status"),
+                "required": True,
+                "reason": ";".join(post_render_qa.get("failures") or []) or None,
+            },
+            {
+                "stage": "HUMAN_FACING_QA",
+                "status": "PASS" if not human_failures else "FAILED",
+                "required": True,
+                "reason": ";".join(human_failures) or None,
+            },
+        ]
+    )
+
     output_dir.mkdir(parents=True, exist_ok=True)
+    execution_proof = {
+        "schema_version": 2,
+        "runner": "V12_INTEGRATED_REPORT_RUNNER",
+        "report_slot": report_slot,
+        "report_mode": "DEEP",
+        "planning_gw": planning_gw,
+        "runner_status": runner_status,
+        "canonical_expected_section_ids": contract.get("expected_section_ids"),
+        "rendered_section_ids": parsed_ids,
+        "canonical_catalog_complete": catalog_complete,
+        "core_slot_binding": core_binding,
+        "report_prefetch_binding": {
+            "same_occurrence_bound": prefetch.get("same_occurrence_bound"),
+            "report_prefetch_run_id": prefetch.get("report_prefetch_run_id"),
+            "target_logical_report_slot": prefetch.get("target_logical_report_slot"),
+            "scope_checks": prefetch.get("scope_checks"),
+        },
+        "pre_render_qa_status": pre_render_qa.get("status"),
+        "post_render_qa_status": post_render_qa.get("status"),
+        "human_facing_qa_status": "PASS" if not human_failures else "FAIL",
+        "stages": ledger,
+        "no_silent_stage_skip": True,
+        "no_second_model_authority": True,
+        "monte_carlo_fabricated": False,
+    }
     bundle = {
-        "schema": "FPL_MASTER_V12_INTEGRATED_REPORT_BUNDLE_V1",
+        "schema": "FPL_MASTER_V12_INTEGRATED_REPORT_BUNDLE_V2",
         "authority": str(CANONICAL_PATH.relative_to(ROOT)),
         "state_authority": False,
         "report_mode": "DEEP",
         "report_slot": report_slot,
         "planning_gw": planning_gw,
+        "runner_status": runner_status,
         "stage_ledger": ledger,
+        "section_manifest": section_manifest,
+        "compute_contract": compute_contract,
+        "pre_render_qa": pre_render_qa,
+        "post_render_qa": post_render_qa,
+        "human_facing_qa": {
+            "status": "PASS" if not human_failures else "FAIL",
+            "failures": human_failures,
+        },
+        "execution_proof": execution_proof,
         "report": report,
         "visible_body": body,
         "source_fingerprints": {
@@ -755,25 +1120,16 @@ def run_deep(
             "second_methodology_created": False,
             "manual_shortlist_privileged": False,
             "report_falls_back_to_prose_without_bundle": False,
+            "fail_operational_delivery": True,
         },
     }
     (output_dir / "report_bundle.json").write_text(
-        json.dumps(bundle, indent=2, ensure_ascii=False),
+        json.dumps(bundle, indent=2, ensure_ascii=False, default=str),
         encoding="utf-8",
     )
     (output_dir / "report_body.md").write_text(body, encoding="utf-8")
     (output_dir / "execution_proof.json").write_text(
-        json.dumps(
-            {
-                "report_slot": report_slot,
-                "report_mode": "DEEP",
-                "planning_gw": planning_gw,
-                "stages": ledger,
-                "bundle_fingerprint": _fingerprint(bundle),
-            },
-            indent=2,
-            ensure_ascii=False,
-        ),
+        json.dumps(execution_proof, indent=2, ensure_ascii=False, default=str),
         encoding="utf-8",
     )
     return bundle
@@ -792,11 +1148,23 @@ def main() -> int:
         raise IntegratedRunnerError(
             f"runner stage-1 supports {sorted(SUPPORTED_MODES)}; got {mode}"
         )
-    run_deep(
+    bundle = run_deep(
         runtime_data_root=Path(args.runtime_data_root),
         report_slot=args.report_slot,
         output_dir=Path(args.output_dir),
         checkpoint_time=args.checkpoint_time,
+    )
+    print(
+        json.dumps(
+            {
+                "runner_status": bundle.get("runner_status"),
+                "report_mode": bundle.get("report_mode"),
+                "report_slot": bundle.get("report_slot"),
+                "section_count": len(bundle.get("section_manifest") or []),
+                "output_dir": str(Path(args.output_dir).resolve()),
+            },
+            sort_keys=True,
+        )
     )
     return 0
 

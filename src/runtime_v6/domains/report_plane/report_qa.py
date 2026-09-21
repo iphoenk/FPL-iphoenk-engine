@@ -2103,6 +2103,45 @@ def validate_v12_decision_semantics(
         if probability.get("bench_is_overlapping_state") is not True:
             failures.append("V12_BENCH_OVERLAP_SEMANTICS_MISSING")
 
+    posterior_predictive = proof.get("posterior_predictive")
+    if not isinstance(posterior_predictive, Mapping):
+        failures.append("V12_POSTERIOR_PREDICTIVE_EVENT_PROOF_MISSING")
+    else:
+        if posterior_predictive.get("source_contract") != "P1.3/P1.3B_POSTERIOR_PREDICTIVE":
+            failures.append("V12_POSTERIOR_PREDICTIVE_SOURCE_CONTRACT_INVALID")
+        events = posterior_predictive.get("event_probabilities")
+        distribution = posterior_predictive.get("point_distribution")
+        if not isinstance(events, Mapping):
+            failures.append("V12_POSTERIOR_PREDICTIVE_EVENT_PROBABILITIES_MISSING")
+        else:
+            for key in (
+                "p_goal_return",
+                "p_assist_return",
+                "p_attacking_return",
+                "p_total_ga_ge_2",
+                "p_no_attacking_return",
+            ):
+                if events.get(key) is None:
+                    failures.append(
+                        f"V12_POSTERIOR_PREDICTIVE_{key.upper()}_MISSING"
+                    )
+        if not isinstance(distribution, Mapping):
+            failures.append("V12_POSTERIOR_PREDICTIVE_POINT_DISTRIBUTION_MISSING")
+        else:
+            for key in (
+                "p_fpl_blank",
+                "p_haul_10_plus",
+                "expected_points",
+                "variance",
+                "std",
+                "quantiles",
+                "tails",
+            ):
+                if distribution.get(key) is None:
+                    failures.append(
+                        f"V12_POSTERIOR_PREDICTIVE_{key.upper()}_MISSING"
+                    )
+
     xmins = proof.get("xmins_distribution")
     if not isinstance(xmins, Mapping) or xmins.get("mean") is None:
         failures.append("V12_XMINS_DISTRIBUTION_MISSING")

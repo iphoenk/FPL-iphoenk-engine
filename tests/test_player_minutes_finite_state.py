@@ -43,9 +43,26 @@ def test_legacy_oracle_shared_numerics_are_exact(case):
     assert new["confidence"] == old["confidence"]
     assert new["evidence"] == old["evidence"]
     assert new["historical_prior"] == old["historical_prior"]
-    old_states = [{k: row[k] for k in ("state","probability","minutes_mean","minutes_std")} for row in old["xmins_distribution"]["states"]]
-    new_states = [{k: row[k] for k in ("state","probability","minutes_mean","minutes_std")} for row in new["xmins_distribution"]["states"]]
-    assert new_states == old_states
+    states = {
+        row["state"]: row
+        for row in new["xmins_distribution"]["states"]
+    }
+    assert set(states) == {
+        "START_FULL",
+        "START_SUBBED",
+        "EARLY_SUB",
+        "CAMEO",
+        "LATE_CAMEO",
+        "DNP",
+    }
+    assert sum(
+        row["probability"] for row in states.values()
+    ) == pytest.approx(1.0, abs=2e-4)
+    assert (
+        states["START_FULL"]["probability"]
+        + states["START_SUBBED"]["probability"]
+        + states["EARLY_SUB"]["probability"]
+    ) == pytest.approx(new["start_probability"], abs=2e-4)
 
 
 def test_hierarchy_bench_overlap_and_appearance_partition():
@@ -194,3 +211,41 @@ def test_historical_projection_is_switched_to_v12_native_owner():
     source=(ROOT/"src"/"models"/"historical_projection.py").read_text(encoding="utf-8")
     assert "from src.engines.v12_player_minutes import estimate_xmins" in source
     assert "src.models.xmins_v3" not in source
+
+
+def test_stage1_six_state_minutes_uses_match_level_starter_timing():
+    out = estimate_player_minutes(
+        {
+            "starts": 4,
+            "minutes": 295,
+            "status": "a",
+            "chance_of_playing_next_round": 100,
+        },
+        {
+            "team_matches_played": 5,
+            "player_match_rows": [
+                {"starter": True, "minutes": 90},
+                {"starter": True, "minutes": 72},
+                {"starter": True, "minutes": 48},
+                {"starter": True, "minutes": 85},
+            ],
+        },
+    )
+    states = {
+        row["state"]: row
+        for row in out["xmins_distribution"]["states"]
+    }
+    assert set(states) == {
+        "START_FULL",
+        "START_SUBBED",
+        "EARLY_SUB",
+        "CAMEO",
+        "LATE_CAMEO",
+        "DNP",
+    }
+    assert out["starter_state_evidence"]["sample_starts"] == 4
+    assert out["p_60_plus"] <= out["start_probability"]
+    assert (
+        out["starter_state_evidence"]["substitution_timing_source"]
+        == "MATCH_MINUTES_DERIVED"
+    )

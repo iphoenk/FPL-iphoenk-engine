@@ -145,7 +145,26 @@ jobs:
           fi
           python -m src.engines.v12_integrated_report_runner "${args[@]}"
 
+      - name: Read integrated runner proof
+        id: proof
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          proof = json.loads(
+              Path("artifacts/v12-report/execution_proof.json").read_text(encoding="utf-8")
+          )
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as fh:
+              fh.write(f"runner_status={proof.get('runner_status', 'UNKNOWN')}\n")
+              fh.write(f"pre_render={proof.get('pre_render_qa_status', 'UNKNOWN')}\n")
+              fh.write(f"post_render={proof.get('post_render_qa_status', 'UNKNOWN')}\n")
+              fh.write(f"human_facing={proof.get('human_facing_qa_status', 'UNKNOWN')}\n")
+          PY
+
       - name: Upload immutable occurrence bundle
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: v12-report-${{ needs.parse.outputs.report_mode }}-${{ github.run_id }}
@@ -162,11 +181,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPORT_MODE: ${{ needs.parse.outputs.report_mode }}
           REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
-          RUN_STATUS: ${{ job.status }}
+          JOB_STATUS: ${{ job.status }}
+          RUNNER_STATUS: ${{ steps.proof.outputs.runner_status }}
+          PRE_RENDER: ${{ steps.proof.outputs.pre_render }}
+          POST_RENDER: ${{ steps.proof.outputs.post_render }}
+          HUMAN_FACING: ${{ steps.proof.outputs.human_facing }}
         run: |
-          if [ "$RUN_STATUS" = "success" ]; then
-            status="PASS"
-          else
+          status="${RUNNER_STATUS:-UNKNOWN}"
+          if [ "$JOB_STATUS" != "success" ] && [ -z "${RUNNER_STATUS:-}" ]; then
             status="FAIL"
           fi
-          gh issue comment 431 --repo "${GITHUB_REPOSITORY}" --body             "V12_REPORT_RUN | status=${status} | report_mode=${REPORT_MODE} | report_slot=${REPORT_SLOT} | run_id=${GITHUB_RUN_ID} | artifact=v12-report-${REPORT_MODE}-${GITHUB_RUN_ID} | integrated_runner=true | v6_mutated=false"
+          gh issue comment 431 --repo "${GITHUB_REPOSITORY}" --body             "V12_REPORT_RUN | status=${status} | report_mode=${REPORT_MODE} | report_slot=${REPORT_SLOT} | run_id=${GITHUB_RUN_ID} | artifact=v12-report-${REPORT_MODE}-${GITHUB_RUN_ID} | pre_render=${PRE_RENDER:-UNKNOWN} | post_render=${POST_RENDER:-UNKNOWN} | human_facing=${HUMAN_FACING:-UNKNOWN} | integrated_runner=true | fail_operational=true | v6_mutated=false"

@@ -117,7 +117,7 @@ def _matched_section_id(match: re.Match[str]) -> str:
         return f"PRICE{int(groups['price'])}"
     if groups.get("post"):
         return f"POST_ALL_MATCH{int(groups['post'])}"
-    if "FINAL_LOCK_SECTION_RE" and match.re is _FINAL_LOCK_SECTION_RE:
+    if match.re is _FINAL_LOCK_SECTION_RE:
         return "GW_LOCK_PACKAGE"
     return _normalize_section_id(groups.get("section") or "")
 

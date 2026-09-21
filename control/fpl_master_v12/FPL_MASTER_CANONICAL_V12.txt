@@ -1,5 +1,5 @@
 FPL MASTER CANONICAL V12 — FAIL-OPERATIONAL REPORT-PLANE ARCHITECTURE
-Effective: 2026-09-21T13:35:00+07:00
+Effective: 2026-09-21T14:05:00+07:00
 Authority path: control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
 State path: control/fpl_master_v12/FPL_MASTER_STATE_V12.json
 
@@ -537,6 +537,19 @@ NATURAL DEEP EXECUTION BARRIER:
 - critical_sections_present=true, a non-empty body, or an Engine/Data Status block is never sufficient proof. Acceptance requires actual rendered section IDs to match this Canonical catalog and actual post-render/human-facing QA PASS.
 - Healthy core/publication alone MUST NOT be used as justification to stop before Watchlist20, RISE20/FALL20, Package Frontier, ALL15, probability/Bayesian surfaces, or ICON+ evidence that is supportable from current inputs.
 - Conversely, never fabricate owner execution. Monte Carlo may be labelled EXECUTED only with occurrence-bound native V12 MC evidence. If the integrated native compute owner cannot execute, expose the exact compute-layer blocker in the affected section while preserving all other structural sections.
+
+NATURAL DEEP INTEGRATED EXECUTOR CONTRACT:
+A. The repository executor entrypoint is `src.engines.v12_integrated_report_runner`. It is a THIN ORCHESTRATION OWNER only; it MUST NOT become a second football score, probability, package, Monte Carlo, V6 factual, or scheduler authority.
+B. The governed execution command is an owner-authored issue #431 COMMENT:
+   `/v12-report-run report_mode=DEEP report_slot=<TIMEZONE_AWARE_REPORT_SLOT> checkpoint_time=<HH:MM>`.
+   The executor MUST NOT edit issue #431 title, fulfill a core slot, create a scheduler, acquire/publish V6, backfill, or future-fill.
+C. The executor consumes the latest authoritative `runtime-data-v6` snapshot read-only and invokes existing V12 owner modules only when their prerequisites are supportable. Every expected owner stage must appear in occurrence-bound execution proof even when the stage is PARTIAL / NOT_RUN.
+D. Mandatory stage inventory for DEEP includes at least: V6 factual binding; P1.1 xMins; P1.3/P1.3B player events; P1.2A full-universe package search; P1.7 lineup/bench/C/VC; P1.2B package utility; P1.4 correlated Monte Carlo; Official FPL Price Change Predictor; Canonical render; PRE_RENDER QA; POST_RENDER QA; HUMAN_FACING QA. Silent omission is forbidden.
+E. Monte Carlo remains EXECUTED only with native occurrence-bound evidence satisfying the existing Canonical correlated >=500,000 path contract. The integrated executor may emit NOT_RUN/PARTIAL with exact prerequisite reason; it MUST NOT synthesize substitute paths.
+F. The executor emits one occurrence-bound artifact bundle containing exactly the durable surfaces `report_bundle.json`, `report_body.md`, and `execution_proof.json`. Workflow artifact naming is `v12-report-DEEP-<github_run_id>`.
+G. Runner PASS requires the exact Canonical DEEP catalog plus actual POST_RENDER QA PASS plus HUMAN_FACING QA PASS. Repository module existence, a non-empty body, or section headings alone are not execution proof.
+H. Runner FAIL/BLOCKED never suppresses a due report. The ChatGPT scheduler consumes any available bundle/proof, preserves all 20 Canonical DEEP sections, and truthfully marks the affected integrated stage as DEGRADED/NOT_RUN. It MUST NOT fall back to a short freeform summary.
+I. The executor workflow is event-driven only, owner-authorized, read-only toward V6/runtime publication, and has no cron/schedule authority. The single ChatGPT FPL Master Monitor remains the only recurring FPL scheduler.
 
 AD_HOC MODE-EQUIVALENCE IS MANDATORY. When the user explicitly requests a Canonical report mode outside its natural scheduler occurrence, including wording such as "DEEP sekarang", "PRICE sekarang", or "format 04:30 tapi mode sekarang", treat it as an actual AD_HOC occurrence of that requested Canonical mode, not as a prose imitation of the layout. The AD_HOC occurrence MUST traverse the same mode contract, compute/retrieval semantics, pre-render QA, actual visible-body post-render QA and same-request recovery semantics as the scheduled mode, except that scheduler proof is N/A. Manual/chat composition MUST NOT bypass visible-body QA merely because the request is interactive. For DEEP/PRICE, a visible RISE20/FALL20 row missing required cycle/ETA fields is a post-render QA failure and MUST be re-rendered on the same request identity rather than delivered as COMPLETE. Fail-operational delivery still applies to truthful source degradation; it does not permit omission of supported mandatory visible fields.
 Post-deadline closed-decision sections remain structural: XI BATTLE may say GW locked/no executable XI change; C/VC and Chip show locked/current state; Actionable Price Radar may be DEGRADED/UNAVAILABLE rather than omitted.

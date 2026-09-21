@@ -91,6 +91,44 @@ def _qa(report_mode: str = "DEEP"):
     return compute, pre, post
 
 
+@pytest.mark.parametrize(
+    ("body_kwargs", "label"),
+    [
+        ({"omit_rise_field": "eta_human"}, "RISE20"),
+        ({"omit_fall_field": "eta_human"}, "FALL20"),
+    ],
+)
+def test_ad_hoc_deep_rejects_visible_price_rows_missing_eta(body_kwargs, label):
+    compute, pre, _ = _qa("DEEP")
+    body = valid_visible_body(pre, **body_kwargs)
+    post = validate_post_render_qa(
+        pre_render_qa=pre,
+        rendered_body=body,
+        rendered_section_ids=pre["expected_section_ids"],
+        rendered_section_states={
+            row["section_id"]: row["status"]
+            for row in pre["section_manifest"]
+        },
+        rendered_compute_fingerprint=compute["compute_fingerprint"],
+        render_contract_token=pre["render_contract_token"],
+        rendered_counts=pre["expected_counts"],
+        rendered_fact_keys=pre["expected_fact_keys"],
+        rendered_model_keys=pre["expected_model_keys"],
+        rendered_mini_league_denominator_complete=True,
+        rendered_weather_contract_state="DIRECT_CHATGPT",
+        truncated=False,
+    )
+
+    assert post["status"] == "FAIL"
+    assert post["delivery_ready"] is False
+    assert any(
+        "VISIBLE_RANK20_SCHEMA_MISSING" in failure
+        and label in failure
+        and "eta_human" in failure
+        for failure in post["failures"]
+    )
+
+
 def test_ad_hoc_identity_is_stable_across_equivalent_timezones_and_retry():
     first = build_ad_hoc_report_context(
         request_id="req-abc-001",

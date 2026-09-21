@@ -8,6 +8,7 @@ It never acquires data, publishes V6 artifacts, or marks a report delivered.
 
 from collections import Counter
 from hashlib import sha256
+import re
 import json
 from typing import Any, Mapping, Sequence
 

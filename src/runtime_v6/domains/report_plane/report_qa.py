@@ -229,6 +229,45 @@ _MATCH_SCOUT_FIELDS = (
     "implication_for_next_opponent",
     "posterior_calibration_implication",
 )
+_MATCH_SCOUT_VISIBLE_LABELS = (
+    "RESULT:",
+    "FORMATION/SYSTEM:",
+    "COACH PATTERN:",
+    "PLAYER ROLES:",
+    "MINUTES/SUBS:",
+    "XG/XA/XGI/SHOTS/CHANCES:",
+    "SET PIECES/PENALTIES:",
+    "DEFCON:",
+    "OPPONENT CHANNELS:",
+    "SUSTAINABLE VS NOISE:",
+    "OUR15 IMPLICATION:",
+    "NEXT OPPONENT IMPLICATION:",
+    "POSTERIOR CALIBRATION IMPLICATION:",
+)
+_SERIOUS_DECISION_VISIBLE_MARKERS = (
+    "MATHEMATICAL DECISION STACK",
+    "BAYESIAN PRIOR -> POSTERIOR / SHRINKAGE",
+    "AVAILABILITY MIXTURE",
+    "P(AVAILABLE)",
+    "P(START)",
+    "P(BENCH)",
+    "P(CAMEO)",
+    "P(DNP)",
+    "XMINS DISTRIBUTION",
+    "EVENT PROBABILITIES",
+    "P(GOAL)",
+    "P(ASSIST)",
+    "P(RETURN)",
+    "P(HAUL)",
+    "P(BLANK)",
+    "1GW",
+    "3GW",
+    "5GW",
+    "P(OUTPERFORM",
+    "EXPECTED REGRET",
+    "INFORMATION VALUE OF WAITING",
+    "MONTE CARLO",
+)
 _PRICE_WAIT_FIELDS = (
     "route",
     "affordable_now",
@@ -847,6 +886,39 @@ def validate_v12_visible_content_contract(
             if degradation:
                 section_degradations.append(degradation)
 
+    if mode in {"DEEP", "FULL"} and payload.get("post_all_match_context") is True:
+        completed = [str(value) for value in payload.get("completed_fixture_ids") or []]
+        scout = list(payload.get("match_scout") or [])
+        scout_meta = _section_state(payload, "MATCH_SCOUT")
+        scout_state = str(scout_meta.get("state") or "").upper()
+        scout_ids = [
+            str(row.get("fixture_id"))
+            for row in scout
+            if isinstance(row, Mapping) and row.get("fixture_id") is not None
+        ]
+        if len(scout_ids) != len(scout):
+            hard_failures.append("MATCH_SCOUT_IDENTITY_MISSING")
+        if len(scout_ids) != len(set(scout_ids)):
+            hard_failures.append("MATCH_SCOUT_FIXTURE_DUPLICATE")
+        hard_failures.extend(_placeholder_rows(scout, "MATCH_SCOUT"))
+        if scout_state == "COMPLETE":
+            hard_failures.extend(
+                _missing_row_fields(scout, _MATCH_SCOUT_FIELDS, "MATCH_SCOUT")
+            )
+            if set(scout_ids) != set(completed) or len(scout_ids) != len(completed):
+                hard_failures.append("MATCH_SCOUT_FIXTURE_COVERAGE_MISMATCH")
+        else:
+            degradation, meta_hard = _section_degradation(
+                section="MATCH_SCOUT",
+                meta=scout_meta,
+                actual_count=len(scout),
+                expected_count=len(completed),
+                require_count=True,
+            )
+            hard_failures.extend(meta_hard)
+            if degradation:
+                section_degradations.append(degradation)
+
     if mode == "PRICE":
         order = tuple(str(value).strip().upper() for value in payload.get("visible_order") or [])
         if order != tuple(value.upper() for value in _PRICE_VISIBLE_ORDER):
@@ -921,6 +993,52 @@ def _validate_operational_action_labels(rendered_body: str) -> list[str]:
     return list(dict.fromkeys(failures))
 
 
+def _validate_visible_match_scout_blocks(
+    *,
+    rendered_body: str,
+    content_contract: Mapping[str, Any],
+) -> list[str]:
+    """Require every completed fixture to expose the canonical detailed scout fields."""
+    completed = [str(value) for value in content_contract.get("completed_fixture_ids") or []]
+    scout = [
+        dict(row)
+        for row in content_contract.get("match_scout") or []
+        if isinstance(row, Mapping)
+    ]
+    if not completed and not scout:
+        return []
+    body = str(rendered_body or "")
+    fixture_matches = list(
+        re.finditer(
+            r"(?mi)^\s{0,3}#{1,6}\s*FIXTURE\s+ID:\s*(?P<fixture>[^\n]+?)\s*$",
+            body,
+        )
+    )
+    blocks: dict[str, str] = {}
+    for index, match in enumerate(fixture_matches):
+        fixture_id = match.group("fixture").strip()
+        end = fixture_matches[index + 1].start() if index + 1 < len(fixture_matches) else len(body)
+        blocks[fixture_id] = body[match.end():end]
+    failures: list[str] = []
+    if set(blocks) != set(completed) or len(blocks) != len(completed):
+        failures.append(
+            "VISIBLE_MATCH_SCOUT_FIXTURE_COVERAGE_MISMATCH="
+            f"{len(blocks)}!={len(completed)}"
+        )
+    for fixture_id in completed:
+        block = blocks.get(fixture_id, "")
+        if not block:
+            failures.append(f"VISIBLE_MATCH_SCOUT_FIXTURE_MISSING={fixture_id}")
+            continue
+        upper = block.upper()
+        for label in _MATCH_SCOUT_VISIBLE_LABELS:
+            if label not in upper:
+                failures.append(
+                    f"VISIBLE_MATCH_SCOUT_FIELD_MISSING={fixture_id}:{label.rstrip(':')}"
+                )
+    return failures
+
+
 def _validate_v12_rendered_body(
     *,
     report_mode: str,
@@ -966,6 +1084,32 @@ def _validate_v12_rendered_body(
         failures.append("VISIBLE_GW_LOCK_PACKAGE_MISSING")
     if mode == "POST_ALL_MATCH" and "GW COMPLETED MATCH-BY-MATCH SCOUT" not in body.upper():
         failures.append("VISIBLE_MATCH_SCOUT_MISSING")
+    if (
+        mode == "POST_ALL_MATCH"
+        or (
+            mode in {"DEEP", "FULL"}
+            and content_contract.get("post_all_match_context") is True
+        )
+    ):
+        if "POST-MATCH MATCH-BY-MATCH SCOUT" not in body.upper() and mode in {"DEEP", "FULL"}:
+            failures.append("VISIBLE_DEEP_POST_MATCH_SCOUT_MISSING")
+        failures.extend(
+            _validate_visible_match_scout_blocks(
+                rendered_body=body,
+                content_contract=content_contract,
+            )
+        )
+
+    serious_decision_required = bool(
+        content_contract.get("serious_decision_required")
+    )
+    if serious_decision_required:
+        for marker in _SERIOUS_DECISION_VISIBLE_MARKERS:
+            if marker.casefold() not in body.casefold():
+                failures.append(
+                    f"VISIBLE_SERIOUS_DECISION_MATH_MISSING={marker}"
+                )
+
     if str(content_contract.get("search_authority") or "").upper() == "PARTIAL":
         if "SEARCH PARTIAL" not in body.upper():
             failures.append("VISIBLE_PARTIAL_SEARCH_LABEL_MISSING")
@@ -1316,6 +1460,29 @@ def validate_pre_render_qa(
             for failure in visible_content_validation.get("hard_failures", [])
         ]
 
+    decision_proof = compute_contract.get("DECISION_PROOF")
+    serious_decision_required = bool(
+        compute_contract.get("serious_decision_required")
+        or (
+            isinstance(visible_content_contract, Mapping)
+            and visible_content_contract.get("serious_decision_required")
+        )
+        or isinstance(decision_proof, Mapping)
+    )
+    v12_decision_semantic = validate_v12_decision_semantics(
+        decision_proof if isinstance(decision_proof, Mapping) else None,
+        serious_decision_required=serious_decision_required,
+    )
+    if v12_decision_semantic.get("status") == "PARTIAL":
+        warnings.extend(
+            f"V12_SEMANTIC:{failure}"
+            for failure in v12_decision_semantic.get("failures") or []
+        )
+        warnings.extend(
+            str(value)
+            for value in v12_decision_semantic.get("warnings") or []
+        )
+
     compute_failures = _compute_handoff_failures(
         compute_contract,
         degradable_count_labels=degraded_count_labels,
@@ -1383,6 +1550,20 @@ def validate_pre_render_qa(
     for label in degraded_count_labels:
         expected_counts.pop(label, None)
     required_visible_markers = _required_visible_markers(resolved_report_mode)
+    if serious_decision_required:
+        required_visible_markers = list(required_visible_markers) + list(
+            _SERIOUS_DECISION_VISIBLE_MARKERS
+        )
+    post_all_match_context = bool(
+        isinstance(visible_content_contract, Mapping)
+        and visible_content_contract.get("post_all_match_context") is True
+        and resolved_report_mode in {"DEEP", "FULL"}
+    )
+    if post_all_match_context:
+        required_visible_markers = list(required_visible_markers) + [
+            "POST-MATCH MATCH-BY-MATCH SCOUT"
+        ]
+    required_visible_markers = list(dict.fromkeys(required_visible_markers))
     compute_fingerprint = str(compute_contract.get("compute_fingerprint") or "")
 
     qa_passed = not hard_failures
@@ -1469,6 +1650,9 @@ def validate_pre_render_qa(
         ),
         "visible_content_contract_fingerprint": visible_content_contract_fingerprint,
         "visible_content_validation": visible_content_validation,
+        "serious_decision_required": serious_decision_required,
+        "v12_decision_semantic": v12_decision_semantic,
+        "post_all_match_context": post_all_match_context,
     }
 
 

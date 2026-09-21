@@ -125,13 +125,57 @@ def test_canonical_universe_uses_exact_macro_weights_and_owner_outputs_only():
                             "expected_points90": 0.4,
                         },
                     },
+                    "xmins": {
+                        "expected_minutes": 82.0,
+                        "start_probability": 0.91,
+                        "p_60_plus": 0.86,
+                        "xmins_distribution": {
+                            "distribution": "FINITE_STATE_MINUTES_MIXTURE"
+                        },
+                    },
+                    "position_engine": {
+                        "model": "POSITION_SPECIFIC_DISCRETE_POSTERIOR_PREDICTIVE_V1",
+                        "matchup_vector": {
+                            "model": "DYNAMIC_POSITION_ROLE_MATCHUP_VECTOR_V1",
+                            "vector": {
+                                key: {"multiplier": 1.0}
+                                for key in (
+                                    "goal", "creation", "attack",
+                                    "clean_sheet", "defcon", "save",
+                                    "set_piece", "aerial", "transition",
+                                    "minutes", "bonus",
+                                )
+                            },
+                        },
+                    },
                     "tactical_role_component": {
                         "canonical_tactical_role_score": 50 + index
                     },
                     "horizons": {
-                        "1": {"mean": 4 + index / 10},
-                        "3": {"mean": 12 + index / 10},
-                        "5": {"mean": 20 + index / 10},
+                        "1": {
+                            "mean": 4 + index / 10,
+                            "point_distribution": {
+                                "status": "READY_COMPLETE_CONDITIONAL_PMF",
+                                "model": "EXACT_DISCRETE_CONVOLUTION_CONDITIONAL_ON_POSTERIOR",
+                                "sum_probability": 1.0,
+                            },
+                        },
+                        "3": {
+                            "mean": 12 + index / 10,
+                            "point_distribution": {
+                                "status": "READY_COMPLETE_CONDITIONAL_PMF",
+                                "model": "EXACT_DISCRETE_CONVOLUTION_CONDITIONAL_ON_POSTERIOR",
+                                "sum_probability": 1.0,
+                            },
+                        },
+                        "5": {
+                            "mean": 20 + index / 10,
+                            "point_distribution": {
+                                "status": "READY_COMPLETE_CONDITIONAL_PMF",
+                                "model": "EXACT_DISCRETE_CONVOLUTION_CONDITIONAL_ON_POSTERIOR",
+                                "sum_probability": 1.0,
+                            },
+                        },
                     },
                 }
             )
@@ -145,6 +189,25 @@ def test_canonical_universe_uses_exact_macro_weights_and_owner_outputs_only():
     }
     assert all(
         row["canonical_evaluation_complete"] for row in out["players"]
+    )
+    assert (
+        out["stage2_lineage_contract"]
+        == "V12_CANONICAL_STAGE2_SINGLE_CHAIN_V1"
+    )
+    assert out["stage2_lineage_complete_players"] == len(out["players"])
+    assert all(
+        (row["stage2_lineage"] or {}).get("lineage_complete") is True
+        for row in out["players"]
+    )
+    assert all(
+        (row["stage2_lineage"]["p1_1"] or {}).get("owner")
+        == "V12_PLAYER_MINUTES"
+        for row in out["players"]
+    )
+    assert all(
+        (row["stage2_lineage"]["posterior"] or {}).get("owner")
+        == "V12_PLAYER_EVENTS"
+        for row in out["players"]
     )
     assert out["new_xpts_model_created"] is False
     assert out["new_xmins_model_created"] is False

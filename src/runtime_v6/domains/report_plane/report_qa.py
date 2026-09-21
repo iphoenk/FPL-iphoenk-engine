@@ -1686,11 +1686,11 @@ def validate_pre_render_qa(
         str(row.get("section") or "") == "ICON+"
         for row in section_degradations
     )
-    s14b_state = next(
+    icon_section_state = next(
         (
             str(row.get("status") or "").strip().upper()
             for row in canonical_manifest
-            if str(row.get("section_id") or "").strip().upper() == "S14B"
+            if str(row.get("section_id") or "").strip().upper() == "S15B"
         ),
         "MISSING",
     )
@@ -1698,7 +1698,7 @@ def validate_pre_render_qa(
         mini_league_contract_state = "DEGRADED"
     elif mini_league_denominator_complete:
         mini_league_contract_state = "COMPLETE"
-    elif s14b_state == "PARTIAL":
+    elif icon_section_state in {"PARTIAL", "DEGRADED", "UNAVAILABLE"}:
         mini_league_contract_state = "DEGRADED"
     else:
         mini_league_contract_state = "INCOMPLETE"

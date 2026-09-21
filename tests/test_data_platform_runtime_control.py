@@ -357,3 +357,28 @@ def test_runtime_scheduler_metadata_agrees_with_schedule_policy():
     )
     assert updated["governance"]["github_natural_acquisition_schedule_disabled"] is True
     assert updated["governance"]["github_natural_scheduler_is_authority"] is False
+
+
+
+def test_issue_comment_manual_recovery_is_non_authoritative():
+    manifest = {
+        "overall": "GREEN",
+        "polling": {"scheduler_interval_minutes": 60},
+        "paths": {},
+        "governance": {},
+    }
+    updated, control = apply_runtime_control(
+        manifest,
+        {},
+        now=datetime(2026, 9, 21, 14, 51, tzinfo=timezone.utc),
+        event_name="issue_comment",
+        schedule_kind="manual_recovery",
+    )
+    assert control["health"] == "AMBER"
+    assert control["manual_recovery"] is True
+    assert control["authoritative_runtime_snapshot"] is False
+    assert control["counts_as_completed_operational_slot"] is False
+    assert control["counts_as_completed_scheduled_slot"] is False
+    assert updated["control_failures"] == [
+        "NON_AUTHORITATIVE_MANUAL_RECOVERY"
+    ]

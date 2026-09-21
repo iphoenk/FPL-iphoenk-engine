@@ -96,6 +96,7 @@ def valid_visible_body(
     weather_state_override: str | None = None,
     omit_rise_field: str | None = None,
     omit_fall_field: str | None = None,
+    include_serious_math: bool = True,
 ) -> str:
     """Build a deterministic body matching the canonical visible Full skeleton."""
     lines = ["# 04:30 MORNING DEEP REVIEW"]
@@ -178,7 +179,7 @@ def valid_visible_body(
                 str(value).upper()
                 for value in pre_render_qa.get("required_visible_markers", [])
             }
-            if "MATHEMATICAL DECISION STACK" in required_markers:
+            if include_serious_math and "MATHEMATICAL DECISION STACK" in required_markers:
                 lines.extend(
                     [
                         "### MATHEMATICAL DECISION STACK",

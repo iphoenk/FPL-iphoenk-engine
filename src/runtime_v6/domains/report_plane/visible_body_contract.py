@@ -22,7 +22,16 @@ _SECTION_NUMBERED_RE = re.compile(
     r"(?mi)^\s{0,3}#{1,6}\s*(?P<section>\d{1,2}B?)\.\s+[^\n]+$"
 )
 _MATCH_SECTION_RE = re.compile(
-    r"(?mi)^\s{0,3}#{1,6}\s*MATCH\s+(?P<match>\d)\b[^\n]*$"
+    r"(?mi)^\s{0,3}#{1,6}\s*MATCH\s+(?P<match>\d{1,2})\b[^\n]*$"
+)
+_PRICE_SECTION_RE = re.compile(
+    r"(?mi)^\s{0,3}#{1,6}\s*PRICE\s+(?P<price>\d{1,2})\b[^\n]*$"
+)
+_POST_ALL_MATCH_SECTION_RE = re.compile(
+    r"(?mi)^\s{0,3}#{1,6}\s*POST(?:[-_ ]ALL[-_ ]MATCH)\s+(?P<post>\d{1,2})\b[^\n]*$"
+)
+_FINAL_LOCK_SECTION_RE = re.compile(
+    r"(?mi)^\s{0,3}#{1,6}\s*(?:FINAL\s*[—-]\s*)?GW\s+LOCK\s+PACKAGE\b[^\n]*$"
 )
 _TABLE_LINE_RE = re.compile(r"^\s*\|.*\|\s*$")
 _TABLE_SEPARATOR_CELL_RE = re.compile(r"^:?-{3,}:?$")
@@ -39,14 +48,14 @@ _PROGRESS_RE = re.compile(
 
 _VISIBLE_COUNT_SECTIONS: Mapping[str, tuple[str, str]] = {
     "OUR15": ("S02", "TABLE"),
-    "XI": ("S05", "XI"),
-    "BENCH": ("S05", "BENCH"),
-    "WATCHLIST20": ("S10", "WATCHLIST"),
-    "RISE20": ("S11", "RANK20_RISE"),
-    "FALL20": ("S12", "RANK20_FALL"),
+    "XI": ("S06", "XI"),
+    "BENCH": ("S06", "BENCH"),
+    "WATCHLIST20": ("S11", "WATCHLIST"),
+    "RISE20": ("S12", "RANK20_RISE"),
+    "FALL20": ("S13", "RANK20_FALL"),
 }
 _ADDITIONAL_VISIBLE_COUNTS: Mapping[str, tuple[str, str, int]] = {
-    "ALL15_TACTICAL": ("S15", "TABLE", 15),
+    "ALL15_TACTICAL": ("S16", "TABLE", 15),
 }
 _POSITION_TARGET = {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}
 
@@ -93,6 +102,9 @@ def _section_matches(body: str) -> list[re.Match[str]]:
         *_SECTION_EXPLICIT_RE.finditer(body),
         *_SECTION_NUMBERED_RE.finditer(body),
         *_MATCH_SECTION_RE.finditer(body),
+        *_PRICE_SECTION_RE.finditer(body),
+        *_POST_ALL_MATCH_SECTION_RE.finditer(body),
+        *_FINAL_LOCK_SECTION_RE.finditer(body),
     ]
     return sorted(matches, key=lambda match: match.start())
 
@@ -101,6 +113,12 @@ def _matched_section_id(match: re.Match[str]) -> str:
     groups = match.groupdict()
     if groups.get("match"):
         return f"MATCH{int(groups['match'])}"
+    if groups.get("price"):
+        return f"PRICE{int(groups['price'])}"
+    if groups.get("post"):
+        return f"POST_ALL_MATCH{int(groups['post'])}"
+    if "FINAL_LOCK_SECTION_RE" and match.re is _FINAL_LOCK_SECTION_RE:
+        return "GW_LOCK_PACKAGE"
     return _normalize_section_id(groups.get("section") or "")
 
 
@@ -378,15 +396,30 @@ def validate_visible_report_body(
     match_catalog = bool(expected_sections) and all(
         section_id.startswith("MATCH") for section_id in expected_sections
     )
+    price_catalog = bool(expected_sections) and all(
+        section_id.startswith("PRICE") for section_id in expected_sections
+    )
+    post_all_match_catalog = bool(expected_sections) and all(
+        section_id.startswith("POST_ALL_MATCH") for section_id in expected_sections
+    )
     visible_count_sections = dict(_VISIBLE_COUNT_SECTIONS)
     if match_catalog:
-        visible_count_sections.update(
-            {
-                "OUR15": ("MATCH2", "TABLE"),
-                "XI": ("MATCH2", "XI"),
-                "BENCH": ("MATCH2", "BENCH"),
-            }
-        )
+        visible_count_sections = {
+            "OUR15": ("MATCH2", "TABLE"),
+            "XI": ("MATCH2", "XI"),
+            "BENCH": ("MATCH2", "BENCH"),
+        }
+    elif price_catalog:
+        visible_count_sections = {
+            "WATCHLIST20": ("PRICE4", "WATCHLIST"),
+            "RISE20": ("PRICE5", "RANK20_RISE"),
+            "FALL20": ("PRICE6", "RANK20_FALL"),
+        }
+    elif post_all_match_catalog:
+        visible_count_sections = {
+            "OUR15": ("POST_ALL_MATCH4", "TABLE"),
+            "WATCHLIST20": ("POST_ALL_MATCH11", "WATCHLIST"),
+        }
 
     visible_counts: dict[str, int] = {}
     for label, target in expected_counts.items():
@@ -425,8 +458,14 @@ def validate_visible_report_body(
         if actual != target:
             failures.append(f"VISIBLE_COUNT_MISMATCH={label}:{actual}!={target}")
 
-    our15_section_id = "MATCH2" if match_catalog else "S02"
-    xi_bench_section_id = "MATCH2" if match_catalog else "S05"
+    our15_section_id = (
+        "MATCH2"
+        if match_catalog
+        else "POST_ALL_MATCH4"
+        if post_all_match_catalog
+        else "S02"
+    )
+    xi_bench_section_id = "MATCH2" if match_catalog else "S06"
     our15_body = "\n".join(section_content.get(our15_section_id, []))
     our15_ids = _extract_table_column(our15_body, "element_id")
     our15_names = _extract_table_column(our15_body, "player_name")
@@ -445,9 +484,9 @@ def validate_visible_report_body(
         if set(xi_names) & set(bench_names) or set(xi_names + bench_names) != set(our15_names):
             failures.append("VISIBLE_XI_BENCH_NOT_EXACT_OUR15")
 
-    if "S15" in expected_set:
+    if "S16" in expected_set:
         tactical_ids = _extract_table_column(
-            "\n".join(section_content.get("S15", [])),
+            "\n".join(section_content.get("S16", [])),
             "element_id",
         )
         if len(tactical_ids) == 15 and our15_ids and set(tactical_ids) != set(our15_ids):

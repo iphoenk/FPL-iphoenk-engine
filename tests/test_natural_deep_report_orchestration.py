@@ -1691,7 +1691,7 @@ def test_deep_renderer_headings_are_visible_qa_parseable_and_canonical_ordered()
     )["expected_section_ids"]
 
 
-def test_price_signal_visible_identity_is_not_misrepresented_as_official_product():
+def test_price_signal_visible_identity_is_verified_official_fpl_predictor_guidance():
     row = build_price20(
         predictor_artifact=_crossing_contract_price_artifact(),
         direction="RISE",
@@ -1699,5 +1699,6 @@ def test_price_signal_visible_identity_is_not_misrepresented_as_official_product
     assert row["price_fact"] == "FACT"
     assert row["predictor_classification"] == "MODEL"
     assert row["artifact_source"] == "official_price_predictor"
-    assert row["estimate_source"] == "V6_DERIVED_PRICE_SIGNAL"
-    assert "not an Official FPL predictor/product" in row["visible_source_label"]
+    assert row["estimate_source"] == "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR"
+    assert "Official FPL Price Change Predictor" in row["visible_source_label"]
+    assert "not a guarantee" in row["visible_source_label"]

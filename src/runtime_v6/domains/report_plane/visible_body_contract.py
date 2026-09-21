@@ -492,20 +492,22 @@ def validate_visible_report_body(
     our15_body = "\n".join(section_content.get(our15_section_id, []))
     our15_ids = _extract_table_column(our15_body, "element_id")
     our15_names = _extract_table_column(our15_body, "player_name")
-    if len(our15_ids) != 15 or len(set(our15_ids)) != 15:
-        failures.append("VISIBLE_OUR15_IDENTITY_INVALID")
+    if "OUR15" in expected_counts:
+        if len(our15_ids) != 15 or len(set(our15_ids)) != 15:
+            failures.append("VISIBLE_OUR15_IDENTITY_INVALID")
 
-    xi_count, xi_names = _count_label_list(
-        "\n".join(section_content.get(xi_bench_section_id, [])),
-        "XI",
-    )
-    bench_count, bench_names = _count_label_list(
-        "\n".join(section_content.get(xi_bench_section_id, [])),
-        "BENCH",
-    )
-    if xi_count == 11 and bench_count == 4 and our15_names:
-        if set(xi_names) & set(bench_names) or set(xi_names + bench_names) != set(our15_names):
-            failures.append("VISIBLE_XI_BENCH_NOT_EXACT_OUR15")
+    if "XI" in expected_counts or "BENCH" in expected_counts:
+        xi_count, xi_names = _count_label_list(
+            "\n".join(section_content.get(xi_bench_section_id, [])),
+            "XI",
+        )
+        bench_count, bench_names = _count_label_list(
+            "\n".join(section_content.get(xi_bench_section_id, [])),
+            "BENCH",
+        )
+        if xi_count == 11 and bench_count == 4 and our15_names:
+            if set(xi_names) & set(bench_names) or set(xi_names + bench_names) != set(our15_names):
+                failures.append("VISIBLE_XI_BENCH_NOT_EXACT_OUR15")
 
     if "S16" in expected_set:
         tactical_ids = _extract_table_column(

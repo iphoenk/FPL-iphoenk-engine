@@ -175,6 +175,174 @@ def _select_match_source(
     }
 
 
+
+def _supplemental_player_evidence(
+    runtime_data_root: Path,
+) -> dict[str, dict[str, Any]]:
+    """Fuse existing normalized V6 facts read-only for Stage-2 producers."""
+    understat = _read_json(
+        runtime_data_root / "data/v6/normalized/sources/understat.json"
+    )
+    statmuse = _read_json(
+        runtime_data_root / "data/v6/normalized/sources/statmuse.json"
+    )
+    rotowire = _read_json(
+        runtime_data_root / "data/v6/normalized/sources/rotowire.json"
+    )
+    players: dict[str, dict[str, Any]] = {}
+
+    def ensure(element: int) -> dict[str, Any]:
+        return players.setdefault(
+            str(element),
+            {
+                "element": element,
+                "advanced_current": {},
+                "tactical_role": {
+                    "profile": "UNASSESSED",
+                    "confidence": "NONE",
+                    "decision_influence": "ADVISORY_ONLY",
+                },
+                "availability_evidence": [],
+                "provenance": {},
+            },
+        )
+
+    for row in (understat.get("record_groups") or {}).get("players") or []:
+        if not isinstance(row, Mapping):
+            continue
+        element = int(row.get("official_element_id") or 0)
+        identity = str(row.get("identity_status") or "").upper()
+        if element <= 0 or identity not in JOINABLE:
+            continue
+        target = ensure(element)
+        minutes = float(row.get("time") or 0.0)
+        advanced = target["advanced_current"]
+        for key in (
+            "xg", "xa", "npxg", "shots", "key_passes",
+            "goals", "assists", "xg_chain", "xg_buildup",
+        ):
+            if row.get(key) is not None:
+                advanced[key] = row.get(key)
+        advanced["minutes"] = minutes
+        if minutes > 0.0:
+            for source_key, output_key in (
+                ("xg", "xg_per90"),
+                ("xa", "xa_per90"),
+                ("npxg", "npxg_per90"),
+                ("shots", "shots_per90"),
+                ("key_passes", "key_passes_per90"),
+            ):
+                if row.get(source_key) is not None:
+                    advanced[output_key] = round(
+                        float(row.get(source_key) or 0.0)
+                        * 90.0 / minutes,
+                        6,
+                    )
+        role = str(row.get("position") or "").strip()
+        if role:
+            target["tactical_role"] = {
+                "profile": role.upper(),
+                "confidence": "MEDIUM",
+                "decision_influence": "ADVISORY_ONLY",
+                "source": "understat_normalized_exact_identity",
+            }
+        target["provenance"]["understat"] = {
+            "source_health": understat.get("source_health"),
+            "normalization_status": understat.get("normalization_status"),
+            "effective_at": understat.get("effective_at"),
+            "identity_status": identity,
+        }
+
+    for row in (statmuse.get("record_groups") or {}).get("players") or []:
+        if not isinstance(row, Mapping):
+            continue
+        element = int(row.get("official_element_id") or 0)
+        identity = str(row.get("identity_status") or "").upper()
+        if element <= 0 or identity not in JOINABLE:
+            continue
+        target = ensure(element)
+        advanced = target["advanced_current"]
+        for source_key, output_key in (
+            ("shots", "shots"),
+            ("shots_on_target", "shots_on_target"),
+            ("touches", "touches"),
+            ("touches_box", "touches_opposition_box"),
+            ("xg", "xg_statmuse"),
+            ("xa", "xa_statmuse"),
+        ):
+            if row.get(source_key) is not None:
+                advanced[output_key] = row.get(source_key)
+        minutes = float(
+            row.get("minutes") or advanced.get("minutes") or 0.0
+        )
+        if minutes > 0.0:
+            if row.get("shots_on_target") is not None:
+                advanced["shots_on_target_per90"] = round(
+                    float(row.get("shots_on_target") or 0.0)
+                    * 90.0 / minutes,
+                    6,
+                )
+            if row.get("touches_box") is not None:
+                advanced["touches_opposition_box_per90"] = round(
+                    float(row.get("touches_box") or 0.0)
+                    * 90.0 / minutes,
+                    6,
+                )
+        target["provenance"]["statmuse"] = {
+            "source_health": statmuse.get("source_health"),
+            "normalization_status": statmuse.get("normalization_status"),
+            "effective_at": statmuse.get("effective_at"),
+            "identity_status": identity,
+        }
+
+    for group in ("lineups", "availability"):
+        for row in (rotowire.get("record_groups") or {}).get(group) or []:
+            if not isinstance(row, Mapping):
+                continue
+            element = int(row.get("official_element_id") or 0)
+            identity = str(row.get("identity_status") or "").upper()
+            if element <= 0 or identity not in JOINABLE:
+                continue
+            target = ensure(element)
+            target["availability_evidence"].append(
+                {
+                    "group": group,
+                    "availability_status": row.get("availability_status"),
+                    "lineup_status": row.get("lineup_status"),
+                    "fixture_key": row.get("fixture_key"),
+                    "position": row.get("position"),
+                }
+            )
+            target["provenance"]["rotowire"] = {
+                "source_health": rotowire.get("source_health"),
+                "normalization_status": rotowire.get("normalization_status"),
+                "effective_at": rotowire.get("effective_at"),
+                "identity_status": identity,
+            }
+
+    for target in players.values():
+        evidence = list(target.get("availability_evidence") or [])
+        statuses = [
+            str(row.get("availability_status") or "").upper()
+            for row in evidence
+            if row.get("availability_status")
+        ]
+        target["availability"] = {
+            "statuses": statuses,
+            "available_signal": (
+                None
+                if not statuses
+                else not any(
+                    token in status
+                    for status in statuses
+                    for token in ("OUT", "SUSPEND", "INJUR")
+                )
+            ),
+            "source": "rotowire_normalized_exact_identity",
+        }
+    return players
+
+
 def load_v6_analytics_foundation(
     runtime_data_root: Path,
     *,
@@ -204,6 +372,9 @@ def load_v6_analytics_foundation(
         for row in bootstrap.get("elements") or []
         if int(row.get("id") or 0) > 0
     }
+    supplemental_players = _supplemental_player_evidence(
+        runtime_data_root
+    )
 
     required_core = (
         "official_element_id",
@@ -352,6 +523,9 @@ def load_v6_analytics_foundation(
                 "saves": row.get("saves"),
                 "penalties_saved": row.get("penalties_saved"),
                 "penalties_missed": row.get("penalties_missed"),
+                "yellow_cards": row.get("yellow_cards"),
+                "red_cards": row.get("red_cards"),
+                "own_goals": row.get("own_goals"),
                 "bonus": row.get("bonus"),
                 "bps": row.get("bps"),
                 "defensive": row.get("defensive"),
@@ -439,6 +613,13 @@ def load_v6_analytics_foundation(
             "stage1_distribution_selection": distributions,
             "stage1_walk_forward_validation": validation,
             "stage1_tactical_states": tactical_states,
+            "players": supplemental_players,
+            "supplemental_v6_read_only": {
+                "understat": "NORMALIZED_READ_ONLY",
+                "statmuse": "NORMALIZED_READ_ONLY",
+                "rotowire": "NORMALIZED_READ_ONLY",
+                "player_count": len(supplemental_players),
+            },
         },
         "opponent_adjustment": {
             "status": "AVAILABLE" if adjusted else "UNAVAILABLE",

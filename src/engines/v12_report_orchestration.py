@@ -1423,6 +1423,16 @@ def _materialize_canonical_report(
                 )
             content["universe_movers"] = dict(universe_movers)
             mover_attachments += 1
+        if "PACKAGE OPTIMIZER" in str(label or "").upper() and state == "COMPLETE":
+            package_failures = _package_frontier_contract_failures(
+                content if isinstance(content, Mapping) else None
+            )
+            if package_failures:
+                state = "DEGRADED"
+                row["degradation_reason"] = (
+                    "full-universe package/frontier visible contract incomplete: "
+                    + ",".join(package_failures)
+                )
         sections.append(
             {
                 "section_id": section_id,
@@ -1658,6 +1668,176 @@ def _render_math_stack_lines(stack: Mapping[str, Any]) -> list[str]:
     return lines
 
 
+def _package_frontier_contract_failures(content: Mapping[str, Any] | None) -> list[str]:
+    """Validate visible package/full-universe evidence without creating new ranking math."""
+    payload = dict(content or {})
+    proof = payload.get("package_search_proof") or payload.get("search_proof")
+    challengers = list(
+        payload.get("package_universe_challengers")
+        or payload.get("universe_challengers")
+        or ()
+    )
+    routes = list(
+        payload.get("package_routes")
+        or payload.get("routes")
+        or payload.get("frontier")
+        or ()
+    )
+    failures: list[str] = []
+    if not isinstance(proof, Mapping):
+        failures.append("SEARCH_PROOF_MISSING")
+    else:
+        try:
+            owned_expected = int(proof.get("owned_expected"))
+            owned_evaluated = int(proof.get("owned_evaluated"))
+            universe_expected = int(proof.get("eligible_universe_expected"))
+            universe_evaluated = int(proof.get("eligible_universe_evaluated"))
+            outgoing = int(proof.get("outgoing_candidate_count"))
+            legal_routes = int(proof.get("legal_route_count"))
+        except (TypeError, ValueError):
+            failures.append("SEARCH_PROOF_NUMERIC_INVALID")
+        else:
+            if owned_expected != 15 or owned_evaluated != 15:
+                failures.append(f"OUR15={owned_evaluated}/{owned_expected}")
+            if universe_expected <= 0 or universe_evaluated != universe_expected:
+                failures.append(f"UNIVERSE={universe_evaluated}/{universe_expected}")
+            if outgoing != 15:
+                failures.append(f"OUTGOING={outgoing}/15")
+            if legal_routes <= 0:
+                failures.append("LEGAL_ROUTES=0")
+        if proof.get("hold_included") is not True:
+            failures.append("HOLD_MISSING")
+        if proof.get("lossy_pruning") is not False:
+            failures.append("LOSSY_PRUNING")
+        if str(proof.get("search_authority") or "").upper() != "FULL":
+            failures.append("SEARCH_AUTHORITY_NOT_FULL")
+    if not challengers:
+        failures.append("SCAN_DERIVED_CHALLENGERS_MISSING")
+    if not routes:
+        failures.append("PACKAGE_ROUTES_MISSING")
+    elif not any(
+        str(row.get("route") or "").upper() == "HOLD"
+        for row in routes
+        if isinstance(row, Mapping)
+    ):
+        failures.append("HOLD_ROUTE_MISSING")
+    return failures
+
+
+def _render_package_frontier_lines(
+    content: Mapping[str, Any] | None,
+    *,
+    section_state: str,
+) -> list[str]:
+    """Render the full-universe team-impact surface without recomputing models."""
+    payload = dict(content or {})
+    proof = dict(
+        payload.get("package_search_proof")
+        or payload.get("search_proof")
+        or {}
+    )
+    challengers = [
+        dict(row)
+        for row in (
+            payload.get("package_universe_challengers")
+            or payload.get("universe_challengers")
+            or ()
+        )
+        if isinstance(row, Mapping)
+    ]
+    routes = [
+        dict(row)
+        for row in (
+            payload.get("package_routes")
+            or payload.get("routes")
+            or payload.get("frontier")
+            or ()
+        )
+        if isinstance(row, Mapping)
+    ]
+    lines = ["### UNIVERSE SCAN / OPTIMAL TEAM IMPACT"]
+    if proof:
+        lines.append(
+            "SEARCH PROOF: "
+            f"OUR15 {proof.get('owned_evaluated', 'UNAVAILABLE')}/"
+            f"{proof.get('owned_expected', 'UNAVAILABLE')} | "
+            f"UNIVERSE {proof.get('eligible_universe_evaluated', 'UNAVAILABLE')}/"
+            f"{proof.get('eligible_universe_expected', 'UNAVAILABLE')} | "
+            f"OUTGOING {proof.get('outgoing_candidate_count', 'UNAVAILABLE')}/15 | "
+            f"LEGAL ROUTES {proof.get('legal_route_count', 'UNAVAILABLE')} | "
+            f"HOLD {proof.get('hold_included', 'UNAVAILABLE')} | "
+            f"LOSSY PRUNING {proof.get('lossy_pruning', 'UNAVAILABLE')} | "
+            f"AUTHORITY {proof.get('search_authority', 'UNAVAILABLE')}"
+        )
+    else:
+        lines.append(
+            f"SEARCH PROOF: {section_state} — current full-universe proof unavailable"
+        )
+
+    lines.append("#### SCAN-DERIVED CHALLENGERS")
+    if not challengers:
+        lines.append("UNAVAILABLE — no supportable scan-derived challenger rows")
+    for row in challengers:
+        components = row.get("football_score_components", "UNAVAILABLE")
+        distribution = row.get("expected_points_distribution", "UNAVAILABLE")
+        lines.append(
+            "- "
+            f"#{row.get('rank', 'NA')} {row.get('player') or row.get('element_id')} "
+            f"({row.get('position', 'NA')}, {row.get('club', 'NA')}) | "
+            f"BEST OUT {row.get('best_outgoing', 'UNAVAILABLE')} | "
+            f"ROUTE {row.get('package_route', 'UNAVAILABLE')} | "
+            f"FOOTBALL {row.get('football_score', 'UNAVAILABLE')} "
+            f"[20/25/30/25={components}] | "
+            f"P(avail/start/cameo/DNP)="
+            f"{row.get('p_available', 'UNAVAILABLE')}/"
+            f"{row.get('p_start', 'UNAVAILABLE')}/"
+            f"{row.get('p_cameo', 'UNAVAILABLE')}/"
+            f"{row.get('p_dnp', 'UNAVAILABLE')} | "
+            f"xMins {row.get('xmins', 'UNAVAILABLE')} | "
+            f"P(return/blank/haul)="
+            f"{row.get('p_return', 'UNAVAILABLE')}/"
+            f"{row.get('p_blank', 'UNAVAILABLE')}/"
+            f"{row.get('p_haul', 'UNAVAILABLE')} | "
+            f"xPtsDist {distribution} | "
+            f"TACTICAL {row.get('tactical_role', 'UNAVAILABLE')} | "
+            f"SP/PEN {row.get('set_piece_penalty_role', 'UNAVAILABLE')} | "
+            f"1GW {row.get('gw_plus_1', 'UNAVAILABLE')} | "
+            f"3GW {row.get('three_gw', 'UNAVAILABLE')} | "
+            f"5GW {row.get('five_gw', 'UNAVAILABLE')} | "
+            f"UTILITY ΔHOLD {row.get('package_utility_delta_vs_hold', 'UNAVAILABLE')} | "
+            f"PRICE {row.get('price_economics', 'UNAVAILABLE')} | "
+            f"STRUCTURE {row.get('structure_effect', 'UNAVAILABLE')} | "
+            f"REGRET {row.get('expected_regret', 'UNAVAILABLE')} | "
+            f"IVW {row.get('information_value_of_waiting', 'UNAVAILABLE')} | "
+            f"ICON+ {row.get('mini_league_leverage', 'UNAVAILABLE')} | "
+            f"UPSIDE {row.get('main_upside', 'UNAVAILABLE')} | "
+            f"RISK {row.get('main_risk', 'UNAVAILABLE')} | "
+            f"ACTION {row.get('action', 'UNAVAILABLE')}"
+        )
+
+    lines.append("#### PACKAGE FRONTIER")
+    if not routes:
+        lines.append("UNAVAILABLE — package routes not materialized")
+    for row in routes:
+        lines.append(
+            "- "
+            f"{row.get('route', 'UNAVAILABLE')} | "
+            f"MOVES {row.get('moves', 'UNAVAILABLE')} | "
+            f"COST {row.get('transfer_cost', 'UNAVAILABLE')} | "
+            f"1GW NET {row.get('gw1_net', 'UNAVAILABLE')} | "
+            f"2GW {row.get('two_gw_if_relevant', 'N/A')} | "
+            f"3GW {row.get('three_gw', 'UNAVAILABLE')} | "
+            f"5GW {row.get('five_gw', 'UNAVAILABLE')} | "
+            f"P>HOLD {row.get('p_beats_hold', 'UNAVAILABLE')} | "
+            f"REGRET {row.get('expected_regret', 'UNAVAILABLE')} | "
+            f"ROBUSTNESS {row.get('robustness', 'UNAVAILABLE')} | "
+            f"PRICE {row.get('price_risk', 'UNAVAILABLE')} | "
+            f"STRUCTURE {row.get('structure_effect', 'UNAVAILABLE')} | "
+            f"VERDICT {row.get('action_verdict', 'UNAVAILABLE')}"
+        )
+    return lines
+
+
 def materialize_deep_report(
     *,
     canonical_text: str,
@@ -1831,6 +2011,14 @@ def render_natural_post_match_text(report: Mapping[str, Any]) -> str:
         if isinstance(math_stack, Mapping):
             lines.extend(_render_math_stack_lines(math_stack))
 
+        if "PACKAGE OPTIMIZER" in label.upper():
+            lines.extend(
+                _render_package_frontier_lines(
+                    content_map,
+                    section_state=state,
+                )
+            )
+
         movers = dict(content_map.get("universe_movers") or {})
         if movers:
             lines.append("### UNIVERSE MOVERS")
@@ -1895,6 +2083,13 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
         math_stack = content_map.get("mathematical_decision_stack")
         if isinstance(math_stack, Mapping):
             lines.extend(_render_math_stack_lines(math_stack))
+        if "PACKAGE OPTIMIZER" in label.upper():
+            lines.extend(
+                _render_package_frontier_lines(
+                    content_map,
+                    section_state=state,
+                )
+            )
         blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
 

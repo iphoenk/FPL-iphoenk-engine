@@ -895,6 +895,7 @@ def run_deep(
                     if int(row.get("event") or -1) == planning_gw
                 ],
                 "weather": "DIRECT_CHATGPT_REQUIRED_AT_VISIBLE_DELIVERY",
+                "weather_source": "DEGRADED",
             },
         ),
         "S06": _section(
@@ -985,12 +986,22 @@ def run_deep(
                         if canonical_complete
                         else "PARTIAL"
                     ),
-                }
+                },
+                "FACT": "OFFICIAL_FPL_OCCURRENCE_FACTS",
+                "MODEL": "V12_OCCURRENCE_MODEL_OUTPUTS",
+                "INFERENCE": "V12_DECISION_INFERENCE",
             },
         ),
         "S15B": _section(
             mini_state,
-            mini or {"coverage_state": "UNAVAILABLE"},
+            {
+                **(mini or {"coverage_state": "UNAVAILABLE"}),
+                "mini_league_denominator": (
+                    "COMPLETE"
+                    if mini_state == "COMPLETE"
+                    else "DEGRADED"
+                ),
+            },
             mini_reason,
         ),
         "S16": _section(

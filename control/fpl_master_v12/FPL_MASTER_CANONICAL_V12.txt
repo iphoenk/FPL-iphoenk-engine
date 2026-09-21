@@ -1,5 +1,5 @@
 FPL MASTER CANONICAL V12 — FAIL-OPERATIONAL REPORT-PLANE ARCHITECTURE
-Effective: 2026-09-21T12:50:00+07:00
+Effective: 2026-09-21T13:55:00+07:00
 Authority path: control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
 State path: control/fpl_master_v12/FPL_MASTER_STATE_V12.json
 
@@ -857,6 +857,34 @@ J. Natural Match acceptance semantics are orthogonal:
 K. The proof is sealed with occurrence identity + digest and read back from the existing durable evidence surface. Tamper/cross-occurrence readback fails closed. Sealing the proof does not mint a canonical delivery receipt and does not transition a report slot to DELIVERED.
 L. Historical evidence is immutable. Never fabricate or retrofit a proof for an old occurrence merely because the current schema exists. In particular the 2026-09-20 23:30 Asia/Jakarta occurrence remains NATURAL CORE + GENUINE LIVE PROVEN and RENDER/VISIBLE ACCEPTANCE UNRESOLVED unless exact immutable evidence from that occurrence already exists and is truthfully recoverable.
 M. This observability contract changes no V6 acquisition/publisher logic, scheduler cadence, issue #431 transport, NATURAL_CORE_UPKEEP_GATE semantics, Dynamic Match mathematics/logic, fixture lifecycle predicate, public-first routing, locked-team logic, ICON+ calculations, EO mathematics, 20/25/30/25, Bayesian/xMins/P1.x/Monte Carlo/price/trajectory/link-up/Universe Movers/material-deep/WAIT-PREPARE-ACT semantics.
+
+15C. INTEGRATED V12 REPORT OCCURRENCE RUNNER
+A. PURPOSE. The existing V12 owner modules MUST be executed as one bounded occurrence pipeline before a mandatory DEEP report is rendered. Repository code existence is not execution proof. The runner is an execution bridge only and never becomes scheduler, methodology authority, V6 publisher, decision authority or second report schema.
+B. AUTHORITY. FPL Master Monitor V12 remains the only recurring scheduler. This Canonical TXT remains methodology/report authority. V6 remains the only factual production data plane. State JSON remains non-authoritative. The runner MUST NOT import or execute V3/V4/V5, legacy full-authority caches, legacy optimizers, migration/regression oracles or alternate schedulers.
+C. SAME-OCCURRENCE FACTUAL BINDING. For mandatory DEEP/FULL/Deadline/Final/Post-All-Match where the mode requires current personal/league/live scope, execute the existing governed V6 report-prefetch for the same REPORT_SLOT before the integrated V12 run. The runner MUST verify fresh_for_target_report and same-occurrence timestamp binding. A stale prior-report prefetch may not be silently reused as fresh.
+D. OWNER EXECUTION ORDER, when inputs support each owner:
+1 Official FPL/V6 factual read;
+2 OUR15 identity/state merge;
+3 team-strength/fixture surface;
+4 P1.1 finite-state minutes + P1.3/P1.3B full-universe posterior/event/point distributions;
+5 Official set-piece/penalty role evidence;
+6 P1.6 tactical/role component;
+7 canonical full-universe 20/25/30/25 evaluation;
+8 exact Watchlist20;
+9 P1.7 XI/bench/captain/vice;
+10 Official FPL Price Change Predictor RISE20/FALL20 + OUR15 price radar;
+11 P1.2A package search + P1.2B package utility when economics are supportable;
+12 P1.4 correlated Monte Carlo only from supportable material routes and actual_paths>=500000;
+13 P1.8 mini-league overlay only after the football baseline;
+14 exact Canonical section materialization;
+15 existing PRE_RENDER_QA, visible render and POST_RENDER_QA;
+16 occurrence bundle + execution proof.
+E. NO MANUAL-PROSE BYPASS. A mandatory DEEP report MUST NOT jump directly from core-slot health or V6 publication status to a hand-written summary when the integrated runner path is supportable. Core PASS is not analytics execution. Prefetch PASS is not analytics execution. A visible DEEP report must consume the occurrence-bound runner bundle or visibly declare INTEGRATED_RUNNER_BLOCKED with the exact stage blocker while preserving all Canonical sections fail-operationally.
+F. BUNDLE. The bounded runner produces a single occurrence-bound report bundle containing report_mode, report_slot, planning_gw, stage ledger, source fingerprints, Canonical section payloads, visible body/render input and execution proof. The bundle is evidence, not durable user state and not V6 data. It MUST NOT be published into runtime-data-v6.
+G. FULL-UNIVERSE EVALUATOR BOUNDARY. The runner MUST NOT invent missing 20/25/30/25 component mathematics. If any required component producer is absent or incomplete, mark CANONICAL_UNIVERSE_20_25_30_25=PARTIAL and prohibit Watchlist/package/full-universe-optimized claims. This limitation is an implementation gap to be completed by a separately governed V12-native component evaluator, never by legacy runtime or ad-hoc percentile scoring.
+H. FAIL-OPERATIONAL. A runner-stage failure degrades only dependent sections and does not cancel a due report. However fail-operational does not authorize manual shortlist substitution, false COMPLETE labels, fake MC, fake probabilities or omission of mandatory structure.
+I. ACCEPTANCE. Natural acceptance requires proof that the same REPORT_SLOT performed same-occurrence report-prefetch where required, invoked the integrated runner, terminalized the runner, consumed the resulting bundle, rendered the correct Canonical catalog and delivered a non-empty visible report. A controlled/manual runner execution never counts as natural scheduler acceptance.
+J. TRANSPORT. The non-scheduled workflow/comment command used to execute the runner is executor-only. It MUST have no cron and must not create a second recurring automation. Issue #431 title remains reserved for core V6 transport; report-prefetch remains /v6-report-prefetch comments; integrated report execution may use /v12-report-run comments without mutating the issue title.
 
 16. FAIL-OPERATIONAL
 #431 failure, V6 refresh latency/failure, provider failure, prefetch degradation, one auth failure, predictor incompleteness NEVER equal NOT_DUE.

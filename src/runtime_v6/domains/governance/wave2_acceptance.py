@@ -227,7 +227,7 @@ def run() -> dict[str, Any]:
         "price_0530_provenance",
         price_payload.get("source_id") == "official_price_predictor"
         and price_payload.get("source_name") == "Official FPL Price Change Predictor"
-        and price_payload.get("semantic_class") == "OFFICIAL_FPL_PREDICTOR_MODEL"
+        and price_payload.get("semantic_class") == "UPSTREAM_MODEL_SIGNAL"
         and price_payload.get("authority_class") == "OFFICIAL_FPL_MODEL"
         and price_payload.get("v6_computation") == "NONE"
         and price_payload.get("predictor_official_status") == "VERIFIED_OFFICIAL_FPL_PRODUCT"

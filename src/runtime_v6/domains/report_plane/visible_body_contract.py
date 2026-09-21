@@ -393,6 +393,29 @@ def validate_visible_report_body(
     if empty_sections:
         failures.append(f"VISIBLE_SECTION_EMPTY={','.join(empty_sections)}")
 
+    status_only_sections: list[str] = []
+    for section_id in expected_sections:
+        parts = section_content.get(section_id, [])
+        if not parts:
+            continue
+        substantive = False
+        for part in parts:
+            remaining = [
+                line.strip()
+                for line in str(part).splitlines()
+                if line.strip()
+                and not re.match(r"(?i)^STATUS\s*:", line.strip())
+            ]
+            if remaining:
+                substantive = True
+                break
+        if not substantive:
+            status_only_sections.append(section_id)
+    if status_only_sections:
+        failures.append(
+            f"VISIBLE_SECTION_STATUS_ONLY={','.join(status_only_sections)}"
+        )
+
     match_catalog = bool(expected_sections) and all(
         section_id.startswith("MATCH") for section_id in expected_sections
     )

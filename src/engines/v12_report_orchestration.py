@@ -1413,6 +1413,16 @@ def _materialize_canonical_report(
                 f"{section_id} degraded/unavailable section requires reason"
             )
         content = row.get("content")
+        if state == "COMPLETE" and (
+            content is None
+            or content == ""
+            or content == {}
+            or content == []
+        ):
+            state = "DEGRADED"
+            row["degradation_reason"] = (
+                "section declared COMPLETE but no human-facing content was materialized"
+            )
         if section_id == "S03" and str(checkpoint_time or "") == "12:30":
             content = dict(content or {})
             content["signal_delta_since_0430"] = dict(
@@ -2099,6 +2109,9 @@ def render_natural_post_match_text(report: Mapping[str, Any]) -> str:
         state = str(section.get("state") or "")
         section_id = section.get("section_id")
         lines = [_visible_section_heading(section_id, label), f"Status: {state}"]
+        reason = str(section.get("degradation_reason") or "").strip()
+        if state != "COMPLETE" and reason:
+            lines.append(f"Reason: {reason}")
         content = section.get("content")
         content_map = dict(content or {}) if isinstance(content, Mapping) else {}
 
@@ -2197,6 +2210,9 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
         state = str(row.get("state") or "")
         section_id = row.get("section_id")
         lines = [_visible_section_heading(section_id, label), f"Status: {state}"]
+        reason = str(row.get("degradation_reason") or "").strip()
+        if state != "COMPLETE" and reason:
+            lines.append(f"Reason: {reason}")
         content = row.get("content")
         content_map = dict(content or {}) if isinstance(content, Mapping) else {}
         scout = [

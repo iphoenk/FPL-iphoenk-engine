@@ -229,8 +229,105 @@ def _estimate_core(
     late_std = max(
         0.0, _f(cfg.get("late_cameo_minutes_state_std"), 4.0)
     )
+
+    starter_rows = [
+        dict(row)
+        for row in context.get("player_match_rows") or []
+        if isinstance(row, Mapping)
+        and bool(row.get("starter"))
+        and _f(row.get("minutes")) > 0.0
+    ]
+    full_rows = [
+        row for row in starter_rows
+        if _f(row.get("minutes")) >= 80.0
+    ]
+    subbed_rows = [
+        row for row in starter_rows
+        if 60.0 <= _f(row.get("minutes")) < 80.0
+    ]
+    early_rows = [
+        row for row in starter_rows
+        if _f(row.get("minutes")) < 60.0
+    ]
+    state_prior = dict(
+        cfg.get("starter_state_prior")
+        or {
+            "START_FULL": 2.0,
+            "START_SUBBED": 2.0,
+            "EARLY_SUB": 1.0,
+        }
+    )
+    counts = {
+        "START_FULL": len(full_rows),
+        "START_SUBBED": len(subbed_rows),
+        "EARLY_SUB": len(early_rows),
+    }
+    denominator = sum(counts.values()) + sum(
+        max(0.0, _f(state_prior.get(name), 0.0))
+        for name in counts
+    )
+    conditional_start = {
+        name: (
+            counts[name] + max(0.0, _f(state_prior.get(name), 0.0))
+        ) / max(1e-9, denominator)
+        for name in counts
+    }
+
+    def observed_mean(
+        rows: list[dict[str, Any]],
+        fallback: float,
+    ) -> float:
+        if not rows:
+            return fallback
+        return sum(_f(row.get("minutes")) for row in rows) / len(rows)
+
+    if starter_rows:
+        full_minutes = clamp(
+            observed_mean(full_rows, max(80.0, starter_minutes)),
+            80.0,
+            90.0,
+        )
+        subbed_minutes = clamp(
+            observed_mean(
+                subbed_rows,
+                min(79.0, max(60.0, starter_minutes)),
+            ),
+            60.0,
+            79.0,
+        )
+        early_minutes = clamp(
+            observed_mean(
+                early_rows,
+                min(59.0, max(30.0, starter_minutes - 20.0)),
+            ),
+            1.0,
+            59.0,
+        )
+    else:
+        # Preserve the existing aggregate xMins when factual substitution
+        # timing is unavailable. State probability is still explicit, while
+        # within-start timing remains prior-only rather than fabricated.
+        full_minutes = subbed_minutes = early_minutes = starter_minutes
+
     states = [
-        ("START", start_probability, starter_minutes, starter_std),
+        (
+            "START_FULL",
+            start_probability * conditional_start["START_FULL"],
+            full_minutes,
+            max(4.0, starter_std * 0.55),
+        ),
+        (
+            "START_SUBBED",
+            start_probability * conditional_start["START_SUBBED"],
+            subbed_minutes,
+            max(5.0, starter_std * 0.70),
+        ),
+        (
+            "EARLY_SUB",
+            start_probability * conditional_start["EARLY_SUB"],
+            early_minutes,
+            max(7.0, starter_std),
+        ),
         (
             "CAMEO",
             regular_cameo_probability,
@@ -243,7 +340,7 @@ def _estimate_core(
             late_cameo_minutes,
             late_std,
         ),
-        ("ZERO_MINUTES", dnp_probability, 0.0, 0.0),
+        ("DNP", dnp_probability, 0.0, 0.0),
     ]
     expected_minutes, mixture_variance = _mixture_mean_variance(states)
     mixture_std = math.sqrt(mixture_variance)
@@ -252,15 +349,10 @@ def _estimate_core(
     small_sample = matches < small_sample_limit
     uncertainty = cfg.get("uncertainty") or {}
     entropy = 0.0
-    for p in (
-        start_probability,
-        regular_cameo_probability,
-        late_cameo_probability,
-        dnp_probability,
-    ):
-        if p > 0:
-            entropy -= p * math.log(p)
-    entropy /= math.log(4)
+    for _, probability, _, _ in states:
+        if probability > 0:
+            entropy -= probability * math.log(probability)
+    entropy /= math.log(6)
     probability_half_width = _f(
         uncertainty.get("base_start_probability_half_width"), 0.12
     )
@@ -322,7 +414,42 @@ def _estimate_core(
         "appearance_outcomes_sum_to_one": True,
         "bench_is_overlapping_state": True,
         "expected_minutes": round(expected_minutes, 1),
-        "starter_minutes_if_start": round(starter_minutes, 1),
+        "starter_minutes_if_start": round(
+            sum(
+                conditional_start[name] * minutes
+                for name, minutes in (
+                    ("START_FULL", full_minutes),
+                    ("START_SUBBED", subbed_minutes),
+                    ("EARLY_SUB", early_minutes),
+                )
+            ),
+            1,
+        ),
+        "p_60_plus": round(
+            start_probability
+            * (
+                conditional_start["START_FULL"]
+                + conditional_start["START_SUBBED"]
+            ),
+            4,
+        ),
+        "starter_state_evidence": {
+            "sample_starts": len(starter_rows),
+            "counts": counts,
+            "dirichlet_prior": {
+                name: _f(state_prior.get(name), 0.0)
+                for name in counts
+            },
+            "conditional_probabilities": {
+                name: round(value, 6)
+                for name, value in conditional_start.items()
+            },
+            "substitution_timing_source": (
+                "MATCH_MINUTES_DERIVED"
+                if starter_rows
+                else "PRIOR_ONLY_NO_MATCH_LEVEL_START_MINUTES"
+            ),
+        },
         "bench_minutes_if_used": round(cameo_minutes, 1),
         "cameo_minutes_if_used": round(cameo_minutes, 1),
         "late_cameo_minutes_if_used": round(late_cameo_minutes, 1),

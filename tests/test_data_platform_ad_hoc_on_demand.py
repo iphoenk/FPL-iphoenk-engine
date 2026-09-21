@@ -349,6 +349,7 @@ def test_ad_hoc_deep_serious_decision_rejects_missing_visible_mathematical_stack
     assert pre["status"] == "PASS"
     assert pre["serious_decision_required"] is True
     assert "MATHEMATICAL DECISION STACK" in pre["required_visible_markers"]
+    assert "UNIVERSE SCAN / OPTIMAL TEAM IMPACT" in pre["required_visible_markers"]
 
     missing_body = valid_visible_body(pre, include_serious_math=False)
     failed = validate_post_render_qa(

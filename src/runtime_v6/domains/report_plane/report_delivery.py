@@ -12,8 +12,17 @@ from hashlib import sha256
 import json
 import re
 from typing import Any, Mapping, Sequence
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from .delivery_integrity import DeliveryIntegrityError, build_report_slot_id
+from .delivery_integrity import (
+    DEEP_MANDATORY_SECTIONS,
+    FINAL_MANDATORY_SECTIONS,
+    MATCH_MANDATORY_SECTIONS,
+    POST_ALL_MATCH_MANDATORY_SECTIONS,
+    PRICE_MANDATORY_SECTIONS,
+    DeliveryIntegrityError,
+    build_report_slot_id,
+)
 from .temporal import canonical_timestamp, try_parse_timestamp
 
 
@@ -1272,6 +1281,91 @@ def _v12_acceptance_digest(payload: Mapping[str, Any]) -> str:
     return _proof_digest(canonical)
 
 
+def _v12_expected_render_catalog(mode: Any) -> tuple[str, ...]:
+    """Return the Canonical-aligned runtime section catalog for one rendered mode."""
+    tokens = _v12_mode_tokens(mode)
+    if not tokens:
+        return ()
+    ordered: list[str] = []
+
+    def add(rows: Sequence[str]) -> None:
+        for section_id in rows:
+            if section_id not in ordered:
+                ordered.append(section_id)
+
+    if "FINAL" in tokens:
+        add(FINAL_MANDATORY_SECTIONS)
+    elif any(token in tokens for token in ("DEEP", "FULL", "DEADLINE", "OVERLAP")):
+        add(DEEP_MANDATORY_SECTIONS)
+    if "PRICE" in tokens:
+        add(PRICE_MANDATORY_SECTIONS)
+    if "POST_ALL_MATCH" in tokens:
+        add(POST_ALL_MATCH_MANDATORY_SECTIONS)
+    if "MATCH" in tokens:
+        add(MATCH_MANDATORY_SECTIONS)
+    return tuple(ordered)
+
+
+def _v12_render_catalog_evidence(
+    mode: Any,
+    rendered_section_ids: Sequence[str],
+) -> dict[str, Any]:
+    expected = list(_v12_expected_render_catalog(mode))
+    actual = [str(value) for value in rendered_section_ids]
+    missing = [section_id for section_id in expected if section_id not in actual]
+    unexpected = [section_id for section_id in actual if section_id not in expected]
+    tokens = _v12_mode_tokens(mode)
+    overlap = len(tokens) > 1
+    if overlap:
+        order_ok = not missing
+    else:
+        order_ok = actual == expected
+    return {
+        "expected_section_ids": expected,
+        "actual_section_ids": actual,
+        "missing_section_ids": missing,
+        "unexpected_section_ids": unexpected,
+        "catalog_complete": bool(expected) and not missing,
+        "catalog_order_exact": bool(expected) and order_ok,
+        "overlap_mode": overlap,
+    }
+
+
+def _v12_core_slot_relation(
+    *,
+    scheduler_occurrence: Any,
+    timezone_name: str | None,
+    core_logical_slot: Any,
+) -> dict[str, Any]:
+    """Prove core HH:00 is the exact hour floor of the bound natural HH:30 occurrence."""
+    occurrence = _parse_aware_timestamp(scheduler_occurrence)
+    core = _parse_aware_timestamp(core_logical_slot)
+    if occurrence is None or core is None or not timezone_name:
+        return {
+            "valid": False,
+            "expected_core_logical_slot": None,
+            "actual_core_logical_slot": core_logical_slot,
+            "reason": "MISSING_OR_INVALID_TIMESTAMP",
+        }
+    try:
+        zone = ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError:
+        return {
+            "valid": False,
+            "expected_core_logical_slot": None,
+            "actual_core_logical_slot": core_logical_slot,
+            "reason": "INVALID_TIMEZONE",
+        }
+    local_occurrence = occurrence.astimezone(zone)
+    expected = local_occurrence.replace(minute=0, second=0, microsecond=0)
+    return {
+        "valid": core == expected,
+        "expected_core_logical_slot": expected.isoformat(),
+        "actual_core_logical_slot": core.isoformat(),
+        "reason": "PASS" if core == expected else "CORE_LOGICAL_SLOT_MISMATCH",
+    }
+
+
 def build_natural_report_acceptance_proof(
     evidence: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -1304,6 +1398,14 @@ def build_natural_report_acceptance_proof(
         failures.append("CORE_LOGICAL_SLOT_INVALID")
     if not scheduler_identity:
         failures.append("SCHEDULER_IDENTITY_MISSING")
+
+    core_slot_relation = _v12_core_slot_relation(
+        scheduler_occurrence=occurrence_id,
+        timezone_name=timezone_name,
+        core_logical_slot=core_slot,
+    )
+    if not core_slot_relation["valid"]:
+        failures.append(str(core_slot_relation["reason"]))
 
     core_gate_executed = row.get("core_gate_executed") is True
     core_gate_resolution = _v12_nonempty(row.get("core_gate_resolution"))
@@ -1379,12 +1481,19 @@ def build_natural_report_acceptance_proof(
             or section_count_value == len(section_names)
         )
     )
+    render_catalog = _v12_render_catalog_evidence(rendered_mode, section_ids)
+    post_render_qa_pass = row.get("post_render_qa_pass") is True
+    human_facing_qa_pass = row.get("human_facing_qa_pass") is True
     render_proven = bool(
         render_attempted
         and render_completed
         and rendered_mode
         and critical_sections_present
         and render_shape_consistent
+        and render_catalog["catalog_complete"]
+        and render_catalog["catalog_order_exact"]
+        and post_render_qa_pass
+        and human_facing_qa_pass
         and _is_sha256(render_digest)
         and _parse_aware_timestamp(render_completed_at) is not None
         and report_instance_count == 1
@@ -1396,6 +1505,17 @@ def build_natural_report_acceptance_proof(
         failures.append("RENDER_COMPLETED_WITHOUT_ATTEMPT")
     if render_completed and not render_shape_consistent:
         failures.append("RENDER_SECTION_COUNT_MISMATCH")
+    if render_completed and not render_catalog["catalog_complete"]:
+        failures.append(
+            "RENDER_SECTION_CATALOG_MISSING="
+            + ",".join(render_catalog["missing_section_ids"])
+        )
+    if render_completed and not render_catalog["catalog_order_exact"]:
+        failures.append("RENDER_SECTION_CATALOG_ORDER_MISMATCH")
+    if final_due is True and not post_render_qa_pass:
+        failures.append("POST_RENDER_QA_NOT_PROVEN")
+    if final_due is True and not human_facing_qa_pass:
+        failures.append("HUMAN_FACING_QA_NOT_PROVEN")
     if final_due is True and report_instance_count != 1:
         failures.append("REPORT_INSTANCE_COUNT_INVALID")
 
@@ -1491,6 +1611,7 @@ def build_natural_report_acceptance_proof(
         },
         "core": {
             "core_gate_executed": core_gate_executed,
+            "core_slot_relation": core_slot_relation,
             "core_gate_resolution": core_gate_resolution,
             "same_slot_fulfilled": _v12_optional_bool(
                 row.get("same_slot_fulfilled")
@@ -1527,6 +1648,9 @@ def build_natural_report_acceptance_proof(
             "rendered_section_names": section_names,
             "section_count": section_count_value,
             "critical_sections_present": critical_sections_present,
+            "section_catalog": render_catalog,
+            "post_render_qa_pass": post_render_qa_pass,
+            "human_facing_qa_pass": human_facing_qa_pass,
             "render_content_digest": render_digest,
             "render_completed_at": render_completed_at,
             "report_instance_count": report_instance_count,

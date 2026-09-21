@@ -226,16 +226,16 @@ def run() -> dict[str, Any]:
         checks,
         "price_0530_provenance",
         price_payload.get("source_id") == "official_price_predictor"
-        and price_payload.get("source_name") == "V6 Derived Price Change Signal"
+        and price_payload.get("source_name") == "Official FPL Price Change Predictor"
         and price_payload.get("semantic_class") == "UPSTREAM_MODEL_SIGNAL"
-        and price_payload.get("authority_class") == "MODEL"
+        and price_payload.get("authority_class") == "OFFICIAL_FPL_MODEL"
         and price_payload.get("v6_computation") == "NONE"
-        and price_payload.get("predictor_official_status") == "UNVERIFIED_NOT_OFFICIAL_PRODUCT"
-        and price_payload.get("independent_official_product_evidence") is False
-        and price_payload.get("governance", {}).get("legacy_source_identifier_is_not_authority_proof") is True
-        and price_payload.get("governance", {}).get("may_be_described_as_official_fpl_predictor_product") is False
+        and price_payload.get("predictor_official_status") == "VERIFIED_OFFICIAL_FPL_PRODUCT"
+        and price_payload.get("independent_official_product_evidence") is True
+        and price_payload.get("governance", {}).get("official_product_documented_by_premierleague_com") is True
+        and price_payload.get("governance", {}).get("may_be_described_as_official_fpl_predictor_product") is True
         and price_contract.get("status") == "PASS"
-        and price_contract.get("predictor_may_be_called_official") is False,
+        and price_contract.get("predictor_may_be_called_official") is True,
         runtime_artifact={
             "id": price_payload.get("source_id"),
             "name": price_payload.get("source_name"),

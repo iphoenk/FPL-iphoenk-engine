@@ -456,7 +456,10 @@ def _finite_states(minutes_projection: Mapping[str, Any]) -> list[dict[str, Any]
         "LATE_CAMEO",
         "DNP",
     }
-    if names not in {frozenset(legacy), frozenset(stage1)}:
+    if frozenset(names) not in {
+        frozenset(legacy),
+        frozenset(stage1),
+    }:
         raise ValueError(
             "P1.3 requires legacy four-state or Stage-1 six-state "
             "minutes contract"

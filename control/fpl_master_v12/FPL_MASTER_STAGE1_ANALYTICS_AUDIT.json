@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "audit_id": "V12_STAGE1_ANALYTICS_COMPLETION_2026_09_21",
-  "observed_at": "2026-09-21T21:08:00+07:00",
+  "observed_at": "2026-09-21T21:34:04+07:00",
   "authority": "EVIDENCE_ONLY_NON_AUTHORITATIVE",
   "baseline": {
     "main_sha": "4955f91ab2ba560a0221a4d42a6fd672eafcd277",
@@ -129,7 +129,7 @@
   ],
   "capability_classification": {
     "full_universe": "A implementation: exact Canonical 20/25/30/25 producer consumes existing owner outputs only; runtime acceptance pending",
-    "match_by_match": "A implementation / runtime pending: V6 merged_gw request + deterministic player/fixture/opponent normalization implemented",
+    "match_by_match": "A implementation / final runtime acceptance pending: Official FPL finalized event-live history is primary; stale Vaastav mirror is rejected and fallback requires complete latest-finished-GW coverage",
     "opponent_adjustment": "A supported core: venue-specific attack/defence team-strength weights applied to historical observations; unsupported set-piece/transition/aerial dimensions remain explicit UNAVAILABLE",
     "recency": "A: historical weight is recency × opponent-strength × regime weight",
     "coach_formation_role": "A/F by evidence: explicit probabilistic UNKNOWN state when factual coach/formation/role data is unavailable; no FPL-position-as-role fabrication",
@@ -145,9 +145,10 @@
     "pre_render": "A gate: required tests prove runner source compilation and Stage 1 contracts"
   },
   "exact_gaps_to_finish_stage1": [
-    "merge the CI-GREEN Stage 1 implementation to main",
-    "publish a fresh V6 runtime snapshot containing normalized vaastav_fpl player_matches through the current completed GW",
-    "run one controlled DEEP integrated-report acceptance on the published runtime and require the Stage 1 analytics ledger / canonical universe / PRE_RENDER / POST_RENDER / HUMAN_FACING gates to pass"
+    "merge Official FPL finalized-history freshness repair to main with all required V6/V12/governance CI GREEN",
+    "publish a fresh runtime-data-v6 snapshot with normalized official_fpl player_matches through every finished GW",
+    "run one controlled DEEP integrated-report acceptance and require Stage 1 foundation, canonical universe, PRE_RENDER, POST_RENDER and HUMAN_FACING gates to PASS",
+    "update durable Stage 1 audit to stage1_green=true only after the controlled acceptance proof exists"
   ],
   "stage1_green": false,
   "stage2_started": false,
@@ -167,5 +168,13 @@
   "runtime_acceptance_pending": true,
   "implementation_ci_green_head": "ca9f5129732e14cd2e0782946d0be68acccd98d8",
   "implementation_ci_green_repository_governance_run_id": 35609817302,
-  "documentation_event_retrigger": "PR body timestamp was updated after prior push event; evidence-only commit retriggers checks with synchronized PR body + README timestamp"
+  "documentation_event_retrigger": "PR body timestamp was updated after prior push event; evidence-only commit retriggers checks with synchronized PR body + README timestamp",
+  "final_history_policy": {
+    "primary": "official_fpl.finalized_event_live_history",
+    "fallback": "vaastav_fpl.merged_gw only if complete through latest finished GW",
+    "stale_fallback_allowed": false,
+    "official_fixture_resolution": "OFFICIAL_EXPLAIN_FIXTURE_ONLY",
+    "dgw_aggregate_split_fabrication": false
+  },
+  "stage1_official_history_repair_branch": "v12-stage1-official-history-freshness"
 }

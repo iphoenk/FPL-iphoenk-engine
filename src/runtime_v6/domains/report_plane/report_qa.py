@@ -12,7 +12,15 @@ import re
 import json
 from typing import Any, Mapping, Sequence
 
-from .delivery_integrity import MANDATORY_SECTIONS, PARTIAL_ALLOWED_SECTIONS
+from .delivery_integrity import (
+    DEEP_MANDATORY_SECTIONS,
+    FINAL_MANDATORY_SECTIONS,
+    MANDATORY_SECTIONS,
+    MATCH_MANDATORY_SECTIONS,
+    PARTIAL_ALLOWED_SECTIONS,
+    POST_ALL_MATCH_MANDATORY_SECTIONS,
+    PRICE_MANDATORY_SECTIONS,
+)
 from .visible_body_contract import validate_visible_report_body
 
 
@@ -40,12 +48,27 @@ _MATCH_COUNT_TARGETS = {
     "XI": 11,
     "BENCH": 4,
 }
-_MATCH_SECTION_IDS = tuple(f"MATCH{index}" for index in range(1, 9))
+_MATCH_SECTION_IDS = MATCH_MANDATORY_SECTIONS
+_PRICE_SECTION_IDS = PRICE_MANDATORY_SECTIONS
+_POST_ALL_MATCH_SECTION_IDS = POST_ALL_MATCH_MANDATORY_SECTIONS
+_FULL_SECTION_IDS = DEEP_MANDATORY_SECTIONS
+_FINAL_SECTION_IDS = FINAL_MANDATORY_SECTIONS
 _FULL_BACKBONE_CATALOG_MODES = frozenset(
-    {"LEGACY", "DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP", "POST_ALL_MATCH"}
+    {"LEGACY", "DEEP", "FULL", "DEADLINE", "OVERLAP"}
 )
-_VALID_SECTION_STATES = frozenset({"COMPLETE", "PARTIAL"})
-_MANDATORY_ORDER = {section_id: index for index, section_id in enumerate(MANDATORY_SECTIONS)}
+_VALID_SECTION_STATES = frozenset(
+    {"COMPLETE", "PARTIAL", "DEGRADED", "UNAVAILABLE"}
+)
+_ALL_SECTION_ORDER = (
+    list(_FULL_SECTION_IDS)
+    + [section for section in _FINAL_SECTION_IDS if section not in _FULL_SECTION_IDS]
+    + list(_MATCH_SECTION_IDS)
+    + list(_PRICE_SECTION_IDS)
+    + list(_POST_ALL_MATCH_SECTION_IDS)
+)
+_MANDATORY_ORDER = {
+    section_id: index for index, section_id in enumerate(_ALL_SECTION_ORDER)
+}
 _DEEP_WEATHER_MODES = frozenset(
     {"DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP", "POST_ALL_MATCH"}
 )
@@ -1255,8 +1278,14 @@ def _expected_visible_catalog(report_mode: str, generated_section_ids: Sequence[
     mode = str(report_mode or "LEGACY").strip().upper() or "LEGACY"
     if mode == "MATCH":
         return list(_MATCH_SECTION_IDS)
+    if mode == "PRICE":
+        return list(_PRICE_SECTION_IDS)
+    if mode == "POST_ALL_MATCH":
+        return list(_POST_ALL_MATCH_SECTION_IDS)
+    if mode == "FINAL":
+        return list(_FINAL_SECTION_IDS)
     if mode in _FULL_BACKBONE_CATALOG_MODES:
-        return list(MANDATORY_SECTIONS)
+        return list(_FULL_SECTION_IDS)
     return list(generated_section_ids)
 
 

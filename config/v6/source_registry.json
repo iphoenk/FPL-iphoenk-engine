@@ -702,6 +702,20 @@
               "first_name,second_name,id"
             ]
           }
+        },
+        {
+          "id": "merged_gw",
+          "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/{{season.hyphen_short}}/gws/merged_gw.csv",
+          "expect": "csv",
+          "validation": {
+            "min_body_bytes": 1000,
+            "required_text_any": [
+              "element",
+              "minutes",
+              "expected_goals",
+              "GW"
+            ]
+          }
         }
       ],
       "notes": "Historical/calibration mirror; not a live factual authority over Official FPL."

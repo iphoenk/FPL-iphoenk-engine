@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-21T19:06:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-21T20:07:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -372,3 +372,20 @@ The intended invariant is simple:
 > **V6 tells V12 what is factually true. V12 decides what those facts mean for FPL.**
 
 Facts, probability models, tactics, optimization, decisions, and reports remain separately owned and auditable.
+
+## Stage 1 analytics completion status
+
+The integrated DEEP runner now delegates projection horizon ownership to
+P1.3 and no longer sends empty match-history arrays as if they were a valid
+analytics foundation. V12 consumes match-by-match facts only through
+V6-published normalized artifacts. The existing Vaastav source contract now
+includes its season `merged_gw` factual file, normalized as deterministic
+player/fixture/opponent-linked `player_matches`.
+
+Stage 1 remains fail-closed until factual and statistical acceptance proves
+the full requested foundation. In particular, unavailable advanced match
+features, observed coach/formation/role state, formal opponent-strength
+adjustment, hierarchical posterior uncertainty, full xMins state splitting,
+distribution selection and walk-forward calibration are not greenwashed by a
+successful renderer.
+

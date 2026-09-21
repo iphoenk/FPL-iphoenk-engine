@@ -45,7 +45,7 @@ from src.runtime_v6.domains.report_plane.report_qa import (
 from src.runtime_v6.domains.report_plane.visible_body_contract import _parse_sections
 from src.engines.v12_tactical_role import attach_tactical_role_scores
 from src.models.historical_projection import build as build_player_projections
-from src.models.official_role_evidence import attach_official_role_evidence
+from src.models.v12_analytics_foundation import (\n    load_v6_analytics_foundation,\n    require_match_foundation,\n)\nfrom src.models.official_role_evidence import attach_official_role_evidence
 from src.models.team_strength import build_team_strength
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -587,24 +587,57 @@ def run_deep(
         lambda: build_team_strength(bootstrap, fixtures),
         required=True,
     )
-    projections = _stage(
+    foundation = _stage(
         ledger,
-        "P1_1_P1_3_FULL_UNIVERSE",
-        lambda: build_player_projections(
-            bootstrap,
-            strength or {},
-            planning_gw,
-            {},
-            horizon=5,
-            player_features_payload={},
-            player_match_rows=[],
-            opponent_history_rows=[],
-            opponent_history_scope="CURRENT-SEASON ONLY",
+        "V12_ANALYTICS_FOUNDATION",
+        lambda: require_match_foundation(
+            load_v6_analytics_foundation(
+                runtime_data_root,
+                bootstrap=bootstrap,
+                planning_gw=planning_gw,
+            )
         ),
         required=True,
     )
-    projection_failure = _stage_failure_reason(
-        ledger, "P1_1_P1_3_FULL_UNIVERSE"
+    if foundation:
+        projections = _stage(
+            ledger,
+            "P1_1_P1_3_FULL_UNIVERSE",
+            lambda: build_player_projections(
+                bootstrap,
+                strength or {},
+                planning_gw,
+                foundation.get("historical_prior") or {},
+                player_features_payload=(
+                    foundation.get("player_features_payload") or {}
+                ),
+                player_match_rows=(
+                    foundation.get("player_match_rows") or []
+                ),
+                opponent_history_rows=(
+                    foundation.get("opponent_history_rows") or []
+                ),
+                opponent_history_scope=foundation.get(
+                    "opponent_history_scope"
+                ),
+            ),
+            required=True,
+        )
+    else:
+        foundation_reason = (
+            _stage_failure_reason(ledger, "V12_ANALYTICS_FOUNDATION")
+            or "UNKNOWN_ANALYTICS_FOUNDATION_FAILURE"
+        )
+        _skip_stage(
+            ledger,
+            "P1_1_P1_3_FULL_UNIVERSE",
+            "analytics foundation prerequisite failed: " + foundation_reason,
+            required=True,
+        )
+        projections = None
+    projection_failure = (
+        _stage_failure_reason(ledger, "P1_1_P1_3_FULL_UNIVERSE")
+        or _stage_failure_reason(ledger, "V12_ANALYTICS_FOUNDATION")
     )
 
     owned_ids = {int(row["element_id"]) for row in owned}

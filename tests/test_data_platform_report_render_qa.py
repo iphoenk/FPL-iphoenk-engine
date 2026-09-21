@@ -372,3 +372,18 @@ def test_post_render_cannot_bypass_failed_pre_render_gate():
     assert result["report_state"] == "QA_FAILED"
     assert result["next_action"] == "PRE_RENDER_QA"
     assert result["failures"] == ["PRE_RENDER_QA_NOT_PASSED"]
+
+
+
+def test_post_render_rejects_status_only_visible_section():
+    pre = _pre_render()
+    body = valid_visible_body(pre).replace(
+        "Final judgement: WAIT; no executable change without the stated trigger.",
+        "",
+        1,
+    )
+
+    result = _post_render(pre, rendered_body=body)
+
+    assert result["status"] == "FAIL"
+    assert "VISIBLE_SECTION_STATUS_ONLY=S19" in result["failures"]

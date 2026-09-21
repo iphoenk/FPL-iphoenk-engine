@@ -137,6 +137,136 @@ def valid_visible_body(
     for section_id in section_ids:
         if section_id == "S15B" and not include_14b:
             continue
+        if section_id.startswith("PRICE"):
+            index = int(section_id.removeprefix("PRICE"))
+            price_titles = {
+                1: "Price Decision",
+                2: "Official Price Changes FACT",
+                3: "Team-Needs Price Alert",
+                4: "Watchlist20",
+                5: "RISE20",
+                6: "FALL20",
+                7: "Package / Affordability Impact",
+                8: "Price Risk vs Information Value of Waiting",
+                9: "ICON+ Price Impact",
+                10: "Action Board",
+                11: "Source Health",
+            }
+            lines.append(f"## PRICE {index} — {price_titles[index]}")
+            if index == 1:
+                lines.append("NOW: WAIT")
+                lines.extend(_visible_weather_lines(weather_state))
+            elif index == 2:
+                lines.append("FACT: Official FPL current/confirmed price changes.")
+            elif index == 3:
+                lines.append(
+                    "MODEL: V6-derived price signal using Official FPL facts; "
+                    "not an Official FPL predictor/product."
+                )
+                if include_inference and pre_render_qa.get("expected_inference_keys"):
+                    lines.append("INFERENCE: Price impact on team needs is decision-labelled.")
+            elif index == 4:
+                positions = ["GK"] * 5 + ["DEF"] * 5 + ["MID"] * 5 + ["FWD"] * 5
+                rows = [
+                    [str(i), str(100 + i), f"WATCH{i:02d}", pos, "NON_OWNED"]
+                    for i, pos in enumerate(positions, 1)
+                ]
+                lines.extend(
+                    _table(
+                        ["rank", "element_id", "player_name", "position", "ownership_tag"],
+                        rows,
+                    )
+                )
+            elif index == 5:
+                lines.extend(
+                    _rank20_tables(
+                        direction="RISE",
+                        count=rise_count,
+                        omit_field=omit_rise_field,
+                    )
+                )
+            elif index == 6:
+                lines.extend(
+                    _rank20_tables(
+                        direction="FALL",
+                        count=20,
+                        omit_field=omit_fall_field,
+                    )
+                )
+            elif index == 9:
+                lines.append("MANAGER COVERAGE: COMPLETE")
+                lines.append("ICON+ price leverage is downstream of football baseline.")
+            elif index == 10:
+                lines.extend(
+                    [
+                        "NOW: WAIT",
+                        "TRIGGER TO ACT: route becomes price-fragile and football case remains valid",
+                        "ABORT / REVERSAL: football case weakens or route no longer legal",
+                        "NEXT CHECKPOINT: next governed price cycle",
+                    ]
+                )
+            elif index == 11:
+                lines.append("ENGINE / DATA STATUS: source and model freshness visible.")
+            else:
+                lines.append("Material price-report content.")
+            continue
+        if section_id.startswith("POST_ALL_MATCH"):
+            index = int(section_id.removeprefix("POST_ALL_MATCH"))
+            post_titles = {
+                1: "GW Result Summary",
+                2: "Decision P&L / Counterfactual",
+                3: "Prediction Calibration",
+                4: "Owned15 Review",
+                5: "GW Completed Match-by-Match Scout",
+                6: "Role / Set-Piece Changes",
+                7: "Bayesian Calibration Input / Actual Update Status",
+                8: "ICON+ Final GW",
+                9: "Price Outlook",
+                10: "Fresh Full-Universe Next-GW Scan",
+                11: "Watchlist20",
+                12: "Early HOLD / Transfer Frontier",
+                13: "Learning Log",
+            }
+            lines.append(f"## POST-ALL-MATCH {index} — {post_titles[index]}")
+            if index == 1:
+                lines.append("GW RESULT SUMMARY: completed.")
+                lines.extend(_visible_weather_lines(weather_state))
+            elif index == 3:
+                if pre_render_qa.get("expected_fact_keys"):
+                    lines.append("FACT: settled match outcomes.")
+                if pre_render_qa.get("expected_model_keys"):
+                    lines.append("MODEL: prediction errors calibrated against settled outcomes.")
+                if include_inference and pre_render_qa.get("expected_inference_keys"):
+                    lines.append("INFERENCE: learning implications are labelled.")
+            elif index == 4:
+                positions = ["GK"] * 2 + ["DEF"] * 5 + ["MID"] * 5 + ["FWD"] * 3
+                rows = [
+                    [str(i), str(i), f"OWN{i:02d}", pos]
+                    for i, pos in enumerate(positions, 1)
+                ]
+                lines.extend(_table(["rank", "element_id", "player_name", "position"], rows))
+            elif index == 5:
+                lines.append("GW COMPLETED MATCH-BY-MATCH SCOUT")
+            elif index == 8:
+                if str(pre_render_qa.get("mini_league_contract_state") or "COMPLETE").upper() == "DEGRADED":
+                    lines.append("MINI_LEAGUE SOURCE: DEGRADED")
+                else:
+                    lines.append("MANAGER COVERAGE: COMPLETE")
+            elif index == 11:
+                positions = ["GK"] * 5 + ["DEF"] * 5 + ["MID"] * 5 + ["FWD"] * 5
+                rows = [
+                    [str(i), str(100 + i), f"WATCH{i:02d}", pos, "NON_OWNED"]
+                    for i, pos in enumerate(positions, 1)
+                ]
+                lines.extend(
+                    _table(
+                        ["rank", "element_id", "player_name", "position", "ownership_tag"],
+                        rows,
+                    )
+                )
+            else:
+                lines.append("Material post-all-match content.")
+            continue
         if section_id == "GW_LOCK_PACKAGE":
             lines.append("## GW LOCK PACKAGE")
             lines.append(

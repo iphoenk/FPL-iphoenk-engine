@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T04:44:06+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T04:57:18+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -375,41 +375,33 @@ Facts, probability models, tactics, optimization, decisions, and reports remain 
 
 ## Stage 1 analytics completion status
 
-Stage 1 model/analytics implementation is already merged on `main` and its
-required CI is GREEN. The final factual-history repair now makes normalized
-**Official FPL finalized event-live history** the primary GW1→current
-match-by-match source for V12. The older Vaastav `merged_gw` path remains a
-mirror/fallback only when it independently proves complete coverage through
-the latest finished GW. A stale mirror is rejected.
+**FINAL GREEN / CLOSED.** Stage 1 is complete and ready for Stage 2 handoff.
+Stage 2 has **not** started.
 
-The Stage 1 chain includes:
+Final occurrence-bound acceptance:
 
-- exact root-cause repair for controlled run `35597594711`;
-- P1.3-owned horizons with no runner-private shorter horizon;
-- finalized Official FPL GW history with exact element/fixture/opponent/H-A
-  identity and provenance;
-- opponent-adjusted historical recency with venue-specific team strength;
-- recency × opponent × regime weighting without hard history reset;
-- Bayesian change-point evidence with `P(role stable)`;
-- empirical-Bayes league → position → factual-role-if-available → team
-  leave-one-player-out priors feeding the existing P1.3 owner;
-- explicit credible intervals and sample exposure;
-- target-specific distribution diagnostics/selection with generic Erlang use
-  forbidden;
-- P1.1 six-state minutes:
-  `START_FULL / START_SUBBED / EARLY_SUB / CAMEO / LATE_CAMEO / DNP`;
-- expanding-window GW walk-forward validation with future leakage forbidden;
-- exact Canonical 20/25/30/25 full-universe materialization from existing
-  owner outputs only;
-- required CI coverage across P1.1, P1.3, integrated runner, Stage 1
-  analytics, V6, governance, documentation and naming.
+- DEEP report slot: `2026-09-22T05:00:00+07:00`
+- workflow run: `35659879299`
+- production `main`: `e20313c497d27e0cc9e800ab9de6280a7781510c`
+- factual `runtime-data-v6`: `b851d72f7183395c8d632e8d8f14e6c9282b17f0`
+- immutable artifact: `v12-report-DEEP-35659879299`
+- artifact digest: `sha256:9b8c16fce1088eefe44ff1751075ebdb565542d8cb35ebfee710c8c5adcc0881`
+- runner / PRE_RENDER / POST_RENDER / HUMAN_FACING: **PASS / PASS / PASS / PASS**
+- CORE_SLOT_BINDING and same-occurrence full_master prefetch: **PASS**
+- V12 analytics foundation, P1.1/P1.3 full universe, P1.6 tactical role,
+  ALL15, P1.7 lineup, Watchlist20, RISE20/FALL20, mini-league snapshot and
+  Canonical 20/25/30/25 universe: **PASS**
 
-Unsupported optional factual features remain explicit `UNAVAILABLE`; they
-are never silently zero-filled. Stage 2 remains not started. Final
-`stage1_green=true` is allowed only after this repair is merged, a fresh V6
-runtime snapshot contains complete Official FPL match history through the
-latest finished GW, and one controlled DEEP run passes the Stage 1 analytics,
-canonical universe, PRE_RENDER, POST_RENDER and HUMAN_FACING acceptance gates.
+The factual history foundation uses finalized Official FPL event-live GW
+history with exact element/fixture/opponent identity and provenance. Vaastav
+remains only a complete-through-latest-finished-GW mirror fallback; stale
+mirror data is rejected. Missing optional evidence remains explicit and is
+never silently fabricated.
+
+P1.2 Package Utility / Frontier and material P1.4 Monte Carlo remain
+`NOT_RUN` by design because they belong to **Stage 2**. Their non-execution is
+not a Stage 1 degradation. V3/V4/V5 remain frozen, V6 remains the only factual
+production data plane, and Canonical V12 remains the methodology authority.
 
 ### Controlled Stage 1 runtime recovery
 

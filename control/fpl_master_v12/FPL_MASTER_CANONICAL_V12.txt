@@ -1,5 +1,5 @@
 FPL MASTER CANONICAL V12 — FAIL-OPERATIONAL REPORT-PLANE ARCHITECTURE
-Effective: 2026-09-21T08:06:00+07:00
+Effective: 2026-09-21T08:18:00+07:00
 Authority path: control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
 State path: control/fpl_master_v12/FPL_MASTER_STATE_V12.json
 
@@ -316,6 +316,7 @@ The visible block must retain supportable values, and explicit UNAVAILABLE/NOT R
 - AVAILABILITY MIXTURE: P(available), P(start), P(bench), P(cameo), P(late cameo), P(DNP);
 - xMins DISTRIBUTION including state mixture rather than only mean;
 - EVENT PROBABILITIES: P(goal), P(assist), P(return), P(2+ returns where available), P(haul), P(blank/no attacking return under existing semantics);
+  These values MUST bind to existing V12 P1.3/P1.3B posterior-predictive evidence where available: p_goal_return; p_assist_return; p_attacking_return; p_total_ga_ge_2 / p_multiple_attacking_returns; P1.3B p_haul_10_plus; P1.3B p_fpl_blank; and p_no_attacking_return as a separate attacking-blank semantic. Renderer/report logic MUST NOT reconstruct these probabilities from xG/xA, mean xPts, heuristics or a second model.
 - HORIZON DISTRIBUTIONS: 1GW, 3GW, 5GW and 2GW where rental/exit relevant;
 - P(outperform HOLD/comparator), lower/upper quantiles or floor/ceiling/tail risk where calibrated;
 - EXPECTED REGRET / ROBUSTNESS / INFORMATION VALUE OF WAITING;

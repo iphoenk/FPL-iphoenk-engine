@@ -1632,7 +1632,15 @@ def _render_math_stack_lines(stack: Mapping[str, Any]) -> list[str]:
         f"P(RETURN)={events.get('p_return', 'UNAVAILABLE')} | "
         f"P(2+ RETURNS)={events.get('p_two_plus_returns', 'UNAVAILABLE')} | "
         f"P(HAUL)={events.get('p_haul', 'UNAVAILABLE')} | "
-        f"P(BLANK)={events.get('p_blank', 'UNAVAILABLE')}",
+        f"P(BLANK)={events.get('p_blank', 'UNAVAILABLE')} | "
+        f"P(NO ATTACK RETURN)={events.get('p_no_attacking_return', 'UNAVAILABLE')}",
+        "P1.3B POINT DISTRIBUTION: "
+        f"source={payload.get('posterior_predictive_source', 'UNAVAILABLE')} | "
+        f"E[xPts]={dict(payload.get('point_distribution') or {}).get('expected_points', 'UNAVAILABLE')} | "
+        f"variance={dict(payload.get('point_distribution') or {}).get('variance', 'UNAVAILABLE')} | "
+        f"std={dict(payload.get('point_distribution') or {}).get('std', 'UNAVAILABLE')} | "
+        f"quantiles={dict(payload.get('point_distribution') or {}).get('quantiles', 'UNAVAILABLE')} | "
+        f"tails={dict(payload.get('point_distribution') or {}).get('tails', 'UNAVAILABLE')}",
         f"HORIZONS 1GW / 3GW / 5GW: {payload.get('horizons', 'UNAVAILABLE')}",
         f"P(OUTPERFORM HOLD/COMPARATOR): {payload.get('p_outperform', 'UNAVAILABLE')}",
         f"EXPECTED REGRET: {payload.get('expected_regret', 'UNAVAILABLE')}",

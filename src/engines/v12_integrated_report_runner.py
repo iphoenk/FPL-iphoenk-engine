@@ -49,6 +49,7 @@ from src.models.v12_analytics_foundation import (
     load_v6_analytics_foundation,
     require_match_foundation,
 )
+from src.models.v12_stage1_analytics import build_canonical_universe
 from src.models.official_role_evidence import attach_official_role_evidence
 from src.models.team_strength import build_team_strength
 
@@ -372,26 +373,12 @@ def _projection_model_rows(
     return rows
 
 
-def _candidate_universe(projections: Mapping[str, Any]) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for player in projections.get("players") or []:
-        if not isinstance(player, Mapping):
-            continue
-        rows.append(
-            {
-                "element_id": int(player.get("element") or 0),
-                "element": int(player.get("element") or 0),
-                "name": player.get("name"),
-                "position": player.get("position"),
-                "team_id": int(player.get("team_id") or 0),
-                "now_cost": int(player.get("now_cost") or 0),
-                "status": player.get("status"),
-                "eligible": str(player.get("status") or "a") not in {"u"},
-                # Full 20/25/30/25 producer is intentionally NOT invented here.
-                "canonical_evaluation_complete": False,
-            }
-        )
-    return [row for row in rows if row["element"] > 0]
+def _candidate_universe(
+    projections: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    return list(
+        build_canonical_universe(projections).get("players") or []
+    )
 
 
 def _lineup_content(lineup: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -599,6 +586,7 @@ def run_deep(
                 runtime_data_root,
                 bootstrap=bootstrap,
                 planning_gw=planning_gw,
+                strength=strength or {},
             )
         ),
         required=True,
@@ -746,7 +734,13 @@ def run_deep(
         lambda: build_watchlist20(
             evaluated_universe=universe,
             owned_element_ids=sorted(owned_ids),
-            universe_authority="PARTIAL",
+            universe_authority=(
+                "FULL"
+                if build_canonical_universe(
+                    projections or {}
+                ).get("status") == "COMPLETE"
+                else "PARTIAL"
+            ),
         ),
     )
 
@@ -778,46 +772,71 @@ def run_deep(
         ),
     )
 
-    if projections:
-        universe_gap_reason = (
-            "P1.1/P1.3/P1.6 executed for full universe, but the current repository "
-            "does not yet expose V12-native numeric producers for all four "
-            "20/25/30/25 components. Full football_score/ranking is therefore "
-            "fail-closed instead of reconstructed ad hoc."
-        )
-    else:
-        universe_gap_reason = (
-            "P1.1/P1.3 full-universe projection did not execute for this occurrence: "
-            + (projection_failure or "UNKNOWN_PROJECTION_FAILURE")
-        )
+    canonical_bundle = build_canonical_universe(
+        projections or {}
+    )
+    canonical_complete = (
+        projections is not None
+        and canonical_bundle.get("status") == "COMPLETE"
+    )
     universe_gap = {
-        "status": "PARTIAL",
-        "reason": universe_gap_reason,
+        "status": (
+            "COMPLETE" if canonical_complete else "PARTIAL"
+        ),
+        "reason": (
+            None
+            if canonical_complete
+            else (
+                "canonical 20/25/30/25 component materialization "
+                "is incomplete for at least one required position"
+            )
+        ),
         "scanned_players": len(universe),
-        "required_component_weights": {
-            "PROVEN_HISTORICAL": 0.20,
-            "TACTICAL_ROLE": 0.25,
-            "CURRENT_UNDERLYING": 0.30,
-            "FIXTURE_SECURITY": 0.25,
+        "complete_players": canonical_bundle.get(
+            "complete_players",
+            0,
+        ),
+        "position_counts": canonical_bundle.get(
+            "position_counts",
+            {},
+        ),
+        "required_component_weights": canonical_bundle.get(
+            "weights",
+            {
+                "PROVEN_HISTORICAL": 0.20,
+                "TACTICAL_ROLE": 0.25,
+                "CURRENT_UNDERLYING": 0.30,
+                "FIXTURE_SECURITY": 0.25,
+            },
+        ),
+        "anti_double_count": {
+            "historical_prior_rates_only": True,
+            "current_posterior_rates_only": True,
+            "tactical_p1_6_only": True,
+            "fixture_p1_3_xpts_only": True,
+            "p1_1_security_not_reapplied": True,
         },
     }
     ledger.append(
         {
             "stage": "CANONICAL_UNIVERSE_20_25_30_25",
-            "status": "PARTIAL",
+            "status": (
+                "PASS" if canonical_complete else "PARTIAL"
+            ),
             "required": True,
             "reason": universe_gap["reason"],
         }
     )
+
     _skip_stage(
         ledger,
         "P1_2_PACKAGE_UTILITY",
-        "full canonical 20/25/30/25 ranking is prerequisite for utility-ranked packages",
+        "Stage 2 package/frontier execution is intentionally not started by Stage 1",
     )
     _skip_stage(
         ledger,
         "P1_4_MONTE_CARLO",
-        "supportable material route distributions are unavailable until canonical universe/package utility is complete",
+        "Stage 2 material Monte Carlo execution is intentionally not started by Stage 1",
     )
 
     lineup_state = "COMPLETE" if lineup else "DEGRADED"
@@ -951,7 +970,11 @@ def run_deep(
                     "p1_6": "EXECUTED" if projections else "NOT_RUN",
                     "p1_7": "EXECUTED" if lineup else "PARTIAL",
                     "price_predictor": (rise or {}).get("predictor_health"),
-                    "universe_20_25_30_25": "PARTIAL",
+                    "universe_20_25_30_25": (
+                        "COMPLETE"
+                        if canonical_complete
+                        else "PARTIAL"
+                    ),
                 }
             },
         ),

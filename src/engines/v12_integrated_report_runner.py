@@ -165,6 +165,18 @@ def _require_report_prefetch(
     generated = _parse_aware(latest.get("generated_at"))
     if requested is None:
         raise IntegratedRunnerError("report_slot must be timezone-aware ISO-8601")
+    public_first_acceptable = bool(
+        latest.get("public_core_complete") is True
+        and str(health.get("public_core_status") or "").upper() == "GREEN"
+        and latest.get("authenticated_personal_required_for_public_green") is False
+        and str(latest.get("public_personal_status") or "").upper() == "AVAILABLE"
+        and str(latest.get("mini_league_status") or "").upper() == "AVAILABLE"
+        and not (latest.get("public_control_failures") or [])
+    )
+    prefetch_health_acceptable = bool(
+        str(health.get("prefetch_status") or "").upper() == "GREEN"
+        or public_first_acceptable
+    )
     checks = {
         "report_kind_full_master": str(latest.get("report_kind") or "") == "full_master",
         "target_report_slot_match": bool(
@@ -175,7 +187,7 @@ def _require_report_prefetch(
         "mini_league_requested": latest.get("mini_league_requested") is True,
         "public_core_complete": latest.get("public_core_complete") is True,
         "fresh_for_target_report": latest.get("fresh_for_target_report") is True,
-        "health_green": str(health.get("prefetch_status") or "").upper() == "GREEN",
+        "prefetch_health_acceptable": prefetch_health_acceptable,
     }
     failed = [key for key, value in checks.items() if not value]
     if failed:

@@ -1054,6 +1054,149 @@ def _position_goal_process(
     }
 
 
+def _optional_probability(
+    advanced: Mapping[str, Any],
+    *keys: str,
+) -> float | None:
+    for key in keys:
+        if advanced.get(key) is not None:
+            return _clamp(_f(advanced.get(key)), 0.0, 1.0)
+    return None
+
+
+def _set_piece_process(
+    advanced: Mapping[str, Any],
+    goal_process: Mapping[str, Any],
+) -> dict[str, Any]:
+    event_rate = advanced.get("set_piece_event_rate_per_match")
+    p_set_piece = (
+        1.0 - math.exp(-max(0.0, _f(event_rate)))
+        if event_rate is not None
+        else _optional_probability(
+            advanced, "P_set_piece", "set_piece_probability"
+        )
+    )
+    p_taker = _optional_probability(
+        advanced, "set_piece_taker_share", "P_set_piece_taker"
+    )
+    p_target = _optional_probability(
+        advanced, "set_piece_target_share", "P_set_piece_target_involved"
+    )
+    p_shot = _optional_probability(
+        advanced, "set_piece_shot_given_involved", "P_set_piece_shot"
+    )
+    p_goal = _optional_probability(
+        advanced, "set_piece_goal_given_shot", "P_set_piece_goal_given_shot"
+    )
+    components = (p_set_piece, p_taker, p_target, p_shot, p_goal)
+    complete = all(value is not None for value in components)
+    chain_probability = (
+        math.prod(float(value) for value in components)
+        if complete
+        else None
+    )
+    return {
+        "status": (
+            "AVAILABLE_COMPLETE_COMPONENT_CHAIN"
+            if complete
+            else "PARTIAL_OR_UNAVAILABLE_FACTUAL_COMPONENTS"
+        ),
+        "chain": (
+            "P(set piece) x P(taker) x P(target involved) "
+            "x P(shot) x P(goal)"
+        ),
+        "P_set_piece": (
+            None if p_set_piece is None else round(p_set_piece, 6)
+        ),
+        "P_taker": None if p_taker is None else round(p_taker, 6),
+        "P_target_involved": (
+            None if p_target is None else round(p_target, 6)
+        ),
+        "P_shot_given_involved": (
+            None if p_shot is None else round(p_shot, 6)
+        ),
+        "P_goal_given_shot": (
+            None if p_goal is None else round(p_goal, 6)
+        ),
+        "P_goal_chain": (
+            None
+            if chain_probability is None
+            else round(chain_probability, 9)
+        ),
+        "posterior_set_piece_goal_rate90": goal_process.get(
+            "lambda_set_piece90"
+        ),
+        "taker_uncertainty_probabilistic": True,
+        "hardcoded_taker": False,
+        "missing_component_imputed_as_zero": False,
+    }
+
+
+def estimate_live_threshold_probability(
+    *,
+    current_count: int,
+    minute: float,
+    threshold: int,
+    projected_full_match_mean: float,
+    interarrival_minutes: Sequence[float] | None = None,
+) -> dict[str, Any]:
+    """Live threshold estimator; survival family is evidence-gated."""
+    current = max(0, int(current_count))
+    target = max(0, int(threshold))
+    elapsed = _clamp(float(minute), 0.0, 90.0)
+    if current >= target:
+        return {
+            "probability": 1.0,
+            "selected_model": "THRESHOLD_ALREADY_REACHED",
+            "survival_family_forced": False,
+        }
+    remaining_events = target - current
+    remaining_minutes = max(0.0, 90.0 - elapsed)
+    timings = [
+        float(value)
+        for value in (interarrival_minutes or [])
+        if value is not None and _f(value) > 0.0
+    ]
+    survival_selected = False
+    selection_reason = "NO_EMPIRICALLY_JUSTIFIED_INTERARRIVAL_SAMPLE"
+    rate_per_minute = max(0.0, float(projected_full_match_mean)) / 90.0
+    selected_model = "CONDITIONAL_COUNT_PROCESS"
+    if len(timings) >= 8:
+        timing_mean = _safe_mean(timings)
+        timing_variance = _sample_variance(timings)
+        cv = (
+            math.sqrt(max(0.0, timing_variance)) / timing_mean
+            if timing_mean > 0.0
+            else 0.0
+        )
+        if 0.80 <= cv <= 1.20 and timing_mean > 0.0:
+            rate_per_minute = 1.0 / timing_mean
+            survival_selected = True
+            selected_model = "ERLANG_FROM_EMPIRICAL_EXPONENTIAL_INTERARRIVALS"
+            selection_reason = "N_GE_8_AND_INTERARRIVAL_CV_NEAR_1"
+        else:
+            selection_reason = (
+                "INTERARRIVAL_SAMPLE_REJECTS_EXPONENTIAL_ERLANG_ASSUMPTION"
+            )
+    expected_remaining = rate_per_minute * remaining_minutes
+    probability = _poisson_tail_at_least(
+        expected_remaining, remaining_events
+    )
+    return {
+        "probability": round(_clamp(probability, 0.0, 1.0), 9),
+        "selected_model": selected_model,
+        "selection_reason": selection_reason,
+        "survival_family_forced": False,
+        "erlang_selected_only_if_empirically_justified": True,
+        "gamma_weibull_status": "NOT_SELECTED_WITHOUT_CALIBRATED_TIMING_EVIDENCE",
+        "current_count": current,
+        "threshold": target,
+        "minute": round(elapsed, 3),
+        "remaining_minutes": round(remaining_minutes, 3),
+        "remaining_events_required": remaining_events,
+    }
+
+
 def _creation_process(
     advanced: Mapping[str, Any],
     assist_rate90: float,
@@ -1608,6 +1751,10 @@ def enhance_fixture_projection(
             else None
         ),
         "two_stage_sot_then_save": position == "GK",
+        "live_threshold_policy": (
+            "COUNT_DISTRIBUTION_PRE_MATCH;"
+            "ERLANG_ONLY_IF_EMPIRICAL_INTERARRIVAL_EVIDENCE_JUSTIFIES"
+        ),
     }
     result.setdefault("events", {})["defcon"] = {
         **defcon,
@@ -1616,6 +1763,10 @@ def enhance_fixture_projection(
         "components": dc_components,
         "cs_process_separate": True,
         "strong_opponent_can_lower_cs_and_raise_defcon": True,
+        "live_threshold_policy": (
+            "COUNT_DISTRIBUTION_PRE_MATCH;"
+            "ERLANG_ONLY_IF_EMPIRICAL_INTERARRIVAL_EVIDENCE_JUSTIFIES"
+        ),
     }
     result.setdefault("events", {})["bonus"] = {
         "classification": "DIRECT_CONDITIONAL_BPS_MODEL",
@@ -1676,14 +1827,9 @@ def enhance_fixture_projection(
         "goal_process": goal_process,
         "creation_process": creation_process,
         "penalty_process": penalty_process,
-        "set_piece_process": {
-            "status": goal_process["set_piece_evidence_status"],
-            "chain": (
-                "P(set_piece) x P(taker) x P(target involved) "
-                "x P(shot) x P(goal)"
-            ),
-            "hardcoded_taker": False,
-        },
+        "set_piece_process": _set_piece_process(
+            advanced, goal_process
+        ),
         "linkup": contextual.get("linkup_network"),
         "position_priority": {
             "GK": [

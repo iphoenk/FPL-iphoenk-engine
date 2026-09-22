@@ -116,6 +116,15 @@ jobs:
                       "current_authenticated_squad_status": proof.get(
                           "current_authenticated_squad_status"
                       ),
+                      "current_squad_evidence_status": proof.get(
+                          "current_squad_evidence_status"
+                      ),
+                      "current_squad_evidence_mode": proof.get(
+                          "current_squad_evidence_mode"
+                      ),
+                      "mini_league_public_status": proof.get(
+                          "mini_league_public_status"
+                      ),
                       "auth_state": (proof.get("source_runtime") or {}).get(
                           "auth_state"
                       ),
@@ -127,9 +136,13 @@ jobs:
           )
           if proof.get("stage2_engine_status") != "PASS":
               raise SystemExit("Stage2 engine acceptance failed")
-          if proof.get("current_authenticated_squad_status") != "PASS":
+          if proof.get("current_squad_evidence_status") != "PASS":
               raise SystemExit(
-                  "Stage2 live acceptance blocked by external V6 authenticated-squad evidence; see separate V6 issue"
+                  "Stage2 live acceptance requires a current 15-player Official FPL squad surface; authenticated /me is not required when fresh public submitted picks prove it"
+              )
+          if proof.get("mini_league_public_status") != "PASS":
+              raise SystemExit(
+                  "Stage2 live acceptance requires fresh public Official FPL mini-league standings and manager submitted-picks coverage"
               )
           if proof.get("status") != "GREEN":
               raise SystemExit("Stage2 acceptance is not GREEN")

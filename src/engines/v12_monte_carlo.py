@@ -316,6 +316,7 @@ def _fixture_catalog(
                     "teams": set(),
                     "team_cs": {},
                     "team_goal_mean": {},
+                    "team_assist_mean": {},
                     "gw": int(gw),
                 },
             )
@@ -363,6 +364,15 @@ def _fixture_catalog(
             row["team_goal_mean"][team_id] = (
                 _f(row["team_goal_mean"].get(team_id)) + contribution
             )
+            assist_contribution = (
+                max(0.0, params["assist_rate90"])
+                * min(90.0, expected_minutes)
+                / 90.0
+            )
+            row["team_assist_mean"][team_id] = (
+                _f(row["team_assist_mean"].get(team_id))
+                + assist_contribution
+            )
 
     for row in catalog.values():
         row["teams"] = tuple(sorted(row["teams"]))
@@ -384,6 +394,11 @@ def _fixture_catalog(
                 )
             else:
                 row["team_goal_mean"][team_id] = 1.35
+            if _f(row["team_assist_mean"].get(team_id)) <= 0.0:
+                row["team_assist_mean"][team_id] = min(
+                    _f(row["team_goal_mean"].get(team_id), 1.35) * 0.65,
+                    _f(row["team_goal_mean"].get(team_id), 1.35),
+                )
     return catalog
 
 

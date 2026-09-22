@@ -730,103 +730,247 @@ def test_34_package_output_carries_non_authoritative_execution_proof(monkeypatch
     assert proof["lossy_pruning"] is False
     assert result["methodology"]["lineup_execution"] == proof
 
+def _canonical_compact_reference(lineup):
+    def bench(starters, reserve_gk, outfield_bench):
+        winner, _ = lineup.optimize_bench_order(
+            starters,
+            reserve_gk,
+            outfield_bench,
+            include_winner_blocking_counterfactual=False,
+            publish_alternatives=False,
+            include_winner_slots=False,
+        )
+        return winner
 
-def test_p1_2b_profile_exact_p17_subcomponents(monkeypatch):
-    """One representative exact 5-GW profile before the bounded runtime repair.
+    def cvc(starters, ranked_pairs):
+        del ranked_pairs
+        return lineup._best_captain_vice_pair(starters)
 
-    This instrumentation is intentionally fail-closed for the first PR run so
-    the GitHub Actions log becomes durable factual timing evidence. It is
-    removed/replaced by equivalence/performance acceptance after profiling.
-    """
-    import json as _json
-    import time as _time
-    from collections import defaultdict as _defaultdict
-    from src.engines import v12_lineup_optimizer as _lineup
+    return bench, cvc
 
-    projections = _projections()
+
+def _randomized_projections(seed: int) -> dict:
+    import random
+
+    rng = random.Random(seed)
+    payload = deepcopy(_projections())
+    for player in payload["players"]:
+        dnp = rng.uniform(0.02, 0.16)
+        cameo_total = rng.uniform(0.04, min(0.20, 0.42 - dnp))
+        late = rng.uniform(0.01, min(0.07, cameo_total))
+        regular = cameo_total - late
+        start = 1.0 - dnp - cameo_total
+        xmins = player["xmins"]
+        xmins["start_probability"] = start
+        xmins["cameo_probability"] = cameo_total
+        xmins["late_cameo_probability"] = late
+        xmins["dnp_probability"] = dnp
+        xmins["expected_minutes"] = 90 * start + 18 * regular + 7 * late
+        xmins["xmins_distribution"]["mean"] = xmins["expected_minutes"]
+        xmins["xmins_distribution"]["states"] = [
+            {"state": "START", "probability": start},
+            {"state": "REGULAR_CAMEO", "probability": regular},
+            {"state": "LATE_CAMEO", "probability": late},
+            {"state": "ZERO_MINUTES", "probability": dnp},
+        ]
+        for gw_row in player["xpts_by_gw"]:
+            blank = rng.uniform(0.05, 0.24)
+            upside = rng.uniform(0.08, 0.28)
+            middle = 1.0 - blank - upside
+            probs = {"0": blank, "4": middle, "8": upside}
+            mean = 4.0 * middle + 8.0 * upside
+            second = 16.0 * middle + 64.0 * upside
+            variance = max(0.0, second - mean * mean)
+            gw_row["mean"] = mean
+            gw_row["std"] = variance ** 0.5
+            gw_row["points_variance"] = variance
+            gw_row["point_distribution"]["probabilities"] = probs
+    return payload
+
+
+def test_35_prepared_compact_bench_and_cvc_match_canonical_all_550_xi():
+    from src.engines import v12_lineup_optimizer as lineup
+
+    projections = _randomized_projections(1207)
+    pmap = {row["element"]: row for row in projections["players"]}
     squad_ids = tuple(row["element"] for row in _current())
-    timings = _defaultdict(float)
-    counts = _defaultdict(int)
+    surfaces = [
+        lineup.build_player_surface(pmap[element], GW)
+        for element in squad_ids
+    ]
+    legal = lineup.enumerate_legal_xi(surfaces)
+    assert len(legal) == 550
+    ranked_pairs = lineup.evaluate_captain_vice_pairs(surfaces)
 
-    def _wrap(name, fn, bucket=None):
-        key = bucket or name
-        def wrapped(*args, **kwargs):
-            start = _time.perf_counter()
-            try:
-                return fn(*args, **kwargs)
-            finally:
-                timings[key] += _time.perf_counter() - start
-                counts[key] += 1
-        return wrapped
-
-    monkeypatch.setattr(
-        _lineup,
-        "build_player_surface",
-        _wrap("build_player_surface", _lineup.build_player_surface),
+    bench_fields = (
+        "order",
+        "expected_autosub_value",
+        "autosub_probability",
+        "expected_selected_blank_probability_mass",
+        "expected_selected_ge8_probability_mass",
+        "expected_selected_ge10_probability_mass",
+        "bench_order_utility",
     )
-    monkeypatch.setattr(
-        _lineup,
-        "enumerate_legal_xi",
-        _wrap("enumerate_legal_xi", _lineup.enumerate_legal_xi),
+    for indices in legal:
+        starters = [surfaces[index] for index in indices]
+        starter_ids = {row["element"] for row in starters}
+        bench = [row for row in surfaces if row["element"] not in starter_ids]
+        reserve_gk = next(row for row in bench if row["position"] == "GK")
+        outfield_bench = [row for row in bench if row["position"] != "GK"]
+
+        expected_bench, _ = lineup.optimize_bench_order(
+            starters,
+            reserve_gk,
+            outfield_bench,
+            include_winner_blocking_counterfactual=False,
+            publish_alternatives=False,
+            include_winner_slots=False,
+        )
+        actual_bench = lineup._compact_bench_order_winner_exact(
+            starters,
+            reserve_gk,
+            outfield_bench,
+        )
+        assert {
+            key: actual_bench[key] for key in bench_fields
+        } == {
+            key: expected_bench[key] for key in bench_fields
+        }
+
+        expected_cvc = lineup._best_captain_vice_pair(starters)
+        actual_cvc = lineup._best_captain_vice_pair_from_ranked_exact(
+            starters,
+            ranked_pairs,
+        )
+        assert actual_cvc == expected_cvc
+
+
+@pytest.mark.parametrize("seed", [1207, 4319, 6471])
+def test_36_prepared_p17_full_decision_matches_pre_repair_reference(
+    monkeypatch, seed
+):
+    from src.engines import v12_lineup_optimizer as lineup
+
+    projections = _randomized_projections(seed)
+    squad_ids = tuple(row["element"] for row in _current())
+
+    actual = lineup.optimize_lineup(
+        projections,
+        squad_ids,
+        planning_gw=GW,
+        generated_at=GENERATED,
     )
-
-    original_route = _lineup._lineup_route
-    def profiled_route(*args, **kwargs):
-        compact = bool(kwargs.get("compact", False))
-        key = "lineup_route_compact" if compact else "lineup_route_full"
-        start = _time.perf_counter()
-        try:
-            return original_route(*args, **kwargs)
-        finally:
-            timings[key] += _time.perf_counter() - start
-            counts[key] += 1
-    monkeypatch.setattr(_lineup, "_lineup_route", profiled_route)
-
-    for name in (
-        "optimize_bench_order",
-        "_compact_bench_order_winner_exact",
-        "_dnp_count_distribution",
-        "_resolver_state_matrix",
-        "_best_captain_vice_pair",
-        "_best_captain_vice_pair_from_ranked_exact",
-        "evaluate_captain_vice_pairs",
-        "_model_evidence_binding",
-    ):
-        monkeypatch.setattr(_lineup, name, _wrap(name, getattr(_lineup, name)))
-
-    per_gw = []
-    total_start = _time.perf_counter()
-    for offset in range(5):
-        start = _time.perf_counter()
-        row = utility._lineup_decision(
+    reference_bench, reference_cvc = _canonical_compact_reference(lineup)
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            lineup,
+            "_compact_bench_order_winner_exact",
+            reference_bench,
+        )
+        patch.setattr(
+            lineup,
+            "_best_captain_vice_pair_from_ranked_exact",
+            reference_cvc,
+        )
+        expected = lineup.optimize_lineup(
             projections,
             squad_ids,
-            gw=GW + offset,
+            planning_gw=GW,
             generated_at=GENERATED,
         )
-        per_gw.append({
-            "gw": GW + offset,
-            "elapsed_seconds": round(_time.perf_counter() - start, 6),
-            "legal_xi_count": 550,
-            "status": row["status"],
-        })
-    total = _time.perf_counter() - total_start
 
-    profile = {
-        "profile_contract": "P1_2B_P1_7_PRE_REPAIR_PROFILE_V1",
-        "representative_squads": 1,
-        "gw_invocations": 5,
-        "total_elapsed_seconds": round(total, 6),
-        "per_gw": per_gw,
-        "timings_seconds_inclusive": {
-            key: round(value, 6) for key, value in sorted(timings.items())
-        },
-        "call_counts": dict(sorted(counts.items())),
-        "projected_invocations_for_2043_unique_squads": 2043 * 5,
-        "exact_semantics": {
-            "legal_xi_per_gw": 550,
-            "bench_permutations_per_compact_xi": 6,
-            "captain_vice_ordered_pairs_per_compact_xi": 110,
-        },
+    assert actual == expected
+    assert actual["legal_xi_count"] == 550
+    assert actual["governance"]["all_legal_xi_enumerated"] is True
+
+
+def test_37_prepared_p17_preserves_1_2_3_5gw_cumulative_outputs(monkeypatch):
+    from src.engines import v12_lineup_optimizer as lineup
+
+    projections = _randomized_projections(1207647)
+    squad_ids = tuple(row["element"] for row in _current())
+
+    actual = utility._cumulative_lineup_horizons(
+        projections,
+        squad_ids,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    reference_bench, reference_cvc = _canonical_compact_reference(lineup)
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            lineup,
+            "_compact_bench_order_winner_exact",
+            reference_bench,
+        )
+        patch.setattr(
+            lineup,
+            "_best_captain_vice_pair_from_ranked_exact",
+            reference_cvc,
+        )
+        expected = utility._cumulative_lineup_horizons(
+            projections,
+            squad_ids,
+            planning_gw=GW,
+            generated_at=GENERATED,
+        )
+
+    assert actual == expected
+    for horizon in ("1", "2", "3", "5"):
+        assert actual[horizon]["status"] == "READY"
+
+
+def test_38_prepared_exact_p17_has_material_runtime_margin(monkeypatch, capsys):
+    import json
+    import time
+    from src.engines import v12_lineup_optimizer as lineup
+
+    projections = _randomized_projections(6481)
+    squad_ids = tuple(row["element"] for row in _current())
+    reference_bench, reference_cvc = _canonical_compact_reference(lineup)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            lineup,
+            "_compact_bench_order_winner_exact",
+            reference_bench,
+        )
+        patch.setattr(
+            lineup,
+            "_best_captain_vice_pair_from_ranked_exact",
+            reference_cvc,
+        )
+        started = time.perf_counter()
+        reference = lineup.optimize_lineup(
+            projections,
+            squad_ids,
+            planning_gw=GW,
+            generated_at=GENERATED,
+        )
+        reference_elapsed = time.perf_counter() - started
+
+    started = time.perf_counter()
+    repaired = lineup.optimize_lineup(
+        projections,
+        squad_ids,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    repaired_elapsed = time.perf_counter() - started
+
+    assert repaired == reference
+    assert repaired_elapsed < reference_elapsed * 0.50
+    speedup = reference_elapsed / max(repaired_elapsed, 1e-9)
+    evidence = {
+        "contract": "P1_2B_P1_7_RUNTIME_ACCEPTANCE_V1",
+        "reference_seconds": round(reference_elapsed, 6),
+        "repaired_seconds": round(repaired_elapsed, 6),
+        "speedup": round(speedup, 3),
+        "legal_xi": repaired["legal_xi_count"],
+        "route_pruning": False,
+        "approximation": False,
     }
-    pytest.fail("P1_2B_PROFILE_EVIDENCE=" + _json.dumps(profile, sort_keys=True))
+    print("P1_2B_RUNTIME_ACCEPTANCE=" + json.dumps(evidence, sort_keys=True))
+    captured = capsys.readouterr()
+    assert "P1_2B_RUNTIME_ACCEPTANCE=" in captured.out
+

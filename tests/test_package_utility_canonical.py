@@ -696,6 +696,11 @@ def test_32_exact_route_materializer_preserves_sequential_p1_7_results(monkeypat
     assert proof["exact_route_identity_preserved"] is True
     assert proof["lossy_pruning"] is False
     assert proof["p1_7_math_mutated"] is False
+    assert proof["elapsed_seconds"] > 0.0
+    assert proof["unique_squad_elapsed_seconds"]["count"] == len(routes)
+    assert proof["per_gw_elapsed_seconds"]["count"] == len(routes) * 5
+    assert 0.0 < proof["worker_utilization_estimate"] <= 1.0
+    assert proof["coordination_serialization_upper_bound_seconds"] >= 0.0
 
 
 def test_33_process_worker_calls_same_exact_p1_7_horizon_owner(monkeypatch):
@@ -713,12 +718,19 @@ def test_33_process_worker_calls_same_exact_p1_7_horizon_owner(monkeypatch):
         GW,
         GENERATED,
     )
-    route_id, returned_squad, actual = utility._p1_2b_route_lineups_worker(
-        ("HOLD", squad)
-    )
+    (
+        route_id,
+        returned_squad,
+        actual,
+        elapsed,
+        gw_elapsed,
+    ) = utility._p1_2b_route_lineups_worker(("HOLD", squad))
     assert route_id == "HOLD"
     assert returned_squad == squad
     assert actual == expected
+    assert elapsed > 0.0
+    assert len(gw_elapsed) == 5
+    assert all(value > 0.0 for value in gw_elapsed)
 
 
 def test_34_package_output_carries_non_authoritative_execution_proof(monkeypatch):

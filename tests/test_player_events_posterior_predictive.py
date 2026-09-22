@@ -17,8 +17,12 @@ from src.engines.v12_player_events import (
 )
 from src.engines.v12_player_minutes import estimate_player_minutes
 from src.engines.v12_position_probability_components import (
+    _gk_save_pmf_from_model,
+    _gk_sot_save_model,
+    _set_piece_process,
     build_dynamic_matchup_vector,
     convolve_point_distributions,
+    estimate_live_threshold_probability,
     scoreline_clean_sheet_probabilities,
     select_count_distribution,
     select_scoreline_model,
@@ -1066,3 +1070,109 @@ def test_C4_stage2_horizon_distribution_is_true_convolution():
     assert abs(out["sum_probability"] - 1.0) < 1e-9
     assert set(out["support"]) == {3, 7, 11}
     assert out["expected_points"] == pytest.approx(8.0)
+
+
+
+def test_C5_stage2_gk_is_sot_then_conditional_save_model():
+    rows = [
+        {"minutes": 90, "saves": 4, "goals_conceded": 1},
+        {"minutes": 90, "saves": 2, "goals_conceded": 2},
+        {"minutes": 90, "saves": 6, "goals_conceded": 0},
+        {"minutes": 90, "saves": 1, "goals_conceded": 3},
+        {"minutes": 90, "saves": 5, "goals_conceded": 1},
+    ]
+    model = _gk_sot_save_model(
+        rows,
+        xmins=82.0,
+        opponent_volume_multiplier=1.10,
+        fallback_save_rate90=3.0,
+    )
+    assert model["model"] == "GK_SOT_THEN_CONDITIONAL_SAVE_V1"
+    assert model["sot_count_model"]["family"] in {
+        "POISSON", "NEGATIVE_BINOMIAL"
+    }
+    assert model["conditional_save_model"]["family"] in {
+        "BINOMIAL", "BETA_BINOMIAL"
+    }
+    assert model["empirical"]["save_percentage"] is not None
+    assert model["empirical"]["psxg_xgot"] is None
+    assert model["empirical"]["psxg_xgot_status"].startswith("UNAVAILABLE")
+    pmf = _gk_save_pmf_from_model(
+        model, model["projected_sot_mean"]
+    )
+    assert abs(sum(pmf.values()) - 1.0) < 1e-9
+    assert sum(prob for saves, prob in pmf.items() if saves >= 3) > 0.0
+
+
+def test_C6_stage2_set_piece_chain_is_probabilistic_not_hardcoded():
+    process = _set_piece_process(
+        {
+            "set_piece_event_rate_per_match": 0.55,
+            "set_piece_taker_share": 0.70,
+            "set_piece_target_share": 0.30,
+            "set_piece_shot_given_involved": 0.45,
+            "set_piece_goal_given_shot": 0.20,
+        },
+        {"lambda_set_piece90": 0.05},
+    )
+    assert process["status"] == "AVAILABLE_COMPLETE_COMPONENT_CHAIN"
+    assert process["P_goal_chain"] is not None
+    assert process["P_goal_chain"] > 0.0
+    assert process["taker_uncertainty_probabilistic"] is True
+    assert process["hardcoded_taker"] is False
+
+
+def test_C7_stage2_live_threshold_does_not_force_erlang():
+    no_timing = estimate_live_threshold_probability(
+        current_count=7,
+        minute=65,
+        threshold=10,
+        projected_full_match_mean=11.0,
+    )
+    assert no_timing["selected_model"] == "CONDITIONAL_COUNT_PROCESS"
+    assert no_timing["survival_family_forced"] is False
+    assert 0.0 <= no_timing["probability"] <= 1.0
+
+    justified = estimate_live_threshold_probability(
+        current_count=7,
+        minute=65,
+        threshold=10,
+        projected_full_match_mean=11.0,
+        interarrival_minutes=[7.0, 11.0, 8.0, 10.0, 9.0, 6.0, 12.0, 8.5],
+    )
+    assert (
+        justified["selected_model"]
+        == "ERLANG_FROM_EMPIRICAL_EXPONENTIAL_INTERARRIVALS"
+    )
+    assert justified["erlang_selected_only_if_empirically_justified"] is True
+
+
+def test_C8_stage2_dynamic_fdr_exposes_governed_tactical_inputs():
+    out = build_dynamic_matchup_vector(
+        position="FWD",
+        role="CENTRAL STRIKER",
+        matchup={
+            "home_expected_goals": 1.8,
+            "home_clean_sheet_probability": 0.35,
+            "official_fdr_home": 3,
+        },
+        home=True,
+        current_context={
+            "own_team_tactical_state": {
+                "nominal_formation": {
+                    "state": "OBSERVED_DISTRIBUTION"
+                }
+            },
+            "opponent_team_tactical_state": {
+                "press_block": {"state": "UNAVAILABLE"}
+            },
+            "player_availability": {"available_signal": True},
+            "expected_personnel": {"opponent_cb": None},
+            "venue": "HOME",
+        },
+    )
+    evidence = out["tactical_input_evidence"]
+    assert evidence["own_coach_formation_style"] is not None
+    assert evidence["opponent_coach_formation_style"] is not None
+    assert evidence["venue"] == "HOME"
+    assert evidence["missing_evidence_is_explicit_not_neutral"] is True

@@ -1009,16 +1009,226 @@ def run_deep(
         }
     )
 
-    _skip_stage(
+    finance = _stage(
         ledger,
-        "P1_2_PACKAGE_UTILITY",
-        "Stage 2 package/frontier execution is intentionally not started by Stage 1",
+        "TRANSFER_FINANCE_CONTEXT",
+        lambda: _private_finance_context(runtime_data_root),
+        required=True,
     )
-    _skip_stage(
-        ledger,
-        "P1_4_MONTE_CARLO",
-        "Stage 2 material Monte Carlo execution is intentionally not started by Stage 1",
-    )
+    package_search_result = None
+    package_utility = None
+    material_mc_routes = None
+    monte_carlo = None
+    stage3_decision = None
+    package_with_stage3 = None
+    mini_overlay = None
+
+    if projections is not None and canonical_complete:
+        package_candidates = _package_candidate_rows(projections)
+        max_transfers = (
+            2
+            if (
+                (finance or {}).get("free_transfers") is not None
+                or (finance or {}).get("hit_cost_per_extra_transfer")
+                is not None
+            )
+            else 1
+        )
+        package_search_result = _stage(
+            ledger,
+            "P1_2A_PACKAGE_SEARCH",
+            lambda: search_packages(
+                current_squad=owned,
+                candidate_universe=package_candidates,
+                bank=(finance or {}).get("bank"),
+                max_transfers=max_transfers,
+                universe_complete=True,
+                expected_eligible_universe_count=None,
+                lossy_pruning=False,
+                execution_mode="SCALAR",
+            ),
+            required=True,
+        )
+        if package_search_result:
+            package_utility = _stage(
+                ledger,
+                "P1_2_PACKAGE_UTILITY",
+                lambda: evaluate_packages(
+                    search_result=package_search_result,
+                    projections=projections,
+                    free_transfers=(finance or {}).get(
+                        "free_transfers"
+                    ),
+                    hit_cost_per_extra_transfer=(finance or {}).get(
+                        "hit_cost_per_extra_transfer"
+                    ),
+                    future_frontier_by_route=None,
+                    information_value_by_route={},
+                    price_risk_by_route={},
+                    generated_at=report_slot,
+                ),
+                required=True,
+            )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_2_PACKAGE_UTILITY",
+                "P1.2A package search failed",
+                required=True,
+            )
+
+        if package_utility:
+            material_mc_routes = _stage(
+                ledger,
+                "P1_4_MATERIAL_ROUTE_SELECTION",
+                lambda: select_stage3_material_mc_routes(
+                    package_utility,
+                    max_routes=8,
+                ),
+                required=True,
+            )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_4_MATERIAL_ROUTE_SELECTION",
+                "P1.2B package utility failed",
+                required=True,
+            )
+
+        if package_utility and material_mc_routes:
+            mc_route_ids = [
+                str(value)
+                for value in material_mc_routes.get("route_ids") or []
+                if str(value) != "HOLD"
+            ]
+            monte_carlo = _stage(
+                ledger,
+                "P1_4_MONTE_CARLO",
+                lambda: run_package_monte_carlo(
+                    projections,
+                    package_utility,
+                    actual_paths=500_000,
+                    seed=_stage3_seed(report_slot),
+                    input_snapshot_id=(
+                        "STAGE3:"
+                        + _fingerprint(
+                            {
+                                "official": official["payload"],
+                                "prefetch": prefetch,
+                                "projections": projections,
+                            }
+                        )[:24]
+                    ),
+                    route_ids=mc_route_ids,
+                    canonical=True,
+                    generated_at=report_slot,
+                ),
+                required=True,
+            )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_4_MONTE_CARLO",
+                "package utility/material route prerequisite failed",
+                required=True,
+            )
+
+        if package_utility and monte_carlo:
+            package_with_mc = _stage(
+                ledger,
+                "P1_4_PACKAGE_BINDING",
+                lambda: attach_monte_carlo_to_package_utility(
+                    package_utility,
+                    monte_carlo,
+                ),
+                required=True,
+            )
+            price_uncertainty = _price_uncertainty_by_route(
+                package_with_mc or package_utility,
+                predictor,
+            )
+            stage3_decision = _stage(
+                ledger,
+                "P1_2_STAGE3_DECISION_CLOSURE",
+                lambda: finalize_stage3_decision(
+                    package_with_mc or package_utility,
+                    monte_carlo,
+                    price_uncertainty_by_route=price_uncertainty,
+                ),
+                required=True,
+            )
+            if package_with_mc and stage3_decision:
+                package_with_stage3 = _stage(
+                    ledger,
+                    "P1_2_STAGE3_DECISION_BINDING",
+                    lambda: attach_stage3_decision(
+                        package_with_mc,
+                        stage3_decision,
+                    ),
+                    required=True,
+                )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_2_STAGE3_DECISION_CLOSURE",
+                "P1.4 canonical MC prerequisite failed",
+                required=True,
+            )
+
+        if package_with_stage3 and mini:
+            mini_overlay = _stage(
+                ledger,
+                "P1_8_MINI_LEAGUE_OVERLAY",
+                lambda: evaluate_mini_league_overlay(
+                    package_with_stage3,
+                    mini,
+                    monte_carlo=monte_carlo,
+                    relative_mc=None,
+                    input_snapshot_id=(
+                        "STAGE3_MINI:"
+                        + _fingerprint(mini)[:24]
+                    ),
+                    generated_at=report_slot,
+                ),
+                required=True,
+            )
+            if mini_overlay:
+                package_with_stage3 = _stage(
+                    ledger,
+                    "P1_8_MINI_LEAGUE_BINDING",
+                    lambda: attach_mini_league_overlay(
+                        package_with_stage3,
+                        mini_overlay,
+                    ),
+                    required=True,
+                )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_8_MINI_LEAGUE_OVERLAY",
+                "package decision or mini-league snapshot unavailable",
+                required=True,
+            )
+    else:
+        reason = (
+            "Stage-2 canonical full universe unavailable"
+            if projections is not None
+            else "Stage-2 projections unavailable"
+        )
+        for stage_name in (
+            "P1_2A_PACKAGE_SEARCH",
+            "P1_2_PACKAGE_UTILITY",
+            "P1_4_MATERIAL_ROUTE_SELECTION",
+            "P1_4_MONTE_CARLO",
+            "P1_2_STAGE3_DECISION_CLOSURE",
+            "P1_8_MINI_LEAGUE_OVERLAY",
+        ):
+            _skip_stage(
+                ledger,
+                stage_name,
+                reason,
+                required=True,
+            )
 
     lineup_state = "COMPLETE" if lineup else "DEGRADED"
     lineup_reason = None if lineup else "P1.7 owner did not produce a supportable route"

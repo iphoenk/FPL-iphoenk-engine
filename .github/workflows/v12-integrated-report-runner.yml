@@ -126,6 +126,14 @@ jobs:
               raise SystemExit(f"legacy execution boundary violated: {bad}")
           PY
 
+      - name: Restore exact P1.7 decision-core cache
+        uses: actions/cache@v4
+        with:
+          path: app/.cache/v12-p17
+          key: v12-p17-decision-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_lineup_optimizer.py', 'app/config/intelligence/v12_lineup_optimizer.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
+          restore-keys: |
+            v12-p17-decision-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_lineup_optimizer.py', 'app/config/intelligence/v12_lineup_optimizer.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-
+
       - name: Execute occurrence-bound integrated report
         id: report
         working-directory: app
@@ -133,6 +141,7 @@ jobs:
           REPORT_MODE: ${{ needs.parse.outputs.report_mode }}
           REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
           CHECKPOINT_TIME: ${{ needs.parse.outputs.checkpoint_time }}
+          V12_P17_DECISION_CACHE_DIR: .cache/v12-p17
         run: |
           args=(
             --runtime-data-root "../runtime-data"

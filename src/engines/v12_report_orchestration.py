@@ -2309,9 +2309,10 @@ def build_deep_human_facing_manifest(
         # proves there is no material item (for example no XI battle).
         state = str(section.get("state") or "").upper()
         truthful_empty = payload.get("empty_is_truthful") is True
+        all_required_empty = bool(required_keys) and len(empty) == len(required_keys)
         hard_empty = (
-            empty
-            if state == "COMPLETE" and not truthful_empty
+            list(required_keys)
+            if state == "COMPLETE" and all_required_empty and not truthful_empty
             else []
         )
         if missing:
@@ -2478,6 +2479,8 @@ def _render_deep_visible_contract_lines(
                     ],
                 )
             )
+        else:
+            lines.append("FORMATION ALTERNATIVES: NONE MATERIAL / NONE SUPPORTABLE")
         excluded.extend(("starting_xi", "bench", "formation_comparison", "lineup_score"))
 
     elif section_id == "S06B":

@@ -1473,6 +1473,7 @@ def finalize_stage3_decision(
     monte_carlo: Mapping[str, Any],
     *,
     price_uncertainty_by_route: Mapping[str, Any] | None = None,
+    projections: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Close the P1.2 decision downstream of canonical P1.4 evidence.
 
@@ -1502,6 +1503,133 @@ def finalize_stage3_decision(
         raise PackageUtilityError("Stage3 decision closure requires HOLD")
     price_map = dict(price_uncertainty_by_route or {})
     metrics = dict(mc.get("metrics") or {})
+    projection_map = _projection_map(projections or {})
+
+    def sensitivity_for_route(
+        route: Mapping[str, Any],
+        price: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        involved = sorted(
+            {
+                int(row.get("element") or 0)
+                for row in (
+                    list(route.get("players_out") or [])
+                    + list(route.get("players_in") or [])
+                )
+                if int(row.get("element") or 0) > 0
+            }
+        )
+        player_rows = [
+            projection_map[element]
+            for element in involved
+            if element in projection_map
+        ]
+        pstart_ranges = {
+            str(int(row.get("element") or 0)): (
+                (row.get("xmins") or {}).get(
+                    "start_probability_interval"
+                )
+            )
+            for row in player_rows
+        }
+        xmins_ranges = {
+            str(int(row.get("element") or 0)): (
+                (row.get("xmins") or {}).get(
+                    "expected_minutes_interval"
+                )
+            )
+            for row in player_rows
+        }
+        price_scenarios = [
+            {
+                "element": signal.get("element"),
+                "projection": signal.get("price_change_projections"),
+                "locked_until": signal.get(
+                    "price_change_locked_until"
+                ),
+            }
+            for signal in price.get("signals") or []
+            if isinstance(signal, Mapping)
+        ]
+        dimensions = {
+            "P_start": {
+                "status": (
+                    "GOVERNED_INTERVAL"
+                    if any(pstart_ranges.values())
+                    else "UNAVAILABLE"
+                ),
+                "ranges": pstart_ranges,
+                "perturbation": "LOW_AND_HIGH_P1_1_INTERVAL_ENDPOINTS",
+            },
+            "xMins": {
+                "status": (
+                    "GOVERNED_INTERVAL"
+                    if any(xmins_ranges.values())
+                    else "UNAVAILABLE"
+                ),
+                "ranges": xmins_ranges,
+                "perturbation": "LOW_AND_HIGH_P1_1_INTERVAL_ENDPOINTS",
+            },
+            "role": {
+                "status": "FRESH_REPROJECTION_REQUIRED",
+                "perturbation": "ROLE_CHANGE_IS_DISCRETE_STAGE2_STATE_NOT_ARBITRARY_SCALAR",
+            },
+            "formation": {
+                "status": "FRESH_REPROJECTION_REQUIRED",
+                "perturbation": "FORMATION_CHANGE_REQUIRES_DYNAMIC_FDR_AND_ROLE_REBUILD",
+            },
+            "fixture_strength": {
+                "status": "FRESH_REPROJECTION_REQUIRED",
+                "perturbation": "DYNAMIC_FDR_VECTOR_HAS_NO_CALIBRATED_LOCAL_CONFIDENCE_BAND",
+            },
+            "DefCon_rate": {
+                "status": "ALEATORIC_COUNT_DISTRIBUTION_IN_MC",
+                "perturbation": "STAGE2_SELECTED_COUNT_FAMILY_SAMPLED_PATHWISE",
+            },
+            "finishing": {
+                "status": "BAYESIAN_EVENT_DISTRIBUTION_IN_MC",
+                "perturbation": "STAGE2_SHRUNK_GOAL_PROCESS_SAMPLED_PATHWISE",
+            },
+            "creator_availability": {
+                "status": (
+                    "PATH_CONDITIONED_IN_MC"
+                    if (
+                        (mc.get("match_state_contract") or {}).get(
+                            "stage2_linkup_conditioned_on_sampled_material_teammate_appearance"
+                        )
+                    )
+                    else "UNAVAILABLE"
+                ),
+                "perturbation": "P1_1_APPEARANCE_STATE_CHANGES_STAGE2_LINKUP_RATIO",
+            },
+            "opponent_lineup": {
+                "status": "FRESH_REPROJECTION_REQUIRED",
+                "perturbation": "EXPECTED_PERSONNEL_CHANGE_REQUIRES_DYNAMIC_FDR_REBUILD",
+            },
+            "price": {
+                "status": (
+                    "PREDICTOR_SCENARIO_ONLY_UNCALIBRATED_PROBABILITY"
+                    if price_scenarios
+                    else "UNAVAILABLE"
+                ),
+                "scenarios": price_scenarios,
+                "perturbation": "PUBLISHED_PREDICTOR_SCENARIOS_ONLY",
+            },
+        }
+        unresolved = sorted(
+            key
+            for key, value in dimensions.items()
+            if value.get("status")
+            in {"FRESH_REPROJECTION_REQUIRED", "UNAVAILABLE"}
+        )
+        return {
+            "method": "GOVERNED_ONE_AT_A_TIME_ENVELOPE_PLUS_PATH_STRESS",
+            "dimensions": dimensions,
+            "unresolved_material_dimensions": unresolved,
+            "all_material_dimensions_resolved": not unresolved,
+            "arbitrary_percentage_shocks_used": False,
+            "fresh_reprojection_required_for_structural_state_change": True,
+        }
 
     rows = []
     for route_id in sorted(routes):
@@ -1584,6 +1712,11 @@ def finalize_stage3_decision(
             and long_noninferior
         )
         economics = dict(route.get("transfer_economics") or {})
+        sensitivity = sensitivity_for_route(route, price)
+        statistically_robust = bool(
+            statistically_robust
+            and sensitivity.get("all_material_dimensions_resolved") is True
+        )
         rows.append(
             {
                 "route_id": route_id,
@@ -1602,6 +1735,7 @@ def finalize_stage3_decision(
                 },
                 "price_uncertainty": price,
                 "voi_vs_cost_of_waiting": voi_comparison,
+                "sensitivity": sensitivity,
                 "robustness": {
                     "classification": (
                         "ROBUST"
@@ -1621,8 +1755,9 @@ def finalize_stage3_decision(
                     ),
                     "rules": (
                         "ROBUST iff MC converged, mean delta and P(outperform) "
-                        "95% lower bounds are positive/>0.5, and 3GW/5GW "
-                        "football deltas are non-negative"
+                        "95% lower bounds are positive/>0.5, 3GW/5GW football "
+                        "deltas are non-negative, and every material sensitivity "
+                        "dimension is either governed-bounded or path-modelled"
                     ),
                 },
                 "stress_coverage": {

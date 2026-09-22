@@ -36,7 +36,6 @@ from src.engines.v12_model_evidence import (
 from src.engines.v12_player_events import (
     _finite_states,
     _minute_support,
-    load_event_config,
 )
 from src.engines.v12_position_probability_components import (
     _conditional_bonus_pmf,
@@ -762,109 +761,6 @@ def _sample_bonus_points(
         out[mask] = draws
     return out
 
-def _simulate_player_gw(
-    rng: np.random.Generator,
-    player: Mapping[str, Any],
-    *,
-    gw: int,
-    n: int,
-    factors: Mapping[str, Any],
-    shared_fraction: float,
-) -> dict[str, Any]:
-    element_type = _element_type(player)
-    team_id = _i(player.get("team_id") or player.get("team"), -1)
-    total_points = np.zeros(n, dtype=np.float64)
-    appeared = np.zeros(n, dtype=bool)
-    state_rows = _state_rows(player)
-    state_counts = np.zeros(len(state_rows), dtype=np.int64)
-    event_sums = {"goals": 0.0, "assists": 0.0, "clean_sheets": 0.0, "defcon_hits": 0.0, "saves": 0.0}
-    fixtures = _fixture_rows(player, gw)
-    for index, fixture in enumerate(fixtures):
-        fid = _fixture_id(fixture, gw=gw, team_id=team_id, index=index)
-        world = factors.get(fid)
-        if not isinstance(world, Mapping):
-            raise MonteCarloError(f"missing world factor for fixture={fid}")
-        team_world = dict((world.get("teams") or {}).get(team_id) or {})
-        if not team_world:
-            raise MonteCarloError(f"missing team factor fixture={fid} team={team_id}")
-        opponent = _opponent_id(fixture)
-        opponent_world = dict((world.get("teams") or {}).get(opponent) or {})
-        attack_factor = np.asarray(team_world["attack_factor"], dtype=np.float64)
-        pressure_factor = (
-            np.asarray(opponent_world.get("attack_factor"), dtype=np.float64)
-            if opponent_world
-            else np.ones(n, dtype=np.float64)
-        )
-
-        state_idx, minutes = _sample_state_minutes(rng, player, n)
-        for idx in range(len(state_rows)):
-            state_counts[idx] += int(
-                np.count_nonzero(state_idx == idx)
-            )
-        fixture_appeared = minutes > 0.0
-        appeared |= fixture_appeared
-
-        params = _fixture_event_parameters(player, fixture)
-        scale = minutes / 90.0
-        lam_g = params["goal_rate90"] * scale * attack_factor
-        lam_a = params["assist_rate90"] * scale * attack_factor
-        if np.any(lam_g < 0.0) or np.any(lam_a < 0.0):
-            raise MonteCarloError("negative event intensity")
-        lam_shared = shared_fraction * np.minimum(lam_g, lam_a)
-        shared = rng.poisson(lam_shared)
-        goals = shared + rng.poisson(np.maximum(0.0, lam_g - lam_shared))
-        assists = shared + rng.poisson(np.maximum(0.0, lam_a - lam_shared))
-
-        appearance_points = np.where(
-            minutes <= 0.0,
-            0.0,
-            np.where(minutes >= 60.0, float(APPEARANCE_POINTS_60_PLUS), float(APPEARANCE_POINTS_UNDER_60)),
-        )
-        points = appearance_points
-        points = points + goals * float(GOAL_POINTS[element_type])
-        points = points + assists * float(ASSIST_POINTS)
-
-        clean = np.asarray((world.get("clean_sheet") or {}).get(team_id, np.zeros(n, dtype=bool)), dtype=bool)
-        cs_awarded = clean & (minutes >= params["clean_sheet_minimum_minutes"]) & (params["clean_sheet_points"] > 0.0)
-        points = points + cs_awarded.astype(np.float64) * params["clean_sheet_points"]
-
-        defcon_hits = np.zeros(n, dtype=bool)
-        if params["defcon_eligible"] and params["defcon_threshold"] > 0 and params["defcon_points"] > 0.0:
-            dc_lam = params["defcon_rate90"] * scale
-            dc_counts = rng.poisson(np.maximum(0.0, dc_lam))
-            defcon_hits = dc_counts >= params["defcon_threshold"]
-            points = points + defcon_hits.astype(np.float64) * params["defcon_points"]
-
-        save_counts = np.zeros(n, dtype=np.int64)
-        if params["save_eligible"] and params["save_rate90"] > 0.0:
-            save_lam = params["save_rate90"] * scale * pressure_factor
-            save_counts = rng.poisson(np.maximum(0.0, save_lam))
-            save_points = (save_counts // int(SAVE_INTERVAL)) * int(SAVE_POINTS_PER_INTERVAL)
-            points = points + save_points.astype(np.float64)
-
-        # P1.3 bonus remains expectation-only. It is deliberately deterministic
-        # conditional on sampled minutes and is never converted to Gaussian noise.
-        points = points + params["bonus_rate90"] * scale
-        if np.any(~np.isfinite(points)):
-            raise MonteCarloError("non-finite sampled player points")
-
-        total_points += points
-        event_sums["goals"] += float(goals.sum())
-        event_sums["assists"] += float(assists.sum())
-        event_sums["clean_sheets"] += float(clean.sum())
-        event_sums["defcon_hits"] += float(defcon_hits.sum())
-        event_sums["saves"] += float(save_counts.sum())
-
-    draws = n * max(1, len(fixtures))
-    return {
-        "points": total_points,
-        "appeared": appeared,
-        "state_counts": state_counts,
-        "state_draws": draws,
-        "event_sums": event_sums,
-    }
-
-
 def _route_rows_from_package(
     package_utility: Mapping[str, Any],
     *,
@@ -1102,15 +998,6 @@ def _material_player_ids(route_defs: Sequence[Mapping[str, Any]], horizons: Sequ
             ids.add(_i(row.get("bench_gk")))
             by_gw.setdefault(gw, set()).update(x for x in ids if x > 0)
     return by_gw
-
-
-def _shared_fraction() -> float:
-    cfg = load_event_config()
-    dep = dict(cfg.get("joint_goal_assist") or {}).get("dependence_parameter") or {}
-    value = _f(dep.get("value"), 0.1)
-    low = _f(dep.get("lower_bound"), 0.0)
-    high = _f(dep.get("upper_bound"), 0.25)
-    return min(high, max(low, value))
 
 
 def _categorical_goal_allocation(

@@ -2466,6 +2466,17 @@ def run_correlated_monte_carlo(
             route_def = next(item for item in route_defs if str(item.get("route_id")) == rid)
             execution_cost = route_def.get("execution_cost_points")
             row["execution_cost_points"] = execution_cost
+            row["execution_cost_status"] = route_def.get(
+                "execution_cost_status"
+            )
+            row["decision_net_supported"] = bool(
+                route_def.get("decision_net_supported")
+            )
+            row["utility_semantics"] = (
+                "DECISION_NET"
+                if row["decision_net_supported"]
+                else "GROSS_FOOTBALL_ONLY_PRIVATE_ECONOMICS_UNAVAILABLE"
+            )
             row["mean_gross_points"] = (
                 None
                 if row.get("mean_net_utility") is None or execution_cost is None
@@ -2619,6 +2630,7 @@ def run_package_monte_carlo(
     seed: int,
     input_snapshot_id: str,
     route_ids: Sequence[str] | None = None,
+    selected_route_id: str | None = None,
     canonical: bool = True,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
@@ -2639,7 +2651,11 @@ def run_package_monte_carlo(
         input_snapshot_id=input_snapshot_id,
         canonical=canonical,
         horizons=horizons,
-        selected_route_id=str(package_utility.get("selected_route_id") or "HOLD"),
+        selected_route_id=str(
+            selected_route_id
+            or package_utility.get("selected_route_id")
+            or "HOLD"
+        ),
         generated_at=generated_at,
     )
     out["package_integration"] = {
@@ -2650,6 +2666,11 @@ def run_package_monte_carlo(
         "rental_exit_auto_assumed": False,
         "transfer_economics_deterministic": True,
         "future_price_stochastic": False,
+        "convergence_route_id": str(
+            selected_route_id
+            or package_utility.get("selected_route_id")
+            or "HOLD"
+        ),
     }
     return out
 
@@ -2671,7 +2692,20 @@ def attach_monte_carlo_to_package_utility(
         mc_row = dict((metrics.get(rid) or {}).get("1") or {})
         uncertainty = route.setdefault("uncertainty", {})
         if mc_row and mc.get("execution_state") == "EXECUTED":
-            uncertainty["p_beats_hold"] = mc_row.get("p_route_gt_hold")
+            decision_net_supported = bool(
+                mc_row.get("decision_net_supported")
+            )
+            if decision_net_supported:
+                uncertainty["p_beats_hold"] = mc_row.get(
+                    "p_route_gt_hold"
+                )
+            else:
+                uncertainty["p_beats_hold"] = (
+                    "UNAVAILABLE_PRIVATE_ECONOMICS"
+                )
+                uncertainty["p_football_points_gt_hold"] = (
+                    mc_row.get("p_route_gt_hold")
+                )
             uncertainty["monte_carlo"] = {
                 "execution_state": mc.get("execution_state"),
                 "canonical_pass": bool(mc.get("canonical_pass")),
@@ -2680,6 +2714,8 @@ def attach_monte_carlo_to_package_utility(
                 "mean_difference_vs_hold": mc_row.get("mean_difference_vs_hold"),
                 "paired_difference_standard_error": mc_row.get("paired_difference_standard_error"),
                 "expected_regret": mc_row.get("expected_regret"),
+                "utility_semantics": mc_row.get("utility_semantics"),
+                "decision_net_supported": decision_net_supported,
                 "output_fingerprint": mc.get("output_fingerprint"),
             }
         else:

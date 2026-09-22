@@ -1262,6 +1262,75 @@ def _mini_context(mini: Mapping[str, Any] | None) -> dict[str, Any]:
     )
 
 
+def _captain_candidate_review(
+    *,
+    candidate: Mapping[str, Any] | None,
+    projections: Mapping[str, Any] | None,
+    mini: Mapping[str, Any] | None,
+    mini_league_stance: str,
+) -> dict[str, Any]:
+    """Visible C/VC evidence using existing P1.3/P1.6/P1.7/P1.8 owners."""
+    raw_candidate = dict(candidate or {})
+    element = _surface_element(raw_candidate)
+    pmap = _projection_map(projections)
+    player = pmap.get(element or -1) or {}
+    mechanism = (
+        _visible_position_mechanism(player, action="HOLD")
+        if player
+        else {}
+    )
+    exposure = next(
+        (
+            dict(row)
+            for row in (mini or {}).get("exposures") or []
+            if isinstance(row, Mapping)
+            and int(row.get("element_id") or 0) == int(element or 0)
+        ),
+        {},
+    )
+    one = dict(mechanism.get("1GW") or {})
+    complete = dict(mechanism.get("complete_player_distribution") or {})
+    return {
+        "element_id": element,
+        "player": (
+            raw_candidate.get("name")
+            or mechanism.get("player")
+            or (f"element:{element}" if element else "UNAVAILABLE")
+        ),
+        "expected_points": one.get("mean", raw_candidate.get("xpts_mean")),
+        "ceiling_q90": one.get("Q90"),
+        "haul_probability": one.get("p_haul"),
+        "blank_probability": one.get("p_blank"),
+        "xmins": mechanism.get("xmins", raw_candidate.get("xmins")),
+        "p_start": mechanism.get("p_start", raw_candidate.get("p_start")),
+        "goal_involvement": {
+            "goal_process": mechanism.get("goal_process"),
+            "creation_process": mechanism.get("creation_process"),
+            "p_return": complete.get("P_return"),
+            "p_goal": complete.get("P_goal"),
+            "p_assist": complete.get("P_assist"),
+        },
+        "penalties": mechanism.get("penalty_process"),
+        "set_pieces": mechanism.get("set_piece_process"),
+        "fixture": {
+            "opponent": mechanism.get("opponent"),
+            "home": mechanism.get("home"),
+            "dynamic_matchup": mechanism.get("dynamic_matchup"),
+        },
+        "captain_count": exposure.get("captain_count"),
+        "captain_pct": exposure.get("captain_pct"),
+        "eo_pct": exposure.get("eo_pct"),
+        "mini_league_upside": (
+            "Lower captain/EO can create leverage only when football evidence remains close."
+        ),
+        "mini_league_downside": (
+            "Fading a strong high-EO captain increases relative-rank downside."
+        ),
+        "mini_league_stance": mini_league_stance,
+        "raw_mean_is_not_sole_authority": True,
+    }
+
+
 def _formation_mini_league_strategy(
     *,
     lineup: Mapping[str, Any] | None,
@@ -2488,6 +2557,18 @@ def run_deep(
     )
     league_context = _mini_context(mini)
     league_exposures = list((mini or {}).get("exposures") or [])
+    captain_review = _captain_candidate_review(
+        candidate=(lineup or {}).get("captain"),
+        projections=projections,
+        mini=mini,
+        mini_league_stance=str(formation_strategy.get("stance") or "BALANCED"),
+    )
+    vice_captain_review = _captain_candidate_review(
+        candidate=(lineup or {}).get("vice_captain"),
+        projections=projections,
+        mini=mini,
+        mini_league_stance=str(formation_strategy.get("stance") or "BALANCED"),
+    )
     chip_payload = _read_json(
         runtime_data_root / "data/v6/personal/current_team.json",
         {},
@@ -2593,20 +2674,15 @@ def run_deep(
         "S08": _section(
             lineup_state,
             {
-                "captain": (lineup or {}).get("captain"),
-                "vice_captain": (lineup or {}).get("vice_captain"),
+                "captain": captain_review,
+                "vice_captain": vice_captain_review,
                 "captain_safe_pool": (lineup or {}).get("captain_safe_pool") or [],
-                "captain_eo": next(
-                    (
-                        row.get("eo_pct")
-                        for row in league_exposures
-                        if int(row.get("element_id") or 0)
-                        == int(((lineup or {}).get("captain") or {}).get("element") or 0)
-                    ),
-                    None,
-                ),
                 "mini_league_stance": formation_strategy.get("stance"),
-                "authority": "distributional C/VC utility + minutes/role/fixture + downstream exposure context",
+                "authority": (
+                    "expected points + ceiling + xMins/P(start) + involvement/role + "
+                    "penalty/set-piece + fixture + captain EO + mini-league downside/upside"
+                ),
+                "raw_mean_is_not_sole_authority": True,
             },
             lineup_reason,
         ),

@@ -445,15 +445,54 @@ def _world_factors(
                 + team_sigma * z_team
                 - 0.5 * team_sigma * team_sigma
             )
-            base_mean = max(
+            prior_mean = max(
                 0.01,
                 _f((meta.get("team_goal_mean") or {}).get(team_id), 1.35),
             )
+            opponents = [
+                int(tid)
+                for tid in (meta.get("teams") or ())
+                if int(tid) != int(team_id)
+            ]
+            target_zero = (
+                (meta.get("team_cs") or {}).get(opponents[0])
+                if len(opponents) == 1
+                else None
+            )
+            if target_zero is not None:
+                target_zero = _validate_probability(
+                    _f(target_zero),
+                    "opponent clean sheet probability",
+                )
+                low, high = 0.0, max(4.0, prior_mean * 4.0)
+                while (
+                    float(np.mean(np.exp(-high * factor)))
+                    > target_zero
+                    and high < 25.0
+                ):
+                    high *= 1.5
+                for _ in range(48):
+                    mid = 0.5 * (low + high)
+                    zero_rate = float(
+                        np.mean(np.exp(-mid * factor))
+                    )
+                    if zero_rate > target_zero:
+                        low = mid
+                    else:
+                        high = mid
+                base_mean = 0.5 * (low + high)
+                calibration = "CALIBRATED_TO_STAGE2_OPPONENT_CS_MARGINAL"
+            else:
+                base_mean = prior_mean
+                calibration = "STAGE2_TEAM_GOAL_MEAN_PRIOR"
             goals = rng.poisson(base_mean * factor).astype(np.int16)
             teams[int(team_id)] = {
                 "latent": latent,
                 "attack_factor": factor,
+                "prior_goal_mean": prior_mean,
                 "base_goal_mean": base_mean,
+                "scoreline_mean_calibration": calibration,
+                "target_opponent_clean_sheet": target_zero,
                 "goals": goals,
             }
 

@@ -702,3 +702,19 @@ def test_75_unresolved_economics_mc_is_explicitly_gross_football_only():
     row = result["metrics"]["R1"]["1"]
     assert row["decision_net_supported"] is False
     assert row["utility_semantics"] == "GROSS_FOOTBALL_ONLY_PRIVATE_ECONOMICS_UNAVAILABLE"
+
+
+def test_76_canonical_chunk_size_is_stage3_runtime_bounded():
+    assert load_config()["canonical"]["chunk_size"] >= 100_000
+
+
+def test_77_fixture_catalog_is_precomputed_once_per_gw():
+    source = Path("src/engines/v12_monte_carlo.py").read_text(encoding="utf-8")
+    assert "fixture_catalog_by_gw = {" in source
+    assert "catalog=fixture_catalog_by_gw[gw]" in source
+
+
+def test_78_scoreline_zero_marginal_calibration_is_not_pathwise_bisection():
+    source = Path("src/engines/v12_monte_carlo.py").read_text(encoding="utf-8")
+    assert "DETERMINISTIC_GAUSS_HERMITE_TO_STAGE2_OPPONENT_CS_MARGINAL" in source
+    assert "np.mean(np.exp(-mid * factor))" not in source

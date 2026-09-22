@@ -413,6 +413,47 @@ def _fixture_catalog(
     return catalog
 
 
+@lru_cache(maxsize=256)
+def _calibrated_poisson_base_mean(
+    target_zero: float,
+    match_sigma: float,
+    team_sigma: float,
+) -> float:
+    """Calibrate Poisson-lognormal scoreline intensity to Stage-2 P(CS).
+
+    The shared match/team factors imply a lognormal marginal attack factor.
+    Deterministic Gauss-Hermite quadrature solves
+    E[exp(-lambda * factor)] = target_zero once per parameter tuple, avoiding
+    repeated sample-path bisection without changing the intended marginal.
+    """
+    target = _validate_probability(float(target_zero), "opponent clean sheet probability")
+    if target <= 0.0:
+        return 25.0
+    if target >= 1.0:
+        return 0.0
+    sigma2 = float(match_sigma) ** 2 + float(team_sigma) ** 2
+    sigma = math.sqrt(max(0.0, sigma2))
+    nodes, weights = np.polynomial.hermite.hermgauss(32)
+    z = math.sqrt(2.0) * nodes
+    factors = np.exp(sigma * z - 0.5 * sigma2)
+    norm = math.sqrt(math.pi)
+
+    def zero_probability(base_mean: float) -> float:
+        return float(np.sum(weights * np.exp(-float(base_mean) * factors)) / norm)
+
+    low, high = 0.0, 4.0
+    while zero_probability(high) > target and high < 25.0:
+        high *= 1.5
+    high = min(high, 25.0)
+    for _ in range(56):
+        mid = 0.5 * (low + high)
+        if zero_probability(mid) > target:
+            low = mid
+        else:
+            high = mid
+    return 0.5 * (low + high)
+
+
 def _world_factors(
     rng: np.random.Generator,
     catalog: Mapping[str, Mapping[str, Any]],
@@ -463,24 +504,12 @@ def _world_factors(
                     _f(target_zero),
                     "opponent clean sheet probability",
                 )
-                low, high = 0.0, max(4.0, prior_mean * 4.0)
-                while (
-                    float(np.mean(np.exp(-high * factor)))
-                    > target_zero
-                    and high < 25.0
-                ):
-                    high *= 1.5
-                for _ in range(48):
-                    mid = 0.5 * (low + high)
-                    zero_rate = float(
-                        np.mean(np.exp(-mid * factor))
-                    )
-                    if zero_rate > target_zero:
-                        low = mid
-                    else:
-                        high = mid
-                base_mean = 0.5 * (low + high)
-                calibration = "CALIBRATED_TO_STAGE2_OPPONENT_CS_MARGINAL"
+                base_mean = _calibrated_poisson_base_mean(
+                    float(target_zero),
+                    float(match_sigma),
+                    float(team_sigma),
+                )
+                calibration = "DETERMINISTIC_GAUSS_HERMITE_TO_STAGE2_OPPONENT_CS_MARGINAL"
             else:
                 base_mean = prior_mean
                 calibration = "STAGE2_TEAM_GOAL_MEAN_PRIOR"
@@ -1150,9 +1179,11 @@ def _simulate_match_coupled_gw(
     gw: int,
     n: int,
     cfg: Mapping[str, Any],
+    catalog: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> tuple[dict[int, dict[str, Any]], dict[str, Any]]:
     """Simulate one GW from shared football match states, not player-point noise."""
-    catalog = _fixture_catalog(pmap, player_ids, gw)
+    if catalog is None:
+        catalog = _fixture_catalog(pmap, player_ids, gw)
     factors = _world_factors(rng, catalog, n, cfg)
     player_world: dict[int, dict[str, Any]] = {}
     for element in player_ids:
@@ -1770,6 +1801,18 @@ def _simulate_route_arrays(
     if len(ordered_gws) < horizons[-1]:
         raise MonteCarloError("insufficient GW coverage")
     ordered_gws = ordered_gws[: horizons[-1]]
+    player_ids_by_gw = {
+        gw: sorted(by_gw[gw])
+        for gw in ordered_gws
+    }
+    fixture_catalog_by_gw = {
+        gw: _fixture_catalog(
+            pmap,
+            player_ids_by_gw[gw],
+            gw,
+        )
+        for gw in ordered_gws
+    }
 
     route_totals = {
         rid: {
@@ -1811,7 +1854,7 @@ def _simulate_route_arrays(
         for gw_index, gw in enumerate(
             ordered_gws, start=1
         ):
-            player_ids = sorted(by_gw[gw])
+            player_ids = player_ids_by_gw[gw]
             player_world, gw_diag = (
                 _simulate_match_coupled_gw(
                     rng,
@@ -1820,6 +1863,7 @@ def _simulate_route_arrays(
                     gw=gw,
                     n=n,
                     cfg=cfg,
+                    catalog=fixture_catalog_by_gw[gw],
                 )
             )
             invariants = dict(
@@ -1944,6 +1988,9 @@ def _simulate_route_arrays(
             ],
             "player_point_noise_sampling": False,
             "stage2_event_intensities_consumed_read_only": True,
+            "fixture_catalog_precomputed_per_gw": True,
+            "fixture_catalog_build_count": len(fixture_catalog_by_gw),
+            "scoreline_zero_marginal_calibration": "DETERMINISTIC_GAUSS_HERMITE",
         },
     }
     for key, counts in state_counts.items():

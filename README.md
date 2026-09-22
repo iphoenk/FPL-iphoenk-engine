@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T13:39:05+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T13:50:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -14,6 +14,8 @@ This repository powers a governed personal Fantasy Premier League decision syste
 
 
 ## V12 Stage 2 position-specific probabilistic engine
+
+Stage 3 MC performance repair: canonical Monte Carlo remains **500,000 correlated paths** with unchanged acceptance/convergence gates. Runtime now precomputes immutable Stage-2 fixture catalogs once per GW, replaces repeated path-sample clean-sheet calibration with deterministic Gauss-Hermite calibration of the same Poisson-lognormal zero-goal marginal, and processes larger bounded NumPy chunks. This changes execution efficiency, not V6 facts, Stage-1/Stage-2 authorities, 20/25/30/25, package economics, or report QA.
 
 Status: **STAGE 1 GREEN / STAGE 2 GREEN / STAGE 3 CODE MERGED — CONTROLLED + NATURAL DEEP ACCEPTANCE PENDING**.
 

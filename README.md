@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T19:00:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T19:20:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -479,12 +479,39 @@ verification and request-budget gates remain enforced.
 
 
 
-### P1.2B/P1.7 bounded runtime profiling
+### P1.2B/P1.7 bounded runtime repair
 
-Controlled DEEP run `35709678609` confirmed that PR #646 and PR #647 were
-insufficient for production runtime: all 2,043 exact P1.2A routes / 2,043
-unique squads entered exact P1.2B P1.7 materialization, and the job was
-cancelled before P1.4 began. The current bounded branch first adds narrow
-timing instrumentation to isolate repeated P1.7 costs before any exact
-execution-path optimization is accepted. Stage 1 and Stage 2 remain GREEN;
-Stage 3 remains code-merged / acceptance pending.
+Controlled DEEP run `35709678609` proved that PR #646 and PR #647 were
+still insufficient: all 2,043 exact P1.2A routes / 2,043 unique squads entered
+exact P1.2B P1.7 materialization and the job was cancelled after more than
+3,527 seconds in P1.2B, before P1.4 began.
+
+A fail-closed pre-repair profile measured one representative exact squad across
+five GWs at 6.950154 seconds. Of that, compact route evaluation consumed
+6.848297 seconds; exact bench-order optimization consumed 5.964454 seconds and
+exact compact C/VC selection 0.769681 seconds. Player-surface construction,
+legal-XI enumeration, full selected/best-alternative materialization and model
+evidence were not the primary bottleneck.
+
+The bounded repair keeps all 550 legal XI per GW, all six outfield bench
+permutations, the canonical autosub resolver, exact ordered captain/vice
+semantics, deterministic tie-breaking, all 2,043 package routes and all five
+GW evaluations. It reuses only mathematically invariant resolver state
+matrices, batches the six exact compact bench permutations, materializes only
+the compact winner payload during route ranking, and reuses one canonical
+15-player C/VC rank table per squad/GW. Full selected and best-alternative
+P1.7 routes are still materialized through the canonical owner.
+
+The corresponding post-repair profile measured 1.040479 seconds for the same
+five-GW representative workload, a 6.68x end-to-end speedup; warm per-GW
+runtime was about 0.164 seconds versus about 1.33 seconds before repair. The
+P1.2B execution proof now records wall time, per-unique-squad and per-GW timing
+distributions, worker-utilization estimate and a coordination/serialization
+upper bound. No route pruning, sampling, heuristic lineup, timeout increase,
+Monte Carlo reduction, alternate decision owner, V6 mutation or QA relaxation
+is introduced.
+
+Stage 1 remains GREEN. Stage 2 remains GREEN. Stage 3 remains
+code-merged / acceptance pending until a fresh controlled acceptance and the
+required genuine natural DEEP acceptance pass.
+

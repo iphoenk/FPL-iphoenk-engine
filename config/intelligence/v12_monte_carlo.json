@@ -18,7 +18,7 @@
       500000
     ],
     "max_material_routes": 8,
-    "chunk_size": 25000,
+    "chunk_size": 100000,
     "quantile_method": "NUMPY_LINEAR_EMPIRICAL_QUANTILE_STORED_ROUTE_TOTALS",
     "tail_definition_version": "P1_4_ROUTE_DELTA_TAILS_V1",
     "downside_definition": "P(route_net_utility < HOLD_net_utility)",

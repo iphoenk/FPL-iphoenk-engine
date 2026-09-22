@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T07:12:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T07:13:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -15,11 +15,11 @@ This repository powers a governed personal Fantasy Premier League decision syste
 
 ## V12 Stage 2 position-specific probabilistic engine
 
-Status: **PR #639 IN PROGRESS / STAGE-2 ENGINE PASS / OVERALL BLOCKED BY EXTERNAL V6 AUTH**.
+Status: **PR #639 IN PROGRESS / STAGE-2 ENGINE PASS / PUBLIC-FIRST ACCEPTANCE RERUN PENDING**.
 
 Stage 2 starts from the exact GREEN Stage-1 head `d8a286a9428d8114125abb9093639de00c82103b` and preserves that commit as the immutable V6 behavior comparison baseline. V6 acquisition, source adapters, publisher, identity governance, scheduler, recovery transport, schedule policy, runtime-control, health semantics, schema, and `runtime-data-v6` are frozen and are not modified by Stage 2.
 
-Hardened live read-only acceptance run `35670160734` (artifact `10670918918`) proved the Stage-2 engine itself **PASS** across every required analytics check over all 667 projected Official players, including the strengthened full-eligible-universe and Watchlist20 single-chain lineage gates. Overall Stage-2 acceptance remains **BLOCKED_EXTERNAL_V6_AUTH**. A separate governed V6 `full_master` prefetch for logical slot `2026-09-22T07:00:00+07:00` published successfully (`publish_integrity=PASS`, V6 run `35670452927`) but fresh `current_team.json` still reports `AUTH_EXPIRED` / HTTP 401. This proves the blocker is the authenticated V6 session/credential, not stale Stage-2 evidence. It is tracked separately in issue #640 and is not repaired in PR #639.
+Hardened live read-only acceptance run `35670160734` (artifact `10670918918`) proved the Stage-2 engine itself **PASS** across every required analytics check over all 667 projected Official players, including the strengthened full-eligible-universe and Watchlist20 single-chain lineage gates. The previous overall blocker was too strict: the same fresh V6 publication proves Official FPL public submitted picks for entry `3462711` are HTTP 200 with all 15 players, ICON+ League standings are complete for 58/58 managers, and GW5 submitted picks are complete for 58/58 managers. Therefore private `/me` auth is diagnostic only for Stage-2 acceptance. `AUTH_EXPIRED` / HTTP 401 remains tracked separately in issue #640 for private-only facts and is not repaired in PR #639. The Stage-2 live gate now requires current public squad identity plus complete public mini-league evidence instead of private authentication.
 
 The Canonical Stage-2 contract now requires explicit single-chain lineage from the same governed projection row through P1.1, P1.3 posterior, position engine, 20/25/30/25, and genuine 1/3/5GW distributions into full-universe and Watchlist20 rows. A mere subset relationship is not sufficient acceptance evidence.
 

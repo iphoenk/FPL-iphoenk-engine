@@ -26,7 +26,23 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
 from src.engines.v12_lineup_optimizer import optimize_lineup
-from src.engines.v12_mini_league_overlay import build_mini_league_snapshot
+from src.engines.v12_mini_league_overlay import (
+    attach_mini_league_overlay,
+    build_mini_league_snapshot,
+    evaluate_mini_league_overlay,
+)
+from src.engines.v12_monte_carlo import (
+    attach_monte_carlo_to_package_utility,
+    run_package_monte_carlo,
+)
+from src.engines.v12_package_search import search_packages
+from src.engines.v12_package_utility import (
+    attach_stage3_decision,
+    derive_bounded_future_frontier,
+    evaluate_packages,
+    finalize_stage3_decision,
+    select_stage3_material_mc_routes,
+)
 from src.engines.visible_content_proof import canonical_mode_contract
 from src.engines.v12_report_orchestration import (
     build_actionable_price_radar,

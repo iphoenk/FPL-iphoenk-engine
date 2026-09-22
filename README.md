@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T21:40:46+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T22:00:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -536,3 +536,20 @@ rather than fabricated. This delivery escape does not count as natural
 Stage-3 acceptance and does not convert a non-terminal core into success or
 failure. V6 acquisition, cadence, model math, QA, route search, Monte Carlo and
 decision ownership are unchanged.
+
+
+### Exact P1.7 decision-core reuse
+
+Mandatory DEEP latency is now allowed to reuse only the expensive canonical
+P1.7 decision core when its complete deterministic fingerprint is identical.
+The key includes the normalized 15-player decision surfaces, lineup config,
+ruleset, Canonical revision and exact optimizer source hash. Any change forces a
+cold exact recomputation. The cache never owns decisions, never stores outputs
+in V6, never prunes routes, never approximates XI/bench/C/VC, and
+`optimize_lineup` still rebuilds the current model-evidence envelope after a
+cache hit.
+
+The integrated V12 report workflow restores/saves this non-authoritative
+execution cache between runs. This targets repeated mandatory reports with
+unchanged numerical P1.7 inputs so they do not repeat the full 550-XI exact
+search for every identical squad/GW state.

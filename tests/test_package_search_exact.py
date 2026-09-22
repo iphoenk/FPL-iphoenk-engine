@@ -284,3 +284,28 @@ def test_23_search_governance_declares_v6_and_authority_unchanged():
     assert governance["authority_added"] is False
     assert governance["scheduler_changed"] is False
     assert governance["search_decision_utility_separated"] is True
+
+
+def test_stage3_unavailable_private_bank_preserves_structural_full_search():
+    current = _current()
+    universe = _universe()
+    for row in current:
+        row["sell_cost"] = None
+    result = search.search_packages(
+        current_squad=current,
+        candidate_universe=universe,
+        bank=None,
+        max_transfers=1,
+        universe_complete=True,
+        expected_eligible_universe_count=None,
+        lossy_pruning=False,
+    )
+    assert result["status"] == "READY"
+    assert result["search_authority"] == "FULL"
+    assert result["max_transfers_evaluated"] == 1
+    assert result["transfer_depth_semantics"] == "COMPLETE_WITHIN_GOVERNED_CURRENT_OCCURRENCE_BOUND"
+    assert any(row["route_id"] != "HOLD" for row in result["routes"])
+    changes = [row for row in result["routes"] if row["route_id"] != "HOLD"]
+    assert all(row["economics_status"] in {"UNRESOLVED_SELL_VALUE", "UNRESOLVED_BANK"} for row in changes)
+    assert all(row["affordable"] is None for row in changes)
+    assert all(row["sell_value_fallback_to_market_price"] is False for row in changes)

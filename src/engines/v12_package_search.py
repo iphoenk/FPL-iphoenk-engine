@@ -237,21 +237,43 @@ def _economics(
     outs: Sequence[Mapping[str, Any]],
     ins: Sequence[Mapping[str, Any]],
     *,
-    bank_before: int,
+    bank_before: int | None,
 ) -> dict[str, Any]:
     sell_values = [_sell_value(row) for row in outs]
     gross_buy = sum(_buy_price(row) for row in ins)
-    unresolved = [int(_element(row)) for row, value in zip(outs, sell_values) if value is None]
-    if unresolved:
+    if not outs and not ins:
         return {
-            "status": "UNRESOLVED_SELL_VALUE",
+            "status": "RESOLVED",
+            "gross_buy_cost": 0,
+            "gross_sell_value": 0,
+            "bank_before": bank_before,
+            "bank_after": bank_before,
+            "affordable": True,
+            "unresolved_sell_value_elements": [],
+            "sell_value_fallback_to_market_price": False,
+            "bank_fallback_to_zero": False,
+            "hold_requires_private_finance": False,
+        }
+    unresolved = [int(_element(row)) for row, value in zip(outs, sell_values) if value is None]
+    if unresolved or bank_before is None:
+        return {
+            "status": (
+                "UNRESOLVED_SELL_VALUE"
+                if unresolved
+                else "UNRESOLVED_BANK"
+            ),
             "gross_buy_cost": gross_buy,
-            "gross_sell_value": None,
+            "gross_sell_value": (
+                None
+                if unresolved
+                else sum(int(value) for value in sell_values if value is not None)
+            ),
             "bank_before": bank_before,
             "bank_after": None,
             "affordable": None,
             "unresolved_sell_value_elements": unresolved,
             "sell_value_fallback_to_market_price": False,
+            "bank_fallback_to_zero": False,
         }
     gross_sell = sum(int(value) for value in sell_values if value is not None)
     bank_after = int(bank_before) + gross_sell - gross_buy
@@ -264,6 +286,7 @@ def _economics(
         "affordable": bank_after >= 0,
         "unresolved_sell_value_elements": [],
         "sell_value_fallback_to_market_price": False,
+        "bank_fallback_to_zero": False,
     }
 
 
@@ -272,7 +295,7 @@ def _route(
     outs: Sequence[Mapping[str, Any]],
     ins: Sequence[Mapping[str, Any]],
     *,
-    bank_before: int,
+    bank_before: int | None,
 ) -> dict[str, Any] | None:
     out_ids = {_element(row) for row in outs}
     final_rows = [dict(row) for row in current if _element(row) not in out_ids]
@@ -329,7 +352,7 @@ def _enumerate_exact(
     current: Sequence[Mapping[str, Any]],
     candidates: Sequence[Mapping[str, Any]],
     *,
-    bank_before: int,
+    bank_before: int | None,
     max_transfers: int,
     shard_index: int = 0,
     shard_count: int = 1,
@@ -369,7 +392,7 @@ def enumerate_routes_scalar(
     current_squad: Sequence[Mapping[str, Any]],
     candidate_universe: Sequence[Mapping[str, Any]],
     *,
-    bank: int,
+    bank: int | None,
     max_transfers: int,
 ) -> list[dict[str, Any]]:
     current = [_normalized_player(row, owned=True) for row in current_squad]
@@ -383,7 +406,7 @@ def enumerate_routes_scalar(
     return _enumerate_exact(
         current,
         candidates,
-        bank_before=_int(bank, label="bank"),
+        bank_before=(None if bank is None else _int(bank, label="bank")),
         max_transfers=_validated_transfer_bound(max_transfers),
     )
 
@@ -392,7 +415,7 @@ def enumerate_routes_batch(
     current_squad: Sequence[Mapping[str, Any]],
     candidate_universe: Sequence[Mapping[str, Any]],
     *,
-    bank: int,
+    bank: int | None,
     max_transfers: int,
     batch_size: int = 512,
 ) -> list[dict[str, Any]]:
@@ -421,7 +444,7 @@ def enumerate_routes_sharded(
     current_squad: Sequence[Mapping[str, Any]],
     candidate_universe: Sequence[Mapping[str, Any]],
     *,
-    bank: int,
+    bank: int | None,
     max_transfers: int,
     shard_count: int,
 ) -> list[dict[str, Any]]:
@@ -437,7 +460,7 @@ def enumerate_routes_sharded(
         _enumerate_exact(
             current,
             candidates,
-            bank_before=_int(bank, label="bank"),
+            bank_before=(None if bank is None else _int(bank, label="bank")),
             max_transfers=_validated_transfer_bound(max_transfers),
             shard_index=index,
             shard_count=int(shard_count),
@@ -549,7 +572,7 @@ def search_packages(
     *,
     current_squad: Sequence[Mapping[str, Any]],
     candidate_universe: Sequence[Mapping[str, Any]],
-    bank: int,
+    bank: int | None,
     max_transfers: int | None = None,
     universe_complete: bool,
     expected_eligible_universe_count: int | None = None,
@@ -578,7 +601,9 @@ def search_packages(
         routes = _enumerate_exact(
             current,
             candidates,
-            bank_before=_int(bank, label="bank"),
+            bank_before=(
+                None if bank is None else _int(bank, label="bank")
+            ),
             max_transfers=bound,
         )
     elif mode == "BATCH":
@@ -653,6 +678,10 @@ def search_packages(
         "eligible_universe_count": coverage["eligible_universe_count"],
         "searched_universe_count": coverage["searched_universe_count"],
         "route_denominator": len(routes),
+        "max_transfers_evaluated": bound,
+        "transfer_depth_semantics": (
+            "COMPLETE_WITHIN_GOVERNED_CURRENT_OCCURRENCE_BOUND"
+        ),
         "coverage": coverage,
         "search_proof": search_proof,
         "owned_out_scan": owned_out_scan,

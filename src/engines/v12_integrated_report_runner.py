@@ -21,12 +21,29 @@ coherent report bundle.
 import argparse
 import hashlib
 import json
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
 from src.engines.v12_lineup_optimizer import optimize_lineup
-from src.engines.v12_mini_league_overlay import build_mini_league_snapshot
+from src.engines.v12_mini_league_overlay import (
+    attach_mini_league_overlay,
+    build_mini_league_snapshot,
+    evaluate_mini_league_overlay,
+)
+from src.engines.v12_monte_carlo import (
+    attach_monte_carlo_to_package_utility,
+    run_package_monte_carlo,
+)
+from src.engines.v12_package_search import search_packages
+from src.engines.v12_package_utility import (
+    attach_stage3_decision,
+    derive_bounded_future_frontier,
+    evaluate_packages,
+    finalize_stage3_decision,
+    select_stage3_material_mc_routes,
+)
 from src.engines.visible_content_proof import canonical_mode_contract
 from src.engines.v12_report_orchestration import (
     build_actionable_price_radar,
@@ -379,6 +396,727 @@ def _candidate_universe(
     return list(
         build_canonical_universe(projections).get("players") or []
     )
+
+
+def _package_candidate_rows(
+    projections: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for player in projections.get("players") or []:
+        if not isinstance(player, Mapping):
+            continue
+        element = int(player.get("element") or player.get("id") or 0)
+        position = str(player.get("position") or "").upper()
+        team_id = int(player.get("team_id") or player.get("team") or 0)
+        now_cost = player.get("now_cost")
+        if (
+            element <= 0
+            or position not in {"GK", "DEF", "MID", "FWD"}
+            or team_id <= 0
+            or now_cost is None
+        ):
+            continue
+        rows.append(
+            {
+                "element": element,
+                "name": player.get("name"),
+                "position": position,
+                "team_id": team_id,
+                "now_cost": int(now_cost),
+                "status": player.get("status"),
+                "eligible": player.get("eligible", True) is not False,
+                "stage2_lineage": deepcopy(
+                    player.get("canonical_lineage")
+                    or player.get("lineage")
+                    or {}
+                ),
+            }
+        )
+    return rows
+
+
+def _private_finance_context(
+    runtime_data_root: Path,
+) -> dict[str, Any]:
+    current = _read_json(
+        runtime_data_root / "data/v6/personal/current_team.json",
+        {},
+    ) or {}
+    bank = current.get("bank")
+    free_transfers = current.get("free_transfers")
+    if free_transfers is None:
+        transfers = current.get("transfers")
+        free_transfers = (
+            transfers.get("free_transfers")
+            if isinstance(transfers, Mapping)
+            else None
+        )
+    availability = dict(current.get("availability") or {})
+    return {
+        "auth_state": current.get("auth_state"),
+        "bank": int(bank) if isinstance(bank, int) else None,
+        "free_transfers": (
+            int(free_transfers)
+            if isinstance(free_transfers, int)
+            else None
+        ),
+        "hit_cost_per_extra_transfer": (
+            int(current.get("hit_cost_per_extra_transfer"))
+            if isinstance(
+                current.get("hit_cost_per_extra_transfer"),
+                int,
+            )
+            else None
+        ),
+        "bank_status": availability.get("bank", "UNAVAILABLE"),
+        "sell_value_status": availability.get(
+            "purchase_selling_price",
+            "UNAVAILABLE",
+        ),
+        "free_transfers_status": availability.get(
+            "free_transfers",
+            "UNAVAILABLE",
+        ),
+        "private_finance_fabricated": False,
+    }
+
+
+def _price_player_map(
+    predictor: Mapping[str, Any],
+) -> dict[int, dict[str, Any]]:
+    payload = predictor.get("data") or {}
+    return {
+        int(row.get("id")): dict(row)
+        for row in payload.get("players") or []
+        if isinstance(row, Mapping) and row.get("id") is not None
+    }
+
+
+def _price_uncertainty_by_route(
+    package_utility: Mapping[str, Any],
+    predictor: Mapping[str, Any],
+) -> dict[str, Any]:
+    pmap = _price_player_map(predictor)
+    out: dict[str, Any] = {}
+    for route in package_utility.get("routes") or []:
+        route_id = str(route.get("route_id") or "")
+        elements = [
+            int(row.get("element") or 0)
+            for row in (
+                list(route.get("players_in") or [])
+                + list(route.get("players_out") or [])
+            )
+            if int(row.get("element") or 0) > 0
+        ]
+        signals = []
+        for element in elements:
+            row = pmap.get(element)
+            if not row:
+                continue
+            signals.append(
+                {
+                    "element": element,
+                    "price_change_percent": row.get(
+                        "price_change_percent"
+                    ),
+                    "price_change_hourly_rate": row.get(
+                        "price_change_hourly_rate"
+                    ),
+                    "price_change_projections": deepcopy(
+                        row.get("price_change_projections") or []
+                    ),
+                    "price_change_locked_until": row.get(
+                        "price_change_locked_until"
+                    ),
+                    "price_change_calibrating": row.get(
+                        "price_change_calibrating"
+                    ),
+                    "p_rise_before_deadline": None,
+                    "p_fall_before_deadline": None,
+                }
+            )
+        out[route_id] = {
+            "status": (
+                "MODEL_SIGNAL_AVAILABLE_PROBABILITY_UNCALIBRATED"
+                if signals
+                else "NOT_APPLICABLE"
+            ),
+            "signals": signals,
+            "p_rise_before_deadline": None,
+            "p_fall_before_deadline": None,
+            "expected_cost_of_waiting_points": None,
+            "probability_reason": (
+                "OFFICIAL_FPL_PREDICTOR_EXPOSES_LIKELIHOOD_CLASSES_AND_"
+                "PROJECTED_PERCENT_NOT_A_CALIBRATED_EVENT_PROBABILITY"
+                if signals
+                else None
+            ),
+            "price_predictor_is_football_authority": False,
+            "probability_not_fabricated": True,
+        }
+    return out
+
+
+def _stage3_seed(report_slot: str) -> int:
+    digest = hashlib.sha256(
+        str(report_slot).encode("utf-8")
+    ).hexdigest()
+    return int(digest[:8], 16)
+
+
+def _first_projection_fixture(
+    player: Mapping[str, Any],
+) -> dict[str, Any]:
+    for gw_row in player.get("xpts_by_gw") or []:
+        for fixture in (gw_row or {}).get("fixtures") or []:
+            if isinstance(fixture, Mapping):
+                return dict(fixture)
+    return {}
+
+
+def _point_distribution_summary(
+    value: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    row = dict(value or {})
+    quantiles = dict(row.get("quantiles") or {})
+    return {
+        "status": row.get("status"),
+        "mean": row.get("mean", row.get("expected_points")),
+        "median": row.get("median"),
+        "variance": row.get("variance"),
+        "Q10": quantiles.get("Q10"),
+        "Q25": quantiles.get("Q25"),
+        "Q75": quantiles.get("Q75"),
+        "Q90": quantiles.get("Q90"),
+        "p_blank": row.get("p_fpl_blank"),
+        "p_haul": row.get("p_haul_10_plus"),
+    }
+
+
+def _visible_position_mechanism(
+    player: Mapping[str, Any],
+    *,
+    action: str,
+) -> dict[str, Any]:
+    fixture = _first_projection_fixture(player)
+    events = dict(fixture.get("events") or {})
+    engine = dict(
+        fixture.get("position_engine")
+        or player.get("position_engine")
+        or {}
+    )
+    complete = dict(
+        fixture.get("complete_player_distribution")
+        or player.get("complete_player_distribution")
+        or {}
+    )
+    xmins = dict(player.get("xmins") or {})
+    derived = dict(xmins.get("derived_probabilities") or {})
+    horizons = dict(player.get("horizons") or {})
+    position = str(player.get("position") or "").upper()
+    common = {
+        "element_id": int(player.get("element") or 0),
+        "player": player.get("name"),
+        "position": position,
+        "opponent": fixture.get("opponent"),
+        "home": fixture.get("home"),
+        "role": (
+            (player.get("tactical_role") or {}).get("profile")
+            if isinstance(player.get("tactical_role"), Mapping)
+            else player.get("tactical_role")
+        ),
+        "p_available": complete.get(
+            "P_available",
+            xmins.get("availability"),
+        ),
+        "p_start": complete.get(
+            "P_start",
+            derived.get("p_start", xmins.get("start_probability")),
+        ),
+        "p_60_plus": complete.get(
+            "P_60_plus",
+            xmins.get("p_60_plus"),
+        ),
+        "p_cameo": complete.get(
+            "P_cameo",
+            derived.get("p_cameo", xmins.get("cameo_probability")),
+        ),
+        "p_dnp": complete.get(
+            "P_DNP",
+            derived.get("p_dnp", xmins.get("dnp_probability")),
+        ),
+        "xmins": xmins.get("expected_minutes"),
+        "dynamic_matchup": engine.get("matchup_vector"),
+        "bonus": events.get("bonus"),
+        "goal_process": engine.get("goal_process"),
+        "creation_process": engine.get("creation_process"),
+        "penalty_process": engine.get("penalty_process"),
+        "set_piece_process": engine.get("set_piece_process"),
+        "linkup": engine.get("linkup"),
+        "complete_player_distribution": complete,
+        "1GW": _point_distribution_summary(
+            (horizons.get("1") or {}).get("point_distribution")
+        ),
+        "3GW": _point_distribution_summary(
+            (horizons.get("3") or {}).get("point_distribution")
+        ),
+        "5GW": _point_distribution_summary(
+            (horizons.get("5") or {}).get("point_distribution")
+        ),
+        "action": action,
+    }
+    if position == "GK":
+        common["position_mechanism"] = {
+            "clean_sheet": events.get("clean_sheet"),
+            "saves": events.get("saves"),
+            "shot_stopping": (
+                (events.get("saves") or {}).get("shot_stopping")
+                if isinstance(events.get("saves"), Mapping)
+                else None
+            ),
+            "penalty_save": events.get("penalty_save"),
+            "goals_conceded": events.get("goals_conceded"),
+        }
+    elif position == "DEF":
+        common["position_mechanism"] = {
+            "clean_sheet": events.get("clean_sheet"),
+            "defcon": events.get("defcon"),
+            "defensive_role": engine.get("defensive_role"),
+            "attacking_upside": {
+                "goal_process": engine.get("goal_process"),
+                "creation_process": engine.get("creation_process"),
+            },
+        }
+    elif position == "MID":
+        common["position_mechanism"] = {
+            "goal_process": engine.get("goal_process"),
+            "creation_process": engine.get("creation_process"),
+            "penalty_process": engine.get("penalty_process"),
+            "set_piece_process": engine.get("set_piece_process"),
+            "defcon": events.get("defcon"),
+            "mid_clean_sheet": events.get("clean_sheet"),
+        }
+    else:
+        common["position_mechanism"] = {
+            "goal_process": engine.get("goal_process"),
+            "creation_process": engine.get("creation_process"),
+            "service_linkup": engine.get("linkup"),
+            "penalty_process": engine.get("penalty_process"),
+            "set_piece_process": engine.get("set_piece_process"),
+        }
+    return common
+
+
+def _stage3_visible_package_surface(
+    *,
+    projections: Mapping[str, Any],
+    canonical_bundle: Mapping[str, Any],
+    package_search_result: Mapping[str, Any],
+    package_utility: Mapping[str, Any],
+    material_mc_routes: Mapping[str, Any],
+    monte_carlo: Mapping[str, Any],
+    stage3_decision: Mapping[str, Any],
+    mini_overlay: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    player_map = {
+        int(row.get("element") or 0): dict(row)
+        for row in projections.get("players") or []
+        if isinstance(row, Mapping)
+        and int(row.get("element") or 0) > 0
+    }
+    canonical_map = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in canonical_bundle.get("players") or []
+        if isinstance(row, Mapping)
+        and int(row.get("element_id") or 0) > 0
+    }
+    utility_routes = {
+        str(row.get("route_id") or ""): dict(row)
+        for row in package_utility.get("routes") or []
+        if isinstance(row, Mapping)
+    }
+    decision_routes = {
+        str(row.get("route_id") or ""): dict(row)
+        for row in stage3_decision.get("routes") or []
+        if isinstance(row, Mapping)
+    }
+    material_ids = [
+        str(value)
+        for value in material_mc_routes.get("route_ids") or []
+    ]
+
+    challengers: list[dict[str, Any]] = []
+    seen_incoming: set[int] = set()
+    for route_id in material_ids:
+        if route_id == "HOLD":
+            continue
+        route = utility_routes.get(route_id) or {}
+        decision = decision_routes.get(route_id) or {}
+        for incoming in route.get("players_in") or []:
+            element = int(incoming.get("element") or 0)
+            if element <= 0 or element in seen_incoming:
+                continue
+            seen_incoming.add(element)
+            player = player_map.get(element) or {}
+            canonical = canonical_map.get(element) or {}
+            mechanism = _visible_position_mechanism(
+                player,
+                action=str(stage3_decision.get("operational_action") or "WAIT"),
+            )
+            challengers.append(
+                {
+                    "rank": canonical.get("canonical_rank"),
+                    "element_id": element,
+                    "player": player.get("name"),
+                    "position": player.get("position"),
+                    "club": player.get("team"),
+                    "best_outgoing": [
+                        row.get("element")
+                        for row in route.get("players_out") or []
+                    ],
+                    "package_route": route_id,
+                    "football_score": canonical.get("football_score"),
+                    "football_score_components": canonical.get(
+                        "canonical_components"
+                    ),
+                    "p_available": mechanism.get("p_available"),
+                    "p_start": mechanism.get("p_start"),
+                    "p_cameo": mechanism.get("p_cameo"),
+                    "p_dnp": mechanism.get("p_dnp"),
+                    "xmins": mechanism.get("xmins"),
+                    "p_return": (
+                        mechanism.get("complete_player_distribution") or {}
+                    ).get("P_return"),
+                    "p_blank": (
+                        mechanism.get("complete_player_distribution") or {}
+                    ).get("P_blank"),
+                    "p_haul": (
+                        mechanism.get("complete_player_distribution") or {}
+                    ).get("P_haul"),
+                    "expected_points_distribution": mechanism.get("1GW"),
+                    "tactical_role": mechanism.get("role"),
+                    "set_piece_penalty_role": {
+                        "set_piece": mechanism.get("set_piece_process"),
+                        "penalty": mechanism.get("penalty_process"),
+                    },
+                    "gw_plus_1": (
+                        mechanism.get("1GW") or {}
+                    ).get("mean"),
+                    "three_gw": (
+                        mechanism.get("3GW") or {}
+                    ).get("mean"),
+                    "five_gw": (
+                        mechanism.get("5GW") or {}
+                    ).get("mean"),
+                    "package_utility_delta_vs_hold": (
+                        decision.get("mc_pair_vs_hold") or {}
+                    ).get("mean_difference"),
+                    "price_economics": decision.get("price_uncertainty"),
+                    "structure_effect": route.get("structural_impact"),
+                    "expected_regret": decision.get("expected_regret"),
+                    "information_value_of_waiting": decision.get(
+                        "value_of_information"
+                    ),
+                    "mini_league_leverage": (
+                        (mini_overlay or {}).get("decision_delta")
+                        if mini_overlay
+                        else None
+                    ),
+                    "main_upside": (
+                        decision.get("mc_pair_vs_hold") or {}
+                    ).get("Q90"),
+                    "main_risk": (
+                        decision.get("mc_pair_vs_hold") or {}
+                    ).get("Q10"),
+                    "action": stage3_decision.get("operational_action"),
+                    "position_mechanism": mechanism.get(
+                        "position_mechanism"
+                    ),
+                    "dynamic_matchup": mechanism.get("dynamic_matchup"),
+                }
+            )
+
+    package_routes: list[dict[str, Any]] = []
+    for route_id in material_ids:
+        route = utility_routes.get(route_id) or {}
+        decision = decision_routes.get(route_id) or {}
+        pair = dict(decision.get("mc_pair_vs_hold") or {})
+        horizons = dict(route.get("horizons") or {})
+        economics = dict(route.get("transfer_economics") or {})
+        package_routes.append(
+            {
+                "route": route_id,
+                "moves": {
+                    "out": route.get("players_out"),
+                    "in": route.get("players_in"),
+                },
+                "transfer_cost": {
+                    "hit": route.get("hit"),
+                    "ft_usage": route.get("ft_usage"),
+                    "economics_status": economics.get("status"),
+                    "bank_after": route.get("bank_after"),
+                },
+                "gw1_net": (
+                    (horizons.get("GW+1") or {}).get(
+                        "net_delta_vs_hold"
+                    )
+                ),
+                "two_gw_if_relevant": (
+                    (horizons.get("2GW") or {}).get(
+                        "net_delta_vs_hold"
+                    )
+                ),
+                "three_gw": (
+                    (horizons.get("3GW") or {}).get(
+                        "net_delta_vs_hold"
+                    )
+                ),
+                "five_gw": (
+                    (horizons.get("5GW") or {}).get(
+                        "net_delta_vs_hold"
+                    )
+                ),
+                "p_beats_hold": pair.get("p_route_gt_hold"),
+                "p_delta_meaningful": pair.get(
+                    "p_delta_ge_meaningful_threshold"
+                ),
+                "Q10": pair.get("Q10"),
+                "Q25": pair.get("Q25"),
+                "median": pair.get("median"),
+                "Q75": pair.get("Q75"),
+                "Q90": pair.get("Q90"),
+                "football_1GW": (
+                    (decision.get("horizon_deltas") or {}).get("1GW")
+                ),
+                "football_3GW": (
+                    (decision.get("horizon_deltas") or {}).get("3GW")
+                ),
+                "football_5GW": (
+                    (decision.get("horizon_deltas") or {}).get("5GW")
+                ),
+                "expected_regret": decision.get("expected_regret"),
+                "robustness": decision.get("robustness"),
+                "sensitivity": decision.get("sensitivity"),
+                "stress_coverage": decision.get("stress_coverage"),
+                "price_risk": decision.get("price_uncertainty"),
+                "structure_effect": route.get("structural_impact"),
+                "action_verdict": stage3_decision.get(
+                    "operational_action"
+                ),
+                "voi": decision.get("value_of_information"),
+                "voi_vs_wait_cost": decision.get(
+                    "voi_vs_cost_of_waiting"
+                ),
+            }
+        )
+
+    mechanism_ids = set()
+    for route_id in material_ids:
+        route = utility_routes.get(route_id) or {}
+        mechanism_ids.update(
+            int(row.get("element") or 0)
+            for row in route.get("players_in") or []
+            if int(row.get("element") or 0) > 0
+        )
+        mechanism_ids.update(
+            int(row.get("element") or 0)
+            for row in route.get("players_out") or []
+            if int(row.get("element") or 0) > 0
+        )
+    mechanism_rows = [
+        _visible_position_mechanism(
+            player_map[element],
+            action=str(stage3_decision.get("operational_action") or "WAIT"),
+        )
+        for element in sorted(mechanism_ids)
+        if element in player_map
+    ]
+
+    return {
+        "package_search_proof": package_search_result.get("search_proof"),
+        "package_search_scope": {
+            "search_authority": package_search_result.get(
+                "search_authority"
+            ),
+            "eligible_universe_count": package_search_result.get(
+                "eligible_universe_count"
+            ),
+            "searched_universe_count": package_search_result.get(
+                "searched_universe_count"
+            ),
+            "route_denominator": package_search_result.get(
+                "route_denominator"
+            ),
+            "max_transfers_evaluated": package_search_result.get(
+                "max_transfers_evaluated"
+            ),
+            "transfer_depth_semantics": package_search_result.get(
+                "transfer_depth_semantics"
+            ),
+            "coverage": package_search_result.get("coverage"),
+        },
+        "package_universe_challengers": challengers,
+        "package_routes": package_routes,
+        "frontier": package_utility.get("package_frontier"),
+        "material_route_selection": material_mc_routes,
+        "monte_carlo": {
+            "execution_state": monte_carlo.get("execution_state"),
+            "canonical_pass": monte_carlo.get("canonical_pass"),
+            "actual_paths": monte_carlo.get("actual_paths"),
+            "seed": monte_carlo.get("seed"),
+            "horizons": monte_carlo.get("horizons"),
+            "convergence_evidence": monte_carlo.get(
+                "convergence_evidence"
+            ),
+            "match_state_invariants": (
+                monte_carlo.get("sampling_diagnostics") or {}
+            ).get("match_state_invariants"),
+            "match_state_contract": monte_carlo.get(
+                "match_state_contract"
+            ),
+            "common_random_numbers": monte_carlo.get(
+                "common_random_numbers"
+            ),
+        },
+        "decision": stage3_decision,
+        "position_mechanisms": mechanism_rows,
+        "mini_league_overlay": mini_overlay,
+    }
+
+
+def _stage3_math_proof(
+    *,
+    projections: Mapping[str, Any],
+    package_utility: Mapping[str, Any],
+    stage3_decision: Mapping[str, Any],
+    monte_carlo: Mapping[str, Any],
+) -> dict[str, Any]:
+    selected_id = str(
+        stage3_decision.get("selected_route_id") or "HOLD"
+    )
+    route = next(
+        (
+            dict(row)
+            for row in package_utility.get("routes") or []
+            if str(row.get("route_id") or "") == selected_id
+        ),
+        {},
+    )
+    candidate_element = next(
+        (
+            int(row.get("element") or 0)
+            for row in route.get("players_in") or []
+            if int(row.get("element") or 0) > 0
+        ),
+        None,
+    )
+    if candidate_element is None:
+        first_lineup = (
+            (route.get("football_route_utility") or {}).get("per_gw")
+            or [{}]
+        )[0]
+        candidate_element = int(
+            (first_lineup.get("captain") or 0)
+        )
+    player = next(
+        (
+            dict(row)
+            for row in projections.get("players") or []
+            if int(row.get("element") or 0) == candidate_element
+        ),
+        {},
+    )
+    fixture = _first_projection_fixture(player)
+    complete = dict(
+        fixture.get("complete_player_distribution")
+        or player.get("complete_player_distribution")
+        or {}
+    )
+    xmins = dict(player.get("xmins") or {})
+    decision_route = next(
+        (
+            dict(row)
+            for row in stage3_decision.get("routes") or []
+            if str(row.get("route_id") or "") == selected_id
+        ),
+        {},
+    )
+    return {
+        "bayesian_shrinkage_lineage": (
+            player.get("posterior_rates")
+            or "STAGE2_POSTERIOR_RATES"
+        ),
+        "probability_state": {
+            "unconditional": {
+                "p_available": complete.get(
+                    "P_available", xmins.get("availability")
+                ),
+                "p_start": complete.get(
+                    "P_start", xmins.get("start_probability")
+                ),
+                "p_bench": xmins.get("bench_probability"),
+                "p_cameo": complete.get(
+                    "P_cameo", xmins.get("cameo_probability")
+                ),
+                "p_late_cameo": xmins.get(
+                    "late_cameo_probability"
+                ),
+                "p_dnp": complete.get(
+                    "P_DNP", xmins.get("dnp_probability")
+                ),
+            }
+        },
+        "xmins_distribution": xmins.get("xmins_distribution"),
+        "posterior_predictive": {
+            "source_contract": (
+                (fixture.get("position_engine") or {}).get(
+                    "posterior_predictive"
+                )
+                or {}
+            ).get("contract"),
+            "event_probabilities": complete,
+            "point_distribution": fixture.get("point_distribution"),
+        },
+        "horizons": {
+            label: _point_distribution_summary(
+                (player.get("horizons") or {}).get(key, {}).get(
+                    "point_distribution"
+                )
+            )
+            for label, key in (
+                ("1GW", "1"),
+                ("3GW", "3"),
+                ("5GW", "5"),
+            )
+        },
+        "robustness": {
+            "p_outperform": (
+                decision_route.get("mc_pair_vs_hold") or {}
+            ).get("p_route_gt_hold"),
+            "expected_regret": decision_route.get("expected_regret"),
+            "conditional_floor": (
+                decision_route.get("mc_pair_vs_hold") or {}
+            ).get("Q10"),
+            "upper_tail": (
+                decision_route.get("mc_pair_vs_hold") or {}
+            ).get("Q90"),
+        },
+        "information_value_of_waiting": decision_route.get(
+            "value_of_information"
+        ),
+        "covariance_correlation": monte_carlo.get(
+            "correlation_model"
+        ),
+        "monte_carlo": {
+            "execution_state": monte_carlo.get("execution_state"),
+            "actual_paths": monte_carlo.get("actual_paths"),
+            "correlated": monte_carlo.get("correlated"),
+            "seed": monte_carlo.get("seed"),
+            "convergence_evidence": monte_carlo.get(
+                "convergence_evidence"
+            ),
+        },
+    }
 
 
 def _lineup_content(lineup: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -828,16 +1566,315 @@ def run_deep(
         }
     )
 
-    _skip_stage(
+    finance = _stage(
         ledger,
+        "TRANSFER_FINANCE_CONTEXT",
+        lambda: _private_finance_context(runtime_data_root),
+        required=True,
+    )
+    package_search_result = None
+    package_utility = None
+    material_mc_routes = None
+    monte_carlo = None
+    stage3_decision = None
+    package_with_stage3 = None
+    mini_overlay = None
+
+    if projections is not None and canonical_complete:
+        package_candidates = _package_candidate_rows(projections)
+        max_transfers = (
+            2
+            if (
+                (finance or {}).get("free_transfers") is not None
+                or (finance or {}).get("hit_cost_per_extra_transfer")
+                is not None
+            )
+            else 1
+        )
+        package_search_result = _stage(
+            ledger,
+            "P1_2A_PACKAGE_SEARCH",
+            lambda: search_packages(
+                current_squad=owned,
+                candidate_universe=package_candidates,
+                bank=(finance or {}).get("bank"),
+                max_transfers=max_transfers,
+                universe_complete=True,
+                expected_eligible_universe_count=None,
+                lossy_pruning=False,
+                execution_mode="SCALAR",
+            ),
+            required=True,
+        )
+        if package_search_result:
+            package_utility = _stage(
+                ledger,
+                "P1_2_PACKAGE_UTILITY",
+                lambda: evaluate_packages(
+                    search_result=package_search_result,
+                    projections=projections,
+                    free_transfers=(finance or {}).get(
+                        "free_transfers"
+                    ),
+                    hit_cost_per_extra_transfer=(finance or {}).get(
+                        "hit_cost_per_extra_transfer"
+                    ),
+                    future_frontier_by_route=None,
+                    information_value_by_route={},
+                    price_risk_by_route={},
+                    generated_at=report_slot,
+                ),
+                required=True,
+            )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_2_PACKAGE_UTILITY",
+                "P1.2A package search failed",
+                required=True,
+            )
+
+        if package_utility:
+            material_mc_routes = _stage(
+                ledger,
+                "P1_4_MATERIAL_ROUTE_SELECTION",
+                lambda: select_stage3_material_mc_routes(
+                    package_utility,
+                    max_routes=8,
+                ),
+                required=True,
+            )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_4_MATERIAL_ROUTE_SELECTION",
+                "P1.2B package utility failed",
+                required=True,
+            )
+
+        if package_utility and material_mc_routes:
+            mc_route_ids = [
+                str(value)
+                for value in material_mc_routes.get("route_ids") or []
+                if str(value) != "HOLD"
+            ]
+            monte_carlo = _stage(
+                ledger,
+                "P1_4_MONTE_CARLO",
+                lambda: run_package_monte_carlo(
+                    projections,
+                    package_utility,
+                    actual_paths=500_000,
+                    seed=_stage3_seed(report_slot),
+                    input_snapshot_id=(
+                        "STAGE3:"
+                        + _fingerprint(
+                            {
+                                "official": official["payload"],
+                                "prefetch": prefetch,
+                                "projections": projections,
+                            }
+                        )[:24]
+                    ),
+                    route_ids=mc_route_ids,
+                    selected_route_id=(
+                        mc_route_ids[0] if mc_route_ids else "HOLD"
+                    ),
+                    canonical=True,
+                    generated_at=report_slot,
+                ),
+                required=True,
+            )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_4_MONTE_CARLO",
+                "package utility/material route prerequisite failed",
+                required=True,
+            )
+
+        if package_utility and monte_carlo:
+            package_with_mc = _stage(
+                ledger,
+                "P1_4_PACKAGE_BINDING",
+                lambda: attach_monte_carlo_to_package_utility(
+                    package_utility,
+                    monte_carlo,
+                ),
+                required=True,
+            )
+            price_uncertainty = _price_uncertainty_by_route(
+                package_with_mc or package_utility,
+                predictor,
+            )
+            stage3_decision = _stage(
+                ledger,
+                "P1_2_STAGE3_DECISION_CLOSURE",
+                lambda: finalize_stage3_decision(
+                    package_with_mc or package_utility,
+                    monte_carlo,
+                    price_uncertainty_by_route=price_uncertainty,
+                    projections=projections,
+                ),
+                required=True,
+            )
+            if package_with_mc and stage3_decision:
+                package_with_stage3 = _stage(
+                    ledger,
+                    "P1_2_STAGE3_DECISION_BINDING",
+                    lambda: attach_stage3_decision(
+                        package_with_mc,
+                        stage3_decision,
+                    ),
+                    required=True,
+                )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_2_STAGE3_DECISION_CLOSURE",
+                "P1.4 canonical MC prerequisite failed",
+                required=True,
+            )
+
+        if package_with_stage3 and mini:
+            mini_overlay = _stage(
+                ledger,
+                "P1_8_MINI_LEAGUE_OVERLAY",
+                lambda: evaluate_mini_league_overlay(
+                    package_with_stage3,
+                    mini,
+                    monte_carlo=monte_carlo,
+                    relative_mc=None,
+                    input_snapshot_id=(
+                        "STAGE3_MINI:"
+                        + _fingerprint(mini)[:24]
+                    ),
+                    generated_at=report_slot,
+                ),
+                required=True,
+            )
+            if mini_overlay:
+                package_with_stage3 = _stage(
+                    ledger,
+                    "P1_8_MINI_LEAGUE_BINDING",
+                    lambda: attach_mini_league_overlay(
+                        package_with_stage3,
+                        mini_overlay,
+                    ),
+                    required=True,
+                )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_8_MINI_LEAGUE_OVERLAY",
+                "package decision or mini-league snapshot unavailable",
+                required=True,
+            )
+    else:
+        reason = (
+            "Stage-2 canonical full universe unavailable"
+            if projections is not None
+            else "Stage-2 projections unavailable"
+        )
+        for stage_name in (
+            "P1_2A_PACKAGE_SEARCH",
+            "P1_2_PACKAGE_UTILITY",
+            "P1_4_MATERIAL_ROUTE_SELECTION",
+            "P1_4_MONTE_CARLO",
+            "P1_2_STAGE3_DECISION_CLOSURE",
+            "P1_8_MINI_LEAGUE_OVERLAY",
+        ):
+            _skip_stage(
+                ledger,
+                stage_name,
+                reason,
+                required=True,
+            )
+
+    stage3_required_stage_names = {
+        "P1_2A_PACKAGE_SEARCH",
         "P1_2_PACKAGE_UTILITY",
-        "Stage 2 package/frontier execution is intentionally not started by Stage 1",
-    )
-    _skip_stage(
-        ledger,
+        "P1_4_MATERIAL_ROUTE_SELECTION",
         "P1_4_MONTE_CARLO",
-        "Stage 2 material Monte Carlo execution is intentionally not started by Stage 1",
+        "P1_4_PACKAGE_BINDING",
+        "P1_2_STAGE3_DECISION_CLOSURE",
+        "P1_2_STAGE3_DECISION_BINDING",
+        "P1_8_MINI_LEAGUE_OVERLAY",
+        "P1_8_MINI_LEAGUE_BINDING",
+    }
+    stage_status = {
+        str(row.get("stage") or ""): str(row.get("status") or "")
+        for row in ledger
+    }
+    stage3_internal_pass = bool(
+        package_search_result
+        and package_utility
+        and material_mc_routes
+        and monte_carlo
+        and stage3_decision
+        and package_with_stage3
+        and mini_overlay
+        and monte_carlo.get("execution_state") == "EXECUTED"
+        and monte_carlo.get("canonical_pass") is True
+        and int(monte_carlo.get("actual_paths") or 0) >= 500_000
+        and (monte_carlo.get("convergence_evidence") or {}).get(
+            "status"
+        )
+        == "PASS"
+        and (
+            (monte_carlo.get("sampling_diagnostics") or {}).get(
+                "match_state_invariants"
+            )
+            or {}
+        ).get("status")
+        == "PASS"
+        and package_search_result.get("search_authority") == "FULL"
+        and package_search_result.get("coverage", {}).get(
+            "coverage_complete"
+        ) is True
+        and canonical_bundle.get("stage2_lineage_complete_players")
+        == canonical_bundle.get("complete_players")
+        and str((watchlist or {}).get("state") or "").upper()
+        == "COMPLETE"
+        and str((mini or {}).get("coverage_state") or "").upper()
+        == "FULL"
+        and all(
+            stage_status.get(name) == "PASS"
+            for name in stage3_required_stage_names
+        )
     )
+    stage3_visible = (
+        _stage3_visible_package_surface(
+            projections=projections or {},
+            canonical_bundle=canonical_bundle,
+            package_search_result=package_search_result or {},
+            package_utility=package_utility or {},
+            material_mc_routes=material_mc_routes or {},
+            monte_carlo=monte_carlo or {},
+            stage3_decision=stage3_decision or {},
+            mini_overlay=mini_overlay,
+        )
+        if stage3_internal_pass
+        else {}
+    )
+    stage3_math_proof = (
+        _stage3_math_proof(
+            projections=projections or {},
+            package_utility=package_utility or {},
+            stage3_decision=stage3_decision or {},
+            monte_carlo=monte_carlo or {},
+        )
+        if stage3_internal_pass
+        else {}
+    )
+    operational_action = str(
+        (stage3_decision or {}).get("operational_action")
+        or "WAIT"
+    ).upper()
+    if operational_action not in {"WAIT", "PREPARE", "ACT"}:
+        raise IntegratedRunnerError(
+            "Stage3 action state must be WAIT/PREPARE/ACT"
+        )
 
     lineup_state = "COMPLETE" if lineup else "DEGRADED"
     lineup_reason = None if lineup else "P1.7 owner did not produce a supportable route"
@@ -858,7 +1895,7 @@ def run_deep(
         "S01": _section(
             "COMPLETE",
             {
-                "operational_state": "WAIT",
+                "operational_state": operational_action,
                 "planning_gw": planning_gw,
                 "report_slot": report_slot,
                 "integrated_runner": "EXECUTED",
@@ -873,8 +1910,21 @@ def run_deep(
         "S03": _section(
             "COMPLETE",
             {
-                "decision_delta": "NO ACT WITHOUT FULL 20/25/30/25 UNIVERSE EVALUATION",
-                "runner_delta": "P1.1/P1.3/P1.6/P1.7/price/ICON stages now occurrence-bound",
+                "decision_delta": {
+                    "action": operational_action,
+                    "selected_route_id": (
+                        (stage3_decision or {}).get("selected_route_id")
+                    ),
+                    "reason": (stage3_decision or {}).get("reason"),
+                    "mini_league_delta": (
+                        (mini_overlay or {}).get("decision_delta")
+                    ),
+                },
+                "runner_delta": (
+                    "Stage2 full-universe distributions -> P1.2 package -> "
+                    "P1.4 correlated match-state MC -> P1.2 decision -> "
+                    "P1.8 mini-league -> renderer"
+                ),
             },
         ),
         "S04": _section(
@@ -950,24 +2000,17 @@ def run_deep(
             expected_count=20,
         ),
         "S14": _section(
-            "DEGRADED",
+            "COMPLETE" if stage3_internal_pass else "DEGRADED",
             {
                 "universe_scan": universe_gap,
-                "package_routes": [],
-                "monte_carlo": {
-                    "execution_state": "NOT_RUN",
-                    "reason": (
-                        "STAGE_2_PACKAGE_FRONTIER_AND_MATERIAL_MONTE_CARLO_"
-                        "NOT_STARTED"
-                    ),
-                },
+                **stage3_visible,
             },
             (
-                universe_gap["reason"]
-                or (
-                    "Stage 1 canonical universe is complete; Stage 2 "
-                    "package/frontier and material Monte Carlo execution "
-                    "are intentionally not started yet"
+                None
+                if stage3_internal_pass
+                else (
+                    "Stage3 internal producer/wiring failure; this is NOT "
+                    "accepted as a factual-source degradation"
                 )
             ),
         ),
@@ -979,6 +2022,20 @@ def run_deep(
                     "p1_1_p1_3": "EXECUTED" if projections else "FAILED",
                     "p1_6": "EXECUTED" if projections else "NOT_RUN",
                     "p1_7": "EXECUTED" if lineup else "PARTIAL",
+                    "p1_2_package": (
+                        "EXECUTED" if package_utility else "FAILED"
+                    ),
+                    "p1_4_monte_carlo": (
+                        "EXECUTED_CANONICAL"
+                        if (
+                            monte_carlo
+                            and monte_carlo.get("canonical_pass") is True
+                        )
+                        else "FAILED"
+                    ),
+                    "p1_8_downstream_overlay": (
+                        "EXECUTED" if mini_overlay else "FAILED"
+                    ),
                     "price_predictor": (rise or {}).get("predictor_health"),
                     "universe_20_25_30_25": (
                         "COMPLETE"
@@ -989,13 +2046,42 @@ def run_deep(
             },
         ),
         "S15B": _section(
-            mini_state,
-            mini or {"coverage_state": "UNAVAILABLE"},
-            mini_reason,
+            (
+                "COMPLETE"
+                if mini_state == "COMPLETE" and mini_overlay
+                else "DEGRADED"
+            ),
+            {
+                **(mini or {"coverage_state": "UNAVAILABLE"}),
+                "downstream_overlay": mini_overlay,
+                "football_baseline_precedes_leverage": True,
+            },
+            (
+                None
+                if mini_state == "COMPLETE" and mini_overlay
+                else (
+                    mini_reason
+                    or "P1.8 downstream overlay producer did not complete"
+                )
+            ),
         ),
         "S16": _section(
             "COMPLETE" if projections else "DEGRADED",
-            {"rows": (all15 or {}).get("rows", [])},
+            {
+                "rows": (all15 or {}).get("rows", []),
+                "position_mechanisms": (
+                    [
+                        _visible_position_mechanism(
+                            player,
+                            action=operational_action,
+                        )
+                        for player in (projections or {}).get("players") or []
+                        if int(player.get("element") or 0) in owned_ids
+                    ]
+                    if projections
+                    else []
+                ),
+            },
             (
                 None
                 if projections
@@ -1016,6 +2102,13 @@ def run_deep(
                     "projection_players": len((projections or {}).get("players") or []),
                     "our15": len(owned),
                     "mini_league_coverage": (mini or {}).get("coverage_state"),
+                    "stage3_internal_pass": stage3_internal_pass,
+                    "mc_actual_paths": (
+                        (monte_carlo or {}).get("actual_paths")
+                    ),
+                    "mc_convergence": (
+                        (monte_carlo or {}).get("convergence_evidence")
+                    ),
                     "stage_ledger": ledger,
                 }
             },
@@ -1023,24 +2116,54 @@ def run_deep(
         "S18": _section(
             "COMPLETE",
             {
-                "NOW": "WAIT",
-                "TRIGGER TO ACT": "FULL 20/25/30/25 universe evaluator + legal/economic route + robustness evidence",
-                "ABORT / REVERSAL": "role/injury/economics or challenger evidence invalidates selected route",
+                "NOW": operational_action,
+                "TRIGGER TO ACT": (
+                    (stage3_decision or {}).get("action_contract")
+                    or "UNAVAILABLE"
+                ),
+                "ABORT / REVERSAL": (
+                    "fresh role/injury/lineup/economics/price evidence or "
+                    "challenger posterior changes invalidate the selected route"
+                ),
+                "VALUE OF INFORMATION": (
+                    next(
+                        (
+                            row.get("voi_vs_cost_of_waiting")
+                            for row in (stage3_decision or {}).get("routes") or []
+                            if str(row.get("route_id") or "")
+                            == str(
+                                (stage3_decision or {}).get(
+                                    "selected_route_id"
+                                )
+                                or "HOLD"
+                            )
+                        ),
+                        None,
+                    )
+                ),
                 "NEXT CHECKPOINT": "next due report occurrence with fresh V6 prefetch",
             },
         ),
         "S19": _section(
             "COMPLETE",
             {
-                "final_judgement": (
-                    "WAIT pending full canonical universe component evaluation; "
-                    "do not privilege prior shortlist names."
-                )
+                "final_judgement": {
+                    "action": operational_action,
+                    "selected_route_id": (
+                        (stage3_decision or {}).get("selected_route_id")
+                    ),
+                    "reason": (stage3_decision or {}).get("reason"),
+                    "stage3_internal_pass": stage3_internal_pass,
+                    "private_finance_status": finance,
+                    "no_fake_completeness": True,
+                }
             },
         ),
     }
 
-    math_stack = build_visible_mathematical_decision_stack({})
+    math_stack = build_visible_mathematical_decision_stack(
+        stage3_math_proof
+    )
     report = materialize_deep_report(
         canonical_text=canonical,
         section_payloads=sections,
@@ -1101,7 +2224,8 @@ def run_deep(
     runner_status = (
         "PASS"
         if (
-            catalog_complete
+            stage3_internal_pass
+            and catalog_complete
             and str(pre_render_qa.get("status") or "").upper() == "PASS"
             and str(post_render_qa.get("status") or "").upper() == "PASS"
             and not human_failures
@@ -1162,6 +2286,20 @@ def run_deep(
         "pre_render_qa_status": pre_render_qa.get("status"),
         "post_render_qa_status": post_render_qa.get("status"),
         "human_facing_qa_status": "PASS" if not human_failures else "FAIL",
+        "stage3_internal_pass": stage3_internal_pass,
+        "stage3_action": operational_action,
+        "stage3_required_stages": sorted(stage3_required_stage_names),
+        "monte_carlo": {
+            "actual_paths": (monte_carlo or {}).get("actual_paths"),
+            "seed": (monte_carlo or {}).get("seed"),
+            "canonical_pass": (monte_carlo or {}).get("canonical_pass"),
+            "convergence": (monte_carlo or {}).get(
+                "convergence_evidence"
+            ),
+            "match_state_invariants": (
+                (monte_carlo or {}).get("sampling_diagnostics") or {}
+            ).get("match_state_invariants"),
+        },
         "stages": ledger,
         "no_silent_stage_skip": True,
         "no_second_model_authority": True,
@@ -1203,6 +2341,8 @@ def run_deep(
             "manual_shortlist_privileged": False,
             "report_falls_back_to_prose_without_bundle": False,
             "fail_operational_delivery": True,
+            "qa_relaxed": False,
+            "stage3_requires_internal_producers_before_runner_pass": True,
         },
     }
     (output_dir / "report_bundle.json").write_text(

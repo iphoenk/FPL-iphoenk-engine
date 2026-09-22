@@ -831,7 +831,7 @@ def evaluate_packages(
     generated = generated_at or _now()
     routes = _validate_search(search_result)
     planning_gw = int(projections.get("planning_gw") or 1)
-    future = future_frontier_by_route or {}
+    supplied_future = future_frontier_by_route
     info_map = information_value_by_route or {}
     price_map = price_risk_by_route or {}
     rentals = {str(value) for value in (rental_route_ids or [])}
@@ -894,11 +894,45 @@ def evaluate_packages(
         return output
 
     hold_lineups = route_lineups(hold_route)
+    lineups_by_route = {
+        str(route.get("route_id")): (
+            hold_lineups
+            if str(route.get("route_id")) == "HOLD"
+            else route_lineups(route)
+        )
+        for route in routes
+    }
+    if supplied_future is None:
+        future = derive_bounded_future_frontier(
+            {
+                "model_owner": MODEL_OWNER,
+                "routes": [
+                    {
+                        "route_id": str(route.get("route_id")),
+                        "final_squad_elements": list(
+                            route.get("final_squad_elements") or []
+                        ),
+                        "football_route_utility": {
+                            "per_gw": deepcopy(
+                                lineups_by_route[
+                                    str(route.get("route_id"))
+                                ].get("per_gw")
+                                or []
+                            )
+                        },
+                    }
+                    for route in routes
+                ],
+            }
+        )
+    else:
+        future = dict(supplied_future)
+
     evaluated: list[dict[str, Any]] = []
     for route in routes:
         route_id = str(route.get("route_id"))
         transfer_count = int(route.get("transfer_count") or 0)
-        lineups = hold_lineups if route_id == "HOLD" else route_lineups(route)
+        lineups = lineups_by_route[route_id]
         hit = _hit_economics(
             transfer_count=transfer_count,
             free_transfers=free_transfers,
@@ -1077,6 +1111,7 @@ def evaluate_packages(
             "dynamic_ft_shadow_method": (
                 "FUTURE_OPTIMIZATION_OPPORTUNITY_DIFFERENCE"
             ),
+            "bounded_future_frontier_auto_derived": supplied_future is None,
             "p_beats_hold": "NOT_COMPUTED",
             "monte_carlo": "NOT_RUN",
             "mini_league": "NOT_CONSUMED",
@@ -1110,6 +1145,852 @@ def evaluate_packages(
         **output_core,
         "model_evidence_binding": evidence,
     }
+
+
+
+
+def derive_bounded_future_frontier(
+    preliminary_package_utility: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    """One-step future FT opportunity frontier over already-evaluated routes.
+
+    State transition approximation:
+    current final squad -> next-GW reoptimization among package states reachable
+    by at most one player replacement. This uses P1.7 next-GW football utility
+    already produced for each route. It creates no player xPts or hidden horizon
+    weights.
+    """
+    if preliminary_package_utility.get("model_owner") != MODEL_OWNER:
+        raise PackageUtilityError(
+            "future frontier requires V12_PACKAGE_UTILITY preliminary output"
+        )
+    routes = [
+        dict(row)
+        for row in preliminary_package_utility.get("routes") or []
+        if isinstance(row, Mapping)
+    ]
+    states = {}
+    for row in routes:
+        route_id = str(row.get("route_id") or "")
+        squad = frozenset(
+            int(x) for x in row.get("final_squad_elements") or []
+        )
+        per_gw = list(
+            (row.get("football_route_utility") or {}).get("per_gw")
+            or []
+        )
+        next_row = per_gw[1] if len(per_gw) > 1 else None
+        next_utility = (
+            None
+            if not isinstance(next_row, Mapping)
+            or next_row.get("status") != "READY"
+            else _f(next_row.get("route_utility"))
+        )
+        states[route_id] = {
+            "squad": squad,
+            "next_gw_utility": next_utility,
+        }
+
+    snapshot_id = fingerprint(
+        {
+            route_id: {
+                "squad": sorted(state["squad"]),
+                "next_gw_utility": state["next_gw_utility"],
+            }
+            for route_id, state in sorted(states.items())
+        }
+    )
+    out: dict[str, dict[str, Any]] = {}
+    for route_id, state in states.items():
+        own = state["next_gw_utility"]
+        if own is None:
+            out[route_id] = {
+                "status": "UNAVAILABLE",
+                "frontier_snapshot_id": snapshot_id,
+                "reason": "NEXT_GW_P1_7_UTILITY_UNAVAILABLE",
+            }
+            continue
+        reachable = []
+        for other_id, other in states.items():
+            other_utility = other["next_gw_utility"]
+            if other_utility is None:
+                continue
+            outgoing = len(state["squad"] - other["squad"])
+            incoming = len(other["squad"] - state["squad"])
+            if outgoing == incoming and outgoing <= 1:
+                reachable.append(
+                    {
+                        "route_id": other_id,
+                        "next_gw_utility": other_utility,
+                        "transfer_distance": outgoing,
+                    }
+                )
+        best = max(
+            reachable,
+            key=lambda row: (
+                _f(row["next_gw_utility"]),
+                -int(row["transfer_distance"]),
+                str(row["route_id"]),
+            ),
+            default={
+                "route_id": route_id,
+                "next_gw_utility": own,
+                "transfer_distance": 0,
+            },
+        )
+        out[route_id] = {
+            "status": "READY",
+            "best_future_utility_with_ft": _f(
+                best["next_gw_utility"]
+            ),
+            "best_future_utility_with_ft_consumed": _f(own),
+            "frontier_snapshot_id": snapshot_id,
+            "best_reachable_route_id": best["route_id"],
+            "bounded_rollout": {
+                "lookahead_gw": 1,
+                "reachable_transfer_distance": 1,
+                "fresh_p1_7_lineup_utility": True,
+                "future_transfer_precommitted": False,
+                "approximation": (
+                    "ONE_STEP_ROUTE_GRAPH_VALUE_OF_ONE_EXTRA_FT"
+                ),
+            },
+        }
+    return out
+
+
+def _football_horizon_delta(
+    route: Mapping[str, Any],
+    hold: Mapping[str, Any],
+    horizon: int,
+) -> float | None:
+    route_rows = list(
+        (route.get("football_route_utility") or {}).get("per_gw")
+        or []
+    )
+    hold_rows = list(
+        (hold.get("football_route_utility") or {}).get("per_gw")
+        or []
+    )
+    if len(route_rows) < int(horizon) or len(hold_rows) < int(horizon):
+        return None
+    route_subset = route_rows[: int(horizon)]
+    hold_subset = hold_rows[: int(horizon)]
+    if any(
+        row.get("status") != "READY"
+        for row in route_subset + hold_subset
+    ):
+        return None
+    return round(
+        sum(_f(row.get("expected_fpl_points")) for row in route_subset)
+        - sum(_f(row.get("expected_fpl_points")) for row in hold_subset),
+        6,
+    )
+
+
+def select_stage3_material_mc_routes(
+    package_utility: Mapping[str, Any],
+    *,
+    max_routes: int = 8,
+) -> dict[str, Any]:
+    """Select material P1.2 routes for P1.4 without creating a score authority.
+
+    The selector uses only existing football horizon deltas and structural
+    lineup-change flags. It does not rerank the full universe, recompute xPts,
+    or decide transfers.
+    """
+    if package_utility.get("model_owner") != MODEL_OWNER:
+        raise PackageUtilityError(
+            "Stage3 material route selector requires V12_PACKAGE_UTILITY"
+        )
+    limit = max(2, int(max_routes))
+    routes = [
+        dict(row) for row in package_utility.get("routes") or []
+        if isinstance(row, Mapping)
+    ]
+    hold = next(
+        (row for row in routes if row.get("route_id") == "HOLD"),
+        None,
+    )
+    if hold is None:
+        raise PackageUtilityError("Stage3 MC route selection requires HOLD")
+    candidates = []
+    for route in routes:
+        route_id = str(route.get("route_id") or "")
+        if route_id == "HOLD":
+            continue
+        deltas = {
+            label: _football_horizon_delta(route, hold, horizon)
+            for label, horizon in (("1GW", 1), ("3GW", 3), ("5GW", 5))
+        }
+        resolved = [
+            abs(float(value))
+            for value in deltas.values()
+            if value is not None
+        ]
+        impact = dict(route.get("lineup_impact") or {})
+        structural = any(
+            bool(impact.get(key))
+            for key in (
+                "captain_changed",
+                "vice_changed",
+                "bench_order_changed",
+                "formation_changed",
+            )
+        )
+        candidates.append(
+            {
+                "route_id": route_id,
+                "football_horizon_deltas": deltas,
+                "max_absolute_horizon_delta": max(resolved, default=0.0),
+                "structural_lineup_change": structural,
+                "transfer_count": int(route.get("transfer_count") or 0),
+                "economics_status": (
+                    (route.get("transfer_economics") or {}).get("status")
+                ),
+            }
+        )
+    candidates.sort(
+        key=lambda row: (
+            bool(row["structural_lineup_change"]),
+            float(row["max_absolute_horizon_delta"]),
+            -int(row["transfer_count"]),
+            str(row["route_id"]),
+        ),
+        reverse=True,
+    )
+    selected = ["HOLD"] + [
+        str(row["route_id"]) for row in candidates[: limit - 1]
+    ]
+    return {
+        "status": "READY",
+        "route_ids": selected,
+        "candidate_evidence": candidates[: limit - 1],
+        "max_routes": limit,
+        "selection_purpose": "MC_MATERIALITY_ONLY_NOT_DECISION_RANKING",
+        "full_package_route_denominator": len(routes),
+        "full_universe_search_authority": package_utility.get(
+            "search_authority"
+        ),
+        "no_package_specific_xpts": True,
+        "no_new_player_score": True,
+    }
+
+
+def _pair_vs_hold(
+    monte_carlo: Mapping[str, Any],
+    route_id: str,
+) -> dict[str, Any]:
+    if route_id == "HOLD":
+        return {
+            "status": "BASELINE",
+            "mean_difference": 0.0,
+            "p_route_gt_hold": 0.5,
+            "p_route_gt_hold_standard_error": 0.0,
+            "Q10": 0.0,
+            "Q25": 0.0,
+            "median": 0.0,
+            "Q75": 0.0,
+            "Q90": 0.0,
+        }
+    pairs = dict(monte_carlo.get("paired_outputs") or {})
+    direct = pairs.get(f"{route_id}__VS__HOLD__H1")
+    reverse = False
+    if not isinstance(direct, Mapping):
+        direct = pairs.get(f"HOLD__VS__{route_id}__H1")
+        reverse = isinstance(direct, Mapping)
+    if not isinstance(direct, Mapping):
+        return {
+            "status": "UNAVAILABLE",
+            "reason": "PAIR_NOT_SIMULATED",
+        }
+    row = dict(direct)
+    if not reverse:
+        return {
+            "status": row.get("status"),
+            "mean_difference": row.get("mean_difference"),
+            "p_route_gt_hold": row.get("p_a_gt_b"),
+            "p_route_gt_hold_standard_error": row.get(
+                "p_a_gt_b_standard_error"
+            ),
+            "p_delta_ge_meaningful_threshold": row.get(
+                "p_delta_ge_meaningful_threshold"
+            ),
+            "meaningful_threshold_points": row.get(
+                "meaningful_threshold_points"
+            ),
+            "Q10": row.get("Q10"),
+            "Q25": row.get("Q25"),
+            "median": row.get("median"),
+            "Q75": row.get("Q75"),
+            "Q90": row.get("Q90"),
+            "paired_difference_standard_error": row.get(
+                "paired_difference_standard_error"
+            ),
+        }
+    return {
+        "status": row.get("status"),
+        "mean_difference": (
+            None
+            if row.get("mean_difference") is None
+            else -_f(row.get("mean_difference"))
+        ),
+        "p_route_gt_hold": (
+            None
+            if row.get("p_a_gt_b") is None
+            else 1.0 - _f(row.get("p_a_gt_b"))
+        ),
+        "p_route_gt_hold_standard_error": row.get(
+            "p_a_gt_b_standard_error"
+        ),
+        "p_delta_ge_meaningful_threshold": None,
+        "meaningful_threshold_points": row.get(
+            "meaningful_threshold_points"
+        ),
+        "Q10": (
+            None if row.get("Q90") is None else -_f(row.get("Q90"))
+        ),
+        "Q25": (
+            None if row.get("Q75") is None else -_f(row.get("Q75"))
+        ),
+        "median": (
+            None if row.get("median") is None else -_f(row.get("median"))
+        ),
+        "Q75": (
+            None if row.get("Q25") is None else -_f(row.get("Q25"))
+        ),
+        "Q90": (
+            None if row.get("Q10") is None else -_f(row.get("Q10"))
+        ),
+        "paired_difference_standard_error": row.get(
+            "paired_difference_standard_error"
+        ),
+    }
+
+
+def finalize_stage3_decision(
+    package_utility: Mapping[str, Any],
+    monte_carlo: Mapping[str, Any],
+    *,
+    price_uncertainty_by_route: Mapping[str, Any] | None = None,
+    projections: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Close the P1.2 decision downstream of canonical P1.4 evidence.
+
+    This stays inside the existing V12_PACKAGE_UTILITY owner. It does not
+    change P1.1/P1.3/Stage-2 distributions and never fabricates private
+    transfer economics or a probability of a price move.
+    """
+    if package_utility.get("model_owner") != MODEL_OWNER:
+        raise PackageUtilityError(
+            "Stage3 decision closure requires V12_PACKAGE_UTILITY"
+        )
+    mc = dict(monte_carlo or {})
+    mc_ready = (
+        mc.get("model_owner") == "V12_MONTE_CARLO"
+        and mc.get("execution_state") == "EXECUTED"
+        and mc.get("canonical_pass") is True
+        and int(mc.get("actual_paths") or 0) >= 500_000
+        and (mc.get("convergence_evidence") or {}).get("status") == "PASS"
+    )
+    routes = {
+        str(row.get("route_id")): dict(row)
+        for row in package_utility.get("routes") or []
+        if isinstance(row, Mapping)
+    }
+    hold = routes.get("HOLD")
+    if hold is None:
+        raise PackageUtilityError("Stage3 decision closure requires HOLD")
+    price_map = dict(price_uncertainty_by_route or {})
+    metrics = dict(mc.get("metrics") or {})
+    projection_map = _projection_map(projections or {})
+    stage3_cfg = dict(load_config().get("stage3") or {})
+    robust_cfg = dict(stage3_cfg.get("robustness") or {})
+    confidence_z = _f(robust_cfg.get("confidence_z"), 1.96)
+    min_mean_lcb = _f(
+        robust_cfg.get("minimum_mean_delta_lower_bound_points"),
+        0.0,
+    )
+    min_p_lcb = _f(
+        robust_cfg.get(
+            "minimum_outperform_probability_lower_bound"
+        ),
+        0.50,
+    )
+
+    def sensitivity_for_route(
+        route: Mapping[str, Any],
+        price: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        involved = sorted(
+            {
+                int(row.get("element") or 0)
+                for row in (
+                    list(route.get("players_out") or [])
+                    + list(route.get("players_in") or [])
+                )
+                if int(row.get("element") or 0) > 0
+            }
+        )
+        player_rows = [
+            projection_map[element]
+            for element in involved
+            if element in projection_map
+        ]
+        pstart_ranges = {
+            str(int(row.get("element") or 0)): (
+                (row.get("xmins") or {}).get(
+                    "start_probability_interval"
+                )
+            )
+            for row in player_rows
+        }
+        xmins_ranges = {
+            str(int(row.get("element") or 0)): (
+                (row.get("xmins") or {}).get(
+                    "expected_minutes_interval"
+                )
+            )
+            for row in player_rows
+        }
+        price_scenarios = [
+            {
+                "element": signal.get("element"),
+                "projection": signal.get("price_change_projections"),
+                "locked_until": signal.get(
+                    "price_change_locked_until"
+                ),
+            }
+            for signal in price.get("signals") or []
+            if isinstance(signal, Mapping)
+        ]
+        dimensions = {
+            "P_start": {
+                "status": (
+                    "GOVERNED_INTERVAL"
+                    if any(pstart_ranges.values())
+                    else "UNAVAILABLE"
+                ),
+                "ranges": pstart_ranges,
+                "perturbation": "LOW_AND_HIGH_P1_1_INTERVAL_ENDPOINTS",
+            },
+            "xMins": {
+                "status": (
+                    "GOVERNED_INTERVAL"
+                    if any(xmins_ranges.values())
+                    else "UNAVAILABLE"
+                ),
+                "ranges": xmins_ranges,
+                "perturbation": "LOW_AND_HIGH_P1_1_INTERVAL_ENDPOINTS",
+            },
+            "role": {
+                "status": "FRESH_REPROJECTION_REQUIRED",
+                "perturbation": "ROLE_CHANGE_IS_DISCRETE_STAGE2_STATE_NOT_ARBITRARY_SCALAR",
+            },
+            "formation": {
+                "status": "FRESH_REPROJECTION_REQUIRED",
+                "perturbation": "FORMATION_CHANGE_REQUIRES_DYNAMIC_FDR_AND_ROLE_REBUILD",
+            },
+            "fixture_strength": {
+                "status": "FRESH_REPROJECTION_REQUIRED",
+                "perturbation": "DYNAMIC_FDR_VECTOR_HAS_NO_CALIBRATED_LOCAL_CONFIDENCE_BAND",
+            },
+            "DefCon_rate": {
+                "status": "ALEATORIC_COUNT_DISTRIBUTION_IN_MC",
+                "perturbation": "STAGE2_SELECTED_COUNT_FAMILY_SAMPLED_PATHWISE",
+            },
+            "finishing": {
+                "status": "BAYESIAN_EVENT_DISTRIBUTION_IN_MC",
+                "perturbation": "STAGE2_SHRUNK_GOAL_PROCESS_SAMPLED_PATHWISE",
+            },
+            "creator_availability": {
+                "status": (
+                    "PATH_CONDITIONED_IN_MC"
+                    if (
+                        (mc.get("match_state_contract") or {}).get(
+                            "stage2_linkup_conditioned_on_sampled_material_teammate_appearance"
+                        )
+                    )
+                    else "UNAVAILABLE"
+                ),
+                "perturbation": "P1_1_APPEARANCE_STATE_CHANGES_STAGE2_LINKUP_RATIO",
+            },
+            "opponent_lineup": {
+                "status": "FRESH_REPROJECTION_REQUIRED",
+                "perturbation": "EXPECTED_PERSONNEL_CHANGE_REQUIRES_DYNAMIC_FDR_REBUILD",
+            },
+            "price": {
+                "status": (
+                    "PREDICTOR_SCENARIO_ONLY_UNCALIBRATED_PROBABILITY"
+                    if price_scenarios
+                    else "UNAVAILABLE"
+                ),
+                "scenarios": price_scenarios,
+                "perturbation": "PUBLISHED_PREDICTOR_SCENARIOS_ONLY",
+            },
+        }
+        unresolved = sorted(
+            key
+            for key, value in dimensions.items()
+            if value.get("status")
+            in {"FRESH_REPROJECTION_REQUIRED", "UNAVAILABLE"}
+        )
+        return {
+            "method": "GOVERNED_ONE_AT_A_TIME_ENVELOPE_PLUS_PATH_STRESS",
+            "dimensions": dimensions,
+            "unresolved_material_dimensions": unresolved,
+            "all_material_dimensions_resolved": not unresolved,
+            "arbitrary_percentage_shocks_used": False,
+            "fresh_reprojection_required_for_structural_state_change": True,
+        }
+
+    rows = []
+    for route_id in sorted(routes):
+        route = routes[route_id]
+        pair = _pair_vs_hold(mc, route_id)
+        horizon_deltas = {
+            "1GW": _football_horizon_delta(route, hold, 1),
+            "3GW": _football_horizon_delta(route, hold, 3),
+            "5GW": _football_horizon_delta(route, hold, 5),
+        }
+        mc_route = dict((metrics.get(route_id) or {}).get("1") or {})
+        expected_regret = mc_route.get("expected_regret")
+        evpi_upper_bound = (
+            None
+            if expected_regret is None
+            else max(0.0, _f(expected_regret))
+        )
+        price = dict(price_map.get(route_id) or {})
+        expected_wait_cost_points = price.get(
+            "expected_cost_of_waiting_points"
+        )
+        if expected_wait_cost_points is None:
+            voi_comparison = {
+                "status": "UNRESOLVED",
+                "reason": (
+                    price.get("probability_reason")
+                    or "PRICE_MOVE_PROBABILITY_OR_POINTS_EQUIVALENT_UNAVAILABLE"
+                ),
+                "voi_upper_bound_points": evpi_upper_bound,
+                "expected_cost_of_waiting_points": None,
+                "act_now_dominates_waiting": False,
+            }
+        else:
+            wait_cost = max(0.0, _f(expected_wait_cost_points))
+            voi_comparison = {
+                "status": "BOUND_RESOLVED",
+                "method": (
+                    "EVPI_UPPER_BOUND_FROM_P1_4_EXPECTED_REGRET_VS_"
+                    "EXPECTED_PRICE_WAIT_COST"
+                ),
+                "voi_upper_bound_points": evpi_upper_bound,
+                "expected_cost_of_waiting_points": wait_cost,
+                "act_now_dominates_waiting": (
+                    evpi_upper_bound is not None
+                    and evpi_upper_bound <= wait_cost
+                ),
+                "actual_voi_not_overclaimed": True,
+            }
+
+        mean = pair.get("mean_difference")
+        mean_se = pair.get("paired_difference_standard_error")
+        probability = pair.get("p_route_gt_hold")
+        probability_se = pair.get(
+            "p_route_gt_hold_standard_error"
+        )
+        mean_lcb = (
+            None
+            if mean is None or mean_se is None
+            else _f(mean) - confidence_z * _f(mean_se)
+        )
+        p_lcb = (
+            None
+            if probability is None or probability_se is None
+            else max(
+                0.0,
+                _f(probability)
+                - confidence_z * _f(probability_se),
+            )
+        )
+        long_noninferior = all(
+            value is not None and _f(value) >= 0.0
+            for value in (
+                horizon_deltas["3GW"],
+                horizon_deltas["5GW"],
+            )
+        )
+        statistically_robust = bool(
+            mc_ready
+            and route_id != "HOLD"
+            and mean_lcb is not None
+            and mean_lcb > min_mean_lcb
+            and p_lcb is not None
+            and p_lcb > min_p_lcb
+            and long_noninferior
+        )
+        economics = dict(route.get("transfer_economics") or {})
+        sensitivity = sensitivity_for_route(route, price)
+        if bool(
+            robust_cfg.get(
+                "require_all_material_sensitivity_dimensions_resolved",
+                True,
+            )
+        ):
+            statistically_robust = bool(
+                statistically_robust
+                and sensitivity.get(
+                    "all_material_dimensions_resolved"
+                )
+                is True
+            )
+        rows.append(
+            {
+                "route_id": route_id,
+                "classification": route.get("classification"),
+                "horizon_deltas": horizon_deltas,
+                "mc_pair_vs_hold": pair,
+                "expected_regret": expected_regret,
+                "value_of_information": {
+                    "method": (
+                        "P1_4_EXPECTED_REGRET_AS_PERFECT_INFORMATION_UPPER_BOUND"
+                    ),
+                    "upper_bound_points": evpi_upper_bound,
+                    "actual_information_revelation_model": (
+                        "NOT_CALIBRATED_NOT_FABRICATED"
+                    ),
+                },
+                "price_uncertainty": price,
+                "voi_vs_cost_of_waiting": voi_comparison,
+                "sensitivity": sensitivity,
+                "robustness": {
+                    "classification": (
+                        "ROBUST"
+                        if statistically_robust
+                        else "FRAGILE"
+                        if route_id != "HOLD"
+                        else "BASELINE"
+                    ),
+                    "mean_delta_95pct_lower_bound": mean_lcb,
+                    "p_outperform_95pct_lower_bound": p_lcb,
+                    "three_and_five_gw_noninferior": long_noninferior,
+                    "convergence_pass": (
+                        (mc.get("convergence_evidence") or {}).get(
+                            "status"
+                        )
+                        == "PASS"
+                    ),
+                    "rules": {
+                        "confidence_z": confidence_z,
+                        "minimum_mean_delta_lower_bound_points": min_mean_lcb,
+                        "minimum_outperform_probability_lower_bound": min_p_lcb,
+                        "require_3gw_noninferior": bool(
+                            robust_cfg.get(
+                                "require_3gw_noninferior", True
+                            )
+                        ),
+                        "require_5gw_noninferior": bool(
+                            robust_cfg.get(
+                                "require_5gw_noninferior", True
+                            )
+                        ),
+                        "require_all_material_sensitivity_dimensions_resolved": bool(
+                            robust_cfg.get(
+                                "require_all_material_sensitivity_dimensions_resolved",
+                                True,
+                            )
+                        ),
+                        "calibration_status": robust_cfg.get(
+                            "calibration_status"
+                        ),
+                        "settled_predeadline_sample_size_at_introduction": robust_cfg.get(
+                            "settled_predeadline_sample_size_at_introduction"
+                        ),
+                        "automatic_retuning": robust_cfg.get(
+                            "automatic_retuning"
+                        ),
+                    },
+                },
+                "stress_coverage": {
+                    "unexpected_bench": "IN_DISTRIBUTION_P1_1",
+                    "cameo": "IN_DISTRIBUTION_P1_1",
+                    "early_sub": "IN_DISTRIBUTION_P1_1",
+                    "rotation": "IN_DISTRIBUTION_P1_1",
+                    "injury": "P1_1_AVAILABILITY_ONLY_NO_CLUSTER_MODEL",
+                    "creator_absent": (
+                        "PATH_CONDITIONED_STAGE2_LINKUP_FOR_MATERIAL_TEAMMATE"
+                        if (
+                            (mc.get("match_state_contract") or {}).get(
+                                "stage2_linkup_conditioned_on_sampled_material_teammate_appearance"
+                            )
+                        )
+                        else "NOT_MODELLED"
+                    ),
+                    "early_cs_loss": "IN_SCORELINE_DISTRIBUTION_TIMING_NOT_MODELLED",
+                    "fixture_strength": "STAGE2_POSTERIOR_AND_DYNAMIC_FDR_FIXED_SNAPSHOT",
+                    "finishing": "STAGE2_BAYESIAN_POSTERIOR_FIXED_SNAPSHOT",
+                    "defcon_rate": "STAGE2_COUNT_POSTERIOR_FIXED_SNAPSHOT",
+                    "role_formation_opponent_shape": (
+                        "OUT_OF_DISTRIBUTION_REQUIRES_FRESH_REOPTIMIZATION"
+                    ),
+                    "penalty_taker_change": (
+                        "OUT_OF_DISTRIBUTION_REQUIRES_FRESH_REOPTIMIZATION"
+                    ),
+                    "price_move": (
+                        "EXTERNAL_MODEL_SIGNAL_REVERSAL_TRIGGER_NOT_FOOTBALL_MC"
+                    ),
+                },
+                "transfer_economics": economics,
+            }
+        )
+
+    viable = [
+        row for row in rows
+        if row["route_id"] != "HOLD"
+        and row["mc_pair_vs_hold"].get("status") == "READY"
+        and row["mc_pair_vs_hold"].get("mean_difference") is not None
+        and _f(row["mc_pair_vs_hold"].get("mean_difference")) > 0.0
+        and row["horizon_deltas"]["3GW"] is not None
+        and _f(row["horizon_deltas"]["3GW"]) >= 0.0
+        and row["horizon_deltas"]["5GW"] is not None
+        and _f(row["horizon_deltas"]["5GW"]) >= 0.0
+    ]
+    viable.sort(
+        key=lambda row: (
+            _f(row["horizon_deltas"].get("3GW")),
+            _f(row["mc_pair_vs_hold"].get("mean_difference")),
+            _f(row["horizon_deltas"].get("5GW")),
+            str(row["route_id"]),
+        ),
+        reverse=True,
+    )
+    candidate = viable[0] if viable else None
+
+    if candidate is None:
+        action = "WAIT"
+        reason = "NO_POSITIVE_MC_SUPPORTED_ROUTE_CLEARS_1_3_5GW_VECTOR"
+        selected_route_id = "HOLD"
+    else:
+        selected_route_id = str(candidate["route_id"])
+        economics_pass = (
+            (candidate.get("transfer_economics") or {}).get("status")
+            == "PASS"
+        )
+        robust = (
+            (candidate.get("robustness") or {}).get("classification")
+            == "ROBUST"
+        )
+        info = candidate.get("voi_vs_cost_of_waiting") or {}
+        if not economics_pass:
+            action = "PREPARE"
+            reason = (
+                "FOOTBALL_ROUTE_VIABLE_BUT_EXECUTION_ECONOMICS_UNRESOLVED"
+            )
+        elif not mc_ready or not robust:
+            action = "PREPARE"
+            reason = (
+                "ROUTE_VIABLE_BUT_MC_ROBUSTNESS_THRESHOLD_NOT_CLEARED"
+            )
+        elif info.get("status") != "BOUND_RESOLVED":
+            action = "PREPARE"
+            reason = (
+                "ROUTE_VIABLE_BUT_VOI_VS_WAIT_COST_NOT_RESOLVED"
+            )
+        elif info.get("act_now_dominates_waiting") is not True:
+            action = "WAIT"
+            reason = "VALUE_OF_INFORMATION_CAN_EXCEED_COST_OF_WAITING"
+        else:
+            action = "ACT"
+            reason = (
+                "POSITIVE_EXPECTED_UTILITY_OUTPERFORM_PROBABILITY_"
+                "ROBUSTNESS_ECONOMICS_AND_WAIT_COST_ALL_CLEAR"
+            )
+
+    return {
+        "status": "READY" if mc_ready else "PARTIAL",
+        "model_owner": MODEL_OWNER,
+        "decision_layer": "P1_2B_STAGE3_DOWNSTREAM_CLOSURE",
+        "selected_route_id": selected_route_id,
+        "operational_action": action,
+        "reason": reason,
+        "routes": rows,
+        "monte_carlo": {
+            "execution_state": mc.get("execution_state"),
+            "canonical_pass": mc.get("canonical_pass"),
+            "actual_paths": mc.get("actual_paths"),
+            "seed": mc.get("seed"),
+            "convergence": mc.get("convergence_evidence"),
+            "output_fingerprint": mc.get("output_fingerprint"),
+        },
+        "sequential_decision": {
+            "method": "BOUNDED_SHARED_WORLD_ROLLOUT",
+            "state": [
+                "squad",
+                "bank",
+                "FT",
+                "prices",
+                "chips",
+                "availability",
+                "fixtures",
+            ],
+            "actions": [
+                "HOLD",
+                "TRANSFER_ROUTE",
+                "LINEUP",
+                "CAPTAIN_VICE",
+            ],
+            "horizons": [1, 3, 5],
+            "per_gw_lineup_reoptimized_by_p1_7": True,
+            "future_transfer_route_precommitment": False,
+            "future_state_transition_model": (
+                "CURRENT_STAGE2_POSTERIOR_ROLLOUT_WITH_FRESH_REOPT_REQUIRED_"
+                "AFTER_NEW_INFORMATION"
+            ),
+            "approximation": (
+                "Current transfer package is rolled through shared football "
+                "worlds; later transfer decisions are not precommitted. "
+                "This is bounded rollout, not an infinite-horizon MDP."
+            ),
+            "independent_gw_sum_decision_rule": False,
+        },
+        "action_contract": {
+            "states": ["WAIT", "PREPARE", "ACT"],
+            "act_requires_positive_expected_utility": True,
+            "act_requires_outperform_probability_lcb_gt_0_5": True,
+            "act_requires_robustness": True,
+            "act_requires_resolved_transfer_economics": True,
+            "act_requires_voi_vs_wait_cost_resolved": True,
+        },
+        "governance": {
+            "same_p1_2_owner_extended": True,
+            "new_decision_authority_created": False,
+            "p1_1_mutated": False,
+            "p1_3_mutated": False,
+            "stage2_position_engine_mutated": False,
+            "20_25_30_25_mutated": False,
+            "full_universe_mutated": False,
+            "watchlist_mutated": False,
+            "horizon_distributions_mutated": False,
+            "private_finance_fabricated": False,
+        },
+    }
+
+
+def attach_stage3_decision(
+    package_utility: Mapping[str, Any],
+    stage3_decision: Mapping[str, Any],
+) -> dict[str, Any]:
+    if package_utility.get("model_owner") != MODEL_OWNER:
+        raise PackageUtilityError(
+            "Stage3 decision attaches only to V12_PACKAGE_UTILITY"
+        )
+    if stage3_decision.get("model_owner") != MODEL_OWNER:
+        raise PackageUtilityError("Stage3 decision owner mismatch")
+    out = deepcopy(dict(package_utility))
+    out["stage3_decision"] = deepcopy(dict(stage3_decision))
+    out.setdefault("governance", {})[
+        "stage3_decision_same_owner"
+    ] = True
+    return out
 
 
 def build_package_frontier(utility_output: Mapping[str, Any]) -> dict[str, Any]:

@@ -163,6 +163,35 @@ jobs:
               fh.write(f"human_facing={proof.get('human_facing_qa_status', 'UNKNOWN')}\n")
           PY
 
+      - name: Enforce Stage3 natural integrated acceptance
+        id: stage3
+        working-directory: app
+        run: |
+          model_sha="$(git rev-parse HEAD)"
+          runtime_sha="$(git -C ../runtime-data rev-parse HEAD)"
+          python -m src.engines.v12_stage3_acceptance \
+            --bundle artifacts/v12-report/report_bundle.json \
+            --runtime-data-root ../runtime-data \
+            --model-sha "$model_sha" \
+            --runtime-sha "$runtime_sha" \
+            --canonical control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt \
+            --output artifacts/v12-report/stage3_acceptance.json
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          proof = json.loads(
+              Path("artifacts/v12-report/stage3_acceptance.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as fh:
+              fh.write(f"status={proof.get('status', 'UNKNOWN')}\n")
+              fh.write(f"action={proof.get('stage3_action', 'UNKNOWN')}\n")
+              fh.write(
+                  f"mc_paths={(proof.get('mc') or {}).get('actual_paths', 'UNKNOWN')}\n"
+              )
+          PY
+
       - name: Upload immutable occurrence bundle
         if: always()
         uses: actions/upload-artifact@v4
@@ -172,6 +201,7 @@ jobs:
             app/artifacts/v12-report/report_bundle.json
             app/artifacts/v12-report/report_body.md
             app/artifacts/v12-report/execution_proof.json
+            app/artifacts/v12-report/stage3_acceptance.json
           if-no-files-found: error
           retention-days: 14
 
@@ -186,9 +216,12 @@ jobs:
           PRE_RENDER: ${{ steps.proof.outputs.pre_render }}
           POST_RENDER: ${{ steps.proof.outputs.post_render }}
           HUMAN_FACING: ${{ steps.proof.outputs.human_facing }}
+          STAGE3_STATUS: ${{ steps.stage3.outputs.status }}
+          STAGE3_ACTION: ${{ steps.stage3.outputs.action }}
+          MC_PATHS: ${{ steps.stage3.outputs.mc_paths }}
         run: |
           status="${RUNNER_STATUS:-UNKNOWN}"
           if [ "$JOB_STATUS" != "success" ] && [ -z "${RUNNER_STATUS:-}" ]; then
             status="FAIL"
           fi
-          gh issue comment 431 --repo "${GITHUB_REPOSITORY}" --body             "V12_REPORT_RUN | status=${status} | report_mode=${REPORT_MODE} | report_slot=${REPORT_SLOT} | run_id=${GITHUB_RUN_ID} | artifact=v12-report-${REPORT_MODE}-${GITHUB_RUN_ID} | pre_render=${PRE_RENDER:-UNKNOWN} | post_render=${POST_RENDER:-UNKNOWN} | human_facing=${HUMAN_FACING:-UNKNOWN} | integrated_runner=true | fail_operational=true | v6_mutated=false"
+          gh issue comment 431 --repo "${GITHUB_REPOSITORY}" --body             "V12_REPORT_RUN | status=${status} | report_mode=${REPORT_MODE} | report_slot=${REPORT_SLOT} | run_id=${GITHUB_RUN_ID} | artifact=v12-report-${REPORT_MODE}-${GITHUB_RUN_ID} | pre_render=${PRE_RENDER:-UNKNOWN} | post_render=${POST_RENDER:-UNKNOWN} | human_facing=${HUMAN_FACING:-UNKNOWN} | stage3=${STAGE3_STATUS:-UNKNOWN} | action=${STAGE3_ACTION:-UNKNOWN} | mc_paths=${MC_PATHS:-UNKNOWN} | integrated_runner=true | fail_operational=true | v6_mutated=false"

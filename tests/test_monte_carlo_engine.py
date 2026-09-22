@@ -274,9 +274,12 @@ def test_17_opponent_attack_clean_sheet_interaction_is_negative():
 
 def test_18_unsupported_correlations_are_explicit_not_modelled():
     corr = load_config()["correlation"]
-    assert corr["availability_cross_player"] == "NOT_MODELLED"
-    assert corr["injury_cluster"] == "NOT_MODELLED"
-    assert corr["manager_rotation_cluster"] == "NOT_MODELLED"
+    assert (
+        corr["availability_cross_player"]
+        == "MATERIAL_STAGE2_LINKUP_CONDITIONED_ON_SAMPLED_TEAMMATE_APPEARANCE_ONLY"
+    )
+    assert corr["injury_cluster"] == "NOT_MODELLED_BEYOND_P1_1"
+    assert corr["manager_rotation_cluster"] == "NOT_MODELLED_BEYOND_P1_1"
 
 
 def test_19_correlation_model_is_versioned():
@@ -554,24 +557,24 @@ def test_60_performance_evidence_is_recorded_without_affecting_fingerprint():
     assert perf["wall_clock_excluded_from_output_fingerprint"] is True
 
 
-def test_61_bonus_is_expectation_only_not_random_noise():
+def test_61_bonus_is_conditional_event_process_not_random_noise():
     assert (
         load_config()["correlation"]["bonus_stochastic_process"]
-        == "NOT_MODELLED_EXPECTATION_ONLY_RESIDUAL"
+        == "STAGE2_EMPIRICAL_CONDITIONAL_BPS_PMF_SAMPLED_FROM_SIMULATED_CORE_EVENTS"
     )
 
 
-def test_62_same_team_clean_sheet_state_is_shared():
+def test_62_same_team_clean_sheet_is_scoreline_derived():
     assert (
         load_config()["correlation"]["same_team_clean_sheet_dependence"]
-        == "ONE_SHARED_BERNOULLI_CLEAN_SHEET_STATE_PER_TEAM_FIXTURE"
+        == "DERIVED_FROM_SINGLE_OPPONENT_TEAM_GOAL_COUNT_PER_FIXTURE"
     )
 
 
-def test_63_goal_assist_dependence_consumes_p1_3_structure():
+def test_63_goal_assist_dependence_uses_team_goal_event_allocation():
     assert (
         load_config()["correlation"]["within_player_goal_assist"]
-        == "P1_3_BIVARIATE_POISSON_SHARED_COMPONENT"
+        == "TEAM_GOAL_FIRST_CATEGORICAL_SCORER_THEN_SCORER_EXCLUDED_ASSIST_ALLOCATION"
     )
 
 
@@ -645,3 +648,57 @@ def test_71_migration_negative_oracle_has_bounded_taxonomy():
     assert "STATE_SAMPLING_IMPROVEMENT" in comparison["classifications"]
     assert "AUTOSUB_PATH_IMPROVEMENT" in comparison["classifications"]
     assert "CRN_IMPROVEMENT" in comparison["classifications"]
+
+
+def test_72_active_mc_path_is_match_coupled_not_independent_player_point_sampling():
+    import inspect
+    from src.engines import v12_monte_carlo as mc
+
+    source = inspect.getsource(mc._simulate_route_arrays)
+    assert "_simulate_match_coupled_gw(" in source
+    assert "_simulate_player_gw(" not in source
+    assert load_config()["governance"]["independent_player_point_sampling_forbidden"] is True
+
+
+def test_73_match_state_invariants_are_emitted_and_pass():
+    result = _diag()
+    invariants = result["sampling_diagnostics"]["match_state_invariants"]
+    assert invariants["status"] == "PASS"
+    assert invariants["cs_goal_consistency_failures"] == 0
+    assert invariants["material_goal_overflow_failures"] == 0
+    assert invariants["assist_overflow_failures"] == 0
+    assert invariants["self_assist_failures"] == 0
+    assert invariants["dnp_scorer_failures"] == 0
+
+
+def test_74_pairwise_delta_exposes_stage3_distributional_decision_surface():
+    pair = _diag()["paired_outputs"]["HOLD__VS__R1__H1"]
+    assert pair["Q10"] <= pair["Q25"] <= pair["median"] <= pair["Q75"] <= pair["Q90"]
+    assert 0.0 <= pair["p_delta_ge_meaningful_threshold"] <= 1.0
+    assert pair["p_delta_ge_meaningful_threshold_standard_error"] >= 0.0
+
+
+def test_75_unresolved_economics_mc_is_explicitly_gross_football_only():
+    projections, package = _fixture()
+    package = dict(package)
+    package["routes"] = [dict(row) for row in package["routes"]]
+    target = next(row for row in package["routes"] if row["route_id"] == "R1")
+    target["transfer_economics"] = {
+        "status": "PARTIAL",
+        "decision_chain_stage": "TRANSFER_ECONOMICS",
+        "included_in_football_score": False,
+    }
+    result = run_package_monte_carlo(
+        projections,
+        package,
+        actual_paths=5_000,
+        seed=757575,
+        input_snapshot_id="P1_4_GROSS_ONLY_DIAGNOSTIC",
+        route_ids=["R1"],
+        selected_route_id="R1",
+        canonical=False,
+        generated_at="2026-09-20T01:09:04Z",
+    )
+    row = result["metrics"]["R1"]["1"]
+    assert row["decision_net_supported"] is False
+    assert row["utility_semantics"] == "GROSS_FOOTBALL_ONLY_PRIVATE_ECONOMICS_UNAVAILABLE"

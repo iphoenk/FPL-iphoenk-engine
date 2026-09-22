@@ -36,15 +36,23 @@ from src.engines.v12_model_evidence import (
 from src.engines.v12_player_events import (
     _finite_states,
     _minute_support,
-    load_event_config,
+)
+from src.engines.v12_position_probability_components import (
+    _conditional_bonus_pmf,
 )
 from src.rules import (
     APPEARANCE_POINTS_60_PLUS,
     APPEARANCE_POINTS_UNDER_60,
     ASSIST_POINTS,
     GOAL_POINTS,
+    GOALS_CONCEDED_INTERVAL,
+    GOALS_CONCEDED_POINTS_PER_INTERVAL,
+    PENALTY_MISS_POINTS,
+    PENALTY_SAVE_POINTS,
+    RED_CARD_POINTS,
     SAVE_INTERVAL,
     SAVE_POINTS_PER_INTERVAL,
+    YELLOW_CARD_POINTS,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -280,12 +288,39 @@ def _opponent_id(fixture: Mapping[str, Any]) -> int:
     return _i(fixture.get("opponent") or identity.get("opponent"), -1)
 
 
+def _stage2_expected_minutes(
+    player: Mapping[str, Any],
+) -> float:
+    xmins = dict(player.get("xmins") or {})
+    for key in ("expected_minutes", "xMins"):
+        value = xmins.get(key)
+        if value is not None and _f(value) > 0.0:
+            return min(90.0, max(0.0, _f(value)))
+    total = 0.0
+    for state in _state_rows(player):
+        probability = max(0.0, _f(state.get("probability")))
+        support = _minute_support(state)
+        conditional_mean = sum(
+            _f(weight) * _f(minutes)
+            for weight, minutes in support
+        )
+        total += probability * conditional_mean
+    return min(90.0, max(0.0, total))
+
+
 def _fixture_catalog(
     players: Mapping[int, Mapping[str, Any]],
     player_ids: Sequence[int],
     gw: int,
 ) -> dict[str, dict[str, Any]]:
+    """Build one fixture catalog from governed Stage-2 event intensities.
+
+    Material-route players determine which fixtures are needed, but team goal
+    intensity is aggregated from the full projected team universe so scorer
+    allocation never treats the FPL squad as the whole football team.
+    """
     catalog: dict[str, dict[str, Any]] = {}
+    material_fixture_ids: set[str] = set()
     for element in sorted(set(int(x) for x in player_ids)):
         player = players[element]
         team_id = _i(player.get("team_id") or player.get("team"), -1)
@@ -293,7 +328,17 @@ def _fixture_catalog(
             raise MonteCarloError(f"missing team_id for element={element}")
         for index, fixture in enumerate(_fixture_rows(player, gw)):
             fid = _fixture_id(fixture, gw=gw, team_id=team_id, index=index)
-            row = catalog.setdefault(fid, {"teams": set(), "team_cs": {}, "gw": int(gw)})
+            material_fixture_ids.add(fid)
+            row = catalog.setdefault(
+                fid,
+                {
+                    "teams": set(),
+                    "team_cs": {},
+                    "team_goal_mean": {},
+                    "team_assist_mean": {},
+                    "gw": int(gw),
+                },
+            )
             row["teams"].add(team_id)
             opponent = _opponent_id(fixture)
             if opponent > 0:
@@ -304,9 +349,67 @@ def _fixture_catalog(
             if p_cs is None:
                 p_cs = fixture.get("clean_sheet_probability")
             if p_cs is not None:
-                row["team_cs"][team_id] = _validate_probability(_f(p_cs), "clean sheet probability")
+                row["team_cs"][team_id] = _validate_probability(
+                    _f(p_cs),
+                    "clean sheet probability",
+                )
+
+    # Full-universe aggregation uses the Stage-2 fixture-adjusted player goal
+    # intensities and P1.1 expected minutes. No new xG/xPts model is created.
+    for element, player in players.items():
+        team_id = _i(player.get("team_id") or player.get("team"), -1)
+        if team_id <= 0:
+            continue
+        expected_minutes = _stage2_expected_minutes(player)
+        for index, fixture in enumerate(_fixture_rows(player, gw)):
+            fid = _fixture_id(fixture, gw=gw, team_id=team_id, index=index)
+            if fid not in material_fixture_ids:
+                continue
+            row = catalog[fid]
+            params = _fixture_event_parameters(player, fixture)
+            contribution = (
+                max(0.0, params["goal_rate90"])
+                * min(90.0, expected_minutes)
+                / 90.0
+            )
+            row["team_goal_mean"][team_id] = (
+                _f(row["team_goal_mean"].get(team_id)) + contribution
+            )
+            assist_contribution = (
+                max(0.0, params["assist_rate90"])
+                * min(90.0, expected_minutes)
+                / 90.0
+            )
+            row["team_assist_mean"][team_id] = (
+                _f(row["team_assist_mean"].get(team_id))
+                + assist_contribution
+            )
+
     for row in catalog.values():
         row["teams"] = tuple(sorted(row["teams"]))
+        # If complete player goal intensities do not identify a team mean,
+        # use the opponent Stage-2 CS marginal only as a scoreline prior.
+        for team_id in row["teams"]:
+            if _f(row["team_goal_mean"].get(team_id)) > 0.0:
+                continue
+            opponents = [x for x in row["teams"] if int(x) != int(team_id)]
+            opponent = opponents[0] if len(opponents) == 1 else None
+            p_opp_cs = (
+                row["team_cs"].get(opponent)
+                if opponent is not None
+                else None
+            )
+            if p_opp_cs is not None:
+                row["team_goal_mean"][team_id] = -math.log(
+                    max(1e-9, min(0.999999, _f(p_opp_cs)))
+                )
+            else:
+                row["team_goal_mean"][team_id] = 1.35
+            if _f(row["team_assist_mean"].get(team_id)) <= 0.0:
+                row["team_assist_mean"][team_id] = min(
+                    _f(row["team_goal_mean"].get(team_id), 1.35) * 0.65,
+                    _f(row["team_goal_mean"].get(team_id), 1.35),
+                )
     return catalog
 
 
@@ -316,54 +419,105 @@ def _world_factors(
     n: int,
     cfg: Mapping[str, Any],
 ) -> dict[str, Any]:
+    """Sample shared match/team state and one coherent scoreline per fixture."""
     corr = dict(cfg.get("correlation") or {})
     match_sigma = max(0.0, _f(corr.get("match_attack_sigma"), 0.18))
     team_sigma = max(0.0, _f(corr.get("team_attack_sigma"), 0.28))
     denom = math.sqrt(match_sigma * match_sigma + team_sigma * team_sigma)
     if denom <= 0.0:
-        raise MonteCarloError("correlation model requires non-zero shared factor scale")
+        raise MonteCarloError(
+            "correlation model requires non-zero shared factor scale"
+        )
     out: dict[str, Any] = {}
-    normal = NormalDist()
     for fid in sorted(catalog):
         meta = catalog[fid]
         z_match = rng.standard_normal(n)
-        teams = {}
+        teams: dict[int, dict[str, Any]] = {}
         for team_id in meta.get("teams") or ():
             z_team = rng.standard_normal(n)
-            latent = (match_sigma * z_match + team_sigma * z_team) / denom
+            latent = (
+                match_sigma * z_match + team_sigma * z_team
+            ) / denom
             factor = np.exp(
-                match_sigma * z_match - 0.5 * match_sigma * match_sigma
-                + team_sigma * z_team - 0.5 * team_sigma * team_sigma
+                match_sigma * z_match
+                - 0.5 * match_sigma * match_sigma
+                + team_sigma * z_team
+                - 0.5 * team_sigma * team_sigma
             )
+            prior_mean = max(
+                0.01,
+                _f((meta.get("team_goal_mean") or {}).get(team_id), 1.35),
+            )
+            opponents = [
+                int(tid)
+                for tid in (meta.get("teams") or ())
+                if int(tid) != int(team_id)
+            ]
+            target_zero = (
+                (meta.get("team_cs") or {}).get(opponents[0])
+                if len(opponents) == 1
+                else None
+            )
+            if target_zero is not None:
+                target_zero = _validate_probability(
+                    _f(target_zero),
+                    "opponent clean sheet probability",
+                )
+                low, high = 0.0, max(4.0, prior_mean * 4.0)
+                while (
+                    float(np.mean(np.exp(-high * factor)))
+                    > target_zero
+                    and high < 25.0
+                ):
+                    high *= 1.5
+                for _ in range(48):
+                    mid = 0.5 * (low + high)
+                    zero_rate = float(
+                        np.mean(np.exp(-mid * factor))
+                    )
+                    if zero_rate > target_zero:
+                        low = mid
+                    else:
+                        high = mid
+                base_mean = 0.5 * (low + high)
+                calibration = "CALIBRATED_TO_STAGE2_OPPONENT_CS_MARGINAL"
+            else:
+                base_mean = prior_mean
+                calibration = "STAGE2_TEAM_GOAL_MEAN_PRIOR"
+            goals = rng.poisson(base_mean * factor).astype(np.int16)
             teams[int(team_id)] = {
                 "latent": latent,
                 "attack_factor": factor,
+                "prior_goal_mean": prior_mean,
+                "base_goal_mean": base_mean,
+                "scoreline_mean_calibration": calibration,
+                "target_opponent_clean_sheet": target_zero,
+                "goals": goals,
             }
-        clean_sheet = {}
-        for team_id, p_cs_raw in dict(meta.get("team_cs") or {}).items():
-            p_cs = _validate_probability(_f(p_cs_raw), "clean sheet probability")
-            opponent_ids = [tid for tid in teams if int(tid) != int(team_id)]
-            if len(opponent_ids) == 1:
-                opp_latent = teams[opponent_ids[0]]["latent"]
-            else:
-                own = teams.get(int(team_id))
-                if own is None:
-                    raise MonteCarloError("clean-sheet factor cannot identify team")
-                opp_latent = -own["latent"]
-            if p_cs <= 0.0:
-                clean = np.zeros(n, dtype=bool)
-            elif p_cs >= 1.0:
-                clean = np.ones(n, dtype=bool)
-            else:
-                threshold = normal.inv_cdf(p_cs)
-                clean = opp_latent < threshold
-            clean_sheet[int(team_id)] = clean
+
+        clean_sheet: dict[int, np.ndarray] = {}
+        for team_id in teams:
+            opponents = [
+                tid for tid in teams if int(tid) != int(team_id)
+            ]
+            if len(opponents) != 1:
+                raise MonteCarloError(
+                    f"fixture={fid} cannot identify exactly one opponent"
+                )
+            clean_sheet[int(team_id)] = (
+                np.asarray(teams[opponents[0]]["goals"]) == 0
+            )
         out[fid] = {
             "teams": teams,
+            "team_goals": {
+                int(team_id): np.asarray(payload["goals"], dtype=np.int16)
+                for team_id, payload in teams.items()
+            },
             "clean_sheet": clean_sheet,
+            "scoreline_generated_before_player_points": True,
+            "cs_derived_from_opponent_goals": True,
         }
     return out
-
 
 def _fixture_event_parameters(
     player: Mapping[str, Any],
@@ -376,123 +530,236 @@ def _fixture_event_parameters(
     dc = dict(events.get("defcon") or {})
     saves = dict(events.get("saves") or {})
     bonus = dict(events.get("bonus") or {})
+    cards = dict(events.get("cards") or {})
+    penalty_save = dict(events.get("penalty_save") or {})
+    goals_conceded = dict(events.get("goals_conceded") or {})
+    position_engine = dict(fixture.get("position_engine") or {})
     return {
-        "goal_rate90": max(0.0, _f(goals.get("fixture_adjusted_rate90"))),
-        "assist_rate90": max(0.0, _f(assists.get("fixture_adjusted_rate90"))),
-        "clean_sheet_points": max(0.0, _f(cs.get("points_if_qualified"))),
-        "clean_sheet_minimum_minutes": max(0.0, _f(cs.get("minimum_minutes"), 60.0)),
+        "goal_rate90": max(
+            0.0, _f(goals.get("fixture_adjusted_rate90"))
+        ),
+        "assist_rate90": max(
+            0.0, _f(assists.get("fixture_adjusted_rate90"))
+        ),
+        "clean_sheet_points": max(
+            0.0, _f(cs.get("points_if_qualified"))
+        ),
+        "clean_sheet_minimum_minutes": max(
+            0.0, _f(cs.get("minimum_minutes"), 60.0)
+        ),
         "defcon_eligible": bool(dc.get("eligible")),
-        "defcon_rate90": max(0.0, _f(dc.get("posterior_count_rate90"))),
+        "defcon_rate90": max(
+            0.0, _f(dc.get("posterior_count_rate90"))
+        ),
         "defcon_threshold": _i(dc.get("threshold"), 0),
         "defcon_points": max(0.0, _f(dc.get("points"))),
-        "save_eligible": bool(saves.get("eligible")) or _position(player) == "GK",
-        "save_rate90": max(0.0, _f(saves.get("posterior_rate90"))),
-        "bonus_rate90": max(0.0, _f(bonus.get("posterior_rate90"))),
+        "defcon_count_model": deepcopy(
+            dc.get("count_model") or {}
+        ),
+        "save_eligible": bool(saves.get("eligible"))
+        or _position(player) == "GK",
+        "save_rate90": max(
+            0.0, _f(saves.get("posterior_rate90"))
+        ),
+        "save_count_model": deepcopy(
+            saves.get("sot_count_model")
+            or saves.get("count_model")
+            or {}
+        ),
+        "bonus_calibration": deepcopy(
+            bonus.get("calibration") or {}
+        ),
+        "yellow_rate90": max(
+            0.0, _f(cards.get("yellow_rate90"))
+        ),
+        "red_rate90": max(
+            0.0, _f(cards.get("red_rate90"))
+        ),
+        "penalty_save_probability": max(
+            0.0, min(1.0, _f(penalty_save.get("P_at_least_1")))
+        ),
+        "goals_conceded_interval": max(
+            1,
+            _i(
+                goals_conceded.get("interval"),
+                int(GOALS_CONCEDED_INTERVAL),
+            ),
+        ),
+        "goals_conceded_points_per_interval": _f(
+            goals_conceded.get("points_per_interval"),
+            float(GOALS_CONCEDED_POINTS_PER_INTERVAL),
+        ),
+        "goal_process": deepcopy(
+            position_engine.get("goal_process") or {}
+        ),
+        "penalty_process": deepcopy(
+            position_engine.get("penalty_process") or {}
+        ),
+        "set_piece_process": deepcopy(
+            position_engine.get("set_piece_process") or {}
+        ),
+        "linkup": deepcopy(position_engine.get("linkup") or {}),
+        "matchup_vector": deepcopy(
+            position_engine.get("matchup_vector") or {}
+        ),
     }
 
 
-def _simulate_player_gw(
-    rng: np.random.Generator,
+def _fixture_context(
     player: Mapping[str, Any],
-    *,
-    gw: int,
-    n: int,
-    factors: Mapping[str, Any],
-    shared_fraction: float,
+    fixture_id: str,
 ) -> dict[str, Any]:
-    element_type = _element_type(player)
-    team_id = _i(player.get("team_id") or player.get("team"), -1)
-    total_points = np.zeros(n, dtype=np.float64)
-    appeared = np.zeros(n, dtype=bool)
-    state_rows = _state_rows(player)
-    state_counts = np.zeros(len(state_rows), dtype=np.int64)
-    event_sums = {"goals": 0.0, "assists": 0.0, "clean_sheets": 0.0, "defcon_hits": 0.0, "saves": 0.0}
-    fixtures = _fixture_rows(player, gw)
-    for index, fixture in enumerate(fixtures):
-        fid = _fixture_id(fixture, gw=gw, team_id=team_id, index=index)
-        world = factors.get(fid)
-        if not isinstance(world, Mapping):
-            raise MonteCarloError(f"missing world factor for fixture={fid}")
-        team_world = dict((world.get("teams") or {}).get(team_id) or {})
-        if not team_world:
-            raise MonteCarloError(f"missing team factor fixture={fid} team={team_id}")
-        opponent = _opponent_id(fixture)
-        opponent_world = dict((world.get("teams") or {}).get(opponent) or {})
-        attack_factor = np.asarray(team_world["attack_factor"], dtype=np.float64)
-        pressure_factor = (
-            np.asarray(opponent_world.get("attack_factor"), dtype=np.float64)
-            if opponent_world
-            else np.ones(n, dtype=np.float64)
+    contexts = (
+        (player.get("contextual_dynamics") or {}).get(
+            "fixture_contexts"
         )
+        or []
+    )
+    for row in contexts:
+        if str((row or {}).get("fixture") or "") == str(fixture_id):
+            return dict(row)
+    return {}
 
-        state_idx, minutes = _sample_state_minutes(rng, player, n)
-        for idx in range(len(state_rows)):
-            state_counts[idx] += int(
-                np.count_nonzero(state_idx == idx)
-            )
-        fixture_appeared = minutes > 0.0
-        appeared |= fixture_appeared
 
-        params = _fixture_event_parameters(player, fixture)
-        scale = minutes / 90.0
-        lam_g = params["goal_rate90"] * scale * attack_factor
-        lam_a = params["assist_rate90"] * scale * attack_factor
-        if np.any(lam_g < 0.0) or np.any(lam_a < 0.0):
-            raise MonteCarloError("negative event intensity")
-        lam_shared = shared_fraction * np.minimum(lam_g, lam_a)
-        shared = rng.poisson(lam_shared)
-        goals = shared + rng.poisson(np.maximum(0.0, lam_g - lam_shared))
-        assists = shared + rng.poisson(np.maximum(0.0, lam_a - lam_shared))
+def _path_linkup_ratio(
+    player: Mapping[str, Any],
+    fixture_id: str,
+    appeared_by_element: Mapping[int, np.ndarray],
+    *,
+    channel: str,
+    n: int,
+) -> np.ndarray:
+    """Condition Stage-2 marginalized link-up on sampled teammate appearance.
 
-        appearance_points = np.where(
-            minutes <= 0.0,
-            0.0,
-            np.where(minutes >= 60.0, float(APPEARANCE_POINTS_60_PLUS), float(APPEARANCE_POINTS_UNDER_60)),
-        )
-        points = appearance_points
-        points = points + goals * float(GOAL_POINTS[element_type])
-        points = points + assists * float(ASSIST_POINTS)
-
-        clean = np.asarray((world.get("clean_sheet") or {}).get(team_id, np.zeros(n, dtype=bool)), dtype=bool)
-        cs_awarded = clean & (minutes >= params["clean_sheet_minimum_minutes"]) & (params["clean_sheet_points"] > 0.0)
-        points = points + cs_awarded.astype(np.float64) * params["clean_sheet_points"]
-
-        defcon_hits = np.zeros(n, dtype=bool)
-        if params["defcon_eligible"] and params["defcon_threshold"] > 0 and params["defcon_points"] > 0.0:
-            dc_lam = params["defcon_rate90"] * scale
-            dc_counts = rng.poisson(np.maximum(0.0, dc_lam))
-            defcon_hits = dc_counts >= params["defcon_threshold"]
-            points = points + defcon_hits.astype(np.float64) * params["defcon_points"]
-
-        save_counts = np.zeros(n, dtype=np.int64)
-        if params["save_eligible"] and params["save_rate90"] > 0.0:
-            save_lam = params["save_rate90"] * scale * pressure_factor
-            save_counts = rng.poisson(np.maximum(0.0, save_lam))
-            save_points = (save_counts // int(SAVE_INTERVAL)) * int(SAVE_POINTS_PER_INTERVAL)
-            points = points + save_points.astype(np.float64)
-
-        # P1.3 bonus remains expectation-only. It is deliberately deterministic
-        # conditional on sampled minutes and is never converted to Gaussian noise.
-        points = points + params["bonus_rate90"] * scale
-        if np.any(~np.isfinite(points)):
-            raise MonteCarloError("non-finite sampled player points")
-
-        total_points += points
-        event_sums["goals"] += float(goals.sum())
-        event_sums["assists"] += float(assists.sum())
-        event_sums["clean_sheets"] += float(clean.sum())
-        event_sums["defcon_hits"] += float(defcon_hits.sum())
-        event_sums["saves"] += float(save_counts.sum())
-
-    draws = n * max(1, len(fixtures))
-    return {
-        "points": total_points,
-        "appeared": appeared,
-        "state_counts": state_counts,
-        "state_draws": draws,
-        "event_sums": event_sums,
+    The Stage-2 event intensity already contains the marginalized link effect.
+    P1.4 therefore applies only conditional/marginal ratios, preventing double
+    counting while making creator/linked-player absence path dependent.
+    """
+    context = _fixture_context(player, fixture_id)
+    network = dict(context.get("linkup_network") or {})
+    marginalized = {
+        str(row.get("edge_id")): dict(row)
+        for row in network.get("marginalized") or []
+        if isinstance(row, Mapping)
     }
+    relationships = [
+        dict(row)
+        for row in network.get("relationships") or []
+        if isinstance(row, Mapping)
+    ]
+    ratio = np.ones(n, dtype=np.float64)
+    for link in relationships:
+        source = _i(
+            link.get("source_player_id"),
+            _i(link.get("teammate_player_id"), -1),
+        )
+        target = _i(link.get("target_player_id"), -1)
+        if source <= 0 or target != _i(player.get("element"), -1):
+            continue
+        source_appeared = appeared_by_element.get(source)
+        if source_appeared is None:
+            continue
+        edge_id = f"{source}->{target}"
+        marginal = marginalized.get(edge_id) or {}
+        confidence = max(
+            0.0, min(1.0, _f(link.get("confidence")))
+        )
+        role_hint = str(link.get("target_role") or "").upper()
+        with_mod = max(
+            0.01, _f(link.get("with_player_modifier"), 1.0)
+        )
+        without_mod = max(
+            0.01, _f(link.get("without_player_modifier"), 1.0)
+        )
+        if channel == "goal" and any(
+            token in role_hint for token in ("CREATOR", "PLAYMAKER")
+        ):
+            conditional_with = 1.0
+            conditional_without = 1.0
+            baseline = 1.0
+        else:
+            exponent = confidence * (
+                1.0 if channel == "goal" else 0.5
+            )
+            conditional_with = math.exp(
+                math.log(with_mod) * exponent
+            )
+            conditional_without = math.exp(
+                math.log(without_mod) * exponent
+            )
+            baseline = max(
+                0.01,
+                _f(
+                    marginal.get(
+                        "applied_goal_multiplier"
+                        if channel == "goal"
+                        else "applied_assist_multiplier"
+                    ),
+                    1.0,
+                ),
+            )
+        conditional = np.where(
+            np.asarray(source_appeared, dtype=bool),
+            conditional_with,
+            conditional_without,
+        )
+        ratio *= conditional / baseline
+    return np.clip(ratio, 0.55, 1.65)
 
+
+def _sample_count_from_stage2(
+    rng: np.random.Generator,
+    model: Mapping[str, Any],
+    mean: np.ndarray,
+) -> np.ndarray:
+    mu = np.maximum(0.0, np.asarray(mean, dtype=np.float64))
+    family = str(model.get("family") or "POISSON").upper()
+    selection = dict(model.get("selection") or {})
+    if family == "NEGATIVE_BINOMIAL":
+        dispersion = max(
+            1e-6,
+            _f(selection.get("nb_dispersion"), 1.0),
+        )
+        p = dispersion / (dispersion + mu)
+        return rng.negative_binomial(
+            dispersion,
+            np.clip(p, 1e-9, 1.0),
+        ).astype(np.int32)
+    return rng.poisson(mu).astype(np.int32)
+
+
+def _sample_bonus_points(
+    rng: np.random.Generator,
+    core_points: np.ndarray,
+    calibration: Mapping[str, Any],
+) -> np.ndarray:
+    out = np.zeros(len(core_points), dtype=np.int8)
+    if not calibration:
+        return out
+    for value in np.unique(core_points.astype(np.int32)):
+        mask = core_points.astype(np.int32) == int(value)
+        if not np.any(mask):
+            continue
+        pmf = _conditional_bonus_pmf(
+            int(value),
+            calibration,
+        )
+        tiers = np.asarray(sorted(pmf), dtype=np.int8)
+        probs = np.asarray(
+            [max(0.0, _f(pmf[int(tier)])) for tier in tiers],
+            dtype=np.float64,
+        )
+        total = float(probs.sum())
+        if total <= 0.0:
+            continue
+        probs /= total
+        draws = rng.choice(
+            tiers,
+            size=int(np.count_nonzero(mask)),
+            p=probs,
+        )
+        out[mask] = draws
+    return out
 
 def _route_rows_from_package(
     package_utility: Mapping[str, Any],
@@ -537,16 +804,34 @@ def _route_definition(row: Mapping[str, Any]) -> dict[str, Any]:
     if not per_gw:
         raise MonteCarloError(f"route {row.get('route_id')} lacks P1.7 per-GW lineups")
     economics = dict(row.get("transfer_economics") or {})
-    execution_cost = None
-    if economics.get("status") == "PASS":
-        execution_cost = _f(economics.get("hit_points")) + _f(economics.get("future_ft_shadow_value"))
+    economics_resolved = economics.get("status") == "PASS"
+    if economics_resolved:
+        execution_cost = (
+            _f(economics.get("hit_points"))
+            + _f(economics.get("future_ft_shadow_value"))
+        )
+        execution_cost_status = "RESOLVED_APPLIED"
     elif str(row.get("route_id")) == "HOLD":
         execution_cost = 0.0
+        execution_cost_status = "HOLD_ZERO"
+    else:
+        # Private finance facts may be genuinely unavailable while the
+        # football distribution is still fully supportable. P1.4 simulates
+        # football gross outcomes and never invents bank/sell/FT costs.
+        execution_cost = 0.0
+        execution_cost_status = (
+            "UNRESOLVED_NOT_APPLIED_TO_FOOTBALL_MC"
+        )
     return {
         "route_id": str(row.get("route_id")),
         "classification": row.get("classification"),
         "per_gw": per_gw,
         "execution_cost_points": execution_cost,
+        "execution_cost_status": execution_cost_status,
+        "decision_net_supported": (
+            economics_resolved
+            or str(row.get("route_id")) == "HOLD"
+        ),
         "transfer_economics": economics,
     }
 
@@ -715,13 +1000,748 @@ def _material_player_ids(route_defs: Sequence[Mapping[str, Any]], horizons: Sequ
     return by_gw
 
 
-def _shared_fraction() -> float:
-    cfg = load_event_config()
-    dep = dict(cfg.get("joint_goal_assist") or {}).get("dependence_parameter") or {}
-    value = _f(dep.get("value"), 0.1)
-    low = _f(dep.get("lower_bound"), 0.0)
-    high = _f(dep.get("upper_bound"), 0.25)
-    return min(high, max(low, value))
+def _categorical_goal_allocation(
+    rng: np.random.Generator,
+    total_events: np.ndarray,
+    player_ids: Sequence[int],
+    player_weights: Mapping[int, np.ndarray],
+    *,
+    other_weight: float | np.ndarray,
+) -> tuple[dict[int, np.ndarray], list[np.ndarray]]:
+    """Allocate each team event to exactly one material player or OTHER."""
+    ids = [int(x) for x in player_ids]
+    n = len(total_events)
+    out = {
+        element: np.zeros(n, dtype=np.int16)
+        for element in ids
+    }
+    max_events = int(np.max(total_events)) if n else 0
+    scorer_by_ordinal: list[np.ndarray] = []
+    for ordinal in range(max_events):
+        active = np.asarray(total_events > ordinal)
+        assignment = np.full(n, -1, dtype=np.int32)
+        if not np.any(active):
+            scorer_by_ordinal.append(assignment)
+            continue
+        weights = [
+            np.maximum(
+                0.0,
+                np.asarray(
+                    player_weights.get(
+                        element,
+                        np.zeros(n, dtype=np.float64),
+                    ),
+                    dtype=np.float64,
+                ),
+            )
+            for element in ids
+        ]
+        other = np.asarray(other_weight, dtype=np.float64)
+        if other.ndim == 0:
+            other = np.full(n, float(other), dtype=np.float64)
+        denom = np.maximum(1e-9, other.copy())
+        for weight in weights:
+            denom += weight
+        u = rng.random(n)
+        cumulative = np.zeros(n, dtype=np.float64)
+        for element, weight in zip(ids, weights):
+            p = np.divide(
+                weight,
+                denom,
+                out=np.zeros_like(weight),
+                where=denom > 0.0,
+            )
+            choose = (
+                active
+                & (assignment < 0)
+                & (u >= cumulative)
+                & (u < cumulative + p)
+            )
+            if np.any(choose):
+                out[element][choose] += 1
+                assignment[choose] = element
+            cumulative += p
+        scorer_by_ordinal.append(assignment)
+    return out, scorer_by_ordinal
+
+
+def _categorical_assist_allocation(
+    rng: np.random.Generator,
+    total_goals: np.ndarray,
+    scorer_by_ordinal: Sequence[np.ndarray],
+    player_ids: Sequence[int],
+    player_weights: Mapping[int, np.ndarray],
+    *,
+    other_assist_weight: float | np.ndarray,
+    no_assist_weight: float | np.ndarray,
+) -> dict[int, np.ndarray]:
+    """At most one assist per goal, with scorer excluded from that goal."""
+    ids = [int(x) for x in player_ids]
+    n = len(total_goals)
+    out = {
+        element: np.zeros(n, dtype=np.int16)
+        for element in ids
+    }
+    for ordinal, scorer in enumerate(scorer_by_ordinal):
+        active = np.asarray(total_goals > ordinal)
+        if not np.any(active):
+            continue
+        eligible_weights = []
+        for element in ids:
+            base = np.maximum(
+                0.0,
+                np.asarray(
+                    player_weights.get(
+                        element,
+                        np.zeros(n, dtype=np.float64),
+                    ),
+                    dtype=np.float64,
+                ),
+            )
+            eligible_weights.append(
+                np.where(scorer == element, 0.0, base)
+            )
+        other = np.asarray(
+            other_assist_weight, dtype=np.float64
+        )
+        no_assist = np.asarray(
+            no_assist_weight, dtype=np.float64
+        )
+        if other.ndim == 0:
+            other = np.full(n, float(other), dtype=np.float64)
+        if no_assist.ndim == 0:
+            no_assist = np.full(
+                n, float(no_assist), dtype=np.float64
+            )
+        denom = np.maximum(
+            1e-9,
+            other + no_assist,
+        )
+        for weight in eligible_weights:
+            denom += weight
+        u = rng.random(n)
+        cumulative = np.zeros(n, dtype=np.float64)
+        assigned = np.zeros(n, dtype=bool)
+        for element, weight in zip(ids, eligible_weights):
+            p = np.divide(
+                weight,
+                denom,
+                out=np.zeros_like(weight),
+                where=denom > 0.0,
+            )
+            choose = (
+                active
+                & ~assigned
+                & (u >= cumulative)
+                & (u < cumulative + p)
+            )
+            if np.any(choose):
+                out[element][choose] += 1
+                assigned[choose] = True
+            cumulative += p
+    return out
+
+
+def _simulate_match_coupled_gw(
+    rng: np.random.Generator,
+    pmap: Mapping[int, Mapping[str, Any]],
+    player_ids: Sequence[int],
+    *,
+    gw: int,
+    n: int,
+    cfg: Mapping[str, Any],
+) -> tuple[dict[int, dict[str, Any]], dict[str, Any]]:
+    """Simulate one GW from shared football match states, not player-point noise."""
+    catalog = _fixture_catalog(pmap, player_ids, gw)
+    factors = _world_factors(rng, catalog, n, cfg)
+    player_world: dict[int, dict[str, Any]] = {}
+    for element in player_ids:
+        state_rows = _state_rows(pmap[element])
+        player_world[element] = {
+            "points": np.zeros(n, dtype=np.float64),
+            "appeared": np.zeros(n, dtype=bool),
+            "state_counts": np.zeros(
+                len(state_rows),
+                dtype=np.int64,
+            ),
+            "state_draws": 0,
+            "event_sums": {
+                "goals": 0.0,
+                "assists": 0.0,
+                "clean_sheets": 0.0,
+                "defcon_hits": 0.0,
+                "saves": 0.0,
+                "cards": 0.0,
+                "penalty_goals": 0.0,
+                "set_piece_goals": 0.0,
+                "bonus_points": 0.0,
+            },
+        }
+
+    fixture_members: dict[
+        str,
+        list[tuple[int, Mapping[str, Any], int, int]],
+    ] = {}
+    for element in player_ids:
+        player = pmap[element]
+        team_id = _i(player.get("team_id") or player.get("team"), -1)
+        for index, fixture in enumerate(_fixture_rows(player, gw)):
+            fid = _fixture_id(
+                fixture,
+                gw=gw,
+                team_id=team_id,
+                index=index,
+            )
+            fixture_members.setdefault(fid, []).append(
+                (
+                    int(element),
+                    fixture,
+                    team_id,
+                    _opponent_id(fixture),
+                )
+            )
+
+    invariant_counts = {
+        "fixture_chunks": 0,
+        "cs_goal_consistency_failures": 0,
+        "material_goal_overflow_failures": 0,
+        "assist_overflow_failures": 0,
+        "self_assist_failures": 0,
+        "dnp_scorer_failures": 0,
+    }
+
+    for fid, members in sorted(fixture_members.items()):
+        world = factors.get(fid)
+        if not isinstance(world, Mapping):
+            raise MonteCarloError(
+                f"missing match state for fixture={fid}"
+            )
+        invariant_counts["fixture_chunks"] += 1
+        local_minutes: dict[int, np.ndarray] = {}
+        local_appeared: dict[int, np.ndarray] = {}
+        local_params: dict[int, dict[str, Any]] = {}
+        by_team: dict[int, list[int]] = {}
+
+        for element, fixture, team_id, _ in members:
+            state_idx, minutes = _sample_state_minutes(
+                rng,
+                pmap[element],
+                n,
+            )
+            local_minutes[element] = minutes
+            local_appeared[element] = minutes > 0.0
+            local_params[element] = _fixture_event_parameters(
+                pmap[element],
+                fixture,
+            )
+            by_team.setdefault(team_id, []).append(element)
+            target = player_world[element]
+            for idx in range(len(target["state_counts"])):
+                target["state_counts"][idx] += int(
+                    np.count_nonzero(state_idx == idx)
+                )
+            target["state_draws"] += n
+            target["appeared"] |= local_appeared[element]
+
+        for team_id, elements in by_team.items():
+            team_world = dict(
+                (world.get("teams") or {}).get(team_id) or {}
+            )
+            if not team_world:
+                raise MonteCarloError(
+                    f"missing team world fixture={fid} team={team_id}"
+                )
+            team_goals = np.asarray(
+                (world.get("team_goals") or {}).get(team_id),
+                dtype=np.int16,
+            )
+            base_goal_mean = max(
+                0.01,
+                _f(team_world.get("base_goal_mean"), 1.35),
+            )
+            expected_material_goal = 0.0
+            expected_material_assist = 0.0
+            expected_goal_by_element: dict[int, float] = {}
+            goal_weights: dict[int, np.ndarray] = {}
+            assist_weights: dict[int, np.ndarray] = {}
+            for element in elements:
+                params = local_params[element]
+                minutes = local_minutes[element]
+                expected_minutes = _stage2_expected_minutes(
+                    pmap[element]
+                )
+                expected_goal = (
+                    params["goal_rate90"]
+                    * min(90.0, expected_minutes)
+                    / 90.0
+                )
+                expected_assist = (
+                    params["assist_rate90"]
+                    * min(90.0, expected_minutes)
+                    / 90.0
+                )
+                expected_goal_by_element[element] = expected_goal
+                expected_material_goal += expected_goal
+                expected_material_assist += expected_assist
+                goal_ratio = _path_linkup_ratio(
+                    pmap[element],
+                    fid,
+                    local_appeared,
+                    channel="goal",
+                    n=n,
+                )
+                assist_ratio = _path_linkup_ratio(
+                    pmap[element],
+                    fid,
+                    local_appeared,
+                    channel="assist",
+                    n=n,
+                )
+                goal_weights[element] = (
+                    params["goal_rate90"]
+                    * minutes
+                    / 90.0
+                    * goal_ratio
+                )
+                assist_weights[element] = (
+                    params["assist_rate90"]
+                    * minutes
+                    / 90.0
+                    * assist_ratio
+                )
+
+            material_goal_path = np.zeros(
+                n, dtype=np.float64
+            )
+            for weight in goal_weights.values():
+                material_goal_path += weight
+            other_goal_weight = np.maximum(
+                1e-6,
+                base_goal_mean - material_goal_path,
+            )
+            goals_by_player, scorer_by_ordinal = (
+                _categorical_goal_allocation(
+                    rng,
+                    team_goals,
+                    elements,
+                    goal_weights,
+                    other_weight=other_goal_weight,
+                )
+            )
+            total_material_goals = np.zeros(
+                n, dtype=np.int16
+            )
+            for element in elements:
+                total_material_goals += goals_by_player[element]
+                if np.any(
+                    (goals_by_player[element] > 0)
+                    & ~local_appeared[element]
+                ):
+                    invariant_counts[
+                        "dnp_scorer_failures"
+                    ] += 1
+            if np.any(total_material_goals > team_goals):
+                invariant_counts[
+                    "material_goal_overflow_failures"
+                ] += 1
+
+            # Preserve the Stage-2 assist marginal while enforcing
+            # scorer != assister for each goal. A player's assist propensity
+            # is conditioned on not being that goal's scorer.
+            for element in elements:
+                scorer_share = min(
+                    0.80,
+                    max(
+                        0.0,
+                        expected_goal_by_element.get(
+                            element, 0.0
+                        )
+                        / max(1e-9, base_goal_mean),
+                    ),
+                )
+                assist_weights[element] = (
+                    assist_weights[element]
+                    / max(0.20, 1.0 - scorer_share)
+                )
+            material_assist_path = np.zeros(
+                n, dtype=np.float64
+            )
+            for weight in assist_weights.values():
+                material_assist_path += weight
+            other_assist_weight = np.maximum(
+                1e-6,
+                base_goal_mean - material_assist_path,
+            )
+            no_assist_weight = np.zeros(
+                n, dtype=np.float64
+            )
+            assists_by_player = _categorical_assist_allocation(
+                rng,
+                team_goals,
+                scorer_by_ordinal,
+                elements,
+                assist_weights,
+                other_assist_weight=other_assist_weight,
+                no_assist_weight=no_assist_weight,
+            )
+            total_material_assists = np.zeros(
+                n, dtype=np.int16
+            )
+            for element in elements:
+                total_material_assists += assists_by_player[element]
+                if np.any(
+                    (goals_by_player[element] > 0)
+                    & (assists_by_player[element] > team_goals)
+                ):
+                    invariant_counts["self_assist_failures"] += 1
+            if np.any(total_material_assists > team_goals):
+                invariant_counts["assist_overflow_failures"] += 1
+
+            for element in elements:
+                player = pmap[element]
+                params = local_params[element]
+                minutes = local_minutes[element]
+                scale = minutes / 90.0
+                goals = goals_by_player[element].astype(
+                    np.int32
+                )
+                assists = assists_by_player[element].astype(
+                    np.int32
+                )
+                opponent_ids = [
+                    tid
+                    for tid in (world.get("teams") or {})
+                    if int(tid) != int(team_id)
+                ]
+                if len(opponent_ids) != 1:
+                    raise MonteCarloError(
+                        f"fixture={fid} opponent ambiguity"
+                    )
+                opponent_id = int(opponent_ids[0])
+                opponent_goals = np.asarray(
+                    (world.get("team_goals") or {}).get(
+                        opponent_id
+                    ),
+                    dtype=np.int32,
+                )
+                clean = opponent_goals == 0
+                if not np.array_equal(
+                    clean,
+                    np.asarray(
+                        (world.get("clean_sheet") or {}).get(
+                            team_id
+                        ),
+                        dtype=bool,
+                    ),
+                ):
+                    invariant_counts[
+                        "cs_goal_consistency_failures"
+                    ] += 1
+
+                appearance_points = np.where(
+                    minutes <= 0.0,
+                    0.0,
+                    np.where(
+                        minutes >= 60.0,
+                        float(APPEARANCE_POINTS_60_PLUS),
+                        float(APPEARANCE_POINTS_UNDER_60),
+                    ),
+                )
+                points = appearance_points.astype(np.float64)
+                points += goals * float(
+                    GOAL_POINTS[_element_type(player)]
+                )
+                points += assists * float(ASSIST_POINTS)
+
+                cs_awarded = (
+                    clean
+                    & (
+                        minutes
+                        >= params[
+                            "clean_sheet_minimum_minutes"
+                        ]
+                    )
+                    & (params["clean_sheet_points"] > 0.0)
+                )
+                points += (
+                    cs_awarded.astype(np.float64)
+                    * params["clean_sheet_points"]
+                )
+
+                defcon_hits = np.zeros(n, dtype=bool)
+                if (
+                    params["defcon_eligible"]
+                    and params["defcon_threshold"] > 0
+                    and params["defcon_points"] > 0.0
+                ):
+                    pressure = np.asarray(
+                        (
+                            (world.get("teams") or {}).get(
+                                opponent_id
+                            )
+                            or {}
+                        ).get(
+                            "attack_factor",
+                            np.ones(n),
+                        ),
+                        dtype=np.float64,
+                    )
+                    dc_mean = (
+                        params["defcon_rate90"]
+                        * scale
+                        * np.clip(
+                            pressure ** 0.35,
+                            0.65,
+                            1.55,
+                        )
+                    )
+                    dc_counts = _sample_count_from_stage2(
+                        rng,
+                        params["defcon_count_model"],
+                        dc_mean,
+                    )
+                    defcon_hits = (
+                        dc_counts
+                        >= params["defcon_threshold"]
+                    )
+                    points += (
+                        defcon_hits.astype(np.float64)
+                        * params["defcon_points"]
+                    )
+
+                save_counts = np.zeros(
+                    n, dtype=np.int32
+                )
+                if (
+                    params["save_eligible"]
+                    and params["save_rate90"] > 0.0
+                ):
+                    pressure = np.asarray(
+                        (
+                            (world.get("teams") or {}).get(
+                                opponent_id
+                            )
+                            or {}
+                        ).get(
+                            "attack_factor",
+                            np.ones(n),
+                        ),
+                        dtype=np.float64,
+                    )
+                    save_mean = (
+                        params["save_rate90"]
+                        * scale
+                        * np.clip(pressure, 0.60, 1.75)
+                    )
+                    save_counts = _sample_count_from_stage2(
+                        rng,
+                        params["save_count_model"],
+                        save_mean,
+                    )
+                    # Shot-on-target identity is explicit:
+                    # opponent SoT = goals conceded + saves.
+                    save_points = (
+                        save_counts // int(SAVE_INTERVAL)
+                    ) * int(SAVE_POINTS_PER_INTERVAL)
+                    points += save_points.astype(np.float64)
+
+                if _position(player) in {"GK", "DEF"}:
+                    interval = max(
+                        1,
+                        int(
+                            params[
+                                "goals_conceded_interval"
+                            ]
+                        ),
+                    )
+                    gc_intervals = (
+                        opponent_goals // interval
+                    )
+                    points += (
+                        gc_intervals.astype(np.float64)
+                        * params[
+                            "goals_conceded_points_per_interval"
+                        ]
+                    )
+
+                yellow_p = (
+                    1.0
+                    - np.exp(
+                        -params["yellow_rate90"] * scale
+                    )
+                )
+                red_p = (
+                    1.0
+                    - np.exp(
+                        -params["red_rate90"] * scale
+                    )
+                )
+                yellow = (
+                    rng.random(n) < yellow_p
+                ) & local_appeared[element]
+                red = (
+                    rng.random(n) < red_p
+                ) & local_appeared[element]
+                points += (
+                    yellow.astype(np.float64)
+                    * float(YELLOW_CARD_POINTS)
+                )
+                points += (
+                    red.astype(np.float64)
+                    * float(RED_CARD_POINTS)
+                )
+
+                penalty_process = dict(
+                    params["penalty_process"]
+                )
+                penalty_attempt_rate90 = max(
+                    0.0,
+                    _f(
+                        penalty_process.get(
+                            "penalty_attempt_rate90"
+                        )
+                    ),
+                )
+                penalty_misses = rng.poisson(
+                    penalty_attempt_rate90
+                    * 0.22
+                    * scale
+                )
+                points += (
+                    penalty_misses.astype(np.float64)
+                    * float(PENALTY_MISS_POINTS)
+                )
+
+                penalty_saved = np.zeros(
+                    n, dtype=bool
+                )
+                if (
+                    _position(player) == "GK"
+                    and params[
+                        "penalty_save_probability"
+                    ]
+                    > 0.0
+                ):
+                    penalty_saved = (
+                        rng.random(n)
+                        < params[
+                            "penalty_save_probability"
+                        ]
+                    ) & local_appeared[element]
+                    points += (
+                        penalty_saved.astype(np.float64)
+                        * float(PENALTY_SAVE_POINTS)
+                    )
+
+                goal_process = dict(
+                    params["goal_process"]
+                )
+                total_goal_rate = max(
+                    1e-12,
+                    _f(
+                        goal_process.get(
+                            "lambda_goal_total90"
+                        ),
+                        params["goal_rate90"],
+                    ),
+                )
+                penalty_share = max(
+                    0.0,
+                    min(
+                        1.0,
+                        _f(
+                            goal_process.get(
+                                "lambda_penalty90"
+                            )
+                        )
+                        / total_goal_rate,
+                    ),
+                )
+                set_piece_share = max(
+                    0.0,
+                    min(
+                        1.0 - penalty_share,
+                        _f(
+                            goal_process.get(
+                                "lambda_set_piece90"
+                            )
+                        )
+                        / total_goal_rate,
+                    ),
+                )
+                penalty_goals = rng.binomial(
+                    goals,
+                    penalty_share,
+                )
+                remaining_non_penalty = goals - penalty_goals
+                conditional_sp = (
+                    set_piece_share
+                    / max(1e-12, 1.0 - penalty_share)
+                    if penalty_share < 1.0
+                    else 0.0
+                )
+                set_piece_goals = rng.binomial(
+                    remaining_non_penalty,
+                    max(0.0, min(1.0, conditional_sp)),
+                )
+
+                core_points = np.rint(points).astype(
+                    np.int32
+                )
+                bonus_points = _sample_bonus_points(
+                    rng,
+                    core_points,
+                    params["bonus_calibration"],
+                )
+                points += bonus_points.astype(np.float64)
+
+                target = player_world[element]
+                target["points"] += points
+                events = target["event_sums"]
+                events["goals"] += float(goals.sum())
+                events["assists"] += float(assists.sum())
+                events["clean_sheets"] += float(
+                    clean.sum()
+                )
+                events["defcon_hits"] += float(
+                    defcon_hits.sum()
+                )
+                events["saves"] += float(
+                    save_counts.sum()
+                )
+                events["cards"] += float(
+                    np.count_nonzero(yellow | red)
+                )
+                events["penalty_goals"] += float(
+                    penalty_goals.sum()
+                )
+                events["set_piece_goals"] += float(
+                    set_piece_goals.sum()
+                )
+                events["bonus_points"] += float(
+                    bonus_points.sum()
+                )
+
+    if any(
+        value
+        for key, value in invariant_counts.items()
+        if key.endswith("_failures")
+    ):
+        raise MonteCarloError(
+            "match-state invariant violation: "
+            + json.dumps(invariant_counts, sort_keys=True)
+        )
+    return player_world, {
+        "match_state_invariants": {
+            **invariant_counts,
+            "status": "PASS",
+            "opponent_goal_implies_cs_lost": True,
+            "team_goal_has_single_scorer_category": True,
+            "at_most_one_assist_per_goal": True,
+            "self_assist_forbidden": True,
+            "dnp_scorer_forbidden": True,
+        }
+    }
 
 
 def _simulate_route_arrays(
@@ -752,39 +1772,67 @@ def _simulate_route_arrays(
     ordered_gws = ordered_gws[: horizons[-1]]
 
     route_totals = {
-        rid: {h: np.empty(actual_paths, dtype=np.float64) for h in horizons}
+        rid: {
+            h: np.empty(actual_paths, dtype=np.float64)
+            for h in horizons
+        }
         for rid in route_ids
     }
     state_counts: dict[str, np.ndarray] = {}
     state_draws: dict[str, int] = {}
     event_sums: dict[str, dict[str, float]] = {}
     route_diag = {
-        rid: {"autosub_paths": 0, "captain_takeover_paths": 0}
+        rid: {
+            "autosub_paths": 0,
+            "captain_takeover_paths": 0,
+        }
         for rid in route_ids
     }
+    match_state_diag = {
+        "fixture_chunks": 0,
+        "cs_goal_consistency_failures": 0,
+        "material_goal_overflow_failures": 0,
+        "assist_overflow_failures": 0,
+        "self_assist_failures": 0,
+        "dnp_scorer_failures": 0,
+    }
 
-    rng = np.random.Generator(np.random.PCG64(int(seed)))
-    shared_fraction = _shared_fraction()
+    rng = np.random.Generator(
+        np.random.PCG64(int(seed))
+    )
     cfg = load_config()
     offset = 0
     while offset < actual_paths:
         n = min(chunk_size, actual_paths - offset)
-        cumulative = {rid: np.zeros(n, dtype=np.float64) for rid in route_ids}
-        for gw_index, gw in enumerate(ordered_gws, start=1):
+        cumulative = {
+            rid: np.zeros(n, dtype=np.float64)
+            for rid in route_ids
+        }
+        for gw_index, gw in enumerate(
+            ordered_gws, start=1
+        ):
             player_ids = sorted(by_gw[gw])
-            catalog = _fixture_catalog(pmap, player_ids, gw)
-            factors = _world_factors(rng, catalog, n, cfg)
-            player_world: dict[int, dict[str, Any]] = {}
-            for element in player_ids:
-                simulated = _simulate_player_gw(
+            player_world, gw_diag = (
+                _simulate_match_coupled_gw(
                     rng,
-                    pmap[element],
+                    pmap,
+                    player_ids,
                     gw=gw,
                     n=n,
-                    factors=factors,
-                    shared_fraction=shared_fraction,
+                    cfg=cfg,
                 )
-                player_world[element] = simulated
+            )
+            invariants = dict(
+                gw_diag.get("match_state_invariants")
+                or {}
+            )
+            for key in match_state_diag:
+                match_state_diag[key] += int(
+                    invariants.get(key) or 0
+                )
+
+            for element in player_ids:
+                simulated = player_world[element]
                 key = f"{element}:gw{gw}"
                 state_counts.setdefault(
                     key,
@@ -793,34 +1841,110 @@ def _simulate_route_arrays(
                         dtype=np.int64,
                     ),
                 )
-                state_counts[key] += simulated["state_counts"]
-                state_draws[key] = state_draws.get(key, 0) + int(simulated["state_draws"])
+                state_counts[key] += simulated[
+                    "state_counts"
+                ]
+                state_draws[key] = (
+                    state_draws.get(key, 0)
+                    + int(simulated["state_draws"])
+                )
                 row = event_sums.setdefault(
                     key,
-                    {"goals": 0.0, "assists": 0.0, "clean_sheets": 0.0, "defcon_hits": 0.0, "saves": 0.0},
+                    {
+                        "goals": 0.0,
+                        "assists": 0.0,
+                        "clean_sheets": 0.0,
+                        "defcon_hits": 0.0,
+                        "saves": 0.0,
+                        "cards": 0.0,
+                        "penalty_goals": 0.0,
+                        "set_piece_goals": 0.0,
+                        "bonus_points": 0.0,
+                    },
                 )
-                for name, value in simulated["event_sums"].items():
-                    row[name] += float(value)
+                for name, value in simulated[
+                    "event_sums"
+                ].items():
+                    row[name] = row.get(name, 0.0) + float(
+                        value
+                    )
 
             for route in route_defs:
                 rid = str(route["route_id"])
-                lineup_row = dict((route.get("per_gw") or [])[gw_index - 1])
-                resolved = _resolve_route_chunk(lineup_row, pmap, player_world)
-                cumulative[rid] += np.asarray(resolved["points"], dtype=np.float64)
-                route_diag[rid]["autosub_paths"] += int(np.count_nonzero(resolved["autosub_any"]))
-                route_diag[rid]["captain_takeover_paths"] += int(np.count_nonzero(resolved["captain_takeover"]))
+                lineup_row = dict(
+                    (route.get("per_gw") or [])[
+                        gw_index - 1
+                    ]
+                )
+                resolved = _resolve_route_chunk(
+                    lineup_row,
+                    pmap,
+                    player_world,
+                )
+                cumulative[rid] += np.asarray(
+                    resolved["points"],
+                    dtype=np.float64,
+                )
+                route_diag[rid][
+                    "autosub_paths"
+                ] += int(
+                    np.count_nonzero(
+                        resolved["autosub_any"]
+                    )
+                )
+                route_diag[rid][
+                    "captain_takeover_paths"
+                ] += int(
+                    np.count_nonzero(
+                        resolved["captain_takeover"]
+                    )
+                )
                 if gw_index in horizons:
-                    cost = route.get("execution_cost_points")
+                    cost = route.get(
+                        "execution_cost_points"
+                    )
                     if cost is None:
-                        route_totals[rid][gw_index][offset : offset + n] = np.nan
+                        route_totals[rid][gw_index][
+                            offset : offset + n
+                        ] = np.nan
                     else:
-                        route_totals[rid][gw_index][offset : offset + n] = cumulative[rid] - float(cost)
+                        route_totals[rid][gw_index][
+                            offset : offset + n
+                        ] = (
+                            cumulative[rid] - float(cost)
+                        )
         offset += n
 
     diagnostics = {
         "state_frequencies": {},
         "event_means": {},
         "route_path_semantics": {},
+        "match_state_invariants": {
+            **match_state_diag,
+            "status": "PASS",
+            "simulation_order": [
+                "TACTICAL_STATE",
+                "EXPECTED_LINEUPS",
+                "AVAILABILITY",
+                "START_CAMEO_DNP",
+                "MINUTES",
+                "MATCH_STATE",
+                "TEAM_GOALS",
+                "SCORER_ASSISTER",
+                "CLEAN_SHEET",
+                "SHOTS_SOT_SAVES",
+                "DEFENSIVE_ACTIONS_DEFCON",
+                "SET_PIECES_PENALTIES",
+                "CARDS",
+                "BPS_BONUS",
+                "PLAYER_FPL_POINTS",
+                "AUTOSUBS",
+                "CAPTAIN_VICE",
+                "TEAM_TOTAL",
+            ],
+            "player_point_noise_sampling": False,
+            "stage2_event_intensities_consumed_read_only": True,
+        },
     }
     for key, counts in state_counts.items():
         draws = max(1, state_draws[key])
@@ -843,8 +1967,12 @@ def _simulate_route_arrays(
                 )
             )
         if "DNP" in frequencies:
-            frequencies["ZERO_MINUTES"] = frequencies["DNP"]
-        diagnostics["state_frequencies"][key] = frequencies
+            frequencies["ZERO_MINUTES"] = (
+                frequencies["DNP"]
+            )
+        diagnostics["state_frequencies"][
+            key
+        ] = frequencies
         diagnostics["event_means"][key] = {
             name: float(value) / draws
             for name, value in event_sums[key].items()
@@ -852,11 +1980,16 @@ def _simulate_route_arrays(
     denom = actual_paths * len(ordered_gws)
     for rid, row in route_diag.items():
         diagnostics["route_path_semantics"][rid] = {
-            "autosub_path_rate": float(row["autosub_paths"]) / max(1, denom),
-            "captain_takeover_path_rate": float(row["captain_takeover_paths"]) / max(1, denom),
+            "autosub_path_rate": float(
+                row["autosub_paths"]
+            )
+            / max(1, denom),
+            "captain_takeover_path_rate": float(
+                row["captain_takeover_paths"]
+            )
+            / max(1, denom),
         }
     return route_totals, diagnostics
-
 
 def _quantiles(values: np.ndarray) -> dict[str, float]:
     q = np.quantile(values, [0.10, 0.25, 0.50, 0.75, 0.90], method="linear")
@@ -882,34 +2015,112 @@ def _route_metrics(
             "p_route_gt_hold": None,
         }
     diff = values - hold
-    std = float(np.std(values, ddof=1)) if len(values) > 1 else 0.0
-    diff_std = float(np.std(diff, ddof=1)) if len(diff) > 1 else 0.0
+    n = max(1, len(values))
+    mean = float(np.mean(values))
+    std = (
+        float(np.std(values, ddof=1))
+        if len(values) > 1
+        else 0.0
+    )
+    diff_std = (
+        float(np.std(diff, ddof=1))
+        if len(diff) > 1
+        else 0.0
+    )
+    p_gt = float(np.mean(diff > 0.0))
+    p_lt = float(np.mean(diff < 0.0))
+    p_up = float(np.mean(diff >= material_upside_threshold))
     return {
         "status": "READY",
-        "mean_net_utility": float(np.mean(values)),
+        "mean_net_utility": mean,
         "median": float(np.median(values)),
         "standard_deviation": std,
+        "mean_standard_error": std / math.sqrt(n),
         **_quantiles(values),
-        "p_route_gt_hold": float(np.mean(diff > 0.0)),
-        "p_route_lt_hold": float(np.mean(diff < 0.0)),
-        "downside_probability": float(np.mean(diff < 0.0)),
-        "material_upside_probability": float(np.mean(diff >= material_upside_threshold)),
+        "p_route_gt_hold": p_gt,
+        "p_route_gt_hold_standard_error": math.sqrt(
+            max(0.0, p_gt * (1.0 - p_gt)) / n
+        ),
+        "p_route_lt_hold": p_lt,
+        "p_route_lt_hold_standard_error": math.sqrt(
+            max(0.0, p_lt * (1.0 - p_lt)) / n
+        ),
+        "downside_probability": p_lt,
+        "material_upside_probability": p_up,
+        "material_upside_probability_standard_error": math.sqrt(
+            max(0.0, p_up * (1.0 - p_up)) / n
+        ),
         "mean_difference_vs_hold": float(np.mean(diff)),
-        "paired_difference_standard_error": diff_std / math.sqrt(max(1, len(diff))),
+        "paired_difference_standard_error": (
+            diff_std / math.sqrt(max(1, len(diff)))
+        ),
+        "mc_standard_error_formula": {
+            "probability": "sqrt(p*(1-p)/N)",
+            "mean": "SD/sqrt(N)",
+        },
     }
 
 
 def _pair_metrics(a: np.ndarray, b: np.ndarray) -> dict[str, Any]:
     diff = a - b
     if np.any(~np.isfinite(diff)):
-        return {"status": "ECONOMICS_PARTIAL", "p_a_gt_b": None}
-    std = float(np.std(diff, ddof=1)) if len(diff) > 1 else 0.0
+        return {
+            "status": "ECONOMICS_PARTIAL",
+            "p_a_gt_b": None,
+        }
+    n = max(1, len(diff))
+    std = (
+        float(np.std(diff, ddof=1))
+        if len(diff) > 1
+        else 0.0
+    )
+    p_gt = float(np.mean(diff > 0.0))
+    p_lt = float(np.mean(diff < 0.0))
+    meaningful = _f(
+        (load_config().get("canonical") or {}).get(
+            "material_upside_threshold_points"
+        ),
+        5.0,
+    )
+    p_meaningful = float(np.mean(diff >= meaningful))
     return {
         "status": "READY",
         "mean_difference": float(np.mean(diff)),
-        "p_a_gt_b": float(np.mean(diff > 0.0)),
-        "p_a_lt_b": float(np.mean(diff < 0.0)),
-        "paired_difference_standard_error": std / math.sqrt(max(1, len(diff))),
+        "p_a_gt_b": p_gt,
+        "p_a_gt_b_standard_error": math.sqrt(
+            max(0.0, p_gt * (1.0 - p_gt)) / n
+        ),
+        "p_a_lt_b": p_lt,
+        "p_a_lt_b_standard_error": math.sqrt(
+            max(0.0, p_lt * (1.0 - p_lt)) / n
+        ),
+        "p_delta_ge_meaningful_threshold": p_meaningful,
+        "meaningful_threshold_points": meaningful,
+        "p_delta_ge_meaningful_threshold_standard_error": math.sqrt(
+            max(
+                0.0,
+                p_meaningful * (1.0 - p_meaningful),
+            )
+            / n
+        ),
+        "Q10": float(
+            np.quantile(diff, 0.10, method="linear")
+        ),
+        "Q25": float(
+            np.quantile(diff, 0.25, method="linear")
+        ),
+        "median": float(
+            np.quantile(diff, 0.50, method="linear")
+        ),
+        "Q75": float(
+            np.quantile(diff, 0.75, method="linear")
+        ),
+        "Q90": float(
+            np.quantile(diff, 0.90, method="linear")
+        ),
+        "paired_difference_standard_error": (
+            std / math.sqrt(n)
+        ),
     }
 
 
@@ -1142,6 +2353,17 @@ def run_correlated_monte_carlo(
             route_def = next(item for item in route_defs if str(item.get("route_id")) == rid)
             execution_cost = route_def.get("execution_cost_points")
             row["execution_cost_points"] = execution_cost
+            row["execution_cost_status"] = route_def.get(
+                "execution_cost_status"
+            )
+            row["decision_net_supported"] = bool(
+                route_def.get("decision_net_supported")
+            )
+            row["utility_semantics"] = (
+                "DECISION_NET"
+                if row["decision_net_supported"]
+                else "GROSS_FOOTBALL_ONLY_PRIVATE_ECONOMICS_UNAVAILABLE"
+            )
             row["mean_gross_points"] = (
                 None
                 if row.get("mean_net_utility") is None or execution_cost is None
@@ -1182,7 +2404,7 @@ def run_correlated_monte_carlo(
         "model_id": MODEL_ID,
         "execution_state": execution_state,
         "canonical_pass": canonical_pass,
-        "method": "PATH_LEVEL_SHARED_MATCH_TEAM_STATE_EVENT_SIMULATION",
+        "method": "MATCH_STATE_FIRST_SCORELINE_SCORER_ASSISTER_EVENT_SIMULATION",
         "correlated": True,
         "common_random_numbers": True,
         "seed": int(seed),
@@ -1193,7 +2415,7 @@ def run_correlated_monte_carlo(
         "horizons": list(horizons),
         "selected_route_id": selected_id,
         "route_ids": route_ids,
-        "correlation_model": "SHARED_MATCH_TEAM_FACTORS",
+        "correlation_model": "SHARED_MATCH_TEAM_SCORELINE_AND_EVENT_FACTORS",
         "correlation_model_version": correlation.get("correlation_model_version"),
         "metrics": metrics,
         "paired_outputs": pairwise,
@@ -1206,14 +2428,27 @@ def run_correlated_monte_carlo(
             "material_upside_threshold_points": upside_threshold,
         },
         "limitations": [
-            "AVAILABILITY_CROSS_PLAYER_NOT_MODELLED",
-            "INJURY_CLUSTER_NOT_MODELLED",
-            "MANAGER_ROTATION_CLUSTER_NOT_MODELLED",
-            "SET_PIECE_EVENT_CROSS_PLAYER_NOT_MODELLED",
-            "BONUS_EXPECTATION_ONLY_RESIDUAL_NOT_STOCHASTIC",
+            "NON_MATERIAL_PLAYER_START_STATES_ENTER_TEAM_GOAL_MEAN_AS_STAGE2_EXPECTATIONS",
+            "INJURY_CLUSTER_BEYOND_P1_1_AND_STAGE2_LINKUP_NOT_MODELLED",
+            "MANAGER_ROTATION_CLUSTER_BEYOND_P1_1_NOT_MODELLED",
+            "SET_PIECE_CROSS_PLAYER_TARGET_COMPETITION_PARTIAL",
+            "SCORELINE_TIMING_WITHIN_MATCH_NOT_MODELLED",
             "CROSS_GW_TEMPORAL_STATE_CONDITIONALLY_INDEPENDENT_GIVEN_CURRENT_MODEL",
             "FUTURE_PRICE_PROCESS_NOT_MODELLED",
         ],
+        "match_state_contract": {
+            "team_goals_sampled_before_player_points": True,
+            "clean_sheet_is_opponent_goals_zero": True,
+            "single_scorer_category_per_team_goal": True,
+            "at_most_one_assist_per_goal": True,
+            "self_assist_forbidden": True,
+            "dnp_scorer_forbidden": True,
+            "stage2_linkup_conditioned_on_sampled_material_teammate_appearance": True,
+            "defcon_count_family_from_stage2": True,
+            "save_count_family_from_stage2": True,
+            "bonus_sampled_from_stage2_empirical_bps_conditional_pmf": True,
+            "arbitrary_player_point_noise": False
+        },
         "governance": {
             "authority": False,
             "raw_v6_payload_duplicated": False,
@@ -1295,6 +2530,7 @@ def run_package_monte_carlo(
     seed: int,
     input_snapshot_id: str,
     route_ids: Sequence[str] | None = None,
+    selected_route_id: str | None = None,
     canonical: bool = True,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
@@ -1315,7 +2551,11 @@ def run_package_monte_carlo(
         input_snapshot_id=input_snapshot_id,
         canonical=canonical,
         horizons=horizons,
-        selected_route_id=str(package_utility.get("selected_route_id") or "HOLD"),
+        selected_route_id=str(
+            selected_route_id
+            or package_utility.get("selected_route_id")
+            or "HOLD"
+        ),
         generated_at=generated_at,
     )
     out["package_integration"] = {
@@ -1326,6 +2566,11 @@ def run_package_monte_carlo(
         "rental_exit_auto_assumed": False,
         "transfer_economics_deterministic": True,
         "future_price_stochastic": False,
+        "convergence_route_id": str(
+            selected_route_id
+            or package_utility.get("selected_route_id")
+            or "HOLD"
+        ),
     }
     return out
 
@@ -1347,7 +2592,20 @@ def attach_monte_carlo_to_package_utility(
         mc_row = dict((metrics.get(rid) or {}).get("1") or {})
         uncertainty = route.setdefault("uncertainty", {})
         if mc_row and mc.get("execution_state") == "EXECUTED":
-            uncertainty["p_beats_hold"] = mc_row.get("p_route_gt_hold")
+            decision_net_supported = bool(
+                mc_row.get("decision_net_supported")
+            )
+            if decision_net_supported:
+                uncertainty["p_beats_hold"] = mc_row.get(
+                    "p_route_gt_hold"
+                )
+            else:
+                uncertainty["p_beats_hold"] = (
+                    "UNAVAILABLE_PRIVATE_ECONOMICS"
+                )
+                uncertainty["p_football_points_gt_hold"] = (
+                    mc_row.get("p_route_gt_hold")
+                )
             uncertainty["monte_carlo"] = {
                 "execution_state": mc.get("execution_state"),
                 "canonical_pass": bool(mc.get("canonical_pass")),
@@ -1356,6 +2614,8 @@ def attach_monte_carlo_to_package_utility(
                 "mean_difference_vs_hold": mc_row.get("mean_difference_vs_hold"),
                 "paired_difference_standard_error": mc_row.get("paired_difference_standard_error"),
                 "expected_regret": mc_row.get("expected_regret"),
+                "utility_semantics": mc_row.get("utility_semantics"),
+                "decision_net_supported": decision_net_supported,
                 "output_fingerprint": mc.get("output_fingerprint"),
             }
         else:

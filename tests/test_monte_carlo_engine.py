@@ -664,11 +664,11 @@ def test_73_match_state_invariants_are_emitted_and_pass():
     result = _diag()
     invariants = result["sampling_diagnostics"]["match_state_invariants"]
     assert invariants["status"] == "PASS"
-    assert invariants["clean_sheet_contradictions"] == 0
-    assert invariants["goal_overflow_paths"] == 0
-    assert invariants["assist_overflow_paths"] == 0
-    assert invariants["self_assist_violations"] == 0
-    assert invariants["dnp_scorer_violations"] == 0
+    assert invariants["cs_goal_consistency_failures"] == 0
+    assert invariants["material_goal_overflow_failures"] == 0
+    assert invariants["assist_overflow_failures"] == 0
+    assert invariants["self_assist_failures"] == 0
+    assert invariants["dnp_scorer_failures"] == 0
 
 
 def test_74_pairwise_delta_exposes_stage3_distributional_decision_surface():

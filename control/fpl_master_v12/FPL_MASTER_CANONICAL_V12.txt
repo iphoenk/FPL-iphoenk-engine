@@ -1594,8 +1594,13 @@ STAGE 2 ACCEPTANCE:
   and save thresholds; set-piece/penalty; link-up; conditional BPS; posterior
   predictive; complete point distributions; genuine 1/3/5GW; full-universe
   same lineage; Watchlist20 same lineage; run-35597594711 producer-root-cause
-  closure; required tests; V6 health; current authenticated squad evidence;
-  and legacy isolation all pass.
+  closure; required tests; V6 health; current 15-player Official FPL squad
+  identity; current public mini-league evidence; and legacy isolation all pass.
+- A private authenticated /me session is NOT a Stage-2 GREEN prerequisite when
+  fresh Official FPL public submitted-picks evidence proves the current 15-player
+  squad and fresh public mini-league standings/manager picks are complete.
+  Private auth remains diagnostic for finance/private-only facts and must never
+  be fabricated or used to mutate V6 from Stage 2.
 - Renderer success cannot compensate for an incomplete Stage-2 producer.
 - Stage 3 MUST NOT start until the full Stage-2 acceptance state is GREEN.
 

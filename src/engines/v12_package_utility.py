@@ -831,7 +831,7 @@ def evaluate_packages(
     generated = generated_at or _now()
     routes = _validate_search(search_result)
     planning_gw = int(projections.get("planning_gw") or 1)
-    future = future_frontier_by_route or {}
+    supplied_future = future_frontier_by_route
     info_map = information_value_by_route or {}
     price_map = price_risk_by_route or {}
     rentals = {str(value) for value in (rental_route_ids or [])}
@@ -894,11 +894,45 @@ def evaluate_packages(
         return output
 
     hold_lineups = route_lineups(hold_route)
+    lineups_by_route = {
+        str(route.get("route_id")): (
+            hold_lineups
+            if str(route.get("route_id")) == "HOLD"
+            else route_lineups(route)
+        )
+        for route in routes
+    }
+    if supplied_future is None:
+        future = derive_bounded_future_frontier(
+            {
+                "model_owner": MODEL_OWNER,
+                "routes": [
+                    {
+                        "route_id": str(route.get("route_id")),
+                        "final_squad_elements": list(
+                            route.get("final_squad_elements") or []
+                        ),
+                        "football_route_utility": {
+                            "per_gw": deepcopy(
+                                lineups_by_route[
+                                    str(route.get("route_id"))
+                                ].get("per_gw")
+                                or []
+                            )
+                        },
+                    }
+                    for route in routes
+                ],
+            }
+        )
+    else:
+        future = dict(supplied_future)
+
     evaluated: list[dict[str, Any]] = []
     for route in routes:
         route_id = str(route.get("route_id"))
         transfer_count = int(route.get("transfer_count") or 0)
-        lineups = hold_lineups if route_id == "HOLD" else route_lineups(route)
+        lineups = lineups_by_route[route_id]
         hit = _hit_economics(
             transfer_count=transfer_count,
             free_transfers=free_transfers,
@@ -1077,6 +1111,7 @@ def evaluate_packages(
             "dynamic_ft_shadow_method": (
                 "FUTURE_OPTIMIZATION_OPPORTUNITY_DIFFERENCE"
             ),
+            "bounded_future_frontier_auto_derived": supplied_future is None,
             "p_beats_hold": "NOT_COMPUTED",
             "monte_carlo": "NOT_RUN",
             "mini_league": "NOT_CONSUMED",

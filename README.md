@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T22:00:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T23:06:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -11,6 +11,48 @@
 > **V3 / V4 / V5 are frozen legacy**: no production execution, no production fallback, no new features, and no scheduler authority.
 
 This repository powers a governed personal Fantasy Premier League decision system. The active design deliberately separates **facts** from **models and decisions** so that factual acquisition can remain stable while V12 analytics evolve without creating duplicate authorities.
+
+## DEEP human-facing report contract
+
+The Canonical V12 DEEP report is a **23-section fail-closed human-facing contract**. The presentation may become easier to scan, but analytics and evidence must not be removed to shorten the report.
+
+Required visible order:
+
+```text
+S01   Decision / Current Status
+S02   OUR15
+S03   Decision Delta
+S04   Material Developments / Changes
+S05   Fixtures / Rest / Conditions
+S06   Formation / XI / Bench
+S06B  Formation & Mini-League Strategy
+S07   XI Battle
+S08   Captain / Vice Captain
+S09   Chip Strategy
+S10   Actionable Price Radar
+S11   Watchlist20
+S12   RISE20
+S13   FALL20
+S14   Package Optimizer / Transfer Frontier
+S14B  3-GW Squad Staging
+S15   Evidence Quality
+S15B  ICON+ Mini-League
+S16   ALL15 Tactical / Probability Review
+S16B  Post-Match Review GW1 → Now
+S17   Source Health / Freshness / Lineage
+S18   Action Board
+S19   Final Judgement
+```
+
+`S06B` reuses the existing P1.7 football-optimal lineup evidence and P1.8 downstream mini-league evidence. It explicitly distinguishes the highest raw mean-xPts formation from the P1.7 distributional football choice and the supportable mini-league objective. It does **not** create a second lineup optimizer or allow ownership alone to override football evidence.
+
+`S14B` is a non-binding three-GW roadmap. It can classify players/routes as `CORE / HOLD`, `WATCH`, `PREPARE OUT`, `PREPARE IN`, or `ACT CANDIDATE`, and must re-optimize when new injury, lineup, role, fixture, price, budget, or posterior evidence changes. Staging is never treated as a promise to execute a future transfer.
+
+`S16B` makes the existing GW1→Now evidence visibly consumable: match-by-match minutes/start status, FPL output, xG/xA/xGI, shots/SOT, box involvement, chance creation, set-piece/penalty/defensive evidence when available, role/shape context, recency weighting, Bayesian state, genuine role-change versus noise, and link-up dependency. Material non-owned universe candidates use the same existing full-universe post-match materiality path.
+
+DEEP acceptance is intentionally fail-closed across the Canonical catalog, semantic human-facing manifest, PRE_RENDER QA, actual visible-body POST_RENDER QA, and HUMAN_FACING QA. Missing `S06B`, `S14B`, or `S16B`, or silently removing any older DEEP backbone section, cannot pass. Exact15/exact20 completeness and anti-fabrication rules remain unchanged.
+
+This contract does not move factual ownership out of V6. V6 acquisition, source adapters, publication, identity, scheduler, and factual schemas remain untouched by this report-plane enhancement.
 
 
 ## V12 Stage 2 position-specific probabilistic engine

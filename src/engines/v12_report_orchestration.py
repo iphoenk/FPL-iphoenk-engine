@@ -1350,24 +1350,83 @@ def build_signal_delta(
     return {"status": "AVAILABLE", "rows": rows}
 
 
-def _locked_default(label: str, locked_state: Mapping[str, Any]) -> dict[str, Any] | None:
-    upper = label.upper()
-    if "FORMATION/XI/BENCH" in upper:
+_DEEP_LEGACY_LABEL_ALIASES: dict[str, tuple[str, ...]] = {
+    "S01": ("Decision/status",),
+    "S02": ("OUR15",),
+    "S03": ("DECISION DELTA",),
+    "S04": ("Changes",),
+    "S05": ("Fixtures/rest/conditions",),
+    "S06": ("Formation/XI/bench",),
+    "S07": ("XI battle",),
+    "S08": ("C/VC",),
+    "S09": ("Chip",),
+    "S10": ("Actionable Price Radar",),
+    "S11": ("Watchlist20 exact20",),
+    "S12": ("RISE20 exact20 where required",),
+    "S13": ("FALL20 exact20 where required",),
+    "S14": ("Package optimizer/frontier including HOLD baseline",),
+    "S15": ("Evidence quality",),
+    "S15B": ("ICON+ mini-league",),
+    "S16": ("ALL15 exact15 next-GW tactical/probability table",),
+    "S17": ("Source health/freshness/lineage",),
+    "S18": ("WAIT/PREPARE/ACT + trigger/reversal",),
+    "S19": ("Final judgement",),
+}
+
+
+def _payload_for_section(
+    payloads: Mapping[str, Mapping[str, Any]],
+    *,
+    section_id: str,
+    label: str,
+) -> Mapping[str, Any] | None:
+    direct = payloads.get(section_id) or payloads.get(label)
+    if direct is not None:
+        return direct
+    for alias in _DEEP_LEGACY_LABEL_ALIASES.get(section_id, ()):
+        if alias in payloads:
+            return payloads[alias]
+    return None
+
+
+def _locked_default(
+    section_id: str,
+    label: str,
+    locked_state: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    sid = str(section_id or "").upper()
+    if sid == "S06":
+        raw_bench = locked_state.get("bench")
+        if isinstance(raw_bench, Mapping):
+            bench = dict(raw_bench)
+        else:
+            bench_rows = list(raw_bench or [])
+            bench = {
+                "gk": bench_rows[0] if bench_rows else None,
+                "order": bench_rows[1:4],
+            }
         return {
             "state": "COMPLETE",
             "content": {
                 "status": "GW LOCKED — NO EXECUTABLE XI CHANGE",
                 "formation": locked_state.get("formation"),
+                "starting_xi": locked_state.get("xi"),
                 "xi": locked_state.get("xi"),
-                "bench": locked_state.get("bench"),
+                "bench": bench,
+                "lineup_score": {"state": "LOCKED"},
+                "formation_comparison": [],
             },
         }
-    if "XI BATTLE" in upper:
+    if sid == "S07":
         return {
             "state": "COMPLETE",
-            "content": {"status": "GW LOCKED — XI battle retained as factual locked state"},
+            "content": {
+                "status": "GW LOCKED — XI battle retained as factual locked state",
+                "battles": [],
+                "empty_is_truthful": True,
+            },
         }
-    if label.upper() == "C/VC":
+    if sid == "S08":
         return {
             "state": "COMPLETE",
             "content": {
@@ -1376,7 +1435,7 @@ def _locked_default(label: str, locked_state: Mapping[str, Any]) -> dict[str, An
                 "vice_captain": locked_state.get("vice_captain"),
             },
         }
-    if label.upper() == "CHIP":
+    if sid == "S09":
         return {
             "state": "COMPLETE",
             "content": {"status": "LOCKED", "chip": locked_state.get("chip")},
@@ -1408,9 +1467,13 @@ def _materialize_canonical_report(
         contract["expected_section_ids"],
         contract["expected_visible_order"],
     ):
-        raw = payloads.get(section_id) or payloads.get(label)
+        raw = _payload_for_section(
+            payloads,
+            section_id=section_id,
+            label=label,
+        )
         if raw is None and current_gw_locked:
-            raw = _locked_default(label, locked)
+            raw = _locked_default(section_id, label, locked)
         if raw is None:
             raw = {
                 "state": "UNAVAILABLE",
@@ -1448,8 +1511,12 @@ def _materialize_canonical_report(
         if (
             universe_movers is not None
             and universe_movers_target_label
-            and str(label).upper()
-            == str(universe_movers_target_label).upper()
+            and (
+                str(section_id).upper()
+                == str(universe_movers_target_label).upper()
+                or str(label).upper()
+                == str(universe_movers_target_label).upper()
+            )
         ):
             content = dict(content or {})
             if "universe_movers" in content:
@@ -1493,6 +1560,7 @@ def _materialize_canonical_report(
         "exact_canonical_order": [row["section_id"] for row in sections]
         == contract["expected_section_ids"],
         "numbered_headings": 19 if structural_mode == "DEEP" else len(sections),
+        "rendered_blocks_including_suffix_sections": len(sections), 
         "rendered_blocks_including_15B": len(sections),
         "universe_movers_attachment_count": mover_attachments,
         "universe_movers_visible": mover_attachments == 1,
@@ -1910,7 +1978,7 @@ def materialize_deep_report(
             (
                 row
                 for row in report["sections"]
-                if str(row.get("label") or "").strip().upper() == "CHANGES"
+                if str(row.get("section_id") or "").strip().upper() == "S04"
             ),
             None,
         )
@@ -1930,7 +1998,7 @@ def materialize_deep_report(
             (
                 row
                 for row in report["sections"]
-                if "PACKAGE OPTIMIZER" in str(row.get("label") or "").upper()
+                if str(row.get("section_id") or "").strip().upper() == "S14"
             ),
             None,
         )
@@ -1966,7 +2034,7 @@ def _post_match_structural_route(
         "DEEP+MATCH",
         "MATCH+DEEP",
     }:
-        return "DEEP", "Changes"
+        return "DEEP", "S04"
     return mode, None
 
 
@@ -2239,6 +2307,116 @@ def _markdown_table(
     return [header, separator, *body]
 
 
+DEEP_HUMAN_SECTION_REQUIREMENTS: dict[str, tuple[str, ...]] = {
+    "S01": ("operational_state", "planning_gw", "primary_decision", "key_decision_driver"),
+    "S02": ("rows",),
+    "S03": ("decision_delta",),
+    "S04": ("changes",),
+    "S05": ("fixtures",),
+    "S06": ("formation", "starting_xi", "bench", "lineup_score", "formation_comparison"),
+    "S06B": (
+        "stance",
+        "raw_ev_formation",
+        "mini_league_objective_formation",
+        "formation_alternatives",
+        "high_eo_protection",
+        "differential_slots",
+    ),
+    "S07": ("battles",),
+    "S08": ("captain", "vice_captain"),
+    "S09": ("chip",),
+    "S10": ("rows",),
+    "S11": ("rows",),
+    "S12": ("rows",),
+    "S13": ("rows",),
+    "S14": ("package_routes", "frontier"),
+    "S14B": ("staging_rows", "squad_classification", "target_formation"),
+    "S15": ("evidence_quality",),
+    "S15B": ("current_league_context", "exposures"),
+    "S16": ("rows", "position_mechanisms"),
+    "S16B": ("our15", "material_universe_candidates", "recency_weighting", "bayesian_update"),
+    "S17": ("engine_data_status", "source_health"),
+    "S18": ("NOW", "NEXT", "TRIGGERS", "REVERSAL"),
+    "S19": ("final_judgement",),
+}
+
+
+def build_deep_human_facing_manifest(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Durable semantic manifest for required DEEP human-facing content."""
+    sections = {
+        str(row.get("section_id") or "").strip().upper(): dict(row)
+        for row in report.get("sections") or []
+        if isinstance(row, Mapping)
+    }
+    entries: list[dict[str, Any]] = []
+    failures: list[str] = []
+    for section_id, required_keys in DEEP_HUMAN_SECTION_REQUIREMENTS.items():
+        section = sections.get(section_id)
+        if section is None:
+            failures.append(f"HUMAN_SECTION_MISSING={section_id}")
+            entries.append({
+                "section_id": section_id,
+                "status": "MISSING",
+                "required_keys": list(required_keys),
+                "missing_keys": list(required_keys),
+            })
+            continue
+        content = section.get("content")
+        payload = dict(content or {}) if isinstance(content, Mapping) else {}
+        missing = [key for key in required_keys if key not in payload]
+        empty = [
+            key
+            for key in required_keys
+            if key in payload and payload.get(key) in (None, "", [], {})
+        ]
+        # Degraded/unavailable sections may truthfully carry empty factual rows,
+        # but the semantic key must remain visible. Some COMPLETE decision
+        # sections can also be truthfully empty when the payload explicitly
+        # proves there is no material item (for example no XI battle).
+        state = str(section.get("state") or "").upper()
+        truthful_empty = payload.get("empty_is_truthful") is True
+        all_required_empty = bool(required_keys) and len(empty) == len(required_keys)
+        hard_empty = (
+            list(required_keys)
+            if state == "COMPLETE" and all_required_empty and not truthful_empty
+            else []
+        )
+        if missing:
+            failures.append(
+                f"HUMAN_SECTION_KEYS_MISSING={section_id}:{','.join(missing)}"
+            )
+        if hard_empty:
+            failures.append(
+                f"HUMAN_SECTION_CONTENT_EMPTY={section_id}:{','.join(hard_empty)}"
+            )
+        entries.append({
+            "section_id": section_id,
+            "label": section.get("label"),
+            "status": state,
+            "required_keys": list(required_keys),
+            "missing_keys": missing,
+            "empty_keys": empty,
+            "semantic_pass": not missing and not hard_empty,
+        })
+    return {
+        "contract": "V12_DEEP_HUMAN_FACING_MANIFEST_V2",
+        "required_section_ids": list(DEEP_HUMAN_SECTION_REQUIREMENTS),
+        "entries": entries,
+        "status": "PASS" if not failures else "FAIL",
+        "failures": failures,
+    }
+
+
+def validate_deep_human_facing_manifest(
+    manifest: Mapping[str, Any],
+) -> list[str]:
+    if str(manifest.get("status") or "").upper() == "PASS":
+        return []
+    return [str(value) for value in manifest.get("failures") or []]
+
+
 def _render_deep_visible_contract_lines(
     *,
     section_id: str,
@@ -2273,6 +2451,8 @@ def _render_deep_visible_contract_lines(
                     "p_dnp",
                     "xmins",
                     "tactical_role",
+                    "injury_rotation_warning",
+                    "price_relevance",
                     "1gw",
                     "3gw",
                     "5gw",
@@ -2289,6 +2469,8 @@ def _render_deep_visible_contract_lines(
                         row.get("p_dnp"),
                         row.get("xmins"),
                         row.get("tactical_role"),
+                        row.get("injury_rotation_warning", "NONE_MATERIAL"),
+                        row.get("price_relevance", "NONE_MATERIAL"),
                         row.get("gw_plus_1"),
                         row.get("three_gw"),
                         row.get("five_gw"),
@@ -2330,9 +2512,273 @@ def _render_deep_visible_contract_lines(
             player_name(row)
             for row in (bench.get("order") or [])
         )
+        lines.append(f"FORMATION: {payload.get('formation') or 'UNAVAILABLE'}")
         lines.append("XI: " + ", ".join(xi_names))
         lines.append("BENCH: " + ", ".join(bench_names))
-        excluded.extend(("starting_xi", "bench"))
+        score = dict(payload.get("lineup_score") or {})
+        lines.append(
+            "PROJECTED XI SCORE: "
+            + str(
+                score.get("xpts_mean")
+                if score.get("xpts_mean") is not None
+                else score.get("expected_fpl_points_with_captain_vice", "UNAVAILABLE")
+            )
+        )
+        comparisons = [
+            dict(item)
+            for item in payload.get("formation_comparison") or []
+            if isinstance(item, Mapping)
+        ]
+        if comparisons:
+            lines.append("FORMATION ALTERNATIVES:")
+            lines.extend(
+                _markdown_table(
+                    ("formation", "projected_points", "route_utility", "downside", "upside", "selected"),
+                    [
+                        (
+                            item.get("formation"),
+                            item.get("expected_fpl_points_with_captain_vice"),
+                            item.get("route_utility"),
+                            item.get("distributional_downside"),
+                            item.get("supportable_upside"),
+                            item.get("selected"),
+                        )
+                        for item in comparisons
+                    ],
+                )
+            )
+        else:
+            lines.append("FORMATION ALTERNATIVES: NONE MATERIAL / NONE SUPPORTABLE")
+        excluded.extend(("starting_xi", "bench", "formation_comparison", "lineup_score"))
+
+    elif section_id == "S06B":
+        lines.append(f"MINI-LEAGUE STANCE: {payload.get('stance') or 'UNAVAILABLE'}")
+        league = dict(payload.get("league_context") or {})
+        lines.append(
+            "LEAGUE POSITION: "
+            f"rank={league.get('our_rank', 'UNAVAILABLE')} / "
+            f"{league.get('manager_count', 'UNAVAILABLE')} | "
+            f"points={league.get('our_total_points', 'UNAVAILABLE')} | "
+            f"leader_gap={league.get('points_to_leader', 'UNAVAILABLE')} | "
+            f"top3_gap={league.get('points_to_top_3', 'UNAVAILABLE')} | "
+            f"top5_gap={league.get('points_to_top_5', 'UNAVAILABLE')} | "
+            f"rival_above_gap={league.get('points_to_nearest_above', 'UNAVAILABLE')} | "
+            f"rival_below_cushion={league.get('points_ahead_nearest_below', 'UNAVAILABLE')}"
+        )
+        lines.append(f"RAW EV FORMATION: {payload.get('raw_ev_formation') or 'UNAVAILABLE'}")
+        lines.append(
+            "MINI-LEAGUE OBJECTIVE FORMATION: "
+            + str(payload.get("mini_league_objective_formation") or "UNAVAILABLE")
+        )
+        lines.append(
+            "PROJECTED POINTS DIFFERENCE: "
+            + str(payload.get("projected_points_difference", "UNAVAILABLE"))
+        )
+        lines.append(
+            "OBJECTIVES SAME: "
+            + str(payload.get("objectives_same", "UNAVAILABLE"))
+        )
+        lines.append(
+            "RATIONAL DIFFERENTIAL EXPOSURE: "
+            + str(payload.get("rational_differential_exposure", "UNAVAILABLE"))
+        )
+        lines.append(
+            "AGGRESSIVE DOWNSIDE: "
+            + str(payload.get("aggressive_downside") or "UNAVAILABLE")
+        )
+        alternatives = [
+            dict(item)
+            for item in payload.get("formation_alternatives") or []
+            if isinstance(item, Mapping)
+        ]
+        if alternatives:
+            lines.extend(
+                _markdown_table(
+                    ("formation", "projected_points", "utility", "downside", "upside", "selected"),
+                    [
+                        (
+                            item.get("formation"),
+                            item.get("expected_fpl_points_with_captain_vice"),
+                            item.get("route_utility"),
+                            item.get("distributional_downside"),
+                            item.get("supportable_upside"),
+                            item.get("selected"),
+                        )
+                        for item in alternatives
+                    ],
+                )
+            )
+        lines.append(
+            "HIGH-EO PROTECTION: "
+            + ", ".join(
+                str(item.get("player") or item.get("element_id"))
+                for item in payload.get("high_eo_protection") or []
+                if isinstance(item, Mapping)
+            )
+        )
+        lines.append(
+            "DIFFERENTIAL SLOTS: "
+            + ", ".join(
+                str(item.get("player") or item.get("element_id"))
+                for item in payload.get("differential_slots") or []
+                if isinstance(item, Mapping)
+            )
+        )
+        excluded.extend((
+            "formation_alternatives",
+            "high_eo_protection",
+            "differential_slots",
+        ))
+
+    elif section_id == "S07":
+        battles = [
+            dict(item)
+            for item in payload.get("battles") or []
+            if isinstance(item, Mapping)
+        ]
+        lines.extend(
+            _markdown_table(
+                ("player_a", "player_b", "xmins_a", "xmins_b", "p_start_a", "p_start_b", "1gw_a", "1gw_b", "eo_a", "eo_b", "starter", "reason"),
+                [
+                    (
+                        item.get("player_a"),
+                        item.get("player_b"),
+                        item.get("xmins_a"),
+                        item.get("xmins_b"),
+                        item.get("p_start_a"),
+                        item.get("p_start_b"),
+                        item.get("projection_1gw_a"),
+                        item.get("projection_1gw_b"),
+                        item.get("eo_a"),
+                        item.get("eo_b"),
+                        item.get("final_starter"),
+                        item.get("tactical_reason"),
+                    )
+                    for item in battles
+                ],
+            )
+        )
+        excluded.append("battles")
+
+    elif section_id == "S08":
+        captain_rows = []
+        for role_label, raw_candidate in (
+            ("C", payload.get("captain")),
+            ("VC", payload.get("vice_captain")),
+        ):
+            candidate = (
+                dict(raw_candidate)
+                if isinstance(raw_candidate, Mapping)
+                else {
+                    "element_id": raw_candidate,
+                    "player": (
+                        owned_names.get(int(raw_candidate), str(raw_candidate))
+                        if raw_candidate is not None and str(raw_candidate).isdigit()
+                        else raw_candidate
+                    ),
+                }
+            )
+            goal_involvement = dict(candidate.get("goal_involvement") or {})
+            fixture = dict(candidate.get("fixture") or {})
+            captain_rows.append(
+                (
+                    role_label,
+                    candidate.get("player") or candidate.get("element_id"),
+                    candidate.get("expected_points"),
+                    candidate.get("ceiling_q90"),
+                    candidate.get("haul_probability"),
+                    candidate.get("xmins"),
+                    candidate.get("p_start"),
+                    goal_involvement.get("p_goal"),
+                    goal_involvement.get("p_assist"),
+                    goal_involvement.get("p_return"),
+                    candidate.get("penalties"),
+                    candidate.get("set_pieces"),
+                    fixture.get("opponent"),
+                    "H" if fixture.get("home") is True else "A" if fixture.get("home") is False else "UNAVAILABLE",
+                    candidate.get("captain_pct"),
+                    candidate.get("eo_pct"),
+                    candidate.get("mini_league_downside"),
+                    candidate.get("mini_league_upside"),
+                )
+            )
+        lines.extend(
+            _markdown_table(
+                (
+                    "role",
+                    "player",
+                    "xPts",
+                    "Q90",
+                    "P(haul)",
+                    "xMins",
+                    "P(start)",
+                    "P(goal)",
+                    "P(assist)",
+                    "P(return)",
+                    "penalty",
+                    "set-piece",
+                    "fixture",
+                    "H/A",
+                    "captain%",
+                    "EO%",
+                    "ML downside",
+                    "ML upside",
+                ),
+                captain_rows,
+            )
+        )
+        lines.append(
+            "CAPTAIN AUTHORITY: "
+            + str(
+                payload.get("authority")
+                or "distributional evidence; raw 1GW mean alone is insufficient"
+            )
+        )
+        excluded.extend(("captain", "vice_captain", "captain_safe_pool"))
+
+    elif section_id == "S14B":
+        lines.append("STAGING IS A ROADMAP, NOT A TRANSFER COMMITMENT.")
+        staging = [
+            dict(item)
+            for item in payload.get("staging_rows") or []
+            if isinstance(item, Mapping)
+        ]
+        lines.extend(
+            _markdown_table(
+                ("Timing", "Planned Move", "Status", "Trigger", "Expected Gain", "Dependency"),
+                [
+                    (
+                        item.get("timing"),
+                        item.get("planned_move"),
+                        item.get("status"),
+                        item.get("trigger"),
+                        item.get("expected_gain"),
+                        item.get("dependency"),
+                    )
+                    for item in staging
+                ],
+            )
+        )
+        classifications = [
+            dict(item)
+            for item in payload.get("squad_classification") or []
+            if isinstance(item, Mapping)
+        ]
+        if classifications:
+            lines.extend(
+                _markdown_table(
+                    ("player", "classification", "reason"),
+                    [
+                        (
+                            item.get("player"),
+                            item.get("classification"),
+                            item.get("reason"),
+                        )
+                        for item in classifications
+                    ],
+                )
+            )
+        excluded.extend(("staging_rows", "squad_classification"))
 
     elif section_id == "S11":
         rows = [
@@ -2506,6 +2952,45 @@ def _render_deep_visible_contract_lines(
             "MINI_LEAGUE_DENOMINATOR: "
             + ("COMPLETE" if coverage == "FULL" else "DEGRADED")
         )
+        context = dict(payload.get("current_league_context") or {})
+        lines.append(
+            "LEAGUE LANDSCAPE: "
+            f"rank={context.get('our_rank')} / {context.get('manager_count')} | "
+            f"points={context.get('our_total_points')} | "
+            f"leader={context.get('leader_points')} | "
+            f"leader_gap={context.get('points_to_leader')} | "
+            f"top3_gap={context.get('points_to_top_3')} | "
+            f"top5_gap={context.get('points_to_top_5')} | "
+            f"above_gap={context.get('points_to_nearest_above')} | "
+            f"below_cushion={context.get('points_ahead_nearest_below')}"
+        )
+        exposures = [
+            dict(item)
+            for item in payload.get("exposures") or []
+            if isinstance(item, Mapping)
+        ]
+        if exposures:
+            lines.extend(
+                _markdown_table(
+                    ("element_id", "owned_count", "owned_pct", "starter_count", "starter_pct", "captain_count", "captain_pct", "vice_count", "vice_pct", "eo_pct"),
+                    [
+                        (
+                            item.get("element_id"),
+                            item.get("ownership_count"),
+                            item.get("ownership_pct"),
+                            item.get("starter_count"),
+                            item.get("starter_pct"),
+                            item.get("captain_count"),
+                            item.get("captain_pct"),
+                            item.get("vice_count"),
+                            item.get("vice_pct"),
+                            item.get("eo_pct"),
+                        )
+                        for item in exposures
+                    ],
+                )
+            )
+        excluded.extend(("current_league_context", "exposures"))
 
     elif section_id == "S16":
         rows = [
@@ -2545,6 +3030,84 @@ def _render_deep_visible_contract_lines(
             )
         )
         excluded.append("rows")
+
+    elif section_id == "S16B":
+        lines.append(
+            "RECENCY WEIGHTING: "
+            + str(payload.get("recency_weighting") or "EXPONENTIAL_HALF_LIFE_GW")
+        )
+        lines.append(
+            "BAYESIAN UPDATE: "
+            + str(payload.get("bayesian_update") or "POSTERIOR_RECENT_RATE_WITH_SHRINKAGE")
+        )
+        for item in payload.get("our15") or []:
+            if not isinstance(item, Mapping):
+                continue
+            lines.append(
+                "### "
+                + str(item.get("player") or item.get("element_id"))
+                + " | GW1→NOW"
+            )
+            trajectory = dict(item.get("trajectory") or {})
+            role = dict(trajectory.get("role_minutes_evolution") or {})
+            lines.append(
+                "TREND: "
+                f"{trajectory.get('trajectory_classification')} | "
+                f"sustained_role_change={role.get('sustained_role_change')} | "
+                f"recent_role={role.get('recent_role')} | prior_role={role.get('prior_role')}"
+            )
+            for match in trajectory.get("matches") or []:
+                if not isinstance(match, Mapping):
+                    continue
+                lines.append(
+                    "- GW{gw} vs {opp} {ha} | {start} {mins}m | "
+                    "Pts {pts} | xG {xg} xA {xa} xGI {xgi} | "
+                    "Sh {shots} SOT {sot} Box {box} KP/CC {kp}/{cc} BC {bc} | "
+                    "SP {sp} PEN {pen} DEF {deff} | shape {shape} role {role}".format(
+                        gw=match.get("gw"),
+                        opp=match.get("opponent_team_id"),
+                        ha="H" if match.get("home") is True else "A" if match.get("home") is False else "?",
+                        start="START" if match.get("starter") else "SUB",
+                        mins=match.get("minutes"),
+                        pts=match.get("fpl_points"),
+                        xg=match.get("xg"),
+                        xa=match.get("xa"),
+                        xgi=match.get("xgi"),
+                        shots=match.get("shots"),
+                        sot=match.get("shots_on_target"),
+                        box=match.get("box_touches"),
+                        kp=match.get("key_passes"),
+                        cc=match.get("chances_created"),
+                        bc=match.get("big_chances"),
+                        sp=match.get("set_piece_role", match.get("set_piece_involvement")),
+                        pen=match.get("penalty_role", match.get("penalty_involvement")),
+                        deff=match.get("defensive_contribution"),
+                        shape=match.get("team_formation"),
+                        role=match.get("role"),
+                    )
+                )
+            link = item.get("linkup_dependency")
+            if link:
+                lines.append("LINK-UP DEPENDENCY: " + _markdown_cell(link))
+        candidates = [
+            dict(item)
+            for item in payload.get("material_universe_candidates") or []
+            if isinstance(item, Mapping)
+        ]
+        if candidates:
+            lines.append("### MATERIAL UNIVERSE CANDIDATES")
+            for item in candidates:
+                trajectory = dict(item.get("trajectory") or {})
+                lines.append(
+                    "- "
+                    f"{item.get('name') or item.get('element_id')} | "
+                    f"{item.get('primary_classification')} | "
+                    f"trend={trajectory.get('trajectory_classification')} | "
+                    f"xMins={(item.get('minutes') or {}).get('xmins')} | "
+                    f"P(start)={(item.get('minutes') or {}).get('p_start')} | "
+                    f"1/3/5GW={item.get('horizon_1gw')}/{item.get('horizon_3gw')}/{item.get('horizon_5gw')}"
+                )
+        excluded.extend(("our15", "material_universe_candidates"))
 
     elif section_id == "S17":
         lines.extend(

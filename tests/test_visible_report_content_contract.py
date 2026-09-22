@@ -782,14 +782,14 @@ def _degraded_watchlist_body(pre, *, include_label=True):
     output = []
     in_watchlist = False
     for line in body.splitlines():
-        if line.startswith("## 10."):
+        if line.startswith("## 11."):
             in_watchlist = True
-        elif line.startswith("## 11."):
+        elif line.startswith("## 12."):
             in_watchlist = False
         if in_watchlist and any(line.startswith(f"| {rank} |") for rank in (18, 19, 20)):
             continue
         output.append(line)
-        if include_label and line.startswith("## 10."):
+        if include_label and line.startswith("## 11."):
             output.extend([
                 "WATCHLIST20 STATE=DEGRADED",
                 "AVAILABLE=17 EXPECTED=20",

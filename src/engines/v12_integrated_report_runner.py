@@ -48,12 +48,14 @@ from src.engines.v12_package_utility import (
 from src.engines.visible_content_proof import canonical_mode_contract
 from src.engines.v12_report_orchestration import (
     build_actionable_price_radar,
+    build_deep_human_facing_manifest,
     build_price20,
     build_visible_mathematical_decision_stack,
     build_watchlist20,
     materialize_all15,
     materialize_deep_report,
     render_deep_text,
+    validate_deep_human_facing_manifest,
     validate_human_facing_body,
 )
 from src.runtime_v6.domains.report_plane.report_qa import (
@@ -62,6 +64,11 @@ from src.runtime_v6.domains.report_plane.report_qa import (
 )
 from src.runtime_v6.domains.report_plane.visible_body_contract import _parse_sections
 from src.engines.v12_tactical_role import attach_tactical_role_scores
+from src.engines.v12_contextual_dynamics import (
+    build_player_trajectory,
+    build_post_match_deep_details,
+    build_post_match_universe_scan,
+)
 from src.models.historical_projection import build as build_player_projections
 from src.models.v12_analytics_foundation import (
     load_v6_analytics_foundation,
@@ -1137,7 +1144,16 @@ def _stage3_math_proof(
 
 def _lineup_content(lineup: Mapping[str, Any] | None) -> dict[str, Any]:
     if not lineup:
-        return {"status": "UNAVAILABLE"}
+        return {
+            "status": "UNAVAILABLE",
+            "formation": "UNAVAILABLE",
+            "starting_xi": [],
+            "bench": {"gk": None, "order": []},
+            "captain": None,
+            "vice_captain": None,
+            "lineup_score": {},
+            "formation_comparison": [],
+        }
     return {
         "formation": lineup.get("formation"),
         "starting_xi": lineup.get("starting_xi"),
@@ -1147,6 +1163,583 @@ def _lineup_content(lineup: Mapping[str, Any] | None) -> dict[str, Any]:
         "lineup_score": lineup.get("lineup_score"),
         "formation_comparison": lineup.get("formation_comparison"),
     }
+
+
+def _surface_element(value: Any) -> int | None:
+    if isinstance(value, Mapping):
+        value = value.get("element", value.get("element_id"))
+    try:
+        out = int(value)
+    except (TypeError, ValueError):
+        return None
+    return out if out > 0 else None
+
+
+def _projection_map(projections: Mapping[str, Any] | None) -> dict[int, dict[str, Any]]:
+    return {
+        int(row.get("element") or 0): dict(row)
+        for row in (projections or {}).get("players") or []
+        if isinstance(row, Mapping) and int(row.get("element") or 0) > 0
+    }
+
+
+def _horizon_mean(player: Mapping[str, Any], horizon: str) -> Any:
+    return ((player.get("horizons") or {}).get(horizon) or {}).get("mean")
+
+
+def _enrich_all15_rows(
+    *,
+    all15: Mapping[str, Any] | None,
+    projections: Mapping[str, Any] | None,
+    predictor: Mapping[str, Any],
+    owned: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    pmap = _projection_map(projections)
+    predictor_map = _price_player_map(predictor)
+    owned_map = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in owned
+        if int(row.get("element_id") or 0) > 0
+    }
+    rows: list[dict[str, Any]] = []
+    for raw in (all15 or {}).get("rows") or []:
+        row = dict(raw)
+        element = int(row.get("element_id") or 0)
+        player = pmap.get(element) or {}
+        xm = dict(player.get("xmins") or {})
+        price = predictor_map.get(element) or {}
+        owned_row = owned_map.get(element) or {}
+        p_start = row.get("p_start", xm.get("start_probability"))
+        xmins = row.get("xmins", xm.get("expected_minutes"))
+        status = str(player.get("status") or "a").lower()
+        warnings: list[str] = []
+        if status != "a":
+            warnings.append(f"STATUS_{status.upper()}")
+        try:
+            if p_start is not None and float(p_start) < 0.70:
+                warnings.append("START_RISK")
+        except (TypeError, ValueError):
+            pass
+        try:
+            if xmins is not None and float(xmins) < 60.0:
+                warnings.append("MINUTES_RISK")
+        except (TypeError, ValueError):
+            pass
+        direction = str(price.get("direction") or price.get("change_direction") or "").upper()
+        progress = price.get("projected_percent", price.get("current_progress_percent"))
+        price_relevance = "NONE_MATERIAL"
+        if direction in {"RISE", "FALL"}:
+            price_relevance = (
+                f"{direction}"
+                + (f" {progress}%" if progress is not None else "")
+            )
+        row.update({
+            "availability": row.get("p_available", xm.get("availability")),
+            "projection_1gw": row.get("gw_plus_1", _horizon_mean(player, "1")),
+            "projection_3gw": row.get("three_gw", _horizon_mean(player, "3")),
+            "projection_5gw": row.get("five_gw", _horizon_mean(player, "5")),
+            "tactical_role_note": (
+                player.get("tactical_role")
+                or player.get("system_context")
+                or row.get("tactical_role")
+            ),
+            "injury_rotation_warning": ", ".join(warnings) if warnings else "NONE_MATERIAL",
+            "price_relevance": price_relevance,
+            "current_price": owned_row.get("current_price", player.get("now_cost")),
+            "purchase_price": owned_row.get("purchase_price"),
+            "selling_price": owned_row.get("selling_price"),
+        })
+        rows.append(row)
+    return rows
+
+
+def _mini_context(mini: Mapping[str, Any] | None) -> dict[str, Any]:
+    payload = dict(mini or {})
+    return dict(
+        payload.get("current_league_context")
+        or payload.get("current_context")
+        or {}
+    )
+
+
+def _captain_candidate_review(
+    *,
+    candidate: Mapping[str, Any] | None,
+    projections: Mapping[str, Any] | None,
+    mini: Mapping[str, Any] | None,
+    mini_league_stance: str,
+) -> dict[str, Any]:
+    """Visible C/VC evidence using existing P1.3/P1.6/P1.7/P1.8 owners."""
+    raw_candidate = dict(candidate or {})
+    element = _surface_element(raw_candidate)
+    pmap = _projection_map(projections)
+    player = pmap.get(element or -1) or {}
+    mechanism = (
+        _visible_position_mechanism(player, action="HOLD")
+        if player
+        else {}
+    )
+    exposure = next(
+        (
+            dict(row)
+            for row in (mini or {}).get("exposures") or []
+            if isinstance(row, Mapping)
+            and int(row.get("element_id") or 0) == int(element or 0)
+        ),
+        {},
+    )
+    one = dict(mechanism.get("1GW") or {})
+    complete = dict(mechanism.get("complete_player_distribution") or {})
+    return {
+        "element_id": element,
+        "player": (
+            raw_candidate.get("name")
+            or mechanism.get("player")
+            or (f"element:{element}" if element else "UNAVAILABLE")
+        ),
+        "expected_points": one.get("mean", raw_candidate.get("xpts_mean")),
+        "ceiling_q90": one.get("Q90"),
+        "haul_probability": one.get("p_haul"),
+        "blank_probability": one.get("p_blank"),
+        "xmins": mechanism.get("xmins", raw_candidate.get("xmins")),
+        "p_start": mechanism.get("p_start", raw_candidate.get("p_start")),
+        "goal_involvement": {
+            "goal_process": mechanism.get("goal_process"),
+            "creation_process": mechanism.get("creation_process"),
+            "p_return": complete.get("P_return"),
+            "p_goal": complete.get("P_goal"),
+            "p_assist": complete.get("P_assist"),
+        },
+        "penalties": mechanism.get("penalty_process"),
+        "set_pieces": mechanism.get("set_piece_process"),
+        "fixture": {
+            "opponent": mechanism.get("opponent"),
+            "home": mechanism.get("home"),
+            "dynamic_matchup": mechanism.get("dynamic_matchup"),
+        },
+        "captain_count": exposure.get("captain_count"),
+        "captain_pct": exposure.get("captain_pct"),
+        "eo_pct": exposure.get("eo_pct"),
+        "mini_league_upside": (
+            "Lower captain/EO can create leverage only when football evidence remains close."
+        ),
+        "mini_league_downside": (
+            "Fading a strong high-EO captain increases relative-rank downside."
+        ),
+        "mini_league_stance": mini_league_stance,
+        "raw_mean_is_not_sole_authority": True,
+    }
+
+
+def _formation_mini_league_strategy(
+    *,
+    lineup: Mapping[str, Any] | None,
+    mini: Mapping[str, Any] | None,
+    mini_overlay: Mapping[str, Any] | None,
+    projections: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    raw_formation = (lineup or {}).get("formation")
+    comparisons = [
+        dict(row)
+        for row in (lineup or {}).get("formation_comparison") or []
+        if isinstance(row, Mapping)
+    ]
+    overlay = dict(mini_overlay or {})
+    posture = str((overlay.get("risk_posture") or {}).get("posture") or "BALANCED").upper()
+    changed = bool((overlay.get("decision_delta") or {}).get("changed"))
+    if posture == "PROTECT":
+        stance = "PROTECT"
+    elif posture == "CHASE":
+        stance = "CHASE AGGRESSIVE"
+    elif changed:
+        stance = "CHASE MODERATE"
+    else:
+        stance = "BALANCED"
+
+    pmap = _projection_map(projections)
+    exposures = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in (mini or {}).get("exposures") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    }
+    xi_ids = [
+        element
+        for element in (
+            _surface_element(value)
+            for value in (lineup or {}).get("starting_xi") or []
+        )
+        if element is not None
+    ]
+    xi_exposure = []
+    for element in xi_ids:
+        exp = exposures.get(element) or {}
+        xi_exposure.append({
+            "element_id": element,
+            "player": (pmap.get(element) or {}).get("name") or f"element:{element}",
+            "ownership_pct": exp.get("ownership_pct"),
+            "starter_pct": exp.get("starter_pct"),
+            "captain_pct": exp.get("captain_pct"),
+            "eo_pct": exp.get("eo_pct"),
+        })
+    high_eo = sorted(
+        xi_exposure,
+        key=lambda row: float(
+            row.get("eo_pct")
+            if row.get("eo_pct") is not None
+            else row.get("starter_pct")
+            if row.get("starter_pct") is not None
+            else -1
+        ),
+        reverse=True,
+    )[:5]
+    differentials = sorted(
+        xi_exposure,
+        key=lambda row: float(
+            row.get("starter_pct")
+            if row.get("starter_pct") is not None
+            else 101
+        ),
+    )[:3]
+
+    rational = {
+        "PROTECT": "0-1",
+        "BALANCED": "1-2",
+        "CHASE MODERATE": "2-3",
+        "CHASE AGGRESSIVE": "3-4",
+    }[stance]
+    selected_comparison = next(
+        (row for row in comparisons if row.get("selected") is True),
+        {},
+    )
+    football_selected_points = selected_comparison.get(
+        "expected_fpl_points_with_captain_vice"
+    )
+    raw_ev_choice = (
+        max(
+            comparisons,
+            key=lambda row: float(
+                row.get("expected_fpl_points_with_captain_vice")
+                if row.get("expected_fpl_points_with_captain_vice") is not None
+                else float("-inf")
+            ),
+        )
+        if comparisons
+        else selected_comparison
+    )
+    raw_ev_formation = raw_ev_choice.get("formation") or raw_formation
+    raw_ev_points = raw_ev_choice.get(
+        "expected_fpl_points_with_captain_vice"
+    )
+    # P1.8 is a downstream relative-risk overlay and does not create a
+    # second lineup optimizer. Therefore the supportable mini-league
+    # formation is the existing P1.7 football-optimal route, while the report
+    # separately exposes the pure raw-mean formation for transparency.
+    objective_formation = raw_formation
+    objective_points = football_selected_points
+    projected_difference = (
+        round(float(objective_points) - float(raw_ev_points), 6)
+        if objective_points is not None and raw_ev_points is not None
+        else None
+    )
+    return {
+        "stance": stance,
+        "stance_source": "P1.8_DOWNSTREAM_RELATIVE_RISK_OVERLAY",
+        "league_context": _mini_context(mini),
+        "raw_ev_formation": raw_ev_formation or "UNAVAILABLE",
+        "football_optimal_formation": raw_formation or "UNAVAILABLE",
+        "mini_league_objective_formation": objective_formation or "UNAVAILABLE",
+        "objectives_same": (
+            raw_ev_formation == objective_formation
+            if raw_ev_formation and objective_formation
+            else None
+        ),
+        "projected_points_difference": projected_difference,
+        "raw_projected_points": raw_ev_points,
+        "mini_league_objective_projected_points": objective_points,
+        "formation_alternatives": comparisons,
+        "high_eo_protection": high_eo,
+        "differential_slots": differentials,
+        "rational_differential_exposure": rational,
+        "aggressive_downside": (
+            "Higher variance and avoidable rank loss if low-EO exposure replaces "
+            "strong high-EO expected-value coverage without a close football decision."
+        ),
+        "governance": {
+            "p1_7_football_optimal_first": True,
+            "p1_8_downstream_only": True,
+            "second_lineup_optimizer_created": False,
+            "raw_mean_not_sole_p1_7_objective": True,
+            "formation_switch_requires_supportable_existing_route": True,
+        },
+    }
+
+
+def _xi_battles(
+    *,
+    lineup: Mapping[str, Any] | None,
+    projections: Mapping[str, Any] | None,
+    mini: Mapping[str, Any] | None,
+) -> list[dict[str, Any]]:
+    proof = dict((lineup or {}).get("main_starting_xi_battle") or {})
+    starters = [
+        dict(row) for row in proof.get("starter_side") or []
+        if isinstance(row, Mapping)
+    ]
+    bench = [
+        dict(row) for row in proof.get("bench_side") or []
+        if isinstance(row, Mapping)
+    ]
+    pmap = _projection_map(projections)
+    exposures = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in (mini or {}).get("exposures") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    }
+    out: list[dict[str, Any]] = []
+    for a, b in zip(starters, bench):
+        aid = int(a.get("element") or 0)
+        bid = int(b.get("element") or 0)
+        pa = pmap.get(aid) or {}
+        pb = pmap.get(bid) or {}
+        xa = dict(pa.get("xmins") or {})
+        xb = dict(pb.get("xmins") or {})
+        ea = exposures.get(aid) or {}
+        eb = exposures.get(bid) or {}
+        out.append({
+            "player_a": pa.get("name") or a.get("name") or aid,
+            "player_b": pb.get("name") or b.get("name") or bid,
+            "xmins_a": xa.get("expected_minutes"),
+            "xmins_b": xb.get("expected_minutes"),
+            "p_start_a": xa.get("start_probability"),
+            "p_start_b": xb.get("start_probability"),
+            "projection_1gw_a": _horizon_mean(pa, "1"),
+            "projection_1gw_b": _horizon_mean(pb, "1"),
+            "ceiling_a": ((pa.get("horizons") or {}).get("1") or {}).get("quantiles"),
+            "ceiling_b": ((pb.get("horizons") or {}).get("1") or {}).get("quantiles"),
+            "fixture_a": ((pa.get("xpts_by_gw") or [{}])[0].get("fixtures") or [{}])[0].get("opponent") if pa.get("xpts_by_gw") else None,
+            "fixture_b": ((pb.get("xpts_by_gw") or [{}])[0].get("fixtures") or [{}])[0].get("opponent") if pb.get("xpts_by_gw") else None,
+            "role_a": pa.get("tactical_role") or pa.get("system_context"),
+            "role_b": pb.get("tactical_role") or pb.get("system_context"),
+            "eo_a": ea.get("eo_pct"),
+            "eo_b": eb.get("eo_pct"),
+            "tactical_reason": proof.get("status"),
+            "final_starter": pa.get("name") or a.get("name") or aid,
+            "utility_margin": proof.get("margin"),
+        })
+    return out
+
+
+def _three_gw_staging(
+    *,
+    planning_gw: int,
+    action: str,
+    stage3_decision: Mapping[str, Any] | None,
+    stage3_visible: Mapping[str, Any],
+    all15_rows: Sequence[Mapping[str, Any]],
+    lineup: Mapping[str, Any] | None,
+    finance: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    selected_id = str((stage3_decision or {}).get("selected_route_id") or "HOLD")
+    routes = [
+        dict(row)
+        for row in stage3_visible.get("package_routes") or []
+        if isinstance(row, Mapping)
+    ]
+    selected = next((row for row in routes if str(row.get("route")) == selected_id), {})
+    moves = dict(selected.get("moves") or {})
+    outs = [dict(row) for row in moves.get("out") or [] if isinstance(row, Mapping)]
+    ins = [dict(row) for row in moves.get("in") or [] if isinstance(row, Mapping)]
+    out_ids = {int(row.get("element") or 0) for row in outs if int(row.get("element") or 0) > 0}
+    xi_ids = {
+        element
+        for element in (
+            _surface_element(value)
+            for value in (lineup or {}).get("starting_xi") or []
+        )
+        if element is not None
+    }
+    classifications: list[dict[str, Any]] = []
+    for raw in all15_rows:
+        row = dict(raw)
+        element = int(row.get("element_id") or 0)
+        if element in out_ids:
+            classification = "ACT CANDIDATE" if action == "ACT" else "PREPARE OUT"
+            reason = f"selected material route {selected_id}"
+        elif element in xi_ids:
+            classification = "CORE / HOLD"
+            reason = "current P1.7 starting structure"
+        else:
+            classification = "WATCH"
+            reason = "bench/optionality slot; reassess with fresh role and fixture evidence"
+        classifications.append({
+            "element_id": element,
+            "player": row.get("player") or row.get("name") or f"element:{element}",
+            "classification": classification,
+            "reason": reason,
+        })
+    for incoming in ins:
+        classifications.append({
+            "element_id": incoming.get("element"),
+            "player": incoming.get("name") or f"element:{incoming.get('element')}",
+            "classification": "ACT CANDIDATE" if action == "ACT" else "PREPARE IN",
+            "reason": f"selected material route {selected_id}",
+        })
+
+    if selected_id == "HOLD" or not (outs and ins):
+        move_text = "SAVE FT / HOLD SQUAD"
+        status = "HOLD"
+    else:
+        pairs = []
+        for index in range(max(len(outs), len(ins))):
+            out_name = (outs[index].get("name") if index < len(outs) else None) or (
+                f"element:{outs[index].get('element')}" if index < len(outs) else "?"
+            )
+            in_name = (ins[index].get("name") if index < len(ins) else None) or (
+                f"element:{ins[index].get('element')}" if index < len(ins) else "?"
+            )
+            pairs.append(f"{out_name} → {in_name}")
+        move_text = "; ".join(pairs)
+        status = "ACT CANDIDATE" if action == "ACT" else "PREPARE"
+
+    staging_rows = [
+        {
+            "timing": f"GW{planning_gw}",
+            "planned_move": move_text,
+            "status": status,
+            "trigger": (
+                (stage3_decision or {}).get("reason")
+                or "fresh decision gate remains valid"
+            ),
+            "expected_gain": selected.get("three_gw", 0.0 if selected_id == "HOLD" else None),
+            "dependency": "fresh injury/lineup/role + affordability + price evidence",
+        },
+        {
+            "timing": f"GW{planning_gw + 1}",
+            "planned_move": "REOPTIMIZE FULL FRONTIER / SAVE FT IF NO EDGE",
+            "status": "WATCH",
+            "trigger": "new fixture, xMins, role, price or package evidence",
+            "expected_gain": "RECOMPUTE",
+            "dependency": "first staged move outcome and remaining bank/FT",
+        },
+        {
+            "timing": f"GW{planning_gw + 2}",
+            "planned_move": "REASSESS TARGET SHAPE AND CONTINGENCY",
+            "status": "WATCH",
+            "trigger": "fresh full-universe scan and Bayesian/post-match update",
+            "expected_gain": "RECOMPUTE",
+            "dependency": "prior-GW evidence; staging is non-binding",
+        },
+    ]
+    contingency = next(
+        (
+            row for row in routes
+            if str(row.get("route")) not in {"HOLD", selected_id}
+        ),
+        None,
+    )
+    return {
+        "squad_classification": classifications,
+        "staging_rows": staging_rows,
+        "ft_saving_plan": (
+            "SAVE FT" if action == "WAIT"
+            else "SAVE UNTIL TRIGGER" if action == "PREPARE"
+            else "USE ONLY IF ACT GATE REMAINS GREEN"
+        ),
+        "order_of_transfers": move_text,
+        "budget_dependency": {
+            "bank": (finance or {}).get("bank"),
+            "bank_status": (finance or {}).get("bank_status"),
+            "sell_value_status": (finance or {}).get("sell_value_status"),
+        },
+        "price_dependency": selected.get("price_risk"),
+        "player_dependency": "fresh P(start)/xMins/role/injury evidence",
+        "contingency": contingency,
+        "target_formation": (lineup or {}).get("formation") or "UNAVAILABLE",
+        "roadmap_is_not_transfer_commitment": True,
+        "roadmap_reoptimizes_on_new_evidence": True,
+    }
+
+
+def _post_match_review(
+    *,
+    projections: Mapping[str, Any] | None,
+    foundation: Mapping[str, Any] | None,
+    owned_ids: set[int],
+    current_gw: int,
+) -> dict[str, Any]:
+    if not projections or not foundation:
+        return {
+            "our15": [],
+            "material_universe_candidates": [],
+            "full_universe_scan": {},
+            "recency_weighting": "UNAVAILABLE",
+            "bayesian_update": "UNAVAILABLE",
+            "linkup_dependency": "UNAVAILABLE",
+        }
+    match_rows = list(foundation.get("player_match_rows") or [])
+    pmap = _projection_map(projections)
+    scan = build_post_match_universe_scan(
+        current_projection_players=list(pmap.values()),
+        previous_projection_players=None,
+        player_match_rows=match_rows,
+        current_gw=current_gw,
+        owned_element_ids=sorted(owned_ids),
+    )
+    our15 = []
+    for element in sorted(owned_ids):
+        player = pmap.get(element) or {}
+        trajectory = build_player_trajectory(
+            match_rows,
+            player_id=element,
+            current_gw=current_gw,
+        )
+        fixture_contexts = list(
+            ((player.get("contextual_dynamics") or {}).get("fixture_contexts"))
+            or []
+        )
+        linkup = (
+            (fixture_contexts[0].get("linkup_network") or {})
+            if fixture_contexts and isinstance(fixture_contexts[0], Mapping)
+            else {}
+        )
+        our15.append({
+            "element_id": element,
+            "player": player.get("name") or f"element:{element}",
+            "trajectory": trajectory,
+            "bayesian_state": player.get("posterior_rates"),
+            "linkup_dependency": linkup,
+        })
+    material_non_owned = [
+        int(value)
+        for value in scan.get("deep_analysis_element_ids") or []
+        if int(value) not in owned_ids
+    ]
+    deep = build_post_match_deep_details(
+        deep_analysis_element_ids=material_non_owned,
+        current_projection_players=list(pmap.values()),
+        player_match_rows=match_rows,
+        post_match_universe_scan=scan,
+        current_gw=current_gw,
+        maximum_material_deep_players=20,
+    )
+    return {
+        "our15": our15,
+        "material_universe_candidates": list(deep.get("details") or []),
+        "full_universe_scan": {
+            "eligible_count": scan.get("eligible_count"),
+            "scanned_count": scan.get("scanned_count"),
+            "material_count": scan.get("material_count"),
+            "scope": scan.get("scope"),
+        },
+        "recency_weighting": "EXPONENTIAL_HALF_LIFE_GW",
+        "bayesian_update": "POSTERIOR_RECENT_RATE_WITH_REGIME_SHRINKAGE",
+        "linkup_dependency": (
+            "creator→finisher / overlap→winger / set-piece-taker→target; "
+            "partner availability is marginalized where supportable"
+        ),
+    }
+
+
 
 
 def _core_slot_binding(
@@ -1178,9 +1771,14 @@ def _qa_compute_contract(
     rise: Mapping[str, Any] | None,
     fall: Mapping[str, Any] | None,
     sections: Mapping[str, Any],
+    human_manifest: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     xi = list((lineup or {}).get("starting_xi") or [])
-    bench = list((lineup or {}).get("bench") or [])
+    bench_payload = dict((lineup or {}).get("bench") or {})
+    bench = (
+        ([bench_payload.get("gk")] if bench_payload.get("gk") is not None else [])
+        + list(bench_payload.get("order") or [])
+    )
     watch_rows = list((watchlist or {}).get("rows") or [])
     rise_rows = list((rise or {}).get("rows") or [])
     fall_rows = list((fall or {}).get("rows") or [])
@@ -1242,6 +1840,8 @@ def _qa_compute_contract(
             "inference_keys": [inference_key],
         },
         "serious_decision_required": True,
+        "human_facing_manifest_required": True,
+        "HUMAN_FACING_MANIFEST": dict(human_manifest or {}),
     }
 
 
@@ -1450,6 +2050,27 @@ def run_deep(
         lineup = None
 
 
+    post_match_review = _stage(
+        ledger,
+        "S16B_POST_MATCH_GW1_NOW",
+        lambda: _post_match_review(
+            projections=projections,
+            foundation=foundation,
+            owned_ids=owned_ids,
+            current_gw=max(1, planning_gw - 1),
+        ),
+        required=True,
+    ) if projections and foundation else None
+    if post_match_review is None:
+        post_match_review = {
+            "our15": [],
+            "material_universe_candidates": [],
+            "full_universe_scan": {},
+            "recency_weighting": "UNAVAILABLE",
+            "bayesian_update": "UNAVAILABLE",
+            "linkup_dependency": "UNAVAILABLE",
+        }
+
     predictor = _read_json(
         runtime_data_root / "data/v6/current/official_price_predictor.json",
         {},
@@ -1479,6 +2100,13 @@ def run_deep(
             owned15=owned,
             predictor_artifact=predictor,
         ),
+    )
+
+    all15_rows = _enrich_all15_rows(
+        all15=all15,
+        projections=projections,
+        predictor=predictor,
+        owned=owned,
     )
 
     universe = _candidate_universe(projections or {})
@@ -1907,20 +2535,68 @@ def run_deep(
     watch_state = str((watchlist or {}).get("state") or "UNAVAILABLE")
     watch_reason = (watchlist or {}).get("degradation_reason") or universe_gap["reason"]
 
+    formation_strategy = _formation_mini_league_strategy(
+        lineup=lineup,
+        mini=mini,
+        mini_overlay=mini_overlay,
+        projections=projections,
+    )
+    xi_battles = _xi_battles(
+        lineup=lineup,
+        projections=projections,
+        mini=mini,
+    )
+    staging = _three_gw_staging(
+        planning_gw=planning_gw,
+        action=operational_action,
+        stage3_decision=stage3_decision,
+        stage3_visible=stage3_visible,
+        all15_rows=all15_rows,
+        lineup=lineup,
+        finance=finance,
+    )
+    league_context = _mini_context(mini)
+    league_exposures = list((mini or {}).get("exposures") or [])
+    captain_review = _captain_candidate_review(
+        candidate=(lineup or {}).get("captain"),
+        projections=projections,
+        mini=mini,
+        mini_league_stance=str(formation_strategy.get("stance") or "BALANCED"),
+    )
+    vice_captain_review = _captain_candidate_review(
+        candidate=(lineup or {}).get("vice_captain"),
+        projections=projections,
+        mini=mini,
+        mini_league_stance=str(formation_strategy.get("stance") or "BALANCED"),
+    )
+    chip_payload = _read_json(
+        runtime_data_root / "data/v6/personal/current_team.json",
+        {},
+    ) or {}
+    chip_state = chip_payload.get("chips")
+    chip_available = chip_state not in (None, {}, [])
+
     sections = {
         "S01": _section(
             "COMPLETE",
             {
                 "operational_state": operational_action,
                 "planning_gw": planning_gw,
-                "report_slot": report_slot,
-                "integrated_runner": "EXECUTED",
+                "primary_decision": (
+                    (stage3_decision or {}).get("selected_route_id") or "HOLD"
+                ),
+                "reason": (stage3_decision or {}).get("reason") or "No material route cleared the decision gate.",
+                "key_decision_driver": (
+                    "P1.2 package utility + canonical P1.4 MC + P1.8 bounded mini-league overlay"
+                ),
+                "current_planning_gw": planning_gw,
             },
         ),
         "S02": _section(
-            "COMPLETE",
-            {"rows": (all15 or {}).get("rows", [])},
-            available_count=len((all15 or {}).get("rows", [])),
+            "COMPLETE" if len(all15_rows) == 15 else "DEGRADED",
+            {"rows": all15_rows},
+            None if len(all15_rows) == 15 else "OUR15 model enrichment incomplete",
+            available_count=len(all15_rows),
             expected_count=15,
         ),
         "S03": _section(
@@ -1928,28 +2604,37 @@ def run_deep(
             {
                 "decision_delta": {
                     "action": operational_action,
-                    "selected_route_id": (
-                        (stage3_decision or {}).get("selected_route_id")
-                    ),
+                    "selected_route_id": (stage3_decision or {}).get("selected_route_id"),
                     "reason": (stage3_decision or {}).get("reason"),
-                    "mini_league_delta": (
-                        (mini_overlay or {}).get("decision_delta")
-                    ),
+                    "mini_league_delta": (mini_overlay or {}).get("decision_delta"),
+                    "material_only": True,
                 },
-                "runner_delta": (
-                    "Stage2 full-universe distributions -> P1.2 package -> "
-                    "P1.4 correlated match-state MC -> P1.2 decision -> "
-                    "P1.8 mini-league -> renderer"
-                ),
             },
         ),
         "S04": _section(
             "COMPLETE",
             {
-                "changes": [
-                    "Integrated owner-module execution is bound to one occurrence.",
-                    "Manual prose is not accepted as an analytics substitute.",
-                ]
+                "changes": (
+                    [
+                        {
+                            "type": "POST_MATCH_MATERIALITY",
+                            "summary": (
+                                f"{(post_match_review.get('full_universe_scan') or {}).get('material_count')} "
+                                "material GW1→Now trajectories identified by the existing universe scan"
+                            ),
+                        }
+                    ]
+                    if (post_match_review.get("full_universe_scan") or {}).get("material_count")
+                    else [
+                        {
+                            "type": "NO_NEW_MATERIAL_CHANGE",
+                            "summary": "No new factual development in the bound occurrence independently changes the decision.",
+                        }
+                    ]
+                ),
+                "decision_change_sources": (
+                    "injury / lineup / role / tactics / price / fixture / underlying / mini-league / transfer economics"
+                ),
             },
         ),
         "S05": _section(
@@ -1960,6 +2645,10 @@ def run_deep(
                     row for row in fixtures
                     if int(row.get("event") or -1) == planning_gw
                 ],
+                "home_away_and_rest": "DERIVED_FROM_OFFICIAL_FIXTURE_ROWS_WHERE_AVAILABLE",
+                "opponent_strength": strength or {},
+                "fixture_swing": "MODEL_DERIVED_WHERE_SUPPORTABLE",
+                "congestion": "DERIVED_FROM_FIXTURE_DATES_WHERE AVAILABLE",
                 "weather": "DIRECT_CHATGPT_REQUIRED_AT_VISIBLE_DELIVERY",
             },
         ),
@@ -1968,27 +2657,54 @@ def run_deep(
             _lineup_content(lineup),
             lineup_reason,
         ),
+        "S06B": _section(
+            "COMPLETE" if lineup and mini_overlay else "DEGRADED",
+            formation_strategy,
+            None if lineup and mini_overlay else "formation or mini-league downstream evidence incomplete",
+        ),
         "S07": _section(
             lineup_state,
-            {"main_starting_xi_battle": (lineup or {}).get("main_starting_xi_battle")},
+            {
+                "battles": xi_battles,
+                "empty_is_truthful": not bool(xi_battles),
+                "battle_summary": (lineup or {}).get("main_starting_xi_battle"),
+            },
             lineup_reason,
         ),
         "S08": _section(
             lineup_state,
             {
-                "captain": (lineup or {}).get("captain"),
-                "vice_captain": (lineup or {}).get("vice_captain"),
+                "captain": captain_review,
+                "vice_captain": vice_captain_review,
+                "captain_safe_pool": (lineup or {}).get("captain_safe_pool") or [],
+                "mini_league_stance": formation_strategy.get("stance"),
+                "authority": (
+                    "expected points + ceiling + xMins/P(start) + involvement/role + "
+                    "penalty/set-piece + fixture + captain EO + mini-league downside/upside"
+                ),
+                "raw_mean_is_not_sole_authority": True,
             },
             lineup_reason,
         ),
         "S09": _section(
-            "DEGRADED",
-            {"chip": "UNAVAILABLE_CURRENT_AUTH"},
-            "private authenticated chip/economics evidence unavailable",
+            "COMPLETE" if chip_available else "DEGRADED",
+            {
+                "chip": chip_state if chip_available else "UNAVAILABLE",
+                "considered_now": False,
+                "horizon": "REASSESS EACH DEADLINE",
+                "trigger": "material chip-specific fixture/ceiling edge",
+                "hold_reason": "No chip action is created without current authenticated chip state and a supportable edge.",
+            },
+            None if chip_available else "authenticated chip state unavailable in bound current-team artifact",
         ),
         "S10": _section(
             "COMPLETE" if price_radar else "DEGRADED",
-            price_radar or {"rows": []},
+            {
+                **(price_radar or {"rows": []}),
+                "bank": (finance or {}).get("bank"),
+                "bank_status": (finance or {}).get("bank_status"),
+                "sell_value_status": (finance or {}).get("sell_value_status"),
+            },
             None if price_radar else "Official FPL predictor radar unavailable",
         ),
         "S11": _section(
@@ -1996,6 +2712,7 @@ def run_deep(
             {
                 "rows": (watchlist or {}).get("rows", []),
                 "universe_evaluator": universe_gap,
+                "scope": "FULL_ELIGIBLE_FPL_UNIVERSE",
             },
             None if watch_state == "COMPLETE" else watch_reason,
             available_count=(watchlist or {}).get("available_count", 0),
@@ -2019,95 +2736,84 @@ def run_deep(
             "COMPLETE" if stage3_internal_pass else "DEGRADED",
             {
                 "universe_scan": universe_gap,
+                "package_routes": stage3_visible.get("package_routes", []),
+                "frontier": stage3_visible.get("frontier", []),
                 **stage3_visible,
             },
-            (
-                None
-                if stage3_internal_pass
-                else (
-                    "Stage3 internal producer/wiring failure; this is NOT "
-                    "accepted as a factual-source degradation"
-                )
+            None if stage3_internal_pass else (
+                "Stage3 internal producer/wiring failure; this is NOT accepted as factual-source degradation"
             ),
+        ),
+        "S14B": _section(
+            "COMPLETE" if stage3_decision else "DEGRADED",
+            staging,
+            None if stage3_decision else "Stage3 decision unavailable; roadmap remains non-binding and must reoptimize.",
         ),
         "S15": _section(
             "COMPLETE",
             {
                 "evidence_quality": {
-                    "official_fpl": "CURRENT_INPUT_READ",
+                    "official_factual_evidence": "STRONG" if official else "INCOMPLETE",
+                    "model_derived_inference": "STRONG" if projections and stage3_internal_pass else "MODERATE",
+                    "market_predictor": (
+                        "STRONG" if (rise or {}).get("predictor_health") == "GREEN" else "INCOMPLETE"
+                    ),
+                    "tactical_interpretation": "MODERATE" if projections else "INCOMPLETE",
                     "p1_1_p1_3": "EXECUTED" if projections else "FAILED",
                     "p1_6": "EXECUTED" if projections else "NOT_RUN",
                     "p1_7": "EXECUTED" if lineup else "PARTIAL",
-                    "p1_2_package": (
-                        "EXECUTED" if package_utility else "FAILED"
-                    ),
+                    "p1_2_package": "EXECUTED" if package_utility else "FAILED",
                     "p1_4_monte_carlo": (
                         "EXECUTED_CANONICAL"
-                        if (
-                            monte_carlo
-                            and monte_carlo.get("canonical_pass") is True
-                        )
+                        if monte_carlo and monte_carlo.get("canonical_pass") is True
                         else "FAILED"
                     ),
-                    "p1_8_downstream_overlay": (
-                        "EXECUTED" if mini_overlay else "FAILED"
-                    ),
-                    "price_predictor": (rise or {}).get("predictor_health"),
-                    "universe_20_25_30_25": (
-                        "COMPLETE"
-                        if canonical_complete
-                        else "PARTIAL"
-                    ),
+                    "p1_8_downstream_overlay": "EXECUTED" if mini_overlay else "FAILED",
                 }
             },
         ),
         "S15B": _section(
-            (
-                "COMPLETE"
-                if mini_state == "COMPLETE" and mini_overlay
-                else "DEGRADED"
-            ),
+            "COMPLETE" if mini_state == "COMPLETE" and mini_overlay else "DEGRADED",
             {
                 **(mini or {"coverage_state": "UNAVAILABLE"}),
+                "current_league_context": league_context,
+                "exposures": league_exposures,
                 "downstream_overlay": mini_overlay,
                 "football_baseline_precedes_leverage": True,
+                "protection_players": formation_strategy.get("high_eo_protection"),
+                "differential_opportunities": formation_strategy.get("differential_slots"),
             },
-            (
-                None
-                if mini_state == "COMPLETE" and mini_overlay
-                else (
-                    mini_reason
-                    or "P1.8 downstream overlay producer did not complete"
-                )
+            None if mini_state == "COMPLETE" and mini_overlay else (
+                mini_reason or "P1.8 downstream overlay producer did not complete"
             ),
         ),
         "S16": _section(
             "COMPLETE" if projections else "DEGRADED",
             {
-                "rows": (all15 or {}).get("rows", []),
+                "rows": all15_rows,
                 "position_mechanisms": (
                     [
-                        _visible_position_mechanism(
-                            player,
-                            action=operational_action,
-                        )
+                        _visible_position_mechanism(player, action=operational_action)
                         for player in (projections or {}).get("players") or []
                         if int(player.get("element") or 0) in owned_ids
                     ]
-                    if projections
-                    else []
+                    if projections else []
+                ),
+                "why_not_duplicate_of_our15": (
+                    "This section exposes probability state, tactical mechanism, uncertainty and fixture context behind the projections."
                 ),
             },
-            (
-                None
-                if projections
-                else (
-                    "P1.1/P1.3 occurrence projection unavailable: "
-                    + (projection_failure or "UNKNOWN_PROJECTION_FAILURE")
-                )
+            None if projections else (
+                "P1.1/P1.3 occurrence projection unavailable: "
+                + (projection_failure or "UNKNOWN_PROJECTION_FAILURE")
             ),
-            available_count=len((all15 or {}).get("rows", [])),
+            available_count=len(all15_rows),
             expected_count=15,
+        ),
+        "S16B": _section(
+            "COMPLETE" if post_match_review.get("our15") else "DEGRADED",
+            post_match_review,
+            None if post_match_review.get("our15") else "GW1→Now match-level evidence unavailable for this occurrence",
         ),
         "S17": _section(
             "COMPLETE",
@@ -2119,59 +2825,68 @@ def run_deep(
                     "our15": len(owned),
                     "mini_league_coverage": (mini or {}).get("coverage_state"),
                     "stage3_internal_pass": stage3_internal_pass,
-                    "mc_actual_paths": (
-                        (monte_carlo or {}).get("actual_paths")
+                    "mc_actual_paths": (monte_carlo or {}).get("actual_paths"),
+                },
+                "source_health": {
+                    "official_fpl": "HEALTHY" if official else "UNAVAILABLE",
+                    "authenticated_personal_scope": (
+                        "HEALTHY" if prefetch.get("public_personal_status") == "AVAILABLE" else prefetch.get("personal_status") or "UNAVAILABLE"
                     ),
-                    "mc_convergence": (
-                        (monte_carlo or {}).get("convergence_evidence")
-                    ),
-                    "stage_ledger": ledger,
-                }
+                    "fixture_data": "HEALTHY" if fixtures is not None else "UNAVAILABLE",
+                    "price_predictor": (rise or {}).get("predictor_health") or "UNAVAILABLE",
+                    "tactical_statistical_data": "HEALTHY" if foundation else "UNAVAILABLE",
+                    "mini_league": (mini or {}).get("coverage_state") or "UNAVAILABLE",
+                    "weather": "SOURCE_DEGRADED_AT_RUNNER; DIRECT_CHATGPT_AT_VISIBLE_DELIVERY",
+                },
+                "lineage": {
+                    "v6_factual_plane_mutated": False,
+                    "post_match_source": "V12 contextual dynamics over read-only V6 normalized match rows",
+                },
             },
         ),
         "S18": _section(
             "COMPLETE",
             {
                 "NOW": operational_action,
-                "TRIGGER TO ACT": (
-                    (stage3_decision or {}).get("action_contract")
-                    or "UNAVAILABLE"
+                "NEXT": (
+                    "prepare selected route and re-evaluate at next fresh occurrence"
+                    if operational_action == "PREPARE"
+                    else "execute only while ACT gate remains green"
+                    if operational_action == "ACT"
+                    else "preserve optionality and refresh evidence"
                 ),
-                "ABORT / REVERSAL": (
-                    "fresh role/injury/lineup/economics/price evidence or "
-                    "challenger posterior changes invalidate the selected route"
+                "TRIGGERS": (stage3_decision or {}).get("action_contract") or "UNAVAILABLE",
+                "REVERSAL": (
+                    "fresh role/injury/lineup/economics/price evidence or challenger posterior invalidates the route"
                 ),
-                "VALUE OF INFORMATION": (
-                    next(
-                        (
-                            row.get("voi_vs_cost_of_waiting")
-                            for row in (stage3_decision or {}).get("routes") or []
-                            if str(row.get("route_id") or "")
-                            == str(
-                                (stage3_decision or {}).get(
-                                    "selected_route_id"
-                                )
-                                or "HOLD"
-                            )
-                        ),
-                        None,
-                    )
+                "VALUE OF INFORMATION": next(
+                    (
+                        row.get("voi_vs_cost_of_waiting")
+                        for row in (stage3_decision or {}).get("routes") or []
+                        if str(row.get("route_id") or "") == str((stage3_decision or {}).get("selected_route_id") or "HOLD")
+                    ),
+                    None,
                 ),
-                "NEXT CHECKPOINT": "next due report occurrence with fresh V6 prefetch",
             },
         ),
         "S19": _section(
             "COMPLETE",
             {
                 "final_judgement": {
-                    "action": operational_action,
-                    "selected_route_id": (
-                        (stage3_decision or {}).get("selected_route_id")
-                    ),
+                    "transfer": "NO TRANSFER NOW" if operational_action == "WAIT" else operational_action,
+                    "selected_route_id": (stage3_decision or {}).get("selected_route_id") or "HOLD",
+                    "xi": [
+                        _surface_element(value)
+                        for value in (lineup or {}).get("starting_xi") or []
+                    ],
+                    "formation": (lineup or {}).get("formation"),
+                    "captain": ((lineup or {}).get("captain") or {}).get("name") or ((lineup or {}).get("captain") or {}).get("element"),
+                    "vice_captain": ((lineup or {}).get("vice_captain") or {}).get("name") or ((lineup or {}).get("vice_captain") or {}).get("element"),
+                    "bench": (lineup or {}).get("bench"),
+                    "mini_league_stance": formation_strategy.get("stance"),
+                    "immediate_watch": staging.get("contingency"),
+                    "three_gw_direction": staging.get("staging_rows"),
                     "reason": (stage3_decision or {}).get("reason"),
-                    "stage3_internal_pass": stage3_internal_pass,
-                    "private_finance_status": finance,
-                    "no_fake_completeness": True,
                 }
             },
         ),
@@ -2193,6 +2908,7 @@ def run_deep(
         }
         for row in report.get("sections") or []
     ]
+    human_manifest = build_deep_human_facing_manifest(report)
     compute_contract = _qa_compute_contract(
         owned=owned,
         lineup=lineup,
@@ -2200,6 +2916,7 @@ def run_deep(
         rise=rise,
         fall=fall,
         sections=sections,
+        human_manifest=human_manifest,
     )
     mini_complete = bool(
         mini
@@ -2213,7 +2930,10 @@ def run_deep(
         weather_contract_state="SOURCE_DEGRADED",
     )
     body = render_deep_text(report)
-    human_failures = validate_human_facing_body(body)
+    human_failures = list(dict.fromkeys(
+        validate_human_facing_body(body)
+        + validate_deep_human_facing_manifest(human_manifest)
+    ))
     parsed_ids, _, _ = _parse_sections(body)
     rendered_states = {
         str(row.get("section_id") or ""): str(row.get("state") or "")
@@ -2302,6 +3022,7 @@ def run_deep(
         "pre_render_qa_status": pre_render_qa.get("status"),
         "post_render_qa_status": post_render_qa.get("status"),
         "human_facing_qa_status": "PASS" if not human_failures else "FAIL",
+        "human_facing_manifest_status": human_manifest.get("status"),
         "stage3_internal_pass": stage3_internal_pass,
         "stage3_action": operational_action,
         "stage3_required_stages": sorted(stage3_required_stage_names),
@@ -2331,6 +3052,7 @@ def run_deep(
         "runner_status": runner_status,
         "stage_ledger": ledger,
         "section_manifest": section_manifest,
+        "human_facing_manifest": human_manifest,
         "compute_contract": compute_contract,
         "pre_render_qa": pre_render_qa,
         "post_render_qa": post_render_qa,

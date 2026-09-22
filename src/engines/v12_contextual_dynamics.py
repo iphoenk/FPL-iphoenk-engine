@@ -401,6 +401,11 @@ def build_player_trajectory(
                 "minutes": round(minutes, 1),
                 "starter": _starter(row),
                 "role": _role_label(row),
+                "team_formation": (
+                    row.get("team_formation")
+                    or row.get("formation")
+                    or "UNAVAILABLE"
+                ),
                 "xg": round(_metric(row, "xg"), 4),
                 "xa": round(_metric(row, "xa"), 4),
                 "xgi": round(_metric(row, "xgi"), 4),
@@ -414,8 +419,23 @@ def build_player_trajectory(
                 "big_chances": round(_metric(row, "big_chances"), 4),
                 "touches": round(_metric(row, "touches"), 4),
                 "box_touches": round(_metric(row, "box_touches"), 4),
+                "key_passes": (
+                    round(_f(row.get("key_passes")), 4)
+                    if row.get("key_passes") is not None
+                    else "UNAVAILABLE"
+                ),
                 "chances_created": round(_metric(row, "chances_created"), 4),
+                "set_piece_role": (
+                    row.get("set_piece_role")
+                    or row.get("set_piece_duty")
+                    or "UNAVAILABLE"
+                ),
                 "set_piece_involvement": round(_metric(row, "corners"), 4),
+                "penalty_role": (
+                    row.get("penalty_role")
+                    or row.get("penalty_duty")
+                    or "UNAVAILABLE"
+                ),
                 "penalty_involvement": round(
                     _metric(row, "penalties_scored") + _metric(row, "penalties_missed"),
                     4,

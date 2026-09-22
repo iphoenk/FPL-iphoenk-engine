@@ -52,20 +52,41 @@ EXACT_SCOPE_RECOVERY_STEPS = (
     "VALIDATE_COMPLETENESS",
 )
 
-DEEP_MANDATORY_SECTIONS = tuple(
-    [f"S{index:02d}" for index in range(1, 16)]
-    + ["S15B"]
-    + [f"S{index:02d}" for index in range(16, 20)]
+DEEP_MANDATORY_SECTIONS = (
+    "S01",
+    "S02",
+    "S03",
+    "S04",
+    "S05",
+    "S06",
+    "S06B",
+    "S07",
+    "S08",
+    "S09",
+    "S10",
+    "S11",
+    "S12",
+    "S13",
+    "S14",
+    "S14B",
+    "S15",
+    "S15B",
+    "S16",
+    "S16B",
+    "S17",
+    "S18",
+    "S19",
 )
 MATCH_MANDATORY_SECTIONS = tuple(f"MATCH{index}" for index in range(1, 14))
 PRICE_MANDATORY_SECTIONS = tuple(f"PRICE{index}" for index in range(1, 12))
 POST_ALL_MATCH_MANDATORY_SECTIONS = tuple(
     f"POST_ALL_MATCH{index}" for index in range(1, 14)
 )
+_FINAL_LOCK_INSERT_INDEX = DEEP_MANDATORY_SECTIONS.index("S13") + 1
 FINAL_MANDATORY_SECTIONS = tuple(
-    list(DEEP_MANDATORY_SECTIONS[:13])
+    list(DEEP_MANDATORY_SECTIONS[:_FINAL_LOCK_INSERT_INDEX])
     + ["GW_LOCK_PACKAGE"]
-    + list(DEEP_MANDATORY_SECTIONS[13:])
+    + list(DEEP_MANDATORY_SECTIONS[_FINAL_LOCK_INSERT_INDEX:])
 )
 
 # Backward-compatible name used by full/DEEP report-plane callers.

@@ -89,25 +89,54 @@ _WEATHER_STATES_BY_MODE = {
 
 
 _FULL_DEEP_VISIBLE_ORDER = (
-    "DECISION/STATUS",
+    "DECISION / CURRENT STATUS",
     "OUR15",
     "DECISION DELTA",
-    "CHANGES",
-    "FIXTURES/REST/CONDITIONS",
-    "FORMATION/XI/BENCH",
+    "MATERIAL DEVELOPMENTS / CHANGES",
+    "FIXTURES / REST / CONDITIONS",
+    "FORMATION / XI / BENCH",
+    "FORMATION & MINI-LEAGUE STRATEGY",
     "XI BATTLE",
-    "C/VC",
-    "CHIP",
+    "CAPTAIN / VICE CAPTAIN",
+    "CHIP STRATEGY",
     "ACTIONABLE PRICE RADAR",
     "WATCHLIST20",
     "RISE20",
     "FALL20",
-    "PACKAGE OPTIMIZER/FRONTIER",
+    "PACKAGE OPTIMIZER / TRANSFER FRONTIER",
+    "3-GW SQUAD STAGING",
     "EVIDENCE QUALITY",
     "ICON+ MINI-LEAGUE",
-    "ALL15 NEXT-GW TACTICAL/PROBABILITY",
-    "SOURCE HEALTH/FRESHNESS/LINEAGE",
-    "WAIT/PREPARE/ACT + TRIGGER/REVERSAL",
+    "ALL15 TACTICAL / PROBABILITY REVIEW",
+    "POST-MATCH REVIEW GW1 → NOW",
+    "SOURCE HEALTH / FRESHNESS / LINEAGE",
+    "ACTION BOARD",
+    "FINAL JUDGEMENT",
+)
+
+_DEEP_HUMAN_REQUIRED_VISIBLE_MARKERS = (
+    "DECISION / CURRENT STATUS",
+    "OUR15",
+    "DECISION DELTA",
+    "MATERIAL DEVELOPMENTS / CHANGES",
+    "FIXTURES / REST / CONDITIONS",
+    "FORMATION / XI / BENCH",
+    "FORMATION & MINI-LEAGUE STRATEGY",
+    "XI BATTLE",
+    "CAPTAIN / VICE CAPTAIN",
+    "CHIP STRATEGY",
+    "ACTIONABLE PRICE RADAR",
+    "WATCHLIST20",
+    "RISE20",
+    "FALL20",
+    "PACKAGE OPTIMIZER / TRANSFER FRONTIER",
+    "3-GW SQUAD STAGING",
+    "EVIDENCE QUALITY",
+    "ICON+ MINI-LEAGUE",
+    "ALL15 TACTICAL / PROBABILITY REVIEW",
+    "POST-MATCH REVIEW GW1",
+    "SOURCE HEALTH / FRESHNESS / LINEAGE",
+    "ACTION BOARD",
     "FINAL JUDGEMENT",
 )
 _PRICE_VISIBLE_ORDER = (
@@ -358,6 +387,12 @@ _SERIOUS_DECISION_VISIBLE_MARKERS = (
     "UNIVERSE SCAN / OPTIMAL TEAM IMPACT",
 )
 
+_DEEP_ACTION_BOARD_VISIBLE_MARKERS = (
+    "NOW:",
+    "NEXT:",
+    "TRIGGERS:",
+    "REVERSAL:",
+)
 _ACTION_BOARD_VISIBLE_MARKERS = (
     "NOW:",
     "TRIGGER TO ACT:",
@@ -1337,9 +1372,12 @@ def _required_visible_markers(report_mode: str) -> list[str]:
     markers: list[str] = []
     if mode == "POST_ALL_MATCH":
         markers.append("GW COMPLETED MATCH-BY-MATCH SCOUT")
-    if mode in {"DEEP", "FULL", "DEADLINE", "FINAL", "PRICE"}:
+    if mode in {"DEEP", "FULL", "DEADLINE", "FINAL"}:
+        markers.extend(_DEEP_HUMAN_REQUIRED_VISIBLE_MARKERS)
+        markers.extend(_DEEP_ACTION_BOARD_VISIBLE_MARKERS)
+    if mode == "PRICE":
         markers.extend(_ACTION_BOARD_VISIBLE_MARKERS)
-    return markers
+    return list(dict.fromkeys(markers))
 
 
 def _is_sha256(value: Any) -> bool:
@@ -1449,6 +1487,21 @@ def _compute_handoff_failures(
         failures.append("FACT_MODEL_CONTRACT_FAILED")
     elif fact_model.get("overlap"):
         failures.append("FACT_MODEL_CONTRACT_OVERLAP")
+
+    if compute_contract.get("human_facing_manifest_required") is True:
+        human_manifest = compute_contract.get("HUMAN_FACING_MANIFEST")
+        if not isinstance(human_manifest, Mapping):
+            failures.append("HUMAN_FACING_MANIFEST_MISSING")
+        elif str(human_manifest.get("status") or "").upper() != "PASS":
+            manifest_failures = [
+                str(value)
+                for value in human_manifest.get("failures") or []
+                if str(value).strip()
+            ]
+            failures.append(
+                "HUMAN_FACING_MANIFEST_FAILED="
+                + (",".join(manifest_failures) if manifest_failures else "UNKNOWN")
+            )
 
     section_contract = compute_contract.get("SECTION_CONTRACT")
     if isinstance(section_contract, Mapping) and section_contract.get("status") != "PASS":

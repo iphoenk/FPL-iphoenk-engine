@@ -101,25 +101,28 @@ def valid_visible_body(
     """Build a deterministic body matching the current Canonical DEEP skeleton."""
     lines = ["# 04:30 MORNING DEEP REVIEW"]
     titles = {
-        "S01": "Decision / Status",
+        "S01": "Decision / Current Status",
         "S02": "OUR15",
-        "S03": "DECISION DELTA",
-        "S04": "Changes",
+        "S03": "Decision Delta",
+        "S04": "Material Developments / Changes",
         "S05": "Fixtures / Rest / Conditions",
         "S06": "Formation / XI / Bench",
+        "S06B": "Formation & Mini-League Strategy",
         "S07": "XI Battle",
-        "S08": "C / VC",
-        "S09": "Chip",
+        "S08": "Captain / Vice Captain",
+        "S09": "Chip Strategy",
         "S10": "Actionable Price Radar",
         "S11": "Watchlist20",
         "S12": "RISE20",
         "S13": "FALL20",
-        "S14": "Package Optimizer / Frontier including HOLD baseline",
+        "S14": "Package Optimizer / Transfer Frontier",
+        "S14B": "3-GW Squad Staging",
         "S15": "Evidence Quality",
         "S15B": "ICON+ Mini-League",
-        "S16": "ALL15 Next-GW Tactical / Probability",
+        "S16": "ALL15 Tactical / Probability Review",
+        "S16B": "Post-Match Review GW1 → Now",
         "S17": "Source Health / Freshness / Lineage",
-        "S18": "WAIT / PREPARE / ACT + Trigger / Reversal",
+        "S18": "Action Board",
         "S19": "Final Judgement",
         "GW_LOCK_PACKAGE": "GW LOCK PACKAGE",
     }
@@ -299,6 +302,13 @@ def valid_visible_body(
             lines.append("BENCH: " + ", ".join(f"OWN{i:02d}" for i in range(12, 16)))
             lines.append("Bench GK: OWN12")
             lines.append("Outfield autosub priority: 1 OWN13, 2 OWN14, 3 OWN15")
+        elif section_id == "S06B":
+            lines.append("MINI-LEAGUE STANCE: BALANCED")
+            lines.append("RAW EV FORMATION: 4-4-2")
+            lines.append("MINI-LEAGUE OBJECTIVE FORMATION: 3-5-2")
+            lines.append("PROJECTED POINTS DIFFERENCE: -0.4")
+            lines.append("HIGH-EO PROTECTION: OWN09, OWN10")
+            lines.append("DIFFERENTIAL SLOTS: OWN11")
         elif section_id == "S07":
             lines.append("XI BATTLE: P(start), xMins, cameo/DNP risk and expected-regret comparison.")
         elif section_id == "S08":
@@ -364,6 +374,17 @@ def valid_visible_body(
                         "PACKAGE FRONTIER: HOLD plus scan-derived legal routes with 1GW/3GW/5GW team-impact deltas.",
                     ]
                 )
+        elif section_id == "S14B":
+            lines.append("STAGING IS A ROADMAP, NOT A TRANSFER COMMITMENT.")
+            lines.extend(
+                _table(
+                    ["Timing", "Planned Move", "Status", "Trigger", "Expected Gain", "Dependency"],
+                    [
+                        ["GW6", "SAVE FT / HOLD SQUAD", "HOLD", "fresh evidence", "0.0", "role + price"],
+                        ["GW7", "REOPTIMIZE", "WATCH", "new evidence", "RECOMPUTE", "GW6 outcome"],
+                    ],
+                )
+            )
         elif section_id == "S15":
             lines.append("Authority, observed_at, freshness, status and decision-use are shown by scope.")
             if pre_render_qa.get("expected_fact_keys"):
@@ -386,6 +407,10 @@ def valid_visible_body(
                     [[str(i), str(i), f"OWN{i:02d}", "B"] for i in range(1, 16)],
                 )
             )
+        elif section_id == "S16B":
+            lines.append("RECENCY WEIGHTING: EXPONENTIAL_HALF_LIFE_GW")
+            lines.append("BAYESIAN UPDATE: POSTERIOR_RECENT_RATE_WITH_REGIME_SHRINKAGE")
+            lines.append("OWN01 | GW1→NOW | role stable | link-up dependency assessed")
         elif section_id == "S17":
             lines.append("ENGINE / DATA STATUS")
             lines.append("V6 core: GREEN | Publication: PASS | Universe authority: FULL")
@@ -393,9 +418,9 @@ def valid_visible_body(
             lines.extend(
                 [
                     "NOW: WAIT",
-                    "TRIGGER TO ACT: material team-news or route-value threshold",
-                    "ABORT / REVERSAL: challenger loses role/security or route legality",
-                    "NEXT CHECKPOINT: next Canonical report occurrence",
+                    "NEXT: preserve optionality and refresh evidence",
+                    "TRIGGERS: material team-news or route-value threshold",
+                    "REVERSAL: challenger loses role/security or route legality",
                 ]
             )
         elif section_id == "S19":

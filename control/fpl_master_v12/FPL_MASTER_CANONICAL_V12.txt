@@ -444,6 +444,44 @@ Visible reports are decision-first user surfaces. Internal implementation/debug 
 GLOBAL VISIBLE PRESENTATION CONTRACT — ALL VISIBLE MODES
 This is a presentation layer only. It does not replace any mode-specific Canonical structure, exact count, methodology, probability model, optimization rule, or evidence requirement.
 
+
+HUMAN-FACING DECISION MEMO PROFILE — DEFAULT
+The normal visible report MUST read like an FPL decision memo, not an engineering incident report.
+
+A. OPENING
+- Title first in natural form, for example: "19:30 DEADLINE DEEP REVIEW, GW5", "12:30 DEEP REVIEW, GW6", or "05:30 PRICE".
+- Immediately follow with 1-2 compact paragraphs stating: current operational decision (WAIT/PREPARE/ACT), the most important material change since the prior report, and the practical implication for the user's team.
+- Do not lead with core transport, workflow IDs, QA state, artifact names, scheduler binding, runtime-control, or other plumbing unless a true delivery blocker makes the football report impossible.
+
+B. HUMAN SECTION STYLE
+- Render the Canonical mode sections as clear numbered football-analysis sections with natural labels such as Decision board; OUR15/current truth; key player problem; XI/bench; probability overlay; mini-league; transfer/package route; hold/sell player review; Watchlist20; Price risk; Weather; Final judgement.
+- The exact Canonical section identities/order/counts still govern completeness. Friendly headings are a presentation alias only. Do not omit a required Canonical section; where a section has no executable change or material delta, render it compactly in 1-3 lines rather than replacing it with technical status.
+- Prefer a compact decision table where it improves comparison. Use prose for football reasoning, uncertainty, tactical interpretation and why a route is or is not preferred.
+- Keep paragraphs short. Avoid a wall of headings containing only DEGRADED/UNAVAILABLE labels.
+
+C. FOOTBALL FIRST, PLUMBING LAST
+- Main body priority: team decision -> owned-player consequence -> football/tactical evidence -> probabilities/horizons -> transfer/package economics -> mini-league -> price/weather -> final action.
+- ENGINE / DATA STATUS stays near the end and should normally fit in a compact paragraph or small table.
+- A core timeout, blocked write, prefetch issue, runner issue or Python-execution status must NEVER replace the football report body when Canonical fail-operational delivery can still populate the report.
+- Do not make the user read transport history to discover the transfer/XI/captain recommendation.
+
+D. DEGRADED PRESENTATION
+- Degradation is source/field scoped. State it inside the affected football section, with the missing evidence and practical effect.
+- Never turn a healthy report into a page of operational warnings because one source is degraded.
+- If exact20 or another exact-count section cannot be truthfully completed, keep that section visible with the exact supported count and reason. Never pad rows.
+- When healthy evidence exists, show the football values first and the status second.
+
+E. NATURAL LANGUAGE
+- Use direct FPL language such as "primary transfer-out candidate", "leading challenger", "minutes risk", "captain remains locked".
+- Avoid internal phrases in the normal body such as "semantic execution binding", "content proof", "owner module", "scheduler maturity", "transport proof", "stage pass", or "artifact hydration". Keep those transient/audit-only unless they materially explain a decision limitation.
+- FACT / MODEL / INFERENCE / RUMOR distinction remains mandatory but should be embedded naturally rather than dominating the report.
+
+F. ENDING
+- Finish with a clear football judgement in ordinary language, followed by the Action Board semantics NOW / TRIGGER TO ACT / ABORT-REVERSAL / NEXT CHECKPOINT where required.
+- The final sentence should summarize what the user should do now, not the state of the scheduler.
+
+This profile is presentation-only. It MUST NOT weaken full-universe search, 20/25/30/25, Bayesian/xMins, Monte Carlo truth, exact20 rules, evidence lineage, post-deadline reconciliation, or any mode-specific mandatory data contract.
+
 A. DECISION-FIRST
 - The first visible block answers current decision/status, operational state WAIT/PREPARE/ACT, material change since the prior visible report, and the next actionable trigger.
 - The user must not need to read technical or narrative paragraphs before finding the decision state.
@@ -498,28 +536,59 @@ Do not let #431 mutation/readback, workflow IDs, core upkeep narration, authorit
 
 14A. FULL / DEEP BACKBONE
 Exact visible order:
-1 Decision/status
+1 DECISION / CURRENT STATUS
 2 OUR15
 3 DECISION DELTA
-4 Changes
-5 Fixtures/rest/conditions
-6 Formation/XI/bench
-7 XI battle
-8 C/VC
-9 Chip
-10 Actionable Price Radar
-11 Watchlist20 exact20
-12 RISE20 exact20 where required
-13 FALL20 exact20 where required
-14 Package optimizer/frontier including HOLD baseline
-15 Evidence quality
-15B ICON+ mini-league
-16 ALL15 exact15 next-GW tactical/probability table
-17 Source health/freshness/lineage
-18 WAIT/PREPARE/ACT + trigger/reversal
-19 Final judgement.
+4 MATERIAL DEVELOPMENTS / CHANGES
+5 FIXTURES / REST / CONDITIONS
+6 FORMATION / XI / BENCH
+6B FORMATION & MINI-LEAGUE STRATEGY
+7 XI BATTLE
+8 CAPTAIN / VICE CAPTAIN
+9 CHIP STRATEGY
+10 ACTIONABLE PRICE RADAR
+11 WATCHLIST20
+12 RISE20
+13 FALL20
+14 PACKAGE OPTIMIZER / TRANSFER FRONTIER
+14B 3-GW SQUAD STAGING
+15 EVIDENCE QUALITY
+15B ICON+ MINI-LEAGUE
+16 ALL15 TACTICAL / PROBABILITY REVIEW
+16B POST-MATCH REVIEW GW1 → NOW
+17 SOURCE HEALTH / FRESHNESS / LINEAGE
+18 ACTION BOARD
+19 FINAL JUDGEMENT.
 
 For DEEP, every structural section above MUST be visibly materialized in this exact order. Data unavailability never authorizes structural omission. A section without authoritative data remains visible as PARTIAL / DEGRADED / UNAVAILABLE with reason and counts where meaningful. "NOT RENDERED" is not a Canonical section state.
+
+DEEP HUMAN-FACING DURABILITY CONTRACT:
+- This revision preserves the complete pre-existing DEEP backbone and adds S06B, S14B and S16B. It never replaces DEEP with a shorter memo.
+- S01: WAIT/PREPARE/ACT, primary decision, concise reason, key driver and planning GW.
+- S02: exact OUR15 with player-specific availability, xMins, P(start), 1GW/3GW/5GW projection, role/tactical note, material injury/rotation warning and material price relevance.
+- S03: material decision delta only. S04: factual material developments capable of changing the decision. S05: fixtures, H/A, strength/swing, rest/congestion and weather only when supportable.
+- S06: recommended formation, exact XI, reserve GK, outfield bench 1/2/3, projected XI score and close formation alternatives.
+- S06B: one visible stance from PROTECT / BALANCED / CHASE MODERATE / CHASE AGGRESSIVE; current league gaps and exposure evidence; raw-football formation versus mini-league-objective formation; projected-points difference; high-EO protection; differential slots; rational differential exposure and downside of excessive aggression. P1.7 football-optimal formation remains upstream of P1.8 relative-risk leverage.
+- S07: every material XI battle with xMins, P(start), 1GW projection, ceiling, fixture, role, EO, tactical reason and final starter.
+- S08: C/VC expected points, ceiling, xMins, goal involvement, penalties/set pieces, fixture, captain EO and mini-league upside/downside. Raw 1GW mean alone is not captain authority.
+- S09: chip state, horizon, trigger and HOLD reason. S10: actionable current/purchase/selling price, bank, affordability, predicted move, supportable ETA and urgency for OUR15/material targets.
+- S11 remains WATCHLIST20 from broad/full eligible-universe scanning. S12/S13 remain genuine RISE20/FALL20. Exact20 is required when factual data supports exact20; fabricated padding is forbidden.
+- S14 preserves HOLD plus all material OUT→IN routes with affordability, FT/hit economics, selling price/bank, xMins/P(start), 1GW/3GW/5GW gain, P(beat HOLD), package utility, canonical MC, tactical/fixture fit, reversal risk and robustness. Material eliminated routes stay explainable.
+- S14B is a three-GW planning roadmap, never a forced-transfer schedule. It must expose supportable CORE/HOLD, WATCH, PREPARE OUT, PREPARE IN and ACT CANDIDATE classifications; Timing | Planned Move | Status | Trigger | Expected Gain | Dependency; FT saving/order, budget/price/player dependencies, contingency, target formation and explicit re-optimization when evidence changes.
+- S15 distinguishes official fact, model-derived inference, market predictor and tactical interpretation. S15B remains the standalone ICON+ factual landscape and exposes rank, manager count, points, leader/top-3/top-5 gaps, nearest rivals and material ownership/starter/captain/vice/EO. S06B reuses S15B evidence rather than creating a second league truth.
+- S16 explains WHY behind OUR15 projections through xMins, P(start), role, tactical fit, Bayesian state, uncertainty, expected involvement and fixture context; it is not merely an S02 duplicate.
+- S16B is mandatory visible GW1→Now post-match review for OUR15 plus material universe candidates. Compact match-by-match evidence includes opponent, H/A, starter/sub, minutes, FPL points, xG, xA, xGI, shots, SOT, box touches, chances/key passes when factual, big chances when factual, set-piece/penalty evidence, defensive contribution where relevant, team shape/role when factual, recency weighting, Bayesian update, trend/regime classification and link-up dependency. Distinguish sustained role change from one-match noise and expose supportable creator→finisher, overlap/fullback→winger and set-piece-taker→target dependencies, including partner absence/bench/xMins effects.
+- S17 preserves source health/freshness/lineage and must not call a healthy factual source DEGRADED merely because downstream analytics are incomplete.
+- S18 exposes NOW, NEXT, TRIGGERS and REVERSAL using only WAIT/PREPARE/ACT as operational states. S19 is the plain-language decision summary: transfer/no transfer, XI, formation, captain, bench, mini-league stance, immediate watch and three-GW direction.
+
+HUMAN_FACING acceptance is fail-closed:
+- missing any required visible DEEP section => HUMAN_FACING FAIL;
+- structural presence with empty/status-only content => HUMAN_FACING FAIL;
+- S06B, S14B or S16B absent => PRE_RENDER/POST_RENDER acceptance cannot pass;
+- exact15/exact20 completeness and anti-fabrication requirements remain unchanged; QA MUST NOT be relaxed;
+- simplifying presentation means scan-friendly rendering, never reduced analytics;
+- Bayesian/posterior predictive, xMins/P(start), tactical/contextual/link-up models, canonical 500k MC, package utility, price model, sequential decision theory and P1.8 mini-league utility remain backend evidence;
+- V6 remains the factual data plane. This contract does not authorize changes to V6 acquisition, source adapters, publication, identity, scheduler or factual schemas.
 
 AD_HOC MODE-EQUIVALENCE IS MANDATORY. When the user explicitly requests a Canonical report mode outside its natural scheduler occurrence, including wording such as "DEEP sekarang", "PRICE sekarang", or "format 04:30 tapi mode sekarang", treat it as an actual AD_HOC occurrence of that requested Canonical mode, not as a prose imitation of the layout. The AD_HOC occurrence MUST traverse the same mode contract, compute/retrieval semantics, pre-render QA, actual visible-body post-render QA and same-request recovery semantics as the scheduled mode, except that scheduler proof is N/A. Manual/chat composition MUST NOT bypass visible-body QA merely because the request is interactive. For DEEP/PRICE, a visible RISE20/FALL20 row missing required cycle/ETA fields is a post-render QA failure and MUST be re-rendered on the same request identity rather than delivered as COMPLETE. Fail-operational delivery still applies to truthful source degradation; it does not permit omission of supported mandatory visible fields.
 Post-deadline closed-decision sections remain structural: XI BATTLE may say GW locked/no executable XI change; C/VC and Chip show locked/current state; Actionable Price Radar may be DEGRADED/UNAVAILABLE rather than omitted.

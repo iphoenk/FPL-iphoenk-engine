@@ -586,3 +586,13 @@ def test_transfer_scope_search_semantics_require_complete_full_universe_proof():
     )
     assert failed["status"] == "PARTIAL"
     assert "V12_SEARCH_PROOF_UNIVERSE_INCOMPLETE" in failed["failures"]
+
+
+def test_Z_time_budget_exhaustion_cannot_replace_mandatory_report():
+    canonical = (ROOT / CANONICAL_AUTHORITY).read_text(encoding="utf-8")
+    assert "STATE B1 — BOUND_IN_PROGRESS_TIME_BUDGET_EXHAUSTED" in canonical
+    assert "A status-only TIME_BUDGET_EXHAUSTED blocker is forbidden" in canonical
+    assert "emit the FULL Canonical report structure" in canonical
+    assert "integrated execution NOT_RUN/BLOCKED_BY_BOUND_CORE" in canonical
+    assert "STATE B1 never counts as natural DEEP acceptance" in canonical
+    assert "duplicate_acquisition=false" in canonical

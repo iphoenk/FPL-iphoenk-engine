@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T19:22:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T21:40:46+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -515,3 +515,24 @@ Stage 1 remains GREEN. Stage 2 remains GREEN. Stage 3 remains
 code-merged / acceptance pending until a fresh controlled acceptance and the
 required genuine natural DEEP acceptance pass.
 
+
+
+### Mandatory report time-budget continuity
+
+Natural 21:30 on 22 Sep 2026 exposed a report-plane edge case: the exact
+same-slot core run was correctly bound and not duplicated, but remained queued
+until the scheduler execution budget expired. The prior scheduler hotfix then
+rendered a status-only `TIME_BUDGET_EXHAUSTED` blocker instead of the mandatory
+DEEP body, even though Canonical V12 already requires due reports to remain
+fail-operational.
+
+Canonical V12 now distinguishes core terminal acceptance from visible delivery.
+If an exact bound core run remains queued/in-progress when the platform budget
+expires, the run identity stays fixed and no second core attempt is allowed,
+but a mandatory DEEP/PRICE/Deadline/Final must still render the full Canonical
+structure from the freshest valid evidence ladder. Current-core-dependent
+fields are marked `BOUND_IN_PROGRESS_TIME_BUDGET_EXHAUSTED` / `NOT_RUN`
+rather than fabricated. This delivery escape does not count as natural
+Stage-3 acceptance and does not convert a non-terminal core into success or
+failure. V6 acquisition, cadence, model math, QA, route search, Monte Carlo and
+decision ownership are unchanged.

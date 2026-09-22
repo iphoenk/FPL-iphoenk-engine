@@ -633,7 +633,10 @@ def _visible_position_mechanism(
             "P_start",
             derived.get("p_start", xmins.get("start_probability")),
         ),
-        "p_60_plus": complete.get("P_60_plus"),
+        "p_60_plus": complete.get(
+            "P_60_plus",
+            xmins.get("p_60_plus"),
+        ),
         "p_cameo": complete.get(
             "P_cameo",
             derived.get("p_cameo", xmins.get("cameo_probability")),
@@ -1679,6 +1682,7 @@ def run_deep(
                     package_with_mc or package_utility,
                     monte_carlo,
                     price_uncertainty_by_route=price_uncertainty,
+                    projections=projections,
                 ),
                 required=True,
             )

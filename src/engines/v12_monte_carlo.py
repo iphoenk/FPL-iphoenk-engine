@@ -294,7 +294,14 @@ def _fixture_catalog(
     player_ids: Sequence[int],
     gw: int,
 ) -> dict[str, dict[str, Any]]:
+    """Build one fixture catalog from governed Stage-2 event intensities.
+
+    Material-route players determine which fixtures are needed, but team goal
+    intensity is aggregated from the full projected team universe so scorer
+    allocation never treats the FPL squad as the whole football team.
+    """
     catalog: dict[str, dict[str, Any]] = {}
+    material_fixture_ids: set[str] = set()
     for element in sorted(set(int(x) for x in player_ids)):
         player = players[element]
         team_id = _i(player.get("team_id") or player.get("team"), -1)
@@ -302,7 +309,16 @@ def _fixture_catalog(
             raise MonteCarloError(f"missing team_id for element={element}")
         for index, fixture in enumerate(_fixture_rows(player, gw)):
             fid = _fixture_id(fixture, gw=gw, team_id=team_id, index=index)
-            row = catalog.setdefault(fid, {"teams": set(), "team_cs": {}, "gw": int(gw)})
+            material_fixture_ids.add(fid)
+            row = catalog.setdefault(
+                fid,
+                {
+                    "teams": set(),
+                    "team_cs": {},
+                    "team_goal_mean": {},
+                    "gw": int(gw),
+                },
+            )
             row["teams"].add(team_id)
             opponent = _opponent_id(fixture)
             if opponent > 0:
@@ -313,9 +329,61 @@ def _fixture_catalog(
             if p_cs is None:
                 p_cs = fixture.get("clean_sheet_probability")
             if p_cs is not None:
-                row["team_cs"][team_id] = _validate_probability(_f(p_cs), "clean sheet probability")
+                row["team_cs"][team_id] = _validate_probability(
+                    _f(p_cs),
+                    "clean sheet probability",
+                )
+
+    # Full-universe aggregation uses the Stage-2 fixture-adjusted player goal
+    # intensities and P1.1 expected minutes. No new xG/xPts model is created.
+    for element, player in players.items():
+        team_id = _i(player.get("team_id") or player.get("team"), -1)
+        if team_id <= 0:
+            continue
+        expected_minutes = max(
+            0.0,
+            _f(
+                (player.get("xmins") or {}).get(
+                    "expected_minutes",
+                    (player.get("xmins") or {}).get("xMins"),
+                )
+            ),
+        )
+        for index, fixture in enumerate(_fixture_rows(player, gw)):
+            fid = _fixture_id(fixture, gw=gw, team_id=team_id, index=index)
+            if fid not in material_fixture_ids:
+                continue
+            row = catalog[fid]
+            params = _fixture_event_parameters(player, fixture)
+            contribution = (
+                max(0.0, params["goal_rate90"])
+                * min(90.0, expected_minutes)
+                / 90.0
+            )
+            row["team_goal_mean"][team_id] = (
+                _f(row["team_goal_mean"].get(team_id)) + contribution
+            )
+
     for row in catalog.values():
         row["teams"] = tuple(sorted(row["teams"]))
+        # If complete player goal intensities do not identify a team mean,
+        # use the opponent Stage-2 CS marginal only as a scoreline prior.
+        for team_id in row["teams"]:
+            if _f(row["team_goal_mean"].get(team_id)) > 0.0:
+                continue
+            opponents = [x for x in row["teams"] if int(x) != int(team_id)]
+            opponent = opponents[0] if len(opponents) == 1 else None
+            p_opp_cs = (
+                row["team_cs"].get(opponent)
+                if opponent is not None
+                else None
+            )
+            if p_opp_cs is not None:
+                row["team_goal_mean"][team_id] = -math.log(
+                    max(1e-9, min(0.999999, _f(p_opp_cs)))
+                )
+            else:
+                row["team_goal_mean"][team_id] = 1.35
     return catalog
 
 
@@ -325,54 +393,66 @@ def _world_factors(
     n: int,
     cfg: Mapping[str, Any],
 ) -> dict[str, Any]:
+    """Sample shared match/team state and one coherent scoreline per fixture."""
     corr = dict(cfg.get("correlation") or {})
     match_sigma = max(0.0, _f(corr.get("match_attack_sigma"), 0.18))
     team_sigma = max(0.0, _f(corr.get("team_attack_sigma"), 0.28))
     denom = math.sqrt(match_sigma * match_sigma + team_sigma * team_sigma)
     if denom <= 0.0:
-        raise MonteCarloError("correlation model requires non-zero shared factor scale")
+        raise MonteCarloError(
+            "correlation model requires non-zero shared factor scale"
+        )
     out: dict[str, Any] = {}
-    normal = NormalDist()
     for fid in sorted(catalog):
         meta = catalog[fid]
         z_match = rng.standard_normal(n)
-        teams = {}
+        teams: dict[int, dict[str, Any]] = {}
         for team_id in meta.get("teams") or ():
             z_team = rng.standard_normal(n)
-            latent = (match_sigma * z_match + team_sigma * z_team) / denom
+            latent = (
+                match_sigma * z_match + team_sigma * z_team
+            ) / denom
             factor = np.exp(
-                match_sigma * z_match - 0.5 * match_sigma * match_sigma
-                + team_sigma * z_team - 0.5 * team_sigma * team_sigma
+                match_sigma * z_match
+                - 0.5 * match_sigma * match_sigma
+                + team_sigma * z_team
+                - 0.5 * team_sigma * team_sigma
             )
+            base_mean = max(
+                0.01,
+                _f((meta.get("team_goal_mean") or {}).get(team_id), 1.35),
+            )
+            goals = rng.poisson(base_mean * factor).astype(np.int16)
             teams[int(team_id)] = {
                 "latent": latent,
                 "attack_factor": factor,
+                "base_goal_mean": base_mean,
+                "goals": goals,
             }
-        clean_sheet = {}
-        for team_id, p_cs_raw in dict(meta.get("team_cs") or {}).items():
-            p_cs = _validate_probability(_f(p_cs_raw), "clean sheet probability")
-            opponent_ids = [tid for tid in teams if int(tid) != int(team_id)]
-            if len(opponent_ids) == 1:
-                opp_latent = teams[opponent_ids[0]]["latent"]
-            else:
-                own = teams.get(int(team_id))
-                if own is None:
-                    raise MonteCarloError("clean-sheet factor cannot identify team")
-                opp_latent = -own["latent"]
-            if p_cs <= 0.0:
-                clean = np.zeros(n, dtype=bool)
-            elif p_cs >= 1.0:
-                clean = np.ones(n, dtype=bool)
-            else:
-                threshold = normal.inv_cdf(p_cs)
-                clean = opp_latent < threshold
-            clean_sheet[int(team_id)] = clean
+
+        clean_sheet: dict[int, np.ndarray] = {}
+        for team_id in teams:
+            opponents = [
+                tid for tid in teams if int(tid) != int(team_id)
+            ]
+            if len(opponents) != 1:
+                raise MonteCarloError(
+                    f"fixture={fid} cannot identify exactly one opponent"
+                )
+            clean_sheet[int(team_id)] = (
+                np.asarray(teams[opponents[0]]["goals"]) == 0
+            )
         out[fid] = {
             "teams": teams,
+            "team_goals": {
+                int(team_id): np.asarray(payload["goals"], dtype=np.int16)
+                for team_id, payload in teams.items()
+            },
             "clean_sheet": clean_sheet,
+            "scoreline_generated_before_player_points": True,
+            "cs_derived_from_opponent_goals": True,
         }
     return out
-
 
 def _fixture_event_parameters(
     player: Mapping[str, Any],

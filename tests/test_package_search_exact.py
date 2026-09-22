@@ -287,11 +287,11 @@ def test_23_search_governance_declares_v6_and_authority_unchanged():
 
 
 def test_stage3_unavailable_private_bank_preserves_structural_full_search():
-    current = _current_squad()
-    universe = _candidate_universe()
+    current = _current()
+    universe = _universe()
     for row in current:
         row["sell_cost"] = None
-    result = package_search.search_packages(
+    result = search.search_packages(
         current_squad=current,
         candidate_universe=universe,
         bank=None,

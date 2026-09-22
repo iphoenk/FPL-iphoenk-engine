@@ -1350,24 +1350,74 @@ def build_signal_delta(
     return {"status": "AVAILABLE", "rows": rows}
 
 
-def _locked_default(label: str, locked_state: Mapping[str, Any]) -> dict[str, Any] | None:
-    upper = label.upper()
-    if "FORMATION/XI/BENCH" in upper:
+_DEEP_LEGACY_LABEL_ALIASES: dict[str, tuple[str, ...]] = {
+    "S01": ("Decision/status",),
+    "S02": ("OUR15",),
+    "S03": ("DECISION DELTA",),
+    "S04": ("Changes",),
+    "S05": ("Fixtures/rest/conditions",),
+    "S06": ("Formation/XI/bench",),
+    "S07": ("XI battle",),
+    "S08": ("C/VC",),
+    "S09": ("Chip",),
+    "S10": ("Actionable Price Radar",),
+    "S11": ("Watchlist20 exact20",),
+    "S12": ("RISE20 exact20 where required",),
+    "S13": ("FALL20 exact20 where required",),
+    "S14": ("Package optimizer/frontier including HOLD baseline",),
+    "S15": ("Evidence quality",),
+    "S15B": ("ICON+ mini-league",),
+    "S16": ("ALL15 exact15 next-GW tactical/probability table",),
+    "S17": ("Source health/freshness/lineage",),
+    "S18": ("WAIT/PREPARE/ACT + trigger/reversal",),
+    "S19": ("Final judgement",),
+}
+
+
+def _payload_for_section(
+    payloads: Mapping[str, Mapping[str, Any]],
+    *,
+    section_id: str,
+    label: str,
+) -> Mapping[str, Any] | None:
+    direct = payloads.get(section_id) or payloads.get(label)
+    if direct is not None:
+        return direct
+    for alias in _DEEP_LEGACY_LABEL_ALIASES.get(section_id, ()):
+        if alias in payloads:
+            return payloads[alias]
+    return None
+
+
+def _locked_default(
+    section_id: str,
+    label: str,
+    locked_state: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    sid = str(section_id or "").upper()
+    if sid == "S06":
         return {
             "state": "COMPLETE",
             "content": {
                 "status": "GW LOCKED — NO EXECUTABLE XI CHANGE",
                 "formation": locked_state.get("formation"),
+                "starting_xi": locked_state.get("xi"),
                 "xi": locked_state.get("xi"),
                 "bench": locked_state.get("bench"),
+                "lineup_score": {"state": "LOCKED"},
+                "formation_comparison": [],
             },
         }
-    if "XI BATTLE" in upper:
+    if sid == "S07":
         return {
             "state": "COMPLETE",
-            "content": {"status": "GW LOCKED — XI battle retained as factual locked state"},
+            "content": {
+                "status": "GW LOCKED — XI battle retained as factual locked state",
+                "battles": [],
+                "empty_is_truthful": True,
+            },
         }
-    if label.upper() == "C/VC":
+    if sid == "S08":
         return {
             "state": "COMPLETE",
             "content": {
@@ -1376,7 +1426,7 @@ def _locked_default(label: str, locked_state: Mapping[str, Any]) -> dict[str, An
                 "vice_captain": locked_state.get("vice_captain"),
             },
         }
-    if label.upper() == "CHIP":
+    if sid == "S09":
         return {
             "state": "COMPLETE",
             "content": {"status": "LOCKED", "chip": locked_state.get("chip")},
@@ -1408,9 +1458,13 @@ def _materialize_canonical_report(
         contract["expected_section_ids"],
         contract["expected_visible_order"],
     ):
-        raw = payloads.get(section_id) or payloads.get(label)
+        raw = _payload_for_section(
+            payloads,
+            section_id=section_id,
+            label=label,
+        )
         if raw is None and current_gw_locked:
-            raw = _locked_default(label, locked)
+            raw = _locked_default(section_id, label, locked)
         if raw is None:
             raw = {
                 "state": "UNAVAILABLE",
@@ -1448,8 +1502,12 @@ def _materialize_canonical_report(
         if (
             universe_movers is not None
             and universe_movers_target_label
-            and str(label).upper()
-            == str(universe_movers_target_label).upper()
+            and (
+                str(section_id).upper()
+                == str(universe_movers_target_label).upper()
+                or str(label).upper()
+                == str(universe_movers_target_label).upper()
+            )
         ):
             content = dict(content or {})
             if "universe_movers" in content:
@@ -1493,6 +1551,7 @@ def _materialize_canonical_report(
         "exact_canonical_order": [row["section_id"] for row in sections]
         == contract["expected_section_ids"],
         "numbered_headings": 19 if structural_mode == "DEEP" else len(sections),
+        "rendered_blocks_including_suffix_sections": len(sections), 
         "rendered_blocks_including_15B": len(sections),
         "universe_movers_attachment_count": mover_attachments,
         "universe_movers_visible": mover_attachments == 1,
@@ -1910,7 +1969,7 @@ def materialize_deep_report(
             (
                 row
                 for row in report["sections"]
-                if str(row.get("label") or "").strip().upper() == "CHANGES"
+                if str(row.get("section_id") or "").strip().upper() == "S04"
             ),
             None,
         )
@@ -1930,7 +1989,7 @@ def materialize_deep_report(
             (
                 row
                 for row in report["sections"]
-                if "PACKAGE OPTIMIZER" in str(row.get("label") or "").upper()
+                if str(row.get("section_id") or "").strip().upper() == "S14"
             ),
             None,
         )
@@ -1966,7 +2025,7 @@ def _post_match_structural_route(
         "DEEP+MATCH",
         "MATCH+DEEP",
     }:
-        return "DEEP", "Changes"
+        return "DEEP", "S04"
     return mode, None
 
 

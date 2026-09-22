@@ -1138,7 +1138,7 @@ def test_C7_stage2_live_threshold_does_not_force_erlang():
         minute=65,
         threshold=10,
         projected_full_match_mean=11.0,
-        interarrival_minutes=[7.0, 11.0, 8.0, 10.0, 9.0, 6.0, 12.0, 8.5],
+        interarrival_minutes=[1.0, 2.0, 3.0, 5.0, 8.0, 13.0, 21.0, 34.0],
     )
     assert (
         justified["selected_model"]

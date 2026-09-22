@@ -1640,6 +1640,9 @@ def run_deep(
                         )[:24]
                     ),
                     route_ids=mc_route_ids,
+                    selected_route_id=(
+                        mc_route_ids[0] if mc_route_ids else "HOLD"
+                    ),
                     canonical=True,
                     generated_at=report_slot,
                 ),
@@ -1787,6 +1790,16 @@ def run_deep(
             or {}
         ).get("status")
         == "PASS"
+        and package_search_result.get("search_authority") == "FULL"
+        and package_search_result.get("coverage", {}).get(
+            "coverage_complete"
+        ) is True
+        and canonical_bundle.get("stage2_lineage_complete_players")
+        == canonical_bundle.get("complete_players")
+        and str((watchlist or {}).get("state") or "").upper()
+        == "COMPLETE"
+        and str((mini or {}).get("coverage_state") or "").upper()
+        == "FULL"
         and all(
             stage_status.get(name) == "PASS"
             for name in stage3_required_stage_names

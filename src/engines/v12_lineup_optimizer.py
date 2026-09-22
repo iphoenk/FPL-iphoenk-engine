@@ -890,13 +890,12 @@ def _compact_bench_order_winner_exact(
     reserve_gk: Mapping[str, Any],
     outfield_bench: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
-    """Exact compact bench winner with one batched six-permutation pass.
+    """Exact compact winner for all six bench permutations in one tensor pass.
 
-    This is computation reuse only. It evaluates the same six bench
-    permutations, consumes the same canonical formation resolver through
-    _resolver_mask_table, and preserves the existing sort/tie-break key.
-    Publish-only slots and cameo-blocking counterfactuals remain owned by the
-    full materialization path for the selected/best-alternative XI.
+    The canonical resolver and objective are unchanged. Only invariant state
+    matrices and probability-mass arithmetic are batched. The six canonical
+    sort keys are still rounded exactly at their published precision and the
+    original stable permutation order remains the deterministic tie-break.
     """
     if len(outfield_bench) != 3 or any(
         row.get("position") == "GK" for row in outfield_bench
@@ -905,8 +904,7 @@ def _compact_bench_order_winner_exact(
             "outfield bench order must contain exactly three non-GK players"
         )
 
-    cfg = load_config()
-    objective = dict(cfg.get("objective") or {})
+    objective = dict((load_config().get("objective") or {}))
     outfield_starters = [
         row for row in starters if row.get("position") in OUTFIELD
     ]
@@ -917,7 +915,9 @@ def _compact_bench_order_winner_exact(
     count_states = _dnp_count_distribution(outfield_starters)
     permutations = list(itertools.permutations(list(outfield_bench), 3))
     if len(permutations) != 6:
-        raise LineupOptimizerError("compact bench must preserve all six permutations")
+        raise LineupOptimizerError(
+            "compact bench must preserve all six permutations"
+        )
 
     starter_probabilities = np.asarray(
         [float(probability) for _, probability in count_states],
@@ -936,178 +936,229 @@ def _compact_bench_order_winner_exact(
         dtype=np.float64,
     )
 
-    state_count = len(count_states)
     dnp_count_keys = tuple(
         tuple(int(value) for value in dnp_counts)
         for dnp_counts, _ in count_states
     )
-    selected_matrices: list[tuple[tuple[int, ...], ...]] = []
-    reached_matrices: list[tuple[tuple[int, ...], ...]] = []
+    selected_matrices = []
     for permutation in permutations:
         bench_positions = tuple(
             str(row.get("position")) for row in permutation
         )
-        selected_matrix, reached_matrix = _resolver_state_matrix(
+        selected_matrix, _ = _resolver_state_matrix(
             start_counts,
             dnp_count_keys,
             bench_positions,
         )
         selected_matrices.append(selected_matrix)
-        reached_matrices.append(reached_matrix)
-
     selected_bits = np.asarray(selected_matrices, dtype=np.uint8)
-    reached_bits = np.asarray(reached_matrices, dtype=np.uint8)
 
+    state_count = len(count_states)
     if state_count:
         joint_probability = (
             starter_probabilities[None, :, None]
             * mask_probabilities[:, None, :]
         )
+        autosub_probability_outfield = np.sum(
+            np.where(selected_bits != 0, joint_probability, 0.0),
+            axis=(1, 2),
+            dtype=np.float64,
+        )
+        selected_prob = np.empty((6, 3), dtype=np.float64)
+        for slot_index in range(3):
+            bit = 1 << slot_index
+            selected_prob[:, slot_index] = np.sum(
+                np.where(
+                    (selected_bits & bit) != 0,
+                    joint_probability,
+                    0.0,
+                ),
+                axis=(1, 2),
+                dtype=np.float64,
+            )
     else:
-        joint_probability = np.zeros((6, 0, 8), dtype=np.float64)
+        autosub_probability_outfield = np.zeros(6, dtype=np.float64)
+        selected_prob = np.zeros((6, 3), dtype=np.float64)
+
+    expected_by_slot = np.asarray(
+        [
+            [
+                _f((row.get("appearance_conditioned") or {}).get(
+                    "expected_points"
+                ))
+                for row in permutation
+            ]
+            for permutation in permutations
+        ],
+        dtype=np.float64,
+    )
+    blank_by_slot = np.asarray(
+        [
+            [
+                (
+                    0.0
+                    if (row.get("appearance_conditioned") or {}).get(
+                        "p_fpl_blank"
+                    ) is None
+                    else _f(
+                        (row.get("appearance_conditioned") or {}).get(
+                            "p_fpl_blank"
+                        )
+                    )
+                )
+                for row in permutation
+            ]
+            for permutation in permutations
+        ],
+        dtype=np.float64,
+    )
+    ge8_by_slot = np.asarray(
+        [
+            [
+                (
+                    0.0
+                    if (row.get("appearance_conditioned") or {}).get(
+                        "p_points_ge_8"
+                    ) is None
+                    else _f(
+                        (row.get("appearance_conditioned") or {}).get(
+                            "p_points_ge_8"
+                        )
+                    )
+                )
+                for row in permutation
+            ]
+            for permutation in permutations
+        ],
+        dtype=np.float64,
+    )
+    ge10_by_slot = np.asarray(
+        [
+            [
+                (
+                    0.0
+                    if (row.get("appearance_conditioned") or {}).get(
+                        "p_points_ge_10"
+                    ) is None
+                    else _f(
+                        (row.get("appearance_conditioned") or {}).get(
+                            "p_points_ge_10"
+                        )
+                    )
+                )
+                for row in permutation
+            ]
+            for permutation in permutations
+        ],
+        dtype=np.float64,
+    )
+
+    expected_outfield = (
+        selected_prob[:, 0] * expected_by_slot[:, 0]
+        + selected_prob[:, 1] * expected_by_slot[:, 1]
+        + selected_prob[:, 2] * expected_by_slot[:, 2]
+    )
+    selected_blank = (
+        selected_prob[:, 0] * blank_by_slot[:, 0]
+        + selected_prob[:, 1] * blank_by_slot[:, 1]
+        + selected_prob[:, 2] * blank_by_slot[:, 2]
+    )
+    selected_ge8 = (
+        selected_prob[:, 0] * ge8_by_slot[:, 0]
+        + selected_prob[:, 1] * ge8_by_slot[:, 1]
+        + selected_prob[:, 2] * ge8_by_slot[:, 2]
+    )
+    selected_ge10 = (
+        selected_prob[:, 0] * ge10_by_slot[:, 0]
+        + selected_prob[:, 1] * ge10_by_slot[:, 1]
+        + selected_prob[:, 2] * ge10_by_slot[:, 2]
+    )
 
     starter_gk = next(row for row in starters if row.get("position") == "GK")
     actual_gk = _expected_gk_autosub(starter_gk, reserve_gk)
+    expected_autosub_value = (
+        expected_outfield + float(actual_gk["expected_points"])
+    )
+    autosub_probability = 1.0 - (
+        (1.0 - autosub_probability_outfield)
+        * (1.0 - float(actual_gk["autosub_probability"]))
+    )
     blank_weight = _f(
         objective.get("bench_blank_probability_weight_points"), 0.20
     )
     upside_weight = _f(
         objective.get("bench_ge8_probability_weight_points"), 0.20
     )
-
-    rows: list[dict[str, Any]] = []
-    for permutation_index, permutation in enumerate(permutations):
-        joint = joint_probability[permutation_index]
-        selected = selected_bits[permutation_index]
-        reached = reached_bits[permutation_index]
-
-        if state_count:
-            autosub_probability_outfield = float(
-                np.sum(joint[selected != 0], dtype=np.float64)
-            )
-            selected_prob = []
-            reach_prob = []
-            for slot_index in range(3):
-                bit = 1 << slot_index
-                selected_prob.append(
-                    float(
-                        np.sum(
-                            joint[(selected & bit) != 0],
-                            dtype=np.float64,
-                        )
-                    )
-                )
-                reach_prob.append(
-                    float(
-                        np.sum(
-                            joint[(reached & bit) != 0],
-                            dtype=np.float64,
-                        )
-                    )
-                )
-        else:
-            autosub_probability_outfield = 0.0
-            selected_prob = [0.0, 0.0, 0.0]
-            reach_prob = [0.0, 0.0, 0.0]
-
-        conditioned = [
-            dict(row.get("appearance_conditioned") or {})
-            for row in permutation
-        ]
-        expected_outfield = sum(
-            selected_prob[index] * _f(row.get("expected_points"))
-            for index, row in enumerate(conditioned)
-        )
-        selected_blank = sum(
-            selected_prob[index] * _f(row.get("p_fpl_blank"))
-            for index, row in enumerate(conditioned)
-            if row.get("p_fpl_blank") is not None
-        )
-        selected_ge8 = sum(
-            selected_prob[index] * _f(row.get("p_points_ge_8"))
-            for index, row in enumerate(conditioned)
-            if row.get("p_points_ge_8") is not None
-        )
-        selected_ge10 = sum(
-            selected_prob[index] * _f(row.get("p_points_ge_10"))
-            for index, row in enumerate(conditioned)
-            if row.get("p_points_ge_10") is not None
-        )
-
-        expected_autosub_value = (
-            expected_outfield + actual_gk["expected_points"]
-        )
-        autosub_probability = 1.0 - (
-            (1.0 - autosub_probability_outfield)
-            * (1.0 - actual_gk["autosub_probability"])
-        )
-        bench_utility = (
-            expected_autosub_value
-            - blank_weight * selected_blank
-            + upside_weight * selected_ge8
-        )
-        rows.append(
-            {
-                "order": [
-                    int(row.get("element") or 0) for row in permutation
-                ],
-                "slots": [],
-                "expected_autosub_value": round(
-                    expected_autosub_value, 6
-                ),
-                "expected_blocked_autosub_value": None,
-                "expected_late_cameo_blocked_autosub_value": None,
-                "autosub_probability": round(autosub_probability, 9),
-                "blocked_autosub_probability": None,
-                "expected_selected_blank_probability_mass": round(
-                    selected_blank, 9
-                ),
-                "expected_selected_ge8_probability_mass": round(
-                    selected_ge8, 9
-                ),
-                "expected_selected_ge10_probability_mass": round(
-                    selected_ge10, 9
-                ),
-                "bench_order_utility": round(bench_utility, 6),
-                "reserve_gk": {
-                    "element": reserve_gk.get("element"),
-                    "name": reserve_gk.get("name"),
-                    "position": "GK",
-                    "autosub_probability": round(
-                        actual_gk["autosub_probability"], 9
-                    ),
-                    "expected_autosub_value": round(
-                        actual_gk["expected_points"], 6
-                    ),
-                    "separate_from_outfield_priority": True,
-                },
-                "covariance_status": "COVARIANCE_NOT_MODELLED_YET",
-                "appearance_dependence_assumption": (
-                    "INDEPENDENCE_APPROXIMATION_PENDING_COVARIANCE_MODEL"
-                ),
-                "governance": {
-                    "global_team_level_resolver": True,
-                    "cameo_blocks_autosub": True,
-                    "late_cameo_blocks_autosub": True,
-                    "dnp_only_triggers_autosub": True,
-                    "bench_points_not_treated_as_guaranteed": True,
-                    "blocking_counterfactual_evaluated": False,
-                    "six_permutations_batched_exactly": True,
-                },
-            }
-        )
-
-    rows.sort(
-        key=lambda row: (
-            _f(row.get("bench_order_utility")),
-            _f(row.get("expected_autosub_value")),
-            -_f(row.get("expected_selected_blank_probability_mass")),
-            _f(row.get("expected_selected_ge8_probability_mass")),
-            _f(row.get("expected_selected_ge10_probability_mass")),
-        ),
-        reverse=True,
+    bench_utility = (
+        expected_autosub_value
+        - blank_weight * selected_blank
+        + upside_weight * selected_ge8
     )
-    return rows[0]
+
+    rounded_keys = [
+        (
+            round(float(bench_utility[index]), 6),
+            round(float(expected_autosub_value[index]), 6),
+            -round(float(selected_blank[index]), 9),
+            round(float(selected_ge8[index]), 9),
+            round(float(selected_ge10[index]), 9),
+        )
+        for index in range(6)
+    ]
+    winner_index = max(range(6), key=lambda index: rounded_keys[index])
+    winner = permutations[winner_index]
+
+    return {
+        "order": [int(row.get("element") or 0) for row in winner],
+        "slots": [],
+        "expected_autosub_value": round(
+            float(expected_autosub_value[winner_index]), 6
+        ),
+        "expected_blocked_autosub_value": None,
+        "expected_late_cameo_blocked_autosub_value": None,
+        "autosub_probability": round(
+            float(autosub_probability[winner_index]), 9
+        ),
+        "blocked_autosub_probability": None,
+        "expected_selected_blank_probability_mass": round(
+            float(selected_blank[winner_index]), 9
+        ),
+        "expected_selected_ge8_probability_mass": round(
+            float(selected_ge8[winner_index]), 9
+        ),
+        "expected_selected_ge10_probability_mass": round(
+            float(selected_ge10[winner_index]), 9
+        ),
+        "bench_order_utility": round(
+            float(bench_utility[winner_index]), 6
+        ),
+        "reserve_gk": {
+            "element": reserve_gk.get("element"),
+            "name": reserve_gk.get("name"),
+            "position": "GK",
+            "autosub_probability": round(
+                float(actual_gk["autosub_probability"]), 9
+            ),
+            "expected_autosub_value": round(
+                float(actual_gk["expected_points"]), 6
+            ),
+            "separate_from_outfield_priority": True,
+        },
+        "covariance_status": "COVARIANCE_NOT_MODELLED_YET",
+        "appearance_dependence_assumption": (
+            "INDEPENDENCE_APPROXIMATION_PENDING_COVARIANCE_MODEL"
+        ),
+        "governance": {
+            "global_team_level_resolver": True,
+            "cameo_blocks_autosub": True,
+            "late_cameo_blocks_autosub": True,
+            "dnp_only_triggers_autosub": True,
+            "bench_points_not_treated_as_guaranteed": True,
+            "blocking_counterfactual_evaluated": False,
+            "six_permutations_batched_exactly": True,
+            "winner_only_compact_materialization": True,
+        },
+    }
 
 
 def _captain_vice_pair_row(

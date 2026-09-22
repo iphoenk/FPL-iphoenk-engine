@@ -2189,6 +2189,13 @@ def _pair_metrics(a: np.ndarray, b: np.ndarray) -> dict[str, Any]:
     )
     p_gt = float(np.mean(diff > 0.0))
     p_lt = float(np.mean(diff < 0.0))
+    meaningful = _f(
+        (load_config().get("canonical") or {}).get(
+            "material_upside_threshold_points"
+        ),
+        5.0,
+    )
+    p_meaningful = float(np.mean(diff >= meaningful))
     return {
         "status": "READY",
         "mean_difference": float(np.mean(diff)),
@@ -2199,6 +2206,30 @@ def _pair_metrics(a: np.ndarray, b: np.ndarray) -> dict[str, Any]:
         "p_a_lt_b": p_lt,
         "p_a_lt_b_standard_error": math.sqrt(
             max(0.0, p_lt * (1.0 - p_lt)) / n
+        ),
+        "p_delta_ge_meaningful_threshold": p_meaningful,
+        "meaningful_threshold_points": meaningful,
+        "p_delta_ge_meaningful_threshold_standard_error": math.sqrt(
+            max(
+                0.0,
+                p_meaningful * (1.0 - p_meaningful),
+            )
+            / n
+        ),
+        "Q10": float(
+            np.quantile(diff, 0.10, method="linear")
+        ),
+        "Q25": float(
+            np.quantile(diff, 0.25, method="linear")
+        ),
+        "median": float(
+            np.quantile(diff, 0.50, method="linear")
+        ),
+        "Q75": float(
+            np.quantile(diff, 0.75, method="linear")
+        ),
+        "Q90": float(
+            np.quantile(diff, 0.90, method="linear")
         ),
         "paired_difference_standard_error": (
             std / math.sqrt(n)

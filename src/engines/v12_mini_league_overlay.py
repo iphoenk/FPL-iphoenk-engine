@@ -338,6 +338,11 @@ def build_mini_league_snapshot(
         and abs(_i(row.get("league_rank"), 10**9) - our_rank) <= 2
     ]
 
+    top3 = ordered[min(2, len(ordered) - 1)] if ordered else None
+    top5 = ordered[min(4, len(ordered) - 1)] if ordered else None
+    top3_points = _i((top3 or {}).get("league_total"), 0) if top3 else None
+    top5_points = _i((top5 or {}).get("league_total"), 0) if top5 else None
+
     current_context = {
         "our_entry_id": int(our_entry_id),
         "our_rank": our_rank,
@@ -349,13 +354,37 @@ def build_mini_league_snapshot(
             if leader_total is not None and our_total is not None
             else None
         ),
+        "top_3_cutoff_points": top3_points,
+        "points_to_top_3": (
+            max(0, top3_points - our_total)
+            if top3_points is not None and our_total is not None
+            else None
+        ),
+        "top_5_cutoff_points": top5_points,
+        "points_to_top_5": (
+            max(0, top5_points - our_total)
+            if top5_points is not None and our_total is not None
+            else None
+        ),
         "nearest_above_entry_id": _i((nearest_above or {}).get("entry_id"), 0) or None,
+        "nearest_above_rank": _i((nearest_above or {}).get("league_rank"), 0) or None,
+        "nearest_above_points": (
+            _i(nearest_above.get("league_total"))
+            if nearest_above is not None
+            else None
+        ),
         "points_to_nearest_above": (
             max(0, _i(nearest_above.get("league_total")) - our_total)
             if nearest_above is not None and our_total is not None
             else None
         ),
         "nearest_below_entry_id": _i((nearest_below or {}).get("entry_id"), 0) or None,
+        "nearest_below_rank": _i((nearest_below or {}).get("league_rank"), 0) or None,
+        "nearest_below_points": (
+            _i(nearest_below.get("league_total"))
+            if nearest_below is not None
+            else None
+        ),
         "points_ahead_nearest_below": (
             max(0, our_total - _i(nearest_below.get("league_total")))
             if nearest_below is not None and our_total is not None

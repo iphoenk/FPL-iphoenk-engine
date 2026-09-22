@@ -465,20 +465,236 @@ def _fixture_event_parameters(
     dc = dict(events.get("defcon") or {})
     saves = dict(events.get("saves") or {})
     bonus = dict(events.get("bonus") or {})
+    cards = dict(events.get("cards") or {})
+    penalty_save = dict(events.get("penalty_save") or {})
+    goals_conceded = dict(events.get("goals_conceded") or {})
+    position_engine = dict(fixture.get("position_engine") or {})
     return {
-        "goal_rate90": max(0.0, _f(goals.get("fixture_adjusted_rate90"))),
-        "assist_rate90": max(0.0, _f(assists.get("fixture_adjusted_rate90"))),
-        "clean_sheet_points": max(0.0, _f(cs.get("points_if_qualified"))),
-        "clean_sheet_minimum_minutes": max(0.0, _f(cs.get("minimum_minutes"), 60.0)),
+        "goal_rate90": max(
+            0.0, _f(goals.get("fixture_adjusted_rate90"))
+        ),
+        "assist_rate90": max(
+            0.0, _f(assists.get("fixture_adjusted_rate90"))
+        ),
+        "clean_sheet_points": max(
+            0.0, _f(cs.get("points_if_qualified"))
+        ),
+        "clean_sheet_minimum_minutes": max(
+            0.0, _f(cs.get("minimum_minutes"), 60.0)
+        ),
         "defcon_eligible": bool(dc.get("eligible")),
-        "defcon_rate90": max(0.0, _f(dc.get("posterior_count_rate90"))),
+        "defcon_rate90": max(
+            0.0, _f(dc.get("posterior_count_rate90"))
+        ),
         "defcon_threshold": _i(dc.get("threshold"), 0),
         "defcon_points": max(0.0, _f(dc.get("points"))),
-        "save_eligible": bool(saves.get("eligible")) or _position(player) == "GK",
-        "save_rate90": max(0.0, _f(saves.get("posterior_rate90"))),
-        "bonus_rate90": max(0.0, _f(bonus.get("posterior_rate90"))),
+        "defcon_count_model": deepcopy(
+            dc.get("count_model") or {}
+        ),
+        "save_eligible": bool(saves.get("eligible"))
+        or _position(player) == "GK",
+        "save_rate90": max(
+            0.0, _f(saves.get("posterior_rate90"))
+        ),
+        "save_count_model": deepcopy(
+            saves.get("sot_count_model")
+            or saves.get("count_model")
+            or {}
+        ),
+        "bonus_calibration": deepcopy(
+            bonus.get("calibration") or {}
+        ),
+        "yellow_rate90": max(
+            0.0, _f(cards.get("yellow_rate90"))
+        ),
+        "red_rate90": max(
+            0.0, _f(cards.get("red_rate90"))
+        ),
+        "penalty_save_probability": max(
+            0.0, min(1.0, _f(penalty_save.get("P_at_least_1")))
+        ),
+        "goals_conceded_interval": max(
+            1,
+            _i(
+                goals_conceded.get("interval"),
+                int(GOALS_CONCEDED_INTERVAL),
+            ),
+        ),
+        "goals_conceded_points_per_interval": _f(
+            goals_conceded.get("points_per_interval"),
+            float(GOALS_CONCEDED_POINTS_PER_INTERVAL),
+        ),
+        "goal_process": deepcopy(
+            position_engine.get("goal_process") or {}
+        ),
+        "penalty_process": deepcopy(
+            position_engine.get("penalty_process") or {}
+        ),
+        "set_piece_process": deepcopy(
+            position_engine.get("set_piece_process") or {}
+        ),
+        "linkup": deepcopy(position_engine.get("linkup") or {}),
+        "matchup_vector": deepcopy(
+            position_engine.get("matchup_vector") or {}
+        ),
     }
 
+
+def _fixture_context(
+    player: Mapping[str, Any],
+    fixture_id: str,
+) -> dict[str, Any]:
+    contexts = (
+        (player.get("contextual_dynamics") or {}).get(
+            "fixture_contexts"
+        )
+        or []
+    )
+    for row in contexts:
+        if str((row or {}).get("fixture") or "") == str(fixture_id):
+            return dict(row)
+    return {}
+
+
+def _path_linkup_ratio(
+    player: Mapping[str, Any],
+    fixture_id: str,
+    appeared_by_element: Mapping[int, np.ndarray],
+    *,
+    channel: str,
+    n: int,
+) -> np.ndarray:
+    """Condition Stage-2 marginalized link-up on sampled teammate appearance.
+
+    The Stage-2 event intensity already contains the marginalized link effect.
+    P1.4 therefore applies only conditional/marginal ratios, preventing double
+    counting while making creator/linked-player absence path dependent.
+    """
+    context = _fixture_context(player, fixture_id)
+    network = dict(context.get("linkup_network") or {})
+    marginalized = {
+        str(row.get("edge_id")): dict(row)
+        for row in network.get("marginalized") or []
+        if isinstance(row, Mapping)
+    }
+    relationships = [
+        dict(row)
+        for row in network.get("relationships") or []
+        if isinstance(row, Mapping)
+    ]
+    ratio = np.ones(n, dtype=np.float64)
+    for link in relationships:
+        source = _i(
+            link.get("source_player_id"),
+            _i(link.get("teammate_player_id"), -1),
+        )
+        target = _i(link.get("target_player_id"), -1)
+        if source <= 0 or target != _i(player.get("element"), -1):
+            continue
+        source_appeared = appeared_by_element.get(source)
+        if source_appeared is None:
+            continue
+        edge_id = f"{source}->{target}"
+        marginal = marginalized.get(edge_id) or {}
+        confidence = max(
+            0.0, min(1.0, _f(link.get("confidence")))
+        )
+        role_hint = str(link.get("target_role") or "").upper()
+        with_mod = max(
+            0.01, _f(link.get("with_player_modifier"), 1.0)
+        )
+        without_mod = max(
+            0.01, _f(link.get("without_player_modifier"), 1.0)
+        )
+        if channel == "goal" and any(
+            token in role_hint for token in ("CREATOR", "PLAYMAKER")
+        ):
+            conditional_with = 1.0
+            conditional_without = 1.0
+            baseline = 1.0
+        else:
+            exponent = confidence * (
+                1.0 if channel == "goal" else 0.5
+            )
+            conditional_with = math.exp(
+                math.log(with_mod) * exponent
+            )
+            conditional_without = math.exp(
+                math.log(without_mod) * exponent
+            )
+            baseline = max(
+                0.01,
+                _f(
+                    marginal.get(
+                        "applied_goal_multiplier"
+                        if channel == "goal"
+                        else "applied_assist_multiplier"
+                    ),
+                    1.0,
+                ),
+            )
+        conditional = np.where(
+            np.asarray(source_appeared, dtype=bool),
+            conditional_with,
+            conditional_without,
+        )
+        ratio *= conditional / baseline
+    return np.clip(ratio, 0.55, 1.65)
+
+
+def _sample_count_from_stage2(
+    rng: np.random.Generator,
+    model: Mapping[str, Any],
+    mean: np.ndarray,
+) -> np.ndarray:
+    mu = np.maximum(0.0, np.asarray(mean, dtype=np.float64))
+    family = str(model.get("family") or "POISSON").upper()
+    selection = dict(model.get("selection") or {})
+    if family == "NEGATIVE_BINOMIAL":
+        dispersion = max(
+            1e-6,
+            _f(selection.get("nb_dispersion"), 1.0),
+        )
+        p = dispersion / (dispersion + mu)
+        return rng.negative_binomial(
+            dispersion,
+            np.clip(p, 1e-9, 1.0),
+        ).astype(np.int32)
+    return rng.poisson(mu).astype(np.int32)
+
+
+def _sample_bonus_points(
+    rng: np.random.Generator,
+    core_points: np.ndarray,
+    calibration: Mapping[str, Any],
+) -> np.ndarray:
+    out = np.zeros(len(core_points), dtype=np.int8)
+    if not calibration:
+        return out
+    for value in np.unique(core_points.astype(np.int32)):
+        mask = core_points.astype(np.int32) == int(value)
+        if not np.any(mask):
+            continue
+        pmf = _conditional_bonus_pmf(
+            int(value),
+            calibration,
+        )
+        tiers = np.asarray(sorted(pmf), dtype=np.int8)
+        probs = np.asarray(
+            [max(0.0, _f(pmf[int(tier)])) for tier in tiers],
+            dtype=np.float64,
+        )
+        total = float(probs.sum())
+        if total <= 0.0:
+            continue
+        probs /= total
+        draws = rng.choice(
+            tiers,
+            size=int(np.count_nonzero(mask)),
+            p=probs,
+        )
+        out[mask] = draws
+    return out
 
 def _simulate_player_gw(
     rng: np.random.Generator,

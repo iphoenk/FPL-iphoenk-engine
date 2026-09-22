@@ -501,16 +501,16 @@ def test_integrated_runner_source_compiles():
 
 
 
-def test_stage1_complete_universe_keeps_s14_truthfully_degraded_for_stage2():
+def test_stage3_s14_consumes_real_package_mc_and_decision_producers():
     source = Path(runner.__file__).read_text(encoding="utf-8")
-    assert (
-        "Stage 1 canonical universe is complete; Stage 2 "
-        in source
-    )
-    assert (
-        "STAGE_2_PACKAGE_FRONTIER_AND_MATERIAL_MONTE_CARLO_"
-        in source
-    )
+    assert "P1_2A_PACKAGE_SEARCH" in source
+    assert "P1_2_PACKAGE_UTILITY" in source
+    assert "P1_4_MONTE_CARLO" in source
+    assert "P1_2_STAGE3_DECISION_CLOSURE" in source
+    assert "P1_8_MINI_LEAGUE_OVERLAY" in source
+    assert "_stage3_visible_package_surface(" in source
+    assert "Stage3 internal producer/wiring failure" in source
+    assert "STAGE_2_PACKAGE_FRONTIER_AND_MATERIAL_MONTE_CARLO_NOT_STARTED" not in source
     assert '"S14": _section(' in source
 
 

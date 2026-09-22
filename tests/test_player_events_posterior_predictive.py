@@ -16,6 +16,17 @@ from src.engines.v12_player_events import (
     project_player_fixture,
 )
 from src.engines.v12_player_minutes import estimate_player_minutes
+from src.engines.v12_position_probability_components import (
+    _gk_save_pmf_from_model,
+    _gk_sot_save_model,
+    _set_piece_process,
+    build_dynamic_matchup_vector,
+    convolve_point_distributions,
+    estimate_live_threshold_probability,
+    scoreline_clean_sheet_probabilities,
+    select_count_distribution,
+    select_scoreline_model,
+)
 from src.models import projection_components as legacy
 from src.models.historical_projection import build as build_projection
 
@@ -968,3 +979,200 @@ def test_B20_no_genuine_settled_history_is_not_reconstructed_from_hindsight():
     assert registry["settled_predeadline_sample_size"] == 0
     assert registry["dependence_status"] == "LOW_CONFIDENCE_CONSERVATIVE"
     assert registry["hindsight_reconstruction_forbidden"] is True
+
+
+
+def test_C1_stage2_count_family_selects_overdispersion():
+    model = select_count_distribution(
+        [0, 0, 0, 1, 1, 2, 3, 12],
+        3.5,
+        thresholds=(3, 6, 9),
+        label="TEST_COUNT",
+    )
+    assert model["family"] == "NEGATIVE_BINOMIAL"
+    assert 0.0 <= model["threshold_probabilities"]["3"] <= 1.0
+    assert model["posterior_predictive"]["replicated_variance"] > 0.0
+
+
+def test_C2_stage2_dynamic_fdr_is_position_specific_and_mechanistic():
+    matchup = {
+        "home_expected_goals": 2.0,
+        "away_expected_goals": 0.9,
+        "home_clean_sheet_probability": 0.42,
+        "official_fdr_home": 3,
+    }
+    context = {
+        "opponent_high_line": 0.8,
+        "opponent_fullback_vulnerability": 0.7,
+        "opponent_pressure": 0.8,
+    }
+    winger = build_dynamic_matchup_vector(
+        position="MID",
+        role="LW WINGER",
+        matchup=matchup,
+        home=True,
+        current_context=context,
+    )
+    centre_back = build_dynamic_matchup_vector(
+        position="DEF",
+        role="CB",
+        matchup=matchup,
+        home=True,
+        current_context=context,
+    )
+    assert set(winger["vector"]) == {
+        "goal",
+        "creation",
+        "attack",
+        "clean_sheet",
+        "defcon",
+        "save",
+        "set_piece",
+        "aerial",
+        "transition",
+        "minutes",
+        "bonus",
+    }
+    assert winger["vector"]["goal"]["multiplier"] != centre_back["vector"]["goal"]["multiplier"]
+    assert winger["football_mechanism_interactions"]
+    assert winger["official_fdr"]["applied_as_final_matchup"] is False
+    assert winger["arbitrary_final_point_bonus"] is False
+
+
+def test_C3_stage2_scoreline_family_is_selected_by_settled_sample():
+    fixtures = [
+        {"team_h_score": h, "team_a_score": a}
+        for h, a in [
+            (1, 0), (0, 0), (2, 1), (1, 1), (3, 1),
+            (0, 1), (2, 0), (1, 2), (0, 0), (2, 2),
+        ]
+    ]
+    selection = select_scoreline_model(fixtures)
+    assert selection["selected"] in {
+        "POISSON", "DIXON_COLES", "BIVARIATE_POISSON"
+    }
+    assert selection["sample_size"] == len(fixtures)
+    cs = scoreline_clean_sheet_probabilities(selection, 1.6, 1.1)
+    assert 0.0 <= cs["home_clean_sheet_probability"] <= 1.0
+    assert 0.0 <= cs["away_clean_sheet_probability"] <= 1.0
+
+
+def test_C4_stage2_horizon_distribution_is_true_convolution():
+    one = {
+        "probabilities": {"2": 0.5, "6": 0.5}
+    }
+    two = {
+        "probabilities": {"1": 0.25, "5": 0.75}
+    }
+    out = convolve_point_distributions([one, two])
+    assert out is not None
+    assert out["status"] == "READY_COMPLETE_CONDITIONAL_PMF"
+    assert abs(out["sum_probability"] - 1.0) < 1e-9
+    assert set(out["support"]) == {3, 7, 11}
+    assert out["expected_points"] == pytest.approx(8.0)
+
+
+
+def test_C5_stage2_gk_is_sot_then_conditional_save_model():
+    rows = [
+        {"minutes": 90, "saves": 4, "goals_conceded": 1},
+        {"minutes": 90, "saves": 2, "goals_conceded": 2},
+        {"minutes": 90, "saves": 6, "goals_conceded": 0},
+        {"minutes": 90, "saves": 1, "goals_conceded": 3},
+        {"minutes": 90, "saves": 5, "goals_conceded": 1},
+    ]
+    model = _gk_sot_save_model(
+        rows,
+        xmins=82.0,
+        opponent_volume_multiplier=1.10,
+        fallback_save_rate90=3.0,
+    )
+    assert model["model"] == "GK_SOT_THEN_CONDITIONAL_SAVE_V1"
+    assert model["sot_count_model"]["family"] in {
+        "POISSON", "NEGATIVE_BINOMIAL"
+    }
+    assert model["conditional_save_model"]["family"] in {
+        "BINOMIAL", "BETA_BINOMIAL"
+    }
+    assert model["empirical"]["save_percentage"] is not None
+    assert model["empirical"]["psxg_xgot"] is None
+    assert model["empirical"]["psxg_xgot_status"].startswith("UNAVAILABLE")
+    pmf = _gk_save_pmf_from_model(
+        model, model["projected_sot_mean"]
+    )
+    assert abs(sum(pmf.values()) - 1.0) < 1e-9
+    assert sum(prob for saves, prob in pmf.items() if saves >= 3) > 0.0
+
+
+def test_C6_stage2_set_piece_chain_is_probabilistic_not_hardcoded():
+    process = _set_piece_process(
+        {
+            "set_piece_event_rate_per_match": 0.55,
+            "set_piece_taker_share": 0.70,
+            "set_piece_target_share": 0.30,
+            "set_piece_shot_given_involved": 0.45,
+            "set_piece_goal_given_shot": 0.20,
+        },
+        {"lambda_set_piece90": 0.05},
+    )
+    assert process["status"] == "AVAILABLE_COMPLETE_COMPONENT_CHAIN"
+    assert process["P_goal_chain"] is not None
+    assert process["P_goal_chain"] > 0.0
+    assert process["taker_uncertainty_probabilistic"] is True
+    assert process["hardcoded_taker"] is False
+
+
+def test_C7_stage2_live_threshold_does_not_force_erlang():
+    no_timing = estimate_live_threshold_probability(
+        current_count=7,
+        minute=65,
+        threshold=10,
+        projected_full_match_mean=11.0,
+    )
+    assert no_timing["selected_model"] == "CONDITIONAL_COUNT_PROCESS"
+    assert no_timing["survival_family_forced"] is False
+    assert 0.0 <= no_timing["probability"] <= 1.0
+
+    justified = estimate_live_threshold_probability(
+        current_count=7,
+        minute=65,
+        threshold=10,
+        projected_full_match_mean=11.0,
+        interarrival_minutes=[1.0, 2.0, 3.0, 5.0, 8.0, 13.0, 21.0, 34.0],
+    )
+    assert (
+        justified["selected_model"]
+        == "ERLANG_FROM_EMPIRICAL_EXPONENTIAL_INTERARRIVALS"
+    )
+    assert justified["erlang_selected_only_if_empirically_justified"] is True
+
+
+def test_C8_stage2_dynamic_fdr_exposes_governed_tactical_inputs():
+    out = build_dynamic_matchup_vector(
+        position="FWD",
+        role="CENTRAL STRIKER",
+        matchup={
+            "home_expected_goals": 1.8,
+            "home_clean_sheet_probability": 0.35,
+            "official_fdr_home": 3,
+        },
+        home=True,
+        current_context={
+            "own_team_tactical_state": {
+                "nominal_formation": {
+                    "state": "OBSERVED_DISTRIBUTION"
+                }
+            },
+            "opponent_team_tactical_state": {
+                "press_block": {"state": "UNAVAILABLE"}
+            },
+            "player_availability": {"available_signal": True},
+            "expected_personnel": {"opponent_cb": None},
+            "venue": "HOME",
+        },
+    )
+    evidence = out["tactical_input_evidence"]
+    assert evidence["own_coach_formation_style"] is not None
+    assert evidence["opponent_coach_formation_style"] is not None
+    assert evidence["venue"] == "HOME"
+    assert evidence["missing_evidence_is_explicit_not_neutral"] is True

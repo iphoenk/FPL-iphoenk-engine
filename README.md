@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T05:10:10+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T07:17:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -11,6 +11,34 @@
 > **V3 / V4 / V5 are frozen legacy**: no production execution, no production fallback, no new features, and no scheduler authority.
 
 This repository powers a governed personal Fantasy Premier League decision system. The active design deliberately separates **facts** from **models and decisions** so that factual acquisition can remain stable while V12 analytics evolve without creating duplicate authorities.
+
+
+## V12 Stage 2 position-specific probabilistic engine
+
+Status: **PR #639 GREEN / STAGE 2 READY / STAGE 3 NOT STARTED**.
+
+Stage 2 starts from the exact GREEN Stage-1 head `d8a286a9428d8114125abb9093639de00c82103b` and preserves that commit as the immutable V6 behavior comparison baseline. V6 acquisition, source adapters, publisher, identity governance, scheduler, recovery transport, schedule policy, runtime-control, health semantics, schema, and `runtime-data-v6` are frozen and are not modified by Stage 2.
+
+Final public-first live acceptance run `35671072769` (artifact `10671910220`, SHA-256 `0a952e39283f01c8f824731b0cf35f689287617265be0ac767e092cb27f30038`) is **GREEN**. It proves the Stage-2 engine **PASS** across all required analytics checks over all 667 projected Official players, Watchlist20 **COMPLETE**, full-universe/Watchlist single-chain lineage **PASS**, current squad evidence **PASS** via `PUBLIC_SUBMITTED_PICKS`, and public mini-league evidence **PASS**. Official FPL public submitted picks for entry `3462711` are HTTP 200 with 15/15 players; ICON+ League standings and GW5 manager picks are complete for 58/58 managers. Private `/me` remains `AUTH_EXPIRED` / HTTP 401, but is diagnostic only for Stage-2 acceptance and stays tracked separately in issue #640 for private-only facts. No V6 repair is included in PR #639.
+
+The Canonical Stage-2 contract now requires explicit single-chain lineage from the same governed projection row through P1.1, P1.3 posterior, position engine, 20/25/30/25, and genuine 1/3/5GW distributions into full-universe and Watchlist20 rows. A mere subset relationship is not sufficient acceptance evidence.
+
+Stage-2 analytics work is confined to the V12 producer layer:
+
+- dynamic position/role-specific matchup vector for goal, creation, attack, clean sheet, DefCon, save, set piece, aerial, transition, minutes, and bonus;
+- Official FDR retained only as an external prior/sanity check, never as the final generic matchup number;
+- tactical football-mechanism interactions that change event intensities without arbitrary final-point bonuses;
+- empirically selected Poisson versus negative-binomial count models for save and defensive-contribution processes;
+- settled-scoreline comparison of Poisson, Dixon-Coles, and bivariate Poisson, with the simplest calibrated family selected;
+- stochastic conditional bonus/BPS layer, penalty and negative-event deductions, and posterior-predictive checks;
+- position-specific complete discrete FPL point distributions;
+- genuine per-GW and 1GW/3GW/5GW PMF aggregation rather than multiplying current xPts by horizon length;
+- read-only consumption of already-normalized V6 Understat, Statmuse, and Rotowire evidence where exact identity joins are available;
+- full-universe and Watchlist20 remain on the same canonical 20/25/30/25 lineage.
+
+Stage 2 is **READY / GREEN**. Stage 3 remains **NOT STARTED** and is outside PR #639.
+
+Durable evidence is recorded in `control/fpl_master_v12/FPL_MASTER_STAGE2_ANALYTICS_AUDIT.json`; it is evidence only and does not become a second methodology or factual authority.
 
 ## Active authority map
 

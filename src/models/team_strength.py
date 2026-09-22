@@ -6,6 +6,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from src.engines.v12_position_probability_components import (
+    scoreline_clean_sheet_probabilities,
+    select_scoreline_model,
+)
+
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = ROOT / "config" / "intelligence" / "team_strength.json"
 
@@ -66,6 +71,7 @@ def build_team_strength(bootstrap: dict[str, Any], fixtures: list[dict[str, Any]
     teams = list(bootstrap.get("teams") or [])
     finished = [f for f in fixtures if f.get("finished") and f.get("team_h_score") is not None and f.get("team_a_score") is not None]
     min_finished = int(cfg.get("minimum_finished_matches_for_league_baseline") or 10)
+    scoreline_selection = select_scoreline_model(finished)
     if len(finished) >= min_finished:
         home_base = sum(_f(f.get("team_h_score")) for f in finished) / len(finished)
         away_base = sum(_f(f.get("team_a_score")) for f in finished) / len(finished)
@@ -138,6 +144,12 @@ def build_team_strength(bootstrap: dict[str, Any], fixtures: list[dict[str, Any]
         away_xg = clamp(away_base * a["attack_away_index"] / max(0.2, h["defence_home_index"]), lam_min, lam_max)
         hp = [poisson_pmf(home_xg, g) for g in range(max_goals + 1)]
         ap = [poisson_pmf(away_xg, g) for g in range(max_goals + 1)]
+        selected_cs = scoreline_clean_sheet_probabilities(
+            scoreline_selection,
+            home_xg,
+            away_xg,
+            max_goals=max_goals,
+        )
         home_win = draw = away_win = 0.0
         for hg, ph in enumerate(hp):
             for ag, pa in enumerate(ap):
@@ -154,8 +166,11 @@ def build_team_strength(bootstrap: dict[str, Any], fixtures: list[dict[str, Any]
             "team_a": a["team_id"],
             "home_expected_goals": round(home_xg, 4),
             "away_expected_goals": round(away_xg, 4),
-            "home_clean_sheet_probability": round(math.exp(-away_xg), 4),
-            "away_clean_sheet_probability": round(math.exp(-home_xg), 4),
+            "home_clean_sheet_probability": round(selected_cs["home_clean_sheet_probability"], 4),
+            "away_clean_sheet_probability": round(selected_cs["away_clean_sheet_probability"], 4),
+            "official_fdr_home": fixture.get("team_h_difficulty"),
+            "official_fdr_away": fixture.get("team_a_difficulty"),
+            "scoreline_model": scoreline_selection.get("selected"),
             "home_2plus_probability": round(1 - math.exp(-home_xg) * (1 + home_xg), 4),
             "away_2plus_probability": round(1 - math.exp(-away_xg) * (1 + away_xg), 4),
             "home_win_probability": round(home_win, 4),
@@ -173,4 +188,5 @@ def build_team_strength(bootstrap: dict[str, Any], fixtures: list[dict[str, Any]
         },
         "teams": rows,
         "matchups": matchup_rows,
+        "scoreline_model_selection": scoreline_selection,
     }

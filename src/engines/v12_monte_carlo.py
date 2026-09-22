@@ -857,16 +857,34 @@ def _route_definition(row: Mapping[str, Any]) -> dict[str, Any]:
     if not per_gw:
         raise MonteCarloError(f"route {row.get('route_id')} lacks P1.7 per-GW lineups")
     economics = dict(row.get("transfer_economics") or {})
-    execution_cost = None
-    if economics.get("status") == "PASS":
-        execution_cost = _f(economics.get("hit_points")) + _f(economics.get("future_ft_shadow_value"))
+    economics_resolved = economics.get("status") == "PASS"
+    if economics_resolved:
+        execution_cost = (
+            _f(economics.get("hit_points"))
+            + _f(economics.get("future_ft_shadow_value"))
+        )
+        execution_cost_status = "RESOLVED_APPLIED"
     elif str(row.get("route_id")) == "HOLD":
         execution_cost = 0.0
+        execution_cost_status = "HOLD_ZERO"
+    else:
+        # Private finance facts may be genuinely unavailable while the
+        # football distribution is still fully supportable. P1.4 simulates
+        # football gross outcomes and never invents bank/sell/FT costs.
+        execution_cost = 0.0
+        execution_cost_status = (
+            "UNRESOLVED_NOT_APPLIED_TO_FOOTBALL_MC"
+        )
     return {
         "route_id": str(row.get("route_id")),
         "classification": row.get("classification"),
         "per_gw": per_gw,
         "execution_cost_points": execution_cost,
+        "execution_cost_status": execution_cost_status,
+        "decision_net_supported": (
+            economics_resolved
+            or str(row.get("route_id")) == "HOLD"
+        ),
         "transfer_economics": economics,
     }
 

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T13:08:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T13:44:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -16,6 +16,8 @@ This repository powers a governed personal Fantasy Premier League decision syste
 ## V12 Stage 2 position-specific probabilistic engine
 
 Status: **STAGE 1 GREEN / STAGE 2 GREEN / STAGE 3 IMPLEMENTATION IN PROGRESS — CONTROLLED + NATURAL DEEP ACCEPTANCE PENDING**.
+
+Stage 3 runtime repair after controlled DEEP timeout: the canonical MC still requires **500,000 correlated paths** and unchanged Stage-2 distributions, but the runtime now precomputes immutable fixture catalogs once per GW, calibrates scoreline zero-goal marginals deterministically with Gauss-Hermite quadrature instead of repeating sample-path bisection, uses a larger bounded NumPy chunk, and allows a 45-minute runner timeout. This is a performance/operability repair only; V6, Stage-1/Stage-2 model authorities, 20/25/30/25, QA, route economics, and acceptance thresholds are unchanged.
 
 Stage 2 starts from the exact GREEN Stage-1 head `d8a286a9428d8114125abb9093639de00c82103b` and preserves that commit as the immutable V6 behavior comparison baseline. V6 acquisition, source adapters, publisher, identity governance, scheduler, recovery transport, schedule policy, runtime-control, health semantics, schema, and `runtime-data-v6` are frozen and are not modified by Stage 2.
 

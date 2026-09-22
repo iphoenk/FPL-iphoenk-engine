@@ -21,6 +21,7 @@ coherent report bundle.
 import argparse
 import hashlib
 import json
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
@@ -395,6 +396,170 @@ def _candidate_universe(
     return list(
         build_canonical_universe(projections).get("players") or []
     )
+
+
+def _package_candidate_rows(
+    projections: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for player in projections.get("players") or []:
+        if not isinstance(player, Mapping):
+            continue
+        element = int(player.get("element") or player.get("id") or 0)
+        position = str(player.get("position") or "").upper()
+        team_id = int(player.get("team_id") or player.get("team") or 0)
+        now_cost = player.get("now_cost")
+        if (
+            element <= 0
+            or position not in {"GK", "DEF", "MID", "FWD"}
+            or team_id <= 0
+            or now_cost is None
+        ):
+            continue
+        rows.append(
+            {
+                "element": element,
+                "name": player.get("name"),
+                "position": position,
+                "team_id": team_id,
+                "now_cost": int(now_cost),
+                "status": player.get("status"),
+                "eligible": player.get("eligible", True) is not False,
+                "stage2_lineage": deepcopy(
+                    player.get("canonical_lineage")
+                    or player.get("lineage")
+                    or {}
+                ),
+            }
+        )
+    return rows
+
+
+def _private_finance_context(
+    runtime_data_root: Path,
+) -> dict[str, Any]:
+    current = _read_json(
+        runtime_data_root / "data/v6/personal/current_team.json",
+        {},
+    ) or {}
+    bank = current.get("bank")
+    free_transfers = current.get("free_transfers")
+    if free_transfers is None:
+        transfers = current.get("transfers")
+        free_transfers = (
+            transfers.get("free_transfers")
+            if isinstance(transfers, Mapping)
+            else None
+        )
+    availability = dict(current.get("availability") or {})
+    return {
+        "auth_state": current.get("auth_state"),
+        "bank": int(bank) if isinstance(bank, int) else None,
+        "free_transfers": (
+            int(free_transfers)
+            if isinstance(free_transfers, int)
+            else None
+        ),
+        "hit_cost_per_extra_transfer": (
+            int(current.get("hit_cost_per_extra_transfer"))
+            if isinstance(
+                current.get("hit_cost_per_extra_transfer"),
+                int,
+            )
+            else None
+        ),
+        "bank_status": availability.get("bank", "UNAVAILABLE"),
+        "sell_value_status": availability.get(
+            "purchase_selling_price",
+            "UNAVAILABLE",
+        ),
+        "free_transfers_status": availability.get(
+            "free_transfers",
+            "UNAVAILABLE",
+        ),
+        "private_finance_fabricated": False,
+    }
+
+
+def _price_player_map(
+    predictor: Mapping[str, Any],
+) -> dict[int, dict[str, Any]]:
+    payload = predictor.get("data") or {}
+    return {
+        int(row.get("id")): dict(row)
+        for row in payload.get("players") or []
+        if isinstance(row, Mapping) and row.get("id") is not None
+    }
+
+
+def _price_uncertainty_by_route(
+    package_utility: Mapping[str, Any],
+    predictor: Mapping[str, Any],
+) -> dict[str, Any]:
+    pmap = _price_player_map(predictor)
+    out: dict[str, Any] = {}
+    for route in package_utility.get("routes") or []:
+        route_id = str(route.get("route_id") or "")
+        elements = [
+            int(row.get("element") or 0)
+            for row in (
+                list(route.get("players_in") or [])
+                + list(route.get("players_out") or [])
+            )
+            if int(row.get("element") or 0) > 0
+        ]
+        signals = []
+        for element in elements:
+            row = pmap.get(element) or {}
+            signals.append(
+                {
+                    "element": element,
+                    "price_change_percent": row.get(
+                        "price_change_percent"
+                    ),
+                    "price_change_hourly_rate": row.get(
+                        "price_change_hourly_rate"
+                    ),
+                    "price_change_projections": deepcopy(
+                        row.get("price_change_projections") or []
+                    ),
+                    "price_change_locked_until": row.get(
+                        "price_change_locked_until"
+                    ),
+                    "price_change_calibrating": row.get(
+                        "price_change_calibrating"
+                    ),
+                    "p_rise_before_deadline": None,
+                    "p_fall_before_deadline": None,
+                }
+            )
+        out[route_id] = {
+            "status": (
+                "MODEL_SIGNAL_AVAILABLE_PROBABILITY_UNCALIBRATED"
+                if signals
+                else "NOT_APPLICABLE"
+            ),
+            "signals": signals,
+            "p_rise_before_deadline": None,
+            "p_fall_before_deadline": None,
+            "expected_cost_of_waiting_points": None,
+            "probability_reason": (
+                "OFFICIAL_FPL_PREDICTOR_EXPOSES_LIKELIHOOD_CLASSES_AND_"
+                "PROJECTED_PERCENT_NOT_A_CALIBRATED_EVENT_PROBABILITY"
+                if signals
+                else None
+            ),
+            "price_predictor_is_football_authority": False,
+            "probability_not_fabricated": True,
+        }
+    return out
+
+
+def _stage3_seed(report_slot: str) -> int:
+    digest = hashlib.sha256(
+        str(report_slot).encode("utf-8")
+    ).hexdigest()
+    return int(digest[:8], 16)
 
 
 def _lineup_content(lineup: Mapping[str, Any] | None) -> dict[str, Any]:

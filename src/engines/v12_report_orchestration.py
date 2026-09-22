@@ -2304,9 +2304,16 @@ def build_deep_human_facing_manifest(
             if key in payload and payload.get(key) in (None, "", [], {})
         ]
         # Degraded/unavailable sections may truthfully carry empty factual rows,
-        # but the semantic key must remain visible. COMPLETE sections may not.
+        # but the semantic key must remain visible. Some COMPLETE decision
+        # sections can also be truthfully empty when the payload explicitly
+        # proves there is no material item (for example no XI battle).
         state = str(section.get("state") or "").upper()
-        hard_empty = empty if state == "COMPLETE" else []
+        truthful_empty = payload.get("empty_is_truthful") is True
+        hard_empty = (
+            empty
+            if state == "COMPLETE" and not truthful_empty
+            else []
+        )
         if missing:
             failures.append(
                 f"HUMAN_SECTION_KEYS_MISSING={section_id}:{','.join(missing)}"

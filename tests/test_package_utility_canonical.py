@@ -784,7 +784,11 @@ def test_p1_2b_profile_exact_p17_subcomponents(monkeypatch):
 
     for name in (
         "optimize_bench_order",
+        "_compact_bench_order_winner_exact",
+        "_dnp_count_distribution",
+        "_resolver_state_matrix",
         "_best_captain_vice_pair",
+        "_best_captain_vice_pair_from_ranked_exact",
         "evaluate_captain_vice_pairs",
         "_model_evidence_binding",
     ):

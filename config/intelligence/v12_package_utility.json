@@ -12,7 +12,11 @@
   "search_contract": "V12_EXACT_PACKAGE_SEARCH_V1",
   "lineup_owner": "V12_LINEUP_OPTIMIZER",
   "horizons": {
-    "mandatory": [1, 3, 5],
+    "mandatory": [
+      1,
+      3,
+      5
+    ],
     "rental_optional_required": 2,
     "collapsed_weighted_sum": false,
     "legacy_10_15gw_used": false,
@@ -37,7 +41,11 @@
     "precommitted_exit_forbidden_unless_explicit_route": true
   },
   "action": {
-    "states": ["WAIT", "PREPARE", "ACT"],
+    "states": [
+      "WAIT",
+      "PREPARE",
+      "ACT"
+    ],
     "hold_is_valid_final_decision": true,
     "act_requires_resolved_execution_economics": true,
     "act_requires_information_value_available": true,
@@ -70,5 +78,34 @@
     "v6_mutated": false,
     "scheduler_changed": false,
     "authority_added": false
+  },
+  "stage3": {
+    "decision_version": "P1_2B_STAGE3_DOWNSTREAM_CLOSURE_V1",
+    "robustness": {
+      "confidence_z": 1.96,
+      "minimum_mean_delta_lower_bound_points": 0,
+      "minimum_outperform_probability_lower_bound": 0.5,
+      "require_3gw_noninferior": true,
+      "require_5gw_noninferior": true,
+      "require_all_material_sensitivity_dimensions_resolved": true,
+      "calibration_status": "STRUCTURAL_PRIOR_PENDING_SETTLED_STAGE3_DECISIONS",
+      "settled_predeadline_sample_size_at_introduction": 0,
+      "automatic_retuning": false
+    },
+    "sequential_decision": {
+      "approximation": "ONE_STEP_ROUTE_GRAPH_VALUE_OF_ONE_EXTRA_FT",
+      "future_transfer_precommitted": false,
+      "next_gw_fresh_reoptimization": true,
+      "full_season_dynamic_program_claimed": false
+    },
+    "information_value": {
+      "expected_regret_is_evpi_upper_bound_only": true,
+      "actual_voi_requires_calibrated_information_revelation_model": true,
+      "act_requires_resolved_expected_cost_of_waiting": true
+    },
+    "price_uncertainty": {
+      "source_native_probability_required": true,
+      "likelihood_class_to_probability_mapping_forbidden": true
+    }
   }
 }

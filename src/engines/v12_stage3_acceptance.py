@@ -118,10 +118,53 @@ def validate(
     require(s14.get("state") == "COMPLETE", "S14_NOT_COMPLETE")
     require(bool(s14_content.get("package_search_proof")), "S14_SEARCH_PROOF_MISSING")
     require(bool(s14_content.get("package_routes")), "S14_PACKAGE_ROUTES_MISSING")
+    search_scope = dict(s14_content.get("package_search_scope") or {})
+    require(
+        search_scope.get("search_authority") == "FULL",
+        "S14_PACKAGE_SEARCH_NOT_FULL_UNIVERSE",
+    )
+    require(
+        search_scope.get("eligible_universe_count")
+        == search_scope.get("searched_universe_count"),
+        "S14_PACKAGE_UNIVERSE_DENOMINATOR_MISMATCH",
+    )
+    require(
+        int(search_scope.get("max_transfers_evaluated") or 0) >= 1,
+        "S14_TRANSFER_DEPTH_NOT_PROVEN",
+    )
+    require(
+        search_scope.get("transfer_depth_semantics")
+        == "COMPLETE_WITHIN_GOVERNED_CURRENT_OCCURRENCE_BOUND",
+        "S14_TRANSFER_DEPTH_SEMANTICS_MISSING",
+    )
     require(
         bool(s14_content.get("package_universe_challengers")),
         "S14_CHALLENGERS_MISSING",
     )
+    for route in s14_content.get("package_routes") or []:
+        if not isinstance(route, Mapping):
+            failures.append("S14_PACKAGE_ROUTE_INVALID")
+            continue
+        require(
+            route.get("football_1GW") is not None,
+            f"S14_ROUTE_1GW_MISSING:{route.get('route')}",
+        )
+        require(
+            route.get("football_3GW") is not None,
+            f"S14_ROUTE_3GW_MISSING:{route.get('route')}",
+        )
+        require(
+            route.get("football_5GW") is not None,
+            f"S14_ROUTE_5GW_MISSING:{route.get('route')}",
+        )
+        require(
+            bool(route.get("sensitivity")),
+            f"S14_ROUTE_SENSITIVITY_MISSING:{route.get('route')}",
+        )
+        require(
+            bool(route.get("stress_coverage")),
+            f"S14_ROUTE_STRESS_MISSING:{route.get('route')}",
+        )
     require(
         ((s14_content.get("monte_carlo") or {}).get("actual_paths") or 0)
         >= 500_000,

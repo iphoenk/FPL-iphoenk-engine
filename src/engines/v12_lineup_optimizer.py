@@ -463,6 +463,34 @@ def _resolver_mask_table(
     return tuple(rows)
 
 
+@lru_cache(maxsize=4096)
+def _resolver_state_matrix(
+    start_counts: tuple[int, int, int],
+    dnp_count_keys: tuple[tuple[int, int, int], ...],
+    bench_positions: tuple[str, str, str],
+) -> tuple[
+    tuple[tuple[int, ...], ...],
+    tuple[tuple[int, ...], ...],
+]:
+    """Exact resolver masks assembled once for invariant positional states.
+
+    The canonical _resolver_mask_table remains the only legality owner. This
+    cache removes repeated Python reconstruction of the same formation x
+    DNP-count-state x bench-position matrices across hundreds of XI routes.
+    """
+    selected_rows: list[tuple[int, ...]] = []
+    reached_rows: list[tuple[int, ...]] = []
+    for dnp_counts in dnp_count_keys:
+        table = _resolver_mask_table(
+            start_counts,
+            dnp_counts,
+            bench_positions,
+        )
+        selected_rows.append(tuple(row[0] for row in table))
+        reached_rows.append(tuple(row[1] for row in table))
+    return tuple(selected_rows), tuple(reached_rows)
+
+
 def _expected_outfield_autosub(
     starters: Sequence[Mapping[str, Any]],
     bench_order: Sequence[Mapping[str, Any]],
@@ -857,6 +885,282 @@ def optimize_bench_order(
     return winner, alternatives
 
 
+def _compact_bench_order_winner_exact(
+    starters: Sequence[Mapping[str, Any]],
+    reserve_gk: Mapping[str, Any],
+    outfield_bench: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Exact compact winner for all six bench permutations in one tensor pass.
+
+    The canonical resolver and objective are unchanged. Only invariant state
+    matrices and probability-mass arithmetic are batched. The six canonical
+    sort keys are still rounded exactly at their published precision and the
+    original stable permutation order remains the deterministic tie-break.
+    """
+    if len(outfield_bench) != 3 or any(
+        row.get("position") == "GK" for row in outfield_bench
+    ):
+        raise LineupOptimizerError(
+            "outfield bench order must contain exactly three non-GK players"
+        )
+
+    objective = dict((load_config().get("objective") or {}))
+    outfield_starters = [
+        row for row in starters if row.get("position") in OUTFIELD
+    ]
+    start_counts = tuple(
+        sum(1 for row in outfield_starters if row.get("position") == position)
+        for position in OUTFIELD
+    )
+    count_states = _dnp_count_distribution(outfield_starters)
+    permutations = list(itertools.permutations(list(outfield_bench), 3))
+    if len(permutations) != 6:
+        raise LineupOptimizerError(
+            "compact bench must preserve all six permutations"
+        )
+
+    starter_probabilities = np.asarray(
+        [float(probability) for _, probability in count_states],
+        dtype=np.float64,
+    )
+    mask_probabilities = np.asarray(
+        [
+            _appearance_mask_probabilities(
+                tuple(
+                    max(0.0, min(1.0, _f(row.get("p_appearance"))))
+                    for row in permutation
+                )
+            )
+            for permutation in permutations
+        ],
+        dtype=np.float64,
+    )
+
+    dnp_count_keys = tuple(
+        tuple(int(value) for value in dnp_counts)
+        for dnp_counts, _ in count_states
+    )
+    selected_matrices = []
+    for permutation in permutations:
+        bench_positions = tuple(
+            str(row.get("position")) for row in permutation
+        )
+        selected_matrix, _ = _resolver_state_matrix(
+            start_counts,
+            dnp_count_keys,
+            bench_positions,
+        )
+        selected_matrices.append(selected_matrix)
+    selected_bits = np.asarray(selected_matrices, dtype=np.uint8)
+
+    state_count = len(count_states)
+    if state_count:
+        joint_probability = (
+            starter_probabilities[None, :, None]
+            * mask_probabilities[:, None, :]
+        )
+        autosub_probability_outfield = np.sum(
+            np.where(selected_bits != 0, joint_probability, 0.0),
+            axis=(1, 2),
+            dtype=np.float64,
+        )
+        selected_prob = np.empty((6, 3), dtype=np.float64)
+        for slot_index in range(3):
+            bit = 1 << slot_index
+            selected_prob[:, slot_index] = np.sum(
+                np.where(
+                    (selected_bits & bit) != 0,
+                    joint_probability,
+                    0.0,
+                ),
+                axis=(1, 2),
+                dtype=np.float64,
+            )
+    else:
+        autosub_probability_outfield = np.zeros(6, dtype=np.float64)
+        selected_prob = np.zeros((6, 3), dtype=np.float64)
+
+    expected_by_slot = np.asarray(
+        [
+            [
+                _f((row.get("appearance_conditioned") or {}).get(
+                    "expected_points"
+                ))
+                for row in permutation
+            ]
+            for permutation in permutations
+        ],
+        dtype=np.float64,
+    )
+    blank_by_slot = np.asarray(
+        [
+            [
+                (
+                    0.0
+                    if (row.get("appearance_conditioned") or {}).get(
+                        "p_fpl_blank"
+                    ) is None
+                    else _f(
+                        (row.get("appearance_conditioned") or {}).get(
+                            "p_fpl_blank"
+                        )
+                    )
+                )
+                for row in permutation
+            ]
+            for permutation in permutations
+        ],
+        dtype=np.float64,
+    )
+    ge8_by_slot = np.asarray(
+        [
+            [
+                (
+                    0.0
+                    if (row.get("appearance_conditioned") or {}).get(
+                        "p_points_ge_8"
+                    ) is None
+                    else _f(
+                        (row.get("appearance_conditioned") or {}).get(
+                            "p_points_ge_8"
+                        )
+                    )
+                )
+                for row in permutation
+            ]
+            for permutation in permutations
+        ],
+        dtype=np.float64,
+    )
+    ge10_by_slot = np.asarray(
+        [
+            [
+                (
+                    0.0
+                    if (row.get("appearance_conditioned") or {}).get(
+                        "p_points_ge_10"
+                    ) is None
+                    else _f(
+                        (row.get("appearance_conditioned") or {}).get(
+                            "p_points_ge_10"
+                        )
+                    )
+                )
+                for row in permutation
+            ]
+            for permutation in permutations
+        ],
+        dtype=np.float64,
+    )
+
+    expected_outfield = (
+        selected_prob[:, 0] * expected_by_slot[:, 0]
+        + selected_prob[:, 1] * expected_by_slot[:, 1]
+        + selected_prob[:, 2] * expected_by_slot[:, 2]
+    )
+    selected_blank = (
+        selected_prob[:, 0] * blank_by_slot[:, 0]
+        + selected_prob[:, 1] * blank_by_slot[:, 1]
+        + selected_prob[:, 2] * blank_by_slot[:, 2]
+    )
+    selected_ge8 = (
+        selected_prob[:, 0] * ge8_by_slot[:, 0]
+        + selected_prob[:, 1] * ge8_by_slot[:, 1]
+        + selected_prob[:, 2] * ge8_by_slot[:, 2]
+    )
+    selected_ge10 = (
+        selected_prob[:, 0] * ge10_by_slot[:, 0]
+        + selected_prob[:, 1] * ge10_by_slot[:, 1]
+        + selected_prob[:, 2] * ge10_by_slot[:, 2]
+    )
+
+    starter_gk = next(row for row in starters if row.get("position") == "GK")
+    actual_gk = _expected_gk_autosub(starter_gk, reserve_gk)
+    expected_autosub_value = (
+        expected_outfield + float(actual_gk["expected_points"])
+    )
+    autosub_probability = 1.0 - (
+        (1.0 - autosub_probability_outfield)
+        * (1.0 - float(actual_gk["autosub_probability"]))
+    )
+    blank_weight = _f(
+        objective.get("bench_blank_probability_weight_points"), 0.20
+    )
+    upside_weight = _f(
+        objective.get("bench_ge8_probability_weight_points"), 0.20
+    )
+    bench_utility = (
+        expected_autosub_value
+        - blank_weight * selected_blank
+        + upside_weight * selected_ge8
+    )
+
+    rounded_keys = [
+        (
+            round(float(bench_utility[index]), 6),
+            round(float(expected_autosub_value[index]), 6),
+            -round(float(selected_blank[index]), 9),
+            round(float(selected_ge8[index]), 9),
+            round(float(selected_ge10[index]), 9),
+        )
+        for index in range(6)
+    ]
+    winner_index = max(range(6), key=lambda index: rounded_keys[index])
+    winner = permutations[winner_index]
+
+    return {
+        "order": [int(row.get("element") or 0) for row in winner],
+        "slots": [],
+        "expected_autosub_value": round(
+            float(expected_autosub_value[winner_index]), 6
+        ),
+        "expected_blocked_autosub_value": None,
+        "expected_late_cameo_blocked_autosub_value": None,
+        "autosub_probability": round(
+            float(autosub_probability[winner_index]), 9
+        ),
+        "blocked_autosub_probability": None,
+        "expected_selected_blank_probability_mass": round(
+            float(selected_blank[winner_index]), 9
+        ),
+        "expected_selected_ge8_probability_mass": round(
+            float(selected_ge8[winner_index]), 9
+        ),
+        "expected_selected_ge10_probability_mass": round(
+            float(selected_ge10[winner_index]), 9
+        ),
+        "bench_order_utility": round(
+            float(bench_utility[winner_index]), 6
+        ),
+        "reserve_gk": {
+            "element": reserve_gk.get("element"),
+            "name": reserve_gk.get("name"),
+            "position": "GK",
+            "autosub_probability": round(
+                float(actual_gk["autosub_probability"]), 9
+            ),
+            "expected_autosub_value": round(
+                float(actual_gk["expected_points"]), 6
+            ),
+            "separate_from_outfield_priority": True,
+        },
+        "covariance_status": "COVARIANCE_NOT_MODELLED_YET",
+        "appearance_dependence_assumption": (
+            "INDEPENDENCE_APPROXIMATION_PENDING_COVARIANCE_MODEL"
+        ),
+        "governance": {
+            "global_team_level_resolver": True,
+            "cameo_blocks_autosub": True,
+            "late_cameo_blocks_autosub": True,
+            "dnp_only_triggers_autosub": True,
+            "bench_points_not_treated_as_guaranteed": True,
+            "blocking_counterfactual_evaluated": False,
+            "six_permutations_batched_exactly": True,
+            "winner_only_compact_materialization": True,
+        },
+    }
+
+
 def _captain_vice_pair_row(
     captain: Mapping[str, Any],
     vice: Mapping[str, Any],
@@ -976,11 +1280,35 @@ def _best_captain_vice_pair(
     )
 
 
+def _best_captain_vice_pair_from_ranked_exact(
+    starters: Sequence[Mapping[str, Any]],
+    ranked_pairs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Select exact best C/VC from a squad-wide canonical rank table.
+
+    Pair utility depends only on the two player surfaces. The full 15-player
+    ordered-pair table is invariant across legal XI subsets for the same
+    squad/GW. Filtering the stable canonical ordering by XI membership
+    preserves the exact winner and tie-break of _best_captain_vice_pair.
+    """
+    starter_ids = {
+        int(row.get("element") or 0) for row in starters
+    }
+    for pair in ranked_pairs:
+        if (
+            int(pair.get("captain_element") or 0) in starter_ids
+            and int(pair.get("vice_element") or 0) in starter_ids
+        ):
+            return dict(pair)
+    raise LineupOptimizerError("no legal captain/vice pair")
+
+
 def _lineup_route(
     players: Sequence[Mapping[str, Any]],
     xi_indices: Sequence[int],
     *,
     compact: bool = False,
+    compact_cvc_ranked_pairs: Sequence[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     cfg = load_config()
     objective = dict(cfg.get("objective") or {})
@@ -997,18 +1325,31 @@ def _lineup_route(
     outfield_bench = [row for row in bench if row.get("position") != "GK"]
     if len(reserve_gk_rows) != 1 or len(outfield_bench) != 3:
         raise LineupOptimizerError("legal XI must leave one reserve GK and three outfield substitutes")
-    bench_best, bench_alternatives = optimize_bench_order(
-        starters,
-        reserve_gk_rows[0],
-        outfield_bench,
-        include_winner_blocking_counterfactual=not compact,
-        publish_alternatives=not compact,
-        include_winner_slots=not compact,
-    )
     if compact:
-        cvc = _best_captain_vice_pair(starters)
+        bench_best = _compact_bench_order_winner_exact(
+            starters,
+            reserve_gk_rows[0],
+            outfield_bench,
+        )
+        bench_alternatives: list[dict[str, Any]] = []
+        cvc = (
+            _best_captain_vice_pair_from_ranked_exact(
+                starters,
+                compact_cvc_ranked_pairs,
+            )
+            if compact_cvc_ranked_pairs is not None
+            else _best_captain_vice_pair(starters)
+        )
         cvc_pairs: list[dict[str, Any]] = []
     else:
+        bench_best, bench_alternatives = optimize_bench_order(
+            starters,
+            reserve_gk_rows[0],
+            outfield_bench,
+            include_winner_blocking_counterfactual=True,
+            publish_alternatives=True,
+            include_winner_slots=True,
+        )
         cvc_pairs = evaluate_captain_vice_pairs(starters)
         if not cvc_pairs:
             raise LineupOptimizerError("no legal captain/vice pair")
@@ -1148,7 +1489,16 @@ def _compact_public_route(
 
 def _decision_core(players: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     legal = enumerate_legal_xi(players)
-    compact_routes = [_lineup_route(players, indices, compact=True) for indices in legal]
+    compact_cvc_ranked_pairs = evaluate_captain_vice_pairs(players)
+    compact_routes = [
+        _lineup_route(
+            players,
+            indices,
+            compact=True,
+            compact_cvc_ranked_pairs=compact_cvc_ranked_pairs,
+        )
+        for indices in legal
+    ]
     compact_routes.sort(key=_route_sort_key, reverse=True)
     if not compact_routes:
         raise LineupOptimizerError("no legal P1.7 route")

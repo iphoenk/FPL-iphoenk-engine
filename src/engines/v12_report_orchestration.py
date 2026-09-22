@@ -1396,6 +1396,15 @@ def _locked_default(
 ) -> dict[str, Any] | None:
     sid = str(section_id or "").upper()
     if sid == "S06":
+        raw_bench = locked_state.get("bench")
+        if isinstance(raw_bench, Mapping):
+            bench = dict(raw_bench)
+        else:
+            bench_rows = list(raw_bench or [])
+            bench = {
+                "gk": bench_rows[0] if bench_rows else None,
+                "order": bench_rows[1:4],
+            }
         return {
             "state": "COMPLETE",
             "content": {
@@ -1403,7 +1412,7 @@ def _locked_default(
                 "formation": locked_state.get("formation"),
                 "starting_xi": locked_state.get("xi"),
                 "xi": locked_state.get("xi"),
-                "bench": locked_state.get("bench"),
+                "bench": bench,
                 "lineup_score": {"state": "LOCKED"},
                 "formation_comparison": [],
             },
@@ -2544,6 +2553,18 @@ def _render_deep_visible_contract_lines(
 
     elif section_id == "S06B":
         lines.append(f"MINI-LEAGUE STANCE: {payload.get('stance') or 'UNAVAILABLE'}")
+        league = dict(payload.get("league_context") or {})
+        lines.append(
+            "LEAGUE POSITION: "
+            f"rank={league.get('our_rank', 'UNAVAILABLE')} / "
+            f"{league.get('manager_count', 'UNAVAILABLE')} | "
+            f"points={league.get('our_total_points', 'UNAVAILABLE')} | "
+            f"leader_gap={league.get('points_to_leader', 'UNAVAILABLE')} | "
+            f"top3_gap={league.get('points_to_top_3', 'UNAVAILABLE')} | "
+            f"top5_gap={league.get('points_to_top_5', 'UNAVAILABLE')} | "
+            f"rival_above_gap={league.get('points_to_nearest_above', 'UNAVAILABLE')} | "
+            f"rival_below_cushion={league.get('points_ahead_nearest_below', 'UNAVAILABLE')}"
+        )
         lines.append(f"RAW EV FORMATION: {payload.get('raw_ev_formation') or 'UNAVAILABLE'}")
         lines.append(
             "MINI-LEAGUE OBJECTIVE FORMATION: "
@@ -2638,6 +2659,82 @@ def _render_deep_visible_contract_lines(
             )
         )
         excluded.append("battles")
+
+    elif section_id == "S08":
+        captain_rows = []
+        for role_label, raw_candidate in (
+            ("C", payload.get("captain")),
+            ("VC", payload.get("vice_captain")),
+        ):
+            candidate = (
+                dict(raw_candidate)
+                if isinstance(raw_candidate, Mapping)
+                else {
+                    "element_id": raw_candidate,
+                    "player": (
+                        owned_names.get(int(raw_candidate), str(raw_candidate))
+                        if raw_candidate is not None and str(raw_candidate).isdigit()
+                        else raw_candidate
+                    ),
+                }
+            )
+            goal_involvement = dict(candidate.get("goal_involvement") or {})
+            fixture = dict(candidate.get("fixture") or {})
+            captain_rows.append(
+                (
+                    role_label,
+                    candidate.get("player") or candidate.get("element_id"),
+                    candidate.get("expected_points"),
+                    candidate.get("ceiling_q90"),
+                    candidate.get("haul_probability"),
+                    candidate.get("xmins"),
+                    candidate.get("p_start"),
+                    goal_involvement.get("p_goal"),
+                    goal_involvement.get("p_assist"),
+                    goal_involvement.get("p_return"),
+                    candidate.get("penalties"),
+                    candidate.get("set_pieces"),
+                    fixture.get("opponent"),
+                    "H" if fixture.get("home") is True else "A" if fixture.get("home") is False else "UNAVAILABLE",
+                    candidate.get("captain_pct"),
+                    candidate.get("eo_pct"),
+                    candidate.get("mini_league_downside"),
+                    candidate.get("mini_league_upside"),
+                )
+            )
+        lines.extend(
+            _markdown_table(
+                (
+                    "role",
+                    "player",
+                    "xPts",
+                    "Q90",
+                    "P(haul)",
+                    "xMins",
+                    "P(start)",
+                    "P(goal)",
+                    "P(assist)",
+                    "P(return)",
+                    "penalty",
+                    "set-piece",
+                    "fixture",
+                    "H/A",
+                    "captain%",
+                    "EO%",
+                    "ML downside",
+                    "ML upside",
+                ),
+                captain_rows,
+            )
+        )
+        lines.append(
+            "CAPTAIN AUTHORITY: "
+            + str(
+                payload.get("authority")
+                or "distributional evidence; raw 1GW mean alone is insufficient"
+            )
+        )
+        excluded.extend(("captain", "vice_captain", "captain_safe_pool"))
 
     elif section_id == "S14B":
         lines.append("STAGING IS A ROADMAP, NOT A TRANSFER COMMITMENT.")

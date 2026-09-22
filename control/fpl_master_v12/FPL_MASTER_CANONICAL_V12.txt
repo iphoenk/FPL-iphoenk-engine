@@ -1477,3 +1477,125 @@ Hard invariants:
   completeness for the claimed surface. A green renderer cannot compensate
   for incomplete analytics.
 
+==================================================
+V12 STAGE 2 POSITION-SPECIFIC PROBABILISTIC FOOTBALL ENGINE
+Effective: 2026-09-22T07:05:00+07:00
+==================================================
+
+This section is Canonical methodology authority for Stage 2. It extends the
+Stage-1 dependency DAG without creating a second factual or model authority.
+
+FREEZE / OWNERSHIP:
+- Immutable Stage-2 V6 behavior baseline is main
+  d8a286a9428d8114125abb9093639de00c82103b.
+- Stage 2 MUST NOT modify V6 acquisition, source adapters, publisher, identity
+  governance, scheduler, recovery transport, schedule policy, runtime-control,
+  health semantics, schema, or runtime-data-v6 behavior.
+- Any V6 defect discovered during Stage 2 is evidence for a separate V6 issue;
+  it MUST NOT be repaired inside Stage 2.
+- P1.1 / V12_PLAYER_MINUTES remains the only xMins / availability owner.
+- P1.3 / V12_PLAYER_EVENTS remains the event-posterior / xPts owner.
+- Position-specific Stage-2 probability components are subordinate producers;
+  they MUST NOT create a competing xMins, posterior, FDR, xPts, horizon,
+  universe, ranking, or decision authority.
+
+DYNAMIC MATCHUP / FDR:
+- Official FDR is an external prior / sanity check only.
+- Final player matchup is a position/role-specific vector containing:
+  goal, creation, attack, clean_sheet, defcon, save, set_piece, aerial,
+  transition, minutes, bonus.
+- The same opponent may produce different effective difficulty for different
+  players because role, channel, venue, expected personnel, formation and
+  availability differ.
+- Football-mechanism interactions modify event intensities, never by adding an
+  arbitrary final-points bonus. Supported mechanisms include pace runner x high
+  line, striker x central-CB weakness, aerial target x aerial weakness,
+  creator/#10 x central-press weakness, winger x vulnerable fullback,
+  attacking fullback x narrow defence, set-piece target x set-piece weakness,
+  defensive CB x opponent pressure, GK x opponent shot volume, and governed
+  transition interactions. Missing factual mechanism evidence remains explicit.
+
+POSITION ENGINES:
+- GK: minutes + CS + save-count distribution + shot stopping where factual +
+  penalty saves + conditional bonus - goals conceded - negative events.
+  Save thresholds MUST be calculated from the complete count distribution at
+  the official 3-save intervals. GK evaluation MUST NOT be CS-primary.
+- DEF: minutes/security first, then separate CS and DefCon processes, defensive
+  workload/role, attacking upside, bonus/deductions. Stronger opponent may
+  lower P(CS) while raising P(DefCon); the processes MUST remain separate.
+  DEF MUST NOT be ranked primarily by xGI.
+- MID: condition on actual governed role evidence. Goal intensity is decomposed
+  into open-play, penalty and set-piece components where factual evidence
+  exists. Creation remains a separate process. MID CS and DefCon apply only
+  under current Official rules.
+- FWD: goal generation is primary and uses Bayesian-shrunk finishing rather
+  than naive short-run G-xG overperformance. Service/supply and assists are
+  separate processes and may respond to creator/finisher link-up evidence.
+
+COUNT / SCORELINE / SURVIVAL:
+- Pre-match saves and DefCon use complete count distributions selected
+  empirically. Poisson is the baseline; Negative Binomial is preferred only
+  when supported by overdispersion evidence. Model family selection is based
+  on calibration, not sophistication.
+- Scoreline/CS modelling compares governed candidates including Poisson,
+  Dixon-Coles and correlated/bivariate alternatives where data supports them;
+  select by calibration.
+- Erlang/Gamma/Weibull MAY be used for live/post-match time-to-threshold
+  estimation only when empirically justified. Generic pre-match Erlang count
+  modelling is forbidden.
+
+SET PIECES / PENALTIES / LINK-UP / BPS:
+- Set-piece chain:
+  P(set piece) x P(taker) x P(target involved) x P(shot) x P(goal).
+- Penalty chain:
+  P(team penalty) x P(player on pitch) x P(player takes | on pitch) x P(score).
+  Taker uncertainty is probabilistic; player-specific hardcodes are forbidden.
+- Link-up dependencies include creator->finisher, FB/WB->winger, set-piece
+  taker->target, midfield structure->advanced player, CB partnership->defensive
+  role, and GK/CB/DM->CS. Linked-player absence, benching, role change or lower
+  P(start)/xMins must change the related distribution when evidence supports it.
+- Bonus is conditional on simulated football events. Fixed bonus assignment is
+  forbidden. The engine exposes probabilities for 1/2/3 bonus tiers.
+
+POSTERIOR PREDICTIVE / COMPLETE DISTRIBUTION:
+- Every supported position-specific model publishes posterior-predictive checks
+  for actual versus replicated mean, variance, zero rate, tails and threshold
+  rates where applicable. A model whose replicated distribution does not
+  reproduce the factual distribution MUST NOT be labelled calibrated.
+- Every eligible player exposes, where relevant:
+  P(available), P(start), P(60+), P(cameo), P(DNP), P(CS),
+  P(DefCon points), P(save thresholds), P(goal), P(assist), P(return),
+  P(blank), P(haul), P(card), and conditional P(BPS1/2/3).
+- The FPL point distribution exposes mean, median, variance, Q10, Q25, Q75,
+  Q90 and a normalized discrete PMF. Aleatoric and epistemic uncertainty are
+  separated where practical and otherwise the limitation is stated.
+
+HORIZONS / UNIVERSE / WATCHLIST:
+- 1GW, 3GW and 5GW are genuine fixture-by-fixture distributions. 2GW is
+  generated when a rental/punt comparison requires it. Every future GW uses
+  its own opponent, venue, dynamic matchup/FDR, likely role/formation,
+  availability and rotation/congestion evidence. 5GW = current xPts x 5 is
+  forbidden.
+- The complete eligible Official FPL universe is evaluated through the same
+  governed chain. Social-media candidates are discovery only; candidate-specific
+  shortcuts are forbidden.
+- Watchlist20 MUST consume the same governed projection snapshot, exact
+  20/25/30/25 evaluation, P1.1, P1.3 posterior, position engine and 1/3/5GW
+  distributions as the full-universe comparator. It may filter/rank existing
+  Canonical rows but MUST NOT run a separate Watchlist heuristic or model.
+- Canonical rows MUST carry auditable single-chain lineage proving those owner
+  bindings; a subset relation alone is insufficient evidence.
+
+STAGE 2 ACCEPTANCE:
+- Acceptance cases for Muharemovic, Groß/Gross, DCL, Brobbey and representative
+  GK CS/save-volume profiles are evidence cases only. No predetermined winner
+  may be encoded.
+- Stage 2 is GREEN only when dynamic FDR; GK/DEF/MID/FWD engines; CS; DefCon
+  and save thresholds; set-piece/penalty; link-up; conditional BPS; posterior
+  predictive; complete point distributions; genuine 1/3/5GW; full-universe
+  same lineage; Watchlist20 same lineage; run-35597594711 producer-root-cause
+  closure; required tests; V6 health; current authenticated squad evidence;
+  and legacy isolation all pass.
+- Renderer success cannot compensate for an incomplete Stage-2 producer.
+- Stage 3 MUST NOT start until the full Stage-2 acceptance state is GREEN.
+

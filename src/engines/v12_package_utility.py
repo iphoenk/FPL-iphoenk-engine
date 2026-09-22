@@ -18,6 +18,7 @@ import multiprocessing as mp
 import os
 from pathlib import Path
 import sys
+import time
 from typing import Any, Mapping, Sequence
 
 from src.engines.canonical_decision_methodology import (
@@ -195,16 +196,21 @@ def _cumulative_lineup_horizons(
     *,
     planning_gw: int,
     generated_at: str,
+    _perf_sink: list[float] | None = None,
 ) -> dict[str, Any]:
-    gw_rows = [
-        _lineup_decision(
-            projections,
-            squad_ids,
-            gw=int(planning_gw) + offset,
-            generated_at=generated_at,
+    gw_rows: list[dict[str, Any]] = []
+    for offset in range(5):
+        started = time.perf_counter()
+        gw_rows.append(
+            _lineup_decision(
+                projections,
+                squad_ids,
+                gw=int(planning_gw) + offset,
+                generated_at=generated_at,
+            )
         )
-        for offset in range(5)
-    ]
+        if _perf_sink is not None:
+            _perf_sink.append(time.perf_counter() - started)
     out: dict[str, Any] = {"per_gw": gw_rows}
     for horizon in (1, 2, 3, 5):
         subset = gw_rows[:horizon]
@@ -838,22 +844,55 @@ def _init_p1_2b_lineup_worker(
 
 def _p1_2b_route_lineups_worker(
     item: tuple[str, tuple[int, ...]],
-) -> tuple[str, tuple[int, ...], dict[str, Any]]:
-    """Evaluate one exact route through the existing P1.7 owner."""
+) -> tuple[
+    str,
+    tuple[int, ...],
+    dict[str, Any],
+    float,
+    tuple[float, ...],
+]:
+    """Evaluate one exact route and return non-authoritative timing proof."""
     if _P1_2B_WORKER_CONTEXT is None:
         raise PackageUtilityError("P1.2B lineup worker context is not initialized")
     route_id, squad = item
     projections, planning_gw, generated_at = _P1_2B_WORKER_CONTEXT
+    gw_elapsed: list[float] = []
+    started = time.perf_counter()
+    output = _cumulative_lineup_horizons(
+        projections,
+        squad,
+        planning_gw=planning_gw,
+        generated_at=generated_at,
+        _perf_sink=gw_elapsed,
+    )
+    elapsed = time.perf_counter() - started
     return (
         str(route_id),
         tuple(squad),
-        _cumulative_lineup_horizons(
-            projections,
-            squad,
-            planning_gw=planning_gw,
-            generated_at=generated_at,
-        ),
+        output,
+        elapsed,
+        tuple(gw_elapsed),
     )
+
+
+def _perf_distribution(values: Sequence[float]) -> dict[str, Any]:
+    rows = sorted(float(value) for value in values)
+    if not rows:
+        return {"count": 0}
+    def percentile(fraction: float) -> float:
+        index = min(
+            len(rows) - 1,
+            max(0, int(round((len(rows) - 1) * fraction))),
+        )
+        return rows[index]
+    return {
+        "count": len(rows),
+        "min": round(rows[0], 6),
+        "p50": round(percentile(0.50), 6),
+        "p95": round(percentile(0.95), 6),
+        "max": round(rows[-1], 6),
+        "mean": round(sum(rows) / len(rows), 6),
+    }
 
 
 def _materialize_route_lineups(
@@ -911,6 +950,9 @@ def _materialize_route_lineups(
     )
 
     by_squad: dict[tuple[int, ...], dict[str, Any]] = {}
+    squad_elapsed: list[float] = []
+    gw_elapsed: list[float] = []
+    materialization_started = time.perf_counter()
     if use_parallel:
         fork_context = mp.get_context("fork")
         chunksize = max(
@@ -931,12 +973,14 @@ def _materialize_route_lineups(
             initializer=_init_p1_2b_lineup_worker,
             initargs=(projections, planning_gw, generated_at),
         ) as executor:
-            for _, squad, output in executor.map(
+            for _, squad, output, elapsed, route_gw_elapsed in executor.map(
                 _p1_2b_route_lineups_worker,
                 unique_items,
                 chunksize=chunksize,
             ):
                 by_squad[tuple(squad)] = output
+                squad_elapsed.append(float(elapsed))
+                gw_elapsed.extend(float(value) for value in route_gw_elapsed)
         execution_mode = "PROCESS_POOL_EXACT_P1_7"
     else:
         print(
@@ -946,12 +990,17 @@ def _materialize_route_lineups(
             flush=True,
         )
         for _, squad in unique_items:
+            route_gw_elapsed: list[float] = []
+            route_started = time.perf_counter()
             by_squad[tuple(squad)] = _cumulative_lineup_horizons(
                 projections,
                 squad,
                 planning_gw=planning_gw,
                 generated_at=generated_at,
+                _perf_sink=route_gw_elapsed,
             )
+            squad_elapsed.append(time.perf_counter() - route_started)
+            gw_elapsed.extend(route_gw_elapsed)
         execution_mode = "SEQUENTIAL_EXACT_P1_7"
 
     if len(by_squad) != len(unique_items):
@@ -968,8 +1017,39 @@ def _materialize_route_lineups(
             "P1.2B exact P1.7 route materialization lost route identity"
         )
 
+    materialization_elapsed = time.perf_counter() - materialization_started
+    effective_workers = workers if use_parallel else 1
+    utilization = (
+        sum(squad_elapsed)
+        / max(materialization_elapsed * effective_workers, 1e-12)
+    )
+    coordination_upper_bound = max(
+        0.0,
+        materialization_elapsed
+        - (
+            sum(squad_elapsed)
+            / max(effective_workers, 1)
+        ),
+    )
+    print(
+        "[P1_2B_PERF] completed exact P1.7 route materialization "
+        f"elapsed_seconds={materialization_elapsed:.3f} "
+        f"squad_p50={(_perf_distribution(squad_elapsed).get('p50') or 0):.3f} "
+        f"squad_p95={(_perf_distribution(squad_elapsed).get('p95') or 0):.3f} "
+        f"worker_utilization={min(1.0, utilization):.3f} "
+        f"coordination_upper_bound_seconds={coordination_upper_bound:.3f}",
+        flush=True,
+    )
+
     proof = {
         "execution_mode": execution_mode,
+        "elapsed_seconds": round(materialization_elapsed, 6),
+        "unique_squad_elapsed_seconds": _perf_distribution(squad_elapsed),
+        "per_gw_elapsed_seconds": _perf_distribution(gw_elapsed),
+        "worker_utilization_estimate": round(min(1.0, utilization), 6),
+        "coordination_serialization_upper_bound_seconds": round(
+            coordination_upper_bound, 6
+        ),
         "route_count": len(route_squads),
         "unique_squad_count": len(unique_items),
         "worker_count": workers if use_parallel else 1,

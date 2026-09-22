@@ -7,13 +7,17 @@ evaluated under existing Canonical V12 methodology. It does not enumerate a
 candidate universe, implement Monte Carlo, or consume mini-league leverage.
 """
 
+from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
 from datetime import datetime, timezone
 from functools import lru_cache
 import hashlib
 import json
 import math
+import multiprocessing as mp
+import os
 from pathlib import Path
+import sys
 from typing import Any, Mapping, Sequence
 
 from src.engines.canonical_decision_methodology import (
@@ -814,6 +818,172 @@ def _model_evidence_binding(
     }
 
 
+
+_P1_2B_WORKER_CONTEXT: tuple[Mapping[str, Any], int, str] | None = None
+
+
+def _init_p1_2b_lineup_worker(
+    projections: Mapping[str, Any],
+    planning_gw: int,
+    generated_at: str,
+) -> None:
+    """Bind immutable read-only P1.7 inputs once per worker process."""
+    global _P1_2B_WORKER_CONTEXT
+    _P1_2B_WORKER_CONTEXT = (
+        projections,
+        int(planning_gw),
+        str(generated_at),
+    )
+
+
+def _p1_2b_route_lineups_worker(
+    item: tuple[str, tuple[int, ...]],
+) -> tuple[str, tuple[int, ...], dict[str, Any]]:
+    """Evaluate one exact route through the existing P1.7 owner."""
+    if _P1_2B_WORKER_CONTEXT is None:
+        raise PackageUtilityError("P1.2B lineup worker context is not initialized")
+    route_id, squad = item
+    projections, planning_gw, generated_at = _P1_2B_WORKER_CONTEXT
+    return (
+        str(route_id),
+        tuple(squad),
+        _cumulative_lineup_horizons(
+            projections,
+            squad,
+            planning_gw=planning_gw,
+            generated_at=generated_at,
+        ),
+    )
+
+
+def _materialize_route_lineups(
+    routes: Sequence[Mapping[str, Any]],
+    projections: Mapping[str, Any],
+    *,
+    planning_gw: int,
+    generated_at: str,
+) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+    """Materialize every P1.2A route with exact P1.7 math.
+
+    Large full-universe route sets are split across bounded Linux worker
+    processes. Each worker calls the same canonical P1.7 owner; this is only an
+    execution strategy and never a second lineup model, lossy route pruning, or
+    alternate decision authority.
+    """
+    cfg = load_config()
+    perf_cfg = dict(cfg.get("performance") or {})
+    min_routes = max(
+        1,
+        int(perf_cfg.get("parallel_lineup_min_routes") or 64),
+    )
+    max_workers = max(
+        1,
+        int(perf_cfg.get("parallel_lineup_max_workers") or 4),
+    )
+    requested_chunks_per_worker = max(
+        1,
+        int(perf_cfg.get("parallel_chunks_per_worker") or 8),
+    )
+
+    route_squads = [
+        (str(route.get("route_id") or ""), _route_squad(route))
+        for route in routes
+    ]
+    if any(not route_id for route_id, _ in route_squads):
+        raise PackageUtilityError("P1.2B route lost route_id")
+
+    # Preserve every route while avoiding duplicate P1.7 work if two exact
+    # search routes happen to resolve to the same final 15-player squad.
+    unique_by_squad: dict[tuple[int, ...], str] = {}
+    for route_id, squad in route_squads:
+        unique_by_squad.setdefault(tuple(squad), route_id)
+    unique_items = [
+        (route_id, squad)
+        for squad, route_id in unique_by_squad.items()
+    ]
+
+    cpu_count = max(1, int(os.cpu_count() or 1))
+    workers = min(max_workers, cpu_count, max(1, len(unique_items)))
+    use_parallel = bool(
+        sys.platform.startswith("linux")
+        and workers > 1
+        and len(unique_items) >= min_routes
+    )
+
+    by_squad: dict[tuple[int, ...], dict[str, Any]] = {}
+    if use_parallel:
+        fork_context = mp.get_context("fork")
+        chunksize = max(
+            1,
+            len(unique_items)
+            // max(1, workers * requested_chunks_per_worker),
+        )
+        print(
+            "[P1_2B_PERF] exact P1.7 route materialization "
+            f"mode=process_pool routes={len(route_squads)} "
+            f"unique_squads={len(unique_items)} workers={workers} "
+            f"chunksize={chunksize}",
+            flush=True,
+        )
+        with ProcessPoolExecutor(
+            max_workers=workers,
+            mp_context=fork_context,
+            initializer=_init_p1_2b_lineup_worker,
+            initargs=(projections, planning_gw, generated_at),
+        ) as executor:
+            for _, squad, output in executor.map(
+                _p1_2b_route_lineups_worker,
+                unique_items,
+                chunksize=chunksize,
+            ):
+                by_squad[tuple(squad)] = output
+        execution_mode = "PROCESS_POOL_EXACT_P1_7"
+    else:
+        print(
+            "[P1_2B_PERF] exact P1.7 route materialization "
+            f"mode=sequential routes={len(route_squads)} "
+            f"unique_squads={len(unique_items)} workers=1",
+            flush=True,
+        )
+        for _, squad in unique_items:
+            by_squad[tuple(squad)] = _cumulative_lineup_horizons(
+                projections,
+                squad,
+                planning_gw=planning_gw,
+                generated_at=generated_at,
+            )
+        execution_mode = "SEQUENTIAL_EXACT_P1_7"
+
+    if len(by_squad) != len(unique_items):
+        raise PackageUtilityError(
+            "P1.2B exact P1.7 route materialization lost a squad"
+        )
+
+    lineups_by_route = {
+        route_id: by_squad[tuple(squad)]
+        for route_id, squad in route_squads
+    }
+    if len(lineups_by_route) != len(route_squads):
+        raise PackageUtilityError(
+            "P1.2B exact P1.7 route materialization lost route identity"
+        )
+
+    proof = {
+        "execution_mode": execution_mode,
+        "route_count": len(route_squads),
+        "unique_squad_count": len(unique_items),
+        "worker_count": workers if use_parallel else 1,
+        "parallel_min_routes": min_routes,
+        "parallel_chunks_per_worker": requested_chunks_per_worker,
+        "p1_7_owner": "V12_LINEUP_OPTIMIZER",
+        "exact_route_identity_preserved": True,
+        "lossy_pruning": False,
+        "p1_7_math_mutated": False,
+        "decision_authority_changed": False,
+    }
+    return lineups_by_route, proof
+
+
 def evaluate_packages(
     *,
     search_result: Mapping[str, Any],
@@ -840,68 +1010,14 @@ def evaluate_packages(
     hold_route = next(row for row in routes if row.get("route_id") == "HOLD")
     hold_squad = _route_squad(hold_route)
     projection_by_id = _projection_map(projections)
-    lineup_cache: dict[tuple[tuple[int, ...], int], dict[str, Any]] = {}
 
-    def route_lineups(route: Mapping[str, Any]) -> dict[str, Any]:
-        squad = _route_squad(route)
-        key_base = tuple(squad)
-        rows = []
-        for offset in range(5):
-            key = (key_base, planning_gw + offset)
-            if key not in lineup_cache:
-                lineup_cache[key] = _lineup_decision(
-                    projections,
-                    squad,
-                    gw=planning_gw + offset,
-                    generated_at=generated,
-                )
-            rows.append(lineup_cache[key])
-        output: dict[str, Any] = {"per_gw": rows}
-        for horizon in (1, 2, 3, 5):
-            subset = rows[:horizon]
-            if any(row.get("status") != "READY" for row in subset):
-                output[str(horizon)] = {
-                    "status": "UNAVAILABLE",
-                    "reason": "INCOMPLETE_P1_7_HORIZON",
-                    "missing_gws": [
-                        row.get("gw")
-                        for row in subset
-                        if row.get("status") != "READY"
-                    ],
-                }
-            else:
-                output[str(horizon)] = {
-                    "status": "READY",
-                    "gross_route_utility": round(
-                        sum(_f(row.get("route_utility")) for row in subset), 6
-                    ),
-                    "expected_fpl_points": round(
-                        sum(_f(row.get("expected_fpl_points")) for row in subset), 6
-                    ),
-                    "distributional_downside": round(
-                        sum(_f(row.get("distributional_downside")) for row in subset), 6
-                    ),
-                    "supportable_upside": round(
-                        sum(_f(row.get("supportable_upside")) for row in subset), 6
-                    ),
-                    "expected_autosub_value": round(
-                        sum(_f(row.get("expected_autosub_value")) for row in subset), 6
-                    ),
-                    "cameo_blocking_cost": round(
-                        sum(_f(row.get("cameo_blocking_cost")) for row in subset), 6
-                    ),
-                }
-        return output
-
-    hold_lineups = route_lineups(hold_route)
-    lineups_by_route = {
-        str(route.get("route_id")): (
-            hold_lineups
-            if str(route.get("route_id")) == "HOLD"
-            else route_lineups(route)
-        )
-        for route in routes
-    }
+    lineups_by_route, lineup_execution = _materialize_route_lineups(
+        routes,
+        projections,
+        planning_gw=planning_gw,
+        generated_at=generated,
+    )
+    hold_lineups = lineups_by_route["HOLD"]
     if supplied_future is None:
         future = derive_bounded_future_frontier(
             {
@@ -1115,6 +1231,7 @@ def evaluate_packages(
             "p_beats_hold": "NOT_COMPUTED",
             "monte_carlo": "NOT_RUN",
             "mini_league": "NOT_CONSUMED",
+            "lineup_execution": deepcopy(lineup_execution),
         },
         "governance": {
             "p1_2a_search_owner": SEARCH_OWNER,
@@ -1131,6 +1248,11 @@ def evaluate_packages(
             "authority_added": False,
             "monte_carlo_started": False,
             "mini_league_overlay_started": False,
+            "p1_7_execution_parallelized_only": (
+                lineup_execution.get("execution_mode")
+                == "PROCESS_POOL_EXACT_P1_7"
+            ),
+            "p1_7_execution_proof": deepcopy(lineup_execution),
         },
     }
     evidence = _model_evidence_binding(

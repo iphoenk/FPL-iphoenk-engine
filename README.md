@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T13:57:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T15:01:02+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -18,6 +18,8 @@ This repository powers a governed personal Fantasy Premier League decision syste
 Report concurrency is versioned by production SHA so an obsolete in-flight controlled report from an older main commit cannot block acceptance of a newer merged Stage-3 implementation. Reports from the same production SHA remain serialized; cancel-in-progress remains false, so no due report is silently discarded.
 
 Stage 3 MC performance repair: canonical Monte Carlo remains **500,000 correlated paths** with unchanged acceptance/convergence gates. Runtime now precomputes immutable Stage-2 fixture catalogs once per GW, replaces repeated path-sample clean-sheet calibration with deterministic Gauss-Hermite calibration of the same Poisson-lognormal zero-goal marginal, and processes larger bounded NumPy chunks. This changes execution efficiency, not V6 facts, Stage-1/Stage-2 authorities, 20/25/30/25, package economics, or report QA.
+
+Stage 3 P1.2B runtime repair: controlled production run `35697291246` proved the remaining timeout is inside `P1_2_PACKAGE_UTILITY`, after P1.2A completes in ~0.1s and before Monte Carlo starts. Large full-universe package route sets now materialize the existing exact P1.7 lineup owner through a bounded Linux process pool (maximum 4 workers), preserving every P1.2A route, identical P1.7 mathematics, route identity, economics, 20/25/30/25, and all QA gates. No lossy pruning, second lineup model, V6 change, path-count reduction, or timeout increase is introduced. Stage 3 remains **acceptance pending** until fresh controlled and natural DEEP evidence passes.
 
 Status: **STAGE 1 GREEN / STAGE 2 GREEN / STAGE 3 CODE MERGED — CONTROLLED + NATURAL DEEP ACCEPTANCE PENDING**.
 

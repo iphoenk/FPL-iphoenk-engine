@@ -387,6 +387,12 @@ _SERIOUS_DECISION_VISIBLE_MARKERS = (
     "UNIVERSE SCAN / OPTIMAL TEAM IMPACT",
 )
 
+_DEEP_ACTION_BOARD_VISIBLE_MARKERS = (
+    "NOW:",
+    "NEXT:",
+    "TRIGGERS:",
+    "REVERSAL:",
+)
 _ACTION_BOARD_VISIBLE_MARKERS = (
     "NOW:",
     "TRIGGER TO ACT:",
@@ -1368,7 +1374,8 @@ def _required_visible_markers(report_mode: str) -> list[str]:
         markers.append("GW COMPLETED MATCH-BY-MATCH SCOUT")
     if mode in {"DEEP", "FULL", "DEADLINE", "FINAL"}:
         markers.extend(_DEEP_HUMAN_REQUIRED_VISIBLE_MARKERS)
-    if mode in {"DEEP", "FULL", "DEADLINE", "FINAL", "PRICE"}:
+        markers.extend(_DEEP_ACTION_BOARD_VISIBLE_MARKERS)
+    if mode == "PRICE":
         markers.extend(_ACTION_BOARD_VISIBLE_MARKERS)
     return list(dict.fromkeys(markers))
 

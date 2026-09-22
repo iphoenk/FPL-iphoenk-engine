@@ -463,6 +463,34 @@ def _resolver_mask_table(
     return tuple(rows)
 
 
+@lru_cache(maxsize=4096)
+def _resolver_state_matrix(
+    start_counts: tuple[int, int, int],
+    dnp_count_keys: tuple[tuple[int, int, int], ...],
+    bench_positions: tuple[str, str, str],
+) -> tuple[
+    tuple[tuple[int, ...], ...],
+    tuple[tuple[int, ...], ...],
+]:
+    """Exact resolver masks assembled once for invariant positional states.
+
+    The canonical _resolver_mask_table remains the only legality owner. This
+    cache removes repeated Python reconstruction of the same formation x
+    DNP-count-state x bench-position matrices across hundreds of XI routes.
+    """
+    selected_rows: list[tuple[int, ...]] = []
+    reached_rows: list[tuple[int, ...]] = []
+    for dnp_counts in dnp_count_keys:
+        table = _resolver_mask_table(
+            start_counts,
+            dnp_counts,
+            bench_positions,
+        )
+        selected_rows.append(tuple(row[0] for row in table))
+        reached_rows.append(tuple(row[1] for row in table))
+    return tuple(selected_rows), tuple(reached_rows)
+
+
 def _expected_outfield_autosub(
     starters: Sequence[Mapping[str, Any]],
     bench_order: Sequence[Mapping[str, Any]],
@@ -909,24 +937,26 @@ def _compact_bench_order_winner_exact(
     )
 
     state_count = len(count_states)
-    selected_bits = np.empty((6, state_count, 8), dtype=np.uint8)
-    reached_bits = np.empty_like(selected_bits)
-    for permutation_index, permutation in enumerate(permutations):
+    dnp_count_keys = tuple(
+        tuple(int(value) for value in dnp_counts)
+        for dnp_counts, _ in count_states
+    )
+    selected_matrices: list[tuple[tuple[int, ...], ...]] = []
+    reached_matrices: list[tuple[tuple[int, ...], ...]] = []
+    for permutation in permutations:
         bench_positions = tuple(
             str(row.get("position")) for row in permutation
         )
-        for state_index, (dnp_counts, _) in enumerate(count_states):
-            table = _resolver_mask_table(
-                start_counts,
-                dnp_counts,
-                bench_positions,
-            )
-            selected_bits[permutation_index, state_index, :] = tuple(
-                row[0] for row in table
-            )
-            reached_bits[permutation_index, state_index, :] = tuple(
-                row[1] for row in table
-            )
+        selected_matrix, reached_matrix = _resolver_state_matrix(
+            start_counts,
+            dnp_count_keys,
+            bench_positions,
+        )
+        selected_matrices.append(selected_matrix)
+        reached_matrices.append(reached_matrix)
+
+    selected_bits = np.asarray(selected_matrices, dtype=np.uint8)
+    reached_bits = np.asarray(reached_matrices, dtype=np.uint8)
 
     if state_count:
         joint_probability = (

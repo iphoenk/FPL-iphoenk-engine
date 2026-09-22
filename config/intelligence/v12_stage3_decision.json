@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "contract": "V12_STAGE3_DOWNSTREAM_DECISION_V1",
+  "model_owner": "V12_STAGE3_DECISION",
+  "authority": "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt",
+  "action_states": ["WAIT", "PREPARE", "ACT"],
+  "decision_thresholds": {
+    "minimum_positive_mean_delta": 0.0,
+    "minimum_outperform_probability": 0.58,
+    "minimum_meaningful_upside_probability": 0.15,
+    "minimum_q10_delta": -4.0,
+    "maximum_expected_regret": 2.0,
+    "calibration_status": "STRUCTURAL_PRIOR_PENDING_SETTLED_STAGE3_DECISIONS",
+    "settled_sample_size_at_introduction": 0,
+    "automatic_retuning": false
+  },
+  "sequential_rollout": {
+    "approximation": "ONE_STEP_ACTION_WITH_MANDATORY_NEXT_GW_REOPTIMIZATION_BOUNDARY",
+    "horizons_kept_separate": [1, 3, 5],
+    "future_transfer_policy": "REOPTIMIZE_FROM_NEXT_FACTUAL_STATE",
+    "fixed_squad_horizon_is_not_dynamic_programming_value": true,
+    "precommitted_future_transfer_forbidden": true
+  },
+  "sensitivity": {
+    "classification_states": ["ROBUST", "FRAGILE"],
+    "modelled_stress": [
+      "unexpected_bench",
+      "cameo",
+      "early_sub",
+      "creator_absent",
+      "early_cs_loss"
+    ],
+    "explicitly_unmodelled_or_external": [
+      "opponent_shape_change",
+      "penalty_taker_change_after_snapshot",
+      "injury_cluster",
+      "manager_rotation_cluster",
+      "future_price_process"
+    ]
+  },
+  "price_uncertainty": {
+    "source_native_probability_required": true,
+    "likelihood_bucket_to_probability_mapping_forbidden": true,
+    "price_predictor_is_football_authority": false
+  },
+  "governance": {
+    "downstream_only": true,
+    "p1_1_read_only": true,
+    "p1_3_read_only": true,
+    "dynamic_fdr_read_only": true,
+    "position_engines_read_only": true,
+    "posterior_predictive_read_only": true,
+    "weights_20_25_30_25_unchanged": true,
+    "full_universe_read_only": true,
+    "watchlist20_not_decision_authority": true,
+    "horizon_distributions_read_only": true,
+    "p1_2_read_only": true,
+    "p1_4_read_only": true,
+    "p1_7_read_only": true,
+    "p1_8_downstream_only": true,
+    "v6_mutated": false,
+    "new_scheduler": false
+  }
+}

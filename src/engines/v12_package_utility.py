@@ -1504,6 +1504,19 @@ def finalize_stage3_decision(
     price_map = dict(price_uncertainty_by_route or {})
     metrics = dict(mc.get("metrics") or {})
     projection_map = _projection_map(projections or {})
+    stage3_cfg = dict(load_config().get("stage3") or {})
+    robust_cfg = dict(stage3_cfg.get("robustness") or {})
+    confidence_z = _f(robust_cfg.get("confidence_z"), 1.96)
+    min_mean_lcb = _f(
+        robust_cfg.get("minimum_mean_delta_lower_bound_points"),
+        0.0,
+    )
+    min_p_lcb = _f(
+        robust_cfg.get(
+            "minimum_outperform_probability_lower_bound"
+        ),
+        0.50,
+    )
 
     def sensitivity_for_route(
         route: Mapping[str, Any],
@@ -1688,7 +1701,7 @@ def finalize_stage3_decision(
         mean_lcb = (
             None
             if mean is None or mean_se is None
-            else _f(mean) - 1.96 * _f(mean_se)
+            else _f(mean) - confidence_z * _f(mean_se)
         )
         p_lcb = (
             None
@@ -1706,9 +1719,9 @@ def finalize_stage3_decision(
             mc_ready
             and route_id != "HOLD"
             and mean_lcb is not None
-            and mean_lcb > 0.0
+            and mean_lcb > min_mean_lcb
             and p_lcb is not None
-            and p_lcb > 0.50
+            and p_lcb > min_p_lcb
             and long_noninferior
         )
         economics = dict(route.get("transfer_economics") or {})
@@ -1753,12 +1766,36 @@ def finalize_stage3_decision(
                         )
                         == "PASS"
                     ),
-                    "rules": (
-                        "ROBUST iff MC converged, mean delta and P(outperform) "
-                        "95% lower bounds are positive/>0.5, 3GW/5GW football "
-                        "deltas are non-negative, and every material sensitivity "
-                        "dimension is either governed-bounded or path-modelled"
-                    ),
+                    "rules": {
+                        "confidence_z": confidence_z,
+                        "minimum_mean_delta_lower_bound_points": min_mean_lcb,
+                        "minimum_outperform_probability_lower_bound": min_p_lcb,
+                        "require_3gw_noninferior": bool(
+                            robust_cfg.get(
+                                "require_3gw_noninferior", True
+                            )
+                        ),
+                        "require_5gw_noninferior": bool(
+                            robust_cfg.get(
+                                "require_5gw_noninferior", True
+                            )
+                        ),
+                        "require_all_material_sensitivity_dimensions_resolved": bool(
+                            robust_cfg.get(
+                                "require_all_material_sensitivity_dimensions_resolved",
+                                True,
+                            )
+                        ),
+                        "calibration_status": robust_cfg.get(
+                            "calibration_status"
+                        ),
+                        "settled_predeadline_sample_size_at_introduction": robust_cfg.get(
+                            "settled_predeadline_sample_size_at_introduction"
+                        ),
+                        "automatic_retuning": robust_cfg.get(
+                            "automatic_retuning"
+                        ),
+                    },
                 },
                 "stress_coverage": {
                     "unexpected_bench": "IN_DISTRIBUTION_P1_1",

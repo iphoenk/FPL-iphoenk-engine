@@ -303,7 +303,7 @@ def test_stage3_unavailable_private_bank_preserves_structural_full_search():
     assert result["status"] == "READY"
     assert result["search_authority"] == "FULL"
     assert result["max_transfers_evaluated"] == 1
-    assert result["search_proof"]["transfer_depth_complete_within_bound"] is True
+    assert result["transfer_depth_semantics"] == "COMPLETE_WITHIN_GOVERNED_CURRENT_OCCURRENCE_BOUND"
     assert any(row["route_id"] != "HOLD" for row in result["routes"])
     changes = [row for row in result["routes"] if row["route_id"] != "HOLD"]
     assert all(row["economics_status"] in {"UNRESOLVED_SELL_VALUE", "UNRESOLVED_BANK"} for row in changes)

@@ -1481,6 +1481,21 @@ def _compute_handoff_failures(
     elif fact_model.get("overlap"):
         failures.append("FACT_MODEL_CONTRACT_OVERLAP")
 
+    if compute_contract.get("human_facing_manifest_required") is True:
+        human_manifest = compute_contract.get("HUMAN_FACING_MANIFEST")
+        if not isinstance(human_manifest, Mapping):
+            failures.append("HUMAN_FACING_MANIFEST_MISSING")
+        elif str(human_manifest.get("status") or "").upper() != "PASS":
+            manifest_failures = [
+                str(value)
+                for value in human_manifest.get("failures") or []
+                if str(value).strip()
+            ]
+            failures.append(
+                "HUMAN_FACING_MANIFEST_FAILED="
+                + (",".join(manifest_failures) if manifest_failures else "UNKNOWN")
+            )
+
     section_contract = compute_contract.get("SECTION_CONTRACT")
     if isinstance(section_contract, Mapping) and section_contract.get("status") != "PASS":
         failed_sections = {

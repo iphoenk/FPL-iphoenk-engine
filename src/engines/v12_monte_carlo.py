@@ -1119,7 +1119,7 @@ def _categorical_goal_allocation(
     player_ids: Sequence[int],
     player_weights: Mapping[int, np.ndarray],
     *,
-    other_weight: float,
+    other_weight: float | np.ndarray,
 ) -> tuple[dict[int, np.ndarray], list[np.ndarray]]:
     """Allocate each team event to exactly one material player or OTHER."""
     ids = [int(x) for x in player_ids]
@@ -1149,11 +1149,10 @@ def _categorical_goal_allocation(
             )
             for element in ids
         ]
-        denom = np.full(
-            n,
-            max(1e-9, float(other_weight)),
-            dtype=np.float64,
-        )
+        other = np.asarray(other_weight, dtype=np.float64)
+        if other.ndim == 0:
+            other = np.full(n, float(other), dtype=np.float64)
+        denom = np.maximum(1e-9, other.copy())
         for weight in weights:
             denom += weight
         u = rng.random(n)
@@ -1186,8 +1185,8 @@ def _categorical_assist_allocation(
     player_ids: Sequence[int],
     player_weights: Mapping[int, np.ndarray],
     *,
-    other_assist_weight: float,
-    no_assist_weight: float,
+    other_assist_weight: float | np.ndarray,
+    no_assist_weight: float | np.ndarray,
 ) -> dict[int, np.ndarray]:
     """At most one assist per goal, with scorer excluded from that goal."""
     ids = [int(x) for x in player_ids]
@@ -1215,14 +1214,21 @@ def _categorical_assist_allocation(
             eligible_weights.append(
                 np.where(scorer == element, 0.0, base)
             )
-        denom = np.full(
-            n,
-            max(
-                1e-9,
-                float(other_assist_weight)
-                + float(no_assist_weight),
-            ),
-            dtype=np.float64,
+        other = np.asarray(
+            other_assist_weight, dtype=np.float64
+        )
+        no_assist = np.asarray(
+            no_assist_weight, dtype=np.float64
+        )
+        if other.ndim == 0:
+            other = np.full(n, float(other), dtype=np.float64)
+        if no_assist.ndim == 0:
+            no_assist = np.full(
+                n, float(no_assist), dtype=np.float64
+            )
+        denom = np.maximum(
+            1e-9,
+            other + no_assist,
         )
         for weight in eligible_weights:
             denom += weight
@@ -1368,6 +1374,7 @@ def _simulate_match_coupled_gw(
             )
             expected_material_goal = 0.0
             expected_material_assist = 0.0
+            expected_goal_by_element: dict[int, float] = {}
             goal_weights: dict[int, np.ndarray] = {}
             assist_weights: dict[int, np.ndarray] = {}
             for element in elements:
@@ -1376,16 +1383,19 @@ def _simulate_match_coupled_gw(
                 expected_minutes = _stage2_expected_minutes(
                     pmap[element]
                 )
-                expected_material_goal += (
+                expected_goal = (
                     params["goal_rate90"]
                     * min(90.0, expected_minutes)
                     / 90.0
                 )
-                expected_material_assist += (
+                expected_assist = (
                     params["assist_rate90"]
                     * min(90.0, expected_minutes)
                     / 90.0
                 )
+                expected_goal_by_element[element] = expected_goal
+                expected_material_goal += expected_goal
+                expected_material_assist += expected_assist
                 goal_ratio = _path_linkup_ratio(
                     pmap[element],
                     fid,
@@ -1413,9 +1423,14 @@ def _simulate_match_coupled_gw(
                     * assist_ratio
                 )
 
-            other_goal_weight = max(
-                0.05,
-                base_goal_mean - expected_material_goal,
+            material_goal_path = np.zeros(
+                n, dtype=np.float64
+            )
+            for weight in goal_weights.values():
+                material_goal_path += weight
+            other_goal_weight = np.maximum(
+                1e-6,
+                base_goal_mean - material_goal_path,
             )
             goals_by_player, scorer_by_ordinal = (
                 _categorical_goal_allocation(
@@ -1443,26 +1458,35 @@ def _simulate_match_coupled_gw(
                     "material_goal_overflow_failures"
                 ] += 1
 
-            base_assist_mean = max(
-                0.0,
-                _f(
-                    (catalog.get(fid) or {}).get(
-                        "team_assist_mean",
-                        {},
-                    ).get(team_id),
-                    min(
-                        base_goal_mean,
-                        expected_material_assist,
+            # Preserve the Stage-2 assist marginal while enforcing
+            # scorer != assister for each goal. A player's assist propensity
+            # is conditioned on not being that goal's scorer.
+            for element in elements:
+                scorer_share = min(
+                    0.80,
+                    max(
+                        0.0,
+                        expected_goal_by_element.get(
+                            element, 0.0
+                        )
+                        / max(1e-9, base_goal_mean),
                     ),
-                ),
+                )
+                assist_weights[element] = (
+                    assist_weights[element]
+                    / max(0.20, 1.0 - scorer_share)
+                )
+            material_assist_path = np.zeros(
+                n, dtype=np.float64
             )
-            other_assist_weight = max(
-                0.05,
-                base_assist_mean - expected_material_assist,
+            for weight in assist_weights.values():
+                material_assist_path += weight
+            other_assist_weight = np.maximum(
+                1e-6,
+                base_goal_mean - material_assist_path,
             )
-            no_assist_weight = max(
-                0.05,
-                base_goal_mean - base_assist_mean,
+            no_assist_weight = np.zeros(
+                n, dtype=np.float64
             )
             assists_by_player = _categorical_assist_allocation(
                 rng,

@@ -227,13 +227,13 @@ def test_08_stale_gw5_hit_assumption_never_flows_into_gw6_economics():
 def test_09_deep_expected_section_catalog_is_derived_from_canonical_exact_order():
     contract = _deep_contract()
     assert contract["expected_section_ids"] == [
-        "S01", "S02", "S03", "S04", "S05", "S06", "S07", "S08", "S09",
-        "S10", "S11", "S12", "S13", "S14", "S15", "S15B", "S16", "S17",
-        "S18", "S19",
+        "S01", "S02", "S03", "S04", "S05", "S06", "S06B", "S07", "S08",
+        "S09", "S10", "S11", "S12", "S13", "S14", "S14B", "S15", "S15B",
+        "S16", "S16B", "S17", "S18", "S19",
     ]
-    assert contract["expected_visible_order"][0] == "Decision/status"
-    assert "ALL15" in contract["expected_visible_order"][16]
-    assert contract["expected_visible_order"][-1] == "Final judgement"
+    assert contract["expected_visible_order"][0] == "DECISION / CURRENT STATUS"
+    assert "ALL15" in contract["expected_visible_order"][18]
+    assert contract["expected_visible_order"][-1] == "FINAL JUDGEMENT"
 
 
 def test_10_missing_all15_section_is_structural_failure_requiring_rerender():

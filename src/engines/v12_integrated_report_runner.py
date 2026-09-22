@@ -21,6 +21,7 @@ coherent report bundle.
 import argparse
 import hashlib
 import json
+import time
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
@@ -107,9 +108,17 @@ def _stage(
     *,
     required: bool = False,
 ) -> Any:
+    started = time.perf_counter()
+    print(f"[V12_STAGE] START {name}", flush=True)
     try:
         value = fn()
     except Exception as exc:  # occurrence truth must survive one stage failure
+        elapsed = time.perf_counter() - started
+        print(
+            f"[V12_STAGE] FAILED {name} elapsed_seconds={elapsed:.3f} "
+            f"error={type(exc).__name__}: {exc}",
+            flush=True,
+        )
         ledger.append(
             {
                 "stage": name,
@@ -117,15 +126,22 @@ def _stage(
                 "required": bool(required),
                 "error_class": type(exc).__name__,
                 "error": str(exc),
+                "elapsed_seconds": round(elapsed, 3),
             }
         )
         return None
+    elapsed = time.perf_counter() - started
+    print(
+        f"[V12_STAGE] PASS {name} elapsed_seconds={elapsed:.3f}",
+        flush=True,
+    )
     ledger.append(
         {
             "stage": name,
             "status": "PASS",
             "required": bool(required),
             "output_fingerprint": _fingerprint(value),
+            "elapsed_seconds": round(elapsed, 3),
         }
     )
     return value

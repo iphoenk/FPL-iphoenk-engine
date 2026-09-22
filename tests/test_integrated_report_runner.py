@@ -394,6 +394,78 @@ def test_deep_human_manifest_fails_closed_when_new_section_is_missing():
     assert "HUMAN_SECTION_MISSING=S16B" in manifest["failures"]
 
 
+def test_captain_review_exposes_distributional_and_mini_league_evidence():
+    projections = {
+        "players": [
+            {
+                "element": 10,
+                "name": "Captain A",
+                "position": "FWD",
+                "xmins": {
+                    "expected_minutes": 88.0,
+                    "start_probability": 0.98,
+                },
+                "horizons": {
+                    "1": {
+                        "point_distribution": {
+                            "status": "AVAILABLE",
+                            "mean": 7.4,
+                            "quantiles": {"Q90": 13.0},
+                            "p_haul_10_plus": 0.31,
+                            "p_fpl_blank": 0.34,
+                        }
+                    }
+                },
+                "xpts_by_gw": [
+                    {
+                        "gw": 6,
+                        "fixtures": [
+                            {
+                                "opponent": "OPP",
+                                "home": True,
+                                "complete_player_distribution": {
+                                    "P_goal": 0.48,
+                                    "P_assist": 0.22,
+                                    "P_return": 0.60,
+                                    "P_start": 0.98,
+                                },
+                                "position_engine": {
+                                    "goal_process": {"status": "AVAILABLE"},
+                                    "creation_process": {"status": "AVAILABLE"},
+                                    "penalty_process": {"role": "TAKER"},
+                                    "set_piece_process": {"role": "NONE"},
+                                },
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    review = runner._captain_candidate_review(
+        candidate={"element": 10, "name": "Captain A"},
+        projections=projections,
+        mini={
+            "exposures": [
+                {
+                    "element_id": 10,
+                    "captain_count": 30,
+                    "captain_pct": 51.7,
+                    "eo_pct": 140.0,
+                }
+            ]
+        },
+        mini_league_stance="BALANCED",
+    )
+    assert review["expected_points"] == pytest.approx(7.4)
+    assert review["ceiling_q90"] == pytest.approx(13.0)
+    assert review["xmins"] == pytest.approx(88.0)
+    assert review["goal_involvement"]["p_return"] == pytest.approx(0.60)
+    assert review["captain_pct"] == pytest.approx(51.7)
+    assert review["eo_pct"] == pytest.approx(140.0)
+    assert review["raw_mean_is_not_sole_authority"] is True
+
+
 def test_formation_strategy_separates_raw_ev_from_distributional_choice():
     lineup = {
         "formation": "3-5-2",

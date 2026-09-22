@@ -1029,6 +1029,734 @@ def _shared_fraction() -> float:
     return min(high, max(low, value))
 
 
+def _categorical_goal_allocation(
+    rng: np.random.Generator,
+    total_events: np.ndarray,
+    player_ids: Sequence[int],
+    player_weights: Mapping[int, np.ndarray],
+    *,
+    other_weight: float,
+) -> tuple[dict[int, np.ndarray], list[np.ndarray]]:
+    """Allocate each team event to exactly one material player or OTHER."""
+    ids = [int(x) for x in player_ids]
+    n = len(total_events)
+    out = {
+        element: np.zeros(n, dtype=np.int16)
+        for element in ids
+    }
+    max_events = int(np.max(total_events)) if n else 0
+    scorer_by_ordinal: list[np.ndarray] = []
+    for ordinal in range(max_events):
+        active = np.asarray(total_events > ordinal)
+        assignment = np.full(n, -1, dtype=np.int32)
+        if not np.any(active):
+            scorer_by_ordinal.append(assignment)
+            continue
+        weights = [
+            np.maximum(
+                0.0,
+                np.asarray(
+                    player_weights.get(
+                        element,
+                        np.zeros(n, dtype=np.float64),
+                    ),
+                    dtype=np.float64,
+                ),
+            )
+            for element in ids
+        ]
+        denom = np.full(
+            n,
+            max(1e-9, float(other_weight)),
+            dtype=np.float64,
+        )
+        for weight in weights:
+            denom += weight
+        u = rng.random(n)
+        cumulative = np.zeros(n, dtype=np.float64)
+        for element, weight in zip(ids, weights):
+            p = np.divide(
+                weight,
+                denom,
+                out=np.zeros_like(weight),
+                where=denom > 0.0,
+            )
+            choose = (
+                active
+                & (assignment < 0)
+                & (u >= cumulative)
+                & (u < cumulative + p)
+            )
+            if np.any(choose):
+                out[element][choose] += 1
+                assignment[choose] = element
+            cumulative += p
+        scorer_by_ordinal.append(assignment)
+    return out, scorer_by_ordinal
+
+
+def _categorical_assist_allocation(
+    rng: np.random.Generator,
+    total_goals: np.ndarray,
+    scorer_by_ordinal: Sequence[np.ndarray],
+    player_ids: Sequence[int],
+    player_weights: Mapping[int, np.ndarray],
+    *,
+    other_assist_weight: float,
+    no_assist_weight: float,
+) -> dict[int, np.ndarray]:
+    """At most one assist per goal, with scorer excluded from that goal."""
+    ids = [int(x) for x in player_ids]
+    n = len(total_goals)
+    out = {
+        element: np.zeros(n, dtype=np.int16)
+        for element in ids
+    }
+    for ordinal, scorer in enumerate(scorer_by_ordinal):
+        active = np.asarray(total_goals > ordinal)
+        if not np.any(active):
+            continue
+        eligible_weights = []
+        for element in ids:
+            base = np.maximum(
+                0.0,
+                np.asarray(
+                    player_weights.get(
+                        element,
+                        np.zeros(n, dtype=np.float64),
+                    ),
+                    dtype=np.float64,
+                ),
+            )
+            eligible_weights.append(
+                np.where(scorer == element, 0.0, base)
+            )
+        denom = np.full(
+            n,
+            max(
+                1e-9,
+                float(other_assist_weight)
+                + float(no_assist_weight),
+            ),
+            dtype=np.float64,
+        )
+        for weight in eligible_weights:
+            denom += weight
+        u = rng.random(n)
+        cumulative = np.zeros(n, dtype=np.float64)
+        assigned = np.zeros(n, dtype=bool)
+        for element, weight in zip(ids, eligible_weights):
+            p = np.divide(
+                weight,
+                denom,
+                out=np.zeros_like(weight),
+                where=denom > 0.0,
+            )
+            choose = (
+                active
+                & ~assigned
+                & (u >= cumulative)
+                & (u < cumulative + p)
+            )
+            if np.any(choose):
+                out[element][choose] += 1
+                assigned[choose] = True
+            cumulative += p
+    return out
+
+
+def _simulate_match_coupled_gw(
+    rng: np.random.Generator,
+    pmap: Mapping[int, Mapping[str, Any]],
+    player_ids: Sequence[int],
+    *,
+    gw: int,
+    n: int,
+    cfg: Mapping[str, Any],
+) -> tuple[dict[int, dict[str, Any]], dict[str, Any]]:
+    """Simulate one GW from shared football match states, not player-point noise."""
+    catalog = _fixture_catalog(pmap, player_ids, gw)
+    factors = _world_factors(rng, catalog, n, cfg)
+    player_world: dict[int, dict[str, Any]] = {}
+    for element in player_ids:
+        state_rows = _state_rows(pmap[element])
+        player_world[element] = {
+            "points": np.zeros(n, dtype=np.float64),
+            "appeared": np.zeros(n, dtype=bool),
+            "state_counts": np.zeros(
+                len(state_rows),
+                dtype=np.int64,
+            ),
+            "state_draws": 0,
+            "event_sums": {
+                "goals": 0.0,
+                "assists": 0.0,
+                "clean_sheets": 0.0,
+                "defcon_hits": 0.0,
+                "saves": 0.0,
+                "cards": 0.0,
+                "penalty_goals": 0.0,
+                "set_piece_goals": 0.0,
+                "bonus_points": 0.0,
+            },
+        }
+
+    fixture_members: dict[
+        str,
+        list[tuple[int, Mapping[str, Any], int, int]],
+    ] = {}
+    for element in player_ids:
+        player = pmap[element]
+        team_id = _i(player.get("team_id") or player.get("team"), -1)
+        for index, fixture in enumerate(_fixture_rows(player, gw)):
+            fid = _fixture_id(
+                fixture,
+                gw=gw,
+                team_id=team_id,
+                index=index,
+            )
+            fixture_members.setdefault(fid, []).append(
+                (
+                    int(element),
+                    fixture,
+                    team_id,
+                    _opponent_id(fixture),
+                )
+            )
+
+    invariant_counts = {
+        "fixture_chunks": 0,
+        "cs_goal_consistency_failures": 0,
+        "material_goal_overflow_failures": 0,
+        "assist_overflow_failures": 0,
+        "self_assist_failures": 0,
+        "dnp_scorer_failures": 0,
+    }
+
+    for fid, members in sorted(fixture_members.items()):
+        world = factors.get(fid)
+        if not isinstance(world, Mapping):
+            raise MonteCarloError(
+                f"missing match state for fixture={fid}"
+            )
+        invariant_counts["fixture_chunks"] += 1
+        local_minutes: dict[int, np.ndarray] = {}
+        local_appeared: dict[int, np.ndarray] = {}
+        local_params: dict[int, dict[str, Any]] = {}
+        by_team: dict[int, list[int]] = {}
+
+        for element, fixture, team_id, _ in members:
+            state_idx, minutes = _sample_state_minutes(
+                rng,
+                pmap[element],
+                n,
+            )
+            local_minutes[element] = minutes
+            local_appeared[element] = minutes > 0.0
+            local_params[element] = _fixture_event_parameters(
+                pmap[element],
+                fixture,
+            )
+            by_team.setdefault(team_id, []).append(element)
+            target = player_world[element]
+            for idx in range(len(target["state_counts"])):
+                target["state_counts"][idx] += int(
+                    np.count_nonzero(state_idx == idx)
+                )
+            target["state_draws"] += n
+            target["appeared"] |= local_appeared[element]
+
+        for team_id, elements in by_team.items():
+            team_world = dict(
+                (world.get("teams") or {}).get(team_id) or {}
+            )
+            if not team_world:
+                raise MonteCarloError(
+                    f"missing team world fixture={fid} team={team_id}"
+                )
+            team_goals = np.asarray(
+                (world.get("team_goals") or {}).get(team_id),
+                dtype=np.int16,
+            )
+            base_goal_mean = max(
+                0.01,
+                _f(team_world.get("base_goal_mean"), 1.35),
+            )
+            expected_material_goal = 0.0
+            expected_material_assist = 0.0
+            goal_weights: dict[int, np.ndarray] = {}
+            assist_weights: dict[int, np.ndarray] = {}
+            for element in elements:
+                params = local_params[element]
+                minutes = local_minutes[element]
+                expected_minutes = max(
+                    0.0,
+                    _f(
+                        (pmap[element].get("xmins") or {}).get(
+                            "expected_minutes",
+                            (pmap[element].get("xmins") or {}).get(
+                                "xMins"
+                            ),
+                        )
+                    ),
+                )
+                expected_material_goal += (
+                    params["goal_rate90"]
+                    * min(90.0, expected_minutes)
+                    / 90.0
+                )
+                expected_material_assist += (
+                    params["assist_rate90"]
+                    * min(90.0, expected_minutes)
+                    / 90.0
+                )
+                goal_ratio = _path_linkup_ratio(
+                    pmap[element],
+                    fid,
+                    local_appeared,
+                    channel="goal",
+                    n=n,
+                )
+                assist_ratio = _path_linkup_ratio(
+                    pmap[element],
+                    fid,
+                    local_appeared,
+                    channel="assist",
+                    n=n,
+                )
+                goal_weights[element] = (
+                    params["goal_rate90"]
+                    * minutes
+                    / 90.0
+                    * goal_ratio
+                )
+                assist_weights[element] = (
+                    params["assist_rate90"]
+                    * minutes
+                    / 90.0
+                    * assist_ratio
+                )
+
+            other_goal_weight = max(
+                0.05,
+                base_goal_mean - expected_material_goal,
+            )
+            goals_by_player, scorer_by_ordinal = (
+                _categorical_goal_allocation(
+                    rng,
+                    team_goals,
+                    elements,
+                    goal_weights,
+                    other_weight=other_goal_weight,
+                )
+            )
+            total_material_goals = np.zeros(
+                n, dtype=np.int16
+            )
+            for element in elements:
+                total_material_goals += goals_by_player[element]
+                if np.any(
+                    (goals_by_player[element] > 0)
+                    & ~local_appeared[element]
+                ):
+                    invariant_counts[
+                        "dnp_scorer_failures"
+                    ] += 1
+            if np.any(total_material_goals > team_goals):
+                invariant_counts[
+                    "material_goal_overflow_failures"
+                ] += 1
+
+            base_assist_mean = max(
+                0.0,
+                _f(
+                    (catalog.get(fid) or {}).get(
+                        "team_assist_mean",
+                        {},
+                    ).get(team_id),
+                    min(
+                        base_goal_mean,
+                        expected_material_assist,
+                    ),
+                ),
+            )
+            other_assist_weight = max(
+                0.05,
+                base_assist_mean - expected_material_assist,
+            )
+            no_assist_weight = max(
+                0.05,
+                base_goal_mean - base_assist_mean,
+            )
+            assists_by_player = _categorical_assist_allocation(
+                rng,
+                team_goals,
+                scorer_by_ordinal,
+                elements,
+                assist_weights,
+                other_assist_weight=other_assist_weight,
+                no_assist_weight=no_assist_weight,
+            )
+            total_material_assists = np.zeros(
+                n, dtype=np.int16
+            )
+            for element in elements:
+                total_material_assists += assists_by_player[element]
+                if np.any(
+                    (goals_by_player[element] > 0)
+                    & (assists_by_player[element] > team_goals)
+                ):
+                    invariant_counts["self_assist_failures"] += 1
+            if np.any(total_material_assists > team_goals):
+                invariant_counts["assist_overflow_failures"] += 1
+
+            for element in elements:
+                player = pmap[element]
+                params = local_params[element]
+                minutes = local_minutes[element]
+                scale = minutes / 90.0
+                goals = goals_by_player[element].astype(
+                    np.int32
+                )
+                assists = assists_by_player[element].astype(
+                    np.int32
+                )
+                opponent_ids = [
+                    tid
+                    for tid in (world.get("teams") or {})
+                    if int(tid) != int(team_id)
+                ]
+                if len(opponent_ids) != 1:
+                    raise MonteCarloError(
+                        f"fixture={fid} opponent ambiguity"
+                    )
+                opponent_id = int(opponent_ids[0])
+                opponent_goals = np.asarray(
+                    (world.get("team_goals") or {}).get(
+                        opponent_id
+                    ),
+                    dtype=np.int32,
+                )
+                clean = opponent_goals == 0
+                if not np.array_equal(
+                    clean,
+                    np.asarray(
+                        (world.get("clean_sheet") or {}).get(
+                            team_id
+                        ),
+                        dtype=bool,
+                    ),
+                ):
+                    invariant_counts[
+                        "cs_goal_consistency_failures"
+                    ] += 1
+
+                appearance_points = np.where(
+                    minutes <= 0.0,
+                    0.0,
+                    np.where(
+                        minutes >= 60.0,
+                        float(APPEARANCE_POINTS_60_PLUS),
+                        float(APPEARANCE_POINTS_UNDER_60),
+                    ),
+                )
+                points = appearance_points.astype(np.float64)
+                points += goals * float(
+                    GOAL_POINTS[_element_type(player)]
+                )
+                points += assists * float(ASSIST_POINTS)
+
+                cs_awarded = (
+                    clean
+                    & (
+                        minutes
+                        >= params[
+                            "clean_sheet_minimum_minutes"
+                        ]
+                    )
+                    & (params["clean_sheet_points"] > 0.0)
+                )
+                points += (
+                    cs_awarded.astype(np.float64)
+                    * params["clean_sheet_points"]
+                )
+
+                defcon_hits = np.zeros(n, dtype=bool)
+                if (
+                    params["defcon_eligible"]
+                    and params["defcon_threshold"] > 0
+                    and params["defcon_points"] > 0.0
+                ):
+                    pressure = np.asarray(
+                        (
+                            (world.get("teams") or {}).get(
+                                opponent_id
+                            )
+                            or {}
+                        ).get(
+                            "attack_factor",
+                            np.ones(n),
+                        ),
+                        dtype=np.float64,
+                    )
+                    dc_mean = (
+                        params["defcon_rate90"]
+                        * scale
+                        * np.clip(
+                            pressure ** 0.35,
+                            0.65,
+                            1.55,
+                        )
+                    )
+                    dc_counts = _sample_count_from_stage2(
+                        rng,
+                        params["defcon_count_model"],
+                        dc_mean,
+                    )
+                    defcon_hits = (
+                        dc_counts
+                        >= params["defcon_threshold"]
+                    )
+                    points += (
+                        defcon_hits.astype(np.float64)
+                        * params["defcon_points"]
+                    )
+
+                save_counts = np.zeros(
+                    n, dtype=np.int32
+                )
+                if (
+                    params["save_eligible"]
+                    and params["save_rate90"] > 0.0
+                ):
+                    pressure = np.asarray(
+                        (
+                            (world.get("teams") or {}).get(
+                                opponent_id
+                            )
+                            or {}
+                        ).get(
+                            "attack_factor",
+                            np.ones(n),
+                        ),
+                        dtype=np.float64,
+                    )
+                    save_mean = (
+                        params["save_rate90"]
+                        * scale
+                        * np.clip(pressure, 0.60, 1.75)
+                    )
+                    save_counts = _sample_count_from_stage2(
+                        rng,
+                        params["save_count_model"],
+                        save_mean,
+                    )
+                    # Shot-on-target identity is explicit:
+                    # opponent SoT = goals conceded + saves.
+                    save_points = (
+                        save_counts // int(SAVE_INTERVAL)
+                    ) * int(SAVE_POINTS_PER_INTERVAL)
+                    points += save_points.astype(np.float64)
+
+                if _position(player) in {"GK", "DEF"}:
+                    interval = max(
+                        1,
+                        int(
+                            params[
+                                "goals_conceded_interval"
+                            ]
+                        ),
+                    )
+                    gc_intervals = (
+                        opponent_goals // interval
+                    )
+                    points += (
+                        gc_intervals.astype(np.float64)
+                        * params[
+                            "goals_conceded_points_per_interval"
+                        ]
+                    )
+
+                yellow_p = (
+                    1.0
+                    - np.exp(
+                        -params["yellow_rate90"] * scale
+                    )
+                )
+                red_p = (
+                    1.0
+                    - np.exp(
+                        -params["red_rate90"] * scale
+                    )
+                )
+                yellow = (
+                    rng.random(n) < yellow_p
+                ) & local_appeared[element]
+                red = (
+                    rng.random(n) < red_p
+                ) & local_appeared[element]
+                points += (
+                    yellow.astype(np.float64)
+                    * float(YELLOW_CARD_POINTS)
+                )
+                points += (
+                    red.astype(np.float64)
+                    * float(RED_CARD_POINTS)
+                )
+
+                penalty_process = dict(
+                    params["penalty_process"]
+                )
+                penalty_attempt_rate90 = max(
+                    0.0,
+                    _f(
+                        penalty_process.get(
+                            "penalty_attempt_rate90"
+                        )
+                    ),
+                )
+                penalty_misses = rng.poisson(
+                    penalty_attempt_rate90
+                    * 0.22
+                    * scale
+                )
+                points += (
+                    penalty_misses.astype(np.float64)
+                    * float(PENALTY_MISS_POINTS)
+                )
+
+                penalty_saved = np.zeros(
+                    n, dtype=bool
+                )
+                if (
+                    _position(player) == "GK"
+                    and params[
+                        "penalty_save_probability"
+                    ]
+                    > 0.0
+                ):
+                    penalty_saved = (
+                        rng.random(n)
+                        < params[
+                            "penalty_save_probability"
+                        ]
+                    ) & local_appeared[element]
+                    points += (
+                        penalty_saved.astype(np.float64)
+                        * float(PENALTY_SAVE_POINTS)
+                    )
+
+                goal_process = dict(
+                    params["goal_process"]
+                )
+                total_goal_rate = max(
+                    1e-12,
+                    _f(
+                        goal_process.get(
+                            "lambda_goal_total90"
+                        ),
+                        params["goal_rate90"],
+                    ),
+                )
+                penalty_share = max(
+                    0.0,
+                    min(
+                        1.0,
+                        _f(
+                            goal_process.get(
+                                "lambda_penalty90"
+                            )
+                        )
+                        / total_goal_rate,
+                    ),
+                )
+                set_piece_share = max(
+                    0.0,
+                    min(
+                        1.0 - penalty_share,
+                        _f(
+                            goal_process.get(
+                                "lambda_set_piece90"
+                            )
+                        )
+                        / total_goal_rate,
+                    ),
+                )
+                penalty_goals = rng.binomial(
+                    goals,
+                    penalty_share,
+                )
+                remaining_non_penalty = goals - penalty_goals
+                conditional_sp = (
+                    set_piece_share
+                    / max(1e-12, 1.0 - penalty_share)
+                    if penalty_share < 1.0
+                    else 0.0
+                )
+                set_piece_goals = rng.binomial(
+                    remaining_non_penalty,
+                    max(0.0, min(1.0, conditional_sp)),
+                )
+
+                core_points = np.rint(points).astype(
+                    np.int32
+                )
+                bonus_points = _sample_bonus_points(
+                    rng,
+                    core_points,
+                    params["bonus_calibration"],
+                )
+                points += bonus_points.astype(np.float64)
+
+                target = player_world[element]
+                target["points"] += points
+                events = target["event_sums"]
+                events["goals"] += float(goals.sum())
+                events["assists"] += float(assists.sum())
+                events["clean_sheets"] += float(
+                    clean.sum()
+                )
+                events["defcon_hits"] += float(
+                    defcon_hits.sum()
+                )
+                events["saves"] += float(
+                    save_counts.sum()
+                )
+                events["cards"] += float(
+                    np.count_nonzero(yellow | red)
+                )
+                events["penalty_goals"] += float(
+                    penalty_goals.sum()
+                )
+                events["set_piece_goals"] += float(
+                    set_piece_goals.sum()
+                )
+                events["bonus_points"] += float(
+                    bonus_points.sum()
+                )
+
+    if any(
+        value
+        for key, value in invariant_counts.items()
+        if key.endswith("_failures")
+    ):
+        raise MonteCarloError(
+            "match-state invariant violation: "
+            + json.dumps(invariant_counts, sort_keys=True)
+        )
+    return player_world, {
+        "match_state_invariants": {
+            **invariant_counts,
+            "status": "PASS",
+            "opponent_goal_implies_cs_lost": True,
+            "team_goal_has_single_scorer_category": True,
+            "at_most_one_assist_per_goal": True,
+            "self_assist_forbidden": True,
+            "dnp_scorer_forbidden": True,
+        }
+    }
+
+
 def _simulate_route_arrays(
     projections: Mapping[str, Any],
     route_defs: Sequence[Mapping[str, Any]],
@@ -1057,39 +1785,67 @@ def _simulate_route_arrays(
     ordered_gws = ordered_gws[: horizons[-1]]
 
     route_totals = {
-        rid: {h: np.empty(actual_paths, dtype=np.float64) for h in horizons}
+        rid: {
+            h: np.empty(actual_paths, dtype=np.float64)
+            for h in horizons
+        }
         for rid in route_ids
     }
     state_counts: dict[str, np.ndarray] = {}
     state_draws: dict[str, int] = {}
     event_sums: dict[str, dict[str, float]] = {}
     route_diag = {
-        rid: {"autosub_paths": 0, "captain_takeover_paths": 0}
+        rid: {
+            "autosub_paths": 0,
+            "captain_takeover_paths": 0,
+        }
         for rid in route_ids
     }
+    match_state_diag = {
+        "fixture_chunks": 0,
+        "cs_goal_consistency_failures": 0,
+        "material_goal_overflow_failures": 0,
+        "assist_overflow_failures": 0,
+        "self_assist_failures": 0,
+        "dnp_scorer_failures": 0,
+    }
 
-    rng = np.random.Generator(np.random.PCG64(int(seed)))
-    shared_fraction = _shared_fraction()
+    rng = np.random.Generator(
+        np.random.PCG64(int(seed))
+    )
     cfg = load_config()
     offset = 0
     while offset < actual_paths:
         n = min(chunk_size, actual_paths - offset)
-        cumulative = {rid: np.zeros(n, dtype=np.float64) for rid in route_ids}
-        for gw_index, gw in enumerate(ordered_gws, start=1):
+        cumulative = {
+            rid: np.zeros(n, dtype=np.float64)
+            for rid in route_ids
+        }
+        for gw_index, gw in enumerate(
+            ordered_gws, start=1
+        ):
             player_ids = sorted(by_gw[gw])
-            catalog = _fixture_catalog(pmap, player_ids, gw)
-            factors = _world_factors(rng, catalog, n, cfg)
-            player_world: dict[int, dict[str, Any]] = {}
-            for element in player_ids:
-                simulated = _simulate_player_gw(
+            player_world, gw_diag = (
+                _simulate_match_coupled_gw(
                     rng,
-                    pmap[element],
+                    pmap,
+                    player_ids,
                     gw=gw,
                     n=n,
-                    factors=factors,
-                    shared_fraction=shared_fraction,
+                    cfg=cfg,
                 )
-                player_world[element] = simulated
+            )
+            invariants = dict(
+                gw_diag.get("match_state_invariants")
+                or {}
+            )
+            for key in match_state_diag:
+                match_state_diag[key] += int(
+                    invariants.get(key) or 0
+                )
+
+            for element in player_ids:
+                simulated = player_world[element]
                 key = f"{element}:gw{gw}"
                 state_counts.setdefault(
                     key,
@@ -1098,34 +1854,110 @@ def _simulate_route_arrays(
                         dtype=np.int64,
                     ),
                 )
-                state_counts[key] += simulated["state_counts"]
-                state_draws[key] = state_draws.get(key, 0) + int(simulated["state_draws"])
+                state_counts[key] += simulated[
+                    "state_counts"
+                ]
+                state_draws[key] = (
+                    state_draws.get(key, 0)
+                    + int(simulated["state_draws"])
+                )
                 row = event_sums.setdefault(
                     key,
-                    {"goals": 0.0, "assists": 0.0, "clean_sheets": 0.0, "defcon_hits": 0.0, "saves": 0.0},
+                    {
+                        "goals": 0.0,
+                        "assists": 0.0,
+                        "clean_sheets": 0.0,
+                        "defcon_hits": 0.0,
+                        "saves": 0.0,
+                        "cards": 0.0,
+                        "penalty_goals": 0.0,
+                        "set_piece_goals": 0.0,
+                        "bonus_points": 0.0,
+                    },
                 )
-                for name, value in simulated["event_sums"].items():
-                    row[name] += float(value)
+                for name, value in simulated[
+                    "event_sums"
+                ].items():
+                    row[name] = row.get(name, 0.0) + float(
+                        value
+                    )
 
             for route in route_defs:
                 rid = str(route["route_id"])
-                lineup_row = dict((route.get("per_gw") or [])[gw_index - 1])
-                resolved = _resolve_route_chunk(lineup_row, pmap, player_world)
-                cumulative[rid] += np.asarray(resolved["points"], dtype=np.float64)
-                route_diag[rid]["autosub_paths"] += int(np.count_nonzero(resolved["autosub_any"]))
-                route_diag[rid]["captain_takeover_paths"] += int(np.count_nonzero(resolved["captain_takeover"]))
+                lineup_row = dict(
+                    (route.get("per_gw") or [])[
+                        gw_index - 1
+                    ]
+                )
+                resolved = _resolve_route_chunk(
+                    lineup_row,
+                    pmap,
+                    player_world,
+                )
+                cumulative[rid] += np.asarray(
+                    resolved["points"],
+                    dtype=np.float64,
+                )
+                route_diag[rid][
+                    "autosub_paths"
+                ] += int(
+                    np.count_nonzero(
+                        resolved["autosub_any"]
+                    )
+                )
+                route_diag[rid][
+                    "captain_takeover_paths"
+                ] += int(
+                    np.count_nonzero(
+                        resolved["captain_takeover"]
+                    )
+                )
                 if gw_index in horizons:
-                    cost = route.get("execution_cost_points")
+                    cost = route.get(
+                        "execution_cost_points"
+                    )
                     if cost is None:
-                        route_totals[rid][gw_index][offset : offset + n] = np.nan
+                        route_totals[rid][gw_index][
+                            offset : offset + n
+                        ] = np.nan
                     else:
-                        route_totals[rid][gw_index][offset : offset + n] = cumulative[rid] - float(cost)
+                        route_totals[rid][gw_index][
+                            offset : offset + n
+                        ] = (
+                            cumulative[rid] - float(cost)
+                        )
         offset += n
 
     diagnostics = {
         "state_frequencies": {},
         "event_means": {},
         "route_path_semantics": {},
+        "match_state_invariants": {
+            **match_state_diag,
+            "status": "PASS",
+            "simulation_order": [
+                "TACTICAL_STATE",
+                "EXPECTED_LINEUPS",
+                "AVAILABILITY",
+                "START_CAMEO_DNP",
+                "MINUTES",
+                "MATCH_STATE",
+                "TEAM_GOALS",
+                "SCORER_ASSISTER",
+                "CLEAN_SHEET",
+                "SHOTS_SOT_SAVES",
+                "DEFENSIVE_ACTIONS_DEFCON",
+                "SET_PIECES_PENALTIES",
+                "CARDS",
+                "BPS_BONUS",
+                "PLAYER_FPL_POINTS",
+                "AUTOSUBS",
+                "CAPTAIN_VICE",
+                "TEAM_TOTAL",
+            ],
+            "player_point_noise_sampling": False,
+            "stage2_event_intensities_consumed_read_only": True,
+        },
     }
     for key, counts in state_counts.items():
         draws = max(1, state_draws[key])
@@ -1148,8 +1980,12 @@ def _simulate_route_arrays(
                 )
             )
         if "DNP" in frequencies:
-            frequencies["ZERO_MINUTES"] = frequencies["DNP"]
-        diagnostics["state_frequencies"][key] = frequencies
+            frequencies["ZERO_MINUTES"] = (
+                frequencies["DNP"]
+            )
+        diagnostics["state_frequencies"][
+            key
+        ] = frequencies
         diagnostics["event_means"][key] = {
             name: float(value) / draws
             for name, value in event_sums[key].items()
@@ -1157,11 +1993,16 @@ def _simulate_route_arrays(
     denom = actual_paths * len(ordered_gws)
     for rid, row in route_diag.items():
         diagnostics["route_path_semantics"][rid] = {
-            "autosub_path_rate": float(row["autosub_paths"]) / max(1, denom),
-            "captain_takeover_path_rate": float(row["captain_takeover_paths"]) / max(1, denom),
+            "autosub_path_rate": float(
+                row["autosub_paths"]
+            )
+            / max(1, denom),
+            "captain_takeover_path_rate": float(
+                row["captain_takeover_paths"]
+            )
+            / max(1, denom),
         }
     return route_totals, diagnostics
-
 
 def _quantiles(values: np.ndarray) -> dict[str, float]:
     q = np.quantile(values, [0.10, 0.25, 0.50, 0.75, 0.90], method="linear")

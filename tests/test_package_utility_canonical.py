@@ -644,3 +644,88 @@ def test_30_model_evidence_is_non_authoritative(monkeypatch):
     assert evidence["repository_python_execution_claimed"] is False
     assert len(evidence["run_fingerprint"]) == 64
     assert len(evidence["output_fingerprint"]) == 64
+
+
+
+def test_31_p1_2b_parallel_runtime_is_bounded_execution_only():
+    perf = utility.load_config()["performance"]
+    assert perf["parallel_lineup_min_routes"] >= 64
+    assert 2 <= perf["parallel_lineup_max_workers"] <= 4
+    assert perf["parallel_chunks_per_worker"] >= 1
+    assert perf["lossy_pruning"] is False
+    assert perf["route_identity_preserved"] is True
+    assert perf["p1_7_owner_unchanged"] is True
+
+    materializer = inspect.getsource(utility._materialize_route_lineups)
+    worker = inspect.getsource(utility._p1_2b_route_lineups_worker)
+    assert "ProcessPoolExecutor" in inspect.getsource(utility)
+    assert "PROCESS_POOL_EXACT_P1_7" in materializer
+    assert "_cumulative_lineup_horizons(" in worker
+    assert "optimize_lineup(" in inspect.getsource(utility._lineup_decision)
+    assert "lossy_pruning" in materializer
+
+
+def test_32_exact_route_materializer_preserves_sequential_p1_7_results(monkeypatch):
+    monkeypatch.setattr(utility, "_lineup_decision", _fake_lineup)
+    real_config = deepcopy(utility.load_config())
+    real_config.setdefault("performance", {})["parallel_lineup_min_routes"] = 999999
+    monkeypatch.setattr(utility, "load_config", lambda: real_config)
+
+    search_result = _search()
+    routes = search_result["routes"][:8]
+    projections = _projections()
+    actual, proof = utility._materialize_route_lineups(
+        routes,
+        projections,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+
+    expected = {
+        row["route_id"]: utility._cumulative_lineup_horizons(
+            projections,
+            utility._route_squad(row),
+            planning_gw=GW,
+            generated_at=GENERATED,
+        )
+        for row in routes
+    }
+    assert actual == expected
+    assert proof["execution_mode"] == "SEQUENTIAL_EXACT_P1_7"
+    assert proof["route_count"] == len(routes)
+    assert proof["exact_route_identity_preserved"] is True
+    assert proof["lossy_pruning"] is False
+    assert proof["p1_7_math_mutated"] is False
+
+
+def test_33_process_worker_calls_same_exact_p1_7_horizon_owner(monkeypatch):
+    monkeypatch.setattr(utility, "_lineup_decision", _fake_lineup)
+    projections = _projections()
+    squad = utility._route_squad(_search()["routes"][0])
+    expected = utility._cumulative_lineup_horizons(
+        projections,
+        squad,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    utility._init_p1_2b_lineup_worker(
+        projections,
+        GW,
+        GENERATED,
+    )
+    route_id, returned_squad, actual = utility._p1_2b_route_lineups_worker(
+        ("HOLD", squad)
+    )
+    assert route_id == "HOLD"
+    assert returned_squad == squad
+    assert actual == expected
+
+
+def test_34_package_output_carries_non_authoritative_execution_proof(monkeypatch):
+    search_result, result = _evaluate(monkeypatch)
+    proof = result["governance"]["p1_7_execution_proof"]
+    assert proof["route_count"] == len(search_result["routes"])
+    assert proof["p1_7_owner"] == "V12_LINEUP_OPTIMIZER"
+    assert proof["decision_authority_changed"] is False
+    assert proof["lossy_pruning"] is False
+    assert result["methodology"]["lineup_execution"] == proof

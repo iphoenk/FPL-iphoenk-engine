@@ -588,7 +588,9 @@ def search_packages(
         routes = _enumerate_exact(
             current,
             candidates,
-            bank_before=_int(bank, label="bank"),
+            bank_before=(
+                None if bank is None else _int(bank, label="bank")
+            ),
             max_transfers=bound,
         )
     elif mode == "BATCH":

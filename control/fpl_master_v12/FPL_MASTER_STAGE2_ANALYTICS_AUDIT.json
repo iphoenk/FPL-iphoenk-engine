@@ -111,7 +111,7 @@
     "repository_policy": "PASS",
     "repository_naming_run_id": 35671072760,
     "repository_naming": "PASS",
-    "documentation_sync": "PENDING_FINAL_METADATA_RETRIGGER",
+    "documentation_sync": "RETRIGGERED_ON_FINAL_METADATA_HEAD",
     "v6_required_jobs": "SKIPPED_NO_V6_DIFF"
   },
   "run_35597594711_stage2_root_causes_repaired": true,
@@ -131,6 +131,16 @@
     "public_first_acceptance": true,
     "authenticated_private_session_required_for_stage2_green": false,
     "v6_mutated": false,
+    "stage3_started": false
+  },
+  "final_closure": {
+    "stage2_green": true,
+    "stage2_ready": true,
+    "documentation_metadata_timestamp": "2026-09-22T07:17:00+07:00",
+    "final_acceptance_run_id": 35671072769,
+    "final_acceptance_artifact_id": 10671910220,
+    "final_acceptance_code_head_sha": "3c8bbee200433d58e6b9ffec0456406287fcbcbb",
+    "post_acceptance_changes": "EVIDENCE_AND_DOCUMENTATION_ONLY",
     "stage3_started": false
   }
 }

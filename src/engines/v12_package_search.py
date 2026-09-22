@@ -241,6 +241,19 @@ def _economics(
 ) -> dict[str, Any]:
     sell_values = [_sell_value(row) for row in outs]
     gross_buy = sum(_buy_price(row) for row in ins)
+    if not outs and not ins:
+        return {
+            "status": "RESOLVED",
+            "gross_buy_cost": 0,
+            "gross_sell_value": 0,
+            "bank_before": bank_before,
+            "bank_after": bank_before,
+            "affordable": True,
+            "unresolved_sell_value_elements": [],
+            "sell_value_fallback_to_market_price": False,
+            "bank_fallback_to_zero": False,
+            "hold_requires_private_finance": False,
+        }
     unresolved = [int(_element(row)) for row, value in zip(outs, sell_values) if value is None]
     if unresolved or bank_before is None:
         return {

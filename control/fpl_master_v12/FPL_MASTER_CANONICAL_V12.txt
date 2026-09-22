@@ -1604,3 +1604,177 @@ STAGE 2 ACCEPTANCE:
 - Renderer success cannot compensate for an incomplete Stage-2 producer.
 - Stage 3 MUST NOT start until the full Stage-2 acceptance state is GREEN.
 
+
+
+==================================================
+V12 STAGE 3 CORRELATED DECISION / INTEGRATED REPORT CONTRACT
+Effective methodology binding: 2026-09-22T08:10:00+07:00
+Acceptance state: EVIDENCE-GATED; CONTROLLED + NATURAL DEEP REQUIRED
+==================================================
+
+This section extends the frozen GREEN Stage-1 and Stage-2 chain downstream.
+Exact Stage-2 production baseline entering Stage 3:
+main 2e770f5403c211851b122248c201dd7d8b81c3e1.
+
+FREEZE / OWNERSHIP
+- V6 remains the only factual production data plane and MUST NOT be modified by
+  Stage 3.
+- Stage 1 and Stage 2 outputs are read-only governed inputs.
+- Stage 3 MUST NOT replace, duplicate, or independently reconstruct P1.1,
+  P1.3, Dynamic FDR, position engines, posterior predictive, 20/25/30/25,
+  full-universe, Watchlist20, or 1GW/3GW/5GW distributions.
+- P1.2A remains V12_PACKAGE_SEARCH. P1.2B remains V12_PACKAGE_UTILITY.
+  P1.4 remains V12_MONTE_CARLO. P1.7 remains V12_LINEUP_OPTIMIZER.
+  P1.8 remains V12_MINI_LEAGUE_OVERLAY and is downstream only.
+- An upstream defect found by Stage-3 acceptance is repaired only in the exact
+  existing producer with the smallest bounded change. A competing model or
+  authority is forbidden.
+
+P1.4 MATCH-STATE / CORRELATED MONTE CARLO
+- Active canonical simulation is match-state coupled. Independent sampling of a
+  player's final FPL point total plus arbitrary noise is forbidden.
+- Causal order is governed as:
+  Stage-2 tactical/matchup state -> P1.1 availability/start/cameo/DNP/minutes
+  -> shared fixture/team scoreline state -> scorer allocation -> compatible
+  assister allocation -> scoreline-derived CS -> Stage-2 shot/save/DefCon and
+  set-piece/penalty/card event processes -> conditional BPS/bonus -> player
+  FPL points -> autosubs -> captain/vice fallback -> team total.
+- One fixture has one coherent team-goal state. Opponent goals remove CS.
+  Material goals cannot exceed the sampled team-goal count. Self-assists and
+  DNP scorers are forbidden. Match-state invariant failures are fatal.
+- Same-team attackers, creator-finisher links, goalkeeper/defender stacks,
+  opposing attack-vs-defence and captain exposure are represented through
+  shared event worlds where supportable. Stage-2 link-up effects are
+  conditioned on sampled linked-player appearance for material players.
+- Common random numbers are used for route comparisons.
+- Canonical material decisions require actual N >= 500,000 paths and publish
+  seed, actual N, probability standard errors, paired mean standard error,
+  convergence checkpoints and match-state invariant evidence.
+- Distributional comparison exposes E[Delta], P(A>B),
+  P(Delta >= governed meaningful threshold), Q10, Q25, median, Q75, Q90,
+  expected regret, downside and upside.
+- CODE EXISTS != EXECUTED and N>=500k != calibrated/correct. Canonical MC must
+  also pass convergence and invariant gates.
+
+PACKAGE / FRONTIER / TRANSFER ECONOMICS
+- P1.2A consumes the same Stage-2 full eligible universe and its existing
+  lineage. Package-specific xPts, minutes, posterior, FDR, or player scoring is
+  forbidden.
+- Structural route search enforces squad size, position composition, club
+  limits and governed transfer-depth bounds. Candidate-universe coverage and
+  exact max transfer depth evaluated MUST be published separately; FULL
+  universe authority MUST NOT be misrepresented as an unbounded transfer tree.
+- P1.2B consumes P1.7 per-GW lineup consequences and keeps 1GW, 3GW and 5GW
+  separate. A 2GW view is added only for an explicitly relevant rental/punt.
+- Current transfer economics include factual purchase/current prices where
+  supported, authenticated selling value, bank, FT/hit cost, dynamically
+  derived one-step FT shadow value, buy-back/value-loss effects, structure and
+  future flexibility.
+- If private bank/selling-price/FT/chip facts are genuinely unavailable,
+  structural package search and gross-football Monte Carlo MAY continue, but
+  affordability/net utility MUST remain unresolved. Market price MUST NOT be
+  substituted for selling value, missing bank MUST NOT become zero, and ACT is
+  prohibited.
+- Gross-football P(A>B) MUST NOT be mislabeled as decision-net P(A>B) when
+  execution economics are unresolved.
+
+SEQUENTIAL DECISION / INFORMATION VALUE / PRICE
+- FPL is sequential. P1.2B uses a bounded one-step future route-graph rollout
+  for the value of one additional FT and fresh P1.7 reoptimization in the next
+  GW. This is an explicit approximation, not full-season dynamic programming.
+- No future transfer is precommitted. Future factual state must be rebuilt from
+  fresh V6 + frozen Stage-2 methodology before reoptimization.
+- Official price-predictor evidence is probabilistic/model evidence only.
+  Source-native likelihood classes or projected percentages MUST NOT be mapped
+  to fabricated P(rise before deadline) / P(fall before deadline).
+- VOI is compared with expected cost of waiting only when both are supportable.
+  P1.4 expected regret may provide an explicit perfect-information upper bound;
+  it is NOT automatically claimed as actual realized VOI.
+- If expected price cost of waiting cannot be calibrated to a points-equivalent
+  quantity, the comparison remains unresolved and ACT cannot clear that gate.
+
+ROBUSTNESS / SENSITIVITY / STRESS
+- Route robustness consumes the same P1.4 shared worlds and Stage-2 uncertainty
+  surfaces. Mean-only ranking is forbidden.
+- Supported sensitivity uses governed P1.1 P(start)/xMins intervals, sampled
+  Stage-2 DefCon and finishing distributions, linked-player appearance, and
+  source-published price scenarios. Arbitrary percentage shocks are forbidden.
+- Role, formation, opponent-lineup, tactical-shape, penalty-taker or fixture
+  changes without calibrated local counterfactuals require a fresh Stage-2
+  reprojection rather than invented scalar perturbation.
+- Stress evidence includes unexpected bench, cameo, early sub, rotation,
+  creator absence where link-up is supportable, early CS loss via scoreline,
+  and explicit external/unmodelled limitations.
+- A route is ROBUST only when the documented statistical gate and every
+  material sensitivity requirement are resolved; otherwise it is FRAGILE.
+  Small positive mean edge plus large uncertainty never automatically creates
+  ACT.
+
+XI / BENCH / CAPTAIN / VICE
+- P1.7 remains the sole lineup owner and consumes complete distributions, not
+  mean xPts alone.
+- XI/bench decisions include P(start), P(60+), cameo/DNP, legal autosub,
+  valuable-autosub blocking risk, downside/upside and covariance evidence.
+- Captain/vice selection consumes mean, tails/haul, blank/minutes security,
+  variance, fallback and shared-world covariance. Highest mean alone is not a
+  sufficient captain rule.
+- The general lesson from prior cameo-blocking failure modes is structural and
+  must never become a named-player hardcode.
+
+MINI-LEAGUE
+- P1.8 is evaluated only after the football baseline exists and cannot mutate
+  raw football score, 20/25/30/25 or P1.4.
+- Where factual coverage supports it, expose ownership, starter ownership,
+  captain/vice ownership, EO where supportable, current rank/gap, leverage,
+  differential upside and high-ownership downside.
+- Low ownership alone can never justify a recommendation. Incomplete league
+  evidence cannot overturn the football baseline.
+
+ACTION STATE
+- The only operational states are WAIT / PREPARE / ACT.
+- ACT requires supportable positive expected utility, sufficient outperform
+  probability, acceptable downside, ROBUST status, resolved transfer economics
+  and a resolved information-value/wait-cost gate.
+- PREPARE means a football route is viable but economics, robustness, VOI or
+  other material information remains unresolved.
+- WAIT means no route clears the governed decision threshold or waiting is
+  preferred by the resolved information-value gate.
+- Thresholds and confidence logic are explicit and calibration evidence must be
+  retained. Automatic hidden threshold retuning is forbidden.
+
+VISIBLE REPORT / QA
+- Serious comparisons visibly expose genuine 1GW/3GW/5GW football evidence,
+  uncertainty/MC status, transfer economics, regret/robustness/sensitivity and
+  WAIT/PREPARE/ACT.
+- Position-visible blocks expose the applicable Stage-2 mechanism:
+  GK save/SoT/CS/shot-stopping/bonus; DEF CS/DefCon defensive workload plus
+  attack; MID role/goal/creation/set-piece/penalty/DefCon where applicable;
+  FWD goal/service/penalty/assist; all with P(start)/xMins and dynamic matchup.
+- When private economics are unavailable, gross-football horizons stay visible
+  while net economics remain explicit UNAVAILABLE/PARTIAL.
+- PRE_RENDER, POST_RENDER and HUMAN_FACING QA MUST NOT be weakened. Internal
+  producer bugs, missing wiring, skipped analytics, stale internal state or
+  renderer defects are never valid DEGRADED reasons.
+- DEGRADED is allowed only for a genuinely unavailable factual source under
+  existing governance and must preserve the available football report.
+
+STAGE 3 ACCEPTANCE
+- Controlled acceptance requires ONE fresh governed full_master V6 prefetch and
+  the existing integrated DEEP runner for the exact same logical occurrence:
+  FRESH V6 -> Stage-2 analytics -> P1.2 -> P1.4 -> P1.7/P1.8 -> integrated
+  runner -> PRE_RENDER -> render -> POST_RENDER -> HUMAN_FACING.
+- Controlled acceptance requires integrated runner PASS, PRE_RENDER PASS,
+  POST_RENDER PASS and HUMAN_FACING PASS, plus canonical P1.4 N>=500k,
+  convergence PASS, match-state invariants PASS, full Stage-2 package lineage,
+  complete Watchlist20/public mini-league evidence and zero V6/legacy mutation.
+- Controlled PASS alone is NOT final Stage-3 acceptance.
+- Final Stage-3 GREEN additionally requires the next suitable natural scheduled
+  DEEP occurrence through the existing FPL Master Monitor V12 to pass the same
+  chain without manual repair/intervention.
+- No new scheduler may be created for Stage-3 acceptance.
+- Durable evidence must record code SHA, runtime-data-v6 SHA, logical slot,
+  V6 run/prefetch evidence, report run ID, artifact IDs, Canonical hash,
+  actual MC path count/seed/convergence and all QA states.
+- Stage 3 remains NOT GREEN until both controlled and natural acceptance are
+  factually proven.
+

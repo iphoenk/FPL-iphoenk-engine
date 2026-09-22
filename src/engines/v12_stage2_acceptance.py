@@ -324,6 +324,149 @@ def _same_opponent_player_specific(
     )
 
 
+def _public_personal_and_mini_league_evidence(
+    runtime_data_root: Path,
+    *,
+    current_team: Mapping[str, Any],
+    owned: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Prove current public Official FPL squad + mini-league evidence.
+
+    Authenticated /me is deliberately diagnostic only here. Stage 2 needs a
+    current 15-player identity surface and current public mini-league facts,
+    both of which Official FPL exposes without an authenticated private session.
+    This function consumes only already-published V6 artifacts read-only.
+    """
+    submitted = _read_json(
+        runtime_data_root / "data/v6/personal/submitted_picks.json"
+    )
+    memberships = _read_json(
+        runtime_data_root / "data/v6/personal/memberships.json"
+    )
+    prefetch = _read_json(
+        runtime_data_root / "data/v6/report_prefetch/latest.json"
+    )
+
+    submitted_picks = [
+        dict(row)
+        for row in submitted.get("picks") or []
+        if isinstance(row, Mapping)
+    ]
+    submitted_ids = {
+        int(row.get("element_id") or 0)
+        for row in submitted_picks
+        if int(row.get("element_id") or 0) > 0
+    }
+    owned_ids = {
+        int(row.get("element_id") or 0)
+        for row in owned
+        if int(row.get("element_id") or 0) > 0
+    }
+    entry_id = int(
+        submitted.get("entry_id")
+        or current_team.get("entry_id")
+        or prefetch.get("entry_id")
+        or 0
+    )
+    submitted_lineage = dict(submitted.get("lineage") or {})
+    current_submitted_lineage = dict(
+        (current_team.get("lineage") or {}).get("submitted_picks") or {}
+    )
+    current_public_squad = bool(
+        str(submitted.get("status") or "").upper() == "AVAILABLE"
+        and entry_id > 0
+        and int(submitted_lineage.get("http_status") or 0) == 200
+        and str(submitted_lineage.get("origin") or "").upper()
+        == "LIVE_FETCHED_CURRENT_GW"
+        and len(submitted_picks) == 15
+        and len(submitted_ids) == 15
+        and len(owned_ids) == 15
+        and submitted_ids == owned_ids
+        and str(current_team.get("squad_state") or "").upper()
+        == "SUBMITTED_PICKS_ONLY"
+        and int(current_submitted_lineage.get("http_status") or 0) == 200
+        and int(current_team.get("entry_id") or 0) == entry_id
+    )
+
+    priority = [
+        dict(row)
+        for row in memberships.get("priority_resolution") or []
+        if isinstance(row, Mapping)
+        and str(row.get("resolution_status") or "").upper() == "RESOLVED"
+    ]
+    priority_league_id = int(
+        prefetch.get("priority_league_id")
+        or (priority[0].get("league_id") if priority else 0)
+        or 0
+    )
+    standings = (
+        _read_json(
+            runtime_data_root
+            / f"data/v6/mini_leagues/{priority_league_id}/standings.json"
+        )
+        if priority_league_id > 0
+        else {}
+    )
+    gw = int(submitted.get("gw") or current_team.get("gw") or prefetch.get("gw") or 0)
+    manager_picks = (
+        _read_json(
+            runtime_data_root
+            / f"data/v6/mini_leagues/{priority_league_id}/gw_{gw}_manager_picks.json"
+        )
+        if priority_league_id > 0 and gw > 0
+        else {}
+    )
+    manager_entry = dict(
+        (manager_picks.get("entries") or {}).get(str(entry_id)) or {}
+    )
+    expected_managers = int(
+        standings.get("expected_manager_count")
+        or prefetch.get("expected_manager_count")
+        or 0
+    )
+    collected_managers = int(
+        standings.get("collected_manager_count")
+        or prefetch.get("collected_manager_count")
+        or 0
+    )
+    public_mini_league = bool(
+        priority_league_id > 0
+        and prefetch.get("public_core_complete") is True
+        and str(prefetch.get("public_personal_status") or "").upper()
+        == "AVAILABLE"
+        and str(prefetch.get("mini_league_status") or "").upper()
+        == "AVAILABLE"
+        and not (prefetch.get("public_control_failures") or [])
+        and standings.get("complete") is True
+        and expected_managers > 0
+        and collected_managers == expected_managers
+        and manager_picks.get("complete") is True
+        and float(manager_picks.get("coverage_percent") or 0.0) >= 100.0
+        and int(manager_entry.get("http_status") or 0) == 200
+        and len(manager_entry.get("picks") or []) == 15
+    )
+    return {
+        "current_public_squad_available": current_public_squad,
+        "mini_league_public_available": public_mini_league,
+        "entry_id": entry_id,
+        "submitted_gw": gw,
+        "submitted_pick_count": len(submitted_picks),
+        "submitted_http_status": submitted_lineage.get("http_status"),
+        "submitted_origin": submitted_lineage.get("origin"),
+        "priority_league_id": priority_league_id,
+        "priority_league_name": prefetch.get("priority_league_name"),
+        "standings_complete": standings.get("complete"),
+        "expected_manager_count": expected_managers,
+        "collected_manager_count": collected_managers,
+        "manager_picks_complete": manager_picks.get("complete"),
+        "manager_picks_coverage_percent": manager_picks.get("coverage_percent"),
+        "manager_entry_http_status": manager_entry.get("http_status"),
+        "manager_entry_pick_count": len(manager_entry.get("picks") or []),
+        "authenticated_session_required": False,
+        "source": "V6_PUBLISHED_OFFICIAL_FPL_PUBLIC_READ_ONLY",
+    }
+
+
 def run_acceptance(
     runtime_data_root: Path,
     *,
@@ -423,6 +566,11 @@ def run_acceptance(
         "VALID",
         "GREEN",
     }
+    public_evidence = _public_personal_and_mini_league_evidence(
+        runtime_data_root,
+        current_team=current_team,
+        owned=owned,
+    )
 
     dynamic_vectors = [
         ((fixture.get("position_engine") or {}).get("matchup_vector") or {})
@@ -691,11 +839,22 @@ def run_acceptance(
 
     stage2_engine_pass = all(checks.values())
     current_authenticated_squad_pass = auth_current and len(owned) == 15
+    current_squad_evidence_pass = bool(
+        current_authenticated_squad_pass
+        or public_evidence.get("current_public_squad_available") is True
+    )
+    mini_league_public_pass = bool(
+        public_evidence.get("mini_league_public_available") is True
+    )
     status = (
         "GREEN"
-        if stage2_engine_pass and current_authenticated_squad_pass
-        else "BLOCKED_EXTERNAL_V6_AUTH"
-        if stage2_engine_pass and not current_authenticated_squad_pass
+        if (
+            stage2_engine_pass
+            and current_squad_evidence_pass
+            and mini_league_public_pass
+        )
+        else "BLOCKED_CURRENT_PUBLIC_EVIDENCE"
+        if stage2_engine_pass
         else "FAIL_STAGE2_ENGINE"
     )
     proof = {
@@ -705,7 +864,20 @@ def run_acceptance(
             "PASS" if stage2_engine_pass else "FAIL"
         ),
         "current_authenticated_squad_status": (
-            "PASS" if current_authenticated_squad_pass else "BLOCKED"
+            "PASS" if current_authenticated_squad_pass else "AUTH_EXPIRED_DIAGNOSTIC_ONLY"
+        ),
+        "current_squad_evidence_status": (
+            "PASS" if current_squad_evidence_pass else "BLOCKED"
+        ),
+        "current_squad_evidence_mode": (
+            "AUTHENTICATED_CURRENT_TEAM"
+            if current_authenticated_squad_pass
+            else "PUBLIC_SUBMITTED_PICKS"
+            if public_evidence.get("current_public_squad_available") is True
+            else "UNAVAILABLE"
+        ),
+        "mini_league_public_status": (
+            "PASS" if mini_league_public_pass else "BLOCKED"
         ),
         "v6_frozen_baseline": BASELINE_V6_SHA,
         "v6_mutated": False,
@@ -719,6 +891,8 @@ def run_acceptance(
             "current_team_generated_at": current_team.get("generated_at"),
             "auth_state": auth_state,
             "owned_count": len(owned),
+            "auth_is_stage2_blocker": False,
+            "public_evidence": public_evidence,
         },
         "scoreline_model_selection": scoreline_selection,
         "universe": {
@@ -767,6 +941,8 @@ def run_acceptance(
             "official_fdr_is_sanity_prior_only": True,
             "missing_tactical_evidence_not_fabricated": True,
             "v6_repair_forbidden": True,
+            "authenticated_private_session_required_for_stage2_green": False,
+            "public_official_fpl_identity_and_mini_league_are_sufficient": True,
             "stage3_started": False,
         },
     }
@@ -797,6 +973,12 @@ def main() -> int:
                 ),
                 "current_authenticated_squad_status": proof.get(
                     "current_authenticated_squad_status"
+                ),
+                "current_squad_evidence_status": proof.get(
+                    "current_squad_evidence_status"
+                ),
+                "mini_league_public_status": proof.get(
+                    "mini_league_public_status"
                 ),
                 "planning_gw": proof.get("planning_gw"),
                 "projected_players": (

@@ -464,6 +464,19 @@ def run_acceptance(
         int(row.get("element_id") or 0)
         for row in canonical_rows
     }
+    eligible_projection_ids = {
+        int(row.get("element") or 0)
+        for row in players
+        if int(row.get("element") or 0) > 0
+        and str(row.get("status") or "a") != "u"
+    }
+    eligible_canonical_ids = {
+        int(row.get("element_id") or 0)
+        for row in canonical_rows
+        if int(row.get("element_id") or 0) > 0
+        and row.get("eligible") is not False
+        and row.get("canonical_evaluation_complete") is True
+    }
     def stage2_lineage_complete(row: Mapping[str, Any]) -> bool:
         lineage = dict(row.get("stage2_lineage") or {})
         p1_1 = dict(lineage.get("p1_1") or {})
@@ -506,11 +519,13 @@ def run_acceptance(
             for element in watch_ids
         )
     )
-    full_universe_lineage = all(
-        stage2_lineage_complete(row)
-        for row in canonical_rows
-        if row.get("eligible") is not False
-        and row.get("canonical_evaluation_complete") is True
+    full_universe_lineage = bool(
+        eligible_projection_ids
+        and eligible_projection_ids == eligible_canonical_ids
+        and all(
+            stage2_lineage_complete(canonical_by_id.get(element) or {})
+            for element in eligible_projection_ids
+        )
     )
 
     scoreline_selection = dict(
@@ -614,6 +629,8 @@ def run_acceptance(
             and canonical.get("status") == "COMPLETE"
             and canonical.get("stage2_lineage_contract")
             == "V12_CANONICAL_STAGE2_SINGLE_CHAIN_V1"
+            and canonical.get("stage2_lineage_complete_players")
+            == len(eligible_projection_ids)
             and full_universe_lineage
         ),
         "watchlist20_same_lineage": (
@@ -711,6 +728,13 @@ def run_acceptance(
                 "complete_players"
             ),
             "canonical_status": canonical.get("status"),
+            "eligible_projected_players": len(eligible_projection_ids),
+            "eligible_canonical_complete_players": len(
+                eligible_canonical_ids
+            ),
+            "stage2_lineage_complete_players": canonical.get(
+                "stage2_lineage_complete_players"
+            ),
             "canonical_position_counts": canonical.get(
                 "position_counts"
             ),

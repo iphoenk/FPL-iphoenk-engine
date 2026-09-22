@@ -1342,18 +1342,51 @@ def _formation_mini_league_strategy(
         (row for row in comparisons if row.get("selected") is True),
         {},
     )
-    selected_points = selected_comparison.get(
+    football_selected_points = selected_comparison.get(
         "expected_fpl_points_with_captain_vice"
+    )
+    raw_ev_choice = (
+        max(
+            comparisons,
+            key=lambda row: float(
+                row.get("expected_fpl_points_with_captain_vice")
+                if row.get("expected_fpl_points_with_captain_vice") is not None
+                else float("-inf")
+            ),
+        )
+        if comparisons
+        else selected_comparison
+    )
+    raw_ev_formation = raw_ev_choice.get("formation") or raw_formation
+    raw_ev_points = raw_ev_choice.get(
+        "expected_fpl_points_with_captain_vice"
+    )
+    # P1.8 is a downstream relative-risk overlay and does not create a
+    # second lineup optimizer. Therefore the supportable mini-league
+    # formation is the existing P1.7 football-optimal route, while the report
+    # separately exposes the pure raw-mean formation for transparency.
+    objective_formation = raw_formation
+    objective_points = football_selected_points
+    projected_difference = (
+        round(float(objective_points) - float(raw_ev_points), 6)
+        if objective_points is not None and raw_ev_points is not None
+        else None
     )
     return {
         "stance": stance,
         "stance_source": "P1.8_DOWNSTREAM_RELATIVE_RISK_OVERLAY",
         "league_context": _mini_context(mini),
-        "raw_ev_formation": raw_formation or "UNAVAILABLE",
-        "mini_league_objective_formation": raw_formation or "UNAVAILABLE",
-        "objectives_same": True,
-        "projected_points_difference": 0.0 if raw_formation else None,
-        "raw_projected_points": selected_points,
+        "raw_ev_formation": raw_ev_formation or "UNAVAILABLE",
+        "football_optimal_formation": raw_formation or "UNAVAILABLE",
+        "mini_league_objective_formation": objective_formation or "UNAVAILABLE",
+        "objectives_same": (
+            raw_ev_formation == objective_formation
+            if raw_ev_formation and objective_formation
+            else None
+        ),
+        "projected_points_difference": projected_difference,
+        "raw_projected_points": raw_ev_points,
+        "mini_league_objective_projected_points": objective_points,
         "formation_alternatives": comparisons,
         "high_eo_protection": high_eo,
         "differential_slots": differentials,
@@ -1672,7 +1705,11 @@ def _qa_compute_contract(
     human_manifest: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     xi = list((lineup or {}).get("starting_xi") or [])
-    bench = list((lineup or {}).get("bench") or [])
+    bench_payload = dict((lineup or {}).get("bench") or {})
+    bench = (
+        ([bench_payload.get("gk")] if bench_payload.get("gk") is not None else [])
+        + list(bench_payload.get("order") or [])
+    )
     watch_rows = list((watchlist or {}).get("rows") or [])
     rise_rows = list((rise or {}).get("rows") or [])
     fall_rows = list((fall or {}).get("rows") or [])

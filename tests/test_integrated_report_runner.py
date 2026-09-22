@@ -667,3 +667,142 @@ def test_stage1_visible_renderer_source_compiles():
 
     source = Path(orchestration.__file__).read_text(encoding="utf-8")
     compile(source, str(orchestration.__file__), "exec")
+
+
+def test_stage2_public_first_acceptance_does_not_require_private_auth(tmp_path):
+    from src.engines.v12_stage2_acceptance import (
+        _public_personal_and_mini_league_evidence,
+    )
+
+    entry_id = 3462711
+    league_id = 9477
+    picks = [
+        {
+            "element_id": element,
+            "squad_position": element,
+            "multiplier": 1 if element <= 11 else 0,
+        }
+        for element in range(1, 16)
+    ]
+    owned = [{"element_id": element} for element in range(1, 16)]
+    current_team = {
+        "entry_id": entry_id,
+        "gw": 5,
+        "auth_state": "AUTH_EXPIRED",
+        "squad_state": "SUBMITTED_PICKS_ONLY",
+        "lineage": {
+            "authenticated": [{"http_status": 401}],
+            "submitted_picks": {
+                "http_status": 200,
+                "origin": "LIVE_FETCHED_CURRENT_GW",
+            },
+        },
+    }
+    _write(
+        tmp_path / "data/v6/personal/submitted_picks.json",
+        {
+            "status": "AVAILABLE",
+            "entry_id": entry_id,
+            "gw": 5,
+            "picks": picks,
+            "lineage": {
+                "http_status": 200,
+                "origin": "LIVE_FETCHED_CURRENT_GW",
+            },
+        },
+    )
+    _write(
+        tmp_path / "data/v6/personal/memberships.json",
+        {
+            "status": "AVAILABLE",
+            "priority_resolution": [
+                {
+                    "league_id": league_id,
+                    "league_name": "ICON+ League",
+                    "resolution_status": "RESOLVED",
+                }
+            ],
+        },
+    )
+    _write(
+        tmp_path / "data/v6/report_prefetch/latest.json",
+        {
+            "entry_id": entry_id,
+            "gw": 5,
+            "priority_league_id": league_id,
+            "priority_league_name": "ICON+ League",
+            "public_core_complete": True,
+            "public_personal_status": "AVAILABLE",
+            "mini_league_status": "AVAILABLE",
+            "public_control_failures": [],
+            "expected_manager_count": 58,
+            "collected_manager_count": 58,
+        },
+    )
+    _write(
+        tmp_path / f"data/v6/mini_leagues/{league_id}/standings.json",
+        {
+            "complete": True,
+            "expected_manager_count": 58,
+            "collected_manager_count": 58,
+        },
+    )
+    _write(
+        tmp_path / f"data/v6/mini_leagues/{league_id}/gw_5_manager_picks.json",
+        {
+            "complete": True,
+            "coverage_percent": 100.0,
+            "entries": {
+                str(entry_id): {
+                    "entry_id": entry_id,
+                    "gw": 5,
+                    "http_status": 200,
+                    "picks": picks,
+                }
+            },
+        },
+    )
+
+    out = _public_personal_and_mini_league_evidence(
+        tmp_path,
+        current_team=current_team,
+        owned=owned,
+    )
+    assert out["current_public_squad_available"] is True
+    assert out["mini_league_public_available"] is True
+    assert out["authenticated_session_required"] is False
+    assert out["submitted_http_status"] == 200
+    assert out["manager_entry_http_status"] == 200
+
+
+def test_stage2_public_first_acceptance_rejects_incomplete_public_identity(tmp_path):
+    from src.engines.v12_stage2_acceptance import (
+        _public_personal_and_mini_league_evidence,
+    )
+
+    _write(
+        tmp_path / "data/v6/personal/submitted_picks.json",
+        {
+            "status": "AVAILABLE",
+            "entry_id": 3462711,
+            "gw": 5,
+            "picks": [{"element_id": element} for element in range(1, 15)],
+            "lineage": {
+                "http_status": 200,
+                "origin": "LIVE_FETCHED_CURRENT_GW",
+            },
+        },
+    )
+    out = _public_personal_and_mini_league_evidence(
+        tmp_path,
+        current_team={
+            "entry_id": 3462711,
+            "gw": 5,
+            "auth_state": "AUTH_EXPIRED",
+            "squad_state": "SUBMITTED_PICKS_ONLY",
+            "lineage": {"submitted_picks": {"http_status": 200}},
+        },
+        owned=[{"element_id": element} for element in range(1, 16)],
+    )
+    assert out["current_public_squad_available"] is False
+    assert out["mini_league_public_available"] is False

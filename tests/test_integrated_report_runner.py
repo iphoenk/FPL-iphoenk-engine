@@ -9,6 +9,7 @@ from src.engines import v12_integrated_report_runner as runner
 from src.engines.visible_content_proof import canonical_mode_contract
 from src.engines.v12_report_orchestration import (
     _render_math_stack_lines,
+    build_deep_human_facing_manifest,
     render_deep_text,
 )
 from src.runtime_v6.domains.report_plane.visible_body_contract import (
@@ -270,13 +271,30 @@ def test_integrated_deep_runner_executes_owner_stages_and_materializes_full_cata
         "optimize_lineup",
         lambda *a, **k: {
             "formation": "3-5-2",
-            "starting_xi": list(range(1, 12)),
-            "bench": {"gk": 2, "order": [12, 13, 14, 15]},
+            "starting_xi": [1, 3, 4, 5, 8, 9, 10, 11, 12, 13, 14],
+            "bench": {"gk": 2, "order": [6, 7, 15]},
             "captain": {"element": 10},
             "vice_captain": {"element": 8},
             "lineup_score": {"xpts_mean": 55.0},
-            "main_starting_xi_battle": {"status": "AVAILABLE"},
-            "formation_comparison": [],
+            "main_starting_xi_battle": {"status": "NO_CLOSE_BATTLE"},
+            "formation_comparison": [
+                {
+                    "formation": "3-5-2",
+                    "expected_fpl_points_with_captain_vice": 60.0,
+                    "route_utility": 59.5,
+                    "distributional_downside": 40.0,
+                    "supportable_upside": 80.0,
+                    "selected": True,
+                },
+                {
+                    "formation": "4-4-2",
+                    "expected_fpl_points_with_captain_vice": 60.2,
+                    "route_utility": 59.2,
+                    "distributional_downside": 39.0,
+                    "supportable_upside": 81.0,
+                    "selected": False,
+                },
+            ],
         },
     )
     monkeypatch.setattr(
@@ -324,8 +342,9 @@ def test_integrated_deep_runner_executes_owner_stages_and_materializes_full_cata
     expected = canonical_mode_contract(canonical, "DEEP")["expected_section_ids"]
     actual = [row["section_id"] for row in out["report"]["sections"]]
     assert actual == expected
-    assert len(actual) == 20
-    assert "S15B" in actual
+    assert len(actual) == 23
+    assert {"S06B", "S14B", "S15B", "S16B"} <= set(actual)
+    assert out["human_facing_manifest"]["status"] in {"PASS", "FAIL"}
     assert out["planning_gw"] == 6
     stages = {row["stage"]: row["status"] for row in out["stage_ledger"]}
     assert stages["V6_REPORT_PREFETCH_BINDING"] == "PASS"
@@ -344,6 +363,67 @@ def test_integrated_deep_runner_executes_owner_stages_and_materializes_full_cata
     assert (tmp_path / "out/report_bundle.json").exists()
     assert (tmp_path / "out/report_body.md").exists()
     assert (tmp_path / "out/execution_proof.json").exists()
+
+
+def test_deep_contract_includes_expanded_human_backbone():
+    canonical = runner.CANONICAL_PATH.read_text(encoding="utf-8")
+    section_ids = canonical_mode_contract(canonical, "DEEP")["expected_section_ids"]
+    assert section_ids == [
+        "S01", "S02", "S03", "S04", "S05", "S06", "S06B",
+        "S07", "S08", "S09", "S10", "S11", "S12", "S13",
+        "S14", "S14B", "S15", "S15B", "S16", "S16B",
+        "S17", "S18", "S19",
+    ]
+
+
+def test_deep_human_manifest_fails_closed_when_new_section_is_missing():
+    sections = []
+    for section_id in (
+        "S01", "S02", "S03", "S04", "S05", "S06", "S06B",
+        "S07", "S08", "S09", "S10", "S11", "S12", "S13",
+        "S14", "S14B", "S15", "S15B", "S16",
+        "S17", "S18", "S19",
+    ):
+        sections.append({
+            "section_id": section_id,
+            "state": "DEGRADED",
+            "content": {},
+        })
+    manifest = build_deep_human_facing_manifest({"sections": sections})
+    assert manifest["status"] == "FAIL"
+    assert "HUMAN_SECTION_MISSING=S16B" in manifest["failures"]
+
+
+def test_formation_strategy_separates_raw_ev_from_distributional_choice():
+    lineup = {
+        "formation": "3-5-2",
+        "starting_xi": [{"element": i} for i in range(1, 12)],
+        "formation_comparison": [
+            {
+                "formation": "3-5-2",
+                "expected_fpl_points_with_captain_vice": 59.8,
+                "route_utility": 59.6,
+                "selected": True,
+            },
+            {
+                "formation": "4-4-2",
+                "expected_fpl_points_with_captain_vice": 60.2,
+                "route_utility": 59.1,
+                "selected": False,
+            },
+        ],
+    }
+    strategy = runner._formation_mini_league_strategy(
+        lineup=lineup,
+        mini={"exposures": []},
+        mini_overlay={"risk_posture": {"posture": "BALANCED"}},
+        projections={"players": []},
+    )
+    assert strategy["raw_ev_formation"] == "4-4-2"
+    assert strategy["football_optimal_formation"] == "3-5-2"
+    assert strategy["mini_league_objective_formation"] == "3-5-2"
+    assert strategy["objectives_same"] is False
+    assert strategy["projected_points_difference"] == pytest.approx(-0.4)
 
 
 def test_integrated_deep_runner_keeps_bundle_when_projection_stage_fails(

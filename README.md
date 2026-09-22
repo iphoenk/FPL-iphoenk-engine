@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T16:14:22+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T19:00:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -477,3 +477,14 @@ the single ChatGPT scheduler authority, and never creates a second recurring
 acquisition path. It may bypass only ordinary same-slot polling cadence while
 verification and request-budget gates remain enforced.
 
+
+
+### P1.2B/P1.7 bounded runtime profiling
+
+Controlled DEEP run `35709678609` confirmed that PR #646 and PR #647 were
+insufficient for production runtime: all 2,043 exact P1.2A routes / 2,043
+unique squads entered exact P1.2B P1.7 materialization, and the job was
+cancelled before P1.4 began. The current bounded branch first adds narrow
+timing instrumentation to isolate repeated P1.7 costs before any exact
+execution-path optimization is accepted. Stage 1 and Stage 2 remain GREEN;
+Stage 3 remains code-merged / acceptance pending.

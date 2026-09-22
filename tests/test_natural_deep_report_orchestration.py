@@ -252,11 +252,12 @@ def test_deep_materializer_renders_every_canonical_block_in_exact_order():
         signal_delta={"status": "BASELINE UNAVAILABLE", "rows": []},
     )
     assert report["numbered_headings"] == 19
-    assert report["rendered_blocks_including_15B"] == 20
+    assert report["rendered_blocks_including_15B"] == 23
+    assert report["rendered_blocks_including_suffix_sections"] == 23
     assert report["exact_canonical_order"] is True
-    assert len(report["sections"]) == 20
-    assert report["sections"][0]["label"] == "Decision/status"
-    assert report["sections"][-1]["label"] == "Final judgement"
+    assert len(report["sections"]) == 23
+    assert report["sections"][0]["label"] == "DECISION / CURRENT STATUS"
+    assert report["sections"][-1]["label"] == "FINAL JUDGEMENT"
     assert all(row["state"] == "UNAVAILABLE" for row in report["sections"])
 
 
@@ -292,12 +293,12 @@ def test_locked_gw_sections_remain_visible_after_deadline():
             "chip": "NONE",
         },
     )
-    by_label = {row["label"]: row for row in report["sections"]}
-    assert by_label["Formation/XI/bench"]["state"] == "COMPLETE"
-    assert "LOCKED" in by_label["Formation/XI/bench"]["content"]["status"]
-    assert by_label["XI battle"]["state"] == "COMPLETE"
-    assert by_label["C/VC"]["state"] == "COMPLETE"
-    assert by_label["Chip"]["state"] == "COMPLETE"
+    by_id = {row["section_id"]: row for row in report["sections"]}
+    assert by_id["S06"]["state"] == "COMPLETE"
+    assert "LOCKED" in by_id["S06"]["content"]["status"]
+    assert by_id["S07"]["state"] == "COMPLETE"
+    assert by_id["S08"]["state"] == "COMPLETE"
+    assert by_id["S09"]["state"] == "COMPLETE"
 
 
 def test_human_facing_body_rejects_low_level_machine_plumbing_when_healthy():
@@ -1589,7 +1590,7 @@ def _complete_universe_package_content():
 
 def test_deep_package_frontier_complete_requires_full_universe_search_proof():
     canonical = CANONICAL.read_text(encoding="utf-8")
-    label = "Package optimizer/frontier including HOLD baseline"
+    label = "PACKAGE OPTIMIZER / TRANSFER FRONTIER"
 
     incomplete = materialize_deep_report(
         canonical_text=canonical,

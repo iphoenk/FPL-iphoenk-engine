@@ -659,8 +659,6 @@ def search_packages(
         "hold_included": hold_included,
         "lossy_pruning": bool(lossy_pruning),
         "search_authority": coverage["search_authority"],
-        "max_transfers_evaluated": bound,
-        "transfer_depth_complete_within_bound": True,
     }
     owned_out_scan = {
         "evaluated_owned_element_ids": sorted(_element(row) for row in current),

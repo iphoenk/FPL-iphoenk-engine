@@ -1138,3 +1138,81 @@ def test_58_vectorized_autosub_keeps_canonical_resolver_as_only_legality_owner()
     assert "joint_probability" in function_source
     assert "np.sum(" in function_source
     assert "route_pruning" not in function_source
+
+
+def test_p17_exact_decision_core_cache_requires_full_fingerprint_match(
+    monkeypatch, tmp_path
+):
+    from src.engines import v12_lineup_optimizer as lineup
+
+    projections = _squad()
+    ids = [row["element"] for row in projections["players"]]
+    monkeypatch.setenv(lineup.P17_DECISION_CACHE_ENV, str(tmp_path))
+
+    calls = {"count": 0}
+    original = lineup._decision_core
+
+    def counted(players):
+        calls["count"] += 1
+        return original(players)
+
+    monkeypatch.setattr(lineup, "_decision_core", counted)
+
+    first = lineup.optimize_lineup(
+        projections,
+        ids,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    second = lineup.optimize_lineup(
+        projections,
+        ids,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+
+    assert first == second
+    assert calls["count"] == 1
+    assert first["legal_xi_count"] == 550
+    assert list(tmp_path.rglob("*.pkl"))
+
+    changed = deepcopy(projections)
+    changed["players"][0]["tactical_role_component"][
+        "canonical_tactical_role_score"
+    ] += 1.0
+    lineup.optimize_lineup(
+        changed,
+        ids,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    assert calls["count"] == 2
+
+
+def test_p17_decision_cache_is_execution_reuse_not_model_authority(
+    monkeypatch, tmp_path
+):
+    from src.engines import v12_lineup_optimizer as lineup
+
+    projections = _squad()
+    ids = [row["element"] for row in projections["players"]]
+    monkeypatch.setenv(lineup.P17_DECISION_CACHE_ENV, str(tmp_path))
+
+    first = lineup.optimize_lineup(
+        projections,
+        ids,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    second = lineup.optimize_lineup(
+        projections,
+        ids,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+
+    assert first["model_owner"] == "V12_LINEUP_OPTIMIZER"
+    assert second["model_owner"] == "V12_LINEUP_OPTIMIZER"
+    assert first["model_evidence_binding"] == second["model_evidence_binding"]
+    assert first["governance"]["v6_mutated"] is False
+    assert first["governance"]["methodology_weights_20_25_30_25_unchanged"] is True

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T07:17:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T08:05:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -15,7 +15,7 @@ This repository powers a governed personal Fantasy Premier League decision syste
 
 ## V12 Stage 2 position-specific probabilistic engine
 
-Status: **PR #639 GREEN / STAGE 2 READY / STAGE 3 NOT STARTED**.
+Status: **STAGE 1 GREEN / STAGE 2 GREEN / STAGE 3 IMPLEMENTATION IN PROGRESS — CONTROLLED + NATURAL DEEP ACCEPTANCE PENDING**.
 
 Stage 2 starts from the exact GREEN Stage-1 head `d8a286a9428d8114125abb9093639de00c82103b` and preserves that commit as the immutable V6 behavior comparison baseline. V6 acquisition, source adapters, publisher, identity governance, scheduler, recovery transport, schedule policy, runtime-control, health semantics, schema, and `runtime-data-v6` are frozen and are not modified by Stage 2.
 
@@ -36,7 +36,11 @@ Stage-2 analytics work is confined to the V12 producer layer:
 - read-only consumption of already-normalized V6 Understat, Statmuse, and Rotowire evidence where exact identity joins are available;
 - full-universe and Watchlist20 remain on the same canonical 20/25/30/25 lineage.
 
-Stage 2 is **READY / GREEN**. Stage 3 remains **NOT STARTED** and is outside PR #639.
+Stage 2 is **READY / GREEN** and remains frozen. Stage 3 is now implemented on PR #641 as a downstream-only completion layer. **Stage 3 is not yet GREEN**: controlled DEEP and subsequent natural scheduled DEEP acceptance are still mandatory.
+
+Stage 3 reuses the existing owners rather than creating competing authorities: P1.2A performs structural package search over the same Stage-2 universe, P1.2B owns package utility, bounded future-FT rollout, transfer economics and WAIT/PREPARE/ACT closure, P1.4 owns correlated match-state Monte Carlo, P1.7 remains the XI/bench/captain/vice owner, and P1.8 remains a downstream mini-league overlay. The integrated runner now requires these producers to execute before a DEEP occurrence can pass.
+
+Current private FPL authentication is not used to suppress public squad or mini-league analytics. When bank, selling price, free-transfer or chip facts are genuinely unavailable, Stage 3 preserves that factual gap, continues gross-football package/MC analysis, and **does not fabricate transfer economics or permit ACT**. Official FPL price-predictor likelihood classes are also not converted into invented rise/fall probabilities.
 
 Durable evidence is recorded in `control/fpl_master_v12/FPL_MASTER_STAGE2_ANALYTICS_AUDIT.json`; it is evidence only and does not become a second methodology or factual authority.
 
@@ -52,8 +56,12 @@ Durable evidence is recorded in `control/fpl_master_v12/FPL_MASTER_STAGE2_ANALYT
 | Tactical / role canonical scorer | `src/engines/v12_tactical_role.py` — **P1.6 / V12_TACTICAL_ROLE** |
 | Generic player-vs-player comparator | `src/engines/v12_player_comparator.py` — orchestration only, **not a model owner** |
 | Canonical decision methodology / economics contracts | `src/engines/canonical_decision_methodology.py` |
-| Package/search layer | `src/engines/v12_package_search.py` |
-| Correlated Monte Carlo | `src/engines/v12_monte_carlo.py` |
+| Package/search layer | `src/engines/v12_package_search.py` — **P1.2A structural search** |
+| Package utility / sequential decision / transfer economics | `src/engines/v12_package_utility.py` — **P1.2B** |
+| Correlated Monte Carlo | `src/engines/v12_monte_carlo.py` — **P1.4 match-state/shared-world MC** |
+| XI / bench / captain / vice | `src/engines/v12_lineup_optimizer.py` — **P1.7** |
+| Mini-league downstream overlay | `src/engines/v12_mini_league_overlay.py` — **P1.8** |
+| Integrated DEEP execution and QA binding | `src/engines/v12_integrated_report_runner.py` |
 | Visible DEEP/PRICE/report orchestration | `src/engines/v12_report_orchestration.py` |
 | Natural report acceptance observability | existing `src/runtime_v6/domains/report_plane/report_delivery.py` same-slot evidence owner; durable evidence only, **not** authority |
 | FPL recurring orchestration | **FPL Master Monitor V12** — only recurring FPL acquisition/report scheduler authority; methodology remains in Canonical TXT |

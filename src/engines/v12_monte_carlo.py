@@ -289,6 +289,26 @@ def _opponent_id(fixture: Mapping[str, Any]) -> int:
     return _i(fixture.get("opponent") or identity.get("opponent"), -1)
 
 
+def _stage2_expected_minutes(
+    player: Mapping[str, Any],
+) -> float:
+    xmins = dict(player.get("xmins") or {})
+    for key in ("expected_minutes", "xMins"):
+        value = xmins.get(key)
+        if value is not None and _f(value) > 0.0:
+            return min(90.0, max(0.0, _f(value)))
+    total = 0.0
+    for state in _state_rows(player):
+        probability = max(0.0, _f(state.get("probability")))
+        support = _minute_support(state)
+        conditional_mean = sum(
+            _f(weight) * _f(minutes)
+            for weight, minutes in support
+        )
+        total += probability * conditional_mean
+    return min(90.0, max(0.0, total))
+
+
 def _fixture_catalog(
     players: Mapping[int, Mapping[str, Any]],
     player_ids: Sequence[int],
@@ -341,15 +361,7 @@ def _fixture_catalog(
         team_id = _i(player.get("team_id") or player.get("team"), -1)
         if team_id <= 0:
             continue
-        expected_minutes = max(
-            0.0,
-            _f(
-                (player.get("xmins") or {}).get(
-                    "expected_minutes",
-                    (player.get("xmins") or {}).get("xMins"),
-                )
-            ),
-        )
+        expected_minutes = _stage2_expected_minutes(player)
         for index, fixture in enumerate(_fixture_rows(player, gw)):
             fid = _fixture_id(fixture, gw=gw, team_id=team_id, index=index)
             if fid not in material_fixture_ids:
@@ -1322,16 +1334,8 @@ def _simulate_match_coupled_gw(
             for element in elements:
                 params = local_params[element]
                 minutes = local_minutes[element]
-                expected_minutes = max(
-                    0.0,
-                    _f(
-                        (pmap[element].get("xmins") or {}).get(
-                            "expected_minutes",
-                            (pmap[element].get("xmins") or {}).get(
-                                "xMins"
-                            ),
-                        )
-                    ),
+                expected_minutes = _stage2_expected_minutes(
+                    pmap[element]
                 )
                 expected_material_goal += (
                     params["goal_rate90"]

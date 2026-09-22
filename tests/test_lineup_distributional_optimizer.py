@@ -13,6 +13,7 @@ from src.engines.v12_lineup_optimizer import (
     _appearance_mask_probabilities,
     _best_captain_vice_pair,
     _dnp_count_distribution,
+    _expected_outfield_autosub,
     _lineup_route,
     _resolve_outfield_pattern,
     _resolver_mask_table,
@@ -976,3 +977,164 @@ def test_56_formation_comparison_uses_exact_ranked_compact_route_without_recompu
         }
         for row in rows
     )
+
+
+def _scalar_expected_outfield_autosub_reference(
+    starters,
+    bench_order,
+    *,
+    cameo_as_dnp=False,
+    late_cameo_as_dnp=False,
+    count_states=None,
+):
+    outfield_starters = [
+        row for row in starters if row.get("position") in ("DEF", "MID", "FWD")
+    ]
+    start_counts = tuple(
+        sum(1 for row in outfield_starters if row.get("position") == position)
+        for position in ("DEF", "MID", "FWD")
+    )
+    bench_positions = tuple(str(row.get("position")) for row in bench_order)
+    resolved = (
+        list(count_states)
+        if count_states is not None
+        else _dnp_count_distribution(
+            outfield_starters,
+            cameo_as_dnp=cameo_as_dnp,
+            late_cameo_as_dnp=late_cameo_as_dnp,
+        )
+    )
+    appear = tuple(
+        max(0.0, min(1.0, float(row.get("p_appearance") or 0.0)))
+        for row in bench_order
+    )
+    mask_probabilities = _appearance_mask_probabilities(appear)
+    conditioned = [
+        dict(row.get("appearance_conditioned") or {})
+        for row in bench_order
+    ]
+    expected = [
+        float(row.get("expected_points") or 0.0)
+        for row in conditioned
+    ]
+    blank = [
+        None if row.get("p_fpl_blank") is None else float(row["p_fpl_blank"])
+        for row in conditioned
+    ]
+    ge8 = [
+        None if row.get("p_points_ge_8") is None else float(row["p_points_ge_8"])
+        for row in conditioned
+    ]
+    ge10 = [
+        None if row.get("p_points_ge_10") is None else float(row["p_points_ge_10"])
+        for row in conditioned
+    ]
+    expected_points = 0.0
+    autosub_probability = 0.0
+    selected_prob = [0.0, 0.0, 0.0]
+    reach_prob = [0.0, 0.0, 0.0]
+    selected_blank = 0.0
+    selected_ge8 = 0.0
+    selected_ge10 = 0.0
+    for dnp_counts, starter_probability in resolved:
+        table = _resolver_mask_table(
+            start_counts,
+            dnp_counts,
+            bench_positions,
+        )
+        for mask, bench_probability in enumerate(mask_probabilities):
+            probability = starter_probability * bench_probability
+            if probability <= 1e-15:
+                continue
+            selected_bits, reached_bits = table[mask]
+            if selected_bits:
+                autosub_probability += probability
+            for index in range(3):
+                bit = 1 << index
+                if reached_bits & bit:
+                    reach_prob[index] += probability
+                if not (selected_bits & bit):
+                    continue
+                selected_prob[index] += probability
+                expected_points += probability * expected[index]
+                if blank[index] is not None:
+                    selected_blank += probability * blank[index]
+                if ge8[index] is not None:
+                    selected_ge8 += probability * ge8[index]
+                if ge10[index] is not None:
+                    selected_ge10 += probability * ge10[index]
+    return {
+        "expected_points": expected_points,
+        "autosub_probability": autosub_probability,
+        "slot_selected_probability": selected_prob,
+        "slot_reach_probability": reach_prob,
+        "expected_selected_blank_probability_mass": selected_blank,
+        "expected_selected_ge8_probability_mass": selected_ge8,
+        "expected_selected_ge10_probability_mass": selected_ge10,
+    }
+
+
+@pytest.mark.parametrize(
+    "cameo_as_dnp,late_cameo_as_dnp",
+    [(False, False), (True, False), (False, True)],
+)
+def test_57_vectorized_autosub_probability_mass_matches_scalar_canonical_reference(
+    cameo_as_dnp,
+    late_cameo_as_dnp,
+):
+    starters = _starters_343(defender_dnp=0.23, forward_dnp=0.19)
+    starters[2]["p_cameo"] = 0.31
+    starters[2]["p_late_cameo"] = 0.11
+    starters[2]["p_appearance"] = 1.0 - starters[2]["p_dnp"]
+    reserve = _direct_surface(90, "GK", mean=3.0)
+    bench = [
+        _direct_surface(91, "MID", mean=6.2, p_dnp=0.13, cond_blank=0.22, cond_ge8=0.31, cond_ge10=0.14),
+        _direct_surface(92, "DEF", mean=4.7, p_dnp=0.07, cond_blank=0.18, cond_ge8=0.24, cond_ge10=0.09),
+        _direct_surface(93, "FWD", mean=5.4, p_dnp=0.21, cond_blank=0.29, cond_ge8=0.36, cond_ge10=0.19),
+    ]
+    del reserve
+    for order in __import__("itertools").permutations(bench, 3):
+        expected = _scalar_expected_outfield_autosub_reference(
+            starters,
+            order,
+            cameo_as_dnp=cameo_as_dnp,
+            late_cameo_as_dnp=late_cameo_as_dnp,
+        )
+        actual = _expected_outfield_autosub(
+            starters,
+            order,
+            cameo_as_dnp=cameo_as_dnp,
+            late_cameo_as_dnp=late_cameo_as_dnp,
+        )
+        assert actual["expected_points"] == pytest.approx(
+            expected["expected_points"], abs=1e-12
+        )
+        assert actual["autosub_probability"] == pytest.approx(
+            expected["autosub_probability"], abs=1e-12
+        )
+        assert actual["slot_selected_probability"] == pytest.approx(
+            expected["slot_selected_probability"], abs=1e-12
+        )
+        assert actual["slot_reach_probability"] == pytest.approx(
+            expected["slot_reach_probability"], abs=1e-12
+        )
+        for key in (
+            "expected_selected_blank_probability_mass",
+            "expected_selected_ge8_probability_mass",
+            "expected_selected_ge10_probability_mass",
+        ):
+            assert actual[key] == pytest.approx(expected[key], abs=1e-12)
+
+
+def test_58_vectorized_autosub_keeps_canonical_resolver_as_only_legality_owner():
+    source = (
+        ROOT / "src" / "engines" / "v12_lineup_optimizer.py"
+    ).read_text(encoding="utf-8")
+    function_source = source[
+        source.index("def _expected_outfield_autosub("):
+        source.index("def _expected_gk_autosub(")
+    ]
+    assert "_resolver_mask_table(" in function_source
+    assert "joint_probability" in function_source
+    assert "np.sum(" in function_source
+    assert "route_pruning" not in function_source

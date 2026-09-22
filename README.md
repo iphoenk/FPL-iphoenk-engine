@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T15:01:02+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T16:14:22+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -20,6 +20,8 @@ Report concurrency is versioned by production SHA so an obsolete in-flight contr
 Stage 3 MC performance repair: canonical Monte Carlo remains **500,000 correlated paths** with unchanged acceptance/convergence gates. Runtime now precomputes immutable Stage-2 fixture catalogs once per GW, replaces repeated path-sample clean-sheet calibration with deterministic Gauss-Hermite calibration of the same Poisson-lognormal zero-goal marginal, and processes larger bounded NumPy chunks. This changes execution efficiency, not V6 facts, Stage-1/Stage-2 authorities, 20/25/30/25, package economics, or report QA.
 
 Stage 3 P1.2B runtime repair: controlled production run `35697291246` proved the remaining timeout is inside `P1_2_PACKAGE_UTILITY`, after P1.2A completes in ~0.1s and before Monte Carlo starts. Large full-universe package route sets now materialize the existing exact P1.7 lineup owner through a bounded Linux process pool (maximum 4 workers), preserving every P1.2A route, identical P1.7 mathematics, route identity, economics, 20/25/30/25, and all QA gates. No lossy pruning, second lineup model, V6 change, path-count reduction, or timeout increase is introduced. Stage 3 remains **acceptance pending** until fresh controlled and natural DEEP evidence passes.
+
+Stage 3 P1.7 hot-loop repair: follow-up controlled run `35703070607` proved that process-level parallelism alone is insufficient: all `1,965` package squads are unique and P1.2B still exhausted the unchanged 60-minute ceiling before P1.4 began. The existing P1.7 owner now vectorizes only the exact DNP-state × bench-appearance probability-mass accumulation while continuing to use the same canonical formation-legal resolver, all six bench permutations, the same captain/vice logic, and the complete P1.2A route set. Scalar-reference equivalence tests guard the probability and autosub outputs. No route pruning, model/owner change, Monte Carlo path reduction, V6 mutation, or QA relaxation is introduced. Stage 3 remains **acceptance pending** until controlled and natural DEEP proof passes.
 
 Status: **STAGE 1 GREEN / STAGE 2 GREEN / STAGE 3 CODE MERGED — CONTROLLED + NATURAL DEEP ACCEPTANCE PENDING**.
 

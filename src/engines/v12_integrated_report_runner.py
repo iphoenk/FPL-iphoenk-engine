@@ -562,6 +562,526 @@ def _stage3_seed(report_slot: str) -> int:
     return int(digest[:8], 16)
 
 
+def _first_projection_fixture(
+    player: Mapping[str, Any],
+) -> dict[str, Any]:
+    for gw_row in player.get("xpts_by_gw") or []:
+        for fixture in (gw_row or {}).get("fixtures") or []:
+            if isinstance(fixture, Mapping):
+                return dict(fixture)
+    return {}
+
+
+def _point_distribution_summary(
+    value: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    row = dict(value or {})
+    quantiles = dict(row.get("quantiles") or {})
+    return {
+        "status": row.get("status"),
+        "mean": row.get("mean", row.get("expected_points")),
+        "median": row.get("median"),
+        "variance": row.get("variance"),
+        "Q10": quantiles.get("Q10"),
+        "Q25": quantiles.get("Q25"),
+        "Q75": quantiles.get("Q75"),
+        "Q90": quantiles.get("Q90"),
+        "p_blank": row.get("p_fpl_blank"),
+        "p_haul": row.get("p_haul_10_plus"),
+    }
+
+
+def _visible_position_mechanism(
+    player: Mapping[str, Any],
+    *,
+    action: str,
+) -> dict[str, Any]:
+    fixture = _first_projection_fixture(player)
+    events = dict(fixture.get("events") or {})
+    engine = dict(
+        fixture.get("position_engine")
+        or player.get("position_engine")
+        or {}
+    )
+    complete = dict(
+        fixture.get("complete_player_distribution")
+        or player.get("complete_player_distribution")
+        or {}
+    )
+    xmins = dict(player.get("xmins") or {})
+    derived = dict(xmins.get("derived_probabilities") or {})
+    horizons = dict(player.get("horizons") or {})
+    position = str(player.get("position") or "").upper()
+    common = {
+        "element_id": int(player.get("element") or 0),
+        "player": player.get("name"),
+        "position": position,
+        "opponent": fixture.get("opponent"),
+        "home": fixture.get("home"),
+        "role": (
+            (player.get("tactical_role") or {}).get("profile")
+            if isinstance(player.get("tactical_role"), Mapping)
+            else player.get("tactical_role")
+        ),
+        "p_available": complete.get(
+            "P_available",
+            xmins.get("availability"),
+        ),
+        "p_start": complete.get(
+            "P_start",
+            derived.get("p_start", xmins.get("start_probability")),
+        ),
+        "p_60_plus": complete.get("P_60_plus"),
+        "p_cameo": complete.get(
+            "P_cameo",
+            derived.get("p_cameo", xmins.get("cameo_probability")),
+        ),
+        "p_dnp": complete.get(
+            "P_DNP",
+            derived.get("p_dnp", xmins.get("dnp_probability")),
+        ),
+        "xmins": xmins.get("expected_minutes"),
+        "dynamic_matchup": engine.get("matchup_vector"),
+        "bonus": events.get("bonus"),
+        "goal_process": engine.get("goal_process"),
+        "creation_process": engine.get("creation_process"),
+        "penalty_process": engine.get("penalty_process"),
+        "set_piece_process": engine.get("set_piece_process"),
+        "linkup": engine.get("linkup"),
+        "complete_player_distribution": complete,
+        "1GW": _point_distribution_summary(
+            (horizons.get("1") or {}).get("point_distribution")
+        ),
+        "3GW": _point_distribution_summary(
+            (horizons.get("3") or {}).get("point_distribution")
+        ),
+        "5GW": _point_distribution_summary(
+            (horizons.get("5") or {}).get("point_distribution")
+        ),
+        "action": action,
+    }
+    if position == "GK":
+        common["position_mechanism"] = {
+            "clean_sheet": events.get("clean_sheet"),
+            "saves": events.get("saves"),
+            "shot_stopping": (
+                (events.get("saves") or {}).get("shot_stopping")
+                if isinstance(events.get("saves"), Mapping)
+                else None
+            ),
+            "penalty_save": events.get("penalty_save"),
+            "goals_conceded": events.get("goals_conceded"),
+        }
+    elif position == "DEF":
+        common["position_mechanism"] = {
+            "clean_sheet": events.get("clean_sheet"),
+            "defcon": events.get("defcon"),
+            "defensive_role": engine.get("defensive_role"),
+            "attacking_upside": {
+                "goal_process": engine.get("goal_process"),
+                "creation_process": engine.get("creation_process"),
+            },
+        }
+    elif position == "MID":
+        common["position_mechanism"] = {
+            "goal_process": engine.get("goal_process"),
+            "creation_process": engine.get("creation_process"),
+            "penalty_process": engine.get("penalty_process"),
+            "set_piece_process": engine.get("set_piece_process"),
+            "defcon": events.get("defcon"),
+            "mid_clean_sheet": events.get("clean_sheet"),
+        }
+    else:
+        common["position_mechanism"] = {
+            "goal_process": engine.get("goal_process"),
+            "creation_process": engine.get("creation_process"),
+            "service_linkup": engine.get("linkup"),
+            "penalty_process": engine.get("penalty_process"),
+            "set_piece_process": engine.get("set_piece_process"),
+        }
+    return common
+
+
+def _stage3_visible_package_surface(
+    *,
+    projections: Mapping[str, Any],
+    canonical_bundle: Mapping[str, Any],
+    package_search_result: Mapping[str, Any],
+    package_utility: Mapping[str, Any],
+    material_mc_routes: Mapping[str, Any],
+    monte_carlo: Mapping[str, Any],
+    stage3_decision: Mapping[str, Any],
+    mini_overlay: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    player_map = {
+        int(row.get("element") or 0): dict(row)
+        for row in projections.get("players") or []
+        if isinstance(row, Mapping)
+        and int(row.get("element") or 0) > 0
+    }
+    canonical_map = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in canonical_bundle.get("players") or []
+        if isinstance(row, Mapping)
+        and int(row.get("element_id") or 0) > 0
+    }
+    utility_routes = {
+        str(row.get("route_id") or ""): dict(row)
+        for row in package_utility.get("routes") or []
+        if isinstance(row, Mapping)
+    }
+    decision_routes = {
+        str(row.get("route_id") or ""): dict(row)
+        for row in stage3_decision.get("routes") or []
+        if isinstance(row, Mapping)
+    }
+    material_ids = [
+        str(value)
+        for value in material_mc_routes.get("route_ids") or []
+    ]
+
+    challengers: list[dict[str, Any]] = []
+    seen_incoming: set[int] = set()
+    for route_id in material_ids:
+        if route_id == "HOLD":
+            continue
+        route = utility_routes.get(route_id) or {}
+        decision = decision_routes.get(route_id) or {}
+        for incoming in route.get("players_in") or []:
+            element = int(incoming.get("element") or 0)
+            if element <= 0 or element in seen_incoming:
+                continue
+            seen_incoming.add(element)
+            player = player_map.get(element) or {}
+            canonical = canonical_map.get(element) or {}
+            mechanism = _visible_position_mechanism(
+                player,
+                action=str(stage3_decision.get("operational_action") or "WAIT"),
+            )
+            challengers.append(
+                {
+                    "rank": canonical.get("canonical_rank"),
+                    "element_id": element,
+                    "player": player.get("name"),
+                    "position": player.get("position"),
+                    "club": player.get("team"),
+                    "best_outgoing": [
+                        row.get("element")
+                        for row in route.get("players_out") or []
+                    ],
+                    "package_route": route_id,
+                    "football_score": canonical.get("football_score"),
+                    "football_score_components": canonical.get(
+                        "canonical_components"
+                    ),
+                    "p_available": mechanism.get("p_available"),
+                    "p_start": mechanism.get("p_start"),
+                    "p_cameo": mechanism.get("p_cameo"),
+                    "p_dnp": mechanism.get("p_dnp"),
+                    "xmins": mechanism.get("xmins"),
+                    "p_return": (
+                        mechanism.get("complete_player_distribution") or {}
+                    ).get("P_return"),
+                    "p_blank": (
+                        mechanism.get("complete_player_distribution") or {}
+                    ).get("P_blank"),
+                    "p_haul": (
+                        mechanism.get("complete_player_distribution") or {}
+                    ).get("P_haul"),
+                    "expected_points_distribution": mechanism.get("1GW"),
+                    "tactical_role": mechanism.get("role"),
+                    "set_piece_penalty_role": {
+                        "set_piece": mechanism.get("set_piece_process"),
+                        "penalty": mechanism.get("penalty_process"),
+                    },
+                    "gw_plus_1": (
+                        mechanism.get("1GW") or {}
+                    ).get("mean"),
+                    "three_gw": (
+                        mechanism.get("3GW") or {}
+                    ).get("mean"),
+                    "five_gw": (
+                        mechanism.get("5GW") or {}
+                    ).get("mean"),
+                    "package_utility_delta_vs_hold": (
+                        decision.get("mc_pair_vs_hold") or {}
+                    ).get("mean_difference"),
+                    "price_economics": decision.get("price_uncertainty"),
+                    "structure_effect": route.get("structural_impact"),
+                    "expected_regret": decision.get("expected_regret"),
+                    "information_value_of_waiting": decision.get(
+                        "value_of_information"
+                    ),
+                    "mini_league_leverage": (
+                        (mini_overlay or {}).get("decision_delta")
+                        if mini_overlay
+                        else None
+                    ),
+                    "main_upside": (
+                        decision.get("mc_pair_vs_hold") or {}
+                    ).get("Q90"),
+                    "main_risk": (
+                        decision.get("mc_pair_vs_hold") or {}
+                    ).get("Q10"),
+                    "action": stage3_decision.get("operational_action"),
+                    "position_mechanism": mechanism.get(
+                        "position_mechanism"
+                    ),
+                    "dynamic_matchup": mechanism.get("dynamic_matchup"),
+                }
+            )
+
+    package_routes: list[dict[str, Any]] = []
+    for route_id in material_ids:
+        route = utility_routes.get(route_id) or {}
+        decision = decision_routes.get(route_id) or {}
+        pair = dict(decision.get("mc_pair_vs_hold") or {})
+        horizons = dict(route.get("horizons") or {})
+        economics = dict(route.get("transfer_economics") or {})
+        package_routes.append(
+            {
+                "route": route_id,
+                "moves": {
+                    "out": route.get("players_out"),
+                    "in": route.get("players_in"),
+                },
+                "transfer_cost": {
+                    "hit": route.get("hit"),
+                    "ft_usage": route.get("ft_usage"),
+                    "economics_status": economics.get("status"),
+                    "bank_after": route.get("bank_after"),
+                },
+                "gw1_net": (
+                    (horizons.get("GW+1") or {}).get(
+                        "net_delta_vs_hold"
+                    )
+                ),
+                "two_gw_if_relevant": (
+                    (horizons.get("2GW") or {}).get(
+                        "net_delta_vs_hold"
+                    )
+                ),
+                "three_gw": (
+                    (horizons.get("3GW") or {}).get(
+                        "net_delta_vs_hold"
+                    )
+                ),
+                "five_gw": (
+                    (horizons.get("5GW") or {}).get(
+                        "net_delta_vs_hold"
+                    )
+                ),
+                "p_beats_hold": pair.get("p_route_gt_hold"),
+                "p_delta_meaningful": pair.get(
+                    "p_delta_ge_meaningful_threshold"
+                ),
+                "Q10": pair.get("Q10"),
+                "Q25": pair.get("Q25"),
+                "median": pair.get("median"),
+                "Q75": pair.get("Q75"),
+                "Q90": pair.get("Q90"),
+                "expected_regret": decision.get("expected_regret"),
+                "robustness": decision.get("robustness"),
+                "price_risk": decision.get("price_uncertainty"),
+                "structure_effect": route.get("structural_impact"),
+                "action_verdict": stage3_decision.get(
+                    "operational_action"
+                ),
+                "voi": decision.get("value_of_information"),
+                "voi_vs_wait_cost": decision.get(
+                    "voi_vs_cost_of_waiting"
+                ),
+            }
+        )
+
+    mechanism_ids = set()
+    for route_id in material_ids:
+        route = utility_routes.get(route_id) or {}
+        mechanism_ids.update(
+            int(row.get("element") or 0)
+            for row in route.get("players_in") or []
+            if int(row.get("element") or 0) > 0
+        )
+        mechanism_ids.update(
+            int(row.get("element") or 0)
+            for row in route.get("players_out") or []
+            if int(row.get("element") or 0) > 0
+        )
+    mechanism_rows = [
+        _visible_position_mechanism(
+            player_map[element],
+            action=str(stage3_decision.get("operational_action") or "WAIT"),
+        )
+        for element in sorted(mechanism_ids)
+        if element in player_map
+    ]
+
+    return {
+        "package_search_proof": package_search_result.get("search_proof"),
+        "package_universe_challengers": challengers,
+        "package_routes": package_routes,
+        "frontier": package_utility.get("package_frontier"),
+        "material_route_selection": material_mc_routes,
+        "monte_carlo": {
+            "execution_state": monte_carlo.get("execution_state"),
+            "canonical_pass": monte_carlo.get("canonical_pass"),
+            "actual_paths": monte_carlo.get("actual_paths"),
+            "seed": monte_carlo.get("seed"),
+            "horizons": monte_carlo.get("horizons"),
+            "convergence_evidence": monte_carlo.get(
+                "convergence_evidence"
+            ),
+            "match_state_invariants": (
+                monte_carlo.get("sampling_diagnostics") or {}
+            ).get("match_state_invariants"),
+            "match_state_contract": monte_carlo.get(
+                "match_state_contract"
+            ),
+            "common_random_numbers": monte_carlo.get(
+                "common_random_numbers"
+            ),
+        },
+        "decision": stage3_decision,
+        "position_mechanisms": mechanism_rows,
+        "mini_league_overlay": mini_overlay,
+    }
+
+
+def _stage3_math_proof(
+    *,
+    projections: Mapping[str, Any],
+    package_utility: Mapping[str, Any],
+    stage3_decision: Mapping[str, Any],
+    monte_carlo: Mapping[str, Any],
+) -> dict[str, Any]:
+    selected_id = str(
+        stage3_decision.get("selected_route_id") or "HOLD"
+    )
+    route = next(
+        (
+            dict(row)
+            for row in package_utility.get("routes") or []
+            if str(row.get("route_id") or "") == selected_id
+        ),
+        {},
+    )
+    candidate_element = next(
+        (
+            int(row.get("element") or 0)
+            for row in route.get("players_in") or []
+            if int(row.get("element") or 0) > 0
+        ),
+        None,
+    )
+    if candidate_element is None:
+        first_lineup = (
+            (route.get("football_route_utility") or {}).get("per_gw")
+            or [{}]
+        )[0]
+        candidate_element = int(
+            (first_lineup.get("captain") or 0)
+        )
+    player = next(
+        (
+            dict(row)
+            for row in projections.get("players") or []
+            if int(row.get("element") or 0) == candidate_element
+        ),
+        {},
+    )
+    fixture = _first_projection_fixture(player)
+    complete = dict(
+        fixture.get("complete_player_distribution")
+        or player.get("complete_player_distribution")
+        or {}
+    )
+    xmins = dict(player.get("xmins") or {})
+    decision_route = next(
+        (
+            dict(row)
+            for row in stage3_decision.get("routes") or []
+            if str(row.get("route_id") or "") == selected_id
+        ),
+        {},
+    )
+    return {
+        "bayesian_shrinkage_lineage": (
+            player.get("posterior_rates")
+            or "STAGE2_POSTERIOR_RATES"
+        ),
+        "probability_state": {
+            "unconditional": {
+                "p_available": complete.get(
+                    "P_available", xmins.get("availability")
+                ),
+                "p_start": complete.get(
+                    "P_start", xmins.get("start_probability")
+                ),
+                "p_bench": xmins.get("bench_probability"),
+                "p_cameo": complete.get(
+                    "P_cameo", xmins.get("cameo_probability")
+                ),
+                "p_late_cameo": xmins.get(
+                    "late_cameo_probability"
+                ),
+                "p_dnp": complete.get(
+                    "P_DNP", xmins.get("dnp_probability")
+                ),
+            }
+        },
+        "xmins_distribution": xmins.get("xmins_distribution"),
+        "posterior_predictive": {
+            "source_contract": (
+                (fixture.get("position_engine") or {}).get(
+                    "posterior_predictive"
+                )
+                or {}
+            ).get("contract"),
+            "event_probabilities": complete,
+            "point_distribution": fixture.get("point_distribution"),
+        },
+        "horizons": {
+            label: _point_distribution_summary(
+                (player.get("horizons") or {}).get(key, {}).get(
+                    "point_distribution"
+                )
+            )
+            for label, key in (
+                ("1GW", "1"),
+                ("3GW", "3"),
+                ("5GW", "5"),
+            )
+        },
+        "robustness": {
+            "p_outperform": (
+                decision_route.get("mc_pair_vs_hold") or {}
+            ).get("p_route_gt_hold"),
+            "expected_regret": decision_route.get("expected_regret"),
+            "conditional_floor": (
+                decision_route.get("mc_pair_vs_hold") or {}
+            ).get("Q10"),
+            "upper_tail": (
+                decision_route.get("mc_pair_vs_hold") or {}
+            ).get("Q90"),
+        },
+        "information_value_of_waiting": decision_route.get(
+            "value_of_information"
+        ),
+        "covariance_correlation": monte_carlo.get(
+            "correlation_model"
+        ),
+        "monte_carlo": {
+            "execution_state": monte_carlo.get("execution_state"),
+            "actual_paths": monte_carlo.get("actual_paths"),
+            "correlated": monte_carlo.get("correlated"),
+            "seed": monte_carlo.get("seed"),
+            "convergence_evidence": monte_carlo.get(
+                "convergence_evidence"
+            ),
+        },
+    }
+
+
 def _lineup_content(lineup: Mapping[str, Any] | None) -> dict[str, Any]:
     if not lineup:
         return {"status": "UNAVAILABLE"}

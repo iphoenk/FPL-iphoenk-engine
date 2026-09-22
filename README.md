@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T13:08:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T13:39:05+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -15,13 +15,15 @@ This repository powers a governed personal Fantasy Premier League decision syste
 
 ## V12 Stage 2 position-specific probabilistic engine
 
-Status: **STAGE 1 GREEN / STAGE 2 GREEN / STAGE 3 IMPLEMENTATION IN PROGRESS — CONTROLLED + NATURAL DEEP ACCEPTANCE PENDING**.
+Status: **STAGE 1 GREEN / STAGE 2 GREEN / STAGE 3 CODE MERGED — CONTROLLED + NATURAL DEEP ACCEPTANCE PENDING**.
 
 Stage 2 starts from the exact GREEN Stage-1 head `d8a286a9428d8114125abb9093639de00c82103b` and preserves that commit as the immutable V6 behavior comparison baseline. V6 acquisition, source adapters, publisher, identity governance, scheduler, recovery transport, schedule policy, runtime-control, health semantics, schema, and `runtime-data-v6` are frozen and are not modified by Stage 2.
 
 Final public-first live acceptance run `35671072769` (artifact `10671910220`, SHA-256 `0a952e39283f01c8f824731b0cf35f689287617265be0ac767e092cb27f30038`) is **GREEN**. It proves the Stage-2 engine **PASS** across all required analytics checks over all 667 projected Official players, Watchlist20 **COMPLETE**, full-universe/Watchlist single-chain lineage **PASS**, current squad evidence **PASS** via `PUBLIC_SUBMITTED_PICKS`, and public mini-league evidence **PASS**. Official FPL public submitted picks for entry `3462711` are HTTP 200 with 15/15 players; ICON+ League standings and GW5 manager picks are complete for 58/58 managers. Private `/me` remains `AUTH_EXPIRED` / HTTP 401, but is diagnostic only for Stage-2 acceptance and stays tracked separately in issue #640 for private-only facts. No V6 repair is included in PR #639.
 
 The Canonical Stage-2 contract now requires explicit single-chain lineage from the same governed projection row through P1.1, P1.3 posterior, position engine, 20/25/30/25, and genuine 1/3/5GW distributions into full-universe and Watchlist20 rows. A mere subset relationship is not sufficient acceptance evidence.
+
+Controlled Stage-3 runtime note: run `35693691787` reached the integrated analytics execution step but hit the previous 25-minute workflow ceiling before materialization. The report-runner workflow now allows up to 60 minutes and emits per-stage elapsed-time diagnostics; this changes neither V6 nor Stage-1/Stage-2/Stage-3 analytics mathematics or QA gates.
 
 Stage-2 analytics work is confined to the V12 producer layer:
 

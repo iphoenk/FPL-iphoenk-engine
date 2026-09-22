@@ -729,3 +729,100 @@ def test_34_package_output_carries_non_authoritative_execution_proof(monkeypatch
     assert proof["decision_authority_changed"] is False
     assert proof["lossy_pruning"] is False
     assert result["methodology"]["lineup_execution"] == proof
+
+
+def test_p1_2b_profile_exact_p17_subcomponents(monkeypatch):
+    """One representative exact 5-GW profile before the bounded runtime repair.
+
+    This instrumentation is intentionally fail-closed for the first PR run so
+    the GitHub Actions log becomes durable factual timing evidence. It is
+    removed/replaced by equivalence/performance acceptance after profiling.
+    """
+    import json as _json
+    import time as _time
+    from collections import defaultdict as _defaultdict
+    from src.engines import v12_lineup_optimizer as _lineup
+
+    projections = _projections()
+    squad_ids = tuple(row["element"] for row in _current())
+    timings = _defaultdict(float)
+    counts = _defaultdict(int)
+
+    def _wrap(name, fn, bucket=None):
+        key = bucket or name
+        def wrapped(*args, **kwargs):
+            start = _time.perf_counter()
+            try:
+                return fn(*args, **kwargs)
+            finally:
+                timings[key] += _time.perf_counter() - start
+                counts[key] += 1
+        return wrapped
+
+    monkeypatch.setattr(
+        _lineup,
+        "build_player_surface",
+        _wrap("build_player_surface", _lineup.build_player_surface),
+    )
+    monkeypatch.setattr(
+        _lineup,
+        "enumerate_legal_xi",
+        _wrap("enumerate_legal_xi", _lineup.enumerate_legal_xi),
+    )
+
+    original_route = _lineup._lineup_route
+    def profiled_route(*args, **kwargs):
+        compact = bool(kwargs.get("compact", False))
+        key = "lineup_route_compact" if compact else "lineup_route_full"
+        start = _time.perf_counter()
+        try:
+            return original_route(*args, **kwargs)
+        finally:
+            timings[key] += _time.perf_counter() - start
+            counts[key] += 1
+    monkeypatch.setattr(_lineup, "_lineup_route", profiled_route)
+
+    for name in (
+        "optimize_bench_order",
+        "_best_captain_vice_pair",
+        "evaluate_captain_vice_pairs",
+        "_model_evidence_binding",
+    ):
+        monkeypatch.setattr(_lineup, name, _wrap(name, getattr(_lineup, name)))
+
+    per_gw = []
+    total_start = _time.perf_counter()
+    for offset in range(5):
+        start = _time.perf_counter()
+        row = utility._lineup_decision(
+            projections,
+            squad_ids,
+            gw=GW + offset,
+            generated_at=GENERATED,
+        )
+        per_gw.append({
+            "gw": GW + offset,
+            "elapsed_seconds": round(_time.perf_counter() - start, 6),
+            "legal_xi_count": 550,
+            "status": row["status"],
+        })
+    total = _time.perf_counter() - total_start
+
+    profile = {
+        "profile_contract": "P1_2B_P1_7_PRE_REPAIR_PROFILE_V1",
+        "representative_squads": 1,
+        "gw_invocations": 5,
+        "total_elapsed_seconds": round(total, 6),
+        "per_gw": per_gw,
+        "timings_seconds_inclusive": {
+            key: round(value, 6) for key, value in sorted(timings.items())
+        },
+        "call_counts": dict(sorted(counts.items())),
+        "projected_invocations_for_2043_unique_squads": 2043 * 5,
+        "exact_semantics": {
+            "legal_xi_per_gw": 550,
+            "bench_permutations_per_compact_xi": 6,
+            "captain_vice_ordered_pairs_per_compact_xi": 110,
+        },
+    }
+    pytest.fail("P1_2B_PROFILE_EVIDENCE=" + _json.dumps(profile, sort_keys=True))

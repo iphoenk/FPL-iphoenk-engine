@@ -14,6 +14,7 @@ import hashlib
 import itertools
 import json
 import math
+import numpy as np
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -470,7 +471,15 @@ def _expected_outfield_autosub(
     late_cameo_as_dnp: bool = False,
     count_states: Sequence[tuple[tuple[int, int, int], float]] | None = None,
 ) -> dict[str, Any]:
-    outfield_starters = [row for row in starters if row.get("position") in OUTFIELD]
+    """Exact autosub expectation with vectorized probability-mass aggregation.
+
+    The canonical formation-legal resolver is unchanged.  NumPy replaces only
+    the hot Python accumulation over DNP-count states x eight bench-appearance
+    masks; every selected/reached mask still comes from _resolver_mask_table.
+    """
+    outfield_starters = [
+        row for row in starters if row.get("position") in OUTFIELD
+    ]
     start_counts = tuple(
         sum(
             1
@@ -479,7 +488,9 @@ def _expected_outfield_autosub(
         )
         for position in OUTFIELD
     )
-    bench_positions = tuple(str(row.get("position")) for row in bench_order)
+    bench_positions = tuple(
+        str(row.get("position")) for row in bench_order
+    )
     resolved_count_states = (
         list(count_states)
         if count_states is not None
@@ -493,67 +504,135 @@ def _expected_outfield_autosub(
         max(0.0, min(1.0, _f(row.get("p_appearance"))))
         for row in bench_order
     )
-    mask_probabilities = _appearance_mask_probabilities(appear)
+    mask_probabilities = np.asarray(
+        _appearance_mask_probabilities(appear),
+        dtype=np.float64,
+    )
     conditioned_rows = [
         dict(row.get("appearance_conditioned") or {})
         for row in bench_order
     ]
-    expected_by_slot = tuple(
-        _f(row.get("expected_points")) for row in conditioned_rows
+    expected_by_slot = np.asarray(
+        [_f(row.get("expected_points")) for row in conditioned_rows],
+        dtype=np.float64,
     )
     blank_by_slot = tuple(
-        None if row.get("p_fpl_blank") is None else _f(row.get("p_fpl_blank"))
+        None
+        if row.get("p_fpl_blank") is None
+        else _f(row.get("p_fpl_blank"))
         for row in conditioned_rows
     )
     ge8_by_slot = tuple(
-        None if row.get("p_points_ge_8") is None else _f(row.get("p_points_ge_8"))
+        None
+        if row.get("p_points_ge_8") is None
+        else _f(row.get("p_points_ge_8"))
         for row in conditioned_rows
     )
     ge10_by_slot = tuple(
-        None if row.get("p_points_ge_10") is None else _f(row.get("p_points_ge_10"))
+        None
+        if row.get("p_points_ge_10") is None
+        else _f(row.get("p_points_ge_10"))
         for row in conditioned_rows
     )
 
-    expected_points = 0.0
-    autosub_probability = 0.0
-    selected_prob = [0.0, 0.0, 0.0]
-    reach_prob = [0.0, 0.0, 0.0]
-    selected_blank = 0.0
-    selected_ge8 = 0.0
-    selected_ge10 = 0.0
+    if not resolved_count_states:
+        return {
+            "expected_points": 0.0,
+            "autosub_probability": 0.0,
+            "slot_selected_probability": [0.0, 0.0, 0.0],
+            "slot_reach_probability": [0.0, 0.0, 0.0],
+            "expected_selected_blank_probability_mass": 0.0,
+            "expected_selected_ge8_probability_mass": 0.0,
+            "expected_selected_ge10_probability_mass": 0.0,
+        }
 
-    for dnp_counts, starter_probability in resolved_count_states:
-        if starter_probability <= 0.0:
-            continue
-        mask_table = _resolver_mask_table(
+    starter_probabilities = np.asarray(
+        [float(probability) for _, probability in resolved_count_states],
+        dtype=np.float64,
+    )
+    joint_probability = (
+        starter_probabilities[:, None] * mask_probabilities[None, :]
+    )
+
+    selected_bits = np.empty(
+        (len(resolved_count_states), 8),
+        dtype=np.uint8,
+    )
+    reached_bits = np.empty_like(selected_bits)
+    for state_index, (dnp_counts, _) in enumerate(
+        resolved_count_states
+    ):
+        table = _resolver_mask_table(
             start_counts,
             dnp_counts,
             bench_positions,
         )
-        for mask, bench_probability in enumerate(mask_probabilities):
-            probability = starter_probability * bench_probability
-            if probability <= 1e-15:
-                continue
-            selected_bits, reached_bits = mask_table[mask]
-            if selected_bits:
-                autosub_probability += probability
-            for index in range(3):
-                bit = 1 << index
-                if reached_bits & bit:
-                    reach_prob[index] += probability
-                if not (selected_bits & bit):
-                    continue
-                selected_prob[index] += probability
-                expected_points += probability * expected_by_slot[index]
-                blank = blank_by_slot[index]
-                if blank is not None:
-                    selected_blank += probability * blank
-                ge8 = ge8_by_slot[index]
-                if ge8 is not None:
-                    selected_ge8 += probability * ge8
-                ge10 = ge10_by_slot[index]
-                if ge10 is not None:
-                    selected_ge10 += probability * ge10
+        selected_bits[state_index, :] = tuple(
+            row[0] for row in table
+        )
+        reached_bits[state_index, :] = tuple(
+            row[1] for row in table
+        )
+
+    autosub_probability = float(
+        np.sum(
+            joint_probability[selected_bits != 0],
+            dtype=np.float64,
+        )
+    )
+    selected_prob: list[float] = []
+    reach_prob: list[float] = []
+    for index in range(3):
+        bit = 1 << index
+        selected_prob.append(
+            float(
+                np.sum(
+                    joint_probability[
+                        (selected_bits & bit) != 0
+                    ],
+                    dtype=np.float64,
+                )
+            )
+        )
+        reach_prob.append(
+            float(
+                np.sum(
+                    joint_probability[
+                        (reached_bits & bit) != 0
+                    ],
+                    dtype=np.float64,
+                )
+            )
+        )
+
+    selected_array = np.asarray(
+        selected_prob,
+        dtype=np.float64,
+    )
+    expected_points = float(
+        np.dot(selected_array, expected_by_slot)
+    )
+    selected_blank = float(
+        sum(
+            selected_prob[index] * float(value)
+            for index, value in enumerate(blank_by_slot)
+            if value is not None
+        )
+    )
+    selected_ge8 = float(
+        sum(
+            selected_prob[index] * float(value)
+            for index, value in enumerate(ge8_by_slot)
+            if value is not None
+        )
+    )
+    selected_ge10 = float(
+        sum(
+            selected_prob[index] * float(value)
+            for index, value in enumerate(ge10_by_slot)
+            if value is not None
+        )
+    )
     return {
         "expected_points": expected_points,
         "autosub_probability": autosub_probability,
@@ -563,7 +642,6 @@ def _expected_outfield_autosub(
         "expected_selected_ge8_probability_mass": selected_ge8,
         "expected_selected_ge10_probability_mass": selected_ge10,
     }
-
 
 def _expected_gk_autosub(
     starter_gk: Mapping[str, Any],

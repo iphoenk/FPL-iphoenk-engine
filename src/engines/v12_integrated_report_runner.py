@@ -510,7 +510,9 @@ def _price_uncertainty_by_route(
         ]
         signals = []
         for element in elements:
-            row = pmap.get(element) or {}
+            row = pmap.get(element)
+            if not row:
+                continue
             signals.append(
                 {
                     "element": element,

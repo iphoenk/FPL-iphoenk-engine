@@ -659,6 +659,8 @@ def search_packages(
         "hold_included": hold_included,
         "lossy_pruning": bool(lossy_pruning),
         "search_authority": coverage["search_authority"],
+        "max_transfers_evaluated": bound,
+        "transfer_depth_complete_within_bound": True,
     }
     owned_out_scan = {
         "evaluated_owned_element_ids": sorted(_element(row) for row in current),
@@ -678,6 +680,10 @@ def search_packages(
         "eligible_universe_count": coverage["eligible_universe_count"],
         "searched_universe_count": coverage["searched_universe_count"],
         "route_denominator": len(routes),
+        "max_transfers_evaluated": bound,
+        "transfer_depth_semantics": (
+            "COMPLETE_WITHIN_GOVERNED_CURRENT_OCCURRENCE_BOUND"
+        ),
         "coverage": coverage,
         "search_proof": search_proof,
         "owned_out_scan": owned_out_scan,

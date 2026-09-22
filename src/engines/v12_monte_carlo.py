@@ -2061,34 +2061,81 @@ def _route_metrics(
             "p_route_gt_hold": None,
         }
     diff = values - hold
-    std = float(np.std(values, ddof=1)) if len(values) > 1 else 0.0
-    diff_std = float(np.std(diff, ddof=1)) if len(diff) > 1 else 0.0
+    n = max(1, len(values))
+    mean = float(np.mean(values))
+    std = (
+        float(np.std(values, ddof=1))
+        if len(values) > 1
+        else 0.0
+    )
+    diff_std = (
+        float(np.std(diff, ddof=1))
+        if len(diff) > 1
+        else 0.0
+    )
+    p_gt = float(np.mean(diff > 0.0))
+    p_lt = float(np.mean(diff < 0.0))
+    p_up = float(np.mean(diff >= material_upside_threshold))
     return {
         "status": "READY",
-        "mean_net_utility": float(np.mean(values)),
+        "mean_net_utility": mean,
         "median": float(np.median(values)),
         "standard_deviation": std,
+        "mean_standard_error": std / math.sqrt(n),
         **_quantiles(values),
-        "p_route_gt_hold": float(np.mean(diff > 0.0)),
-        "p_route_lt_hold": float(np.mean(diff < 0.0)),
-        "downside_probability": float(np.mean(diff < 0.0)),
-        "material_upside_probability": float(np.mean(diff >= material_upside_threshold)),
+        "p_route_gt_hold": p_gt,
+        "p_route_gt_hold_standard_error": math.sqrt(
+            max(0.0, p_gt * (1.0 - p_gt)) / n
+        ),
+        "p_route_lt_hold": p_lt,
+        "p_route_lt_hold_standard_error": math.sqrt(
+            max(0.0, p_lt * (1.0 - p_lt)) / n
+        ),
+        "downside_probability": p_lt,
+        "material_upside_probability": p_up,
+        "material_upside_probability_standard_error": math.sqrt(
+            max(0.0, p_up * (1.0 - p_up)) / n
+        ),
         "mean_difference_vs_hold": float(np.mean(diff)),
-        "paired_difference_standard_error": diff_std / math.sqrt(max(1, len(diff))),
+        "paired_difference_standard_error": (
+            diff_std / math.sqrt(max(1, len(diff)))
+        ),
+        "mc_standard_error_formula": {
+            "probability": "sqrt(p*(1-p)/N)",
+            "mean": "SD/sqrt(N)",
+        },
     }
 
 
 def _pair_metrics(a: np.ndarray, b: np.ndarray) -> dict[str, Any]:
     diff = a - b
     if np.any(~np.isfinite(diff)):
-        return {"status": "ECONOMICS_PARTIAL", "p_a_gt_b": None}
-    std = float(np.std(diff, ddof=1)) if len(diff) > 1 else 0.0
+        return {
+            "status": "ECONOMICS_PARTIAL",
+            "p_a_gt_b": None,
+        }
+    n = max(1, len(diff))
+    std = (
+        float(np.std(diff, ddof=1))
+        if len(diff) > 1
+        else 0.0
+    )
+    p_gt = float(np.mean(diff > 0.0))
+    p_lt = float(np.mean(diff < 0.0))
     return {
         "status": "READY",
         "mean_difference": float(np.mean(diff)),
-        "p_a_gt_b": float(np.mean(diff > 0.0)),
-        "p_a_lt_b": float(np.mean(diff < 0.0)),
-        "paired_difference_standard_error": std / math.sqrt(max(1, len(diff))),
+        "p_a_gt_b": p_gt,
+        "p_a_gt_b_standard_error": math.sqrt(
+            max(0.0, p_gt * (1.0 - p_gt)) / n
+        ),
+        "p_a_lt_b": p_lt,
+        "p_a_lt_b_standard_error": math.sqrt(
+            max(0.0, p_lt * (1.0 - p_lt)) / n
+        ),
+        "paired_difference_standard_error": (
+            std / math.sqrt(n)
+        ),
     }
 
 

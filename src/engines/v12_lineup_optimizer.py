@@ -14,6 +14,8 @@ import hashlib
 import itertools
 import json
 import math
+import os
+import pickle
 import numpy as np
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -39,6 +41,8 @@ MODEL_OWNER = "V12_LINEUP_OPTIMIZER"
 POSITIONS = ("GK", "DEF", "MID", "FWD")
 OUTFIELD = ("DEF", "MID", "FWD")
 LEGAL_FORMATIONS = frozenset(LINEUP_RULES.get("legal_formations") or [])
+P17_DECISION_CACHE_ENV = "V12_P17_DECISION_CACHE_DIR"
+P17_DECISION_CACHE_SCHEMA = 1
 
 
 class LineupOptimizerError(ValueError):
@@ -1487,6 +1491,85 @@ def _compact_public_route(
     return public
 
 
+@lru_cache(maxsize=1)
+def _optimizer_code_sha256() -> str:
+    return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+
+
+def _decision_core_cache_key(
+    players: Sequence[Mapping[str, Any]],
+) -> str:
+    """Fingerprint only exact numerical/model inputs for reusable P1.7 core math."""
+    return fingerprint(
+        {
+            "schema": P17_DECISION_CACHE_SCHEMA,
+            "optimizer_code_sha256": _optimizer_code_sha256(),
+            "canonical_v12_revision": _canonical_sha256(),
+            "ruleset_id": RULESET_ID,
+            "lineup_rules": LINEUP_RULES,
+            "config": load_config(),
+            "players": [dict(row) for row in players],
+        }
+    )
+
+
+def _decision_core_cached(
+    players: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Reuse an exact P1.7 decision core only on a full deterministic fingerprint hit.
+
+    The cache contains no V6 facts beyond the already-normalized player surfaces,
+    owns no decision authority, and never bypasses current model-evidence binding.
+    optimize_lineup still rebuilds the current output/evidence envelope after this
+    function returns. Any code/config/rules/player-surface change produces a new
+    fingerprint and therefore a mandatory exact recomputation.
+    """
+    cache_root = str(os.environ.get(P17_DECISION_CACHE_ENV) or "").strip()
+    if not cache_root:
+        return _decision_core(players)
+
+    key = _decision_core_cache_key(players)
+    path = Path(cache_root) / key[:2] / f"{key}.pkl"
+    if path.is_file():
+        try:
+            with path.open("rb") as fh:
+                payload = pickle.load(fh)
+            if (
+                isinstance(payload, dict)
+                and int(payload.get("schema") or 0) == P17_DECISION_CACHE_SCHEMA
+                and payload.get("key") == key
+                and isinstance(payload.get("core"), dict)
+            ):
+                core = dict(payload["core"])
+                if int(core.get("legal_xi_count") or 0) > 0:
+                    return deepcopy(core)
+        except (OSError, EOFError, pickle.PickleError, AttributeError, ValueError, TypeError):
+            pass
+
+    core = _decision_core(players)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        with tmp.open("wb") as fh:
+            pickle.dump(
+                {
+                    "schema": P17_DECISION_CACHE_SCHEMA,
+                    "key": key,
+                    "core": core,
+                },
+                fh,
+                protocol=pickle.HIGHEST_PROTOCOL,
+            )
+        os.replace(tmp, path)
+    finally:
+        try:
+            if tmp.exists():
+                tmp.unlink()
+        except OSError:
+            pass
+    return core
+
+
 def _decision_core(players: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     legal = enumerate_legal_xi(players)
     compact_cvc_ranked_pairs = evaluate_captain_vice_pairs(players)
@@ -1764,7 +1847,7 @@ def optimize_lineup(
     if missing:
         raise LineupOptimizerError(f"P1.7 missing projections for owned elements: {missing}")
     players = [build_player_surface(pmap[element], gw) for element in ids]
-    core = _decision_core(players)
+    core = _decision_core_cached(players)
     selected = core["selected"]
     captain_id = int((selected.get("captain_vice") or {}).get("captain_element") or 0)
     vice_id = int((selected.get("captain_vice") or {}).get("vice_element") or 0)

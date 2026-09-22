@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "audit_id": "V12_STAGE2_POSITION_PROBABILISTIC_ENGINE_2026_09_22",
-  "observed_at": "2026-09-22T07:06:00+07:00",
+  "observed_at": "2026-09-22T07:17:00+07:00",
   "authority": "EVIDENCE_ONLY_NON_AUTHORITATIVE",
   "baseline": {
     "stage1_green_main_sha": "d8a286a9428d8114125abb9093639de00c82103b",
     "stage2_branch": "v12-stage2-position-probabilistic-engine",
-    "stage2_head_sha": "a7a6b0847fc62d7c9fe231d7045cdc372564eb3b",
+    "stage2_head_sha": "3c8bbee200433d58e6b9ffec0456406287fcbcbb",
     "controlled_root_cause_run_id": 35597594711
   },
   "freeze_boundary": {
@@ -26,17 +26,37 @@
     "runtime_data_behavior_modified": false
   },
   "latest_stage2_live_acceptance": {
-    "workflow_run_id": 35670160734,
-    "artifact_id": 10670918918,
-    "artifact_name": "v12-stage2-live-acceptance-35670160734-1",
-    "artifact_sha256": "0b260f4c6d051179c8a84ca6125985de4605f8f9394fc9fa111ae47a6428dbb5",
-    "code_head_sha": "a7a6b0847fc62d7c9fe231d7045cdc372564eb3b",
+    "workflow_run_id": 35671072769,
+    "artifact_id": 10671910220,
+    "artifact_name": "v12-stage2-live-acceptance-35671072769-1",
+    "artifact_sha256": "0a952e39283f01c8f824731b0cf35f689287617265be0ac767e092cb27f30038",
+    "code_head_sha": "3c8bbee200433d58e6b9ffec0456406287fcbcbb",
     "planning_gw": 6,
     "projected_players": 667,
     "watchlist20": "COMPLETE",
     "stage2_engine_status": "PASS",
-    "overall_status": "BLOCKED_EXTERNAL_V6_AUTH",
-    "current_authenticated_squad_status": "BLOCKED",
+    "overall_status": "GREEN",
+    "current_authenticated_squad_status": "AUTH_EXPIRED_DIAGNOSTIC_ONLY",
+    "current_squad_evidence_status": "PASS",
+    "current_squad_evidence_mode": "PUBLIC_SUBMITTED_PICKS",
+    "mini_league_public_status": "PASS",
+    "public_official_fpl_evidence": {
+      "entry_id": 3462711,
+      "submitted_gw": 5,
+      "submitted_pick_count": 15,
+      "submitted_http_status": 200,
+      "submitted_origin": "LIVE_FETCHED_CURRENT_GW",
+      "priority_league_id": 9477,
+      "priority_league_name": "ICON+ League",
+      "standings_complete": true,
+      "expected_manager_count": 58,
+      "collected_manager_count": 58,
+      "manager_picks_complete": true,
+      "manager_picks_coverage_percent": 100,
+      "manager_entry_http_status": 200,
+      "manager_entry_pick_count": 15,
+      "authenticated_session_required_for_stage2_green": false
+    },
     "checks": {
       "dynamic_fdr_vector": true,
       "same_opponent_player_specific": true,
@@ -75,28 +95,23 @@
   },
   "separate_v6_auth_issue": {
     "issue_number": 640,
-    "initial_auth_state": "AUTH_EXPIRED",
-    "initial_http_status": 401,
-    "governed_retry_transport": "EXISTING_V6_REPORT_PREFETCH",
-    "retry_logical_slot": "2026-09-22T07:00:00+07:00",
-    "retry_v6_run_id": "35670452927",
-    "retry_publish_integrity": "PASS",
-    "retry_current_team_generated_at": "2026-09-22T00:05:44.103495+00:00",
-    "retry_auth_state": "AUTH_EXPIRED",
-    "retry_http_status": 401,
-    "retry_squad_state": "SUBMITTED_PICKS_ONLY",
-    "stale_snapshot_explanation_rejected": true,
-    "stage2_v6_repair_performed": false
+    "auth_state": "AUTH_EXPIRED",
+    "http_status": 401,
+    "classification": "NON_BLOCKING_DIAGNOSTIC_FOR_STAGE2",
+    "reason": "Fresh Official FPL public submitted picks prove the current 15-player squad and public ICON+ mini-league evidence is complete; private /me remains relevant only for private-only facts.",
+    "stage2_v6_repair_performed": false,
+    "keep_separate": true
   },
   "ci": {
-    "repository_governance_run_id": 35670160678,
-    "repository_governance": "PASS",
+    "public_first_live_acceptance_run_id": 35671072769,
+    "public_first_live_acceptance": "PASS",
+    "repository_governance_previous_run_id": 35671072767,
     "v12_required_verify": "PASS",
-    "repository_policy": "PASS",
-    "documentation_sync": "PASS",
     "detect_v6_change": "PASS",
-    "repository_naming_run_id": 35670160671,
+    "repository_policy": "PASS",
+    "repository_naming_run_id": 35671072760,
     "repository_naming": "PASS",
+    "documentation_sync": "PENDING_FINAL_METADATA_RETRIGGER",
     "v6_required_jobs": "SKIPPED_NO_V6_DIFF"
   },
   "run_35597594711_stage2_root_causes_repaired": true,
@@ -108,8 +123,14 @@
     "fwd_dcl_brobbey_route": true
   },
   "stage2_engine_green": true,
-  "stage2_green": false,
-  "blocking_reason": "CURRENT_AUTHENTICATED_SQUAD_UNAVAILABLE_AUTH_EXPIRED_HTTP_401",
+  "stage2_green": true,
+  "blocking_reason": null,
   "stage3_started": false,
-  "next_gate": "Renew V6 authenticated session through the existing V6 credential/governance path, then rerun the same read-only Stage-2 live acceptance. Do not change Stage-2 analytics or V6 behavior to bypass this gate."
+  "next_gate": "Merge PR #639 only after final documentation/governance retrigger is GREEN. Stage 3 remains NOT STARTED.",
+  "governance": {
+    "public_first_acceptance": true,
+    "authenticated_private_session_required_for_stage2_green": false,
+    "v6_mutated": false,
+    "stage3_started": false
+  }
 }

@@ -885,8 +885,19 @@ def _stage3_visible_package_surface(
                 "median": pair.get("median"),
                 "Q75": pair.get("Q75"),
                 "Q90": pair.get("Q90"),
+                "football_1GW": (
+                    (decision.get("horizon_deltas") or {}).get("1GW")
+                ),
+                "football_3GW": (
+                    (decision.get("horizon_deltas") or {}).get("3GW")
+                ),
+                "football_5GW": (
+                    (decision.get("horizon_deltas") or {}).get("5GW")
+                ),
                 "expected_regret": decision.get("expected_regret"),
                 "robustness": decision.get("robustness"),
+                "sensitivity": decision.get("sensitivity"),
+                "stress_coverage": decision.get("stress_coverage"),
                 "price_risk": decision.get("price_uncertainty"),
                 "structure_effect": route.get("structural_impact"),
                 "action_verdict": stage3_decision.get(
@@ -923,6 +934,27 @@ def _stage3_visible_package_surface(
 
     return {
         "package_search_proof": package_search_result.get("search_proof"),
+        "package_search_scope": {
+            "search_authority": package_search_result.get(
+                "search_authority"
+            ),
+            "eligible_universe_count": package_search_result.get(
+                "eligible_universe_count"
+            ),
+            "searched_universe_count": package_search_result.get(
+                "searched_universe_count"
+            ),
+            "route_denominator": package_search_result.get(
+                "route_denominator"
+            ),
+            "max_transfers_evaluated": package_search_result.get(
+                "max_transfers_evaluated"
+            ),
+            "transfer_depth_semantics": package_search_result.get(
+                "transfer_depth_semantics"
+            ),
+            "coverage": package_search_result.get("coverage"),
+        },
         "package_universe_challengers": challengers,
         "package_routes": package_routes,
         "frontier": package_utility.get("package_frontier"),

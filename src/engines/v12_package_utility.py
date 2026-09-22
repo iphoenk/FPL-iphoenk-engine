@@ -1706,7 +1706,11 @@ def finalize_stage3_decision(
         p_lcb = (
             None
             if probability is None or probability_se is None
-            else _f(probability) - 1.96 * _f(probability_se)
+            else max(
+                0.0,
+                _f(probability)
+                - confidence_z * _f(probability_se),
+            )
         )
         long_noninferior = all(
             value is not None and _f(value) >= 0.0
@@ -1726,10 +1730,19 @@ def finalize_stage3_decision(
         )
         economics = dict(route.get("transfer_economics") or {})
         sensitivity = sensitivity_for_route(route, price)
-        statistically_robust = bool(
-            statistically_robust
-            and sensitivity.get("all_material_dimensions_resolved") is True
-        )
+        if bool(
+            robust_cfg.get(
+                "require_all_material_sensitivity_dimensions_resolved",
+                True,
+            )
+        ):
+            statistically_robust = bool(
+                statistically_robust
+                and sensitivity.get(
+                    "all_material_dimensions_resolved"
+                )
+                is True
+            )
         rows.append(
             {
                 "route_id": route_id,

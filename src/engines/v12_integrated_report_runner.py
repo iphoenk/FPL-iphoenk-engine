@@ -1750,6 +1750,81 @@ def run_deep(
                 required=True,
             )
 
+    stage3_required_stage_names = {
+        "P1_2A_PACKAGE_SEARCH",
+        "P1_2_PACKAGE_UTILITY",
+        "P1_4_MATERIAL_ROUTE_SELECTION",
+        "P1_4_MONTE_CARLO",
+        "P1_4_PACKAGE_BINDING",
+        "P1_2_STAGE3_DECISION_CLOSURE",
+        "P1_2_STAGE3_DECISION_BINDING",
+        "P1_8_MINI_LEAGUE_OVERLAY",
+        "P1_8_MINI_LEAGUE_BINDING",
+    }
+    stage_status = {
+        str(row.get("stage") or ""): str(row.get("status") or "")
+        for row in ledger
+    }
+    stage3_internal_pass = bool(
+        package_search_result
+        and package_utility
+        and material_mc_routes
+        and monte_carlo
+        and stage3_decision
+        and package_with_stage3
+        and mini_overlay
+        and monte_carlo.get("execution_state") == "EXECUTED"
+        and monte_carlo.get("canonical_pass") is True
+        and int(monte_carlo.get("actual_paths") or 0) >= 500_000
+        and (monte_carlo.get("convergence_evidence") or {}).get(
+            "status"
+        )
+        == "PASS"
+        and (
+            (monte_carlo.get("sampling_diagnostics") or {}).get(
+                "match_state_invariants"
+            )
+            or {}
+        ).get("status")
+        == "PASS"
+        and all(
+            stage_status.get(name) == "PASS"
+            for name in stage3_required_stage_names
+        )
+    )
+    stage3_visible = (
+        _stage3_visible_package_surface(
+            projections=projections or {},
+            canonical_bundle=canonical_bundle,
+            package_search_result=package_search_result or {},
+            package_utility=package_utility or {},
+            material_mc_routes=material_mc_routes or {},
+            monte_carlo=monte_carlo or {},
+            stage3_decision=stage3_decision or {},
+            mini_overlay=mini_overlay,
+        )
+        if stage3_internal_pass
+        else {}
+    )
+    stage3_math_proof = (
+        _stage3_math_proof(
+            projections=projections or {},
+            package_utility=package_utility or {},
+            stage3_decision=stage3_decision or {},
+            monte_carlo=monte_carlo or {},
+        )
+        if stage3_internal_pass
+        else {}
+    )
+    operational_action = str(
+        (stage3_decision or {}).get("operational_action")
+        or "WAIT"
+    ).upper()
+    if operational_action not in {"WAIT", "PREPARE", "ACT"}:
+        raise IntegratedRunnerError(
+            "Stage3 action state must be WAIT/PREPARE/ACT"
+        )
+
     lineup_state = "COMPLETE" if lineup else "DEGRADED"
     lineup_reason = None if lineup else "P1.7 owner did not produce a supportable route"
     mini_state = (
@@ -1769,7 +1844,7 @@ def run_deep(
         "S01": _section(
             "COMPLETE",
             {
-                "operational_state": "WAIT",
+                "operational_state": operational_action,
                 "planning_gw": planning_gw,
                 "report_slot": report_slot,
                 "integrated_runner": "EXECUTED",
@@ -1784,8 +1859,21 @@ def run_deep(
         "S03": _section(
             "COMPLETE",
             {
-                "decision_delta": "NO ACT WITHOUT FULL 20/25/30/25 UNIVERSE EVALUATION",
-                "runner_delta": "P1.1/P1.3/P1.6/P1.7/price/ICON stages now occurrence-bound",
+                "decision_delta": {
+                    "action": operational_action,
+                    "selected_route_id": (
+                        (stage3_decision or {}).get("selected_route_id")
+                    ),
+                    "reason": (stage3_decision or {}).get("reason"),
+                    "mini_league_delta": (
+                        (mini_overlay or {}).get("decision_delta")
+                    ),
+                },
+                "runner_delta": (
+                    "Stage2 full-universe distributions -> P1.2 package -> "
+                    "P1.4 correlated match-state MC -> P1.2 decision -> "
+                    "P1.8 mini-league -> renderer"
+                ),
             },
         ),
         "S04": _section(
@@ -1861,24 +1949,17 @@ def run_deep(
             expected_count=20,
         ),
         "S14": _section(
-            "DEGRADED",
+            "COMPLETE" if stage3_internal_pass else "DEGRADED",
             {
                 "universe_scan": universe_gap,
-                "package_routes": [],
-                "monte_carlo": {
-                    "execution_state": "NOT_RUN",
-                    "reason": (
-                        "STAGE_2_PACKAGE_FRONTIER_AND_MATERIAL_MONTE_CARLO_"
-                        "NOT_STARTED"
-                    ),
-                },
+                **stage3_visible,
             },
             (
-                universe_gap["reason"]
-                or (
-                    "Stage 1 canonical universe is complete; Stage 2 "
-                    "package/frontier and material Monte Carlo execution "
-                    "are intentionally not started yet"
+                None
+                if stage3_internal_pass
+                else (
+                    "Stage3 internal producer/wiring failure; this is NOT "
+                    "accepted as a factual-source degradation"
                 )
             ),
         ),
@@ -1890,6 +1971,20 @@ def run_deep(
                     "p1_1_p1_3": "EXECUTED" if projections else "FAILED",
                     "p1_6": "EXECUTED" if projections else "NOT_RUN",
                     "p1_7": "EXECUTED" if lineup else "PARTIAL",
+                    "p1_2_package": (
+                        "EXECUTED" if package_utility else "FAILED"
+                    ),
+                    "p1_4_monte_carlo": (
+                        "EXECUTED_CANONICAL"
+                        if (
+                            monte_carlo
+                            and monte_carlo.get("canonical_pass") is True
+                        )
+                        else "FAILED"
+                    ),
+                    "p1_8_downstream_overlay": (
+                        "EXECUTED" if mini_overlay else "FAILED"
+                    ),
                     "price_predictor": (rise or {}).get("predictor_health"),
                     "universe_20_25_30_25": (
                         "COMPLETE"
@@ -1900,13 +1995,42 @@ def run_deep(
             },
         ),
         "S15B": _section(
-            mini_state,
-            mini or {"coverage_state": "UNAVAILABLE"},
-            mini_reason,
+            (
+                "COMPLETE"
+                if mini_state == "COMPLETE" and mini_overlay
+                else "DEGRADED"
+            ),
+            {
+                **(mini or {"coverage_state": "UNAVAILABLE"}),
+                "downstream_overlay": mini_overlay,
+                "football_baseline_precedes_leverage": True,
+            },
+            (
+                None
+                if mini_state == "COMPLETE" and mini_overlay
+                else (
+                    mini_reason
+                    or "P1.8 downstream overlay producer did not complete"
+                )
+            ),
         ),
         "S16": _section(
             "COMPLETE" if projections else "DEGRADED",
-            {"rows": (all15 or {}).get("rows", [])},
+            {
+                "rows": (all15 or {}).get("rows", []),
+                "position_mechanisms": (
+                    [
+                        _visible_position_mechanism(
+                            player,
+                            action=operational_action,
+                        )
+                        for player in (projections or {}).get("players") or []
+                        if int(player.get("element") or 0) in owned_ids
+                    ]
+                    if projections
+                    else []
+                ),
+            },
             (
                 None
                 if projections
@@ -1927,6 +2051,13 @@ def run_deep(
                     "projection_players": len((projections or {}).get("players") or []),
                     "our15": len(owned),
                     "mini_league_coverage": (mini or {}).get("coverage_state"),
+                    "stage3_internal_pass": stage3_internal_pass,
+                    "mc_actual_paths": (
+                        (monte_carlo or {}).get("actual_paths")
+                    ),
+                    "mc_convergence": (
+                        (monte_carlo or {}).get("convergence_evidence")
+                    ),
                     "stage_ledger": ledger,
                 }
             },
@@ -1934,24 +2065,54 @@ def run_deep(
         "S18": _section(
             "COMPLETE",
             {
-                "NOW": "WAIT",
-                "TRIGGER TO ACT": "FULL 20/25/30/25 universe evaluator + legal/economic route + robustness evidence",
-                "ABORT / REVERSAL": "role/injury/economics or challenger evidence invalidates selected route",
+                "NOW": operational_action,
+                "TRIGGER TO ACT": (
+                    (stage3_decision or {}).get("action_contract")
+                    or "UNAVAILABLE"
+                ),
+                "ABORT / REVERSAL": (
+                    "fresh role/injury/lineup/economics/price evidence or "
+                    "challenger posterior changes invalidate the selected route"
+                ),
+                "VALUE OF INFORMATION": (
+                    next(
+                        (
+                            row.get("voi_vs_cost_of_waiting")
+                            for row in (stage3_decision or {}).get("routes") or []
+                            if str(row.get("route_id") or "")
+                            == str(
+                                (stage3_decision or {}).get(
+                                    "selected_route_id"
+                                )
+                                or "HOLD"
+                            )
+                        ),
+                        None,
+                    )
+                ),
                 "NEXT CHECKPOINT": "next due report occurrence with fresh V6 prefetch",
             },
         ),
         "S19": _section(
             "COMPLETE",
             {
-                "final_judgement": (
-                    "WAIT pending full canonical universe component evaluation; "
-                    "do not privilege prior shortlist names."
-                )
+                "final_judgement": {
+                    "action": operational_action,
+                    "selected_route_id": (
+                        (stage3_decision or {}).get("selected_route_id")
+                    ),
+                    "reason": (stage3_decision or {}).get("reason"),
+                    "stage3_internal_pass": stage3_internal_pass,
+                    "private_finance_status": finance,
+                    "no_fake_completeness": True,
+                }
             },
         ),
     }
 
-    math_stack = build_visible_mathematical_decision_stack({})
+    math_stack = build_visible_mathematical_decision_stack(
+        stage3_math_proof
+    )
     report = materialize_deep_report(
         canonical_text=canonical,
         section_payloads=sections,
@@ -2012,7 +2173,8 @@ def run_deep(
     runner_status = (
         "PASS"
         if (
-            catalog_complete
+            stage3_internal_pass
+            and catalog_complete
             and str(pre_render_qa.get("status") or "").upper() == "PASS"
             and str(post_render_qa.get("status") or "").upper() == "PASS"
             and not human_failures
@@ -2073,6 +2235,20 @@ def run_deep(
         "pre_render_qa_status": pre_render_qa.get("status"),
         "post_render_qa_status": post_render_qa.get("status"),
         "human_facing_qa_status": "PASS" if not human_failures else "FAIL",
+        "stage3_internal_pass": stage3_internal_pass,
+        "stage3_action": operational_action,
+        "stage3_required_stages": sorted(stage3_required_stage_names),
+        "monte_carlo": {
+            "actual_paths": (monte_carlo or {}).get("actual_paths"),
+            "seed": (monte_carlo or {}).get("seed"),
+            "canonical_pass": (monte_carlo or {}).get("canonical_pass"),
+            "convergence": (monte_carlo or {}).get(
+                "convergence_evidence"
+            ),
+            "match_state_invariants": (
+                (monte_carlo or {}).get("sampling_diagnostics") or {}
+            ).get("match_state_invariants"),
+        },
         "stages": ledger,
         "no_silent_stage_skip": True,
         "no_second_model_authority": True,
@@ -2114,6 +2290,8 @@ def run_deep(
             "manual_shortlist_privileged": False,
             "report_falls_back_to_prose_without_bundle": False,
             "fail_operational_delivery": True,
+            "qa_relaxed": False,
+            "stage3_requires_internal_producers_before_runner_pass": True,
         },
     }
     (output_dir / "report_bundle.json").write_text(

@@ -1113,6 +1113,117 @@ def evaluate_packages(
 
 
 
+
+def derive_bounded_future_frontier(
+    preliminary_package_utility: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    """One-step future FT opportunity frontier over already-evaluated routes.
+
+    State transition approximation:
+    current final squad -> next-GW reoptimization among package states reachable
+    by at most one player replacement. This uses P1.7 next-GW football utility
+    already produced for each route. It creates no player xPts or hidden horizon
+    weights.
+    """
+    if preliminary_package_utility.get("model_owner") != MODEL_OWNER:
+        raise PackageUtilityError(
+            "future frontier requires V12_PACKAGE_UTILITY preliminary output"
+        )
+    routes = [
+        dict(row)
+        for row in preliminary_package_utility.get("routes") or []
+        if isinstance(row, Mapping)
+    ]
+    states = {}
+    for row in routes:
+        route_id = str(row.get("route_id") or "")
+        squad = frozenset(
+            int(x) for x in row.get("final_squad_elements") or []
+        )
+        per_gw = list(
+            (row.get("football_route_utility") or {}).get("per_gw")
+            or []
+        )
+        next_row = per_gw[1] if len(per_gw) > 1 else None
+        next_utility = (
+            None
+            if not isinstance(next_row, Mapping)
+            or next_row.get("status") != "READY"
+            else _f(next_row.get("route_utility"))
+        )
+        states[route_id] = {
+            "squad": squad,
+            "next_gw_utility": next_utility,
+        }
+
+    snapshot_id = fingerprint(
+        {
+            route_id: {
+                "squad": sorted(state["squad"]),
+                "next_gw_utility": state["next_gw_utility"],
+            }
+            for route_id, state in sorted(states.items())
+        }
+    )
+    out: dict[str, dict[str, Any]] = {}
+    for route_id, state in states.items():
+        own = state["next_gw_utility"]
+        if own is None:
+            out[route_id] = {
+                "status": "UNAVAILABLE",
+                "frontier_snapshot_id": snapshot_id,
+                "reason": "NEXT_GW_P1_7_UTILITY_UNAVAILABLE",
+            }
+            continue
+        reachable = []
+        for other_id, other in states.items():
+            other_utility = other["next_gw_utility"]
+            if other_utility is None:
+                continue
+            outgoing = len(state["squad"] - other["squad"])
+            incoming = len(other["squad"] - state["squad"])
+            if outgoing == incoming and outgoing <= 1:
+                reachable.append(
+                    {
+                        "route_id": other_id,
+                        "next_gw_utility": other_utility,
+                        "transfer_distance": outgoing,
+                    }
+                )
+        best = max(
+            reachable,
+            key=lambda row: (
+                _f(row["next_gw_utility"]),
+                -int(row["transfer_distance"]),
+                str(row["route_id"]),
+            ),
+            default={
+                "route_id": route_id,
+                "next_gw_utility": own,
+                "transfer_distance": 0,
+            },
+        )
+        out[route_id] = {
+            "status": "READY",
+            "best_future_utility_with_ft": _f(
+                best["next_gw_utility"]
+            ),
+            "best_future_utility_with_ft_consumed": _f(own),
+            "frontier_snapshot_id": snapshot_id,
+            "best_reachable_route_id": best["route_id"],
+            "bounded_rollout": {
+                "lookahead_gw": 1,
+                "reachable_transfer_distance": 1,
+                "fresh_p1_7_lineup_utility": True,
+                "future_transfer_precommitted": False,
+                "approximation": (
+                    "ONE_STEP_ROUTE_GRAPH_VALUE_OF_ONE_EXTRA_FT"
+                ),
+            },
+        }
+    return out
+
+
 def _football_horizon_delta(
     route: Mapping[str, Any],
     hold: Mapping[str, Any],

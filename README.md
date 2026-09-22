@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-22T06:45:01+07:00`  
+> **Last runtime/documentation sync:** `2026-09-22T07:05:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -15,9 +15,13 @@ This repository powers a governed personal Fantasy Premier League decision syste
 
 ## V12 Stage 2 position-specific probabilistic engine
 
-Status: **PR #639 IN PROGRESS / CI PENDING**.
+Status: **PR #639 IN PROGRESS / STAGE-2 ENGINE PASS / OVERALL BLOCKED BY EXTERNAL V6 AUTH**.
 
 Stage 2 starts from the exact GREEN Stage-1 head `d8a286a9428d8114125abb9093639de00c82103b` and preserves that commit as the immutable V6 behavior comparison baseline. V6 acquisition, source adapters, publisher, identity governance, scheduler, recovery transport, schedule policy, runtime-control, health semantics, schema, and `runtime-data-v6` are frozen and are not modified by Stage 2.
+
+Live read-only acceptance run `35669602463` proved the Stage-2 engine itself **PASS** across all required analytics checks over the full 667-player Official universe, with Watchlist20 COMPLETE. Overall Stage-2 acceptance remains **BLOCKED_EXTERNAL_V6_AUTH** because the fresh V6 `current_team.json` reports `AUTH_EXPIRED` / HTTP 401 for authenticated evidence. That V6 defect is tracked separately in issue #640 and is not repaired in PR #639.
+
+The Canonical Stage-2 contract now requires explicit single-chain lineage from the same governed projection row through P1.1, P1.3 posterior, position engine, 20/25/30/25, and genuine 1/3/5GW distributions into full-universe and Watchlist20 rows. A mere subset relationship is not sufficient acceptance evidence.
 
 Stage-2 analytics work is confined to the V12 producer layer:
 

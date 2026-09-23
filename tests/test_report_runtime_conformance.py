@@ -566,12 +566,12 @@ def _omit_contract_section(contract: dict, section_id: str) -> tuple[list[str], 
 
 def test_28_price_mode_contract_is_canonical_derived_and_non_empty():
     contract = canonical_mode_contract(_canonical(), "PRICE")
-    assert contract["expected_section_ids"] == [f"PRICE{i}" for i in range(1, 12)]
-    assert len(contract["expected_visible_order"]) == 11
-    assert contract["expected_visible_order"][3] == "Watchlist20 exact20"
-    assert contract["expected_visible_order"][4] == "RISE20 exact20"
-    assert contract["expected_visible_order"][5] == "FALL20 exact20"
-    assert contract["expected_visible_order"][-1] == "Source health"
+    assert contract["expected_section_ids"] == [f"PRICE{i}" for i in range(1, 13)]
+    assert len(contract["expected_visible_order"]) == 12
+    assert contract["expected_visible_order"][4] == "WATCHLIST20"
+    assert contract["expected_visible_order"][5] == "RISE20"
+    assert contract["expected_visible_order"][6] == "FALL20"
+    assert contract["expected_visible_order"][-1] == "FINAL PRICE JUDGEMENT"
 
 
 def test_29_price_missing_mandatory_section_is_structural_failure():
@@ -726,13 +726,13 @@ def test_37_deadline_requires_no_invented_additive_structural_block():
 def test_38_mode_contract_tracks_canonical_wording_instead_of_static_duplicate_schema():
     canonical = _canonical()
     mutated = canonical.replace(
-        "4 Watchlist20 exact20",
-        "4 Watchlist20 exact20 CANONICAL-MUTATION-PROBE",
+        "5 WATCHLIST20",
+        "5 WATCHLIST20 CANONICAL-MUTATION-PROBE",
         1,
     )
     contract = canonical_mode_contract(mutated, "PRICE")
-    assert contract["expected_visible_order"][3] == (
-        "Watchlist20 exact20 CANONICAL-MUTATION-PROBE"
+    assert contract["expected_visible_order"][4] == (
+        "WATCHLIST20 CANONICAL-MUTATION-PROBE"
     )
 
 

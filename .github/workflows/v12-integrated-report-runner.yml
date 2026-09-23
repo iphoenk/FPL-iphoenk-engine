@@ -173,6 +173,7 @@ jobs:
           PY
 
       - name: Enforce Stage3 natural integrated acceptance
+        if: needs.parse.outputs.report_mode == 'DEEP'
         id: stage3
         working-directory: app
         run: |
@@ -199,6 +200,26 @@ jobs:
               fh.write(
                   f"mc_paths={(proof.get('mc') or {}).get('actual_paths', 'UNKNOWN')}\n"
               )
+          PY
+
+      - name: Record Stage3 not applicable for PRICE
+        if: needs.parse.outputs.report_mode == 'PRICE'
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          Path("artifacts/v12-report/stage3_acceptance.json").write_text(
+              json.dumps(
+                  {
+                      "status": "NOT_APPLICABLE",
+                      "report_mode": "PRICE",
+                      "reason": "PRICE delivery barrier does not execute or alter Stage3/MC",
+                  },
+                  indent=2,
+              ),
+              encoding="utf-8",
+          )
           PY
 
       - name: Upload immutable occurrence bundle

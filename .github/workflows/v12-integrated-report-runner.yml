@@ -126,6 +126,19 @@ jobs:
               raise SystemExit(f"legacy execution boundary violated: {bad}")
           PY
 
+      - name: Restore deterministic Stage-2 derived projection cache
+        id: stage2-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: app/.cache/v12-stage2
+          key: v12-stage2-derived-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_stage2_derived_cache.py', 'app/src/models/historical_projection.py', 'app/src/engines/v12_contextual_dynamics.py', 'app/src/engines/v12_player_events.py', 'app/src/engines/v12_player_minutes.py', 'app/src/engines/v12_position_probability_components.py', 'app/src/engines/p0_decision_quality.py', 'app/src/models/v12_stage1_analytics.py', 'app/src/rules.py', 'app/config/intelligence/player_events.json', 'app/config/intelligence/player_minutes.json', 'app/config/intelligence/historical_priors.json', 'app/config/intelligence/v12_contextual_dynamics.json') }}-${{ github.run_id }}
+          restore-keys: |
+            v12-stage2-derived-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_stage2_derived_cache.py', 'app/src/models/historical_projection.py', 'app/src/engines/v12_contextual_dynamics.py', 'app/src/engines/v12_player_events.py', 'app/src/engines/v12_player_minutes.py', 'app/src/engines/v12_position_probability_components.py', 'app/src/engines/p0_decision_quality.py', 'app/src/models/v12_stage1_analytics.py', 'app/src/rules.py', 'app/config/intelligence/player_events.json', 'app/config/intelligence/player_minutes.json', 'app/config/intelligence/historical_priors.json', 'app/config/intelligence/v12_contextual_dynamics.json') }}-
+
+      - name: Ensure Stage-2 derived cache directory
+        working-directory: app
+        run: mkdir -p .cache/v12-stage2
+
       - name: Restore exact P1.7 decision-core cache
         id: p17-cache-restore
         uses: actions/cache/restore@v4
@@ -159,6 +172,7 @@ jobs:
           REPORT_MODE: ${{ needs.parse.outputs.report_mode }}
           REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
           CHECKPOINT_TIME: ${{ needs.parse.outputs.checkpoint_time }}
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/v12-stage2
           V12_P17_DECISION_CACHE_DIR: .cache/v12-p17
           V12_MC_SIM_CACHE_DIR: .cache/v12-mc
         run: |
@@ -172,6 +186,13 @@ jobs:
             args+=(--checkpoint-time "$CHECKPOINT_TIME")
           fi
           python -m src.engines.v12_integrated_report_runner "${args[@]}"
+
+      - name: Persist deterministic Stage-2 derived projection cache before downstream acceptance
+        if: always() && needs.parse.outputs.report_mode == 'DEEP'
+        uses: actions/cache/save@v4
+        with:
+          path: app/.cache/v12-stage2
+          key: v12-stage2-derived-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_stage2_derived_cache.py', 'app/src/models/historical_projection.py', 'app/src/engines/v12_contextual_dynamics.py', 'app/src/engines/v12_player_events.py', 'app/src/engines/v12_player_minutes.py', 'app/src/engines/v12_position_probability_components.py', 'app/src/engines/p0_decision_quality.py', 'app/src/models/v12_stage1_analytics.py', 'app/src/rules.py', 'app/config/intelligence/player_events.json', 'app/config/intelligence/player_minutes.json', 'app/config/intelligence/historical_priors.json', 'app/config/intelligence/v12_contextual_dynamics.json') }}-${{ github.run_id }}
 
       - name: Persist exact P1.7 decision-core cache before downstream acceptance
         if: always() && needs.parse.outputs.report_mode == 'DEEP'

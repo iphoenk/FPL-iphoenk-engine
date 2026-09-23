@@ -85,6 +85,17 @@ def _lexicographic_first(
 
     first = metrics[0]() if callable(metrics[0]) else metrics[0]
     shape = first.shape
+    # Eager callers historically hand us already-materialized ranking keys.
+    # Validate every such key up front so the shared finite contract applies
+    # to all callers. Lazy keys remain genuinely lazy and are validated only
+    # if ranking reaches them.
+    for source in metrics:
+        if callable(source):
+            continue
+        if source.shape != shape:
+            raise LineupBatchError("lexicographic metric shape drift")
+        if not np.all(np.isfinite(source)):
+            raise LineupBatchError("lexicographic metric must be finite")
     if not np.all(np.isfinite(first)):
         raise LineupBatchError("lexicographic metric must be finite")
     candidates = first == np.max(first, axis=axis, keepdims=True)

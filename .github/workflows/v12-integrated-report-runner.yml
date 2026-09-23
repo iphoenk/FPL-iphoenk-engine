@@ -139,6 +139,19 @@ jobs:
         working-directory: app
         run: mkdir -p .cache/v12-p17
 
+      - name: Restore deterministic MC simulation-summary cache
+        id: mc-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: app/.cache/v12-mc
+          key: v12-mc-summary-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_monte_carlo.py', 'app/config/intelligence/v12_monte_carlo.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
+          restore-keys: |
+            v12-mc-summary-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_monte_carlo.py', 'app/config/intelligence/v12_monte_carlo.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-
+
+      - name: Ensure MC cache directory
+        working-directory: app
+        run: mkdir -p .cache/v12-mc
+
       - name: Execute occurrence-bound integrated report
         id: report
         working-directory: app
@@ -147,6 +160,7 @@ jobs:
           REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
           CHECKPOINT_TIME: ${{ needs.parse.outputs.checkpoint_time }}
           V12_P17_DECISION_CACHE_DIR: .cache/v12-p17
+          V12_MC_SIM_CACHE_DIR: .cache/v12-mc
         run: |
           args=(
             --runtime-data-root "../runtime-data"
@@ -165,6 +179,13 @@ jobs:
         with:
           path: app/.cache/v12-p17
           key: v12-p17-decision-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_lineup_optimizer.py', 'app/config/intelligence/v12_lineup_optimizer.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
+
+      - name: Persist deterministic MC summary cache before downstream acceptance
+        if: needs.parse.outputs.report_mode == 'DEEP'
+        uses: actions/cache/save@v4
+        with:
+          path: app/.cache/v12-mc
+          key: v12-mc-summary-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_monte_carlo.py', 'app/config/intelligence/v12_monte_carlo.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
 
       - name: Read integrated runner proof
         id: proof

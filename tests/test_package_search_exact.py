@@ -309,3 +309,66 @@ def test_stage3_unavailable_private_bank_preserves_structural_full_search():
     assert all(row["economics_status"] in {"UNRESOLVED_SELL_VALUE", "UNRESOLVED_BANK"} for row in changes)
     assert all(row["affordable"] is None for row in changes)
     assert all(row["sell_value_fallback_to_market_price"] is False for row in changes)
+
+def test_material_funded_composition_is_legal_affordable_and_truthful():
+    current = _current()
+    direct = _run(current_squad=current, bank=0, max_transfers=1)
+    expensive = next(
+        row
+        for row in direct["routes"]
+        if row["route_id"] == "1:8->105"
+    )
+    funding = next(
+        row
+        for row in direct["routes"]
+        if row["route_id"] == "1:9->104"
+    )
+    assert expensive["affordable"] is False
+    assert funding["affordable"] is True
+
+    result = search.compose_material_two_transfer_packages(
+        current_squad=current,
+        direct_search_result=direct,
+        material_direct_route_ids=[
+            expensive["route_id"],
+            funding["route_id"],
+        ],
+        bank=0,
+    )
+    routes = [
+        row for row in result["routes"]
+        if row["route_id"] != "HOLD"
+    ]
+    assert len(routes) == 1
+    route = routes[0]
+    assert route["transfer_count"] == 2
+    assert route["affordable"] is True
+    assert route["funding_dependent"] is True
+    assert route["source_direct_route_ids"] == ["1:8->105", "1:9->104"]
+    assert result["search_authority"] == "MATERIAL_FUNDED"
+    assert result["coverage"]["global_two_transfer_complete"] is False
+    assert result["search_proof"]["global_two_transfer_exhaustive_claim"] is False
+    assert result["search_proof"]["decision_score_used"] is False
+
+
+def test_material_funded_pair_count_is_bounded_by_selected_direct_legs():
+    direct = _run(bank=5, max_transfers=1)
+    selected = [
+        row["route_id"]
+        for row in direct["routes"]
+        if row["route_id"] != "HOLD"
+    ][:6]
+    result = search.compose_material_two_transfer_packages(
+        current_squad=_current(),
+        direct_search_result=direct,
+        material_direct_route_ids=selected,
+        bank=5,
+    )
+    non_hold = [
+        row for row in result["routes"]
+        if row["route_id"] != "HOLD"
+    ]
+    assert len(non_hold) <= 15
+    assert result["search_proof"]["pair_attempt_count"] <= 15
+    assert result["governance"]["global_two_transfer_exhaustive_claim"] is False
+

@@ -2069,6 +2069,43 @@ def _family_captain_kernel(
             PAIR_CAP == cap_slot,
         ] = corrected
 
+    # When captain DNP is exactly zero the scalar pair key is independent
+    # of vice for every metric: utility/base, captain mean, joint
+    # upside/downside, and vice fallback.  Compute that scalar key once per
+    # route/captain and broadcast to its 14 vice choices.
+    zero_dnp_captain = p_dnp == 0.0
+    zero_dnp_scalar_captain_count = 0
+    for route_index, cap_slot in np.argwhere(zero_dnp_captain):
+        route_index = int(route_index)
+        cap_slot = int(cap_slot)
+        cap_mean_scalar = float(xpts_mean[route_index, cap_slot])
+        cap_downside_scalar = float(shortfall[route_index, cap_slot])
+        cap_upside_scalar = float(excess[route_index, cap_slot])
+        cap_base_scalar = (
+            cap_mean_scalar
+            - downside_weight * cap_downside_scalar
+            + upside_weight * cap_upside_scalar
+        )
+        pair_mask = PAIR_CAP == cap_slot
+        pair_utility[route_index, pair_mask] = round(
+            cap_base_scalar,
+            6,
+        )
+        cap_mean[route_index, pair_mask] = round(
+            cap_mean_scalar,
+            6,
+        )
+        vice_fallback[route_index, pair_mask] = 0.0
+        joint_upside[route_index, pair_mask] = round(
+            cap_upside_scalar,
+            6,
+        )
+        joint_downside[route_index, pair_mask] = round(
+            cap_downside_scalar,
+            6,
+        )
+        zero_dnp_scalar_captain_count += 1
+
     # Boundary risk is pair-local.  Recomputing an entire 210-pair route
     # whenever any irrelevant pair is near a decimal half boundary is both
     # unnecessary and catastrophically expensive on production projections.
@@ -2077,10 +2114,13 @@ def _family_captain_kernel(
     # introduced before rounding while preserving global pair_order for the
     # selected-XI safe-pool contract.
     captain_pair_boundary = (
-        _near_decimal_half(raw_pair_utility, 6)
-        | _near_decimal_half(raw_vice_fallback, 6)
-        | _near_decimal_half(raw_joint_upside, 6)
-        | _near_decimal_half(raw_joint_downside, 6)
+        (
+            _near_decimal_half(raw_pair_utility, 6)
+            | _near_decimal_half(raw_vice_fallback, 6)
+            | _near_decimal_half(raw_joint_upside, 6)
+            | _near_decimal_half(raw_joint_downside, 6)
+        )
+        & (p_dnp[:, PAIR_CAP] != 0.0)
     )
     captain_pair_boundary_count_by_route = np.sum(
         captain_pair_boundary,
@@ -2290,6 +2330,9 @@ def _family_captain_kernel(
         ),
         "scalar_direct_cap_mean_round_count": int(
             np.sum(direct_cap_mean_boundary)
+        ),
+        "scalar_zero_dnp_captain_count": int(
+            zero_dnp_scalar_captain_count
         ),
     }
 
@@ -2702,6 +2745,9 @@ def _optimize_gw_family(
         "captain_scalar_direct_cap_mean_round_count": int(
             captain["scalar_direct_cap_mean_round_count"]
         ),
+        "captain_scalar_zero_dnp_captain_count": int(
+            captain["scalar_zero_dnp_captain_count"]
+        ),
     }
 
 
@@ -3024,6 +3070,7 @@ def optimize_lineup_horizons_exact_batch(
     captain_scalar_pair_fallback_count = 0
     captain_max_scalar_pair_fallbacks_per_route = 0
     captain_scalar_direct_cap_mean_round_count = 0
+    captain_scalar_zero_dnp_captain_count = 0
     batch_size = max(1, int(batch_size))
     for offset, gw in enumerate(gws):
         valid_indices: list[int] = []
@@ -3129,6 +3176,11 @@ def optimize_lineup_horizons_exact_batch(
                 captain_scalar_direct_cap_mean_round_count += int(
                     _family_proof[
                         "captain_scalar_direct_cap_mean_round_count"
+                    ]
+                )
+                captain_scalar_zero_dnp_captain_count += int(
+                    _family_proof[
+                        "captain_scalar_zero_dnp_captain_count"
                     ]
                 )
                 if len(family_results) != len(members):
@@ -3303,6 +3355,9 @@ def optimize_lineup_horizons_exact_batch(
         ),
         "captain_scalar_direct_cap_mean_round_count": int(
             captain_scalar_direct_cap_mean_round_count
+        ),
+        "captain_scalar_zero_dnp_captain_count": int(
+            captain_scalar_zero_dnp_captain_count
         ),
     }
     return outputs, proof

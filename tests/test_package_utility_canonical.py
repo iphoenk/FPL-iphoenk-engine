@@ -932,53 +932,64 @@ def test_37_prepared_p17_preserves_1_2_3_5gw_cumulative_outputs(monkeypatch):
         assert actual[horizon]["status"] == "READY"
 
 
-def test_38_prepared_exact_p17_has_material_runtime_margin(monkeypatch, capsys):
+def test_38_prepared_exact_p17_has_material_runtime_margin(capsys):
     import json
     import time
     from src.engines import v12_lineup_optimizer as lineup
 
     projections = _randomized_projections(6481)
     squad_ids = tuple(row["element"] for row in _current())
-    reference_bench, reference_cvc = _canonical_compact_reference(lineup)
-
-    with monkeypatch.context() as patch:
-        patch.setattr(
-            lineup,
-            "_compact_bench_order_winner_exact",
-            reference_bench,
-        )
-        patch.setattr(
-            lineup,
-            "_best_captain_vice_pair_from_ranked_exact",
-            reference_cvc,
-        )
-        started = time.perf_counter()
-        reference = lineup.optimize_lineup(
-            projections,
-            squad_ids,
-            planning_gw=GW,
-            generated_at=GENERATED,
-        )
-        reference_elapsed = time.perf_counter() - started
+    pmap = {
+        int(row["element"]): row
+        for row in projections["players"]
+    }
+    players = [
+        lineup.build_player_surface(pmap[int(element)], GW)
+        for element in squad_ids
+    ]
 
     started = time.perf_counter()
-    repaired = lineup.optimize_lineup(
-        projections,
-        squad_ids,
-        planning_gw=GW,
-        generated_at=GENERATED,
-    )
+    reference = lineup._decision_core_scalar_reference(players)
+    reference_elapsed = time.perf_counter() - started
+
+    started = time.perf_counter()
+    repaired = lineup._decision_core(players)
     repaired_elapsed = time.perf_counter() - started
 
-    assert repaired == reference
+    for key in (
+        "selected",
+        "best_alternative",
+        "formation_comparison",
+        "close_call_proof",
+        "alternatives",
+        "legal_xi_count",
+        "legal_formations_evaluated",
+    ):
+        assert repaired[key] == reference[key]
+    for key in (
+        "all_legal_routes_ranked_exactly",
+        "selected_route_fully_materialized",
+        "best_alternative_fully_materialized",
+        "other_published_routes",
+        "formation_comparison_source",
+        "route_pruning_applied",
+        "route_utility_changed",
+    ):
+        assert (
+            repaired["materialization_governance"][key]
+            == reference["materialization_governance"][key]
+        )
     assert repaired_elapsed < reference_elapsed * 0.50
     speedup = reference_elapsed / max(repaired_elapsed, 1e-9)
     evidence = {
-        "contract": "P1_2B_P1_7_RUNTIME_ACCEPTANCE_V1",
+        "contract": "P1_2B_P1_7_RUNTIME_ACCEPTANCE_V2",
         "reference_seconds": round(reference_elapsed, 6),
         "repaired_seconds": round(repaired_elapsed, 6),
         "speedup": round(speedup, 3),
         "legal_xi": repaired["legal_xi_count"],
+        "execution_kernel": repaired["materialization_governance"].get(
+            "execution_kernel"
+        ),
         "route_pruning": False,
         "approximation": False,
     }

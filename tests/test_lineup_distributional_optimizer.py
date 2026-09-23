@@ -1375,3 +1375,101 @@ def test_v12_workflow_saves_compute_caches_even_if_downstream_acceptance_fails()
         block = workflow[start : start + 450]
         assert "if: always() && needs.parse.outputs.report_mode == 'DEEP'" in block
         assert "actions/cache/save@v4" in block
+
+
+def _p17_core_surface_rows(projections):
+    from src.engines import v12_lineup_optimizer as lineup
+
+    return [
+        lineup.build_player_surface(row, GW)
+        for row in projections["players"]
+    ]
+
+
+def _assert_fast_scalar_core_equivalent(fast, scalar):
+    assert fast["legal_xi_count"] == scalar["legal_xi_count"] == 550
+    assert fast["legal_formations_evaluated"] == scalar["legal_formations_evaluated"]
+    assert fast["selected"] == scalar["selected"]
+    assert fast["best_alternative"] == scalar["best_alternative"]
+    assert fast["formation_comparison"] == scalar["formation_comparison"]
+    assert fast["close_call_proof"] == scalar["close_call_proof"]
+    assert fast["alternatives"] == scalar["alternatives"]
+    for key in (
+        "all_legal_routes_ranked_exactly",
+        "selected_route_fully_materialized",
+        "best_alternative_fully_materialized",
+        "other_published_routes",
+        "formation_comparison_source",
+        "route_pruning_applied",
+        "route_utility_changed",
+    ):
+        assert (
+            fast["materialization_governance"][key]
+            == scalar["materialization_governance"][key]
+        )
+
+
+def test_p17_vectorized_550_xi_kernel_is_exact_scalar_equivalent():
+    from src.engines import v12_lineup_optimizer as lineup
+
+    players = _p17_core_surface_rows(_squad())
+    fast = lineup._decision_core(players)
+    scalar = lineup._decision_core_scalar_reference(players)
+    _assert_fast_scalar_core_equivalent(fast, scalar)
+    assert (
+        fast["materialization_governance"]["execution_kernel"]
+        == "NUMPY_BATCH_EXACT_550_XI"
+    )
+    assert fast["materialization_governance"]["scalar_reference_preserved"] is True
+
+
+def test_p17_vectorized_kernel_randomized_surface_equivalence():
+    from src.engines import v12_lineup_optimizer as lineup
+
+    base = _p17_core_surface_rows(_squad())
+    for scenario in range(8):
+        players = deepcopy(base)
+        for index, row in enumerate(players):
+            signed = ((index * 7 + scenario * 3) % 11) - 5
+            delta = signed * 0.007
+            row["xpts_mean"] = round(max(0.0, float(row["xpts_mean"]) + delta), 6)
+            row["xpts_variance"] = round(
+                max(0.0, float(row["xpts_variance"]) + abs(delta) * 0.5),
+                6,
+            )
+            row["expected_shortfall"] = round(
+                max(0.0, float(row["expected_shortfall"] or 0.0) + abs(delta) * 0.2),
+                6,
+            )
+            row["expected_excess_ge_8"] = round(
+                max(0.0, float(row["expected_excess_ge_8"] or 0.0) + max(delta, 0.0) * 0.3),
+                6,
+            )
+            p_dnp = min(
+                0.95,
+                max(0.0, float(row["p_dnp"]) + signed * 0.0007),
+            )
+            row["p_dnp"] = round(p_dnp, 9)
+            row["p_appearance"] = round(1.0 - p_dnp, 9)
+            conditional = dict(row.get("appearance_conditioned") or {})
+            conditional["expected_points"] = round(
+                max(
+                    0.0,
+                    float(conditional.get("expected_points") or 0.0)
+                    + delta,
+                ),
+                6,
+            )
+            row["appearance_conditioned"] = conditional
+        fast = lineup._decision_core(players)
+        scalar = lineup._decision_core_scalar_reference(players)
+        _assert_fast_scalar_core_equivalent(fast, scalar)
+
+
+def test_issue_comment_compute_cache_write_is_owner_gated():
+    workflow = (
+        ROOT / ".github" / "workflows" / "v12-integrated-report-runner.yml"
+    ).read_text(encoding="utf-8")
+    assert "github.event.comment.user.login == github.repository_owner" in workflow
+    assert "ref: main" in workflow
+    assert "cache-mode: write" in workflow

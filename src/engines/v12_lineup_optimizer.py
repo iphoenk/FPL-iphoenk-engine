@@ -2124,6 +2124,10 @@ def _batch_compact_bench_winners_exact(
             (row_count, 3),
             dtype=np.float64,
         )
+        cameo_selected_probability = np.zeros(
+            (row_count, 3),
+            dtype=np.float64,
+        )
         outfield_autosub = np.zeros(row_count, dtype=np.float64)
 
         grouping: dict[
@@ -2215,6 +2219,11 @@ def _batch_compact_bench_winners_exact(
             axis=1,
             dtype=np.float64,
         )
+        cameo_outfield_expected = np.sum(
+            cameo_selected_probability * slot_mean,
+            axis=1,
+            dtype=np.float64,
+        )
         selected_blank = np.sum(
             selected_probability * slot_blank,
             axis=1,
@@ -2232,6 +2241,13 @@ def _batch_compact_bench_winners_exact(
         )
         expected[:, permutation_index] = (
             outfield_expected + gk_expected
+        )
+        cameo_expected = (
+            cameo_outfield_expected + cameo_gk_expected
+        )
+        blocked[:, permutation_index] = np.maximum(
+            0.0,
+            cameo_expected - expected[:, permutation_index],
         )
         autosub[:, permutation_index] = 1.0 - (
             (1.0 - outfield_autosub) * (1.0 - gk_autosub)
@@ -2666,6 +2682,7 @@ def _route_batch_bench_winners_exact(
     element_matrix: np.ndarray,
     p_appearance_matrix: np.ndarray,
     p_dnp_matrix: np.ndarray,
+    p_cameo_matrix: np.ndarray,
     xpts_mean_matrix: np.ndarray,
     conditioned_mean_matrix: np.ndarray,
     conditioned_blank_matrix: np.ndarray,
@@ -2690,6 +2707,12 @@ def _route_batch_bench_winners_exact(
     elements = element_matrix[route_index]
     p_appearance = p_appearance_matrix[route_index]
     p_dnp = p_dnp_matrix[route_index]
+    p_cameo = p_cameo_matrix[route_index]
+    p_cameo_trigger = np.clip(
+        p_dnp + p_cameo,
+        0.0,
+        1.0,
+    )
     xpts_mean = xpts_mean_matrix[route_index]
     conditioned_mean = conditioned_mean_matrix[route_index]
     conditioned_blank = conditioned_blank_matrix[route_index]
@@ -2760,6 +2783,25 @@ def _route_batch_bench_winners_exact(
         position_id=_ROUTE_BATCH_POSITION_ID["FWD"],
     )
 
+    cameo_def_dist = _route_batch_position_dnp_distribution(
+        starter_mask,
+        positions,
+        p_cameo_trigger,
+        position_id=_ROUTE_BATCH_POSITION_ID["DEF"],
+    )
+    cameo_mid_dist = _route_batch_position_dnp_distribution(
+        starter_mask,
+        positions,
+        p_cameo_trigger,
+        position_id=_ROUTE_BATCH_POSITION_ID["MID"],
+    )
+    cameo_fwd_dist = _route_batch_position_dnp_distribution(
+        starter_mask,
+        positions,
+        p_cameo_trigger,
+        position_id=_ROUTE_BATCH_POSITION_ID["FWD"],
+    )
+
     def_counts = (
         starter_mask
         & (positions == _ROUTE_BATCH_POSITION_ID["DEF"])
@@ -2779,6 +2821,7 @@ def _route_batch_bench_winners_exact(
     blank = np.empty_like(utility)
     ge8 = np.empty_like(utility)
     ge10 = np.empty_like(utility)
+    blocked = np.empty_like(utility)
 
     rows_all = np.arange(row_count, dtype=np.int64)
     gk_expected = (
@@ -2788,6 +2831,10 @@ def _route_batch_bench_winners_exact(
     gk_autosub = (
         p_dnp[rows_all, starter_gk_indices]
         * p_appearance[rows_all, reserve_gk_indices]
+    )
+    cameo_gk_expected = (
+        p_cameo_trigger[rows_all, starter_gk_indices]
+        * xpts_mean[rows_all, reserve_gk_indices]
     )
 
     for permutation_index, permutation in enumerate(
@@ -2849,6 +2896,21 @@ def _route_batch_bench_winners_exact(
                 dnp_probability,
                 0.0,
             )
+            cameo_dnp_probability = np.empty(
+                (len(rows), len(state_keys)),
+                dtype=np.float64,
+            )
+            for state_index, (d, m, f) in enumerate(state_keys):
+                cameo_dnp_probability[:, state_index] = (
+                    cameo_def_dist[rows, d]
+                    * cameo_mid_dist[rows, m]
+                    * cameo_fwd_dist[rows, f]
+                )
+            cameo_dnp_probability = np.where(
+                cameo_dnp_probability > 1e-15,
+                cameo_dnp_probability,
+                0.0,
+            )
             appearance_probability = (
                 _batch_appearance_mask_probabilities_exact(
                     np.take_along_axis(
@@ -2860,6 +2922,10 @@ def _route_batch_bench_winners_exact(
             )
             joint_probability = (
                 dnp_probability[:, :, None]
+                * appearance_probability[:, None, :]
+            )
+            cameo_joint_probability = (
+                cameo_dnp_probability[:, :, None]
                 * appearance_probability[:, None, :]
             )
             bench_position_names = tuple(
@@ -2894,6 +2960,17 @@ def _route_batch_bench_winners_exact(
                     np.where(
                         (selected_bits[None, :, :] & bit) != 0,
                         joint_probability,
+                        0.0,
+                    ),
+                    axis=(1, 2),
+                    dtype=np.float64,
+                )
+                cameo_selected_probability[
+                    rows, slot_index
+                ] = np.sum(
+                    np.where(
+                        (selected_bits[None, :, :] & bit) != 0,
+                        cameo_joint_probability,
                         0.0,
                     ),
                     axis=(1, 2),
@@ -3031,6 +3108,10 @@ def _route_batch_bench_winners_exact(
         "bench_order_utility": rounded_utility[
             rows_all, winner
         ],
+        "expected_blocked_autosub_value": np.round(
+            blocked[rows_all, winner],
+            6,
+        ),
         "reserve_gk_indices": reserve_gk_indices,
     }
 
@@ -3325,6 +3406,10 @@ def optimize_lineup_summaries_exact_batch(
         )
         for element in sorted(material_elements)
     }
+    surface_fingerprint_catalog = {
+        element: fingerprint(surface_catalog[element])
+        for element in sorted(material_elements)
+    }
     route_players: list[list[dict[str, Any]]] = []
     legal_by_route: list[list[tuple[int, ...]]] = []
     legal_catalog: dict[tuple[str, ...], list[tuple[int, ...]]] = {}
@@ -3399,6 +3484,9 @@ def optimize_lineup_summaries_exact_batch(
     )
     p_dnp_matrix = matrix(
         lambda row: _f(row.get("p_dnp"))
+    )
+    p_cameo_matrix = matrix(
+        lambda row: _f(row.get("p_cameo"))
     )
     xpts_mean_matrix = matrix(
         lambda row: _f(row.get("xpts_mean"))
@@ -3475,6 +3563,7 @@ def optimize_lineup_summaries_exact_batch(
         element_matrix=element_matrix,
         p_appearance_matrix=p_appearance_matrix,
         p_dnp_matrix=p_dnp_matrix,
+        p_cameo_matrix=p_cameo_matrix,
         xpts_mean_matrix=xpts_mean_matrix,
         conditioned_mean_matrix=conditioned_mean_matrix,
         conditioned_blank_matrix=conditioned_blank_matrix,
@@ -3616,12 +3705,14 @@ def optimize_lineup_summaries_exact_batch(
             int(value)
             for value in bench["order_elements"][global_index]
         )
-        blocking_cost, reserve_gk_element = (
-            _route_batch_selected_blocking_cost_exact(
-                players,
-                selected_indices,
-                bench_order,
-            )
+        blocking_cost = float(
+            bench["expected_blocked_autosub_value"][global_index]
+        )
+        reserve_gk_element = int(
+            element_matrix[
+                route_pos,
+                int(bench["reserve_gk_indices"][global_index]),
+            ]
         )
         captain_element = int(
             element_matrix[route_pos, int(captain_slot[global_index])]
@@ -3706,17 +3797,26 @@ def optimize_lineup_summaries_exact_batch(
                 "publish_only_alternatives_recomputed": False,
             },
         }
-        evidence = _model_evidence_binding(
-            projections=projections,
-            squad_ids=[int(value) for value in squads[key]],
-            planning_gw=gw,
-            deterministic_output=summary_core,
-            generated_at=generated,
+        route_surface_fingerprint = fingerprint(
+            {
+                "planning_gw": gw,
+                "squad": sorted(route_ids_by_key[key]),
+                "player_surfaces": [
+                    surface_fingerprint_catalog[element]
+                    for element in route_ids_by_key[key]
+                ],
+                "optimizer_code_sha256": _optimizer_code_sha256(),
+                "canonical_v12_revision": _canonical_sha256(),
+                "ruleset_id": RULESET_ID,
+            }
         )
         output[key] = {
             **summary_core,
-            "p1_7_model_evidence_output_fingerprint": (
-                evidence.get("output_fingerprint")
+            "p1_7_model_evidence_output_fingerprint": fingerprint(
+                {
+                    "route_surface_fingerprint": route_surface_fingerprint,
+                    "deterministic_output": summary_core,
+                }
             ),
         }
     return output

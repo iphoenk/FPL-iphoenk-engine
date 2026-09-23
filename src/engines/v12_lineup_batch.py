@@ -11,7 +11,7 @@ No route is pruned and no P1.1/P1.3/P1.6 mathematics is recomputed here.
 import math
 import time
 from functools import lru_cache
-from typing import Any, Mapping, Sequence
+from typing import Callable, Any, Mapping, Sequence
 
 import numpy as np
 
@@ -71,18 +71,32 @@ def _ordered_gather_sum(values: np.ndarray, legal: np.ndarray) -> np.ndarray:
 
 
 def _lexicographic_first(
-    metrics: Sequence[np.ndarray],
+    metrics: Sequence[np.ndarray | Callable[[], np.ndarray]],
     *,
     axis: int,
 ) -> np.ndarray:
-    """Index of lexicographic maximum, preserving first-row tie order."""
+    """Index of lexicographic maximum, preserving first-row tie order.
+
+    Later keys may be supplied lazily and are evaluated only while at least
+    one row remains tied on all earlier keys.
+    """
     if not metrics:
         raise LineupBatchError("lexicographic selection requires metrics")
-    shape = metrics[0].shape
-    candidates = np.ones(shape, dtype=bool)
-    for metric in metrics:
+
+    first = metrics[0]() if callable(metrics[0]) else metrics[0]
+    shape = first.shape
+    if not np.all(np.isfinite(first)):
+        raise LineupBatchError("lexicographic metric must be finite")
+    candidates = first == np.max(first, axis=axis, keepdims=True)
+
+    for source in metrics[1:]:
+        if np.all(np.sum(candidates, axis=axis) == 1):
+            break
+        metric = source() if callable(source) else source
         if metric.shape != shape:
             raise LineupBatchError("lexicographic metric shape drift")
+        if not np.all(np.isfinite(metric)):
+            raise LineupBatchError("lexicographic metric must be finite")
         best = np.max(
             np.where(candidates, metric, -np.inf),
             axis=axis,
@@ -1457,6 +1471,8 @@ def _family_bench_kernel(
         )
         * ge8
     )
+    # Keep the tie-rank invariant independent from whether the final
+    # lexicographic key is needed for a particular data set.
     tie_rank = _bench_permutation_tie_rank(
         arrays["elements"],
         layout["outfield_permutations"],
@@ -1464,11 +1480,11 @@ def _family_bench_kernel(
     winner = _lexicographic_first(
         (
             np.round(utility, 6),
-            np.round(expected, 6),
-            -np.round(blank, 9),
-            np.round(ge8, 9),
-            np.round(ge10, 9),
-            -tie_rank.astype(np.float64),
+            lambda: np.round(expected, 6),
+            lambda: -np.round(blank, 9),
+            lambda: np.round(ge8, 9),
+            lambda: np.round(ge10, 9),
+            lambda: -tie_rank.astype(np.float64),
         ),
         axis=2,
     )

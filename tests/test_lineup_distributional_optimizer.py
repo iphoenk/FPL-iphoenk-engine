@@ -2345,6 +2345,86 @@ def test_p17_captain_rounding_boundary_uses_scalar_oracle():
         captain["pair_utility"][0, xi_index]
         == scalar_pair["pair_utility"]
     )
+    assert captain["scalar_boundary_fallback_count"] == 0
+    assert captain["scalar_pair_fallback_count"] == 0
+    assert captain["scalar_direct_cap_mean_round_count"] > 0
+    assert captain["scalar_zero_dnp_captain_count"] == 15
+
+
+def test_p17_captain_pair_arithmetic_boundary_uses_pair_local_scalar_oracle():
+    from src.engines import v12_lineup_batch as batch
+
+    signature = (
+        "GK", "GK",
+        "DEF", "DEF", "DEF", "DEF", "DEF",
+        "MID", "MID", "MID", "MID", "MID",
+        "FWD", "FWD", "FWD",
+    )
+    layout = batch._family_layout(signature)
+    elements = np.arange(1, 16, dtype=np.int64)[None, :]
+    xpts = np.full((1, 15), 0.002, dtype=np.float64)
+    p_dnp = np.zeros_like(xpts)
+    captain_slot = 7
+    vice_slot = 8
+    p_dnp[0, captain_slot] = 0.5
+    xpts[0, captain_slot] = 0.006
+    xpts[0, vice_slot] = 0.008241
+    zeros = np.zeros_like(xpts)
+    vice_boundary = (
+        p_dnp[0, captain_slot]
+        * xpts[0, vice_slot]
+    )
+    assert batch._near_decimal_half(
+        np.asarray([vice_boundary]),
+        6,
+    )[0]
+
+    captain = batch._family_captain_kernel(
+        layout=layout,
+        elements=elements,
+        xpts_mean=xpts,
+        shortfall=zeros,
+        excess=zeros,
+        p_dnp=p_dnp,
+    )
+    xi_index = next(
+        index
+        for index, row in enumerate(layout["legal"])
+        if captain_slot in row and vice_slot in row
+    )
+    surfaces = [
+        _direct_surface(
+            slot + 1,
+            signature[slot],
+            mean=float(xpts[0, slot]),
+            p_dnp=float(p_dnp[0, slot]),
+            cond_blank=0.0,
+            cond_ge8=0.0,
+            cond_ge10=0.0,
+        )
+        for slot in range(15)
+    ]
+    scalar_pair = _best_captain_vice_pair(
+        [surfaces[int(slot)] for slot in layout["legal"][xi_index]]
+    )
+    observed_captain = int(
+        elements[
+            0,
+            int(captain["captain_index"][0, xi_index]),
+        ]
+    )
+    observed_vice = int(
+        elements[
+            0,
+            int(captain["vice_index"][0, xi_index]),
+        ]
+    )
+    assert observed_captain == scalar_pair["captain_element"]
+    assert observed_vice == scalar_pair["vice_element"]
+    assert (
+        captain["pair_utility"][0, xi_index]
+        == scalar_pair["pair_utility"]
+    )
     assert captain["scalar_boundary_fallback_count"] == 1
     assert captain["scalar_pair_fallback_count"] > 0
     assert (

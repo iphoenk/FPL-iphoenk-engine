@@ -2683,6 +2683,7 @@ def test_p17_fallback_budget_degrades_family_gw_to_scalar(monkeypatch):
     assert family_calls["count"] > 0
     assert scalar_calls["count"] > 0
     assert proof["execution_degraded"] is True
+    assert proof["degradation_status"] == "DEGRADED"
     assert proof["bench_scalar_degraded_family_gw_count"] > 0
     assert proof["bench_scalar_degraded_squad_gw_count"] == scalar_calls["count"]
     assert proof["bench_scalar_degradation_max_trigger_count"] == 65

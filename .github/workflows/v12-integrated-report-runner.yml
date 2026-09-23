@@ -208,15 +208,20 @@ jobs:
           fi
           if [ "$PROFILE_MODE" = "COLD" ]; then
             rm -rf .cache/v12-stage2 .cache/v12-p17 .cache/v12-mc
-            mkdir -p .cache/v12-stage2 .cache/v12-p17 .cache/v12-mc artifacts/v12-report
+            mkdir -p \
+              .cache/v12-stage2 \
+              .cache/v12-p17 \
+              .cache/v12-mc \
+              artifacts/v12-report/stage-profiles
+            export V12_STAGE_PROFILE_DIR="artifacts/v12-report/stage-profiles"
             set +e
-            python -m cProfile -o artifacts/v12-report/profile.pstats \
-              -m src.engines.v12_integrated_report_runner "${args[@]}" \
+            python -m src.engines.v12_integrated_report_runner "${args[@]}" \
               2>&1 | tee artifacts/v12-report/profile_run.log
             runner_status=${PIPESTATUS[0]}
             set -e
+            unset V12_STAGE_PROFILE_DIR
             python -m src.engines.v12_profile_summary \
-              --pstats artifacts/v12-report/profile.pstats \
+              --profile-dir artifacts/v12-report/stage-profiles \
               --log artifacts/v12-report/profile_run.log \
               --output-json artifacts/v12-report/profile_summary.json \
               --output-md artifacts/v12-report/profile_summary.md || true
@@ -324,7 +329,7 @@ jobs:
             app/artifacts/v12-report/report_body.md
             app/artifacts/v12-report/execution_proof.json
             app/artifacts/v12-report/stage3_acceptance.json
-            app/artifacts/v12-report/profile.pstats
+            app/artifacts/v12-report/stage-profiles/*.pstats
             app/artifacts/v12-report/profile_run.log
             app/artifacts/v12-report/profile_summary.json
             app/artifacts/v12-report/profile_summary.md

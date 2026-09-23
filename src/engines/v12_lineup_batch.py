@@ -1506,18 +1506,25 @@ def _family_bench_kernel(
         )
         * ge8
     )
-    # Keep the tie-rank invariant independent from whether the final
-    # lexicographic key is needed.  The guard remains authoritative, but the
-    # pure rank matrix is computed once per family input and reused across
-    # the five GW horizon instead of being rebuilt five times.
+    for metric_name, metric_values in (
+        ("utility", utility),
+        ("expected", expected),
+        ("blank", blank),
+        ("ge8", ge8),
+        ("ge10", ge10),
+    ):
+        if not np.all(np.isfinite(metric_values)):
+            raise LineupBatchError(
+                f"family bench {metric_name} must be finite"
+            )
+
+    # Keep the exact tie-rank guard and cross-GW memoization, but materialize
+    # the rank matrix only if all higher-priority rounded keys still leave a
+    # tie.  This preserves first-match semantics while avoiding unnecessary
+    # work on the common unique-primary-key path.
     element_matrix = np.ascontiguousarray(
         arrays["elements"],
         dtype=np.int64,
-    )
-    tie_rank = _family_bench_permutation_tie_rank_cached(
-        element_matrix.tobytes(),
-        route_count,
-        tuple(layout["position_signature"]),
     )
     winner = _lexicographic_first(
         (
@@ -1526,7 +1533,11 @@ def _family_bench_kernel(
             lambda: -np.round(blank, 9),
             lambda: np.round(ge8, 9),
             lambda: np.round(ge10, 9),
-            lambda: -tie_rank.astype(np.float64),
+            lambda: -_family_bench_permutation_tie_rank_cached(
+                element_matrix.tobytes(),
+                route_count,
+                tuple(layout["position_signature"]),
+            ).astype(np.float64),
         ),
         axis=2,
     )

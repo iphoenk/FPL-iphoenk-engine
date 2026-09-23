@@ -1616,6 +1616,175 @@ def select_stage3_material_mc_routes(
     }
 
 
+
+def select_material_funding_legs(
+    package_utility: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Select direct P1.7-evaluated legs for bounded funded composition.
+
+    This delegates ordering to the existing Stage3 materiality selector. It
+    creates no player score, no package score, and no decision authority.
+    """
+    cfg = load_config()
+    perf_cfg = dict(cfg.get("performance") or {})
+    leg_limit = max(
+        2,
+        int(perf_cfg.get("funded_material_direct_leg_limit") or 32),
+    )
+    selected = select_stage3_material_mc_routes(
+        package_utility,
+        max_routes=leg_limit + 1,
+    )
+    routes_by_id = {
+        str(row.get("route_id") or ""): dict(row)
+        for row in package_utility.get("routes") or []
+        if isinstance(row, Mapping)
+    }
+    route_ids = [
+        str(route_id)
+        for route_id in selected.get("route_ids") or []
+        if str(route_id) != "HOLD"
+        and int((routes_by_id.get(str(route_id)) or {}).get("transfer_count") or 0)
+        == 1
+    ][:leg_limit]
+    return {
+        "status": "READY",
+        "route_ids": route_ids,
+        "direct_leg_limit": leg_limit,
+        "source": "P1_4_EXISTING_MATERIALITY_SELECTOR",
+        "selection_purpose": "FUNDED_COMPOSITION_INPUT_ONLY_NOT_DECISION_RANKING",
+        "direct_search_authority": package_utility.get("search_authority"),
+        "no_new_player_score": True,
+        "no_new_package_score": True,
+    }
+
+
+def combine_package_utility_surfaces(
+    direct_package_utility: Mapping[str, Any],
+    funded_package_utility: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Combine exact direct and exact bounded-funded P1.2B owner outputs.
+
+    Both inputs have already been evaluated with the canonical P1.7 owner.
+    Combination only re-applies existing P1.2B selection/frontier/action
+    functions over the union. No projection, lineup, horizon, economics or
+    Monte Carlo math is recomputed here.
+    """
+    if direct_package_utility.get("model_owner") != MODEL_OWNER:
+        raise PackageUtilityError("direct package utility owner drift")
+    if funded_package_utility.get("model_owner") != MODEL_OWNER:
+        raise PackageUtilityError("funded package utility owner drift")
+    if direct_package_utility.get("search_authority") != "FULL":
+        raise PackageUtilityError(
+            "combined package utility requires FULL direct search authority"
+        )
+
+    direct_routes = [
+        deepcopy(dict(row))
+        for row in direct_package_utility.get("routes") or []
+        if isinstance(row, Mapping)
+    ]
+    funded_routes = [
+        deepcopy(dict(row))
+        for row in funded_package_utility.get("routes") or []
+        if isinstance(row, Mapping)
+        and str(row.get("route_id") or "") != "HOLD"
+    ]
+    if not any(str(row.get("route_id") or "") == "HOLD" for row in direct_routes):
+        raise PackageUtilityError("combined package utility requires direct HOLD")
+
+    combined_by_id: dict[str, dict[str, Any]] = {}
+    for row in direct_routes + funded_routes:
+        route_id = str(row.get("route_id") or "")
+        if not route_id:
+            raise PackageUtilityError("combined package route lost route_id")
+        combined_by_id.setdefault(route_id, row)
+    evaluated = list(combined_by_id.values())
+
+    resolved_gw1 = [
+        _f(((row.get("horizons") or {}).get("GW+1") or {}).get("net_delta_vs_hold"))
+        for row in evaluated
+        if ((row.get("horizons") or {}).get("GW+1") or {}).get(
+            "net_delta_vs_hold"
+        )
+        is not None
+    ]
+    best_gw1 = max(resolved_gw1, default=0.0)
+    for row in evaluated:
+        value = ((row.get("horizons") or {}).get("GW+1") or {}).get(
+            "net_delta_vs_hold"
+        )
+        row["expected_regret"] = (
+            None
+            if value is None
+            else round(max(0.0, best_gw1 - _f(value)), 6)
+        )
+
+    hold_eval = next(
+        row for row in evaluated if str(row.get("route_id") or "") == "HOLD"
+    )
+    candidates = [row for row in evaluated if _qualifies_change(row)]
+    candidates.sort(key=_selection_key, reverse=True)
+    selected = candidates[0] if candidates else hold_eval
+    action = _action(selected)
+    package_frontier = _frontier(evaluated)
+
+    output = deepcopy(dict(direct_package_utility))
+    output["search_authority"] = "FULL_DIRECT_MATERIAL_FUNDED"
+    output["search_route_denominator"] = len(evaluated)
+    output["routes"] = evaluated
+    output["package_frontier"] = package_frontier
+    output["selected_route_id"] = selected.get("route_id")
+    output["selected_route"] = deepcopy(selected)
+    output["decision"] = action
+    output["search_scope"] = {
+        "direct": {
+            "authority": "FULL",
+            "route_count": len(direct_routes),
+            "global_direct_complete": True,
+        },
+        "funded_two_transfer": {
+            "authority": "MATERIAL_FUNDED",
+            "route_count": len(funded_routes),
+            "global_two_transfer_complete": False,
+            "scope": "P1_7_MATERIAL_DIRECT_LEG_CROSS_PRODUCT",
+        },
+        "global_two_transfer_exhaustive_claim": False,
+    }
+    output.setdefault("methodology", {})["funded_expansion"] = {
+        "source": "EXACT_P1_7_EVALUATED_DIRECT_LEGS",
+        "selection": "EXISTING_MATERIALITY_SELECTOR",
+        "funded_routes_exact_p1_7": True,
+        "global_two_transfer_exhaustive_claim": False,
+        "decision_mapping_reused": True,
+    }
+    output.setdefault("governance", {})["funded_materialization"] = {
+        "direct_full_search_preserved": True,
+        "funded_search_bounded": True,
+        "funded_route_p1_7_exact": True,
+        "p1_7_math_mutated": False,
+        "new_player_score_created": False,
+        "new_package_score_created": False,
+        "decision_authority_changed": False,
+        "global_two_transfer_exhaustive_claim": False,
+    }
+    output["model_evidence_binding"] = {
+        "status": "COMPOSED_FROM_BOUND_P1_2B_OWNER_OUTPUTS",
+        "direct_binding_fingerprint": fingerprint(
+            direct_package_utility.get("model_evidence_binding") or {}
+        ),
+        "funded_binding_fingerprint": fingerprint(
+            funded_package_utility.get("model_evidence_binding") or {}
+        ),
+        "route_union_fingerprint": fingerprint(
+            sorted(str(row.get("route_id") or "") for row in evaluated)
+        ),
+        "model_owner": MODEL_OWNER,
+        "decision_authority_changed": False,
+    }
+    return output
+
+
 def _pair_vs_hold(
     monte_carlo: Mapping[str, Any],
     route_id: str,

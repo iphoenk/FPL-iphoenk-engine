@@ -66,13 +66,18 @@
     "parallel_lineup_min_routes": 64,
     "parallel_lineup_max_workers": 4,
     "parallel_chunks_per_worker": 8,
-    "execution_strategy": "BOUNDED_LINUX_PROCESS_POOL_EXACT_P1_7",
+    "execution_strategy": "BOUNDED_LINUX_PROCESS_POOL_EXACT_P1_7_ROUTE_BATCH",
     "lossy_pruning": false,
     "route_identity_preserved": true,
     "p1_7_owner_unchanged": true,
     "funded_material_direct_leg_limit": 32,
     "funded_materialization_strategy": "FULL_DIRECT_P1_7_THEN_MATERIAL_FUNDED_PAIR_P1_7",
-    "global_two_transfer_bruteforce_forbidden": true
+    "global_two_transfer_bruteforce_forbidden": true,
+    "route_batch_size": 32,
+    "route_batch_full_direct_threshold": 64,
+    "route_batch_scalar_refinement_guard": 0.0001,
+    "route_batch_all_550_xi_numerically_evaluated": true,
+    "route_batch_scalar_exact_refinement": true
   },
   "governance": {
     "search_utility_separated": true,
@@ -89,7 +94,8 @@
     "mini_league_forbidden": true,
     "v6_mutated": false,
     "scheduler_changed": false,
-    "authority_added": false
+    "authority_added": false,
+    "route_batch_execution_only": true
   },
   "stage3": {
     "decision_version": "P1_2B_STAGE3_DOWNSTREAM_CLOSURE_V1",

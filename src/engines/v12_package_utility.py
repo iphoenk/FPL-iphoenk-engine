@@ -35,6 +35,9 @@ from src.engines.v12_lineup_optimizer import (
     prime_player_surface_cache,
     reset_p17_execution_observability,
 )
+from src.engines.v12_lineup_batch import (
+    optimize_lineup_horizons_exact_batch,
+)
 from src.engines.v12_model_evidence import (
     bind_deterministic_output,
     build_model_run_binding,
@@ -965,28 +968,19 @@ def _materialize_route_lineups(
     planning_gw: int,
     generated_at: str,
 ) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
-    """Materialize every P1.2A route with exact P1.7 math.
+    """Materialize every direct P1.2A route with one exact cross-route P1.7 kernel.
 
-    Large full-universe route sets are split across bounded Linux worker
-    processes. Each worker calls the same canonical P1.7 owner; this is only an
-    execution strategy and never a second lineup model, lossy route pruning, or
-    alternate decision authority.
+    Route families are execution locality only.  Every final squad still enters
+    the exact 550-XI/six-bench/CVC ranking surface, but player surfaces, legal
+    structural templates and numerical tensors are reused across routes instead
+    of invoking the complete scalar-style decision core once per squad/GW.
     """
     cfg = load_config()
     perf_cfg = dict(cfg.get("performance") or {})
-    min_routes = max(
+    batch_size = max(
         1,
-        int(perf_cfg.get("parallel_lineup_min_routes") or 64),
+        int(perf_cfg.get("cross_route_lineup_batch_size") or 96),
     )
-    max_workers = max(
-        1,
-        int(perf_cfg.get("parallel_lineup_max_workers") or 4),
-    )
-    requested_chunks_per_worker = max(
-        1,
-        int(perf_cfg.get("parallel_chunks_per_worker") or 8),
-    )
-
     route_squads = [
         (str(route.get("route_id") or ""), _route_squad(route))
         for route in routes
@@ -994,8 +988,6 @@ def _materialize_route_lineups(
     if any(not route_id for route_id, _ in route_squads):
         raise PackageUtilityError("P1.2B route lost route_id")
 
-    # Preserve every route while avoiding duplicate P1.7 work if two exact
-    # search routes happen to resolve to the same final 15-player squad.
     unique_by_squad: dict[tuple[int, ...], str] = {}
     for route_id, squad in route_squads:
         unique_by_squad.setdefault(tuple(squad), route_id)
@@ -1012,72 +1004,14 @@ def _materialize_route_lineups(
             }
         )
     )
-
-    cpu_count = max(1, int(os.cpu_count() or 1))
-    workers = min(max_workers, cpu_count, max(1, len(unique_items)))
-    use_parallel = bool(
-        sys.platform.startswith("linux")
-        and workers > 1
-        and len(unique_items) >= min_routes
+    min_routes = max(
+        1,
+        int(perf_cfg.get("parallel_lineup_min_routes") or 64),
     )
-
-    by_squad: dict[tuple[int, ...], dict[str, Any]] = {}
-    squad_elapsed: list[float] = []
-    gw_elapsed: list[float] = []
-    p17_totals = {
-        "p17_cache_hits": 0.0,
-        "p17_cache_misses": 0.0,
-        "p17_cache_writes": 0.0,
-        "p17_cache_corrupt_rejects": 0.0,
-        "legal_xi_template_hits": 0.0,
-        "legal_xi_template_misses": 0.0,
-        "p1_7_wall_seconds": 0.0,
-        "p1_7_cpu_seconds": 0.0,
-    }
-    materialization_started = time.perf_counter()
-    if use_parallel:
-        fork_context = mp.get_context("fork")
-        chunksize = max(
-            1,
-            len(unique_items)
-            // max(1, workers * requested_chunks_per_worker),
-        )
-        print(
-            "[P1_2B_PERF] exact P1.7 route materialization "
-            f"mode=process_pool routes={len(route_squads)} "
-            f"unique_squads={len(unique_items)} workers={workers} "
-            f"chunksize={chunksize}",
-            flush=True,
-        )
-        with ProcessPoolExecutor(
-            max_workers=workers,
-            mp_context=fork_context,
-            initializer=_init_p1_2b_lineup_worker,
-            initargs=(
-                projections,
-                planning_gw,
-                generated_at,
-                material_elements,
-            ),
-        ) as executor:
-            for _, squad, output, elapsed, route_gw_elapsed, route_stats in executor.map(
-                _p1_2b_route_lineups_worker_with_stats,
-                unique_items,
-                chunksize=chunksize,
-            ):
-                by_squad[tuple(squad)] = output
-                squad_elapsed.append(float(elapsed))
-                gw_elapsed.extend(float(value) for value in route_gw_elapsed)
-                for key in p17_totals:
-                    p17_totals[key] += float(route_stats.get(key, 0.0) or 0.0)
-        execution_mode = "PROCESS_POOL_EXACT_P1_7"
-    else:
-        print(
-            "[P1_2B_PERF] exact P1.7 route materialization "
-            f"mode=sequential routes={len(route_squads)} "
-            f"unique_squads={len(unique_items)} workers=1",
-            flush=True,
-        )
+    if len(unique_items) < min_routes:
+        by_squad: dict[tuple[int, ...], dict[str, Any]] = {}
+        squad_elapsed: list[float] = []
+        gw_elapsed: list[float] = []
         reset_p17_execution_observability()
         prime_player_surface_cache(
             projections,
@@ -1087,9 +1021,9 @@ def _materialize_route_lineups(
             ),
             material_elements=material_elements,
         )
+        materialization_started = time.perf_counter()
         for _, squad in unique_items:
             route_gw_elapsed: list[float] = []
-            before = p17_execution_observability()
             route_started = time.perf_counter()
             by_squad[tuple(squad)] = _cumulative_lineup_horizons(
                 projections,
@@ -1100,95 +1034,171 @@ def _materialize_route_lineups(
             )
             squad_elapsed.append(time.perf_counter() - route_started)
             gw_elapsed.extend(route_gw_elapsed)
-            after = p17_execution_observability()
-            for key in p17_totals:
-                p17_totals[key] += (
-                    float(after.get(key, 0.0) or 0.0)
-                    - float(before.get(key, 0.0) or 0.0)
-                )
-        execution_mode = "SEQUENTIAL_EXACT_P1_7"
+        materialization_elapsed = time.perf_counter() - materialization_started
+        lineups_by_route = {
+            route_id: by_squad[tuple(squad)]
+            for route_id, squad in route_squads
+        }
+        stats = p17_execution_observability()
+        proof = {
+            "execution_mode": "SEQUENTIAL_EXACT_P1_7",
+            "elapsed_seconds": round(materialization_elapsed, 6),
+            "unique_squad_elapsed_seconds": _perf_distribution(squad_elapsed),
+            "per_gw_elapsed_seconds": _perf_distribution(gw_elapsed),
+            "worker_utilization_estimate": 1.0,
+            "coordination_serialization_upper_bound_seconds": 0.0,
+            "route_count": len(route_squads),
+            "unique_squad_count": len(unique_items),
+            "worker_count": 1,
+            "parallel_min_routes": min_routes,
+            "parallel_chunks_per_worker": int(
+                perf_cfg.get("parallel_chunks_per_worker") or 8
+            ),
+            "p1_7_owner": "V12_LINEUP_OPTIMIZER",
+            "shared_player_surface_catalog": True,
+            "material_element_count": len(material_elements),
+            "p17_cache_hits": int(stats.get("p17_cache_hits", 0) or 0),
+            "p17_cache_misses": int(stats.get("p17_cache_misses", 0) or 0),
+            "p17_cache_writes": int(stats.get("p17_cache_writes", 0) or 0),
+            "p17_cache_corrupt_rejects": int(
+                stats.get("p17_cache_corrupt_rejects", 0) or 0
+            ),
+            "legal_xi_template_hits": int(
+                stats.get("legal_xi_template_hits", 0) or 0
+            ),
+            "legal_xi_template_misses": int(
+                stats.get("legal_xi_template_misses", 0) or 0
+            ),
+            "player_surface_build_count": len(material_elements) * 5,
+            "unique_player_surface_count": len(material_elements) * 5,
+            "p1_7_wall_seconds": round(
+                float(stats.get("p1_7_wall_seconds", 0) or 0),
+                6,
+            ),
+            "p1_7_cpu_seconds": round(
+                float(stats.get("p1_7_cpu_seconds", 0) or 0),
+                6,
+            ),
+            "exact_route_identity_preserved": True,
+            "lossy_pruning": False,
+            "p1_7_math_mutated": False,
+            "decision_authority_changed": False,
+        }
+        return lineups_by_route, proof
 
-    if len(by_squad) != len(unique_items):
-        raise PackageUtilityError(
-            "P1.2B exact P1.7 route materialization lost a squad"
+    hold_rows = [
+        tuple(squad)
+        for route_id, squad in route_squads
+        if route_id == "HOLD"
+    ]
+    if len(hold_rows) != 1:
+        raise PackageUtilityError("P1.2B requires exactly one HOLD squad")
+    hold_squad = hold_rows[0]
+    hold_set = set(hold_squad)
+
+    def family_key(
+        squad: tuple[int, ...],
+    ) -> tuple[Any, ...]:
+        squad_set = set(squad)
+        outgoing = tuple(sorted(hold_set - squad_set))
+        incoming = tuple(sorted(squad_set - hold_set))
+        if not outgoing and not incoming:
+            return ("HOLD", tuple(hold_squad))
+        core = tuple(sorted(hold_set - set(outgoing)))
+        return (
+            "CORE_REUSE",
+            outgoing,
+            core,
+            len(incoming),
         )
 
+    families: dict[tuple[Any, ...], list[tuple[str, tuple[int, ...]]]] = {}
+    for route_id, squad in unique_items:
+        families.setdefault(family_key(tuple(squad)), []).append(
+            (route_id, tuple(squad))
+        )
+    ordered_unique = [
+        item
+        for family_items in families.values()
+        for item in family_items
+    ]
+    ordered_squads = [squad for _, squad in ordered_unique]
+    materialization_started = time.perf_counter()
+    outputs, kernel_proof = optimize_lineup_horizons_exact_batch(
+        projections,
+        ordered_squads,
+        planning_gw=planning_gw,
+        generated_at=generated_at,
+        batch_size=batch_size,
+    )
+    materialization_elapsed = time.perf_counter() - materialization_started
+    if len(outputs) != len(ordered_unique):
+        raise PackageUtilityError(
+            "P1.2B cross-route exact P1.7 batch lost a squad"
+        )
+    by_squad = {
+        tuple(squad): output
+        for (_, squad), output in zip(ordered_unique, outputs)
+    }
+    if len(by_squad) != len(unique_items):
+        raise PackageUtilityError(
+            "P1.2B cross-route exact P1.7 batch lost unique squad identity"
+        )
     lineups_by_route = {
         route_id: by_squad[tuple(squad)]
         for route_id, squad in route_squads
     }
     if len(lineups_by_route) != len(route_squads):
         raise PackageUtilityError(
-            "P1.2B exact P1.7 route materialization lost route identity"
+            "P1.2B cross-route exact P1.7 batch lost route identity"
         )
 
-    materialization_elapsed = time.perf_counter() - materialization_started
-    effective_workers = workers if use_parallel else 1
-    utilization = (
-        sum(squad_elapsed)
-        / max(materialization_elapsed * effective_workers, 1e-12)
+    family_sizes = sorted(
+        (len(rows) for rows in families.values()),
+        reverse=True,
     )
-    coordination_upper_bound = max(
-        0.0,
-        materialization_elapsed
-        - (
-            sum(squad_elapsed)
-            / max(effective_workers, 1)
-        ),
+    one_transfer_families = sum(
+        1
+        for key in families
+        if key[0] == "CORE_REUSE"
+        and len(key[1]) == 1
+        and int(key[3]) == 1
     )
     print(
-        "[P1_2B_PERF] completed exact P1.7 route materialization "
+        "[P1_2B_PERF] completed cross-route exact P1.7 batch "
         f"elapsed_seconds={materialization_elapsed:.3f} "
-        f"squad_p50={(_perf_distribution(squad_elapsed).get('p50') or 0):.3f} "
-        f"squad_p95={(_perf_distribution(squad_elapsed).get('p95') or 0):.3f} "
-        f"worker_utilization={min(1.0, utilization):.3f} "
-        f"coordination_upper_bound_seconds={coordination_upper_bound:.3f}",
+        f"routes={len(route_squads)} "
+        f"unique_squads={len(unique_items)} "
+        f"families={len(families)} "
+        f"largest_family={(family_sizes[0] if family_sizes else 0)} "
+        f"batch_size={batch_size}",
         flush=True,
     )
-
     proof = {
-        "execution_mode": execution_mode,
+        "execution_mode": "CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7",
         "elapsed_seconds": round(materialization_elapsed, 6),
-        "unique_squad_elapsed_seconds": _perf_distribution(squad_elapsed),
-        "per_gw_elapsed_seconds": _perf_distribution(gw_elapsed),
-        "worker_utilization_estimate": round(min(1.0, utilization), 6),
-        "coordination_serialization_upper_bound_seconds": round(
-            coordination_upper_bound, 6
-        ),
         "route_count": len(route_squads),
         "unique_squad_count": len(unique_items),
-        "worker_count": workers if use_parallel else 1,
-        "parallel_min_routes": min_routes,
-        "parallel_chunks_per_worker": requested_chunks_per_worker,
+        "worker_count": 1,
+        "family_count": len(families),
+        "one_transfer_family_count": one_transfer_families,
+        "largest_family_size": family_sizes[0] if family_sizes else 0,
+        "cross_route_batch_size": batch_size,
         "p1_7_owner": "V12_LINEUP_OPTIMIZER",
         "shared_player_surface_catalog": True,
         "material_element_count": len(material_elements),
-        "p17_cache_hits": int(p17_totals["p17_cache_hits"]),
-        "p17_cache_misses": int(p17_totals["p17_cache_misses"]),
-        "p17_cache_writes": int(p17_totals["p17_cache_writes"]),
-        "p17_cache_corrupt_rejects": int(
-            p17_totals["p17_cache_corrupt_rejects"]
-        ),
-        "legal_xi_template_hits": int(
-            p17_totals["legal_xi_template_hits"]
-        ),
-        "legal_xi_template_misses": int(
-            p17_totals["legal_xi_template_misses"]
-        ),
-        "player_surface_build_count": (
-            len(material_elements) * 5 * effective_workers
-        ),
         "unique_player_surface_count": len(material_elements) * 5,
-        "p1_7_wall_seconds": round(
-            p17_totals["p1_7_wall_seconds"], 6
-        ),
-        "p1_7_cpu_seconds": round(
-            p17_totals["p1_7_cpu_seconds"], 6
-        ),
+        "legal_xi_templates_reused": True,
+        "all_550_legal_xi_ranked_per_squad": True,
+        "all_six_bench_permutations_ranked": True,
+        "captain_vice_exact": True,
+        "compact_non_ranking_detail_deferred": True,
+        "kernel_proof": deepcopy(kernel_proof),
         "exact_route_identity_preserved": True,
         "lossy_pruning": False,
         "p1_7_math_mutated": False,
         "decision_authority_changed": False,
+        "scalar_oracle_preserved": True,
     }
     return lineups_by_route, proof
 
@@ -1459,7 +1469,14 @@ def evaluate_packages(
             "mini_league_overlay_started": False,
             "p1_7_execution_parallelized_only": (
                 lineup_execution.get("execution_mode")
-                == "PROCESS_POOL_EXACT_P1_7"
+                in {
+                    "PROCESS_POOL_EXACT_P1_7",
+                    "CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7",
+                }
+            ),
+            "p1_7_execution_cross_route_batch": (
+                lineup_execution.get("execution_mode")
+                == "CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7"
             ),
             "p1_7_execution_proof": deepcopy(lineup_execution),
         },

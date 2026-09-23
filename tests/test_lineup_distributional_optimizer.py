@@ -4,6 +4,7 @@ from copy import deepcopy
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from src.engines.canonical_decision_methodology import CANONICAL_WEIGHTS
@@ -1473,3 +1474,1066 @@ def test_issue_comment_compute_cache_write_is_owner_gated():
     assert "github.event.comment.user.login == github.repository_owner" in workflow
     assert "ref: main" in workflow
     assert "cache-mode: write" in workflow
+
+
+def _cross_route_projection_fixture(candidate_per_position: int = 4):
+    projections = deepcopy(_squad())
+    for row in projections["players"]:
+        base = deepcopy(row["xpts_by_gw"][0])
+        row["xpts_by_gw"] = [
+            {**deepcopy(base), "gw": gw}
+            for gw in range(GW, GW + 5)
+        ]
+    candidates = []
+    next_element = 1001
+    for position_index, position in enumerate(("GK", "DEF", "MID", "FWD")):
+        for index in range(candidate_per_position):
+            row = _projection(
+                next_element,
+                position,
+                meanish=4.0 + position_index * 0.65 + (index % 17) * 0.11,
+                p_start=0.82 + (index % 4) * 0.03,
+                p_regular=0.06,
+                p_late=0.02,
+                p_dnp=max(0.01, 0.10 - (index % 4) * 0.03),
+                blank=0.07 + (index % 5) * 0.02,
+                upside=0.16 + (index % 4) * 0.03,
+                tactical=52.0 + (index % 9) * 3.0,
+            )
+            base = deepcopy(row["xpts_by_gw"][0])
+            row["xpts_by_gw"] = [
+                {**deepcopy(base), "gw": gw}
+                for gw in range(GW, GW + 5)
+            ]
+            candidates.append(row)
+            next_element += 1
+    projections["players"].extend(candidates)
+    return projections, candidates
+
+
+def _cross_route_2043_squads(projections, candidates):
+    owned = projections["players"][:15]
+    base_ids = tuple(sorted(int(row["element"]) for row in owned))
+    owned_by_id = {int(row["element"]): row for row in owned}
+    candidates_by_position = {
+        position: [
+            int(row["element"])
+            for row in candidates
+            if row["position"] == position
+        ]
+        for position in ("GK", "DEF", "MID", "FWD")
+    }
+    squads = [base_ids]
+    for outgoing in base_ids:
+        position = owned_by_id[outgoing]["position"]
+        for incoming in candidates_by_position[position]:
+            squads.append(
+                tuple(
+                    sorted(
+                        (set(base_ids) - {outgoing})
+                        | {incoming}
+                    )
+                )
+            )
+            if len(squads) == 2043:
+                break
+        if len(squads) == 2043:
+            break
+    assert len(squads) == 2043
+    assert len(set(squads)) == 2043
+    return squads
+
+
+def _cross_route_tie_rich_projection_fixture(
+    candidate_per_position: int = 140,
+):
+    projections, candidates = _cross_route_projection_fixture(
+        candidate_per_position
+    )
+    for row in projections["players"]:
+        xmins = row["xmins"]
+        xmins["start_probability"] = 1.0
+        xmins["cameo_probability"] = 0.0
+        xmins["late_cameo_probability"] = 0.0
+        xmins["dnp_probability"] = 0.0
+        xmins["availability"] = 1.0
+        xmins["expected_minutes"] = 90.0
+        xmins["xmins_distribution"] = {
+            "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+            "mean": 90.0,
+            "std": 0.0,
+            "states": [
+                {
+                    "state": "START",
+                    "probability": 1.0,
+                    "minutes_mean": 90,
+                    "minutes_std": 0,
+                },
+                {
+                    "state": "REGULAR_CAMEO",
+                    "probability": 0.0,
+                    "minutes_mean": 18,
+                    "minutes_std": 0,
+                },
+                {
+                    "state": "LATE_CAMEO",
+                    "probability": 0.0,
+                    "minutes_mean": 7,
+                    "minutes_std": 0,
+                },
+                {
+                    "state": "ZERO_MINUTES",
+                    "probability": 0.0,
+                    "minutes_mean": 0,
+                    "minutes_std": 0,
+                },
+            ],
+        }
+    return projections, candidates
+
+
+def test_p17_cross_route_batch_matches_scalar_one_transfer_families():
+    from src.engines import v12_lineup_batch as batch
+    from src.engines import v12_package_utility as package
+
+    projections, candidates = _cross_route_projection_fixture(5)
+    base_ids = tuple(
+        sorted(row["element"] for row in projections["players"][:15])
+    )
+    base_by_id = {
+        int(row["element"]): row
+        for row in projections["players"][:15]
+    }
+    candidate_by_position = {
+        position: [
+            row for row in candidates
+            if row["position"] == position
+        ]
+        for position in ("GK", "DEF", "MID", "FWD")
+    }
+    squads = [base_ids]
+    for outgoing in (base_ids[0], base_ids[2], base_ids[7], base_ids[12]):
+        position = base_by_id[outgoing]["position"]
+        for incoming in candidate_by_position[position][:2]:
+            squads.append(
+                tuple(
+                    sorted(
+                        (set(base_ids) - {outgoing})
+                        | {int(incoming["element"])}
+                    )
+                )
+            )
+
+    actual, proof = batch.optimize_lineup_horizons_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+        batch_size=8,
+    )
+    assert proof["execution_kernel"] == "CROSS_ROUTE_NUMPY_EXACT_P1_7"
+    assert proof["route_pruning"] is False
+    assert proof["approximation"] is False
+    assert proof["legal_xi_per_squad"] == 550
+    assert proof["bench_permutations"] == 6
+
+    exact_keys = (
+        "status",
+        "gw",
+        "route_utility",
+        "expected_fpl_points",
+        "distributional_downside",
+        "supportable_upside",
+        "expected_autosub_value",
+        "cameo_blocking_cost",
+        "formation",
+        "starting_xi",
+        "bench_gk",
+        "bench_order",
+        "captain",
+        "vice_captain",
+        "captain_safe_pool_count",
+        "confidence",
+        "covariance_status",
+    )
+    scalar_rows = []
+    batch_rows = []
+    for squad, horizons in zip(squads, actual):
+        for offset in range(5):
+            expected = package._lineup_decision(
+                projections,
+                squad,
+                gw=GW + offset,
+                generated_at=GENERATED,
+            )
+            observed = horizons["per_gw"][offset]
+            assert {
+                key: observed.get(key)
+                for key in exact_keys
+            } == {
+                key: expected.get(key)
+                for key in exact_keys
+            }
+        scalar_rows.append(
+            tuple(
+                package._lineup_decision(
+                    projections,
+                    squad,
+                    gw=GW,
+                    generated_at=GENERATED,
+                ).get(key)
+                for key in (
+                    "route_utility",
+                    "expected_fpl_points",
+                    "distributional_downside",
+                    "supportable_upside",
+                )
+            )
+        )
+        first = horizons["per_gw"][0]
+        batch_rows.append(
+            tuple(
+                first.get(key)
+                for key in (
+                    "route_utility",
+                    "expected_fpl_points",
+                    "distributional_downside",
+                    "supportable_upside",
+                )
+            )
+        )
+    assert sorted(
+        range(len(squads)),
+        key=lambda index: scalar_rows[index],
+        reverse=True,
+    ) == sorted(
+        range(len(squads)),
+        key=lambda index: batch_rows[index],
+        reverse=True,
+    )
+
+
+
+def test_p17_core14_family_kernel_matches_scalar_across_positions_and_five_gw():
+    from src.engines import v12_lineup_batch as batch
+    from src.engines import v12_package_utility as package
+
+    projections, candidates = _cross_route_projection_fixture(20)
+    owned = projections["players"][:15]
+    base_ids = tuple(sorted(int(row["element"]) for row in owned))
+    owned_by_id = {int(row["element"]): row for row in owned}
+    candidate_by_position = {
+        position: [
+            row for row in candidates
+            if row["position"] == position
+        ]
+        for position in ("GK", "DEF", "MID", "FWD")
+    }
+
+    outgoing_by_position = {}
+    for element in base_ids:
+        position = owned_by_id[element]["position"]
+        outgoing_by_position.setdefault(position, element)
+    assert set(outgoing_by_position) == {"GK", "DEF", "MID", "FWD"}
+
+    squads = [base_ids]
+    family_ranges = {}
+    for position in ("GK", "DEF", "MID", "FWD"):
+        start = len(squads)
+        outgoing = outgoing_by_position[position]
+        for incoming in candidate_by_position[position][:16]:
+            squads.append(
+                tuple(
+                    sorted(
+                        (set(base_ids) - {outgoing})
+                        | {int(incoming["element"])}
+                    )
+                )
+            )
+        family_ranges[position] = (start, len(squads) - 1)
+
+    assert len(squads) == 65
+    actual, proof = batch.optimize_lineup_horizons_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+        batch_size=512,
+    )
+    assert proof["execution_kernel"] == "ROUTE_FAMILY_CORE14_AFFINE_EXACT_P1_7"
+    assert proof["route_family_count"] == 4
+    assert proof["route_family_core_reuse"] is True
+    assert proof["candidate_affine_resolver_exact"] is True
+    assert proof["route_pruning"] is False
+    assert proof["approximation"] is False
+
+    exact_keys = (
+        "status",
+        "gw",
+        "route_utility",
+        "expected_fpl_points",
+        "distributional_downside",
+        "supportable_upside",
+        "expected_autosub_value",
+        "cameo_blocking_cost",
+        "formation",
+        "starting_xi",
+        "bench_gk",
+        "bench_order",
+        "captain",
+        "vice_captain",
+        "captain_safe_pool_count",
+        "confidence",
+        "covariance_status",
+    )
+    representative_indices = [0]
+    for start, end in family_ranges.values():
+        representative_indices.extend((start, end))
+
+    for index in representative_indices:
+        squad = squads[index]
+        horizons = actual[index]["per_gw"]
+        for offset in range(5):
+            expected = package._lineup_decision(
+                projections,
+                squad,
+                gw=GW + offset,
+                generated_at=GENERATED,
+            )
+            observed = horizons[offset]
+            assert {
+                key: observed.get(key)
+                for key in exact_keys
+            } == {
+                key: expected.get(key)
+                for key in exact_keys
+            }
+
+def test_p17_cross_route_batch_2043_routes_five_gw_under_ten_seconds():
+    import time
+
+    from src.engines import v12_lineup_batch as batch
+
+    projections, candidates = _cross_route_projection_fixture(140)
+    squads = _cross_route_2043_squads(
+        projections,
+        candidates,
+    )
+
+    started = time.perf_counter()
+    outputs, proof = batch.optimize_lineup_horizons_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+        batch_size=512,
+    )
+    elapsed = time.perf_counter() - started
+    assert len(outputs) == 2043
+    assert all(len(row["per_gw"]) == 5 for row in outputs)
+    assert all(
+        gw_row["status"] == "READY"
+        for row in outputs
+        for gw_row in row["per_gw"]
+    )
+    assert proof["squad_count"] == 2043
+    assert proof["legal_xi_per_squad"] == 550
+    assert proof["execution_kernel"] == "ROUTE_FAMILY_CORE14_AFFINE_EXACT_P1_7"
+    assert proof["route_family_count"] >= 1
+    assert proof["route_family_core_reuse"] is True
+    assert proof["candidate_affine_resolver_exact"] is True
+    assert proof["route_pruning"] is False
+    assert all(
+        gw_row["cameo_blocking_cost"] is not None
+        and gw_row["captain_safe_pool_count"] >= 2
+        for row in outputs
+        for gw_row in row["per_gw"]
+    )
+    assert elapsed <= 10.0
+
+
+def test_p17_cross_route_batch_2043_routes_five_gw_tie_rich_under_ten_seconds():
+    import time
+
+    from src.engines import v12_lineup_batch as batch
+
+    projections, candidates = (
+        _cross_route_tie_rich_projection_fixture(140)
+    )
+    squads = _cross_route_2043_squads(
+        projections,
+        candidates,
+    )
+
+    started = time.perf_counter()
+    outputs, proof = batch.optimize_lineup_horizons_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+        batch_size=512,
+    )
+    elapsed = time.perf_counter() - started
+
+    assert len(outputs) == 2043
+    assert all(
+        gw_row["status"] == "READY"
+        for row in outputs
+        for gw_row in row["per_gw"]
+    )
+    assert proof["execution_kernel"] == (
+        "ROUTE_FAMILY_CORE14_AFFINE_EXACT_P1_7"
+    )
+    assert proof["bench_rows_evaluated"] > 0
+    assert proof["bench_primary_tie_count"] > 0
+    assert proof["bench_primary_tie_rate"] >= 0.99
+    assert proof["bench_scalar_fallback_count"] == 0
+    assert proof["bench_scalar_fallback_rate"] == 0.0
+    assert elapsed <= 10.0
+
+
+def test_p17_lazy_lexicographic_preserves_first_tie_and_skips_later_keys():
+    from src.engines import v12_lineup_batch as batch
+
+    calls = {"later": 0}
+    first = np.asarray(
+        [
+            [[3.0, 2.0, 1.0], [4.0, 3.0, 2.0]],
+            [[1.0, 0.0, -1.0], [9.0, 8.0, 7.0]],
+        ],
+        dtype=np.float64,
+    )
+
+    def later():
+        calls["later"] += 1
+        raise AssertionError("unique first key must skip later keys")
+
+    winner = batch._lexicographic_first((first, later), axis=2)
+    assert winner.tolist() == [[0, 0], [0, 0]]
+    assert calls["later"] == 0
+
+
+def test_p17_lazy_lexicographic_resolves_adversarial_ties_in_first_order():
+    from src.engines import v12_lineup_batch as batch
+
+    first = np.asarray([[[1.0, 1.0, 0.0], [2.0, 2.0, 2.0]]])
+    second = np.asarray([[[5.0, 6.0, 99.0], [7.0, 7.0, 6.0]]])
+    third = np.asarray([[[0.0, 0.0, 0.0], [1.0, 2.0, 99.0]]])
+    winner = batch._lexicographic_first(
+        (first, lambda: second, lambda: third),
+        axis=2,
+    )
+    assert winner.tolist() == [[1, 1]]
+
+
+def test_p17_lazy_lexicographic_rejects_non_finite_ranking_keys():
+    from src.engines import v12_lineup_batch as batch
+
+    with pytest.raises(batch.LineupBatchError, match="must be finite"):
+        batch._lexicographic_first(
+            (np.asarray([[[1.0, np.nan]]], dtype=np.float64),),
+            axis=2,
+        )
+
+
+def test_p17_rounding_boundary_is_non_vacuous_and_matches_scalar_bench():
+    from src.engines import v12_lineup_batch as batch
+
+    position_signature = (
+        "GK",
+        "GK",
+        "DEF",
+        "DEF",
+        "DEF",
+        "DEF",
+        "DEF",
+        "MID",
+        "MID",
+        "MID",
+        "MID",
+        "MID",
+        "FWD",
+        "FWD",
+        "FWD",
+    )
+    layout = batch._family_layout(position_signature)
+
+    # Build the adversarial condition at the ranking-key level.  One MID
+    # starter is guaranteed DNP, while the target MID bench player is certain
+    # to appear.  Its blank mass is exactly near a 9-decimal half boundary;
+    # expected points are chosen so the resulting bench utility is near a
+    # 6-decimal half boundary.
+    boundary_blank = 0.1234567895
+    boundary_utility = 0.9999995
+    boundary_expected = (
+        boundary_utility + 0.20 * boundary_blank
+    )
+
+    def near_half(value: float, decimals: int) -> bool:
+        scaled = float(value) * (10.0 ** decimals)
+        fraction = scaled - np.floor(scaled)
+        tolerance = 64.0 * abs(float(np.spacing(scaled)))
+        return abs(fraction - 0.5) <= tolerance
+
+    raw_ranking_keys = (
+        (boundary_expected - 0.20 * boundary_blank, 6),
+        (boundary_blank, 9),
+    )
+    boundary_hits = sum(
+        1
+        for value, decimals in raw_ranking_keys
+        if near_half(value, decimals)
+    )
+    assert boundary_hits > 0
+    assert boundary_hits == len(raw_ranking_keys)
+
+    surfaces = []
+    for slot, position in enumerate(position_signature):
+        mean = boundary_expected if slot == 7 else 0.25
+        p_dnp = 1.0 if slot == 8 else 0.0
+        surfaces.append(
+            _direct_surface(
+                slot + 1,
+                position,
+                mean=mean,
+                p_dnp=p_dnp,
+                cond_blank=boundary_blank if slot == 7 else 0.0,
+                cond_ge8=0.0,
+                cond_ge10=0.0,
+            )
+        )
+
+    arrays = {
+        "elements": np.asarray(
+            [[row["element"] for row in surfaces]],
+            dtype=np.int64,
+        ),
+        "position_codes": np.asarray(
+            [[batch.POS_CODE[row["position"]] for row in surfaces]],
+            dtype=np.int8,
+        ),
+        "p_dnp": np.asarray(
+            [[row["p_dnp"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "p_cameo": np.asarray(
+            [[row["p_cameo"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "p_appearance": np.asarray(
+            [[row["p_appearance"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "xpts_mean": np.asarray(
+            [[row["xpts_mean"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "shortfall": np.asarray(
+            [[row["expected_shortfall"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "excess": np.asarray(
+            [[row["expected_excess_ge_8"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "conditioned_mean": np.asarray(
+            [[
+                row["appearance_conditioned"]["expected_points"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
+        "conditioned_blank": np.asarray(
+            [[
+                row["appearance_conditioned"]["p_fpl_blank"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
+        "conditioned_ge8": np.asarray(
+            [[
+                row["appearance_conditioned"]["p_points_ge_8"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
+        "conditioned_ge10": np.asarray(
+            [[
+                row["appearance_conditioned"]["p_points_ge_10"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
+    }
+
+    legal_index = next(
+        index
+        for index, row in enumerate(layout["legal"])
+        if 8 in row and 7 not in row
+    )
+    legal_row = set(int(slot) for slot in layout["legal"][legal_index])
+    bench_slots = [slot for slot in range(15) if slot not in legal_row]
+    reserve_slot = next(
+        slot for slot in bench_slots if position_signature[slot] == "GK"
+    )
+    outfield_slots = [
+        slot for slot in bench_slots if position_signature[slot] != "GK"
+    ]
+    assert 7 in outfield_slots
+
+    starters = [surfaces[slot] for slot in sorted(legal_row)]
+    reserve_gk = surfaces[reserve_slot]
+    outfield_bench = [surfaces[slot] for slot in outfield_slots]
+
+    scalar_winner, _ = optimize_bench_order(
+        starters,
+        reserve_gk,
+        outfield_bench,
+        include_winner_blocking_counterfactual=False,
+        publish_alternatives=False,
+        include_winner_slots=False,
+    )
+    batch_result = batch._family_bench_kernel(
+        layout=layout,
+        arrays=arrays,
+    )
+
+    observed_order = batch_result["order_elements"][
+        0,
+        legal_index,
+    ].tolist()
+    assert observed_order == scalar_winner["order"]
+    assert (
+        batch_result["bench_order_utility"][0, legal_index]
+        == scalar_winner["bench_order_utility"]
+    )
+    assert (
+        batch_result["selected_blank"][0, legal_index]
+        == scalar_winner[
+            "expected_selected_blank_probability_mass"
+        ]
+    )
+
+
+def test_p17_bench_scalar_fallback_budget_fails_explicitly():
+    from src.engines import v12_lineup_batch as batch
+
+    signature = (
+        "GK", "GK",
+        "DEF", "DEF", "DEF", "DEF", "DEF",
+        "MID", "MID", "MID", "MID", "MID",
+        "FWD", "FWD", "FWD",
+    )
+    layout = batch._family_layout(signature)
+    boundary_blank = 0.1234567895
+    boundary_utility = 0.9999995
+    boundary_expected = (
+        boundary_utility + 0.20 * boundary_blank
+    )
+    surfaces = [
+        _direct_surface(
+            slot + 1,
+            position,
+            mean=(
+                boundary_expected
+                if slot == 7
+                else 0.25
+            ),
+            p_dnp=(1.0 if slot == 8 else 0.0),
+            cond_blank=(
+                boundary_blank
+                if slot == 7
+                else 0.0
+            ),
+            cond_ge8=0.0,
+            cond_ge10=0.0,
+        )
+        for slot, position in enumerate(signature)
+    ]
+    arrays = {
+        "elements": np.asarray(
+            [[row["element"] for row in surfaces]],
+            dtype=np.int64,
+        ),
+        "position_codes": np.asarray(
+            [[batch.POS_CODE[row["position"]] for row in surfaces]],
+            dtype=np.int8,
+        ),
+        "p_dnp": np.asarray(
+            [[row["p_dnp"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "p_cameo": np.asarray(
+            [[row["p_cameo"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "p_appearance": np.asarray(
+            [[row["p_appearance"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "xpts_mean": np.asarray(
+            [[row["xpts_mean"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "shortfall": np.asarray(
+            [[row["expected_shortfall"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "excess": np.asarray(
+            [[row["expected_excess_ge_8"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "conditioned_mean": np.asarray(
+            [[
+                row["appearance_conditioned"]["expected_points"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
+        "conditioned_blank": np.asarray(
+            [[
+                row["appearance_conditioned"]["p_fpl_blank"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
+        "conditioned_ge8": np.asarray(
+            [[
+                row["appearance_conditioned"]["p_points_ge_8"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
+        "conditioned_ge10": np.asarray(
+            [[
+                row["appearance_conditioned"]["p_points_ge_10"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
+    }
+    with pytest.raises(
+        batch.LineupBatchError,
+        match="scalar fallback budget exceeded",
+    ):
+        batch._family_bench_kernel(
+            layout=layout,
+            arrays=arrays,
+            scalar_fallback_limit=0,
+        )
+
+
+def test_p17_family_bench_tie_rank_memoizes_across_gw(monkeypatch):
+    from src.engines import v12_lineup_batch as batch
+
+    batch._family_bench_permutation_tie_rank_cached.cache_clear()
+    signature = (
+        "GK",
+        "GK",
+        "DEF",
+        "DEF",
+        "DEF",
+        "DEF",
+        "DEF",
+        "MID",
+        "MID",
+        "MID",
+        "MID",
+        "MID",
+        "FWD",
+        "FWD",
+        "FWD",
+    )
+    elements = np.arange(1, 16, dtype=np.int64)[None, :]
+    calls = {"count": 0}
+    original = batch._bench_permutation_tie_rank
+
+    def counted(element_rows, permutations):
+        calls["count"] += 1
+        return original(element_rows, permutations)
+
+    monkeypatch.setattr(
+        batch,
+        "_bench_permutation_tie_rank",
+        counted,
+    )
+    key = elements.tobytes()
+    first = batch._family_bench_permutation_tie_rank_cached(
+        key,
+        1,
+        signature,
+    )
+    second = batch._family_bench_permutation_tie_rank_cached(
+        key,
+        1,
+        signature,
+    )
+    assert calls["count"] == 1
+    assert np.array_equal(first, second)
+
+
+def test_p17_captain_rounding_boundary_uses_scalar_oracle():
+    from src.engines import v12_lineup_batch as batch
+
+    signature = (
+        "GK", "GK",
+        "DEF", "DEF", "DEF", "DEF", "DEF",
+        "MID", "MID", "MID", "MID", "MID",
+        "FWD", "FWD", "FWD",
+    )
+    layout = batch._family_layout(signature)
+    elements = np.arange(1, 16, dtype=np.int64)[None, :]
+
+    # Pinned NumPy/Python semantics disagree at this six-decimal half
+    # boundary.  The prerequisite makes the test fail loudly if that ceases
+    # to be true rather than silently becoming non-adversarial.
+    boundary = 0.0041205
+    competitor = 0.0041206
+    assert batch._near_decimal_half(
+        np.asarray([boundary]),
+        6,
+    )[0]
+    assert round(boundary, 6) != float(np.round(boundary, 6))
+
+    xpts = np.full((1, 15), 0.001, dtype=np.float64)
+    xpts[0, 7] = boundary
+    xpts[0, 8] = competitor
+    zeros = np.zeros_like(xpts)
+    captain = batch._family_captain_kernel(
+        layout=layout,
+        elements=elements,
+        xpts_mean=xpts,
+        shortfall=zeros,
+        excess=zeros,
+        p_dnp=zeros,
+    )
+    xi_index = next(
+        index
+        for index, row in enumerate(layout["legal"])
+        if 7 in row and 8 in row
+    )
+    surfaces = [
+        _direct_surface(
+            slot + 1,
+            signature[slot],
+            mean=float(xpts[0, slot]),
+            p_dnp=0.0,
+            cond_blank=0.0,
+            cond_ge8=0.0,
+            cond_ge10=0.0,
+        )
+        for slot in range(15)
+    ]
+    scalar_pair = _best_captain_vice_pair(
+        [surfaces[int(slot)] for slot in layout["legal"][xi_index]]
+    )
+    observed_captain = int(
+        elements[
+            0,
+            int(captain["captain_index"][0, xi_index]),
+        ]
+    )
+    observed_vice = int(
+        elements[
+            0,
+            int(captain["vice_index"][0, xi_index]),
+        ]
+    )
+    assert observed_captain == scalar_pair["captain_element"]
+    assert observed_vice == scalar_pair["vice_element"]
+    assert (
+        captain["pair_utility"][0, xi_index]
+        == scalar_pair["pair_utility"]
+    )
+    assert captain["scalar_boundary_fallback_count"] == 0
+    assert captain["scalar_pair_fallback_count"] == 0
+    assert captain["scalar_direct_cap_mean_round_count"] > 0
+    assert captain["scalar_pair_round_count"] > 0
+    assert captain["scalar_zero_dnp_captain_count"] == 0
+
+
+def test_p17_captain_pair_arithmetic_boundary_uses_pair_local_scalar_oracle():
+    from src.engines import v12_lineup_batch as batch
+
+    signature = (
+        "GK", "GK",
+        "DEF", "DEF", "DEF", "DEF", "DEF",
+        "MID", "MID", "MID", "MID", "MID",
+        "FWD", "FWD", "FWD",
+    )
+    layout = batch._family_layout(signature)
+    elements = np.arange(1, 16, dtype=np.int64)[None, :]
+    xpts = np.full((1, 15), 0.002, dtype=np.float64)
+    p_dnp = np.zeros_like(xpts)
+    captain_slot = 7
+    vice_slot = 8
+    p_dnp[0, captain_slot] = 0.5
+    xpts[0, captain_slot] = 0.006
+    xpts[0, vice_slot] = 0.008241
+    zeros = np.zeros_like(xpts)
+    vice_boundary = (
+        p_dnp[0, captain_slot]
+        * xpts[0, vice_slot]
+    )
+    assert batch._near_decimal_half(
+        np.asarray([vice_boundary]),
+        6,
+    )[0]
+
+    captain = batch._family_captain_kernel(
+        layout=layout,
+        elements=elements,
+        xpts_mean=xpts,
+        shortfall=zeros,
+        excess=zeros,
+        p_dnp=p_dnp,
+    )
+    xi_index = next(
+        index
+        for index, row in enumerate(layout["legal"])
+        if captain_slot in row and vice_slot in row
+    )
+    surfaces = [
+        _direct_surface(
+            slot + 1,
+            signature[slot],
+            mean=float(xpts[0, slot]),
+            p_dnp=float(p_dnp[0, slot]),
+            cond_blank=0.0,
+            cond_ge8=0.0,
+            cond_ge10=0.0,
+        )
+        for slot in range(15)
+    ]
+    scalar_pair = _best_captain_vice_pair(
+        [surfaces[int(slot)] for slot in layout["legal"][xi_index]]
+    )
+    observed_captain = int(
+        elements[
+            0,
+            int(captain["captain_index"][0, xi_index]),
+        ]
+    )
+    observed_vice = int(
+        elements[
+            0,
+            int(captain["vice_index"][0, xi_index]),
+        ]
+    )
+    assert observed_captain == scalar_pair["captain_element"]
+    assert observed_vice == scalar_pair["vice_element"]
+    assert (
+        captain["pair_utility"][0, xi_index]
+        == scalar_pair["pair_utility"]
+    )
+    assert captain["scalar_boundary_fallback_count"] == 0
+    assert captain["scalar_pair_fallback_count"] == 0
+    assert captain["scalar_pair_round_count"] > 0
+    assert (
+        captain["scalar_pair_round_count"]
+        < batch.PAIR_CAP.size
+    )
+    assert (
+        captain["max_scalar_pair_rounds_per_route"]
+        == captain["scalar_pair_round_count"]
+    )
+
+
+def test_p17_family_route_first_match_tie_matches_scalar_oracle():
+    from src.engines import v12_lineup_batch as batch
+    from src.engines import v12_package_utility as package
+
+    projections, candidates = _cross_route_projection_fixture(20)
+    tie_template = _projection(
+        999999,
+        "MID",
+        meanish=5.0,
+        p_start=1.0,
+        p_regular=0.0,
+        p_late=0.0,
+        p_dnp=0.0,
+        blank=0.10,
+        upside=0.20,
+        tactical=60.0,
+    )
+    template_xmins = deepcopy(tie_template["xmins"])
+    template_tactical = deepcopy(
+        tie_template["tactical_role_component"]
+    )
+    template_gw = deepcopy(tie_template["xpts_by_gw"][0])
+    for row in projections["players"]:
+        row["xmins"] = deepcopy(template_xmins)
+        row["tactical_role_component"] = deepcopy(template_tactical)
+        row["xpts_by_gw"] = [
+            {**deepcopy(template_gw), "gw": gw}
+            for gw in range(GW, GW + 5)
+        ]
+
+    owned = projections["players"][:15]
+    base_ids = tuple(sorted(int(row["element"]) for row in owned))
+    owned_by_id = {int(row["element"]): row for row in owned}
+    candidate_by_position = {
+        position: [
+            int(row["element"])
+            for row in candidates
+            if row["position"] == position
+        ]
+        for position in ("GK", "DEF", "MID", "FWD")
+    }
+    outgoing_by_position = {}
+    for element in base_ids:
+        position = owned_by_id[element]["position"]
+        outgoing_by_position.setdefault(position, element)
+
+    squads = [base_ids]
+    representative_indices = [0]
+    for position in ("GK", "DEF", "MID", "FWD"):
+        start = len(squads)
+        outgoing = outgoing_by_position[position]
+        for incoming in candidate_by_position[position][:16]:
+            squads.append(
+                tuple(
+                    sorted(
+                        (set(base_ids) - {outgoing})
+                        | {incoming}
+                    )
+                )
+            )
+        representative_indices.append(start)
+    assert len(squads) == 65
+
+    actual, proof = batch.optimize_lineup_horizons_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+        batch_size=512,
+    )
+    assert (
+        proof["execution_kernel"]
+        == "ROUTE_FAMILY_CORE14_AFFINE_EXACT_P1_7"
+    )
+
+    keys = (
+        "route_utility",
+        "expected_fpl_points",
+        "distributional_downside",
+        "supportable_upside",
+        "formation",
+        "starting_xi",
+        "bench_gk",
+        "bench_order",
+        "captain",
+        "vice_captain",
+    )
+    for index in representative_indices:
+        expected = package._lineup_decision(
+            projections,
+            squads[index],
+            gw=GW,
+            generated_at=GENERATED,
+        )
+        observed = actual[index]["per_gw"][0]
+        assert tuple(observed.get(key) for key in keys) == tuple(
+            expected.get(key) for key in keys
+        )

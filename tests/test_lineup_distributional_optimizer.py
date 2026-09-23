@@ -2539,7 +2539,7 @@ def test_p17_family_route_first_match_tie_matches_scalar_oracle():
         )
 
 
-def test_p17_secondary_boundary_tie_falls_back_and_matches_scalar(monkeypatch):
+def test_p17_secondary_boundary_tie_falls_back_and_matches_scalar():
     from src.engines import v12_lineup_batch as batch
 
     signature = (
@@ -2549,15 +2549,31 @@ def test_p17_secondary_boundary_tie_falls_back_and_matches_scalar(monkeypatch):
         "FWD", "FWD", "FWD",
     )
     layout = batch._family_layout(signature)
+
+    # Every possible outfield substitute has the same appearance-conditioned
+    # metrics. One MID starter is certain DNP, so all six bench permutations
+    # tie on the primary utility key. The common expected-autosub value is an
+    # exact six-decimal half boundary, while the primary utility is deliberately
+    # moved away from a half boundary by the blank-probability term.
+    boundary_expected = 1.2345675
+    blank = 0.123456
+    primary_utility = boundary_expected - 0.20 * blank
+    assert batch._near_decimal_half(
+        np.asarray([boundary_expected]), 6
+    )[0]
+    assert not batch._near_decimal_half(
+        np.asarray([primary_utility]), 6
+    )[0]
+
     surfaces = [
         _direct_surface(
             slot + 1,
             position,
-            mean=1.0,
-            p_dnp=0.10,
-            cond_blank=0.20,
-            cond_ge8=0.10,
-            cond_ge10=0.05,
+            mean=boundary_expected,
+            p_dnp=(1.0 if slot == 8 else 0.0),
+            cond_blank=blank,
+            cond_ge8=0.0,
+            cond_ge10=0.0,
         )
         for slot, position in enumerate(signature)
     ]
@@ -2584,37 +2600,25 @@ def test_p17_secondary_boundary_tie_falls_back_and_matches_scalar(monkeypatch):
         ]], dtype=np.float64),
     }
 
-    real_near_half = batch._near_decimal_half
-    calls = {"count": 0}
-
-    def force_secondary_only(values, decimals):
-        calls["count"] += 1
-        if calls["count"] == 2:
-            # First call is the primary utility key. The second call is the
-            # expected-points secondary key for contenders still tied on the
-            # primary key. Force only that secondary detector to the boundary.
-            return np.ones_like(np.asarray(values), dtype=bool)
-        return np.zeros_like(np.asarray(values), dtype=bool)
-
-    monkeypatch.setattr(batch, "_near_decimal_half", force_secondary_only)
     result = batch._family_bench_kernel(
         layout=layout,
         arrays=arrays,
         scalar_fallback_limit=None,
     )
-    monkeypatch.setattr(batch, "_near_decimal_half", real_near_half)
 
     assert result["bench_primary_tie_count"] > 0
-    assert result["bench_primary_boundary_count"] == 0
     assert result["bench_secondary_boundary_count"] > 0
     assert result["bench_scalar_fallback_count"] >= result[
         "bench_secondary_boundary_count"
     ]
 
-    # The boundary-triggered vector result must be exactly the scalar oracle
-    # for representative legal-XI rows.
-    for legal_index in (0, 1, 17, 101, 549):
-        legal_row = set(int(slot) for slot in layout["legal"][legal_index])
+    # Compare rows where the certain-DNP MID is actually a starter. Those are
+    # the rows whose tied contenders exercise the secondary expected key.
+    checked = 0
+    for legal_index, legal in enumerate(layout["legal"]):
+        legal_row = set(int(slot) for slot in legal)
+        if 8 not in legal_row:
+            continue
         bench_slots = [slot for slot in range(15) if slot not in legal_row]
         reserve_slot = next(
             slot for slot in bench_slots if signature[slot] == "GK"
@@ -2632,7 +2636,10 @@ def test_p17_secondary_boundary_tie_falls_back_and_matches_scalar(monkeypatch):
         )
         assert result["order_elements"][0, legal_index].tolist() == scalar_winner["order"]
         assert result["bench_order_utility"][0, legal_index] == scalar_winner["bench_order_utility"]
-
+        checked += 1
+        if checked == 5:
+            break
+    assert checked == 5
 
 def test_p17_fallback_budget_degrades_family_gw_to_scalar(monkeypatch):
     from src.engines import v12_lineup_batch as batch

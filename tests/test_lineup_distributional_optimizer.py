@@ -2051,3 +2051,185 @@ def test_p17_family_bench_tie_rank_memoizes_across_gw(monkeypatch):
     )
     assert calls["count"] == 1
     assert np.array_equal(first, second)
+
+
+def test_p17_rounding_boundary_batch_matches_scalar_full_path():
+    from src.engines import v12_lineup_batch as batch
+    from src.engines import v12_package_utility as package
+
+    projections, candidates = _cross_route_projection_fixture(20)
+    # Perturb the fixture around decimal half boundaries.  The assertion is
+    # intentionally end-to-end: any ULP drift before rounding must still
+    # preserve scalar ranking/output, not merely Python-vs-NumPy round().
+    for index, row in enumerate(projections["players"]):
+        base = deepcopy(row["xpts_by_gw"][0])
+        epsilon = (-1.0, 0.0, 1.0)[index % 3] * 1e-12
+        target = 4.1234565 + epsilon
+        base["xpts_mean"] = target
+        conditional = dict(base.get("appearance_conditioned") or {})
+        conditional["expected_points"] = target
+        base["appearance_conditioned"] = conditional
+        row["xpts_by_gw"] = [
+            {**deepcopy(base), "gw": gw}
+            for gw in range(GW, GW + 5)
+        ]
+
+    base_ids = tuple(
+        sorted(row["element"] for row in projections["players"][:15])
+    )
+    owned_by_id = {
+        int(row["element"]): row for row in projections["players"][:15]
+    }
+    candidate_by_position = {
+        position: [
+            row for row in candidates if row["position"] == position
+        ]
+        for position in ("GK", "DEF", "MID", "FWD")
+    }
+    squads = [base_ids]
+    for outgoing in base_ids:
+        position = owned_by_id[outgoing]["position"]
+        for incoming in candidate_by_position[position][:5]:
+            squads.append(
+                tuple(
+                    sorted(
+                        (set(base_ids) - {outgoing})
+                        | {int(incoming["element"])}
+                    )
+                )
+            )
+    actual, _ = batch.optimize_lineup_horizons_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+        batch_size=512,
+    )
+    keys = (
+        "route_utility",
+        "expected_fpl_points",
+        "distributional_downside",
+        "supportable_upside",
+        "formation",
+        "starting_xi",
+        "bench_order",
+        "captain",
+        "vice_captain",
+    )
+    for squad, horizons in zip(squads, actual):
+        for offset in range(5):
+            scalar_row = package._lineup_decision(
+                projections,
+                squad,
+                gw=GW + offset,
+                generated_at=GENERATED,
+            )
+            batch_row = horizons["per_gw"][offset]
+            assert tuple(batch_row.get(key) for key in keys) == tuple(
+                scalar_row.get(key) for key in keys
+            )
+
+
+def test_p17_core14_family_adversarial_full_tie_matches_scalar():
+    from src.engines import v12_lineup_batch as batch
+    from src.engines import v12_package_utility as package
+
+    projections, candidates = _cross_route_projection_fixture(20)
+    common = deepcopy(projections["players"][0])
+    common_xmins = deepcopy(common["xmins"])
+    common_tactical = deepcopy(common["tactical_role_component"])
+    common_xpts = deepcopy(common["xpts_by_gw"][0])
+
+    for row in projections["players"]:
+        row["xmins"] = deepcopy(common_xmins)
+        row["tactical_role_component"] = deepcopy(common_tactical)
+        row["xpts_by_gw"] = [
+            {**deepcopy(common_xpts), "gw": gw}
+            for gw in range(GW, GW + 5)
+        ]
+
+    owned = projections["players"][:15]
+    base_ids = tuple(sorted(int(row["element"]) for row in owned))
+    owned_by_id = {int(row["element"]): row for row in owned}
+    candidate_by_position = {
+        position: [
+            row for row in candidates
+            if row["position"] == position
+        ]
+        for position in ("GK", "DEF", "MID", "FWD")
+    }
+
+    outgoing_by_position = {}
+    for element in base_ids:
+        position = owned_by_id[element]["position"]
+        outgoing_by_position.setdefault(position, element)
+
+    squads = [base_ids]
+    family_ranges = {}
+    for position in ("GK", "DEF", "MID", "FWD"):
+        start = len(squads)
+        outgoing = outgoing_by_position[position]
+        for incoming in candidate_by_position[position][:16]:
+            squads.append(
+                tuple(
+                    sorted(
+                        (set(base_ids) - {outgoing})
+                        | {int(incoming["element"])}
+                    )
+                )
+            )
+        family_ranges[position] = (start, len(squads) - 1)
+
+    assert len(squads) == 65
+    observed, proof = batch.optimize_lineup_horizons_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+        batch_size=512,
+    )
+    assert (
+        proof["execution_kernel"]
+        == "ROUTE_FAMILY_CORE14_AFFINE_EXACT_P1_7"
+    )
+
+    exact_keys = (
+        "status",
+        "gw",
+        "route_utility",
+        "expected_fpl_points",
+        "distributional_downside",
+        "supportable_upside",
+        "expected_autosub_value",
+        "cameo_blocking_cost",
+        "formation",
+        "starting_xi",
+        "bench_gk",
+        "bench_order",
+        "captain",
+        "vice_captain",
+        "captain_safe_pool_count",
+        "confidence",
+        "covariance_status",
+    )
+    representative_indices = [0]
+    for start, end in family_ranges.values():
+        representative_indices.extend((start, end))
+
+    for index in representative_indices:
+        squad = squads[index]
+        for offset in range(5):
+            expected = package._lineup_decision(
+                projections,
+                squad,
+                gw=GW + offset,
+                generated_at=GENERATED,
+            )
+            actual = observed[index]["per_gw"][offset]
+            assert {
+                key: actual.get(key)
+                for key in exact_keys
+            } == {
+                key: expected.get(key)
+                for key in exact_keys
+            }

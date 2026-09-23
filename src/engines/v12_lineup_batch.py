@@ -19,6 +19,7 @@ from src.engines import v12_lineup_optimizer as scalar
 
 POSITIONS = ("GK", "DEF", "MID", "FWD")
 FAMILY_BENCH_SCALAR_FALLBACK_LIMIT = 64
+FAMILY_CAPTAIN_SCALAR_PAIR_FALLBACK_LIMIT_PER_ROUTE = 64
 POS_CODE = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
 CODE_POS = {value: key for key, value in POS_CODE.items()}
 PAIR_CAP = np.asarray(
@@ -2046,18 +2047,94 @@ def _family_captain_kernel(
     joint_upside = np.round(raw_joint_upside, 6)
     joint_downside = np.round(raw_joint_downside, 6)
 
-    # Captain/vice has only 210 ordered pairs per route, so a conservative
-    # full-key boundary scan is cheap.  Any route close to a decimal half
-    # boundary gets its complete pair rank table and published pair metrics
-    # from the scalar oracle.
-    captain_boundary = np.any(
+    # Boundary risk is pair-local.  Recomputing an entire 210-pair route
+    # whenever any irrelevant pair is near a decimal half boundary is both
+    # unnecessary and catastrophically expensive on production projections.
+    # Recompute only the affected ordered pair through the scalar oracle, then
+    # rank the complete 210-pair table normally.  This repairs any ULP drift
+    # introduced before rounding while preserving global pair_order for the
+    # selected-XI safe-pool contract.
+    captain_pair_boundary = (
         _near_decimal_half(raw_pair_utility, 6)
         | _near_decimal_half(raw_cap_mean, 6)
         | _near_decimal_half(raw_vice_fallback, 6)
         | _near_decimal_half(raw_joint_upside, 6)
-        | _near_decimal_half(raw_joint_downside, 6),
-        axis=1,
+        | _near_decimal_half(raw_joint_downside, 6)
     )
+    captain_pair_boundary_count_by_route = np.sum(
+        captain_pair_boundary,
+        axis=1,
+        dtype=np.int16,
+    )
+    if np.any(
+        captain_pair_boundary_count_by_route
+        > FAMILY_CAPTAIN_SCALAR_PAIR_FALLBACK_LIMIT_PER_ROUTE
+    ):
+        worst = int(np.max(captain_pair_boundary_count_by_route))
+        raise LineupBatchError(
+            "route-family captain scalar-pair fallback budget exceeded: "
+            f"{worst} > "
+            f"{FAMILY_CAPTAIN_SCALAR_PAIR_FALLBACK_LIMIT_PER_ROUTE}"
+        )
+
+    for route_index, pair_index in np.argwhere(
+        captain_pair_boundary
+    ):
+        route_index = int(route_index)
+        pair_index = int(pair_index)
+        cap_slot = int(PAIR_CAP[pair_index])
+        vice_slot = int(PAIR_VICE[pair_index])
+        captain_row = {
+            "element": int(elements[route_index, cap_slot]),
+            "name": str(elements[route_index, cap_slot]),
+            "xpts_mean": float(xpts_mean[route_index, cap_slot]),
+            "expected_shortfall": float(
+                shortfall[route_index, cap_slot]
+            ),
+            "expected_excess_ge_8": float(
+                excess[route_index, cap_slot]
+            ),
+            "p_dnp": float(p_dnp[route_index, cap_slot]),
+            "p_appearance": float(
+                1.0 - p_dnp[route_index, cap_slot]
+            ),
+        }
+        vice_row = {
+            "element": int(elements[route_index, vice_slot]),
+            "name": str(elements[route_index, vice_slot]),
+            "xpts_mean": float(xpts_mean[route_index, vice_slot]),
+            "expected_shortfall": float(
+                shortfall[route_index, vice_slot]
+            ),
+            "expected_excess_ge_8": float(
+                excess[route_index, vice_slot]
+            ),
+            "p_dnp": float(p_dnp[route_index, vice_slot]),
+            "p_appearance": float(
+                1.0 - p_dnp[route_index, vice_slot]
+            ),
+        }
+        scalar_pair = scalar._captain_vice_pair_row(
+            captain_row,
+            vice_row,
+            downside_weight=downside_weight,
+            upside_weight=upside_weight,
+        )
+        pair_utility[route_index, pair_index] = float(
+            scalar_pair["pair_utility"]
+        )
+        cap_mean[route_index, pair_index] = float(
+            scalar_pair["expected_captain_multiplier_value"]
+        )
+        vice_fallback[route_index, pair_index] = float(
+            scalar_pair["expected_vice_takeover_value"]
+        )
+        joint_upside[route_index, pair_index] = float(
+            scalar_pair["joint_upside"]
+        )
+        joint_downside[route_index, pair_index] = float(
+            scalar_pair["joint_downside"]
+        )
 
     slot_rank = _actual_slot_ranks(elements)
     cap_rank = slot_rank[:, PAIR_CAP]
@@ -2081,83 +2158,6 @@ def _family_captain_kernel(
         ),
         axis=1,
     )
-
-    pair_index_by_slots = {
-        (int(cap), int(vice)): index
-        for index, (cap, vice) in enumerate(
-            zip(PAIR_CAP.tolist(), PAIR_VICE.tolist())
-        )
-    }
-    for route_index in np.flatnonzero(captain_boundary):
-        route_index = int(route_index)
-        scalar_players = sorted(
-            (
-                _scalar_surface_from_family_arrays(
-                    arrays={
-                        "elements": elements,
-                        "position_codes": np.broadcast_to(
-                            np.asarray(
-                                layout["position_codes"],
-                                dtype=np.int8,
-                            )[None, :],
-                            elements.shape,
-                        ),
-                        "xpts_mean": xpts_mean,
-                        "shortfall": shortfall,
-                        "excess": excess,
-                        "p_dnp": p_dnp,
-                        "p_cameo": np.zeros_like(p_dnp),
-                        "p_appearance": 1.0 - p_dnp,
-                        "conditioned_mean": xpts_mean,
-                        "conditioned_blank": np.zeros_like(xpts_mean),
-                        "conditioned_ge8": np.zeros_like(xpts_mean),
-                        "conditioned_ge10": np.zeros_like(xpts_mean),
-                    },
-                    route_index=route_index,
-                    slot=slot,
-                )
-                for slot in range(15)
-            ),
-            key=lambda row: int(row["element"]),
-        )
-        scalar_ranked = scalar.evaluate_captain_vice_pairs(
-            scalar_players
-        )
-        slot_by_element = {
-            int(elements[route_index, slot]): slot
-            for slot in range(15)
-        }
-        scalar_pair_order: list[int] = []
-        for row in scalar_ranked:
-            cap_slot = slot_by_element[
-                int(row["captain_element"])
-            ]
-            vice_slot = slot_by_element[
-                int(row["vice_element"])
-            ]
-            pair_index = pair_index_by_slots[
-                (int(cap_slot), int(vice_slot))
-            ]
-            scalar_pair_order.append(pair_index)
-            pair_utility[route_index, pair_index] = float(
-                row["pair_utility"]
-            )
-            cap_mean[route_index, pair_index] = float(
-                row["expected_captain_multiplier_value"]
-            )
-            vice_fallback[route_index, pair_index] = float(
-                row["expected_vice_takeover_value"]
-            )
-            joint_upside[route_index, pair_index] = float(
-                row["joint_upside"]
-            )
-            joint_downside[route_index, pair_index] = float(
-                row["joint_downside"]
-            )
-        pair_order[route_index, :] = np.asarray(
-            scalar_pair_order,
-            dtype=pair_order.dtype,
-        )
 
     route_count = elements.shape[0]
     legal = np.asarray(layout["legal"], dtype=np.int64)
@@ -2254,7 +2254,18 @@ def _family_captain_kernel(
         "joint_upside": gather(joint_upside),
         "joint_downside": gather(joint_downside),
         "scalar_boundary_fallback_count": int(
-            np.sum(captain_boundary)
+            np.sum(captain_pair_boundary_count_by_route > 0)
+        ),
+        "scalar_pair_fallback_count": int(
+            np.sum(captain_pair_boundary_count_by_route)
+        ),
+        "max_scalar_pair_fallbacks_per_route": int(
+            np.max(captain_pair_boundary_count_by_route)
+            if captain_pair_boundary_count_by_route.size
+            else 0
+        ),
+        "scalar_pair_fallback_limit_per_route": int(
+            FAMILY_CAPTAIN_SCALAR_PAIR_FALLBACK_LIMIT_PER_ROUTE
         ),
     }
 
@@ -2655,6 +2666,15 @@ def _optimize_gw_family(
         "captain_scalar_boundary_fallback_count": int(
             captain["scalar_boundary_fallback_count"]
         ),
+        "captain_scalar_pair_fallback_count": int(
+            captain["scalar_pair_fallback_count"]
+        ),
+        "captain_max_scalar_pair_fallbacks_per_route": int(
+            captain["max_scalar_pair_fallbacks_per_route"]
+        ),
+        "captain_scalar_pair_fallback_limit_per_route": int(
+            captain["scalar_pair_fallback_limit_per_route"]
+        ),
     }
 
 
@@ -2974,6 +2994,8 @@ def optimize_lineup_horizons_exact_batch(
     bench_published_boundary_count = 0
     bench_scalar_fallback_count = 0
     captain_scalar_boundary_fallback_count = 0
+    captain_scalar_pair_fallback_count = 0
+    captain_max_scalar_pair_fallbacks_per_route = 0
     batch_size = max(1, int(batch_size))
     for offset, gw in enumerate(gws):
         valid_indices: list[int] = []
@@ -3062,6 +3084,19 @@ def optimize_lineup_horizons_exact_batch(
                     _family_proof[
                         "captain_scalar_boundary_fallback_count"
                     ]
+                )
+                captain_scalar_pair_fallback_count += int(
+                    _family_proof[
+                        "captain_scalar_pair_fallback_count"
+                    ]
+                )
+                captain_max_scalar_pair_fallbacks_per_route = max(
+                    captain_max_scalar_pair_fallbacks_per_route,
+                    int(
+                        _family_proof[
+                            "captain_max_scalar_pair_fallbacks_per_route"
+                        ]
+                    ),
                 )
                 if len(family_results) != len(members):
                     raise LineupBatchError(
@@ -3223,6 +3258,15 @@ def optimize_lineup_horizons_exact_batch(
         ),
         "captain_scalar_boundary_fallback_count": int(
             captain_scalar_boundary_fallback_count
+        ),
+        "captain_scalar_pair_fallback_count": int(
+            captain_scalar_pair_fallback_count
+        ),
+        "captain_max_scalar_pair_fallbacks_per_route": int(
+            captain_max_scalar_pair_fallbacks_per_route
+        ),
+        "captain_scalar_pair_fallback_limit_per_route": int(
+            FAMILY_CAPTAIN_SCALAR_PAIR_FALLBACK_LIMIT_PER_ROUTE
         ),
     }
     return outputs, proof

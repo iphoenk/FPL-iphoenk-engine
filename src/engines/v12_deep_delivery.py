@@ -299,4 +299,49 @@ def validate_deep_decision_content_delivery(
     if routes and "BEST ALTERNATIVE" not in upper:
         failures.append("ACTION_BOARD_NOT_LINKED_TO_FRONTIER")
 
+    # Fail closed when a COMPLETE decision-critical section is not explicitly
+    # bound to its authoritative producer payload. This prevents presentation
+    # code from silently reconstructing optimizer, Rank20, XI, mini-league,
+    # ALL15, or post-match outputs.
+    governed = ("S06", "S08", "S11", "S12", "S13", "S14", "S15B", "S16", "S16B")
+    for sid in governed:
+        if state(sid) != "COMPLETE":
+            continue
+        payload = content(sid)
+        binding = dict(payload.get("authoritative_binding") or {})
+        if str(binding.get("status") or "").upper() != "BOUND":
+            failures.append(f"AUTHORITATIVE_PAYLOAD_NOT_BOUND={sid}")
+        if not str(binding.get("producer") or "").strip():
+            failures.append(f"AUTHORITATIVE_PRODUCER_MISSING={sid}")
+        if not str(binding.get("payload_fingerprint") or "").strip():
+            failures.append(f"AUTHORITATIVE_FINGERPRINT_MISSING={sid}")
+
+    # Exact Rise/Fall20 must preserve governed producer rank and direction.
+    for sid in ("S12", "S13"):
+        if state(sid) != "COMPLETE":
+            continue
+        rows = [dict(row) for row in content(sid).get("rows") or [] if isinstance(row, Mapping)]
+        expected_direction = "RISE" if sid == "S12" else "FALL"
+        for index, row in enumerate(rows, start=1):
+            if int(row.get("rank") or 0) != index:
+                failures.append(f"GOVERNED_RANK20_RANK_MISMATCH={sid}:{index}")
+                break
+            if str(row.get("direction") or "").upper() != expected_direction:
+                failures.append(f"GOVERNED_RANK20_DIRECTION_MISMATCH={sid}:{index}")
+                break
+            if not str(row.get("estimate_source") or row.get("source") or "").strip():
+                failures.append(f"GOVERNED_RANK20_SOURCE_MISSING={sid}:{index}")
+                break
+
+    # Watchlist20 remains a football-decision surface: exact 5/5/5/5 by pos.
+    if state("S11") == "COMPLETE":
+        rows = [dict(row) for row in content("S11").get("rows") or [] if isinstance(row, Mapping)]
+        counts: dict[str, int] = {"GK": 0, "DEF": 0, "MID": 0, "FWD": 0}
+        for row in rows:
+            pos = str(row.get("position") or "").upper()
+            if pos in counts:
+                counts[pos] += 1
+        if counts != {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}:
+            failures.append("WATCHLIST20_POSITION_BALANCE=" + str(counts))
+
     return list(dict.fromkeys(failures))

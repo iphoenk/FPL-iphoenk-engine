@@ -80,6 +80,10 @@ from src.engines.v12_contextual_dynamics import (
     build_post_match_deep_details,
     build_post_match_universe_scan,
 )
+from src.engines.v12_stage2_derived_cache import (
+    load_or_build_foundation,
+    load_or_build_projections,
+)
 from src.models.historical_projection import build as build_player_projections
 from src.models.v12_analytics_foundation import (
     load_v6_analytics_foundation,
@@ -2262,41 +2266,95 @@ def run_deep(
         lambda: build_team_strength(bootstrap, fixtures),
         required=True,
     )
+    stage2_cache: dict[str, Any] = {
+        "foundation": {},
+        "projections": {},
+    }
+
+    def _foundation_stage() -> dict[str, Any]:
+        def _build_foundation_owner(
+            data_root: Path,
+            *,
+            bootstrap: Mapping[str, Any],
+            planning_gw: int,
+            strength: Mapping[str, Any],
+        ) -> dict[str, Any]:
+            return require_match_foundation(
+                load_v6_analytics_foundation(
+                    data_root,
+                    bootstrap=bootstrap,
+                    planning_gw=planning_gw,
+                    strength=strength,
+                )
+            )
+
+        value, cache_meta = load_or_build_foundation(
+            runtime_data_root,
+            bootstrap=bootstrap,
+            strength=strength or {},
+            planning_gw=planning_gw,
+            builder=_build_foundation_owner,
+        )
+        stage2_cache["foundation"] = dict(cache_meta)
+        print(
+            "[V12_STAGE2_CACHE] foundation "
+            f"hit={bool(cache_meta.get('cache_hit'))} "
+            f"key={str(cache_meta.get('cache_key') or '')[:20]}",
+            flush=True,
+        )
+        return value
+
     foundation = _stage(
         ledger,
         "V12_ANALYTICS_FOUNDATION",
-        lambda: require_match_foundation(
-            load_v6_analytics_foundation(
-                runtime_data_root,
-                bootstrap=bootstrap,
-                planning_gw=planning_gw,
-                strength=strength or {},
-            )
-        ),
+        _foundation_stage,
         required=True,
     )
     if foundation:
+        def _projection_stage() -> dict[str, Any]:
+            public_key = str(
+                (stage2_cache.get("foundation") or {}).get(
+                    "cache_key"
+                )
+                or ""
+            )
+
+            def _build_projection_owner(
+                bootstrap: Mapping[str, Any],
+                strength: Mapping[str, Any],
+                planning_gw: int,
+                prior: Mapping[str, Any],
+                **kwargs: Any,
+            ) -> Mapping[str, Any]:
+                return build_player_projections(
+                    dict(bootstrap),
+                    dict(strength),
+                    int(planning_gw),
+                    dict(prior),
+                    **kwargs,
+                )
+
+            value, cache_meta = load_or_build_projections(
+                bootstrap=bootstrap,
+                strength=strength or {},
+                planning_gw=planning_gw,
+                foundation=foundation,
+                public_input_key=public_key,
+                builder=_build_projection_owner,
+            )
+            stage2_cache["projections"] = dict(cache_meta)
+            print(
+                "[V12_STAGE2_CACHE] projections "
+                f"hit={bool(cache_meta.get('cache_hit'))} "
+                f"key={str(cache_meta.get('cache_key') or '')[:20]}",
+                flush=True,
+            )
+            return value
+
         projections = _stage(
             ledger,
             "P1_1_P1_3_FULL_UNIVERSE",
-            lambda: build_player_projections(
-                bootstrap,
-                strength or {},
-                planning_gw,
-                foundation.get("historical_prior") or {},
-                player_features_payload=(
-                    foundation.get("player_features_payload") or {}
-                ),
-                player_match_rows=(
-                    foundation.get("player_match_rows") or []
-                ),
-                opponent_history_rows=(
-                    foundation.get("opponent_history_rows") or []
-                ),
-                opponent_history_scope=foundation.get(
-                    "opponent_history_scope"
-                ),
-            ),
+            _projection_stage,
             required=True,
         )
     else:
@@ -3540,6 +3598,30 @@ def run_deep(
         "stage3_internal_pass": stage3_internal_pass,
         "stage3_action": operational_action,
         "stage3_required_stages": sorted(stage3_required_stage_names),
+        "stage2_derived_cache": {
+            "foundation": {
+                "cache_hit": (
+                    stage2_cache.get("foundation") or {}
+                ).get("cache_hit"),
+                "cache_key": str(
+                    (stage2_cache.get("foundation") or {}).get(
+                        "cache_key"
+                    )
+                    or ""
+                )[:20],
+            },
+            "projections": {
+                "cache_hit": (
+                    stage2_cache.get("projections") or {}
+                ).get("cache_hit"),
+                "cache_key": str(
+                    (stage2_cache.get("projections") or {}).get(
+                        "cache_key"
+                    )
+                    or ""
+                )[:20],
+            },
+        },
         "monte_carlo": {
             "actual_paths": (monte_carlo or {}).get("actual_paths"),
             "seed": (monte_carlo or {}).get("seed"),

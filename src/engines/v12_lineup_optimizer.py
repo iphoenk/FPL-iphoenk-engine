@@ -3245,6 +3245,35 @@ def _route_batch_selected_blocking_cost_exact(
     )
 
 
+def _route_batch_ordered_legal_sum_exact(
+    values: np.ndarray,
+    legal_indices: np.ndarray,
+) -> np.ndarray:
+    """Sum XI values in canonical legal-index order across all route rows.
+
+    Eleven vector additions preserve the same binary64 accumulation order as
+    Python's scalar sum(float(values[index]) for index in xi_indices), while
+    executing the route dimension in parallel inside NumPy.
+    """
+    if values.ndim != 2 or legal_indices.ndim != 3:
+        raise LineupOptimizerError(
+            "route-batch ordered sum received invalid tensor rank"
+        )
+    route_count, legal_count, starter_count = legal_indices.shape
+    if values.shape[0] != route_count or starter_count != 11:
+        raise LineupOptimizerError(
+            "route-batch ordered sum shape mismatch"
+        )
+    route_rows = np.arange(route_count, dtype=np.int64)[:, None]
+    out = np.zeros((route_count, legal_count), dtype=np.float64)
+    for slot in range(starter_count):
+        out = out + values[
+            route_rows,
+            legal_indices[:, :, slot],
+        ]
+    return out
+
+
 def optimize_lineup_summaries_exact_batch(
     projections: Mapping[str, Any],
     squads: Mapping[str, Sequence[int]],
@@ -3255,10 +3284,10 @@ def optimize_lineup_summaries_exact_batch(
     """Exact P1.7 selected-decision batch for P1.2B execution.
 
     All legal XI and all six bench permutations are numerically evaluated for
-    every supplied squad. A conservative numerical guard around the vectorized
-    winner is re-ranked with the canonical scalar compact route, then the exact
-    selected route is fully materialized. This is execution reuse only and
-    never creates a second lineup model or prunes a package route.
+    every supplied squad. Starter aggregates use eleven ordered binary64 vector
+    additions in the exact canonical XI index order, so the full scalar route
+    sort key can be resolved without broad scalar re-ranking. This is execution
+    reuse only and never creates a second lineup model or prunes a package route.
     """
     if not squads:
         return {}
@@ -3387,6 +3416,14 @@ def optimize_lineup_summaries_exact_batch(
             )
         )
     )
+    tactical_weight_available_matrix = matrix(
+        lambda row: 1.0
+        if (row.get("tactical_role") or {}).get(
+            "weighted_component_points"
+        )
+        is not None
+        else 0.0
+    )
     conditioned_mean_matrix = matrix(
         lambda row: _f(
             (row.get("appearance_conditioned") or {}).get(
@@ -3448,8 +3485,8 @@ def optimize_lineup_summaries_exact_batch(
         pair_utility,
         captain_value,
         vice_value,
-        _,
-        _,
+        captain_slot,
+        vice_slot,
         ranked_by_route,
     ) = _route_batch_captain_vice_exact(
         route_players=route_players,
@@ -3458,89 +3495,116 @@ def optimize_lineup_summaries_exact_batch(
     )
 
     objective = dict(load_config().get("objective") or {})
-    mean_rows = xpts_mean_matrix[route_index]
-    shortfall_rows = shortfall_matrix[route_index]
-    excess_rows = excess_matrix[route_index]
-    tactical_rows = tactical_weight_matrix[route_index]
-    approximate_points = np.sum(
-        np.where(starter_flat, mean_rows, 0.0),
-        axis=1,
-        dtype=np.float64,
+    exact_points_matrix = _route_batch_ordered_legal_sum_exact(
+        xpts_mean_matrix,
+        legal_indices,
     )
-    approximate_shortfall = np.sum(
-        np.where(starter_flat, shortfall_rows, 0.0),
-        axis=1,
-        dtype=np.float64,
+    exact_shortfall_matrix = _route_batch_ordered_legal_sum_exact(
+        shortfall_matrix,
+        legal_indices,
     )
-    approximate_excess = np.sum(
-        np.where(starter_flat, excess_rows, 0.0),
-        axis=1,
-        dtype=np.float64,
+    exact_excess_matrix = _route_batch_ordered_legal_sum_exact(
+        excess_matrix,
+        legal_indices,
     )
-    approximate_tactical = np.sum(
-        np.where(starter_flat, tactical_rows, 0.0),
-        axis=1,
-        dtype=np.float64,
-    ) / 11.0
-    approximate_base = (
-        approximate_points
+    exact_tactical_sum_matrix = _route_batch_ordered_legal_sum_exact(
+        tactical_weight_matrix,
+        legal_indices,
+    )
+    exact_tactical_count_matrix = _route_batch_ordered_legal_sum_exact(
+        tactical_weight_available_matrix,
+        legal_indices,
+    )
+    exact_tactical_mean_matrix = np.divide(
+        exact_tactical_sum_matrix,
+        exact_tactical_count_matrix,
+        out=np.zeros_like(exact_tactical_sum_matrix),
+        where=exact_tactical_count_matrix > 0.0,
+    )
+
+    exact_points = exact_points_matrix.reshape(-1)
+    exact_shortfall = exact_shortfall_matrix.reshape(-1)
+    exact_excess = exact_excess_matrix.reshape(-1)
+    exact_tactical_mean = exact_tactical_mean_matrix.reshape(-1)
+    exact_base = (
+        exact_points
         - _f(objective.get("lineup_downside_weight"), 0.10)
-        * approximate_shortfall
+        * exact_shortfall
         + _f(objective.get("lineup_upside_weight"), 0.05)
-        * approximate_excess
+        * exact_excess
     )
-    approximate_utility = (
-        approximate_base
+    exact_route_utility = np.round(
+        exact_base
         + np.asarray(
             bench["bench_order_utility"],
             dtype=np.float64,
         )
-        + pair_utility
+        + pair_utility,
+        6,
     )
-    approximate_with_cvc = (
-        approximate_points
+    exact_with_cvc = np.round(
+        exact_points
         + np.asarray(
             bench["expected_autosub_value"],
             dtype=np.float64,
         )
         + captain_value
-        + vice_value
+        + vice_value,
+        6,
     )
+    exact_downside = np.round(exact_shortfall, 6)
+    exact_upside = np.round(exact_excess, 6)
+    exact_tactical = np.round(exact_tactical_mean, 6)
+
+    # Stable lexicographic maximum of the exact canonical _route_sort_key.
+    # Equality keeps the earlier canonical legal-XI enumeration row, matching
+    # Python's stable reverse sort on equal keys.
+    winner = np.zeros(route_count, dtype=np.int64)
+    rows = np.arange(route_count, dtype=np.int64)
+    base_rows = rows * legal_count
+    best_global = base_rows.copy()
+    for candidate in range(1, legal_count):
+        global_rows = base_rows + candidate
+        better = (
+            (exact_route_utility[global_rows] > exact_route_utility[best_global])
+            | (
+                (exact_route_utility[global_rows] == exact_route_utility[best_global])
+                & (
+                    (exact_with_cvc[global_rows] > exact_with_cvc[best_global])
+                    | (
+                        (exact_with_cvc[global_rows] == exact_with_cvc[best_global])
+                        & (
+                            (-exact_downside[global_rows] > -exact_downside[best_global])
+                            | (
+                                (exact_downside[global_rows] == exact_downside[best_global])
+                                & (
+                                    (exact_upside[global_rows] > exact_upside[best_global])
+                                    | (
+                                        (exact_upside[global_rows] == exact_upside[best_global])
+                                        & (
+                                            exact_tactical[global_rows]
+                                            > exact_tactical[best_global]
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        winner = np.where(better, candidate, winner)
+        best_global = np.where(better, global_rows, best_global)
 
     output: dict[str, dict[str, Any]] = {}
     for route_pos, key in enumerate(keys):
-        start = route_pos * legal_count
-        end = start + legal_count
-        local_primary = np.round(
-            approximate_utility[start:end],
-            6,
-        )
-        primary_max = float(np.max(local_primary))
-        refine = np.flatnonzero(
-            local_primary
-            >= primary_max - _ROUTE_BATCH_NUMERICAL_GUARD
-        )
+        local_index = int(winner[route_pos])
+        global_index = route_pos * legal_count + local_index
         players = route_players[route_pos]
         ranked_pairs = ranked_by_route[route_pos]
-        exact_candidates = [
-            _lineup_route(
-                players,
-                legal_by_route[route_pos][int(local_index)],
-                compact=True,
-                compact_cvc_ranked_pairs=ranked_pairs,
-            )
-            for local_index in refine
-        ]
-        exact_best_index = max(
-            range(len(exact_candidates)),
-            key=lambda index: _route_sort_key(
-                exact_candidates[index]
-            ),
-        )
-        compact_best = exact_candidates[exact_best_index]
         selected_indices = tuple(
             int(value)
-            for value in compact_best.get("_xi_indices") or ()
+            for value in legal_by_route[route_pos][local_index]
         )
         starter_rows = [
             players[int(index)] for index in selected_indices
@@ -3550,7 +3614,7 @@ def optimize_lineup_summaries_exact_batch(
         }
         bench_order = tuple(
             int(value)
-            for value in compact_best.get("_bench_order") or ()
+            for value in bench["order_elements"][global_index]
         )
         blocking_cost, reserve_gk_element = (
             _route_batch_selected_blocking_cost_exact(
@@ -3560,29 +3624,35 @@ def optimize_lineup_summaries_exact_batch(
             )
         )
         captain_element = int(
-            compact_best.get("_captain_element") or 0
+            element_matrix[route_pos, int(captain_slot[global_index])]
         )
         vice_element = int(
-            compact_best.get("_vice_element") or 0
+            element_matrix[route_pos, int(vice_slot[global_index])]
         )
+        compact_selected = {
+            "_captain_element": captain_element,
+            "_vice_element": vice_element,
+        }
         summary_core = {
             "status": "READY",
             "gw": gw,
-            "route_utility": compact_best.get("route_utility"),
-            "expected_fpl_points": compact_best.get(
-                "expected_fpl_points_before_captain"
+            "route_utility": float(exact_route_utility[global_index]),
+            "expected_fpl_points": round(
+                float(exact_points[global_index])
+                + float(bench["expected_autosub_value"][global_index]),
+                6,
             ),
-            "distributional_downside": compact_best.get(
-                "distributional_downside"
+            "distributional_downside": float(
+                exact_downside[global_index]
             ),
-            "supportable_upside": compact_best.get(
-                "supportable_upside"
+            "supportable_upside": float(
+                exact_upside[global_index]
             ),
-            "expected_autosub_value": compact_best.get(
-                "expected_autosub_value"
+            "expected_autosub_value": float(
+                bench["expected_autosub_value"][global_index]
             ),
             "cameo_blocking_cost": blocking_cost,
-            "formation": compact_best.get("formation"),
+            "formation": _formation(starter_rows),
             "starting_xi": [
                 int(row.get("element") or 0)
                 for row in starter_rows
@@ -3593,12 +3663,28 @@ def optimize_lineup_summaries_exact_batch(
             "vice_captain": vice_element,
             "captain_safe_pool_count": (
                 _route_batch_safe_pool_count_exact(
-                    compact_selected=compact_best,
+                    compact_selected=compact_selected,
                     ranked_pairs=ranked_pairs,
                     starter_ids=starter_ids,
                 )
             ),
-            "confidence": compact_best.get("confidence"),
+            "confidence": (
+                "HIGH"
+                if all(
+                    (row.get("distribution_status") or {}).get("status")
+                    == "READY"
+                    for row in starter_rows
+                )
+                else "MEDIUM"
+                if sum(
+                    1
+                    for row in starter_rows
+                    if (row.get("distribution_status") or {}).get("status")
+                    == "READY"
+                )
+                >= 8
+                else "LOW"
+            ),
             "covariance_status": (
                 "COVARIANCE_NOT_MODELLED_YET"
             ),
@@ -3610,8 +3696,10 @@ def optimize_lineup_summaries_exact_batch(
                 "p1_7_math_mutated": False,
                 "route_batch_execution_only": True,
                 "all_550_legal_xi_numerically_evaluated": True,
-                "scalar_exact_refinement_count": int(len(refine)),
-                "numerical_guard": _ROUTE_BATCH_NUMERICAL_GUARD,
+                "scalar_exact_refinement_count": 0,
+                "numerical_guard": None,
+                "exact_ordered_vector_accumulation": True,
+                "exact_route_sort_key_vectorized": True,
                 "selected_summary_materialization": (
                     "EXACT_COMPACT_PLUS_SELECTED_CAMEO_COUNTERFACTUAL"
                 ),

@@ -1092,3 +1092,242 @@ def test_funding_leg_selector_reuses_existing_materiality_authority(monkeypatch)
     assert selected["no_new_package_score"] is True
     assert len(selected["route_ids"]) <= selected["direct_leg_limit"]
 
+
+
+def _assert_batch_lineup_row_matches_scalar(actual, expected):
+    keys = (
+        "status",
+        "gw",
+        "route_utility",
+        "expected_fpl_points",
+        "distributional_downside",
+        "supportable_upside",
+        "expected_autosub_value",
+        "cameo_blocking_cost",
+        "formation",
+        "starting_xi",
+        "bench_gk",
+        "bench_order",
+        "captain",
+        "vice_captain",
+        "captain_safe_pool_count",
+        "confidence",
+        "covariance_status",
+    )
+    assert {key: actual.get(key) for key in keys} == {
+        key: expected.get(key) for key in keys
+    }
+
+
+def test_route_batch_p17_selected_summary_matches_scalar_exactly():
+    from src.engines import v12_lineup_optimizer as lineup
+
+    projections = _randomized_projections(9237)
+    search = package_search.search_packages(
+        current_squad=_current(),
+        candidate_universe=_universe(),
+        bank=5,
+        max_transfers=1,
+        universe_complete=True,
+        expected_eligible_universe_count=len(_candidates()),
+    )
+    routes = list(search["routes"])[:12]
+    squads = {
+        str(route["route_id"]): tuple(
+            sorted(int(value) for value in route["final_squad_elements"])
+        )
+        for route in routes
+    }
+    actual = lineup.optimize_lineup_summaries_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    for route_id, squad in squads.items():
+        expected = utility._lineup_decision(
+            projections,
+            squad,
+            gw=GW,
+            generated_at=GENERATED,
+        )
+        _assert_batch_lineup_row_matches_scalar(
+            actual[route_id],
+            expected,
+        )
+        governance = actual[route_id]["governance"]
+        assert governance["route_batch_execution_only"] is True
+        assert governance[
+            "all_550_legal_xi_numerically_evaluated"
+        ] is True
+        assert governance["scalar_exact_refinement_count"] >= 1
+        assert governance["numerical_guard"] == pytest.approx(1e-4)
+
+
+def _route_batch_stress_fixture(route_count=2043):
+    projections = _randomized_projections(19437)
+    current_ids = tuple(
+        sorted(row["element"] for row in _current())
+    )
+    mids = [
+        row["element"]
+        for row in _current()
+        if row["position"] == "MID"
+    ]
+    pmap = {
+        row["element"]: row
+        for row in projections["players"]
+    }
+    candidate_ids = []
+    for index in range(410):
+        element = 1000 + index
+        source = deepcopy(pmap[mids[index % len(mids)]])
+        source["element"] = element
+        source["name"] = f"B{element}"
+        source["team_id"] = 1 + (index % 20)
+        shift = ((index % 31) - 15) * 0.0004
+        for gw_row in source["xpts_by_gw"]:
+            probs = dict(
+                gw_row["point_distribution"]["probabilities"]
+            )
+            blank = max(
+                0.02,
+                min(0.30, float(probs["0"]) - shift),
+            )
+            upside = max(
+                0.04,
+                min(0.35, float(probs["8"]) + shift),
+            )
+            middle = 1.0 - blank - upside
+            probs = {
+                "0": blank,
+                "4": middle,
+                "8": upside,
+            }
+            mean = 4.0 * middle + 8.0 * upside
+            second = 16.0 * middle + 64.0 * upside
+            variance = max(0.0, second - mean * mean)
+            gw_row["mean"] = mean
+            gw_row["std"] = variance ** 0.5
+            gw_row["points_variance"] = variance
+            gw_row["point_distribution"]["probabilities"] = probs
+        projections["players"].append(source)
+        candidate_ids.append(element)
+
+    routes = [
+        {
+            "route_id": "HOLD",
+            "final_squad_elements": list(current_ids),
+        }
+    ]
+    for element in candidate_ids:
+        for outgoing in mids:
+            if len(routes) >= int(route_count):
+                break
+            squad = sorted(
+                (set(current_ids) - {int(outgoing)})
+                | {int(element)}
+            )
+            routes.append(
+                {
+                    "route_id": f"{outgoing}->{element}",
+                    "final_squad_elements": squad,
+                }
+            )
+        if len(routes) >= int(route_count):
+            break
+    assert len(routes) == int(route_count)
+    return projections, routes
+
+
+def test_full_2043_route_batch_p17_runtime_acceptance(capsys):
+    import json
+    import time
+
+    projections, routes = _route_batch_stress_fixture(2043)
+    started = time.perf_counter()
+    lineups, proof = utility._materialize_route_lineups(
+        routes,
+        projections,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    elapsed = time.perf_counter() - started
+
+    assert len(lineups) == 2043
+    assert proof["route_count"] == 2043
+    assert proof["unique_squad_count"] == 2043
+    assert proof["execution_mode"] in {
+        "PROCESS_POOL_EXACT_P1_7_ROUTE_BATCH",
+        "SEQUENTIAL_EXACT_P1_7_ROUTE_BATCH",
+    }
+    assert proof["route_batch_all_direct_routes_preserved"] is True
+    assert proof["lossy_pruning"] is False
+    assert proof["p1_7_math_mutated"] is False
+    assert proof["decision_authority_changed"] is False
+    assert proof["route_batch_count"] > 0
+    assert proof["route_batch_exact_refinement_count"] >= 2043 * 5
+    assert proof["elapsed_seconds"] <= 10.0
+    assert elapsed <= 10.0
+
+    current_ids = tuple(
+        sorted(row["element"] for row in _current())
+    )
+    sample_route_ids = [
+        "HOLD",
+        routes[len(routes) // 2]["route_id"],
+        routes[-1]["route_id"],
+    ]
+    route_by_id = {
+        str(route["route_id"]): route
+        for route in routes
+    }
+    for route_id in sample_route_ids:
+        squad = tuple(
+            sorted(
+                int(value)
+                for value in route_by_id[route_id][
+                    "final_squad_elements"
+                ]
+            )
+        )
+        expected = utility._cumulative_lineup_horizons(
+            projections,
+            squad,
+            planning_gw=GW,
+            generated_at=GENERATED,
+        )
+        actual = lineups[route_id]
+        for actual_row, expected_row in zip(
+            actual["per_gw"],
+            expected["per_gw"],
+        ):
+            _assert_batch_lineup_row_matches_scalar(
+                actual_row,
+                expected_row,
+            )
+        for horizon in ("1", "2", "3", "5"):
+            assert actual[horizon] == expected[horizon]
+
+    evidence = {
+        "contract": "P1_2B_2043_ROUTE_BATCH_RUNTIME_ACCEPTANCE_V1",
+        "route_count": proof["route_count"],
+        "unique_squad_count": proof["unique_squad_count"],
+        "execution_mode": proof["execution_mode"],
+        "worker_count": proof["worker_count"],
+        "route_batch_size": proof["route_batch_size"],
+        "route_batch_count": proof["route_batch_count"],
+        "exact_refinement_count": proof[
+            "route_batch_exact_refinement_count"
+        ],
+        "materialization_seconds": proof["elapsed_seconds"],
+        "outer_wall_seconds": round(elapsed, 6),
+        "lossy_pruning": proof["lossy_pruning"],
+        "p1_7_math_mutated": proof["p1_7_math_mutated"],
+    }
+    print(
+        "P1_2B_ROUTE_BATCH_ACCEPTANCE="
+        + json.dumps(evidence, sort_keys=True)
+    )
+    captured = capsys.readouterr()
+    assert "P1_2B_ROUTE_BATCH_ACCEPTANCE=" in captured.out

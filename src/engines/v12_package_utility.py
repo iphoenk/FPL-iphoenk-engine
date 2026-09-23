@@ -1116,6 +1116,10 @@ def _materialize_route_lineups(
         1,
         int(perf_cfg.get("parallel_chunks_per_worker") or 8),
     )
+    route_batch_size = max(
+        1,
+        int(perf_cfg.get("route_batch_size") or 32),
+    )
 
     route_squads = [
         (str(route.get("route_id") or ""), _route_squad(route))
@@ -1165,46 +1169,81 @@ def _materialize_route_lineups(
         "p1_7_cpu_seconds": 0.0,
     }
     materialization_started = time.perf_counter()
-    if use_parallel:
-        fork_context = mp.get_context("fork")
-        chunksize = max(
-            1,
-            len(unique_items)
-            // max(1, workers * requested_chunks_per_worker),
+    use_route_batch = len(unique_items) >= min_routes
+    exact_refinement_count = 0
+    batch_elapsed_values: list[float] = []
+
+    if use_route_batch:
+        batch_tasks = tuple(
+            tuple(unique_items[index : index + route_batch_size])
+            for index in range(0, len(unique_items), route_batch_size)
         )
         print(
             "[P1_2B_PERF] exact P1.7 route materialization "
-            f"mode=process_pool routes={len(route_squads)} "
-            f"unique_squads={len(unique_items)} workers={workers} "
-            f"chunksize={chunksize}",
+            f"mode={'process_route_batch' if use_parallel else 'sequential_route_batch'} "
+            f"routes={len(route_squads)} unique_squads={len(unique_items)} "
+            f"workers={workers if use_parallel else 1} "
+            f"batch_size={route_batch_size} batches={len(batch_tasks)}",
             flush=True,
         )
-        with ProcessPoolExecutor(
-            max_workers=workers,
-            mp_context=fork_context,
-            initializer=_init_p1_2b_lineup_worker,
-            initargs=(
+
+        def consume_batch_result(result):
+            nonlocal exact_refinement_count
+            (
+                outputs,
+                batch_elapsed,
+                batch_gw_elapsed,
+                refinement_count,
+                route_stats,
+            ) = result
+            if not outputs:
+                return
+            batch_elapsed_values.append(float(batch_elapsed))
+            gw_elapsed.extend(float(value) for value in batch_gw_elapsed)
+            per_squad_estimate = float(batch_elapsed) / len(outputs)
+            for _, squad, output in outputs:
+                by_squad[tuple(squad)] = output
+                squad_elapsed.append(per_squad_estimate)
+            exact_refinement_count += int(refinement_count)
+            for key in p17_totals:
+                p17_totals[key] += float(route_stats.get(key, 0.0) or 0.0)
+
+        if use_parallel:
+            fork_context = mp.get_context("fork")
+            with ProcessPoolExecutor(
+                max_workers=workers,
+                mp_context=fork_context,
+                initializer=_init_p1_2b_lineup_worker,
+                initargs=(
+                    projections,
+                    planning_gw,
+                    generated_at,
+                    material_elements,
+                ),
+            ) as executor:
+                for result in executor.map(
+                    _p1_2b_route_batch_worker,
+                    batch_tasks,
+                    chunksize=1,
+                ):
+                    consume_batch_result(result)
+            execution_mode = "PROCESS_POOL_EXACT_P1_7_ROUTE_BATCH"
+        else:
+            _init_p1_2b_lineup_worker(
                 projections,
                 planning_gw,
                 generated_at,
                 material_elements,
-            ),
-        ) as executor:
-            for _, squad, output, elapsed, route_gw_elapsed, route_stats in executor.map(
-                _p1_2b_route_lineups_worker_with_stats,
-                unique_items,
-                chunksize=chunksize,
-            ):
-                by_squad[tuple(squad)] = output
-                squad_elapsed.append(float(elapsed))
-                gw_elapsed.extend(float(value) for value in route_gw_elapsed)
-                for key in p17_totals:
-                    p17_totals[key] += float(route_stats.get(key, 0.0) or 0.0)
-        execution_mode = "PROCESS_POOL_EXACT_P1_7"
+            )
+            for task in batch_tasks:
+                consume_batch_result(
+                    _p1_2b_route_batch_worker(task)
+                )
+            execution_mode = "SEQUENTIAL_EXACT_P1_7_ROUTE_BATCH"
     else:
         print(
             "[P1_2B_PERF] exact P1.7 route materialization "
-            f"mode=sequential routes={len(route_squads)} "
+            f"mode=sequential_scalar routes={len(route_squads)} "
             f"unique_squads={len(unique_items)} workers=1",
             flush=True,
         )
@@ -1219,7 +1258,7 @@ def _materialize_route_lineups(
         )
         for _, squad in unique_items:
             route_gw_elapsed: list[float] = []
-            before = p17_execution_observability()
+            before_stats = p17_execution_observability()
             route_started = time.perf_counter()
             by_squad[tuple(squad)] = _cumulative_lineup_horizons(
                 projections,
@@ -1228,13 +1267,15 @@ def _materialize_route_lineups(
                 generated_at=generated_at,
                 _perf_sink=route_gw_elapsed,
             )
-            squad_elapsed.append(time.perf_counter() - route_started)
+            route_elapsed = time.perf_counter() - route_started
+            squad_elapsed.append(route_elapsed)
+            batch_elapsed_values.append(route_elapsed)
             gw_elapsed.extend(route_gw_elapsed)
-            after = p17_execution_observability()
+            after_stats = p17_execution_observability()
             for key in p17_totals:
                 p17_totals[key] += (
-                    float(after.get(key, 0.0) or 0.0)
-                    - float(before.get(key, 0.0) or 0.0)
+                    float(after_stats.get(key, 0.0) or 0.0)
+                    - float(before_stats.get(key, 0.0) or 0.0)
                 )
         execution_mode = "SEQUENTIAL_EXACT_P1_7"
 
@@ -1253,16 +1294,23 @@ def _materialize_route_lineups(
         )
 
     materialization_elapsed = time.perf_counter() - materialization_started
-    effective_workers = workers if use_parallel else 1
+    effective_workers = (
+        workers if use_parallel and use_route_batch else 1
+    )
+    worker_elapsed = (
+        batch_elapsed_values
+        if batch_elapsed_values
+        else squad_elapsed
+    )
     utilization = (
-        sum(squad_elapsed)
+        sum(worker_elapsed)
         / max(materialization_elapsed * effective_workers, 1e-12)
     )
     coordination_upper_bound = max(
         0.0,
         materialization_elapsed
         - (
-            sum(squad_elapsed)
+            sum(worker_elapsed)
             / max(effective_workers, 1)
         ),
     )
@@ -1290,6 +1338,15 @@ def _materialize_route_lineups(
         "worker_count": workers if use_parallel else 1,
         "parallel_min_routes": min_routes,
         "parallel_chunks_per_worker": requested_chunks_per_worker,
+        "route_batch_size": route_batch_size,
+        "route_batch_count": (
+            len(batch_elapsed_values) if use_route_batch else 0
+        ),
+        "route_batch_exact_refinement_count": exact_refinement_count,
+        "route_batch_all_direct_routes_preserved": True,
+        "per_batch_elapsed_seconds": _perf_distribution(
+            batch_elapsed_values
+        ),
         "p1_7_owner": "V12_LINEUP_OPTIMIZER",
         "shared_player_surface_catalog": True,
         "material_element_count": len(material_elements),

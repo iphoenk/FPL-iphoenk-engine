@@ -1592,6 +1592,79 @@ def _family_bench_kernel(
 ) -> dict[str, Any]:
     """Exact affine core14 bench/autosub kernel for all candidates."""
     route_count = int(arrays["elements"].shape[0])
+
+    # Exact structural fast path: with zero DNP probability for every player
+    # in the family/GW, no starter can trigger an autosub. Therefore every
+    # bench permutation has identical zero autosub metrics and the canonical
+    # scalar winner is determined only by the stable bench tie rank.
+    if np.all(np.asarray(arrays["p_dnp"], dtype=np.float64) == 0.0):
+        legal_count = int(layout["legal"].shape[0])
+        element_matrix = np.ascontiguousarray(
+            arrays["elements"],
+            dtype=np.int64,
+        )
+        tie_rank = _family_bench_permutation_tie_rank_cached(
+            element_matrix.tobytes(),
+            route_count,
+            tuple(layout["position_signature"]),
+        )
+        winner = np.argmin(tie_rank, axis=2)
+        route_axis = np.arange(
+            route_count,
+            dtype=np.int64,
+        )[:, None]
+        legal_axis = np.arange(
+            legal_count,
+            dtype=np.int64,
+        )[None, :]
+        winning_order_indices = layout["outfield_permutations"][
+            legal_axis,
+            winner,
+        ]
+        zeros = np.zeros(
+            (route_count, legal_count),
+            dtype=np.float64,
+        )
+        reserve_gk = np.asarray(
+            layout["reserve_gk"],
+            dtype=np.int64,
+        )
+        return {
+            "order_indices": winning_order_indices,
+            "order_elements": arrays["elements"][
+                route_axis[:, :, None],
+                winning_order_indices,
+            ],
+            "reserve_gk_indices": np.broadcast_to(
+                reserve_gk[None, :],
+                (route_count, legal_count),
+            ),
+            "expected_autosub_value_raw": zeros.copy(),
+            "expected_autosub_value": zeros.copy(),
+            "autosub_probability": zeros.copy(),
+            "selected_blank": zeros.copy(),
+            "selected_ge8": zeros.copy(),
+            "selected_ge10": zeros.copy(),
+            "bench_order_utility": zeros.copy(),
+            "endpoint_evaluations": 0,
+            "bench_rows_evaluated": int(
+                route_count * legal_count
+            ),
+            "bench_primary_tie_count": int(
+                route_count * legal_count
+            ),
+            "bench_primary_boundary_count": 0,
+            "bench_secondary_boundary_count": 0,
+            "bench_published_boundary_count": 0,
+            "bench_scalar_fallback_count": 0,
+            "bench_scalar_fallback_limit": (
+                None
+                if scalar_fallback_limit is None
+                else int(scalar_fallback_limit)
+            ),
+            "zero_dnp_fast_path": True,
+        }
+
     p_dnp_zero = np.asarray(arrays["p_dnp"][0], dtype=np.float64).copy()
     p_dnp_one = p_dnp_zero.copy()
     p_appearance_zero = np.asarray(
@@ -1980,6 +2053,7 @@ def _family_bench_kernel(
             if scalar_fallback_limit is None
             else int(scalar_fallback_limit)
         ),
+        "zero_dnp_fast_path": False,
     }
 
 
@@ -2648,6 +2722,9 @@ def _optimize_gw_family(
         "bench_scalar_fallback_limit": int(
             FAMILY_BENCH_SCALAR_FALLBACK_LIMIT
         ),
+        "bench_zero_dnp_fast_path": bool(
+            bench["zero_dnp_fast_path"]
+        ),
         "captain_scalar_boundary_fallback_count": int(
             captain["scalar_boundary_fallback_count"]
         ),
@@ -2990,6 +3067,7 @@ def optimize_lineup_horizons_exact_batch(
     bench_secondary_boundary_count = 0
     bench_published_boundary_count = 0
     bench_scalar_fallback_count = 0
+    bench_zero_dnp_fast_path_family_gw_count = 0
     captain_scalar_boundary_fallback_count = 0
     captain_scalar_pair_fallback_count = 0
     captain_max_scalar_pair_fallbacks_per_route = 0
@@ -3080,6 +3158,13 @@ def optimize_lineup_horizons_exact_batch(
                     _family_proof[
                         "bench_scalar_fallback_count"
                     ]
+                )
+                bench_zero_dnp_fast_path_family_gw_count += int(
+                    bool(
+                        _family_proof[
+                            "bench_zero_dnp_fast_path"
+                        ]
+                    )
                 )
                 captain_scalar_boundary_fallback_count += int(
                     _family_proof[
@@ -3279,6 +3364,9 @@ def optimize_lineup_horizons_exact_batch(
         ),
         "bench_scalar_fallback_limit_per_family_gw": int(
             FAMILY_BENCH_SCALAR_FALLBACK_LIMIT
+        ),
+        "bench_zero_dnp_fast_path_family_gw_count": int(
+            bench_zero_dnp_fast_path_family_gw_count
         ),
         "captain_scalar_boundary_fallback_count": int(
             captain_scalar_boundary_fallback_count

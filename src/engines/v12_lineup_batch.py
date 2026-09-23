@@ -2967,6 +2967,13 @@ def optimize_lineup_horizons_exact_batch(
     ]
     chunks = 0
     gw_elapsed: list[float] = []
+    bench_rows_evaluated = 0
+    bench_primary_tie_count = 0
+    bench_primary_boundary_count = 0
+    bench_secondary_boundary_count = 0
+    bench_published_boundary_count = 0
+    bench_scalar_fallback_count = 0
+    captain_scalar_boundary_fallback_count = 0
     batch_size = max(1, int(batch_size))
     for offset, gw in enumerate(gws):
         valid_indices: list[int] = []
@@ -3024,6 +3031,37 @@ def optimize_lineup_horizons_exact_batch(
                     [incoming for _, incoming in members],
                     gw=gw,
                     surface_catalog=surface_catalogs[int(gw)],
+                )
+                bench_rows_evaluated += int(
+                    _family_proof["bench_rows_evaluated"]
+                )
+                bench_primary_tie_count += int(
+                    _family_proof["bench_primary_tie_count"]
+                )
+                bench_primary_boundary_count += int(
+                    _family_proof[
+                        "bench_primary_boundary_count"
+                    ]
+                )
+                bench_secondary_boundary_count += int(
+                    _family_proof[
+                        "bench_secondary_boundary_count"
+                    ]
+                )
+                bench_published_boundary_count += int(
+                    _family_proof[
+                        "bench_published_boundary_count"
+                    ]
+                )
+                bench_scalar_fallback_count += int(
+                    _family_proof[
+                        "bench_scalar_fallback_count"
+                    ]
+                )
+                captain_scalar_boundary_fallback_count += int(
+                    _family_proof[
+                        "captain_scalar_boundary_fallback_count"
+                    ]
                 )
                 if len(family_results) != len(members):
                     raise LineupBatchError(
@@ -3146,5 +3184,45 @@ def optimize_lineup_horizons_exact_batch(
         "p1_7_math_mutated": False,
         "scalar_oracle_preserved": True,
         "detailed_non_ranking_materialization_deferred": True,
+        "bench_rows_evaluated": int(bench_rows_evaluated),
+        "bench_primary_tie_count": int(
+            bench_primary_tie_count
+        ),
+        "bench_primary_tie_rate": round(
+            (
+                bench_primary_tie_count
+                / bench_rows_evaluated
+            )
+            if bench_rows_evaluated
+            else 0.0,
+            9,
+        ),
+        "bench_primary_boundary_count": int(
+            bench_primary_boundary_count
+        ),
+        "bench_secondary_boundary_count": int(
+            bench_secondary_boundary_count
+        ),
+        "bench_published_boundary_count": int(
+            bench_published_boundary_count
+        ),
+        "bench_scalar_fallback_count": int(
+            bench_scalar_fallback_count
+        ),
+        "bench_scalar_fallback_rate": round(
+            (
+                bench_scalar_fallback_count
+                / bench_rows_evaluated
+            )
+            if bench_rows_evaluated
+            else 0.0,
+            9,
+        ),
+        "bench_scalar_fallback_limit_per_family_gw": int(
+            FAMILY_BENCH_SCALAR_FALLBACK_LIMIT
+        ),
+        "captain_scalar_boundary_fallback_count": int(
+            captain_scalar_boundary_fallback_count
+        ),
     }
     return outputs, proof

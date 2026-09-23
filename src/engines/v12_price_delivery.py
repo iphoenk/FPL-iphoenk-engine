@@ -361,6 +361,104 @@ def _price_map(predictor_artifact: Mapping[str, Any]) -> dict[int, Mapping[str, 
     }
 
 
+def _strict_directional_price20(
+    *,
+    predictor_artifact: Mapping[str, Any] | None,
+    direction: str,
+    owned_element_ids: Sequence[int] | None = None,
+) -> dict[str, Any]:
+    """Apply PRICE exact20 direction semantics to the existing predictor materializer."""
+    block = build_price20(
+        predictor_artifact=predictor_artifact,
+        direction=direction,
+        owned_element_ids=owned_element_ids,
+    )
+    wanted = str(direction or "").upper()
+    rows = [
+        dict(row)
+        for row in block.get("rows") or []
+        if str(row.get("direction") or "").upper() == wanted
+    ]
+    if len(rows) == 20 and str(block.get("state") or "").upper() == "COMPLETE":
+        return {**block, "rows": rows, "available_count": 20}
+    reason = block.get("degradation_reason")
+    if len(rows) < 20:
+        direction_reason = (
+            f"only {len(rows)} valid {wanted} rows available from the governed "
+            "full-universe predictor materialization"
+        )
+        reason = f"{reason}; {direction_reason}" if reason else direction_reason
+    return {
+        **block,
+        "state": "DEGRADED" if rows else "UNAVAILABLE",
+        "rows": rows,
+        "available_count": len(rows),
+        "expected_count": 20,
+        "degradation_reason": reason or f"{wanted} exact20 unavailable",
+    }
+
+
+def _load_priority_mini_league(
+    runtime_data_root: Path,
+) -> dict[str, Any]:
+    """Resolve the occurrence mini-league from runtime membership evidence, never a fixed ID."""
+    memberships = _read_json(
+        runtime_data_root / "data/v6/personal/memberships.json", {}
+    ) or {}
+    priority = [
+        dict(row)
+        for row in memberships.get("priority_resolution") or []
+        if isinstance(row, Mapping)
+        and row.get("league_id") is not None
+        and str(row.get("resolution_status") or "").upper() in {"RESOLVED", "AVAILABLE", "CURRENT"}
+    ]
+    candidates: list[tuple[datetime | None, int, dict[str, Any]]] = []
+
+    for membership in priority:
+        league_id = int(membership["league_id"])
+        path = (
+            runtime_data_root
+            / "data/v6/mini_leagues"
+            / str(league_id)
+            / "standings.json"
+        )
+        payload = _read_json(path, {}) or {}
+        if payload:
+            enriched = dict(payload)
+            enriched.setdefault("league_id", league_id)
+            enriched.setdefault("league_name", membership.get("league_name"))
+            enriched["membership_resolution"] = "PRIORITY_RESOLUTION"
+            generated = _aware(payload.get("generated_at"))
+            candidates.append((generated, league_id, enriched))
+
+    if not candidates:
+        root = runtime_data_root / "data/v6/mini_leagues"
+        if root.exists():
+            for path in root.glob("*/standings.json"):
+                payload = _read_json(path, {}) or {}
+                if not payload or not payload.get("user_summary"):
+                    continue
+                try:
+                    league_id = int(path.parent.name)
+                except ValueError:
+                    continue
+                enriched = dict(payload)
+                enriched.setdefault("league_id", league_id)
+                enriched["membership_resolution"] = "DISCOVERED_USER_SUMMARY"
+                generated = _aware(payload.get("generated_at"))
+                candidates.append((generated, league_id, enriched))
+
+    if not candidates:
+        return {}
+
+    floor = _aware("1970-01-01T00:00:00+00:00")
+    candidates.sort(
+        key=lambda item: (item[0] or floor, -item[1]),
+        reverse=True,
+    )
+    return candidates[0][2]
+
+
 def _actual_price_changes(bootstrap: Mapping[str, Any]) -> list[dict[str, Any]]:
     rows = []
     for player in bootstrap.get("elements") or []:
@@ -504,12 +602,12 @@ def build_price_delivery_report(
         int(value)
         for value in team_resolution.get("element_ids") or []
     ]
-    rise = build_price20(
+    rise = _strict_directional_price20(
         predictor_artifact=predictor,
         direction="RISE",
         owned_element_ids=owned_ids if team_resolution.get("supportable") else (),
     )
-    fall = build_price20(
+    fall = _strict_directional_price20(
         predictor_artifact=predictor,
         direction="FALL",
         owned_element_ids=owned_ids if team_resolution.get("supportable") else (),
@@ -1288,9 +1386,7 @@ def run_price_occurrence(
     predictor = _read_json(
         runtime_data_root / "data/v6/current/official_price_predictor.json", {}
     ) or {}
-    standings = _read_json(
-        runtime_data_root / "data/v6/mini_leagues/9477/standings.json", {}
-    ) or {}
+    standings = _load_priority_mini_league(runtime_data_root)
     publish_integrity = _read_json(
         runtime_data_root / "data/v6/health/publish_integrity.json", {}
     ) or {}

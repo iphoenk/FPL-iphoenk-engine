@@ -888,3 +888,42 @@ def test_34_pre_and_post_render_agree_on_truthful_degradation_and_visible_label(
     assert post_missing["status"] == "FAIL"
     assert "VISIBLE_DEGRADATION_LABEL_MISSING=WATCHLIST20:DEGRADED" in post_missing["hard_failures"]
 
+
+
+def test_deep_delivery_rejects_complete_unbound_governed_payload():
+    from src.engines.v12_deep_delivery import validate_deep_decision_content_delivery
+    report = {"sections": [
+        {"section_id": "S12", "state": "COMPLETE", "content": {"rows": [
+            {"rank": i, "direction": "RISE", "estimate_source": "PREDICTOR"} for i in range(1, 21)
+        ]}},
+        {"section_id": "S18", "state": "COMPLETE", "content": {
+            "NOW": "WAIT", "NEXT": "CHECK", "TRIGGER TO ACT": "EDGE",
+            "LATEST SAFE DECISION POINT": "DEADLINE", "COST OF WAITING": "LOW",
+            "ABORT / REVERSAL": "NEW EVIDENCE"
+        }},
+    ]}
+    failures = validate_deep_decision_content_delivery(report, "RISE20")
+    assert "AUTHORITATIVE_PAYLOAD_NOT_BOUND=S12" in failures
+
+
+def test_deep_delivery_rejects_rank20_resort_and_watchlist_imbalance():
+    from src.engines.v12_deep_delivery import validate_deep_decision_content_delivery
+    bound = {"status": "BOUND", "producer": "TEST", "payload_fingerprint": "abc"}
+    report = {"sections": [
+        {"section_id": "S11", "state": "COMPLETE", "content": {
+            "authoritative_binding": bound,
+            "rows": [{"position": "MID"} for _ in range(20)]
+        }},
+        {"section_id": "S13", "state": "COMPLETE", "content": {
+            "authoritative_binding": bound,
+            "rows": [{"rank": 99 if i == 1 else i, "direction": "FALL", "estimate_source": "PREDICTOR"} for i in range(1, 21)]
+        }},
+        {"section_id": "S18", "state": "COMPLETE", "content": {
+            "NOW": "WAIT", "NEXT": "CHECK", "TRIGGER TO ACT": "EDGE",
+            "LATEST SAFE DECISION POINT": "DEADLINE", "COST OF WAITING": "LOW",
+            "ABORT / REVERSAL": "NEW EVIDENCE"
+        }},
+    ]}
+    failures = validate_deep_decision_content_delivery(report, "FALL20")
+    assert any(x.startswith("GOVERNED_RANK20_RANK_MISMATCH=S13") for x in failures)
+    assert any(x.startswith("WATCHLIST20_POSITION_BALANCE=") for x in failures)

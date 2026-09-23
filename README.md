@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-23T09:07:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-23T11:39:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -15,6 +15,8 @@ This repository powers a governed personal Fantasy Premier League decision syste
 ## DEEP human-facing report contract
 
 The Canonical V12 DEEP report is a **23-section fail-closed human-facing contract**. The presentation may become easier to scan, but analytics and evidence must not be removed to shorten the report.
+
+Occurrence-stage observability fingerprints normalize supported runtime `datetime` values to deterministic ISO-8601 strings before hashing. This keeps personal-evidence reconciliation auditable without changing evidence selection, football analytics, V6 facts, or decision semantics.
 
 Required visible order:
 

@@ -1894,14 +1894,22 @@ def _decision_core_scalar_reference(players: Sequence[Mapping[str, Any]]) -> dic
 _BENCH_COLUMN_PERMUTATIONS = tuple(itertools.permutations((0, 1, 2), 3))
 
 
-def _ordered_masked_sum(
-    starter_mask: np.ndarray,
+def _ordered_legal_sum(
+    legal: Sequence[Sequence[int]],
     values: np.ndarray,
 ) -> np.ndarray:
-    """Preserve scalar player-order accumulation while vectorizing legal XI."""
-    out = np.zeros(starter_mask.shape[0], dtype=np.float64)
-    for index in range(starter_mask.shape[1]):
-        out += starter_mask[:, index].astype(np.float64) * float(values[index])
+    """Preserve scalar starter-order IEEE-754 accumulation exactly.
+
+    Scalar _lineup_route sums only the eleven selected players, in legal-XI
+    index order. Multiplying non-starters by zero in a masked vector changes
+    the floating accumulation path enough to move some six-decimal route
+    values by 1e-6. Gather the same eleven values and add them in the same
+    order while still vectorizing across all 550 legal XIs.
+    """
+    indices = np.asarray(legal, dtype=np.int64)
+    out = np.zeros(indices.shape[0], dtype=np.float64)
+    for slot in range(indices.shape[1]):
+        out += values[indices[:, slot]]
     return out
 
 
@@ -2428,32 +2436,32 @@ def _compact_routes_vectorized_exact(
         dtype=np.float64,
     )
 
-    expected_points = _ordered_masked_sum(
-        starter_mask, mean_values
+    expected_points = _ordered_legal_sum(
+        legal, mean_values
     )
-    expected_shortfall = _ordered_masked_sum(
-        starter_mask, shortfall_values
+    expected_shortfall = _ordered_legal_sum(
+        legal, shortfall_values
     )
-    expected_excess = _ordered_masked_sum(
-        starter_mask, excess_values
+    expected_excess = _ordered_legal_sum(
+        legal, excess_values
     )
-    aggregate_variance = _ordered_masked_sum(
-        starter_mask, variance_values
+    aggregate_variance = _ordered_legal_sum(
+        legal, variance_values
     )
-    tactical_score_sum = _ordered_masked_sum(
-        starter_mask, tactical_score_values
+    tactical_score_sum = _ordered_legal_sum(
+        legal, tactical_score_values
     )
-    tactical_score_count = _ordered_masked_sum(
-        starter_mask, tactical_score_available
+    tactical_score_count = _ordered_legal_sum(
+        legal, tactical_score_available
     )
-    tactical_weight_sum = _ordered_masked_sum(
-        starter_mask, tactical_weight_values
+    tactical_weight_sum = _ordered_legal_sum(
+        legal, tactical_weight_values
     )
-    tactical_weight_count = _ordered_masked_sum(
-        starter_mask, tactical_weight_available
+    tactical_weight_count = _ordered_legal_sum(
+        legal, tactical_weight_available
     )
-    pmf_ready_count = _ordered_masked_sum(
-        starter_mask, pmf_ready_values
+    pmf_ready_count = _ordered_legal_sum(
+        legal, pmf_ready_values
     )
 
     base = (

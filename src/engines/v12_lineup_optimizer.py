@@ -347,6 +347,62 @@ def build_player_surface(projection: Mapping[str, Any], planning_gw: int) -> dic
     }
 
 
+_P17_SURFACE_CACHE_OWNER: Mapping[str, Any] | None = None
+_P17_SURFACE_CACHE: dict[tuple[int, int], dict[str, Any]] = {}
+
+
+def prime_player_surface_cache(
+    projections: Mapping[str, Any],
+    *,
+    planning_gws: Sequence[int],
+    material_elements: Sequence[int],
+) -> dict[str, int]:
+    """Prime exact immutable player surfaces for repeated route evaluation.
+
+    The cache is process-local and bound by object identity to one projections
+    payload.  A different projections object cannot reuse these surfaces.
+    """
+    global _P17_SURFACE_CACHE_OWNER, _P17_SURFACE_CACHE
+    pmap = {
+        int(row.get("element") or -1): row
+        for row in projections.get("players") or []
+    }
+    elements = tuple(
+        sorted(
+            {
+                int(element)
+                for element in material_elements
+                if int(element) in pmap
+            }
+        )
+    )
+    gws = tuple(sorted({int(gw) for gw in planning_gws}))
+    _P17_SURFACE_CACHE_OWNER = projections
+    _P17_SURFACE_CACHE = {
+        (element, gw): build_player_surface(pmap[element], gw)
+        for gw in gws
+        for element in elements
+    }
+    return {
+        "element_count": len(elements),
+        "gw_count": len(gws),
+        "surface_count": len(_P17_SURFACE_CACHE),
+    }
+
+
+def _cached_player_surface(
+    projections: Mapping[str, Any],
+    projection: Mapping[str, Any],
+    gw: int,
+) -> dict[str, Any]:
+    element = int(projection.get("element") or -1)
+    if projections is _P17_SURFACE_CACHE_OWNER:
+        cached = _P17_SURFACE_CACHE.get((element, int(gw)))
+        if cached is not None:
+            return deepcopy(cached)
+    return build_player_surface(projection, int(gw))
+
+
 @lru_cache(maxsize=4096)
 def _poisson_binomial_count_probabilities(
     probabilities: tuple[float, ...],
@@ -1866,43 +1922,30 @@ def optimize_lineup(
     *,
     planning_gw: int | None = None,
     generated_at: str | None = None,
-    prebuilt_surfaces: Mapping[int, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     cfg = load_config()
     generated = generated_at or _now()
     gw = int(planning_gw or projections.get("planning_gw") or 1)
+    pmap = {
+        int(row.get("element") or -1): row
+        for row in projections.get("players") or []
+    }
     ids = [int(x) for x in squad_ids]
     if len(ids) != 15 or len(set(ids)) != 15:
         raise LineupOptimizerError("P1.7 squad must contain 15 unique elements")
-
-    if prebuilt_surfaces is None:
-        pmap = {
-            int(row.get("element") or -1): row
-            for row in projections.get("players") or []
-        }
-        missing = [element for element in ids if element not in pmap]
-        if missing:
-            raise LineupOptimizerError(
-                f"P1.7 missing projections for owned elements: {missing}"
-            )
-        players = [
-            build_player_surface(pmap[element], gw)
-            for element in ids
-        ]
-    else:
-        missing = [
-            element
-            for element in ids
-            if element not in prebuilt_surfaces
-        ]
-        if missing:
-            raise LineupOptimizerError(
-                f"P1.7 missing prebuilt surfaces for owned elements: {missing}"
-            )
-        players = [
-            deepcopy(dict(prebuilt_surfaces[element]))
-            for element in ids
-        ]
+    missing = [element for element in ids if element not in pmap]
+    if missing:
+        raise LineupOptimizerError(
+            f"P1.7 missing projections for owned elements: {missing}"
+        )
+    players = [
+        _cached_player_surface(
+            projections,
+            pmap[element],
+            gw,
+        )
+        for element in ids
+    ]
     core = _decision_core_cached(players)
     selected = core["selected"]
     captain_id = int((selected.get("captain_vice") or {}).get("captain_element") or 0)

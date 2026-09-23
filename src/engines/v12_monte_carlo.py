@@ -10,8 +10,11 @@ It is not a football scoring authority and never imports runtime_v3 or V6.
 from copy import deepcopy
 from datetime import datetime, timezone
 from functools import lru_cache
+import hashlib
 import json
 import math
+import os
+import pickle
 from pathlib import Path
 from statistics import NormalDist
 import time
@@ -71,6 +74,8 @@ STAGE1_STATE_NAMES = (
 )
 POSITIONS = ("GK", "DEF", "MID", "FWD")
 OUTFIELD = ("DEF", "MID", "FWD")
+MC_SIM_CACHE_ENV = "V12_MC_SIM_CACHE_DIR"
+MC_SIM_CACHE_SCHEMA = 1
 
 
 class MonteCarloError(ValueError):
@@ -871,6 +876,151 @@ def package_route_definitions(
     route_ids: Sequence[str] | None = None,
 ) -> list[dict[str, Any]]:
     return [_route_definition(row) for row in _route_rows_from_package(package_utility, route_ids=route_ids)]
+
+
+@lru_cache(maxsize=1)
+def _mc_code_sha256() -> str:
+    return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+
+
+def _simulation_route_signature(
+    route_defs: Sequence[Mapping[str, Any]],
+    *,
+    include_economics: bool,
+) -> list[dict[str, Any]]:
+    """Normalize only route fields consumed by P1.4 simulation/metrics.
+
+    Occurrence-only P1.7 evidence fingerprints are intentionally excluded so
+    identical football lineups can reuse the same random world across reports.
+    """
+    rows: list[dict[str, Any]] = []
+    for route in route_defs:
+        normalized = {
+            "route_id": str(route.get("route_id") or ""),
+            "per_gw": [
+                {
+                    "gw": _i(row.get("gw")),
+                    "starting_xi": [
+                        int(value)
+                        for value in row.get("starting_xi") or []
+                    ],
+                    "bench_order": [
+                        int(value)
+                        for value in row.get("bench_order") or []
+                    ],
+                    "bench_gk": _i(row.get("bench_gk")),
+                    "captain": _i(row.get("captain")),
+                    "vice_captain": _i(row.get("vice_captain")),
+                }
+                for row in route.get("per_gw") or []
+                if isinstance(row, Mapping)
+            ],
+        }
+        if include_economics:
+            normalized.update(
+                {
+                    "execution_cost_points": route.get(
+                        "execution_cost_points"
+                    ),
+                    "execution_cost_status": route.get(
+                        "execution_cost_status"
+                    ),
+                    "decision_net_supported": bool(
+                        route.get("decision_net_supported")
+                    ),
+                }
+            )
+        rows.append(normalized)
+    return rows
+
+
+def canonical_package_seed(
+    projections: Mapping[str, Any],
+    package_utility: Mapping[str, Any],
+    *,
+    route_ids: Sequence[str] | None = None,
+) -> int:
+    """Stable common-random-number seed for identical football inputs."""
+    route_defs = package_route_definitions(
+        package_utility,
+        route_ids=route_ids,
+    )
+    digest = fingerprint(
+        {
+            "projection_fingerprint": fingerprint(projections),
+            "football_route_signature": _simulation_route_signature(
+                route_defs,
+                include_economics=False,
+            ),
+            "correlation_model_version": (
+                load_config().get("correlation") or {}
+            ).get("correlation_model_version"),
+        }
+    )
+    return int(digest[:8], 16)
+
+
+def _mc_cache_path(key: str) -> Path | None:
+    root = str(os.environ.get(MC_SIM_CACHE_ENV) or "").strip()
+    if not root:
+        return None
+    return Path(root) / key[:2] / f"{key}.pkl"
+
+
+def _load_mc_summary_cache(key: str) -> dict[str, Any] | None:
+    path = _mc_cache_path(key)
+    if path is None or not path.is_file():
+        return None
+    try:
+        with path.open("rb") as fh:
+            payload = pickle.load(fh)
+        if (
+            isinstance(payload, dict)
+            and int(payload.get("schema") or 0)
+            == MC_SIM_CACHE_SCHEMA
+            and payload.get("key") == key
+            and isinstance(payload.get("summary"), dict)
+        ):
+            return deepcopy(dict(payload["summary"]))
+    except (
+        OSError,
+        EOFError,
+        pickle.PickleError,
+        AttributeError,
+        ValueError,
+        TypeError,
+    ):
+        return None
+    return None
+
+
+def _save_mc_summary_cache(
+    key: str,
+    summary: Mapping[str, Any],
+) -> None:
+    path = _mc_cache_path(key)
+    if path is None:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        with tmp.open("wb") as fh:
+            pickle.dump(
+                {
+                    "schema": MC_SIM_CACHE_SCHEMA,
+                    "key": key,
+                    "summary": dict(summary),
+                },
+                fh,
+                protocol=pickle.HIGHEST_PROTOCOL,
+            )
+        os.replace(tmp, path)
+    finally:
+        try:
+            if tmp.exists():
+                tmp.unlink()
+        except OSError:
+            pass
 
 
 def _validate_lineup_row(

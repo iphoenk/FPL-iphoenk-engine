@@ -683,9 +683,6 @@ def _captain_kernel(
         "expected_vice_takeover_value": gather(vice_fallback),
         "joint_upside": gather(joint_upside),
         "joint_downside": gather(joint_downside),
-        "scalar_boundary_fallback_count": int(
-            np.sum(captain_boundary)
-        ),
     }
 
 def _selected_safe_pool_counts(
@@ -2256,6 +2253,9 @@ def _family_captain_kernel(
         "expected_vice_takeover_value": gather(vice_fallback),
         "joint_upside": gather(joint_upside),
         "joint_downside": gather(joint_downside),
+        "scalar_boundary_fallback_count": int(
+            np.sum(captain_boundary)
+        ),
     }
 
 

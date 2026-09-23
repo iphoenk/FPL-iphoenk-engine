@@ -4,6 +4,7 @@ from copy import deepcopy
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from src.engines.canonical_decision_methodology import CANONICAL_WEIGHTS
@@ -1796,38 +1797,125 @@ def test_p17_cross_route_batch_2043_routes_five_gw_under_ten_seconds():
     assert elapsed <= 10.0
 
 
-def test_p17_lazy_lexicographic_skips_lower_keys_after_unique_first_key():
+def test_p17_lazy_lexicographic_preserves_first_tie_and_skips_later_keys():
     from src.engines import v12_lineup_batch as batch
 
-    first = batch.np.asarray(
+    calls = {"later": 0}
+    first = np.asarray(
         [
-            [3.0, 2.0, 1.0],
-            [1.0, 3.0, 2.0],
+            [[3.0, 2.0, 1.0], [4.0, 3.0, 2.0]],
+            [[1.0, 0.0, -1.0], [9.0, 8.0, 7.0]],
         ],
-        dtype=batch.np.float64,
+        dtype=np.float64,
     )
 
-    def forbidden_lower_key():
-        raise AssertionError(
-            "lower-priority key should not materialize after unique winner"
+    def later():
+        calls["later"] += 1
+        raise AssertionError("unique first key must skip later keys")
+
+    winner = batch._lexicographic_first((first, later), axis=2)
+    assert winner.tolist() == [[0, 0], [0, 0]]
+    assert calls["later"] == 0
+
+
+def test_p17_lazy_lexicographic_resolves_adversarial_ties_in_first_order():
+    from src.engines import v12_lineup_batch as batch
+
+    first = np.asarray([[[1.0, 1.0, 0.0], [2.0, 2.0, 2.0]]])
+    second = np.asarray([[[5.0, 6.0, 99.0], [7.0, 7.0, 6.0]]])
+    third = np.asarray([[[0.0, 0.0, 0.0], [1.0, 2.0, 99.0]]])
+    winner = batch._lexicographic_first(
+        (first, lambda: second, lambda: third),
+        axis=2,
+    )
+    assert winner.tolist() == [[1, 1]]
+
+
+def test_p17_lazy_lexicographic_rejects_non_finite_ranking_keys():
+    from src.engines import v12_lineup_batch as batch
+
+    with pytest.raises(batch.LineupBatchError, match="must be finite"):
+        batch._lexicographic_first(
+            (np.asarray([[[1.0, np.nan]]], dtype=np.float64),),
+            axis=2,
         )
 
-    observed = batch._lexicographic_first(
-        (first, forbidden_lower_key),
-        axis=1,
-    )
-    assert observed.tolist() == [0, 1]
 
-
-def test_p17_lazy_lexicographic_rejects_nonfinite_metric():
+def test_p17_rounding_boundary_batch_matches_scalar_full_path():
     from src.engines import v12_lineup_batch as batch
+    from src.engines import v12_package_utility as package
 
-    metric = batch.np.asarray(
-        [[1.0, float("nan"), 0.0]],
-        dtype=batch.np.float64,
+    projections, candidates = _cross_route_projection_fixture(20)
+    # Perturb the fixture around decimal half boundaries.  The assertion is
+    # intentionally end-to-end: any ULP drift before rounding must still
+    # preserve scalar ranking/output, not merely Python-vs-NumPy round().
+    for index, row in enumerate(projections["players"]):
+        base = deepcopy(row["xpts_by_gw"][0])
+        epsilon = (-1.0, 0.0, 1.0)[index % 3] * 1e-12
+        target = 4.1234565 + epsilon
+        base["xpts_mean"] = target
+        conditional = dict(base.get("appearance_conditioned") or {})
+        conditional["expected_points"] = target
+        base["appearance_conditioned"] = conditional
+        row["xpts_by_gw"] = [
+            {**deepcopy(base), "gw": gw}
+            for gw in range(GW, GW + 5)
+        ]
+
+    base_ids = tuple(
+        sorted(row["element"] for row in projections["players"][:15])
     )
-    with pytest.raises(batch.LineupBatchError, match="finite"):
-        batch._lexicographic_first((metric,), axis=1)
+    owned_by_id = {
+        int(row["element"]): row for row in projections["players"][:15]
+    }
+    candidate_by_position = {
+        position: [
+            row for row in candidates if row["position"] == position
+        ]
+        for position in ("GK", "DEF", "MID", "FWD")
+    }
+    squads = [base_ids]
+    for outgoing in base_ids:
+        position = owned_by_id[outgoing]["position"]
+        for incoming in candidate_by_position[position][:5]:
+            squads.append(
+                tuple(
+                    sorted(
+                        (set(base_ids) - {outgoing})
+                        | {int(incoming["element"])}
+                    )
+                )
+            )
+    actual, _ = batch.optimize_lineup_horizons_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+        batch_size=512,
+    )
+    keys = (
+        "route_utility",
+        "expected_fpl_points",
+        "distributional_downside",
+        "supportable_upside",
+        "formation",
+        "starting_xi",
+        "bench_order",
+        "captain",
+        "vice_captain",
+    )
+    for squad, horizons in zip(squads, actual):
+        for offset in range(5):
+            scalar_row = package._lineup_decision(
+                projections,
+                squad,
+                gw=GW + offset,
+                generated_at=GENERATED,
+            )
+            batch_row = horizons["per_gw"][offset]
+            assert tuple(batch_row.get(key) for key in keys) == tuple(
+                scalar_row.get(key) for key in keys
+            )
 
 
 def test_p17_core14_family_adversarial_full_tie_matches_scalar():

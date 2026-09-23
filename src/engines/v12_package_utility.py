@@ -29,7 +29,12 @@ from src.engines.canonical_decision_methodology import (
     derive_dynamic_ft_shadow_value,
     validate_methodology_weights,
 )
-from src.engines.v12_lineup_optimizer import optimize_lineup, prime_player_surface_cache
+from src.engines.v12_lineup_optimizer import (
+    optimize_lineup,
+    p17_execution_observability,
+    prime_player_surface_cache,
+    reset_p17_execution_observability,
+)
 from src.engines.v12_model_evidence import (
     bind_deterministic_output,
     build_model_run_binding,
@@ -845,6 +850,7 @@ def _init_p1_2b_lineup_worker(
             if int(row.get("element") or -1) > 0
         )
     )
+    reset_p17_execution_observability()
     prime_player_surface_cache(
         projections,
         planning_gws=range(
@@ -868,6 +874,7 @@ def _p1_2b_route_lineups_worker(
     dict[str, Any],
     float,
     tuple[float, ...],
+    dict[str, float],
 ]:
     """Evaluate one exact route and return non-authoritative timing proof."""
     if _P1_2B_WORKER_CONTEXT is None:
@@ -875,6 +882,7 @@ def _p1_2b_route_lineups_worker(
     route_id, squad = item
     projections, planning_gw, generated_at = _P1_2B_WORKER_CONTEXT
     gw_elapsed: list[float] = []
+    before = p17_execution_observability()
     started = time.perf_counter()
     output = _cumulative_lineup_horizons(
         projections,
@@ -884,12 +892,27 @@ def _p1_2b_route_lineups_worker(
         _perf_sink=gw_elapsed,
     )
     elapsed = time.perf_counter() - started
+    after = p17_execution_observability()
+    delta = {
+        key: float(after.get(key, 0) or 0) - float(before.get(key, 0) or 0)
+        for key in (
+            "p17_cache_hits",
+            "p17_cache_misses",
+            "p17_cache_writes",
+            "p17_cache_corrupt_rejects",
+            "legal_xi_template_hits",
+            "legal_xi_template_misses",
+            "p1_7_wall_seconds",
+            "p1_7_cpu_seconds",
+        )
+    }
     return (
         str(route_id),
         tuple(squad),
         output,
         elapsed,
         tuple(gw_elapsed),
+        delta,
     )
 
 
@@ -979,6 +1002,16 @@ def _materialize_route_lineups(
     by_squad: dict[tuple[int, ...], dict[str, Any]] = {}
     squad_elapsed: list[float] = []
     gw_elapsed: list[float] = []
+    p17_totals = {
+        "p17_cache_hits": 0.0,
+        "p17_cache_misses": 0.0,
+        "p17_cache_writes": 0.0,
+        "p17_cache_corrupt_rejects": 0.0,
+        "legal_xi_template_hits": 0.0,
+        "legal_xi_template_misses": 0.0,
+        "p1_7_wall_seconds": 0.0,
+        "p1_7_cpu_seconds": 0.0,
+    }
     materialization_started = time.perf_counter()
     if use_parallel:
         fork_context = mp.get_context("fork")
@@ -1005,7 +1038,7 @@ def _materialize_route_lineups(
                 material_elements,
             ),
         ) as executor:
-            for _, squad, output, elapsed, route_gw_elapsed in executor.map(
+            for _, squad, output, elapsed, route_gw_elapsed, route_stats in executor.map(
                 _p1_2b_route_lineups_worker,
                 unique_items,
                 chunksize=chunksize,
@@ -1013,6 +1046,8 @@ def _materialize_route_lineups(
                 by_squad[tuple(squad)] = output
                 squad_elapsed.append(float(elapsed))
                 gw_elapsed.extend(float(value) for value in route_gw_elapsed)
+                for key in p17_totals:
+                    p17_totals[key] += float(route_stats.get(key, 0.0) or 0.0)
         execution_mode = "PROCESS_POOL_EXACT_P1_7"
     else:
         print(
@@ -1021,6 +1056,7 @@ def _materialize_route_lineups(
             f"unique_squads={len(unique_items)} workers=1",
             flush=True,
         )
+        reset_p17_execution_observability()
         prime_player_surface_cache(
             projections,
             planning_gws=range(
@@ -1031,6 +1067,7 @@ def _materialize_route_lineups(
         )
         for _, squad in unique_items:
             route_gw_elapsed: list[float] = []
+            before = p17_execution_observability()
             route_started = time.perf_counter()
             by_squad[tuple(squad)] = _cumulative_lineup_horizons(
                 projections,
@@ -1041,6 +1078,12 @@ def _materialize_route_lineups(
             )
             squad_elapsed.append(time.perf_counter() - route_started)
             gw_elapsed.extend(route_gw_elapsed)
+            after = p17_execution_observability()
+            for key in p17_totals:
+                p17_totals[key] += (
+                    float(after.get(key, 0.0) or 0.0)
+                    - float(before.get(key, 0.0) or 0.0)
+                )
         execution_mode = "SEQUENTIAL_EXACT_P1_7"
 
     if len(by_squad) != len(unique_items):
@@ -1098,6 +1141,28 @@ def _materialize_route_lineups(
         "p1_7_owner": "V12_LINEUP_OPTIMIZER",
         "shared_player_surface_catalog": True,
         "material_element_count": len(material_elements),
+        "p17_cache_hits": int(p17_totals["p17_cache_hits"]),
+        "p17_cache_misses": int(p17_totals["p17_cache_misses"]),
+        "p17_cache_writes": int(p17_totals["p17_cache_writes"]),
+        "p17_cache_corrupt_rejects": int(
+            p17_totals["p17_cache_corrupt_rejects"]
+        ),
+        "legal_xi_template_hits": int(
+            p17_totals["legal_xi_template_hits"]
+        ),
+        "legal_xi_template_misses": int(
+            p17_totals["legal_xi_template_misses"]
+        ),
+        "player_surface_build_count": (
+            len(material_elements) * 5 * effective_workers
+        ),
+        "unique_player_surface_count": len(material_elements) * 5,
+        "p1_7_wall_seconds": round(
+            p17_totals["p1_7_wall_seconds"], 6
+        ),
+        "p1_7_cpu_seconds": round(
+            p17_totals["p1_7_cpu_seconds"], 6
+        ),
         "exact_route_identity_preserved": True,
         "lossy_pruning": False,
         "p1_7_math_mutated": False,

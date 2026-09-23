@@ -2617,6 +2617,903 @@ def _compact_routes_vectorized_exact(
     return routes
 
 
+
+_ROUTE_BATCH_POSITION_ID = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
+_ROUTE_BATCH_POSITION_NAME = {value: key for key, value in _ROUTE_BATCH_POSITION_ID.items()}
+_ROUTE_BATCH_BENCH_SLOT_TABLE = np.asarray(
+    (
+        (1, 2, 3),
+        (0, 2, 3),
+        (0, 1, 3),
+        (0, 1, 2),
+    ),
+    dtype=np.int64,
+)
+_ROUTE_BATCH_NUMERICAL_GUARD = 1e-4
+
+
+def _route_batch_position_dnp_distribution(
+    starter_mask: np.ndarray,
+    position_ids: np.ndarray,
+    p_dnp: np.ndarray,
+    *,
+    position_id: int,
+) -> np.ndarray:
+    """Exact row-wise Poisson-binomial counts across many route/XI rows."""
+    selected = starter_mask & (position_ids == int(position_id))
+    counts = selected.sum(axis=1).astype(np.int64)
+    max_count = int(counts.max(initial=0))
+    probabilities = np.where(selected, p_dnp, np.inf)
+    probabilities.sort(axis=1)
+    dist = np.zeros(
+        (starter_mask.shape[0], max_count + 1),
+        dtype=np.float64,
+    )
+    dist[:, 0] = 1.0
+    for step in range(max_count):
+        p = np.where(step < counts, probabilities[:, step], 0.0)
+        nxt = dist * (1.0 - p[:, None])
+        nxt[:, 1:] += dist[:, :-1] * p[:, None]
+        dist = nxt
+    return dist
+
+
+def _route_batch_bench_winners_exact(
+    *,
+    starter_mask: np.ndarray,
+    route_index: np.ndarray,
+    position_matrix: np.ndarray,
+    element_matrix: np.ndarray,
+    p_appearance_matrix: np.ndarray,
+    p_dnp_matrix: np.ndarray,
+    xpts_mean_matrix: np.ndarray,
+    conditioned_mean_matrix: np.ndarray,
+    conditioned_blank_matrix: np.ndarray,
+    conditioned_ge8_matrix: np.ndarray,
+    conditioned_ge10_matrix: np.ndarray,
+) -> dict[str, Any]:
+    """Batch all six exact bench permutations across many squad/XI rows.
+
+    This is the route-dimension analogue of
+    _batch_compact_bench_winners_exact. Resolver legality still comes only
+    from _resolver_state_matrix/_resolver_mask_table.
+    """
+    row_count = int(starter_mask.shape[0])
+    objective = dict(load_config().get("objective") or {})
+    blank_weight = _f(
+        objective.get("bench_blank_probability_weight_points"), 0.20
+    )
+    upside_weight = _f(
+        objective.get("bench_ge8_probability_weight_points"), 0.20
+    )
+    positions = position_matrix[route_index]
+    elements = element_matrix[route_index]
+    p_appearance = p_appearance_matrix[route_index]
+    p_dnp = p_dnp_matrix[route_index]
+    xpts_mean = xpts_mean_matrix[route_index]
+    conditioned_mean = conditioned_mean_matrix[route_index]
+    conditioned_blank = conditioned_blank_matrix[route_index]
+    conditioned_ge8 = conditioned_ge8_matrix[route_index]
+    conditioned_ge10 = conditioned_ge10_matrix[route_index]
+
+    slot_ids = np.arange(15, dtype=np.int64)[None, :]
+    bench_sort_key = np.where(
+        starter_mask,
+        100 + slot_ids,
+        slot_ids,
+    )
+    bench4 = np.argsort(
+        bench_sort_key,
+        axis=1,
+        kind="stable",
+    )[:, :4]
+    bench_positions = np.take_along_axis(
+        positions,
+        bench4,
+        axis=1,
+    )
+    reserve_is_gk = bench_positions == _ROUTE_BATCH_POSITION_ID["GK"]
+    if not np.all(reserve_is_gk.sum(axis=1) == 1):
+        raise LineupOptimizerError(
+            "route-batch P1.7 bench lost exactly one reserve GK"
+        )
+    reserve_slot = reserve_is_gk.argmax(axis=1)
+    reserve_gk_indices = bench4[
+        np.arange(row_count, dtype=np.int64),
+        reserve_slot,
+    ]
+    outfield_slot_indices = _ROUTE_BATCH_BENCH_SLOT_TABLE[
+        reserve_slot
+    ]
+    outfield_bench_indices = np.take_along_axis(
+        bench4,
+        outfield_slot_indices,
+        axis=1,
+    )
+
+    starter_gk_mask = (
+        starter_mask
+        & (positions == _ROUTE_BATCH_POSITION_ID["GK"])
+    )
+    if not np.all(starter_gk_mask.sum(axis=1) == 1):
+        raise LineupOptimizerError(
+            "route-batch P1.7 XI lost exactly one starting GK"
+        )
+    starter_gk_indices = starter_gk_mask.argmax(axis=1)
+
+    def_dist = _route_batch_position_dnp_distribution(
+        starter_mask,
+        positions,
+        p_dnp,
+        position_id=_ROUTE_BATCH_POSITION_ID["DEF"],
+    )
+    mid_dist = _route_batch_position_dnp_distribution(
+        starter_mask,
+        positions,
+        p_dnp,
+        position_id=_ROUTE_BATCH_POSITION_ID["MID"],
+    )
+    fwd_dist = _route_batch_position_dnp_distribution(
+        starter_mask,
+        positions,
+        p_dnp,
+        position_id=_ROUTE_BATCH_POSITION_ID["FWD"],
+    )
+
+    def_counts = (
+        starter_mask
+        & (positions == _ROUTE_BATCH_POSITION_ID["DEF"])
+    ).sum(axis=1).astype(np.int64)
+    mid_counts = (
+        starter_mask
+        & (positions == _ROUTE_BATCH_POSITION_ID["MID"])
+    ).sum(axis=1).astype(np.int64)
+    fwd_counts = (
+        starter_mask
+        & (positions == _ROUTE_BATCH_POSITION_ID["FWD"])
+    ).sum(axis=1).astype(np.int64)
+
+    utility = np.empty((row_count, 6), dtype=np.float64)
+    expected = np.empty_like(utility)
+    autosub = np.empty_like(utility)
+    blank = np.empty_like(utility)
+    ge8 = np.empty_like(utility)
+    ge10 = np.empty_like(utility)
+
+    rows_all = np.arange(row_count, dtype=np.int64)
+    gk_expected = (
+        p_dnp[rows_all, starter_gk_indices]
+        * xpts_mean[rows_all, reserve_gk_indices]
+    )
+    gk_autosub = (
+        p_dnp[rows_all, starter_gk_indices]
+        * p_appearance[rows_all, reserve_gk_indices]
+    )
+
+    for permutation_index, permutation in enumerate(
+        _BENCH_COLUMN_PERMUTATIONS
+    ):
+        perm_indices = outfield_bench_indices[
+            :, list(permutation)
+        ]
+        perm_positions = np.take_along_axis(
+            positions,
+            perm_indices,
+            axis=1,
+        )
+        group_code = (
+            def_counts * 100000
+            + mid_counts * 10000
+            + fwd_counts * 1000
+            + perm_positions[:, 0] * 100
+            + perm_positions[:, 1] * 10
+            + perm_positions[:, 2]
+        )
+        selected_probability = np.zeros(
+            (row_count, 3),
+            dtype=np.float64,
+        )
+        outfield_autosub = np.zeros(
+            row_count,
+            dtype=np.float64,
+        )
+
+        for code in np.unique(group_code):
+            rows = np.flatnonzero(group_code == code)
+            if not len(rows):
+                continue
+            first = int(rows[0])
+            formation_counts = (
+                int(def_counts[first]),
+                int(mid_counts[first]),
+                int(fwd_counts[first]),
+            )
+            state_keys = tuple(
+                (d, m, f)
+                for d in range(formation_counts[0] + 1)
+                for m in range(formation_counts[1] + 1)
+                for f in range(formation_counts[2] + 1)
+            )
+            dnp_probability = np.empty(
+                (len(rows), len(state_keys)),
+                dtype=np.float64,
+            )
+            for state_index, (d, m, f) in enumerate(state_keys):
+                dnp_probability[:, state_index] = (
+                    def_dist[rows, d]
+                    * mid_dist[rows, m]
+                    * fwd_dist[rows, f]
+                )
+            dnp_probability = np.where(
+                dnp_probability > 1e-15,
+                dnp_probability,
+                0.0,
+            )
+            appearance_probability = (
+                _batch_appearance_mask_probabilities_exact(
+                    np.take_along_axis(
+                        p_appearance[rows],
+                        perm_indices[rows],
+                        axis=1,
+                    )
+                )
+            )
+            joint_probability = (
+                dnp_probability[:, :, None]
+                * appearance_probability[:, None, :]
+            )
+            bench_position_names = tuple(
+                _ROUTE_BATCH_POSITION_NAME[
+                    int(value)
+                ]
+                for value in perm_positions[first]
+            )
+            selected_matrix, _ = _resolver_state_matrix(
+                formation_counts,
+                state_keys,
+                bench_position_names,
+            )
+            selected_bits = np.asarray(
+                selected_matrix,
+                dtype=np.uint8,
+            )
+            outfield_autosub[rows] = np.sum(
+                np.where(
+                    selected_bits[None, :, :] != 0,
+                    joint_probability,
+                    0.0,
+                ),
+                axis=(1, 2),
+                dtype=np.float64,
+            )
+            for slot_index in range(3):
+                bit = 1 << slot_index
+                selected_probability[
+                    rows, slot_index
+                ] = np.sum(
+                    np.where(
+                        (selected_bits[None, :, :] & bit) != 0,
+                        joint_probability,
+                        0.0,
+                    ),
+                    axis=(1, 2),
+                    dtype=np.float64,
+                )
+
+        slot_mean = np.take_along_axis(
+            conditioned_mean,
+            perm_indices,
+            axis=1,
+        )
+        slot_blank = np.take_along_axis(
+            conditioned_blank,
+            perm_indices,
+            axis=1,
+        )
+        slot_ge8 = np.take_along_axis(
+            conditioned_ge8,
+            perm_indices,
+            axis=1,
+        )
+        slot_ge10 = np.take_along_axis(
+            conditioned_ge10,
+            perm_indices,
+            axis=1,
+        )
+        outfield_expected = np.sum(
+            selected_probability * slot_mean,
+            axis=1,
+            dtype=np.float64,
+        )
+        selected_blank = np.sum(
+            selected_probability * slot_blank,
+            axis=1,
+            dtype=np.float64,
+        )
+        selected_ge8 = np.sum(
+            selected_probability * slot_ge8,
+            axis=1,
+            dtype=np.float64,
+        )
+        selected_ge10 = np.sum(
+            selected_probability * slot_ge10,
+            axis=1,
+            dtype=np.float64,
+        )
+        expected[:, permutation_index] = (
+            outfield_expected + gk_expected
+        )
+        autosub[:, permutation_index] = 1.0 - (
+            (1.0 - outfield_autosub)
+            * (1.0 - gk_autosub)
+        )
+        blank[:, permutation_index] = selected_blank
+        ge8[:, permutation_index] = selected_ge8
+        ge10[:, permutation_index] = selected_ge10
+        utility[:, permutation_index] = (
+            expected[:, permutation_index]
+            - blank_weight * selected_blank
+            + upside_weight * selected_ge8
+        )
+
+    rounded_utility = np.round(utility, 6)
+    rounded_expected = np.round(expected, 6)
+    rounded_blank = np.round(blank, 9)
+    rounded_ge8 = np.round(ge8, 9)
+    rounded_ge10 = np.round(ge10, 9)
+    winner = np.zeros(row_count, dtype=np.int64)
+    best_u = rounded_utility[:, 0].copy()
+    best_e = rounded_expected[:, 0].copy()
+    best_b = rounded_blank[:, 0].copy()
+    best_8 = rounded_ge8[:, 0].copy()
+    best_10 = rounded_ge10[:, 0].copy()
+    for candidate in range(1, 6):
+        cu = rounded_utility[:, candidate]
+        ce = rounded_expected[:, candidate]
+        cb = rounded_blank[:, candidate]
+        c8 = rounded_ge8[:, candidate]
+        c10 = rounded_ge10[:, candidate]
+        better = (
+            (cu > best_u)
+            | (
+                (cu == best_u)
+                & (
+                    (ce > best_e)
+                    | (
+                        (ce == best_e)
+                        & (
+                            (-cb > -best_b)
+                            | (
+                                (cb == best_b)
+                                & (
+                                    (c8 > best_8)
+                                    | (
+                                        (c8 == best_8)
+                                        & (c10 > best_10)
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        winner = np.where(better, candidate, winner)
+        best_u = np.where(better, cu, best_u)
+        best_e = np.where(better, ce, best_e)
+        best_b = np.where(better, cb, best_b)
+        best_8 = np.where(better, c8, best_8)
+        best_10 = np.where(better, c10, best_10)
+
+    permutation_table = np.asarray(
+        _BENCH_COLUMN_PERMUTATIONS,
+        dtype=np.int64,
+    )
+    winning_permutations = permutation_table[winner]
+    winning_indices = np.take_along_axis(
+        outfield_bench_indices,
+        winning_permutations,
+        axis=1,
+    )
+    return {
+        "order_elements": np.take_along_axis(
+            elements,
+            winning_indices,
+            axis=1,
+        ),
+        "expected_autosub_value": rounded_expected[
+            rows_all, winner
+        ],
+        "autosub_probability": np.round(
+            autosub[rows_all, winner],
+            9,
+        ),
+        "bench_order_utility": rounded_utility[
+            rows_all, winner
+        ],
+        "reserve_gk_indices": reserve_gk_indices,
+    }
+
+
+def _route_batch_captain_vice_exact(
+    *,
+    route_players: Sequence[Sequence[Mapping[str, Any]]],
+    starter_mask: np.ndarray,
+    legal_count: int,
+) -> tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    list[list[dict[str, Any]]],
+]:
+    """Resolve canonical C/VC ordering for every route/XI row."""
+    route_count = len(route_players)
+    total_rows = route_count * int(legal_count)
+    pair_utility = np.empty(total_rows, dtype=np.float64)
+    captain_value = np.empty(total_rows, dtype=np.float64)
+    vice_value = np.empty(total_rows, dtype=np.float64)
+    captain_slot = np.empty(total_rows, dtype=np.int64)
+    vice_slot = np.empty(total_rows, dtype=np.int64)
+    ranked_by_route: list[list[dict[str, Any]]] = []
+
+    for route_pos, players in enumerate(route_players):
+        ranked = evaluate_captain_vice_pairs(players)
+        ranked_by_route.append(ranked)
+        element_to_slot = {
+            int(row.get("element") or 0): index
+            for index, row in enumerate(players)
+        }
+        start = route_pos * int(legal_count)
+        end = start + int(legal_count)
+        local_mask = starter_mask[start:end]
+        unresolved = np.ones(
+            int(legal_count),
+            dtype=bool,
+        )
+        for pair in ranked:
+            cap = element_to_slot[
+                int(pair.get("captain_element") or 0)
+            ]
+            vice = element_to_slot[
+                int(pair.get("vice_element") or 0)
+            ]
+            eligible = (
+                unresolved
+                & local_mask[:, cap]
+                & local_mask[:, vice]
+            )
+            if not np.any(eligible):
+                continue
+            global_rows = start + np.flatnonzero(eligible)
+            pair_utility[global_rows] = _f(
+                pair.get("pair_utility")
+            )
+            captain_value[global_rows] = _f(
+                pair.get("expected_captain_multiplier_value")
+            )
+            vice_value[global_rows] = _f(
+                pair.get("expected_vice_takeover_value")
+            )
+            captain_slot[global_rows] = cap
+            vice_slot[global_rows] = vice
+            unresolved[eligible] = False
+            if not np.any(unresolved):
+                break
+        if np.any(unresolved):
+            raise LineupOptimizerError(
+                "route-batch P1.7 lost canonical captain/vice pair"
+            )
+    return (
+        pair_utility,
+        captain_value,
+        vice_value,
+        captain_slot,
+        vice_slot,
+        ranked_by_route,
+    )
+
+
+def _captain_safe_pool_count_from_selected(
+    selected: Mapping[str, Any],
+) -> int:
+    pair = dict(selected.get("captain_vice") or {})
+    seen: set[int] = set()
+    for element in (
+        int(pair.get("captain_element") or 0),
+        int(pair.get("vice_element") or 0),
+    ):
+        if element > 0:
+            seen.add(element)
+    for row in selected.get("captain_vice_alternatives") or []:
+        element = int(row.get("captain_element") or 0)
+        if element > 0:
+            seen.add(element)
+        if len(seen) >= 5:
+            break
+    return len(seen)
+
+
+def optimize_lineup_summaries_exact_batch(
+    projections: Mapping[str, Any],
+    squads: Mapping[str, Sequence[int]],
+    *,
+    planning_gw: int,
+    generated_at: str | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Exact P1.7 selected-decision batch for P1.2B execution.
+
+    All legal XI and all six bench permutations are numerically evaluated for
+    every supplied squad. A conservative numerical guard around the vectorized
+    winner is re-ranked with the canonical scalar compact route, then the exact
+    selected route is fully materialized. This is execution reuse only and
+    never creates a second lineup model or prunes a package route.
+    """
+    if not squads:
+        return {}
+    generated = generated_at or _now()
+    gw = int(planning_gw)
+    pmap = {
+        int(row.get("element") or -1): row
+        for row in projections.get("players") or []
+    }
+    keys = list(squads)
+    route_players: list[list[dict[str, Any]]] = []
+    legal_by_route: list[list[tuple[int, ...]]] = []
+    for key in keys:
+        ids = [int(value) for value in squads[key]]
+        if len(ids) != 15 or len(set(ids)) != 15:
+            raise LineupOptimizerError(
+                f"route-batch P1.7 squad {key} is not exact15"
+            )
+        missing = [element for element in ids if element not in pmap]
+        if missing:
+            raise LineupOptimizerError(
+                f"route-batch P1.7 missing projections for {key}: {missing}"
+            )
+        players = [
+            _cached_player_surface(
+                projections,
+                pmap[element],
+                gw,
+            )
+            for element in ids
+        ]
+        route_players.append(players)
+        legal = enumerate_legal_xi(players)
+        if len(legal) != 550:
+            raise LineupOptimizerError(
+                f"route-batch P1.7 expected 550 legal XI for {key}"
+            )
+        legal_by_route.append(legal)
+
+    route_count = len(keys)
+    legal_count = 550
+    legal_indices = np.asarray(
+        legal_by_route,
+        dtype=np.int64,
+    )
+    starter = np.zeros(
+        (route_count, legal_count, 15),
+        dtype=bool,
+    )
+    route_rows = np.arange(route_count)[:, None]
+    legal_rows = np.arange(legal_count)[None, :]
+    for slot in range(11):
+        starter[
+            route_rows,
+            legal_rows,
+            legal_indices[:, :, slot],
+        ] = True
+    starter_flat = starter.reshape(
+        route_count * legal_count,
+        15,
+    )
+    route_index = np.repeat(
+        np.arange(route_count, dtype=np.int64),
+        legal_count,
+    )
+
+    def matrix(extractor, dtype=np.float64):
+        return np.asarray(
+            [
+                [extractor(row) for row in players]
+                for players in route_players
+            ],
+            dtype=dtype,
+        )
+
+    position_matrix = matrix(
+        lambda row: _ROUTE_BATCH_POSITION_ID[
+            str(row.get("position"))
+        ],
+        dtype=np.int64,
+    )
+    element_matrix = matrix(
+        lambda row: int(row.get("element") or 0),
+        dtype=np.int64,
+    )
+    p_appearance_matrix = matrix(
+        lambda row: _f(row.get("p_appearance"))
+    )
+    p_dnp_matrix = matrix(
+        lambda row: _f(row.get("p_dnp"))
+    )
+    xpts_mean_matrix = matrix(
+        lambda row: _f(row.get("xpts_mean"))
+    )
+    shortfall_matrix = matrix(
+        lambda row: _f(row.get("expected_shortfall"))
+    )
+    excess_matrix = matrix(
+        lambda row: _f(row.get("expected_excess_ge_8"))
+    )
+    tactical_weight_matrix = matrix(
+        lambda row: _f(
+            (row.get("tactical_role") or {}).get(
+                "weighted_component_points"
+            )
+        )
+    )
+    conditioned_mean_matrix = matrix(
+        lambda row: _f(
+            (row.get("appearance_conditioned") or {}).get(
+                "expected_points"
+            )
+        )
+    )
+    conditioned_blank_matrix = matrix(
+        lambda row: _f(
+            (row.get("appearance_conditioned") or {}).get(
+                "p_fpl_blank"
+            )
+        )
+        if (row.get("appearance_conditioned") or {}).get(
+            "p_fpl_blank"
+        )
+        is not None
+        else 0.0
+    )
+    conditioned_ge8_matrix = matrix(
+        lambda row: _f(
+            (row.get("appearance_conditioned") or {}).get(
+                "p_points_ge_8"
+            )
+        )
+        if (row.get("appearance_conditioned") or {}).get(
+            "p_points_ge_8"
+        )
+        is not None
+        else 0.0
+    )
+    conditioned_ge10_matrix = matrix(
+        lambda row: _f(
+            (row.get("appearance_conditioned") or {}).get(
+                "p_points_ge_10"
+            )
+        )
+        if (row.get("appearance_conditioned") or {}).get(
+            "p_points_ge_10"
+        )
+        is not None
+        else 0.0
+    )
+
+    bench = _route_batch_bench_winners_exact(
+        starter_mask=starter_flat,
+        route_index=route_index,
+        position_matrix=position_matrix,
+        element_matrix=element_matrix,
+        p_appearance_matrix=p_appearance_matrix,
+        p_dnp_matrix=p_dnp_matrix,
+        xpts_mean_matrix=xpts_mean_matrix,
+        conditioned_mean_matrix=conditioned_mean_matrix,
+        conditioned_blank_matrix=conditioned_blank_matrix,
+        conditioned_ge8_matrix=conditioned_ge8_matrix,
+        conditioned_ge10_matrix=conditioned_ge10_matrix,
+    )
+    (
+        pair_utility,
+        captain_value,
+        vice_value,
+        _,
+        _,
+        ranked_by_route,
+    ) = _route_batch_captain_vice_exact(
+        route_players=route_players,
+        starter_mask=starter_flat,
+        legal_count=legal_count,
+    )
+
+    objective = dict(load_config().get("objective") or {})
+    mean_rows = xpts_mean_matrix[route_index]
+    shortfall_rows = shortfall_matrix[route_index]
+    excess_rows = excess_matrix[route_index]
+    tactical_rows = tactical_weight_matrix[route_index]
+    approximate_points = np.sum(
+        np.where(starter_flat, mean_rows, 0.0),
+        axis=1,
+        dtype=np.float64,
+    )
+    approximate_shortfall = np.sum(
+        np.where(starter_flat, shortfall_rows, 0.0),
+        axis=1,
+        dtype=np.float64,
+    )
+    approximate_excess = np.sum(
+        np.where(starter_flat, excess_rows, 0.0),
+        axis=1,
+        dtype=np.float64,
+    )
+    approximate_tactical = np.sum(
+        np.where(starter_flat, tactical_rows, 0.0),
+        axis=1,
+        dtype=np.float64,
+    ) / 11.0
+    approximate_base = (
+        approximate_points
+        - _f(objective.get("lineup_downside_weight"), 0.10)
+        * approximate_shortfall
+        + _f(objective.get("lineup_upside_weight"), 0.05)
+        * approximate_excess
+    )
+    approximate_utility = (
+        approximate_base
+        + np.asarray(
+            bench["bench_order_utility"],
+            dtype=np.float64,
+        )
+        + pair_utility
+    )
+    approximate_with_cvc = (
+        approximate_points
+        + np.asarray(
+            bench["expected_autosub_value"],
+            dtype=np.float64,
+        )
+        + captain_value
+        + vice_value
+    )
+
+    output: dict[str, dict[str, Any]] = {}
+    for route_pos, key in enumerate(keys):
+        start = route_pos * legal_count
+        end = start + legal_count
+        local_primary = np.round(
+            approximate_utility[start:end],
+            6,
+        )
+        primary_max = float(np.max(local_primary))
+        refine = np.flatnonzero(
+            local_primary
+            >= primary_max - _ROUTE_BATCH_NUMERICAL_GUARD
+        )
+        players = route_players[route_pos]
+        ranked_pairs = ranked_by_route[route_pos]
+        exact_candidates = [
+            _lineup_route(
+                players,
+                legal_by_route[route_pos][int(local_index)],
+                compact=True,
+                compact_cvc_ranked_pairs=ranked_pairs,
+            )
+            for local_index in refine
+        ]
+        exact_best_index = max(
+            range(len(exact_candidates)),
+            key=lambda index: _route_sort_key(
+                exact_candidates[index]
+            ),
+        )
+        compact_best = exact_candidates[exact_best_index]
+        selected_indices = tuple(
+            int(value)
+            for value in compact_best.get("_xi_indices") or ()
+        )
+        selected = _lineup_route(
+            players,
+            selected_indices,
+            compact=False,
+        )
+        compact_key = _route_sort_key(compact_best)
+        detailed_key = _route_sort_key(selected)
+        if any(
+            not math.isclose(
+                left,
+                right,
+                rel_tol=0.0,
+                abs_tol=1e-9,
+            )
+            for left, right in zip(
+                compact_key,
+                detailed_key,
+            )
+        ):
+            raise LineupOptimizerError(
+                "route-batch P1.7 exact materialization diverged"
+            )
+        pair = dict(selected.get("captain_vice") or {})
+        summary_core = {
+            "status": "READY",
+            "gw": gw,
+            "route_utility": selected.get("route_utility"),
+            "expected_fpl_points": selected.get(
+                "expected_fpl_points_before_captain"
+            ),
+            "distributional_downside": selected.get(
+                "distributional_downside"
+            ),
+            "supportable_upside": selected.get(
+                "supportable_upside"
+            ),
+            "expected_autosub_value": selected.get(
+                "expected_autosub_value"
+            ),
+            "cameo_blocking_cost": selected.get(
+                "expected_blocked_autosub_value"
+            ),
+            "formation": selected.get("formation"),
+            "starting_xi": [
+                int(row.get("element") or 0)
+                for row in selected.get("starters") or []
+            ],
+            "bench_gk": int(
+                (
+                    (selected.get("bench") or {}).get(
+                        "reserve_gk"
+                    )
+                    or {}
+                ).get("element")
+                or 0
+            ),
+            "bench_order": [
+                int(value)
+                for value in (
+                    (selected.get("bench") or {}).get("order")
+                    or []
+                )
+            ],
+            "captain": int(
+                pair.get("captain_element") or 0
+            ),
+            "vice_captain": int(
+                pair.get("vice_element") or 0
+            ),
+            "captain_safe_pool_count": (
+                _captain_safe_pool_count_from_selected(selected)
+            ),
+            "confidence": selected.get("confidence"),
+            "covariance_status": (
+                "COVARIANCE_NOT_MODELLED_YET"
+            ),
+            "governance": {
+                "p1_7_consumed_read_only": True,
+                "p1_1_math_mutated": False,
+                "p1_3_math_mutated": False,
+                "p1_6_math_mutated": False,
+                "p1_7_math_mutated": False,
+                "route_batch_execution_only": True,
+                "all_550_legal_xi_numerically_evaluated": True,
+                "scalar_exact_refinement_count": int(len(refine)),
+                "numerical_guard": _ROUTE_BATCH_NUMERICAL_GUARD,
+            },
+        }
+        evidence = _model_evidence_binding(
+            projections=projections,
+            squad_ids=[int(value) for value in squads[key]],
+            planning_gw=gw,
+            deterministic_output=summary_core,
+            generated_at=generated,
+        )
+        output[key] = {
+            **summary_core,
+            "p1_7_model_evidence_output_fingerprint": (
+                evidence.get("output_fingerprint")
+            ),
+        }
+    return output
+
 def _decision_core(players: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     """High-performance exact kernel; scalar implementation remains oracle."""
     legal = enumerate_legal_xi(players)

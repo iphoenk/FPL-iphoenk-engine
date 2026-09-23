@@ -1913,8 +1913,16 @@ def test_p17_rounding_boundary_is_non_vacuous_and_matches_scalar_bench():
             [[row["element"] for row in surfaces]],
             dtype=np.int64,
         ),
+        "position_codes": np.asarray(
+            [[batch.POS_CODE[row["position"]] for row in surfaces]],
+            dtype=np.int8,
+        ),
         "p_dnp": np.asarray(
             [[row["p_dnp"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "p_cameo": np.asarray(
+            [[row["p_cameo"] for row in surfaces]],
             dtype=np.float64,
         ),
         "p_appearance": np.asarray(

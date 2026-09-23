@@ -657,9 +657,13 @@ def test_72_active_mc_path_is_match_coupled_not_independent_player_point_samplin
     import inspect
     from src.engines import v12_monte_carlo as mc
 
-    source = inspect.getsource(mc._simulate_route_arrays)
-    assert "_simulate_match_coupled_gw(" in source
-    assert "_simulate_player_gw(" not in source
+    serial_source = inspect.getsource(mc._simulate_route_arrays_serial)
+    worker_source = inspect.getsource(mc._mc_parallel_worker)
+    wrapper_source = inspect.getsource(mc._simulate_route_arrays)
+    assert "_simulate_match_coupled_gw(" in serial_source
+    assert "_simulate_player_gw(" not in serial_source
+    assert "_simulate_route_arrays_serial(" in worker_source
+    assert "_simulate_route_arrays_parallel(" in wrapper_source
     assert load_config()["governance"]["independent_player_point_sampling_forbidden"] is True
 
 
@@ -801,3 +805,86 @@ def test_mc_summary_cache_reuses_simulation_and_rebinds_occurrence(
     )
     assert first["run_fingerprint"] != second["run_fingerprint"]
     assert list(tmp_path.rglob("*.pkl"))
+
+
+def test_parallel_mc_shards_are_deterministic_and_preserve_exact_path_count():
+    from src.engines import v12_monte_carlo as mc
+
+    projections, _ = _fixture()
+    routes = _routes()
+    kwargs = {
+        "actual_paths": 4_000,
+        "seed": 808080,
+        "horizons": (1,),
+        "worker_count": 2,
+    }
+    first_arrays, first_diag = mc._simulate_route_arrays_parallel(
+        projections,
+        routes,
+        **kwargs,
+    )
+    second_arrays, second_diag = mc._simulate_route_arrays_parallel(
+        projections,
+        routes,
+        **kwargs,
+    )
+
+    assert set(first_arrays) == set(second_arrays)
+    for route_id in first_arrays:
+        assert set(first_arrays[route_id]) == {1}
+        assert len(first_arrays[route_id][1]) == 4_000
+        assert np.array_equal(
+            first_arrays[route_id][1],
+            second_arrays[route_id][1],
+        )
+
+    assert first_diag == second_diag
+    parallel = first_diag["parallel_execution"]
+    assert parallel["status"] == "ENABLED"
+    assert parallel["worker_count"] == 2
+    assert parallel["shard_count"] == 2
+    assert parallel["shard_path_counts"] == [2_000, 2_000]
+    assert parallel["child_seed_policy"] == "NUMPY_SEEDSEQUENCE_SPAWN"
+    assert parallel["deterministic_shard_order"] is True
+    assert parallel["common_random_numbers_within_each_shard"] is True
+    assert parallel["total_paths_exact"] is True
+    assert first_diag["match_state_invariants"]["status"] == "PASS"
+
+
+def test_parallel_mc_uses_same_canonical_serial_model_owner():
+    import inspect
+    from src.engines import v12_monte_carlo as mc
+
+    worker_source = inspect.getsource(mc._mc_parallel_worker)
+    parallel_source = inspect.getsource(mc._simulate_route_arrays_parallel)
+    assert "_simulate_route_arrays_serial(" in worker_source
+    assert "ProcessPoolExecutor" in parallel_source
+    assert "SeedSequence" in parallel_source
+    assert "route_pruning" not in parallel_source
+    assert load_config()["canonical"]["parallel_workers"] == 4
+    assert load_config()["canonical"]["parallel_min_paths"] == 200_000
+    assert (
+        load_config()["governance"][
+            "deterministic_parallel_shards_execution_only"
+        ]
+        is True
+    )
+
+
+def test_parallel_mc_wrapper_keeps_diagnostics_serial_below_threshold():
+    from src.engines import v12_monte_carlo as mc
+
+    projections, _ = _fixture()
+    arrays, diagnostics = mc._simulate_route_arrays(
+        projections,
+        _routes(),
+        actual_paths=2_000,
+        seed=818181,
+        horizons=(1,),
+        chunk_size=2_000,
+    )
+    assert all(len(row[1]) == 2_000 for row in arrays.values())
+    proof = diagnostics["parallel_execution"]
+    assert proof["status"] == "SERIAL"
+    assert proof["worker_count"] == 1
+    assert proof["total_paths_exact"] is True

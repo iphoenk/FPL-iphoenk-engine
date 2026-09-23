@@ -35,6 +35,7 @@ from src.engines.v12_mini_league_overlay import (
 )
 from src.engines.v12_monte_carlo import (
     attach_monte_carlo_to_package_utility,
+    canonical_package_seed,
     run_package_monte_carlo,
 )
 from src.engines.v12_package_search import (
@@ -2722,7 +2723,11 @@ def run_deep(
                     projections,
                     package_utility,
                     actual_paths=500_000,
-                    seed=_stage3_seed(report_slot),
+                    seed=canonical_package_seed(
+                        projections,
+                        package_utility,
+                        route_ids=mc_route_ids,
+                    ),
                     input_snapshot_id=(
                         "STAGE3:"
                         + _fingerprint(

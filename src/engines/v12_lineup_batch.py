@@ -11,6 +11,7 @@ No route is pruned and no P1.1/P1.3/P1.6 mathematics is recomputed here.
 import math
 import time
 from functools import lru_cache
+from functools import lru_cache
 from typing import Any, Mapping, Sequence
 
 import numpy as np
@@ -32,6 +33,21 @@ BENCH_PERMUTATIONS = np.asarray(
     scalar._BENCH_COLUMN_PERMUTATIONS,
     dtype=np.int64,
 )
+PAIR_MASKS = np.asarray(
+    [
+        (1 << int(captain)) | (1 << int(vice))
+        for captain, vice in zip(PAIR_CAP, PAIR_VICE)
+    ],
+    dtype=np.uint16,
+)
+BENCH_PERMUTATION_RANK = np.full(27, 99, dtype=np.int64)
+for _rank, _permutation in enumerate(BENCH_PERMUTATIONS):
+    _code = (
+        int(_permutation[0]) * 9
+        + int(_permutation[1]) * 3
+        + int(_permutation[2])
+    )
+    BENCH_PERMUTATION_RANK[_code] = int(_rank)
 
 
 class LineupBatchError(ValueError):
@@ -913,6 +929,1098 @@ def _surface_arrays(
     }
 
 
+
+
+@lru_cache(maxsize=64)
+def _family_layout(
+    position_signature: tuple[str, ...],
+) -> dict[str, Any]:
+    """Static exact 550-XI structure for one core14 + candidate slot layout."""
+    if len(position_signature) != 15:
+        raise LineupBatchError("route-family layout requires 15 positions")
+    position_codes = np.asarray(
+        [POS_CODE[str(value)] for value in position_signature],
+        dtype=np.int8,
+    )
+    legal = np.asarray(
+        scalar._legal_xi_templates(position_signature),
+        dtype=np.int64,
+    )
+    if legal.shape != (550, 11):
+        raise LineupBatchError(
+            f"standard route-family layout requires 550 legal XI, got {legal.shape}"
+        )
+    legal_count = legal.shape[0]
+    starter_mask = np.zeros((legal_count, 15), dtype=bool)
+    starter_mask[
+        np.arange(legal_count, dtype=np.int64)[:, None],
+        legal,
+    ] = True
+
+    def position_count(code: int) -> np.ndarray:
+        return np.sum(
+            starter_mask & (position_codes[None, :] == code),
+            axis=1,
+            dtype=np.int64,
+        )
+
+    gk_count = position_count(POS_CODE["GK"])
+    def_count = position_count(POS_CODE["DEF"])
+    mid_count = position_count(POS_CODE["MID"])
+    fwd_count = position_count(POS_CODE["FWD"])
+    if np.any(gk_count != 1):
+        raise LineupBatchError("family layout lost starting goalkeeper")
+    formation_code = def_count * 100 + mid_count * 10 + fwd_count
+
+    bench_all = np.argsort(
+        starter_mask,
+        axis=1,
+        kind="stable",
+    )[:, :4]
+    bench_positions = position_codes[bench_all]
+    reserve_mask = bench_positions == POS_CODE["GK"]
+    if np.any(np.sum(reserve_mask, axis=1) != 1):
+        raise LineupBatchError("family layout lost reserve goalkeeper")
+    reserve_gk = np.sum(
+        np.where(reserve_mask, bench_all, 0),
+        axis=1,
+        dtype=np.int64,
+    )
+    outfield_bench = np.sort(
+        np.where(~reserve_mask, bench_all, 16),
+        axis=1,
+    )[:, :3]
+    if np.any(outfield_bench > 14):
+        raise LineupBatchError("family layout lost outfield bench")
+
+    slot_indices = np.arange(15, dtype=np.int64)[None, :]
+    starter_gk_mask = starter_mask & (
+        position_codes[None, :] == POS_CODE["GK"]
+    )
+    starter_gk = np.sum(
+        np.where(starter_gk_mask, slot_indices, 0),
+        axis=1,
+        dtype=np.int64,
+    )
+    outfield_permutations = np.stack(
+        [
+            outfield_bench[:, permutation]
+            for permutation in BENCH_PERMUTATIONS
+        ],
+        axis=1,
+    )
+
+    subset_layouts: dict[int, tuple[np.ndarray, np.ndarray]] = {}
+    for code, max_count in (
+        (POS_CODE["DEF"], 5),
+        (POS_CODE["MID"], 5),
+        (POS_CODE["FWD"], 3),
+    ):
+        unique: list[tuple[int, ...]] = []
+        unique_index: dict[tuple[int, ...], int] = {}
+        inverse = np.empty(legal_count, dtype=np.int64)
+        for row_index in range(legal_count):
+            subset = tuple(
+                int(slot)
+                for slot in np.flatnonzero(
+                    starter_mask[row_index]
+                    & (position_codes == code)
+                )
+            )
+            if subset not in unique_index:
+                unique_index[subset] = len(unique)
+                unique.append(subset)
+            inverse[row_index] = unique_index[subset]
+        padded = np.full(
+            (len(unique), int(max_count)),
+            -1,
+            dtype=np.int64,
+        )
+        for row_index, subset in enumerate(unique):
+            padded[row_index, : len(subset)] = subset
+        subset_layouts[code] = (padded, inverse)
+
+    structural_groups: list[list[dict[str, Any]]] = []
+    for permutation_index in range(6):
+        perm_indices = outfield_permutations[:, permutation_index, :]
+        perm_position_codes = position_codes[perm_indices]
+        structural_key = (
+            formation_code.astype(np.int64) * 64
+            + perm_position_codes[:, 0].astype(np.int64) * 16
+            + perm_position_codes[:, 1].astype(np.int64) * 4
+            + perm_position_codes[:, 2].astype(np.int64)
+        )
+        permutation_groups: list[dict[str, Any]] = []
+        for key in np.unique(structural_key):
+            rows = np.flatnonzero(structural_key == key)
+            fcode = int(formation_code[rows[0]])
+            d_count = fcode // 100
+            m_count = (fcode // 10) % 10
+            f_count = fcode % 10
+            bench_position_tuple = tuple(
+                CODE_POS[int(value)]
+                for value in perm_position_codes[rows[0]]
+            )
+            state_keys = tuple(
+                (d, m, f)
+                for d in range(d_count + 1)
+                for m in range(m_count + 1)
+                for f in range(f_count + 1)
+            )
+            selected_matrix, _ = scalar._resolver_state_matrix(
+                (d_count, m_count, f_count),
+                state_keys,
+                bench_position_tuple,
+            )
+            selected_bits = np.asarray(
+                selected_matrix,
+                dtype=np.uint8,
+            )
+            resolver_masks = [
+                (selected_bits != 0).astype(np.float64),
+                *[
+                    (
+                        (selected_bits & (1 << slot)) != 0
+                    ).astype(np.float64)
+                    for slot in range(3)
+                ],
+            ]
+            resolver_projection = np.concatenate(
+                [mask.T for mask in resolver_masks],
+                axis=1,
+            )
+            permutation_groups.append({
+                "rows": rows,
+                "state_keys": state_keys,
+                "resolver_projection": resolver_projection,
+            })
+        structural_groups.append(permutation_groups)
+
+    xi_bits = np.asarray(
+        [
+            sum(1 << int(slot) for slot in row)
+            for row in legal
+        ],
+        dtype=np.uint16,
+    )
+    return {
+        "position_signature": position_signature,
+        "position_codes": position_codes,
+        "legal": legal,
+        "starter_mask": starter_mask,
+        "formation_code": formation_code,
+        "reserve_gk": reserve_gk,
+        "starter_gk": starter_gk,
+        "outfield_bench": outfield_bench,
+        "outfield_permutations": outfield_permutations,
+        "subset_layouts": subset_layouts,
+        "structural_groups": structural_groups,
+        "candidate_started": starter_mask[:, 14],
+        "xi_bits": xi_bits,
+    }
+
+
+def _static_position_dnp_distribution(
+    p_dnp: np.ndarray,
+    subset_layout: tuple[np.ndarray, np.ndarray],
+) -> np.ndarray:
+    """Exact DNP-count distributions once per unique positional XI subset."""
+    subsets, inverse = subset_layout
+    if subsets.size == 0:
+        return np.ones((len(inverse), 1), dtype=np.float64)
+    safe = np.where(subsets >= 0, subsets, 0)
+    probabilities = p_dnp[safe]
+    probabilities = np.where(
+        subsets >= 0,
+        probabilities,
+        0.0,
+    )
+    max_count = subsets.shape[1]
+    dist = np.zeros(
+        (subsets.shape[0], max_count + 1),
+        dtype=np.float64,
+    )
+    dist[:, 0] = 1.0
+    for step in range(max_count):
+        probability = probabilities[:, step]
+        nxt = dist * (1.0 - probability[:, None])
+        nxt[:, 1:] += dist[:, :-1] * probability[:, None]
+        dist = nxt
+    return dist[inverse]
+
+
+def _family_selection_endpoint(
+    layout: Mapping[str, Any],
+    *,
+    p_dnp: np.ndarray,
+    p_appearance: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Exact outfield autosub probabilities for one family endpoint.
+
+    Candidate slot 14 is the only variable.  p=0 and p=1 endpoints therefore
+    span the exact multilinear resolver for every route in the family.
+    """
+    legal_count = int(layout["legal"].shape[0])
+    def_dist = _static_position_dnp_distribution(
+        p_dnp,
+        layout["subset_layouts"][POS_CODE["DEF"]],
+    )
+    mid_dist = _static_position_dnp_distribution(
+        p_dnp,
+        layout["subset_layouts"][POS_CODE["MID"]],
+    )
+    fwd_dist = _static_position_dnp_distribution(
+        p_dnp,
+        layout["subset_layouts"][POS_CODE["FWD"]],
+    )
+    selected = np.zeros(
+        (legal_count, 6, 3),
+        dtype=np.float64,
+    )
+    autosub = np.zeros(
+        (legal_count, 6),
+        dtype=np.float64,
+    )
+    outfield_permutations = layout["outfield_permutations"]
+
+    for permutation_index in range(6):
+        perm_indices = outfield_permutations[:, permutation_index, :]
+        for group in layout["structural_groups"][permutation_index]:
+            rows = group["rows"]
+            state_keys = group["state_keys"]
+            dnp_probability = np.empty(
+                (rows.size, len(state_keys)),
+                dtype=np.float64,
+            )
+            for state_index, (d_count, m_count, f_count) in enumerate(
+                state_keys
+            ):
+                dnp_probability[:, state_index] = (
+                    def_dist[rows, d_count]
+                    * mid_dist[rows, m_count]
+                    * fwd_dist[rows, f_count]
+                )
+            dnp_probability = np.where(
+                dnp_probability > 1e-15,
+                dnp_probability,
+                0.0,
+            )
+            appearance = _appearance_mask_probabilities(
+                p_appearance[perm_indices[rows]]
+            )
+            conditional = (
+                appearance @ group["resolver_projection"]
+            ).reshape(
+                rows.size,
+                4,
+                len(state_keys),
+            )
+            resolved = np.sum(
+                conditional * dnp_probability[:, None, :],
+                axis=2,
+                dtype=np.float64,
+            )
+            autosub[rows, permutation_index] = resolved[:, 0]
+            selected[rows, permutation_index, :] = resolved[:, 1:4]
+    return selected, autosub
+
+
+def _family_metric_coefficients(
+    *,
+    selected_zero: np.ndarray,
+    selected_delta: np.ndarray,
+    outfield_permutations: np.ndarray,
+    core_metric: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    metric = np.asarray(core_metric, dtype=np.float64).copy()
+    metric[14] = 0.0
+    values = metric[outfield_permutations]
+    candidate_slot = outfield_permutations == 14
+    return (
+        np.sum(selected_zero * values, axis=2, dtype=np.float64),
+        np.sum(selected_delta * values, axis=2, dtype=np.float64),
+        np.sum(selected_zero * candidate_slot, axis=2, dtype=np.float64),
+        np.sum(selected_delta * candidate_slot, axis=2, dtype=np.float64),
+    )
+
+
+def _bench_permutation_tie_rank(
+    elements: np.ndarray,
+    outfield_permutations: np.ndarray,
+) -> np.ndarray:
+    """Scalar itertools.permutations tie order under actual element ordering."""
+    sequence = elements[:, outfield_permutations]
+    ranks = np.sum(
+        sequence[..., :, None] > sequence[..., None, :],
+        axis=-1,
+        dtype=np.int64,
+    )
+    code = (
+        ranks[..., 0] * 9
+        + ranks[..., 1] * 3
+        + ranks[..., 2]
+    )
+    tie = BENCH_PERMUTATION_RANK[code]
+    if np.any(tie > 5):
+        raise LineupBatchError("bench permutation tie-rank drift")
+    return tie
+
+
+def _family_bench_kernel(
+    *,
+    layout: Mapping[str, Any],
+    arrays: Mapping[str, np.ndarray],
+) -> dict[str, np.ndarray]:
+    """Exact affine core14 bench/autosub kernel for all candidates."""
+    route_count = int(arrays["elements"].shape[0])
+    p_dnp_zero = np.asarray(arrays["p_dnp"][0], dtype=np.float64).copy()
+    p_dnp_one = p_dnp_zero.copy()
+    p_appearance_zero = np.asarray(
+        arrays["p_appearance"][0],
+        dtype=np.float64,
+    ).copy()
+    p_appearance_one = p_appearance_zero.copy()
+    p_dnp_zero[14] = 0.0
+    p_dnp_one[14] = 1.0
+    p_appearance_zero[14] = 0.0
+    p_appearance_one[14] = 1.0
+
+    selected_zero, autosub_zero = _family_selection_endpoint(
+        layout,
+        p_dnp=p_dnp_zero,
+        p_appearance=p_appearance_zero,
+    )
+    selected_one, autosub_one = _family_selection_endpoint(
+        layout,
+        p_dnp=p_dnp_one,
+        p_appearance=p_appearance_one,
+    )
+    selected_delta = selected_one - selected_zero
+    autosub_delta = autosub_one - autosub_zero
+
+    candidate_started = np.asarray(
+        layout["candidate_started"],
+        dtype=bool,
+    )
+    candidate_p_dnp = arrays["p_dnp"][:, 14]
+    candidate_p_appearance = arrays["p_appearance"][:, 14]
+    p_variable = np.where(
+        candidate_started[None, :],
+        candidate_p_dnp[:, None],
+        candidate_p_appearance[:, None],
+    )
+
+    core_metrics = {
+        "expected": np.asarray(
+            arrays["conditioned_mean"][0],
+            dtype=np.float64,
+        ),
+        "blank": np.asarray(
+            arrays["conditioned_blank"][0],
+            dtype=np.float64,
+        ),
+        "ge8": np.asarray(
+            arrays["conditioned_ge8"][0],
+            dtype=np.float64,
+        ),
+        "ge10": np.asarray(
+            arrays["conditioned_ge10"][0],
+            dtype=np.float64,
+        ),
+    }
+    candidate_metrics = {
+        "expected": arrays["conditioned_mean"][:, 14],
+        "blank": arrays["conditioned_blank"][:, 14],
+        "ge8": arrays["conditioned_ge8"][:, 14],
+        "ge10": arrays["conditioned_ge10"][:, 14],
+    }
+
+    resolved_metrics: dict[str, np.ndarray] = {}
+    for key in ("expected", "blank", "ge8", "ge10"):
+        base, slope, candidate_base, candidate_slope = (
+            _family_metric_coefficients(
+                selected_zero=selected_zero,
+                selected_delta=selected_delta,
+                outfield_permutations=layout[
+                    "outfield_permutations"
+                ],
+                core_metric=core_metrics[key],
+            )
+        )
+        resolved_metrics[key] = (
+            base[None, :, :]
+            + slope[None, :, :] * p_variable[:, :, None]
+            + candidate_metrics[key][:, None, None]
+            * (
+                candidate_base[None, :, :]
+                + candidate_slope[None, :, :]
+                * p_variable[:, :, None]
+            )
+        )
+
+    starter_gk = layout["starter_gk"]
+    reserve_gk = layout["reserve_gk"]
+    gk_expected = (
+        arrays["p_dnp"][:, starter_gk]
+        * arrays["xpts_mean"][:, reserve_gk]
+    )
+    gk_autosub = (
+        arrays["p_dnp"][:, starter_gk]
+        * arrays["p_appearance"][:, reserve_gk]
+    )
+    outfield_autosub = (
+        autosub_zero[None, :, :]
+        + autosub_delta[None, :, :]
+        * p_variable[:, :, None]
+    )
+
+    expected = (
+        resolved_metrics["expected"]
+        + gk_expected[:, :, None]
+    )
+    autosub = 1.0 - (
+        (1.0 - outfield_autosub)
+        * (1.0 - gk_autosub[:, :, None])
+    )
+    blank = resolved_metrics["blank"]
+    ge8 = resolved_metrics["ge8"]
+    ge10 = resolved_metrics["ge10"]
+
+    objective = dict((scalar.load_config().get("objective") or {}))
+    utility = (
+        expected
+        - _f(
+            objective.get("bench_blank_probability_weight_points"),
+            0.20,
+        )
+        * blank
+        + _f(
+            objective.get("bench_ge8_probability_weight_points"),
+            0.20,
+        )
+        * ge8
+    )
+    tie_rank = _bench_permutation_tie_rank(
+        arrays["elements"],
+        layout["outfield_permutations"],
+    )
+    winner = _lexicographic_first(
+        (
+            np.round(utility, 6),
+            np.round(expected, 6),
+            -np.round(blank, 9),
+            np.round(ge8, 9),
+            np.round(ge10, 9),
+            -tie_rank.astype(np.float64),
+        ),
+        axis=2,
+    )
+    route_axis = np.arange(route_count, dtype=np.int64)[:, None]
+    legal_axis = np.arange(
+        layout["legal"].shape[0],
+        dtype=np.int64,
+    )[None, :]
+    winning_order_indices = layout["outfield_permutations"][
+        legal_axis,
+        winner,
+    ]
+    return {
+        "order_indices": winning_order_indices,
+        "order_elements": arrays["elements"][
+            route_axis[:, :, None],
+            winning_order_indices,
+        ],
+        "reserve_gk_indices": np.broadcast_to(
+            reserve_gk[None, :],
+            (route_count, len(reserve_gk)),
+        ),
+        "expected_autosub_value_raw": expected[
+            route_axis,
+            legal_axis,
+            winner,
+        ],
+        "expected_autosub_value": np.round(
+            expected[route_axis, legal_axis, winner],
+            6,
+        ),
+        "autosub_probability": np.round(
+            autosub[route_axis, legal_axis, winner],
+            9,
+        ),
+        "selected_blank": np.round(
+            blank[route_axis, legal_axis, winner],
+            9,
+        ),
+        "selected_ge8": np.round(
+            ge8[route_axis, legal_axis, winner],
+            9,
+        ),
+        "selected_ge10": np.round(
+            ge10[route_axis, legal_axis, winner],
+            9,
+        ),
+        "bench_order_utility": np.round(
+            utility[route_axis, legal_axis, winner],
+            6,
+        ),
+        "endpoint_evaluations": 2,
+    }
+
+
+def _actual_slot_ranks(elements: np.ndarray) -> np.ndarray:
+    order = np.argsort(elements, axis=1, kind="stable")
+    ranks = np.empty_like(order)
+    ranks[
+        np.arange(elements.shape[0], dtype=np.int64)[:, None],
+        order,
+    ] = np.arange(15, dtype=np.int64)[None, :]
+    return ranks
+
+
+def _family_captain_kernel(
+    *,
+    layout: Mapping[str, Any],
+    elements: np.ndarray,
+    xpts_mean: np.ndarray,
+    shortfall: np.ndarray,
+    excess: np.ndarray,
+    p_dnp: np.ndarray,
+) -> dict[str, np.ndarray]:
+    """Exact C/VC ranking with static XI bitmasks and actual scalar tie order."""
+    objective = dict((scalar.load_config().get("objective") or {}))
+    downside_weight = _f(
+        objective.get("captain_downside_weight"),
+        0.15,
+    )
+    upside_weight = _f(
+        objective.get("captain_upside_weight"),
+        0.10,
+    )
+    base = (
+        xpts_mean
+        - downside_weight * shortfall
+        + upside_weight * excess
+    )
+    pair_utility = np.round(
+        base[:, PAIR_CAP]
+        + p_dnp[:, PAIR_CAP] * base[:, PAIR_VICE],
+        6,
+    )
+    cap_mean = np.round(xpts_mean[:, PAIR_CAP], 6)
+    vice_fallback = np.round(
+        p_dnp[:, PAIR_CAP] * xpts_mean[:, PAIR_VICE],
+        6,
+    )
+    joint_upside = np.round(
+        excess[:, PAIR_CAP]
+        + p_dnp[:, PAIR_CAP] * excess[:, PAIR_VICE],
+        6,
+    )
+    joint_downside = np.round(
+        shortfall[:, PAIR_CAP]
+        + p_dnp[:, PAIR_CAP] * shortfall[:, PAIR_VICE],
+        6,
+    )
+
+    slot_rank = _actual_slot_ranks(elements)
+    cap_rank = slot_rank[:, PAIR_CAP]
+    vice_rank = slot_rank[:, PAIR_VICE]
+    pair_tie = (
+        cap_rank * 14
+        + np.where(
+            vice_rank < cap_rank,
+            vice_rank,
+            vice_rank - 1,
+        )
+    )
+    pair_order = np.lexsort(
+        (
+            pair_tie,
+            -vice_fallback,
+            joint_downside,
+            -joint_upside,
+            -cap_mean,
+            -pair_utility,
+        ),
+        axis=1,
+    )
+
+    route_count = elements.shape[0]
+    legal_count = layout["legal"].shape[0]
+    winner = np.full(
+        (route_count, legal_count),
+        -1,
+        dtype=np.int64,
+    )
+    unresolved = np.ones_like(winner, dtype=bool)
+    xi_bits = layout["xi_bits"][None, :]
+    for rank in range(pair_order.shape[1]):
+        pair_index = pair_order[:, rank]
+        pair_mask = PAIR_MASKS[pair_index][:, None]
+        eligible = (
+            unresolved
+            & ((xi_bits & pair_mask) == pair_mask)
+        )
+        if np.any(eligible):
+            winner[eligible] = np.broadcast_to(
+                pair_index[:, None],
+                winner.shape,
+            )[eligible]
+            unresolved &= ~eligible
+        if not np.any(unresolved):
+            break
+    if np.any(winner < 0):
+        raise LineupBatchError("route-family captain lost legal pair")
+
+    def gather(values: np.ndarray) -> np.ndarray:
+        return np.take_along_axis(
+            values[:, None, :],
+            winner[:, :, None],
+            axis=2,
+        )[:, :, 0]
+
+    return {
+        "winner_pair_index": winner,
+        "pair_order": pair_order,
+        "captain_index": PAIR_CAP[winner],
+        "vice_index": PAIR_VICE[winner],
+        "pair_utility": gather(pair_utility),
+        "expected_captain_multiplier_value": gather(cap_mean),
+        "expected_vice_takeover_value": gather(vice_fallback),
+        "joint_upside": gather(joint_upside),
+        "joint_downside": gather(joint_downside),
+    }
+
+
+@lru_cache(maxsize=256)
+def _family_legal_tie_rank_for_candidate_position(
+    position_signature: tuple[str, ...],
+    candidate_actual_rank: int,
+) -> tuple[int, ...]:
+    """Map canonical family XI rows to scalar legal enumeration order."""
+    rank = int(candidate_actual_rank)
+    if rank < 0 or rank > 14:
+        raise LineupBatchError("candidate actual rank must be within [0,14]")
+    actual_order = list(range(14))
+    actual_order.insert(rank, 14)
+    actual_signature = tuple(
+        position_signature[slot]
+        for slot in actual_order
+    )
+    actual_legal = scalar._legal_xi_templates(actual_signature)
+    actual_rank_by_combination = {
+        tuple(int(value) for value in combination): index
+        for index, combination in enumerate(actual_legal)
+    }
+    canonical_to_actual = np.empty(15, dtype=np.int64)
+    for actual_slot, canonical_slot in enumerate(actual_order):
+        canonical_to_actual[canonical_slot] = actual_slot
+    canonical_legal = scalar._legal_xi_templates(position_signature)
+    result: list[int] = []
+    for row in canonical_legal:
+        actual_combination = tuple(
+            sorted(
+                int(canonical_to_actual[int(slot)])
+                for slot in row
+            )
+        )
+        if actual_combination not in actual_rank_by_combination:
+            raise LineupBatchError("family legal XI mapping drift")
+        result.append(
+            int(actual_rank_by_combination[actual_combination])
+        )
+    return tuple(result)
+
+
+def _family_route_tie_rank(
+    layout: Mapping[str, Any],
+    elements: np.ndarray,
+) -> np.ndarray:
+    slot_rank = _actual_slot_ranks(elements)
+    candidate_rank = slot_rank[:, 14]
+    out = np.empty(
+        (elements.shape[0], layout["legal"].shape[0]),
+        dtype=np.int64,
+    )
+    for rank in np.unique(candidate_rank):
+        rows = np.flatnonzero(candidate_rank == rank)
+        mapping = np.asarray(
+            _family_legal_tie_rank_for_candidate_position(
+                tuple(layout["position_signature"]),
+                int(rank),
+            ),
+            dtype=np.int64,
+        )
+        out[rows, :] = mapping[None, :]
+    return out
+
+
+def _ordered_gather_sum_static(
+    values: np.ndarray,
+    legal: np.ndarray,
+) -> np.ndarray:
+    total = np.zeros(
+        (values.shape[0], legal.shape[0]),
+        dtype=np.float64,
+    )
+    for slot in range(legal.shape[1]):
+        total = total + values[:, legal[:, slot]]
+    return total
+
+
+def _optimize_gw_family(
+    core14: Sequence[int],
+    candidate_elements: Sequence[int],
+    *,
+    gw: int,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Exact fixed-outgoing family evaluation with core14 structural reuse."""
+    if not candidate_elements:
+        return [], {
+            "route_count": 0,
+            "endpoint_evaluations": 0,
+        }
+    canonical_squads = [
+        tuple(int(value) for value in core14)
+        + (int(candidate),)
+        for candidate in candidate_elements
+    ]
+    arrays = _surface_arrays(canonical_squads, gw=gw)
+    signatures = {
+        tuple(str(value) for value in row)
+        for row in arrays["position_rows"]
+    }
+    if len(signatures) != 1:
+        raise LineupBatchError(
+            "one route family must preserve candidate position"
+        )
+    layout = _family_layout(next(iter(signatures)))
+    legal = layout["legal"]
+    bench = _family_bench_kernel(
+        layout=layout,
+        arrays=arrays,
+    )
+    captain = _family_captain_kernel(
+        layout=layout,
+        elements=arrays["elements"],
+        xpts_mean=arrays["xpts_mean"],
+        shortfall=arrays["shortfall"],
+        excess=arrays["excess"],
+        p_dnp=arrays["p_dnp"],
+    )
+
+    expected_points = _ordered_gather_sum_static(
+        arrays["xpts_mean"],
+        legal,
+    )
+    shortfall = _ordered_gather_sum_static(
+        arrays["shortfall"],
+        legal,
+    )
+    excess = _ordered_gather_sum_static(
+        arrays["excess"],
+        legal,
+    )
+    tactical_sum = _ordered_gather_sum_static(
+        arrays["tactical_weight"],
+        legal,
+    )
+    tactical_count = _ordered_gather_sum_static(
+        arrays["tactical_available"],
+        legal,
+    )
+    pmf_ready = _ordered_gather_sum_static(
+        arrays["pmf_ready"],
+        legal,
+    )
+
+    objective = dict((scalar.load_config().get("objective") or {}))
+    base_utility = (
+        expected_points
+        - _f(
+            objective.get("lineup_downside_weight"),
+            0.10,
+        )
+        * shortfall
+        + _f(
+            objective.get("lineup_upside_weight"),
+            0.05,
+        )
+        * excess
+    )
+    route_utility = np.round(
+        base_utility
+        + bench["bench_order_utility"]
+        + captain["pair_utility"],
+        6,
+    )
+    expected_before_captain = np.round(
+        expected_points
+        + bench["expected_autosub_value"],
+        6,
+    )
+    expected_with_captain = np.round(
+        expected_points
+        + bench["expected_autosub_value"]
+        + captain["expected_captain_multiplier_value"]
+        + captain["expected_vice_takeover_value"],
+        6,
+    )
+    downside = np.round(shortfall, 6)
+    upside = np.round(excess, 6)
+    tactical_mean = np.where(
+        tactical_count > 0.0,
+        np.round(
+            tactical_sum / np.maximum(tactical_count, 1.0),
+            6,
+        ),
+        0.0,
+    )
+    route_tie_rank = _family_route_tie_rank(
+        layout,
+        arrays["elements"],
+    )
+    winner = _lexicographic_first(
+        (
+            route_utility,
+            expected_with_captain,
+            -downside,
+            upside,
+            tactical_mean,
+            -route_tie_rank.astype(np.float64),
+        ),
+        axis=1,
+    )
+
+    route_axis = np.arange(
+        arrays["elements"].shape[0],
+        dtype=np.int64,
+    )
+    selected_starter_mask = layout["starter_mask"][winner]
+    selected_bench_order = bench["order_indices"][
+        route_axis,
+        winner,
+    ]
+    selected_reserve_gk = layout["reserve_gk"][winner]
+    selected_pair_index = captain["winner_pair_index"][
+        route_axis,
+        winner,
+    ]
+    safe_pool_counts = _selected_safe_pool_counts(
+        pair_order=captain["pair_order"],
+        selected_starter_mask=selected_starter_mask,
+        selected_pair_index=selected_pair_index,
+    )
+    cameo_blocking_cost = _selected_cameo_blocking_cost_exact(
+        starter_mask=selected_starter_mask,
+        formation_code=layout["formation_code"][winner],
+        position_codes=arrays["position_codes"],
+        p_dnp=arrays["p_dnp"],
+        p_cameo=arrays["p_cameo"],
+        p_appearance=arrays["p_appearance"],
+        xpts_mean=arrays["xpts_mean"],
+        conditioned_mean=arrays["conditioned_mean"],
+        bench_order_indices=selected_bench_order,
+        reserve_gk_indices=selected_reserve_gk,
+        actual_expected_autosub=bench[
+            "expected_autosub_value_raw"
+        ][route_axis, winner],
+    )
+
+    results: list[dict[str, Any]] = []
+    for route_index in range(arrays["elements"].shape[0]):
+        xi_index = int(winner[route_index])
+        starter_slots = legal[xi_index]
+        starter_elements = sorted(
+            int(arrays["elements"][route_index, slot])
+            for slot in starter_slots
+        )
+        bench_slots = selected_bench_order[route_index]
+        bench_elements = [
+            int(arrays["elements"][route_index, slot])
+            for slot in bench_slots
+        ]
+        reserve_index = int(selected_reserve_gk[route_index])
+        cap_index = int(
+            captain["captain_index"][route_index, xi_index]
+        )
+        vice_index = int(
+            captain["vice_index"][route_index, xi_index]
+        )
+        fcode = int(layout["formation_code"][xi_index])
+        ready_count = int(
+            round(float(pmf_ready[route_index, xi_index]))
+        )
+        results.append({
+            "status": "READY",
+            "gw": int(gw),
+            "route_utility": round(
+                float(route_utility[route_index, xi_index]),
+                6,
+            ),
+            "expected_fpl_points": round(
+                float(
+                    expected_before_captain[
+                        route_index,
+                        xi_index,
+                    ]
+                ),
+                6,
+            ),
+            "distributional_downside": round(
+                float(downside[route_index, xi_index]),
+                6,
+            ),
+            "supportable_upside": round(
+                float(upside[route_index, xi_index]),
+                6,
+            ),
+            "expected_autosub_value": round(
+                float(
+                    bench["expected_autosub_value"][
+                        route_index,
+                        xi_index,
+                    ]
+                ),
+                6,
+            ),
+            "cameo_blocking_cost": round(
+                float(cameo_blocking_cost[route_index]),
+                6,
+            ),
+            "cameo_blocking_cost_status": (
+                "EXACT_WINNER_ONLY_COUNTERFACTUAL"
+            ),
+            "formation": (
+                f"{fcode // 100}-"
+                f"{(fcode // 10) % 10}-"
+                f"{fcode % 10}"
+            ),
+            "starting_xi": starter_elements,
+            "bench_gk": int(
+                arrays["elements"][
+                    route_index,
+                    reserve_index,
+                ]
+            ),
+            "bench_order": bench_elements,
+            "captain": int(
+                arrays["elements"][
+                    route_index,
+                    cap_index,
+                ]
+            ),
+            "vice_captain": int(
+                arrays["elements"][
+                    route_index,
+                    vice_index,
+                ]
+            ),
+            "captain_safe_pool_count": int(
+                safe_pool_counts[route_index]
+            ),
+            "confidence": (
+                "HIGH"
+                if ready_count == 11
+                else "MEDIUM"
+                if ready_count >= 8
+                else "LOW"
+            ),
+            "covariance_status": "COVARIANCE_NOT_MODELLED_YET",
+            "p1_7_model_evidence_output_fingerprint": None,
+            "materialization_status": (
+                "EXACT_CORE14_AFFINE_ROUTE_FAMILY_BATCH"
+            ),
+            "governance": {
+                "p1_7_consumed_read_only": True,
+                "p1_1_math_mutated": False,
+                "p1_3_math_mutated": False,
+                "p1_6_math_mutated": False,
+                "p1_7_math_mutated": False,
+                "all_550_legal_xi_ranked_exactly": True,
+                "six_bench_permutations_exact": True,
+                "captain_vice_exact": True,
+                "cameo_blocking_exact": True,
+                "captain_safe_pool_exact": True,
+                "core14_reused": True,
+                "candidate_affine_resolver_exact": True,
+                "route_pruning": False,
+                "approximation": False,
+                "detail_materialization_deferred": True,
+            },
+        })
+    return results, {
+        "route_count": len(results),
+        "endpoint_evaluations": 2,
+        "legal_xi_per_route": 550,
+        "bench_permutations": 6,
+        "core14_reused": True,
+        "candidate_affine_resolver_exact": True,
+    }
+
+
+def _one_replacement_family_plan(
+    normalized: Sequence[tuple[int, ...]],
+    pmap: Mapping[int, Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Infer direct one-transfer route families from the supplied HOLD squad."""
+    if not normalized:
+        return {
+            "supported": False,
+            "reference": None,
+            "families": [],
+            "fallback_indices": [],
+        }
+    reference = tuple(normalized[0])
+    reference_set = set(reference)
+    families: dict[int, list[tuple[int, int]]] = {}
+    fallback: list[int] = []
+    hold_indices: list[int] = []
+    for index, squad in enumerate(normalized):
+        if tuple(squad) == reference:
+            hold_indices.append(index)
+            continue
+        squad_set = set(squad)
+        outgoing = reference_set - squad_set
+        incoming = squad_set - reference_set
+        if len(outgoing) != 1 or len(incoming) != 1:
+            fallback.append(index)
+            continue
+        out_element = int(next(iter(outgoing)))
+        in_element = int(next(iter(incoming)))
+        out_row = pmap.get(out_element)
+        in_row = pmap.get(in_element)
+        if (
+            out_row is None
+            or in_row is None
+            or str(out_row.get("position"))
+            != str(in_row.get("position"))
+        ):
+            fallback.append(index)
+            continue
+        families.setdefault(out_element, []).append(
+            (index, in_element)
+        )
+    return {
+        "supported": not fallback and bool(hold_indices),
+        "reference": reference,
+        "hold_indices": hold_indices,
+        "families": [
+            {
+                "outgoing": outgoing,
+                "core14": tuple(
+                    element
+                    for element in reference
+                    if element != outgoing
+                ),
+                "members": members,
+            }
+            for outgoing, members in families.items()
+        ],
+        "fallback_indices": fallback,
+    }
+
+
 def _optimize_gw_chunk(
     squads: Sequence[tuple[int, ...]],
     *,
@@ -1174,15 +2282,72 @@ def optimize_lineup_horizons_exact_batch(
                 valid_indices.append(index)
 
         gw_started = time.perf_counter()
-        for start in range(0, len(valid_indices), batch_size):
-            chunk_indices = valid_indices[start : start + batch_size]
-            chunk_squads = [normalized[index] for index in chunk_indices]
-            chunk_results = _optimize_gw_chunk(chunk_squads, gw=gw)
-            if len(chunk_results) != len(chunk_indices):
-                raise LineupBatchError("cross-route batch lost squad identity")
-            for source_index, result in zip(chunk_indices, chunk_results):
-                per_squad[source_index][offset] = result
-            chunks += 1
+        valid_set = set(valid_indices)
+        family_plan = _one_replacement_family_plan(
+            normalized,
+            pmap,
+        )
+        family_used = (
+            family_plan["supported"]
+            and len(normalized) >= 64
+        )
+        if family_used:
+            reference = tuple(family_plan["reference"])
+            for source_index in family_plan["hold_indices"]:
+                if source_index not in valid_set:
+                    continue
+                hold_result = _optimize_gw_chunk(
+                    [reference],
+                    gw=gw,
+                )
+                per_squad[source_index][offset] = hold_result[0]
+                chunks += 1
+            for family in family_plan["families"]:
+                members = [
+                    (source_index, incoming)
+                    for source_index, incoming in family["members"]
+                    if source_index in valid_set
+                ]
+                if not members:
+                    continue
+                family_results, _family_proof = _optimize_gw_family(
+                    family["core14"],
+                    [incoming for _, incoming in members],
+                    gw=gw,
+                )
+                if len(family_results) != len(members):
+                    raise LineupBatchError(
+                        "route-family batch lost squad identity"
+                    )
+                for (source_index, _), result in zip(
+                    members,
+                    family_results,
+                ):
+                    per_squad[source_index][offset] = result
+                chunks += 1
+        else:
+            for start in range(0, len(valid_indices), batch_size):
+                chunk_indices = valid_indices[
+                    start : start + batch_size
+                ]
+                chunk_squads = [
+                    normalized[index]
+                    for index in chunk_indices
+                ]
+                chunk_results = _optimize_gw_chunk(
+                    chunk_squads,
+                    gw=gw,
+                )
+                if len(chunk_results) != len(chunk_indices):
+                    raise LineupBatchError(
+                        "cross-route batch lost squad identity"
+                    )
+                for source_index, result in zip(
+                    chunk_indices,
+                    chunk_results,
+                ):
+                    per_squad[source_index][offset] = result
+                chunks += 1
         gw_elapsed.append(time.perf_counter() - gw_started)
 
     outputs: list[dict[str, Any]] = []
@@ -1230,8 +2395,27 @@ def optimize_lineup_horizons_exact_batch(
         outputs.append(out)
 
     elapsed = time.perf_counter() - started
+    final_family_plan = _one_replacement_family_plan(
+        normalized,
+        pmap,
+    )
+    family_kernel_used = (
+        final_family_plan["supported"]
+        and len(normalized) >= 64
+    )
     proof = {
-        "execution_kernel": "CROSS_ROUTE_NUMPY_EXACT_P1_7",
+        "execution_kernel": (
+            "ROUTE_FAMILY_CORE14_AFFINE_EXACT_P1_7"
+            if family_kernel_used
+            else "CROSS_ROUTE_NUMPY_EXACT_P1_7"
+        ),
+        "route_family_count": (
+            len(final_family_plan["families"])
+            if family_kernel_used
+            else 0
+        ),
+        "route_family_core_reuse": bool(family_kernel_used),
+        "candidate_affine_resolver_exact": bool(family_kernel_used),
         "elapsed_seconds": round(elapsed, 6),
         "squad_count": len(normalized),
         "gw_count": 5,

@@ -657,9 +657,13 @@ def test_72_active_mc_path_is_match_coupled_not_independent_player_point_samplin
     import inspect
     from src.engines import v12_monte_carlo as mc
 
-    source = inspect.getsource(mc._simulate_route_arrays)
-    assert "_simulate_match_coupled_gw(" in source
-    assert "_simulate_player_gw(" not in source
+    serial_source = inspect.getsource(mc._simulate_route_arrays_serial)
+    worker_source = inspect.getsource(mc._mc_parallel_worker)
+    wrapper_source = inspect.getsource(mc._simulate_route_arrays)
+    assert "_simulate_match_coupled_gw(" in serial_source
+    assert "_simulate_player_gw(" not in serial_source
+    assert "_simulate_route_arrays_serial(" in worker_source
+    assert "_simulate_route_arrays_parallel(" in wrapper_source
     assert load_config()["governance"]["independent_player_point_sampling_forbidden"] is True
 
 
@@ -801,3 +805,158 @@ def test_mc_summary_cache_reuses_simulation_and_rebinds_occurrence(
     )
     assert first["run_fingerprint"] != second["run_fingerprint"]
     assert list(tmp_path.rglob("*.pkl"))
+
+
+def test_parallel_mc_shards_are_deterministic_and_preserve_exact_path_count():
+    from src.engines import v12_monte_carlo as mc
+
+    projections, _ = _fixture()
+    routes = _routes()
+    kwargs = {
+        "actual_paths": 4_000,
+        "seed": 808080,
+        "horizons": (1,),
+        "worker_count": 2,
+    }
+    first_arrays, first_diag = mc._simulate_route_arrays_parallel(
+        projections,
+        routes,
+        **kwargs,
+    )
+    second_arrays, second_diag = mc._simulate_route_arrays_parallel(
+        projections,
+        routes,
+        **kwargs,
+    )
+
+    assert set(first_arrays) == set(second_arrays)
+    for route_id in first_arrays:
+        assert set(first_arrays[route_id]) == {1}
+        assert len(first_arrays[route_id][1]) == 4_000
+        assert np.array_equal(
+            first_arrays[route_id][1],
+            second_arrays[route_id][1],
+        )
+
+    assert first_diag == second_diag
+    parallel = first_diag["parallel_execution"]
+    assert parallel["status"] == "ENABLED"
+    assert parallel["worker_count"] == 2
+    assert parallel["shard_count"] == 2
+    assert parallel["shard_path_counts"] == [2_000, 2_000]
+    assert parallel["child_seed_policy"] == "NUMPY_SEEDSEQUENCE_SPAWN"
+    assert parallel["deterministic_shard_order"] is True
+    assert parallel["common_random_numbers_within_each_shard"] is True
+    assert parallel["total_paths_exact"] is True
+    assert first_diag["match_state_invariants"]["status"] == "PASS"
+
+
+def test_parallel_mc_uses_same_canonical_serial_model_owner():
+    import inspect
+    from src.engines import v12_monte_carlo as mc
+
+    worker_source = inspect.getsource(mc._mc_parallel_worker)
+    parallel_source = inspect.getsource(mc._simulate_route_arrays_parallel)
+    assert "_simulate_route_arrays_serial(" in worker_source
+    assert "ProcessPoolExecutor" in parallel_source
+    assert "SeedSequence" in parallel_source
+    assert "route_pruning" not in parallel_source
+    assert load_config()["canonical"]["parallel_workers"] == 4
+    assert load_config()["canonical"]["parallel_min_paths"] == 200_000
+    assert (
+        load_config()["governance"][
+            "deterministic_parallel_shards_execution_only"
+        ]
+        is True
+    )
+
+
+def test_parallel_mc_wrapper_keeps_diagnostics_serial_below_threshold():
+    from src.engines import v12_monte_carlo as mc
+
+    projections, _ = _fixture()
+    arrays, diagnostics = mc._simulate_route_arrays(
+        projections,
+        _routes(),
+        actual_paths=2_000,
+        seed=818181,
+        horizons=(1,),
+        chunk_size=2_000,
+    )
+    assert all(len(row[1]) == 2_000 for row in arrays.values())
+    proof = diagnostics["parallel_execution"]
+    assert proof["status"] == "SERIAL"
+    assert proof["worker_count"] == 1
+    assert proof["total_paths_exact"] is True
+
+
+def test_canonical_500k_parallel_runtime_acceptance(monkeypatch, capsys):
+    import json
+    import time
+    from src.engines import v12_monte_carlo as mc
+
+    monkeypatch.delenv(MC_SIM_CACHE_ENV, raising=False)
+    projections, _ = _fixture()
+    hold, change = _routes()
+    routes = [deepcopy(hold)]
+    for index in range(1, 8):
+        cloned = deepcopy(change)
+        cloned["route_id"] = f"R{index}"
+        routes.append(cloned)
+
+    started = time.perf_counter()
+    result = mc.run_correlated_monte_carlo(
+        projections,
+        routes,
+        actual_paths=500_000,
+        seed=909090,
+        input_snapshot_id="P1_4_PARALLEL_RUNTIME_ACCEPTANCE",
+        canonical=True,
+        horizons=(1, 3, 5),
+        selected_route_id="R1",
+        generated_at="2026-09-23T09:36:00Z",
+        factual_snapshot_timestamps={
+            "fixture": "2026-09-23T09:36:00Z"
+        },
+    )
+    total_wall = time.perf_counter() - started
+    perf = result["performance"]
+    proof = result["sampling_diagnostics"]["parallel_execution"]
+
+    assert result["actual_paths"] == 500_000
+    assert result["execution_state"] == "EXECUTED"
+    assert result["canonical_pass"] is True
+    assert result["convergence_evidence"]["status"] == "PASS"
+    assert result["sampling_diagnostics"]["match_state_invariants"]["status"] == "PASS"
+    assert len(result["route_ids"]) == 8
+    assert proof["status"] == "ENABLED"
+    assert proof["worker_count"] == 4
+    assert proof["shard_count"] == 4
+    assert proof["shard_path_counts"] == [125_000] * 4
+    assert proof["total_paths_exact"] is True
+    assert perf["wall_seconds"] <= 15.0
+    assert total_wall <= 15.0
+
+    evidence = {
+        "contract": "P1_4_500K_PARALLEL_RUNTIME_ACCEPTANCE_V1",
+        "actual_paths": result["actual_paths"],
+        "material_routes": len(result["route_ids"]),
+        "simulation_wall_seconds": round(
+            float(perf["wall_seconds"]), 6
+        ),
+        "total_wall_seconds": round(total_wall, 6),
+        "worker_count": proof["worker_count"],
+        "shard_path_counts": proof["shard_path_counts"],
+        "convergence": result["convergence_evidence"]["status"],
+        "match_state_invariants": result[
+            "sampling_diagnostics"
+        ]["match_state_invariants"]["status"],
+        "route_pruning": False,
+        "model_owner": result["model_owner"],
+    }
+    print(
+        "P1_4_RUNTIME_ACCEPTANCE="
+        + json.dumps(evidence, sort_keys=True)
+    )
+    captured = capsys.readouterr()
+    assert "P1_4_RUNTIME_ACCEPTANCE=" in captured.out

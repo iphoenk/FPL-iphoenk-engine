@@ -7,14 +7,17 @@ P1.7 lineup/autosub/captain semantics and P1.2 package routes read-only.
 It is not a football scoring authority and never imports runtime_v3 or V6.
 """
 
+from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
 from datetime import datetime, timezone
 from functools import lru_cache
 import hashlib
 import json
 import math
+import multiprocessing as mp
 import os
 import pickle
+import sys
 from pathlib import Path
 from statistics import NormalDist
 import time
@@ -1925,7 +1928,7 @@ def _simulate_match_coupled_gw(
     }
 
 
-def _simulate_route_arrays(
+def _simulate_route_arrays_serial(
     projections: Mapping[str, Any],
     route_defs: Sequence[Mapping[str, Any]],
     *,
@@ -2187,6 +2190,387 @@ def _simulate_route_arrays(
             / max(1, denom),
         }
     return route_totals, diagnostics
+
+
+_MC_PARALLEL_CONTEXT: tuple[
+    Mapping[str, Any],
+    tuple[dict[str, Any], ...],
+    tuple[int, ...],
+] | None = None
+
+
+def _init_mc_parallel_worker(
+    projections: Mapping[str, Any],
+    route_defs: Sequence[Mapping[str, Any]],
+    horizons: Sequence[int],
+) -> None:
+    """Bind immutable canonical MC inputs once per forked worker."""
+    global _MC_PARALLEL_CONTEXT
+    _MC_PARALLEL_CONTEXT = (
+        projections,
+        tuple(dict(row) for row in route_defs),
+        tuple(int(value) for value in horizons),
+    )
+
+
+def _mc_parallel_worker(
+    item: tuple[int, int, int],
+) -> tuple[
+    int,
+    int,
+    dict[str, dict[int, np.ndarray]],
+    dict[str, Any],
+]:
+    if _MC_PARALLEL_CONTEXT is None:
+        raise MonteCarloError("parallel MC worker context is not initialized")
+    shard_index, path_count, child_seed = item
+    projections, route_defs, horizons = _MC_PARALLEL_CONTEXT
+    arrays, diagnostics = _simulate_route_arrays_serial(
+        projections,
+        route_defs,
+        actual_paths=int(path_count),
+        seed=int(child_seed),
+        horizons=horizons,
+        chunk_size=int(path_count),
+    )
+    return int(shard_index), int(path_count), arrays, diagnostics
+
+
+def _merge_parallel_sampling_diagnostics(
+    shard_results: Sequence[
+        tuple[
+            int,
+            int,
+            dict[str, dict[int, np.ndarray]],
+            dict[str, Any],
+        ]
+    ],
+    *,
+    actual_paths: int,
+    worker_count: int,
+    child_seeds: Sequence[int],
+) -> dict[str, Any]:
+    if not shard_results:
+        raise MonteCarloError("parallel MC produced no shard diagnostics")
+    ordered = sorted(shard_results, key=lambda row: int(row[0]))
+    total = sum(int(row[1]) for row in ordered)
+    if total != int(actual_paths):
+        raise MonteCarloError(
+            f"parallel MC diagnostics path mismatch: {total} != {actual_paths}"
+        )
+    first = deepcopy(dict(ordered[0][3]))
+    first["state_frequencies"] = {}
+    first["event_means"] = {}
+    first["route_path_semantics"] = {}
+
+    state_keys = sorted(
+        {
+            key
+            for _, _, _, diag in ordered
+            for key in (diag.get("state_frequencies") or {})
+        }
+    )
+    for key in state_keys:
+        names = sorted(
+            {
+                name
+                for _, _, _, diag in ordered
+                for name in (
+                    (diag.get("state_frequencies") or {}).get(key) or {}
+                )
+            }
+        )
+        first["state_frequencies"][key] = {
+            name: sum(
+                int(path_count)
+                * float(
+                    (
+                        (diag.get("state_frequencies") or {}).get(key)
+                        or {}
+                    ).get(name, 0.0)
+                )
+                for _, path_count, _, diag in ordered
+            )
+            / total
+            for name in names
+        }
+
+    event_keys = sorted(
+        {
+            key
+            for _, _, _, diag in ordered
+            for key in (diag.get("event_means") or {})
+        }
+    )
+    for key in event_keys:
+        names = sorted(
+            {
+                name
+                for _, _, _, diag in ordered
+                for name in (
+                    (diag.get("event_means") or {}).get(key) or {}
+                )
+            }
+        )
+        first["event_means"][key] = {
+            name: sum(
+                int(path_count)
+                * float(
+                    (
+                        (diag.get("event_means") or {}).get(key)
+                        or {}
+                    ).get(name, 0.0)
+                )
+                for _, path_count, _, diag in ordered
+            )
+            / total
+            for name in names
+        }
+
+    route_ids = sorted(
+        {
+            route_id
+            for _, _, _, diag in ordered
+            for route_id in (diag.get("route_path_semantics") or {})
+        }
+    )
+    for route_id in route_ids:
+        names = sorted(
+            {
+                name
+                for _, _, _, diag in ordered
+                for name in (
+                    (diag.get("route_path_semantics") or {}).get(route_id)
+                    or {}
+                )
+            }
+        )
+        first["route_path_semantics"][route_id] = {
+            name: sum(
+                int(path_count)
+                * float(
+                    (
+                        (diag.get("route_path_semantics") or {}).get(route_id)
+                        or {}
+                    ).get(name, 0.0)
+                )
+                for _, path_count, _, diag in ordered
+            )
+            / total
+            for name in names
+        }
+
+    first_invariants = dict(
+        (ordered[0][3].get("match_state_invariants") or {})
+    )
+    additive_keys = (
+        "fixture_chunks",
+        "cs_goal_consistency_failures",
+        "material_goal_overflow_failures",
+        "assist_overflow_failures",
+        "self_assist_failures",
+        "dnp_scorer_failures",
+    )
+    for key in additive_keys:
+        first_invariants[key] = sum(
+            int(
+                (diag.get("match_state_invariants") or {}).get(key)
+                or 0
+            )
+            for _, _, _, diag in ordered
+        )
+    first_invariants["status"] = (
+        "PASS"
+        if all(
+            str(
+                (diag.get("match_state_invariants") or {}).get("status")
+                or ""
+            )
+            == "PASS"
+            for _, _, _, diag in ordered
+        )
+        else "FAIL"
+    )
+    first["match_state_invariants"] = first_invariants
+    first["parallel_execution"] = {
+        "status": "ENABLED",
+        "worker_count": int(worker_count),
+        "shard_count": len(ordered),
+        "shard_path_counts": [int(row[1]) for row in ordered],
+        "child_seed_policy": "NUMPY_SEEDSEQUENCE_SPAWN",
+        "child_seed_count": len(child_seeds),
+        "deterministic_shard_order": True,
+        "common_random_numbers_within_each_shard": True,
+        "total_paths_exact": total == int(actual_paths),
+    }
+    return first
+
+
+def _simulate_route_arrays_parallel(
+    projections: Mapping[str, Any],
+    route_defs: Sequence[Mapping[str, Any]],
+    *,
+    actual_paths: int,
+    seed: int,
+    horizons: Sequence[int],
+    worker_count: int,
+) -> tuple[dict[str, dict[int, np.ndarray]], dict[str, Any]]:
+    """Run exact canonical MC in deterministic process shards.
+
+    Every shard evaluates all material routes against the same sampled football
+    world inside that shard, preserving CRN route pairing. Shards use stable
+    SeedSequence children and are concatenated by shard index so repeated
+    identical inputs produce identical arrays and convergence prefixes.
+    """
+    workers = max(
+        1,
+        min(
+            int(worker_count),
+            int(os.cpu_count() or 1),
+            int(actual_paths),
+        ),
+    )
+    if workers <= 1 or not sys.platform.startswith("linux"):
+        arrays, diagnostics = _simulate_route_arrays_serial(
+            projections,
+            route_defs,
+            actual_paths=actual_paths,
+            seed=seed,
+            horizons=horizons,
+            chunk_size=actual_paths,
+        )
+        diagnostics["parallel_execution"] = {
+            "status": "SERIAL_FALLBACK",
+            "worker_count": 1,
+            "shard_count": 1,
+            "shard_path_counts": [int(actual_paths)],
+            "child_seed_policy": "ROOT_SEED",
+            "child_seed_count": 1,
+            "deterministic_shard_order": True,
+            "common_random_numbers_within_each_shard": True,
+            "total_paths_exact": True,
+        }
+        return arrays, diagnostics
+
+    base = int(actual_paths) // workers
+    remainder = int(actual_paths) % workers
+    path_counts = [
+        base + (1 if index < remainder else 0)
+        for index in range(workers)
+    ]
+    children = np.random.SeedSequence(int(seed)).spawn(workers)
+    child_seeds = [
+        int(child.generate_state(1, dtype=np.uint64)[0])
+        for child in children
+    ]
+    work = [
+        (index, path_counts[index], child_seeds[index])
+        for index in range(workers)
+    ]
+    fork_context = mp.get_context("fork")
+    with ProcessPoolExecutor(
+        max_workers=workers,
+        mp_context=fork_context,
+        initializer=_init_mc_parallel_worker,
+        initargs=(
+            projections,
+            route_defs,
+            tuple(int(value) for value in horizons),
+        ),
+    ) as executor:
+        results = list(executor.map(_mc_parallel_worker, work, chunksize=1))
+    results.sort(key=lambda row: int(row[0]))
+
+    first_arrays = results[0][2]
+    route_ids = list(first_arrays)
+    resolved_horizons = sorted(
+        {
+            int(horizon)
+            for route_arrays in first_arrays.values()
+            for horizon in route_arrays
+        }
+    )
+    combined = {
+        route_id: {
+            horizon: np.concatenate(
+                [
+                    result[2][route_id][horizon]
+                    for result in results
+                ]
+            )
+            for horizon in resolved_horizons
+        }
+        for route_id in route_ids
+    }
+    for route_id, horizon_map in combined.items():
+        for horizon, values in horizon_map.items():
+            if len(values) != int(actual_paths):
+                raise MonteCarloError(
+                    "parallel MC lost path identity "
+                    f"for {route_id}/H{horizon}: "
+                    f"{len(values)} != {actual_paths}"
+                )
+    diagnostics = _merge_parallel_sampling_diagnostics(
+        results,
+        actual_paths=actual_paths,
+        worker_count=workers,
+        child_seeds=child_seeds,
+    )
+    return combined, diagnostics
+
+
+def _simulate_route_arrays(
+    projections: Mapping[str, Any],
+    route_defs: Sequence[Mapping[str, Any]],
+    *,
+    actual_paths: int,
+    seed: int,
+    horizons: Sequence[int],
+    chunk_size: int,
+) -> tuple[dict[str, dict[int, np.ndarray]], dict[str, Any]]:
+    cfg = load_config()
+    canonical_cfg = dict(cfg.get("canonical") or {})
+    parallel_min_paths = max(
+        1,
+        _i(canonical_cfg.get("parallel_min_paths"), 200_000),
+    )
+    requested_workers = max(
+        1,
+        _i(canonical_cfg.get("parallel_workers"), 4),
+    )
+    if (
+        int(actual_paths) >= parallel_min_paths
+        and requested_workers > 1
+        and sys.platform.startswith("linux")
+    ):
+        return _simulate_route_arrays_parallel(
+            projections,
+            route_defs,
+            actual_paths=int(actual_paths),
+            seed=int(seed),
+            horizons=horizons,
+            worker_count=requested_workers,
+        )
+    arrays, diagnostics = _simulate_route_arrays_serial(
+        projections,
+        route_defs,
+        actual_paths=int(actual_paths),
+        seed=int(seed),
+        horizons=horizons,
+        chunk_size=int(chunk_size),
+    )
+    diagnostics["parallel_execution"] = {
+        "status": "SERIAL",
+        "worker_count": 1,
+        "shard_count": 1,
+        "shard_path_counts": [int(actual_paths)],
+        "child_seed_policy": "ROOT_SEED",
+        "child_seed_count": 1,
+        "deterministic_shard_order": True,
+        "common_random_numbers_within_each_shard": True,
+        "total_paths_exact": True,
+    }
+    return arrays, diagnostics
 
 def _quantiles(values: np.ndarray) -> dict[str, float]:
     q = np.quantile(values, [0.10, 0.25, 0.50, 0.75, 0.90], method="linear")
@@ -2804,6 +3188,20 @@ def run_correlated_monte_carlo(
         "simulation_cache_hit": simulation_cache_hit,
         "simulation_cache_key": simulation_cache_key[:20],
         "simulation_cache_schema": MC_SIM_CACHE_SCHEMA,
+        "execution_mode": (
+            (sampling.get("parallel_execution") or {}).get("status")
+        ),
+        "parallel_worker_count": (
+            (sampling.get("parallel_execution") or {}).get("worker_count")
+        ),
+        "parallel_shard_count": (
+            (sampling.get("parallel_execution") or {}).get("shard_count")
+        ),
+        "parallel_total_paths_exact": (
+            (sampling.get("parallel_execution") or {}).get(
+                "total_paths_exact"
+            )
+        ),
         "wall_clock_excluded_from_output_fingerprint": True,
     }
     result = {

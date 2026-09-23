@@ -23,12 +23,14 @@
     "tail_definition_version": "P1_4_ROUTE_DELTA_TAILS_V1",
     "downside_definition": "P(route_net_utility < HOLD_net_utility)",
     "material_upside_definition": "P(route_net_utility - HOLD_net_utility >= threshold_points)",
-    "material_upside_threshold_points": 5
+    "material_upside_threshold_points": 5,
+    "parallel_min_paths": 200000,
+    "parallel_workers": 4
   },
   "rng": {
     "implementation": "numpy.random.Generator",
     "bit_generator": "PCG64",
-    "seed_policy": "EXPLICIT_FIXED_INTEGER_PER_EXECUTION",
+    "seed_policy": "INPUT_STATE_SEED_WITH_DETERMINISTIC_SEEDSEQUENCE_CHILD_SHARDS",
     "common_random_numbers": true
   },
   "correlation": {
@@ -87,6 +89,7 @@
     "stage2_distribution_owner_unchanged": true,
     "independent_player_point_sampling_forbidden": true,
     "clean_sheet_independent_bernoulli_forbidden": true,
-    "stage3_match_state_invariants_required": true
+    "stage3_match_state_invariants_required": true,
+    "deterministic_parallel_shards_execution_only": true
   }
 }

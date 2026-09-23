@@ -2859,8 +2859,14 @@ def _render_deep_visible_contract_lines(
                     "element_id",
                     "player_name",
                     "position",
+                    "price",
+                    "xmins",
+                    "p_start",
+                    "predictor",
                     "ownership_tag",
                     "football_score",
+                    "watchlist_relevance",
+                    "transfer_relevance",
                 ),
                 [
                     (
@@ -2868,8 +2874,17 @@ def _render_deep_visible_contract_lines(
                         row.get("element_id", row.get("element")),
                         row.get("name"),
                         row.get("position"),
+                        row.get("current_price"),
+                        row.get("xmins"),
+                        row.get("p_start"),
+                        {
+                            "direction": row.get("predictor_direction"),
+                            "progress": row.get("predictor_progress"),
+                        },
                         "NON_OWNED",
                         row.get("football_score"),
+                        row.get("watchlist_relevance"),
+                        row.get("transfer_relevance"),
                     )
                     for rank, row in enumerate(rows, start=1)
                 ],

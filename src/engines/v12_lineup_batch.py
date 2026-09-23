@@ -1422,6 +1422,12 @@ def _scalar_surface_from_family_arrays(
         "element": int(arrays["elements"][route_index, slot]),
         "position": CODE_POS[position_code],
         "xpts_mean": float(arrays["xpts_mean"][route_index, slot]),
+        "expected_shortfall": float(
+            arrays["shortfall"][route_index, slot]
+        ),
+        "expected_excess_ge_8": float(
+            arrays["excess"][route_index, slot]
+        ),
         "p_dnp": p_dnp,
         "p_appearance": p_appearance,
         "p_cameo": p_cameo,
@@ -1945,25 +1951,39 @@ def _family_captain_kernel(
         - downside_weight * shortfall
         + upside_weight * excess
     )
-    pair_utility = np.round(
+    raw_pair_utility = (
         base[:, PAIR_CAP]
-        + p_dnp[:, PAIR_CAP] * base[:, PAIR_VICE],
-        6,
+        + p_dnp[:, PAIR_CAP] * base[:, PAIR_VICE]
     )
-    cap_mean = np.round(xpts_mean[:, PAIR_CAP], 6)
-    vice_fallback = np.round(
-        p_dnp[:, PAIR_CAP] * xpts_mean[:, PAIR_VICE],
-        6,
+    raw_cap_mean = xpts_mean[:, PAIR_CAP]
+    raw_vice_fallback = (
+        p_dnp[:, PAIR_CAP] * xpts_mean[:, PAIR_VICE]
     )
-    joint_upside = np.round(
+    raw_joint_upside = (
         excess[:, PAIR_CAP]
-        + p_dnp[:, PAIR_CAP] * excess[:, PAIR_VICE],
-        6,
+        + p_dnp[:, PAIR_CAP] * excess[:, PAIR_VICE]
     )
-    joint_downside = np.round(
+    raw_joint_downside = (
         shortfall[:, PAIR_CAP]
-        + p_dnp[:, PAIR_CAP] * shortfall[:, PAIR_VICE],
-        6,
+        + p_dnp[:, PAIR_CAP] * shortfall[:, PAIR_VICE]
+    )
+    pair_utility = np.round(raw_pair_utility, 6)
+    cap_mean = np.round(raw_cap_mean, 6)
+    vice_fallback = np.round(raw_vice_fallback, 6)
+    joint_upside = np.round(raw_joint_upside, 6)
+    joint_downside = np.round(raw_joint_downside, 6)
+
+    # Captain/vice has only 210 ordered pairs per route, so a conservative
+    # full-key boundary scan is cheap.  Any route close to a decimal half
+    # boundary gets its complete pair rank table and published pair metrics
+    # from the scalar oracle.
+    captain_boundary = np.any(
+        _near_decimal_half(raw_pair_utility, 6)
+        | _near_decimal_half(raw_cap_mean, 6)
+        | _near_decimal_half(raw_vice_fallback, 6)
+        | _near_decimal_half(raw_joint_upside, 6)
+        | _near_decimal_half(raw_joint_downside, 6),
+        axis=1,
     )
 
     slot_rank = _actual_slot_ranks(elements)
@@ -1988,6 +2008,83 @@ def _family_captain_kernel(
         ),
         axis=1,
     )
+
+    pair_index_by_slots = {
+        (int(cap), int(vice)): index
+        for index, (cap, vice) in enumerate(
+            zip(PAIR_CAP.tolist(), PAIR_VICE.tolist())
+        )
+    }
+    for route_index in np.flatnonzero(captain_boundary):
+        route_index = int(route_index)
+        scalar_players = sorted(
+            (
+                _scalar_surface_from_family_arrays(
+                    arrays={
+                        "elements": elements,
+                        "position_codes": np.broadcast_to(
+                            np.asarray(
+                                layout["position_codes"],
+                                dtype=np.int8,
+                            )[None, :],
+                            elements.shape,
+                        ),
+                        "xpts_mean": xpts_mean,
+                        "shortfall": shortfall,
+                        "excess": excess,
+                        "p_dnp": p_dnp,
+                        "p_cameo": np.zeros_like(p_dnp),
+                        "p_appearance": 1.0 - p_dnp,
+                        "conditioned_mean": xpts_mean,
+                        "conditioned_blank": np.zeros_like(xpts_mean),
+                        "conditioned_ge8": np.zeros_like(xpts_mean),
+                        "conditioned_ge10": np.zeros_like(xpts_mean),
+                    },
+                    route_index=route_index,
+                    slot=slot,
+                )
+                for slot in range(15)
+            ),
+            key=lambda row: int(row["element"]),
+        )
+        scalar_ranked = scalar.evaluate_captain_vice_pairs(
+            scalar_players
+        )
+        slot_by_element = {
+            int(elements[route_index, slot]): slot
+            for slot in range(15)
+        }
+        scalar_pair_order: list[int] = []
+        for row in scalar_ranked:
+            cap_slot = slot_by_element[
+                int(row["captain_element"])
+            ]
+            vice_slot = slot_by_element[
+                int(row["vice_element"])
+            ]
+            pair_index = pair_index_by_slots[
+                (int(cap_slot), int(vice_slot))
+            ]
+            scalar_pair_order.append(pair_index)
+            pair_utility[route_index, pair_index] = float(
+                row["pair_utility"]
+            )
+            cap_mean[route_index, pair_index] = float(
+                row["expected_captain_multiplier_value"]
+            )
+            vice_fallback[route_index, pair_index] = float(
+                row["expected_vice_takeover_value"]
+            )
+            joint_upside[route_index, pair_index] = float(
+                row["joint_upside"]
+            )
+            joint_downside[route_index, pair_index] = float(
+                row["joint_downside"]
+            )
+        pair_order[route_index, :] = np.asarray(
+            scalar_pair_order,
+            dtype=pair_order.dtype,
+        )
 
     route_count = elements.shape[0]
     legal = np.asarray(layout["legal"], dtype=np.int64)

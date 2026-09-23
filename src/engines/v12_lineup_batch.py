@@ -461,6 +461,11 @@ def _bench_kernel(
             winning_order_indices,
         ],
         "reserve_gk_indices": reserve_gk,
+        "expected_autosub_value_raw": expected[
+            route_axis,
+            legal_axis,
+            winner,
+        ],
         "expected_autosub_value": np.round(
             expected[route_axis, legal_axis, winner],
             6,
@@ -582,6 +587,7 @@ def _captain_kernel(
 
     return {
         "winner_pair_index": winner,
+        "pair_order": pair_order,
         "captain_index": PAIR_CAP[winner],
         "vice_index": PAIR_VICE[winner],
         "pair_utility": gather(pair_utility),
@@ -590,6 +596,182 @@ def _captain_kernel(
         "joint_upside": gather(joint_upside),
         "joint_downside": gather(joint_downside),
     }
+
+
+def _selected_safe_pool_counts(
+    *,
+    pair_order: np.ndarray,
+    selected_starter_mask: np.ndarray,
+    selected_pair_index: np.ndarray,
+) -> np.ndarray:
+    """Exact scalar compatibility count for the selected XI only."""
+    counts = np.empty(selected_starter_mask.shape[0], dtype=np.int64)
+    for row_index in range(selected_starter_mask.shape[0]):
+        pair_index = int(selected_pair_index[row_index])
+        seen = {
+            int(PAIR_CAP[pair_index]),
+            int(PAIR_VICE[pair_index]),
+        }
+        legal_rows = 0
+        for ranked_pair in pair_order[row_index]:
+            ranked_pair = int(ranked_pair)
+            captain_index = int(PAIR_CAP[ranked_pair])
+            vice_index = int(PAIR_VICE[ranked_pair])
+            if not (
+                selected_starter_mask[row_index, captain_index]
+                and selected_starter_mask[row_index, vice_index]
+            ):
+                continue
+            legal_rows += 1
+            seen.add(captain_index)
+            if len(seen) >= 5 or legal_rows >= 20:
+                break
+        counts[row_index] = len(seen)
+    return counts
+
+
+def _selected_cameo_blocking_cost_exact(
+    *,
+    starter_mask: np.ndarray,
+    formation_code: np.ndarray,
+    position_codes: np.ndarray,
+    p_dnp: np.ndarray,
+    p_cameo: np.ndarray,
+    p_appearance: np.ndarray,
+    xpts_mean: np.ndarray,
+    conditioned_mean: np.ndarray,
+    bench_order_indices: np.ndarray,
+    reserve_gk_indices: np.ndarray,
+    actual_expected_autosub: np.ndarray,
+) -> np.ndarray:
+    """Exact scalar cameo-blocking counterfactual for batch winners only."""
+    batch_count = starter_mask.shape[0]
+    if batch_count == 0:
+        return np.empty(0, dtype=np.float64)
+
+    counterfactual_dnp = np.clip(p_dnp + p_cameo, 0.0, 1.0)
+    starter_mask_3d = starter_mask[:, None, :]
+    def_dist = _position_dnp_distribution(
+        starter_mask_3d,
+        counterfactual_dnp,
+        position_codes,
+        POS_CODE["DEF"],
+        5,
+    )[:, 0, :]
+    mid_dist = _position_dnp_distribution(
+        starter_mask_3d,
+        counterfactual_dnp,
+        position_codes,
+        POS_CODE["MID"],
+        5,
+    )[:, 0, :]
+    fwd_dist = _position_dnp_distribution(
+        starter_mask_3d,
+        counterfactual_dnp,
+        position_codes,
+        POS_CODE["FWD"],
+        3,
+    )[:, 0, :]
+
+    selected_probability = np.zeros((batch_count, 3), dtype=np.float64)
+    bench_positions = np.take_along_axis(
+        position_codes,
+        bench_order_indices,
+        axis=1,
+    )
+    structural_key = (
+        formation_code.astype(np.int64) * 64
+        + bench_positions[:, 0].astype(np.int64) * 16
+        + bench_positions[:, 1].astype(np.int64) * 4
+        + bench_positions[:, 2].astype(np.int64)
+    )
+    for key in np.unique(structural_key):
+        rows = np.flatnonzero(structural_key == key)
+        if rows.size == 0:
+            continue
+        fcode = int(formation_code[rows[0]])
+        def_count = fcode // 100
+        mid_count = (fcode // 10) % 10
+        fwd_count = fcode % 10
+        bench_position_tuple = tuple(
+            CODE_POS[int(value)] for value in bench_positions[rows[0]]
+        )
+        state_keys = tuple(
+            (d, m, f)
+            for d in range(def_count + 1)
+            for m in range(mid_count + 1)
+            for f in range(fwd_count + 1)
+        )
+        dnp_probability = np.empty(
+            (rows.size, len(state_keys)),
+            dtype=np.float64,
+        )
+        for state_index, (d, m, f) in enumerate(state_keys):
+            dnp_probability[:, state_index] = (
+                def_dist[rows, d]
+                * mid_dist[rows, m]
+                * fwd_dist[rows, f]
+            )
+        dnp_probability = np.where(
+            dnp_probability > 1e-15,
+            dnp_probability,
+            0.0,
+        )
+        appearance = _appearance_mask_probabilities(
+            p_appearance[rows[:, None], bench_order_indices[rows]]
+        )
+        selected_matrix, _ = scalar._resolver_state_matrix(
+            (def_count, mid_count, fwd_count),
+            state_keys,
+            bench_position_tuple,
+        )
+        selected_bits = np.asarray(selected_matrix, dtype=np.uint8)
+        resolver_projection = np.concatenate(
+            [
+                (
+                    (selected_bits & (1 << slot)) != 0
+                ).astype(np.float64).T
+                for slot in range(3)
+            ],
+            axis=1,
+        )
+        conditional_selection = appearance @ resolver_projection
+        conditional_selection = conditional_selection.reshape(
+            rows.size,
+            3,
+            len(state_keys),
+        )
+        selected_probability[rows, :] = np.sum(
+            conditional_selection * dnp_probability[:, None, :],
+            axis=2,
+            dtype=np.float64,
+        )
+
+    batch = np.arange(batch_count, dtype=np.int64)
+    slot_mean = conditioned_mean[
+        batch[:, None],
+        bench_order_indices,
+    ]
+    outfield_counterfactual = np.sum(
+        selected_probability * slot_mean,
+        axis=1,
+        dtype=np.float64,
+    )
+    starter_gk_mask = starter_mask & (
+        position_codes == POS_CODE["GK"]
+    )
+    if np.any(np.sum(starter_gk_mask, axis=1) != 1):
+        raise LineupBatchError("selected XI lost starting goalkeeper")
+    starter_gk_indices = np.argmax(starter_gk_mask, axis=1)
+    gk_counterfactual = (
+        counterfactual_dnp[batch, starter_gk_indices]
+        * xpts_mean[batch, reserve_gk_indices]
+    )
+    counterfactual = outfield_counterfactual + gk_counterfactual
+    return np.round(
+        np.maximum(0.0, counterfactual - actual_expected_autosub),
+        6,
+    )
 
 
 def _surface_arrays(
@@ -673,6 +855,7 @@ def _surface_arrays(
         "shortfall": direct("expected_shortfall"),
         "excess": direct("expected_excess_ge_8"),
         "p_dnp": direct("p_dnp"),
+        "p_cameo": direct("p_cameo"),
         "p_appearance": direct("p_appearance"),
         "conditioned_mean": appearance("expected_points"),
         "conditioned_blank": appearance("p_fpl_blank"),
@@ -771,6 +954,33 @@ def _optimize_gw_chunk(
         axis=1,
     )
 
+    batch_axis = np.arange(batch_count, dtype=np.int64)
+    selected_starter_mask = starter_mask[batch_axis, winner]
+    selected_bench_order = bench["order_indices"][batch_axis, winner]
+    selected_reserve_gk = bench["reserve_gk_indices"][batch_axis, winner]
+    selected_pair_index = captain["winner_pair_index"][batch_axis, winner]
+    safe_pool_counts = _selected_safe_pool_counts(
+        pair_order=captain["pair_order"],
+        selected_starter_mask=selected_starter_mask,
+        selected_pair_index=selected_pair_index,
+    )
+    cameo_blocking_cost = _selected_cameo_blocking_cost_exact(
+        starter_mask=selected_starter_mask,
+        formation_code=formation_code[batch_axis, winner],
+        position_codes=arrays["position_codes"],
+        p_dnp=arrays["p_dnp"],
+        p_cameo=arrays["p_cameo"],
+        p_appearance=arrays["p_appearance"],
+        xpts_mean=arrays["xpts_mean"],
+        conditioned_mean=arrays["conditioned_mean"],
+        bench_order_indices=selected_bench_order,
+        reserve_gk_indices=selected_reserve_gk,
+        actual_expected_autosub=bench["expected_autosub_value_raw"][
+            batch_axis,
+            winner,
+        ],
+    )
+
     results: list[dict[str, Any]] = []
     for batch_index in range(batch_count):
         xi_index = int(winner[batch_index])
@@ -804,15 +1014,17 @@ def _optimize_gw_chunk(
                 "expected_autosub_value": round(
                     float(bench["expected_autosub_value"][batch_index, xi_index]), 6
                 ),
-                "cameo_blocking_cost": None,
-                "cameo_blocking_cost_status": "DEFERRED_NON_RANKING_EXPLAINABILITY",
+                "cameo_blocking_cost": round(
+                    float(cameo_blocking_cost[batch_index]), 6
+                ),
+                "cameo_blocking_cost_status": "EXACT_WINNER_ONLY_COUNTERFACTUAL",
                 "formation": f"{fcode // 100}-{(fcode // 10) % 10}-{fcode % 10}",
                 "starting_xi": starter_elements,
                 "bench_gk": int(arrays["elements"][batch_index, reserve_index]),
                 "bench_order": bench_elements,
                 "captain": int(arrays["elements"][batch_index, cap_index]),
                 "vice_captain": int(arrays["elements"][batch_index, vice_index]),
-                "captain_safe_pool_count": 5,
+                "captain_safe_pool_count": int(safe_pool_counts[batch_index]),
                 "confidence": (
                     "HIGH" if ready_count == 11 else "MEDIUM" if ready_count >= 8 else "LOW"
                 ),
@@ -828,6 +1040,8 @@ def _optimize_gw_chunk(
                     "all_550_legal_xi_ranked_exactly": True,
                     "six_bench_permutations_exact": True,
                     "captain_vice_exact": True,
+                    "cameo_blocking_exact": True,
+                    "captain_safe_pool_exact": True,
                     "detail_materialization_deferred": True,
                 },
             }
@@ -945,8 +1159,14 @@ def optimize_lineup_horizons_exact_batch(
                 "expected_autosub_value": round(
                     sum(_f(row.get("expected_autosub_value")) for row in subset), 6
                 ),
-                "cameo_blocking_cost": None,
-                "cameo_blocking_cost_status": "DEFERRED_NON_RANKING_EXPLAINABILITY",
+                "cameo_blocking_cost": round(
+                    sum(
+                        _f(row.get("cameo_blocking_cost"))
+                        for row in subset
+                    ),
+                    6,
+                ),
+                "cameo_blocking_cost_status": "EXACT_WINNER_ONLY_COUNTERFACTUAL",
             }
         outputs.append(out)
 

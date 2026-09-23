@@ -654,7 +654,9 @@ def test_31_p1_2b_parallel_runtime_is_bounded_execution_only():
     assert perf["parallel_chunks_per_worker"] >= 1
     assert perf["route_batch_size"] >= 16
     assert perf["route_batch_all_550_xi_numerically_evaluated"] is True
-    assert perf["route_batch_scalar_exact_refinement"] is True
+    assert perf["route_batch_scalar_exact_refinement"] is False
+    assert perf["route_batch_exact_ordered_vector_accumulation"] is True
+    assert perf["route_batch_exact_route_sort_key_vectorized"] is True
     assert perf["lossy_pruning"] is False
     assert perf["route_identity_preserved"] is True
     assert perf["p1_7_owner_unchanged"] is True
@@ -1163,8 +1165,10 @@ def test_route_batch_p17_selected_summary_matches_scalar_exactly():
         assert governance[
             "all_550_legal_xi_numerically_evaluated"
         ] is True
-        assert governance["scalar_exact_refinement_count"] >= 1
-        assert governance["numerical_guard"] == pytest.approx(1e-4)
+        assert governance["scalar_exact_refinement_count"] == 0
+        assert governance["numerical_guard"] is None
+        assert governance["exact_ordered_vector_accumulation"] is True
+        assert governance["exact_route_sort_key_vectorized"] is True
 
 
 def _route_batch_stress_fixture(route_count=2043):
@@ -1269,7 +1273,7 @@ def test_full_2043_route_batch_p17_runtime_acceptance(capsys):
     assert proof["p1_7_math_mutated"] is False
     assert proof["decision_authority_changed"] is False
     assert proof["route_batch_count"] > 0
-    assert proof["route_batch_exact_refinement_count"] >= 2043 * 5
+    assert proof["route_batch_exact_refinement_count"] == 0
     assert proof["elapsed_seconds"] <= 10.0
     assert elapsed <= 10.0
 
@@ -1442,6 +1446,6 @@ def test_route_batch_materializer_matches_scalar_five_gw_horizons(monkeypatch):
     assert proof["route_count"] == len(routes)
     assert proof["unique_squad_count"] == len(routes)
     assert proof["route_batch_all_direct_routes_preserved"] is True
-    assert proof["route_batch_exact_refinement_count"] >= len(routes) * 5
+    assert proof["route_batch_exact_refinement_count"] == 0
     assert proof["lossy_pruning"] is False
     assert proof["p1_7_math_mutated"] is False

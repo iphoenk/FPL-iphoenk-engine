@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import cProfile
 import json
 import os
+import pstats
 import subprocess
 import sys
 import time
@@ -30,6 +32,8 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--runtime-root", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--profile-direct", action="store_true")
+    parser.add_argument("--pstats")
     args = parser.parse_args()
 
     runtime_root = Path(args.runtime_root).resolve()
@@ -135,18 +139,52 @@ def main() -> int:
         or prefetch.get("report_slot")
         or "PRODUCTION_SNAPSHOT"
     )
-    direct = runner.evaluate_packages(
-        search_result=search,
-        projections=projections,
-        free_transfers=(finance or {}).get("free_transfers"),
-        hit_cost_per_extra_transfer=(
-            finance or {}
-        ).get("hit_cost_per_extra_transfer"),
-        future_frontier_by_route=None,
-        information_value_by_route={},
-        price_risk_by_route={},
-        generated_at=str(generated_at),
-    )
+    profile_top: list[dict[str, Any]] = []
+    profiler = cProfile.Profile() if args.profile_direct else None
+    if profiler is not None:
+        profiler.enable()
+    try:
+        direct = runner.evaluate_packages(
+            search_result=search,
+            projections=projections,
+            free_transfers=(finance or {}).get("free_transfers"),
+            hit_cost_per_extra_transfer=(
+                finance or {}
+            ).get("hit_cost_per_extra_transfer"),
+            future_frontier_by_route=None,
+            information_value_by_route={},
+            price_risk_by_route={},
+            generated_at=str(generated_at),
+        )
+    finally:
+        if profiler is not None:
+            profiler.disable()
+            if args.pstats:
+                profiler.dump_stats(str(Path(args.pstats).resolve()))
+            stats = pstats.Stats(profiler)
+            rows = []
+            for (filename, line, function), raw in stats.stats.items():
+                cc, nc, tt, ct, _callers = raw
+                rows.append(
+                    {
+                        "file": filename,
+                        "line": int(line),
+                        "function": function,
+                        "primitive_calls": int(cc),
+                        "total_calls": int(nc),
+                        "internal_seconds": float(tt),
+                        "cumulative_seconds": float(ct),
+                    }
+                )
+            rows.sort(
+                key=lambda row: (
+                    -row["cumulative_seconds"],
+                    -row["internal_seconds"],
+                    row["file"],
+                    row["line"],
+                )
+            )
+            profile_top = rows[:100]
 
     execution = dict(
         ((direct.get("governance") or {}).get(
@@ -156,7 +194,12 @@ def main() -> int:
     kernel = dict(execution.get("kernel_proof") or {})
     result: dict[str, Any] = {
         "schema_version": 1,
-        "measurement": "PRODUCTION_SNAPSHOT_P1_7_TIE_PREVALENCE",
+        "measurement": (
+            "PRODUCTION_SNAPSHOT_P1_7_PROFILE"
+            if args.profile_direct
+            else "PRODUCTION_SNAPSHOT_P1_7_TIE_PREVALENCE"
+        ),
+        "profile_direct": bool(args.profile_direct),
         "runtime_data_sha": _git_sha(runtime_root),
         "code_sha": _git_sha(runner.ROOT),
         "planning_gw": int(planning_gw),
@@ -216,6 +259,7 @@ def main() -> int:
             ),
         },
         "stage2_cache_proof": stage2_proof,
+        "profile_top": profile_top,
         "wall_seconds": round(
             time.perf_counter() - started,
             6,

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-23T15:20:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-23T15:35:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -86,6 +86,8 @@ PRICE human-facing acceptance validates the **visible body**, including exact 12
 Report concurrency is versioned by production SHA so an obsolete in-flight controlled report from an older main commit cannot block acceptance of a newer merged Stage-3 implementation. Reports from the same production SHA remain serialized; cancel-in-progress remains false, so no due report is silently discarded.
 
 Stage 3 MC performance repair: canonical Monte Carlo remains **500,000 correlated paths** with unchanged acceptance/convergence gates. Runtime now precomputes immutable Stage-2 fixture catalogs once per GW, replaces repeated path-sample clean-sheet calibration with deterministic Gauss-Hermite calibration of the same Poisson-lognormal zero-goal marginal, and processes larger bounded NumPy chunks. This changes execution efficiency, not V6 facts, Stage-1/Stage-2 authorities, 20/25/30/25, package economics, or report QA.
+
+Stage 3 MC cache hardening: canonical package Monte Carlo now derives its common-random-number seed from the exact football projection + material lineup signature rather than the wall-clock report slot. The expensive deterministic simulation summary (500k-path metrics, pairwise outputs, sampling diagnostics and convergence evidence) is cached by exact model/code/config/projection/route/economics inputs and may be reused across occurrences; occurrence-specific run/evidence binding is always rebuilt. Cache restore/save happens before downstream acceptance, so a later report/auth gate failure cannot discard a valid simulation summary. A miss or any input/code/config change falls back to the unchanged canonical correlated simulation.
 
 Stage 3 P1.2B runtime repair history: earlier controlled runs proved the hot path is exact P1.7 materialization inside `P1_2_PACKAGE_UTILITY`. Full direct search remains exhaustive and every direct route still receives exact P1.7. After funded two-transfer discovery expanded the global route set to roughly 1.5 million legal squads, controlled run `35819490932` proved brute-force exact P1.7 over the full two-transfer cross-product cannot finish inside the unchanged 60-minute report ceiling. Production therefore uses the governed **FULL_DIRECT + MATERIAL_FUNDED** execution scope: full direct P1.7 first, existing P1.7 materiality selection second, exact legal/affordable funded composition third, and exact P1.7 + canonical MC on every composed funded package. The engine does not claim exhaustive global two-transfer coverage. No V6 change, MC path reduction, timeout increase, second lineup model, or new decision score is introduced. Stage 3 remains **acceptance pending** until fresh controlled and natural DEEP evidence passes.
 

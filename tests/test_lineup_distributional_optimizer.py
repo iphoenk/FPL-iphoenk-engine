@@ -1283,3 +1283,95 @@ def test_p17_primed_player_surfaces_are_exactly_output_equivalent(
         "surface_count": 15,
     }
     assert primed == scalar
+
+
+def test_p17_cache_observability_proves_hit_miss_write_and_numerical_invalidation(
+    monkeypatch, tmp_path
+):
+    from src.engines import v12_lineup_optimizer as lineup
+
+    projections = _squad()
+    ids = [row["element"] for row in projections["players"]]
+    monkeypatch.setenv(lineup.P17_DECISION_CACHE_ENV, str(tmp_path))
+    lineup.reset_p17_execution_observability()
+
+    cold = lineup.optimize_lineup(
+        projections,
+        ids,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    warm = lineup.optimize_lineup(
+        projections,
+        ids,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    stats = lineup.p17_execution_observability()
+
+    assert cold == warm
+    assert stats["p17_cache_hits"] >= 1
+    assert stats["p17_cache_misses"] >= 1
+    assert stats["p17_cache_writes"] >= 1
+    assert stats["p17_cache_corrupt_rejects"] == 0
+    assert stats["p1_7_wall_seconds"] > 0.0
+    assert stats["p1_7_cpu_seconds"] > 0.0
+
+    changed = deepcopy(projections)
+    changed["players"][0]["xpts_by_gw"][0]["mean"] += 0.125
+    before_misses = stats["p17_cache_misses"]
+    lineup.optimize_lineup(
+        changed,
+        ids,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    changed_stats = lineup.p17_execution_observability()
+    assert changed_stats["p17_cache_misses"] == before_misses + 1
+
+
+def test_p17_corrupt_cache_is_rejected_fail_closed_and_recomputed(
+    monkeypatch, tmp_path
+):
+    from src.engines import v12_lineup_optimizer as lineup
+
+    projections = _squad()
+    ids = [row["element"] for row in projections["players"]]
+    monkeypatch.setenv(lineup.P17_DECISION_CACHE_ENV, str(tmp_path))
+    first = lineup.optimize_lineup(
+        projections,
+        ids,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    cache_files = list(tmp_path.rglob("*.pkl"))
+    assert len(cache_files) == 1
+    cache_files[0].write_bytes(b"not-a-valid-pickle")
+
+    lineup.reset_p17_execution_observability()
+    recovered = lineup.optimize_lineup(
+        projections,
+        ids,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    stats = lineup.p17_execution_observability()
+
+    assert recovered == first
+    assert stats["p17_cache_corrupt_rejects"] == 1
+    assert stats["p17_cache_misses"] == 1
+    assert stats["p17_cache_writes"] == 1
+
+
+def test_v12_workflow_saves_compute_caches_even_if_downstream_acceptance_fails():
+    workflow = (
+        ROOT / ".github" / "workflows" / "v12-integrated-report-runner.yml"
+    ).read_text(encoding="utf-8")
+    for step_name in (
+        "Persist exact P1.7 decision-core cache before downstream acceptance",
+        "Persist deterministic MC summary cache before downstream acceptance",
+    ):
+        start = workflow.index(f"- name: {step_name}")
+        block = workflow[start : start + 450]
+        assert "if: always() && needs.parse.outputs.report_mode == 'DEEP'" in block
+        assert "actions/cache/save@v4" in block

@@ -8,44 +8,88 @@ permissions:
   contents: read
 
 jobs:
-  cache-inventory:
+  cache-file-inventory:
     runs-on: ubuntu-latest
     steps:
-      - name: Capture Actions cache inventory
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Prepare cache paths
         run: |
-          mkdir -p cache-inventory
+          mkdir -p app/.cache/v12-stage2 app/.cache/v12-p17 app/.cache/v12-mc
+
+      - name: Restore exact Stage-2 cache
+        id: stage2
+        uses: actions/cache/restore@v4
+        with:
+          path: app/.cache/v12-stage2
+          key: v12-stage2-derived-Linux-d99490cb5db4229e597694cf383285e7db4e7722d6055e8b069f677ca7a84dcc-35843674793
+          fail-on-cache-miss: true
+
+      - name: Restore exact P1.7 cache
+        id: p17
+        uses: actions/cache/restore@v4
+        with:
+          path: app/.cache/v12-p17
+          key: v12-p17-decision-Linux-dd9ab0c966c8023fe9a93fc928cfa1c4ce8eb9af2d37c3b7ebb2cc80da0620ec-35843674793
+          fail-on-cache-miss: true
+
+      - name: Restore exact MC cache
+        id: mc
+        uses: actions/cache/restore@v4
+        with:
+          path: app/.cache/v12-mc
+          key: v12-mc-summary-Linux-1fe68c934d6aa0115587cef50f1195a2e91b1b55049c100267f0ba408f4b974c-35843674793
+          fail-on-cache-miss: true
+
+      - name: Inventory restored cache files
+        run: |
+          mkdir -p cache-file-inventory
           python - <<'PY'
-          import json, os, urllib.request, datetime
-          repo=os.environ["GITHUB_REPOSITORY"]
-          url=f"https://api.github.com/repos/{repo}/actions/caches?per_page=100"
-          req=urllib.request.Request(url,headers={
-            "Accept":"application/vnd.github+json",
-            "Authorization":f"Bearer {os.environ['GH_TOKEN']}",
-            "X-GitHub-Api-Version":"2022-11-28",
-          })
-          with urllib.request.urlopen(req) as response:
-              payload=json.load(response)
+          import hashlib, json, os, pathlib, datetime
+          roots={
+            "stage2":"app/.cache/v12-stage2",
+            "p17":"app/.cache/v12-p17",
+            "mc":"app/.cache/v12-mc",
+          }
+          keys={
+            "stage2":"v12-stage2-derived-Linux-d99490cb5db4229e597694cf383285e7db4e7722d6055e8b069f677ca7a84dcc-35843674793",
+            "p17":"v12-p17-decision-Linux-dd9ab0c966c8023fe9a93fc928cfa1c4ce8eb9af2d37c3b7ebb2cc80da0620ec-35843674793",
+            "mc":"v12-mc-summary-Linux-1fe68c934d6aa0115587cef50f1195a2e91b1b55049c100267f0ba408f4b974c-35843674793",
+          }
+          archive_sizes={"stage2":9271003,"p17":38885046,"mc":21426}
           out={
-            "source_url":url,
+            "source":"GitHub Actions exact cache restore from refs/heads/main cache inventory",
             "timestamp_utc":datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00","Z"),
             "run_id":int(os.environ["GITHUB_RUN_ID"]),
             "event":os.environ["GITHUB_EVENT_NAME"],
             "head_sha":os.environ["GITHUB_SHA"],
-            "total_count":payload.get("total_count"),
-            "actions_caches":payload.get("actions_caches",[]),
+            "caches":{}
           }
-          open("cache-inventory/cache_inventory.json","w").write(json.dumps(out,indent=2)+"\n")
-          print("total_count",out["total_count"])
-          for row in out["actions_caches"]:
-              print(row.get("id"),row.get("key"),row.get("size_in_bytes"),row.get("ref"))
+          for name,root_s in roots.items():
+              root=pathlib.Path(root_s)
+              files=[]
+              total=0
+              for p in sorted(x for x in root.rglob("*") if x.is_file()):
+                  b=p.read_bytes()
+                  size=len(b); total+=size
+                  files.append({
+                    "path":str(p.relative_to(root)),
+                    "size_bytes":size,
+                    "sha256":hashlib.sha256(b).hexdigest()
+                  })
+              out["caches"][name]={
+                "key":keys[name],
+                "archive_size_in_bytes_from_actions_cache_api":archive_sizes[name],
+                "restored_file_count":len(files),
+                "restored_uncompressed_file_bytes":total,
+                "files":files,
+              }
+          pathlib.Path("cache-file-inventory/cache_file_inventory.json").write_text(json.dumps(out,indent=2)+"\n")
+          print(json.dumps({k:{kk:v for kk,v in row.items() if kk!="files"} for k,row in out["caches"].items()},indent=2))
           PY
 
-      - name: Upload cache inventory
+      - name: Upload cache file inventory
         uses: actions/upload-artifact@v4
         with:
-          name: audit-cache-inventory-${{ github.run_id }}
-          path: cache-inventory
+          name: audit-cache-file-inventory-${{ github.run_id }}
+          path: cache-file-inventory
           if-no-files-found: error
           retention-days: 14

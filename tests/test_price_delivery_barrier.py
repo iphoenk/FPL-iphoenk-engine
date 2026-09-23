@@ -7,7 +7,7 @@ import re
 import pytest
 
 from src.engines.v12_price_delivery import (
-    PRICE_SECTION_LABELS,
+    PRICE_SECTION_IDS,
     build_price_delivery_report,
     render_price_report,
     resolve_current15,
@@ -16,17 +16,12 @@ from src.engines.v12_price_delivery import (
 )
 
 
+ROOT = Path(__file__).resolve().parents[1]
+CANONICAL = ROOT / "control" / "fpl_master_v12" / "FPL_MASTER_CANONICAL_V12.txt"
+
+
 def _canonical() -> str:
-    rows = "\n".join(
-        f"{index} {label}"
-        for index, label in enumerate(PRICE_SECTION_LABELS, 1)
-    )
-    return (
-        "14L. 05:30 PRICE DELIVERY BARRIER\n"
-        "Exact backbone:\n"
-        + rows
-        + "\n\n14M. TIME-SPECIFIC DEEP EMPHASIS\n"
-    )
+    return CANONICAL.read_text(encoding="utf-8")
 
 
 def _position_for_index(index: int) -> str:
@@ -201,7 +196,7 @@ def test_a_healthy_price_exact20_eta_12_sections_and_human_pass():
     body = render_price_report(report)
     assert validate_price_report_model(report) == []
     assert validate_price_visible_body(body, report=report) == []
-    assert len(report["sections"]) == 12
+    assert [row["section_id"] for row in report["sections"]] == list(PRICE_SECTION_IDS)
     assert len(report["watchlist20"]["rows"]) == 20
     assert len(report["rise20"]["rows"]) == 20
     assert len(report["fall20"]["rows"]) == 20

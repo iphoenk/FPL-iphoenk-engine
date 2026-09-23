@@ -1880,8 +1880,17 @@ def test_p17_rounding_boundary_is_non_vacuous_and_matches_scalar_bench():
         tolerance = 64.0 * abs(float(np.spacing(scaled)))
         return abs(fraction - 0.5) <= tolerance
 
-    assert near_half(boundary_blank, 9)
-    assert near_half(boundary_utility, 6)
+    raw_ranking_keys = (
+        (boundary_expected - 0.20 * boundary_blank, 6),
+        (boundary_blank, 9),
+    )
+    boundary_hits = sum(
+        1
+        for value, decimals in raw_ranking_keys
+        if near_half(value, decimals)
+    )
+    assert boundary_hits > 0
+    assert boundary_hits == len(raw_ranking_keys)
 
     surfaces = []
     for slot, position in enumerate(position_signature):

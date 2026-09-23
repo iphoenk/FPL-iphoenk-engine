@@ -11,7 +11,7 @@ No route is pruned and no P1.1/P1.3/P1.6 mathematics is recomputed here.
 import math
 import time
 from functools import lru_cache
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 import numpy as np
 
@@ -71,24 +71,44 @@ def _ordered_gather_sum(values: np.ndarray, legal: np.ndarray) -> np.ndarray:
 
 
 def _lexicographic_first(
-    metrics: Sequence[np.ndarray],
+    metrics: Sequence[np.ndarray | Callable[[], np.ndarray]],
     *,
     axis: int,
 ) -> np.ndarray:
-    """Index of lexicographic maximum, preserving first-row tie order."""
+    """Index of lexicographic maximum, preserving first-row tie order.
+
+    Later keys may be supplied lazily.  Once every row has exactly one
+    surviving candidate, lower-priority keys cannot affect the result and are
+    not materialized.  All evaluated metrics must be finite so the lazy path
+    remains exactly equivalent to the previous finite-value semantics.
+    """
     if not metrics:
         raise LineupBatchError("lexicographic selection requires metrics")
-    shape = metrics[0].shape
-    candidates = np.ones(shape, dtype=bool)
-    for metric in metrics:
-        if metric.shape != shape:
+    shape: tuple[int, ...] | None = None
+    candidates: np.ndarray | None = None
+    for raw_metric in metrics:
+        metric = raw_metric() if callable(raw_metric) else raw_metric
+        if shape is None:
+            shape = metric.shape
+            candidates = np.ones(shape, dtype=bool)
+        elif metric.shape != shape:
             raise LineupBatchError("lexicographic metric shape drift")
+        if not np.all(np.isfinite(metric)):
+            raise LineupBatchError(
+                "lexicographic metrics must be finite"
+            )
+        assert candidates is not None
         best = np.max(
             np.where(candidates, metric, -np.inf),
             axis=axis,
             keepdims=True,
         )
         candidates &= metric == best
+        if np.all(
+            np.sum(candidates, axis=axis, dtype=np.int64) == 1
+        ):
+            break
+    assert candidates is not None
     return np.argmax(candidates, axis=axis)
 
 
@@ -1493,18 +1513,29 @@ def _family_bench_kernel(
         )
         * ge8
     )
-    tie_rank = _bench_permutation_tie_rank(
-        arrays["elements"],
-        layout["outfield_permutations"],
-    )
+    for metric_name, metric_values in (
+        ("utility", utility),
+        ("expected", expected),
+        ("blank", blank),
+        ("ge8", ge8),
+        ("ge10", ge10),
+    ):
+        if not np.all(np.isfinite(metric_values)):
+            raise LineupBatchError(
+                f"family bench {metric_name} must be finite"
+            )
+
     winner = _lexicographic_first(
         (
             np.round(utility, 6),
-            np.round(expected, 6),
-            -np.round(blank, 9),
-            np.round(ge8, 9),
-            np.round(ge10, 9),
-            -tie_rank.astype(np.float64),
+            lambda: np.round(expected, 6),
+            lambda: -np.round(blank, 9),
+            lambda: np.round(ge8, 9),
+            lambda: np.round(ge10, 9),
+            lambda: -_bench_permutation_tie_rank(
+                arrays["elements"],
+                layout["outfield_permutations"],
+            ).astype(np.float64),
         ),
         axis=2,
     )

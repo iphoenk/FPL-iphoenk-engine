@@ -23,7 +23,7 @@ on:
 permissions:
   contents: read
   issues: write
-  actions: read
+  actions: write
 
 concurrency:
   group: v12-report-${{ github.event_name }}-${{ github.sha }}-${{ github.event.issue.number || inputs.report_slot }}

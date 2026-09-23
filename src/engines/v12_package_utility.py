@@ -832,17 +832,26 @@ def _init_p1_2b_lineup_worker(
     projections: Mapping[str, Any],
     planning_gw: int,
     generated_at: str,
-    material_elements: Sequence[int],
+    material_elements: Sequence[int] | None = None,
 ) -> None:
     """Bind immutable read-only P1.7 inputs once per worker process."""
     global _P1_2B_WORKER_CONTEXT
+    resolved_material_elements = (
+        tuple(int(value) for value in material_elements)
+        if material_elements is not None
+        else tuple(
+            int(row.get("element") or -1)
+            for row in projections.get("players") or []
+            if int(row.get("element") or -1) > 0
+        )
+    )
     prime_player_surface_cache(
         projections,
         planning_gws=range(
             int(planning_gw),
             int(planning_gw) + 5,
         ),
-        material_elements=material_elements,
+        material_elements=resolved_material_elements,
     )
     _P1_2B_WORKER_CONTEXT = (
         projections,

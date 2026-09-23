@@ -18,6 +18,7 @@ import numpy as np
 from src.engines import v12_lineup_optimizer as scalar
 
 POSITIONS = ("GK", "DEF", "MID", "FWD")
+FAMILY_BENCH_SCALAR_FALLBACK_LIMIT = 64
 POS_CODE = {"GK": 0, "DEF": 1, "MID": 2, "FWD": 3}
 CODE_POS = {value: key for key, value in POS_CODE.items()}
 PAIR_CAP = np.asarray(
@@ -682,6 +683,9 @@ def _captain_kernel(
         "expected_vice_takeover_value": gather(vice_fallback),
         "joint_upside": gather(joint_upside),
         "joint_downside": gather(joint_downside),
+        "scalar_boundary_fallback_count": int(
+            np.sum(captain_boundary)
+        ),
     }
 
 def _selected_safe_pool_counts(
@@ -1586,7 +1590,8 @@ def _family_bench_kernel(
     *,
     layout: Mapping[str, Any],
     arrays: Mapping[str, np.ndarray],
-) -> dict[str, np.ndarray]:
+    scalar_fallback_limit: int | None = None,
+) -> dict[str, Any]:
     """Exact affine core14 bench/autosub kernel for all candidates."""
     route_count = int(arrays["elements"].shape[0])
     p_dnp_zero = np.asarray(arrays["p_dnp"][0], dtype=np.float64).copy()
@@ -1743,18 +1748,20 @@ def _family_bench_kernel(
     )
 
     # A different vector accumulation order can move a raw key by a few ULP
-    # across Python's decimal half boundary even when np.round() is replaced
-    # with round().  Avoid scanning all five full [route, XI, permutation]
-    # tensors: only the primary utility can change which permutation reaches
-    # later keys.  Any primary-key tie is conservatively sent to scalar.
+    # across Python's decimal half boundary.  Exact ties by themselves are
+    # safe: continue the canonical lexicographic ranking in vector form and
+    # fall back only when a ranking key for an actually tied contender is
+    # boundary-sensitive.  This keeps common zero-autosub / zero-appearance
+    # ties O(vector) instead of exploding into scalar route × XI work.
     max_utility_key = np.max(
         utility_key,
         axis=2,
         keepdims=True,
     )
+    tied_candidates = utility_key == max_utility_key
     primary_tie = (
         np.sum(
-            utility_key == max_utility_key,
+            tied_candidates,
             axis=2,
             dtype=np.int8,
         )
@@ -1768,6 +1775,47 @@ def _family_bench_kernel(
         & competitive,
         axis=2,
     )
+
+    secondary_boundary = np.zeros(
+        primary_tie.shape,
+        dtype=bool,
+    )
+    candidate_mask = tied_candidates.copy()
+    secondary_specs = (
+        (expected, np.round(expected, 6), 6),
+        (blank, -np.round(blank, 9), 9),
+        (ge8, np.round(ge8, 9), 9),
+        (ge10, np.round(ge10, 9), 9),
+    )
+    for raw_metric, ranking_key, decimals in secondary_specs:
+        active_tie = (
+            np.sum(
+                candidate_mask,
+                axis=2,
+                dtype=np.int8,
+            )
+            > 1
+        )
+        if not np.any(active_tie):
+            break
+        secondary_boundary |= (
+            active_tie
+            & np.any(
+                _near_decimal_half(raw_metric, decimals)
+                & candidate_mask,
+                axis=2,
+            )
+        )
+        best_secondary = np.max(
+            np.where(
+                candidate_mask,
+                ranking_key,
+                -np.inf,
+            ),
+            axis=2,
+            keepdims=True,
+        )
+        candidate_mask &= ranking_key == best_secondary
 
     route_axis_for_boundary = np.arange(
         route_count,
@@ -1804,10 +1852,19 @@ def _family_bench_kernel(
         | _near_decimal_half(selected_ge10_raw, 9)
     )
     boundary_sensitive = (
-        primary_tie
-        | primary_boundary
+        primary_boundary
+        | secondary_boundary
         | published_boundary
     )
+    scalar_fallback_count = int(np.sum(boundary_sensitive))
+    if (
+        scalar_fallback_limit is not None
+        and scalar_fallback_count > int(scalar_fallback_limit)
+    ):
+        raise LineupBatchError(
+            "route-family bench scalar fallback budget exceeded: "
+            f"{scalar_fallback_count} > {int(scalar_fallback_limit)}"
+        )
     scalar_fallbacks: dict[
         tuple[int, int],
         dict[str, Any],
@@ -1906,6 +1963,25 @@ def _family_bench_kernel(
         "selected_ge10": ge10_out,
         "bench_order_utility": utility_out,
         "endpoint_evaluations": 2,
+        "bench_rows_evaluated": int(
+            route_count * layout["legal"].shape[0]
+        ),
+        "bench_primary_tie_count": int(np.sum(primary_tie)),
+        "bench_primary_boundary_count": int(
+            np.sum(primary_boundary)
+        ),
+        "bench_secondary_boundary_count": int(
+            np.sum(secondary_boundary)
+        ),
+        "bench_published_boundary_count": int(
+            np.sum(published_boundary)
+        ),
+        "bench_scalar_fallback_count": scalar_fallback_count,
+        "bench_scalar_fallback_limit": (
+            None
+            if scalar_fallback_limit is None
+            else int(scalar_fallback_limit)
+        ),
     }
 
 
@@ -2295,6 +2371,9 @@ def _optimize_gw_family(
     bench = _family_bench_kernel(
         layout=layout,
         arrays=arrays,
+        scalar_fallback_limit=(
+            FAMILY_BENCH_SCALAR_FALLBACK_LIMIT
+        ),
     )
     captain = _family_captain_kernel(
         layout=layout,
@@ -2552,6 +2631,30 @@ def _optimize_gw_family(
         "bench_permutations": 6,
         "core14_reused": True,
         "candidate_affine_resolver_exact": True,
+        "bench_rows_evaluated": int(
+            bench["bench_rows_evaluated"]
+        ),
+        "bench_primary_tie_count": int(
+            bench["bench_primary_tie_count"]
+        ),
+        "bench_primary_boundary_count": int(
+            bench["bench_primary_boundary_count"]
+        ),
+        "bench_secondary_boundary_count": int(
+            bench["bench_secondary_boundary_count"]
+        ),
+        "bench_published_boundary_count": int(
+            bench["bench_published_boundary_count"]
+        ),
+        "bench_scalar_fallback_count": int(
+            bench["bench_scalar_fallback_count"]
+        ),
+        "bench_scalar_fallback_limit": int(
+            FAMILY_BENCH_SCALAR_FALLBACK_LIMIT
+        ),
+        "captain_scalar_boundary_fallback_count": int(
+            captain["scalar_boundary_fallback_count"]
+        ),
     }
 
 

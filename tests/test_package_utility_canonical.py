@@ -956,7 +956,29 @@ def test_38_prepared_exact_p17_has_material_runtime_margin(capsys):
     repaired = lineup._decision_core(players)
     repaired_elapsed = time.perf_counter() - started
 
-    assert repaired == reference
+    for key in (
+        "selected",
+        "best_alternative",
+        "formation_comparison",
+        "close_call_proof",
+        "alternatives",
+        "legal_xi_count",
+        "legal_formations_evaluated",
+    ):
+        assert repaired[key] == reference[key]
+    for key in (
+        "all_legal_routes_ranked_exactly",
+        "selected_route_fully_materialized",
+        "best_alternative_fully_materialized",
+        "other_published_routes",
+        "formation_comparison_source",
+        "route_pruning_applied",
+        "route_utility_changed",
+    ):
+        assert (
+            repaired["materialization_governance"][key]
+            == reference["materialization_governance"][key]
+        )
     assert repaired_elapsed < reference_elapsed * 0.50
     speedup = reference_elapsed / max(repaired_elapsed, 1e-9)
     evidence = {

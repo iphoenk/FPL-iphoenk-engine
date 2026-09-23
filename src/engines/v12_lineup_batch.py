@@ -1352,6 +1352,26 @@ def _bench_permutation_tie_rank(
     return tie
 
 
+@lru_cache(maxsize=256)
+def _family_bench_permutation_tie_rank_cached(
+    elements_bytes: bytes,
+    route_count: int,
+    position_signature: tuple[str, ...],
+) -> np.ndarray:
+    """Memoize pure family bench tie ranks across the five GW horizon."""
+    elements = np.frombuffer(
+        elements_bytes,
+        dtype=np.int64,
+    ).reshape(int(route_count), 15)
+    layout = _family_layout(position_signature)
+    tie = _bench_permutation_tie_rank(
+        elements,
+        layout["outfield_permutations"],
+    )
+    tie.setflags(write=False)
+    return tie
+
+
 def _family_bench_kernel(
     *,
     layout: Mapping[str, Any],
@@ -1487,10 +1507,17 @@ def _family_bench_kernel(
         * ge8
     )
     # Keep the tie-rank invariant independent from whether the final
-    # lexicographic key is needed for a particular data set.
-    tie_rank = _bench_permutation_tie_rank(
+    # lexicographic key is needed.  The guard remains authoritative, but the
+    # pure rank matrix is computed once per family input and reused across
+    # the five GW horizon instead of being rebuilt five times.
+    element_matrix = np.ascontiguousarray(
         arrays["elements"],
-        layout["outfield_permutations"],
+        dtype=np.int64,
+    )
+    tie_rank = _family_bench_permutation_tie_rank_cached(
+        element_matrix.tobytes(),
+        route_count,
+        tuple(layout["position_signature"]),
     )
     winner = _lexicographic_first(
         (

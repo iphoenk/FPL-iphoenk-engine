@@ -3188,6 +3188,20 @@ def run_correlated_monte_carlo(
         "simulation_cache_hit": simulation_cache_hit,
         "simulation_cache_key": simulation_cache_key[:20],
         "simulation_cache_schema": MC_SIM_CACHE_SCHEMA,
+        "execution_mode": (
+            (sampling.get("parallel_execution") or {}).get("status")
+        ),
+        "parallel_worker_count": (
+            (sampling.get("parallel_execution") or {}).get("worker_count")
+        ),
+        "parallel_shard_count": (
+            (sampling.get("parallel_execution") or {}).get("shard_count")
+        ),
+        "parallel_total_paths_exact": (
+            (sampling.get("parallel_execution") or {}).get(
+                "total_paths_exact"
+            )
+        ),
         "wall_clock_excluded_from_output_fingerprint": True,
     }
     result = {

@@ -1,0 +1,39 @@
+name: Audit evidence bootstrap
+
+on:
+  push:
+    branches:
+      - audit/evidence-2026-09-23
+    paths:
+      - .github/workflows/audit-evidence-bootstrap.yml
+      - .github/workflows/audit-evidence-capture.yml
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch audit capture
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          url = "https://api.github.com/repos/${{ github.repository }}/actions/workflows/audit-evidence-capture.yml/dispatches"
+          req = urllib.request.Request(
+              url,
+              data=json.dumps({"ref":"audit/evidence-2026-09-23"}).encode(),
+              method="POST",
+              headers={
+                  "Accept":"application/vnd.github+json",
+                  "Authorization":f"Bearer {os.environ['GH_TOKEN']}",
+                  "X-GitHub-Api-Version":"2022-11-28",
+                  "Content-Type":"application/json",
+              },
+          )
+          with urllib.request.urlopen(req) as response:
+              print("dispatch_status", response.status)
+          PY

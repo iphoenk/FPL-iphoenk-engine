@@ -1,0 +1,105 @@
+name: P17 roundvec A-B production benchmark
+
+on:
+  push:
+    branches:
+      - audit/p17-roundvec-ab-2026-09-24
+    paths:
+      - '.github/workflows/p17-roundvec-ab-benchmark.yml'
+      - 'scripts/audit_p17_roundvec_ab.py'
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout audit harness
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: app
+      - name: Checkout frozen production runtime data
+        uses: actions/checkout@v4
+        with:
+          ref: 32466551c365ca2054eaf4316d36cda9a7484eae
+          path: runtime-data
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install runtime dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install threadpoolctl
+      - name: Record runner CPU
+        working-directory: app
+        run: |
+          mkdir -p artifacts/p17-roundvec-ab
+          lscpu | tee artifacts/p17-roundvec-ab/lscpu.txt
+          python -VV | tee artifacts/p17-roundvec-ab/python.txt
+          python - <<'PY' | tee artifacts/p17-roundvec-ab/numpy.txt
+          import numpy as np
+          print(np.__version__)
+          np.show_config()
+          PY
+      - name: Build one frozen production snapshot
+        working-directory: app
+        env:
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/audit-stage2
+          V12_P17_DECISION_CACHE_DIR: .cache/audit-p17
+        run: |
+          cp scripts/audit_p17_roundvec_ab.py ../audit_p17_roundvec_ab.py
+          rm -rf ../p17-snapshot .cache/audit-stage2 .cache/audit-p17
+          mkdir -p ../p17-snapshot
+          PYTHONPATH="$PWD" python ../audit_p17_roundvec_ab.py --build --runtime-root ../runtime-data --out ../p17-snapshot --slot '2026-09-23T19:40:00+07:00'
+      - name: Benchmark baseline, Patch A, Patch A+B in one job
+        working-directory: app
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+          MKL_NUM_THREADS: '1'
+          NUMEXPR_NUM_THREADS: '1'
+          BLIS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          git fetch origin --quiet
+          declare -A SHAS
+          SHAS[baseline]='e21d38c23c2f2af4132ab4f400b12d5420d7af35'
+          SHAS[patch_a]='ec4a64bddea872fafc6ca845f4c05961bc6e558b'
+          SHAS[patch_ab]='850c9ccf1990f6f699a23770ab5fb215247b8c76'
+          for variant in baseline patch_a patch_ab; do
+            git checkout --detach "${SHAS[$variant]}"
+            for i in 1 2 3 4 5; do
+              rm -rf ".cache/bench-${variant}-${i}"
+              export V12_P17_DECISION_CACHE_DIR=".cache/bench-${variant}-${i}"
+              PYTHONPATH="$PWD" python ../audit_p17_roundvec_ab.py --benchmark --out ../p17-snapshot --label "${variant}_${i}" --scalar-n 0
+            done
+          done
+          git checkout --detach '850c9ccf1990f6f699a23770ab5fb215247b8c76'
+          cp ../p17-snapshot/benchmark_*.json artifacts/p17-roundvec-ab/
+          cp ../p17-snapshot/snapshot_metadata.json artifacts/p17-roundvec-ab/
+          python - <<'PY'
+          import json, statistics
+          from pathlib import Path
+          root=Path('../p17-snapshot')
+          out={}
+          for v in ('baseline','patch_a','patch_ab'):
+              vals=[]
+              for p in sorted(root.glob(f'benchmark_{v}_*.json')):
+                  vals.append(json.loads(p.read_text())['batch_wall_seconds_external'])
+              out[v]={'samples':vals,'median':statistics.median(vals),'min':min(vals),'max':max(vals)}
+          out['shas']={'baseline':'e21d38c23c2f2af4132ab4f400b12d5420d7af35','patch_a':'ec4a64bddea872fafc6ca845f4c05961bc6e558b','patch_ab':'850c9ccf1990f6f699a23770ab5fb215247b8c76'}
+          Path('artifacts/p17-roundvec-ab/summary.json').write_text(json.dumps(out,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(out,indent=2,sort_keys=True))
+          PY
+      - name: Upload benchmark evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: p17-roundvec-ab-${{ github.run_id }}
+          path: app/artifacts/p17-roundvec-ab/
+          if-no-files-found: error
+          retention-days: 14

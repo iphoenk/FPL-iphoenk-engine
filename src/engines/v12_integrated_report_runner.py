@@ -1501,6 +1501,53 @@ def _enrich_all15_rows(
     return rows
 
 
+def _enrich_watchlist_rows(
+    watchlist: Mapping[str, Any] | None,
+    *,
+    projections: Mapping[str, Any] | None,
+    predictor: Mapping[str, Any],
+) -> dict[str, Any]:
+    result = deepcopy(dict(watchlist or {}))
+    pmap = _projection_map(projections)
+    price_map = _price_player_map(predictor)
+    enriched: list[dict[str, Any]] = []
+    for raw in result.get("rows") or []:
+        if not isinstance(raw, Mapping):
+            continue
+        row = dict(raw)
+        element = int(row.get("element_id") or 0)
+        player = pmap.get(element) or {}
+        mechanism = (
+            _visible_position_mechanism(player, action="WATCH")
+            if player else {}
+        )
+        price = price_map.get(element) or {}
+        row.update({
+            "current_price": (
+                player.get("now_cost")
+                if player.get("now_cost") is not None
+                else price.get("now_cost")
+            ),
+            "xmins": mechanism.get("xmins"),
+            "p_start": mechanism.get("p_start"),
+            "predictor_direction": (
+                price.get("direction")
+                or price.get("change_direction")
+                or "NONE"
+            ),
+            "predictor_progress": price.get(
+                "projected_percent",
+                price.get("current_progress_percent"),
+            ),
+            "watchlist_relevance": "TOP5_POSITIONAL_CANONICAL",
+            "transfer_relevance": "PACKAGE_CANDIDATE_UNIVERSE",
+        })
+        enriched.append(row)
+    result["rows"] = enriched
+    result["decision_context_materialized"] = True
+    return result
+
+
 def _mini_context(mini: Mapping[str, Any] | None) -> dict[str, Any]:
     payload = dict(mini or {})
     return dict(
@@ -2403,6 +2450,11 @@ def run_deep(
             our_entry_id=3462711,
             planning_gw=planning_gw,
         ),
+    )
+    watchlist = _enrich_watchlist_rows(
+        watchlist,
+        projections=projections,
+        predictor=predictor,
     )
 
     canonical_bundle = build_canonical_universe(

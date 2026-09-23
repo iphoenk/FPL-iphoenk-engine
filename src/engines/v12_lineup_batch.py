@@ -2371,29 +2371,37 @@ def _family_legal_tie_rank_for_candidate_position(
         position_signature[slot]
         for slot in actual_order
     )
-    actual_legal = scalar._legal_xi_templates(actual_signature)
-    actual_rank_by_combination = {
-        tuple(int(value) for value in combination): index
-        for index, combination in enumerate(actual_legal)
-    }
+    # A legal XI is a set of slots, so its 15-bit slot mask identifies it
+    # uniquely; mapping by mask is identical to mapping by sorted tuple.
+    actual_legal = np.asarray(
+        scalar._legal_xi_templates(actual_signature),
+        dtype=np.int64,
+    )
     canonical_to_actual = np.empty(15, dtype=np.int64)
     for actual_slot, canonical_slot in enumerate(actual_order):
         canonical_to_actual[canonical_slot] = actual_slot
-    canonical_legal = scalar._legal_xi_templates(position_signature)
-    result: list[int] = []
-    for row in canonical_legal:
-        actual_combination = tuple(
-            sorted(
-                int(canonical_to_actual[int(slot)])
-                for slot in row
-            )
-        )
-        if actual_combination not in actual_rank_by_combination:
-            raise LineupBatchError("family legal XI mapping drift")
-        result.append(
-            int(actual_rank_by_combination[actual_combination])
-        )
-    return tuple(result)
+    canonical_legal = np.asarray(
+        scalar._legal_xi_templates(position_signature),
+        dtype=np.int64,
+    )
+    actual_masks = np.bitwise_or.reduce(
+        np.left_shift(1, actual_legal),
+        axis=1,
+    )
+    canonical_masks = np.bitwise_or.reduce(
+        np.left_shift(1, canonical_to_actual[canonical_legal]),
+        axis=1,
+    )
+    order = np.argsort(actual_masks, kind="stable")
+    sorted_masks = actual_masks[order]
+    position = np.searchsorted(sorted_masks, canonical_masks)
+    position = np.minimum(position, sorted_masks.size - 1)
+    if not np.array_equal(
+        sorted_masks[position],
+        canonical_masks,
+    ):
+        raise LineupBatchError("family legal XI mapping drift")
+    return tuple(int(value) for value in order[position])
 
 
 def _family_route_tie_rank(

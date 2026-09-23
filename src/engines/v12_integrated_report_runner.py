@@ -19,8 +19,10 @@ coherent report bundle.
 """
 
 import argparse
+import cProfile
 import hashlib
 import json
+import os
 import time
 from copy import deepcopy
 from datetime import datetime
@@ -132,6 +134,25 @@ def _fingerprint(value: Any) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+_PROFILED_STAGE_NAMES = frozenset(
+    {
+        "V12_ANALYTICS_FOUNDATION",
+        "P1_1_P1_3_FULL_UNIVERSE",
+        "P1_2B_PACKAGE_COMBINE",
+        "P1_4_MONTE_CARLO",
+    }
+)
+
+
+def _stage_profile_path(name: str) -> Path | None:
+    raw = str(os.environ.get("V12_STAGE_PROFILE_DIR") or "").strip()
+    if not raw or name not in _PROFILED_STAGE_NAMES:
+        return None
+    directory = Path(raw)
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory / f"{name}.pstats"
+
+
 def _stage(
     ledger: list[dict[str, Any]],
     name: str,
@@ -141,9 +162,16 @@ def _stage(
 ) -> Any:
     started = time.perf_counter()
     print(f"[V12_STAGE] START {name}", flush=True)
+    profile_path = _stage_profile_path(name)
+    profiler = cProfile.Profile() if profile_path is not None else None
+    if profiler is not None:
+        profiler.enable()
     try:
         value = fn()
     except Exception as exc:  # occurrence truth must survive one stage failure
+        if profiler is not None:
+            profiler.disable()
+            profiler.dump_stats(str(profile_path))
         elapsed = time.perf_counter() - started
         print(
             f"[V12_STAGE] FAILED {name} elapsed_seconds={elapsed:.3f} "
@@ -158,9 +186,13 @@ def _stage(
                 "error_class": type(exc).__name__,
                 "error": str(exc),
                 "elapsed_seconds": round(elapsed, 3),
+                "profile_artifact": str(profile_path) if profile_path else None,
             }
         )
         return None
+    if profiler is not None:
+        profiler.disable()
+        profiler.dump_stats(str(profile_path))
     elapsed = time.perf_counter() - started
     print(
         f"[V12_STAGE] PASS {name} elapsed_seconds={elapsed:.3f}",
@@ -173,6 +205,7 @@ def _stage(
             "required": bool(required),
             "output_fingerprint": _fingerprint(value),
             "elapsed_seconds": round(elapsed, 3),
+            "profile_artifact": str(profile_path) if profile_path else None,
         }
     )
     return value

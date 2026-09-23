@@ -103,10 +103,9 @@ def select_personal_evidence(
         selected = max(
             valid,
             key=lambda row: (
-                row["timestamp"] or datetime.min.replace(tzinfo=next(
-                    (r["timestamp"].tzinfo for r in valid if r["timestamp"]),
-                    None,
-                )),
+                row["timestamp"].timestamp()
+                if row["timestamp"] is not None
+                else float("-inf"),
                 1 if row["authenticated"] else 0,
                 -row["index"],
             ),
@@ -115,7 +114,9 @@ def select_personal_evidence(
             **selected,
             "resolution_status": "CURRENT_VALID",
             "stale": False,
-            "finance_allowed": selected["authenticated"],
+            "finance_allowed": bool(
+                selected["authenticated"] or selected["user_current"]
+            ),
             "candidate_count": len(normalized),
         }
 

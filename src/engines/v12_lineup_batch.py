@@ -1712,9 +1712,10 @@ def _family_bench_kernel(
         route_count,
         tuple(layout["position_signature"]),
     )
+    utility_key = np.round(utility, 6)
     winner = _lexicographic_first(
         (
-            np.round(utility, 6),
+            utility_key,
             lambda: np.round(expected, 6),
             lambda: -np.round(blank, 9),
             lambda: np.round(ge8, 9),
@@ -1726,15 +1727,69 @@ def _family_bench_kernel(
 
     # A different vector accumulation order can move a raw key by a few ULP
     # across Python's decimal half boundary even when np.round() is replaced
-    # with round().  Such rows therefore fall back to the full scalar bench
-    # oracle; normal rows retain the vectorized family path.
-    boundary_sensitive = np.any(
-        _near_decimal_half(utility, 6)
-        | _near_decimal_half(expected, 6)
-        | _near_decimal_half(blank, 9)
-        | _near_decimal_half(ge8, 9)
-        | _near_decimal_half(ge10, 9),
+    # with round().  Avoid scanning all five full [route, XI, permutation]
+    # tensors: only the primary utility can change which permutation reaches
+    # later keys.  Any primary-key tie is conservatively sent to scalar.
+    max_utility_key = np.max(
+        utility_key,
         axis=2,
+        keepdims=True,
+    )
+    primary_tie = (
+        np.sum(
+            utility_key == max_utility_key,
+            axis=2,
+            dtype=np.int8,
+        )
+        > 1
+    )
+    competitive = utility_key >= (
+        max_utility_key - 2e-6
+    )
+    primary_boundary = np.any(
+        _near_decimal_half(utility, 6)
+        & competitive,
+        axis=2,
+    )
+
+    route_axis_for_boundary = np.arange(
+        route_count,
+        dtype=np.int64,
+    )[:, None]
+    legal_axis_for_boundary = np.arange(
+        layout["legal"].shape[0],
+        dtype=np.int64,
+    )[None, :]
+    selected_expected_raw = expected[
+        route_axis_for_boundary,
+        legal_axis_for_boundary,
+        winner,
+    ]
+    selected_blank_raw = blank[
+        route_axis_for_boundary,
+        legal_axis_for_boundary,
+        winner,
+    ]
+    selected_ge8_raw = ge8[
+        route_axis_for_boundary,
+        legal_axis_for_boundary,
+        winner,
+    ]
+    selected_ge10_raw = ge10[
+        route_axis_for_boundary,
+        legal_axis_for_boundary,
+        winner,
+    ]
+    published_boundary = (
+        _near_decimal_half(selected_expected_raw, 6)
+        | _near_decimal_half(selected_blank_raw, 9)
+        | _near_decimal_half(selected_ge8_raw, 9)
+        | _near_decimal_half(selected_ge10_raw, 9)
+    )
+    boundary_sensitive = (
+        primary_tie
+        | primary_boundary
+        | published_boundary
     )
     scalar_fallbacks: dict[
         tuple[int, int],

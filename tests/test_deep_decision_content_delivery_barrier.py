@@ -26,11 +26,18 @@ def test_stage_fingerprint_canonicalizes_aware_datetime():
 
 
 def _section(section_id: str, label: str, content: dict, state: str = "COMPLETE"):
+    payload = dict(content)
+    if state == "COMPLETE" and section_id in {"S06", "S08", "S11", "S12", "S13", "S14", "S15B", "S16", "S16B"}:
+        payload.setdefault("authoritative_binding", {
+            "status": "BOUND",
+            "producer": "SYNTHETIC_TEST_PRODUCER",
+            "payload_fingerprint": "synthetic-test-fingerprint",
+        })
     return {
         "section_id": section_id,
         "label": label,
         "state": state,
-        "content": content,
+        "content": payload,
     }
 
 

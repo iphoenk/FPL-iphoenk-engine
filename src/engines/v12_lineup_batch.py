@@ -1385,6 +1385,50 @@ def _family_bench_permutation_tie_rank_cached(
     return tie
 
 
+_SPLIT = 134217729.0  # 2**27 + 1 (Dekker/Veltkamp split)
+
+
+def python_round_vec(x: np.ndarray, decimals: int) -> np.ndarray:
+    """Vectorized bit-identical Python round() for the bounded P1.7 domain."""
+    x = np.asarray(x, dtype=np.float64)
+    assert isinstance(
+        decimals,
+        (int, np.integer),
+    ), "python_round_vec decimals must be an integer"
+    decimals = int(decimals)
+    assert (
+        0 <= decimals <= 11
+    ), "python_round_vec exact domain requires 0 <= decimals <= 11"
+    assert np.all(
+        np.isfinite(x)
+    ), "python_round_vec exact domain requires finite values"
+    scale = float(10 ** decimals)
+    a = np.abs(x)
+    hi = a * scale
+    assert np.all(
+        hi < float(2**52)
+    ), (
+        "python_round_vec exact domain requires "
+        "|x| * 10**decimals < 2**52"
+    )
+
+    # Error-free product a*scale = hi + lo.  Within the asserted domain,
+    # the split recovers the product residual needed to make the decimal-half
+    # decision match Python's correctly rounded round(float, decimals).
+    c = _SPLIT * a
+    ah = c - (c - a)
+    al = a - ah
+    lo = ((ah * scale - hi) + al * scale)
+    k = np.floor(hi)
+    frac = hi - k
+    diff = frac - 0.5
+    up = (diff > 0) | ((diff == 0) & (lo > 0))
+    tie = (diff == 0) & (lo == 0)
+    up = up | (tie & (np.fmod(k, 2.0) == 1.0))
+    q = k + up
+    return np.copysign(q / scale, x)
+
+
 def _near_decimal_half(
     values: np.ndarray,
     decimals: int,
@@ -2126,11 +2170,13 @@ def _family_captain_kernel(
     raw_joint_downside = (
         shortfall[:, PAIR_CAP] + raw_vice_downside
     )
-    pair_utility = np.round(raw_pair_utility, 6)
-    cap_mean = np.round(raw_cap_mean, 6)
-    vice_fallback = np.round(raw_vice_fallback, 6)
-    joint_upside = np.round(raw_joint_upside, 6)
-    joint_downside = np.round(raw_joint_downside, 6)
+    # Use the exact vector equivalent of Python round() for every ranking
+    # value, rather than np.round() plus per-element scalar correction.
+    pair_utility = python_round_vec(raw_pair_utility, 6)
+    cap_mean = python_round_vec(raw_cap_mean, 6)
+    vice_fallback = python_round_vec(raw_vice_fallback, 6)
+    joint_upside = python_round_vec(raw_joint_upside, 6)
+    joint_downside = python_round_vec(raw_joint_downside, 6)
 
     # Captain mean is a direct player-surface value, not an accumulated pair
     # expression.  At its decimal half boundary Python round() alone is the
@@ -2169,27 +2215,8 @@ def _family_captain_kernel(
         axis=1,
         dtype=np.int16,
     )
-    for route_index, pair_index in np.argwhere(
-        captain_pair_boundary
-    ):
-        route_index = int(route_index)
-        pair_index = int(pair_index)
-        pair_utility[route_index, pair_index] = round(
-            float(raw_pair_utility[route_index, pair_index]),
-            6,
-        )
-        vice_fallback[route_index, pair_index] = round(
-            float(raw_vice_fallback[route_index, pair_index]),
-            6,
-        )
-        joint_upside[route_index, pair_index] = round(
-            float(raw_joint_upside[route_index, pair_index]),
-            6,
-        )
-        joint_downside[route_index, pair_index] = round(
-            float(raw_joint_downside[route_index, pair_index]),
-            6,
-        )
+    # Boundary telemetry is still counted, but python_round_vec() has already
+    # produced the exact scalar-oracle rounded keys for every pair.
 
     slot_rank = _actual_slot_ranks(elements)
     cap_rank = slot_rank[:, PAIR_CAP]

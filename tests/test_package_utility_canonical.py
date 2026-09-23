@@ -652,15 +652,18 @@ def test_31_p1_2b_parallel_runtime_is_bounded_execution_only():
     assert perf["parallel_lineup_min_routes"] >= 64
     assert 2 <= perf["parallel_lineup_max_workers"] <= 4
     assert perf["parallel_chunks_per_worker"] >= 1
+    assert perf["route_batch_size"] >= 16
+    assert perf["route_batch_all_550_xi_numerically_evaluated"] is True
+    assert perf["route_batch_scalar_exact_refinement"] is True
     assert perf["lossy_pruning"] is False
     assert perf["route_identity_preserved"] is True
     assert perf["p1_7_owner_unchanged"] is True
 
     materializer = inspect.getsource(utility._materialize_route_lineups)
-    worker = inspect.getsource(utility._p1_2b_route_lineups_worker)
+    batch_worker = inspect.getsource(utility._p1_2b_route_batch_worker)
     assert "ProcessPoolExecutor" in inspect.getsource(utility)
-    assert "PROCESS_POOL_EXACT_P1_7" in materializer
-    assert "_cumulative_lineup_horizons(" in worker
+    assert "PROCESS_POOL_EXACT_P1_7_ROUTE_BATCH" in materializer
+    assert "optimize_lineup_summaries_exact_batch(" in batch_worker
     assert "optimize_lineup(" in inspect.getsource(utility._lineup_decision)
     assert "lossy_pruning" in materializer
 
@@ -1331,3 +1334,114 @@ def test_full_2043_route_batch_p17_runtime_acceptance(capsys):
     )
     captured = capsys.readouterr()
     assert "P1_2B_ROUTE_BATCH_ACCEPTANCE=" in captured.out
+
+
+def _route_batch_compare_surface(row):
+    return {
+        "status": row.get("status"),
+        "gw": row.get("gw"),
+        "route_utility": row.get("route_utility"),
+        "expected_fpl_points": row.get("expected_fpl_points"),
+        "distributional_downside": row.get("distributional_downside"),
+        "supportable_upside": row.get("supportable_upside"),
+        "expected_autosub_value": row.get("expected_autosub_value"),
+        "cameo_blocking_cost": row.get("cameo_blocking_cost"),
+        "formation": row.get("formation"),
+        "starting_xi": row.get("starting_xi"),
+        "bench_gk": row.get("bench_gk"),
+        "bench_order": row.get("bench_order"),
+        "captain": row.get("captain"),
+        "vice_captain": row.get("vice_captain"),
+        "captain_safe_pool_count": row.get("captain_safe_pool_count"),
+        "confidence": row.get("confidence"),
+        "covariance_status": row.get("covariance_status"),
+    }
+
+
+@pytest.mark.parametrize("seed", [71, 407, 1907])
+def test_route_batch_selected_decisions_match_scalar_exactly(seed):
+    from src.engines import v12_lineup_optimizer as lineup
+
+    projections = _randomized_projections(seed)
+    direct = package_search.search_packages(
+        current_squad=_current(),
+        candidate_universe=_universe(),
+        bank=5,
+        max_transfers=1,
+        universe_complete=True,
+        expected_eligible_universe_count=len(_candidates()),
+    )
+    sample_routes = direct["routes"][: min(12, len(direct["routes"]))]
+    squads = {
+        str(row["route_id"]): utility._route_squad(row)
+        for row in sample_routes
+    }
+    batch = lineup.optimize_lineup_summaries_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    for route_id, squad in squads.items():
+        scalar = utility._lineup_decision(
+            projections,
+            squad,
+            gw=GW,
+            generated_at=GENERATED,
+        )
+        assert _route_batch_compare_surface(
+            batch[route_id]
+        ) == _route_batch_compare_surface(scalar)
+        assert (
+            batch[route_id]["governance"][
+                "all_550_legal_xi_numerically_evaluated"
+            ]
+            is True
+        )
+        assert (
+            batch[route_id]["governance"]["p1_7_math_mutated"]
+            is False
+        )
+
+
+def test_route_batch_materializer_matches_scalar_five_gw_horizons(monkeypatch):
+    projections = _randomized_projections(8128)
+    direct = package_search.search_packages(
+        current_squad=_current(),
+        candidate_universe=_universe(),
+        bank=5,
+        max_transfers=1,
+        universe_complete=True,
+        expected_eligible_universe_count=len(_candidates()),
+    )
+    routes = direct["routes"][: min(10, len(direct["routes"]))]
+
+    cfg = deepcopy(utility.load_config())
+    cfg.setdefault("performance", {})["parallel_lineup_min_routes"] = 2
+    cfg["performance"]["parallel_lineup_max_workers"] = 1
+    cfg["performance"]["route_batch_size"] = 4
+    monkeypatch.setattr(utility, "load_config", lambda: cfg)
+
+    actual, proof = utility._materialize_route_lineups(
+        routes,
+        projections,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    expected = {
+        row["route_id"]: utility._cumulative_lineup_horizons(
+            projections,
+            utility._route_squad(row),
+            planning_gw=GW,
+            generated_at=GENERATED,
+        )
+        for row in routes
+    }
+    assert actual == expected
+    assert proof["execution_mode"] == "SEQUENTIAL_EXACT_P1_7_ROUTE_BATCH"
+    assert proof["route_count"] == len(routes)
+    assert proof["unique_squad_count"] == len(routes)
+    assert proof["route_batch_all_direct_routes_preserved"] is True
+    assert proof["route_batch_exact_refinement_count"] >= len(routes) * 5
+    assert proof["lossy_pruning"] is False
+    assert proof["p1_7_math_mutated"] is False

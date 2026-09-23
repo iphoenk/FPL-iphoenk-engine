@@ -1222,6 +1222,11 @@ def _family_selection_endpoint(
 
     Candidate slot 14 is the only variable.  p=0 and p=1 endpoints therefore
     span the exact multilinear resolver for every route in the family.
+
+    DNP state probabilities depend on legal-XI row and formation state only,
+    not on bench permutation.  Build them once per formation and reuse them
+    across all six bench permutations while preserving scalar multiplication
+    order exactly as (DEF * MID) * FWD.
     """
     legal_count = int(layout["legal"].shape[0])
     def_dist = _static_position_dnp_distribution(
@@ -1245,29 +1250,54 @@ def _family_selection_endpoint(
         dtype=np.float64,
     )
     outfield_permutations = layout["outfield_permutations"]
+    formation_code = np.asarray(layout["formation_code"], dtype=np.int64)
+
+    dnp_probability_by_formation: dict[
+        int,
+        tuple[tuple[tuple[int, int, int], ...], np.ndarray],
+    ] = {}
+    for raw_code in np.unique(formation_code):
+        code = int(raw_code)
+        rows = np.flatnonzero(formation_code == code)
+        d_count = code // 100
+        m_count = (code // 10) % 10
+        f_count = code % 10
+        state_keys = tuple(
+            (d, m, f)
+            for d in range(d_count + 1)
+            for m in range(m_count + 1)
+            for f in range(f_count + 1)
+        )
+        state_index = np.asarray(state_keys, dtype=np.int64)
+        dnp_probability = (
+            def_dist[rows[:, None], state_index[None, :, 0]]
+            * mid_dist[rows[:, None], state_index[None, :, 1]]
+        ) * fwd_dist[rows[:, None], state_index[None, :, 2]]
+        dnp_probability = np.where(
+            dnp_probability > 1e-15,
+            dnp_probability,
+            0.0,
+        )
+        full = np.empty(
+            (legal_count, len(state_keys)),
+            dtype=np.float64,
+        )
+        full[rows, :] = dnp_probability
+        dnp_probability_by_formation[code] = (state_keys, full)
 
     for permutation_index in range(6):
         perm_indices = outfield_permutations[:, permutation_index, :]
         for group in layout["structural_groups"][permutation_index]:
             rows = group["rows"]
-            state_keys = group["state_keys"]
-            dnp_probability = np.empty(
-                (rows.size, len(state_keys)),
-                dtype=np.float64,
+            code = int(formation_code[int(rows[0])])
+            state_keys, cached_probability = (
+                dnp_probability_by_formation[code]
             )
-            for state_index, (d_count, m_count, f_count) in enumerate(
-                state_keys
-            ):
-                dnp_probability[:, state_index] = (
-                    def_dist[rows, d_count]
-                    * mid_dist[rows, m_count]
-                    * fwd_dist[rows, f_count]
+            if tuple(group["state_keys"]) != state_keys:
+                raise LineupBatchError(
+                    "route-family DNP state-key drift"
                 )
-            dnp_probability = np.where(
-                dnp_probability > 1e-15,
-                dnp_probability,
-                0.0,
-            )
+            dnp_probability = cached_probability[rows]
             appearance = _appearance_mask_probabilities(
                 p_appearance[perm_indices[rows]]
             )

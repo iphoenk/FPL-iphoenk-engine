@@ -55,6 +55,18 @@ class LineupBatchError(ValueError):
     pass
 
 
+class BenchScalarFallbackBudgetExceeded(LineupBatchError):
+    """A family/GW exceeded the bounded row-level scalar fallback budget."""
+
+    def __init__(self, count: int, limit: int):
+        self.count = int(count)
+        self.limit = int(limit)
+        super().__init__(
+            "route-family bench scalar fallback budget exceeded: "
+            f"{self.count} > {self.limit}"
+        )
+
+
 def _f(value: Any, default: float = 0.0) -> float:
     try:
         out = float(default if value is None else value)
@@ -1932,9 +1944,9 @@ def _family_bench_kernel(
         scalar_fallback_limit is not None
         and scalar_fallback_count > int(scalar_fallback_limit)
     ):
-        raise LineupBatchError(
-            "route-family bench scalar fallback budget exceeded: "
-            f"{scalar_fallback_count} > {int(scalar_fallback_limit)}"
+        raise BenchScalarFallbackBudgetExceeded(
+            scalar_fallback_count,
+            int(scalar_fallback_limit),
         )
     scalar_fallbacks: dict[
         tuple[int, int],
@@ -3014,6 +3026,54 @@ def _optimize_gw_chunk(
     return results
 
 
+def _scalar_gw_decision(
+    projections: Mapping[str, Any],
+    squad: Sequence[int],
+    *,
+    gw: int,
+    generated_at: str,
+) -> dict[str, Any]:
+    """Canonical scalar P1.7 row used only for fail-operational degradation."""
+    decision = scalar.optimize_lineup(
+        projections,
+        list(squad),
+        planning_gw=int(gw),
+        generated_at=generated_at,
+    )
+    score = dict(decision.get("lineup_score") or {})
+    bench = dict(decision.get("bench") or {})
+    captain = dict(decision.get("captain") or {})
+    vice = dict(decision.get("vice_captain") or {})
+    return {
+        "status": "READY",
+        "gw": int(gw),
+        "route_utility": score.get("robust"),
+        "expected_fpl_points": score.get("xpts_mean"),
+        "distributional_downside": score.get("distributional_downside"),
+        "supportable_upside": score.get("supportable_upside"),
+        "expected_autosub_value": score.get("expected_autosub_value"),
+        "cameo_blocking_cost": score.get("cameo_blocking_cost"),
+        "formation": decision.get("formation"),
+        "starting_xi": [int(row.get("element") or 0) for row in decision.get("starting_xi") or []],
+        "bench_gk": int(((bench.get("gk") or {}).get("element") or 0)),
+        "bench_order": [int(row.get("element") or 0) for row in bench.get("order") or []],
+        "captain": int(captain.get("element") or 0),
+        "vice_captain": int(vice.get("element") or 0),
+        "captain_safe_pool_count": len(decision.get("captain_safe_pool") or []),
+        "confidence": score.get("confidence"),
+        "covariance_status": score.get("covariance_status"),
+        "p1_7_model_evidence_output_fingerprint": ((decision.get("model_evidence_binding") or {}).get("output_fingerprint")),
+        "governance": {
+            "p1_7_consumed_read_only": True,
+            "p1_1_math_mutated": False,
+            "p1_3_math_mutated": False,
+            "p1_6_math_mutated": False,
+            "p1_7_math_mutated": False,
+            "execution_degraded_to_scalar": True,
+        },
+    }
+
+
 def optimize_lineup_horizons_exact_batch(
     projections: Mapping[str, Any],
     squads: Sequence[Sequence[int]],
@@ -3068,6 +3128,9 @@ def optimize_lineup_horizons_exact_batch(
     bench_published_boundary_count = 0
     bench_scalar_fallback_count = 0
     bench_zero_dnp_fast_path_family_gw_count = 0
+    bench_scalar_degraded_family_gw_count = 0
+    bench_scalar_degraded_squad_gw_count = 0
+    bench_scalar_degradation_max_trigger_count = 0
     captain_scalar_boundary_fallback_count = 0
     captain_scalar_pair_fallback_count = 0
     captain_max_scalar_pair_fallbacks_per_route = 0
@@ -3127,12 +3190,48 @@ def optimize_lineup_horizons_exact_batch(
                 ]
                 if not members:
                     continue
-                family_results, _family_proof = _optimize_gw_family(
-                    family["core14"],
-                    [incoming for _, incoming in members],
-                    gw=gw,
-                    surface_catalog=surface_catalogs[int(gw)],
-                )
+                try:
+                    family_results, _family_proof = _optimize_gw_family(
+                        family["core14"],
+                        [incoming for _, incoming in members],
+                        gw=gw,
+                        surface_catalog=surface_catalogs[int(gw)],
+                    )
+                except BenchScalarFallbackBudgetExceeded as exc:
+                    # Availability policy: a boundary-heavy family/GW
+                    # degrades to canonical scalar P1.7 instead of aborting
+                    # the entire DEEP report.
+                    family_results = [
+                        _scalar_gw_decision(
+                            projections,
+                            tuple(family["core14"]) + (int(incoming),),
+                            gw=int(gw),
+                            generated_at=generated_at,
+                        )
+                        for _, incoming in members
+                    ]
+                    bench_scalar_degraded_family_gw_count += 1
+                    bench_scalar_degraded_squad_gw_count += len(members)
+                    bench_scalar_degradation_max_trigger_count = max(
+                        bench_scalar_degradation_max_trigger_count,
+                        int(exc.count),
+                    )
+                    _family_proof = {
+                        "bench_rows_evaluated": 0,
+                        "bench_primary_tie_count": 0,
+                        "bench_primary_boundary_count": 0,
+                        "bench_secondary_boundary_count": 0,
+                        "bench_published_boundary_count": 0,
+                        "bench_scalar_fallback_count": 0,
+                        "bench_zero_dnp_fast_path": False,
+                        "captain_scalar_boundary_fallback_count": 0,
+                        "captain_scalar_pair_fallback_count": 0,
+                        "captain_max_scalar_pair_fallbacks_per_route": 0,
+                        "captain_scalar_direct_cap_mean_round_count": 0,
+                        "captain_scalar_zero_dnp_captain_count": 0,
+                        "captain_scalar_pair_round_count": 0,
+                        "captain_max_scalar_pair_rounds_per_route": 0,
+                    }
                 bench_rows_evaluated += int(
                     _family_proof["bench_rows_evaluated"]
                 )
@@ -3367,6 +3466,22 @@ def optimize_lineup_horizons_exact_batch(
         ),
         "bench_zero_dnp_fast_path_family_gw_count": int(
             bench_zero_dnp_fast_path_family_gw_count
+        ),
+        "bench_scalar_degraded_family_gw_count": int(
+            bench_scalar_degraded_family_gw_count
+        ),
+        "bench_scalar_degraded_squad_gw_count": int(
+            bench_scalar_degraded_squad_gw_count
+        ),
+        "bench_scalar_degradation_max_trigger_count": int(
+            bench_scalar_degradation_max_trigger_count
+        ),
+        "bench_scalar_degradation_policy": "FAMILY_GW_TO_CANONICAL_SCALAR",
+        "execution_degraded": bool(bench_scalar_degraded_family_gw_count),
+        "degradation_status": (
+            "DEGRADED"
+            if bench_scalar_degraded_family_gw_count
+            else "NONE"
         ),
         "captain_scalar_boundary_fallback_count": int(
             captain_scalar_boundary_fallback_count

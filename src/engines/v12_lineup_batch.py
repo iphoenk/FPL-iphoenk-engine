@@ -1236,6 +1236,11 @@ def _family_selection_endpoint(
 
     Candidate slot 14 is the only variable.  p=0 and p=1 endpoints therefore
     span the exact multilinear resolver for every route in the family.
+
+    DNP state probabilities depend only on legal-XI row and formation state,
+    not on bench permutation.  Build them once per formation and reuse them
+    across all six bench permutations while preserving scalar multiplication
+    order exactly as (DEF * MID) * FWD.
     """
     legal_count = int(layout["legal"].shape[0])
     def_dist = _static_position_dnp_distribution(
@@ -1259,38 +1264,57 @@ def _family_selection_endpoint(
         dtype=np.float64,
     )
     outfield_permutations = layout["outfield_permutations"]
+    formation_code = np.asarray(layout["formation_code"], dtype=np.int64)
 
-    # DNP state probability depends on the XI row and formation state only,
-    # not on the six bench permutations. Build each formation-state matrix
-    # once per endpoint, preserving the scalar multiplication order
-    # (DEF * MID) * FWD bit-for-bit.
-    dnp_probability_by_states: dict[
-        tuple[tuple[int, int, int], ...],
-        np.ndarray,
+    dnp_probability_by_formation: dict[
+        int,
+        tuple[tuple[tuple[int, int, int], ...], np.ndarray],
     ] = {}
-    for permutation_groups in layout["structural_groups"]:
-        for group in permutation_groups:
-            state_keys = group["state_keys"]
-            if state_keys in dnp_probability_by_states:
-                continue
-            state_array = np.asarray(state_keys, dtype=np.int64)
-            dnp_probability = (
-                def_dist[:, state_array[:, 0]]
-                * mid_dist[:, state_array[:, 1]]
-                * fwd_dist[:, state_array[:, 2]]
-            )
-            dnp_probability_by_states[state_keys] = np.where(
-                dnp_probability > 1e-15,
-                dnp_probability,
-                0.0,
-            )
+    for raw_code in np.unique(formation_code):
+        code = int(raw_code)
+        rows = np.flatnonzero(formation_code == code)
+        d_count = code // 100
+        m_count = (code // 10) % 10
+        f_count = code % 10
+        state_keys = tuple(
+            (d, m, f)
+            for d in range(d_count + 1)
+            for m in range(m_count + 1)
+            for f in range(f_count + 1)
+        )
+        state_array = np.asarray(state_keys, dtype=np.int64)
+        dnp_probability = (
+            def_dist[rows[:, None], state_array[None, :, 0]]
+            * mid_dist[rows[:, None], state_array[None, :, 1]]
+        ) * fwd_dist[rows[:, None], state_array[None, :, 2]]
+        dnp_probability = np.where(
+            dnp_probability > 1e-15,
+            dnp_probability,
+            0.0,
+        )
+        full = np.empty(
+            (legal_count, len(state_keys)),
+            dtype=np.float64,
+        )
+        full[rows, :] = dnp_probability
+        dnp_probability_by_formation[code] = (
+            state_keys,
+            full,
+        )
 
     for permutation_index in range(6):
         perm_indices = outfield_permutations[:, permutation_index, :]
         for group in layout["structural_groups"][permutation_index]:
             rows = group["rows"]
-            state_keys = group["state_keys"]
-            dnp_probability = dnp_probability_by_states[state_keys][rows]
+            code = int(formation_code[int(rows[0])])
+            state_keys, cached_probability = (
+                dnp_probability_by_formation[code]
+            )
+            if tuple(group["state_keys"]) != state_keys:
+                raise LineupBatchError(
+                    "route-family DNP state-key drift"
+                )
+            dnp_probability = cached_probability[rows]
             appearance = _appearance_mask_probabilities(
                 p_appearance[perm_indices[rows]]
             )
@@ -1506,18 +1530,25 @@ def _family_bench_kernel(
         )
         * ge8
     )
-    # Keep the tie-rank invariant independent from whether the final
-    # lexicographic key is needed.  The guard remains authoritative, but the
-    # pure rank matrix is computed once per family input and reused across
-    # the five GW horizon instead of being rebuilt five times.
+    for metric_name, metric_values in (
+        ("utility", utility),
+        ("expected", expected),
+        ("blank", blank),
+        ("ge8", ge8),
+        ("ge10", ge10),
+    ):
+        if not np.all(np.isfinite(metric_values)):
+            raise LineupBatchError(
+                f"family bench {metric_name} must be finite"
+            )
+
+    # Keep the exact tie-rank guard and cross-GW memoization, but materialize
+    # the rank matrix only if all higher-priority rounded keys still leave a
+    # tie.  This preserves first-match semantics while avoiding unnecessary
+    # work on the common unique-primary-key path.
     element_matrix = np.ascontiguousarray(
         arrays["elements"],
         dtype=np.int64,
-    )
-    tie_rank = _family_bench_permutation_tie_rank_cached(
-        element_matrix.tobytes(),
-        route_count,
-        tuple(layout["position_signature"]),
     )
     winner = _lexicographic_first(
         (
@@ -1526,7 +1557,11 @@ def _family_bench_kernel(
             lambda: -np.round(blank, 9),
             lambda: np.round(ge8, 9),
             lambda: np.round(ge10, 9),
-            lambda: -tie_rank.astype(np.float64),
+            lambda: -_family_bench_permutation_tie_rank_cached(
+                element_matrix.tobytes(),
+                route_count,
+                tuple(layout["position_signature"]),
+            ).astype(np.float64),
         ),
         axis=2,
     )

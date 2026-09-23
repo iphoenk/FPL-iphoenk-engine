@@ -1662,6 +1662,8 @@ def select_material_funding_legs(
 def combine_package_utility_surfaces(
     direct_package_utility: Mapping[str, Any],
     funded_package_utility: Mapping[str, Any],
+    *,
+    funded_search_result: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Combine exact direct and exact bounded-funded P1.2B owner outputs.
 
@@ -1748,6 +1750,9 @@ def combine_package_utility_surfaces(
             "route_count": len(funded_routes),
             "global_two_transfer_complete": False,
             "scope": "P1_7_MATERIAL_DIRECT_LEG_CROSS_PRODUCT",
+            "search_proof": deepcopy(
+                dict((funded_search_result or {}).get("search_proof") or {})
+            ),
         },
         "global_two_transfer_exhaustive_claim": False,
     }

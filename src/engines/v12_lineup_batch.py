@@ -10,6 +10,7 @@ No route is pruned and no P1.1/P1.3/P1.6 mathematics is recomputed here.
 
 import math
 import time
+from functools import lru_cache
 from typing import Any, Mapping, Sequence
 
 import numpy as np
@@ -208,6 +209,37 @@ def _bench_indices(
     return reserve, starter_gk, outfield
 
 
+@lru_cache(maxsize=16)
+def _structural_plan_cached(
+    position_signatures: tuple[tuple[str, ...], ...],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Reuse GW-invariant exact XI/bench structure for an unchanged route chunk."""
+    position_rows = [list(row) for row in position_signatures]
+    position_codes = np.asarray(
+        [[POS_CODE[position] for position in row] for row in position_rows],
+        dtype=np.int8,
+    )
+    legal = _legal_templates(position_rows)
+    batch_count, legal_count, _ = legal.shape
+    starter_mask = np.zeros((batch_count, legal_count, 15), dtype=bool)
+    route_axis3 = np.arange(batch_count, dtype=np.int64)[:, None, None]
+    legal_axis3 = np.arange(legal_count, dtype=np.int64)[None, :, None]
+    starter_mask[route_axis3, legal_axis3, legal] = True
+    formation_code = _formation_codes(starter_mask, position_codes)
+    reserve_gk, starter_gk, outfield_bench = _bench_indices(
+        starter_mask,
+        position_codes,
+    )
+    return (
+        legal,
+        starter_mask,
+        formation_code,
+        reserve_gk,
+        starter_gk,
+        outfield_bench,
+    )
+
+
 def _bench_kernel(
     *,
     starter_mask: np.ndarray,
@@ -221,12 +253,11 @@ def _bench_kernel(
     conditioned_blank: np.ndarray,
     conditioned_ge8: np.ndarray,
     conditioned_ge10: np.ndarray,
+    reserve_gk: np.ndarray,
+    starter_gk: np.ndarray,
+    outfield_bench: np.ndarray,
 ) -> dict[str, np.ndarray]:
     batch_count, legal_count, _ = starter_mask.shape
-    reserve_gk, starter_gk, outfield_bench = _bench_indices(
-        starter_mask,
-        position_codes,
-    )
     def_dist = _position_dnp_distribution(
         starter_mask,
         p_dnp,
@@ -496,94 +527,71 @@ def _bench_kernel(
 def _captain_kernel(
     *,
     starter_mask: np.ndarray,
+    legal: np.ndarray,
     xpts_mean: np.ndarray,
     shortfall: np.ndarray,
     excess: np.ndarray,
     p_dnp: np.ndarray,
 ) -> dict[str, np.ndarray]:
+    """Exact C/VC ranking with route-level pair ranks gathered over 11 starters.
+
+    Pair utility ordering is identical to the scalar oracle.  The execution
+    change replaces the previous 210 full starter-mask scans per XI with 11
+    vectorized rank-row gathers, one for each legal starter slot.
+    """
     objective = dict((scalar.load_config().get("objective") or {}))
     downside_weight = _f(objective.get("captain_downside_weight"), 0.15)
     upside_weight = _f(objective.get("captain_upside_weight"), 0.10)
-    base = (
-        xpts_mean
-        - downside_weight * shortfall
-        + upside_weight * excess
-    )
+    base = xpts_mean - downside_weight * shortfall + upside_weight * excess
     cap = PAIR_CAP
     vice = PAIR_VICE
-    pair_utility = np.round(
-        base[:, cap]
-        + p_dnp[:, cap] * base[:, vice],
-        6,
-    )
+    pair_utility = np.round(base[:, cap] + p_dnp[:, cap] * base[:, vice], 6)
     cap_mean = np.round(xpts_mean[:, cap], 6)
-    vice_fallback = np.round(
-        p_dnp[:, cap] * xpts_mean[:, vice],
-        6,
-    )
-    joint_upside = np.round(
-        excess[:, cap] + p_dnp[:, cap] * excess[:, vice],
-        6,
-    )
-    joint_downside = np.round(
-        shortfall[:, cap] + p_dnp[:, cap] * shortfall[:, vice],
-        6,
-    )
+    vice_fallback = np.round(p_dnp[:, cap] * xpts_mean[:, vice], 6)
+    joint_upside = np.round(excess[:, cap] + p_dnp[:, cap] * excess[:, vice], 6)
+    joint_downside = np.round(shortfall[:, cap] + p_dnp[:, cap] * shortfall[:, vice], 6)
     pair_tie = np.broadcast_to(
-        np.arange(PAIR_CAP.size, dtype=np.int64)[None, :],
-        pair_utility.shape,
+        np.arange(PAIR_CAP.size, dtype=np.int64)[None, :], pair_utility.shape
     )
     pair_order = np.lexsort(
-        (
-            pair_tie,
-            -vice_fallback,
-            joint_downside,
-            -joint_upside,
-            -cap_mean,
-            -pair_utility,
-        ),
+        (pair_tie, -vice_fallback, joint_downside, -joint_upside, -cap_mean, -pair_utility),
         axis=1,
     )
 
     batch_count, legal_count, _ = starter_mask.shape
-    winner = np.full((batch_count, legal_count), -1, dtype=np.int64)
-    unresolved = np.ones((batch_count, legal_count), dtype=bool)
+    rank_by_pair = np.empty_like(pair_order, dtype=np.int16)
+    rank_by_pair[
+        np.arange(batch_count, dtype=np.int64)[:, None],
+        pair_order,
+    ] = np.arange(PAIR_CAP.size, dtype=np.int16)[None, :]
+    sentinel = np.int16(PAIR_CAP.size + 1)
+    rank_matrix = np.full((batch_count, 15, 15), sentinel, dtype=np.int16)
+    rank_matrix[:, PAIR_CAP, PAIR_VICE] = rank_by_pair
+    pair_lookup = np.full((15, 15), -1, dtype=np.int16)
+    pair_lookup[PAIR_CAP, PAIR_VICE] = np.arange(PAIR_CAP.size, dtype=np.int16)
+
+    best_rank = np.full((batch_count, legal_count), sentinel, dtype=np.int16)
+    winner = np.full((batch_count, legal_count), -1, dtype=np.int16)
     route_axis = np.arange(batch_count, dtype=np.int64)[:, None]
-    legal_axis = np.arange(legal_count, dtype=np.int64)[None, :]
-    for rank in range(pair_order.shape[1]):
-        pair_index = pair_order[:, rank]
-        cap_index = PAIR_CAP[pair_index]
-        vice_index = PAIR_VICE[pair_index]
-        eligible = (
-            unresolved
-            & starter_mask[
-                route_axis,
-                legal_axis,
-                cap_index[:, None],
-            ]
-            & starter_mask[
-                route_axis,
-                legal_axis,
-                vice_index[:, None],
-            ]
-        )
-        if np.any(eligible):
-            winner[eligible] = np.broadcast_to(
-                pair_index[:, None],
-                winner.shape,
-            )[eligible]
-            unresolved &= ~eligible
-        if not np.any(unresolved):
-            break
+    for starter_slot in range(legal.shape[2]):
+        captain_index = legal[:, :, starter_slot]
+        rank_rows = rank_matrix[route_axis, captain_index]
+        eligible_rank = np.where(starter_mask, rank_rows, sentinel)
+        vice_index = np.argmin(eligible_rank, axis=2).astype(np.int64)
+        local_rank = np.take_along_axis(
+            eligible_rank, vice_index[:, :, None], axis=2
+        )[:, :, 0]
+        better = local_rank < best_rank
+        if np.any(better):
+            local_pair = pair_lookup[captain_index, vice_index]
+            best_rank[better] = local_rank[better]
+            winner[better] = local_pair[better]
     if np.any(winner < 0):
         raise LineupBatchError("captain batch lost a legal pair")
+    winner = winner.astype(np.int64, copy=False)
 
     def gather(values: np.ndarray) -> np.ndarray:
-        return np.take_along_axis(
-            values[:, None, :],
-            winner[:, :, None],
-            axis=2,
-        )[:, :, 0]
+        return np.take_along_axis(values[:, None, :], winner[:, :, None], axis=2)[:, :, 0]
 
     return {
         "winner_pair_index": winner,
@@ -596,7 +604,6 @@ def _captain_kernel(
         "joint_upside": gather(joint_upside),
         "joint_downside": gather(joint_downside),
     }
-
 
 def _selected_safe_pool_counts(
     *,
@@ -875,17 +882,20 @@ def _optimize_gw_chunk(
     if not squads:
         return []
     arrays = _surface_arrays(squads, gw=gw)
-    legal = _legal_templates(arrays["position_rows"])
+    position_signatures = tuple(tuple(row) for row in arrays["position_rows"])
+    (
+        legal,
+        starter_mask,
+        formation_code,
+        reserve_gk,
+        starter_gk,
+        outfield_bench,
+    ) = _structural_plan_cached(position_signatures)
     if legal.shape[1] != 550:
         raise LineupBatchError(
             f"standard FPL route must preserve 550 legal XI, got {legal.shape[1]}"
         )
     batch_count, legal_count, _ = legal.shape
-    starter_mask = np.zeros((batch_count, legal_count, 15), dtype=bool)
-    route_axis3 = np.arange(batch_count, dtype=np.int64)[:, None, None]
-    legal_axis3 = np.arange(legal_count, dtype=np.int64)[None, :, None]
-    starter_mask[route_axis3, legal_axis3, legal] = True
-    formation_code = _formation_codes(starter_mask, arrays["position_codes"])
 
     bench = _bench_kernel(
         starter_mask=starter_mask,
@@ -899,9 +909,13 @@ def _optimize_gw_chunk(
         conditioned_blank=arrays["conditioned_blank"],
         conditioned_ge8=arrays["conditioned_ge8"],
         conditioned_ge10=arrays["conditioned_ge10"],
+        reserve_gk=reserve_gk,
+        starter_gk=starter_gk,
+        outfield_bench=outfield_bench,
     )
     captain = _captain_kernel(
         starter_mask=starter_mask,
+        legal=legal,
         xpts_mean=arrays["xpts_mean"],
         shortfall=arrays["shortfall"],
         excess=arrays["excess"],

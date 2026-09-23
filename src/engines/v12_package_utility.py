@@ -948,6 +948,126 @@ def _p1_2b_route_lineups_worker_with_stats(
     )
 
 
+
+def _p1_2b_route_batch_worker(
+    items: tuple[tuple[str, tuple[int, ...]], ...],
+) -> tuple[
+    tuple[tuple[str, tuple[int, ...], dict[str, Any]], ...],
+    float,
+    tuple[float, ...],
+    int,
+    dict[str, float],
+]:
+    """Evaluate a bounded route batch through the canonical P1.7 batch API."""
+    if _P1_2B_WORKER_CONTEXT is None:
+        raise PackageUtilityError(
+            "P1.2B route-batch worker context is not initialized"
+        )
+    projections, planning_gw, generated_at = _P1_2B_WORKER_CONTEXT
+    pmap = _projection_map(projections)
+    gw_rows_by_route: dict[str, list[dict[str, Any]]] = {
+        str(route_id): [] for route_id, _ in items
+    }
+    before = p17_execution_observability()
+    batch_started = time.perf_counter()
+    per_gw_elapsed: list[float] = []
+    exact_refinement_count = 0
+
+    for offset in range(5):
+        gw = int(planning_gw) + offset
+        started = time.perf_counter()
+        ready: dict[str, tuple[int, ...]] = {}
+        unavailable: dict[str, dict[str, Any]] = {}
+        for route_id, squad in items:
+            missing_players = [
+                element for element in squad if element not in pmap
+            ]
+            if missing_players:
+                unavailable[str(route_id)] = {
+                    "status": "UNAVAILABLE",
+                    "reason": "MISSING_PROJECTION_PLAYER",
+                    "missing_elements": missing_players,
+                    "gw": gw,
+                }
+                continue
+            missing_gw = [
+                element
+                for element in squad
+                if not _gw_available(pmap[element], gw)
+            ]
+            if missing_gw:
+                unavailable[str(route_id)] = {
+                    "status": "UNAVAILABLE",
+                    "reason": "MISSING_HORIZON_PROJECTION",
+                    "missing_elements": missing_gw,
+                    "gw": gw,
+                }
+                continue
+            ready[str(route_id)] = tuple(squad)
+
+        batch_rows = (
+            optimize_lineup_summaries_exact_batch(
+                projections,
+                ready,
+                planning_gw=gw,
+                generated_at=generated_at,
+            )
+            if ready
+            else {}
+        )
+        for route_id, _ in items:
+            rid = str(route_id)
+            row = dict(
+                batch_rows.get(rid)
+                or unavailable.get(rid)
+                or {
+                    "status": "UNAVAILABLE",
+                    "reason": "ROUTE_BATCH_RESULT_MISSING",
+                    "gw": gw,
+                }
+            )
+            gw_rows_by_route[rid].append(row)
+            exact_refinement_count += int(
+                (row.get("governance") or {}).get(
+                    "scalar_exact_refinement_count"
+                )
+                or 0
+            )
+        per_gw_elapsed.append(time.perf_counter() - started)
+
+    outputs = tuple(
+        (
+            str(route_id),
+            tuple(squad),
+            _aggregate_lineup_gw_rows(
+                gw_rows_by_route[str(route_id)]
+            ),
+        )
+        for route_id, squad in items
+    )
+    after = p17_execution_observability()
+    delta = {
+        key: float(after.get(key, 0) or 0)
+        - float(before.get(key, 0) or 0)
+        for key in (
+            "p17_cache_hits",
+            "p17_cache_misses",
+            "p17_cache_writes",
+            "p17_cache_corrupt_rejects",
+            "legal_xi_template_hits",
+            "legal_xi_template_misses",
+            "p1_7_wall_seconds",
+            "p1_7_cpu_seconds",
+        )
+    }
+    return (
+        outputs,
+        time.perf_counter() - batch_started,
+        tuple(per_gw_elapsed),
+        exact_refinement_count,
+        delta,
+    )
+
 def _perf_distribution(values: Sequence[float]) -> dict[str, Any]:
     rows = sorted(float(value) for value in values)
     if not rows:

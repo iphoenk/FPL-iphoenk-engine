@@ -7,7 +7,11 @@ permissions:
   contents: read
 
 jobs:
-  audit-evidence:
+  scalar-evidence:
+    strategy:
+      fail-fast: false
+      matrix:
+        repetition: [1, 2, 3, 4, 5]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -32,15 +36,15 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/iphoenk/FPL-iphoenk-engine/d117cf35a04bdb8b50e5ca621f389cb7891eb016/scripts/p17_benchmark_diagnostics.py -o scripts/p17_benchmark_diagnostics.py
           sha256sum scripts/p17_benchmark_diagnostics.py
 
-      - name: Capture benchmark and profile
+      - name: Capture full scalar repetition
         run: |
-          mkdir -p audit-capture
-          git rev-parse HEAD | tee audit-capture/target_sha.txt
-          date -u +%Y-%m-%dT%H:%M:%SZ | tee audit-capture/timestamp_utc.txt
-          python scripts/p17_benchmark_diagnostics.py             --repeats 5             --scalar-route-count 65             --artifact-dir audit-capture/p17-benchmark | tee audit-capture/stdout.log
+          mkdir -p scalar-capture
+          git rev-parse HEAD | tee scalar-capture/target_sha.txt
+          date -u +%Y-%m-%dT%H:%M:%SZ | tee scalar-capture/timestamp_utc.txt
+          python scripts/p17_benchmark_diagnostics.py             --child-mode scalar             --route-count 2043             --output scalar-capture/scalar_2043_run_${{ matrix.repetition }}.json
           python - <<'PY'
           import json, pathlib, os, platform, subprocess
-          root=pathlib.Path("audit-capture")
+          root=pathlib.Path("scalar-capture")
           payload={
             "event":"workflow_dispatch",
             "workflow_ref":"audit/evidence-2026-09-23",
@@ -48,14 +52,15 @@ jobs:
             "runner_label":"ubuntu-latest",
             "python":platform.python_version(),
             "cpu_count":os.cpu_count(),
+            "repetition":int("${{ matrix.repetition }}"),
           }
           (root/"capture_metadata.json").write_text(json.dumps(payload,indent=2)+"\n")
           PY
 
-      - name: Upload capture
+      - name: Upload scalar capture
         uses: actions/upload-artifact@v4
         with:
-          name: audit-evidence-followup-${{ github.run_id }}
-          path: audit-capture
+          name: audit-scalar-full-r${{ matrix.repetition }}-${{ github.run_id }}
+          path: scalar-capture
           if-no-files-found: error
           retention-days: 14

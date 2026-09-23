@@ -75,9 +75,10 @@
     "global_two_transfer_bruteforce_forbidden": true,
     "route_batch_size": 32,
     "route_batch_full_direct_threshold": 64,
-    "route_batch_scalar_refinement_guard": 0.0001,
     "route_batch_all_550_xi_numerically_evaluated": true,
-    "route_batch_scalar_exact_refinement": true
+    "route_batch_scalar_exact_refinement": false,
+    "route_batch_exact_ordered_vector_accumulation": true,
+    "route_batch_exact_route_sort_key_vectorized": true
   },
   "governance": {
     "search_utility_separated": true,

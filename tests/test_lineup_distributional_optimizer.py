@@ -1841,78 +1841,204 @@ def test_p17_lazy_lexicographic_rejects_non_finite_ranking_keys():
         )
 
 
-def test_p17_rounding_boundary_batch_matches_scalar_full_path():
+def test_p17_rounding_boundary_is_non_vacuous_and_matches_scalar_bench():
     from src.engines import v12_lineup_batch as batch
-    from src.engines import v12_package_utility as package
 
-    projections, candidates = _cross_route_projection_fixture(20)
-    # Perturb the fixture around decimal half boundaries.  The assertion is
-    # intentionally end-to-end: any ULP drift before rounding must still
-    # preserve scalar ranking/output, not merely Python-vs-NumPy round().
-    for index, row in enumerate(projections["players"]):
-        base = deepcopy(row["xpts_by_gw"][0])
-        epsilon = (-1.0, 0.0, 1.0)[index % 3] * 1e-12
-        target = 4.1234565 + epsilon
-        base["xpts_mean"] = target
-        conditional = dict(base.get("appearance_conditioned") or {})
-        conditional["expected_points"] = target
-        base["appearance_conditioned"] = conditional
-        row["xpts_by_gw"] = [
-            {**deepcopy(base), "gw": gw}
-            for gw in range(GW, GW + 5)
-        ]
+    position_signature = (
+        "GK",
+        "GK",
+        "DEF",
+        "DEF",
+        "DEF",
+        "DEF",
+        "DEF",
+        "MID",
+        "MID",
+        "MID",
+        "MID",
+        "MID",
+        "FWD",
+        "FWD",
+        "FWD",
+    )
+    layout = batch._family_layout(position_signature)
 
-    base_ids = tuple(
-        sorted(row["element"] for row in projections["players"][:15])
+    # Build the adversarial condition at the ranking-key level.  One MID
+    # starter is guaranteed DNP, while the target MID bench player is certain
+    # to appear.  Its blank mass is exactly near a 9-decimal half boundary;
+    # expected points are chosen so the resulting bench utility is near a
+    # 6-decimal half boundary.
+    boundary_blank = 0.1234567895
+    boundary_utility = 0.9999995
+    boundary_expected = (
+        boundary_utility + 0.20 * boundary_blank
     )
-    owned_by_id = {
-        int(row["element"]): row for row in projections["players"][:15]
+
+    def near_half(value: float, decimals: int) -> bool:
+        scaled = float(value) * (10.0 ** decimals)
+        fraction = scaled - np.floor(scaled)
+        tolerance = 64.0 * abs(float(np.spacing(scaled)))
+        return abs(fraction - 0.5) <= tolerance
+
+    assert near_half(boundary_blank, 9)
+    assert near_half(boundary_utility, 6)
+
+    surfaces = []
+    for slot, position in enumerate(position_signature):
+        mean = boundary_expected if slot == 7 else 0.25
+        p_dnp = 1.0 if slot == 8 else 0.0
+        surfaces.append(
+            _direct_surface(
+                slot + 1,
+                position,
+                mean=mean,
+                p_dnp=p_dnp,
+                cond_blank=boundary_blank if slot == 7 else 0.0,
+                cond_ge8=0.0,
+                cond_ge10=0.0,
+            )
+        )
+
+    arrays = {
+        "elements": np.asarray(
+            [[row["element"] for row in surfaces]],
+            dtype=np.int64,
+        ),
+        "p_dnp": np.asarray(
+            [[row["p_dnp"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "p_appearance": np.asarray(
+            [[row["p_appearance"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "xpts_mean": np.asarray(
+            [[row["xpts_mean"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "conditioned_mean": np.asarray(
+            [[
+                row["appearance_conditioned"]["expected_points"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
+        "conditioned_blank": np.asarray(
+            [[
+                row["appearance_conditioned"]["p_fpl_blank"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
+        "conditioned_ge8": np.asarray(
+            [[
+                row["appearance_conditioned"]["p_points_ge_8"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
+        "conditioned_ge10": np.asarray(
+            [[
+                row["appearance_conditioned"]["p_points_ge_10"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
     }
-    candidate_by_position = {
-        position: [
-            row for row in candidates if row["position"] == position
+
+    legal_index = next(
+        index
+        for index, row in enumerate(layout["legal"])
+        if 8 in row and 7 not in row
+    )
+    legal_row = set(int(slot) for slot in layout["legal"][legal_index])
+    bench_slots = [slot for slot in range(15) if slot not in legal_row]
+    reserve_slot = next(
+        slot for slot in bench_slots if position_signature[slot] == "GK"
+    )
+    outfield_slots = [
+        slot for slot in bench_slots if position_signature[slot] != "GK"
+    ]
+    assert 7 in outfield_slots
+
+    starters = [surfaces[slot] for slot in sorted(legal_row)]
+    reserve_gk = surfaces[reserve_slot]
+    outfield_bench = [surfaces[slot] for slot in outfield_slots]
+
+    scalar_winner, _ = optimize_bench_order(
+        starters,
+        reserve_gk,
+        outfield_bench,
+        include_winner_blocking_counterfactual=False,
+        publish_alternatives=False,
+        include_winner_slots=False,
+    )
+    batch_result = batch._family_bench_kernel(
+        layout=layout,
+        arrays=arrays,
+    )
+
+    observed_order = batch_result["order_elements"][
+        0,
+        legal_index,
+    ].tolist()
+    assert observed_order == scalar_winner["order"]
+    assert (
+        batch_result["bench_order_utility"][0, legal_index]
+        == scalar_winner["bench_order_utility"]
+    )
+    assert (
+        batch_result["selected_blank"][0, legal_index]
+        == scalar_winner[
+            "expected_selected_blank_probability_mass"
         ]
-        for position in ("GK", "DEF", "MID", "FWD")
-    }
-    squads = [base_ids]
-    for outgoing in base_ids:
-        position = owned_by_id[outgoing]["position"]
-        for incoming in candidate_by_position[position][:5]:
-            squads.append(
-                tuple(
-                    sorted(
-                        (set(base_ids) - {outgoing})
-                        | {int(incoming["element"])}
-                    )
-                )
-            )
-    actual, _ = batch.optimize_lineup_horizons_exact_batch(
-        projections,
-        squads,
-        planning_gw=GW,
-        generated_at=GENERATED,
-        batch_size=512,
     )
-    keys = (
-        "route_utility",
-        "expected_fpl_points",
-        "distributional_downside",
-        "supportable_upside",
-        "formation",
-        "starting_xi",
-        "bench_order",
-        "captain",
-        "vice_captain",
+
+
+def test_p17_family_bench_tie_rank_memoizes_across_gw(monkeypatch):
+    from src.engines import v12_lineup_batch as batch
+
+    batch._family_bench_permutation_tie_rank_cached.cache_clear()
+    signature = (
+        "GK",
+        "GK",
+        "DEF",
+        "DEF",
+        "DEF",
+        "DEF",
+        "DEF",
+        "MID",
+        "MID",
+        "MID",
+        "MID",
+        "MID",
+        "FWD",
+        "FWD",
+        "FWD",
     )
-    for squad, horizons in zip(squads, actual):
-        for offset in range(5):
-            scalar_row = package._lineup_decision(
-                projections,
-                squad,
-                gw=GW + offset,
-                generated_at=GENERATED,
-            )
-            batch_row = horizons["per_gw"][offset]
-            assert tuple(batch_row.get(key) for key in keys) == tuple(
-                scalar_row.get(key) for key in keys
-            )
+    elements = np.arange(1, 16, dtype=np.int64)[None, :]
+    calls = {"count": 0}
+    original = batch._bench_permutation_tie_rank
+
+    def counted(element_rows, permutations):
+        calls["count"] += 1
+        return original(element_rows, permutations)
+
+    monkeypatch.setattr(
+        batch,
+        "_bench_permutation_tie_rank",
+        counted,
+    )
+    key = elements.tobytes()
+    first = batch._family_bench_permutation_tie_rank_cached(
+        key,
+        1,
+        signature,
+    )
+    second = batch._family_bench_permutation_tie_rank_cached(
+        key,
+        1,
+        signature,
+    )
+    assert calls["count"] == 1
+    assert np.array_equal(first, second)

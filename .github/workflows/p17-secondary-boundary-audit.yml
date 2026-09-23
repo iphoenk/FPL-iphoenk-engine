@@ -22,9 +22,9 @@ jobs:
           pip install pytest
       - name: Exact targeted regressions
         run: |
-          pytest -q tests/test_lineup_distributional_optimizer.py -k 'secondary_boundary_tie_falls_back_and_matches_scalar or fallback_budget_degrades_family_gw_to_scalar or bench_scalar_fallback_budget_fails_explicitly'
+          PYTHONPATH=. pytest -q tests/test_lineup_distributional_optimizer.py -k 'secondary_boundary_tie_falls_back_and_matches_scalar or fallback_budget_degrades_family_gw_to_scalar or bench_scalar_fallback_budget_fails_explicitly'
       - name: Full lineup optimizer suite
         run: |
-          pytest -q tests/test_lineup_distributional_optimizer.py
+          PYTHONPATH=. pytest -q tests/test_lineup_distributional_optimizer.py
       - name: Runner topology
         run: lscpu

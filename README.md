@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-23T07:11:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-23T09:07:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -53,6 +53,18 @@ S19   Final Judgement
 DEEP acceptance is intentionally fail-closed across the Canonical catalog, semantic human-facing manifest, PRE_RENDER QA, actual visible-body POST_RENDER QA, and HUMAN_FACING QA. Missing `S06B`, `S14B`, or `S16B`, or silently removing any older DEEP backbone section, cannot pass. Exact15/exact20 completeness and anti-fabrication rules remain unchanged.
 
 This contract does not move factual ownership out of V6. V6 acquisition, source adapters, publication, identity, scheduler, and factual schemas remain untouched by this report-plane enhancement.
+
+## DEEP decision-content delivery barrier
+
+DEEP success is now defined by the full delivery chain, not by section headings alone: **V6 facts → V12/P1.x analytics → Stage-3 payload → materialization → renderer → PRE_RENDER → POST_RENDER → HUMAN_FACING**. Report-plane consumes the existing canonical analytics and never creates a second xPts, package, Monte Carlo, lineup, or mini-league model.
+
+CURRENT15 is occurrence-bound. Fresh valid authenticated or explicitly current user-confirmed evidence outranks stale AUTH_EXPIRED artifacts; previous-GW submitted picks are identity fallback only and cannot mint current selling values, bank, chips, FT, or hit economics. A proposed transfer never changes CURRENT15. If current ownership cannot be proved, identity may remain visibly STALE while unsupported private finance stays UNAVAILABLE.
+
+Package search remains squad-wide and lossless across all legal weak-link/replacement combinations. Missing FT/hit evidence does not reduce search depth to one transfer: direct and funded/two-transfer routes remain searchable, while unsupported economics degrade only those fields. The existing Stage-3 material-route selector preserves direct and funded route-depth coverage for canonical correlated MC without changing football utility or creating another ranking score.
+
+Visible Section 14 must make the frontier decision-usable: explicit OUT → IN identities; HOLD comparator; selling/purchase values and bank before/after where supportable; affordability and FT/hit status; 1/2/3/5GW; raw/net gain; P(beat HOLD); MC path count and tails/quantiles; tactical/fixture effects; price optionality; mini-league utility; robustness/regret/reversal risk; and WAIT/PREPARE/ACT. A funded route is not allowed to disappear merely because the direct target is unaffordable.
+
+Watchlist20, RISE20, FALL20, ALL15, post-match GW1→NOW, P1.7 XI/bench/C/VC, P1.8 mini-league evidence, and the Action Board are semantically validated against the visible body. HUMAN_FACING fails when supportable evidence is hidden, exact counts are falsely claimed, post-match detail collapses into season totals, mini-league evidence becomes decorative, Action Board loses its frontier link, or a legacy short narrative substitutes for the report. Fail-operational means field/scope-level degradation, never disappearance of available decision content.
 
 ## PRICE human-facing delivery barrier
 

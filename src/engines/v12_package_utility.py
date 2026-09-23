@@ -1561,15 +1561,52 @@ def select_stage3_material_mc_routes(
         ),
         reverse=True,
     )
+
+    # Preserve the existing materiality ordering while guaranteeing that
+    # supportable direct and funded package depths can both reach canonical
+    # Monte Carlo. This is route-surface coverage, not a new decision score.
+    mandatory: list[dict[str, Any]] = []
+    for transfer_count in (1, 2):
+        representative = next(
+            (
+                row for row in candidates
+                if int(row.get("transfer_count") or 0) == transfer_count
+            ),
+            None,
+        )
+        if representative is not None:
+            mandatory.append(representative)
+
+    selected_rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in mandatory + candidates:
+        route_id = str(row.get("route_id") or "")
+        if not route_id or route_id in seen:
+            continue
+        selected_rows.append(row)
+        seen.add(route_id)
+        if len(selected_rows) >= limit - 1:
+            break
     selected = ["HOLD"] + [
-        str(row["route_id"]) for row in candidates[: limit - 1]
+        str(row["route_id"]) for row in selected_rows
     ]
     return {
         "status": "READY",
         "route_ids": selected,
-        "candidate_evidence": candidates[: limit - 1],
+        "candidate_evidence": selected_rows,
         "max_routes": limit,
         "selection_purpose": "MC_MATERIALITY_ONLY_NOT_DECISION_RANKING",
+        "transfer_depth_coverage": {
+            "direct_1_transfer": any(
+                int(row.get("transfer_count") or 0) == 1
+                for row in selected_rows
+            ),
+            "funded_2_transfer": any(
+                int(row.get("transfer_count") or 0) == 2
+                for row in selected_rows
+            ),
+            "coverage_is_not_decision_preference": True,
+        },
         "full_package_route_denominator": len(routes),
         "full_universe_search_authority": package_utility.get(
             "search_authority"

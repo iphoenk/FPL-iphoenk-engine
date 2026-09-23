@@ -6,7 +6,7 @@ on:
       - audit/evidence-2026-09-23
     paths:
       - .github/workflows/audit-evidence-bootstrap.yml
-      - .github/workflows/audit-evidence-capture.yml
+      - .github/workflows/v12-integrated-report-runner.yml
 
 permissions:
   actions: write
@@ -16,13 +16,13 @@ jobs:
   dispatch:
     runs-on: ubuntu-latest
     steps:
-      - name: Dispatch audit capture
+      - name: Dispatch registered workflow on audit branch
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           python - <<'PY'
           import json, os, urllib.request
-          url = "https://api.github.com/repos/${{ github.repository }}/actions/workflows/audit-evidence-capture.yml/dispatches"
+          url = "https://api.github.com/repos/${{ github.repository }}/actions/workflows/363126796/dispatches"
           req = urllib.request.Request(
               url,
               data=json.dumps({"ref":"audit/evidence-2026-09-23"}).encode(),

@@ -12,6 +12,9 @@ from collections import Counter
 from datetime import datetime
 import re
 from typing import Any, Mapping, Sequence
+import hashlib
+import json
+from pathlib import Path
 
 from src.engines.visible_content_proof import canonical_mode_contract
 from src.engines.v12_report_orchestration import (
@@ -1094,3 +1097,334 @@ def validate_price_visible_body(
         failures.append("VISIBLE_FINAL_PRICE_JUDGEMENT_ACTION_MISSING")
 
     return list(dict.fromkeys(failures))
+
+
+def _read_json(path: Path, default: Any = None) -> Any:
+    if not path.exists() or path.stat().st_size <= 0:
+        return default
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return default
+
+
+def _planning_gw_from_bootstrap(bootstrap: Mapping[str, Any]) -> int:
+    events = [
+        dict(row)
+        for row in bootstrap.get("events") or []
+        if isinstance(row, Mapping)
+    ]
+    next_rows = [row for row in events if row.get("is_next") is True]
+    if next_rows:
+        return int(next_rows[0]["id"])
+    current = [row for row in events if row.get("is_current") is True]
+    if current:
+        return int(current[0]["id"]) + 1
+    unfinished = [
+        int(row.get("id") or 0)
+        for row in events
+        if not row.get("finished")
+    ]
+    unfinished = [gw for gw in unfinished if gw > 0]
+    return min(unfinished) if unfinished else 1
+
+
+def _expected_core_slot(report_slot: str) -> str | None:
+    parsed = _aware(report_slot)
+    if parsed is None:
+        return None
+    return parsed.replace(minute=0, second=0, microsecond=0).isoformat()
+
+
+def _core_lineage(
+    *,
+    report_slot: str,
+    publish_integrity: Mapping[str, Any],
+) -> dict[str, Any]:
+    expected = _expected_core_slot(report_slot)
+    actual_dt = _aware(publish_integrity.get("logical_slot"))
+    requested = _aware(report_slot)
+    actual = (
+        actual_dt.astimezone(requested.tzinfo).isoformat()
+        if actual_dt is not None and requested is not None
+        else None
+    )
+    return {
+        "expected_core_slot": expected,
+        "actual_core_slot": actual,
+        "core_binding_state": "PASS" if expected and actual == expected else "DEGRADED",
+        "core_logical_slot": actual or "UNAVAILABLE",
+        "core_run_id": publish_integrity.get("run_id") or "UNAVAILABLE",
+        "official_timestamp": publish_integrity.get("observed_at")
+        or publish_integrity.get("generated_at")
+        or "UNAVAILABLE",
+        "runtime_snapshot": publish_integrity.get("candidate_generation_id")
+        or publish_integrity.get("tree_sha256")
+        or "UNAVAILABLE",
+    }
+
+
+def _scenario_routes(state: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Expose only structurally explicit OUT/IN contemplated routes.
+
+    A recommendation/scenario without both element identities is deliberately not
+    converted into a transfer route, and execution is never inferred.
+    """
+    output = []
+    for raw in state.get("active_scenarios") or []:
+        if not isinstance(raw, Mapping):
+            continue
+        if str(raw.get("execution_state") or "").upper() == "EXECUTED":
+            continue
+        out_id = raw.get("out_element_id")
+        in_id = raw.get("in_element_id")
+        if out_id is None or in_id is None:
+            continue
+        output.append(
+            {
+                "route": raw.get("scenario_id") or raw.get("route"),
+                "out_element_id": out_id,
+                "in_element_id": in_id,
+                "football_action": raw.get("operational_action")
+                or raw.get("action")
+                or "WAIT",
+                "utility_1gw": raw.get("utility_1gw", "UNAVAILABLE"),
+                "utility_3gw": raw.get("utility_3gw", "UNAVAILABLE"),
+                "utility_5gw": raw.get("utility_5gw", "UNAVAILABLE"),
+                "buyback_reversal_exit_risk": raw.get(
+                    "reversal_conditions", "UNAVAILABLE"
+                ),
+            }
+        )
+    return output
+
+
+def run_price_occurrence(
+    *,
+    runtime_data_root: Path,
+    canonical_path: Path,
+    state_path: Path,
+    report_slot: str,
+    output_dir: Path,
+) -> dict[str, Any]:
+    """Materialize and visible-body validate one PRICE occurrence.
+
+    This path is intentionally independent of Stage-3/MC. PRICE consumes the
+    existing factual/model owners needed for PRICE and never relaxes DEEP.
+    """
+    canonical_text = canonical_path.read_text(encoding="utf-8")
+    state = _read_json(state_path, {}) or {}
+    official_payload = _read_json(
+        runtime_data_root / "data/v6/current/official_fpl.json", {}
+    ) or {}
+    official = official_payload.get("official") or {}
+    bootstrap = official.get("bootstrap") or {}
+    fixtures = official.get("fixtures") or []
+    if not isinstance(bootstrap, Mapping) or not bootstrap.get("elements"):
+        raise PriceDeliveryError("Official FPL bootstrap unavailable")
+    if not isinstance(fixtures, list):
+        fixtures = []
+    planning_gw = _planning_gw_from_bootstrap(bootstrap)
+
+    current_team = _read_json(
+        runtime_data_root / "data/v6/personal/current_team.json", {}
+    ) or {}
+    submitted = _read_json(
+        runtime_data_root / "data/v6/personal/submitted_picks.json", {}
+    ) or {}
+    explicit = explicit_user_evidence_from_state(state)
+    resolution = resolve_current15(
+        planning_gw=planning_gw,
+        bootstrap=bootstrap,
+        explicit_user_evidence=explicit,
+        authenticated_current_team=current_team,
+        personal_artifact=None,
+        last_good_evidence=submitted,
+    )
+
+    evaluated_universe: list[dict[str, Any]] = []
+    universe_authority = "PARTIAL"
+    analytics_error = None
+    try:
+        from src.models.team_strength import build_team_strength
+        from src.models.v12_analytics_foundation import (
+            load_v6_analytics_foundation,
+            require_match_foundation,
+        )
+        from src.models.historical_projection import build as build_player_projections
+        from src.models.official_role_evidence import attach_official_role_evidence
+        from src.engines.v12_tactical_role import attach_tactical_role_scores
+        from src.models.v12_stage1_analytics import build_canonical_universe
+
+        strength = build_team_strength(bootstrap, fixtures)
+        foundation = require_match_foundation(
+            load_v6_analytics_foundation(
+                runtime_data_root,
+                bootstrap=bootstrap,
+                planning_gw=planning_gw,
+                strength=strength,
+            )
+        )
+        projections = build_player_projections(
+            bootstrap,
+            strength,
+            planning_gw,
+            foundation.get("historical_prior") or {},
+            player_features_payload=foundation.get("player_features_payload") or {},
+            player_match_rows=foundation.get("player_match_rows") or [],
+            opponent_history_rows=foundation.get("opponent_history_rows") or [],
+            opponent_history_scope=foundation.get("opponent_history_scope"),
+        )
+        attach_official_role_evidence(projections, bootstrap)
+        attach_tactical_role_scores(
+            projections,
+            planning_gw,
+            team_strength=strength,
+        )
+        canonical_universe = build_canonical_universe(projections)
+        evaluated_universe = list(canonical_universe.get("players") or [])
+        universe_authority = (
+            "FULL"
+            if canonical_universe.get("status") == "COMPLETE"
+            else "PARTIAL"
+        )
+    except Exception as exc:
+        analytics_error = f"{type(exc).__name__}: {exc}"
+
+    predictor = _read_json(
+        runtime_data_root / "data/v6/current/official_price_predictor.json", {}
+    ) or {}
+    standings = _read_json(
+        runtime_data_root / "data/v6/mini_leagues/9477/standings.json", {}
+    ) or {}
+    publish_integrity = _read_json(
+        runtime_data_root / "data/v6/health/publish_integrity.json", {}
+    ) or {}
+    lineage = _core_lineage(
+        report_slot=report_slot,
+        publish_integrity=publish_integrity,
+    )
+    lineage["analytics_state"] = (
+        "FULL" if universe_authority == "FULL" else "DEGRADED"
+    )
+    lineage["analytics_reason"] = analytics_error
+    lineage["next_checkpoint"] = "NEXT PRICE CYCLE / next mandatory decision checkpoint"
+
+    report = build_price_delivery_report(
+        canonical_text=canonical_text,
+        report_slot=report_slot,
+        planning_gw=planning_gw,
+        bootstrap=bootstrap,
+        team_resolution=resolution,
+        predictor_artifact=predictor,
+        evaluated_universe=evaluated_universe,
+        universe_authority=universe_authority,
+        transfer_routes=_scenario_routes(state),
+        mini_league=standings,
+        source_lineage=lineage,
+        previous_price_evidence=None,
+    )
+    model_failures = validate_price_report_model(report)
+    body = render_price_report(report)
+    visible_failures = validate_price_visible_body(body, report=report)
+
+    pre_render_status = "PASS" if not model_failures else "FAIL"
+    post_render_status = "PASS" if not visible_failures else "FAIL"
+    human_facing_status = post_render_status
+    runner_status = (
+        "PASS"
+        if pre_render_status == "PASS"
+        and post_render_status == "PASS"
+        and human_facing_status == "PASS"
+        else "FAIL"
+    )
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    canonical_sha = hashlib.sha256(
+        canonical_text.encode("utf-8")
+    ).hexdigest()
+    execution_proof = {
+        "schema": "V12_PRICE_EXECUTION_PROOF_V1",
+        "runner_status": runner_status,
+        "report_mode": "PRICE",
+        "report_slot": report_slot,
+        "planning_gw": planning_gw,
+        "pre_render_qa_status": pre_render_status,
+        "post_render_qa_status": post_render_status,
+        "human_facing_qa_status": human_facing_status,
+        "pre_render_failures": model_failures,
+        "post_render_failures": visible_failures,
+        "top_level_section_count": len(report.get("sections") or []),
+        "current15_state": resolution.get("state"),
+        "current15_supportable": resolution.get("supportable"),
+        "watchlist20_state": (report.get("watchlist20") or {}).get("state"),
+        "rise20_state": (report.get("rise20") or {}).get("state"),
+        "fall20_state": (report.get("fall20") or {}).get("state"),
+        "core_binding_state": lineage.get("core_binding_state"),
+        "canonical_content_sha256": canonical_sha,
+        "governance": {
+            "v6_mutated": False,
+            "scheduler_created_or_changed": False,
+            "issue_431_transport_changed": False,
+            "deep_contract_changed_by_runner": False,
+            "stage3_or_mc_executed": False,
+            "qa_relaxed": False,
+            "legacy_short_fallback_allowed": False,
+        },
+    }
+    bundle = {
+        "schema": "FPL_MASTER_V12_PRICE_REPORT_BUNDLE_V1",
+        "authority": str(canonical_path),
+        "state_authority": False,
+        "report_mode": "PRICE",
+        "report_slot": report_slot,
+        "planning_gw": planning_gw,
+        "runner_status": runner_status,
+        "report": report,
+        "visible_body": body,
+        "human_facing_validation": {
+            "status": human_facing_status,
+            "failures": visible_failures,
+        },
+        "execution_proof": execution_proof,
+        "source_fingerprints": {
+            "official_fpl": hashlib.sha256(
+                json.dumps(
+                    official_payload,
+                    sort_keys=True,
+                    default=str,
+                ).encode("utf-8")
+            ).hexdigest(),
+            "predictor": hashlib.sha256(
+                json.dumps(
+                    predictor,
+                    sort_keys=True,
+                    default=str,
+                ).encode("utf-8")
+            ).hexdigest(),
+            "current_team": hashlib.sha256(
+                json.dumps(
+                    current_team,
+                    sort_keys=True,
+                    default=str,
+                ).encode("utf-8")
+            ).hexdigest(),
+            "mini_league": hashlib.sha256(
+                json.dumps(
+                    standings,
+                    sort_keys=True,
+                    default=str,
+                ).encode("utf-8")
+            ).hexdigest(),
+        },
+    }
+    (output_dir / "report_bundle.json").write_text(
+        json.dumps(bundle, indent=2, ensure_ascii=False, default=str),
+        encoding="utf-8",
+    )
+    (output_dir / "report_body.md").write_text(body, encoding="utf-8")
+    (output_dir / "execution_proof.json").write_text(
+        json.dumps(execution_proof, indent=2, ensure_ascii=False, default=str),
+        encoding="utf-8",
+    )
+    return bundle

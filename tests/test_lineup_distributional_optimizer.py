@@ -1216,3 +1216,70 @@ def test_p17_decision_cache_is_execution_reuse_not_model_authority(
     assert first["model_evidence_binding"] == second["model_evidence_binding"]
     assert first["governance"]["v6_mutated"] is False
     assert first["governance"]["methodology_weights_20_25_30_25_unchanged"] is True
+
+
+def test_p17_legal_xi_templates_reuse_identical_position_signature():
+    from src.engines import v12_lineup_optimizer as lineup
+
+    lineup._legal_xi_templates.cache_clear()
+    positions = (
+        ["GK"] * 2
+        + ["DEF"] * 5
+        + ["MID"] * 5
+        + ["FWD"] * 3
+    )
+    first_players = [
+        {"element": index + 1, "position": position}
+        for index, position in enumerate(positions)
+    ]
+    second_players = [
+        {"element": index + 101, "position": position}
+        for index, position in enumerate(positions)
+    ]
+
+    first = lineup.enumerate_legal_xi(first_players)
+    first_info = lineup._legal_xi_templates.cache_info()
+    second = lineup.enumerate_legal_xi(second_players)
+    second_info = lineup._legal_xi_templates.cache_info()
+
+    assert first == second
+    assert len(first) == 550
+    assert second_info.hits == first_info.hits + 1
+
+
+def test_p17_primed_player_surfaces_are_exactly_output_equivalent(
+    monkeypatch,
+):
+    from src.engines import v12_lineup_optimizer as lineup
+
+    monkeypatch.delenv(lineup.P17_DECISION_CACHE_ENV, raising=False)
+    projections = _squad()
+    ids = [row["element"] for row in projections["players"]]
+
+    lineup._P17_SURFACE_CACHE_OWNER = None
+    lineup._P17_SURFACE_CACHE = {}
+    scalar = lineup.optimize_lineup(
+        projections,
+        ids,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+
+    proof = lineup.prime_player_surface_cache(
+        projections,
+        planning_gws=[GW],
+        material_elements=ids,
+    )
+    primed = lineup.optimize_lineup(
+        projections,
+        ids,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+
+    assert proof == {
+        "element_count": 15,
+        "gw_count": 1,
+        "surface_count": 15,
+    }
+    assert primed == scalar

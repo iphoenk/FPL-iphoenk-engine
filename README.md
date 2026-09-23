@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-23T12:55:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-23T15:20:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -90,6 +90,8 @@ Stage 3 MC performance repair: canonical Monte Carlo remains **500,000 correlate
 Stage 3 P1.2B runtime repair history: earlier controlled runs proved the hot path is exact P1.7 materialization inside `P1_2_PACKAGE_UTILITY`. Full direct search remains exhaustive and every direct route still receives exact P1.7. After funded two-transfer discovery expanded the global route set to roughly 1.5 million legal squads, controlled run `35819490932` proved brute-force exact P1.7 over the full two-transfer cross-product cannot finish inside the unchanged 60-minute report ceiling. Production therefore uses the governed **FULL_DIRECT + MATERIAL_FUNDED** execution scope: full direct P1.7 first, existing P1.7 materiality selection second, exact legal/affordable funded composition third, and exact P1.7 + canonical MC on every composed funded package. The engine does not claim exhaustive global two-transfer coverage. No V6 change, MC path reduction, timeout increase, second lineup model, or new decision score is introduced. Stage 3 remains **acceptance pending** until fresh controlled and natural DEEP evidence passes.
 
 Stage 3 P1.7 hot-loop repair: follow-up controlled run `35703070607` proved that process-level parallelism alone is insufficient: all `1,965` package squads are unique and P1.2B still exhausted the unchanged 60-minute ceiling before P1.4 began. The existing P1.7 owner now vectorizes only the exact DNP-state × bench-appearance probability-mass accumulation while continuing to use the same canonical formation-legal resolver, all six bench permutations, the same captain/vice logic, and the complete P1.2A route set. Scalar-reference equivalence tests guard the probability and autosub outputs. No route pruning, model/owner change, Monte Carlo path reduction, V6 mutation, or QA relaxation is introduced. Stage 3 remains **acceptance pending** until controlled and natural DEEP proof passes.
+
+Stage 3 P1.7 performance hardening: direct-route workers now prebuild immutable player decision surfaces once per material element × GW and reuse them across all squads, while legal-XI index masks are memoized by the 15-slot position signature. The existing exact decision-core cache is restored separately and is now persisted immediately after the integrated runner completes, before downstream Stage-3 acceptance, so a later auth/report gate failure cannot discard valid expensive P1.7 compute. These are execution-only changes: every route still uses the same P1.7 owner, all legal XI remain evaluated, model-evidence binding is rebuilt per occurrence, route search/MC/QA are unchanged, and any cache miss falls back to exact recomputation.
 
 Status: **STAGE 1 GREEN / STAGE 2 GREEN / STAGE 3 CODE MERGED — CONTROLLED + NATURAL DEEP ACCEPTANCE PENDING**.
 

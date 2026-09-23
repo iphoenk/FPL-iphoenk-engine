@@ -121,7 +121,7 @@ def _normalise_team_rows(
                 ),
                 "current_price": row.get("current_price")
                 or official.get("now_cost"),
-                "sell_value": row.get("selling_price", row.get("sell_value")),
+                "sell_value": row.get("authenticated_sell_value", row.get("sell_value")),
                 "purchase_price": row.get("purchase_price"),
                 "squad_position": row.get("squad_position"),
                 "bench_order": row.get("bench_order"),
@@ -595,6 +595,14 @@ def build_price_delivery_report(
     for row in our15.get("rows") or []:
         row["eta_status"] = _eta_status(row)
         row["ownership_scope"] = team_resolution.get("state")
+        row["direction"] = row.get("predictor_direction", "UNAVAILABLE")
+        row["official_or_provider_progress"] = row.get(
+            "predictor_progress", "UNAVAILABLE"
+        )
+        row["impact_on_our_decision"] = row.get(
+            "decision_implication",
+            row.get("sell_value_affordability_impact", "UNAVAILABLE"),
+        )
 
     route_rows = _route_economics(
         transfer_routes,

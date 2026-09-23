@@ -1,5 +1,5 @@
 FPL MASTER CANONICAL V12 — FAIL-OPERATIONAL REPORT-PLANE ARCHITECTURE
-Effective: 2026-09-21T17:55:00+07:00
+Effective: 2026-09-23T07:11:00+07:00
 Authority path: control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
 State path: control/fpl_master_v12/FPL_MASTER_STATE_V12.json
 
@@ -753,27 +753,97 @@ EO is shown only when exact multiplier/chip/captain inputs required for EO are s
 For current OUR15 players, apply 14D owned-player bold presentation while retaining element_id as the sole ownership identity basis.
 Football-optimal baseline is first; ICON+ remains an overlay.
 
-14L. 05:30 PRICE INFORMATION-VALUE CONTRACT
+14L. 05:30 PRICE DELIVERY BARRIER
 Exact backbone:
-1 Price decision
-2 Official price changes FACT
-3 Team-needs price alert
-4 Watchlist20 exact20
-5 RISE20 exact20
-6 FALL20 exact20
-7 Package/affordability impact
-8 PRICE RISK vs VALUE OF WAITING FOR FOOTBALL INFORMATION
-9 ICON+ price impact
-10 Action board
-11 Source health.
+1 PRICE DECISION / CURRENT STATUS
+2 OUR15 PRICE & VALUE
+3 PRICE DELTA / MATERIAL CHANGES
+4 TEAM-NEEDS PRICE ALERT
+5 WATCHLIST20
+6 RISE20
+7 FALL20
+8 PACKAGE / AFFORDABILITY / TRANSFER ECONOMICS
+9 MINI-LEAGUE PRICE IMPACT
+10 ACTION BOARD
+11 SOURCE HEALTH / PRICE-CYCLE / LINEAGE
+12 FINAL PRICE JUDGEMENT
 
-PRICE timing header MUST state the immediately upcoming official daily cycle derived from 00:00 Europe/London and converted to WIB. During the current BST period this normally reads NEXT PRICE CYCLE: 06:00 WIB; during GMT it normally reads NEXT PRICE CYCLE: 07:00 WIB. Predictor observation/update time is shown separately from official cycle time.
+Mandatory 05:30 PRICE is a structured decision report. It MUST never collapse into a short narrative, blocker-only/status-only output, or legacy prose fallback. FAIL-OPERATIONAL permits degraded DATA but never degraded STRUCTURE: all twelve top-level sections remain visible in exact order for every due PRICE occurrence, with only affected fields marked PARTIAL / STALE / DEGRADED / UNAVAILABLE / NOT_RUN and an exact factual reason.
 
-RISE20/FALL20 use the row timing contract in Section 11. Predictor progress/likelihood may update every 15 minutes but never converts into a guarantee. If a player is supportably projected for the immediately upcoming cycle, use ESTIMATED CHANGE: NEXT PRICE CYCLE — <derived WIB time>. If support is insufficient, show probability/progress and a later-cycle or UNAVAILABLE window truthfully.
+PRICE MATERIALIZATION BARRIER
+- DATA AVAILABLE does not require a pre-rendered table artifact.
+- When current authoritative full-universe/predictor evidence supports deterministic construction, report-plane MUST materialize Watchlist20 / RISE20 / FALL20 itself.
+- Materialization is not fabrication. Missing/insufficient underlying evidence degrades only the affected scope; rows are never invented or padded.
+- A healthy full-universe predictor with sufficient offset-0 rows MUST produce exact RISE20=20 and FALL20=20 even if no pre-rendered exact20 artifact exists.
+- Watchlist20 COMPLETE means exactly 20 unique evidence-backed players split 5 GK / 5 DEF / 5 MID / 5 FWD. If supportable construction cannot reach that contract, keep the section visible and do not claim COMPLETE.
+- RISE20/FALL20 COMPLETE means exactly 20 unique evidence-backed rows from the full current predictor universe. Fewer rows may be shown only with a degraded state and without an exact20 claim.
 
-For material routes show:
-affordable_now;after_target_plus_0_1;after_owned_minus_0_1;sell_value_impact;route_survival;football_information_benefit_of_waiting.
-Price alone never overrides football-optimal decision without explicit downstream economics.
+DYNAMIC CURRENT15 AUTHORITY
+- CURRENT15 is occurrence-bound runtime evidence, never a permanent production constant.
+- Resolve CURRENT15 for the applicable planning GW from the freshest valid evidence ladder: current-GW explicit user-confirmed evidence; newer authenticated Official current-team evidence may supersede it; then current authenticated personal evidence; then an explicitly STALE last-good fallback.
+- Every manual/screenshot correction carries observed timestamp, GW scope and evidence scope. It expires as current authority when a newer applicable authoritative current-GW evidence item supersedes it or when GW applicability changes.
+- Never infer ownership from contemplated transfers, optimizer suggestions, watchlists, previous recommendations, previous-GW picks, or stale persisted state when fresher current-GW evidence exists.
+- Never infer that a contemplated transfer was executed.
+- If CURRENT15 cannot be safely established, section 2 remains visible, ownership is STALE / UNRESOLVED as appropriate, and no ownership label is fabricated.
+- When CURRENT15 is supportable, OUR15 is exactly 15 unique dynamically resolved owned players. For each row expose player, position, current market price, authenticated selling value when available, predictor direction/progress, ETA/status and material implication with source/GW/timestamp lineage.
+
+PRICE DECISION
+- Section 1 leads with exactly one operational action: WAIT / PREPARE / ACT.
+- State material change, affordability change, meaningful target/outgoing pressure, whether that pressure changes the football decision, and whether immediate action is justified.
+- Price movement alone never produces ACT. Football decision quality remains upstream of transfer economics.
+
+PRICE DELTA / FACT-MODEL-INFERENCE
+- Distinguish confirmed Official price changes (FACT), predictor acceleration/reversal/progress (MODEL), and decision/economic interpretation (INFERENCE).
+- Compare against previous valid PRICE evidence where supportable. Never present predictor movement as a confirmed Official price change.
+
+TEAM-NEEDS PRICE ALERT
+- Relate evidence-backed price pressure to current squad weakness, current transfer frontier, positional need, 1GW/3GW/5GW football horizon, affordability, structural flexibility and exit/reversal risk.
+- High predictor movement with no current decision relevance remains radar information, not an action trigger.
+
+ETA CONTRACT
+- ETA/status is mandatory for applicable OUR15, Watchlist20, RISE20 and FALL20 rows.
+- Permitted truthful surfaces include governed MODEL clock/range, NEXT PRICE CYCLE, UNCERTAIN, NO RELIABLE ETA, or UNAVAILABLE with exact reason.
+- Never invent a clock time or derive a fake ETA mechanically from predictor percentage. MODEL ETA is always labelled MODEL.
+- PRICE timing uses the governed Official cycle conversion from 00:00 Europe/London to WIB and keeps predictor observation/update time separate from Official cycle time.
+
+PACKAGE / AFFORDABILITY / TRANSFER ECONOMICS
+- For every serious current supportable OUT -> IN route expose OUT selling value, IN market price, bank before, nominal affordability, bank after, FT state when actually known, hit cost when actually known, FT shadow value where modelled, target +0.1, outgoing -0.1, combined deterioration, route survival, buy-back/reversal/exit risk, and 1GW/3GW/5GW football utility.
+- Authenticated selling_price + bank is the nominal replacement budget when valid.
+- AFFORDABILITY and FT/HIT ECONOMICS are separate contracts. Affordability may be known while FT/HIT ECONOMICS remains UNKNOWN.
+- A contemplated route never mutates CURRENT15.
+
+MINI-LEAGUE PRICE IMPACT
+- Keep section 9 visible. Where current league evidence is supportable expose relevant ownership, starter/captain exposure and differential implications, including whether early price action adds unnecessary variance/reversal risk.
+- If current mini-league evidence is unavailable, degrade only this scope and continue PRICE.
+
+ACTION BOARD
+- Section 10 MUST visibly contain NOW; NEXT; TRIGGER TO ACT; LATEST SAFE DECISION POINT; COST OF WAITING; ABORT / REVERSAL.
+- HUMAN_FACING cannot PASS if any required Action Board field is missing.
+
+SOURCE HEALTH / LINEAGE
+- Put technical lineage near the end, never ahead of the football/price decision.
+- Expose Official factual timestamp, predictor/model timestamp, personal/current-team timestamp/status, mini-league timestamp/status, core logical slot, authoritative snapshot/run lineage, and scope-specific freshness/degradation.
+- A mandatory 05:30 must bind the correct current core slot. A prior-hour run cannot be relabelled as the 05:00 core.
+
+FINAL PRICE JUDGEMENT
+- Finish with current action, key price risk, whether affordability is threatened, whether the football edge justifies action, and next checkpoint.
+- Never finish with engine/plumbing status alone.
+
+PRICE HUMAN-FACING SELF-CHECK
+- Visible body MUST contain exactly 12 PRICE top-level sections in the exact Canonical order above.
+- When CURRENT15 is supportable: OUR15 count=15 and unique=15, every owned label matches the resolved occurrence evidence, no non-owned player is labelled owned, and no resolved owner silently disappears.
+- When Watchlist20 is COMPLETE: count=20 with GK=5 / DEF=5 / MID=5 / FWD=5.
+- When RISE20 is COMPLETE: count=20. When FALL20 is COMPLETE: count=20.
+- ETA/status must be present for all applicable rows.
+- Action Board must contain all six mandatory fields.
+- FACT / MODEL / INFERENCE must not be silently conflated.
+- Structural failure means HUMAN_FACING != PASS. If bounded same-occurrence execution budget remains, repair/render again inside the original occurrence. Never mint a replacement occurrence solely to obtain PASS.
+- A short legacy fallback can never HUMAN_FACING PASS.
+
+NATURAL ACCEPTANCE
+- CODE ACCEPTANCE and NATURAL PRICE ACCEPTANCE are distinct.
+- NATURAL PRICE ACCEPTANCE requires a genuine naturally scheduled mandatory 05:30 occurrence with natural provenance, correctly bound current core evidence, dynamically resolved current ownership, complete twelve-section visible body, exact counts when supportable, ETA/status, package/affordability, mini-league, complete Action Board, source lineage, final judgement, HUMAN_FACING PASS, non-empty visible report, no duplicate acquisition and no replacement occurrence.
+- Manual/ad-hoc execution may validate code but can never be used to claim NATURAL PRICE ACCEPTANCE.
 
 14M. TIME-SPECIFIC DEEP EMPHASIS
 04:30 = overnight reset / baseline.

@@ -835,82 +835,91 @@ def _selected_cameo_blocking_cost_exact(
     )
 
 
-def _surface_arrays(
-    squads: Sequence[tuple[int, ...]],
+def _build_surface_catalog(
+    elements: Sequence[int],
     *,
     gw: int,
 ) -> dict[str, Any]:
-    surfaces = [
-        [scalar._P17_SURFACE_CACHE[(int(element), int(gw))] for element in squad]
-        for squad in squads
+    """Materialize immutable P1.7 player surfaces once per GW.
+
+    The scalar optimizer remains the surface owner.  This only converts the
+    already-primed scalar cache into dense arrays once, so route families can
+    gather by integer index instead of repeating nested Python/dict extraction.
+    """
+    ordered = tuple(int(element) for element in elements)
+    rows = [
+        scalar._P17_SURFACE_CACHE[(int(element), int(gw))]
+        for element in ordered
     ]
-    position_rows = [
-        [str(row.get("position")) for row in squad_rows]
-        for squad_rows in surfaces
-    ]
-    position_codes = np.asarray(
-        [[POS_CODE[position] for position in row] for row in position_rows],
-        dtype=np.int8,
-    )
-    elements = np.asarray(squads, dtype=np.int64)
+    index = {element: idx for idx, element in enumerate(ordered)}
 
     def direct(field: str) -> np.ndarray:
-        return np.asarray(
-            [[_f(row.get(field)) for row in squad_rows] for squad_rows in surfaces],
+        return np.fromiter(
+            (_f(row.get(field)) for row in rows),
             dtype=np.float64,
+            count=len(rows),
         )
 
     def appearance(field: str) -> np.ndarray:
-        return np.asarray(
-            [
-                [
-                    _f((row.get("appearance_conditioned") or {}).get(field))
-                    for row in squad_rows
-                ]
-                for squad_rows in surfaces
-            ],
+        return np.fromiter(
+            (
+                _f((row.get("appearance_conditioned") or {}).get(field))
+                for row in rows
+            ),
             dtype=np.float64,
+            count=len(rows),
         )
 
-    tactical_weight = np.asarray(
-        [
-            [
-                _f((row.get("tactical_role") or {}).get("weighted_component_points"))
-                for row in squad_rows
-            ]
-            for squad_rows in surfaces
-        ],
-        dtype=np.float64,
+    position_rows = np.asarray(
+        [str(row.get("position")) for row in rows],
+        dtype=object,
     )
-    tactical_available = np.asarray(
-        [
-            [
-                1.0
-                if (row.get("tactical_role") or {}).get("weighted_component_points")
-                is not None
-                else 0.0
-                for row in squad_rows
-            ]
-            for squad_rows in surfaces
-        ],
-        dtype=np.float64,
+    position_codes = np.fromiter(
+        (POS_CODE[str(position)] for position in position_rows),
+        dtype=np.int8,
+        count=len(rows),
     )
-    pmf_ready = np.asarray(
-        [
-            [
-                1.0
-                if (row.get("distribution_status") or {}).get("status") == "READY"
-                else 0.0
-                for row in squad_rows
-            ]
-            for squad_rows in surfaces
-        ],
+    tactical_weight = np.fromiter(
+        (
+            _f(
+                (row.get("tactical_role") or {}).get(
+                    "weighted_component_points"
+                )
+            )
+            for row in rows
+        ),
         dtype=np.float64,
+        count=len(rows),
+    )
+    tactical_available = np.fromiter(
+        (
+            1.0
+            if (row.get("tactical_role") or {}).get(
+                "weighted_component_points"
+            )
+            is not None
+            else 0.0
+            for row in rows
+        ),
+        dtype=np.float64,
+        count=len(rows),
+    )
+    pmf_ready = np.fromiter(
+        (
+            1.0
+            if (row.get("distribution_status") or {}).get("status")
+            == "READY"
+            else 0.0
+            for row in rows
+        ),
+        dtype=np.float64,
+        count=len(rows),
     )
     return {
+        "index": index,
+        "elements": np.asarray(ordered, dtype=np.int64),
         "position_rows": position_rows,
         "position_codes": position_codes,
-        "elements": elements,
         "xpts_mean": direct("xpts_mean"),
         "variance": direct("xpts_variance"),
         "shortfall": direct("expected_shortfall"),
@@ -928,6 +937,57 @@ def _surface_arrays(
     }
 
 
+def _surface_arrays(
+    squads: Sequence[tuple[int, ...]],
+    *,
+    gw: int,
+    catalog: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    if catalog is None:
+        material_elements = sorted(
+            {int(element) for squad in squads for element in squad}
+        )
+        catalog = _build_surface_catalog(material_elements, gw=gw)
+
+    index = catalog["index"]
+    gather = np.asarray(
+        [
+            [int(index[int(element)]) for element in squad]
+            for squad in squads
+        ],
+        dtype=np.int64,
+    )
+    elements = np.asarray(squads, dtype=np.int64)
+    position_rows_array = np.asarray(
+        catalog["position_rows"],
+        dtype=object,
+    )[gather]
+    position_rows = position_rows_array.tolist()
+
+    fields = (
+        "position_codes",
+        "xpts_mean",
+        "variance",
+        "shortfall",
+        "excess",
+        "p_dnp",
+        "p_cameo",
+        "p_appearance",
+        "conditioned_mean",
+        "conditioned_blank",
+        "conditioned_ge8",
+        "conditioned_ge10",
+        "tactical_weight",
+        "tactical_available",
+        "pmf_ready",
+    )
+    out: dict[str, Any] = {
+        "position_rows": position_rows,
+        "elements": elements,
+    }
+    for field in fields:
+        out[field] = np.asarray(catalog[field])[gather]
+    return out
 
 
 @lru_cache(maxsize=64)
@@ -1715,6 +1775,7 @@ def _optimize_gw_family(
     candidate_elements: Sequence[int],
     *,
     gw: int,
+    surface_catalog: Mapping[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Exact fixed-outgoing family evaluation with core14 structural reuse."""
     if not candidate_elements:
@@ -1727,7 +1788,11 @@ def _optimize_gw_family(
         + (int(candidate),)
         for candidate in candidate_elements
     ]
-    arrays = _surface_arrays(canonical_squads, gw=gw)
+    arrays = _surface_arrays(
+        canonical_squads,
+        gw=gw,
+        catalog=surface_catalog,
+    )
     signatures = {
         tuple(str(value) for value in row)
         for row in arrays["position_rows"]
@@ -2067,10 +2132,15 @@ def _optimize_gw_chunk(
     squads: Sequence[tuple[int, ...]],
     *,
     gw: int,
+    surface_catalog: Mapping[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     if not squads:
         return []
-    arrays = _surface_arrays(squads, gw=gw)
+    arrays = _surface_arrays(
+        squads,
+        gw=gw,
+        catalog=surface_catalog,
+    )
     position_signatures = tuple(tuple(row) for row in arrays["position_rows"])
     (
         legal,
@@ -2295,6 +2365,10 @@ def optimize_lineup_horizons_exact_batch(
         planning_gws=gws,
         material_elements=elements,
     )
+    surface_catalogs = {
+        int(gw): _build_surface_catalog(elements, gw=int(gw))
+        for gw in gws
+    }
 
     per_squad: list[list[dict[str, Any]]] = [
         [{} for _ in range(5)] for _ in normalized
@@ -2341,6 +2415,7 @@ def optimize_lineup_horizons_exact_batch(
                 hold_result = _optimize_gw_chunk(
                     [reference],
                     gw=gw,
+                    surface_catalog=surface_catalogs[int(gw)],
                 )
                 per_squad[source_index][offset] = hold_result[0]
                 chunks += 1
@@ -2356,6 +2431,7 @@ def optimize_lineup_horizons_exact_batch(
                     family["core14"],
                     [incoming for _, incoming in members],
                     gw=gw,
+                    surface_catalog=surface_catalogs[int(gw)],
                 )
                 if len(family_results) != len(members):
                     raise LineupBatchError(
@@ -2379,6 +2455,7 @@ def optimize_lineup_horizons_exact_batch(
                 chunk_results = _optimize_gw_chunk(
                     chunk_squads,
                     gw=gw,
+                    surface_catalog=surface_catalogs[int(gw)],
                 )
                 if len(chunk_results) != len(chunk_indices):
                     raise LineupBatchError(

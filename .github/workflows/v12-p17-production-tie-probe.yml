@@ -1,0 +1,52 @@
+name: V12 P1.7 production tie prevalence probe
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v12-p17-production-tie-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-tie-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout validation head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Overlay read-only runtime-data-v6 snapshot
+        shell: bash
+        run: |
+          git fetch origin 32466551c365ca2054eaf4316d36cda9a7484eae --depth=1
+          test "$(git rev-parse FETCH_HEAD)" = "32466551c365ca2054eaf4316d36cda9a7484eae"
+          git checkout FETCH_HEAD -- data/v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-ci.lock
+
+      - name: Install locked V12 dependencies
+        run: python -m pip install --no-deps -r requirements-ci.lock
+
+      - name: Measure production primary-tie prevalence
+        run: python scripts/p17_production_tie_probe.py
+
+      - name: Upload production tie evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p17-production-tie-probe-${{ github.run_id }}
+          path: |
+            artifacts/p17-production-tie-probe.json
+          if-no-files-found: error
+          retention-days: 14

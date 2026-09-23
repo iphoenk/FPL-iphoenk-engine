@@ -1511,6 +1511,87 @@ def _cross_route_projection_fixture(candidate_per_position: int = 4):
     return projections, candidates
 
 
+def _cross_route_2043_squads(projections, candidates):
+    owned = projections["players"][:15]
+    base_ids = tuple(sorted(int(row["element"]) for row in owned))
+    owned_by_id = {int(row["element"]): row for row in owned}
+    candidates_by_position = {
+        position: [
+            int(row["element"])
+            for row in candidates
+            if row["position"] == position
+        ]
+        for position in ("GK", "DEF", "MID", "FWD")
+    }
+    squads = [base_ids]
+    for outgoing in base_ids:
+        position = owned_by_id[outgoing]["position"]
+        for incoming in candidates_by_position[position]:
+            squads.append(
+                tuple(
+                    sorted(
+                        (set(base_ids) - {outgoing})
+                        | {incoming}
+                    )
+                )
+            )
+            if len(squads) == 2043:
+                break
+        if len(squads) == 2043:
+            break
+    assert len(squads) == 2043
+    assert len(set(squads)) == 2043
+    return squads
+
+
+def _cross_route_tie_rich_projection_fixture(
+    candidate_per_position: int = 140,
+):
+    projections, candidates = _cross_route_projection_fixture(
+        candidate_per_position
+    )
+    for row in projections["players"]:
+        xmins = row["xmins"]
+        xmins["start_probability"] = 1.0
+        xmins["cameo_probability"] = 0.0
+        xmins["late_cameo_probability"] = 0.0
+        xmins["dnp_probability"] = 0.0
+        xmins["availability"] = 1.0
+        xmins["expected_minutes"] = 90.0
+        xmins["xmins_distribution"] = {
+            "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+            "mean": 90.0,
+            "std": 0.0,
+            "states": [
+                {
+                    "state": "START",
+                    "probability": 1.0,
+                    "minutes_mean": 90,
+                    "minutes_std": 0,
+                },
+                {
+                    "state": "REGULAR_CAMEO",
+                    "probability": 0.0,
+                    "minutes_mean": 18,
+                    "minutes_std": 0,
+                },
+                {
+                    "state": "LATE_CAMEO",
+                    "probability": 0.0,
+                    "minutes_mean": 7,
+                    "minutes_std": 0,
+                },
+                {
+                    "state": "ZERO_MINUTES",
+                    "probability": 0.0,
+                    "minutes_mean": 0,
+                    "minutes_std": 0,
+                },
+            ],
+        }
+    return projections, candidates
+
+
 def test_p17_cross_route_batch_matches_scalar_one_transfer_families():
     from src.engines import v12_lineup_batch as batch
     from src.engines import v12_package_utility as package
@@ -1734,36 +1815,10 @@ def test_p17_cross_route_batch_2043_routes_five_gw_under_ten_seconds():
     from src.engines import v12_lineup_batch as batch
 
     projections, candidates = _cross_route_projection_fixture(140)
-    owned = projections["players"][:15]
-    base_ids = tuple(sorted(int(row["element"]) for row in owned))
-    owned_by_id = {int(row["element"]): row for row in owned}
-    candidates_by_position = {
-        position: [
-            int(row["element"])
-            for row in candidates
-            if row["position"] == position
-        ]
-        for position in ("GK", "DEF", "MID", "FWD")
-    }
-
-    squads = [base_ids]
-    for outgoing in base_ids:
-        position = owned_by_id[outgoing]["position"]
-        for incoming in candidates_by_position[position]:
-            squads.append(
-                tuple(
-                    sorted(
-                        (set(base_ids) - {outgoing})
-                        | {incoming}
-                    )
-                )
-            )
-            if len(squads) == 2043:
-                break
-        if len(squads) == 2043:
-            break
-    assert len(squads) == 2043
-    assert len(set(squads)) == 2043
+    squads = _cross_route_2043_squads(
+        projections,
+        candidates,
+    )
 
     started = time.perf_counter()
     outputs, proof = batch.optimize_lineup_horizons_exact_batch(
@@ -1794,6 +1849,46 @@ def test_p17_cross_route_batch_2043_routes_five_gw_under_ten_seconds():
         for row in outputs
         for gw_row in row["per_gw"]
     )
+    assert elapsed <= 10.0
+
+
+def test_p17_cross_route_batch_2043_routes_five_gw_tie_rich_under_ten_seconds():
+    import time
+
+    from src.engines import v12_lineup_batch as batch
+
+    projections, candidates = (
+        _cross_route_tie_rich_projection_fixture(140)
+    )
+    squads = _cross_route_2043_squads(
+        projections,
+        candidates,
+    )
+
+    started = time.perf_counter()
+    outputs, proof = batch.optimize_lineup_horizons_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+        batch_size=512,
+    )
+    elapsed = time.perf_counter() - started
+
+    assert len(outputs) == 2043
+    assert all(
+        gw_row["status"] == "READY"
+        for row in outputs
+        for gw_row in row["per_gw"]
+    )
+    assert proof["execution_kernel"] == (
+        "ROUTE_FAMILY_CORE14_AFFINE_EXACT_P1_7"
+    )
+    assert proof["bench_rows_evaluated"] > 0
+    assert proof["bench_primary_tie_count"] > 0
+    assert proof["bench_primary_tie_rate"] >= 0.99
+    assert proof["bench_scalar_fallback_count"] == 0
+    assert proof["bench_scalar_fallback_rate"] == 0.0
     assert elapsed <= 10.0
 
 

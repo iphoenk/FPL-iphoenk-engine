@@ -995,6 +995,97 @@ def _materialize_route_lineups(
         (route_id, squad)
         for squad, route_id in unique_by_squad.items()
     ]
+    material_elements = tuple(
+        sorted(
+            {
+                int(element)
+                for _, squad in unique_items
+                for element in squad
+            }
+        )
+    )
+    min_routes = max(
+        1,
+        int(perf_cfg.get("parallel_lineup_min_routes") or 64),
+    )
+    if len(unique_items) < min_routes:
+        by_squad: dict[tuple[int, ...], dict[str, Any]] = {}
+        squad_elapsed: list[float] = []
+        gw_elapsed: list[float] = []
+        reset_p17_execution_observability()
+        prime_player_surface_cache(
+            projections,
+            planning_gws=range(
+                int(planning_gw),
+                int(planning_gw) + 5,
+            ),
+            material_elements=material_elements,
+        )
+        materialization_started = time.perf_counter()
+        for _, squad in unique_items:
+            route_gw_elapsed: list[float] = []
+            route_started = time.perf_counter()
+            by_squad[tuple(squad)] = _cumulative_lineup_horizons(
+                projections,
+                squad,
+                planning_gw=planning_gw,
+                generated_at=generated_at,
+                _perf_sink=route_gw_elapsed,
+            )
+            squad_elapsed.append(time.perf_counter() - route_started)
+            gw_elapsed.extend(route_gw_elapsed)
+        materialization_elapsed = time.perf_counter() - materialization_started
+        lineups_by_route = {
+            route_id: by_squad[tuple(squad)]
+            for route_id, squad in route_squads
+        }
+        stats = p17_execution_observability()
+        proof = {
+            "execution_mode": "SEQUENTIAL_EXACT_P1_7",
+            "elapsed_seconds": round(materialization_elapsed, 6),
+            "unique_squad_elapsed_seconds": _perf_distribution(squad_elapsed),
+            "per_gw_elapsed_seconds": _perf_distribution(gw_elapsed),
+            "worker_utilization_estimate": 1.0,
+            "coordination_serialization_upper_bound_seconds": 0.0,
+            "route_count": len(route_squads),
+            "unique_squad_count": len(unique_items),
+            "worker_count": 1,
+            "parallel_min_routes": min_routes,
+            "parallel_chunks_per_worker": int(
+                perf_cfg.get("parallel_chunks_per_worker") or 8
+            ),
+            "p1_7_owner": "V12_LINEUP_OPTIMIZER",
+            "shared_player_surface_catalog": True,
+            "material_element_count": len(material_elements),
+            "p17_cache_hits": int(stats.get("p17_cache_hits", 0) or 0),
+            "p17_cache_misses": int(stats.get("p17_cache_misses", 0) or 0),
+            "p17_cache_writes": int(stats.get("p17_cache_writes", 0) or 0),
+            "p17_cache_corrupt_rejects": int(
+                stats.get("p17_cache_corrupt_rejects", 0) or 0
+            ),
+            "legal_xi_template_hits": int(
+                stats.get("legal_xi_template_hits", 0) or 0
+            ),
+            "legal_xi_template_misses": int(
+                stats.get("legal_xi_template_misses", 0) or 0
+            ),
+            "player_surface_build_count": len(material_elements) * 5,
+            "unique_player_surface_count": len(material_elements) * 5,
+            "p1_7_wall_seconds": round(
+                float(stats.get("p1_7_wall_seconds", 0) or 0),
+                6,
+            ),
+            "p1_7_cpu_seconds": round(
+                float(stats.get("p1_7_cpu_seconds", 0) or 0),
+                6,
+            ),
+            "exact_route_identity_preserved": True,
+            "lossy_pruning": False,
+            "p1_7_math_mutated": False,
+            "decision_authority_changed": False,
+        }
+        return lineups_by_route, proof
+
     hold_rows = [
         tuple(squad)
         for route_id, squad in route_squads
@@ -1032,16 +1123,6 @@ def _materialize_route_lineups(
         for item in family_items
     ]
     ordered_squads = [squad for _, squad in ordered_unique]
-    material_elements = tuple(
-        sorted(
-            {
-                int(element)
-                for squad in ordered_squads
-                for element in squad
-            }
-        )
-    )
-
     materialization_started = time.perf_counter()
     outputs, kernel_proof = optimize_lineup_horizons_exact_batch(
         projections,

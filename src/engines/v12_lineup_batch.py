@@ -1372,6 +1372,199 @@ def _family_bench_permutation_tie_rank_cached(
     return tie
 
 
+def _near_decimal_half(
+    values: np.ndarray,
+    decimals: int,
+    *,
+    ulps: float = 64.0,
+) -> np.ndarray:
+    """Detect values whose decimal rounding key is ULP-close to a half boundary.
+
+    The fast family kernel is allowed only when the rounded ranking key is
+    numerically far from the scalar oracle's decision boundary.  Rows near a
+    boundary are recomputed through the scalar bench path because merely
+    applying Python round() to the vector result would not repair ULP drift
+    introduced by a different accumulation order.
+    """
+    raw = np.asarray(values, dtype=np.float64)
+    scale = float(10 ** int(decimals))
+    scaled = raw * scale
+    fraction = scaled - np.floor(scaled)
+    tolerance = float(ulps) * np.abs(np.spacing(scaled))
+    return (
+        np.isfinite(scaled)
+        & (np.abs(fraction - 0.5) <= tolerance)
+    )
+
+
+def _scalar_surface_from_family_arrays(
+    arrays: Mapping[str, np.ndarray],
+    route_index: int,
+    slot: int,
+) -> dict[str, Any]:
+    """Reconstruct the scalar bench surface for one already-materialized slot."""
+    position_code = int(arrays["position_codes"][route_index, slot])
+    p_dnp = float(arrays["p_dnp"][route_index, slot])
+    p_appearance = float(arrays["p_appearance"][route_index, slot])
+    p_cameo = float(arrays["p_cameo"][route_index, slot])
+    return {
+        "element": int(arrays["elements"][route_index, slot]),
+        "position": CODE_POS[position_code],
+        "xpts_mean": float(arrays["xpts_mean"][route_index, slot]),
+        "p_dnp": p_dnp,
+        "p_appearance": p_appearance,
+        "p_cameo": p_cameo,
+        "p_late_cameo": 0.0,
+        "appearance_conditioned": {
+            "expected_points": float(
+                arrays["conditioned_mean"][route_index, slot]
+            ),
+            "p_fpl_blank": float(
+                arrays["conditioned_blank"][route_index, slot]
+            ),
+            "p_points_ge_8": float(
+                arrays["conditioned_ge8"][route_index, slot]
+            ),
+            "p_points_ge_10": float(
+                arrays["conditioned_ge10"][route_index, slot]
+            ),
+        },
+    }
+
+
+def _family_scalar_bench_boundary_fallback(
+    *,
+    layout: Mapping[str, Any],
+    arrays: Mapping[str, np.ndarray],
+    route_index: int,
+    xi_index: int,
+) -> dict[str, Any]:
+    """Recompute one boundary-sensitive bench row through the scalar oracle."""
+    players = sorted(
+        (
+            _scalar_surface_from_family_arrays(
+                arrays,
+                int(route_index),
+                slot,
+            )
+            for slot in range(15)
+        ),
+        key=lambda row: int(row["element"]),
+    )
+    starter_elements = {
+        int(arrays["elements"][route_index, int(slot)])
+        for slot in layout["legal"][xi_index]
+    }
+    starters = [
+        row
+        for row in players
+        if int(row["element"]) in starter_elements
+    ]
+    bench = [
+        row
+        for row in players
+        if int(row["element"]) not in starter_elements
+    ]
+    reserve_gk = next(
+        row for row in bench if row["position"] == "GK"
+    )
+    outfield_bench = [
+        row for row in bench if row["position"] != "GK"
+    ]
+    scalar_winner, _ = scalar.optimize_bench_order(
+        starters,
+        reserve_gk,
+        outfield_bench,
+        include_winner_blocking_counterfactual=False,
+        publish_alternatives=False,
+        include_winner_slots=False,
+    )
+
+    winner_order = [
+        next(
+            row
+            for row in outfield_bench
+            if int(row["element"]) == int(element)
+        )
+        for element in scalar_winner["order"]
+    ]
+    count_states = scalar._dnp_count_distribution(
+        [
+            row
+            for row in starters
+            if row["position"] in scalar.OUTFIELD
+        ]
+    )
+    outfield_actual = scalar._expected_outfield_autosub(
+        starters,
+        winner_order,
+        count_states=count_states,
+    )
+    starter_gk = next(
+        row for row in starters if row["position"] == "GK"
+    )
+    gk_actual = scalar._expected_gk_autosub(
+        starter_gk,
+        reserve_gk,
+    )
+    raw_expected = float(
+        outfield_actual["expected_points"]
+        + gk_actual["expected_points"]
+    )
+
+    slot_by_element = {
+        int(arrays["elements"][route_index, slot]): slot
+        for slot in range(15)
+    }
+    order_slots = np.asarray(
+        [
+            slot_by_element[int(element)]
+            for element in scalar_winner["order"]
+        ],
+        dtype=np.int64,
+    )
+    permutations = np.asarray(
+        layout["outfield_permutations"][xi_index],
+        dtype=np.int64,
+    )
+    matches = np.all(
+        permutations == order_slots[None, :],
+        axis=1,
+    )
+    if int(np.sum(matches)) != 1:
+        raise LineupBatchError(
+            "scalar boundary fallback lost bench permutation identity"
+        )
+    return {
+        "permutation_index": int(np.flatnonzero(matches)[0]),
+        "expected_autosub_value_raw": raw_expected,
+        "expected_autosub_value": float(
+            scalar_winner["expected_autosub_value"]
+        ),
+        "autosub_probability": float(
+            scalar_winner["autosub_probability"]
+        ),
+        "selected_blank": float(
+            scalar_winner[
+                "expected_selected_blank_probability_mass"
+            ]
+        ),
+        "selected_ge8": float(
+            scalar_winner[
+                "expected_selected_ge8_probability_mass"
+            ]
+        ),
+        "selected_ge10": float(
+            scalar_winner[
+                "expected_selected_ge10_probability_mass"
+            ]
+        ),
+        "bench_order_utility": float(
+            scalar_winner["bench_order_utility"]
+        ),
+    }
+
+
 def _family_bench_kernel(
     *,
     layout: Mapping[str, Any],
@@ -1530,6 +1723,39 @@ def _family_bench_kernel(
         ),
         axis=2,
     )
+
+    # A different vector accumulation order can move a raw key by a few ULP
+    # across Python's decimal half boundary even when np.round() is replaced
+    # with round().  Such rows therefore fall back to the full scalar bench
+    # oracle; normal rows retain the vectorized family path.
+    boundary_sensitive = np.any(
+        _near_decimal_half(utility, 6)
+        | _near_decimal_half(expected, 6)
+        | _near_decimal_half(blank, 9)
+        | _near_decimal_half(ge8, 9)
+        | _near_decimal_half(ge10, 9),
+        axis=2,
+    )
+    scalar_fallbacks: dict[
+        tuple[int, int],
+        dict[str, Any],
+    ] = {}
+    for route_index, xi_index in np.argwhere(
+        boundary_sensitive
+    ):
+        scalar_row = _family_scalar_bench_boundary_fallback(
+            layout=layout,
+            arrays=arrays,
+            route_index=int(route_index),
+            xi_index=int(xi_index),
+        )
+        winner[int(route_index), int(xi_index)] = int(
+            scalar_row["permutation_index"]
+        )
+        scalar_fallbacks[
+            (int(route_index), int(xi_index))
+        ] = scalar_row
+
     route_axis = np.arange(route_count, dtype=np.int64)[:, None]
     legal_axis = np.arange(
         layout["legal"].shape[0],
@@ -1539,6 +1765,57 @@ def _family_bench_kernel(
         legal_axis,
         winner,
     ]
+    expected_raw_out = expected[
+        route_axis,
+        legal_axis,
+        winner,
+    ].copy()
+    expected_out = np.round(expected_raw_out, 6)
+    autosub_out = np.round(
+        autosub[route_axis, legal_axis, winner],
+        9,
+    )
+    blank_out = np.round(
+        blank[route_axis, legal_axis, winner],
+        9,
+    )
+    ge8_out = np.round(
+        ge8[route_axis, legal_axis, winner],
+        9,
+    )
+    ge10_out = np.round(
+        ge10[route_axis, legal_axis, winner],
+        9,
+    )
+    utility_out = np.round(
+        utility[route_axis, legal_axis, winner],
+        6,
+    )
+    for (route_index, xi_index), scalar_row in (
+        scalar_fallbacks.items()
+    ):
+        expected_raw_out[route_index, xi_index] = scalar_row[
+            "expected_autosub_value_raw"
+        ]
+        expected_out[route_index, xi_index] = scalar_row[
+            "expected_autosub_value"
+        ]
+        autosub_out[route_index, xi_index] = scalar_row[
+            "autosub_probability"
+        ]
+        blank_out[route_index, xi_index] = scalar_row[
+            "selected_blank"
+        ]
+        ge8_out[route_index, xi_index] = scalar_row[
+            "selected_ge8"
+        ]
+        ge10_out[route_index, xi_index] = scalar_row[
+            "selected_ge10"
+        ]
+        utility_out[route_index, xi_index] = scalar_row[
+            "bench_order_utility"
+        ]
+
     return {
         "order_indices": winning_order_indices,
         "order_elements": arrays["elements"][
@@ -1549,35 +1826,13 @@ def _family_bench_kernel(
             reserve_gk[None, :],
             (route_count, len(reserve_gk)),
         ),
-        "expected_autosub_value_raw": expected[
-            route_axis,
-            legal_axis,
-            winner,
-        ],
-        "expected_autosub_value": np.round(
-            expected[route_axis, legal_axis, winner],
-            6,
-        ),
-        "autosub_probability": np.round(
-            autosub[route_axis, legal_axis, winner],
-            9,
-        ),
-        "selected_blank": np.round(
-            blank[route_axis, legal_axis, winner],
-            9,
-        ),
-        "selected_ge8": np.round(
-            ge8[route_axis, legal_axis, winner],
-            9,
-        ),
-        "selected_ge10": np.round(
-            ge10[route_axis, legal_axis, winner],
-            9,
-        ),
-        "bench_order_utility": np.round(
-            utility[route_axis, legal_axis, winner],
-            6,
-        ),
+        "expected_autosub_value_raw": expected_raw_out,
+        "expected_autosub_value": expected_out,
+        "autosub_probability": autosub_out,
+        "selected_blank": blank_out,
+        "selected_ge8": ge8_out,
+        "selected_ge10": ge10_out,
+        "bench_order_utility": utility_out,
         "endpoint_evaluations": 2,
     }
 

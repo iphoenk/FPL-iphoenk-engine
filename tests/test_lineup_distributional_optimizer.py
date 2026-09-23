@@ -1473,3 +1473,217 @@ def test_issue_comment_compute_cache_write_is_owner_gated():
     assert "github.event.comment.user.login == github.repository_owner" in workflow
     assert "ref: main" in workflow
     assert "cache-mode: write" in workflow
+
+
+def _cross_route_projection_fixture(candidate_per_position: int = 4):
+    projections = deepcopy(_squad())
+    for row in projections["players"]:
+        base = deepcopy(row["xpts_by_gw"][0])
+        row["xpts_by_gw"] = [
+            {**deepcopy(base), "gw": gw}
+            for gw in range(GW, GW + 5)
+        ]
+    candidates = []
+    next_element = 1001
+    for position_index, position in enumerate(("GK", "DEF", "MID", "FWD")):
+        for index in range(candidate_per_position):
+            row = _projection(
+                next_element,
+                position,
+                meanish=4.0 + position_index * 0.65 + (index % 17) * 0.11,
+                p_start=0.82 + (index % 4) * 0.03,
+                p_regular=0.06,
+                p_late=0.02,
+                p_dnp=max(0.01, 0.10 - (index % 4) * 0.03),
+                blank=0.07 + (index % 5) * 0.02,
+                upside=0.16 + (index % 4) * 0.03,
+                tactical=52.0 + (index % 9) * 3.0,
+            )
+            base = deepcopy(row["xpts_by_gw"][0])
+            row["xpts_by_gw"] = [
+                {**deepcopy(base), "gw": gw}
+                for gw in range(GW, GW + 5)
+            ]
+            candidates.append(row)
+            next_element += 1
+    projections["players"].extend(candidates)
+    return projections, candidates
+
+
+def test_p17_cross_route_batch_matches_scalar_one_transfer_families():
+    from src.engines import v12_lineup_batch as batch
+    from src.engines import v12_package_utility as package
+
+    projections, candidates = _cross_route_projection_fixture(5)
+    base_ids = tuple(
+        sorted(row["element"] for row in projections["players"][:15])
+    )
+    base_by_id = {
+        int(row["element"]): row
+        for row in projections["players"][:15]
+    }
+    candidate_by_position = {
+        position: [
+            row for row in candidates
+            if row["position"] == position
+        ]
+        for position in ("GK", "DEF", "MID", "FWD")
+    }
+    squads = [base_ids]
+    for outgoing in (base_ids[0], base_ids[2], base_ids[7], base_ids[12]):
+        position = base_by_id[outgoing]["position"]
+        for incoming in candidate_by_position[position][:2]:
+            squads.append(
+                tuple(
+                    sorted(
+                        (set(base_ids) - {outgoing})
+                        | {int(incoming["element"])}
+                    )
+                )
+            )
+
+    actual, proof = batch.optimize_lineup_horizons_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+        batch_size=8,
+    )
+    assert proof["execution_kernel"] == "CROSS_ROUTE_NUMPY_EXACT_P1_7"
+    assert proof["route_pruning"] is False
+    assert proof["approximation"] is False
+    assert proof["legal_xi_per_squad"] == 550
+    assert proof["bench_permutations"] == 6
+
+    exact_keys = (
+        "status",
+        "gw",
+        "route_utility",
+        "expected_fpl_points",
+        "distributional_downside",
+        "supportable_upside",
+        "expected_autosub_value",
+        "formation",
+        "starting_xi",
+        "bench_gk",
+        "bench_order",
+        "captain",
+        "vice_captain",
+        "captain_safe_pool_count",
+        "confidence",
+        "covariance_status",
+    )
+    scalar_rows = []
+    batch_rows = []
+    for squad, horizons in zip(squads, actual):
+        for offset in range(5):
+            expected = package._lineup_decision(
+                projections,
+                squad,
+                gw=GW + offset,
+                generated_at=GENERATED,
+            )
+            observed = horizons["per_gw"][offset]
+            assert {
+                key: observed.get(key)
+                for key in exact_keys
+            } == {
+                key: expected.get(key)
+                for key in exact_keys
+            }
+        scalar_rows.append(
+            tuple(
+                package._lineup_decision(
+                    projections,
+                    squad,
+                    gw=GW,
+                    generated_at=GENERATED,
+                ).get(key)
+                for key in (
+                    "route_utility",
+                    "expected_fpl_points",
+                    "distributional_downside",
+                    "supportable_upside",
+                )
+            )
+        )
+        first = horizons["per_gw"][0]
+        batch_rows.append(
+            tuple(
+                first.get(key)
+                for key in (
+                    "route_utility",
+                    "expected_fpl_points",
+                    "distributional_downside",
+                    "supportable_upside",
+                )
+            )
+        )
+    assert sorted(
+        range(len(squads)),
+        key=lambda index: scalar_rows[index],
+        reverse=True,
+    ) == sorted(
+        range(len(squads)),
+        key=lambda index: batch_rows[index],
+        reverse=True,
+    )
+
+
+def test_p17_cross_route_batch_2043_routes_five_gw_under_ten_seconds():
+    import time
+
+    from src.engines import v12_lineup_batch as batch
+
+    projections, candidates = _cross_route_projection_fixture(140)
+    owned = projections["players"][:15]
+    base_ids = tuple(sorted(int(row["element"]) for row in owned))
+    owned_by_id = {int(row["element"]): row for row in owned}
+    candidates_by_position = {
+        position: [
+            int(row["element"])
+            for row in candidates
+            if row["position"] == position
+        ]
+        for position in ("GK", "DEF", "MID", "FWD")
+    }
+
+    squads = [base_ids]
+    for outgoing in base_ids:
+        position = owned_by_id[outgoing]["position"]
+        for incoming in candidates_by_position[position]:
+            squads.append(
+                tuple(
+                    sorted(
+                        (set(base_ids) - {outgoing})
+                        | {incoming}
+                    )
+                )
+            )
+            if len(squads) == 2043:
+                break
+        if len(squads) == 2043:
+            break
+    assert len(squads) == 2043
+    assert len(set(squads)) == 2043
+
+    started = time.perf_counter()
+    outputs, proof = batch.optimize_lineup_horizons_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+        batch_size=96,
+    )
+    elapsed = time.perf_counter() - started
+    assert len(outputs) == 2043
+    assert all(len(row["per_gw"]) == 5 for row in outputs)
+    assert all(
+        gw_row["status"] == "READY"
+        for row in outputs
+        for gw_row in row["per_gw"]
+    )
+    assert proof["squad_count"] == 2043
+    assert proof["legal_xi_per_squad"] == 550
+    assert proof["route_pruning"] is False
+    assert elapsed <= 10.0

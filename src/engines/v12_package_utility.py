@@ -874,15 +874,13 @@ def _p1_2b_route_lineups_worker(
     dict[str, Any],
     float,
     tuple[float, ...],
-    dict[str, float],
 ]:
-    """Evaluate one exact route and return non-authoritative timing proof."""
+    """Evaluate one exact route and preserve the historical worker API."""
     if _P1_2B_WORKER_CONTEXT is None:
         raise PackageUtilityError("P1.2B lineup worker context is not initialized")
     route_id, squad = item
     projections, planning_gw, generated_at = _P1_2B_WORKER_CONTEXT
     gw_elapsed: list[float] = []
-    before = p17_execution_observability()
     started = time.perf_counter()
     output = _cumulative_lineup_horizons(
         projections,
@@ -892,6 +890,30 @@ def _p1_2b_route_lineups_worker(
         _perf_sink=gw_elapsed,
     )
     elapsed = time.perf_counter() - started
+    return (
+        str(route_id),
+        tuple(squad),
+        output,
+        elapsed,
+        tuple(gw_elapsed),
+    )
+
+
+def _p1_2b_route_lineups_worker_with_stats(
+    item: tuple[str, tuple[int, ...]],
+) -> tuple[
+    str,
+    tuple[int, ...],
+    dict[str, Any],
+    float,
+    tuple[float, ...],
+    dict[str, float],
+]:
+    """Wrap the canonical worker with process-local execution telemetry."""
+    before = p17_execution_observability()
+    route_id, squad, output, elapsed, gw_elapsed = (
+        _p1_2b_route_lineups_worker(item)
+    )
     after = p17_execution_observability()
     delta = {
         key: float(after.get(key, 0) or 0) - float(before.get(key, 0) or 0)
@@ -907,11 +929,11 @@ def _p1_2b_route_lineups_worker(
         )
     }
     return (
-        str(route_id),
-        tuple(squad),
+        route_id,
+        squad,
         output,
         elapsed,
-        tuple(gw_elapsed),
+        gw_elapsed,
         delta,
     )
 
@@ -1039,7 +1061,7 @@ def _materialize_route_lineups(
             ),
         ) as executor:
             for _, squad, output, elapsed, route_gw_elapsed, route_stats in executor.map(
-                _p1_2b_route_lineups_worker,
+                _p1_2b_route_lineups_worker_with_stats,
                 unique_items,
                 chunksize=chunksize,
             ):

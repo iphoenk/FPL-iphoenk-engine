@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-23T21:57:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-24T04:25:17+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -64,7 +64,9 @@ DEEP success is now defined by the full delivery chain, not by section headings 
 
 CURRENT15 is occurrence-bound. Fresh valid authenticated or explicitly current user-confirmed evidence outranks stale AUTH_EXPIRED artifacts; previous-GW submitted picks are identity fallback only and cannot mint current selling values, bank, chips, FT, or hit economics. A proposed transfer never changes CURRENT15. If current ownership cannot be proved, identity may remain visibly STALE while unsupported private finance stays UNAVAILABLE.
 
-P1.7 exact execution now uses a NumPy-batched 550-XI kernel for the same canonical legal formations, autosub resolver, six bench permutations, captain/vice ordering, and route utility. The scalar implementation remains a CI regression oracle and randomized equivalence tests must match the batched output exactly before production use. Stage-2 projections and the 500,000-path MC summary are reusable only behind exact deterministic fingerprints; cache reuse is execution-only and cannot change V6 or model authority.
+P1.7 exact execution now uses a NumPy-batched 550-XI kernel for the same canonical legal formations, autosub resolver, six bench permutations, captain/vice ordering, and route utility. The scalar implementation remains a CI regression oracle and randomized equivalence tests must match the batched output exactly before production use.
+
+Boundary-sensitive bench ranking is fail-operational. Rows near decimal ranking boundaries use the canonical scalar oracle. If a single route family/GW exceeds the bounded row-level scalar-fallback budget, only that family/GW degrades to canonical scalar P1.7 with explicit degradation telemetry; the full DEEP report is not aborted. Primary-tie continuation and secondary-key boundary detection are regression-tested against the scalar oracle. Stage-2 projections and the 500,000-path MC summary are reusable only behind exact deterministic fingerprints; cache reuse is execution-only and cannot change V6 or model authority.
 
 Canonical fresh 500,000-path Monte Carlo can execute as four deterministic process shards on Linux. Each shard runs the unchanged match-state-first correlated model for every material route with common random numbers inside the shard; `SeedSequence.spawn` supplies stable child streams and results are concatenated in deterministic shard order before the unchanged metrics, tails, regret, and convergence gates. Parallelism is execution-only: total path count, material routes, football model, and QA remain unchanged.
 

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-23T19:20:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-23T19:28:00+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -642,8 +642,8 @@ search for every identical squad/GW state.
 Performance diagnosis can run through the existing occurrence-bound V12 report
 runner with `profile_mode=COLD`. This mode is measurement-only: it skips
 Stage-2, P1.7 and Monte Carlo cache restore, does not persist those compute
-caches, keeps the V6 factual plane read-only, and emits cProfile evidence plus
-stage wall-clock timings.
+caches, keeps the V6 factual plane read-only, and emits stage-local cProfile
+evidence plus explicit stage wall-clock timings.
 
 Example owner-gated issue command:
 
@@ -651,8 +651,14 @@ Example owner-gated issue command:
 /v12-report-run report_mode=DEEP report_slot=<ASIA_JAKARTA_ISO_SLOT> checkpoint_time=<HH:MM> profile_mode=COLD
 ```
 
-The immutable report artifact includes `profile.pstats`,
+The runner itself executes normally. cProfile is enabled only while executing
+`V12_ANALYTICS_FOUNDATION`, `P1_1_P1_3_FULL_UNIVERSE`,
+`P1_2B_PACKAGE_COMBINE`, and `P1_4_MONTE_CARLO`; each stage writes its own
+`stage-profiles/<STAGE>.pstats`. The immutable report artifact also includes
 `profile_run.log`, `profile_summary.json`, and `profile_summary.md`.
-Cumulative cProfile time is inclusive and must not be summed across nested
-functions. Production acceptance should use the explicit stage wall-clock
-measurements for total-budget accounting.
+
+Stage wall-clock values are the production-budget evidence. cProfile cumulative
+times are diagnostic only, are inclusive, and must not be summed across nested
+functions. Parent-process cProfile includes time waiting on multiprocessing
+children but does not profile child-process internals; child hotspots require a
+separate child-aware profiler if the parent profile points there.

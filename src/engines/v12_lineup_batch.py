@@ -1260,22 +1260,37 @@ def _family_selection_endpoint(
     )
     outfield_permutations = layout["outfield_permutations"]
 
+    # DNP state probability depends on the XI row and formation state only,
+    # not on the six bench permutations. Build each formation-state matrix
+    # once per endpoint, preserving the scalar multiplication order
+    # (DEF * MID) * FWD bit-for-bit.
+    dnp_probability_by_states: dict[
+        tuple[tuple[int, int, int], ...],
+        np.ndarray,
+    ] = {}
+    for permutation_groups in layout["structural_groups"]:
+        for group in permutation_groups:
+            state_keys = group["state_keys"]
+            if state_keys in dnp_probability_by_states:
+                continue
+            state_array = np.asarray(state_keys, dtype=np.int64)
+            dnp_probability = (
+                def_dist[:, state_array[None, :, 0]]
+                * mid_dist[:, state_array[None, :, 1]]
+                * fwd_dist[:, state_array[None, :, 2]]
+            )
+            dnp_probability_by_states[state_keys] = np.where(
+                dnp_probability > 1e-15,
+                dnp_probability,
+                0.0,
+            )
+
     for permutation_index in range(6):
         perm_indices = outfield_permutations[:, permutation_index, :]
         for group in layout["structural_groups"][permutation_index]:
             rows = group["rows"]
             state_keys = group["state_keys"]
-            state_array = np.asarray(state_keys, dtype=np.int64)
-            dnp_probability = (
-                def_dist[rows[:, None], state_array[None, :, 0]]
-                * mid_dist[rows[:, None], state_array[None, :, 1]]
-                * fwd_dist[rows[:, None], state_array[None, :, 2]]
-            )
-            dnp_probability = np.where(
-                dnp_probability > 1e-15,
-                dnp_probability,
-                0.0,
-            )
+            dnp_probability = dnp_probability_by_states[state_keys][rows]
             appearance = _appearance_mask_probabilities(
                 p_appearance[perm_indices[rows]]
             )

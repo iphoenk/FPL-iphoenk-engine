@@ -1924,23 +1924,81 @@ def _render_package_frontier_lines(
         )
 
     lines.append("#### PACKAGE FRONTIER")
+    mc = dict(payload.get("monte_carlo") or {})
+    lines.append(
+        "MC PATHS: "
+        f"{mc.get('actual_paths', 'UNAVAILABLE')} | "
+        f"canonical_pass={mc.get('canonical_pass', 'UNAVAILABLE')} | "
+        f"convergence={(mc.get('convergence_evidence') or {}).get('status', 'UNAVAILABLE')}"
+    )
     if not routes:
         lines.append("UNAVAILABLE — package routes not materialized")
+
+    def move_label(move: Mapping[str, Any]) -> str:
+        return str(
+            move.get("name")
+            or move.get("player")
+            or move.get("element")
+            or "UNAVAILABLE"
+        )
+
     for row in routes:
+        moves = dict(row.get("moves") or {})
+        outs = [
+            dict(item) for item in moves.get("out") or []
+            if isinstance(item, Mapping)
+        ]
+        ins = [
+            dict(item) for item in moves.get("in") or []
+            if isinstance(item, Mapping)
+        ]
+        if str(row.get("route") or "").upper() == "HOLD":
+            move_text = "HOLD → HOLD"
+        else:
+            move_text = (
+                ", ".join(move_label(item) for item in outs)
+                + " → "
+                + ", ".join(move_label(item) for item in ins)
+            )
+        outgoing_value = sum(
+            float(item.get("sell_value"))
+            for item in outs
+            if item.get("sell_value") is not None
+        ) if any(item.get("sell_value") is not None for item in outs) else None
+        incoming_cost = sum(
+            float(item.get("buy_price", item.get("price")))
+            for item in ins
+            if item.get("buy_price", item.get("price")) is not None
+        ) if any(item.get("buy_price", item.get("price")) is not None for item in ins) else None
+        transfer_cost = dict(row.get("transfer_cost") or {})
         lines.append(
             "- "
-            f"{row.get('route', 'UNAVAILABLE')} | "
-            f"MOVES {row.get('moves', 'UNAVAILABLE')} | "
-            f"COST {row.get('transfer_cost', 'UNAVAILABLE')} | "
-            f"1GW NET {row.get('gw1_net', 'UNAVAILABLE')} | "
-            f"2GW {row.get('two_gw_if_relevant', 'N/A')} | "
+            f"{row.get('route_kind', 'ROUTE')} | "
+            f"{row.get('route', 'UNAVAILABLE')} | OUT → IN {move_text} | "
+            f"SELL {outgoing_value if outgoing_value is not None else 'UNAVAILABLE'} | "
+            f"BUY {incoming_cost if incoming_cost is not None else 'UNAVAILABLE'} | "
+            f"BANK BEFORE {row.get('bank_before', 'UNAVAILABLE')} | "
+            f"BANK AFTER {transfer_cost.get('bank_after', 'UNAVAILABLE')} | "
+            f"AFFORDABILITY {row.get('affordability', 'UNAVAILABLE')} | "
+            f"HIT/FT {transfer_cost} | "
+            f"1GW {row.get('gw1_net', 'UNAVAILABLE')} | "
+            f"2GW {row.get('two_gw_if_relevant', 'UNAVAILABLE')} | "
             f"3GW {row.get('three_gw', 'UNAVAILABLE')} | "
             f"5GW {row.get('five_gw', 'UNAVAILABLE')} | "
+            f"RAW GAIN {row.get('raw_gain', 'UNAVAILABLE')} | "
+            f"NET GAIN {row.get('net_gain', 'UNAVAILABLE')} | "
             f"P>HOLD {row.get('p_beats_hold', 'UNAVAILABLE')} | "
+            f"Q10 {row.get('Q10', 'UNAVAILABLE')} | "
+            f"Q25 {row.get('Q25', 'UNAVAILABLE')} | "
+            f"MEDIAN {row.get('median', 'UNAVAILABLE')} | "
+            f"Q75 {row.get('Q75', 'UNAVAILABLE')} | "
+            f"Q90 {row.get('Q90', 'UNAVAILABLE')} | "
+            f"TACTICAL/FIXTURE {row.get('tactical_fixture_effect', 'UNAVAILABLE')} | "
+            f"PRICE/OPTIONALITY {row.get('price_risk', 'UNAVAILABLE')} | "
+            f"ICON+ UTILITY {row.get('mini_league_utility', 'UNAVAILABLE')} | "
             f"REGRET {row.get('expected_regret', 'UNAVAILABLE')} | "
             f"ROBUSTNESS {row.get('robustness', 'UNAVAILABLE')} | "
-            f"PRICE {row.get('price_risk', 'UNAVAILABLE')} | "
-            f"STRUCTURE {row.get('structure_effect', 'UNAVAILABLE')} | "
+            f"REVERSAL RISK {row.get('sensitivity', 'UNAVAILABLE')} | "
             f"VERDICT {row.get('action_verdict', 'UNAVAILABLE')}"
         )
     return lines
@@ -2336,7 +2394,15 @@ DEEP_HUMAN_SECTION_REQUIREMENTS: dict[str, tuple[str, ...]] = {
     "S16": ("rows", "position_mechanisms"),
     "S16B": ("our15", "material_universe_candidates", "recency_weighting", "bayesian_update"),
     "S17": ("engine_data_status", "source_health"),
-    "S18": ("NOW", "NEXT", "TRIGGERS", "REVERSAL"),
+    "S18": (
+        "NOW",
+        "NEXT",
+        "TRIGGER TO ACT",
+        "LATEST SAFE DECISION POINT",
+        "COST OF WAITING",
+        "ABORT / REVERSAL",
+        "BEST ALTERNATIVE",
+    ),
     "S19": ("final_judgement",),
 }
 
@@ -3003,26 +3069,36 @@ def _render_deep_visible_contract_lines(
                 (
                     "element_id",
                     "player_name",
-                    "opponent",
+                    "availability",
                     "p_start",
                     "xmins",
-                    "tactical_role",
+                    "posterior",
+                    "role / set-piece / penalty",
+                    "fixture",
+                    "defensive contribution",
                     "1gw",
                     "3gw",
                     "5gw",
+                    "price / optionality",
+                    "ICON+ relevance",
                     "action",
                 ),
                 [
                     (
                         row.get("element_id"),
                         row.get("player") or row.get("name"),
-                        row.get("opponent"),
+                        row.get("availability", row.get("p_available")),
                         row.get("p_start"),
                         row.get("xmins"),
-                        row.get("tactical_role"),
-                        row.get("gw_plus_1"),
-                        row.get("three_gw"),
-                        row.get("five_gw"),
+                        row.get("posterior_signal"),
+                        row.get("role_detail"),
+                        row.get("fixture_detail"),
+                        row.get("defensive_contribution"),
+                        row.get("projection_1gw", row.get("gw_plus_1")),
+                        row.get("projection_3gw", row.get("three_gw")),
+                        row.get("projection_5gw", row.get("five_gw")),
+                        row.get("price_optionality"),
+                        row.get("mini_league_relevance"),
                         row.get("action"),
                     )
                     for row in rows
@@ -3061,16 +3137,23 @@ def _render_deep_visible_contract_lines(
                     continue
                 lines.append(
                     "- GW{gw} vs {opp} {ha} | {start} {mins}m | "
-                    "Pts {pts} | xG {xg} xA {xa} xGI {xgi} | "
+                    "Result {result} | Pts {pts} | G {goals} A {assists} | "
+                    "xG {xg} npxG {npxg} xA {xa} xGI {xgi} | "
                     "Sh {shots} SOT {sot} Box {box} KP/CC {kp}/{cc} BC {bc} | "
-                    "SP {sp} PEN {pen} DEF {deff} | shape {shape} role {role}".format(
+                    "SP {sp} PEN {pen} DEF {deff} | "
+                    "team shape {shape} opp shape {opp_shape} role {role} | "
+                    "Bayesian {bayes} | price {price} | outlook 1/3/5 {outlook}".format(
                         gw=match.get("gw"),
                         opp=match.get("opponent_team_id"),
                         ha="H" if match.get("home") is True else "A" if match.get("home") is False else "?",
                         start="START" if match.get("starter") else "SUB",
                         mins=match.get("minutes"),
+                        result=match.get("result", "UNAVAILABLE"),
                         pts=match.get("fpl_points"),
+                        goals=match.get("goals", "UNAVAILABLE"),
+                        assists=match.get("assists", "UNAVAILABLE"),
                         xg=match.get("xg"),
+                        npxg=match.get("npxg", "UNAVAILABLE"),
                         xa=match.get("xa"),
                         xgi=match.get("xgi"),
                         shots=match.get("shots"),
@@ -3083,7 +3166,11 @@ def _render_deep_visible_contract_lines(
                         pen=match.get("penalty_role", match.get("penalty_involvement")),
                         deff=match.get("defensive_contribution"),
                         shape=match.get("team_formation"),
+                        opp_shape=match.get("opponent_formation", "UNAVAILABLE"),
                         role=match.get("role"),
+                        bayes=match.get("bayesian_update", item.get("bayesian_state", "UNAVAILABLE")),
+                        price=match.get("price_movement", "UNAVAILABLE"),
+                        outlook=match.get("outlook_1_3_5gw", "UNAVAILABLE"),
                     )
                 )
             link = item.get("linkup_dependency")

@@ -3269,10 +3269,10 @@ def optimize_lineup_summaries_exact_batch(
         for row in projections.get("players") or []
     }
     keys = list(squads)
-    route_players: list[list[dict[str, Any]]] = []
-    legal_by_route: list[list[tuple[int, ...]]] = []
+    route_ids_by_key: dict[str, tuple[int, ...]] = {}
+    material_elements: set[int] = set()
     for key in keys:
-        ids = [int(value) for value in squads[key]]
+        ids = tuple(int(value) for value in squads[key])
         if len(ids) != 15 or len(set(ids)) != 15:
             raise LineupOptimizerError(
                 f"route-batch P1.7 squad {key} is not exact15"
@@ -3282,20 +3282,41 @@ def optimize_lineup_summaries_exact_batch(
             raise LineupOptimizerError(
                 f"route-batch P1.7 missing projections for {key}: {missing}"
             )
+        route_ids_by_key[key] = ids
+        material_elements.update(ids)
+
+    # One immutable surface object per element/GW for the whole route batch.
+    # Route evaluation is read-only, so sharing these objects is exact and
+    # avoids thousands of nested deepcopy operations.
+    surface_catalog = {
+        element: _cached_player_surface(
+            projections,
+            pmap[element],
+            gw,
+        )
+        for element in sorted(material_elements)
+    }
+    route_players: list[list[dict[str, Any]]] = []
+    legal_by_route: list[list[tuple[int, ...]]] = []
+    legal_catalog: dict[tuple[str, ...], list[tuple[int, ...]]] = {}
+    for key in keys:
         players = [
-            _cached_player_surface(
-                projections,
-                pmap[element],
-                gw,
-            )
-            for element in ids
+            surface_catalog[element]
+            for element in route_ids_by_key[key]
         ]
         route_players.append(players)
-        legal = enumerate_legal_xi(players)
-        if len(legal) != 550:
-            raise LineupOptimizerError(
-                f"route-batch P1.7 expected 550 legal XI for {key}"
-            )
+        signature = tuple(
+            str(row.get("position") or "") for row in players
+        )
+        legal = legal_catalog.get(signature)
+        if legal is None:
+            legal = enumerate_legal_xi(players)
+            if len(legal) != 550:
+                raise LineupOptimizerError(
+                    "route-batch P1.7 expected 550 legal XI "
+                    f"for position signature {signature}"
+                )
+            legal_catalog[signature] = legal
         legal_by_route.append(legal)
 
     route_count = len(keys)
@@ -3978,6 +3999,7 @@ def _model_evidence_binding(
 ) -> dict[str, Any]:
     cfg = load_config()
     projection_timestamp = str(projections.get("generated_at") or generated_at)
+    squad_set = {int(value) for value in squad_ids}
     projection_fingerprint = fingerprint({
         "planning_gw": planning_gw,
         "players": [
@@ -3988,7 +4010,7 @@ def _model_evidence_binding(
                 "tactical_role_component": row.get("tactical_role_component"),
             }
             for row in projections.get("players") or []
-            if int(row.get("element") or -1) in set(int(x) for x in squad_ids)
+            if int(row.get("element") or -1) in squad_set
         ],
     })
     snapshot_id = f"p1.7:{projection_fingerprint[:20]}"
@@ -3998,7 +4020,7 @@ def _model_evidence_binding(
         factual_artifact_fingerprints={"projections_subset": projection_fingerprint},
         deterministic_factual_inputs={
             "planning_gw": planning_gw,
-            "owned_elements": sorted(int(x) for x in squad_ids),
+            "owned_elements": sorted(squad_set),
             "projections_subset_fingerprint": projection_fingerprint,
         },
         model_version=str(cfg.get("model_version")),

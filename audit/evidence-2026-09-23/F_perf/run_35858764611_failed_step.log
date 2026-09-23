@@ -1,0 +1,36 @@
+# Evidence metadata
+# source: run_id=35858764611 job_id=107173580175 step="Execute occurrence-bound integrated report" artifact_id=10747734725 path=profile_run.log
+# commit_sha: e385826d6f3e0c6f02da1b300cd25ec6c7cedf20
+# timestamp_utc: 2026-09-23T12:10:11Z
+# status: AVAILABLE
+# step_conclusion: failure
+# exit_code: 1
+
+[V12_STAGE] START V6_REPORT_PREFETCH_BINDING
+[V12_STAGE] FAILED V6_REPORT_PREFETCH_BINDING elapsed_seconds=0.000 error=IntegratedRunnerError: same-occurrence full_master prefetch mismatch: target_report_slot_match
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/cProfile.py", line 195, in <module>
+    main()
+  File "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/cProfile.py", line 184, in main
+    runctx(code, globs, None, options.outfile, options.sort)
+  File "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/cProfile.py", line 21, in runctx
+    return _pyprofile._Utils(Profile).runctx(statement, globals, locals,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/profile.py", line 64, in runctx
+    prof.runctx(statement, globals, locals)
+  File "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/cProfile.py", line 102, in runctx
+    exec(cmd, globals, locals)
+  File "<string>", line 1, in <module>
+  File "<frozen runpy>", line 229, in run_module
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_integrated_report_runner.py", line 3695, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_integrated_report_runner.py", line 3673, in main
+    bundle = run_deep(
+             ^^^^^^^^^
+  File "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_integrated_report_runner.py", line 2211, in run_deep
+    raise IntegratedRunnerError(
+IntegratedRunnerError: DEEP integrated runner requires fresh same-occurrence V6 report-prefetch

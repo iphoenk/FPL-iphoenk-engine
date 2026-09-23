@@ -1,0 +1,48 @@
+{
+  "_evidence_metadata": {
+    "source": "run_id=35862913757 job_id=107187268848 artifact_id=10751027740 benchmark_diagnostics.json",
+    "commit_sha": "66afdae4b5ae042b32b597c0910fc7ca4fe13727",
+    "timestamp_utc": "2026-09-23T12:51:33Z",
+    "status": "AVAILABLE"
+  },
+  "compliance_with_item_13": "NO",
+  "event": "pull_request",
+  "head_branch": "v12-p17-benchmark-diagnostics",
+  "batch_2043_repeated": {
+    "process_isolation": true,
+    "samples_seconds": [
+      13.537863737999999,
+      13.836672052999994,
+      13.615502167999992,
+      13.565339494,
+      13.620250257999999
+    ],
+    "summary": {
+      "count": 5,
+      "min": 13.537863737999999,
+      "median": 13.615502167999992,
+      "max": 13.836672052999994,
+      "mean": 13.635125542199997,
+      "range": 0.29880831499999516
+    }
+  },
+  "same_runner_scalar_vs_batch_subset": {
+    "route_count": 65,
+    "gw_count": 5,
+    "scalar_seconds": 34.101390772,
+    "batch_seconds": 1.065584986999994,
+    "speedup_x": 32.00250678081315
+  },
+  "runtime_environment": {
+    "os_cpu_count": 4,
+    "numpy_version": "2.5.2",
+    "thread_environment": {
+      "OMP_NUM_THREADS": null,
+      "OPENBLAS_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null,
+      "NUMEXPR_NUM_THREADS": null,
+      "VECLIB_MAXIMUM_THREADS": null,
+      "BLIS_NUM_THREADS": null
+    }
+  }
+}

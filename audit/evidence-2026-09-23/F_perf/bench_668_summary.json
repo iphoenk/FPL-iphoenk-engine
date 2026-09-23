@@ -1,0 +1,40 @@
+{
+  "_evidence_metadata": {
+    "source": "run_id=35868441017 job_id=107205941667 runner_label=ubuntu-latest workflow_dispatch_ref=audit/evidence-2026-09-23 path=F_perf/bench_668_summary.json",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:53Z",
+    "status": "NOT AVAILABLE"
+  },
+  "status": "NOT AVAILABLE",
+  "reason": "Exact requested 5x batch + 5x full scalar series did not complete on the frozen PR #668 head.",
+  "route_count": 2043,
+  "gw_count": 5,
+  "batch_seconds_completed": [],
+  "batch_failure": {
+    "repetition": 1,
+    "exception_type": "ValueError",
+    "exception_message": "shape mismatch: value array of shape (100,80) could not be broadcast to indexing result of shape (100,)",
+    "traceback": "Traceback (most recent call last):\n  File \"/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/audit/.github/audit_evidence_runner.py\", line 416, in <module>\n    outputs, proof = batch.optimize_lineup_horizons_exact_batch(\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/pr668/src/engines/v12_lineup_batch.py\", line 2501, in optimize_lineup_horizons_exact_batch\n    family_results, _family_proof = _optimize_gw_family(\n                                    ^^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/pr668/src/engines/v12_lineup_batch.py\", line 1877, in _optimize_gw_family\n    bench = _family_bench_kernel(\n            ^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/pr668/src/engines/v12_lineup_batch.py\", line 1394, in _family_bench_kernel\n    selected_zero, autosub_zero = _family_selection_endpoint(\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/pr668/src/engines/v12_lineup_batch.py\", line 1309, in _family_selection_endpoint\n    autosub[rows, permutation_index] = resolved[:, 0]\n    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\nValueError: shape mismatch: value array of shape (100,80) could not be broadcast to indexing result of shape (100,)\n"
+  },
+  "scalar_seconds": [],
+  "batch": {
+    "median": null,
+    "min": null,
+    "max": null
+  },
+  "scalar": {
+    "median": null,
+    "min": null,
+    "max": null
+  },
+  "worker_count": 1,
+  "thread_env": {
+    "OMP_NUM_THREADS": null,
+    "OPENBLAS_NUM_THREADS": null,
+    "MKL_NUM_THREADS": null,
+    "NUMEXPR_NUM_THREADS": null,
+    "VECLIB_MAXIMUM_THREADS": null,
+    "BLIS_NUM_THREADS": null
+  },
+  "runner_label": "ubuntu-latest"
+}

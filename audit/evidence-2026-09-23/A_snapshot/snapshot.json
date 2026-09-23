@@ -1,0 +1,165 @@
+{
+  "_evidence_metadata": {
+    "source": "GitHub REST branches/main; pulls/668; pulls/668/commits",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:38:47Z",
+    "status": "AVAILABLE"
+  },
+  "main_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+  "pr_668_head_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+  "requested_commit_count": 22,
+  "observed_commit_count": 30,
+  "discrepancy": "GitHub REST returned 30 commits at capture time; all returned commits are included.",
+  "commits": [
+    {
+      "sha": "febba221458a81ae5e4046ab8d86f67a926d352d",
+      "message": "perf(v12): add exact cross-route P1.7 batch kernel",
+      "timestamp_utc": "2026-09-23T10:24:44Z"
+    },
+    {
+      "sha": "0346fdedcbd8e98b46e3d4da2ac5a2f1921a4332",
+      "message": "perf(v12): route P1.2B through cross-route exact lineup batch",
+      "timestamp_utc": "2026-09-23T10:25:10Z"
+    },
+    {
+      "sha": "cd983ec625bca8450e68f3fbf2d72f4e299164a5",
+      "message": "perf(v12): configure cross-route exact P1.7 execution",
+      "timestamp_utc": "2026-09-23T10:25:18Z"
+    },
+    {
+      "sha": "ce1463c5e0c386dd456df9e8272236c019142d56",
+      "message": "test(v12): gate cross-route P1.7 equivalence and 2043-route latency",
+      "timestamp_utc": "2026-09-23T10:26:02Z"
+    },
+    {
+      "sha": "9b3a2584ab8eee5e4d6bce846ec8735b9dd0e863",
+      "message": "docs(v12): sync cross-route P1.7 performance architecture",
+      "timestamp_utc": "2026-09-23T10:28:11Z"
+    },
+    {
+      "sha": "21a421494eeef20ebeb69ba8a2f6b17200b3899f",
+      "message": "fix(v12): preserve scalar fallback for bounded small route sets",
+      "timestamp_utc": "2026-09-23T10:30:14Z"
+    },
+    {
+      "sha": "64ede20e06c6f8c9d77b478ea11e45487de68a6c",
+      "message": "perf(v12): eliminate cross-route resolver probability cube",
+      "timestamp_utc": "2026-09-23T10:37:32Z"
+    },
+    {
+      "sha": "d942c5e18ac96b89f57aa88c5c1093551a45929e",
+      "message": "perf(v12): widen exact cross-route batch to 512 squads",
+      "timestamp_utc": "2026-09-23T10:37:43Z"
+    },
+    {
+      "sha": "968568da2a86c69c910927507f1c964f61205a36",
+      "message": "test(v12): benchmark production-sized cross-route batch",
+      "timestamp_utc": "2026-09-23T10:37:47Z"
+    },
+    {
+      "sha": "62960f47f711f0f95f83fdd1ef4259565a16a45b",
+      "message": "perf(v12): fuse resolver outputs into one structural matrix product",
+      "timestamp_utc": "2026-09-23T10:41:23Z"
+    },
+    {
+      "sha": "8fde1d4bf7b487c24b553e79410450b5f54ece84",
+      "message": "perf(v12): materialize exact winner-only P1.7 compatibility details",
+      "timestamp_utc": "2026-09-23T10:49:35Z"
+    },
+    {
+      "sha": "807d82b25d151a3ce52554b062207305e51acef9",
+      "message": "test(v12): prove exact winner-only cameo and safe-pool semantics",
+      "timestamp_utc": "2026-09-23T10:49:51Z"
+    },
+    {
+      "sha": "553ec6cc012db53a22673a36b8e84623f907c198",
+      "message": "perf(v12): reuse structural plans and vectorize exact CVC selection",
+      "timestamp_utc": "2026-09-23T11:06:36Z"
+    },
+    {
+      "sha": "e0ac81a2145429d6f130fa1116a25f6dd50ef13d",
+      "message": "test(v12): align execution contract with exact cross-route kernel",
+      "timestamp_utc": "2026-09-23T11:06:48Z"
+    },
+    {
+      "sha": "0a71b2c92f7ec5de69e0366e00b4b00e2e507053",
+      "message": "perf(v12): factor exact positional DNP distributions across 550 XI",
+      "timestamp_utc": "2026-09-23T11:08:43Z"
+    },
+    {
+      "sha": "fa1cfb4344c501655ab9ec3b0cfa8902d050b24d",
+      "message": "perf(v12): add exact core14 affine route-family kernel",
+      "timestamp_utc": "2026-09-23T11:16:05Z"
+    },
+    {
+      "sha": "1abaec18fa8da21ca1d55cfed6129c9b4499c92f",
+      "message": "chore(v12): deduplicate lineup batch cache import",
+      "timestamp_utc": "2026-09-23T11:17:34Z"
+    },
+    {
+      "sha": "101d3198a365f8ff4f2898c27960261bcfe78f54",
+      "message": "test(v12): require exact core14 route-family performance kernel",
+      "timestamp_utc": "2026-09-23T11:17:46Z"
+    },
+    {
+      "sha": "2096a5848e4f48d2c6c5bb47b179bcac1feb3d6b",
+      "message": "fix(v12): preserve scalar DNP recurrence ordering in family kernel",
+      "timestamp_utc": "2026-09-23T11:18:52Z"
+    },
+    {
+      "sha": "69727563b1629825d47143b2328f9c82e946a7eb",
+      "message": "perf(v12): vectorize exact family captain selection",
+      "timestamp_utc": "2026-09-23T11:20:38Z"
+    },
+    {
+      "sha": "88d04b8481e54e18a3677f7d9c80123abfd7d993",
+      "message": "test(v12): golden-check core14 family kernel against scalar",
+      "timestamp_utc": "2026-09-23T11:24:23Z"
+    },
+    {
+      "sha": "babd1d29efae21b6ba9cc9f9c0a1b3ea2d81b7ff",
+      "message": "perf(v12): materialize shared P1.7 surface catalog once per GW",
+      "timestamp_utc": "2026-09-23T11:36:17Z"
+    },
+    {
+      "sha": "d2242aa16772939c386d7eda98df7ca56c2e3f59",
+      "message": "perf(v12): reuse invariant core14 captain winners",
+      "timestamp_utc": "2026-09-23T11:47:34Z"
+    },
+    {
+      "sha": "49673cff1c30b61dfcc2474ba4b1757258d1ee8f",
+      "message": "perf(v12): vectorize family DNP state probabilities",
+      "timestamp_utc": "2026-09-23T13:13:39Z"
+    },
+    {
+      "sha": "e4cce6e061617882367451a56a60e6895af849c5",
+      "message": "perf(v12): evaluate bench tie keys lazily",
+      "timestamp_utc": "2026-09-23T13:13:50Z"
+    },
+    {
+      "sha": "2a5faf2fd3a5b345e699a0c14b5d75c279cc1440",
+      "message": "test(v12): lock adversarial P1.7 tie and rounding semantics",
+      "timestamp_utc": "2026-09-23T13:14:12Z"
+    },
+    {
+      "sha": "3125a13f78eab50490b5a8a8038108236eddf33c",
+      "message": "test(v12): import numpy for adversarial ranking cases",
+      "timestamp_utc": "2026-09-23T13:14:22Z"
+    },
+    {
+      "sha": "707faef25f63e0f1658e169975fddc8d553261d0",
+      "message": "perf(v12): reuse DNP state matrices across bench permutations",
+      "timestamp_utc": "2026-09-23T13:31:57Z"
+    },
+    {
+      "sha": "4774e04dff7816cec8819a239cacde2b1f266554",
+      "message": "perf(v12): memoize family bench tie ranks across GW",
+      "timestamp_utc": "2026-09-23T13:32:14Z"
+    },
+    {
+      "sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+      "message": "test(v12): make rounding boundary proof non-vacuous",
+      "timestamp_utc": "2026-09-23T13:37:26Z"
+    }
+  ]
+}

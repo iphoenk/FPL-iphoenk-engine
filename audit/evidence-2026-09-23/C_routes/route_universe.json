@@ -1,0 +1,41 @@
+{
+  "_evidence_metadata": {
+    "source": "run_id=35748919665 artifact=v12-report-DEEP-35748919665/report_bundle.json S14",
+    "commit_sha": "967f74b82d0da2027515af40dbeb7d6a57ec9586",
+    "timestamp_utc": "2026-09-22T16:12:41Z",
+    "status": "NOT AVAILABLE"
+  },
+  "status": "NOT AVAILABLE",
+  "available_raw": {
+    "route_count": 2043,
+    "route_type_counts": {
+      "HOLD": 1,
+      "1-transfer": 2042,
+      "2-transfer": 0,
+      "other": 0
+    },
+    "package_search_proof": {
+      "owned_expected": 15,
+      "owned_evaluated": 15,
+      "eligible_universe_expected": 472,
+      "eligible_universe_evaluated": 472,
+      "outgoing_candidate_count": 15,
+      "outgoing_combination_count": 15,
+      "legal_route_count": 2043,
+      "hold_included": true,
+      "lossy_pruning": false,
+      "search_authority": "FULL"
+    },
+    "package_search_scope": {
+      "eligible_universe_count": 472,
+      "searched_universe_count": 472,
+      "route_denominator": 2043,
+      "max_transfers_evaluated": 1,
+      "transfer_depth_semantics": "COMPLETE_WITHIN_GOVERNED_CURRENT_OCCURRENCE_BOUND"
+    }
+  },
+  "unavailable_subfields": {
+    "per_position_route_counts": "NOT AVAILABLE: production artifact does not serialize a complete element-to-position map for all 472 eligible incoming elements.",
+    "family_size_distribution": "NOT AVAILABLE: production snapshot predates PR #668 family proof; inspected diagnostics serialize route_family_count but not core14/core13 family-size distribution."
+  }
+}

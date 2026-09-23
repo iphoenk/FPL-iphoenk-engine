@@ -1,0 +1,1676 @@
+{
+  "cold_cache_contract": {
+    "cache_persist": false,
+    "mc_restore": false,
+    "p17_restore": false,
+    "stage2_restore": false
+  },
+  "limitations": {
+    "multiprocessing_child_functions_profiled": false,
+    "parent_entrypoint_wait_time_included": true,
+    "production_latency_gate_uses_stage_wall_seconds": true,
+    "profile_cumulative_times_are_diagnostic_only": true
+  },
+  "profile_scope": "STAGE_LOCAL_PARENT_PROCESS",
+  "profiled_stages": [
+    "V12_ANALYTICS_FOUNDATION",
+    "P1_1_P1_3_FULL_UNIVERSE",
+    "P1_2B_PACKAGE_COMBINE",
+    "P1_4_MONTE_CARLO"
+  ],
+  "profiler": "cProfile",
+  "schema_version": 2,
+  "stage_profiles": {
+    "P1_1_P1_3_FULL_UNIVERSE": {
+      "category": "STAGE2",
+      "entrypoints": [
+        {
+          "cumulative_seconds": 157.231834,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_stage2_derived_cache.py",
+          "function": "load_or_build_stage2_projections",
+          "internal_seconds": 0.000112,
+          "line": 107,
+          "primitive_calls": 1,
+          "total_calls": 1
+        }
+      ],
+      "note": "cumulative_seconds is inclusive within this stage and must not be summed across nested functions",
+      "profile_path": "artifacts/v12-report/stage-profiles/P1_1_P1_3_FULL_UNIVERSE.pstats",
+      "status": "AVAILABLE",
+      "top_functions": [
+        {
+          "cumulative_seconds": 157.231907,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_integrated_report_runner.py",
+          "function": "_stage2_projection_with_cache",
+          "internal_seconds": 4.6e-05,
+          "line": 2316,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 157.231834,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_stage2_derived_cache.py",
+          "function": "load_or_build_stage2_projections",
+          "internal_seconds": 0.000112,
+          "line": 107,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 156.042486,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_integrated_report_runner.py",
+          "function": "<lambda>",
+          "internal_seconds": 0.002554,
+          "line": 2334,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 156.03993,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/historical_projection.py",
+          "function": "build",
+          "internal_seconds": 0.842579,
+          "line": 35,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 120.462708,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/historical_projection.py",
+          "function": "project_stage2_fixture",
+          "internal_seconds": 0.208974,
+          "line": 489,
+          "primitive_calls": 10005,
+          "total_calls": 10005
+        },
+        {
+          "cumulative_seconds": 91.650262,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_position_probability_components.py",
+          "function": "enhance_fixture_projection",
+          "internal_seconds": 6.738379,
+          "line": 1258,
+          "primitive_calls": 10005,
+          "total_calls": 10005
+        },
+        {
+          "cumulative_seconds": 28.52058,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_player_events.py",
+          "function": "project_player_fixture",
+          "internal_seconds": 2.165377,
+          "line": 1254,
+          "primitive_calls": 10005,
+          "total_calls": 10005
+        },
+        {
+          "cumulative_seconds": 23.284959,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_player_events.py",
+          "function": "_convolve_integer_pmf",
+          "internal_seconds": 18.771092,
+          "line": 873,
+          "primitive_calls": 85623,
+          "total_calls": 85623
+        },
+        {
+          "cumulative_seconds": 21.800106,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_player_events.py",
+          "function": "_build_joint_predictive_surface",
+          "internal_seconds": 5.129901,
+          "line": 970,
+          "primitive_calls": 10005,
+          "total_calls": 10005
+        },
+        {
+          "cumulative_seconds": 17.37575,
+          "file": "~",
+          "function": "<method 'get' of 'dict' objects>",
+          "internal_seconds": 17.37575,
+          "line": 0,
+          "primitive_calls": 120651671,
+          "total_calls": 120651671
+        },
+        {
+          "cumulative_seconds": 16.375375,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_position_probability_components.py",
+          "function": "_gk_save_pmf_from_model",
+          "internal_seconds": 6.96652,
+          "line": 357,
+          "primitive_calls": 12870,
+          "total_calls": 12870
+        },
+        {
+          "cumulative_seconds": 14.366188,
+          "file": "~",
+          "function": "<built-in method builtins.sum>",
+          "internal_seconds": 3.847127,
+          "line": 0,
+          "primitive_calls": 3098626,
+          "total_calls": 3098626
+        },
+        {
+          "cumulative_seconds": 13.975598,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/copy.py",
+          "function": "deepcopy",
+          "internal_seconds": 7.117759,
+          "line": 118,
+          "primitive_calls": 10005,
+          "total_calls": 8816592
+        },
+        {
+          "cumulative_seconds": 13.937244,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/copy.py",
+          "function": "_deepcopy_dict",
+          "internal_seconds": 2.276558,
+          "line": 217,
+          "primitive_calls": 10005,
+          "total_calls": 430215
+        },
+        {
+          "cumulative_seconds": 13.807376,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_contextual_dynamics.py",
+          "function": "build_contextual_dynamics",
+          "internal_seconds": 0.238391,
+          "line": 2222,
+          "primitive_calls": 10005,
+          "total_calls": 10005
+        },
+        {
+          "cumulative_seconds": 13.419644,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_position_probability_components.py",
+          "function": "_apply_conditional_bonus",
+          "internal_seconds": 2.395556,
+          "line": 998,
+          "primitive_calls": 10005,
+          "total_calls": 10005
+        },
+        {
+          "cumulative_seconds": 12.386391,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_contextual_dynamics.py",
+          "function": "build_player_trajectory",
+          "internal_seconds": 1.038366,
+          "line": 312,
+          "primitive_calls": 10005,
+          "total_calls": 10005
+        },
+        {
+          "cumulative_seconds": 10.420148,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_position_probability_components.py",
+          "function": "_conditional_bonus_pmf",
+          "internal_seconds": 5.471736,
+          "line": 968,
+          "primitive_calls": 383568,
+          "total_calls": 383568
+        },
+        {
+          "cumulative_seconds": 10.042458,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_position_probability_components.py",
+          "function": "convolve_point_distributions",
+          "internal_seconds": 0.806059,
+          "line": 636,
+          "primitive_calls": 13340,
+          "total_calls": 13340
+        },
+        {
+          "cumulative_seconds": 9.792806,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_player_events.py",
+          "function": "_joint_goal_assist_point_surface",
+          "internal_seconds": 1.657367,
+          "line": 807,
+          "primitive_calls": 229350,
+          "total_calls": 229350
+        },
+        {
+          "cumulative_seconds": 8.315599,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_player_events.py",
+          "function": "_apply_bernoulli_reward",
+          "internal_seconds": 5.880001,
+          "line": 905,
+          "primitive_calls": 448695,
+          "total_calls": 448695
+        },
+        {
+          "cumulative_seconds": 6.474222,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_player_events.py",
+          "function": "_compound_poisson_point_pmf",
+          "internal_seconds": 5.172131,
+          "line": 753,
+          "primitive_calls": 229350,
+          "total_calls": 229350
+        },
+        {
+          "cumulative_seconds": 5.984913,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_contextual_dynamics.py",
+          "function": "_posterior_recent_rate",
+          "internal_seconds": 0.264512,
+          "line": 236,
+          "primitive_calls": 70035,
+          "total_calls": 70035
+        },
+        {
+          "cumulative_seconds": 5.514552,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_player_minutes.py",
+          "function": "estimate_xmins",
+          "internal_seconds": 0.015094,
+          "line": 763,
+          "primitive_calls": 22621,
+          "total_calls": 22621
+        },
+        {
+          "cumulative_seconds": 5.499459,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_player_minutes.py",
+          "function": "estimate_player_minutes",
+          "internal_seconds": 0.633812,
+          "line": 654,
+          "primitive_calls": 22621,
+          "total_calls": 22621
+        },
+        {
+          "cumulative_seconds": 4.935827,
+          "file": "~",
+          "function": "<built-in method builtins.max>",
+          "internal_seconds": 4.834644,
+          "line": 0,
+          "primitive_calls": 18872316,
+          "total_calls": 18872316
+        },
+        {
+          "cumulative_seconds": 4.131644,
+          "file": "~",
+          "function": "<built-in method builtins.round>",
+          "internal_seconds": 4.131644,
+          "line": 0,
+          "primitive_calls": 8071941,
+          "total_calls": 8071941
+        },
+        {
+          "cumulative_seconds": 3.981639,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_position_probability_components.py",
+          "function": "_beta_binomial_pmf",
+          "internal_seconds": 1.40404,
+          "line": 330,
+          "primitive_calls": 68040,
+          "total_calls": 68040
+        },
+        {
+          "cumulative_seconds": 3.946839,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_contextual_dynamics.py",
+          "function": "_rate90",
+          "internal_seconds": 0.331036,
+          "line": 186,
+          "primitive_calls": 215937,
+          "total_calls": 215937
+        },
+        {
+          "cumulative_seconds": 3.815223,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_contextual_dynamics.py",
+          "function": "evaluate_linkup",
+          "internal_seconds": 0.90007,
+          "line": 1663,
+          "primitive_calls": 21954,
+          "total_calls": 21954
+        },
+        {
+          "cumulative_seconds": 3.581227,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_position_probability_components.py",
+          "function": "_pmf_tail",
+          "internal_seconds": 0.655847,
+          "line": 135,
+          "primitive_calls": 153285,
+          "total_calls": 153285
+        },
+        {
+          "cumulative_seconds": 3.576439,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_contextual_dynamics.py",
+          "function": "_metric",
+          "internal_seconds": 2.348461,
+          "line": 157,
+          "primitive_calls": 1801067,
+          "total_calls": 1801067
+        },
+        {
+          "cumulative_seconds": 3.505608,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_position_probability_components.py",
+          "function": "_binomial_pmf",
+          "internal_seconds": 2.379524,
+          "line": 311,
+          "primitive_calls": 385830,
+          "total_calls": 385830
+        },
+        {
+          "cumulative_seconds": 3.135825,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_player_minutes.py",
+          "function": "_estimate_core",
+          "internal_seconds": 1.173779,
+          "line": 73,
+          "primitive_calls": 22621,
+          "total_calls": 22621
+        },
+        {
+          "cumulative_seconds": 3.029618,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_player_events.py",
+          "function": "_joint_support",
+          "internal_seconds": 0.260737,
+          "line": 538,
+          "primitive_calls": 20010,
+          "total_calls": 20010
+        },
+        {
+          "cumulative_seconds": 2.774506,
+          "file": "~",
+          "function": "<built-in method builtins.sorted>",
+          "internal_seconds": 1.142417,
+          "line": 0,
+          "primitive_calls": 387527,
+          "total_calls": 387527
+        },
+        {
+          "cumulative_seconds": 2.62309,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_position_probability_components.py",
+          "function": "_f",
+          "internal_seconds": 2.082298,
+          "line": 64,
+          "primitive_calls": 6349317,
+          "total_calls": 6349317
+        },
+        {
+          "cumulative_seconds": 2.523365,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_contextual_dynamics.py",
+          "function": "_recency_weights",
+          "internal_seconds": 0.805317,
+          "line": 197,
+          "primitive_calls": 70035,
+          "total_calls": 70035
+        },
+        {
+          "cumulative_seconds": 2.479748,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_player_events.py",
+          "function": "clamp",
+          "internal_seconds": 1.033978,
+          "line": 49,
+          "primitive_calls": 3240262,
+          "total_calls": 3240262
+        },
+        {
+          "cumulative_seconds": 2.441622,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/copy.py",
+          "function": "_deepcopy_list",
+          "internal_seconds": 0.167629,
+          "line": 191,
+          "primitive_calls": 40020,
+          "total_calls": 40020
+        }
+      ]
+    },
+    "P1_2B_PACKAGE_COMBINE": {
+      "category": "PACKAGE_COMBINE",
+      "entrypoints": [
+        {
+          "cumulative_seconds": 5.248673,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_package_utility.py",
+          "function": "combine_package_utility_surfaces",
+          "internal_seconds": 0.033734,
+          "line": 1791,
+          "primitive_calls": 1,
+          "total_calls": 1
+        }
+      ],
+      "note": "cumulative_seconds is inclusive within this stage and must not be summed across nested functions",
+      "profile_path": "artifacts/v12-report/stage-profiles/P1_2B_PACKAGE_COMBINE.pstats",
+      "status": "AVAILABLE",
+      "top_functions": [
+        {
+          "cumulative_seconds": 5.248703,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_integrated_report_runner.py",
+          "function": "<lambda>",
+          "internal_seconds": 3e-05,
+          "line": 2751,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 5.248673,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_package_utility.py",
+          "function": "combine_package_utility_surfaces",
+          "internal_seconds": 0.033734,
+          "line": 1791,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 5.189661,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/copy.py",
+          "function": "deepcopy",
+          "internal_seconds": 2.531549,
+          "line": 118,
+          "primitive_calls": 2046,
+          "total_calls": 3132034
+        },
+        {
+          "cumulative_seconds": 5.184423,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/copy.py",
+          "function": "_deepcopy_dict",
+          "internal_seconds": 0.799321,
+          "line": 217,
+          "primitive_calls": 2046,
+          "total_calls": 183974
+        },
+        {
+          "cumulative_seconds": 3.820756,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/copy.py",
+          "function": "_deepcopy_list",
+          "internal_seconds": 0.186138,
+          "line": 191,
+          "primitive_calls": 18408,
+          "total_calls": 77675
+        },
+        {
+          "cumulative_seconds": 0.90532,
+          "file": "~",
+          "function": "<method 'get' of 'dict' objects>",
+          "internal_seconds": 0.90532,
+          "line": 0,
+          "primitive_calls": 6298834,
+          "total_calls": 6298834
+        },
+        {
+          "cumulative_seconds": 0.349744,
+          "file": "~",
+          "function": "<built-in method builtins.id>",
+          "internal_seconds": 0.349744,
+          "line": 0,
+          "primitive_calls": 3657378,
+          "total_calls": 3657378
+        },
+        {
+          "cumulative_seconds": 0.195899,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/copy.py",
+          "function": "_deepcopy_atomic",
+          "internal_seconds": 0.195899,
+          "line": 172,
+          "primitive_calls": 2870385,
+          "total_calls": 2870385
+        },
+        {
+          "cumulative_seconds": 0.178967,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/copy.py",
+          "function": "_keep_alive",
+          "internal_seconds": 0.113102,
+          "line": 231,
+          "primitive_calls": 261649,
+          "total_calls": 261649
+        },
+        {
+          "cumulative_seconds": 0.086229,
+          "file": "~",
+          "function": "<method 'append' of 'list' objects>",
+          "internal_seconds": 0.086229,
+          "line": 0,
+          "primitive_calls": 672602,
+          "total_calls": 672602
+        },
+        {
+          "cumulative_seconds": 0.030734,
+          "file": "~",
+          "function": "<method 'items' of 'dict' objects>",
+          "internal_seconds": 0.030734,
+          "line": 0,
+          "primitive_calls": 183974,
+          "total_calls": 183974
+        },
+        {
+          "cumulative_seconds": 0.00709,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_package_utility.py",
+          "function": "_qualifies_change",
+          "internal_seconds": 0.003676,
+          "line": 695,
+          "primitive_calls": 2043,
+          "total_calls": 2043
+        },
+        {
+          "cumulative_seconds": 0.006903,
+          "file": "~",
+          "function": "<built-in method builtins.isinstance>",
+          "internal_seconds": 0.002219,
+          "line": 0,
+          "primitive_calls": 2050,
+          "total_calls": 6138
+        },
+        {
+          "cumulative_seconds": 0.005509,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/typing.py",
+          "function": "__instancecheck__",
+          "internal_seconds": 0.000988,
+          "line": 1221,
+          "primitive_calls": 2044,
+          "total_calls": 2044
+        },
+        {
+          "cumulative_seconds": 0.004521,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/typing.py",
+          "function": "__subclasscheck__",
+          "internal_seconds": 0.001239,
+          "line": 1492,
+          "primitive_calls": 2044,
+          "total_calls": 2044
+        },
+        {
+          "cumulative_seconds": 0.004506,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_package_utility.py",
+          "function": "_frontier",
+          "internal_seconds": 0.001516,
+          "line": 610,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 0.002617,
+          "file": "~",
+          "function": "<built-in method builtins.all>",
+          "internal_seconds": 0.000357,
+          "line": 0,
+          "primitive_calls": 2043,
+          "total_calls": 2043
+        },
+        {
+          "cumulative_seconds": 0.002616,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_package_utility.py",
+          "function": "<genexpr>",
+          "internal_seconds": 0.001389,
+          "line": 614,
+          "primitive_calls": 4088,
+          "total_calls": 4088
+        },
+        {
+          "cumulative_seconds": 0.002456,
+          "file": "~",
+          "function": "<built-in method builtins.issubclass>",
+          "internal_seconds": 0.001097,
+          "line": 0,
+          "primitive_calls": 2044,
+          "total_calls": 2044
+        },
+        {
+          "cumulative_seconds": 0.001678,
+          "file": "~",
+          "function": "<built-in method builtins.sorted>",
+          "internal_seconds": 0.000202,
+          "line": 0,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 0.001476,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_package_utility.py",
+          "function": "<genexpr>",
+          "internal_seconds": 0.000892,
+          "line": 1914,
+          "primitive_calls": 2044,
+          "total_calls": 2044
+        },
+        {
+          "cumulative_seconds": 0.001359,
+          "file": "<frozen abc>",
+          "function": "__subclasscheck__",
+          "internal_seconds": 0.000524,
+          "line": 121,
+          "primitive_calls": 2044,
+          "total_calls": 2044
+        },
+        {
+          "cumulative_seconds": 0.001262,
+          "file": "~",
+          "function": "<built-in method builtins.any>",
+          "internal_seconds": 0.000395,
+          "line": 0,
+          "primitive_calls": 2043,
+          "total_calls": 2043
+        },
+        {
+          "cumulative_seconds": 0.001244,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_package_utility.py",
+          "function": "<genexpr>",
+          "internal_seconds": 0.000858,
+          "line": 700,
+          "primitive_calls": 4084,
+          "total_calls": 4084
+        },
+        {
+          "cumulative_seconds": 0.000835,
+          "file": "~",
+          "function": "<built-in method _abc._abc_subclasscheck>",
+          "internal_seconds": 0.000835,
+          "line": 0,
+          "primitive_calls": 2044,
+          "total_calls": 2044
+        },
+        {
+          "cumulative_seconds": 0.000343,
+          "file": "~",
+          "function": "<method 'setdefault' of 'dict' objects>",
+          "internal_seconds": 0.000343,
+          "line": 0,
+          "primitive_calls": 2045,
+          "total_calls": 2045
+        },
+        {
+          "cumulative_seconds": 0.000319,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_model_evidence.py",
+          "function": "fingerprint",
+          "internal_seconds": 1.3e-05,
+          "line": 33,
+          "primitive_calls": 3,
+          "total_calls": 3
+        },
+        {
+          "cumulative_seconds": 0.000267,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_model_evidence.py",
+          "function": "_canon",
+          "internal_seconds": 1e-05,
+          "line": 26,
+          "primitive_calls": 3,
+          "total_calls": 3
+        },
+        {
+          "cumulative_seconds": 0.000253,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/json/__init__.py",
+          "function": "dumps",
+          "internal_seconds": 1.5e-05,
+          "line": 183,
+          "primitive_calls": 3,
+          "total_calls": 3
+        },
+        {
+          "cumulative_seconds": 0.000235,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/json/encoder.py",
+          "function": "encode",
+          "internal_seconds": 1.5e-05,
+          "line": 183,
+          "primitive_calls": 3,
+          "total_calls": 3
+        },
+        {
+          "cumulative_seconds": 0.000216,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/json/encoder.py",
+          "function": "iterencode",
+          "internal_seconds": 0.000216,
+          "line": 205,
+          "primitive_calls": 3,
+          "total_calls": 3
+        },
+        {
+          "cumulative_seconds": 6.9e-05,
+          "file": "~",
+          "function": "<method 'disable' of '_lsprof.Profiler' objects>",
+          "internal_seconds": 6.9e-05,
+          "line": 0,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 3.3e-05,
+          "file": "~",
+          "function": "<built-in method _hashlib.openssl_sha256>",
+          "internal_seconds": 3.3e-05,
+          "line": 0,
+          "primitive_calls": 3,
+          "total_calls": 3
+        },
+        {
+          "cumulative_seconds": 1.5e-05,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_package_utility.py",
+          "function": "_f",
+          "internal_seconds": 1.2e-05,
+          "line": 61,
+          "primitive_calls": 9,
+          "total_calls": 9
+        },
+        {
+          "cumulative_seconds": 1.3e-05,
+          "file": "~",
+          "function": "<built-in method builtins.round>",
+          "internal_seconds": 1.3e-05,
+          "line": 0,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 7e-06,
+          "file": "~",
+          "function": "<method 'sort' of 'list' objects>",
+          "internal_seconds": 4e-06,
+          "line": 0,
+          "primitive_calls": 2,
+          "total_calls": 2
+        },
+        {
+          "cumulative_seconds": 6e-06,
+          "file": "~",
+          "function": "<built-in method builtins.max>",
+          "internal_seconds": 6e-06,
+          "line": 0,
+          "primitive_calls": 2,
+          "total_calls": 2
+        },
+        {
+          "cumulative_seconds": 6e-06,
+          "file": "~",
+          "function": "<built-in method builtins.next>",
+          "internal_seconds": 2e-06,
+          "line": 0,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 5e-06,
+          "file": "~",
+          "function": "<method 'hexdigest' of '_hashlib.HASH' objects>",
+          "internal_seconds": 5e-06,
+          "line": 0,
+          "primitive_calls": 3,
+          "total_calls": 3
+        },
+        {
+          "cumulative_seconds": 5e-06,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_package_utility.py",
+          "function": "<genexpr>",
+          "internal_seconds": 4e-06,
+          "line": 1854,
+          "primitive_calls": 2,
+          "total_calls": 2
+        }
+      ]
+    },
+    "P1_4_MONTE_CARLO": {
+      "category": "MONTE_CARLO",
+      "entrypoints": [
+        {
+          "cumulative_seconds": 29.027408,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_monte_carlo.py",
+          "function": "run_package_monte_carlo",
+          "internal_seconds": 0.005523,
+          "line": 3234,
+          "primitive_calls": 1,
+          "total_calls": 1
+        }
+      ],
+      "note": "cumulative_seconds is inclusive within this stage and must not be summed across nested functions",
+      "profile_path": "artifacts/v12-report/stage-profiles/P1_4_MONTE_CARLO.pstats",
+      "status": "AVAILABLE",
+      "top_functions": [
+        {
+          "cumulative_seconds": 39.875287,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_integrated_report_runner.py",
+          "function": "<lambda>",
+          "internal_seconds": 0.00162,
+          "line": 2793,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 29.027408,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_monte_carlo.py",
+          "function": "run_package_monte_carlo",
+          "internal_seconds": 0.005523,
+          "line": 3234,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 29.012272,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_monte_carlo.py",
+          "function": "run_correlated_monte_carlo",
+          "internal_seconds": 0.001669,
+          "line": 2833,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 20.831653,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/concurrent/futures/process.py",
+          "function": "_chain_from_iterable_of_lists",
+          "internal_seconds": 0.000138,
+          "line": 630,
+          "primitive_calls": 5,
+          "total_calls": 5
+        },
+        {
+          "cumulative_seconds": 20.815484,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_monte_carlo.py",
+          "function": "_simulate_route_arrays",
+          "internal_seconds": 0.000892,
+          "line": 2522,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 20.814587,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_monte_carlo.py",
+          "function": "_simulate_route_arrays_parallel",
+          "internal_seconds": 0.024271,
+          "line": 2409,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 20.75001,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/concurrent/futures/_base.py",
+          "function": "__exit__",
+          "internal_seconds": 8e-06,
+          "line": 646,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 20.750002,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/concurrent/futures/process.py",
+          "function": "shutdown",
+          "internal_seconds": 0.000194,
+          "line": 856,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 20.749711,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/threading.py",
+          "function": "join",
+          "internal_seconds": 3.4e-05,
+          "line": 1117,
+          "primitive_calls": 1,
+          "total_calls": 2
+        },
+        {
+          "cumulative_seconds": 20.749641,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/threading.py",
+          "function": "_wait_for_tstate_lock",
+          "internal_seconds": 0.000115,
+          "line": 1155,
+          "primitive_calls": 1,
+          "total_calls": 2
+        },
+        {
+          "cumulative_seconds": 20.714951,
+          "file": "~",
+          "function": "<method 'acquire' of '_thread.lock' objects>",
+          "internal_seconds": 0.000674,
+          "line": 0,
+          "primitive_calls": 4,
+          "total_calls": 50
+        },
+        {
+          "cumulative_seconds": 20.714724,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/threading.py",
+          "function": "_bootstrap",
+          "internal_seconds": 2.3e-05,
+          "line": 1018,
+          "primitive_calls": 1,
+          "total_calls": 2
+        },
+        {
+          "cumulative_seconds": 20.714697,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/threading.py",
+          "function": "_bootstrap_inner",
+          "internal_seconds": 2.8e-05,
+          "line": 1058,
+          "primitive_calls": 1,
+          "total_calls": 2
+        },
+        {
+          "cumulative_seconds": 20.714581,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/concurrent/futures/process.py",
+          "function": "run",
+          "internal_seconds": 4.9e-05,
+          "line": 339,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 20.714532,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/concurrent/futures/process.py",
+          "function": "join_executor_internals",
+          "internal_seconds": 7e-06,
+          "line": 568,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 20.714523,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/concurrent/futures/process.py",
+          "function": "_join_executor_internals",
+          "internal_seconds": 5e-05,
+          "line": 572,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 20.647528,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/multiprocessing/util.py",
+          "function": "__call__",
+          "internal_seconds": 8.5e-05,
+          "line": 208,
+          "primitive_calls": 6,
+          "total_calls": 6
+        },
+        {
+          "cumulative_seconds": 20.647467,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/multiprocessing/queues.py",
+          "function": "join_thread",
+          "internal_seconds": 1.3e-05,
+          "line": 147,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 20.647317,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/multiprocessing/queues.py",
+          "function": "_finalize_join",
+          "internal_seconds": 3.8e-05,
+          "line": 214,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 20.644212,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/concurrent/futures/process.py",
+          "function": "wait_result_broken_or_wakeup",
+          "internal_seconds": 0.000103,
+          "line": 414,
+          "primitive_calls": 6,
+          "total_calls": 6
+        },
+        {
+          "cumulative_seconds": 20.509666,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/multiprocessing/connection.py",
+          "function": "wait",
+          "internal_seconds": 0.000225,
+          "line": 1122,
+          "primitive_calls": 17,
+          "total_calls": 17
+        },
+        {
+          "cumulative_seconds": 20.508851,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/selectors.py",
+          "function": "select",
+          "internal_seconds": 0.000121,
+          "line": 402,
+          "primitive_calls": 17,
+          "total_calls": 17
+        },
+        {
+          "cumulative_seconds": 20.508698,
+          "file": "~",
+          "function": "<method 'poll' of 'select.poll' objects>",
+          "internal_seconds": 20.508698,
+          "line": 0,
+          "primitive_calls": 17,
+          "total_calls": 17
+        },
+        {
+          "cumulative_seconds": 20.460019,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/concurrent/futures/_base.py",
+          "function": "result_iterator",
+          "internal_seconds": 9e-05,
+          "line": 612,
+          "primitive_calls": 5,
+          "total_calls": 5
+        },
+        {
+          "cumulative_seconds": 14.864398,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/json/__init__.py",
+          "function": "dumps",
+          "internal_seconds": 7.2e-05,
+          "line": 183,
+          "primitive_calls": 13,
+          "total_calls": 13
+        },
+        {
+          "cumulative_seconds": 14.86431,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/json/encoder.py",
+          "function": "encode",
+          "internal_seconds": 6.4e-05,
+          "line": 183,
+          "primitive_calls": 13,
+          "total_calls": 13
+        },
+        {
+          "cumulative_seconds": 14.864218,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/json/encoder.py",
+          "function": "iterencode",
+          "internal_seconds": 14.864218,
+          "line": 205,
+          "primitive_calls": 13,
+          "total_calls": 13
+        },
+        {
+          "cumulative_seconds": 10.715148,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_model_evidence.py",
+          "function": "fingerprint",
+          "internal_seconds": 0.002515,
+          "line": 33,
+          "primitive_calls": 12,
+          "total_calls": 12
+        },
+        {
+          "cumulative_seconds": 10.286682,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_model_evidence.py",
+          "function": "_canon",
+          "internal_seconds": 0.010902,
+          "line": 26,
+          "primitive_calls": 12,
+          "total_calls": 12
+        },
+        {
+          "cumulative_seconds": 5.49481,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_integrated_report_runner.py",
+          "function": "_fingerprint",
+          "internal_seconds": 0.005369,
+          "line": 125,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 5.35145,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_monte_carlo.py",
+          "function": "canonical_package_seed",
+          "internal_seconds": 3.4e-05,
+          "line": 940,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 2.510037,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py",
+          "function": "_ureduce",
+          "internal_seconds": 0.001531,
+          "line": 3827,
+          "primitive_calls": 480,
+          "total_calls": 480
+        },
+        {
+          "cumulative_seconds": 2.38614,
+          "file": "~",
+          "function": "<method 'partition' of 'numpy.ndarray' objects>",
+          "internal_seconds": 2.38614,
+          "line": 0,
+          "primitive_calls": 480,
+          "total_calls": 480
+        },
+        {
+          "cumulative_seconds": 2.336972,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py",
+          "function": "quantile",
+          "internal_seconds": 0.001371,
+          "line": 4267,
+          "primitive_calls": 456,
+          "total_calls": 456
+        },
+        {
+          "cumulative_seconds": 2.332849,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py",
+          "function": "_quantile_unchecked",
+          "internal_seconds": 0.001054,
+          "line": 4512,
+          "primitive_calls": 456,
+          "total_calls": 456
+        },
+        {
+          "cumulative_seconds": 2.330134,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py",
+          "function": "_quantile_ureduce_func",
+          "internal_seconds": 0.001197,
+          "line": 4651,
+          "primitive_calls": 456,
+          "total_calls": 456
+        },
+        {
+          "cumulative_seconds": 2.270833,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py",
+          "function": "_quantile",
+          "internal_seconds": 0.010374,
+          "line": 4726,
+          "primitive_calls": 456,
+          "total_calls": 456
+        },
+        {
+          "cumulative_seconds": 2.164922,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_monte_carlo.py",
+          "function": "_pair_metrics",
+          "internal_seconds": 0.053911,
+          "line": 2645,
+          "primitive_calls": 84,
+          "total_calls": 84
+        },
+        {
+          "cumulative_seconds": 0.679887,
+          "file": "~",
+          "function": "<method 'encode' of 'str' objects>",
+          "internal_seconds": 0.679887,
+          "line": 0,
+          "primitive_calls": 29,
+          "total_calls": 29
+        },
+        {
+          "cumulative_seconds": 0.647212,
+          "file": "~",
+          "function": "<built-in method _hashlib.openssl_sha256>",
+          "internal_seconds": 0.647212,
+          "line": 0,
+          "primitive_calls": 16,
+          "total_calls": 16
+        }
+      ]
+    },
+    "V12_ANALYTICS_FOUNDATION": {
+      "category": "FOUNDATION",
+      "entrypoints": [
+        {
+          "cumulative_seconds": 46.110758,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_analytics_foundation.py",
+          "function": "load_v6_analytics_foundation",
+          "internal_seconds": 0.039555,
+          "line": 346,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 6e-06,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_analytics_foundation.py",
+          "function": "require_match_foundation",
+          "internal_seconds": 6e-06,
+          "line": 693,
+          "primitive_calls": 1,
+          "total_calls": 1
+        }
+      ],
+      "note": "cumulative_seconds is inclusive within this stage and must not be summed across nested functions",
+      "profile_path": "artifacts/v12-report/stage-profiles/V12_ANALYTICS_FOUNDATION.pstats",
+      "status": "AVAILABLE",
+      "top_functions": [
+        {
+          "cumulative_seconds": 46.115132,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/engines/v12_integrated_report_runner.py",
+          "function": "<lambda>",
+          "internal_seconds": 0.004367,
+          "line": 2305,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 46.110758,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_analytics_foundation.py",
+          "function": "load_v6_analytics_foundation",
+          "internal_seconds": 0.039555,
+          "line": 346,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 32.175554,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "build_hierarchical_priors",
+          "internal_seconds": 0.352628,
+          "line": 150,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 31.425002,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "_sufficient",
+          "internal_seconds": 11.8612,
+          "line": 134,
+          "primitive_calls": 8004,
+          "total_calls": 8004
+        },
+        {
+          "cumulative_seconds": 13.602081,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "walk_forward_validate",
+          "internal_seconds": 3.957821,
+          "line": 475,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 8.664607,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "_f",
+          "internal_seconds": 6.613999,
+          "line": 19,
+          "primitive_calls": 25887500,
+          "total_calls": 25887500
+        },
+        {
+          "cumulative_seconds": 6.71512,
+          "file": "~",
+          "function": "<method 'get' of 'dict' objects>",
+          "internal_seconds": 6.71512,
+          "line": 0,
+          "primitive_calls": 40663702,
+          "total_calls": 40663702
+        },
+        {
+          "cumulative_seconds": 5.525584,
+          "file": "~",
+          "function": "<built-in method builtins.max>",
+          "internal_seconds": 5.520602,
+          "line": 0,
+          "primitive_calls": 25917724,
+          "total_calls": 25917724
+        },
+        {
+          "cumulative_seconds": 4.337237,
+          "file": "~",
+          "function": "<built-in method builtins.sum>",
+          "internal_seconds": 0.406846,
+          "line": 0,
+          "primitive_calls": 30565,
+          "total_calls": 30565
+        },
+        {
+          "cumulative_seconds": 3.866519,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "_clamp",
+          "internal_seconds": 1.584195,
+          "line": 34,
+          "primitive_calls": 5719641,
+          "total_calls": 5719641
+        },
+        {
+          "cumulative_seconds": 3.649831,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "_rate90",
+          "internal_seconds": 0.025148,
+          "line": 43,
+          "primitive_calls": 10096,
+          "total_calls": 10096
+        },
+        {
+          "cumulative_seconds": 2.05708,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "_position",
+          "internal_seconds": 1.526598,
+          "line": 38,
+          "primitive_calls": 4096613,
+          "total_calls": 4096613
+        },
+        {
+          "cumulative_seconds": 2.050609,
+          "file": "~",
+          "function": "<built-in method math.isfinite>",
+          "internal_seconds": 2.050609,
+          "line": 0,
+          "primitive_calls": 25887500,
+          "total_calls": 25887500
+        },
+        {
+          "cumulative_seconds": 1.696372,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "<genexpr>",
+          "internal_seconds": 0.756056,
+          "line": 50,
+          "primitive_calls": 1343776,
+          "total_calls": 1343776
+        },
+        {
+          "cumulative_seconds": 1.684933,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "_i",
+          "internal_seconds": 1.684933,
+          "line": 27,
+          "primitive_calls": 9080323,
+          "total_calls": 9080323
+        },
+        {
+          "cumulative_seconds": 1.656544,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "<genexpr>",
+          "internal_seconds": 0.715645,
+          "line": 56,
+          "primitive_calls": 1333036,
+          "total_calls": 1333036
+        },
+        {
+          "cumulative_seconds": 1.164943,
+          "file": "~",
+          "function": "<built-in method builtins.min>",
+          "internal_seconds": 1.164943,
+          "line": 0,
+          "primitive_calls": 5722167,
+          "total_calls": 5722167
+        },
+        {
+          "cumulative_seconds": 0.533006,
+          "file": "~",
+          "function": "<method 'upper' of 'str' objects>",
+          "internal_seconds": 0.533006,
+          "line": 0,
+          "primitive_calls": 4113075,
+          "total_calls": 4113075
+        },
+        {
+          "cumulative_seconds": 0.519776,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "<genexpr>",
+          "internal_seconds": 0.346913,
+          "line": 548,
+          "primitive_calls": 1317625,
+          "total_calls": 1317625
+        },
+        {
+          "cumulative_seconds": 0.100699,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "distribution_selection_matrix",
+          "internal_seconds": 0.037063,
+          "line": 290,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 0.071655,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_analytics_foundation.py",
+          "function": "_select_match_source",
+          "internal_seconds": 1.3e-05,
+          "line": 135,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 0.071642,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_analytics_foundation.py",
+          "function": "_match_source_candidate",
+          "internal_seconds": 0.005372,
+          "line": 79,
+          "primitive_calls": 2,
+          "total_calls": 2
+        },
+        {
+          "cumulative_seconds": 0.05689,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_analytics_foundation.py",
+          "function": "_read_json",
+          "internal_seconds": 4.1e-05,
+          "line": 24,
+          "primitive_calls": 5,
+          "total_calls": 5
+        },
+        {
+          "cumulative_seconds": 0.050499,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/json/__init__.py",
+          "function": "loads",
+          "internal_seconds": 1.7e-05,
+          "line": 299,
+          "primitive_calls": 5,
+          "total_calls": 5
+        },
+        {
+          "cumulative_seconds": 0.050479,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/json/decoder.py",
+          "function": "decode",
+          "internal_seconds": 4.5e-05,
+          "line": 333,
+          "primitive_calls": 5,
+          "total_calls": 5
+        },
+        {
+          "cumulative_seconds": 0.050398,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/json/decoder.py",
+          "function": "raw_decode",
+          "internal_seconds": 0.050398,
+          "line": 344,
+          "primitive_calls": 5,
+          "total_calls": 5
+        },
+        {
+          "cumulative_seconds": 0.0346,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "opponent_adjust_match_rows",
+          "internal_seconds": 0.01513,
+          "line": 72,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 0.031937,
+          "file": "~",
+          "function": "<built-in method builtins.round>",
+          "internal_seconds": 0.031937,
+          "line": 0,
+          "primitive_calls": 38761,
+          "total_calls": 38761
+        },
+        {
+          "cumulative_seconds": 0.029826,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_analytics_foundation.py",
+          "function": "_feature_status",
+          "internal_seconds": 5.9e-05,
+          "line": 55,
+          "primitive_calls": 22,
+          "total_calls": 22
+        },
+        {
+          "cumulative_seconds": 0.025894,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_analytics_foundation.py",
+          "function": "_supplemental_player_evidence",
+          "internal_seconds": 0.005331,
+          "line": 179,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 0.02374,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_analytics_foundation.py",
+          "function": "<genexpr>",
+          "internal_seconds": 0.013749,
+          "line": 61,
+          "primitive_calls": 70224,
+          "total_calls": 70224
+        },
+        {
+          "cumulative_seconds": 0.021384,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "_gamma_interval",
+          "internal_seconds": 0.01219,
+          "line": 120,
+          "primitive_calls": 2668,
+          "total_calls": 2668
+        },
+        {
+          "cumulative_seconds": 0.019512,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "<genexpr>",
+          "internal_seconds": 0.009908,
+          "line": 248,
+          "primitive_calls": 15432,
+          "total_calls": 15432
+        },
+        {
+          "cumulative_seconds": 0.015308,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_analytics_foundation.py",
+          "function": "_row_is_joinable",
+          "internal_seconds": 0.009689,
+          "line": 44,
+          "primitive_calls": 3801,
+          "total_calls": 3801
+        },
+        {
+          "cumulative_seconds": 0.01347,
+          "file": "~",
+          "function": "<method 'append' of 'list' objects>",
+          "internal_seconds": 0.01347,
+          "line": 0,
+          "primitive_calls": 79409,
+          "total_calls": 79409
+        },
+        {
+          "cumulative_seconds": 0.009045,
+          "file": "/home/runner/work/FPL-iphoenk-engine/FPL-iphoenk-engine/app/src/models/v12_stage1_analytics.py",
+          "function": "probabilistic_tactical_states",
+          "internal_seconds": 0.004932,
+          "line": 598,
+          "primitive_calls": 1,
+          "total_calls": 1
+        },
+        {
+          "cumulative_seconds": 0.008851,
+          "file": "~",
+          "function": "<built-in method builtins.isinstance>",
+          "internal_seconds": 0.002537,
+          "line": 0,
+          "primitive_calls": 4655,
+          "total_calls": 13895
+        },
+        {
+          "cumulative_seconds": 0.007362,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/typing.py",
+          "function": "__instancecheck__",
+          "internal_seconds": 0.001422,
+          "line": 1221,
+          "primitive_calls": 4620,
+          "total_calls": 4620
+        },
+        {
+          "cumulative_seconds": 0.006348,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/pathlib.py",
+          "function": "read_text",
+          "internal_seconds": 3.5e-05,
+          "line": 1022,
+          "primitive_calls": 5,
+          "total_calls": 5
+        },
+        {
+          "cumulative_seconds": 0.005939,
+          "file": "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/typing.py",
+          "function": "__subclasscheck__",
+          "internal_seconds": 0.00185,
+          "line": 1492,
+          "primitive_calls": 4620,
+          "total_calls": 4620
+        }
+      ]
+    }
+  },
+  "stage_wall_seconds": {
+    "ALL15_MATERIALIZATION": {
+      "elapsed_seconds": 0.0,
+      "status": "PASS"
+    },
+    "OFFICIAL_FPL_PREDICTOR_FALL20": {
+      "elapsed_seconds": 0.031,
+      "status": "PASS"
+    },
+    "OFFICIAL_FPL_PREDICTOR_RISE20": {
+      "elapsed_seconds": 0.033,
+      "status": "PASS"
+    },
+    "OFFICIAL_ROLE_EVIDENCE": {
+      "elapsed_seconds": 0.003,
+      "status": "PASS"
+    },
+    "OUR15_IDENTITY": {
+      "elapsed_seconds": 0.001,
+      "status": "PASS"
+    },
+    "OUR15_PRICE_RADAR": {
+      "elapsed_seconds": 0.002,
+      "status": "PASS"
+    },
+    "P1_1_P1_3_FULL_UNIVERSE": {
+      "elapsed_seconds": 157.234,
+      "status": "PASS"
+    },
+    "P1_2A_FUNDED_PACKAGE_SEARCH": {
+      "elapsed_seconds": 0.004,
+      "status": "PASS"
+    },
+    "P1_2A_PACKAGE_SEARCH": {
+      "elapsed_seconds": 0.108,
+      "status": "PASS"
+    },
+    "P1_2B_FUNDED_PACKAGE_UTILITY": {
+      "elapsed_seconds": 5.995,
+      "status": "PASS"
+    },
+    "P1_2B_PACKAGE_COMBINE": {
+      "elapsed_seconds": 5.249,
+      "status": "PASS"
+    },
+    "P1_2_MATERIAL_FUNDING_LEGS": {
+      "elapsed_seconds": 0.047,
+      "status": "PASS"
+    },
+    "P1_2_PACKAGE_UTILITY": {
+      "elapsed_seconds": 1224.645,
+      "status": "PASS"
+    },
+    "P1_2_STAGE3_DECISION_BINDING": {
+      "elapsed_seconds": 0.772,
+      "status": "PASS"
+    },
+    "P1_2_STAGE3_DECISION_CLOSURE": {
+      "elapsed_seconds": 0.084,
+      "status": "PASS"
+    },
+    "P1_4_MATERIAL_ROUTE_SELECTION": {
+      "elapsed_seconds": 0.04,
+      "status": "PASS"
+    },
+    "P1_4_MONTE_CARLO": {
+      "elapsed_seconds": 39.88,
+      "status": "PASS"
+    },
+    "P1_4_PACKAGE_BINDING": {
+      "elapsed_seconds": 1.22,
+      "status": "PASS"
+    },
+    "P1_6_TACTICAL_ROLE": {
+      "elapsed_seconds": 1.142,
+      "status": "PASS"
+    },
+    "P1_7_LINEUP": {
+      "elapsed_seconds": 0.496,
+      "status": "PASS"
+    },
+    "P1_8_MINI_LEAGUE_BINDING": {
+      "elapsed_seconds": 0.832,
+      "status": "PASS"
+    },
+    "P1_8_MINI_LEAGUE_OVERLAY": {
+      "elapsed_seconds": 1.548,
+      "status": "PASS"
+    },
+    "P1_8_MINI_LEAGUE_SNAPSHOT": {
+      "elapsed_seconds": 0.003,
+      "status": "PASS"
+    },
+    "PERSONAL_EVIDENCE_RECONCILIATION": {
+      "elapsed_seconds": 0.001,
+      "status": "PASS"
+    },
+    "S16B_POST_MATCH_GW1_NOW": {
+      "elapsed_seconds": 0.302,
+      "status": "PASS"
+    },
+    "TEAM_STRENGTH": {
+      "elapsed_seconds": 0.078,
+      "status": "PASS"
+    },
+    "TRANSFER_FINANCE_CONTEXT": {
+      "elapsed_seconds": 0.0,
+      "status": "PASS"
+    },
+    "V12_ANALYTICS_FOUNDATION": {
+      "elapsed_seconds": 46.116,
+      "status": "PASS"
+    },
+    "V6_OFFICIAL_FACTS": {
+      "elapsed_seconds": 0.159,
+      "status": "PASS"
+    },
+    "V6_REPORT_PREFETCH_BINDING": {
+      "elapsed_seconds": 0.0,
+      "status": "PASS"
+    },
+    "WATCHLIST20": {
+      "elapsed_seconds": 0.068,
+      "status": "PASS"
+    }
+  }
+}

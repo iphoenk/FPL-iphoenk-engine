@@ -1,0 +1,36 @@
+# # Evidence metadata
+# source: run_id=35868441017 job_id=107205941667 path=E_env/importtime.txt command=python -X importtime import src.engines.v12_integrated_report_runner
+# commit_sha: 03abbdd9e4a1f662d4bb92f588808247d8790892
+# timestamp_utc: 2026-09-23T13:38:50Z
+# status: AVAILABLE
+
+import time:     17289 |     689937 | src.engines.v12_integrated_report_runner
+import time:      7873 |     242117 |   src.engines.v12_price_delivery
+import time:     10237 |     234641 |   src.engines.v12_mini_league_overlay
+import time:     18057 |     234244 |     src.engines.v12_report_orchestration
+import time:     26084 |     224404 |     src.engines.v12_monte_carlo
+import time:    180435 |     208696 |       zoneinfo
+import time:     14321 |     139163 |       concurrent.futures.process
+import time:     16285 |      76977 |   src.engines.v12_lineup_optimizer
+import time:     24722 |      76862 |         multiprocessing
+import time:     12546 |      52141 |           multiprocessing.context
+import time:       842 |      40988 |     numpy
+import time:     11085 |      38379 |       concurrent.futures
+import time:     16373 |      34288 |         multiprocessing.connection
+import time:     15304 |      27292 |   src.runtime_v6.domains.report_plane.report_qa
+import time:     24726 |      26950 |             multiprocessing.reduction
+import time:       247 |      26745 |       numpy.__config__
+import time:        25 |      26499 |         numpy._core._multiarray_umath
+import time:       458 |      26474 |           numpy._core
+import time:     11486 |      22711 |   src.engines.v12_package_utility
+import time:     13126 |      18324 |   src.engines.v12_contextual_dynamics
+import time:     15709 |      15709 |         concurrent
+import time:     13017 |      13017 |         multiprocessing.queues
+import time:       380 |      12712 |       numpy.lib
+import time:     12138 |      12645 |             multiprocessing.process
+import time:      1266 |      11982 |             numpy._core.multiarray
+import time:      8323 |      11585 |         concurrent.futures._base
+import time:     11225 |      11225 |     src.engines.v12_lineup_batch
+import time:     11210 |      11210 |         _zoneinfo
+import time:     10560 |      10560 |   src.engines.v12_tactical_role
+import time:      9904 |       9904 |         zoneinfo._common

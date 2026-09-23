@@ -1,0 +1,418 @@
+[
+  {
+    "path": "00_README.md",
+    "sha256": "4e7ab5f573b24e098fa335abb0d21785aac5e5db4cd7c8d3b8b94ac3c579df7c",
+    "source": "audit assembly from GitHub source, Actions runs, production artifacts, and compliant workflow_dispatch audit benchmark",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:38:53Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "A_snapshot/snapshot.json",
+    "sha256": "9d5a3c7322c35fa937ccdc4fb54a8040caefc53534a1028d8fb8ff89de8744a3",
+    "source": "GitHub REST branches/main; pulls/668; pulls/668/commits",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:38:47Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "B_code/code_index.md",
+    "sha256": "47c30b4e746f4d3f870c33643cec0927cdc6f6edf5d38f9cf5b30dc52c94571b",
+    "source": "GitHub source at PR #668 head",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:47Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "B_code/entrypoint.md",
+    "sha256": "c3a09269316abe9eaa6a4cabf2b393a3c8716437ba745175f52887e2bb0b1ed6",
+    "source": ".github/workflows/v12-integrated-report-runner.yml at main; src/engines/v12_integrated_report_runner.py at PR #668 head",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:47Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "B_code/multiprocessing.md",
+    "sha256": "1eafe47242f5560d96fb4b53526131eb0bbdc219aa3e51c7df7c37e10437dd60",
+    "source": "GitHub source at PR #668 head",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:47Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "B_code/samples/mc_input.json",
+    "sha256": "272e380bc056a674e2749e84b3c15463dc952d844ec8dfaa30f9785123d2c6b1",
+    "source": "run_id=35748919665 artifact=v12-report-DEEP-35748919665/report_bundle.json S14.material_route_selection + S14.monte_carlo",
+    "commit_sha": "967f74b82d0da2027515af40dbeb7d6a57ec9586",
+    "timestamp_utc": "2026-09-22T16:12:41Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "B_code/samples/mc_output.json",
+    "sha256": "d4b1305ad086d2e515ee34f18a4d7b8b6560986f3f18d703729a05a6835dac45",
+    "source": "run_id=35748919665 artifact=v12-report-DEEP-35748919665/report_bundle.json S14.monte_carlo",
+    "commit_sha": "967f74b82d0da2027515af40dbeb7d6a57ec9586",
+    "timestamp_utc": "2026-09-22T16:12:41Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "B_code/samples/route_row.json",
+    "sha256": "58fe808fdac38c53b5130246b0c4294cc82047dc421586321b3db9bbf016bd11",
+    "source": "run_id=35748919665 artifact=v12-report-DEEP-35748919665/report_bundle.json S14.material_route_selection.candidate_evidence[0]",
+    "commit_sha": "967f74b82d0da2027515af40dbeb7d6a57ec9586",
+    "timestamp_utc": "2026-09-22T16:12:41Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "B_code/samples/stage2_surface.json",
+    "sha256": "87de5fae5de960c1f183de495a1488f940b3572ef0e7fcf1b9521d9f0a51120c",
+    "source": "run_id=35748919665 artifact=v12-report-DEEP-35748919665/report_bundle.json S16.rows[0]",
+    "commit_sha": "967f74b82d0da2027515af40dbeb7d6a57ec9586",
+    "timestamp_utc": "2026-09-22T16:12:41Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "C_routes/route_universe.json",
+    "sha256": "c24a5867b9fa53a311ef4c35b7f91fdd6cc536a909fd5b579dc2e5070a6834bd",
+    "source": "run_id=35748919665 artifact=v12-report-DEEP-35748919665/report_bundle.json S14",
+    "commit_sha": "967f74b82d0da2027515af40dbeb7d6a57ec9586",
+    "timestamp_utc": "2026-09-22T16:12:41Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "D_e2e/chatgpt_consumption.md",
+    "sha256": "ac243a40ffd3326a89d2e7ce2e1cb87ceb683f930cea039c1e591c38044bd9af",
+    "source": "GitHub Actions, issue #431, repository telemetry inspected",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:07:57Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "D_e2e/issue431_protocol.md",
+    "sha256": "4ae7e86f11e81eecfd691e10ad2b0f16d303a69080433f292b1d235c5650c176",
+    "source": "Issue #431 comments + current V12 workflow + run 35858764611 job 107173580175",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:07:57Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "D_e2e/timeline_run_35727331458.json",
+    "sha256": "ec0c914607f9ec5c653221aadb48d9cf9dc71dc1a2479a1e64bd0532dd7f21e6",
+    "source": "run_id=35727331458; jobs API; issue #431 command/completion comments",
+    "commit_sha": "67ba71a4ee5e3ade5416130915bd2b7433fe6ec0",
+    "timestamp_utc": "2026-09-22T13:38:33Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "D_e2e/timeline_run_35741710555.json",
+    "sha256": "707a6b70d64707b9194ab3d01cacedf3756399d0f2f23a4a0b444608c97d059f",
+    "source": "run_id=35741710555; jobs API; issue #431 command/completion comments",
+    "commit_sha": "67ba71a4ee5e3ade5416130915bd2b7433fe6ec0",
+    "timestamp_utc": "2026-09-22T15:04:11Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "D_e2e/timeline_run_35748919665.json",
+    "sha256": "1104fa3e9f5d10f10d20f270c59e0470f2915af476216d13cc5b7a402238b2a6",
+    "source": "run_id=35748919665; jobs API; issue #431 command/completion comments",
+    "commit_sha": "967f74b82d0da2027515af40dbeb7d6a57ec9586",
+    "timestamp_utc": "2026-09-22T16:12:47Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "D_e2e/workflows_index.md",
+    "sha256": "f447f02794ccfe06f8e5125de7c7d8254c322fba9d7c7f85371c93f40cfb75b7",
+    "source": "GitHub source at current production main + Actions run 35860891234",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:07:57Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "E_env/importtime.txt",
+    "sha256": "b525dea840b25023bfda2442977a57595cccc3dede167367ce6a8c6e38c71cbb",
+    "source": "run_id=35868441017 job_id=107205941667 path=E_env/importtime.txt command=python -X importtime import src.engines.v12_integrated_report_runner",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:50Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "E_env/lscpu.txt",
+    "sha256": "de029ac2cdc5ab07d5c18763ede7aef1512aa6af86a3826c98f44fe41ea865f7",
+    "source": "run_id=35868441017 job_id=107205941667 path=E_env/lscpu.txt",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:49Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "E_env/numpy_config.txt",
+    "sha256": "d51ad002b449eabc087a0df85c3e2bddc924c2b1589596d05d3a946ea1adb7cf",
+    "source": "run_id=35868441017 job_id=107205941667 path=E_env/numpy_config.txt",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:49Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "E_env/python_env.txt",
+    "sha256": "678c3b23a1097d17a51b8b4b8791f5c0cf5c2d361d80162b363a4fa8e545a79f",
+    "source": "run_id=35868441017 job_id=107205941667 path=E_env/python_env.txt",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:49Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "E_env/thread_env.txt",
+    "sha256": "4a33ffd5210603b6eb13a6158b824dd00581bde96c748d64a8a42ae201005593",
+    "source": "run_id=35868441017 job_id=107205941667 path=E_env/thread_env.txt",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:49Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "F_perf/bench_668_batch_run1.log",
+    "sha256": "6180e3cb7c13bfe18e92a3aee562381c1d3401a5836b859312bd0e18f3e76dac",
+    "source": "run_id=35868441017 job_id=107205941667 runner_label=ubuntu-latest workflow_dispatch_ref=audit/evidence-2026-09-23 path=F_perf/bench_668_batch_run1.log",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:53Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "F_perf/bench_668_batch_run2.log",
+    "sha256": "ce5a44d7178a1fd292c6bdfd9550947e634e1995028ac860c8f2f8783a88a4fb",
+    "source": "run_id=35868441017 job_id=107205941667 runner_label=ubuntu-latest workflow_dispatch_ref=audit/evidence-2026-09-23 path=F_perf/bench_668_batch_run2.log",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:53Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "F_perf/bench_668_batch_run3.log",
+    "sha256": "af576a9504296818eb47b9ae25411a84c3fef11d6313dcd7726ee2f5c8bb5f70",
+    "source": "run_id=35868441017 job_id=107205941667 runner_label=ubuntu-latest workflow_dispatch_ref=audit/evidence-2026-09-23 path=F_perf/bench_668_batch_run3.log",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:53Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "F_perf/bench_668_batch_run4.log",
+    "sha256": "916ea750463e8532147cc79d25907ab4aa09b4fa08093bd01ba97f28df6ec6df",
+    "source": "run_id=35868441017 job_id=107205941667 runner_label=ubuntu-latest workflow_dispatch_ref=audit/evidence-2026-09-23 path=F_perf/bench_668_batch_run4.log",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:53Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "F_perf/bench_668_batch_run5.log",
+    "sha256": "e16d03aa459ce9b2262af3ba87d7997865c121f2b6847bea62f36f237103a4a1",
+    "source": "run_id=35868441017 job_id=107205941667 runner_label=ubuntu-latest workflow_dispatch_ref=audit/evidence-2026-09-23 path=F_perf/bench_668_batch_run5.log",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:53Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "F_perf/bench_668_scalar_run1.log",
+    "sha256": "c0770b42a68dcecce5ff987d67d84537b3712c7e60d78d02e86ad84c6254c5a6",
+    "source": "run_id=35868441017 job_id=107205941667 runner_label=ubuntu-latest workflow_dispatch_ref=audit/evidence-2026-09-23 path=F_perf/bench_668_scalar_run1.log",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:53Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "F_perf/bench_668_scalar_run2.log",
+    "sha256": "8bcb8cfee427aadb63e905a111107404ac02fa28f58e0d292ce185ea1da062af",
+    "source": "run_id=35868441017 job_id=107205941667 runner_label=ubuntu-latest workflow_dispatch_ref=audit/evidence-2026-09-23 path=F_perf/bench_668_scalar_run2.log",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:53Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "F_perf/bench_668_scalar_run3.log",
+    "sha256": "43766dcb3620412c38d158f7b098a5ac21a49fe4a19a7183467c7d12e7610de9",
+    "source": "run_id=35868441017 job_id=107205941667 runner_label=ubuntu-latest workflow_dispatch_ref=audit/evidence-2026-09-23 path=F_perf/bench_668_scalar_run3.log",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:53Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "F_perf/bench_668_scalar_run4.log",
+    "sha256": "3a176c89e2195871b96d656490f851888136ed0f3d1f68554bd0ece0035de0a3",
+    "source": "run_id=35868441017 job_id=107205941667 runner_label=ubuntu-latest workflow_dispatch_ref=audit/evidence-2026-09-23 path=F_perf/bench_668_scalar_run4.log",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:53Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "F_perf/bench_668_scalar_run5.log",
+    "sha256": "85b0d09475f97ba928598b4850805f82de146e75fa3e19a89c3022eaaeb77340",
+    "source": "run_id=35868441017 job_id=107205941667 runner_label=ubuntu-latest workflow_dispatch_ref=audit/evidence-2026-09-23 path=F_perf/bench_668_scalar_run5.log",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:53Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "F_perf/bench_668_summary.json",
+    "sha256": "481fb74227973071278bf74de190b49a86782d70b2d77c2e0eeba605e9ae8791",
+    "source": "run_id=35868441017 job_id=107205941667 runner_label=ubuntu-latest workflow_dispatch_ref=audit/evidence-2026-09-23 path=F_perf/bench_668_summary.json",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:53Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "F_perf/cold_profile_19_15/profile.pstats",
+    "sha256": "69915a52b6847f716db6cdb65cf6434a9b3717c5a1be1deb91a0dec8d642ed10",
+    "source": "run_id=35858942122 artifact_id=10750288439 path=profile.pstats",
+    "commit_sha": "e385826d6f3e0c6f02da1b300cd25ec6c7cedf20",
+    "timestamp_utc": "2026-09-23T12:46:29Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "F_perf/cold_profile_19_15/profile_summary.json",
+    "sha256": "40ba5ca0715f2000b834eee883b32b974ee645dd736283328045c88d4bcd88aa",
+    "source": "run_id=35858942122 artifact_id=10750288439 path=profile_summary.json",
+    "commit_sha": "e385826d6f3e0c6f02da1b300cd25ec6c7cedf20",
+    "timestamp_utc": "2026-09-23T12:46:29Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "F_perf/cold_profile_19_15/profile_summary.md",
+    "sha256": "2c12a4f32253448ef06b4092b041127022ff782ba81d234fda63cce7a314584e",
+    "source": "run_id=35858942122 artifact_id=10750288439 path=profile_summary.md",
+    "commit_sha": "e385826d6f3e0c6f02da1b300cd25ec6c7cedf20",
+    "timestamp_utc": "2026-09-23T12:46:29Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "F_perf/cold_profile_19_15/status.json",
+    "sha256": "0b4f729d4167f7f731ebf24ddacd9c9722e6b0c22397b18be2bba15f3a0f58c4",
+    "source": "run_id=35858942122 artifact_id=10750288439",
+    "commit_sha": "e385826d6f3e0c6f02da1b300cd25ec6c7cedf20",
+    "timestamp_utc": "2026-09-23T12:46:37Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "F_perf/cold_profile_19_40/profile.pstats.NOT_AVAILABLE.md",
+    "sha256": "439fd9c5c10238f4c4c351fe141d2773dbbe6d70a2390787e16c3cc6f43b2fdc",
+    "source": "run_id=35861004775 artifact_id=10751578247 path=profile.pstats",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:20:12Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "F_perf/cold_profile_19_40/profile_summary.json",
+    "sha256": "58be201090eeb0283187e08f2ca0658b629af064ff348ee566a0ac7a6fb1c3e5",
+    "source": "run_id=35861004775 artifact_id=10751578247 path=profile_summary.json",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:20:12Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "F_perf/cold_profile_19_40/profile_summary.md",
+    "sha256": "6a208f8b55d73c3c22ecc3428f24ccfc10616d4820c8777ac42b2c431df8947e",
+    "source": "run_id=35861004775 artifact_id=10751578247 path=profile_summary.md",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:20:12Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "F_perf/cold_profile_19_40/stage-profiles/P1_1_P1_3_FULL_UNIVERSE.pstats",
+    "sha256": "a4af90004b10813fb0815b96005ec39ca6cca206bf4fa88794dd0e3ad6d0befa",
+    "source": "run_id=35861004775 artifact_id=10751578247 path=stage-profiles/P1_1_P1_3_FULL_UNIVERSE.pstats",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:20:12Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "F_perf/cold_profile_19_40/stage-profiles/P1_2B_PACKAGE_COMBINE.pstats",
+    "sha256": "9a339f6c43b1fcdf3387be534aa17fd179ef46e8ee18d0826d555089cf484e17",
+    "source": "run_id=35861004775 artifact_id=10751578247 path=stage-profiles/P1_2B_PACKAGE_COMBINE.pstats",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:20:12Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "F_perf/cold_profile_19_40/stage-profiles/P1_4_MONTE_CARLO.pstats",
+    "sha256": "bd57ba6f3e33c974a9e892c48bbb18a8e479f2b5c44dc4d68e7b601b08586d7b",
+    "source": "run_id=35861004775 artifact_id=10751578247 path=stage-profiles/P1_4_MONTE_CARLO.pstats",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:20:12Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "F_perf/cold_profile_19_40/stage-profiles/V12_ANALYTICS_FOUNDATION.pstats",
+    "sha256": "90a6b6c4f6824d726b2fbb689b4ae23e76dd0c0c9efd14daaa3be58c50297c85",
+    "source": "run_id=35861004775 artifact_id=10751578247 path=stage-profiles/V12_ANALYTICS_FOUNDATION.pstats",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:20:12Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "F_perf/cold_profile_19_40/status.json",
+    "sha256": "bc41b5652be5ac6067f0f28de5717595b88fb11e503ed81f5047d80d83574318",
+    "source": "Actions run API for run_id=35860953431 and run_id=35861004775",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:38:53Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "F_perf/controlled_cold_deep_raw.json",
+    "sha256": "6c4165686da83c185c3f567757489eb572246f9f3b039784afab831606c8bd44",
+    "source": "repository code search + inspected production/diagnostic Actions artifacts",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:07:57Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "F_perf/existing_noncompliant_diagnostics_35862913757.json",
+    "sha256": "e7f38903eaa90431e511a71f62eda92620223e357185708e1806efde198907f6",
+    "source": "run_id=35862913757 job_id=107187268848 artifact_id=10751027740 benchmark_diagnostics.json",
+    "commit_sha": "66afdae4b5ae042b32b597c0910fc7ca4fe13727",
+    "timestamp_utc": "2026-09-23T12:51:33Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "F_perf/pstats/README.md",
+    "sha256": "ea42caf7fdb9949cfb5046ca81177ba9df54b4f64f03d5ccdcf2e90948eb588a",
+    "source": "run_id=35868441017 job_id=107205941667 runner_label=ubuntu-latest workflow_dispatch_ref=audit/evidence-2026-09-23 path=F_perf/pstats/README.md",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:53Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "F_perf/run_35858764611_failed_step.log",
+    "sha256": "39c01efc4e8e7855020457faa8a97c44cd471e4df4004e5685731eaa2fd8e5e5",
+    "source": "run_id=35858764611 job_id=107173580175 step=\"Execute occurrence-bound integrated report\" artifact_id=10747734725 path=profile_run.log",
+    "commit_sha": "e385826d6f3e0c6f02da1b300cd25ec6c7cedf20",
+    "timestamp_utc": "2026-09-23T12:10:11Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "G_tests/golden_tests.md",
+    "sha256": "4b34c155bbdddc3f54e3a8d90efd3ba297bcf8136bcaaa579581577307007fc8",
+    "source": "tests at PR #668 head",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:47Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "H_cache_mc/cache_fingerprint.md",
+    "sha256": "9b74561f9b88ce0d00bbe07c3ed0a0e0449d2b9b9637acc6e59e5520df6e3944",
+    "source": "cache modules at PR #668 head + inspected Actions artifacts",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:47Z",
+    "status": "NOT AVAILABLE"
+  },
+  {
+    "path": "H_cache_mc/mc_rng.md",
+    "sha256": "967bf7cd82f9894f72c4e09f3bdc287b9290c3f4c2bb77a54730d01e0bbbd9d8",
+    "source": "src/engines/v12_monte_carlo.py at PR #668 head + run 35748919665 production artifact",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:38:47Z",
+    "status": "AVAILABLE"
+  },
+  {
+    "path": "Z_secret_scan/secret_scan.md",
+    "sha256": "0b1b912ec533146e67e4a83c8ca1eab667318f068bce5982bc5df494d59af665",
+    "source": "run_id=35868441017 job_id=107205941667 complete bundle scan plus final delta rescan",
+    "commit_sha": "03abbdd9e4a1f662d4bb92f588808247d8790892",
+    "timestamp_utc": "2026-09-23T13:43:10Z",
+    "status": "AVAILABLE"
+  }
+]

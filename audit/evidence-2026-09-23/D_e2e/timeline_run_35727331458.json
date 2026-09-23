@@ -1,0 +1,135 @@
+{
+  "_evidence_metadata": {
+    "source": "run_id=35727331458; jobs API; issue #431 command/completion comments",
+    "commit_sha": "67ba71a4ee5e3ade5416130915bd2b7433fe6ec0",
+    "timestamp_utc": "2026-09-22T13:38:33Z",
+    "status": "AVAILABLE"
+  },
+  "run_id": 35727331458,
+  "sha": "67ba71a4ee5e3ade5416130915bd2b7433fe6ec0",
+  "updated": "2026-09-22T13:38:33Z",
+  "report_slot": "2026-09-22T19:25:00+07:00",
+  "command_comment": {
+    "id": 5776491392,
+    "posted_at": "2026-09-22T12:27:53Z"
+  },
+  "queued_at": "2026-09-22T12:27:56Z",
+  "run_started_at": "2026-09-22T12:27:56Z",
+  "jobs": [
+    {
+      "job_id": 106756233581,
+      "name": "parse",
+      "started_at": "2026-09-22T13:03:31Z",
+      "completed_at": "2026-09-22T13:03:35Z",
+      "steps": [
+        [
+          "Set up job",
+          "2026-09-22T13:03:32Z",
+          "2026-09-22T13:03:32Z"
+        ],
+        [
+          "Run python - <<'PY'",
+          "2026-09-22T13:03:32Z",
+          "2026-09-22T13:03:32Z"
+        ],
+        [
+          "Complete job",
+          "2026-09-22T13:03:32Z",
+          "2026-09-22T13:03:33Z"
+        ]
+      ]
+    },
+    {
+      "job_id": 106756280462,
+      "name": "run",
+      "started_at": "2026-09-22T13:03:38Z",
+      "completed_at": "2026-09-22T13:38:32Z",
+      "steps": [
+        [
+          "Set up job",
+          "2026-09-22T13:03:39Z",
+          "2026-09-22T13:03:40Z"
+        ],
+        [
+          "Checkout current production main",
+          "2026-09-22T13:03:40Z",
+          "2026-09-22T13:03:42Z"
+        ],
+        [
+          "Checkout factual runtime-data-v6",
+          "2026-09-22T13:03:42Z",
+          "2026-09-22T13:03:45Z"
+        ],
+        [
+          "Setup Python",
+          "2026-09-22T13:03:45Z",
+          "2026-09-22T13:03:45Z"
+        ],
+        [
+          "Install runtime dependencies",
+          "2026-09-22T13:03:45Z",
+          "2026-09-22T13:03:55Z"
+        ],
+        [
+          "Enforce active V12-only execution boundary",
+          "2026-09-22T13:03:55Z",
+          "2026-09-22T13:03:55Z"
+        ],
+        [
+          "Execute occurrence-bound integrated report",
+          "2026-09-22T13:03:55Z",
+          "2026-09-22T13:38:26Z"
+        ],
+        [
+          "Read integrated runner proof",
+          "2026-09-22T13:38:26Z",
+          "2026-09-22T13:38:26Z"
+        ],
+        [
+          "Enforce Stage3 natural integrated acceptance",
+          "2026-09-22T13:38:26Z",
+          "2026-09-22T13:38:27Z"
+        ],
+        [
+          "Upload immutable occurrence bundle",
+          "2026-09-22T13:38:27Z",
+          "2026-09-22T13:38:28Z"
+        ],
+        [
+          "Publish compact completion proof to issue 431",
+          "2026-09-22T13:38:28Z",
+          "2026-09-22T13:38:29Z"
+        ],
+        [
+          "Post Setup Python",
+          "2026-09-22T13:38:29Z",
+          "2026-09-22T13:38:30Z"
+        ],
+        [
+          "Post Checkout factual runtime-data-v6",
+          "2026-09-22T13:38:30Z",
+          "2026-09-22T13:38:30Z"
+        ],
+        [
+          "Post Checkout current production main",
+          "2026-09-22T13:38:30Z",
+          "2026-09-22T13:38:30Z"
+        ],
+        [
+          "Complete job",
+          "2026-09-22T13:38:30Z",
+          "2026-09-22T13:38:30Z"
+        ]
+      ]
+    }
+  ],
+  "publish": {
+    "artifact_step_started_at": "2026-09-22T13:38:27Z",
+    "artifact_step_completed_at": "2026-09-22T13:38:28Z"
+  },
+  "completion_comment": {
+    "id": 5777553281,
+    "posted_at": "2026-09-22T13:38:29Z",
+    "status": "PASS"
+  }
+}

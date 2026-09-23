@@ -1,0 +1,19 @@
+{
+  "_evidence_metadata": {
+    "source": "run_id=35748919665 artifact=v12-report-DEEP-35748919665/report_bundle.json S16.rows[0]",
+    "commit_sha": "967f74b82d0da2027515af40dbeb7d6a57ec9586",
+    "timestamp_utc": "2026-09-22T16:12:41Z",
+    "status": "AVAILABLE"
+  },
+  "record": {
+    "element_id": 572,
+    "opponent": 9,
+    "recommended_or_locked_role": "UNLOCKED",
+    "p_available": 1,
+    "p_start": 0.8299,
+    "p_cameo": 0.0796,
+    "p_dnp": 0.0905,
+    "xmins": 71.4,
+    "tactical_role": 54.198476
+  }
+}

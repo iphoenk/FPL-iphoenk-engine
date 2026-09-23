@@ -1,0 +1,20 @@
+{
+  "_evidence_metadata": {
+    "source": "run_id=35748919665 artifact=v12-report-DEEP-35748919665/report_bundle.json S14.material_route_selection.candidate_evidence[0]",
+    "commit_sha": "967f74b82d0da2027515af40dbeb7d6a57ec9586",
+    "timestamp_utc": "2026-09-22T16:12:41Z",
+    "status": "AVAILABLE"
+  },
+  "record": {
+    "route_id": "1:426->52",
+    "football_horizon_deltas": {
+      "1GW": -2.295493,
+      "3GW": -5.977297,
+      "5GW": -11.101118
+    },
+    "max_absolute_horizon_delta": 11.101118,
+    "structural_lineup_change": true,
+    "transfer_count": 1,
+    "economics_status": "PARTIAL"
+  }
+}

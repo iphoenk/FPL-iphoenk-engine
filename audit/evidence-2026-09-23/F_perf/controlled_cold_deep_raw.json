@@ -1,0 +1,10 @@
+{
+  "_evidence_metadata": {
+    "source": "repository code search + inspected production/diagnostic Actions artifacts",
+    "commit_sha": "918da08b892320592b9d51684e0130933a6fbb7a",
+    "timestamp_utc": "2026-09-23T13:07:57Z",
+    "status": "NOT AVAILABLE"
+  },
+  "status": "NOT AVAILABLE",
+  "reason": "No machine-readable source was found containing the referenced controlled cold DEEP table together with the exact definition and units of `per unique squad p50/p95`. No metric definition or unit was inferred."
+}

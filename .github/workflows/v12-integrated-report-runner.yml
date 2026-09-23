@@ -82,6 +82,10 @@ jobs:
     needs: parse
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # issue_comment is cache-read-only by default. This job is owner-gated above
+    # and checks out only production main/runtime-data, so explicit cache write
+    # cannot be populated from commenter-controlled code.
+    cache-mode: write
     steps:
       - name: Checkout current production main
         uses: actions/checkout@v4

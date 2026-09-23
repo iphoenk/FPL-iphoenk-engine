@@ -73,7 +73,7 @@
     "funded_material_direct_leg_limit": 32,
     "funded_materialization_strategy": "FULL_DIRECT_P1_7_THEN_MATERIAL_FUNDED_PAIR_P1_7",
     "global_two_transfer_bruteforce_forbidden": true,
-    "cross_route_lineup_batch_size": 96,
+    "cross_route_lineup_batch_size": 512,
     "route_family_core_reuse": true,
     "shared_player_surface_catalog": true,
     "static_legal_xi_templates": true,

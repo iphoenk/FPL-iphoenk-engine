@@ -1933,6 +1933,14 @@ def test_p17_rounding_boundary_is_non_vacuous_and_matches_scalar_bench():
             [[row["xpts_mean"] for row in surfaces]],
             dtype=np.float64,
         ),
+        "shortfall": np.asarray(
+            [[row["expected_shortfall"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "excess": np.asarray(
+            [[row["expected_excess_ge_8"] for row in surfaces]],
+            dtype=np.float64,
+        ),
         "conditioned_mean": np.asarray(
             [[
                 row["appearance_conditioned"]["expected_points"]

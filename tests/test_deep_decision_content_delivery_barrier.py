@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 from src.engines.v12_deep_delivery import (
     select_personal_evidence,
     validate_deep_decision_content_delivery,
 )
+from src.engines.v12_integrated_report_runner import _fingerprint
 from src.engines.v12_package_utility import (
     select_stage3_material_mc_routes,
 )
@@ -13,6 +15,13 @@ from src.engines.v12_report_orchestration import (
     build_watchlist20,
     render_deep_text,
 )
+
+
+def test_stage_fingerprint_canonicalizes_aware_datetime():
+    observed = datetime(2026, 9, 23, 4, 36, 9, tzinfo=timezone.utc)
+    assert _fingerprint({"timestamp": observed}) == _fingerprint(
+        {"timestamp": observed.isoformat()}
+    )
 
 
 def _section(section_id: str, label: str, content: dict, state: str = "COMPLETE"):

@@ -17,6 +17,11 @@ on:
         required: false
         default: ""
         type: string
+      profile_mode:
+        description: Performance profiling mode (OFF or COLD)
+        required: false
+        default: "OFF"
+        type: string
   issue_comment:
     types: [created]
 
@@ -44,6 +49,7 @@ jobs:
       report_mode: ${{ steps.args.outputs.report_mode }}
       report_slot: ${{ steps.args.outputs.report_slot }}
       checkpoint_time: ${{ steps.args.outputs.checkpoint_time }}
+      profile_mode: ${{ steps.args.outputs.profile_mode }}
     steps:
       - id: args
         env:
@@ -51,6 +57,7 @@ jobs:
           INPUT_MODE: ${{ inputs.report_mode }}
           INPUT_SLOT: ${{ inputs.report_slot }}
           INPUT_CHECKPOINT: ${{ inputs.checkpoint_time }}
+          INPUT_PROFILE_MODE: ${{ inputs.profile_mode }}
           COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
           python - <<'PY'
@@ -61,6 +68,7 @@ jobs:
               mode = os.environ.get("INPUT_MODE") or "DEEP"
               slot = os.environ.get("INPUT_SLOT") or ""
               checkpoint = os.environ.get("INPUT_CHECKPOINT") or ""
+              profile_mode = os.environ.get("INPUT_PROFILE_MODE") or "OFF"
           else:
               body = os.environ.get("COMMENT_BODY") or ""
               def arg(name, default=""):
@@ -69,6 +77,10 @@ jobs:
               mode = arg("report_mode", "DEEP")
               slot = arg("report_slot")
               checkpoint = arg("checkpoint_time")
+              profile_mode = arg("profile_mode", "OFF")
+          profile_mode = str(profile_mode or "OFF").upper()
+          if profile_mode not in {"OFF", "COLD"}:
+              raise SystemExit("profile_mode must be OFF or COLD")
           if not slot:
               raise SystemExit("report_slot is required")
           out = Path(os.environ["GITHUB_OUTPUT"])
@@ -76,6 +88,7 @@ jobs:
               fh.write(f"report_mode={mode.upper()}\n")
               fh.write(f"report_slot={slot}\n")
               fh.write(f"checkpoint_time={checkpoint}\n")
+              fh.write(f"profile_mode={profile_mode}\n")
           PY
 
   run:
@@ -131,6 +144,7 @@ jobs:
           PY
 
       - name: Restore deterministic Stage-2 derived projection cache
+        if: needs.parse.outputs.profile_mode != 'COLD'
         id: stage2-cache-restore
         uses: actions/cache/restore@v4
         with:
@@ -144,6 +158,7 @@ jobs:
         run: mkdir -p .cache/v12-stage2
 
       - name: Restore exact P1.7 decision-core cache
+        if: needs.parse.outputs.profile_mode != 'COLD'
         id: p17-cache-restore
         uses: actions/cache/restore@v4
         with:
@@ -157,6 +172,7 @@ jobs:
         run: mkdir -p .cache/v12-p17
 
       - name: Restore deterministic MC simulation-summary cache
+        if: needs.parse.outputs.profile_mode != 'COLD'
         id: mc-cache-restore
         uses: actions/cache/restore@v4
         with:
@@ -176,6 +192,7 @@ jobs:
           REPORT_MODE: ${{ needs.parse.outputs.report_mode }}
           REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
           CHECKPOINT_TIME: ${{ needs.parse.outputs.checkpoint_time }}
+          PROFILE_MODE: ${{ needs.parse.outputs.profile_mode }}
           V12_STAGE2_DERIVED_CACHE_DIR: .cache/v12-stage2
           V12_P17_DECISION_CACHE_DIR: .cache/v12-p17
           V12_MC_SIM_CACHE_DIR: .cache/v12-mc
@@ -189,10 +206,27 @@ jobs:
           if [ -n "$CHECKPOINT_TIME" ]; then
             args+=(--checkpoint-time "$CHECKPOINT_TIME")
           fi
-          python -m src.engines.v12_integrated_report_runner "${args[@]}"
+          if [ "$PROFILE_MODE" = "COLD" ]; then
+            rm -rf .cache/v12-stage2 .cache/v12-p17 .cache/v12-mc
+            mkdir -p .cache/v12-stage2 .cache/v12-p17 .cache/v12-mc artifacts/v12-report
+            set +e
+            python -m cProfile -o artifacts/v12-report/profile.pstats \
+              -m src.engines.v12_integrated_report_runner "${args[@]}" \
+              2>&1 | tee artifacts/v12-report/profile_run.log
+            runner_status=${PIPESTATUS[0]}
+            set -e
+            python -m src.engines.v12_profile_summary \
+              --pstats artifacts/v12-report/profile.pstats \
+              --log artifacts/v12-report/profile_run.log \
+              --output-json artifacts/v12-report/profile_summary.json \
+              --output-md artifacts/v12-report/profile_summary.md || true
+            exit "$runner_status"
+          else
+            python -m src.engines.v12_integrated_report_runner "${args[@]}"
+          fi
 
       - name: Persist deterministic Stage-2 derived projection cache before downstream acceptance
-        if: always() && needs.parse.outputs.report_mode == 'DEEP'
+        if: always() && needs.parse.outputs.report_mode == 'DEEP' && needs.parse.outputs.profile_mode != 'COLD' && needs.parse.outputs.profile_mode != 'COLD' && needs.parse.outputs.profile_mode != 'COLD'
         uses: actions/cache/save@v4
         with:
           path: app/.cache/v12-stage2
@@ -290,6 +324,10 @@ jobs:
             app/artifacts/v12-report/report_body.md
             app/artifacts/v12-report/execution_proof.json
             app/artifacts/v12-report/stage3_acceptance.json
+            app/artifacts/v12-report/profile.pstats
+            app/artifacts/v12-report/profile_run.log
+            app/artifacts/v12-report/profile_summary.json
+            app/artifacts/v12-report/profile_summary.md
           if-no-files-found: error
           retention-days: 14
 
@@ -307,9 +345,10 @@ jobs:
           STAGE3_STATUS: ${{ steps.stage3.outputs.status }}
           STAGE3_ACTION: ${{ steps.stage3.outputs.action }}
           MC_PATHS: ${{ steps.stage3.outputs.mc_paths }}
+          PROFILE_MODE: ${{ needs.parse.outputs.profile_mode }}
         run: |
           status="${RUNNER_STATUS:-UNKNOWN}"
           if [ "$JOB_STATUS" != "success" ] && [ -z "${RUNNER_STATUS:-}" ]; then
             status="FAIL"
           fi
-          gh issue comment 431 --repo "${GITHUB_REPOSITORY}" --body             "V12_REPORT_RUN | status=${status} | report_mode=${REPORT_MODE} | report_slot=${REPORT_SLOT} | run_id=${GITHUB_RUN_ID} | artifact=v12-report-${REPORT_MODE}-${GITHUB_RUN_ID} | pre_render=${PRE_RENDER:-UNKNOWN} | post_render=${POST_RENDER:-UNKNOWN} | human_facing=${HUMAN_FACING:-UNKNOWN} | stage3=${STAGE3_STATUS:-UNKNOWN} | action=${STAGE3_ACTION:-UNKNOWN} | mc_paths=${MC_PATHS:-UNKNOWN} | integrated_runner=true | fail_operational=true | v6_mutated=false"
+          gh issue comment 431 --repo "${GITHUB_REPOSITORY}" --body             "V12_REPORT_RUN | status=${status} | report_mode=${REPORT_MODE} | report_slot=${REPORT_SLOT} | run_id=${GITHUB_RUN_ID} | artifact=v12-report-${REPORT_MODE}-${GITHUB_RUN_ID} | pre_render=${PRE_RENDER:-UNKNOWN} | post_render=${POST_RENDER:-UNKNOWN} | human_facing=${HUMAN_FACING:-UNKNOWN} | stage3=${STAGE3_STATUS:-UNKNOWN} | action=${STAGE3_ACTION:-UNKNOWN} | mc_paths=${MC_PATHS:-UNKNOWN} | profile_mode=${PROFILE_MODE:-OFF} | integrated_runner=true | fail_operational=true | v6_mutated=false"

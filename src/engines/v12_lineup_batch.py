@@ -1134,6 +1134,10 @@ def _static_position_dnp_distribution(
         probabilities,
         0.0,
     )
+    # Scalar P1.7 canonicalizes positional DNP subsets by sorted
+    # probability before the Poisson-binomial recurrence. Preserve that
+    # operation order exactly; padded zeros are exact no-op steps.
+    probabilities.sort(axis=1)
     max_count = subsets.shape[1]
     dist = np.zeros(
         (subsets.shape[0], max_count + 1),

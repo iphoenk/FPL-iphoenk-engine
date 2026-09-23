@@ -1686,6 +1686,10 @@ def test_p17_cross_route_batch_2043_routes_five_gw_under_ten_seconds():
     )
     assert proof["squad_count"] == 2043
     assert proof["legal_xi_per_squad"] == 550
+    assert proof["execution_kernel"] == "ROUTE_FAMILY_CORE14_AFFINE_EXACT_P1_7"
+    assert proof["route_family_count"] >= 1
+    assert proof["route_family_core_reuse"] is True
+    assert proof["candidate_affine_resolver_exact"] is True
     assert proof["route_pruning"] is False
     assert all(
         gw_row["cameo_blocking_cost"] is not None

@@ -353,33 +353,37 @@ def _bench_kernel(
             appearance = _appearance_mask_probabilities(
                 p_appearance[row_batch[:, None], row_perm]
             )
-            joint = dnp_probability[:, :, None] * appearance[:, None, :]
             selected_matrix, _ = scalar._resolver_state_matrix(
                 (def_count, mid_count, fwd_count),
                 state_keys,
                 bench_positions,
             )
             selected_bits = np.asarray(selected_matrix, dtype=np.uint8)
-            flat_autosub = np.sum(
-                np.where(
-                    selected_bits[None, :, :] != 0,
-                    joint,
-                    0.0,
-                ),
-                axis=(1, 2),
-                dtype=np.float64,
+
+            # Exact probability contraction without materializing the
+            # row × DNP-state × appearance-mask cube.  This is the same
+            # finite sum as the scalar resolver, evaluated over all routes in
+            # the structural group at once.
+            any_mask = (selected_bits != 0).astype(np.float64)
+            flat_autosub = np.einsum(
+                "rs,rm,sm->r",
+                dnp_probability,
+                appearance,
+                any_mask,
+                optimize=True,
             )
             flat_selected = np.zeros((rows.size, 3), dtype=np.float64)
             for slot in range(3):
                 bit = 1 << slot
-                flat_selected[:, slot] = np.sum(
-                    np.where(
-                        (selected_bits[None, :, :] & bit) != 0,
-                        joint,
-                        0.0,
-                    ),
-                    axis=(1, 2),
-                    dtype=np.float64,
+                slot_mask = (
+                    (selected_bits & bit) != 0
+                ).astype(np.float64)
+                flat_selected[:, slot] = np.einsum(
+                    "rs,rm,sm->r",
+                    dnp_probability,
+                    appearance,
+                    slot_mask,
+                    optimize=True,
                 )
             outfield_autosub.reshape(flat_count)[rows] = flat_autosub
             selected_probability.reshape(flat_count, 3)[rows, :] = flat_selected

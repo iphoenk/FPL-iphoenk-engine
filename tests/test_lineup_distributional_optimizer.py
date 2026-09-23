@@ -2637,11 +2637,6 @@ def test_p17_secondary_boundary_tie_falls_back_and_matches_scalar(monkeypatch):
 def test_p17_fallback_budget_degrades_family_gw_to_scalar(monkeypatch):
     from src.engines import v12_lineup_batch as batch
 
-    projections, candidates = _cross_route_projection_fixture(20)
-    squads = _cross_route_2043_squads(
-        *_cross_route_projection_fixture(140)
-    )[:65]
-
     family_calls = {"count": 0}
     scalar_calls = {"count": 0}
 

@@ -11,9 +11,10 @@ from src.runtime_v6.domains.report_plane.delivery_integrity import (
     FINAL_MANDATORY_SECTIONS,
     MATCH_MANDATORY_SECTIONS,
     POST_ALL_MATCH_MANDATORY_SECTIONS,
-    PRICE_MANDATORY_SECTIONS,
+
 )
 from src.runtime_v6.domains.report_plane.visible_body_contract import _parse_sections
+from src.engines.v12_price_delivery import PRICE_SECTION_IDS
 from src.engines.v12_report_orchestration import (
     ReportOrchestrationError,
     analytic_execution_truth,
@@ -1647,7 +1648,7 @@ def test_report_plane_mode_catalogs_cannot_drift_from_canonical_v12():
     expected = {
         "DEEP": DEEP_MANDATORY_SECTIONS,
         "MATCH": MATCH_MANDATORY_SECTIONS,
-        "PRICE": PRICE_MANDATORY_SECTIONS,
+        "PRICE": PRICE_SECTION_IDS,
         "POST_ALL_MATCH": POST_ALL_MATCH_MANDATORY_SECTIONS,
         "FINAL": FINAL_MANDATORY_SECTIONS,
     }
@@ -1665,7 +1666,10 @@ def test_visible_section_parser_supports_all_current_two_digit_mode_sections():
         ),
         "PRICE": "\n".join(
             f"## PRICE {index} — section"
-            for index in range(1, 12)
+            for index in range(
+                1,
+                len(canonical_mode_contract(canonical, "PRICE")["expected_section_ids"]) + 1,
+            )
         ),
         "POST_ALL_MATCH": "\n".join(
             f"## POST-ALL-MATCH {index} — section"

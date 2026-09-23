@@ -1673,7 +1673,7 @@ def test_p17_cross_route_batch_2043_routes_five_gw_under_ten_seconds():
         squads,
         planning_gw=GW,
         generated_at=GENERATED,
-        batch_size=96,
+        batch_size=512,
     )
     elapsed = time.perf_counter() - started
     assert len(outputs) == 2043

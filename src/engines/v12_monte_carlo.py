@@ -10,8 +10,11 @@ It is not a football scoring authority and never imports runtime_v3 or V6.
 from copy import deepcopy
 from datetime import datetime, timezone
 from functools import lru_cache
+import hashlib
 import json
 import math
+import os
+import pickle
 from pathlib import Path
 from statistics import NormalDist
 import time
@@ -71,6 +74,8 @@ STAGE1_STATE_NAMES = (
 )
 POSITIONS = ("GK", "DEF", "MID", "FWD")
 OUTFIELD = ("DEF", "MID", "FWD")
+MC_SIM_CACHE_ENV = "V12_MC_SIM_CACHE_DIR"
+MC_SIM_CACHE_SCHEMA = 1
 
 
 class MonteCarloError(ValueError):
@@ -871,6 +876,151 @@ def package_route_definitions(
     route_ids: Sequence[str] | None = None,
 ) -> list[dict[str, Any]]:
     return [_route_definition(row) for row in _route_rows_from_package(package_utility, route_ids=route_ids)]
+
+
+@lru_cache(maxsize=1)
+def _mc_code_sha256() -> str:
+    return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+
+
+def _simulation_route_signature(
+    route_defs: Sequence[Mapping[str, Any]],
+    *,
+    include_economics: bool,
+) -> list[dict[str, Any]]:
+    """Normalize only route fields consumed by P1.4 simulation/metrics.
+
+    Occurrence-only P1.7 evidence fingerprints are intentionally excluded so
+    identical football lineups can reuse the same random world across reports.
+    """
+    rows: list[dict[str, Any]] = []
+    for route in route_defs:
+        normalized = {
+            "route_id": str(route.get("route_id") or ""),
+            "per_gw": [
+                {
+                    "gw": _i(row.get("gw")),
+                    "starting_xi": [
+                        int(value)
+                        for value in row.get("starting_xi") or []
+                    ],
+                    "bench_order": [
+                        int(value)
+                        for value in row.get("bench_order") or []
+                    ],
+                    "bench_gk": _i(row.get("bench_gk")),
+                    "captain": _i(row.get("captain")),
+                    "vice_captain": _i(row.get("vice_captain")),
+                }
+                for row in route.get("per_gw") or []
+                if isinstance(row, Mapping)
+            ],
+        }
+        if include_economics:
+            normalized.update(
+                {
+                    "execution_cost_points": route.get(
+                        "execution_cost_points"
+                    ),
+                    "execution_cost_status": route.get(
+                        "execution_cost_status"
+                    ),
+                    "decision_net_supported": bool(
+                        route.get("decision_net_supported")
+                    ),
+                }
+            )
+        rows.append(normalized)
+    return rows
+
+
+def canonical_package_seed(
+    projections: Mapping[str, Any],
+    package_utility: Mapping[str, Any],
+    *,
+    route_ids: Sequence[str] | None = None,
+) -> int:
+    """Stable common-random-number seed for identical football inputs."""
+    route_defs = package_route_definitions(
+        package_utility,
+        route_ids=route_ids,
+    )
+    digest = fingerprint(
+        {
+            "projection_fingerprint": fingerprint(projections),
+            "football_route_signature": _simulation_route_signature(
+                route_defs,
+                include_economics=False,
+            ),
+            "correlation_model_version": (
+                load_config().get("correlation") or {}
+            ).get("correlation_model_version"),
+        }
+    )
+    return int(digest[:8], 16)
+
+
+def _mc_cache_path(key: str) -> Path | None:
+    root = str(os.environ.get(MC_SIM_CACHE_ENV) or "").strip()
+    if not root:
+        return None
+    return Path(root) / key[:2] / f"{key}.pkl"
+
+
+def _load_mc_summary_cache(key: str) -> dict[str, Any] | None:
+    path = _mc_cache_path(key)
+    if path is None or not path.is_file():
+        return None
+    try:
+        with path.open("rb") as fh:
+            payload = pickle.load(fh)
+        if (
+            isinstance(payload, dict)
+            and int(payload.get("schema") or 0)
+            == MC_SIM_CACHE_SCHEMA
+            and payload.get("key") == key
+            and isinstance(payload.get("summary"), dict)
+        ):
+            return deepcopy(dict(payload["summary"]))
+    except (
+        OSError,
+        EOFError,
+        pickle.PickleError,
+        AttributeError,
+        ValueError,
+        TypeError,
+    ):
+        return None
+    return None
+
+
+def _save_mc_summary_cache(
+    key: str,
+    summary: Mapping[str, Any],
+) -> None:
+    path = _mc_cache_path(key)
+    if path is None:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        with tmp.open("wb") as fh:
+            pickle.dump(
+                {
+                    "schema": MC_SIM_CACHE_SCHEMA,
+                    "key": key,
+                    "summary": dict(summary),
+                },
+                fh,
+                protocol=pickle.HIGHEST_PROTOCOL,
+            )
+        os.replace(tmp, path)
+    finally:
+        try:
+            if tmp.exists():
+                tmp.unlink()
+        except OSError:
+            pass
 
 
 def _validate_lineup_row(
@@ -2372,80 +2522,191 @@ def run_correlated_monte_carlo(
         canonical_v12_revision=_canonical_sha256(),
     )
 
-    started = time.perf_counter()
-    arrays, sampling = _simulate_route_arrays(
-        projections,
-        route_defs,
-        actual_paths=actual_paths,
-        seed=int(seed),
-        horizons=horizons,
-        chunk_size=chunk_size,
+    simulation_cache_key = fingerprint(
+        {
+            "schema": MC_SIM_CACHE_SCHEMA,
+            "mc_code_sha256": _mc_code_sha256(),
+            "canonical_v12_revision": _canonical_sha256(),
+            "config_fingerprint": fingerprint(cfg),
+            "projection_fingerprint": projection_fp,
+            "route_signature": _simulation_route_signature(
+                route_defs,
+                include_economics=True,
+            ),
+            "actual_paths": actual_paths,
+            "seed": int(seed),
+            "horizons": list(horizons),
+            "selected_route_id": selected_id,
+            "canonical": bool(canonical),
+            "numpy_version": np.__version__,
+        }
     )
-    elapsed = time.perf_counter() - started
-    hold_arrays = arrays["HOLD"]
-    upside_threshold = _f(canonical_cfg.get("material_upside_threshold_points"), 5.0)
+    cache_started = time.perf_counter()
+    cached_summary = _load_mc_summary_cache(
+        simulation_cache_key
+    )
+    simulation_cache_hit = cached_summary is not None
 
-    metrics: dict[str, Any] = {}
-    pairwise: dict[str, Any] = {}
-    regret_by_horizon: dict[int, dict[str, float | None]] = {}
-    for horizon in horizons:
-        horizon_arrays = {rid: arrays[rid][horizon] for rid in route_ids}
-        regret_by_horizon[horizon] = _expected_regret(horizon_arrays)
-        for rid in route_ids:
-            row = _route_metrics(
-                arrays[rid][horizon],
-                hold_arrays[horizon],
-                material_upside_threshold=upside_threshold,
+    if cached_summary is not None:
+        metrics = deepcopy(dict(cached_summary["metrics"]))
+        pairwise = deepcopy(dict(cached_summary["pairwise"]))
+        sampling = deepcopy(dict(cached_summary["sampling"]))
+        convergence = deepcopy(
+            dict(cached_summary["convergence"])
+        )
+        execution_state = str(
+            cached_summary["execution_state"]
+        )
+        canonical_pass = bool(
+            cached_summary["canonical_pass"]
+        )
+        upside_threshold = _f(
+            cached_summary["upside_threshold"]
+        )
+        elapsed = time.perf_counter() - cache_started
+    else:
+        started = time.perf_counter()
+        arrays, sampling = _simulate_route_arrays(
+            projections,
+            route_defs,
+            actual_paths=actual_paths,
+            seed=int(seed),
+            horizons=horizons,
+            chunk_size=chunk_size,
+        )
+        elapsed = time.perf_counter() - started
+        hold_arrays = arrays["HOLD"]
+        upside_threshold = _f(
+            canonical_cfg.get(
+                "material_upside_threshold_points"
+            ),
+            5.0,
+        )
+
+        metrics: dict[str, Any] = {}
+        pairwise: dict[str, Any] = {}
+        regret_by_horizon: dict[
+            int, dict[str, float | None]
+        ] = {}
+        route_def_by_id = {
+            str(item.get("route_id")): item
+            for item in route_defs
+        }
+        for horizon in horizons:
+            horizon_arrays = {
+                rid: arrays[rid][horizon]
+                for rid in route_ids
+            }
+            regret_by_horizon[horizon] = _expected_regret(
+                horizon_arrays
             )
-            route_def = next(item for item in route_defs if str(item.get("route_id")) == rid)
-            execution_cost = route_def.get("execution_cost_points")
-            row["execution_cost_points"] = execution_cost
-            row["execution_cost_status"] = route_def.get(
-                "execution_cost_status"
-            )
-            row["decision_net_supported"] = bool(
-                route_def.get("decision_net_supported")
-            )
-            row["utility_semantics"] = (
-                "DECISION_NET"
-                if row["decision_net_supported"]
-                else "GROSS_FOOTBALL_ONLY_PRIVATE_ECONOMICS_UNAVAILABLE"
-            )
-            row["mean_gross_points"] = (
-                None
-                if row.get("mean_net_utility") is None or execution_cost is None
-                else float(row["mean_net_utility"]) + float(execution_cost)
-            )
-            row["expected_regret"] = regret_by_horizon[horizon].get(rid)
-            metrics.setdefault(rid, {})[str(horizon)] = row
-        for i, a in enumerate(route_ids):
-            for b in route_ids[i + 1 :]:
-                pairwise[f"{a}__VS__{b}__H{horizon}"] = _pair_metrics(
-                    arrays[a][horizon], arrays[b][horizon]
+            for rid in route_ids:
+                row = _route_metrics(
+                    arrays[rid][horizon],
+                    hold_arrays[horizon],
+                    material_upside_threshold=(
+                        upside_threshold
+                    ),
                 )
+                route_def = route_def_by_id[rid]
+                execution_cost = route_def.get(
+                    "execution_cost_points"
+                )
+                row["execution_cost_points"] = execution_cost
+                row["execution_cost_status"] = (
+                    route_def.get(
+                        "execution_cost_status"
+                    )
+                )
+                row["decision_net_supported"] = bool(
+                    route_def.get(
+                        "decision_net_supported"
+                    )
+                )
+                row["utility_semantics"] = (
+                    "DECISION_NET"
+                    if row["decision_net_supported"]
+                    else (
+                        "GROSS_FOOTBALL_ONLY_PRIVATE_"
+                        "ECONOMICS_UNAVAILABLE"
+                    )
+                )
+                row["mean_gross_points"] = (
+                    None
+                    if (
+                        row.get("mean_net_utility")
+                        is None
+                        or execution_cost is None
+                    )
+                    else (
+                        float(row["mean_net_utility"])
+                        + float(execution_cost)
+                    )
+                )
+                row["expected_regret"] = (
+                    regret_by_horizon[horizon].get(rid)
+                )
+                metrics.setdefault(rid, {})[
+                    str(horizon)
+                ] = row
+            for i, a in enumerate(route_ids):
+                for b in route_ids[i + 1 :]:
+                    pairwise[
+                        f"{a}__VS__{b}__H{horizon}"
+                    ] = _pair_metrics(
+                        arrays[a][horizon],
+                        arrays[b][horizon],
+                    )
 
-    checkpoints = [
-        int(x)
-        for x in canonical_cfg.get("checkpoints") or [50_000, 100_000, 250_000, 500_000]
-        if int(x) <= actual_paths
-    ]
-    if actual_paths not in checkpoints:
-        checkpoints.append(actual_paths)
-    checkpoints = sorted(set(checkpoints))
-    convergence = _convergence(
-        arrays[selected_id][horizons[-1]],
-        hold_arrays[horizons[-1]],
-        {rid: arrays[rid][horizons[-1]] for rid in route_ids},
-        checkpoints=checkpoints,
-        cfg=cfg,
-    )
+        checkpoints = [
+            int(x)
+            for x in (
+                canonical_cfg.get("checkpoints")
+                or [
+                    50_000,
+                    100_000,
+                    250_000,
+                    500_000,
+                ]
+            )
+            if int(x) <= actual_paths
+        ]
+        if actual_paths not in checkpoints:
+            checkpoints.append(actual_paths)
+        checkpoints = sorted(set(checkpoints))
+        convergence = _convergence(
+            arrays[selected_id][horizons[-1]],
+            hold_arrays[horizons[-1]],
+            {
+                rid: arrays[rid][horizons[-1]]
+                for rid in route_ids
+            },
+            checkpoints=checkpoints,
+            cfg=cfg,
+        )
 
-    execution_state = "EXECUTED" if actual_paths >= minimum_paths else "PARTIAL"
-    canonical_pass = (
-        actual_paths >= minimum_paths
-        and convergence.get("status") == "PASS"
-        and canonical
-    )
+        execution_state = (
+            "EXECUTED"
+            if actual_paths >= minimum_paths
+            else "PARTIAL"
+        )
+        canonical_pass = (
+            actual_paths >= minimum_paths
+            and convergence.get("status") == "PASS"
+            and canonical
+        )
+        _save_mc_summary_cache(
+            simulation_cache_key,
+            {
+                "metrics": metrics,
+                "pairwise": pairwise,
+                "sampling": sampling,
+                "convergence": convergence,
+                "execution_state": execution_state,
+                "canonical_pass": canonical_pass,
+                "upside_threshold": upside_threshold,
+            },
+        )
     deterministic_core = {
         "model_owner": MODEL_OWNER,
         "model_id": MODEL_ID,
@@ -2540,6 +2801,9 @@ def run_correlated_monte_carlo(
         "material_routes": len(route_ids),
         "horizons": len(horizons),
         "chunk_size": chunk_size,
+        "simulation_cache_hit": simulation_cache_hit,
+        "simulation_cache_key": simulation_cache_key[:20],
+        "simulation_cache_schema": MC_SIM_CACHE_SCHEMA,
         "wall_clock_excluded_from_output_fingerprint": True,
     }
     result = {

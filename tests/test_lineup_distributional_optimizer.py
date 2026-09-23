@@ -4,6 +4,7 @@ from copy import deepcopy
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from src.engines.canonical_decision_methodology import CANONICAL_WEIGHTS

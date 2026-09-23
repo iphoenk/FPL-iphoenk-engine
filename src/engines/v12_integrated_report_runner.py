@@ -102,6 +102,15 @@ def _read_json(path: Path, default: Any = None) -> Any:
         return default
 
 
+def _fingerprint_json_default(value: Any) -> Any:
+    """Canonicalize supported runtime-only objects for deterministic stage hashing."""
+    if isinstance(value, datetime):
+        return value.isoformat()
+    raise TypeError(
+        f"Object of type {value.__class__.__name__} is not JSON serializable"
+    )
+
+
 def _fingerprint(value: Any) -> str:
     payload = json.dumps(
         value,
@@ -109,6 +118,7 @@ def _fingerprint(value: Any) -> str:
         separators=(",", ":"),
         ensure_ascii=False,
         allow_nan=False,
+        default=_fingerprint_json_default,
     ).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
 

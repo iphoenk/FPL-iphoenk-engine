@@ -300,6 +300,7 @@ def _position_name(value: Any) -> str:
 
 def _personal_evidence_resolution(
     runtime_root: Path,
+    state: Mapping[str, Any] | None = None,
     *,
     planning_gw: int,
 ) -> dict[str, Any]:
@@ -315,6 +316,57 @@ def _personal_evidence_resolution(
             "gw": payload.get("gw"),
             "auth_state": payload.get("auth_state"),
         })
+    confirmed = dict(
+        ((state or {}).get("confirmed_current_squad_state") or {})
+    )
+    explicit_at = (
+        confirmed.get("explicit_user_confirmed_at")
+        or confirmed.get("evidence_timestamp")
+        or confirmed.get("confirmed_at")
+    )
+    explicit_gw = (
+        confirmed.get("applicable_planning_gw")
+        or confirmed.get("planning_gw")
+        or confirmed.get("gw")
+    )
+    explicit_flag = confirmed.get("explicit_user_confirmation") is True
+    if explicit_at and explicit_gw is not None and explicit_flag:
+        players: list[dict[str, Any]] = []
+        for group, position in (
+            ("goalkeepers", "GK"),
+            ("defenders", "DEF"),
+            ("midfielders", "MID"),
+            ("forwards", "FWD"),
+        ):
+            for item in confirmed.get(group) or []:
+                if not isinstance(item, Mapping):
+                    continue
+                element = item.get("element_id", item.get("element"))
+                if element is None:
+                    continue
+                players.append({
+                    **dict(item),
+                    "element_id": int(element),
+                    "position": position,
+                })
+        candidates.append({
+            "source": "FPL_MASTER_STATE_V12:EXPLICIT_USER_CONFIRMED",
+            "source_class": "USER_CONFIRMED",
+            "payload": {
+                "players": players,
+                "generated_at": explicit_at,
+                "gw": explicit_gw,
+                "bank": confirmed.get("bank"),
+                "chips": confirmed.get("chips"),
+                "availability": confirmed.get("availability") or {},
+            },
+            "observed_at": explicit_at,
+            "gw": explicit_gw,
+            "auth_state": "USER_CONFIRMED",
+            "applicable_planning_gw": int(explicit_gw),
+            "explicit_confirmation": True,
+        })
+
     submitted = _read_json(
         personal_dir / "submitted_picks.json",
         {},
@@ -2118,6 +2170,7 @@ def run_deep(
         "PERSONAL_EVIDENCE_RECONCILIATION",
         lambda: _personal_evidence_resolution(
             runtime_data_root,
+            state,
             planning_gw=planning_gw,
         ),
         required=True,

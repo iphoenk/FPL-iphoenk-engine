@@ -1,6 +1,9 @@
 name: V12 P1.7 patched-kernel diagnostics
 
 on:
+  push:
+    branches:
+      - v12-p17-bench-hotpath-exact
   pull_request:
   workflow_dispatch:
 

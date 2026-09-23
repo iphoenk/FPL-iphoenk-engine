@@ -24,20 +24,7 @@ from src.engines.v12_report_orchestration import (
 )
 
 
-PRICE_SECTION_LABELS = (
-    "PRICE DECISION / CURRENT STATUS",
-    "OUR15 PRICE & VALUE",
-    "PRICE DELTA / MATERIAL CHANGES",
-    "TEAM-NEEDS PRICE ALERT",
-    "WATCHLIST20",
-    "RISE20",
-    "FALL20",
-    "PACKAGE / AFFORDABILITY / TRANSFER ECONOMICS",
-    "MINI-LEAGUE PRICE IMPACT",
-    "ACTION BOARD",
-    "SOURCE HEALTH / PRICE-CYCLE / LINEAGE",
-    "FINAL PRICE JUDGEMENT",
-)
+PRICE_SECTION_IDS = tuple(f"PRICE{index}" for index in range(1, 13))
 ACTION_BOARD_FIELDS = (
     "NOW",
     "NEXT",
@@ -504,10 +491,11 @@ def build_price_delivery_report(
     previous_price_evidence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     contract = canonical_mode_contract(canonical_text, "PRICE")
+    expected_ids = list(contract.get("expected_section_ids") or [])
     expected_labels = list(contract.get("expected_visible_order") or [])
-    if expected_labels != list(PRICE_SECTION_LABELS):
+    if expected_ids != list(PRICE_SECTION_IDS) or len(expected_labels) != 12:
         raise PriceDeliveryError(
-            "Canonical PRICE catalog does not match the 12-section delivery barrier"
+            "Canonical PRICE catalog does not define the exact 12-section delivery barrier"
         )
 
     predictor = dict(predictor_artifact or {})
@@ -662,12 +650,12 @@ def build_price_delivery_report(
 
     sections = [
         {
-            "section_id": f"PRICE{index}",
+            "section_id": section_id,
             "label": label,
             "state": "COMPLETE",
             "content": {},
         }
-        for index, label in enumerate(PRICE_SECTION_LABELS, 1)
+        for section_id, label in zip(expected_ids, expected_labels)
     ]
     by_id = {row["section_id"]: row for row in sections}
     by_id["PRICE1"]["content"] = {
@@ -834,9 +822,7 @@ def validate_price_report_model(report: Mapping[str, Any]) -> list[str]:
     sections = list(report.get("sections") or [])
     labels = [str(row.get("label") or "") for row in sections]
     ids = [str(row.get("section_id") or "") for row in sections]
-    if labels != list(PRICE_SECTION_LABELS):
-        failures.append("PRICE_MODEL_SECTION_ORDER_INVALID")
-    if ids != [f"PRICE{i}" for i in range(1, 13)]:
+    if ids != list(PRICE_SECTION_IDS):
         failures.append("PRICE_MODEL_SECTION_IDS_INVALID")
     if len(sections) != 12:
         failures.append(f"PRICE_MODEL_SECTION_COUNT={len(sections)}!=12")

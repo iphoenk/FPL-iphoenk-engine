@@ -37,12 +37,17 @@ from src.engines.v12_monte_carlo import (
     attach_monte_carlo_to_package_utility,
     run_package_monte_carlo,
 )
-from src.engines.v12_package_search import search_packages
+from src.engines.v12_package_search import (
+    compose_material_two_transfer_packages,
+    search_packages,
+)
 from src.engines.v12_package_utility import (
     attach_stage3_decision,
+    combine_package_utility_surfaces,
     derive_bounded_future_frontier,
     evaluate_packages,
     finalize_stage3_decision,
+    select_material_funding_legs,
     select_stage3_material_mc_routes,
 )
 from src.engines.visible_content_proof import canonical_mode_contract
@@ -1165,10 +1170,19 @@ def _stage3_visible_package_surface(
 
     return {
         "package_search_proof": package_search_result.get("search_proof"),
+        "funded_search_proof": (
+            ((package_utility.get("search_scope") or {}).get(
+                "funded_two_transfer"
+            ) or {}).get("search_proof")
+        ),
         "package_search_scope": {
             "search_authority": package_search_result.get(
                 "search_authority"
             ),
+            "combined_authority": package_utility.get(
+                "search_authority"
+            ),
+            "combined_scope": package_utility.get("search_scope"),
             "eligible_universe_count": package_search_result.get(
                 "eligible_universe_count"
             ),
@@ -2530,6 +2544,10 @@ def run_deep(
         required=True,
     )
     package_search_result = None
+    direct_package_utility = None
+    funding_leg_selection = None
+    funded_search_result = None
+    funded_package_utility = None
     package_utility = None
     material_mc_routes = None
     monte_carlo = None
@@ -2539,10 +2557,11 @@ def run_deep(
 
     if projections is not None and canonical_complete:
         package_candidates = _package_candidate_rows(projections)
-        # Legal package search depth is independent of whether FT/hit
-        # economics are currently supportable. Missing economics degrades
-        # those fields; it must never prune the legal funding universe.
-        max_transfers = 2
+        # P1.2A exhaustively searches the complete direct universe first.
+        # Funded two-transfer packages are then composed only from direct legs
+        # already proven material by exact P1.7. This preserves full direct
+        # authority and real funding routes without pretending that 1.5M+
+        # global two-transfer squads were exhaustively P1.7-materialized.
         package_search_result = _stage(
             ledger,
             "P1_2A_PACKAGE_SEARCH",
@@ -2550,7 +2569,7 @@ def run_deep(
                 current_squad=owned,
                 candidate_universe=package_candidates,
                 bank=(finance or {}).get("bank"),
-                max_transfers=max_transfers,
+                max_transfers=1,
                 universe_complete=True,
                 expected_eligible_universe_count=None,
                 lossy_pruning=False,
@@ -2559,7 +2578,7 @@ def run_deep(
             required=True,
         )
         if package_search_result:
-            package_utility = _stage(
+            direct_package_utility = _stage(
                 ledger,
                 "P1_2_PACKAGE_UTILITY",
                 lambda: evaluate_packages(
@@ -2582,7 +2601,93 @@ def run_deep(
             _skip_stage(
                 ledger,
                 "P1_2_PACKAGE_UTILITY",
-                "P1.2A package search failed",
+                "P1.2A direct package search failed",
+                required=True,
+            )
+
+        if direct_package_utility:
+            funding_leg_selection = _stage(
+                ledger,
+                "P1_2_MATERIAL_FUNDING_LEGS",
+                lambda: select_material_funding_legs(
+                    direct_package_utility,
+                ),
+                required=True,
+            )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_2_MATERIAL_FUNDING_LEGS",
+                "direct P1.2B utility failed",
+                required=True,
+            )
+
+        if package_search_result and funding_leg_selection:
+            funded_search_result = _stage(
+                ledger,
+                "P1_2A_FUNDED_PACKAGE_SEARCH",
+                lambda: compose_material_two_transfer_packages(
+                    current_squad=owned,
+                    direct_search_result=package_search_result,
+                    material_direct_route_ids=(
+                        funding_leg_selection.get("route_ids") or []
+                    ),
+                    bank=(finance or {}).get("bank"),
+                ),
+                required=True,
+            )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_2A_FUNDED_PACKAGE_SEARCH",
+                "direct search/material funding legs unavailable",
+                required=True,
+            )
+
+        if funded_search_result:
+            funded_package_utility = _stage(
+                ledger,
+                "P1_2B_FUNDED_PACKAGE_UTILITY",
+                lambda: evaluate_packages(
+                    search_result=funded_search_result,
+                    projections=projections,
+                    free_transfers=(finance or {}).get(
+                        "free_transfers"
+                    ),
+                    hit_cost_per_extra_transfer=(finance or {}).get(
+                        "hit_cost_per_extra_transfer"
+                    ),
+                    future_frontier_by_route=None,
+                    information_value_by_route={},
+                    price_risk_by_route={},
+                    generated_at=report_slot,
+                ),
+                required=True,
+            )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_2B_FUNDED_PACKAGE_UTILITY",
+                "material funded search unavailable",
+                required=True,
+            )
+
+        if direct_package_utility and funded_package_utility:
+            package_utility = _stage(
+                ledger,
+                "P1_2B_PACKAGE_COMBINE",
+                lambda: combine_package_utility_surfaces(
+                    direct_package_utility,
+                    funded_package_utility,
+                    funded_search_result=funded_search_result,
+                ),
+                required=True,
+            )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_2B_PACKAGE_COMBINE",
+                "direct or funded P1.2B utility unavailable",
                 required=True,
             )
 
@@ -2731,6 +2836,10 @@ def run_deep(
         for stage_name in (
             "P1_2A_PACKAGE_SEARCH",
             "P1_2_PACKAGE_UTILITY",
+            "P1_2_MATERIAL_FUNDING_LEGS",
+            "P1_2A_FUNDED_PACKAGE_SEARCH",
+            "P1_2B_FUNDED_PACKAGE_UTILITY",
+            "P1_2B_PACKAGE_COMBINE",
             "P1_4_MATERIAL_ROUTE_SELECTION",
             "P1_4_MONTE_CARLO",
             "P1_2_STAGE3_DECISION_CLOSURE",
@@ -2746,6 +2855,10 @@ def run_deep(
     stage3_required_stage_names = {
         "P1_2A_PACKAGE_SEARCH",
         "P1_2_PACKAGE_UTILITY",
+        "P1_2_MATERIAL_FUNDING_LEGS",
+        "P1_2A_FUNDED_PACKAGE_SEARCH",
+        "P1_2B_FUNDED_PACKAGE_UTILITY",
+        "P1_2B_PACKAGE_COMBINE",
         "P1_4_MATERIAL_ROUTE_SELECTION",
         "P1_4_MONTE_CARLO",
         "P1_4_PACKAGE_BINDING",
@@ -2784,6 +2897,20 @@ def run_deep(
         and package_search_result.get("coverage", {}).get(
             "coverage_complete"
         ) is True
+        and package_utility.get("search_authority")
+        == "FULL_DIRECT_MATERIAL_FUNDED"
+        and (package_utility.get("search_scope") or {}).get(
+            "global_two_transfer_exhaustive_claim"
+        ) is False
+        and (
+            (package_utility.get("search_scope") or {}).get("direct") or {}
+        ).get("global_direct_complete") is True
+        and (
+            (package_utility.get("search_scope") or {}).get(
+                "funded_two_transfer"
+            )
+            or {}
+        ).get("authority") == "MATERIAL_FUNDED"
         and canonical_bundle.get("stage2_lineage_complete_players")
         == canonical_bundle.get("complete_players")
         and str((watchlist or {}).get("state") or "").upper()

@@ -1943,23 +1943,35 @@ def _render_package_frontier_lines(
         )
 
     for row in routes:
-        moves = dict(row.get("moves") or {})
-        outs = [
-            dict(item) for item in moves.get("out") or []
-            if isinstance(item, Mapping)
-        ]
-        ins = [
-            dict(item) for item in moves.get("in") or []
-            if isinstance(item, Mapping)
-        ]
-        if str(row.get("route") or "").upper() == "HOLD":
-            move_text = "HOLD → HOLD"
-        else:
-            move_text = (
+        moves_raw = row.get("moves")
+        if isinstance(moves_raw, Mapping):
+            moves = dict(moves_raw)
+            outs = [
+                dict(item) for item in moves.get("out") or []
+                if isinstance(item, Mapping)
+            ]
+            ins = [
+                dict(item) for item in moves.get("in") or []
+                if isinstance(item, Mapping)
+            ]
+            structured_move_text = (
                 ", ".join(move_label(item) for item in outs)
                 + " → "
                 + ", ".join(move_label(item) for item in ins)
             )
+        else:
+            moves = {}
+            outs = []
+            ins = []
+            structured_move_text = (
+                " | ".join(str(item) for item in (moves_raw or []))
+                if isinstance(moves_raw, (list, tuple))
+                else str(moves_raw or "UNAVAILABLE")
+            )
+        if str(row.get("route") or "").upper() == "HOLD":
+            move_text = "HOLD → HOLD"
+        else:
+            move_text = structured_move_text
         outgoing_value = sum(
             float(item.get("sell_value"))
             for item in outs
@@ -1970,7 +1982,12 @@ def _render_package_frontier_lines(
             for item in ins
             if item.get("buy_price", item.get("price")) is not None
         ) if any(item.get("buy_price", item.get("price")) is not None for item in ins) else None
-        transfer_cost = dict(row.get("transfer_cost") or {})
+        transfer_cost_raw = row.get("transfer_cost")
+        transfer_cost = (
+            dict(transfer_cost_raw)
+            if isinstance(transfer_cost_raw, Mapping)
+            else {"legacy_value": transfer_cost_raw}
+        )
         lines.append(
             "- "
             f"{row.get('route_kind', 'ROUTE')} | "

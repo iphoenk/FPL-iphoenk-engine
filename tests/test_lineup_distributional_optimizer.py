@@ -1563,6 +1563,7 @@ def test_p17_cross_route_batch_matches_scalar_one_transfer_families():
         "distributional_downside",
         "supportable_upside",
         "expected_autosub_value",
+        "cameo_blocking_cost",
         "formation",
         "starting_xi",
         "bench_gk",
@@ -1686,4 +1687,10 @@ def test_p17_cross_route_batch_2043_routes_five_gw_under_ten_seconds():
     assert proof["squad_count"] == 2043
     assert proof["legal_xi_per_squad"] == 550
     assert proof["route_pruning"] is False
+    assert all(
+        gw_row["cameo_blocking_cost"] is not None
+        and gw_row["captain_safe_pool_count"] >= 2
+        for row in outputs
+        for gw_row in row["per_gw"]
+    )
     assert elapsed <= 10.0

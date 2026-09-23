@@ -29,7 +29,7 @@ from src.engines.canonical_decision_methodology import (
     derive_dynamic_ft_shadow_value,
     validate_methodology_weights,
 )
-from src.engines.v12_lineup_optimizer import optimize_lineup
+from src.engines.v12_lineup_optimizer import build_player_surface, optimize_lineup
 from src.engines.v12_model_evidence import (
     bind_deterministic_output,
     build_model_run_binding,
@@ -125,6 +125,7 @@ def _lineup_decision(
     *,
     gw: int,
     generated_at: str,
+    prebuilt_surfaces: Mapping[int, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     pmap = _projection_map(projections)
     missing_players = [element for element in squad_ids if element not in pmap]
@@ -148,6 +149,7 @@ def _lineup_decision(
         list(squad_ids),
         planning_gw=int(gw),
         generated_at=generated_at,
+        prebuilt_surfaces=prebuilt_surfaces,
     )
     score = dict(decision.get("lineup_score") or {})
     bench = dict(decision.get("bench") or {})
@@ -196,6 +198,9 @@ def _cumulative_lineup_horizons(
     *,
     planning_gw: int,
     generated_at: str,
+    prebuilt_surfaces_by_gw: Mapping[
+        int, Mapping[int, Mapping[str, Any]]
+    ] | None = None,
     _perf_sink: list[float] | None = None,
 ) -> dict[str, Any]:
     gw_rows: list[dict[str, Any]] = []
@@ -207,6 +212,11 @@ def _cumulative_lineup_horizons(
                 squad_ids,
                 gw=int(planning_gw) + offset,
                 generated_at=generated_at,
+                prebuilt_surfaces=(
+                    (prebuilt_surfaces_by_gw or {}).get(
+                        int(planning_gw) + offset
+                    )
+                ),
             )
         )
         if _perf_sink is not None:
@@ -825,13 +835,52 @@ def _model_evidence_binding(
 
 
 
-_P1_2B_WORKER_CONTEXT: tuple[Mapping[str, Any], int, str] | None = None
+def _prebuild_p1_7_surface_catalog(
+    projections: Mapping[str, Any],
+    planning_gw: int,
+    material_elements: Sequence[int],
+) -> dict[int, dict[int, dict[str, Any]]]:
+    """Build immutable per-player P1.7 surfaces once per worker/GW.
+
+    Direct-route evaluation repeatedly uses the same players.  Rebuilding
+    identical player surfaces inside every squad is deterministic duplication,
+    not decision work.
+    """
+    pmap = _projection_map(projections)
+    elements = tuple(
+        sorted(
+            {
+                int(element)
+                for element in material_elements
+                if int(element) in pmap
+            }
+        )
+    )
+    return {
+        int(planning_gw) + offset: {
+            element: build_player_surface(
+                pmap[element],
+                int(planning_gw) + offset,
+            )
+            for element in elements
+        }
+        for offset in range(5)
+    }
+
+
+_P1_2B_WORKER_CONTEXT: tuple[
+    Mapping[str, Any],
+    int,
+    str,
+    Mapping[int, Mapping[int, Mapping[str, Any]]],
+] | None = None
 
 
 def _init_p1_2b_lineup_worker(
     projections: Mapping[str, Any],
     planning_gw: int,
     generated_at: str,
+    material_elements: Sequence[int],
 ) -> None:
     """Bind immutable read-only P1.7 inputs once per worker process."""
     global _P1_2B_WORKER_CONTEXT
@@ -839,6 +888,11 @@ def _init_p1_2b_lineup_worker(
         projections,
         int(planning_gw),
         str(generated_at),
+        _prebuild_p1_7_surface_catalog(
+            projections,
+            int(planning_gw),
+            material_elements,
+        ),
     )
 
 
@@ -855,7 +909,12 @@ def _p1_2b_route_lineups_worker(
     if _P1_2B_WORKER_CONTEXT is None:
         raise PackageUtilityError("P1.2B lineup worker context is not initialized")
     route_id, squad = item
-    projections, planning_gw, generated_at = _P1_2B_WORKER_CONTEXT
+    (
+        projections,
+        planning_gw,
+        generated_at,
+        prebuilt_surfaces_by_gw,
+    ) = _P1_2B_WORKER_CONTEXT
     gw_elapsed: list[float] = []
     started = time.perf_counter()
     output = _cumulative_lineup_horizons(
@@ -863,6 +922,7 @@ def _p1_2b_route_lineups_worker(
         squad,
         planning_gw=planning_gw,
         generated_at=generated_at,
+        prebuilt_surfaces_by_gw=prebuilt_surfaces_by_gw,
         _perf_sink=gw_elapsed,
     )
     elapsed = time.perf_counter() - started
@@ -940,6 +1000,15 @@ def _materialize_route_lineups(
         (route_id, squad)
         for squad, route_id in unique_by_squad.items()
     ]
+    material_elements = tuple(
+        sorted(
+            {
+                int(element)
+                for _, squad in unique_items
+                for element in squad
+            }
+        )
+    )
 
     cpu_count = max(1, int(os.cpu_count() or 1))
     workers = min(max_workers, cpu_count, max(1, len(unique_items)))
@@ -971,7 +1040,12 @@ def _materialize_route_lineups(
             max_workers=workers,
             mp_context=fork_context,
             initializer=_init_p1_2b_lineup_worker,
-            initargs=(projections, planning_gw, generated_at),
+            initargs=(
+                projections,
+                planning_gw,
+                generated_at,
+                material_elements,
+            ),
         ) as executor:
             for _, squad, output, elapsed, route_gw_elapsed in executor.map(
                 _p1_2b_route_lineups_worker,
@@ -989,6 +1063,11 @@ def _materialize_route_lineups(
             f"unique_squads={len(unique_items)} workers=1",
             flush=True,
         )
+        prebuilt_surfaces_by_gw = _prebuild_p1_7_surface_catalog(
+            projections,
+            planning_gw,
+            material_elements,
+        )
         for _, squad in unique_items:
             route_gw_elapsed: list[float] = []
             route_started = time.perf_counter()
@@ -997,6 +1076,7 @@ def _materialize_route_lineups(
                 squad,
                 planning_gw=planning_gw,
                 generated_at=generated_at,
+                prebuilt_surfaces_by_gw=prebuilt_surfaces_by_gw,
                 _perf_sink=route_gw_elapsed,
             )
             squad_elapsed.append(time.perf_counter() - route_started)
@@ -1056,6 +1136,8 @@ def _materialize_route_lineups(
         "parallel_min_routes": min_routes,
         "parallel_chunks_per_worker": requested_chunks_per_worker,
         "p1_7_owner": "V12_LINEUP_OPTIMIZER",
+        "shared_player_surface_catalog": True,
+        "material_element_count": len(material_elements),
         "exact_route_identity_preserved": True,
         "lossy_pruning": False,
         "p1_7_math_mutated": False,

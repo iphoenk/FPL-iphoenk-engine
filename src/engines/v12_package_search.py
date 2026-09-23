@@ -717,3 +717,198 @@ def search_packages(
             "v6_mutated": False,
         },
     }
+
+def compose_material_two_transfer_packages(
+    *,
+    current_squad: Sequence[Mapping[str, Any]],
+    direct_search_result: Mapping[str, Any],
+    material_direct_route_ids: Sequence[str],
+    bank: int | None,
+) -> dict[str, Any]:
+    """Compose a bounded exact 2-transfer package set from material direct legs.
+
+    P1.2A remains the sole legality/search owner. The direct universe must have
+    been searched with FULL authority first. This helper does not score players
+    or routes; it only combines already-selected material one-transfer legs,
+    re-runs the canonical final-squad legality/economics kernel, and publishes
+    explicit bounded-scope provenance. It never claims exhaustive global
+    two-transfer coverage.
+    """
+    if direct_search_result.get("model_owner") != MODEL_OWNER:
+        raise PackageSearchError(
+            "material funded composition requires V12_PACKAGE_SEARCH input"
+        )
+    if direct_search_result.get("search_authority") != "FULL":
+        raise PackageSearchError(
+            "material funded composition requires FULL direct search authority"
+        )
+    if (
+        direct_search_result.get("coverage", {}).get("coverage_complete")
+        is not True
+    ):
+        raise PackageSearchError(
+            "material funded composition requires complete direct coverage"
+        )
+
+    current = [_normalized_player(row, owned=True) for row in current_squad]
+    ok, reason = legal_squad(current)
+    if not ok:
+        raise PackageSearchError(f"current squad illegal: {reason}")
+    current_by_id = {_element(row): row for row in current}
+
+    direct_by_id = {
+        str(row.get("route_id") or ""): dict(row)
+        for row in direct_search_result.get("routes") or []
+        if isinstance(row, Mapping)
+        and int(row.get("transfer_count") or 0) == 1
+        and row.get("legal") is True
+    }
+    selected = []
+    seen_ids: set[str] = set()
+    for route_id in material_direct_route_ids:
+        key = str(route_id or "")
+        if not key or key in seen_ids:
+            continue
+        route = direct_by_id.get(key)
+        if route is None:
+            continue
+        selected.append(route)
+        seen_ids.add(key)
+
+    hold = _route(current, (), (), bank_before=bank)
+    if hold is None:
+        raise PackageSearchError("HOLD route unexpectedly illegal")
+    hold["search_authority"] = "MATERIAL_FUNDED"
+    hold["funding_scope"] = "BOUNDED_MATERIAL_DIRECT_LEG_COMPOSITION"
+
+    composed_by_id: dict[str, dict[str, Any]] = {}
+    pair_attempts = 0
+    rejected_overlap = 0
+    rejected_illegal = 0
+    rejected_unaffordable = 0
+    funding_dependent_count = 0
+
+    for left, right in combinations(selected, 2):
+        pair_attempts += 1
+        left_out = list(left.get("players_out") or [])
+        right_out = list(right.get("players_out") or [])
+        left_in = list(left.get("players_in") or [])
+        right_in = list(right.get("players_in") or [])
+        if not left_out or not right_out or not left_in or not right_in:
+            rejected_overlap += 1
+            continue
+
+        out_ids = {
+            int(left_out[0].get("element") or 0),
+            int(right_out[0].get("element") or 0),
+        }
+        in_ids = {
+            int(left_in[0].get("element") or 0),
+            int(right_in[0].get("element") or 0),
+        }
+        if 0 in out_ids or 0 in in_ids or len(out_ids) != 2 or len(in_ids) != 2:
+            rejected_overlap += 1
+            continue
+        if not out_ids <= set(current_by_id):
+            rejected_overlap += 1
+            continue
+
+        ins = []
+        for raw in (left_in[0], right_in[0]):
+            ins.append(
+                {
+                    "element": int(raw.get("element")),
+                    "position": _position(raw.get("position")),
+                    "team_id": _int(
+                        raw.get("club"),
+                        label="team_id",
+                    ),
+                    "now_cost": _int(
+                        raw.get("buy_price"),
+                        label="now_cost",
+                    ),
+                }
+            )
+        route = _route(
+            current,
+            [current_by_id[element] for element in sorted(out_ids)],
+            ins,
+            bank_before=bank,
+        )
+        if route is None:
+            rejected_illegal += 1
+            continue
+        if route.get("affordable") is not True:
+            rejected_unaffordable += 1
+            continue
+
+        source_ids = sorted(
+            [str(left.get("route_id")), str(right.get("route_id"))]
+        )
+        funding_dependent = not (
+            left.get("affordable") is True and right.get("affordable") is True
+        )
+        route["search_authority"] = "MATERIAL_FUNDED"
+        route["funding_scope"] = "BOUNDED_MATERIAL_DIRECT_LEG_COMPOSITION"
+        route["source_direct_route_ids"] = source_ids
+        route["funding_dependent"] = funding_dependent
+        route["global_two_transfer_exhaustive_claim"] = False
+        if funding_dependent:
+            funding_dependent_count += 1
+        composed_by_id.setdefault(str(route["route_id"]), route)
+
+    routes = [hold] + sorted(
+        composed_by_id.values(),
+        key=lambda row: (
+            0 if row.get("funding_dependent") else 1,
+            -int(row.get("bank_after") or 0),
+            str(row.get("route_id") or ""),
+        ),
+    )
+    return {
+        "schema_version": 1,
+        "model": load_config().get("model_id"),
+        "model_owner": MODEL_OWNER,
+        "ruleset_id": RULESET_ID,
+        "status": "READY",
+        "search_authority": "MATERIAL_FUNDED",
+        "route_denominator": len(routes),
+        "max_transfers_evaluated": 2,
+        "transfer_depth_semantics": "MATERIAL_FUNDED_TWO_TRANSFER_ONLY",
+        "coverage": {
+            "search_authority": "MATERIAL_FUNDED",
+            "coverage_complete": True,
+            "coverage_scope": "SELECTED_MATERIAL_DIRECT_LEG_CROSS_PRODUCT",
+            "global_two_transfer_complete": False,
+            "direct_source_full": True,
+        },
+        "search_proof": {
+            "direct_source_search_authority": "FULL",
+            "direct_source_coverage_complete": True,
+            "selected_direct_leg_count": len(selected),
+            "pair_attempt_count": pair_attempts,
+            "legal_affordable_two_transfer_count": len(composed_by_id),
+            "funding_dependent_count": funding_dependent_count,
+            "rejected_overlap_count": rejected_overlap,
+            "rejected_illegal_count": rejected_illegal,
+            "rejected_unaffordable_count": rejected_unaffordable,
+            "hold_included": True,
+            "global_two_transfer_exhaustive_claim": False,
+            "decision_score_used": False,
+        },
+        "routes": routes,
+        "search_frontier": build_search_frontier(routes),
+        "governance": {
+            "search_decision_utility_separated": True,
+            "source_direct_routes_materialized_by_p1_2b": True,
+            "funding_composition_is_legality_only": True,
+            "decision_score_present": False,
+            "canonical_weights_present": False,
+            "horizon_utility_present": False,
+            "monte_carlo_present": False,
+            "mini_league_present": False,
+            "global_two_transfer_exhaustive_claim": False,
+            "v6_mutated": False,
+        },
+    }
+

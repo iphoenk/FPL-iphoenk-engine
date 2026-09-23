@@ -584,8 +584,8 @@ DEEP HUMAN-FACING DURABILITY CONTRACT:
 DEEP DECISION-CONTENT DELIVERY BARRIER:
 - The governed chain is analytics output -> materialization -> renderer -> PRE_RENDER -> POST_RENDER -> HUMAN_FACING. Existing P1.x/Stage-3 output is authoritative; report-plane MUST consume it rather than recomputing a second analytics model.
 - CURRENT15 is resolved dynamically for every occurrence. A stale AUTH_EXPIRED marker cannot outrank a valid authenticated or explicitly current user-confirmed team evidence item. Previous-GW picks are fallback identity evidence only and never mint current finance. Contemplated transfers never mutate ownership.
-- Package search covers all owned weak-link candidates and the complete legal replacement universe. Search depth must not be reduced merely because free-transfer or hit-cost evidence is unavailable: legal direct and funded/two-transfer packages remain searchable while unresolved economics stay field-level PARTIAL/UNAVAILABLE.
-- Canonical Stage-3 material-route coverage must allow both a direct one-transfer route and a funded/two-transfer route to reach the existing correlated Monte Carlo whenever those route depths exist. This is material-surface coverage, not a second decision score or preference for extra transfers.
+- Package search covers all owned weak-link candidates and the complete legal one-transfer replacement universe with FULL authority. Two-transfer funding must remain discoverable without brute-forcing the global two-transfer cross-product through P1.7: P1.2B first evaluates the full direct universe exactly, the existing materiality selector identifies material direct legs, P1.2A composes legal/affordable two-transfer packages from those legs, and P1.2B evaluates every composed funded package with the unchanged exact P1.7 owner. This scope is explicitly FULL_DIRECT_MATERIAL_FUNDED and MUST NOT be described as exhaustive global two-transfer coverage.
+- Canonical Stage-3 material-route coverage must allow both a direct one-transfer route and a material funded/two-transfer route to reach the existing correlated Monte Carlo whenever such funded composition exists. Material-leg selection reuses existing P1.7 horizon/structure evidence only; it creates no second player score, package score, or decision authority.
 - S14 visibly materializes HOLD plus meaningful direct/funded frontier rows with explicit OUT -> IN identities, selling/purchase values where supportable, bank before/after, affordability, FT/hit economics, 1GW/2GW/3GW/5GW, raw/net gain, P(beat HOLD), MC tails/quantiles, tactical/fixture effect, price optionality, mini-league utility, robustness/regret/reversal risk and WAIT/PREPARE/ACT.
 - S11 exact20 remains 5 GK + 5 DEF + 5 MID + 5 FWD and, when evidence supports it, visibly carries price/predictor, xMins/P(start), ownership membership and transfer relevance. S12/S13 exact20 are materialized from authoritative predictor rows rather than requiring a pre-rendered table.
 - S16 is exactly 15 unique owned players when CURRENT15 is supportable and exposes availability, xMins/P(start), Bayesian/posterior signal, role/set-piece/penalty, tactical/fixture context, defensive contribution where relevant, 1GW/3GW/5GW, price optionality, mini-league relevance and action state.
@@ -1817,6 +1817,19 @@ PACKAGE / FRONTIER / TRANSFER ECONOMICS
   limits and governed transfer-depth bounds. Candidate-universe coverage and
   exact max transfer depth evaluated MUST be published separately; FULL
   universe authority MUST NOT be misrepresented as an unbounded transfer tree.
+- Current DEEP package execution is two-stage: P1.2A exhaustively searches the
+  complete eligible one-transfer universe; P1.2B evaluates every direct route
+  with exact P1.7; the existing materiality surface selects a bounded set of
+  direct legs; P1.2A then composes the legal/affordable two-transfer cross-
+  product of those selected legs; and P1.2B evaluates every composed funded
+  route with exact P1.7. The combined authority is
+  FULL_DIRECT_MATERIAL_FUNDED. Global two-transfer exhaustive coverage is
+  explicitly false and MUST NOT be inferred from FULL direct coverage.
+- The funded materialization bound is an execution-scope boundary, not a
+  football score or hidden preference. It may use only already-produced
+  canonical P1.7 horizon/structure evidence to choose direct legs; it MUST NOT
+  introduce player xPts, package utility, mini-league leverage, or price
+  prediction into P1.2A.
 - P1.2B consumes P1.7 per-GW lineup consequences and keeps 1GW, 3GW and 5GW
   separate. A 2GW view is added only for an explicitly relevant rental/punt.
 - Current transfer economics include factual purchase/current prices where

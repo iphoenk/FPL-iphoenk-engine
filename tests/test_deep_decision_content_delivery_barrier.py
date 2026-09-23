@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import inspect
 from pathlib import Path
 
 from src.engines.v12_deep_delivery import (
     select_personal_evidence,
     validate_deep_decision_content_delivery,
 )
-from src.engines.v12_integrated_report_runner import _fingerprint
+from src.engines.v12_integrated_report_runner import _fingerprint, run_deep
 from src.engines.v12_package_utility import (
     select_stage3_material_mc_routes,
 )
@@ -619,3 +620,13 @@ def test_r_legacy_short_narrative_cannot_human_facing_pass():
     assert failures
     assert "FRONTIER_IDENTITIES_NOT_VISIBLE" in failures
     assert "MC_DISTRIBUTION_NOT_VISIBLE" in failures
+
+def test_integrated_deep_does_not_bruteforce_global_two_transfer_p17():
+    source = inspect.getsource(run_deep)
+    assert "max_transfers=1" in source
+    assert "compose_material_two_transfer_packages" in source
+    assert "P1_2A_FUNDED_PACKAGE_SEARCH" in source
+    assert "P1_2B_FUNDED_PACKAGE_UTILITY" in source
+    assert "FULL_DIRECT_MATERIAL_FUNDED" in source
+    assert "max_transfers=2" not in source
+

@@ -69,7 +69,10 @@
     "execution_strategy": "BOUNDED_LINUX_PROCESS_POOL_EXACT_P1_7",
     "lossy_pruning": false,
     "route_identity_preserved": true,
-    "p1_7_owner_unchanged": true
+    "p1_7_owner_unchanged": true,
+    "funded_material_direct_leg_limit": 32,
+    "funded_materialization_strategy": "FULL_DIRECT_P1_7_THEN_MATERIAL_FUNDED_PAIR_P1_7",
+    "global_two_transfer_bruteforce_forbidden": true
   },
   "governance": {
     "search_utility_separated": true,

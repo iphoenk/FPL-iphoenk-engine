@@ -11,7 +11,6 @@ No route is pruned and no P1.1/P1.3/P1.6 mathematics is recomputed here.
 import math
 import time
 from functools import lru_cache
-from functools import lru_cache
 from typing import Any, Mapping, Sequence
 
 import numpy as np

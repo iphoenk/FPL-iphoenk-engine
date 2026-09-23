@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+from copy import deepcopy
 from functools import lru_cache
 import math
 from pathlib import Path
@@ -10,10 +11,12 @@ import pytest
 
 from src.engines.canonical_decision_methodology import CANONICAL_WEIGHTS
 from src.engines.v12_monte_carlo import (
+    MC_SIM_CACHE_ENV,
     MonteCarloError,
     _projection_map,
     _resolve_route_chunk,
     attach_monte_carlo_to_package_utility,
+    canonical_package_seed,
     compare_legacy_monte_carlo,
     correlation_structure_diagnostic,
     crn_variance_benchmark,
@@ -718,3 +721,83 @@ def test_78_scoreline_zero_marginal_calibration_is_not_pathwise_bisection():
     source = Path("src/engines/v12_monte_carlo.py").read_text(encoding="utf-8")
     assert "DETERMINISTIC_GAUSS_HERMITE_TO_STAGE2_OPPONENT_CS_MARGINAL" in source
     assert "np.mean(np.exp(-mid * factor))" not in source
+
+
+def test_mc_input_stable_seed_ignores_occurrence_only_p17_evidence():
+    projections, package = _fixture()
+    baseline = canonical_package_seed(
+        projections,
+        package,
+        route_ids=["R1"],
+    )
+
+    mutated = deepcopy(package)
+    for route in mutated.get("routes") or []:
+        football = route.get("football_route_utility") or {}
+        for row in football.get("per_gw") or []:
+            row["p1_7_model_evidence_output_fingerprint"] = (
+                "OCCURRENCE_ONLY_CHANGED"
+            )
+
+    changed = canonical_package_seed(
+        projections,
+        mutated,
+        route_ids=["R1"],
+    )
+    assert changed == baseline
+
+
+def test_mc_summary_cache_reuses_simulation_and_rebinds_occurrence(
+    monkeypatch,
+    tmp_path,
+):
+    projections, package = _fixture()
+    routes = package_route_definitions(
+        package,
+        route_ids=["R1"],
+    )
+    seed = canonical_package_seed(
+        projections,
+        package,
+        route_ids=["R1"],
+    )
+    monkeypatch.setenv(MC_SIM_CACHE_ENV, str(tmp_path))
+
+    first = run_correlated_monte_carlo(
+        projections,
+        routes,
+        actual_paths=5_000,
+        seed=seed,
+        input_snapshot_id="MC_CACHE_OCCURRENCE_A",
+        canonical=False,
+        horizons=(1,),
+        selected_route_id="R1",
+        generated_at="2026-09-23T08:30:00Z",
+        factual_snapshot_timestamps={
+            "fixture": "2026-09-23T08:30:00Z"
+        },
+    )
+    second = run_correlated_monte_carlo(
+        projections,
+        routes,
+        actual_paths=5_000,
+        seed=seed,
+        input_snapshot_id="MC_CACHE_OCCURRENCE_B",
+        canonical=False,
+        horizons=(1,),
+        selected_route_id="R1",
+        generated_at="2026-09-23T08:31:00Z",
+        factual_snapshot_timestamps={
+            "fixture": "2026-09-23T08:31:00Z"
+        },
+    )
+
+    assert first["performance"]["simulation_cache_hit"] is False
+    assert second["performance"]["simulation_cache_hit"] is True
+    assert first["metrics"] == second["metrics"]
+    assert (
+        first["sampling_diagnostics"]
+        == second["sampling_diagnostics"]
+    )
+    assert first["run_fingerprint"] != second["run_fingerprint"]
+    assert list(tmp_path.rglob("*.pkl"))

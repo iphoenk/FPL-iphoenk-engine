@@ -2844,6 +2844,10 @@ def _route_batch_bench_winners_exact(
             (row_count, 3),
             dtype=np.float64,
         )
+        cameo_selected_probability = np.zeros(
+            (row_count, 3),
+            dtype=np.float64,
+        )
         outfield_autosub = np.zeros(
             row_count,
             dtype=np.float64,
@@ -2986,6 +2990,11 @@ def _route_batch_bench_winners_exact(
             axis=1,
             dtype=np.float64,
         )
+        cameo_outfield_expected = np.sum(
+            cameo_selected_probability * slot_mean,
+            axis=1,
+            dtype=np.float64,
+        )
         selected_blank = np.sum(
             selected_probability * slot_blank,
             axis=1,
@@ -3003,6 +3012,13 @@ def _route_batch_bench_winners_exact(
         )
         expected[:, permutation_index] = (
             outfield_expected + gk_expected
+        )
+        cameo_expected = (
+            cameo_outfield_expected + cameo_gk_expected
+        )
+        blocked[:, permutation_index] = np.maximum(
+            0.0,
+            cameo_expected - expected[:, permutation_index],
         )
         autosub[:, permutation_index] = 1.0 - (
             (1.0 - outfield_autosub)

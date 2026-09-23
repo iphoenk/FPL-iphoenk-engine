@@ -47,6 +47,10 @@ from src.engines.v12_package_utility import (
 )
 from src.engines.visible_content_proof import canonical_mode_contract
 from src.engines.v12_price_delivery import run_price_occurrence
+from src.engines.v12_deep_delivery import (
+    select_personal_evidence,
+    validate_deep_decision_content_delivery,
+)
 from src.engines.v12_report_orchestration import (
     build_actionable_price_radar,
     build_deep_human_facing_manifest,
@@ -294,72 +298,116 @@ def _position_name(value: Any) -> str:
     return "GK" if token in {"GKP", "GK"} else token
 
 
-def _owned15(
+def _personal_evidence_resolution(
     runtime_root: Path,
-    state: Mapping[str, Any],
+    *,
+    planning_gw: int,
+) -> dict[str, Any]:
+    candidates: list[dict[str, Any]] = []
+    personal_dir = runtime_root / "data/v6/personal"
+    for path in sorted(personal_dir.glob("*current_team*.json")):
+        payload = _read_json(path, {}) or {}
+        candidates.append({
+            "source": str(path.relative_to(runtime_root)),
+            "source_class": "AUTHENTICATED_CURRENT_TEAM",
+            "payload": payload,
+            "observed_at": payload.get("generated_at"),
+            "gw": payload.get("gw"),
+            "auth_state": payload.get("auth_state"),
+        })
+    submitted = _read_json(
+        personal_dir / "submitted_picks.json",
+        {},
+    ) or {}
+    if submitted:
+        candidates.append({
+            "source": "data/v6/personal/submitted_picks.json",
+            "source_class": "OFFICIAL_SUBMITTED_PICKS",
+            "payload": submitted,
+            "observed_at": submitted.get("generated_at"),
+            "gw": submitted.get("gw"),
+            "auth_state": "PUBLIC_OFFICIAL",
+        })
+    return select_personal_evidence(
+        candidates,
+        planning_gw=planning_gw,
+    )
+
+
+def _position_from_official(row: Mapping[str, Any]) -> str:
+    mapping = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
+    try:
+        return mapping.get(int(row.get("element_type") or 0), "")
+    except (TypeError, ValueError):
+        return ""
+
+
+def _owned15(
+    personal_resolution: Mapping[str, Any],
     bootstrap: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
-    current = _read_json(runtime_root / "data/v6/personal/current_team.json", {}) or {}
     player_map = {
         int(row.get("id")): dict(row)
         for row in bootstrap.get("elements") or []
         if row.get("id") is not None
     }
+    finance_allowed = personal_resolution.get("finance_allowed") is True
     rows: list[dict[str, Any]] = []
-    for row in current.get("players") or []:
-        if not isinstance(row, Mapping) or row.get("element_id") is None:
+    for row in personal_resolution.get("rows") or []:
+        if not isinstance(row, Mapping):
             continue
-        element = int(row["element_id"])
+        raw_element = row.get("element_id", row.get("element"))
+        if raw_element is None:
+            continue
+        element = int(raw_element)
         official = player_map.get(element) or {}
         rows.append(
             {
                 "element_id": element,
                 "element": element,
                 "name": official.get("web_name") or str(element),
-                "position": _position_name(row.get("position")),
+                "position": (
+                    _position_name(row.get("position"))
+                    or _position_from_official(official)
+                ),
                 "team_id": int(official.get("team") or 0),
-                "now_cost": int(row.get("current_price") or official.get("now_cost") or 0),
-                "sell_value": row.get("selling_price"),
+                "now_cost": int(
+                    row.get("current_price")
+                    or official.get("now_cost")
+                    or 0
+                ),
+                "current_price": (
+                    row.get("current_price")
+                    if row.get("current_price") is not None
+                    else official.get("now_cost")
+                ),
+                "purchase_price": (
+                    row.get("purchase_price")
+                    if finance_allowed
+                    else None
+                ),
+                "selling_price": (
+                    row.get("selling_price")
+                    if finance_allowed
+                    else None
+                ),
+                "sell_value": (
+                    row.get("selling_price")
+                    if finance_allowed
+                    else None
+                ),
                 "status": official.get("status"),
                 "eligible": True,
-                "squad_position": row.get("squad_position"),
+                "squad_position": row.get("squad_position", row.get("position_index")),
                 "bench_order": row.get("bench_order"),
                 "captain": bool(row.get("captain")),
                 "vice_captain": bool(row.get("vice_captain")),
             }
         )
-    if len(rows) == 15:
-        return rows
-
-    confirmed = (state.get("confirmed_current_squad_state") or {})
-    rows = []
-    groups = (
-        ("goalkeepers", "GK"),
-        ("defenders", "DEF"),
-        ("midfielders", "MID"),
-        ("forwards", "FWD"),
-    )
-    for group, position in groups:
-        for row in confirmed.get(group) or []:
-            if row.get("element_id") is None:
-                continue
-            element = int(row["element_id"])
-            official = player_map.get(element) or {}
-            rows.append(
-                {
-                    "element_id": element,
-                    "element": element,
-                    "name": official.get("web_name") or row.get("display_name") or str(element),
-                    "position": position,
-                    "team_id": int(official.get("team") or 0),
-                    "now_cost": int(official.get("now_cost") or 0),
-                    "sell_value": None,
-                    "status": official.get("status"),
-                    "eligible": True,
-                }
-            )
-    if len(rows) != 15:
-        raise IntegratedRunnerError(f"OUR15 identity incomplete: {len(rows)}/15")
+    if len(rows) != 15 or len({row["element_id"] for row in rows}) != 15:
+        raise IntegratedRunnerError(
+            f"OUR15 identity incomplete: {len(rows)}/15"
+        )
     return rows
 
 
@@ -460,22 +508,24 @@ def _package_candidate_rows(
 
 
 def _private_finance_context(
-    runtime_data_root: Path,
+    personal_resolution: Mapping[str, Any],
 ) -> dict[str, Any]:
-    current = _read_json(
-        runtime_data_root / "data/v6/personal/current_team.json",
-        {},
-    ) or {}
-    bank = current.get("bank")
-    free_transfers = current.get("free_transfers")
-    if free_transfers is None:
+    current = dict(personal_resolution.get("payload") or {})
+    availability = dict(current.get("availability") or {})
+    finance_allowed = personal_resolution.get("finance_allowed") is True
+    bank = current.get("bank") if finance_allowed else None
+    free_transfers = (
+        current.get("free_transfers") if finance_allowed else None
+    )
+    if free_transfers is None and finance_allowed:
         transfers = current.get("transfers")
         free_transfers = (
             transfers.get("free_transfers")
             if isinstance(transfers, Mapping)
             else None
         )
-    availability = dict(current.get("availability") or {})
+    purchase_status = availability.get("purchase_price", "UNAVAILABLE")
+    selling_status = availability.get("selling_price", "UNAVAILABLE")
     return {
         "auth_state": current.get("auth_state"),
         "bank": int(bank) if isinstance(bank, int) else None,
@@ -486,21 +536,40 @@ def _private_finance_context(
         ),
         "hit_cost_per_extra_transfer": (
             int(current.get("hit_cost_per_extra_transfer"))
-            if isinstance(
-                current.get("hit_cost_per_extra_transfer"),
-                int,
-            )
+            if finance_allowed
+            and isinstance(current.get("hit_cost_per_extra_transfer"), int)
             else None
         ),
-        "bank_status": availability.get("bank", "UNAVAILABLE"),
-        "sell_value_status": availability.get(
-            "purchase_selling_price",
-            "UNAVAILABLE",
+        "bank_status": (
+            availability.get("bank", "UNAVAILABLE")
+            if finance_allowed
+            else "STALE_NOT_AUTHORIZED"
         ),
-        "free_transfers_status": availability.get(
-            "free_transfers",
-            "UNAVAILABLE",
+        "purchase_price_status": (
+            purchase_status if finance_allowed else "STALE_NOT_AUTHORIZED"
         ),
+        "sell_value_status": (
+            selling_status if finance_allowed else "STALE_NOT_AUTHORIZED"
+        ),
+        "chips": current.get("chips") if finance_allowed else None,
+        "chips_status": (
+            availability.get("chips", "UNAVAILABLE")
+            if finance_allowed
+            else "STALE_NOT_AUTHORIZED"
+        ),
+        "free_transfers_status": (
+            availability.get("free_transfers", "NOT_SUPPORTED")
+            if finance_allowed
+            else "NOT_SUPPORTED"
+        ),
+        "personal_resolution_status": personal_resolution.get(
+            "resolution_status"
+        ),
+        "personal_evidence_source": personal_resolution.get("source"),
+        "personal_evidence_observed_at": personal_resolution.get(
+            "observed_at"
+        ),
+        "personal_evidence_stale": personal_resolution.get("stale") is True,
         "private_finance_fabricated": False,
     }
 
@@ -741,6 +810,7 @@ def _stage3_visible_package_surface(
     monte_carlo: Mapping[str, Any],
     stage3_decision: Mapping[str, Any],
     mini_overlay: Mapping[str, Any] | None,
+    finance: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     player_map = {
         int(row.get("element") or 0): dict(row)
@@ -867,13 +937,67 @@ def _stage3_visible_package_surface(
         pair = dict(decision.get("mc_pair_vs_hold") or {})
         horizons = dict(route.get("horizons") or {})
         economics = dict(route.get("transfer_economics") or {})
+        def visible_move(raw: Mapping[str, Any], *, incoming: bool) -> dict[str, Any]:
+            item = dict(raw or {})
+            element = int(item.get("element") or 0)
+            player = player_map.get(element) or {}
+            mechanism = (
+                _visible_position_mechanism(
+                    player,
+                    action=str(stage3_decision.get("operational_action") or "WAIT"),
+                )
+                if player else {}
+            )
+            return {
+                **item,
+                "name": player.get("name") or f"element:{element}",
+                "current_price": player.get("now_cost"),
+                "xmins": mechanism.get("xmins"),
+                "p_start": mechanism.get("p_start"),
+                "tactical_role": mechanism.get("role"),
+                "fixture": {
+                    "opponent": mechanism.get("opponent"),
+                    "home": mechanism.get("home"),
+                    "dynamic_matchup": mechanism.get("dynamic_matchup"),
+                },
+                "price": (
+                    item.get("buy_price")
+                    if incoming
+                    else item.get("sell_value")
+                ),
+            }
+
+        visible_out = [
+            visible_move(row, incoming=False)
+            for row in route.get("players_out") or []
+            if isinstance(row, Mapping)
+        ]
+        visible_in = [
+            visible_move(row, incoming=True)
+            for row in route.get("players_in") or []
+            if isinstance(row, Mapping)
+        ]
+        route_kind = (
+            "HOLD"
+            if route_id == "HOLD"
+            else "FUNDED / 2-TRANSFER"
+            if max(len(visible_out), len(visible_in)) >= 2
+            else "DIRECT / 1-TRANSFER"
+        )
         package_routes.append(
             {
                 "route": route_id,
+                "route_kind": route_kind,
                 "moves": {
-                    "out": route.get("players_out"),
-                    "in": route.get("players_in"),
+                    "out": visible_out,
+                    "in": visible_in,
                 },
+                "bank_before": (finance or {}).get("bank"),
+                "affordability": (
+                    "SUPPORTED"
+                    if economics.get("status") == "COMPLETE"
+                    else economics.get("status") or "PARTIAL"
+                ),
                 "transfer_cost": {
                     "hit": route.get("hit"),
                     "ft_usage": route.get("ft_usage"),
@@ -918,6 +1042,27 @@ def _stage3_visible_package_surface(
                 "football_5GW": (
                     (decision.get("horizon_deltas") or {}).get("5GW")
                 ),
+                "raw_gain": pair.get("mean_difference"),
+                "net_gain": (
+                    (horizons.get("GW+1") or {}).get(
+                        "net_delta_vs_hold"
+                    )
+                ),
+                "mini_league_utility": (
+                    (mini_overlay or {}).get("decision_delta")
+                    if mini_overlay else None
+                ),
+                "tactical_fixture_effect": [
+                    {
+                        "element": row.get("element"),
+                        "name": row.get("name"),
+                        "xmins": row.get("xmins"),
+                        "p_start": row.get("p_start"),
+                        "tactical_role": row.get("tactical_role"),
+                        "fixture": row.get("fixture"),
+                    }
+                    for row in visible_in
+                ],
                 "expected_regret": decision.get("expected_regret"),
                 "robustness": decision.get("robustness"),
                 "sensitivity": decision.get("sensitivity"),
@@ -1194,6 +1339,7 @@ def _enrich_all15_rows(
     projections: Mapping[str, Any] | None,
     predictor: Mapping[str, Any],
     owned: Sequence[Mapping[str, Any]],
+    mini: Mapping[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     pmap = _projection_map(projections)
     predictor_map = _price_player_map(predictor)
@@ -1201,6 +1347,12 @@ def _enrich_all15_rows(
         int(row.get("element_id") or 0): dict(row)
         for row in owned
         if int(row.get("element_id") or 0) > 0
+    }
+    exposures = {
+        int(item.get("element_id") or 0): dict(item)
+        for item in (mini or {}).get("exposures") or []
+        if isinstance(item, Mapping)
+        and int(item.get("element_id") or 0) > 0
     }
     rows: list[dict[str, Any]] = []
     for raw in (all15 or {}).get("rows") or []:
@@ -1234,21 +1386,64 @@ def _enrich_all15_rows(
                 f"{direction}"
                 + (f" {progress}%" if progress is not None else "")
             )
+        fixture = _first_projection_fixture(player)
+        mechanism = _visible_position_mechanism(
+            player,
+            action=str(row.get("action") or "HOLD"),
+        ) if player else {}
+        exposure = exposures.get(element) or {}
         row.update({
             "availability": row.get("p_available", xm.get("availability")),
             "projection_1gw": row.get("gw_plus_1", _horizon_mean(player, "1")),
             "projection_3gw": row.get("three_gw", _horizon_mean(player, "3")),
             "projection_5gw": row.get("five_gw", _horizon_mean(player, "5")),
-            "tactical_role_note": (
-                player.get("tactical_role")
-                or player.get("system_context")
-                or row.get("tactical_role")
+            "posterior_signal": {
+                "posterior_rates": player.get("posterior_rates"),
+                "posterior_predictive": (
+                    (fixture.get("position_engine") or {}).get(
+                        "posterior_predictive"
+                    )
+                ),
+                "point_distribution_1gw": mechanism.get("1GW"),
+            },
+            "role_detail": {
+                "tactical_role": (
+                    player.get("tactical_role")
+                    or player.get("system_context")
+                    or row.get("tactical_role")
+                ),
+                "set_piece": mechanism.get("set_piece_process"),
+                "penalty": mechanism.get("penalty_process"),
+            },
+            "fixture_detail": {
+                "opponent": mechanism.get("opponent"),
+                "home": mechanism.get("home"),
+                "dynamic_matchup": mechanism.get("dynamic_matchup"),
+            },
+            "defensive_contribution": (
+                mechanism.get("defcon")
+                or mechanism.get("defensive_process")
+                or "UNAVAILABLE"
             ),
             "injury_rotation_warning": ", ".join(warnings) if warnings else "NONE_MATERIAL",
             "price_relevance": price_relevance,
+            "price_optionality": {
+                "current_price": owned_row.get("current_price", player.get("now_cost")),
+                "purchase_price": owned_row.get("purchase_price"),
+                "selling_price": owned_row.get("selling_price"),
+                "predictor_direction": direction or "NONE",
+                "predictor_progress": progress,
+            },
             "current_price": owned_row.get("current_price", player.get("now_cost")),
             "purchase_price": owned_row.get("purchase_price"),
             "selling_price": owned_row.get("selling_price"),
+            "mini_league_relevance": {
+                "ownership_pct": exposure.get("ownership_pct"),
+                "starter_pct": exposure.get("starter_pct"),
+                "captain_pct": exposure.get("captain_pct"),
+                "vice_pct": exposure.get("vice_pct"),
+                "eo_pct": exposure.get("eo_pct"),
+            },
         })
         rows.append(row)
     return rows
@@ -1918,10 +2113,19 @@ def run_deep(
     bootstrap = official["bootstrap"]
     fixtures = official["fixtures"]
     planning_gw = _planning_gw(bootstrap)
+    personal_resolution = _stage(
+        ledger,
+        "PERSONAL_EVIDENCE_RECONCILIATION",
+        lambda: _personal_evidence_resolution(
+            runtime_data_root,
+            planning_gw=planning_gw,
+        ),
+        required=True,
+    )
     owned = _stage(
         ledger,
         "OUR15_IDENTITY",
-        lambda: _owned15(runtime_data_root, state, bootstrap),
+        lambda: _owned15(personal_resolution or {}, bootstrap),
         required=True,
     )
     if not owned:
@@ -2103,13 +2307,6 @@ def run_deep(
         ),
     )
 
-    all15_rows = _enrich_all15_rows(
-        all15=all15,
-        projections=projections,
-        predictor=predictor,
-        owned=owned,
-    )
-
     universe = _candidate_universe(projections or {})
     watchlist = _stage(
         ledger,
@@ -2214,7 +2411,7 @@ def run_deep(
     finance = _stage(
         ledger,
         "TRANSFER_FINANCE_CONTEXT",
-        lambda: _private_finance_context(runtime_data_root),
+        lambda: _private_finance_context(personal_resolution or {}),
         required=True,
     )
     package_search_result = None
@@ -2227,15 +2424,10 @@ def run_deep(
 
     if projections is not None and canonical_complete:
         package_candidates = _package_candidate_rows(projections)
-        max_transfers = (
-            2
-            if (
-                (finance or {}).get("free_transfers") is not None
-                or (finance or {}).get("hit_cost_per_extra_transfer")
-                is not None
-            )
-            else 1
-        )
+        # Legal package search depth is independent of whether FT/hit
+        # economics are currently supportable. Missing economics degrades
+        # those fields; it must never prune the legal funding universe.
+        max_transfers = 2
         package_search_result = _stage(
             ledger,
             "P1_2A_PACKAGE_SEARCH",
@@ -2498,6 +2690,7 @@ def run_deep(
             monte_carlo=monte_carlo or {},
             stage3_decision=stage3_decision or {},
             mini_overlay=mini_overlay,
+            finance=finance,
         )
         if stage3_internal_pass
         else {}
@@ -2536,6 +2729,14 @@ def run_deep(
     watch_state = str((watchlist or {}).get("state") or "UNAVAILABLE")
     watch_reason = (watchlist or {}).get("degradation_reason") or universe_gap["reason"]
 
+    all15_rows = _enrich_all15_rows(
+        all15=all15,
+        projections=projections,
+        predictor=predictor,
+        owned=owned,
+        mini=mini,
+    )
+
     formation_strategy = _formation_mini_league_strategy(
         lineup=lineup,
         mini=mini,
@@ -2570,12 +2771,11 @@ def run_deep(
         mini=mini,
         mini_league_stance=str(formation_strategy.get("stance") or "BALANCED"),
     )
-    chip_payload = _read_json(
-        runtime_data_root / "data/v6/personal/current_team.json",
-        {},
-    ) or {}
-    chip_state = chip_payload.get("chips")
-    chip_available = chip_state not in (None, {}, [])
+    chip_state = (finance or {}).get("chips")
+    chip_available = (
+        chip_state not in (None, {}, [])
+        and (finance or {}).get("chips_status") == "AVAILABLE"
+    )
 
     sections = {
         "S01": _section(
@@ -2594,9 +2794,28 @@ def run_deep(
             },
         ),
         "S02": _section(
-            "COMPLETE" if len(all15_rows) == 15 else "DEGRADED",
-            {"rows": all15_rows},
-            None if len(all15_rows) == 15 else "OUR15 model enrichment incomplete",
+            (
+                "COMPLETE"
+                if len(all15_rows) == 15
+                and not (personal_resolution or {}).get("stale")
+                else "DEGRADED"
+            ),
+            {
+                "rows": all15_rows,
+                "personal_resolution": {
+                    "status": (personal_resolution or {}).get("resolution_status"),
+                    "source": (personal_resolution or {}).get("source"),
+                    "observed_at": (personal_resolution or {}).get("observed_at"),
+                    "gw": (personal_resolution or {}).get("gw"),
+                    "stale": (personal_resolution or {}).get("stale"),
+                },
+            },
+            (
+                None
+                if len(all15_rows) == 15
+                and not (personal_resolution or {}).get("stale")
+                else "CURRENT15 is preserved from the freshest supportable identity evidence but is not authenticated-current for the planning GW"
+            ),
             available_count=len(all15_rows),
             expected_count=15,
         ),
@@ -2831,7 +3050,10 @@ def run_deep(
                 "source_health": {
                     "official_fpl": "HEALTHY" if official else "UNAVAILABLE",
                     "authenticated_personal_scope": (
-                        "HEALTHY" if prefetch.get("public_personal_status") == "AVAILABLE" else prefetch.get("personal_status") or "UNAVAILABLE"
+                        "HEALTHY"
+                        if (personal_resolution or {}).get("resolution_status") == "CURRENT_VALID"
+                        else (personal_resolution or {}).get("resolution_status")
+                        or "UNAVAILABLE"
                     ),
                     "fixture_data": "HEALTHY" if fixtures is not None else "UNAVAILABLE",
                     "price_predictor": (rise or {}).get("predictor_health") or "UNAVAILABLE",
@@ -2855,6 +3077,27 @@ def run_deep(
                     else "execute only while ACT gate remains green"
                     if operational_action == "ACT"
                     else "preserve optionality and refresh evidence"
+                ),
+                "TRIGGER TO ACT": (stage3_decision or {}).get("action_contract") or "UNAVAILABLE",
+                "LATEST SAFE DECISION POINT": "NEXT_CANONICAL_PRE_DEADLINE_OCCURRENCE_WITH_FRESH_TEAM_NEWS_AND_PRICE_EVIDENCE",
+                "COST OF WAITING": next(
+                    (
+                        row.get("voi_vs_cost_of_waiting")
+                        for row in (stage3_decision or {}).get("routes") or []
+                        if str(row.get("route_id") or "") == str((stage3_decision or {}).get("selected_route_id") or "HOLD")
+                    ),
+                    None,
+                ),
+                "ABORT / REVERSAL": (
+                    "fresh role/injury/lineup/economics/price evidence or challenger posterior invalidates the route"
+                ),
+                "BEST ALTERNATIVE": next(
+                    (
+                        row
+                        for row in stage3_visible.get("package_routes", [])
+                        if str(row.get("route") or "").upper() != "HOLD"
+                    ),
+                    None,
                 ),
                 "TRIGGERS": (stage3_decision or {}).get("action_contract") or "UNAVAILABLE",
                 "REVERSAL": (
@@ -2934,6 +3177,7 @@ def run_deep(
     human_failures = list(dict.fromkeys(
         validate_human_facing_body(body)
         + validate_deep_human_facing_manifest(human_manifest)
+        + validate_deep_decision_content_delivery(report, body)
     ))
     parsed_ids, _, _ = _parse_sections(body)
     rendered_states = {

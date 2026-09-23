@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-23T17:27:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-23T19:35:00+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -637,3 +637,17 @@ The integrated V12 report workflow restores/saves this non-authoritative
 execution cache between runs. This targets repeated mandatory reports with
 unchanged numerical P1.7 inputs so they do not repeat the full 550-XI exact
 search for every identical squad/GW state.
+
+
+## V12 P1.7 benchmark diagnostics
+
+The P1.7 performance branch carries a diagnostic-only benchmark workflow that
+does not alter the existing 10.0 second acceptance gate. It runs the 2,043
+route × 5 GW batch in five independent Python processes, reports
+min/median/max/range, profiles one full single-process batch with cProfile, and
+measures scalar versus batch execution on the same GitHub Actions runner using
+the same 65-route fixture subset.
+
+The diagnostic artifact contains JSON, Markdown, per-run timing rows, and the
+raw pstats file. Absolute production acceptance remains separate from profiler
+runs because cProfile overhead is not a wall-clock acceptance measurement.

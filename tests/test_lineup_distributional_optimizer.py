@@ -2115,6 +2115,114 @@ def test_p17_rounding_boundary_is_non_vacuous_and_matches_scalar_bench():
     )
 
 
+def test_p17_bench_scalar_fallback_budget_fails_explicitly():
+    from src.engines import v12_lineup_batch as batch
+
+    signature = (
+        "GK", "GK",
+        "DEF", "DEF", "DEF", "DEF", "DEF",
+        "MID", "MID", "MID", "MID", "MID",
+        "FWD", "FWD", "FWD",
+    )
+    layout = batch._family_layout(signature)
+    boundary_blank = 0.1234567895
+    boundary_utility = 0.9999995
+    boundary_expected = (
+        boundary_utility + 0.20 * boundary_blank
+    )
+    surfaces = [
+        _direct_surface(
+            slot + 1,
+            position,
+            mean=(
+                boundary_expected
+                if slot == 7
+                else 0.25
+            ),
+            p_dnp=(1.0 if slot == 8 else 0.0),
+            cond_blank=(
+                boundary_blank
+                if slot == 7
+                else 0.0
+            ),
+            cond_ge8=0.0,
+            cond_ge10=0.0,
+        )
+        for slot, position in enumerate(signature)
+    ]
+    arrays = {
+        "elements": np.asarray(
+            [[row["element"] for row in surfaces]],
+            dtype=np.int64,
+        ),
+        "position_codes": np.asarray(
+            [[batch.POS_CODE[row["position"]] for row in surfaces]],
+            dtype=np.int8,
+        ),
+        "p_dnp": np.asarray(
+            [[row["p_dnp"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "p_cameo": np.asarray(
+            [[row["p_cameo"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "p_appearance": np.asarray(
+            [[row["p_appearance"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "xpts_mean": np.asarray(
+            [[row["xpts_mean"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "shortfall": np.asarray(
+            [[row["expected_shortfall"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "excess": np.asarray(
+            [[row["expected_excess_ge_8"] for row in surfaces]],
+            dtype=np.float64,
+        ),
+        "conditioned_mean": np.asarray(
+            [[
+                row["appearance_conditioned"]["expected_points"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
+        "conditioned_blank": np.asarray(
+            [[
+                row["appearance_conditioned"]["p_fpl_blank"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
+        "conditioned_ge8": np.asarray(
+            [[
+                row["appearance_conditioned"]["p_points_ge_8"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
+        "conditioned_ge10": np.asarray(
+            [[
+                row["appearance_conditioned"]["p_points_ge_10"]
+                for row in surfaces
+            ]],
+            dtype=np.float64,
+        ),
+    }
+    with pytest.raises(
+        batch.LineupBatchError,
+        match="scalar fallback budget exceeded",
+    ):
+        batch._family_bench_kernel(
+            layout=layout,
+            arrays=arrays,
+            scalar_fallback_limit=0,
+        )
+
+
 def test_p17_family_bench_tie_rank_memoizes_across_gw(monkeypatch):
     from src.engines import v12_lineup_batch as batch
 

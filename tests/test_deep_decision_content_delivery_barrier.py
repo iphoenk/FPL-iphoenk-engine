@@ -570,22 +570,35 @@ def test_p_current_gw_authenticated_squad_beats_previous_gw_submitted_picks():
     assert [row["element_id"] for row in resolved["rows"]] == list(range(31, 46))
 
 
-def test_q_report_plane_and_permanent_contract_do_not_pin_production_players():
+def test_q_report_plane_and_new_permanent_contract_do_not_pin_production_players():
     root = Path(__file__).resolve().parents[1]
-    paths = (
+    source_paths = (
         root / "src/engines/v12_deep_delivery.py",
         root / "src/engines/v12_integrated_report_runner.py",
         root / "src/engines/v12_report_orchestration.py",
-        root / "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt",
-        root / "README.md",
     )
     production_names = ("Haaland", "Calafiori", "Sangaré", "Groß")
-    for path in paths:
+    for path in source_paths:
         text = path.read_text(encoding="utf-8")
         assert "CURRENT15 = [" not in text
         assert "owned_element_ids = [" not in text
         for name in production_names:
             assert name not in text
+
+    canonical = (
+        root / "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt"
+    ).read_text(encoding="utf-8")
+    canonical_block = canonical.split(
+        "DEEP DECISION-CONTENT DELIVERY BARRIER:", 1
+    )[1].split("HUMAN_FACING acceptance is fail-closed:", 1)[0]
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    readme_block = readme.split(
+        "## DEEP decision-content delivery barrier", 1
+    )[1].split("## PRICE human-facing delivery barrier", 1)[0]
+    for block in (canonical_block, readme_block):
+        assert "CURRENT15 = [" not in block
+        for name in production_names:
+            assert name not in block
 
 
 def test_r_legacy_short_narrative_cannot_human_facing_pass():

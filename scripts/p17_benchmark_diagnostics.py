@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import cProfile
 import importlib.util
+import io
 import json
+import os
 from pathlib import Path
 import pstats
 import statistics
@@ -11,6 +14,8 @@ import subprocess
 import sys
 import time
 from typing import Any
+
+import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -208,6 +213,29 @@ def _invoke_child(
     return json.loads(output.read_text(encoding="utf-8"))
 
 
+def _runtime_environment() -> dict[str, Any]:
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        np.show_config()
+    thread_vars = (
+        "OMP_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "NUMEXPR_NUM_THREADS",
+        "VECLIB_MAXIMUM_THREADS",
+        "BLIS_NUM_THREADS",
+    )
+    return {
+        "os_cpu_count": os.cpu_count(),
+        "numpy_version": np.__version__,
+        "numpy_show_config": buffer.getvalue(),
+        "thread_environment": {
+            key: os.environ.get(key)
+            for key in thread_vars
+        },
+    }
+
+
 def _summary(values: list[float]) -> dict[str, float]:
     ordered = sorted(float(value) for value in values)
     return {
@@ -330,6 +358,7 @@ def main() -> int:
     payload = {
         "schema_version": 1,
         "gate_10_seconds_unchanged": True,
+        "runtime_environment": _runtime_environment(),
         "batch_2043_repeated": {
             "process_isolation": True,
             "samples_seconds": samples,

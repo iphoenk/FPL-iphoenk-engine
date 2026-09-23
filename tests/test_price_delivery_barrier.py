@@ -317,6 +317,23 @@ def test_f_false_exact20_claim_fails_qa(key):
     assert any("FALSE_EXACT20" in failure for failure in failures)
 
 
+def test_f_directional_exact20_requires_twenty_actual_direction_rows():
+    report = build_price_delivery_report(
+        canonical_text=_canonical(),
+        report_slot="2026-09-23T05:30:00+07:00",
+        planning_gw=6,
+        bootstrap=_bootstrap(),
+        team_resolution=_team_resolution(),
+        predictor_artifact=_predictor(count=38),
+        evaluated_universe=_universe(),
+        universe_authority="FULL",
+    )
+    assert report["rise20"]["state"] != "COMPLETE"
+    assert report["fall20"]["state"] != "COMPLETE"
+    assert len(report["rise20"]["rows"]) == 19
+    assert len(report["fall20"]["rows"]) == 19
+
+
 def test_g_eta_omitted_from_relevant_visible_rows_fails_qa():
     report = _healthy_report()
     body = render_price_report(report).replace("ETA/status", "ETA")
@@ -390,6 +407,8 @@ def test_l_no_hardcoded_player_or_fixed_current15_production_rule():
     block = canonical.split("14L.", 1)[1].split("14M.", 1)[0]
     assert re.search(r"CURRENT15\s*=\s*\[", source) is None
     assert "owned_element_ids = [" not in source
+    assert "mini_leagues/9477" not in source
+    assert "/9477/" not in source
     for transient_name in ("Haaland", "Calafiori", "Sangaré", "Groß"):
         assert transient_name not in source
         assert transient_name not in block

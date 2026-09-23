@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import cProfile
 
-from src.engines.v12_profile_summary import build_summary, render_markdown
+from src.engines.v12_profile_summary import (
+    build_stage_directory_summary,
+    render_markdown,
+)
 
 
 def load_v6_analytics_foundation() -> int:
@@ -21,18 +24,33 @@ def run_package_monte_carlo() -> int:
     return sum(range(200))
 
 
-def _synthetic_profile() -> None:
-    load_v6_analytics_foundation()
-    load_or_build_stage2_projections()
-    combine_package_utility_surfaces()
-    run_package_monte_carlo()
-
-
-def test_controlled_profile_summary_classifies_required_entrypoints(tmp_path):
+def _dump_profile(path, fn) -> None:
     profiler = cProfile.Profile()
-    profiler.runcall(_synthetic_profile)
-    pstats_path = tmp_path / "profile.pstats"
-    profiler.dump_stats(str(pstats_path))
+    profiler.runcall(fn)
+    profiler.dump_stats(str(path))
+
+
+def test_controlled_stage_local_profile_summary_classifies_required_entrypoints(
+    tmp_path,
+):
+    profile_dir = tmp_path / "stage-profiles"
+    profile_dir.mkdir()
+    _dump_profile(
+        profile_dir / "V12_ANALYTICS_FOUNDATION.pstats",
+        load_v6_analytics_foundation,
+    )
+    _dump_profile(
+        profile_dir / "P1_1_P1_3_FULL_UNIVERSE.pstats",
+        load_or_build_stage2_projections,
+    )
+    _dump_profile(
+        profile_dir / "P1_2B_PACKAGE_COMBINE.pstats",
+        combine_package_utility_surfaces,
+    )
+    _dump_profile(
+        profile_dir / "P1_4_MONTE_CARLO.pstats",
+        run_package_monte_carlo,
+    )
 
     log_path = tmp_path / "profile.log"
     log_path.write_text(
@@ -48,8 +66,9 @@ def test_controlled_profile_summary_classifies_required_entrypoints(tmp_path):
         encoding="utf-8",
     )
 
-    summary = build_summary(pstats_path, log_path)
+    summary = build_stage_directory_summary(profile_dir, log_path)
 
+    assert summary["profile_scope"] == "STAGE_LOCAL_PARENT_PROCESS"
     assert summary["cold_cache_contract"] == {
         "stage2_restore": False,
         "p17_restore": False,
@@ -62,15 +81,20 @@ def test_controlled_profile_summary_classifies_required_entrypoints(tmp_path):
         ]
         == 60.075
     )
-    for category in (
-        "FOUNDATION",
-        "STAGE2",
-        "PACKAGE_COMBINE",
-        "MONTE_CARLO",
+    assert summary["limitations"]["multiprocessing_child_functions_profiled"] is False
+    assert summary["limitations"]["production_latency_gate_uses_stage_wall_seconds"] is True
+
+    for stage in (
+        "V12_ANALYTICS_FOUNDATION",
+        "P1_1_P1_3_FULL_UNIVERSE",
+        "P1_2B_PACKAGE_COMBINE",
+        "P1_4_MONTE_CARLO",
     ):
-        assert summary["categories"][category]["entrypoints"]
+        row = summary["stage_profiles"][stage]
+        assert row["status"] == "AVAILABLE"
+        assert row["entrypoints"]
 
     markdown = render_markdown(summary)
     assert "V12 Controlled Cold Profile" in markdown
-    assert "P1_4_MONTE_CARLO" in markdown
-    assert "Cumulative time is inclusive" in markdown
+    assert "P1_4_MONTE_CARLO / MONTE_CARLO" in markdown
+    assert "Child-process internals are not captured" in markdown

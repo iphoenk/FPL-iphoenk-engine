@@ -75,6 +75,9 @@ from src.runtime_v6.domains.report_plane.report_qa import (
 )
 from src.runtime_v6.domains.report_plane.visible_body_contract import _parse_sections
 from src.engines.v12_tactical_role import attach_tactical_role_scores
+from src.engines.v12_stage2_derived_cache import (
+    load_or_build_stage2_projections,
+)
 from src.engines.v12_contextual_dynamics import (
     build_player_trajectory,
     build_post_match_deep_details,
@@ -2191,6 +2194,7 @@ def run_deep(
     checkpoint_time: str | None = None,
 ) -> dict[str, Any]:
     ledger: list[dict[str, Any]] = []
+    stage2_cache_proof: dict[str, Any] = {}
     canonical = CANONICAL_PATH.read_text(encoding="utf-8")
     state = _read_json(STATE_PATH, {}) or {}
 
@@ -2276,14 +2280,12 @@ def run_deep(
         required=True,
     )
     if foundation:
-        projections = _stage(
-            ledger,
-            "P1_1_P1_3_FULL_UNIVERSE",
-            lambda: build_player_projections(
-                bootstrap,
-                strength or {},
-                planning_gw,
-                foundation.get("historical_prior") or {},
+        def _stage2_projection_with_cache() -> dict[str, Any]:
+            projections_payload, proof = load_or_build_stage2_projections(
+                bootstrap=bootstrap,
+                strength=strength or {},
+                planning_gw=planning_gw,
+                historical_prior=foundation.get("historical_prior") or {},
                 player_features_payload=(
                     foundation.get("player_features_payload") or {}
                 ),
@@ -2296,7 +2298,43 @@ def run_deep(
                 opponent_history_scope=foundation.get(
                     "opponent_history_scope"
                 ),
-            ),
+                builder=lambda: build_player_projections(
+                    bootstrap,
+                    strength or {},
+                    planning_gw,
+                    foundation.get("historical_prior") or {},
+                    player_features_payload=(
+                        foundation.get("player_features_payload") or {}
+                    ),
+                    player_match_rows=(
+                        foundation.get("player_match_rows") or []
+                    ),
+                    opponent_history_rows=(
+                        foundation.get("opponent_history_rows") or []
+                    ),
+                    opponent_history_scope=foundation.get(
+                        "opponent_history_scope"
+                    ),
+                ),
+            )
+            stage2_cache_proof.clear()
+            stage2_cache_proof.update(proof)
+            print(
+                "[V12_STAGE2_CACHE] "
+                f"status={proof.get('status')} "
+                f"hit={proof.get('cache_hit')} "
+                f"miss={proof.get('cache_miss')} "
+                f"write={proof.get('cache_write')} "
+                f"corrupt_reject={proof.get('cache_corrupt_reject')} "
+                f"elapsed_seconds={proof.get('load_or_build_seconds')}",
+                flush=True,
+            )
+            return projections_payload
+
+        projections = _stage(
+            ledger,
+            "P1_1_P1_3_FULL_UNIVERSE",
+            _stage2_projection_with_cache,
             required=True,
         )
     else:
@@ -3540,6 +3578,7 @@ def run_deep(
         "stage3_internal_pass": stage3_internal_pass,
         "stage3_action": operational_action,
         "stage3_required_stages": sorted(stage3_required_stage_names),
+        "stage2_derived_cache": deepcopy(stage2_cache_proof),
         "monte_carlo": {
             "actual_paths": (monte_carlo or {}).get("actual_paths"),
             "seed": (monte_carlo or {}).get("seed"),

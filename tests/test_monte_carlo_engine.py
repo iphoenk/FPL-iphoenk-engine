@@ -888,3 +888,75 @@ def test_parallel_mc_wrapper_keeps_diagnostics_serial_below_threshold():
     assert proof["status"] == "SERIAL"
     assert proof["worker_count"] == 1
     assert proof["total_paths_exact"] is True
+
+
+def test_canonical_500k_parallel_runtime_acceptance(monkeypatch, capsys):
+    import json
+    import time
+    from src.engines import v12_monte_carlo as mc
+
+    monkeypatch.delenv(MC_SIM_CACHE_ENV, raising=False)
+    projections, _ = _fixture()
+    hold, change = _routes()
+    routes = [deepcopy(hold)]
+    for index in range(1, 8):
+        cloned = deepcopy(change)
+        cloned["route_id"] = f"R{index}"
+        routes.append(cloned)
+
+    started = time.perf_counter()
+    result = mc.run_correlated_monte_carlo(
+        projections,
+        routes,
+        actual_paths=500_000,
+        seed=909090,
+        input_snapshot_id="P1_4_PARALLEL_RUNTIME_ACCEPTANCE",
+        canonical=True,
+        horizons=(1, 3, 5),
+        selected_route_id="R1",
+        generated_at="2026-09-23T09:36:00Z",
+        factual_snapshot_timestamps={
+            "fixture": "2026-09-23T09:36:00Z"
+        },
+    )
+    total_wall = time.perf_counter() - started
+    perf = result["performance"]
+    proof = result["sampling_diagnostics"]["parallel_execution"]
+
+    assert result["actual_paths"] == 500_000
+    assert result["execution_state"] == "EXECUTED"
+    assert result["canonical_pass"] is True
+    assert result["convergence_evidence"]["status"] == "PASS"
+    assert result["sampling_diagnostics"]["match_state_invariants"]["status"] == "PASS"
+    assert len(result["route_ids"]) == 8
+    assert proof["status"] == "ENABLED"
+    assert proof["worker_count"] == 4
+    assert proof["shard_count"] == 4
+    assert proof["shard_path_counts"] == [125_000] * 4
+    assert proof["total_paths_exact"] is True
+    assert perf["wall_seconds"] <= 15.0
+    assert total_wall <= 15.0
+
+    evidence = {
+        "contract": "P1_4_500K_PARALLEL_RUNTIME_ACCEPTANCE_V1",
+        "actual_paths": result["actual_paths"],
+        "material_routes": len(result["route_ids"]),
+        "simulation_wall_seconds": round(
+            float(perf["wall_seconds"]), 6
+        ),
+        "total_wall_seconds": round(total_wall, 6),
+        "worker_count": proof["worker_count"],
+        "shard_path_counts": proof["shard_path_counts"],
+        "convergence": result["convergence_evidence"]["status"],
+        "match_state_invariants": result[
+            "sampling_diagnostics"
+        ]["match_state_invariants"]["status"],
+        "route_pruning": False,
+        "model_owner": result["model_owner"],
+    }
+    print(
+        "P1_4_RUNTIME_ACCEPTANCE="
+        + json.dumps(evidence, sort_keys=True)
+    )
+    captured = capsys.readouterr()
+    assert "P1_4_RUNTIME_ACCEPTANCE=" in captured.out

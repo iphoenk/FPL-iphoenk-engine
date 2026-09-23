@@ -3478,6 +3478,11 @@ def optimize_lineup_horizons_exact_batch(
         ),
         "bench_scalar_degradation_policy": "FAMILY_GW_TO_CANONICAL_SCALAR",
         "execution_degraded": bool(bench_scalar_degraded_family_gw_count),
+        "degradation_status": (
+            "DEGRADED"
+            if bench_scalar_degraded_family_gw_count
+            else "NONE"
+        ),
         "captain_scalar_boundary_fallback_count": int(
             captain_scalar_boundary_fallback_count
         ),

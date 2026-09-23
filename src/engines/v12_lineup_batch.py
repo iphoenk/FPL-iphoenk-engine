@@ -364,27 +364,33 @@ def _bench_kernel(
             # row × DNP-state × appearance-mask cube.  This is the same
             # finite sum as the scalar resolver, evaluated over all routes in
             # the structural group at once.
-            any_mask = (selected_bits != 0).astype(np.float64)
-            flat_autosub = np.einsum(
-                "rs,rm,sm->r",
-                dnp_probability,
-                appearance,
-                any_mask,
-                optimize=True,
+            resolver_masks = [
+                (selected_bits != 0).astype(np.float64),
+                *[
+                    (
+                        (selected_bits & (1 << slot)) != 0
+                    ).astype(np.float64)
+                    for slot in range(3)
+                ],
+            ]
+            resolver_projection = np.concatenate(
+                [mask.T for mask in resolver_masks],
+                axis=1,
             )
-            flat_selected = np.zeros((rows.size, 3), dtype=np.float64)
-            for slot in range(3):
-                bit = 1 << slot
-                slot_mask = (
-                    (selected_bits & bit) != 0
-                ).astype(np.float64)
-                flat_selected[:, slot] = np.einsum(
-                    "rs,rm,sm->r",
-                    dnp_probability,
-                    appearance,
-                    slot_mask,
-                    optimize=True,
-                )
+            conditional_selection = appearance @ resolver_projection
+            conditional_selection = conditional_selection.reshape(
+                rows.size,
+                4,
+                len(state_keys),
+            )
+            resolved_values = np.sum(
+                conditional_selection
+                * dnp_probability[:, None, :],
+                axis=2,
+                dtype=np.float64,
+            )
+            flat_autosub = resolved_values[:, 0]
+            flat_selected = resolved_values[:, 1:4]
             outfield_autosub.reshape(flat_count)[rows] = flat_autosub
             selected_probability.reshape(flat_count, 3)[rows, :] = flat_selected
 

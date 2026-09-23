@@ -3135,6 +3135,116 @@ def _captain_safe_pool_count_from_selected(
     return len(seen)
 
 
+def _route_batch_safe_pool_count_exact(
+    *,
+    compact_selected: Mapping[str, Any],
+    ranked_pairs: Sequence[Mapping[str, Any]],
+    starter_ids: set[int],
+) -> int:
+    """Match optimize_lineup captain_safe_pool cardinality without re-running C/VC."""
+    seen: set[int] = set()
+    for element in (
+        int(compact_selected.get("_captain_element") or 0),
+        int(compact_selected.get("_vice_element") or 0),
+    ):
+        if element > 0:
+            seen.add(element)
+
+    eligible_seen = 0
+    for row in ranked_pairs:
+        captain = int(row.get("captain_element") or 0)
+        vice = int(row.get("vice_element") or 0)
+        if captain not in starter_ids or vice not in starter_ids:
+            continue
+        eligible_seen += 1
+        if captain > 0:
+            seen.add(captain)
+        if len(seen) >= 5 or eligible_seen >= 20:
+            break
+    return len(seen)
+
+
+def _route_batch_selected_blocking_cost_exact(
+    players: Sequence[Mapping[str, Any]],
+    selected_indices: Sequence[int],
+    bench_order_elements: Sequence[int],
+) -> tuple[float, int]:
+    """Materialize only the selected cameo-blocking counterfactual exactly.
+
+    Compact route ranking already owns exact XI, bench-order and C/VC winners.
+    P1.2B needs the selected route's blocking cost but not publish-only
+    alternatives, so recomputing a full detailed _lineup_route for every
+    route/GW is pure execution waste.
+    """
+    starters = [players[int(index)] for index in selected_indices]
+    starter_ids = {
+        int(row.get("element") or 0) for row in starters
+    }
+    bench = [
+        row
+        for row in players
+        if int(row.get("element") or 0) not in starter_ids
+    ]
+    reserve = [row for row in bench if row.get("position") == "GK"]
+    outfield = [row for row in bench if row.get("position") != "GK"]
+    if len(reserve) != 1 or len(outfield) != 3:
+        raise LineupOptimizerError(
+            "route-batch selected summary lost legal bench structure"
+        )
+    by_id = {
+        int(row.get("element") or 0): row
+        for row in outfield
+    }
+    order = [
+        by_id[int(element)]
+        for element in bench_order_elements
+    ]
+    if len(order) != 3:
+        raise LineupOptimizerError(
+            "route-batch selected summary lost exact bench order"
+        )
+
+    outfield_starters = [
+        row for row in starters if row.get("position") in OUTFIELD
+    ]
+    actual_count_states = _dnp_count_distribution(outfield_starters)
+    actual = _expected_outfield_autosub(
+        starters,
+        order,
+        count_states=actual_count_states,
+    )
+    starter_gk = next(
+        row for row in starters if row.get("position") == "GK"
+    )
+    actual_gk = _expected_gk_autosub(
+        starter_gk,
+        reserve[0],
+    )
+    actual_value = (
+        float(actual["expected_points"])
+        + float(actual_gk["expected_points"])
+    )
+
+    cameo = _expected_outfield_autosub(
+        starters,
+        order,
+        cameo_as_dnp=True,
+    )
+    cameo_gk = _expected_gk_autosub(
+        starter_gk,
+        reserve[0],
+        cameo_as_dnp=True,
+    )
+    cameo_value = (
+        float(cameo["expected_points"])
+        + float(cameo_gk["expected_points"])
+    )
+    return (
+        round(max(0.0, cameo_value - actual_value), 6),
+        int(reserve[0].get("element") or 0),
+    )
+
+
 def optimize_lineup_summaries_exact_batch(
     projections: Mapping[str, Any],
     squads: Mapping[str, Sequence[int]],
@@ -3411,79 +3521,63 @@ def optimize_lineup_summaries_exact_batch(
             int(value)
             for value in compact_best.get("_xi_indices") or ()
         )
-        selected = _lineup_route(
-            players,
-            selected_indices,
-            compact=False,
+        starter_rows = [
+            players[int(index)] for index in selected_indices
+        ]
+        starter_ids = {
+            int(row.get("element") or 0) for row in starter_rows
+        }
+        bench_order = tuple(
+            int(value)
+            for value in compact_best.get("_bench_order") or ()
         )
-        compact_key = _route_sort_key(compact_best)
-        detailed_key = _route_sort_key(selected)
-        if any(
-            not math.isclose(
-                left,
-                right,
-                rel_tol=0.0,
-                abs_tol=1e-9,
+        blocking_cost, reserve_gk_element = (
+            _route_batch_selected_blocking_cost_exact(
+                players,
+                selected_indices,
+                bench_order,
             )
-            for left, right in zip(
-                compact_key,
-                detailed_key,
-            )
-        ):
-            raise LineupOptimizerError(
-                "route-batch P1.7 exact materialization diverged"
-            )
-        pair = dict(selected.get("captain_vice") or {})
+        )
+        captain_element = int(
+            compact_best.get("_captain_element") or 0
+        )
+        vice_element = int(
+            compact_best.get("_vice_element") or 0
+        )
         summary_core = {
             "status": "READY",
             "gw": gw,
-            "route_utility": selected.get("route_utility"),
-            "expected_fpl_points": selected.get(
+            "route_utility": compact_best.get("route_utility"),
+            "expected_fpl_points": compact_best.get(
                 "expected_fpl_points_before_captain"
             ),
-            "distributional_downside": selected.get(
+            "distributional_downside": compact_best.get(
                 "distributional_downside"
             ),
-            "supportable_upside": selected.get(
+            "supportable_upside": compact_best.get(
                 "supportable_upside"
             ),
-            "expected_autosub_value": selected.get(
+            "expected_autosub_value": compact_best.get(
                 "expected_autosub_value"
             ),
-            "cameo_blocking_cost": selected.get(
-                "expected_blocked_autosub_value"
-            ),
-            "formation": selected.get("formation"),
+            "cameo_blocking_cost": blocking_cost,
+            "formation": compact_best.get("formation"),
             "starting_xi": [
                 int(row.get("element") or 0)
-                for row in selected.get("starters") or []
+                for row in starter_rows
             ],
-            "bench_gk": int(
-                (
-                    (selected.get("bench") or {}).get(
-                        "reserve_gk"
-                    )
-                    or {}
-                ).get("element")
-                or 0
-            ),
-            "bench_order": [
-                int(value)
-                for value in (
-                    (selected.get("bench") or {}).get("order")
-                    or []
-                )
-            ],
-            "captain": int(
-                pair.get("captain_element") or 0
-            ),
-            "vice_captain": int(
-                pair.get("vice_element") or 0
-            ),
+            "bench_gk": reserve_gk_element,
+            "bench_order": list(bench_order),
+            "captain": captain_element,
+            "vice_captain": vice_element,
             "captain_safe_pool_count": (
-                _captain_safe_pool_count_from_selected(selected)
+                _route_batch_safe_pool_count_exact(
+                    compact_selected=compact_best,
+                    ranked_pairs=ranked_pairs,
+                    starter_ids=starter_ids,
+                )
             ),
-            "confidence": selected.get("confidence"),
+            "confidence": compact_best.get("confidence"),
             "covariance_status": (
                 "COVARIANCE_NOT_MODELLED_YET"
             ),
@@ -3497,6 +3591,10 @@ def optimize_lineup_summaries_exact_batch(
                 "all_550_legal_xi_numerically_evaluated": True,
                 "scalar_exact_refinement_count": int(len(refine)),
                 "numerical_guard": _ROUTE_BATCH_NUMERICAL_GUARD,
+                "selected_summary_materialization": (
+                    "EXACT_COMPACT_PLUS_SELECTED_CAMEO_COUNTERFACTUAL"
+                ),
+                "publish_only_alternatives_recomputed": False,
             },
         }
         evidence = _model_evidence_binding(

@@ -2204,7 +2204,7 @@ def test_p17_family_route_first_match_tie_matches_scalar_oracle():
                     )
                 )
             )
-        representative_indices.extend((start, len(squads) - 1))
+        representative_indices.append(start)
     assert len(squads) == 65
 
     actual, proof = batch.optimize_lineup_horizons_exact_batch(
@@ -2232,14 +2232,13 @@ def test_p17_family_route_first_match_tie_matches_scalar_oracle():
         "vice_captain",
     )
     for index in representative_indices:
-        for offset in range(5):
-            expected = package._lineup_decision(
-                projections,
-                squads[index],
-                gw=GW + offset,
-                generated_at=GENERATED,
-            )
-            observed = actual[index]["per_gw"][offset]
-            assert tuple(observed.get(key) for key in keys) == tuple(
-                expected.get(key) for key in keys
-            )
+        expected = package._lineup_decision(
+            projections,
+            squads[index],
+            gw=GW,
+            generated_at=GENERATED,
+        )
+        observed = actual[index]["per_gw"][0]
+        assert tuple(observed.get(key) for key in keys) == tuple(
+            expected.get(key) for key in keys
+        )

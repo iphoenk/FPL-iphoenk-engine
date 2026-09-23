@@ -659,7 +659,8 @@ def test_31_p1_2b_parallel_runtime_is_bounded_execution_only():
     materializer = inspect.getsource(utility._materialize_route_lineups)
     worker = inspect.getsource(utility._p1_2b_route_lineups_worker)
     assert "ProcessPoolExecutor" in inspect.getsource(utility)
-    assert "PROCESS_POOL_EXACT_P1_7" in materializer
+    assert "CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7" in materializer
+    assert "SEQUENTIAL_EXACT_P1_7" in materializer
     assert "_cumulative_lineup_horizons(" in worker
     assert "optimize_lineup(" in inspect.getsource(utility._lineup_decision)
     assert "lossy_pruning" in materializer

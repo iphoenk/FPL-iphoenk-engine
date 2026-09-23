@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-23T17:27:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-23T20:24:00+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -637,3 +637,22 @@ The integrated V12 report workflow restores/saves this non-authoritative
 execution cache between runs. This targets repeated mandatory reports with
 unchanged numerical P1.7 inputs so they do not repeat the full 550-XI exact
 search for every identical squad/GW state.
+
+
+## V12 P1.7 bench/autosub hotpath exactness
+
+A bounded performance branch on top of PR #668 keeps the existing <=10 second
+2,043-route × 5-GW acceptance gate unchanged while optimizing the measured
+bench/autosub hotpath.
+
+The changes are exactness-preserving:
+- DNP state probabilities are built once per formation/endpoint and reused
+  across all six bench permutations, preserving multiplication order.
+- Lower-priority bench ranking keys are materialized lazily only while a tie
+  remains; all evaluated numerical metrics must be finite.
+- Scalar-vs-batch golden tests and adversarial full-tie tests remain required.
+- The diagnostic workflow records five independent samples, cProfile evidence,
+  lscpu, NumPy runtime configuration, and the unchanged hard gate result.
+
+No V6 logic, route universe, MC path count, timeout, or P1.7 mathematical
+authority is changed by this branch.

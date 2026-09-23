@@ -2537,3 +2537,154 @@ def test_p17_family_route_first_match_tie_matches_scalar_oracle():
         assert tuple(observed.get(key) for key in keys) == tuple(
             expected.get(key) for key in keys
         )
+
+
+def test_p17_secondary_boundary_tie_falls_back_and_matches_scalar(monkeypatch):
+    from src.engines import v12_lineup_batch as batch
+
+    signature = (
+        "GK", "GK",
+        "DEF", "DEF", "DEF", "DEF", "DEF",
+        "MID", "MID", "MID", "MID", "MID",
+        "FWD", "FWD", "FWD",
+    )
+    layout = batch._family_layout(signature)
+    surfaces = [
+        _direct_surface(
+            slot + 1,
+            position,
+            mean=1.0,
+            p_dnp=0.10,
+            cond_blank=0.20,
+            cond_ge8=0.10,
+            cond_ge10=0.05,
+        )
+        for slot, position in enumerate(signature)
+    ]
+    arrays = {
+        "elements": np.asarray([[row["element"] for row in surfaces]], dtype=np.int64),
+        "position_codes": np.asarray([[batch.POS_CODE[row["position"]] for row in surfaces]], dtype=np.int8),
+        "p_dnp": np.asarray([[row["p_dnp"] for row in surfaces]], dtype=np.float64),
+        "p_cameo": np.asarray([[row["p_cameo"] for row in surfaces]], dtype=np.float64),
+        "p_appearance": np.asarray([[row["p_appearance"] for row in surfaces]], dtype=np.float64),
+        "xpts_mean": np.asarray([[row["xpts_mean"] for row in surfaces]], dtype=np.float64),
+        "shortfall": np.asarray([[row["expected_shortfall"] for row in surfaces]], dtype=np.float64),
+        "excess": np.asarray([[row["expected_excess_ge_8"] for row in surfaces]], dtype=np.float64),
+        "conditioned_mean": np.asarray([[
+            row["appearance_conditioned"]["expected_points"] for row in surfaces
+        ]], dtype=np.float64),
+        "conditioned_blank": np.asarray([[
+            row["appearance_conditioned"]["p_fpl_blank"] for row in surfaces
+        ]], dtype=np.float64),
+        "conditioned_ge8": np.asarray([[
+            row["appearance_conditioned"]["p_points_ge_8"] for row in surfaces
+        ]], dtype=np.float64),
+        "conditioned_ge10": np.asarray([[
+            row["appearance_conditioned"]["p_points_ge_10"] for row in surfaces
+        ]], dtype=np.float64),
+    }
+
+    real_near_half = batch._near_decimal_half
+    calls = {"count": 0}
+
+    def force_secondary_only(values, decimals):
+        calls["count"] += 1
+        if calls["count"] == 2:
+            # First call is the primary utility key. The second call is the
+            # expected-points secondary key for contenders still tied on the
+            # primary key. Force only that secondary detector to the boundary.
+            return np.ones_like(np.asarray(values), dtype=bool)
+        return np.zeros_like(np.asarray(values), dtype=bool)
+
+    monkeypatch.setattr(batch, "_near_decimal_half", force_secondary_only)
+    result = batch._family_bench_kernel(
+        layout=layout,
+        arrays=arrays,
+        scalar_fallback_limit=None,
+    )
+    monkeypatch.setattr(batch, "_near_decimal_half", real_near_half)
+
+    assert result["bench_primary_tie_count"] > 0
+    assert result["bench_primary_boundary_count"] == 0
+    assert result["bench_secondary_boundary_count"] > 0
+    assert result["bench_scalar_fallback_count"] >= result[
+        "bench_secondary_boundary_count"
+    ]
+
+    # The boundary-triggered vector result must be exactly the scalar oracle
+    # for representative legal-XI rows.
+    for legal_index in (0, 1, 17, 101, 549):
+        legal_row = set(int(slot) for slot in layout["legal"][legal_index])
+        bench_slots = [slot for slot in range(15) if slot not in legal_row]
+        reserve_slot = next(
+            slot for slot in bench_slots if signature[slot] == "GK"
+        )
+        outfield_slots = [
+            slot for slot in bench_slots if signature[slot] != "GK"
+        ]
+        scalar_winner, _ = optimize_bench_order(
+            [surfaces[slot] for slot in sorted(legal_row)],
+            surfaces[reserve_slot],
+            [surfaces[slot] for slot in outfield_slots],
+            include_winner_blocking_counterfactual=False,
+            publish_alternatives=False,
+            include_winner_slots=False,
+        )
+        assert result["order_elements"][0, legal_index].tolist() == scalar_winner["order"]
+        assert result["bench_order_utility"][0, legal_index] == scalar_winner["bench_order_utility"]
+
+
+def test_p17_fallback_budget_degrades_family_gw_to_scalar(monkeypatch):
+    from src.engines import v12_lineup_batch as batch
+
+    projections, candidates = _cross_route_projection_fixture(20)
+    squads = _cross_route_2043_squads(
+        *_cross_route_projection_fixture(140)
+    )[:65]
+
+    original_family = batch._optimize_gw_family
+    original_scalar = batch._scalar_gw_decision
+    family_calls = {"count": 0}
+    scalar_calls = {"count": 0}
+
+    def force_budget(*args, **kwargs):
+        family_calls["count"] += 1
+        raise batch.BenchScalarFallbackBudgetExceeded(65, 64)
+
+    def scalar_row(projections, squad, *, gw, generated_at):
+        scalar_calls["count"] += 1
+        return original_scalar(
+            projections,
+            squad,
+            gw=gw,
+            generated_at=generated_at,
+        )
+
+    # Use a self-consistent 65-squad fixture while forcing the family kernel
+    # over its budget. The outer batch must stay available and use the
+    # canonical scalar owner for only the affected family/GW.
+    projections, candidates = _cross_route_projection_fixture(140)
+    squads = _cross_route_2043_squads(projections, candidates)[:65]
+    monkeypatch.setattr(batch, "_optimize_gw_family", force_budget)
+    monkeypatch.setattr(batch, "_scalar_gw_decision", scalar_row)
+
+    outputs, proof = batch.optimize_lineup_horizons_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+        batch_size=64,
+    )
+
+    assert family_calls["count"] > 0
+    assert scalar_calls["count"] > 0
+    assert proof["execution_degraded"] is True
+    assert proof["bench_scalar_degraded_family_gw_count"] > 0
+    assert proof["bench_scalar_degraded_squad_gw_count"] == scalar_calls["count"]
+    assert proof["bench_scalar_degradation_max_trigger_count"] == 65
+    assert proof["bench_scalar_degradation_policy"] == "FAMILY_GW_TO_CANONICAL_SCALAR"
+    assert all(
+        row["status"] == "READY"
+        for output in outputs
+        for row in output["per_gw"]
+    )

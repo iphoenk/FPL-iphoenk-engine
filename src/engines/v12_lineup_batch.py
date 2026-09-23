@@ -1251,18 +1251,12 @@ def _family_selection_endpoint(
         for group in layout["structural_groups"][permutation_index]:
             rows = group["rows"]
             state_keys = group["state_keys"]
-            dnp_probability = np.empty(
-                (rows.size, len(state_keys)),
-                dtype=np.float64,
+            state_array = np.asarray(state_keys, dtype=np.int64)
+            dnp_probability = (
+                def_dist[rows[:, None], state_array[None, :, 0]]
+                * mid_dist[rows[:, None], state_array[None, :, 1]]
+                * fwd_dist[rows[:, None], state_array[None, :, 2]]
             )
-            for state_index, (d_count, m_count, f_count) in enumerate(
-                state_keys
-            ):
-                dnp_probability[:, state_index] = (
-                    def_dist[rows, d_count]
-                    * mid_dist[rows, m_count]
-                    * fwd_dist[rows, f_count]
-                )
             dnp_probability = np.where(
                 dnp_probability > 1e-15,
                 dnp_probability,

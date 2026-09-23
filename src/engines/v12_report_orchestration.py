@@ -3294,6 +3294,17 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
             if isinstance(content, Mapping)
             else {}
         )
+        # Renderer consumes the bound payload verbatim. Binding metadata is
+        # deliberately not synthesized here: missing binding must fail QA,
+        # never be repaired by presentation code.
+        binding = content_map.get("authoritative_binding")
+        if isinstance(binding, Mapping):
+            lines.append(
+                "AUTHORITY: "
+                + str(binding.get("producer") or "UNAVAILABLE")
+                + " | BINDING="
+                + str(binding.get("status") or "UNAVAILABLE")
+            )
 
         visible_lines, visible_excluded = (
             _render_deep_visible_contract_lines(

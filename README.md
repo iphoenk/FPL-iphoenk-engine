@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-23T16:36:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-23T16:42:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -67,6 +67,8 @@ CURRENT15 is occurrence-bound. Fresh valid authenticated or explicitly current u
 P1.7 exact execution now uses a NumPy-batched 550-XI kernel for the same canonical legal formations, autosub resolver, six bench permutations, captain/vice ordering, and route utility. The scalar implementation remains a CI regression oracle and randomized equivalence tests must match the batched output exactly before production use. Stage-2 projections and the 500,000-path MC summary are reusable only behind exact deterministic fingerprints; cache reuse is execution-only and cannot change V6 or model authority.
 
 Canonical fresh 500,000-path Monte Carlo can execute as four deterministic process shards on Linux. Each shard runs the unchanged match-state-first correlated model for every material route with common random numbers inside the shard; `SeedSequence.spawn` supplies stable child streams and results are concatenated in deterministic shard order before the unchanged metrics, tails, regret, and convergence gates. Parallelism is execution-only: total path count, material routes, football model, and QA remain unchanged.
+
+Full-direct P1.2B now has an execution-only **route-batch P1.7 kernel** for large route sets. Player surfaces are shared, all 550 legal XI and all six bench permutations remain numerically evaluated for every direct squad, canonical C/VC ordering is preserved, and a conservative numerical guard re-ranks close candidates with the scalar P1.7 route before the selected route is fully materialized. Package routes are never pruned; small/funded route sets keep the scalar canonical path. The scalar owner remains the correctness oracle.
 
 Package execution is now explicitly **FULL_DIRECT + MATERIAL_FUNDED**. P1.2A exhaustively searches the complete legal one-transfer universe, P1.2B evaluates every direct route with the unchanged exact P1.7 owner, and the existing Stage-3 materiality surface selects a bounded set of already-evaluated direct legs. P1.2A then composes legal/affordable two-transfer packages from those material legs and P1.2B evaluates every composed funded package exactly before MC. This preserves real funding routes without sending the roughly million-scale global two-transfer cross-product through P1.7. The engine explicitly records that global two-transfer exhaustive coverage is **false**; no hidden player/package score or second decision authority is introduced.
 

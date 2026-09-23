@@ -52,6 +52,7 @@ _P17_EXECUTION_STATS = {
     "p17_cache_corrupt_rejects": 0,
     "legal_xi_template_hits": 0,
     "legal_xi_template_misses": 0,
+    "player_surface_build_count": 0,
     "p1_7_wall_seconds": 0.0,
     "p1_7_cpu_seconds": 0.0,
 }
@@ -275,6 +276,7 @@ def _tactical_surface(projection: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def build_player_surface(projection: Mapping[str, Any], planning_gw: int) -> dict[str, Any]:
+    _P17_EXECUTION_STATS["player_surface_build_count"] += 1
     cfg = load_config()
     objective = dict(cfg.get("objective") or {})
     gw_row = _gw_row(projection, planning_gw)

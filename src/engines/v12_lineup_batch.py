@@ -102,6 +102,45 @@ def _position_dnp_distribution(
     return dist
 
 
+def _position_dnp_distribution_slots(
+    starter_mask: np.ndarray,
+    p_dnp: np.ndarray,
+    slot_indices: np.ndarray,
+) -> np.ndarray:
+    """Exact Poisson-binomial DNP counts using only slots of one position.
+
+    Player probabilities are ordered once per route. Non-selected positional
+    slots contribute p=0, so selected probabilities retain the same ascending
+    order used by the scalar per-XI sort without sorting 15 values 550 times.
+    """
+    batch_count, legal_count, _ = starter_mask.shape
+    if slot_indices.shape[0] != batch_count:
+        raise LineupBatchError("position slot batch drift")
+    position_count = int(slot_indices.shape[1])
+    batch = np.arange(batch_count, dtype=np.int64)[:, None]
+    position_probs = p_dnp[batch, slot_indices]
+    order = np.argsort(position_probs, axis=1, kind="stable")
+    ordered_slots = np.take_along_axis(slot_indices, order, axis=1)
+    ordered_probs = np.take_along_axis(position_probs, order, axis=1)
+    gather_slots = np.broadcast_to(
+        ordered_slots[:, None, :],
+        (batch_count, legal_count, position_count),
+    )
+    selected = np.take_along_axis(starter_mask, gather_slots, axis=2)
+    probs = np.where(selected, ordered_probs[:, None, :], 0.0)
+    dist = np.zeros(
+        (batch_count, legal_count, position_count + 1),
+        dtype=np.float64,
+    )
+    dist[..., 0] = 1.0
+    for step in range(position_count):
+        p = probs[..., step]
+        nxt = dist * (1.0 - p[..., None])
+        nxt[..., 1:] += dist[..., :-1] * p[..., None]
+        dist = nxt
+    return dist
+
+
 def _appearance_mask_probabilities(probabilities: np.ndarray) -> np.ndarray:
     """Vector form of scalar appearance masks with identical mask order."""
     p0 = probabilities[..., 0]
@@ -212,7 +251,10 @@ def _bench_indices(
 @lru_cache(maxsize=16)
 def _structural_plan_cached(
     position_signatures: tuple[tuple[str, ...], ...],
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[
+    np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray,
+    np.ndarray, np.ndarray, np.ndarray, np.ndarray,
+]:
     """Reuse GW-invariant exact XI/bench structure for an unchanged route chunk."""
     position_rows = [list(row) for row in position_signatures]
     position_codes = np.asarray(
@@ -230,6 +272,15 @@ def _structural_plan_cached(
         starter_mask,
         position_codes,
     )
+    slot_axis = np.arange(15, dtype=np.int64)[None, :]
+
+    def slots_for(code: int, count: int) -> np.ndarray:
+        candidates = np.where(position_codes == code, slot_axis, 16)
+        slots = np.sort(candidates, axis=1)[:, :count]
+        if np.any(slots >= 15):
+            raise LineupBatchError("standard position slot count drift")
+        return slots.astype(np.int64, copy=False)
+
     return (
         legal,
         starter_mask,
@@ -237,6 +288,9 @@ def _structural_plan_cached(
         reserve_gk,
         starter_gk,
         outfield_bench,
+        slots_for(POS_CODE["DEF"], 5),
+        slots_for(POS_CODE["MID"], 5),
+        slots_for(POS_CODE["FWD"], 3),
     )
 
 
@@ -256,29 +310,14 @@ def _bench_kernel(
     reserve_gk: np.ndarray,
     starter_gk: np.ndarray,
     outfield_bench: np.ndarray,
+    def_slots: np.ndarray,
+    mid_slots: np.ndarray,
+    fwd_slots: np.ndarray,
 ) -> dict[str, np.ndarray]:
     batch_count, legal_count, _ = starter_mask.shape
-    def_dist = _position_dnp_distribution(
-        starter_mask,
-        p_dnp,
-        position_codes,
-        POS_CODE["DEF"],
-        5,
-    )
-    mid_dist = _position_dnp_distribution(
-        starter_mask,
-        p_dnp,
-        position_codes,
-        POS_CODE["MID"],
-        5,
-    )
-    fwd_dist = _position_dnp_distribution(
-        starter_mask,
-        p_dnp,
-        position_codes,
-        POS_CODE["FWD"],
-        3,
-    )
+    def_dist = _position_dnp_distribution_slots(starter_mask, p_dnp, def_slots)
+    mid_dist = _position_dnp_distribution_slots(starter_mask, p_dnp, mid_slots)
+    fwd_dist = _position_dnp_distribution_slots(starter_mask, p_dnp, fwd_slots)
 
     objective = dict((scalar.load_config().get("objective") or {}))
     blank_weight = _f(
@@ -890,6 +929,9 @@ def _optimize_gw_chunk(
         reserve_gk,
         starter_gk,
         outfield_bench,
+        def_slots,
+        mid_slots,
+        fwd_slots,
     ) = _structural_plan_cached(position_signatures)
     if legal.shape[1] != 550:
         raise LineupBatchError(
@@ -912,6 +954,9 @@ def _optimize_gw_chunk(
         reserve_gk=reserve_gk,
         starter_gk=starter_gk,
         outfield_bench=outfield_bench,
+        def_slots=def_slots,
+        mid_slots=mid_slots,
+        fwd_slots=fwd_slots,
     )
     captain = _captain_kernel(
         starter_mask=starter_mask,

@@ -2067,3 +2067,179 @@ def test_p17_family_bench_tie_rank_memoizes_across_gw(monkeypatch):
     )
     assert calls["count"] == 1
     assert np.array_equal(first, second)
+
+
+def test_p17_captain_rounding_boundary_uses_scalar_oracle():
+    from src.engines import v12_lineup_batch as batch
+
+    signature = (
+        "GK", "GK",
+        "DEF", "DEF", "DEF", "DEF", "DEF",
+        "MID", "MID", "MID", "MID", "MID",
+        "FWD", "FWD", "FWD",
+    )
+    layout = batch._family_layout(signature)
+    elements = np.arange(1, 16, dtype=np.int64)[None, :]
+
+    # Pinned NumPy/Python semantics disagree at this six-decimal half
+    # boundary.  The prerequisite makes the test fail loudly if that ceases
+    # to be true rather than silently becoming non-adversarial.
+    boundary = 0.0041205
+    competitor = 0.0041206
+    assert batch._near_decimal_half(
+        np.asarray([boundary]),
+        6,
+    )[0]
+    assert round(boundary, 6) != float(np.round(boundary, 6))
+
+    xpts = np.full((1, 15), 0.001, dtype=np.float64)
+    xpts[0, 7] = boundary
+    xpts[0, 8] = competitor
+    zeros = np.zeros_like(xpts)
+    captain = batch._family_captain_kernel(
+        layout=layout,
+        elements=elements,
+        xpts_mean=xpts,
+        shortfall=zeros,
+        excess=zeros,
+        p_dnp=zeros,
+    )
+    xi_index = next(
+        index
+        for index, row in enumerate(layout["legal"])
+        if 7 in row and 8 in row
+    )
+    surfaces = [
+        _direct_surface(
+            slot + 1,
+            signature[slot],
+            mean=float(xpts[0, slot]),
+            p_dnp=0.0,
+            cond_blank=0.0,
+            cond_ge8=0.0,
+            cond_ge10=0.0,
+        )
+        for slot in range(15)
+    ]
+    scalar_pair = _best_captain_vice_pair(
+        [surfaces[int(slot)] for slot in layout["legal"][xi_index]]
+    )
+    observed_captain = int(
+        elements[
+            0,
+            int(captain["captain_index"][0, xi_index]),
+        ]
+    )
+    observed_vice = int(
+        elements[
+            0,
+            int(captain["vice_index"][0, xi_index]),
+        ]
+    )
+    assert observed_captain == scalar_pair["captain_element"]
+    assert observed_vice == scalar_pair["vice_element"]
+    assert (
+        captain["pair_utility"][0, xi_index]
+        == scalar_pair["pair_utility"]
+    )
+
+
+def test_p17_family_route_first_match_tie_matches_scalar_oracle():
+    from src.engines import v12_lineup_batch as batch
+    from src.engines import v12_package_utility as package
+
+    projections, candidates = _cross_route_projection_fixture(20)
+    tie_template = _projection(
+        999999,
+        "MID",
+        meanish=5.0,
+        p_start=1.0,
+        p_regular=0.0,
+        p_late=0.0,
+        p_dnp=0.0,
+        blank=0.10,
+        upside=0.20,
+        tactical=60.0,
+    )
+    template_xmins = deepcopy(tie_template["xmins"])
+    template_tactical = deepcopy(
+        tie_template["tactical_role_component"]
+    )
+    template_gw = deepcopy(tie_template["xpts_by_gw"][0])
+    for row in projections["players"]:
+        row["xmins"] = deepcopy(template_xmins)
+        row["tactical_role_component"] = deepcopy(template_tactical)
+        row["xpts_by_gw"] = [
+            {**deepcopy(template_gw), "gw": gw}
+            for gw in range(GW, GW + 5)
+        ]
+
+    owned = projections["players"][:15]
+    base_ids = tuple(sorted(int(row["element"]) for row in owned))
+    owned_by_id = {int(row["element"]): row for row in owned}
+    candidate_by_position = {
+        position: [
+            int(row["element"])
+            for row in candidates
+            if row["position"] == position
+        ]
+        for position in ("GK", "DEF", "MID", "FWD")
+    }
+    outgoing_by_position = {}
+    for element in base_ids:
+        position = owned_by_id[element]["position"]
+        outgoing_by_position.setdefault(position, element)
+
+    squads = [base_ids]
+    representative_indices = [0]
+    for position in ("GK", "DEF", "MID", "FWD"):
+        start = len(squads)
+        outgoing = outgoing_by_position[position]
+        for incoming in candidate_by_position[position][:16]:
+            squads.append(
+                tuple(
+                    sorted(
+                        (set(base_ids) - {outgoing})
+                        | {incoming}
+                    )
+                )
+            )
+        representative_indices.extend((start, len(squads) - 1))
+    assert len(squads) == 65
+
+    actual, proof = batch.optimize_lineup_horizons_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+        batch_size=512,
+    )
+    assert (
+        proof["execution_kernel"]
+        == "ROUTE_FAMILY_CORE14_AFFINE_EXACT_P1_7"
+    )
+
+    keys = (
+        "route_utility",
+        "expected_fpl_points",
+        "distributional_downside",
+        "supportable_upside",
+        "formation",
+        "starting_xi",
+        "bench_gk",
+        "bench_order",
+        "captain",
+        "vice_captain",
+    )
+    for index in representative_indices:
+        for offset in range(5):
+            expected = package._lineup_decision(
+                projections,
+                squads[index],
+                gw=GW + offset,
+                generated_at=GENERATED,
+            )
+            observed = actual[index]["per_gw"][offset]
+            assert tuple(observed.get(key) for key in keys) == tuple(
+                expected.get(key) for key in keys
+            )

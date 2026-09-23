@@ -1900,17 +1900,18 @@ def _ordered_legal_sum(
 ) -> np.ndarray:
     """Preserve scalar starter-order IEEE-754 accumulation exactly.
 
-    Scalar _lineup_route sums only the eleven selected players, in legal-XI
-    index order. Multiplying non-starters by zero in a masked vector changes
-    the floating accumulation path enough to move some six-decimal route
-    values by 1e-6. Gather the same eleven values and add them in the same
-    order while still vectorizing across all 550 legal XIs.
+    The batch kernel keeps the expensive bench/autosub/CVC work vectorized,
+    but aggregate starter sums deliberately use Python float addition in the
+    same legal-XI index order as scalar _lineup_route. This avoids one-ulp
+    NumPy ufunc differences that can cross the published six-decimal boundary.
     """
-    indices = np.asarray(legal, dtype=np.int64)
-    out = np.zeros(indices.shape[0], dtype=np.float64)
-    for slot in range(indices.shape[1]):
-        out += values[indices[:, slot]]
-    return out
+    return np.asarray(
+        [
+            sum(float(values[index]) for index in indices)
+            for indices in legal
+        ],
+        dtype=np.float64,
+    )
 
 
 def _batch_position_dnp_distribution_exact(

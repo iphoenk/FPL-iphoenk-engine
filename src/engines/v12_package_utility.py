@@ -31,6 +31,7 @@ from src.engines.canonical_decision_methodology import (
 )
 from src.engines.v12_lineup_optimizer import (
     optimize_lineup,
+    optimize_lineup_summaries_exact_batch,
     p17_execution_observability,
     prime_player_surface_cache,
     reset_p17_execution_observability,
@@ -195,36 +196,21 @@ def _lineup_decision(
     }
 
 
-def _cumulative_lineup_horizons(
-    projections: Mapping[str, Any],
-    squad_ids: Sequence[int],
-    *,
-    planning_gw: int,
-    generated_at: str,
-    _perf_sink: list[float] | None = None,
+def _aggregate_lineup_gw_rows(
+    gw_rows: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
-    gw_rows: list[dict[str, Any]] = []
-    for offset in range(5):
-        started = time.perf_counter()
-        gw_rows.append(
-            _lineup_decision(
-                projections,
-                squad_ids,
-                gw=int(planning_gw) + offset,
-                generated_at=generated_at,
-            )
-        )
-        if _perf_sink is not None:
-            _perf_sink.append(time.perf_counter() - started)
-    out: dict[str, Any] = {"per_gw": gw_rows}
+    rows = [dict(row) for row in gw_rows]
+    out: dict[str, Any] = {"per_gw": rows}
     for horizon in (1, 2, 3, 5):
-        subset = gw_rows[:horizon]
+        subset = rows[:horizon]
         if any(row.get("status") != "READY" for row in subset):
             out[str(horizon)] = {
                 "status": "UNAVAILABLE",
                 "reason": "INCOMPLETE_P1_7_HORIZON",
                 "missing_gws": [
-                    row.get("gw") for row in subset if row.get("status") != "READY"
+                    row.get("gw")
+                    for row in subset
+                    if row.get("status") != "READY"
                 ],
             }
             continue
@@ -250,6 +236,30 @@ def _cumulative_lineup_horizons(
             ),
         }
     return out
+
+
+def _cumulative_lineup_horizons(
+    projections: Mapping[str, Any],
+    squad_ids: Sequence[int],
+    *,
+    planning_gw: int,
+    generated_at: str,
+    _perf_sink: list[float] | None = None,
+) -> dict[str, Any]:
+    gw_rows: list[dict[str, Any]] = []
+    for offset in range(5):
+        started = time.perf_counter()
+        gw_rows.append(
+            _lineup_decision(
+                projections,
+                squad_ids,
+                gw=int(planning_gw) + offset,
+                generated_at=generated_at,
+            )
+        )
+        if _perf_sink is not None:
+            _perf_sink.append(time.perf_counter() - started)
+    return _aggregate_lineup_gw_rows(gw_rows)
 
 
 def _hit_economics(
@@ -938,6 +948,126 @@ def _p1_2b_route_lineups_worker_with_stats(
     )
 
 
+
+def _p1_2b_route_batch_worker(
+    items: tuple[tuple[str, tuple[int, ...]], ...],
+) -> tuple[
+    tuple[tuple[str, tuple[int, ...], dict[str, Any]], ...],
+    float,
+    tuple[float, ...],
+    int,
+    dict[str, float],
+]:
+    """Evaluate a bounded route batch through the canonical P1.7 batch API."""
+    if _P1_2B_WORKER_CONTEXT is None:
+        raise PackageUtilityError(
+            "P1.2B route-batch worker context is not initialized"
+        )
+    projections, planning_gw, generated_at = _P1_2B_WORKER_CONTEXT
+    pmap = _projection_map(projections)
+    gw_rows_by_route: dict[str, list[dict[str, Any]]] = {
+        str(route_id): [] for route_id, _ in items
+    }
+    before = p17_execution_observability()
+    batch_started = time.perf_counter()
+    per_gw_elapsed: list[float] = []
+    exact_refinement_count = 0
+
+    for offset in range(5):
+        gw = int(planning_gw) + offset
+        started = time.perf_counter()
+        ready: dict[str, tuple[int, ...]] = {}
+        unavailable: dict[str, dict[str, Any]] = {}
+        for route_id, squad in items:
+            missing_players = [
+                element for element in squad if element not in pmap
+            ]
+            if missing_players:
+                unavailable[str(route_id)] = {
+                    "status": "UNAVAILABLE",
+                    "reason": "MISSING_PROJECTION_PLAYER",
+                    "missing_elements": missing_players,
+                    "gw": gw,
+                }
+                continue
+            missing_gw = [
+                element
+                for element in squad
+                if not _gw_available(pmap[element], gw)
+            ]
+            if missing_gw:
+                unavailable[str(route_id)] = {
+                    "status": "UNAVAILABLE",
+                    "reason": "MISSING_HORIZON_PROJECTION",
+                    "missing_elements": missing_gw,
+                    "gw": gw,
+                }
+                continue
+            ready[str(route_id)] = tuple(squad)
+
+        batch_rows = (
+            optimize_lineup_summaries_exact_batch(
+                projections,
+                ready,
+                planning_gw=gw,
+                generated_at=generated_at,
+            )
+            if ready
+            else {}
+        )
+        for route_id, _ in items:
+            rid = str(route_id)
+            row = dict(
+                batch_rows.get(rid)
+                or unavailable.get(rid)
+                or {
+                    "status": "UNAVAILABLE",
+                    "reason": "ROUTE_BATCH_RESULT_MISSING",
+                    "gw": gw,
+                }
+            )
+            gw_rows_by_route[rid].append(row)
+            exact_refinement_count += int(
+                (row.get("governance") or {}).get(
+                    "scalar_exact_refinement_count"
+                )
+                or 0
+            )
+        per_gw_elapsed.append(time.perf_counter() - started)
+
+    outputs = tuple(
+        (
+            str(route_id),
+            tuple(squad),
+            _aggregate_lineup_gw_rows(
+                gw_rows_by_route[str(route_id)]
+            ),
+        )
+        for route_id, squad in items
+    )
+    after = p17_execution_observability()
+    delta = {
+        key: float(after.get(key, 0) or 0)
+        - float(before.get(key, 0) or 0)
+        for key in (
+            "p17_cache_hits",
+            "p17_cache_misses",
+            "p17_cache_writes",
+            "p17_cache_corrupt_rejects",
+            "legal_xi_template_hits",
+            "legal_xi_template_misses",
+            "p1_7_wall_seconds",
+            "p1_7_cpu_seconds",
+        )
+    }
+    return (
+        outputs,
+        time.perf_counter() - batch_started,
+        tuple(per_gw_elapsed),
+        exact_refinement_count,
+        delta,
+    )
+
 def _perf_distribution(values: Sequence[float]) -> dict[str, Any]:
     rows = sorted(float(value) for value in values)
     if not rows:
@@ -985,6 +1115,10 @@ def _materialize_route_lineups(
     requested_chunks_per_worker = max(
         1,
         int(perf_cfg.get("parallel_chunks_per_worker") or 8),
+    )
+    route_batch_size = max(
+        1,
+        int(perf_cfg.get("route_batch_size") or 32),
     )
 
     route_squads = [
@@ -1035,46 +1169,81 @@ def _materialize_route_lineups(
         "p1_7_cpu_seconds": 0.0,
     }
     materialization_started = time.perf_counter()
-    if use_parallel:
-        fork_context = mp.get_context("fork")
-        chunksize = max(
-            1,
-            len(unique_items)
-            // max(1, workers * requested_chunks_per_worker),
+    use_route_batch = len(unique_items) >= min_routes
+    exact_refinement_count = 0
+    batch_elapsed_values: list[float] = []
+
+    if use_route_batch:
+        batch_tasks = tuple(
+            tuple(unique_items[index : index + route_batch_size])
+            for index in range(0, len(unique_items), route_batch_size)
         )
         print(
             "[P1_2B_PERF] exact P1.7 route materialization "
-            f"mode=process_pool routes={len(route_squads)} "
-            f"unique_squads={len(unique_items)} workers={workers} "
-            f"chunksize={chunksize}",
+            f"mode={'process_route_batch' if use_parallel else 'sequential_route_batch'} "
+            f"routes={len(route_squads)} unique_squads={len(unique_items)} "
+            f"workers={workers if use_parallel else 1} "
+            f"batch_size={route_batch_size} batches={len(batch_tasks)}",
             flush=True,
         )
-        with ProcessPoolExecutor(
-            max_workers=workers,
-            mp_context=fork_context,
-            initializer=_init_p1_2b_lineup_worker,
-            initargs=(
+
+        def consume_batch_result(result):
+            nonlocal exact_refinement_count
+            (
+                outputs,
+                batch_elapsed,
+                batch_gw_elapsed,
+                refinement_count,
+                route_stats,
+            ) = result
+            if not outputs:
+                return
+            batch_elapsed_values.append(float(batch_elapsed))
+            gw_elapsed.extend(float(value) for value in batch_gw_elapsed)
+            per_squad_estimate = float(batch_elapsed) / len(outputs)
+            for _, squad, output in outputs:
+                by_squad[tuple(squad)] = output
+                squad_elapsed.append(per_squad_estimate)
+            exact_refinement_count += int(refinement_count)
+            for key in p17_totals:
+                p17_totals[key] += float(route_stats.get(key, 0.0) or 0.0)
+
+        if use_parallel:
+            fork_context = mp.get_context("fork")
+            with ProcessPoolExecutor(
+                max_workers=workers,
+                mp_context=fork_context,
+                initializer=_init_p1_2b_lineup_worker,
+                initargs=(
+                    projections,
+                    planning_gw,
+                    generated_at,
+                    material_elements,
+                ),
+            ) as executor:
+                for result in executor.map(
+                    _p1_2b_route_batch_worker,
+                    batch_tasks,
+                    chunksize=1,
+                ):
+                    consume_batch_result(result)
+            execution_mode = "PROCESS_POOL_EXACT_P1_7_ROUTE_BATCH"
+        else:
+            _init_p1_2b_lineup_worker(
                 projections,
                 planning_gw,
                 generated_at,
                 material_elements,
-            ),
-        ) as executor:
-            for _, squad, output, elapsed, route_gw_elapsed, route_stats in executor.map(
-                _p1_2b_route_lineups_worker_with_stats,
-                unique_items,
-                chunksize=chunksize,
-            ):
-                by_squad[tuple(squad)] = output
-                squad_elapsed.append(float(elapsed))
-                gw_elapsed.extend(float(value) for value in route_gw_elapsed)
-                for key in p17_totals:
-                    p17_totals[key] += float(route_stats.get(key, 0.0) or 0.0)
-        execution_mode = "PROCESS_POOL_EXACT_P1_7"
+            )
+            for task in batch_tasks:
+                consume_batch_result(
+                    _p1_2b_route_batch_worker(task)
+                )
+            execution_mode = "SEQUENTIAL_EXACT_P1_7_ROUTE_BATCH"
     else:
         print(
             "[P1_2B_PERF] exact P1.7 route materialization "
-            f"mode=sequential routes={len(route_squads)} "
+            f"mode=sequential_scalar routes={len(route_squads)} "
             f"unique_squads={len(unique_items)} workers=1",
             flush=True,
         )
@@ -1089,7 +1258,7 @@ def _materialize_route_lineups(
         )
         for _, squad in unique_items:
             route_gw_elapsed: list[float] = []
-            before = p17_execution_observability()
+            before_stats = p17_execution_observability()
             route_started = time.perf_counter()
             by_squad[tuple(squad)] = _cumulative_lineup_horizons(
                 projections,
@@ -1098,13 +1267,15 @@ def _materialize_route_lineups(
                 generated_at=generated_at,
                 _perf_sink=route_gw_elapsed,
             )
-            squad_elapsed.append(time.perf_counter() - route_started)
+            route_elapsed = time.perf_counter() - route_started
+            squad_elapsed.append(route_elapsed)
+            batch_elapsed_values.append(route_elapsed)
             gw_elapsed.extend(route_gw_elapsed)
-            after = p17_execution_observability()
+            after_stats = p17_execution_observability()
             for key in p17_totals:
                 p17_totals[key] += (
-                    float(after.get(key, 0.0) or 0.0)
-                    - float(before.get(key, 0.0) or 0.0)
+                    float(after_stats.get(key, 0.0) or 0.0)
+                    - float(before_stats.get(key, 0.0) or 0.0)
                 )
         execution_mode = "SEQUENTIAL_EXACT_P1_7"
 
@@ -1123,16 +1294,23 @@ def _materialize_route_lineups(
         )
 
     materialization_elapsed = time.perf_counter() - materialization_started
-    effective_workers = workers if use_parallel else 1
+    effective_workers = (
+        workers if use_parallel and use_route_batch else 1
+    )
+    worker_elapsed = (
+        batch_elapsed_values
+        if batch_elapsed_values
+        else squad_elapsed
+    )
     utilization = (
-        sum(squad_elapsed)
+        sum(worker_elapsed)
         / max(materialization_elapsed * effective_workers, 1e-12)
     )
     coordination_upper_bound = max(
         0.0,
         materialization_elapsed
         - (
-            sum(squad_elapsed)
+            sum(worker_elapsed)
             / max(effective_workers, 1)
         ),
     )
@@ -1160,6 +1338,15 @@ def _materialize_route_lineups(
         "worker_count": workers if use_parallel else 1,
         "parallel_min_routes": min_routes,
         "parallel_chunks_per_worker": requested_chunks_per_worker,
+        "route_batch_size": route_batch_size,
+        "route_batch_count": (
+            len(batch_elapsed_values) if use_route_batch else 0
+        ),
+        "route_batch_exact_refinement_count": exact_refinement_count,
+        "route_batch_all_direct_routes_preserved": True,
+        "per_batch_elapsed_seconds": _perf_distribution(
+            batch_elapsed_values
+        ),
         "p1_7_owner": "V12_LINEUP_OPTIMIZER",
         "shared_player_surface_catalog": True,
         "material_element_count": len(material_elements),

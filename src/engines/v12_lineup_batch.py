@@ -11,7 +11,7 @@ No route is pruned and no P1.1/P1.3/P1.6 mathematics is recomputed here.
 import math
 import time
 from functools import lru_cache
-from typing import Any, Callable, Mapping, Sequence
+from typing import Callable, Any, Mapping, Sequence
 
 import numpy as np
 
@@ -77,38 +77,32 @@ def _lexicographic_first(
 ) -> np.ndarray:
     """Index of lexicographic maximum, preserving first-row tie order.
 
-    Later keys may be supplied lazily.  Once every row has exactly one
-    surviving candidate, lower-priority keys cannot affect the result and are
-    not materialized.  All evaluated metrics must be finite so the lazy path
-    remains exactly equivalent to the previous finite-value semantics.
+    Later keys may be supplied lazily and are evaluated only while at least
+    one row remains tied on all earlier keys.
     """
     if not metrics:
         raise LineupBatchError("lexicographic selection requires metrics")
-    shape: tuple[int, ...] | None = None
-    candidates: np.ndarray | None = None
-    for raw_metric in metrics:
-        metric = raw_metric() if callable(raw_metric) else raw_metric
-        if shape is None:
-            shape = metric.shape
-            candidates = np.ones(shape, dtype=bool)
-        elif metric.shape != shape:
+
+    first = metrics[0]() if callable(metrics[0]) else metrics[0]
+    shape = first.shape
+    if not np.all(np.isfinite(first)):
+        raise LineupBatchError("lexicographic metric must be finite")
+    candidates = first == np.max(first, axis=axis, keepdims=True)
+
+    for source in metrics[1:]:
+        if np.all(np.sum(candidates, axis=axis) == 1):
+            break
+        metric = source() if callable(source) else source
+        if metric.shape != shape:
             raise LineupBatchError("lexicographic metric shape drift")
         if not np.all(np.isfinite(metric)):
-            raise LineupBatchError(
-                "lexicographic metrics must be finite"
-            )
-        assert candidates is not None
+            raise LineupBatchError("lexicographic metric must be finite")
         best = np.max(
             np.where(candidates, metric, -np.inf),
             axis=axis,
             keepdims=True,
         )
         candidates &= metric == best
-        if np.all(
-            np.sum(candidates, axis=axis, dtype=np.int64) == 1
-        ):
-            break
-    assert candidates is not None
     return np.argmax(candidates, axis=axis)
 
 
@@ -1243,7 +1237,7 @@ def _family_selection_endpoint(
     Candidate slot 14 is the only variable.  p=0 and p=1 endpoints therefore
     span the exact multilinear resolver for every route in the family.
 
-    DNP state probabilities depend on legal-XI row and formation state only,
+    DNP state probabilities depend only on legal-XI row and formation state,
     not on bench permutation.  Build them once per formation and reuse them
     across all six bench permutations while preserving scalar multiplication
     order exactly as (DEF * MID) * FWD.
@@ -1288,11 +1282,11 @@ def _family_selection_endpoint(
             for m in range(m_count + 1)
             for f in range(f_count + 1)
         )
-        state_index = np.asarray(state_keys, dtype=np.int64)
+        state_array = np.asarray(state_keys, dtype=np.int64)
         dnp_probability = (
-            def_dist[rows[:, None], state_index[None, :, 0]]
-            * mid_dist[rows[:, None], state_index[None, :, 1]]
-        ) * fwd_dist[rows[:, None], state_index[None, :, 2]]
+            def_dist[rows[:, None], state_array[None, :, 0]]
+            * mid_dist[rows[:, None], state_array[None, :, 1]]
+        ) * fwd_dist[rows[:, None], state_array[None, :, 2]]
         dnp_probability = np.where(
             dnp_probability > 1e-15,
             dnp_probability,
@@ -1303,7 +1297,10 @@ def _family_selection_endpoint(
             dtype=np.float64,
         )
         full[rows, :] = dnp_probability
-        dnp_probability_by_formation[code] = (state_keys, full)
+        dnp_probability_by_formation[code] = (
+            state_keys,
+            full,
+        )
 
     for permutation_index in range(6):
         perm_indices = outfield_permutations[:, permutation_index, :]

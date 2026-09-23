@@ -31,6 +31,7 @@ from src.engines.canonical_decision_methodology import (
 )
 from src.engines.v12_lineup_optimizer import (
     optimize_lineup,
+    optimize_lineup_summaries_exact_batch,
     p17_execution_observability,
     prime_player_surface_cache,
     reset_p17_execution_observability,
@@ -195,36 +196,21 @@ def _lineup_decision(
     }
 
 
-def _cumulative_lineup_horizons(
-    projections: Mapping[str, Any],
-    squad_ids: Sequence[int],
-    *,
-    planning_gw: int,
-    generated_at: str,
-    _perf_sink: list[float] | None = None,
+def _aggregate_lineup_gw_rows(
+    gw_rows: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
-    gw_rows: list[dict[str, Any]] = []
-    for offset in range(5):
-        started = time.perf_counter()
-        gw_rows.append(
-            _lineup_decision(
-                projections,
-                squad_ids,
-                gw=int(planning_gw) + offset,
-                generated_at=generated_at,
-            )
-        )
-        if _perf_sink is not None:
-            _perf_sink.append(time.perf_counter() - started)
-    out: dict[str, Any] = {"per_gw": gw_rows}
+    rows = [dict(row) for row in gw_rows]
+    out: dict[str, Any] = {"per_gw": rows}
     for horizon in (1, 2, 3, 5):
-        subset = gw_rows[:horizon]
+        subset = rows[:horizon]
         if any(row.get("status") != "READY" for row in subset):
             out[str(horizon)] = {
                 "status": "UNAVAILABLE",
                 "reason": "INCOMPLETE_P1_7_HORIZON",
                 "missing_gws": [
-                    row.get("gw") for row in subset if row.get("status") != "READY"
+                    row.get("gw")
+                    for row in subset
+                    if row.get("status") != "READY"
                 ],
             }
             continue
@@ -250,6 +236,30 @@ def _cumulative_lineup_horizons(
             ),
         }
     return out
+
+
+def _cumulative_lineup_horizons(
+    projections: Mapping[str, Any],
+    squad_ids: Sequence[int],
+    *,
+    planning_gw: int,
+    generated_at: str,
+    _perf_sink: list[float] | None = None,
+) -> dict[str, Any]:
+    gw_rows: list[dict[str, Any]] = []
+    for offset in range(5):
+        started = time.perf_counter()
+        gw_rows.append(
+            _lineup_decision(
+                projections,
+                squad_ids,
+                gw=int(planning_gw) + offset,
+                generated_at=generated_at,
+            )
+        )
+        if _perf_sink is not None:
+            _perf_sink.append(time.perf_counter() - started)
+    return _aggregate_lineup_gw_rows(gw_rows)
 
 
 def _hit_economics(

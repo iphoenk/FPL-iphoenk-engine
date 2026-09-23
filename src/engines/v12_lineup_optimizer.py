@@ -16,6 +16,7 @@ import json
 import math
 import os
 import pickle
+import time
 import numpy as np
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -43,6 +44,30 @@ OUTFIELD = ("DEF", "MID", "FWD")
 LEGAL_FORMATIONS = frozenset(LINEUP_RULES.get("legal_formations") or [])
 P17_DECISION_CACHE_ENV = "V12_P17_DECISION_CACHE_DIR"
 P17_DECISION_CACHE_SCHEMA = 1
+
+_P17_EXECUTION_STATS = {
+    "p17_cache_hits": 0,
+    "p17_cache_misses": 0,
+    "p17_cache_writes": 0,
+    "p17_cache_corrupt_rejects": 0,
+    "legal_xi_template_hits": 0,
+    "legal_xi_template_misses": 0,
+    "player_surface_build_count": 0,
+    "p1_7_wall_seconds": 0.0,
+    "p1_7_cpu_seconds": 0.0,
+}
+
+
+def reset_p17_execution_observability() -> None:
+    for key in tuple(_P17_EXECUTION_STATS):
+        _P17_EXECUTION_STATS[key] = 0.0 if key.endswith("_seconds") else 0
+
+
+def p17_execution_observability() -> dict[str, Any]:
+    return {
+        **_P17_EXECUTION_STATS,
+        "unique_player_surface_count": len(_P17_SURFACE_CACHE),
+    }
 
 
 class LineupOptimizerError(ValueError):
@@ -130,7 +155,16 @@ def enumerate_legal_xi(
         str(row.get("position") or "")
         for row in rows
     )
-    return list(_legal_xi_templates(signature))
+    before = _legal_xi_templates.cache_info()
+    result = list(_legal_xi_templates(signature))
+    after = _legal_xi_templates.cache_info()
+    _P17_EXECUTION_STATS["legal_xi_template_hits"] += max(
+        0, after.hits - before.hits
+    )
+    _P17_EXECUTION_STATS["legal_xi_template_misses"] += max(
+        0, after.misses - before.misses
+    )
+    return result
 
 
 def _gw_row(projection: Mapping[str, Any], planning_gw: int) -> dict[str, Any]:
@@ -242,6 +276,7 @@ def _tactical_surface(projection: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def build_player_surface(projection: Mapping[str, Any], planning_gw: int) -> dict[str, Any]:
+    _P17_EXECUTION_STATS["player_surface_build_count"] += 1
     cfg = load_config()
     objective = dict(cfg.get("objective") or {})
     gw_row = _gw_row(projection, planning_gw)
@@ -1613,6 +1648,7 @@ def _decision_core_cached(
     """
     cache_root = str(os.environ.get(P17_DECISION_CACHE_ENV) or "").strip()
     if not cache_root:
+        _P17_EXECUTION_STATS["p17_cache_misses"] += 1
         return _decision_core(players)
 
     key = _decision_core_cache_key(players)
@@ -1629,10 +1665,13 @@ def _decision_core_cached(
             ):
                 core = dict(payload["core"])
                 if int(core.get("legal_xi_count") or 0) > 0:
+                    _P17_EXECUTION_STATS["p17_cache_hits"] += 1
                     return deepcopy(core)
+            _P17_EXECUTION_STATS["p17_cache_corrupt_rejects"] += 1
         except (OSError, EOFError, pickle.PickleError, AttributeError, ValueError, TypeError):
-            pass
+            _P17_EXECUTION_STATS["p17_cache_corrupt_rejects"] += 1
 
+    _P17_EXECUTION_STATS["p17_cache_misses"] += 1
     core = _decision_core(players)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
@@ -1648,6 +1687,7 @@ def _decision_core_cached(
                 protocol=pickle.HIGHEST_PROTOCOL,
             )
         os.replace(tmp, path)
+        _P17_EXECUTION_STATS["p17_cache_writes"] += 1
     finally:
         try:
             if tmp.exists():
@@ -1923,6 +1963,8 @@ def optimize_lineup(
     planning_gw: int | None = None,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
+    wall_started = time.perf_counter()
+    cpu_started = time.process_time()
     cfg = load_config()
     generated = generated_at or _now()
     gw = int(planning_gw or projections.get("planning_gw") or 1)
@@ -2103,6 +2145,12 @@ def optimize_lineup(
         planning_gw=gw,
         deterministic_output=output_core,
         generated_at=generated,
+    )
+    _P17_EXECUTION_STATS["p1_7_wall_seconds"] += (
+        time.perf_counter() - wall_started
+    )
+    _P17_EXECUTION_STATS["p1_7_cpu_seconds"] += (
+        time.process_time() - cpu_started
     )
     return {
         "generated_at": generated,

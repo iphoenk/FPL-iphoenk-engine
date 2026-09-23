@@ -2345,6 +2345,16 @@ def test_p17_captain_rounding_boundary_uses_scalar_oracle():
         captain["pair_utility"][0, xi_index]
         == scalar_pair["pair_utility"]
     )
+    assert captain["scalar_boundary_fallback_count"] == 1
+    assert captain["scalar_pair_fallback_count"] > 0
+    assert (
+        captain["scalar_pair_fallback_count"]
+        < batch.PAIR_CAP.size
+    )
+    assert (
+        captain["max_scalar_pair_fallbacks_per_route"]
+        == captain["scalar_pair_fallback_count"]
+    )
 
 
 def test_p17_family_route_first_match_tie_matches_scalar_oracle():

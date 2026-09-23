@@ -3378,6 +3378,38 @@ def run_deep(
         ),
     }
 
+    # Bind decision-critical visible sections to the exact producer payload
+    # before rendering. The renderer is forbidden from manufacturing this
+    # metadata, so HUMAN_FACING can prove it consumed authoritative outputs.
+    producer_by_section = {
+        "S06": "P1_7_LINEUP",
+        "S08": "P1_7_LINEUP",
+        "S11": "WATCHLIST20",
+        "S12": "OFFICIAL_FPL_PREDICTOR_RISE20",
+        "S13": "OFFICIAL_FPL_PREDICTOR_FALL20",
+        "S14": "P1_2_PACKAGE_UTILITY+P1_4_MONTE_CARLO+P1_8_MINI_LEAGUE_OVERLAY",
+        "S15B": "P1_8_MINI_LEAGUE_SNAPSHOT+P1_8_MINI_LEAGUE_OVERLAY",
+        "S16": "P1_1_P1_3_FULL_UNIVERSE+P1_6_TACTICAL_ROLE",
+        "S16B": "POST_MATCH_DEEP_DETAILS",
+    }
+    for sid, producer in producer_by_section.items():
+        section = sections.get(sid)
+        if not isinstance(section, Mapping):
+            continue
+        if str(section.get("state") or "").upper() != "COMPLETE":
+            continue
+        content = dict(section.get("content") or {})
+        content["authoritative_binding"] = {
+            "status": "BOUND",
+            "producer": producer,
+            "payload_fingerprint": _fingerprint({
+                key: value for key, value in content.items()
+                if key != "authoritative_binding"
+            }),
+            "report_slot": report_slot,
+        }
+        section["content"] = content
+
     math_stack = build_visible_mathematical_decision_stack(
         stage3_math_proof
     )

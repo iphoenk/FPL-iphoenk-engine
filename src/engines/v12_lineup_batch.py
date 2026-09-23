@@ -2047,6 +2047,28 @@ def _family_captain_kernel(
     joint_upside = np.round(raw_joint_upside, 6)
     joint_downside = np.round(raw_joint_downside, 6)
 
+    # Captain mean is a direct player-surface value, not an accumulated pair
+    # expression.  At its decimal half boundary Python round() alone is the
+    # scalar oracle, so correct it once per route/player instead of forcing
+    # all 14 ordered pairs for that captain through scalar pair evaluation.
+    direct_cap_mean_boundary = _near_decimal_half(
+        xpts_mean,
+        6,
+    )
+    for route_index, cap_slot in np.argwhere(
+        direct_cap_mean_boundary
+    ):
+        route_index = int(route_index)
+        cap_slot = int(cap_slot)
+        corrected = round(
+            float(xpts_mean[route_index, cap_slot]),
+            6,
+        )
+        cap_mean[
+            route_index,
+            PAIR_CAP == cap_slot,
+        ] = corrected
+
     # Boundary risk is pair-local.  Recomputing an entire 210-pair route
     # whenever any irrelevant pair is near a decimal half boundary is both
     # unnecessary and catastrophically expensive on production projections.
@@ -2056,7 +2078,6 @@ def _family_captain_kernel(
     # selected-XI safe-pool contract.
     captain_pair_boundary = (
         _near_decimal_half(raw_pair_utility, 6)
-        | _near_decimal_half(raw_cap_mean, 6)
         | _near_decimal_half(raw_vice_fallback, 6)
         | _near_decimal_half(raw_joint_upside, 6)
         | _near_decimal_half(raw_joint_downside, 6)
@@ -2266,6 +2287,9 @@ def _family_captain_kernel(
         ),
         "scalar_pair_fallback_limit_per_route": int(
             FAMILY_CAPTAIN_SCALAR_PAIR_FALLBACK_LIMIT_PER_ROUTE
+        ),
+        "scalar_direct_cap_mean_round_count": int(
+            np.sum(direct_cap_mean_boundary)
         ),
     }
 
@@ -2675,6 +2699,9 @@ def _optimize_gw_family(
         "captain_scalar_pair_fallback_limit_per_route": int(
             captain["scalar_pair_fallback_limit_per_route"]
         ),
+        "captain_scalar_direct_cap_mean_round_count": int(
+            captain["scalar_direct_cap_mean_round_count"]
+        ),
     }
 
 
@@ -2996,6 +3023,7 @@ def optimize_lineup_horizons_exact_batch(
     captain_scalar_boundary_fallback_count = 0
     captain_scalar_pair_fallback_count = 0
     captain_max_scalar_pair_fallbacks_per_route = 0
+    captain_scalar_direct_cap_mean_round_count = 0
     batch_size = max(1, int(batch_size))
     for offset, gw in enumerate(gws):
         valid_indices: list[int] = []
@@ -3097,6 +3125,11 @@ def optimize_lineup_horizons_exact_batch(
                             "captain_max_scalar_pair_fallbacks_per_route"
                         ]
                     ),
+                )
+                captain_scalar_direct_cap_mean_round_count += int(
+                    _family_proof[
+                        "captain_scalar_direct_cap_mean_round_count"
+                    ]
                 )
                 if len(family_results) != len(members):
                     raise LineupBatchError(
@@ -3267,6 +3300,9 @@ def optimize_lineup_horizons_exact_batch(
         ),
         "captain_scalar_pair_fallback_limit_per_route": int(
             FAMILY_CAPTAIN_SCALAR_PAIR_FALLBACK_LIMIT_PER_ROUTE
+        ),
+        "captain_scalar_direct_cap_mean_round_count": int(
+            captain_scalar_direct_cap_mean_round_count
         ),
     }
     return outputs, proof

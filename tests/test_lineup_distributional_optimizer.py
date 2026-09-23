@@ -2642,8 +2642,6 @@ def test_p17_fallback_budget_degrades_family_gw_to_scalar(monkeypatch):
         *_cross_route_projection_fixture(140)
     )[:65]
 
-    original_family = batch._optimize_gw_family
-    original_scalar = batch._scalar_gw_decision
     family_calls = {"count": 0}
     scalar_calls = {"count": 0}
 
@@ -2653,12 +2651,16 @@ def test_p17_fallback_budget_degrades_family_gw_to_scalar(monkeypatch):
 
     def scalar_row(projections, squad, *, gw, generated_at):
         scalar_calls["count"] += 1
-        return original_scalar(
-            projections,
-            squad,
-            gw=gw,
-            generated_at=generated_at,
-        )
+        return {
+            "status": "READY",
+            "gw": int(gw),
+            "route_utility": 0.0,
+            "expected_fpl_points": 0.0,
+            "distributional_downside": 0.0,
+            "supportable_upside": 0.0,
+            "expected_autosub_value": 0.0,
+            "cameo_blocking_cost": 0.0,
+        }
 
     # Use a self-consistent 65-squad fixture while forcing the family kernel
     # over its budget. The outer batch must stay available and use the

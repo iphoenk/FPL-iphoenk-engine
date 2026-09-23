@@ -1275,9 +1275,9 @@ def _family_selection_endpoint(
                 continue
             state_array = np.asarray(state_keys, dtype=np.int64)
             dnp_probability = (
-                def_dist[:, state_array[None, :, 0]]
-                * mid_dist[:, state_array[None, :, 1]]
-                * fwd_dist[:, state_array[None, :, 2]]
+                def_dist[:, state_array[:, 0]]
+                * mid_dist[:, state_array[:, 1]]
+                * fwd_dist[:, state_array[:, 2]]
             )
             dnp_probability_by_states[state_keys] = np.where(
                 dnp_probability > 1e-15,

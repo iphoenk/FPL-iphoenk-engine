@@ -1631,6 +1631,102 @@ def test_p17_cross_route_batch_matches_scalar_one_transfer_families():
     )
 
 
+
+def test_p17_core14_family_kernel_matches_scalar_across_positions_and_five_gw():
+    from src.engines import v12_lineup_batch as batch
+    from src.engines import v12_package_utility as package
+
+    projections, candidates = _cross_route_projection_fixture(20)
+    owned = projections["players"][:15]
+    base_ids = tuple(sorted(int(row["element"]) for row in owned))
+    owned_by_id = {int(row["element"]): row for row in owned}
+    candidate_by_position = {
+        position: [
+            row for row in candidates
+            if row["position"] == position
+        ]
+        for position in ("GK", "DEF", "MID", "FWD")
+    }
+
+    outgoing_by_position = {}
+    for element in base_ids:
+        position = owned_by_id[element]["position"]
+        outgoing_by_position.setdefault(position, element)
+    assert set(outgoing_by_position) == {"GK", "DEF", "MID", "FWD"}
+
+    squads = [base_ids]
+    family_ranges = {}
+    for position in ("GK", "DEF", "MID", "FWD"):
+        start = len(squads)
+        outgoing = outgoing_by_position[position]
+        for incoming in candidate_by_position[position][:16]:
+            squads.append(
+                tuple(
+                    sorted(
+                        (set(base_ids) - {outgoing})
+                        | {int(incoming["element"])}
+                    )
+                )
+            )
+        family_ranges[position] = (start, len(squads) - 1)
+
+    assert len(squads) == 65
+    actual, proof = batch.optimize_lineup_horizons_exact_batch(
+        projections,
+        squads,
+        planning_gw=GW,
+        generated_at=GENERATED,
+        batch_size=512,
+    )
+    assert proof["execution_kernel"] == "ROUTE_FAMILY_CORE14_AFFINE_EXACT_P1_7"
+    assert proof["route_family_count"] == 4
+    assert proof["route_family_core_reuse"] is True
+    assert proof["candidate_affine_resolver_exact"] is True
+    assert proof["route_pruning"] is False
+    assert proof["approximation"] is False
+
+    exact_keys = (
+        "status",
+        "gw",
+        "route_utility",
+        "expected_fpl_points",
+        "distributional_downside",
+        "supportable_upside",
+        "expected_autosub_value",
+        "cameo_blocking_cost",
+        "formation",
+        "starting_xi",
+        "bench_gk",
+        "bench_order",
+        "captain",
+        "vice_captain",
+        "captain_safe_pool_count",
+        "confidence",
+        "covariance_status",
+    )
+    representative_indices = [0]
+    for start, end in family_ranges.values():
+        representative_indices.extend((start, end))
+
+    for index in representative_indices:
+        squad = squads[index]
+        horizons = actual[index]["per_gw"]
+        for offset in range(5):
+            expected = package._lineup_decision(
+                projections,
+                squad,
+                gw=GW + offset,
+                generated_at=GENERATED,
+            )
+            observed = horizons[offset]
+            assert {
+                key: observed.get(key)
+                for key in exact_keys
+            } == {
+                key: expected.get(key)
+                for key in exact_keys
+            }
+
 def test_p17_cross_route_batch_2043_routes_five_gw_under_ten_seconds():
     import time
 

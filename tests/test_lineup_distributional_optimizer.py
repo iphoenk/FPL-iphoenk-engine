@@ -1247,7 +1247,7 @@ def test_p17_legal_xi_templates_reuse_identical_position_signature():
     assert second_info.hits == first_info.hits + 1
 
 
-def test_p17_prebuilt_player_surfaces_are_exactly_output_equivalent(
+def test_p17_primed_player_surfaces_are_exactly_output_equivalent(
     monkeypatch,
 ):
     from src.engines import v12_lineup_optimizer as lineup
@@ -1255,30 +1255,31 @@ def test_p17_prebuilt_player_surfaces_are_exactly_output_equivalent(
     monkeypatch.delenv(lineup.P17_DECISION_CACHE_ENV, raising=False)
     projections = _squad()
     ids = [row["element"] for row in projections["players"]]
-    projection_map = {
-        int(row["element"]): row
-        for row in projections["players"]
-    }
-    surfaces = {
-        element: lineup.build_player_surface(
-            projection_map[element],
-            GW,
-        )
-        for element in ids
-    }
 
+    lineup._P17_SURFACE_CACHE_OWNER = None
+    lineup._P17_SURFACE_CACHE = {}
     scalar = lineup.optimize_lineup(
         projections,
         ids,
         planning_gw=GW,
         generated_at=GENERATED,
     )
-    prebuilt = lineup.optimize_lineup(
+
+    proof = lineup.prime_player_surface_cache(
+        projections,
+        planning_gws=[GW],
+        material_elements=ids,
+    )
+    primed = lineup.optimize_lineup(
         projections,
         ids,
         planning_gw=GW,
         generated_at=GENERATED,
-        prebuilt_surfaces=surfaces,
     )
 
-    assert prebuilt == scalar
+    assert proof == {
+        "element_count": 15,
+        "gw_count": 1,
+        "surface_count": 15,
+    }
+    assert primed == scalar

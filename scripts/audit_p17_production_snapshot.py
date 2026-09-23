@@ -1,7 +1,9 @@
 from __future__ import annotations
-import argparse, hashlib, json, os, time
+import argparse, hashlib, json, os, sys, time
 from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.engines import v12_integrated_report_runner as ir
 from src.engines.v12_package_search import search_packages

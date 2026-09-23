@@ -1549,31 +1549,70 @@ def _family_captain_kernel(
     )
 
     route_count = elements.shape[0]
-    legal_count = layout["legal"].shape[0]
+    legal = np.asarray(layout["legal"], dtype=np.int64)
+    legal_count = legal.shape[0]
+
+    # Preserve the exact scalar pair ordering above, but invert that order
+    # once per route. For every legal XI we only need the best ranked pair
+    # among its 11 starters. This replaces up to 210 full XI-mask scans with
+    # 11 starter-row gathers without changing the candidate set or tie order.
+    rank_by_pair = np.empty_like(pair_order, dtype=np.int16)
+    rank_by_pair[
+        np.arange(route_count, dtype=np.int64)[:, None],
+        pair_order,
+    ] = np.arange(PAIR_CAP.size, dtype=np.int16)[None, :]
+    sentinel = np.int16(PAIR_CAP.size + 1)
+    rank_matrix = np.full(
+        (route_count, 15, 15),
+        sentinel,
+        dtype=np.int16,
+    )
+    rank_matrix[:, PAIR_CAP, PAIR_VICE] = rank_by_pair
+    pair_lookup = np.full((15, 15), -1, dtype=np.int16)
+    pair_lookup[PAIR_CAP, PAIR_VICE] = np.arange(
+        PAIR_CAP.size,
+        dtype=np.int16,
+    )
+
+    starter_mask = np.asarray(layout["starter_mask"], dtype=bool)
+    best_rank = np.full(
+        (route_count, legal_count),
+        sentinel,
+        dtype=np.int16,
+    )
     winner = np.full(
         (route_count, legal_count),
         -1,
-        dtype=np.int64,
+        dtype=np.int16,
     )
-    unresolved = np.ones_like(winner, dtype=bool)
-    xi_bits = layout["xi_bits"][None, :]
-    for rank in range(pair_order.shape[1]):
-        pair_index = pair_order[:, rank]
-        pair_mask = PAIR_MASKS[pair_index][:, None]
-        eligible = (
-            unresolved
-            & ((xi_bits & pair_mask) == pair_mask)
+    for starter_slot in range(legal.shape[1]):
+        captain_index = legal[:, starter_slot]
+        rank_rows = rank_matrix[:, captain_index, :]
+        eligible_rank = np.where(
+            starter_mask[None, :, :],
+            rank_rows,
+            sentinel,
         )
-        if np.any(eligible):
-            winner[eligible] = np.broadcast_to(
-                pair_index[:, None],
-                winner.shape,
-            )[eligible]
-            unresolved &= ~eligible
-        if not np.any(unresolved):
-            break
+        vice_index = np.argmin(
+            eligible_rank,
+            axis=2,
+        ).astype(np.int64)
+        local_rank = np.take_along_axis(
+            eligible_rank,
+            vice_index[:, :, None],
+            axis=2,
+        )[:, :, 0]
+        better = local_rank < best_rank
+        if np.any(better):
+            local_pair = pair_lookup[
+                captain_index[None, :],
+                vice_index,
+            ]
+            best_rank[better] = local_rank[better]
+            winner[better] = local_pair[better]
     if np.any(winner < 0):
         raise LineupBatchError("route-family captain lost legal pair")
+    winner = winner.astype(np.int64, copy=False)
 
     def gather(values: np.ndarray) -> np.ndarray:
         return np.take_along_axis(

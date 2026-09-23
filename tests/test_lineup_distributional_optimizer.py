@@ -2272,6 +2272,55 @@ def test_p17_family_bench_tie_rank_memoizes_across_gw(monkeypatch):
     assert np.array_equal(first, second)
 
 
+def test_p17_python_round_vec_matches_python_round_bitwise():
+    from src.engines import v12_lineup_batch as batch
+
+    rng = np.random.default_rng(20260924)
+    for decimals in (6, 9, 11):
+        scale = float(10 ** decimals)
+        centers = (
+            np.arange(-4096, 4097, dtype=np.float64) + 0.5
+        ) / scale
+        variants = [centers]
+        lower = centers.copy()
+        upper = centers.copy()
+        for _ in range(6):
+            lower = np.nextafter(lower, -np.inf)
+            upper = np.nextafter(upper, np.inf)
+            variants.extend((lower.copy(), upper.copy()))
+        values = np.concatenate(
+            (
+                *variants,
+                rng.uniform(-1000.0, 1000.0, size=8192),
+                np.asarray([0.0, -0.0], dtype=np.float64),
+            )
+        )
+        observed = batch.python_round_vec(values, decimals)
+        expected = np.fromiter(
+            (round(float(value), decimals) for value in values),
+            dtype=np.float64,
+            count=values.size,
+        )
+        assert np.array_equal(
+            observed.view(np.uint64),
+            expected.view(np.uint64),
+        )
+
+
+def test_p17_python_round_vec_asserts_exact_domain():
+    from src.engines import v12_lineup_batch as batch
+
+    with pytest.raises(AssertionError, match="0 <= decimals <= 11"):
+        batch.python_round_vec(np.asarray([1.0]), 12)
+    with pytest.raises(AssertionError, match="finite values"):
+        batch.python_round_vec(np.asarray([np.inf]), 6)
+    with pytest.raises(AssertionError, match=r"2\*\*52"):
+        batch.python_round_vec(
+            np.asarray([float(2**52) / float(10**6)]),
+            6,
+        )
+
+
 def test_p17_captain_rounding_boundary_uses_scalar_oracle():
     from src.engines import v12_lineup_batch as batch
 

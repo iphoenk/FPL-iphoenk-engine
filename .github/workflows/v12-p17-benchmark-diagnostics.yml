@@ -1,0 +1,211 @@
+name: V12 P1.7 production patch validation
+# validation-sync: 2026-09-24T04:50:00+07:00
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v12-p17-patch-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact validation head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Checkout frozen production runtime snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: 32466551c365ca2054eaf4316d36cda9a7484eae
+          path: runtime-data-prod
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-ci.lock
+
+      - name: Install locked V12 test dependencies
+        run: |
+          python -m pip install --no-deps -r requirements-ci.lock
+          python -m pip install threadpoolctl
+
+      - name: Record runner environment once
+        run: |
+          mkdir -p artifacts/p17-benchmark
+          {
+            echo "validation_head=$(git rev-parse HEAD)"
+            echo "runtime_data_sha=$(git -C runtime-data-prod rev-parse HEAD)"
+            echo "python=$(python -VV 2>&1)"
+            python -c 'import numpy as np; print("numpy=" + np.__version__); np.show_runtime() if hasattr(np, "show_runtime") else np.show_config()'
+            echo
+            lscpu
+          } > artifacts/p17-benchmark/runtime_environment.txt 2>&1
+          cat artifacts/p17-benchmark/runtime_environment.txt
+
+      - name: Validate exact rounding contract and full P1.7 oracle suite
+        run: |
+          python -m pytest -q \
+            tests/test_lineup_distributional_optimizer.py::test_p17_python_round_vec_matches_python_round_bitwise \
+            tests/test_lineup_distributional_optimizer.py::test_p17_python_round_vec_asserts_exact_domain
+          python -m pytest -q tests/test_lineup_distributional_optimizer.py \
+            | tee artifacts/p17-benchmark/lineup_suite.log
+
+      - name: Build one frozen production snapshot
+        env:
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/p17-prod-stage2
+          V12_P17_DECISION_CACHE_DIR: .cache/p17-prod-p17
+        run: |
+          rm -rf .cache/p17-prod-stage2 .cache/p17-prod-p17
+          rm -rf "$RUNNER_TEMP/p17-prod-snapshot"
+          mkdir -p "$RUNNER_TEMP/p17-prod-snapshot"
+          python scripts/audit_p17_production_snapshot.py \
+            --build \
+            --runtime-root runtime-data-prod \
+            --out "$RUNNER_TEMP/p17-prod-snapshot" \
+            --slot '2026-09-23T19:40:00+07:00'
+          cp "$RUNNER_TEMP/p17-prod-snapshot/snapshot_metadata.json" \
+            artifacts/p17-benchmark/production_snapshot_metadata.json
+          cp scripts/audit_p17_production_snapshot.py \
+            "$RUNNER_TEMP/audit_p17_production_snapshot.py"
+
+      - name: Benchmark b5d0a67 vs e21d38c vs patched head five samples each
+        shell: bash
+        env:
+          BASE_PRE_HARDENING: b5d0a6722b6a0ffef164f25fda6256a5807b74d2
+          HARDENED_HEAD: e21d38c23c2f2af4132ab4f400b12d5420d7af35
+          V12_P17_DECISION_CACHE_DIR: .cache/p17-prod-compare
+        run: |
+          set -euo pipefail
+          patched_head="$(git rev-parse HEAD)"
+          snapshot="$RUNNER_TEMP/p17-prod-snapshot"
+          mkdir -p artifacts/p17-benchmark/production-compare
+
+          benchmark_version() {
+            local sha="$1"
+            local label="$2"
+            git checkout --force "$sha"
+            mkdir -p scripts
+            cp "$RUNNER_TEMP/audit_p17_production_snapshot.py" \
+              scripts/audit_p17_production_snapshot.py
+            for sample in 1 2 3 4 5; do
+              rm -rf .cache/p17-prod-compare
+              python scripts/audit_p17_production_snapshot.py \
+                --benchmark \
+                --out "$snapshot" \
+                --label "${label}_${sample}" \
+                --scalar-n 0
+            done
+          }
+
+          benchmark_version "$BASE_PRE_HARDENING" "b5d0a67"
+          benchmark_version "$HARDENED_HEAD" "e21d38c"
+          benchmark_version "$patched_head" "patched"
+
+          git checkout --force "$patched_head"
+          cp "$snapshot"/benchmark_*.json \
+            artifacts/p17-benchmark/production-compare/
+
+          python - <<'PY'
+          import json
+          import statistics
+          from pathlib import Path
+
+          root = Path("artifacts/p17-benchmark/production-compare")
+          versions = {}
+          for label in ("b5d0a67", "e21d38c", "patched"):
+              rows = [
+                  json.loads(
+                      (root / f"benchmark_{label}_{sample}.json").read_text(
+                          encoding="utf-8"
+                      )
+                  )
+                  for sample in range(1, 6)
+              ]
+              external = [
+                  float(row["batch_wall_seconds_external"])
+                  for row in rows
+              ]
+              internal = [
+                  float((row.get("batch_proof") or {})["elapsed_seconds"])
+                  for row in rows
+              ]
+              versions[label] = {
+                  "external_seconds": external,
+                  "external_median_seconds": statistics.median(external),
+                  "internal_seconds": internal,
+                  "internal_median_seconds": statistics.median(internal),
+              }
+
+          payload = {
+              "comparison": versions,
+              "gate_seconds": 10.0,
+              "patched_production_gate_pass": (
+                  versions["patched"]["internal_median_seconds"] <= 10.0
+              ),
+          }
+          (root / "comparison_summary.json").write_text(
+              json.dumps(payload, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(payload, indent=2, sort_keys=True))
+          PY
+
+      - name: Run current synthetic five-sample diagnostics
+        run: |
+          python scripts/p17_benchmark_diagnostics.py \
+            --repeats 5 \
+            --scalar-route-count 65 \
+            --artifact-dir artifacts/p17-benchmark/synthetic
+
+      - name: Record immutable benchmark source metadata
+        run: |
+          python - <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+
+          out = Path("artifacts/p17-benchmark")
+          payload = {
+              "validation_head": subprocess.check_output(
+                  ["git", "rev-parse", "HEAD"], text=True
+              ).strip(),
+              "base_pre_hardening": (
+                  "b5d0a6722b6a0ffef164f25fda6256a5807b74d2"
+              ),
+              "hardened_head": (
+                  "e21d38c23c2f2af4132ab4f400b12d5420d7af35"
+              ),
+              "runtime_data_sha": subprocess.check_output(
+                  ["git", "-C", "runtime-data-prod", "rev-parse", "HEAD"],
+                  text=True,
+              ).strip(),
+              "samples_per_version": 5,
+              "same_job": True,
+          }
+          (out / "source_metadata.json").write_text(
+              json.dumps(payload, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload immutable validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p17-production-patch-validation-${{ github.run_id }}
+          path: artifacts/p17-benchmark
+          if-no-files-found: error
+          retention-days: 14

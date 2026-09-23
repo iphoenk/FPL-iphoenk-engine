@@ -66,13 +66,18 @@
     "parallel_lineup_min_routes": 64,
     "parallel_lineup_max_workers": 4,
     "parallel_chunks_per_worker": 8,
-    "execution_strategy": "BOUNDED_LINUX_PROCESS_POOL_EXACT_P1_7",
+    "execution_strategy": "ROUTE_FAMILY_CROSS_ROUTE_NUMPY_EXACT_P1_7",
     "lossy_pruning": false,
     "route_identity_preserved": true,
     "p1_7_owner_unchanged": true,
     "funded_material_direct_leg_limit": 32,
     "funded_materialization_strategy": "FULL_DIRECT_P1_7_THEN_MATERIAL_FUNDED_PAIR_P1_7",
-    "global_two_transfer_bruteforce_forbidden": true
+    "global_two_transfer_bruteforce_forbidden": true,
+    "cross_route_lineup_batch_size": 96,
+    "route_family_core_reuse": true,
+    "shared_player_surface_catalog": true,
+    "static_legal_xi_templates": true,
+    "compact_non_ranking_materialization": true
   },
   "governance": {
     "search_utility_separated": true,

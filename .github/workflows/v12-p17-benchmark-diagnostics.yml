@@ -1,5 +1,5 @@
 name: V12 P1.7 benchmark diagnostics
-# validation-sync: 2026-09-24T03:22:00+07:00
+# validation-sync: 2026-09-24T03:28:00+07:00
 
 on:
   pull_request:
@@ -20,6 +20,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout factual runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          ref: runtime-data-v6
+          path: runtime-data-v6
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -36,6 +42,17 @@ jobs:
             --repeats 5 \
             --scalar-route-count 65 \
             --artifact-dir artifacts/p17-benchmark
+
+      - name: Measure production snapshot tie prevalence
+        env:
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/v12-prod-tie-stage2
+          V12_P17_CACHE_DIR: .cache/v12-prod-tie-p17
+        run: |
+          rm -rf .cache/v12-prod-tie-stage2 .cache/v12-prod-tie-p17
+          mkdir -p artifacts/p17-benchmark
+          python scripts/p17_production_tie_prevalence.py \
+            --runtime-root runtime-data-v6 \
+            --output artifacts/p17-benchmark/production_tie_prevalence.json
 
       - name: Compare isolated gate versus full-suite gate
         shell: bash

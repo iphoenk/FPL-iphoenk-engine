@@ -1,0 +1,120 @@
+name: P17 production snapshot audit
+
+on:
+  push:
+    branches:
+      - audit/p17-production-snapshot-2026-09-24
+    paths:
+      - '.github/workflows/p17-production-snapshot-audit.yml'
+      - 'scripts/audit_p17_production_snapshot.py'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact audit head
+        uses: actions/checkout@v4
+        with:
+          path: app
+
+      - name: Checkout exact 19:40 runtime snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: 32466551c365ca2054eaf4316d36cda9a7484eae
+          path: runtime-data
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install runtime dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install threadpoolctl
+
+      - name: Build frozen production projections and routes
+        working-directory: app
+        env:
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/audit-stage2
+          V12_P17_DECISION_CACHE_DIR: .cache/audit-p17
+        run: |
+          rm -rf .cache/audit-stage2 .cache/audit-p17 artifacts/p17-prod-snapshot
+          mkdir -p artifacts/p17-prod-snapshot
+          python scripts/audit_p17_production_snapshot.py --build --runtime-root ../runtime-data --out artifacts/p17-prod-snapshot --slot '2026-09-23T19:40:00+07:00'
+
+      - name: Benchmark production snapshot with runner defaults
+        working-directory: app
+        env:
+          V12_P17_DECISION_CACHE_DIR: .cache/audit-p17-default
+        run: |
+          rm -rf .cache/audit-p17-default
+          python scripts/audit_p17_production_snapshot.py --benchmark --out artifacts/p17-prod-snapshot --label default --scalar-n 65
+
+      - name: Benchmark production snapshot with BLAS threads pinned to one
+        working-directory: app
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+          MKL_NUM_THREADS: '1'
+          NUMEXPR_NUM_THREADS: '1'
+          BLIS_NUM_THREADS: '1'
+          V12_P17_DECISION_CACHE_DIR: .cache/audit-p17-one-thread
+        run: |
+          rm -rf .cache/audit-p17-one-thread
+          python scripts/audit_p17_production_snapshot.py --benchmark --out artifacts/p17-prod-snapshot --label blas1 --scalar-n 65
+
+      - name: Record immutable source metadata
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          out=Path('artifacts/p17-prod-snapshot')
+          meta={
+            'audit_head_sha': subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
+            'pr668_source_sha': 'e21d38c23c2f2af4132ab4f400b12d5420d7af35',
+            'production_main_sha': '918da08b892320592b9d51684e0130933a6fbb7a',
+            'runtime_data_sha': subprocess.check_output(['git','-C','../runtime-data','rev-parse','HEAD'],text=True).strip(),
+            'source_run_id': 35861004775,
+            'source_report_slot': '2026-09-23T19:40:00+07:00',
+          }
+          (out/'source_metadata.json').write_text(json.dumps(meta,indent=2,sort_keys=True)+'\n')
+          PY
+
+      - name: Secret scan snapshot before upload
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+          root=Path('artifacts/p17-prod-snapshot')
+          pats={
+            'email': re.compile(rb'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'),
+            'authorization': re.compile(rb'(?i)authorization\s*[:=]'),
+            'secret_assignment': re.compile(rb'(?i)(token|password|passwd|cookie|fpl_access_token|fpl_password)\s*[:=]\s*[^\s,]+'),
+            'github_token': re.compile(rb'gh[pousr]_[A-Za-z0-9_]{20,}'),
+          }
+          findings=[]
+          files=list(root.glob('*.json'))
+          for p in files:
+            b=p.read_bytes()
+            for name,rx in pats.items():
+              if rx.search(b): findings.append({'file':p.name,'pattern':name})
+          result={'status':'PASS' if not findings else 'FAIL','findings':findings,'files_scanned':len(files)}
+          (root/'secret_scan.json').write_text(json.dumps(result,indent=2,sort_keys=True)+'\n')
+          if findings: raise SystemExit(f'secret scan failed: {findings}')
+          PY
+
+      - name: Upload immutable audit evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: p17-production-snapshot-${{ github.run_id }}
+          path: app/artifacts/p17-prod-snapshot/
+          if-no-files-found: error
+          retention-days: 14

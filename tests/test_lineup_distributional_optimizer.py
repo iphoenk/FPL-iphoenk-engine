@@ -2348,7 +2348,8 @@ def test_p17_captain_rounding_boundary_uses_scalar_oracle():
     assert captain["scalar_boundary_fallback_count"] == 0
     assert captain["scalar_pair_fallback_count"] == 0
     assert captain["scalar_direct_cap_mean_round_count"] > 0
-    assert captain["scalar_zero_dnp_captain_count"] == 15
+    assert captain["scalar_pair_round_count"] > 0
+    assert captain["scalar_zero_dnp_captain_count"] == 0
 
 
 def test_p17_captain_pair_arithmetic_boundary_uses_pair_local_scalar_oracle():
@@ -2425,15 +2426,16 @@ def test_p17_captain_pair_arithmetic_boundary_uses_pair_local_scalar_oracle():
         captain["pair_utility"][0, xi_index]
         == scalar_pair["pair_utility"]
     )
-    assert captain["scalar_boundary_fallback_count"] == 1
-    assert captain["scalar_pair_fallback_count"] > 0
+    assert captain["scalar_boundary_fallback_count"] == 0
+    assert captain["scalar_pair_fallback_count"] == 0
+    assert captain["scalar_pair_round_count"] > 0
     assert (
-        captain["scalar_pair_fallback_count"]
+        captain["scalar_pair_round_count"]
         < batch.PAIR_CAP.size
     )
     assert (
-        captain["max_scalar_pair_fallbacks_per_route"]
-        == captain["scalar_pair_fallback_count"]
+        captain["max_scalar_pair_rounds_per_route"]
+        == captain["scalar_pair_round_count"]
     )
 
 

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-23T16:20:48+07:00`  
+> **Last runtime/documentation sync:** `2026-09-23T16:23:00+07:00`  
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -63,6 +63,8 @@ This contract does not move factual ownership out of V6. V6 acquisition, source 
 DEEP success is now defined by the full delivery chain, not by section headings alone: **V6 facts → V12/P1.x analytics → Stage-3 payload → materialization → renderer → PRE_RENDER → POST_RENDER → HUMAN_FACING**. Report-plane consumes the existing canonical analytics and never creates a second xPts, package, Monte Carlo, lineup, or mini-league model.
 
 CURRENT15 is occurrence-bound. Fresh valid authenticated or explicitly current user-confirmed evidence outranks stale AUTH_EXPIRED artifacts; previous-GW submitted picks are identity fallback only and cannot mint current selling values, bank, chips, FT, or hit economics. A proposed transfer never changes CURRENT15. If current ownership cannot be proved, identity may remain visibly STALE while unsupported private finance stays UNAVAILABLE.
+
+P1.7 exact execution now uses a NumPy-batched 550-XI kernel for the same canonical legal formations, autosub resolver, six bench permutations, captain/vice ordering, and route utility. The scalar implementation remains a CI regression oracle and randomized equivalence tests must match the batched output exactly before production use. Stage-2 projections and the 500,000-path MC summary are reusable only behind exact deterministic fingerprints; cache reuse is execution-only and cannot change V6 or model authority.
 
 Package execution is now explicitly **FULL_DIRECT + MATERIAL_FUNDED**. P1.2A exhaustively searches the complete legal one-transfer universe, P1.2B evaluates every direct route with the unchanged exact P1.7 owner, and the existing Stage-3 materiality surface selects a bounded set of already-evaluated direct legs. P1.2A then composes legal/affordable two-transfer packages from those material legs and P1.2B evaluates every composed funded package exactly before MC. This preserves real funding routes without sending the roughly million-scale global two-transfer cross-product through P1.7. The engine explicitly records that global two-transfer exhaustive coverage is **false**; no hidden player/package score or second decision authority is introduced.
 

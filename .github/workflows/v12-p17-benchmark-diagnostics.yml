@@ -1,5 +1,5 @@
 name: V12 P1.7 benchmark diagnostics
-# validation-sync: 2026-09-24T03:28:00+07:00
+# validation-sync: 2026-09-24T03:36:00+07:00
 
 on:
   pull_request:
@@ -53,6 +53,17 @@ jobs:
           python scripts/p17_production_tie_prevalence.py \
             --runtime-root runtime-data-v6 \
             --output artifacts/p17-benchmark/production_tie_prevalence.json
+
+      - name: Profile production direct P1.7
+        env:
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/v12-prod-tie-stage2
+          V12_P17_CACHE_DIR: .cache/v12-prod-tie-p17
+        run: |
+          python scripts/p17_production_tie_prevalence.py \
+            --runtime-root runtime-data-v6 \
+            --output artifacts/p17-benchmark/production_tie_profile.json \
+            --profile-direct \
+            --pstats artifacts/p17-benchmark/production_tie_profile.pstats
 
       - name: Compare isolated gate versus full-suite gate
         shell: bash

@@ -986,3 +986,98 @@ def test_38_prepared_exact_p17_has_material_runtime_margin(monkeypatch, capsys):
     captured = capsys.readouterr()
     assert "P1_2B_RUNTIME_ACCEPTANCE=" in captured.out
 
+def test_full_direct_plus_material_funded_utility_preserves_truthful_scope(monkeypatch):
+    monkeypatch.setattr(utility, "_lineup_decision", _fake_lineup)
+    direct_search = package_search.search_packages(
+        current_squad=_current(),
+        candidate_universe=_universe(),
+        bank=0,
+        max_transfers=1,
+        universe_complete=True,
+        expected_eligible_universe_count=len(_candidates()),
+    )
+    future, info, price = _contexts(direct_search)
+    direct_utility = utility.evaluate_packages(
+        search_result=direct_search,
+        projections=_projections(),
+        free_transfers=2,
+        hit_cost_per_extra_transfer=4,
+        future_frontier_by_route=future,
+        information_value_by_route=info,
+        price_risk_by_route=price,
+        generated_at=GENERATED,
+    )
+    funding_legs = utility.select_material_funding_legs(direct_utility)
+    funded_search = package_search.compose_material_two_transfer_packages(
+        current_squad=_current(),
+        direct_search_result=direct_search,
+        material_direct_route_ids=funding_legs["route_ids"],
+        bank=0,
+    )
+    funded_future, funded_info, funded_price = _contexts(funded_search)
+    funded_utility = utility.evaluate_packages(
+        search_result=funded_search,
+        projections=_projections(),
+        free_transfers=2,
+        hit_cost_per_extra_transfer=4,
+        future_frontier_by_route=funded_future,
+        information_value_by_route=funded_info,
+        price_risk_by_route=funded_price,
+        generated_at=GENERATED,
+    )
+    combined = utility.combine_package_utility_surfaces(
+        direct_utility,
+        funded_utility,
+        funded_search_result=funded_search,
+    )
+
+    direct_ids = {row["route_id"] for row in direct_utility["routes"]}
+    combined_ids = {row["route_id"] for row in combined["routes"]}
+    assert direct_ids <= combined_ids
+    assert combined["search_authority"] == "FULL_DIRECT_MATERIAL_FUNDED"
+    assert combined["search_scope"]["direct"]["global_direct_complete"] is True
+    assert (
+        combined["search_scope"]["funded_two_transfer"][
+            "global_two_transfer_complete"
+        ]
+        is False
+    )
+    assert combined["search_scope"]["global_two_transfer_exhaustive_claim"] is False
+    assert combined["governance"]["funded_materialization"][
+        "decision_authority_changed"
+    ] is False
+    assert any(
+        int(row.get("transfer_count") or 0) == 2
+        for row in combined["routes"]
+    )
+
+
+def test_funding_leg_selector_reuses_existing_materiality_authority(monkeypatch):
+    monkeypatch.setattr(utility, "_lineup_decision", _fake_lineup)
+    direct_search = package_search.search_packages(
+        current_squad=_current(),
+        candidate_universe=_universe(),
+        bank=5,
+        max_transfers=1,
+        universe_complete=True,
+        expected_eligible_universe_count=len(_candidates()),
+    )
+    future, info, price = _contexts(direct_search)
+    direct_utility = utility.evaluate_packages(
+        search_result=direct_search,
+        projections=_projections(),
+        free_transfers=2,
+        hit_cost_per_extra_transfer=4,
+        future_frontier_by_route=future,
+        information_value_by_route=info,
+        price_risk_by_route=price,
+        generated_at=GENERATED,
+    )
+    selected = utility.select_material_funding_legs(direct_utility)
+    assert selected["status"] == "READY"
+    assert selected["route_ids"]
+    assert selected["source"] == "P1_4_EXISTING_MATERIALITY_SELECTOR"
+    assert selected["no_new_player_score"] is True
+    assert selected["no_new_package_score"] is True
+    assert len(selected["route_ids"]) <= selected["direct_leg_limit"]
+

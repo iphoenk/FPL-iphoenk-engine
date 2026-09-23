@@ -46,6 +46,7 @@ from src.engines.v12_package_utility import (
     select_stage3_material_mc_routes,
 )
 from src.engines.visible_content_proof import canonical_mode_contract
+from src.engines.v12_price_delivery import run_price_occurrence
 from src.engines.v12_report_orchestration import (
     build_actionable_price_radar,
     build_deep_human_facing_manifest,
@@ -82,7 +83,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CANONICAL_PATH = ROOT / "control" / "fpl_master_v12" / "FPL_MASTER_CANONICAL_V12.txt"
 STATE_PATH = ROOT / "control" / "fpl_master_v12" / "FPL_MASTER_STATE_V12.json"
 
-SUPPORTED_MODES = {"DEEP"}
+SUPPORTED_MODES = {"DEEP", "PRICE"}
 
 class IntegratedRunnerError(RuntimeError):
     pass
@@ -3106,14 +3107,23 @@ def main() -> int:
     mode = str(args.report_mode).upper()
     if mode not in SUPPORTED_MODES:
         raise IntegratedRunnerError(
-            f"runner stage-1 supports {sorted(SUPPORTED_MODES)}; got {mode}"
+            f"integrated runner supports {sorted(SUPPORTED_MODES)}; got {mode}"
         )
-    bundle = run_deep(
-        runtime_data_root=Path(args.runtime_data_root),
-        report_slot=args.report_slot,
-        output_dir=Path(args.output_dir),
-        checkpoint_time=args.checkpoint_time,
-    )
+    if mode == "PRICE":
+        bundle = run_price_occurrence(
+            runtime_data_root=Path(args.runtime_data_root),
+            canonical_path=CANONICAL_PATH,
+            state_path=STATE_PATH,
+            report_slot=args.report_slot,
+            output_dir=Path(args.output_dir),
+        )
+    else:
+        bundle = run_deep(
+            runtime_data_root=Path(args.runtime_data_root),
+            report_slot=args.report_slot,
+            output_dir=Path(args.output_dir),
+            checkpoint_time=args.checkpoint_time,
+        )
     print(
         json.dumps(
             {

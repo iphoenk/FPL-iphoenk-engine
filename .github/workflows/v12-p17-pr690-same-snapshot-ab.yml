@@ -1,0 +1,217 @@
+name: P17 PR690 same-snapshot A/B
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PYTHONPATH: app
+      REPORT_SLOT: 2026-09-24T14:20:00+07:00
+      CODE_SHA: 09789bf4f8da5a181f3247ba8659d1d63cb48c15
+      RUNTIME_SHA: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+    steps:
+      - name: Checkout exact PR690 code
+        uses: actions/checkout@v4
+        with:
+          ref: 09789bf4f8da5a181f3247ba8659d1d63cb48c15
+          path: app
+
+      - name: Checkout exact V6 snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+
+      - name: Verify immutable inputs
+        run: |
+          test "$(git -C app rev-parse HEAD)" = "$CODE_SHA"
+          test "$(git -C runtime-data rev-parse HEAD)" = "$RUNTIME_SHA"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify default execution mode
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("config/intelligence/v12_package_utility.json")
+          cfg = json.loads(p.read_text())
+          mode = cfg["performance"]["execution_mode"]
+          print("configured_execution_mode=", mode)
+          if mode != "CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7":
+              raise SystemExit(f"unexpected default mode: {mode}")
+          PY
+
+      - name: Run default cross-route
+        working-directory: app
+        env:
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/ab-default-stage2
+          V12_P17_DECISION_CACHE_DIR: .cache/ab-default-p17
+          V12_MC_SIM_CACHE_DIR: .cache/ab-default-mc
+        run: |
+          mkdir -p artifacts/ab/default
+          set +e
+          python -m src.engines.v12_integrated_report_runner \
+            --runtime-data-root ../runtime-data \
+            --report-mode DEEP \
+            --report-slot "$REPORT_SLOT" \
+            --output-dir artifacts/ab/default
+          rc=$?
+          set -e
+          echo "default_runner_rc=$rc"
+          test -s artifacts/ab/default/report_bundle.json
+          test -s artifacts/ab/default/execution_proof.json
+
+      - name: Switch working tree to exact kill-switch mode
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("config/intelligence/v12_package_utility.json")
+          cfg = json.loads(p.read_text())
+          assert cfg["performance"]["execution_mode"] == "CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7"
+          cfg["performance"]["execution_mode"] = "PROCESS_POOL_EXACT_P1_7"
+          p.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+          print("configured_execution_mode=PROCESS_POOL_EXACT_P1_7")
+          PY
+
+      - name: Run kill-switch process pool
+        working-directory: app
+        env:
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/ab-kill-stage2
+          V12_P17_DECISION_CACHE_DIR: .cache/ab-kill-p17
+          V12_MC_SIM_CACHE_DIR: .cache/ab-kill-mc
+        run: |
+          mkdir -p artifacts/ab/kill
+          set +e
+          python -m src.engines.v12_integrated_report_runner \
+            --runtime-data-root ../runtime-data \
+            --report-mode DEEP \
+            --report-slot "$REPORT_SLOT" \
+            --output-dir artifacts/ab/kill
+          rc=$?
+          set -e
+          echo "kill_runner_rc=$rc"
+          test -s artifacts/ab/kill/report_bundle.json
+          test -s artifacts/ab/kill/execution_proof.json
+
+      - name: Require bit-identical S14 and S15B
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          def load(root):
+              bundle = json.loads((root / "report_bundle.json").read_text())
+              proof = json.loads((root / "execution_proof.json").read_text())
+              sections = {
+                  row["section_id"]: row
+                  for row in bundle["report"]["sections"]
+              }
+              return bundle, proof, sections
+
+          def canonical(value):
+              return json.dumps(
+                  value,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=False,
+                  allow_nan=False,
+              ).encode()
+
+          def digest(value):
+              return hashlib.sha256(canonical(value)).hexdigest()
+
+          def diffs(a, b, path="$", out=None):
+              if out is None:
+                  out = []
+              if len(out) >= 100:
+                  return out
+              if type(a) is not type(b):
+                  out.append({"path": path, "default": a, "kill": b})
+              elif isinstance(a, dict):
+                  for key in sorted(set(a) | set(b)):
+                      if key not in a or key not in b:
+                          out.append({"path": f"{path}.{key}", "default": a.get(key), "kill": b.get(key)})
+                      else:
+                          diffs(a[key], b[key], f"{path}.{key}", out)
+              elif isinstance(a, list):
+                  if len(a) != len(b):
+                      out.append({"path": path + ".length", "default": len(a), "kill": len(b)})
+                  for i, (x, y) in enumerate(zip(a, b)):
+                      diffs(x, y, f"{path}[{i}]", out)
+              elif a != b:
+                  out.append({"path": path, "default": a, "kill": b})
+              return out
+
+          d_bundle, d_proof, d_sections = load(Path("artifacts/ab/default"))
+          k_bundle, k_proof, k_sections = load(Path("artifacts/ab/kill"))
+
+          result = {
+              "code_sha": "09789bf4f8da5a181f3247ba8659d1d63cb48c15",
+              "runtime_sha": "9fc2ce5e590518c399765e6fd576bb96db6e5897",
+              "report_slot": "2026-09-24T14:20:00+07:00",
+              "default_cpu_count": d_proof.get("cpu_count"),
+              "kill_cpu_count": k_proof.get("cpu_count"),
+              "default_runner_status": d_proof.get("runner_status"),
+              "kill_runner_status": k_proof.get("runner_status"),
+              "default_human_facing": d_proof.get("human_facing_qa_status"),
+              "kill_human_facing": k_proof.get("human_facing_qa_status"),
+              "default_s02_state": d_sections["S02"].get("state"),
+              "kill_s02_state": k_sections["S02"].get("state"),
+              "sections": {},
+          }
+          failed = False
+          for section_id in ("S14", "S15B"):
+              a = d_sections[section_id]
+              b = k_sections[section_id]
+              delta = diffs(a, b)
+              equal = not delta
+              result["sections"][section_id] = {
+                  "bit_identical": equal,
+                  "default_sha256": digest(a),
+                  "kill_sha256": digest(b),
+                  "differences": delta,
+              }
+              failed |= not equal
+
+          out = Path("artifacts/ab/ab_compare.json")
+          out.write_text(json.dumps(result, indent=2), encoding="utf-8")
+          print(json.dumps(result, indent=2))
+          if failed:
+              raise SystemExit("S14/S15B are not bit-identical")
+          PY
+
+      - name: Upload A/B evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p17-pr690-same-snapshot-ab-${{ github.run_id }}
+          path: |
+            app/artifacts/ab/default/report_bundle.json
+            app/artifacts/ab/default/execution_proof.json
+            app/artifacts/ab/default/report_body.md
+            app/artifacts/ab/kill/report_bundle.json
+            app/artifacts/ab/kill/execution_proof.json
+            app/artifacts/ab/kill/report_body.md
+            app/artifacts/ab/ab_compare.json
+          if-no-files-found: warn
+          retention-days: 14

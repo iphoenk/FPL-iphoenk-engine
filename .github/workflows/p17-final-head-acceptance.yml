@@ -1,0 +1,190 @@
+name: P17 final-head acceptance benchmark
+
+on:
+  push:
+    branches:
+      - audit/p17-roundvec-ab-2026-09-24
+    paths:
+      - '.github/workflows/p17-final-head-acceptance.yml'
+      - 'scripts/audit_p17_final_synthetic.py'
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout audit harness
+        uses: actions/checkout@v4
+        with:
+          ref: audit/p17-roundvec-ab-2026-09-24
+          fetch-depth: 0
+          path: harness
+
+      - name: Checkout exact final PR head
+        uses: actions/checkout@v4
+        with:
+          ref: eb05b7d3c7f0553f68538f82beb2a1e4bb961a77
+          fetch-depth: 0
+          path: target
+
+      - name: Checkout frozen production runtime data
+        uses: actions/checkout@v4
+        with:
+          ref: 32466551c365ca2054eaf4316d36cda9a7484eae
+          path: runtime-data
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install exact-head runtime dependencies
+        working-directory: target
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install threadpoolctl
+
+      - name: Record immutable benchmark context
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/p17-final-head
+          {
+            echo "target_sha=eb05b7d3c7f0553f68538f82beb2a1e4bb961a77"
+            echo "audit_head=$(git -C harness rev-parse HEAD)"
+            echo "runtime_data_sha=$(git -C runtime-data rev-parse HEAD)"
+            echo "profiler=OFF"
+            echo "sample_processes_per_fixture=5"
+          } | tee artifacts/p17-final-head/context.txt
+          lscpu | tee artifacts/p17-final-head/lscpu.txt
+          python -VV | tee artifacts/p17-final-head/python.txt
+          (
+            cd target
+            python - <<'PY'
+          import numpy as np
+          print(np.__version__)
+          np.show_config()
+          PY
+          ) | tee artifacts/p17-final-head/numpy.txt
+
+      - name: Benchmark normal and tie-rich fixtures in independent processes
+        working-directory: target
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+          MKL_NUM_THREADS: '1'
+          NUMEXPR_NUM_THREADS: '1'
+          BLIS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          for mode in normal tie-rich; do
+            for i in 1 2 3 4 5; do
+              rm -rf ".cache/final-synth-${mode}-${i}"
+              export V12_P17_DECISION_CACHE_DIR=".cache/final-synth-${mode}-${i}"
+              PYTHONPATH="$PWD" python ../harness/scripts/audit_p17_final_synthetic.py \
+                --mode "$mode" \
+                --output "../artifacts/p17-final-head/synthetic_${mode}_${i}.json"
+            done
+          done
+
+      - name: Build frozen production snapshot once
+        working-directory: target
+        env:
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/audit-stage2
+          V12_P17_DECISION_CACHE_DIR: .cache/audit-p17
+        run: |
+          set -euo pipefail
+          rm -rf ../p17-final-snapshot .cache/audit-stage2 .cache/audit-p17
+          mkdir -p ../p17-final-snapshot
+          PYTHONPATH="$PWD" python ../harness/scripts/audit_p17_roundvec_ab.py \
+            --build \
+            --runtime-root ../runtime-data \
+            --out ../p17-final-snapshot \
+            --slot '2026-09-23T19:40:00+07:00'
+
+      - name: Benchmark frozen production snapshot in five independent cache states
+        working-directory: target
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+          MKL_NUM_THREADS: '1'
+          NUMEXPR_NUM_THREADS: '1'
+          BLIS_NUM_THREADS: '1'
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4 5; do
+            rm -rf ".cache/final-production-${i}"
+            export V12_P17_DECISION_CACHE_DIR=".cache/final-production-${i}"
+            PYTHONPATH="$PWD" python ../harness/scripts/audit_p17_roundvec_ab.py \
+              --benchmark \
+              --out ../p17-final-snapshot \
+              --label "production_${i}" \
+              --scalar-n 0
+          done
+          cp ../p17-final-snapshot/benchmark_production_*.json ../artifacts/p17-final-head/
+          cp ../p17-final-snapshot/snapshot_metadata.json ../artifacts/p17-final-head/
+
+      - name: Summarize acceptance without relaxing production gate
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, statistics
+          from pathlib import Path
+
+          root = Path("artifacts/p17-final-head")
+          out = {
+              "target_sha": "eb05b7d3c7f0553f68538f82beb2a1e4bb961a77",
+              "runtime_data_sha": "32466551c365ca2054eaf4316d36cda9a7484eae",
+              "profiler": "OFF",
+          }
+
+          for mode in ("normal", "tie-rich"):
+              vals = [
+                  json.loads(p.read_text())["wall_seconds"]
+                  for p in sorted(root.glob(f"synthetic_{mode}_*.json"))
+              ]
+              out[mode] = {
+                  "samples": vals,
+                  "sample_count": len(vals),
+                  "min": min(vals),
+                  "median": statistics.median(vals),
+                  "max": max(vals),
+                  "gate_seconds": 10.0,
+                  "gate_pass": statistics.median(vals) <= 10.0,
+              }
+
+          prod = [
+              json.loads(p.read_text())["batch_wall_seconds_external"]
+              for p in sorted(root.glob("benchmark_production_*.json"))
+          ]
+          out["production"] = {
+              "samples": prod,
+              "sample_count": len(prod),
+              "min": min(prod),
+              "median": statistics.median(prod),
+              "max": max(prod),
+              "gate_seconds": 10.0,
+              "gate_pass": statistics.median(prod) <= 10.0,
+              "merge_blocking_under_option_b": False,
+          }
+
+          if out["normal"]["sample_count"] != 5 or out["tie-rich"]["sample_count"] != 5 or out["production"]["sample_count"] != 5:
+              raise SystemExit("acceptance requires exactly five samples per benchmark")
+          if not out["normal"]["gate_pass"]:
+              raise SystemExit("normal synthetic median exceeds 10 seconds")
+          if not out["tie-rich"]["gate_pass"]:
+              raise SystemExit("tie-rich synthetic median exceeds 10 seconds")
+
+          (root / "summary.json").write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
+          print(json.dumps(out, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload final-head benchmark evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: p17-final-head-acceptance-${{ github.run_id }}
+          path: artifacts/p17-final-head/
+          if-no-files-found: error
+          retention-days: 14

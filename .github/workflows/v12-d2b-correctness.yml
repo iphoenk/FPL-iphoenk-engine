@@ -746,22 +746,100 @@ jobs:
           ):
               failures.append("foundation fingerprint changed")
 
-          # Full raw traces and actual _rate90 traces must match bit-for-bit.
+          # Raw semantic trace must remain bit-for-bit identical.
           if o0["main_case"]["reference_trace"] != c0["main_case"]["reference_trace"]:
               failures.append("main raw float.hex/reference trace differs")
-          if o0["main_case"]["actual_rate90_trace"] != c0["main_case"]["actual_rate90_trace"]:
-              failures.append("main actual _rate90 row/weight/result trace differs")
-          if o0["actual_rate90_trace_fingerprint"] != c0["actual_rate90_trace_fingerprint"]:
-              failures.append("main actual _rate90 trace fingerprint differs")
 
-          # Edge fixtures: compare actual payload, raw reference trace,
-          # actual _rate90 trace, immutability, and leakage exactly.
+          def expected_position_cached_rate_trace(reference_trace, oracle_trace):
+              expected = []
+              seen_position_keys = set()
+              cursor = 0
+              for entry in reference_trace:
+                  if entry["skipped"]:
+                      continue
+                  group = oracle_trace[cursor : cursor + 4]
+                  if len(group) != 4:
+                      raise AssertionError(
+                          "scalar oracle must make exactly four _rate90 calls "
+                          "per evaluated test row"
+                      )
+                  cursor += 4
+                  key = (
+                      entry["target_gw"],
+                      entry["actual_position"],
+                      "xgi",
+                      "weights=None",
+                  )
+                  if key not in seen_position_keys:
+                      expected.append(group[0])
+                      seen_position_keys.add(key)
+                  expected.extend(group[1:])
+              if cursor != len(oracle_trace):
+                  raise AssertionError(
+                      f"unconsumed scalar _rate90 calls: "
+                      f"{len(oracle_trace) - cursor}"
+                  )
+              return expected, seen_position_keys
+
+          expected_main_rate_trace, main_position_keys = (
+              expected_position_cached_rate_trace(
+                  o0["main_case"]["reference_trace"],
+                  o0["main_case"]["actual_rate90_trace"],
+              )
+          )
+          if expected_main_rate_trace != c0["main_case"]["actual_rate90_trace"]:
+              failures.append(
+                  "candidate _rate90 trace is not exactly scalar trace minus "
+                  "repeated position-rate calls"
+              )
+          if len(main_position_keys) != 16:
+              failures.append(
+                  f"expected 16 requested position keys, got "
+                  f"{len(main_position_keys)}"
+              )
+          if len(o0["main_case"]["actual_rate90_trace"]) != 10096:
+              failures.append("scalar _rate90 main call count changed")
+          if len(c0["main_case"]["actual_rate90_trace"]) != 7588:
+              failures.append(
+                  "candidate _rate90 main call count is not 16 position misses "
+                  "+ unchanged player calls"
+              )
+
+          # Edge fixtures compare semantic/raw outputs exactly. The optimized
+          # call trace is validated separately against the scalar trace with
+          # only repeated position-rate calls removed.
           if set(o0["fixtures"]) != set(c0["fixtures"]):
               failures.append("fixture sets differ")
           else:
+              semantic_fields = (
+                  "actual_payload",
+                  "actual_payload_fingerprint",
+                  "reference_payload_fingerprint",
+                  "reference_trace",
+                  "reference_trace_fingerprint",
+                  "leakage_ok",
+                  "input_fingerprint_before",
+                  "input_fingerprint_after",
+                  "input_immutable",
+              )
               for name in sorted(o0["fixtures"]):
-                  if o0["fixtures"][name] != c0["fixtures"][name]:
-                      failures.append(f"fixture differs: {name}")
+                  of = o0["fixtures"][name]
+                  cf = c0["fixtures"][name]
+                  for field in semantic_fields:
+                      if of[field] != cf[field]:
+                          failures.append(
+                              f"fixture semantic divergence {name}:{field}"
+                          )
+                  expected_fixture_trace, _ = (
+                      expected_position_cached_rate_trace(
+                          of["reference_trace"],
+                          of["actual_rate90_trace"],
+                      )
+                  )
+                  if expected_fixture_trace != cf["actual_rate90_trace"]:
+                      failures.append(
+                          f"fixture optimized _rate90 trace invalid: {name}"
+                      )
 
           # Explicit DGW rule: target-GW rows cannot enter each other's history.
           dgw = c0["fixtures"]["dgw_same_player_same_target_gw"][
@@ -797,6 +875,13 @@ jobs:
               "actual_rate90_trace_fingerprint": c0[
                   "actual_rate90_trace_fingerprint"
               ],
+              "oracle_rate90_calls": len(
+                  o0["main_case"]["actual_rate90_trace"]
+              ),
+              "candidate_rate90_calls": len(
+                  c0["main_case"]["actual_rate90_trace"]
+              ),
+              "position_cache_requested_keys": len(main_position_keys),
               "hardware": c0["environment"],
               "failures": failures,
           }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import ast
 import json
 from pathlib import Path
 
@@ -2570,6 +2571,177 @@ def test_python_round_vec_bitwise_matches_python_round_near_decimal_halves() -> 
             count=x.size,
         )
         assert np.array_equal(got.view(np.int64), expected.view(np.int64))
+
+
+def _boundary_dense_cross_route_fixture(candidate_per_position: int = 3):
+    projections, candidates = _cross_route_projection_fixture(
+        candidate_per_position
+    )
+    directions = (None, -np.inf, np.inf)
+    for index, row in enumerate(projections["players"]):
+        direction = directions[index % len(directions)]
+        center = 3.0 + (index % 13) * 0.125 + 0.0000005
+        mean = (
+            center
+            if direction is None
+            else float(np.nextafter(center, direction))
+        )
+        for gw_row in row["xpts_by_gw"]:
+            gw_row["mean"] = mean
+
+        # Make appearance/autosub inputs dense around decimal boundaries too,
+        # while preserving an exact normalized finite-state distribution.
+        dnp_center = 0.04 + (index % 5) * 0.01 + 0.0000000005
+        dnp = (
+            dnp_center
+            if direction is None
+            else float(np.nextafter(dnp_center, direction))
+        )
+        regular = 0.05
+        late = 0.02
+        start = 1.0 - regular - late - dnp
+        xmins = row["xmins"]
+        xmins["start_probability"] = start
+        xmins["cameo_probability"] = regular + late
+        xmins["late_cameo_probability"] = late
+        xmins["dnp_probability"] = dnp
+        xmins["availability"] = 1.0 - dnp
+        xmins["expected_minutes"] = 90 * start + 18 * regular + 7 * late
+        states = xmins["xmins_distribution"]["states"]
+        state_values = (start, regular, late, dnp)
+        for state_row, probability in zip(states, state_values):
+            state_row["probability"] = probability
+        xmins["xmins_distribution"]["mean"] = xmins["expected_minutes"]
+
+        tactical = row["tactical_role_component"]["canonical_component"]
+        tactical_center = 12.0 + (index % 7) * 0.25 + 0.0000005
+        tactical["weighted_component_points"] = (
+            tactical_center
+            if direction is None
+            else float(np.nextafter(tactical_center, direction))
+        )
+    return projections, candidates
+
+
+def test_p17_batch_has_no_undocumented_numpy_round_calls() -> None:
+    from src.engines import v12_lineup_batch as batch
+
+    tree = ast.parse(Path(batch.__file__).read_text(encoding="utf-8"))
+    calls = []
+    for node in ast.walk(tree):
+        func = getattr(node, "func", None)
+        if (
+            isinstance(func, ast.Attribute)
+            and func.attr == "round"
+            and isinstance(func.value, ast.Name)
+            and func.value.id == "np"
+        ):
+            calls.append(node.lineno)
+
+    # Empty by design. Any future np.round site must first be explicitly
+    # documented as a scalar-exact exception with an oracle/fallback proof.
+    documented_whitelist: set[int] = set()
+    assert set(calls) == documented_whitelist
+
+
+def test_p17_boundary_dense_all_public_route_fields_match_scalar_family_and_chunk() -> None:
+    from src.engines import v12_lineup_batch as batch
+    from src.engines import v12_lineup_optimizer as scalar
+    from src.engines import v12_package_utility as package
+
+    projections, candidates = _boundary_dense_cross_route_fixture(4)
+    owned = projections["players"][:15]
+    base_ids = tuple(sorted(int(row["element"]) for row in owned))
+    owned_by_id = {int(row["element"]): row for row in owned}
+    candidates_by_position = {
+        position: [
+            int(row["element"])
+            for row in candidates
+            if row["position"] == position
+        ]
+        for position in ("GK", "DEF", "MID", "FWD")
+    }
+
+    outgoing = base_ids[7]
+    position = owned_by_id[outgoing]["position"]
+    incoming_ids = candidates_by_position[position][:3]
+    core14 = tuple(value for value in base_ids if value != outgoing)
+    family_squads = [
+        tuple(sorted(core14 + (incoming,)))
+        for incoming in incoming_ids
+    ]
+    chunk_squads = [base_ids, *family_squads]
+
+    public_fields = (
+        "status",
+        "gw",
+        "route_utility",
+        "expected_fpl_points",
+        "distributional_downside",
+        "supportable_upside",
+        "expected_autosub_value",
+        "cameo_blocking_cost",
+        "formation",
+        "starting_xi",
+        "bench_gk",
+        "bench_order",
+        "captain",
+        "vice_captain",
+        "captain_safe_pool_count",
+        "confidence",
+        "covariance_status",
+    )
+    material_elements = sorted(
+        {element for squad in chunk_squads for element in squad}
+    )
+    scalar.prime_player_surface_cache(
+        projections,
+        planning_gws=range(GW, GW + 5),
+        material_elements=material_elements,
+    )
+
+    for gw in range(GW, GW + 5):
+        catalog = batch._build_surface_catalog(
+            material_elements,
+            gw=gw,
+        )
+        family_rows, _ = batch._optimize_gw_family(
+            core14,
+            incoming_ids,
+            gw=gw,
+            surface_catalog=catalog,
+        )
+        chunk_rows = batch._optimize_gw_chunk(
+            chunk_squads,
+            gw=gw,
+            surface_catalog=catalog,
+        )
+
+        for squad, observed in zip(family_squads, family_rows):
+            expected = package._lineup_decision(
+                projections,
+                squad,
+                gw=gw,
+                generated_at=GENERATED,
+            )
+            assert {
+                key: observed.get(key) for key in public_fields
+            } == {
+                key: expected.get(key) for key in public_fields
+            }
+
+        for squad, observed in zip(chunk_squads, chunk_rows):
+            expected = package._lineup_decision(
+                projections,
+                squad,
+                gw=gw,
+                generated_at=GENERATED,
+            )
+            assert {
+                key: observed.get(key) for key in public_fields
+            } == {
+                key: expected.get(key) for key in public_fields
+            }
 
 
 def test_cross_route_route_utility_rounding_matches_scalar_oracle_at_production_half_boundaries() -> None:

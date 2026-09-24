@@ -103,7 +103,7 @@ jobs:
       - name: Checkout current production main
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: audit/p17-process-pool-same-snapshot-20260924
           path: app
 
       - name: Checkout factual runtime-data-v6

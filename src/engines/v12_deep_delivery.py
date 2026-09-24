@@ -72,13 +72,19 @@ def select_personal_evidence(
             and raw.get("applicable_planning_gw") == planning_gw
             and raw.get("explicit_confirmation") is True
         )
+        manual_current = bool(
+            source_class == "MANUAL_CAPTURE_CURRENT"
+            and gw == planning_gw
+            and raw.get("manual_capture_validated") is True
+        )
         authenticated = auth_state == "AUTH_AVAILABLE"
         previous_gw = gw is not None and gw < planning_gw
         current_semantic = bool(
             exact15
             and (
-                user_current
-                or authenticated
+                authenticated
+                or manual_current
+                or user_current
             )
         )
         normalized.append({
@@ -94,6 +100,7 @@ def select_personal_evidence(
             "exact15": exact15,
             "authenticated": authenticated,
             "user_current": user_current,
+            "manual_current": manual_current,
             "previous_gw": previous_gw,
             "current_semantic": current_semantic,
         })
@@ -106,7 +113,7 @@ def select_personal_evidence(
                 row["timestamp"].timestamp()
                 if row["timestamp"] is not None
                 else float("-inf"),
-                1 if row["authenticated"] else 0,
+                2 if row["authenticated"] else (1 if row["manual_current"] else 0),
                 -row["index"],
             ),
         )
@@ -115,7 +122,9 @@ def select_personal_evidence(
             "resolution_status": "CURRENT_VALID",
             "stale": False,
             "finance_allowed": bool(
-                selected["authenticated"] or selected["user_current"]
+                selected["authenticated"]
+                or selected["manual_current"]
+                or selected["user_current"]
             ),
             "candidate_count": len(normalized),
         }

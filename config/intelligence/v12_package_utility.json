@@ -67,6 +67,7 @@
     "parallel_lineup_max_workers": 4,
     "parallel_chunks_per_worker": 8,
     "execution_strategy": "ROUTE_FAMILY_CROSS_ROUTE_NUMPY_EXACT_P1_7",
+    "execution_mode": "CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7",
     "lossy_pruning": false,
     "route_identity_preserved": true,
     "p1_7_owner_unchanged": true,

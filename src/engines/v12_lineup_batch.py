@@ -2512,7 +2512,7 @@ def _optimize_gw_family(
         )
         * excess
     )
-    route_utility = np.round(
+    route_utility = python_round_vec(
         base_utility
         + bench["bench_order_utility"]
         + captain["pair_utility"],
@@ -2905,7 +2905,7 @@ def _optimize_gw_chunk(
         - _f(objective.get("lineup_downside_weight"), 0.10) * shortfall
         + _f(objective.get("lineup_upside_weight"), 0.05) * excess
     )
-    route_utility = np.round(
+    route_utility = python_round_vec(
         base_utility + bench["bench_order_utility"] + captain["pair_utility"],
         6,
     )

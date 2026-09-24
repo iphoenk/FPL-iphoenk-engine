@@ -1,0 +1,27 @@
+name: V6 Manual Capture Current Stage C
+
+on:
+  push:
+    branches:
+      - v6-manual-capture-current-20260924
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stage-c:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install pytest
+      - name: Manual authority bounded tests
+        run: |
+          python -m pytest -q tests/test_manual_capture_current.py tests/test_public_last_deadline_reconstruction.py
+      - name: Security proof
+        run: |
+          ! grep -R --line-number -E 'print\(.*FPL_MANUAL_IDENTITY_B64|echo .*FPL_MANUAL_IDENTITY_B64' src .github/workflows

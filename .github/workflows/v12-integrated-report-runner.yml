@@ -1,6 +1,9 @@
 name: V12 integrated report runner
 
 on:
+  push:
+    branches:
+      - audit/p17-process-pool-same-snapshot-20260924
   workflow_dispatch:
     inputs:
       report_mode:
@@ -37,6 +40,7 @@ concurrency:
 jobs:
   parse:
     if: >-
+      github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
       (
         github.event_name == 'issue_comment' &&
@@ -64,7 +68,12 @@ jobs:
           import os, re
           from pathlib import Path
 
-          if os.environ["EVENT_NAME"] == "workflow_dispatch":
+          if os.environ["EVENT_NAME"] == "push":
+              mode = "DEEP"
+              slot = "2026-09-24T14:20:00+07:00"
+              checkpoint = ""
+              profile_mode = "OFF"
+          elif os.environ["EVENT_NAME"] == "workflow_dispatch":
               mode = os.environ.get("INPUT_MODE") or "DEEP"
               slot = os.environ.get("INPUT_SLOT") or ""
               checkpoint = os.environ.get("INPUT_CHECKPOINT") or ""

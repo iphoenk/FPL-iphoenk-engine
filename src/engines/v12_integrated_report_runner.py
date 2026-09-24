@@ -45,6 +45,7 @@ from src.engines.v12_package_search import (
     search_packages,
 )
 from src.engines.v12_package_utility import (
+    load_config as load_package_utility_config,
     attach_stage3_decision,
     combine_package_utility_surfaces,
     derive_bounded_future_frontier,
@@ -3358,6 +3359,8 @@ def run_deep(
             {
                 "engine_data_status": {
                     "runner": "V12_INTEGRATED_REPORT_RUNNER",
+        "configured_execution_mode": _p17_cfg,
+        "execution_mode": _p17_exec.get("execution_mode"),
                     "planning_gw": planning_gw,
                     "projection_players": len((projections or {}).get("players") or []),
                     "our15": len(owned),
@@ -3587,6 +3590,12 @@ def run_deep(
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
+    _p17_exec = dict(
+        (((direct_package_utility or {}).get("governance") or {}).get("p1_7_execution_proof") or {})
+    )
+    _p17_cfg = str(
+        ((load_package_utility_config().get("performance") or {}).get("execution_mode") or "")
+    ).strip().upper()
     execution_proof = {
         "schema_version": 2,
         "runner": "V12_INTEGRATED_REPORT_RUNNER",

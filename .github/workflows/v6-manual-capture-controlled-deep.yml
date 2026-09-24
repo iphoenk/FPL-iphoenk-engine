@@ -1,0 +1,75 @@
+name: V6 Manual Capture Controlled DEEP
+
+on:
+  workflow_dispatch:
+    inputs:
+      report_slot:
+        description: Controlled report slot ISO-8601
+        required: true
+        default: "2026-09-24T17:36:00+07:00"
+
+permissions:
+  contents: read
+
+jobs:
+  controlled-deep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      FPL_MANUAL_IDENTITY_B64: ${{ secrets.FPL_MANUAL_IDENTITY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Require manual identity secret
+        shell: bash
+        run: |
+          test -n "$FPL_MANUAL_IDENTITY_B64" || {
+            echo "MANUAL_CAPTURE_SECRET_MISSING"
+            exit 2
+          }
+      - name: Install runtime
+        run: |
+          python -m pip install -r requirements.txt
+      - name: Controlled DEEP
+        env:
+          REPORT_SLOT: ${{ inputs.report_slot }}
+        run: |
+          python -m src.engines.v12_integrated_report_runner \
+            --report-mode DEEP \
+            --report-slot "$REPORT_SLOT" \
+            --output-dir artifacts/manual-capture-controlled-deep
+      - name: Acceptance proof
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          roots=list(Path("artifacts/manual-capture-controlled-deep").rglob("*.json"))
+          docs=[]
+          for p in roots:
+              try:
+                  x=json.loads(p.read_text())
+                  if isinstance(x,dict): docs.append((p,x))
+              except Exception:
+                  pass
+          hits=[]
+          for p,x in docs:
+              blob=json.dumps(x)
+              if '"S02"' in blob and "MANUAL_CAPTURE_CURRENT" in blob:
+                  hits.append((p,x))
+          if not hits:
+              raise SystemExit("NO_S02_MANUAL_AUTHORITY_PROOF")
+          blob=json.dumps(hits[-1][1])
+          required=["MANUAL_CAPTURE_CURRENT","COMPLETE"]
+          missing=[v for v in required if v not in blob]
+          if missing:
+              raise SystemExit("ACCEPTANCE_MISSING:"+",".join(missing))
+          print("CONTROLLED_DEEP_MANUAL_IDENTITY_PASS")
+          print("evidence_file="+str(hits[-1][0]))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v6-manual-capture-controlled-deep
+          path: artifacts/manual-capture-controlled-deep

@@ -110,10 +110,14 @@ def select_personal_evidence(
         selected = max(
             valid,
             key=lambda row: (
+                3 if row["authenticated"] else (
+                    2 if row["manual_current"] else (
+                        1 if row["user_current"] else 0
+                    )
+                ),
                 row["timestamp"].timestamp()
                 if row["timestamp"] is not None
                 else float("-inf"),
-                2 if row["authenticated"] else (1 if row["manual_current"] else 0),
                 -row["index"],
             ),
         )

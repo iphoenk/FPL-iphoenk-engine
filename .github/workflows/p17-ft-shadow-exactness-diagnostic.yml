@@ -1,6 +1,9 @@
 name: P1.7 FT shadow exactness diagnostic
 
 on:
+  push:
+    branches:
+      - audit/p17-ft-shadow-exactness-diagnostic-20260924
   workflow_dispatch:
 
 permissions:

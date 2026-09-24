@@ -9,6 +9,7 @@ No route is pruned and no P1.1/P1.3/P1.6 mathematics is recomputed here.
 """
 
 import math
+import os
 import time
 from functools import lru_cache
 from typing import Callable, Any, Mapping, Sequence
@@ -2905,10 +2906,10 @@ def _optimize_gw_chunk(
         - _f(objective.get("lineup_downside_weight"), 0.10) * shortfall
         + _f(objective.get("lineup_upside_weight"), 0.05) * excess
     )
-    route_utility = np.round(
-        base_utility + bench["bench_order_utility"] + captain["pair_utility"],
-        6,
+    route_utility_raw = (
+        base_utility + bench["bench_order_utility"] + captain["pair_utility"]
     )
+    route_utility = np.round(route_utility_raw, 6)
     expected_before_captain = np.round(
         expected_points + bench["expected_autosub_value"],
         6,
@@ -2981,8 +2982,7 @@ def _optimize_gw_chunk(
         vice_index = int(captain["vice_index"][batch_index, xi_index])
         fcode = int(formation_code[batch_index, xi_index])
         ready_count = int(round(float(pmf_ready[batch_index, xi_index])))
-        results.append(
-            {
+        result = {
                 "status": "READY",
                 "gw": int(gw),
                 "route_utility": round(float(route_utility[batch_index, xi_index]), 6),
@@ -3029,7 +3029,19 @@ def _optimize_gw_chunk(
                     "detail_materialization_deferred": True,
                 },
             }
-        )
+        if os.environ.get("V12_P17_ROUND_DIAGNOSTIC") == "1":
+            raw = float(route_utility_raw[batch_index, xi_index])
+            scaled = raw * 1_000_000.0
+            fraction = scaled - math.floor(scaled)
+            result["_rounding_diagnostic"] = {
+                "route_utility_pre_round": raw,
+                "python_round_6": round(raw, 6),
+                "numpy_round_6": float(np.round(raw, 6)),
+                "scaled_fraction": fraction,
+                "distance_to_decimal_half": abs(fraction - 0.5),
+                "spacing_scaled": abs(float(np.spacing(scaled))),
+            }
+        results.append(result)
     return results
 
 

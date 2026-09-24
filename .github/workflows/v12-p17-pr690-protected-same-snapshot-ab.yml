@@ -1,0 +1,217 @@
+name: P17 PR690 protected same-snapshot A/B
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CODE_SHA: 7766288dd21d08b2710a1b84cc77ff40966f92dd
+  RUNTIME_SHA: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+  REPORT_SLOT: 2026-09-24T14:20:00+07:00
+
+jobs:
+  default:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 7766288dd21d08b2710a1b84cc77ff40966f92dd
+          path: app
+      - uses: actions/checkout@v4
+        with:
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+      - name: Verify immutable inputs
+        run: |
+          test "$(git -C app rev-parse HEAD)" = "$CODE_SHA"
+          test "$(git -C runtime-data rev-parse HEAD)" = "$RUNTIME_SHA"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Verify default mode
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          cfg=json.loads(Path("config/intelligence/v12_package_utility.json").read_text())
+          mode=cfg["performance"]["execution_mode"]
+          print("configured_execution_mode=", mode)
+          assert mode == "CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7"
+          PY
+      - name: Run default
+        working-directory: app
+        env:
+          PYTHONPATH: .
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/default-stage2
+          V12_P17_DECISION_CACHE_DIR: .cache/default-p17
+          V12_MC_SIM_CACHE_DIR: .cache/default-mc
+        run: |
+          mkdir -p artifacts/default
+          python -m src.engines.v12_integrated_report_runner \
+            --runtime-data-root ../runtime-data \
+            --report-mode DEEP \
+            --report-slot "$REPORT_SLOT" \
+            --output-dir artifacts/default
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p17-pr690-default-${{ github.run_id }}
+          path: |
+            app/artifacts/default/report_bundle.json
+            app/artifacts/default/execution_proof.json
+            app/artifacts/default/report_body.md
+
+  kill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 7766288dd21d08b2710a1b84cc77ff40966f92dd
+          path: app
+      - uses: actions/checkout@v4
+        with:
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+      - name: Verify immutable inputs
+        run: |
+          test "$(git -C app rev-parse HEAD)" = "$CODE_SHA"
+          test "$(git -C runtime-data rev-parse HEAD)" = "$RUNTIME_SHA"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Select kill-switch mode ephemerally
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("config/intelligence/v12_package_utility.json")
+          cfg=json.loads(p.read_text())
+          assert cfg["performance"]["execution_mode"] == "CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7"
+          cfg["performance"]["execution_mode"] = "PROCESS_POOL_EXACT_P1_7"
+          p.write_text(json.dumps(cfg, indent=2) + "\n")
+          print("configured_execution_mode=PROCESS_POOL_EXACT_P1_7")
+          PY
+      - name: Run kill switch
+        working-directory: app
+        env:
+          PYTHONPATH: .
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/kill-stage2
+          V12_P17_DECISION_CACHE_DIR: .cache/kill-p17
+          V12_MC_SIM_CACHE_DIR: .cache/kill-mc
+        run: |
+          mkdir -p artifacts/kill
+          python -m src.engines.v12_integrated_report_runner \
+            --runtime-data-root ../runtime-data \
+            --report-mode DEEP \
+            --report-slot "$REPORT_SLOT" \
+            --output-dir artifacts/kill
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p17-pr690-kill-${{ github.run_id }}
+          path: |
+            app/artifacts/kill/report_bundle.json
+            app/artifacts/kill/execution_proof.json
+            app/artifacts/kill/report_body.md
+
+  compare:
+    needs: [default, kill]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: p17-pr690-default-${{ github.run_id }}
+          path: evidence/default
+      - uses: actions/download-artifact@v4
+        with:
+          name: p17-pr690-kill-${{ github.run_id }}
+          path: evidence/kill
+      - name: Compare S14 and S15B bit-exactly
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+
+          def locate(root, filename):
+              matches=list(Path(root).rglob(filename))
+              if len(matches) != 1:
+                  raise SystemExit(f"{root}: expected one {filename}, got {matches}")
+              return matches[0]
+
+          def load(root):
+              bundle=json.loads(locate(root,"report_bundle.json").read_text())
+              proof=json.loads(locate(root,"execution_proof.json").read_text())
+              sections={x["section_id"]:x for x in bundle["report"]["sections"]}
+              return proof,sections
+
+          def canon(x):
+              return json.dumps(x,sort_keys=True,separators=(",",":"),ensure_ascii=False,allow_nan=False).encode()
+          def digest(x):
+              return hashlib.sha256(canon(x)).hexdigest()
+          def diff(a,b,path="$",out=None):
+              out=[] if out is None else out
+              if len(out)>=200: return out
+              if type(a) is not type(b):
+                  out.append({"path":path,"default":a,"kill":b}); return out
+              if isinstance(a,dict):
+                  for k in sorted(set(a)|set(b)):
+                      if k not in a or k not in b:
+                          out.append({"path":f"{path}.{k}","default":a.get(k),"kill":b.get(k)})
+                      else: diff(a[k],b[k],f"{path}.{k}",out)
+              elif isinstance(a,list):
+                  if len(a)!=len(b): out.append({"path":path+".length","default":len(a),"kill":len(b)})
+                  for i,(x,y) in enumerate(zip(a,b)): diff(x,y,f"{path}[{i}]",out)
+              elif a!=b:
+                  out.append({"path":path,"default":a,"kill":b})
+              return out
+
+          dp,ds=load("evidence/default")
+          kp,ks=load("evidence/kill")
+          result={
+            "code_sha":"7766288dd21d08b2710a1b84cc77ff40966f92dd",
+            "runtime_sha":"9fc2ce5e590518c399765e6fd576bb96db6e5897",
+            "report_slot":"2026-09-24T14:20:00+07:00",
+            "default_cpu_count":dp.get("cpu_count"),
+            "kill_cpu_count":kp.get("cpu_count"),
+            "cpu_count_equal":dp.get("cpu_count")==kp.get("cpu_count"),
+            "default_runner_status":dp.get("runner_status"),
+            "kill_runner_status":kp.get("runner_status"),
+            "default_human_facing":dp.get("human_facing_qa_status"),
+            "kill_human_facing":kp.get("human_facing_qa_status"),
+            "sections":{}
+          }
+          failed=not result["cpu_count_equal"]
+          for sid in ("S14","S15B"):
+              delta=diff(ds[sid],ks[sid])
+              same=not delta
+              result["sections"][sid]={
+                "bit_identical":same,
+                "default_sha256":digest(ds[sid]),
+                "kill_sha256":digest(ks[sid]),
+                "differences":delta,
+              }
+              failed |= not same
+          Path("ab_compare.json").write_text(json.dumps(result,indent=2))
+          print(json.dumps(result,indent=2))
+          if failed:
+              raise SystemExit("A/B exactness failed")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p17-pr690-ab-compare-${{ github.run_id }}
+          path: ab_compare.json

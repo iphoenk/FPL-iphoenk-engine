@@ -1,0 +1,113 @@
+name: P17 production output exactness
+
+on:
+  push:
+    branches:
+      - audit/p17-output-exactness-2026-09-24
+    paths:
+      - '.github/workflows/p17-output-exactness.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  exactness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout harness
+        uses: actions/checkout@v4
+        with:
+          ref: audit/p17-output-exactness-2026-09-24
+          fetch-depth: 0
+          path: harness
+      - name: Checkout baseline
+        uses: actions/checkout@v4
+        with:
+          ref: e21d38c23c2f2af4132ab4f400b12d5420d7af35
+          path: baseline
+      - name: Checkout final head
+        uses: actions/checkout@v4
+        with:
+          ref: eb05b7d3c7f0553f68538f82beb2a1e4bb961a77
+          path: target
+      - name: Checkout frozen runtime data
+        uses: actions/checkout@v4
+        with:
+          ref: 32466551c365ca2054eaf4316d36cda9a7484eae
+          path: runtime-data
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install target dependencies
+        working-directory: target
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install threadpoolctl
+      - name: Build one frozen snapshot
+        working-directory: target
+        env:
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/exactness-stage2
+          V12_P17_DECISION_CACHE_DIR: .cache/exactness-p17
+        run: |
+          rm -rf ../snapshot .cache/exactness-stage2 .cache/exactness-p17
+          mkdir -p ../snapshot ../artifacts
+          PYTHONPATH="$PWD" python ../harness/scripts/audit_p17_roundvec_ab.py             --build --runtime-root ../runtime-data --out ../snapshot             --slot '2026-09-23T19:40:00+07:00'
+      - name: Hash baseline canonical output
+        working-directory: baseline
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+          MKL_NUM_THREADS: '1'
+          NUMEXPR_NUM_THREADS: '1'
+          BLIS_NUM_THREADS: '1'
+          V12_P17_DECISION_CACHE_DIR: .cache/exactness-baseline
+        run: |
+          rm -rf .cache/exactness-baseline
+          PYTHONPATH="$PWD" python ../harness/scripts/audit_p17_output_exactness.py             --snapshot ../snapshot --output ../artifacts/baseline.json --label baseline
+      - name: Hash final-head canonical output
+        working-directory: target
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+          MKL_NUM_THREADS: '1'
+          NUMEXPR_NUM_THREADS: '1'
+          BLIS_NUM_THREADS: '1'
+          V12_P17_DECISION_CACHE_DIR: .cache/exactness-final
+        run: |
+          rm -rf .cache/exactness-final
+          PYTHONPATH="$PWD" python ../harness/scripts/audit_p17_output_exactness.py             --snapshot ../snapshot --output ../artifacts/final.json --label final
+      - name: Enforce exact canonical equality
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a=json.loads(Path("artifacts/baseline.json").read_text())
+          b=json.loads(Path("artifacts/final.json").read_text())
+          result={
+            "baseline_sha":"e21d38c23c2f2af4132ab4f400b12d5420d7af35",
+            "final_sha":"eb05b7d3c7f0553f68538f82beb2a1e4bb961a77",
+            "runtime_data_sha":"32466551c365ca2054eaf4316d36cda9a7484eae",
+            "route_count":a["route_count"],
+            "canonical_bytes_baseline":a["canonical_bytes"],
+            "canonical_bytes_final":b["canonical_bytes"],
+            "baseline_output_sha256":a["sha256"],
+            "final_output_sha256":b["sha256"],
+            "exact_equal":a["sha256"]==b["sha256"] and a["canonical_bytes"]==b["canonical_bytes"],
+          }
+          Path("artifacts/exactness.json").write_text(json.dumps(result,indent=2,sort_keys=True)+"\n")
+          print(json.dumps(result,indent=2,sort_keys=True))
+          if not result["exact_equal"]:
+              raise SystemExit("canonical 2043x5 output differs")
+          PY
+      - name: Record environment
+        run: |
+          lscpu > artifacts/lscpu.txt
+          python -VV > artifacts/python.txt
+      - name: Upload exactness evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: p17-output-exactness-${{ github.run_id }}
+          path: artifacts/
+          retention-days: 14

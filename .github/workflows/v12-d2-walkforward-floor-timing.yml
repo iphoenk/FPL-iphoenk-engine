@@ -1,0 +1,383 @@
+name: V12 D2 walk-forward floor timing
+
+on:
+  push:
+    branches:
+      - validation/v12-stagec-post-d1-baseline-20260925
+    paths:
+      - ".github/workflows/v12-d2-walkforward-floor-timing.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  floor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout merged main authority
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: daf7247c320b1bb61eebd943b23f3ca694b088ef
+          path: app
+          persist-credentials: false
+
+      - name: Checkout frozen runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Measure removable and irreducible walk-forward work
+        working-directory: app
+        run: |
+          mkdir -p artifacts/stagec
+          python - <<'PY'
+          import gc
+          import hashlib
+          import json
+          import math
+          import os
+          import platform
+          import statistics
+          import sys
+          import time
+          from collections import defaultdict
+          from pathlib import Path
+
+          from src.engines.v12_integrated_report_runner import _official_payload, _planning_gw
+          from src.models.team_strength import build_team_strength
+          import src.models.v12_analytics_foundation as af
+          import src.models.v12_stage1_analytics as s1
+
+          runtime = Path("../runtime-data")
+          official = _official_payload(runtime)
+          bootstrap = official["bootstrap"]
+          fixtures = official["fixtures"]
+          planning_gw = _planning_gw(bootstrap)
+          strength = build_team_strength(bootstrap, fixtures)
+
+          def stable(value):
+              return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False, default=str)
+
+          def fp(value):
+              return hashlib.sha256(stable(value).encode()).hexdigest()
+
+          runs = []
+
+          def instrumented(rows):
+              if not gc.isenabled() or sys.gettrace() is not None or sys.getprofile() is not None:
+                  raise RuntimeError("unexpected runtime instrumentation state")
+
+              clean = [dict(row) for row in rows if s1._i(row.get("gw")) > 0]
+              gws = sorted({s1._i(row.get("gw")) for row in clean})
+              errors = defaultdict(list)
+              brier = defaultdict(list)
+              logloss = defaultdict(list)
+              timers = defaultdict(float)
+              counts = defaultdict(int)
+              unique_player_keys = set()
+              unique_position_keys = set()
+              first_key_cost = defaultdict(float)
+              repeated_key_cost = defaultdict(float)
+              folds = 0
+              total_start = time.perf_counter()
+
+              for target_gw in gws:
+                  t0 = time.perf_counter()
+                  train = [row for row in clean if s1._i(row.get("gw")) < target_gw]
+                  timers["fold_train_construct"] += time.perf_counter() - t0
+
+                  t0 = time.perf_counter()
+                  test = [row for row in clean if s1._i(row.get("gw")) == target_gw]
+                  timers["fold_test_construct"] += time.perf_counter() - t0
+
+                  if not train or not test:
+                      continue
+                  folds += 1
+
+                  for actual in test:
+                      pid = s1._i(actual.get("player_id"), s1._i(actual.get("element")))
+                      position = s1._position(actual.get("position"))
+                      pkey = (target_gw, pid)
+                      poskey = (target_gw, position)
+                      player_first = pkey not in unique_player_keys
+                      position_first = poskey not in unique_position_keys
+
+                      t0 = time.perf_counter()
+                      player_train = [
+                          row for row in train
+                          if s1._i(row.get("player_id"), s1._i(row.get("element"))) == pid
+                      ]
+                      dt = time.perf_counter() - t0
+                      timers["player_train_construct"] += dt
+                      counts["player_train_construct"] += 1
+
+                      t0 = time.perf_counter()
+                      position_train = [
+                          row for row in train
+                          if s1._position(row.get("position")) == position
+                      ]
+                      dt2 = time.perf_counter() - t0
+                      timers["position_train_construct"] += dt2
+                      counts["position_train_construct"] += 1
+
+                      if not player_train or not position_train:
+                          unique_player_keys.add(pkey)
+                          unique_position_keys.add(poskey)
+                          continue
+
+                      t0 = time.perf_counter()
+                      pos_rate = s1._rate90(position_train, "xgi") or 0.0
+                      dt = time.perf_counter() - t0
+                      timers["pos_rate90"] += dt
+                      counts["pos_rate90"] += 1
+                      (first_key_cost if position_first else repeated_key_cost)["pos_rate90"] += dt
+
+                      t0 = time.perf_counter()
+                      season = s1._rate90(player_train, "xgi")
+                      dt = time.perf_counter() - t0
+                      timers["season_rate90"] += dt
+                      counts["season_rate90"] += 1
+                      (first_key_cost if player_first else repeated_key_cost)["season_rate90"] += dt
+                      season = pos_rate if season is None else season
+
+                      t0 = time.perf_counter()
+                      recency_weights = [
+                          0.5 ** (max(0, target_gw - s1._i(row.get("gw"))) / 2.5)
+                          for row in player_train
+                      ]
+                      dt = time.perf_counter() - t0
+                      timers["recency_weights"] += dt
+                      (first_key_cost if player_first else repeated_key_cost)["recency_weights"] += dt
+
+                      t0 = time.perf_counter()
+                      recency = s1._rate90(player_train, "xgi", weights=recency_weights)
+                      dt = time.perf_counter() - t0
+                      timers["recency_rate90"] += dt
+                      (first_key_cost if player_first else repeated_key_cost)["recency_rate90"] += dt
+                      recency = season if recency is None else recency
+
+                      t0 = time.perf_counter()
+                      opponent_weights = [
+                          weight * s1._clamp(s1._f(row.get("opponent_strength_weight"), 1.0), 0.5, 1.5)
+                          for row, weight in zip(player_train, recency_weights)
+                      ]
+                      dt = time.perf_counter() - t0
+                      timers["opponent_weights"] += dt
+                      (first_key_cost if player_first else repeated_key_cost)["opponent_weights"] += dt
+
+                      t0 = time.perf_counter()
+                      opponent = s1._rate90(player_train, "xgi", weights=opponent_weights)
+                      dt = time.perf_counter() - t0
+                      timers["opponent_rate90"] += dt
+                      (first_key_cost if player_first else repeated_key_cost)["opponent_rate90"] += dt
+                      opponent = recency if opponent is None else opponent
+
+                      t0 = time.perf_counter()
+                      effective = sum(opponent_weights)
+                      bayes = (opponent * effective + pos_rate * 4.0) / max(1e-9, effective + 4.0)
+                      minutes = max(0.0, s1._f(actual.get("minutes")))
+                      if minutes > 0:
+                          observed = 90.0 * max(0.0, s1._f(actual.get("xgi"))) / minutes
+                          for label, prediction in {
+                              "naive_position": pos_rate,
+                              "season_aggregate": season,
+                              "recency": recency,
+                              "opponent_adjusted": opponent,
+                              "bayesian_opponent_adjusted": bayes,
+                          }.items():
+                              errors[label].append(abs(prediction - observed))
+                      timers["per_actual_xgi_metrics"] += time.perf_counter() - t0
+
+                      t0 = time.perf_counter()
+                      pos_start_num = sum(bool(row.get("starter")) for row in position_train)
+                      dt = time.perf_counter() - t0
+                      timers["pos_start_sum"] += dt
+                      (first_key_cost if position_first else repeated_key_cost)["pos_start_sum"] += dt
+                      pos_start = (2.0 + pos_start_num) / (4.0 + len(position_train))
+
+                      t0 = time.perf_counter()
+                      season_start_num = sum(bool(row.get("starter")) for row in player_train)
+                      recent = player_train[-min(4, len(player_train)) :]
+                      recent_start_num = sum(bool(row.get("starter")) for row in recent)
+                      dt = time.perf_counter() - t0
+                      timers["player_start_sums"] += dt
+                      (first_key_cost if player_first else repeated_key_cost)["player_start_sums"] += dt
+
+                      season_start = (2.0 + season_start_num) / (4.0 + len(player_train))
+                      recent_start = (1.5 + recent_start_num) / (3.0 + len(recent))
+                      bayes_start = (pos_start * 4.0 + recent_start * len(recent)) / (4.0 + len(recent))
+                      y = 1.0 if actual.get("starter") else 0.0
+
+                      t0 = time.perf_counter()
+                      for label, prediction in {
+                          "naive_position": pos_start,
+                          "season_aggregate": season_start,
+                          "recency": recent_start,
+                          "bayesian_opponent_adjusted": bayes_start,
+                      }.items():
+                          p = s1._clamp(prediction, 1e-6, 1.0 - 1e-6)
+                          brier[label].append((p - y) ** 2)
+                          logloss[label].append(-(y * math.log(p) + (1 - y) * math.log(1 - p)))
+                      timers["per_actual_start_metrics"] += time.perf_counter() - t0
+
+                      unique_player_keys.add(pkey)
+                      unique_position_keys.add(poskey)
+
+              t0 = time.perf_counter()
+              def average(mapping):
+                  return {key: round(sum(values) / len(values), 6) if values else None for key, values in mapping.items()}
+              xgi_mae = average(errors)
+              starter_brier = average(brier)
+              starter_logloss = average(logloss)
+              valid_xgi = {k: v for k, v in xgi_mae.items() if v is not None}
+              valid_start = {k: v for k, v in starter_brier.items() if v is not None}
+              payload = {
+                  "status": "PASS" if folds > 0 and valid_start else "INSUFFICIENT_COMPLETED_FOLDS",
+                  "folds": folds,
+                  "future_leakage": False,
+                  "split": "EXPANDING_WINDOW_BY_GW",
+                  "xgi_mae": xgi_mae,
+                  "starter_brier": starter_brier,
+                  "starter_log_loss": starter_logloss,
+                  "xgi_selected_variant": min(valid_xgi, key=valid_xgi.get) if valid_xgi else None,
+                  "starter_selected_variant": min(valid_start, key=valid_start.get) if valid_start else None,
+                  "complex_model_survives_only_if_metric_improves": True,
+              }
+              timers["final_aggregation"] += time.perf_counter() - t0
+              timers["function_total"] = time.perf_counter() - total_start
+
+              runs.append({
+                  "timers": dict(timers),
+                  "counts": dict(counts),
+                  "first_key_cost": dict(first_key_cost),
+                  "repeated_key_cost": dict(repeated_key_cost),
+                  "unique_player_keys": len(unique_player_keys),
+                  "unique_position_keys": len(unique_position_keys),
+                  "payload_fingerprint": fp(payload),
+              })
+              return payload
+
+          original = af.walk_forward_validate
+          af.walk_forward_validate = instrumented
+          foundation_fps = []
+          for _ in range(7):
+              foundation = af.require_match_foundation(
+                  af.load_v6_analytics_foundation(
+                      runtime,
+                      bootstrap=bootstrap,
+                      planning_gw=planning_gw,
+                      strength=strength,
+                  )
+              )
+              foundation_fps.append(fp(foundation))
+          af.walk_forward_validate = original
+
+          adjusted = foundation["player_match_rows"]
+          oracle = s1.walk_forward_validate(adjusted)
+          if fp(oracle) != runs[-1]["payload_fingerprint"]:
+              raise SystemExit("instrumented payload differs from oracle")
+
+          timer_names = sorted(runs[0]["timers"])
+          summary = {}
+          for name in timer_names:
+              vals=[r["timers"].get(name,0.0) for r in runs]
+              summary[name]={
+                  "samples_seconds":vals,
+                  "median_seconds":statistics.median(vals),
+                  "mean_seconds":statistics.mean(vals),
+              }
+
+          first_names=sorted(set().union(*(r["first_key_cost"] for r in runs)))
+          first_summary={}
+          repeated_summary={}
+          for name in first_names:
+              fv=[r["first_key_cost"].get(name,0.0) for r in runs]
+              rv=[r["repeated_key_cost"].get(name,0.0) for r in runs]
+              first_summary[name]=statistics.median(fv)
+              repeated_summary[name]=statistics.median(rv)
+
+          # Amdahl structural estimate:
+          # removable scan construction = player_train + position_train.
+          # cacheable repeated state = repeated position/player keyed calculations.
+          # first-key costs approximate the exact-order work that still has to execute once.
+          removable_median = (
+              summary["player_train_construct"]["median_seconds"]
+              + summary["position_train_construct"]["median_seconds"]
+              + sum(repeated_summary.values())
+          )
+          total_median = summary["function_total"]["median_seconds"]
+          structural_floor = max(0.0, total_median - removable_median)
+
+          result={
+              "schema":1,
+              "mode":"D2_FLOOR_TIMING_STAGEC_GC_ENABLED_NO_PRECOLLECT",
+              "main_sha":"daf7247c320b1bb61eebd943b23f3ca694b088ef",
+              "runtime_sha":"9fc2ce5e590518c399765e6fd576bb96db6e5897",
+              "rows":len(adjusted),
+              "rows_fingerprint":fp(adjusted),
+              "foundation_fingerprint":foundation_fps[-1],
+              "walkforward_fingerprint":fp(oracle),
+              "deterministic_foundation":len(set(foundation_fps))==1,
+              "gc_enabled":gc.isenabled(),
+              "sys_gettrace":repr(sys.gettrace()),
+              "sys_getprofile":repr(sys.getprofile()),
+              "row_types":sorted({type(r).__module__+"."+type(r).__qualname__ for r in adjusted}),
+              "scope":summary,
+              "median_first_key_cost_seconds":first_summary,
+              "median_repeated_key_cost_seconds":repeated_summary,
+              "unique_player_keys_median":statistics.median([r["unique_player_keys"] for r in runs]),
+              "unique_position_keys_median":statistics.median([r["unique_position_keys"] for r in runs]),
+              "structural_estimate":{
+                  "removable_seconds":removable_median,
+                  "irreducible_floor_seconds_before_new_index_overhead":structural_floor,
+                  "removable_fraction":removable_median/total_median if total_median else None,
+              },
+              "environment":{
+                  "python_version":sys.version,
+                  "image_os":os.environ.get("ImageOS"),
+                  "image_version":os.environ.get("ImageVersion"),
+                  "runner_os":os.environ.get("RUNNER_OS"),
+                  "runner_arch":os.environ.get("RUNNER_ARCH"),
+                  "platform":platform.platform(),
+              },
+          }
+          if result["rows"] != 3191:
+              raise SystemExit("row count changed")
+          if result["rows_fingerprint"] != "a36eaf2f623c811f4d5d942aa4da3fb8842fa3d456724bb4c9e32fcec5b4b99f":
+              raise SystemExit("input fingerprint changed")
+          if not result["deterministic_foundation"]:
+              raise SystemExit("foundation not deterministic")
+          if result["row_types"] != ["builtins.dict"]:
+              raise SystemExit("unexpected row type")
+          if result["sys_gettrace"] != "None" or result["sys_getprofile"] != "None":
+              raise SystemExit("unexpected hooks")
+
+          Path("artifacts/stagec/d2_walkforward_floor_timing.json").write_text(
+              json.dumps(result,indent=2,sort_keys=True),encoding="utf-8"
+          )
+          print(json.dumps(result,indent=2,sort_keys=True))
+          PY
+
+      - name: Upload immutable floor evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-d2-walkforward-floor-timing-${{ github.run_id }}
+          path: app/artifacts/stagec/d2_walkforward_floor_timing.json
+          if-no-files-found: error
+          retention-days: 14

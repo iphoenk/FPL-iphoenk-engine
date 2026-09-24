@@ -2626,22 +2626,53 @@ def _boundary_dense_cross_route_fixture(candidate_per_position: int = 3):
 def test_p17_batch_has_no_undocumented_numpy_round_calls() -> None:
     from src.engines import v12_lineup_batch as batch
 
-    tree = ast.parse(Path(batch.__file__).read_text(encoding="utf-8"))
-    calls = []
+    source = Path(batch.__file__).read_text(encoding="utf-8")
+    source_lines = source.splitlines()
+    tree = ast.parse(source)
+    functions = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
+    marker = "P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK"
+    documented = []
+    undocumented = []
     for node in ast.walk(tree):
         func = getattr(node, "func", None)
-        if (
-            isinstance(func, ast.Attribute)
+        if not (
+            isinstance(node, ast.Call)
+            and isinstance(func, ast.Attribute)
             and func.attr == "round"
             and isinstance(func.value, ast.Name)
             and func.value.id == "np"
         ):
-            calls.append(node.lineno)
+            continue
+        owners = [
+            fn
+            for fn in functions
+            if fn.lineno <= node.lineno <= getattr(fn, "end_lineno", node.lineno)
+        ]
+        owner = min(
+            owners,
+            key=lambda fn: getattr(fn, "end_lineno", fn.lineno) - fn.lineno,
+            default=None,
+        )
+        line = source_lines[node.lineno - 1]
+        previous = source_lines[node.lineno - 2] if node.lineno >= 2 else ""
+        row = (getattr(owner, "name", None), node.lineno)
+        if marker in line or marker in previous:
+            documented.append(row)
+        else:
+            undocumented.append(row)
 
-    # Empty by design. Any future np.round site must first be explicitly
-    # documented as a scalar-exact exception with an oracle/fallback proof.
-    documented_whitelist: set[int] = set()
-    assert set(calls) == documented_whitelist
+    # Only family-bench tensor rounding may use NumPy rounding. These 15 sites
+    # are protected by primary/secondary/published boundary detection followed
+    # by scalar _family_scalar_bench_boundary_fallback. Everything else must use
+    # python_round_vec directly.
+    assert undocumented == []
+    assert len(documented) == 15
+    assert {owner for owner, _ in documented} == {"_family_bench_kernel"}
+
 
 
 def test_p17_boundary_dense_all_public_route_fields_match_scalar_family_and_chunk() -> None:

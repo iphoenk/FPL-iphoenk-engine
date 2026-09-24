@@ -1635,7 +1635,12 @@ def _family_bench_kernel(
     # scalar winner is determined only by the stable bench tie rank.
     if np.all(np.asarray(arrays["p_dnp"], dtype=np.float64) == 0.0):
         legal_count = int(layout["legal"].shape[0])
-        element_matrix = np.ascontiguousarray(
+        # The 15 np.round sites below are intentionally retained only in this
+    # family-bench kernel. They operate on the largest [route, XI, permutation]
+    # tensors. Exactness is guarded by primary_boundary, secondary_boundary and
+    # published_boundary, followed by scalar _family_scalar_bench_boundary_fallback.
+    # The guard test requires an inline marker on every allowed site.
+    element_matrix = np.ascontiguousarray(
             arrays["elements"],
             dtype=np.int64,
         )
@@ -1841,14 +1846,14 @@ def _family_bench_kernel(
         route_count,
         tuple(layout["position_signature"]),
     )
-    utility_key = python_round_vec(utility, 6)
+    utility_key = np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKutility, 6)
     winner = _lexicographic_first(
         (
             utility_key,
-            lambda: python_round_vec(expected, 6),
-            lambda: -python_round_vec(blank, 9),
-            lambda: python_round_vec(ge8, 9),
-            lambda: python_round_vec(ge10, 9),
+            lambda: np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKexpected, 6),
+            lambda: -np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKblank, 9),
+            lambda: np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKge8, 9),
+            lambda: np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKge10, 9),
             lambda: -tie_rank.astype(np.float64),
         ),
         axis=2,
@@ -1889,10 +1894,10 @@ def _family_bench_kernel(
     )
     candidate_mask = tied_candidates.copy()
     secondary_specs = (
-        (expected, python_round_vec(expected, 6), 6),
-        (blank, -python_round_vec(blank, 9), 9),
-        (ge8, python_round_vec(ge8, 9), 9),
-        (ge10, python_round_vec(ge10, 9), 9),
+        (expected, np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKexpected, 6), 6),
+        (blank, -np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKblank, 9), 9),
+        (ge8, np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKge8, 9), 9),
+        (ge10, np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKge10, 9), 9),
     )
     for raw_metric, ranking_key, decimals in secondary_specs:
         active_tie = (
@@ -2006,24 +2011,24 @@ def _family_bench_kernel(
         legal_axis,
         winner,
     ].copy()
-    expected_out = python_round_vec(expected_raw_out, 6)
-    autosub_out = python_round_vec(
+    expected_out = np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKexpected_raw_out, 6)
+    autosub_out = np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
         autosub[route_axis, legal_axis, winner],
         9,
     )
-    blank_out = python_round_vec(
+    blank_out = np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
         blank[route_axis, legal_axis, winner],
         9,
     )
-    ge8_out = python_round_vec(
+    ge8_out = np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
         ge8[route_axis, legal_axis, winner],
         9,
     )
-    ge10_out = python_round_vec(
+    ge10_out = np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
         ge10[route_axis, legal_axis, winner],
         9,
     )
-    utility_out = python_round_vec(
+    utility_out = np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
         utility[route_axis, legal_axis, winner],
         6,
     )

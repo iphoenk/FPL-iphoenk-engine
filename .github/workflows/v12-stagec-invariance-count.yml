@@ -1,0 +1,132 @@
+name: V12 Stage C invariance count-only
+
+on:
+  push:
+    branches:
+      - validation/v12-stagec-foundation-discovery-20260924
+    paths:
+      - ".github/workflows/v12-stagec-invariance-count.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  count:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout frozen runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+          persist-credentials: false
+
+      - name: Count exact current hierarchical scopes
+        run: |
+          python - <<'PY'
+          import json
+          from collections import defaultdict
+          from pathlib import Path
+
+          root = Path("runtime-data")
+          normalized = json.loads(
+              (root / "data/v6/normalized/sources/official_fpl.json").read_text()
+          )
+          current = json.loads(
+              (root / "data/v6/current/official_fpl.json").read_text()
+          )
+          bootstrap = ((current.get("official") or {}).get("bootstrap") or {})
+          elements = {
+              int(r.get("id") or 0): r
+              for r in bootstrap.get("elements") or []
+              if int(r.get("id") or 0) > 0
+          }
+          JOINABLE={"EXACT","VERIFIED","VERIFIED_MANUAL"}
+          raw=(normalized.get("record_groups") or {}).get("player_matches") or []
+          rows=[]
+          for r in raw:
+              if (
+                  int(r.get("official_element_id") or 0)>0
+                  and str(r.get("identity_status") or "").upper() in JOINABLE
+                  and int(r.get("official_fixture_id") or 0)>0
+                  and str(r.get("fixture_identity_status") or "").upper() in JOINABLE
+                  and int(r.get("official_opponent_team_id") or 0)>0
+                  and str(r.get("opponent_identity_status") or "").upper() in JOINABLE
+                  and 1 <= int(r.get("gw") or 0) <= 5
+              ):
+                  rows.append(r)
+
+          posmap={1:"GK",2:"DEF",3:"MID",4:"FWD"}
+          players={}
+          by_position=defaultdict(set)
+          by_team=defaultdict(set)
+          for r in rows:
+              pid=int(r["official_element_id"])
+              e=elements.get(pid,{})
+              pos=posmap.get(int(e.get("element_type") or 0),"UNKNOWN")
+              team=int(e.get("team") or 0)
+              players[pid]=(pos,team)
+              by_position[pos].add(pid)
+              by_team[team].add(pid)
+
+          P=len(players)
+          V=4
+          mandatory_calls=P*V*3
+          role_calls=0  # current foundation materializes actual_role=None for every match row
+          total_calls=mandatory_calls+role_calls
+          unique_league=V
+          unique_position=len(by_position)*V
+          unique_team_loo=P*V
+          unique_role_loo=0
+          safe_invariant_unique=unique_league+unique_position
+          safe_invariant_calls=P*V*2
+
+          result={
+              "joinable_rows_gw1_5":len(rows),
+              "players":P,
+              "positions":{k:len(v) for k,v in sorted(by_position.items())},
+              "teams":len([k for k,v in by_team.items() if v]),
+              "variables":V,
+              "role_layer_current_calls":role_calls,
+              "sufficient_total_expected":total_calls,
+              "sufficient_scope_calls":{
+                  "league":P*V,
+                  "position":P*V,
+                  "team_leave_one_player_out":P*V,
+                  "role_leave_one_player_out":role_calls,
+              },
+              "unique_keys_current":{
+                  "league":unique_league,
+                  "position":unique_position,
+                  "team_leave_one_player_out":unique_team_loo,
+                  "role_leave_one_player_out":unique_role_loo,
+              },
+              "safe_invariant_scope":{
+                  "calls":safe_invariant_calls,
+                  "unique_keys":safe_invariant_unique,
+                  "redundant_calls":safe_invariant_calls-safe_invariant_unique,
+                  "reuse_fraction":(
+                      (safe_invariant_calls-safe_invariant_unique)/safe_invariant_calls
+                      if safe_invariant_calls else 0
+                  ),
+              },
+              "notes":[
+                  "Hierarchical prior has no cutoff/fold parameter in current code.",
+                  "build_hierarchical_priors and walk_forward_validate are sibling calls.",
+                  "Current match rows materialize actual_role=None, so role LOO path is dormant.",
+              ],
+          }
+          print(json.dumps(result,indent=2,sort_keys=True))
+          Path("invariance_count.json").write_text(json.dumps(result,indent=2,sort_keys=True))
+          if total_calls != 8004:
+              raise SystemExit(f"expected profiler 8004 calls, reconstructed {total_calls}")
+          PY
+
+      - name: Upload count evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-stagec-invariance-count-${{ github.run_id }}
+          path: invariance_count.json
+          retention-days: 14

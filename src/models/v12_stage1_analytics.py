@@ -177,6 +177,10 @@ def build_hierarchical_priors(
             by_role[role].append(row)
 
     players: dict[str, Any] = {}
+    league_sufficient_cache: dict[tuple[str, str], tuple[float, float]] = {}
+    position_sufficient_cache: dict[
+        tuple[str, str, str], tuple[float, float]
+    ] = {}
     for pid, history in by_player.items():
         latest = max(
             history,
@@ -193,13 +197,21 @@ def build_hierarchical_priors(
             "variables": {},
         }
         for name, (field, weight, pos_k, role_k, team_k) in specs.items():
-            league_mass, league_exp = _sufficient(clean, field, weight)
+            league_key = (field, weight)
+            if league_key not in league_sufficient_cache:
+                league_sufficient_cache[league_key] = _sufficient(
+                    clean, field, weight
+                )
+            league_mass, league_exp = league_sufficient_cache[league_key]
             league_rate = (
                 league_mass / league_exp if league_exp > 0 else 0.0
             )
-            pos_mass, pos_exp = _sufficient(
-                by_position.get(position, []), field, weight
-            )
+            position_key = (position, field, weight)
+            if position_key not in position_sufficient_cache:
+                position_sufficient_cache[position_key] = _sufficient(
+                    by_position.get(position, []), field, weight
+                )
+            pos_mass, pos_exp = position_sufficient_cache[position_key]
             pos_rate = (
                 pos_mass + league_rate * pos_k
             ) / max(1e-9, pos_exp + pos_k)

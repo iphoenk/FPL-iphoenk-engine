@@ -1,0 +1,551 @@
+name: V12 D1 correctness gate
+
+on:
+  push:
+    branches:
+      - validation/v12-d1-correctness-20260925
+
+permissions:
+  contents: read
+
+jobs:
+  correctness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout D1 candidate
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: f5f990fbaa6c5954e789b869388562d19abcb80b
+          path: candidate
+          persist-credentials: false
+
+      - name: Checkout scalar oracle
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 083c5ed82458b4e9cc6505820ac6a88818c3d202
+          path: oracle
+          persist-credentials: false
+
+      - name: Checkout frozen runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r candidate/requirements.txt
+
+      - name: Write validation probe
+        run: |
+          cat > /tmp/d1_probe.py <<'PY'
+          import argparse
+          import hashlib
+          import json
+          import os
+          import sys
+          from collections import defaultdict
+          from pathlib import Path
+
+          import src.models.v12_stage1_analytics as s1
+          from src.engines.v12_integrated_report_runner import _official_payload, _planning_gw
+          from src.models.team_strength import build_team_strength
+          from src.models.v12_analytics_foundation import (
+              load_v6_analytics_foundation,
+              require_match_foundation,
+          )
+
+          SPECS = {
+              "xg90": ("xg", "opponent_strength_weight", 8.0, 5.0, 5.0),
+              "xa90": ("xa", "opponent_strength_weight", 10.0, 6.0, 6.0),
+              "saves90": ("saves", "opponent_attack_weight", 6.0, 4.0, 4.0),
+              "defcon90": ("defensive", "opponent_attack_weight", 7.0, 5.0, 5.0),
+          }
+
+          def stable(value):
+              return json.dumps(
+                  value,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=False,
+                  allow_nan=False,
+                  default=str,
+              )
+
+          def fp(value):
+              return hashlib.sha256(stable(value).encode("utf-8")).hexdigest()
+
+          def hx(value):
+              return float(value).hex()
+
+          def load_snapshot(runtime_root):
+              runtime = Path(runtime_root)
+              official = _official_payload(runtime)
+              bootstrap = official["bootstrap"]
+              fixtures = official["fixtures"]
+              planning_gw = _planning_gw(bootstrap)
+              strength = build_team_strength(bootstrap, fixtures)
+              foundation = require_match_foundation(
+                  load_v6_analytics_foundation(
+                      runtime,
+                      bootstrap=bootstrap,
+                      planning_gw=planning_gw,
+                      strength=strength,
+                  )
+              )
+              return foundation, foundation["player_match_rows"]
+
+          def raw_reference(rows):
+              clean = [dict(row) for row in rows]
+              by_player = defaultdict(list)
+              by_position = defaultdict(list)
+              for row in clean:
+                  pid = s1._i(row.get("player_id"), s1._i(row.get("element")))
+                  if pid <= 0:
+                      continue
+                  by_player[pid].append(row)
+                  by_position[s1._position(row.get("position"))].append(row)
+
+              league = {}
+              position = {}
+              league_rate_float = {}
+              for pid, history in by_player.items():
+                  latest = max(
+                      history,
+                      key=lambda row: (
+                          s1._i(row.get("gw")),
+                          str(row.get("match_id") or ""),
+                      ),
+                  )
+                  pos = s1._position(latest.get("position"))
+                  for _name, (field, weight, pos_k, _role_k, _team_k) in SPECS.items():
+                      lk = f"{field}|{weight}"
+                      if lk not in league:
+                          mass, exp = s1._sufficient(clean, field, weight)
+                          rate = mass / exp if exp > 0 else 0.0
+                          league[lk] = {
+                              "mass": hx(mass),
+                              "exp": hx(exp),
+                              "rate": hx(rate),
+                          }
+                          league_rate_float[lk] = rate
+                      pk = f"{pos}|{field}|{weight}"
+                      if pk not in position:
+                          mass, exp = s1._sufficient(
+                              by_position.get(pos, []), field, weight
+                          )
+                          rate = (
+                              mass + league_rate_float[lk] * pos_k
+                          ) / max(1e-9, exp + pos_k)
+                          position[pk] = {
+                              "mass": hx(mass),
+                              "exp": hx(exp),
+                              "rate": hx(rate),
+                          }
+              return {"league": league, "position": position}
+
+          def sequence_hash(rows):
+              return fp([dict(row) for row in rows])
+
+          def instrument_candidate(rows):
+              clean_expected = [dict(row) for row in rows]
+              by_position_expected = defaultdict(list)
+              for row in clean_expected:
+                  pid = s1._i(row.get("player_id"), s1._i(row.get("element")))
+                  if pid <= 0:
+                      continue
+                  by_position_expected[s1._position(row.get("position"))].append(row)
+
+              league_seq = sequence_hash(clean_expected)
+              pos_seq_to_name = {
+                  sequence_hash(value): key
+                  for key, value in by_position_expected.items()
+              }
+
+              original = s1._sufficient
+              counts = defaultdict(int)
+              observed = {"league": {}, "position": {}}
+
+              def wrapped(rows_arg, field, weight):
+                  result = original(rows_arg, field, weight)
+                  seq = sequence_hash(rows_arg)
+                  if seq == league_seq:
+                      counts["league"] += 1
+                      key = f"{field}|{weight}"
+                      observed["league"][key] = {
+                          "mass": hx(result[0]),
+                          "exp": hx(result[1]),
+                      }
+                  elif seq in pos_seq_to_name:
+                      counts["position"] += 1
+                      pos = pos_seq_to_name[seq]
+                      key = f"{pos}|{field}|{weight}"
+                      observed["position"][key] = {
+                          "mass": hx(result[0]),
+                          "exp": hx(result[1]),
+                      }
+                  else:
+                      counts["other"] += 1
+                  return result
+
+              snapshots = {}
+              target_code = s1.build_hierarchical_priors.__code__
+
+              def local_hash(frame):
+                  clean = frame.f_locals.get("clean") or []
+                  bp = frame.f_locals.get("by_position") or {}
+                  return {
+                      "clean": sequence_hash(clean),
+                      "by_position": {
+                          str(key): sequence_hash(value)
+                          for key, value in sorted(bp.items(), key=lambda item: str(item[0]))
+                      },
+                  }
+
+              def tracer(frame, event, arg):
+                  if frame.f_code is target_code:
+                      if (
+                          event == "line"
+                          and "league_sufficient_cache" in frame.f_locals
+                          and "before" not in snapshots
+                      ):
+                          snapshots["before"] = local_hash(frame)
+                      elif event == "return":
+                          snapshots["after"] = local_hash(frame)
+                  return tracer
+
+              s1._sufficient = wrapped
+              sys.settrace(tracer)
+              try:
+                  payload = s1.build_hierarchical_priors(rows)
+              finally:
+                  sys.settrace(None)
+                  s1._sufficient = original
+
+              for key, value in observed["league"].items():
+                  mass = float.fromhex(value["mass"])
+                  exp = float.fromhex(value["exp"])
+                  value["rate"] = hx(mass / exp if exp > 0 else 0.0)
+              for key, value in observed["position"].items():
+                  _pos, field, weight = key.split("|", 2)
+                  lk = f"{field}|{weight}"
+                  pos_k = next(
+                      spec[2]
+                      for spec in SPECS.values()
+                      if spec[0] == field and spec[1] == weight
+                  )
+                  mass = float.fromhex(value["mass"])
+                  exp = float.fromhex(value["exp"])
+                  league_rate = float.fromhex(observed["league"][lk]["rate"])
+                  value["rate"] = hx(
+                      (mass + league_rate * pos_k) / max(1e-9, exp + pos_k)
+                  )
+
+              return {
+                  "payload_fingerprint": fp(payload),
+                  "counts": {
+                      "league": counts["league"],
+                      "position": counts["position"],
+                      "other": counts["other"],
+                      "total": sum(counts.values()),
+                  },
+                  "raw_cache_misses": observed,
+                  "input_immutability": {
+                      "before": snapshots.get("before"),
+                      "after": snapshots.get("after"),
+                      "identical": (
+                          snapshots.get("before") is not None
+                          and snapshots.get("before") == snapshots.get("after")
+                      ),
+                  },
+              }
+
+          def row(
+              pid,
+              *,
+              position="MID",
+              team=1,
+              gw=1,
+              match_id="m1",
+              minutes=90.0,
+              starter=True,
+              xg=0.2,
+              xa=0.1,
+              saves=0.0,
+              defensive=1.0,
+              role=None,
+          ):
+              return {
+                  "player_id": pid,
+                  "element": pid,
+                  "team_id": team,
+                  "position": position,
+                  "actual_role": role,
+                  "gw": gw,
+                  "match_id": match_id,
+                  "minutes": minutes,
+                  "starter": starter,
+                  "xg": xg,
+                  "xa": xa,
+                  "saves": saves,
+                  "defensive": defensive,
+                  "opponent_strength_weight": 1.0,
+                  "opponent_attack_weight": 1.0,
+              }
+
+          def fixture_result(name, rows, position_mode=None):
+              original_position = s1._position
+              original_sufficient = s1._sufficient
+              suff_calls = 0
+
+              if position_mode == "missing_after_grouping":
+                  calls = {"n": 0}
+                  def changing_position(value):
+                      calls["n"] += 1
+                      if calls["n"] == 1:
+                          return "DEF"
+                      if calls["n"] == 2:
+                          return "MISSING_POSITION"
+                      return original_position(value)
+                  s1._position = changing_position
+
+              def counted(*args, **kwargs):
+                  nonlocal suff_calls
+                  suff_calls += 1
+                  return original_sufficient(*args, **kwargs)
+
+              s1._sufficient = counted
+              try:
+                  payload = s1.build_hierarchical_priors(rows)
+                  error = None
+              except Exception as exc:
+                  payload = None
+                  error = {
+                      "class": type(exc).__name__,
+                      "message": str(exc),
+                  }
+              finally:
+                  s1._position = original_position
+                  s1._sufficient = original_sufficient
+
+              role_used = False
+              role_sources = []
+              if payload:
+                  for player in (payload.get("players") or {}).values():
+                      role_used = role_used or bool(player.get("role_layer_used"))
+                      for variable in (player.get("variables") or {}).values():
+                          role_sources.append(variable.get("prior_source"))
+              return {
+                  "name": name,
+                  "fingerprint": None if payload is None else fp(payload),
+                  "error": error,
+                  "sufficient_calls": suff_calls,
+                  "role_used": role_used,
+                  "role_sources": role_sources,
+              }
+
+          def fixtures():
+              suite = {}
+              suite["zero_players"] = fixture_result("zero_players", [])
+              suite["one_player_position"] = fixture_result(
+                  "one_player_position",
+                  [row(1, position="GK", team=1)],
+              )
+              suite["single_player_team_empty_loo"] = fixture_result(
+                  "single_player_team_empty_loo",
+                  [row(2, position="DEF", team=2)],
+              )
+              suite["zero_exposure"] = fixture_result(
+                  "zero_exposure",
+                  [row(3, position="MID", team=3, minutes=0.0, xg=0.0, xa=0.0)],
+              )
+              suite["active_role_loo"] = fixture_result(
+                  "active_role_loo",
+                  [
+                      row(4, position="MID", team=4, role="LEFT_8", xg=0.3),
+                      row(5, position="MID", team=5, role="LEFT_8", xg=0.1),
+                  ],
+              )
+              suite["dgw_like_duplicate_player_gw"] = fixture_result(
+                  "dgw_like_duplicate_player_gw",
+                  [
+                      row(6, position="FWD", team=6, gw=2, match_id="a", xg=0.4),
+                      row(6, position="FWD", team=6, gw=2, match_id="b", xg=0.2),
+                      row(7, position="FWD", team=6, gw=2, match_id="c", xg=0.1),
+                  ],
+              )
+              suite["missing_position_get_semantics"] = fixture_result(
+                  "missing_position_get_semantics",
+                  [row(8, position="DEF", team=8)],
+                  position_mode="missing_after_grouping",
+              )
+              return suite
+
+          def main():
+              parser = argparse.ArgumentParser()
+              parser.add_argument("--runtime", required=True)
+              parser.add_argument("--mode", choices=("full", "seed"), required=True)
+              parser.add_argument("--output", required=True)
+              args = parser.parse_args()
+
+              foundation, rows = load_snapshot(args.runtime)
+              hierarchy = s1.build_hierarchical_priors(rows)
+              result = {
+                  "pythonhashseed": os.environ.get("PYTHONHASHSEED"),
+                  "foundation_fingerprint": fp(foundation),
+                  "hierarchy_fingerprint": fp(hierarchy),
+                  "raw_reference": raw_reference(rows),
+              }
+              if args.mode == "full":
+                  result["instrumentation"] = instrument_candidate(rows)
+                  result["fixtures"] = fixtures()
+                  result["snapshot"] = {
+                      "rows": len(rows),
+                      "players": len(hierarchy.get("players") or {}),
+                  }
+
+              Path(args.output).write_text(
+                  json.dumps(result, indent=2, sort_keys=True),
+                  encoding="utf-8",
+              )
+
+          if __name__ == "__main__":
+              main()
+          PY
+
+      - name: Run oracle and candidate across explicit hash seeds
+        env:
+          RUNTIME: ${{ github.workspace }}/runtime-data
+        run: |
+          mkdir -p evidence/oracle evidence/candidate
+          for seed in 0 1 7 42 12345; do
+            mode=seed
+            if [ "$seed" = "0" ]; then mode=full; fi
+            (
+              cd oracle
+              PYTHONHASHSEED="$seed" PYTHONPATH="$PWD"                 python /tmp/d1_probe.py                   --runtime "$RUNTIME"                   --mode "$mode"                   --output "../evidence/oracle/seed-$seed.json"
+            )
+            (
+              cd candidate
+              PYTHONHASHSEED="$seed" PYTHONPATH="$PWD"                 python /tmp/d1_probe.py                   --runtime "$RUNTIME"                   --mode "$mode"                   --output "../evidence/candidate/seed-$seed.json"
+            )
+          done
+
+      - name: Enforce D1 correctness gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          seeds = ["0", "1", "7", "42", "12345"]
+          oracle = {
+              seed: json.loads(Path(f"evidence/oracle/seed-{seed}.json").read_text())
+              for seed in seeds
+          }
+          candidate = {
+              seed: json.loads(Path(f"evidence/candidate/seed-{seed}.json").read_text())
+              for seed in seeds
+          }
+
+          failures = []
+          for seed in seeds:
+              o = oracle[seed]
+              c = candidate[seed]
+              for field in (
+                  "foundation_fingerprint",
+                  "hierarchy_fingerprint",
+                  "raw_reference",
+              ):
+                  if o[field] != c[field]:
+                      failures.append(f"seed={seed} {field} differs")
+
+          for side, payloads in (("oracle", oracle), ("candidate", candidate)):
+              for field in ("foundation_fingerprint", "hierarchy_fingerprint", "raw_reference"):
+                  values = [json.dumps(payloads[s][field], sort_keys=True) for s in seeds]
+                  if len(set(values)) != 1:
+                      failures.append(f"{side} {field} varies across PYTHONHASHSEED")
+
+          full_o = oracle["0"]
+          full_c = candidate["0"]
+          inst = full_c["instrumentation"]
+
+          if inst["payload_fingerprint"] != full_c["hierarchy_fingerprint"]:
+              failures.append("instrumented candidate payload differs from direct candidate")
+          if inst["raw_cache_misses"] != full_o["raw_reference"]:
+              failures.append("candidate cache-miss raw float.hex oracle differs")
+
+          expected_counts = {
+              "league": 4,
+              "position": 16,
+              "other": 2668,
+              "total": 2688,
+          }
+          if inst["counts"] != expected_counts:
+              failures.append(
+                  f"candidate call counts {inst['counts']} != {expected_counts}"
+              )
+          if inst["input_immutability"]["identical"] is not True:
+              failures.append("clean/by_position mutated during player loop")
+
+          of = full_o["fixtures"]
+          cf = full_c["fixtures"]
+          if set(of) != set(cf):
+              failures.append("fixture set differs")
+          else:
+              for name in sorted(of):
+                  if of[name] != cf[name]:
+                      failures.append(f"fixture {name} differs: oracle={of[name]} candidate={cf[name]}")
+
+          if cf["zero_players"]["sufficient_calls"] != 0:
+              failures.append("zero-player candidate evaluated _sufficient eagerly")
+          if cf["active_role_loo"]["role_used"] is not True:
+              failures.append("active role fixture did not exercise role layer")
+          if not all(
+              source == "LEAGUE_POSITION_TEAM_ROLE_EMPIRICAL_BAYES"
+              for source in cf["active_role_loo"]["role_sources"]
+          ):
+              failures.append("active role fixture did not exercise role-LOO source")
+          if cf["missing_position_get_semantics"]["error"] is not None:
+              failures.append(
+                  "missing-position fixture raised instead of preserving .get(position, [])"
+              )
+
+          report = {
+              "status": "PASS" if not failures else "FAIL",
+              "candidate_sha": "f5f990fbaa6c5954e789b869388562d19abcb80b",
+              "oracle_sha": "083c5ed82458b4e9cc6505820ac6a88818c3d202",
+              "runtime_sha": "9fc2ce5e590518c399765e6fd576bb96db6e5897",
+              "seeds": seeds,
+              "candidate_call_counts": inst["counts"],
+              "input_immutability": inst["input_immutability"],
+              "foundation_fingerprint": full_c["foundation_fingerprint"],
+              "hierarchy_fingerprint": full_c["hierarchy_fingerprint"],
+              "failures": failures,
+          }
+          Path("evidence/correctness_gate.json").write_text(
+              json.dumps(report, indent=2, sort_keys=True)
+          )
+          print(json.dumps(report, indent=2, sort_keys=True))
+          if failures:
+              raise SystemExit("\n".join(failures))
+          PY
+
+      - name: Upload immutable correctness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-d1-correctness-${{ github.run_id }}
+          path: evidence
+          if-no-files-found: error
+          retention-days: 14

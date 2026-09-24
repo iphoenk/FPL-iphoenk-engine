@@ -2097,6 +2097,8 @@ def test_p17_rounding_boundary_is_non_vacuous_and_matches_scalar_bench():
         layout=layout,
         arrays=arrays,
     )
+    assert batch_result["bench_secondary_boundary_count"] > 0
+    assert batch_result["bench_scalar_fallback_count"] > 0
 
     observed_order = batch_result["order_elements"][
         0,

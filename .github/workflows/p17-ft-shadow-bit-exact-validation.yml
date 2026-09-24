@@ -38,7 +38,7 @@ jobs:
       - name: Run bounded exactness regression tests
         working-directory: app
         run: |
-          pytest -q tests/test_lineup_distributional_optimizer.py \
+          python -m pytest -q tests/test_lineup_distributional_optimizer.py \
             -k "p17_family_aggregate_matches_scalar_element_order_at_production_half_boundary or p17_production_ft_shadow_half_values_use_python_round_semantics or p17_core14_family_kernel_matches_scalar_across_positions_and_five_gw or p17_cross_route_batch_matches_scalar_one_transfer_families"
 
       - name: Run default cross-route DEEP

@@ -1385,6 +1385,42 @@ def _family_bench_permutation_tie_rank_cached(
     return tie
 
 
+_SPLIT = 134217729.0  # 2**27 + 1 (Dekker/Veltkamp split)
+
+
+def python_round_vec(x: np.ndarray, decimals: int) -> np.ndarray:
+    """Vectorized, bit-identical equivalent of Python's round(float, decimals).
+
+    Valid only for finite float64 values with |x| * 10**decimals < 2**52
+    and 0 <= decimals <= 11. Fail closed outside that proven domain.
+    """
+    x = np.asarray(x, dtype=np.float64)
+    if not 0 <= int(decimals) <= 11:
+        raise LineupBatchError("python_round_vec decimals outside proven domain")
+    if not np.all(np.isfinite(x)):
+        raise LineupBatchError("python_round_vec requires finite values")
+    scale = float(10 ** int(decimals))
+    a = np.abs(x)
+    if np.any(a * scale >= float(2**52)):
+        raise LineupBatchError("python_round_vec magnitude outside proven domain")
+
+    # Error-free product a*scale = hi + lo.  For decimals <= 11 the scale
+    # has <= 26 significant bits, so the Dekker split is exact here.
+    hi = a * scale
+    c = _SPLIT * a
+    ah = c - (c - a)
+    al = a - ah
+    lo = ((ah * scale - hi) + al * scale)
+    k = np.floor(hi)
+    frac = hi - k
+    diff = frac - 0.5
+    up = (diff > 0) | ((diff == 0) & (lo > 0))
+    tie = (diff == 0) & (lo == 0)
+    up = up | (tie & (np.fmod(k, 2.0) == 1.0))
+    q = k + up
+    return np.copysign(q / scale, x)
+
+
 def _near_decimal_half(
     values: np.ndarray,
     decimals: int,
@@ -2126,11 +2162,13 @@ def _family_captain_kernel(
     raw_joint_downside = (
         shortfall[:, PAIR_CAP] + raw_vice_downside
     )
-    pair_utility = np.round(raw_pair_utility, 6)
-    cap_mean = np.round(raw_cap_mean, 6)
-    vice_fallback = np.round(raw_vice_fallback, 6)
-    joint_upside = np.round(raw_joint_upside, 6)
-    joint_downside = np.round(raw_joint_downside, 6)
+    # Exact vector equivalent of scalar Python round(value, 6), including
+    # decimal-half cases that are common in production captain pairs.
+    pair_utility = python_round_vec(raw_pair_utility, 6)
+    cap_mean = python_round_vec(raw_cap_mean, 6)
+    vice_fallback = python_round_vec(raw_vice_fallback, 6)
+    joint_upside = python_round_vec(raw_joint_upside, 6)
+    joint_downside = python_round_vec(raw_joint_downside, 6)
 
     # Captain mean is a direct player-surface value, not an accumulated pair
     # expression.  At its decimal half boundary Python round() alone is the
@@ -2169,27 +2207,8 @@ def _family_captain_kernel(
         axis=1,
         dtype=np.int16,
     )
-    for route_index, pair_index in np.argwhere(
-        captain_pair_boundary
-    ):
-        route_index = int(route_index)
-        pair_index = int(pair_index)
-        pair_utility[route_index, pair_index] = round(
-            float(raw_pair_utility[route_index, pair_index]),
-            6,
-        )
-        vice_fallback[route_index, pair_index] = round(
-            float(raw_vice_fallback[route_index, pair_index]),
-            6,
-        )
-        joint_upside[route_index, pair_index] = round(
-            float(raw_joint_upside[route_index, pair_index]),
-            6,
-        )
-        joint_downside[route_index, pair_index] = round(
-            float(raw_joint_downside[route_index, pair_index]),
-            6,
-        )
+    # Boundary telemetry remains, but python_round_vec already applies the
+    # scalar-oracle rounding rule to every element without a Python loop.
 
     slot_rank = _actual_slot_ranks(elements)
     cap_rank = slot_rank[:, PAIR_CAP]
@@ -2344,29 +2363,29 @@ def _family_legal_tie_rank_for_candidate_position(
         position_signature[slot]
         for slot in actual_order
     )
-    actual_legal = scalar._legal_xi_templates(actual_signature)
-    actual_rank_by_combination = {
-        tuple(int(value) for value in combination): index
-        for index, combination in enumerate(actual_legal)
-    }
+    # A legal XI is a set of slots, so its 15-bit mask identifies it uniquely.
+    actual_legal = np.asarray(
+        scalar._legal_xi_templates(actual_signature), dtype=np.int64
+    )
     canonical_to_actual = np.empty(15, dtype=np.int64)
     for actual_slot, canonical_slot in enumerate(actual_order):
         canonical_to_actual[canonical_slot] = actual_slot
-    canonical_legal = scalar._legal_xi_templates(position_signature)
-    result: list[int] = []
-    for row in canonical_legal:
-        actual_combination = tuple(
-            sorted(
-                int(canonical_to_actual[int(slot)])
-                for slot in row
-            )
-        )
-        if actual_combination not in actual_rank_by_combination:
-            raise LineupBatchError("family legal XI mapping drift")
-        result.append(
-            int(actual_rank_by_combination[actual_combination])
-        )
-    return tuple(result)
+    canonical_legal = np.asarray(
+        scalar._legal_xi_templates(position_signature), dtype=np.int64
+    )
+    actual_masks = np.bitwise_or.reduce(
+        np.left_shift(1, actual_legal), axis=1
+    )
+    canonical_masks = np.bitwise_or.reduce(
+        np.left_shift(1, canonical_to_actual[canonical_legal]), axis=1
+    )
+    order = np.argsort(actual_masks, kind="stable")
+    sorted_masks = actual_masks[order]
+    position = np.searchsorted(sorted_masks, canonical_masks)
+    position = np.minimum(position, sorted_masks.size - 1)
+    if not np.array_equal(sorted_masks[position], canonical_masks):
+        raise LineupBatchError("family legal XI mapping drift")
+    return tuple(int(value) for value in order[position])
 
 
 def _family_route_tie_rank(

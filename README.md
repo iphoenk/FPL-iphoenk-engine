@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-23T21:57:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-24T07:41:00+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -106,6 +106,8 @@ Stage 3 architecture-class latency hardening adds two execution-only layers with
 P1.7 cross-route hardening extends that execution layer across the full direct route set: one-transfer squads are grouped by stable core/outgoing-player family, authoritative element × GW player surfaces and legal-XI structural templates are reused, and route × legal-XI × player tensors are evaluated together. Every route still ranks all 550 legal XI, all six outfield bench permutations, reserve-GK/autosub states, and ordered captain/vice choices. Non-ranking explainability is deferred for bulk routes while the scalar P1.7 path remains the CI oracle and human-facing owner; this is execution-only compaction, not route pruning or approximation.
 
 P1.7 route-family hardening now also hoists formation/DNP state matrices out of the six bench-permutation loop, memoizes the pure bench tie-rank matrix across the five-GW horizon, and evaluates later lexicographic bench keys lazily only while an earlier key remains tied. Ranking keys are finite-checked fail-closed. Because NumPy and scalar accumulation/rounding can diverge by a few ULP at decimal half boundaries, boundary-sensitive bench rows and captain/vice route tables fall back to the scalar P1.7 oracle rather than merely re-rounding vector output. Adversarial tests explicitly cover bench decimal-half boundaries, captain/vice rounding boundaries, stable tie order, and legal-XI first-match semantics. The existing `<=10s` 2,043-route × 5-GW acceptance gate remains unchanged.
+
+The production-snapshot P1.7 follow-up preserves the same scalar oracle and full route universe while replacing captain decimal-half rounding with a fail-closed vectorized equivalent of Python `round()` inside its proven finite float64 domain, and mapping legal-XI tie ranks by unique 15-bit slot masks. CI bitwise coverage exercises more than 5.2 million values for each of 6- and 9-decimal rounding around at least 400,000 half-decimal centers, including both signs and signed zero. Adversarial bench coverage also requires a non-vacuous secondary-boundary scalar fallback. The production `<=10s` snapshot gate remains unchanged and separate from merge-contract history.
 
 The controlled 15:48 DEEP baseline exposed an infrastructure-level cache defect specific to the owner-gated `issue_comment` trigger: GitHub granted read-only cache mode, so completed P1.7/MC caches could restore but could not be saved. The report job now explicitly requests cache write mode only after the existing repository-owner command gate and still checks out production `main` plus factual `runtime-data-v6`; no commenter-controlled ref is executed. Stage-2, P1.7 and MC cache contents remain non-authoritative and are validated by deterministic fingerprints before reuse.
 

@@ -111,7 +111,16 @@ def test_temporary_sangare_gross_special_watch_is_not_active_authority_or_state(
     assert "Temporary Sangaré -> Groß" not in canonical
     assert "TEMPORARY PRICE-RISK WATCH — SANGARÉ -> PASCAL GROSS" not in canonical.upper()
 
-    values = list(_strings(_state()))
+    state = _state()
+    # A player may legitimately appear in explicitly user-confirmed CURRENT15.
+    # The anti-hardcode invariant is that the old temporary Sangaré -> Groß
+    # price-risk watch must not survive elsewhere as decision authority/state.
+    non_current15 = {
+        key: value
+        for key, value in state.items()
+        if key != "confirmed_current_squad_state"
+    }
+    values = list(_strings(non_current15))
     assert not any("GROSS" in value.upper() or "GROß" in value.upper() for value in values)
 
 

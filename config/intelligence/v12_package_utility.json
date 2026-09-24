@@ -64,7 +64,7 @@
   },
   "performance": {
     "parallel_lineup_min_routes": 64,
-    "parallel_lineup_max_workers": 4,
+    "parallel_lineup_max_workers": 1,
     "parallel_chunks_per_worker": 8,
     "execution_strategy": "BOUNDED_LINUX_PROCESS_POOL_EXACT_P1_7",
     "lossy_pruning": false,

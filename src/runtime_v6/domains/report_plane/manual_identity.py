@@ -22,7 +22,7 @@ def _int(value: Any, field: str) -> int:
         raise ManualIdentityError(f"{field}:integer_required") from exc
 
 
-def decode_manual_identity_b64(raw: str, *, planning_gw: int) -> dict[str, Any]:
+def decode_manual_identity_b64(raw: str, *, planning_gw: int, official_players: list[Mapping[str, Any]] | None = None) -> dict[str, Any]:
     """Decode and validate a human-captured current-team identity.
 
     The payload is evidence, not an FPL credential. Purchase price is optional:
@@ -57,7 +57,28 @@ def decode_manual_identity_b64(raw: str, *, planning_gw: int) -> dict[str, Any]:
     for index, row in enumerate(raw_players):
         if not isinstance(row, Mapping):
             raise ManualIdentityError(f"players[{index}]:object_required")
-        element = _int(row.get("element_id"), f"players[{index}].element_id")
+        raw_element = row.get("element_id")
+        if raw_element is None:
+            capture_name = str(row.get("name") or "").strip()
+            if not capture_name:
+                raise ManualIdentityError(f"players[{index}]:element_id_or_name_required")
+            if not official_players:
+                raise ManualIdentityError("official_player_universe_required_for_name_capture")
+            key = capture_name.casefold()
+            matches = []
+            for official in official_players:
+                aliases = {
+                    str(official.get("web_name") or "").strip().casefold(),
+                    str(official.get("second_name") or "").strip().casefold(),
+                    (str(official.get("first_name") or "").strip()+" "+str(official.get("second_name") or "").strip()).strip().casefold(),
+                }
+                if key in aliases:
+                    matches.append(official)
+            if len(matches) != 1:
+                raise ManualIdentityError(f"players[{index}]:name_not_unique_in_official_universe")
+            element = _int(matches[0].get("id"), f"players[{index}].resolved_element_id")
+        else:
+            element = _int(raw_element, f"players[{index}].element_id")
         if element <= 0 or element in seen:
             raise ManualIdentityError("duplicate_or_invalid_element_id")
         seen.add(element)
@@ -66,6 +87,8 @@ def decode_manual_identity_b64(raw: str, *, planning_gw: int) -> dict[str, Any]:
             raise ManualIdentityError(f"players[{index}].position_invalid")
         positions[position] += 1
         normalized = {"element_id": element, "position": position}
+        if row.get("name") is not None:
+            normalized["captured_name"] = str(row.get("name")).strip()
         for field in ("current_price", "selling_price", "purchase_price"):
             if row.get(field) is not None:
                 normalized[field] = _int(row.get(field), f"players[{index}].{field}")

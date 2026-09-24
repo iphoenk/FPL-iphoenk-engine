@@ -355,6 +355,7 @@ def _personal_evidence_resolution(
     state: Mapping[str, Any] | None = None,
     *,
     planning_gw: int,
+    official_players: list[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     candidates: list[dict[str, Any]] = []
     personal_dir = runtime_root / "data/v6/personal"
@@ -424,7 +425,11 @@ def _personal_evidence_resolution(
         from src.runtime_v6.domains.report_plane.manual_identity import (
             decode_manual_identity_b64,
         )
-        manual = decode_manual_identity_b64(manual_b64, planning_gw=planning_gw)
+        manual = decode_manual_identity_b64(
+            manual_b64,
+            planning_gw=planning_gw,
+            official_players=official_players,
+        )
         candidates.append({
             "source": "ENV:FPL_MANUAL_IDENTITY_B64",
             "source_class": "MANUAL_CAPTURE_CURRENT",
@@ -2298,6 +2303,10 @@ def run_deep(
             runtime_data_root,
             state,
             planning_gw=planning_gw,
+            official_players=[
+                dict(row) for row in bootstrap.get("elements") or []
+                if isinstance(row, Mapping)
+            ],
         ),
         required=True,
     )

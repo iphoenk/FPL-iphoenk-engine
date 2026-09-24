@@ -167,3 +167,11 @@ def test_name_capture_fails_closed_when_official_name_is_ambiguous():
     ]
     with pytest.raises(ManualIdentityError, match="name_not_unique_in_official_universe"):
         decode_manual_identity_b64(_b64(payload), planning_gw=6, official_players=official)
+
+
+def test_name_capture_requires_official_universe():
+    payload = _manual_payload()
+    payload["players"][0].pop("element_id")
+    payload["players"][0]["name"] = "Keeper A"
+    with pytest.raises(ManualIdentityError, match="official_player_universe_required"):
+        decode_manual_identity_b64(_b64(payload), planning_gw=6)

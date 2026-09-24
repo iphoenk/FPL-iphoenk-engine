@@ -145,3 +145,25 @@ def test_manual_current_authority_is_exactly_second_class_after_auth():
     assert resolved["authenticated"] is False
     assert resolved["resolution_status"] == "CURRENT_VALID"
     assert resolved["finance_allowed"] is True
+
+
+def test_name_capture_resolves_only_against_official_universe():
+    payload = _manual_payload()
+    payload["players"][0].pop("element_id")
+    payload["players"][0]["name"] = "Keeper A"
+    official = [{"id": 701, "web_name": "Keeper A", "first_name": "A", "second_name": "Keeper"}]
+    row = decode_manual_identity_b64(_b64(payload), planning_gw=6, official_players=official)
+    assert row["players"][0]["element_id"] == 701
+    assert row["players"][0]["captured_name"] == "Keeper A"
+
+
+def test_name_capture_fails_closed_when_official_name_is_ambiguous():
+    payload = _manual_payload()
+    payload["players"][0].pop("element_id")
+    payload["players"][0]["name"] = "Silva"
+    official = [
+        {"id": 701, "web_name": "Silva", "first_name": "A", "second_name": "Silva"},
+        {"id": 702, "web_name": "Silva", "first_name": "B", "second_name": "Silva"},
+    ]
+    with pytest.raises(ManualIdentityError, match="name_not_unique_in_official_universe"):
+        decode_manual_identity_b64(_b64(payload), planning_gw=6, official_players=official)

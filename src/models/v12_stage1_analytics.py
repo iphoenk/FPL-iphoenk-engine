@@ -489,6 +489,12 @@ def walk_forward_validate(
 ) -> dict[str, Any]:
     clean = [dict(row) for row in rows if _i(row.get("gw")) > 0]
     gws = sorted({_i(row.get("gw")) for row in clean})
+    rows_by_player: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    rows_by_position: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in clean:
+        pid = _i(row.get("player_id"), _i(row.get("element")))
+        rows_by_player[pid].append(row)
+        rows_by_position[_position(row.get("position"))].append(row)
     errors: dict[str, list[float]] = defaultdict(list)
     brier: dict[str, list[float]] = defaultdict(list)
     logloss: dict[str, list[float]] = defaultdict(list)
@@ -504,13 +510,13 @@ def walk_forward_validate(
             position = _position(actual.get("position"))
             player_train = [
                 row
-                for row in train
-                if _i(row.get("player_id"), _i(row.get("element"))) == pid
+                for row in rows_by_player.get(pid, [])
+                if _i(row.get("gw")) < target_gw
             ]
             position_train = [
                 row
-                for row in train
-                if _position(row.get("position")) == position
+                for row in rows_by_position.get(position, [])
+                if _i(row.get("gw")) < target_gw
             ]
             if not player_train or not position_train:
                 continue

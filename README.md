@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-24T16:56:30+07:00`
+> **Last runtime/documentation sync:** `2026-09-24T17:55:00+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -65,6 +65,8 @@ DEEP success is now defined by the full delivery chain, not by section headings 
 CURRENT15 is occurrence-bound. Fresh valid authenticated or explicitly current user-confirmed evidence outranks stale AUTH_EXPIRED artifacts; previous-GW submitted picks are identity fallback only and cannot mint current selling values, bank, chips, FT, or hit economics. A proposed transfer never changes CURRENT15. If current ownership cannot be proved, identity may remain visibly STALE while unsupported private finance stays UNAVAILABLE.
 
 P1.7 exact execution now uses a NumPy-batched 550-XI kernel for the same canonical legal formations, autosub resolver, six bench permutations, captain/vice ordering, and route utility. The scalar implementation remains a CI regression oracle and randomized equivalence tests must match the batched output exactly before production use. Stage-2 projections and the 500,000-path MC summary are reusable only behind exact deterministic fingerprints; cache reuse is execution-only and cannot change V6 or model authority.
+
+P1.7 batch rounding is scalar-exact by contract. Public route fields and ranking keys use `python_round_vec` wherever Python `round(float, decimals)` semantics are required. The only documented `np.round` whitelist is the 15 large-tensor sites inside the route-family bench kernel; those sites are guarded by primary, secondary, and published decimal-boundary detection plus scalar bench fallback. CI rejects any undocumented `np.round` call, and boundary-dense family/chunk property tests compare the published football-decision fields against the scalar oracle. `execution_proof.json` records runner `cpu_count` for performance evidence.
 
 Canonical fresh 500,000-path Monte Carlo can execute as four deterministic process shards on Linux. Each shard runs the unchanged match-state-first correlated model for every material route with common random numbers inside the shard; `SeedSequence.spawn` supplies stable child streams and results are concatenated in deterministic shard order before the unchanged metrics, tails, regret, and convergence gates. Parallelism is execution-only: total path count, material routes, football model, and QA remain unchanged.
 

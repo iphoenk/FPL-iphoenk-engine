@@ -491,6 +491,13 @@ def walk_forward_validate(
     gws = sorted({_i(row.get("gw")) for row in clean})
     rows_by_player: dict[int, list[dict[str, Any]]] = defaultdict(list)
     rows_by_position: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    position_history_cache: dict[
+        tuple[int, str], list[dict[str, Any]]
+    ] = {}
+    position_rate_cache: dict[
+        tuple[int, str, str, str], float
+    ] = {}
+    position_start_cache: dict[tuple[int, str], float] = {}
     for row in clean:
         pid = _i(row.get("player_id"), _i(row.get("element")))
         rows_by_player[pid].append(row)
@@ -513,14 +520,27 @@ def walk_forward_validate(
                 for row in rows_by_player.get(pid, [])
                 if _i(row.get("gw")) < target_gw
             ]
-            position_train = [
-                row
-                for row in rows_by_position.get(position, [])
-                if _i(row.get("gw")) < target_gw
-            ]
+            position_history_key = (target_gw, position)
+            if position_history_key not in position_history_cache:
+                position_history_cache[position_history_key] = [
+                    row
+                    for row in rows_by_position.get(position, [])
+                    if _i(row.get("gw")) < target_gw
+                ]
+            position_train = position_history_cache[position_history_key]
             if not player_train or not position_train:
                 continue
-            pos_rate = _rate90(position_train, "xgi") or 0.0
+            position_rate_key = (
+                target_gw,
+                position,
+                "xgi",
+                "weights=None",
+            )
+            if position_rate_key not in position_rate_cache:
+                position_rate_cache[position_rate_key] = (
+                    _rate90(position_train, "xgi") or 0.0
+                )
+            pos_rate = position_rate_cache[position_rate_key]
             season = _rate90(player_train, "xgi")
             season = pos_rate if season is None else season
             recency_weights = [
@@ -562,9 +582,12 @@ def walk_forward_validate(
                 }.items():
                     errors[label].append(abs(prediction - observed))
 
-            pos_start = (
-                2.0 + sum(bool(row.get("starter")) for row in position_train)
-            ) / (4.0 + len(position_train))
+            if position_history_key not in position_start_cache:
+                position_start_cache[position_history_key] = (
+                    2.0
+                    + sum(bool(row.get("starter")) for row in position_train)
+                ) / (4.0 + len(position_train))
+            pos_start = position_start_cache[position_history_key]
             season_start = (
                 2.0 + sum(bool(row.get("starter")) for row in player_train)
             ) / (4.0 + len(player_train))

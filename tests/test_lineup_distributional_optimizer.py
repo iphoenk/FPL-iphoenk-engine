@@ -2540,6 +2540,68 @@ def test_p17_family_route_first_match_tie_matches_scalar_oracle():
             expected.get(key) for key in keys
         )
 
+def test_p17_family_aggregate_matches_scalar_element_order_at_production_half_boundary():
+    from src.engines import v12_lineup_batch as batch
+
+    # Reproduces the mechanism observed for production route 1:31->60:
+    # route-family slot order lands exactly on 50.1011815, while scalar
+    # element-id order lands one float64 ULP below the decimal half.
+    values = np.zeros((1, 15), dtype=np.float64)
+    values[0, :5] = np.asarray(
+        [
+            5.281400804228389,
+            3.3066720267949443,
+            0.9399544554367156,
+            0.4976445963489422,
+            40.07550961719101,
+        ],
+        dtype=np.float64,
+    )
+    elements = np.asarray(
+        [[2, 3, 4, 5, 1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]],
+        dtype=np.int64,
+    )
+    starter_mask = np.zeros((1, 15), dtype=bool)
+    starter_mask[0, :11] = True
+
+    legacy_slot_order = 0.0
+    for slot in range(11):
+        legacy_slot_order += float(values[0, slot])
+
+    scalar_element_order = batch._ordered_gather_sum_static(
+        values,
+        starter_mask,
+        elements,
+    )[0, 0]
+
+    decimal_half = 50.1011815
+    assert legacy_slot_order == decimal_half
+    assert scalar_element_order == np.nextafter(decimal_half, -np.inf)
+    assert round(legacy_slot_order, 6) == 50.101182
+    assert round(float(scalar_element_order), 6) == 50.101181
+
+
+def test_p17_production_ft_shadow_half_values_use_python_round_semantics():
+    from src.engines.v12_lineup_batch import python_round_vec
+
+    raw = np.asarray(
+        [
+            48.1041715,
+            50.4109955,
+            50.2572345,
+            50.5610645,
+            50.4541465,
+        ],
+        dtype=np.float64,
+    )
+    expected = np.asarray(
+        [round(float(value), 6) for value in raw],
+        dtype=np.float64,
+    )
+    observed = python_round_vec(raw, 6)
+    assert np.array_equal(observed.view(np.int64), expected.view(np.int64))
+
+
 # Phase-1 production-snapshot rounding exactness coverage.
 def test_python_round_vec_bitwise_matches_python_round_near_decimal_halves() -> None:
     from src.engines.v12_lineup_batch import python_round_vec

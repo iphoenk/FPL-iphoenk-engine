@@ -129,3 +129,19 @@ def test_manual_without_validation_marker_cannot_become_current_authority():
     ], planning_gw=6)
     assert resolved["resolution_status"] == "STALE_IDENTITY_FALLBACK"
     assert resolved["stale"] is True
+
+
+def test_manual_current_authority_is_exactly_second_class_after_auth():
+    manual = decode_manual_identity_b64(_b64(_manual_payload()), planning_gw=6)
+    resolved = select_personal_evidence([{
+        "source": "manual",
+        "source_class": "MANUAL_CAPTURE_CURRENT",
+        "payload": manual,
+        "gw": 6,
+        "observed_at": manual["generated_at"],
+        "manual_capture_validated": True,
+    }], planning_gw=6)
+    assert resolved["manual_current"] is True
+    assert resolved["authenticated"] is False
+    assert resolved["resolution_status"] == "CURRENT_VALID"
+    assert resolved["finance_allowed"] is True

@@ -1,0 +1,85 @@
+{
+  "schema": "FPL_AUTHORITY_CONSOLIDATION_AUDIT_V1",
+  "non_authoritative": true,
+  "effective_timestamp": "2026-09-18T21:21:00+07:00",
+  "repo_exact_main": "b704a453590c404944fb8e2a7d41a5e6d999e4ef",
+  "baseline_sha256": {
+    "runtime": "d4e1829332a91f610002ce0e0b8486127120302f7aef0cdbe0c8008f76762753",
+    "spec": "c7286a2c8bba5224feedbc880c9f6046373a3a42da8f17310f6fff0d3ef6697d",
+    "state": "bc90b6e71271a510fcc1fdeeb4616aded659ba69b47c79fd4b6210e93bb33350"
+  },
+  "runtime_section_classification": {
+    "0": "AUTHORITY/BOOTSTRAP",
+    "0A": "AUTHORITY/BOOTSTRAP",
+    "0B": "DECISION-CONTEXT",
+    "1": "SCHEDULER/ROUTING",
+    "1A": "SCHEDULER/ROUTING",
+    "2": "V6 INTEGRATION",
+    "3": "FRESHNESS/RECOVERY",
+    "3A": "FRESHNESS/RECOVERY",
+    "3B": "REPORT-PREFETCH",
+    "3C": "TERMINAL CONTINUATION",
+    "3D": "DECISION-CONTEXT",
+    "3E": "REPORT-PREFETCH",
+    "4": "QA/DELIVERY",
+    "5": "QA/DELIVERY",
+    "6": "QA/DELIVERY",
+    "7": "QA/DELIVERY",
+    "8": "QA/DELIVERY",
+    "8A": "FRESHNESS/RECOVERY",
+    "8B": "SCHEDULER/ROUTING",
+    "8C": "SCHEDULER/ROUTING",
+    "8D": "ACCEPTANCE",
+    "8E": "QA/DELIVERY",
+    "9": "QA/DELIVERY",
+    "10": "OBSERVABILITY",
+    "11": "QA/DELIVERY"
+  },
+  "runtime_ownership_findings": [
+    {
+      "finding": "dispatch/terminal timing semantics coupled",
+      "baseline": "Runtime 3C said terminal 90s budget was the same concept as Runtime 1A dispatch tolerance",
+      "resolution": "distinct dispatch_tolerance_seconds owner 1A and terminal_continuation_budget_seconds owner 3C"
+    },
+    {
+      "finding": "3A contained polling behavior",
+      "resolution": "3A classification/snapshot selection only; polling delegated to 3C"
+    },
+    {
+      "finding": "3B executed recovery while 3E also continued recovery",
+      "resolution": "3B identity/validation/eligibility only; 3E sole recovery continuation implementation"
+    },
+    {
+      "finding": "FINAL EXECUTION RECALL drift",
+      "missing_baseline": [
+        "DECISION CONTEXT HYDRATION",
+        "ACQUISITION / TERMINAL CONTINUATION",
+        "EXACT REPORT-PREFETCH CHECK / RECOVERY",
+        "DELIVERY_ACKNOWLEDGED",
+        "IMMUTABLE SAME-SLOT RECEIPT"
+      ],
+      "resolution": "canonical full execution recall in Runtime 11"
+    }
+  ],
+  "spec_duplication_findings": [
+    {"section":"M","overlaps":"Y1","classification":"near duplicate","canonical":"Y1","action":"pointer/purpose only"},
+    {"section":"N","overlaps":"Y2","classification":"exact duplicate skeleton","canonical":"Y2","action":"04:30 emphasis + pointer only"},
+    {"section":"O","overlaps":"Y2","classification":"near duplicate","canonical":"Y2","action":"12:30 emphasis + pointer only"},
+    {"section":"P","overlaps":"Y2","classification":"near duplicate","canonical":"Y2","action":"21:30 emphasis + pointer only"},
+    {"section":"Q","overlaps":"Y3","classification":"near duplicate with potentially divergent visible order","canonical":"Y3","action":"purpose/analytical obligation + pointer only"},
+    {"section":"R","overlaps":"Y4/Y5","classification":"near duplicate","canonical":"Y4/Y5","action":"analytical obligation + pointer only"},
+    {"section":"S","overlaps":"Y6/Y7","classification":"near duplicate","canonical":"Y6/Y7","action":"analytical obligation + pointer only"}
+  ],
+  "scope_preserved": [
+    "V6 data-plane",
+    "scheduler ownership",
+    "issue #431 transport",
+    "report-prefetch transport",
+    "publisher",
+    "acquisition",
+    "FPL Master Monitor recurring ownership",
+    "methodology weights",
+    "Monte Carlo policy",
+    "report cadence"
+  ]
+}

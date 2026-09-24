@@ -86,6 +86,21 @@ jobs:
           def hx(value):
               return float(value).hex()
 
+          def row_key(row):
+              return (
+                  s1._i(row.get("gw")),
+                  s1._i(row.get("player_id"), s1._i(row.get("element"))),
+                  str(row.get("match_id") or ""),
+                  s1._position(row.get("position")),
+              )
+
+          def sequence_token(rows):
+              digest = hashlib.sha256()
+              for row in rows:
+                  digest.update(repr(row_key(row)).encode("utf-8"))
+                  digest.update(b"\\n")
+              return digest.hexdigest()
+
           def cpu_model():
               try:
                   for line in Path("/proc/cpuinfo").read_text().splitlines():
@@ -127,15 +142,7 @@ jobs:
                   result = original_rate90(rows_arg, field, weights=weights)
                   rate_calls.append({
                       "field": field,
-                      "rows_fingerprint": fp([dict(row) for row in rows_arg]),
-                      "rows_gw": [s1._i(row.get("gw")) for row in rows_arg],
-                      "rows_player": [
-                          s1._i(row.get("player_id"), s1._i(row.get("element")))
-                          for row in rows_arg
-                      ],
-                      "rows_position": [
-                          s1._position(row.get("position")) for row in rows_arg
-                      ],
+                      "rows_sequence_token": sequence_token(rows_arg),
                       "weights": None if weights is None else [hx(x) for x in weights],
                       "result": None if result is None else hx(result),
                   })
@@ -225,8 +232,8 @@ jobs:
                           "actual_match_id": str(actual.get("match_id") or ""),
                           "actual_player_id": pid,
                           "actual_position": position,
-                          "player_train_fingerprint": fp(player_train),
-                          "position_train_fingerprint": fp(position_train),
+                          "player_train_sequence_token": sequence_token(player_train),
+                          "position_train_sequence_token": sequence_token(position_train),
                           "player_train_gws": [
                               s1._i(row.get("gw")) for row in player_train
                           ],

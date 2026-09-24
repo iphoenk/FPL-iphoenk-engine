@@ -3097,6 +3097,13 @@ def run_deep(
     )
 
 
+    _p17_exec = dict(
+        (((direct_package_utility or {}).get("governance") or {}).get("p1_7_execution_proof") or {})
+    )
+    _p17_cfg = str(
+        ((load_package_utility_config().get("performance") or {}).get("execution_mode") or "")
+    ).strip().upper()
+
     sections = {
         "S01": _section(
             "COMPLETE",
@@ -3591,12 +3598,6 @@ def run_deep(
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    _p17_exec = dict(
-        (((direct_package_utility or {}).get("governance") or {}).get("p1_7_execution_proof") or {})
-    )
-    _p17_cfg = str(
-        ((load_package_utility_config().get("performance") or {}).get("execution_mode") or "")
-    ).strip().upper()
     execution_proof = {
         "schema_version": 2,
         "runner": "V12_INTEGRATED_REPORT_RUNNER",

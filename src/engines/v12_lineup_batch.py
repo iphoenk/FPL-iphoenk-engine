@@ -1635,12 +1635,7 @@ def _family_bench_kernel(
     # scalar winner is determined only by the stable bench tie rank.
     if np.all(np.asarray(arrays["p_dnp"], dtype=np.float64) == 0.0):
         legal_count = int(layout["legal"].shape[0])
-        # The 15 np.round sites below are intentionally retained only in this
-    # family-bench kernel. They operate on the largest [route, XI, permutation]
-    # tensors. Exactness is guarded by primary_boundary, secondary_boundary and
-    # published_boundary, followed by scalar _family_scalar_bench_boundary_fallback.
-    # The guard test requires an inline marker on every allowed site.
-    element_matrix = np.ascontiguousarray(
+        element_matrix = np.ascontiguousarray(
             arrays["elements"],
             dtype=np.int64,
         )
@@ -1846,6 +1841,11 @@ def _family_bench_kernel(
         route_count,
         tuple(layout["position_signature"]),
     )
+    # The 15 np.round sites below are intentionally retained only in this
+    # family-bench kernel. They operate on the largest [route, XI, permutation]
+    # tensors. Exactness is guarded by primary_boundary, secondary_boundary and
+    # published_boundary, followed by scalar _family_scalar_bench_boundary_fallback.
+    # The guard test requires an inline marker on every allowed site.
     utility_key = np.round(utility, 6)  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
     winner = _lexicographic_first(
         (

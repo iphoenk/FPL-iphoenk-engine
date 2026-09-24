@@ -1,0 +1,282 @@
+name: V12 D1 paired performance gate
+
+on:
+  push:
+    branches:
+      - validation/v12-d1-performance-20260925
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout D1 candidate
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: f5f990fbaa6c5954e789b869388562d19abcb80b
+          path: candidate
+          persist-credentials: false
+
+      - name: Checkout scalar oracle
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 083c5ed82458b4e9cc6505820ac6a88818c3d202
+          path: oracle
+          persist-credentials: false
+
+      - name: Checkout frozen runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r candidate/requirements.txt
+
+      - name: Run interleaved A/B benchmark
+        env:
+          PYTHONPATH: ${{ github.workspace }}/candidate
+        run: |
+          mkdir -p evidence
+          python - <<'PY'
+          import gc
+          import hashlib
+          import importlib.util
+          import json
+          import resource
+          import statistics
+          import sys
+          import time
+          import tracemalloc
+          from pathlib import Path
+
+          from src.engines.v12_integrated_report_runner import _official_payload, _planning_gw
+          from src.models.team_strength import build_team_strength
+          from src.models.v12_analytics_foundation import (
+              load_v6_analytics_foundation,
+              require_match_foundation,
+          )
+
+          ROOT = Path.cwd()
+          runtime = ROOT / "runtime-data"
+          candidate_root = ROOT / "candidate"
+          oracle_root = ROOT / "oracle"
+
+          def load_module(name, path):
+              spec = importlib.util.spec_from_file_location(name, path)
+              mod = importlib.util.module_from_spec(spec)
+              assert spec and spec.loader
+              spec.loader.exec_module(mod)
+              return mod
+
+          oracle = load_module(
+              "oracle_stage1",
+              oracle_root / "src/models/v12_stage1_analytics.py",
+          )
+          candidate = load_module(
+              "candidate_stage1",
+              candidate_root / "src/models/v12_stage1_analytics.py",
+          )
+
+          official = _official_payload(runtime)
+          bootstrap = official["bootstrap"]
+          fixtures = official["fixtures"]
+          planning_gw = _planning_gw(bootstrap)
+          strength = build_team_strength(bootstrap, fixtures)
+          foundation = require_match_foundation(
+              load_v6_analytics_foundation(
+                  runtime,
+                  bootstrap=bootstrap,
+                  planning_gw=planning_gw,
+                  strength=strength,
+              )
+          )
+          rows = foundation["player_match_rows"]
+
+          def fp(value):
+              raw = json.dumps(
+                  value,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=False,
+                  allow_nan=False,
+                  default=str,
+              ).encode("utf-8")
+              return hashlib.sha256(raw).hexdigest()
+
+          # Independent warm-up for both implementations.
+          warm_oracle = oracle.build_hierarchical_priors(rows)
+          warm_candidate = candidate.build_hierarchical_priors(rows)
+          if fp(warm_oracle) != fp(warm_candidate):
+              raise SystemExit("warm-up semantic mismatch")
+
+          N = 11
+          oracle_samples = []
+          candidate_samples = []
+          pairs = []
+
+          def timed(fn):
+              gc.collect()
+              t0 = time.perf_counter()
+              payload = fn(rows)
+              elapsed = time.perf_counter() - t0
+              return elapsed, payload
+
+          for i in range(N):
+              if i % 2 == 0:
+                  o_t, o_p = timed(oracle.build_hierarchical_priors)
+                  c_t, c_p = timed(candidate.build_hierarchical_priors)
+                  order = "ORACLE_THEN_D1"
+              else:
+                  c_t, c_p = timed(candidate.build_hierarchical_priors)
+                  o_t, o_p = timed(oracle.build_hierarchical_priors)
+                  order = "D1_THEN_ORACLE"
+              if fp(o_p) != fp(c_p):
+                  raise SystemExit(f"semantic mismatch in pair {i+1}")
+              oracle_samples.append(o_t)
+              candidate_samples.append(c_t)
+              pairs.append({
+                  "pair": i + 1,
+                  "order": order,
+                  "oracle_seconds": o_t,
+                  "candidate_seconds": c_t,
+                  "reduction_fraction": (o_t - c_t) / o_t,
+              })
+
+          oracle_median = statistics.median(oracle_samples)
+          candidate_median = statistics.median(candidate_samples)
+          reduction = (oracle_median - candidate_median) / oracle_median
+
+          # Separate allocation/RSS observation, outside timing samples.
+          def memory_probe(fn):
+              gc.collect()
+              rss_before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+              tracemalloc.start()
+              tracemalloc.reset_peak()
+              payload = fn(rows)
+              current, peak = tracemalloc.get_traced_memory()
+              tracemalloc.stop()
+              rss_after = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+              return {
+                  "fingerprint": fp(payload),
+                  "tracemalloc_current_bytes": current,
+                  "tracemalloc_peak_bytes": peak,
+                  "ru_maxrss_before_kb": rss_before,
+                  "ru_maxrss_after_kb": rss_after,
+                  "ru_maxrss_delta_kb": max(0, rss_after - rss_before),
+              }
+
+          oracle_mem = memory_probe(oracle.build_hierarchical_priors)
+          candidate_mem = memory_probe(candidate.build_hierarchical_priors)
+
+          # Structural cache-cardinality proof on the actual candidate.
+          cache_cardinality = {}
+          target = candidate.build_hierarchical_priors.__code__
+
+          def tracer(frame, event, arg):
+              if frame.f_code is target and event == "return":
+                  cache_cardinality["league"] = len(
+                      frame.f_locals.get("league_sufficient_cache") or {}
+                  )
+                  cache_cardinality["position"] = len(
+                      frame.f_locals.get("position_sufficient_cache") or {}
+                  )
+              return tracer
+
+          sys.settrace(tracer)
+          try:
+              payload = candidate.build_hierarchical_priors(rows)
+          finally:
+              sys.settrace(None)
+
+          if fp(payload) != fp(warm_oracle):
+              raise SystemExit("structural probe semantic mismatch")
+
+          abs_pass = candidate_median <= 1.00
+          relative_pass = reduction >= 0.85
+          cardinality_pass = cache_cardinality == {
+              "league": 4,
+              "position": 16,
+          }
+
+          # RSS is noisy/monotonic. Preserve the measured value and also
+          # enforce the frozen structural fallback when attributable RSS
+          # cannot be isolated below 2 MiB.
+          rss_delta_candidate_kb = candidate_mem["ru_maxrss_delta_kb"]
+          rss_direct_pass = rss_delta_candidate_kb <= 2048
+          structural_memory_pass = cardinality_pass
+          memory_pass = rss_direct_pass or structural_memory_pass
+
+          result = {
+              "status": (
+                  "PASS"
+                  if abs_pass and relative_pass and memory_pass
+                  else "FAIL"
+              ),
+              "candidate_sha": "f5f990fbaa6c5954e789b869388562d19abcb80b",
+              "oracle_sha": "083c5ed82458b4e9cc6505820ac6a88818c3d202",
+              "runtime_sha": "9fc2ce5e590518c399765e6fd576bb96db6e5897",
+              "rows": len(rows),
+              "pairs": pairs,
+              "oracle": {
+                  "samples_seconds": oracle_samples,
+                  "median_seconds": oracle_median,
+                  "mean_seconds": statistics.mean(oracle_samples),
+                  "min_seconds": min(oracle_samples),
+                  "max_seconds": max(oracle_samples),
+              },
+              "candidate": {
+                  "samples_seconds": candidate_samples,
+                  "median_seconds": candidate_median,
+                  "mean_seconds": statistics.mean(candidate_samples),
+                  "min_seconds": min(candidate_samples),
+                  "max_seconds": max(candidate_samples),
+              },
+              "median_reduction_fraction": reduction,
+              "gates": {
+                  "candidate_median_le_1s": abs_pass,
+                  "median_reduction_ge_85pct": relative_pass,
+                  "memory": memory_pass,
+                  "cache_cardinality": cardinality_pass,
+              },
+              "memory": {
+                  "oracle": oracle_mem,
+                  "candidate": candidate_mem,
+                  "candidate_rss_direct_pass": rss_direct_pass,
+                  "structural_fallback_used": not rss_direct_pass,
+                  "cache_cardinality": cache_cardinality,
+              },
+              "fingerprint": fp(warm_candidate),
+          }
+
+          Path("evidence/performance_gate.json").write_text(
+              json.dumps(result, indent=2, sort_keys=True),
+              encoding="utf-8",
+          )
+          print(json.dumps(result, indent=2, sort_keys=True))
+          if result["status"] != "PASS":
+              raise SystemExit("D1 performance gate failed")
+          PY
+
+      - name: Upload immutable performance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-d1-performance-${{ github.run_id }}
+          path: evidence
+          if-no-files-found: error
+          retention-days: 14

@@ -1,4 +1,5 @@
 name: P17 final-head acceptance benchmark
+# trigger-revision: 1
 
 on:
   push:

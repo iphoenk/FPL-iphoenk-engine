@@ -48,8 +48,8 @@
         "display_name": "B.Fernandes"
       },
       {
-        "element_id": 565,
-        "display_name": "M.Sangaré"
+        "element_id": 124,
+        "display_name": "Pascal Groß"
       },
       {
         "element_id": 40,
@@ -78,9 +78,14 @@
         "display_name": "Calvert-Lewin"
       }
     ],
-    "transfer_execution_state": "NO_TRANSFER_CONFIRMED",
-    "status": "MIGRATED_FROM_LAST_CONFIRMED_USER_EXPLICIT_STATE",
-    "note": "Any newer explicit screenshot/manual state supersedes this immediately."
+    "transfer_execution_state": "EXECUTED",
+    "status": "USER_CONFIRMED_CURRENT",
+    "note": "Explicit user-confirmed post-transfer CURRENT15 for planning GW6. Identity only; private finance is not persisted or inferred here.",
+    "explicit_user_confirmation": true,
+    "explicit_user_confirmed_at": "2026-09-23T05:54:41+00:00",
+    "applicable_planning_gw": 6,
+    "evidence_source_class": "USER_CONFIRMED",
+    "evidence_basis": "EXPLICIT_USER_CONFIRMED_CURRENT15"
   },
   "active_scenarios": [
     {

@@ -1,0 +1,173 @@
+name: V12 D1 input and environment proof
+
+on:
+  push:
+    branches:
+      - validation/v12-d1-performance-20260925
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout D1 candidate
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: f5f990fbaa6c5954e789b869388562d19abcb80b
+          path: candidate
+          persist-credentials: false
+
+      - name: Checkout scalar oracle
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 083c5ed82458b4e9cc6505820ac6a88818c3d202
+          path: oracle
+          persist-credentials: false
+
+      - name: Checkout frozen runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r candidate/requirements.txt
+
+      - name: Prove identical benchmark input and record environment
+        run: |
+          mkdir -p evidence
+          python - <<'PY'
+          import hashlib
+          import importlib.util
+          import json
+          import os
+          import platform
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          ROOT = Path.cwd()
+          runtime = ROOT / "runtime-data"
+
+          def load_module(name, path):
+              spec = importlib.util.spec_from_file_location(name, path)
+              mod = importlib.util.module_from_spec(spec)
+              assert spec and spec.loader
+              spec.loader.exec_module(mod)
+              return mod
+
+          def stable(value):
+              return json.dumps(
+                  value,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=False,
+                  allow_nan=False,
+                  default=str,
+              )
+
+          def fp(value):
+              return hashlib.sha256(stable(value).encode("utf-8")).hexdigest()
+
+          def load_rows(repo_root, module_name):
+              sys.path.insert(0, str(repo_root))
+              try:
+                  runner = load_module(
+                      module_name + "_runner",
+                      repo_root / "src/engines/v12_integrated_report_runner.py",
+                  )
+                  strength_mod = load_module(
+                      module_name + "_strength",
+                      repo_root / "src/models/team_strength.py",
+                  )
+                  foundation_mod = load_module(
+                      module_name + "_foundation",
+                      repo_root / "src/models/v12_analytics_foundation.py",
+                  )
+                  official = runner._official_payload(runtime)
+                  bootstrap = official["bootstrap"]
+                  fixtures = official["fixtures"]
+                  planning_gw = runner._planning_gw(bootstrap)
+                  strength = strength_mod.build_team_strength(bootstrap, fixtures)
+                  foundation = foundation_mod.require_match_foundation(
+                      foundation_mod.load_v6_analytics_foundation(
+                          runtime,
+                          bootstrap=bootstrap,
+                          planning_gw=planning_gw,
+                          strength=strength,
+                      )
+                  )
+                  rows = foundation["player_match_rows"]
+                  return {
+                      "planning_gw": planning_gw,
+                      "rows": len(rows),
+                      "rows_fingerprint": fp(rows),
+                      "first_row_fingerprint": fp(rows[0]) if rows else None,
+                      "last_row_fingerprint": fp(rows[-1]) if rows else None,
+                  }
+              finally:
+                  sys.path.remove(str(repo_root))
+
+          oracle_input = load_rows(ROOT / "oracle", "oracle")
+          candidate_input = load_rows(ROOT / "candidate", "candidate")
+
+          cpu_model = None
+          try:
+              cpuinfo = Path("/proc/cpuinfo").read_text()
+              for line in cpuinfo.splitlines():
+                  if line.lower().startswith("model name"):
+                      cpu_model = line.split(":", 1)[1].strip()
+                      break
+          except Exception:
+              pass
+
+          result = {
+              "status": "PASS" if oracle_input == candidate_input else "FAIL",
+              "oracle_sha": "083c5ed82458b4e9cc6505820ac6a88818c3d202",
+              "candidate_sha": "f5f990fbaa6c5954e789b869388562d19abcb80b",
+              "runtime_sha": "9fc2ce5e590518c399765e6fd576bb96db6e5897",
+              "oracle_input": oracle_input,
+              "candidate_input": candidate_input,
+              "environment": {
+                  "python_version": sys.version,
+                  "python_executable": sys.executable,
+                  "platform": platform.platform(),
+                  "machine": platform.machine(),
+                  "processor": platform.processor(),
+                  "cpu_model": cpu_model,
+                  "image_os": os.environ.get("ImageOS"),
+                  "image_version": os.environ.get("ImageVersion"),
+                  "runner_os": os.environ.get("RUNNER_OS"),
+                  "runner_arch": os.environ.get("RUNNER_ARCH"),
+              },
+          }
+          Path("evidence/input_environment_proof.json").write_text(
+              json.dumps(result, indent=2, sort_keys=True),
+              encoding="utf-8",
+          )
+          print(json.dumps(result, indent=2, sort_keys=True))
+          if result["status"] != "PASS":
+              raise SystemExit("oracle and candidate benchmark inputs differ")
+          PY
+
+      - name: Upload immutable proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-d1-input-environment-proof-${{ github.run_id }}
+          path: evidence
+          if-no-files-found: error
+          retention-days: 14

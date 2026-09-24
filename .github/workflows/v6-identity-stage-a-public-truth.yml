@@ -175,3 +175,5 @@ jobs:
           name: v6-identity-stage-a-public-truth
           path: stage_a_public_truth.json
           if-no-files-found: error
+
+# stage-a-trigger: second push after workflow registration

@@ -141,14 +141,14 @@ jobs:
           if not isinstance(s02, dict):
               raise SystemExit("S02 payload not found")
           print("S02=", json.dumps(s02, sort_keys=True)[:3000])
-          if s02.get("status") != "COMPLETE":
-              raise SystemExit(f"S02 expected COMPLETE, got {s02.get('status')}")
-          personal = ((s02.get("payload") or {}).get("personal_resolution") or {})
+          if s02.get("state") != "COMPLETE":
+              raise SystemExit(f"S02 expected COMPLETE, got {s02.get('state')}")
+          personal = ((s02.get("content") or {}).get("personal_resolution") or {})
           if personal.get("stale") is True:
               raise SystemExit("S02 personal evidence remained stale")
           if personal.get("status") != "CURRENT_VALID":
               raise SystemExit(f"S02 personal status expected CURRENT_VALID, got {personal.get('status')}")
-          rows = ((s02.get("payload") or {}).get("rows") or [])
+          rows = ((s02.get("content") or {}).get("rows") or [])
           ids = [int(row.get("element_id") or row.get("element") or 0) for row in rows]
           if len(ids) != 15 or len(set(ids)) != 15:
               raise SystemExit(f"S02 exact15 failed: {ids}")

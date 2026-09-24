@@ -1,0 +1,177 @@
+name: V6 Identity Stage A Public Truth
+
+on:
+  push:
+    branches:
+      - audit/v6-identity-stage-a-20260924
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-truth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Probe Official FPL public identity endpoints
+        shell: bash
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+          import json
+          import urllib.request
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          BASE = "https://fantasy.premierleague.com/api"
+          config = json.loads(Path("config/engine.json").read_text(encoding="utf-8"))
+          entry_id = int(config["team_id"])
+
+          def fetch(path):
+              url = f"{BASE}/{path.lstrip('/')}"
+              req = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "FPL-V6-Stage-A-Audit/1.0"})
+              try:
+                  with urllib.request.urlopen(req, timeout=20) as resp:
+                      body = resp.read().decode("utf-8")
+                      return {"http_status": int(resp.status), "payload": json.loads(body)}
+              except Exception as exc:
+                  code = getattr(exc, "code", None)
+                  return {"http_status": int(code) if code is not None else None, "error": type(exc).__name__, "payload": None}
+
+          bootstrap_r = fetch("bootstrap-static/")
+          bootstrap = bootstrap_r.get("payload") or {}
+          now = datetime.now(timezone.utc)
+
+          events = [e for e in bootstrap.get("events", []) if isinstance(e, dict) and e.get("id") is not None and e.get("deadline_time")]
+          parsed_events = []
+          for e in events:
+              try:
+                  deadline = datetime.fromisoformat(str(e["deadline_time"]).replace("Z", "+00:00"))
+              except Exception:
+                  continue
+              parsed_events.append((int(e["id"]), deadline, e))
+
+          past = [row for row in parsed_events if row[1] <= now]
+          future = [row for row in parsed_events if row[1] > now]
+          last_deadline_gw = max((row[0] for row in past), default=None)
+          planning_gw = min((row[0] for row in future), default=None)
+          last_deadline = next((row[1] for row in parsed_events if row[0] == last_deadline_gw), None)
+          planning_deadline = next((row[1] for row in parsed_events if row[0] == planning_gw), None)
+
+          entry_r = fetch(f"entry/{entry_id}/")
+          picks_r = fetch(f"entry/{entry_id}/event/{last_deadline_gw}/picks/") if last_deadline_gw else {"http_status": None, "payload": None}
+          history_r = fetch(f"entry/{entry_id}/history/")
+          transfers_r = fetch(f"entry/{entry_id}/transfers/")
+
+          picks = (picks_r.get("payload") or {}).get("picks") or []
+          last_ids = {int(x["element"]) for x in picks if isinstance(x, dict) and x.get("element") is not None}
+          transfers = transfers_r.get("payload") if isinstance(transfers_r.get("payload"), list) else []
+
+          pending = []
+          for row in transfers:
+              if not isinstance(row, dict):
+                  continue
+              try:
+                  event = int(row.get("event"))
+                  ts = datetime.fromisoformat(str(row.get("time")).replace("Z", "+00:00"))
+              except Exception:
+                  continue
+              if planning_gw is not None and event == planning_gw and last_deadline is not None and ts > last_deadline and (planning_deadline is None or ts < planning_deadline):
+                  pending.append((ts, row))
+          pending.sort(key=lambda x: x[0])
+
+          evolving = set(last_ids)
+          sequence_valid = True
+          for _, row in pending:
+              try:
+                  out_id = int(row["element_out"])
+                  in_id = int(row["element_in"])
+              except Exception:
+                  sequence_valid = False
+                  break
+              if out_id not in evolving:
+                  sequence_valid = False
+              evolving.discard(out_id)
+              evolving.add(in_id)
+
+          if pending:
+              pending_visibility = "VERIFIED_VISIBLE"
+              pending_evidence = {
+                  "public_transfer_rows_in_open_window": len(pending),
+                  "all_rows_event_equals_planning_gw": all(int(r.get("event")) == planning_gw for _, r in pending),
+                  "sequence_applies_to_last_deadline_squad": sequence_valid,
+                  "reconstructed_squad_count": len(evolving),
+                  "reconstructed_differs_from_last_deadline": evolving != last_ids,
+              }
+          else:
+              pending_visibility = "UNVERIFIED"
+              pending_evidence = {
+                  "public_transfer_rows_in_open_window": 0,
+                  "reason": "No public transfer row for the open planning window; absence alone cannot distinguish no pending transfer from non-visibility."
+              }
+
+          history = history_r.get("payload") or {}
+          chips = history.get("chips") if isinstance(history, dict) else None
+          current_history = history.get("current") if isinstance(history, dict) else None
+          pick_payload = picks_r.get("payload") or {}
+          entry_history = pick_payload.get("entry_history") if isinstance(pick_payload, dict) else None
+
+          transfer_fields = sorted({k for row in transfers[:20] if isinstance(row, dict) for k in row.keys()})
+          pick_fields = sorted({k for row in picks[:20] if isinstance(row, dict) for k in row.keys()})
+          entry_history_fields = sorted(entry_history.keys()) if isinstance(entry_history, dict) else []
+          current_history_fields = sorted({k for row in (current_history or [])[:20] if isinstance(row, dict) for k in row.keys()})
+          chip_fields = sorted({k for row in (chips or [])[:20] if isinstance(row, dict) for k in row.keys()})
+          element_rows = bootstrap.get("elements") or []
+          bootstrap_element_fields = sorted({k for row in element_rows[:1] if isinstance(row, dict) for k in row.keys()})
+
+          summary = {
+              "generated_at_utc": now.isoformat(),
+              "entry_id": entry_id,
+              "last_deadline_gw": last_deadline_gw,
+              "planning_gw": planning_gw,
+              "endpoint_status": {
+                  "bootstrap-static/": bootstrap_r.get("http_status"),
+                  "entry/{id}/": entry_r.get("http_status"),
+                  "entry/{id}/event/{gw}/picks/": picks_r.get("http_status"),
+                  "entry/{id}/history/": history_r.get("http_status"),
+                  "entry/{id}/transfers/": transfers_r.get("http_status"),
+              },
+              "field_inventory": {
+                  "picks_row": pick_fields,
+                  "picks_entry_history": entry_history_fields,
+                  "history_current_row": current_history_fields,
+                  "history_chip_row": chip_fields,
+                  "transfer_row": transfer_fields,
+                  "bootstrap_element_row": bootstrap_element_fields,
+              },
+              "semantic_checks": {
+                  "picks_count": len(last_ids),
+                  "deadline_bank_field_present": isinstance(entry_history, dict) and "bank" in entry_history,
+                  "deadline_value_field_present": isinstance(entry_history, dict) and "value" in entry_history,
+                  "chip_history_present": isinstance(chips, list),
+                  "transfer_cost_fields_present": "element_in_cost" in transfer_fields and "element_out_cost" in transfer_fields,
+                  "public_purchase_price_per_current_pick_present": any(k in pick_fields for k in ("purchase_price", "selling_price", "element_in_cost")),
+                  "bootstrap_current_price_present": "now_cost" in bootstrap_element_fields,
+              },
+              "pending_transfer_visibility": pending_visibility,
+              "pending_transfer_evidence": pending_evidence,
+              "security": {
+                  "authenticated_request_used": False,
+                  "credential_env_read": False,
+                  "cookies_or_tokens_printed": False,
+                  "element_ids_printed": False,
+              },
+          }
+          Path("stage_a_public_truth.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print(json.dumps(summary, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload Stage A evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v6-identity-stage-a-public-truth
+          path: stage_a_public_truth.json
+          if-no-files-found: error

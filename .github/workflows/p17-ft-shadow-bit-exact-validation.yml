@@ -1,9 +1,6 @@
 name: P1.7 FT-shadow bit-exact validation
 
 on:
-  push:
-    branches:
-      - fix/p17-ft-shadow-bit-exact-20260924
   workflow_dispatch:
 
 permissions:

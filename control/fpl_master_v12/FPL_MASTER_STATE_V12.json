@@ -6,8 +6,8 @@
   "non_authoritative_state_file": true,
   "v6_factual_data_plane_owner": false,
   "authority": false,
-  "updated_at": "2026-09-20T17:19:58+07:00",
-  "source": "migrated_from_library_ACTIVE_DECISION_CONTEXT_V2",
+  "updated_at": "2026-09-23T04:43:09+07:00",
+  "source": "USER_EXPLICIT_SCREENSHOT_2026-09-23T04:43:09+07:00",
   "latest_explicit_user_state_wins": true,
   "confirmed_current_squad_state": {
     "goalkeepers": [
@@ -48,8 +48,8 @@
         "display_name": "B.Fernandes"
       },
       {
-        "element_id": 565,
-        "display_name": "M.Sangaré"
+        "element_id": 124,
+        "display_name": "Groß"
       },
       {
         "element_id": 40,
@@ -78,21 +78,34 @@
         "display_name": "Calvert-Lewin"
       }
     ],
-    "transfer_execution_state": "NO_TRANSFER_CONFIRMED",
-    "status": "MIGRATED_FROM_LAST_CONFIRMED_USER_EXPLICIT_STATE",
-    "note": "Any newer explicit screenshot/manual state supersedes this immediately."
+    "transfer_execution_state": "CURRENT_TEAM_SCREENSHOT_CONFIRMED",
+    "status": "USER_EXPLICIT_SCREENSHOT_SUPERSEDES_PRIOR_STATE",
+    "note": "User screenshot at 2026-09-23T04:43:09+07:00 is current-team authority. M.Sangaré is no longer owned; Pascal Groß (element 124) is owned. Screenshot also shows bank £0.2m, 0 free transfers, 0 pts transfer cost, Wildcard played in GW2, Free Hit available, and GW6 deadline Sat 10 Oct 17:00 as displayed in the app.",
+    "current_personal_state": {
+      "screenshot_observed_at": "2026-09-23T04:43:09+07:00",
+      "bank_gbp_m": 0.2,
+      "free_transfers": 0,
+      "transfer_cost_points": 0,
+      "wildcard": "PLAYED_GW2",
+      "free_hit": "AVAILABLE",
+      "gw": 6,
+      "app_deadline_display": "Sat 10 Oct at 17:00",
+      "authority": "USER_EXPLICIT_SCREENSHOT"
+    }
   },
   "active_scenarios": [
     {
       "scenario_id": "HOLD_SANGARE",
-      "state": "CONTEMPLATED",
+      "state": "SUPERSEDED",
       "execution_state": "NOT_EXECUTED",
       "route_type": "HOLD",
       "target_gw": null,
       "scope_type": "CROSS_GW_SQUAD_MONITORING",
       "execution_window": "ROLLING_UNTIL_SUPERSEDED_OR_EXPLICIT_TARGET_GW",
-      "currently_valid": true,
-      "validity_reason": "HOLD route remains a legally actionable future-GW squad branch."
+      "currently_valid": false,
+      "validity_reason": "Superseded by user screenshot confirming M.Sangaré is no longer in CURRENT15 and Pascal Groß is owned.",
+      "active_for_merge": false,
+      "superseded_at": "2026-09-23T04:43:09+07:00"
     },
     {
       "scenario_id": "TRANSFER_TO_BARNES",
@@ -162,7 +175,7 @@
     },
     {
       "scenario_id": "XI_MARGINAL_SANGARE_DE_CUYPER_DCL",
-      "state": "CONTEMPLATED",
+      "state": "SUPERSEDED",
       "execution_state": "NOT_EXECUTED",
       "route_type": "XI_BENCH_BRANCH",
       "players": [
@@ -182,8 +195,10 @@
       "target_gw": null,
       "scope_type": "CROSS_GW_LINEUP_CALIBRATION",
       "execution_window": "ROLLING_UNTIL_SUPERSEDED_OR_EXPLICIT_TARGET_GW",
-      "currently_valid": true,
-      "validity_reason": "Marginal-XI branch remains useful for future lineup calibration and is not treated as executed."
+      "currently_valid": false,
+      "validity_reason": "Superseded by user screenshot confirming M.Sangaré is no longer in CURRENT15 and Pascal Groß is owned.",
+      "active_for_merge": false,
+      "superseded_at": "2026-09-23T04:43:09+07:00"
     }
   ],
   "guards": [
@@ -361,6 +376,6 @@
       }
     }
   },
-  "updated_at_basis": "STATE_SEMANTIC_REVISION_COMMIT_ec2d5880e70eafd0bf1de2c28be768abd55ec740_AT_2026-09-20T10:19:58Z",
-  "source_provenance_class": "HISTORICAL_MIGRATION_ONLY"
+  "updated_at_basis": "USER_EXPLICIT_SCREENSHOT_2026-09-23T04:43:09+07:00",
+  "source_provenance_class": "CURRENT_USER_EXPLICIT_SCREENSHOT"
 }

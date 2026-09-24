@@ -174,31 +174,91 @@ D2 MUST NOT:
    - each requested `(target_gw, player)` reusable historical state is materialized at most once;
    - `_rate90` continues to receive row/weight sequences in the same order as the scalar oracle.
 
-## Frozen performance gate
+## Frozen performance gate — REVISION 1
 
-Benchmark policy:
-- exact main oracle `daf7247c320b1bb61eebd943b23f3ca694b088ef` vs D2 candidate;
-- exact runtime/input fingerprint above;
-- GC enabled in both paths;
-- **no forced pre-collection** before timed samples;
-- at least 11 interleaved A/B pairs;
-- record Python version, runner image, CPU model, row count/fingerprint, GC state, and GC collection deltas;
-- correctness gates must pass before performance timing is accepted.
+**Revision authority:** this section supersedes the original D2 performance gate committed at `09d456a1a543d9ea9bce821402d95fa60937f93d`. The revision is valid because no D2 implementation branch or candidate result exists yet.
 
-D2 passes only if ALL are true:
-- paired median `walk_forward_validate` **<= 0.75 s**;
-- paired median reduction versus oracle **>= 70%**;
-- full foundation median under the production-like Stage C harness **<= 1.50 s**;
-- D2 does not increase median foundation GC collection count by more than 20% in any generation;
-- peak RSS attributable delta **<= 8 MiB**, with a structural fallback proof allowed if runner RSS granularity prevents reliable attribution.
+Additional pre-implementation evidence:
+- Stage C scope timing run: `36071511169`
+- refined structural-floor timing run: `36071777225`
+- exact main/runtime/input unchanged;
+- `sys.gettrace() is None` and `sys.getprofile() is None` inside the Stage C walk-forward timing;
+- every Stage C walk-forward row is native `builtins.dict`;
+- direct repeated D1 hierarchy on the same Stage C runner is ~0.480 s, matching Stage C hierarchy timing rather than the historical D1 A/B ~0.268 s. Therefore the historical ~1.8x absolute factor is not proven to be caused by direct-vs-foundation call placement, tracing/profiling hooks, row type, GC enablement, or forced pre-collection. Absolute seconds MUST NOT be compared across those harness histories without an explicit harness label.
 
-Rationale:
-- current walk-forward median is 2.726 s;
-- a 70% reduction implies ~0.818 s, so the 0.75 s absolute gate is slightly stronger on the frozen baseline;
-- non-walk-forward foundation work is ~0.61 s, making a <=1.50 s total-foundation gate coherent while leaving headroom for runner variation;
-- the optimization target is repeated indexing/filtering/recomputation, not numerical approximation.
+### Measured D2 removable work
 
-No performance target may be relaxed after seeing D2 candidate results without an explicit new gate revision committed before further tuning.
+Refined Stage C timing, GC enabled / no pre-collect, no cProfile:
+
+- instrumented walk-forward median: **1.964546 s**
+- player-train full scans: **0.689123 s**
+- position-train full scans: **0.482453 s**
+- repeated position `_rate90` work beyond the first requested `(GW, position)` key: **0.666218 s**
+- repeated position starter-sum work beyond the first requested `(GW, position)` key: **0.063382 s**
+- total structurally removable work under the allowed D2 design: **1.901177 s = 96.77%**
+- estimated retained work before index/cache overhead: **0.063370 s**
+- unique `(target_gw, player)` keys: **2,598**, so the frozen snapshot has effectively no player-key reuse across evaluated test rows
+- unique `(target_gw, position)` keys: **16**, so the large reusable computation is position-level
+- player `_rate90`, recency, opponent, and player-start computations must still execute once per unique player/fold key and retain exact row/weight order.
+
+The structural floor is an Amdahl estimate, **not** a promised candidate runtime. It excludes the cost of building and accessing new invocation-local indexes/caches.
+
+### Harness A — absolute Stage C gate
+
+All absolute-second gates are measured **only** in the Stage C production-like harness:
+
+- full `load_v6_analytics_foundation` path on the exact frozen snapshot;
+- exact adjusted rows fingerprint `a36eaf2f623c811f4d5d942aa4da3fb8842fa3d456724bb4c9e32fcec5b4b99f`;
+- GC enabled;
+- no forced `gc.collect()` before measured runs;
+- no cProfile, `sys.settrace`, or `sys.setprofile`;
+- native `builtins.dict` rows;
+- at least 7 measured runs after warm-up;
+- component timing of the actual `walk_forward_validate` call inside Stage C.
+
+Absolute gates:
+- Stage C median `walk_forward_validate` **<= 0.55 s**;
+- Stage C full-foundation median **<= 1.25 s**.
+
+The 0.55 s walk-forward cap is intentionally far above the ~0.063 s structural floor to allow index construction, cache lookup, Python object-allocation, and runner variation, while still requiring the candidate to capture most of the measured removable work. The 1.25 s foundation cap is consistent with the pre-D2 non-walk-forward baseline of roughly 0.61 s plus bounded D2 overhead.
+
+### Harness B — paired relative gate
+
+Relative speedup is measured separately with an interleaved same-run oracle/candidate A/B harness:
+
+- exact current-main oracle `daf7247c320b1bb61eebd943b23f3ca694b088ef` vs exact D2 candidate;
+- exact same adjusted rows and fingerprint;
+- GC enabled on both sides;
+- no forced pre-collection;
+- no trace/profile hooks;
+- at least 11 interleaved pairs with alternating execution order;
+- record Python version, runner image, CPU model when available, row count/fingerprint, GC state, and GC collection deltas.
+
+Relative gate:
+- paired median `walk_forward_validate` reduction **>= 82%**.
+
+Rationale: the measured removable fraction is 96.77%. Requiring >=82% total reduction means the implementation must realize roughly 85% of the measured removable opportunity while leaving substantial headroom for unavoidable index/cache overhead. On the authoritative Stage C baseline of 2.726 s, an 82% reduction corresponds to ~0.491 s, making the relative gate slightly tighter than the 0.55 s absolute cap when host speed is similar.
+
+### Other performance gates
+
+D2 also must:
+- not increase median foundation GC collection count by more than 20% in any generation;
+- add peak RSS attributable delta **<= 8 MiB**, with structural fallback proof allowed only when runner RSS granularity prevents reliable attribution.
+
+Correctness gates must pass before any candidate performance result is accepted.
+
+No performance target may be relaxed after observing a D2 candidate without another explicit gate revision committed before further tuning.
+
+
+
+## Expanding-window cutoff authority
+
+The scalar oracle is GW-based, not row-index-based:
+
+- `train = rows where gw < target_gw`
+- `test = rows where gw == target_gw`
+
+There is no `<=` cutoff and no row-position cutoff. All same-GW rows, including DGW-like duplicate player fixtures within that GW, remain test observations for that fold and may not enter one another's history. Any D2 index/cache must preserve this exact rule and key cached historical state by the target GW.
 
 ## D2 branch rule
 

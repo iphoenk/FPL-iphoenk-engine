@@ -2513,12 +2513,12 @@ def _optimize_gw_family(
         )
         * excess
     )
-    route_utility = np.round(
+    route_utility_raw = (
         base_utility
         + bench["bench_order_utility"]
-        + captain["pair_utility"],
-        6,
+        + captain["pair_utility"]
     )
+    route_utility = np.round(route_utility_raw, 6)
     expected_before_captain = np.round(
         expected_points
         + bench["expected_autosub_value"],
@@ -2616,7 +2616,7 @@ def _optimize_gw_family(
         ready_count = int(
             round(float(pmf_ready[route_index, xi_index]))
         )
-        results.append({
+        result = {
             "status": "READY",
             "gw": int(gw),
             "route_utility": round(
@@ -2713,7 +2713,20 @@ def _optimize_gw_family(
                 "approximation": False,
                 "detail_materialization_deferred": True,
             },
-        })
+        }
+        if os.environ.get("V12_P17_ROUND_DIAGNOSTIC") == "1":
+            raw = float(route_utility_raw[route_index, xi_index])
+            scaled = raw * 1_000_000.0
+            fraction = scaled - math.floor(scaled)
+            result["_rounding_diagnostic"] = {
+                "route_utility_pre_round": raw,
+                "python_round_6": round(raw, 6),
+                "numpy_round_6": float(np.round(raw, 6)),
+                "scaled_fraction": fraction,
+                "distance_to_decimal_half": abs(fraction - 0.5),
+                "spacing_scaled": abs(float(np.spacing(scaled))),
+            }
+        results.append(result)
     return results, {
         "route_count": len(results),
         "endpoint_evaluations": 2,

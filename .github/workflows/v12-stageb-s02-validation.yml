@@ -77,7 +77,7 @@ jobs:
           python -m src.engines.v12_integrated_report_runner \
             --runtime-data-root "../runtime-data" \
             --report-mode DEEP \
-            --report-slot "2026-09-24T18:30:00+07:00" \
+            --report-slot "2026-09-24T14:20:00+07:00" \
             --output-dir "artifacts/v12-report"
 
       - name: Enforce Stage3 candidate acceptance

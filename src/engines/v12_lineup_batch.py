@@ -1846,14 +1846,14 @@ def _family_bench_kernel(
         route_count,
         tuple(layout["position_signature"]),
     )
-    utility_key = np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKutility, 6)
+    utility_key = np.round(utility, 6)  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
     winner = _lexicographic_first(
         (
             utility_key,
-            lambda: np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKexpected, 6),
-            lambda: -np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKblank, 9),
-            lambda: np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKge8, 9),
-            lambda: np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKge10, 9),
+            lambda: np.round(expected, 6),  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+            lambda: -np.round(blank, 9),  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+            lambda: np.round(ge8, 9),  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+            lambda: np.round(ge10, 9),  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
             lambda: -tie_rank.astype(np.float64),
         ),
         axis=2,
@@ -1894,10 +1894,10 @@ def _family_bench_kernel(
     )
     candidate_mask = tied_candidates.copy()
     secondary_specs = (
-        (expected, np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKexpected, 6), 6),
-        (blank, -np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKblank, 9), 9),
-        (ge8, np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKge8, 9), 9),
-        (ge10, np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKge10, 9), 9),
+        (expected, np.round(expected, 6), 6),  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+        (blank, -np.round(blank, 9), 9),  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+        (ge8, np.round(ge8, 9), 9),  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+        (ge10, np.round(ge10, 9), 9),  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
     )
     for raw_metric, ranking_key, decimals in secondary_specs:
         active_tie = (
@@ -2011,24 +2011,29 @@ def _family_bench_kernel(
         legal_axis,
         winner,
     ].copy()
-    expected_out = np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACKexpected_raw_out, 6)
-    autosub_out = np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+    expected_out = np.round(expected_raw_out, 6)  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+    # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+    autosub_out = np.round(
         autosub[route_axis, legal_axis, winner],
         9,
     )
-    blank_out = np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+    # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+    blank_out = np.round(
         blank[route_axis, legal_axis, winner],
         9,
     )
-    ge8_out = np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+    # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+    ge8_out = np.round(
         ge8[route_axis, legal_axis, winner],
         9,
     )
-    ge10_out = np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+    # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+    ge10_out = np.round(
         ge10[route_axis, legal_axis, winner],
         9,
     )
-    utility_out = np.round(  # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+    # P17_NP_ROUND_PROTECTED_BY_FAMILY_BENCH_FALLBACK
+    utility_out = np.round(
         utility[route_axis, legal_axis, winner],
         6,
     )

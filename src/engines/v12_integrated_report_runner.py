@@ -3590,6 +3590,7 @@ def run_deep(
     execution_proof = {
         "schema_version": 2,
         "runner": "V12_INTEGRATED_REPORT_RUNNER",
+        "cpu_count": max(1, int(os.cpu_count() or 1)),
         "report_slot": report_slot,
         "report_mode": "DEEP",
         "planning_gw": planning_gw,

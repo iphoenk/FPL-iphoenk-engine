@@ -2,13 +2,18 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import inspect
+import json
 from pathlib import Path
 
 from src.engines.v12_deep_delivery import (
     select_personal_evidence,
     validate_deep_decision_content_delivery,
 )
-from src.engines.v12_integrated_report_runner import _fingerprint, run_deep
+from src.engines.v12_integrated_report_runner import (
+    _fingerprint,
+    _personal_evidence_resolution,
+    run_deep,
+)
 from src.engines.v12_package_utility import (
     select_stage3_material_mc_routes,
 )
@@ -661,6 +666,74 @@ def test_p_current_gw_authenticated_squad_beats_previous_gw_submitted_picks():
     )
     assert resolved["source"] == "gw6-auth"
     assert [row["element_id"] for row in resolved["rows"]] == list(range(31, 46))
+
+
+def test_p1_explicit_current15_state_outranks_stale_previous_gw_runtime(tmp_path: Path):
+    root = Path(__file__).resolve().parents[1]
+    state = json.loads(
+        (root / "control/fpl_master_v12/FPL_MASTER_STATE_V12.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    confirmed = dict(state["confirmed_current_squad_state"])
+    planning_gw = int(confirmed["applicable_planning_gw"])
+
+    confirmed_rows = []
+    for group in ("goalkeepers", "defenders", "midfielders", "forwards"):
+        confirmed_rows.extend(
+            dict(row) for row in confirmed.get(group) or []
+        )
+    confirmed_ids = [int(row["element_id"]) for row in confirmed_rows]
+
+    assert confirmed["explicit_user_confirmation"] is True
+    assert confirmed["explicit_user_confirmed_at"]
+    assert len(confirmed_ids) == 15
+    assert len(set(confirmed_ids)) == 15
+
+    personal = tmp_path / "data/v6/personal"
+    personal.mkdir(parents=True)
+    stale_ids = list(range(9001, 9016))
+    (personal / "current_team.json").write_text(
+        json.dumps(
+            {
+                "players": [{"element_id": value} for value in stale_ids],
+                "generated_at": "2026-09-24T09:00:00+00:00",
+                "gw": planning_gw - 1,
+                "auth_state": "AUTH_EXPIRED",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (personal / "submitted_picks.json").write_text(
+        json.dumps(
+            {
+                "picks": [{"element_id": value} for value in stale_ids],
+                "generated_at": "2026-09-24T09:01:00+00:00",
+                "gw": planning_gw - 1,
+                "status": "AVAILABLE",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    resolved = _personal_evidence_resolution(
+        tmp_path,
+        state,
+        planning_gw=planning_gw,
+    )
+
+    assert resolved["resolution_status"] == "CURRENT_VALID"
+    assert resolved["stale"] is False
+    assert resolved["source_class"] == "USER_CONFIRMED"
+    assert resolved["source"] == "FPL_MASTER_STATE_V12:EXPLICIT_USER_CONFIRMED"
+    assert resolved["user_current"] is True
+    assert [int(row["element_id"]) for row in resolved["rows"]] == confirmed_ids
+    assert resolved["payload"].get("bank") is None
+    assert resolved["payload"].get("chips") is None
+    assert all(
+        row.get("purchase_price") is None and row.get("selling_price") is None
+        for row in resolved["rows"]
+    )
 
 
 def test_q_report_plane_and_new_permanent_contract_do_not_pin_production_players():

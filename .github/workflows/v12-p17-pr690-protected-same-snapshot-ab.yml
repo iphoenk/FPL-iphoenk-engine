@@ -1,6 +1,9 @@
 name: P17 PR690 protected same-snapshot A/B
 
 on:
+  push:
+    branches:
+      - audit/p17-pr690-protected-same-snapshot-ab-20260924
   workflow_dispatch:
 
 permissions:

@@ -316,21 +316,98 @@ def validate_deep_decision_content_delivery(
         if not str(binding.get("payload_fingerprint") or "").strip():
             failures.append(f"AUTHORITATIVE_FINGERPRINT_MISSING={sid}")
 
-    # Exact Rise/Fall20 must preserve governed producer rank and direction.
+    # Exact Rise/Fall20 must preserve the governed producer ordering and
+    # direction. The real V6 predictor schema is order-authoritative and does
+    # not carry an internal rank field; the renderer materializes visible
+    # rank=1..20 from that deterministic order. Compact/legacy payloads retain
+    # their producer-supplied rank aliases and are validated directly.
     for sid in ("S12", "S13"):
         if state(sid) != "COMPLETE":
             continue
-        rows = [dict(row) for row in content(sid).get("rows") or [] if isinstance(row, Mapping)]
+        payload = content(sid)
+        rows = [
+            dict(row)
+            for row in payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
         expected_direction = "RISE" if sid == "S12" else "FALL"
+        adapter = str(payload.get("artifact_adapter") or "").upper()
+
+        if adapter == "V6_DATA_PLAYERS_OFFSET0":
+            expected_sort_contract = (
+                "projected_percent DESC, id ASC"
+                if sid == "S12"
+                else "projected_percent ASC, id ASC"
+            )
+            if str(payload.get("sort_contract") or "") != expected_sort_contract:
+                failures.append(
+                    f"GOVERNED_RANK20_SORT_CONTRACT_MISMATCH={sid}"
+                )
+            sortable: list[tuple[float, int, int]] = []
+            order_input_valid = True
+            for index, row in enumerate(rows, start=1):
+                try:
+                    projected = float(row["projected_percent"])
+                    element_id = int(row["element_id"])
+                except (KeyError, TypeError, ValueError):
+                    failures.append(
+                        f"GOVERNED_RANK20_ORDER_INPUT_INVALID={sid}:{index}"
+                    )
+                    order_input_valid = False
+                    break
+                primary = -projected if sid == "S12" else projected
+                sortable.append((primary, element_id, index))
+            if order_input_valid:
+                expected_indices = [
+                    item[2]
+                    for item in sorted(sortable, key=lambda item: (item[0], item[1]))
+                ]
+                if expected_indices != list(range(1, len(rows) + 1)):
+                    mismatch = next(
+                        (
+                            index
+                            for index, expected_index in enumerate(
+                                expected_indices,
+                                start=1,
+                            )
+                            if expected_index != index
+                        ),
+                        1,
+                    )
+                    failures.append(
+                        f"GOVERNED_RANK20_ORDER_MISMATCH={sid}:{mismatch}"
+                    )
+        else:
+            for index, row in enumerate(rows, start=1):
+                governed_rank = (
+                    row.get("rank")
+                    if row.get("rank") is not None
+                    else row.get("predictor_rank")
+                    if row.get("predictor_rank") is not None
+                    else row.get("direction_rank")
+                )
+                try:
+                    rank_value = int(governed_rank)
+                except (TypeError, ValueError):
+                    rank_value = 0
+                if rank_value != index:
+                    failures.append(
+                        f"GOVERNED_RANK20_RANK_MISMATCH={sid}:{index}"
+                    )
+                    break
+
         for index, row in enumerate(rows, start=1):
-            if int(row.get("rank") or 0) != index:
-                failures.append(f"GOVERNED_RANK20_RANK_MISMATCH={sid}:{index}")
-                break
             if str(row.get("direction") or "").upper() != expected_direction:
-                failures.append(f"GOVERNED_RANK20_DIRECTION_MISMATCH={sid}:{index}")
+                failures.append(
+                    f"GOVERNED_RANK20_DIRECTION_MISMATCH={sid}:{index}"
+                )
                 break
-            if not str(row.get("estimate_source") or row.get("source") or "").strip():
-                failures.append(f"GOVERNED_RANK20_SOURCE_MISSING={sid}:{index}")
+            if not str(
+                row.get("estimate_source") or row.get("source") or ""
+            ).strip():
+                failures.append(
+                    f"GOVERNED_RANK20_SOURCE_MISSING={sid}:{index}"
+                )
                 break
 
     # Watchlist20 remains a football-decision surface: exact 5/5/5/5 by pos.

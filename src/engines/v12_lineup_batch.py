@@ -2413,14 +2413,28 @@ def _family_route_tie_rank(
 
 def _ordered_gather_sum_static(
     values: np.ndarray,
-    legal: np.ndarray,
+    starter_mask: np.ndarray,
+    elements: np.ndarray,
 ) -> np.ndarray:
-    total = np.zeros(
-        (values.shape[0], legal.shape[0]),
-        dtype=np.float64,
-    )
-    for slot in range(legal.shape[1]):
-        total = total + values[:, legal[:, slot]]
+    """Match scalar Python sum order by ascending element id for every XI.
+
+    Route-family layout keeps the incoming candidate in a reusable structural
+    slot, which is not necessarily the scalar owner's sorted squad order.
+    Floating-point addition is order-sensitive, so aggregate arithmetic must
+    follow the scalar element-id order before any six-decimal rounding.
+    """
+    route_count = values.shape[0]
+    legal_count = starter_mask.shape[0]
+    if elements.shape != values.shape or starter_mask.shape[1] != values.shape[1]:
+        raise LineupBatchError("family ordered sum shape mismatch")
+    canonical_order = np.argsort(elements, axis=1, kind="stable")
+    route_axis = np.arange(route_count, dtype=np.int64)
+    total = np.zeros((route_count, legal_count), dtype=np.float64)
+    for rank in range(elements.shape[1]):
+        source_slot = canonical_order[:, rank]
+        selected = starter_mask[:, source_slot].T
+        source_value = values[route_axis, source_slot]
+        total = total + np.where(selected, source_value[:, None], 0.0)
     return total
 
 
@@ -2475,27 +2489,33 @@ def _optimize_gw_family(
 
     expected_points = _ordered_gather_sum_static(
         arrays["xpts_mean"],
-        legal,
+        layout["starter_mask"],
+        arrays["elements"],
     )
     shortfall = _ordered_gather_sum_static(
         arrays["shortfall"],
-        legal,
+        layout["starter_mask"],
+        arrays["elements"],
     )
     excess = _ordered_gather_sum_static(
         arrays["excess"],
-        legal,
+        layout["starter_mask"],
+        arrays["elements"],
     )
     tactical_sum = _ordered_gather_sum_static(
         arrays["tactical_weight"],
-        legal,
+        layout["starter_mask"],
+        arrays["elements"],
     )
     tactical_count = _ordered_gather_sum_static(
         arrays["tactical_available"],
-        legal,
+        layout["starter_mask"],
+        arrays["elements"],
     )
     pmf_ready = _ordered_gather_sum_static(
         arrays["pmf_ready"],
-        legal,
+        layout["starter_mask"],
+        arrays["elements"],
     )
 
     objective = dict((scalar.load_config().get("objective") or {}))
@@ -2512,29 +2532,29 @@ def _optimize_gw_family(
         )
         * excess
     )
-    route_utility = np.round(
+    route_utility = python_round_vec(
         base_utility
         + bench["bench_order_utility"]
         + captain["pair_utility"],
         6,
     )
-    expected_before_captain = np.round(
+    expected_before_captain = python_round_vec(
         expected_points
         + bench["expected_autosub_value"],
         6,
     )
-    expected_with_captain = np.round(
+    expected_with_captain = python_round_vec(
         expected_points
         + bench["expected_autosub_value"]
         + captain["expected_captain_multiplier_value"]
         + captain["expected_vice_takeover_value"],
         6,
     )
-    downside = np.round(shortfall, 6)
-    upside = np.round(excess, 6)
+    downside = python_round_vec(shortfall, 6)
+    upside = python_round_vec(excess, 6)
     tactical_mean = np.where(
         tactical_count > 0.0,
-        np.round(
+        python_round_vec(
             tactical_sum / np.maximum(tactical_count, 1.0),
             6,
         ),
@@ -2905,26 +2925,26 @@ def _optimize_gw_chunk(
         - _f(objective.get("lineup_downside_weight"), 0.10) * shortfall
         + _f(objective.get("lineup_upside_weight"), 0.05) * excess
     )
-    route_utility = np.round(
+    route_utility = python_round_vec(
         base_utility + bench["bench_order_utility"] + captain["pair_utility"],
         6,
     )
-    expected_before_captain = np.round(
+    expected_before_captain = python_round_vec(
         expected_points + bench["expected_autosub_value"],
         6,
     )
-    expected_with_captain = np.round(
+    expected_with_captain = python_round_vec(
         expected_points
         + bench["expected_autosub_value"]
         + captain["expected_captain_multiplier_value"]
         + captain["expected_vice_takeover_value"],
         6,
     )
-    downside = np.round(shortfall, 6)
-    upside = np.round(excess, 6)
+    downside = python_round_vec(shortfall, 6)
+    upside = python_round_vec(excess, 6)
     tactical_mean = np.where(
         tactical_count > 0.0,
-        np.round(tactical_sum / np.maximum(tactical_count, 1.0), 6),
+        python_round_vec(tactical_sum / np.maximum(tactical_count, 1.0), 6),
         0.0,
     )
     winner = _lexicographic_first(

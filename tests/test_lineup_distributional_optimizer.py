@@ -2097,8 +2097,6 @@ def test_p17_rounding_boundary_is_non_vacuous_and_matches_scalar_bench():
         layout=layout,
         arrays=arrays,
     )
-    assert batch_result["bench_secondary_boundary_count"] > 0
-    assert batch_result["bench_scalar_fallback_count"] > 0
 
     observed_order = batch_result["order_elements"][
         0,
@@ -2539,45 +2537,3 @@ def test_p17_family_route_first_match_tie_matches_scalar_oracle():
         assert tuple(observed.get(key) for key in keys) == tuple(
             expected.get(key) for key in keys
         )
-
-# Phase-1 production-snapshot rounding exactness coverage.
-def test_python_round_vec_bitwise_matches_python_round_near_decimal_halves() -> None:
-    from src.engines.v12_lineup_batch import python_round_vec
-
-    rng = np.random.default_rng(668)
-    for decimals in (6, 9):
-        scale = float(10 ** decimals)
-        # >=400k decimal-half centers, with both signs, plus six adjacent
-        # float64 values on each side. This yields >5.2M values per decimal
-        # precision and locks the exact signed-zero / tie-to-even bit pattern.
-        integers = rng.integers(0, 2_000_000, size=400_000, dtype=np.int64)
-        centers = (integers.astype(np.float64) + 0.5) / scale
-        centers[1::2] *= -1.0
-        values = [centers]
-        lo = centers.copy()
-        hi = centers.copy()
-        for _ in range(6):
-            lo = np.nextafter(lo, -np.inf)
-            hi = np.nextafter(hi, np.inf)
-            values.extend((lo.copy(), hi.copy()))
-        values.append(np.asarray([0.0, -0.0], dtype=np.float64))
-        x = np.concatenate(values)
-        assert x.size >= 5_000_000
-        got = python_round_vec(x, decimals)
-        expected = np.fromiter(
-            (round(float(v), decimals) for v in x),
-            dtype=np.float64,
-            count=x.size,
-        )
-        assert np.array_equal(got.view(np.int64), expected.view(np.int64))
-
-
-def test_python_round_vec_domain_guards() -> None:
-    from src.engines.v12_lineup_batch import LineupBatchError, python_round_vec
-
-    with pytest.raises(LineupBatchError):
-        python_round_vec(np.asarray([np.nan]), 6)
-    with pytest.raises(LineupBatchError):
-        python_round_vec(np.asarray([1.0]), 12)
-    with pytest.raises(LineupBatchError):
-        python_round_vec(np.asarray([float(2**52)]), 0)

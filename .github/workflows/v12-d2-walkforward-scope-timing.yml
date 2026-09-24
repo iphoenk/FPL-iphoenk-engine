@@ -1,0 +1,488 @@
+name: V12 D2 walk-forward scope timing
+
+on:
+  push:
+    branches:
+      - validation/v12-stagec-post-d1-baseline-20260925
+    paths:
+      - ".github/workflows/v12-d2-walkforward-scope-timing.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  timing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout merged main authority
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: daf7247c320b1bb61eebd943b23f3ca694b088ef
+          path: app
+          persist-credentials: false
+
+      - name: Checkout frozen runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Measure walk-forward scopes under Stage C harness
+        working-directory: app
+        run: |
+          mkdir -p artifacts/stagec
+          python - <<'PY'
+          import gc
+          import hashlib
+          import json
+          import math
+          import os
+          import platform
+          import statistics
+          import sys
+          import time
+          from collections import defaultdict
+          from pathlib import Path
+
+          from src.engines.v12_integrated_report_runner import _official_payload, _planning_gw
+          from src.models.team_strength import build_team_strength
+          import src.models.v12_analytics_foundation as af
+          import src.models.v12_stage1_analytics as s1
+
+          runtime = Path("../runtime-data")
+          official = _official_payload(runtime)
+          bootstrap = official["bootstrap"]
+          fixtures = official["fixtures"]
+          planning_gw = _planning_gw(bootstrap)
+          strength = build_team_strength(bootstrap, fixtures)
+
+          def stable(value):
+              return json.dumps(
+                  value,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=False,
+                  allow_nan=False,
+                  default=str,
+              )
+
+          def fp(value):
+              return hashlib.sha256(stable(value).encode("utf-8")).hexdigest()
+
+          def hx(v):
+              return float(v).hex()
+
+          scope_runs = []
+          trace_states = []
+          row_types = []
+          timer_pair_counts = []
+
+          def instrumented_walk(rows):
+              if not gc.isenabled():
+                  raise RuntimeError("GC disabled inside walk-forward timing")
+              trace_states.append({
+                  "trace": repr(sys.gettrace()),
+                  "profile": repr(sys.getprofile()),
+              })
+              row_types.append(sorted({type(row).__module__ + "." + type(row).__qualname__ for row in rows}))
+
+              timers = defaultdict(float)
+              counts = defaultdict(int)
+              raw_trace = []
+              total_start = time.perf_counter()
+
+              t0 = time.perf_counter()
+              clean = [dict(row) for row in rows if s1._i(row.get("gw")) > 0]
+              gws = sorted({s1._i(row.get("gw")) for row in clean})
+              timers["setup_clean_gws"] += time.perf_counter() - t0
+              counts["setup_clean_gws"] += 1
+
+              errors = defaultdict(list)
+              brier = defaultdict(list)
+              logloss = defaultdict(list)
+              folds = 0
+
+              for target_gw in gws:
+                  t0 = time.perf_counter()
+                  train = [row for row in clean if s1._i(row.get("gw")) < target_gw]
+                  timers["fold_train_construct"] += time.perf_counter() - t0
+                  counts["fold_train_construct"] += 1
+
+                  t0 = time.perf_counter()
+                  test = [row for row in clean if s1._i(row.get("gw")) == target_gw]
+                  timers["fold_test_construct"] += time.perf_counter() - t0
+                  counts["fold_test_construct"] += 1
+
+                  if not train or not test:
+                      continue
+                  folds += 1
+
+                  for actual in test:
+                      loop_start = time.perf_counter()
+                      pid = s1._i(actual.get("player_id"), s1._i(actual.get("element")))
+                      position = s1._position(actual.get("position"))
+
+                      t0 = time.perf_counter()
+                      player_train = [
+                          row
+                          for row in train
+                          if s1._i(row.get("player_id"), s1._i(row.get("element"))) == pid
+                      ]
+                      timers["player_train_construct"] += time.perf_counter() - t0
+                      counts["player_train_construct"] += 1
+
+                      t0 = time.perf_counter()
+                      position_train = [
+                          row
+                          for row in train
+                          if s1._position(row.get("position")) == position
+                      ]
+                      timers["position_train_construct"] += time.perf_counter() - t0
+                      counts["position_train_construct"] += 1
+
+                      if not player_train or not position_train:
+                          timers["test_row_total"] += time.perf_counter() - loop_start
+                          counts["test_row_total"] += 1
+                          continue
+
+                      t0 = time.perf_counter()
+                      pos_rate = s1._rate90(position_train, "xgi") or 0.0
+                      season = s1._rate90(player_train, "xgi")
+                      timers["rate90_unweighted"] += time.perf_counter() - t0
+                      counts["rate90_unweighted"] += 2
+                      season = pos_rate if season is None else season
+
+                      t0 = time.perf_counter()
+                      recency_weights = [
+                          0.5 ** (max(0, target_gw - s1._i(row.get("gw"))) / 2.5)
+                          for row in player_train
+                      ]
+                      timers["recency_weights_construct"] += time.perf_counter() - t0
+                      counts["recency_weights_construct"] += 1
+
+                      t0 = time.perf_counter()
+                      recency = s1._rate90(player_train, "xgi", weights=recency_weights)
+                      timers["rate90_recency"] += time.perf_counter() - t0
+                      counts["rate90_recency"] += 1
+                      recency = season if recency is None else recency
+
+                      t0 = time.perf_counter()
+                      opponent_weights = [
+                          weight * s1._clamp(
+                              s1._f(row.get("opponent_strength_weight"), 1.0),
+                              0.5,
+                              1.5,
+                          )
+                          for row, weight in zip(player_train, recency_weights)
+                      ]
+                      timers["opponent_weights_construct"] += time.perf_counter() - t0
+                      counts["opponent_weights_construct"] += 1
+
+                      t0 = time.perf_counter()
+                      opponent = s1._rate90(player_train, "xgi", weights=opponent_weights)
+                      timers["rate90_opponent"] += time.perf_counter() - t0
+                      counts["rate90_opponent"] += 1
+                      opponent = recency if opponent is None else opponent
+
+                      t0 = time.perf_counter()
+                      effective = sum(opponent_weights)
+                      bayes = (
+                          opponent * effective + pos_rate * 4.0
+                      ) / max(1e-9, effective + 4.0)
+                      minutes = max(0.0, s1._f(actual.get("minutes")))
+                      observed = None
+                      if minutes > 0:
+                          observed = 90.0 * max(0.0, s1._f(actual.get("xgi"))) / minutes
+                          for label, prediction in {
+                              "naive_position": pos_rate,
+                              "season_aggregate": season,
+                              "recency": recency,
+                              "opponent_adjusted": opponent,
+                              "bayesian_opponent_adjusted": bayes,
+                          }.items():
+                              errors[label].append(abs(prediction - observed))
+                      timers["xgi_metric_remainder"] += time.perf_counter() - t0
+                      counts["xgi_metric_remainder"] += 1
+
+                      t0 = time.perf_counter()
+                      pos_start = (
+                          2.0 + sum(bool(row.get("starter")) for row in position_train)
+                      ) / (4.0 + len(position_train))
+                      season_start = (
+                          2.0 + sum(bool(row.get("starter")) for row in player_train)
+                      ) / (4.0 + len(player_train))
+                      recent = player_train[-min(4, len(player_train)) :]
+                      recent_start = (
+                          1.5 + sum(bool(row.get("starter")) for row in recent)
+                      ) / (3.0 + len(recent))
+                      bayes_start = (
+                          pos_start * 4.0 + recent_start * len(recent)
+                      ) / (4.0 + len(recent))
+                      y = 1.0 if actual.get("starter") else 0.0
+                      probs = {}
+                      for label, prediction in {
+                          "naive_position": pos_start,
+                          "season_aggregate": season_start,
+                          "recency": recent_start,
+                          "bayesian_opponent_adjusted": bayes_start,
+                      }.items():
+                          p = s1._clamp(prediction, 1e-6, 1.0 - 1e-6)
+                          probs[label] = p
+                          brier[label].append((p - y) ** 2)
+                          logloss[label].append(
+                              -(y * math.log(p) + (1 - y) * math.log(1 - p))
+                          )
+                      timers["starter_metric_remainder"] += time.perf_counter() - t0
+                      counts["starter_metric_remainder"] += 1
+
+                      raw_trace.append({
+                          "target_gw": target_gw,
+                          "player_id": pid,
+                          "match_id": str(actual.get("match_id") or ""),
+                          "position": position,
+                          "player_train_len": len(player_train),
+                          "position_train_len": len(position_train),
+                          "player_train_gws": [s1._i(row.get("gw")) for row in player_train],
+                          "position_train_gws": [s1._i(row.get("gw")) for row in position_train],
+                          "pos_rate": hx(pos_rate),
+                          "season": hx(season),
+                          "recency": hx(recency),
+                          "opponent": hx(opponent),
+                          "effective": hx(effective),
+                          "bayes": hx(bayes),
+                          "observed": None if observed is None else hx(observed),
+                          "pos_start": hx(pos_start),
+                          "season_start": hx(season_start),
+                          "recent_start": hx(recent_start),
+                          "bayes_start": hx(bayes_start),
+                          "probabilities": {k: hx(v) for k, v in probs.items()},
+                      })
+                      timers["test_row_total"] += time.perf_counter() - loop_start
+                      counts["test_row_total"] += 1
+
+              t0 = time.perf_counter()
+              def average(mapping):
+                  return {
+                      key: round(sum(values) / len(values), 6) if values else None
+                      for key, values in mapping.items()
+                  }
+              xgi_mae = average(errors)
+              starter_brier = average(brier)
+              starter_logloss = average(logloss)
+              valid_xgi = {k: v for k, v in xgi_mae.items() if v is not None}
+              valid_start = {k: v for k, v in starter_brier.items() if v is not None}
+              payload = {
+                  "status": "PASS" if folds > 0 and valid_start else "INSUFFICIENT_COMPLETED_FOLDS",
+                  "folds": folds,
+                  "future_leakage": False,
+                  "split": "EXPANDING_WINDOW_BY_GW",
+                  "xgi_mae": xgi_mae,
+                  "starter_brier": starter_brier,
+                  "starter_log_loss": starter_logloss,
+                  "xgi_selected_variant": min(valid_xgi, key=valid_xgi.get) if valid_xgi else None,
+                  "starter_selected_variant": min(valid_start, key=valid_start.get) if valid_start else None,
+                  "complex_model_survives_only_if_metric_improves": True,
+              }
+              timers["final_aggregation"] += time.perf_counter() - t0
+              counts["final_aggregation"] += 1
+              timers["function_total"] = time.perf_counter() - total_start
+              counts["function_total"] = 1
+
+              explicitly_timed = sum(
+                  timers[name]
+                  for name in (
+                      "setup_clean_gws",
+                      "fold_train_construct",
+                      "fold_test_construct",
+                      "player_train_construct",
+                      "position_train_construct",
+                      "rate90_unweighted",
+                      "recency_weights_construct",
+                      "rate90_recency",
+                      "opponent_weights_construct",
+                      "rate90_opponent",
+                      "xgi_metric_remainder",
+                      "starter_metric_remainder",
+                      "final_aggregation",
+                  )
+              )
+              timers["unattributed_timer_overhead_and_control"] = (
+                  timers["function_total"] - explicitly_timed
+              )
+              counts["unattributed_timer_overhead_and_control"] = 1
+
+              pair_count = sum(
+                  counts[name]
+                  for name in (
+                      "setup_clean_gws",
+                      "fold_train_construct",
+                      "fold_test_construct",
+                      "player_train_construct",
+                      "position_train_construct",
+                      "rate90_unweighted",
+                      "recency_weights_construct",
+                      "rate90_recency",
+                      "opponent_weights_construct",
+                      "rate90_opponent",
+                      "xgi_metric_remainder",
+                      "starter_metric_remainder",
+                      "final_aggregation",
+                  )
+              )
+              timer_pair_counts.append(pair_count)
+              scope_runs.append({
+                  "timers": dict(timers),
+                  "counts": dict(counts),
+                  "payload_fingerprint": fp(payload),
+                  "raw_trace_fingerprint": fp(raw_trace),
+                  "raw_trace_rows": len(raw_trace),
+              })
+              return payload
+
+          original_wf = af.walk_forward_validate
+          af.walk_forward_validate = instrumented_walk
+
+          foundation_totals = []
+          foundation_fps = []
+          for i in range(7):
+              before_trace = repr(sys.gettrace())
+              before_profile = repr(sys.getprofile())
+              if before_trace != "None" or before_profile != "None":
+                  raise SystemExit(f"unexpected hooks before Stage C run: {before_trace} {before_profile}")
+              t0 = time.perf_counter()
+              payload = af.require_match_foundation(
+                  af.load_v6_analytics_foundation(
+                      runtime,
+                      bootstrap=bootstrap,
+                      planning_gw=planning_gw,
+                      strength=strength,
+                  )
+              )
+              foundation_totals.append(time.perf_counter() - t0)
+              foundation_fps.append(fp(payload))
+
+          af.walk_forward_validate = original_wf
+
+          # Direct oracle on the exact adjusted rows emitted by Stage C.
+          adjusted = payload["player_match_rows"]
+          oracle_payload = s1.walk_forward_validate(adjusted)
+          if fp(oracle_payload) != scope_runs[-1]["payload_fingerprint"]:
+              raise SystemExit("instrumented walk-forward payload differs from oracle")
+
+          # Harness diagnostics: direct repeated D1 hierarchy vs fresh in-foundation
+          # is measured separately to localize the historical uniform factor.
+          hierarchy_direct = []
+          for _ in range(7):
+              if sys.gettrace() is not None or sys.getprofile() is not None:
+                  raise SystemExit("unexpected trace/profile hook in direct harness")
+              t0 = time.perf_counter()
+              s1.build_hierarchical_priors(adjusted)
+              hierarchy_direct.append(time.perf_counter() - t0)
+
+          # Timer-pair overhead calibration.
+          pairs = int(statistics.median(timer_pair_counts))
+          calibration = []
+          for _ in range(9):
+              t0 = time.perf_counter()
+              for _i in range(pairs):
+                  a = time.perf_counter()
+                  b = time.perf_counter()
+                  if b < a:
+                      raise SystemExit("non-monotonic perf_counter")
+              calibration.append(time.perf_counter() - t0)
+
+          scope_names = sorted(scope_runs[0]["timers"])
+          summary = {}
+          for name in scope_names:
+              vals = [r["timers"][name] for r in scope_runs]
+              summary[name] = {
+                  "samples_seconds": vals,
+                  "median_seconds": statistics.median(vals),
+                  "mean_seconds": statistics.mean(vals),
+                  "min_seconds": min(vals),
+                  "max_seconds": max(vals),
+                  "calls_per_run": scope_runs[0]["counts"].get(name),
+              }
+
+          result = {
+              "schema": 1,
+              "mode": "D2_PREIMPLEMENTATION_SCOPE_TIMING",
+              "main_sha": "daf7247c320b1bb61eebd943b23f3ca694b088ef",
+              "runtime_sha": "9fc2ce5e590518c399765e6fd576bb96db6e5897",
+              "rows": len(adjusted),
+              "rows_fingerprint": fp(adjusted),
+              "planning_gw": planning_gw,
+              "gc_enabled": gc.isenabled(),
+              "sys_gettrace": repr(sys.gettrace()),
+              "sys_getprofile": repr(sys.getprofile()),
+              "row_types_in_stagec_walkforward": row_types,
+              "trace_states_inside_walkforward": trace_states,
+              "foundation": {
+                  "samples_seconds": foundation_totals,
+                  "median_seconds": statistics.median(foundation_totals),
+                  "fingerprints": foundation_fps,
+                  "deterministic": len(set(foundation_fps)) == 1,
+              },
+              "walkforward_scope": summary,
+              "walkforward_payload_fingerprint": fp(oracle_payload),
+              "raw_trace_fingerprint": scope_runs[-1]["raw_trace_fingerprint"],
+              "raw_trace_rows": scope_runs[-1]["raw_trace_rows"],
+              "hierarchy_direct_same_rows": {
+                  "samples_seconds": hierarchy_direct,
+                  "median_seconds": statistics.median(hierarchy_direct),
+              },
+              "timer_calibration": {
+                  "pairs_per_run": pairs,
+                  "samples_seconds": calibration,
+                  "median_seconds": statistics.median(calibration),
+              },
+              "environment": {
+                  "python_version": sys.version,
+                  "image_os": os.environ.get("ImageOS"),
+                  "image_version": os.environ.get("ImageVersion"),
+                  "runner_os": os.environ.get("RUNNER_OS"),
+                  "runner_arch": os.environ.get("RUNNER_ARCH"),
+                  "platform": platform.platform(),
+              },
+          }
+
+          if result["rows"] != 3191:
+              raise SystemExit(f"unexpected rows {result['rows']}")
+          if result["rows_fingerprint"] != "a36eaf2f623c811f4d5d942aa4da3fb8842fa3d456724bb4c9e32fcec5b4b99f":
+              raise SystemExit("input fingerprint changed")
+          if not result["foundation"]["deterministic"]:
+              raise SystemExit("foundation not deterministic")
+          if result["sys_gettrace"] != "None" or result["sys_getprofile"] != "None":
+              raise SystemExit("trace/profile hook remains installed")
+          if any(types != ["builtins.dict"] for types in row_types):
+              raise SystemExit(f"unexpected row type in Stage C: {row_types}")
+
+          Path("artifacts/stagec/d2_walkforward_scope_timing.json").write_text(
+              json.dumps(result, indent=2, sort_keys=True),
+              encoding="utf-8",
+          )
+          print(json.dumps(result, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload immutable timing evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-d2-walkforward-scope-timing-${{ github.run_id }}
+          path: app/artifacts/stagec/d2_walkforward_scope_timing.json
+          if-no-files-found: error
+          retention-days: 14

@@ -419,6 +419,23 @@ def _personal_evidence_resolution(
             "explicit_confirmation": True,
         })
 
+    manual_b64 = str(os.environ.get("FPL_MANUAL_IDENTITY_B64") or "").strip()
+    if manual_b64:
+        from src.runtime_v6.domains.report_plane.manual_identity import (
+            decode_manual_identity_b64,
+        )
+        manual = decode_manual_identity_b64(manual_b64, planning_gw=planning_gw)
+        candidates.append({
+            "source": "ENV:FPL_MANUAL_IDENTITY_B64",
+            "source_class": "MANUAL_CAPTURE_CURRENT",
+            "payload": manual,
+            "observed_at": manual.get("generated_at"),
+            "gw": manual.get("gw"),
+            "auth_state": "MANUAL_CAPTURE",
+            "applicable_planning_gw": planning_gw,
+            "manual_capture_validated": True,
+        })
+
     submitted = _read_json(
         personal_dir / "submitted_picks.json",
         {},

@@ -503,12 +503,36 @@ jobs:
           if set(of) != set(cf):
               failures.append("fixture set differs")
           else:
+              semantic_fields = (
+                  "fingerprint",
+                  "error",
+                  "role_used",
+                  "role_sources",
+              )
               for name in sorted(of):
-                  if of[name] != cf[name]:
-                      failures.append(f"fixture {name} differs: oracle={of[name]} candidate={cf[name]}")
+                  for field in semantic_fields:
+                      if of[name][field] != cf[name][field]:
+                          failures.append(
+                              f"fixture {name} semantic field {field} differs: "
+                              f"oracle={of[name][field]} candidate={cf[name][field]}"
+                          )
 
           if cf["zero_players"]["sufficient_calls"] != 0:
               failures.append("zero-player candidate evaluated _sufficient eagerly")
+          if of["active_role_loo"]["sufficient_calls"] != 32:
+              failures.append("active-role oracle call-count fixture changed")
+          if cf["active_role_loo"]["sufficient_calls"] != 24:
+              failures.append(
+                  "active-role candidate call count should preserve team+role "
+                  "while caching only league+position"
+              )
+          if of["dgw_like_duplicate_player_gw"]["sufficient_calls"] != 24:
+              failures.append("DGW-like oracle call-count fixture changed")
+          if cf["dgw_like_duplicate_player_gw"]["sufficient_calls"] != 16:
+              failures.append(
+                  "DGW-like candidate call count should reduce only "
+                  "league+position calls"
+              )
           if cf["active_role_loo"]["role_used"] is not True:
               failures.append("active role fixture did not exercise role layer")
           if not all(

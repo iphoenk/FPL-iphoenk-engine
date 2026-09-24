@@ -15,8 +15,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install bounded test dependency
+        run: python -m pip install pytest
       - name: Run bounded Stage B tests
-        run: |
-          python -m pytest -q tests/test_public_last_deadline_reconstruction.py
+        run: python -m pytest -q tests/test_public_last_deadline_reconstruction.py
 
 # trigger after workflow registration

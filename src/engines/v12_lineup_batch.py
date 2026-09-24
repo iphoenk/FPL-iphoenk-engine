@@ -545,11 +545,11 @@ def _bench_kernel(
 
     winner = _lexicographic_first(
         (
-            np.round(utility, 6),
-            np.round(expected, 6),
-            -np.round(blank, 9),
-            np.round(ge8, 9),
-            np.round(ge10, 9),
+            python_round_vec(utility, 6),
+            python_round_vec(expected, 6),
+            -python_round_vec(blank, 9),
+            python_round_vec(ge8, 9),
+            python_round_vec(ge10, 9),
         ),
         axis=2,
     )
@@ -578,27 +578,27 @@ def _bench_kernel(
             legal_axis,
             winner,
         ],
-        "expected_autosub_value": np.round(
+        "expected_autosub_value": python_round_vec(
             expected[route_axis, legal_axis, winner],
             6,
         ),
-        "autosub_probability": np.round(
+        "autosub_probability": python_round_vec(
             autosub[route_axis, legal_axis, winner],
             9,
         ),
-        "selected_blank": np.round(
+        "selected_blank": python_round_vec(
             blank[route_axis, legal_axis, winner],
             9,
         ),
-        "selected_ge8": np.round(
+        "selected_ge8": python_round_vec(
             ge8[route_axis, legal_axis, winner],
             9,
         ),
-        "selected_ge10": np.round(
+        "selected_ge10": python_round_vec(
             ge10[route_axis, legal_axis, winner],
             9,
         ),
-        "bench_order_utility": np.round(
+        "bench_order_utility": python_round_vec(
             utility[route_axis, legal_axis, winner],
             6,
         ),
@@ -626,11 +626,11 @@ def _captain_kernel(
     base = xpts_mean - downside_weight * shortfall + upside_weight * excess
     cap = PAIR_CAP
     vice = PAIR_VICE
-    pair_utility = np.round(base[:, cap] + p_dnp[:, cap] * base[:, vice], 6)
-    cap_mean = np.round(xpts_mean[:, cap], 6)
-    vice_fallback = np.round(p_dnp[:, cap] * xpts_mean[:, vice], 6)
-    joint_upside = np.round(excess[:, cap] + p_dnp[:, cap] * excess[:, vice], 6)
-    joint_downside = np.round(shortfall[:, cap] + p_dnp[:, cap] * shortfall[:, vice], 6)
+    pair_utility = python_round_vec(base[:, cap] + p_dnp[:, cap] * base[:, vice], 6)
+    cap_mean = python_round_vec(xpts_mean[:, cap], 6)
+    vice_fallback = python_round_vec(p_dnp[:, cap] * xpts_mean[:, vice], 6)
+    joint_upside = python_round_vec(excess[:, cap] + p_dnp[:, cap] * excess[:, vice], 6)
+    joint_downside = python_round_vec(shortfall[:, cap] + p_dnp[:, cap] * shortfall[:, vice], 6)
     pair_tie = np.broadcast_to(
         np.arange(PAIR_CAP.size, dtype=np.int64)[None, :], pair_utility.shape
     )
@@ -856,7 +856,7 @@ def _selected_cameo_blocking_cost_exact(
         * xpts_mean[batch, reserve_gk_indices]
     )
     counterfactual = outfield_counterfactual + gk_counterfactual
-    return np.round(
+    return python_round_vec(
         np.maximum(0.0, counterfactual - actual_expected_autosub),
         6,
     )
@@ -1841,14 +1841,14 @@ def _family_bench_kernel(
         route_count,
         tuple(layout["position_signature"]),
     )
-    utility_key = np.round(utility, 6)
+    utility_key = python_round_vec(utility, 6)
     winner = _lexicographic_first(
         (
             utility_key,
-            lambda: np.round(expected, 6),
-            lambda: -np.round(blank, 9),
-            lambda: np.round(ge8, 9),
-            lambda: np.round(ge10, 9),
+            lambda: python_round_vec(expected, 6),
+            lambda: -python_round_vec(blank, 9),
+            lambda: python_round_vec(ge8, 9),
+            lambda: python_round_vec(ge10, 9),
             lambda: -tie_rank.astype(np.float64),
         ),
         axis=2,
@@ -1889,10 +1889,10 @@ def _family_bench_kernel(
     )
     candidate_mask = tied_candidates.copy()
     secondary_specs = (
-        (expected, np.round(expected, 6), 6),
-        (blank, -np.round(blank, 9), 9),
-        (ge8, np.round(ge8, 9), 9),
-        (ge10, np.round(ge10, 9), 9),
+        (expected, python_round_vec(expected, 6), 6),
+        (blank, -python_round_vec(blank, 9), 9),
+        (ge8, python_round_vec(ge8, 9), 9),
+        (ge10, python_round_vec(ge10, 9), 9),
     )
     for raw_metric, ranking_key, decimals in secondary_specs:
         active_tie = (
@@ -2006,24 +2006,24 @@ def _family_bench_kernel(
         legal_axis,
         winner,
     ].copy()
-    expected_out = np.round(expected_raw_out, 6)
-    autosub_out = np.round(
+    expected_out = python_round_vec(expected_raw_out, 6)
+    autosub_out = python_round_vec(
         autosub[route_axis, legal_axis, winner],
         9,
     )
-    blank_out = np.round(
+    blank_out = python_round_vec(
         blank[route_axis, legal_axis, winner],
         9,
     )
-    ge8_out = np.round(
+    ge8_out = python_round_vec(
         ge8[route_axis, legal_axis, winner],
         9,
     )
-    ge10_out = np.round(
+    ge10_out = python_round_vec(
         ge10[route_axis, legal_axis, winner],
         9,
     )
-    utility_out = np.round(
+    utility_out = python_round_vec(
         utility[route_axis, legal_axis, winner],
         6,
     )
@@ -2193,7 +2193,7 @@ def _family_captain_kernel(
         ] = corrected
 
     # With vector arithmetic now in scalar operation order, remaining
-    # decimal-half risk is only Python round() versus np.round(). Correct
+    # decimal-half risk is Python scalar rounding versus binary vector arithmetic. Correct
     # those rare pair keys individually with scalar rounding; no full pair
     # recomputation is necessary.
     captain_pair_boundary = (
@@ -2518,23 +2518,23 @@ def _optimize_gw_family(
         + captain["pair_utility"],
         6,
     )
-    expected_before_captain = np.round(
+    expected_before_captain = python_round_vec(
         expected_points
         + bench["expected_autosub_value"],
         6,
     )
-    expected_with_captain = np.round(
+    expected_with_captain = python_round_vec(
         expected_points
         + bench["expected_autosub_value"]
         + captain["expected_captain_multiplier_value"]
         + captain["expected_vice_takeover_value"],
         6,
     )
-    downside = np.round(shortfall, 6)
-    upside = np.round(excess, 6)
+    downside = python_round_vec(shortfall, 6)
+    upside = python_round_vec(excess, 6)
     tactical_mean = np.where(
         tactical_count > 0.0,
-        np.round(
+        python_round_vec(
             tactical_sum / np.maximum(tactical_count, 1.0),
             6,
         ),
@@ -2909,22 +2909,22 @@ def _optimize_gw_chunk(
         base_utility + bench["bench_order_utility"] + captain["pair_utility"],
         6,
     )
-    expected_before_captain = np.round(
+    expected_before_captain = python_round_vec(
         expected_points + bench["expected_autosub_value"],
         6,
     )
-    expected_with_captain = np.round(
+    expected_with_captain = python_round_vec(
         expected_points
         + bench["expected_autosub_value"]
         + captain["expected_captain_multiplier_value"]
         + captain["expected_vice_takeover_value"],
         6,
     )
-    downside = np.round(shortfall, 6)
-    upside = np.round(excess, 6)
+    downside = python_round_vec(shortfall, 6)
+    upside = python_round_vec(excess, 6)
     tactical_mean = np.where(
         tactical_count > 0.0,
-        np.round(tactical_sum / np.maximum(tactical_count, 1.0), 6),
+        python_round_vec(tactical_sum / np.maximum(tactical_count, 1.0), 6),
         0.0,
     )
     winner = _lexicographic_first(

@@ -1,0 +1,196 @@
+name: V12 Stage C foundation discovery-only
+
+on:
+  push:
+    branches:
+      - validation/v12-stagec-foundation-discovery-20260924
+
+permissions:
+  contents: read
+
+jobs:
+  profile-foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact post-Stage-B main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: app
+          persist-credentials: false
+
+      - name: Checkout frozen runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install runtime dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Profile analytics foundation only
+        working-directory: app
+        run: |
+          mkdir -p artifacts/stagec
+          python - <<'PY'
+          import cProfile
+          import hashlib
+          import io
+          import json
+          import pstats
+          import statistics
+          import time
+          from pathlib import Path
+
+          from src.engines.v12_integrated_report_runner import _official_payload, _planning_gw
+          from src.models.team_strength import build_team_strength
+          import src.models.v12_analytics_foundation as af
+
+          runtime = Path("../runtime-data")
+          official = _official_payload(runtime)
+          bootstrap = official["bootstrap"]
+          fixtures = official["fixtures"]
+          planning_gw = _planning_gw(bootstrap)
+          strength = build_team_strength(bootstrap, fixtures)
+
+          names = [
+              "_select_match_source",
+              "_supplemental_player_evidence",
+              "opponent_adjust_match_rows",
+              "build_hierarchical_priors",
+              "distribution_selection_matrix",
+              "walk_forward_validate",
+              "probabilistic_tactical_states",
+          ]
+
+          originals = {name: getattr(af, name) for name in names}
+          samples = {name: [] for name in names}
+
+          def wrapped(name, fn):
+              def inner(*args, **kwargs):
+                  t0 = time.perf_counter()
+                  try:
+                      return fn(*args, **kwargs)
+                  finally:
+                      samples[name].append(time.perf_counter() - t0)
+              return inner
+
+          for name, fn in originals.items():
+              setattr(af, name, wrapped(name, fn))
+
+          totals = []
+          fingerprints = []
+          summaries = []
+          for i in range(3):
+              t0 = time.perf_counter()
+              payload = af.require_match_foundation(
+                  af.load_v6_analytics_foundation(
+                      runtime,
+                      bootstrap=bootstrap,
+                      planning_gw=planning_gw,
+                      strength=strength,
+                  )
+              )
+              elapsed = time.perf_counter() - t0
+              totals.append(elapsed)
+              raw = json.dumps(
+                  payload,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=False,
+                  default=str,
+              ).encode("utf-8")
+              fingerprints.append(hashlib.sha256(raw).hexdigest())
+              summaries.append({
+                  "run": i + 1,
+                  "elapsed_seconds": elapsed,
+                  "joinable_match_rows": len(payload.get("player_match_rows") or []),
+                  "supplemental_player_count": len(
+                      ((payload.get("player_features_payload") or {}).get("players") or {})
+                  ),
+                  "selected_match_source": payload.get("selected_match_source"),
+                  "latest_completed_gw": payload.get("latest_completed_gw"),
+                  "status": payload.get("status"),
+              })
+
+          # restore originals before cProfile so function names remain truthful
+          for name, fn in originals.items():
+              setattr(af, name, fn)
+
+          profiler = cProfile.Profile()
+          profiler.enable()
+          profiled = af.require_match_foundation(
+              af.load_v6_analytics_foundation(
+                  runtime,
+                  bootstrap=bootstrap,
+                  planning_gw=planning_gw,
+                  strength=strength,
+              )
+          )
+          profiler.disable()
+          profiler.dump_stats("artifacts/stagec/foundation.pstats")
+
+          sio = io.StringIO()
+          pstats.Stats(profiler, stream=sio).sort_stats("cumulative").print_stats(80)
+          Path("artifacts/stagec/cprofile_top80.txt").write_text(
+              sio.getvalue(), encoding="utf-8"
+          )
+
+          component = {}
+          for name, vals in samples.items():
+              component[name] = {
+                  "calls": len(vals),
+                  "samples_seconds": vals,
+                  "median_seconds": statistics.median(vals) if vals else None,
+                  "mean_seconds": statistics.mean(vals) if vals else None,
+                  "max_seconds": max(vals) if vals else None,
+              }
+
+          result = {
+              "schema": 1,
+              "mode": "DISCOVERY_ONLY",
+              "production_mutated": False,
+              "v6_mutated": False,
+              "main_sha": "083c5ed82458b4e9cc6505820ac6a88818c3d202",
+              "runtime_sha": "9fc2ce5e590518c399765e6fd576bb96db6e5897",
+              "planning_gw": planning_gw,
+              "runs": summaries,
+              "total": {
+                  "samples_seconds": totals,
+                  "median_seconds": statistics.median(totals),
+                  "mean_seconds": statistics.mean(totals),
+                  "min_seconds": min(totals),
+                  "max_seconds": max(totals),
+              },
+              "component": component,
+              "deterministic_output": len(set(fingerprints)) == 1,
+              "fingerprints": fingerprints,
+              "profiled_joinable_match_rows": len(profiled.get("player_match_rows") or []),
+          }
+          Path("artifacts/stagec/foundation_profile.json").write_text(
+              json.dumps(result, indent=2, sort_keys=True),
+              encoding="utf-8",
+          )
+          print(json.dumps(result, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload immutable discovery evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-stagec-foundation-discovery-${{ github.run_id }}
+          path: |
+            app/artifacts/stagec/foundation_profile.json
+            app/artifacts/stagec/foundation.pstats
+            app/artifacts/stagec/cprofile_top80.txt
+          retention-days: 14
+          if-no-files-found: error

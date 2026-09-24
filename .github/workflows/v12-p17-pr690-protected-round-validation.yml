@@ -1,6 +1,9 @@
 name: P17 PR690 protected-round validation
 
 on:
+  push:
+    branches:
+      - audit/p17-pr690-protected-round-validation-20260924
   workflow_dispatch:
 
 permissions:

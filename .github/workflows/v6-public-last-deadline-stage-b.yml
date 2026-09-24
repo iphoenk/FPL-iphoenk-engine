@@ -1,0 +1,20 @@
+name: V6 Public Last Deadline Stage B
+
+on:
+  push:
+    branches:
+      - v6-public-last-deadline-reconstruction-20260924
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stage-b:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run bounded Stage B tests
+        run: |
+          python -m pytest -q tests/test_public_last_deadline_reconstruction.py

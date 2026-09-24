@@ -113,12 +113,14 @@ jobs:
                   "reason": "No public transfer row for the open planning window; absence alone cannot distinguish no pending transfer from non-visibility."
               }
 
+          entry = entry_r.get("payload") or {}
           history = history_r.get("payload") or {}
           chips = history.get("chips") if isinstance(history, dict) else None
           current_history = history.get("current") if isinstance(history, dict) else None
           pick_payload = picks_r.get("payload") or {}
           entry_history = pick_payload.get("entry_history") if isinstance(pick_payload, dict) else None
 
+          entry_fields = sorted(entry.keys()) if isinstance(entry, dict) else []
           transfer_fields = sorted({k for row in transfers[:20] if isinstance(row, dict) for k in row.keys()})
           pick_fields = sorted({k for row in picks[:20] if isinstance(row, dict) for k in row.keys()})
           entry_history_fields = sorted(entry_history.keys()) if isinstance(entry_history, dict) else []
@@ -131,7 +133,9 @@ jobs:
               "generated_at_utc": now.isoformat(),
               "entry_id": entry_id,
               "last_deadline_gw": last_deadline_gw,
+              "last_deadline_utc": last_deadline.isoformat() if last_deadline else None,
               "planning_gw": planning_gw,
+              "planning_deadline_utc": planning_deadline.isoformat() if planning_deadline else None,
               "endpoint_status": {
                   "bootstrap-static/": bootstrap_r.get("http_status"),
                   "entry/{id}/": entry_r.get("http_status"),
@@ -140,6 +144,7 @@ jobs:
                   "entry/{id}/transfers/": transfers_r.get("http_status"),
               },
               "field_inventory": {
+                  "entry": entry_fields,
                   "picks_row": pick_fields,
                   "picks_entry_history": entry_history_fields,
                   "history_current_row": current_history_fields,

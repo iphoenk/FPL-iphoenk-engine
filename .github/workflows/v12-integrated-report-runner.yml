@@ -1,6 +1,9 @@
 name: V12 integrated report runner
 
 on:
+  push:
+    branches:
+      - audit/p17-cross-route-same-snapshot-20260924
   workflow_dispatch:
     inputs:
       report_mode:
@@ -37,6 +40,7 @@ concurrency:
 jobs:
   parse:
     if: >-
+      github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
       (
         github.event_name == 'issue_comment' &&
@@ -64,7 +68,12 @@ jobs:
           import os, re
           from pathlib import Path
 
-          if os.environ["EVENT_NAME"] == "workflow_dispatch":
+          if os.environ["EVENT_NAME"] == "push":
+              mode = "DEEP"
+              slot = "2026-09-24T14:20:00+07:00"
+              checkpoint = ""
+              profile_mode = "OFF"
+          elif os.environ["EVENT_NAME"] == "workflow_dispatch":
               mode = os.environ.get("INPUT_MODE") or "DEEP"
               slot = os.environ.get("INPUT_SLOT") or ""
               checkpoint = os.environ.get("INPUT_CHECKPOINT") or ""
@@ -103,7 +112,7 @@ jobs:
       - name: Checkout current production main
         uses: actions/checkout@v4
         with:
-          ref: audit/p17-process-pool-same-snapshot-20260924
+          ref: audit/p17-cross-route-same-snapshot-20260924
           path: app
 
       - name: Checkout factual runtime-data-v6
@@ -356,4 +365,4 @@ jobs:
           if [ "$JOB_STATUS" != "success" ] && [ -z "${RUNNER_STATUS:-}" ]; then
             status="FAIL"
           fi
-          gh issue comment 431 --repo "${GITHUB_REPOSITORY}" --body             "VALIDATION_ONLY | branch=audit/p17-process-pool-same-snapshot-20260924 | execution_mode=PROCESS_POOL_EXACT_P1_7 | V12_REPORT_RUN | status=${status} | report_mode=${REPORT_MODE} | report_slot=${REPORT_SLOT} | run_id=${GITHUB_RUN_ID} | artifact=v12-report-${REPORT_MODE}-${GITHUB_RUN_ID} | pre_render=${PRE_RENDER:-UNKNOWN} | post_render=${POST_RENDER:-UNKNOWN} | human_facing=${HUMAN_FACING:-UNKNOWN} | stage3=${STAGE3_STATUS:-UNKNOWN} | action=${STAGE3_ACTION:-UNKNOWN} | mc_paths=${MC_PATHS:-UNKNOWN} | profile_mode=${PROFILE_MODE:-OFF} | integrated_runner=true | fail_operational=true | v6_mutated=false"
+          gh issue comment 431 --repo "${GITHUB_REPOSITORY}" --body             "VALIDATION_ONLY | branch=audit/p17-cross-route-same-snapshot-20260924 | execution_mode=CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7 | V12_REPORT_RUN | status=${status} | report_mode=${REPORT_MODE} | report_slot=${REPORT_SLOT} | run_id=${GITHUB_RUN_ID} | artifact=v12-report-${REPORT_MODE}-${GITHUB_RUN_ID} | pre_render=${PRE_RENDER:-UNKNOWN} | post_render=${POST_RENDER:-UNKNOWN} | human_facing=${HUMAN_FACING:-UNKNOWN} | stage3=${STAGE3_STATUS:-UNKNOWN} | action=${STAGE3_ACTION:-UNKNOWN} | mc_paths=${MC_PATHS:-UNKNOWN} | profile_mode=${PROFILE_MODE:-OFF} | integrated_runner=true | fail_operational=true | v6_mutated=false"

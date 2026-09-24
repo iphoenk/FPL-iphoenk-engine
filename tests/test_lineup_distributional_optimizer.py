@@ -2572,6 +2572,34 @@ def test_python_round_vec_bitwise_matches_python_round_near_decimal_halves() -> 
         assert np.array_equal(got.view(np.int64), expected.view(np.int64))
 
 
+def test_cross_route_route_utility_rounding_matches_scalar_oracle_at_production_half_boundaries() -> None:
+    from src.engines import v12_lineup_batch as batch
+
+    # Frozen 9fc2ce5e production S14 exposed FT-shadow drift when the
+    # cross-route route-utility path used np.round at decimal-half boundaries.
+    # These centers reproduce the exact 1e-6 split seen in that artifact.
+    centers = np.asarray(
+        [
+            48.1041715,
+            50.4109955,
+            50.2572345,
+            50.1011815,
+            50.5610645,
+            50.4541465,
+        ],
+        dtype=np.float64,
+    )
+    observed = batch.python_round_vec(centers, 6)
+    expected = np.asarray([round(float(value), 6) for value in centers])
+    assert observed.view(np.int64).tolist() == expected.view(np.int64).tolist()
+
+    # Regression guard: both cross-route route-utility kernels must use the
+    # scalar-exact rounding primitive rather than NumPy's decimal rounding.
+    source = Path(batch.__file__).read_text(encoding="utf-8")
+    assert "route_utility = np.round(" not in source
+    assert source.count("route_utility = python_round_vec(") >= 2
+
+
 def test_python_round_vec_domain_guards() -> None:
     from src.engines.v12_lineup_batch import LineupBatchError, python_round_vec
 

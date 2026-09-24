@@ -1,0 +1,167 @@
+name: P1.7 FT-shadow bit-exact validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repair branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/p17-ft-shadow-bit-exact-20260924
+          path: app
+
+      - name: Checkout frozen V6 snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run bounded exactness regression tests
+        working-directory: app
+        run: |
+          pytest -q tests/test_lineup_distributional_optimizer.py \
+            -k "p17_family_aggregate_matches_scalar_element_order_at_production_half_boundary or p17_production_ft_shadow_half_values_use_python_round_semantics or p17_core14_family_kernel_matches_scalar_across_positions_and_five_gw or p17_cross_route_batch_matches_scalar_one_transfer_families"
+
+      - name: Run default cross-route DEEP
+        working-directory: app
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p .cache/v12-stage2 .cache/default-p17 .cache/v12-mc artifacts/ab/default
+          export V12_STAGE2_DERIVED_CACHE_DIR=.cache/v12-stage2
+          export V12_P17_DECISION_CACHE_DIR=.cache/default-p17
+          export V12_MC_SIM_CACHE_DIR=.cache/v12-mc
+          set +e
+          python -m src.engines.v12_integrated_report_runner \
+            --runtime-data-root ../runtime-data \
+            --report-mode DEEP \
+            --report-slot 2026-09-24T14:20:00+07:00 \
+            --output-dir artifacts/ab/default
+          rc=$?
+          set -e
+          echo "default_runner_exit=$rc"
+          test -f artifacts/ab/default/report_bundle.json
+          test -f artifacts/ab/default/execution_proof.json
+
+      - name: Switch workspace only to kill-switch mode
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("config/intelligence/v12_package_utility.json")
+          cfg = json.loads(path.read_text(encoding="utf-8"))
+          assert cfg["performance"]["execution_mode"] == "CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7"
+          cfg["performance"]["execution_mode"] = "PROCESS_POOL_EXACT_P1_7"
+          path.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Run kill-switch DEEP
+        working-directory: app
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p .cache/kill-p17 artifacts/ab/kill
+          export V12_STAGE2_DERIVED_CACHE_DIR=.cache/v12-stage2
+          export V12_P17_DECISION_CACHE_DIR=.cache/kill-p17
+          export V12_MC_SIM_CACHE_DIR=.cache/v12-mc
+          set +e
+          python -m src.engines.v12_integrated_report_runner \
+            --runtime-data-root ../runtime-data \
+            --report-mode DEEP \
+            --report-slot 2026-09-24T14:20:00+07:00 \
+            --output-dir artifacts/ab/kill
+          rc=$?
+          set -e
+          echo "kill_runner_exit=$rc"
+          test -f artifacts/ab/kill/report_bundle.json
+          test -f artifacts/ab/kill/execution_proof.json
+
+      - name: Enforce exact S14 and S15B equality
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          def load(label):
+              return json.loads(Path(f"artifacts/ab/{label}/report_bundle.json").read_text(encoding="utf-8"))
+
+          def section(bundle, section_id):
+              rows = bundle["report"]["sections"]
+              return next(row for row in rows if row["section_id"] == section_id)
+
+          def canonical(value):
+              return json.dumps(
+                  value,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=False,
+                  allow_nan=False,
+              ).encode("utf-8")
+
+          default = load("default")
+          kill = load("kill")
+          result = {
+              "default_cpu_count": default["execution_proof"].get("cpu_count"),
+              "kill_cpu_count": kill["execution_proof"].get("cpu_count"),
+              "sections": {},
+          }
+          failures = []
+          for section_id in ("S14", "S15B"):
+              left = section(default, section_id)
+              right = section(kill, section_id)
+              left_bytes = canonical(left)
+              right_bytes = canonical(right)
+              equal = left_bytes == right_bytes
+              result["sections"][section_id] = {
+                  "bit_identical_canonical_json": equal,
+                  "default_sha256": hashlib.sha256(left_bytes).hexdigest(),
+                  "kill_sha256": hashlib.sha256(right_bytes).hexdigest(),
+              }
+              if not equal:
+                  failures.append(section_id)
+          if not isinstance(result["default_cpu_count"], int) or result["default_cpu_count"] < 1:
+              failures.append("DEFAULT_CPU_COUNT")
+          if not isinstance(result["kill_cpu_count"], int) or result["kill_cpu_count"] < 1:
+              failures.append("KILL_CPU_COUNT")
+          Path("artifacts/ab/comparison.json").write_text(
+              json.dumps(result, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(result, sort_keys=True))
+          if failures:
+              raise SystemExit("exactness validation failed: " + ",".join(failures))
+          PY
+
+      - name: Upload A/B evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p17-ft-shadow-bit-exact-${{ github.run_id }}
+          path: |
+            app/artifacts/ab/default/report_bundle.json
+            app/artifacts/ab/default/execution_proof.json
+            app/artifacts/ab/kill/report_bundle.json
+            app/artifacts/ab/kill/execution_proof.json
+            app/artifacts/ab/comparison.json
+          retention-days: 14

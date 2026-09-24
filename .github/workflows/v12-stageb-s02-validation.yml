@@ -1,0 +1,169 @@
+name: V12 Stage B S02 validation-only
+
+on:
+  push:
+    branches:
+      - validation/v12-stageb-s02-20260924
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v12-stageb-s02-validation
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact Stage B candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: app
+          persist-credentials: false
+
+      - name: Checkout frozen runtime-data-v6 snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install runtime dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Restore deterministic Stage-2 cache read-only
+        uses: actions/cache/restore@v4
+        with:
+          path: app/.cache/v12-stage2
+          key: v12-stage2-derived-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_stage2_derived_cache.py', 'app/src/models/historical_projection.py', 'app/src/engines/v12_contextual_dynamics.py', 'app/src/engines/v12_player_events.py', 'app/src/engines/v12_player_minutes.py', 'app/src/engines/v12_position_probability_components.py', 'app/src/engines/p0_decision_quality.py', 'app/src/models/v12_stage1_analytics.py', 'app/src/rules.py', 'app/config/intelligence/player_events.json', 'app/config/intelligence/player_minutes.json', 'app/config/intelligence/historical_priors.json', 'app/config/intelligence/v12_contextual_dynamics.json') }}-validation-${{ github.run_id }}
+          restore-keys: |
+            v12-stage2-derived-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_stage2_derived_cache.py', 'app/src/models/historical_projection.py', 'app/src/engines/v12_contextual_dynamics.py', 'app/src/engines/v12_player_events.py', 'app/src/engines/v12_player_minutes.py', 'app/src/engines/v12_position_probability_components.py', 'app/src/engines/p0_decision_quality.py', 'app/src/models/v12_stage1_analytics.py', 'app/src/rules.py', 'app/config/intelligence/player_events.json', 'app/config/intelligence/player_minutes.json', 'app/config/intelligence/historical_priors.json', 'app/config/intelligence/v12_contextual_dynamics.json') }}-
+
+      - name: Restore exact P1.7 cache read-only
+        uses: actions/cache/restore@v4
+        with:
+          path: app/.cache/v12-p17
+          key: v12-p17-decision-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_lineup_optimizer.py', 'app/config/intelligence/v12_lineup_optimizer.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-validation-${{ github.run_id }}
+          restore-keys: |
+            v12-p17-decision-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_lineup_optimizer.py', 'app/config/intelligence/v12_lineup_optimizer.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-
+
+      - name: Restore deterministic MC cache read-only
+        uses: actions/cache/restore@v4
+        with:
+          path: app/.cache/v12-mc
+          key: v12-mc-summary-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_monte_carlo.py', 'app/config/intelligence/v12_monte_carlo.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-validation-${{ github.run_id }}
+          restore-keys: |
+            v12-mc-summary-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_monte_carlo.py', 'app/config/intelligence/v12_monte_carlo.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-
+
+      - name: Execute frozen-snapshot DEEP candidate
+        working-directory: app
+        env:
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/v12-stage2
+          V12_P17_DECISION_CACHE_DIR: .cache/v12-p17
+          V12_MC_SIM_CACHE_DIR: .cache/v12-mc
+        run: |
+          mkdir -p .cache/v12-stage2 .cache/v12-p17 .cache/v12-mc
+          python -m src.engines.v12_integrated_report_runner \
+            --runtime-data-root "../runtime-data" \
+            --report-mode DEEP \
+            --report-slot "2026-09-24T18:30:00+07:00" \
+            --output-dir "artifacts/v12-report"
+
+      - name: Enforce Stage3 candidate acceptance
+        working-directory: app
+        run: |
+          model_sha="$(git rev-parse HEAD)"
+          runtime_sha="$(git -C ../runtime-data rev-parse HEAD)"
+          python -m src.engines.v12_stage3_acceptance \
+            --bundle artifacts/v12-report/report_bundle.json \
+            --runtime-data-root ../runtime-data \
+            --model-sha "$model_sha" \
+            --runtime-sha "$runtime_sha" \
+            --canonical control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt \
+            --output artifacts/v12-report/stage3_acceptance.json
+
+      - name: Enforce S02 and human-facing closure
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          execution = json.loads(Path("artifacts/v12-report/execution_proof.json").read_text(encoding="utf-8"))
+          stage3 = json.loads(Path("artifacts/v12-report/stage3_acceptance.json").read_text(encoding="utf-8"))
+          bundle = json.loads(Path("artifacts/v12-report/report_bundle.json").read_text(encoding="utf-8"))
+
+          expected = {
+              "runner_status": "PASS",
+              "pre_render_qa_status": "PASS",
+              "post_render_qa_status": "PASS",
+              "human_facing_qa_status": "PASS",
+          }
+          for key, value in expected.items():
+              actual = execution.get(key)
+              print(f"{key}={actual}")
+              if actual != value:
+                  raise SystemExit(f"{key} expected {value}, got {actual}")
+
+          print(f"stage3={stage3.get('status')}")
+          if stage3.get("status") != "PASS":
+              raise SystemExit(f"Stage3 expected PASS, got {stage3.get('status')}")
+
+          def find_s02(value):
+              if isinstance(value, dict):
+                  if "S02" in value and isinstance(value["S02"], dict):
+                      return value["S02"]
+                  for nested in value.values():
+                      found = find_s02(nested)
+                      if found is not None:
+                          return found
+              elif isinstance(value, list):
+                  for nested in value:
+                      found = find_s02(nested)
+                      if found is not None:
+                          return found
+              return None
+
+          s02 = find_s02(bundle)
+          if not isinstance(s02, dict):
+              raise SystemExit("S02 payload not found")
+          print("S02=", json.dumps(s02, sort_keys=True)[:3000])
+          if s02.get("status") != "COMPLETE":
+              raise SystemExit(f"S02 expected COMPLETE, got {s02.get('status')}")
+          personal = ((s02.get("payload") or {}).get("personal_resolution") or {})
+          if personal.get("stale") is True:
+              raise SystemExit("S02 personal evidence remained stale")
+          if personal.get("status") != "CURRENT_VALID":
+              raise SystemExit(f"S02 personal status expected CURRENT_VALID, got {personal.get('status')}")
+          rows = ((s02.get("payload") or {}).get("rows") or [])
+          ids = [int(row.get("element_id") or row.get("element") or 0) for row in rows]
+          if len(ids) != 15 or len(set(ids)) != 15:
+              raise SystemExit(f"S02 exact15 failed: {ids}")
+          if 124 not in ids or 565 in ids:
+              raise SystemExit(f"S02 expected Groß 124 IN and Sangaré 565 OUT: {ids}")
+          print("S02_EXACT15=", ids)
+          PY
+
+      - name: Upload immutable validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-stageb-s02-validation-${{ github.run_id }}
+          path: |
+            app/artifacts/v12-report/report_bundle.json
+            app/artifacts/v12-report/report_body.md
+            app/artifacts/v12-report/execution_proof.json
+            app/artifacts/v12-report/stage3_acceptance.json
+          if-no-files-found: error
+          retention-days: 14

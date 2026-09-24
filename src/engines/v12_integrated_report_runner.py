@@ -3593,6 +3593,7 @@ def run_deep(
         "report_slot": report_slot,
         "report_mode": "DEEP",
         "planning_gw": planning_gw,
+        "cpu_count": max(1, int(os.cpu_count() or 1)),
         "runner_status": runner_status,
         "canonical_expected_section_ids": contract.get("expected_section_ids"),
         "rendered_section_ids": parsed_ids,

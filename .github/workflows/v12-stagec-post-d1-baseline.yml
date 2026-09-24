@@ -1,0 +1,411 @@
+name: V12 Stage C post-D1 baseline
+
+on:
+  push:
+    branches:
+      - validation/v12-stagec-post-d1-baseline-20260925
+    paths:
+      - ".github/workflows/v12-stagec-post-d1-baseline.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout merged main authority
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: daf7247c320b1bb61eebd943b23f3ca694b088ef
+          path: app
+          persist-credentials: false
+
+      - name: Checkout pre-D1 oracle
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 083c5ed82458b4e9cc6505820ac6a88818c3d202
+          path: oracle
+          persist-credentials: false
+
+      - name: Checkout frozen runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Profile post-D1 foundation with production-like GC
+        working-directory: app
+        run: |
+          mkdir -p artifacts/stagec
+          python - <<'PY'
+          import cProfile
+          import gc
+          import hashlib
+          import io
+          import json
+          import os
+          import platform
+          import pstats
+          import statistics
+          import sys
+          import time
+          from pathlib import Path
+
+          from src.engines.v12_integrated_report_runner import _official_payload, _planning_gw
+          from src.models.team_strength import build_team_strength
+          import src.models.v12_analytics_foundation as af
+
+          runtime = Path("../runtime-data")
+          official = _official_payload(runtime)
+          bootstrap = official["bootstrap"]
+          fixtures = official["fixtures"]
+          planning_gw = _planning_gw(bootstrap)
+          strength = build_team_strength(bootstrap, fixtures)
+
+          def stable(value):
+              return json.dumps(
+                  value,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=False,
+                  allow_nan=False,
+                  default=str,
+              )
+
+          def fp(value):
+              return hashlib.sha256(stable(value).encode("utf-8")).hexdigest()
+
+          def stats_collections():
+              return tuple(int(x.get("collections", 0)) for x in gc.get_stats())
+
+          def delta(a, b):
+              return [int(y - x) for x, y in zip(a, b)]
+
+          names = [
+              "_select_match_source",
+              "_supplemental_player_evidence",
+              "opponent_adjust_match_rows",
+              "build_hierarchical_priors",
+              "distribution_selection_matrix",
+              "walk_forward_validate",
+              "probabilistic_tactical_states",
+          ]
+
+          originals = {name: getattr(af, name) for name in names}
+          samples = {name: [] for name in names}
+          component_gc_enabled = {name: [] for name in names}
+          component_gc_collections = {name: [] for name in names}
+
+          def wrapped(name, fn):
+              def inner(*args, **kwargs):
+                  before = stats_collections()
+                  component_gc_enabled[name].append(gc.isenabled())
+                  t0 = time.perf_counter()
+                  try:
+                      return fn(*args, **kwargs)
+                  finally:
+                      samples[name].append(time.perf_counter() - t0)
+                      component_gc_collections[name].append(
+                          delta(before, stats_collections())
+                      )
+              return inner
+
+          for name, fn in originals.items():
+              setattr(af, name, wrapped(name, fn))
+
+          totals = []
+          fingerprints = []
+          summaries = []
+          gc_run_states = []
+          payload_for_rows = None
+
+          # Production-like baseline: GC stays at Python default enabled state.
+          # There is deliberately NO forced gc.collect() before measured runs.
+          for i in range(5):
+              before_stats = stats_collections()
+              state_before = gc.isenabled()
+              t0 = time.perf_counter()
+              payload = af.require_match_foundation(
+                  af.load_v6_analytics_foundation(
+                      runtime,
+                      bootstrap=bootstrap,
+                      planning_gw=planning_gw,
+                      strength=strength,
+                  )
+              )
+              elapsed = time.perf_counter() - t0
+              after_stats = stats_collections()
+              state_after = gc.isenabled()
+              if payload_for_rows is None:
+                  payload_for_rows = payload
+              totals.append(elapsed)
+              fingerprints.append(fp(payload))
+              summaries.append({
+                  "run": i + 1,
+                  "elapsed_seconds": elapsed,
+                  "joinable_match_rows": len(payload.get("player_match_rows") or []),
+                  "selected_match_source": payload.get("selected_match_source"),
+                  "latest_completed_gw": payload.get("latest_completed_gw"),
+                  "status": payload.get("status"),
+              })
+              gc_run_states.append({
+                  "run": i + 1,
+                  "enabled_before": state_before,
+                  "enabled_after": state_after,
+                  "collection_delta_by_generation": delta(before_stats, after_stats),
+              })
+
+          for name, fn in originals.items():
+              setattr(af, name, fn)
+
+          # cProfile itself runs under the same GC-enabled/no-precollect condition.
+          profile_gc_enabled_before = gc.isenabled()
+          profile_before_stats = stats_collections()
+          profiler = cProfile.Profile()
+          profiler.enable()
+          profiled = af.require_match_foundation(
+              af.load_v6_analytics_foundation(
+                  runtime,
+                  bootstrap=bootstrap,
+                  planning_gw=planning_gw,
+                  strength=strength,
+              )
+          )
+          profiler.disable()
+          profile_after_stats = stats_collections()
+          profile_gc_enabled_after = gc.isenabled()
+          profiler.dump_stats("artifacts/stagec/foundation_post_d1.pstats")
+
+          sio = io.StringIO()
+          pstats.Stats(profiler, stream=sio).sort_stats("cumulative").print_stats(100)
+          Path("artifacts/stagec/cprofile_post_d1_top100.txt").write_text(
+              sio.getvalue(), encoding="utf-8"
+          )
+
+          component = {}
+          for name, vals in samples.items():
+              shares = [
+                  vals[i] / totals[i]
+                  for i in range(min(len(vals), len(totals)))
+                  if totals[i] > 0
+              ]
+              component[name] = {
+                  "calls": len(vals),
+                  "samples_seconds": vals,
+                  "median_seconds": statistics.median(vals) if vals else None,
+                  "mean_seconds": statistics.mean(vals) if vals else None,
+                  "min_seconds": min(vals) if vals else None,
+                  "max_seconds": max(vals) if vals else None,
+                  "per_run_share": shares,
+                  "median_per_run_share": statistics.median(shares) if shares else None,
+                  "gc_enabled_inside_all": all(component_gc_enabled[name]),
+                  "gc_enabled_inside_samples": component_gc_enabled[name],
+                  "gc_collection_delta_by_generation": component_gc_collections[name],
+              }
+
+          rows = (payload_for_rows or {}).get("player_match_rows") or []
+          result = {
+              "schema": 2,
+              "mode": "POST_D1_D2_BASELINE",
+              "production_mutated": False,
+              "v6_mutated": False,
+              "main_sha": "daf7247c320b1bb61eebd943b23f3ca694b088ef",
+              "d1_source_sha": "f5f990fbaa6c5954e789b869388562d19abcb80b",
+              "runtime_sha": "9fc2ce5e590518c399765e6fd576bb96db6e5897",
+              "planning_gw": planning_gw,
+              "rows": len(rows),
+              "rows_fingerprint": fp(rows),
+              "runs": summaries,
+              "total": {
+                  "samples_seconds": totals,
+                  "median_seconds": statistics.median(totals),
+                  "mean_seconds": statistics.mean(totals),
+                  "min_seconds": min(totals),
+                  "max_seconds": max(totals),
+              },
+              "component": component,
+              "deterministic_output": len(set(fingerprints)) == 1,
+              "fingerprints": fingerprints,
+              "profiled_fingerprint": fp(profiled),
+              "profiled_joinable_match_rows": len(profiled.get("player_match_rows") or []),
+              "gc": {
+                  "production_like_policy": "ENABLED_NO_FORCED_PRECOLLECT",
+                  "enabled_at_process_start": True,
+                  "run_states": gc_run_states,
+                  "cprofile_enabled_before": profile_gc_enabled_before,
+                  "cprofile_enabled_after": profile_gc_enabled_after,
+                  "cprofile_collection_delta_by_generation": delta(
+                      profile_before_stats, profile_after_stats
+                  ),
+              },
+              "environment": {
+                  "python_version": sys.version,
+                  "image_os": os.environ.get("ImageOS"),
+                  "image_version": os.environ.get("ImageVersion"),
+                  "runner_os": os.environ.get("RUNNER_OS"),
+                  "runner_arch": os.environ.get("RUNNER_ARCH"),
+                  "platform": platform.platform(),
+              },
+          }
+
+          if not gc.isenabled():
+              raise SystemExit("GC unexpectedly disabled in post-D1 profiler")
+          if not all(
+              item["enabled_before"] and item["enabled_after"]
+              for item in gc_run_states
+          ):
+              raise SystemExit("GC state changed during measured foundation runs")
+          if not all(v["gc_enabled_inside_all"] for v in component.values()):
+              raise SystemExit("GC disabled inside a measured foundation component")
+          if len(rows) != 3191:
+              raise SystemExit(f"unexpected row count {len(rows)}")
+          if result["rows_fingerprint"] != "a36eaf2f623c811f4d5d942aa4da3fb8842fa3d456724bb4c9e32fcec5b4b99f":
+              raise SystemExit("frozen input fingerprint changed")
+          if not result["deterministic_output"]:
+              raise SystemExit("foundation output not deterministic")
+
+          Path("artifacts/stagec/foundation_post_d1_profile.json").write_text(
+              json.dumps(result, indent=2, sort_keys=True),
+              encoding="utf-8",
+          )
+          print(json.dumps(result, indent=2, sort_keys=True))
+          PY
+
+      - name: Audit GC state of historical harness styles
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import gc
+          import importlib.util
+          import json
+          import statistics
+          import time
+          from pathlib import Path
+
+          from src.engines.v12_integrated_report_runner import _official_payload, _planning_gw
+          from src.models.team_strength import build_team_strength
+          from src.models.v12_analytics_foundation import (
+              load_v6_analytics_foundation,
+              require_match_foundation,
+          )
+
+          runtime = Path("../runtime-data")
+          official = _official_payload(runtime)
+          bootstrap = official["bootstrap"]
+          fixtures = official["fixtures"]
+          planning_gw = _planning_gw(bootstrap)
+          strength = build_team_strength(bootstrap, fixtures)
+          foundation = require_match_foundation(
+              load_v6_analytics_foundation(
+                  runtime,
+                  bootstrap=bootstrap,
+                  planning_gw=planning_gw,
+                  strength=strength,
+              )
+          )
+          rows = foundation["player_match_rows"]
+
+          def load_module(name, path):
+              spec = importlib.util.spec_from_file_location(name, path)
+              mod = importlib.util.module_from_spec(spec)
+              assert spec and spec.loader
+              spec.loader.exec_module(mod)
+              return mod
+
+          oracle = load_module(
+              "pre_d1_stage1",
+              Path("../oracle/src/models/v12_stage1_analytics.py"),
+          )
+
+          state = {
+              "profiler_style_entry_gc_enabled": gc.isenabled(),
+              "timing_scope_style_entry_gc_enabled": gc.isenabled(),
+          }
+          gc.collect()
+          state["ab_style_after_forced_collect_gc_enabled"] = gc.isenabled()
+
+          # Diagnostic only: test whether the A/B harness's forced pre-collection
+          # materially changes the old oracle timing on this same runner.
+          oracle.build_hierarchical_priors(rows)
+          natural = []
+          precollect = []
+          paired = []
+          for i in range(9):
+              if i % 2 == 0:
+                  t0 = time.perf_counter()
+                  oracle.build_hierarchical_priors(rows)
+                  a = time.perf_counter() - t0
+                  gc.collect()
+                  t0 = time.perf_counter()
+                  oracle.build_hierarchical_priors(rows)
+                  b = time.perf_counter() - t0
+                  order = "NATURAL_THEN_PRECOLLECT"
+              else:
+                  gc.collect()
+                  t0 = time.perf_counter()
+                  oracle.build_hierarchical_priors(rows)
+                  b = time.perf_counter() - t0
+                  t0 = time.perf_counter()
+                  oracle.build_hierarchical_priors(rows)
+                  a = time.perf_counter() - t0
+                  order = "PRECOLLECT_THEN_NATURAL"
+              natural.append(a)
+              precollect.append(b)
+              paired.append({
+                  "pair": i + 1,
+                  "order": order,
+                  "natural_seconds": a,
+                  "precollect_seconds": b,
+              })
+
+          diagnostic = {
+              "gc_state": state,
+              "timeit_used_in_historical_harnesses": False,
+              "historical_ab_used_forced_gc_collect_before_each_sample": True,
+              "oracle_gc_diagnostic": {
+                  "pairs": paired,
+                  "natural_median_seconds": statistics.median(natural),
+                  "precollect_median_seconds": statistics.median(precollect),
+                  "precollect_vs_natural_fraction": (
+                      statistics.median(precollect) / statistics.median(natural)
+                      if statistics.median(natural) > 0 else None
+                  ),
+              },
+          }
+          if not all(state.values()):
+              raise SystemExit(f"GC unexpectedly disabled: {state}")
+          Path("artifacts/stagec/gc_harness_audit.json").write_text(
+              json.dumps(diagnostic, indent=2, sort_keys=True),
+              encoding="utf-8",
+          )
+          print(json.dumps(diagnostic, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload immutable post-D1 baseline evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-stagec-post-d1-baseline-${{ github.run_id }}
+          path: |
+            app/artifacts/stagec/foundation_post_d1_profile.json
+            app/artifacts/stagec/cprofile_post_d1_top100.txt
+            app/artifacts/stagec/foundation_post_d1.pstats
+            app/artifacts/stagec/gc_harness_audit.json
+          if-no-files-found: error
+          retention-days: 14

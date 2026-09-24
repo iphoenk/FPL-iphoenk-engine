@@ -1,0 +1,400 @@
+name: V12 Stage C hierarchical scope timing
+
+on:
+  push:
+    branches:
+      - validation/v12-stagec-foundation-discovery-20260924
+    paths:
+      - ".github/workflows/v12-stagec-hierarchy-scope-timing.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  timing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact post-Stage-B main
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 083c5ed82458b4e9cc6505820ac6a88818c3d202
+          path: app
+          persist-credentials: false
+
+      - name: Checkout frozen runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install runtime dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Measure hierarchical scopes
+        working-directory: app
+        run: |
+          mkdir -p artifacts/stagec
+          python - <<'PY'
+          import hashlib
+          import json
+          import math
+          import resource
+          import statistics
+          import time
+          from collections import defaultdict
+          from pathlib import Path
+
+          from src.engines.v12_integrated_report_runner import _official_payload, _planning_gw
+          from src.models.team_strength import build_team_strength
+          from src.models.v12_analytics_foundation import (
+              load_v6_analytics_foundation,
+              require_match_foundation,
+          )
+          import src.models.v12_stage1_analytics as s1
+
+          runtime = Path("../runtime-data")
+          official = _official_payload(runtime)
+          bootstrap = official["bootstrap"]
+          fixtures = official["fixtures"]
+          planning_gw = _planning_gw(bootstrap)
+          strength = build_team_strength(bootstrap, fixtures)
+          foundation = require_match_foundation(
+              load_v6_analytics_foundation(
+                  runtime,
+                  bootstrap=bootstrap,
+                  planning_gw=planning_gw,
+                  strength=strength,
+              )
+          )
+          rows = foundation["player_match_rows"]
+
+          specs = {
+              "xg90": ("xg", "opponent_strength_weight", 8.0, 5.0, 5.0),
+              "xa90": ("xa", "opponent_strength_weight", 10.0, 6.0, 6.0),
+              "saves90": ("saves", "opponent_attack_weight", 6.0, 4.0, 4.0),
+              "defcon90": ("defensive", "opponent_attack_weight", 7.0, 5.0, 5.0),
+          }
+
+          def fingerprint(value):
+              raw = json.dumps(
+                  value,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=False,
+                  allow_nan=False,
+                  default=str,
+              ).encode("utf-8")
+              return hashlib.sha256(raw).hexdigest()
+
+          def instrumented_build(rows):
+              timers = defaultdict(float)
+              counts = defaultdict(int)
+              total_start = time.perf_counter()
+
+              t0 = time.perf_counter()
+              clean = [dict(row) for row in rows]
+              by_player = defaultdict(list)
+              by_position = defaultdict(list)
+              by_team = defaultdict(list)
+              by_role = defaultdict(list)
+              for row in clean:
+                  pid = s1._i(row.get("player_id"), s1._i(row.get("element")))
+                  if pid <= 0:
+                      continue
+                  by_player[pid].append(row)
+                  by_position[s1._position(row.get("position"))].append(row)
+                  by_team[s1._i(row.get("team_id"))].append(row)
+                  role = str(row.get("actual_role") or "").strip().upper()
+                  if role:
+                      by_role[role].append(row)
+              timers["setup_grouping"] += time.perf_counter() - t0
+              counts["setup_grouping"] += 1
+
+              players = {}
+              loop_start = time.perf_counter()
+              for pid, history in by_player.items():
+                  latest = max(
+                      history,
+                      key=lambda row: (
+                          s1._i(row.get("gw")),
+                          str(row.get("match_id") or ""),
+                      ),
+                  )
+                  position = s1._position(latest.get("position"))
+                  team_id = s1._i(latest.get("team_id"))
+                  role = str(latest.get("actual_role") or "").strip().upper() or None
+                  bundle = {
+                      "position": position,
+                      "team_id": team_id,
+                      "actual_role": role,
+                      "role_layer_used": bool(role),
+                      "variables": {},
+                  }
+                  for name, (field, weight, pos_k, role_k, team_k) in specs.items():
+                      t0 = time.perf_counter()
+                      league_mass, league_exp = s1._sufficient(clean, field, weight)
+                      timers["league_sufficient"] += time.perf_counter() - t0
+                      counts["league_sufficient"] += 1
+
+                      league_rate = (
+                          league_mass / league_exp if league_exp > 0 else 0.0
+                      )
+
+                      t0 = time.perf_counter()
+                      pos_mass, pos_exp = s1._sufficient(
+                          by_position.get(position, []), field, weight
+                      )
+                      timers["position_sufficient"] += time.perf_counter() - t0
+                      counts["position_sufficient"] += 1
+
+                      pos_rate = (
+                          pos_mass + league_rate * pos_k
+                      ) / max(1e-9, pos_exp + pos_k)
+
+                      t0 = time.perf_counter()
+                      team_loo = [
+                          row
+                          for row in by_team.get(team_id, [])
+                          if s1._i(
+                              row.get("player_id"),
+                              s1._i(row.get("element")),
+                          ) != pid
+                      ]
+                      timers["team_loo_construct"] += time.perf_counter() - t0
+                      counts["team_loo_construct"] += 1
+
+                      t0 = time.perf_counter()
+                      team_mass, team_exp = s1._sufficient(
+                          team_loo, field, weight
+                      )
+                      timers["team_sufficient"] += time.perf_counter() - t0
+                      counts["team_sufficient"] += 1
+
+                      team_rate = (
+                          team_mass + pos_rate * team_k
+                      ) / max(1e-9, team_exp + team_k)
+
+                      prior = team_rate
+                      source = "LEAGUE_POSITION_TEAM_EMPIRICAL_BAYES"
+                      role_exp = 0.0
+                      if role and by_role.get(role):
+                          t0 = time.perf_counter()
+                          role_loo = [
+                              row
+                              for row in by_role[role]
+                              if s1._i(
+                                  row.get("player_id"),
+                                  s1._i(row.get("element")),
+                              ) != pid
+                          ]
+                          timers["role_loo_construct"] += time.perf_counter() - t0
+                          counts["role_loo_construct"] += 1
+
+                          t0 = time.perf_counter()
+                          role_mass, role_exp = s1._sufficient(
+                              role_loo, field, weight
+                          )
+                          timers["role_sufficient"] += time.perf_counter() - t0
+                          counts["role_sufficient"] += 1
+                          prior = (
+                              role_mass + team_rate * role_k
+                          ) / max(1e-9, role_exp + role_k)
+                          source = "LEAGUE_POSITION_TEAM_ROLE_EMPIRICAL_BAYES"
+
+                      kappa = 5.0 if name == "xg90" else 6.0
+                      bundle["variables"][name] = {
+                          "prior_rate90": round(max(0.0, prior), 6),
+                          "credible_interval90": s1._gamma_interval(
+                              max(1e-6, prior * kappa), kappa
+                          ),
+                          "prior_equivalent_matches": kappa,
+                          "prior_source": source,
+                          "league_rate90": round(max(0.0, league_rate), 6),
+                          "position_rate90": round(max(0.0, pos_rate), 6),
+                          "team_rate90_leave_one_player_out": round(
+                              max(0.0, team_rate), 6
+                          ),
+                          "role_layer_used": bool(role),
+                          "role_evidence_exposure90": round(role_exp, 3),
+                          "sample_exposure_minutes": round(
+                              sum(
+                                  max(0.0, s1._f(row.get("minutes")))
+                                  for row in history
+                              ),
+                              1,
+                          ),
+                      }
+
+                  starts = sum(bool(row.get("starter")) for row in history)
+                  n = len(history)
+                  alpha, beta = 2.5 + starts, 1.5 + n - starts
+                  mean = alpha / (alpha + beta)
+                  variance = (
+                      alpha * beta
+                      / ((alpha + beta) ** 2 * (alpha + beta + 1.0))
+                  )
+                  half = s1.Z90 * math.sqrt(max(0.0, variance))
+                  bundle["start_probability"] = round(mean, 6)
+                  bundle["start_probability_credible_interval90"] = [
+                      round(s1._clamp(mean - half, 0.0, 1.0), 6),
+                      round(s1._clamp(mean + half, 0.0, 1.0), 6),
+                  ]
+                  bundle["start_prior"] = {
+                      "alpha0": 2.5,
+                      "beta0": 1.5,
+                      "sample_matches": n,
+                  }
+                  players[str(pid)] = bundle
+
+              loop_total = time.perf_counter() - loop_start
+              measured_loop = sum(
+                  timers[name]
+                  for name in (
+                      "league_sufficient",
+                      "position_sufficient",
+                      "team_loo_construct",
+                      "team_sufficient",
+                      "role_loo_construct",
+                      "role_sufficient",
+                  )
+              )
+              timers["loop_total"] = loop_total
+              timers["loop_remainder"] = loop_total - measured_loop
+              counts["loop_total"] = 1
+              counts["loop_remainder"] = 1
+
+              payload = {
+                  "model": "V12_STAGE1_HIERARCHICAL_PRIOR_UTILITY_V1",
+                  "players": players,
+                  "hierarchy": [
+                      "league",
+                      "position",
+                      "role_if_factual",
+                      "team_leave_one_player_out",
+                      "player_owner_posterior",
+                  ],
+                  "different_prior_strengths_by_variable": True,
+                  "final_player_posterior_owner": "V12_PLAYER_EVENTS",
+                  "role_fabricated_from_position": False,
+              }
+              timers["function_total"] = time.perf_counter() - total_start
+              counts["function_total"] = 1
+              return payload, dict(timers), dict(counts)
+
+          # Warm up both code paths.
+          oracle_warm = s1.build_hierarchical_priors(rows)
+          inst_warm, _, _ = instrumented_build(rows)
+          if fingerprint(oracle_warm) != fingerprint(inst_warm):
+              raise SystemExit("instrumented copy does not match oracle")
+
+          N = 7
+          oracle_samples = []
+          instrumented = []
+          rss_before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
+          for _ in range(N):
+              t0 = time.perf_counter()
+              oracle = s1.build_hierarchical_priors(rows)
+              oracle_elapsed = time.perf_counter() - t0
+              oracle_samples.append(oracle_elapsed)
+
+              inst, timers, counts = instrumented_build(rows)
+              if fingerprint(oracle) != fingerprint(inst):
+                  raise SystemExit("instrumented payload diverged from oracle")
+              instrumented.append({
+                  "timers": timers,
+                  "counts": counts,
+                  "fingerprint": fingerprint(inst),
+              })
+
+          rss_after = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
+          # Calibrate raw timer-pair overhead at approximately the same number
+          # of instrumented block pairs as one measured run.
+          pairs = sum(
+              instrumented[0]["counts"].get(name, 0)
+              for name in (
+                  "league_sufficient",
+                  "position_sufficient",
+                  "team_loo_construct",
+                  "team_sufficient",
+                  "role_loo_construct",
+                  "role_sufficient",
+              )
+          )
+          calibration_samples = []
+          for _ in range(9):
+              t0 = time.perf_counter()
+              for _i in range(pairs):
+                  a = time.perf_counter()
+                  b = time.perf_counter()
+                  if b < a:
+                      raise SystemExit("monotonic clock violated")
+              calibration_samples.append(time.perf_counter() - t0)
+
+          scope_names = sorted(instrumented[0]["timers"])
+          scope_summary = {}
+          for name in scope_names:
+              vals = [r["timers"][name] for r in instrumented]
+              scope_summary[name] = {
+                  "samples_seconds": vals,
+                  "median_seconds": statistics.median(vals),
+                  "mean_seconds": statistics.mean(vals),
+                  "min_seconds": min(vals),
+                  "max_seconds": max(vals),
+                  "calls_per_run": instrumented[0]["counts"].get(name),
+              }
+
+          result = {
+              "schema": 1,
+              "mode": "VALIDATION_ONLY_SCOPE_TIMING",
+              "main_sha": "083c5ed82458b4e9cc6505820ac6a88818c3d202",
+              "runtime_sha": "9fc2ce5e590518c399765e6fd576bb96db6e5897",
+              "planning_gw": planning_gw,
+              "rows": len(rows),
+              "runs": N,
+              "oracle": {
+                  "samples_seconds": oracle_samples,
+                  "median_seconds": statistics.median(oracle_samples),
+                  "mean_seconds": statistics.mean(oracle_samples),
+                  "min_seconds": min(oracle_samples),
+                  "max_seconds": max(oracle_samples),
+              },
+              "scope": scope_summary,
+              "timer_calibration": {
+                  "pairs_per_run": pairs,
+                  "samples_seconds": calibration_samples,
+                  "median_seconds": statistics.median(calibration_samples),
+              },
+              "payload_fingerprint": fingerprint(oracle_warm),
+              "instrumented_matches_oracle_all_runs": True,
+              "ru_maxrss_before_kb_linux": rss_before,
+              "ru_maxrss_after_kb_linux": rss_after,
+              "ru_maxrss_delta_kb_linux": max(0, rss_after - rss_before),
+          }
+          Path("artifacts/stagec/hierarchy_scope_timing.json").write_text(
+              json.dumps(result, indent=2, sort_keys=True),
+              encoding="utf-8",
+          )
+          print(json.dumps(result, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload timing evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-stagec-hierarchy-scope-timing-${{ github.run_id }}
+          path: app/artifacts/stagec/hierarchy_scope_timing.json
+          retention-days: 14
+          if-no-files-found: error

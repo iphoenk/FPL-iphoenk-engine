@@ -103,13 +103,13 @@ jobs:
       - name: Checkout current production main
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: audit/p17-918da08-same-snapshot-20260924
           path: app
 
       - name: Checkout factual runtime-data-v6
         uses: actions/checkout@v4
         with:
-          ref: runtime-data-v6
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
           path: runtime-data
 
       - name: Setup Python
@@ -356,4 +356,4 @@ jobs:
           if [ "$JOB_STATUS" != "success" ] && [ -z "${RUNNER_STATUS:-}" ]; then
             status="FAIL"
           fi
-          gh issue comment 431 --repo "${GITHUB_REPOSITORY}" --body             "V12_REPORT_RUN | status=${status} | report_mode=${REPORT_MODE} | report_slot=${REPORT_SLOT} | run_id=${GITHUB_RUN_ID} | artifact=v12-report-${REPORT_MODE}-${GITHUB_RUN_ID} | pre_render=${PRE_RENDER:-UNKNOWN} | post_render=${POST_RENDER:-UNKNOWN} | human_facing=${HUMAN_FACING:-UNKNOWN} | stage3=${STAGE3_STATUS:-UNKNOWN} | action=${STAGE3_ACTION:-UNKNOWN} | mc_paths=${MC_PATHS:-UNKNOWN} | profile_mode=${PROFILE_MODE:-OFF} | integrated_runner=true | fail_operational=true | v6_mutated=false"
+          gh issue comment 431 --repo "${GITHUB_REPOSITORY}" --body             "VALIDATION_ONLY | branch=audit/p17-918da08-same-snapshot-20260924 | execution_mode=LEGACY_PRE_684 | V12_REPORT_RUN | status=${status} | report_mode=${REPORT_MODE} | report_slot=${REPORT_SLOT} | run_id=${GITHUB_RUN_ID} | artifact=v12-report-${REPORT_MODE}-${GITHUB_RUN_ID} | pre_render=${PRE_RENDER:-UNKNOWN} | post_render=${POST_RENDER:-UNKNOWN} | human_facing=${HUMAN_FACING:-UNKNOWN} | stage3=${STAGE3_STATUS:-UNKNOWN} | action=${STAGE3_ACTION:-UNKNOWN} | mc_paths=${MC_PATHS:-UNKNOWN} | profile_mode=${PROFILE_MODE:-OFF} | integrated_runner=true | fail_operational=true | v6_mutated=false"

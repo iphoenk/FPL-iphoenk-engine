@@ -649,6 +649,7 @@ def test_30_model_evidence_is_non_authoritative(monkeypatch):
 
 def test_31_p1_2b_parallel_runtime_is_bounded_execution_only():
     perf = utility.load_config()["performance"]
+    assert perf["execution_mode"] == "CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7"
     assert perf["parallel_lineup_min_routes"] >= 64
     assert 2 <= perf["parallel_lineup_max_workers"] <= 4
     assert perf["parallel_chunks_per_worker"] >= 1
@@ -660,10 +661,108 @@ def test_31_p1_2b_parallel_runtime_is_bounded_execution_only():
     worker = inspect.getsource(utility._p1_2b_route_lineups_worker)
     assert "ProcessPoolExecutor" in inspect.getsource(utility)
     assert "CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7" in materializer
+    assert "PROCESS_POOL_EXACT_P1_7" in materializer
+    assert "_materialize_route_lineups_process_pool_exact" in materializer
     assert "SEQUENTIAL_EXACT_P1_7" in materializer
     assert "_cumulative_lineup_horizons(" in worker
     assert "optimize_lineup(" in inspect.getsource(utility._lineup_decision)
     assert "lossy_pruning" in materializer
+
+
+def test_31a_process_pool_kill_switch_routes_to_legacy_exact_path(monkeypatch):
+    real_config = deepcopy(utility.load_config())
+    real_config.setdefault("performance", {})["execution_mode"] = (
+        "PROCESS_POOL_EXACT_P1_7"
+    )
+    monkeypatch.setattr(utility, "load_config", lambda: real_config)
+
+    captured = {}
+
+    def fake_legacy(**kwargs):
+        captured.update(kwargs)
+        return (
+            {"SENTINEL": {"status": "READY"}},
+            {
+                "execution_mode": "PROCESS_POOL_EXACT_P1_7",
+                "configured_execution_mode": "PROCESS_POOL_EXACT_P1_7",
+                "kill_switch_path": True,
+            },
+        )
+
+    monkeypatch.setattr(
+        utility,
+        "_materialize_route_lineups_process_pool_exact",
+        fake_legacy,
+    )
+    routes = _search()["routes"][:3]
+    actual, proof = utility._materialize_route_lineups(
+        routes,
+        _projections(),
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+    assert actual == {"SENTINEL": {"status": "READY"}}
+    assert proof["execution_mode"] == "PROCESS_POOL_EXACT_P1_7"
+    assert proof["kill_switch_path"] is True
+    assert len(captured["route_squads"]) == len(routes)
+    assert captured["planning_gw"] == GW
+
+
+def test_31b_process_pool_kill_switch_preserves_exact_sequential_owner(monkeypatch):
+    monkeypatch.setattr(utility, "_lineup_decision", _fake_lineup)
+    perf = deepcopy(utility.load_config()["performance"])
+    perf["parallel_lineup_min_routes"] = 999999
+
+    routes = _search()["routes"][:5]
+    route_squads = [
+        (str(row["route_id"]), utility._route_squad(row))
+        for row in routes
+    ]
+    unique_items = list(route_squads)
+    material_elements = tuple(
+        sorted({element for _, squad in unique_items for element in squad})
+    )
+    actual, proof = utility._materialize_route_lineups_process_pool_exact(
+        route_squads=route_squads,
+        unique_items=unique_items,
+        material_elements=material_elements,
+        projections=_projections(),
+        planning_gw=GW,
+        generated_at=GENERATED,
+        perf_cfg=perf,
+    )
+    expected = {
+        route_id: utility._cumulative_lineup_horizons(
+            _projections(),
+            squad,
+            planning_gw=GW,
+            generated_at=GENERATED,
+        )
+        for route_id, squad in route_squads
+    }
+    assert actual == expected
+    assert proof["configured_execution_mode"] == "PROCESS_POOL_EXACT_P1_7"
+    assert proof["execution_mode"] == "SEQUENTIAL_EXACT_P1_7"
+    assert proof["kill_switch_path"] is True
+    assert proof["p1_7_math_mutated"] is False
+    assert proof["decision_authority_changed"] is False
+
+
+def test_31c_unknown_execution_mode_fails_closed(monkeypatch):
+    real_config = deepcopy(utility.load_config())
+    real_config.setdefault("performance", {})["execution_mode"] = "UNKNOWN"
+    monkeypatch.setattr(utility, "load_config", lambda: real_config)
+
+    with pytest.raises(
+        utility.PackageUtilityError,
+        match="unsupported P1.2B execution_mode",
+    ):
+        utility._materialize_route_lineups(
+            _search()["routes"][:3],
+            _projections(),
+            planning_gw=GW,
+            generated_at=GENERATED,
+        )
 
 
 def test_32_exact_route_materializer_preserves_sequential_p1_7_results(monkeypatch):

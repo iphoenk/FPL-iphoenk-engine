@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-24T08:12:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-24T16:56:30+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -14,7 +14,7 @@ This repository powers a governed personal Fantasy Premier League decision syste
 
 ## DEEP human-facing report contract
 
-Decision-critical COMPLETE sections are fail-closed to an **authoritative producer payload binding**. XI/C/VC, Watchlist20, governed Rise20/Fall20, package/MC frontier, mini-league, ALL15, and post-match surfaces carry producer identity plus payload fingerprint before rendering; presentation does not reconstruct or re-sort them. Exact Rise20/Fall20 preserve producer rank/direction/source and COMPLETE Watchlist20 preserves 5 GK / 5 DEF / 5 MID / 5 FWD.
+Decision-critical COMPLETE sections are fail-closed to an **authoritative producer payload binding**. XI/C/VC, Watchlist20, governed Rise20/Fall20, package/MC frontier, mini-league, ALL15, and post-match surfaces carry producer identity plus payload fingerprint before rendering; presentation does not reconstruct or re-sort them. Real-schema Rise20/Fall20 preserve the producer-native deterministic order (`projected_percent`, then element id), direction, and source; visible rank 1..20 is materialized from that order and validated in the rendered body. Compact/legacy payloads retain direct producer-rank validation. COMPLETE Watchlist20 preserves 5 GK / 5 DEF / 5 MID / 5 FWD.
 
 The Canonical V12 DEEP report is a **23-section fail-closed human-facing contract**. The presentation may become easier to scan, but analytics and evidence must not be removed to shorten the report.
 

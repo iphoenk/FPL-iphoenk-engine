@@ -354,6 +354,82 @@ def test_g_complete_58_manager_mini_league_cannot_be_placeholder():
     assert "MINI_LEAGUE_PLACEHOLDER_ONLY" in failures
 
 
+def test_h0_real_schema_rank20_uses_native_order_without_internal_rank():
+    rise_rows = [
+        {
+            "element_id": 100 + index,
+            "projected_percent": 100.0 - index,
+            "direction": "RISE",
+            "estimate_source": "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR",
+        }
+        for index in range(20)
+    ]
+    fall_rows = [
+        {
+            "element_id": 200 + index,
+            "projected_percent": -100.0 + index,
+            "direction": "FALL",
+            "estimate_source": "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR",
+        }
+        for index in range(20)
+    ]
+    rise = _section(
+        "S12",
+        "RISE20",
+        {
+            "rows": rise_rows,
+            "artifact_adapter": "V6_DATA_PLAYERS_OFFSET0",
+            "sort_contract": "projected_percent DESC, id ASC",
+        },
+    )
+    fall = _section(
+        "S13",
+        "FALL20",
+        {
+            "rows": fall_rows,
+            "artifact_adapter": "V6_DATA_PLAYERS_OFFSET0",
+            "sort_contract": "projected_percent ASC, id ASC",
+        },
+    )
+    assert all("rank" not in row for row in rise_rows + fall_rows)
+    failures = validate_deep_decision_content_delivery(
+        {"sections": [rise, fall]},
+        "",
+    )
+    assert not [
+        failure
+        for failure in failures
+        if failure.startswith("GOVERNED_RANK20_")
+    ]
+
+
+def test_h1_real_schema_rank20_rejects_order_drift():
+    rows = [
+        {
+            "element_id": 100 + index,
+            "projected_percent": 100.0 - index,
+            "direction": "RISE",
+            "estimate_source": "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR",
+        }
+        for index in range(20)
+    ]
+    rows[0], rows[1] = rows[1], rows[0]
+    rise = _section(
+        "S12",
+        "RISE20",
+        {
+            "rows": rows,
+            "artifact_adapter": "V6_DATA_PLAYERS_OFFSET0",
+            "sort_contract": "projected_percent DESC, id ASC",
+        },
+    )
+    failures = validate_deep_decision_content_delivery(
+        {"sections": [rise]},
+        "",
+    )
+    assert "GOVERNED_RANK20_ORDER_MISMATCH=S12:1" in failures
+
+
 def test_h_raw_predictor_exact20_is_semantically_enforced():
     rise = _section(
         "S12",

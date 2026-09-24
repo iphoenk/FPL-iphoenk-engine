@@ -6,6 +6,8 @@ on:
       - v6-manual-capture-current-20260924
   workflow_dispatch:
 
+# trigger: official-universe-wiring acceptance
+
 permissions:
   contents: read
 

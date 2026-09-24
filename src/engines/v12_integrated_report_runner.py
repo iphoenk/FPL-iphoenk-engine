@@ -3143,6 +3143,20 @@ def run_deep(
                     "observed_at": (personal_resolution or {}).get("observed_at"),
                     "gw": (personal_resolution or {}).get("gw"),
                     "stale": (personal_resolution or {}).get("stale"),
+                    "source_class": (personal_resolution or {}).get("source_class"),
+                    "authority": (
+                        "AUTH_CURRENT"
+                        if (personal_resolution or {}).get("authenticated")
+                        else (
+                            "MANUAL_CAPTURE_CURRENT"
+                            if (personal_resolution or {}).get("manual_current")
+                            else (
+                                "USER_CONFIRMED"
+                                if (personal_resolution or {}).get("user_current")
+                                else "DEGRADED"
+                            )
+                        )
+                    ),
                 },
             },
             (

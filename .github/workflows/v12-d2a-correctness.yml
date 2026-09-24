@@ -512,9 +512,19 @@ jobs:
                   ],
               }
 
-          def evaluate_case(rows, indexed):
+          def evaluate_case(rows, indexed, capture_rate_trace):
               before = fp(rows)
-              actual = actual_instrumented(rows)
+              if capture_rate_trace:
+                  actual = actual_instrumented(rows)
+              else:
+                  payload = s1.walk_forward_validate(rows)
+                  actual = {
+                      "payload": payload,
+                      "payload_fingerprint": fp(payload),
+                      "rate90_trace": None,
+                      "rate90_trace_fingerprint": None,
+                      "input_immutable": fp(rows) == before,
+                  }
               reference = traced_reference(rows, indexed=indexed)
               after = fp(rows)
               return {
@@ -554,7 +564,11 @@ jobs:
 
               indexed = args.algorithm == "indexed"
               planning_gw, foundation, rows = load_snapshot(args.runtime)
-              main_case = evaluate_case(rows, indexed=indexed)
+              main_case = evaluate_case(
+                  rows,
+                  indexed=indexed,
+                  capture_rate_trace=args.full,
+              )
 
               result = {
                   "algorithm": args.algorithm,
@@ -601,7 +615,11 @@ jobs:
               if args.full:
                   result["main_case"] = main_case
                   result["fixtures"] = {
-                      name: evaluate_case(case_rows, indexed=indexed)
+                      name: evaluate_case(
+                          case_rows,
+                          indexed=indexed,
+                          capture_rate_trace=True,
+                      )
                       for name, case_rows in fixture_cases().items()
                   }
 
@@ -658,7 +676,6 @@ jobs:
               "walkforward_payload_fingerprint",
               "reference_payload_fingerprint",
               "reference_trace_fingerprint",
-              "actual_rate90_trace_fingerprint",
               "input_immutable",
               "leakage_ok",
           )
@@ -703,7 +720,6 @@ jobs:
               "walkforward_payload_fingerprint",
               "reference_payload_fingerprint",
               "reference_trace_fingerprint",
-              "actual_rate90_trace_fingerprint",
           )
           for side_name, data in (
               ("oracle", oracle),
@@ -735,6 +751,8 @@ jobs:
               failures.append("main raw float.hex/reference trace differs")
           if o0["main_case"]["actual_rate90_trace"] != c0["main_case"]["actual_rate90_trace"]:
               failures.append("main actual _rate90 row/weight/result trace differs")
+          if o0["actual_rate90_trace_fingerprint"] != c0["actual_rate90_trace_fingerprint"]:
+              failures.append("main actual _rate90 trace fingerprint differs")
 
           # Edge fixtures: compare actual payload, raw reference trace,
           # actual _rate90 trace, immutability, and leakage exactly.

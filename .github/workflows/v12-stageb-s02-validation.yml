@@ -122,6 +122,8 @@ jobs:
 
           def find_s02(value):
               if isinstance(value, dict):
+                  if value.get("section_id") == "S02":
+                      return value
                   if "S02" in value and isinstance(value["S02"], dict):
                       return value["S02"]
                   for nested in value.values():

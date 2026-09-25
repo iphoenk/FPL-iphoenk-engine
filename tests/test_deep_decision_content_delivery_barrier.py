@@ -1234,3 +1234,216 @@ def test_stage_b_calendar_is_data_driven_and_never_applies_static_fatigue_penalt
     assert weather[101]["fpl_impact"] == "NORMAL"
     assert weather[102]["state"] == "WEATHER UNAVAILABLE — OUTSIDE RELIABLE FORECAST HORIZON"
 
+def _stage_c_scope_rows(denominator: int) -> list[dict]:
+    return [
+        {
+            "element_id": element,
+            "player": f"P{element}",
+            "denominator": denominator,
+            "ownership_count": min(denominator, 1),
+            "ownership_pct": (100.0 / denominator if denominator else None),
+            "starter_count": min(denominator, 1),
+            "starter_pct": (100.0 / denominator if denominator else None),
+            "bench_count": 0,
+            "bench_pct": (0.0 if denominator else None),
+            "captain_count": 0,
+            "captain_pct": (0.0 if denominator else None),
+            "vice_count": 0,
+            "vice_pct": (0.0 if denominator else None),
+            "effective_multiplier_sum": (1.0 if denominator else None),
+            "eo_pct": (100.0 / denominator if denominator else None),
+            "eo_supported": denominator > 0,
+        }
+        for element in range(1, 16)
+    ]
+
+
+def test_stage_c_legacy_captain_outside_final_xi_is_semantic_false_pass():
+    report = {
+        "sections": [
+            {
+                "section_id": "S02",
+                "state": "COMPLETE",
+                "content": {"rows": [{"element_id": i} for i in range(1, 16)]},
+            },
+            {
+                "section_id": "S06",
+                "state": "COMPLETE",
+                "content": {
+                    "starting_xi": [{"element": i} for i in range(1, 12)],
+                    "formation": "3-5-2",
+                    "bench": {"gk": {"element": 12}, "order": [13, 14, 15]},
+                    "xi_base_xpts": 50.0,
+                    "captain_adjusted_xpts": 55.0,
+                    "score_semantics": {
+                        "authority": "P1_7_LINEUP",
+                        "relationship": "DISTINCT_BY_DESIGN",
+                    },
+                    "authoritative_binding": {
+                        "status": "BOUND",
+                        "producer": "P1_7_LINEUP",
+                        "payload_fingerprint": "stage-c-s06",
+                    },
+                },
+            },
+            {
+                "section_id": "S08",
+                "state": "COMPLETE",
+                "content": {
+                    "captain": {"element_id": 12, "player": "P12"},
+                    "vice_captain": {"element_id": 2, "player": "P2"},
+                    "authoritative_binding": {
+                        "status": "BOUND",
+                        "producer": "P1_7_LINEUP",
+                        "payload_fingerprint": "legacy-s08",
+                    },
+                },
+            },
+        ]
+    }
+    failures = validate_deep_decision_content_delivery(report, render_deep_text(report))
+    assert "S08_CAPTAIN_NOT_IN_FINAL_XI" in failures
+    assert "S08_CAPTAIN_DECISION_STATE_INVALID" in failures
+    assert "S08_CAPTAIN_FRONTIER_MISSING" in failures
+
+
+def test_stage_c_legacy_single_rival_denominator_cannot_masquerade_as_all_scopes():
+    report = {
+        "sections": [
+            {
+                "section_id": "S15B",
+                "state": "COMPLETE",
+                "content": {
+                    "coverage_state": "FULL",
+                    "expected_manager_count": 58,
+                    "submitted_picks_available_count": 58,
+                    "rival_exposure_denominator": 57,
+                    "our15_rival_exposure": _stage_c_scope_rows(57),
+                    "strategy_implication": {"human_posture": "BALANCED"},
+                    "authoritative_binding": {
+                        "status": "BOUND",
+                        "producer": "P1_8",
+                        "payload_fingerprint": "legacy-one-denominator",
+                    },
+                },
+            }
+        ]
+    }
+    failures = validate_deep_decision_content_delivery(report, render_deep_text(report))
+    assert "S15B_LEAGUE_SCOPE_MUST_INCLUDE_US" in failures
+    assert "S15B_RIVALS_SCOPE_MUST_EXCLUDE_US" in failures
+    assert "S15B_DIRECT_SCOPE_MUST_EXCLUDE_US" in failures
+    assert "S15B_BEHAVIOURAL_BASELINE_LABEL_MISSING" in failures
+
+
+def test_stage_c_categorical_expected_rank_utility_name_is_forbidden():
+    scopes = {
+        "LEAGUE": {
+            "label": "LEAGUE3_INCL_US",
+            "expected": 3,
+            "collected": 3,
+            "denominator": 3,
+            "includes_us": True,
+        },
+        "RIVALS": {
+            "label": "RIVALS2_EXCL_US",
+            "expected": 2,
+            "collected": 2,
+            "denominator": 2,
+            "includes_us": False,
+        },
+        "DIRECT": {
+            "label": "DIRECT6_ABOVE_US",
+            "expected": 2,
+            "collected": 2,
+            "denominator": 2,
+            "includes_us": False,
+        },
+    }
+    report = {
+        "sections": [
+            {
+                "section_id": "S15B",
+                "state": "COMPLETE",
+                "content": {
+                    "coverage_state": "FULL",
+                    "expected_manager_count": 3,
+                    "submitted_picks_available_count": 3,
+                    "disclosed_picks_label": "BEHAVIOURAL BASELINE",
+                    "denominator_scopes": scopes,
+                    "league_our15_exposure": _stage_c_scope_rows(3),
+                    "rivals_our15_exposure": _stage_c_scope_rows(2),
+                    "direct_rival_our15_exposure": _stage_c_scope_rows(2),
+                    "direct_rival_scope": {"denominator": 2},
+                    "captain_leverage": [
+                        {
+                            "element_id": 1,
+                            "expected_rank_utility": "HIGH_LEVERAGE",
+                        }
+                    ],
+                    "strategy_implication": {"human_posture": "BALANCED"},
+                    "authoritative_binding": {
+                        "status": "BOUND",
+                        "producer": "P1_8",
+                        "payload_fingerprint": "categorical-rank-utility",
+                    },
+                },
+            }
+        ]
+    }
+    failures = validate_deep_decision_content_delivery(report, render_deep_text(report))
+    assert "S15B_CATEGORICAL_RANK_UTILITY_FORBIDDEN" in failures
+
+
+def test_stage_c_legacy_s19_copy_without_s08_s15b_dependency_fails_closed():
+    report = {
+        "sections": [
+            {
+                "section_id": "S02",
+                "state": "COMPLETE",
+                "content": {"rows": [{"element_id": i} for i in range(1, 16)]},
+            },
+            {
+                "section_id": "S06",
+                "state": "COMPLETE",
+                "content": {
+                    "starting_xi": [{"element": i} for i in range(1, 12)],
+                    "authoritative_binding": {
+                        "status": "BOUND",
+                        "producer": "P1_7_LINEUP",
+                        "payload_fingerprint": "s06",
+                    },
+                },
+            },
+            {
+                "section_id": "S08",
+                "state": "DEGRADED",
+                "content": {},
+            },
+            {
+                "section_id": "S15B",
+                "state": "DEGRADED",
+                "content": {},
+            },
+            {
+                "section_id": "S19",
+                "state": "COMPLETE",
+                "content": {
+                    "final_judgement": {
+                        "final_captain": {"element_id": 1, "player": "P1"},
+                        "vice": {"element_id": 2, "player": "P2"},
+                        "captain_state": "LOCK",
+                    },
+                    "authoritative_binding": {
+                        "status": "BOUND",
+                        "producer": "P1_7_LINEUP",
+                        "payload_fingerprint": "legacy-s19",
+                    },
+                },
+            },
+        ]
+    }
+    failures = validate_deep_decision_content_delivery(report, render_deep_text(report))
+    assert "S19_DID_NOT_CONSUME_S08_S15B" in failures
+    assert "S19_CAPTAIN_STATE_CONTRADICTS_S08" in failures
+

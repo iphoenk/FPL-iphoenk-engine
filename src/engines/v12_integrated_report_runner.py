@@ -913,6 +913,40 @@ def _visible_position_mechanism(
     return common
 
 
+_EXECUTION_FINANCE_UNAVAILABLE = frozenset(
+    {"", "UNAVAILABLE", "UNKNOWN", "STALE_NOT_AUTHORIZED", "NOT_SUPPORTED", "AUTH_EXPIRED"}
+)
+
+
+def _execution_finance_available(finance: Mapping[str, Any] | None) -> bool:
+    row = dict(finance or {})
+    return bool(
+        isinstance(row.get("bank"), int)
+        and isinstance(row.get("free_transfers"), int)
+        and str(row.get("bank_status") or "").upper() not in _EXECUTION_FINANCE_UNAVAILABLE
+        and str(row.get("sell_value_status") or "").upper() not in _EXECUTION_FINANCE_UNAVAILABLE
+        and str(row.get("free_transfers_status") or "").upper() not in _EXECUTION_FINANCE_UNAVAILABLE
+    )
+
+
+def _route_execution_economics_state(
+    *,
+    route_id: str,
+    route_economics_status: Any,
+    finance: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if str(route_id).upper() == "HOLD":
+        return {"status": "NOT_APPLICABLE", "executable": True}
+    available = bool(
+        _execution_finance_available(finance)
+        and str(route_economics_status or "").upper() == "COMPLETE"
+    )
+    return {
+        "status": "AVAILABLE" if available else "DEGRADED",
+        "executable": available,
+    }
+
+
 def _stage3_visible_package_surface(
     *,
     projections: Mapping[str, Any],
@@ -1120,26 +1154,13 @@ def _stage3_visible_package_surface(
             if max(len(visible_out), len(visible_in)) >= 2
             else "DIRECT / 1-TRANSFER"
         )
-        finance_row = dict(finance or {})
-        unavailable_tokens = {"", "UNAVAILABLE", "UNKNOWN", "STALE_NOT_AUTHORIZED", "NOT_SUPPORTED", "AUTH_EXPIRED"}
-        private_finance_available = bool(
-            isinstance(finance_row.get("bank"), int)
-            and isinstance(finance_row.get("free_transfers"), int)
-            and str(finance_row.get("bank_status") or "").upper() not in unavailable_tokens
-            and str(finance_row.get("sell_value_status") or "").upper() not in unavailable_tokens
-            and str(finance_row.get("free_transfers_status") or "").upper() not in unavailable_tokens
+        execution = _route_execution_economics_state(
+            route_id=route_id,
+            route_economics_status=economics.get("status"),
+            finance=finance,
         )
-        route_execution_status = (
-            "NOT_APPLICABLE"
-            if route_id == "HOLD"
-            else "AVAILABLE"
-            if private_finance_available and str(economics.get("status") or "").upper() == "COMPLETE"
-            else "DEGRADED"
-        )
-        route_executable = bool(
-            route_id == "HOLD"
-            or route_execution_status == "AVAILABLE"
-        )
+        route_execution_status = str(execution["status"])
+        route_executable = bool(execution["executable"])
         package_routes.append(
             {
                 "route": route_id,
@@ -1294,18 +1315,7 @@ def _stage3_visible_package_surface(
         "package_universe_challengers": challengers,
         "football_frontier_status": "COMPLETE",
         "execution_economics_status": (
-            "AVAILABLE"
-            if bool(
-                isinstance((finance or {}).get("bank"), int)
-                and isinstance((finance or {}).get("free_transfers"), int)
-                and str((finance or {}).get("bank_status") or "").upper()
-                    not in {"", "UNAVAILABLE", "UNKNOWN", "STALE_NOT_AUTHORIZED", "NOT_SUPPORTED", "AUTH_EXPIRED"}
-                and str((finance or {}).get("sell_value_status") or "").upper()
-                    not in {"", "UNAVAILABLE", "UNKNOWN", "STALE_NOT_AUTHORIZED", "NOT_SUPPORTED", "AUTH_EXPIRED"}
-                and str((finance or {}).get("free_transfers_status") or "").upper()
-                    not in {"", "UNAVAILABLE", "UNKNOWN", "STALE_NOT_AUTHORIZED", "NOT_SUPPORTED", "AUTH_EXPIRED"}
-            )
-            else "DEGRADED"
+            "AVAILABLE" if _execution_finance_available(finance) else "DEGRADED"
         ),
         "execution_economics_authority": {
             "bank": (finance or {}).get("bank"),

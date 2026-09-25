@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 from src.engines.price_radar import (
     DISPLAY_TIMEZONE,
     MODEL_THRESHOLD as EXISTING_PRICE_MODEL_THRESHOLD,
+    OFFICIAL_MAX_AGE_SECONDS,
     OFFICIAL_UPDATE_TIMEZONE,
 )
 from src.engines.visible_content_proof import canonical_mode_contract
@@ -293,6 +294,39 @@ def _format_price_cycle(value: Any, *, wib: bool) -> str | None:
     return f"{local.strftime('%d %b %Y • %H:%M')} {zone}"
 
 
+def _price_freshness(
+    evidence_timestamp: Any,
+    *,
+    as_of: Any = None,
+) -> dict[str, Any]:
+    evidence = _parse_price_dt(evidence_timestamp)
+    reference = _parse_price_dt(as_of)
+    if evidence is None or reference is None:
+        return {
+            "source_age_seconds": None,
+            "freshness": "UNAVAILABLE",
+            "freshness_threshold_seconds": OFFICIAL_MAX_AGE_SECONDS,
+        }
+    age_seconds = max(
+        0,
+        int(
+            (
+                reference.astimezone(timezone.utc)
+                - evidence.astimezone(timezone.utc)
+            ).total_seconds()
+        ),
+    )
+    return {
+        "source_age_seconds": age_seconds,
+        "freshness": (
+            "FRESH"
+            if age_seconds <= OFFICIAL_MAX_AGE_SECONDS
+            else "STALE"
+        ),
+        "freshness_threshold_seconds": OFFICIAL_MAX_AGE_SECONDS,
+    }
+
+
 def _governed_expected_cycle(
     projections: Any,
     *,
@@ -452,6 +486,7 @@ def _visible_price_contract(
     predictor_health: str,
     owned_ids: set[int],
     target_ids: set[int],
+    as_of: Any = None,
 ) -> dict[str, Any]:
     out = dict(row)
     direction = _visible_price_direction(out.get("projected_percent"))
@@ -460,6 +495,10 @@ def _visible_price_contract(
         evidence_timestamp=evidence_timestamp,
         locked_until=out.get("locked_until"),
     )
+    freshness = _price_freshness(
+        evidence_timestamp,
+        as_of=as_of,
+    )
     likelihood = out.get("likelihood")
     out.update(
         {
@@ -467,6 +506,7 @@ def _visible_price_contract(
             "official_or_provider_progress": out.get("price_change_percent", "UNAVAILABLE"),
             "prediction_strength": likelihood if likelihood is not None else "UNAVAILABLE",
             **timing,
+            **freshness,
             "estimate_source": "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR",
             "artifact_source": "official_price_predictor",
             "visible_source_label": (
@@ -552,6 +592,7 @@ def build_price20(
     direction: str,
     owned_element_ids: Sequence[int] | None = None,
     target_element_ids: Sequence[int] | None = None,
+    as_of: Any = None,
 ) -> dict[str, Any]:
     """Consume current official_price_predictor output; never predict price itself."""
     if not predictor_artifact:
@@ -585,6 +626,7 @@ def build_price20(
                 predictor_health=health,
                 owned_ids=owned_ids,
                 target_ids=target_ids,
+                as_of=as_of,
             )
             for row in rows
             if (bound := _normalize_real_price_row(row)) is not None
@@ -664,10 +706,22 @@ def build_price20(
             for row in selected
         )
     )
+    freshness_required = as_of is not None
+    freshness_complete = (
+        not freshness_required
+        or all(row.get("freshness") == "FRESH" for row in selected)
+    )
     # NO_CROSSING_WITHIN_GOVERNED_HORIZON is a healthy terminal predictor
     # outcome. It intentionally leaves expected-change-cycle fields unavailable
     # because no governed threshold crossing exists; that is not degradation.
-    if enough and healthy and date_state_complete and not missing_cycle_clock and not invalid_eta_state:
+    if (
+        enough
+        and healthy
+        and date_state_complete
+        and not missing_cycle_clock
+        and not invalid_eta_state
+        and freshness_complete
+    ):
         state = "COMPLETE"
     elif selected:
         state = "DEGRADED"
@@ -695,6 +749,14 @@ def build_price20(
             reason = (
                 f"official_price_predictor has genuinely unavailable/invalid ETA evidence "
                 f"for {invalid}/20 rows"
+            )
+        elif freshness_required and not freshness_complete:
+            stale = sum(row.get("freshness") == "STALE" for row in selected)
+            unknown = sum(row.get("freshness") == "UNAVAILABLE" for row in selected)
+            reason = (
+                "official_price_predictor freshness is not current at report time; "
+                f"stale={stale}, unavailable={unknown}, "
+                f"max_age_seconds={OFFICIAL_MAX_AGE_SECONDS}"
             )
         else:
             reason = (
@@ -737,6 +799,8 @@ def build_price20(
             "latest_supported_projection",
             "estimate_source",
             "evidence_timestamp",
+            "source_age_seconds",
+            "freshness",
             "confidence",
             "impact_on_our_decision",
         ),
@@ -756,6 +820,14 @@ def build_price20(
         "no_crossing_count": sum(
             row.get("date_state") == "NO_CROSSING_WITHIN_GOVERNED_HORIZON" for row in selected
         ) if adapter == "V6_DATA_PLAYERS_OFFSET0" else None,
+        "freshness_state": (
+            "FRESH"
+            if selected and all(row.get("freshness") == "FRESH" for row in selected)
+            else "STALE"
+            if any(row.get("freshness") == "STALE" for row in selected)
+            else "UNAVAILABLE"
+        ),
+        "freshness_threshold_seconds": OFFICIAL_MAX_AGE_SECONDS,
     }
 
 
@@ -763,6 +835,7 @@ def build_actionable_price_radar(
     *,
     owned15: Sequence[Mapping[str, Any]],
     predictor_artifact: Mapping[str, Any] | None = None,
+    as_of: Any = None,
 ) -> dict[str, Any]:
     """Always preserve owned identity; predictor evidence enriches but never removes OUR15."""
     artifact = dict(predictor_artifact or {})
@@ -805,6 +878,7 @@ def build_actionable_price_radar(
                 predictor_health=predictor_health,
                 owned_ids={element},
                 target_ids=set(),
+                as_of=as_of,
             )
             if normalized is not None
             else None
@@ -877,6 +951,8 @@ def build_actionable_price_radar(
                     else "UNAVAILABLE",
                 ),
                 "evidence_timestamp": (visible or {}).get("evidence_timestamp", evidence_timestamp or "UNAVAILABLE"),
+                "source_age_seconds": (visible or {}).get("source_age_seconds"),
+                "freshness": (visible or {}).get("freshness", "UNAVAILABLE"),
                 "confidence": (visible or {}).get("confidence", "UNAVAILABLE"),
                 "sell_value_affordability_impact": (visible or {}).get(
                     "impact_on_our_decision",
@@ -906,6 +982,14 @@ def build_actionable_price_radar(
             bool(row.get("date_state_complete")) for row in identities
         ),
         "degradation_reason": None if complete else "owned price identity coverage is not exact15",
+        "predictor_freshness": (
+            "FRESH"
+            if identities and all(row.get("freshness") == "FRESH" for row in identities)
+            else "STALE"
+            if any(row.get("freshness") == "STALE" for row in identities)
+            else "UNAVAILABLE"
+        ),
+        "freshness_threshold_seconds": OFFICIAL_MAX_AGE_SECONDS,
         "price_alone_may_create_act": False,
     }
 
@@ -2612,11 +2696,11 @@ def _render_deep_visible_contract_lines(
         lines.append("BENCH: " + ", ".join(bench_names))
         score = dict(payload.get("lineup_score") or {})
         lines.append(
-            "PROJECTED XI SCORE: "
+            "XI_BASE_XPTS: "
             + str(
                 score.get("xpts_mean")
                 if score.get("xpts_mean") is not None
-                else score.get("expected_fpl_points_with_captain_vice", "UNAVAILABLE")
+                else "UNAVAILABLE"
             )
         )
         comparisons = [
@@ -2625,10 +2709,23 @@ def _render_deep_visible_contract_lines(
             if isinstance(item, Mapping)
         ]
         if comparisons:
+            selected_comparison = next(
+                (item for item in comparisons if item.get("selected") is True),
+                None,
+            )
+            lines.append(
+                "CAPTAIN_ADJUSTED_XPTS: "
+                + str(
+                    (selected_comparison or {}).get(
+                        "expected_fpl_points_with_captain_vice",
+                        "UNAVAILABLE",
+                    )
+                )
+            )
             lines.append("FORMATION ALTERNATIVES:")
             lines.extend(
                 _markdown_table(
-                    ("formation", "projected_points", "route_utility", "downside", "upside", "selected"),
+                    ("formation", "captain_adjusted_xpts", "route_utility", "downside", "upside", "selected"),
                     [
                         (
                             item.get("formation"),
@@ -2944,6 +3041,8 @@ def _render_deep_visible_contract_lines(
             "confidence",
             "source",
             "observed_at",
+            "source_age_seconds",
+            "freshness",
             "raw_payload_hash",
         )
         payload_hash = str(
@@ -3039,6 +3138,8 @@ def _render_deep_visible_contract_lines(
                         or row.get("observed_at")
                         or "UNAVAILABLE"
                     ),
+                    "source_age_seconds": row.get("source_age_seconds"),
+                    "freshness": row.get("freshness", "UNAVAILABLE"),
                     "raw_payload_hash": (
                         row.get("raw_payload_hash")
                         or payload_hash

@@ -101,6 +101,13 @@ STATE_PATH = ROOT / "control" / "fpl_master_v12" / "FPL_MASTER_STATE_V12.json"
 
 SUPPORTED_MODES = {"DEEP", "PRICE"}
 
+
+def _stagec_scanner_enabled() -> bool:
+    return str(os.getenv("V12_STAGEC_SCANNER_ENABLED") or "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+
+
 class IntegratedRunnerError(RuntimeError):
     pass
 
@@ -3774,6 +3781,42 @@ def run_deep(
         and (finance or {}).get("chips_status") == "AVAILABLE"
     )
 
+    stagec_surface = None
+    if _stagec_scanner_enabled():
+        from src.engines.v12_stagec_reporting import (
+            build_stagec_report_surface,
+        )
+        from src.models.v12_external_challenge import (
+            build_external_challenge_layer,
+        )
+        from src.models.v12_stagec_universe_scanner import (
+            build_stagec_from_canonical_inputs,
+        )
+
+        stagec_bundle = build_stagec_from_canonical_inputs(
+            projections=projections or {},
+            bootstrap=bootstrap,
+            match_rows=list((foundation or {}).get("player_match_rows") or []),
+            season=str((foundation or {}).get("season") or "") or None,
+        )
+        stagec_scan = dict(stagec_bundle.get("scan") or {})
+        stagec_external = build_external_challenge_layer(
+            [],
+            scan=stagec_scan,
+            decision_context={
+                "captain_element": (
+                    ((lineup or {}).get("captain") or {}).get("element")
+                ),
+                "selected_route_id": (
+                    (stage3_decision or {}).get("selected_route_id")
+                ),
+            },
+        )
+        stagec_surface = build_stagec_report_surface(
+            scan=stagec_scan,
+            external_challenges=stagec_external,
+        )
+
     sections = {
         "S01": _section(
             "COMPLETE",
@@ -3851,6 +3894,11 @@ def run_deep(
                 ),
                 "decision_change_sources": (
                     "injury / lineup / role / tactics / price / fixture / underlying / mini-league / transfer economics"
+                ),
+                **(
+                    {"stagec_universe_intelligence": stagec_surface}
+                    if stagec_surface is not None
+                    else {}
                 ),
             },
         ),

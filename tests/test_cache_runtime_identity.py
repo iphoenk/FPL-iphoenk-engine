@@ -12,18 +12,8 @@ IDENTITY_A = {
     "numpy_version": "2.4.4",
     "openblas_coretype": "Haswell",
     "numpy_simd_active": (
-        "AVX",
-        "AVX2",
-        "F16C",
-        "FMA3",
-        "MMX",
-        "POPCNT",
-        "SSE",
-        "SSE2",
-        "SSE3",
-        "SSE41",
-        "SSE42",
-        "SSSE3",
+        "X86_V2",
+        "X86_V3",
     ),
     "openblas_num_threads": 1,
 }
@@ -39,11 +29,7 @@ def _changed(**updates):
 IDENTITY_PYTHON_CHANGED = _changed(python_major_minor="3.13")
 IDENTITY_NUMPY_CHANGED = _changed(numpy_version="2.5.0")
 IDENTITY_SIMD_CHANGED = _changed(
-    numpy_simd_active=tuple(
-        value
-        for value in IDENTITY_A["numpy_simd_active"]
-        if value != "AVX2"
-    ),
+    numpy_simd_active=("X86_V2",),
 )
 IDENTITY_OPENBLAS_CORE_CHANGED = _changed(
     openblas_coretype="SkylakeX",

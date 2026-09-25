@@ -62,6 +62,7 @@ from src.engines.v12_deep_delivery import (
 )
 from src.engines.v12_report_orchestration import (
     build_actionable_price_radar,
+    build_calendar_workload_context,
     build_deep_human_facing_manifest,
     build_price20,
     build_visible_mathematical_decision_stack,
@@ -581,6 +582,127 @@ def _candidate_universe(
     return list(
         build_canonical_universe(projections).get("players") or []
     )
+
+
+def _watchlist_candidate_universe(
+    projections: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    canonical = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in build_canonical_universe(projections).get("players") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    }
+    pmap = _projection_map(projections)
+    out: list[dict[str, Any]] = []
+    for element, row in canonical.items():
+        player = pmap.get(element) or {}
+        mechanism = _visible_position_mechanism(player, action="WATCH") if player else {}
+        positional = dict(mechanism.get("position_mechanism") or {})
+        position = str(row.get("position") or "").upper()
+        if position == "GK":
+            evidence = {
+                "save_process": positional.get("saves"),
+                "shot_stopping": positional.get("shot_stopping"),
+                "clean_sheet_environment": positional.get("clean_sheet"),
+                "goals_conceded_environment": positional.get("goals_conceded"),
+                "penalty_save_evidence": positional.get("penalty_save"),
+                "hierarchy_security": {
+                    "p_start": mechanism.get("p_start"),
+                    "xmins": mechanism.get("xmins"),
+                },
+            }
+        elif position == "DEF":
+            attacking = dict(positional.get("attacking_upside") or {})
+            evidence = {
+                "goal_process": attacking.get("goal_process"),
+                "creation_process": attacking.get("creation_process"),
+                "clean_sheet_environment": positional.get("clean_sheet"),
+                "defcon": positional.get("defcon"),
+                "defensive_role": positional.get("defensive_role"),
+                "matchup": mechanism.get("dynamic_matchup"),
+            }
+        elif position == "MID":
+            evidence = {
+                "goal_process": positional.get("goal_process"),
+                "creation_process": positional.get("creation_process"),
+                "penalty_process": positional.get("penalty_process"),
+                "set_piece_process": positional.get("set_piece_process"),
+                "advanced_role": mechanism.get("role"),
+                "matchup": mechanism.get("dynamic_matchup"),
+            }
+        else:
+            evidence = {
+                "goal_process": positional.get("goal_process"),
+                "creation_process": positional.get("creation_process"),
+                "penalty_process": positional.get("penalty_process"),
+                "set_piece_process": positional.get("set_piece_process"),
+                "service_linkup": positional.get("service_linkup"),
+                "matchup": mechanism.get("dynamic_matchup"),
+            }
+        out.append(
+            {
+                **row,
+                "p_available": mechanism.get("p_available"),
+                "p_start": mechanism.get("p_start"),
+                "p_dnp": mechanism.get("p_dnp"),
+                "xmins": mechanism.get("xmins"),
+                "position_specific_evidence": evidence,
+            }
+        )
+    return out
+
+
+def _calendar_relevant_players(
+    projections: Mapping[str, Any] | None,
+    *,
+    planning_gw: int,
+    element_ids: set[int],
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for player in (projections or {}).get("players") or []:
+        if not isinstance(player, Mapping):
+            continue
+        element = int(player.get("element") or player.get("id") or 0)
+        if element <= 0 or element not in element_ids:
+            continue
+        planning_fixture_evidence: list[dict[str, Any]] = []
+        for gw_row in player.get("xpts_by_gw") or []:
+            if not isinstance(gw_row, Mapping):
+                continue
+            try:
+                gw = int(gw_row.get("gw") or gw_row.get("event") or -1)
+            except (TypeError, ValueError):
+                continue
+            if gw != int(planning_gw):
+                continue
+            for fixture in gw_row.get("fixtures") or []:
+                if not isinstance(fixture, Mapping):
+                    continue
+                planning_fixture_evidence.append(
+                    {
+                        "fixture_id": fixture.get("fixture_id", fixture.get("id")),
+                        "xpts": fixture.get("mean", fixture.get("expected_points")),
+                        "xmins": fixture.get("xmins", fixture.get("expected_minutes")),
+                        "p_start": fixture.get("p_start", fixture.get("start_probability")),
+                        "matchup": (
+                            fixture.get("dynamic_matchup_vector")
+                            or fixture.get("matchup")
+                            or fixture.get("opponent")
+                        ),
+                        "rest_from_previous_fixture_hours": fixture.get(
+                            "rest_from_previous_fixture_hours"
+                        ),
+                    }
+                )
+        out.append(
+            {
+                "element_id": element,
+                "name": player.get("name"),
+                "team_id": int(player.get("team_id") or player.get("team") or 0),
+                "planning_fixture_evidence": planning_fixture_evidence,
+            }
+        )
+    return out
 
 
 def _package_candidate_rows(
@@ -3315,7 +3437,7 @@ def run_deep(
         ),
     )
 
-    universe = _candidate_universe(projections or {})
+    universe = _watchlist_candidate_universe(projections or {})
     watchlist = _stage(
         ledger,
         "WATCHLIST20",
@@ -3363,6 +3485,32 @@ def run_deep(
         watchlist,
         projections=projections,
         predictor=predictor,
+    )
+
+    calendar_elements = set(owned_ids)
+    calendar_elements.update(
+        int(row.get("element_id") or 0)
+        for row in (watchlist or {}).get("rows") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    )
+    calendar_context = build_calendar_workload_context(
+        planning_gw=planning_gw,
+        pl_fixtures=fixtures or [],
+        team_ids=[
+            int(row.get("id"))
+            for row in (bootstrap or {}).get("teams") or []
+            if isinstance(row, Mapping) and row.get("id") is not None
+        ],
+        relevant_players=_calendar_relevant_players(
+            projections,
+            planning_gw=planning_gw,
+            element_ids=calendar_elements,
+        ),
+        verified_schedule_events=(),
+        non_pl_schedule_authority=False,
+        report_timestamp=report_slot,
+        weather_rows=(),
+        weather_forecast_horizon_hours=None,
     )
 
     canonical_bundle = build_canonical_universe(
@@ -4053,19 +4201,13 @@ def run_deep(
             },
         ),
         "S05": _section(
-            "COMPLETE",
+            str(calendar_context.get("state") or "DEGRADED"),
             {
-                "planning_gw": planning_gw,
-                "fixtures": [
-                    row for row in fixtures
-                    if int(row.get("event") or -1) == planning_gw
-                ],
-                "home_away_and_rest": "DERIVED_FROM_OFFICIAL_FIXTURE_ROWS_WHERE_AVAILABLE",
+                **calendar_context,
                 "opponent_strength": strength or {},
                 "fixture_swing": "MODEL_DERIVED_WHERE_SUPPORTABLE",
-                "congestion": "DERIVED_FROM_FIXTURE_DATES_WHERE AVAILABLE",
-                "weather": "DIRECT_CHATGPT_REQUIRED_AT_VISIBLE_DELIVERY",
             },
+            calendar_context.get("degradation_reason"),
         ),
         "S06": _section(
             lineup_state,

@@ -331,9 +331,10 @@ def _hidden_gem(
             and value >= (_f(cfg.get("minimum_five_gw_xpts_per_million")) or 2.4)
         ),
         "fixture_support": (
-            fixture_ratio is None
-            or fixture_ratio >= (_f(cfg.get("minimum_fixture_support_ratio")) or 0.95)
+            fixture_ratio is not None
+            and fixture_ratio >= (_f(cfg.get("minimum_fixture_support_ratio")) or 0.95)
         ),
+        "role_support": _role(player).get("actual") is not None,
     }
     active = all(checks.values())
     reasons = [key for key, ok in checks.items() if ok] if active else []

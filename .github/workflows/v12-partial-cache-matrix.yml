@@ -1,0 +1,203 @@
+name: V12 partial-change cache matrix
+
+on:
+  push:
+    branches:
+      - validation/v12-partial-cache-matrix-20260925
+    paths:
+      - "scripts/validation/partial_cache_matrix_probe.py"
+      - ".github/workflows/v12-partial-cache-matrix.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  prime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      stage2_key: ${{ steps.keys.outputs.stage2_key }}
+      p17_key: ${{ steps.keys.outputs.p17_key }}
+      mc_key: ${{ steps.keys.outputs.mc_key }}
+    steps:
+      - name: Checkout matrix authority
+        uses: actions/checkout@v4
+
+      - name: Verify production source authority
+        run: |
+          git diff --exit-code 156df38920896a7aa8cb9e7de759f279a726fe89 --             src/engines/v12_stage2_derived_cache.py             src/engines/v12_lineup_optimizer.py             src/engines/v12_monte_carlo.py             src/engines/v12_monte_carlo_acceptance.py
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Freeze isolated outer cache keys
+        id: keys
+        env:
+          SESSION: ${{ github.run_id }}
+          STAGE2_HASH: ${{ hashFiles('src/engines/v12_stage2_derived_cache.py', 'src/models/historical_projection.py', 'src/engines/v12_contextual_dynamics.py', 'src/engines/v12_player_events.py', 'src/engines/v12_player_minutes.py', 'src/engines/v12_position_probability_components.py', 'src/engines/p0_decision_quality.py', 'src/models/v12_stage1_analytics.py', 'src/rules.py', 'config/intelligence/player_events.json', 'config/intelligence/player_minutes.json', 'config/intelligence/historical_priors.json', 'config/intelligence/v12_contextual_dynamics.json') }}
+          P17_HASH: ${{ hashFiles('src/engines/v12_lineup_optimizer.py', 'config/intelligence/v12_lineup_optimizer.json', 'src/rules.py', 'control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}
+          MC_HASH: ${{ hashFiles('src/engines/v12_monte_carlo.py', 'config/intelligence/v12_monte_carlo.json', 'src/rules.py', 'control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}
+        run: |
+          echo "stage2_key=v12-partial-matrix-${SESSION}-stage2-${STAGE2_HASH}-primeA" >> "$GITHUB_OUTPUT"
+          echo "p17_key=v12-partial-matrix-${SESSION}-p17-${P17_HASH}-primeA" >> "$GITHUB_OUTPUT"
+          echo "mc_key=v12-partial-matrix-${SESSION}-mc-${MC_HASH}-primeA" >> "$GITHUB_OUTPUT"
+
+      - name: Prime state A exact internal caches
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          rm -rf .matrix-cache evidence
+          mkdir -p .matrix-cache evidence
+          python scripts/validation/partial_cache_matrix_probe.py prime             --cache-root .matrix-cache             --output evidence/prime_manifest.json
+
+      - name: Save prime A Stage-2 cache
+        uses: actions/cache/save@v4
+        with:
+          path: .matrix-cache/stage2
+          key: ${{ steps.keys.outputs.stage2_key }}
+
+      - name: Save prime A P1.7 cache
+        uses: actions/cache/save@v4
+        with:
+          path: .matrix-cache/p17
+          key: ${{ steps.keys.outputs.p17_key }}
+
+      - name: Save prime A MC cache
+        uses: actions/cache/save@v4
+        with:
+          path: .matrix-cache/mc
+          key: ${{ steps.keys.outputs.mc_key }}
+
+      - name: Upload prime A manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: partial-cache-matrix-prime-${{ github.run_id }}
+          path: evidence/prime_manifest.json
+          retention-days: 14
+
+  matrix:
+    needs: prime
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        change:
+          - injury
+          - xmins
+          - role
+          - price
+          - team
+          - finance
+          - unchanged
+    steps:
+      - name: Checkout matrix authority
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download prime A manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: partial-cache-matrix-prime-${{ github.run_id }}
+          path: evidence
+
+      - name: Restore prime A Stage-2 directory through fallback
+        id: restore-stage2
+        uses: actions/cache/restore@v4
+        with:
+          path: .matrix-cache/stage2
+          key: ${{ needs.prime.outputs.stage2_key }}-${{ matrix.change }}-stateB
+          restore-keys: |
+            ${{ needs.prime.outputs.stage2_key }}
+
+      - name: Restore prime A P1.7 directory through fallback
+        id: restore-p17
+        uses: actions/cache/restore@v4
+        with:
+          path: .matrix-cache/p17
+          key: ${{ needs.prime.outputs.p17_key }}-${{ matrix.change }}-stateB
+          restore-keys: |
+            ${{ needs.prime.outputs.p17_key }}
+
+      - name: Restore prime A MC directory through fallback
+        id: restore-mc
+        uses: actions/cache/restore@v4
+        with:
+          path: .matrix-cache/mc
+          key: ${{ needs.prime.outputs.mc_key }}-${{ matrix.change }}-stateB
+          restore-keys: |
+            ${{ needs.prime.outputs.mc_key }}
+
+      - name: Validate prime A outer-cache provenance
+        env:
+          EXPECT_STAGE2: ${{ needs.prime.outputs.stage2_key }}
+          EXPECT_P17: ${{ needs.prime.outputs.p17_key }}
+          EXPECT_MC: ${{ needs.prime.outputs.mc_key }}
+          GOT_STAGE2: ${{ steps.restore-stage2.outputs.cache-matched-key }}
+          GOT_P17: ${{ steps.restore-p17.outputs.cache-matched-key }}
+          GOT_MC: ${{ steps.restore-mc.outputs.cache-matched-key }}
+          CHANGE: ${{ matrix.change }}
+        run: |
+          mkdir -p evidence
+          python - <<'PY'
+          import json, os
+          expected = {
+              "stage2": os.environ["EXPECT_STAGE2"],
+              "p17": os.environ["EXPECT_P17"],
+              "mc": os.environ["EXPECT_MC"],
+          }
+          matched = {
+              "stage2": os.environ.get("GOT_STAGE2", ""),
+              "p17": os.environ.get("GOT_P17", ""),
+              "mc": os.environ.get("GOT_MC", ""),
+          }
+          valid = all(matched[k] == expected[k] for k in expected)
+          payload = {
+              "status": "VALID" if valid else "INVALID",
+              "change_class": os.environ["CHANGE"],
+              "matrix_session_id": os.environ.get("GITHUB_RUN_ID"),
+              "expected_prime_keys": expected,
+              "matched_keys": matched,
+          }
+          open(
+              f"evidence/outer-provenance-{os.environ['CHANGE']}.json",
+              "w",
+              encoding="utf-8",
+          ).write(json.dumps(payload, indent=2, sort_keys=True))
+          print(json.dumps(payload, indent=2, sort_keys=True))
+          if not valid:
+              raise SystemExit(
+                  "INVALID matrix observation: restored outer key is not prime A"
+              )
+          PY
+
+      - name: Run frozen HIT MISS matrix against restored prime A
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python scripts/validation/partial_cache_matrix_probe.py matrix             --change "${{ matrix.change }}"             --cache-root .matrix-cache             --prime-manifest evidence/prime_manifest.json             --output "evidence/matrix-${{ matrix.change }}.json"
+
+      - name: Upload matrix evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: partial-cache-matrix-${{ matrix.change }}-${{ github.run_id }}
+          path: evidence
+          if-no-files-found: error
+          retention-days: 14

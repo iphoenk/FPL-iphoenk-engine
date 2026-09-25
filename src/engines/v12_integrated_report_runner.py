@@ -1120,6 +1120,38 @@ def _stage3_visible_package_surface(
             if max(len(visible_out), len(visible_in)) >= 2
             else "DIRECT / 1-TRANSFER"
         )
+        route_finance_complete = bool(
+            route_id == "HOLD"
+            or (
+                isinstance((finance or {}).get("bank"), int)
+                and isinstance(route.get("hit"), int)
+                and isinstance(route.get("ft_usage"), Mapping)
+                and isinstance(
+                    (route.get("ft_usage") or {}).get("free_transfers"),
+                    int,
+                )
+                and all(
+                    row.get("price") is not None
+                    for row in visible_out + visible_in
+                )
+            )
+        )
+        execution_economics_status = (
+            "COMPLETE" if route_finance_complete else "DEGRADED"
+        )
+        affordability_value = (
+            "SUPPORTED"
+            if economics.get("status") == "COMPLETE"
+            else economics.get("status") or "PARTIAL"
+        )
+        executable = bool(
+            route_id == "HOLD"
+            or (
+                route_finance_complete
+                and str(affordability_value).upper()
+                not in {"UNAFFORDABLE", "FALSE", "FAILED"}
+            )
+        )
         package_routes.append(
             {
                 "route": route_id,
@@ -1129,11 +1161,10 @@ def _stage3_visible_package_surface(
                     "in": visible_in,
                 },
                 "bank_before": (finance or {}).get("bank"),
-                "affordability": (
-                    "SUPPORTED"
-                    if economics.get("status") == "COMPLETE"
-                    else economics.get("status") or "PARTIAL"
-                ),
+                "affordability": affordability_value,
+                "football_frontier_status": "COMPLETE",
+                "execution_economics_status": execution_economics_status,
+                "executable": executable,
                 "transfer_cost": {
                     "hit": route.get("hit"),
                     "ft_usage": route.get("ft_usage"),
@@ -1237,7 +1268,24 @@ def _stage3_visible_package_surface(
         if element in player_map
     ]
 
+    non_hold_routes = [
+        row
+        for row in package_routes
+        if str(row.get("route") or "").upper() != "HOLD"
+    ]
+    overall_execution_economics_status = (
+        "COMPLETE"
+        if non_hold_routes
+        and all(
+            row.get("execution_economics_status") == "COMPLETE"
+            for row in non_hold_routes
+        )
+        else "DEGRADED"
+    )
+
     return {
+        "football_frontier_status": "COMPLETE",
+        "execution_economics_status": overall_execution_economics_status,
         "package_search_proof": package_search_result.get("search_proof"),
         "funded_search_proof": (
             ((package_utility.get("search_scope") or {}).get(
@@ -2647,8 +2695,22 @@ def _three_gw_staging(
             "reason": f"selected material route {selected_id}",
         })
 
+    free_transfers = (finance or {}).get("free_transfers")
+    ft_authoritative = bool(
+        isinstance(free_transfers, int)
+        and free_transfers >= 0
+        and (finance or {}).get("personal_resolution_status") == "CURRENT_VALID"
+        and (finance or {}).get("personal_evidence_stale") is not True
+        and str((finance or {}).get("free_transfers_status") or "").upper()
+        not in {"NOT_SUPPORTED", "UNAVAILABLE", "STALE_NOT_AUTHORIZED"}
+    )
+
     if selected_id == "HOLD" or not (outs and ins):
-        move_text = "SAVE FT / HOLD SQUAD"
+        move_text = (
+            "SAVE FT / HOLD SQUAD"
+            if ft_authoritative
+            else "NO TRANSFER NOW"
+        )
         status = "HOLD"
     else:
         pairs = []
@@ -2677,7 +2739,11 @@ def _three_gw_staging(
         },
         {
             "timing": f"GW{planning_gw + 1}",
-            "planned_move": "REOPTIMIZE FULL FRONTIER / SAVE FT IF NO EDGE",
+            "planned_move": (
+                "REOPTIMIZE FULL FRONTIER / SAVE FT IF NO EDGE"
+                if ft_authoritative
+                else "REOPTIMIZE FULL FRONTIER / NO TRANSFER IF NO EDGE"
+            ),
             "status": "WATCH",
             "trigger": "new fixture, xMins, role, price or package evidence",
             "expected_gain": "RECOMPUTE",
@@ -2703,7 +2769,9 @@ def _three_gw_staging(
         "squad_classification": classifications,
         "staging_rows": staging_rows,
         "ft_saving_plan": (
-            "SAVE FT" if action == "WAIT"
+            "FT STATE UNAVAILABLE"
+            if not ft_authoritative
+            else "SAVE FT" if action == "WAIT"
             else "SAVE UNTIL TRIGGER" if action == "PREPARE"
             else "USE ONLY IF ACT GATE REMAINS GREEN"
         ),
@@ -2712,6 +2780,9 @@ def _three_gw_staging(
             "bank": (finance or {}).get("bank"),
             "bank_status": (finance or {}).get("bank_status"),
             "sell_value_status": (finance or {}).get("sell_value_status"),
+            "free_transfers": free_transfers,
+            "free_transfers_status": (finance or {}).get("free_transfers_status"),
+            "ft_authoritative": ft_authoritative,
         },
         "price_dependency": selected.get("price_risk"),
         "player_dependency": "fresh P(start)/xMins/role/injury evidence",
@@ -3189,6 +3260,7 @@ def run_deep(
             predictor_artifact=predictor,
             direction="RISE",
             owned_element_ids=sorted(owned_ids),
+            as_of=report_slot,
         ),
     )
     fall = _stage(
@@ -3198,6 +3270,7 @@ def run_deep(
             predictor_artifact=predictor,
             direction="FALL",
             owned_element_ids=sorted(owned_ids),
+            as_of=report_slot,
         ),
     )
     price_radar = _stage(
@@ -3206,6 +3279,7 @@ def run_deep(
         lambda: build_actionable_price_radar(
             owned15=owned,
             predictor_artifact=predictor,
+            as_of=report_slot,
         ),
     )
 
@@ -4139,17 +4213,50 @@ def run_deep(
                 },
                 "source_health": {
                     "official_fpl": "HEALTHY" if official else "UNAVAILABLE",
-                    "authenticated_personal_scope": (
-                        "HEALTHY"
-                        if (personal_resolution or {}).get("resolution_status") == "CURRENT_VALID"
-                        else (personal_resolution or {}).get("resolution_status")
+                    "authenticated_personal_scope": str(
+                        (personal_resolution or {}).get("auth_state")
+                        or (finance or {}).get("auth_state")
                         or "UNAVAILABLE"
-                    ),
+                    ).upper(),
                     "fixture_data": "HEALTHY" if fixtures is not None else "UNAVAILABLE",
                     "price_predictor": (rise or {}).get("predictor_health") or "UNAVAILABLE",
                     "tactical_statistical_data": "HEALTHY" if foundation else "UNAVAILABLE",
                     "mini_league": (mini or {}).get("coverage_state") or "UNAVAILABLE",
                     "weather": "SOURCE_DEGRADED_AT_RUNNER; DIRECT_CHATGPT_AT_VISIBLE_DELIVERY",
+                },
+                "bound_authority": {
+                    "personal_auth_state": str(
+                        (personal_resolution or {}).get("auth_state")
+                        or (finance or {}).get("auth_state")
+                        or "UNAVAILABLE"
+                    ).upper(),
+                    "personal_resolution_status": (
+                        (personal_resolution or {}).get("resolution_status")
+                        or "UNAVAILABLE"
+                    ),
+                    "personal_evidence_source": (
+                        (personal_resolution or {}).get("source")
+                        or (finance or {}).get("personal_evidence_source")
+                        or "UNAVAILABLE"
+                    ),
+                    "personal_observed_at": (
+                        (personal_resolution or {}).get("observed_at")
+                        or (finance or {}).get("personal_evidence_observed_at")
+                        or "UNAVAILABLE"
+                    ),
+                    "finance_state": (
+                        "AVAILABLE"
+                        if isinstance((finance or {}).get("bank"), int)
+                        else "DEGRADED"
+                    ),
+                    "free_transfers_state": (
+                        (finance or {}).get("free_transfers_status")
+                        or "UNAVAILABLE"
+                    ),
+                    "chip_state": (
+                        (finance or {}).get("chips_status")
+                        or "UNAVAILABLE"
+                    ),
                 },
                 "lineage": {
                     "v6_factual_plane_mutated": False,

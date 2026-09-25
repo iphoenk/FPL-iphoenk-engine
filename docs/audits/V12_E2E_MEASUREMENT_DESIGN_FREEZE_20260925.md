@@ -1,8 +1,8 @@
 # V12 End-to-End Measurement Design Freeze — 2026-09-25
 
-Status: REVISION 3 FROZEN BEFORE END-TO-END PROFILING
+Status: REVISION 4 FROZEN BEFORE PARTIAL-CHANGE MATRIX / END-TO-END PROFILING
 Production main authority: `bb2d9f1f4b5387a7a9dd39ef6b23ad72de5caa94`
-Supersedes Revision 2 commit: `adb0ffd65e4f93a066556503309cb13b611afc7d` (which superseded initial freeze `d0dad6e47ddad49b7c7f480990e3908d6bdebf82`)
+Supersedes Revision 3 commit: `5cf0af69e262c74b0ebd1d33a95c61fe4cf92bcd` (earlier revisions remain historical evidence)
 
 ## 0. Execution-truth correction
 
@@ -490,7 +490,136 @@ Correctness equivalence check:
 - emulated-cold material output must match ordinary COLD output on the same frozen input, excluding only profiling/provenance metadata that explicitly describes instrumentation.
 
 
-## 15. Strategic answer
+
+## 15. Frozen partial-change HIT/MISS expectation matrix
+
+The matrix is frozen **before any partial-change result is observed**.
+
+Fixtures are defined at the exact source-input level so an observed HIT/MISS cannot be rationalized after the run.
+
+| Change class | Exact isolated mutation | Stage-2 | P1.7 | MC | Code-derived reason |
+|---|---|---|---|---|---|
+| Injury / availability | mutate only Official `bootstrap.elements[player].chance_of_playing_next_round` | **MISS** | **MISS** | **MISS** | Stage-2 key includes full bootstrap and xMins consumes Official availability; P1.7 player surface consumes states/xMins; MC consumes full projection fingerprint |
+| xMins driver | mutate only historical prior `start_probability` for one player, availability unchanged | **MISS** | **MISS** | **MISS** | Stage-2 key includes historical prior; xMins context consumes prior start probability; P1.7 surface consumes xMins/states; MC consumes changed projections |
+| Tactical role/system | mutate only one player's `player_features_payload.tactical_role/system_context` | **MISS** | **MISS** | **MISS** | Stage-2 key includes player-features payload and projection carries tactical/system evidence; P1.7 surface contains tactical role; MC projection fingerprint changes |
+| Official price | mutate only one player's Official `now_cost` | **MISS** | **HIT** | **MISS** | Stage-2 key includes full bootstrap and projection emits `now_cost`; P1.7 `build_player_surface()` contains no price/economics field; MC uses full projection fingerprint and route economics |
+| Current-team identity | replace exactly one owned element while keeping public/model evidence fixed | **HIT** | **MISS** | **MISS** | Stage-2 explicitly excludes private CURRENT15; P1.7 exact player list changes with squad ids; package/route definition and MC route signature change |
+| Finance-only | mutate only bank / purchase/selling-value state, current 15 unchanged | **HIT** | **HIT** | **MISS** | Stage-2 excludes private finance; P1.7 lineup surface declares transfer economics not consumed; package economics / MC route signature include economics |
+| Unchanged control | byte-identical resolved input set | **HIT** | **HIT** | **HIT** | all exact internal semantic keys remain identical |
+
+The old coarse “team/finance” class is intentionally split because current-team identity and finance-only have different P1.7 dependencies.
+
+### Frozen asymmetric scoring
+
+| Observation | Frozen expectation | Classification |
+|---|---|---|
+| HIT | MISS | **FAIL correctness**: key is incomplete or stale state was reused |
+| MISS | HIT | **Performance finding**: over-invalidation; not a correctness failure by itself |
+| HIT | HIT | PASS only if exact internal key and output reference also agree |
+| MISS | MISS | PASS only if recomputation completes and output matches cold-B oracle |
+| output B != cold B | any expectation | **FAIL correctness** |
+
+A MISS where HIT was expected may still cause the warm latency gate to fail, but it is not mislabeled as stale-cache correctness failure.
+
+## 16. Prime-A outer-cache provenance requirement
+
+Partial-change tests use an isolated harness cache namespace so scheduled/report jobs cannot race the experiment.
+
+For one matrix session, choose a unique immutable `matrix_session_id` before prime A. Each layer uses a harness-only prefix containing that id plus the same code/config dependency hash used by production.
+
+Example shape:
+
+```
+v12-partial-matrix-<session>-stage2-<os>-<codehash>-<prime_run_id>
+v12-partial-matrix-<session>-p17-<os>-<codehash>-<prime_run_id>
+v12-partial-matrix-<session>-mc-<os>-<codehash>-<prime_run_id>
+```
+
+The state-B restore prefix is restricted to that exact matrix-session namespace.
+
+A B-run is **VALID** only if, for every expected restored layer:
+- outer restore reports a cache hit;
+- `cache-matched-key` equals the exact key saved by the prime-A run;
+- artifact/directory provenance records prime-A run id and session id.
+
+If any matched key comes from another run, the observation is **INVALID**:
+- it is neither PASS nor FAIL;
+- discard it and repeat the B-run after restoring isolation.
+
+This validity rule is checked before interpreting internal HIT/MISS behavior.
+
+Production scheduled jobs continue using the broad production prefixes. The isolated harness proves semantic invalidation without contamination from unrelated scheduled cache writes; the production-prefix risk itself is covered by the two-level exact-key design inspected in Revision 3.
+
+## 17. Runtime-version cache authority — pre-matrix hardening requirement
+
+Code inspection found:
+
+### Stage-2
+
+`_dependency_fingerprints()` hashes only repository source/config file bytes in `_MODEL_DEPENDENCIES`.
+
+It does **not** include:
+- Python major/minor version;
+- NumPy version;
+- another installed-package version.
+
+Therefore the current Stage-2 internal key is not runtime-version complete.
+
+### P1.7
+
+`_decision_core_cache_key()` includes:
+- optimizer source hash;
+- canonical revision;
+- rules/config;
+- exact player surfaces.
+
+It does **not** include Python major/minor or NumPy version.
+
+Therefore the current P1.7 internal key is not runtime-version complete.
+
+### MC
+
+The MC simulation-summary key already includes `numpy_version`, but does **not** include Python major/minor.
+
+Therefore MC is NumPy-version-aware but not Python-minor-aware.
+
+### Required hardening before the matrix
+
+All three internal keys must bind at least:
+
+```
+python_major_minor = "<major>.<minor>"
+numpy_version = np.__version__
+```
+
+The version values must be part of the exact content-addressed internal key, not merely provenance metadata.
+
+Required correctness fixture:
+- compute each layer key under runtime identity A;
+- simulate a Python-minor change while all football/code/config inputs remain fixed;
+- assert key A != key B;
+- simulate a NumPy-version change while all other inputs remain fixed;
+- assert key A != key B;
+- unchanged runtime identity must reproduce the exact same key.
+
+The fixture should inject/monkeypatch a small runtime-identity helper rather than changing the real interpreter.
+
+No partial-change cache matrix may run against production authority until this runtime-key hardening is correctness-tested and merged.
+
+## 18. Version-change scoring
+
+Runtime change is a seventh invalidation class, evaluated separately from factual partial changes:
+
+| Runtime-only mutation | Stage-2 | P1.7 | MC |
+|---|---|---|---|
+| Python minor changes | **MISS** | **MISS** | **MISS** |
+| NumPy version changes | **MISS** | **MISS** | **MISS** |
+| runtime identity unchanged | **HIT** | **HIT** | **HIT** |
+
+A HIT after a simulated Python-minor or NumPy change is a correctness failure.
+
+
+## 19. Strategic answer
 
 As of production main `bb2d9f1f4b5387a7a9dd39ef6b23ad72de5caa94`, repeated scenario/report recomputation is **not served by a resident fastpath**.
 

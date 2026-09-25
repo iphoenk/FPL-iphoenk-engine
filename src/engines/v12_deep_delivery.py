@@ -502,6 +502,11 @@ def validate_deep_decision_content_delivery(
                 }:
                     failures.append(f"{sid}_TERMINAL_DATE_STATE_MISSING={index}")
                     break
+        if rows:
+            if "SOURCE_AGE_MINUTES" not in upper:
+                failures.append(f"{sid}_PRICE_SOURCE_AGE_NOT_VISIBLE")
+            if "FRESHNESS" not in upper:
+                failures.append(f"{sid}_PRICE_FRESHNESS_NOT_VISIBLE")
 
     if state("S06") == "COMPLETE":
         semantics = dict(s06.get("score_semantics") or {})

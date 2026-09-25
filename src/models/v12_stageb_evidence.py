@@ -718,6 +718,10 @@ def build_availability_state(
             "congestion_factor": round(congestion, 6),
             "application": xmins_effect,
             "availability_probability_override": None,
+            "calibration_status": cfg.get(
+                "congestion_overlay_calibration_status"
+            )
+            or "UNSPECIFIED",
             "reason": (
                 "Stage B may use existing P1.1 congestion input for workload/travel; "
                 "it does not create a second availability owner."
@@ -729,6 +733,7 @@ def build_availability_state(
             "official_or_club_fact_precedes_analyst_claim": True,
             "stale_evidence_cannot_drive_active_state": True,
             "external_claim_does_not_overwrite_official_player_status": True,
+            "numeric_congestion_overlay_is_model_assumption_not_fact": True,
         },
     }
 

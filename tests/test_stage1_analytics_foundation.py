@@ -1892,3 +1892,88 @@ def test_stagec_feature_off_report_is_exact_noop():
     assert report == before
     assert render_deep_text(report) == render_deep_text(before)
 
+def test_stagec_role_minutes_and_fixture_swing_classifications():
+    gain_element = 9401
+    gain_rows = []
+    for gw in range(1, 7):
+        recent = gw >= 4
+        gain_rows.append(
+            _mw_row(
+                gw,
+                player_id=gain_element,
+                minutes=90 if recent else 45,
+                starter=recent,
+                goals=1 if gw in {3, 6} else 0,
+                assists=0,
+                xg=0.18 if recent else 0.09,
+                npxg=0.18 if recent else 0.09,
+                xa=0.07 if recent else 0.035,
+                xgi=0.25 if recent else 0.125,
+                shots=2 if recent else 1,
+                shots_in_box=1,
+                shots_on_target=1 if recent else 0,
+                box_touches=5 if recent else 2.5,
+                key_passes=1,
+                chances_created=1,
+            )
+        )
+    loss_element = 9402
+    loss_rows = []
+    for gw in range(1, 7):
+        recent = gw >= 4
+        loss_rows.append(
+            _mw_row(
+                gw,
+                player_id=loss_element,
+                minutes=45 if recent else 90,
+                starter=not recent,
+                goals=1 if gw in {3, 6} else 0,
+                assists=0,
+                xg=0.09 if recent else 0.18,
+                npxg=0.09 if recent else 0.18,
+                xa=0.035 if recent else 0.07,
+                xgi=0.125 if recent else 0.25,
+                shots=1 if recent else 2,
+                shots_in_box=1,
+                shots_on_target=0 if recent else 1,
+                box_touches=2.5 if recent else 5,
+                key_passes=1,
+                chances_created=1,
+            )
+        )
+
+    scan = _stagec_scan(
+        [gain_rows, loss_rows],
+        [
+            _stagec_projection(
+                gain_element,
+                xmins=82,
+                p_start=0.9,
+                h1=7,
+                h2=13,
+                h3=18,
+                h5=20,
+            ),
+            _stagec_projection(
+                loss_element,
+                xmins=50,
+                p_start=0.55,
+                h1=3,
+                h2=6,
+                h3=8,
+                h5=18,
+            ),
+        ],
+    )
+    by_id = {row["element"]: row for row in scan["material_candidates"]}
+    gain = by_id[gain_element]
+    loss = by_id[loss_element]
+    assert gain["signals"]["ROLE_GAIN"]["active"] is True
+    assert gain["signals"]["MINUTES_GAIN"]["active"] is True
+    assert gain["signals"]["FIXTURE_SWING"]["active"] is True
+    assert gain["signals"]["FIXTURE_SWING"]["direction"] == "POSITIVE"
+    assert loss["signals"]["ROLE_LOSS"]["active"] is True
+    assert loss["signals"]["MINUTES_RISK"]["active"] is True
+    assert loss["signals"]["FIXTURE_SWING"]["active"] is True
+    assert loss["signals"]["FIXTURE_SWING"]["direction"] == "NEGATIVE"
+

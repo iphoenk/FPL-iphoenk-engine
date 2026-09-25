@@ -3187,7 +3187,136 @@ def _render_deep_visible_contract_lines(
         excluded.append("rows")
 
     elif section_id == "S05":
-        lines.append("WEATHER SOURCE: DEGRADED")
+        lines.append(f"GW TOPOLOGY: {payload.get('gw_topology') or 'UNAVAILABLE'}")
+        coverage = dict(payload.get("competition_coverage") or {})
+        lines.append(
+            "COMPETITION COVERAGE: "
+            f"PL={coverage.get('official_pl')} | "
+            f"NON_PL_BOUND={coverage.get('verified_non_pl_schedule_bound')} | "
+            f"NON_PL_EVENTS={coverage.get('verified_non_pl_event_count')} | "
+            f"CATEGORIES={coverage.get('competition_categories_data_driven')}"
+        )
+        flags = dict(payload.get("period_flags") or {})
+        lines.append(
+            "PERIOD FLAGS: "
+            f"DGW_TEAMS={flags.get('double_gw_teams')} | "
+            f"BGW_TEAMS={flags.get('blank_gw_teams')} | "
+            f"REARRANGED={flags.get('rearranged_fixture')} | "
+            f"INTERNATIONAL={flags.get('international_schedule_present')} | "
+            f"CONGESTED={flags.get('congested_player_present')} | "
+            f"SHORT_REST={flags.get('short_rest_player_present')}"
+        )
+        workload = [
+            dict(row)
+            for row in payload.get("player_workload") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.append("### PLAYER WORKLOAD / TRAVEL")
+        lines.extend(
+            _markdown_table(
+                (
+                    "player",
+                    "gw_state",
+                    "load_state",
+                    "prev_match",
+                    "next_pl",
+                    "matches_3/7/14/21",
+                    "minutes_3/7/14/21",
+                    "days_rest",
+                    "cross_border",
+                    "long_haul",
+                    "tz_shift",
+                    "return_to_club_h",
+                    "call_up",
+                    "tournament_absence",
+                    "return_date",
+                    "reintegration",
+                ),
+                [
+                    (
+                        row.get("player") or row.get("element_id"),
+                        row.get("gw_state"),
+                        row.get("load_state"),
+                        row.get("previous_match_datetime"),
+                        row.get("next_pl_fixture_datetime"),
+                        row.get("matches_last_days"),
+                        row.get("minutes_last_days"),
+                        row.get("days_rest"),
+                        row.get("cross_border_travel"),
+                        row.get("long_haul"),
+                        row.get("timezone_shift_hours"),
+                        row.get("return_to_club_interval_hours"),
+                        row.get("confirmed_call_up"),
+                        row.get("tournament_absence"),
+                        row.get("return_date"),
+                        row.get("reintegration_state"),
+                    )
+                    for row in workload
+                ],
+            )
+        )
+        multi_fixture_rows = [
+            row for row in workload
+            if str(row.get("gw_state") or "").upper() in {"DOUBLE", "BLANK"}
+        ]
+        lines.append("### DGW / BGW PLAYER DETAIL")
+        if multi_fixture_rows:
+            for row in multi_fixture_rows:
+                lines.append(
+                    f"- {row.get('player') or row.get('element_id')}: "
+                    f"{row.get('gw_state')} | fixtures={row.get('planning_gw_fixtures')}"
+                )
+        else:
+            lines.append("NONE — no relevant DGW/BGW player in bound evidence")
+        weather = [
+            dict(row)
+            for row in payload.get("weather") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.append("### WEATHER")
+        lines.extend(
+            _markdown_table(
+                (
+                    "fixture_id",
+                    "venue",
+                    "kickoff",
+                    "condition/state",
+                    "temp",
+                    "precipitation",
+                    "wind",
+                    "FPL impact",
+                    "evidence timestamp",
+                ),
+                [
+                    (
+                        row.get("fixture_id"),
+                        row.get("venue"),
+                        row.get("kickoff"),
+                        row.get("condition") or row.get("state"),
+                        row.get("temperature_c"),
+                        row.get("precipitation_probability"),
+                        row.get("wind_kph"),
+                        row.get("fpl_impact"),
+                        row.get("evidence_timestamp"),
+                    )
+                    for row in weather
+                ],
+            )
+        )
+        lines.append(
+            "MODEL GOVERNANCE: workload/travel feeds P1.1 review only; "
+            "STATIC_FATIGUE_PENALTY=False; WEATHER_MUTATES_FOOTBALL_MODEL=False; "
+            "DGW_CROSS_FIXTURE_COVARIANCE_CLAIMED=False"
+        )
+        excluded.extend(
+            (
+                "fixtures",
+                "verified_schedule_events",
+                "player_workload",
+                "weather",
+                "opponent_strength",
+            )
+        )
 
     elif section_id == "S06":
         def player_name(value: Any) -> str:
@@ -3546,9 +3675,19 @@ def _render_deep_visible_contract_lines(
     elif section_id == "S11":
         rows = [
             dict(row)
-            for row in payload.get("rows") or []
+            for row in payload.get("scanner20") or payload.get("rows") or []
             if isinstance(row, Mapping)
         ]
+        lines.append("### POSITIONAL SCANNER20")
+        lines.append(
+            "POSITION FORMULAE: "
+            + json.dumps(
+                payload.get("position_formulae") or {},
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            )
+        )
         lines.extend(
             _markdown_table(
                 (
@@ -3559,11 +3698,13 @@ def _render_deep_visible_contract_lines(
                     "price",
                     "xmins",
                     "p_start",
+                    "p_dnp",
+                    "pos_formula",
+                    "pos_coverage",
+                    "admitted",
                     "predictor",
-                    "ownership_tag",
                     "football_score",
-                    "watchlist_relevance",
-                    "transfer_relevance",
+                    "watch_action",
                 ),
                 [
                     (
@@ -3574,20 +3715,65 @@ def _render_deep_visible_contract_lines(
                         row.get("current_price"),
                         row.get("xmins"),
                         row.get("p_start"),
+                        row.get("p_dnp"),
+                        (row.get("position_specific_evidence") or {}).get("formula_id"),
+                        (row.get("position_specific_evidence") or {}).get("coverage"),
+                        (row.get("admission_gate") or {}).get("admitted"),
                         {
                             "direction": row.get("predictor_direction"),
                             "progress": row.get("predictor_progress"),
                         },
-                        "NON_OWNED",
                         row.get("football_score"),
-                        row.get("watchlist_relevance"),
-                        row.get("transfer_relevance"),
+                        row.get("watchlist_action"),
                     )
                     for rank, row in enumerate(rows, start=1)
                 ],
             )
         )
-        excluded.append("rows")
+        actionable = [
+            dict(row)
+            for row in payload.get("actionable_watchlist") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.append("### ACTIONABLE WATCHLIST")
+        if actionable:
+            lines.extend(
+                _markdown_table(
+                    (
+                        "element_id",
+                        "player",
+                        "position",
+                        "xmins",
+                        "p_start",
+                        "p_dnp",
+                        "position evidence",
+                        "admission checks",
+                        "action",
+                    ),
+                    [
+                        (
+                            row.get("element_id"),
+                            row.get("name"),
+                            row.get("position"),
+                            row.get("xmins"),
+                            row.get("p_start"),
+                            row.get("p_dnp"),
+                            (row.get("position_specific_evidence") or {}).get("present_features"),
+                            (row.get("admission_gate") or {}).get("checks"),
+                            row.get("action") or "WATCH",
+                        )
+                        for row in actionable
+                    ],
+                )
+            )
+        else:
+            lines.append("NONE — no Scanner20 player clears all admission/security/evidence gates")
+        lines.append(
+            "WATCHLIST GOVERNANCE: Scanner20 exact 5/5/5/5 when COMPLETE; "
+            "Actionable Watchlist is an unpadded subset; price is overlay only; "
+            "Watchlist cannot emit ACT."
+        )
+        excluded.extend(("rows", "scanner20", "actionable_watchlist"))
 
     elif section_id in {"S12", "S13"}:
         rows = [

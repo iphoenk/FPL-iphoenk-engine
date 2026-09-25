@@ -440,6 +440,14 @@ def validate_deep_decision_content_delivery(
             failures.append("S17_AUTH_AUTHORITY_VALUE_MISMATCH")
         if private_auth and visible_auth and private_auth != visible_auth:
             failures.append("S17_AUTH_CONTRADICTION")
+        price_health = str(source_health.get("price_predictor") or "").upper()
+        price_freshness = str(
+            source_health.get("price_predictor_freshness") or ""
+        ).upper()
+        price_age = source_health.get("price_predictor_source_age_minutes")
+        if price_health not in {"", "UNAVAILABLE"}:
+            if price_freshness not in {"FRESH", "STALE"} or price_age is None:
+                failures.append("S17_PRICE_FRESHNESS_AUTHORITY_MISSING")
 
     s14b = content("S14B")
     if state("S14B") == "COMPLETE":
@@ -507,6 +515,20 @@ def validate_deep_decision_content_delivery(
                 failures.append(f"{sid}_PRICE_SOURCE_AGE_NOT_VISIBLE")
             if "FRESHNESS" not in upper:
                 failures.append(f"{sid}_PRICE_FRESHNESS_NOT_VISIBLE")
+            s17_freshness = str(
+                (content("S17").get("source_health") or {}).get(
+                    "price_predictor_freshness"
+                )
+                or ""
+            ).upper()
+            row_freshness = str(rows[0].get("freshness") or "").upper()
+            if (
+                state("S17") == "COMPLETE"
+                and s17_freshness
+                and row_freshness
+                and s17_freshness != row_freshness
+            ):
+                failures.append(f"{sid}_S17_PRICE_FRESHNESS_CONTRADICTION")
 
     if state("S06") == "COMPLETE":
         semantics = dict(s06.get("score_semantics") or {})

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-25T16:36:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-25T17:55:00+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -702,3 +702,8 @@ times are diagnostic only, are inclusive, and must not be summed across nested
 functions. Parent-process cProfile includes time waiting on multiprocessing
 children but does not profile child-process internals; child hotspots require a
 separate child-aware profiler if the parent profile points there.
+
+
+### Validation-only final same-snapshot A/B — 25 Sep 2026
+
+Branch `audit/v12-final-ab-f1402818-20260925` is validation-only. The added workflow checks out production `f1402818519237d3628184e298bd58c0240983bb` twice and runtime-data `39454aa417be500f041eb57827f7d09c08a0bb05`, runs default exact cross-route versus the exact process-pool kill switch, and requires bit-identical S14 and S15B plus S02 CURRENT_VALID and HUMAN_FACING PASS. The validation branch does not change production model code and is not intended for merge.

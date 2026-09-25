@@ -199,13 +199,17 @@ Observed leading captain candidates:
 | Captain | 1GW xPts | Downside | Upside >=8 excess | Captain base utility | Best-pair utility |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Tzolakis | 4.811181 | 0.371945 | 0.688922 | 4.824100 | **5.250876** |
-| Bruno Fernandes | 4.681000 | 0.334955 | 0.849903 | 4.715747 | 5.152328 |
-| De Cuyper | 4.540000 | — | — | 4.553696 | 4.990277 |
+| Bruno Fernandes | 4.681309 | 0.334955 | 0.849903 | 4.715747 | 5.152328 |
+| De Cuyper | 4.540000 | 0.510505 | 0.902713 | 4.553696 | 4.990277 |
 | Haaland | 4.485000 | 0.301449 | 0.725400 | 4.512323 | 4.948904 |
-| Gvardiol | — | — | — | — | 4.864489 |
+| Gvardiol | 4.425000 | 0.424966 | 0.666531 | 4.427908 | 4.864489 |
 
 Tzolakis's best ordered pair leads the Bruno-captain pair by approximately
-0.098548 utility points.
+0.098548 utility points. His own captain base is 4.824100. The Bruno vice
+contribution to **pair utility** is approximately 0.426775 after the same
+downside/upside adjustment. The separately published
+`expected_vice_takeover_value=0.423630` is the DNP-weighted **raw mean**
+fallback, so those two numbers intentionally have different semantics.
 
 The important interpretation is that tactical-role score did **not** make a
 goalkeeper captain. Tzolakis's tactical-role score was lower than Bruno's in

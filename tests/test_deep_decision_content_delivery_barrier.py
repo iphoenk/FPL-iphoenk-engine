@@ -786,3 +786,97 @@ def test_integrated_deep_does_not_bruteforce_global_two_transfer_p17():
     assert "FULL_DIRECT_MATERIAL_FUNDED" in source
     assert "max_transfers=2" not in source
 
+def test_stage_a_regression_auth_expired_cannot_render_personal_scope_healthy():
+    report = _deep_report(
+        [_route()],
+        extra_sections=[
+            _section(
+                "S17",
+                "SOURCE HEALTH / FRESHNESS / LINEAGE",
+                {
+                    "bound_authoritative_health": {
+                        "personal_auth": "AUTH_EXPIRED",
+                        "personal_status": "DEGRADED",
+                    },
+                    "source_health": {
+                        "authenticated_personal_scope": "HEALTHY",
+                    },
+                },
+            )
+        ],
+    )
+    body = render_deep_text(report)
+    failures = validate_deep_decision_content_delivery(report, body)
+    assert "S17_AUTH_CONTRADICTION=AUTH_EXPIRED!=HEALTHY" in failures
+    assert "S17_FALSE_HEALTHY_AUTH" in failures
+
+
+def test_stage_a_regression_unknown_ft_cannot_emit_save_or_roll_ft():
+    report = _deep_report(
+        [_route()],
+        extra_sections=[
+            _section(
+                "S14B",
+                "3-GW SQUAD STAGING",
+                {
+                    "staging_rows": [
+                        {
+                            "timing": "GW6",
+                            "planned_move": "SAVE FT / HOLD SQUAD",
+                            "status": "HOLD",
+                        }
+                    ],
+                    "squad_classification": [],
+                    "target_formation": "3-5-2",
+                    "ft_saving_plan": "SAVE FT",
+                    "order_of_transfers": "SAVE FT / HOLD SQUAD",
+                    "budget_dependency": {
+                        "free_transfers": None,
+                        "free_transfers_status": "NOT_SUPPORTED",
+                    },
+                },
+            )
+        ],
+    )
+    body = render_deep_text(report)
+    failures = validate_deep_decision_content_delivery(report, body)
+    assert "S14B_FT_CLAIM_WITHOUT_AUTHORITY" in failures
+
+
+def test_stage_a_regression_degraded_finance_route_cannot_be_executable():
+    route = _route()
+    route["execution_economics_status"] = "DEGRADED"
+    route["executable"] = True
+    report = _deep_report([route])
+    body = render_deep_text(report)
+    failures = validate_deep_decision_content_delivery(report, body)
+    assert "S14_EXECUTABLE_WITH_DEGRADED_ECONOMICS=1" in failures
+
+
+def test_stage_a_s06_requires_unambiguous_score_semantics_when_values_differ():
+    lineup = _section(
+        "S06",
+        "FORMATION / XI / BENCH",
+        {
+            "formation": "5-4-1",
+            "starting_xi": [{"element": i, "name": f"P{i:02d}"} for i in range(1, 12)],
+            "bench": {"gk": {"element": 12, "name": "P12"}, "order": []},
+            "captain": {"element": 1, "name": "P01"},
+            "vice_captain": {"element": 2, "name": "P02"},
+            "lineup_score": {"xpts_mean": 49.777897},
+            "formation_comparison": [
+                {
+                    "formation": "5-4-1",
+                    "expected_fpl_points_with_captain_vice": 55.012527,
+                    "route_utility": 54.817245,
+                    "selected": True,
+                }
+            ],
+        },
+    )
+    report = _deep_report([_route()], extra_sections=[lineup])
+    body = render_deep_text(report)
+    assert "XI_BASE_XPTS: 49.777897" in body
+    assert "CAPTAIN_ADJUSTED_XPTS: 55.012527" in body
+    assert "LINEUP_ROUTE_UTILITY: 54.817245" in body
+    assert "PROJECTED XI SCORE:" not in body

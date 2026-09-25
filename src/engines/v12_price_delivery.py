@@ -366,12 +366,14 @@ def _strict_directional_price20(
     predictor_artifact: Mapping[str, Any] | None,
     direction: str,
     owned_element_ids: Sequence[int] | None = None,
+    as_of: Any = None,
 ) -> dict[str, Any]:
     """Apply PRICE exact20 direction semantics to the existing predictor materializer."""
     block = build_price20(
         predictor_artifact=predictor_artifact,
         direction=direction,
         owned_element_ids=owned_element_ids,
+        as_of=as_of,
     )
     wanted = str(direction or "").upper()
     rows = [
@@ -606,15 +608,18 @@ def build_price_delivery_report(
         predictor_artifact=predictor,
         direction="RISE",
         owned_element_ids=owned_ids if team_resolution.get("supportable") else (),
+        as_of=report_slot,
     )
     fall = _strict_directional_price20(
         predictor_artifact=predictor,
         direction="FALL",
         owned_element_ids=owned_ids if team_resolution.get("supportable") else (),
+        as_of=report_slot,
     )
     our15 = build_actionable_price_radar(
         owned15=owned_rows,
         predictor_artifact=predictor,
+        as_of=report_slot,
     ) if owned_rows else {
         "state": "UNAVAILABLE",
         "rows": [],
@@ -631,6 +636,7 @@ def build_price_delivery_report(
     watch_price = build_actionable_price_radar(
         owned15=list(watchlist.get("rows") or []),
         predictor_artifact=predictor,
+        as_of=report_slot,
     ) if watchlist.get("rows") else {"rows": []}
     watch_by_id = {
         int(row["element_id"]): row

@@ -4471,23 +4471,28 @@ def run_deep(
         mini_overlay=mini_overlay,
         disclosed_gw=picks_gw,
         operational_action=operational_action,
+        calendar_context=calendar_context,
     )
-    captain_review = _captain_candidate_review(
-        candidate=(lineup or {}).get("captain"),
-        projections=projections,
-        mini=mini,
-        mini_league_stance=str(formation_strategy.get("stance") or "BALANCED"),
-    )
-    vice_captain_review = _captain_candidate_review(
-        candidate=(lineup or {}).get("vice_captain"),
-        projections=projections,
-        mini=mini,
-        mini_league_stance=str(formation_strategy.get("stance") or "BALANCED"),
+    captain_surface = _captain_decision_surface(
+        owned=owned,
+        lineup=lineup,
+        lineup_state=lineup_state,
+        mini_detail=mini_deep_detail,
     )
     chip_state = (finance or {}).get("chips")
     chip_available = (
         chip_state not in (None, {}, [])
         and (finance or {}).get("chips_status") == "AVAILABLE"
+    )
+    final_judgement = _final_judgement_surface(
+        operational_action=operational_action,
+        stage3_decision=stage3_decision,
+        stage3_visible=stage3_visible,
+        lineup=lineup,
+        captain_surface=captain_surface,
+        mini_detail=mini_deep_detail,
+        staging=staging,
+        chip_state=chip_state if chip_available else None,
     )
 
     sections = {
@@ -4605,17 +4610,7 @@ def run_deep(
         ),
         "S08": _section(
             lineup_state,
-            {
-                "captain": captain_review,
-                "vice_captain": vice_captain_review,
-                "captain_safe_pool": (lineup or {}).get("captain_safe_pool") or [],
-                "mini_league_stance": formation_strategy.get("stance"),
-                "authority": (
-                    "expected points + ceiling + xMins/P(start) + involvement/role + "
-                    "penalty/set-piece + fixture + captain EO + mini-league downside/upside"
-                ),
-                "raw_mean_is_not_sole_authority": True,
-            },
+            captain_surface,
             lineup_reason,
         ),
         "S09": _section(
@@ -4858,22 +4853,7 @@ def run_deep(
         "S19": _section(
             "COMPLETE",
             {
-                "final_judgement": {
-                    "transfer": "NO TRANSFER NOW" if operational_action == "WAIT" else operational_action,
-                    "selected_route_id": (stage3_decision or {}).get("selected_route_id") or "HOLD",
-                    "xi": [
-                        _surface_element(value)
-                        for value in (lineup or {}).get("starting_xi") or []
-                    ],
-                    "formation": (lineup or {}).get("formation"),
-                    "captain": ((lineup or {}).get("captain") or {}).get("name") or ((lineup or {}).get("captain") or {}).get("element"),
-                    "vice_captain": ((lineup or {}).get("vice_captain") or {}).get("name") or ((lineup or {}).get("vice_captain") or {}).get("element"),
-                    "bench": (lineup or {}).get("bench"),
-                    "mini_league_stance": formation_strategy.get("stance"),
-                    "immediate_watch": staging.get("contingency"),
-                    "three_gw_direction": staging.get("staging_rows"),
-                    "reason": (stage3_decision or {}).get("reason"),
-                }
+                "final_judgement": final_judgement,
             },
         ),
     }
@@ -4887,6 +4867,7 @@ def run_deep(
         "S15B": "P1_8_MINI_LEAGUE_SNAPSHOT+P1_8_MINI_LEAGUE_OVERLAY",
         "S16": "P1_1_P1_3_FULL_UNIVERSE+P1_6_TACTICAL_ROLE",
         "S16B": "POST_MATCH_DEEP_DETAILS",
+        "S19": "S08_CAPTAIN_FRONTIER+S15B_MINI_LEAGUE_RECONCILIATION",
     }
     for sid, producer in producer_by_section.items():
         section = sections.get(sid)

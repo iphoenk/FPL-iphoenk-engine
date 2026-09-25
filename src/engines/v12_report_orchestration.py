@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 from src.engines.price_radar import (
     DISPLAY_TIMEZONE,
     MODEL_THRESHOLD as EXISTING_PRICE_MODEL_THRESHOLD,
+    OFFICIAL_MAX_AGE_SECONDS,
     OFFICIAL_UPDATE_TIMEZONE,
 )
 from src.engines.visible_content_proof import canonical_mode_contract
@@ -558,13 +559,17 @@ def _price_source_freshness(
         return {
             "source_age_minutes": None,
             "freshness": "UNKNOWN",
-            "freshness_policy": "DAILY_PRICE_SOURCE_MAX_24H_AND_HEALTHY",
+            "freshness_policy": "config/intelligence/price_radar.json:freshness.official_max_age_seconds",
         }
     age_minutes = max(0.0, (report - observed).total_seconds() / 60.0)
     return {
         "source_age_minutes": round(age_minutes, 1),
-        "freshness": "FRESH" if healthy and age_minutes <= 24 * 60 else "STALE",
-        "freshness_policy": "DAILY_PRICE_SOURCE_MAX_24H_AND_HEALTHY",
+        "freshness": (
+            "FRESH"
+            if healthy and age_minutes * 60.0 <= OFFICIAL_MAX_AGE_SECONDS
+            else "STALE"
+        ),
+        "freshness_policy": "config/intelligence/price_radar.json:freshness.official_max_age_seconds",
     }
 
 

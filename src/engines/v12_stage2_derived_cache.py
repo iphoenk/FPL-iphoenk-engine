@@ -15,12 +15,15 @@ import json
 import os
 from pathlib import Path
 import pickle
+import sys
 import time
+
+import numpy as np
 from typing import Any, Callable, Mapping, Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
 STAGE2_DERIVED_CACHE_ENV = "V12_STAGE2_DERIVED_CACHE_DIR"
-STAGE2_DERIVED_CACHE_SCHEMA = 1
+STAGE2_DERIVED_CACHE_SCHEMA = 2
 
 _MODEL_DEPENDENCIES = (
     "src/models/historical_projection.py",
@@ -40,6 +43,15 @@ _MODEL_DEPENDENCIES = (
 
 class Stage2DerivedCacheError(RuntimeError):
     pass
+
+
+def _runtime_cache_identity() -> dict[str, str]:
+    return {
+        "python_major_minor": (
+            f"{sys.version_info.major}.{sys.version_info.minor}"
+        ),
+        "numpy_version": np.__version__,
+    }
 
 
 def _json_default(value: Any) -> Any:
@@ -91,6 +103,7 @@ def stage2_derived_input_fingerprint(
     return _fingerprint(
         {
             "schema": STAGE2_DERIVED_CACHE_SCHEMA,
+            "runtime": _runtime_cache_identity(),
             "planning_gw": int(planning_gw),
             "bootstrap": bootstrap,
             "strength": strength,

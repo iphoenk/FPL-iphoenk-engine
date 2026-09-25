@@ -78,7 +78,7 @@ STAGE1_STATE_NAMES = (
 POSITIONS = ("GK", "DEF", "MID", "FWD")
 OUTFIELD = ("DEF", "MID", "FWD")
 MC_SIM_CACHE_ENV = "V12_MC_SIM_CACHE_DIR"
-MC_SIM_CACHE_SCHEMA = 1
+MC_SIM_CACHE_SCHEMA = 2
 
 
 class MonteCarloError(ValueError):
@@ -87,6 +87,15 @@ class MonteCarloError(ValueError):
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _runtime_cache_identity() -> dict[str, str]:
+    return {
+        "python_major_minor": (
+            f"{sys.version_info.major}.{sys.version_info.minor}"
+        ),
+        "numpy_version": np.__version__,
+    }
 
 
 def _f(value: Any, default: float = 0.0) -> float:
@@ -961,6 +970,38 @@ def canonical_package_seed(
         }
     )
     return int(digest[:8], 16)
+
+
+def _simulation_cache_key(
+    *,
+    projection_fp: str,
+    route_defs: Sequence[Mapping[str, Any]],
+    actual_paths: int,
+    seed: int,
+    horizons: Sequence[int],
+    selected_route_id: str,
+    canonical: bool,
+) -> str:
+    return fingerprint(
+        {
+            "schema": MC_SIM_CACHE_SCHEMA,
+            "runtime": _runtime_cache_identity(),
+            "mc_code_sha256": _mc_code_sha256(),
+            "canonical_v12_revision": _canonical_sha256(),
+            "config_fingerprint": fingerprint(load_config()),
+            "projection_fingerprint": projection_fp,
+            "route_signature": _simulation_route_signature(
+                route_defs,
+                include_economics=True,
+            ),
+            "actual_paths": int(actual_paths),
+            "seed": int(seed),
+            "horizons": [int(value) for value in horizons],
+            "selected_route_id": str(selected_route_id),
+            "canonical": bool(canonical),
+            "numpy_version": np.__version__,
+        }
+    )
 
 
 def _mc_cache_path(key: str) -> Path | None:
@@ -2906,24 +2947,14 @@ def run_correlated_monte_carlo(
         canonical_v12_revision=_canonical_sha256(),
     )
 
-    simulation_cache_key = fingerprint(
-        {
-            "schema": MC_SIM_CACHE_SCHEMA,
-            "mc_code_sha256": _mc_code_sha256(),
-            "canonical_v12_revision": _canonical_sha256(),
-            "config_fingerprint": fingerprint(cfg),
-            "projection_fingerprint": projection_fp,
-            "route_signature": _simulation_route_signature(
-                route_defs,
-                include_economics=True,
-            ),
-            "actual_paths": actual_paths,
-            "seed": int(seed),
-            "horizons": list(horizons),
-            "selected_route_id": selected_id,
-            "canonical": bool(canonical),
-            "numpy_version": np.__version__,
-        }
+    simulation_cache_key = _simulation_cache_key(
+        projection_fp=projection_fp,
+        route_defs=route_defs,
+        actual_paths=actual_paths,
+        seed=int(seed),
+        horizons=horizons,
+        selected_route_id=selected_id,
+        canonical=bool(canonical),
     )
     cache_started = time.perf_counter()
     cached_summary = _load_mc_summary_cache(

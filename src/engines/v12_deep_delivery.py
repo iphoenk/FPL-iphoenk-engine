@@ -480,6 +480,13 @@ def validate_deep_decision_content_delivery(
 
     s14 = content("S14")
     if state("S14") == "COMPLETE":
+        for token in (
+            "FOOTBALL FRONTIER STATUS:",
+            "EXECUTION ECONOMICS STATUS:",
+            "EXECUTABLE",
+        ):
+            if token not in upper:
+                failures.append("S14_ECONOMICS_NOT_VISIBLE=" + token)
         football_status = str(
             s14.get("football_frontier_status") or ""
         ).upper()

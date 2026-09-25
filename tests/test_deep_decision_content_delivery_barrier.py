@@ -102,6 +102,9 @@ def _route(
         ),
         "moves": {"out": outs, "in": ins},
         "bank_before": 2,
+        "football_frontier_status": "COMPLETE",
+        "execution_economics_status": "COMPLETE",
+        "executable": True,
         "affordability": "SUPPORTED",
         "transfer_cost": {
             "hit": 0 if transfer_count == 1 else 4,
@@ -141,6 +144,8 @@ def _deep_report(routes, *, extra_sections=()):
         "S14",
         "PACKAGE OPTIMIZER / TRANSFER FRONTIER",
         {
+            "football_frontier_status": "COMPLETE",
+            "execution_economics_status": "COMPLETE",
             "package_search_proof": {
                 "owned_evaluated": 15,
                 "owned_expected": 15,
@@ -158,7 +163,10 @@ def _deep_report(routes, *, extra_sections=()):
                     "route_kind": "HOLD",
                     "moves": {"out": [], "in": []},
                     "bank_before": 2,
-                    "affordability": "SUPPORTED",
+                    "football_frontier_status": "COMPLETE",
+                    "execution_economics_status": "NOT_REQUIRED",
+                    "executable": True,
+                    "affordability": "NOT_REQUIRED",
                     "transfer_cost": {"bank_after": 2},
                     "gw1_net": 0.0,
                     "two_gw_if_relevant": 0.0,

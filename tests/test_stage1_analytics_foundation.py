@@ -700,3 +700,568 @@ def test_multiwindow_missing_provider_fails_closed():
     assert out["provider_guard"]["status"] == "PROVIDER_UNAVAILABLE"
     assert out["provider_guard"]["aggregation_allowed"] is False
 
+
+from copy import deepcopy
+
+from src.models.v12_availability_evidence import build_availability_state
+from src.models.v12_defcon_probability import (
+    build_defcon_context,
+    project_defcon_hit_probability,
+)
+from src.models.v12_role_duty_evidence import build_role_duty_evidence
+from src.models.v12_stage_b_ab import (
+    compare_player_ordering,
+    compare_transfer_comparator_outputs,
+    run_exact_p17_ab,
+    run_stage_b_controlled_ab,
+    shadow_component_replacement,
+)
+
+
+def _stageb_xmins(*, expected=82.0, low=70.0, high=90.0):
+    return {
+        "expected_minutes": expected,
+        "expected_minutes_interval": [low, high],
+        "minutes_std": max(1.0, (high - low) / 2.56),
+        "start_probability": 0.90,
+        "confidence": "HIGH",
+        "xmins_distribution": {
+            "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+            "states": [
+                {"state": "START_FULL", "probability": 0.80, "minutes_mean": 90},
+                {"state": "START_SUBBED", "probability": 0.10, "minutes_mean": 70},
+                {"state": "CAMEO", "probability": 0.05, "minutes_mean": 20},
+                {"state": "DNP", "probability": 0.05, "minutes_mean": 0},
+            ],
+        },
+    }
+
+
+def _stageb_def_row(
+    gw,
+    defensive,
+    *,
+    player_id=8101,
+    home=True,
+    position="DEF",
+    opponent=20,
+    minutes=90,
+    starter=True,
+):
+    return {
+        "player_id": player_id,
+        "element": player_id,
+        "gw": gw,
+        "match_id": 81000 + gw,
+        "position": position,
+        "opponent_team_id": opponent,
+        "home": home,
+        "minutes": minutes,
+        "starter": starter,
+        "defensive": defensive,
+    }
+
+
+def _stageb_universe_rows():
+    rows = []
+    for player_id in range(8201, 8207):
+        for gw in range(1, 7):
+            rows.append(
+                _stageb_def_row(
+                    gw,
+                    10 + (gw % 3),
+                    player_id=player_id,
+                    home=gw % 2 == 0,
+                    position="DEF",
+                    opponent=20 if gw <= 4 else 21,
+                )
+            )
+    return rows
+
+
+def test_stageb_high_defcon_weak_cs_is_independent_of_clean_sheet():
+    rows = [_stageb_def_row(gw, 14) for gw in range(1, 7)]
+    context = build_defcon_context([*rows, *_stageb_universe_rows()])
+    out = project_defcon_hit_probability(
+        rows,
+        position="DEF",
+        xmins=_stageb_xmins(),
+        home=True,
+        opponent_team_id=20,
+        context=context,
+    )
+    assert out["defcon_hits"] == 6
+    assert out["eligible_starts"] == 6
+    assert out["hit_rate"] == 1.0
+    assert out["projected_hit_probability"] is not None
+    assert out["DEFCON_EV"] is not None
+    assert out["component_separation"]["CS_EV"] == "NOT_INCLUDED_HERE"
+    assert out["component_separation"]["cs_defcon_double_count"] is False
+
+
+def test_stageb_low_defcon_strong_cs_does_not_fabricate_defcon():
+    rows = [_stageb_def_row(gw, 3) for gw in range(1, 7)]
+    context = build_defcon_context([*rows, *_stageb_universe_rows()])
+    out = project_defcon_hit_probability(
+        rows,
+        position="DEF",
+        xmins=_stageb_xmins(),
+        home=False,
+        opponent_team_id=21,
+        context=context,
+    )
+    assert out["defcon_hits"] == 0
+    assert out["hit_rate"] == 0.0
+    assert out["DEFCON_EV"] is not None
+    assert out["DEFCON_EV"] < 1.0
+
+
+def test_stageb_home_away_asymmetry_changes_conditioned_probability():
+    rows = [
+        _stageb_def_row(
+            gw,
+            15 if gw <= 3 else 6,
+            home=gw <= 3,
+            opponent=20,
+        )
+        for gw in range(1, 7)
+    ]
+    context = build_defcon_context([*rows, *_stageb_universe_rows()])
+    home = project_defcon_hit_probability(
+        rows,
+        position="DEF",
+        xmins=_stageb_xmins(),
+        home=True,
+        opponent_team_id=20,
+        context=context,
+    )
+    away = project_defcon_hit_probability(
+        rows,
+        position="DEF",
+        xmins=_stageb_xmins(),
+        home=False,
+        opponent_team_id=20,
+        context=context,
+    )
+    assert home["conditions"]["home_away"]["status"] == "APPLIED"
+    assert away["conditions"]["home_away"]["status"] == "APPLIED"
+    assert home["projected_hit_probability"] > away["projected_hit_probability"]
+
+
+def test_stageb_defcon_under_three_starts_is_low_confidence():
+    rows = [_stageb_def_row(1, 12), _stageb_def_row(2, 11)]
+    context = build_defcon_context([*rows, *_stageb_universe_rows()])
+    out = project_defcon_hit_probability(
+        rows,
+        position="DEF",
+        xmins=_stageb_xmins(),
+        home=True,
+        context=context,
+    )
+    assert out["eligible_starts"] == 2
+    assert out["confidence"]["label"] == "LOW"
+    assert out["confidence"]["score"] < 0.2
+
+
+def test_stageb_defcon_uses_finite_state_xmins_and_uncertainty():
+    rows = [_stageb_def_row(gw, 12) for gw in range(1, 9)]
+    context = build_defcon_context([*rows, *_stageb_universe_rows()])
+    out = project_defcon_hit_probability(
+        rows,
+        position="DEF",
+        xmins=_stageb_xmins(expected=50, low=10, high=90),
+        home=True,
+        opponent_team_id=20,
+        context=context,
+    )
+    assert out["xmins"]["mode"] == "FINITE_STATE_XMINS"
+    assert out["xmins"]["state_count"] == 4
+    assert out["xmins"]["uncertainty"]["label"] == "LOW"
+    assert out["confidence"]["label"] != "HIGH"
+    assert (
+        out["conditions"]["calibration"][
+            "conditional_hit_rate_not_blended_into_unconditional_xmins_probability"
+        ]
+        is True
+    )
+
+
+def _available_player():
+    return {
+        "id": 8101,
+        "element_type": 2,
+        "status": "a",
+        "chance_of_playing_next_round": 100,
+        "starts": 5,
+        "minutes": 430,
+    }
+
+
+def test_stageb_unknown_absence_is_not_injury_diagnosis():
+    out = build_availability_state(
+        _available_player(),
+        events=[
+            {
+                "source": "NEWS_REPORT",
+                "timestamp": "2026-09-25T01:00:00Z",
+                "expires_at": "2026-09-26T01:00:00Z",
+                "evidence_type": "ABSENCE_REPORT",
+                "confidence": "MEDIUM",
+                "reason": "not selected; reason not stated",
+                "claim": "injury suspected",
+            }
+        ],
+        snapshot_timestamp="2026-09-25T03:00:00Z",
+        now_iso="2026-09-25T04:00:00Z",
+    )
+    assert out["dominant_state"] == "FIT"
+    assert "UNAVAILABLE_UNKNOWN" in out["states"]
+    unknown = next(
+        row for row in out["evidence"]
+        if row.get("state") == "UNAVAILABLE_UNKNOWN"
+    )
+    assert unknown["medical_diagnosis"] is None
+    assert out["governance"]["unknown_absence_not_relabelled_injury"] is True
+
+
+def test_stageb_played_90_international_minutes_is_preserved_as_workload_state():
+    out = build_availability_state(
+        _available_player(),
+        events=[
+            {
+                "source": "INTERNATIONAL_MATCH_OBSERVED",
+                "timestamp": "2026-09-24T20:00:00Z",
+                "evidence_type": "INTERNATIONAL_PLAYED",
+                "confidence": "HIGH",
+                "minutes": 90,
+            }
+        ],
+        snapshot_timestamp="2026-09-25T03:00:00Z",
+        now_iso="2026-09-25T04:00:00Z",
+    )
+    assert out["dominant_state"] == "FIT"
+    assert "INTERNATIONAL_PLAYED" in out["states"]
+    assert "INTERNATIONAL_HEAVY_MINUTES" in out["states"]
+    assert out["xmins_context"]["international_heavy_minutes_present"] is True
+    assert out["xmins_context"]["automatic_numeric_congestion_factor"] is None
+
+
+def test_stageb_conflicting_sources_preserve_official_authority():
+    out = build_availability_state(
+        _available_player(),
+        events=[
+            {
+                "source": "CLUB_OFFICIAL",
+                "timestamp": "2026-09-25T02:30:00Z",
+                "evidence_type": "EXPLICIT_STATE",
+                "state": "UNAVAILABLE_CONFIRMED",
+                "confidence": "HIGH",
+            }
+        ],
+        snapshot_timestamp="2026-09-25T03:00:00Z",
+        now_iso="2026-09-25T04:00:00Z",
+    )
+    assert out["dominant_state"] == "FIT"
+    assert out["conflict"] is True
+    assert "UNAVAILABLE_CONFIRMED" in out["states"]
+    assert out["xmins_context"]["external_availability_overrides_official"] is False
+
+
+def test_stageb_stale_availability_cannot_dominate():
+    out = build_availability_state(
+        _available_player(),
+        events=[
+            {
+                "source": "EXTERNAL",
+                "timestamp": "2026-09-20T00:00:00Z",
+                "expires_at": "2026-09-21T00:00:00Z",
+                "evidence_type": "UNAVAILABLE_REPORT",
+                "confidence": "HIGH",
+            }
+        ],
+        snapshot_timestamp="2026-09-25T03:00:00Z",
+        now_iso="2026-09-25T04:00:00Z",
+    )
+    assert out["dominant_state"] == "FIT"
+    assert out["stale_evidence_count"] == 1
+    assert out["governance"]["stale_evidence_cannot_be_dominant"] is True
+
+
+def test_stageb_role_fact_is_not_overwritten_by_external_opinion():
+    player = {
+        **_available_player(),
+        "penalties_order": 1,
+        "penalties_text": "First choice",
+        "corners_and_indirect_freekicks_order": 2,
+        "corners_and_indirect_freekicks_text": "Second choice",
+        "direct_freekicks_order": 3,
+        "direct_freekicks_text": "Third choice",
+    }
+    rows = [
+        _stageb_def_row(gw, 10, starter=gw != 5, minutes=70 if gw == 4 else 90)
+        for gw in range(1, 6)
+    ]
+    out = build_role_duty_evidence(
+        player,
+        match_rows=rows,
+        observed_role={
+            "profile": "OVERLAPPING_FULLBACK",
+            "confidence": "MEDIUM",
+            "source": "OBSERVED_ROLE",
+        },
+        xmins=_stageb_xmins(),
+        external_claims=[
+            {
+                "source": "ANALYST",
+                "name": "penalty_duty",
+                "value": "not on penalties",
+                "confidence": "HIGH",
+            }
+        ],
+    )
+    assert out["facts"]["penalty_duty"]["value"]["order"] == 1
+    assert out["facts"]["penalty_duty"]["classification"] == "FACT"
+    assert (
+        out["derived"]["actual_tactical_role"]["value"]
+        == "OVERLAPPING_FULLBACK"
+    )
+    assert out["inferred"][0]["authoritative_override_forbidden"] is True
+    assert out["conflicts"][0]["resolution"] == "OFFICIAL_FACT_PRESERVED"
+
+
+def test_stageb_foundation_feature_off_is_output_compatible(tmp_path, monkeypatch):
+    monkeypatch.delenv("V12_STAGE_B_EVIDENCE_ENABLED", raising=False)
+    _write_normalized(
+        tmp_path,
+        "official_fpl",
+        _normalized_history("official_fpl", _foundation_rows(3)),
+    )
+    out = load_v6_analytics_foundation(
+        tmp_path,
+        bootstrap=_foundation_bootstrap(),
+        planning_gw=4,
+        strength=_strength(),
+    )
+    assert "stage_b_evidence" not in out
+
+
+def test_stageb_foundation_feature_on_exposes_shadow_snapshot(tmp_path, monkeypatch):
+    monkeypatch.setenv("V12_STAGE_B_EVIDENCE_ENABLED", "1")
+    _write_normalized(
+        tmp_path,
+        "official_fpl",
+        _normalized_history("official_fpl", _foundation_rows(3)),
+    )
+    out = load_v6_analytics_foundation(
+        tmp_path,
+        bootstrap=_foundation_bootstrap(),
+        planning_gw=4,
+        strength=_strength(),
+    )
+    snapshot = out["stage_b_evidence"]
+    assert snapshot["contract"] == "V12_STAGE_B_EVIDENCE_SNAPSHOT_V1"
+    assert snapshot["governance"]["analytical_evidence_only"] is True
+    assert snapshot["governance"]["p1_7_semantics_changed"] is False
+
+
+def test_stageb_p11_ab_uses_existing_owner_for_role_evidence_only():
+    player = _available_player()
+    rows = [_stageb_def_row(gw, 10) for gw in range(1, 6)]
+    role = build_role_duty_evidence(
+        player,
+        match_rows=rows,
+        xmins=_stageb_xmins(),
+    )
+    availability = build_availability_state(
+        player,
+        events=[
+            {
+                "source": "INTERNATIONAL_MATCH_OBSERVED",
+                "timestamp": "2026-09-24T20:00:00Z",
+                "evidence_type": "INTERNATIONAL_PLAYED",
+                "confidence": "HIGH",
+                "minutes": 90,
+            }
+        ],
+        snapshot_timestamp="2026-09-25T03:00:00Z",
+        now_iso="2026-09-25T04:00:00Z",
+    )
+    out = run_stage_b_controlled_ab(
+        player=player,
+        baseline_context={"team_matches_played": 5},
+        role_duty_evidence=role,
+        availability_evidence=availability,
+    )
+    assert "context.role_start_probability" in out["delta"]["causal_fields"]
+    assert out["delta"]["xmins"] != 0
+    assert out["delta"]["p_start"] != 0
+    assert (
+        out["availability_numeric_effect"]
+        == "NOT_APPLIED_NO_CALIBRATED_NUMERIC_MAPPING"
+    )
+    assert out["governance"]["p1_1_owner_reused"] is True
+
+
+def test_stageb_defcon_ev_replaces_not_adds_baseline_component():
+    out = shadow_component_replacement(
+        baseline_total=6.0,
+        baseline_components={
+            "ATTACK_EV": 1.5,
+            "CS_EV": 2.0,
+            "DEFCON_EV": 0.8,
+            "BONUS_EV": 0.5,
+        },
+        enriched_defcon_ev=1.4,
+    )
+    assert out["shadow_total"] == 6.6
+    assert out["delta"] == 0.6
+    assert out["double_count_guard"] is True
+    assert out["CS_EV_unchanged"] == 2.0
+
+
+def _stageb_pmf(meanish):
+    return {
+        "0": 0.10,
+        str(max(3, int(round(meanish)))): 0.70,
+        str(max(8, int(round(meanish + 4)))): 0.20,
+    }
+
+
+def _stageb_projection(element, position, meanish):
+    probs = _stageb_pmf(meanish)
+    mean = sum(int(points) * probability for points, probability in probs.items())
+    second = sum(
+        int(points) ** 2 * probability
+        for points, probability in probs.items()
+    )
+    variance = max(0.0, second - mean * mean)
+    return {
+        "element": element,
+        "name": f"B{element}",
+        "position": position,
+        "team_id": (element % 10) + 1,
+        "projection_confidence": "HIGH",
+        "xmins": {
+            "start_probability": 0.90,
+            "cameo_probability": 0.04,
+            "late_cameo_probability": 0.01,
+            "dnp_probability": 0.06,
+            "availability": 0.94,
+            "expected_minutes": 82.0,
+            "confidence": "HIGH",
+            "xmins_distribution": {
+                "distribution": "FINITE_STATE_MINUTES_MIXTURE",
+                "mean": 82.0,
+                "std": 12.0,
+                "states": [
+                    {"state": "START_FULL", "probability": 0.90, "minutes_mean": 90, "minutes_std": 0},
+                    {"state": "CAMEO", "probability": 0.03, "minutes_mean": 18, "minutes_std": 0},
+                    {"state": "LATE_CAMEO", "probability": 0.01, "minutes_mean": 7, "minutes_std": 0},
+                    {"state": "DNP", "probability": 0.06, "minutes_mean": 0, "minutes_std": 0},
+                ],
+            },
+        },
+        "tactical_role_component": {
+            "canonical_tactical_role_score": 60.0,
+            "confidence": 0.9,
+            "canonical_component": {
+                "name": "TACTICAL_ROLE",
+                "weight": 0.25,
+                "weighted_component_points": 15.0,
+            },
+        },
+        "xpts_by_gw": [
+            {
+                "gw": 6,
+                "mean": mean,
+                "std": variance ** 0.5,
+                "points_variance": variance,
+                "point_distribution": {
+                    "model": "FINITE_STATE_CONDITIONAL_CORE_POINT_PMF_V1",
+                    "distribution_completeness": "PARTIAL_BONUS_RESIDUAL",
+                    "bonus_incorporation": "EXPECTATION_ONLY_NOT_STOCHASTIC",
+                    "probabilities": probs,
+                },
+                "fixtures": [],
+            }
+        ],
+    }
+
+
+def _stageb_squad():
+    positions = ["GK", "GK"] + ["DEF"] * 5 + ["MID"] * 5 + ["FWD"] * 3
+    means = [
+        4.8, 3.9,
+        5.4, 5.2, 5.0, 4.7, 3.0,
+        7.4, 7.0, 6.4, 5.8, 4.6,
+        8.1, 6.7, 5.9,
+    ]
+    return {
+        "planning_gw": 6,
+        "players": [
+            _stageb_projection(index + 1, position, means[index])
+            for index, position in enumerate(positions)
+        ],
+    }
+
+
+def test_stageb_exact_p17_ab_is_unchanged_when_only_evidence_is_added():
+    baseline = _stageb_squad()
+    enriched = deepcopy(baseline)
+    for row in enriched["players"]:
+        row["stage_b_evidence"] = {
+            "defcon": {"DEFCON_EV": 1.2},
+            "availability": {"states": ["FIT"]},
+            "role_duty": {"facts": {}},
+        }
+    squad_ids = [row["element"] for row in baseline["players"]]
+
+    out = run_exact_p17_ab(
+        baseline_projections=baseline,
+        enriched_projections=enriched,
+        squad_ids=squad_ids,
+        planning_gw=6,
+        generated_at="2026-09-25T04:00:00Z",
+    )
+    assert out["p17_semantics_changed"] is False
+    assert out["changed"] == {
+        "XI": False,
+        "bench": False,
+        "captain": False,
+        "vice": False,
+        "formation": False,
+    }
+
+
+def test_stageb_player_ordering_and_transfer_comparator_stay_unchanged_before_commit():
+    baseline_rows = [
+        {"element": 1, "score": 5.0},
+        {"element": 2, "score": 4.0},
+    ]
+    enriched_rows = deepcopy(baseline_rows)
+    enriched_rows[1]["stage_b_evidence"] = {"defcon": {"DEFCON_EV": 1.4}}
+    ordering = compare_player_ordering(baseline_rows, enriched_rows)
+
+    baseline_comparator = {
+        "comparisons": [
+            {
+                "candidate": {"element": 2},
+                "raw_gains": {"1": -0.2, "3": 0.4},
+            }
+        ]
+    }
+    enriched_comparator = deepcopy(baseline_comparator)
+    enriched_comparator["comparisons"][0]["stage_b_evidence"] = {
+        "availability": {"states": ["FIT"]}
+    }
+    comparator = compare_transfer_comparator_outputs(
+        baseline_comparator,
+        enriched_comparator,
+    )
+    assert ordering["baseline"] == [1, 2]
+    assert ordering["enriched"] == [1, 2]
+    assert ordering["changed"] is False
+    assert ordering["ranking_authority_created"] is False
+    assert comparator["changed"] is False
+    assert comparator["comparator_semantics_changed"] is False
+

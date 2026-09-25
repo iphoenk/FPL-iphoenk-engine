@@ -99,7 +99,7 @@ jobs:
       OPENBLAS_CORETYPE: Haswell
       OPENBLAS_NUM_THREADS: "1"
       OMP_NUM_THREADS: "1"
-      NPY_DISABLE_CPU_FEATURES: "AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR"
+      NPY_DISABLE_CPU_FEATURES: "X86_V4,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR"
     # issue_comment is cache-read-only by default. This job is owner-gated above
     # and checks out only production main/runtime-data, so explicit cache write
     # cannot be populated from commenter-controlled code.

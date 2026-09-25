@@ -2932,6 +2932,57 @@ def _render_deep_visible_contract_lines(
             )
         excluded.extend(("staging_rows", "squad_classification"))
 
+    elif section_id == "S10":
+        rows = [
+            dict(row)
+            for row in payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.extend(
+            _markdown_table(
+                (
+                    "element_id",
+                    "player",
+                    "current_price",
+                    "sell_value",
+                    "direction",
+                    "progress",
+                    "projected_offset0",
+                    "next_cycle",
+                    "cycles_to_change",
+                    "date_state",
+                    "eta",
+                    "evidence_timestamp",
+                    "source_age_minutes",
+                    "freshness",
+                    "decision_implication",
+                ),
+                [
+                    (
+                        row.get("element_id"),
+                        row.get("name") or row.get("player"),
+                        row.get("current_price"),
+                        row.get("authenticated_sell_value"),
+                        row.get("predictor_direction"),
+                        row.get("predictor_progress"),
+                        row.get("predictor_projected_percent"),
+                        row.get("next_official_price_cycle_wib"),
+                        row.get("cycles_to_expected_change"),
+                        row.get("date_state"),
+                        row.get("eta_context")
+                        or row.get("estimated_change_window")
+                        or row.get("date_state"),
+                        row.get("evidence_timestamp"),
+                        row.get("source_age_minutes"),
+                        row.get("freshness"),
+                        row.get("decision_implication"),
+                    )
+                    for row in rows
+                ],
+            )
+        )
+        excluded.append("rows")
+
     elif section_id == "S11":
         rows = [
             dict(row)
@@ -3001,6 +3052,9 @@ def _render_deep_visible_contract_lines(
             "confidence",
             "source",
             "observed_at",
+            "source_age_minutes",
+            "freshness",
+            "date_state",
             "raw_payload_hash",
         )
         payload_hash = str(
@@ -3096,6 +3150,9 @@ def _render_deep_visible_contract_lines(
                         or row.get("observed_at")
                         or "UNAVAILABLE"
                     ),
+                    "source_age_minutes": row.get("source_age_minutes"),
+                    "freshness": row.get("freshness"),
+                    "date_state": row.get("date_state"),
                     "raw_payload_hash": (
                         row.get("raw_payload_hash")
                         or payload_hash

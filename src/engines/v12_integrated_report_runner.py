@@ -3051,6 +3051,13 @@ def run_deep(
     bootstrap = official["bootstrap"]
     fixtures = official["fixtures"]
     planning_gw = _planning_gw(bootstrap)
+    private_auth_snapshot = _read_json(
+        runtime_data_root / "data/v6/personal/current_team.json",
+        {},
+    ) or {}
+    bound_private_auth_state = str(
+        private_auth_snapshot.get("auth_state") or "UNAVAILABLE"
+    ).upper()
     personal_resolution = _stage(
         ledger,
         "PERSONAL_EVIDENCE_RECONCILIATION",
@@ -4213,11 +4220,7 @@ def run_deep(
                 },
                 "source_health": {
                     "official_fpl": "HEALTHY" if official else "UNAVAILABLE",
-                    "authenticated_personal_scope": str(
-                        (personal_resolution or {}).get("auth_state")
-                        or (finance or {}).get("auth_state")
-                        or "UNAVAILABLE"
-                    ).upper(),
+                    "authenticated_personal_scope": bound_private_auth_state,
                     "fixture_data": "HEALTHY" if fixtures is not None else "UNAVAILABLE",
                     "price_predictor": (rise or {}).get("predictor_health") or "UNAVAILABLE",
                     "tactical_statistical_data": "HEALTHY" if foundation else "UNAVAILABLE",
@@ -4225,13 +4228,13 @@ def run_deep(
                     "weather": "SOURCE_DEGRADED_AT_RUNNER; DIRECT_CHATGPT_AT_VISIBLE_DELIVERY",
                 },
                 "bound_authority": {
-                    "personal_auth_state": str(
-                        (personal_resolution or {}).get("auth_state")
-                        or (finance or {}).get("auth_state")
-                        or "UNAVAILABLE"
-                    ).upper(),
+                    "personal_auth_state": bound_private_auth_state,
                     "personal_resolution_status": (
                         (personal_resolution or {}).get("resolution_status")
+                        or "UNAVAILABLE"
+                    ),
+                    "identity_source_class": (
+                        (personal_resolution or {}).get("source_class")
                         or "UNAVAILABLE"
                     ),
                     "personal_evidence_source": (

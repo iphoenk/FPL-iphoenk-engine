@@ -16,6 +16,7 @@ import json
 import math
 import os
 import pickle
+import sys
 import time
 import numpy as np
 from pathlib import Path
@@ -43,7 +44,7 @@ POSITIONS = ("GK", "DEF", "MID", "FWD")
 OUTFIELD = ("DEF", "MID", "FWD")
 LEGAL_FORMATIONS = frozenset(LINEUP_RULES.get("legal_formations") or [])
 P17_DECISION_CACHE_ENV = "V12_P17_DECISION_CACHE_DIR"
-P17_DECISION_CACHE_SCHEMA = 1
+P17_DECISION_CACHE_SCHEMA = 2
 
 _P17_EXECUTION_STATS = {
     "p17_cache_hits": 0,
@@ -76,6 +77,15 @@ class LineupOptimizerError(ValueError):
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _runtime_cache_identity() -> dict[str, str]:
+    return {
+        "python_major_minor": (
+            f"{sys.version_info.major}.{sys.version_info.minor}"
+        ),
+        "numpy_version": np.__version__,
+    }
 
 
 def _f(value: Any, default: float = 0.0) -> float:
@@ -1625,6 +1635,7 @@ def _decision_core_cache_key(
     return fingerprint(
         {
             "schema": P17_DECISION_CACHE_SCHEMA,
+            "runtime": _runtime_cache_identity(),
             "optimizer_code_sha256": _optimizer_code_sha256(),
             "canonical_v12_revision": _canonical_sha256(),
             "ruleset_id": RULESET_ID,

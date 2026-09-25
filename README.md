@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-25T10:40:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-25T10:57:00+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -419,6 +419,12 @@ Gate0 / legality
 ```
 
 Missing evidence must remain explicit. A report must never silently convert missing evidence into zero, neutral fact, fabricated tactical context, or an invented probability.
+
+### Advisory multi-window underlying form
+
+V12 now contains a disabled-by-default analytical evidence layer for player form across MATCH, L3, L5 and SEASON. It is exposed only when `V12_MULTIWINDOW_FORM_ENABLED=1` and does not change Canonical decision weights, transfer/captain recommendations, P1.7, P1.2B or Monte Carlo semantics.
+
+Every raw or derived metric carries provider-aware provenance, sample size, confidence and availability. Same-provider longitudinal aggregation is allowed; cross-provider averaging is rejected unless a future explicit normalization contract exists. Missing values remain missing, zero-minute non-appearances are excluded from rolling windows, and regression/breakout/role-decline labels are advisory evidence rather than deterministic future claims.
 
 ## Reporting
 

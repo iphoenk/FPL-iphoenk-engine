@@ -696,7 +696,7 @@ def test_multiwindow_missing_provider_fails_closed():
     row = _mw_row(1)
     row.pop("source")
     out = build_player_multiwindow_form([row])
-    assert out["status"] == "PROVIDER_MISMATCH"
+    assert out["status"] == "PROVIDER_UNAVAILABLE"
     assert out["provider_guard"]["status"] == "PROVIDER_UNAVAILABLE"
     assert out["provider_guard"]["aggregation_allowed"] is False
 

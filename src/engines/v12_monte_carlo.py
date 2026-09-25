@@ -78,7 +78,7 @@ STAGE1_STATE_NAMES = (
 POSITIONS = ("GK", "DEF", "MID", "FWD")
 OUTFIELD = ("DEF", "MID", "FWD")
 MC_SIM_CACHE_ENV = "V12_MC_SIM_CACHE_DIR"
-MC_SIM_CACHE_SCHEMA = 1
+MC_SIM_CACHE_SCHEMA = 2
 
 
 class MonteCarloError(ValueError):
@@ -87,6 +87,15 @@ class MonteCarloError(ValueError):
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _runtime_cache_identity() -> dict[str, str]:
+    return {
+        "python_major_minor": (
+            f"{sys.version_info.major}.{sys.version_info.minor}"
+        ),
+        "numpy_version": np.__version__,
+    }
 
 
 def _f(value: Any, default: float = 0.0) -> float:
@@ -2909,6 +2918,7 @@ def run_correlated_monte_carlo(
     simulation_cache_key = fingerprint(
         {
             "schema": MC_SIM_CACHE_SCHEMA,
+            "runtime": _runtime_cache_identity(),
             "mc_code_sha256": _mc_code_sha256(),
             "canonical_v12_revision": _canonical_sha256(),
             "config_fingerprint": fingerprint(cfg),

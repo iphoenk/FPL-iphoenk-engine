@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-25T10:39:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-25T11:40:45+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -425,6 +425,12 @@ Missing evidence must remain explicit. A report must never silently convert miss
 V12 now contains a disabled-by-default analytical evidence layer for player form across MATCH, L3, L5 and SEASON. It is exposed only when `V12_MULTIWINDOW_FORM_ENABLED=1` and does not change Canonical decision weights, transfer/captain recommendations, P1.7, P1.2B or Monte Carlo semantics.
 
 Every raw or derived metric carries provider-aware provenance, sample size, confidence and availability. Same-provider longitudinal aggregation is allowed; cross-provider averaging is rejected unless a future explicit normalization contract exists. Missing values remain missing, zero-minute non-appearances are excluded from rolling windows, and regression/breakout/role-decline labels are advisory evidence rather than deterministic future claims.
+
+### Stage B shadow DEFCON / availability / role-duty evidence
+
+The Stage B layer remains diagnostic and unmerged. It models defensive-contribution threshold probability from the verified Official FPL ruleset using existing P1.3 DEFCON as prior evidence when available, then conditions on finite-state xMins, venue history, recent defensive actions, same-position opponent workload, and role-conditioned history only when sample support exists. The resulting `DEFCON_EV` is a shadow replacement for the existing DEFCON component in controlled A/B, never an additive bonus and never a second clean-sheet input.
+
+Availability is represented as structured evidence with source, timestamp, type, confidence and staleness. Unknown absence never becomes an injury diagnosis. International heavy minutes and travel may feed only the existing P1.1 congestion input in controlled A/B; the numeric fatigue/travel overlay is explicitly an experimental bounded A/B model assumption, not a factual observation or an empirically calibrated production parameter. Stage B does not create a second minutes owner. Role/duty evidence keeps Official FPL penalty, corner/indirect-free-kick, direct-free-kick and nominal-position facts separate from derived tactical role, recent starts/substitution timing and external inferred claims. External opinion cannot overwrite authoritative role facts.
 
 ## Reporting
 

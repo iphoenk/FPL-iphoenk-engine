@@ -113,27 +113,35 @@ Median-ratio reduction:
 
 ### D2a / D2b diagnostic attribution
 
-Observed:
+Observed on the final same-host performance run:
 - oracle -> D2a gain: **1.387679 s**
 - D2a -> D2 final gain: **1.485388 s**
+- total oracle -> D2 final gain: **2.873067 s**
 
-Pre-registered refined-harness diagnostic expectation:
-- D2a scan-removal gain: ~1.17 s
-- D2b position-reuse gain: ~0.73 s
+The pre-registered component timing came from the refined harness where oracle walk-forward was ~1.965 s, while the final same-host oracle was ~2.948 s. Direct comparison of the raw component seconds across those harnesses is therefore invalid.
 
-The D2b gain is materially larger than the pre-registered 0.73 s estimate. This is now explained by a modeling omission, not an unexplained candidate cost.
+Scale factor:
+- **2.947526 / 1.964546 ~= 1.50**
 
-The pre-registered 0.73 s estimate counted:
-- repeated position `_rate90` (~0.666 s in the refined timing);
-- repeated position starter sum (~0.063 s).
+Scaled refined-harness prediction on the final-run time scale:
+- D2a scan-removal: `(0.689 + 0.482) * 1.50 ~= 1.757 s`
+- D2b position reuse: `(0.666 + 0.063) * 1.50 ~= 1.094 s`
+- total removable work: `1.901 * 1.50 ~= 2.852 s`
+- retained work: `0.064 * 1.50 ~= 0.096 s`
 
-It did **not** include the residual D2a work:
-- D2a replaces a full-`train` position scan with a smaller `rows_by_position[position]` scan, but still performs that smaller `gw < target_gw` filter once per test row.
-- D2b caches the exact ordered position history by `(target_gw, normalized_position)`, eliminating those repeated subset filters as well.
+Actual:
+- D2a gain: **1.388 s**
+- D2b gain: **1.485 s**
+- total gain: **2.873 s**
+- retained: **0.0745 s**
 
-On the same-host runner, this additional saved position-history filtering accounts for the larger D2b gain. Directionally this is consistent with the earlier refined timing, where position-history construction was itself material.
+Therefore the cost model is **confirmed at the total level**: predicted total removed ~2.852 s versus actual ~2.873 s, a difference of only ~0.021 s.
 
-Therefore the cost model was incomplete in attribution, while the implementation behavior is consistent with the allowed D2 design.
+What shifted is attribution between D2a and D2b. The refined model allocated the full position-scan cost to D2a. In reality:
+- D2a replaces full-`train` scanning with an order-preserving per-position index, but still filters that smaller position list with `gw < target_gw` for every test row;
+- D2b then removes that residual repeated position-history filtering by caching exact ordered history per `(target_gw, normalized_position)`, in addition to removing repeated position `_rate90` and starter-sum work.
+
+So D2a realizes less than the scaled scan-removal estimate, while D2b realizes more than its scaled rate/start estimate. The **total Amdahl prediction remains accurate**; the stage allocation, not the total model, was approximate.
 
 ### Diagnostic floor
 
@@ -142,7 +150,7 @@ The pre-registered diagnostic said a well-shaped candidate might land around 0.1
 Observed:
 - **0.0743 s**
 
-There is therefore no unexplained excess cost before merge. The candidate is slightly below the earlier structural estimate, confirming that estimate was not a mathematical lower bound and included instrumentation/control effects.
+There is therefore no unexplained excess cost before merge. The candidate is slightly below the scaled retained estimate (~0.096 s vs 0.0745 s). The most likely explanation is instrumentation/timer/control overhead included in the refined-harness floor estimate; the ~0.021 s difference is not material and the earlier floor was never a mathematical lower bound.
 
 ## GC gate
 
@@ -180,9 +188,15 @@ For D2 final:
 
 Thus, when the code is measured on the **same host**, Stage C and direct A/B timings agree closely. This strongly argues against a systematic ~1.8x harness slowdown.
 
-The old ~1.8x D1 discrepancy is therefore most consistent with different hosted-runner hardware/runtime allocation, but this remains an attribution rather than proof because the historical A/B run did not record CPU model / nproc.
+The old ~1.8x D1 discrepancy and the earlier ~1.39x D2 pre-implementation discrepancy are therefore **not proven**, but are now **consistent with the hosted-runner hardware heterogeneity hypothesis**. Historical runs did not record CPU model / nproc, so hardware cannot be established retrospectively as the cause.
 
 All D2 performance runs now record CPU model and nproc to prevent recurrence.
+
+## Backlog — position data-quality contract
+
+D2 deliberately preserves the scalar oracle's current `_position()` semantics. Numeric values such as `element_type=1` are not translated to `GK`; they normalize to the string `"1"` and therefore form a separate position group.
+
+If any factual source can emit numeric position encodings into this Stage-1 row surface, that would be a latent data-quality/oracle issue because semantically equivalent positions could be split into different groups. This is **outside D2 scope** and should be audited separately against real source schemas before any normalization change is proposed.
 
 ## Closure
 

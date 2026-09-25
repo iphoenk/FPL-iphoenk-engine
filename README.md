@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-25T11:20:52+07:00`
+> **Last runtime/documentation sync:** `2026-09-25T11:49:00+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -430,7 +430,7 @@ Every raw or derived metric carries provider-aware provenance, sample size, conf
 
 The Stage B layer remains diagnostic and unmerged. It models defensive-contribution threshold probability from the verified Official FPL ruleset using existing P1.3 DEFCON as prior evidence when available, then conditions on finite-state xMins, venue history, recent defensive actions, same-position opponent workload, and role-conditioned history only when sample support exists. The resulting `DEFCON_EV` is a shadow replacement for the existing DEFCON component in controlled A/B, never an additive bonus and never a second clean-sheet input.
 
-Availability is represented as structured evidence with source, timestamp, type, confidence and staleness. Unknown absence never becomes an injury diagnosis. International heavy minutes and travel may feed only the existing P1.1 congestion input in controlled A/B; Stage B does not create a second minutes owner. Role/duty evidence keeps Official FPL penalty, corner/indirect-free-kick, direct-free-kick and nominal-position facts separate from derived tactical role, recent starts/substitution timing and external inferred claims. External opinion cannot overwrite authoritative role facts.
+Availability is represented as structured evidence with source, timestamp, type, confidence and staleness. Unknown absence never becomes an injury diagnosis. International heavy minutes and travel remain explicit workload evidence, but Stage B does not fabricate an automatic numeric fatigue/travel multiplier; any future P1.1 effect must enter through the existing P1.1 context only after calibration. Role/duty evidence keeps Official FPL penalty, corner/indirect-free-kick, direct-free-kick and nominal-position facts separate from derived tactical role, recent starts/substitution timing and external inferred claims. External opinion cannot overwrite authoritative role facts.
 
 ## Reporting
 

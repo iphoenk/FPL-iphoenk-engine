@@ -4,8 +4,8 @@
     "recent_start_window": 3,
     "minimum_starts_for_mature_hit_rate": 5,
     "minimum_starts_for_conditioning": 3,
-    "prior_strength_starts": 4.0,
-    "rate_shrinkage_minutes": 450.0,
+    "prior_strength_starts": 4,
+    "rate_shrinkage_minutes": 450,
     "venue_factor_min": 0.75,
     "venue_factor_max": 1.25,
     "opponent_factor_min": 0.8,
@@ -14,8 +14,8 @@
     "role_factor_max": 1.15,
     "opponent_minimum_same_position_starts": 3,
     "role_minimum_starts": 3,
-    "xmins_uncertainty_developing_width": 25.0,
-    "xmins_uncertainty_low_width": 40.0
+    "xmins_uncertainty_developing_width": 25,
+    "xmins_uncertainty_low_width": 40
   },
   "availability": {
     "international_heavy_minutes_threshold": 75,
@@ -29,7 +29,8 @@
     },
     "international_heavy_minutes_congestion_factor": 0.9,
     "travel_return_congestion_factor": 0.95,
-    "minimum_confirmed_confidence": 0.8
+    "minimum_confirmed_confidence": 0.8,
+    "congestion_overlay_calibration_status": "EXPERIMENTAL_BOUNDED_AB_ONLY_NOT_EMPIRICALLY_CALIBRATED"
   },
   "role_duty": {
     "starts_last_n": 5,

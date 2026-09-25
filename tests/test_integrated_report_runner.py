@@ -324,6 +324,17 @@ def test_integrated_deep_runner_executes_owner_stages_and_materializes_full_cata
             "available_count": 0,
             "expected_count": 20,
             "rows": [],
+            "scanner20": [],
+            "actionable_watchlist": [],
+            "actionable_count": 0,
+            "position_formulae": {
+                "GK": "V12_WATCH_GK_EVIDENCE_V1",
+                "DEF": "V12_WATCH_DEF_EVIDENCE_V1",
+                "MID": "V12_WATCH_MID_EVIDENCE_V1",
+                "FWD": "V12_WATCH_FWD_EVIDENCE_V1",
+            },
+            "actionable_watchlist_is_unpadded_subset": True,
+            "price_is_overlay_not_primary_authority": True,
             "degradation_reason": "canonical evaluator intentionally incomplete",
         },
     )
@@ -346,6 +357,10 @@ def test_integrated_deep_runner_executes_owner_stages_and_materializes_full_cata
     assert actual == expected
     assert len(actual) == 23
     assert {"S06B", "S14B", "S15B", "S16B"} <= set(actual)
+    s11 = next(row for row in out["report"]["sections"] if row["section_id"] == "S11")
+    assert "scanner20" in s11["content"]
+    assert "actionable_watchlist" in s11["content"]
+    assert s11["content"]["position_formulae"]["GK"] == "V12_WATCH_GK_EVIDENCE_V1"
     assert out["human_facing_manifest"]["status"] in {"PASS", "FAIL"}
     assert out["planning_gw"] == 6
     stages = {row["stage"]: row["status"] for row in out["stage_ledger"]}

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-25T10:17:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-25T10:40:00+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -49,6 +49,8 @@ S19   Final Judgement
 ```
 
 `S06B` reuses the existing P1.7 football-optimal lineup evidence and P1.8 downstream mini-league evidence. It explicitly distinguishes the highest raw mean-xPts formation from the P1.7 distributional football choice and the supportable mini-league objective. It does **not** create a second lineup optimizer or allow ownership alone to override football evidence.
+
+S15B is a **comprehensive decision-oriented mini-league surface**, not a compact ownership summary. For OUR15 it must show raw numerator / explicit denominator / percentage for ownership, starter, bench, captain, vice, and EO where multiplier evidence is complete. It also materializes the immediate rivals above our current rank, squad overlap and unique-player differences, direct-rival OUR15 exposure, non-owned rival threats, captain leverage with xPts/P(haul)/all-rival/direct-rival exposure, and the CHASE / BALANCED / DEFEND implication for XI, captaincy, and transfers. Latest disclosed rival picks are labelled as a prior-GW behavioral baseline and are never represented as still-private planning-GW selections.
 
 `S14B` is a non-binding three-GW roadmap. It can classify players/routes as `CORE / HOLD`, `WATCH`, `PREPARE OUT`, `PREPARE IN`, or `ACT CANDIDATE`, and must re-optimize when new injury, lineup, role, fixture, price, budget, or posterior evidence changes. Staging is never treated as a promise to execute a future transfer.
 

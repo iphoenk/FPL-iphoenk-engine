@@ -2011,6 +2011,11 @@ def _mini_league_deep_detail(
     captain_n = max(1, int(report_cfg.get("captain_candidates", 5) or 5))
 
     pmap = _projection_map(projections)
+    canonical_map = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in build_canonical_universe(projections or {}).get("players") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    }
     owned_ids = [
         element
         for element in (_surface_element(row) for row in owned)
@@ -2236,6 +2241,7 @@ def _mini_league_deep_detail(
         entry
         for entry_id, entry in entries.items()
         if entry_id in standing_ids
+        and str(entry.get("status") or "").upper() == "AVAILABLE"
     ]
     rival_entries = [
         entry
@@ -2336,8 +2342,11 @@ def _mini_league_deep_detail(
         entry_id = int(row.get("entry_id") or 0)
         entry = entries.get(entry_id)
         picks = list((entry or {}).get("picks") or [])
-        if entry is not None:
+        if entry is not None and str(entry.get("status") or "").upper() == "AVAILABLE":
             direct_entries.append(entry)
+        else:
+            entry = None
+            picks = []
         squad = {
             element
             for element in (pick_element(pick) for pick in picks)
@@ -2633,6 +2642,7 @@ def _mini_league_deep_detail(
                 "league_scope": league_row,
                 "rivals_scope": rivals_row,
                 "direct_scope": direct_row,
+                "football_score": (canonical_map.get(element) or {}).get("football_score"),
                 "exposure_leverage_class": leverage_class,
             }
         )
@@ -2989,9 +2999,9 @@ def _formation_mini_league_strategy(
     if posture == "PROTECT":
         stance = "PROTECT"
     elif posture == "CHASE":
-        stance = "CHASE AGGRESSIVE"
+        stance = "CHASE_MODERATE"
     elif changed:
-        stance = "CHASE MODERATE"
+        stance = "CHASE_MODERATE"
     else:
         stance = "BALANCED"
 

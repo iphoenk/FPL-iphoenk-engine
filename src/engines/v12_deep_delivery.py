@@ -303,7 +303,7 @@ def validate_deep_decision_content_delivery(
     # bound to its authoritative producer payload. This prevents presentation
     # code from silently reconstructing optimizer, Rank20, XI, mini-league,
     # ALL15, or post-match outputs.
-    governed = ("S06", "S08", "S11", "S12", "S13", "S14", "S15B", "S16", "S16B")
+    governed = ("S06", "S08", "S11", "S12", "S13", "S14", "S15B", "S16", "S16B", "S19")
     for sid in governed:
         if state(sid) != "COMPLETE":
             continue
@@ -543,6 +543,231 @@ def validate_deep_decision_content_delivery(
             if "BLANK" not in upper:
                 failures.append("S05_BGW_NOT_VISIBLE")
 
+
+    # Stage-C captain / mini-league / final-judgement semantic barrier.
+    # Football baseline remains P1.7; mini-league is a downstream exposure
+    # overlay and must not manufacture captain candidates outside final XI.
+    current15_ids = {
+        int(row.get("element_id") or row.get("element"))
+        for row in content("S02").get("rows") or []
+        if isinstance(row, Mapping)
+        and (row.get("element_id") is not None or row.get("element") is not None)
+    }
+    final_xi_ids = {
+        int(
+            row.get("element")
+            if isinstance(row, Mapping)
+            else row
+        )
+        for row in content("S06").get("starting_xi") or []
+        if (
+            (isinstance(row, Mapping) and row.get("element") is not None)
+            or (not isinstance(row, Mapping) and row is not None)
+        )
+    }
+
+    s08 = content("S08")
+    if state("S08") == "COMPLETE":
+        captain_state = str(s08.get("decision_state") or "").upper()
+        if captain_state not in {"WAIT", "PREPARE", "LOCK"}:
+            failures.append("S08_CAPTAIN_DECISION_STATE_INVALID")
+        cap = dict(s08.get("captain") or {})
+        vice = dict(s08.get("vice_captain") or {})
+        try:
+            cap_id = int(cap.get("element_id"))
+        except (TypeError, ValueError):
+            cap_id = 0
+        try:
+            vice_id = int(vice.get("element_id"))
+        except (TypeError, ValueError):
+            vice_id = 0
+        if cap_id <= 0 or cap_id not in current15_ids:
+            failures.append("S08_CAPTAIN_NOT_IN_CURRENT15")
+        if vice_id <= 0 or vice_id not in current15_ids:
+            failures.append("S08_VICE_NOT_IN_CURRENT15")
+        if cap_id <= 0 or cap_id not in final_xi_ids:
+            failures.append("S08_CAPTAIN_NOT_IN_FINAL_XI")
+        if vice_id <= 0 or vice_id not in final_xi_ids:
+            failures.append("S08_VICE_NOT_IN_FINAL_XI")
+        if cap_id > 0 and cap_id == vice_id:
+            failures.append("S08_CAPTAIN_EQUALS_VICE")
+
+        proof = dict(s08.get("candidate_universe_proof") or {})
+        for key in (
+            "captain_in_current15",
+            "vice_in_current15",
+            "captain_in_final_xi",
+            "vice_in_final_xi",
+            "captain_vice_distinct",
+            "frontier_subset_of_final_xi",
+        ):
+            if proof.get(key) is not True:
+                failures.append(f"S08_LEGALITY_PROOF_FAIL={key}")
+
+        frontier = [
+            dict(row)
+            for row in s08.get("captain_frontier") or []
+            if isinstance(row, Mapping)
+        ]
+        if not frontier:
+            failures.append("S08_CAPTAIN_FRONTIER_MISSING")
+        for index, row in enumerate(frontier, start=1):
+            try:
+                element = int(row.get("element_id"))
+            except (TypeError, ValueError):
+                element = 0
+            if element <= 0 or element not in final_xi_ids:
+                failures.append(f"S08_FRONTIER_OUTSIDE_FINAL_XI={index}")
+            for scope_key in ("league_scope", "rivals_scope", "direct_scope"):
+                if not isinstance(row.get(scope_key), Mapping):
+                    failures.append(f"S08_CAPTAIN_SCOPE_MISSING={index}:{scope_key}")
+            if not str(row.get("exposure_leverage_class") or ""):
+                failures.append(f"S08_EXPOSURE_LEVERAGE_CLASS_MISSING={index}")
+            if "expected_rank_utility" in row:
+                failures.append(f"S08_CATEGORICAL_RANK_UTILITY_FORBIDDEN={index}")
+        if s08.get("football_baseline_first") is not True:
+            failures.append("S08_FOOTBALL_BASELINE_ORDER_MISSING")
+        if s08.get("mini_league_overlay_second") is not True:
+            failures.append("S08_MINI_LEAGUE_OVERLAY_ORDER_MISSING")
+        if "OWNED FINAL-XI CAPTAIN FRONTIER" not in upper:
+            failures.append("S08_CAPTAIN_FRONTIER_NOT_VISIBLE")
+        if "EXPOSURE / LEVERAGE CLASS" not in upper:
+            failures.append("S08_EXPOSURE_CLASS_NOT_VISIBLE")
+
+    s15b = content("S15B")
+    if state("S15B") == "COMPLETE":
+        scopes = dict(s15b.get("denominator_scopes") or {})
+        league_scope = dict(scopes.get("LEAGUE") or {})
+        rivals_scope = dict(scopes.get("RIVALS") or {})
+        direct_scope = dict(scopes.get("DIRECT") or {})
+        if league_scope.get("includes_us") is not True:
+            failures.append("S15B_LEAGUE_SCOPE_MUST_INCLUDE_US")
+        if rivals_scope.get("includes_us") is not False:
+            failures.append("S15B_RIVALS_SCOPE_MUST_EXCLUDE_US")
+        if direct_scope.get("includes_us") is not False:
+            failures.append("S15B_DIRECT_SCOPE_MUST_EXCLUDE_US")
+        try:
+            league_expected = int(league_scope.get("expected"))
+            rivals_expected = int(rivals_scope.get("expected"))
+        except (TypeError, ValueError):
+            league_expected = rivals_expected = -1
+        if league_expected <= 0 or rivals_expected != max(0, league_expected - 1):
+            failures.append("S15B_LEAGUE_RIVALS_DENOMINATOR_RELATION_INVALID")
+        if str(s15b.get("disclosed_picks_label") or "") != "BEHAVIOURAL BASELINE":
+            failures.append("S15B_BEHAVIOURAL_BASELINE_LABEL_MISSING")
+
+        for scope_key, payload_key in (
+            ("LEAGUE", "league_our15_exposure"),
+            ("RIVALS", "rivals_our15_exposure"),
+            ("DIRECT", "direct_rival_our15_exposure"),
+        ):
+            scope = dict(scopes.get(scope_key) or {})
+            rows = [
+                dict(row)
+                for row in s15b.get(payload_key) or []
+                if isinstance(row, Mapping)
+            ]
+            if len(rows) != 15:
+                failures.append(f"S15B_OUR15_SCOPE_COUNT={scope_key}:{len(rows)}/15")
+            denominator = scope.get("denominator")
+            for index, row in enumerate(rows, start=1):
+                if row.get("denominator") != denominator:
+                    failures.append(
+                        f"S15B_DENOMINATOR_MISMATCH={scope_key}:{index}"
+                    )
+                    break
+                if row.get("eo_pct") is not None:
+                    if row.get("eo_supported") is not True:
+                        failures.append(
+                            f"S15B_UNSUPPORTED_EO={scope_key}:{index}"
+                        )
+                        break
+                    if row.get("effective_multiplier_sum") is None:
+                        failures.append(
+                            f"S15B_EO_UNITS_MISSING={scope_key}:{index}"
+                        )
+                        break
+
+        direct_meta = dict(s15b.get("direct_rival_scope") or {})
+        if direct_meta.get("denominator") != direct_scope.get("denominator"):
+            failures.append("S15B_DIRECT_DENOMINATOR_MISLABEL")
+        for index, rival in enumerate(s15b.get("direct_rivals") or [], start=1):
+            if not isinstance(rival, Mapping):
+                continue
+            for key in (
+                "xi_overlap_count",
+                "bench_overlap_count",
+                "shields",
+                "rival_only_threats",
+                "differential_against_us",
+            ):
+                if key not in rival:
+                    failures.append(f"S15B_DIRECT_RIVAL_DETAIL_MISSING={index}:{key}")
+        if "expected_rank_utility" in str(s15b):
+            failures.append("S15B_CATEGORICAL_RANK_UTILITY_FORBIDDEN")
+        posture = str(
+            (s15b.get("strategy_implication") or {}).get("human_posture")
+            or ""
+        ).upper()
+        if posture not in {
+            "PROTECT",
+            "BALANCED",
+            "CHASE_MODERATE",
+            "CHASE_AGGRESSIVE",
+        }:
+            failures.append("S15B_POSTURE_INVALID")
+        for token in (
+            "DENOMINATOR SCOPES",
+            "BEHAVIOURAL BASELINE",
+            "EXPOSURE / LEVERAGE CLASS",
+        ):
+            if token not in upper:
+                failures.append(f"S15B_VISIBLE_CONTRACT_MISSING={token}")
+
+    s19 = content("S19")
+    if state("S19") == "COMPLETE":
+        judgement = dict(s19.get("final_judgement") or {})
+        consumed = {
+            str(value)
+            for value in judgement.get("consumed_sections") or []
+        }
+        if not {"S08", "S15B"}.issubset(consumed):
+            failures.append("S19_DID_NOT_CONSUME_S08_S15B")
+        final_cap = dict(judgement.get("final_captain") or {})
+        final_vice = dict(judgement.get("vice") or {})
+        try:
+            final_cap_id = int(final_cap.get("element_id"))
+        except (TypeError, ValueError):
+            final_cap_id = 0
+        try:
+            final_vice_id = int(final_vice.get("element_id"))
+        except (TypeError, ValueError):
+            final_vice_id = 0
+        if final_cap_id not in current15_ids or final_cap_id not in final_xi_ids:
+            failures.append("S19_CAPTAIN_NOT_IN_CURRENT15_FINAL_XI")
+        if final_vice_id not in current15_ids or final_vice_id not in final_xi_ids:
+            failures.append("S19_VICE_NOT_IN_CURRENT15_FINAL_XI")
+        if final_cap_id > 0 and final_cap_id == final_vice_id:
+            failures.append("S19_CAPTAIN_EQUALS_VICE")
+        s08_cap_id = 0
+        s08_vice_id = 0
+        try:
+            s08_cap_id = int((s08.get("captain") or {}).get("element_id"))
+            s08_vice_id = int((s08.get("vice_captain") or {}).get("element_id"))
+        except (TypeError, ValueError):
+            pass
+        if (
+            (final_cap_id != s08_cap_id or final_vice_id != s08_vice_id)
+            and not str(judgement.get("reconciliation_reason") or "").strip()
+        ):
+            failures.append("S19_S08_CONTRADICTION_WITHOUT_RECONCILIATION")
+        if (
+            str(judgement.get("captain_state") or "").upper()
+            != str(s08.get("decision_state") or "").upper()
+        ):
+            failures.append("S19_CAPTAIN_STATE_CONTRADICTS_S08")
+        if "S19 CONSUMED:" not in upper or "RECONCILIATION:" not in upper:
+            failures.append("S19_RECONCILIATION_NOT_VISIBLE")
 
     # Stage-A semantic correctness barrier. Field paths below are the exact
     # section payload contract emitted by v12_integrated_report_runner; a

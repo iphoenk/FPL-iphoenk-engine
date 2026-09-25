@@ -34,6 +34,7 @@ from src.engines.v12_mini_league_overlay import (
     attach_mini_league_overlay,
     build_mini_league_snapshot,
     evaluate_mini_league_overlay,
+    load_config as load_mini_league_config,
 )
 from src.engines.v12_monte_carlo import (
     attach_monte_carlo_to_package_utility,
@@ -1687,6 +1688,673 @@ def _captain_candidate_review(
     }
 
 
+
+def _mini_league_deep_detail(
+    *,
+    mini: Mapping[str, Any] | None,
+    standings: Mapping[str, Any],
+    manager_picks: Mapping[str, Any],
+    owned: Sequence[Mapping[str, Any]],
+    projections: Mapping[str, Any] | None,
+    lineup: Mapping[str, Any] | None,
+    mini_overlay: Mapping[str, Any] | None,
+    disclosed_gw: int,
+    operational_action: str,
+) -> dict[str, Any]:
+    """Materialize decision-oriented mini-league evidence without new football math.
+
+    Counts and denominators stay explicit. Current OUR15 comes from the
+    occurrence-bound personal resolution, while rival picks remain the latest
+    disclosed Official FPL submission and are labelled with that GW.
+    """
+    snapshot = dict(mini or {})
+    context = _mini_context(snapshot)
+    report_cfg = dict(load_mini_league_config().get("report") or {})
+    direct_n = max(1, int(report_cfg.get("direct_rivals_above", 6) or 6))
+    threat_n = max(1, int(report_cfg.get("max_rival_threats", 12) or 12))
+    captain_n = max(1, int(report_cfg.get("captain_candidates", 5) or 5))
+
+    pmap = _projection_map(projections)
+    owned_ids = [
+        element
+        for element in (_surface_element(row) for row in owned)
+        if element is not None
+    ]
+    owned_ids = list(dict.fromkeys(owned_ids))
+    owned_set = set(owned_ids)
+
+    owned_names: dict[int, str] = {}
+    for raw in owned:
+        element = _surface_element(raw)
+        if element is None:
+            continue
+        player = pmap.get(element) or {}
+        owned_names[element] = str(
+            raw.get("name")
+            or raw.get("player")
+            or raw.get("web_name")
+            or player.get("name")
+            or player.get("web_name")
+            or f"element:{element}"
+        )
+
+    def player_name(element: int) -> str:
+        player = pmap.get(int(element)) or {}
+        return str(
+            owned_names.get(int(element))
+            or player.get("name")
+            or player.get("web_name")
+            or f"element:{int(element)}"
+        )
+
+    entries_raw = manager_picks.get("entries") or {}
+    entries: dict[int, dict[str, Any]] = {}
+    if isinstance(entries_raw, Mapping):
+        for key, raw in entries_raw.items():
+            if not isinstance(raw, Mapping):
+                continue
+            try:
+                entry_id = int(raw.get("entry_id", key))
+            except (TypeError, ValueError):
+                continue
+            picks = [
+                dict(pick)
+                for pick in raw.get("picks") or []
+                if isinstance(pick, Mapping)
+            ]
+            if picks:
+                entries[entry_id] = {
+                    "entry_id": entry_id,
+                    "picks": picks,
+                    "status": raw.get("status"),
+                }
+
+    def pick_element(pick: Mapping[str, Any]) -> int | None:
+        return _surface_element(
+            pick.get("element_id", pick.get("element"))
+        )
+
+    def pick_multiplier(pick: Mapping[str, Any]) -> float | None:
+        raw = pick.get("multiplier")
+        if raw is None:
+            return None
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
+
+    def pick_position(pick: Mapping[str, Any]) -> int | None:
+        raw = pick.get("squad_position", pick.get("position"))
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return None
+
+    def exposure_for_entries(
+        scoped_entries: Sequence[Mapping[str, Any]],
+        element_ids: Sequence[int],
+        *,
+        require_complete_eo: bool,
+    ) -> list[dict[str, Any]]:
+        denominator = len(scoped_entries)
+        rows: list[dict[str, Any]] = []
+        scope_multiplier_complete = (
+            denominator > 0
+            and all(
+                len(entry.get("picks") or []) == 15
+                and all(
+                    pick_multiplier(pick) is not None
+                    for pick in entry.get("picks") or []
+                )
+                for entry in scoped_entries
+            )
+        )
+        eo_supported = (
+            denominator > 0
+            and (scope_multiplier_complete or not require_complete_eo)
+        )
+        for element in element_ids:
+            own = starter = bench = captain = vice = 0
+            effective = 0.0
+            element_multiplier_complete = True
+            for entry in scoped_entries:
+                pick = next(
+                    (
+                        pick
+                        for pick in entry.get("picks") or []
+                        if pick_element(pick) == int(element)
+                    ),
+                    None,
+                )
+                if pick is None:
+                    continue
+                own += 1
+                multiplier = pick_multiplier(pick)
+                position = pick_position(pick)
+                if multiplier is not None:
+                    effective += multiplier
+                    if multiplier > 0:
+                        starter += 1
+                    else:
+                        bench += 1
+                else:
+                    element_multiplier_complete = False
+                    if position is not None and 1 <= position <= 11:
+                        starter += 1
+                    elif position is not None and position > 11:
+                        bench += 1
+                if bool(pick.get("captain", pick.get("is_captain"))):
+                    captain += 1
+                if bool(
+                    pick.get(
+                        "vice_captain",
+                        pick.get("is_vice_captain"),
+                    )
+                ):
+                    vice += 1
+            rows.append(
+                {
+                    "element_id": int(element),
+                    "player": player_name(int(element)),
+                    "denominator": denominator,
+                    "ownership_count": own,
+                    "ownership_pct": (
+                        round(100.0 * own / denominator, 1)
+                        if denominator > 0 else None
+                    ),
+                    "starter_count": starter,
+                    "starter_pct": (
+                        round(100.0 * starter / denominator, 1)
+                        if denominator > 0 else None
+                    ),
+                    "bench_count": bench,
+                    "bench_pct": (
+                        round(100.0 * bench / denominator, 1)
+                        if denominator > 0 else None
+                    ),
+                    "captain_count": captain,
+                    "captain_pct": (
+                        round(100.0 * captain / denominator, 1)
+                        if denominator > 0 else None
+                    ),
+                    "vice_count": vice,
+                    "vice_pct": (
+                        round(100.0 * vice / denominator, 1)
+                        if denominator > 0 else None
+                    ),
+                    "effective_multiplier_sum": (
+                        effective if element_multiplier_complete else None
+                    ),
+                    "eo_pct": (
+                        round(100.0 * effective / denominator, 1)
+                        if (
+                            eo_supported
+                            and element_multiplier_complete
+                            and denominator > 0
+                        )
+                        else None
+                    ),
+                    "eo_supported": bool(
+                        eo_supported and element_multiplier_complete
+                    ),
+                }
+            )
+        return rows
+
+    standings_rows = [
+        dict(row)
+        for row in standings.get("managers") or []
+        if isinstance(row, Mapping)
+    ]
+    ordered = sorted(
+        standings_rows,
+        key=lambda row: (
+            int(row.get("league_rank") or 10**9),
+            -int(row.get("league_total") or 0),
+        ),
+    )
+    our_rank = context.get("our_rank")
+    our_total = context.get("our_total_points")
+    try:
+        our_rank_i = int(our_rank) if our_rank is not None else None
+    except (TypeError, ValueError):
+        our_rank_i = None
+    try:
+        our_total_i = int(our_total) if our_total is not None else None
+    except (TypeError, ValueError):
+        our_total_i = None
+
+    rank_battle: list[dict[str, Any]] = []
+    for row in ordered:
+        try:
+            rank = int(row.get("league_rank") or 0)
+            total = int(row.get("league_total") or 0)
+        except (TypeError, ValueError):
+            continue
+        if rank <= 10 or (
+            our_rank_i is not None and abs(rank - our_rank_i) <= 3
+        ):
+            rank_battle.append(
+                {
+                    "entry_id": row.get("entry_id"),
+                    "rank": rank,
+                    "manager": (
+                        row.get("manager_name")
+                        or row.get("player_name")
+                        or "UNAVAILABLE"
+                    ),
+                    "team": (
+                        row.get("team_name")
+                        or row.get("entry_name")
+                        or "UNAVAILABLE"
+                    ),
+                    "total_points": total,
+                    "gap_vs_us": (
+                        total - our_total_i
+                        if our_total_i is not None else None
+                    ),
+                    "gw_score": row.get("gw_score"),
+                    "is_us": (
+                        int(row.get("entry_id") or 0)
+                        == int(context.get("our_entry_id") or 0)
+                    ),
+                }
+            )
+
+    above = []
+    if our_rank_i is not None:
+        above = [
+            row
+            for row in ordered
+            if int(row.get("league_rank") or 10**9) < our_rank_i
+        ]
+    direct_rows = sorted(
+        sorted(
+            above,
+            key=lambda row: int(row.get("league_rank") or 0),
+            reverse=True,
+        )[:direct_n],
+        key=lambda row: int(row.get("league_rank") or 0),
+    )
+    direct_entries: list[dict[str, Any]] = []
+    direct_rivals: list[dict[str, Any]] = []
+    for row in direct_rows:
+        entry_id = int(row.get("entry_id") or 0)
+        entry = entries.get(entry_id)
+        picks = list((entry or {}).get("picks") or [])
+        if entry is not None:
+            direct_entries.append(entry)
+        squad = {
+            element
+            for element in (pick_element(pick) for pick in picks)
+            if element is not None
+        }
+        overlap = [element for element in owned_ids if element in squad]
+        our_unique = [element for element in owned_ids if element not in squad]
+        rival_unique = [element for element in squad if element not in owned_set]
+        captain_pick = next(
+            (
+                pick
+                for pick in picks
+                if bool(pick.get("captain", pick.get("is_captain")))
+            ),
+            None,
+        )
+        vice_pick = next(
+            (
+                pick
+                for pick in picks
+                if bool(
+                    pick.get(
+                        "vice_captain",
+                        pick.get("is_vice_captain"),
+                    )
+                )
+            ),
+            None,
+        )
+        captain_element = (
+            pick_element(captain_pick) if captain_pick is not None else None
+        )
+        vice_element = (
+            pick_element(vice_pick) if vice_pick is not None else None
+        )
+        total = int(row.get("league_total") or 0)
+        direct_rivals.append(
+            {
+                "entry_id": entry_id,
+                "rank": int(row.get("league_rank") or 0),
+                "manager": (
+                    row.get("manager_name")
+                    or row.get("player_name")
+                    or "UNAVAILABLE"
+                ),
+                "team": (
+                    row.get("team_name")
+                    or row.get("entry_name")
+                    or "UNAVAILABLE"
+                ),
+                "total_points": total,
+                "gap_vs_us": (
+                    total - our_total_i
+                    if our_total_i is not None else None
+                ),
+                "gw_score": row.get("gw_score"),
+                "overlap_count": len(overlap),
+                "overlap_denominator": len(owned_ids),
+                "overlap_players": [
+                    {"element_id": element, "player": player_name(element)}
+                    for element in overlap
+                ],
+                "our_unique_players": [
+                    {"element_id": element, "player": player_name(element)}
+                    for element in our_unique
+                ],
+                "rival_unique_players": [
+                    {"element_id": element, "player": player_name(element)}
+                    for element in sorted(rival_unique)
+                ],
+                "captain_element": captain_element,
+                "captain": (
+                    player_name(captain_element)
+                    if captain_element is not None else "UNAVAILABLE"
+                ),
+                "vice_element": vice_element,
+                "vice": (
+                    player_name(vice_element)
+                    if vice_element is not None else "UNAVAILABLE"
+                ),
+                "disclosed_picks_available": entry is not None,
+            }
+        )
+
+    full_denominator = int(snapshot.get("rival_exposure_denominator") or 0)
+    full_exposure_map = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in snapshot.get("exposures") or []
+        if isinstance(row, Mapping)
+        and int(row.get("element_id") or 0) > 0
+    }
+    our15_rival_exposure: list[dict[str, Any]] = []
+    for element in owned_ids:
+        raw = full_exposure_map.get(element) or {}
+        our15_rival_exposure.append(
+            {
+                "element_id": element,
+                "player": player_name(element),
+                "denominator": full_denominator,
+                "ownership_count": int(raw.get("ownership_count") or 0),
+                "ownership_pct": raw.get("ownership_pct"),
+                "starter_count": int(raw.get("starter_count") or 0),
+                "starter_pct": raw.get("starter_pct"),
+                "bench_count": int(raw.get("bench_count") or 0),
+                "bench_pct": raw.get("bench_pct"),
+                "captain_count": int(raw.get("captain_count") or 0),
+                "captain_pct": raw.get("captain_pct"),
+                "vice_count": int(raw.get("vice_count") or 0),
+                "vice_pct": raw.get("vice_pct"),
+                "effective_multiplier_sum": raw.get(
+                    "effective_multiplier_sum"
+                ),
+                "eo_pct": raw.get("eo_pct"),
+                "eo_supported": raw.get("eo_supported"),
+            }
+        )
+
+    direct_our15_exposure = exposure_for_entries(
+        direct_entries,
+        owned_ids,
+        require_complete_eo=True,
+    )
+    direct_exposure_map = {
+        int(row["element_id"]): row
+        for row in direct_our15_exposure
+    }
+
+    threat_totals: dict[int, dict[str, Any]] = {}
+    direct_denominator = len(direct_entries)
+    scope_multiplier_complete = (
+        direct_denominator > 0
+        and all(
+            len(entry.get("picks") or []) == 15
+            and all(
+                pick_multiplier(pick) is not None
+                for pick in entry.get("picks") or []
+            )
+            for entry in direct_entries
+        )
+    )
+    for entry in direct_entries:
+        for pick in entry.get("picks") or []:
+            element = pick_element(pick)
+            if element is None or element in owned_set:
+                continue
+            row = threat_totals.setdefault(
+                element,
+                {
+                    "element_id": element,
+                    "ownership_count": 0,
+                    "starter_count": 0,
+                    "bench_count": 0,
+                    "captain_count": 0,
+                    "vice_count": 0,
+                    "effective_multiplier_sum": 0.0,
+                    "multiplier_complete": True,
+                },
+            )
+            row["ownership_count"] += 1
+            multiplier = pick_multiplier(pick)
+            position = pick_position(pick)
+            if multiplier is not None:
+                row["effective_multiplier_sum"] += multiplier
+                if multiplier > 0:
+                    row["starter_count"] += 1
+                else:
+                    row["bench_count"] += 1
+            else:
+                row["multiplier_complete"] = False
+                if position is not None and 1 <= position <= 11:
+                    row["starter_count"] += 1
+                elif position is not None and position > 11:
+                    row["bench_count"] += 1
+            if bool(pick.get("captain", pick.get("is_captain"))):
+                row["captain_count"] += 1
+            if bool(
+                pick.get(
+                    "vice_captain",
+                    pick.get("is_vice_captain"),
+                )
+            ):
+                row["vice_count"] += 1
+
+    rival_threats: list[dict[str, Any]] = []
+    sorted_threats = sorted(
+        threat_totals.values(),
+        key=lambda row: (
+            -float(row.get("effective_multiplier_sum") or 0.0),
+            -int(row.get("ownership_count") or 0),
+            int(row.get("element_id") or 0),
+        ),
+    )[:threat_n]
+    for raw in sorted_threats:
+        denominator = direct_denominator
+        effective = raw.get("effective_multiplier_sum")
+        complete = bool(
+            scope_multiplier_complete and raw.get("multiplier_complete")
+        )
+        rival_threats.append(
+            {
+                **raw,
+                "player": player_name(int(raw["element_id"])),
+                "denominator": denominator,
+                "ownership_pct": (
+                    round(
+                        100.0 * int(raw["ownership_count"]) / denominator,
+                        1,
+                    )
+                    if denominator > 0 else None
+                ),
+                "starter_pct": (
+                    round(
+                        100.0 * int(raw["starter_count"]) / denominator,
+                        1,
+                    )
+                    if denominator > 0 else None
+                ),
+                "bench_pct": (
+                    round(
+                        100.0 * int(raw["bench_count"]) / denominator,
+                        1,
+                    )
+                    if denominator > 0 else None
+                ),
+                "captain_pct": (
+                    round(
+                        100.0 * int(raw["captain_count"]) / denominator,
+                        1,
+                    )
+                    if denominator > 0 else None
+                ),
+                "vice_pct": (
+                    round(
+                        100.0 * int(raw["vice_count"]) / denominator,
+                        1,
+                    )
+                    if denominator > 0 else None
+                ),
+                "eo_pct": (
+                    round(100.0 * float(effective) / denominator, 1)
+                    if complete and denominator > 0 else None
+                ),
+                "eo_supported": complete,
+            }
+        )
+
+    candidate_reviews: list[dict[str, Any]] = []
+    for element in owned_ids:
+        player = pmap.get(element) or {}
+        review = _captain_candidate_review(
+            candidate={
+                "element": element,
+                "name": player_name(element),
+            },
+            projections=projections,
+            mini=snapshot,
+            mini_league_stance=str(
+                ((mini_overlay or {}).get("risk_posture") or {}).get(
+                    "posture"
+                )
+                or "BALANCED"
+            ),
+        )
+        league_row = next(
+            (
+                row
+                for row in our15_rival_exposure
+                if int(row["element_id"]) == element
+            ),
+            {},
+        )
+        direct_row = direct_exposure_map.get(element) or {}
+        direct_eo = direct_row.get("eo_pct")
+        if direct_eo is None:
+            rank_utility = "UNAVAILABLE"
+        elif float(direct_eo) >= 120.0:
+            rank_utility = "PROTECTION_HEAVY"
+        elif float(direct_eo) >= 75.0:
+            rank_utility = "PROTECTION"
+        elif float(direct_eo) <= 20.0:
+            rank_utility = "HIGH_LEVERAGE"
+        elif float(direct_eo) <= 50.0:
+            rank_utility = "LEVERAGE"
+        else:
+            rank_utility = "BALANCED"
+        candidate_reviews.append(
+            {
+                **review,
+                "all_rivals": league_row,
+                "direct_rivals": direct_row,
+                "expected_rank_utility": rank_utility,
+            }
+        )
+
+    def candidate_sort_key(row: Mapping[str, Any]) -> tuple[float, int]:
+        raw = row.get("expected_points")
+        try:
+            score = float(raw)
+        except (TypeError, ValueError):
+            score = -1.0
+        return (-score, int(row.get("element_id") or 10**9))
+
+    candidate_reviews.sort(key=candidate_sort_key)
+    selected_ids = {
+        element
+        for element in (
+            _surface_element((lineup or {}).get("captain")),
+            _surface_element((lineup or {}).get("vice_captain")),
+        )
+        if element is not None
+    }
+    captain_leverage = candidate_reviews[:captain_n]
+    captain_seen = {
+        int(row.get("element_id") or 0) for row in captain_leverage
+    }
+    for row in candidate_reviews:
+        element = int(row.get("element_id") or 0)
+        if element in selected_ids and element not in captain_seen:
+            captain_leverage.append(row)
+            captain_seen.add(element)
+
+    model_posture = str(
+        ((mini_overlay or {}).get("risk_posture") or {}).get("posture")
+        or "BALANCED"
+    ).upper()
+    human_posture = "DEFEND" if model_posture == "PROTECT" else model_posture
+    return {
+        "disclosed_picks_gw": int(disclosed_gw),
+        "disclosed_picks_are_baseline_not_gw_forecast": True,
+        "rank_battle": rank_battle,
+        "our15_rival_exposure": our15_rival_exposure,
+        "direct_rival_scope": {
+            "requested_above_count": direct_n,
+            "standings_rival_count": len(direct_rows),
+            "picks_available_count": len(direct_entries),
+            "denominator": len(direct_entries),
+            "scope": "IMMEDIATELY_ABOVE_CURRENT_RANK",
+            "complete": (
+                len(direct_rows) > 0
+                and len(direct_entries) == len(direct_rows)
+            ),
+        },
+        "direct_rivals": direct_rivals,
+        "direct_rival_our15_exposure": direct_our15_exposure,
+        "rival_threats": rival_threats,
+        "captain_leverage": captain_leverage,
+        "strategy_implication": {
+            "human_posture": human_posture,
+            "model_posture": model_posture,
+            "transfer_action": operational_action,
+            "xi_rule": "FOOTBALL_BASELINE_FIRST_MINI_LEAGUE_ONLY_BREAKS_NEAR_TIES",
+            "captain_rule": (
+                "COMPARE_XPTS_P_HAUL_ALL_RIVAL_EO_DIRECT_RIVAL_EO_AND_RANK_UTILITY"
+            ),
+            "transfer_rule": (
+                "DO_NOT_BUY_OR_SELL_FOR_OWNERSHIP_ALONE; REQUIRE_FOOTBALL_GATE"
+            ),
+        },
+        "report_contract": {
+            "raw_count_denominator_percentage_required": True,
+            "ownership_starter_bench_captain_vice_required": True,
+            "eo_requires_multiplier_evidence": True,
+            "direct_rivals_required": True,
+            "overlap_required": True,
+            "rival_threats_required": True,
+            "captain_leverage_required": True,
+            "strategy_implication_required": True,
+        },
+    }
+
+
 def _formation_mini_league_strategy(
     *,
     lineup: Mapping[str, Any] | None,
@@ -3077,6 +3745,17 @@ def run_deep(
     )
     league_context = _mini_context(mini)
     league_exposures = list((mini or {}).get("exposures") or [])
+    mini_deep_detail = _mini_league_deep_detail(
+        mini=mini,
+        standings=standings,
+        manager_picks=manager_picks,
+        owned=owned,
+        projections=projections,
+        lineup=lineup,
+        mini_overlay=mini_overlay,
+        disclosed_gw=picks_gw,
+        operational_action=operational_action,
+    )
     captain_review = _captain_candidate_review(
         candidate=(lineup or {}).get("captain"),
         projections=projections,
@@ -3320,6 +3999,7 @@ def run_deep(
                 "football_baseline_precedes_leverage": True,
                 "protection_players": formation_strategy.get("high_eo_protection"),
                 "differential_opportunities": formation_strategy.get("differential_slots"),
+                **mini_deep_detail,
             },
             None if mini_state == "COMPLETE" and mini_overlay else (
                 mini_reason or "P1.8 downstream overlay producer did not complete"

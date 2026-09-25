@@ -134,11 +134,41 @@ def _sort_match_rows(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _defensive_count(row: Mapping[str, Any]) -> float | None:
+    """Resolve the Official FPL CBIT/CBIRT count without fabricating missing parts."""
     for key in ("defensive", "defensive_contribution", "defensive_contributions"):
         value = _optional_f(row.get(key))
         if value is not None:
             return max(0.0, value)
-    return None
+
+    position = str(row.get("position") or "").upper().strip()
+    if position not in {"DEF", "MID", "FWD"}:
+        return None
+
+    cbi = _optional_f(row.get("clearances_blocks_interceptions"))
+    if cbi is None:
+        clearances = _optional_f(row.get("clearances"))
+        blocks = _optional_f(row.get("blocks"))
+        interceptions = _optional_f(row.get("interceptions"))
+        if None in (clearances, blocks, interceptions):
+            return None
+        cbi = float(clearances) + float(blocks) + float(interceptions)
+
+    tackles = _optional_f(row.get("tackles"))
+    if tackles is None:
+        return None
+    total = float(cbi) + float(tackles)
+
+    if position in {"MID", "FWD"}:
+        recoveries = _optional_f(
+            row.get("recoveries")
+            if row.get("recoveries") is not None
+            else row.get("ball_recoveries")
+        )
+        if recoveries is None:
+            return None
+        total += float(recoveries)
+
+    return max(0.0, total)
 
 
 def _def_actions_per90(rows: Sequence[Mapping[str, Any]]) -> float | None:

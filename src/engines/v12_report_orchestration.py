@@ -529,7 +529,6 @@ def _visible_price_contract(
                 direction=direction,
                 owned_ids=owned_ids,
                 target_ids=target_ids,
-                as_of=as_of,
             ),
         }
     )

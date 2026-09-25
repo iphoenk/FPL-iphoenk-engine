@@ -786,3 +786,155 @@ def test_integrated_deep_does_not_bruteforce_global_two_transfer_p17():
     assert "FULL_DIRECT_MATERIAL_FUNDED" in source
     assert "max_transfers=2" not in source
 
+
+
+def test_regression_36126675342_semantic_false_pass_is_rejected():
+    fixture_path = (
+        Path(__file__).parent
+        / "fixtures"
+        / "v12_regression_36126675342_stage_a.json"
+    )
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    old = fixture["old_visible"]
+    bound = fixture["bound_authority"]
+    route = fixture["finance_degraded_route"]
+
+    report = {
+        "sections": [
+            _section(
+                "S06",
+                "Formation/XI/bench",
+                {
+                    "starting_xi": [1],
+                    "formation": old["s06_selected_formation"],
+                    "bench": {"gk": 2, "order": [3, 4, 5]},
+                    "lineup_score": {
+                        "xpts_mean": old["s06_projected_xi_score"],
+                        "captain_multiplier_value": old[
+                            "s06_captain_multiplier_value"
+                        ],
+                        "vice_fallback_value": old[
+                            "s06_vice_fallback_value"
+                        ],
+                    },
+                    "formation_comparison": [
+                        {
+                            "formation": old["s06_selected_formation"],
+                            "selected": True,
+                            "expected_fpl_points_with_captain_vice": old[
+                                "s06_selected_captain_adjusted_xpts"
+                            ],
+                        }
+                    ],
+                },
+            ),
+            _section(
+                "S10",
+                "Actionable Price Radar",
+                {
+                    "rows": [
+                        {
+                            "element_id": 1,
+                            "evidence_timestamp": old[
+                                "price_evidence_timestamp"
+                            ],
+                        }
+                    ],
+                    "predictor_freshness": "FRESH",
+                },
+            ),
+            _section(
+                "S14",
+                "Package optimizer/frontier including HOLD baseline",
+                {
+                    "package_routes": [
+                        {
+                            "route": route["route"],
+                            "bank_before": route["bank_before"],
+                            "affordability": route["old_affordability"],
+                            "transfer_cost": {
+                                "hit": route["hit"],
+                                "ft_usage": {
+                                    "free_transfers": route["free_transfers"]
+                                },
+                                "bank_after": route["bank_after"],
+                            },
+                            "moves": {
+                                "out": [
+                                    {
+                                        "element": 426,
+                                        "sell_value": route[
+                                            "out_sell_value"
+                                        ],
+                                    }
+                                ],
+                                "in": [{"element": 52, "price": 70}],
+                            },
+                        }
+                    ],
+                    "frontier": [{"route": route["route"]}],
+                },
+            ),
+            _section(
+                "S14B",
+                "3-GW squad staging",
+                {
+                    "ft_saving_plan": old["s14b_ft_saving_plan"],
+                    "order_of_transfers": old[
+                        "s14b_order_of_transfers"
+                    ],
+                    "budget_dependency": {
+                        "bank": bound["bank"],
+                        "sell_value_status": bound[
+                            "selling_value_status"
+                        ],
+                    },
+                    "staging_rows": [
+                        {
+                            "planned_move": old[
+                                "s14b_order_of_transfers"
+                            ]
+                        }
+                    ],
+                },
+            ),
+            _section(
+                "S17",
+                "Source health/freshness/lineage",
+                {
+                    "source_health": {
+                        "authenticated_personal_scope": old[
+                            "s17_authenticated_personal_scope"
+                        ],
+                    },
+                    "bound_authority": {
+                        "personal_auth_state": bound[
+                            "private_auth_state"
+                        ],
+                    },
+                },
+            ),
+        ]
+    }
+    old_body = (
+        "FORMATION: 5-4-1\n"
+        "XI: element:1\n"
+        "BENCH: element:2, element:3, element:4, element:5\n"
+        "PROJECTED XI SCORE: 49.777897\n"
+        "CAPTAIN AUTHORITY: old-visible-contract\n"
+    )
+
+    failures = validate_deep_decision_content_delivery(report, old_body)
+
+    assert fixture["occurrence"]["old_human_facing_status"] == "PASS"
+    assert "AUTH_STATE_CONTRADICTION=HEALTHY!=AUTH_EXPIRED" in failures
+    assert "FT_INFERENCE_WITHOUT_AUTHORITY" in failures
+    assert "S06_XI_BASE_XPTS_NOT_VISIBLE" in failures
+    assert "S06_CAPTAIN_ADJUSTED_XPTS_NOT_VISIBLE" in failures
+    assert "FOOTBALL_FRONTIER_STATUS_MISSING" in failures
+    assert "EXECUTION_ECONOMICS_STATUS_MISSING" in failures
+    assert (
+        "ROUTE_EXECUTION_ECONOMICS_STATUS_MISSING=1:426->52"
+        in failures
+    )
+    assert "PRICE_FRESHNESS_MISSING=S10:1" in failures

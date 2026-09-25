@@ -860,7 +860,7 @@ def test_stageb_defcon_under_three_starts_is_low_confidence():
     )
     assert out["eligible_starts"] == 2
     assert out["confidence"]["label"] == "LOW"
-    assert out["conditions"]["home_away"]["status"].startswith("DEGRADED_")
+    assert out["confidence"]["score"] < 0.2
 
 
 def test_stageb_defcon_uses_finite_state_xmins_and_uncertainty():

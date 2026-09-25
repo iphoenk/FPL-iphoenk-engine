@@ -1,0 +1,521 @@
+name: V12 post-D2 end-to-end composition
+
+on:
+  push:
+    branches:
+      - validation/v12-post-d2-e2e-composition-20260925
+    paths:
+      - ".github/workflows/v12-post-d2-e2e-composition.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  composition:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact merged production main
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: bb2d9f1f4b5387a7a9dd39ef6b23ad72de5caa94
+          path: app
+          persist-credentials: false
+
+      - name: Checkout frozen runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run three cold-compute integrated DEEP samples
+        working-directory: app
+        run: |
+          mkdir -p artifacts/e2e
+          python - <<'PY'
+          import gc
+          import json
+          import os
+          import platform
+          import re
+          import shutil
+          import subprocess
+          import sys
+          import time
+          from pathlib import Path
+
+          APP = Path.cwd()
+          RUNTIME = APP.parent / "runtime-data"
+          OUTROOT = APP / "artifacts" / "e2e"
+          MODEL_SHA = "bb2d9f1f4b5387a7a9dd39ef6b23ad72de5caa94"
+          RUNTIME_SHA = "9fc2ce5e590518c399765e6fd576bb96db6e5897"
+          REPORT_SLOT = "2026-09-24T14:20:00+07:00"
+          STAGE_RE = re.compile(
+              r"\[V12_STAGE\]\s+(PASS|FAILED)\s+"
+              r"([A-Z0-9_]+)\s+elapsed_seconds=([0-9.]+)"
+          )
+
+          def cpu_model():
+              try:
+                  for line in Path("/proc/cpuinfo").read_text().splitlines():
+                      if line.lower().startswith("model name"):
+                          return line.split(":", 1)[1].strip()
+              except Exception:
+                  pass
+              return None
+
+          def nproc():
+              try:
+                  return int(
+                      subprocess.check_output(["nproc"], text=True).strip()
+                  )
+              except Exception:
+                  return os.cpu_count()
+
+          environment = {
+              "cpu_model": cpu_model(),
+              "nproc": nproc(),
+              "os_cpu_count": os.cpu_count(),
+              "python_version": sys.version,
+              "image_os": os.environ.get("ImageOS"),
+              "image_version": os.environ.get("ImageVersion"),
+              "runner_os": os.environ.get("RUNNER_OS"),
+              "runner_arch": os.environ.get("RUNNER_ARCH"),
+              "platform": platform.platform(),
+              "parent_gc_enabled": gc.isenabled(),
+              "parent_sys_gettrace": repr(sys.gettrace()),
+              "parent_sys_getprofile": repr(sys.getprofile()),
+          }
+
+          samples = []
+          for i in range(1, 4):
+              sample_dir = OUTROOT / f"run-{i}"
+              cache_root = APP / ".cache" / f"e2e-run-{i}"
+              shutil.rmtree(sample_dir, ignore_errors=True)
+              shutil.rmtree(cache_root, ignore_errors=True)
+              sample_dir.mkdir(parents=True, exist_ok=True)
+              (cache_root / "stage2").mkdir(parents=True, exist_ok=True)
+              (cache_root / "p17").mkdir(parents=True, exist_ok=True)
+              (cache_root / "mc").mkdir(parents=True, exist_ok=True)
+
+              env = os.environ.copy()
+              env["V12_STAGE2_DERIVED_CACHE_DIR"] = str(cache_root / "stage2")
+              env["V12_P17_DECISION_CACHE_DIR"] = str(cache_root / "p17")
+              env["V12_MC_SIM_CACHE_DIR"] = str(cache_root / "mc")
+              env.pop("V12_STAGE_PROFILE_DIR", None)
+
+              cmd = [
+                  sys.executable,
+                  "-m",
+                  "src.engines.v12_integrated_report_runner",
+                  "--runtime-data-root",
+                  str(RUNTIME),
+                  "--report-mode",
+                  "DEEP",
+                  "--report-slot",
+                  REPORT_SLOT,
+                  "--output-dir",
+                  str(sample_dir),
+              ]
+
+              log_path = sample_dir / "runner.log"
+              started = time.perf_counter()
+              with log_path.open("w", encoding="utf-8") as log:
+                  proc = subprocess.Popen(
+                      cmd,
+                      cwd=APP,
+                      env=env,
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.STDOUT,
+                      text=True,
+                      bufsize=1,
+                  )
+                  assert proc.stdout is not None
+                  for line in proc.stdout:
+                      sys.stdout.write(f"[run-{i}] {line}")
+                      log.write(line)
+                  rc = proc.wait()
+              runner_wall = time.perf_counter() - started
+              if rc != 0:
+                  raise SystemExit(f"integrated runner failed run={i} rc={rc}")
+
+              proof_path = sample_dir / "execution_proof.json"
+              proof = json.loads(proof_path.read_text(encoding="utf-8"))
+              if proof.get("runner_status") != "PASS":
+                  raise SystemExit(
+                      f"runner_status not PASS run={i}: "
+                      f"{proof.get('runner_status')}"
+                  )
+
+              log_text = log_path.read_text(encoding="utf-8", errors="replace")
+              stages = {}
+              for status, name, seconds in STAGE_RE.findall(log_text):
+                  stages[name] = {
+                      "status": status,
+                      "elapsed_seconds": float(seconds),
+                  }
+
+              if not stages:
+                  raise SystemExit(f"no V12 stage timings parsed run={i}")
+              failed = [
+                  name for name, row in stages.items()
+                  if row["status"] != "PASS"
+              ]
+              if failed:
+                  raise SystemExit(f"failed timed stages run={i}: {failed}")
+
+              acceptance_path = sample_dir / "stage3_acceptance.json"
+              acceptance_cmd = [
+                  sys.executable,
+                  "-m",
+                  "src.engines.v12_stage3_acceptance",
+                  "--bundle",
+                  str(sample_dir / "report_bundle.json"),
+                  "--runtime-data-root",
+                  str(RUNTIME),
+                  "--model-sha",
+                  MODEL_SHA,
+                  "--runtime-sha",
+                  RUNTIME_SHA,
+                  "--canonical",
+                  "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt",
+                  "--output",
+                  str(acceptance_path),
+              ]
+              accept_started = time.perf_counter()
+              accept = subprocess.run(
+                  acceptance_cmd,
+                  cwd=APP,
+                  env=env,
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.STDOUT,
+                  text=True,
+              )
+              acceptance_wall = time.perf_counter() - accept_started
+              (sample_dir / "stage3_acceptance.log").write_text(
+                  accept.stdout, encoding="utf-8"
+              )
+              if accept.returncode != 0:
+                  print(accept.stdout)
+                  raise SystemExit(
+                      f"Stage3 acceptance failed run={i} "
+                      f"rc={accept.returncode}"
+                  )
+              acceptance = json.loads(
+                  acceptance_path.read_text(encoding="utf-8")
+              )
+              if acceptance.get("status") != "PASS":
+                  raise SystemExit(
+                      f"Stage3 acceptance status run={i}: "
+                      f"{acceptance.get('status')}"
+                  )
+
+              stage_sum = sum(
+                  row["elapsed_seconds"] for row in stages.values()
+              )
+              residual = max(0.0, runner_wall - stage_sum)
+              samples.append({
+                  "run": i,
+                  "runner_wall_seconds": runner_wall,
+                  "stage3_acceptance_wall_seconds": acceptance_wall,
+                  "decision_pipeline_wall_seconds": (
+                      runner_wall + acceptance_wall
+                  ),
+                  "stage_sum_seconds": stage_sum,
+                  "residual_nonstaged_seconds": residual,
+                  "stages": stages,
+                  "runner_status": proof.get("runner_status"),
+                  "pre_render_qa_status": proof.get("pre_render_qa_status"),
+                  "post_render_qa_status": proof.get("post_render_qa_status"),
+                  "human_facing_qa_status": proof.get(
+                      "human_facing_qa_status"
+                  ),
+                  "stage3_internal_pass": proof.get("stage3_internal_pass"),
+                  "stage3_external_status": acceptance.get("status"),
+                  "mc_actual_paths": (
+                      proof.get("monte_carlo") or {}
+                  ).get("actual_paths"),
+                  "cpu_count_proof": proof.get("cpu_count"),
+              })
+
+          raw = {
+              "schema": 1,
+              "mode": "POST_D2_END_TO_END_COLD_COMPUTE",
+              "main_sha": MODEL_SHA,
+              "runtime_sha": RUNTIME_SHA,
+              "report_slot": REPORT_SLOT,
+              "compute_cache_restore": False,
+              "cprofile_enabled": False,
+              "samples": samples,
+              "environment": environment,
+          }
+          (OUTROOT / "raw_samples.json").write_text(
+              json.dumps(raw, indent=2, sort_keys=True),
+              encoding="utf-8",
+          )
+          print(json.dumps(raw, indent=2, sort_keys=True))
+          PY
+
+      - name: Aggregate non-overlapping stage composition
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import json
+          import statistics
+          from pathlib import Path
+
+          path = Path("artifacts/e2e/raw_samples.json")
+          raw = json.loads(path.read_text(encoding="utf-8"))
+          samples = raw["samples"]
+
+          def med(values):
+              return statistics.median(values)
+
+          factual_setup = {
+              "V6_REPORT_PREFETCH_BINDING",
+              "V6_OFFICIAL_FACTS",
+              "PERSONAL_EVIDENCE_RECONCILIATION",
+              "OUR15_IDENTITY",
+              "TEAM_STRENGTH",
+              "OFFICIAL_ROLE_EVIDENCE",
+              "TRANSFER_FINANCE_CONTEXT",
+          }
+          foundation = {"V12_ANALYTICS_FOUNDATION"}
+          stage2 = {"P1_1_P1_3_FULL_UNIVERSE"}
+          lineup_tactical = {
+              "P1_6_TACTICAL_ROLE",
+              "ALL15_MATERIALIZATION",
+              "P1_7_LINEUP",
+          }
+          report_surfaces = {
+              "S16B_POST_MATCH_GW1_NOW",
+              "OFFICIAL_FPL_PREDICTOR_RISE20",
+              "OFFICIAL_FPL_PREDICTOR_FALL20",
+              "OUR15_PRICE_RADAR",
+              "WATCHLIST20",
+          }
+          package = {
+              "P1_2A_PACKAGE_SEARCH",
+              "P1_2_PACKAGE_UTILITY",
+              "P1_2_MATERIAL_FUNDING_LEGS",
+              "P1_2A_FUNDED_PACKAGE_SEARCH",
+              "P1_2B_FUNDED_PACKAGE_UTILITY",
+              "P1_2B_PACKAGE_COMBINE",
+              "P1_2_STAGE3_DECISION_CLOSURE",
+              "P1_2_STAGE3_DECISION_BINDING",
+          }
+          monte_carlo = {
+              "P1_4_MATERIAL_ROUTE_SELECTION",
+              "P1_4_MONTE_CARLO",
+              "P1_4_PACKAGE_BINDING",
+          }
+          mini_league = {
+              "P1_8_MINI_LEAGUE_SNAPSHOT",
+              "P1_8_MINI_LEAGUE_OVERLAY",
+              "P1_8_MINI_LEAGUE_BINDING",
+          }
+
+          group_rules = [
+              ("FACTUAL_SETUP", factual_setup),
+              ("FOUNDATION", foundation),
+              ("STAGE2_PROJECTION", stage2),
+              ("LINEUP_TACTICAL", lineup_tactical),
+              ("REPORT_SURFACES", report_surfaces),
+              ("PACKAGE_SEARCH_UTILITY", package),
+              ("MONTE_CARLO", monte_carlo),
+              ("MINI_LEAGUE", mini_league),
+          ]
+
+          all_stage_names = sorted({
+              name
+              for sample in samples
+              for name in sample["stages"]
+          })
+
+          known = set().union(*(members for _, members in group_rules))
+          uncategorized = sorted(set(all_stage_names) - known)
+
+          stage_summary = []
+          for name in all_stage_names:
+              vals = [
+                  sample["stages"].get(name, {}).get("elapsed_seconds", 0.0)
+                  for sample in samples
+              ]
+              shares = [
+                  sample["stages"].get(name, {}).get("elapsed_seconds", 0.0)
+                  / sample["runner_wall_seconds"]
+                  for sample in samples
+              ]
+              stage_summary.append({
+                  "stage": name,
+                  "median_seconds": med(vals),
+                  "median_runner_share": med(shares),
+                  "samples_seconds": vals,
+              })
+          stage_summary.sort(
+              key=lambda row: -row["median_seconds"]
+          )
+
+          group_summary = []
+          for group, members in group_rules:
+              vals = []
+              shares = []
+              for sample in samples:
+                  total = sum(
+                      sample["stages"].get(name, {}).get(
+                          "elapsed_seconds", 0.0
+                      )
+                      for name in members
+                  )
+                  vals.append(total)
+                  shares.append(total / sample["runner_wall_seconds"])
+              group_summary.append({
+                  "group": group,
+                  "median_seconds": med(vals),
+                  "median_runner_share": med(shares),
+                  "samples_seconds": vals,
+              })
+
+          other_vals = []
+          other_shares = []
+          for sample in samples:
+              total = sum(
+                  sample["stages"].get(name, {}).get(
+                      "elapsed_seconds", 0.0
+                  )
+                  for name in uncategorized
+              )
+              other_vals.append(total)
+              other_shares.append(total / sample["runner_wall_seconds"])
+          if uncategorized:
+              group_summary.append({
+                  "group": "OTHER_TIMED_STAGES",
+                  "median_seconds": med(other_vals),
+                  "median_runner_share": med(other_shares),
+                  "samples_seconds": other_vals,
+                  "stages": uncategorized,
+              })
+
+          residual_vals = [
+              sample["residual_nonstaged_seconds"]
+              for sample in samples
+          ]
+          residual_shares = [
+              sample["residual_nonstaged_seconds"]
+              / sample["runner_wall_seconds"]
+              for sample in samples
+          ]
+          group_summary.append({
+              "group": "NONSTAGED_RENDER_QA_CONTROL_IO",
+              "median_seconds": med(residual_vals),
+              "median_runner_share": med(residual_shares),
+              "samples_seconds": residual_vals,
+          })
+          group_summary.sort(
+              key=lambda row: -row["median_seconds"]
+          )
+
+          runner_vals = [
+              sample["runner_wall_seconds"] for sample in samples
+          ]
+          acceptance_vals = [
+              sample["stage3_acceptance_wall_seconds"]
+              for sample in samples
+          ]
+          pipeline_vals = [
+              sample["decision_pipeline_wall_seconds"]
+              for sample in samples
+          ]
+
+          result = {
+              "schema": 1,
+              "mode": raw["mode"],
+              "main_sha": raw["main_sha"],
+              "runtime_sha": raw["runtime_sha"],
+              "report_slot": raw["report_slot"],
+              "environment": raw["environment"],
+              "runner": {
+                  "samples_seconds": runner_vals,
+                  "median_seconds": med(runner_vals),
+              },
+              "external_stage3_acceptance": {
+                  "samples_seconds": acceptance_vals,
+                  "median_seconds": med(acceptance_vals),
+              },
+              "decision_pipeline": {
+                  "samples_seconds": pipeline_vals,
+                  "median_seconds": med(pipeline_vals),
+              },
+              "groups": group_summary,
+              "stages": stage_summary,
+              "uncategorized_timed_stages": uncategorized,
+              "all_runs_runner_pass": all(
+                  sample["runner_status"] == "PASS"
+                  for sample in samples
+              ),
+              "all_runs_stage3_pass": all(
+                  sample["stage3_external_status"] == "PASS"
+                  for sample in samples
+              ),
+              "all_runs_human_facing_pass": all(
+                  sample["human_facing_qa_status"] == "PASS"
+                  for sample in samples
+              ),
+              "mc_paths": [
+                  sample["mc_actual_paths"] for sample in samples
+              ],
+          }
+
+          Path("artifacts/e2e/composition_summary.json").write_text(
+              json.dumps(result, indent=2, sort_keys=True),
+              encoding="utf-8",
+          )
+
+          print("\n=== POST-D2 END-TO-END COMPOSITION ===")
+          print(
+              f"runner_median={result['runner']['median_seconds']:.6f}s "
+              f"pipeline_median={result['decision_pipeline']['median_seconds']:.6f}s"
+          )
+          print("\nGroups:")
+          for row in result["groups"]:
+              print(
+                  f"{row['group']}: "
+                  f"{row['median_seconds']:.6f}s "
+                  f"({100.0 * row['median_runner_share']:.2f}%)"
+              )
+          print("\nTop stages:")
+          for row in result["stages"][:20]:
+              print(
+                  f"{row['stage']}: "
+                  f"{row['median_seconds']:.6f}s "
+                  f"({100.0 * row['median_runner_share']:.2f}%)"
+              )
+          print("\nUncategorized:", uncategorized)
+          PY
+
+      - name: Upload immutable end-to-end evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-post-d2-e2e-composition-${{ github.run_id }}
+          path: |
+            app/artifacts/e2e/raw_samples.json
+            app/artifacts/e2e/composition_summary.json
+            app/artifacts/e2e/run-*/runner.log
+            app/artifacts/e2e/run-*/execution_proof.json
+            app/artifacts/e2e/run-*/stage3_acceptance.json
+          if-no-files-found: error
+          retention-days: 14

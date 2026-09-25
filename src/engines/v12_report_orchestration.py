@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 from src.engines.price_radar import (
     DISPLAY_TIMEZONE,
     MODEL_THRESHOLD as EXISTING_PRICE_MODEL_THRESHOLD,
+    OFFICIAL_MAX_AGE_SECONDS,
     OFFICIAL_UPDATE_TIMEZONE,
 )
 from src.engines.visible_content_proof import canonical_mode_contract
@@ -260,6 +261,58 @@ def _parse_price_dt(value: Any) -> datetime | None:
 
 _PRICE_UK = ZoneInfo(OFFICIAL_UPDATE_TIMEZONE)
 _PRICE_WIB = ZoneInfo(DISPLAY_TIMEZONE)
+
+
+def _predictor_freshness_contract(
+    evidence_timestamp: Any,
+    *,
+    as_of: Any = None,
+) -> dict[str, Any]:
+    """Expose governed price-source age without inventing a second freshness policy."""
+    observed = (
+        evidence_timestamp
+        if isinstance(evidence_timestamp, datetime)
+        else _parse_price_dt(evidence_timestamp)
+    )
+    reference = (
+        as_of
+        if isinstance(as_of, datetime)
+        else _parse_price_dt(as_of)
+    )
+    if observed is None:
+        return {
+            "freshness": "UNAVAILABLE",
+            "source_age_seconds": None,
+            "freshness_threshold_seconds": OFFICIAL_MAX_AGE_SECONDS,
+        }
+    if reference is None:
+        return {
+            "freshness": "UNAVAILABLE",
+            "source_age_seconds": None,
+            "freshness_threshold_seconds": OFFICIAL_MAX_AGE_SECONDS,
+        }
+    if observed.tzinfo is None:
+        observed = observed.replace(tzinfo=timezone.utc)
+    if reference.tzinfo is None:
+        reference = reference.replace(tzinfo=timezone.utc)
+    age = max(
+        0,
+        int(
+            (
+                reference.astimezone(timezone.utc)
+                - observed.astimezone(timezone.utc)
+            ).total_seconds()
+        ),
+    )
+    return {
+        "freshness": (
+            "FRESH"
+            if age <= OFFICIAL_MAX_AGE_SECONDS
+            else "STALE"
+        ),
+        "source_age_seconds": age,
+        "freshness_threshold_seconds": OFFICIAL_MAX_AGE_SECONDS,
+    }
 
 
 def _next_official_price_cycle(evidence_timestamp: Any, *, offset: int = 0) -> tuple[str, str] | tuple[None, None]:
@@ -552,6 +605,7 @@ def build_price20(
     direction: str,
     owned_element_ids: Sequence[int] | None = None,
     target_element_ids: Sequence[int] | None = None,
+    as_of: Any = None,
 ) -> dict[str, Any]:
     """Consume current official_price_predictor output; never predict price itself."""
     if not predictor_artifact:
@@ -570,6 +624,10 @@ def build_price20(
         or "UNKNOWN"
     ).upper()
     evidence_timestamp = artifact.get("checked_at") or artifact.get("generated_at")
+    freshness = _predictor_freshness_contract(
+        evidence_timestamp,
+        as_of=as_of,
+    )
     owned_ids = {int(value) for value in (owned_element_ids or ())}
     target_ids = {int(value) for value in (target_element_ids or ())}
     direction_token = str(direction or "").upper()
@@ -667,7 +725,18 @@ def build_price20(
     # NO_CROSSING_WITHIN_GOVERNED_HORIZON is a healthy terminal predictor
     # outcome. It intentionally leaves expected-change-cycle fields unavailable
     # because no governed threshold crossing exists; that is not degradation.
-    if enough and healthy and date_state_complete and not missing_cycle_clock and not invalid_eta_state:
+    stale_at_report_time = (
+        as_of is not None
+        and freshness.get("freshness") == "STALE"
+    )
+    if (
+        enough
+        and healthy
+        and date_state_complete
+        and not missing_cycle_clock
+        and not invalid_eta_state
+        and not stale_at_report_time
+    ):
         state = "COMPLETE"
     elif selected:
         state = "DEGRADED"
@@ -676,7 +745,13 @@ def build_price20(
 
     reason = None
     if state != "COMPLETE":
-        if adapter == "V6_DATA_PLAYERS_OFFSET0" and not enough:
+        if stale_at_report_time:
+            reason = (
+                "official_price_predictor evidence is STALE at report time; "
+                f"age_seconds={freshness.get('source_age_seconds')} "
+                f"> governed_max={OFFICIAL_MAX_AGE_SECONDS}"
+            )
+        elif adapter == "V6_DATA_PLAYERS_OFFSET0" and not enough:
             reason = (
                 f"official_price_predictor health={health}; "
                 f"usable offset-0 {direction_token.lower()} rows={len(selected)}/20"
@@ -706,8 +781,23 @@ def build_price20(
         "available_count": len(selected),
         "expected_count": 20,
         "usable_eligible_rows": usable_count,
-        "rows": selected,
+        "rows": [
+            {
+                **dict(row),
+                "source_age_seconds": freshness.get("source_age_seconds"),
+                "freshness": freshness.get("freshness"),
+                "freshness_threshold_seconds": freshness.get(
+                    "freshness_threshold_seconds"
+                ),
+            }
+            for row in selected
+        ],
         "predictor_health": health,
+        "predictor_freshness": freshness.get("freshness"),
+        "source_age_seconds": freshness.get("source_age_seconds"),
+        "freshness_threshold_seconds": freshness.get(
+            "freshness_threshold_seconds"
+        ),
         "degradation_reason": reason,
         "artifact_adapter": adapter,
         "sort_contract": (
@@ -737,6 +827,8 @@ def build_price20(
             "latest_supported_projection",
             "estimate_source",
             "evidence_timestamp",
+            "source_age_seconds",
+            "freshness",
             "confidence",
             "impact_on_our_decision",
         ),
@@ -763,6 +855,7 @@ def build_actionable_price_radar(
     *,
     owned15: Sequence[Mapping[str, Any]],
     predictor_artifact: Mapping[str, Any] | None = None,
+    as_of: Any = None,
 ) -> dict[str, Any]:
     """Always preserve owned identity; predictor evidence enriches but never removes OUR15."""
     artifact = dict(predictor_artifact or {})
@@ -773,6 +866,10 @@ def build_actionable_price_radar(
         or "UNKNOWN"
     ).upper()
     evidence_timestamp = artifact.get("checked_at") or artifact.get("generated_at")
+    freshness = _predictor_freshness_contract(
+        evidence_timestamp,
+        as_of=as_of,
+    )
     predictor: dict[int, dict[str, Any]] = {}
     for row in _predictor_rows(artifact):
         raw_id = row.get("element_id", row.get("element", row.get("id")))
@@ -877,6 +974,11 @@ def build_actionable_price_radar(
                     else "UNAVAILABLE",
                 ),
                 "evidence_timestamp": (visible or {}).get("evidence_timestamp", evidence_timestamp or "UNAVAILABLE"),
+                "source_age_seconds": freshness.get("source_age_seconds"),
+                "freshness": freshness.get("freshness"),
+                "freshness_threshold_seconds": freshness.get(
+                    "freshness_threshold_seconds"
+                ),
                 "confidence": (visible or {}).get("confidence", "UNAVAILABLE"),
                 "sell_value_affordability_impact": (visible or {}).get(
                     "impact_on_our_decision",
@@ -905,7 +1007,18 @@ def build_actionable_price_radar(
         "date_state_complete_count": sum(
             bool(row.get("date_state_complete")) for row in identities
         ),
-        "degradation_reason": None if complete else "owned price identity coverage is not exact15",
+        "predictor_freshness": freshness.get("freshness"),
+        "source_age_seconds": freshness.get("source_age_seconds"),
+        "freshness_threshold_seconds": freshness.get(
+            "freshness_threshold_seconds"
+        ),
+        "degradation_reason": (
+            "owned price identity coverage is not exact15"
+            if not complete
+            else "official_price_predictor evidence is STALE at report time"
+            if as_of is not None and freshness.get("freshness") == "STALE"
+            else None
+        ),
         "price_alone_may_create_act": False,
     }
 
@@ -2612,11 +2725,11 @@ def _render_deep_visible_contract_lines(
         lines.append("BENCH: " + ", ".join(bench_names))
         score = dict(payload.get("lineup_score") or {})
         lines.append(
-            "PROJECTED XI SCORE: "
+            "XI_BASE_XPTS: "
             + str(
                 score.get("xpts_mean")
                 if score.get("xpts_mean") is not None
-                else score.get("expected_fpl_points_with_captain_vice", "UNAVAILABLE")
+                else "UNAVAILABLE"
             )
         )
         comparisons = [
@@ -2625,6 +2738,33 @@ def _render_deep_visible_contract_lines(
             if isinstance(item, Mapping)
         ]
         if comparisons:
+            selected_comparison = next(
+                (
+                    item
+                    for item in comparisons
+                    if item.get("selected") is True
+                ),
+                None,
+            )
+            if selected_comparison:
+                lines.append(
+                    "CAPTAIN_ADJUSTED_XPTS: "
+                    + str(
+                        selected_comparison.get(
+                            "expected_fpl_points_with_captain_vice",
+                            "UNAVAILABLE",
+                        )
+                    )
+                )
+                lines.append(
+                    "LINEUP_ROUTE_UTILITY: "
+                    + str(
+                        selected_comparison.get(
+                            "route_utility",
+                            "UNAVAILABLE",
+                        )
+                    )
+                )
             lines.append("FORMATION ALTERNATIVES:")
             lines.extend(
                 _markdown_table(

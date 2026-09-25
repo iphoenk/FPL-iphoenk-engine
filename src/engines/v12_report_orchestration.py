@@ -3280,7 +3280,7 @@ def _render_deep_visible_contract_lines(
         )
         lines.append(
             "WEATHER SOURCE: "
-            + ("REPORT_TIME_BOUND" if weather_bound else "SOURCE_DEGRADED")
+            + ("REPORT_TIME_BOUND" if weather_bound else "DEGRADED")
         )
         lines.append("### WEATHER")
         lines.extend(

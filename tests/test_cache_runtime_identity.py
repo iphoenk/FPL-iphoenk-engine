@@ -21,6 +21,11 @@ IDENTITY_A = {
         "openblas_coretype": "",
         "openblas_num_threads": "4",
         "omp_num_threads": "",
+        "runtime_architecture": "SkylakeX",
+        "runtime_internal_api": "openblas",
+        "runtime_num_threads": 4,
+        "runtime_threading_layer": "pthreads",
+        "runtime_version": "0.3.30",
     },
 }
 
@@ -43,6 +48,13 @@ IDENTITY_OPENBLAS_CHANGED = _changed(
     blas={
         **IDENTITY_A["blas"],
         "version": "0.3.31",
+    }
+)
+
+IDENTITY_OPENBLAS_CORE_CHANGED = _changed(
+    blas={
+        **IDENTITY_A["blas"],
+        "runtime_architecture": "Haswell",
     }
 )
 
@@ -124,6 +136,7 @@ def _assert_runtime_identity_changes_key(monkeypatch, key_builder):
         IDENTITY_CORE_COUNT_CHANGED,
         IDENTITY_SIMD_CHANGED,
         IDENTITY_OPENBLAS_CHANGED,
+        IDENTITY_OPENBLAS_CORE_CHANGED,
     )
 
     assert key_a == key_a_repeat

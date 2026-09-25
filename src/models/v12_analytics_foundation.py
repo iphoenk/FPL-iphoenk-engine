@@ -21,6 +21,14 @@ class AnalyticsFoundationError(RuntimeError):
     pass
 
 
+def _multiwindow_underlying_enabled() -> bool:
+    import os
+
+    return str(os.getenv("V12_MULTIWINDOW_FORM_ENABLED") or "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+
+
 def _read_json(path: Path) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
@@ -611,7 +619,7 @@ def load_v6_analytics_foundation(
         and hierarchy.get("players")
         and distributions.get("matrix")
     )
-    return {
+    payload = {
         "contract": "V12_ANALYTICS_FOUNDATION_V2",
         "status": "MATCH_FOUNDATION_READY" if match_ready else "BLOCKED",
         "stage1_full_foundation_ready": stage1_ready,
@@ -688,6 +696,25 @@ def load_v6_analytics_foundation(
             "new_model_owner_created": False,
         },
     }
+
+    if _multiwindow_underlying_enabled():
+        from src.models.v12_multiwindow_form import (
+            build_multiwindow_form_snapshot,
+        )
+
+        source_season = (
+            normalized.get("season")
+            or normalized.get("season_label")
+            or normalized.get("season_id")
+        )
+        payload["multiwindow_underlying_form"] = (
+            build_multiwindow_form_snapshot(
+                adjusted,
+                season=str(source_season) if source_season else None,
+            )
+        )
+
+    return payload
 
 
 def require_match_foundation(

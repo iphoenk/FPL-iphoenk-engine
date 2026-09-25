@@ -1221,6 +1221,81 @@ def test_mini_league_s15b_visible_renderer_keeps_comprehensive_contract(monkeypa
     assert "SHIELDS" in body
 
 
+def test_stage_c_captain_surface_uses_final_xi_and_p1_7_safe_pool(monkeypatch):
+    _, detail, owned = _ml_deep_fixture(monkeypatch)
+    lineup = {
+        "starting_xi": list(range(1, 12)),
+        "bench": {"gk": 12, "order": [13, 14, 15]},
+        "captain": {"element": 1, "name": "P1"},
+        "vice_captain": {"element": 2, "name": "P2"},
+        "captain_safe_pool": [1, 2],
+        "formation": "3-5-2",
+    }
+    surface = runner._captain_decision_surface(
+        owned=owned,
+        lineup=lineup,
+        lineup_state="COMPLETE",
+        mini_detail=detail,
+    )
+    assert surface["decision_state"] == "PREPARE"
+    assert surface["candidate_universe_proof"]["captain_in_current15"] is True
+    assert surface["candidate_universe_proof"]["vice_in_current15"] is True
+    assert surface["candidate_universe_proof"]["captain_in_final_xi"] is True
+    assert surface["candidate_universe_proof"]["vice_in_final_xi"] is True
+    assert surface["candidate_universe_proof"]["frontier_subset_of_final_xi"] is True
+    assert surface["mini_league_override_applied"] is False
+    assert surface["near_tie_authority"] == {
+        "source": "P1_7_CAPTAIN_SAFE_POOL",
+        "candidate_count": 2,
+    }
+
+
+def test_stage_c_s19_explicitly_consumes_s08_and_s15b(monkeypatch):
+    _, detail, owned = _ml_deep_fixture(monkeypatch)
+    lineup = {
+        "starting_xi": list(range(1, 12)),
+        "bench": {"gk": 12, "order": [13, 14, 15]},
+        "captain": {"element": 1, "name": "P1"},
+        "vice_captain": {"element": 2, "name": "P2"},
+        "captain_safe_pool": [1],
+        "formation": "3-5-2",
+    }
+    captain_surface = runner._captain_decision_surface(
+        owned=owned,
+        lineup=lineup,
+        lineup_state="COMPLETE",
+        mini_detail=detail,
+    )
+    judgement = runner._final_judgement_surface(
+        operational_action="WAIT",
+        stage3_decision={
+            "selected_route_id": "HOLD",
+            "action_contract": "FRESH_DEADLINE_EVIDENCE",
+        },
+        stage3_visible={
+            "package_routes": [
+                {"route": "HOLD", "executable": True},
+            ]
+        },
+        lineup=lineup,
+        captain_surface=captain_surface,
+        mini_detail=detail,
+        staging={
+            "contingency": "WATCH",
+            "staging_rows": [{"timing": "GW+1"}],
+        },
+        chip_state=None,
+    )
+    assert judgement["consumed_sections"] == ["S08", "S15B"]
+    assert judgement["selected_route_executable"] is True
+    assert judgement["football_optimal_captain"]["element_id"] == 1
+    assert judgement["final_captain"]["element_id"] == 1
+    assert judgement["vice"]["element_id"] == 2
+    assert judgement["captain_state"] == "LOCK"
+    assert judgement["football_baseline_preserved"] is True
+    assert judgement["mini_league_captain_context"]["label"] == "BEHAVIOURAL BASELINE"
+
+
 def test_mini_league_s15b_manifest_cannot_regress_to_compact_summary():
     required = set(DEEP_HUMAN_SECTION_REQUIREMENTS["S15B"])
     assert {

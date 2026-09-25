@@ -4088,14 +4088,28 @@ def run_deep(
             None if chip_available else "authenticated chip state unavailable in bound current-team artifact",
         ),
         "S10": _section(
-            "COMPLETE" if price_radar else "DEGRADED",
+            (
+                "COMPLETE"
+                if price_radar
+                and str(
+                    (price_radar or {}).get("predictor_freshness") or ""
+                ).upper() == "FRESH"
+                else "DEGRADED"
+            ),
             {
                 **(price_radar or {"rows": []}),
                 "bank": (finance or {}).get("bank"),
                 "bank_status": (finance or {}).get("bank_status"),
                 "sell_value_status": (finance or {}).get("sell_value_status"),
             },
-            None if price_radar else "Official FPL predictor radar unavailable",
+            (
+                None
+                if price_radar
+                and str(
+                    (price_radar or {}).get("predictor_freshness") or ""
+                ).upper() == "FRESH"
+                else "Official FPL predictor evidence is stale or unavailable at report time"
+            ),
         ),
         "S11": _section(
             watch_state,
@@ -4146,7 +4160,14 @@ def run_deep(
                     "official_factual_evidence": "STRONG" if official else "INCOMPLETE",
                     "model_derived_inference": "STRONG" if projections and stage3_internal_pass else "MODERATE",
                     "market_predictor": (
-                        "STRONG" if (rise or {}).get("predictor_health") == "GREEN" else "INCOMPLETE"
+                        "STRONG_CURRENT"
+                        if (
+                            (rise or {}).get("predictor_health") == "GREEN"
+                            and (rise or {}).get("freshness_state") == "FRESH"
+                        )
+                        else "STALE"
+                        if (rise or {}).get("freshness_state") == "STALE"
+                        else "INCOMPLETE"
                     ),
                     "tactical_interpretation": "MODERATE" if projections else "INCOMPLETE",
                     "p1_1_p1_3": "EXECUTED" if projections else "FAILED",

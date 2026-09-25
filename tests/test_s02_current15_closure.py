@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from src.engines import v12_integrated_report_runner as runner
@@ -58,28 +59,32 @@ def _write_runtime_identity(root: Path) -> None:
         }
         for index, element_id in enumerate(OLD_GW5_IDS, start=1)
     ]
-    runner._write_json(
-        personal / "submitted_picks.json",
-        {
-            "status": "AVAILABLE",
-            "entry_id": 3462711,
-            "gw": 5,
-            "generated_at": "2026-09-24T07:17:31.862320+00:00",
-            "authority": "OFFICIAL_FPL",
-            "picks": stale_picks,
-        },
+    (personal / "submitted_picks.json").write_text(
+        json.dumps(
+            {
+                "status": "AVAILABLE",
+                "entry_id": 3462711,
+                "gw": 5,
+                "generated_at": "2026-09-24T07:17:31.862320+00:00",
+                "authority": "OFFICIAL_FPL",
+                "picks": stale_picks,
+            }
+        ),
+        encoding="utf-8",
     )
-    runner._write_json(
-        personal / "current_team.json",
-        {
-            "entry_id": 3462711,
-            "gw": 5,
-            "generated_at": "2026-09-24T07:17:31.433974+00:00",
-            "authority": "OFFICIAL_FPL",
-            "auth_state": "AUTH_EXPIRED",
-            "squad_state": "SUBMITTED_PICKS_ONLY",
-            "players": stale_picks,
-        },
+    (personal / "current_team.json").write_text(
+        json.dumps(
+            {
+                "entry_id": 3462711,
+                "gw": 5,
+                "generated_at": "2026-09-24T07:17:31.433974+00:00",
+                "authority": "OFFICIAL_FPL",
+                "auth_state": "AUTH_EXPIRED",
+                "squad_state": "SUBMITTED_PICKS_ONLY",
+                "players": stale_picks,
+            }
+        ),
+        encoding="utf-8",
     )
 
 

@@ -1995,6 +1995,7 @@ def _mini_league_deep_detail(
     mini_overlay: Mapping[str, Any] | None,
     disclosed_gw: int,
     operational_action: str,
+    calendar_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Materialize decision-oriented mini-league evidence without new football math.
 
@@ -2017,6 +2018,29 @@ def _mini_league_deep_detail(
     ]
     owned_ids = list(dict.fromkeys(owned_ids))
     owned_set = set(owned_ids)
+    final_xi_ids = [
+        element
+        for element in (
+            _surface_element(value)
+            for value in (lineup or {}).get("starting_xi") or []
+        )
+        if element is not None and element in owned_set
+    ]
+    final_xi_ids = list(dict.fromkeys(final_xi_ids))
+    final_xi_set = set(final_xi_ids)
+    bench_payload = dict((lineup or {}).get("bench") or {})
+    bench_ids = [
+        element
+        for element in (
+            [_surface_element(bench_payload.get("gk"))]
+            + [
+                _surface_element(value)
+                for value in bench_payload.get("order") or []
+            ]
+        )
+        if element is not None and element in owned_set
+    ]
+    bench_set = set(bench_ids)
 
     owned_names: dict[int, str] = {}
     for raw in owned:
@@ -2062,6 +2086,7 @@ def _mini_league_deep_detail(
                     "entry_id": entry_id,
                     "picks": picks,
                     "status": raw.get("status"),
+                    "active_chip": raw.get("active_chip"),
                 }
 
     def pick_element(pick: Mapping[str, Any]) -> int | None:
@@ -2541,6 +2566,7 @@ def _mini_league_deep_detail(
                 )
                 or "BALANCED"
             ),
+            calendar_context=calendar_context,
         )
         league_row = next(
             (

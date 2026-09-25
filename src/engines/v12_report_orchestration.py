@@ -3065,9 +3065,12 @@ def _render_deep_visible_contract_lines(
         lines.append(
             "MINI_LEAGUE_DENOMINATOR: "
             + ("COMPLETE" if coverage == "FULL" else "DEGRADED")
-            + f" | submitted={available}/{expected}"
-            + f" | rival_denominator={rival_denominator}"
-            + f" | disclosed_picks=GW{disclosed_gw}"
+        )
+        lines.append(
+            "MINI_LEAGUE_COVERAGE: "
+            f"submitted={available}/{expected} | "
+            f"rival_denominator={rival_denominator} | "
+            f"disclosed_picks=GW{disclosed_gw}"
         )
         lines.append(
             "RIVAL PICKS NOTE: latest disclosed submitted picks are a behavioral/"

@@ -1891,6 +1891,7 @@ def _captain_candidate_review(
     projections: Mapping[str, Any] | None,
     mini: Mapping[str, Any] | None,
     mini_league_stance: str,
+    calendar_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Visible C/VC evidence using existing P1.3/P1.6/P1.7/P1.8 owners."""
     raw_candidate = dict(candidate or {})
@@ -1911,6 +1912,15 @@ def _captain_candidate_review(
         ),
         {},
     )
+    workload = next(
+        (
+            dict(row)
+            for row in (calendar_context or {}).get("player_workload") or []
+            if isinstance(row, Mapping)
+            and int(row.get("element_id") or 0) == int(element or 0)
+        ),
+        {},
+    )
     one = dict(mechanism.get("1GW") or {})
     complete = dict(mechanism.get("complete_player_distribution") or {})
     return {
@@ -1921,6 +1931,11 @@ def _captain_candidate_review(
             or (f"element:{element}" if element else "UNAVAILABLE")
         ),
         "expected_points": one.get("mean", raw_candidate.get("xpts_mean")),
+        "q10": one.get("Q10"),
+        "q25": one.get("Q25"),
+        "q50": one.get("median"),
+        "q75": one.get("Q75"),
+        "q90": one.get("Q90"),
         "ceiling_q90": one.get("Q90"),
         "haul_probability": one.get("p_haul"),
         "blank_probability": one.get("p_blank"),
@@ -1940,9 +1955,23 @@ def _captain_candidate_review(
             "home": mechanism.get("home"),
             "dynamic_matchup": mechanism.get("dynamic_matchup"),
         },
-        "captain_count": exposure.get("captain_count"),
-        "captain_pct": exposure.get("captain_pct"),
-        "eo_pct": exposure.get("eo_pct"),
+        "workload_context": {
+            "gw_state": workload.get("gw_state"),
+            "load_state": workload.get("load_state"),
+            "days_rest": workload.get("days_rest"),
+            "long_haul": workload.get("long_haul"),
+            "timezone_shift_hours": workload.get("timezone_shift_hours"),
+            "return_to_club_interval_hours": workload.get(
+                "return_to_club_interval_hours"
+            ),
+            "planning_gw_fixtures": workload.get("planning_gw_fixtures"),
+        },
+        # Legacy P1.8 snapshot exposure is RIVALS-excluding-us. Stage C deep
+        # detail adds LEAGUE/RIVALS/DIRECT named scopes separately.
+        "rivals_captain_count": exposure.get("captain_count"),
+        "rivals_captain_pct": exposure.get("captain_pct"),
+        "rivals_eo_pct": exposure.get("eo_pct"),
+        "rivals_eo_supported": exposure.get("eo_supported"),
         "mini_league_upside": (
             "Lower captain/EO can create leverage only when football evidence remains close."
         ),
@@ -1951,8 +1980,8 @@ def _captain_candidate_review(
         ),
         "mini_league_stance": mini_league_stance,
         "raw_mean_is_not_sole_authority": True,
+        "candidate_source": "AUTHORITATIVE_CURRENT15_FINAL_XI",
     }
-
 
 
 def _mini_league_deep_detail(

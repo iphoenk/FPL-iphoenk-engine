@@ -1210,6 +1210,7 @@ def test_stageb_controlled_exact_p17_ab_reports_xi_bench_captain_vice():
     assert out["changed"]["XI"] is True
     assert out["changed"]["bench"] is True
     assert out["changed"]["captain"] is True
+    assert out["changed"]["vice"] is True
 
 
 def test_stageb_player_ordering_and_transfer_comparator_ab_are_diagnostic_only():

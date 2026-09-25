@@ -1,0 +1,22 @@
+{
+  "_fixture_provenance": {
+    "extraction_note": "Sanitized exact Stage-A comparison slice extracted from workflow artifact v12-report-DEEP-36108029034.",
+    "report_slot": "2026-09-25T14:30:00+07:00",
+    "sanitized": true,
+    "source_artifact": "v12-report-DEEP-36108029034",
+    "source_head_sha": "106d229acd92ef1b6434a786f77b4983ff86747a",
+    "source_run_id": 36108029034
+  },
+  "bound_authority": {"v6_private_auth_state": "AUTH_EXPIRED"},
+  "report": {
+    "sections": [
+      {"section_id":"S06","state":"COMPLETE","content":{"authoritative_binding":{"status":"BOUND","producer":"P1_7_LINEUP","payload_fingerprint":"48497a36f33acfc94745933b22f6d722ae94666d7f893433df7c211fc157e55f","report_slot":"2026-09-25T14:30:00+07:00"},"lineup_score":{"xpts_mean":49.777897},"formation_comparison":[{"formation":"5-4-1","expected_fpl_points_with_captain_vice":55.012527,"route_utility":54.817245,"selected":true}]}},
+      {"section_id":"S10","state":"COMPLETE","content":{"rows":[{"element_id":572,"evidence_timestamp":"2026-09-25T02:37:34.626747+00:00","date_state":"NO_CROSSING_WITHIN_GOVERNED_HORIZON","date_state_complete":true}]}},
+      {"section_id":"S12","state":"COMPLETE","content":{"artifact_adapter":"V6_DATA_PLAYERS_OFFSET0","sort_contract":"projected_percent DESC, id ASC","authoritative_binding":{"status":"BOUND","producer":"OFFICIAL_FPL_PREDICTOR_RISE20","payload_fingerprint":"c854b68f81175343bba08bc34fcf053a22ef2f36680ca63db40fedb5eeeede9a","report_slot":"2026-09-25T14:30:00+07:00"},"rows":[{"element_id":115,"direction":"RISE","projected_percent":97.9,"estimate_source":"OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR","evidence_timestamp":"2026-09-25T02:37:34.626747+00:00","date_state":"EXPECTED_CHANGE_DATE","date_state_complete":true}]}},
+      {"section_id":"S13","state":"COMPLETE","content":{"artifact_adapter":"V6_DATA_PLAYERS_OFFSET0","sort_contract":"projected_percent ASC, id ASC","authoritative_binding":{"status":"BOUND","producer":"OFFICIAL_FPL_PREDICTOR_FALL20","payload_fingerprint":"2134572cd909798c6265e77857cbe3a5bc284fb8121324d7515c570820af7d89","report_slot":"2026-09-25T14:30:00+07:00"},"rows":[{"element_id":14,"direction":"FALL","projected_percent":-99.9,"estimate_source":"OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR","evidence_timestamp":"2026-09-25T02:37:34.626747+00:00","date_state":"EXPECTED_CHANGE_DATE","date_state_complete":true}]}},
+      {"section_id":"S14","state":"COMPLETE","content":{"authoritative_binding":{"status":"BOUND","producer":"P1_2_PACKAGE_UTILITY+P1_4_MONTE_CARLO+P1_8_MINI_LEAGUE_OVERLAY","payload_fingerprint":"2b11f22c34ccf06e740bb4a50ab7ce45ca7bb563747e095a9f743441ea62bf21"},"package_routes":[{"route":"HOLD","route_kind":"HOLD","moves":{"out":[],"in":[]},"bank_before":null,"transfer_cost":{"economics_status":"PASS","bank_after":null}},{"route":"1:426->52","route_kind":"DIRECT / 1-TRANSFER","moves":{"out":[{"element":426,"sell_value":null}],"in":[{"element":52,"buy_price":50}]},"bank_before":null,"transfer_cost":{"economics_status":"PARTIAL","bank_after":null}}]}},
+      {"section_id":"S14B","state":"COMPLETE","content":{"budget_dependency":{"bank":null,"bank_status":"UNAVAILABLE","sell_value_status":"UNAVAILABLE"},"ft_saving_plan":"SAVE FT","order_of_transfers":"SAVE FT / HOLD SQUAD","staging_rows":[{"timing":"GW6","planned_move":"SAVE FT / HOLD SQUAD","status":"HOLD"},{"timing":"GW7","planned_move":"REOPTIMIZE FULL FRONTIER / SAVE FT IF NO EDGE","status":"WATCH"}]}},
+      {"section_id":"S17","state":"COMPLETE","content":{"source_health":{"official_fpl":"HEALTHY","authenticated_personal_scope":"HEALTHY","fixture_data":"HEALTHY","price_predictor":"GREEN","tactical_statistical_data":"HEALTHY","mini_league":"FULL","weather":"SOURCE_DEGRADED_AT_RUNNER; DIRECT_CHATGPT_AT_VISIBLE_DELIVERY"},"lineage":{"v6_factual_plane_mutated":false}}}
+    ]
+  }
+}

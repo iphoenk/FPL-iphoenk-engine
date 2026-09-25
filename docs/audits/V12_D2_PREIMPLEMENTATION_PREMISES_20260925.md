@@ -147,3 +147,57 @@ Only after D2a raw oracle/fingerprint correctness is green:
 - raw `float.hex()` and row-sequence fingerprints remain mandatory.
 
 This sequencing isolates scan removal from position memoization and makes attribution auditable.
+
+## 9. Evaluated-row count reconciliation
+
+The frozen snapshot produces **2,598 test rows** in the walk-forward reference trace, but **74 rows are skipped before any `_rate90` call** because `player_train` is empty. Therefore:
+
+- total test rows traced: **2,598**
+- skipped before rate evaluation: **74**
+- evaluated rows: **2,524**
+- scalar position `_rate90` calls: **2,524**
+- scalar player-level `_rate90` calls: **7,572 = 3 × 2,524**
+- total scalar `_rate90` calls: **10,096**
+- D2b candidate `_rate90` calls: **7,588 = 7,572 player-level + 16 position cache misses**
+- repeated position-rate calls removed: **2,508 = 2,524 - 16**
+
+This resolves the earlier apparent inconsistency between 2,598 unique `(target_gw, player)` keys and 2,524 position-rate calls. The cache remains lazy: rows that fail the `not player_train or not position_train` guard do not populate the rate cache.
+
+## 10. Normalized-position equivalence proof
+
+The scalar oracle computes:
+
+```python
+position = _position(actual.get("position"))
+position_train = [
+    row
+    for row in train
+    if _position(row.get("position")) == position
+]
+```
+
+D2 builds its position index with the **same** normalization function:
+
+```python
+rows_by_position[_position(row.get("position"))].append(row)
+```
+
+Thus the cache/index equivalence class is exactly the oracle predicate's equivalence class.
+
+Current `_position()` behavior:
+- case-insensitive via `str(...).upper()`;
+- `GK` and `GKP` both normalize to `GK`;
+- other strings normalize by upper-casing only;
+- numeric `element_type` values such as `1` normalize to `"1"`, not to `GK`.
+
+Therefore a mixed-representation regression fixture must use representations the current normalizer itself treats as equivalent, such as `gk` / `GKP` and `mid` / `MID`. Numeric-vs-label equivalence is outside the current function contract and must not be invented by D2.
+
+## 11. Cached position-history immutability
+
+Current consumers of `position_train` are read-only:
+- `_rate90()` iterates rows and does not mutate the sequence or rows;
+- starter-rate computation iterates `row.get("starter")`;
+- `len(position_train)` is read-only.
+
+To make this invariant enforceable rather than merely observed, D2 stores cached position history as an invocation-local **tuple** while preserving the exact row-object order. This prevents append/sort/in-place list mutation by future consumers without changing the scalar-observed iteration order.
+

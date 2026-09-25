@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-25T16:26:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-25T16:36:00+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -97,7 +97,7 @@ Walk-forward validation now uses invocation-local, input-order-preserving player
 
 Persistent deterministic caches are also runtime-version bound: Stage-2, P1.7, and MC cache schemas include Python major.minor plus NumPy version in their exact internal content-addressed keys. GitHub Actions may restore a broad cache directory by prefix, but only an exact semantic + runtime key file may be reused; cross-Python-minor or cross-NumPy cache hits are rejected by construction.
 
-Partial-change validation now uses cache schema v3 and an explicit upstream-lineage chain. Stage-2 binds Foundation code, P1.7 binds Stage-2/Foundation code lineage in addition to its consumed player surfaces, and MC binds P1.7/Stage-2/Foundation code lineage in addition to projections and route definitions. Persistent reuse is also bound to the numeric runtime class (Python/NumPy, machine/CPU, logical core count, active NumPy SIMD, and BLAS/OpenBLAS/thread configuration), so cross-runtime reuse misses by construction. The frozen partial-change HIT/MISS expectations and asymmetric correctness rules are recorded in `docs/validation/V12_PARTIAL_CHANGE_PRECONDITIONS_20260925.md` before new matrix results are run.
+Partial-change validation now uses cache schema v3 and an explicit upstream-lineage chain. Stage-2 binds Foundation code, P1.7 binds Stage-2/Foundation code lineage in addition to its consumed player surfaces, and MC binds P1.7/Stage-2/Foundation code lineage in addition to projections and route definitions. Persistent reuse is normalized before NumPy execution with `OPENBLAS_CORETYPE=Haswell`, one OpenBLAS/OMP thread, and AVX512 dispatch disabled. The cache runtime key contains only Python, NumPy, effective OpenBLAS core, effective active SIMD set, and effective OpenBLAS thread count; physical CPU model and host logical-core count are observability only. Cross-host acceptance requires bit-identical governed P1.7 output across at least two distinct physical CPU models. The frozen count-aware partial-change expectations, price-path proof, fixture/runtime change classes, and scheduler closure sequence are recorded in `docs/validation/V12_PARTIAL_CHANGE_PRECONDITIONS_20260925.md` before new matrix results are run.
 
 ## V12 Stage 2 position-specific probabilistic engine
 

@@ -73,11 +73,20 @@ def sample_confidence(matches: int, minutes: float) -> dict[str, Any]:
 
 
 def provider_guard(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
-    providers = sorted({value for row in rows if (value := provider(row))})
+    observed = [provider(row) for row in rows]
+    providers = sorted({value for value in observed if value})
+    missing = sum(value is None for value in observed)
+    if missing:
+        status = "PROVIDER_UNAVAILABLE"
+    elif len(providers) > 1:
+        status = "PROVIDER_MISMATCH"
+    else:
+        status = "OK"
     return {
         "providers_seen": providers,
-        "status": "OK" if len(providers) <= 1 else "PROVIDER_MISMATCH",
-        "aggregation_allowed": len(providers) <= 1,
+        "missing_provider_rows": missing,
+        "status": status,
+        "aggregation_allowed": status == "OK",
     }
 
 
@@ -100,8 +109,12 @@ def build_provenance(
     seasons = sorted({value for row in rows if (value := season(row, default_season))})
     return {
         "provider": providers[0] if len(providers) == 1 else None,
+        "provider_availability": (
+            "AVAILABLE" if len(providers) == 1 else "UNAVAILABLE_OR_AMBIGUOUS"
+        ),
         "providers_seen": providers,
         "retrieved_at": stamps[-1] if stamps else None,
+        "retrieved_at_availability": "AVAILABLE" if stamps else "UNAVAILABLE",
         "snapshot_timestamps_seen": stamps,
         "season": seasons[0] if len(seasons) == 1 else None,
         "season_availability": (

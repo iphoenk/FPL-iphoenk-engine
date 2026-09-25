@@ -81,3 +81,33 @@ That is the direct `HUMAN_FACING_QA` failure in this occurrence. It must not be 
 Do not merge from this workstream yet.
 
 PR #716 currently changes `v12_deep_delivery.py` and `v12_integrated_report_runner.py`. This branch intentionally avoids those files and acts only as a bounded regression/evidence lock. Re-read latest main and reconcile with #716 after that workstream reaches its own closure gate.
+
+
+## Current-main production verification
+
+Natural DEEP run `36126675342` was executed on exact production main
+`f1402818519237d3628184e298bd58c0240983bb`.
+
+Observed acceptance evidence:
+
+- S02 = `COMPLETE`
+- available/expected CURRENT15 = `15/15`
+- personal resolution = `CURRENT_VALID`
+- source = `FPL_MASTER_STATE_V12:EXPLICIT_USER_CONFIRMED`
+- source GW = `6`
+- stale = `false`
+- PERSONAL_EVIDENCE_RECONCILIATION = PASS
+- OUR15_IDENTITY = PASS
+- PRE_RENDER = PASS
+- POST_RENDER = PASS
+- HUMAN_FACING = PASS
+- runner = PASS
+- Stage3 = PASS, failures = []
+- degraded sections = `S09` only
+
+Therefore the historical S12/S13 human-facing mismatch from run
+`35979672473` is no longer present on the current production main used by
+this closure branch.
+
+Because this branch changes tests/documentation only, it cannot alter
+XI/bench/C/VC/package/MC decisions relative to its base SHA.

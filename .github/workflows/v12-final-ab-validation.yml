@@ -1,0 +1,235 @@
+name: V12 final same-snapshot A-B validation
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/v12-final-ab-validation.yml"
+      - "README.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v12-final-ab-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
+
+jobs:
+  ab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      OPENBLAS_CORETYPE: Haswell
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      NPY_DISABLE_CPU_FEATURES: "X86_V4,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR"
+      FINAL_SHA: f1402818519237d3628184e298bd58c0240983bb
+      RUNTIME_SHA: 39454aa417be500f041eb57827f7d09c08a0bb05
+      REPORT_SLOT: 2026-09-25T14:30:00+07:00
+    steps:
+      - name: Checkout exact final production A
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.FINAL_SHA }}
+          path: app-a
+          persist-credentials: false
+
+      - name: Checkout exact final production B
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.FINAL_SHA }}
+          path: app-b
+          persist-credentials: false
+
+      - name: Checkout exact runtime-data snapshot
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.RUNTIME_SHA }}
+          path: runtime-data
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: app-a/requirements.txt
+
+      - name: Install production runtime dependencies
+        working-directory: app-a
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Prove exact frozen inputs
+        run: |
+          set -euo pipefail
+          test "$(git -C app-a rev-parse HEAD)" = "$FINAL_SHA"
+          test "$(git -C app-b rev-parse HEAD)" = "$FINAL_SHA"
+          test "$(git -C runtime-data rev-parse HEAD)" = "$RUNTIME_SHA"
+          python -m app-a.src.engines.v12_cache_runtime_identity >/dev/null
+
+      - name: Run A default exact cross-route
+        working-directory: app-a
+        env:
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/ab-a/stage2
+          V12_P17_DECISION_CACHE_DIR: .cache/ab-a/p17
+          V12_MC_SIM_CACHE_DIR: .cache/ab-a/mc
+        run: |
+          rm -rf .cache/ab-a artifacts/ab
+          mkdir -p .cache/ab-a/stage2 .cache/ab-a/p17 .cache/ab-a/mc
+          python -m src.engines.v12_integrated_report_runner             --runtime-data-root ../runtime-data             --report-mode DEEP             --report-slot "$REPORT_SLOT"             --output-dir artifacts/ab
+
+      - name: Configure B kill-switch only
+        working-directory: app-b
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("config/intelligence/v12_package_utility.json")
+          data = json.loads(path.read_text(encoding="utf-8"))
+          perf = data["performance"]
+          assert perf["execution_mode"] == "CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7"
+          perf["execution_mode"] = "PROCESS_POOL_EXACT_P1_7"
+          path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Run B exact process-pool kill-switch
+        working-directory: app-b
+        env:
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/ab-b/stage2
+          V12_P17_DECISION_CACHE_DIR: .cache/ab-b/p17
+          V12_MC_SIM_CACHE_DIR: .cache/ab-b/mc
+        run: |
+          rm -rf .cache/ab-b artifacts/ab
+          mkdir -p .cache/ab-b/stage2 .cache/ab-b/p17 .cache/ab-b/mc
+          python -m src.engines.v12_integrated_report_runner             --runtime-data-root ../runtime-data             --report-mode DEEP             --report-slot "$REPORT_SLOT"             --output-dir artifacts/ab
+
+      - name: Compare governed semantic surfaces
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          def load(path):
+              return json.loads(Path(path).read_text(encoding="utf-8"))
+
+          a = load("app-a/artifacts/ab/report_bundle.json")
+          b = load("app-b/artifacts/ab/report_bundle.json")
+
+          def section(bundle, sid):
+              rows = bundle["report"]["sections"]
+              hit = [row for row in rows if row.get("section_id") == sid]
+              if len(hit) != 1:
+                  raise SystemExit(f"{sid}: expected exactly one section, got {len(hit)}")
+              return hit[0]
+
+          def canon(value):
+              return json.dumps(
+                  value,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=False,
+                  allow_nan=False,
+              ).encode("utf-8")
+
+          def digest(value):
+              return hashlib.sha256(canon(value)).hexdigest()
+
+          def diff(a0, b0, path="$", out=None):
+              out = [] if out is None else out
+              if len(out) >= 100:
+                  return out
+              if type(a0) is not type(b0):
+                  out.append({"path": path, "a": type(a0).__name__, "b": type(b0).__name__})
+                  return out
+              if isinstance(a0, dict):
+                  for key in sorted(set(a0) | set(b0)):
+                      if key not in a0 or key not in b0:
+                          out.append({"path": f"{path}.{key}", "a": a0.get(key, "<MISSING>"), "b": b0.get(key, "<MISSING>")})
+                      else:
+                          diff(a0[key], b0[key], f"{path}.{key}", out)
+                      if len(out) >= 100:
+                          break
+              elif isinstance(a0, list):
+                  if len(a0) != len(b0):
+                      out.append({"path": path + ".length", "a": len(a0), "b": len(b0)})
+                  for i, (av, bv) in enumerate(zip(a0, b0)):
+                      diff(av, bv, f"{path}[{i}]", out)
+                      if len(out) >= 100:
+                          break
+              elif a0 != b0:
+                  out.append({"path": path, "a": a0, "b": b0})
+              return out
+
+          s14a, s14b = section(a, "S14"), section(b, "S14")
+          s15ba, s15bb = section(a, "S15B"), section(b, "S15B")
+          s02a = section(a, "S02")
+          s06a = section(a, "S06")
+          s08a = section(a, "S08")
+
+          failures = []
+          for sid, av, bv in (("S14", s14a, s14b), ("S15B", s15ba, s15bb)):
+              if canon(av) != canon(bv):
+                  failures.append({
+                      "gate": f"{sid}_BIT_IDENTICAL",
+                      "diff": diff(av, bv),
+                  })
+
+          personal = (s02a.get("content") or {}).get("personal_resolution") or {}
+          if s02a.get("state") != "COMPLETE":
+              failures.append({"gate": "S02_COMPLETE", "actual": s02a.get("state")})
+          if personal.get("status") != "CURRENT_VALID":
+              failures.append({"gate": "S02_CURRENT_VALID", "actual": personal.get("status")})
+          for label, bundle in (("A", a), ("B", b)):
+              human = bundle.get("human_facing_qa") or {}
+              if human.get("status") != "PASS":
+                  failures.append({"gate": f"HUMAN_FACING_{label}", "actual": human})
+
+          captain = (s08a.get("content") or {}).get("captain") or {}
+          vice = (s08a.get("content") or {}).get("vice_captain") or {}
+          lineup_captain = (s06a.get("content") or {}).get("captain") or {}
+          result = {
+              "schema": "V12_FINAL_SAME_SNAPSHOT_AB_V1",
+              "final_sha": "f1402818519237d3628184e298bd58c0240983bb",
+              "runtime_sha": "39454aa417be500f041eb57827f7d09c08a0bb05",
+              "report_slot": "2026-09-25T14:30:00+07:00",
+              "a_mode": "CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7",
+              "b_mode": "PROCESS_POOL_EXACT_P1_7",
+              "s14_sha256_a": digest(s14a),
+              "s14_sha256_b": digest(s14b),
+              "s15b_sha256_a": digest(s15ba),
+              "s15b_sha256_b": digest(s15bb),
+              "s02_state": s02a.get("state"),
+              "s02_personal_resolution": personal,
+              "human_facing_a": (a.get("human_facing_qa") or {}).get("status"),
+              "human_facing_b": (b.get("human_facing_qa") or {}).get("status"),
+              "captain_a": captain,
+              "vice_a": vice,
+              "lineup_captain_a": lineup_captain,
+              "status": "PASS" if not failures else "FAIL",
+              "failures": failures,
+          }
+          Path("ab_acceptance.json").write_text(
+              json.dumps(result, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(result, indent=2, sort_keys=True))
+          if failures:
+              raise SystemExit("same-snapshot A/B acceptance failed")
+          PY
+
+      - name: Upload immutable A-B evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: v12-final-ab-${{ github.run_id }}
+          path: |
+            app-a/artifacts/ab/report_bundle.json
+            app-a/artifacts/ab/report_body.md
+            app-a/artifacts/ab/execution_proof.json
+            app-b/artifacts/ab/report_bundle.json
+            app-b/artifacts/ab/report_body.md
+            app-b/artifacts/ab/execution_proof.json
+            ab_acceptance.json
+          retention-days: 14
+          if-no-files-found: warn

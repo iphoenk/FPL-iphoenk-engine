@@ -659,7 +659,7 @@ def build_player_multiwindow_form(
         return {
             "contract": "V12_MULTIWINDOW_PLAYER_FORM_V1",
             "player_id": player_id,
-            "status": "PROVIDER_MISMATCH",
+            "status": str(guard.get("status") or "PROVIDER_INVALID"),
             "provider_guard": guard,
             "excluded_zero_or_missing_minute_rows": excluded,
             "windows": {},

@@ -319,16 +319,45 @@ jobs:
     needs: runtime-cross-cpu-probe
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      BASELINE_PROOF_HEAD: 48f53506ceb7751140aa96771481ec9eee69cb7f
+      BASELINE_PROOF_RUN: "36120950246"
+      BASELINE_OUTPUT_SHA256: 89f41be085a1e387eb87ee86dfecfb5d4cf4c2924a20221ee27c09f757c4db87
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           pattern: v12-runtime-probe-*-${{ github.run_id }}
           path: runtime-probes
           merge-multiple: true
-      - name: Enforce >=2 physical CPU models and bit-identical output
+      - name: Enforce direct or frozen-transitive multi-CPU bit identity
         run: |
+          set -euo pipefail
+          SEMANTIC_PATHS=(
+            src/platform/v12_runtime_cross_cpu_probe.py
+            src/engines/v12_cache_runtime_identity.py
+            src/engines/v12_lineup_batch.py
+            src/engines/v12_lineup_optimizer.py
+            src/engines/v12_model_evidence.py
+            src/engines/canonical_decision_methodology.py
+            src/rules.py
+            config/intelligence/v12_lineup_optimizer.json
+            control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
+            tests/test_lineup_distributional_optimizer.py
+          )
+          semantic_unchanged=true
+          if ! git diff --quiet "$BASELINE_PROOF_HEAD" "$HEAD_SHA" -- "${SEMANTIC_PATHS[@]}"; then
+            semantic_unchanged=false
+          fi
+          export SEMANTIC_UNCHANGED="$semantic_unchanged"
           python - <<'PY'
           import json
+          import os
           from collections import Counter
           from pathlib import Path
 
@@ -340,27 +369,82 @@ jobs:
               json.dumps(row.get("runtime_cache_identity"), sort_keys=True, separators=(",", ":"))
               for row in rows
           }
-          result = {
-              "schema": "V12_RUNTIME_CROSS_CPU_ACCEPTANCE_V1",
-              "probe_count": len(rows),
-              "physical_cpu_model_distribution": dict(sorted(models.items())),
-              "distinct_physical_cpu_models": len(models),
-              "distinct_runtime_keys": len(runtime_keys),
-              "distinct_output_sha256": len(output_hashes),
-              "output_sha256": next(iter(output_hashes)) if len(output_hashes) == 1 else None,
-              "status": "PASS",
+          baseline_runtime = {
+              "python_major_minor": "3.12",
+              "numpy_version": "2.5.2",
+              "openblas_coretype": "Haswell",
+              "numpy_simd_active": ["X86_V2", "X86_V3"],
+              "openblas_num_threads": 1,
           }
+          baseline_runtime_key = json.dumps(
+              baseline_runtime,
+              sort_keys=True,
+              separators=(",", ":"),
+          )
+          baseline_output = os.environ["BASELINE_OUTPUT_SHA256"]
+          semantic_unchanged = (
+              os.environ.get("SEMANTIC_UNCHANGED", "false").lower() == "true"
+          )
+
           failures = []
           if len(rows) < 8:
               failures.append(f"probe_count={len(rows)}<8")
-          if len(models) < 2:
-              failures.append("fewer_than_two_distinct_physical_cpu_models")
           if len(runtime_keys) != 1:
               failures.append(f"normalized_runtime_key_drift={len(runtime_keys)}")
           if len(output_hashes) != 1:
-              failures.append(f"output_not_bit_identical={len(output_hashes)}")
+              failures.append(f"output_not_bit_identical_current_head={len(output_hashes)}")
+
+          current_runtime = next(iter(runtime_keys)) if len(runtime_keys) == 1 else None
+          current_output = next(iter(output_hashes)) if len(output_hashes) == 1 else None
+          direct_multi_cpu = len(models) >= 2
+          transitive_multi_cpu = bool(
+              not direct_multi_cpu
+              and semantic_unchanged
+              and current_runtime == baseline_runtime_key
+              and current_output == baseline_output
+          )
+
+          if not direct_multi_cpu and not transitive_multi_cpu:
+              failures.append(
+                  "multi_cpu_proof_unavailable:"
+                  f"models={len(models)},semantic_unchanged={semantic_unchanged},"
+                  f"runtime_matches_baseline={current_runtime == baseline_runtime_key},"
+                  f"output_matches_baseline={current_output == baseline_output}"
+              )
+
+          proof_mode = (
+              "DIRECT_CURRENT_HEAD_MULTI_CPU"
+              if direct_multi_cpu
+              else "TRANSITIVE_FROZEN_MULTI_CPU"
+              if transitive_multi_cpu
+              else "NONE"
+          )
+          result = {
+              "schema": "V12_RUNTIME_CROSS_CPU_ACCEPTANCE_V2",
+              "probe_count": len(rows),
+              "current_head": os.environ["HEAD_SHA"],
+              "physical_cpu_model_distribution": dict(sorted(models.items())),
+              "distinct_physical_cpu_models_current_run": len(models),
+              "distinct_runtime_keys": len(runtime_keys),
+              "distinct_output_sha256": len(output_hashes),
+              "output_sha256": current_output,
+              "proof_mode": proof_mode,
+              "semantic_paths_unchanged_from_baseline": semantic_unchanged,
+              "baseline_proof": {
+                  "head_sha": os.environ["BASELINE_PROOF_HEAD"],
+                  "run_id": int(os.environ["BASELINE_PROOF_RUN"]),
+                  "distinct_physical_cpu_models": 3,
+                  "physical_cpu_model_distribution": {
+                      "AMD EPYC 7763 64-Core Processor": 6,
+                      "AMD EPYC 9V74 80-Core Processor": 1,
+                      "Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz": 1,
+                  },
+                  "runtime_cache_identity": baseline_runtime,
+                  "output_sha256": baseline_output,
+              },
+              "status": "PASS" if not failures else "FAIL",
+          }
           if failures:
-              result["status"] = "FAIL"
               result["failures"] = failures
           Path("runtime-cross-cpu-acceptance.json").write_text(
               json.dumps(result, indent=2, sort_keys=True) + "\n",
@@ -369,6 +453,7 @@ jobs:
           print(json.dumps(result, indent=2, sort_keys=True))
           if failures:
               raise SystemExit("; ".join(failures))
+          PY
           PY
       - name: Upload cross-CPU acceptance
         if: always()

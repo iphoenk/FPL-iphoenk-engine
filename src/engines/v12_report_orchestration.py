@@ -3570,6 +3570,7 @@ def _render_deep_visible_contract_lines(
                 rows.append(
                     (
                         item.get("football_rank"),
+                        item.get("football_score"),
                         item.get("player") or item.get("element_id"),
                         item.get("expected_points"),
                         item.get("q10"),
@@ -3603,6 +3604,7 @@ def _render_deep_visible_contract_lines(
                 _markdown_table(
                     (
                         "football rank",
+                        "football score",
                         "player",
                         "xPts",
                         "Q10",

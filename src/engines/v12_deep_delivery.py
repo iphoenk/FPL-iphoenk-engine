@@ -410,6 +410,142 @@ def validate_deep_decision_content_delivery(
                 )
                 break
 
+    # Stage-A semantic cross-section invariants. These validate meaning, not
+    # merely field presence, and intentionally fail the 36126675342 false-pass
+    # class where structurally complete sections contradicted bound authority.
+    s17 = content("S17")
+    source_health = dict(s17.get("source_health") or {})
+    bound_authority = dict(s17.get("bound_authority") or {})
+    bound_auth = str(
+        bound_authority.get("personal_auth_state") or ""
+    ).upper()
+    visible_auth = str(
+        source_health.get("authenticated_personal_scope") or ""
+    ).upper()
+    if bound_auth and visible_auth != bound_auth:
+        failures.append(
+            f"AUTH_STATE_CONTRADICTION={visible_auth or 'MISSING'}!={bound_auth}"
+        )
+
+    s14b = content("S14B")
+    budget_dependency = dict(s14b.get("budget_dependency") or {})
+    ft_authoritative = budget_dependency.get("ft_authoritative") is True
+    ft_claims = [
+        s14b.get("ft_saving_plan"),
+        s14b.get("order_of_transfers"),
+        *[
+            row.get("planned_move")
+            for row in s14b.get("staging_rows") or []
+            if isinstance(row, Mapping)
+        ],
+    ]
+    if not ft_authoritative and any(
+        token in str(value or "").upper()
+        for value in ft_claims
+        for token in ("SAVE FT", "ROLL FT")
+    ):
+        failures.append("FT_INFERENCE_WITHOUT_AUTHORITY")
+
+    s06 = content("S06")
+    if state("S06") == "COMPLETE":
+        score = dict(s06.get("lineup_score") or {})
+        comparisons = [
+            dict(row)
+            for row in s06.get("formation_comparison") or []
+            if isinstance(row, Mapping)
+        ]
+        selected_comparison = next(
+            (row for row in comparisons if row.get("selected") is True),
+            None,
+        )
+        try:
+            base_xpts = float(score["xpts_mean"])
+            captain_value = float(score["captain_multiplier_value"])
+            vice_value = float(score["vice_fallback_value"])
+            adjusted_xpts = float(
+                (selected_comparison or {})[
+                    "expected_fpl_points_with_captain_vice"
+                ]
+            )
+        except (KeyError, TypeError, ValueError):
+            base_xpts = captain_value = vice_value = adjusted_xpts = None
+        if base_xpts is not None:
+            expected_adjusted = base_xpts + captain_value + vice_value
+            if abs(expected_adjusted - adjusted_xpts) > 1e-6:
+                failures.append(
+                    "S06_SCORE_SEMANTICS_MISMATCH="
+                    f"{expected_adjusted:.6f}!={adjusted_xpts:.6f}"
+                )
+            if "XI_BASE_XPTS:" not in upper:
+                failures.append("S06_XI_BASE_XPTS_NOT_VISIBLE")
+            if "CAPTAIN_ADJUSTED_XPTS:" not in upper:
+                failures.append("S06_CAPTAIN_ADJUSTED_XPTS_NOT_VISIBLE")
+
+    s14 = content("S14")
+    package_routes = [
+        dict(row)
+        for row in s14.get("package_routes") or []
+        if isinstance(row, Mapping)
+    ]
+    if state("S14") == "COMPLETE":
+        if not str(s14.get("football_frontier_status") or "").strip():
+            failures.append("FOOTBALL_FRONTIER_STATUS_MISSING")
+        if not str(s14.get("execution_economics_status") or "").strip():
+            failures.append("EXECUTION_ECONOMICS_STATUS_MISSING")
+        for row in package_routes:
+            if str(row.get("route") or "").upper() == "HOLD":
+                continue
+            economics_state = str(
+                row.get("execution_economics_status") or ""
+            ).upper()
+            if not economics_state:
+                failures.append(
+                    "ROUTE_EXECUTION_ECONOMICS_STATUS_MISSING="
+                    + str(row.get("route"))
+                )
+                continue
+            if economics_state != "COMPLETE" and row.get("executable") is True:
+                failures.append(
+                    "FINANCE_UNRESOLVED_ROUTE_EXECUTABLE="
+                    + str(row.get("route"))
+                )
+
+    for sid in ("S10", "S12", "S13"):
+        price_payload = content(sid)
+        rows = [
+            dict(row)
+            for row in price_payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        if not rows:
+            continue
+        missing_freshness = [
+            index
+            for index, row in enumerate(rows, start=1)
+            if not str(row.get("freshness") or "").strip()
+        ]
+        if missing_freshness:
+            failures.append(
+                f"PRICE_FRESHNESS_MISSING={sid}:{missing_freshness[0]}"
+            )
+            continue
+        if sid == "S10":
+            surface_freshness = str(
+                price_payload.get("predictor_freshness") or ""
+            ).upper()
+        else:
+            surface_freshness = str(
+                price_payload.get("freshness_state") or ""
+            ).upper()
+        any_stale = any(
+            str(row.get("freshness") or "").upper() == "STALE"
+            for row in rows
+        )
+        if any_stale and surface_freshness == "FRESH":
+            failures.append(f"STALE_PRICE_MARKED_CURRENT={sid}")
+        if state(sid) == "COMPLETE" and any_stale:
+            failures.append(f"STALE_PRICE_SECTION_COMPLETE={sid}")
+
     # Watchlist20 remains a football-decision surface: exact 5/5/5/5 by pos.
     if state("S11") == "COMPLETE":
         rows = [dict(row) for row in content("S11").get("rows") or [] if isinstance(row, Mapping)]

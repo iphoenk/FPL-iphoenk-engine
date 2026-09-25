@@ -1,0 +1,37 @@
+{
+  "occurrence": {
+    "run_id": 36126675342,
+    "report_slot": "2026-09-25T17:53:00+07:00",
+    "artifact": "v12-report-DEEP-36126675342",
+    "head_sha": "f1402818519237d3628184e298bd58c0240983bb",
+    "old_human_facing_status": "PASS"
+  },
+  "bound_authority": {
+    "private_auth_state": "AUTH_EXPIRED",
+    "personal_resolution_status": "CURRENT_VALID",
+    "bank": null,
+    "free_transfers": null,
+    "selling_value_status": "UNAVAILABLE"
+  },
+  "old_visible": {
+    "s17_authenticated_personal_scope": "HEALTHY",
+    "s14b_ft_saving_plan": "SAVE FT",
+    "s14b_order_of_transfers": "SAVE FT / HOLD SQUAD",
+    "s06_projected_xi_score": 49.777897,
+    "s06_selected_formation": "5-4-1",
+    "s06_selected_captain_adjusted_xpts": 55.012527,
+    "s06_captain_multiplier_value": 4.811,
+    "s06_vice_fallback_value": 0.42363,
+    "price_evidence_timestamp": "2026-09-25T02:37:34.626747+00:00",
+    "price_freshness_field_present": false
+  },
+  "finance_degraded_route": {
+    "route": "1:426->52",
+    "bank_before": null,
+    "out_sell_value": null,
+    "hit": null,
+    "free_transfers": null,
+    "bank_after": null,
+    "old_affordability": "PARTIAL"
+  }
+}

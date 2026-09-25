@@ -231,8 +231,32 @@ methodology weights.
 
 The original P1.2 baseline remains published separately.
 
-`report_enrichment` publishes a compact section containing current league
-context, coverage, relevant exposure, baseline route, adjusted route, Decision
-Delta, posture, relative upside/downside and reversal triggers.
+The DEEP `S15B` consumer is deliberately comprehensive rather than compact.
+It must preserve denominator discipline visibly and publish, when supportable:
+
+- rank battle around the user's current position;
+- OUR15 exposure against all collected rivals as `count / denominator (%)` for
+  ownership, starter, bench, captain and vice;
+- EO as effective-multiplier sum / denominator (%) only when multiplier evidence
+  is complete for the scope;
+- the configured immediate rivals above the user, including points gap,
+  current-OUR15 overlap, OUR-only players, rival-only players, captain and vice;
+- OUR15 exposure against that direct-rival scope using the same raw-count
+  denominator contract;
+- material non-owned rival threats from the direct-rival scope;
+- captain leverage candidates with football xPts/P(haul), all-rival exposure,
+  direct-rival exposure and a bounded rank-utility interpretation;
+- a visible `CHASE / BALANCED / DEFEND` implication for XI, captaincy and
+  transfer behavior while preserving the football baseline first.
+
+The rival-pick source is explicitly labelled by its disclosed gameweek. A
+previous-GW submitted-picks snapshot is a behavioral/structural baseline only
+and must never be presented as a prediction of still-private planning-GW picks.
+
+The DEEP human-facing manifest requires these S15B structures, so a renderer
+that collapses the section back to percentage-only summary cannot pass.
+
+`report_enrichment` may still publish a compact machine-facing summary for
+non-DEEP consumers, but it does not weaken the S15B visible DEEP contract.
 
 No new scheduler or authority is introduced.

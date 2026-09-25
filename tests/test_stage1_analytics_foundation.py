@@ -1389,6 +1389,7 @@ from src.models.v12_external_challenge import (
     ExternalChallengeError,
     build_external_challenge_layer,
     challenge_external_claim,
+    load_external_claims_input,
 )
 from src.models.v12_stagec_universe_scanner import build_universe_scan
 
@@ -1995,13 +1996,73 @@ def test_stagec_external_challenge_has_no_network_client_or_scraper():
     assert not [token for token in forbidden if token in source]
 
 
-def test_stagec_runner_feature_defaults_off(monkeypatch):
+def test_stagec_runner_feature_defaults_on_with_explicit_kill_switch(monkeypatch):
     from src.engines.v12_integrated_report_runner import (
         _stagec_scanner_enabled,
     )
 
     monkeypatch.delenv("V12_STAGEC_SCANNER_ENABLED", raising=False)
+    assert _stagec_scanner_enabled() is True
+    monkeypatch.setenv("V12_STAGEC_SCANNER_ENABLED", "0")
     assert _stagec_scanner_enabled() is False
     monkeypatch.setenv("V12_STAGEC_SCANNER_ENABLED", "1")
     assert _stagec_scanner_enabled() is True
+
+
+def test_stagec_external_claim_resolves_unique_player_name_without_element():
+    element = 9501
+    scan = _stagec_scan(
+        [_stagec_negative_regression_rows(element)],
+        [_stagec_projection(element)],
+    )
+    row = challenge_external_claim(
+        {
+            "source": "AI FPL Manager",
+            "timestamp": "2026-09-25T03:25:25Z",
+            "player": f"C{element}",
+            "stance": "BUY",
+            "ingestion_mode": "MANUAL_CAPTURE",
+        },
+        scan=scan,
+    )
+    assert row["model_challenge"]["candidate_resolution"] == "PLAYER_NAME"
+    assert row["model_challenge"]["resolved_element"] == element
+    assert row["model_challenge"]["result"] == "DISAGREE"
+
+
+def test_stagec_external_claim_input_filters_stale_without_network(tmp_path):
+    path = tmp_path / "claims.json"
+    path.write_text(
+        json.dumps(
+            {
+                "contract": "V12_STAGEC_EXTERNAL_CLAIMS_V1",
+                "max_age_hours": 24,
+                "claims": [
+                    {
+                        "source": "AI FPL Manager",
+                        "timestamp": "2026-09-25T03:25:25Z",
+                        "player": "Current",
+                        "stance": "WATCH",
+                        "ingestion_mode": "MANUAL_CAPTURE",
+                    },
+                    {
+                        "source": "FPL GOAT",
+                        "timestamp": "2026-09-20T03:25:25Z",
+                        "player": "Stale",
+                        "stance": "WATCH",
+                        "ingestion_mode": "MANUAL_CAPTURE",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    out = load_external_claims_input(
+        path=path,
+        as_of="2026-09-25T06:00:00Z",
+    )
+    assert out["state"] == "AVAILABLE"
+    assert out["claim_count"] == 1
+    assert out["stale_claim_count"] == 1
+    assert out["claims"][0]["player"] == "Current"
 

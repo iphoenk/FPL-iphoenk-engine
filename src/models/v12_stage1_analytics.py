@@ -492,7 +492,7 @@ def walk_forward_validate(
     rows_by_player: dict[int, list[dict[str, Any]]] = defaultdict(list)
     rows_by_position: dict[str, list[dict[str, Any]]] = defaultdict(list)
     position_history_cache: dict[
-        tuple[int, str], list[dict[str, Any]]
+        tuple[int, str], tuple[dict[str, Any], ...]
     ] = {}
     position_rate_cache: dict[
         tuple[int, str, str, str], float
@@ -522,11 +522,11 @@ def walk_forward_validate(
             ]
             position_history_key = (target_gw, position)
             if position_history_key not in position_history_cache:
-                position_history_cache[position_history_key] = [
+                position_history_cache[position_history_key] = tuple(
                     row
                     for row in rows_by_position.get(position, [])
                     if _i(row.get("gw")) < target_gw
-                ]
+                )
             position_train = position_history_cache[position_history_key]
             if not player_train or not position_train:
                 continue

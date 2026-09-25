@@ -1,0 +1,176 @@
+name: Cache partial-change matrix validation
+
+on:
+  push:
+    branches:
+      - validation/cache-partial-change-matrix-20260925
+
+permissions:
+  contents: read
+
+jobs:
+  prime:
+    name: prime-${{ matrix.change_class }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        change_class:
+          - injury
+          - xmins
+          - role
+          - price
+          - team
+          - finance
+          - unchanged
+    steps:
+      - name: Checkout validation head
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Prime A exact internal caches
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          CHANGE_CLASS: ${{ matrix.change_class }}
+        run: |
+          mkdir -p evidence ".matrix-cache/${CHANGE_CLASS}"
+          python tools/validation/cache_partial_change_matrix.py \
+            --mode prime \
+            --change-class "${CHANGE_CLASS}" \
+            --cache-root ".matrix-cache/${CHANGE_CLASS}" \
+            --output "evidence/prime-${CHANGE_CLASS}.json"
+
+      - name: Save Stage-2 prime A cache
+        uses: actions/cache/save@v4
+        with:
+          path: .matrix-cache/${{ matrix.change_class }}/stage2
+          key: matrix-${{ github.run_id }}-${{ matrix.change_class }}-stage2-prime
+
+      - name: Save P1.7 prime A cache
+        uses: actions/cache/save@v4
+        with:
+          path: .matrix-cache/${{ matrix.change_class }}/p17
+          key: matrix-${{ github.run_id }}-${{ matrix.change_class }}-p17-prime
+
+      - name: Save MC prime A cache
+        uses: actions/cache/save@v4
+        with:
+          path: .matrix-cache/${{ matrix.change_class }}/mc
+          key: matrix-${{ github.run_id }}-${{ matrix.change_class }}-mc-prime
+
+      - name: Upload prime evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: matrix-prime-${{ matrix.change_class }}-${{ github.run_id }}
+          path: evidence/prime-${{ matrix.change_class }}.json
+          if-no-files-found: error
+          retention-days: 14
+
+  verify:
+    name: verify-${{ matrix.change_class }}-${{ matrix.attempt }}
+    needs: prime
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        change_class:
+          - injury
+          - xmins
+          - role
+          - price
+          - team
+          - finance
+          - unchanged
+        attempt: [1, 2, 3]
+    steps:
+      - name: Checkout validation head
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Restore exact Stage-2 prime A cache
+        id: restore-stage2
+        uses: actions/cache/restore@v4
+        with:
+          path: .matrix-cache/${{ matrix.change_class }}/stage2
+          key: matrix-${{ github.run_id }}-${{ matrix.change_class }}-stage2-prime
+
+      - name: Restore exact P1.7 prime A cache
+        id: restore-p17
+        uses: actions/cache/restore@v4
+        with:
+          path: .matrix-cache/${{ matrix.change_class }}/p17
+          key: matrix-${{ github.run_id }}-${{ matrix.change_class }}-p17-prime
+
+      - name: Restore exact MC prime A cache
+        id: restore-mc
+        uses: actions/cache/restore@v4
+        with:
+          path: .matrix-cache/${{ matrix.change_class }}/mc
+          key: matrix-${{ github.run_id }}-${{ matrix.change_class }}-mc-prime
+
+      - name: Validate matched outer keys are prime A
+        env:
+          CHANGE_CLASS: ${{ matrix.change_class }}
+          MATCHED_STAGE2: ${{ steps.restore-stage2.outputs.cache-matched-key }}
+          MATCHED_P17: ${{ steps.restore-p17.outputs.cache-matched-key }}
+          MATCHED_MC: ${{ steps.restore-mc.outputs.cache-matched-key }}
+          EXPECT_STAGE2: matrix-${{ github.run_id }}-${{ matrix.change_class }}-stage2-prime
+          EXPECT_P17: matrix-${{ github.run_id }}-${{ matrix.change_class }}-p17-prime
+          EXPECT_MC: matrix-${{ github.run_id }}-${{ matrix.change_class }}-mc-prime
+        run: |
+          python - <<'PY'
+          import os
+          failures = []
+          for layer in ("STAGE2", "P17", "MC"):
+              matched = os.environ[f"MATCHED_{layer}"]
+              expected = os.environ[f"EXPECT_{layer}"]
+              if matched != expected:
+                  failures.append(
+                      f"{layer} matched key {matched!r} != prime A {expected!r}"
+                  )
+          if failures:
+              raise SystemExit("\n".join(failures))
+          print("PASS: all outer cache restores are exact prime-A keys")
+          PY
+
+      - name: Execute B with restored A caches and compare cold B
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          CHANGE_CLASS: ${{ matrix.change_class }}
+          ATTEMPT: ${{ matrix.attempt }}
+        run: |
+          mkdir -p evidence
+          python tools/validation/cache_partial_change_matrix.py \
+            --mode verify \
+            --change-class "${CHANGE_CLASS}" \
+            --cache-root ".matrix-cache/${CHANGE_CLASS}" \
+            --output "evidence/verify-${CHANGE_CLASS}-${ATTEMPT}.json"
+
+      - name: Upload verify evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: matrix-verify-${{ matrix.change_class }}-${{ matrix.attempt }}-${{ github.run_id }}
+          path: evidence/verify-${{ matrix.change_class }}-${{ matrix.attempt }}.json
+          if-no-files-found: warn
+          retention-days: 14

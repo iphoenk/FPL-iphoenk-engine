@@ -1,0 +1,912 @@
+name: V12 D2 final correctness gate
+
+on:
+  push:
+    branches:
+      - validation/v12-d2-final-correctness-20260925
+
+permissions:
+  contents: read
+
+jobs:
+  correctness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout D2a candidate
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 8309ddaf0da87546bf92e3e9a2ea21e7c409a2a4
+          path: candidate
+          persist-credentials: false
+
+      - name: Checkout scalar oracle
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: daf7247c320b1bb61eebd943b23f3ca694b088ef
+          path: oracle
+          persist-credentials: false
+
+      - name: Checkout frozen runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r candidate/requirements.txt
+
+      - name: Write D2a oracle probe
+        run: |
+          cat > /tmp/d2a_probe.py <<'PY'
+          import argparse
+          import gc
+          import hashlib
+          import json
+          import math
+          import os
+          import platform
+          import subprocess
+          import sys
+          from collections import defaultdict
+          from pathlib import Path
+
+          import src.models.v12_stage1_analytics as s1
+          from src.engines.v12_integrated_report_runner import _official_payload, _planning_gw
+          from src.models.team_strength import build_team_strength
+          from src.models.v12_analytics_foundation import (
+              load_v6_analytics_foundation,
+              require_match_foundation,
+          )
+
+          def stable(value):
+              return json.dumps(
+                  value,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=False,
+                  allow_nan=False,
+                  default=str,
+              )
+
+          def fp(value):
+              return hashlib.sha256(stable(value).encode("utf-8")).hexdigest()
+
+          def hx(value):
+              return float(value).hex()
+
+          def row_key(row):
+              return (
+                  s1._i(row.get("gw")),
+                  s1._i(row.get("player_id"), s1._i(row.get("element"))),
+                  str(row.get("match_id") or ""),
+                  s1._position(row.get("position")),
+              )
+
+          def sequence_token(rows):
+              digest = hashlib.sha256()
+              for row in rows:
+                  digest.update(repr(row_key(row)).encode("utf-8"))
+                  digest.update(b"\\n")
+              return digest.hexdigest()
+
+          def cpu_model():
+              try:
+                  for line in Path("/proc/cpuinfo").read_text().splitlines():
+                      if line.lower().startswith("model name"):
+                          return line.split(":", 1)[1].strip()
+              except Exception:
+                  return None
+              return None
+
+          def nproc():
+              try:
+                  return int(subprocess.check_output(["nproc"], text=True).strip())
+              except Exception:
+                  return os.cpu_count()
+
+          def load_snapshot(runtime_root):
+              runtime = Path(runtime_root)
+              official = _official_payload(runtime)
+              bootstrap = official["bootstrap"]
+              fixtures = official["fixtures"]
+              planning_gw = _planning_gw(bootstrap)
+              strength = build_team_strength(bootstrap, fixtures)
+              foundation = require_match_foundation(
+                  load_v6_analytics_foundation(
+                      runtime,
+                      bootstrap=bootstrap,
+                      planning_gw=planning_gw,
+                      strength=strength,
+                  )
+              )
+              return planning_gw, foundation, foundation["player_match_rows"]
+
+          def actual_instrumented(rows):
+              before_fp = fp(rows)
+              original_rate90 = s1._rate90
+              rate_calls = []
+
+              def wrapped_rate90(rows_arg, field, *, weights=None):
+                  result = original_rate90(rows_arg, field, weights=weights)
+                  rate_calls.append({
+                      "field": field,
+                      "rows_sequence_token": sequence_token(rows_arg),
+                      "weights": None if weights is None else [hx(x) for x in weights],
+                      "result": None if result is None else hx(result),
+                  })
+                  return result
+
+              s1._rate90 = wrapped_rate90
+              try:
+                  payload = s1.walk_forward_validate(rows)
+              finally:
+                  s1._rate90 = original_rate90
+
+              after_fp = fp(rows)
+              return {
+                  "payload": payload,
+                  "payload_fingerprint": fp(payload),
+                  "rate90_trace": rate_calls,
+                  "rate90_trace_fingerprint": fp(rate_calls),
+                  "input_fingerprint_before": before_fp,
+                  "input_fingerprint_after": after_fp,
+                  "input_immutable": before_fp == after_fp,
+              }
+
+          def traced_reference(rows, indexed):
+              clean = [dict(row) for row in rows if s1._i(row.get("gw")) > 0]
+              gws = sorted({s1._i(row.get("gw")) for row in clean})
+              rows_by_player = defaultdict(list)
+              rows_by_position = defaultdict(list)
+              if indexed:
+                  for row in clean:
+                      pid = s1._i(row.get("player_id"), s1._i(row.get("element")))
+                      rows_by_player[pid].append(row)
+                      rows_by_position[s1._position(row.get("position"))].append(row)
+
+              errors = defaultdict(list)
+              brier = defaultdict(list)
+              logloss = defaultdict(list)
+              folds = 0
+              trace = []
+              leakage_ok = True
+
+              for target_gw in gws:
+                  train = [row for row in clean if s1._i(row.get("gw")) < target_gw]
+                  test = [row for row in clean if s1._i(row.get("gw")) == target_gw]
+                  if not train or not test:
+                      continue
+                  folds += 1
+                  for actual in test:
+                      pid = s1._i(actual.get("player_id"), s1._i(actual.get("element")))
+                      position = s1._position(actual.get("position"))
+                      if indexed:
+                          player_train = [
+                              row
+                              for row in rows_by_player.get(pid, [])
+                              if s1._i(row.get("gw")) < target_gw
+                          ]
+                          position_train = [
+                              row
+                              for row in rows_by_position.get(position, [])
+                              if s1._i(row.get("gw")) < target_gw
+                          ]
+                      else:
+                          player_train = [
+                              row
+                              for row in train
+                              if s1._i(
+                                  row.get("player_id"),
+                                  s1._i(row.get("element")),
+                              ) == pid
+                          ]
+                          position_train = [
+                              row
+                              for row in train
+                              if s1._position(row.get("position")) == position
+                          ]
+
+                      leakage_ok = leakage_ok and all(
+                          s1._i(row.get("gw")) < target_gw
+                          for row in player_train
+                      )
+                      leakage_ok = leakage_ok and all(
+                          s1._i(row.get("gw")) < target_gw
+                          for row in position_train
+                      )
+
+                      entry = {
+                          "target_gw": target_gw,
+                          "actual_match_id": str(actual.get("match_id") or ""),
+                          "actual_player_id": pid,
+                          "actual_position": position,
+                          "player_train_sequence_token": sequence_token(player_train),
+                          "position_train_sequence_token": sequence_token(position_train),
+                          "player_train_gws": [
+                              s1._i(row.get("gw")) for row in player_train
+                          ],
+                          "position_train_gws": [
+                              s1._i(row.get("gw")) for row in position_train
+                          ],
+                      }
+
+                      if not player_train or not position_train:
+                          entry["skipped"] = True
+                          trace.append(entry)
+                          continue
+
+                      pos_rate = s1._rate90(position_train, "xgi") or 0.0
+                      season = s1._rate90(player_train, "xgi")
+                      season = pos_rate if season is None else season
+
+                      recency_weights = [
+                          0.5 ** (
+                              max(0, target_gw - s1._i(row.get("gw"))) / 2.5
+                          )
+                          for row in player_train
+                      ]
+                      recency = s1._rate90(
+                          player_train,
+                          "xgi",
+                          weights=recency_weights,
+                      )
+                      recency = season if recency is None else recency
+
+                      opponent_weights = [
+                          weight
+                          * s1._clamp(
+                              s1._f(
+                                  row.get("opponent_strength_weight"),
+                                  1.0,
+                              ),
+                              0.5,
+                              1.5,
+                          )
+                          for row, weight in zip(
+                              player_train,
+                              recency_weights,
+                          )
+                      ]
+                      opponent = s1._rate90(
+                          player_train,
+                          "xgi",
+                          weights=opponent_weights,
+                      )
+                      opponent = recency if opponent is None else opponent
+
+                      effective = sum(opponent_weights)
+                      bayes = (
+                          opponent * effective + pos_rate * 4.0
+                      ) / max(1e-9, effective + 4.0)
+
+                      minutes = max(0.0, s1._f(actual.get("minutes")))
+                      observed = None
+                      if minutes > 0:
+                          observed = (
+                              90.0
+                              * max(0.0, s1._f(actual.get("xgi")))
+                              / minutes
+                          )
+                          for label, prediction in {
+                              "naive_position": pos_rate,
+                              "season_aggregate": season,
+                              "recency": recency,
+                              "opponent_adjusted": opponent,
+                              "bayesian_opponent_adjusted": bayes,
+                          }.items():
+                              errors[label].append(abs(prediction - observed))
+
+                      pos_start = (
+                          2.0
+                          + sum(
+                              bool(row.get("starter"))
+                              for row in position_train
+                          )
+                      ) / (4.0 + len(position_train))
+                      season_start = (
+                          2.0
+                          + sum(
+                              bool(row.get("starter"))
+                              for row in player_train
+                          )
+                      ) / (4.0 + len(player_train))
+                      recent = player_train[-min(4, len(player_train)) :]
+                      recent_start = (
+                          1.5
+                          + sum(bool(row.get("starter")) for row in recent)
+                      ) / (3.0 + len(recent))
+                      bayes_start = (
+                          pos_start * 4.0 + recent_start * len(recent)
+                      ) / (4.0 + len(recent))
+
+                      y = 1.0 if actual.get("starter") else 0.0
+                      probs = {}
+                      for label, prediction in {
+                          "naive_position": pos_start,
+                          "season_aggregate": season_start,
+                          "recency": recent_start,
+                          "bayesian_opponent_adjusted": bayes_start,
+                      }.items():
+                          p = s1._clamp(prediction, 1e-6, 1.0 - 1e-6)
+                          probs[label] = p
+                          brier[label].append((p - y) ** 2)
+                          logloss[label].append(
+                              -(
+                                  y * math.log(p)
+                                  + (1 - y) * math.log(1 - p)
+                              )
+                          )
+
+                      entry.update({
+                          "skipped": False,
+                          "pos_rate": hx(pos_rate),
+                          "season": hx(season),
+                          "recency_weights": [hx(x) for x in recency_weights],
+                          "recency": hx(recency),
+                          "opponent_weights": [hx(x) for x in opponent_weights],
+                          "opponent": hx(opponent),
+                          "effective": hx(effective),
+                          "bayes": hx(bayes),
+                          "observed": None if observed is None else hx(observed),
+                          "pos_start": hx(pos_start),
+                          "season_start": hx(season_start),
+                          "recent_start": hx(recent_start),
+                          "bayes_start": hx(bayes_start),
+                          "probabilities": {
+                              key: hx(value) for key, value in probs.items()
+                          },
+                      })
+                      trace.append(entry)
+
+              def average(mapping):
+                  return {
+                      key: (
+                          round(sum(values) / len(values), 6)
+                          if values
+                          else None
+                      )
+                      for key, values in mapping.items()
+                  }
+
+              xgi_mae = average(errors)
+              starter_brier = average(brier)
+              starter_logloss = average(logloss)
+              valid_xgi = {
+                  key: value
+                  for key, value in xgi_mae.items()
+                  if value is not None
+              }
+              valid_start = {
+                  key: value
+                  for key, value in starter_brier.items()
+                  if value is not None
+              }
+              payload = {
+                  "status": (
+                      "PASS"
+                      if folds > 0 and valid_start
+                      else "INSUFFICIENT_COMPLETED_FOLDS"
+                  ),
+                  "folds": folds,
+                  "future_leakage": False,
+                  "split": "EXPANDING_WINDOW_BY_GW",
+                  "xgi_mae": xgi_mae,
+                  "starter_brier": starter_brier,
+                  "starter_log_loss": starter_logloss,
+                  "xgi_selected_variant": (
+                      min(valid_xgi, key=valid_xgi.get)
+                      if valid_xgi
+                      else None
+                  ),
+                  "starter_selected_variant": (
+                      min(valid_start, key=valid_start.get)
+                      if valid_start
+                      else None
+                  ),
+                  "complex_model_survives_only_if_metric_improves": True,
+              }
+              return {
+                  "payload": payload,
+                  "payload_fingerprint": fp(payload),
+                  "trace": trace,
+                  "trace_fingerprint": fp(trace),
+                  "leakage_ok": leakage_ok,
+              }
+
+          def row(
+              pid,
+              *,
+              gw,
+              match,
+              position="MID",
+              team=1,
+              minutes=90.0,
+              starter=True,
+              xgi=0.2,
+              opponent_weight=1.0,
+          ):
+              return {
+                  "player_id": pid,
+                  "element": pid,
+                  "team_id": team,
+                  "position": position,
+                  "gw": gw,
+                  "match_id": match,
+                  "minutes": minutes,
+                  "starter": starter,
+                  "xgi": xgi,
+                  "opponent_strength_weight": opponent_weight,
+              }
+
+          def fixture_cases():
+              return {
+                  "empty": [],
+                  "one_gw_only": [
+                      row(1, gw=1, match="a", position="MID"),
+                      row(2, gw=1, match="b", position="MID"),
+                  ],
+                  "nonpositive_gw_filtered": [
+                      row(1, gw=-1, match="n"),
+                      row(1, gw=0, match="z"),
+                      row(1, gw=1, match="a"),
+                      row(1, gw=2, match="b"),
+                  ],
+                  "player_no_prior": [
+                      row(1, gw=1, match="a", position="MID"),
+                      row(2, gw=2, match="b", position="MID"),
+                  ],
+                  "position_no_prior": [
+                      row(1, gw=1, match="a", position="MID"),
+                      row(2, gw=2, match="b", position="FWD"),
+                  ],
+                  "unknown_and_missing_position": [
+                      row(1, gw=1, match="a", position="XYZ"),
+                      row(1, gw=2, match="b", position="XYZ"),
+                      row(2, gw=1, match="c", position=None),
+                      row(2, gw=2, match="d", position=None),
+                  ],
+                  "zero_minutes": [
+                      row(1, gw=1, match="a", minutes=0.0, xgi=0.0),
+                      row(1, gw=2, match="b", minutes=90.0, xgi=0.0),
+                  ],
+                  "missing_zero_xgi": [
+                      {
+                          **row(1, gw=1, match="a"),
+                          "xgi": None,
+                      },
+                      row(1, gw=2, match="b", xgi=0.0),
+                  ],
+                  "opponent_weight_clamp": [
+                      row(1, gw=1, match="a", opponent_weight=0.1),
+                      row(1, gw=2, match="b", opponent_weight=3.0),
+                      row(1, gw=3, match="c", opponent_weight=1.0),
+                  ],
+                  "dgw_same_player_same_target_gw": [
+                      row(1, gw=1, match="a", position="FWD", xgi=0.2),
+                      row(1, gw=2, match="b1", position="FWD", xgi=0.3),
+                      row(1, gw=2, match="b2", position="FWD", xgi=0.4),
+                  ],
+                  "unsorted_input": [
+                      row(1, gw=3, match="c", position="MID", xgi=0.4),
+                      row(2, gw=2, match="b2", position="MID", xgi=0.1),
+                      row(1, gw=1, match="a1", position="MID", xgi=0.2),
+                      row(2, gw=1, match="a2", position="MID", xgi=0.3),
+                      row(1, gw=2, match="b1", position="MID", xgi=0.5),
+                  ],
+                  "metric_tie_order": [
+                      row(1, gw=1, match="a", xgi=0.0, starter=False),
+                      row(1, gw=2, match="b", xgi=0.0, starter=False),
+                      row(1, gw=3, match="c", xgi=0.0, starter=False),
+                  ],
+                  "mixed_normalized_position_representations": [
+                      row(1, gw=1, match="gk-a", position="gk", xgi=0.10),
+                      row(2, gw=1, match="gkp-a", position="GKP", xgi=0.20),
+                      row(1, gw=2, match="gk-b", position="GKP", xgi=0.30),
+                      row(2, gw=2, match="gkp-b", position="gk", xgi=0.40),
+                      row(3, gw=1, match="mid-a", position="mid", xgi=0.15),
+                      row(3, gw=2, match="mid-b", position="MID", xgi=0.25),
+                  ],
+              }
+
+          def evaluate_case(rows, indexed, capture_rate_trace):
+              before = fp(rows)
+              if capture_rate_trace:
+                  actual = actual_instrumented(rows)
+              else:
+                  payload = s1.walk_forward_validate(rows)
+                  actual = {
+                      "payload": payload,
+                      "payload_fingerprint": fp(payload),
+                      "rate90_trace": None,
+                      "rate90_trace_fingerprint": None,
+                      "input_immutable": fp(rows) == before,
+                  }
+              reference = traced_reference(rows, indexed=indexed)
+              after = fp(rows)
+              return {
+                  "actual_payload": actual["payload"],
+                  "actual_payload_fingerprint": actual["payload_fingerprint"],
+                  "actual_rate90_trace": actual["rate90_trace"],
+                  "actual_rate90_trace_fingerprint": actual[
+                      "rate90_trace_fingerprint"
+                  ],
+                  "reference_payload_fingerprint": reference[
+                      "payload_fingerprint"
+                  ],
+                  "reference_trace": reference["trace"],
+                  "reference_trace_fingerprint": reference[
+                      "trace_fingerprint"
+                  ],
+                  "leakage_ok": reference["leakage_ok"],
+                  "input_fingerprint_before": before,
+                  "input_fingerprint_after": after,
+                  "input_immutable": (
+                      before == after
+                      and actual["input_immutable"]
+                  ),
+              }
+
+          def main():
+              parser = argparse.ArgumentParser()
+              parser.add_argument("--runtime", required=True)
+              parser.add_argument(
+                  "--algorithm",
+                  choices=("scalar", "indexed"),
+                  required=True,
+              )
+              parser.add_argument("--full", action="store_true")
+              parser.add_argument("--output", required=True)
+              args = parser.parse_args()
+
+              indexed = args.algorithm == "indexed"
+              planning_gw, foundation, rows = load_snapshot(args.runtime)
+              main_case = evaluate_case(
+                  rows,
+                  indexed=indexed,
+                  capture_rate_trace=args.full,
+              )
+
+              result = {
+                  "algorithm": args.algorithm,
+                  "pythonhashseed": os.environ.get("PYTHONHASHSEED"),
+                  "planning_gw": planning_gw,
+                  "rows": len(rows),
+                  "rows_fingerprint": fp(rows),
+                  "foundation_fingerprint": fp(foundation),
+                  "walkforward_payload_fingerprint": main_case[
+                      "actual_payload_fingerprint"
+                  ],
+                  "reference_payload_fingerprint": main_case[
+                      "reference_payload_fingerprint"
+                  ],
+                  "reference_trace_fingerprint": main_case[
+                      "reference_trace_fingerprint"
+                  ],
+                  "actual_rate90_trace_fingerprint": main_case[
+                      "actual_rate90_trace_fingerprint"
+                  ],
+                  "input_immutable": main_case["input_immutable"],
+                  "leakage_ok": main_case["leakage_ok"],
+                  "environment": {
+                      "python_version": sys.version,
+                      "image_os": os.environ.get("ImageOS"),
+                      "image_version": os.environ.get("ImageVersion"),
+                      "runner_os": os.environ.get("RUNNER_OS"),
+                      "runner_arch": os.environ.get("RUNNER_ARCH"),
+                      "platform": platform.platform(),
+                      "cpu_model": cpu_model(),
+                      "nproc": nproc(),
+                      "gc_enabled": gc.isenabled(),
+                      "sys_gettrace": repr(sys.gettrace()),
+                      "sys_getprofile": repr(sys.getprofile()),
+                      "row_types": sorted({
+                          type(row).__module__
+                          + "."
+                          + type(row).__qualname__
+                          for row in rows
+                      }),
+                  },
+              }
+
+              if args.full:
+                  result["main_case"] = main_case
+                  result["fixtures"] = {
+                      name: evaluate_case(
+                          case_rows,
+                          indexed=indexed,
+                          capture_rate_trace=True,
+                      )
+                      for name, case_rows in fixture_cases().items()
+                  }
+
+              Path(args.output).write_text(
+                  json.dumps(result, indent=2, sort_keys=True),
+                  encoding="utf-8",
+              )
+
+          if __name__ == "__main__":
+              main()
+          PY
+
+      - name: Run oracle and candidate over explicit hash seeds
+        env:
+          RUNTIME: ${{ github.workspace }}/runtime-data
+        run: |
+          mkdir -p evidence/oracle evidence/candidate
+          for seed in 0 1 7 42 12345; do
+            full=""
+            if [ "$seed" = "0" ]; then full="--full"; fi
+            (
+              cd oracle
+              PYTHONHASHSEED="$seed" PYTHONPATH="$PWD"                 python /tmp/d2a_probe.py                   --runtime "$RUNTIME"                   --algorithm scalar                   $full                   --output "../evidence/oracle/seed-$seed.json"
+            )
+            (
+              cd candidate
+              PYTHONHASHSEED="$seed" PYTHONPATH="$PWD"                 python /tmp/d2a_probe.py                   --runtime "$RUNTIME"                   --algorithm indexed                   $full                   --output "../evidence/candidate/seed-$seed.json"
+            )
+          done
+
+      - name: Enforce D2 final correctness gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          seeds = ["0", "1", "7", "42", "12345"]
+          oracle = {
+              s: json.loads(Path(f"evidence/oracle/seed-{s}.json").read_text())
+              for s in seeds
+          }
+          candidate = {
+              s: json.loads(Path(f"evidence/candidate/seed-{s}.json").read_text())
+              for s in seeds
+          }
+
+          failures = []
+
+          compare_fields = (
+              "planning_gw",
+              "rows",
+              "rows_fingerprint",
+              "foundation_fingerprint",
+              "walkforward_payload_fingerprint",
+              "reference_payload_fingerprint",
+              "reference_trace_fingerprint",
+              "input_immutable",
+              "leakage_ok",
+          )
+
+          for seed in seeds:
+              for field in compare_fields:
+                  if oracle[seed][field] != candidate[seed][field]:
+                      failures.append(
+                          f"seed={seed} field={field} oracle="
+                          f"{oracle[seed][field]} candidate={candidate[seed][field]}"
+                      )
+
+              for side_name, item in (
+                  ("oracle", oracle[seed]),
+                  ("candidate", candidate[seed]),
+              ):
+                  if item["walkforward_payload_fingerprint"] != item[
+                      "reference_payload_fingerprint"
+                  ]:
+                      failures.append(
+                          f"{side_name} seed={seed} actual WFV != traced reference"
+                      )
+                  env = item["environment"]
+                  if env["gc_enabled"] is not True:
+                      failures.append(f"{side_name} seed={seed} GC disabled")
+                  if env["sys_gettrace"] != "None":
+                      failures.append(f"{side_name} seed={seed} trace hook active")
+                  if env["sys_getprofile"] != "None":
+                      failures.append(f"{side_name} seed={seed} profile hook active")
+                  if env["row_types"] != ["builtins.dict"]:
+                      failures.append(
+                          f"{side_name} seed={seed} unexpected row types "
+                          f"{env['row_types']}"
+                      )
+                  if not env["cpu_model"] or not env["nproc"]:
+                      failures.append(
+                          f"{side_name} seed={seed} hardware metadata missing"
+                      )
+
+          deterministic_fields = (
+              "foundation_fingerprint",
+              "walkforward_payload_fingerprint",
+              "reference_payload_fingerprint",
+              "reference_trace_fingerprint",
+          )
+          for side_name, data in (
+              ("oracle", oracle),
+              ("candidate", candidate),
+          ):
+              for field in deterministic_fields:
+                  values = [data[s][field] for s in seeds]
+                  if len(set(values)) != 1:
+                      failures.append(
+                          f"{side_name} {field} varies by PYTHONHASHSEED"
+                      )
+
+          o0 = oracle["0"]
+          c0 = candidate["0"]
+
+          if o0["rows"] != 3191:
+              failures.append(f"unexpected rows {o0['rows']}")
+          if o0["rows_fingerprint"] != (
+              "a36eaf2f623c811f4d5d942aa4da3fb8842fa3d456724bb4c9e32fcec5b4b99f"
+          ):
+              failures.append("frozen rows fingerprint changed")
+          if o0["foundation_fingerprint"] != (
+              "afa20a169b6f2018b0d47e0381086847bd21eba89569a12e2bc29df43b31979b"
+          ):
+              failures.append("foundation fingerprint changed")
+
+          # Raw semantic trace must remain bit-for-bit identical.
+          if o0["main_case"]["reference_trace"] != c0["main_case"]["reference_trace"]:
+              failures.append("main raw float.hex/reference trace differs")
+
+          def expected_position_cached_rate_trace(reference_trace, oracle_trace):
+              expected = []
+              seen_position_keys = set()
+              cursor = 0
+              for entry in reference_trace:
+                  if entry["skipped"]:
+                      continue
+                  group = oracle_trace[cursor : cursor + 4]
+                  if len(group) != 4:
+                      raise AssertionError(
+                          "scalar oracle must make exactly four _rate90 calls "
+                          "per evaluated test row"
+                      )
+                  cursor += 4
+                  key = (
+                      entry["target_gw"],
+                      entry["actual_position"],
+                      "xgi",
+                      "weights=None",
+                  )
+                  if key not in seen_position_keys:
+                      expected.append(group[0])
+                      seen_position_keys.add(key)
+                  expected.extend(group[1:])
+              if cursor != len(oracle_trace):
+                  raise AssertionError(
+                      f"unconsumed scalar _rate90 calls: "
+                      f"{len(oracle_trace) - cursor}"
+                  )
+              return expected, seen_position_keys
+
+          expected_main_rate_trace, main_position_keys = (
+              expected_position_cached_rate_trace(
+                  o0["main_case"]["reference_trace"],
+                  o0["main_case"]["actual_rate90_trace"],
+              )
+          )
+          if expected_main_rate_trace != c0["main_case"]["actual_rate90_trace"]:
+              failures.append(
+                  "candidate _rate90 trace is not exactly scalar trace minus "
+                  "repeated position-rate calls"
+              )
+          if len(main_position_keys) != 16:
+              failures.append(
+                  f"expected 16 requested position keys, got "
+                  f"{len(main_position_keys)}"
+              )
+          if len(o0["main_case"]["actual_rate90_trace"]) != 10096:
+              failures.append("scalar _rate90 main call count changed")
+          if len(c0["main_case"]["actual_rate90_trace"]) != 7588:
+              failures.append(
+                  "candidate _rate90 main call count is not 16 position misses "
+                  "+ unchanged player calls"
+              )
+
+          # Edge fixtures compare semantic/raw outputs exactly. The optimized
+          # call trace is validated separately against the scalar trace with
+          # only repeated position-rate calls removed.
+          if set(o0["fixtures"]) != set(c0["fixtures"]):
+              failures.append("fixture sets differ")
+          else:
+              semantic_fields = (
+                  "actual_payload",
+                  "actual_payload_fingerprint",
+                  "reference_payload_fingerprint",
+                  "reference_trace",
+                  "reference_trace_fingerprint",
+                  "leakage_ok",
+                  "input_fingerprint_before",
+                  "input_fingerprint_after",
+                  "input_immutable",
+              )
+              for name in sorted(o0["fixtures"]):
+                  of = o0["fixtures"][name]
+                  cf = c0["fixtures"][name]
+                  for field in semantic_fields:
+                      if of[field] != cf[field]:
+                          failures.append(
+                              f"fixture semantic divergence {name}:{field}"
+                          )
+                  expected_fixture_trace, _ = (
+                      expected_position_cached_rate_trace(
+                          of["reference_trace"],
+                          of["actual_rate90_trace"],
+                      )
+                  )
+                  if expected_fixture_trace != cf["actual_rate90_trace"]:
+                      failures.append(
+                          f"fixture optimized _rate90 trace invalid: {name}"
+                      )
+
+          # Explicit DGW rule: target-GW rows cannot enter each other's history.
+          dgw = c0["fixtures"]["dgw_same_player_same_target_gw"][
+              "reference_trace"
+          ]
+          target2 = [
+              row for row in dgw
+              if row["target_gw"] == 2
+          ]
+          if len(target2) != 2:
+              failures.append("DGW fixture did not produce two target-GW rows")
+          for row in target2:
+              if row["player_train_gws"] != [1]:
+                  failures.append(
+                      f"DGW same-GW leakage detected: {row['player_train_gws']}"
+                  )
+
+          report = {
+              "status": "PASS" if not failures else "FAIL",
+              "oracle_sha": "daf7247c320b1bb61eebd943b23f3ca694b088ef",
+              "candidate_sha": "8309ddaf0da87546bf92e3e9a2ea21e7c409a2a4",
+              "runtime_sha": "9fc2ce5e590518c399765e6fd576bb96db6e5897",
+              "seeds": seeds,
+              "rows": c0["rows"],
+              "rows_fingerprint": c0["rows_fingerprint"],
+              "foundation_fingerprint": c0["foundation_fingerprint"],
+              "walkforward_payload_fingerprint": c0[
+                  "walkforward_payload_fingerprint"
+              ],
+              "reference_trace_fingerprint": c0[
+                  "reference_trace_fingerprint"
+              ],
+              "actual_rate90_trace_fingerprint": c0[
+                  "actual_rate90_trace_fingerprint"
+              ],
+              "oracle_rate90_calls": len(
+                  o0["main_case"]["actual_rate90_trace"]
+              ),
+              "candidate_rate90_calls": len(
+                  c0["main_case"]["actual_rate90_trace"]
+              ),
+              "position_cache_requested_keys": len(main_position_keys),
+              "hardware": c0["environment"],
+              "failures": failures,
+          }
+          Path("evidence/correctness_gate.json").write_text(
+              json.dumps(report, indent=2, sort_keys=True),
+              encoding="utf-8",
+          )
+          print(json.dumps(report, indent=2, sort_keys=True))
+          if failures:
+              raise SystemExit("\n".join(failures))
+          PY
+
+      - name: Upload immutable correctness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-d2-final-correctness-${{ github.run_id }}
+          path: evidence
+          if-no-files-found: error
+          retention-days: 14

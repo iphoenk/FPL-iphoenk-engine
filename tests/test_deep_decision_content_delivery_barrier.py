@@ -107,6 +107,8 @@ def _route(
         "moves": {"out": outs, "in": ins},
         "bank_before": 2,
         "affordability": "SUPPORTED",
+        "execution_economics_status": "AVAILABLE",
+        "executable": True,
         "transfer_cost": {
             "hit": 0 if transfer_count == 1 else 4,
             "ft_usage": {"free_transfers": 1},
@@ -156,6 +158,16 @@ def _deep_report(routes, *, extra_sections=()):
                 "lossy_pruning": False,
                 "search_authority": "FULL",
             },
+            "execution_economics_status": "AVAILABLE",
+            "execution_economics_authority": {
+                "bank": 2,
+                "bank_status": "AVAILABLE",
+                "sell_value_status": "AVAILABLE",
+                "free_transfers": 1,
+                "free_transfers_status": "AVAILABLE",
+                "source": "SYNTHETIC_AUTH_CURRENT",
+                "observed_at": "2026-09-25T10:00:00+00:00",
+            },
             "package_routes": [
                 {
                     "route": "HOLD",
@@ -163,6 +175,8 @@ def _deep_report(routes, *, extra_sections=()):
                     "moves": {"out": [], "in": []},
                     "bank_before": 2,
                     "affordability": "SUPPORTED",
+                    "execution_economics_status": "NOT_APPLICABLE",
+                    "executable": True,
                     "transfer_cost": {"bank_after": 2},
                     "gw1_net": 0.0,
                     "two_gw_if_relevant": 0.0,
@@ -570,6 +584,14 @@ def test_m_p1_7_lineup_and_captain_outputs_are_visibly_required():
             "starting_xi": [{"element": i, "name": f"P{i:02d}"} for i in range(1, 12)],
             "bench": {"gk": {"element": 12, "name": "P12"}, "order": [13, 14, 15]},
             "lineup_score": {"xpts_mean": 55.0},
+            "xi_base_xpts": 55.0,
+            "captain_adjusted_xpts": 55.0,
+            "lineup_route_utility": 55.0,
+            "score_semantics": {
+                "authority": "P1_7_LINEUP",
+                "relationship": "DISTINCT_BY_DESIGN",
+                "raw_xpts_mutated": False,
+            },
         },
     )
     s08 = _section(

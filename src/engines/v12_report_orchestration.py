@@ -1955,6 +1955,19 @@ def _render_package_frontier_lines(
         if isinstance(row, Mapping)
     ]
     lines = ["### UNIVERSE SCAN / OPTIMAL TEAM IMPACT"]
+    lines.append(
+        "FOOTBALL FRONTIER STATUS: "
+        + str(payload.get("football_frontier_status") or "UNAVAILABLE")
+    )
+    lines.append(
+        "EXECUTION ECONOMICS STATUS: "
+        + str(payload.get("execution_economics_status") or "UNAVAILABLE")
+    )
+    if payload.get("execution_economics_reason"):
+        lines.append(
+            "EXECUTION ECONOMICS REASON: "
+            + str(payload.get("execution_economics_reason"))
+        )
     if proof:
         lines.append(
             "SEARCH PROOF: "
@@ -2088,6 +2101,8 @@ def _render_package_frontier_lines(
             f"BANK BEFORE {row.get('bank_before', 'UNAVAILABLE')} | "
             f"BANK AFTER {transfer_cost.get('bank_after', 'UNAVAILABLE')} | "
             f"AFFORDABILITY {row.get('affordability', 'UNAVAILABLE')} | "
+            f"EXEC ECON {row.get('execution_economics_status', 'UNAVAILABLE')} | "
+            f"EXECUTABLE {'YES' if row.get('executable') is True else 'NO'} | "
             f"HIT/FT {transfer_cost} | "
             f"1GW {row.get('gw1_net', 'UNAVAILABLE')} | "
             f"2GW {row.get('two_gw_if_relevant', 'UNAVAILABLE')} | "

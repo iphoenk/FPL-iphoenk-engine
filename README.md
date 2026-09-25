@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-25T16:36:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-25T22:22:26+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -19,6 +19,8 @@ Decision-critical COMPLETE sections are fail-closed to an **authoritative produc
 The Canonical V12 DEEP report is a **23-section fail-closed human-facing contract**. The presentation may become easier to scan, but analytics and evidence must not be removed to shorten the report.
 
 Occurrence-stage observability fingerprints normalize supported runtime `datetime` values to deterministic ISO-8601 strings before hashing. This keeps personal-evidence reconciliation auditable without changing evidence selection, football analytics, V6 facts, or decision semantics.
+
+Stage-A semantic correctness is also fail-closed across producer and delivery boundaries. S17 binds private-auth health to `data/v6/personal/current_team.json:auth_state` instead of inferring authentication from current-squad identity resolution; S14B may say `SAVE FT` or `ROLL FT` only when current free-transfer authority is known; S14 separates football-frontier completeness from execution-economics availability and marks non-HOLD routes non-executable when finance is degraded; S06 names `XI_BASE_XPTS`, `CAPTAIN_ADJUSTED_XPTS`, and `LINEUP_ROUTE_UTILITY` explicitly; S10/S12/S13 expose predictor evidence age/freshness while S12/S13 retain terminal governed `date_state` semantics. The regression contract is grounded in sanitized evidence extracted from production occurrence `36126675342`, not a synthetic reconstruction.
 
 Required visible order:
 

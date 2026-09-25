@@ -1891,6 +1891,7 @@ def _captain_candidate_review(
     projections: Mapping[str, Any] | None,
     mini: Mapping[str, Any] | None,
     mini_league_stance: str,
+    calendar_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Visible C/VC evidence using existing P1.3/P1.6/P1.7/P1.8 owners."""
     raw_candidate = dict(candidate or {})
@@ -1911,6 +1912,15 @@ def _captain_candidate_review(
         ),
         {},
     )
+    workload = next(
+        (
+            dict(row)
+            for row in (calendar_context or {}).get("player_workload") or []
+            if isinstance(row, Mapping)
+            and int(row.get("element_id") or 0) == int(element or 0)
+        ),
+        {},
+    )
     one = dict(mechanism.get("1GW") or {})
     complete = dict(mechanism.get("complete_player_distribution") or {})
     return {
@@ -1921,6 +1931,11 @@ def _captain_candidate_review(
             or (f"element:{element}" if element else "UNAVAILABLE")
         ),
         "expected_points": one.get("mean", raw_candidate.get("xpts_mean")),
+        "q10": one.get("Q10"),
+        "q25": one.get("Q25"),
+        "q50": one.get("median"),
+        "q75": one.get("Q75"),
+        "q90": one.get("Q90"),
         "ceiling_q90": one.get("Q90"),
         "haul_probability": one.get("p_haul"),
         "blank_probability": one.get("p_blank"),
@@ -1940,9 +1955,23 @@ def _captain_candidate_review(
             "home": mechanism.get("home"),
             "dynamic_matchup": mechanism.get("dynamic_matchup"),
         },
-        "captain_count": exposure.get("captain_count"),
-        "captain_pct": exposure.get("captain_pct"),
-        "eo_pct": exposure.get("eo_pct"),
+        "workload_context": {
+            "gw_state": workload.get("gw_state"),
+            "load_state": workload.get("load_state"),
+            "days_rest": workload.get("days_rest"),
+            "long_haul": workload.get("long_haul"),
+            "timezone_shift_hours": workload.get("timezone_shift_hours"),
+            "return_to_club_interval_hours": workload.get(
+                "return_to_club_interval_hours"
+            ),
+            "planning_gw_fixtures": workload.get("planning_gw_fixtures"),
+        },
+        # Legacy P1.8 snapshot exposure is RIVALS-excluding-us. Stage C deep
+        # detail adds LEAGUE/RIVALS/DIRECT named scopes separately.
+        "rivals_captain_count": exposure.get("captain_count"),
+        "rivals_captain_pct": exposure.get("captain_pct"),
+        "rivals_eo_pct": exposure.get("eo_pct"),
+        "rivals_eo_supported": exposure.get("eo_supported"),
         "mini_league_upside": (
             "Lower captain/EO can create leverage only when football evidence remains close."
         ),
@@ -1951,8 +1980,8 @@ def _captain_candidate_review(
         ),
         "mini_league_stance": mini_league_stance,
         "raw_mean_is_not_sole_authority": True,
+        "candidate_source": "AUTHORITATIVE_CURRENT15_FINAL_XI",
     }
-
 
 
 def _mini_league_deep_detail(
@@ -1966,6 +1995,7 @@ def _mini_league_deep_detail(
     mini_overlay: Mapping[str, Any] | None,
     disclosed_gw: int,
     operational_action: str,
+    calendar_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Materialize decision-oriented mini-league evidence without new football math.
 
@@ -1981,6 +2011,11 @@ def _mini_league_deep_detail(
     captain_n = max(1, int(report_cfg.get("captain_candidates", 5) or 5))
 
     pmap = _projection_map(projections)
+    canonical_map = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in build_canonical_universe(projections or {}).get("players") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    }
     owned_ids = [
         element
         for element in (_surface_element(row) for row in owned)
@@ -1988,6 +2023,29 @@ def _mini_league_deep_detail(
     ]
     owned_ids = list(dict.fromkeys(owned_ids))
     owned_set = set(owned_ids)
+    final_xi_ids = [
+        element
+        for element in (
+            _surface_element(value)
+            for value in (lineup or {}).get("starting_xi") or []
+        )
+        if element is not None and element in owned_set
+    ]
+    final_xi_ids = list(dict.fromkeys(final_xi_ids))
+    final_xi_set = set(final_xi_ids)
+    bench_payload = dict((lineup or {}).get("bench") or {})
+    bench_ids = [
+        element
+        for element in (
+            [_surface_element(bench_payload.get("gk"))]
+            + [
+                _surface_element(value)
+                for value in bench_payload.get("order") or []
+            ]
+        )
+        if element is not None and element in owned_set
+    ]
+    bench_set = set(bench_ids)
 
     owned_names: dict[int, str] = {}
     for raw in owned:
@@ -2033,6 +2091,7 @@ def _mini_league_deep_detail(
                     "entry_id": entry_id,
                     "picks": picks,
                     "status": raw.get("status"),
+                    "active_chip": raw.get("active_chip"),
                 }
 
     def pick_element(pick: Mapping[str, Any]) -> int | None:
@@ -2172,6 +2231,41 @@ def _mini_league_deep_detail(
         for row in standings.get("managers") or []
         if isinstance(row, Mapping)
     ]
+    standing_ids = {
+        int(row.get("entry_id") or 0)
+        for row in standings_rows
+        if int(row.get("entry_id") or 0) > 0
+    }
+    our_entry_id = int(context.get("our_entry_id") or 0)
+    league_entries = [
+        entry
+        for entry_id, entry in entries.items()
+        if entry_id in standing_ids
+        and str(entry.get("status") or "").upper() == "AVAILABLE"
+    ]
+    rival_entries = [
+        entry
+        for entry in league_entries
+        if int(entry.get("entry_id") or 0) != our_entry_id
+    ]
+    league_our15_exposure = exposure_for_entries(
+        league_entries,
+        owned_ids,
+        require_complete_eo=True,
+    )
+    rivals_our15_exposure = exposure_for_entries(
+        rival_entries,
+        owned_ids,
+        require_complete_eo=True,
+    )
+    league_exposure_map = {
+        int(row["element_id"]): row
+        for row in league_our15_exposure
+    }
+    rivals_exposure_map = {
+        int(row["element_id"]): row
+        for row in rivals_our15_exposure
+    }
     ordered = sorted(
         standings_rows,
         key=lambda row: (
@@ -2248,14 +2342,34 @@ def _mini_league_deep_detail(
         entry_id = int(row.get("entry_id") or 0)
         entry = entries.get(entry_id)
         picks = list((entry or {}).get("picks") or [])
-        if entry is not None:
+        if entry is not None and str(entry.get("status") or "").upper() == "AVAILABLE":
             direct_entries.append(entry)
+        else:
+            entry = None
+            picks = []
         squad = {
             element
             for element in (pick_element(pick) for pick in picks)
             if element is not None
         }
+        rival_xi = {
+            element
+            for pick in picks
+            for element in [pick_element(pick)]
+            if element is not None
+            and (
+                (pick_multiplier(pick) is not None and pick_multiplier(pick) > 0)
+                or (
+                    pick_multiplier(pick) is None
+                    and pick_position(pick) is not None
+                    and 1 <= int(pick_position(pick) or 0) <= 11
+                )
+            )
+        }
+        rival_bench = squad - rival_xi
         overlap = [element for element in owned_ids if element in squad]
+        xi_overlap = [element for element in final_xi_ids if element in rival_xi]
+        bench_overlap = [element for element in bench_ids if element in rival_bench]
         our_unique = [element for element in owned_ids if element not in squad]
         rival_unique = [element for element in squad if element not in owned_set]
         captain_pick = next(
@@ -2308,6 +2422,10 @@ def _mini_league_deep_detail(
                 "gw_score": row.get("gw_score"),
                 "overlap_count": len(overlap),
                 "overlap_denominator": len(owned_ids),
+                "xi_overlap_count": len(xi_overlap),
+                "xi_overlap_denominator": len(final_xi_ids),
+                "bench_overlap_count": len(bench_overlap),
+                "bench_overlap_denominator": len(bench_ids),
                 "overlap_players": [
                     {"element_id": element, "player": player_name(element)}
                     for element in overlap
@@ -2320,6 +2438,27 @@ def _mini_league_deep_detail(
                     {"element_id": element, "player": player_name(element)}
                     for element in sorted(rival_unique)
                 ],
+                "xi_overlap_players": [
+                    {"element_id": element, "player": player_name(element)}
+                    for element in xi_overlap
+                ],
+                "bench_overlap_players": [
+                    {"element_id": element, "player": player_name(element)}
+                    for element in bench_overlap
+                ],
+                "shields": [
+                    {"element_id": element, "player": player_name(element)}
+                    for element in xi_overlap
+                ],
+                "rival_only_threats": [
+                    {"element_id": element, "player": player_name(element)}
+                    for element in sorted(rival_xi - owned_set)
+                ],
+                "differential_against_us": [
+                    {"element_id": element, "player": player_name(element)}
+                    for element in sorted(final_xi_set - rival_xi)
+                ],
+                "active_chip": (entry or {}).get("active_chip"),
                 "captain_element": captain_element,
                 "captain": (
                     player_name(captain_element)
@@ -2331,39 +2470,6 @@ def _mini_league_deep_detail(
                     if vice_element is not None else "UNAVAILABLE"
                 ),
                 "disclosed_picks_available": entry is not None,
-            }
-        )
-
-    full_denominator = int(snapshot.get("rival_exposure_denominator") or 0)
-    full_exposure_map = {
-        int(row.get("element_id") or 0): dict(row)
-        for row in snapshot.get("exposures") or []
-        if isinstance(row, Mapping)
-        and int(row.get("element_id") or 0) > 0
-    }
-    our15_rival_exposure: list[dict[str, Any]] = []
-    for element in owned_ids:
-        raw = full_exposure_map.get(element) or {}
-        our15_rival_exposure.append(
-            {
-                "element_id": element,
-                "player": player_name(element),
-                "denominator": full_denominator,
-                "ownership_count": int(raw.get("ownership_count") or 0),
-                "ownership_pct": raw.get("ownership_pct"),
-                "starter_count": int(raw.get("starter_count") or 0),
-                "starter_pct": raw.get("starter_pct"),
-                "bench_count": int(raw.get("bench_count") or 0),
-                "bench_pct": raw.get("bench_pct"),
-                "captain_count": int(raw.get("captain_count") or 0),
-                "captain_pct": raw.get("captain_pct"),
-                "vice_count": int(raw.get("vice_count") or 0),
-                "vice_pct": raw.get("vice_pct"),
-                "effective_multiplier_sum": raw.get(
-                    "effective_multiplier_sum"
-                ),
-                "eo_pct": raw.get("eo_pct"),
-                "eo_supported": raw.get("eo_supported"),
             }
         )
 
@@ -2497,7 +2603,7 @@ def _mini_league_deep_detail(
         )
 
     candidate_reviews: list[dict[str, Any]] = []
-    for element in owned_ids:
+    for element in final_xi_ids:
         player = pmap.get(element) or {}
         review = _captain_candidate_review(
             candidate={
@@ -2512,35 +2618,32 @@ def _mini_league_deep_detail(
                 )
                 or "BALANCED"
             ),
+            calendar_context=calendar_context,
         )
-        league_row = next(
-            (
-                row
-                for row in our15_rival_exposure
-                if int(row["element_id"]) == element
-            ),
-            {},
-        )
+        league_row = league_exposure_map.get(element) or {}
+        rivals_row = rivals_exposure_map.get(element) or {}
         direct_row = direct_exposure_map.get(element) or {}
         direct_eo = direct_row.get("eo_pct")
         if direct_eo is None:
-            rank_utility = "UNAVAILABLE"
+            leverage_class = "UNAVAILABLE"
         elif float(direct_eo) >= 120.0:
-            rank_utility = "PROTECTION_HEAVY"
+            leverage_class = "PROTECTION_HEAVY"
         elif float(direct_eo) >= 75.0:
-            rank_utility = "PROTECTION"
+            leverage_class = "PROTECTION"
         elif float(direct_eo) <= 20.0:
-            rank_utility = "HIGH_LEVERAGE"
+            leverage_class = "HIGH_LEVERAGE"
         elif float(direct_eo) <= 50.0:
-            rank_utility = "LEVERAGE"
+            leverage_class = "LEVERAGE"
         else:
-            rank_utility = "BALANCED"
+            leverage_class = "BALANCED"
         candidate_reviews.append(
             {
                 **review,
-                "all_rivals": league_row,
-                "direct_rivals": direct_row,
-                "expected_rank_utility": rank_utility,
+                "league_scope": league_row,
+                "rivals_scope": rivals_row,
+                "direct_scope": direct_row,
+                "football_score": (canonical_map.get(element) or {}).get("football_score"),
+                "exposure_leverage_class": leverage_class,
             }
         )
 
@@ -2553,6 +2656,8 @@ def _mini_league_deep_detail(
         return (-score, int(row.get("element_id") or 10**9))
 
     candidate_reviews.sort(key=candidate_sort_key)
+    for football_rank, row in enumerate(candidate_reviews, start=1):
+        row["football_rank"] = football_rank
     selected_ids = {
         element
         for element in (
@@ -2575,12 +2680,44 @@ def _mini_league_deep_detail(
         ((mini_overlay or {}).get("risk_posture") or {}).get("posture")
         or "BALANCED"
     ).upper()
-    human_posture = "DEFEND" if model_posture == "PROTECT" else model_posture
+    human_posture = (
+        "PROTECT"
+        if model_posture == "PROTECT"
+        else "CHASE_MODERATE"
+        if model_posture == "CHASE"
+        else "BALANCED"
+    )
     return {
         "disclosed_picks_gw": int(disclosed_gw),
         "disclosed_picks_are_baseline_not_gw_forecast": True,
+        "disclosed_picks_label": "BEHAVIOURAL BASELINE",
         "rank_battle": rank_battle,
-        "our15_rival_exposure": our15_rival_exposure,
+        "denominator_scopes": {
+            "LEAGUE": {
+                "label": f"LEAGUE{int(context.get('manager_count') or len(standing_ids))}_INCL_US",
+                "expected": int(context.get("manager_count") or len(standing_ids)),
+                "collected": len(league_entries),
+                "denominator": len(league_entries),
+                "includes_us": True,
+            },
+            "RIVALS": {
+                "label": f"RIVALS{max(0, int(context.get('manager_count') or len(standing_ids)) - 1)}_EXCL_US",
+                "expected": max(0, int(context.get("manager_count") or len(standing_ids)) - 1),
+                "collected": len(rival_entries),
+                "denominator": len(rival_entries),
+                "includes_us": False,
+            },
+            "DIRECT": {
+                "label": f"DIRECT{direct_n}_ABOVE_US",
+                "expected": len(direct_rows),
+                "collected": len(direct_entries),
+                "denominator": len(direct_entries),
+                "includes_us": False,
+            },
+        },
+        "league_our15_exposure": league_our15_exposure,
+        "rivals_our15_exposure": rivals_our15_exposure,
+        "our15_rival_exposure": rivals_our15_exposure,
         "direct_rival_scope": {
             "requested_above_count": direct_n,
             "standings_rival_count": len(direct_rows),
@@ -2602,7 +2739,7 @@ def _mini_league_deep_detail(
             "transfer_action": operational_action,
             "xi_rule": "FOOTBALL_BASELINE_FIRST_MINI_LEAGUE_ONLY_BREAKS_NEAR_TIES",
             "captain_rule": (
-                "COMPARE_XPTS_P_HAUL_ALL_RIVAL_EO_DIRECT_RIVAL_EO_AND_RANK_UTILITY"
+                "FOOTBALL_BASELINE_FIRST; COMPARE_XPTS_P_HAUL_LEAGUE_RIVALS_DIRECT_EO_AND_EXPOSURE_LEVERAGE_CLASS"
             ),
             "transfer_rule": (
                 "DO_NOT_BUY_OR_SELL_FOR_OWNERSHIP_ALONE; REQUIRE_FOOTBALL_GATE"
@@ -2616,10 +2753,232 @@ def _mini_league_deep_detail(
             "overlap_required": True,
             "rival_threats_required": True,
             "captain_leverage_required": True,
+            "three_denominator_scopes_required": True,
+            "behavioural_baseline_label_required": True,
+            "categorical_rank_utility_forbidden": True,
             "strategy_implication_required": True,
         },
     }
 
+
+
+def _captain_decision_surface(
+    *,
+    owned: Sequence[Mapping[str, Any]],
+    lineup: Mapping[str, Any] | None,
+    lineup_state: str,
+    mini_detail: Mapping[str, Any],
+) -> dict[str, Any]:
+    current15_ids = [
+        element
+        for element in (_surface_element(row) for row in owned)
+        if element is not None
+    ]
+    current15_ids = list(dict.fromkeys(current15_ids))
+    current15_set = set(current15_ids)
+    final_xi_ids = [
+        element
+        for element in (
+            _surface_element(row)
+            for row in (lineup or {}).get("starting_xi") or []
+        )
+        if element is not None
+    ]
+    final_xi_ids = list(dict.fromkeys(final_xi_ids))
+    final_xi_set = set(final_xi_ids)
+    captain_id = _surface_element((lineup or {}).get("captain"))
+    vice_id = _surface_element((lineup or {}).get("vice_captain"))
+
+    frontier = [
+        dict(row)
+        for row in mini_detail.get("captain_leverage") or []
+        if isinstance(row, Mapping)
+        and int(row.get("element_id") or 0) in final_xi_set
+    ]
+    frontier_map = {
+        int(row.get("element_id") or 0): row
+        for row in frontier
+        if int(row.get("element_id") or 0) > 0
+    }
+
+    safe_pool_ids = [
+        element
+        for element in (
+            _surface_element(row)
+            for row in (lineup or {}).get("captain_safe_pool") or []
+        )
+        if element is not None and element in final_xi_set
+    ]
+    safe_pool_ids = list(dict.fromkeys(safe_pool_ids))
+    legal = bool(
+        captain_id is not None
+        and vice_id is not None
+        and captain_id != vice_id
+        and captain_id in current15_set
+        and vice_id in current15_set
+        and captain_id in final_xi_set
+        and vice_id in final_xi_set
+    )
+    if not legal or str(lineup_state or "").upper() != "COMPLETE":
+        decision_state = "WAIT"
+    elif len(safe_pool_ids) > 1:
+        decision_state = "PREPARE"
+    else:
+        decision_state = "LOCK"
+
+    football_captain = dict(frontier_map.get(int(captain_id or 0)) or {})
+    football_vice = dict(frontier_map.get(int(vice_id or 0)) or {})
+    if len(safe_pool_ids) > 1:
+        reconciliation = (
+            "P1.7 captain_safe_pool contains multiple legal final-XI candidates; "
+            "football baseline is retained and mini-league exposure is advisory "
+            "until fresh deadline evidence resolves the near-tie."
+        )
+    else:
+        reconciliation = (
+            "P1.7 football-optimal captain/vice retained. Mini-league exposure "
+            "did not override the football baseline."
+        )
+
+    return {
+        "decision_state": decision_state,
+        "captain": football_captain,
+        "vice_captain": football_vice,
+        "captain_frontier": frontier,
+        "captain_safe_pool": safe_pool_ids,
+        "candidate_universe_proof": {
+            "current15_ids": current15_ids,
+            "final_xi_ids": final_xi_ids,
+            "captain_id": captain_id,
+            "vice_id": vice_id,
+            "captain_in_current15": captain_id in current15_set if captain_id is not None else False,
+            "vice_in_current15": vice_id in current15_set if vice_id is not None else False,
+            "captain_in_final_xi": captain_id in final_xi_set if captain_id is not None else False,
+            "vice_in_final_xi": vice_id in final_xi_set if vice_id is not None else False,
+            "captain_vice_distinct": captain_id != vice_id if captain_id is not None and vice_id is not None else False,
+            "frontier_subset_of_final_xi": all(
+                int(row.get("element_id") or 0) in final_xi_set
+                for row in frontier
+            ),
+        },
+        "football_baseline_first": True,
+        "mini_league_overlay_second": True,
+        "mini_league_override_applied": False,
+        "near_tie_authority": {
+            "source": "P1_7_CAPTAIN_SAFE_POOL",
+            "candidate_count": len(safe_pool_ids),
+        },
+        "reconciliation_reason": reconciliation,
+        "authority": (
+            "P1.7 final-XI football captain baseline + P1.8 LEAGUE/RIVALS/DIRECT "
+            "exposure overlay; no second captain optimizer"
+        ),
+        "raw_mean_is_not_sole_authority": True,
+    }
+
+
+def _final_judgement_surface(
+    *,
+    operational_action: str,
+    stage3_decision: Mapping[str, Any] | None,
+    stage3_visible: Mapping[str, Any],
+    lineup: Mapping[str, Any] | None,
+    captain_surface: Mapping[str, Any],
+    mini_detail: Mapping[str, Any],
+    staging: Mapping[str, Any],
+    chip_state: Any,
+) -> dict[str, Any]:
+    selected_route = str(
+        (stage3_decision or {}).get("selected_route_id") or "HOLD"
+    )
+    route = next(
+        (
+            dict(row)
+            for row in stage3_visible.get("package_routes") or []
+            if isinstance(row, Mapping)
+            and str(row.get("route") or "") == selected_route
+        ),
+        {},
+    )
+    bench = dict((lineup or {}).get("bench") or {})
+    captain = dict(captain_surface.get("captain") or {})
+    vice = dict(captain_surface.get("vice_captain") or {})
+    direct_context = dict(mini_detail.get("direct_rival_scope") or {})
+    return {
+        "consumed_sections": ["S08", "S15B"],
+        "transfer_action": (
+            "NO TRANSFER NOW"
+            if str(operational_action).upper() == "WAIT"
+            else operational_action
+        ),
+        "selected_route_id": selected_route,
+        "selected_route_executable": (
+            True
+            if selected_route.upper() == "HOLD"
+            else route.get("executable")
+        ),
+        "xi": [
+            _surface_element(value)
+            for value in (lineup or {}).get("starting_xi") or []
+        ],
+        "formation": (lineup or {}).get("formation"),
+        "bench_gk": _surface_element(bench.get("gk")),
+        "bench_order": [
+            _surface_element(value)
+            for value in bench.get("order") or []
+        ],
+        "football_optimal_captain": {
+            "element_id": captain.get("element_id"),
+            "player": captain.get("player"),
+            "football_rank": captain.get("football_rank"),
+            "xpts": captain.get("expected_points"),
+        },
+        "mini_league_captain_context": {
+            "league_scope": captain.get("league_scope"),
+            "rivals_scope": captain.get("rivals_scope"),
+            "direct_scope": captain.get("direct_scope"),
+            "exposure_leverage_class": captain.get(
+                "exposure_leverage_class"
+            ),
+            "direct_rival_scope": direct_context,
+            "behavioural_baseline_gw": mini_detail.get(
+                "disclosed_picks_gw"
+            ),
+            "label": mini_detail.get("disclosed_picks_label"),
+        },
+        "final_captain": {
+            "element_id": captain.get("element_id"),
+            "player": captain.get("player"),
+        },
+        "captain_state": captain_surface.get("decision_state"),
+        "vice": {
+            "element_id": vice.get("element_id"),
+            "player": vice.get("player"),
+        },
+        "chip": chip_state if chip_state not in (None, {}, []) else "UNAVAILABLE",
+        "mini_league_posture": (
+            (mini_detail.get("strategy_implication") or {}).get(
+                "human_posture"
+            )
+            or "BALANCED"
+        ),
+        "immediate_watch": staging.get("contingency"),
+        "three_gw_direction": staging.get("staging_rows"),
+        "next_trigger": (
+            (stage3_decision or {}).get("action_contract")
+            or "NEXT_FRESH_DECISION_OCCURRENCE"
+        ),
+        "reversal_trigger": (
+            "fresh role/injury/lineup/economics/price/workload/fixture evidence "
+            "invalidates the selected football baseline"
+        ),
+        "reconciliation_reason": captain_surface.get(
+            "reconciliation_reason"
+        ),
+        "football_baseline_preserved": (
+            captain_surface.get("mini_league_override_applied") is False
+        ),
+    }
 
 def _formation_mini_league_strategy(
     *,
@@ -2640,9 +2999,9 @@ def _formation_mini_league_strategy(
     if posture == "PROTECT":
         stance = "PROTECT"
     elif posture == "CHASE":
-        stance = "CHASE AGGRESSIVE"
+        stance = "CHASE_MODERATE"
     elif changed:
-        stance = "CHASE MODERATE"
+        stance = "CHASE_MODERATE"
     else:
         stance = "BALANCED"
 
@@ -4122,23 +4481,28 @@ def run_deep(
         mini_overlay=mini_overlay,
         disclosed_gw=picks_gw,
         operational_action=operational_action,
+        calendar_context=calendar_context,
     )
-    captain_review = _captain_candidate_review(
-        candidate=(lineup or {}).get("captain"),
-        projections=projections,
-        mini=mini,
-        mini_league_stance=str(formation_strategy.get("stance") or "BALANCED"),
-    )
-    vice_captain_review = _captain_candidate_review(
-        candidate=(lineup or {}).get("vice_captain"),
-        projections=projections,
-        mini=mini,
-        mini_league_stance=str(formation_strategy.get("stance") or "BALANCED"),
+    captain_surface = _captain_decision_surface(
+        owned=owned,
+        lineup=lineup,
+        lineup_state=lineup_state,
+        mini_detail=mini_deep_detail,
     )
     chip_state = (finance or {}).get("chips")
     chip_available = (
         chip_state not in (None, {}, [])
         and (finance or {}).get("chips_status") == "AVAILABLE"
+    )
+    final_judgement = _final_judgement_surface(
+        operational_action=operational_action,
+        stage3_decision=stage3_decision,
+        stage3_visible=stage3_visible,
+        lineup=lineup,
+        captain_surface=captain_surface,
+        mini_detail=mini_deep_detail,
+        staging=staging,
+        chip_state=chip_state if chip_available else None,
     )
 
     sections = {
@@ -4256,17 +4620,7 @@ def run_deep(
         ),
         "S08": _section(
             lineup_state,
-            {
-                "captain": captain_review,
-                "vice_captain": vice_captain_review,
-                "captain_safe_pool": (lineup or {}).get("captain_safe_pool") or [],
-                "mini_league_stance": formation_strategy.get("stance"),
-                "authority": (
-                    "expected points + ceiling + xMins/P(start) + involvement/role + "
-                    "penalty/set-piece + fixture + captain EO + mini-league downside/upside"
-                ),
-                "raw_mean_is_not_sole_authority": True,
-            },
+            captain_surface,
             lineup_reason,
         ),
         "S09": _section(
@@ -4509,22 +4863,7 @@ def run_deep(
         "S19": _section(
             "COMPLETE",
             {
-                "final_judgement": {
-                    "transfer": "NO TRANSFER NOW" if operational_action == "WAIT" else operational_action,
-                    "selected_route_id": (stage3_decision or {}).get("selected_route_id") or "HOLD",
-                    "xi": [
-                        _surface_element(value)
-                        for value in (lineup or {}).get("starting_xi") or []
-                    ],
-                    "formation": (lineup or {}).get("formation"),
-                    "captain": ((lineup or {}).get("captain") or {}).get("name") or ((lineup or {}).get("captain") or {}).get("element"),
-                    "vice_captain": ((lineup or {}).get("vice_captain") or {}).get("name") or ((lineup or {}).get("vice_captain") or {}).get("element"),
-                    "bench": (lineup or {}).get("bench"),
-                    "mini_league_stance": formation_strategy.get("stance"),
-                    "immediate_watch": staging.get("contingency"),
-                    "three_gw_direction": staging.get("staging_rows"),
-                    "reason": (stage3_decision or {}).get("reason"),
-                }
+                "final_judgement": final_judgement,
             },
         ),
     }
@@ -4538,6 +4877,7 @@ def run_deep(
         "S15B": "P1_8_MINI_LEAGUE_SNAPSHOT+P1_8_MINI_LEAGUE_OVERLAY",
         "S16": "P1_1_P1_3_FULL_UNIVERSE+P1_6_TACTICAL_ROLE",
         "S16B": "POST_MATCH_DEEP_DETAILS",
+        "S19": "S08_CAPTAIN_FRONTIER+S15B_MINI_LEAGUE_RECONCILIATION",
     }
     for sid, producer in producer_by_section.items():
         section = sections.get(sid)

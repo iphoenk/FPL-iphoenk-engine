@@ -421,4 +421,106 @@ def validate_deep_decision_content_delivery(
         if counts != {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}:
             failures.append("WATCHLIST20_POSITION_BALANCE=" + str(counts))
 
+
+    # Stage-A semantic correctness barrier. These checks deliberately validate
+    # meaning across sections, not merely presence/rendering. They do not
+    # recompute football mathematics.
+    s17 = content("S17")
+    if state("S17") == "COMPLETE":
+        bound_auth = str(
+            s17.get("bound_authoritative_auth_state")
+            or s17.get("authoritative_auth_state")
+            or s17.get("personal_auth_authority")
+            or ""
+        ).upper()
+        visible_auth = str(
+            s17.get("personal_auth")
+            or s17.get("personal_auth_state")
+            or (s17.get("personal") or {}).get("status")
+            or ""
+        ).upper()
+        if bound_auth and visible_auth:
+            expired = {"AUTH_EXPIRED", "EXPIRED", "UNAVAILABLE"}
+            healthy = {"HEALTHY", "AVAILABLE", "AUTH_AVAILABLE", "GREEN"}
+            if bound_auth in expired and visible_auth in healthy:
+                failures.append("S17_AUTH_CONTRADICTION")
+
+    s14b = content("S14B")
+    if state("S14B") == "COMPLETE":
+        ft_state = str(
+            s14b.get("ft_state")
+            or s14b.get("free_transfer_state")
+            or s14b.get("free_transfers_status")
+            or ""
+        ).upper()
+        ft_known = bool(
+            s14b.get("free_transfers") is not None
+            or ft_state in {"AVAILABLE", "KNOWN", "AUTHORITATIVE"}
+        )
+        staging_text = str(s14b).upper()
+        if not ft_known and ("SAVE FT" in staging_text or "ROLL FT" in staging_text):
+            failures.append("S14B_FT_CLAIM_WITHOUT_AUTHORITY")
+
+    if state("S14") == "COMPLETE":
+        economics_status = str(
+            s14.get("execution_economics_status")
+            or s14.get("economics_status")
+            or ""
+        ).upper()
+        finance_unavailable = economics_status in {
+            "DEGRADED", "UNAVAILABLE", "UNKNOWN", "AUTH_EXPIRED"
+        }
+        for route in non_hold:
+            route_econ = str(
+                route.get("execution_economics_status")
+                or (route.get("transfer_cost") or {}).get("economics_status")
+                or route.get("economics_status")
+                or ""
+            ).upper()
+            executable = route.get("executable")
+            if (finance_unavailable or route_econ in {"DEGRADED", "UNAVAILABLE", "UNKNOWN", "AUTH_EXPIRED"}) and executable is True:
+                failures.append(
+                    "S14_EXECUTABLE_WITHOUT_FINANCE=" + str(route.get("route") or "UNKNOWN")
+                )
+                break
+
+    for sid in ("S10", "S12", "S13"):
+        if state(sid) != "COMPLETE":
+            continue
+        for index, row in enumerate(content(sid).get("rows") or [], start=1):
+            if not isinstance(row, Mapping):
+                continue
+            freshness = str(row.get("freshness") or row.get("freshness_state") or "").upper()
+            source_age = row.get("source_age_minutes", row.get("source_age"))
+            marked_current = row.get("current") is True or freshness in {"CURRENT", "FRESH"}
+            stale = freshness == "STALE" or row.get("stale") is True
+            if stale and marked_current:
+                failures.append(f"{sid}_STALE_PRICE_MARKED_CURRENT={index}")
+                break
+            if sid in {"S12", "S13"}:
+                date_state = str(row.get("date_state") or row.get("terminal_date_state") or "").upper()
+                if date_state not in {
+                    "EXPECTED_CHANGE_DATE",
+                    "NO_CROSSING_WITHIN_GOVERNED_HORIZON",
+                    "DATE_UNAVAILABLE",
+                }:
+                    failures.append(f"{sid}_TERMINAL_DATE_STATE_MISSING={index}")
+                    break
+
+    if state("S06") == "COMPLETE":
+        base = s06.get("xi_base_xpts", s06.get("projected_xi_score"))
+        selected = s06.get("selected_formation_projection")
+        semantics = str(s06.get("score_semantics") or "").upper()
+        if base is not None and selected is not None:
+            try:
+                mismatch = abs(float(base) - float(selected)) > 1e-9
+            except (TypeError, ValueError):
+                mismatch = False
+            if mismatch and semantics not in {
+                "EXPLICITLY_DISTINCT",
+                "XI_BASE_XPTS_VS_CAPTAIN_ADJUSTED_XPTS",
+                "XI_BASE_XPTS_VS_LINEUP_ROUTE_UTILITY",
+            }:
+                failures.append("S06_AMBIGUOUS_SCORE_SEMANTICS")
+
     return list(dict.fromkeys(failures))

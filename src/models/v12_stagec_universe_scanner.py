@@ -354,7 +354,19 @@ def _candidate(
     start_delta = _trajectory_value(form, "start_share_delta")
     minutes_ratio = _trajectory_value(form, "minutes_per_appearance_ratio")
     confidence = _sample_confidence(form)
-    minimum_confidence = _f(cfg.get("minimum_sample_confidence")) or 0.45
+    role_gate = dict(cfg.get("role_minutes_sample_gate") or {})
+    recent_window = _window(form, "L3")
+    season_window = _window(form, "SEASON")
+    role_sample_eligible = (
+        int(recent_window.get("sample_matches") or 0)
+        >= int(role_gate.get("minimum_recent_matches") or 3)
+        and (_f(recent_window.get("sample_minutes")) or 0.0)
+        >= (_f(role_gate.get("minimum_recent_minutes")) or 90.0)
+        and int(season_window.get("sample_matches") or 0)
+        >= int(role_gate.get("minimum_season_matches") or 3)
+        and (_f(season_window.get("sample_minutes")) or 0.0)
+        >= (_f(role_gate.get("minimum_season_minutes")) or 270.0)
+    )
 
     signals: dict[str, dict[str, Any]] = {}
 
@@ -385,14 +397,14 @@ def _candidate(
     )
 
     role_gain = (
-        confidence >= minimum_confidence
+        role_sample_eligible
         and (
             (start_delta is not None and start_delta >= (_f(thresholds.get("role_gain_start_share_delta")) or 0.2))
             or (minutes_ratio is not None and minutes_ratio >= (_f(thresholds.get("minutes_gain_ratio")) or 1.15))
         )
     )
     role_loss = (
-        confidence >= minimum_confidence
+        role_sample_eligible
         and (
             (start_delta is not None and start_delta <= (_f(thresholds.get("role_loss_start_share_delta")) or -0.2))
             or (minutes_ratio is not None and minutes_ratio <= (_f(thresholds.get("minutes_loss_ratio")) or 0.8))
@@ -548,6 +560,7 @@ def _candidate(
         "negative_signals": negative,
         "hidden_gem": hidden,
         "sample_confidence": confidence,
+        "role_minutes_sample_eligible": role_sample_eligible,
         "material_score_internal": round(material_score, 6),
         "material": bool(active_signals or hidden),
         "why_flagged": why,

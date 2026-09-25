@@ -1,0 +1,42 @@
+{
+  "source_run_id": 36126675342,
+  "artifact": "v12-report-DEEP-36126675342",
+  "report_slot": "2026-09-25T17:53:00+07:00",
+  "head_sha": "f1402818519237d3628184e298bd58c0240983bb",
+  "old_acceptance": {
+    "integrated_runner": "PASS",
+    "human_facing": "PASS",
+    "private_auth_state": "AUTH_EXPIRED"
+  },
+  "s17": {
+    "bound_personal_auth": "AUTH_EXPIRED",
+    "old_visible_authenticated_personal_scope": "HEALTHY"
+  },
+  "s06": {
+    "old_visible_label": "PROJECTED XI SCORE",
+    "xi_base_xpts": 49.777897,
+    "selected_formation": "5-4-1",
+    "captain_adjusted_xpts": 55.012527,
+    "lineup_route_utility": 54.817245
+  },
+  "s14b": {
+    "bank": null,
+    "bank_status": "UNAVAILABLE",
+    "sell_value_status": "UNAVAILABLE",
+    "free_transfers": null,
+    "old_ft_saving_plan": "SAVE FT",
+    "old_planned_move": "SAVE FT / HOLD SQUAD"
+  },
+  "s14": {
+    "example_non_hold_route": "1:426->52",
+    "bank_before": null,
+    "old_affordability": "PARTIAL",
+    "old_economics_status": "PARTIAL"
+  },
+  "price": {
+    "predictor_health": "GREEN",
+    "evidence_timestamp": "2026-09-25T02:37:34.626747+00:00",
+    "old_s12_state": "COMPLETE",
+    "old_s13_state": "COMPLETE"
+  }
+}

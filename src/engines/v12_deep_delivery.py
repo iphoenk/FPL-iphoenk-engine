@@ -410,6 +410,119 @@ def validate_deep_decision_content_delivery(
                 )
                 break
 
+    # P0 semantic consistency. These checks compare already-bound report
+    # evidence; they do not recalculate football or transfer mathematics.
+    s17 = content("S17")
+    bound_health = dict(s17.get("bound_authoritative_health") or {})
+    source_health = dict(s17.get("source_health") or {})
+    if bound_health:
+        bound_auth = str(
+            bound_health.get("personal_auth") or "UNAVAILABLE"
+        ).upper()
+        visible_auth = str(
+            source_health.get("authenticated_personal_scope")
+            or "UNAVAILABLE"
+        ).upper()
+        if bound_auth != visible_auth:
+            failures.append(
+                "S17_AUTH_CONTRADICTION="
+                + bound_auth
+                + "!="
+                + visible_auth
+            )
+        if (
+            bound_auth in {"AUTH_EXPIRED", "AUTH_UNAVAILABLE", "UNAVAILABLE"}
+            and visible_auth in {"HEALTHY", "AVAILABLE", "AUTH_AVAILABLE"}
+        ):
+            failures.append("S17_FALSE_HEALTHY_AUTH")
+
+    s14b = content("S14B")
+    budget_dependency = dict(s14b.get("budget_dependency") or {})
+    ft_status = str(
+        budget_dependency.get("free_transfers_status") or ""
+    ).upper()
+    ft_known = (
+        isinstance(budget_dependency.get("free_transfers"), int)
+        and ft_status in {"AVAILABLE", "CURRENT", "PASS", "SUPPORTED"}
+    )
+    if budget_dependency and not ft_known:
+        ft_claims = [
+            str(s14b.get("ft_saving_plan") or ""),
+            str(s14b.get("order_of_transfers") or ""),
+            *[
+                str(row.get("planned_move") or "")
+                for row in s14b.get("staging_rows") or []
+                if isinstance(row, Mapping)
+            ],
+        ]
+        if any(
+            "SAVE FT" in claim.upper() or "ROLL FT" in claim.upper()
+            for claim in ft_claims
+        ):
+            failures.append("S14B_FT_CLAIM_WITHOUT_AUTHORITY")
+
+    for index, route in enumerate(non_hold, start=1):
+        execution_status = str(
+            route.get("execution_economics_status")
+            or (route.get("transfer_cost") or {}).get("economics_status")
+            or ""
+        ).upper()
+        if execution_status not in {"COMPLETE", "SUPPORTED"}:
+            if route.get("executable") is True:
+                failures.append(
+                    f"S14_EXECUTABLE_WITH_DEGRADED_ECONOMICS={index}"
+                )
+
+    if state("S06") == "COMPLETE" and s06.get("starting_xi"):
+        score = dict(s06.get("lineup_score") or {})
+        comparisons = [
+            dict(row)
+            for row in s06.get("formation_comparison") or []
+            if isinstance(row, Mapping)
+        ]
+        selected_comparison = next(
+            (row for row in comparisons if row.get("selected") is True),
+            None,
+        )
+        if (
+            score.get("xpts_mean") is not None
+            and selected_comparison is not None
+            and selected_comparison.get(
+                "expected_fpl_points_with_captain_vice"
+            ) is not None
+        ):
+            if "XI_BASE_XPTS:" not in upper:
+                failures.append("S06_BASE_XPTS_SEMANTIC_LABEL_MISSING")
+            if "CAPTAIN_ADJUSTED_XPTS:" not in upper:
+                failures.append(
+                    "S06_CAPTAIN_ADJUSTED_XPTS_SEMANTIC_LABEL_MISSING"
+                )
+            if "LINEUP_ROUTE_UTILITY:" not in upper:
+                failures.append("S06_ROUTE_UTILITY_SEMANTIC_LABEL_MISSING")
+            if "PROJECTED XI SCORE:" in upper:
+                failures.append("S06_AMBIGUOUS_PROJECTED_XI_SCORE_LABEL")
+
+    for sid in ("S10", "S12", "S13"):
+        payload = content(sid)
+        freshness = str(
+            payload.get("predictor_freshness") or ""
+        ).upper()
+        if freshness == "STALE" and state(sid) == "COMPLETE":
+            failures.append(f"{sid}_STALE_PRICE_MARKED_COMPLETE")
+        rows = [
+            dict(row)
+            for row in payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        if (
+            state(sid) == "COMPLETE"
+            and any(
+                str(row.get("freshness") or "").upper() == "STALE"
+                for row in rows
+            )
+        ):
+            failures.append(f"{sid}_STALE_PRICE_ROW_MARKED_CURRENT")
+
     # Watchlist20 remains a football-decision surface: exact 5/5/5/5 by pos.
     if state("S11") == "COMPLETE":
         rows = [dict(row) for row in content("S11").get("rows") or [] if isinstance(row, Mapping)]

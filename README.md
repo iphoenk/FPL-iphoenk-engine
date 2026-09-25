@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-25T16:36:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-25T20:00:00+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -63,6 +63,8 @@ This contract does not move factual ownership out of V6. V6 acquisition, source 
 ## DEEP decision-content delivery barrier
 
 DEEP success is now defined by the full delivery chain, not by section headings alone: **V6 facts → V12/P1.x analytics → Stage-3 payload → materialization → renderer → PRE_RENDER → POST_RENDER → HUMAN_FACING**. Report-plane consumes the existing canonical analytics and never creates a second xPts, package, Monte Carlo, lineup, or mini-league model.
+
+Stage A semantic hardening makes that final gate fail closed on five previously supportable false-pass classes: private-auth health may not be inferred from CURRENT15 identity validity; unknown free-transfer state may not be rendered as SAVE/ROLL FT; XI base xPts, captain-adjusted xPts and route utility are separately labelled; a football-evaluated transfer route is not executable until finance/sell-value/FT economics are resolved; and V12 price surfaces reuse the existing governed predictor freshness threshold instead of presenting stale predictor evidence as current. Regression evidence is pinned to DEEP run `36126675342`. This changes report semantics only and does not alter P1.1/P1.3/P1.3B/P1.6/P1.7/P1.4 mathematics.
 
 CURRENT15 is occurrence-bound. Fresh valid authenticated or explicitly current user-confirmed evidence outranks stale AUTH_EXPIRED artifacts; previous-GW submitted picks are identity fallback only and cannot mint current selling values, bank, chips, FT, or hit economics. A proposed transfer never changes CURRENT15. If current ownership cannot be proved, identity may remain visibly STALE while unsupported private finance stays UNAVAILABLE. Durable user-confirmed state is considered current only when it carries an explicit confirmation timestamp and applicable planning-GW binding; identity confirmation never fabricates private finance fields.
 

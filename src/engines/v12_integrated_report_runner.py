@@ -1120,6 +1120,38 @@ def _stage3_visible_package_surface(
             if max(len(visible_out), len(visible_in)) >= 2
             else "DIRECT / 1-TRANSFER"
         )
+        ft_known = (
+            isinstance((finance or {}).get("free_transfers"), int)
+            and str(
+                (finance or {}).get("free_transfers_status") or ""
+            ).upper() in {"AVAILABLE", "CURRENT", "PASS", "SUPPORTED"}
+        )
+        bank_known = (
+            isinstance((finance or {}).get("bank"), int)
+            and str((finance or {}).get("bank_status") or "").upper()
+            in {"AVAILABLE", "CURRENT", "PASS", "SUPPORTED"}
+        )
+        sell_values_known = all(
+            row.get("price") is not None
+            for row in visible_out
+        )
+        economics_complete = (
+            route_id == "HOLD"
+            or (
+                str(economics.get("status") or "").upper()
+                in {"PASS", "COMPLETE"}
+                and ft_known
+                and bank_known
+                and sell_values_known
+            )
+        )
+        execution_economics_status = (
+            "NOT_REQUIRED"
+            if route_id == "HOLD"
+            else "COMPLETE"
+            if economics_complete
+            else "DEGRADED"
+        )
         package_routes.append(
             {
                 "route": route_id,
@@ -1129,15 +1161,23 @@ def _stage3_visible_package_surface(
                     "in": visible_in,
                 },
                 "bank_before": (finance or {}).get("bank"),
+                "football_frontier_status": "COMPLETE",
+                "execution_economics_status": execution_economics_status,
+                "executable": bool(economics_complete),
                 "affordability": (
                     "SUPPORTED"
-                    if economics.get("status") == "COMPLETE"
-                    else economics.get("status") or "PARTIAL"
+                    if execution_economics_status in {"COMPLETE", "NOT_REQUIRED"}
+                    else "UNRESOLVED"
                 ),
                 "transfer_cost": {
                     "hit": route.get("hit"),
                     "ft_usage": route.get("ft_usage"),
-                    "economics_status": economics.get("status"),
+                    "economics_status": execution_economics_status,
+                    "producer_economics_status": economics.get("status"),
+                    "free_transfers": (finance or {}).get("free_transfers"),
+                    "free_transfers_status": (finance or {}).get(
+                        "free_transfers_status"
+                    ),
                     "bank_after": route.get("bank_after"),
                 },
                 "gw1_net": (
@@ -2647,8 +2687,19 @@ def _three_gw_staging(
             "reason": f"selected material route {selected_id}",
         })
 
+    ft_known = (
+        isinstance((finance or {}).get("free_transfers"), int)
+        and str(
+            (finance or {}).get("free_transfers_status") or ""
+        ).upper() in {"AVAILABLE", "CURRENT", "PASS", "SUPPORTED"}
+    )
+
     if selected_id == "HOLD" or not (outs and ins):
-        move_text = "SAVE FT / HOLD SQUAD"
+        move_text = (
+            "SAVE FT / HOLD SQUAD"
+            if ft_known
+            else "NO TRANSFER NOW"
+        )
         status = "HOLD"
     else:
         pairs = []
@@ -2677,7 +2728,11 @@ def _three_gw_staging(
         },
         {
             "timing": f"GW{planning_gw + 1}",
-            "planned_move": "REOPTIMIZE FULL FRONTIER / SAVE FT IF NO EDGE",
+            "planned_move": (
+                "REOPTIMIZE FULL FRONTIER / SAVE FT IF NO EDGE"
+                if ft_known
+                else "REOPTIMIZE FULL FRONTIER / NO TRANSFER IF NO EDGE"
+            ),
             "status": "WATCH",
             "trigger": "new fixture, xMins, role, price or package evidence",
             "expected_gain": "RECOMPUTE",
@@ -2703,15 +2758,25 @@ def _three_gw_staging(
         "squad_classification": classifications,
         "staging_rows": staging_rows,
         "ft_saving_plan": (
-            "SAVE FT" if action == "WAIT"
-            else "SAVE UNTIL TRIGGER" if action == "PREPARE"
-            else "USE ONLY IF ACT GATE REMAINS GREEN"
+            (
+                "SAVE FT"
+                if action == "WAIT"
+                else "SAVE UNTIL TRIGGER"
+                if action == "PREPARE"
+                else "USE ONLY IF ACT GATE REMAINS GREEN"
+            )
+            if ft_known
+            else "FT STATE UNAVAILABLE"
         ),
         "order_of_transfers": move_text,
         "budget_dependency": {
             "bank": (finance or {}).get("bank"),
             "bank_status": (finance or {}).get("bank_status"),
             "sell_value_status": (finance or {}).get("sell_value_status"),
+            "free_transfers": (finance or {}).get("free_transfers"),
+            "free_transfers_status": (finance or {}).get(
+                "free_transfers_status"
+            ),
         },
         "price_dependency": selected.get("price_risk"),
         "player_dependency": "fresh P(start)/xMins/role/injury evidence",
@@ -3189,6 +3254,7 @@ def run_deep(
             predictor_artifact=predictor,
             direction="RISE",
             owned_element_ids=sorted(owned_ids),
+            as_of=report_slot,
         ),
     )
     fall = _stage(
@@ -3198,6 +3264,7 @@ def run_deep(
             predictor_artifact=predictor,
             direction="FALL",
             owned_element_ids=sorted(owned_ids),
+            as_of=report_slot,
         ),
     )
     price_radar = _stage(
@@ -3206,6 +3273,7 @@ def run_deep(
         lambda: build_actionable_price_radar(
             owned15=owned,
             predictor_artifact=predictor,
+            as_of=report_slot,
         ),
     )
 
@@ -3860,6 +3928,27 @@ def run_deep(
         chip_state not in (None, {}, [])
         and (finance or {}).get("chips_status") == "AVAILABLE"
     )
+    bound_current_team = _read_json(
+        runtime_data_root / "data/v6/personal/current_team.json",
+        {},
+    ) or {}
+    bound_private_auth_state = str(
+        bound_current_team.get("auth_state")
+        or prefetch.get("auth_state")
+        or (prefetch.get("prefetch_health") or {}).get("auth_state")
+        or "UNAVAILABLE"
+    ).upper()
+    bound_personal_status = str(
+        prefetch.get("personal_status")
+        or (prefetch.get("prefetch_health") or {}).get("personal_status")
+        or (
+            "AVAILABLE"
+            if bound_private_auth_state == "AUTH_AVAILABLE"
+            else "DEGRADED"
+            if bound_private_auth_state in {"AUTH_EXPIRED", "AUTH_UNAVAILABLE"}
+            else "UNAVAILABLE"
+        )
+    ).upper()
 
     sections = {
         "S01": _section(
@@ -4007,7 +4096,12 @@ def run_deep(
             None if chip_available else "authenticated chip state unavailable in bound current-team artifact",
         ),
         "S10": _section(
-            "COMPLETE" if price_radar else "DEGRADED",
+            (
+                "COMPLETE"
+                if price_radar
+                and price_radar.get("predictor_freshness") != "STALE"
+                else "DEGRADED"
+            ),
             {
                 **(price_radar or {"rows": []}),
                 "bank": (finance or {}).get("bank"),
@@ -4044,6 +4138,22 @@ def run_deep(
         "S14": _section(
             "COMPLETE" if stage3_internal_pass else "DEGRADED",
             {
+                "football_frontier_status": (
+                    "COMPLETE" if stage3_internal_pass else "DEGRADED"
+                ),
+                "execution_economics_status": (
+                    "COMPLETE"
+                    if all(
+                        bool(row.get("executable"))
+                        for row in stage3_visible.get("package_routes", [])
+                        if str(row.get("route") or "").upper() != "HOLD"
+                    )
+                    and any(
+                        str(row.get("route") or "").upper() != "HOLD"
+                        for row in stage3_visible.get("package_routes", [])
+                    )
+                    else "DEGRADED"
+                ),
                 "universe_scan": universe_gap,
                 "package_routes": stage3_visible.get("package_routes", []),
                 "frontier": stage3_visible.get("frontier", []),
@@ -4065,7 +4175,12 @@ def run_deep(
                     "official_factual_evidence": "STRONG" if official else "INCOMPLETE",
                     "model_derived_inference": "STRONG" if projections and stage3_internal_pass else "MODERATE",
                     "market_predictor": (
-                        "STRONG" if (rise or {}).get("predictor_health") == "GREEN" else "INCOMPLETE"
+                        "STRONG_CURRENT"
+                        if (rise or {}).get("predictor_health") == "GREEN"
+                        and (rise or {}).get("predictor_freshness") == "FRESH"
+                        else "STALE"
+                        if (rise or {}).get("predictor_freshness") == "STALE"
+                        else "INCOMPLETE"
                     ),
                     "tactical_interpretation": "MODERATE" if projections else "INCOMPLETE",
                     "p1_1_p1_3": "EXECUTED" if projections else "FAILED",
@@ -4137,16 +4252,47 @@ def run_deep(
                     "stage3_internal_pass": stage3_internal_pass,
                     "mc_actual_paths": (monte_carlo or {}).get("actual_paths"),
                 },
-                "source_health": {
-                    "official_fpl": "HEALTHY" if official else "UNAVAILABLE",
-                    "authenticated_personal_scope": (
-                        "HEALTHY"
-                        if (personal_resolution or {}).get("resolution_status") == "CURRENT_VALID"
-                        else (personal_resolution or {}).get("resolution_status")
+                "bound_authoritative_health": {
+                    "personal_auth": bound_private_auth_state,
+                    "personal_status": bound_personal_status,
+                    "current15_identity": (
+                        (personal_resolution or {}).get("resolution_status")
                         or "UNAVAILABLE"
                     ),
+                    "finance": (
+                        "AVAILABLE"
+                        if (finance or {}).get("bank_status") == "AVAILABLE"
+                        and (finance or {}).get("sell_value_status") == "AVAILABLE"
+                        else "DEGRADED"
+                    ),
+                    "chips": (
+                        "AVAILABLE" if chip_available else "DEGRADED"
+                    ),
+                },
+                "source_health": {
+                    "official_fpl": "HEALTHY" if official else "UNAVAILABLE",
+                    "current_squad_identity": (
+                        (personal_resolution or {}).get("resolution_status")
+                        or "UNAVAILABLE"
+                    ),
+                    "authenticated_personal_scope": bound_private_auth_state,
+                    "personal_status": bound_personal_status,
+                    "finance": (
+                        "AVAILABLE"
+                        if (finance or {}).get("bank_status") == "AVAILABLE"
+                        and (finance or {}).get("sell_value_status") == "AVAILABLE"
+                        else "DEGRADED"
+                    ),
+                    "chips": "AVAILABLE" if chip_available else "DEGRADED",
                     "fixture_data": "HEALTHY" if fixtures is not None else "UNAVAILABLE",
                     "price_predictor": (rise or {}).get("predictor_health") or "UNAVAILABLE",
+                    "price_predictor_freshness": (
+                        (rise or {}).get("predictor_freshness")
+                        or "UNAVAILABLE"
+                    ),
+                    "price_predictor_age_seconds": (
+                        (rise or {}).get("source_age_seconds")
+                    ),
                     "tactical_statistical_data": "HEALTHY" if foundation else "UNAVAILABLE",
                     "mini_league": (mini or {}).get("coverage_state") or "UNAVAILABLE",
                     "weather": "SOURCE_DEGRADED_AT_RUNNER; DIRECT_CHATGPT_AT_VISIBLE_DELIVERY",

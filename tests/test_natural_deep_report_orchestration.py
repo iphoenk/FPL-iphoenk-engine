@@ -95,7 +95,11 @@ def _predictor():
                 "rank": i + 1,
             }
         )
-    return {"health": "GREEN", "rows": rows}
+    return {
+        "health": "GREEN",
+        "checked_at": "2026-09-25T10:00:00+00:00",
+        "rows": rows,
+    }
 
 
 def test_repository_python_false_does_not_suppress_chatgpt_v12_analytics():
@@ -1707,3 +1711,39 @@ def test_price_signal_visible_identity_is_verified_official_fpl_predictor_guidan
     assert row["estimate_source"] == "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR"
     assert "Official FPL Price Change Predictor" in row["visible_source_label"]
     assert "not a guarantee" in row["visible_source_label"]
+
+
+def test_stage_a_price_freshness_uses_governed_age_and_degrades_stale_rank20():
+    predictor = _predictor()
+    fresh = build_price20(
+        predictor_artifact=predictor,
+        direction="RISE",
+        as_of="2026-09-25T10:10:00+00:00",
+    )
+    assert fresh["state"] == "COMPLETE"
+    assert fresh["predictor_freshness"] == "FRESH"
+    assert fresh["source_age_seconds"] == 600
+    assert all(row["freshness"] == "FRESH" for row in fresh["rows"])
+
+    stale = build_price20(
+        predictor_artifact=predictor,
+        direction="RISE",
+        as_of="2026-09-25T10:16:00+00:00",
+    )
+    assert stale["state"] == "DEGRADED"
+    assert stale["predictor_freshness"] == "STALE"
+    assert stale["source_age_seconds"] == 960
+    assert "STALE" in stale["degradation_reason"]
+    assert all(row["freshness"] == "STALE" for row in stale["rows"])
+
+
+def test_stage_a_price_freshness_is_visible_on_exact_our15_radar():
+    radar = build_actionable_price_radar(
+        owned15=_owned15(),
+        predictor_artifact=_predictor(),
+        as_of="2026-09-25T10:16:00+00:00",
+    )
+    assert radar["predictor_freshness"] == "STALE"
+    assert radar["source_age_seconds"] == 960
+    assert len(radar["rows"]) == 15
+    assert all(row["freshness"] == "STALE" for row in radar["rows"])

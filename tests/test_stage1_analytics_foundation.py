@@ -925,6 +925,31 @@ def test_stageb_played_90_international_minutes_is_heavy_minutes():
     assert out["xmins_context_overlay"]["congestion_factor"] < 1.0
 
 
+def test_stageb_club_available_does_not_erase_heavy_international_workload():
+    out = build_availability_state(
+        [
+            {
+                "source": "club-statement",
+                "timestamp": "2026-09-25T02:00:00Z",
+                "evidence_type": "CLUB_STATEMENT",
+                "confidence": 0.95,
+                "availability": "AVAILABLE",
+            },
+            {
+                "source": "official-international-match",
+                "timestamp": "2026-09-24T20:00:00Z",
+                "evidence_type": "INTERNATIONAL_APPEARANCE",
+                "confidence": 1.0,
+                "minutes": 90,
+            },
+        ],
+        as_of="2026-09-25T04:00:00Z",
+    )
+    assert out["state"] == "CLUB_CONFIRMED_AVAILABLE"
+    assert "INTERNATIONAL_HEAVY_MINUTES" in out["secondary_workload_states"]
+    assert out["xmins_context_overlay"]["congestion_factor"] < 1.0
+
+
 def test_stageb_conflicting_confirmed_sources_fail_to_doubt():
     out = build_availability_state(
         [
@@ -1169,7 +1194,7 @@ def test_stageb_controlled_exact_p17_ab_reports_xi_bench_captain_vice():
     target = bench_ids[0]
     enriched = deepcopy(baseline)
     replacement = next(row for row in enriched["players"] if row["element"] == target)
-    boosted = _stageb_projection(target, replacement["position"], 14.0)
+    boosted = _stageb_projection(target, replacement["position"], 30.0)
     replacement.clear()
     replacement.update(boosted)
 
@@ -1184,6 +1209,7 @@ def test_stageb_controlled_exact_p17_ab_reports_xi_bench_captain_vice():
     assert set(out["changed"]) == {"XI", "bench", "captain", "vice", "formation"}
     assert out["changed"]["XI"] is True
     assert out["changed"]["bench"] is True
+    assert out["changed"]["captain"] is True
 
 
 def test_stageb_player_ordering_and_transfer_comparator_ab_are_diagnostic_only():

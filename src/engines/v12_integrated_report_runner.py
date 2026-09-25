@@ -3310,6 +3310,7 @@ def run_deep(
             predictor_artifact=predictor,
             direction="RISE",
             owned_element_ids=sorted(owned_ids),
+            as_of=report_slot,
         ),
     )
     fall = _stage(
@@ -3319,6 +3320,7 @@ def run_deep(
             predictor_artifact=predictor,
             direction="FALL",
             owned_element_ids=sorted(owned_ids),
+            as_of=report_slot,
         ),
     )
     price_radar = _stage(
@@ -3327,6 +3329,7 @@ def run_deep(
         lambda: build_actionable_price_radar(
             owned15=owned,
             predictor_artifact=predictor,
+            as_of=report_slot,
         ),
     )
 

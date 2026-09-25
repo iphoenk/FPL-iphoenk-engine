@@ -398,6 +398,7 @@ def build_calendar_workload_context(
     team_ids: Sequence[int],
     relevant_players: Sequence[Mapping[str, Any]],
     verified_schedule_events: Sequence[Mapping[str, Any]] = (),
+    non_pl_schedule_authority: bool = False,
     report_timestamp: Any = None,
     weather_rows: Sequence[Mapping[str, Any]] = (),
     weather_forecast_horizon_hours: float | None = None,
@@ -429,11 +430,35 @@ def build_calendar_workload_context(
         for row in fixtures
     )
 
-    normalized_schedule = [
+    non_pl_schedule = [
         dict(row)
         for row in verified_schedule_events
         if isinstance(row, Mapping)
     ]
+    pl_schedule: list[dict[str, Any]] = []
+    for fixture in pl_fixtures:
+        if not isinstance(fixture, Mapping):
+            continue
+        kickoff = fixture.get("kickoff_time")
+        for side, opponent_side, home in (("team_h", "team_a", True), ("team_a", "team_h", False)):
+            try:
+                team_id = int(fixture.get(side))
+                opponent_id = int(fixture.get(opponent_side))
+            except (TypeError, ValueError):
+                continue
+            pl_schedule.append(
+                {
+                    "fixture_id": fixture.get("id"),
+                    "team_id": team_id,
+                    "opponent_team_id": opponent_id,
+                    "kickoff": kickoff,
+                    "competition": "Premier League",
+                    "competition_category": "DOMESTIC_LEAGUE",
+                    "home_away": "H" if home else "A",
+                    "verified_source": "OFFICIAL_FPL_FIXTURE",
+                }
+            )
+    normalized_schedule = pl_schedule + non_pl_schedule
     categories = {
         str(row.get("competition_category") or "").upper()
         for row in normalized_schedule
@@ -684,7 +709,7 @@ def build_calendar_workload_context(
             }
         )
 
-    complete_schedule_scope = bool(normalized_schedule)
+    complete_schedule_scope = bool(non_pl_schedule_authority)
     return {
         "state": "COMPLETE" if complete_schedule_scope else "DEGRADED",
         "planning_gw": int(planning_gw),
@@ -703,6 +728,7 @@ def build_calendar_workload_context(
         "competition_coverage": {
             "official_pl": True,
             "verified_non_pl_schedule_bound": complete_schedule_scope,
+            "verified_non_pl_event_count": len(non_pl_schedule),
             "competition_names_data_driven": sorted(
                 {
                     str(row.get("competition") or "UNSPECIFIED")

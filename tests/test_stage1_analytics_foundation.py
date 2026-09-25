@@ -1718,36 +1718,75 @@ def test_stagec_deterministic_full_universe_scan():
 def test_stagec_667_player_scan_runtime_budget(capsys):
     import time
 
-    template_form = build_player_multiwindow_form(
-        _stagec_breakout_rows(9999),
+    breakout_form = build_player_multiwindow_form(
+        _stagec_breakout_rows(9997),
+        player_id=9997,
+        season="2026/27",
+    )
+    negative_form = build_player_multiwindow_form(
+        _stagec_negative_regression_rows(9998),
+        player_id=9998,
+        season="2026/27",
+    )
+    neutral_rows = [
+        _mw_row(
+            gw,
+            player_id=9999,
+            goals=1 if gw in {3, 6} else 0,
+            assists=0,
+            xg=0.18,
+            npxg=0.18,
+            xa=0.07,
+            xgi=0.25,
+            shots=2,
+            shots_in_box=1,
+            shots_on_target=1,
+            box_touches=5,
+            key_passes=1,
+            chances_created=1,
+        )
+        for gw in range(1, 7)
+    ]
+    neutral_form = build_player_multiwindow_form(
+        neutral_rows,
         player_id=9999,
         season="2026/27",
     )
-    snapshot = {
-        "contract": "V12_MULTIWINDOW_FORM_SNAPSHOT_V1",
-        "player_count": 667,
-        "players": {
-            str(10000 + index): {
-                **deepcopy(template_form),
-                "player_id": str(10000 + index),
-            }
-            for index in range(667)
-        },
-    }
-    projections = {
-        "players": [
+
+    forms = {}
+    projections = []
+    for index in range(667):
+        element = 10000 + index
+        if index < 100:
+            template = breakout_form
+        elif index < 200:
+            template = negative_form
+        else:
+            template = neutral_form
+        forms[str(element)] = {
+            **deepcopy(template),
+            "player_id": str(element),
+        }
+        defcon = index >= 200 and index % 10 == 0
+        projections.append(
             _stagec_projection(
-                10000 + index,
+                element,
                 position=("DEF" if index % 4 == 0 else "MID"),
                 ownership=float(index % 12),
                 price=45 + (index % 30),
+                defcon_ev=1.1 if defcon else None,
+                defcon_p=0.55 if defcon else None,
             )
-            for index in range(667)
-        ]
+        )
+    snapshot = {
+        "contract": "V12_MULTIWINDOW_FORM_SNAPSHOT_V1",
+        "player_count": 667,
+        "players": forms,
     }
+
     started = time.perf_counter()
     scan = build_universe_scan(
-        projections=projections,
+        projections={"players": projections},
         multiwindow_snapshot=snapshot,
     )
     elapsed_ms = (time.perf_counter() - started) * 1000.0
@@ -1767,6 +1806,10 @@ def test_stagec_667_player_scan_runtime_budget(capsys):
         )
     assert scan["full_universe_count"] == 667
     assert scan["scanned_count"] == 667
+    assert scan["signal_counts"]["BREAKOUT"] == 100
+    assert scan["signal_counts"]["POSITIVE_REGRESSION"] == 100
+    assert scan["signal_counts"]["NEGATIVE_REGRESSION"] == 100
+    assert scan["signal_counts"]["DEFCON_VALUE"] > 0
     assert elapsed_ms < 5000.0
 
 

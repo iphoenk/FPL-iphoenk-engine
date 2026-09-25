@@ -3076,6 +3076,11 @@ def _render_deep_visible_contract_lines(
             "RIVAL PICKS NOTE: latest disclosed submitted picks are a behavioral/"
             "structural baseline, not a forecast of the still-private planning-GW picks."
         )
+        lines.append(
+            "VISIBLE METRIC CONTRACT: "
+            "OWNERSHIP_COUNT=OWN | STARTER_COUNT=START | BENCH_COUNT=BENCH | "
+            "CAPTAIN_COUNT=C | VICE_COUNT=VC | EO_PCT=EO"
+        )
         context = dict(payload.get("current_league_context") or {})
         lines.append(
             "LEAGUE LANDSCAPE: "

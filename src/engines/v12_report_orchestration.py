@@ -2479,7 +2479,14 @@ DEEP_HUMAN_SECTION_REQUIREMENTS: dict[str, tuple[str, ...]] = {
     "S03": ("decision_delta",),
     "S04": ("changes",),
     "S05": ("fixtures",),
-    "S06": ("formation", "starting_xi", "bench", "lineup_score", "formation_comparison"),
+    "S06": (
+        "formation",
+        "starting_xi",
+        "bench",
+        "lineup_score",
+        "formation_comparison",
+        "score_semantics",
+    ),
     "S06B": (
         "stance",
         "raw_ev_formation",
@@ -2495,8 +2502,18 @@ DEEP_HUMAN_SECTION_REQUIREMENTS: dict[str, tuple[str, ...]] = {
     "S11": ("rows",),
     "S12": ("rows",),
     "S13": ("rows",),
-    "S14": ("package_routes", "frontier"),
-    "S14B": ("staging_rows", "squad_classification", "target_formation"),
+    "S14": (
+        "package_routes",
+        "frontier",
+        "football_frontier_status",
+        "execution_economics_status",
+    ),
+    "S14B": (
+        "staging_rows",
+        "squad_classification",
+        "target_formation",
+        "ft_authority",
+    ),
     "S15": ("evidence_quality",),
     "S15B": (
         "current_league_context",
@@ -2513,7 +2530,11 @@ DEEP_HUMAN_SECTION_REQUIREMENTS: dict[str, tuple[str, ...]] = {
     ),
     "S16": ("rows", "position_mechanisms"),
     "S16B": ("our15", "material_universe_candidates", "recency_weighting", "bayesian_update"),
-    "S17": ("engine_data_status", "source_health"),
+    "S17": (
+        "engine_data_status",
+        "source_health",
+        "bound_authoritative_health",
+    ),
     "S18": (
         "NOW",
         "NEXT",

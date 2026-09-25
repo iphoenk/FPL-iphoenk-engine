@@ -1262,7 +1262,7 @@ def test_stagec_evidence_is_wired_into_visible_transfer_comparator_without_math_
         "full_universe_package_search_preserved": True,
         "decision_math_mutated": False,
     }
-    challenger = surface["challengers"][0]
+    challenger = surface["package_universe_challengers"][0]
     assert challenger["stagec_evidence"]["active_signals"] == ["BREAKOUT"]
     assert challenger["stagec_evidence"]["decision_math_adjustment"] == 0.0
     move = surface["package_routes"][0]["moves"]["in"][0]

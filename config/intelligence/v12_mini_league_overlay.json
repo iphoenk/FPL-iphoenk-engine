@@ -80,7 +80,16 @@
     "max_relevant_exposures": 8,
     "show_numerator_denominator": true,
     "show_decision_delta": true,
-    "show_reversal_triggers": true
+    "show_reversal_triggers": true,
+    "direct_rivals_above": 6,
+    "max_rival_threats": 12,
+    "captain_candidates": 5,
+    "deep_requires_raw_count_denominator_percentage": true,
+    "deep_requires_ownership_starter_bench_captain_vice": true,
+    "deep_requires_direct_rival_overlap": true,
+    "deep_requires_rival_threats": true,
+    "deep_requires_captain_leverage": true,
+    "deep_requires_strategy_implication": true
   },
   "governance": {
     "downstream_overlay_only": true,

@@ -29,6 +29,14 @@ def _multiwindow_underlying_enabled() -> bool:
     }
 
 
+def _stage_b_evidence_enabled() -> bool:
+    import os
+
+    return str(os.getenv("V12_STAGE_B_EVIDENCE_ENABLED") or "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+
+
 def _read_json(path: Path) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
@@ -712,6 +720,18 @@ def load_v6_analytics_foundation(
                 adjusted,
                 season=str(source_season) if source_season else None,
             )
+        )
+
+    if _stage_b_evidence_enabled():
+        from src.models.v12_stage_b_evidence import (
+            build_stage_b_evidence_snapshot,
+        )
+
+        payload["stage_b_evidence"] = build_stage_b_evidence_snapshot(
+            bootstrap=bootstrap,
+            player_match_rows=adjusted,
+            supplemental_players=supplemental_players,
+            snapshot_timestamp=normalized.get("effective_at"),
         )
 
     return payload

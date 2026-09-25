@@ -546,12 +546,35 @@ def _normalize_real_price_row(row: Mapping[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def _price_source_freshness(
+    evidence_timestamp: Any,
+    report_timestamp: Any,
+    predictor_health: str,
+) -> dict[str, Any]:
+    observed = _parse_price_dt(evidence_timestamp)
+    report = _parse_price_dt(report_timestamp)
+    healthy = str(predictor_health or "").upper() in {"GREEN", "HEALTHY", "PASS", "CURRENT", "OK"}
+    if observed is None or report is None:
+        return {
+            "source_age_minutes": None,
+            "freshness": "UNKNOWN",
+            "freshness_policy": "DAILY_PRICE_SOURCE_MAX_24H_AND_HEALTHY",
+        }
+    age_minutes = max(0.0, (report - observed).total_seconds() / 60.0)
+    return {
+        "source_age_minutes": round(age_minutes, 1),
+        "freshness": "FRESH" if healthy and age_minutes <= 24 * 60 else "STALE",
+        "freshness_policy": "DAILY_PRICE_SOURCE_MAX_24H_AND_HEALTHY",
+    }
+
+
 def build_price20(
     *,
     predictor_artifact: Mapping[str, Any] | None,
     direction: str,
     owned_element_ids: Sequence[int] | None = None,
     target_element_ids: Sequence[int] | None = None,
+    report_timestamp: Any = None,
 ) -> dict[str, Any]:
     """Consume current official_price_predictor output; never predict price itself."""
     if not predictor_artifact:
@@ -631,6 +654,16 @@ def build_price20(
             row.pop("_artifact_index", None)
         usable_count = len(selected)
         adapter = "COMPACT_COMPAT"
+
+    freshness = _price_source_freshness(
+        evidence_timestamp,
+        report_timestamp,
+        health,
+    )
+    for row in selected:
+        row.setdefault("date_state", "DATE_UNAVAILABLE")
+        row.setdefault("date_state_complete", True)
+        row.update(freshness)
 
     artifact_payload_hash = hashlib.sha256(
         json.dumps(
@@ -737,6 +770,8 @@ def build_price20(
             "latest_supported_projection",
             "estimate_source",
             "evidence_timestamp",
+            "source_age_minutes",
+            "freshness",
             "confidence",
             "impact_on_our_decision",
         ),
@@ -763,6 +798,7 @@ def build_actionable_price_radar(
     *,
     owned15: Sequence[Mapping[str, Any]],
     predictor_artifact: Mapping[str, Any] | None = None,
+    report_timestamp: Any = None,
 ) -> dict[str, Any]:
     """Always preserve owned identity; predictor evidence enriches but never removes OUR15."""
     artifact = dict(predictor_artifact or {})
@@ -773,6 +809,11 @@ def build_actionable_price_radar(
         or "UNKNOWN"
     ).upper()
     evidence_timestamp = artifact.get("checked_at") or artifact.get("generated_at")
+    freshness = _price_source_freshness(
+        evidence_timestamp,
+        report_timestamp,
+        predictor_health,
+    )
     predictor: dict[int, dict[str, Any]] = {}
     for row in _predictor_rows(artifact):
         raw_id = row.get("element_id", row.get("element", row.get("id")))
@@ -877,6 +918,9 @@ def build_actionable_price_radar(
                     else "UNAVAILABLE",
                 ),
                 "evidence_timestamp": (visible or {}).get("evidence_timestamp", evidence_timestamp or "UNAVAILABLE"),
+                "source_age_minutes": freshness.get("source_age_minutes"),
+                "freshness": freshness.get("freshness"),
+                "freshness_policy": freshness.get("freshness_policy"),
                 "confidence": (visible or {}).get("confidence", "UNAVAILABLE"),
                 "sell_value_affordability_impact": (visible or {}).get(
                     "impact_on_our_decision",
@@ -2612,12 +2656,20 @@ def _render_deep_visible_contract_lines(
         lines.append("BENCH: " + ", ".join(bench_names))
         score = dict(payload.get("lineup_score") or {})
         lines.append(
-            "PROJECTED XI SCORE: "
-            + str(
-                score.get("xpts_mean")
-                if score.get("xpts_mean") is not None
-                else score.get("expected_fpl_points_with_captain_vice", "UNAVAILABLE")
-            )
+            "XI_BASE_XPTS: "
+            + str(payload.get("xi_base_xpts", score.get("xpts_mean", "UNAVAILABLE")))
+        )
+        lines.append(
+            "CAPTAIN_ADJUSTED_XPTS: "
+            + str(payload.get("captain_adjusted_xpts", "UNAVAILABLE"))
+        )
+        lines.append(
+            "LINEUP_ROUTE_UTILITY: "
+            + str(payload.get("lineup_route_utility", "UNAVAILABLE"))
+        )
+        lines.append(
+            "SCORE SEMANTICS: "
+            + str((payload.get("score_semantics") or {}).get("relationship", "UNAVAILABLE"))
         )
         comparisons = [
             dict(item)

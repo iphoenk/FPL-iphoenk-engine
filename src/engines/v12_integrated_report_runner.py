@@ -1138,7 +1138,8 @@ def _stage3_visible_package_surface(
         economics_complete = (
             route_id == "HOLD"
             or (
-                economics.get("status") == "COMPLETE"
+                str(economics.get("status") or "").upper()
+                in {"PASS", "COMPLETE"}
                 and ft_known
                 and bank_known
                 and sell_values_known

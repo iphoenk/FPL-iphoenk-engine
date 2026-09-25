@@ -3708,6 +3708,14 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
                 )
             )
 
+        stagec = content_map.get("stagec_universe_intelligence")
+        if section_id == "S04" and isinstance(stagec, Mapping):
+            from src.engines.v12_stagec_reporting import (
+                render_stagec_deep_lines,
+            )
+
+            lines.extend(render_stagec_deep_lines(stagec))
+
         generic = _render_generic_human_content(
             content_map,
             excluded_keys=(
@@ -3720,6 +3728,7 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
                 "package_routes",
                 "routes",
                 "frontier",
+                "stagec_universe_intelligence",
                 *visible_excluded,
             ),
         )

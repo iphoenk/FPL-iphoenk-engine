@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-25T08:25:03+07:00`
+> **Last runtime/documentation sync:** `2026-09-25T10:14:00+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -92,6 +92,8 @@ PRICE human-facing acceptance validates the **visible body**, including exact 12
 Stage-1 hierarchical-prior execution memoizes only invocation-local league and position sufficient statistics, lazily and with the existing `_sufficient()` function and row order. Team and factual-role leave-one-player-out paths remain uncached and mathematically unchanged. Correctness is guarded against the scalar oracle with raw `float.hex()` equality for cached mass/exposure/rates, full hierarchy/foundation fingerprints, explicit `PYTHONHASHSEED` coverage, input-immutability checks, and active role-LOO / DGW-like edge fixtures. The optimization is execution-only and does not change V6 facts, prior formulas, downstream posterior ownership, or walk-forward validation.
 
 Walk-forward validation now uses invocation-local, input-order-preserving player/position indexes while retaining exact `gw < target_gw` train and `gw == target_gw` test semantics. Position history/rate/start state is lazily reused only across the exact scalar equivalence class `(target_gw, _position(position))`, with the current position-rate contract fixed to `field="xgi", weights=None`; cached history is immutable tuple data. Player-level season/recency/opponent calculations remain exact-order scalar computations. Five-hash-seed, raw `float.hex()` traces, unsorted-input, mixed normalized-position, same-GW/DGW leakage, GC/RSS, and same-host Stage-C/A-B performance gates protect the optimization from changing analytics semantics.
+
+Persistent deterministic caches are also runtime-version bound: Stage-2, P1.7, and MC cache schemas include Python major.minor plus NumPy version in their exact internal content-addressed keys. GitHub Actions may restore a broad cache directory by prefix, but only an exact semantic + runtime key file may be reused; cross-Python-minor or cross-NumPy cache hits are rejected by construction.
 
 ## V12 Stage 2 position-specific probabilistic engine
 

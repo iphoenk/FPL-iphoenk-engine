@@ -337,7 +337,33 @@ def _mutate_mc(change_class):
             gwrow = target["football_route_utility"]["per_gw"][0]
             starters = list(gwrow["starting_xi"])
             bench = list(gwrow["bench_order"])
-            starters[0], bench[0] = bench[0], starters[0]
+            pmap = {
+                int(row["element"]): str(row.get("position") or "")
+                for row in projections["players"]
+            }
+            swap = None
+            for bench_index, bench_element in enumerate(bench):
+                bench_position = pmap[int(bench_element)]
+                if bench_position == "GK":
+                    continue
+                for starter_index, starter_element in enumerate(starters):
+                    if pmap[int(starter_element)] == bench_position:
+                        swap = (
+                            starter_index,
+                            bench_index,
+                        )
+                        break
+                if swap is not None:
+                    break
+            if swap is None:
+                raise RuntimeError(
+                    "team fixture cannot find same-position outfield swap"
+                )
+            starter_index, bench_index = swap
+            starters[starter_index], bench[bench_index] = (
+                bench[bench_index],
+                starters[starter_index],
+            )
             gwrow["starting_xi"] = starters
             gwrow["bench_order"] = bench
         else:

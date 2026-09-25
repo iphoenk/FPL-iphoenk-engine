@@ -23,6 +23,7 @@ import numpy as np
 CANONICAL_OPENBLAS_CORETYPE = "Haswell"
 CANONICAL_OPENBLAS_NUM_THREADS = 1
 CANONICAL_NPY_DISABLE_CPU_FEATURES = (
+    "X86_V4",
     "AVX512F",
     "AVX512CD",
     "AVX512_KNL",
@@ -178,15 +179,18 @@ def validate_canonical_runtime_class() -> dict[str, Any]:
             "NORMALIZED_OPENBLAS_NUM_THREADS_NOT_ONE:"
             + str(identity["openblas_num_threads"])
         )
-    active_avx512 = [
+    forbidden_active = [
         feature
         for feature in identity["numpy_simd_active"]
-        if str(feature).upper().startswith("AVX512")
+        if (
+            str(feature).upper() == "X86_V4"
+            or str(feature).upper().startswith("AVX512")
+        )
     ]
-    if active_avx512:
+    if forbidden_active:
         failures.append(
-            "ACTIVE_AVX512_NOT_ALLOWED:"
-            + ",".join(active_avx512)
+            "ACTIVE_SIMD_ABOVE_HASWELL_NOT_ALLOWED:"
+            + ",".join(forbidden_active)
         )
 
     evidence["canonical_runtime_class"] = (

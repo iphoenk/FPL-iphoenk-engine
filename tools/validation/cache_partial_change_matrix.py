@@ -342,11 +342,17 @@ def _mutate_mc(change_class):
                 for row in projections["players"]
             }
             swap = None
+            protected = {
+                int(gwrow.get("captain") or 0),
+                int(gwrow.get("vice_captain") or 0),
+            }
             for bench_index, bench_element in enumerate(bench):
                 bench_position = pmap[int(bench_element)]
                 if bench_position == "GK":
                     continue
                 for starter_index, starter_element in enumerate(starters):
+                    if int(starter_element) in protected:
+                        continue
                     if pmap[int(starter_element)] == bench_position:
                         swap = (
                             starter_index,

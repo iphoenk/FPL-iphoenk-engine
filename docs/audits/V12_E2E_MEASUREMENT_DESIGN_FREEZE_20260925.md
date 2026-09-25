@@ -1,8 +1,8 @@
 # V12 End-to-End Measurement Design Freeze — 2026-09-25
 
-Status: REVISION 2 FROZEN BEFORE END-TO-END PROFILING
+Status: REVISION 3 FROZEN BEFORE END-TO-END PROFILING
 Production main authority: `bb2d9f1f4b5387a7a9dd39ef6b23ad72de5caa94`
-Supersedes initial freeze commit: `d0dad6e47ddad49b7c7f480990e3908d6bdebf82`
+Supersedes Revision 2 commit: `adb0ffd65e4f93a066556503309cb13b611afc7d` (which superseded initial freeze `d0dad6e47ddad49b7c7f480990e3908d6bdebf82`)
 
 ## 0. Execution-truth correction
 
@@ -253,7 +253,244 @@ If benchmarked:
 
 If a supported resident V12 fastpath is later deployed, process model and hardware must be frozen from that deployment and this section must be replaced by a new production gate.
 
-## 10. Strategic answer
+
+## 10. Cache restore authority and two-level key model
+
+The active V12 workflow uses broad GitHub Actions cache-directory restore plus exact content-addressed files inside each restored directory.
+
+### 10.1 GitHub Actions restore keys
+
+All three workflow caches use a unique write key ending in `github.run_id` and a prefix fallback that removes that run id.
+
+Stage-2 directory:
+
+```
+key:
+v12-stage2-derived-${runner.os}-${hashFiles(stage2 code/config dependencies)}-${github.run_id}
+
+restore-keys:
+v12-stage2-derived-${runner.os}-${hashFiles(stage2 code/config dependencies)}-
+```
+
+P1.7 directory:
+
+```
+key:
+v12-p17-decision-${runner.os}-${hashFiles(optimizer/config/rules/canonical)}-${github.run_id}
+
+restore-keys:
+v12-p17-decision-${runner.os}-${hashFiles(optimizer/config/rules/canonical)}-
+```
+
+MC directory:
+
+```
+key:
+v12-mc-summary-${runner.os}-${hashFiles(mc/config/rules/canonical)}-${github.run_id}
+
+restore-keys:
+v12-mc-summary-${runner.os}-${hashFiles(mc/config/rules/canonical)}-
+```
+
+Therefore:
+- a previous directory may be restored whenever code/config authority matches;
+- factual runtime input identity is **not** part of the GitHub Actions restore prefix;
+- prefix restore is expected and is not itself proof of semantic cache validity.
+
+Partial-change correctness MUST therefore test the internal cache key, not merely the outer GitHub cache restore result.
+
+### 10.2 Stage-2 exact internal key
+
+`stage2_derived_input_fingerprint()` includes:
+- planning GW;
+- full bootstrap;
+- strength;
+- historical prior;
+- player-features payload;
+- ordered player-match rows;
+- ordered opponent-history rows;
+- opponent-history scope;
+- exact model-dependency file hashes.
+
+The cache file path is derived from that fingerprint and the loaded payload must contain the same key.
+
+Private CURRENT15 is deliberately outside this cache key because Stage-2 projection math does not own private current-team state.
+
+### 10.3 P1.7 exact internal key
+
+`_decision_core_cache_key(players)` includes:
+- cache schema;
+- optimizer source SHA256;
+- canonical V12 revision SHA;
+- ruleset id;
+- lineup rules;
+- full optimizer config;
+- the exact normalized player-surface list passed to P1.7.
+
+Any change that changes the P1.7 player surfaces produces a new internal file key.
+
+### 10.4 MC exact internal key
+
+The MC simulation-summary key includes:
+- MC source SHA256;
+- canonical V12 revision;
+- config fingerprint;
+- projection fingerprint;
+- route signature with economics included;
+- actual path count;
+- deterministic seed;
+- horizons;
+- selected route id;
+- canonical flag;
+- NumPy version.
+
+Thus a restored MC directory may contain stale files, but the runtime only loads a summary whose exact simulation key matches current inputs.
+
+### 10.5 Safety interpretation
+
+GitHub prefix fallback is intentionally broad storage reuse, not semantic reuse.
+
+The safety boundary is:
+1. outer cache directory may restore;
+2. runtime computes current exact internal key;
+3. only exact-key file may hit;
+4. otherwise current computation executes and writes a new exact-key file.
+
+The partial-change matrix must prove that every tested mutation changes every internal key whose declared semantic input depends on that mutation.
+
+## 11. Partial-change test sequence — cache restore MUST be active
+
+A partial-change fixture is valid only when it exercises the risky path: a prior-state cache directory is actually restored before running the changed input.
+
+For each mutation class:
+
+1. **Prime old state**
+   - run input state A with normal cache-enabled execution;
+   - require successful cache save for every applicable cache layer;
+   - persist exact internal cache fingerprints/keys and material output fingerprint.
+
+2. **Mutate exactly one semantic input**
+   - create state B changing only the declared fixture dimension.
+
+3. **Restore prior cache**
+   - run state B in a fresh GitHub-hosted job with normal cache restore active;
+   - require evidence that a previous matching-prefix cache directory was restored;
+   - record the matched outer cache key/path for Stage-2, P1.7, and MC.
+
+4. **Observe internal decision**
+   - for every cache semantically affected by the mutation, assert current internal fingerprint/key differs from state A and runtime reports MISS/recompute;
+   - for an unaffected cache, exact internal hit is allowed only if key completeness proves its semantic inputs did not change.
+
+5. **Cold/no-reuse oracle for new input**
+   - execute state B again with empty cache directories and no profiler;
+   - compare material decision/report fingerprint against the restore-enabled state-B run.
+
+6. **Acceptance**
+   - restored-directory run and cold state-B oracle must be materially identical;
+   - any affected internal cache that incorrectly hits is a correctness failure even if the final output happens to match on that fixture.
+
+This sequence applies separately to:
+- injury / availability;
+- xMins;
+- tactical role/system;
+- Official current-state / price;
+- current-team / finance;
+- unchanged-input control.
+
+The unchanged control is the inverse proof:
+- outer cache restore must qualify;
+- expected exact internal keys must remain equal;
+- expected internal caches must hit.
+
+## 12. Warm-cache gate semantics
+
+The unchanged-input warm-cache gate remains **N = 7 independent new-process jobs**, but a measured run is never removed from the denominator because restore failed.
+
+A warm run passes only when ALL are true:
+- the expected GitHub cache directory is restored from an eligible prior cache;
+- the matched restore key is recorded;
+- every cache stage expected to execute in the frozen scenario reports the expected exact internal HIT;
+- material output is identical to the cold oracle;
+- compute E2E <= 15 s.
+
+For the frozen DEEP benchmark scenario, choose an occurrence where Stage-2, P1.7, and MC are all invoked so all three persistent cache layers are exercised.
+
+Any of the following counts as a failed warm run:
+- outer restore missing;
+- restored directory present but expected exact internal file missing;
+- unexpected internal MISS/recompute;
+- stale/incorrect internal HIT;
+- material-output mismatch;
+- compute > 15 s.
+
+Therefore the warm gate is literally:
+- **7 attempts**
+- **7 qualifying outer restores**
+- **7 expected internal-hit sets**
+- **7 correct outputs**
+- **7 compute times <= 15 s**
+
+Report outer restore hit rate and exact internal hit rate separately even though both are required for closure.
+
+Because the primary GitHub cache key contains the current unique `github.run_id`, exact primary-key reuse across independent runs is not the normal expectation. Evidence must record the matched fallback key/prefix rather than treating a non-exact outer restore as a semantic miss.
+
+## 13. Workflow-total latency policy
+
+No empirically justified user-accepted end-to-end GitHub workflow SLO has been established yet.
+
+Therefore **workflow total is frozen as REPORT-ONLY, with no pass/fail threshold** for this profiling round.
+
+Mandatory reported timings:
+- queue wait;
+- checkout;
+- Python setup;
+- dependency installation;
+- cache transfer;
+- V12 compute;
+- downstream acceptance;
+- artifact/comment publication;
+- total dispatch-to-artifact wall-clock.
+
+Consequences:
+- passing the 30 s / 15 s compute gates does **not** authorize a claim that real interactive waiting time is acceptable;
+- this workstream may close **compute hardening** if compute gates pass;
+- it may not close a future “interactive user-experience SLO” because no workflow-total SLO has been frozen;
+- the decision to build a resident serving architecture must use these observed workflow timings plus a separately frozen user-facing latency requirement, not a threshold invented after seeing the data.
+
+This explicitly prevents post-hoc interpretation of workflow overhead.
+
+## 14. Cold-cache emulation equivalence
+
+The repository's current `profile_mode=COLD` is unsuitable for a latency gate because it enables cProfile.
+
+A source/workflow audit shows `PROFILE_MODE` is not read by `v12_integrated_report_runner.py`; it only controls workflow orchestration.
+
+Relative to OFF, COLD does exactly these performance-relevant orchestration changes:
+- skips Stage-2 cache restore;
+- skips P1.7 cache restore;
+- skips MC cache restore;
+- deletes and recreates the three cache directories;
+- creates the stage-profile directory;
+- sets `V12_STAGE_PROFILE_DIR`, which activates cProfile in selected stages;
+- tees the runner log and generates profile summaries;
+- skips all three cache-save steps.
+
+No MC worker count, path count, runner argument, mathematical config, report mode, or model input is changed by `PROFILE_MODE` itself.
+
+Therefore the latency-safe cold emulation is:
+
+- use the same integrated-runner CLI arguments and frozen inputs as production;
+- do not restore any of the three cache directories;
+- start all three directories empty;
+- leave `V12_STAGE_PROFILE_DIR` unset;
+- do not invoke profile-summary generation;
+- do not save the resulting cache directories into the shared warm-cache namespace.
+
+Correctness equivalence check:
+- emulated-cold material output must match ordinary COLD output on the same frozen input, excluding only profiling/provenance metadata that explicitly describes instrumentation.
+
+
+## 15. Strategic answer
 
 As of production main `bb2d9f1f4b5387a7a9dd39ef6b23ad72de5caa94`, repeated scenario/report recomputation is **not served by a resident fastpath**.
 

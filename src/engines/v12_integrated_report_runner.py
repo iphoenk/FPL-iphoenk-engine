@@ -4293,7 +4293,7 @@ def run_deep(
         "S11": _section(
             watch_state,
             {
-                "rows": (watchlist or {}).get("rows", []),
+                **(watchlist or {"rows": []}),
                 "universe_evaluator": universe_gap,
                 "scope": "FULL_ELIGIBLE_FPL_UNIVERSE",
             },

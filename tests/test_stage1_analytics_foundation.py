@@ -692,3 +692,11 @@ def test_foundation_feature_enabled_exposes_advisory_snapshot_only(
         == "UNAVAILABLE"
     )
 
+def test_multiwindow_missing_provider_fails_closed():
+    row = _mw_row(1)
+    row.pop("source")
+    out = build_player_multiwindow_form([row])
+    assert out["status"] == "PROVIDER_MISMATCH"
+    assert out["provider_guard"]["status"] == "PROVIDER_UNAVAILABLE"
+    assert out["provider_guard"]["aggregation_allowed"] is False
+

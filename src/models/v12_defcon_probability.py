@@ -79,11 +79,14 @@ def defensive_actions(
     position = _position(row, position)
     if position == "GK":
         return None, "INELIGIBLE_POSITION"
-    direct = _f(
+    direct_raw = (
         row.get("defensive_contribution")
         if row.get("defensive_contribution") is not None
         else row.get("defensive_contributions")
+        if row.get("defensive_contributions") is not None
+        else row.get("defensive")
     )
+    direct = _f(direct_raw)
     if direct is not None:
         return max(0.0, direct), "DIRECT_DEFENSIVE_CONTRIBUTION"
 
@@ -537,6 +540,24 @@ def project_defcon_hit_probability(
         * role_factor
     )
     xmins_atoms, xmins_mode, xmins_uncertainty = _xmins_atoms(xmins)
+    projection_confidence = dict(confidence)
+    if xmins_uncertainty.get("label") == "LOW":
+        projection_confidence["label"] = (
+            "DEVELOPING"
+            if projection_confidence.get("label") in {"HIGH", "MODERATE"}
+            else projection_confidence.get("label")
+        )
+        projection_confidence["score"] = round(
+            float(projection_confidence.get("score") or 0.0) * 0.75,
+            4,
+        )
+    elif xmins_uncertainty.get("label") == "UNKNOWN":
+        if projection_confidence.get("label") == "HIGH":
+            projection_confidence["label"] = "MODERATE"
+        projection_confidence["score"] = round(
+            float(projection_confidence.get("score") or 0.0) * 0.9,
+            4,
+        )
     if not xmins_atoms:
         projected_probability = None
         defcon_ev = None
@@ -592,7 +613,7 @@ def project_defcon_hit_probability(
             "home_starts": len(home_starts),
             "away_starts": len(away_starts),
         },
-        "confidence": confidence,
+        "confidence": projection_confidence,
         "xmins": {
             "mode": xmins_mode,
             "expected_minutes": (

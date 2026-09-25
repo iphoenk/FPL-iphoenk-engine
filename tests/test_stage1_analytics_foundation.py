@@ -1205,15 +1205,15 @@ def _stageb_squad():
     }
 
 
-def test_stageb_exact_p17_ab_compares_xi_bench_captain_and_vice():
+def test_stageb_exact_p17_ab_is_unchanged_when_only_evidence_is_added():
     baseline = _stageb_squad()
     enriched = deepcopy(baseline)
-    target = 7
-    replacement = next(
-        row for row in enriched["players"] if row["element"] == target
-    )
-    replacement.clear()
-    replacement.update(_stageb_projection(target, "DEF", 30.0))
+    for row in enriched["players"]:
+        row["stage_b_evidence"] = {
+            "defcon": {"DEFCON_EV": 1.2},
+            "availability": {"states": ["FIT"]},
+            "role_duty": {"facts": {}},
+        }
     squad_ids = [row["element"] for row in baseline["players"]]
 
     out = run_exact_p17_ab(
@@ -1224,39 +1224,44 @@ def test_stageb_exact_p17_ab_compares_xi_bench_captain_and_vice():
         generated_at="2026-09-25T04:00:00Z",
     )
     assert out["p17_semantics_changed"] is False
-    assert out["changed"]["XI"] is True
-    assert out["changed"]["bench"] is True
-    assert out["changed"]["captain"] is True
-    assert out["changed"]["vice"] is True
+    assert out["changed"] == {
+        "XI": False,
+        "bench": False,
+        "captain": False,
+        "vice": False,
+        "formation": False,
+    }
 
 
-def test_stageb_player_ordering_and_transfer_comparator_are_diagnostic():
-    ordering = compare_player_ordering(
-        [{"element": 1, "score": 5.0}, {"element": 2, "score": 4.0}],
-        [{"element": 1, "score": 5.0}, {"element": 2, "score": 5.5}],
-    )
+def test_stageb_player_ordering_and_transfer_comparator_stay_unchanged_before_commit():
+    baseline_rows = [
+        {"element": 1, "score": 5.0},
+        {"element": 2, "score": 4.0},
+    ]
+    enriched_rows = deepcopy(baseline_rows)
+    enriched_rows[1]["stage_b_evidence"] = {"defcon": {"DEFCON_EV": 1.4}}
+    ordering = compare_player_ordering(baseline_rows, enriched_rows)
+
+    baseline_comparator = {
+        "comparisons": [
+            {
+                "candidate": {"element": 2},
+                "raw_gains": {"1": -0.2, "3": 0.4},
+            }
+        ]
+    }
+    enriched_comparator = deepcopy(baseline_comparator)
+    enriched_comparator["comparisons"][0]["stage_b_evidence"] = {
+        "availability": {"states": ["FIT"]}
+    }
     comparator = compare_transfer_comparator_outputs(
-        {
-            "comparisons": [
-                {
-                    "candidate": {"element": 2},
-                    "raw_gains": {"1": -0.2, "3": 0.4},
-                }
-            ]
-        },
-        {
-            "comparisons": [
-                {
-                    "candidate": {"element": 2},
-                    "raw_gains": {"1": 0.3, "3": 0.9},
-                }
-            ]
-        },
+        baseline_comparator,
+        enriched_comparator,
     )
     assert ordering["baseline"] == [1, 2]
-    assert ordering["enriched"] == [2, 1]
-    assert ordering["changed"] is True
+    assert ordering["enriched"] == [1, 2]
+    assert ordering["changed"] is False
     assert ordering["ranking_authority_created"] is False
-    assert comparator["changed"] is True
+    assert comparator["changed"] is False
     assert comparator["comparator_semantics_changed"] is False
 

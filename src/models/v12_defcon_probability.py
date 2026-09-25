@@ -248,9 +248,16 @@ def build_defcon_context(
 def _venue_factor(
     starts: Sequence[Mapping[str, Any]],
     *,
-    home: bool,
+    home: bool | None,
     season_rate: float,
 ) -> tuple[float, dict[str, Any]]:
+    if home is None:
+        return 1.0, {
+            "status": "DEGRADED_UPCOMING_VENUE_UNAVAILABLE",
+            "factor": 1.0,
+            "sample_starts": 0,
+            "rate_per90": None,
+        }
     venue_rows = [row for row in starts if bool(row.get("home")) is bool(home)]
     venue_rate = _rate(venue_rows)
     if (
@@ -344,7 +351,7 @@ def project_defcon_hit_probability(
     *,
     position: str,
     xmins: float | None,
-    home: bool,
+    home: bool | None,
     opponent_team_id: int | None = None,
     context: Mapping[str, Any] | None = None,
     role_evidence: Mapping[str, Any] | None = None,

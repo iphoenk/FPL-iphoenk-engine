@@ -1047,9 +1047,21 @@ def _ml_deep_fixture(monkeypatch):
     }
     manager_picks = {
         "entries": {
+            "100": {
+                "entry_id": 100,
+                "status": "AVAILABLE",
+                "active_chip": None,
+                "picks": _ml_picks(
+                    list(range(1, 16)),
+                    captain=1,
+                    vice=2,
+                    bench={12, 13, 14, 15},
+                ),
+            },
             "201": {
                 "entry_id": 201,
                 "status": "AVAILABLE",
+                "active_chip": "bboost",
                 "picks": _ml_picks(
                     list(range(1, 15)) + [16],
                     captain=1,
@@ -1126,8 +1138,11 @@ def _ml_deep_fixture(monkeypatch):
         owned=owned,
         projections={"players": []},
         lineup={
+            "starting_xi": list(range(1, 12)),
+            "bench": {"gk": 12, "order": [13, 14, 15]},
             "captain": {"element": 1, "name": "P1"},
             "vice_captain": {"element": 2, "name": "P2"},
+            "captain_safe_pool": [1, 2],
         },
         mini_overlay={"risk_posture": {"posture": "BALANCED"}},
         disclosed_gw=5,
@@ -1149,11 +1164,44 @@ def test_mini_league_deep_materializes_raw_counts_direct_rivals_and_threats(monk
     assert p1["captain_count"] == 1
     assert p1["eo_pct"] == 150.0
 
+    assert detail["denominator_scopes"]["LEAGUE"] == {
+        "label": "LEAGUE3_INCL_US",
+        "expected": 3,
+        "collected": 3,
+        "denominator": 3,
+        "includes_us": True,
+    }
+    assert detail["denominator_scopes"]["RIVALS"]["denominator"] == 2
+    assert detail["denominator_scopes"]["DIRECT"]["label"] == "DIRECT6_ABOVE_US"
+    league_p1 = next(
+        row for row in detail["league_our15_exposure"]
+        if row["element_id"] == 1
+    )
+    assert league_p1["denominator"] == 3
+    assert league_p1["eo_supported"] is True
     assert detail["direct_rival_scope"]["denominator"] == 2
     assert detail["direct_rival_scope"]["complete"] is True
     assert [row["rank"] for row in detail["direct_rivals"]] == [1, 2]
     assert detail["direct_rivals"][0]["overlap_count"] == 14
+    assert detail["direct_rivals"][0]["xi_overlap_count"] >= 1
+    assert detail["direct_rivals"][0]["bench_overlap_count"] >= 1
+    assert detail["direct_rivals"][0]["active_chip"] == "bboost"
+    assert detail["direct_rivals"][0]["shields"]
     assert detail["rival_threats"]
+    assert detail["captain_leverage"]
+    assert all(
+        row["element_id"] in set(range(1, 12))
+        for row in detail["captain_leverage"]
+    )
+    assert all(
+        "expected_rank_utility" not in row
+        for row in detail["captain_leverage"]
+    )
+    assert all(
+        row.get("exposure_leverage_class")
+        for row in detail["captain_leverage"]
+    )
+    assert detail["disclosed_picks_label"] == "BEHAVIOURAL BASELINE"
     assert detail["report_contract"]["raw_count_denominator_percentage_required"] is True
     assert detail["strategy_implication"]["human_posture"] == "BALANCED"
     assert mini["coverage_state"] == "FULL"
@@ -1173,27 +1221,103 @@ def test_mini_league_s15b_visible_renderer_keeps_comprehensive_contract(monkeypa
         owned_names=owned_names,
     )
     body = "\n".join(lines)
-    assert "OUR15 VS ALL RIVALS" in body
-    assert "OUR15 VS DIRECT RIVALS" in body
+    assert "DENOMINATOR SCOPES" in body
+    assert "LEAGUE3_INCL_US" in body
+    assert "RIVALS2_EXCL_US" in body
+    assert "DIRECT6_ABOVE_US" in body
+    assert "OUR15 EXPOSURE — LEAGUE3_INCL_US" in body
+    assert "OUR15 EXPOSURE — RIVALS2_EXCL_US" in body
+    assert "OUR15 EXPOSURE — DIRECT6_ABOVE_US" in body
     assert "RIVAL THREATS NOT IN OUR15" in body
-    assert "CAPTAIN LEVERAGE" in body
-    assert "CHASE / BALANCED / DEFEND IMPLICATION" in body
-    assert "| Player | OWN | START | BENCH | C | VC | EO |" in body
-    assert "STARTER_COUNT=START" in body
-    assert "CAPTAIN_COUNT=C" in body
-    assert "VICE_COUNT=VC" in body
-    assert "EO_PCT=EO" in body
-    assert "**P1**" in body
-    assert "2/2 (100.0%)" in body
-    assert "3/2 (150.0%)" in body
+    assert "CAPTAIN LANDSCAPE" in body
+    assert "EXPOSURE / LEVERAGE CLASS" in body
+    assert "BEHAVIOURAL BASELINE" in body
     assert "DIRECT RIVAL DIFFERENCE DETAIL" in body
+    assert "SHIELDS" in body
+
+
+def test_stage_c_captain_surface_uses_final_xi_and_p1_7_safe_pool(monkeypatch):
+    _, detail, owned = _ml_deep_fixture(monkeypatch)
+    lineup = {
+        "starting_xi": list(range(1, 12)),
+        "bench": {"gk": 12, "order": [13, 14, 15]},
+        "captain": {"element": 1, "name": "P1"},
+        "vice_captain": {"element": 2, "name": "P2"},
+        "captain_safe_pool": [1, 2],
+        "formation": "3-5-2",
+    }
+    surface = runner._captain_decision_surface(
+        owned=owned,
+        lineup=lineup,
+        lineup_state="COMPLETE",
+        mini_detail=detail,
+    )
+    assert surface["decision_state"] == "PREPARE"
+    assert surface["candidate_universe_proof"]["captain_in_current15"] is True
+    assert surface["candidate_universe_proof"]["vice_in_current15"] is True
+    assert surface["candidate_universe_proof"]["captain_in_final_xi"] is True
+    assert surface["candidate_universe_proof"]["vice_in_final_xi"] is True
+    assert surface["candidate_universe_proof"]["frontier_subset_of_final_xi"] is True
+    assert surface["mini_league_override_applied"] is False
+    assert surface["near_tie_authority"] == {
+        "source": "P1_7_CAPTAIN_SAFE_POOL",
+        "candidate_count": 2,
+    }
+
+
+def test_stage_c_s19_explicitly_consumes_s08_and_s15b(monkeypatch):
+    _, detail, owned = _ml_deep_fixture(monkeypatch)
+    lineup = {
+        "starting_xi": list(range(1, 12)),
+        "bench": {"gk": 12, "order": [13, 14, 15]},
+        "captain": {"element": 1, "name": "P1"},
+        "vice_captain": {"element": 2, "name": "P2"},
+        "captain_safe_pool": [1],
+        "formation": "3-5-2",
+    }
+    captain_surface = runner._captain_decision_surface(
+        owned=owned,
+        lineup=lineup,
+        lineup_state="COMPLETE",
+        mini_detail=detail,
+    )
+    judgement = runner._final_judgement_surface(
+        operational_action="WAIT",
+        stage3_decision={
+            "selected_route_id": "HOLD",
+            "action_contract": "FRESH_DEADLINE_EVIDENCE",
+        },
+        stage3_visible={
+            "package_routes": [
+                {"route": "HOLD", "executable": True},
+            ]
+        },
+        lineup=lineup,
+        captain_surface=captain_surface,
+        mini_detail=detail,
+        staging={
+            "contingency": "WATCH",
+            "staging_rows": [{"timing": "GW+1"}],
+        },
+        chip_state=None,
+    )
+    assert judgement["consumed_sections"] == ["S08", "S15B"]
+    assert judgement["selected_route_executable"] is True
+    assert judgement["football_optimal_captain"]["element_id"] == 1
+    assert judgement["final_captain"]["element_id"] == 1
+    assert judgement["vice"]["element_id"] == 2
+    assert judgement["captain_state"] == "LOCK"
+    assert judgement["football_baseline_preserved"] is True
+    assert judgement["mini_league_captain_context"]["label"] == "BEHAVIOURAL BASELINE"
 
 
 def test_mini_league_s15b_manifest_cannot_regress_to_compact_summary():
     required = set(DEEP_HUMAN_SECTION_REQUIREMENTS["S15B"])
     assert {
         "rank_battle",
-        "our15_rival_exposure",
+        "denominator_scopes",
+        "league_our15_exposure",
+        "rivals_our15_exposure",
         "direct_rival_scope",
         "direct_rivals",
         "direct_rival_our15_exposure",

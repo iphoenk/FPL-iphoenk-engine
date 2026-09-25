@@ -1304,3 +1304,70 @@ def test_stageb_evidence_outputs_are_deterministic():
     }
     assert build_role_duty_evidence(**role_kwargs) == build_role_duty_evidence(**role_kwargs)
 
+def test_stageb_reconstructs_official_cbit_cbirt_without_zero_fill():
+    defender_rows = [
+        {
+            "player_id": 8301,
+            "element": 8301,
+            "gw": gw,
+            "match_id": 83000 + gw,
+            "position": "DEF",
+            "opponent_team_id": 20,
+            "home": True,
+            "minutes": 90,
+            "starter": True,
+            "clearances_blocks_interceptions": 8,
+            "tackles": 2,
+        }
+        for gw in range(1, 4)
+    ]
+    defender = build_defcon_probability(
+        player_id=8301,
+        element_type=2,
+        match_rows=defender_rows,
+        xmins=_stageb_xmins(),
+        baseline_probability=0.3,
+    )
+    assert defender["eligible_starts"] == 3
+    assert defender["defcon_hits"] == 3
+    assert defender["def_actions_per90"] == 10.0
+
+    midfielder_rows = [
+        {
+            "player_id": 8302,
+            "element": 8302,
+            "gw": gw,
+            "match_id": 83100 + gw,
+            "position": "MID",
+            "opponent_team_id": 20,
+            "home": False,
+            "minutes": 90,
+            "starter": True,
+            "clearances_blocks_interceptions": 6,
+            "tackles": 2,
+            "recoveries": 4,
+        }
+        for gw in range(1, 4)
+    ]
+    midfielder = build_defcon_probability(
+        player_id=8302,
+        element_type=3,
+        match_rows=midfielder_rows,
+        xmins=_stageb_xmins(),
+        baseline_probability=0.3,
+    )
+    assert midfielder["eligible_starts"] == 3
+    assert midfielder["defcon_hits"] == 3
+    assert midfielder["def_actions_per90"] == 12.0
+
+    missing_recoveries = [{**row, "recoveries": None} for row in midfielder_rows]
+    degraded = build_defcon_probability(
+        player_id=8302,
+        element_type=3,
+        match_rows=missing_recoveries,
+        xmins=_stageb_xmins(),
+        baseline_probability=0.3,
+    )
+    assert degraded["eligible_starts"] == 0
+    assert degraded["hit_rate"] is None
+

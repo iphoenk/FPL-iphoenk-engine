@@ -1977,3 +1977,30 @@ def test_stagec_role_minutes_and_fixture_swing_classifications():
     assert loss["signals"]["FIXTURE_SWING"]["active"] is True
     assert loss["signals"]["FIXTURE_SWING"]["direction"] == "NEGATIVE"
 
+def test_stagec_external_challenge_has_no_network_client_or_scraper():
+    root = Path(__file__).resolve().parents[1]
+    source = (
+        root / "src" / "models" / "v12_external_challenge.py"
+    ).read_text(encoding="utf-8").lower()
+    forbidden = (
+        "import requests",
+        "import httpx",
+        "urllib.request",
+        "selenium",
+        "playwright",
+        "beautifulsoup",
+        "cloudscraper",
+    )
+    assert not [token for token in forbidden if token in source]
+
+
+def test_stagec_runner_feature_defaults_off(monkeypatch):
+    from src.engines.v12_integrated_report_runner import (
+        _stagec_scanner_enabled,
+    )
+
+    monkeypatch.delenv("V12_STAGEC_SCANNER_ENABLED", raising=False)
+    assert _stagec_scanner_enabled() is False
+    monkeypatch.setenv("V12_STAGEC_SCANNER_ENABLED", "1")
+    assert _stagec_scanner_enabled() is True
+

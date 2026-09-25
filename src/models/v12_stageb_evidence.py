@@ -877,3 +877,112 @@ def build_opponent_defensive_workload(
         "derived_from": "normalized player-match defensive contribution totals",
         "interpretation": "how many eligible defensive actions same-position starters accumulate when facing the opponent",
     }
+def attach_stageb_shadow_evidence(
+    projections: dict[str, Any],
+    *,
+    bootstrap: Mapping[str, Any],
+    match_rows: Sequence[Mapping[str, Any]],
+    universe_rows: Sequence[Mapping[str, Any]] | None = None,
+    availability_by_player: Mapping[int | str, Sequence[Mapping[str, Any]]] | None = None,
+    as_of: str | None = None,
+    enabled: bool = False,
+) -> dict[str, Any]:
+    """Attach Stage B evidence without mutating canonical score/minutes fields.
+
+    Disabled is an exact no-op on the supplied object so feature-off output is
+    structurally identical. Enabled only adds stageb_evidence.
+    """
+    if not enabled:
+        return projections
+
+    official = {
+        _i(row.get("id"), -1): dict(row)
+        for row in bootstrap.get("elements") or []
+        if isinstance(row, Mapping) and _i(row.get("id"), -1) > 0
+    }
+    availability_map = dict(availability_by_player or {})
+    evidence_players = 0
+    for projection in projections.get("players") or []:
+        if not isinstance(projection, dict):
+            continue
+        element = _i(projection.get("element"), -1)
+        if element <= 0:
+            continue
+        player = official.get(element) or {}
+        element_type = _i(player.get("element_type"), 0)
+        xmins = dict(projection.get("xmins") or {})
+        rates = dict(projection.get("posterior_rates") or {})
+        baseline_dc = dict(rates.get("defcon") or {})
+
+        target_home = None
+        target_opponent = None
+        gw_rows = projection.get("xpts_by_gw") or projection.get("fixtures") or []
+        if gw_rows and isinstance(gw_rows[0], Mapping):
+            fixture = dict(gw_rows[0])
+            target_home = fixture.get("home")
+            target_opponent = fixture.get("opponent")
+            nested = fixture.get("fixtures") or []
+            if nested and isinstance(nested[0], Mapping):
+                target_home = nested[0].get("home", target_home)
+                target_opponent = nested[0].get("opponent", target_opponent)
+
+        baseline_probability = None
+        if baseline_dc.get("expected_points90") is not None and baseline_dc.get("points"):
+            baseline_probability = _f(baseline_dc.get("expected_points90")) / max(
+                1e-9, _f(baseline_dc.get("points"))
+            )
+        role = dict(projection.get("tactical_role") or {})
+        role_profile = role.get("profile") or role.get("role")
+
+        defcon = build_defcon_probability(
+            player_id=element,
+            element_type=element_type,
+            match_rows=match_rows,
+            universe_rows=universe_rows or match_rows,
+            xmins=xmins,
+            target_home=target_home if isinstance(target_home, bool) else None,
+            target_opponent_team_id=(
+                _i(target_opponent, -1) if target_opponent is not None else None
+            ),
+            target_role=str(role_profile) if role_profile else None,
+            baseline_probability=baseline_probability,
+            baseline_count_rate90=_optional_f(
+                baseline_dc.get("posterior_count_rate90")
+            ),
+        )
+        role_duty = build_role_duty_evidence(
+            official_player=player,
+            match_rows=match_rows,
+            xmins=xmins,
+            tactical_role=role,
+        )
+        availability = None
+        supplied = (
+            availability_map.get(element)
+            or availability_map.get(str(element))
+            or []
+        )
+        if as_of and supplied:
+            availability = build_availability_state(supplied, as_of=as_of)
+
+        projection["stageb_evidence"] = {
+            "defcon": defcon,
+            "availability": availability,
+            "role_duty": role_duty,
+            "shadow_only": True,
+            "canonical_xpts_mutated": False,
+            "canonical_xmins_mutated": False,
+        }
+        evidence_players += 1
+
+    projections["stageb_evidence_summary"] = {
+        "contract": "V12_STAGEB_SHADOW_EVIDENCE_ATTACHMENT_V1",
+        "enabled": True,
+        "player_count": evidence_players,
+        "canonical_xpts_mutated": False,
+        "canonical_xmins_mutated": False,
+        "p17_semantics_changed": False,
+        "p12b_semantics_changed": False,
+        "monte_carlo_semantics_changed": False,
+    }
+    return projections

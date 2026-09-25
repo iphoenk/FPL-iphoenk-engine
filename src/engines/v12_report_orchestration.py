@@ -27,6 +27,52 @@ from src.engines.visible_content_proof import canonical_mode_contract
 SECTION_STATES = frozenset({"COMPLETE", "PARTIAL", "DEGRADED", "UNAVAILABLE"})
 POSITIONS = ("GK", "DEF", "MID", "FWD")
 ACTION_STATES = frozenset({"WAIT", "PREPARE", "ACT"})
+WATCHLIST_POSITION_FORMULAE = {
+    "GK": {
+        "formula_id": "V12_WATCH_GK_EVIDENCE_V1",
+        "features": (
+            "save_process",
+            "shot_stopping",
+            "clean_sheet_environment",
+            "goals_conceded_environment",
+            "penalty_save_evidence",
+            "hierarchy_security",
+        ),
+    },
+    "DEF": {
+        "formula_id": "V12_WATCH_DEF_EVIDENCE_V1",
+        "features": (
+            "goal_process",
+            "creation_process",
+            "clean_sheet_environment",
+            "defcon",
+            "defensive_role",
+            "matchup",
+        ),
+    },
+    "MID": {
+        "formula_id": "V12_WATCH_MID_EVIDENCE_V1",
+        "features": (
+            "goal_process",
+            "creation_process",
+            "penalty_process",
+            "set_piece_process",
+            "advanced_role",
+            "matchup",
+        ),
+    },
+    "FWD": {
+        "formula_id": "V12_WATCH_FWD_EVIDENCE_V1",
+        "features": (
+            "goal_process",
+            "creation_process",
+            "penalty_process",
+            "set_piece_process",
+            "service_linkup",
+            "matchup",
+        ),
+    },
+}
 PRICE_UP = frozenset({"RISE", "UP", "INCREASE", "RISING"})
 PRICE_DOWN = frozenset({"FALL", "DOWN", "DECREASE", "FALLING"})
 MACHINE_TERMS = (
@@ -119,18 +165,99 @@ def analytic_execution_truth(
     }
 
 
+def _watchlist_feature_family(row: Mapping[str, Any]) -> dict[str, Any]:
+    position = str(row.get("position") or "").upper()
+    contract = WATCHLIST_POSITION_FORMULAE.get(position) or {
+        "formula_id": "UNSUPPORTED",
+        "features": (),
+    }
+    supplied = dict(row.get("position_specific_evidence") or {})
+    values = {
+        key: supplied.get(key)
+        for key in contract["features"]
+    }
+    present = [
+        key
+        for key, value in values.items()
+        if value not in (None, "", "UNAVAILABLE")
+    ]
+    total = len(values)
+    coverage = (len(present) / total) if total else 0.0
+    return {
+        "position": position,
+        "formula_id": contract["formula_id"],
+        "features": values,
+        "present_features": present,
+        "required_feature_count": total,
+        "present_feature_count": len(present),
+        "coverage": round(coverage, 6),
+        "attacker_xgi_gate_required": False if position == "GK" else None,
+        "decision_authority": False,
+        "purpose": "POSITION_SPECIFIC_WATCHLIST_EVIDENCE_AND_ADMISSION",
+    }
+
+
+def _watchlist_admission(row: Mapping[str, Any], family: Mapping[str, Any]) -> dict[str, Any]:
+    # Reuse the existing Stage-C security screen. This is an admission gate,
+    # not a second xMins/P(start) model or a transfer decision authority.
+    from src.models.v12_stagec_universe_scanner import load_config as load_stagec_config
+
+    thresholds = dict(load_stagec_config().get("signal_thresholds") or {})
+    minimum_xmins = float(thresholds.get("secure_xmins") or 70.0)
+    minimum_p_start = float(thresholds.get("secure_p_start") or 0.75)
+    maximum_p_dnp = max(0.0, 1.0 - minimum_p_start)
+
+    def number(value: Any) -> float | None:
+        try:
+            out = float(value)
+        except (TypeError, ValueError):
+            return None
+        return out
+
+    xmins = number(row.get("xmins"))
+    p_start = number(row.get("p_start"))
+    p_dnp = number(row.get("p_dnp"))
+    p_available = number(row.get("p_available"))
+    feature_coverage = number(family.get("coverage")) or 0.0
+    lineage = dict(row.get("stage2_lineage") or {})
+    evidence_complete = bool(
+        lineage.get("lineage_complete", row.get("canonical_evaluation_complete"))
+    )
+    checks = {
+        "availability_present": p_available is not None,
+        "availability_supportable": p_available is not None and p_available >= minimum_p_start,
+        "p_start_secure": p_start is not None and p_start >= minimum_p_start,
+        "xmins_secure": xmins is not None and xmins >= minimum_xmins,
+        "p_dnp_present": p_dnp is not None,
+        "p_dnp_secure": p_dnp is not None and p_dnp <= maximum_p_dnp,
+        "canonical_evidence_complete": evidence_complete,
+        "position_specific_inputs_complete": feature_coverage >= 0.5,
+    }
+    admitted = all(checks.values())
+    return {
+        "admitted": admitted,
+        "checks": checks,
+        "minimum_xmins": minimum_xmins,
+        "minimum_p_start": minimum_p_start,
+        "maximum_p_dnp": round(maximum_p_dnp, 6),
+        "threshold_source": "config/intelligence/v12_stagec_universe_scanner.json:signal_thresholds",
+        "no_transfer_action_authority": True,
+    }
+
+
 def build_watchlist20(
     *,
     evaluated_universe: Sequence[Mapping[str, Any]],
     owned_element_ids: Sequence[int],
     universe_authority: str,
 ) -> dict[str, Any]:
-    """Select 5 per position using existing canonical evaluation outputs only."""
+    """Build Scanner20 plus an unpadded actionable subset from canonical V12 evidence."""
     authority = str(universe_authority or "").strip().upper()
     if authority not in {"FULL", "PARTIAL"}:
         raise ReportOrchestrationError("universe_authority must be FULL/PARTIAL")
     owned = {int(value) for value in owned_element_ids}
     rows: list[dict[str, Any]] = []
+    scanned_ids: set[int] = set()
     for index, raw in enumerate(evaluated_universe):
         if not isinstance(raw, Mapping):
             continue
@@ -139,17 +266,23 @@ def build_watchlist20(
         if element is None or position not in POSITIONS:
             continue
         element = int(element)
+        scanned_ids.add(element)
         if element in owned or raw.get("eligible") is False:
             continue
         if raw.get("canonical_evaluation_complete") is False:
             continue
         score = raw.get("football_score")
         canonical_rank = raw.get("canonical_rank")
+        family = _watchlist_feature_family(raw)
+        admission = _watchlist_admission(raw, family)
         rows.append(
             {
                 **dict(raw),
                 "element_id": element,
                 "position": position,
+                "position_specific_evidence": family,
+                "admission_gate": admission,
+                "watchlist_action": "WATCH",
                 "_input_index": index,
                 "_canonical_rank": canonical_rank,
                 "_football_score": score,
@@ -164,27 +297,43 @@ def build_watchlist20(
         def key(row: Mapping[str, Any]):
             rank = row.get("_canonical_rank")
             score = row.get("_football_score")
+            coverage = float(
+                ((row.get("position_specific_evidence") or {}).get("coverage"))
+                or 0.0
+            )
             if rank is not None:
                 try:
-                    return (0, float(rank), 0.0, int(row["_input_index"]))
+                    return (0, float(rank), -coverage, int(row["_input_index"]))
                 except (TypeError, ValueError):
                     pass
             if score is not None:
                 try:
-                    return (1, 0.0, -float(score), int(row["_input_index"]))
+                    return (1, -float(score), -coverage, int(row["_input_index"]))
                 except (TypeError, ValueError):
                     pass
-            return (2, 0.0, 0.0, int(row["_input_index"]))
+            return (2, 0.0, -coverage, int(row["_input_index"]))
 
         pool.sort(key=key)
         chosen = pool[:5]
         counts[position] = len(chosen)
         selected.extend(chosen)
 
+    actionable = [
+        dict(row)
+        for row in selected
+        if bool((row.get("admission_gate") or {}).get("admitted"))
+    ]
+
     for row in selected:
         row.pop("_input_index", None)
         row.pop("_canonical_rank", None)
         row.pop("_football_score", None)
+    for row in actionable:
+        row.pop("_input_index", None)
+        row.pop("_canonical_rank", None)
+        row.pop("_football_score", None)
+        row["watchlist_action"] = "ACTIONABLE_MONITOR"
+        row["action"] = "WATCH"
 
     complete = len(selected) == 20 and all(counts.get(pos) == 5 for pos in POSITIONS)
     if authority == "FULL" and complete:
@@ -202,13 +351,379 @@ def build_watchlist20(
         "available_count": len(selected),
         "expected_count": 20,
         "rows": selected,
+        "scanner20": selected,
+        "actionable_watchlist": actionable,
+        "actionable_count": len(actionable),
         "position_counts": counts,
         "universe_authority": authority,
+        "full_eligible_universe_scanned_count": len(scanned_ids),
+        "owned_excluded": not bool(owned & {int(row["element_id"]) for row in selected}),
         "degradation_reason": reason,
         "selection_uses_existing_canonical_evaluation_only": True,
+        "macro_weights": {
+            "PROVEN_HISTORICAL": 0.20,
+            "TACTICAL_ROLE": 0.25,
+            "CURRENT_UNDERLYING": 0.30,
+            "FIXTURE_SECURITY": 0.25,
+        },
+        "position_formulae": {
+            pos: WATCHLIST_POSITION_FORMULAE[pos]["formula_id"]
+            for pos in POSITIONS
+        },
+        "position_specific_evidence_is_watchlist_only": True,
+        "actionable_watchlist_is_unpadded_subset": True,
+        "watchlist_never_emits_act": True,
+        "price_is_overlay_not_primary_authority": True,
         "new_player_score_created": False,
     }
 
+
+def _calendar_dt(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str) and value:
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    else:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+
+
+def build_calendar_workload_context(
+    *,
+    planning_gw: int,
+    pl_fixtures: Sequence[Mapping[str, Any]],
+    team_ids: Sequence[int],
+    relevant_players: Sequence[Mapping[str, Any]],
+    verified_schedule_events: Sequence[Mapping[str, Any]] = (),
+    report_timestamp: Any = None,
+    weather_rows: Sequence[Mapping[str, Any]] = (),
+    weather_forecast_horizon_hours: float | None = None,
+) -> dict[str, Any]:
+    """Build data-driven GW topology and descriptive workload/travel evidence.
+
+    This consumes verified schedule evidence only. It never applies a static
+    fatigue penalty and never mutates xPts, P(start), or xMins.
+    """
+    report_dt = _calendar_dt(report_timestamp)
+    fixtures = [
+        dict(row)
+        for row in pl_fixtures
+        if isinstance(row, Mapping) and int(row.get("event") or -1) == int(planning_gw)
+    ]
+    team_fixture_counts = {int(team): 0 for team in team_ids}
+    for row in fixtures:
+        for key in ("team_h", "team_a"):
+            try:
+                team = int(row.get(key))
+            except (TypeError, ValueError):
+                continue
+            team_fixture_counts[team] = team_fixture_counts.get(team, 0) + 1
+
+    doubles = sorted(team for team, count in team_fixture_counts.items() if count > 1)
+    blanks = sorted(team for team, count in team_fixture_counts.items() if count == 0)
+    rearranged = any(
+        bool(row.get("rearranged") or row.get("rescheduled") or row.get("postponed_then_rearranged"))
+        for row in fixtures
+    )
+
+    normalized_schedule = [
+        dict(row)
+        for row in verified_schedule_events
+        if isinstance(row, Mapping)
+    ]
+    categories = {
+        str(row.get("competition_category") or "").upper()
+        for row in normalized_schedule
+        if row.get("competition_category")
+    }
+    has_international = "INTERNATIONAL" in categories
+    has_non_pl = any(
+        str(row.get("competition_category") or "").upper()
+        in {"CONTINENTAL_CLUB", "DOMESTIC_CUP", "INTERNATIONAL", "GLOBAL_CLUB"}
+        for row in normalized_schedule
+    )
+
+    def event_dt(row: Mapping[str, Any]) -> datetime | None:
+        return _calendar_dt(
+            row.get("kickoff")
+            or row.get("kickoff_time")
+            or row.get("datetime")
+        )
+
+    player_rows: list[dict[str, Any]] = []
+    any_congested = False
+    any_short_rest = False
+    for raw_player in relevant_players:
+        if not isinstance(raw_player, Mapping):
+            continue
+        element = raw_player.get("element_id", raw_player.get("element"))
+        team_id = raw_player.get("team_id", raw_player.get("team"))
+        try:
+            element_i = int(element)
+            team_i = int(team_id)
+        except (TypeError, ValueError):
+            continue
+
+        team_events = [
+            row for row in normalized_schedule
+            if int(row.get("team_id") or -1) == team_i
+            and (
+                row.get("player_id") in (None, "", element_i)
+                or int(row.get("player_id") or -1) == element_i
+            )
+        ]
+        dated = [(event_dt(row), row) for row in team_events]
+        dated = [(dt, row) for dt, row in dated if dt is not None]
+        dated.sort(key=lambda item: item[0])
+
+        upcoming_pl = []
+        for fixture in fixtures:
+            if team_i not in {
+                int(fixture.get("team_h") or -1),
+                int(fixture.get("team_a") or -1),
+            }:
+                continue
+            upcoming_pl.append(fixture)
+        next_pl_dt = min(
+            (event_dt(row) for row in upcoming_pl if event_dt(row) is not None),
+            default=None,
+        )
+
+        counts: dict[str, int] = {}
+        minutes: dict[str, float | None] = {}
+        for days in (3, 7, 14, 21):
+            if report_dt is None:
+                window_rows = []
+            else:
+                start = report_dt - timedelta(days=days)
+                window_rows = [
+                    row for dt, row in dated
+                    if start <= dt <= report_dt
+                ]
+            counts[str(days)] = len(window_rows)
+            minute_values = [
+                float(row.get("minutes"))
+                for row in window_rows
+                if row.get("minutes") is not None
+            ]
+            minutes[str(days)] = (
+                round(sum(minute_values), 1) if minute_values else None
+            )
+
+        previous_dt = max(
+            (dt for dt, _ in dated if report_dt is not None and dt <= report_dt),
+            default=None,
+        )
+        days_rest = (
+            round((next_pl_dt - previous_dt).total_seconds() / 86400.0, 2)
+            if previous_dt is not None and next_pl_dt is not None
+            else None
+        )
+        short_rest = days_rest is not None and days_rest < 4.0
+        congested = counts.get("7", 0) >= 3
+        any_short_rest = any_short_rest or short_rest
+        any_congested = any_congested or congested
+
+        long_haul = any(bool(row.get("long_haul")) for _, row in dated)
+        international = any(
+            str(row.get("competition_category") or "").upper() == "INTERNATIONAL"
+            for _, row in dated
+        )
+        domestic_cup = any(
+            str(row.get("competition_category") or "").upper() == "DOMESTIC_CUP"
+            for _, row in dated
+        )
+        continental = any(
+            str(row.get("competition_category") or "").upper() == "CONTINENTAL_CLUB"
+            for _, row in dated
+        )
+        tournament_absence = any(bool(row.get("tournament_absence")) for _, row in dated)
+        reintegration = next(
+            (
+                row.get("reintegration_state")
+                for _, row in reversed(dated)
+                if row.get("reintegration_state")
+            ),
+            None,
+        )
+
+        if tournament_absence:
+            load_state = "TOURNAMENT ABSENCE"
+        elif reintegration:
+            load_state = "REINTEGRATION WATCH"
+        elif long_haul:
+            load_state = "LONG-HAUL RETURN"
+        elif international:
+            load_state = "INTERNATIONAL DUTY"
+        elif congested:
+            load_state = "CONGESTED"
+        elif short_rest:
+            load_state = "SHORT REST"
+        elif continental:
+            load_state = "EUROPE MIDWEEK"
+        elif domestic_cup:
+            load_state = "DOMESTIC CUP LOAD"
+        else:
+            load_state = "NORMAL LOAD"
+
+        player_fixtures = []
+        for fixture in upcoming_pl:
+            home = int(fixture.get("team_h") or -1) == team_i
+            player_fixtures.append(
+                {
+                    "fixture_id": fixture.get("id"),
+                    "opponent_team_id": (
+                        fixture.get("team_a") if home else fixture.get("team_h")
+                    ),
+                    "home": home,
+                    "kickoff": fixture.get("kickoff_time"),
+                    "xpts": None,
+                    "xmins": None,
+                    "p_start": None,
+                    "matchup": None,
+                }
+            )
+        blank = not player_fixtures
+        player_rows.append(
+            {
+                "element_id": element_i,
+                "player": raw_player.get("name") or raw_player.get("player"),
+                "team_id": team_i,
+                "gw_state": "BLANK" if blank else ("DOUBLE" if len(player_fixtures) > 1 else "NORMAL"),
+                "planning_gw_fixtures": player_fixtures,
+                "previous_match_datetime": previous_dt.isoformat() if previous_dt else None,
+                "next_pl_fixture_datetime": next_pl_dt.isoformat() if next_pl_dt else None,
+                "matches_last_days": counts,
+                "minutes_last_days": minutes,
+                "days_rest": days_rest,
+                "load_state": load_state,
+                "cross_border_travel": any(bool(row.get("cross_border")) for _, row in dated),
+                "long_haul": long_haul,
+                "timezone_shift_hours": max(
+                    [
+                        abs(float(row.get("timezone_shift_hours")))
+                        for _, row in dated
+                        if row.get("timezone_shift_hours") is not None
+                    ]
+                    or [0.0]
+                ),
+                "return_to_club_interval_hours": next(
+                    (
+                        row.get("return_to_club_interval_hours")
+                        for _, row in reversed(dated)
+                        if row.get("return_to_club_interval_hours") is not None
+                    ),
+                    None,
+                ),
+                "tournament_absence": tournament_absence,
+                "confirmed_call_up": any(bool(row.get("confirmed_call_up")) for _, row in dated),
+                "return_date": next(
+                    (row.get("return_date") for _, row in reversed(dated) if row.get("return_date")),
+                    None,
+                ),
+                "injury_knock": next(
+                    (row.get("injury_knock") for _, row in reversed(dated) if row.get("injury_knock")),
+                    None,
+                ),
+                "reintegration_state": reintegration,
+            }
+        )
+
+    if doubles and blanks:
+        topology = "MIXED_DGW_BGW"
+    elif doubles:
+        topology = "DOUBLE_GW"
+    elif blanks:
+        topology = "BLANK_GW"
+    elif rearranged:
+        topology = "REARRANGED_FIXTURE"
+    elif has_international:
+        topology = "INTERNATIONAL_BREAK"
+    elif any_congested:
+        topology = "CONGESTED_PERIOD"
+    elif has_non_pl:
+        topology = "NORMAL_WITH_MIDWEEK_COMPETITION"
+    else:
+        topology = "NORMAL_GW"
+
+    weather_by_fixture = {
+        int(row.get("fixture_id")): dict(row)
+        for row in weather_rows
+        if isinstance(row, Mapping) and row.get("fixture_id") is not None
+    }
+    weather: list[dict[str, Any]] = []
+    for fixture in fixtures:
+        fixture_id = fixture.get("id")
+        kickoff = event_dt(fixture)
+        bound = weather_by_fixture.get(int(fixture_id)) if fixture_id is not None else None
+        if bound:
+            weather.append(bound)
+            continue
+        inside = (
+            report_dt is not None
+            and kickoff is not None
+            and weather_forecast_horizon_hours is not None
+            and 0 <= (kickoff - report_dt).total_seconds() / 3600.0
+            <= float(weather_forecast_horizon_hours)
+        )
+        weather.append(
+            {
+                "fixture_id": fixture_id,
+                "kickoff": fixture.get("kickoff_time"),
+                "state": (
+                    "WEATHER UNAVAILABLE — REPORT-TIME SOURCE NOT BOUND"
+                    if inside
+                    else "WEATHER UNAVAILABLE — OUTSIDE RELIABLE FORECAST HORIZON"
+                    if weather_forecast_horizon_hours is not None
+                    else "WEATHER UNAVAILABLE — FORECAST HORIZON NOT AUTHORIZED"
+                ),
+                "fpl_impact": "UNAVAILABLE",
+            }
+        )
+
+    complete_schedule_scope = bool(normalized_schedule)
+    return {
+        "state": "COMPLETE" if complete_schedule_scope else "DEGRADED",
+        "planning_gw": int(planning_gw),
+        "gw_topology": topology,
+        "period_flags": {
+            "double_gw_teams": doubles,
+            "blank_gw_teams": blanks,
+            "rearranged_fixture": rearranged,
+            "international_schedule_present": has_international,
+            "non_pl_schedule_present": has_non_pl,
+            "congested_player_present": any_congested,
+            "short_rest_player_present": any_short_rest,
+        },
+        "fixtures": fixtures,
+        "verified_schedule_events": normalized_schedule,
+        "competition_coverage": {
+            "official_pl": True,
+            "verified_non_pl_schedule_bound": complete_schedule_scope,
+            "competition_names_data_driven": sorted(
+                {
+                    str(row.get("competition") or "UNSPECIFIED")
+                    for row in normalized_schedule
+                }
+            ),
+            "competition_categories_data_driven": sorted(categories),
+        },
+        "player_workload": player_rows,
+        "weather": weather,
+        "weather_nested_in_s05": True,
+        "workload_feeds_p1_1_review_only": True,
+        "static_fatigue_penalty_applied": False,
+        "weather_mutates_football_model": False,
+        "dgw_cross_fixture_covariance_claimed": False,
+        "degradation_reason": (
+            None
+            if complete_schedule_scope
+            else "verified non-PL first-team schedule source is not bound for this occurrence; PL topology remains authoritative"
+        ),
+    }
 
 def _predictor_rows(artifact: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Return predictor player rows; real V6 data.players is first-class."""

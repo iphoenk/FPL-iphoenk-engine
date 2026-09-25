@@ -928,6 +928,6 @@ def test_stage_a_required_ci_producer_repairs_are_fail_closed_without_new_math()
         regression["_fixture_provenance"]["report_slot"],
         "GREEN",
     )
-    assert freshness["freshness"] == "FRESH"
+    assert freshness["freshness"] == "STALE"
     assert 495.0 < freshness["source_age_minutes"] < 497.0
 

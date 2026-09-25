@@ -10,23 +10,22 @@ from src.engines import v12_stage2_derived_cache as stage2
 IDENTITY_A = {
     "python_major_minor": "3.12",
     "numpy_version": "2.4.4",
-    "platform_machine": "x86_64",
-    "cpu_model": "AMD EPYC 7763",
-    "cpu_count": 4,
-    "numpy_simd_active": ("AVX", "AVX2", "FMA3"),
-    "blas": {
-        "name": "scipy-openblas",
-        "version": "0.3.30",
-        "openblas_configuration": "OpenBLAS DYNAMIC_ARCH",
-        "openblas_coretype": "",
-        "openblas_num_threads": "4",
-        "omp_num_threads": "",
-        "runtime_architecture": "SkylakeX",
-        "runtime_internal_api": "openblas",
-        "runtime_num_threads": 4,
-        "runtime_threading_layer": "pthreads",
-        "runtime_version": "0.3.30",
-    },
+    "openblas_coretype": "Haswell",
+    "numpy_simd_active": (
+        "AVX",
+        "AVX2",
+        "F16C",
+        "FMA3",
+        "MMX",
+        "POPCNT",
+        "SSE",
+        "SSE2",
+        "SSE3",
+        "SSE41",
+        "SSE42",
+        "SSSE3",
+    ),
+    "openblas_num_threads": 1,
 }
 
 
@@ -39,24 +38,17 @@ def _changed(**updates):
 
 IDENTITY_PYTHON_CHANGED = _changed(python_major_minor="3.13")
 IDENTITY_NUMPY_CHANGED = _changed(numpy_version="2.5.0")
-IDENTITY_CPU_CHANGED = _changed(cpu_model="Intel Xeon Platinum 8370C")
-IDENTITY_CORE_COUNT_CHANGED = _changed(cpu_count=2)
 IDENTITY_SIMD_CHANGED = _changed(
-    numpy_simd_active=("AVX", "AVX2"),
+    numpy_simd_active=tuple(
+        value
+        for value in IDENTITY_A["numpy_simd_active"]
+        if value != "AVX2"
+    ),
 )
-IDENTITY_OPENBLAS_CHANGED = _changed(
-    blas={
-        **IDENTITY_A["blas"],
-        "version": "0.3.31",
-    }
-)
-
 IDENTITY_OPENBLAS_CORE_CHANGED = _changed(
-    blas={
-        **IDENTITY_A["blas"],
-        "runtime_architecture": "Haswell",
-    }
+    openblas_coretype="SkylakeX",
 )
+IDENTITY_THREAD_CHANGED = _changed(openblas_num_threads=2)
 
 
 def _stage2_key(monkeypatch, identity):
@@ -132,11 +124,9 @@ def _assert_runtime_identity_changes_key(monkeypatch, key_builder):
     variants = (
         IDENTITY_PYTHON_CHANGED,
         IDENTITY_NUMPY_CHANGED,
-        IDENTITY_CPU_CHANGED,
-        IDENTITY_CORE_COUNT_CHANGED,
         IDENTITY_SIMD_CHANGED,
-        IDENTITY_OPENBLAS_CHANGED,
         IDENTITY_OPENBLAS_CORE_CHANGED,
+        IDENTITY_THREAD_CHANGED,
     )
 
     assert key_a == key_a_repeat
@@ -145,16 +135,29 @@ def _assert_runtime_identity_changes_key(monkeypatch, key_builder):
     assert len(set(changed_keys)) == len(changed_keys)
 
 
-def test_stage2_cache_key_binds_full_numeric_runtime_class(monkeypatch):
+def test_stage2_cache_key_binds_normalized_numeric_runtime_class(monkeypatch):
     _assert_runtime_identity_changes_key(monkeypatch, _stage2_key)
 
 
-def test_p17_cache_key_binds_full_numeric_runtime_class(monkeypatch):
+def test_p17_cache_key_binds_normalized_numeric_runtime_class(monkeypatch):
     _assert_runtime_identity_changes_key(monkeypatch, _p17_key)
 
 
-def test_mc_cache_key_binds_full_numeric_runtime_class(monkeypatch):
+def test_mc_cache_key_binds_normalized_numeric_runtime_class(monkeypatch):
     _assert_runtime_identity_changes_key(monkeypatch, _mc_key)
+
+
+def test_runtime_key_excludes_physical_cpu_and_host_core_count():
+    assert set(IDENTITY_A) == {
+        "python_major_minor",
+        "numpy_version",
+        "openblas_coretype",
+        "numpy_simd_active",
+        "openblas_num_threads",
+    }
+    assert "cpu_model" not in IDENTITY_A
+    assert "cpu_count" not in IDENTITY_A
+    assert "platform_machine" not in IDENTITY_A
 
 
 def test_cache_schema_bump_rejects_pre_lineage_runtime_generation():

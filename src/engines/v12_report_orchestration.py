@@ -3273,6 +3273,15 @@ def _render_deep_visible_contract_lines(
             for row in payload.get("weather") or []
             if isinstance(row, Mapping)
         ]
+        weather_bound = any(
+            str(row.get("fpl_impact") or "UNAVAILABLE").upper()
+            in {"NORMAL", "LOW", "MATERIAL"}
+            for row in weather
+        )
+        lines.append(
+            "WEATHER SOURCE: "
+            + ("REPORT_TIME_BOUND" if weather_bound else "SOURCE_DEGRADED")
+        )
         lines.append("### WEATHER")
         lines.extend(
             _markdown_table(
@@ -3699,6 +3708,7 @@ def _render_deep_visible_contract_lines(
                     "xmins",
                     "p_start",
                     "p_dnp",
+                    "ownership_tag",
                     "pos_formula",
                     "pos_coverage",
                     "admitted",
@@ -3716,6 +3726,7 @@ def _render_deep_visible_contract_lines(
                         row.get("xmins"),
                         row.get("p_start"),
                         row.get("p_dnp"),
+                        "NON_OWNED",
                         (row.get("position_specific_evidence") or {}).get("formula_id"),
                         (row.get("position_specific_evidence") or {}).get("coverage"),
                         (row.get("admission_gate") or {}).get("admitted"),

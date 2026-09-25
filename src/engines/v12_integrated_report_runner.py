@@ -4256,29 +4256,30 @@ def run_deep(
                     ),
                     "finance": (
                         "AVAILABLE"
-                        if (finance or {}).get("bank") is not None
-                        and (finance or {}).get("sell_value_status") not in {None, "UNAVAILABLE", "STALE_NOT_AUTHORIZED"}
+                        if _execution_finance_available(finance)
                         else "DEGRADED"
                     ),
                     "fixture_data": "HEALTHY" if fixtures is not None else "UNAVAILABLE",
                     "price_predictor": (rise or {}).get("predictor_health") or "UNAVAILABLE",
+                    "price_predictor_freshness": next(
+                        (
+                            str(row.get("freshness") or "UNKNOWN").upper()
+                            for row in (rise or {}).get("rows") or []
+                            if isinstance(row, Mapping)
+                        ),
+                        "UNAVAILABLE",
+                    ),
+                    "price_predictor_source_age_minutes": next(
+                        (
+                            row.get("source_age_minutes")
+                            for row in (rise or {}).get("rows") or []
+                            if isinstance(row, Mapping)
+                        ),
+                        None,
+                    ),
                     "tactical_statistical_data": "HEALTHY" if foundation else "UNAVAILABLE",
                     "mini_league": (mini or {}).get("coverage_state") or "UNAVAILABLE",
                     "weather": "SOURCE_DEGRADED_AT_RUNNER; DIRECT_CHATGPT_AT_VISIBLE_DELIVERY",
-                },
-                "authority": {
-                    "personal_auth_state": (
-                        (finance or {}).get("auth_state")
-                        or (personal_resolution or {}).get("auth_state")
-                        or "UNAVAILABLE"
-                    ),
-                    "personal_resolution_status": (personal_resolution or {}).get("resolution_status"),
-                    "finance_allowed": (personal_resolution or {}).get("finance_allowed") is True,
-                    "finance_status": {
-                        "bank": (finance or {}).get("bank_status") or "UNAVAILABLE",
-                        "sell_value": (finance or {}).get("sell_value_status") or "UNAVAILABLE",
-                        "free_transfers": (finance or {}).get("free_transfers_status") or "UNAVAILABLE",
-                    },
                 },
                 "auth_authority": {
                     "field": "data/v6/personal/current_team.json:auth_state",

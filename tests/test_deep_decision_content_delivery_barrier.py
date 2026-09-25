@@ -22,6 +22,7 @@ from src.engines.v12_package_utility import (
 )
 from src.engines.v12_report_orchestration import (
     _price_source_freshness,
+    build_calendar_workload_context,
     build_watchlist20,
     render_deep_text,
 )
@@ -965,4 +966,271 @@ def test_stage_a_required_ci_producer_repairs_are_fail_closed_without_new_math()
     )
     assert freshness["freshness"] == "STALE"
     assert 495.0 < freshness["source_age_minutes"] < 497.0
+
+def _stage_b_position_evidence(position: str) -> dict:
+    if position == "GK":
+        return {
+            "save_process": {"P_points_awarded": 0.8},
+            "shot_stopping": {"rate": 0.7},
+            "clean_sheet_environment": {"probability": 0.35},
+            "goals_conceded_environment": {"mean": 1.2},
+            "penalty_save_evidence": {"probability": 0.05},
+            "hierarchy_security": {"p_start": 0.9, "xmins": 90},
+        }
+    if position == "DEF":
+        return {
+            "goal_process": {"rate": 0.08},
+            "creation_process": {"rate": 0.12},
+            "clean_sheet_environment": {"probability": 0.35},
+            "defcon": {"expected_points": 0.7},
+            "defensive_role": "FULLBACK",
+            "matchup": {"wide_channel": "FAVOURABLE"},
+        }
+    if position == "MID":
+        return {
+            "goal_process": {"rate": 0.35},
+            "creation_process": {"rate": 0.28},
+            "penalty_process": {"role": "SECONDARY"},
+            "set_piece_process": {"role": "CORNERS"},
+            "advanced_role": "10",
+            "matchup": {"central_space": "FAVOURABLE"},
+        }
+    return {
+        "goal_process": {"rate": 0.5},
+        "creation_process": {"rate": 0.16},
+        "penalty_process": {"role": "PRIMARY"},
+        "set_piece_process": {"role": "NONE"},
+        "service_linkup": {"creator_dependency": "SUPPORTED"},
+        "matchup": {"box_access": "FAVOURABLE"},
+    }
+
+
+def _stage_b_watch_universe(*, low_security_element: int | None = None) -> list[dict]:
+    rows = []
+    element = 100
+    for position in ("GK", "DEF", "MID", "FWD"):
+        for rank in range(1, 7):
+            element += 1
+            low = element == low_security_element
+            rows.append(
+                {
+                    "element_id": element,
+                    "name": f"{position}{rank}",
+                    "position": position,
+                    "eligible": True,
+                    "canonical_evaluation_complete": True,
+                    "canonical_rank": rank,
+                    "football_score": 80.0 - rank,
+                    "stage2_lineage": {"lineage_complete": True},
+                    "p_available": 0.95,
+                    "p_start": 0.55 if low else 0.90,
+                    "p_dnp": 0.35 if low else 0.05,
+                    "xmins": 52 if low else 82,
+                    "position_specific_evidence": _stage_b_position_evidence(position),
+                }
+            )
+    return rows
+
+
+def test_stage_b_legacy_5_5_5_5_without_positional_contract_is_now_false_pass():
+    positions = ["GK"] * 5 + ["DEF"] * 5 + ["MID"] * 5 + ["FWD"] * 5
+    report = {
+        "sections": [
+            {
+                "section_id": "S02",
+                "state": "COMPLETE",
+                "content": {"rows": [{"element_id": i} for i in range(1, 16)]},
+            },
+            {
+                "section_id": "S11",
+                "state": "COMPLETE",
+                "content": {
+                    "authoritative_binding": {
+                        "status": "BOUND",
+                        "producer": "WATCHLIST20",
+                        "payload_fingerprint": "legacy-fixture",
+                    },
+                    "rows": [
+                        {"element_id": 100 + i, "position": position}
+                        for i, position in enumerate(positions, start=1)
+                    ],
+                },
+            },
+        ]
+    }
+    body = render_deep_text(report)
+    failures = validate_deep_decision_content_delivery(report, body)
+    assert "WATCHLIST_POSITION_FORMULA_MISSING=1:GK" in failures
+    assert "WATCHLIST_ADMISSION_GATE_MISSING=1" in failures
+    assert "ACTIONABLE_WATCHLIST_PADDING_CONTRACT_MISSING" in failures
+    assert "WATCHLIST_PRICE_PRIMARY_AUTHORITY" in failures
+
+
+def test_stage_b_scanner20_is_exact_positional_and_actionable_is_unpadded_subset():
+    universe = _stage_b_watch_universe(low_security_element=101)
+    result = build_watchlist20(
+        evaluated_universe=universe,
+        owned_element_ids=[],
+        universe_authority="FULL",
+    )
+    assert result["state"] == "COMPLETE"
+    assert result["position_counts"] == {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}
+    assert len(result["scanner20"]) == 20
+    assert len({row["element_id"] for row in result["scanner20"]}) == 20
+    assert result["actionable_watchlist_is_unpadded_subset"] is True
+    assert result["watchlist_never_emits_act"] is True
+    assert result["price_is_overlay_not_primary_authority"] is True
+    assert all(row["action"] == "WATCH" for row in result["actionable_watchlist"])
+    gk = next(row for row in result["scanner20"] if row["position"] == "GK")
+    assert gk["position_specific_evidence"]["formula_id"] == "V12_WATCH_GK_EVIDENCE_V1"
+    assert gk["position_specific_evidence"]["attacker_xgi_gate_required"] is False
+    # Element 101 is still valid broad-monitoring Scanner20, but fails the
+    # P1.1-derived security gate and must not be padded back into actionable.
+    assert 101 in {row["element_id"] for row in result["scanner20"]}
+    assert 101 not in {row["element_id"] for row in result["actionable_watchlist"]}
+
+
+def test_stage_b_watchlist_excludes_owned_and_formula_drift_is_detected():
+    universe = _stage_b_watch_universe()
+    owned = [101, 107, 113, 119]
+    result = build_watchlist20(
+        evaluated_universe=universe,
+        owned_element_ids=owned,
+        universe_authority="FULL",
+    )
+    assert not (set(owned) & {row["element_id"] for row in result["scanner20"]})
+    result["scanner20"][0]["position_specific_evidence"]["formula_id"] = "DRIFTED"
+    result["rows"] = result["scanner20"]
+    report = {
+        "sections": [
+            {
+                "section_id": "S02",
+                "state": "COMPLETE",
+                "content": {"rows": [{"element_id": i} for i in range(1, 16)]},
+            },
+            {
+                "section_id": "S11",
+                "state": "COMPLETE",
+                "content": {
+                    **result,
+                    "authoritative_binding": {
+                        "status": "BOUND",
+                        "producer": "WATCHLIST20",
+                        "payload_fingerprint": "stage-b-drift",
+                    },
+                },
+            },
+        ]
+    }
+    failures = validate_deep_decision_content_delivery(report, render_deep_text(report))
+    assert any(item.startswith("WATCHLIST_POSITION_FORMULA_MISSING=1:") for item in failures)
+
+
+def test_stage_b_calendar_is_data_driven_and_never_applies_static_fatigue_penalty():
+    fixtures = [
+        {
+            "id": 90,
+            "event": 5,
+            "team_h": 2,
+            "team_a": 1,
+            "kickoff_time": "2026-09-23T19:00:00+00:00",
+        },
+        {
+            "id": 101,
+            "event": 6,
+            "team_h": 1,
+            "team_a": 2,
+            "kickoff_time": "2026-09-27T14:00:00+00:00",
+        },
+        {
+            "id": 102,
+            "event": 6,
+            "team_h": 3,
+            "team_a": 1,
+            "kickoff_time": "2026-09-30T18:00:00+00:00",
+        },
+    ]
+    schedule = [
+        {
+            "team_id": 1,
+            "player_id": 201,
+            "kickoff": "2026-09-25T18:00:00+00:00",
+            "competition": "Verified International Fixture",
+            "competition_category": "INTERNATIONAL",
+            "minutes": 90,
+            "started": True,
+            "cross_border": True,
+            "long_haul": True,
+            "timezone_shift_hours": 5,
+            "confirmed_call_up": True,
+            "return_to_club_interval_hours": 30,
+        }
+    ]
+    players = [
+        {
+            "element_id": 201,
+            "name": "P201",
+            "team_id": 1,
+            "planning_fixture_evidence": [
+                {
+                    "fixture_id": 101,
+                    "xpts": 5.2,
+                    "xmins": 82,
+                    "p_start": 0.91,
+                    "matchup": "A",
+                },
+                {
+                    "fixture_id": 102,
+                    "xpts": 4.7,
+                    "xmins": 76,
+                    "p_start": 0.84,
+                    "matchup": "B",
+                },
+            ],
+        },
+        {"element_id": 204, "name": "P204", "team_id": 4},
+    ]
+    context = build_calendar_workload_context(
+        planning_gw=6,
+        pl_fixtures=fixtures,
+        team_ids=[1, 2, 3, 4],
+        relevant_players=players,
+        verified_schedule_events=schedule,
+        non_pl_schedule_authority=True,
+        report_timestamp="2026-09-26T00:00:00+00:00",
+        weather_rows=[
+            {
+                "fixture_id": 101,
+                "venue": "Ground A",
+                "kickoff": "2026-09-27T14:00:00+00:00",
+                "condition": "Dry",
+                "temperature_c": 18,
+                "precipitation_probability": 10,
+                "wind_kph": 12,
+                "fpl_impact": "NORMAL",
+                "evidence_timestamp": "2026-09-26T00:00:00+00:00",
+            }
+        ],
+        weather_forecast_horizon_hours=72,
+    )
+    assert context["state"] == "COMPLETE"
+    assert context["gw_topology"] == "MIXED_DGW_BGW"
+    assert context["period_flags"]["double_gw_teams"] == [1]
+    assert 4 in context["period_flags"]["blank_gw_teams"]
+    assert context["static_fatigue_penalty_applied"] is False
+    assert context["weather_mutates_football_model"] is False
+    assert context["dgw_cross_fixture_covariance_claimed"] is False
+    p201 = next(row for row in context["player_workload"] if row["element_id"] == 201)
+    assert p201["load_state"] == "LONG-HAUL RETURN"
+    assert p201["gw_state"] == "DOUBLE"
+    assert [row["xpts"] for row in p201["planning_gw_fixtures"]] == [5.2, 4.7]
+    p204 = next(row for row in context["player_workload"] if row["element_id"] == 204)
+    assert p204["gw_state"] == "BLANK"
+    assert context["competition_coverage"]["competition_names_data_driven"] == [
+        "Premier League",
+        "Verified International Fixture",
+    ]
+    weather = {row["fixture_id"]: row for row in context["weather"]}
+    assert weather[101]["fpl_impact"] == "NORMAL"
+    assert weather[102]["state"] == "WEATHER UNAVAILABLE — OUTSIDE RELIABLE FORECAST HORIZON"
 

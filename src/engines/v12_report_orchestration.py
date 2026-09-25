@@ -594,21 +594,40 @@ def build_calendar_workload_context(
         else:
             load_state = "NORMAL LOAD"
 
+        projection_fixtures = [
+            dict(row)
+            for row in raw_player.get("planning_fixture_evidence") or []
+            if isinstance(row, Mapping)
+        ]
+        by_fixture_id = {
+            int(row.get("fixture_id")): row
+            for row in projection_fixtures
+            if row.get("fixture_id") is not None
+        }
         player_fixtures = []
         for fixture in upcoming_pl:
             home = int(fixture.get("team_h") or -1) == team_i
+            fixture_id = fixture.get("id")
+            projected = (
+                by_fixture_id.get(int(fixture_id))
+                if fixture_id is not None
+                else None
+            ) or {}
             player_fixtures.append(
                 {
-                    "fixture_id": fixture.get("id"),
+                    "fixture_id": fixture_id,
                     "opponent_team_id": (
                         fixture.get("team_a") if home else fixture.get("team_h")
                     ),
                     "home": home,
                     "kickoff": fixture.get("kickoff_time"),
-                    "xpts": None,
-                    "xmins": None,
-                    "p_start": None,
-                    "matchup": None,
+                    "xpts": projected.get("xpts"),
+                    "xmins": projected.get("xmins"),
+                    "p_start": projected.get("p_start"),
+                    "matchup": projected.get("matchup"),
+                    "rest_from_previous_fixture_hours": projected.get(
+                        "rest_from_previous_fixture_hours"
+                    ),
                 }
             )
         blank = not player_fixtures

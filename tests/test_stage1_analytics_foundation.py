@@ -923,6 +923,14 @@ def test_stageb_played_90_international_minutes_is_heavy_minutes():
         == "EXISTING_P1_1_CONGESTION_FACTOR"
     )
     assert out["xmins_context_overlay"]["congestion_factor"] < 1.0
+    assert (
+        out["xmins_context_overlay"]["calibration_status"]
+        == "EXPERIMENTAL_BOUNDED_AB_ONLY_NOT_EMPIRICALLY_CALIBRATED"
+    )
+    assert (
+        out["governance"]["numeric_congestion_overlay_is_model_assumption_not_fact"]
+        is True
+    )
 
 
 def test_stageb_club_available_does_not_erase_heavy_international_workload():

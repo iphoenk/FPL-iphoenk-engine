@@ -1846,6 +1846,32 @@ def _enrich_watchlist_rows(
         })
         enriched.append(row)
     result["rows"] = enriched
+    result["scanner20"] = deepcopy(enriched)
+    enriched_by_id = {
+        int(row.get("element_id") or 0): row
+        for row in enriched
+        if int(row.get("element_id") or 0) > 0
+    }
+    actionable: list[dict[str, Any]] = []
+    for raw in result.get("actionable_watchlist") or []:
+        if not isinstance(raw, Mapping):
+            continue
+        element = int(raw.get("element_id") or 0)
+        if element <= 0:
+            continue
+        merged = {
+            **dict(raw),
+            **dict(enriched_by_id.get(element) or {}),
+        }
+        merged["admission_gate"] = deepcopy(raw.get("admission_gate") or {})
+        merged["position_specific_evidence"] = deepcopy(
+            raw.get("position_specific_evidence") or {}
+        )
+        merged["action"] = "WATCH"
+        merged["watchlist_action"] = "ACTIONABLE_MONITOR"
+        actionable.append(merged)
+    result["actionable_watchlist"] = actionable
+    result["actionable_count"] = len(actionable)
     result["decision_context_materialized"] = True
     return result
 

@@ -1120,6 +1120,26 @@ def _stage3_visible_package_surface(
             if max(len(visible_out), len(visible_in)) >= 2
             else "DIRECT / 1-TRANSFER"
         )
+        finance_row = dict(finance or {})
+        unavailable_tokens = {"", "UNAVAILABLE", "UNKNOWN", "STALE_NOT_AUTHORIZED", "NOT_SUPPORTED", "AUTH_EXPIRED"}
+        private_finance_available = bool(
+            isinstance(finance_row.get("bank"), int)
+            and isinstance(finance_row.get("free_transfers"), int)
+            and str(finance_row.get("bank_status") or "").upper() not in unavailable_tokens
+            and str(finance_row.get("sell_value_status") or "").upper() not in unavailable_tokens
+            and str(finance_row.get("free_transfers_status") or "").upper() not in unavailable_tokens
+        )
+        route_execution_status = (
+            "NOT_APPLICABLE"
+            if route_id == "HOLD"
+            else "AVAILABLE"
+            if private_finance_available and str(economics.get("status") or "").upper() == "COMPLETE"
+            else "DEGRADED"
+        )
+        route_executable = bool(
+            route_id == "HOLD"
+            or route_execution_status == "AVAILABLE"
+        )
         package_routes.append(
             {
                 "route": route_id,
@@ -1134,6 +1154,8 @@ def _stage3_visible_package_surface(
                     if economics.get("status") == "COMPLETE"
                     else economics.get("status") or "PARTIAL"
                 ),
+                "execution_economics_status": route_execution_status,
+                "executable": route_executable,
                 "transfer_cost": {
                     "hit": route.get("hit"),
                     "ft_usage": route.get("ft_usage"),
@@ -1270,6 +1292,30 @@ def _stage3_visible_package_surface(
             "coverage": package_search_result.get("coverage"),
         },
         "package_universe_challengers": challengers,
+        "football_frontier_status": "COMPLETE",
+        "execution_economics_status": (
+            "AVAILABLE"
+            if bool(
+                isinstance((finance or {}).get("bank"), int)
+                and isinstance((finance or {}).get("free_transfers"), int)
+                and str((finance or {}).get("bank_status") or "").upper()
+                    not in {"", "UNAVAILABLE", "UNKNOWN", "STALE_NOT_AUTHORIZED", "NOT_SUPPORTED", "AUTH_EXPIRED"}
+                and str((finance or {}).get("sell_value_status") or "").upper()
+                    not in {"", "UNAVAILABLE", "UNKNOWN", "STALE_NOT_AUTHORIZED", "NOT_SUPPORTED", "AUTH_EXPIRED"}
+                and str((finance or {}).get("free_transfers_status") or "").upper()
+                    not in {"", "UNAVAILABLE", "UNKNOWN", "STALE_NOT_AUTHORIZED", "NOT_SUPPORTED", "AUTH_EXPIRED"}
+            )
+            else "DEGRADED"
+        ),
+        "execution_economics_authority": {
+            "bank": (finance or {}).get("bank"),
+            "bank_status": (finance or {}).get("bank_status"),
+            "sell_value_status": (finance or {}).get("sell_value_status"),
+            "free_transfers": (finance or {}).get("free_transfers"),
+            "free_transfers_status": (finance or {}).get("free_transfers_status"),
+            "source": (finance or {}).get("personal_evidence_source"),
+            "observed_at": (finance or {}).get("personal_evidence_observed_at"),
+        },
         "package_routes": package_routes,
         "frontier": package_utility.get("package_frontier"),
         "material_route_selection": material_mc_routes,
@@ -1451,15 +1497,39 @@ def _lineup_content(lineup: Mapping[str, Any] | None) -> dict[str, Any]:
             "vice_captain": None,
             "lineup_score": {},
             "formation_comparison": [],
+            "score_semantics": {
+                "authority": "P1_7_LINEUP",
+                "relationship": "UNAVAILABLE",
+            },
         }
+    score = dict(lineup.get("lineup_score") or {})
+    comparisons = [
+        dict(row)
+        for row in lineup.get("formation_comparison") or []
+        if isinstance(row, Mapping)
+    ]
+    selected = next((row for row in comparisons if row.get("selected") is True), {})
+    xi_base_xpts = score.get("xpts_mean")
+    captain_adjusted_xpts = selected.get("expected_fpl_points_with_captain_vice")
     return {
         "formation": lineup.get("formation"),
         "starting_xi": lineup.get("starting_xi"),
         "bench": lineup.get("bench"),
         "captain": lineup.get("captain"),
         "vice_captain": lineup.get("vice_captain"),
-        "lineup_score": lineup.get("lineup_score"),
-        "formation_comparison": lineup.get("formation_comparison"),
+        "lineup_score": score,
+        "formation_comparison": comparisons,
+        "xi_base_xpts": xi_base_xpts,
+        "captain_adjusted_xpts": captain_adjusted_xpts,
+        "lineup_route_utility": selected.get("route_utility"),
+        "score_semantics": {
+            "authority": "P1_7_LINEUP",
+            "relationship": "DISTINCT_BY_DESIGN",
+            "xi_base_xpts_path": "lineup_score.xpts_mean",
+            "captain_adjusted_xpts_path": "formation_comparison[selected].expected_fpl_points_with_captain_vice",
+            "lineup_route_utility_path": "formation_comparison[selected].route_utility",
+            "raw_xpts_mutated": False,
+        },
     }
 
 
@@ -2647,8 +2717,14 @@ def _three_gw_staging(
             "reason": f"selected material route {selected_id}",
         })
 
+    free_transfers = (finance or {}).get("free_transfers")
+    free_transfers_status = str((finance or {}).get("free_transfers_status") or "NOT_SUPPORTED").upper()
+    ft_known = bool(
+        isinstance(free_transfers, int)
+        and free_transfers_status not in {"", "UNAVAILABLE", "UNKNOWN", "NOT_SUPPORTED", "STALE_NOT_AUTHORIZED", "AUTH_EXPIRED"}
+    )
     if selected_id == "HOLD" or not (outs and ins):
-        move_text = "SAVE FT / HOLD SQUAD"
+        move_text = "SAVE FT / HOLD SQUAD" if ft_known else "NO TRANSFER NOW"
         status = "HOLD"
     else:
         pairs = []
@@ -2677,7 +2753,11 @@ def _three_gw_staging(
         },
         {
             "timing": f"GW{planning_gw + 1}",
-            "planned_move": "REOPTIMIZE FULL FRONTIER / SAVE FT IF NO EDGE",
+            "planned_move": (
+                "REOPTIMIZE FULL FRONTIER / SAVE FT IF NO EDGE"
+                if ft_known
+                else "REOPTIMIZE FULL FRONTIER / NO TRANSFER NOW IF NO EDGE"
+            ),
             "status": "WATCH",
             "trigger": "new fixture, xMins, role, price or package evidence",
             "expected_gain": "RECOMPUTE",
@@ -2702,8 +2782,17 @@ def _three_gw_staging(
     return {
         "squad_classification": classifications,
         "staging_rows": staging_rows,
+        "free_transfers": free_transfers,
+        "free_transfers_status": free_transfers_status,
+        "ft_authority": {
+            "known": ft_known,
+            "source": (finance or {}).get("personal_evidence_source"),
+            "observed_at": (finance or {}).get("personal_evidence_observed_at"),
+        },
         "ft_saving_plan": (
-            "SAVE FT" if action == "WAIT"
+            "FT STATE UNAVAILABLE"
+            if not ft_known
+            else "SAVE FT" if action == "WAIT"
             else "SAVE UNTIL TRIGGER" if action == "PREPARE"
             else "USE ONLY IF ACT GATE REMAINS GREEN"
         ),
@@ -2980,6 +3069,10 @@ def run_deep(
     bootstrap = official["bootstrap"]
     fixtures = official["fixtures"]
     planning_gw = _planning_gw(bootstrap)
+    private_current_team = _read_json(
+        runtime_data_root / "data/v6/personal/current_team.json",
+        {},
+    ) or {}
     personal_resolution = _stage(
         ledger,
         "PERSONAL_EVIDENCE_RECONCILIATION",
@@ -4140,16 +4233,30 @@ def run_deep(
                 "source_health": {
                     "official_fpl": "HEALTHY" if official else "UNAVAILABLE",
                     "authenticated_personal_scope": (
-                        "HEALTHY"
-                        if (personal_resolution or {}).get("resolution_status") == "CURRENT_VALID"
-                        else (personal_resolution or {}).get("resolution_status")
-                        or "UNAVAILABLE"
+                        str(private_current_team.get("auth_state") or "UNAVAILABLE").upper()
+                    ),
+                    "private_auth_state": (
+                        str(private_current_team.get("auth_state") or "UNAVAILABLE").upper()
+                    ),
+                    "current_squad_identity": (
+                        (personal_resolution or {}).get("resolution_status") or "UNAVAILABLE"
+                    ),
+                    "finance": (
+                        "AVAILABLE"
+                        if (finance or {}).get("bank") is not None
+                        and (finance or {}).get("sell_value_status") not in {None, "UNAVAILABLE", "STALE_NOT_AUTHORIZED"}
+                        else "DEGRADED"
                     ),
                     "fixture_data": "HEALTHY" if fixtures is not None else "UNAVAILABLE",
                     "price_predictor": (rise or {}).get("predictor_health") or "UNAVAILABLE",
                     "tactical_statistical_data": "HEALTHY" if foundation else "UNAVAILABLE",
                     "mini_league": (mini or {}).get("coverage_state") or "UNAVAILABLE",
                     "weather": "SOURCE_DEGRADED_AT_RUNNER; DIRECT_CHATGPT_AT_VISIBLE_DELIVERY",
+                },
+                "auth_authority": {
+                    "field": "data/v6/personal/current_team.json:auth_state",
+                    "value": str(private_current_team.get("auth_state") or "UNAVAILABLE").upper(),
+                    "identity_resolution_is_not_auth_authority": True,
                 },
                 "lineage": {
                     "v6_factual_plane_mutated": False,

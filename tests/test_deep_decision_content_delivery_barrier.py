@@ -863,6 +863,41 @@ def test_stage_a_required_ci_comparison_36108029034_is_not_semantic_pass():
     assert not any("TERMINAL_DATE_STATE_MISSING" in row for row in failures)
 
 
+def test_stage_a_required_ci_price_freshness_is_human_visible():
+    s10 = _section(
+        "S10",
+        "ACTIONABLE PRICE RADAR",
+        {
+            "rows": [
+                {
+                    "element_id": 572,
+                    "name": "P572",
+                    "current_price": 4.7,
+                    "authenticated_sell_value": "UNAVAILABLE",
+                    "predictor_direction": "RISE",
+                    "predictor_progress": "0.0",
+                    "predictor_projected_percent": 0.1,
+                    "next_official_price_cycle_wib": "2026-09-26T06:00:00+07:00",
+                    "cycles_to_expected_change": "UNAVAILABLE",
+                    "date_state": "NO_CROSSING_WITHIN_GOVERNED_HORIZON",
+                    "eta_context": "Belum terdeteksi berubah sampai governed horizon",
+                    "evidence_timestamp": "2026-09-25T02:37:34.626747+00:00",
+                    "source_age_minutes": 495.4,
+                    "freshness": "STALE",
+                    "decision_implication": "MONITOR",
+                }
+            ]
+        },
+    )
+    report = _deep_report([_route()], extra_sections=[s10])
+    body = render_deep_text(report)
+    assert "source_age_minutes" in body
+    assert "freshness" in body
+    assert "STALE" in body
+    failures = validate_deep_decision_content_delivery(report, body)
+    assert not [failure for failure in failures if failure.startswith("S10_PRICE_")]
+
+
 def test_stage_a_required_ci_producer_repairs_are_fail_closed_without_new_math():
     regression = _stage_a_fixture("v12_semantic_regression_36126675342.json")
     old_s06 = next(

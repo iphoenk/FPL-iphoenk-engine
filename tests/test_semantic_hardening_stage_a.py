@@ -13,6 +13,11 @@ FIXTURE = (
     / "fixtures"
     / "v12_semantic_regression_36126675342.json"
 )
+COMPARISON_FIXTURE = (
+    Path(__file__).parent
+    / "fixtures"
+    / "v12_semantic_comparison_36108029034.json"
+)
 
 
 def _fixture() -> dict:
@@ -59,6 +64,32 @@ def test_real_occurrence_36126675342_fails_new_semantic_barrier():
 
     # ETA/date-state itself was already present in the source occurrence and
     # must not be falsely reported missing.
+    assert not any("TERMINAL_DATE_STATE_MISSING" in row for row in failures)
+
+
+def test_comparison_occurrence_36108029034_is_not_semantically_healthy():
+    payload = json.loads(COMPARISON_FIXTURE.read_text(encoding="utf-8"))
+    assert payload["_fixture_provenance"]["source_run_id"] == 36108029034
+    assert payload["bound_authority"]["v6_private_auth_state"] == "AUTH_EXPIRED"
+    s17 = _section(payload, "S17")["content"]
+    assert s17["source_health"]["authenticated_personal_scope"] == "HEALTHY"
+    failures = validate_deep_decision_content_delivery(payload["report"], "")
+    expected = {
+        "S17_AUTH_AUTHORITY_MISSING",
+        "S17_PRIVATE_AUTH_STATE_MISSING",
+        "S14B_FT_AUTHORITY_MISSING",
+        "S14B_FT_STATUS_MISSING",
+        "S14B_FT_CLAIM_WITHOUT_AUTHORITY",
+        "S14_EXECUTION_ECONOMICS_AUTHORITY_MISSING",
+        "S14_EXECUTION_ECONOMICS_STATUS_MISSING",
+        "S14_ROUTE_EXECUTION_STATE_MISSING=1:426->52",
+        "S06_SCORE_SEMANTICS_AUTHORITY_MISSING",
+        "S06_SCORE_VALUES_MISSING",
+        "S10_PRICE_FRESHNESS_AUTHORITY_MISSING=1",
+        "S12_PRICE_FRESHNESS_AUTHORITY_MISSING=1",
+        "S13_PRICE_FRESHNESS_AUTHORITY_MISSING=1",
+    }
+    assert expected.issubset(set(failures))
     assert not any("TERMINAL_DATE_STATE_MISSING" in row for row in failures)
 
 

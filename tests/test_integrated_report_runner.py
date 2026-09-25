@@ -1164,6 +1164,10 @@ def test_mini_league_s15b_visible_renderer_keeps_comprehensive_contract(monkeypa
     assert "CAPTAIN LEVERAGE" in body
     assert "CHASE / BALANCED / DEFEND IMPLICATION" in body
     assert "| Player | OWN | START | BENCH | C | VC | EO |" in body
+    assert "STARTER_COUNT=START" in body
+    assert "CAPTAIN_COUNT=C" in body
+    assert "VICE_COUNT=VC" in body
+    assert "EO_PCT=EO" in body
     assert "**P1**" in body
     assert "2/2 (100.0%)" in body
     assert "3/2 (150.0%)" in body

@@ -87,13 +87,6 @@ def build_stage_b_evidence_snapshot(
             snapshot_timestamp=snapshot_timestamp,
             now_iso=now_iso,
         )
-        expected_minutes = xmins.get("expected_minutes")
-        try:
-            expected_minutes_value = (
-                None if expected_minutes is None else float(expected_minutes)
-            )
-        except (TypeError, ValueError):
-            expected_minutes_value = None
         home = upcoming.get("home")
         home_value = home if isinstance(home, bool) else None
         try:
@@ -108,7 +101,7 @@ def build_stage_b_evidence_snapshot(
         defcon = project_defcon_hit_probability(
             rows,
             position=_position(player),
-            xmins=expected_minutes_value,
+            xmins=xmins,
             home=home_value,
             opponent_team_id=opponent,
             context=defcon_context,

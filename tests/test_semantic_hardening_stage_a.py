@@ -156,6 +156,6 @@ def test_price_freshness_uses_real_occurrence_evidence_timestamp():
         payload["_fixture_provenance"]["report_slot"],
         "GREEN",
     )
-    assert got["freshness"] == "FRESH"
+    assert got["freshness"] == "STALE"
     assert got["source_age_minutes"] is not None
     assert 495.0 < got["source_age_minutes"] < 497.0

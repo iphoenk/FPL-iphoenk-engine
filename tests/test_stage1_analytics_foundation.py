@@ -1236,3 +1236,71 @@ def test_stageb_player_ordering_and_transfer_comparator_ab_are_diagnostic_only()
     assert comparator["changed"] is True
     assert comparator["comparator_semantics_changed"] is False
     assert comparator["ranking_authority_created"] is False
+
+def test_stageb_evidence_outputs_are_deterministic():
+    rows = [
+        _stageb_def_row(
+            gw,
+            12 + (gw % 2),
+            home=gw % 2 == 1,
+            opponent=20 if gw <= 3 else 21,
+            actual_role="OVERLAPPING_FULLBACK",
+        )
+        for gw in range(1, 7)
+    ]
+    kwargs = {
+        "player_id": 8101,
+        "element_type": 2,
+        "match_rows": rows,
+        "universe_rows": _stageb_universe_rows(),
+        "xmins": _stageb_xmins(),
+        "target_home": True,
+        "target_opponent_team_id": 20,
+        "target_role": "OVERLAPPING_FULLBACK",
+        "baseline_probability": 0.4,
+    }
+    assert build_defcon_probability(**kwargs) == build_defcon_probability(**kwargs)
+
+    availability_evidence = [
+        {
+            "source": "club-statement",
+            "timestamp": "2026-09-25T02:00:00Z",
+            "evidence_type": "CLUB_STATEMENT",
+            "confidence": 0.95,
+            "availability": "AVAILABLE",
+        },
+        {
+            "source": "official-international-match",
+            "timestamp": "2026-09-24T20:00:00Z",
+            "evidence_type": "INTERNATIONAL_APPEARANCE",
+            "confidence": 1.0,
+            "minutes": 90,
+        },
+    ]
+    assert build_availability_state(
+        availability_evidence,
+        as_of="2026-09-25T04:00:00Z",
+    ) == build_availability_state(
+        availability_evidence,
+        as_of="2026-09-25T04:00:00Z",
+    )
+
+    official = {
+        "id": 8101,
+        "element_type": 2,
+        "penalties_order": 1,
+        "corners_and_indirect_freekicks_order": 2,
+        "direct_freekicks_order": 3,
+    }
+    role_kwargs = {
+        "official_player": official,
+        "match_rows": rows,
+        "xmins": _stageb_xmins(),
+        "tactical_role": {
+            "profile": "OVERLAPPING_FULLBACK",
+            "confidence": "MEDIUM",
+            "source": "observed-role",
+        },
+    }
+    assert build_role_duty_evidence(**role_kwargs) == build_role_duty_evidence(**role_kwargs)
+

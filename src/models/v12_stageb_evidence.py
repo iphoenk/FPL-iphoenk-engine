@@ -399,21 +399,16 @@ def build_defcon_probability(
             for probability, minutes in atoms
         )
 
-    prior_strength = max(0.0, _f(cfg.get("prior_strength_starts"), 4.0))
     empirical_rate = _rate(hits)
-    if empirical_rate is None:
+    if structural_p is not None:
         calibrated_p = structural_p
-        calibration_state = "NO_SETTLED_STARTS"
-    elif structural_p is None:
+        calibration_state = "COUNT_RATE_PLUS_XMINS_PRIMARY_HIT_RATE_DIAGNOSTIC"
+    elif empirical_rate is not None:
         calibrated_p = empirical_rate
-        calibration_state = "EMPIRICAL_ONLY"
+        calibration_state = "EMPIRICAL_FALLBACK_NO_STRUCTURAL_RATE_OR_XMINS"
     else:
-        sample_weight = len(starts) / max(1e-9, len(starts) + prior_strength)
-        calibrated_p = (
-            sample_weight * empirical_rate
-            + (1.0 - sample_weight) * structural_p
-        )
-        calibration_state = "EMPIRICAL_HIT_RATE_SHRUNK_TO_STRUCTURAL"
+        calibrated_p = None
+        calibration_state = "UNAVAILABLE"
 
     probability = None if calibrated_p is None else _clamp(calibrated_p, 0.0, 1.0)
     ev = None if probability is None else points * probability
@@ -635,22 +630,45 @@ def build_availability_state(
     if state not in AVAILABILITY_STATES:
         raise AssertionError("invalid availability state")
 
+    heavy_international = bool(
+        international
+        and max(row["minutes"] or 0.0 for row in international) >= _f(
+            cfg.get("international_heavy_minutes_threshold"), 75.0
+        )
+    )
+    workload_states = []
     congestion = 1.0
-    xmins_effect = "NONE"
-    if state == "INTERNATIONAL_HEAVY_MINUTES":
-        congestion = _clamp(
-            _f(cfg.get("international_heavy_minutes_congestion_factor"), 0.9),
-            0.0,
-            1.0,
+    if international:
+        workload_states.append(
+            "INTERNATIONAL_HEAVY_MINUTES"
+            if heavy_international
+            else "INTERNATIONAL_PLAYED"
         )
-        xmins_effect = "EXISTING_P1_1_CONGESTION_FACTOR"
-    elif state == "TRAVEL_RETURN":
-        congestion = _clamp(
-            _f(cfg.get("travel_return_congestion_factor"), 0.95),
-            0.0,
-            1.0,
+    if travel:
+        workload_states.append("TRAVEL_RETURN")
+    if heavy_international:
+        congestion = min(
+            congestion,
+            _clamp(
+                _f(cfg.get("international_heavy_minutes_congestion_factor"), 0.9),
+                0.0,
+                1.0,
+            ),
         )
-        xmins_effect = "EXISTING_P1_1_CONGESTION_FACTOR"
+    if travel:
+        congestion = min(
+            congestion,
+            _clamp(
+                _f(cfg.get("travel_return_congestion_factor"), 0.95),
+                0.0,
+                1.0,
+            ),
+        )
+    xmins_effect = (
+        "EXISTING_P1_1_CONGESTION_FACTOR"
+        if congestion < 1.0
+        else "NONE"
+    )
 
     confidence = max((row["confidence"] for row in active), default=0.0)
     if conflict:
@@ -665,6 +683,7 @@ def build_availability_state(
         "active_evidence": active,
         "stale_evidence": [row for row in rows if row["stale"]],
         "conflicting_sources": conflict,
+        "secondary_workload_states": workload_states,
         "xmins_context_overlay": {
             "congestion_factor": round(congestion, 6),
             "application": xmins_effect,

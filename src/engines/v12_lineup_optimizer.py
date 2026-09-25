@@ -16,7 +16,6 @@ import json
 import math
 import os
 import pickle
-import sys
 import time
 import numpy as np
 from pathlib import Path
@@ -27,6 +26,7 @@ from src.engines.canonical_decision_methodology import (
     CANONICAL_WEIGHTS,
     validate_methodology_weights,
 )
+from src.engines.v12_cache_runtime_identity import runtime_cache_identity
 from src.engines.v12_model_evidence import (
     bind_deterministic_output,
     build_model_run_binding,
@@ -44,7 +44,28 @@ POSITIONS = ("GK", "DEF", "MID", "FWD")
 OUTFIELD = ("DEF", "MID", "FWD")
 LEGAL_FORMATIONS = frozenset(LINEUP_RULES.get("legal_formations") or [])
 P17_DECISION_CACHE_ENV = "V12_P17_DECISION_CACHE_DIR"
-P17_DECISION_CACHE_SCHEMA = 2
+P17_DECISION_CACHE_SCHEMA = 3
+
+
+_P17_UPSTREAM_STAGE2_DEPENDENCIES = (
+    "src/engines/v12_cache_runtime_identity.py",
+    "src/engines/v12_stage2_derived_cache.py",
+    "src/models/v12_analytics_foundation.py",
+    "src/models/historical_projection.py",
+    "src/engines/v12_contextual_dynamics.py",
+    "src/engines/v12_player_events.py",
+    "src/engines/v12_player_minutes.py",
+    "src/engines/v12_position_probability_components.py",
+    "src/engines/p0_decision_quality.py",
+    "src/models/v12_stage1_analytics.py",
+    "src/engines/v12_tactical_role.py",
+    "src/models/official_role_evidence.py",
+    "src/rules.py",
+    "config/intelligence/player_events.json",
+    "config/intelligence/player_minutes.json",
+    "config/intelligence/historical_priors.json",
+    "config/intelligence/v12_contextual_dynamics.json",
+)
 
 _P17_EXECUTION_STATS = {
     "p17_cache_hits": 0,
@@ -79,13 +100,8 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def _runtime_cache_identity() -> dict[str, str]:
-    return {
-        "python_major_minor": (
-            f"{sys.version_info.major}.{sys.version_info.minor}"
-        ),
-        "numpy_version": np.__version__,
-    }
+def _runtime_cache_identity() -> dict[str, Any]:
+    return runtime_cache_identity()
 
 
 def _f(value: Any, default: float = 0.0) -> float:
@@ -1628,6 +1644,21 @@ def _optimizer_code_sha256() -> str:
     return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 
 
+@lru_cache(maxsize=1)
+def _upstream_stage2_code_fingerprint() -> str:
+    digest = hashlib.sha256()
+    for relative in _P17_UPSTREAM_STAGE2_DEPENDENCIES:
+        dependency = ROOT / relative
+        if not dependency.is_file():
+            raise LineupOptimizerError(
+                f"required upstream P1.7 dependency missing: {relative}"
+            )
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(hashlib.sha256(dependency.read_bytes()).digest())
+    return digest.hexdigest()
+
+
 def _decision_core_cache_key(
     players: Sequence[Mapping[str, Any]],
 ) -> str:
@@ -1637,6 +1668,9 @@ def _decision_core_cache_key(
             "schema": P17_DECISION_CACHE_SCHEMA,
             "runtime": _runtime_cache_identity(),
             "optimizer_code_sha256": _optimizer_code_sha256(),
+            "upstream_stage2_code_fingerprint": (
+                _upstream_stage2_code_fingerprint()
+            ),
             "canonical_v12_revision": _canonical_sha256(),
             "ruleset_id": RULESET_ID,
             "lineup_rules": LINEUP_RULES,

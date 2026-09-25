@@ -28,5 +28,7 @@ jobs:
           pip install pytest
 
       - name: Run cache correctness suite
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest -q             tests/test_v12_cache_runtime_identity.py             tests/test_stage2_derived_cache.py             tests/test_lineup_distributional_optimizer.py::test_p17_exact_decision_core_cache_requires_full_fingerprint_match             tests/test_lineup_distributional_optimizer.py::test_p17_cache_observability_proves_hit_miss_write_and_numerical_invalidation             tests/test_monte_carlo_engine.py::test_mc_summary_cache_reuses_simulation_and_rebinds_occurrence

@@ -422,65 +422,72 @@ def validate_deep_decision_content_delivery(
             failures.append("WATCHLIST20_POSITION_BALANCE=" + str(counts))
 
 
-    # Stage-A semantic correctness barrier. These checks deliberately validate
-    # meaning across sections, not merely presence/rendering. They do not
-    # recompute football mathematics.
+    # Stage-A semantic correctness barrier. COMPLETE sections must expose
+    # explicit producer authority. Missing authority is itself a semantic
+    # failure; no guessed aliases are accepted.
     s17 = content("S17")
     if state("S17") == "COMPLETE":
-        bound_auth = str(
-            s17.get("bound_authoritative_auth_state")
-            or s17.get("authoritative_auth_state")
-            or s17.get("personal_auth_authority")
-            or ""
-        ).upper()
-        visible_auth = str(
-            s17.get("personal_auth")
-            or s17.get("personal_auth_state")
-            or (s17.get("personal") or {}).get("status")
-            or ""
-        ).upper()
-        if bound_auth and visible_auth:
-            expired = {"AUTH_EXPIRED", "EXPIRED", "UNAVAILABLE"}
-            healthy = {"HEALTHY", "AVAILABLE", "AUTH_AVAILABLE", "GREEN"}
-            if bound_auth in expired and visible_auth in healthy:
-                failures.append("S17_AUTH_CONTRADICTION")
+        authority = s17.get("authority")
+        if not isinstance(authority, Mapping):
+            failures.append("S17_AUTH_AUTHORITY_MISSING")
+        else:
+            bound_auth = str(authority.get("personal_auth_state") or "").upper()
+            if not bound_auth:
+                failures.append("S17_AUTH_AUTHORITY_MISSING")
+            visible_auth = str(
+                (s17.get("source_health") or {}).get("authenticated_personal_scope")
+                or ""
+            ).upper()
+            if not visible_auth:
+                failures.append("S17_AUTH_VISIBLE_STATE_MISSING")
+            elif bound_auth and visible_auth != bound_auth:
+                failures.append(
+                    "S17_AUTH_CONTRADICTION="
+                    + bound_auth + "!=" + visible_auth
+                )
 
     s14b = content("S14B")
     if state("S14B") == "COMPLETE":
-        ft_state = str(
-            s14b.get("ft_state")
-            or s14b.get("free_transfer_state")
-            or s14b.get("free_transfers_status")
-            or ""
-        ).upper()
-        ft_known = bool(
-            s14b.get("free_transfers") is not None
-            or ft_state in {"AVAILABLE", "KNOWN", "AUTHORITATIVE"}
-        )
-        staging_text = str(s14b).upper()
-        if not ft_known and ("SAVE FT" in staging_text or "ROLL FT" in staging_text):
-            failures.append("S14B_FT_CLAIM_WITHOUT_AUTHORITY")
+        ft_authority = s14b.get("ft_authority")
+        if not isinstance(ft_authority, Mapping):
+            failures.append("S14B_FT_AUTHORITY_MISSING")
+        else:
+            ft_known = ft_authority.get("known") is True
+            staging_text = str({
+                "staging_rows": s14b.get("staging_rows"),
+                "ft_saving_plan": s14b.get("ft_saving_plan"),
+                "order_of_transfers": s14b.get("order_of_transfers"),
+            }).upper()
+            if not ft_known and ("SAVE FT" in staging_text or "ROLL FT" in staging_text):
+                failures.append("S14B_FT_CLAIM_WITHOUT_AUTHORITY")
 
     if state("S14") == "COMPLETE":
-        economics_status = str(
-            s14.get("execution_economics_status")
-            or s14.get("economics_status")
-            or ""
-        ).upper()
-        finance_unavailable = economics_status in {
-            "DEGRADED", "UNAVAILABLE", "UNKNOWN", "AUTH_EXPIRED"
-        }
         for route in non_hold:
-            route_econ = str(
-                route.get("execution_economics_status")
-                or (route.get("transfer_cost") or {}).get("economics_status")
-                or route.get("economics_status")
-                or ""
-            ).upper()
-            executable = route.get("executable")
-            if (finance_unavailable or route_econ in {"DEGRADED", "UNAVAILABLE", "UNKNOWN", "AUTH_EXPIRED"}) and executable is True:
+            transfer_cost = route.get("transfer_cost")
+            if not isinstance(transfer_cost, Mapping):
                 failures.append(
-                    "S14_EXECUTABLE_WITHOUT_FINANCE=" + str(route.get("route") or "UNKNOWN")
+                    "S14_EXECUTION_ECONOMICS_AUTHORITY_MISSING="
+                    + str(route.get("route") or "UNKNOWN")
+                )
+                break
+            route_econ = str(transfer_cost.get("economics_status") or "").upper()
+            if not route_econ:
+                failures.append(
+                    "S14_EXECUTION_ECONOMICS_AUTHORITY_MISSING="
+                    + str(route.get("route") or "UNKNOWN")
+                )
+                break
+            executable = route.get("executable")
+            if executable is None:
+                failures.append(
+                    "S14_EXECUTABLE_STATE_MISSING="
+                    + str(route.get("route") or "UNKNOWN")
+                )
+                break
+            if route_econ != "PASS" and executable is True:
+                failures.append(
+                    "S14_EXECUTABLE_WITHOUT_FINANCE="
+                    + str(route.get("route") or "UNKNOWN")
                 )
                 break
 
@@ -490,15 +497,8 @@ def validate_deep_decision_content_delivery(
         for index, row in enumerate(content(sid).get("rows") or [], start=1):
             if not isinstance(row, Mapping):
                 continue
-            freshness = str(row.get("freshness") or row.get("freshness_state") or "").upper()
-            source_age = row.get("source_age_minutes", row.get("source_age"))
-            marked_current = row.get("current") is True or freshness in {"CURRENT", "FRESH"}
-            stale = freshness == "STALE" or row.get("stale") is True
-            if stale and marked_current:
-                failures.append(f"{sid}_STALE_PRICE_MARKED_CURRENT={index}")
-                break
             if sid in {"S12", "S13"}:
-                date_state = str(row.get("date_state") or row.get("terminal_date_state") or "").upper()
+                date_state = str(row.get("date_state") or "").upper()
                 if date_state not in {
                     "EXPECTED_CHANGE_DATE",
                     "NO_CROSSING_WITHIN_GOVERNED_HORIZON",
@@ -506,21 +506,24 @@ def validate_deep_decision_content_delivery(
                 }:
                     failures.append(f"{sid}_TERMINAL_DATE_STATE_MISSING={index}")
                     break
+            if "evidence_timestamp" not in row:
+                failures.append(f"{sid}_PRICE_EVIDENCE_TIMESTAMP_MISSING={index}")
+                break
 
     if state("S06") == "COMPLETE":
-        base = s06.get("xi_base_xpts", s06.get("projected_xi_score"))
-        selected = s06.get("selected_formation_projection")
-        semantics = str(s06.get("score_semantics") or "").upper()
-        if base is not None and selected is not None:
-            try:
-                mismatch = abs(float(base) - float(selected)) > 1e-9
-            except (TypeError, ValueError):
-                mismatch = False
-            if mismatch and semantics not in {
-                "EXPLICITLY_DISTINCT",
-                "XI_BASE_XPTS_VS_CAPTAIN_ADJUSTED_XPTS",
-                "XI_BASE_XPTS_VS_LINEUP_ROUTE_UTILITY",
-            }:
-                failures.append("S06_AMBIGUOUS_SCORE_SEMANTICS")
+        semantics = s06.get("score_semantics")
+        if not isinstance(semantics, Mapping):
+            failures.append("S06_SCORE_SEMANTICS_MISSING")
+        else:
+            required_semantics = {
+                "lineup_score.xpts_mean": "XI_BASE_XPTS",
+                "lineup_score.robust": "LINEUP_ROUTE_UTILITY",
+                "formation_comparison[].expected_fpl_points_with_captain_vice": "CAPTAIN_ADJUSTED_XPTS",
+                "formation_comparison[].route_utility": "LINEUP_ROUTE_UTILITY",
+            }
+            for key, expected in required_semantics.items():
+                if str(semantics.get(key) or "") != expected:
+                    failures.append("S06_SCORE_SEMANTICS_INVALID=" + key)
+                    break
 
     return list(dict.fromkeys(failures))

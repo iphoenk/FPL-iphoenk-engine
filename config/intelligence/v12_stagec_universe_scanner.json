@@ -8,9 +8,9 @@
     "role_loss_start_share_delta": -0.2,
     "minutes_gain_ratio": 1.15,
     "minutes_loss_ratio": 0.8,
-    "secure_xmins": 70.0,
+    "secure_xmins": 70,
     "secure_p_start": 0.75,
-    "risk_xmins": 60.0,
+    "risk_xmins": 60,
     "risk_p_start": 0.65,
     "defcon_ev": 0.8,
     "defcon_hit_probability": 0.4,
@@ -18,12 +18,12 @@
     "fixture_negative_ratio": 0.9
   },
   "hidden_gem": {
-    "max_ownership_pct": 10.0,
-    "minimum_xmins": 70.0,
+    "max_ownership_pct": 10,
+    "minimum_xmins": 70,
     "minimum_p_start": 0.75,
     "maximum_recent_gi_minus_xgi_per90": -0.12,
     "minimum_l3_xgi_per90_by_position": {
-      "GK": 999.0,
+      "GK": 999,
       "DEF": 0.12,
       "MID": 0.25,
       "FWD": 0.35
@@ -32,7 +32,7 @@
     "minimum_fixture_support_ratio": 0.95
   },
   "material_signal_weights": {
-    "BREAKOUT": 1.0,
+    "BREAKOUT": 1,
     "POSITIVE_REGRESSION": 0.9,
     "NEGATIVE_REGRESSION": 0.9,
     "ROLE_GAIN": 0.75,
@@ -41,7 +41,7 @@
     "MINUTES_RISK": 0.8,
     "DEFCON_VALUE": 0.75,
     "FIXTURE_SWING": 0.6,
-    "HIDDEN_GEM": 1.0
+    "HIDDEN_GEM": 1
   },
   "source_policy": {
     "xgstat": "MANUAL_VALIDATION_ONLY",
@@ -61,6 +61,17 @@
     "existing_p12b_preserved": true,
     "existing_monte_carlo_preserved": true,
     "existing_mini_league_preserved": true,
-    "transfer_horizons": [1, 2, 3, 5]
+    "transfer_horizons": [
+      1,
+      2,
+      3,
+      5
+    ]
+  },
+  "role_minutes_sample_gate": {
+    "minimum_recent_matches": 3,
+    "minimum_recent_minutes": 90,
+    "minimum_season_matches": 3,
+    "minimum_season_minutes": 270
   }
 }

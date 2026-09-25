@@ -578,7 +578,30 @@ def test_m_p1_7_lineup_and_captain_outputs_are_visibly_required():
             "formation": "3-5-2",
             "starting_xi": [{"element": i, "name": f"P{i:02d}"} for i in range(1, 12)],
             "bench": {"gk": {"element": 12, "name": "P12"}, "order": [13, 14, 15]},
-            "lineup_score": {"xpts_mean": 55.0},
+            "lineup_score": {
+                "xpts_mean": 55.0,
+                "captain_multiplier_value": 5.0,
+                "vice_fallback_value": 0.0,
+            },
+            "formation_comparison": [
+                {
+                    "formation": "3-5-2",
+                    "expected_fpl_points_with_captain_vice": 60.0,
+                    "route_utility": 59.5,
+                    "selected": True,
+                }
+            ],
+            "score_semantics": {
+                "xi_base_xpts": 55.0,
+                "captain_multiplier_value": 5.0,
+                "vice_fallback_value": 0.0,
+                "derived_captain_adjusted_xpts": 60.0,
+                "captain_adjusted_xpts": 60.0,
+                "lineup_route_utility": 59.5,
+                "route_utility_definition": (
+                    "P1.7 distributional lineup route utility; not raw expected points"
+                ),
+            },
         },
     )
     s08 = _section(

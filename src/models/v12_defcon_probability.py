@@ -346,11 +346,68 @@ def _opponent_factor(
     }
 
 
+def _xmins_atoms(value: Any) -> tuple[list[tuple[float, float]], str, dict[str, Any]]:
+    if isinstance(value, Mapping):
+        payload = dict(value)
+        distribution = dict(payload.get("xmins_distribution") or {})
+        atoms: list[tuple[float, float]] = []
+        for row in distribution.get("states") or []:
+            if not isinstance(row, Mapping):
+                continue
+            probability = _f(row.get("probability"))
+            minutes = _f(row.get("minutes_mean"))
+            if probability is None or minutes is None or probability < 0.0:
+                continue
+            atoms.append((probability, _clamp(minutes, 0.0, 90.0)))
+        total = sum(probability for probability, _ in atoms)
+        if total > 0.0:
+            atoms = [(probability / total, minutes) for probability, minutes in atoms]
+            mode = "FINITE_STATE_XMINS"
+        else:
+            expected = _f(payload.get("expected_minutes"))
+            if expected is None:
+                expected = _f(distribution.get("mean"))
+            atoms = [] if expected is None else [(1.0, _clamp(expected, 0.0, 90.0))]
+            mode = "MEAN_ONLY_FROM_XMINS"
+
+        interval = payload.get("expected_minutes_interval") or []
+        width = None
+        if isinstance(interval, Sequence) and not isinstance(interval, (str, bytes)) and len(interval) == 2:
+            low = _f(interval[0])
+            high = _f(interval[1])
+            if low is not None and high is not None:
+                width = max(0.0, high - low)
+        if width is None:
+            std = _f(payload.get("minutes_std"))
+            if std is not None:
+                width = 2.56 * max(0.0, std)
+        uncertainty = {
+            "interval_width": None if width is None else round(width, 3),
+            "label": (
+                "UNKNOWN"
+                if width is None
+                else "LOW"
+                if width >= 40.0
+                else "DEVELOPING"
+                if width >= 25.0
+                else "GOOD"
+            ),
+        }
+        return atoms, mode, uncertainty
+
+    expected = _f(value)
+    return (
+        [] if expected is None else [(1.0, _clamp(expected, 0.0, 90.0))],
+        "SCALAR_XMINS",
+        {"interval_width": None, "label": "UNKNOWN"},
+    )
+
+
 def project_defcon_hit_probability(
     player_rows: Sequence[Mapping[str, Any]],
     *,
     position: str,
-    xmins: float | None,
+    xmins: Any,
     home: bool | None,
     opponent_team_id: int | None = None,
     context: Mapping[str, Any] | None = None,
@@ -479,42 +536,35 @@ def project_defcon_hit_probability(
         * recent_factor
         * role_factor
     )
-    if xmins is None:
+    xmins_atoms, xmins_mode, xmins_uncertainty = _xmins_atoms(xmins)
+    if not xmins_atoms:
         projected_probability = None
         defcon_ev = None
         projection_status = "UNAVAILABLE_NO_XMINS"
+        calibration = {"status": "NOT_RUN_NO_XMINS"}
     else:
-        minutes_projection = _clamp(float(xmins), 0.0, 90.0)
-        count_probability = _poisson_tail(
-            threshold,
-            projected_rate * minutes_projection / 90.0,
-        )
-        if starts and prior_hit is not None:
-            prior_strength = 4.0
-            historical_posterior = (
-                hits + prior_hit * prior_strength
-            ) / (len(starts) + prior_strength)
-            history_weight = min(0.35, len(starts) / (len(starts) + 8.0))
-            projected_probability = (
-                (1.0 - history_weight) * count_probability
-                + history_weight * historical_posterior
+        projected_probability = sum(
+            probability
+            * _poisson_tail(
+                threshold,
+                projected_rate * minutes_projection / 90.0,
             )
-            calibration = {
-                "status": "HISTORICAL_HIT_RATE_SHRINKAGE_APPLIED",
-                "history_weight": round(history_weight, 6),
-                "historical_posterior_hit_probability": round(
-                    historical_posterior, 6
-                ),
-            }
-        else:
-            projected_probability = count_probability
-            calibration = {
-                "status": "COUNT_MODEL_ONLY_INSUFFICIENT_HIT_PRIOR",
-                "history_weight": 0.0,
-            }
+            for probability, minutes_projection in xmins_atoms
+        )
         projected_probability = _clamp(projected_probability, 0.0, 1.0)
         defcon_ev = points * projected_probability
         projection_status = "AVAILABLE"
+        calibration = {
+            "status": "COUNT_RATE_PLUS_XMINS_PRIMARY",
+            "empirical_hit_rate_role": "DIAGNOSTIC_ONLY_CONDITIONAL_ON_ELIGIBLE_STARTS",
+            "historical_hit_rate": (
+                None if hit_rate is None else round(hit_rate, 6)
+            ),
+            "position_prior_hit_rate": (
+                None if prior_hit is None else round(prior_hit, 6)
+            ),
+            "conditional_hit_rate_not_blended_into_unconditional_xmins_probability": True,
+        }
 
     return {
         "contract": "V12_DEFCON_HIT_PROBABILITY_V1",
@@ -543,7 +593,19 @@ def project_defcon_hit_probability(
             "away_starts": len(away_starts),
         },
         "confidence": confidence,
-        "xmins": None if xmins is None else round(float(xmins), 3),
+        "xmins": {
+            "mode": xmins_mode,
+            "expected_minutes": (
+                None
+                if not xmins_atoms
+                else round(
+                    sum(probability * minutes for probability, minutes in xmins_atoms),
+                    3,
+                )
+            ),
+            "uncertainty": xmins_uncertainty,
+            "state_count": len(xmins_atoms),
+        },
         "posterior_def_actions_per90": round(posterior_rate, 6),
         "projected_def_actions_per90": round(projected_rate, 6),
         "projected_hit_probability": (
@@ -558,11 +620,7 @@ def project_defcon_hit_probability(
             "opponent_defensive_workload": opponent,
             "recent_defensive_actions": recent,
             "role": role_state,
-            "calibration": (
-                calibration if xmins is not None else {
-                    "status": "NOT_RUN_NO_XMINS"
-                }
-            ),
+            "calibration": calibration,
         },
         "component_separation": {
             "DEFCON_EV": "SEPARATE_FPL_SCORING_COMPONENT",
@@ -578,5 +636,7 @@ def project_defcon_hit_probability(
             "uncalibrated_role_effect_not_applied": True,
             "missing_metrics_not_zero_filled": True,
             "no_recommendation_owner_created": True,
+            "finite_state_xmins_consumed_when_available": True,
+            "eligible_start_hit_rate_is_diagnostic_not_unconditional_probability": True,
         },
     }

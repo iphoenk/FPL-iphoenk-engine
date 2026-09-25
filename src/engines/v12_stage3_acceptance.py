@@ -194,7 +194,7 @@ def validate(
         require(bool(row.get("3GW")), f"VISIBLE_{position}_3GW_MISSING")
         require(bool(row.get("5GW")), f"VISIBLE_{position}_5GW_MISSING")
 
-    allowed_degraded = {"S09"}
+    allowed_degraded = {"S09", "S10", "S12", "S13"}
     degraded = {
         section_id
         for section_id, row in sections.items()
@@ -209,6 +209,19 @@ def validate(
         require(
             "authenticated" in reason or "private" in reason,
             "S09_DEGRADED_NOT_PRIVATE_FACT",
+        )
+    for section_id in ("S10", "S12", "S13"):
+        if section_id not in degraded:
+            continue
+        reason = str(
+            (sections[section_id]).get("degradation_reason") or ""
+        ).lower()
+        require(
+            any(
+                token in reason
+                for token in ("price", "predictor", "fresh", "stale")
+            ),
+            f"{section_id}_DEGRADED_NOT_PRICE_SOURCE_FACT",
         )
 
     governance = dict(bundle.get("governance") or {})

@@ -15,17 +15,18 @@ import json
 import os
 from pathlib import Path
 import pickle
-import sys
 import time
 
-import numpy as np
 from typing import Any, Callable, Mapping, Sequence
+
+from src.engines.v12_cache_runtime_identity import runtime_cache_identity
 
 ROOT = Path(__file__).resolve().parents[2]
 STAGE2_DERIVED_CACHE_ENV = "V12_STAGE2_DERIVED_CACHE_DIR"
-STAGE2_DERIVED_CACHE_SCHEMA = 2
+STAGE2_DERIVED_CACHE_SCHEMA = 3
 
 _MODEL_DEPENDENCIES = (
+    "src/models/v12_analytics_foundation.py",
     "src/models/historical_projection.py",
     "src/engines/v12_contextual_dynamics.py",
     "src/engines/v12_player_events.py",
@@ -45,13 +46,8 @@ class Stage2DerivedCacheError(RuntimeError):
     pass
 
 
-def _runtime_cache_identity() -> dict[str, str]:
-    return {
-        "python_major_minor": (
-            f"{sys.version_info.major}.{sys.version_info.minor}"
-        ),
-        "numpy_version": np.__version__,
-    }
+def _runtime_cache_identity() -> dict[str, Any]:
+    return runtime_cache_identity()
 
 
 def _json_default(value: Any) -> Any:

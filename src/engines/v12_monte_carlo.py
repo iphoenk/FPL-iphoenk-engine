@@ -17,7 +17,6 @@ import math
 import multiprocessing as mp
 import os
 import pickle
-import sys
 from pathlib import Path
 from statistics import NormalDist
 import time
@@ -34,6 +33,7 @@ from src.engines.v12_lineup_optimizer import (
     LEGAL_FORMATIONS,
     _resolve_outfield_pattern,
 )
+from src.engines.v12_cache_runtime_identity import runtime_cache_identity
 from src.engines.v12_model_evidence import (
     bind_deterministic_output,
     build_model_run_binding,
@@ -78,7 +78,32 @@ STAGE1_STATE_NAMES = (
 POSITIONS = ("GK", "DEF", "MID", "FWD")
 OUTFIELD = ("DEF", "MID", "FWD")
 MC_SIM_CACHE_ENV = "V12_MC_SIM_CACHE_DIR"
-MC_SIM_CACHE_SCHEMA = 2
+MC_SIM_CACHE_SCHEMA = 3
+
+
+_MC_UPSTREAM_P17_DEPENDENCIES = (
+    "src/engines/v12_cache_runtime_identity.py",
+    "src/engines/v12_stage2_derived_cache.py",
+    "src/models/v12_analytics_foundation.py",
+    "src/models/historical_projection.py",
+    "src/engines/v12_contextual_dynamics.py",
+    "src/engines/v12_player_events.py",
+    "src/engines/v12_player_minutes.py",
+    "src/engines/v12_position_probability_components.py",
+    "src/engines/p0_decision_quality.py",
+    "src/models/v12_stage1_analytics.py",
+    "src/engines/v12_tactical_role.py",
+    "src/models/official_role_evidence.py",
+    "src/engines/v12_lineup_optimizer.py",
+    "src/engines/v12_lineup_batch.py",
+    "src/engines/v12_package_utility.py",
+    "src/rules.py",
+    "config/intelligence/player_events.json",
+    "config/intelligence/player_minutes.json",
+    "config/intelligence/historical_priors.json",
+    "config/intelligence/v12_contextual_dynamics.json",
+    "config/intelligence/v12_lineup_optimizer.json",
+)
 
 
 class MonteCarloError(ValueError):
@@ -89,13 +114,8 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def _runtime_cache_identity() -> dict[str, str]:
-    return {
-        "python_major_minor": (
-            f"{sys.version_info.major}.{sys.version_info.minor}"
-        ),
-        "numpy_version": np.__version__,
-    }
+def _runtime_cache_identity() -> dict[str, Any]:
+    return runtime_cache_identity()
 
 
 def _f(value: Any, default: float = 0.0) -> float:
@@ -895,6 +915,21 @@ def _mc_code_sha256() -> str:
     return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 
 
+@lru_cache(maxsize=1)
+def _upstream_p17_code_fingerprint() -> str:
+    digest = hashlib.sha256()
+    for relative in _MC_UPSTREAM_P17_DEPENDENCIES:
+        dependency = ROOT / relative
+        if not dependency.is_file():
+            raise MonteCarloError(
+                f"required upstream MC dependency missing: {relative}"
+            )
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(hashlib.sha256(dependency.read_bytes()).digest())
+    return digest.hexdigest()
+
+
 def _simulation_route_signature(
     route_defs: Sequence[Mapping[str, Any]],
     *,
@@ -987,6 +1022,9 @@ def _simulation_cache_key(
             "schema": MC_SIM_CACHE_SCHEMA,
             "runtime": _runtime_cache_identity(),
             "mc_code_sha256": _mc_code_sha256(),
+            "upstream_p17_code_fingerprint": (
+                _upstream_p17_code_fingerprint()
+            ),
             "canonical_v12_revision": _canonical_sha256(),
             "config_fingerprint": fingerprint(load_config()),
             "projection_fingerprint": projection_fp,

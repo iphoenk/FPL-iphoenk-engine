@@ -1,0 +1,722 @@
+name: V12 D2 performance gates
+
+on:
+  push:
+    branches:
+      - validation/v12-d2-performance-20260925
+
+permissions:
+  contents: read
+
+jobs:
+  performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout D2 final candidate
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 8309ddaf0da87546bf92e3e9a2ea21e7c409a2a4
+          path: candidate
+          persist-credentials: false
+
+      - name: Checkout D2a diagnostic
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: b00ffb14e3cc3b7347f5dabb7a4059baa4a6d3f3
+          path: d2a
+          persist-credentials: false
+
+      - name: Checkout production oracle
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: daf7247c320b1bb61eebd943b23f3ca694b088ef
+          path: oracle
+          persist-credentials: false
+
+      - name: Checkout frozen runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: 9fc2ce5e590518c399765e6fd576bb96db6e5897
+          path: runtime-data
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r candidate/requirements.txt
+          mkdir -p evidence
+
+      - name: Write same-host Stage C foundation probe
+        run: |
+          cat > /tmp/d2_foundation_probe.py <<'PY'
+          import argparse
+          import gc
+          import hashlib
+          import json
+          import os
+          import platform
+          import resource
+          import statistics
+          import subprocess
+          import sys
+          import time
+          from pathlib import Path
+
+          from src.engines.v12_integrated_report_runner import (
+              _official_payload,
+              _planning_gw,
+          )
+          from src.models.team_strength import build_team_strength
+          import src.models.v12_analytics_foundation as af
+
+          def stable(value):
+              return json.dumps(
+                  value,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=False,
+                  allow_nan=False,
+                  default=str,
+              )
+
+          def fp(value):
+              return hashlib.sha256(stable(value).encode("utf-8")).hexdigest()
+
+          def cpu_model():
+              try:
+                  for line in Path("/proc/cpuinfo").read_text().splitlines():
+                      if line.lower().startswith("model name"):
+                          return line.split(":", 1)[1].strip()
+              except Exception:
+                  return None
+              return None
+
+          def nproc():
+              return int(subprocess.check_output(["nproc"], text=True).strip())
+
+          def collections():
+              return tuple(
+                  int(item.get("collections", 0))
+                  for item in gc.get_stats()
+              )
+
+          def delta(before, after):
+              return [
+                  int(a - b)
+                  for b, a in zip(before, after)
+              ]
+
+          parser = argparse.ArgumentParser()
+          parser.add_argument("--runtime", required=True)
+          parser.add_argument("--sha", required=True)
+          parser.add_argument("--output", required=True)
+          parser.add_argument("--dump-rows")
+          args = parser.parse_args()
+
+          if not gc.isenabled():
+              raise SystemExit("GC disabled before Stage C probe")
+          if sys.gettrace() is not None or sys.getprofile() is not None:
+              raise SystemExit("trace/profile hook active before Stage C probe")
+
+          runtime = Path(args.runtime)
+          official = _official_payload(runtime)
+          bootstrap = official["bootstrap"]
+          fixtures = official["fixtures"]
+          planning_gw = _planning_gw(bootstrap)
+          strength = build_team_strength(bootstrap, fixtures)
+
+          # Warm-up under the exact same code path. No forced gc.collect().
+          warmup = af.require_match_foundation(
+              af.load_v6_analytics_foundation(
+                  runtime,
+                  bootstrap=bootstrap,
+                  planning_gw=planning_gw,
+                  strength=strength,
+              )
+          )
+          adjusted = warmup["player_match_rows"]
+
+          if args.dump_rows:
+              Path(args.dump_rows).write_text(
+                  json.dumps(adjusted, sort_keys=True),
+                  encoding="utf-8",
+              )
+
+          original_wf = af.walk_forward_validate
+          active_wf_times = []
+          active_wf_gc = []
+
+          def timed_wf(rows):
+              if not gc.isenabled():
+                  raise RuntimeError("GC disabled inside walk_forward_validate")
+              if sys.gettrace() is not None or sys.getprofile() is not None:
+                  raise RuntimeError("trace/profile hook active in walk-forward")
+              before = collections()
+              t0 = time.perf_counter()
+              out = original_wf(rows)
+              elapsed = time.perf_counter() - t0
+              after = collections()
+              active_wf_times.append(elapsed)
+              active_wf_gc.append(delta(before, after))
+              return out
+
+          af.walk_forward_validate = timed_wf
+
+          totals = []
+          foundation_gc = []
+          fingerprints = []
+          row_fingerprints = []
+          for _ in range(9):
+              if not gc.isenabled():
+                  raise SystemExit("GC disabled before foundation sample")
+              before = collections()
+              t0 = time.perf_counter()
+              payload = af.require_match_foundation(
+                  af.load_v6_analytics_foundation(
+                      runtime,
+                      bootstrap=bootstrap,
+                      planning_gw=planning_gw,
+                      strength=strength,
+                  )
+              )
+              totals.append(time.perf_counter() - t0)
+              foundation_gc.append(delta(before, collections()))
+              fingerprints.append(fp(payload))
+              row_fingerprints.append(fp(payload["player_match_rows"]))
+
+          af.walk_forward_validate = original_wf
+
+          if len(active_wf_times) != 9:
+              raise SystemExit(
+                  f"expected 9 measured WFV calls, got {len(active_wf_times)}"
+              )
+
+          def med_by_generation(samples):
+              return [
+                  statistics.median([sample[i] for sample in samples])
+                  for i in range(3)
+              ]
+
+          result = {
+              "sha": args.sha,
+              "planning_gw": planning_gw,
+              "rows": len(adjusted),
+              "rows_fingerprint": fp(adjusted),
+              "foundation_fingerprint": fp(warmup),
+              "measured_foundation_fingerprints": fingerprints,
+              "measured_rows_fingerprints": row_fingerprints,
+              "foundation": {
+                  "samples_seconds": totals,
+                  "median_seconds": statistics.median(totals),
+                  "mean_seconds": statistics.mean(totals),
+                  "gc_collection_deltas": foundation_gc,
+                  "gc_median_by_generation": med_by_generation(
+                      foundation_gc
+                  ),
+              },
+              "walk_forward_validate": {
+                  "samples_seconds": active_wf_times,
+                  "median_seconds": statistics.median(active_wf_times),
+                  "mean_seconds": statistics.mean(active_wf_times),
+                  "gc_collection_deltas": active_wf_gc,
+                  "gc_median_by_generation": med_by_generation(
+                      active_wf_gc
+                  ),
+              },
+              "peak_rss_kib": int(
+                  resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+              ),
+              "environment": {
+                  "cpu_model": cpu_model(),
+                  "nproc": nproc(),
+                  "python_version": sys.version,
+                  "image_os": os.environ.get("ImageOS"),
+                  "image_version": os.environ.get("ImageVersion"),
+                  "runner_os": os.environ.get("RUNNER_OS"),
+                  "runner_arch": os.environ.get("RUNNER_ARCH"),
+                  "platform": platform.platform(),
+                  "gc_enabled": gc.isenabled(),
+                  "sys_gettrace": repr(sys.gettrace()),
+                  "sys_getprofile": repr(sys.getprofile()),
+                  "row_types": sorted({
+                      type(row).__module__
+                      + "."
+                      + type(row).__qualname__
+                      for row in adjusted
+                  }),
+              },
+          }
+
+          Path(args.output).write_text(
+              json.dumps(result, indent=2, sort_keys=True),
+              encoding="utf-8",
+          )
+          print(json.dumps(result, indent=2, sort_keys=True))
+          PY
+
+      - name: Run same-host Stage C oracle and candidate probes
+        env:
+          RUNTIME: ${{ github.workspace }}/runtime-data
+          EVIDENCE: ${{ github.workspace }}/evidence
+        run: |
+          (
+            cd oracle
+            PYTHONPATH="$PWD" python /tmp/d2_foundation_probe.py               --runtime "$RUNTIME"               --sha daf7247c320b1bb61eebd943b23f3ca694b088ef               --output "$EVIDENCE/foundation_oracle.json"
+          )
+          (
+            cd candidate
+            PYTHONPATH="$PWD" python /tmp/d2_foundation_probe.py               --runtime "$RUNTIME"               --sha 8309ddaf0da87546bf92e3e9a2ea21e7c409a2a4               --output "$EVIDENCE/foundation_candidate.json"               --dump-rows "$EVIDENCE/adjusted_rows.json"
+          )
+
+      - name: Run interleaved oracle D2a D2b diagnostic and relative gate
+        run: |
+          python - <<'PY'
+          import gc
+          import hashlib
+          import importlib.util
+          import json
+          import os
+          import platform
+          import statistics
+          import subprocess
+          import sys
+          import time
+          from pathlib import Path
+
+          ROOT = Path.cwd()
+          rows = json.loads(
+              (ROOT / "evidence/adjusted_rows.json").read_text()
+          )
+
+          def stable(value):
+              return json.dumps(
+                  value,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=False,
+                  allow_nan=False,
+                  default=str,
+              )
+
+          def fp(value):
+              return hashlib.sha256(stable(value).encode("utf-8")).hexdigest()
+
+          def load(name, path):
+              spec = importlib.util.spec_from_file_location(name, path)
+              mod = importlib.util.module_from_spec(spec)
+              assert spec and spec.loader
+              spec.loader.exec_module(mod)
+              return mod
+
+          def cpu_model():
+              for line in Path("/proc/cpuinfo").read_text().splitlines():
+                  if line.lower().startswith("model name"):
+                      return line.split(":", 1)[1].strip()
+              return None
+
+          def collections():
+              return tuple(
+                  int(item.get("collections", 0))
+                  for item in gc.get_stats()
+              )
+
+          def delta(before, after):
+              return [
+                  int(a - b)
+                  for b, a in zip(before, after)
+              ]
+
+          mods = {
+              "oracle": load(
+                  "d2_oracle",
+                  ROOT / "oracle/src/models/v12_stage1_analytics.py",
+              ),
+              "d2a": load(
+                  "d2a",
+                  ROOT / "d2a/src/models/v12_stage1_analytics.py",
+              ),
+              "candidate": load(
+                  "d2_candidate",
+                  ROOT / "candidate/src/models/v12_stage1_analytics.py",
+              ),
+          }
+
+          expected_rows_fp = (
+              "a36eaf2f623c811f4d5d942aa4da3fb8842fa3d456724bb4c9e32fcec5b4b99f"
+          )
+          expected_wfv_fp = (
+              "a7fad3e6e2b0444cf6f1fa945068c97eb732cad1323921643fc5b58bf6149d99"
+          )
+          if fp(rows) != expected_rows_fp:
+              raise SystemExit("adjusted rows fingerprint changed")
+          if not gc.isenabled():
+              raise SystemExit("GC disabled in relative harness")
+          if sys.gettrace() is not None or sys.getprofile() is not None:
+              raise SystemExit("trace/profile hook active in relative harness")
+
+          # Warm-up each implementation. No forced gc.collect().
+          for name in ("oracle", "d2a", "candidate"):
+              out = mods[name].walk_forward_validate(rows)
+              if fp(out) != expected_wfv_fp:
+                  raise SystemExit(f"{name} warm-up payload drift")
+
+          samples = {name: [] for name in mods}
+          gc_samples = {name: [] for name in mods}
+          payload_fps = {name: [] for name in mods}
+          pairs = []
+
+          orders = [
+              ("oracle", "d2a", "candidate"),
+              ("candidate", "d2a", "oracle"),
+              ("d2a", "oracle", "candidate"),
+              ("candidate", "oracle", "d2a"),
+              ("oracle", "candidate", "d2a"),
+              ("d2a", "candidate", "oracle"),
+          ]
+
+          for i in range(13):
+              order = orders[i % len(orders)]
+              observed = {}
+              for name in order:
+                  if not gc.isenabled():
+                      raise SystemExit(f"GC disabled before {name}")
+                  if sys.gettrace() is not None or sys.getprofile() is not None:
+                      raise SystemExit(f"runtime hook active before {name}")
+                  before = collections()
+                  t0 = time.perf_counter()
+                  out = mods[name].walk_forward_validate(rows)
+                  elapsed = time.perf_counter() - t0
+                  after = collections()
+                  samples[name].append(elapsed)
+                  gc_samples[name].append(delta(before, after))
+                  payload_fps[name].append(fp(out))
+                  observed[name] = elapsed
+
+              pairs.append({
+                  "pair": i + 1,
+                  "order": list(order),
+                  "oracle_seconds": observed["oracle"],
+                  "d2a_seconds": observed["d2a"],
+                  "candidate_seconds": observed["candidate"],
+                  "oracle_to_d2a_reduction": (
+                      1.0 - observed["d2a"] / observed["oracle"]
+                  ),
+                  "d2a_to_candidate_reduction": (
+                      1.0 - observed["candidate"] / observed["d2a"]
+                  ),
+                  "oracle_to_candidate_reduction": (
+                      1.0 - observed["candidate"] / observed["oracle"]
+                  ),
+              })
+
+          medians = {
+              name: statistics.median(vals)
+              for name, vals in samples.items()
+          }
+
+          def med_gc(name):
+              return [
+                  statistics.median(
+                      [sample[i] for sample in gc_samples[name]]
+                  )
+                  for i in range(3)
+              ]
+
+          pair_reductions = [
+              row["oracle_to_candidate_reduction"]
+              for row in pairs
+          ]
+
+          result = {
+              "rows": len(rows),
+              "rows_fingerprint": fp(rows),
+              "pairs": pairs,
+              "samples_seconds": samples,
+              "medians_seconds": medians,
+              "paired_median_reduction": statistics.median(
+                  pair_reductions
+              ),
+              "median_ratio_reduction": (
+                  1.0 - medians["candidate"] / medians["oracle"]
+              ),
+              "diagnostic_attribution": {
+                  "oracle_to_d2a_gain_seconds": (
+                      medians["oracle"] - medians["d2a"]
+                  ),
+                  "d2a_to_candidate_gain_seconds": (
+                      medians["d2a"] - medians["candidate"]
+                  ),
+                  "oracle_to_d2a_reduction": (
+                      1.0 - medians["d2a"] / medians["oracle"]
+                  ),
+                  "d2a_to_candidate_reduction": (
+                      1.0 - medians["candidate"] / medians["d2a"]
+                  ),
+                  "preregistered_refined_harness_expectation_seconds": {
+                      "d2a_scan_removal_gain": 1.17,
+                      "d2b_position_reuse_gain": 0.73,
+                  },
+                  "expectation_is_diagnostic_not_gate": True,
+              },
+              "gc_median_by_generation": {
+                  name: med_gc(name)
+                  for name in mods
+              },
+              "payload_fingerprints": payload_fps,
+              "environment": {
+                  "cpu_model": cpu_model(),
+                  "nproc": int(
+                      subprocess.check_output(
+                          ["nproc"], text=True
+                      ).strip()
+                  ),
+                  "python_version": sys.version,
+                  "image_os": os.environ.get("ImageOS"),
+                  "image_version": os.environ.get("ImageVersion"),
+                  "runner_os": os.environ.get("RUNNER_OS"),
+                  "runner_arch": os.environ.get("RUNNER_ARCH"),
+                  "platform": platform.platform(),
+                  "gc_enabled": gc.isenabled(),
+                  "sys_gettrace": repr(sys.gettrace()),
+                  "sys_getprofile": repr(sys.getprofile()),
+                  "row_types": sorted({
+                      type(row).__module__
+                      + "."
+                      + type(row).__qualname__
+                      for row in rows
+                  }),
+              },
+          }
+
+          for name, fps in payload_fps.items():
+              if set(fps) != {expected_wfv_fp}:
+                  raise SystemExit(f"{name} payload drift during timing")
+
+          Path("evidence/relative_ab.json").write_text(
+              json.dumps(result, indent=2, sort_keys=True),
+              encoding="utf-8",
+          )
+          print(json.dumps(result, indent=2, sort_keys=True))
+          PY
+
+      - name: Enforce frozen D2 performance gates
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          oracle = json.loads(
+              Path("evidence/foundation_oracle.json").read_text()
+          )
+          candidate = json.loads(
+              Path("evidence/foundation_candidate.json").read_text()
+          )
+          relative = json.loads(
+              Path("evidence/relative_ab.json").read_text()
+          )
+
+          failures = []
+          expected_rows_fp = (
+              "a36eaf2f623c811f4d5d942aa4da3fb8842fa3d456724bb4c9e32fcec5b4b99f"
+          )
+          expected_foundation_fp = (
+              "afa20a169b6f2018b0d47e0381086847bd21eba89569a12e2bc29df43b31979b"
+          )
+
+          for name, item in (
+              ("oracle", oracle),
+              ("candidate", candidate),
+          ):
+              if item["rows"] != 3191:
+                  failures.append(f"{name} row count changed")
+              if item["rows_fingerprint"] != expected_rows_fp:
+                  failures.append(f"{name} row fingerprint changed")
+              if item["foundation_fingerprint"] != expected_foundation_fp:
+                  failures.append(f"{name} warmup foundation fingerprint changed")
+              if set(item["measured_foundation_fingerprints"]) != {
+                  expected_foundation_fp
+              }:
+                  failures.append(f"{name} measured foundation drift")
+              if set(item["measured_rows_fingerprints"]) != {
+                  expected_rows_fp
+              }:
+                  failures.append(f"{name} measured rows drift")
+              env = item["environment"]
+              if env["gc_enabled"] is not True:
+                  failures.append(f"{name} GC disabled")
+              if env["sys_gettrace"] != "None":
+                  failures.append(f"{name} trace hook active")
+              if env["sys_getprofile"] != "None":
+                  failures.append(f"{name} profile hook active")
+              if env["row_types"] != ["builtins.dict"]:
+                  failures.append(f"{name} unexpected row type")
+
+          # Same hosted job must mean same hardware metadata.
+          hardware_keys = (
+              "cpu_model",
+              "nproc",
+              "image_os",
+              "image_version",
+              "runner_os",
+              "runner_arch",
+          )
+          for key in hardware_keys:
+              ov = oracle["environment"][key]
+              cv = candidate["environment"][key]
+              rv = relative["environment"][key]
+              if not (ov == cv == rv):
+                  failures.append(
+                      f"hardware mismatch {key}: "
+                      f"oracle={ov} candidate={cv} relative={rv}"
+                  )
+
+          # Harness A: Stage C production-like absolute gates.
+          candidate_wfv = candidate[
+              "walk_forward_validate"
+          ]["median_seconds"]
+          candidate_foundation = candidate[
+              "foundation"
+          ]["median_seconds"]
+
+          if candidate_wfv > 0.55:
+              failures.append(
+                  f"Stage C WFV median {candidate_wfv:.6f}s > 0.55s"
+              )
+          if candidate_foundation > 1.25:
+              failures.append(
+                  f"Stage C foundation median "
+                  f"{candidate_foundation:.6f}s > 1.25s"
+              )
+
+          # Harness B: paired relative gate.
+          paired_reduction = relative["paired_median_reduction"]
+          if paired_reduction < 0.82:
+              failures.append(
+                  f"paired median reduction {paired_reduction:.4%} < 82%"
+              )
+
+          # Foundation GC gate: candidate may not increase median
+          # collections by more than 20% in any generation.
+          oracle_gc = oracle["foundation"]["gc_median_by_generation"]
+          candidate_gc = candidate["foundation"]["gc_median_by_generation"]
+          gc_checks = []
+          for generation, (base, new) in enumerate(
+              zip(oracle_gc, candidate_gc)
+          ):
+              if base == 0:
+                  ok = new == 0
+                  limit = 0
+              else:
+                  limit = base * 1.20
+                  ok = new <= limit
+              gc_checks.append({
+                  "generation": generation,
+                  "oracle_median": base,
+                  "candidate_median": new,
+                  "limit": limit,
+                  "pass": ok,
+              })
+              if not ok:
+                  failures.append(
+                      f"GC gen{generation} median {new} exceeds "
+                      f"oracle {base} by >20%"
+                  )
+
+          rss_delta_kib = (
+              candidate["peak_rss_kib"] - oracle["peak_rss_kib"]
+          )
+          if rss_delta_kib > 8192:
+              failures.append(
+                  f"peak RSS delta {rss_delta_kib} KiB > 8192 KiB"
+              )
+
+          diagnostic = relative["diagnostic_attribution"]
+          # Pre-registered diagnostic, explicitly not a gate.
+          diagnostic_flag = (
+              diagnostic["oracle_to_d2a_gain_seconds"] <= 0
+              or diagnostic["d2a_to_candidate_gain_seconds"] <= 0
+          )
+
+          report = {
+              "status": "PASS" if not failures else "FAIL",
+              "correctness_prerequisite": {
+                  "run_id": 36078362621,
+                  "conclusion": "SUCCESS",
+                  "candidate_sha": "8309ddaf0da87546bf92e3e9a2ea21e7c409a2a4",
+              },
+              "oracle_sha": "daf7247c320b1bb61eebd943b23f3ca694b088ef",
+              "d2a_sha": "b00ffb14e3cc3b7347f5dabb7a4059baa4a6d3f3",
+              "candidate_sha": "8309ddaf0da87546bf92e3e9a2ea21e7c409a2a4",
+              "runtime_sha": "9fc2ce5e590518c399765e6fd576bb96db6e5897",
+              "hardware": candidate["environment"],
+              "absolute_stagec": {
+                  "oracle_walkforward_median_seconds": oracle[
+                      "walk_forward_validate"
+                  ]["median_seconds"],
+                  "candidate_walkforward_median_seconds": candidate_wfv,
+                  "walkforward_gate_seconds": 0.55,
+                  "oracle_foundation_median_seconds": oracle[
+                      "foundation"
+                  ]["median_seconds"],
+                  "candidate_foundation_median_seconds": candidate_foundation,
+                  "foundation_gate_seconds": 1.25,
+              },
+              "relative_ab": {
+                  "oracle_median_seconds": relative[
+                      "medians_seconds"
+                  ]["oracle"],
+                  "d2a_median_seconds": relative[
+                      "medians_seconds"
+                  ]["d2a"],
+                  "candidate_median_seconds": relative[
+                      "medians_seconds"
+                  ]["candidate"],
+                  "paired_median_reduction": paired_reduction,
+                  "required_reduction": 0.82,
+                  "median_ratio_reduction": relative[
+                      "median_ratio_reduction"
+                  ],
+              },
+              "diagnostic_attribution": diagnostic,
+              "diagnostic_unexpected_direction": diagnostic_flag,
+              "gc_checks": gc_checks,
+              "rss": {
+                  "oracle_peak_rss_kib": oracle["peak_rss_kib"],
+                  "candidate_peak_rss_kib": candidate["peak_rss_kib"],
+                  "delta_kib": rss_delta_kib,
+                  "gate_kib": 8192,
+              },
+              "failures": failures,
+          }
+
+          Path("evidence/performance_gate.json").write_text(
+              json.dumps(report, indent=2, sort_keys=True),
+              encoding="utf-8",
+          )
+          print(json.dumps(report, indent=2, sort_keys=True))
+          if failures:
+              raise SystemExit("\n".join(failures))
+          PY
+
+      - name: Upload immutable D2 performance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-d2-performance-${{ github.run_id }}
+          path: |
+            evidence/foundation_oracle.json
+            evidence/foundation_candidate.json
+            evidence/relative_ab.json
+            evidence/performance_gate.json
+          if-no-files-found: error
+          retention-days: 14

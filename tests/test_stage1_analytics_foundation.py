@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from src.models.v12_analytics_foundation import (
     load_v6_analytics_foundation,
@@ -1378,4 +1379,690 @@ def test_stageb_reconstructs_official_cbit_cbirt_without_zero_fill():
     )
     assert degraded["eligible_starts"] == 0
     assert degraded["hit_rate"] is None
+
+from src.engines.v12_report_orchestration import render_deep_text
+from src.engines.v12_stagec_reporting import (
+    attach_stagec_to_deep_report,
+    build_stagec_report_surface,
+)
+from src.models.v12_external_challenge import (
+    ExternalChallengeError,
+    build_external_challenge_layer,
+    challenge_external_claim,
+    load_external_claims_input,
+)
+from src.models.v12_stagec_universe_scanner import build_universe_scan
+
+
+def _stagec_projection(
+    element,
+    *,
+    position="MID",
+    price=60,
+    ownership=5.0,
+    xmins=82.0,
+    p_start=0.9,
+    h1=5.0,
+    h2=10.0,
+    h3=15.0,
+    h5=24.0,
+    defcon_ev=None,
+    defcon_p=None,
+):
+    element_type = {"GK": 1, "DEF": 2, "MID": 3, "FWD": 4}[position]
+    stageb = {
+        "role_duty": {
+            "DERIVED": {
+                "actual_tactical_role": {
+                    "class": "DERIVED",
+                    "value": "ADVANCED_ROLE",
+                    "source": "synthetic",
+                }
+            },
+            "FACT": {
+                "nominal_position": {
+                    "class": "FACT",
+                    "value": position,
+                    "source": "OFFICIAL_FPL_BOOTSTRAP",
+                }
+            },
+        }
+    }
+    if defcon_ev is not None or defcon_p is not None:
+        stageb["defcon"] = {
+            "DEFCON_EV": defcon_ev,
+            "projected_hit_probability": defcon_p,
+            "hit_rate": 0.5,
+            "eligible_starts": 6,
+            "confidence": "MODERATE",
+        }
+    return {
+        "element": element,
+        "name": f"C{element}",
+        "team_id": (element % 20) + 1,
+        "position": position,
+        "element_type": element_type,
+        "now_cost": price,
+        "ownership_pct": ownership,
+        "xmins": {
+            "expected_minutes": xmins,
+            "start_probability": p_start,
+            "dnp_probability": max(0.0, 1.0 - p_start),
+            "confidence": "HIGH",
+        },
+        "horizons": {
+            "1": {"mean": h1},
+            "2": {"mean": h2},
+            "3": {"mean": h3},
+            "5": {"mean": h5},
+        },
+        "tactical_role": {
+            "profile": "ADVANCED_ROLE",
+            "confidence": "MEDIUM",
+        },
+        "stageb_evidence": stageb,
+    }
+
+
+def _stagec_breakout_rows(element):
+    rows = []
+    for gw in range(1, 7):
+        recent = gw >= 4
+        rows.append(
+            _mw_row(
+                gw,
+                player_id=element,
+                goals=0,
+                assists=0,
+                xg=0.40 if recent else 0.10,
+                npxg=0.40 if recent else 0.10,
+                xa=0.20 if recent else 0.05,
+                xgi=0.60 if recent else 0.15,
+                shots=4 if recent else 1,
+                shots_in_box=3 if recent else 1,
+                shots_on_target=2 if recent else 0,
+                box_touches=9 if recent else 3,
+                key_passes=3 if recent else 1,
+                chances_created=3 if recent else 1,
+            )
+        )
+    return rows
+
+
+def _stagec_negative_regression_rows(element):
+    return [
+        _mw_row(
+            gw,
+            player_id=element,
+            goals=1 if gw >= 4 else 0,
+            assists=0,
+            xg=0.15,
+            npxg=0.15,
+            xa=0.05,
+            xgi=0.20,
+            shots=1,
+            shots_in_box=1,
+            shots_on_target=1,
+            box_touches=3,
+            key_passes=1,
+            chances_created=1,
+        )
+        for gw in range(1, 7)
+    ]
+
+
+def _stagec_scan(rows_by_player, projections):
+    rows = [
+        row
+        for group in rows_by_player
+        for row in group
+    ]
+    snapshot = build_multiwindow_form_snapshot(rows, season="2026/27")
+    return build_universe_scan(
+        projections={"players": projections},
+        multiwindow_snapshot=snapshot,
+    )
+
+
+def test_stagec_breakout_before_returns_and_hidden_gem():
+    element = 9201
+    scan = _stagec_scan(
+        [_stagec_breakout_rows(element)],
+        [_stagec_projection(element, ownership=3.0, price=55)],
+    )
+    row = scan["material_candidates"][0]
+    assert row["actual_returns"]["L3"]["goal_involvements"] == 0
+    assert row["signals"]["BREAKOUT"]["active"] is True
+    assert row["signals"]["POSITIVE_REGRESSION"]["active"] is True
+    assert row["hidden_gem"] is True
+    assert row["positive_signals"]
+
+
+def test_stagec_false_breakout_low_sample_is_rejected():
+    element = 9202
+    rows = [
+        _mw_row(
+            gw,
+            player_id=element,
+            xg=0.6,
+            npxg=0.6,
+            xa=0.2,
+            xgi=0.8,
+            shots=5,
+            shots_in_box=4,
+        )
+        for gw in (1, 2)
+    ]
+    scan = _stagec_scan(
+        [rows],
+        [_stagec_projection(element)],
+    )
+    row = next(x for x in scan["material_candidates"] if x["element"] == element) if scan["material_candidates"] else None
+    if row is not None:
+        assert row["signals"]["BREAKOUT"]["active"] is False
+    form = build_player_multiwindow_form(rows, player_id=element)
+    assert form["signals"]["sample_eligibility"]["eligible"] is False
+    assert form["signals"]["BREAKOUT"]["active"] is False
+
+
+def test_stagec_negative_regression_high_points_weak_underlying():
+    element = 9203
+    scan = _stagec_scan(
+        [_stagec_negative_regression_rows(element)],
+        [_stagec_projection(element, h1=9, h2=17, h3=24, h5=35)],
+    )
+    row = next(x for x in scan["material_candidates"] if x["element"] == element)
+    assert row["actual_returns"]["L3"]["goal_involvements"] == 3
+    assert row["signals"]["NEGATIVE_REGRESSION"]["active"] is True
+    assert row["negative_signals"] == ["NEGATIVE_REGRESSION"]
+    assert row["underlying"]["L3"]["xgi"]["per90"] == 0.2
+
+
+def test_stagec_defender_defcon_candidate_is_independent_signal():
+    element = 9204
+    rows = [
+        _mw_row(
+            gw,
+            player_id=element,
+            xg=0.03,
+            npxg=0.03,
+            xa=0.04,
+            xgi=0.07,
+            shots=1,
+            shots_in_box=1,
+            box_touches=2,
+        )
+        for gw in range(1, 7)
+    ]
+    scan = _stagec_scan(
+        [rows],
+        [
+            _stagec_projection(
+                element,
+                position="DEF",
+                price=45,
+                ownership=4,
+                defcon_ev=1.25,
+                defcon_p=0.63,
+            )
+        ],
+    )
+    row = next(x for x in scan["material_candidates"] if x["element"] == element)
+    assert row["signals"]["DEFCON_VALUE"]["active"] is True
+    assert row["defcon"]["DEFCON_EV"] == 1.25
+    assert "DEFCON_VALUE" in row["positive_signals"]
+
+
+def test_stagec_external_buy_contradicted_and_sell_agreed():
+    element = 9205
+    scan = _stagec_scan(
+        [_stagec_negative_regression_rows(element)],
+        [_stagec_projection(element)],
+    )
+    buy = challenge_external_claim(
+        {
+            "source": "AI FPL Manager",
+            "timestamp": "2026-09-25T05:00:00Z",
+            "element": element,
+            "player": f"C{element}",
+            "stance": "BUY",
+            "rationale_tags": ["FORM"],
+            "raw_reference": "manual-capture-1",
+        },
+        scan=scan,
+    )
+    sell = challenge_external_claim(
+        {
+            "source": "FPL GOAT",
+            "timestamp": "2026-09-25T05:01:00Z",
+            "element": element,
+            "player": f"C{element}",
+            "stance": "SELL",
+            "rationale_tags": ["UNDERLYING"],
+            "raw_reference": "manual-capture-2",
+        },
+        scan=scan,
+    )
+    assert buy["model_challenge"]["result"] == "DISAGREE"
+    assert sell["model_challenge"]["result"] == "AGREE"
+    assert buy["predicted_points_adjustment"] == 0.0
+    assert sell["ensemble_weight_applied"] is False
+
+
+def test_stagec_external_no_data_is_explicit():
+    scan = {"material_candidates": []}
+    out = build_external_challenge_layer([], scan=scan)
+    assert out["state"] == "NO_EXTERNAL_DATA"
+    assert out["claim_count"] == 0
+    assert out["counts"] == {
+        "AGREE": 0,
+        "DISAGREE": 0,
+        "UNRESOLVED": 0,
+    }
+
+
+def test_stagec_xgstat_is_manual_validation_only():
+    scan = {"material_candidates": []}
+    try:
+        challenge_external_claim(
+            {
+                "source": "xGStat",
+                "timestamp": "2026-09-25T05:00:00Z",
+                "element": 9206,
+                "stance": "WATCH",
+                "ingestion_mode": "AUTOMATED",
+            },
+            scan=scan,
+        )
+    except ExternalChallengeError as exc:
+        assert "MANUAL_VALIDATION_ONLY" in str(exc)
+    else:
+        raise AssertionError("automated xGStat ingestion must fail closed")
+
+    manual = challenge_external_claim(
+        {
+            "source": "xGStat",
+            "timestamp": "2026-09-25T05:00:00Z",
+            "element": 9206,
+            "stance": "WATCH",
+            "ingestion_mode": "MANUAL_VALIDATION_ONLY",
+            "raw_reference": "licensed-or-manual-reference",
+        },
+        scan=scan,
+    )
+    assert manual["claim"]["factual_authority"] is False
+    assert manual["model_challenge"]["result"] == "UNRESOLVED"
+
+
+def test_stagec_deterministic_full_universe_scan():
+    rows = _stagec_breakout_rows(9207) + _stagec_negative_regression_rows(9208)
+    snapshot = build_multiwindow_form_snapshot(rows, season="2026/27")
+    projections = {
+        "players": [
+            _stagec_projection(9207),
+            _stagec_projection(9208),
+        ]
+    }
+    first = build_universe_scan(
+        projections=projections,
+        multiwindow_snapshot=snapshot,
+    )
+    second = build_universe_scan(
+        projections=deepcopy(projections),
+        multiwindow_snapshot=deepcopy(snapshot),
+    )
+    assert first == second
+    assert first["full_universe_count"] == 2
+    assert all(row["horizons"] == [1, 2, 3, 5] for row in first["evaluation_feed"])
+    assert first["governance"]["final_v12_ranking_unchanged"] is True
+
+
+def test_stagec_667_player_scan_runtime_budget(capsys):
+    import time
+
+    breakout_form = build_player_multiwindow_form(
+        _stagec_breakout_rows(9997),
+        player_id=9997,
+        season="2026/27",
+    )
+    negative_form = build_player_multiwindow_form(
+        _stagec_negative_regression_rows(9998),
+        player_id=9998,
+        season="2026/27",
+    )
+    neutral_rows = [
+        _mw_row(
+            gw,
+            player_id=9999,
+            goals=1 if gw in {3, 6} else 0,
+            assists=0,
+            xg=0.18,
+            npxg=0.18,
+            xa=0.07,
+            xgi=0.25,
+            shots=2,
+            shots_in_box=1,
+            shots_on_target=1,
+            box_touches=5,
+            key_passes=1,
+            chances_created=1,
+        )
+        for gw in range(1, 7)
+    ]
+    neutral_form = build_player_multiwindow_form(
+        neutral_rows,
+        player_id=9999,
+        season="2026/27",
+    )
+
+    forms = {}
+    projections = []
+    for index in range(667):
+        element = 10000 + index
+        if index < 100:
+            template = breakout_form
+        elif index < 200:
+            template = negative_form
+        else:
+            template = neutral_form
+        forms[str(element)] = {
+            **deepcopy(template),
+            "player_id": str(element),
+        }
+        defcon = index >= 200 and index % 10 == 0
+        projections.append(
+            _stagec_projection(
+                element,
+                position=("DEF" if index % 4 == 0 else "MID"),
+                ownership=float(index % 12),
+                price=45 + (index % 30),
+                defcon_ev=1.1 if defcon else None,
+                defcon_p=0.55 if defcon else None,
+            )
+        )
+    snapshot = {
+        "contract": "V12_MULTIWINDOW_FORM_SNAPSHOT_V1",
+        "player_count": 667,
+        "players": forms,
+    }
+
+    started = time.perf_counter()
+    scan = build_universe_scan(
+        projections={"players": projections},
+        multiwindow_snapshot=snapshot,
+    )
+    elapsed_ms = (time.perf_counter() - started) * 1000.0
+    with capsys.disabled():
+        print(f"STAGEC_667_SCAN_RUNTIME_MS={elapsed_ms:.3f}")
+        print(
+            "STAGEC_667_COUNTS="
+            + json.dumps(
+                {
+                    "universe": scan["full_universe_count"],
+                    "material": scan["material_candidate_count"],
+                    "hidden": scan["hidden_gem_count"],
+                    "signals": scan["signal_counts"],
+                },
+                sort_keys=True,
+            )
+        )
+    assert scan["full_universe_count"] == 667
+    assert scan["scanned_count"] == 667
+    assert scan["signal_counts"]["BREAKOUT"] == 100
+    assert scan["signal_counts"]["POSITIVE_REGRESSION"] == 100
+    assert scan["signal_counts"]["NEGATIVE_REGRESSION"] == 100
+    assert scan["signal_counts"]["DEFCON_VALUE"] > 0
+    assert elapsed_ms < 5000.0
+
+
+def test_stagec_report_is_bounded_and_keeps_canonical_top_level_catalog():
+    rows = []
+    projections = []
+    for index in range(30):
+        element = 9300 + index
+        rows.extend(_stagec_breakout_rows(element))
+        projections.append(_stagec_projection(element, ownership=3.0, price=55))
+    scan = build_universe_scan(
+        projections={"players": projections},
+        multiwindow_snapshot=build_multiwindow_form_snapshot(
+            rows,
+            season="2026/27",
+        ),
+    )
+    challenges = build_external_challenge_layer([], scan=scan)
+    surface = build_stagec_report_surface(
+        scan=scan,
+        external_challenges=challenges,
+    )
+    report = {
+        "sections": [
+            {
+                "section_id": "S04",
+                "label": "CHANGES",
+                "state": "COMPLETE",
+                "content": {
+                    "changes": [
+                        {
+                            "type": "NO_NEW_MATERIAL_CHANGE",
+                            "summary": "baseline",
+                        }
+                    ]
+                },
+            }
+        ]
+    }
+    enriched = attach_stagec_to_deep_report(
+        report,
+        surface,
+        enabled=True,
+    )
+    body = render_deep_text(enriched)
+    for label in (
+        "UNDERLYING TRAJECTORY",
+        "POSITIVE REGRESSION WATCH",
+        "NEGATIVE REGRESSION WATCH",
+        "BREAKOUT / HIDDEN GEMS",
+        "DEFCON OPPORTUNITIES",
+        "ROLE / MINUTES CHANGES",
+        "EXTERNAL CLAIM CHALLENGE",
+    ):
+        assert label in body
+    assert len(enriched["sections"]) == 1
+    assert enriched["sections"][0]["section_id"] == "S04"
+    assert surface["rendered_row_count"] <= 35
+    assert len(body) < 25000
+
+
+def test_stagec_feature_off_report_is_exact_noop():
+    report = {
+        "sections": [
+            {
+                "section_id": "S04",
+                "label": "CHANGES",
+                "state": "COMPLETE",
+                "content": {"changes": [{"summary": "baseline"}]},
+            }
+        ]
+    }
+    before = deepcopy(report)
+    returned = attach_stagec_to_deep_report(
+        report,
+        {"contract": "V12_STAGEC_DEEP_SUBSECTIONS_V1"},
+        enabled=False,
+    )
+    assert returned is report
+    assert report == before
+    assert render_deep_text(report) == render_deep_text(before)
+
+def test_stagec_role_minutes_and_fixture_swing_classifications():
+    gain_element = 9401
+    gain_rows = []
+    for gw in range(1, 7):
+        recent = gw >= 4
+        gain_rows.append(
+            _mw_row(
+                gw,
+                player_id=gain_element,
+                minutes=90 if recent else 45,
+                starter=recent,
+                goals=1 if gw in {3, 6} else 0,
+                assists=0,
+                xg=0.18 if recent else 0.09,
+                npxg=0.18 if recent else 0.09,
+                xa=0.07 if recent else 0.035,
+                xgi=0.25 if recent else 0.125,
+                shots=2 if recent else 1,
+                shots_in_box=1,
+                shots_on_target=1 if recent else 0,
+                box_touches=5 if recent else 2.5,
+                key_passes=1,
+                chances_created=1,
+            )
+        )
+    loss_element = 9402
+    loss_rows = []
+    for gw in range(1, 7):
+        recent = gw >= 4
+        loss_rows.append(
+            _mw_row(
+                gw,
+                player_id=loss_element,
+                minutes=45 if recent else 90,
+                starter=not recent,
+                goals=1 if gw in {3, 6} else 0,
+                assists=0,
+                xg=0.09 if recent else 0.18,
+                npxg=0.09 if recent else 0.18,
+                xa=0.035 if recent else 0.07,
+                xgi=0.125 if recent else 0.25,
+                shots=1 if recent else 2,
+                shots_in_box=1,
+                shots_on_target=0 if recent else 1,
+                box_touches=2.5 if recent else 5,
+                key_passes=1,
+                chances_created=1,
+            )
+        )
+
+    scan = _stagec_scan(
+        [gain_rows, loss_rows],
+        [
+            _stagec_projection(
+                gain_element,
+                xmins=82,
+                p_start=0.9,
+                h1=7,
+                h2=13,
+                h3=18,
+                h5=20,
+            ),
+            _stagec_projection(
+                loss_element,
+                xmins=50,
+                p_start=0.55,
+                h1=3,
+                h2=6,
+                h3=8,
+                h5=18,
+            ),
+        ],
+    )
+    by_id = {row["element"]: row for row in scan["material_candidates"]}
+    gain = by_id[gain_element]
+    loss = by_id[loss_element]
+    assert gain["signals"]["ROLE_GAIN"]["active"] is True
+    assert gain["signals"]["MINUTES_GAIN"]["active"] is True
+    assert gain["signals"]["FIXTURE_SWING"]["active"] is True
+    assert gain["signals"]["FIXTURE_SWING"]["direction"] == "POSITIVE"
+    assert loss["signals"]["ROLE_LOSS"]["active"] is True
+    assert loss["signals"]["MINUTES_RISK"]["active"] is True
+    assert loss["signals"]["FIXTURE_SWING"]["active"] is True
+    assert loss["signals"]["FIXTURE_SWING"]["direction"] == "NEGATIVE"
+
+def test_stagec_external_challenge_has_no_network_client_or_scraper():
+    root = Path(__file__).resolve().parents[1]
+    source = (
+        root / "src" / "models" / "v12_external_challenge.py"
+    ).read_text(encoding="utf-8").lower()
+    forbidden = (
+        "import requests",
+        "import httpx",
+        "urllib.request",
+        "selenium",
+        "playwright",
+        "beautifulsoup",
+        "cloudscraper",
+    )
+    assert not [token for token in forbidden if token in source]
+
+
+def test_stagec_runner_feature_defaults_on_with_explicit_kill_switch(monkeypatch):
+    from src.engines.v12_integrated_report_runner import (
+        _stagec_scanner_enabled,
+    )
+
+    monkeypatch.delenv("V12_STAGEC_SCANNER_ENABLED", raising=False)
+    assert _stagec_scanner_enabled() is True
+    monkeypatch.setenv("V12_STAGEC_SCANNER_ENABLED", "0")
+    assert _stagec_scanner_enabled() is False
+    monkeypatch.setenv("V12_STAGEC_SCANNER_ENABLED", "1")
+    assert _stagec_scanner_enabled() is True
+
+
+def test_stagec_external_claim_resolves_unique_player_name_without_element():
+    element = 9501
+    scan = _stagec_scan(
+        [_stagec_negative_regression_rows(element)],
+        [_stagec_projection(element)],
+    )
+    row = challenge_external_claim(
+        {
+            "source": "AI FPL Manager",
+            "timestamp": "2026-09-25T03:25:25Z",
+            "player": f"C{element}",
+            "stance": "BUY",
+            "ingestion_mode": "MANUAL_CAPTURE",
+        },
+        scan=scan,
+    )
+    assert row["model_challenge"]["candidate_resolution"] == "PLAYER_NAME"
+    assert row["model_challenge"]["resolved_element"] == element
+    assert row["model_challenge"]["result"] == "DISAGREE"
+
+
+def test_stagec_external_claim_input_filters_stale_without_network(tmp_path):
+    path = tmp_path / "claims.json"
+    path.write_text(
+        json.dumps(
+            {
+                "contract": "V12_STAGEC_EXTERNAL_CLAIMS_V1",
+                "max_age_hours": 24,
+                "claims": [
+                    {
+                        "source": "AI FPL Manager",
+                        "timestamp": "2026-09-25T03:25:25Z",
+                        "player": "Current",
+                        "stance": "WATCH",
+                        "ingestion_mode": "MANUAL_CAPTURE",
+                    },
+                    {
+                        "source": "FPL GOAT",
+                        "timestamp": "2026-09-20T03:25:25Z",
+                        "player": "Stale",
+                        "stance": "WATCH",
+                        "ingestion_mode": "MANUAL_CAPTURE",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    out = load_external_claims_input(
+        path=path,
+        as_of="2026-09-25T06:00:00Z",
+    )
+    assert out["state"] == "AVAILABLE"
+    assert out["claim_count"] == 1
+    assert out["stale_claim_count"] == 1
+    assert out["claims"][0]["player"] == "Current"
 

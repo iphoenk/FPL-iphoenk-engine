@@ -1,0 +1,37 @@
+{
+  "contract": "V12_STAGEC_EXTERNAL_CLAIMS_V1",
+  "max_age_hours": 168,
+  "evidence_policy": "MANUAL_CAPTURE_OR_MANUAL_VALIDATION_ONLY",
+  "claims": [
+    {
+      "source": "AI FPL Manager",
+      "timestamp": "2026-09-25T03:25:25Z",
+      "player": "Gonzalo García",
+      "team": "Fulham",
+      "stance": "WATCH",
+      "claim_type": "PLAYER_STANCE",
+      "rationale_tags": [
+        "STRONG_UNDERLYING",
+        "BLANKS_WITH_CHANCES",
+        "WATCH_NOT_AUTOBUY"
+      ],
+      "raw_reference": "manual-capture-20260925-gonzalo-garcia",
+      "ingestion_mode": "MANUAL_CAPTURE"
+    },
+    {
+      "source": "AI FPL Manager",
+      "timestamp": "2026-09-25T03:25:25Z",
+      "player": "Lewis Hall",
+      "team": "Newcastle United",
+      "stance": "BUY",
+      "claim_type": "PLAYER_STANCE",
+      "rationale_tags": [
+        "MINUTES_SECURITY",
+        "ATTACKING_INVOLVEMENT",
+        "FIXTURE"
+      ],
+      "raw_reference": "manual-capture-20260925-lewis-hall",
+      "ingestion_mode": "MANUAL_CAPTURE"
+    }
+  ]
+}

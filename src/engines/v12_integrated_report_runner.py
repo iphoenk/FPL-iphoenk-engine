@@ -101,6 +101,14 @@ STATE_PATH = ROOT / "control" / "fpl_master_v12" / "FPL_MASTER_STATE_V12.json"
 
 SUPPORTED_MODES = {"DEEP", "PRICE"}
 
+
+def _stagec_scanner_enabled() -> bool:
+    raw = os.getenv("V12_STAGEC_SCANNER_ENABLED")
+    if raw is None:
+        return True
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
 class IntegratedRunnerError(RuntimeError):
     pass
 
@@ -916,6 +924,7 @@ def _stage3_visible_package_surface(
     stage3_decision: Mapping[str, Any],
     mini_overlay: Mapping[str, Any] | None,
     finance: Mapping[str, Any] | None = None,
+    stagec_scan: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     player_map = {
         int(row.get("element") or 0): dict(row)
@@ -943,6 +952,26 @@ def _stage3_visible_package_surface(
         str(value)
         for value in material_mc_routes.get("route_ids") or []
     ]
+    stagec_map = {
+        int(row.get("element") or 0): dict(row)
+        for row in (stagec_scan or {}).get("material_candidates") or []
+        if isinstance(row, Mapping)
+        and int(row.get("element") or 0) > 0
+    }
+
+    def stagec_context(element: int) -> dict[str, Any]:
+        row = stagec_map.get(int(element)) or {}
+        return {
+            "material": bool(row),
+            "active_signals": list(row.get("active_signals") or []),
+            "positive_signals": list(row.get("positive_signals") or []),
+            "negative_signals": list(row.get("negative_signals") or []),
+            "hidden_gem": bool(row.get("hidden_gem")),
+            "sample_confidence": row.get("sample_confidence"),
+            "why_flagged": list(row.get("why_flagged") or []),
+            "horizons": [1, 2, 3, 5],
+            "decision_math_adjustment": 0.0,
+        }
 
     challengers: list[dict[str, Any]] = []
     seen_incoming: set[int] = set()
@@ -1032,6 +1061,7 @@ def _stage3_visible_package_surface(
                         "position_mechanism"
                     ),
                     "dynamic_matchup": mechanism.get("dynamic_matchup"),
+                    "stagec_evidence": stagec_context(element),
                 }
             )
 
@@ -1070,6 +1100,7 @@ def _stage3_visible_package_surface(
                     if incoming
                     else item.get("sell_value")
                 ),
+                "stagec_evidence": stagec_context(element),
             }
 
         visible_out = [
@@ -1264,6 +1295,13 @@ def _stage3_visible_package_surface(
         "decision": stage3_decision,
         "position_mechanisms": mechanism_rows,
         "mini_league_overlay": mini_overlay,
+        "stagec_evaluation_bridge": {
+            "candidate_feed_count": len((stagec_scan or {}).get("evaluation_feed") or []),
+            "material_candidate_count": len(stagec_map),
+            "visible_route_context_only": True,
+            "full_universe_package_search_preserved": True,
+            "decision_math_mutated": False,
+        },
     }
 
 
@@ -3666,6 +3704,54 @@ def run_deep(
             for name in stage3_required_stage_names
         )
     )
+    stagec_surface = None
+    stagec_scan: dict[str, Any] = {}
+    stagec_external_input: dict[str, Any] = {
+        "state": "DISABLED",
+        "claims": [],
+    }
+    if _stagec_scanner_enabled():
+        from src.engines.v12_stagec_reporting import (
+            build_stagec_report_surface,
+        )
+        from src.models.v12_external_challenge import (
+            build_external_challenge_layer,
+            load_external_claims_input,
+        )
+        from src.models.v12_stagec_universe_scanner import (
+            build_stagec_from_canonical_inputs,
+        )
+
+        stagec_bundle = build_stagec_from_canonical_inputs(
+            projections=projections or {},
+            bootstrap=bootstrap,
+            match_rows=list((foundation or {}).get("player_match_rows") or []),
+            season=str((foundation or {}).get("season") or "") or None,
+        )
+        stagec_scan = dict(stagec_bundle.get("scan") or {})
+        stagec_external_input = load_external_claims_input(as_of=report_slot)
+        stagec_external = build_external_challenge_layer(
+            stagec_external_input.get("claims") or [],
+            scan=stagec_scan,
+            decision_context={
+                "captain_element": (
+                    ((lineup or {}).get("captain") or {}).get("element")
+                ),
+                "selected_route_id": (
+                    (stage3_decision or {}).get("selected_route_id")
+                ),
+            },
+        )
+        stagec_external["input_state"] = {
+            key: value
+            for key, value in stagec_external_input.items()
+            if key != "claims"
+        }
+        stagec_surface = build_stagec_report_surface(
+            scan=stagec_scan,
+            external_challenges=stagec_external,
+        )
+
     stage3_visible = (
         _stage3_visible_package_surface(
             projections=projections or {},
@@ -3677,6 +3763,7 @@ def run_deep(
             stage3_decision=stage3_decision or {},
             mini_overlay=mini_overlay,
             finance=finance,
+            stagec_scan=stagec_scan,
         )
         if stage3_internal_pass
         else {}
@@ -3851,6 +3938,11 @@ def run_deep(
                 ),
                 "decision_change_sources": (
                     "injury / lineup / role / tactics / price / fixture / underlying / mini-league / transfer economics"
+                ),
+                **(
+                    {"stagec_universe_intelligence": stagec_surface}
+                    if stagec_surface is not None
+                    else {}
                 ),
             },
         ),

@@ -1183,3 +1183,87 @@ def test_mini_league_s15b_manifest_cannot_regress_to_compact_summary():
         "strategy_implication",
         "report_contract",
     }.issubset(required)
+
+
+def test_stagec_evidence_is_wired_into_visible_transfer_comparator_without_math_mutation():
+    surface = runner._stage3_visible_package_surface(
+        projections={
+            "players": [
+                {
+                    "element": 9901,
+                    "name": "Scanner Candidate",
+                    "position": "MID",
+                    "team": "TEST",
+                    "now_cost": 55,
+                    "xmins": {
+                        "expected_minutes": 82,
+                        "start_probability": 0.9,
+                    },
+                    "horizons": {},
+                    "xpts_by_gw": [],
+                }
+            ]
+        },
+        canonical_bundle={
+            "players": [
+                {
+                    "element_id": 9901,
+                    "canonical_rank": 7,
+                    "football_score": 1.2,
+                    "canonical_components": {},
+                }
+            ]
+        },
+        package_search_result={},
+        package_utility={
+            "routes": [
+                {
+                    "route_id": "R1",
+                    "players_in": [{"element": 9901, "buy_price": 55}],
+                    "players_out": [],
+                    "horizons": {},
+                    "transfer_economics": {},
+                }
+            ]
+        },
+        material_mc_routes={"route_ids": ["R1"]},
+        monte_carlo={},
+        stage3_decision={
+            "operational_action": "WAIT",
+            "routes": [{"route_id": "R1"}],
+        },
+        mini_overlay=None,
+        finance={},
+        stagec_scan={
+            "evaluation_feed": [
+                {
+                    "element": 9901,
+                    "signals": ["BREAKOUT"],
+                    "horizons": [1, 2, 3, 5],
+                }
+            ],
+            "material_candidates": [
+                {
+                    "element": 9901,
+                    "active_signals": ["BREAKOUT"],
+                    "positive_signals": ["BREAKOUT"],
+                    "negative_signals": [],
+                    "hidden_gem": True,
+                    "sample_confidence": 0.9,
+                    "why_flagged": ["recent underlying improved"],
+                }
+            ],
+        },
+    )
+    assert surface["stagec_evaluation_bridge"] == {
+        "candidate_feed_count": 1,
+        "material_candidate_count": 1,
+        "visible_route_context_only": True,
+        "full_universe_package_search_preserved": True,
+        "decision_math_mutated": False,
+    }
+    challenger = surface["challengers"][0]
+    assert challenger["stagec_evidence"]["active_signals"] == ["BREAKOUT"]
+    assert challenger["stagec_evidence"]["decision_math_adjustment"] == 0.0
+    move = surface["package_routes"][0]["moves"]["in"][0]
+    assert move["stagec_evidence"]["hidden_gem"] is True

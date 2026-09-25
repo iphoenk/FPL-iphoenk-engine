@@ -140,8 +140,9 @@ to:
 - `OPENBLAS_CORETYPE=Haswell`;
 - `OPENBLAS_NUM_THREADS=1`;
 - `OMP_NUM_THREADS=1`;
-- `NPY_DISABLE_CPU_FEATURES` disables the AVX512 family supported by the
-  current NumPy runtime contract.
+- `NPY_DISABLE_CPU_FEATURES` disables `X86_V4` plus the AVX512-family names
+  supported by the current NumPy runtime contract, leaving the governed
+  NumPy dispatch class at Haswell-compatible `X86_V3` or below.
 
 The persistent runtime key is exactly:
 

@@ -3,16 +3,13 @@ from __future__ import annotations
 """Canonical numeric runtime class for deterministic V12 persistent caches.
 
 Physical CPU model and host core count are observability only. Persistent cache
-reuse is keyed on the effective numerical runtime after normalization:
-Python/NumPy, OpenBLAS core, active NumPy SIMD dispatch set, and BLAS thread
-count.
+reuse is keyed on the normalized numerical runtime configured before NumPy is
+imported: Python/NumPy, OpenBLAS core class, effective active NumPy SIMD set,
+and OpenBLAS thread count.
 """
 
 import argparse
-import ast
-from contextlib import redirect_stdout
 from functools import lru_cache
-import io
 import json
 import os
 from pathlib import Path
@@ -67,70 +64,48 @@ def physical_cpu_model() -> str:
     return str(platform.processor() or platform.machine() or "UNKNOWN")
 
 
-@lru_cache(maxsize=1)
-def _numpy_runtime_rows() -> list[dict[str, Any]]:
-    show_runtime = getattr(np, "show_runtime", None)
-    if not callable(show_runtime):
-        return []
-    buf = io.StringIO()
-    try:
-        with redirect_stdout(buf):
-            show_runtime()
-        value = ast.literal_eval(buf.getvalue().strip())
-    except (ValueError, SyntaxError, TypeError):
-        return []
-    return [
-        dict(row)
-        for row in value
-        if isinstance(row, dict)
-    ] if isinstance(value, list) else []
-
-
 def _active_numpy_simd() -> tuple[str, ...]:
-    for row in _numpy_runtime_rows():
-        simd = row.get("simd_extensions")
-        if isinstance(simd, dict):
-            baseline = [
-                str(value)
-                for value in simd.get("baseline") or []
-            ]
-            found = [
-                str(value)
-                for value in simd.get("found") or []
-            ]
-            return tuple(sorted(set(baseline + found)))
-    return ()
+    multiarray = np._core._multiarray_umath
+    baseline = tuple(
+        str(value)
+        for value in getattr(multiarray, "__cpu_baseline__", ())
+    )
+    dispatch = tuple(
+        str(value)
+        for value in getattr(multiarray, "__cpu_dispatch__", ())
+    )
+    features = getattr(multiarray, "__cpu_features__", {})
+    found = tuple(
+        feature
+        for feature in dispatch
+        if isinstance(features, dict) and bool(features.get(feature))
+    )
+    return tuple(sorted(set(baseline + found)))
 
 
-def _openblas_runtime() -> dict[str, Any]:
-    for row in _numpy_runtime_rows():
-        if str(row.get("internal_api") or "").lower() == "openblas":
-            return {
-                "coretype": str(row.get("architecture") or "UNKNOWN"),
-                "num_threads": (
-                    int(row["num_threads"])
-                    if row.get("num_threads") is not None
-                    else None
-                ),
-            }
-    return {
-        "coretype": "UNKNOWN",
-        "num_threads": None,
-    }
+def _normalized_openblas_coretype() -> str:
+    return str(os.environ.get("OPENBLAS_CORETYPE") or "UNSET")
+
+
+def _normalized_openblas_threads() -> int | None:
+    raw = str(os.environ.get("OPENBLAS_NUM_THREADS") or "").strip()
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
 
 
 @lru_cache(maxsize=1)
 def runtime_cache_identity() -> dict[str, Any]:
-    """Exact persistent-cache runtime key. No physical host identity allowed."""
-    openblas = _openblas_runtime()
+    """Exact cache runtime key; physical host identity is deliberately absent."""
     return {
         "python_major_minor": (
             f"{sys.version_info.major}.{sys.version_info.minor}"
         ),
         "numpy_version": np.__version__,
-        "openblas_coretype": openblas["coretype"],
+        "openblas_coretype": _normalized_openblas_coretype(),
         "numpy_simd_active": _active_numpy_simd(),
-        "openblas_num_threads": openblas["num_threads"],
+        "openblas_num_threads": _normalized_openblas_threads(),
     }
 
 
@@ -193,14 +168,14 @@ def validate_canonical_runtime_class() -> dict[str, Any]:
         CANONICAL_OPENBLAS_CORETYPE.lower()
     ):
         failures.append(
-            "EFFECTIVE_OPENBLAS_CORETYPE_NOT_HASWELL:"
+            "NORMALIZED_OPENBLAS_CORETYPE_NOT_HASWELL:"
             + str(identity["openblas_coretype"])
         )
     if identity["openblas_num_threads"] != (
         CANONICAL_OPENBLAS_NUM_THREADS
     ):
         failures.append(
-            "EFFECTIVE_OPENBLAS_NUM_THREADS_NOT_ONE:"
+            "NORMALIZED_OPENBLAS_NUM_THREADS_NOT_ONE:"
             + str(identity["openblas_num_threads"])
         )
     active_avx512 = [

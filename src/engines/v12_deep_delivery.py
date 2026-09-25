@@ -410,6 +410,146 @@ def validate_deep_decision_content_delivery(
                 )
                 break
 
+    # Stage-A semantic cross-section invariants. These deliberately validate
+    # meaning, not merely key presence, and cover the 36126675342 false-pass
+    # class without hard-coding any player, GW, or route identity.
+    s17 = content("S17")
+    source_health = dict(s17.get("source_health") or {})
+    bound_health = dict(s17.get("bound_authoritative_health") or {})
+    bound_auth = str(bound_health.get("auth_state") or "").upper()
+    visible_auth = str(
+        source_health.get("authenticated_personal_scope") or ""
+    ).upper()
+    if bound_auth and bound_auth != "UNAVAILABLE" and visible_auth != bound_auth:
+        failures.append(
+            "S17_AUTH_CONTRADICTION="
+            + visible_auth
+            + "!="
+            + bound_auth
+        )
+
+    s14b = content("S14B")
+    ft_authority = dict(s14b.get("ft_authority") or {})
+    ft_known = ft_authority.get("known") is True
+    if not ft_known:
+        ft_claims = [
+            str(s14b.get("ft_saving_plan") or ""),
+            str(s14b.get("order_of_transfers") or ""),
+            *[
+                str(row.get("planned_move") or "")
+                for row in s14b.get("staging_rows") or []
+                if isinstance(row, Mapping)
+            ],
+        ]
+        if any(
+            "SAVE FT" in claim.upper() or "ROLL FT" in claim.upper()
+            for claim in ft_claims
+        ):
+            failures.append("FT_UNKNOWN_BUT_SAVE_OR_ROLL_CLAIMED")
+
+    s06 = content("S06")
+    if state("S06") == "COMPLETE":
+        semantics = dict(s06.get("score_semantics") or {})
+        required_score_tokens = (
+            "XI_BASE_XPTS:",
+            "CAPTAIN_ADJUSTED_XPTS:",
+            "LINEUP_ROUTE_UTILITY:",
+        )
+        for token in required_score_tokens:
+            if token not in upper:
+                failures.append("S06_SCORE_SEMANTICS_NOT_VISIBLE=" + token)
+        try:
+            base = float(semantics["xi_base_xpts"])
+            captain_value = float(semantics["captain_multiplier_value"])
+            vice_value = float(semantics["vice_fallback_value"])
+            derived = float(semantics["derived_captain_adjusted_xpts"])
+            captain_adjusted = float(semantics["captain_adjusted_xpts"])
+            route_utility = float(semantics["lineup_route_utility"])
+        except (KeyError, TypeError, ValueError):
+            failures.append("S06_SCORE_SEMANTICS_INCOMPLETE")
+        else:
+            expected_adjusted = base + captain_value + vice_value
+            if abs(derived - expected_adjusted) > 1e-6:
+                failures.append("S06_CAPTAIN_ADJUSTED_DERIVATION_MISMATCH")
+            if abs(captain_adjusted - expected_adjusted) > 1e-6:
+                failures.append("S06_SELECTED_FORMATION_SCORE_MISMATCH")
+            # Route utility is intentionally a separate distributional objective.
+            # Equality is allowed, but it may not be silently substituted for xPts.
+            if not semantics.get("route_utility_definition"):
+                failures.append("S06_ROUTE_UTILITY_SEMANTICS_MISSING")
+
+    s14 = content("S14")
+    if state("S14") == "COMPLETE":
+        for token in (
+            "FOOTBALL FRONTIER STATUS:",
+            "EXECUTION ECONOMICS STATUS:",
+            "EXECUTABLE",
+        ):
+            if token not in upper:
+                failures.append("S14_ECONOMICS_NOT_VISIBLE=" + token)
+        football_status = str(
+            s14.get("football_frontier_status") or ""
+        ).upper()
+        economics_status = str(
+            s14.get("execution_economics_status") or ""
+        ).upper()
+        if football_status != "COMPLETE":
+            failures.append("S14_FOOTBALL_FRONTIER_FALSE_COMPLETE")
+        if economics_status not in {"COMPLETE", "DEGRADED"}:
+            failures.append("S14_EXECUTION_ECONOMICS_STATUS_MISSING")
+        for route in s14.get("package_routes") or []:
+            if not isinstance(route, Mapping):
+                continue
+            if str(route.get("route") or "").upper() == "HOLD":
+                continue
+            route_econ = str(
+                route.get("execution_economics_status") or ""
+            ).upper()
+            executable = route.get("executable") is True
+            if route_econ != "COMPLETE" and executable:
+                failures.append(
+                    "S14_DEGRADED_ECONOMICS_MARKED_EXECUTABLE="
+                    + str(route.get("route") or "UNKNOWN")
+                )
+            if not executable and str(
+                route.get("action_verdict") or ""
+            ).upper() == "ACT":
+                failures.append(
+                    "S14_NONEXECUTABLE_ROUTE_MARKED_ACT="
+                    + str(route.get("route") or "UNKNOWN")
+                )
+
+    for sid in ("S12", "S13"):
+        payload = content(sid)
+        freshness = str(payload.get("freshness_state") or "").upper()
+        if freshness == "STALE" and state(sid) == "COMPLETE":
+            failures.append(f"{sid}_STALE_PRICE_MARKED_COMPLETE")
+        for index, row in enumerate(payload.get("rows") or [], start=1):
+            if not isinstance(row, Mapping):
+                continue
+            row_freshness = str(
+                row.get("freshness_state") or freshness or ""
+            ).upper()
+            if row_freshness == "STALE" and str(
+                row.get("source_age_seconds") or ""
+            ) == "":
+                failures.append(f"{sid}_STALE_WITHOUT_SOURCE_AGE={index}")
+
+    s10 = content("S10")
+    radar_freshness = str(s10.get("freshness_state") or "").upper()
+    for index, row in enumerate(s10.get("rows") or [], start=1):
+        if not isinstance(row, Mapping):
+            continue
+        row_freshness = str(
+            row.get("freshness_state") or radar_freshness or ""
+        ).upper()
+        if row_freshness == "STALE" and "STALE PREDICTOR" not in str(
+            row.get("decision_implication") or ""
+        ).upper():
+            failures.append(
+                f"S10_STALE_PRICE_LOOKS_LIVE={index}"
+            )
+
     # Watchlist20 remains a football-decision surface: exact 5/5/5/5 by pos.
     if state("S11") == "COMPLETE":
         rows = [dict(row) for row in content("S11").get("rows") or [] if isinstance(row, Mapping)]

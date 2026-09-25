@@ -470,7 +470,7 @@ def validate_deep_decision_content_delivery(
                     + str(route.get("route") or "UNKNOWN")
                 )
                 break
-            route_econ = str(transfer_cost.get("economics_status") or "").upper()
+            route_econ = str(route.get("execution_economics_status") or "").upper()
             if not route_econ:
                 failures.append(
                     "S14_EXECUTION_ECONOMICS_AUTHORITY_MISSING="
@@ -484,7 +484,7 @@ def validate_deep_decision_content_delivery(
                     + str(route.get("route") or "UNKNOWN")
                 )
                 break
-            if route_econ != "PASS" and executable is True:
+            if route_econ != "AVAILABLE" and executable is True:
                 failures.append(
                     "S14_EXECUTABLE_WITHOUT_FINANCE="
                     + str(route.get("route") or "UNKNOWN")

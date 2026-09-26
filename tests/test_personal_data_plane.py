@@ -78,16 +78,33 @@ def test_private_owner_manual_state_is_private_from_origin(tmp_path):
     assert not (runtime / "data/v6/personal/current_team.json").exists()
 
 
-def test_public_submitted_picks_require_prior_disclosed_gw(tmp_path):
+def test_private_submitted_picks_are_primary_and_public_copy_is_legacy_only(tmp_path):
     runtime = tmp_path / "runtime"
+    private = tmp_path / "private"
     submitted = {
         "status": "AVAILABLE",
-        "gw": 6,
+        "gw": 5,
         "generated_at": "2026-09-26T00:00:00+00:00",
         "picks": [],
     }
+    _write(private / "personal/submitted_picks.json", submitted)
     _write(runtime / "data/v6/personal/submitted_picks.json", submitted)
+
     rows = collect_personal_evidence_candidates(
+        runtime_root=runtime,
+        legacy_state={},
+        planning_gw=6,
+        private_root=private,
+        allow_legacy_private_sources=False,
+    )
+    official = [
+        row for row in rows
+        if row["source_class"] == "OFFICIAL_SUBMITTED_PICKS"
+    ]
+    assert len(official) == 1
+    assert official[0]["source"] == "PRIVATE:personal/submitted_picks.json"
+
+    rows_without_private = collect_personal_evidence_candidates(
         runtime_root=runtime,
         legacy_state={},
         planning_gw=6,
@@ -95,20 +112,20 @@ def test_public_submitted_picks_require_prior_disclosed_gw(tmp_path):
         allow_legacy_private_sources=False,
     )
     assert not any(
-        row["source_class"] == "OFFICIAL_SUBMITTED_PICKS" for row in rows
+        row["source_class"] == "OFFICIAL_SUBMITTED_PICKS"
+        for row in rows_without_private
     )
 
-    submitted["gw"] = 5
-    _write(runtime / "data/v6/personal/submitted_picks.json", submitted)
-    rows = collect_personal_evidence_candidates(
+    legacy_rows = collect_personal_evidence_candidates(
         runtime_root=runtime,
         legacy_state={},
         planning_gw=6,
         private_root=None,
-        allow_legacy_private_sources=False,
+        allow_legacy_private_sources=True,
     )
     assert any(
-        row["source_class"] == "OFFICIAL_SUBMITTED_PICKS" for row in rows
+        row["source"] == "data/v6/personal/submitted_picks.json"
+        for row in legacy_rows
     )
 
 

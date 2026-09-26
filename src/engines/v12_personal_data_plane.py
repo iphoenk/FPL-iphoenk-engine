@@ -192,9 +192,10 @@ def collect_personal_evidence_candidates(
 ) -> list[dict[str, Any]]:
     """Assemble inputs while keeping V12 selection semantics external.
 
-    Public submitted picks are admitted only when their GW is strictly before
-    the planning GW, which establishes that the picks belong to an already
-    disclosed deadline state rather than a current private decision.
+    Owner submitted picks live in the private plane. Legacy public submitted
+    picks are read only when legacy compatibility is explicitly enabled, and
+    only when their GW is strictly before the planning GW unless disclosure
+    enforcement is explicitly disabled.
     """
     candidates: list[dict[str, Any]] = []
 
@@ -222,6 +223,26 @@ def collect_personal_evidence_candidates(
         if candidate is not None:
             candidates.append(candidate)
 
+        private_submitted_path = private_personal / "submitted_picks.json"
+        private_submitted = _read_json(private_submitted_path, {}) or {}
+        if isinstance(private_submitted, Mapping) and private_submitted:
+            try:
+                private_submitted_gw = int(private_submitted.get("gw") or 0)
+            except (TypeError, ValueError):
+                private_submitted_gw = 0
+            disclosed = 0 < private_submitted_gw < int(planning_gw)
+            if (not enforce_public_disclosure) or disclosed:
+                candidates.append(
+                    {
+                        "source": "PRIVATE:personal/submitted_picks.json",
+                        "source_class": "OFFICIAL_SUBMITTED_PICKS",
+                        "payload": dict(private_submitted),
+                        "observed_at": private_submitted.get("generated_at"),
+                        "gw": private_submitted.get("gw"),
+                        "auth_state": "PUBLIC_OFFICIAL",
+                    }
+                )
+
     private_candidate_count = len(candidates)
     if require_private_personal and private_candidate_count == 0:
         raise PersonalDataPlaneError(
@@ -247,7 +268,11 @@ def collect_personal_evidence_candidates(
             candidates.append(candidate)
 
     submitted_path = runtime_root / "data/v6/personal/submitted_picks.json"
-    submitted = _read_json(submitted_path, {}) or {}
+    submitted = (
+        (_read_json(submitted_path, {}) or {})
+        if allow_legacy_private_sources
+        else {}
+    )
     if isinstance(submitted, Mapping) and submitted:
         try:
             submitted_gw = int(submitted.get("gw") or 0)

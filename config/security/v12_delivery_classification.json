@@ -4,23 +4,64 @@
   "classes": {
     "PUBLIC_FACT": {
       "description": "Unauthenticated facts reproducible by the public at the same effective time.",
-      "examples": ["fixtures", "bootstrap_static", "public_submitted_picks_after_disclosure", "match_events"]
+      "examples": [
+        "fixtures",
+        "bootstrap_static",
+        "match_events"
+      ]
     },
     "PUBLIC_OPERATIONAL_PROOF": {
       "description": "Allowlisted execution metadata that contains no personal or decision state.",
-      "examples": ["run_id", "report_mode", "report_slot", "status", "elapsed_seconds", "safe_fingerprint", "model_sha", "runtime_sha"]
+      "examples": [
+        "run_id",
+        "report_mode",
+        "report_slot",
+        "status",
+        "elapsed_seconds",
+        "safe_fingerprint",
+        "model_sha",
+        "runtime_sha"
+      ]
     },
     "PRIVATE_PERSONAL": {
       "description": "Owner-specific current state or inputs that are not public factual authority.",
-      "examples": ["current_private_squad", "bank", "free_transfers", "purchase_price", "selling_price", "pending_transfer", "manual_capture", "auth_state"]
+      "examples": [
+        "current_private_squad",
+        "bank",
+        "free_transfers",
+        "purchase_price",
+        "selling_price",
+        "pending_transfer",
+        "manual_capture",
+        "auth_state",
+        "submitted_picks",
+        "league_memberships"
+      ]
     },
     "PRIVATE_DECISION": {
       "description": "Decision outputs, route materialization, tactical selections, or scenario results.",
-      "examples": ["selected_route", "out_to_in", "stage3_action", "starting_xi", "bench", "captain", "vice", "chip", "staging", "scenario"]
+      "examples": [
+        "selected_route",
+        "out_to_in",
+        "stage3_action",
+        "starting_xi",
+        "bench",
+        "captain",
+        "vice",
+        "chip",
+        "staging",
+        "scenario"
+      ]
     },
     "SECRET": {
       "description": "Credential material.",
-      "examples": ["token", "cookie", "password", "authorization_header", "session"]
+      "examples": [
+        "token",
+        "cookie",
+        "password",
+        "authorization_header",
+        "session"
+      ]
     }
   },
   "public_proof_allowed_fields": [
@@ -70,7 +111,12 @@
   ],
   "public_issue_proof_rule": {
     "stage3_field": "stage3_validation",
-    "allowed_stage3_values": ["PASS", "FAIL", "NOT_APPLICABLE", "UNKNOWN"],
+    "allowed_stage3_values": [
+      "PASS",
+      "FAIL",
+      "NOT_APPLICABLE",
+      "UNKNOWN"
+    ],
     "decision_action_allowed": false
   },
   "cache_target_classification": {

@@ -28,6 +28,30 @@ def test_split_moves_current_team_private_and_sanitizes_public_auth_metadata(tmp
         },
     )
     _write(
+        public / "personal/memberships.json",
+        {
+            "generated_at": "2026-09-26T09:24:49+00:00",
+            "entry_id": 123,
+            "memberships": [{"league_id": 9477}],
+        },
+    )
+    _write(
+        public / "personal/submitted_picks.json",
+        {
+            "generated_at": "2026-09-26T09:24:49+00:00",
+            "entry_id": 123,
+            "gw": 5,
+            "picks": [
+                {
+                    "element_id": 1,
+                    "bench_order": None,
+                    "captain": True,
+                    "vice_captain": False,
+                }
+            ],
+        },
+    )
+    _write(
         public / "report_prefetch/latest.json",
         {
             "auth_state": "AUTH_AVAILABLE",
@@ -55,6 +79,7 @@ def test_split_moves_current_team_private_and_sanitizes_public_auth_metadata(tmp
             ],
             "artifacts": [
                 {"path": "data/v6/personal/current_team.json"},
+                {"path": "data/v6/personal/memberships.json"},
                 {"path": "data/v6/personal/submitted_picks.json"},
             ],
             "governance": {"data_only": True},
@@ -78,11 +103,19 @@ def test_split_moves_current_team_private_and_sanitizes_public_auth_metadata(tmp
 
     assert receipt["moved_current_team"] is True
     assert not (public / "personal/current_team.json").exists()
+    assert not (public / "personal/memberships.json").exists()
+    assert not (public / "personal/submitted_picks.json").exists()
     private_team = json.loads(
         (private / "personal/current_team.json").read_text(encoding="utf-8")
     )
     assert private_team["bank"] == 2
     assert private_team["free_transfers"] == 0
+    assert receipt["moved_memberships"] is True
+    assert receipt["moved_submitted_picks"] is True
+    assert not (public / "personal/memberships.json").exists()
+    assert not (public / "personal/submitted_picks.json").exists()
+    assert (private / "personal/memberships.json").is_file()
+    assert (private / "personal/submitted_picks.json").is_file()
 
     latest = json.loads(
         (public / "report_prefetch/latest.json").read_text(encoding="utf-8")
@@ -100,7 +133,14 @@ def test_split_moves_current_team_private_and_sanitizes_public_auth_metadata(tmp
         }
     ]
     assert all(
-        not str(row.get("path") or "").endswith("/personal/current_team.json")
+        not any(
+            str(row.get("path") or "").endswith(f"/personal/{filename}")
+            for filename in (
+                "current_team.json",
+                "memberships.json",
+                "submitted_picks.json",
+            )
+        )
         for row in latest["artifacts"]
     )
     assert latest["governance"]["private_personal_state_split"] is True

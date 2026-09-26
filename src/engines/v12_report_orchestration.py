@@ -1884,6 +1884,11 @@ def materialize_all15(
             {
                 "element_id": element,
                 "player": owned.get("name") or model.get("name"),
+                "position": owned.get("position") or model.get("position"),
+                "team_id": owned.get("team_id"),
+                "current_price": owned.get("current_price", owned.get("now_cost")),
+                "purchase_price": owned.get("purchase_price"),
+                "selling_price": owned.get("selling_price", owned.get("sell_value")),
                 "opponent": model.get("opponent", "UNAVAILABLE"),
                 "recommended_or_locked_role": model.get(
                     "recommended_or_locked_role", "UNAVAILABLE"

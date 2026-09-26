@@ -190,3 +190,57 @@ def test_publish_integrity_fails_when_identity_mapping_cardinality_diverges(tmp_
     assert report["status"] == "FAIL"
     assert "identity_map_player_mapping_count_mismatch" in report["errors"]
     assert report["identity_counts"]["player"]["mapping_consistent"] is False
+
+
+def test_publish_integrity_allows_only_public_personal_fact_files(tmp_path: Path):
+    _good_tree(tmp_path)
+    _write(
+        tmp_path / "personal" / "memberships.json",
+        {"source": "OFFICIAL_FPL_PUBLIC_ENTRY"},
+    )
+    _write(
+        tmp_path / "personal" / "submitted_picks.json",
+        {"source": "OFFICIAL_FPL_PUBLIC_POST_DEADLINE"},
+    )
+
+    report = validate_publish_tree(tmp_path)
+
+    assert report["status"] == "PASS"
+    assert report["public_personal_allowlist_enforced"] is True
+
+
+def test_publish_integrity_rejects_current_team_from_public_tree(tmp_path: Path):
+    _good_tree(tmp_path)
+    _write(
+        tmp_path / "personal" / "current_team.json",
+        {
+            "auth_state": "AUTH_AVAILABLE",
+            "bank": 2,
+            "free_transfers": 0,
+            "players": [{"element_id": i} for i in range(1, 16)],
+        },
+    )
+
+    report = validate_publish_tree(tmp_path)
+
+    assert report["status"] == "FAIL"
+    assert (
+        "private_personal_artifact_in_public_tree:personal/current_team.json"
+        in report["errors"]
+    )
+
+
+def test_publish_integrity_rejects_future_manual_capture_transit(tmp_path: Path):
+    _good_tree(tmp_path)
+    _write(
+        tmp_path / "personal" / "manual" / "gw6_capture.json",
+        {"schema": "FPL_MANUAL_CURRENT_TEAM_CAPTURE_V1"},
+    )
+
+    report = validate_publish_tree(tmp_path)
+
+    assert report["status"] == "FAIL"
+    assert (
+        "private_personal_artifact_in_public_tree:personal/manual/gw6_capture.json"
+        in report["errors"]
+    )

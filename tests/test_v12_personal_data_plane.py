@@ -135,3 +135,24 @@ def test_semantic_fingerprint_ignores_storage_source_label():
     a = [{**payload, "source": "data/v6/personal/current_team.json"}]
     b = [{**payload, "source": "PRIVATE:personal/current_team.json"}]
     assert candidate_payload_fingerprint(a) == candidate_payload_fingerprint(b)
+
+
+def test_dual_read_compatibility_can_preserve_legacy_submitted_pick_behavior(tmp_path):
+    runtime = tmp_path / "runtime"
+    submitted = {
+        "status": "AVAILABLE",
+        "gw": 6,
+        "generated_at": "2026-09-26T00:00:00+00:00",
+        "picks": [],
+    }
+    _write(runtime / "data/v6/personal/submitted_picks.json", submitted)
+    rows = collect_personal_evidence_candidates(
+        runtime_root=runtime,
+        legacy_state={},
+        planning_gw=6,
+        allow_legacy_private_sources=True,
+        enforce_public_disclosure=False,
+    )
+    assert any(
+        row["source_class"] == "OFFICIAL_SUBMITTED_PICKS" for row in rows
+    )

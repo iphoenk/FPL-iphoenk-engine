@@ -3358,6 +3358,110 @@ def build_match_lifecycle_surface(
     }
 
 
+def validate_match_lifecycle_surface(
+    surface: Mapping[str, Any] | None,
+) -> list[str]:
+    payload = dict(surface or {})
+    failures: list[str] = []
+    locked = payload.get("locked_team")
+    if not isinstance(locked, Mapping):
+        return ["MATCH_LOCKED_TEAM_INVALID"]
+
+    if str(locked.get("authority") or "").upper() != "OFFICIAL_FPL_SUBMITTED_PICKS":
+        failures.append("MATCH_LOCKED_TEAM_NOT_SUBMITTED_PICKS_AUTHORITY")
+    if locked.get("submitted_picks_authority") is not True:
+        failures.append("MATCH_SUBMITTED_PICKS_AUTHORITY_PROOF_MISSING")
+    if locked.get("planning_xi_used") is not False:
+        failures.append("MATCH_PLANNING_XI_MUST_NOT_BE_USED")
+
+    our15 = list(locked.get("our15") or [])
+    xi = list(locked.get("starting_xi") or [])
+    bench_locked = list(locked.get("bench_order") or [])
+    if len(our15) != 15 or len(set(map(str, our15))) != 15:
+        failures.append("MATCH_LOCKED_OUR15_INVALID")
+    if (
+        len(xi) != 11
+        or len(set(map(str, xi))) != 11
+        or not set(map(str, xi)).issubset(set(map(str, our15)))
+    ):
+        failures.append("MATCH_LOCKED_XI_INVALID")
+    if (
+        len(bench_locked) != 4
+        or len(set(map(str, bench_locked))) != 4
+        or bool(set(map(str, bench_locked)) & set(map(str, xi)))
+        or set(map(str, bench_locked)) | set(map(str, xi)) != set(map(str, our15))
+    ):
+        failures.append("MATCH_LOCKED_BENCH_INVALID")
+
+    captain = locked.get("captain")
+    vice = locked.get("vice_captain")
+    if (
+        captain is None
+        or vice is None
+        or str(captain) == str(vice)
+        or str(captain) not in set(map(str, xi))
+        or str(vice) not in set(map(str, xi))
+    ):
+        failures.append("MATCH_LOCKED_CAPTAIN_VICE_INVALID")
+
+    bench_view = payload.get("bench_presentation")
+    if not isinstance(bench_view, Mapping):
+        failures.append("MATCH_BENCH_PRESENTATION_MISSING")
+    else:
+        if str(bench_view.get("bench_gk")) != str(locked.get("bench_gk")):
+            failures.append("MATCH_BENCH_GK_CONTRADICTS_LOCKED_TEAM")
+        if list(map(str, bench_view.get("outfield_autosub_priority") or [])) != list(
+            map(str, locked.get("outfield_autosub_priority") or [])
+        ):
+            failures.append("MATCH_OUTFIELD_PRIORITY_CONTRADICTS_LOCKED_TEAM")
+
+    points_rows = [
+        dict(row)
+        for row in payload.get("owned_live_final_points") or []
+        if isinstance(row, Mapping)
+    ]
+    bonus_bps = payload.get("bonus_bps")
+    if not isinstance(bonus_bps, Mapping):
+        failures.append("MATCH_BONUS_BPS_INVALID")
+    else:
+        unresolved_owned = any(
+            str(row.get("fixture_status") or "").upper() != "FT"
+            for row in points_rows
+        )
+        if unresolved_owned and bonus_bps.get("provisional") is not True:
+            failures.append("MATCH_BPS_FINAL_BEFORE_OWNED_FIXTURES_RESOLVED")
+
+    icon = payload.get("icon_live")
+    if isinstance(icon, Mapping):
+        if icon.get("submitted_and_live_scopes_separate") is not True:
+            failures.append("MATCH_ICON_SCOPES_NOT_SEPARATED")
+
+    calibration = [
+        dict(row)
+        for row in payload.get("calibration_items") or []
+        if isinstance(row, Mapping)
+    ]
+    for index, row in enumerate(calibration, start=1):
+        state = str(row.get("status") or "").upper()
+        if state not in {
+            "CALIBRATION_INPUT",
+            "MODEL_UPDATE_PENDING_NEXT_COMPUTE",
+            "ACTUAL_MODEL_UPDATE",
+        }:
+            failures.append(f"MATCH_CALIBRATION_STATUS_INVALID={index}")
+        if state == "ACTUAL_MODEL_UPDATE":
+            proof = row.get("execution_proof")
+            if not (
+                isinstance(proof, Mapping)
+                and proof.get("executed") is True
+                and proof.get("evidence_time")
+                and "previous_value" in proof
+                and "current_value" in proof
+            ):
+                failures.append(f"MATCH_MODEL_UPDATE_PROOF_MISSING={index}")
+    return failures
+
+
 def materialize_match_lifecycle_report(
     *,
     canonical_text: str,
@@ -3365,6 +3469,12 @@ def materialize_match_lifecycle_report(
     reported_mode: str = "MATCH",
 ) -> dict[str, Any]:
     surface = dict(match_surface or {})
+    semantic_failures = validate_match_lifecycle_surface(surface)
+    if semantic_failures:
+        raise ReportOrchestrationError(
+            "MATCH lifecycle semantic barrier failed: "
+            + ",".join(semantic_failures)
+        )
     icon = dict(surface.get("icon_live") or {})
     section_payloads = {
         "MATCH CHECKPOINT / GW STATUS": {

@@ -60,6 +60,7 @@ from src.engines.v12_deep_delivery import (
     select_personal_evidence,
     validate_deep_decision_content_delivery,
 )
+from src.engines.v12_final_delivery_barrier import validate_final_delivery_barrier
 from src.engines.v12_report_orchestration import (
     build_actionable_price_radar,
     build_calendar_workload_context,
@@ -556,9 +557,12 @@ def _load_previous_visible_deep_baseline(
         manifest = build_deep_human_facing_manifest(report)
         semantic_failures.extend(validate_deep_human_facing_manifest(manifest))
         semantic_failures.extend(validate_human_facing_body(body))
-        semantic_failures.extend(
-            validate_deep_decision_content_delivery(report, body)
+        final_barrier = validate_final_delivery_barrier(
+            report_mode="DEEP",
+            report=report,
+            body=body,
         )
+        semantic_failures.extend(final_barrier.get("failures") or [])
     failures = list(dict.fromkeys(status_failures + semantic_failures))
     if failures:
         return {
@@ -6037,10 +6041,15 @@ def run_deep(
         weather_contract_state="SOURCE_DEGRADED",
     )
     body = render_deep_text(report)
+    final_delivery_barrier = validate_final_delivery_barrier(
+        report_mode="DEEP",
+        report=report,
+        body=body,
+    )
     human_failures = list(dict.fromkeys(
         validate_human_facing_body(body)
         + validate_deep_human_facing_manifest(human_manifest)
-        + validate_deep_decision_content_delivery(report, body)
+        + list(final_delivery_barrier.get("failures") or [])
     ))
     parsed_ids, _, _ = _parse_sections(body)
     rendered_states = {
@@ -6101,6 +6110,12 @@ def run_deep(
                 "reason": ";".join(post_render_qa.get("failures") or []) or None,
             },
             {
+                "stage": "FINAL_DELIVERY_BARRIER",
+                "status": final_delivery_barrier.get("status"),
+                "required": True,
+                "reason": ";".join(final_delivery_barrier.get("failures") or []) or None,
+            },
+            {
                 "stage": "HUMAN_FACING_QA",
                 "status": "PASS" if not human_failures else "FAILED",
                 "required": True,
@@ -6132,6 +6147,8 @@ def run_deep(
         "post_render_qa_status": post_render_qa.get("status"),
         "human_facing_qa_status": "PASS" if not human_failures else "FAIL",
         "human_facing_manifest_status": human_manifest.get("status"),
+        "final_delivery_barrier": deepcopy(final_delivery_barrier),
+        "final_delivery_barrier_status": final_delivery_barrier.get("status"),
         "stage3_internal_pass": stage3_internal_pass,
         "stage3_action": operational_action,
         "stage3_required_stages": sorted(stage3_required_stage_names),

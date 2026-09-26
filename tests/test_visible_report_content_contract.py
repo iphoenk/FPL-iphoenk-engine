@@ -3,6 +3,8 @@ from __future__ import annotations
 from copy import deepcopy
 from pathlib import Path
 
+import pytest
+
 from src.runtime_v6.domains.report_plane.delivery_integrity import MANDATORY_SECTIONS
 from src.runtime_v6.domains.report_plane.report_qa import (
     _FULL_DEEP_VISIBLE_ORDER,

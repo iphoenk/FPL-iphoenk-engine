@@ -204,12 +204,48 @@ def validate(
         require(bool(row.get("3GW")), f"VISIBLE_{position}_3GW_MISSING")
         require(bool(row.get("5GW")), f"VISIBLE_{position}_5GW_MISSING")
 
-    allowed_degraded = {"S09"}
     degraded = {
         section_id
         for section_id, row in sections.items()
         if str(row.get("state") or "").upper() == "DEGRADED"
     }
+    allowed_degraded = {"S09"}
+
+    if "S03" in degraded:
+        reason = str((sections["S03"]).get("degradation_reason") or "").lower()
+        delta = dict(((sections["S03"]).get("content") or {}).get("decision_delta") or {})
+        truthful_missing_baseline = (
+            "previous valid visible deep baseline" in reason
+            and "unavailable" in reason
+            and str(delta.get("baseline_state") or "").upper() == "UNAVAILABLE"
+            and str(delta.get("baseline_requirement") or "").upper()
+            == "PREVIOUS_VALID_VISIBLE_DEEP"
+            and not list(delta.get("rows") or [])
+        )
+        require(
+            truthful_missing_baseline,
+            "S03_DEGRADED_NOT_TRUTHFUL_BASELINE_UNAVAILABILITY",
+        )
+        if truthful_missing_baseline:
+            allowed_degraded.add("S03")
+
+    if "S05" in degraded:
+        reason = str((sections["S05"]).get("degradation_reason") or "").lower()
+        coverage = dict(((sections["S05"]).get("content") or {}).get("competition_coverage") or {})
+        truthful_non_pl_gap = (
+            coverage.get("official_pl") is True
+            and coverage.get("verified_non_pl_schedule_bound") is False
+            and int(coverage.get("verified_non_pl_event_count") or 0) == 0
+            and ("non-pl" in reason or "non pl" in reason)
+            and ("not bound" in reason or "unavailable" in reason)
+        )
+        require(
+            truthful_non_pl_gap,
+            "S05_DEGRADED_NOT_TRUTHFUL_NON_PL_SOURCE_GAP",
+        )
+        if truthful_non_pl_gap:
+            allowed_degraded.add("S05")
+
     require(
         degraded <= allowed_degraded,
         f"INTERNAL_SECTION_DEGRADED:{sorted(degraded - allowed_degraded)}",

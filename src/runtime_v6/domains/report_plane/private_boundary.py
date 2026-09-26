@@ -4,9 +4,9 @@ from __future__ import annotations
 
 The acquisition/normalisation producer remains unchanged. This module runs only
 after collection/runtime-control and before the public candidate tree is frozen.
-It moves private current-team state to the private repository checkout, removes
-that payload from the public candidate tree, and strips explicit auth/session
-metadata from public report-prefetch observability.
+It moves manager-specific personal surfaces to the private repository checkout,
+removes those payloads from the public candidate tree, and strips explicit
+auth/session metadata from public report-prefetch observability.
 """
 
 import argparse
@@ -30,7 +30,8 @@ _PRIVATE_TOP_LEVEL_KEYS = {
 }
 
 _PRIVATE_SCOPE_HEALTH_KEYS = {"AUTH", "PERSONAL"}
-_PRIVATE_ENDPOINT_CLASSES = {"authentication", "me", "my_team", "entry", "picks"}\n_PRIVATE_PERSONAL_FILES = ("current_team.json", "submitted_picks.json", "memberships.json")
+_PRIVATE_ENDPOINT_CLASSES = {"authentication", "me", "my_team", "entry", "picks"}
+_PRIVATE_PERSONAL_FILES = ("current_team.json", "submitted_picks.json", "memberships.json")
 
 
 def _read_json(path: Path, default: Any = None) -> Any:
@@ -45,7 +46,8 @@ def _read_json(path: Path, default: Any = None) -> Any:
 def _write_json(path: Path, value: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps(value, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
+        json.dumps(value, indent=2, ensure_ascii=False, sort_keys=True) + "
+",
         encoding="utf-8",
     )
 
@@ -92,7 +94,7 @@ def _sanitize_public_prefetch(value: Mapping[str, Any]) -> dict[str, Any]:
             continue
         row = dict(raw)
         path = str(row.get("path") or "").replace("\\", "/")
-        if path.endswith("/personal/current_team.json"):
+        if any(path.endswith(f"/personal/{name}") for name in _PRIVATE_PERSONAL_FILES):
             continue
         artifacts.append(row)
     if "artifacts" in out:
@@ -100,7 +102,8 @@ def _sanitize_public_prefetch(value: Mapping[str, Any]) -> dict[str, Any]:
 
     governance = dict(out.get("governance") or {})
     governance["private_personal_state_split"] = True
-    governance["public_tree_contains_current_private_team"] = False\n    governance["public_tree_contains_manager_specific_personal_state"] = False
+    governance["public_tree_contains_current_private_team"] = False
+    governance["public_tree_contains_manager_specific_personal_state"] = False
     out["governance"] = governance
     return out
 

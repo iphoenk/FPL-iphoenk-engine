@@ -327,6 +327,7 @@ def _public_personal_and_mini_league_evidence(
     runtime_data_root: Path,
     *,
     owned: Sequence[Mapping[str, Any]],
+    current_team: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Prove current public Official FPL squad + mini-league evidence.
 
@@ -335,6 +336,9 @@ def _public_personal_and_mini_league_evidence(
     both of which Official FPL exposes without an authenticated private session.
     This function consumes only already-published V6 artifacts read-only.
     """
+    # Compatibility-only parameter: private current-team state is deliberately
+    # ignored. Stage-2 acceptance is proven from disclosed public evidence.
+    _ = current_team
     submitted = _read_json(
         runtime_data_root / "data/v6/personal/submitted_picks.json"
     )

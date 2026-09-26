@@ -258,7 +258,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add personal/current_team.json personal/snapshots personal/private_boundary_receipt.json
+          git add -A -- personal
           if ! git diff --cached --quiet; then
             git commit -m "data(private): V6 personal snapshot ${GITHUB_RUN_ID}"
             git pull --rebase origin main

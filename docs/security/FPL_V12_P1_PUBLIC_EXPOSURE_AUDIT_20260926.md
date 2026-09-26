@@ -121,3 +121,53 @@ The bounded P1 branch now:
 
 No artifact, run, issue comment, cache, branch history, or Git history has been
 deleted or rewritten.
+
+
+## P1-K retained-history inventory status
+
+The current non-destructive historical audit found **44 public V12 completion
+occurrences** in issue #431 between 2026-09-21 and 2026-09-26. Successful
+occurrences from the period include public decision action values such as
+`WAIT`; failed/partial occurrences can still expose artifact names and
+operational metadata.
+
+Retained-artifact verification proves that multiple old full-report artifacts
+remain accessible. Examples sampled during the audit include:
+
+| run_id | artifact | created | expires | still accessible at audit |
+|---|---|---|---|---|
+| 35597594711 | `v12-report-DEEP-35597594711` | 2026-09-21 | 2026-10-05 | YES |
+| 35617436772 | `v12-report-DEEP-35617436772` | 2026-09-21 | 2026-10-05 | YES |
+| 35659302333 | `v12-report-DEEP-35659302333` | 2026-09-21 | 2026-10-05 | YES |
+| 35659879299 | `v12-report-DEEP-35659879299` | 2026-09-21 | 2026-10-05 | YES |
+| 36126675342 | `v12-report-DEEP-36126675342` | 2026-09-25 | retained during audit | YES |
+
+Run `36126675342` remains the mandatory regression occurrence. Latest-main
+re-audit additionally confirmed the same public decision-action leak class in
+run `36232738219`.
+
+No retained artifact, Actions run/log, cache, issue comment, or Git commit has
+been deleted by P1. Cleanup remains an explicit-owner-approval operation.
+
+## Isolated V6 private-personal publisher correction
+
+PR CI correctly rejected an intermediate design that performed `git push`
+from the V6 acquisition job. The acquisition invariant remains unchanged:
+the collection job is read-only and cannot publish.
+
+The corrected architecture is:
+
+1. V6 acquisition may obtain authenticated state in the ephemeral runner;
+2. `private_boundary.py` removes authenticated current-team/auth-personal
+   state before the public candidate tree is frozen;
+3. the verified public runtime artifact contains no current-team private
+   payload;
+4. a separate isolated private-personal publisher job re-runs the governed
+   personal fetch against a temporary copy of the verified factual snapshot;
+5. only `personal/*` is committed to `iphoenk/fpl-reports-private`;
+6. authenticated/private stdout and stderr stay off public logs;
+7. manual captures continue to enter the private repo directly and never
+   transit through `runtime-data-v6`.
+
+This preserves the V6 factual/public acquisition method and public publisher
+governance while separating persistence authority.

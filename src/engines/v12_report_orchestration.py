@@ -3072,7 +3072,7 @@ def materialize_match_report(
     icon_reason = None if icon_state == "COMPLETE" else "fresh ICON+ live standings/exposure unavailable"
 
     section_payloads = {
-        "MATCH CHECKPOINT / GW STATUS": {
+        "MATCH1": {
             "state": "COMPLETE",
             "content": {
                 "scoring_gw": live.get("scoring_gw"),
@@ -3087,7 +3087,7 @@ def materialize_match_report(
                 "transition": lifecycle.get("transition"),
             },
         },
-        "LOCKED PERSONAL TEAM": {
+        "MATCH2": {
             "state": "COMPLETE",
             "content": {
                 "rows": players,
@@ -3096,11 +3096,11 @@ def materialize_match_report(
                 "authority": "LOCKED_SUBMITTED_PICKS",
             },
         },
-        "PERSONAL IMPACT FIRST": {
+        "MATCH3": {
             "state": "COMPLETE",
             "content": {"rows": personal_impact},
         },
-        "GLOBAL AUTOSUB STATE": {
+        "MATCH4": {
             "state": "COMPLETE",
             "content": {
                 **global_autosub_state,
@@ -3108,11 +3108,11 @@ def materialize_match_report(
                 "outfield_autosub_priority": bench.get("outfield_autosub_priority") or [],
             },
         },
-        "CAPTAIN / VICE CONSEQUENCE": {
+        "MATCH5": {
             "state": "COMPLETE",
             "content": captain,
         },
-        "OWNED LIVE / FINAL POINTS": {
+        "MATCH6": {
             "state": "COMPLETE",
             "content": {
                 "rows": [
@@ -3129,7 +3129,7 @@ def materialize_match_report(
                 ]
             },
         },
-        "BONUS / BPS": {
+        "MATCH7": {
             "state": "COMPLETE",
             "content": {
                 **bonus,
@@ -3145,7 +3145,7 @@ def materialize_match_report(
                 ],
             },
         },
-        "CARDS / INJURY / DEFCON / ROLE EVENTS": {
+        "MATCH8": {
             "state": "COMPLETE",
             "content": {
                 "rows": [
@@ -3156,7 +3156,7 @@ def materialize_match_report(
                 "observation_is_not_automatic_model_change": True,
             },
         },
-        "RELEVANT LEAGUE-WIDE SIGNALS": {
+        "MATCH9": {
             "state": "COMPLETE",
             "content": {
                 "rows": [
@@ -3167,12 +3167,12 @@ def materialize_match_report(
                 "scorer_only_scouting_prohibited": True,
             },
         },
-        "ICON+ LIVE": {
+        "MATCH10": {
             "state": icon_state,
             "degradation_reason": icon_reason,
             "content": icon if icon else {"status": "UNAVAILABLE"},
         },
-        "NEXT-GW LEARNING": {
+        "MATCH11": {
             "state": "COMPLETE",
             "content": {
                 "rows": [
@@ -3183,7 +3183,7 @@ def materialize_match_report(
                 "evidence_not_automatic_transfer": True,
             },
         },
-        "NEXT CRITICAL OBSERVATION": {
+        "MATCH12": {
             "state": "COMPLETE",
             "content": {
                 "observation": (
@@ -3196,7 +3196,7 @@ def materialize_match_report(
                 )
             },
         },
-        "SOURCE / FRESHNESS STATUS": {
+        "MATCH13": {
             "state": "COMPLETE",
             "content": {
                 **dict(source_freshness or {}),
@@ -3215,7 +3215,21 @@ def materialize_match_report(
         section_payloads=section_payloads,
     )
     report["content_contract"] = {
-        "visible_order": list(report.get("rendered_visible_order") or []),
+        "visible_order": [
+            "MATCH CHECKPOINT / GW STATUS",
+            "LOCKED PERSONAL TEAM",
+            "PERSONAL IMPACT FIRST",
+            "GLOBAL AUTOSUB STATE",
+            "CAPTAIN / VICE CONSEQUENCE",
+            "OWNED LIVE/FINAL POINTS",
+            "BONUS/BPS",
+            "CARDS / INJURY / DEFCON / ROLE EVENTS",
+            "RELEVANT LEAGUE-WIDE SIGNALS",
+            "ICON+ LIVE",
+            "NEXT-GW LEARNING",
+            "NEXT CRITICAL OBSERVATION",
+            "SOURCE / FRESHNESS STATUS",
+        ],
         "locked_team": {
             "status": "CURRENT_IMMUTABLE",
             "source": "LOCKED_SUBMITTED_PICKS",
@@ -3223,13 +3237,13 @@ def materialize_match_report(
         "personal_impact": personal_impact,
         "global_autosub_state": global_autosub_state,
         "captain_vice_consequence": captain,
-        "owned_live_final_points": section_payloads["OWNED LIVE / FINAL POINTS"]["content"]["rows"],
+        "owned_live_final_points": section_payloads["MATCH6"]["content"]["rows"],
         "bonus_bps": bonus,
-        "cards_injury_defcon_role_events": section_payloads["CARDS / INJURY / DEFCON / ROLE EVENTS"]["content"]["rows"],
-        "league_wide_signals": section_payloads["RELEVANT LEAGUE-WIDE SIGNALS"]["content"]["rows"],
-        "next_gw_learning": section_payloads["NEXT-GW LEARNING"]["content"]["rows"],
-        "next_critical_observation": section_payloads["NEXT CRITICAL OBSERVATION"]["content"]["observation"],
-        "source_freshness": section_payloads["SOURCE / FRESHNESS STATUS"]["content"],
+        "cards_injury_defcon_role_events": section_payloads["MATCH8"]["content"]["rows"],
+        "league_wide_signals": section_payloads["MATCH9"]["content"]["rows"],
+        "next_gw_learning": section_payloads["MATCH11"]["content"]["rows"],
+        "next_critical_observation": section_payloads["MATCH12"]["content"]["observation"],
+        "source_freshness": section_payloads["MATCH13"]["content"],
         "bench_presentation": {
             "bench_gk": (bench.get("bench_gk") or {}).get("name")
             if isinstance(bench.get("bench_gk"), Mapping)

@@ -105,10 +105,10 @@ jobs:
     # cannot be populated from commenter-controlled code.
     cache-mode: write
     steps:
-      - name: Checkout current production main
+      - name: Checkout report code authority
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || 'main' }}
           path: app
 
       - name: Checkout factual runtime-data-v6
@@ -116,6 +116,15 @@ jobs:
         with:
           ref: runtime-data-v6
           path: runtime-data
+
+      - name: Checkout private decision and personal data plane
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/fpl-reports-private
+          ref: main
+          path: private-reports
+          token: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
+          persist-credentials: true
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -183,57 +192,54 @@ jobs:
         working-directory: app
         run: mkdir -p .cache/v12-stage2
 
-      - name: Restore exact P1.7 decision-core cache
-        if: needs.parse.outputs.profile_mode != 'COLD'
-        id: p17-cache-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: app/.cache/v12-p17
-          key: v12-p17-decision-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_lineup_optimizer.py', 'app/config/intelligence/v12_lineup_optimizer.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
-          restore-keys: |
-            v12-p17-decision-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_lineup_optimizer.py', 'app/config/intelligence/v12_lineup_optimizer.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-
-
-      - name: Ensure exact P1.7 cache directory
+      # P1 privacy: exact P1.7 and MC payloads contain private decision state.
+      # They remain runner-local and never enter the public GitHub Actions cache.
+      - name: Ensure ephemeral P1.7 decision-cache directory
         working-directory: app
         run: mkdir -p .cache/v12-p17
 
-      - name: Restore deterministic MC simulation-summary cache
-        if: needs.parse.outputs.profile_mode != 'COLD'
-        id: mc-cache-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: app/.cache/v12-mc
-          key: v12-mc-summary-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_monte_carlo.py', 'app/config/intelligence/v12_monte_carlo.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
-          restore-keys: |
-            v12-mc-summary-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_monte_carlo.py', 'app/config/intelligence/v12_monte_carlo.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-
-
-      - name: Ensure MC cache directory
+      - name: Ensure ephemeral MC decision-cache directory
         working-directory: app
         run: mkdir -p .cache/v12-mc
 
-      - name: Restore previous successful DEEP artifact candidate
+      - name: Restore previous valid DEEP baseline from private history
         if: needs.parse.outputs.report_mode == 'DEEP'
         working-directory: app
         env:
-          GH_TOKEN: ${{ github.token }}
+          REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
         run: |
           set -euo pipefail
-          rm -rf artifacts/previous-deep artifacts/previous-deep-candidate
-          for run_id in $(gh api             "repos/${GITHUB_REPOSITORY}/actions/workflows/v12-integrated-report-runner.yml/runs?branch=main&status=success&per_page=20"             --jq '.workflow_runs[].id'); do
-            if [ "$run_id" = "${GITHUB_RUN_ID}" ]; then
-              continue
-            fi
-            artifact_name="v12-report-DEEP-${run_id}"
-            rm -rf artifacts/previous-deep-candidate
-            if gh run download "$run_id"               --repo "${GITHUB_REPOSITORY}"               --name "$artifact_name"               --dir artifacts/previous-deep-candidate >/dev/null 2>&1; then
-              if [ -f artifacts/previous-deep-candidate/report_bundle.json ]; then
-                mv artifacts/previous-deep-candidate artifacts/previous-deep
-                echo "Previous DEEP candidate restored from run_id=$run_id"
-                break
-              fi
-            fi
-          done
-          rm -rf artifacts/previous-deep-candidate
+          rm -rf artifacts/previous-deep
+          python - <<'PY'
+          import json
+          import os
+          import shutil
+          from datetime import datetime
+          from pathlib import Path
+
+          target = datetime.fromisoformat(os.environ["REPORT_SLOT"].replace("Z", "+00:00"))
+          root = Path("../private-reports/reports")
+          candidates = []
+          for path in root.glob("**/report_bundle.json"):
+              try:
+                  payload = json.loads(path.read_text(encoding="utf-8"))
+                  if str(payload.get("report_mode") or "").upper() != "DEEP":
+                      continue
+                  slot = datetime.fromisoformat(
+                      str(payload.get("report_slot") or "").replace("Z", "+00:00")
+                  )
+                  if slot < target:
+                      candidates.append((slot, path.parent))
+              except (OSError, ValueError, json.JSONDecodeError):
+                  continue
+          if candidates:
+              _, source = max(candidates, key=lambda item: item[0])
+              dest = Path("artifacts/previous-deep")
+              shutil.copytree(source, dest)
+              print("PREVIOUS_PRIVATE_DEEP_BASELINE=AVAILABLE")
+          else:
+              print("PREVIOUS_PRIVATE_DEEP_BASELINE=UNAVAILABLE")
+          PY
 
       - name: Execute occurrence-bound integrated report
         id: report
@@ -249,6 +255,9 @@ jobs:
         run: |
           args=(
             --runtime-data-root "../runtime-data"
+            --private-data-root "../private-reports"
+            --disable-legacy-private-sources
+            --require-private-personal
             --report-mode "$REPORT_MODE"
             --report-slot "$REPORT_SLOT"
             --output-dir "artifacts/v12-report"
@@ -259,6 +268,8 @@ jobs:
           if [ -f artifacts/previous-deep/report_bundle.json ]; then
             args+=(--previous-visible-deep-dir "artifacts/previous-deep")
           fi
+          mkdir -p artifacts/v12-private-delivery
+          private_log="artifacts/v12-private-delivery/runner.log"
           if [ "$PROFILE_MODE" = "COLD" ]; then
             rm -rf .cache/v12-stage2 .cache/v12-p17 .cache/v12-mc
             mkdir -p \
@@ -267,21 +278,23 @@ jobs:
               .cache/v12-mc \
               artifacts/v12-report/stage-profiles
             export V12_STAGE_PROFILE_DIR="artifacts/v12-report/stage-profiles"
-            set +e
-            python -m src.engines.v12_integrated_report_runner "${args[@]}" \
-              2>&1 | tee artifacts/v12-report/profile_run.log
-            runner_status=${PIPESTATUS[0]}
-            set -e
-            unset V12_STAGE_PROFILE_DIR
+          fi
+          set +e
+          python -m src.engines.v12_integrated_report_runner "${args[@]}" \
+            >"$private_log" 2>&1
+          runner_status=$?
+          set -e
+          unset V12_STAGE_PROFILE_DIR || true
+          if [ "$PROFILE_MODE" = "COLD" ]; then
             python -m src.engines.v12_profile_summary \
               --profile-dir artifacts/v12-report/stage-profiles \
-              --log artifacts/v12-report/profile_run.log \
+              --log "$private_log" \
               --output-json artifacts/v12-report/profile_summary.json \
-              --output-md artifacts/v12-report/profile_summary.md || true
-            exit "$runner_status"
-          else
-            python -m src.engines.v12_integrated_report_runner "${args[@]}"
+              --output-md artifacts/v12-report/profile_summary.md >/dev/null 2>&1 || true
           fi
+          python -m src.engines.v12_delivery_security scan-log --path "$private_log"
+          grep -E '^\[(V12_STAGE|V12_STAGE2_CACHE|P1_2B_PERF)\]' "$private_log" || true
+          exit "$runner_status"
 
       - name: Persist deterministic Stage-2 derived projection cache before downstream acceptance
         if: always() && needs.parse.outputs.report_mode == 'DEEP' && needs.parse.outputs.profile_mode != 'COLD'
@@ -289,20 +302,6 @@ jobs:
         with:
           path: app/.cache/v12-stage2
           key: v12-stage2-derived-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_stage2_derived_cache.py', 'app/src/models/historical_projection.py', 'app/src/engines/v12_contextual_dynamics.py', 'app/src/engines/v12_player_events.py', 'app/src/engines/v12_player_minutes.py', 'app/src/engines/v12_position_probability_components.py', 'app/src/engines/p0_decision_quality.py', 'app/src/models/v12_stage1_analytics.py', 'app/src/rules.py', 'app/config/intelligence/player_events.json', 'app/config/intelligence/player_minutes.json', 'app/config/intelligence/historical_priors.json', 'app/config/intelligence/v12_contextual_dynamics.json') }}-${{ github.run_id }}
-
-      - name: Persist exact P1.7 decision-core cache before downstream acceptance
-        if: always() && needs.parse.outputs.report_mode == 'DEEP' && needs.parse.outputs.profile_mode != 'COLD'
-        uses: actions/cache/save@v4
-        with:
-          path: app/.cache/v12-p17
-          key: v12-p17-decision-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_lineup_optimizer.py', 'app/config/intelligence/v12_lineup_optimizer.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
-
-      - name: Persist deterministic MC summary cache before downstream acceptance
-        if: always() && needs.parse.outputs.report_mode == 'DEEP' && needs.parse.outputs.profile_mode != 'COLD'
-        uses: actions/cache/save@v4
-        with:
-          path: app/.cache/v12-mc
-          key: v12-mc-summary-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_monte_carlo.py', 'app/config/intelligence/v12_monte_carlo.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
 
       - name: Read integrated runner proof
         id: proof
@@ -346,10 +345,6 @@ jobs:
           )
           with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as fh:
               fh.write(f"status={proof.get('status', 'UNKNOWN')}\n")
-              fh.write(f"action={proof.get('stage3_action', 'UNKNOWN')}\n")
-              fh.write(
-                  f"mc_paths={(proof.get('mc') or {}).get('actual_paths', 'UNKNOWN')}\n"
-              )
           PY
 
       - name: Record Stage3 not applicable for PRICE
@@ -372,43 +367,112 @@ jobs:
           )
           PY
 
-      - name: Upload immutable occurrence bundle
+      - name: Publish canonical output to private repository
         if: always()
+        id: private_delivery
+        working-directory: app
+        env:
+          REPORT_MODE: ${{ needs.parse.outputs.report_mode }}
+          REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
+        shell: bash
+        run: |
+          set +e
+          mkdir -p artifacts/v12-private-delivery
+          model_sha="$(git rev-parse HEAD)"
+          runtime_sha="$(git -C ../runtime-data rev-parse HEAD)"
+          python -m src.engines.v12_private_publisher \
+            --canonical-dir artifacts/v12-report \
+            --private-root ../private-reports \
+            --run-id "${GITHUB_RUN_ID}" \
+            --model-sha "$model_sha" \
+            --runtime-sha "$runtime_sha" \
+            --receipt-out artifacts/v12-private-delivery/receipt.json \
+            >artifacts/v12-private-delivery/publisher.log 2>&1
+          publisher_rc=$?
+          if [ "$publisher_rc" -eq 0 ]; then
+            (
+              cd ../private-reports
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git add latest reports
+              if ! git diff --cached --quiet; then
+                git commit -m "report(v12): private ${REPORT_MODE} ${REPORT_SLOT} run ${GITHUB_RUN_ID}"
+              fi
+              git pull --rebase origin main
+              git push origin HEAD:main
+              local_sha="$(git rev-parse HEAD)"
+              remote_sha="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+              test "$local_sha" = "$remote_sha"
+            )
+            publisher_rc=$?
+          fi
+          if [ "$publisher_rc" -eq 0 ]; then
+            echo "status=PASS" >> "$GITHUB_OUTPUT"
+            echo "PRIVATE_DELIVERY=PASS"
+          else
+            echo "status=FAIL" >> "$GITHUB_OUTPUT"
+            echo "PRIVATE_DELIVERY=FAIL"
+          fi
+          exit 0
+
+      - name: Build allowlisted public operational proof
+        if: always()
+        id: public_proof
+        working-directory: app
+        env:
+          REPORT_MODE: ${{ needs.parse.outputs.report_mode }}
+          REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
+          PROFILE_MODE: ${{ needs.parse.outputs.profile_mode }}
+          PRIVATE_DELIVERY_STATUS: ${{ steps.private_delivery.outputs.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          model_sha="$(git rev-parse HEAD)"
+          runtime_sha="$(git -C ../runtime-data rev-parse HEAD)"
+          receipt_arg=()
+          if [ -s artifacts/v12-private-delivery/receipt.json ]; then
+            receipt_arg=(--private-receipt artifacts/v12-private-delivery/receipt.json)
+          fi
+          python -m src.engines.v12_delivery_security build-proof \
+            --execution-proof artifacts/v12-report/execution_proof.json \
+            --stage3-acceptance artifacts/v12-report/stage3_acceptance.json \
+            "${receipt_arg[@]}" \
+            --report-mode "$REPORT_MODE" \
+            --report-slot "$REPORT_SLOT" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --model-sha "$model_sha" \
+            --runtime-sha "$runtime_sha" \
+            --private-delivery-status "${PRIVATE_DELIVERY_STATUS:-FAIL}" \
+            --profile-mode "${PROFILE_MODE:-OFF}" \
+            --output artifacts/v12-public-proof/public_proof.json
+          python -m src.engines.v12_delivery_security issue-proof \
+            --public-proof artifacts/v12-public-proof/public_proof.json \
+            --output artifacts/v12-public-proof/issue_proof.txt
+
+      - name: Upload safe public operational proof only
+        if: always() && steps.public_proof.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: v12-report-${{ needs.parse.outputs.report_mode }}-${{ github.run_id }}
-          path: |
-            app/artifacts/v12-report/report_bundle.json
-            app/artifacts/v12-report/report_body.md
-            app/artifacts/v12-report/execution_proof.json
-            app/artifacts/v12-report/stage3_acceptance.json
-            app/artifacts/v12-report/runtime_environment.json
-            app/artifacts/v12-report/stage-profiles/*.pstats
-            app/artifacts/v12-report/profile_run.log
-            app/artifacts/v12-report/profile_summary.json
-            app/artifacts/v12-report/profile_summary.md
+          name: v12-public-proof-${{ needs.parse.outputs.report_mode }}-${{ github.run_id }}
+          path: app/artifacts/v12-public-proof/public_proof.json
           if-no-files-found: error
           retention-days: 14
 
-      - name: Publish compact completion proof to issue 431
-        if: always()
+      - name: Publish allowlisted completion proof to issue 431
+        if: always() && steps.public_proof.outcome == 'success'
+        working-directory: app
         env:
           GH_TOKEN: ${{ github.token }}
-          REPORT_MODE: ${{ needs.parse.outputs.report_mode }}
-          REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
-          JOB_STATUS: ${{ job.status }}
-          RUNNER_STATUS: ${{ steps.proof.outputs.runner_status }}
-          PRE_RENDER: ${{ steps.proof.outputs.pre_render }}
-          POST_RENDER: ${{ steps.proof.outputs.post_render }}
-          HUMAN_FACING: ${{ steps.proof.outputs.human_facing }}
-          STAGE3_STATUS: ${{ steps.stage3.outputs.status }}
-          STAGE3_ACTION: ${{ steps.stage3.outputs.action }}
-          MC_PATHS: ${{ steps.stage3.outputs.mc_paths }}
-          PROFILE_MODE: ${{ needs.parse.outputs.profile_mode }}
-          PHYSICAL_CPU_MODEL: ${{ steps.runtime.outputs.physical_cpu_model }}
         run: |
-          status="${RUNNER_STATUS:-UNKNOWN}"
-          if [ "$JOB_STATUS" != "success" ] && [ -z "${RUNNER_STATUS:-}" ]; then
-            status="FAIL"
-          fi
-          gh issue comment 431 --repo "${GITHUB_REPOSITORY}" --body             "V12_REPORT_RUN | status=${status} | report_mode=${REPORT_MODE} | report_slot=${REPORT_SLOT} | run_id=${GITHUB_RUN_ID} | artifact=v12-report-${REPORT_MODE}-${GITHUB_RUN_ID} | pre_render=${PRE_RENDER:-UNKNOWN} | post_render=${POST_RENDER:-UNKNOWN} | human_facing=${HUMAN_FACING:-UNKNOWN} | stage3=${STAGE3_STATUS:-UNKNOWN} | action=${STAGE3_ACTION:-UNKNOWN} | mc_paths=${MC_PATHS:-UNKNOWN} | profile_mode=${PROFILE_MODE:-OFF} | cpu_model=${PHYSICAL_CPU_MODEL:-UNKNOWN} | integrated_runner=true | fail_operational=true | v6_mutated=false"
+          gh issue comment 431 --repo "${GITHUB_REPOSITORY}" \
+            --body-file artifacts/v12-public-proof/issue_proof.txt
+
+      - name: Enforce fail-closed human delivery
+        if: always()
+        env:
+          PRIVATE_DELIVERY_STATUS: ${{ steps.private_delivery.outputs.status }}
+          PUBLIC_PROOF_OUTCOME: ${{ steps.public_proof.outcome }}
+        run: |
+          set -euo pipefail
+          test "${PRIVATE_DELIVERY_STATUS:-FAIL}" = "PASS"
+          test "${PUBLIC_PROOF_OUTCOME:-failure}" = "success"

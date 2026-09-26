@@ -269,6 +269,7 @@ jobs:
           tests/test_data_platform_scheduler_recovery_guard.py
           tests/test_data_platform_scheduler_watchdog.py
           tests/test_data_platform_scheduler_redundancy.py
+          tests/test_v12_delivery_schedule.py
 
   runtime-cross-cpu-probe:
     name: runtime-cross-cpu-probe-${{ matrix.label }}

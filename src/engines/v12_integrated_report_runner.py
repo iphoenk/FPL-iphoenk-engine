@@ -1972,6 +1972,11 @@ def _captain_candidate_review(
         "rivals_captain_pct": exposure.get("captain_pct"),
         "rivals_eo_pct": exposure.get("eo_pct"),
         "rivals_eo_supported": exposure.get("eo_supported"),
+        # Compatibility aliases only. Their scope is explicit and they are
+        # not used by Stage-C human-facing denominator rendering.
+        "captain_pct": exposure.get("captain_pct"),
+        "eo_pct": exposure.get("eo_pct"),
+        "legacy_exposure_scope": "RIVALS_EXCLUDING_US",
         "mini_league_upside": (
             "Lower captain/EO can create leverage only when football evidence remains close."
         ),

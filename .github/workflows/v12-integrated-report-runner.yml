@@ -59,14 +59,23 @@ jobs:
           INPUT_CHECKPOINT: ${{ inputs.checkpoint_time }}
           INPUT_PROFILE_MODE: ${{ inputs.profile_mode }}
           COMMENT_BODY: ${{ github.event.comment.body }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           python - <<'PY'
           import os, re
+          from datetime import datetime
           from pathlib import Path
+          from zoneinfo import ZoneInfo
 
           if os.environ["EVENT_NAME"] == "workflow_dispatch":
               mode = os.environ.get("INPUT_MODE") or "DEEP"
               slot = os.environ.get("INPUT_SLOT") or ""
+              if slot.strip().upper() == "AUTO":
+                  if os.environ.get("REF_NAME") == "main":
+                      raise SystemExit("AUTO report_slot is branch-acceptance only")
+                  slot = datetime.now(ZoneInfo("Asia/Jakarta")).replace(
+                      microsecond=0
+                  ).isoformat()
               checkpoint = os.environ.get("INPUT_CHECKPOINT") or ""
               profile_mode = os.environ.get("INPUT_PROFILE_MODE") or "OFF"
           else:
@@ -136,6 +145,101 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Prepare branch-only real DEEP acceptance snapshot
+        if: github.event_name == 'workflow_dispatch' && github.ref_name != 'main' && needs.parse.outputs.report_mode == 'DEEP'
+        working-directory: app
+        env:
+          REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
+          FPL_AUTH_MODE: ${{ vars.FPL_AUTH_MODE || 'disabled' }}
+          FPL_SESSION_B64: ${{ secrets.FPL_SESSION_B64 }}
+          FPL_ACCESS_TOKEN: ${{ secrets.FPL_ACCESS_TOKEN }}
+          FPL_TEAM_ID: ${{ vars.FPL_TEAM_ID }}
+          FPL_PRIORITY_LEAGUES: ${{ vars.FPL_PRIORITY_LEAGUES }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          private_prefetch_log="$RUNNER_TEMP/p1-real-prefetch-private.log"
+          set +e
+          python -m src.runtime_v6.domains.report_plane.report_prefetch \
+            --report-kind full_master \
+            --logical-slot "$REPORT_SLOT" \
+            --requested-by "P1_REAL_DEEP_BRANCH_ACCEPTANCE" \
+            --requested-for-report "DEEP" \
+            --personal \
+            --mini-league \
+            --force \
+            --output-root ../runtime-data/data/v6 \
+            >"$private_prefetch_log" 2>&1
+          rc=$?
+          set -e
+          if [[ $rc -ne 0 && $rc -ne 3 ]]; then
+            echo "P1_REAL_PREFETCH=FAIL"
+            exit "$rc"
+          fi
+
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          p = Path("../runtime-data/data/v6/personal/current_team.json")
+          if not p.is_file():
+              raise SystemExit("P1 acceptance requires fresh authenticated current_team")
+          obj = json.loads(p.read_text(encoding="utf-8"))
+          if str(obj.get("auth_state") or "").upper() != "AVAILABLE":
+              raise SystemExit("P1 acceptance requires auth_state=AVAILABLE")
+          digest = hashlib.sha256(p.read_bytes()).hexdigest()
+          Path("../p1-current-team-pre.sha256").write_text(digest + "\n", encoding="utf-8")
+          PY
+
+          rm -rf ../acceptance-private-input
+          mkdir -p ../acceptance-private-input
+          python -m src.runtime_v6.domains.report_plane.private_boundary \
+            --public-root ../runtime-data/data/v6 \
+            --private-root ../acceptance-private-input \
+            >/dev/null
+
+          test ! -e ../runtime-data/data/v6/personal/current_team.json
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          before = Path("../p1-current-team-pre.sha256").read_text(encoding="utf-8").strip()
+          p = Path("../acceptance-private-input/personal/current_team.json")
+          after = hashlib.sha256(p.read_bytes()).hexdigest()
+          if before != after:
+              raise SystemExit("P1 current-team payload changed across private split")
+          print(f"P1_PERSONAL_PAYLOAD_IDENTITY={after}")
+          PY
+
+          mkdir -p ../private-reports/personal
+          cp ../acceptance-private-input/personal/current_team.json \
+            ../private-reports/personal/current_team.json
+          if [ -d ../acceptance-private-input/personal/snapshots ]; then
+            mkdir -p ../private-reports/personal/snapshots
+            cp -a ../acceptance-private-input/personal/snapshots/. \
+              ../private-reports/personal/snapshots/
+          fi
+          (
+            cd ../private-reports
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A -- personal
+            if ! git diff --cached --quiet; then
+              git commit -m "data(private): P1 real acceptance current-team ${GITHUB_RUN_ID}" >/dev/null
+              git pull --rebase origin main >/dev/null
+              git push origin HEAD:main >/dev/null
+            fi
+          )
+
+          (
+            cd ../runtime-data
+            git config user.name "p1-acceptance"
+            git config user.email "p1-acceptance@invalid.local"
+            git add -A -- data/v6
+            if ! git diff --cached --quiet; then
+              git commit -m "validation(p1): ephemeral sanitized V6 snapshot ${GITHUB_RUN_ID}" >/dev/null
+            fi
+          )
+          echo "P1_REAL_ACCEPTANCE_SNAPSHOT=PASS"
 
       - name: Validate normalized numeric runtime and capture physical host
         id: runtime
@@ -207,6 +311,8 @@ jobs:
         working-directory: app
         env:
           REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
+          GH_TOKEN: ${{ github.token }}
+          P1_BRANCH_ACCEPTANCE: ${{ github.event_name == 'workflow_dispatch' && github.ref_name != 'main' }}
         run: |
           set -euo pipefail
           rm -rf artifacts/previous-deep
@@ -240,6 +346,26 @@ jobs:
           else:
               print("PREVIOUS_PRIVATE_DEEP_BASELINE=UNAVAILABLE")
           PY
+          if [ ! -f artifacts/previous-deep/report_bundle.json ] && [ "$P1_BRANCH_ACCEPTANCE" = "true" ]; then
+            rm -rf artifacts/previous-deep-candidate
+            for run_id in $(gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/v12-integrated-report-runner.yml/runs?branch=main&status=success&per_page=20" \
+              --jq '.workflow_runs[].id'); do
+              artifact_name="v12-report-DEEP-${run_id}"
+              rm -rf artifacts/previous-deep-candidate
+              if gh run download "$run_id" \
+                --repo "${GITHUB_REPOSITORY}" \
+                --name "$artifact_name" \
+                --dir artifacts/previous-deep-candidate >/dev/null 2>&1; then
+                if [ -f artifacts/previous-deep-candidate/report_bundle.json ]; then
+                  mv artifacts/previous-deep-candidate artifacts/previous-deep
+                  echo "P1_ACCEPTANCE_LEGACY_BASELINE=AVAILABLE"
+                  break
+                fi
+              fi
+            done
+            rm -rf artifacts/previous-deep-candidate
+          fi
 
       - name: Execute occurrence-bound integrated report
         id: report
@@ -253,9 +379,13 @@ jobs:
           V12_P17_DECISION_CACHE_DIR: .cache/v12-p17
           V12_MC_SIM_CACHE_DIR: .cache/v12-mc
         run: |
+          private_input_root="../private-reports"
+          if [ -f ../acceptance-private-input/personal/current_team.json ]; then
+            private_input_root="../acceptance-private-input"
+          fi
           args=(
             --runtime-data-root "../runtime-data"
-            --private-data-root "../private-reports"
+            --private-data-root "$private_input_root"
             --disable-legacy-private-sources
             --require-private-personal
             --report-mode "$REPORT_MODE"
@@ -328,14 +458,20 @@ jobs:
         run: |
           model_sha="$(git rev-parse HEAD)"
           runtime_sha="$(git -C ../runtime-data rev-parse HEAD)"
+          private_input_root="../private-reports"
+          if [ -f ../acceptance-private-input/personal/current_team.json ]; then
+            private_input_root="../acceptance-private-input"
+          fi
+          mkdir -p artifacts/v12-private-delivery
           python -m src.engines.v12_stage3_acceptance \
             --bundle artifacts/v12-report/report_bundle.json \
             --runtime-data-root ../runtime-data \
-            --private-data-root ../private-reports \
+            --private-data-root "$private_input_root" \
             --model-sha "$model_sha" \
             --runtime-sha "$runtime_sha" \
             --canonical control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt \
-            --output artifacts/v12-report/stage3_acceptance.json
+            --output artifacts/v12-report/stage3_acceptance.json \
+            >artifacts/v12-private-delivery/stage3.log 2>&1
           python - <<'PY'
           import json, os
           from pathlib import Path

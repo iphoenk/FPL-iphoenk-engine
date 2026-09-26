@@ -199,16 +199,43 @@ def _extract_table_column(section_body: str, field: str) -> list[str]:
 
 
 def _watchlist_contract(section_body: str) -> tuple[int, list[str]]:
+    """Validate only the ranked Scanner20 table, not adjacent actionable tables.
+
+    S11 intentionally contains two surfaces: exact ranked Scanner20 plus an
+    unpadded Actionable Watchlist. The latter also has a position column, so
+    collecting columns across every table falsely inflates position coverage.
+    """
     failures: list[str] = []
-    ranks = _extract_table_column(section_body, "rank")
-    positions = [value.upper() for value in _extract_table_column(section_body, "position")]
-    ownership = [value.upper() for value in _extract_table_column(section_body, "ownership_tag")]
-    actual = len(set(ranks)) if ranks else _count_markdown_table_rows(section_body)
+    ranks: list[str] = []
+    positions: list[str] = []
+    ownership: list[str] = []
+
+    for headers, rows in _parse_markdown_tables(section_body):
+        normalized = [_normalize_header(header) for header in headers]
+        required = {"rank", "position", "ownership_tag"}
+        if not required.issubset(set(normalized)):
+            continue
+        rank_col = normalized.index("rank")
+        position_col = normalized.index("position")
+        ownership_col = normalized.index("ownership_tag")
+        for row in rows:
+            if len(row) <= max(rank_col, position_col, ownership_col):
+                continue
+            ranks.append(row[rank_col].strip())
+            positions.append(row[position_col].strip().upper())
+            ownership.append(row[ownership_col].strip().upper())
+
+    actual = len(set(ranks))
+    if len(ranks) != actual:
+        failures.append("VISIBLE_WATCHLIST_RANK_DUPLICATE")
     if len(positions) != actual:
         failures.append("VISIBLE_WATCHLIST_POSITION_MISSING")
     else:
         position_counts = Counter(positions)
-        if any(position_counts.get(position, 0) != target for position, target in _POSITION_TARGET.items()):
+        if any(
+            position_counts.get(position, 0) != target
+            for position, target in _POSITION_TARGET.items()
+        ):
             failures.append("VISIBLE_WATCHLIST_POSITION_DISTRIBUTION_INVALID")
     if len(ownership) != actual or any(tag != "NON_OWNED" for tag in ownership):
         failures.append("VISIBLE_WATCHLIST_OWNERSHIP_INVALID")

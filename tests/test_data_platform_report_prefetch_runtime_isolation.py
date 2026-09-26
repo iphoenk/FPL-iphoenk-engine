@@ -7,7 +7,13 @@ WORKFLOW = Path(".github/workflows/v6-natural-data-ingestion.yml")
 def test_v6_production_checkout_is_shallow_and_never_fetches_other_engine_branches():
     workflow = WORKFLOW.read_text(encoding="utf-8")
     assert "fetch-depth: 0" not in workflow
-    assert workflow.count("fetch-depth: 1") == 2
+    # Three public-repository checkouts exist by design: read-only acquisition,
+    # isolated public publisher, and isolated private-personal publisher.
+    # All remain shallow; the private repository checkout uses checkout's
+    # default shallow depth and does not broaden public branch authority.
+    assert workflow.count("fetch-depth: 1") == 3
+    assert "private_personal_publish:" in workflow
+    assert "repository: iphoenk/fpl-reports-private" in workflow
     runtime_fetch = 'fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"'
     assert workflow.count(runtime_fetch) == 3
     assert workflow.count('AUTHORIZATION: basic $read_auth') >= 3

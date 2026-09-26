@@ -151,4 +151,71 @@ def test_match_mode_uses_fixture_state_not_phase_flag_for_activation(tmp_path, m
     result = _run(tmp_path, monkeypatch, snapshot)
     assert result["match_mode_active"] is False
     assert {row["fixture_status"] for row in result["players"]} == {"FT"}
-    assert result["status"] == "RECONCILED_OR_IDLE"
+    assert result["status"] == "POST_ALL_MATCH"
+    assert result["lifecycle"]["primary_mode"] == "POST_ALL_MATCH"
+
+
+def test_match_lifecycle_gap_after_completed_fixture_stays_in_match():
+    fixtures = [
+        {"id": 101, "event": 3, "started": True, "finished": True},
+        {"id": 102, "event": 3, "started": False, "finished": False},
+    ]
+    lifecycle = service.classify_scoring_gw_lifecycle(
+        fixtures,
+        3,
+        previous_completed_fixture_ids=[],
+    )
+    assert lifecycle["primary_mode"] == "MATCH"
+    assert lifecycle["fixtures_live"] == 0
+    assert lifecycle["fixtures_ft"] == 1
+    assert lifecycle["fixtures_not_started"] == 1
+    assert lifecycle["incremental_post_match_due"] is True
+    assert lifecycle["transition"] == "POST_MATCH_THEN_MATCH"
+    assert lifecycle["post_match_return_mode"] == "MATCH"
+
+    repeated = service.classify_scoring_gw_lifecycle(
+        fixtures,
+        3,
+        previous_completed_fixture_ids=[101],
+    )
+    assert repeated["primary_mode"] == "MATCH"
+    assert repeated["incremental_post_match_due"] is False
+    assert repeated["transition"] == "MATCH"
+
+
+def test_match_lifecycle_last_completion_transitions_to_post_all_match():
+    fixtures = [
+        {"id": 101, "event": 3, "started": True, "finished": True},
+        {"id": 102, "event": 3, "started": True, "finished": True},
+    ]
+    lifecycle = service.classify_scoring_gw_lifecycle(
+        fixtures,
+        3,
+        previous_completed_fixture_ids=[101],
+    )
+    assert lifecycle["primary_mode"] == "POST_ALL_MATCH"
+    assert lifecycle["completed_since_previous"] == [102]
+    assert lifecycle["incremental_post_match_due"] is True
+    assert lifecycle["transition"] == "POST_MATCH_THEN_POST_ALL_MATCH"
+    assert lifecycle["post_match_return_mode"] == "POST_ALL_MATCH"
+
+
+def test_match_surface_separates_bench_captain_and_provisional_bonus(tmp_path, monkeypatch):
+    result = _run(tmp_path, monkeypatch, _snapshot())
+    bench = result["bench_presentation"]
+    assert bench["bench_gk"]["element"] == 15
+    assert [row["element"] for row in bench["outfield_autosub_priority"]] == [12, 13, 14]
+    assert bench["autosub_state"] == "PROVISIONAL"
+
+    consequence = result["captain_vice_consequence"]
+    assert consequence["captain"]["element"] == 7
+    assert consequence["captain"]["appearance_state"] == "APPEARED"
+    assert consequence["vice"]["element"] == 8
+    assert consequence["vice_takeover_state"] == "BLOCKED_BY_CAPTAIN_APPEARANCE"
+    assert consequence["final_consequence"] == "PENDING_OFFICIAL_FINALIZATION"
+
+    assert result["bonus_bps"]["provisional"] is True
+    assert result["bonus_bps"]["status"] == "PROVISIONAL"
+    assert result["match_checkpoint"]["fixtures_live"] == 1
+    assert result["match_checkpoint"]["fixtures_ft"] == 0
+    assert result["match_checkpoint"]["fixtures_not_started"] == 0

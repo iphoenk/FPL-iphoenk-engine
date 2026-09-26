@@ -103,6 +103,17 @@ def test_repository_has_no_pull_request_target_workflow():
     assert_no_pull_request_target()
 
 
+def test_integrated_report_workflow_owner_gates_workflow_dispatch():
+    root = Path(__file__).resolve().parents[1]
+    text = (
+        root / ".github/workflows/v12-integrated-report-runner.yml"
+    ).read_text(encoding="utf-8")
+    assert (
+        "(github.event_name == 'workflow_dispatch' && "
+        "github.actor == github.repository_owner)"
+    ) in text
+
+
 def test_contract_classes_are_complete():
     root = Path(__file__).resolve().parents[1]
     contract = json.loads(

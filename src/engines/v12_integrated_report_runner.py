@@ -5003,20 +5003,53 @@ def run_deep(
         staging=staging,
         chip_state=chip_state if chip_available else None,
     )
+    decision_dashboard = _decision_dashboard(
+        operational_action=operational_action,
+        planning_gw=planning_gw,
+        stage3_decision=stage3_decision,
+        lineup_state=lineup_state,
+        lineup=lineup,
+        captain_surface=captain_surface,
+        chip_available=chip_available,
+        price_radar=price_radar,
+        auth_state=str(private_current_team.get("auth_state") or "UNAVAILABLE"),
+        finance=finance,
+    )
+    evidence_quality = _evidence_quality_surface(
+        official=official,
+        personal_resolution=personal_resolution,
+        finance=finance,
+        chip_available=chip_available,
+        calendar_context=calendar_context,
+        projections=projections,
+        post_match_review=post_match_review,
+        rise=rise,
+        mini=mini,
+        private_auth_state=str(
+            private_current_team.get("auth_state") or "UNAVAILABLE"
+        ),
+        report_slot=report_slot,
+    )
+    action_board = _action_board_surface(
+        dashboard=decision_dashboard,
+        stage3_decision=stage3_decision,
+        stage3_visible=stage3_visible,
+        all15_rows=all15_rows,
+    )
 
     sections = {
         "S01": _section(
             "COMPLETE",
             {
+                "decision_dashboard": decision_dashboard,
                 "operational_state": operational_action,
                 "planning_gw": planning_gw,
                 "primary_decision": (
                     (stage3_decision or {}).get("selected_route_id") or "HOLD"
                 ),
-                "reason": (stage3_decision or {}).get("reason") or "No material route cleared the decision gate.",
-                "key_decision_driver": (
-                    "P1.2 package utility + canonical P1.4 MC + P1.8 bounded mini-league overlay"
-                ),
+                "reason": decision_dashboard.get("PRIMARY_REASON"),
+                "key_decision_driver": decision_dashboard.get("KEY_DRIVER"),
+                "current_blockers": decision_dashboard.get("CURRENT_BLOCKERS"),
                 "current_planning_gw": planning_gw,
             },
         ),
@@ -5029,6 +5062,22 @@ def run_deep(
             ),
             {
                 "rows": all15_rows,
+                "current15_authority": {
+                    "source_class": (personal_resolution or {}).get("source_class"),
+                    "source": (personal_resolution or {}).get("source"),
+                    "observed_at": (personal_resolution or {}).get("observed_at"),
+                    "applicable_gw": (personal_resolution or {}).get("gw"),
+                    "resolution_status": (personal_resolution or {}).get("resolution_status"),
+                    "auth_state": str(
+                        private_current_team.get("auth_state") or "UNAVAILABLE"
+                    ).upper(),
+                    "finance_availability": (
+                        "AVAILABLE"
+                        if _execution_finance_available(finance)
+                        else "DEGRADED"
+                    ),
+                    "stale": (personal_resolution or {}).get("stale"),
+                },
                 "personal_resolution": {
                     "status": (personal_resolution or {}).get("resolution_status"),
                     "source": (personal_resolution or {}).get("source"),
@@ -5188,13 +5237,8 @@ def run_deep(
         "S15": _section(
             "COMPLETE",
             {
-                "evidence_quality": {
-                    "official_factual_evidence": "STRONG" if official else "INCOMPLETE",
-                    "model_derived_inference": "STRONG" if projections and stage3_internal_pass else "MODERATE",
-                    "market_predictor": (
-                        "STRONG" if (rise or {}).get("predictor_health") == "GREEN" else "INCOMPLETE"
-                    ),
-                    "tactical_interpretation": "MODERATE" if projections else "INCOMPLETE",
+                "evidence_quality": evidence_quality,
+                "model_execution": {
                     "p1_1_p1_3": "EXECUTED" if projections else "FAILED",
                     "p1_6": "EXECUTED" if projections else "NOT_RUN",
                     "p1_7": "EXECUTED" if lineup else "PARTIAL",
@@ -5205,7 +5249,7 @@ def run_deep(
                         else "FAILED"
                     ),
                     "p1_8_downstream_overlay": "EXECUTED" if mini_overlay else "FAILED",
-                }
+                },
             },
         ),
         "S15B": _section(
@@ -5316,47 +5360,38 @@ def run_deep(
         "S18": _section(
             "COMPLETE",
             {
-                "NOW": operational_action,
-                "NEXT": (
-                    "prepare selected route and re-evaluate at next fresh occurrence"
-                    if operational_action == "PREPARE"
-                    else "execute only while ACT gate remains green"
-                    if operational_action == "ACT"
-                    else "preserve optionality and refresh evidence"
-                ),
-                "TRIGGER TO ACT": (stage3_decision or {}).get("action_contract") or "UNAVAILABLE",
-                "LATEST SAFE DECISION POINT": "NEXT_CANONICAL_PRE_DEADLINE_OCCURRENCE_WITH_FRESH_TEAM_NEWS_AND_PRICE_EVIDENCE",
-                "COST OF WAITING": next(
-                    (
-                        row.get("voi_vs_cost_of_waiting")
-                        for row in (stage3_decision or {}).get("routes") or []
-                        if str(row.get("route_id") or "") == str((stage3_decision or {}).get("selected_route_id") or "HOLD")
-                    ),
-                    None,
-                ),
-                "ABORT / REVERSAL": (
-                    "fresh role/injury/lineup/economics/price evidence or challenger posterior invalidates the route"
-                ),
-                "BEST ALTERNATIVE": next(
-                    (
-                        row
-                        for row in stage3_visible.get("package_routes", [])
-                        if str(row.get("route") or "").upper() != "HOLD"
-                    ),
-                    None,
-                ),
-                "TRIGGERS": (stage3_decision or {}).get("action_contract") or "UNAVAILABLE",
-                "REVERSAL": (
-                    "fresh role/injury/lineup/economics/price evidence or challenger posterior invalidates the route"
-                ),
-                "VALUE OF INFORMATION": next(
-                    (
-                        row.get("voi_vs_cost_of_waiting")
-                        for row in (stage3_decision or {}).get("routes") or []
-                        if str(row.get("route_id") or "") == str((stage3_decision or {}).get("selected_route_id") or "HOLD")
-                    ),
-                    None,
-                ),
+                "action_board": action_board,
+                "NOW": {
+                    row.get("axis"): row.get("NOW")
+                    for row in action_board.get("axes") or []
+                    if isinstance(row, Mapping)
+                },
+                "NEXT": {
+                    row.get("axis"): row.get("NEXT")
+                    for row in action_board.get("axes") or []
+                    if isinstance(row, Mapping)
+                },
+                "TRIGGER TO ACT": {
+                    row.get("axis"): row.get("TRIGGER TO ACT")
+                    for row in action_board.get("axes") or []
+                    if isinstance(row, Mapping)
+                },
+                "LATEST SAFE DECISION POINT": {
+                    row.get("axis"): row.get("LATEST SAFE DECISION POINT")
+                    for row in action_board.get("axes") or []
+                    if isinstance(row, Mapping)
+                },
+                "COST OF WAITING": {
+                    row.get("axis"): row.get("COST OF WAITING")
+                    for row in action_board.get("axes") or []
+                    if isinstance(row, Mapping)
+                },
+                "ABORT / REVERSAL": {
+                    row.get("axis"): row.get("ABORT / REVERSAL")
+                    for row in action_board.get("axes") or []
+                    if isinstance(row, Mapping)
+                },
+                "BEST ALTERNATIVE": action_board.get("best_alternative"),
             },
         ),
         "S19": _section(

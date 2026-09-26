@@ -262,6 +262,9 @@ jobs:
           tests/test_visible_content_proof.py
           tests/test_visible_report_content_contract.py
           tests/test_visible_report_ux_pause_action_state.py
+          tests/test_personal_data_plane.py
+          tests/test_private_delivery_security.py
+          tests/test_private_publisher.py
           tests/test_data_platform_scheduler_authority.py
           tests/test_data_platform_scheduler_recovery_guard.py
           tests/test_data_platform_scheduler_watchdog.py
@@ -551,6 +554,7 @@ jobs:
           tests/test_adaptive_polling.py
           tests/test_data_platform_*.py
           tests/test_data_platform_production_acceptance.py
+          tests/test_v6_private_boundary.py
 
   v6-publisher-config:
     name: v6-required-publisher-config

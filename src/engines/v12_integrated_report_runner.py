@@ -1089,6 +1089,64 @@ def _watchlist_candidate_universe(
     return out
 
 
+def _bgw_propagation_context(
+    calendar_context: Mapping[str, Any] | None,
+    *,
+    owned_ids: set[int],
+    lineup: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Project S05 blank-GW truth into downstream decision surfaces only.
+
+    This is context propagation, not a second fixture/xPts/lineup/transfer model.
+    """
+    calendar = dict(calendar_context or {})
+    flags = dict(calendar.get("period_flags") or {})
+    blank_team_ids = sorted(
+        {
+            int(value)
+            for value in flags.get("blank_gw_teams") or []
+            if value is not None
+        }
+    )
+    workload = [
+        dict(row)
+        for row in calendar.get("player_workload") or []
+        if isinstance(row, Mapping)
+    ]
+    blank_owned_ids = sorted(
+        {
+            int(row.get("element_id"))
+            for row in workload
+            if row.get("element_id") is not None
+            and int(row.get("element_id")) in owned_ids
+            and str(row.get("gw_state") or "").upper() == "BLANK"
+        }
+    )
+    final_xi_ids = {
+        element
+        for element in (
+            _surface_element(value)
+            for value in (lineup or {}).get("starting_xi") or []
+        )
+        if element is not None
+    }
+    return {
+        "source_section": "S05",
+        "planning_gw": calendar.get("planning_gw"),
+        "gw_topology": calendar.get("gw_topology"),
+        "active": (
+            bool(blank_team_ids)
+            or str(calendar.get("gw_topology") or "").upper()
+            in {"BLANK_GW", "MIXED_DGW_BGW"}
+        ),
+        "blank_team_ids": blank_team_ids,
+        "blank_owned_element_ids": blank_owned_ids,
+        "blank_owned_in_final_xi": sorted(set(blank_owned_ids) & final_xi_ids),
+        "decision_math_mutated": False,
+        "context_only": True,
+    }
+
+
 def _calendar_relevant_players(
     projections: Mapping[str, Any] | None,
     *,
@@ -4907,6 +4965,11 @@ def run_deep(
         weather_rows=(),
         weather_forecast_horizon_hours=None,
     )
+    bgw_context = _bgw_propagation_context(
+        calendar_context,
+        owned_ids=owned_ids,
+        lineup=lineup,
+    )
 
     canonical_bundle = build_canonical_universe(
         projections or {}
@@ -5497,6 +5560,11 @@ def run_deep(
         lineup=lineup,
         finance=finance,
     )
+    staging = {
+        **staging,
+        "bgw_context": dict(bgw_context),
+        "bgw_reoptimization_trigger": bool(bgw_context.get("active")),
+    }
     captain_surface = _captain_decision_surface(
         owned=owned,
         lineup=lineup,
@@ -5518,6 +5586,8 @@ def run_deep(
         staging=staging,
         chip_state=chip_state if chip_available else None,
     )
+    final_judgement["bgw_context"] = dict(bgw_context)
+    final_judgement["bgw_reconciled"] = True
     decision_dashboard = _decision_dashboard(
         operational_action=operational_action,
         planning_gw=planning_gw,
@@ -5717,7 +5787,11 @@ def run_deep(
         ),
         "S06": _section(
             lineup_state,
-            _lineup_content(lineup),
+            {
+                **_lineup_content(lineup),
+                "bgw_context": dict(bgw_context),
+                "bgw_lineup_review_required": bool(bgw_context.get("active")),
+            },
             lineup_reason,
         ),
         "S06B": _section(
@@ -5747,6 +5821,8 @@ def run_deep(
                 "horizon": "REASSESS EACH DEADLINE",
                 "trigger": "material chip-specific fixture/ceiling edge",
                 "hold_reason": "No chip action is created without current authenticated chip state and a supportable edge.",
+                "bgw_context": dict(bgw_context),
+                "bgw_chip_review_required": bool(bgw_context.get("active")),
             },
             None if chip_available else "authenticated chip state unavailable in bound current-team artifact",
         ),
@@ -5792,6 +5868,9 @@ def run_deep(
                 "package_routes": stage3_visible.get("package_routes", []),
                 "frontier": stage3_visible.get("frontier", []),
                 **stage3_visible,
+                "bgw_context": dict(bgw_context),
+                "bgw_frontier_review_required": bool(bgw_context.get("active")),
+                "bgw_is_context_not_second_optimizer": True,
             },
             None if stage3_internal_pass else (
                 "Stage3 internal producer/wiring failure; this is NOT accepted as factual-source degradation"

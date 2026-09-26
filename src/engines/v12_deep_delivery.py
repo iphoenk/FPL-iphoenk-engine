@@ -745,6 +745,69 @@ def validate_deep_decision_content_delivery(
             if "BLANK" not in upper:
                 failures.append("S05_BGW_NOT_VISIBLE")
 
+        blank_team_ids = sorted(
+            int(value)
+            for value in (s05.get("period_flags") or {}).get("blank_gw_teams") or []
+        )
+        bgw_active = bool(blank_team_ids) or topology in {"BLANK_GW", "MIXED_DGW_BGW"}
+        if bgw_active:
+            current15_ids = {
+                int(row.get("element_id") or row.get("element"))
+                for row in content("S02").get("rows") or []
+                if isinstance(row, Mapping)
+                and (row.get("element_id") is not None or row.get("element") is not None)
+            }
+            expected_blank_owned = sorted(
+                int(row.get("element_id"))
+                for row in workload
+                if row.get("element_id") is not None
+                and int(row.get("element_id")) in current15_ids
+                and str(row.get("gw_state") or "").upper() == "BLANK"
+            )
+            final_judgement = dict(content("S19").get("final_judgement") or {})
+            propagation = {
+                "S06": dict(content("S06").get("bgw_context") or {}),
+                "S09": dict(content("S09").get("bgw_context") or {}),
+                "S14": dict(content("S14").get("bgw_context") or {}),
+                "S14B": dict(content("S14B").get("bgw_context") or {}),
+                "S19": dict(final_judgement.get("bgw_context") or {}),
+            }
+            for sid, context in propagation.items():
+                try:
+                    context_blank_teams = sorted(
+                        int(value) for value in context.get("blank_team_ids") or []
+                    )
+                    context_blank_owned = sorted(
+                        int(value)
+                        for value in context.get("blank_owned_element_ids") or []
+                    )
+                except (TypeError, ValueError):
+                    context_blank_teams = []
+                    context_blank_owned = []
+                if (
+                    context.get("source_section") != "S05"
+                    or context.get("active") is not True
+                    or context.get("decision_math_mutated") is not False
+                    or context.get("context_only") is not True
+                    or context.get("gw_topology") != topology
+                    or context_blank_teams != blank_team_ids
+                    or context_blank_owned != expected_blank_owned
+                ):
+                    failures.append(f"S05_BGW_NOT_PROPAGATED_{sid}")
+            if content("S06").get("bgw_lineup_review_required") is not True:
+                failures.append("S05_BGW_S06_REVIEW_MISSING")
+            if content("S09").get("bgw_chip_review_required") is not True:
+                failures.append("S05_BGW_S09_CHIP_REVIEW_MISSING")
+            if (
+                content("S14").get("bgw_frontier_review_required") is not True
+                or content("S14").get("bgw_is_context_not_second_optimizer") is not True
+            ):
+                failures.append("S05_BGW_S14_FRONTIER_REVIEW_MISSING")
+            if content("S14B").get("bgw_reoptimization_trigger") is not True:
+                failures.append("S05_BGW_S14B_REOPTIMIZE_MISSING")
+            if final_judgement.get("bgw_reconciled") is not True:
+                failures.append("S05_BGW_S19_RECONCILIATION_MISSING")
+
 
     # Stage-C captain / mini-league / final-judgement semantic barrier.
     # Football baseline remains P1.7; mini-league is a downstream exposure

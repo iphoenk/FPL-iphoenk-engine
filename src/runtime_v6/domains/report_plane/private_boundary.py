@@ -183,6 +183,10 @@ def split_private_personal_state(
             "public_present_after_split": public_path.exists(),
         }
 
+    public_personal_root = public_root / "personal"
+    if public_personal_root.is_dir() and not any(public_personal_root.iterdir()):
+        public_personal_root.rmdir()
+
     latest_path = public_root / "report_prefetch/latest.json"
     latest = _read_json(latest_path, {}) or {}
     if isinstance(latest, Mapping) and latest:
@@ -213,6 +217,7 @@ def split_private_personal_state(
         "public_submitted_picks_present_after_split": moved_adjacent[
             "submitted_picks.json"
         ]["public_present_after_split"],
+        "public_personal_directory_present_after_split": public_personal_root.exists(),
         "public_report_prefetch_sanitized": bool(latest),
         "public_report_prefetch_health_sanitized": bool(health),
     }
@@ -242,6 +247,9 @@ def main() -> int:
                 ],
                 "public_submitted_picks_present_after_split": receipt[
                     "public_submitted_picks_present_after_split"
+                ],
+                "public_personal_directory_present_after_split": receipt[
+                    "public_personal_directory_present_after_split"
                 ],
             },
             sort_keys=True,

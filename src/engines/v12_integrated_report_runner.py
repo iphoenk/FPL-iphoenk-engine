@@ -1693,7 +1693,10 @@ def _enrich_all15_rows(
     projections: Mapping[str, Any] | None,
     predictor: Mapping[str, Any],
     owned: Sequence[Mapping[str, Any]],
+    bootstrap: Mapping[str, Any],
     mini: Mapping[str, Any] | None = None,
+    mini_detail: Mapping[str, Any] | None = None,
+    calendar_context: Mapping[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     pmap = _projection_map(projections)
     predictor_map = _price_player_map(predictor)
@@ -1702,12 +1705,39 @@ def _enrich_all15_rows(
         for row in owned
         if int(row.get("element_id") or 0) > 0
     }
+    team_map = {
+        int(row.get("id")): {
+            "name": row.get("name"),
+            "short_name": row.get("short_name"),
+        }
+        for row in bootstrap.get("teams") or []
+        if isinstance(row, Mapping) and row.get("id") is not None
+    }
     exposures = {
         int(item.get("element_id") or 0): dict(item)
         for item in (mini or {}).get("exposures") or []
         if isinstance(item, Mapping)
         and int(item.get("element_id") or 0) > 0
     }
+
+    def scope_map(key: str) -> dict[int, dict[str, Any]]:
+        return {
+            int(item.get("element_id") or 0): dict(item)
+            for item in (mini_detail or {}).get(key) or []
+            if isinstance(item, Mapping)
+            and int(item.get("element_id") or 0) > 0
+        }
+
+    league_scope = scope_map("league_our15_exposure")
+    rivals_scope = scope_map("rivals_our15_exposure")
+    direct_scope = scope_map("direct_rival_our15_exposure")
+    workload_map = {
+        int(item.get("element_id") or 0): dict(item)
+        for item in (calendar_context or {}).get("player_workload") or []
+        if isinstance(item, Mapping)
+        and int(item.get("element_id") or 0) > 0
+    }
+
     rows: list[dict[str, Any]] = []
     for raw in (all15 or {}).get("rows") or []:
         row = dict(raw)
@@ -1718,7 +1748,7 @@ def _enrich_all15_rows(
         owned_row = owned_map.get(element) or {}
         p_start = row.get("p_start", xm.get("start_probability"))
         xmins = row.get("xmins", xm.get("expected_minutes"))
-        status = str(player.get("status") or "a").lower()
+        status = str(player.get("status") or owned_row.get("status") or "a").lower()
         warnings: list[str] = []
         if status != "a":
             warnings.append(f"STATUS_{status.upper()}")
@@ -1732,25 +1762,125 @@ def _enrich_all15_rows(
                 warnings.append("MINUTES_RISK")
         except (TypeError, ValueError):
             pass
-        direction = str(price.get("direction") or price.get("change_direction") or "").upper()
-        progress = price.get("projected_percent", price.get("current_progress_percent"))
+
+        direction = str(
+            price.get("direction")
+            or price.get("change_direction")
+            or ""
+        ).upper()
+        progress = price.get(
+            "projected_percent",
+            price.get("current_progress_percent"),
+        )
         price_relevance = "NONE_MATERIAL"
         if direction in {"RISE", "FALL"}:
             price_relevance = (
                 f"{direction}"
                 + (f" {progress}%" if progress is not None else "")
             )
+
         fixture = _first_projection_fixture(player)
-        mechanism = _visible_position_mechanism(
-            player,
-            action=str(row.get("action") or "HOLD"),
-        ) if player else {}
+        mechanism = (
+            _visible_position_mechanism(
+                player,
+                action=str(row.get("action") or "HOLD"),
+            )
+            if player
+            else {}
+        )
+        complete = dict(mechanism.get("complete_player_distribution") or {})
+        event_prob = dict(complete.get("event_probabilities") or {})
+        point_dist = dict(complete.get("point_distribution") or {})
+        quantiles = dict(point_dist.get("quantiles") or {})
         exposure = exposures.get(element) or {}
+        team_id = int(
+            owned_row.get("team_id")
+            or player.get("team_id")
+            or 0
+        )
+        team = team_map.get(team_id) or {}
+        opponent_raw = mechanism.get("opponent", row.get("opponent"))
+        try:
+            opponent_id = int(opponent_raw)
+        except (TypeError, ValueError):
+            opponent_id = 0
+        opponent_team = team_map.get(opponent_id) or {}
+        opponent_name = (
+            opponent_team.get("name")
+            or opponent_team.get("short_name")
+            or opponent_raw
+            or "UNAVAILABLE"
+        )
+        role_value = (
+            player.get("tactical_role")
+            or player.get("system_context")
+            or row.get("tactical_role")
+        )
+        if isinstance(role_value, Mapping):
+            role_label = (
+                role_value.get("profile")
+                or role_value.get("role")
+                or role_value.get("label")
+                or "AVAILABLE_DETAIL"
+            )
+        else:
+            role_label = role_value
+
+        rate = dict(player.get("rates") or {})
+        workload = workload_map.get(element) or {}
+        league = league_scope.get(element) or {}
+        rivals = rivals_scope.get(element) or {}
+        direct = direct_scope.get(element) or {}
         row.update({
+            "position": owned_row.get("position") or player.get("position"),
+            "club": team.get("name") or player.get("team") or f"team:{team_id}",
+            "team_id": team_id,
+            "opponent": opponent_name,
+            "opponent_team_id": opponent_id or opponent_raw,
+            "home_away": (
+                "H" if mechanism.get("home") is True
+                else "A" if mechanism.get("home") is False
+                else "UNAVAILABLE"
+            ),
             "availability": row.get("p_available", xm.get("availability")),
             "projection_1gw": row.get("gw_plus_1", _horizon_mean(player, "1")),
             "projection_3gw": row.get("three_gw", _horizon_mean(player, "3")),
             "projection_5gw": row.get("five_gw", _horizon_mean(player, "5")),
+            "tactical_role_label": role_label,
+            "tactical_score": (
+                ((player.get("tactical_role_component") or {}).get(
+                    "canonical_tactical_role_score"
+                ))
+                if isinstance(player.get("tactical_role_component"), Mapping)
+                else row.get("tactical_role")
+            ),
+            "probabilities": {
+                "p_goal": event_prob.get("p_goal_return"),
+                "p_assist": event_prob.get("p_assist_return"),
+                "p_return": event_prob.get("p_attacking_return"),
+                "p_haul": point_dist.get("p_haul_10_plus"),
+                "p_blank": point_dist.get("p_fpl_blank"),
+                "Q10": quantiles.get("Q10"),
+                "Q50": quantiles.get("Q50"),
+                "Q90": quantiles.get("Q90"),
+            },
+            "underlying": {
+                "xg90": rate.get("xg90"),
+                "npxg90": rate.get("npxg90"),
+                "xa90": rate.get("xa90"),
+                "xgi90": (
+                    round(float(rate.get("xg90") or 0.0) + float(rate.get("xa90") or 0.0), 4)
+                    if rate.get("xg90") is not None and rate.get("xa90") is not None
+                    else None
+                ),
+                "shots": None,
+                "shots_in_box": None,
+                "shots_on_target": None,
+                "big_chances": None,
+                "box_touches": None,
+                "key_passes": None,
+                "chances_created": None,
+            },
             "posterior_signal": {
                 "posterior_rates": player.get("posterior_rates"),
                 "posterior_predictive": (
@@ -1761,16 +1891,13 @@ def _enrich_all15_rows(
                 "point_distribution_1gw": mechanism.get("1GW"),
             },
             "role_detail": {
-                "tactical_role": (
-                    player.get("tactical_role")
-                    or player.get("system_context")
-                    or row.get("tactical_role")
-                ),
+                "tactical_role": role_value,
                 "set_piece": mechanism.get("set_piece_process"),
                 "penalty": mechanism.get("penalty_process"),
             },
             "fixture_detail": {
-                "opponent": mechanism.get("opponent"),
+                "opponent": opponent_name,
+                "opponent_team_id": opponent_id or opponent_raw,
                 "home": mechanism.get("home"),
                 "dynamic_matchup": mechanism.get("dynamic_matchup"),
             },
@@ -1779,24 +1906,52 @@ def _enrich_all15_rows(
                 or mechanism.get("defensive_process")
                 or "UNAVAILABLE"
             ),
-            "injury_rotation_warning": ", ".join(warnings) if warnings else "NONE_MATERIAL",
+            "workload_context": {
+                "load_state": workload.get("load_state"),
+                "days_rest": workload.get("days_rest"),
+                "cross_border_travel": workload.get("cross_border_travel"),
+                "long_haul": workload.get("long_haul"),
+                "timezone_shift_hours": workload.get("timezone_shift_hours"),
+                "return_to_club_interval_hours": workload.get(
+                    "return_to_club_interval_hours"
+                ),
+            },
+            "injury_rotation_warning": (
+                ", ".join(warnings) if warnings else "NONE_MATERIAL"
+            ),
             "price_relevance": price_relevance,
             "price_optionality": {
-                "current_price": owned_row.get("current_price", player.get("now_cost")),
+                "current_price": owned_row.get(
+                    "current_price",
+                    player.get("now_cost"),
+                ),
                 "purchase_price": owned_row.get("purchase_price"),
                 "selling_price": owned_row.get("selling_price"),
                 "predictor_direction": direction or "NONE",
                 "predictor_progress": progress,
             },
-            "current_price": owned_row.get("current_price", player.get("now_cost")),
+            "current_price": owned_row.get(
+                "current_price",
+                player.get("now_cost"),
+            ),
             "purchase_price": owned_row.get("purchase_price"),
             "selling_price": owned_row.get("selling_price"),
+            "ownership_source": (
+                "P1_8_SUBMITTED_PICKS_BEHAVIOURAL_BASELINE"
+                if mini_detail
+                else "OFFICIAL_FPL_PUBLIC_SELECTED_BY_PERCENT"
+            ),
             "mini_league_relevance": {
-                "ownership_pct": exposure.get("ownership_pct"),
-                "starter_pct": exposure.get("starter_pct"),
-                "captain_pct": exposure.get("captain_pct"),
-                "vice_pct": exposure.get("vice_pct"),
-                "eo_pct": exposure.get("eo_pct"),
+                "league": league,
+                "rivals": rivals,
+                "direct": direct,
+                "legacy_rivals": {
+                    "ownership_pct": exposure.get("ownership_pct"),
+                    "starter_pct": exposure.get("starter_pct"),
+                    "captain_pct": exposure.get("captain_pct"),
+                    "vice_pct": exposure.get("vice_pct"),
+                    "eo_pct": exposure.get("eo_pct"),
+                },
             },
         })
         rows.append(row)

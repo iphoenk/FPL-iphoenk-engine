@@ -3254,6 +3254,16 @@ def _render_deep_visible_contract_lines(
     lines: list[str] = []
     excluded: list[str] = []
 
+    def bgw_visible_line(sid: str, context: Mapping[str, Any]) -> str:
+        return (
+            f"BGW PROPAGATION {sid}: "
+            f"ACTIVE={context.get('active')} | "
+            f"TOPOLOGY={context.get('gw_topology')} | "
+            f"BLANK_TEAMS={context.get('blank_team_ids')} | "
+            f"BLANK_OWNED={context.get('blank_owned_element_ids')} | "
+            f"BLANK_IN_FINAL_XI={context.get('blank_owned_in_final_xi')}"
+        )
+
     if section_id == "S01":
         dashboard = dict(payload.get("decision_dashboard") or {})
         lines.append("### MULTI-AXIS DECISION DASHBOARD")
@@ -3610,6 +3620,12 @@ def _render_deep_visible_contract_lines(
             "SCORE SEMANTICS: "
             + str((payload.get("score_semantics") or {}).get("relationship", "UNAVAILABLE"))
         )
+        bgw = dict(payload.get("bgw_context") or {})
+        lines.append(bgw_visible_line("S06", bgw))
+        lines.append(
+            "BGW LINEUP REVIEW REQUIRED: "
+            + str(payload.get("bgw_lineup_review_required"))
+        )
         comparisons = [
             dict(item)
             for item in payload.get("formation_comparison") or []
@@ -3635,7 +3651,10 @@ def _render_deep_visible_contract_lines(
             )
         else:
             lines.append("FORMATION ALTERNATIVES: NONE MATERIAL / NONE SUPPORTABLE")
-        excluded.extend(("starting_xi", "bench", "formation_comparison", "lineup_score"))
+        excluded.extend((
+            "starting_xi", "bench", "formation_comparison", "lineup_score",
+            "bgw_context", "bgw_lineup_review_required",
+        ))
 
     elif section_id == "S06B":
         lines.append(f"MINI-LEAGUE STANCE: {payload.get('stance') or 'UNAVAILABLE'}")
@@ -3910,8 +3929,40 @@ def _render_deep_visible_contract_lines(
             )
         )
 
+    elif section_id == "S09":
+        bgw = dict(payload.get("bgw_context") or {})
+        lines.append(bgw_visible_line("S09", bgw))
+        lines.append(
+            "BGW CHIP REVIEW REQUIRED: "
+            + str(payload.get("bgw_chip_review_required"))
+        )
+        excluded.extend(("bgw_context", "bgw_chip_review_required"))
+
+    elif section_id == "S14":
+        bgw = dict(payload.get("bgw_context") or {})
+        lines.append(bgw_visible_line("S14", bgw))
+        lines.append(
+            "BGW FRONTIER REVIEW REQUIRED: "
+            + str(payload.get("bgw_frontier_review_required"))
+        )
+        lines.append(
+            "BGW CONTEXT IS NOT SECOND OPTIMIZER: "
+            + str(payload.get("bgw_is_context_not_second_optimizer"))
+        )
+        excluded.extend((
+            "bgw_context",
+            "bgw_frontier_review_required",
+            "bgw_is_context_not_second_optimizer",
+        ))
+
     elif section_id == "S14B":
         lines.append("STAGING IS A ROADMAP, NOT A TRANSFER COMMITMENT.")
+        bgw = dict(payload.get("bgw_context") or {})
+        lines.append(bgw_visible_line("S14B", bgw))
+        lines.append(
+            "BGW REOPTIMIZATION TRIGGER: "
+            + str(payload.get("bgw_reoptimization_trigger"))
+        )
         staging = [
             dict(item)
             for item in payload.get("staging_rows") or []
@@ -3952,7 +4003,10 @@ def _render_deep_visible_contract_lines(
                     ],
                 )
             )
-        excluded.extend(("staging_rows", "squad_classification"))
+        excluded.extend((
+            "staging_rows", "squad_classification",
+            "bgw_context", "bgw_reoptimization_trigger",
+        ))
 
     elif section_id == "S10":
         rows = [
@@ -4707,6 +4761,12 @@ def _render_deep_visible_contract_lines(
         lines.append(
             f"NEXT TRIGGER: {judgement.get('next_trigger')} | "
             f"REVERSAL: {judgement.get('reversal_trigger')}"
+        )
+        bgw = dict(judgement.get("bgw_context") or {})
+        lines.append(bgw_visible_line("S19", bgw))
+        lines.append(
+            "BGW RECONCILED: "
+            + str(judgement.get("bgw_reconciled"))
         )
         excluded.append("final_judgement")
 

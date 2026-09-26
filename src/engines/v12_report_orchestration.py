@@ -8,15 +8,71 @@ report structures while keeping repository-Python execution truth separate
 from ChatGPT/V12 analytic execution truth.
 """
 
+import hashlib
+import json
 import re
+from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, Sequence
+from zoneinfo import ZoneInfo
 
+from src.engines.price_radar import (
+    DISPLAY_TIMEZONE,
+    MODEL_THRESHOLD as EXISTING_PRICE_MODEL_THRESHOLD,
+    OFFICIAL_MAX_AGE_SECONDS,
+    OFFICIAL_UPDATE_TIMEZONE,
+)
 from src.engines.visible_content_proof import canonical_mode_contract
 
 
 SECTION_STATES = frozenset({"COMPLETE", "PARTIAL", "DEGRADED", "UNAVAILABLE"})
 POSITIONS = ("GK", "DEF", "MID", "FWD")
 ACTION_STATES = frozenset({"WAIT", "PREPARE", "ACT"})
+WATCHLIST_POSITION_FORMULAE = {
+    "GK": {
+        "formula_id": "V12_WATCH_GK_EVIDENCE_V1",
+        "features": (
+            "save_process",
+            "shot_stopping",
+            "clean_sheet_environment",
+            "goals_conceded_environment",
+            "penalty_save_evidence",
+            "hierarchy_security",
+        ),
+    },
+    "DEF": {
+        "formula_id": "V12_WATCH_DEF_EVIDENCE_V1",
+        "features": (
+            "goal_process",
+            "creation_process",
+            "clean_sheet_environment",
+            "defcon",
+            "defensive_role",
+            "matchup",
+        ),
+    },
+    "MID": {
+        "formula_id": "V12_WATCH_MID_EVIDENCE_V1",
+        "features": (
+            "goal_process",
+            "creation_process",
+            "penalty_process",
+            "set_piece_process",
+            "advanced_role",
+            "matchup",
+        ),
+    },
+    "FWD": {
+        "formula_id": "V12_WATCH_FWD_EVIDENCE_V1",
+        "features": (
+            "goal_process",
+            "creation_process",
+            "penalty_process",
+            "set_piece_process",
+            "service_linkup",
+            "matchup",
+        ),
+    },
+}
 PRICE_UP = frozenset({"RISE", "UP", "INCREASE", "RISING"})
 PRICE_DOWN = frozenset({"FALL", "DOWN", "DECREASE", "FALLING"})
 MACHINE_TERMS = (
@@ -109,18 +165,99 @@ def analytic_execution_truth(
     }
 
 
+def _watchlist_feature_family(row: Mapping[str, Any]) -> dict[str, Any]:
+    position = str(row.get("position") or "").upper()
+    contract = WATCHLIST_POSITION_FORMULAE.get(position) or {
+        "formula_id": "UNSUPPORTED",
+        "features": (),
+    }
+    supplied = dict(row.get("position_specific_evidence") or {})
+    values = {
+        key: supplied.get(key)
+        for key in contract["features"]
+    }
+    present = [
+        key
+        for key, value in values.items()
+        if value not in (None, "", "UNAVAILABLE")
+    ]
+    total = len(values)
+    coverage = (len(present) / total) if total else 0.0
+    return {
+        "position": position,
+        "formula_id": contract["formula_id"],
+        "features": values,
+        "present_features": present,
+        "required_feature_count": total,
+        "present_feature_count": len(present),
+        "coverage": round(coverage, 6),
+        "attacker_xgi_gate_required": False if position == "GK" else None,
+        "decision_authority": False,
+        "purpose": "POSITION_SPECIFIC_WATCHLIST_EVIDENCE_AND_ADMISSION",
+    }
+
+
+def _watchlist_admission(row: Mapping[str, Any], family: Mapping[str, Any]) -> dict[str, Any]:
+    # Reuse the existing Stage-C security screen. This is an admission gate,
+    # not a second xMins/P(start) model or a transfer decision authority.
+    from src.models.v12_stagec_universe_scanner import load_config as load_stagec_config
+
+    thresholds = dict(load_stagec_config().get("signal_thresholds") or {})
+    minimum_xmins = float(thresholds.get("secure_xmins") or 70.0)
+    minimum_p_start = float(thresholds.get("secure_p_start") or 0.75)
+    maximum_p_dnp = max(0.0, 1.0 - minimum_p_start)
+
+    def number(value: Any) -> float | None:
+        try:
+            out = float(value)
+        except (TypeError, ValueError):
+            return None
+        return out
+
+    xmins = number(row.get("xmins"))
+    p_start = number(row.get("p_start"))
+    p_dnp = number(row.get("p_dnp"))
+    p_available = number(row.get("p_available"))
+    feature_coverage = number(family.get("coverage")) or 0.0
+    lineage = dict(row.get("stage2_lineage") or {})
+    evidence_complete = bool(
+        lineage.get("lineage_complete", row.get("canonical_evaluation_complete"))
+    )
+    checks = {
+        "availability_present": p_available is not None,
+        "availability_supportable": p_available is not None and p_available >= minimum_p_start,
+        "p_start_secure": p_start is not None and p_start >= minimum_p_start,
+        "xmins_secure": xmins is not None and xmins >= minimum_xmins,
+        "p_dnp_present": p_dnp is not None,
+        "p_dnp_secure": p_dnp is not None and p_dnp <= maximum_p_dnp,
+        "canonical_evidence_complete": evidence_complete,
+        "position_specific_inputs_complete": feature_coverage >= 0.5,
+    }
+    admitted = all(checks.values())
+    return {
+        "admitted": admitted,
+        "checks": checks,
+        "minimum_xmins": minimum_xmins,
+        "minimum_p_start": minimum_p_start,
+        "maximum_p_dnp": round(maximum_p_dnp, 6),
+        "threshold_source": "config/intelligence/v12_stagec_universe_scanner.json:signal_thresholds",
+        "no_transfer_action_authority": True,
+    }
+
+
 def build_watchlist20(
     *,
     evaluated_universe: Sequence[Mapping[str, Any]],
     owned_element_ids: Sequence[int],
     universe_authority: str,
 ) -> dict[str, Any]:
-    """Select 5 per position using existing canonical evaluation outputs only."""
+    """Build Scanner20 plus an unpadded actionable subset from canonical V12 evidence."""
     authority = str(universe_authority or "").strip().upper()
     if authority not in {"FULL", "PARTIAL"}:
         raise ReportOrchestrationError("universe_authority must be FULL/PARTIAL")
     owned = {int(value) for value in owned_element_ids}
     rows: list[dict[str, Any]] = []
+    scanned_ids: set[int] = set()
     for index, raw in enumerate(evaluated_universe):
         if not isinstance(raw, Mapping):
             continue
@@ -129,17 +266,23 @@ def build_watchlist20(
         if element is None or position not in POSITIONS:
             continue
         element = int(element)
+        scanned_ids.add(element)
         if element in owned or raw.get("eligible") is False:
             continue
         if raw.get("canonical_evaluation_complete") is False:
             continue
         score = raw.get("football_score")
         canonical_rank = raw.get("canonical_rank")
+        family = _watchlist_feature_family(raw)
+        admission = _watchlist_admission(raw, family)
         rows.append(
             {
                 **dict(raw),
                 "element_id": element,
                 "position": position,
+                "position_specific_evidence": family,
+                "admission_gate": admission,
+                "watchlist_action": "WATCH",
                 "_input_index": index,
                 "_canonical_rank": canonical_rank,
                 "_football_score": score,
@@ -154,27 +297,43 @@ def build_watchlist20(
         def key(row: Mapping[str, Any]):
             rank = row.get("_canonical_rank")
             score = row.get("_football_score")
+            coverage = float(
+                ((row.get("position_specific_evidence") or {}).get("coverage"))
+                or 0.0
+            )
             if rank is not None:
                 try:
-                    return (0, float(rank), 0.0, int(row["_input_index"]))
+                    return (0, float(rank), -coverage, int(row["_input_index"]))
                 except (TypeError, ValueError):
                     pass
             if score is not None:
                 try:
-                    return (1, 0.0, -float(score), int(row["_input_index"]))
+                    return (1, -float(score), -coverage, int(row["_input_index"]))
                 except (TypeError, ValueError):
                     pass
-            return (2, 0.0, 0.0, int(row["_input_index"]))
+            return (2, 0.0, -coverage, int(row["_input_index"]))
 
         pool.sort(key=key)
         chosen = pool[:5]
         counts[position] = len(chosen)
         selected.extend(chosen)
 
+    actionable = [
+        dict(row)
+        for row in selected
+        if bool((row.get("admission_gate") or {}).get("admitted"))
+    ]
+
     for row in selected:
         row.pop("_input_index", None)
         row.pop("_canonical_rank", None)
         row.pop("_football_score", None)
+    for row in actionable:
+        row.pop("_input_index", None)
+        row.pop("_canonical_rank", None)
+        row.pop("_football_score", None)
+        row["watchlist_action"] = "ACTIONABLE_MONITOR"
+        row["action"] = "WATCH"
 
     complete = len(selected) == 20 and all(counts.get(pos) == 5 for pos in POSITIONS)
     if authority == "FULL" and complete:
@@ -192,13 +351,498 @@ def build_watchlist20(
         "available_count": len(selected),
         "expected_count": 20,
         "rows": selected,
+        "scanner20": selected,
+        "actionable_watchlist": actionable,
+        "actionable_count": len(actionable),
         "position_counts": counts,
         "universe_authority": authority,
+        "full_eligible_universe_scanned_count": len(scanned_ids),
+        "owned_excluded": not bool(owned & {int(row["element_id"]) for row in selected}),
         "degradation_reason": reason,
         "selection_uses_existing_canonical_evaluation_only": True,
+        "macro_weights": {
+            "PROVEN_HISTORICAL": 0.20,
+            "TACTICAL_ROLE": 0.25,
+            "CURRENT_UNDERLYING": 0.30,
+            "FIXTURE_SECURITY": 0.25,
+        },
+        "position_formulae": {
+            pos: WATCHLIST_POSITION_FORMULAE[pos]["formula_id"]
+            for pos in POSITIONS
+        },
+        "position_specific_evidence_is_watchlist_only": True,
+        "actionable_watchlist_is_unpadded_subset": True,
+        "watchlist_never_emits_act": True,
+        "price_is_overlay_not_primary_authority": True,
         "new_player_score_created": False,
     }
 
+
+def _calendar_dt(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str) and value:
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    else:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+
+
+def build_calendar_workload_context(
+    *,
+    planning_gw: int,
+    pl_fixtures: Sequence[Mapping[str, Any]],
+    team_ids: Sequence[int],
+    relevant_players: Sequence[Mapping[str, Any]],
+    verified_schedule_events: Sequence[Mapping[str, Any]] = (),
+    non_pl_schedule_authority: bool = False,
+    report_timestamp: Any = None,
+    weather_rows: Sequence[Mapping[str, Any]] = (),
+    weather_forecast_horizon_hours: float | None = None,
+) -> dict[str, Any]:
+    """Build data-driven GW topology and descriptive workload/travel evidence.
+
+    This consumes verified schedule evidence only. It never applies a static
+    fatigue penalty and never mutates xPts, P(start), or xMins.
+    """
+    report_dt = _calendar_dt(report_timestamp)
+    fixtures = [
+        dict(row)
+        for row in pl_fixtures
+        if isinstance(row, Mapping) and int(row.get("event") or -1) == int(planning_gw)
+    ]
+    team_fixture_counts = {int(team): 0 for team in team_ids}
+    for row in fixtures:
+        for key in ("team_h", "team_a"):
+            try:
+                team = int(row.get(key))
+            except (TypeError, ValueError):
+                continue
+            team_fixture_counts[team] = team_fixture_counts.get(team, 0) + 1
+
+    doubles = sorted(team for team, count in team_fixture_counts.items() if count > 1)
+    blanks = sorted(team for team, count in team_fixture_counts.items() if count == 0)
+    rearranged = any(
+        bool(row.get("rearranged") or row.get("rescheduled") or row.get("postponed_then_rearranged"))
+        for row in fixtures
+    )
+
+    non_pl_schedule = [
+        dict(row)
+        for row in verified_schedule_events
+        if isinstance(row, Mapping)
+    ]
+    pl_schedule: list[dict[str, Any]] = []
+    for fixture in pl_fixtures:
+        if not isinstance(fixture, Mapping):
+            continue
+        kickoff = fixture.get("kickoff_time")
+        for side, opponent_side, home in (("team_h", "team_a", True), ("team_a", "team_h", False)):
+            try:
+                team_id = int(fixture.get(side))
+                opponent_id = int(fixture.get(opponent_side))
+            except (TypeError, ValueError):
+                continue
+            pl_schedule.append(
+                {
+                    "fixture_id": fixture.get("id"),
+                    "team_id": team_id,
+                    "opponent_team_id": opponent_id,
+                    "kickoff": kickoff,
+                    "competition": "Premier League",
+                    "competition_category": "DOMESTIC_LEAGUE",
+                    "home_away": "H" if home else "A",
+                    "verified_source": "OFFICIAL_FPL_FIXTURE",
+                }
+            )
+    normalized_schedule = pl_schedule + non_pl_schedule
+    categories = {
+        str(row.get("competition_category") or "").upper()
+        for row in normalized_schedule
+        if row.get("competition_category")
+    }
+
+    def event_dt(row: Mapping[str, Any]) -> datetime | None:
+        return _calendar_dt(
+            row.get("kickoff")
+            or row.get("kickoff_time")
+            or row.get("datetime")
+        )
+
+    # Workload/topology flags are scoped to the planning context, not the
+    # repository's entire verified schedule history/future. The maximum
+    # governed lookback is the existing 21-day workload horizon; future
+    # non-PL evidence is relevant only through the latest planning-GW PL
+    # kickoff. This prevents an old or distant-future international/cup event
+    # from falsely labelling the current period or player load.
+    planning_fixture_dts = [
+        event_dt(row)
+        for row in fixtures
+        if event_dt(row) is not None
+    ]
+    context_floor = (
+        report_dt - timedelta(days=21)
+        if report_dt is not None
+        else None
+    )
+    context_ceiling = max(planning_fixture_dts, default=None)
+
+    def in_planning_context(dt: datetime) -> bool:
+        if context_floor is not None and dt < context_floor:
+            return False
+        if context_ceiling is not None and dt > context_ceiling:
+            return False
+        return True
+
+    relevant_non_pl_schedule = [
+        row
+        for row in non_pl_schedule
+        if (dt := event_dt(row)) is not None and in_planning_context(dt)
+    ]
+    relevant_categories = {
+        str(row.get("competition_category") or "").upper()
+        for row in relevant_non_pl_schedule
+        if row.get("competition_category")
+    }
+    has_international = "INTERNATIONAL" in relevant_categories
+    has_non_pl = any(
+        category in {"CONTINENTAL_CLUB", "DOMESTIC_CUP", "INTERNATIONAL", "GLOBAL_CLUB"}
+        for category in relevant_categories
+    )
+
+    player_rows: list[dict[str, Any]] = []
+    any_congested = False
+    any_short_rest = False
+    for raw_player in relevant_players:
+        if not isinstance(raw_player, Mapping):
+            continue
+        element = raw_player.get("element_id", raw_player.get("element"))
+        team_id = raw_player.get("team_id", raw_player.get("team"))
+        try:
+            element_i = int(element)
+            team_i = int(team_id)
+        except (TypeError, ValueError):
+            continue
+
+        team_events = [
+            row for row in normalized_schedule
+            if int(row.get("team_id") or -1) == team_i
+            and (
+                row.get("player_id") in (None, "", element_i)
+                or int(row.get("player_id") or -1) == element_i
+            )
+        ]
+        dated = [(event_dt(row), row) for row in team_events]
+        dated = [(dt, row) for dt, row in dated if dt is not None]
+        dated.sort(key=lambda item: item[0])
+
+        upcoming_pl = []
+        for fixture in fixtures:
+            if team_i not in {
+                int(fixture.get("team_h") or -1),
+                int(fixture.get("team_a") or -1),
+            }:
+                continue
+            upcoming_pl.append(fixture)
+        next_pl_dt = min(
+            (event_dt(row) for row in upcoming_pl if event_dt(row) is not None),
+            default=None,
+        )
+        player_context_floor = (
+            report_dt - timedelta(days=21)
+            if report_dt is not None
+            else None
+        )
+        player_context_ceiling = next_pl_dt or context_ceiling
+        context_dated = [
+            (dt, row)
+            for dt, row in dated
+            if (
+                (player_context_floor is None or dt >= player_context_floor)
+                and (player_context_ceiling is None or dt <= player_context_ceiling)
+            )
+        ]
+        past_context_dated = [
+            (dt, row)
+            for dt, row in context_dated
+            if report_dt is None or dt <= report_dt
+        ]
+
+        counts: dict[str, int] = {}
+        minutes: dict[str, float | None] = {}
+        for days in (3, 7, 14, 21):
+            if report_dt is None:
+                window_rows = []
+            else:
+                start = report_dt - timedelta(days=days)
+                window_rows = [
+                    row for dt, row in dated
+                    if start <= dt <= report_dt
+                ]
+            counts[str(days)] = len(window_rows)
+            minute_values = [
+                float(row.get("minutes"))
+                for row in window_rows
+                if row.get("minutes") is not None
+            ]
+            minutes[str(days)] = (
+                round(sum(minute_values), 1) if minute_values else None
+            )
+
+        previous_dt = max(
+            (dt for dt, _ in dated if report_dt is not None and dt <= report_dt),
+            default=None,
+        )
+        days_rest = (
+            round((next_pl_dt - previous_dt).total_seconds() / 86400.0, 2)
+            if previous_dt is not None and next_pl_dt is not None
+            else None
+        )
+        short_rest = days_rest is not None and days_rest < 4.0
+        congested = counts.get("7", 0) >= 3
+        any_short_rest = any_short_rest or short_rest
+        any_congested = any_congested or congested
+
+        long_haul = any(
+            bool(row.get("long_haul"))
+            for _, row in past_context_dated
+        )
+        international = any(
+            str(row.get("competition_category") or "").upper() == "INTERNATIONAL"
+            for _, row in context_dated
+        )
+        domestic_cup = any(
+            str(row.get("competition_category") or "").upper() == "DOMESTIC_CUP"
+            for _, row in context_dated
+        )
+        continental = any(
+            str(row.get("competition_category") or "").upper() == "CONTINENTAL_CLUB"
+            for _, row in context_dated
+        )
+        tournament_absence = any(
+            bool(row.get("tournament_absence"))
+            for _, row in context_dated
+        )
+        reintegration = next(
+            (
+                row.get("reintegration_state")
+                for _, row in reversed(past_context_dated)
+                if row.get("reintegration_state")
+            ),
+            None,
+        )
+
+        if tournament_absence:
+            load_state = "TOURNAMENT ABSENCE"
+        elif reintegration:
+            load_state = "REINTEGRATION WATCH"
+        elif long_haul:
+            load_state = "LONG-HAUL RETURN"
+        elif international:
+            load_state = "INTERNATIONAL DUTY"
+        elif congested:
+            load_state = "CONGESTED"
+        elif short_rest:
+            load_state = "SHORT REST"
+        elif continental:
+            load_state = "EUROPE MIDWEEK"
+        elif domestic_cup:
+            load_state = "DOMESTIC CUP LOAD"
+        else:
+            load_state = "NORMAL LOAD"
+
+        projection_fixtures = [
+            dict(row)
+            for row in raw_player.get("planning_fixture_evidence") or []
+            if isinstance(row, Mapping)
+        ]
+        by_fixture_id = {
+            int(row.get("fixture_id")): row
+            for row in projection_fixtures
+            if row.get("fixture_id") is not None
+        }
+        player_fixtures = []
+        for fixture in upcoming_pl:
+            home = int(fixture.get("team_h") or -1) == team_i
+            fixture_id = fixture.get("id")
+            projected = (
+                by_fixture_id.get(int(fixture_id))
+                if fixture_id is not None
+                else None
+            ) or {}
+            player_fixtures.append(
+                {
+                    "fixture_id": fixture_id,
+                    "opponent_team_id": (
+                        fixture.get("team_a") if home else fixture.get("team_h")
+                    ),
+                    "home": home,
+                    "kickoff": fixture.get("kickoff_time"),
+                    "xpts": projected.get("xpts"),
+                    "xmins": projected.get("xmins"),
+                    "p_start": projected.get("p_start"),
+                    "matchup": projected.get("matchup"),
+                    "rest_from_previous_fixture_hours": projected.get(
+                        "rest_from_previous_fixture_hours"
+                    ),
+                }
+            )
+        blank = not player_fixtures
+        player_rows.append(
+            {
+                "element_id": element_i,
+                "player": raw_player.get("name") or raw_player.get("player"),
+                "team_id": team_i,
+                "gw_state": "BLANK" if blank else ("DOUBLE" if len(player_fixtures) > 1 else "NORMAL"),
+                "planning_gw_fixtures": player_fixtures,
+                "previous_match_datetime": previous_dt.isoformat() if previous_dt else None,
+                "next_pl_fixture_datetime": next_pl_dt.isoformat() if next_pl_dt else None,
+                "matches_last_days": counts,
+                "minutes_last_days": minutes,
+                "days_rest": days_rest,
+                "load_state": load_state,
+                "cross_border_travel": any(
+                    bool(row.get("cross_border"))
+                    for _, row in context_dated
+                ),
+                "long_haul": long_haul,
+                "timezone_shift_hours": max(
+                    [
+                        abs(float(row.get("timezone_shift_hours")))
+                        for _, row in context_dated
+                        if row.get("timezone_shift_hours") is not None
+                    ]
+                    or [0.0]
+                ),
+                "return_to_club_interval_hours": next(
+                    (
+                        row.get("return_to_club_interval_hours")
+                        for _, row in reversed(context_dated)
+                        if row.get("return_to_club_interval_hours") is not None
+                    ),
+                    None,
+                ),
+                "tournament_absence": tournament_absence,
+                "confirmed_call_up": any(
+                    bool(row.get("confirmed_call_up"))
+                    for _, row in context_dated
+                ),
+                "return_date": next(
+                    (
+                        row.get("return_date")
+                        for _, row in reversed(context_dated)
+                        if row.get("return_date")
+                    ),
+                    None,
+                ),
+                "injury_knock": next(
+                    (
+                        row.get("injury_knock")
+                        for _, row in reversed(context_dated)
+                        if row.get("injury_knock")
+                    ),
+                    None,
+                ),
+                "reintegration_state": reintegration,
+            }
+        )
+
+    if doubles and blanks:
+        topology = "MIXED_DGW_BGW"
+    elif doubles:
+        topology = "DOUBLE_GW"
+    elif blanks:
+        topology = "BLANK_GW"
+    elif rearranged:
+        topology = "REARRANGED_FIXTURE"
+    elif has_international:
+        topology = "INTERNATIONAL_BREAK"
+    elif any_congested:
+        topology = "CONGESTED_PERIOD"
+    elif has_non_pl:
+        topology = "NORMAL_WITH_MIDWEEK_COMPETITION"
+    else:
+        topology = "NORMAL_GW"
+
+    weather_by_fixture = {
+        int(row.get("fixture_id")): dict(row)
+        for row in weather_rows
+        if isinstance(row, Mapping) and row.get("fixture_id") is not None
+    }
+    weather: list[dict[str, Any]] = []
+    for fixture in fixtures:
+        fixture_id = fixture.get("id")
+        kickoff = event_dt(fixture)
+        bound = weather_by_fixture.get(int(fixture_id)) if fixture_id is not None else None
+        if bound:
+            weather.append(bound)
+            continue
+        inside = (
+            report_dt is not None
+            and kickoff is not None
+            and weather_forecast_horizon_hours is not None
+            and 0 <= (kickoff - report_dt).total_seconds() / 3600.0
+            <= float(weather_forecast_horizon_hours)
+        )
+        weather.append(
+            {
+                "fixture_id": fixture_id,
+                "kickoff": fixture.get("kickoff_time"),
+                "state": (
+                    "WEATHER UNAVAILABLE — REPORT-TIME SOURCE NOT BOUND"
+                    if inside
+                    else "WEATHER UNAVAILABLE — OUTSIDE RELIABLE FORECAST HORIZON"
+                    if weather_forecast_horizon_hours is not None
+                    else "WEATHER UNAVAILABLE — FORECAST HORIZON NOT AUTHORIZED"
+                ),
+                "fpl_impact": "UNAVAILABLE",
+            }
+        )
+
+    complete_schedule_scope = bool(non_pl_schedule_authority)
+    return {
+        "state": "COMPLETE" if complete_schedule_scope else "DEGRADED",
+        "planning_gw": int(planning_gw),
+        "gw_topology": topology,
+        "period_flags": {
+            "double_gw_teams": doubles,
+            "blank_gw_teams": blanks,
+            "rearranged_fixture": rearranged,
+            "international_schedule_present": has_international,
+            "non_pl_schedule_present": has_non_pl,
+            "congested_player_present": any_congested,
+            "short_rest_player_present": any_short_rest,
+        },
+        "fixtures": fixtures,
+        "verified_schedule_events": normalized_schedule,
+        "competition_coverage": {
+            "official_pl": True,
+            "verified_non_pl_schedule_bound": complete_schedule_scope,
+            "verified_non_pl_event_count": len(non_pl_schedule),
+            "competition_names_data_driven": sorted(
+                {
+                    str(row.get("competition") or "UNSPECIFIED")
+                    for row in normalized_schedule
+                }
+            ),
+            "competition_categories_data_driven": sorted(categories),
+        },
+        "player_workload": player_rows,
+        "weather": weather,
+        "weather_nested_in_s05": True,
+        "workload_feeds_p1_1_review_only": True,
+        "static_fatigue_penalty_applied": False,
+        "weather_mutates_football_model": False,
+        "dgw_cross_fixture_covariance_claimed": False,
+        "degradation_reason": (
+            None
+            if complete_schedule_scope
+            else "verified non-PL first-team schedule source is not bound for this occurrence; PL topology remains authoritative"
+        ),
+    }
 
 def _predictor_rows(artifact: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Return predictor player rows; real V6 data.players is first-class."""
@@ -237,6 +881,249 @@ def _official_current_price(now_cost: Any) -> Any:
         return "UNAVAILABLE"
     # Official FPL now_cost uses tenths of £m; retain normalized FACT price.
     return round(value / 10.0, 1) if value >= 20.0 else round(value, 1)
+
+
+def _parse_price_dt(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+
+
+_PRICE_UK = ZoneInfo(OFFICIAL_UPDATE_TIMEZONE)
+_PRICE_WIB = ZoneInfo(DISPLAY_TIMEZONE)
+
+
+def _next_official_price_cycle(evidence_timestamp: Any, *, offset: int = 0) -> tuple[str, str] | tuple[None, None]:
+    """Return the governed daily 00:00 Europe/London cycle and the same instant in WIB."""
+    observed = _parse_price_dt(evidence_timestamp)
+    if observed is None:
+        return None, None
+    local = observed.astimezone(_PRICE_UK)
+    target_date = local.date() + timedelta(days=1 + max(0, int(offset)))
+    uk_cycle = datetime(target_date.year, target_date.month, target_date.day, 0, 0, tzinfo=_PRICE_UK)
+    return uk_cycle.isoformat(), uk_cycle.astimezone(_PRICE_WIB).isoformat()
+
+
+def _visible_price_direction(projected_percent: Any) -> str:
+    value = _finite_price_number(projected_percent)
+    if value is None:
+        return "UNAVAILABLE"
+    if value > 0:
+        return "RISE"
+    if value < 0:
+        return "FALL"
+    return "NEUTRAL"
+
+
+def _format_price_cycle(value: Any, *, wib: bool) -> str | None:
+    parsed = _parse_price_dt(value)
+    if parsed is None:
+        return None
+    local = parsed.astimezone(_PRICE_WIB if wib else _PRICE_UK)
+    zone = "WIB" if wib else (local.tzname() or "UK")
+    return f"{local.strftime('%d %b %Y • %H:%M')} {zone}"
+
+
+def _governed_expected_cycle(
+    projections: Any,
+    *,
+    evidence_timestamp: Any,
+    locked_until: Any,
+) -> dict[str, Any]:
+    """Map the existing 0/1/2 predictor horizon to truthful calendar date states."""
+    next_uk, next_wib = _next_official_price_cycle(evidence_timestamp, offset=0)
+    base = {
+        "next_official_price_cycle_uk": next_uk or "UNAVAILABLE",
+        "next_official_price_cycle_wib": next_wib or "UNAVAILABLE",
+        "cycles_to_expected_change": "UNAVAILABLE",
+        "estimated_change_window": "UNAVAILABLE",
+        "eta_context": None,
+        "estimated_change_date_uk": None,
+        "estimated_change_date_wib": None,
+        "estimated_change_at_uk": None,
+        "estimated_change_at_wib": None,
+        "last_supported_projection_date_uk": None,
+        "last_supported_projection_date_wib": None,
+        "last_supported_projection_at_uk": None,
+        "last_supported_projection_at_wib": None,
+        "horizon_cycles": 0,
+        "latest_supported_projection": None,
+        "projection_offset": None,
+        "date_state": "DATE_UNAVAILABLE",
+        "date_state_complete": True,
+        "degradation_reason": None,
+        "eta_reason": None,
+        "eta_uses_existing_threshold": True,
+        "governed_threshold_percent": EXISTING_PRICE_MODEL_THRESHOLD,
+        "horizon_extension_used": False,
+        "governed_projection_offsets": (0, 1, 2),
+    }
+    if next_uk is None or next_wib is None:
+        reason = "EVIDENCE_TIMESTAMP_UNAVAILABLE"
+        base.update({"eta_reason": reason, "degradation_reason": reason})
+        return base
+    if not isinstance(projections, list):
+        reason = "PREDICTOR_PROJECTIONS_UNAVAILABLE"
+        base.update({"eta_reason": reason, "degradation_reason": reason})
+        return base
+
+    locked = _parse_price_dt(locked_until)
+    candidates: list[tuple[int, float]] = []
+    for item in projections:
+        if not isinstance(item, Mapping):
+            continue
+        try:
+            offset = int(item.get("offset"))
+        except (TypeError, ValueError):
+            continue
+        # The existing governed predictor contract exposes only these offsets.
+        if offset not in {0, 1, 2}:
+            continue
+        projected = _finite_price_number(item.get("projected_percent"))
+        if projected is None:
+            continue
+        candidates.append((offset, projected))
+
+    candidates.sort()
+    if not candidates:
+        reason = "NO_VALID_GOVERNED_PROJECTION_OFFSETS"
+        base.update({"eta_reason": reason, "degradation_reason": reason})
+        return base
+
+    max_offset, latest_projection = candidates[-1]
+    last_uk, last_wib = _next_official_price_cycle(evidence_timestamp, offset=max_offset)
+    base.update(
+        {
+            "horizon_cycles": max_offset + 1,
+            "latest_supported_projection": latest_projection,
+            "last_supported_projection_at_uk": last_uk,
+            "last_supported_projection_at_wib": last_wib,
+            "last_supported_projection_date_uk": _format_price_cycle(last_uk, wib=False),
+            "last_supported_projection_date_wib": _format_price_cycle(last_wib, wib=True),
+        }
+    )
+
+    for offset, projected in candidates:
+        if abs(projected) < EXISTING_PRICE_MODEL_THRESHOLD:
+            continue
+        cycle_uk, cycle_wib = _next_official_price_cycle(evidence_timestamp, offset=offset)
+        if cycle_uk is None or cycle_wib is None:
+            continue
+        cycle_dt = _parse_price_dt(cycle_uk)
+        if (
+            locked is not None
+            and cycle_dt is not None
+            and cycle_dt.astimezone(timezone.utc) < locked.astimezone(timezone.utc)
+        ):
+            continue
+        cycle_label = "NEXT CYCLE" if offset == 0 else f"{offset} CYCLE" if offset == 1 else f"{offset} CYCLES"
+        wib_display = _format_price_cycle(cycle_wib, wib=True)
+        base.update(
+            {
+                "cycles_to_expected_change": cycle_label,
+                "estimated_change_window": wib_display or "UNAVAILABLE",
+                "eta_context": wib_display,
+                "estimated_change_date_uk": _format_price_cycle(cycle_uk, wib=False),
+                "estimated_change_date_wib": wib_display,
+                "estimated_change_at_uk": cycle_uk,
+                "estimated_change_at_wib": cycle_wib,
+                "projection_offset": offset,
+                "date_state": "EXPECTED_CHANGE_DATE",
+                "date_state_complete": True,
+                "eta_reason": None,
+                "degradation_reason": None,
+            }
+        )
+        return base
+
+    last_display = base["last_supported_projection_date_wib"]
+    base.update(
+        {
+            "date_state": "NO_CROSSING_WITHIN_GOVERNED_HORIZON",
+            "date_state_complete": True,
+            "estimated_change_window": "UNAVAILABLE",
+            "eta_context": (
+                f"Belum terdeteksi berubah sampai {last_display}"
+                if last_display
+                else "NO EXPECTED CHANGE WITHIN GOVERNED HORIZON"
+            ),
+            "eta_reason": "NO_EXISTING_PREDICTOR_CYCLE_CROSSES_GOVERNED_THRESHOLD",
+            "degradation_reason": None,
+        }
+    )
+    return base
+
+
+def _price_decision_impact(
+    *,
+    element_id: int,
+    direction: str,
+    owned_ids: set[int],
+    target_ids: set[int],
+) -> str:
+    if element_id in owned_ids:
+        if direction == "FALL":
+            return "OWNED — FALL MAY REDUCE SELL VALUE"
+        if direction == "RISE":
+            return "OWNED — RISE; MONITOR SELL-VALUE / AFFORDABILITY EFFECT"
+        return "OWNED — NEUTRAL PRICE SIGNAL"
+    if element_id in target_ids:
+        if direction == "RISE":
+            return "TARGET — RISE MAY REMOVE AFFORDABILITY"
+        if direction == "FALL":
+            return "TARGET — FALL MAY IMPROVE AFFORDABILITY"
+        return "TARGET — NEUTRAL PRICE SIGNAL"
+    return "WATCH ONLY — NO BOUND PERSONAL ROUTE"
+
+
+def _visible_price_contract(
+    row: Mapping[str, Any],
+    *,
+    evidence_timestamp: Any,
+    predictor_health: str,
+    owned_ids: set[int],
+    target_ids: set[int],
+) -> dict[str, Any]:
+    out = dict(row)
+    direction = _visible_price_direction(out.get("projected_percent"))
+    timing = _governed_expected_cycle(
+        out.get("price_change_projections"),
+        evidence_timestamp=evidence_timestamp,
+        locked_until=out.get("locked_until"),
+    )
+    likelihood = out.get("likelihood")
+    out.update(
+        {
+            "direction": direction,
+            "official_or_provider_progress": out.get("price_change_percent", "UNAVAILABLE"),
+            "prediction_strength": likelihood if likelihood is not None else "UNAVAILABLE",
+            **timing,
+            "estimate_source": "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR",
+            "artifact_source": "official_price_predictor",
+            "visible_source_label": (
+                "Official FPL Price Change Predictor — official predictor guidance; "
+                "not a guarantee of the next confirmed price change"
+            ),
+            "evidence_timestamp": evidence_timestamp or "UNAVAILABLE",
+            "confidence": {
+                "predictor_health": predictor_health,
+                "native_likelihood": likelihood if likelihood is not None else "UNAVAILABLE",
+                "calibrating": bool(out.get("calibrating")),
+                "locked_until": out.get("locked_until"),
+            },
+            "impact_on_our_decision": _price_decision_impact(
+                element_id=int(out["element_id"]),
+                direction=direction,
+                owned_ids=owned_ids,
+                target_ids=target_ids,
+            ),
+        }
+    )
+    return out
 
 
 def _offset_zero_projection(row: Mapping[str, Any]) -> Mapping[str, Any] | None:
@@ -286,6 +1173,37 @@ def _normalize_real_price_row(row: Mapping[str, Any]) -> dict[str, Any] | None:
         "calibrating": row.get("price_change_calibrating"),
         "team": row.get("team"),
         "element_type": row.get("element_type"),
+        "price_change_projections": [
+            dict(item)
+            for item in (row.get("price_change_projections") or [])
+            if isinstance(item, Mapping)
+        ],
+    }
+
+
+def _price_source_freshness(
+    evidence_timestamp: Any,
+    report_timestamp: Any,
+    predictor_health: str,
+) -> dict[str, Any]:
+    observed = _parse_price_dt(evidence_timestamp)
+    report = _parse_price_dt(report_timestamp)
+    healthy = str(predictor_health or "").upper() in {"GREEN", "HEALTHY", "PASS", "CURRENT", "OK"}
+    if observed is None or report is None:
+        return {
+            "source_age_minutes": None,
+            "freshness": "UNKNOWN",
+            "freshness_policy": "config/intelligence/price_radar.json:freshness.official_max_age_seconds",
+        }
+    age_minutes = max(0.0, (report - observed).total_seconds() / 60.0)
+    return {
+        "source_age_minutes": round(age_minutes, 1),
+        "freshness": (
+            "FRESH"
+            if healthy and age_minutes * 60.0 <= OFFICIAL_MAX_AGE_SECONDS
+            else "STALE"
+        ),
+        "freshness_policy": "config/intelligence/price_radar.json:freshness.official_max_age_seconds",
     }
 
 
@@ -293,6 +1211,9 @@ def build_price20(
     *,
     predictor_artifact: Mapping[str, Any] | None,
     direction: str,
+    owned_element_ids: Sequence[int] | None = None,
+    target_element_ids: Sequence[int] | None = None,
+    report_timestamp: Any = None,
 ) -> dict[str, Any]:
     """Consume current official_price_predictor output; never predict price itself."""
     if not predictor_artifact:
@@ -310,6 +1231,9 @@ def build_price20(
         or artifact.get("source_health")
         or "UNKNOWN"
     ).upper()
+    evidence_timestamp = artifact.get("checked_at") or artifact.get("generated_at")
+    owned_ids = {int(value) for value in (owned_element_ids or ())}
+    target_ids = {int(value) for value in (target_element_ids or ())}
     direction_token = str(direction or "").upper()
     if direction_token not in {"RISE", "FALL"}:
         raise ReportOrchestrationError("direction must be RISE/FALL")
@@ -317,7 +1241,13 @@ def build_price20(
 
     if _real_predictor_schema(artifact):
         normalized = [
-            bound
+            _visible_price_contract(
+                bound,
+                evidence_timestamp=evidence_timestamp,
+                predictor_health=health,
+                owned_ids=owned_ids,
+                target_ids=target_ids,
+            )
             for row in rows
             if (bound := _normalize_real_price_row(row)) is not None
         ]
@@ -364,18 +1294,85 @@ def build_price20(
         usable_count = len(selected)
         adapter = "COMPACT_COMPAT"
 
+    freshness = _price_source_freshness(
+        evidence_timestamp,
+        report_timestamp,
+        health,
+    )
+    for row in selected:
+        row.setdefault("date_state", "DATE_UNAVAILABLE")
+        row.setdefault("date_state_complete", True)
+        row.update(freshness)
+
+    artifact_payload_hash = hashlib.sha256(
+        json.dumps(
+            artifact,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            default=str,
+        ).encode("utf-8")
+    ).hexdigest()
+
     enough = len(selected) == 20
     healthy = health in {"GREEN", "HEALTHY", "PASS", "CURRENT", "OK"}
-    state = "COMPLETE" if enough and healthy else ("DEGRADED" if selected else "UNAVAILABLE")
+    date_state_complete = (
+        adapter != "V6_DATA_PLAYERS_OFFSET0"
+        or all(bool(row.get("date_state_complete")) for row in selected)
+    )
+    missing_cycle_clock = (
+        adapter == "V6_DATA_PLAYERS_OFFSET0"
+        and any(
+            row.get("next_official_price_cycle_uk") == "UNAVAILABLE"
+            or row.get("next_official_price_cycle_wib") == "UNAVAILABLE"
+            for row in selected
+        )
+    )
+    invalid_eta_state = (
+        adapter == "V6_DATA_PLAYERS_OFFSET0"
+        and any(
+            row.get("date_state") == "DATE_UNAVAILABLE"
+            or bool(row.get("degradation_reason"))
+            for row in selected
+        )
+    )
+    # NO_CROSSING_WITHIN_GOVERNED_HORIZON is a healthy terminal predictor
+    # outcome. It intentionally leaves expected-change-cycle fields unavailable
+    # because no governed threshold crossing exists; that is not degradation.
+    if enough and healthy and date_state_complete and not missing_cycle_clock and not invalid_eta_state:
+        state = "COMPLETE"
+    elif selected:
+        state = "DEGRADED"
+    else:
+        state = "UNAVAILABLE"
+
     reason = None
     if state != "COMPLETE":
-        reason = (
-            f"official_price_predictor health={health}; "
-            f"usable offset-0 {direction_token.lower()} rows={len(selected)}/20"
-            if adapter == "V6_DATA_PLAYERS_OFFSET0"
-            else f"official_price_predictor health={health}; "
-            f"{direction_token.lower()} rows={len(selected)}/20"
-        )
+        if adapter == "V6_DATA_PLAYERS_OFFSET0" and not enough:
+            reason = (
+                f"official_price_predictor health={health}; "
+                f"usable offset-0 {direction_token.lower()} rows={len(selected)}/20"
+            )
+        elif adapter == "V6_DATA_PLAYERS_OFFSET0" and not date_state_complete:
+            incomplete = sum(not bool(row.get("date_state_complete")) for row in selected)
+            reason = f"date-state terminal contract incomplete for {incomplete}/20 rows"
+        elif adapter == "V6_DATA_PLAYERS_OFFSET0" and missing_cycle_clock:
+            reason = "official_price_predictor evidence timestamp unavailable; official cycle timing cannot be derived"
+        elif adapter == "V6_DATA_PLAYERS_OFFSET0" and invalid_eta_state:
+            invalid = sum(
+                row.get("date_state") == "DATE_UNAVAILABLE"
+                or bool(row.get("degradation_reason"))
+                for row in selected
+            )
+            reason = (
+                f"official_price_predictor has genuinely unavailable/invalid ETA evidence "
+                f"for {invalid}/20 rows"
+            )
+        else:
+            reason = (
+                f"official_price_predictor health={health}; "
+                f"{direction_token.lower()} rows={len(selected)}/20"
+            )
     return {
         "state": state,
         "available_count": len(selected),
@@ -394,8 +1391,45 @@ def build_price20(
         ),
         "current_price_classification": "FACT",
         "projection_classification": "MODEL",
+        "visible_contract_fields": (
+            "player",
+            "current_price",
+            "direction",
+            "official_or_provider_progress",
+            "prediction_strength",
+            "next_official_price_cycle_uk",
+            "next_official_price_cycle_wib",
+            "cycles_to_expected_change",
+            "estimated_change_window",
+            "estimated_change_date_uk",
+            "estimated_change_date_wib",
+            "date_state",
+            "last_supported_projection_date_wib",
+            "horizon_cycles",
+            "latest_supported_projection",
+            "estimate_source",
+            "evidence_timestamp",
+            "source_age_minutes",
+            "freshness",
+            "confidence",
+            "impact_on_our_decision",
+        ),
         "uses_existing_predictor_only": True,
+        "existing_eta_threshold_source": "config/intelligence/price_radar.json:model_interpretation.threshold_percent",
+        "new_price_threshold_model_created": False,
         "new_price_predictor_created": False,
+        "predictor_payload_hash": artifact_payload_hash,
+        "horizon_extension_used": False,
+        "governed_projection_offsets": (0, 1, 2),
+        "date_state_complete_count": sum(
+            bool(row.get("date_state_complete")) for row in selected
+        ) if adapter == "V6_DATA_PLAYERS_OFFSET0" else None,
+        "expected_change_date_count": sum(
+            row.get("date_state") == "EXPECTED_CHANGE_DATE" for row in selected
+        ) if adapter == "V6_DATA_PLAYERS_OFFSET0" else None,
+        "no_crossing_count": sum(
+            row.get("date_state") == "NO_CROSSING_WITHIN_GOVERNED_HORIZON" for row in selected
+        ) if adapter == "V6_DATA_PLAYERS_OFFSET0" else None,
     }
 
 
@@ -403,12 +1437,24 @@ def build_actionable_price_radar(
     *,
     owned15: Sequence[Mapping[str, Any]],
     predictor_artifact: Mapping[str, Any] | None = None,
+    report_timestamp: Any = None,
 ) -> dict[str, Any]:
-    """Always preserve owned identity; predictor direction is optional evidence."""
-    identities: list[dict[str, Any]] = []
-    seen: set[int] = set()
-    predictor = {}
-    for row in _predictor_rows(dict(predictor_artifact or {})):
+    """Always preserve owned identity; predictor evidence enriches but never removes OUR15."""
+    artifact = dict(predictor_artifact or {})
+    predictor_health = str(
+        artifact.get("health")
+        or artifact.get("status")
+        or artifact.get("source_health")
+        or "UNKNOWN"
+    ).upper()
+    evidence_timestamp = artifact.get("checked_at") or artifact.get("generated_at")
+    freshness = _price_source_freshness(
+        evidence_timestamp,
+        report_timestamp,
+        predictor_health,
+    )
+    predictor: dict[int, dict[str, Any]] = {}
+    for row in _predictor_rows(artifact):
         raw_id = row.get("element_id", row.get("element", row.get("id")))
         if raw_id is None:
             continue
@@ -416,6 +1462,9 @@ def build_actionable_price_radar(
             predictor[int(raw_id)] = row
         except (TypeError, ValueError):
             continue
+
+    identities: list[dict[str, Any]] = []
+    seen: set[int] = set()
     for raw in owned15:
         if not isinstance(raw, Mapping):
             continue
@@ -426,33 +1475,121 @@ def build_actionable_price_radar(
         if element in seen:
             continue
         seen.add(element)
-        price = raw.get("current_price", raw.get("price"))
-        pred = dict(predictor.get(element) or {})
+
+        pred_raw = dict(predictor.get(element) or {})
+        normalized = _normalize_real_price_row(pred_raw) if pred_raw.get("price_change_projections") is not None else None
+        visible = (
+            _visible_price_contract(
+                normalized,
+                evidence_timestamp=evidence_timestamp,
+                predictor_health=predictor_health,
+                owned_ids={element},
+                target_ids=set(),
+            )
+            if normalized is not None
+            else None
+        )
+        raw_current = raw.get("current_price", raw.get("price"))
+        current_price = (
+            visible.get("current_price")
+            if visible is not None and visible.get("current_price") != "UNAVAILABLE"
+            else _official_current_price(raw_current)
+            if raw_current is not None
+            else "UNAVAILABLE"
+        )
+        raw_sell = raw.get("authenticated_sell_value", raw.get("selling_price"))
+        sell_value = _official_current_price(raw_sell) if raw_sell is not None else "UNAVAILABLE"
+        raw_sell_state = str(
+            raw.get("sell_value_evidence_state")
+            or raw.get("authenticated_evidence_state")
+            or raw.get("authenticated_state")
+            or ""
+        ).upper()
+        if sell_value == "UNAVAILABLE":
+            sell_value_evidence_state = "UNAVAILABLE"
+        elif raw_sell_state in {"CURRENT_AUTHENTICATED", "AUTH_CURRENT", "CURRENT"}:
+            sell_value_evidence_state = "CURRENT_AUTHENTICATED"
+        elif raw_sell_state in {"STALE_AUTHENTICATED_FALLBACK", "AUTH_STALE", "STALE"}:
+            sell_value_evidence_state = "STALE_AUTHENTICATED_FALLBACK"
+        else:
+            sell_value_evidence_state = "AUTHENTICATED_FRESHNESS_UNPROVEN"
+
         identities.append(
             {
                 "element_id": element,
-                "name": raw.get("name"),
-                "current_price": price if price is not None else "UNAVAILABLE",
-                "price_fact": "FACT" if price is not None else "UNAVAILABLE",
-                "predictor_direction": pred.get("risk_direction")
-                or pred.get("direction")
-                or "UNAVAILABLE",
-                "predictor_projected_percent": (
-                    (_normalize_real_price_row(pred) or {}).get("projected_percent")
-                    if pred.get("price_change_projections") is not None
-                    else "UNAVAILABLE"
+                "name": raw.get("name") or (visible or {}).get("player"),
+                "current_price": current_price,
+                "price_fact": "FACT" if current_price != "UNAVAILABLE" else "UNAVAILABLE",
+                "authenticated_sell_value": sell_value,
+                "sell_value_evidence_state": sell_value_evidence_state,
+                "predictor_direction": (visible or {}).get("direction", "UNAVAILABLE"),
+                "predictor_progress": (visible or {}).get("official_or_provider_progress", "UNAVAILABLE"),
+                "prediction_strength": (visible or {}).get("prediction_strength", "UNAVAILABLE"),
+                "next_official_price_cycle_uk": (visible or {}).get("next_official_price_cycle_uk", "UNAVAILABLE"),
+                "next_official_price_cycle_wib": (visible or {}).get("next_official_price_cycle_wib", "UNAVAILABLE"),
+                "cycles_to_expected_change": (visible or {}).get("cycles_to_expected_change", "UNAVAILABLE"),
+                "estimated_change_date_uk": (visible or {}).get("estimated_change_date_uk"),
+                "estimated_change_date_wib": (visible or {}).get("estimated_change_date_wib"),
+                "date_state": (visible or {}).get("date_state", "DATE_UNAVAILABLE"),
+                "date_state_complete": bool((visible or {}).get("date_state_complete", True)),
+                "date_state_reason": (
+                    (visible or {}).get("degradation_reason")
+                    or (None if visible is not None else "PREDICTOR_EVIDENCE_UNAVAILABLE")
                 ),
-                "predictor_classification": "MODEL" if pred else "UNAVAILABLE",
-                "predictor_evidence": pred or None,
+                "last_supported_projection_date_wib": (visible or {}).get("last_supported_projection_date_wib"),
+                "horizon_cycles": (visible or {}).get("horizon_cycles", 0),
+                "latest_supported_projection": (visible or {}).get("latest_supported_projection"),
+                "estimated_change_window": (visible or {}).get(
+                    "estimated_change_window",
+                    "UNAVAILABLE",
+                ),
+                "eta_context": (visible or {}).get("eta_context"),
+                "eta_reason": (visible or {}).get(
+                    "eta_reason",
+                    "PREDICTOR_EVIDENCE_UNAVAILABLE" if visible is None else None,
+                ),
+                "estimate_source": (visible or {}).get("estimate_source", "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR" if pred_raw else "UNAVAILABLE"),
+                "artifact_source": (visible or {}).get("artifact_source", "official_price_predictor" if pred_raw else "UNAVAILABLE"),
+                "visible_source_label": (visible or {}).get(
+                    "visible_source_label",
+                    "Official FPL Price Change Predictor — official predictor guidance; not a guarantee of the next confirmed price change"
+                    if pred_raw
+                    else "UNAVAILABLE",
+                ),
+                "evidence_timestamp": (visible or {}).get("evidence_timestamp", evidence_timestamp or "UNAVAILABLE"),
+                "source_age_minutes": freshness.get("source_age_minutes"),
+                "freshness": freshness.get("freshness"),
+                "freshness_policy": freshness.get("freshness_policy"),
+                "confidence": (visible or {}).get("confidence", "UNAVAILABLE"),
+                "sell_value_affordability_impact": (visible or {}).get(
+                    "impact_on_our_decision",
+                    "OWNED — PREDICTOR EVIDENCE UNAVAILABLE; DO NOT FABRICATE PRICE ACTION",
+                ),
+                "decision_implication": (visible or {}).get(
+                    "impact_on_our_decision",
+                    "OWNED — PREDICTOR EVIDENCE UNAVAILABLE; FOOTBALL DECISION CONTINUES",
+                ),
+                "predictor_projected_percent": (visible or {}).get("projected_percent", "UNAVAILABLE"),
+                "predictor_classification": "MODEL" if pred_raw else "UNAVAILABLE",
+                "predictor_evidence": pred_raw or None,
             }
         )
+
     complete = len(identities) == 15
     return {
         "state": "COMPLETE" if complete else ("DEGRADED" if identities else "UNAVAILABLE"),
         "available_count": len(identities),
         "expected_count": 15,
         "rows": identities,
+        "identity_complete": complete,
+        "predictor_complete_count": sum(
+            row.get("predictor_direction") != "UNAVAILABLE" for row in identities
+        ),
+        "date_state_complete_count": sum(
+            bool(row.get("date_state_complete")) for row in identities
+        ),
         "degradation_reason": None if complete else "owned price identity coverage is not exact15",
+        "price_alone_may_create_act": False,
     }
 
 
@@ -512,6 +1649,287 @@ def build_icon_subscopes(
     }
 
 
+def build_contextual_player_blocks(
+    player_projection: Mapping[str, Any],
+    *,
+    fixture: Any | None = None,
+) -> dict[str, Any]:
+    """Nested human-facing player detail without changing DEEP top-level count."""
+    contextual = dict(player_projection.get("contextual_dynamics") or {})
+    fixture_contexts = [
+        dict(row)
+        for row in contextual.get("fixture_contexts") or []
+        if isinstance(row, Mapping)
+    ]
+    selected = None
+    if fixture is not None:
+        selected = next(
+            (
+                row
+                for row in fixture_contexts
+                if str(row.get("fixture")) == str(fixture)
+            ),
+            None,
+        )
+    if selected is None and fixture_contexts:
+        selected = fixture_contexts[0]
+    if selected is None:
+        return {
+            "state": "UNAVAILABLE",
+            "degradation_reason": "contextual trajectory/matchup evidence unavailable",
+            "blocks": {},
+        }
+
+    matchup = dict(selected.get("matchup") or {})
+    network = dict(selected.get("linkup_network") or {})
+    relationships = [
+        dict(row)
+        for row in network.get("relationships") or []
+        if isinstance(row, Mapping)
+        and float(row.get("confidence") or 0.0) > 0.0
+    ]
+    relationships.sort(
+        key=lambda row: (
+            float(row.get("confidence") or 0.0),
+            float(row.get("dependency_strength") or 0.0),
+        ),
+        reverse=True,
+    )
+    chains = [
+        dict(row)
+        for row in network.get("multi_player_chains") or []
+        if isinstance(row, Mapping)
+        and row.get("status") == "AVAILABLE"
+        and float(row.get("confidence") or 0.0) > 0.0
+    ]
+    chains.sort(
+        key=lambda row: (
+            float(row.get("confidence") or 0.0),
+            abs(float(row.get("multiplier") or 1.0) - 1.0),
+        ),
+        reverse=True,
+    )
+    return {
+        "state": "COMPLETE",
+        "fixture": selected.get("fixture"),
+        "trajectory_classification": selected.get(
+            "trajectory_classification"
+        ),
+        "latest_match_evidence": selected.get("latest_match_evidence"),
+        "blocks": {
+            "OPPONENT-SPECIFIC MATCHUP": {
+                "historical_meetings": matchup.get("historical_meetings"),
+                "result_evidence": (
+                    matchup.get("result_process") or {}
+                ).get("result_evidence"),
+                "process_evidence": (
+                    matchup.get("result_process") or {}
+                ).get("process_evidence"),
+                "tactical_similarity": matchup.get("tactical_similarity"),
+                "sample_size": matchup.get("sample_size"),
+                "bayesian_confidence": matchup.get("sample_shrinkage"),
+                "current_relevance": matchup.get("tactical_similarity"),
+                "classification": matchup.get("classification"),
+                "opponent_history_scope": matchup.get("opponent_history_scope"),
+                "prior_season_matchup_status": matchup.get(
+                    "prior_season_matchup_status"
+                ),
+                "prior_season_meetings": matchup.get(
+                    "prior_season_meetings"
+                ),
+            },
+            "LINK-UP / COMBINATION NETWORK": {
+                "PAIRWISE LINKS": relationships,
+                "relationships": relationships,
+                "relationship_count": len(relationships),
+                "MULTI-PLAYER CHAINS": chains,
+                "multi_player_chains": chains,
+                "chain_count": len(chains),
+                "insufficient_pairs_suppressed": True,
+                "low_confidence_chains_suppressed": True,
+            },
+        },
+    }
+
+
+def build_post_match_universe_movers(
+    post_match_scan: Mapping[str, Any] | None,
+    *,
+    post_match_deep_analysis: Mapping[str, Any] | None = None,
+    limit_per_category: int = 5,
+) -> dict[str, Any]:
+    """Compact POST-MATCH Universe Movers block from the V12 broad scan.
+
+    The block is descriptive evidence only. It does not create a transfer or
+    mutate WAIT/PREPARE/ACT.
+    """
+    scan = dict(post_match_scan or {})
+    deep = dict(post_match_deep_analysis or scan.get("deep_execution") or {})
+    executed_ids = {
+        int(value)
+        for value in deep.get("executed_element_ids") or []
+        if value is not None
+    }
+    players = [
+        dict(row)
+        for row in scan.get("material_players") or []
+        if isinstance(row, Mapping)
+    ]
+    limit = max(1, int(limit_per_category))
+
+    category_rules = (
+        (
+            "BREAKOUT / CONFIRMATION",
+            {"BREAKOUT_PROCESS", "OUTPUT_CONFIRMING_PROCESS"},
+        ),
+        (
+            "PROCESS UP — RETURNS NOT YET ARRIVED",
+            {"UNDERLYING_IMPROVING_NO_RETURN"},
+        ),
+        (
+            "ROLE / MINUTES RISERS",
+            {"ROLE_BREAKOUT", "MINUTES_BREAKOUT", "SET_PIECE_GAIN"},
+        ),
+        (
+            "LINK-UP RISERS",
+            {"LINKUP_BREAKOUT"},
+        ),
+        (
+            "REGRESSION / SELL-RISK",
+            {
+                "REGRESSION_RISK",
+                "ROLE_DECLINE",
+                "MINUTES_DECLINE",
+                "LINKUP_BROKEN",
+            },
+        ),
+        (
+            "NOISE / DO NOT CHASE",
+            {"OUTPUT_WITHOUT_PROCESS"},
+        ),
+    )
+
+    def compact(row: Mapping[str, Any]) -> dict[str, Any]:
+        latest = dict(row.get("latest_match") or {})
+        comparison = dict(row.get("universe_comparison") or {})
+        return {
+            "element_id": row.get("element_id"),
+            "name": row.get("name"),
+            "position": row.get("position"),
+            "owned": bool(row.get("owned")),
+            "primary_classification": row.get("primary_classification"),
+            "classifications": list(row.get("classifications") or []),
+            "materiality_score": row.get("materiality_score"),
+            "latest_fpl_points": latest.get("fpl_points"),
+            "latest_xgi": latest.get("xgi"),
+            "xmins_delta": (row.get("xmins") or {}).get("delta"),
+            "p_start_delta": (row.get("p_start") or {}).get("delta"),
+            "universe_comparison_state": comparison.get("state"),
+            "published_position_pool_rank": comparison.get(
+                "published_position_pool_rank"
+            ),
+            "beats_hold_in_any_published_package": comparison.get(
+                "beats_hold_in_any_published_package"
+            ),
+            "deep_detail": (
+                bool(row.get("deep_detail_available"))
+                or int(row.get("element_id") or -1) in executed_ids
+            ),
+            "automatic_transfer_recommendation": False,
+        }
+
+    categories: dict[str, list[dict[str, Any]]] = {}
+    for label, accepted in category_rules:
+        rows = [
+            row
+            for row in players
+            if accepted.intersection(set(row.get("classifications") or []))
+        ]
+        rows.sort(
+            key=lambda row: (
+                float(row.get("materiality_score") or 0.0),
+                bool(
+                    (row.get("universe_comparison") or {}).get(
+                        "beats_hold_in_any_published_package"
+                    )
+                ),
+                -int(
+                    (row.get("universe_comparison") or {}).get(
+                        "published_position_pool_rank"
+                    )
+                    or 999
+                ),
+            ),
+            reverse=True,
+        )
+        categories[label] = [compact(row) for row in rows[:limit]]
+
+    comparison = dict(scan.get("universe_comparison") or {})
+    scanned_count = int(scan.get("scanned_count") or 0)
+    eligible_count = int(scan.get("eligible_count") or 0)
+    search_authority = str(comparison.get("search_authority") or "").upper()
+    if not scan:
+        state = "UNAVAILABLE"
+        reason = "post-match full-universe scan unavailable"
+    elif scanned_count <= 0:
+        state = "DEGRADED"
+        reason = "eligible universe scan returned zero supportable players"
+    elif (
+        (eligible_count > 0 and scanned_count < eligible_count)
+        or search_authority == "PARTIAL"
+    ):
+        state = "DEGRADED"
+        reason = (
+            "post-match universe coverage/search authority is partial; "
+            f"scanned={scanned_count}/{eligible_count or 'UNKNOWN'} "
+            f"search_authority={search_authority or 'UNAVAILABLE'}"
+        )
+    else:
+        state = "COMPLETE"
+        reason = None
+
+    return {
+        "state": state,
+        "degradation_reason": reason,
+        "title": "UNIVERSE MOVERS",
+        "scope": scan.get("scope"),
+        "scanned_count": scan.get("scanned_count"),
+        "eligible_count": scan.get("eligible_count"),
+        "material_count": scan.get("material_count"),
+        "summary": (
+            "NO MATERIAL MOVERS"
+            if scan and int(scan.get("material_count") or 0) == 0
+            else None
+        ),
+        "search_authority": comparison.get("search_authority"),
+        "missing_scope": (
+            comparison.get("missing_scope")
+            or (
+                None
+                if state == "COMPLETE"
+                else "PARTIAL_OR_UNAVAILABLE_UNIVERSE_EVIDENCE"
+            )
+        ),
+        "deep_requested_count": deep.get("deep_requested_count"),
+        "deep_executed_count": deep.get("deep_executed_count"),
+        "deep_deferred_count": deep.get("deep_deferred_count"),
+        "deep_execution_scope": deep.get("deep_execution_scope"),
+        "categories": categories,
+        "deep_detail_element_ids": list(
+            scan.get("deep_analysis_element_ids") or []
+        ),
+        "full_universe_comparison": scan.get("universe_comparison"),
+        "governance": {
+            "scorer_assister_only_scouting_prohibited": True,
+            "non_scorers_can_surface": True,
+            "one_match_haul_never_creates_act": True,
+            "deep_detail_materiality_gated": True,
+            "full_universe_comparison_required_before_transfer": True,
+            "operational_action_enum_unchanged": "WAIT_PREPARE_ACT",
+        },
+    }
+
+
 def materialize_all15(
     *,
     owned15: Sequence[Mapping[str, Any]],
@@ -540,6 +1958,11 @@ def materialize_all15(
             {
                 "element_id": element,
                 "player": owned.get("name") or model.get("name"),
+                "position": owned.get("position") or model.get("position"),
+                "team_id": owned.get("team_id"),
+                "current_price": owned.get("current_price", owned.get("now_cost")),
+                "purchase_price": owned.get("purchase_price"),
+                "selling_price": owned.get("selling_price", owned.get("sell_value")),
                 "opponent": model.get("opponent", "UNAVAILABLE"),
                 "recommended_or_locked_role": model.get(
                     "recommended_or_locked_role", "UNAVAILABLE"
@@ -615,24 +2038,83 @@ def build_signal_delta(
     return {"status": "AVAILABLE", "rows": rows}
 
 
-def _locked_default(label: str, locked_state: Mapping[str, Any]) -> dict[str, Any] | None:
-    upper = label.upper()
-    if "FORMATION/XI/BENCH" in upper:
+_DEEP_LEGACY_LABEL_ALIASES: dict[str, tuple[str, ...]] = {
+    "S01": ("Decision/status",),
+    "S02": ("OUR15",),
+    "S03": ("DECISION DELTA",),
+    "S04": ("Changes",),
+    "S05": ("Fixtures/rest/conditions",),
+    "S06": ("Formation/XI/bench",),
+    "S07": ("XI battle",),
+    "S08": ("C/VC",),
+    "S09": ("Chip",),
+    "S10": ("Actionable Price Radar",),
+    "S11": ("Watchlist20 exact20",),
+    "S12": ("RISE20 exact20 where required",),
+    "S13": ("FALL20 exact20 where required",),
+    "S14": ("Package optimizer/frontier including HOLD baseline",),
+    "S15": ("Evidence quality",),
+    "S15B": ("ICON+ mini-league",),
+    "S16": ("ALL15 exact15 next-GW tactical/probability table",),
+    "S17": ("Source health/freshness/lineage",),
+    "S18": ("WAIT/PREPARE/ACT + trigger/reversal",),
+    "S19": ("Final judgement",),
+}
+
+
+def _payload_for_section(
+    payloads: Mapping[str, Mapping[str, Any]],
+    *,
+    section_id: str,
+    label: str,
+) -> Mapping[str, Any] | None:
+    direct = payloads.get(section_id) or payloads.get(label)
+    if direct is not None:
+        return direct
+    for alias in _DEEP_LEGACY_LABEL_ALIASES.get(section_id, ()):
+        if alias in payloads:
+            return payloads[alias]
+    return None
+
+
+def _locked_default(
+    section_id: str,
+    label: str,
+    locked_state: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    sid = str(section_id or "").upper()
+    if sid == "S06":
+        raw_bench = locked_state.get("bench")
+        if isinstance(raw_bench, Mapping):
+            bench = dict(raw_bench)
+        else:
+            bench_rows = list(raw_bench or [])
+            bench = {
+                "gk": bench_rows[0] if bench_rows else None,
+                "order": bench_rows[1:4],
+            }
         return {
             "state": "COMPLETE",
             "content": {
                 "status": "GW LOCKED — NO EXECUTABLE XI CHANGE",
                 "formation": locked_state.get("formation"),
+                "starting_xi": locked_state.get("xi"),
                 "xi": locked_state.get("xi"),
-                "bench": locked_state.get("bench"),
+                "bench": bench,
+                "lineup_score": {"state": "LOCKED"},
+                "formation_comparison": [],
             },
         }
-    if "XI BATTLE" in upper:
+    if sid == "S07":
         return {
             "state": "COMPLETE",
-            "content": {"status": "GW LOCKED — XI battle retained as factual locked state"},
+            "content": {
+                "status": "GW LOCKED — XI battle retained as factual locked state",
+                "battles": [],
+                "empty_is_truthful": True,
+            },
         }
-    if label.upper() == "C/VC":
+    if sid == "S08":
         return {
             "state": "COMPLETE",
             "content": {
@@ -641,7 +2123,7 @@ def _locked_default(label: str, locked_state: Mapping[str, Any]) -> dict[str, An
                 "vice_captain": locked_state.get("vice_captain"),
             },
         }
-    if label.upper() == "CHIP":
+    if sid == "S09":
         return {
             "state": "COMPLETE",
             "content": {"status": "LOCKED", "chip": locked_state.get("chip")},
@@ -649,28 +2131,37 @@ def _locked_default(label: str, locked_state: Mapping[str, Any]) -> dict[str, An
     return None
 
 
-def materialize_deep_report(
+def _materialize_canonical_report(
     *,
     canonical_text: str,
+    structural_mode: str,
+    reported_mode: str,
     section_payloads: Mapping[str, Mapping[str, Any]] | None,
     checkpoint_time: str | None = None,
     signal_delta: Mapping[str, Any] | None = None,
     current_gw_locked: bool = False,
     locked_state: Mapping[str, Any] | None = None,
+    universe_movers: Mapping[str, Any] | None = None,
+    universe_movers_target_label: str | None = None,
 ) -> dict[str, Any]:
-    """Materialize every Canonical DEEP block; unavailable data never omits a section."""
-    contract = canonical_mode_contract(canonical_text, "DEEP")
+    """One existing V12 structural materializer used by DEEP and post-match."""
+    contract = canonical_mode_contract(canonical_text, structural_mode)
     payloads = dict(section_payloads or {})
     sections: list[dict[str, Any]] = []
     locked = dict(locked_state or {})
+    mover_attachments = 0
 
     for section_id, label in zip(
         contract["expected_section_ids"],
         contract["expected_visible_order"],
     ):
-        raw = payloads.get(section_id) or payloads.get(label)
+        raw = _payload_for_section(
+            payloads,
+            section_id=section_id,
+            label=label,
+        )
         if raw is None and current_gw_locked:
-            raw = _locked_default(label, locked)
+            raw = _locked_default(section_id, label, locked)
         if raw is None:
             raw = {
                 "state": "UNAVAILABLE",
@@ -679,11 +2170,23 @@ def materialize_deep_report(
             }
         row = dict(raw)
         state = _status(row.get("state"), label=section_id)
-        if state != "COMPLETE" and not str(row.get("degradation_reason") or "").strip():
+        if state != "COMPLETE" and not str(
+            row.get("degradation_reason") or ""
+        ).strip():
             raise ReportOrchestrationError(
                 f"{section_id} degraded/unavailable section requires reason"
             )
         content = row.get("content")
+        if state == "COMPLETE" and (
+            content is None
+            or content == ""
+            or content == {}
+            or content == []
+        ):
+            state = "DEGRADED"
+            row["degradation_reason"] = (
+                "section declared COMPLETE but no human-facing content was materialized"
+            )
         if section_id == "S03" and str(checkpoint_time or "") == "12:30":
             content = dict(content or {})
             content["signal_delta_since_0430"] = dict(
@@ -693,6 +2196,33 @@ def materialize_deep_report(
                     "rows": [],
                 }
             )
+        if (
+            universe_movers is not None
+            and universe_movers_target_label
+            and (
+                str(section_id).upper()
+                == str(universe_movers_target_label).upper()
+                or str(label).upper()
+                == str(universe_movers_target_label).upper()
+            )
+        ):
+            content = dict(content or {})
+            if "universe_movers" in content:
+                raise ReportOrchestrationError(
+                    "UNIVERSE MOVERS may be attached only once"
+                )
+            content["universe_movers"] = dict(universe_movers)
+            mover_attachments += 1
+        if "PACKAGE OPTIMIZER" in str(label or "").upper() and state == "COMPLETE":
+            package_failures = _package_frontier_contract_failures(
+                content if isinstance(content, Mapping) else None
+            )
+            if package_failures:
+                state = "DEGRADED"
+                row["degradation_reason"] = (
+                    "full-universe package/frontier visible contract incomplete: "
+                    + ",".join(package_failures)
+                )
         sections.append(
             {
                 "section_id": section_id,
@@ -705,25 +2235,3439 @@ def materialize_deep_report(
             }
         )
 
+    if universe_movers is not None and mover_attachments != 1:
+        raise ReportOrchestrationError(
+            "natural post-match report must attach UNIVERSE MOVERS exactly once"
+        )
     return {
-        "report_mode": "DEEP",
+        "report_mode": reported_mode,
+        "structural_mode": structural_mode,
         "sections": sections,
         "rendered_section_ids": [row["section_id"] for row in sections],
         "rendered_visible_order": [row["label"] for row in sections],
         "exact_canonical_order": [row["section_id"] for row in sections]
         == contract["expected_section_ids"],
-        "numbered_headings": 19,
+        "numbered_headings": 19 if structural_mode == "DEEP" else len(sections),
+        "rendered_blocks_including_suffix_sections": len(sections), 
         "rendered_blocks_including_15B": len(sections),
+        "universe_movers_attachment_count": mover_attachments,
+        "universe_movers_visible": mover_attachments == 1,
     }
 
 
+def build_visible_mathematical_decision_stack(
+    decision_proof: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Expose existing V12 decision evidence without recomputing any model."""
+    proof = dict(decision_proof or {})
+    probability = dict(proof.get("probability_state") or {})
+    unconditional = dict(probability.get("unconditional") or {})
+    xmins = dict(proof.get("xmins_distribution") or {})
+    horizons = dict(proof.get("horizons") or {})
+    robustness = dict(proof.get("robustness") or {})
+    posterior_predictive = dict(proof.get("posterior_predictive") or {})
+    event_probabilities = dict(
+        posterior_predictive.get("event_probabilities")
+        or proof.get("event_probabilities")
+        or proof.get("posterior_predictive_event_probabilities")
+        or {}
+    )
+    point_distribution = dict(
+        posterior_predictive.get("point_distribution") or {}
+    )
+    mc = dict(proof.get("monte_carlo") or {})
+    missing: list[str] = []
+    if not proof.get("bayesian_shrinkage_lineage"):
+        missing.append("bayesian_shrinkage_lineage")
+    if not unconditional:
+        missing.append("availability_mixture")
+    if not xmins:
+        missing.append("xmins_distribution")
+    if not event_probabilities:
+        missing.append("event_probabilities")
+    if not horizons:
+        missing.append("horizons")
+    if not robustness:
+        missing.append("robustness")
+    if not mc:
+        missing.append("monte_carlo")
+
+    def event_value(*keys: str) -> Any:
+        for key in keys:
+            if key in event_probabilities:
+                return event_probabilities.get(key)
+        return "UNAVAILABLE"
+
+    def distribution_value(*keys: str) -> Any:
+        for key in keys:
+            if key in point_distribution:
+                return point_distribution.get(key)
+        return "UNAVAILABLE"
+
+    return {
+        "state": "COMPLETE" if not missing else ("PARTIAL" if proof else "UNAVAILABLE"),
+        "missing_scope": missing,
+        "bayesian_prior_posterior_shrinkage": (
+            proof.get("bayesian_shrinkage_lineage") or "UNAVAILABLE"
+        ),
+        "availability_mixture": {
+            "p_available": unconditional.get("p_available", "UNAVAILABLE"),
+            "p_start": unconditional.get("p_start", "UNAVAILABLE"),
+            "p_bench": unconditional.get("p_bench", "UNAVAILABLE"),
+            "p_cameo": unconditional.get("p_cameo", "UNAVAILABLE"),
+            "p_late_cameo": unconditional.get("p_late_cameo", "UNAVAILABLE"),
+            "p_dnp": unconditional.get("p_dnp", "UNAVAILABLE"),
+        },
+        "xmins_distribution": xmins or "UNAVAILABLE",
+        "event_probabilities": {
+            "p_goal": event_value(
+                "p_goal_return", "p_goal", "goal"
+            ),
+            "p_assist": event_value(
+                "p_assist_return", "p_assist", "assist"
+            ),
+            "p_return": event_value(
+                "p_attacking_return", "p_return", "return"
+            ),
+            "p_two_plus_returns": event_value(
+                "p_total_ga_ge_2",
+                "p_multiple_attacking_returns",
+                "p_two_plus_returns",
+                "p_2_plus_returns",
+                "two_plus_returns",
+            ),
+            "p_haul": distribution_value(
+                "p_haul_10_plus", "p_haul", "haul"
+            ),
+            "p_blank": distribution_value(
+                "p_fpl_blank", "p_blank", "blank"
+            ),
+            "p_no_attacking_return": event_value(
+                "p_no_attacking_return"
+            ),
+        },
+        "point_distribution": point_distribution or "UNAVAILABLE",
+        "posterior_predictive_source": (
+            posterior_predictive.get("source_contract")
+            or "UNAVAILABLE"
+        ),
+        "horizons": horizons or "UNAVAILABLE",
+        "p_outperform": robustness.get(
+            "p_outperform",
+            proof.get("p_outperform", "UNAVAILABLE"),
+        ),
+        "expected_regret": robustness.get(
+            "expected_regret",
+            proof.get("expected_regret", "UNAVAILABLE"),
+        ),
+        "tail_risk": {
+            "conditional_floor": robustness.get(
+                "conditional_floor", "UNAVAILABLE"
+            ),
+            "upper_tail": robustness.get("upper_tail", "UNAVAILABLE"),
+        },
+        "information_value_of_waiting": proof.get(
+            "information_value_of_waiting", "UNAVAILABLE"
+        ),
+        "covariance_correlation": (
+            proof.get("covariance_correlation")
+            or proof.get("correlation")
+            or "UNAVAILABLE"
+        ),
+        "monte_carlo": mc or {
+            "execution_state": "UNAVAILABLE",
+            "reason": "NO OCCURRENCE-BOUND MONTE CARLO EVIDENCE",
+        },
+    }
+
+
+def _render_match_scout_lines(rows: Sequence[Mapping[str, Any]]) -> list[str]:
+    lines = ["### POST-MATCH MATCH-BY-MATCH SCOUT"]
+    labels = (
+        ("result", "RESULT"),
+        ("formation_system", "FORMATION/SYSTEM"),
+        ("coach_pattern", "COACH PATTERN"),
+        ("player_roles", "PLAYER ROLES"),
+        ("minutes_substitution_pattern", "MINUTES/SUBS"),
+        ("xg_xa_xgi_shots_chances", "xG/xA/xGI/SHOTS/CHANCES"),
+        ("set_pieces_penalties", "SET PIECES/PENALTIES"),
+        ("defcon", "DEFCON"),
+        ("opponent_channels", "OPPONENT CHANNELS"),
+        ("sustainable_vs_noisy", "SUSTAINABLE VS NOISE"),
+        ("implication_for_our15", "OUR15 IMPLICATION"),
+        ("implication_for_next_opponent", "NEXT OPPONENT IMPLICATION"),
+        (
+            "posterior_calibration_implication",
+            "POSTERIOR CALIBRATION IMPLICATION",
+        ),
+    )
+    for row in rows:
+        fixture_id = row.get("fixture_id", "UNAVAILABLE")
+        lines.append(f"#### FIXTURE ID: {fixture_id}")
+        for field, label in labels:
+            value = row.get(field, "UNAVAILABLE")
+            lines.append(f"{label}: {value}")
+    return lines
+
+
+def _render_math_stack_lines(stack: Mapping[str, Any]) -> list[str]:
+    payload = dict(stack or {})
+
+    def mapping_or_empty(value: Any) -> dict[str, Any]:
+        return dict(value) if isinstance(value, Mapping) else {}
+
+    availability = mapping_or_empty(payload.get("availability_mixture"))
+    events = mapping_or_empty(payload.get("event_probabilities"))
+    point_distribution = mapping_or_empty(payload.get("point_distribution"))
+    mc = mapping_or_empty(payload.get("monte_carlo"))
+    lines = [
+        "### MATHEMATICAL DECISION STACK",
+        "BAYESIAN PRIOR -> POSTERIOR / SHRINKAGE: "
+        f"{payload.get('bayesian_prior_posterior_shrinkage', 'UNAVAILABLE')}",
+        "AVAILABILITY MIXTURE: "
+        f"P(AVAILABLE)={availability.get('p_available', 'UNAVAILABLE')} | "
+        f"P(START)={availability.get('p_start', 'UNAVAILABLE')} | "
+        f"P(BENCH)={availability.get('p_bench', 'UNAVAILABLE')} | "
+        f"P(CAMEO)={availability.get('p_cameo', 'UNAVAILABLE')} | "
+        f"P(LATE CAMEO)={availability.get('p_late_cameo', 'UNAVAILABLE')} | "
+        f"P(DNP)={availability.get('p_dnp', 'UNAVAILABLE')}",
+        f"XMINS DISTRIBUTION: {payload.get('xmins_distribution', 'UNAVAILABLE')}",
+        "EVENT PROBABILITIES: "
+        f"P(GOAL)={events.get('p_goal', 'UNAVAILABLE')} | "
+        f"P(ASSIST)={events.get('p_assist', 'UNAVAILABLE')} | "
+        f"P(RETURN)={events.get('p_return', 'UNAVAILABLE')} | "
+        f"P(2+ RETURNS)={events.get('p_two_plus_returns', 'UNAVAILABLE')} | "
+        f"P(HAUL)={events.get('p_haul', 'UNAVAILABLE')} | "
+        f"P(BLANK)={events.get('p_blank', 'UNAVAILABLE')} | "
+        f"P(NO ATTACK RETURN)={events.get('p_no_attacking_return', 'UNAVAILABLE')}",
+        "P1.3B POINT DISTRIBUTION: "
+        f"source={payload.get('posterior_predictive_source', 'UNAVAILABLE')} | "
+        f"E[xPts]={point_distribution.get('expected_points', 'UNAVAILABLE')} | "
+        f"variance={point_distribution.get('variance', 'UNAVAILABLE')} | "
+        f"std={point_distribution.get('std', 'UNAVAILABLE')} | "
+        f"quantiles={point_distribution.get('quantiles', 'UNAVAILABLE')} | "
+        f"tails={point_distribution.get('tails', 'UNAVAILABLE')}",
+        f"HORIZONS 1GW / 3GW / 5GW: {payload.get('horizons', 'UNAVAILABLE')}",
+        f"P(OUTPERFORM HOLD/COMPARATOR): {payload.get('p_outperform', 'UNAVAILABLE')}",
+        f"EXPECTED REGRET: {payload.get('expected_regret', 'UNAVAILABLE')}",
+        f"TAIL / FLOOR / CEILING: {payload.get('tail_risk', 'UNAVAILABLE')}",
+        "INFORMATION VALUE OF WAITING: "
+        f"{payload.get('information_value_of_waiting', 'UNAVAILABLE')}",
+        f"COVARIANCE / CORRELATION: {payload.get('covariance_correlation', 'UNAVAILABLE')}",
+        "MONTE CARLO: "
+        f"state={mc.get('execution_state', 'UNAVAILABLE')} | "
+        f"N={mc.get('actual_paths', 'UNAVAILABLE')} | "
+        f"correlated={mc.get('correlated', 'UNAVAILABLE')} | "
+        f"reason={mc.get('reason', mc.get('degradation_reason', 'UNAVAILABLE'))} | "
+        f"convergence={mc.get('convergence_evidence', 'UNAVAILABLE')}",
+    ]
+    return lines
+
+
+def _package_frontier_contract_failures(content: Mapping[str, Any] | None) -> list[str]:
+    """Validate visible package/full-universe evidence without creating new ranking math."""
+    payload = dict(content or {})
+    proof = payload.get("package_search_proof") or payload.get("search_proof")
+    challengers = list(
+        payload.get("package_universe_challengers")
+        or payload.get("universe_challengers")
+        or ()
+    )
+    routes = list(
+        payload.get("package_routes")
+        or payload.get("routes")
+        or payload.get("frontier")
+        or ()
+    )
+    failures: list[str] = []
+    if not isinstance(proof, Mapping):
+        failures.append("SEARCH_PROOF_MISSING")
+    else:
+        try:
+            owned_expected = int(proof.get("owned_expected"))
+            owned_evaluated = int(proof.get("owned_evaluated"))
+            universe_expected = int(proof.get("eligible_universe_expected"))
+            universe_evaluated = int(proof.get("eligible_universe_evaluated"))
+            outgoing = int(proof.get("outgoing_candidate_count"))
+            legal_routes = int(proof.get("legal_route_count"))
+        except (TypeError, ValueError):
+            failures.append("SEARCH_PROOF_NUMERIC_INVALID")
+        else:
+            if owned_expected != 15 or owned_evaluated != 15:
+                failures.append(f"OUR15={owned_evaluated}/{owned_expected}")
+            if universe_expected <= 0 or universe_evaluated != universe_expected:
+                failures.append(f"UNIVERSE={universe_evaluated}/{universe_expected}")
+            if outgoing != 15:
+                failures.append(f"OUTGOING={outgoing}/15")
+            if legal_routes <= 0:
+                failures.append("LEGAL_ROUTES=0")
+        if proof.get("hold_included") is not True:
+            failures.append("HOLD_MISSING")
+        if proof.get("lossy_pruning") is not False:
+            failures.append("LOSSY_PRUNING")
+        if str(proof.get("search_authority") or "").upper() != "FULL":
+            failures.append("SEARCH_AUTHORITY_NOT_FULL")
+    if not challengers:
+        failures.append("SCAN_DERIVED_CHALLENGERS_MISSING")
+    if not routes:
+        failures.append("PACKAGE_ROUTES_MISSING")
+    elif not any(
+        str(row.get("route") or "").upper() == "HOLD"
+        for row in routes
+        if isinstance(row, Mapping)
+    ):
+        failures.append("HOLD_ROUTE_MISSING")
+    return failures
+
+
+def _render_package_frontier_lines(
+    content: Mapping[str, Any] | None,
+    *,
+    section_state: str,
+) -> list[str]:
+    """Render the full-universe team-impact surface without recomputing models."""
+    payload = dict(content or {})
+    proof = dict(
+        payload.get("package_search_proof")
+        or payload.get("search_proof")
+        or {}
+    )
+    challengers = [
+        dict(row)
+        for row in (
+            payload.get("package_universe_challengers")
+            or payload.get("universe_challengers")
+            or ()
+        )
+        if isinstance(row, Mapping)
+    ]
+    routes = [
+        dict(row)
+        for row in (
+            payload.get("package_routes")
+            or payload.get("routes")
+            or payload.get("frontier")
+            or ()
+        )
+        if isinstance(row, Mapping)
+    ]
+    lines = ["### UNIVERSE SCAN / OPTIMAL TEAM IMPACT"]
+    if proof:
+        lines.append(
+            "SEARCH PROOF: "
+            f"OUR15 {proof.get('owned_evaluated', 'UNAVAILABLE')}/"
+            f"{proof.get('owned_expected', 'UNAVAILABLE')} | "
+            f"UNIVERSE {proof.get('eligible_universe_evaluated', 'UNAVAILABLE')}/"
+            f"{proof.get('eligible_universe_expected', 'UNAVAILABLE')} | "
+            f"OUTGOING {proof.get('outgoing_candidate_count', 'UNAVAILABLE')}/15 | "
+            f"LEGAL ROUTES {proof.get('legal_route_count', 'UNAVAILABLE')} | "
+            f"HOLD {proof.get('hold_included', 'UNAVAILABLE')} | "
+            f"LOSSY PRUNING {proof.get('lossy_pruning', 'UNAVAILABLE')} | "
+            f"AUTHORITY {proof.get('search_authority', 'UNAVAILABLE')}"
+        )
+    else:
+        lines.append(
+            f"SEARCH PROOF: {section_state} — current full-universe proof unavailable"
+        )
+
+    lines.append("#### SCAN-DERIVED CHALLENGERS")
+    if not challengers:
+        lines.append("UNAVAILABLE — no supportable scan-derived challenger rows")
+    for row in challengers:
+        components = row.get("football_score_components", "UNAVAILABLE")
+        distribution = row.get("expected_points_distribution", "UNAVAILABLE")
+        lines.append(
+            "- "
+            f"#{row.get('rank', 'NA')} {row.get('player') or row.get('element_id')} "
+            f"({row.get('position', 'NA')}, {row.get('club', 'NA')}) | "
+            f"BEST OUT {row.get('best_outgoing', 'UNAVAILABLE')} | "
+            f"ROUTE {row.get('package_route', 'UNAVAILABLE')} | "
+            f"FOOTBALL {row.get('football_score', 'UNAVAILABLE')} "
+            f"[20/25/30/25={components}] | "
+            f"P(avail/start/cameo/DNP)="
+            f"{row.get('p_available', 'UNAVAILABLE')}/"
+            f"{row.get('p_start', 'UNAVAILABLE')}/"
+            f"{row.get('p_cameo', 'UNAVAILABLE')}/"
+            f"{row.get('p_dnp', 'UNAVAILABLE')} | "
+            f"xMins {row.get('xmins', 'UNAVAILABLE')} | "
+            f"P(return/blank/haul)="
+            f"{row.get('p_return', 'UNAVAILABLE')}/"
+            f"{row.get('p_blank', 'UNAVAILABLE')}/"
+            f"{row.get('p_haul', 'UNAVAILABLE')} | "
+            f"xPtsDist {distribution} | "
+            f"TACTICAL {row.get('tactical_role', 'UNAVAILABLE')} | "
+            f"SP/PEN {row.get('set_piece_penalty_role', 'UNAVAILABLE')} | "
+            f"1GW {row.get('gw_plus_1', 'UNAVAILABLE')} | "
+            f"3GW {row.get('three_gw', 'UNAVAILABLE')} | "
+            f"5GW {row.get('five_gw', 'UNAVAILABLE')} | "
+            f"UTILITY ΔHOLD {row.get('package_utility_delta_vs_hold', 'UNAVAILABLE')} | "
+            f"PRICE {row.get('price_economics', 'UNAVAILABLE')} | "
+            f"STRUCTURE {row.get('structure_effect', 'UNAVAILABLE')} | "
+            f"REGRET {row.get('expected_regret', 'UNAVAILABLE')} | "
+            f"IVW {row.get('information_value_of_waiting', 'UNAVAILABLE')} | "
+            f"ICON+ {row.get('mini_league_leverage', 'UNAVAILABLE')} | "
+            f"UPSIDE {row.get('main_upside', 'UNAVAILABLE')} | "
+            f"RISK {row.get('main_risk', 'UNAVAILABLE')} | "
+            f"ACTION {row.get('action', 'UNAVAILABLE')}"
+        )
+
+    lines.append("#### PACKAGE FRONTIER")
+    mc = dict(payload.get("monte_carlo") or {})
+    lines.append(
+        "MC PATHS: "
+        f"{mc.get('actual_paths', 'UNAVAILABLE')} | "
+        f"canonical_pass={mc.get('canonical_pass', 'UNAVAILABLE')} | "
+        f"convergence={(mc.get('convergence_evidence') or {}).get('status', 'UNAVAILABLE')}"
+    )
+    if not routes:
+        lines.append("UNAVAILABLE — package routes not materialized")
+
+    def move_label(move: Mapping[str, Any]) -> str:
+        return str(
+            move.get("name")
+            or move.get("player")
+            or move.get("element")
+            or "UNAVAILABLE"
+        )
+
+    for row in routes:
+        moves_raw = row.get("moves")
+        if isinstance(moves_raw, Mapping):
+            moves = dict(moves_raw)
+            outs = [
+                dict(item) for item in moves.get("out") or []
+                if isinstance(item, Mapping)
+            ]
+            ins = [
+                dict(item) for item in moves.get("in") or []
+                if isinstance(item, Mapping)
+            ]
+            structured_move_text = (
+                ", ".join(move_label(item) for item in outs)
+                + " → "
+                + ", ".join(move_label(item) for item in ins)
+            )
+        else:
+            moves = {}
+            outs = []
+            ins = []
+            structured_move_text = (
+                " | ".join(str(item) for item in (moves_raw or []))
+                if isinstance(moves_raw, (list, tuple))
+                else str(moves_raw or "UNAVAILABLE")
+            )
+        if str(row.get("route") or "").upper() == "HOLD":
+            move_text = "HOLD → HOLD"
+        else:
+            move_text = structured_move_text
+        outgoing_value = sum(
+            float(item.get("sell_value"))
+            for item in outs
+            if item.get("sell_value") is not None
+        ) if any(item.get("sell_value") is not None for item in outs) else None
+        incoming_cost = sum(
+            float(item.get("buy_price", item.get("price")))
+            for item in ins
+            if item.get("buy_price", item.get("price")) is not None
+        ) if any(item.get("buy_price", item.get("price")) is not None for item in ins) else None
+        transfer_cost_raw = row.get("transfer_cost")
+        transfer_cost = (
+            dict(transfer_cost_raw)
+            if isinstance(transfer_cost_raw, Mapping)
+            else {"legacy_value": transfer_cost_raw}
+        )
+        lines.append(
+            "- "
+            f"{row.get('route_kind', 'ROUTE')} | "
+            f"{row.get('route', 'UNAVAILABLE')} | OUT → IN {move_text} | "
+            f"SELL {outgoing_value if outgoing_value is not None else 'UNAVAILABLE'} | "
+            f"BUY {incoming_cost if incoming_cost is not None else 'UNAVAILABLE'} | "
+            f"BANK BEFORE {row.get('bank_before', 'UNAVAILABLE')} | "
+            f"BANK AFTER {transfer_cost.get('bank_after', 'UNAVAILABLE')} | "
+            f"AFFORDABILITY {row.get('affordability', 'UNAVAILABLE')} | "
+            f"HIT/FT {transfer_cost} | "
+            f"1GW {row.get('gw1_net', 'UNAVAILABLE')} | "
+            f"2GW {row.get('two_gw_if_relevant', 'UNAVAILABLE')} | "
+            f"3GW {row.get('three_gw', 'UNAVAILABLE')} | "
+            f"5GW {row.get('five_gw', 'UNAVAILABLE')} | "
+            f"RAW GAIN {row.get('raw_gain', 'UNAVAILABLE')} | "
+            f"NET GAIN {row.get('net_gain', 'UNAVAILABLE')} | "
+            f"P>HOLD {row.get('p_beats_hold', 'UNAVAILABLE')} | "
+            f"Q10 {row.get('Q10', 'UNAVAILABLE')} | "
+            f"Q25 {row.get('Q25', 'UNAVAILABLE')} | "
+            f"MEDIAN {row.get('median', 'UNAVAILABLE')} | "
+            f"Q75 {row.get('Q75', 'UNAVAILABLE')} | "
+            f"Q90 {row.get('Q90', 'UNAVAILABLE')} | "
+            f"TACTICAL/FIXTURE {row.get('tactical_fixture_effect', 'UNAVAILABLE')} | "
+            f"PRICE/OPTIONALITY {row.get('price_risk', 'UNAVAILABLE')} | "
+            f"ICON+ UTILITY {row.get('mini_league_utility', 'UNAVAILABLE')} | "
+            f"REGRET {row.get('expected_regret', 'UNAVAILABLE')} | "
+            f"ROBUSTNESS {row.get('robustness', 'UNAVAILABLE')} | "
+            f"REVERSAL RISK {row.get('sensitivity', 'UNAVAILABLE')} | "
+            f"VERDICT {row.get('action_verdict', 'UNAVAILABLE')}"
+        )
+    return lines
+
+
+def materialize_deep_report(
+    *,
+    canonical_text: str,
+    section_payloads: Mapping[str, Mapping[str, Any]] | None,
+    checkpoint_time: str | None = None,
+    signal_delta: Mapping[str, Any] | None = None,
+    current_gw_locked: bool = False,
+    locked_state: Mapping[str, Any] | None = None,
+    post_all_match_scout: Sequence[Mapping[str, Any]] | None = None,
+    mathematical_decision_stack: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Materialize Canonical DEEP plus nested post-match/math evidence when due."""
+    report = _materialize_canonical_report(
+        canonical_text=canonical_text,
+        structural_mode="DEEP",
+        reported_mode="DEEP",
+        section_payloads=section_payloads,
+        checkpoint_time=checkpoint_time,
+        signal_delta=signal_delta,
+        current_gw_locked=current_gw_locked,
+        locked_state=locked_state,
+    )
+    scout = [
+        dict(row)
+        for row in (post_all_match_scout or ())
+        if isinstance(row, Mapping)
+    ]
+    if scout:
+        target = next(
+            (
+                row
+                for row in report["sections"]
+                if str(row.get("section_id") or "").strip().upper() == "S04"
+            ),
+            None,
+        )
+        if target is None:
+            raise ReportOrchestrationError(
+                "DEEP Changes surface required for post-match scout carryover"
+            )
+        content = dict(target.get("content") or {})
+        content["post_match_match_by_match_scout"] = scout
+        target["content"] = content
+        report["post_all_match_context"] = True
+        report["completed_fixture_ids"] = [
+            str(row.get("fixture_id")) for row in scout
+        ]
+    if mathematical_decision_stack:
+        target = next(
+            (
+                row
+                for row in report["sections"]
+                if str(row.get("section_id") or "").strip().upper() == "S14"
+            ),
+            None,
+        )
+        if target is None:
+            raise ReportOrchestrationError(
+                "DEEP package surface required for mathematical decision stack"
+            )
+        content = dict(target.get("content") or {})
+        content["mathematical_decision_stack"] = dict(
+            mathematical_decision_stack
+        )
+        target["content"] = content
+        report["serious_decision_required"] = True
+    return report
+
+
+def _post_match_structural_route(
+    report_mode: str,
+    *,
+    post_match_context: bool,
+) -> tuple[str, str | None]:
+    mode = str(report_mode or "").strip().upper()
+    if mode == "POST_ALL_MATCH":
+        return "POST_ALL_MATCH", "GW COMPLETED MATCH-BY-MATCH SCOUT"
+    if mode == "POST_MATCH":
+        return "MATCH", "RELEVANT LEAGUE-WIDE SIGNALS"
+    if mode == "MATCH" and post_match_context:
+        return "MATCH", "RELEVANT LEAGUE-WIDE SIGNALS"
+    if mode in {
+        "OVERLAP",
+        "FULL+MATCH",
+        "MATCH+FULL",
+        "DEEP+MATCH",
+        "MATCH+DEEP",
+        "PRICE+MATCH",
+        "MATCH+PRICE",
+        "DEADLINE+MATCH",
+        "MATCH+DEADLINE",
+    }:
+        return "DEEP", "S04"
+    return mode, None
+
+
+def materialize_natural_post_match_report(
+    *,
+    canonical_text: str,
+    report_mode: str,
+    projections_payload: Mapping[str, Any] | None,
+    section_payloads: Mapping[str, Mapping[str, Any]] | None,
+    post_match_context: bool = True,
+    checkpoint_time: str | None = None,
+    signal_delta: Mapping[str, Any] | None = None,
+    current_gw_locked: bool = False,
+    locked_state: Mapping[str, Any] | None = None,
+    match_consequence: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Natural V12 post-match renderer binding projections -> movers -> report.
+
+    No new top-level backbone is created. Universe Movers is nested exactly
+    once in the existing MATCH, POST-ALL-MATCH or overlap surface.
+    """
+    mode = str(report_mode or "").strip().upper()
+    structural_mode, target_label = _post_match_structural_route(
+        mode,
+        post_match_context=post_match_context,
+    )
+    if target_label is None:
+        raise ReportOrchestrationError(
+            f"UNIVERSE MOVERS not applicable for pure mode {mode or '<empty>'}"
+        )
+    projections = dict(projections_payload or {})
+    scan = projections.get("post_match_universe_scan")
+    deep = projections.get("post_match_deep_analysis")
+    movers = build_post_match_universe_movers(
+        scan if isinstance(scan, Mapping) else None,
+        post_match_deep_analysis=(
+            deep if isinstance(deep, Mapping) else None
+        ),
+    )
+    report = _materialize_canonical_report(
+        canonical_text=canonical_text,
+        structural_mode=structural_mode,
+        reported_mode=mode,
+        section_payloads=section_payloads,
+        checkpoint_time=checkpoint_time,
+        signal_delta=signal_delta,
+        current_gw_locked=current_gw_locked,
+        locked_state=locked_state,
+        universe_movers=movers,
+        universe_movers_target_label=target_label,
+    )
+    report["post_match_universe_movers"] = movers
+    report["post_match_source"] = "projections.post_match_universe_scan"
+    report["post_match_deep_source"] = (
+        "projections.post_match_deep_analysis"
+    )
+
+    overlap_modes = {
+        "OVERLAP",
+        "FULL+MATCH",
+        "MATCH+FULL",
+        "DEEP+MATCH",
+        "MATCH+DEEP",
+        "PRICE+MATCH",
+        "MATCH+PRICE",
+        "DEADLINE+MATCH",
+        "MATCH+DEADLINE",
+    }
+    consequence = (
+        dict(match_consequence)
+        if isinstance(match_consequence, Mapping)
+        else {}
+    )
+    if mode in overlap_modes:
+        if not consequence or not str(
+            consequence.get("status") or consequence.get("summary") or ""
+        ).strip():
+            raise ReportOrchestrationError(
+                "overlap report requires explicit locked submitted-pick match consequence"
+            )
+        target = next(
+            (
+                row
+                for row in report.get("sections") or []
+                if str(row.get("section_id") or "").upper() == "S04"
+            ),
+            None,
+        )
+        if not isinstance(target, dict):
+            raise ReportOrchestrationError(
+                "overlap report requires DEEP S04 material-development surface"
+            )
+        target_content = dict(target.get("content") or {})
+        if "match_consequence" in target_content:
+            raise ReportOrchestrationError(
+                "match consequence may be materialized only once"
+            )
+        target_content["match_consequence"] = consequence
+        target["content"] = target_content
+
+    update_proof = dict(projections.get("model_update_execution") or {})
+    actual_update = bool(
+        update_proof.get("executed") is True
+        and update_proof.get("previous_value") is not None
+        and update_proof.get("current_value") is not None
+        and str(update_proof.get("evidence_time") or "").strip()
+    )
+    model_update_status = (
+        {
+            "status": "POSTERIOR UPDATED",
+            "previous_value": update_proof.get("previous_value"),
+            "current_value": update_proof.get("current_value"),
+            "evidence_time": update_proof.get("evidence_time"),
+        }
+        if actual_update
+        else {
+            "status": "MODEL UPDATE PENDING",
+            "reason": (
+                "completed-match evidence is calibration input until the "
+                "authoritative model is actually recomputed"
+            ),
+        }
+    )
+    target_for_update = next(
+        (
+            row
+            for row in report.get("sections") or []
+            if str(row.get("label") or "").upper() == str(target_label or "").upper()
+            or str(row.get("section_id") or "").upper() == str(target_label or "").upper()
+        ),
+        None,
+    )
+    if isinstance(target_for_update, dict):
+        target_content = dict(target_for_update.get("content") or {})
+        target_content["model_update_status"] = model_update_status
+        target_for_update["content"] = target_content
+
+    report["lifecycle_contract"] = {
+        "single_visible_report": True,
+        "reported_mode": mode,
+        "structural_mode": structural_mode,
+        "post_match_incremental": mode != "POST_ALL_MATCH",
+        "post_match_return_mode": (
+            "POST_ALL_MATCH" if mode == "POST_ALL_MATCH" else "MATCH"
+        ),
+        "match_consequence_preserved": (
+            True if mode in overlap_modes else None
+        ),
+        "model_update_status": model_update_status["status"],
+    }
+    return report
+
+
+def materialize_match_report(
+    *,
+    canonical_text: str,
+    live_payload: Mapping[str, Any],
+    icon_live: Mapping[str, Any] | None = None,
+    league_wide_signals: Sequence[Mapping[str, Any]] | None = None,
+    cards_injury_defcon_role_events: Sequence[Mapping[str, Any]] | None = None,
+    next_gw_learning: Sequence[Mapping[str, Any]] | None = None,
+    next_critical_observation: str | None = None,
+    source_freshness: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Materialize the Canonical MATCH1..MATCH13 surface from locked live truth.
+
+    The scoring authority is the submitted-pick live payload. Planning XI is
+    never accepted as an input here. Missing submitted-pick coverage fails
+    closed while optional league-wide/contextual scopes may degrade visibly.
+    """
+    live = dict(live_payload or {})
+    players = [
+        dict(row)
+        for row in live.get("players") or []
+        if isinstance(row, Mapping)
+    ]
+    player_ids = [
+        int(row.get("element") or 0)
+        for row in players
+        if int(row.get("element") or 0) > 0
+    ]
+    if (
+        str(live.get("submitted_picks_status") or "").upper() != "AVAILABLE"
+        or len(players) != 15
+        or len(set(player_ids)) != 15
+    ):
+        raise ReportOrchestrationError(
+            "MATCH publication requires exact15 locked submitted picks"
+        )
+
+    lifecycle = dict(live.get("lifecycle") or {})
+    checkpoint = dict(live.get("match_checkpoint") or {})
+    bench = dict(live.get("bench_presentation") or {})
+    score = dict(live.get("personalized_live_score") or {})
+    captain = dict(live.get("captain_vice_consequence") or {})
+    bonus = dict(live.get("bonus_bps") or {})
+    generated_at = live.get("generated_at")
+
+    xi_rows = [row for row in players if int(row.get("multiplier") or 0) > 0]
+    bench_rows = [row for row in players if int(row.get("multiplier") or 0) == 0]
+    if len(xi_rows) != 11 or len(bench_rows) != 4:
+        raise ReportOrchestrationError(
+            f"MATCH locked submitted picks require XI=11 and bench=4, got {len(xi_rows)}/{len(bench_rows)}"
+        )
+
+    personal_impact: list[dict[str, Any]] = []
+    for row in players:
+        minutes = int(row.get("minutes") or 0)
+        raw = int(row.get("total_points") or 0)
+        multiplier = int(row.get("multiplier") or 0)
+        fixture_status = str(row.get("fixture_status") or "NOT_STARTED")
+        state = "NO_MATERIAL_EVENT"
+        if int(row.get("red_cards") or 0) > 0:
+            state = "RED_CARD"
+        elif int(row.get("goals_scored") or 0) > 0:
+            state = "GOAL_RETURN"
+        elif int(row.get("assists") or 0) > 0:
+            state = "ASSIST_RETURN"
+        elif multiplier == 0 and raw > 0:
+            state = "BENCH_POINTS"
+        elif fixture_status == "FT" and minutes == 0 and multiplier > 0:
+            state = "DNP_AUTOSUB_PENDING"
+        elif fixture_status == "LIVE" and minutes > 0 and minutes < 90:
+            state = "LIVE_APPEARANCE"
+        if state != "NO_MATERIAL_EVENT":
+            personal_impact.append(
+                {
+                    "element_id": row.get("element"),
+                    "player": row.get("name"),
+                    "personal_state": state,
+                    "fixture_status": fixture_status,
+                    "minutes": minutes,
+                    "raw_points": raw,
+                    "multiplier": multiplier,
+                    "effective_points": row.get("effective_points"),
+                }
+            )
+
+    if not personal_impact:
+        personal_impact.append(
+            {
+                "personal_state": "NO_MATERIAL_PERSONAL_EVENT",
+                "summary": "No owned-player event currently changes the locked scoring consequence.",
+            }
+        )
+
+    pending_substitution_map = {
+        str(row.get("element")): "pending"
+        for row in players
+        if int(row.get("multiplier") or 0) > 0
+        and str(row.get("fixture_status") or "").upper() == "FT"
+        and int(row.get("minutes") or 0) == 0
+        and row.get("element") is not None
+    }
+    global_autosub_state = {
+        "status": (score.get("autosub_implications") or {}).get("status") or "PROVISIONAL",
+        "potential_out": (score.get("autosub_implications") or {}).get("potential_out") or [],
+        "bench_candidates": (score.get("autosub_implications") or {}).get("bench_candidates") or [],
+        "final_substitution_map": pending_substitution_map,
+        "official_finalization_authoritative": True,
+    }
+    icon = dict(icon_live or {})
+    icon_state = (
+        "COMPLETE"
+        if str(icon.get("status") or "").upper() in {"FRESH", "COMPLETE"}
+        else "DEGRADED"
+    )
+    icon_reason = None if icon_state == "COMPLETE" else "fresh ICON+ live standings/exposure unavailable"
+
+    section_payloads = {
+        "MATCH1": {
+            "state": "COMPLETE",
+            "content": {
+                "scoring_gw": live.get("scoring_gw"),
+                "fixtures_live": checkpoint.get("fixtures_live", lifecycle.get("fixtures_live")),
+                "fixtures_ft": checkpoint.get("fixtures_ft", lifecycle.get("fixtures_ft")),
+                "fixtures_not_started": checkpoint.get(
+                    "fixtures_not_started",
+                    lifecycle.get("fixtures_not_started"),
+                ),
+                "timestamp": checkpoint.get("generated_at") or generated_at,
+                "lifecycle_mode": lifecycle.get("primary_mode"),
+                "transition": lifecycle.get("transition"),
+            },
+        },
+        "MATCH2": {
+            "state": "COMPLETE",
+            "content": {
+                "rows": players,
+                "xi": [row.get("name") for row in xi_rows],
+                "bench": [row.get("name") for row in bench_rows],
+                "authority": "LOCKED_SUBMITTED_PICKS",
+            },
+        },
+        "MATCH3": {
+            "state": "COMPLETE",
+            "content": {"rows": personal_impact},
+        },
+        "MATCH4": {
+            "state": "COMPLETE",
+            "content": {
+                **global_autosub_state,
+                "bench_gk": bench.get("bench_gk"),
+                "outfield_autosub_priority": bench.get("outfield_autosub_priority") or [],
+            },
+        },
+        "MATCH5": {
+            "state": "COMPLETE",
+            "content": captain,
+        },
+        "MATCH6": {
+            "state": "COMPLETE",
+            "content": {
+                "rows": [
+                    {
+                        "element_id": row.get("element"),
+                        "player": row.get("name"),
+                        "state": row.get("fixture_status"),
+                        "minutes": row.get("minutes"),
+                        "raw_points": row.get("total_points"),
+                        "multiplier": row.get("multiplier"),
+                        "effective_points": row.get("effective_points"),
+                    }
+                    for row in players
+                ]
+            },
+        },
+        "MATCH7": {
+            "state": "COMPLETE",
+            "content": {
+                **bonus,
+                "rows": [
+                    {
+                        "element_id": row.get("element"),
+                        "player": row.get("name"),
+                        "bonus": row.get("bonus"),
+                        "bps": row.get("bps"),
+                    }
+                    for row in players
+                    if int(row.get("bonus") or 0) != 0 or int(row.get("bps") or 0) != 0
+                ],
+            },
+        },
+        "MATCH8": {
+            "state": "COMPLETE",
+            "content": {
+                "rows": [
+                    dict(row)
+                    for row in (cards_injury_defcon_role_events or ())
+                    if isinstance(row, Mapping)
+                ],
+                "observation_is_not_automatic_model_change": True,
+            },
+        },
+        "MATCH9": {
+            "state": "COMPLETE",
+            "content": {
+                "rows": [
+                    dict(row)
+                    for row in (league_wide_signals or ())
+                    if isinstance(row, Mapping)
+                ],
+                "scorer_only_scouting_prohibited": True,
+            },
+        },
+        "MATCH10": {
+            "state": icon_state,
+            "degradation_reason": icon_reason,
+            "content": icon if icon else {"status": "UNAVAILABLE"},
+        },
+        "MATCH11": {
+            "state": "COMPLETE",
+            "content": {
+                "rows": [
+                    dict(row)
+                    for row in (next_gw_learning or ())
+                    if isinstance(row, Mapping)
+                ],
+                "evidence_not_automatic_transfer": True,
+            },
+        },
+        "MATCH12": {
+            "state": "COMPLETE",
+            "content": {
+                "observation": (
+                    next_critical_observation
+                    or (
+                        "process newly completed fixture evidence"
+                        if lifecycle.get("incremental_post_match_due")
+                        else "next scoring-GW fixture state change"
+                    )
+                )
+            },
+        },
+        "MATCH13": {
+            "state": "COMPLETE",
+            "content": {
+                **dict(source_freshness or {}),
+                "generated_at": generated_at,
+                "submitted_picks": live.get("submitted_picks_status"),
+                "event_live": live.get("event_live_status"),
+                "prediction_snapshot": (live.get("prediction_snapshot") or {}).get("status"),
+                "fixture_state_authority": "OFFICIAL_FPL",
+            },
+        },
+    }
+    report = _materialize_canonical_report(
+        canonical_text=canonical_text,
+        structural_mode="MATCH",
+        reported_mode="MATCH",
+        section_payloads=section_payloads,
+    )
+    report["content_contract"] = {
+        "visible_order": [
+            "MATCH CHECKPOINT / GW STATUS",
+            "LOCKED PERSONAL TEAM",
+            "PERSONAL IMPACT FIRST",
+            "GLOBAL AUTOSUB STATE",
+            "CAPTAIN / VICE CONSEQUENCE",
+            "OWNED LIVE/FINAL POINTS",
+            "BONUS/BPS",
+            "CARDS / INJURY / DEFCON / ROLE EVENTS",
+            "RELEVANT LEAGUE-WIDE SIGNALS",
+            "ICON+ LIVE",
+            "NEXT-GW LEARNING",
+            "NEXT CRITICAL OBSERVATION",
+            "SOURCE / FRESHNESS STATUS",
+        ],
+        "locked_team": {
+            "status": "CURRENT_IMMUTABLE",
+            "source": "LOCKED_SUBMITTED_PICKS",
+        },
+        "personal_impact": personal_impact,
+        "global_autosub_state": global_autosub_state,
+        "captain_vice_consequence": captain,
+        "owned_live_final_points": section_payloads["MATCH6"]["content"]["rows"],
+        "bonus_bps": bonus,
+        "cards_injury_defcon_role_events": section_payloads["MATCH8"]["content"]["rows"],
+        "league_wide_signals": section_payloads["MATCH9"]["content"]["rows"],
+        "next_gw_learning": section_payloads["MATCH11"]["content"]["rows"],
+        "next_critical_observation": section_payloads["MATCH12"]["content"]["observation"],
+        "source_freshness": section_payloads["MATCH13"]["content"],
+        "bench_presentation": {
+            "bench_gk": (bench.get("bench_gk") or {}).get("name")
+            if isinstance(bench.get("bench_gk"), Mapping)
+            else bench.get("bench_gk"),
+            "outfield_autosub_priority": [
+                row.get("name") if isinstance(row, Mapping) else row
+                for row in bench.get("outfield_autosub_priority") or []
+            ],
+            "position_by_player": {
+                str(row.get("name")): row.get("position")
+                for row in players
+                if row.get("name")
+            },
+        },
+        "icon": icon,
+        "section_states": {
+            "ICON+": {
+                "state": icon_state,
+                "degradation_reason": icon_reason,
+            }
+        },
+        "football_optimal_baseline_before_icon": True,
+        "report_due": True,
+        "optional_scope_degraded": icon_state != "COMPLETE",
+        "visible_report_suppressed": False,
+    }
+    return report
+
+
+def render_match_text(report: Mapping[str, Any]) -> str:
+    """Render one coherent Canonical MATCH1..MATCH13 human-facing report."""
+    blocks: list[str] = []
+    for section in report.get("sections") or []:
+        sid = str(section.get("section_id") or "").upper()
+        label = str(section.get("label") or "")
+        state = str(section.get("state") or "")
+        content = (
+            dict(section.get("content") or {})
+            if isinstance(section.get("content"), Mapping)
+            else {}
+        )
+        lines = [_visible_section_heading(sid, label), f"Status: {state}"]
+        reason = str(section.get("degradation_reason") or "").strip()
+        if state != "COMPLETE" and reason:
+            lines.append(f"Reason: {reason}")
+
+        if sid == "MATCH1":
+            lines.extend(
+                [
+                    f"SCORING GW: {content.get('scoring_gw')}",
+                    f"FIXTURES LIVE: {content.get('fixtures_live')}",
+                    f"FIXTURES FT: {content.get('fixtures_ft')}",
+                    f"FIXTURES NOT STARTED: {content.get('fixtures_not_started')}",
+                    f"TIMESTAMP: {content.get('timestamp')}",
+                    f"LIFECYCLE: {content.get('lifecycle_mode')} / {content.get('transition')}",
+                    "WEATHER: MATCH CURRENT",
+                ]
+            )
+        elif sid == "MATCH2":
+            rows = [
+                dict(row)
+                for row in content.get("rows") or []
+                if isinstance(row, Mapping)
+            ]
+            lines.extend(
+                _markdown_table(
+                    ("element_id", "player_name", "position", "club", "fixture_status"),
+                    [
+                        (
+                            row.get("element"),
+                            row.get("name"),
+                            row.get("position"),
+                            row.get("team"),
+                            row.get("fixture_status"),
+                        )
+                        for row in rows
+                    ],
+                )
+            )
+            lines.append("XI: " + ", ".join(str(x) for x in content.get("xi") or []))
+            lines.append("BENCH: " + ", ".join(str(x) for x in content.get("bench") or []))
+            lines.append(f"SCORING AUTHORITY: {content.get('authority')}")
+        elif sid == "MATCH3":
+            for row in content.get("rows") or []:
+                if isinstance(row, Mapping):
+                    lines.append(
+                        "- "
+                        + " | ".join(
+                            f"{_human_label(key)}={value}"
+                            for key, value in row.items()
+                            if isinstance(value, (str, int, float, bool)) or value is None
+                        )
+                    )
+        elif sid == "MATCH4":
+            bench_gk = content.get("bench_gk")
+            if isinstance(bench_gk, Mapping):
+                bench_gk = bench_gk.get("name") or bench_gk.get("element")
+            priority = [
+                row.get("name") or row.get("element")
+                if isinstance(row, Mapping)
+                else row
+                for row in content.get("outfield_autosub_priority") or []
+            ]
+            lines.append(f"BENCH GK: {bench_gk or 'UNAVAILABLE'}")
+            lines.append(
+                "OUTFIELD AUTOSUB PRIORITY: "
+                + ", ".join(
+                    f"{index} {value}"
+                    for index, value in enumerate(priority, start=1)
+                )
+            )
+            lines.append(f"AUTOSUB STATE: {content.get('status') or 'PROVISIONAL'}")
+        elif sid == "MATCH5":
+            captain = dict(content.get("captain") or {})
+            vice = dict(content.get("vice") or {})
+            lines.extend(
+                [
+                    "CAPTAIN: "
+                    f"{captain.get('name')} | raw={captain.get('raw_points')} | "
+                    f"multiplier={captain.get('multiplier')} | effective={captain.get('effective_points')} | "
+                    f"appearance={captain.get('appearance_state')}",
+                    "VICE: "
+                    f"{vice.get('name')} | raw={vice.get('raw_points')} | "
+                    f"multiplier={vice.get('multiplier')} | effective={vice.get('effective_points')} | "
+                    f"appearance={vice.get('appearance_state')}",
+                    f"VICE TAKEOVER: {content.get('vice_takeover_state')}",
+                    f"FINAL CONSEQUENCE: {content.get('final_consequence')}",
+                ]
+            )
+        elif sid == "MATCH6":
+            lines.extend(
+                _markdown_table(
+                    ("element_id", "player", "state", "minutes", "raw_points", "multiplier", "effective_points"),
+                    [
+                        (
+                            row.get("element_id"),
+                            row.get("player"),
+                            row.get("state"),
+                            row.get("minutes"),
+                            row.get("raw_points"),
+                            row.get("multiplier"),
+                            row.get("effective_points"),
+                        )
+                        for row in content.get("rows") or []
+                        if isinstance(row, Mapping)
+                    ],
+                )
+            )
+        elif sid == "MATCH7":
+            lines.append(
+                "BONUS/BPS STATUS: "
+                + str(content.get("status") or "PROVISIONAL")
+            )
+            lines.append(f"PROVISIONAL: {content.get('provisional') is True}")
+            for row in content.get("rows") or []:
+                if isinstance(row, Mapping):
+                    lines.append(
+                        f"- {row.get('player')} | bonus={row.get('bonus')} | bps={row.get('bps')}"
+                    )
+        elif sid in {"MATCH8", "MATCH9", "MATCH11"}:
+            rows = [
+                dict(row)
+                for row in content.get("rows") or []
+                if isinstance(row, Mapping)
+            ]
+            if rows:
+                for row in rows:
+                    lines.append(
+                        "- "
+                        + " | ".join(
+                            f"{_human_label(key)}={value}"
+                            for key, value in row.items()
+                            if isinstance(value, (str, int, float, bool)) or value is None
+                        )
+                    )
+            else:
+                lines.append("NONE MATERIAL / NONE SUPPORTABLE")
+            if sid == "MATCH8":
+                lines.append("OBSERVATION ≠ AUTOMATIC MODEL CHANGE")
+            if sid == "MATCH11":
+                lines.append("NEXT-GW LEARNING IS EVIDENCE, NOT AUTOMATIC TRANSFER")
+        elif sid == "MATCH10":
+            if state == "COMPLETE":
+                lines.append("MANAGER COVERAGE: COMPLETE")
+            else:
+                lines.append("MINI_LEAGUE SOURCE: DEGRADED")
+            lines.extend(
+                _render_generic_human_content(content)
+                or ["Current ICON+ consequence unavailable."]
+            )
+        elif sid == "MATCH12":
+            lines.append(
+                "NEXT CRITICAL OBSERVATION: "
+                + str(content.get("observation") or "UNAVAILABLE")
+            )
+        elif sid == "MATCH13":
+            lines.extend(
+                [
+                    "FACT: Official FPL fixture/event-live and locked submitted picks.",
+                    "MODEL: Frozen pre-deadline prediction snapshot where available.",
+                    "INFERENCE: Personal/live consequences are explicitly labelled.",
+                ]
+            )
+            lines.extend(_render_generic_human_content(content))
+        else:
+            lines.extend(_render_generic_human_content(content))
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
+
+
+def _visible_section_heading(section_id: Any, label: Any) -> str:
+    """Render a heading shape that the visible-body validator can parse."""
+    section = str(section_id or "").strip().upper()
+    title = str(label or "Report Section").strip()
+    match = re.fullmatch(r"S(\d{1,2})(B?)", section)
+    if match:
+        return f"## {int(match.group(1))}{match.group(2)}. {title}"
+    match = re.fullmatch(r"MATCH(\d{1,2})", section)
+    if match:
+        return f"## MATCH {int(match.group(1))} — {title}"
+    match = re.fullmatch(r"PRICE(\d{1,2})", section)
+    if match:
+        return f"## PRICE {int(match.group(1))} — {title}"
+    match = re.fullmatch(r"POST_ALL_MATCH(\d{1,2})", section)
+    if match:
+        return f"## POST-ALL-MATCH {int(match.group(1))} — {title}"
+    if section == "GW_LOCK_PACKAGE":
+        return "## GW LOCK PACKAGE"
+    return f"## {title}"
+
+
+def _human_label(value: Any) -> str:
+    return str(value or "").strip().replace("_", " ").upper()
+
+
+def _render_generic_human_content(
+    content: Mapping[str, Any] | None,
+    *,
+    excluded_keys: Sequence[str] = (),
+) -> list[str]:
+    """Render user-facing structured content without dumping runtime internals."""
+    payload = dict(content or {})
+    excluded = {str(key) for key in excluded_keys}
+    lines: list[str] = []
+    hidden_tokens = (
+        "fingerprint",
+        "sha",
+        "run_id",
+        "workflow",
+        "issue_431",
+        "mutation",
+        "readback",
+        "raw_payload",
+    )
+    for key, value in payload.items():
+        key_text = str(key)
+        lower = key_text.lower()
+        if key_text in excluded or any(token in lower for token in hidden_tokens):
+            continue
+        if value is None:
+            lines.append(f"{_human_label(key_text)}: UNAVAILABLE")
+            continue
+        if isinstance(value, (str, int, float, bool)):
+            lines.append(f"{_human_label(key_text)}: {value}")
+            continue
+        if isinstance(value, Mapping):
+            compact = []
+            for subkey, subvalue in value.items():
+                if isinstance(subvalue, (str, int, float, bool)) or subvalue is None:
+                    compact.append(
+                        f"{_human_label(subkey)}={subvalue if subvalue is not None else 'UNAVAILABLE'}"
+                    )
+            if compact:
+                lines.append(f"{_human_label(key_text)}: " + " | ".join(compact))
+            continue
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+            items = list(value)
+            if not items:
+                lines.append(f"{_human_label(key_text)}: NONE")
+                continue
+            scalar_items = [
+                item for item in items
+                if isinstance(item, (str, int, float, bool))
+            ]
+            if len(scalar_items) == len(items):
+                lines.append(
+                    f"{_human_label(key_text)}: "
+                    + ", ".join(str(item) for item in scalar_items)
+                )
+                continue
+            for index, item in enumerate(items, start=1):
+                if not isinstance(item, Mapping):
+                    continue
+                compact = []
+                for subkey, subvalue in item.items():
+                    if isinstance(subvalue, (str, int, float, bool)) or subvalue is None:
+                        compact.append(
+                            f"{_human_label(subkey)}={subvalue if subvalue is not None else 'UNAVAILABLE'}"
+                        )
+                if compact:
+                    lines.append(f"- {index}. " + " | ".join(compact))
+    return lines
+
+
+def render_natural_post_match_text(report: Mapping[str, Any]) -> str:
+    """Visible natural post-match renderer including fixture scout and movers."""
+    blocks: list[str] = []
+    for section in report.get("sections") or []:
+        label = str(section.get("label") or "")
+        state = str(section.get("state") or "")
+        section_id = section.get("section_id")
+        lines = [_visible_section_heading(section_id, label), f"Status: {state}"]
+        reason = str(section.get("degradation_reason") or "").strip()
+        if state != "COMPLETE" and reason:
+            lines.append(f"Reason: {reason}")
+        content = section.get("content")
+        content_map = dict(content or {}) if isinstance(content, Mapping) else {}
+
+        scout = [
+            dict(row)
+            for row in (
+                content_map.get("match_scout")
+                or content_map.get("post_match_match_by_match_scout")
+                or ()
+            )
+            if isinstance(row, Mapping)
+        ]
+        if scout:
+            lines.extend(_render_match_scout_lines(scout))
+
+        math_stack = content_map.get("mathematical_decision_stack")
+        if isinstance(math_stack, Mapping):
+            lines.extend(_render_math_stack_lines(math_stack))
+
+        if "PACKAGE OPTIMIZER" in label.upper():
+            lines.extend(
+                _render_package_frontier_lines(
+                    content_map,
+                    section_state=state,
+                )
+            )
+
+        movers = dict(content_map.get("universe_movers") or {})
+        if movers:
+            lines.append("### UNIVERSE MOVERS")
+            mover_state = str(movers.get("state") or "UNAVAILABLE")
+            if mover_state != "COMPLETE":
+                lines.append(
+                    f"{mover_state} — "
+                    f"{movers.get('degradation_reason') or 'evidence unavailable'}"
+                )
+            elif movers.get("summary") == "NO MATERIAL MOVERS":
+                lines.append("NO MATERIAL MOVERS")
+            else:
+                for category, rows in (
+                    movers.get("categories") or {}
+                ).items():
+                    if not rows:
+                        continue
+                    lines.append(f"**{category}**")
+                    for row in rows:
+                        owner = "OWNED" if row.get("owned") else "NON-OWNED"
+                        deep = "DEEP" if row.get("deep_detail") else "BROAD"
+                        lines.append(
+                            "- "
+                            f"{row.get('name') or row.get('element_id')} "
+                            f"({row.get('position') or 'NA'}) | "
+                            f"{row.get('primary_classification')} | "
+                            f"Pts {row.get('latest_fpl_points')} | "
+                            f"xGI {row.get('latest_xgi')} | "
+                            f"xMins Δ {row.get('xmins_delta')} | "
+                            f"P(start) Δ {row.get('p_start_delta')} | "
+                            f"{row.get('universe_comparison_state') or 'UNAVAILABLE'} | "
+                            f"{owner} | {deep}"
+                        )
+            lines.append(
+                "Coverage: "
+                f"{movers.get('scanned_count')}/{movers.get('eligible_count')} | "
+                f"Material {movers.get('material_count')} | "
+                f"Deep {movers.get('deep_executed_count')}/"
+                f"{movers.get('deep_requested_count')} | "
+                f"Authority {movers.get('search_authority') or 'UNAVAILABLE'}"
+            )
+        generic = _render_generic_human_content(
+            content_map,
+            excluded_keys=(
+                "match_scout",
+                "post_match_match_by_match_scout",
+                "mathematical_decision_stack",
+                "universe_movers",
+                "package_search_proof",
+                "search_proof",
+                "package_universe_challengers",
+                "universe_challengers",
+                "package_routes",
+                "routes",
+                "frontier",
+            ),
+        )
+        if generic:
+            lines.extend(generic)
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
+
+
+
+def _markdown_cell(value: Any) -> str:
+    text = str("UNAVAILABLE" if value is None else value)
+    return text.replace("|", "/").replace("\n", " ").strip()
+
+
+def _human_summary(value: Any) -> str:
+    """Compact nested evidence without Python/JSON dict syntax."""
+    if value is None:
+        return "UNAVAILABLE"
+    if isinstance(value, Mapping):
+        parts: list[str] = []
+        for key, item in value.items():
+            label = str(key).replace("_", " ")
+            if isinstance(item, Mapping):
+                sub = ", ".join(
+                    f"{str(k).replace('_', ' ')}={v}"
+                    for k, v in item.items()
+                    if v not in (None, "", [], {})
+                )
+                if sub:
+                    parts.append(f"{label}: {sub}")
+            elif isinstance(item, (list, tuple, set)):
+                vals = ", ".join(str(x) for x in item)
+                if vals:
+                    parts.append(f"{label}: {vals}")
+            elif item not in (None, ""):
+                parts.append(f"{label}={item}")
+        return "; ".join(parts) if parts else "UNAVAILABLE"
+    if isinstance(value, (list, tuple, set)):
+        return ", ".join(_human_summary(item) for item in value) or "UNAVAILABLE"
+    return str(value)
+
+
+def _markdown_table(
+    headers: Sequence[str],
+    rows: Sequence[Sequence[Any]],
+) -> list[str]:
+    header = "| " + " | ".join(headers) + " |"
+    separator = "| " + " | ".join("---" for _ in headers) + " |"
+    body = [
+        "| " + " | ".join(_markdown_cell(value) for value in row) + " |"
+        for row in rows
+    ]
+    return [header, separator, *body]
+
+
+DEEP_HUMAN_SECTION_REQUIREMENTS: dict[str, tuple[str, ...]] = {
+    "S01": ("operational_state", "planning_gw", "primary_decision", "key_decision_driver"),
+    "S02": ("rows",),
+    "S03": ("decision_delta",),
+    "S04": ("changes",),
+    "S05": ("fixtures",),
+    "S06": ("formation", "starting_xi", "bench", "lineup_score", "formation_comparison"),
+    "S06B": (
+        "stance",
+        "raw_ev_formation",
+        "mini_league_objective_formation",
+        "formation_alternatives",
+        "high_eo_protection",
+        "differential_slots",
+    ),
+    "S07": ("battles",),
+    "S08": (
+        "decision_state",
+        "captain",
+        "vice_captain",
+        "captain_frontier",
+        "candidate_universe_proof",
+        "reconciliation_reason",
+    ),
+    "S09": ("chip",),
+    "S10": ("rows",),
+    "S11": ("rows",),
+    "S12": ("rows",),
+    "S13": ("rows",),
+    "S14": ("package_routes", "frontier"),
+    "S14B": ("staging_rows", "squad_classification", "target_formation"),
+    "S15": ("evidence_quality",),
+    "S15B": (
+        "current_league_context",
+        "exposures",
+        "rank_battle",
+        "denominator_scopes",
+        "league_our15_exposure",
+        "rivals_our15_exposure",
+        "direct_rival_scope",
+        "direct_rivals",
+        "direct_rival_our15_exposure",
+        "rival_threats",
+        "captain_leverage",
+        "strategy_implication",
+        "report_contract",
+        "disclosed_picks_label",
+    ),
+    "S16": ("rows", "position_mechanisms"),
+    "S16B": ("our15", "material_universe_candidates", "recency_weighting", "bayesian_update"),
+    "S17": ("engine_data_status", "source_health"),
+    "S18": (
+        "NOW",
+        "NEXT",
+        "TRIGGER TO ACT",
+        "LATEST SAFE DECISION POINT",
+        "COST OF WAITING",
+        "ABORT / REVERSAL",
+        "BEST ALTERNATIVE",
+    ),
+    "S19": ("final_judgement",),
+}
+
+
+def build_deep_human_facing_manifest(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Durable semantic manifest for required DEEP human-facing content."""
+    sections = {
+        str(row.get("section_id") or "").strip().upper(): dict(row)
+        for row in report.get("sections") or []
+        if isinstance(row, Mapping)
+    }
+    entries: list[dict[str, Any]] = []
+    failures: list[str] = []
+    for section_id, required_keys in DEEP_HUMAN_SECTION_REQUIREMENTS.items():
+        section = sections.get(section_id)
+        if section is None:
+            failures.append(f"HUMAN_SECTION_MISSING={section_id}")
+            entries.append({
+                "section_id": section_id,
+                "status": "MISSING",
+                "required_keys": list(required_keys),
+                "missing_keys": list(required_keys),
+            })
+            continue
+        content = section.get("content")
+        payload = dict(content or {}) if isinstance(content, Mapping) else {}
+        missing = [key for key in required_keys if key not in payload]
+        empty = [
+            key
+            for key in required_keys
+            if key in payload and payload.get(key) in (None, "", [], {})
+        ]
+        # Degraded/unavailable sections may truthfully carry empty factual rows,
+        # but the semantic key must remain visible. Some COMPLETE decision
+        # sections can also be truthfully empty when the payload explicitly
+        # proves there is no material item (for example no XI battle).
+        state = str(section.get("state") or "").upper()
+        truthful_empty = payload.get("empty_is_truthful") is True
+        all_required_empty = bool(required_keys) and len(empty) == len(required_keys)
+        hard_empty = (
+            list(required_keys)
+            if state == "COMPLETE" and all_required_empty and not truthful_empty
+            else []
+        )
+        if missing:
+            failures.append(
+                f"HUMAN_SECTION_KEYS_MISSING={section_id}:{','.join(missing)}"
+            )
+        if hard_empty:
+            failures.append(
+                f"HUMAN_SECTION_CONTENT_EMPTY={section_id}:{','.join(hard_empty)}"
+            )
+        entries.append({
+            "section_id": section_id,
+            "label": section.get("label"),
+            "status": state,
+            "required_keys": list(required_keys),
+            "missing_keys": missing,
+            "empty_keys": empty,
+            "semantic_pass": not missing and not hard_empty,
+        })
+    return {
+        "contract": "V12_DEEP_HUMAN_FACING_MANIFEST_V2",
+        "required_section_ids": list(DEEP_HUMAN_SECTION_REQUIREMENTS),
+        "entries": entries,
+        "status": "PASS" if not failures else "FAIL",
+        "failures": failures,
+    }
+
+
+def validate_deep_human_facing_manifest(
+    manifest: Mapping[str, Any],
+) -> list[str]:
+    if str(manifest.get("status") or "").upper() == "PASS":
+        return []
+    return [str(value) for value in manifest.get("failures") or []]
+
+
+def _render_deep_visible_contract_lines(
+    *,
+    section_id: str,
+    content: Mapping[str, Any],
+    owned_ids: set[int],
+    owned_names: Mapping[int, str],
+) -> tuple[list[str], tuple[str, ...]]:
+    """Render the existing DEEP content into the visible-body QA contract.
+
+    This is presentation only. It does not recompute xPts, xMins, posterior,
+    tactical scores, price predictions, ownership, or mini-league facts.
+    """
+    payload = dict(content or {})
+    lines: list[str] = []
+    excluded: list[str] = []
+
+    def bgw_visible_line(sid: str, context: Mapping[str, Any]) -> str:
+        return (
+            f"BGW PROPAGATION {sid}: "
+            f"ACTIVE={context.get('active')} | "
+            f"TOPOLOGY={context.get('gw_topology')} | "
+            f"BLANK_TEAMS={context.get('blank_team_ids')} | "
+            f"BLANK_OWNED={context.get('blank_owned_element_ids')} | "
+            f"BLANK_IN_FINAL_XI={context.get('blank_owned_in_final_xi')}"
+        )
+
+    if section_id == "S01":
+        dashboard = dict(payload.get("decision_dashboard") or {})
+        lines.append("### MULTI-AXIS DECISION DASHBOARD")
+        lines.extend(
+            _markdown_table(
+                ("axis", "state"),
+                [
+                    ("TRANSFER", dashboard.get("TRANSFER")),
+                    ("XI", dashboard.get("XI")),
+                    ("CAPTAIN", dashboard.get("CAPTAIN")),
+                    ("CHIP", dashboard.get("CHIP")),
+                    ("PRICE", dashboard.get("PRICE")),
+                    ("PERSONAL AUTH", dashboard.get("PERSONAL_AUTH")),
+                ],
+            )
+        )
+        lines.append(f"PLANNING GW: {dashboard.get('PLANNING_GW', payload.get('planning_gw'))}")
+        lines.append(f"PRIMARY REASON: {dashboard.get('PRIMARY_REASON', payload.get('reason'))}")
+        lines.append(f"KEY DRIVER: {dashboard.get('KEY_DRIVER', payload.get('key_decision_driver'))}")
+        blockers = dashboard.get("CURRENT_BLOCKERS") or payload.get("current_blockers") or []
+        lines.append("CURRENT BLOCKERS: " + (", ".join(str(x) for x in blockers) if blockers else "NONE"))
+        excluded.extend((
+            "decision_dashboard",
+            "operational_state",
+            "planning_gw",
+            "primary_decision",
+            "reason",
+            "key_decision_driver",
+            "current_blockers",
+            "current_planning_gw",
+        ))
+
+    elif section_id == "S02":
+        authority = dict(payload.get("current15_authority") or {})
+        lines.append(
+            "CURRENT15 AUTHORITY: "
+            f"SOURCE_CLASS={authority.get('source_class')} | "
+            f"SOURCE={authority.get('source')} | "
+            f"OBSERVED_AT={authority.get('observed_at')} | "
+            f"APPLICABLE_GW={authority.get('applicable_gw')} | "
+            f"AUTH={authority.get('auth_state')} | "
+            f"FINANCE={authority.get('finance_availability')} | "
+            f"STALE={authority.get('stale')}"
+        )
+        rows = [
+            dict(row)
+            for row in payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.extend(
+            _markdown_table(
+                (
+                    "element",
+                    "player",
+                    "pos",
+                    "club",
+                    "price",
+                    "sell",
+                    "opponent",
+                    "H/A",
+                    "avail",
+                    "P(start)",
+                    "xMins",
+                    "1GW",
+                    "3GW",
+                    "5GW",
+                    "role",
+                    "tactical",
+                    "warning",
+                    "price state",
+                    "ownership source",
+                ),
+                [
+                    (
+                        row.get("element_id"),
+                        row.get("player") or row.get("name"),
+                        row.get("position"),
+                        row.get("club"),
+                        row.get("current_price"),
+                        row.get("selling_price"),
+                        row.get("opponent"),
+                        row.get("home_away"),
+                        row.get("availability", row.get("p_available")),
+                        row.get("p_start"),
+                        row.get("xmins"),
+                        row.get("projection_1gw", row.get("gw_plus_1")),
+                        row.get("projection_3gw", row.get("three_gw")),
+                        row.get("projection_5gw", row.get("five_gw")),
+                        row.get("tactical_role_label", row.get("tactical_role")),
+                        row.get("tactical_score"),
+                        row.get("injury_rotation_warning", "NONE_MATERIAL"),
+                        row.get("price_relevance", "NONE_MATERIAL"),
+                        row.get("ownership_source"),
+                    )
+                    for row in rows
+                ],
+            )
+        )
+        excluded.extend(("rows", "current15_authority", "personal_resolution"))
+
+    elif section_id == "S03":
+        delta = dict(payload.get("decision_delta") or {})
+        baseline = str(delta.get("baseline_state") or "UNAVAILABLE").upper()
+        lines.append(f"PREVIOUS VALID VISIBLE DEEP BASELINE: {baseline}")
+        if baseline != "AVAILABLE":
+            lines.append(
+                "BASELINE UNAVAILABLE — previous valid visible DEEP occurrence is not bound; "
+                "no numerical or decision delta is inferred."
+            )
+        else:
+            delta_rows = [
+                dict(row)
+                for row in delta.get("rows") or []
+                if isinstance(row, Mapping)
+            ]
+            if delta_rows:
+                lines.extend(
+                    _markdown_table(
+                        (
+                            "decision_item",
+                            "previous",
+                            "current",
+                            "material_change",
+                            "reason",
+                            "evidence_time",
+                        ),
+                        [
+                            (
+                                row.get("decision_item"),
+                                row.get("previous"),
+                                row.get("current"),
+                                row.get("material_change"),
+                                row.get("reason"),
+                                row.get("evidence_time"),
+                            )
+                            for row in delta_rows
+                        ],
+                    )
+                )
+            else:
+                lines.append("NO MATERIAL DECISION CHANGE")
+        excluded.append("decision_delta")
+
+    elif section_id == "S04":
+        changes = [
+            dict(row)
+            for row in payload.get("changes") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.append("### MATERIAL DEVELOPMENTS")
+        lines.extend(
+            _markdown_table(
+                ("classification", "scope", "event kind", "subject", "summary", "evidence time"),
+                [
+                    (
+                        row.get("classification"),
+                        row.get("scope"),
+                        row.get("event_kind"),
+                        row.get("subject"),
+                        row.get("summary"),
+                        row.get("evidence_time"),
+                    )
+                    for row in changes
+                ],
+            )
+        )
+        excluded.extend(("changes", "decision_change_sources"))
+
+    elif section_id == "S05":
+        lines.append(f"GW TOPOLOGY: {payload.get('gw_topology') or 'UNAVAILABLE'}")
+        coverage = dict(payload.get("competition_coverage") or {})
+        lines.append(
+            "COMPETITION COVERAGE: "
+            f"PL={coverage.get('official_pl')} | "
+            f"NON_PL_BOUND={coverage.get('verified_non_pl_schedule_bound')} | "
+            f"NON_PL_EVENTS={coverage.get('verified_non_pl_event_count')} | "
+            f"CATEGORIES={coverage.get('competition_categories_data_driven')}"
+        )
+        flags = dict(payload.get("period_flags") or {})
+        lines.append(
+            "PERIOD FLAGS: "
+            f"DGW_TEAMS={flags.get('double_gw_teams')} | "
+            f"BGW_TEAMS={flags.get('blank_gw_teams')} | "
+            f"REARRANGED={flags.get('rearranged_fixture')} | "
+            f"INTERNATIONAL={flags.get('international_schedule_present')} | "
+            f"CONGESTED={flags.get('congested_player_present')} | "
+            f"SHORT_REST={flags.get('short_rest_player_present')}"
+        )
+        workload = [
+            dict(row)
+            for row in payload.get("player_workload") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.append("### PLAYER WORKLOAD / TRAVEL")
+        lines.extend(
+            _markdown_table(
+                (
+                    "player",
+                    "gw_state",
+                    "load_state",
+                    "prev_match",
+                    "next_pl",
+                    "matches_3/7/14/21",
+                    "minutes_3/7/14/21",
+                    "days_rest",
+                    "cross_border",
+                    "long_haul",
+                    "tz_shift",
+                    "return_to_club_h",
+                    "call_up",
+                    "tournament_absence",
+                    "return_date",
+                    "reintegration",
+                ),
+                [
+                    (
+                        row.get("player") or row.get("element_id"),
+                        row.get("gw_state"),
+                        row.get("load_state"),
+                        row.get("previous_match_datetime"),
+                        row.get("next_pl_fixture_datetime"),
+                        row.get("matches_last_days"),
+                        row.get("minutes_last_days"),
+                        row.get("days_rest"),
+                        row.get("cross_border_travel"),
+                        row.get("long_haul"),
+                        row.get("timezone_shift_hours"),
+                        row.get("return_to_club_interval_hours"),
+                        row.get("confirmed_call_up"),
+                        row.get("tournament_absence"),
+                        row.get("return_date"),
+                        row.get("reintegration_state"),
+                    )
+                    for row in workload
+                ],
+            )
+        )
+        multi_fixture_rows = [
+            row for row in workload
+            if str(row.get("gw_state") or "").upper() in {"DOUBLE", "BLANK"}
+        ]
+        lines.append("### DGW / BGW PLAYER DETAIL")
+        if multi_fixture_rows:
+            for row in multi_fixture_rows:
+                lines.append(
+                    f"- {row.get('player') or row.get('element_id')}: "
+                    f"{row.get('gw_state')} | fixtures={row.get('planning_gw_fixtures')}"
+                )
+        else:
+            lines.append("NONE — no relevant DGW/BGW player in bound evidence")
+        weather = [
+            dict(row)
+            for row in payload.get("weather") or []
+            if isinstance(row, Mapping)
+        ]
+        weather_bound = any(
+            str(row.get("fpl_impact") or "UNAVAILABLE").upper()
+            in {"NORMAL", "LOW", "MATERIAL"}
+            for row in weather
+        )
+        lines.append(
+            "WEATHER SOURCE: "
+            + ("REPORT_TIME_BOUND" if weather_bound else "DEGRADED")
+        )
+        lines.append("### WEATHER")
+        lines.extend(
+            _markdown_table(
+                (
+                    "fixture_id",
+                    "venue",
+                    "kickoff",
+                    "condition/state",
+                    "temp",
+                    "precipitation",
+                    "wind",
+                    "FPL impact",
+                    "evidence timestamp",
+                ),
+                [
+                    (
+                        row.get("fixture_id"),
+                        row.get("venue"),
+                        row.get("kickoff"),
+                        row.get("condition") or row.get("state"),
+                        row.get("temperature_c"),
+                        row.get("precipitation_probability"),
+                        row.get("wind_kph"),
+                        row.get("fpl_impact"),
+                        row.get("evidence_timestamp"),
+                    )
+                    for row in weather
+                ],
+            )
+        )
+        lines.append(
+            "MODEL GOVERNANCE: workload/travel feeds P1.1 review only; "
+            "STATIC_FATIGUE_PENALTY=False; WEATHER_MUTATES_FOOTBALL_MODEL=False; "
+            "DGW_CROSS_FIXTURE_COVARIANCE_CLAIMED=False"
+        )
+        excluded.extend(
+            (
+                "fixtures",
+                "verified_schedule_events",
+                "player_workload",
+                "weather",
+                "opponent_strength",
+            )
+        )
+
+    elif section_id == "S06":
+        def player_name(value: Any) -> str:
+            if isinstance(value, Mapping):
+                element = value.get("element", value.get("element_id"))
+                name = value.get("name") or value.get("player")
+                if name:
+                    return str(name)
+                try:
+                    return owned_names.get(int(element), str(element))
+                except (TypeError, ValueError):
+                    return str(element)
+            try:
+                element = int(value)
+            except (TypeError, ValueError):
+                return str(value)
+            return owned_names.get(element, str(element))
+
+        xi_raw = list(payload.get("starting_xi") or [])
+        bench = dict(payload.get("bench") or {})
+        xi_names = [player_name(row) for row in xi_raw]
+        bench_names: list[str] = []
+        if bench.get("gk") is not None:
+            bench_names.append(player_name(bench.get("gk")))
+        bench_names.extend(
+            player_name(row)
+            for row in (bench.get("order") or [])
+        )
+        lines.append(f"FORMATION: {payload.get('formation') or 'UNAVAILABLE'}")
+        lines.append("XI: " + ", ".join(xi_names))
+        lines.append("BENCH: " + ", ".join(bench_names))
+        score = dict(payload.get("lineup_score") or {})
+        lines.append(
+            "XI_BASE_XPTS: "
+            + str(payload.get("xi_base_xpts", score.get("xpts_mean", "UNAVAILABLE")))
+        )
+        lines.append(
+            "CAPTAIN_ADJUSTED_XPTS: "
+            + str(payload.get("captain_adjusted_xpts", "UNAVAILABLE"))
+        )
+        lines.append(
+            "LINEUP_ROUTE_UTILITY: "
+            + str(payload.get("lineup_route_utility", "UNAVAILABLE"))
+        )
+        lines.append(
+            "SCORE SEMANTICS: "
+            + str((payload.get("score_semantics") or {}).get("relationship", "UNAVAILABLE"))
+        )
+        bgw = dict(payload.get("bgw_context") or {})
+        lines.append(bgw_visible_line("S06", bgw))
+        lines.append(
+            "BGW LINEUP REVIEW REQUIRED: "
+            + str(payload.get("bgw_lineup_review_required"))
+        )
+        comparisons = [
+            dict(item)
+            for item in payload.get("formation_comparison") or []
+            if isinstance(item, Mapping)
+        ]
+        if comparisons:
+            lines.append("FORMATION ALTERNATIVES:")
+            lines.extend(
+                _markdown_table(
+                    ("formation", "projected_points", "route_utility", "downside", "upside", "selected"),
+                    [
+                        (
+                            item.get("formation"),
+                            item.get("expected_fpl_points_with_captain_vice"),
+                            item.get("route_utility"),
+                            item.get("distributional_downside"),
+                            item.get("supportable_upside"),
+                            item.get("selected"),
+                        )
+                        for item in comparisons
+                    ],
+                )
+            )
+        else:
+            lines.append("FORMATION ALTERNATIVES: NONE MATERIAL / NONE SUPPORTABLE")
+        excluded.extend((
+            "starting_xi", "bench", "formation_comparison", "lineup_score",
+            "bgw_context", "bgw_lineup_review_required",
+        ))
+
+    elif section_id == "S06B":
+        lines.append(f"MINI-LEAGUE STANCE: {payload.get('stance') or 'UNAVAILABLE'}")
+        league = dict(payload.get("league_context") or {})
+        lines.append(
+            "LEAGUE POSITION: "
+            f"rank={league.get('our_rank', 'UNAVAILABLE')} / "
+            f"{league.get('manager_count', 'UNAVAILABLE')} | "
+            f"points={league.get('our_total_points', 'UNAVAILABLE')} | "
+            f"leader_gap={league.get('points_to_leader', 'UNAVAILABLE')} | "
+            f"top3_gap={league.get('points_to_top_3', 'UNAVAILABLE')} | "
+            f"top5_gap={league.get('points_to_top_5', 'UNAVAILABLE')} | "
+            f"rival_above_gap={league.get('points_to_nearest_above', 'UNAVAILABLE')} | "
+            f"rival_below_cushion={league.get('points_ahead_nearest_below', 'UNAVAILABLE')}"
+        )
+        lines.append(f"RAW EV FORMATION: {payload.get('raw_ev_formation') or 'UNAVAILABLE'}")
+        lines.append(
+            "MINI-LEAGUE OBJECTIVE FORMATION: "
+            + str(payload.get("mini_league_objective_formation") or "UNAVAILABLE")
+        )
+        lines.append(
+            "PROJECTED POINTS DIFFERENCE: "
+            + str(payload.get("projected_points_difference", "UNAVAILABLE"))
+        )
+        lines.append(
+            "OBJECTIVES SAME: "
+            + str(payload.get("objectives_same", "UNAVAILABLE"))
+        )
+        lines.append(
+            "RATIONAL DIFFERENTIAL EXPOSURE: "
+            + str(payload.get("rational_differential_exposure", "UNAVAILABLE"))
+        )
+        lines.append(
+            "AGGRESSIVE DOWNSIDE: "
+            + str(payload.get("aggressive_downside") or "UNAVAILABLE")
+        )
+        alternatives = [
+            dict(item)
+            for item in payload.get("formation_alternatives") or []
+            if isinstance(item, Mapping)
+        ]
+        if alternatives:
+            lines.extend(
+                _markdown_table(
+                    ("formation", "projected_points", "utility", "downside", "upside", "selected"),
+                    [
+                        (
+                            item.get("formation"),
+                            item.get("expected_fpl_points_with_captain_vice"),
+                            item.get("route_utility"),
+                            item.get("distributional_downside"),
+                            item.get("supportable_upside"),
+                            item.get("selected"),
+                        )
+                        for item in alternatives
+                    ],
+                )
+            )
+        lines.append(
+            "HIGH-EO PROTECTION: "
+            + ", ".join(
+                str(item.get("player") or item.get("element_id"))
+                for item in payload.get("high_eo_protection") or []
+                if isinstance(item, Mapping)
+            )
+        )
+        lines.append(
+            "DIFFERENTIAL SLOTS: "
+            + ", ".join(
+                str(item.get("player") or item.get("element_id"))
+                for item in payload.get("differential_slots") or []
+                if isinstance(item, Mapping)
+            )
+        )
+        excluded.extend((
+            "formation_alternatives",
+            "high_eo_protection",
+            "differential_slots",
+        ))
+
+    elif section_id == "S07":
+        battles = [
+            dict(item)
+            for item in payload.get("battles") or []
+            if isinstance(item, Mapping)
+        ]
+        lines.extend(
+            _markdown_table(
+                (
+                    "player_a", "player_b", "P(start) A", "P(start) B", "xMins A", "xMins B",
+                    "1GW A", "1GW B", "Phaul A", "Phaul B", "fixture A", "fixture B",
+                    "workload A", "workload B", "role A", "role B",
+                    "Rivals EO A", "Rivals EO B", "Direct EO A", "Direct EO B",
+                    "starter", "utility delta", "reason"
+                ),
+                [
+                    (
+                        item.get("player_a"),
+                        item.get("player_b"),
+                        item.get("p_start_a"),
+                        item.get("p_start_b"),
+                        item.get("xmins_a"),
+                        item.get("xmins_b"),
+                        item.get("projection_1gw_a"),
+                        item.get("projection_1gw_b"),
+                        item.get("p_haul_a"),
+                        item.get("p_haul_b"),
+                        item.get("fixture_a"),
+                        item.get("fixture_b"),
+                        item.get("workload_a"),
+                        item.get("workload_b"),
+                        item.get("role_a"),
+                        item.get("role_b"),
+                        item.get("eo_a"),
+                        item.get("eo_b"),
+                        item.get("direct_eo_a"),
+                        item.get("direct_eo_b"),
+                        item.get("final_starter"),
+                        item.get("utility_margin"),
+                        item.get("tactical_reason"),
+                    )
+                    for item in battles
+                ],
+            )
+        )
+        excluded.append("battles")
+
+    elif section_id == "S08":
+        lines.append(
+            "CAPTAIN DECISION STATE: "
+            + str(payload.get("decision_state") or "UNAVAILABLE")
+        )
+        proof = dict(payload.get("candidate_universe_proof") or {})
+        lines.append(
+            "CAPTAIN LEGALITY: "
+            f"C∈CURRENT15={proof.get('captain_in_current15')} | "
+            f"VC∈CURRENT15={proof.get('vice_in_current15')} | "
+            f"C∈XI={proof.get('captain_in_final_xi')} | "
+            f"VC∈XI={proof.get('vice_in_final_xi')} | "
+            f"C!=VC={proof.get('captain_vice_distinct')} | "
+            f"FRONTIER⊆XI={proof.get('frontier_subset_of_final_xi')}"
+        )
+
+        def _cap_ratio(scope: Mapping[str, Any], key: str, pct_key: str) -> str:
+            denominator = scope.get("denominator")
+            numerator = scope.get(key)
+            pct = scope.get(pct_key)
+            if denominator in (None, 0) or numerator is None:
+                return "UNAVAILABLE"
+            pct_text = "UNAVAILABLE" if pct is None else f"{float(pct):.1f}%"
+            return f"{numerator}/{denominator} ({pct_text})"
+
+        def _cap_eo(scope: Mapping[str, Any]) -> str:
+            denominator = scope.get("denominator")
+            units = scope.get("effective_multiplier_sum")
+            pct = scope.get("eo_pct")
+            if denominator in (None, 0) or units is None or pct is None:
+                return "UNAVAILABLE"
+            return f"{units}/{denominator} ({float(pct):.1f}%)"
+
+        frontier = [
+            dict(row)
+            for row in payload.get("captain_frontier") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.append("### OWNED FINAL-XI CAPTAIN FRONTIER")
+        if frontier:
+            rows = []
+            for item in frontier:
+                goal = dict(item.get("goal_involvement") or {})
+                fixture = dict(item.get("fixture") or {})
+                workload = dict(item.get("workload_context") or {})
+                league = dict(item.get("league_scope") or {})
+                rivals = dict(item.get("rivals_scope") or {})
+                direct = dict(item.get("direct_scope") or {})
+                rows.append(
+                    (
+                        item.get("football_rank"),
+                        item.get("football_score"),
+                        item.get("player") or item.get("element_id"),
+                        item.get("expected_points"),
+                        item.get("q10"),
+                        item.get("q50"),
+                        item.get("q90"),
+                        item.get("p_start"),
+                        item.get("xmins"),
+                        goal.get("p_goal"),
+                        goal.get("p_assist"),
+                        goal.get("p_return"),
+                        item.get("haul_probability"),
+                        item.get("blank_probability"),
+                        item.get("penalties"),
+                        item.get("set_pieces"),
+                        fixture.get("opponent"),
+                        "H" if fixture.get("home") is True else "A" if fixture.get("home") is False else "UNAVAILABLE",
+                        (
+                            f"{workload.get('load_state')} | rest={workload.get('days_rest')}d | "
+                            f"long_haul={workload.get('long_haul')} | tz={workload.get('timezone_shift_hours')}"
+                        ),
+                        _cap_ratio(league, "captain_count", "captain_pct"),
+                        _cap_eo(league),
+                        _cap_ratio(rivals, "captain_count", "captain_pct"),
+                        _cap_eo(rivals),
+                        _cap_ratio(direct, "captain_count", "captain_pct"),
+                        _cap_eo(direct),
+                        item.get("exposure_leverage_class"),
+                    )
+                )
+            lines.extend(
+                _markdown_table(
+                    (
+                        "football rank",
+                        "football score",
+                        "player",
+                        "xPts",
+                        "Q10",
+                        "Q50",
+                        "Q90",
+                        "P(start)",
+                        "xMins",
+                        "P(goal)",
+                        "P(assist)",
+                        "P(return)",
+                        "P(haul)",
+                        "P(blank)",
+                        "penalty",
+                        "set-piece",
+                        "fixture",
+                        "H/A",
+                        "workload/rest/travel",
+                        "LEAGUE C",
+                        "LEAGUE EO",
+                        "RIVALS C",
+                        "RIVALS EO",
+                        "DIRECT C",
+                        "DIRECT EO",
+                        "EXPOSURE / LEVERAGE CLASS",
+                    ),
+                    rows,
+                )
+            )
+        else:
+            lines.append("UNAVAILABLE — no legal final-XI captain frontier materialized")
+
+        captain = dict(payload.get("captain") or {})
+        vice = dict(payload.get("vice_captain") or {})
+        lines.append(
+            "FOOTBALL-OPTIMAL C/VC: "
+            f"C={captain.get('player') or captain.get('element_id')} | "
+            f"VC={vice.get('player') or vice.get('element_id')}"
+        )
+        lines.append(
+            "P1.7 SAFE POOL: "
+            + ", ".join(str(x) for x in payload.get("captain_safe_pool") or [])
+        )
+        lines.append(
+            "CAPTAIN RECONCILIATION: "
+            + str(payload.get("reconciliation_reason") or "UNAVAILABLE")
+        )
+        lines.append(
+            "CAPTAIN AUTHORITY: "
+            + str(payload.get("authority") or "UNAVAILABLE")
+        )
+        excluded.extend(
+            (
+                "captain",
+                "vice_captain",
+                "captain_frontier",
+                "captain_safe_pool",
+                "candidate_universe_proof",
+                "near_tie_authority",
+            )
+        )
+
+    elif section_id == "S09":
+        bgw = dict(payload.get("bgw_context") or {})
+        lines.append(bgw_visible_line("S09", bgw))
+        lines.append(
+            "BGW CHIP REVIEW REQUIRED: "
+            + str(payload.get("bgw_chip_review_required"))
+        )
+        excluded.extend(("bgw_context", "bgw_chip_review_required"))
+
+    elif section_id == "S14":
+        bgw = dict(payload.get("bgw_context") or {})
+        lines.append(bgw_visible_line("S14", bgw))
+        lines.append(
+            "BGW FRONTIER REVIEW REQUIRED: "
+            + str(payload.get("bgw_frontier_review_required"))
+        )
+        lines.append(
+            "BGW CONTEXT IS NOT SECOND OPTIMIZER: "
+            + str(payload.get("bgw_is_context_not_second_optimizer"))
+        )
+        excluded.extend((
+            "bgw_context",
+            "bgw_frontier_review_required",
+            "bgw_is_context_not_second_optimizer",
+        ))
+
+    elif section_id == "S14B":
+        lines.append("STAGING IS A ROADMAP, NOT A TRANSFER COMMITMENT.")
+        bgw = dict(payload.get("bgw_context") or {})
+        lines.append(bgw_visible_line("S14B", bgw))
+        lines.append(
+            "BGW REOPTIMIZATION TRIGGER: "
+            + str(payload.get("bgw_reoptimization_trigger"))
+        )
+        staging = [
+            dict(item)
+            for item in payload.get("staging_rows") or []
+            if isinstance(item, Mapping)
+        ]
+        lines.extend(
+            _markdown_table(
+                ("Timing", "Planned Move", "Status", "Trigger", "Expected Gain", "Dependency"),
+                [
+                    (
+                        item.get("timing"),
+                        item.get("planned_move"),
+                        item.get("status"),
+                        item.get("trigger"),
+                        item.get("expected_gain"),
+                        item.get("dependency"),
+                    )
+                    for item in staging
+                ],
+            )
+        )
+        classifications = [
+            dict(item)
+            for item in payload.get("squad_classification") or []
+            if isinstance(item, Mapping)
+        ]
+        if classifications:
+            lines.extend(
+                _markdown_table(
+                    ("player", "classification", "reason"),
+                    [
+                        (
+                            item.get("player"),
+                            item.get("classification"),
+                            item.get("reason"),
+                        )
+                        for item in classifications
+                    ],
+                )
+            )
+        excluded.extend((
+            "staging_rows", "squad_classification",
+            "bgw_context", "bgw_reoptimization_trigger",
+        ))
+
+    elif section_id == "S10":
+        rows = [
+            dict(row)
+            for row in payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.extend(
+            _markdown_table(
+                (
+                    "element_id",
+                    "player",
+                    "current_price",
+                    "sell_value",
+                    "direction",
+                    "progress",
+                    "projected_offset0",
+                    "prediction_strength",
+                    "next_cycle",
+                    "cycles_to_change",
+                    "date_state",
+                    "eta",
+                    "evidence_timestamp",
+                    "source_age_minutes",
+                    "freshness",
+                    "decision_implication",
+                ),
+                [
+                    (
+                        row.get("element_id"),
+                        row.get("name") or row.get("player"),
+                        row.get("current_price"),
+                        row.get("authenticated_sell_value"),
+                        row.get("predictor_direction"),
+                        row.get("predictor_progress"),
+                        row.get("predictor_projected_percent"),
+                        row.get("prediction_strength"),
+                        row.get("next_official_price_cycle_wib"),
+                        row.get("cycles_to_expected_change"),
+                        row.get("date_state"),
+                        row.get("eta_context")
+                        or row.get("estimated_change_window")
+                        or row.get("date_state"),
+                        row.get("evidence_timestamp"),
+                        row.get("source_age_minutes"),
+                        row.get("freshness"),
+                        row.get("decision_implication"),
+                    )
+                    for row in rows
+                ],
+            )
+        )
+        excluded.append("rows")
+
+    elif section_id == "S11":
+        rows = [
+            dict(row)
+            for row in payload.get("scanner20") or payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.append("### POSITIONAL SCANNER20")
+        lines.append(
+            "POSITION FORMULAE: "
+            + json.dumps(
+                payload.get("position_formulae") or {},
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            )
+        )
+        lines.extend(
+            _markdown_table(
+                (
+                    "rank",
+                    "element_id",
+                    "player_name",
+                    "position",
+                    "price",
+                    "xmins",
+                    "p_start",
+                    "p_dnp",
+                    "ownership_tag",
+                    "pos_formula",
+                    "pos_coverage",
+                    "admitted",
+                    "predictor",
+                    "football_score",
+                    "watch_action",
+                ),
+                [
+                    (
+                        rank,
+                        row.get("element_id", row.get("element")),
+                        row.get("name"),
+                        row.get("position"),
+                        row.get("current_price"),
+                        row.get("xmins"),
+                        row.get("p_start"),
+                        row.get("p_dnp"),
+                        "NON_OWNED",
+                        (row.get("position_specific_evidence") or {}).get("formula_id"),
+                        (row.get("position_specific_evidence") or {}).get("coverage"),
+                        (row.get("admission_gate") or {}).get("admitted"),
+                        {
+                            "direction": row.get("predictor_direction"),
+                            "progress": row.get("predictor_progress"),
+                        },
+                        row.get("football_score"),
+                        row.get("watchlist_action"),
+                    )
+                    for rank, row in enumerate(rows, start=1)
+                ],
+            )
+        )
+        actionable = [
+            dict(row)
+            for row in payload.get("actionable_watchlist") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.append("### ACTIONABLE WATCHLIST")
+        if actionable:
+            lines.extend(
+                _markdown_table(
+                    (
+                        "element_id",
+                        "player",
+                        "position",
+                        "xmins",
+                        "p_start",
+                        "p_dnp",
+                        "position evidence",
+                        "admission checks",
+                        "action",
+                    ),
+                    [
+                        (
+                            row.get("element_id"),
+                            row.get("name"),
+                            row.get("position"),
+                            row.get("xmins"),
+                            row.get("p_start"),
+                            row.get("p_dnp"),
+                            (row.get("position_specific_evidence") or {}).get("present_features"),
+                            (row.get("admission_gate") or {}).get("checks"),
+                            row.get("action") or "WATCH",
+                        )
+                        for row in actionable
+                    ],
+                )
+            )
+        else:
+            lines.append("NONE — no Scanner20 player clears all admission/security/evidence gates")
+        lines.append(
+            "WATCHLIST GOVERNANCE: Scanner20 exact 5/5/5/5 when COMPLETE; "
+            "Actionable Watchlist is an unpadded subset; price is overlay only; "
+            "Watchlist cannot emit ACT."
+        )
+        excluded.extend(("rows", "scanner20", "actionable_watchlist"))
+
+    elif section_id in {"S12", "S13"}:
+        rows = [
+            dict(row)
+            for row in payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        fields = (
+            "rank",
+            "element_id",
+            "player_name",
+            "current_price",
+            "ownership_percent",
+            "ownership_tag",
+            "direction",
+            "current_progress_percent",
+            "projection_offset_0_percent",
+            "predicted_change_cycle",
+            "predicted_change_at",
+            "eta_human",
+            "model_urgency",
+            "confidence",
+            "source",
+            "observed_at",
+            "source_age_minutes",
+            "freshness",
+            "date_state",
+            "raw_payload_hash",
+        )
+        payload_hash = str(
+            payload.get("predictor_payload_hash")
+            or hashlib.sha256(
+                json.dumps(
+                    rows,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                    default=str,
+                ).encode("utf-8")
+            ).hexdigest()
+        )
+        visible_rows = []
+        for rank, row in enumerate(rows, start=1):
+            element_id = int(row.get("element_id") or 0)
+            confidence = row.get("confidence")
+            if isinstance(confidence, Mapping):
+                confidence = json.dumps(
+                    confidence,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                    default=str,
+                )
+            visible_rows.append(
+                {
+                    "rank": rank,
+                    "element_id": element_id,
+                    "player_name": (
+                        row.get("player")
+                        or row.get("player_name")
+                        or f"element:{element_id}"
+                    ),
+                    "current_price": row.get("current_price"),
+                    "ownership_percent": row.get(
+                        "selected_by_percent",
+                        row.get("ownership_percent", "UNAVAILABLE"),
+                    ),
+                    "ownership_tag": (
+                        "OWNED"
+                        if element_id in owned_ids
+                        else "NON_OWNED"
+                    ),
+                    "direction": row.get("direction"),
+                    "current_progress_percent": row.get(
+                        "official_or_provider_progress",
+                        row.get(
+                            "current_progress_percent",
+                            "UNAVAILABLE",
+                        ),
+                    ),
+                    "projection_offset_0_percent": row.get(
+                        "projected_percent",
+                        row.get(
+                            "projection_offset_0_percent",
+                            "UNAVAILABLE",
+                        ),
+                    ),
+                    "predicted_change_cycle": (
+                        row.get("cycles_to_expected_change")
+                        or row.get("predicted_change_cycle")
+                        or row.get("date_state")
+                        or "UNAVAILABLE"
+                    ),
+                    "predicted_change_at": (
+                        row.get("estimated_change_at_wib")
+                        or row.get("predicted_change_at")
+                        or row.get("date_state")
+                        or "UNAVAILABLE"
+                    ),
+                    "eta_human": (
+                        row.get("eta_context")
+                        or row.get("eta_human")
+                        or row.get("estimated_change_window")
+                        or row.get("date_state")
+                        or "UNAVAILABLE"
+                    ),
+                    "model_urgency": (
+                        row.get("impact_on_our_decision")
+                        or row.get("model_urgency")
+                        or "WATCH"
+                    ),
+                    "confidence": confidence or "UNAVAILABLE",
+                    "source": (
+                        row.get("estimate_source")
+                        or row.get("source")
+                        or "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR"
+                    ),
+                    "observed_at": (
+                        row.get("evidence_timestamp")
+                        or row.get("observed_at")
+                        or "UNAVAILABLE"
+                    ),
+                    "source_age_minutes": row.get("source_age_minutes"),
+                    "freshness": row.get("freshness"),
+                    "date_state": row.get("date_state"),
+                    "raw_payload_hash": (
+                        row.get("raw_payload_hash")
+                        or payload_hash
+                    ),
+                }
+            )
+        lines.extend(
+            _markdown_table(
+                fields,
+                [
+                    tuple(row.get(field) for field in fields)
+                    for row in visible_rows
+                ],
+            )
+        )
+        excluded.extend(("rows", "predictor_payload_hash"))
+
+    elif section_id == "S15":
+        evidence = dict(payload.get("evidence_quality") or {})
+        lines.append("### EVIDENCE QUALITY BY SOURCE CATEGORY")
+        lines.extend(
+            _markdown_table(
+                ("category", "state", "source / detail"),
+                [
+                    (
+                        key,
+                        (value or {}).get("state") if isinstance(value, Mapping) else value,
+                        _human_summary({
+                            k: v
+                            for k, v in dict(value or {}).items()
+                            if k != "state"
+                        }) if isinstance(value, Mapping) else "",
+                    )
+                    for key, value in evidence.items()
+                ],
+            )
+        )
+        execution = dict(payload.get("model_execution") or {})
+        lines.append("MODEL EXECUTION: " + " | ".join(f"{k}={v}" for k, v in execution.items()))
+        excluded.extend(("evidence_quality", "model_execution"))
+
+    elif section_id == "S15B":
+        coverage = str(payload.get("coverage_state") or "").upper()
+        expected = payload.get("expected_manager_count")
+        available = payload.get("submitted_picks_available_count")
+        disclosed_gw = payload.get("disclosed_picks_gw")
+        coverage_pct = (
+            round(100.0 * float(available) / float(expected), 1)
+            if available is not None and expected not in (None, 0)
+            else None
+        )
+        lines.append(
+            "MINI_LEAGUE_DENOMINATOR: "
+            + ("COMPLETE" if coverage == "FULL" else "DEGRADED")
+        )
+        lines.append(
+            "MINI_LEAGUE_COVERAGE: "
+            f"collected={available}/{expected} ({coverage_pct if coverage_pct is not None else 'UNAVAILABLE'}%) | "
+            f"disclosed_picks=GW{disclosed_gw} | "
+            f"label={payload.get('disclosed_picks_label') or 'BEHAVIOURAL BASELINE'}"
+        )
+        lines.append(
+            "RIVAL PICKS NOTE: BEHAVIOURAL BASELINE from latest disclosed submitted picks; "
+            "never a forecast of still-private planning-GW selections."
+        )
+        context = dict(payload.get("current_league_context") or {})
+        lines.append(
+            "LEAGUE LANDSCAPE: "
+            f"rank={context.get('our_rank')} / {context.get('manager_count')} | "
+            f"points={context.get('our_total_points')} | "
+            f"leader_gap={context.get('points_to_leader')} | "
+            f"top3_gap={context.get('points_to_top_3')} | "
+            f"top5_gap={context.get('points_to_top_5')} | "
+            f"above_gap={context.get('points_to_nearest_above')} | "
+            f"below_cushion={context.get('points_ahead_nearest_below')}"
+        )
+
+        def _mini_num(value: Any) -> str:
+            if value is None:
+                return "UNAVAILABLE"
+            try:
+                numeric = float(value)
+            except (TypeError, ValueError):
+                return str(value)
+            if numeric.is_integer():
+                return str(int(numeric))
+            return f"{numeric:.2f}".rstrip("0").rstrip(".")
+
+        def _mini_ratio(
+            row: Mapping[str, Any],
+            count_key: str,
+            pct_key: str,
+            *,
+            numerator_key: str | None = None,
+        ) -> str:
+            denominator = row.get("denominator")
+            numerator = (
+                row.get(numerator_key)
+                if numerator_key is not None
+                else row.get(count_key)
+            )
+            pct = row.get(pct_key)
+            if denominator in (None, 0) or numerator is None:
+                return "UNAVAILABLE"
+            pct_text = "UNAVAILABLE" if pct is None else f"{float(pct):.1f}%"
+            return f"{_mini_num(numerator)}/{_mini_num(denominator)} ({pct_text})"
+
+        def _mini_player(row: Mapping[str, Any], *, owned: bool) -> str:
+            name = str(
+                row.get("player")
+                or row.get("name")
+                or row.get("element_id")
+                or "UNAVAILABLE"
+            )
+            return f"**{name}**" if owned else name
+
+        scopes = dict(payload.get("denominator_scopes") or {})
+        lines.append("### DENOMINATOR SCOPES")
+        lines.extend(
+            _markdown_table(
+                ("scope", "label", "expected", "collected", "denominator", "includes us"),
+                [
+                    (
+                        key,
+                        value.get("label"),
+                        value.get("expected"),
+                        value.get("collected"),
+                        value.get("denominator"),
+                        value.get("includes_us"),
+                    )
+                    for key, value in scopes.items()
+                    if isinstance(value, Mapping)
+                ],
+            )
+        )
+
+        rank_battle = [
+            dict(item)
+            for item in payload.get("rank_battle") or []
+            if isinstance(item, Mapping)
+        ]
+        lines.append("### RANK BATTLE")
+        if rank_battle:
+            lines.extend(
+                _markdown_table(
+                    ("Rank", "Manager", "Team", "Total", "Gap vs us", "GW"),
+                    [
+                        (
+                            item.get("rank"),
+                            item.get("manager"),
+                            item.get("team"),
+                            item.get("total_points"),
+                            item.get("gap_vs_us"),
+                            item.get("gw_score"),
+                        )
+                        for item in rank_battle
+                    ],
+                )
+            )
+        else:
+            lines.append("UNAVAILABLE — no supportable rank battle rows")
+
+        for scope_key, payload_key in (
+            ("LEAGUE", "league_our15_exposure"),
+            ("RIVALS", "rivals_our15_exposure"),
+            ("DIRECT", "direct_rival_our15_exposure"),
+        ):
+            exposure_rows = [
+                dict(item)
+                for item in payload.get(payload_key) or []
+                if isinstance(item, Mapping)
+            ]
+            label = (
+                (scopes.get(scope_key) or {}).get("label")
+                if isinstance(scopes.get(scope_key), Mapping)
+                else scope_key
+            )
+            lines.append(f"### OUR15 EXPOSURE — {label or scope_key}")
+            if exposure_rows:
+                lines.extend(
+                    _markdown_table(
+                        ("Player", "OWN", "START", "BENCH", "C", "VC", "EO units / denom = EO%"),
+                        [
+                            (
+                                _mini_player(item, owned=True),
+                                _mini_ratio(item, "ownership_count", "ownership_pct"),
+                                _mini_ratio(item, "starter_count", "starter_pct"),
+                                _mini_ratio(item, "bench_count", "bench_pct"),
+                                _mini_ratio(item, "captain_count", "captain_pct"),
+                                _mini_ratio(item, "vice_count", "vice_pct"),
+                                _mini_ratio(
+                                    item,
+                                    "effective_multiplier_sum",
+                                    "eo_pct",
+                                    numerator_key="effective_multiplier_sum",
+                                ),
+                            )
+                            for item in exposure_rows
+                        ],
+                    )
+                )
+            else:
+                lines.append("UNAVAILABLE — exposure rows not materialized")
+
+        direct_scope = dict(payload.get("direct_rival_scope") or {})
+        lines.append("### DIRECT RIVALS ABOVE US")
+        lines.append(
+            "DIRECT RIVAL SCOPE: "
+            f"requested={direct_scope.get('requested_above_count')} | "
+            f"standings={direct_scope.get('standings_rival_count')} | "
+            f"picks={direct_scope.get('picks_available_count')} | "
+            f"denominator={direct_scope.get('denominator')} | "
+            f"complete={direct_scope.get('complete')}"
+        )
+        direct = [
+            dict(item)
+            for item in payload.get("direct_rivals") or []
+            if isinstance(item, Mapping)
+        ]
+        if direct:
+            lines.extend(
+                _markdown_table(
+                    (
+                        "Rank",
+                        "Manager",
+                        "Points",
+                        "Gap",
+                        "Squad overlap",
+                        "XI overlap",
+                        "Bench overlap",
+                        "Captain",
+                        "Vice",
+                        "Chip",
+                    ),
+                    [
+                        (
+                            item.get("rank"),
+                            item.get("manager"),
+                            item.get("total_points"),
+                            item.get("gap_vs_us"),
+                            f"{item.get('overlap_count')}/{item.get('overlap_denominator')}",
+                            f"{item.get('xi_overlap_count')}/{item.get('xi_overlap_denominator')}",
+                            f"{item.get('bench_overlap_count')}/{item.get('bench_overlap_denominator')}",
+                            item.get("captain"),
+                            item.get("vice"),
+                            item.get("active_chip") or "UNAVAILABLE",
+                        )
+                        for item in direct
+                    ],
+                )
+            )
+            lines.append("#### DIRECT RIVAL DIFFERENCE DETAIL")
+            for item in direct:
+                def names(key: str) -> str:
+                    return ", ".join(
+                        str(row.get("player"))
+                        for row in item.get(key) or []
+                        if isinstance(row, Mapping)
+                    ) or "NONE"
+                lines.append(
+                    f"- #{item.get('rank')} {item.get('manager')} | "
+                    f"SHIELDS [{names('shields')}] | "
+                    f"RIVAL-ONLY THREATS [{names('rival_only_threats')}] | "
+                    f"DIFFERENTIAL AGAINST US [{names('differential_against_us')}]"
+                )
+        else:
+            lines.append("UNAVAILABLE — no direct-rival picks available")
+
+        threats = [
+            dict(item)
+            for item in payload.get("rival_threats") or []
+            if isinstance(item, Mapping)
+        ]
+        lines.append("### RIVAL THREATS NOT IN OUR15")
+        if threats:
+            lines.extend(
+                _markdown_table(
+                    ("Player", "OWN", "START", "BENCH", "C", "VC", "EO"),
+                    [
+                        (
+                            _mini_player(item, owned=False),
+                            _mini_ratio(item, "ownership_count", "ownership_pct"),
+                            _mini_ratio(item, "starter_count", "starter_pct"),
+                            _mini_ratio(item, "bench_count", "bench_pct"),
+                            _mini_ratio(item, "captain_count", "captain_pct"),
+                            _mini_ratio(item, "vice_count", "vice_pct"),
+                            _mini_ratio(
+                                item,
+                                "effective_multiplier_sum",
+                                "eo_pct",
+                                numerator_key="effective_multiplier_sum",
+                            ),
+                        )
+                        for item in threats
+                    ],
+                )
+            )
+        else:
+            lines.append("NONE MATERIAL / UNAVAILABLE")
+
+        captain_rows = [
+            dict(item)
+            for item in payload.get("captain_leverage") or []
+            if isinstance(item, Mapping)
+        ]
+        lines.append("### CAPTAIN LANDSCAPE")
+        if captain_rows:
+            lines.extend(
+                _markdown_table(
+                    (
+                        "Player",
+                        "Football rank",
+                        "xPts",
+                        "P(haul)",
+                        "LEAGUE C",
+                        "LEAGUE EO",
+                        "RIVALS C",
+                        "RIVALS EO",
+                        "DIRECT C",
+                        "DIRECT EO",
+                        "EXPOSURE / LEVERAGE CLASS",
+                    ),
+                    [
+                        (
+                            item.get("player"),
+                            item.get("football_rank"),
+                            item.get("expected_points"),
+                            item.get("haul_probability"),
+                            _mini_ratio(dict(item.get("league_scope") or {}), "captain_count", "captain_pct"),
+                            _mini_ratio(dict(item.get("league_scope") or {}), "effective_multiplier_sum", "eo_pct", numerator_key="effective_multiplier_sum"),
+                            _mini_ratio(dict(item.get("rivals_scope") or {}), "captain_count", "captain_pct"),
+                            _mini_ratio(dict(item.get("rivals_scope") or {}), "effective_multiplier_sum", "eo_pct", numerator_key="effective_multiplier_sum"),
+                            _mini_ratio(dict(item.get("direct_scope") or {}), "captain_count", "captain_pct"),
+                            _mini_ratio(dict(item.get("direct_scope") or {}), "effective_multiplier_sum", "eo_pct", numerator_key="effective_multiplier_sum"),
+                            item.get("exposure_leverage_class"),
+                        )
+                        for item in captain_rows
+                    ],
+                )
+            )
+        else:
+            lines.append("UNAVAILABLE — captain landscape not materialized")
+
+        implication = dict(payload.get("strategy_implication") or {})
+        lines.append("### MINI-LEAGUE POSTURE")
+        lines.append(
+            f"POSTURE: {implication.get('human_posture')} "
+            f"(underlying model posture={implication.get('model_posture')})"
+        )
+        lines.append(
+            f"TRANSFER: {implication.get('transfer_action')} | "
+            f"RULE: {implication.get('transfer_rule')}"
+        )
+        lines.append(f"XI: {implication.get('xi_rule')}")
+        lines.append(f"CAPTAIN: {implication.get('captain_rule')}")
+
+        excluded.extend(
+            (
+                "current_league_context",
+                "exposures",
+                "rank_battle",
+                "league_our15_exposure",
+                "rivals_our15_exposure",
+                "our15_rival_exposure",
+                "direct_rival_scope",
+                "direct_rivals",
+                "direct_rival_our15_exposure",
+                "rival_threats",
+                "captain_leverage",
+                "strategy_implication",
+                "report_contract",
+                "denominator_scopes",
+                "disclosed_picks_gw",
+                "disclosed_picks_are_baseline_not_gw_forecast",
+                "disclosed_picks_label",
+            )
+        )
+
+    elif section_id == "S18":
+        board = dict(payload.get("action_board") or {})
+        axes = [
+            dict(row)
+            for row in board.get("axes") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.append("### MULTI-AXIS ACTION BOARD")
+        lines.extend(
+            _markdown_table(
+                (
+                    "axis", "NOW", "NEXT", "TRIGGER TO ACT",
+                    "LATEST SAFE DECISION POINT", "COST OF WAITING", "ABORT / REVERSAL"
+                ),
+                [
+                    (
+                        row.get("axis"),
+                        row.get("NOW"),
+                        _human_summary(row.get("NEXT")),
+                        _human_summary(row.get("TRIGGER TO ACT")),
+                        _human_summary(row.get("LATEST SAFE DECISION POINT")),
+                        _human_summary(row.get("COST OF WAITING")),
+                        _human_summary(row.get("ABORT / REVERSAL")),
+                    )
+                    for row in axes
+                ],
+            )
+        )
+        alt = board.get("best_alternative")
+        lines.append(
+            "BEST ALTERNATIVE: "
+            + _human_summary(alt)
+            + f" | EXECUTABLE={board.get('best_alternative_executable')}"
+        )
+        excluded.extend((
+            "action_board", "NOW", "NEXT", "TRIGGER TO ACT",
+            "LATEST SAFE DECISION POINT", "COST OF WAITING",
+            "ABORT / REVERSAL", "BEST ALTERNATIVE",
+        ))
+
+    elif section_id == "S19":
+        judgement = dict(payload.get("final_judgement") or {})
+        lines.append(
+            "FINAL TRANSFER: "
+            f"{judgement.get('transfer_action')} | "
+            f"ROUTE={judgement.get('selected_route_id')} | "
+            f"EXECUTABLE={judgement.get('selected_route_executable')}"
+        )
+        lines.append(
+            f"FORMATION: {judgement.get('formation')} | XI={judgement.get('xi')}"
+        )
+        lines.append(
+            f"BENCH GK: {judgement.get('bench_gk')} | "
+            f"OUTFIELD AUTOSUB 1/2/3: {judgement.get('bench_order')}"
+        )
+        football = dict(judgement.get("football_optimal_captain") or {})
+        final_cap = dict(judgement.get("final_captain") or {})
+        vice = dict(judgement.get("vice") or {})
+        lines.append(
+            "FOOTBALL-OPTIMAL CAPTAIN: "
+            f"{football.get('player') or football.get('element_id')} "
+            f"(rank={football.get('football_rank')}, xPts={football.get('xpts')})"
+        )
+        lines.append(
+            "FINAL CAPTAIN: "
+            f"{final_cap.get('player') or final_cap.get('element_id')} | "
+            f"STATE={judgement.get('captain_state')} | "
+            f"VICE={vice.get('player') or vice.get('element_id')}"
+        )
+        ml_context = dict(judgement.get("mini_league_captain_context") or {})
+        lines.append(
+            "MINI-LEAGUE CAPTAIN CONTEXT: "
+            f"class={ml_context.get('exposure_leverage_class')} | "
+            f"baseline={ml_context.get('label')} GW{ml_context.get('behavioural_baseline_gw')}"
+        )
+        lines.append(
+            "S19 CONSUMED: "
+            + ", ".join(str(x) for x in judgement.get("consumed_sections") or [])
+        )
+        lines.append(
+            "RECONCILIATION: "
+            + str(judgement.get("reconciliation_reason") or "UNAVAILABLE")
+        )
+        lines.append(
+            f"CHIP: {judgement.get('chip')} | POSTURE: {judgement.get('mini_league_posture')}"
+        )
+        lines.append(
+            f"IMMEDIATE WATCH: {judgement.get('immediate_watch')} | "
+            f"3GW: {judgement.get('three_gw_direction')}"
+        )
+        lines.append(
+            f"NEXT TRIGGER: {judgement.get('next_trigger')} | "
+            f"REVERSAL: {judgement.get('reversal_trigger')}"
+        )
+        bgw = dict(judgement.get("bgw_context") or {})
+        lines.append(bgw_visible_line("S19", bgw))
+        lines.append(
+            "BGW RECONCILED: "
+            + str(judgement.get("bgw_reconciled"))
+        )
+        excluded.append("final_judgement")
+
+    elif section_id == "S16":
+        rows = [
+            dict(row)
+            for row in payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.extend(
+            _markdown_table(
+                (
+                    "player", "Pavail", "Pstart", "xMins",
+                    "Pgoal", "Passist", "Preturn", "Phaul", "Pblank",
+                    "1GW", "3GW", "5GW",
+                    "xG90", "npxG90", "xA90", "xGI90",
+                    "shots", "SIB", "SOT", "BC", "box", "KP", "CC",
+                    "role / pen / set-piece", "DefCon", "workload/rest",
+                    "fixture", "Bayesian / posterior", "upside", "risk", "ML relevance"
+                ),
+                [
+                    (
+                        row.get("player") or row.get("name"),
+                        row.get("availability", row.get("p_available")),
+                        row.get("p_start"),
+                        row.get("xmins"),
+                        (row.get("probabilities") or {}).get("p_goal"),
+                        (row.get("probabilities") or {}).get("p_assist"),
+                        (row.get("probabilities") or {}).get("p_return"),
+                        (row.get("probabilities") or {}).get("p_haul"),
+                        (row.get("probabilities") or {}).get("p_blank"),
+                        row.get("projection_1gw", row.get("gw_plus_1")),
+                        row.get("projection_3gw", row.get("three_gw")),
+                        row.get("projection_5gw", row.get("five_gw")),
+                        (row.get("underlying") or {}).get("xg90"),
+                        (row.get("underlying") or {}).get("npxg90"),
+                        (row.get("underlying") or {}).get("xa90"),
+                        (row.get("underlying") or {}).get("xgi90"),
+                        (row.get("underlying") or {}).get("shots"),
+                        (row.get("underlying") or {}).get("shots_in_box"),
+                        (row.get("underlying") or {}).get("shots_on_target"),
+                        (row.get("underlying") or {}).get("big_chances"),
+                        (row.get("underlying") or {}).get("box_touches"),
+                        (row.get("underlying") or {}).get("key_passes"),
+                        (row.get("underlying") or {}).get("chances_created"),
+                        _human_summary(row.get("role_detail")),
+                        _human_summary(row.get("defensive_contribution")),
+                        _human_summary(row.get("workload_context")),
+                        _human_summary(row.get("fixture_detail")),
+                        _human_summary(row.get("bayesian_state")),
+                        row.get("main_upside"),
+                        _human_summary(row.get("main_risk")),
+                        _human_summary(row.get("mini_league_relevance")),
+                    )
+                    for row in rows
+                ],
+            )
+        )
+        excluded.extend(("rows", "position_mechanisms"))
+
+    elif section_id == "S16B":
+        lines.append(
+            "RECENCY WEIGHTING: "
+            + str(payload.get("recency_weighting") or "EXPONENTIAL_HALF_LIFE_GW")
+        )
+        lines.append(
+            "BAYESIAN UPDATE: "
+            + str(payload.get("bayesian_update") or "POSTERIOR_RECENT_RATE_WITH_SHRINKAGE")
+        )
+        for item in payload.get("our15") or []:
+            if not isinstance(item, Mapping):
+                continue
+            lines.append(
+                "### "
+                + str(item.get("player") or item.get("element_id"))
+                + " | GW1→NOW"
+            )
+            trajectory = dict(item.get("trajectory") or {})
+            role = dict(trajectory.get("role_minutes_evolution") or {})
+            lines.append(
+                "TREND: "
+                f"{trajectory.get('trajectory_classification')} | "
+                f"sustained_role_change={role.get('sustained_role_change')} | "
+                f"recent_role={role.get('recent_role')} | prior_role={role.get('prior_role')}"
+            )
+            for match in trajectory.get("matches") or []:
+                if not isinstance(match, Mapping):
+                    continue
+                lines.append(
+                    "- GW{gw} vs {opp} {ha} | {start} {mins}m | "
+                    "Result {result} | Pts {pts} | G {goals} A {assists} | "
+                    "xG {xg} npxG {npxg} xA {xa} xGI {xgi} | "
+                    "Sh {shots} SOT {sot} Box {box} KP/CC {kp}/{cc} BC {bc} | "
+                    "SP {sp} PEN {pen} DEF {deff} | "
+                    "team shape {shape} opp shape {opp_shape} role {role} | "
+                    "price {price} | outlook 1/3/5 {outlook}".format(
+                        gw=match.get("gw"),
+                        opp=match.get("opponent_team_id"),
+                        ha="H" if match.get("home") is True else "A" if match.get("home") is False else "?",
+                        start="START" if match.get("starter") else "SUB",
+                        mins=match.get("minutes"),
+                        result=match.get("result", "UNAVAILABLE"),
+                        pts=match.get("fpl_points"),
+                        goals=match.get("goals", "UNAVAILABLE"),
+                        assists=match.get("assists", "UNAVAILABLE"),
+                        xg=match.get("xg"),
+                        npxg=match.get("npxg", "UNAVAILABLE"),
+                        xa=match.get("xa"),
+                        xgi=match.get("xgi"),
+                        shots=match.get("shots"),
+                        sot=match.get("shots_on_target"),
+                        box=match.get("box_touches"),
+                        kp=match.get("key_passes"),
+                        cc=match.get("chances_created"),
+                        bc=match.get("big_chances"),
+                        sp=match.get("set_piece_role", match.get("set_piece_involvement")),
+                        pen=match.get("penalty_role", match.get("penalty_involvement")),
+                        deff=match.get("defensive_contribution"),
+                        shape=match.get("team_formation"),
+                        opp_shape=match.get("opponent_formation", "UNAVAILABLE"),
+                        role=match.get("role"),
+                        price=match.get("price_movement", "UNAVAILABLE"),
+                        outlook=match.get("outlook_1_3_5gw", "UNAVAILABLE"),
+                    )
+                )
+            lines.append(
+                "TRAJECTORY INTERPRETATION: "
+                f"recency={payload.get('recency_weighting')} | "
+                f"Bayesian={item.get('bayesian_state', payload.get('bayesian_update'))} | "
+                f"current P(start)={item.get('p_start')} | current xMins={item.get('xmins')} | "
+                f"1/3/5GW={item.get('projection_1gw')}/{item.get('projection_3gw')}/{item.get('projection_5gw')} | "
+                f"price={item.get('price')} | ML={_human_summary(item.get('mini_league_relevance'))} | "
+                f"action={item.get('action')}"
+            )
+            link = item.get("linkup_dependency")
+            if link:
+                lines.append("LINK-UP DEPENDENCY: " + _human_summary(link))
+        candidates = [
+            dict(item)
+            for item in payload.get("material_universe_candidates") or []
+            if isinstance(item, Mapping)
+        ]
+        if candidates:
+            lines.append("### MATERIAL UNIVERSE CANDIDATES")
+            for item in candidates:
+                trajectory = dict(item.get("trajectory") or {})
+                lines.append(
+                    "- "
+                    f"{item.get('name') or item.get('element_id')} | "
+                    f"{item.get('primary_classification')} | "
+                    f"trend={trajectory.get('trajectory_classification')} | "
+                    f"xMins={(item.get('minutes') or {}).get('xmins')} | "
+                    f"P(start)={(item.get('minutes') or {}).get('p_start')} | "
+                    f"1/3/5GW={item.get('horizon_1gw')}/{item.get('horizon_3gw')}/{item.get('horizon_5gw')}"
+                )
+        excluded.extend((
+            "our15",
+            "material_universe_candidates",
+            "full_universe_scan",
+            "raw_contextual_dynamics",
+            "debug",
+        ))
+
+    elif section_id == "S17":
+        lines.extend(
+            (
+                "FACT: OFFICIAL_FPL_OCCURRENCE_FACTS",
+                "MODEL: V12_OCCURRENCE_MODEL_OUTPUTS",
+                "INFERENCE: V12_DECISION_INFERENCE",
+            )
+        )
+
+    return lines, tuple(excluded)
+
+
 def render_deep_text(report: Mapping[str, Any]) -> str:
-    """Simple human-facing structural renderer for conformance tests."""
-    blocks = []
-    for row in report.get("sections") or []:
+    """Human-facing DEEP renderer retaining nested analytic evidence."""
+    sections = [
+        dict(row)
+        for row in report.get("sections") or []
+        if isinstance(row, Mapping)
+    ]
+    owned_ids = {
+        int(item.get("element_id"))
+        for section in sections
+        if str(section.get("section_id") or "") == "S02"
+        for item in (
+            (section.get("content") or {}).get("rows") or []
+            if isinstance(section.get("content"), Mapping)
+            else []
+        )
+        if isinstance(item, Mapping)
+        and item.get("element_id") is not None
+    }
+    owned_names = {
+        int(item.get("element_id")): str(
+            item.get("player")
+            or item.get("name")
+            or item.get("element_id")
+        )
+        for section in sections
+        if str(section.get("section_id") or "") == "S02"
+        for item in (
+            (section.get("content") or {}).get("rows") or []
+            if isinstance(section.get("content"), Mapping)
+            else []
+        )
+        if isinstance(item, Mapping)
+        and item.get("element_id") is not None
+    }
+
+    blocks: list[str] = []
+    for row in sections:
         label = str(row.get("label") or "")
         state = str(row.get("state") or "")
-        blocks.append(f"## {label}\nStatus: {state}")
+        section_id = str(row.get("section_id") or "")
+        lines = [
+            _visible_section_heading(section_id, label),
+            f"Status: {state}",
+        ]
+        reason = str(row.get("degradation_reason") or "").strip()
+        if state != "COMPLETE" and reason:
+            lines.append(f"Reason: {reason}")
+        content = row.get("content")
+        content_map = (
+            dict(content or {})
+            if isinstance(content, Mapping)
+            else {}
+        )
+        # Renderer consumes the bound payload verbatim. Binding metadata is
+        # deliberately not synthesized here: missing binding must fail QA,
+        # never be repaired by presentation code.
+        binding = content_map.get("authoritative_binding")
+        if isinstance(binding, Mapping):
+            lines.append(
+                "AUTHORITY: "
+                + str(binding.get("producer") or "UNAVAILABLE")
+                + " | BINDING="
+                + str(binding.get("status") or "UNAVAILABLE")
+            )
+
+        visible_lines, visible_excluded = (
+            _render_deep_visible_contract_lines(
+                section_id=section_id,
+                content=content_map,
+                owned_ids=owned_ids,
+                owned_names=owned_names,
+            )
+        )
+        lines.extend(visible_lines)
+
+        scout = [
+            dict(item)
+            for item in content_map.get(
+                "post_match_match_by_match_scout"
+            )
+            or ()
+            if isinstance(item, Mapping)
+        ]
+        if scout:
+            lines.extend(_render_match_scout_lines(scout))
+
+        math_stack = content_map.get(
+            "mathematical_decision_stack"
+        )
+        if isinstance(math_stack, Mapping):
+            lines.extend(_render_math_stack_lines(math_stack))
+
+        if "PACKAGE OPTIMIZER" in label.upper():
+            lines.extend(
+                _render_package_frontier_lines(
+                    content_map,
+                    section_state=state,
+                )
+            )
+
+        stagec = content_map.get("stagec_universe_intelligence")
+        if section_id == "S04" and isinstance(stagec, Mapping):
+            from src.engines.v12_stagec_reporting import (
+                render_stagec_deep_lines,
+            )
+
+            lines.extend(render_stagec_deep_lines(stagec))
+
+        generic = _render_generic_human_content(
+            content_map,
+            excluded_keys=(
+                "post_match_match_by_match_scout",
+                "mathematical_decision_stack",
+                "package_search_proof",
+                "search_proof",
+                "package_universe_challengers",
+                "universe_challengers",
+                "package_routes",
+                "routes",
+                "frontier",
+                "stagec_universe_intelligence",
+                *visible_excluded,
+            ),
+        )
+        if generic:
+            lines.extend(generic)
+        blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
 
 
@@ -777,16 +5721,87 @@ def weather_report_time_evidence(
     weather: Mapping[str, Any] | None,
     lookup_accessible: bool,
     failure_reason: str | None = None,
+    fixture: str | None = None,
 ) -> dict[str, Any]:
-    """Weather is report-time evidence outside V6; absence from V6 is never the reason."""
+    """Normalize SIMPLE visible weather evidence without creating a weather model."""
     if weather:
+        payload = dict(weather)
+        impact = str(
+            payload.get("fpl_impact")
+            or payload.get("impact")
+            or payload.get("impact_classification")
+            or ""
+        ).strip().upper()
+        if impact not in {"NORMAL", "LOW", "MATERIAL"}:
+            impact = "UNAVAILABLE"
+        precipitation = payload.get(
+            "precipitation_probability",
+            payload.get(
+                "precipitation_chance_pct",
+                payload.get("precipitation_probability_pct", "UNAVAILABLE"),
+            ),
+        )
+        wind = payload.get(
+            "wind_kph",
+            payload.get(
+                "wind_kmh",
+                payload.get("wind_speed_kmh", "UNAVAILABLE"),
+            ),
+        )
+        evidence_timestamp = payload.get(
+            "weather_evidence_timestamp",
+            payload.get("evidence_timestamp", payload.get("checked_at", "UNAVAILABLE")),
+        )
+        impact_reason = payload.get("impact_reason", payload.get("fpl_impact_reason", "UNAVAILABLE"))
+        visible_row = {
+            "fixture": fixture or payload.get("fixture") or "UNAVAILABLE",
+            "venue": venue or payload.get("venue") or "UNAVAILABLE",
+            "kickoff": kickoff or payload.get("kickoff") or "UNAVAILABLE",
+            "condition": payload.get("condition") or payload.get("weather_condition") or "UNAVAILABLE",
+            "temperature_c": payload.get("temperature_c", "UNAVAILABLE"),
+            "temperature": payload.get("temperature_c", "UNAVAILABLE"),
+            "precipitation_probability": precipitation,
+            "precipitation_chance_pct": precipitation,
+            "wind_kph": wind,
+            "wind_kmh": wind,
+            "fpl_impact": impact,
+            "impact_class": impact,
+            "impact_reason": impact_reason,
+            "evidence_timestamp": evidence_timestamp,
+            "weather_evidence_timestamp": evidence_timestamp,
+        }
+        required = (
+            "fixture",
+            "venue",
+            "kickoff",
+            "condition",
+            "temperature_c",
+            "precipitation_probability",
+            "wind_kph",
+            "fpl_impact",
+            "weather_evidence_timestamp",
+        )
+        missing = [
+            key for key in required
+            if visible_row.get(key) in {None, "", "UNAVAILABLE"}
+        ]
         return {
-            "state": "COMPLETE",
-            "venue": venue,
-            "kickoff": kickoff,
-            "weather": dict(weather),
+            "state": "COMPLETE" if not missing else "PARTIAL",
+            "venue": visible_row["venue"],
+            "kickoff": visible_row["kickoff"],
+            "weather": payload,
+            "visible_row": visible_row,
+            "missing_visible_fields": missing,
             "source_layer": "REPORT_TIME",
             "v6_weather_required": False,
+            "new_weather_model_created": False,
+            "weather_adjusted_xpts": False,
+            "weather_mutates_p_start": False,
+            "weather_mutates_xmins": False,
+            "weather_mutates_p1_6_tactical_score": False,
+            "weather_failure_isolated_to_weather": True,
+            "weather_may_independently_create_action": False,
+            "raw_provider_plumbing_visible": False,
         }
     reason = str(failure_reason or "").strip()
     if not reason:
@@ -800,7 +5815,33 @@ def weather_report_time_evidence(
         "venue": venue,
         "kickoff": kickoff,
         "weather": None,
+        "visible_row": {
+            "fixture": fixture or "UNAVAILABLE",
+            "venue": venue or "UNAVAILABLE",
+            "kickoff": kickoff or "UNAVAILABLE",
+            "condition": "UNAVAILABLE",
+            "temperature_c": "UNAVAILABLE",
+            "temperature": "UNAVAILABLE",
+            "precipitation_probability": "UNAVAILABLE",
+            "precipitation_chance_pct": "UNAVAILABLE",
+            "wind_kph": "UNAVAILABLE",
+            "wind_kmh": "UNAVAILABLE",
+            "fpl_impact": "UNAVAILABLE",
+            "impact_class": "UNAVAILABLE",
+            "impact_reason": reason,
+            "evidence_timestamp": "UNAVAILABLE",
+            "weather_evidence_timestamp": "UNAVAILABLE",
+        },
         "source_layer": "REPORT_TIME",
         "v6_weather_required": False,
         "degradation_reason": reason,
+        "new_weather_model_created": False,
+        "weather_adjusted_xpts": False,
+        "weather_mutates_p_start": False,
+        "weather_mutates_xmins": False,
+        "weather_mutates_p1_6_tactical_score": False,
+        "weather_failure_isolated_to_weather": True,
+        "weather_may_independently_create_action": False,
+        "raw_provider_plumbing_visible": False,
     }
+

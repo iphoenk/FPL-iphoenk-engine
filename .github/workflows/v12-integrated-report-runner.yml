@@ -1,0 +1,414 @@
+name: V12 integrated report runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      report_mode:
+        description: Canonical report mode
+        required: true
+        default: DEEP
+        type: string
+      report_slot:
+        description: Exact Asia/Jakarta report occurrence ISO-8601
+        required: true
+        type: string
+      checkpoint_time:
+        description: Optional visible checkpoint HH:MM
+        required: false
+        default: ""
+        type: string
+      profile_mode:
+        description: Performance profiling mode (OFF or COLD)
+        required: false
+        default: "OFF"
+        type: string
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  actions: write
+
+concurrency:
+  group: v12-report-${{ github.event_name }}-${{ github.sha }}-${{ github.event.issue.number || inputs.report_slot }}
+  cancel-in-progress: false
+
+jobs:
+  parse:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.number == 431 &&
+        github.event.comment.user.login == github.repository_owner &&
+        startsWith(github.event.comment.body, '/v12-report-run')
+      )
+    runs-on: ubuntu-latest
+    outputs:
+      report_mode: ${{ steps.args.outputs.report_mode }}
+      report_slot: ${{ steps.args.outputs.report_slot }}
+      checkpoint_time: ${{ steps.args.outputs.checkpoint_time }}
+      profile_mode: ${{ steps.args.outputs.profile_mode }}
+    steps:
+      - id: args
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ inputs.report_mode }}
+          INPUT_SLOT: ${{ inputs.report_slot }}
+          INPUT_CHECKPOINT: ${{ inputs.checkpoint_time }}
+          INPUT_PROFILE_MODE: ${{ inputs.profile_mode }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          python - <<'PY'
+          import os, re
+          from pathlib import Path
+
+          if os.environ["EVENT_NAME"] == "workflow_dispatch":
+              mode = os.environ.get("INPUT_MODE") or "DEEP"
+              slot = os.environ.get("INPUT_SLOT") or ""
+              checkpoint = os.environ.get("INPUT_CHECKPOINT") or ""
+              profile_mode = os.environ.get("INPUT_PROFILE_MODE") or "OFF"
+          else:
+              body = os.environ.get("COMMENT_BODY") or ""
+              def arg(name, default=""):
+                  m = re.search(rf"(?:^|\s){re.escape(name)}=([^\s]+)", body)
+                  return m.group(1) if m else default
+              mode = arg("report_mode", "DEEP")
+              slot = arg("report_slot")
+              checkpoint = arg("checkpoint_time")
+              profile_mode = arg("profile_mode", "OFF")
+          profile_mode = str(profile_mode or "OFF").upper()
+          if profile_mode not in {"OFF", "COLD"}:
+              raise SystemExit("profile_mode must be OFF or COLD")
+          if not slot:
+              raise SystemExit("report_slot is required")
+          out = Path(os.environ["GITHUB_OUTPUT"])
+          with out.open("a", encoding="utf-8") as fh:
+              fh.write(f"report_mode={mode.upper()}\n")
+              fh.write(f"report_slot={slot}\n")
+              fh.write(f"checkpoint_time={checkpoint}\n")
+              fh.write(f"profile_mode={profile_mode}\n")
+          PY
+
+  run:
+    needs: parse
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      OPENBLAS_CORETYPE: Haswell
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      NPY_DISABLE_CPU_FEATURES: "X86_V4,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR"
+    # issue_comment is cache-read-only by default. This job is owner-gated above
+    # and checks out only production main/runtime-data, so explicit cache write
+    # cannot be populated from commenter-controlled code.
+    cache-mode: write
+    steps:
+      - name: Checkout current production main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: app
+
+      - name: Checkout factual runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          ref: runtime-data-v6
+          path: runtime-data
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install runtime dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate normalized numeric runtime and capture physical host
+        id: runtime
+        working-directory: app
+        run: |
+          mkdir -p artifacts/v12-report
+          python -m src.engines.v12_cache_runtime_identity \
+            --output artifacts/v12-report/runtime_environment.json
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          proof = json.loads(
+              Path("artifacts/v12-report/runtime_environment.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          model = str(proof.get("physical_cpu_model") or "UNKNOWN").replace("\n", " ")
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as fh:
+              fh.write(f"physical_cpu_model={model}\n")
+          PY
+
+      - name: Enforce active V12-only execution boundary
+        working-directory: app
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          src = Path("src/engines/v12_integrated_report_runner.py").read_text(encoding="utf-8")
+          forbidden = (
+              "from src.runtime_v3",
+              "import src.runtime_v3",
+              "from src.runtime_v4",
+              "import src.runtime_v4",
+              "from src.runtime_v5",
+              "import src.runtime_v5",
+              "full_authority_cache",
+          )
+          bad = [token for token in forbidden if token in src]
+          if bad:
+              raise SystemExit(f"legacy execution boundary violated: {bad}")
+          PY
+
+      - name: Restore deterministic Stage-2 derived projection cache
+        if: needs.parse.outputs.profile_mode != 'COLD'
+        id: stage2-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: app/.cache/v12-stage2
+          key: v12-stage2-derived-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_stage2_derived_cache.py', 'app/src/models/historical_projection.py', 'app/src/engines/v12_contextual_dynamics.py', 'app/src/engines/v12_player_events.py', 'app/src/engines/v12_player_minutes.py', 'app/src/engines/v12_position_probability_components.py', 'app/src/engines/p0_decision_quality.py', 'app/src/models/v12_stage1_analytics.py', 'app/src/rules.py', 'app/config/intelligence/player_events.json', 'app/config/intelligence/player_minutes.json', 'app/config/intelligence/historical_priors.json', 'app/config/intelligence/v12_contextual_dynamics.json') }}-${{ github.run_id }}
+          restore-keys: |
+            v12-stage2-derived-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_stage2_derived_cache.py', 'app/src/models/historical_projection.py', 'app/src/engines/v12_contextual_dynamics.py', 'app/src/engines/v12_player_events.py', 'app/src/engines/v12_player_minutes.py', 'app/src/engines/v12_position_probability_components.py', 'app/src/engines/p0_decision_quality.py', 'app/src/models/v12_stage1_analytics.py', 'app/src/rules.py', 'app/config/intelligence/player_events.json', 'app/config/intelligence/player_minutes.json', 'app/config/intelligence/historical_priors.json', 'app/config/intelligence/v12_contextual_dynamics.json') }}-
+
+      - name: Ensure Stage-2 derived cache directory
+        working-directory: app
+        run: mkdir -p .cache/v12-stage2
+
+      - name: Restore exact P1.7 decision-core cache
+        if: needs.parse.outputs.profile_mode != 'COLD'
+        id: p17-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: app/.cache/v12-p17
+          key: v12-p17-decision-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_lineup_optimizer.py', 'app/config/intelligence/v12_lineup_optimizer.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
+          restore-keys: |
+            v12-p17-decision-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_lineup_optimizer.py', 'app/config/intelligence/v12_lineup_optimizer.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-
+
+      - name: Ensure exact P1.7 cache directory
+        working-directory: app
+        run: mkdir -p .cache/v12-p17
+
+      - name: Restore deterministic MC simulation-summary cache
+        if: needs.parse.outputs.profile_mode != 'COLD'
+        id: mc-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: app/.cache/v12-mc
+          key: v12-mc-summary-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_monte_carlo.py', 'app/config/intelligence/v12_monte_carlo.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
+          restore-keys: |
+            v12-mc-summary-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_monte_carlo.py', 'app/config/intelligence/v12_monte_carlo.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-
+
+      - name: Ensure MC cache directory
+        working-directory: app
+        run: mkdir -p .cache/v12-mc
+
+      - name: Restore previous successful DEEP artifact candidate
+        if: needs.parse.outputs.report_mode == 'DEEP'
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/previous-deep artifacts/previous-deep-candidate
+          for run_id in $(gh api             "repos/${GITHUB_REPOSITORY}/actions/workflows/v12-integrated-report-runner.yml/runs?branch=main&status=success&per_page=20"             --jq '.workflow_runs[].id'); do
+            if [ "$run_id" = "${GITHUB_RUN_ID}" ]; then
+              continue
+            fi
+            artifact_name="v12-report-DEEP-${run_id}"
+            rm -rf artifacts/previous-deep-candidate
+            if gh run download "$run_id"               --repo "${GITHUB_REPOSITORY}"               --name "$artifact_name"               --dir artifacts/previous-deep-candidate >/dev/null 2>&1; then
+              if [ -f artifacts/previous-deep-candidate/report_bundle.json ]; then
+                mv artifacts/previous-deep-candidate artifacts/previous-deep
+                echo "Previous DEEP candidate restored from run_id=$run_id"
+                break
+              fi
+            fi
+          done
+          rm -rf artifacts/previous-deep-candidate
+
+      - name: Execute occurrence-bound integrated report
+        id: report
+        working-directory: app
+        env:
+          REPORT_MODE: ${{ needs.parse.outputs.report_mode }}
+          REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
+          CHECKPOINT_TIME: ${{ needs.parse.outputs.checkpoint_time }}
+          PROFILE_MODE: ${{ needs.parse.outputs.profile_mode }}
+          V12_STAGE2_DERIVED_CACHE_DIR: .cache/v12-stage2
+          V12_P17_DECISION_CACHE_DIR: .cache/v12-p17
+          V12_MC_SIM_CACHE_DIR: .cache/v12-mc
+        run: |
+          args=(
+            --runtime-data-root "../runtime-data"
+            --report-mode "$REPORT_MODE"
+            --report-slot "$REPORT_SLOT"
+            --output-dir "artifacts/v12-report"
+          )
+          if [ -n "$CHECKPOINT_TIME" ]; then
+            args+=(--checkpoint-time "$CHECKPOINT_TIME")
+          fi
+          if [ -f artifacts/previous-deep/report_bundle.json ]; then
+            args+=(--previous-visible-deep-dir "artifacts/previous-deep")
+          fi
+          if [ "$PROFILE_MODE" = "COLD" ]; then
+            rm -rf .cache/v12-stage2 .cache/v12-p17 .cache/v12-mc
+            mkdir -p \
+              .cache/v12-stage2 \
+              .cache/v12-p17 \
+              .cache/v12-mc \
+              artifacts/v12-report/stage-profiles
+            export V12_STAGE_PROFILE_DIR="artifacts/v12-report/stage-profiles"
+            set +e
+            python -m src.engines.v12_integrated_report_runner "${args[@]}" \
+              2>&1 | tee artifacts/v12-report/profile_run.log
+            runner_status=${PIPESTATUS[0]}
+            set -e
+            unset V12_STAGE_PROFILE_DIR
+            python -m src.engines.v12_profile_summary \
+              --profile-dir artifacts/v12-report/stage-profiles \
+              --log artifacts/v12-report/profile_run.log \
+              --output-json artifacts/v12-report/profile_summary.json \
+              --output-md artifacts/v12-report/profile_summary.md || true
+            exit "$runner_status"
+          else
+            python -m src.engines.v12_integrated_report_runner "${args[@]}"
+          fi
+
+      - name: Persist deterministic Stage-2 derived projection cache before downstream acceptance
+        if: always() && needs.parse.outputs.report_mode == 'DEEP' && needs.parse.outputs.profile_mode != 'COLD'
+        uses: actions/cache/save@v4
+        with:
+          path: app/.cache/v12-stage2
+          key: v12-stage2-derived-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_stage2_derived_cache.py', 'app/src/models/historical_projection.py', 'app/src/engines/v12_contextual_dynamics.py', 'app/src/engines/v12_player_events.py', 'app/src/engines/v12_player_minutes.py', 'app/src/engines/v12_position_probability_components.py', 'app/src/engines/p0_decision_quality.py', 'app/src/models/v12_stage1_analytics.py', 'app/src/rules.py', 'app/config/intelligence/player_events.json', 'app/config/intelligence/player_minutes.json', 'app/config/intelligence/historical_priors.json', 'app/config/intelligence/v12_contextual_dynamics.json') }}-${{ github.run_id }}
+
+      - name: Persist exact P1.7 decision-core cache before downstream acceptance
+        if: always() && needs.parse.outputs.report_mode == 'DEEP' && needs.parse.outputs.profile_mode != 'COLD'
+        uses: actions/cache/save@v4
+        with:
+          path: app/.cache/v12-p17
+          key: v12-p17-decision-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_lineup_optimizer.py', 'app/config/intelligence/v12_lineup_optimizer.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
+
+      - name: Persist deterministic MC summary cache before downstream acceptance
+        if: always() && needs.parse.outputs.report_mode == 'DEEP' && needs.parse.outputs.profile_mode != 'COLD'
+        uses: actions/cache/save@v4
+        with:
+          path: app/.cache/v12-mc
+          key: v12-mc-summary-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_monte_carlo.py', 'app/config/intelligence/v12_monte_carlo.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
+
+      - name: Read integrated runner proof
+        id: proof
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          proof = json.loads(
+              Path("artifacts/v12-report/execution_proof.json").read_text(encoding="utf-8")
+          )
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as fh:
+              fh.write(f"runner_status={proof.get('runner_status', 'UNKNOWN')}\n")
+              fh.write(f"pre_render={proof.get('pre_render_qa_status', 'UNKNOWN')}\n")
+              fh.write(f"post_render={proof.get('post_render_qa_status', 'UNKNOWN')}\n")
+              fh.write(f"human_facing={proof.get('human_facing_qa_status', 'UNKNOWN')}\n")
+          PY
+
+      - name: Enforce Stage3 natural integrated acceptance
+        if: needs.parse.outputs.report_mode == 'DEEP'
+        id: stage3
+        working-directory: app
+        run: |
+          model_sha="$(git rev-parse HEAD)"
+          runtime_sha="$(git -C ../runtime-data rev-parse HEAD)"
+          python -m src.engines.v12_stage3_acceptance \
+            --bundle artifacts/v12-report/report_bundle.json \
+            --runtime-data-root ../runtime-data \
+            --model-sha "$model_sha" \
+            --runtime-sha "$runtime_sha" \
+            --canonical control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt \
+            --output artifacts/v12-report/stage3_acceptance.json
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          proof = json.loads(
+              Path("artifacts/v12-report/stage3_acceptance.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as fh:
+              fh.write(f"status={proof.get('status', 'UNKNOWN')}\n")
+              fh.write(f"action={proof.get('stage3_action', 'UNKNOWN')}\n")
+              fh.write(
+                  f"mc_paths={(proof.get('mc') or {}).get('actual_paths', 'UNKNOWN')}\n"
+              )
+          PY
+
+      - name: Record Stage3 not applicable for PRICE
+        if: needs.parse.outputs.report_mode == 'PRICE'
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          Path("artifacts/v12-report/stage3_acceptance.json").write_text(
+              json.dumps(
+                  {
+                      "status": "NOT_APPLICABLE",
+                      "report_mode": "PRICE",
+                      "reason": "PRICE delivery barrier does not execute or alter Stage3/MC",
+                  },
+                  indent=2,
+              ),
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload immutable occurrence bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-report-${{ needs.parse.outputs.report_mode }}-${{ github.run_id }}
+          path: |
+            app/artifacts/v12-report/report_bundle.json
+            app/artifacts/v12-report/report_body.md
+            app/artifacts/v12-report/execution_proof.json
+            app/artifacts/v12-report/stage3_acceptance.json
+            app/artifacts/v12-report/runtime_environment.json
+            app/artifacts/v12-report/stage-profiles/*.pstats
+            app/artifacts/v12-report/profile_run.log
+            app/artifacts/v12-report/profile_summary.json
+            app/artifacts/v12-report/profile_summary.md
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish compact completion proof to issue 431
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPORT_MODE: ${{ needs.parse.outputs.report_mode }}
+          REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
+          JOB_STATUS: ${{ job.status }}
+          RUNNER_STATUS: ${{ steps.proof.outputs.runner_status }}
+          PRE_RENDER: ${{ steps.proof.outputs.pre_render }}
+          POST_RENDER: ${{ steps.proof.outputs.post_render }}
+          HUMAN_FACING: ${{ steps.proof.outputs.human_facing }}
+          STAGE3_STATUS: ${{ steps.stage3.outputs.status }}
+          STAGE3_ACTION: ${{ steps.stage3.outputs.action }}
+          MC_PATHS: ${{ steps.stage3.outputs.mc_paths }}
+          PROFILE_MODE: ${{ needs.parse.outputs.profile_mode }}
+          PHYSICAL_CPU_MODEL: ${{ steps.runtime.outputs.physical_cpu_model }}
+        run: |
+          status="${RUNNER_STATUS:-UNKNOWN}"
+          if [ "$JOB_STATUS" != "success" ] && [ -z "${RUNNER_STATUS:-}" ]; then
+            status="FAIL"
+          fi
+          gh issue comment 431 --repo "${GITHUB_REPOSITORY}" --body             "V12_REPORT_RUN | status=${status} | report_mode=${REPORT_MODE} | report_slot=${REPORT_SLOT} | run_id=${GITHUB_RUN_ID} | artifact=v12-report-${REPORT_MODE}-${GITHUB_RUN_ID} | pre_render=${PRE_RENDER:-UNKNOWN} | post_render=${POST_RENDER:-UNKNOWN} | human_facing=${HUMAN_FACING:-UNKNOWN} | stage3=${STAGE3_STATUS:-UNKNOWN} | action=${STAGE3_ACTION:-UNKNOWN} | mc_paths=${MC_PATHS:-UNKNOWN} | profile_mode=${PROFILE_MODE:-OFF} | cpu_model=${PHYSICAL_CPU_MODEL:-UNKNOWN} | integrated_runner=true | fail_operational=true | v6_mutated=false"

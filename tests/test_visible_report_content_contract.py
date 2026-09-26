@@ -14,6 +14,7 @@ from src.runtime_v6.domains.report_plane.report_qa import (
     validate_v12_visible_content_contract,
 )
 from test_support.report_visible_body import valid_visible_body
+from src.engines.v12_final_delivery_barrier import validate_final_delivery_barrier
 
 
 def _bench():
@@ -126,6 +127,68 @@ def _routes():
     ]
 
 
+def _package_search_proof():
+    return {
+        "owned_expected": 15,
+        "owned_evaluated": 15,
+        "eligible_universe_expected": 667,
+        "eligible_universe_evaluated": 667,
+        "outgoing_candidate_count": 15,
+        "legal_route_count": len(_routes()),
+        "hold_included": True,
+        "lossy_pruning": False,
+        "search_authority": "FULL",
+    }
+
+
+def _package_universe_challengers():
+    return [
+        {
+            "rank": 1,
+            "element_id": 901,
+            "player": "Universe Candidate A",
+            "position": "MID",
+            "club": "CLUB",
+            "best_outgoing": "P8",
+            "package_route": "A_TO_B",
+            "football_score": 82.4,
+            "football_score_components": {
+                "PROVEN_HISTORICAL": 78.0,
+                "TACTICAL_ROLE": 84.0,
+                "CURRENT_UNDERLYING": 86.0,
+                "FIXTURE_SECURITY": 80.0,
+            },
+            "p_available": 0.99,
+            "p_start": 0.91,
+            "p_cameo": 0.05,
+            "p_dnp": 0.04,
+            "xmins": {"mean": 78.2},
+            "p_return": 0.47,
+            "p_blank": 0.43,
+            "p_haul": 0.14,
+            "expected_points_distribution": {
+                "mean": 6.1,
+                "variance": 8.0,
+                "quantiles": {"p10": 2, "p50": 5, "p90": 11},
+            },
+            "tactical_role": "secure multi-channel creator",
+            "set_piece_penalty_role": "set pieces",
+            "gw_plus_1": 6.1,
+            "three_gw": 18.0,
+            "five_gw": 29.2,
+            "package_utility_delta_vs_hold": 3.4,
+            "price_economics": "affordable",
+            "structure_effect": "improves XI and bench optionality",
+            "expected_regret": 0.7,
+            "information_value_of_waiting": 0.5,
+            "mini_league_leverage": "downstream overlay only",
+            "main_upside": "role + process + fixtures",
+            "main_risk": "fixture swing",
+            "action": "PREPARE",
+        }
+    ]
+
+
 def _icon():
     def metric(n, d):
         return {"numerator": n, "denominator": d, "percentage": round(n / d * 100.0, 1)}
@@ -191,6 +254,9 @@ def _deep():
             "watchlist20": _watchlist20(),
             "watchlist_full_universe_derived": True,
             "package_routes": _routes(),
+            "package_full_universe_derived": True,
+            "package_search_proof": _package_search_proof(),
+            "package_universe_challengers": _package_universe_challengers(),
             "serious_comparison": True,
             "search_authority": "FULL",
             "search_authority_visible": True,
@@ -717,14 +783,14 @@ def _degraded_watchlist_body(pre, *, include_label=True):
     output = []
     in_watchlist = False
     for line in body.splitlines():
-        if line.startswith("## 10."):
+        if line.startswith("## 11."):
             in_watchlist = True
-        elif line.startswith("## 11."):
+        elif line.startswith("## 12."):
             in_watchlist = False
         if in_watchlist and any(line.startswith(f"| {rank} |") for rank in (18, 19, 20)):
             continue
         output.append(line)
-        if include_label and line.startswith("## 10."):
+        if include_label and line.startswith("## 11."):
             output.extend([
                 "WATCHLIST20 STATE=DEGRADED",
                 "AVAILABLE=17 EXPECTED=20",
@@ -823,3 +889,114 @@ def test_34_pre_and_post_render_agree_on_truthful_degradation_and_visible_label(
     assert post_missing["status"] == "FAIL"
     assert "VISIBLE_DEGRADATION_LABEL_MISSING=WATCHLIST20:DEGRADED" in post_missing["hard_failures"]
 
+
+
+def test_deep_delivery_rejects_complete_unbound_governed_payload():
+    from src.engines.v12_deep_delivery import validate_deep_decision_content_delivery
+    report = {"sections": [
+        {"section_id": "S12", "state": "COMPLETE", "content": {"rows": [
+            {"rank": i, "direction": "RISE", "estimate_source": "PREDICTOR"} for i in range(1, 21)
+        ]}},
+        {"section_id": "S18", "state": "COMPLETE", "content": {
+            "NOW": "WAIT", "NEXT": "CHECK", "TRIGGER TO ACT": "EDGE",
+            "LATEST SAFE DECISION POINT": "DEADLINE", "COST OF WAITING": "LOW",
+            "ABORT / REVERSAL": "NEW EVIDENCE"
+        }},
+    ]}
+    failures = validate_deep_decision_content_delivery(report, "RISE20")
+    assert "AUTHORITATIVE_PAYLOAD_NOT_BOUND=S12" in failures
+
+
+def test_deep_delivery_rejects_rank20_resort_and_watchlist_imbalance():
+    from src.engines.v12_deep_delivery import validate_deep_decision_content_delivery
+    bound = {"status": "BOUND", "producer": "TEST", "payload_fingerprint": "abc"}
+    report = {"sections": [
+        {"section_id": "S11", "state": "COMPLETE", "content": {
+            "authoritative_binding": bound,
+            "rows": [{"position": "MID"} for _ in range(20)]
+        }},
+        {"section_id": "S13", "state": "COMPLETE", "content": {
+            "authoritative_binding": bound,
+            "rows": [{"rank": 99 if i == 1 else i, "direction": "FALL", "estimate_source": "PREDICTOR"} for i in range(1, 21)]
+        }},
+        {"section_id": "S18", "state": "COMPLETE", "content": {
+            "NOW": "WAIT", "NEXT": "CHECK", "TRIGGER TO ACT": "EDGE",
+            "LATEST SAFE DECISION POINT": "DEADLINE", "COST OF WAITING": "LOW",
+            "ABORT / REVERSAL": "NEW EVIDENCE"
+        }},
+    ]}
+    failures = validate_deep_decision_content_delivery(report, "FALL20")
+    assert any(x.startswith("GOVERNED_RANK20_RANK_MISMATCH=S13") for x in failures)
+    assert any(x.startswith("WATCHLIST20_POSITION_BALANCE=") for x in failures)
+
+
+def test_stage_f_post_all_final_barrier_requires_exact_fixture_coverage():
+    contract = _post_all_match()
+    report = {
+        "sections": [
+            {
+                "section_id": f"POST_ALL_MATCH{index}",
+                "label": contract["visible_order"][index - 1],
+                "state": "COMPLETE",
+                "content": {"status": "VISIBLE"},
+            }
+            for index in range(1, 14)
+        ]
+    }
+    labels = [
+        "RESULT: 1-0",
+        "FORMATION/SYSTEM: 4-3-3",
+        "COACH PATTERN: stable",
+        "PLAYER ROLES: documented",
+        "MINUTES/SUBS: documented",
+        "XG/XA/XGI/SHOTS/CHANCES: available",
+        "SET PIECES/PENALTIES: available",
+        "DEFCON: available",
+        "OPPONENT CHANNELS: wide",
+        "SUSTAINABLE VS NOISE: mixed",
+        "OUR15 IMPLICATION: review",
+        "NEXT OPPONENT IMPLICATION: review",
+        "POSTERIOR CALIBRATION IMPLICATION: CALIBRATION INPUT",
+    ]
+    body = "DECISION DELTA\nGW COMPLETED MATCH-BY-MATCH SCOUT\n" + "\n".join(
+        [
+            "### FIXTURE ID: 101",
+            *labels,
+            "### FIXTURE ID: 102",
+            *labels,
+        ]
+    )
+    result = validate_final_delivery_barrier(
+        report_mode="POST_ALL_MATCH",
+        report=report,
+        body=body,
+        content_contract=contract,
+        finalization={
+            "final_report_due": True,
+            "visible_report_count": 1,
+            "combined_report": False,
+            "dynamic_lifecycle_event": "POST_ALL_MATCH",
+            "final_mode": "POST_ALL_MATCH",
+            "embedded_obligations": [],
+        },
+    )
+    assert result["status"] == "PASS", result["failures"]
+
+    broken_contract = deepcopy(contract)
+    broken_contract["match_scout"] = broken_contract["match_scout"][:1]
+    failed = validate_final_delivery_barrier(
+        report_mode="POST_ALL_MATCH",
+        report=report,
+        body=body,
+        content_contract=broken_contract,
+        finalization={
+            "final_report_due": True,
+            "visible_report_count": 1,
+            "combined_report": False,
+            "dynamic_lifecycle_event": "POST_ALL_MATCH",
+            "final_mode": "POST_ALL_MATCH",
+            "embedded_obligations": [],
+        },
+    )
+    assert failed["status"] == "FAIL"
+    assert "MATCH_SCOUT_FIXTURE_COVERAGE_MISMATCH" in failed["failures"]

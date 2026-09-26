@@ -71,10 +71,134 @@ jobs:
         run: python src/platform/repository_test_naming_validate.py
 
 
+  documentation-sync:
+    name: documentation-sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce change timestamp and documentation synchronization
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" != "pull_request" ]]; then
+            echo "Push/main: PR description synchronization metadata is not applicable"
+            exit 0
+          fi
+
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+
+          payload = json.load(open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8"))
+          body = (payload.get("pull_request") or {}).get("body") or ""
+
+          iso = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})"
+          change = re.search(rf"(?mi)^Change timestamp:\s*({iso})\s*$", body)
+          sync = re.search(r"(?mi)^Documentation sync:\s*(UPDATED|NOT_APPLICABLE)\s*$", body)
+          doc_ts = re.search(rf"(?mi)^Documentation timestamp:\s*({iso})\s*$", body)
+
+          if not change:
+              print("::error::PR description must contain 'Change timestamp: <ISO-8601 timestamp with timezone>'")
+              sys.exit(1)
+          if not sync:
+              print("::error::PR description must contain 'Documentation sync: UPDATED'")
+              sys.exit(1)
+
+          base = os.environ["BASE_SHA"]
+          head = os.environ["HEAD_SHA"]
+          changed = subprocess.check_output(
+              ["git", "diff", "--name-only", base, head],
+              text=True,
+          ).splitlines()
+
+          runtime_prefixes = (
+              "src/runtime_v6/",
+              "src/engines/",
+              "src/models/",
+              "config/v6/",
+              "config/intelligence/",
+              "control/fpl_master_v12/",
+              ".github/workflows/",
+          )
+          runtime_exact = {
+              "README.md",
+              "requirements-v6.lock",
+              "requirements-v6-ci.lock",
+              "requirements-ci.lock",
+          }
+          runtime_relevant = any(
+              p in runtime_exact or any(p.startswith(prefix) for prefix in runtime_prefixes)
+              for p in changed
+          )
+          doc_changed = any(
+              p == "README.md"
+              or p.startswith("docs/")
+              or p == ".github/PULL_REQUEST_TEMPLATE.md"
+              for p in changed
+          )
+          readme_changed = "README.md" in changed
+
+          status = sync.group(1)
+          if status != "UPDATED":
+              print("::error::Every PR requires 'Documentation sync: UPDATED'")
+              sys.exit(1)
+          if not doc_ts:
+              print("::error::Every PR requires 'Documentation timestamp: <ISO-8601 timestamp with timezone>'")
+              sys.exit(1)
+          if not readme_changed:
+              print("::error::Every repository change must update README.md in the same PR")
+              sys.exit(1)
+          if not doc_changed:
+              print("::error::Documentation sync UPDATED requires an actual repository documentation change")
+              sys.exit(1)
+
+          readme_text = open("README.md", encoding="utf-8").read()
+          readme_ts = re.search(
+              rf"(?m)^> \*\*Last runtime/documentation sync:\*\* `({iso})`\s*$",
+              readme_text,
+          )
+          if not readme_ts:
+              print("::error::README.md must contain the visible Last runtime/documentation sync timestamp")
+              sys.exit(1)
+          if readme_ts.group(1) != doc_ts.group(1):
+              print(
+                  "::error::README Last runtime/documentation sync must exactly match "
+                  "the PR Documentation timestamp"
+              )
+              sys.exit(1)
+
+          print({
+              "change_timestamp": change.group(1),
+              "documentation_sync": status,
+              "documentation_timestamp": doc_ts.group(1),
+              "readme_timestamp": readme_ts.group(1),
+              "runtime_relevant": runtime_relevant,
+              "documentation_changed": doc_changed,
+              "readme_changed": readme_changed,
+              "changed_files": changed,
+          })
+          PY
+
   v12-verify:
     name: v12-required-verify
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      OPENBLAS_CORETYPE: Haswell
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      NPY_DISABLE_CPU_FEATURES: "X86_V4,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -100,6 +224,8 @@ jobs:
           cache-dependency-path: requirements-ci.lock
       - name: Install locked V12 test dependencies
         run: python -m pip install --no-deps -r requirements-ci.lock
+      - name: Validate canonical numeric runtime class
+        run: python -m src.engines.v12_cache_runtime_identity
       - name: Prove zero legacy execution statically
         run: python src/platform/legacy_execution_isolation_validate.py
       - name: Execute active V12 architecture, model, decision and report contracts
@@ -111,11 +237,27 @@ jobs:
           tests/test_transfer_search_evidence_contract.py
           tests/test_player_comparator_orchestration.py
           tests/test_natural_deep_report_orchestration.py
+          tests/test_natural_report_acceptance_observability.py
           tests/test_model_evidence_execution_binding.py
           tests/test_model_evidence_calibration.py
           tests/test_package_search_exact.py
+          tests/test_package_utility_canonical.py
+          tests/test_lineup_distributional_optimizer.py
+          tests/test_p0_5_canonical_delivery_stage2.py
+          tests/test_p0_5_scoring_integrity_stage3.py
           tests/test_tactical_role_canonical_scorer.py
+          tests/test_contextual_player_dynamics.py
+          tests/test_player_minutes_finite_state.py
+          tests/test_player_events_posterior_predictive.py
+          tests/test_integrated_report_runner.py
+          tests/test_match_mode_live_score_contract.py
+          tests/test_deep_decision_content_delivery_barrier.py
+          tests/test_price_delivery_barrier.py
+          tests/test_stage1_analytics_foundation.py
           tests/test_monte_carlo_engine.py
+          tests/test_cache_runtime_identity.py
+          tests/test_cache_lineage_invalidation.py
+          tests/test_cache_partial_change_contract.py
           tests/test_report_runtime_conformance.py
           tests/test_visible_content_proof.py
           tests/test_visible_report_content_contract.py
@@ -124,6 +266,203 @@ jobs:
           tests/test_data_platform_scheduler_recovery_guard.py
           tests/test_data_platform_scheduler_watchdog.py
           tests/test_data_platform_scheduler_redundancy.py
+
+  runtime-cross-cpu-probe:
+    name: runtime-cross-cpu-probe-${{ matrix.label }}
+    if: github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {label: u22-a, runner: ubuntu-22.04}
+          - {label: u22-b, runner: ubuntu-22.04}
+          - {label: u22-c, runner: ubuntu-22.04}
+          - {label: u22-d, runner: ubuntu-22.04}
+          - {label: u24-a, runner: ubuntu-24.04}
+          - {label: u24-b, runner: ubuntu-24.04}
+          - {label: u24-c, runner: ubuntu-24.04}
+          - {label: u24-d, runner: ubuntu-24.04}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 8
+    env:
+      OPENBLAS_CORETYPE: Haswell
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      NPY_DISABLE_CPU_FEATURES: "X86_V4,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-ci.lock
+      - name: Install locked V12 test dependencies
+        run: python -m pip install --no-deps -r requirements-ci.lock
+      - name: Execute normalized-runtime governed P1.7 probe
+        run: >-
+          python -m src.platform.v12_runtime_cross_cpu_probe
+          --output "$RUNNER_TEMP/runtime-probe-${{ matrix.label }}.json"
+      - name: Upload cross-CPU probe
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: v12-runtime-probe-${{ matrix.label }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/runtime-probe-${{ matrix.label }}.json
+          retention-days: 14
+          if-no-files-found: error
+
+  runtime-cross-cpu-compare:
+    name: runtime-cross-cpu-bit-identical
+    if: github.event_name == 'pull_request'
+    needs: runtime-cross-cpu-probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BASELINE_PROOF_HEAD: 48f53506ceb7751140aa96771481ec9eee69cb7f
+      BASELINE_PROOF_RUN: "36120950246"
+      BASELINE_OUTPUT_SHA256: 89f41be085a1e387eb87ee86dfecfb5d4cf4c2924a20221ee27c09f757c4db87
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: v12-runtime-probe-*-${{ github.run_id }}
+          path: runtime-probes
+          merge-multiple: true
+      - name: Enforce direct or frozen-transitive multi-CPU bit identity
+        run: |
+          set -euo pipefail
+          SEMANTIC_PATHS=(
+            src/platform/v12_runtime_cross_cpu_probe.py
+            src/engines/v12_cache_runtime_identity.py
+            src/engines/v12_lineup_batch.py
+            src/engines/v12_lineup_optimizer.py
+            src/engines/v12_model_evidence.py
+            src/engines/canonical_decision_methodology.py
+            src/rules.py
+            config/intelligence/v12_lineup_optimizer.json
+            control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
+            tests/test_lineup_distributional_optimizer.py
+          )
+          semantic_unchanged=true
+          if ! git diff --quiet "$BASELINE_PROOF_HEAD" "$HEAD_SHA" -- "${SEMANTIC_PATHS[@]}"; then
+            semantic_unchanged=false
+          fi
+          export SEMANTIC_UNCHANGED="$semantic_unchanged"
+          python - <<'PY'
+          import json
+          import os
+          from collections import Counter
+          from pathlib import Path
+
+          files = sorted(Path("runtime-probes").glob("runtime-probe-*.json"))
+          rows = [json.loads(path.read_text(encoding="utf-8")) for path in files]
+          models = Counter(str(row.get("physical_cpu_model") or "UNKNOWN") for row in rows)
+          output_hashes = {str(row.get("output_sha256")) for row in rows}
+          runtime_keys = {
+              json.dumps(row.get("runtime_cache_identity"), sort_keys=True, separators=(",", ":"))
+              for row in rows
+          }
+          baseline_runtime = {
+              "python_major_minor": "3.12",
+              "numpy_version": "2.5.2",
+              "openblas_coretype": "Haswell",
+              "numpy_simd_active": ["X86_V2", "X86_V3"],
+              "openblas_num_threads": 1,
+          }
+          baseline_runtime_key = json.dumps(
+              baseline_runtime,
+              sort_keys=True,
+              separators=(",", ":"),
+          )
+          baseline_output = os.environ["BASELINE_OUTPUT_SHA256"]
+          semantic_unchanged = (
+              os.environ.get("SEMANTIC_UNCHANGED", "false").lower() == "true"
+          )
+
+          failures = []
+          if len(rows) < 8:
+              failures.append(f"probe_count={len(rows)}<8")
+          if len(runtime_keys) != 1:
+              failures.append(f"normalized_runtime_key_drift={len(runtime_keys)}")
+          if len(output_hashes) != 1:
+              failures.append(f"output_not_bit_identical_current_head={len(output_hashes)}")
+
+          current_runtime = next(iter(runtime_keys)) if len(runtime_keys) == 1 else None
+          current_output = next(iter(output_hashes)) if len(output_hashes) == 1 else None
+          direct_multi_cpu = len(models) >= 2
+          transitive_multi_cpu = bool(
+              not direct_multi_cpu
+              and semantic_unchanged
+              and current_runtime == baseline_runtime_key
+              and current_output == baseline_output
+          )
+
+          if not direct_multi_cpu and not transitive_multi_cpu:
+              failures.append(
+                  "multi_cpu_proof_unavailable:"
+                  f"models={len(models)},semantic_unchanged={semantic_unchanged},"
+                  f"runtime_matches_baseline={current_runtime == baseline_runtime_key},"
+                  f"output_matches_baseline={current_output == baseline_output}"
+              )
+
+          proof_mode = (
+              "DIRECT_CURRENT_HEAD_MULTI_CPU"
+              if direct_multi_cpu
+              else "TRANSITIVE_FROZEN_MULTI_CPU"
+              if transitive_multi_cpu
+              else "NONE"
+          )
+          result = {
+              "schema": "V12_RUNTIME_CROSS_CPU_ACCEPTANCE_V2",
+              "probe_count": len(rows),
+              "current_head": os.environ["HEAD_SHA"],
+              "physical_cpu_model_distribution": dict(sorted(models.items())),
+              "distinct_physical_cpu_models_current_run": len(models),
+              "distinct_runtime_keys": len(runtime_keys),
+              "distinct_output_sha256": len(output_hashes),
+              "output_sha256": current_output,
+              "proof_mode": proof_mode,
+              "semantic_paths_unchanged_from_baseline": semantic_unchanged,
+              "baseline_proof": {
+                  "head_sha": os.environ["BASELINE_PROOF_HEAD"],
+                  "run_id": int(os.environ["BASELINE_PROOF_RUN"]),
+                  "distinct_physical_cpu_models": 3,
+                  "physical_cpu_model_distribution": {
+                      "AMD EPYC 7763 64-Core Processor": 6,
+                      "AMD EPYC 9V74 80-Core Processor": 1,
+                      "Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz": 1,
+                  },
+                  "runtime_cache_identity": baseline_runtime,
+                  "output_sha256": baseline_output,
+              },
+              "status": "PASS" if not failures else "FAIL",
+          }
+          if failures:
+              result["failures"] = failures
+          Path("runtime-cross-cpu-acceptance.json").write_text(
+              json.dumps(result, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(result, indent=2, sort_keys=True))
+          if failures:
+              raise SystemExit("; ".join(failures))
+          PY
+      - name: Upload cross-CPU acceptance
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: v12-runtime-cross-cpu-acceptance-${{ github.run_id }}
+          path: runtime-cross-cpu-acceptance.json
+          retention-days: 14
+          if-no-files-found: error
 
   v6-verify:
     name: v6-required-verify
@@ -255,7 +594,7 @@ jobs:
 
   verify:
     name: verify
-    needs: [detect-v6-change, repository-policy, v12-verify, v6-verify, v6-publisher-config]
+    needs: [detect-v6-change, repository-policy, documentation-sync, v12-verify, runtime-cross-cpu-compare, v6-verify, v6-publisher-config]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -266,7 +605,9 @@ jobs:
           DETECT_RESULT: ${{ needs.detect-v6-change.result }}
           V6_CHANGED: ${{ needs.detect-v6-change.outputs.v6_changed }}
           REPOSITORY_POLICY_RESULT: ${{ needs.repository-policy.result }}
+          DOCUMENTATION_SYNC_RESULT: ${{ needs.documentation-sync.result }}
           V12_VERIFY_RESULT: ${{ needs.v12-verify.result }}
+          RUNTIME_CROSS_CPU_RESULT: ${{ needs.runtime-cross-cpu-compare.result }}
           V6_VERIFY_RESULT: ${{ needs.v6-verify.result }}
           V6_PUBLISHER_RESULT: ${{ needs.v6-publisher-config.result }}
         shell: bash
@@ -280,8 +621,16 @@ jobs:
             echo "Repository governance failed: repository policy=$REPOSITORY_POLICY_RESULT"
             exit 1
           fi
+          if [[ "$DOCUMENTATION_SYNC_RESULT" != "success" ]]; then
+            echo "Repository governance failed: documentation sync=$DOCUMENTATION_SYNC_RESULT"
+            exit 1
+          fi
           if [[ "$V12_VERIFY_RESULT" != "success" ]]; then
             echo "Repository governance failed: active V12 verify=$V12_VERIFY_RESULT"
+            exit 1
+          fi
+          if [[ "$EVENT_NAME" == "pull_request" && "$RUNTIME_CROSS_CPU_RESULT" != "success" ]]; then
+            echo "Repository governance failed: normalized cross-CPU proof=$RUNTIME_CROSS_CPU_RESULT"
             exit 1
           fi
           if [[ "$EVENT_NAME" == "push" ]]; then

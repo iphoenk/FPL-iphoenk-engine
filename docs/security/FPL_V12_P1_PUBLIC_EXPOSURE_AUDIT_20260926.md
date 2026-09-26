@@ -62,7 +62,10 @@ The baseline DEEP occurrence spent about 48.94 s in Stage-2 on a miss, 18.23 s i
 
 - Target report workflow: no `pull_request_target`; owner-gated `issue_comment`; checks out production `main`.
 - Target V6 ingestion workflow: governed dispatch/comment triggers in inspected source.
-- Repository-wide absence of `pull_request_target` is an explicit acceptance condition and will be proven by a whole-tree regression test on this branch. Connector source browsing cannot enumerate the workflow directory, so a negative repository-wide claim is not made from partial evidence.
+- Repository-wide workflow enumeration on production `main` found 11 workflow files. None contains `pull_request_target`; none contains `workflow_run` or `workflow_call`.
+- Five workflows accept `pull_request`: repository-governance, repository-naming-policy, v12-stage2-live-acceptance, v12-stagec-analytics-acceptance, and v6-ci. These use only dependency caches through setup-python/pip; no P1.7 or MC decision-cache restore/save was found in PR-triggered workflows.
+- The only explicit V12 decision-cache restore/save surface is `v12-integrated-report-runner.yml`, which is not PR-triggered. However, GitHub's documented cache model allows fork PRs to read caches in the base/default branch scope. Therefore storing decision material in a main-scope Actions cache is itself unsafe even if the producer workflow is owner-gated.
+- `issue_comment` is a low-trust trigger by platform model. The report workflow explicitly opts into `cache-mode: write`; its current parse gate restricts execution to the repository owner, but P1 still removes private decision caches from public Actions cache so this gate is not the sole confidentiality control.
 - No repository/account security setting is changed by this branch without owner approval.
 
 ## P1-A6 issue/comment conclusion

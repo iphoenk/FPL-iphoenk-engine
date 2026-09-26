@@ -97,7 +97,7 @@ _DECISION_TEXT_PATTERNS = (
 )
 
 _SECRET_TEXT_PATTERNS = (
-    re.compile(r"(?i)\\bAuthorization\\s*:\\s*(?!(?:basic\\s+)?(?:\\*{3,}|\\[REDACTED\\]))\\S+(?:\\s+\\S+)?"),
+    re.compile(r"(?i)\bAuthorization\s*:\s*(?!(?:basic\s+)?(?:\*{3,}|\[REDACTED\]))\S+(?:\s+\S+)?"),
     re.compile(r"(?i)\bCookie\s*:\s*(?!\*{3,}|\[REDACTED\])\S+"),
     re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b"),
     re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~-]{20,}\b"),

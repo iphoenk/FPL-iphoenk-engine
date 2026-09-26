@@ -1831,3 +1831,86 @@ def test_stage_d_s16_renderer_uses_compact_semantics_not_raw_posterior_dict():
     assert "Pgoal" in body and "xGI90" in body and "ML relevance" in body
     assert "S16_RAW_POSTERIOR_DICT_VISIBLE" not in failures
 
+
+
+def test_stage_b_bgw_requires_cross_section_decision_propagation():
+    current15 = [{"element_id": i} for i in range(1, 16)]
+    bgw = {
+        "source_section": "S05",
+        "planning_gw": 6,
+        "gw_topology": "BLANK_GW",
+        "active": True,
+        "blank_team_ids": [4],
+        "blank_owned_element_ids": [1],
+        "blank_owned_in_final_xi": [],
+        "decision_math_mutated": False,
+        "context_only": True,
+    }
+    s05 = {
+        "planning_gw": 6,
+        "gw_topology": "BLANK_GW",
+        "period_flags": {
+            "blank_gw_teams": [4],
+            "double_gw_teams": [],
+        },
+        "competition_coverage": {
+            "official_pl": True,
+            "verified_non_pl_schedule_bound": False,
+        },
+        "player_workload": [
+            {
+                "element_id": 1,
+                "gw_state": "BLANK",
+                "planning_gw_fixtures": [],
+            }
+        ],
+        "weather": [],
+        "workload_feeds_p1_1_review_only": True,
+        "static_fatigue_penalty_applied": False,
+        "weather_mutates_football_model": False,
+        "dgw_cross_fixture_covariance_claimed": False,
+    }
+    report = {
+        "sections": [
+            _section("S02", "OUR15", {"rows": current15}),
+            _section("S05", "FIXTURES / GW CALENDAR / WORKLOAD / REST / CONDITIONS", s05, state="DEGRADED"),
+            _section("S06", "FORMATION / XI / BENCH", {}, state="DEGRADED"),
+            _section("S09", "CHIP STRATEGY", {}, state="DEGRADED"),
+            _section("S14", "PACKAGE OPTIMIZER / TRANSFER FRONTIER", {}, state="DEGRADED"),
+            _section("S14B", "3-GW SQUAD STAGING", {}, state="DEGRADED"),
+            _section("S19", "FINAL JUDGEMENT", {"final_judgement": {}}),
+        ]
+    }
+    failures = validate_deep_decision_content_delivery(report, render_deep_text(report))
+    for sid in ("S06", "S09", "S14", "S14B", "S19"):
+        assert f"S05_BGW_NOT_PROPAGATED_{sid}" in failures
+
+    report["sections"][2]["content"].update({
+        "bgw_context": dict(bgw),
+        "bgw_lineup_review_required": True,
+    })
+    report["sections"][3]["content"].update({
+        "bgw_context": dict(bgw),
+        "bgw_chip_review_required": True,
+    })
+    report["sections"][4]["content"].update({
+        "bgw_context": dict(bgw),
+        "bgw_frontier_review_required": True,
+        "bgw_is_context_not_second_optimizer": True,
+    })
+    report["sections"][5]["content"].update({
+        "bgw_context": dict(bgw),
+        "bgw_reoptimization_trigger": True,
+    })
+    report["sections"][6]["content"]["final_judgement"].update({
+        "bgw_context": dict(bgw),
+        "bgw_reconciled": True,
+    })
+    repaired = validate_deep_decision_content_delivery(report, render_deep_text(report))
+    for sid in ("S06", "S09", "S14", "S14B", "S19"):
+        assert f"S05_BGW_NOT_PROPAGATED_{sid}" not in repaired
+    assert "S05_BGW_S06_REVIEW_MISSING" not in repaired
+    assert "S05_BGW_S09_CHIP_REVIEW_MISSING" not in repaired
+    assert "S05_BGW_S14_FRONTIER_REVIEW_MISSING" not in repaired
+    assert "S05_BGW_S14B_REOPTIMIZE_MISSING" not in repaired
+    assert "S05_BGW_S19_RECONCILIATION_MISSING" not in repaired

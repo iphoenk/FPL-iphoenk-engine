@@ -554,7 +554,7 @@ jobs:
           tests/test_adaptive_polling.py
           tests/test_data_platform_*.py
           tests/test_data_platform_production_acceptance.py
-          tests/test_v6_private_boundary.py
+          tests/test_private_data_boundary.py
 
   v6-publisher-config:
     name: v6-required-publisher-config

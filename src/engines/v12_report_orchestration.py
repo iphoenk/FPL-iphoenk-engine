@@ -3237,6 +3237,12 @@ def materialize_match_report(
             },
         },
         "icon": icon,
+        "section_states": {
+            "ICON+": {
+                "state": icon_state,
+                "degradation_reason": icon_reason,
+            }
+        },
         "football_optimal_baseline_before_icon": True,
         "report_due": True,
         "optional_scope_degraded": icon_state != "COMPLETE",

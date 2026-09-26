@@ -117,3 +117,56 @@ def test_contract_classes_are_complete():
         "PRIVATE_DECISION",
         "SECRET",
     }
+
+
+def _workflow_texts() -> dict[str, str]:
+    root = Path(__file__).resolve().parents[1] / ".github/workflows"
+    return {
+        path.name: path.read_text(encoding="utf-8")
+        for path in sorted(root.glob("*.y*ml"))
+    }
+
+
+def test_no_public_workflow_restores_or_saves_private_decision_cache_families():
+    forbidden = ("v12-p17-decision", "v12-mc-summary")
+    hits = {
+        name: [token for token in forbidden if token in text]
+        for name, text in _workflow_texts().items()
+        if any(token in text for token in forbidden)
+    }
+    assert hits == {}
+
+
+def test_pull_request_workflows_have_no_private_decision_cache_surface():
+    hits = {}
+    for name, text in _workflow_texts().items():
+        if "pull_request:" not in text:
+            continue
+        bad = [
+            token
+            for token in (
+                ".cache/v12-p17",
+                ".cache/v12-mc",
+                "v12-p17-decision",
+                "v12-mc-summary",
+            )
+            if token in text
+        ]
+        if bad:
+            hits[name] = bad
+    assert hits == {}
+
+
+def test_issue_comment_workflows_cannot_write_private_decision_cache():
+    hits = {}
+    for name, text in _workflow_texts().items():
+        if "issue_comment:" not in text:
+            continue
+        bad = [
+            token
+            for token in ("v12-p17-decision", "v12-mc-summary")
+            if token in text
+        ]
+        if bad:
+            hits[name] = bad
+    assert hits == {}

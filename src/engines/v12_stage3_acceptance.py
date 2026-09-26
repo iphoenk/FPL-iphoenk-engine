@@ -84,6 +84,15 @@ def validate(
         == "PASS",
         "HUMAN_FACING_NOT_PASS",
     )
+    require(
+        str(proof.get("final_delivery_barrier_status") or "").upper() == "PASS",
+        "FINAL_DELIVERY_BARRIER_NOT_PASS",
+    )
+    require(
+        str((proof.get("final_delivery_barrier") or {}).get("status") or "").upper()
+        == "PASS",
+        "FINAL_DELIVERY_BARRIER_PROOF_NOT_PASS",
+    )
     require(proof.get("stage3_internal_pass") is True, "STAGE3_INTERNAL_NOT_PASS")
     require(
         proof.get("stage3_action") in {"WAIT", "PREPARE", "ACT"},

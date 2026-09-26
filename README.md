@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-26T11:31:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-26T12:25:00+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -732,3 +732,29 @@ execution proof includes previous value, current value and evidence timestamp.
 The V6 factual plane remains read-only. No second autosub solver, projection
 model, captain model, package optimizer or transfer decision authority is
 introduced.
+
+
+### V12 Stage F unified final delivery barrier
+
+Stage F adds one final fail-closed delivery barrier above the existing Stage A-E
+semantic validators. The barrier owns no football mathematics and no factual
+acquisition. It requires the exact DEEP 23-section catalogue and reuses the
+existing decision-content validator; Pure MATCH requires the exact thirteen
+submitted-picks lifecycle sections; POST-ALL-MATCH requires the exact thirteen
+final-GW surfaces and exact completed-fixture scout coverage. Lifecycle
+finalization also requires one visible report only, with POST_MATCH_INCREMENTAL
+preserved when a fixture completes while another scoring-GW fixture remains
+live.
+
+The integrated DEEP runner now records FINAL_DELIVERY_BARRIER as a required
+stage. HUMAN_FACING can pass only when this final barrier passes, and Stage-3
+acceptance independently requires the same proof. Previous visible DEEP
+artifacts are revalidated through the current final barrier before they may be
+used as decision-delta baselines. The known 36126675342 false-pass fixture is a
+required regression input and must remain rejected.
+
+Pre-merge PR CI is exact-head code/semantic acceptance. The production
+v12-integrated-report-runner workflow still deliberately checks out main, so a
+genuine natural production acceptance can only attest the SHA that is actually
+on production main. A branch or PR run must never be mislabeled as natural
+production acceptance.

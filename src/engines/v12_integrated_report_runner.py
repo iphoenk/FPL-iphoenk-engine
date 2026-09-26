@@ -2647,8 +2647,9 @@ def _three_gw_staging(
             "reason": f"selected material route {selected_id}",
         })
 
+    ft_known = isinstance((finance or {}).get("free_transfers"), int)
     if selected_id == "HOLD" or not (outs and ins):
-        move_text = "SAVE FT / HOLD SQUAD"
+        move_text = "SAVE FT / HOLD SQUAD" if ft_known else "NO TRANSFER NOW / FT STATE UNAVAILABLE"
         status = "HOLD"
     else:
         pairs = []
@@ -2677,7 +2678,11 @@ def _three_gw_staging(
         },
         {
             "timing": f"GW{planning_gw + 1}",
-            "planned_move": "REOPTIMIZE FULL FRONTIER / SAVE FT IF NO EDGE",
+            "planned_move": (
+                "REOPTIMIZE FULL FRONTIER / SAVE FT IF NO EDGE"
+                if ft_known
+                else "REOPTIMIZE FULL FRONTIER / FT STATE UNAVAILABLE"
+            ),
             "status": "WATCH",
             "trigger": "new fixture, xMins, role, price or package evidence",
             "expected_gain": "RECOMPUTE",
@@ -2703,10 +2708,16 @@ def _three_gw_staging(
         "squad_classification": classifications,
         "staging_rows": staging_rows,
         "ft_saving_plan": (
-            "SAVE FT" if action == "WAIT"
-            else "SAVE UNTIL TRIGGER" if action == "PREPARE"
-            else "USE ONLY IF ACT GATE REMAINS GREEN"
+            ("SAVE FT" if action == "WAIT"
+             else "SAVE UNTIL TRIGGER" if action == "PREPARE"
+             else "USE ONLY IF ACT GATE REMAINS GREEN")
+            if ft_known
+            else "FT STATE UNAVAILABLE"
         ),
+        "ft_state": {
+            "status": "AVAILABLE" if ft_known else "UNAVAILABLE",
+            "free_transfers": (finance or {}).get("free_transfers") if ft_known else None,
+        },
         "order_of_transfers": move_text,
         "budget_dependency": {
             "bank": (finance or {}).get("bank"),
@@ -3892,6 +3903,8 @@ def run_deep(
                     "observed_at": (personal_resolution or {}).get("observed_at"),
                     "gw": (personal_resolution or {}).get("gw"),
                     "stale": (personal_resolution or {}).get("stale"),
+                    "auth_state": (personal_resolution or {}).get("auth_state") or "UNKNOWN",
+                    "finance_available": (personal_resolution or {}).get("finance_allowed") is True,
                 },
             },
             (
@@ -4141,10 +4154,26 @@ def run_deep(
                     "official_fpl": "HEALTHY" if official else "UNAVAILABLE",
                     "authenticated_personal_scope": (
                         "HEALTHY"
-                        if (personal_resolution or {}).get("resolution_status") == "CURRENT_VALID"
-                        else (personal_resolution or {}).get("resolution_status")
+                        if str((personal_resolution or {}).get("auth_state") or "").upper() == "AUTH_AVAILABLE"
+                        else "AUTH_EXPIRED"
+                        if str((personal_resolution or {}).get("auth_state") or "").upper() == "AUTH_EXPIRED"
+                        else "USER_CONFIRMED_IDENTITY_ONLY"
+                        if (personal_resolution or {}).get("user_current") is True
+                        else (personal_resolution or {}).get("auth_state")
+                        or (personal_resolution or {}).get("resolution_status")
                         or "UNAVAILABLE"
                     ),
+                    "current_squad_identity": (
+                        (personal_resolution or {}).get("resolution_status") or "UNAVAILABLE"
+                    ),
+                    "finance": (
+                        "AVAILABLE"
+                        if (personal_resolution or {}).get("finance_allowed") is True
+                        and (finance or {}).get("bank") is not None
+                        and str((finance or {}).get("sell_value_status") or "").upper() not in {"UNAVAILABLE", "STALE_NOT_AUTHORIZED"}
+                        else "DEGRADED"
+                    ),
+                    "chips": (finance or {}).get("chips_status") or "UNAVAILABLE",
                     "fixture_data": "HEALTHY" if fixtures is not None else "UNAVAILABLE",
                     "price_predictor": (rise or {}).get("predictor_health") or "UNAVAILABLE",
                     "tactical_statistical_data": "HEALTHY" if foundation else "UNAVAILABLE",

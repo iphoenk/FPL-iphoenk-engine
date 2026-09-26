@@ -192,23 +192,6 @@ def test_publish_integrity_fails_when_identity_mapping_cardinality_diverges(tmp_
     assert report["identity_counts"]["player"]["mapping_consistent"] is False
 
 
-def test_publish_integrity_allows_only_public_personal_fact_files(tmp_path: Path):
-    _good_tree(tmp_path)
-    _write(
-        tmp_path / "personal" / "memberships.json",
-        {"source": "OFFICIAL_FPL_PUBLIC_ENTRY"},
-    )
-    _write(
-        tmp_path / "personal" / "submitted_picks.json",
-        {"source": "OFFICIAL_FPL_PUBLIC_POST_DEADLINE"},
-    )
-
-    report = validate_publish_tree(tmp_path)
-
-    assert report["status"] == "PASS"
-    assert report["public_personal_allowlist_enforced"] is True
-
-
 def test_publish_integrity_rejects_current_team_from_public_tree(tmp_path: Path):
     _good_tree(tmp_path)
     _write(

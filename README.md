@@ -2,7 +2,7 @@
 
 > **Last runtime/documentation sync:** `2026-09-26T21:38:22+07:00`  
 > **Production main at sync:** `bc086a030a49440a1703943c2844dd6d1831a865`  
-> This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence must be read from the active workflows and runtime artifacts, not inferred from this timestamp.
+> This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
 

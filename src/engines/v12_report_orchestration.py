@@ -464,12 +464,6 @@ def build_calendar_workload_context(
         for row in normalized_schedule
         if row.get("competition_category")
     }
-    has_international = "INTERNATIONAL" in categories
-    has_non_pl = any(
-        str(row.get("competition_category") or "").upper()
-        in {"CONTINENTAL_CLUB", "DOMESTIC_CUP", "INTERNATIONAL", "GLOBAL_CLUB"}
-        for row in normalized_schedule
-    )
 
     def event_dt(row: Mapping[str, Any]) -> datetime | None:
         return _calendar_dt(
@@ -477,6 +471,47 @@ def build_calendar_workload_context(
             or row.get("kickoff_time")
             or row.get("datetime")
         )
+
+    # Workload/topology flags are scoped to the planning context, not the
+    # repository's entire verified schedule history/future. The maximum
+    # governed lookback is the existing 21-day workload horizon; future
+    # non-PL evidence is relevant only through the latest planning-GW PL
+    # kickoff. This prevents an old or distant-future international/cup event
+    # from falsely labelling the current period or player load.
+    planning_fixture_dts = [
+        event_dt(row)
+        for row in fixtures
+        if event_dt(row) is not None
+    ]
+    context_floor = (
+        report_dt - timedelta(days=21)
+        if report_dt is not None
+        else None
+    )
+    context_ceiling = max(planning_fixture_dts, default=None)
+
+    def in_planning_context(dt: datetime) -> bool:
+        if context_floor is not None and dt < context_floor:
+            return False
+        if context_ceiling is not None and dt > context_ceiling:
+            return False
+        return True
+
+    relevant_non_pl_schedule = [
+        row
+        for row in non_pl_schedule
+        if (dt := event_dt(row)) is not None and in_planning_context(dt)
+    ]
+    relevant_categories = {
+        str(row.get("competition_category") or "").upper()
+        for row in relevant_non_pl_schedule
+        if row.get("competition_category")
+    }
+    has_international = "INTERNATIONAL" in relevant_categories
+    has_non_pl = any(
+        category in {"CONTINENTAL_CLUB", "DOMESTIC_CUP", "INTERNATIONAL", "GLOBAL_CLUB"}
+        for category in relevant_categories
+    )
 
     player_rows: list[dict[str, Any]] = []
     any_congested = False
@@ -516,6 +551,25 @@ def build_calendar_workload_context(
             (event_dt(row) for row in upcoming_pl if event_dt(row) is not None),
             default=None,
         )
+        player_context_floor = (
+            report_dt - timedelta(days=21)
+            if report_dt is not None
+            else None
+        )
+        player_context_ceiling = next_pl_dt or context_ceiling
+        context_dated = [
+            (dt, row)
+            for dt, row in dated
+            if (
+                (player_context_floor is None or dt >= player_context_floor)
+                and (player_context_ceiling is None or dt <= player_context_ceiling)
+            )
+        ]
+        past_context_dated = [
+            (dt, row)
+            for dt, row in context_dated
+            if report_dt is None or dt <= report_dt
+        ]
 
         counts: dict[str, int] = {}
         minutes: dict[str, float | None] = {}
@@ -552,24 +606,30 @@ def build_calendar_workload_context(
         any_short_rest = any_short_rest or short_rest
         any_congested = any_congested or congested
 
-        long_haul = any(bool(row.get("long_haul")) for _, row in dated)
+        long_haul = any(
+            bool(row.get("long_haul"))
+            for _, row in past_context_dated
+        )
         international = any(
             str(row.get("competition_category") or "").upper() == "INTERNATIONAL"
-            for _, row in dated
+            for _, row in context_dated
         )
         domestic_cup = any(
             str(row.get("competition_category") or "").upper() == "DOMESTIC_CUP"
-            for _, row in dated
+            for _, row in context_dated
         )
         continental = any(
             str(row.get("competition_category") or "").upper() == "CONTINENTAL_CLUB"
-            for _, row in dated
+            for _, row in context_dated
         )
-        tournament_absence = any(bool(row.get("tournament_absence")) for _, row in dated)
+        tournament_absence = any(
+            bool(row.get("tournament_absence"))
+            for _, row in context_dated
+        )
         reintegration = next(
             (
                 row.get("reintegration_state")
-                for _, row in reversed(dated)
+                for _, row in reversed(past_context_dated)
                 if row.get("reintegration_state")
             ),
             None,
@@ -644,12 +704,15 @@ def build_calendar_workload_context(
                 "minutes_last_days": minutes,
                 "days_rest": days_rest,
                 "load_state": load_state,
-                "cross_border_travel": any(bool(row.get("cross_border")) for _, row in dated),
+                "cross_border_travel": any(
+                    bool(row.get("cross_border"))
+                    for _, row in context_dated
+                ),
                 "long_haul": long_haul,
                 "timezone_shift_hours": max(
                     [
                         abs(float(row.get("timezone_shift_hours")))
-                        for _, row in dated
+                        for _, row in context_dated
                         if row.get("timezone_shift_hours") is not None
                     ]
                     or [0.0]
@@ -657,19 +720,30 @@ def build_calendar_workload_context(
                 "return_to_club_interval_hours": next(
                     (
                         row.get("return_to_club_interval_hours")
-                        for _, row in reversed(dated)
+                        for _, row in reversed(context_dated)
                         if row.get("return_to_club_interval_hours") is not None
                     ),
                     None,
                 ),
                 "tournament_absence": tournament_absence,
-                "confirmed_call_up": any(bool(row.get("confirmed_call_up")) for _, row in dated),
+                "confirmed_call_up": any(
+                    bool(row.get("confirmed_call_up"))
+                    for _, row in context_dated
+                ),
                 "return_date": next(
-                    (row.get("return_date") for _, row in reversed(dated) if row.get("return_date")),
+                    (
+                        row.get("return_date")
+                        for _, row in reversed(context_dated)
+                        if row.get("return_date")
+                    ),
                     None,
                 ),
                 "injury_knock": next(
-                    (row.get("injury_knock") for _, row in reversed(dated) if row.get("injury_knock")),
+                    (
+                        row.get("injury_knock")
+                        for _, row in reversed(context_dated)
+                        if row.get("injury_knock")
+                    ),
                     None,
                 ),
                 "reintegration_state": reintegration,

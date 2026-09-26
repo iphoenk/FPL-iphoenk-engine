@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from src.engines.v12_delivery_security import build_public_proof_from_files
 from src.engines.v12_private_publisher import (
     PrivatePublishError,
     build_private_digest,
@@ -220,3 +221,81 @@ def test_latest_pointer_advances_across_distinct_occurrences_without_mutating_hi
     assert latest["report_slot"] == "2026-09-26T21:30:00+07:00"
     assert first["destination"] != second["destination"]
     assert _hash(first_dir / "report_body.md") == first_body_hash
+
+
+def test_synthetic_private_public_acceptance_surface_split(tmp_path):
+    canonical = tmp_path / "canonical"
+    private = tmp_path / "private"
+    public = tmp_path / "public"
+    canonical.mkdir()
+    bundle = _write_fixture(canonical)
+
+    receipt = publish_private_output(
+        canonical_dir=canonical,
+        private_root=private,
+        run_id="synthetic-p1-m",
+        season="2026-27",
+        model_sha="a" * 40,
+        runtime_sha="b" * 40,
+    )
+    receipt_path = tmp_path / "receipt.json"
+    receipt_path.write_text(
+        json.dumps(receipt, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    proof = build_public_proof_from_files(
+        execution_proof_path=canonical / "execution_proof.json",
+        stage3_acceptance_path=canonical / "stage3_acceptance.json",
+        private_receipt_path=receipt_path,
+        report_mode="DEEP",
+        report_slot="2026-09-26T12:30:00+07:00",
+        run_id="synthetic-p1-m",
+        model_sha="a" * 40,
+        runtime_sha="b" * 40,
+        private_delivery_status="PASS",
+        profile_mode="OFF",
+    )
+    public.mkdir()
+    (public / "public_proof.json").write_text(
+        json.dumps(proof, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    destination = private / receipt["destination"]
+    expected_private = {
+        "digest.json",
+        "digest.md",
+        "report_bundle.json",
+        "report_body.md",
+        "execution_proof_private.json",
+        "delivery_receipt.json",
+    }
+    assert expected_private <= {path.name for path in destination.iterdir()}
+    assert not (public / "report_body.md").exists()
+    assert not (public / "report_bundle.json").exists()
+    assert {path.name for path in public.iterdir()} == {"public_proof.json"}
+
+    expected_ids = [
+        "S01", "S02", "S03", "S04", "S05", "S06", "S06B",
+        "S07", "S08", "S09", "S10", "S11", "S12", "S13",
+        "S14", "S14B", "S15", "S15B", "S16", "S16B",
+        "S17", "S18", "S19",
+    ]
+    copied_bundle = json.loads(
+        (destination / "report_bundle.json").read_text(encoding="utf-8")
+    )
+    assert [
+        row["id"] for row in copied_bundle["section_manifest"]
+    ] == expected_ids
+    assert copied_bundle["report"]["S03"] == bundle["report"]["S03"]
+    assert proof["private_delivery_status"] == "PASS"
+    assert proof["private_receipt_hash"]
+    assert "action" not in proof
+    assert "stage3_action" not in proof
+    assert proof["safe_fingerprints"]["canonical_bundle"] == _hash(
+        canonical / "report_bundle.json"
+    )
+    assert proof["safe_fingerprints"]["canonical_body"] == _hash(
+        canonical / "report_body.md"
+    )

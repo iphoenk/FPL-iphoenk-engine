@@ -415,13 +415,30 @@ def valid_visible_body(
             lines.append("ENGINE / DATA STATUS")
             lines.append("V6 core: GREEN | Publication: PASS | Universe authority: FULL")
         elif section_id == "S18":
+            lines.append("### MULTI-AXIS ACTION BOARD")
             lines.extend(
-                [
-                    "NOW: WAIT",
-                    "NEXT: preserve optionality and refresh evidence",
-                    "TRIGGERS: material team-news or route-value threshold",
-                    "REVERSAL: challenger loses role/security or route legality",
-                ]
+                _table(
+                    [
+                        "axis",
+                        "NOW",
+                        "NEXT",
+                        "TRIGGER TO ACT",
+                        "LATEST SAFE DECISION POINT",
+                        "COST OF WAITING",
+                        "ABORT / REVERSAL",
+                    ],
+                    [
+                        [
+                            "TRANSFER",
+                            "WAIT",
+                            "preserve optionality and refresh evidence",
+                            "material team-news or route-value threshold",
+                            "before deadline",
+                            "possible price optionality",
+                            "challenger loses role/security or route legality",
+                        ]
+                    ],
+                )
             )
         elif section_id == "S19":
             lines.append("Final judgement: WAIT; no executable change without the stated trigger.")

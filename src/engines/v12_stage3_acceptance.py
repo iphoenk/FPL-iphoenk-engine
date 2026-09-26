@@ -47,6 +47,55 @@ def _section_map(bundle: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
     }
 
 
+def _truthful_source_degraded_sections(
+    sections: Mapping[str, Mapping[str, Any]],
+) -> tuple[set[str], list[str]]:
+    """Return source-degraded sections that remain semantically acceptable.
+
+    This never whitelists arbitrary DEGRADED output. S03 is allowed only when
+    no prior visible DEEP survives the current semantic contract and no delta is
+    invented. S05 is allowed only when PL truth is intact while optional
+    verified non-PL schedule authority is absent.
+    """
+    allowed: set[str] = set()
+    failures: list[str] = []
+
+    s03 = dict(sections.get("S03") or {})
+    if str(s03.get("state") or "").upper() == "DEGRADED":
+        reason = str(s03.get("degradation_reason") or "").lower()
+        delta = dict((s03.get("content") or {}).get("decision_delta") or {})
+        truthful = (
+            "previous valid visible deep baseline" in reason
+            and "unavailable" in reason
+            and str(delta.get("baseline_state") or "").upper() == "UNAVAILABLE"
+            and str(delta.get("baseline_requirement") or "").upper()
+            == "PREVIOUS_VALID_VISIBLE_DEEP"
+            and not list(delta.get("rows") or [])
+        )
+        if truthful:
+            allowed.add("S03")
+        else:
+            failures.append("S03_DEGRADED_NOT_TRUTHFUL_BASELINE_UNAVAILABILITY")
+
+    s05 = dict(sections.get("S05") or {})
+    if str(s05.get("state") or "").upper() == "DEGRADED":
+        reason = str(s05.get("degradation_reason") or "").lower()
+        coverage = dict((s05.get("content") or {}).get("competition_coverage") or {})
+        truthful = (
+            coverage.get("official_pl") is True
+            and coverage.get("verified_non_pl_schedule_bound") is False
+            and int(coverage.get("verified_non_pl_event_count") or 0) == 0
+            and ("non-pl" in reason or "non pl" in reason)
+            and ("not bound" in reason or "unavailable" in reason)
+        )
+        if truthful:
+            allowed.add("S05")
+        else:
+            failures.append("S05_DEGRADED_NOT_TRUTHFUL_NON_PL_SOURCE_GAP")
+
+    return allowed, failures
+
+
 def validate(
     bundle: Mapping[str, Any],
     *,
@@ -204,12 +253,16 @@ def validate(
         require(bool(row.get("3GW")), f"VISIBLE_{position}_3GW_MISSING")
         require(bool(row.get("5GW")), f"VISIBLE_{position}_5GW_MISSING")
 
-    allowed_degraded = {"S09"}
     degraded = {
         section_id
         for section_id, row in sections.items()
         if str(row.get("state") or "").upper() == "DEGRADED"
     }
+    truthful_source_degraded, degradation_failures = (
+        _truthful_source_degraded_sections(sections)
+    )
+    failures.extend(degradation_failures)
+    allowed_degraded = {"S09"} | truthful_source_degraded
     require(
         degraded <= allowed_degraded,
         f"INTERNAL_SECTION_DEGRADED:{sorted(degraded - allowed_degraded)}",

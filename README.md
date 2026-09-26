@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-26T15:00:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-26T15:39:00+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -712,3 +712,8 @@ times are diagnostic only, are inclusive, and must not be summed across nested
 functions. Parent-process cProfile includes time waiting on multiprocessing
 children but does not profile child-process internals; child hotspots require a
 separate child-aware profiler if the parent profile points there.
+\n\n### Natural acceptance contract sync\nPre-merge PR CI is exact-head code/semantic acceptance. The production
+v12-integrated-report-runner workflow still deliberately checks out main, so a
+genuine natural production acceptance can only attest the SHA that is actually
+on production main. A branch or PR run must never be mislabeled as natural
+production acceptance.\n\nNatural-acceptance hardening additionally aligns visible validation with the current Stage-D/E human contract: Scanner20 validation is scoped to the ranked Scanner20 table rather than the adjacent unpadded Actionable Watchlist; S18 validation follows the multi-axis table labels; S15B exposes explicit starter/captain/vice count and EO field labels; and Stage3 accepts S03/S05 degradation only when it proves truthful missing-baseline or missing optional non-PL schedule authority, never as a blanket degradation waiver.\n

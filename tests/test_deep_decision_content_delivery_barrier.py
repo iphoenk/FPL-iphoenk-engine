@@ -577,6 +577,11 @@ def test_l_canonical_mc_500k_must_reach_visible_probability_and_tails():
 
 
 def test_m_p1_7_lineup_and_captain_outputs_are_visibly_required():
+    s02 = _section(
+        "S02",
+        "OUR15",
+        {"rows": [{"element_id": i, "player": f"P{i:02d}"} for i in range(1, 16)]},
+    )
     s06 = _section(
         "S06",
         "FORMATION / XI / BENCH",
@@ -595,19 +600,65 @@ def test_m_p1_7_lineup_and_captain_outputs_are_visibly_required():
             },
         },
     )
+    scope = {
+        "denominator": 6,
+        "captain_count": 3,
+        "captain_pct": 50.0,
+        "effective_multiplier_sum": 8.0,
+        "eo_pct": 133.3,
+    }
     s08 = _section(
         "S08",
         "CAPTAIN / VICE CAPTAIN",
         {
+            "decision_state": "LOCK",
             "captain": {"element_id": 1, "player": "P01"},
             "vice_captain": {"element_id": 2, "player": "P02"},
-            "authority": "distributional evidence",
+            "captain_frontier": [
+                {
+                    "element_id": 1,
+                    "player": "P01",
+                    "football_rank": 1,
+                    "football_score": 90.0,
+                    "expected_points": 7.0,
+                    "league_scope": scope,
+                    "rivals_scope": scope,
+                    "direct_scope": scope,
+                    "exposure_leverage_class": "BALANCED",
+                },
+                {
+                    "element_id": 2,
+                    "player": "P02",
+                    "football_rank": 2,
+                    "football_score": 86.0,
+                    "expected_points": 6.5,
+                    "league_scope": scope,
+                    "rivals_scope": scope,
+                    "direct_scope": scope,
+                    "exposure_leverage_class": "PROTECTION",
+                },
+            ],
+            "captain_safe_pool": [1],
+            "candidate_universe_proof": {
+                "captain_in_current15": True,
+                "vice_in_current15": True,
+                "captain_in_final_xi": True,
+                "vice_in_final_xi": True,
+                "captain_vice_distinct": True,
+                "frontier_subset_of_final_xi": True,
+            },
+            "football_baseline_first": True,
+            "mini_league_overlay_second": True,
+            "reconciliation_reason": "football baseline retained",
+            "authority": "P1.7 baseline + P1.8 exposure overlay",
         },
     )
-    report = _deep_report([_route()], extra_sections=[s06, s08])
+    report = _deep_report([_route()], extra_sections=[s02, s06, s08])
     body = render_deep_text(report)
     assert "FORMATION:" in body and "XI:" in body and "BENCH:" in body
     assert "CAPTAIN AUTHORITY:" in body
+    assert "OWNED FINAL-XI CAPTAIN FRONTIER" in body
+    assert "EXPOSURE / LEVERAGE CLASS" in body
     assert validate_deep_decision_content_delivery(report, body) == []
 
 

@@ -11,6 +11,7 @@ from src.engines.v12_report_orchestration import (
     DEEP_HUMAN_SECTION_REQUIREMENTS,
     _render_deep_visible_contract_lines,
     _render_math_stack_lines,
+    build_calendar_workload_context,
     build_deep_human_facing_manifest,
     render_deep_text,
 )
@@ -1286,3 +1287,56 @@ def test_stagec_evidence_is_wired_into_visible_transfer_comparator_without_math_
     assert challenger["stagec_evidence"]["decision_math_adjustment"] == 0.0
     move = surface["package_routes"][0]["moves"]["in"][0]
     assert move["stagec_evidence"]["hidden_gem"] is True
+
+
+def test_stage_b_workload_ignores_out_of_window_schedule_events():
+    fixtures = [
+        {
+            "id": 601,
+            "event": 6,
+            "team_h": 1,
+            "team_a": 2,
+            "kickoff_time": "2026-09-27T14:00:00+00:00",
+        }
+    ]
+    schedule = [
+        {
+            "team_id": 1,
+            "player_id": 101,
+            "kickoff": "2026-06-01T18:00:00+00:00",
+            "competition": "Old international",
+            "competition_category": "INTERNATIONAL",
+            "cross_border": True,
+            "long_haul": True,
+            "timezone_shift_hours": 8,
+            "confirmed_call_up": True,
+        },
+        {
+            "team_id": 1,
+            "player_id": 101,
+            "kickoff": "2026-12-01T18:00:00+00:00",
+            "competition": "Future international",
+            "competition_category": "INTERNATIONAL",
+            "cross_border": True,
+            "long_haul": True,
+            "timezone_shift_hours": 9,
+            "confirmed_call_up": True,
+        },
+    ]
+    context = build_calendar_workload_context(
+        planning_gw=6,
+        pl_fixtures=fixtures,
+        team_ids=[1, 2],
+        relevant_players=[{"element_id": 101, "name": "P101", "team_id": 1}],
+        verified_schedule_events=schedule,
+        non_pl_schedule_authority=True,
+        report_timestamp="2026-09-26T00:00:00+00:00",
+    )
+    player = context["player_workload"][0]
+    assert context["gw_topology"] == "NORMAL_GW"
+    assert context["period_flags"]["international_schedule_present"] is False
+    assert player["load_state"] == "NORMAL LOAD"
+    assert player["long_haul"] is False
+    assert player["cross_border_travel"] is False
+    assert player["timezone_shift_hours"] == 0.0
+    assert player["confirmed_call_up"] is False

@@ -95,6 +95,14 @@ Canonical DEEP reporting covers:
 
 The detailed section contract is intentionally maintained outside this README so the front page stays readable.
 
+## DEEP decision-content delivery barrier
+
+A DEEP report is deliverable only when its governed analytics, canonical materialization, render, semantic validation, and final human-facing barrier agree. Unsupported fields degrade explicitly rather than being reconstructed by presentation code or replaced with manager-specific constants.
+
+## PRICE human-facing delivery barrier
+
+PRICE reporting uses the same fail-closed principle: factual price evidence, freshness, decision context, and WAIT / PREPARE / ACT interpretation must remain traceable to their governed producers. A price report cannot silently invent unavailable manager state or decision output.
+
 ## Public / private boundary
 
 The repository is public compute, not a public diary of one manager's decisions.

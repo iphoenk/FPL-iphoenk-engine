@@ -717,3 +717,26 @@ v12-integrated-report-runner workflow still deliberately checks out main, so a
 genuine natural production acceptance can only attest the SHA that is actually
 on production main. A branch or PR run must never be mislabeled as natural
 production acceptance.\n\nNatural-acceptance hardening additionally aligns visible validation with the current Stage-D/E human contract: Scanner20 validation is scoped to the ranked Scanner20 table rather than the adjacent unpadded Actionable Watchlist; S18 validation follows the multi-axis table labels; S15B exposes explicit starter/captain/vice count and EO field labels; and Stage3 accepts S03/S05 degradation only when it proves truthful missing-baseline or missing optional non-PL schedule authority, never as a blanket degradation waiver.\n
+
+### V12 private decision and personal-data delivery plane
+
+The V12 delivery architecture separates public compute/public factual state from
+owner-specific personal state and decision output. The public repository remains
+the authority for source code, model logic, reproducible football facts and
+allowlisted operational proof. Full report bodies, exact routes, XI/bench/C/VC,
+chip/staging/scenario output, authenticated current-team state, manual captures
+and private finance belong to the private storage plane.
+
+The integrated report workflow publishes canonical report material to the
+private repository first, verifies a delivery receipt, and exposes only an
+allowlisted public proof. Private-delivery failure is fail-closed and never
+falls back to publishing the full report publicly. Stage-2 derived cache remains
+public-safe; exact P1.7 decision-core and Monte Carlo decision caches are
+runner-local/private-required. The V6 acquisition methodology is unchanged:
+authenticated current-team state is split from the candidate tree before public
+publication, while reproducible post-deadline submitted picks and league facts
+remain public factual inputs.
+
+Internal V12 section IDs remain S01..S19 plus S06B/S14B/S15B/S16B. The privacy
+boundary does not change optimizer, package, Monte Carlo, captain, mini-league,
+S03 delta, or section semantics.

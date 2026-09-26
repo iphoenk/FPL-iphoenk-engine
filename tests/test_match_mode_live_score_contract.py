@@ -6,6 +6,13 @@ from pathlib import Path
 import pytest
 
 from src.engines import live_state_service as service
+from src.engines.v12_report_orchestration import materialize_match_report, render_match_text
+from src.runtime_v6.domains.report_plane.report_qa import (
+    _validate_v12_rendered_body,
+    validate_v12_visible_content_contract,
+)
+
+CANONICAL = Path(__file__).resolve().parents[1] / "control" / "fpl_master_v12" / "FPL_MASTER_CANONICAL_V12.txt"
 
 
 def _bootstrap() -> dict:
@@ -219,3 +226,51 @@ def test_match_surface_separates_bench_captain_and_provisional_bonus(tmp_path, m
     assert result["match_checkpoint"]["fixtures_live"] == 1
     assert result["match_checkpoint"]["fixtures_ft"] == 0
     assert result["match_checkpoint"]["fixtures_not_started"] == 0
+
+
+def test_match13_materializes_from_locked_submitted_picks_and_passes_semantics(tmp_path, monkeypatch):
+    live = _run(tmp_path, monkeypatch, _snapshot())
+    report = materialize_match_report(
+        canonical_text=CANONICAL.read_text(encoding="utf-8"),
+        live_payload=live,
+        next_critical_observation="fixture 101 full-time",
+    )
+    assert [row["section_id"] for row in report["sections"]] == [
+        f"MATCH{index}" for index in range(1, 14)
+    ]
+    assert report["exact_canonical_order"] is True
+
+    body = render_match_text(report)
+    assert body.count("## MATCH ") == 13
+    assert "SCORING AUTHORITY: LOCKED_SUBMITTED_PICKS" in body
+    assert "BENCH GK: P15" in body
+    assert "OUTFIELD AUTOSUB PRIORITY: 1 P12, 2 P13, 3 P14" in body
+    assert "BONUS/BPS STATUS: PROVISIONAL" in body
+    assert "NEXT CRITICAL OBSERVATION: fixture 101 full-time" in body
+
+    content_contract = report["content_contract"]
+    semantic = validate_v12_visible_content_contract(
+        report_mode="MATCH",
+        content_contract=content_contract,
+    )
+    assert semantic["status"] == "PASS"
+    rendered_failures = _validate_v12_rendered_body(
+        report_mode="MATCH",
+        rendered_body=body,
+        content_contract=content_contract,
+    )
+    assert rendered_failures == []
+
+
+def test_match13_refuses_planning_or_incomplete_team_as_scoring_authority():
+    with pytest.raises(
+        Exception,
+        match="requires exact15 locked submitted picks",
+    ):
+        materialize_match_report(
+            canonical_text=CANONICAL.read_text(encoding="utf-8"),
+            live_payload={
+                "submitted_picks_status": "UNAVAILABLE",
+                "players": [{"element": 1, "name": "planning-only"}],
+            },
+        )

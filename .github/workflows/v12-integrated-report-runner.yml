@@ -183,31 +183,14 @@ jobs:
         working-directory: app
         run: mkdir -p .cache/v12-stage2
 
-      - name: Restore exact P1.7 decision-core cache
-        if: needs.parse.outputs.profile_mode != 'COLD'
-        id: p17-cache-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: app/.cache/v12-p17
-          key: v12-p17-decision-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_lineup_optimizer.py', 'app/config/intelligence/v12_lineup_optimizer.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
-          restore-keys: |
-            v12-p17-decision-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_lineup_optimizer.py', 'app/config/intelligence/v12_lineup_optimizer.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-
-
-      - name: Ensure exact P1.7 cache directory
+      # P1 privacy: P1.7 and MC payloads are decision-sensitive and MUST
+      # remain runner-local. They are never restored from or saved to
+      # the public GitHub Actions cache. Stage-2 remains public-safe.
+      - name: Ensure ephemeral P1.7 decision-cache directory
         working-directory: app
         run: mkdir -p .cache/v12-p17
 
-      - name: Restore deterministic MC simulation-summary cache
-        if: needs.parse.outputs.profile_mode != 'COLD'
-        id: mc-cache-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: app/.cache/v12-mc
-          key: v12-mc-summary-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_monte_carlo.py', 'app/config/intelligence/v12_monte_carlo.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
-          restore-keys: |
-            v12-mc-summary-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_monte_carlo.py', 'app/config/intelligence/v12_monte_carlo.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-
-
-      - name: Ensure MC cache directory
+      - name: Ensure ephemeral MC decision-cache directory
         working-directory: app
         run: mkdir -p .cache/v12-mc
 
@@ -262,20 +245,6 @@ jobs:
         with:
           path: app/.cache/v12-stage2
           key: v12-stage2-derived-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_stage2_derived_cache.py', 'app/src/models/historical_projection.py', 'app/src/engines/v12_contextual_dynamics.py', 'app/src/engines/v12_player_events.py', 'app/src/engines/v12_player_minutes.py', 'app/src/engines/v12_position_probability_components.py', 'app/src/engines/p0_decision_quality.py', 'app/src/models/v12_stage1_analytics.py', 'app/src/rules.py', 'app/config/intelligence/player_events.json', 'app/config/intelligence/player_minutes.json', 'app/config/intelligence/historical_priors.json', 'app/config/intelligence/v12_contextual_dynamics.json') }}-${{ github.run_id }}
-
-      - name: Persist exact P1.7 decision-core cache before downstream acceptance
-        if: always() && needs.parse.outputs.report_mode == 'DEEP' && needs.parse.outputs.profile_mode != 'COLD'
-        uses: actions/cache/save@v4
-        with:
-          path: app/.cache/v12-p17
-          key: v12-p17-decision-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_lineup_optimizer.py', 'app/config/intelligence/v12_lineup_optimizer.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
-
-      - name: Persist deterministic MC summary cache before downstream acceptance
-        if: always() && needs.parse.outputs.report_mode == 'DEEP' && needs.parse.outputs.profile_mode != 'COLD'
-        uses: actions/cache/save@v4
-        with:
-          path: app/.cache/v12-mc
-          key: v12-mc-summary-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_monte_carlo.py', 'app/config/intelligence/v12_monte_carlo.json', 'app/src/rules.py', 'app/control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt') }}-${{ github.run_id }}
 
       - name: Read integrated runner proof
         id: proof

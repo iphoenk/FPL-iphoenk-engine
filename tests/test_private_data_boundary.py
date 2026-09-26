@@ -13,7 +13,7 @@ def _write(path: Path, value: dict) -> None:
     path.write_text(json.dumps(value), encoding="utf-8")
 
 
-def test_split_moves_current_team_private_and_sanitizes_public_auth_metadata(tmp_path):
+def test_split_moves_manager_specific_state_private_and_sanitizes_public_metadata(tmp_path):
     public = tmp_path / "data/v6"
     private = tmp_path / "private"
 
@@ -26,6 +26,25 @@ def test_split_moves_current_team_private_and_sanitizes_public_auth_metadata(tmp
             "free_transfers": 0,
             "players": [{"element_id": i} for i in range(1, 16)],
         },
+    )
+    _write(
+        public / "personal/submitted_picks.json",
+        {
+            "entry_id": 3462711,
+            "picks": [
+                {
+                    "element": i,
+                    "position": i,
+                    "is_captain": i == 1,
+                    "is_vice_captain": i == 2,
+                }
+                for i in range(1, 16)
+            ],
+        },
+    )
+    _write(
+        public / "personal/memberships.json",
+        {"entry_id": 3462711, "classic_leagues": [{"id": 1, "name": "private cohort"}]},
     )
     _write(
         public / "report_prefetch/latest.json",
@@ -56,6 +75,8 @@ def test_split_moves_current_team_private_and_sanitizes_public_auth_metadata(tmp
             "artifacts": [
                 {"path": "data/v6/personal/current_team.json"},
                 {"path": "data/v6/personal/submitted_picks.json"},
+                {"path": "data/v6/personal/memberships.json"},
+                {"path": "data/v6/core/bootstrap_static.json"},
             ],
             "governance": {"data_only": True},
         },
@@ -71,13 +92,19 @@ def test_split_moves_current_team_private_and_sanitizes_public_auth_metadata(tmp
     )
     private.mkdir(parents=True, exist_ok=True)
 
-    receipt = split_private_personal_state(
-        public_root=public,
-        private_root=private,
-    )
+    receipt = split_private_personal_state(public_root=public, private_root=private)
 
     assert receipt["moved_current_team"] is True
-    assert not (public / "personal/current_team.json").exists()\n    assert not (public / "personal/submitted_picks.json").exists()\n    assert not (public / "personal/memberships.json").exists()\n    assert receipt["public_manager_specific_personal_files_present_after_split"] == []
+    assert receipt["moved_personal_files"] == {
+        "current_team.json": True,
+        "submitted_picks.json": True,
+        "memberships.json": True,
+    }
+    assert receipt["public_manager_specific_personal_files_present_after_split"] == []
+    for name in ("current_team.json", "submitted_picks.json", "memberships.json"):
+        assert not (public / "personal" / name).exists()
+        assert (private / "personal" / name).is_file()
+
     private_team = json.loads(
         (private / "personal/current_team.json").read_text(encoding="utf-8")
     )
@@ -99,11 +126,12 @@ def test_split_moves_current_team_private_and_sanitizes_public_auth_metadata(tmp
             "status": "LIVE",
         }
     ]
-    assert all(
-        not str(row.get("path") or "").endswith("/personal/current_team.json")
-        for row in latest["artifacts"]
+    assert latest["artifacts"] == [{"path": "data/v6/core/bootstrap_static.json"}]
+    assert latest["governance"]["private_personal_state_split"] is True
+    assert (
+        latest["governance"]["public_tree_contains_manager_specific_personal_state"]
+        is False
     )
-    assert latest["governance"]["private_personal_state_split"] is True\n    assert latest["governance"]["public_tree_contains_manager_specific_personal_state"] is False
 
     health = json.loads(
         (public / "health/report_prefetch.json").read_text(encoding="utf-8")
@@ -113,7 +141,7 @@ def test_split_moves_current_team_private_and_sanitizes_public_auth_metadata(tmp
     assert health["private_personal_state_split"] is True
 
 
-def test_split_is_idempotent_when_public_current_team_already_removed(tmp_path):
+def test_split_is_idempotent_when_public_personal_state_already_removed(tmp_path):
     public = tmp_path / "data/v6"
     private = tmp_path / "private"
     _write(public / "report_prefetch/latest.json", {"governance": {}})
@@ -124,4 +152,5 @@ def test_split_is_idempotent_when_public_current_team_already_removed(tmp_path):
 
     assert first["moved_current_team"] is False
     assert second["moved_current_team"] is False
-    assert not (public / "personal/current_team.json").exists()
+    assert first["public_manager_specific_personal_files_present_after_split"] == []
+    assert second["public_manager_specific_personal_files_present_after_split"] == []

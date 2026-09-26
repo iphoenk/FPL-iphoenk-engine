@@ -3577,6 +3577,263 @@ def materialize_match_lifecycle_report(
     return report
 
 
+def validate_post_all_match_lifecycle_surface(
+    surface: Mapping[str, Any] | None,
+) -> list[str]:
+    payload = dict(surface or {})
+    failures: list[str] = []
+    completed = [str(value) for value in payload.get("completed_fixture_ids") or []]
+    scout = [
+        dict(row)
+        for row in payload.get("match_scout") or []
+        if isinstance(row, Mapping)
+    ]
+    scout_ids = [
+        str(row.get("fixture_id"))
+        for row in scout
+        if row.get("fixture_id") is not None
+    ]
+    if not completed:
+        failures.append("POST_ALL_MATCH_COMPLETED_FIXTURE_SCOPE_MISSING")
+    if len(completed) != len(set(completed)):
+        failures.append("POST_ALL_MATCH_COMPLETED_FIXTURE_DUPLICATE")
+    if len(scout_ids) != len(scout):
+        failures.append("POST_ALL_MATCH_SCOUT_IDENTITY_MISSING")
+    if len(scout_ids) != len(set(scout_ids)):
+        failures.append("POST_ALL_MATCH_SCOUT_FIXTURE_DUPLICATE")
+    if set(scout_ids) != set(completed) or len(scout_ids) != len(completed):
+        failures.append("POST_ALL_MATCH_SCOUT_FIXTURE_COVERAGE_MISMATCH")
+
+    scout_fields = (
+        "fixture_id",
+        "result",
+        "formation_system",
+        "coach_pattern",
+        "player_roles",
+        "minutes_substitution_pattern",
+        "xg_xa_xgi_shots_chances",
+        "set_pieces_penalties",
+        "defcon",
+        "opponent_channels",
+        "sustainable_vs_noisy",
+        "implication_for_our15",
+        "implication_for_next_opponent",
+        "posterior_calibration_implication",
+    )
+    for index, row in enumerate(scout, start=1):
+        missing = [key for key in scout_fields if key not in row]
+        if missing:
+            failures.append(
+                f"POST_ALL_MATCH_SCOUT_FIELD_MISSING={index}:{','.join(missing)}"
+            )
+
+    required_keys = (
+        "gw_result_summary",
+        "decision_pnl_counterfactual",
+        "prediction_calibration",
+        "owned15_review",
+        "role_set_piece_changes",
+        "bayesian_update_status",
+        "icon_final_gw",
+        "price_outlook",
+        "full_universe_next_gw_scan",
+        "watchlist20",
+        "early_hold_transfer_frontier",
+        "learning_log",
+    )
+    for key in required_keys:
+        if key not in payload:
+            failures.append(f"POST_ALL_MATCH_SURFACE_MISSING={key}")
+
+    owned15 = [
+        dict(row)
+        for row in payload.get("owned15_review") or []
+        if isinstance(row, Mapping)
+    ]
+    if len(owned15) != 15:
+        failures.append(f"POST_ALL_MATCH_OWNED15_COUNT={len(owned15)}/15")
+
+    watchlist = [
+        dict(row)
+        for row in payload.get("watchlist20") or []
+        if isinstance(row, Mapping)
+    ]
+    watch_state = str(payload.get("watchlist_state") or "COMPLETE").upper()
+    if watch_state == "COMPLETE" and len(watchlist) != 20:
+        failures.append(f"POST_ALL_MATCH_WATCHLIST20_COUNT={len(watchlist)}/20")
+
+    bayes = dict(payload.get("bayesian_update_status") or {})
+    bayes_state = str(bayes.get("status") or "").upper()
+    if bayes_state not in {
+        "CALIBRATION_INPUT",
+        "MODEL_UPDATE_PENDING_NEXT_COMPUTE",
+        "ACTUAL_MODEL_UPDATE",
+    }:
+        failures.append("POST_ALL_MATCH_BAYESIAN_STATUS_INVALID")
+    if bayes_state == "ACTUAL_MODEL_UPDATE":
+        proof = bayes.get("execution_proof")
+        if not (
+            isinstance(proof, Mapping)
+            and proof.get("executed") is True
+            and proof.get("evidence_time")
+            and "previous_value" in proof
+            and "current_value" in proof
+        ):
+            failures.append("POST_ALL_MATCH_MODEL_UPDATE_PROOF_MISSING")
+
+    return failures
+
+
+def build_post_all_match_lifecycle_surface(
+    *,
+    completed_fixture_ids: Sequence[Any],
+    match_scout: Sequence[Mapping[str, Any]],
+    gw_result_summary: Mapping[str, Any],
+    decision_pnl_counterfactual: Mapping[str, Any],
+    prediction_calibration: Mapping[str, Any],
+    owned15_review: Sequence[Mapping[str, Any]],
+    role_set_piece_changes: Sequence[Mapping[str, Any]],
+    bayesian_update_status: Mapping[str, Any],
+    icon_final_gw: Mapping[str, Any],
+    price_outlook: Mapping[str, Any],
+    full_universe_next_gw_scan: Mapping[str, Any],
+    watchlist20: Sequence[Mapping[str, Any]],
+    early_hold_transfer_frontier: Mapping[str, Any],
+    learning_log: Sequence[Mapping[str, Any]],
+    watchlist_state: str = "COMPLETE",
+) -> dict[str, Any]:
+    surface = {
+        "visible_order": [
+            "GW RESULT SUMMARY",
+            "DECISION P&L / COUNTERFACTUAL",
+            "PREDICTION CALIBRATION",
+            "OWNED15 REVIEW",
+            "GW COMPLETED MATCH-BY-MATCH SCOUT",
+            "ROLE / SET-PIECE CHANGES",
+            "BAYESIAN CALIBRATION INPUT / ACTUAL UPDATE STATUS",
+            "ICON+ FINAL GW",
+            "PRICE OUTLOOK",
+            "FRESH FULL-UNIVERSE NEXT-GW SCAN",
+            "WATCHLIST20",
+            "EARLY HOLD / TRANSFER FRONTIER",
+            "LEARNING LOG",
+        ],
+        "completed_fixture_ids": [str(value) for value in completed_fixture_ids],
+        "match_scout": [dict(row) for row in match_scout],
+        "gw_result_summary": dict(gw_result_summary),
+        "decision_pnl_counterfactual": dict(decision_pnl_counterfactual),
+        "prediction_calibration": dict(prediction_calibration),
+        "owned15_review": [dict(row) for row in owned15_review],
+        "role_set_piece_changes": [dict(row) for row in role_set_piece_changes],
+        "bayesian_update_status": dict(bayesian_update_status),
+        "icon_final_gw": dict(icon_final_gw),
+        "price_outlook": dict(price_outlook),
+        "full_universe_next_gw_scan": dict(full_universe_next_gw_scan),
+        "watchlist20": [dict(row) for row in watchlist20],
+        "watchlist_state": str(watchlist_state or "COMPLETE").upper(),
+        "early_hold_transfer_frontier": dict(early_hold_transfer_frontier),
+        "learning_log": [dict(row) for row in learning_log],
+        "governance": {
+            "every_completed_fixture_exactly_once": True,
+            "scorer_recap_is_not_sufficient": True,
+            "post_match_observation_is_not_automatic_transfer": True,
+        },
+    }
+    failures = validate_post_all_match_lifecycle_surface(surface)
+    if failures:
+        raise ReportOrchestrationError(
+            "POST_ALL_MATCH lifecycle semantic barrier failed: "
+            + ",".join(failures)
+        )
+    return surface
+
+
+def materialize_post_all_match_lifecycle_report(
+    *,
+    canonical_text: str,
+    surface: Mapping[str, Any],
+) -> dict[str, Any]:
+    payload = dict(surface or {})
+    failures = validate_post_all_match_lifecycle_surface(payload)
+    if failures:
+        raise ReportOrchestrationError(
+            "POST_ALL_MATCH lifecycle semantic barrier failed: "
+            + ",".join(failures)
+        )
+
+    section_payloads = {
+        "GW RESULT SUMMARY": {
+            "state": "COMPLETE",
+            "content": payload.get("gw_result_summary"),
+        },
+        "DECISION P&L / COUNTERFACTUAL": {
+            "state": "COMPLETE",
+            "content": payload.get("decision_pnl_counterfactual"),
+        },
+        "PREDICTION CALIBRATION": {
+            "state": "COMPLETE",
+            "content": payload.get("prediction_calibration"),
+        },
+        "OWNED15 REVIEW": {
+            "state": "COMPLETE",
+            "content": {"rows": payload.get("owned15_review")},
+        },
+        "GW COMPLETED MATCH-BY-MATCH SCOUT": {
+            "state": "COMPLETE",
+            "content": {"match_scout": payload.get("match_scout")},
+        },
+        "ROLE / SET-PIECE CHANGES": {
+            "state": "COMPLETE",
+            "content": {"rows": payload.get("role_set_piece_changes")},
+        },
+        "BAYESIAN CALIBRATION INPUT / ACTUAL UPDATE STATUS": {
+            "state": "COMPLETE",
+            "content": payload.get("bayesian_update_status"),
+        },
+        "ICON+ FINAL GW": {
+            "state": "COMPLETE",
+            "content": payload.get("icon_final_gw"),
+        },
+        "PRICE OUTLOOK": {
+            "state": "COMPLETE",
+            "content": payload.get("price_outlook"),
+        },
+        "FRESH FULL-UNIVERSE NEXT-GW SCAN": {
+            "state": "COMPLETE",
+            "content": payload.get("full_universe_next_gw_scan"),
+        },
+        "WATCHLIST20": {
+            "state": payload.get("watchlist_state"),
+            "content": {"rows": payload.get("watchlist20")},
+            "degradation_reason": (
+                None
+                if str(payload.get("watchlist_state") or "").upper() == "COMPLETE"
+                else "fresh full-universe evidence cannot support exact20"
+            ),
+            "available_count": len(payload.get("watchlist20") or []),
+            "expected_count": 20,
+        },
+        "EARLY HOLD / TRANSFER FRONTIER": {
+            "state": "COMPLETE",
+            "content": payload.get("early_hold_transfer_frontier"),
+        },
+        "LEARNING LOG": {
+            "state": "COMPLETE",
+            "content": {"rows": payload.get("learning_log")},
+        },
+    }
+    report = _materialize_canonical_report(
+        canonical_text=canonical_text,
+        structural_mode="POST_ALL_MATCH",
+        reported_mode="POST_ALL_MATCH",
+        section_payloads=section_payloads,
+    )
+    report["post_all_match_surface"] = payload
+    report["completed_fixture_ids"] = list(payload.get("completed_fixture_ids") or [])
+    report["match_scout"] = list(payload.get("match_scout") or [])
+    return report
+
+
 def render_match_lifecycle_text(report: Mapping[str, Any]) -> str:
     blocks: list[str] = []
     for section in report.get("sections") or []:

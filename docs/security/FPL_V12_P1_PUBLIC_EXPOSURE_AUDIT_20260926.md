@@ -171,3 +171,52 @@ The corrected architecture is:
 
 This preserves the V6 factual/public acquisition method and public publisher
 governance while separating persistence authority.
+
+
+## P1-N real DEEP branch acceptance evidence
+
+A real DEEP occurrence was executed from the bounded P1 branch before merge:
+
+- acceptance code SHA: `aad536a3660f4ff3df0a85f62253302b2e0fce7a`;
+- run ID: `36245142505`;
+- report slot: `2026-09-26T20:26:02+07:00`;
+- factual runtime SHA: `d0bada58d308da3c876a741924e1dfa4c3bbd76b`;
+- analytics, pre-render, post-render, human-facing, and Stage3 validation: `PASS`;
+- private delivery: `PASS`;
+- public artifact set: exactly one allowlisted `v12-public-proof-DEEP-36245142505`;
+- public artifact contains only `public_proof.json`; no report body, report bundle, scenario, profile log, or decision artifact;
+- public issue #431 proof is validation-only and contains no Stage3 action or route material;
+- exact public Actions logs were read after completion: decision-leak findings = `0`, unmasked-secret findings = `0`, rendered-report heading/prose findings = `0`;
+- private repository commit: `3b63bb2d1580abb8d42d816cf8d5c2b60686d02e`;
+- private report path: `reports/2026-27/gw_6/20260926_202602_plus_0700`;
+- canonical body SHA256: `aa208b8c571a37a78397a5dd0a621590c93daaff278c1a9bf3a65491a00480b8`;
+- canonical bundle SHA256: `ecf26a2f01b04dc6b56dbaff1ced71dbe9666aca817bb1edeaca82ccf1d73d34`;
+- public proof carries the same two canonical fingerprints;
+- private digest reports `math_recomputed=false` and `decision_source=CANONICAL_OUTPUT_COPY_ONLY`;
+- all 23 internal section IDs remain exactly `S01..S19` plus `S06B/S14B/S15B/S16B`;
+- the thin publisher persisted report body, report bundle, canonical execution proof, Stage3 acceptance, private execution proof, digest, and delivery receipt.
+
+Observed recompute cost with decision-sensitive Actions caches disabled remained bounded:
+Stage-2 cache was a safe `HIT`; exact cross-route package utility completed in
+about 18.6 s, funded package utility in about 5.8 s, and Monte Carlo in about
+33.6 s. The public proof reports 67.919 s summed stage time.
+
+The temporary owner-only push trigger used solely to obtain this branch
+acceptance was removed immediately after evidence capture. It is not part of
+the final P1 workflow design.
+
+### Remaining production cutover condition
+
+This branch acceptance does **not** claim final production P1 GREEN yet.
+Production `runtime-data-v6` still contains the legacy
+`data/v6/personal/current_team.json` because production `main` has not been
+merged to the private-plane reader. Deleting that file before coordinated
+cutover would break the current production reader and is therefore not a safe
+pre-merge cleanup.
+
+The P1 branch changes V6 publication so the private boundary removes this file
+before the next public candidate freeze, while a separate isolated job
+persists authenticated/current personal state to the private repository.
+Final PUBLIC GIT closure therefore requires owner-approved merge/cutover plus
+one verified V6 publication on the merged code. Historical destructive cleanup
+remains separately approval-gated under P1-K.

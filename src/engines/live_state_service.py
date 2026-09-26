@@ -134,6 +134,26 @@ def run() -> dict:
             captain_raw = raw_points
             captain_effective = effective_points
 
+        starts = stats.get("starts")
+        started_club_match = (
+            bool(int(starts or 0) > 0)
+            if starts is not None
+            else None
+        )
+        substitute = (
+            bool(int(stats.get("minutes") or 0) > 0 and int(starts or 0) == 0)
+            if starts is not None
+            else None
+        )
+        if int(stats.get("minutes") or 0) > 0 and started_club_match is True:
+            appearance_state = "STARTED"
+        elif int(stats.get("minutes") or 0) > 0 and substitute is True:
+            appearance_state = "CAMEO"
+        elif match_status == "FT" and int(stats.get("minutes") or 0) == 0:
+            appearance_state = "DNP"
+        else:
+            appearance_state = "NOT_YET_RESOLVED"
+
         detail.append({
             "element": element,
             "name": player.get("web_name"),
@@ -141,6 +161,9 @@ def run() -> dict:
             "team_id": team_id,
             "position": positions.get(player.get("element_type")),
             "fixture_status": match_status,
+            "appearance_state": appearance_state,
+            "started_club_match": started_club_match,
+            "substitute": substitute,
             "pick_position": pick_position,
             "bench_order": bench_order,
             "multiplier": multiplier,

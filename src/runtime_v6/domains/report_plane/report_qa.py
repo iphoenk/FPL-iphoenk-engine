@@ -815,6 +815,71 @@ def validate_v12_visible_content_contract(
             if key not in payload:
                 hard_failures.append(f"PURE_MATCH_BLOCK_MISSING={key}")
 
+        locked = payload.get("locked_team")
+        if not isinstance(locked, Mapping):
+            hard_failures.append("MATCH_LOCKED_TEAM_INVALID")
+            locked = {}
+        else:
+            if str(locked.get("authority") or "").upper() != "OFFICIAL_FPL_SUBMITTED_PICKS":
+                hard_failures.append("MATCH_LOCKED_TEAM_NOT_SUBMITTED_PICKS_AUTHORITY")
+            if locked.get("submitted_picks_authority") is not True:
+                hard_failures.append("MATCH_SUBMITTED_PICKS_AUTHORITY_PROOF_MISSING")
+            if locked.get("planning_xi_used") is not False:
+                hard_failures.append("MATCH_PLANNING_XI_MUST_NOT_BE_USED")
+            our15 = list(locked.get("our15") or [])
+            xi = list(locked.get("starting_xi") or [])
+            bench_locked = list(locked.get("bench_order") or [])
+            if len(our15) != 15 or len(set(map(str, our15))) != 15:
+                hard_failures.append("MATCH_LOCKED_OUR15_INVALID")
+            if (
+                len(xi) != 11
+                or len(set(map(str, xi))) != 11
+                or not set(map(str, xi)).issubset(set(map(str, our15)))
+            ):
+                hard_failures.append("MATCH_LOCKED_XI_INVALID")
+            if (
+                len(bench_locked) != 4
+                or len(set(map(str, bench_locked))) != 4
+                or set(map(str, bench_locked)) & set(map(str, xi))
+                or set(map(str, bench_locked)) | set(map(str, xi)) != set(map(str, our15))
+            ):
+                hard_failures.append("MATCH_LOCKED_BENCH_INVALID")
+            captain = locked.get("captain")
+            vice = locked.get("vice_captain")
+            if (
+                captain is None
+                or vice is None
+                or str(captain) == str(vice)
+                or str(captain) not in set(map(str, xi))
+                or str(vice) not in set(map(str, xi))
+            ):
+                hard_failures.append("MATCH_LOCKED_CAPTAIN_VICE_INVALID")
+
+            bench_view = payload.get("bench_presentation")
+            if isinstance(bench_view, Mapping):
+                if str(bench_view.get("bench_gk")) != str(locked.get("bench_gk")):
+                    hard_failures.append("MATCH_BENCH_GK_CONTRADICTS_LOCKED_TEAM")
+                if list(map(str, bench_view.get("outfield_autosub_priority") or [])) != list(
+                    map(str, locked.get("outfield_autosub_priority") or [])
+                ):
+                    hard_failures.append("MATCH_OUTFIELD_PRIORITY_CONTRADICTS_LOCKED_TEAM")
+
+        points_rows = [
+            dict(row)
+            for row in payload.get("owned_live_final_points") or []
+            if isinstance(row, Mapping)
+        ]
+        bonus_bps = payload.get("bonus_bps")
+        if not isinstance(bonus_bps, Mapping):
+            hard_failures.append("MATCH_BONUS_BPS_INVALID")
+        else:
+            unresolved_owned = any(
+                str(row.get("fixture_status") or "").upper() != "FT"
+                for row in points_rows
+            )
+            if unresolved_owned and bonus_bps.get("provisional") is not True:
+                hard_failures.append("MATCH_BPS_FINAL_BEFORE_OWNED_FIXTURES_RESOLVED")
+
         impact_rows = list(payload.get("personal_impact") or [])
         substitution_map = (
             (payload.get("global_autosub_state") or {}).get("final_substitution_map")

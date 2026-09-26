@@ -4601,33 +4601,11 @@ def run_deep(
     watch_state = str((watchlist or {}).get("state") or "UNAVAILABLE")
     watch_reason = (watchlist or {}).get("degradation_reason") or universe_gap["reason"]
 
-    all15_rows = _enrich_all15_rows(
-        all15=all15,
-        projections=projections,
-        predictor=predictor,
-        owned=owned,
-        mini=mini,
-    )
-
     formation_strategy = _formation_mini_league_strategy(
         lineup=lineup,
         mini=mini,
         mini_overlay=mini_overlay,
         projections=projections,
-    )
-    xi_battles = _xi_battles(
-        lineup=lineup,
-        projections=projections,
-        mini=mini,
-    )
-    staging = _three_gw_staging(
-        planning_gw=planning_gw,
-        action=operational_action,
-        stage3_decision=stage3_decision,
-        stage3_visible=stage3_visible,
-        all15_rows=all15_rows,
-        lineup=lineup,
-        finance=finance,
     )
     league_context = _mini_context(mini)
     league_exposures = list((mini or {}).get("exposures") or [])
@@ -4642,6 +4620,30 @@ def run_deep(
         disclosed_gw=picks_gw,
         operational_action=operational_action,
         calendar_context=calendar_context,
+    )
+    all15_rows = _enrich_all15_rows(
+        all15=all15,
+        projections=projections,
+        predictor=predictor,
+        owned=owned,
+        bootstrap=bootstrap,
+        mini=mini,
+        mini_detail=mini_deep_detail,
+        calendar_context=calendar_context,
+    )
+    xi_battles = _xi_battles(
+        lineup=lineup,
+        projections=projections,
+        mini=mini,
+    )
+    staging = _three_gw_staging(
+        planning_gw=planning_gw,
+        action=operational_action,
+        stage3_decision=stage3_decision,
+        stage3_visible=stage3_visible,
+        all15_rows=all15_rows,
+        lineup=lineup,
+        finance=finance,
     )
     captain_surface = _captain_decision_surface(
         owned=owned,

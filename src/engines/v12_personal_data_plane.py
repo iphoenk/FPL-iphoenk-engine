@@ -114,6 +114,72 @@ def _current_team_candidates(
     return out
 
 
+def _manual_capture_candidates(
+    directory: Path,
+    *,
+    source_prefix: str,
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    if not directory.is_dir():
+        return out
+    for path in sorted(directory.glob("*.json")):
+        payload = _read_json(path, {}) or {}
+        if not isinstance(payload, Mapping):
+            continue
+        if payload.get("schema") != "FPL_MANUAL_CURRENT_TEAM_CAPTURE_V1":
+            continue
+        squad = [
+            dict(row)
+            for row in payload.get("squad") or []
+            if isinstance(row, Mapping)
+        ]
+        finance = dict(payload.get("finance") or {})
+        chips = dict(payload.get("chips") or {})
+        current_payload = {
+            "players": squad,
+            "generated_at": payload.get("captured_at"),
+            "gw": payload.get("planning_gw"),
+            "bank": finance.get("bank"),
+            "free_transfers": finance.get("free_transfers"),
+            "current_transfer_cost_points": finance.get(
+                "current_transfer_cost_points"
+            ),
+            "hit_cost_per_extra_transfer": finance.get(
+                "hit_cost_per_extra_transfer"
+            ),
+            "chips": chips,
+            "availability": {
+                "bank": (
+                    "AVAILABLE"
+                    if isinstance(finance.get("bank"), int)
+                    else "UNAVAILABLE"
+                ),
+                "free_transfers": (
+                    "AVAILABLE"
+                    if isinstance(finance.get("free_transfers"), int)
+                    else "UNAVAILABLE"
+                ),
+                "purchase_price": "UNAVAILABLE",
+                "selling_price": "UNAVAILABLE",
+                "chips": "PARTIAL_CAPTURE" if chips else "UNAVAILABLE",
+            },
+            "auth_state": "USER_CONFIRMED",
+        }
+        out.append(
+            {
+                "source": f"{source_prefix}{path.name}",
+                "source_class": "USER_CONFIRMED",
+                "payload": current_payload,
+                "observed_at": payload.get("captured_at"),
+                "gw": payload.get("planning_gw"),
+                "auth_state": "USER_CONFIRMED",
+                "applicable_planning_gw": payload.get("planning_gw"),
+                "explicit_confirmation": True,
+            }
+        )
+    return out
+
+
 def collect_personal_evidence_candidates(
     *,
     runtime_root: Path,
@@ -138,6 +204,12 @@ def collect_personal_evidence_candidates(
             _current_team_candidates(
                 private_personal,
                 source_prefix="PRIVATE:personal/",
+            )
+        )
+        candidates.extend(
+            _manual_capture_candidates(
+                private_personal / "manual",
+                source_prefix="PRIVATE:personal/manual/",
             )
         )
         private_owner_state = _read_json(

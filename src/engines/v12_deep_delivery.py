@@ -299,11 +299,213 @@ def validate_deep_decision_content_delivery(
     if routes and "BEST ALTERNATIVE" not in upper:
         failures.append("ACTION_BOARD_NOT_LINKED_TO_FRONTIER")
 
+    # Stage-D human-usable semantic barrier. Structural presence or a raw
+    # nested dict is insufficient for these visible decision surfaces.
+    s01 = content("S01")
+    if state("S01") == "COMPLETE":
+        dashboard = dict(s01.get("decision_dashboard") or {})
+        if not dashboard:
+            failures.append("S01_MULTI_AXIS_PAYLOAD_MISSING")
+        for key, allowed in (
+            ("TRANSFER", {"WAIT", "PREPARE", "ACT"}),
+            ("XI", {"WAIT", "PREPARE", "LOCK"}),
+            ("CAPTAIN", {"WAIT", "PREPARE", "LOCK"}),
+            ("CHIP", {"WAIT", "PREPARE", "ACT", "DEGRADED"}),
+            ("PRICE", {"MONITOR", "PREPARE", "MATERIAL"}),
+            ("PERSONAL_AUTH", {"AVAILABLE", "DEGRADED", "UNAVAILABLE"}),
+        ):
+            if str(dashboard.get(key) or "").upper() not in allowed:
+                failures.append(f"S01_AXIS_INVALID={key}")
+        for key in ("PLANNING_GW", "PRIMARY_REASON", "KEY_DRIVER", "CURRENT_BLOCKERS"):
+            if key not in dashboard:
+                failures.append(f"S01_DASHBOARD_FIELD_MISSING={key}")
+        if "MULTI-AXIS DECISION DASHBOARD" not in upper:
+            failures.append("S01_MULTI_AXIS_NOT_VISIBLE")
+
+    s02 = content("S02")
+    rows02 = [
+        dict(row) for row in s02.get("rows") or []
+        if isinstance(row, Mapping)
+    ]
+    if state("S02") == "COMPLETE":
+        ids02 = [
+            int(row.get("element_id") or 0)
+            for row in rows02
+            if int(row.get("element_id") or 0) > 0
+        ]
+        if len(rows02) != 15 or len(ids02) != 15 or len(set(ids02)) != 15:
+            failures.append(f"S02_CURRENT15_IDENTITY_INVALID={len(set(ids02))}/15")
+        authority = dict(s02.get("current15_authority") or {})
+        for key in (
+            "source_class", "observed_at", "applicable_gw",
+            "auth_state", "finance_availability",
+        ):
+            if key not in authority:
+                failures.append(f"S02_AUTHORITY_FIELD_MISSING={key}")
+        for index, row in enumerate(rows02, start=1):
+            for key in (
+                "position", "club", "current_price", "opponent", "home_away",
+                "p_start", "xmins", "projection_1gw", "projection_3gw",
+                "projection_5gw", "tactical_role_label",
+                "injury_rotation_warning", "price_relevance", "ownership_source",
+            ):
+                if key not in row:
+                    failures.append(f"S02_HUMAN_FIELD_MISSING={index}:{key}")
+                    break
+        if "CURRENT15 AUTHORITY:" not in upper:
+            failures.append("S02_AUTHORITY_NOT_VISIBLE")
+        for token in ("H/A", "OWNERSHIP SOURCE"):
+            if token not in upper:
+                failures.append(f"S02_VISIBLE_FIELD_MISSING={token}")
+
+    s03 = content("S03")
+    delta = dict(s03.get("decision_delta") or {})
+    baseline_state = str(delta.get("baseline_state") or "").upper()
+    if state("S03") == "COMPLETE":
+        if baseline_state != "AVAILABLE":
+            failures.append("S03_COMPLETE_WITHOUT_PREVIOUS_VISIBLE_DEEP")
+        rows = [
+            dict(row) for row in delta.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        if not rows and "NO MATERIAL DECISION CHANGE" not in upper:
+            failures.append("S03_NO_CHANGE_SENTINEL_MISSING")
+    elif state("S03") == "DEGRADED":
+        if baseline_state != "UNAVAILABLE":
+            failures.append("S03_DEGRADED_BASELINE_STATE_INVALID")
+        if "BASELINE UNAVAILABLE" not in upper:
+            failures.append("S03_BASELINE_DEGRADATION_NOT_VISIBLE")
+        if delta.get("no_recomputation_no_numeric_delta") is not True:
+            failures.append("S03_NUMERIC_DELTA_GUARD_MISSING")
+
+    s04 = content("S04")
+    if state("S04") == "COMPLETE":
+        changes = [
+            dict(row) for row in s04.get("changes") or []
+            if isinstance(row, Mapping)
+        ]
+        allowed_classes = {"NEW", "IMPROVED", "WORSENED", "UNCHANGED"}
+        seen = set()
+        for index, row in enumerate(changes, start=1):
+            classification = str(row.get("classification") or "").upper()
+            if classification not in allowed_classes:
+                failures.append(f"S04_CLASSIFICATION_INVALID={index}")
+            if not row.get("scope") or not row.get("event_kind"):
+                failures.append(f"S04_SCOPE_KIND_MISSING={index}")
+            fingerprint = (
+                classification,
+                str(row.get("scope") or ""),
+                str(row.get("subject") or ""),
+                str(row.get("summary") or ""),
+            )
+            if fingerprint in seen:
+                failures.append(f"S04_DUPLICATE_CHANGE={index}")
+            seen.add(fingerprint)
+        if "MATERIAL DEVELOPMENTS" not in upper:
+            failures.append("S04_CLASSIFIED_DEVELOPMENTS_NOT_VISIBLE")
+
+    s07 = content("S07")
+    if state("S07") == "COMPLETE":
+        battles = [
+            dict(row) for row in s07.get("battles") or []
+            if isinstance(row, Mapping)
+        ]
+        for index, row in enumerate(battles, start=1):
+            for key in (
+                "p_start_a", "p_start_b", "xmins_a", "xmins_b",
+                "projection_1gw_a", "projection_1gw_b",
+                "fixture_a", "fixture_b", "workload_a", "workload_b",
+                "role_a", "role_b", "eo_a", "eo_b",
+                "direct_eo_a", "direct_eo_b", "final_starter",
+                "utility_margin", "tactical_reason",
+            ):
+                if key not in row:
+                    failures.append(f"S07_BATTLE_FIELD_MISSING={index}:{key}")
+                    break
+        if battles and "DIRECT EO A" not in upper:
+            failures.append("S07_DIRECT_EO_NOT_VISIBLE")
+
+    if state("S10") == "COMPLETE":
+        if "PREDICTION_STRENGTH" not in upper:
+            failures.append("S10_PREDICTION_STRENGTH_NOT_VISIBLE")
+
+    s15 = content("S15")
+    if state("S15") == "COMPLETE":
+        evidence = dict(s15.get("evidence_quality") or {})
+        required_categories = {
+            "Official public FPL",
+            "CURRENT15 identity",
+            "authenticated personal auth",
+            "authenticated finance",
+            "chips",
+            "fixtures/calendar",
+            "workload/travel",
+            "tactical",
+            "post-match underlying",
+            "price factual",
+            "price predictor freshness",
+            "mini-league submitted picks",
+            "mini-league standings/live",
+            "weather",
+            "model snapshot",
+        }
+        missing_categories = sorted(required_categories - set(evidence))
+        if missing_categories:
+            failures.append(
+                "S15_EVIDENCE_CATEGORY_MISSING=" + ",".join(missing_categories)
+            )
+        if "EVIDENCE QUALITY BY SOURCE CATEGORY" not in upper:
+            failures.append("S15_CATEGORY_GRADING_NOT_VISIBLE")
+
+    if state("S16") == "COMPLETE":
+        for token in (
+            "PGOAL", "PASSIST", "PRETURN", "PHAUL", "PBLANK",
+            "XG90", "NPXG90", "XA90", "XGI90",
+            "WORKLOAD/REST", "BAYESIAN", "ML RELEVANCE",
+        ):
+            if token not in upper:
+                failures.append(f"S16_VISIBLE_FIELD_MISSING={token}")
+        if "POSTERIOR_RATES" in upper:
+            failures.append("S16_RAW_POSTERIOR_DICT_VISIBLE")
+
+    if detailed_match_available:
+        if "TRAJECTORY INTERPRETATION:" not in upper:
+            failures.append("S16B_TRAJECTORY_INTERPRETATION_MISSING")
+        # Historical rows are observations. Repeating a posterior on every
+        # match line would falsely imply per-row model execution.
+        for line in str(body or "").splitlines():
+            if line.lstrip().startswith("- GW") and "BAYESIAN" in line.upper():
+                failures.append("S16B_POSTERIOR_REPEATED_PER_MATCH")
+                break
+
+    if state("S18") == "COMPLETE":
+        board = dict(s18.get("action_board") or {})
+        axes = [
+            dict(row) for row in board.get("axes") or []
+            if isinstance(row, Mapping)
+        ]
+        axis_names = {str(row.get("axis") or "").upper() for row in axes}
+        required_axes = {
+            "TRANSFER", "XI", "CAPTAIN", "PRICE",
+            "AUTH/FINANCE", "INJURY/TEAM NEWS",
+        }
+        if not required_axes.issubset(axis_names):
+            failures.append("S18_MULTI_AXIS_INCOMPLETE")
+        if "MULTI-AXIS ACTION BOARD" not in upper:
+            failures.append("S18_MULTI_AXIS_NOT_VISIBLE")
+        if board.get("best_alternative") is not None and (
+            "best_alternative_executable" not in board
+        ):
+            failures.append("S18_ALTERNATIVE_EXECUTION_STATE_MISSING")
+
     # Fail closed when a COMPLETE decision-critical section is not explicitly
     # bound to its authoritative producer payload. This prevents presentation
     # code from silently reconstructing optimizer, Rank20, XI, mini-league,
     # ALL15, or post-match outputs.
-    governed = ("S06", "S08", "S11", "S12", "S13", "S14", "S15B", "S16", "S16B")
+    governed = (
+        "S01", "S02", "S04", "S06", "S07", "S08", "S10", "S11",
+        "S12", "S13", "S14", "S15", "S15B", "S16", "S16B", "S18", "S19",
+    )
     for sid in governed:
         if state(sid) != "COMPLETE":
             continue
@@ -605,7 +807,275 @@ def validate_deep_decision_content_delivery(
                 failures.append("S05_BGW_S14B_REOPTIMIZE_MISSING")
             if final_judgement.get("bgw_reconciled") is not True:
                 failures.append("S05_BGW_S19_RECONCILIATION_MISSING")
+            for sid in ("S06", "S09", "S14", "S14B", "S19"):
+                if f"BGW PROPAGATION {sid}:" not in upper:
+                    failures.append(f"S05_BGW_VISIBLE_PROPAGATION_MISSING_{sid}")
 
+
+    # Stage-C captain / mini-league / final-judgement semantic barrier.
+    # Football baseline remains P1.7; mini-league is a downstream exposure
+    # overlay and must not manufacture captain candidates outside final XI.
+    current15_ids = {
+        int(row.get("element_id") or row.get("element"))
+        for row in content("S02").get("rows") or []
+        if isinstance(row, Mapping)
+        and (row.get("element_id") is not None or row.get("element") is not None)
+    }
+    final_xi_ids = {
+        int(
+            row.get("element")
+            if isinstance(row, Mapping)
+            else row
+        )
+        for row in content("S06").get("starting_xi") or []
+        if (
+            (isinstance(row, Mapping) and row.get("element") is not None)
+            or (not isinstance(row, Mapping) and row is not None)
+        )
+    }
+
+    s08 = content("S08")
+    if state("S08") == "COMPLETE":
+        captain_state = str(s08.get("decision_state") or "").upper()
+        if captain_state not in {"WAIT", "PREPARE", "LOCK"}:
+            failures.append("S08_CAPTAIN_DECISION_STATE_INVALID")
+        cap = dict(s08.get("captain") or {})
+        vice = dict(s08.get("vice_captain") or {})
+        try:
+            cap_id = int(cap.get("element_id"))
+        except (TypeError, ValueError):
+            cap_id = 0
+        try:
+            vice_id = int(vice.get("element_id"))
+        except (TypeError, ValueError):
+            vice_id = 0
+        if cap_id <= 0 or cap_id not in current15_ids:
+            failures.append("S08_CAPTAIN_NOT_IN_CURRENT15")
+        if vice_id <= 0 or vice_id not in current15_ids:
+            failures.append("S08_VICE_NOT_IN_CURRENT15")
+        if cap_id <= 0 or cap_id not in final_xi_ids:
+            failures.append("S08_CAPTAIN_NOT_IN_FINAL_XI")
+        if vice_id <= 0 or vice_id not in final_xi_ids:
+            failures.append("S08_VICE_NOT_IN_FINAL_XI")
+        if cap_id > 0 and cap_id == vice_id:
+            failures.append("S08_CAPTAIN_EQUALS_VICE")
+
+        proof = dict(s08.get("candidate_universe_proof") or {})
+        for key in (
+            "captain_in_current15",
+            "vice_in_current15",
+            "captain_in_final_xi",
+            "vice_in_final_xi",
+            "captain_vice_distinct",
+            "frontier_subset_of_final_xi",
+        ):
+            if proof.get(key) is not True:
+                failures.append(f"S08_LEGALITY_PROOF_FAIL={key}")
+
+        frontier = [
+            dict(row)
+            for row in s08.get("captain_frontier") or []
+            if isinstance(row, Mapping)
+        ]
+        if not frontier:
+            failures.append("S08_CAPTAIN_FRONTIER_MISSING")
+        for index, row in enumerate(frontier, start=1):
+            try:
+                element = int(row.get("element_id"))
+            except (TypeError, ValueError):
+                element = 0
+            if element <= 0 or element not in final_xi_ids:
+                failures.append(f"S08_FRONTIER_OUTSIDE_FINAL_XI={index}")
+            for scope_key in ("league_scope", "rivals_scope", "direct_scope"):
+                if not isinstance(row.get(scope_key), Mapping):
+                    failures.append(f"S08_CAPTAIN_SCOPE_MISSING={index}:{scope_key}")
+            if not str(row.get("exposure_leverage_class") or ""):
+                failures.append(f"S08_EXPOSURE_LEVERAGE_CLASS_MISSING={index}")
+            if "expected_rank_utility" in row:
+                failures.append(f"S08_CATEGORICAL_RANK_UTILITY_FORBIDDEN={index}")
+        if s08.get("football_baseline_first") is not True:
+            failures.append("S08_FOOTBALL_BASELINE_ORDER_MISSING")
+        if s08.get("mini_league_overlay_second") is not True:
+            failures.append("S08_MINI_LEAGUE_OVERLAY_ORDER_MISSING")
+        if "OWNED FINAL-XI CAPTAIN FRONTIER" not in upper:
+            failures.append("S08_CAPTAIN_FRONTIER_NOT_VISIBLE")
+        if "EXPOSURE / LEVERAGE CLASS" not in upper:
+            failures.append("S08_EXPOSURE_CLASS_NOT_VISIBLE")
+
+    s15b = content("S15B")
+    if state("S15B") == "COMPLETE":
+        scopes = dict(s15b.get("denominator_scopes") or {})
+        league_scope = dict(scopes.get("LEAGUE") or {})
+        rivals_scope = dict(scopes.get("RIVALS") or {})
+        direct_scope = dict(scopes.get("DIRECT") or {})
+        if league_scope.get("includes_us") is not True:
+            failures.append("S15B_LEAGUE_SCOPE_MUST_INCLUDE_US")
+        if rivals_scope.get("includes_us") is not False:
+            failures.append("S15B_RIVALS_SCOPE_MUST_EXCLUDE_US")
+        if direct_scope.get("includes_us") is not False:
+            failures.append("S15B_DIRECT_SCOPE_MUST_EXCLUDE_US")
+        try:
+            league_expected = int(league_scope.get("expected"))
+            rivals_expected = int(rivals_scope.get("expected"))
+        except (TypeError, ValueError):
+            league_expected = rivals_expected = -1
+        if league_expected <= 0 or rivals_expected != max(0, league_expected - 1):
+            failures.append("S15B_LEAGUE_RIVALS_DENOMINATOR_RELATION_INVALID")
+        if (
+            league_expected > 0
+            and str(league_scope.get("label") or "")
+            != f"LEAGUE{league_expected}_INCL_US"
+        ):
+            failures.append("S15B_LEAGUE_SCOPE_LABEL_INVALID")
+        if (
+            rivals_expected >= 0
+            and str(rivals_scope.get("label") or "")
+            != f"RIVALS{rivals_expected}_EXCL_US"
+        ):
+            failures.append("S15B_RIVALS_SCOPE_LABEL_INVALID")
+        if str(s15b.get("disclosed_picks_label") or "") != "BEHAVIOURAL BASELINE":
+            failures.append("S15B_BEHAVIOURAL_BASELINE_LABEL_MISSING")
+
+        for scope_key, payload_key in (
+            ("LEAGUE", "league_our15_exposure"),
+            ("RIVALS", "rivals_our15_exposure"),
+            ("DIRECT", "direct_rival_our15_exposure"),
+        ):
+            scope = dict(scopes.get(scope_key) or {})
+            rows = [
+                dict(row)
+                for row in s15b.get(payload_key) or []
+                if isinstance(row, Mapping)
+            ]
+            if len(rows) != 15:
+                failures.append(f"S15B_OUR15_SCOPE_COUNT={scope_key}:{len(rows)}/15")
+            denominator = scope.get("denominator")
+            for index, row in enumerate(rows, start=1):
+                if row.get("denominator") != denominator:
+                    failures.append(
+                        f"S15B_DENOMINATOR_MISMATCH={scope_key}:{index}"
+                    )
+                    break
+                if row.get("eo_pct") is not None:
+                    if row.get("eo_supported") is not True:
+                        failures.append(
+                            f"S15B_UNSUPPORTED_EO={scope_key}:{index}"
+                        )
+                        break
+                    if row.get("effective_multiplier_sum") is None:
+                        failures.append(
+                            f"S15B_EO_UNITS_MISSING={scope_key}:{index}"
+                        )
+                        break
+
+        direct_meta = dict(s15b.get("direct_rival_scope") or {})
+        if direct_meta.get("denominator") != direct_scope.get("denominator"):
+            failures.append("S15B_DIRECT_DENOMINATOR_MISLABEL")
+        try:
+            direct_requested = int(direct_meta.get("requested_above_count"))
+            direct_standings = int(direct_meta.get("standings_rival_count"))
+            direct_picks = int(direct_meta.get("picks_available_count"))
+            direct_expected = int(direct_scope.get("expected"))
+            direct_collected = int(direct_scope.get("collected"))
+            direct_denominator = int(direct_scope.get("denominator"))
+        except (TypeError, ValueError):
+            direct_requested = direct_standings = direct_picks = -1
+            direct_expected = direct_collected = direct_denominator = -1
+        if direct_requested <= 0:
+            failures.append("S15B_DIRECT_REQUESTED_COHORT_MISSING")
+        else:
+            expected_direct_label = f"DIRECT{direct_requested}_ABOVE_US"
+            if str(direct_scope.get("label") or "") != expected_direct_label:
+                failures.append("S15B_DIRECT_SCOPE_LABEL_INVALID")
+        if (
+            direct_standings < 0
+            or direct_picks < 0
+            or direct_expected != direct_standings
+            or direct_collected != direct_picks
+            or direct_denominator != direct_picks
+            or (
+                direct_requested > 0
+                and direct_standings > direct_requested
+            )
+        ):
+            failures.append("S15B_DIRECT_SCOPE_COHORT_RELATION_INVALID")
+        for index, rival in enumerate(s15b.get("direct_rivals") or [], start=1):
+            if not isinstance(rival, Mapping):
+                continue
+            for key in (
+                "xi_overlap_count",
+                "bench_overlap_count",
+                "shields",
+                "rival_only_threats",
+                "differential_against_us",
+            ):
+                if key not in rival:
+                    failures.append(f"S15B_DIRECT_RIVAL_DETAIL_MISSING={index}:{key}")
+        if "expected_rank_utility" in str(s15b):
+            failures.append("S15B_CATEGORICAL_RANK_UTILITY_FORBIDDEN")
+        posture = str(
+            (s15b.get("strategy_implication") or {}).get("human_posture")
+            or ""
+        ).upper()
+        if posture not in {
+            "PROTECT",
+            "BALANCED",
+            "CHASE_MODERATE",
+            "CHASE_AGGRESSIVE",
+        }:
+            failures.append("S15B_POSTURE_INVALID")
+        for token in (
+            "DENOMINATOR SCOPES",
+            "BEHAVIOURAL BASELINE",
+            "EXPOSURE / LEVERAGE CLASS",
+        ):
+            if token not in upper:
+                failures.append(f"S15B_VISIBLE_CONTRACT_MISSING={token}")
+
+    s19 = content("S19")
+    if state("S19") == "COMPLETE":
+        judgement = dict(s19.get("final_judgement") or {})
+        consumed = {
+            str(value)
+            for value in judgement.get("consumed_sections") or []
+        }
+        if not {"S08", "S15B"}.issubset(consumed):
+            failures.append("S19_DID_NOT_CONSUME_S08_S15B")
+        final_cap = dict(judgement.get("final_captain") or {})
+        final_vice = dict(judgement.get("vice") or {})
+        try:
+            final_cap_id = int(final_cap.get("element_id"))
+        except (TypeError, ValueError):
+            final_cap_id = 0
+        try:
+            final_vice_id = int(final_vice.get("element_id"))
+        except (TypeError, ValueError):
+            final_vice_id = 0
+        if final_cap_id not in current15_ids or final_cap_id not in final_xi_ids:
+            failures.append("S19_CAPTAIN_NOT_IN_CURRENT15_FINAL_XI")
+        if final_vice_id not in current15_ids or final_vice_id not in final_xi_ids:
+            failures.append("S19_VICE_NOT_IN_CURRENT15_FINAL_XI")
+        if final_cap_id > 0 and final_cap_id == final_vice_id:
+            failures.append("S19_CAPTAIN_EQUALS_VICE")
+        s08_cap_id = 0
+        s08_vice_id = 0
+        try:
+            s08_cap_id = int((s08.get("captain") or {}).get("element_id"))
+            s08_vice_id = int((s08.get("vice_captain") or {}).get("element_id"))
+        except (TypeError, ValueError):
+            pass
+        if (
+            (final_cap_id != s08_cap_id or final_vice_id != s08_vice_id)
+            and not str(judgement.get("reconciliation_reason") or "").strip()
+        ):
+            failures.append("S19_S08_CONTRADICTION_WITHOUT_RECONCILIATION")
+        if (
+            str(judgement.get("captain_state") or "").upper()
+            != str(s08.get("decision_state") or "").upper()
+        ):
+            failures.append("S19_CAPTAIN_STATE_CONTRADICTS_S08")
+        if "S19 CONSUMED:" not in upper or "RECONCILIATION:" not in upper:
+            failures.append("S19_RECONCILIATION_NOT_VISIBLE")
 
     # Stage-A semantic correctness barrier. Field paths below are the exact
     # section payload contract emitted by v12_integrated_report_runner; a

@@ -3152,7 +3152,50 @@ def _render_deep_visible_contract_lines(
     lines: list[str] = []
     excluded: list[str] = []
 
-    if section_id == "S02":
+    if section_id == "S01":
+        dashboard = dict(payload.get("decision_dashboard") or {})
+        lines.append("### MULTI-AXIS DECISION DASHBOARD")
+        lines.extend(
+            _markdown_table(
+                ("axis", "state"),
+                [
+                    ("TRANSFER", dashboard.get("TRANSFER")),
+                    ("XI", dashboard.get("XI")),
+                    ("CAPTAIN", dashboard.get("CAPTAIN")),
+                    ("CHIP", dashboard.get("CHIP")),
+                    ("PRICE", dashboard.get("PRICE")),
+                    ("PERSONAL AUTH", dashboard.get("PERSONAL_AUTH")),
+                ],
+            )
+        )
+        lines.append(f"PLANNING GW: {dashboard.get('PLANNING_GW', payload.get('planning_gw'))}")
+        lines.append(f"PRIMARY REASON: {dashboard.get('PRIMARY_REASON', payload.get('reason'))}")
+        lines.append(f"KEY DRIVER: {dashboard.get('KEY_DRIVER', payload.get('key_decision_driver'))}")
+        blockers = dashboard.get("CURRENT_BLOCKERS") or payload.get("current_blockers") or []
+        lines.append("CURRENT BLOCKERS: " + (", ".join(str(x) for x in blockers) if blockers else "NONE"))
+        excluded.extend((
+            "decision_dashboard",
+            "operational_state",
+            "planning_gw",
+            "primary_decision",
+            "reason",
+            "key_decision_driver",
+            "current_blockers",
+            "current_planning_gw",
+        ))
+
+    elif section_id == "S02":
+        authority = dict(payload.get("current15_authority") or {})
+        lines.append(
+            "CURRENT15 AUTHORITY: "
+            f"SOURCE_CLASS={authority.get('source_class')} | "
+            f"SOURCE={authority.get('source')} | "
+            f"OBSERVED_AT={authority.get('observed_at')} | "
+            f"APPLICABLE_GW={authority.get('applicable_gw')} | "
+            f"AUTH={authority.get('auth_state')} | "
+            f"FINANCE={authority.get('finance_availability')} | "
+            f"STALE={authority.get('stale')}"
+        )
         rows = [
             dict(row)
             for row in payload.get("rows") or []
@@ -3161,45 +3204,121 @@ def _render_deep_visible_contract_lines(
         lines.extend(
             _markdown_table(
                 (
-                    "element_id",
-                    "player_name",
+                    "element",
+                    "player",
+                    "pos",
+                    "club",
+                    "price",
+                    "sell",
                     "opponent",
-                    "p_available",
-                    "p_start",
-                    "p_cameo",
-                    "p_dnp",
-                    "xmins",
-                    "tactical_role",
-                    "injury_rotation_warning",
-                    "price_relevance",
-                    "1gw",
-                    "3gw",
-                    "5gw",
-                    "action",
+                    "H/A",
+                    "avail",
+                    "P(start)",
+                    "xMins",
+                    "1GW",
+                    "3GW",
+                    "5GW",
+                    "role",
+                    "tactical",
+                    "warning",
+                    "price state",
+                    "ownership source",
                 ),
                 [
                     (
                         row.get("element_id"),
                         row.get("player") or row.get("name"),
+                        row.get("position"),
+                        row.get("club"),
+                        row.get("current_price"),
+                        row.get("selling_price"),
                         row.get("opponent"),
-                        row.get("p_available"),
+                        row.get("home_away"),
+                        row.get("availability", row.get("p_available")),
                         row.get("p_start"),
-                        row.get("p_cameo"),
-                        row.get("p_dnp"),
                         row.get("xmins"),
-                        row.get("tactical_role"),
+                        row.get("projection_1gw", row.get("gw_plus_1")),
+                        row.get("projection_3gw", row.get("three_gw")),
+                        row.get("projection_5gw", row.get("five_gw")),
+                        row.get("tactical_role_label", row.get("tactical_role")),
+                        row.get("tactical_score"),
                         row.get("injury_rotation_warning", "NONE_MATERIAL"),
                         row.get("price_relevance", "NONE_MATERIAL"),
-                        row.get("gw_plus_1"),
-                        row.get("three_gw"),
-                        row.get("five_gw"),
-                        row.get("action"),
+                        row.get("ownership_source"),
                     )
                     for row in rows
                 ],
             )
         )
-        excluded.append("rows")
+        excluded.extend(("rows", "current15_authority", "personal_resolution"))
+
+    elif section_id == "S03":
+        delta = dict(payload.get("decision_delta") or {})
+        baseline = str(delta.get("baseline_state") or "UNAVAILABLE").upper()
+        lines.append(f"PREVIOUS VALID VISIBLE DEEP BASELINE: {baseline}")
+        if baseline != "AVAILABLE":
+            lines.append(
+                "BASELINE UNAVAILABLE — previous valid visible DEEP occurrence is not bound; "
+                "no numerical or decision delta is inferred."
+            )
+        else:
+            delta_rows = [
+                dict(row)
+                for row in delta.get("rows") or []
+                if isinstance(row, Mapping)
+            ]
+            if delta_rows:
+                lines.extend(
+                    _markdown_table(
+                        (
+                            "decision_item",
+                            "previous",
+                            "current",
+                            "material_change",
+                            "reason",
+                            "evidence_time",
+                        ),
+                        [
+                            (
+                                row.get("decision_item"),
+                                row.get("previous"),
+                                row.get("current"),
+                                row.get("material_change"),
+                                row.get("reason"),
+                                row.get("evidence_time"),
+                            )
+                            for row in delta_rows
+                        ],
+                    )
+                )
+            else:
+                lines.append("NO MATERIAL DECISION CHANGE")
+        excluded.append("decision_delta")
+
+    elif section_id == "S04":
+        changes = [
+            dict(row)
+            for row in payload.get("changes") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.append("### MATERIAL DEVELOPMENTS")
+        lines.extend(
+            _markdown_table(
+                ("classification", "scope", "event kind", "subject", "summary", "evidence time"),
+                [
+                    (
+                        row.get("classification"),
+                        row.get("scope"),
+                        row.get("event_kind"),
+                        row.get("subject"),
+                        row.get("summary"),
+                        row.get("evidence_time"),
+                    )
+                    for row in changes
+                ],
+            )
+        )
+        excluded.extend(("changes", "decision_change_sources"))
 
     elif section_id == "S05":
         lines.append(f"GW TOPOLOGY: {payload.get('gw_topology') or 'UNAVAILABLE'}")
@@ -3503,20 +3622,37 @@ def _render_deep_visible_contract_lines(
         ]
         lines.extend(
             _markdown_table(
-                ("player_a", "player_b", "xmins_a", "xmins_b", "p_start_a", "p_start_b", "1gw_a", "1gw_b", "eo_a", "eo_b", "starter", "reason"),
+                (
+                    "player_a", "player_b", "P(start) A", "P(start) B", "xMins A", "xMins B",
+                    "1GW A", "1GW B", "Phaul A", "Phaul B", "fixture A", "fixture B",
+                    "workload A", "workload B", "role A", "role B",
+                    "Rivals EO A", "Rivals EO B", "Direct EO A", "Direct EO B",
+                    "starter", "utility delta", "reason"
+                ),
                 [
                     (
                         item.get("player_a"),
                         item.get("player_b"),
-                        item.get("xmins_a"),
-                        item.get("xmins_b"),
                         item.get("p_start_a"),
                         item.get("p_start_b"),
+                        item.get("xmins_a"),
+                        item.get("xmins_b"),
                         item.get("projection_1gw_a"),
                         item.get("projection_1gw_b"),
+                        item.get("p_haul_a"),
+                        item.get("p_haul_b"),
+                        item.get("fixture_a"),
+                        item.get("fixture_b"),
+                        item.get("workload_a"),
+                        item.get("workload_b"),
+                        item.get("role_a"),
+                        item.get("role_b"),
                         item.get("eo_a"),
                         item.get("eo_b"),
+                        item.get("direct_eo_a"),
+                        item.get("direct_eo_b"),
                         item.get("final_starter"),
+                        item.get("utility_margin"),
                         item.get("tactical_reason"),
                     )
                     for item in battles
@@ -3732,6 +3868,7 @@ def _render_deep_visible_contract_lines(
                     "direction",
                     "progress",
                     "projected_offset0",
+                    "prediction_strength",
                     "next_cycle",
                     "cycles_to_change",
                     "date_state",
@@ -3750,6 +3887,7 @@ def _render_deep_visible_contract_lines(
                         row.get("predictor_direction"),
                         row.get("predictor_progress"),
                         row.get("predictor_projected_percent"),
+                        row.get("prediction_strength"),
                         row.get("next_official_price_cycle_wib"),
                         row.get("cycles_to_expected_change"),
                         row.get("date_state"),
@@ -4012,6 +4150,30 @@ def _render_deep_visible_contract_lines(
             )
         )
         excluded.extend(("rows", "predictor_payload_hash"))
+
+    elif section_id == "S15":
+        evidence = dict(payload.get("evidence_quality") or {})
+        lines.append("### EVIDENCE QUALITY BY SOURCE CATEGORY")
+        lines.extend(
+            _markdown_table(
+                ("category", "state", "source / detail"),
+                [
+                    (
+                        key,
+                        (value or {}).get("state") if isinstance(value, Mapping) else value,
+                        _markdown_cell({
+                            k: v
+                            for k, v in dict(value or {}).items()
+                            if k != "state"
+                        }) if isinstance(value, Mapping) else "",
+                    )
+                    for key, value in evidence.items()
+                ],
+            )
+        )
+        execution = dict(payload.get("model_execution") or {})
+        lines.append("MODEL EXECUTION: " + " | ".join(f"{k}={v}" for k, v in execution.items()))
+        excluded.extend(("evidence_quality", "model_execution"))
 
     elif section_id == "S15B":
         coverage = str(payload.get("coverage_state") or "").upper()
@@ -4350,6 +4512,46 @@ def _render_deep_visible_contract_lines(
             )
         )
 
+    elif section_id == "S18":
+        board = dict(payload.get("action_board") or {})
+        axes = [
+            dict(row)
+            for row in board.get("axes") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.append("### MULTI-AXIS ACTION BOARD")
+        lines.extend(
+            _markdown_table(
+                (
+                    "axis", "NOW", "NEXT", "TRIGGER TO ACT",
+                    "LATEST SAFE DECISION POINT", "COST OF WAITING", "ABORT / REVERSAL"
+                ),
+                [
+                    (
+                        row.get("axis"),
+                        row.get("NOW"),
+                        _markdown_cell(row.get("NEXT")),
+                        _markdown_cell(row.get("TRIGGER TO ACT")),
+                        _markdown_cell(row.get("LATEST SAFE DECISION POINT")),
+                        _markdown_cell(row.get("COST OF WAITING")),
+                        _markdown_cell(row.get("ABORT / REVERSAL")),
+                    )
+                    for row in axes
+                ],
+            )
+        )
+        alt = board.get("best_alternative")
+        lines.append(
+            "BEST ALTERNATIVE: "
+            + _markdown_cell(alt)
+            + f" | EXECUTABLE={board.get('best_alternative_executable')}"
+        )
+        excluded.extend((
+            "action_board", "NOW", "NEXT", "TRIGGER TO ACT",
+            "LATEST SAFE DECISION POINT", "COST OF WAITING",
+            "ABORT / REVERSAL", "BEST ALTERNATIVE",
+        ))
+
     elif section_id == "S19":
         judgement = dict(payload.get("final_judgement") or {})
         lines.append(
@@ -4415,45 +4617,53 @@ def _render_deep_visible_contract_lines(
         lines.extend(
             _markdown_table(
                 (
-                    "element_id",
-                    "player_name",
-                    "availability",
-                    "p_start",
-                    "xmins",
-                    "posterior",
-                    "role / set-piece / penalty",
-                    "fixture",
-                    "defensive contribution",
-                    "1gw",
-                    "3gw",
-                    "5gw",
-                    "price / optionality",
-                    "ICON+ relevance",
-                    "action",
+                    "player", "Pavail", "Pstart", "xMins",
+                    "Pgoal", "Passist", "Preturn", "Phaul", "Pblank",
+                    "1GW", "3GW", "5GW",
+                    "xG90", "npxG90", "xA90", "xGI90",
+                    "shots", "SIB", "SOT", "BC", "box", "KP", "CC",
+                    "role / pen / set-piece", "DefCon", "workload/rest",
+                    "fixture", "Bayesian", "upside", "risk", "ML relevance"
                 ),
                 [
                     (
-                        row.get("element_id"),
                         row.get("player") or row.get("name"),
                         row.get("availability", row.get("p_available")),
                         row.get("p_start"),
                         row.get("xmins"),
-                        row.get("posterior_signal"),
-                        row.get("role_detail"),
-                        row.get("fixture_detail"),
-                        row.get("defensive_contribution"),
+                        (row.get("probabilities") or {}).get("p_goal"),
+                        (row.get("probabilities") or {}).get("p_assist"),
+                        (row.get("probabilities") or {}).get("p_return"),
+                        (row.get("probabilities") or {}).get("p_haul"),
+                        (row.get("probabilities") or {}).get("p_blank"),
                         row.get("projection_1gw", row.get("gw_plus_1")),
                         row.get("projection_3gw", row.get("three_gw")),
                         row.get("projection_5gw", row.get("five_gw")),
-                        row.get("price_optionality"),
-                        row.get("mini_league_relevance"),
-                        row.get("action"),
+                        (row.get("underlying") or {}).get("xg90"),
+                        (row.get("underlying") or {}).get("npxg90"),
+                        (row.get("underlying") or {}).get("xa90"),
+                        (row.get("underlying") or {}).get("xgi90"),
+                        (row.get("underlying") or {}).get("shots"),
+                        (row.get("underlying") or {}).get("shots_in_box"),
+                        (row.get("underlying") or {}).get("shots_on_target"),
+                        (row.get("underlying") or {}).get("big_chances"),
+                        (row.get("underlying") or {}).get("box_touches"),
+                        (row.get("underlying") or {}).get("key_passes"),
+                        (row.get("underlying") or {}).get("chances_created"),
+                        _markdown_cell(row.get("role_detail")),
+                        _markdown_cell(row.get("defensive_contribution")),
+                        _markdown_cell(row.get("workload_context")),
+                        _markdown_cell(row.get("fixture_detail")),
+                        _markdown_cell(row.get("bayesian_state")),
+                        row.get("main_upside"),
+                        _markdown_cell(row.get("main_risk")),
+                        _markdown_cell(row.get("mini_league_relevance")),
                     )
                     for row in rows
                 ],
             )
         )
-        excluded.append("rows")
+        excluded.extend(("rows", "position_mechanisms"))
 
     elif section_id == "S16B":
         lines.append(
@@ -4490,7 +4700,7 @@ def _render_deep_visible_contract_lines(
                     "Sh {shots} SOT {sot} Box {box} KP/CC {kp}/{cc} BC {bc} | "
                     "SP {sp} PEN {pen} DEF {deff} | "
                     "team shape {shape} opp shape {opp_shape} role {role} | "
-                    "Bayesian {bayes} | price {price} | outlook 1/3/5 {outlook}".format(
+                    "price {price} | outlook 1/3/5 {outlook}".format(
                         gw=match.get("gw"),
                         opp=match.get("opponent_team_id"),
                         ha="H" if match.get("home") is True else "A" if match.get("home") is False else "?",
@@ -4516,11 +4726,19 @@ def _render_deep_visible_contract_lines(
                         shape=match.get("team_formation"),
                         opp_shape=match.get("opponent_formation", "UNAVAILABLE"),
                         role=match.get("role"),
-                        bayes=match.get("bayesian_update", item.get("bayesian_state", "UNAVAILABLE")),
                         price=match.get("price_movement", "UNAVAILABLE"),
                         outlook=match.get("outlook_1_3_5gw", "UNAVAILABLE"),
                     )
                 )
+            lines.append(
+                "TRAJECTORY INTERPRETATION: "
+                f"recency={payload.get('recency_weighting')} | "
+                f"Bayesian={item.get('bayesian_state', payload.get('bayesian_update'))} | "
+                f"current P(start)={item.get('p_start')} | current xMins={item.get('xmins')} | "
+                f"1/3/5GW={item.get('projection_1gw')}/{item.get('projection_3gw')}/{item.get('projection_5gw')} | "
+                f"price={item.get('price')} | ML={_markdown_cell(item.get('mini_league_relevance'))} | "
+                f"action={item.get('action')}"
+            )
             link = item.get("linkup_dependency")
             if link:
                 lines.append("LINK-UP DEPENDENCY: " + _markdown_cell(link))

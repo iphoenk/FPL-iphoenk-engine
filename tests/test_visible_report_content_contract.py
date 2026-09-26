@@ -1231,3 +1231,17 @@ def test_stage_e_post_all_actual_model_update_requires_execution_delta_proof():
     }
     failures = validate_post_all_match_lifecycle_surface(surface)
     assert "POST_ALL_MATCH_MODEL_UPDATE_PROOF_MISSING" in failures
+
+
+def test_stage_e_icon_one_healthy_subscope_degrades_without_blanking_it():
+    icon = _stage_e_icon_live()
+    icon.pop("live_standings")
+    surface = build_match_lifecycle_surface(
+        live_payload=_stage_e_match_live_payload(),
+        icon_live=icon,
+    )
+    assert surface["icon_live"]["state"] == "DEGRADED"
+    assert surface["icon_live"]["submitted_picks"] is not None
+    assert surface["icon_live"]["live_standings"] is None
+    assert surface["icon_live"]["missing_scopes"] == ["LIVE_STANDINGS_RANK"]
+    assert "LIVE_STANDINGS_RANK" in surface["icon_live"]["degradation_reason"]

@@ -3,15 +3,16 @@ from __future__ import annotations
 """Unified Stage-F delivery barrier for V12 visible reports.
 
 This module owns no football model, no factual acquisition and no scheduler.
-It only composes existing report-plane validators into one fail-closed gate.
+It composes the current Stage A-E report-plane validators into one fail-closed
+delivery gate. It must never reconstruct football decisions.
 """
 
 from typing import Any, Mapping
 
 from src.engines.v12_deep_delivery import validate_deep_decision_content_delivery
-from src.engines.v12_report_orchestration import (
-    validate_match_lifecycle_surface,
-    validate_post_all_match_lifecycle_surface,
+from src.runtime_v6.domains.report_plane.report_qa import (
+    _validate_v12_rendered_body,
+    validate_v12_visible_content_contract,
 )
 
 
@@ -22,6 +23,22 @@ DEEP_SECTION_IDS = [
 ]
 MATCH_SECTION_IDS = [f"MATCH{i}" for i in range(1, 14)]
 POST_ALL_MATCH_SECTION_IDS = [f"POST_ALL_MATCH{i}" for i in range(1, 14)]
+
+DEEP_STRUCTURAL_MODES = {
+    "DEEP",
+    "FULL",
+    "DEADLINE",
+    "FINAL",
+    "OVERLAP",
+    "DEEP+MATCH",
+    "MATCH+DEEP",
+    "FULL+MATCH",
+    "MATCH+FULL",
+    "PRICE+MATCH",
+    "MATCH+PRICE",
+    "DEADLINE+MATCH",
+    "MATCH+DEADLINE",
+}
 
 
 def _section_ids(report: Mapping[str, Any]) -> list[str]:
@@ -41,11 +58,48 @@ def _exact_catalog_failures(
     failures: list[str] = []
     if actual != expected:
         failures.append(
-            f"{prefix}_CATALOG_MISMATCH="
-            + ",".join(actual)
+            f"{prefix}_CATALOG_MISMATCH=" + ",".join(actual)
         )
     if len(actual) != len(set(actual)):
         failures.append(f"{prefix}_DUPLICATE_SECTION")
+    return failures
+
+
+def _resolve_contract(
+    report: Mapping[str, Any],
+    content_contract: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if isinstance(content_contract, Mapping):
+        return dict(content_contract)
+    candidate = report.get("content_contract")
+    if isinstance(candidate, Mapping):
+        return dict(candidate)
+    return None
+
+
+def _current_mode_contract_failures(
+    *,
+    mode: str,
+    report: Mapping[str, Any],
+    body: str,
+    content_contract: Mapping[str, Any] | None,
+) -> list[str]:
+    contract = _resolve_contract(report, content_contract)
+    if contract is None:
+        return [f"{mode}_CONTENT_CONTRACT_MISSING"]
+
+    semantic = validate_v12_visible_content_contract(
+        report_mode=mode,
+        content_contract=contract,
+    )
+    failures = list(semantic.get("failures") or [])
+    failures.extend(
+        _validate_v12_rendered_body(
+            report_mode=mode,
+            rendered_body=body,
+            content_contract=contract,
+        )
+    )
     return failures
 
 
@@ -57,13 +111,13 @@ def validate_final_delivery_barrier(
     content_contract: Mapping[str, Any] | None = None,
     finalization: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return one final fail-closed delivery verdict across A-E semantics."""
-    mode = str(report_mode or "").upper()
+    """Return one final fail-closed delivery verdict across Stage A-E semantics."""
+    mode = str(report_mode or "").strip().upper()
     text = str(body or "")
     failures: list[str] = []
     ids = _section_ids(report)
 
-    if mode in {"DEEP", "FULL", "DEADLINE", "FINAL"}:
+    if mode in DEEP_STRUCTURAL_MODES:
         failures.extend(
             _exact_catalog_failures(
                 actual=ids,
@@ -81,24 +135,14 @@ def validate_final_delivery_barrier(
                 prefix="MATCH",
             )
         )
-        surface = (
-            report.get("match_surface")
-            if isinstance(report.get("match_surface"), Mapping)
-            else content_contract
+        failures.extend(
+            _current_mode_contract_failures(
+                mode="MATCH",
+                report=report,
+                body=text,
+                content_contract=content_contract,
+            )
         )
-        failures.extend(validate_match_lifecycle_surface(surface or {}))
-        for marker in (
-            "MATCH CHECKPOINT / GW STATUS",
-            "LOCKED PERSONAL TEAM",
-            "PERSONAL IMPACT FIRST",
-            "GLOBAL AUTOSUB STATE",
-            "CAPTAIN / VICE CONSEQUENCE",
-            "OWNED LIVE/FINAL POINTS",
-            "BONUS/BPS",
-            "SOURCE / FRESHNESS STATUS",
-        ):
-            if marker not in text.upper():
-                failures.append("MATCH_VISIBLE_MARKER_MISSING=" + marker)
 
     elif mode == "POST_ALL_MATCH":
         failures.extend(
@@ -108,21 +152,25 @@ def validate_final_delivery_barrier(
                 prefix="POST_ALL_MATCH",
             )
         )
-        surface = (
-            report.get("post_all_match_surface")
-            if isinstance(report.get("post_all_match_surface"), Mapping)
-            else content_contract
-        )
         failures.extend(
-            validate_post_all_match_lifecycle_surface(surface or {})
+            _current_mode_contract_failures(
+                mode="POST_ALL_MATCH",
+                report=report,
+                body=text,
+                content_contract=content_contract,
+            )
         )
-        if "GW COMPLETED MATCH-BY-MATCH SCOUT" not in text.upper():
-            failures.append("POST_ALL_MATCH_SCOUT_NOT_VISIBLE")
 
     elif mode == "POST_MATCH":
+        # POST_MATCH is incremental evidence carried inside the MATCH lifecycle,
+        # not a competing top-level report schema.
         if "RELEVANT LEAGUE-WIDE SIGNALS" not in text.upper():
             failures.append("POST_MATCH_SIGNAL_SURFACE_NOT_VISIBLE")
-        if "MODEL UPDATE PENDING" not in text.upper() and "ACTUAL MODEL UPDATE" not in text.upper():
+        if (
+            "MODEL UPDATE PENDING" not in text.upper()
+            and "POSTERIOR UPDATED" not in text.upper()
+            and "ACTUAL MODEL UPDATE" not in text.upper()
+        ):
             failures.append("POST_MATCH_MODEL_UPDATE_STATE_NOT_VISIBLE")
 
     else:
@@ -138,6 +186,7 @@ def validate_final_delivery_barrier(
             )
         if final.get("combined_report") is True and visible_count != 1:
             failures.append("OVERLAP_DUPLICATE_VISIBLE_REPORT")
+
         lifecycle_event = str(
             final.get("dynamic_lifecycle_event") or ""
         ).upper()
@@ -170,5 +219,6 @@ def validate_final_delivery_barrier(
             "no_second_model_authority": True,
             "v6_factual_plane_unchanged": True,
             "human_facing_pass_requires_final_barrier_pass": True,
+            "uses_current_stage_e_contract": True,
         },
     }

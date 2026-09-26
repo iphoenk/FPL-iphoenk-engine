@@ -807,6 +807,9 @@ def validate_deep_decision_content_delivery(
                 failures.append("S05_BGW_S14B_REOPTIMIZE_MISSING")
             if final_judgement.get("bgw_reconciled") is not True:
                 failures.append("S05_BGW_S19_RECONCILIATION_MISSING")
+            for sid in ("S06", "S09", "S14", "S14B", "S19"):
+                if f"BGW PROPAGATION {sid}:" not in upper:
+                    failures.append(f"S05_BGW_VISIBLE_PROPAGATION_MISSING_{sid}")
 
 
     # Stage-C captain / mini-league / final-judgement semantic barrier.

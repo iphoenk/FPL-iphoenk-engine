@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from src.engines import live_state_service as service
+from src.engines.v12_final_delivery_barrier import validate_final_delivery_barrier
 from src.engines.v12_report_orchestration import materialize_match_report, render_match_text
 from src.runtime_v6.domains.report_plane.report_qa import (
     _validate_v12_rendered_body,
@@ -274,3 +275,50 @@ def test_match13_refuses_planning_or_incomplete_team_as_scoring_authority():
                 "players": [{"element": 1, "name": "planning-only"}],
             },
         )
+
+
+def test_stage_f_match_final_barrier_requires_single_report_and_incremental_obligation(tmp_path, monkeypatch):
+    live = _run(tmp_path, monkeypatch, _snapshot())
+    report = materialize_match_report(
+        canonical_text=CANONICAL.read_text(encoding="utf-8"),
+        live_payload=live,
+        next_critical_observation="fixture 101 full-time",
+    )
+    body = render_match_text(report)
+    finalization = {
+        "final_report_due": True,
+        "visible_report_count": 1,
+        "combined_report": False,
+        "dynamic_lifecycle_event": "POST_MATCH",
+        "final_mode": "MATCH",
+        "embedded_obligations": ["POST_MATCH_INCREMENTAL"],
+    }
+    result = validate_final_delivery_barrier(
+        report_mode="MATCH",
+        report=report,
+        body=body,
+        finalization=finalization,
+    )
+    assert result["status"] == "PASS", result["failures"]
+    assert result["can_emit"] is True
+
+    broken = dict(finalization)
+    broken["embedded_obligations"] = []
+    failed = validate_final_delivery_barrier(
+        report_mode="MATCH",
+        report=report,
+        body=body,
+        finalization=broken,
+    )
+    assert "POST_MATCH_INCREMENTAL_OBLIGATION_MISSING" in failed["failures"]
+
+    duplicate = dict(report)
+    duplicate["sections"] = list(report["sections"]) + [dict(report["sections"][-1])]
+    duplicate_result = validate_final_delivery_barrier(
+        report_mode="MATCH",
+        report=duplicate,
+        body=body,
+        finalization=finalization,
+    )
+    assert duplicate_result["status"] == "FAIL"
+    assert "MATCH_DUPLICATE_SECTION" in duplicate_result["failures"]

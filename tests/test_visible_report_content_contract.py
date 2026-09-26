@@ -17,9 +17,13 @@ from src.runtime_v6.domains.report_plane.report_qa import (
 from test_support.report_visible_body import valid_visible_body
 from src.engines.v12_report_orchestration import (
     build_match_lifecycle_surface,
+    build_post_all_match_lifecycle_surface,
     materialize_match_lifecycle_report,
+    materialize_post_all_match_lifecycle_report,
     render_match_lifecycle_text,
+    render_natural_post_match_text,
     validate_match_lifecycle_surface,
+    validate_post_all_match_lifecycle_surface,
 )
 
 
@@ -1147,3 +1151,83 @@ def test_stage_e_live_owned_scope_cannot_render_bps_as_final():
     payload["bonus_bps"] = {"provisional": False, "rows": []}
     failures = validate_match_lifecycle_surface(payload)
     assert "MATCH_BPS_FINAL_BEFORE_OWNED_FIXTURES_RESOLVED" in failures
+
+
+def _stage_e_post_all_surface():
+    return build_post_all_match_lifecycle_surface(
+        completed_fixture_ids=[101, 102],
+        match_scout=[_scout_row(101), _scout_row(102)],
+        gw_result_summary={"gw": 6, "status": "FINAL", "net_points": 72},
+        decision_pnl_counterfactual={
+            "status": "SETTLED",
+            "realized_or_live_pnl": 4.0,
+            "policy": "CURRENT_SUBMITTED_VS_CARRY_FORWARD_LAST_OFFICIAL_SUBMITTED_PLAN",
+        },
+        prediction_calibration={"status": "CALIBRATION_INPUT", "sample": "GW6"},
+        owned15_review=_all15(),
+        role_set_piece_changes=[{"player": "P8", "change": "NONE_MATERIAL"}],
+        bayesian_update_status={
+            "status": "MODEL_UPDATE_PENDING_NEXT_COMPUTE",
+            "reason": "post-match observations are calibration input until recomputed",
+        },
+        icon_final_gw={"status": "COMPLETE", "coverage": "58/58"},
+        price_outlook={"status": "CURRENT", "action": "MONITOR_ONLY"},
+        full_universe_next_gw_scan={
+            "status": "COMPLETE",
+            "search_authority": "FULL",
+            "automatic_transfer_recommendation": False,
+        },
+        watchlist20=_watchlist20(),
+        early_hold_transfer_frontier={
+            "status": "PREPARE",
+            "baseline": "HOLD",
+            "fresh_reoptimization_required": True,
+        },
+        learning_log=[{"lesson": "role evidence", "automatic_transfer_recommendation": False}],
+    )
+
+
+def test_stage_e_post_all_materializes_exact_13_and_every_fixture_once():
+    canonical = Path(
+        "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt"
+    ).read_text(encoding="utf-8")
+    surface = _stage_e_post_all_surface()
+    assert validate_post_all_match_lifecycle_surface(surface) == []
+    report = materialize_post_all_match_lifecycle_report(
+        canonical_text=canonical,
+        surface=surface,
+    )
+    assert report["rendered_section_ids"] == [
+        f"POST_ALL_MATCH{i}" for i in range(1, 14)
+    ]
+    scout = next(
+        row for row in report["sections"]
+        if row["section_id"] == "POST_ALL_MATCH5"
+    )
+    scout_ids = [
+        row["fixture_id"]
+        for row in scout["content"]["match_scout"]
+    ]
+    assert scout_ids == [101, 102]
+    assert len(scout_ids) == len(set(scout_ids)) == 2
+    body = render_natural_post_match_text(report)
+    assert body.count("#### FIXTURE ID:") == 2
+    assert "GW COMPLETED MATCH-BY-MATCH SCOUT" in body
+    assert "MODEL UPDATE PENDING NEXT COMPUTE" in body
+
+
+def test_stage_e_post_all_missing_completed_fixture_fails_closed():
+    surface = _stage_e_post_all_surface()
+    surface["match_scout"] = surface["match_scout"][:1]
+    failures = validate_post_all_match_lifecycle_surface(surface)
+    assert "POST_ALL_MATCH_SCOUT_FIXTURE_COVERAGE_MISMATCH" in failures
+
+
+def test_stage_e_post_all_actual_model_update_requires_execution_delta_proof():
+    surface = _stage_e_post_all_surface()
+    surface["bayesian_update_status"] = {
+        "status": "ACTUAL_MODEL_UPDATE",
+        "execution_proof": {"executed": True},
+    }
+    failures = validate_post_all_match_lifecycle_surface(surface)
+    assert "POST_ALL_MATCH_MODEL_UPDATE_PROOF_MISSING" in failures

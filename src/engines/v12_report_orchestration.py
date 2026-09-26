@@ -474,6 +474,11 @@ def _visible_price_contract(
                 "not a guarantee of the next confirmed price change"
             ),
             "evidence_timestamp": evidence_timestamp or "UNAVAILABLE",
+            "freshness": (
+                "FRESH"
+                if str(predictor_health or "").upper() in {"GREEN", "HEALTHY", "PASS", "CURRENT", "OK"}
+                else "STALE"
+            ),
             "confidence": {
                 "predictor_health": predictor_health,
                 "native_likelihood": likelihood if likelihood is not None else "UNAVAILABLE",
@@ -737,6 +742,7 @@ def build_price20(
             "latest_supported_projection",
             "estimate_source",
             "evidence_timestamp",
+            "freshness",
             "confidence",
             "impact_on_our_decision",
         ),
@@ -2611,13 +2617,25 @@ def _render_deep_visible_contract_lines(
         lines.append("XI: " + ", ".join(xi_names))
         lines.append("BENCH: " + ", ".join(bench_names))
         score = dict(payload.get("lineup_score") or {})
+        xi_base = score.get("xpts_mean")
+        captain_adjusted = None
+        if xi_base is not None:
+            try:
+                captain_adjusted = (
+                    float(xi_base)
+                    + float(score.get("captain_multiplier_value") or 0.0)
+                    + float(score.get("vice_fallback_value") or 0.0)
+                )
+            except (TypeError, ValueError):
+                captain_adjusted = None
+        lines.append("XI_BASE_XPTS: " + str(xi_base if xi_base is not None else "UNAVAILABLE"))
         lines.append(
-            "PROJECTED XI SCORE: "
-            + str(
-                score.get("xpts_mean")
-                if score.get("xpts_mean") is not None
-                else score.get("expected_fpl_points_with_captain_vice", "UNAVAILABLE")
-            )
+            "CAPTAIN_ADJUSTED_XPTS: "
+            + str(round(captain_adjusted, 6) if captain_adjusted is not None else "UNAVAILABLE")
+        )
+        lines.append(
+            "LINEUP_ROUTE_UTILITY: "
+            + str(score.get("robust", "UNAVAILABLE"))
         )
         comparisons = [
             dict(item)

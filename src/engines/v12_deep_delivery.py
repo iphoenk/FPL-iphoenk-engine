@@ -653,6 +653,18 @@ def validate_deep_decision_content_delivery(
             league_expected = rivals_expected = -1
         if league_expected <= 0 or rivals_expected != max(0, league_expected - 1):
             failures.append("S15B_LEAGUE_RIVALS_DENOMINATOR_RELATION_INVALID")
+        if (
+            league_expected > 0
+            and str(league_scope.get("label") or "")
+            != f"LEAGUE{league_expected}_INCL_US"
+        ):
+            failures.append("S15B_LEAGUE_SCOPE_LABEL_INVALID")
+        if (
+            rivals_expected >= 0
+            and str(rivals_scope.get("label") or "")
+            != f"RIVALS{rivals_expected}_EXCL_US"
+        ):
+            failures.append("S15B_RIVALS_SCOPE_LABEL_INVALID")
         if str(s15b.get("disclosed_picks_label") or "") != "BEHAVIOURAL BASELINE":
             failures.append("S15B_BEHAVIOURAL_BASELINE_LABEL_MISSING")
 
@@ -691,6 +703,34 @@ def validate_deep_decision_content_delivery(
         direct_meta = dict(s15b.get("direct_rival_scope") or {})
         if direct_meta.get("denominator") != direct_scope.get("denominator"):
             failures.append("S15B_DIRECT_DENOMINATOR_MISLABEL")
+        try:
+            direct_requested = int(direct_meta.get("requested_above_count"))
+            direct_standings = int(direct_meta.get("standings_rival_count"))
+            direct_picks = int(direct_meta.get("picks_available_count"))
+            direct_expected = int(direct_scope.get("expected"))
+            direct_collected = int(direct_scope.get("collected"))
+            direct_denominator = int(direct_scope.get("denominator"))
+        except (TypeError, ValueError):
+            direct_requested = direct_standings = direct_picks = -1
+            direct_expected = direct_collected = direct_denominator = -1
+        if direct_requested <= 0:
+            failures.append("S15B_DIRECT_REQUESTED_COHORT_MISSING")
+        else:
+            expected_direct_label = f"DIRECT{direct_requested}_ABOVE_US"
+            if str(direct_scope.get("label") or "") != expected_direct_label:
+                failures.append("S15B_DIRECT_SCOPE_LABEL_INVALID")
+        if (
+            direct_standings < 0
+            or direct_picks < 0
+            or direct_expected != direct_standings
+            or direct_collected != direct_picks
+            or direct_denominator != direct_picks
+            or (
+                direct_requested > 0
+                and direct_standings > direct_requested
+            )
+        ):
+            failures.append("S15B_DIRECT_SCOPE_COHORT_RELATION_INVALID")
         for index, rival in enumerate(s15b.get("direct_rivals") or [], start=1):
             if not isinstance(rival, Mapping):
                 continue

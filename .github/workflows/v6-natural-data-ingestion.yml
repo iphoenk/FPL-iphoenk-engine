@@ -641,10 +641,6 @@ jobs:
             echo "PRIVATE_PERSONAL_REFRESH=FAIL"
             exit "$rc"
           fi
-          if [[ ! -s "$work/data/v6/personal/current_team.json" ]]; then
-            echo "PRIVATE_PERSONAL_REFRESH=NO_AUTH_CURRENT_TEAM"
-            exit 0
-          fi
           python -m src.runtime_v6.domains.report_plane.private_boundary \
             --public-root "$work/data/v6" \
             --private-root private-reports \

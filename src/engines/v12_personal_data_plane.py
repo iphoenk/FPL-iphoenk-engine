@@ -179,7 +179,7 @@ def collect_personal_evidence_candidates(
         except (TypeError, ValueError):
             submitted_gw = 0
         disclosed = 0 < submitted_gw < int(planning_gw)
-        if (not enforce_public_disclosure and submitted_gw > 0) or disclosed:
+        if (not enforce_public_disclosure) or disclosed:
             candidates.append(
                 {
                     "source": "data/v6/personal/submitted_picks.json",

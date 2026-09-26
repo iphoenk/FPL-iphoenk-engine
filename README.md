@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-25T16:36:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-26T14:12:30+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -16,7 +16,7 @@ This repository powers a governed personal Fantasy Premier League decision syste
 
 Decision-critical COMPLETE sections are fail-closed to an **authoritative producer payload binding**. XI/C/VC, Watchlist20, governed Rise20/Fall20, package/MC frontier, mini-league, ALL15, and post-match surfaces carry producer identity plus payload fingerprint before rendering; presentation does not reconstruct or re-sort them. Real-schema Rise20/Fall20 preserve the producer-native deterministic order (`projected_percent`, then element id), direction, and source; visible rank 1..20 is materialized from that order and validated in the rendered body. Compact/legacy payloads retain direct producer-rank validation. COMPLETE Watchlist20 preserves 5 GK / 5 DEF / 5 MID / 5 FWD.
 
-The Canonical V12 DEEP report is a **23-section fail-closed human-facing contract**. The presentation may become easier to scan, but analytics and evidence must not be removed to shorten the report.
+The Canonical V12 DEEP report is a **23-section fail-closed human-facing contract**. The presentation may become easier to scan, but analytics and evidence must not be removed to shorten the report.\n\nStage-A semantic correctness is fail-closed: current-squad identity is distinct from authenticated personal/finance health; unknown FT state cannot emit SAVE/ROLL FT; S06 exposes XI base xPts, captain-adjusted xPts, and route utility as distinct semantics; transfer football-frontier completeness is distinct from execution-economics completeness; and price predictor rows expose freshness explicitly.
 
 Occurrence-stage observability fingerprints normalize supported runtime `datetime` values to deterministic ISO-8601 strings before hashing. This keeps personal-evidence reconciliation auditable without changing evidence selection, football analytics, V6 facts, or decision semantics.
 

@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-26T22:25:48+07:00`  
-> **Production main at sync:** `38b57bdb96ef2c2d5a7a007bcab0bb00f8e788d7`  
+> **Last runtime/documentation sync:** `2026-09-26T22:41:32+07:00`  
+> **Production main at sync:** `e3695d44568c88202fec85d33aa8c6c2af274bd5`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -530,12 +530,13 @@ The repository is public compute, not a public diary of one manager's decisions.
 **Private-only examples**
 
 - authenticated current-team state;
+- owner-specific submitted picks and league-membership snapshots, even when the upstream Official FPL endpoint is publicly readable;
 - bank, selling values, free transfers, chips, and pending private state;
 - exact transfer routes and squad scenarios;
 - final XI, bench, captain, vice-captain, staging, and manager-specific action;
 - full human-facing decision reports.
 
-A private-delivery failure must not fall back to publishing the same material publicly.
+A private-delivery failure must not fall back to publishing the same material publicly. The public V6 runtime is fail-closed for owner-specific files under `data/v6/personal/`; source reproducibility does not make one manager's squad, XI/bench/C/VC, or league membership public-safe storage.
 
 ## Data and evidence
 

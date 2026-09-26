@@ -3638,6 +3638,8 @@ def _xi_battles(
     lineup: Mapping[str, Any] | None,
     projections: Mapping[str, Any] | None,
     mini: Mapping[str, Any] | None,
+    mini_detail: Mapping[str, Any] | None = None,
+    calendar_context: Mapping[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     proof = dict((lineup or {}).get("main_starting_xi_battle") or {})
     starters = [
@@ -3654,6 +3656,21 @@ def _xi_battles(
         for row in (mini or {}).get("exposures") or []
         if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
     }
+    direct = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in (mini_detail or {}).get("direct_rival_our15_exposure") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    }
+    workload = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in (calendar_context or {}).get("player_workload") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    }
+
+    def onegw(player: Mapping[str, Any]) -> dict[str, Any]:
+        mechanism = _visible_position_mechanism(player, action="HOLD") if player else {}
+        return dict(mechanism.get("1GW") or {})
+
     out: list[dict[str, Any]] = []
     for a, b in zip(starters, bench):
         aid = int(a.get("element") or 0)
@@ -3664,6 +3681,12 @@ def _xi_battles(
         xb = dict(pb.get("xmins") or {})
         ea = exposures.get(aid) or {}
         eb = exposures.get(bid) or {}
+        da = direct.get(aid) or {}
+        db = direct.get(bid) or {}
+        wa = workload.get(aid) or {}
+        wb = workload.get(bid) or {}
+        one_a = onegw(pa)
+        one_b = onegw(pb)
         out.append({
             "player_a": pa.get("name") or a.get("name") or aid,
             "player_b": pb.get("name") or b.get("name") or bid,
@@ -3673,14 +3696,28 @@ def _xi_battles(
             "p_start_b": xb.get("start_probability"),
             "projection_1gw_a": _horizon_mean(pa, "1"),
             "projection_1gw_b": _horizon_mean(pb, "1"),
-            "ceiling_a": ((pa.get("horizons") or {}).get("1") or {}).get("quantiles"),
-            "ceiling_b": ((pb.get("horizons") or {}).get("1") or {}).get("quantiles"),
+            "p_haul_a": one_a.get("p_haul"),
+            "p_haul_b": one_b.get("p_haul"),
+            "ceiling_a": one_a.get("Q90"),
+            "ceiling_b": one_b.get("Q90"),
             "fixture_a": ((pa.get("xpts_by_gw") or [{}])[0].get("fixtures") or [{}])[0].get("opponent") if pa.get("xpts_by_gw") else None,
             "fixture_b": ((pb.get("xpts_by_gw") or [{}])[0].get("fixtures") or [{}])[0].get("opponent") if pb.get("xpts_by_gw") else None,
+            "workload_a": {
+                "load_state": wa.get("load_state"),
+                "days_rest": wa.get("days_rest"),
+                "long_haul": wa.get("long_haul"),
+            },
+            "workload_b": {
+                "load_state": wb.get("load_state"),
+                "days_rest": wb.get("days_rest"),
+                "long_haul": wb.get("long_haul"),
+            },
             "role_a": pa.get("tactical_role") or pa.get("system_context"),
             "role_b": pb.get("tactical_role") or pb.get("system_context"),
             "eo_a": ea.get("eo_pct"),
             "eo_b": eb.get("eo_pct"),
+            "direct_eo_a": da.get("eo_pct"),
+            "direct_eo_b": db.get("eo_pct"),
             "tactical_reason": proof.get("status"),
             "final_starter": pa.get("name") or a.get("name") or aid,
             "utility_margin": proof.get("margin"),
@@ -4985,6 +5022,8 @@ def run_deep(
         lineup=lineup,
         projections=projections,
         mini=mini,
+        mini_detail=mini_deep_detail,
+        calendar_context=calendar_context,
     )
     staging = _three_gw_staging(
         planning_gw=planning_gw,
@@ -5109,16 +5148,44 @@ def run_deep(
             expected_count=15,
         ),
         "S03": _section(
-            "COMPLETE",
+            "DEGRADED",
             {
                 "decision_delta": {
-                    "action": operational_action,
-                    "selected_route_id": (stage3_decision or {}).get("selected_route_id"),
-                    "reason": (stage3_decision or {}).get("reason"),
-                    "mini_league_delta": (mini_overlay or {}).get("decision_delta"),
+                    "baseline_state": "UNAVAILABLE",
+                    "baseline_requirement": "PREVIOUS_VALID_VISIBLE_DEEP",
+                    "rows": [],
+                    "summary": (
+                        "BASELINE UNAVAILABLE — previous valid visible DEEP occurrence is not "
+                        "bound to this runner; no decision delta is inferred."
+                    ),
+                    "current_snapshot": {
+                        "operational_transfer_action": operational_action,
+                        "selected_transfer_route": (stage3_decision or {}).get("selected_route_id"),
+                        "xi": [
+                            _surface_element(row)
+                            for row in (lineup or {}).get("starting_xi") or []
+                        ],
+                        "bench_order": [
+                            _surface_element(row)
+                            for row in ((lineup or {}).get("bench") or {}).get("order") or []
+                        ],
+                        "formation": (lineup or {}).get("formation"),
+                        "captain": _surface_element((lineup or {}).get("captain")),
+                        "vice": _surface_element((lineup or {}).get("vice_captain")),
+                        "finance_state": (
+                            "AVAILABLE"
+                            if _execution_finance_available(finance)
+                            else "DEGRADED"
+                        ),
+                        "chip_state": (
+                            chip_state if chip_available else "UNAVAILABLE"
+                        ),
+                    },
                     "material_only": True,
+                    "no_recomputation_no_numeric_delta": True,
                 },
             },
+            "previous valid visible DEEP baseline is not bound; a true delta cannot be claimed",
         ),
         "S04": _section(
             "COMPLETE",
@@ -5126,24 +5193,40 @@ def run_deep(
                 "changes": (
                     [
                         {
-                            "type": "POST_MATCH_MATERIALITY",
+                            "classification": "NEW",
+                            "scope": "POST_MATCH_UNIVERSE_SCAN",
+                            "event_kind": "ANALYTICAL_SIGNAL",
+                            "subject": "FULL_ELIGIBLE_UNIVERSE",
                             "summary": (
                                 f"{(post_match_review.get('full_universe_scan') or {}).get('material_count')} "
-                                "material GW1→Now trajectories identified by the existing universe scan"
+                                "material GW1→Now trajectories are present in the bound post-match scan"
                             ),
+                            "evidence_time": report_slot,
                         }
                     ]
                     if (post_match_review.get("full_universe_scan") or {}).get("material_count")
                     else [
                         {
-                            "type": "NO_NEW_MATERIAL_CHANGE",
-                            "summary": "No new factual development in the bound occurrence independently changes the decision.",
+                            "classification": "UNCHANGED",
+                            "scope": "BOUND_OCCURRENCE",
+                            "event_kind": "CONFIRMING",
+                            "subject": "DECISION_STATE",
+                            "summary": (
+                                "No new factual development in the bound occurrence independently "
+                                "changes the decision."
+                            ),
+                            "evidence_time": report_slot,
                         }
                     ]
                 ),
-                "decision_change_sources": (
-                    "injury / lineup / role / tactics / price / fixture / underlying / mini-league / transfer economics"
-                ),
+                "decision_change_sources": {
+                    "FACTUAL_EVENT": "injury / lineup / fixture / official availability",
+                    "MODEL_RECOMPUTATION": "P1.x occurrence execution",
+                    "STAGEC_UNIVERSE_SIGNAL": "full-universe breakout/regression scanner",
+                    "POST_MATCH_MATERIALITY": "GW1→Now contextual trajectory",
+                    "PRICE_EVENT": "official/predictor price evidence",
+                    "MINI_LEAGUE_EVENT": "standings/submitted-picks evidence",
+                },
                 **(
                     {"stagec_universe_intelligence": stagec_surface}
                     if stagec_surface is not None

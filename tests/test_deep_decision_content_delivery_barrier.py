@@ -9,6 +9,7 @@ from src.engines.v12_deep_delivery import (
     select_personal_evidence,
     validate_deep_decision_content_delivery,
 )
+from src.engines.v12_final_delivery_barrier import validate_final_delivery_barrier
 from src.engines.v12_integrated_report_runner import (
     _fingerprint,
     _lineup_content,
@@ -969,6 +970,22 @@ def test_stage_a_required_ci_real_36126675342_fails_known_false_pass_classes():
     )
     assert s17["content"]["source_health"]["authenticated_personal_scope"] == "HEALTHY"
     assert not any("TERMINAL_DATE_STATE_MISSING" in row for row in failures)
+
+
+def test_stage_f_final_barrier_rejects_real_36126675342_false_pass():
+    payload = _stage_a_fixture("v12_semantic_regression_36126675342.json")
+    result = validate_final_delivery_barrier(
+        report_mode="DEEP",
+        report=payload["report"],
+        body="",
+    )
+    assert result["status"] == "FAIL"
+    assert result["can_emit"] is False
+    assert "S17_AUTH_AUTHORITY_MISSING" in result["failures"]
+    assert (
+        result["governance"]["human_facing_pass_requires_final_barrier_pass"]
+        is True
+    )
 
 
 def test_stage_a_required_ci_comparison_36108029034_is_not_semantic_pass():

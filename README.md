@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-26T11:22:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-26T11:31:00+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -710,3 +710,25 @@ times are diagnostic only, are inclusive, and must not be summed across nested
 functions. Parent-process cProfile includes time waiting on multiprocessing
 children but does not profile child-process internals; child hotspots require a
 separate child-aware profiler if the parent profile points there.
+
+
+### V12 Stage E lifecycle delivery hardening
+
+Stage E binds post-deadline MATCH delivery to immutable Official FPL submitted
+picks rather than the planning XI. The generated MATCH surface preserves exact
+OUR15/XI/bench/captain/vice identity, separates the reserve goalkeeper from
+outfield autosub priority 1/2/3, and reuses the existing global sequential
+autosub resolver. Live player evidence now retains the Official FPL `starts`
+field when published so STARTED versus CAMEO is factual where supportable.
+
+Pure MATCH materialization exposes the Canonical thirteen visible sections in
+order, puts personal consequences before generic league observations, keeps
+BONUS/BPS explicitly provisional while owned fixtures remain live, keeps ICON+
+submitted-picks exposure separate from live standings, and treats post-match
+learning as calibration evidence rather than an automatic transfer signal.
+An actual posterior/xMins/probability update may be claimed only when bounded
+execution proof includes previous value, current value and evidence timestamp.
+
+The V6 factual plane remains read-only. No second autosub solver, projection
+model, captain model, package optimizer or transfer decision authority is
+introduced.

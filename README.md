@@ -1,6 +1,6 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-26T22:25:48+07:00`  
+> **Last runtime/documentation sync:** `2026-09-26T22:43:00+07:00`  
 > **Production main at sync:** `38b57bdb96ef2c2d5a7a007bcab0bb00f8e788d7`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
@@ -529,7 +529,7 @@ The repository is public compute, not a public diary of one manager's decisions.
 
 **Private-only examples**
 
-- authenticated current-team state;
+- authenticated current-team state;\n- submitted picks, bench ordering, captain/vice state, and owner league memberships;
 - bank, selling values, free transfers, chips, and pending private state;
 - exact transfer routes and squad scenarios;
 - final XI, bench, captain, vice-captain, staging, and manager-specific action;

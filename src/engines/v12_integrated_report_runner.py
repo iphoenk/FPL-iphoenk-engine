@@ -3871,6 +3871,13 @@ def run_deep(
         chip_state not in (None, {}, [])
         and (finance or {}).get("chips_status") == "AVAILABLE"
     )
+    execution_economics_complete = bool(
+        (finance or {}).get("bank") is not None
+        and isinstance((finance or {}).get("free_transfers"), int)
+        and isinstance((finance or {}).get("hit_cost_per_extra_transfer"), int)
+        and str((finance or {}).get("sell_value_status") or "").upper()
+        not in {"", "UNAVAILABLE", "STALE_NOT_AUTHORIZED"}
+    )
 
     sections = {
         "S01": _section(
@@ -4058,9 +4065,33 @@ def run_deep(
             "COMPLETE" if stage3_internal_pass else "DEGRADED",
             {
                 "universe_scan": universe_gap,
-                "package_routes": stage3_visible.get("package_routes", []),
+                "package_routes": [
+                    {
+                        **dict(route),
+                        "executable": (
+                            True
+                            if execution_economics_complete
+                            and str(route.get("route") or "").upper() != "HOLD"
+                            else False
+                            if str(route.get("route") or "").upper() != "HOLD"
+                            else True
+                        ),
+                    }
+                    for route in stage3_visible.get("package_routes", [])
+                    if isinstance(route, Mapping)
+                ],
                 "frontier": stage3_visible.get("frontier", []),
-                **stage3_visible,
+                **{
+                    key: value
+                    for key, value in stage3_visible.items()
+                    if key != "package_routes"
+                },
+                "football_frontier_status": (
+                    "COMPLETE" if stage3_internal_pass else "DEGRADED"
+                ),
+                "execution_economics_status": (
+                    "COMPLETE" if execution_economics_complete else "DEGRADED"
+                ),
             },
             None if stage3_internal_pass else (
                 "Stage3 internal producer/wiring failure; this is NOT accepted as factual-source degradation"

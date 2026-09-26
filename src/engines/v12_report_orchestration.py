@@ -3285,28 +3285,21 @@ def build_match_lifecycle_surface(
         "planning_xi_used": False,
         "event_live": live.get("event_live_status"),
     }
-    visible_order = list(
-        canonical_mode_contract(
-            (
-                "14B. PURE MATCH EXACT CONTENT CONTRACT\n"
-                "1 MATCH CHECKPOINT / GW STATUS\n"
-                "2 LOCKED PERSONAL TEAM\n"
-                "3 PERSONAL IMPACT FIRST\n"
-                "4 GLOBAL AUTOSUB STATE\n"
-                "5 CAPTAIN / VICE CONSEQUENCE\n"
-                "6 OWNED LIVE/FINAL POINTS\n"
-                "7 BONUS/BPS — PROVISIONAL when applicable\n"
-                "8 CARDS / INJURY / DEFCON / ROLE EVENTS\n"
-                "9 RELEVANT LEAGUE-WIDE SIGNALS\n"
-                "10 ICON+ LIVE if fresh\n"
-                "11 NEXT-GW LEARNING\n"
-                "12 NEXT CRITICAL OBSERVATION\n"
-                "13 SOURCE / FRESHNESS STATUS\n"
-                "14C. BENCH PRESENTATION SEMANTICS\n"
-            ),
-            "MATCH",
-        )["expected_visible_order"]
-    )
+    visible_order = [
+        "MATCH CHECKPOINT / GW STATUS",
+        "LOCKED PERSONAL TEAM",
+        "PERSONAL IMPACT FIRST",
+        "GLOBAL AUTOSUB STATE",
+        "CAPTAIN / VICE CONSEQUENCE",
+        "OWNED LIVE/FINAL POINTS",
+        "BONUS/BPS",
+        "CARDS / INJURY / DEFCON / ROLE EVENTS",
+        "RELEVANT LEAGUE-WIDE SIGNALS",
+        "ICON+ LIVE",
+        "NEXT-GW LEARNING",
+        "NEXT CRITICAL OBSERVATION",
+        "SOURCE / FRESHNESS STATUS",
+    ]
     return {
         "visible_order": visible_order,
         "locked_team": locked,
@@ -3337,6 +3330,12 @@ def build_match_lifecycle_surface(
         ],
         "icon_live": {
             "state": icon_state,
+            "status": (
+                str(icon.get("status") or "FRESH").upper()
+                if icon_state == "COMPLETE"
+                else "UNAVAILABLE"
+            ),
+            "metrics": dict(icon.get("metrics") or {}),
             "submitted_picks": submitted_scope or None,
             "live_standings": standings_scope or None,
             "submitted_and_live_scopes_separate": True,
@@ -3452,8 +3451,19 @@ def materialize_match_lifecycle_report(
         for key, value in surface.items()
         if key not in {"icon_live"}
     }
-    report["content_contract"]["icon"] = icon
-    report["content_contract"]["icon"]["status"] = icon.get("state")
+    report["content_contract"]["icon"] = {
+        **icon,
+        "status": (
+            str(icon.get("status") or "FRESH").upper()
+            if str(icon.get("state") or "").upper() == "COMPLETE"
+            else "UNAVAILABLE"
+        ),
+        "degradation_reason": (
+            None
+            if str(icon.get("state") or "").upper() == "COMPLETE"
+            else "current ICON+ live/submitted evidence unavailable"
+        ),
+    }
     return report
 
 

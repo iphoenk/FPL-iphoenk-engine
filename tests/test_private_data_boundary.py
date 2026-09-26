@@ -77,7 +77,7 @@ def test_split_moves_current_team_private_and_sanitizes_public_auth_metadata(tmp
     )
 
     assert receipt["moved_current_team"] is True
-    assert not (public / "personal/current_team.json").exists()
+    assert not (public / "personal/current_team.json").exists()\n    assert not (public / "personal/submitted_picks.json").exists()\n    assert not (public / "personal/memberships.json").exists()\n    assert receipt["public_manager_specific_personal_files_present_after_split"] == []
     private_team = json.loads(
         (private / "personal/current_team.json").read_text(encoding="utf-8")
     )
@@ -103,7 +103,7 @@ def test_split_moves_current_team_private_and_sanitizes_public_auth_metadata(tmp
         not str(row.get("path") or "").endswith("/personal/current_team.json")
         for row in latest["artifacts"]
     )
-    assert latest["governance"]["private_personal_state_split"] is True
+    assert latest["governance"]["private_personal_state_split"] is True\n    assert latest["governance"]["public_tree_contains_manager_specific_personal_state"] is False
 
     health = json.loads(
         (public / "health/report_prefetch.json").read_text(encoding="utf-8")

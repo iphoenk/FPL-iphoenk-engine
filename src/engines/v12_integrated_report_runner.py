@@ -1864,6 +1864,19 @@ def _enrich_all15_rows(
                 "Q50": quantiles.get("Q50"),
                 "Q90": quantiles.get("Q90"),
             },
+            "bayesian_state": {
+                "status": (
+                    "POSTERIOR_AVAILABLE"
+                    if player.get("posterior_rates")
+                    else "UNAVAILABLE"
+                ),
+                "confidence": player.get("projection_confidence"),
+            },
+            "main_upside": quantiles.get("Q90"),
+            "main_risk": {
+                "Q10": quantiles.get("Q10"),
+                "warning": ", ".join(warnings) if warnings else "NONE_MATERIAL",
+            },
             "underlying": {
                 "xg90": rate.get("xg90"),
                 "npxg90": rate.get("npxg90"),

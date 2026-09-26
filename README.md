@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-26T22:09:45+07:00`  
-> **Production main at sync:** `88a5c79dcfecd5032e6893dd422b620231b90f37`  
+> **Last runtime/documentation sync:** `2026-09-26T22:25:48+07:00`  
+> **Production main at sync:** `38b57bdb96ef2c2d5a7a007bcab0bb00f8e788d7`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -65,6 +65,382 @@ Every player is evaluated with shared foundations such as **availability, xMins,
 The matchup layer is role-aware. Examples include runner vs high defensive line, central striker vs central centre-backs, aerial target vs aerial weakness, creator vs weak central pressure, winger vs vulnerable full-back, attacking full-back vs narrow defence, set-piece target vs weak set-piece defence, and goalkeeper vs opponent shot volume.
 
 The model also keeps FPL scoring mechanics explicit, including appearance points, clean sheets, goals conceded, save intervals, DefCon, goals, assists, cards, own goals, penalty misses/saves, and stochastic bonus rather than applying a generic final-point uplift.
+
+## Mathematical and probabilistic core
+
+The engine is intentionally distribution-first. It does not jump directly from raw statistics to one xPts number. The main chain is:
+
+`facts -> availability/minutes states -> posterior event rates -> position-specific event distributions -> exact FPL point PMF -> lineup/package consequences -> correlated Monte Carlo when required -> WAIT / PREPARE / ACT`.
+
+### 1. Canonical football score
+
+The football-only comparison score is fixed to the Canonical V12 evidence weights:
+
+```text
+FootballScore
+  = 0.20 × Proven/Historical
+  + 0.25 × Tactical/Role
+  + 0.30 × Current Underlying
+  + 0.25 × Fixture/Security
+```
+
+Each component is bounded to `[0,100]`; the four weights must total exactly `1.0`. Transfer economics, price timing and mini-league leverage are downstream and are not allowed to rewrite this football baseline.
+
+### 2. Start probability and xMins
+
+Starting probability is not one manually assigned percentage. Multiple signals are pooled in **log-odds space**.
+
+For each start signal `p_i` with weight `w_i`:
+
+```text
+logit(p)   = ln(p / (1-p))
+pooled_logit = Σ[w_i × logit(p_i)] / Σ[w_i]
+raw_P_start_given_available = sigmoid(pooled_logit)
+sigmoid(x) = 1 / (1 + exp(-x))
+```
+
+The observed season start rate is shrunk toward the neutral prior:
+
+```text
+season_start_rate
+  = (observed_start_rate × matches + neutral_prior × shrink_matches)
+    / (matches + shrink_matches)
+```
+
+Rotation and congestion then modify the conditional start probability:
+
+```text
+P(start | available)
+  = raw_P_start_given_available
+    × (1 - rotation_risk × rotation_strength)
+    × congestion_factor
+
+P(start) = P(available) × P(start | available)
+```
+
+Appearance is represented as a finite-state mixture rather than a single minutes estimate:
+
+```text
+states = START, CAMEO, LATE_CAMEO, ZERO_MINUTES
+
+xMins = E[M] = Σ_s P(s) × E[M | s]
+
+Var(M)
+  = Σ_s P(s) × (Var(M | s) + E[M | s]^2)
+    - E[M]^2
+```
+
+The published minutes uncertainty combines state-mixture variance with calibration uncertainty. Entropy of the four appearance outcomes increases the minutes uncertainty when the state probabilities are diffuse.
+
+### 3. Bayesian-style shrinkage of event rates
+
+Observed per-90 rates are not trusted at full strength in small samples. Current evidence is shrunk toward a governed prior:
+
+```text
+posterior_rate90
+  = (bounded_observed_rate90 × observed_minutes
+     + prior_rate90 × shrink_minutes)
+    / (observed_minutes + shrink_minutes)
+
+shrinkage_share
+  = shrink_minutes / (observed_minutes + shrink_minutes)
+```
+
+Early-season extreme rates are winsorized before shrinkage. Historical player priors can themselves be blended with position priors when evidence is available.
+
+Credible-rate intervals use a Gamma-rate approximation. Missing evidence remains prior-only or unavailable rather than being silently converted to zero.
+
+### 4. Count distributions: Poisson vs Negative Binomial
+
+For count events, the basic Poisson model is:
+
+```text
+P(X=k) = exp(-λ) × λ^k / k!
+```
+
+The engine empirically switches to a Negative Binomial family when the recent sample is sufficiently over-dispersed:
+
+```text
+use Negative Binomial when:
+sample_size >= 4
+AND observed_variance > 1.15 × observed_mean
+```
+
+Otherwise Poisson remains the simpler model. Model sophistication is therefore evidence-driven rather than automatically preferred.
+
+### 5. Goal, assist, defensive and negative-event processes
+
+The position engine converts posterior rates and xMins states into event probabilities and count PMFs. It explicitly models FPL-positive and FPL-negative events, including:
+
+- goals and assists;
+- clean sheets and goals conceded;
+- saves and penalty saves;
+- DefCon / defensive-contribution thresholds;
+- yellow/red cards;
+- own goals;
+- penalty misses;
+- stochastic bonus/BPS behaviour.
+
+For a Poisson event with rate `λ`, an at-least-one event probability follows:
+
+```text
+P(X >= 1) = 1 - exp(-λ)
+```
+
+Threshold probabilities are obtained from the relevant PMF rather than from a fixed point uplift.
+
+### 6. Goalkeeper save model
+
+Goalkeeper saves use a two-stage process.
+
+Observed shots-on-target faced proxy:
+
+```text
+SOT_faced = saves + goals_conceded
+```
+
+A shrunk save probability is built with a Jeffreys-style Beta prior:
+
+```text
+alpha = 0.5 + total_saves
+beta  = 0.5 + total_goals_conceded
+
+P(save | SOT) = alpha / (alpha + beta)
+```
+
+The final save-count distribution marginalizes over SOT volume:
+
+```text
+P(Saves=s)
+  = Σ_n P(SOT=n) × P(Saves=s | SOT=n)
+```
+
+The conditional save family is Binomial or Beta-Binomial depending on empirical over-dispersion. From the resulting PMF the engine derives `P(3+)`, `P(6+)`, `P(9+)`, `P(12+)` saves and expected save points.
+
+### 7. Scoreline and clean-sheet probability
+
+The scoreline layer compares three candidate families:
+
+- independent Poisson;
+- Dixon-Coles;
+- Bivariate Poisson.
+
+Candidate models are evaluated by negative log likelihood. A more complex family is selected only if it materially improves fit; otherwise the simpler Poisson model remains.
+
+For Poisson score counts:
+
+```text
+P(G=k | λ) = exp(-λ) × λ^k / k!
+```
+
+Clean-sheet probability is then the marginal probability of the opponent scoring zero after normalizing the selected joint scoreline grid:
+
+```text
+P(home CS) = Σ_h P(HomeGoals=h, AwayGoals=0)
+P(away CS) = Σ_a P(HomeGoals=0, AwayGoals=a)
+```
+
+### 8. Role-aware tactical matchup mathematics
+
+Fixture context is converted into bounded component multipliers rather than one universal FDR number.
+
+Core indices include:
+
+```text
+opponent_xG   = -ln(P(clean_sheet))
+attack_index  = clamp(team_xG / 1.35, 0.65, 1.45)
+pressure_index= clamp(opponent_xG / 1.35, 0.65, 1.45)
+cs_index      = clamp(P(clean_sheet) / 0.30, 0.55, 1.55)
+```
+
+Position-specific examples:
+
+| Position | Example base multiplier |
+| --- | --- |
+| GK | save = `pressure_index^0.72`; bonus = `sqrt(save × clean_sheet)` |
+| DEF | DefCon = `pressure_index^0.62`; goal = `attack_index^0.45`; creation = `attack_index^0.40` |
+| MID | goal = `attack_index^0.72`; creation = `attack_index^0.68`; DefCon = `pressure_index^0.28` |
+| FWD | goal = `attack_index^0.82`; creation = `attack_index^0.48`; bonus = `goal^0.65` |
+
+Role/opponent interactions are then multiplicative, for example:
+
+```text
+runner × high line:        goal × (1 + 0.10 × weakness)
+                           transition × (1 + 0.14 × weakness)
+
+central striker × weak CB: goal × (1 + 0.11 × weakness)
+
+aerial target × weakness:  aerial × (1 + 0.16 × weakness)
+
+creator × weak press:      creation × (1 + 0.10 × weakness)
+
+winger × vulnerable FB:    goal × (1 + 0.06 × weakness)
+                           creation × (1 + 0.08 × weakness)
+```
+
+All matchup multipliers are bounded before consumption. Missing tactical evidence is not fabricated.
+
+### 9. Exact FPL point probability mass function
+
+The engine constructs an **exact discrete point PMF conditional on the current posterior** by convolving the relevant event-point distributions.
+
+For final point support `x` with probabilities `p(x)`:
+
+```text
+E[Points]   = Σ_x x × p(x)
+
+Var(Points) = Σ_x x^2 × p(x) - E[Points]^2
+
+P(blank)    = Σ p(x), for x <= 2
+
+P(haul)     = Σ p(x), for x >= 10
+```
+
+It also publishes median, standard deviation and `Q10 / Q25 / Q50 / Q75 / Q90`, so a player is not represented only by mean xPts.
+
+### 10. Multi-GW horizons
+
+Decision horizons are kept separate:
+
+- GW+1;
+- 2GW for an explicit rental/exit route;
+- 3GW;
+- 5GW.
+
+The engine does **not** collapse them into a hidden weighted 3/5/10/15-GW score.
+
+A change route must satisfy the canonical mapping:
+
+```text
+GW+1 net delta > 0
+AND 3GW net delta >= 0
+AND 5GW net delta >= 0
+```
+
+This preserves immediate edge while preventing a superficially attractive one-week move from silently destroying medium-horizon utility.
+
+### 11. Transfer economics
+
+For a route compared with HOLD:
+
+```text
+gross_delta
+  = route_gross_utility - HOLD_gross_utility
+
+hit_transfers
+  = max(0, transfer_count - free_transfers)
+
+hit_points
+  = hit_transfers × exact_hit_cost
+
+FT_shadow
+  = best_future_utility_with_FT
+    - best_future_utility_with_that_FT_consumed
+
+net_delta
+  = gross_delta - hit_points - FT_shadow
+```
+
+Price is treated as an affordability/timing constraint, not as football authority. Buy-back difficulty is based on the current factual reacquisition-price minus authenticated selling-value gap. Future price gains are not inserted into football xPts.
+
+### 12. Pareto package frontier
+
+Transfer routes are not reduced to one arbitrary scalar when several dimensions matter. The package frontier considers:
+
+```text
+GW+1 net utility
+3GW net utility
+5GW net utility
+lower transfer count
+lower downside
+higher structural flexibility / bank
+```
+
+A route is dominated when another route is at least as good on all governed frontier dimensions and strictly better on at least one.
+
+### 13. Monte Carlo
+
+Monte Carlo is invoked for decisions where deterministic means are insufficient, including close routes, captain/bench changes or material covariance.
+
+Canonical execution uses at least **500,000 paths**, deterministic seeded shards, PCG64 and common random numbers so route-vs-HOLD differences are compared on matched stochastic states.
+
+For route utility samples `R_i` and HOLD samples `H_i`:
+
+```text
+D_i = R_i - H_i
+
+P(route > HOLD) = mean(D_i > 0)
+
+P(downside) = mean(D_i < 0)
+
+P(material upside)
+  = mean(D_i >= 5 points)
+
+mean_delta = mean(D_i)
+```
+
+Monte Carlo standard errors are explicit:
+
+```text
+SE(probability) = sqrt(p × (1-p) / N)
+
+SE(mean) = SD / sqrt(N)
+```
+
+The engine also publishes empirical `P10 / P25 / P50 / P75 / P90` and checks convergence across governed path checkpoints.
+
+The correlated simulation samples shared match/team state before player points. Clean-sheet outcomes derive from the same opponent-goal state rather than independent player Bernoulli draws.
+
+### 14. Regret, information value and action
+
+Before Monte Carlo, deterministic route regret is the opportunity gap:
+
+```text
+regret(route)
+  = max(0, best_resolved_GW+1_net_edge - route_GW+1_net_edge)
+```
+
+During Monte Carlo, selected-route regret is evaluated pathwise against the best route available in the same simulated state:
+
+```text
+MC expected regret
+  = mean(best_route_utility_per_path - selected_route_utility_per_path)
+```
+
+The final operational state remains deliberately simple:
+
+```text
+no canonical change edge                         -> WAIT
+valid edge but unresolved execution/information -> PREPARE
+value of waiting > current GW+1 edge             -> WAIT
+resolved edge > explicit information value       -> ACT
+```
+
+### 15. Methods used across the decision chain
+
+In practical terms the system combines:
+
+- hierarchical finite-state minutes mixtures;
+- logit-space probability pooling;
+- shrinkage and winsorization;
+- Gamma-rate uncertainty intervals;
+- Poisson and Negative Binomial count models;
+- Binomial and Beta-Binomial conditional models;
+- empirical scoreline model selection using Poisson, Dixon-Coles and Bivariate Poisson;
+- exact discrete PMF convolution;
+- posterior-predictive calibration checks;
+- position/role-specific tactical multipliers;
+- exact legal squad/lineup/package search;
+- Pareto-frontier comparison;
+- dynamic free-transfer opportunity cost;
+- correlated Monte Carlo with common random numbers;
+- empirical tails, quantiles and Monte Carlo standard errors;
+- deterministic and simulation-based regret;
+- explicit information-value gating;
+- mini-league leverage as a downstream overlay rather than football-score authority;
+- evidence lineage, source freshness, semantic cross-section validation and fail-closed delivery.
+
+The governing rule is that a more complex model is not automatically better. Complexity is admitted only where evidence, calibration or decision materiality supports it; otherwise the simpler truthful model is retained.
 
 ## What sets this engine apart
 
@@ -206,7 +582,7 @@ Repository changes are governed by CI and the documentation-sync contract. A cha
 
 As of the README sync timestamp above:
 
-- production `main` is `88a5c79dcfecd5032e6893dd422b620231b90f37`;
+- production `main` is `38b57bdb96ef2c2d5a7a007bcab0bb00f8e788d7`;
 - V6 is the active factual plane;
 - Canonical V12 is the active analytics and decision plane;
 - the public/private decision-data boundary is active;

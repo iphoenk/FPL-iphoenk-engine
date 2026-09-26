@@ -304,6 +304,8 @@ def validate_deep_decision_content_delivery(
     s01 = content("S01")
     if state("S01") == "COMPLETE":
         dashboard = dict(s01.get("decision_dashboard") or {})
+        if not dashboard:
+            failures.append("S01_MULTI_AXIS_PAYLOAD_MISSING")
         for key, allowed in (
             ("TRANSFER", {"WAIT", "PREPARE", "ACT"}),
             ("XI", {"WAIT", "PREPARE", "LOCK"}),

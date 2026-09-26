@@ -173,6 +173,24 @@ def validate_deep_decision_content_delivery(
     def state(section_id: str) -> str:
         return str((sections.get(section_id) or {}).get("state") or "").upper()
 
+    s02 = content("S02")
+    s17 = content("S17")
+    personal = dict(s02.get("personal_resolution") or {})
+    source_health = dict(s17.get("source_health") or {})
+    bound_auth = str(personal.get("auth_state") or "").upper()
+    visible_auth = str(source_health.get("authenticated_personal_scope") or "").upper()
+    if bound_auth == "AUTH_EXPIRED" and visible_auth in {"HEALTHY", "AVAILABLE", "CURRENT", "PASS"}:
+        failures.append("S17_AUTH_CONTRADICTS_BOUND_AUTH=AUTH_EXPIRED")
+    if personal.get("finance_available") is False and str(source_health.get("finance") or "").upper() in {"HEALTHY", "AVAILABLE", "CURRENT", "PASS"}:
+        failures.append("S17_FINANCE_CONTRADICTS_BOUND_AUTH")
+
+    s14b = content("S14B")
+    ft_state = dict(s14b.get("ft_state") or {})
+    if str(ft_state.get("status") or "").upper() == "UNAVAILABLE":
+        serialized_staging = str(s14b).upper()
+        if "SAVE FT" in serialized_staging or "ROLL FT" in serialized_staging:
+            failures.append("FT_UNKNOWN_EMITS_SAVE_OR_ROLL_FT")
+
     s14 = content("S14")
     routes = [
         dict(row) for row in s14.get("package_routes") or []
@@ -207,6 +225,12 @@ def validate_deep_decision_content_delivery(
                 failures.append(code)
         if not any(str(row.get("route") or "").upper() == "HOLD" for row in routes):
             failures.append("HOLD_COMPARATOR_MISSING")
+    execution_status = str(s14.get("execution_economics_status") or "").upper()
+    if execution_status == "DEGRADED":
+        for route in non_hold:
+            if route.get("executable") is True:
+                failures.append("FINANCE_DEGRADED_ROUTE_MARKED_EXECUTABLE")
+                break
     if funded and "FUNDED / 2-TRANSFER" not in upper:
         failures.append("FUNDING_ROUTE_NOT_VISIBLE")
     if int(mc.get("actual_paths") or 0) >= 500_000:
@@ -284,6 +308,9 @@ def validate_deep_decision_content_delivery(
                 failures.append(f"P1_7_NOT_VISIBLE={token}")
         if "CAPTAIN AUTHORITY:" not in upper:
             failures.append("P1_7_CAPTAIN_NOT_VISIBLE")
+        for token in ("XI_BASE_XPTS:", "CAPTAIN_ADJUSTED_XPTS:", "LINEUP_ROUTE_UTILITY:"):
+            if token not in upper:
+                failures.append(f"P1_7_SCORE_SEMANTICS_NOT_VISIBLE={token}")
 
     s18 = content("S18")
     for key in (

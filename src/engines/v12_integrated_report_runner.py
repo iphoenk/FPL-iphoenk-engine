@@ -5501,12 +5501,22 @@ def run_deep(
     # Bind decision-critical visible sections to the exact producer payload
     # before rendering. Renderer never manufactures this metadata.
     producer_by_section = {
-        "S06": "P1_7_LINEUP", "S08": "P1_7_LINEUP", "S11": "WATCHLIST20",
-        "S12": "OFFICIAL_FPL_PREDICTOR_RISE20", "S13": "OFFICIAL_FPL_PREDICTOR_FALL20",
+        "S01": "STAGE3_DECISION+S08+S09+S10+S17",
+        "S02": "CURRENT15_RESOLUTION+P1_1_P1_3+S05+S15B",
+        "S04": "BOUND_OCCURRENCE_MATERIALITY+STAGEC",
+        "S06": "P1_7_LINEUP",
+        "S07": "P1_7_XI_BATTLE+P1_1+S05+S15B",
+        "S08": "P1_7_LINEUP",
+        "S10": "OFFICIAL_FPL_PRICE_FACT+PRICE_PREDICTOR",
+        "S11": "WATCHLIST20",
+        "S12": "OFFICIAL_FPL_PREDICTOR_RISE20",
+        "S13": "OFFICIAL_FPL_PREDICTOR_FALL20",
         "S14": "P1_2_PACKAGE_UTILITY+P1_4_MONTE_CARLO+P1_8_MINI_LEAGUE_OVERLAY",
+        "S15": "BOUND_SOURCE_HEALTH+MODEL_EXECUTION",
         "S15B": "P1_8_MINI_LEAGUE_SNAPSHOT+P1_8_MINI_LEAGUE_OVERLAY",
         "S16": "P1_1_P1_3_FULL_UNIVERSE+P1_6_TACTICAL_ROLE",
         "S16B": "POST_MATCH_DEEP_DETAILS",
+        "S18": "S01+S08+S10+S14+TEAM_NEWS",
         "S19": "S08_CAPTAIN_FRONTIER+S15B_MINI_LEAGUE_RECONCILIATION",
     }
     for sid, producer in producer_by_section.items():

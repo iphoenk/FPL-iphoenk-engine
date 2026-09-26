@@ -119,6 +119,7 @@ def collect_personal_evidence_candidates(
     private_root: Path | None = None,
     allow_legacy_private_sources: bool = True,
     require_private_personal: bool = False,
+    enforce_public_disclosure: bool = True,
 ) -> list[dict[str, Any]]:
     """Assemble inputs while keeping V12 selection semantics external.
 
@@ -177,7 +178,8 @@ def collect_personal_evidence_candidates(
             submitted_gw = int(submitted.get("gw") or 0)
         except (TypeError, ValueError):
             submitted_gw = 0
-        if 0 < submitted_gw < int(planning_gw):
+        disclosed = 0 < submitted_gw < int(planning_gw)
+        if (not enforce_public_disclosure and submitted_gw > 0) or disclosed:
             candidates.append(
                 {
                     "source": "data/v6/personal/submitted_picks.json",

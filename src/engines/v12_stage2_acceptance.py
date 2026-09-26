@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from src.engines.v12_integrated_report_runner import (
-    STATE_PATH,
     _official_payload,
     _owned15,
     _planning_gw,
@@ -327,7 +326,6 @@ def _same_opponent_player_specific(
 def _public_personal_and_mini_league_evidence(
     runtime_data_root: Path,
     *,
-    current_team: Mapping[str, Any],
     owned: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
     """Prove current public Official FPL squad + mini-league evidence.
@@ -364,14 +362,10 @@ def _public_personal_and_mini_league_evidence(
     }
     entry_id = int(
         submitted.get("entry_id")
-        or current_team.get("entry_id")
         or prefetch.get("entry_id")
         or 0
     )
     submitted_lineage = dict(submitted.get("lineage") or {})
-    current_submitted_lineage = dict(
-        (current_team.get("lineage") or {}).get("submitted_picks") or {}
-    )
     current_public_squad = bool(
         str(submitted.get("status") or "").upper() == "AVAILABLE"
         and entry_id > 0
@@ -382,10 +376,6 @@ def _public_personal_and_mini_league_evidence(
         and len(submitted_ids) == 15
         and len(owned_ids) == 15
         and submitted_ids == owned_ids
-        and str(current_team.get("squad_state") or "").upper()
-        == "SUBMITTED_PICKS_ONLY"
-        and int(current_submitted_lineage.get("http_status") or 0) == 200
-        and int(current_team.get("entry_id") or 0) == entry_id
     )
 
     priority = [
@@ -407,7 +397,7 @@ def _public_personal_and_mini_league_evidence(
         if priority_league_id > 0
         else {}
     )
-    gw = int(submitted.get("gw") or current_team.get("gw") or prefetch.get("gw") or 0)
+    gw = int(submitted.get("gw") or prefetch.get("gw") or 0)
     manager_picks = (
         _read_json(
             runtime_data_root
@@ -504,8 +494,21 @@ def run_acceptance(
         team_strength=strength,
     )
 
-    state = _read_json(STATE_PATH)
-    owned = _owned15(runtime_data_root, state, bootstrap)
+    submitted_for_owned = _read_json(
+        runtime_data_root / "data/v6/personal/submitted_picks.json"
+    )
+    submitted_rows = [
+        dict(row)
+        for row in submitted_for_owned.get("picks") or []
+        if isinstance(row, Mapping)
+    ]
+    owned = _owned15(
+        {
+            "finance_allowed": False,
+            "rows": submitted_rows,
+        },
+        bootstrap,
+    )
     owned_ids = {int(row["element_id"]) for row in owned}
 
     canonical = build_canonical_universe(projections)
@@ -556,19 +559,8 @@ def run_acceptance(
     v6_publish = _read_json(
         runtime_data_root / "data/v6/health/publish_integrity.json"
     )
-    current_team = _read_json(
-        runtime_data_root / "data/v6/personal/current_team.json"
-    )
-    auth_state = str(current_team.get("auth_state") or "UNAVAILABLE").upper()
-    auth_current = auth_state in {
-        "AUTHENTICATED",
-        "AUTH_OK",
-        "VALID",
-        "GREEN",
-    }
     public_evidence = _public_personal_and_mini_league_evidence(
         runtime_data_root,
-        current_team=current_team,
         owned=owned,
     )
 
@@ -838,10 +830,9 @@ def run_acceptance(
     }
 
     stage2_engine_pass = all(checks.values())
-    current_authenticated_squad_pass = auth_current and len(owned) == 15
+    current_authenticated_squad_pass = False
     current_squad_evidence_pass = bool(
-        current_authenticated_squad_pass
-        or public_evidence.get("current_public_squad_available") is True
+        public_evidence.get("current_public_squad_available") is True
     )
     mini_league_public_pass = bool(
         public_evidence.get("mini_league_public_available") is True
@@ -863,16 +854,12 @@ def run_acceptance(
         "stage2_engine_status": (
             "PASS" if stage2_engine_pass else "FAIL"
         ),
-        "current_authenticated_squad_status": (
-            "PASS" if current_authenticated_squad_pass else "AUTH_EXPIRED_DIAGNOSTIC_ONLY"
-        ),
+        "current_authenticated_squad_status": "PRIVATE_SEPARATED",
         "current_squad_evidence_status": (
             "PASS" if current_squad_evidence_pass else "BLOCKED"
         ),
         "current_squad_evidence_mode": (
-            "AUTHENTICATED_CURRENT_TEAM"
-            if current_authenticated_squad_pass
-            else "PUBLIC_SUBMITTED_PICKS"
+            "PUBLIC_SUBMITTED_PICKS"
             if public_evidence.get("current_public_squad_available") is True
             else "UNAVAILABLE"
         ),
@@ -888,8 +875,6 @@ def run_acceptance(
             "logical_slot": v6_publish.get("logical_slot"),
             "run_id": v6_publish.get("run_id"),
             "identity_counts": v6_publish.get("identity_counts"),
-            "current_team_generated_at": current_team.get("generated_at"),
-            "auth_state": auth_state,
             "owned_count": len(owned),
             "auth_is_stage2_blocker": False,
             "public_evidence": public_evidence,

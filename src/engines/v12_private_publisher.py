@@ -42,6 +42,16 @@ def _read_json(path: Path) -> dict[str, Any]:
     return value
 
 
+def _season_from_report_slot(report_slot: str) -> str:
+    token = str(report_slot or "").strip()
+    if len(token) < 7 or not token[:4].isdigit() or token[4] != "-":
+        raise PrivatePublishError("cannot derive season from report_slot")
+    year = int(token[:4])
+    month = int(token[5:7])
+    start_year = year if month >= 7 else year - 1
+    return f"{start_year}-{str(start_year + 1)[-2:]}"
+
+
 def _timestamp_token(report_slot: str) -> str:
     token = str(report_slot or "").strip()
     if not token:
@@ -124,7 +134,7 @@ def publish_private_output(
     canonical_dir: Path,
     private_root: Path,
     run_id: str,
-    season: str,
+    season: str | None,
     model_sha: str,
     runtime_sha: str,
 ) -> dict[str, Any]:
@@ -156,11 +166,12 @@ def publish_private_output(
     }:
         raise PrivatePublishError("Stage3 canonical acceptance is not publishable")
 
+    season_value = str(season or "").strip() or _season_from_report_slot(report_slot)
     slot_token = _timestamp_token(report_slot)
     report_dir = (
         private_root
         / "reports"
-        / str(season)
+        / season_value
         / f"gw_{planning_gw}"
         / slot_token
     )
@@ -223,7 +234,7 @@ def publish_private_output(
         "report_mode": report_mode,
         "report_slot": report_slot,
         "planning_gw": planning_gw,
-        "season": str(season),
+        "season": season_value,
         "destination": str(report_dir.relative_to(private_root)),
         "canonical_bundle_sha256": canonical_bundle_sha,
         "canonical_body_sha256": canonical_body_sha,
@@ -251,7 +262,7 @@ def main() -> int:
     parser.add_argument("--canonical-dir", required=True)
     parser.add_argument("--private-root", required=True)
     parser.add_argument("--run-id", required=True)
-    parser.add_argument("--season", required=True)
+    parser.add_argument("--season", default="")
     parser.add_argument("--model-sha", required=True)
     parser.add_argument("--runtime-sha", required=True)
     parser.add_argument("--receipt-out", required=True)
@@ -261,7 +272,7 @@ def main() -> int:
         canonical_dir=Path(args.canonical_dir),
         private_root=Path(args.private_root),
         run_id=args.run_id,
-        season=args.season,
+        season=(args.season or None),
         model_sha=args.model_sha,
         runtime_sha=args.runtime_sha,
     )

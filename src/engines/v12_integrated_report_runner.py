@@ -4595,10 +4595,6 @@ def run_deep(
     bootstrap = official["bootstrap"]
     fixtures = official["fixtures"]
     planning_gw = _planning_gw(bootstrap)
-    private_current_team = _read_json(
-        runtime_data_root / "data/v6/personal/current_team.json",
-        {},
-    ) or {}
     personal_resolution = _stage(
         ledger,
         "PERSONAL_EVIDENCE_RECONCILIATION",
@@ -4611,6 +4607,9 @@ def run_deep(
             require_private_personal=require_private_personal,
         ),
         required=True,
+    )
+    private_current_team = dict(
+        (personal_resolution or {}).get("payload") or {}
     )
     owned = _stage(
         ledger,

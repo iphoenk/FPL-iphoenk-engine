@@ -199,23 +199,24 @@ def resolve_delivery_decision(
         quiet
         and not owner_adhoc
         and not deadline_override
-        and not checkpoint
         and not any(item in {"DEEP", "PRICE"} for item in obligations)
     )
     visible = bool(obligations) and not quiet_suppressed
 
+    # Richest visible structure wins; thinner deadline obligations remain
+    # embedded in the same report rather than creating a duplicate publication.
     priority = (
-        "ADHOC",
-        "DEADLINE:FINAL_CONFIRMATION",
-        "DEADLINE:GO_NO_GO",
-        "DEADLINE:FINAL_REVIEW",
+        "DEADLINE:DEEP",
+        "DEEP",
+        "POST_ALL_MATCH",
+        "PRICE",
         "DEADLINE:DELTA_EXECUTION",
         "DEADLINE:DELTA",
-        "DEADLINE:DEEP",
-        "POST_ALL_MATCH",
-        "DEEP",
-        "PRICE",
+        "DEADLINE:FINAL_REVIEW",
+        "DEADLINE:GO_NO_GO",
+        "DEADLINE:FINAL_CONFIRMATION",
         "MATCH",
+        "ADHOC",
     )
     primary = next((name for name in priority if name in obligations), None)
 

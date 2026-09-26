@@ -1,0 +1,127 @@
+name: P1 one-shot historical exposure cleanup
+
+on:
+  push:
+    paths:
+      - ".github/workflows/p1-one-shot-historical-cleanup.yml"
+
+permissions:
+  contents: read
+  actions: write
+  issues: write
+
+jobs:
+  cleanup:
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Redact legacy V12 issue proofs and collect run IDs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/legacy-comments.jsonl
+          for page in $(seq 1 20); do
+            json="$(gh api "repos/${GITHUB_REPOSITORY}/issues/431/comments?per_page=100&page=${page}")"
+            count="$(jq 'length' <<<"$json")"
+            jq -c '.[] | select((.body // "") | contains("V12_REPORT_RUN")) | {id,body}' <<<"$json" >> /tmp/legacy-comments.jsonl
+            if [ "$count" -lt 100 ]; then
+              break
+            fi
+          done
+
+          : > /tmp/legacy-run-ids.txt
+          while IFS= read -r row; do
+            [ -n "$row" ] || continue
+            id="$(jq -r '.id' <<<"$row")"
+            body="$(jq -r '.body' <<<"$row")"
+            run_id="$(grep -oE 'run_id=[0-9]+' <<<"$body" | head -n1 | cut -d= -f2 || true)"
+            status="$(grep -oE '(^|[|[:space:]])status=[A-Z_]+' <<<"$body" | head -n1 | grep -oE 'status=[A-Z_]+' | cut -d= -f2 || true)"
+            [ -n "$run_id" ] || continue
+            safe="HISTORICAL_V12_PROOF_REDACTED | run_id=${run_id} | legacy_status=${status:-UNKNOWN} | public decision/report metadata removed after P1 privacy cutover"
+            jq -n --arg body "$safe" '{body:$body}' |
+              gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${id}" --input - >/dev/null
+            echo "$run_id" >> /tmp/legacy-run-ids.txt
+          done < /tmp/legacy-comments.jsonl
+          sort -u /tmp/legacy-run-ids.txt -o /tmp/legacy-run-ids.txt
+          echo "LEGACY_COMMENTS_REDACTED=$(wc -l < /tmp/legacy-comments.jsonl | tr -d ' ')"
+          echo "LEGACY_RUN_IDS=$(wc -l < /tmp/legacy-run-ids.txt | tr -d ' ')"
+
+      - name: Delete legacy V12 workflow runs, logs, and attached artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          deleted=0
+          missing=0
+          while IFS= read -r run_id; do
+            [ -n "$run_id" ] || continue
+            if gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" >/dev/null 2>&1; then
+              deleted=$((deleted + 1))
+            else
+              missing=$((missing + 1))
+            fi
+          done < /tmp/legacy-run-ids.txt
+          echo "LEGACY_RUNS_DELETED=${deleted}"
+          echo "LEGACY_RUNS_ALREADY_MISSING_OR_UNAVAILABLE=${missing}"
+
+      - name: Delete only historical decision-sensitive Actions caches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > /tmp/decision-cache-ids.txt
+          for page in $(seq 1 20); do
+            json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/caches?per_page=100&page=${page}")"
+            count="$(jq '.actions_caches | length' <<<"$json")"
+            jq -r '.actions_caches[]
+              | select((.key | startswith("v12-p17-decision-")) or (.key | startswith("v12-mc-summary-")))
+              | .id' <<<"$json" >> /tmp/decision-cache-ids.txt
+            if [ "$count" -lt 100 ]; then
+              break
+            fi
+          done
+          sort -u /tmp/decision-cache-ids.txt -o /tmp/decision-cache-ids.txt
+          deleted=0
+          while IFS= read -r cache_id; do
+            [ -n "$cache_id" ] || continue
+            gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/caches/${cache_id}" >/dev/null
+            deleted=$((deleted + 1))
+          done < /tmp/decision-cache-ids.txt
+          echo "DECISION_CACHES_DELETED=${deleted}"
+
+      - name: Verify no legacy public decision comments or decision caches remain
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          legacy_comments=0
+          for page in $(seq 1 20); do
+            json="$(gh api "repos/${GITHUB_REPOSITORY}/issues/431/comments?per_page=100&page=${page}")"
+            count="$(jq 'length' <<<"$json")"
+            found="$(jq '[.[] | select((.body // "") | contains("V12_REPORT_RUN"))] | length' <<<"$json")"
+            legacy_comments=$((legacy_comments + found))
+            if [ "$count" -lt 100 ]; then
+              break
+            fi
+          done
+          [ "$legacy_comments" -eq 0 ]
+
+          decision_caches=0
+          for page in $(seq 1 20); do
+            json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/caches?per_page=100&page=${page}")"
+            count="$(jq '.actions_caches | length' <<<"$json")"
+            found="$(jq '[.actions_caches[]
+              | select((.key | startswith("v12-p17-decision-")) or (.key | startswith("v12-mc-summary-")))] | length' <<<"$json")"
+            decision_caches=$((decision_caches + found))
+            if [ "$count" -lt 100 ]; then
+              break
+            fi
+          done
+          [ "$decision_caches" -eq 0 ]
+          echo "P1_HISTORICAL_NON_GIT_CLEANUP=PASS"

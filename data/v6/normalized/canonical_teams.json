@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "canonical": true,
+  "semantic_class": "NORMALIZED_FACT",
+  "authority": "official_fpl",
+  "generated_at": "2026-09-26T16:28:43.024098+00:00",
+  "effective_at": "2026-09-26T16:28:42.222468+00:00",
+  "normalization_version": "V6_CANONICAL_FPL_1",
+  "primary_keys": [
+    "official_fpl_team_id"
+  ],
+  "source_snapshot_ids": [
+    "official_fpl:bootstrap:9628b303e99cf33b53e7c7a1969ed629bd4ff1cc98469ebcb24b198def361a9b",
+    "official_fpl:event_live_gw1:0974be7e805ad6b65b3345bee327fee541c4e445837b2871473ed9ba1d794d87",
+    "official_fpl:event_live_gw2:2bc0e5b3ca2035f0f0cce42a4c77d699d6c316bc290342cddf562b1a317f5715",
+    "official_fpl:event_live_gw3:c33c2af4674b0a9d4276b412a441ebae8b87e01a3d093cd113446e7ef6a02482",
+    "official_fpl:event_live_gw4:a4ebf3dac44cb598e6f62a1dd5333e3d5ce7206303dbda62f513830ae7cfd095",
+    "official_fpl:event_live_gw5:aeee6dd5b56567b04ef9b4e5b9828ee4d81e094803dc0e6553cd3b394178c6dd",
+    "official_fpl:event_status:dd14199f8a25fc74661700f5de91003b6e7c2b7c19fdcab01756a742afbfed23",
+    "official_fpl:fixtures:113c3c674e681542b8a7926a02036cab9d438f7f1c0bd5d4410afa367a31ad04"
+  ],
+  "team_count": 20,
+  "teams": [
+    {
+      "canonical_team_id": "fpl-team:1",
+      "official_fpl_team_id": 1,
+      "code": 3,
+      "name": "Arsenal",
+      "short_name": "ARS",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:2",
+      "official_fpl_team_id": 2,
+      "code": 7,
+      "name": "Aston Villa",
+      "short_name": "AVL",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:3",
+      "official_fpl_team_id": 3,
+      "code": 91,
+      "name": "Bournemouth",
+      "short_name": "BOU",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:4",
+      "official_fpl_team_id": 4,
+      "code": 94,
+      "name": "Brentford",
+      "short_name": "BRE",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:5",
+      "official_fpl_team_id": 5,
+      "code": 36,
+      "name": "Brighton",
+      "short_name": "BHA",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:6",
+      "official_fpl_team_id": 6,
+      "code": 8,
+      "name": "Chelsea",
+      "short_name": "CHE",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:7",
+      "official_fpl_team_id": 7,
+      "code": 9,
+      "name": "Coventry City",
+      "short_name": "COV",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:8",
+      "official_fpl_team_id": 8,
+      "code": 31,
+      "name": "Crystal Palace",
+      "short_name": "CRY",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:9",
+      "official_fpl_team_id": 9,
+      "code": 11,
+      "name": "Everton",
+      "short_name": "EVE",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:10",
+      "official_fpl_team_id": 10,
+      "code": 54,
+      "name": "Fulham",
+      "short_name": "FUL",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:11",
+      "official_fpl_team_id": 11,
+      "code": 88,
+      "name": "Hull City",
+      "short_name": "HUL",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:12",
+      "official_fpl_team_id": 12,
+      "code": 40,
+      "name": "Ipswich Town",
+      "short_name": "IPS",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:13",
+      "official_fpl_team_id": 13,
+      "code": 2,
+      "name": "Leeds",
+      "short_name": "LEE",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:14",
+      "official_fpl_team_id": 14,
+      "code": 14,
+      "name": "Liverpool",
+      "short_name": "LIV",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:15",
+      "official_fpl_team_id": 15,
+      "code": 43,
+      "name": "Man City",
+      "short_name": "MCI",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:16",
+      "official_fpl_team_id": 16,
+      "code": 1,
+      "name": "Man Utd",
+      "short_name": "MUN",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:17",
+      "official_fpl_team_id": 17,
+      "code": 4,
+      "name": "Newcastle",
+      "short_name": "NEW",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:18",
+      "official_fpl_team_id": 18,
+      "code": 17,
+      "name": "Nott'm Forest",
+      "short_name": "NFO",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:19",
+      "official_fpl_team_id": 19,
+      "code": 6,
+      "name": "Spurs",
+      "short_name": "TOT",
+      "identity_authority": "official_fpl"
+    },
+    {
+      "canonical_team_id": "fpl-team:20",
+      "official_fpl_team_id": 20,
+      "code": 56,
+      "name": "Sunderland",
+      "short_name": "SUN",
+      "identity_authority": "official_fpl"
+    }
+  ]
+}

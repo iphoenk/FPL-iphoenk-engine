@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 from src.engines.price_radar import (
     DISPLAY_TIMEZONE,
     MODEL_THRESHOLD as EXISTING_PRICE_MODEL_THRESHOLD,
+    OFFICIAL_MAX_AGE_SECONDS,
     OFFICIAL_UPDATE_TIMEZONE,
 )
 from src.engines.visible_content_proof import canonical_mode_contract
@@ -546,12 +547,39 @@ def _normalize_real_price_row(row: Mapping[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def _price_source_freshness(
+    evidence_timestamp: Any,
+    report_timestamp: Any,
+    predictor_health: str,
+) -> dict[str, Any]:
+    observed = _parse_price_dt(evidence_timestamp)
+    report = _parse_price_dt(report_timestamp)
+    healthy = str(predictor_health or "").upper() in {"GREEN", "HEALTHY", "PASS", "CURRENT", "OK"}
+    if observed is None or report is None:
+        return {
+            "source_age_minutes": None,
+            "freshness": "UNKNOWN",
+            "freshness_policy": "config/intelligence/price_radar.json:freshness.official_max_age_seconds",
+        }
+    age_minutes = max(0.0, (report - observed).total_seconds() / 60.0)
+    return {
+        "source_age_minutes": round(age_minutes, 1),
+        "freshness": (
+            "FRESH"
+            if healthy and age_minutes * 60.0 <= OFFICIAL_MAX_AGE_SECONDS
+            else "STALE"
+        ),
+        "freshness_policy": "config/intelligence/price_radar.json:freshness.official_max_age_seconds",
+    }
+
+
 def build_price20(
     *,
     predictor_artifact: Mapping[str, Any] | None,
     direction: str,
     owned_element_ids: Sequence[int] | None = None,
     target_element_ids: Sequence[int] | None = None,
+    report_timestamp: Any = None,
 ) -> dict[str, Any]:
     """Consume current official_price_predictor output; never predict price itself."""
     if not predictor_artifact:
@@ -631,6 +659,16 @@ def build_price20(
             row.pop("_artifact_index", None)
         usable_count = len(selected)
         adapter = "COMPACT_COMPAT"
+
+    freshness = _price_source_freshness(
+        evidence_timestamp,
+        report_timestamp,
+        health,
+    )
+    for row in selected:
+        row.setdefault("date_state", "DATE_UNAVAILABLE")
+        row.setdefault("date_state_complete", True)
+        row.update(freshness)
 
     artifact_payload_hash = hashlib.sha256(
         json.dumps(
@@ -737,6 +775,8 @@ def build_price20(
             "latest_supported_projection",
             "estimate_source",
             "evidence_timestamp",
+            "source_age_minutes",
+            "freshness",
             "confidence",
             "impact_on_our_decision",
         ),
@@ -763,6 +803,7 @@ def build_actionable_price_radar(
     *,
     owned15: Sequence[Mapping[str, Any]],
     predictor_artifact: Mapping[str, Any] | None = None,
+    report_timestamp: Any = None,
 ) -> dict[str, Any]:
     """Always preserve owned identity; predictor evidence enriches but never removes OUR15."""
     artifact = dict(predictor_artifact or {})
@@ -773,6 +814,11 @@ def build_actionable_price_radar(
         or "UNKNOWN"
     ).upper()
     evidence_timestamp = artifact.get("checked_at") or artifact.get("generated_at")
+    freshness = _price_source_freshness(
+        evidence_timestamp,
+        report_timestamp,
+        predictor_health,
+    )
     predictor: dict[int, dict[str, Any]] = {}
     for row in _predictor_rows(artifact):
         raw_id = row.get("element_id", row.get("element", row.get("id")))
@@ -877,6 +923,9 @@ def build_actionable_price_radar(
                     else "UNAVAILABLE",
                 ),
                 "evidence_timestamp": (visible or {}).get("evidence_timestamp", evidence_timestamp or "UNAVAILABLE"),
+                "source_age_minutes": freshness.get("source_age_minutes"),
+                "freshness": freshness.get("freshness"),
+                "freshness_policy": freshness.get("freshness_policy"),
                 "confidence": (visible or {}).get("confidence", "UNAVAILABLE"),
                 "sell_value_affordability_impact": (visible or {}).get(
                     "impact_on_our_decision",
@@ -2612,12 +2661,20 @@ def _render_deep_visible_contract_lines(
         lines.append("BENCH: " + ", ".join(bench_names))
         score = dict(payload.get("lineup_score") or {})
         lines.append(
-            "PROJECTED XI SCORE: "
-            + str(
-                score.get("xpts_mean")
-                if score.get("xpts_mean") is not None
-                else score.get("expected_fpl_points_with_captain_vice", "UNAVAILABLE")
-            )
+            "XI_BASE_XPTS: "
+            + str(payload.get("xi_base_xpts", score.get("xpts_mean", "UNAVAILABLE")))
+        )
+        lines.append(
+            "CAPTAIN_ADJUSTED_XPTS: "
+            + str(payload.get("captain_adjusted_xpts", "UNAVAILABLE"))
+        )
+        lines.append(
+            "LINEUP_ROUTE_UTILITY: "
+            + str(payload.get("lineup_route_utility", "UNAVAILABLE"))
+        )
+        lines.append(
+            "SCORE SEMANTICS: "
+            + str((payload.get("score_semantics") or {}).get("relationship", "UNAVAILABLE"))
         )
         comparisons = [
             dict(item)
@@ -2875,6 +2932,57 @@ def _render_deep_visible_contract_lines(
             )
         excluded.extend(("staging_rows", "squad_classification"))
 
+    elif section_id == "S10":
+        rows = [
+            dict(row)
+            for row in payload.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.extend(
+            _markdown_table(
+                (
+                    "element_id",
+                    "player",
+                    "current_price",
+                    "sell_value",
+                    "direction",
+                    "progress",
+                    "projected_offset0",
+                    "next_cycle",
+                    "cycles_to_change",
+                    "date_state",
+                    "eta",
+                    "evidence_timestamp",
+                    "source_age_minutes",
+                    "freshness",
+                    "decision_implication",
+                ),
+                [
+                    (
+                        row.get("element_id"),
+                        row.get("name") or row.get("player"),
+                        row.get("current_price"),
+                        row.get("authenticated_sell_value"),
+                        row.get("predictor_direction"),
+                        row.get("predictor_progress"),
+                        row.get("predictor_projected_percent"),
+                        row.get("next_official_price_cycle_wib"),
+                        row.get("cycles_to_expected_change"),
+                        row.get("date_state"),
+                        row.get("eta_context")
+                        or row.get("estimated_change_window")
+                        or row.get("date_state"),
+                        row.get("evidence_timestamp"),
+                        row.get("source_age_minutes"),
+                        row.get("freshness"),
+                        row.get("decision_implication"),
+                    )
+                    for row in rows
+                ],
+            )
+        )
+        excluded.append("rows")
+
     elif section_id == "S11":
         rows = [
             dict(row)
@@ -2944,6 +3052,9 @@ def _render_deep_visible_contract_lines(
             "confidence",
             "source",
             "observed_at",
+            "source_age_minutes",
+            "freshness",
+            "date_state",
             "raw_payload_hash",
         )
         payload_hash = str(
@@ -3039,6 +3150,9 @@ def _render_deep_visible_contract_lines(
                         or row.get("observed_at")
                         or "UNAVAILABLE"
                     ),
+                    "source_age_minutes": row.get("source_age_minutes"),
+                    "freshness": row.get("freshness"),
+                    "date_state": row.get("date_state"),
                     "raw_payload_hash": (
                         row.get("raw_payload_hash")
                         or payload_hash

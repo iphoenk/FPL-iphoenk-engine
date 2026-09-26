@@ -421,4 +421,129 @@ def validate_deep_decision_content_delivery(
         if counts != {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}:
             failures.append("WATCHLIST20_POSITION_BALANCE=" + str(counts))
 
+
+    # Stage-A semantic correctness barrier. Field paths below are the exact
+    # section payload contract emitted by v12_integrated_report_runner; a
+    # COMPLETE section with missing authority is itself a semantic failure.
+    s17 = content("S17")
+    if state("S17") == "COMPLETE":
+        source_health = dict(s17.get("source_health") or {})
+        auth_authority = dict(s17.get("auth_authority") or {})
+        if not auth_authority.get("field") or "value" not in auth_authority:
+            failures.append("S17_AUTH_AUTHORITY_MISSING")
+        private_auth = str(source_health.get("private_auth_state") or "").upper()
+        visible_auth = str(source_health.get("authenticated_personal_scope") or "").upper()
+        authority_value = str(auth_authority.get("value") or "").upper()
+        if not private_auth:
+            failures.append("S17_PRIVATE_AUTH_STATE_MISSING")
+        if authority_value and private_auth and authority_value != private_auth:
+            failures.append("S17_AUTH_AUTHORITY_VALUE_MISMATCH")
+        if private_auth and visible_auth and private_auth != visible_auth:
+            failures.append("S17_AUTH_CONTRADICTION")
+        price_health = str(source_health.get("price_predictor") or "").upper()
+        price_freshness = str(
+            source_health.get("price_predictor_freshness") or ""
+        ).upper()
+        price_age = source_health.get("price_predictor_source_age_minutes")
+        if price_health not in {"", "UNAVAILABLE"}:
+            if price_freshness not in {"FRESH", "STALE"} or price_age is None:
+                failures.append("S17_PRICE_FRESHNESS_AUTHORITY_MISSING")
+
+    s14b = content("S14B")
+    if state("S14B") == "COMPLETE":
+        ft_authority = dict(s14b.get("ft_authority") or {})
+        if "known" not in ft_authority or not ft_authority.get("source"):
+            failures.append("S14B_FT_AUTHORITY_MISSING")
+        ft_status = str(s14b.get("free_transfers_status") or "").upper()
+        if not ft_status:
+            failures.append("S14B_FT_STATUS_MISSING")
+        ft_known = bool(
+            ft_authority.get("known") is True
+            and isinstance(s14b.get("free_transfers"), int)
+            and ft_status not in {
+                "", "UNAVAILABLE", "UNKNOWN", "NOT_SUPPORTED",
+                "STALE_NOT_AUTHORIZED", "AUTH_EXPIRED",
+            }
+        )
+        staging_text = str(s14b).upper()
+        if not ft_known and ("SAVE FT" in staging_text or "ROLL FT" in staging_text):
+            failures.append("S14B_FT_CLAIM_WITHOUT_AUTHORITY")
+
+    if state("S14") == "COMPLETE":
+        economics_authority = dict(s14.get("execution_economics_authority") or {})
+        economics_status = str(s14.get("execution_economics_status") or "").upper()
+        if not economics_authority:
+            failures.append("S14_EXECUTION_ECONOMICS_AUTHORITY_MISSING")
+        if not economics_status:
+            failures.append("S14_EXECUTION_ECONOMICS_STATUS_MISSING")
+        for route in non_hold:
+            route_id = str(route.get("route") or "UNKNOWN")
+            route_status = str(route.get("execution_economics_status") or "").upper()
+            if not route_status or "executable" not in route:
+                failures.append("S14_ROUTE_EXECUTION_STATE_MISSING=" + route_id)
+                continue
+            if (
+                economics_status != "AVAILABLE"
+                or route_status != "AVAILABLE"
+            ) and route.get("executable") is not False:
+                failures.append("S14_EXECUTABLE_WITHOUT_FINANCE=" + route_id)
+
+    for sid in ("S10", "S12", "S13"):
+        if state(sid) != "COMPLETE":
+            continue
+        rows = [
+            dict(row)
+            for row in content(sid).get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        for index, row in enumerate(rows, start=1):
+            freshness = str(row.get("freshness") or "").upper()
+            if freshness not in {"FRESH", "STALE"} or row.get("source_age_minutes") is None:
+                failures.append(f"{sid}_PRICE_FRESHNESS_AUTHORITY_MISSING={index}")
+                break
+            if sid in {"S12", "S13"}:
+                date_state = str(row.get("date_state") or "").upper()
+                if row.get("date_state_complete") is not True or date_state not in {
+                    "EXPECTED_CHANGE_DATE",
+                    "NO_CROSSING_WITHIN_GOVERNED_HORIZON",
+                    "DATE_UNAVAILABLE",
+                }:
+                    failures.append(f"{sid}_TERMINAL_DATE_STATE_MISSING={index}")
+                    break
+        if rows:
+            if "SOURCE_AGE_MINUTES" not in upper:
+                failures.append(f"{sid}_PRICE_SOURCE_AGE_NOT_VISIBLE")
+            if "FRESHNESS" not in upper:
+                failures.append(f"{sid}_PRICE_FRESHNESS_NOT_VISIBLE")
+            s17_freshness = str(
+                (content("S17").get("source_health") or {}).get(
+                    "price_predictor_freshness"
+                )
+                or ""
+            ).upper()
+            row_freshness = str(rows[0].get("freshness") or "").upper()
+            if (
+                state("S17") == "COMPLETE"
+                and s17_freshness
+                and row_freshness
+                and s17_freshness != row_freshness
+            ):
+                failures.append(f"{sid}_S17_PRICE_FRESHNESS_CONTRADICTION")
+
+    if state("S06") == "COMPLETE":
+        semantics = dict(s06.get("score_semantics") or {})
+        if str(semantics.get("authority") or "") != "P1_7_LINEUP":
+            failures.append("S06_SCORE_SEMANTICS_AUTHORITY_MISSING")
+        base = s06.get("xi_base_xpts")
+        captain_adjusted = s06.get("captain_adjusted_xpts")
+        if base is None or captain_adjusted is None:
+            failures.append("S06_SCORE_VALUES_MISSING")
+        else:
+            try:
+                mismatch = abs(float(base) - float(captain_adjusted)) > 1e-9
+            except (TypeError, ValueError):
+                mismatch = False
+            if mismatch and str(semantics.get("relationship") or "").upper() != "DISTINCT_BY_DESIGN":
+                failures.append("S06_AMBIGUOUS_SCORE_SEMANTICS")
+
     return list(dict.fromkeys(failures))

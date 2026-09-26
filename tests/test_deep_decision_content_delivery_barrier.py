@@ -11,13 +11,17 @@ from src.engines.v12_deep_delivery import (
 )
 from src.engines.v12_integrated_report_runner import (
     _fingerprint,
+    _lineup_content,
     _personal_evidence_resolution,
+    _route_execution_economics_state,
+    _three_gw_staging,
     run_deep,
 )
 from src.engines.v12_package_utility import (
     select_stage3_material_mc_routes,
 )
 from src.engines.v12_report_orchestration import (
+    _price_source_freshness,
     build_watchlist20,
     render_deep_text,
 )
@@ -103,6 +107,8 @@ def _route(
         "moves": {"out": outs, "in": ins},
         "bank_before": 2,
         "affordability": "SUPPORTED",
+        "execution_economics_status": "AVAILABLE",
+        "executable": True,
         "transfer_cost": {
             "hit": 0 if transfer_count == 1 else 4,
             "ft_usage": {"free_transfers": 1},
@@ -152,6 +158,16 @@ def _deep_report(routes, *, extra_sections=()):
                 "lossy_pruning": False,
                 "search_authority": "FULL",
             },
+            "execution_economics_status": "AVAILABLE",
+            "execution_economics_authority": {
+                "bank": 2,
+                "bank_status": "AVAILABLE",
+                "sell_value_status": "AVAILABLE",
+                "free_transfers": 1,
+                "free_transfers_status": "AVAILABLE",
+                "source": "SYNTHETIC_AUTH_CURRENT",
+                "observed_at": "2026-09-25T10:00:00+00:00",
+            },
             "package_routes": [
                 {
                     "route": "HOLD",
@@ -159,6 +175,8 @@ def _deep_report(routes, *, extra_sections=()):
                     "moves": {"out": [], "in": []},
                     "bank_before": 2,
                     "affordability": "SUPPORTED",
+                    "execution_economics_status": "NOT_APPLICABLE",
+                    "executable": True,
                     "transfer_cost": {"bank_after": 2},
                     "gw1_net": 0.0,
                     "two_gw_if_relevant": 0.0,
@@ -566,6 +584,14 @@ def test_m_p1_7_lineup_and_captain_outputs_are_visibly_required():
             "starting_xi": [{"element": i, "name": f"P{i:02d}"} for i in range(1, 12)],
             "bench": {"gk": {"element": 12, "name": "P12"}, "order": [13, 14, 15]},
             "lineup_score": {"xpts_mean": 55.0},
+            "xi_base_xpts": 55.0,
+            "captain_adjusted_xpts": 55.0,
+            "lineup_route_utility": 55.0,
+            "score_semantics": {
+                "authority": "P1_7_LINEUP",
+                "relationship": "DISTINCT_BY_DESIGN",
+                "raw_xpts_mutated": False,
+            },
         },
     )
     s08 = _section(
@@ -785,4 +811,158 @@ def test_integrated_deep_does_not_bruteforce_global_two_transfer_p17():
     assert "P1_2B_FUNDED_PACKAGE_UTILITY" in source
     assert "FULL_DIRECT_MATERIAL_FUNDED" in source
     assert "max_transfers=2" not in source
+
+def _stage_a_fixture(name: str) -> dict:
+    return json.loads(
+        (Path(__file__).parent / "fixtures" / name).read_text(encoding="utf-8")
+    )
+
+
+def test_stage_a_required_ci_real_36126675342_fails_known_false_pass_classes():
+    payload = _stage_a_fixture("v12_semantic_regression_36126675342.json")
+    failures = set(
+        validate_deep_decision_content_delivery(payload["report"], "")
+    )
+    expected = {
+        "S17_AUTH_AUTHORITY_MISSING",
+        "S17_PRIVATE_AUTH_STATE_MISSING",
+        "S14B_FT_AUTHORITY_MISSING",
+        "S14B_FT_STATUS_MISSING",
+        "S14B_FT_CLAIM_WITHOUT_AUTHORITY",
+        "S14_EXECUTION_ECONOMICS_AUTHORITY_MISSING",
+        "S14_EXECUTION_ECONOMICS_STATUS_MISSING",
+        "S14_ROUTE_EXECUTION_STATE_MISSING=1:426->52",
+        "S06_SCORE_SEMANTICS_AUTHORITY_MISSING",
+        "S06_SCORE_VALUES_MISSING",
+        "S10_PRICE_FRESHNESS_AUTHORITY_MISSING=1",
+        "S12_PRICE_FRESHNESS_AUTHORITY_MISSING=1",
+        "S13_PRICE_FRESHNESS_AUTHORITY_MISSING=1",
+    }
+    assert expected.issubset(failures)
+    assert payload["bound_authority"]["v6_private_auth_state"] == "AUTH_EXPIRED"
+    s17 = next(
+        row for row in payload["report"]["sections"]
+        if row["section_id"] == "S17"
+    )
+    assert s17["content"]["source_health"]["authenticated_personal_scope"] == "HEALTHY"
+    assert not any("TERMINAL_DATE_STATE_MISSING" in row for row in failures)
+
+
+def test_stage_a_required_ci_comparison_36108029034_is_not_semantic_pass():
+    payload = _stage_a_fixture("v12_semantic_comparison_36108029034.json")
+    failures = set(
+        validate_deep_decision_content_delivery(payload["report"], "")
+    )
+    assert payload["bound_authority"]["v6_private_auth_state"] == "AUTH_EXPIRED"
+    assert "S17_AUTH_AUTHORITY_MISSING" in failures
+    assert "S17_PRIVATE_AUTH_STATE_MISSING" in failures
+    assert "S14B_FT_CLAIM_WITHOUT_AUTHORITY" in failures
+    assert "S14_EXECUTION_ECONOMICS_STATUS_MISSING" in failures
+    assert "S06_SCORE_SEMANTICS_AUTHORITY_MISSING" in failures
+    assert "S10_PRICE_FRESHNESS_AUTHORITY_MISSING=1" in failures
+    assert not any("TERMINAL_DATE_STATE_MISSING" in row for row in failures)
+
+
+def test_stage_a_required_ci_price_freshness_is_human_visible():
+    s10 = _section(
+        "S10",
+        "ACTIONABLE PRICE RADAR",
+        {
+            "rows": [
+                {
+                    "element_id": 572,
+                    "name": "P572",
+                    "current_price": 4.7,
+                    "authenticated_sell_value": "UNAVAILABLE",
+                    "predictor_direction": "RISE",
+                    "predictor_progress": "0.0",
+                    "predictor_projected_percent": 0.1,
+                    "next_official_price_cycle_wib": "2026-09-26T06:00:00+07:00",
+                    "cycles_to_expected_change": "UNAVAILABLE",
+                    "date_state": "NO_CROSSING_WITHIN_GOVERNED_HORIZON",
+                    "eta_context": "Belum terdeteksi berubah sampai governed horizon",
+                    "evidence_timestamp": "2026-09-25T02:37:34.626747+00:00",
+                    "source_age_minutes": 495.4,
+                    "freshness": "STALE",
+                    "decision_implication": "MONITOR",
+                }
+            ]
+        },
+    )
+    report = _deep_report([_route()], extra_sections=[s10])
+    body = render_deep_text(report)
+    assert "source_age_minutes" in body
+    assert "freshness" in body
+    assert "STALE" in body
+    failures = validate_deep_decision_content_delivery(report, body)
+    assert not [failure for failure in failures if failure.startswith("S10_PRICE_")]
+
+
+def test_stage_a_required_ci_producer_repairs_are_fail_closed_without_new_math():
+    regression = _stage_a_fixture("v12_semantic_regression_36126675342.json")
+    old_s06 = next(
+        row for row in regression["report"]["sections"]
+        if row["section_id"] == "S06"
+    )["content"]
+    lineup = {
+        "formation": old_s06["formation_comparison"][0]["formation"],
+        "starting_xi": [],
+        "bench": {"gk": None, "order": []},
+        "captain": None,
+        "vice_captain": None,
+        "lineup_score": old_s06["lineup_score"],
+        "formation_comparison": old_s06["formation_comparison"],
+    }
+    score = _lineup_content(lineup)
+    assert score["xi_base_xpts"] == 49.777897
+    assert score["captain_adjusted_xpts"] == 55.012527
+    assert score["score_semantics"]["authority"] == "P1_7_LINEUP"
+    assert score["score_semantics"]["relationship"] == "DISTINCT_BY_DESIGN"
+    assert score["score_semantics"]["raw_xpts_mutated"] is False
+
+    finance = {
+        "bank": None,
+        "bank_status": "UNAVAILABLE",
+        "sell_value_status": "UNAVAILABLE",
+        "free_transfers": None,
+        "free_transfers_status": "NOT_SUPPORTED",
+        "personal_evidence_source": "fixture:36126675342",
+        "personal_evidence_observed_at": regression["_fixture_provenance"]["report_slot"],
+    }
+    route_state = _route_execution_economics_state(
+        route_id="1:426->52",
+        route_economics_status="PARTIAL",
+        finance=finance,
+    )
+    assert route_state == {"status": "DEGRADED", "executable": False}
+
+    s14 = next(
+        row for row in regression["report"]["sections"]
+        if row["section_id"] == "S14"
+    )["content"]
+    staging = _three_gw_staging(
+        planning_gw=6,
+        action="WAIT",
+        stage3_decision={"selected_route_id": "HOLD", "reason": "fixture-regression"},
+        stage3_visible={"package_routes": s14["package_routes"]},
+        all15_rows=[],
+        lineup=None,
+        finance=finance,
+    )
+    assert staging["ft_authority"]["known"] is False
+    assert staging["ft_saving_plan"] == "FT STATE UNAVAILABLE"
+    assert "SAVE FT" not in str(staging).upper()
+    assert "ROLL FT" not in str(staging).upper()
+
+    s10 = next(
+        row for row in regression["report"]["sections"]
+        if row["section_id"] == "S10"
+    )["content"]
+    freshness = _price_source_freshness(
+        s10["rows"][0]["evidence_timestamp"],
+        regression["_fixture_provenance"]["report_slot"],
+        "GREEN",
+    )
+    assert freshness["freshness"] == "STALE"
+    assert 495.0 < freshness["source_age_minutes"] < 497.0
 

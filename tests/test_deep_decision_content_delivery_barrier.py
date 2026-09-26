@@ -37,7 +37,10 @@ def test_stage_fingerprint_canonicalizes_aware_datetime():
 
 def _section(section_id: str, label: str, content: dict, state: str = "COMPLETE"):
     payload = dict(content)
-    if state == "COMPLETE" and section_id in {"S06", "S08", "S11", "S12", "S13", "S14", "S15B", "S16", "S16B"}:
+    if state == "COMPLETE" and section_id in {
+        "S01", "S02", "S04", "S06", "S07", "S08", "S10", "S11",
+        "S12", "S13", "S14", "S15", "S15B", "S16", "S16B", "S18", "S19"
+    }:
         payload.setdefault("authoritative_binding", {
             "status": "BOUND",
             "producer": "SYNTHETIC_TEST_PRODUCER",
@@ -1562,4 +1565,200 @@ def test_stage_c_legacy_s19_copy_without_s08_s15b_dependency_fails_closed():
     failures = validate_deep_decision_content_delivery(report, render_deep_text(report))
     assert "S19_DID_NOT_CONSUME_S08_S15B" in failures
     assert "S19_CAPTAIN_STATE_CONTRADICTS_S08" in failures
+
+def test_stage_d_legacy_single_wait_s01_cannot_satisfy_multi_axis_dashboard():
+    report = {
+        "sections": [
+            _section(
+                "S01",
+                "DECISION / CURRENT STATUS",
+                {
+                    "operational_state": "WAIT",
+                    "planning_gw": 6,
+                    "primary_decision": "HOLD",
+                    "key_decision_driver": "legacy",
+                },
+            )
+        ]
+    }
+    body = render_deep_text(report)
+    failures = validate_deep_decision_content_delivery(report, body)
+    assert "S01_AXIS_INVALID=TRANSFER" in failures
+    assert "S01_MULTI_AXIS_NOT_VISIBLE" in failures
+
+
+def test_stage_d_legacy_compact_s02_missing_human_decision_fields_fails_closed():
+    report = {
+        "sections": [
+            _section(
+                "S02",
+                "OUR15",
+                {
+                    "rows": [
+                        {
+                            "element_id": i,
+                            "player": f"P{i:02d}",
+                            "p_start": 0.9,
+                            "xmins": 80,
+                        }
+                        for i in range(1, 16)
+                    ],
+                    "current15_authority": {
+                        "source_class": "AUTH_CURRENT",
+                        "observed_at": "2026-09-26T00:00:00+00:00",
+                        "applicable_gw": 6,
+                        "auth_state": "AUTH_AVAILABLE",
+                        "finance_availability": "AVAILABLE",
+                    },
+                },
+            )
+        ]
+    }
+    body = render_deep_text(report)
+    failures = validate_deep_decision_content_delivery(report, body)
+    assert any(item.startswith("S02_HUMAN_FIELD_MISSING=1:") for item in failures)
+
+
+def test_stage_d_s03_complete_without_previous_visible_deep_is_false_pass():
+    report = {
+        "sections": [
+            _section(
+                "S03",
+                "DECISION DELTA",
+                {
+                    "decision_delta": {
+                        "baseline_state": "UNAVAILABLE",
+                        "rows": [],
+                        "material_only": True,
+                    }
+                },
+            )
+        ]
+    }
+    body = render_deep_text(report)
+    failures = validate_deep_decision_content_delivery(report, body)
+    assert "S03_COMPLETE_WITHOUT_PREVIOUS_VISIBLE_DEEP" in failures
+
+
+def test_stage_d_s03_degraded_baseline_does_not_invent_numeric_delta():
+    report = {
+        "sections": [
+            _section(
+                "S03",
+                "DECISION DELTA",
+                {
+                    "decision_delta": {
+                        "baseline_state": "UNAVAILABLE",
+                        "rows": [],
+                        "summary": "baseline unavailable",
+                        "no_recomputation_no_numeric_delta": True,
+                    }
+                },
+                state="DEGRADED",
+            )
+        ]
+    }
+    body = render_deep_text(report)
+    failures = validate_deep_decision_content_delivery(report, body)
+    assert "BASELINE UNAVAILABLE" in body
+    assert "S03_NUMERIC_DELTA_GUARD_MISSING" not in failures
+    assert "S03_DEGRADED_BASELINE_STATE_INVALID" not in failures
+
+
+def test_stage_d_s18_requires_all_decision_axes():
+    report = {
+        "sections": [
+            _section(
+                "S18",
+                "ACTION BOARD",
+                {
+                    "action_board": {
+                        "axes": [
+                            {
+                                "axis": "TRANSFER",
+                                "NOW": "WAIT",
+                                "NEXT": "refresh",
+                                "TRIGGER TO ACT": "gate",
+                                "LATEST SAFE DECISION POINT": "deadline",
+                                "COST OF WAITING": "none",
+                                "ABORT / REVERSAL": "change",
+                            }
+                        ],
+                        "best_alternative": None,
+                        "best_alternative_executable": None,
+                    },
+                    "NOW": {"TRANSFER": "WAIT"},
+                    "NEXT": {"TRANSFER": "refresh"},
+                    "TRIGGER TO ACT": {"TRANSFER": "gate"},
+                    "LATEST SAFE DECISION POINT": {"TRANSFER": "deadline"},
+                    "COST OF WAITING": {"TRANSFER": "none"},
+                    "ABORT / REVERSAL": {"TRANSFER": "change"},
+                    "BEST ALTERNATIVE": None,
+                },
+            )
+        ]
+    }
+    body = render_deep_text(report)
+    failures = validate_deep_decision_content_delivery(report, body)
+    assert "S18_MULTI_AXIS_INCOMPLETE" in failures
+
+
+def test_stage_d_s16_renderer_uses_compact_semantics_not_raw_posterior_dict():
+    row = {
+        "element_id": 1,
+        "player": "P01",
+        "availability": 0.98,
+        "p_start": 0.94,
+        "xmins": 84,
+        "probabilities": {
+            "p_goal": 0.3,
+            "p_assist": 0.2,
+            "p_return": 0.45,
+            "p_haul": 0.22,
+            "p_blank": 0.37,
+        },
+        "projection_1gw": 6.1,
+        "projection_3gw": 18.0,
+        "projection_5gw": 29.0,
+        "underlying": {
+            "xg90": 0.4,
+            "npxg90": 0.35,
+            "xa90": 0.2,
+            "xgi90": 0.6,
+            "shots": 3,
+            "shots_in_box": 2,
+            "shots_on_target": 1,
+            "big_chances": 1,
+            "box_touches": 7,
+            "key_passes": 2,
+            "chances_created": 2,
+        },
+        "posterior_signal": {"posterior_rates": {"goal": 0.31}},
+        "bayesian_state": {"status": "POSTERIOR_AVAILABLE", "confidence": "MEDIUM"},
+        "role_detail": {"tactical_role": "9", "penalty": "TAKER", "set_piece": "NONE"},
+        "fixture_detail": {"opponent": "OPP", "home": True},
+        "defensive_contribution": "UNAVAILABLE",
+        "workload_context": {"load_state": "NORMAL LOAD", "days_rest": 6},
+        "price_optionality": {"current_price": 90},
+        "mini_league_relevance": {"direct": {"eo_pct": 50.0}},
+        "main_upside": 12,
+        "main_risk": {"Q10": 2, "warning": "NONE_MATERIAL"},
+    }
+    report = {
+        "sections": [
+            _section(
+                "S16",
+                "ALL15 TACTICAL / PROBABILITY REVIEW",
+                {
+                    "rows": [row, *[{**row, "element_id": i, "player": f"P{i:02d}"} for i in range(2, 16)]],
+                    "position_mechanisms": [{"element_id": i} for i in range(1, 16)],
+                },
+            )
+        ]
+    }
+    body = render_deep_text(report)
+    failures = validate_deep_decision_content_delivery(report, body)
+    assert "posterior_rates" not in body
+    assert "Pgoal" in body and "xGI90" in body and "ML relevance" in body
+    assert "S16_RAW_POSTERIOR_DICT_VISIBLE" not in failures
 

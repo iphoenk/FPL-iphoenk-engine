@@ -30,7 +30,7 @@ _PRIVATE_TOP_LEVEL_KEYS = {
 }
 
 _PRIVATE_SCOPE_HEALTH_KEYS = {"AUTH", "PERSONAL"}
-_PRIVATE_ENDPOINT_CLASSES = {"authentication", "me", "my_team"}
+_PRIVATE_ENDPOINT_CLASSES = {"authentication", "me", "my_team", "entry", "picks"}\n_PRIVATE_PERSONAL_FILES = ("current_team.json", "submitted_picks.json", "memberships.json")
 
 
 def _read_json(path: Path, default: Any = None) -> Any:
@@ -100,7 +100,7 @@ def _sanitize_public_prefetch(value: Mapping[str, Any]) -> dict[str, Any]:
 
     governance = dict(out.get("governance") or {})
     governance["private_personal_state_split"] = True
-    governance["public_tree_contains_current_private_team"] = False
+    governance["public_tree_contains_current_private_team"] = False\n    governance["public_tree_contains_manager_specific_personal_state"] = False
     out["governance"] = governance
     return out
 
@@ -125,28 +125,36 @@ def split_private_personal_state(
     if not private_root.is_dir():
         raise PrivateBoundaryError(f"private repository checkout missing: {private_root}")
 
-    current_team_path = public_root / "personal/current_team.json"
-    current_team = _read_json(current_team_path, {}) or {}
-    moved = False
-    private_sha = None
+    moved_files: dict[str, bool] = {}
+    private_hashes: dict[str, str | None] = {}
     generated_at = None
-    if isinstance(current_team, Mapping) and current_team:
-        generated_at = current_team.get("generated_at")
-        private_sha = _sha256_json(current_team)
-        _write_json(private_root / "personal/current_team.json", dict(current_team))
-        snapshot_name = (
-            str(generated_at or "unknown")
-            .replace(":", "")
-            .replace("+", "_plus_")
-            .replace("/", "_")
-        )
-        _write_json(
-            private_root / f"personal/snapshots/current_team_{snapshot_name}.json",
-            dict(current_team),
-        )
-        moved = True
-    if current_team_path.exists():
-        current_team_path.unlink()
+    for filename in _PRIVATE_PERSONAL_FILES:
+        public_path = public_root / "personal" / filename
+        value = _read_json(public_path, {}) or {}
+        moved_file = False
+        private_hash = None
+        if isinstance(value, Mapping) and value:
+            private_hash = _sha256_json(value)
+            _write_json(private_root / "personal" / filename, dict(value))
+            moved_file = True
+            if filename == "current_team.json":
+                generated_at = value.get("generated_at")
+                snapshot_name = (
+                    str(generated_at or "unknown")
+                    .replace(":", "")
+                    .replace("+", "_plus_")
+                    .replace("/", "_")
+                )
+                _write_json(
+                    private_root / f"personal/snapshots/current_team_{snapshot_name}.json",
+                    dict(value),
+                )
+        if public_path.exists():
+            public_path.unlink()
+        moved_files[filename] = moved_file
+        private_hashes[filename] = private_hash
+
+    current_team_path = public_root / "personal/current_team.json"
 
     latest_path = public_root / "report_prefetch/latest.json"
     latest = _read_json(latest_path, {}) or {}
@@ -160,10 +168,17 @@ def split_private_personal_state(
 
     receipt = {
         "schema": "FPL_V6_PRIVATE_BOUNDARY_RECEIPT_V1",
-        "moved_current_team": moved,
-        "current_team_sha256": private_sha,
+        "moved_current_team": moved_files["current_team.json"],
+        "moved_personal_files": moved_files,
+        "personal_file_sha256": private_hashes,
+        "current_team_sha256": private_hashes["current_team.json"],
         "current_team_generated_at": generated_at,
         "public_current_team_present_after_split": current_team_path.exists(),
+        "public_manager_specific_personal_files_present_after_split": [
+            filename
+            for filename in _PRIVATE_PERSONAL_FILES
+            if (public_root / "personal" / filename).exists()
+        ],
         "public_report_prefetch_sanitized": bool(latest),
         "public_report_prefetch_health_sanitized": bool(health),
     }

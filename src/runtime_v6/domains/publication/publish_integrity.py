@@ -53,6 +53,13 @@ _FORBIDDEN_CANONICAL_MINI_LEAGUE_AGGREGATES = {
 _FREEZE_RELATIVE_PATH = "health/candidate_freeze.lock"
 _PUBLISH_INTEGRITY_RELATIVE_PATH = "health/publish_integrity.json"
 
+# Public V6 may retain only post-disclosure/reproducible personal-adjacent facts.
+# Current/manual/authenticated owner state belongs exclusively to the private plane.
+_PUBLIC_PERSONAL_ALLOWED_RELATIVE_PATHS = {
+    "personal/memberships.json",
+    "personal/submitted_picks.json",
+}
+
 
 def _resolve_runtime_path(root: Path, configured: str) -> Path:
     value = str(configured)
@@ -312,6 +319,17 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
             "tree_sha256": None,
         }
 
+    personal_root = root / "personal"
+    if personal_root.exists():
+        for path in sorted(personal_root.rglob("*")):
+            if not path.is_file():
+                continue
+            relative = path.relative_to(root).as_posix()
+            if relative not in _PUBLIC_PERSONAL_ALLOWED_RELATIVE_PATHS:
+                errors.append(
+                    f"private_personal_artifact_in_public_tree:{relative}"
+                )
+
     source_ids = [str(source_id) for source_id in manifest.get("source_ids") or []]
     if int(manifest.get("source_count") or 0) != len(source_ids):
         errors.append("manifest_source_count_mismatch")
@@ -458,6 +476,7 @@ def validate_publish_tree(root: Path = OUT) -> dict[str, Any]:
         "artifact_catalog_checked_count": int(catalog_validation.get("checked") or 0),
         "semantic_authority_enforced": True,
         "canonical_mini_league_analytics_forbidden": True,
+        "public_personal_allowlist_enforced": True,
     }
 
 

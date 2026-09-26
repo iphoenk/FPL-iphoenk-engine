@@ -84,6 +84,16 @@ def _safe_write_text(destination: Path, text: str) -> str:
     return _safe_write_exact(destination, text.encode("utf-8"))
 
 
+def _atomic_replace_text(destination: Path, text: str) -> str:
+    payload = text.encode("utf-8")
+    digest = sha256_bytes(payload)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    tmp = destination.with_name(f".{destination.name}.tmp")
+    tmp.write_bytes(payload)
+    tmp.replace(destination)
+    return digest
+
+
 def build_private_digest(
     bundle: Mapping[str, Any],
     execution_proof: Mapping[str, Any],
@@ -216,8 +226,8 @@ def publish_private_output(
     digest_md_sha = _safe_write_text(report_dir / "digest.md", digest_md)
 
     mode_lower = report_mode.lower()
-    _safe_write_text(latest_dir / f"{mode_lower}.json", digest_json)
-    _safe_write_text(latest_dir / f"{mode_lower}.md", digest_md)
+    _atomic_replace_text(latest_dir / f"{mode_lower}.json", digest_json)
+    _atomic_replace_text(latest_dir / f"{mode_lower}.md", digest_md)
 
     after = {
         name: sha256_file(canonical_dir / name)

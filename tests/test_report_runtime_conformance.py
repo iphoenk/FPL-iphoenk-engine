@@ -944,7 +944,8 @@ def test_53_canonical_keeps_report_cadence_and_separates_hourly_core_upkeep():
     canonical = _canonical()
     assert "EVERY natural FPL Master Monitor V12 HH:30" in canonical
     assert "CORE_UPKEEP_DUE and REPORT_DUE are independent" in canonical
-    assert "04:30 DEEP; 05:30 PRICE; 12:30 DEEP; 21:30 DEEP" in canonical
+    assert "04:30 DEEP; 12:30 DEEP; 21:30 DEEP; PRICE at 23:30 Europe/London" in canonical
+    assert "Deadline-active does NOT create hourly visible reports" in canonical
     assert "report-prefetch remains report-driven and separate" in canonical
 
 

@@ -1875,6 +1875,68 @@ def test_117_overlap_with_match_is_combined_once(mode, expected):
     assert final["visible_report_count"] == 1
 
 
+def test_117b_fixture_completion_during_other_live_match_keeps_one_match_report_with_incremental_post_match():
+    _, final = _finalize_due(
+        preliminary_due=True,
+        preliminary_modes=["MATCH"],
+        preliminary_fixtures=[
+            _fixture(fixture=1, started=True, finished=False),
+            _fixture(fixture=2, started=True, finished=False),
+        ],
+        post_fixtures=[
+            _fixture(fixture=1, started=True, finished=True),
+            _fixture(fixture=2, started=True, finished=False),
+        ],
+    )
+    assert final["final_report_due"] is True
+    assert final["final_mode"] == "MATCH"
+    assert final["dynamic_lifecycle_event"] == "POST_MATCH"
+    assert final["newly_finished_fixture_ids"] == ["1"]
+    assert final["embedded_obligations"] == ["POST_MATCH_INCREMENTAL"]
+    assert final["visible_report_count"] == 1
+
+
+def test_117c_after_incremental_delivery_same_live_state_returns_plain_match_without_duplicate_increment():
+    _, final = _finalize_due(
+        preliminary_due=True,
+        preliminary_modes=["MATCH"],
+        preliminary_fixtures=[
+            _fixture(fixture=1, started=True, finished=True),
+            _fixture(fixture=2, started=True, finished=False),
+        ],
+        post_fixtures=[
+            _fixture(fixture=1, started=True, finished=True),
+            _fixture(fixture=2, started=True, finished=False),
+        ],
+    )
+    assert final["final_mode"] == "MATCH"
+    assert final["dynamic_lifecycle_event"] == "MATCH"
+    assert final["newly_finished_fixture_ids"] == []
+    assert final["embedded_obligations"] == []
+    assert final["visible_report_count"] == 1
+
+
+def test_117d_fixture_can_finish_between_snapshots_without_pre_live_observation():
+    _, final = _finalize_due(
+        preliminary_due=False,
+        preliminary_modes=[],
+        preliminary_fixtures=[
+            _fixture(fixture=1, started=False, finished=False),
+            _fixture(fixture=2, started=False, finished=False),
+        ],
+        post_fixtures=[
+            _fixture(fixture=1, started=True, finished=True),
+            _fixture(fixture=2, started=True, finished=False),
+        ],
+    )
+    assert final["final_report_due"] is True
+    assert final["final_mode"] == "MATCH"
+    assert final["dynamic_lifecycle_event"] == "POST_MATCH"
+    assert final["newly_finished_fixture_ids"] == ["1"]
+    assert final["embedded_obligations"] == ["POST_MATCH_INCREMENTAL"]
+    assert final["visible_report_count"] == 1
+
+
 def test_118_dynamic_evaluation_is_forbidden_before_core_gate_terminalizes():
     plan = plan_natural_core_upkeep_gate(
         scheduler_occurrence="2026-09-19T19:30:00+07:00",

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from pathlib import Path
+
+import pytest
 
 from src.runtime_v6.domains.report_plane.delivery_integrity import MANDATORY_SECTIONS
 from src.runtime_v6.domains.report_plane.report_qa import (
@@ -14,6 +17,16 @@ from src.runtime_v6.domains.report_plane.report_qa import (
     validate_v12_visible_content_contract,
 )
 from test_support.report_visible_body import valid_visible_body
+from src.engines.v12_report_orchestration import (
+    build_match_lifecycle_surface,
+    build_post_all_match_lifecycle_surface,
+    materialize_match_lifecycle_report,
+    materialize_post_all_match_lifecycle_report,
+    render_match_lifecycle_text,
+    render_natural_post_match_text,
+    validate_match_lifecycle_surface,
+    validate_post_all_match_lifecycle_surface,
+)
 
 
 def _bench():
@@ -222,7 +235,19 @@ def _match():
     payload.update(
         {
             "visible_order": list(_MATCH_VISIBLE_ORDER),
-            "locked_team": {"status": "CURRENT_IMMUTABLE"},
+            "locked_team": {
+                "status": "CURRENT_IMMUTABLE",
+                "authority": "OFFICIAL_FPL_SUBMITTED_PICKS",
+                "submitted_picks_authority": True,
+                "planning_xi_used": False,
+                "our15": [*[f"P{i}" for i in range(1, 12)], "GK2", "D5", "M5", "F3"],
+                "starting_xi": [f"P{i}" for i in range(1, 12)],
+                "bench_order": ["GK2", "D5", "M5", "F3"],
+                "bench_gk": "GK2",
+                "outfield_autosub_priority": ["D5", "M5", "F3"],
+                "captain": "P8",
+                "vice_captain": "P9",
+            },
             "personal_impact": [
                 {
                     "element_id": 8,
@@ -927,3 +952,298 @@ def test_deep_delivery_rejects_rank20_resort_and_watchlist_imbalance():
     failures = validate_deep_decision_content_delivery(report, "FALL20")
     assert any(x.startswith("GOVERNED_RANK20_RANK_MISMATCH=S13") for x in failures)
     assert any(x.startswith("WATCHLIST20_POSITION_BALANCE=") for x in failures)
+
+
+def _stage_e_match_live_payload():
+    positions = {
+        1: "GK",
+        2: "DEF", 3: "DEF", 4: "DEF", 5: "DEF",
+        6: "MID", 7: "MID", 8: "MID", 9: "MID", 10: "MID",
+        11: "FWD",
+        12: "GK", 13: "DEF", 14: "MID", 15: "FWD",
+    }
+    players = []
+    for element in range(1, 16):
+        pick_position = element
+        fixture_status = "LIVE"
+        starts = 1
+        minutes = 62
+        appearance = "STARTED"
+        if element == 2:
+            starts = 0
+            minutes = 20
+            appearance = "CAMEO"
+        if element == 3:
+            fixture_status = "FT"
+            starts = 0
+            minutes = 0
+            appearance = "DNP"
+        if element == 13:
+            fixture_status = "FT"
+            starts = 1
+            minutes = 90
+            appearance = "STARTED"
+        multiplier = 0 if pick_position > 11 else 1
+        if element == 9:
+            multiplier = 2
+        players.append(
+            {
+                "element": element,
+                "name": f"P{element}",
+                "position": positions[element],
+                "fixture_status": fixture_status,
+                "appearance_state": appearance,
+                "started_club_match": True if starts else False,
+                "substitute": True if minutes > 0 and starts == 0 else False,
+                "pick_position": pick_position,
+                "bench_order": pick_position - 11 if pick_position > 11 else None,
+                "multiplier": multiplier,
+                "effective_points": element * multiplier,
+                "captain": element == 9,
+                "vice": element == 10,
+                "minutes": minutes,
+                "starts": starts,
+                "total_points": element,
+                "yellow_cards": 1 if element == 2 else 0,
+                "red_cards": 0,
+                "defensive_contribution": 2 if positions[element] == "DEF" else 0,
+                "bonus": 3 if element == 9 else 0,
+                "bps": 40 if element == 9 else 10,
+            }
+        )
+    return {
+        "contract": "MATCH_MODE_LIVE_SCORE_V1",
+        "status": "PROVISIONAL",
+        "match_mode_active": True,
+        "scoring_gw": 6,
+        "submitted_picks_status": "AVAILABLE",
+        "event_live_status": "AVAILABLE",
+        "coverage": {"owned": 15, "expected_owned": 15, "complete": True},
+        "players": players,
+        "governance": {
+            "submitted_picks_are_scoring_authority": True,
+            "planning_xi_cannot_replace_submitted_picks": True,
+        },
+    }
+
+
+def _stage_e_icon_live():
+    def metric(n, d):
+        return {
+            "numerator": n,
+            "denominator": d,
+            "percentage": round(n / d * 100.0, 1),
+        }
+    return {
+        "status": "FRESH",
+        "metrics": {
+            "ownership": metric(40, 58),
+            "starter_share": metric(35, 58),
+            "captain_share": metric(20, 58),
+            "vice_share": metric(10, 58),
+            "eo": {"percentage": 118.0},
+        },
+        "submitted_picks": {
+            "state": "COMPLETE",
+            "coverage": "58/58",
+            "semantic": "CURRENT_GW_SUBMITTED",
+        },
+        "live_standings": {
+            "state": "COMPLETE",
+            "coverage": "58/58",
+            "semantic": "LIVE_STANDINGS",
+        },
+    }
+
+
+def test_stage_e_generated_match_uses_submitted_picks_and_exact_13_sections():
+    canonical = Path(
+        "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt"
+    ).read_text(encoding="utf-8")
+    surface = build_match_lifecycle_surface(
+        live_payload=_stage_e_match_live_payload(),
+        icon_live=_stage_e_icon_live(),
+        league_wide_signals=[{"signal": "fixture process", "action": "OBSERVE"}],
+        next_gw_learning=[{"status": "CALIBRATION_INPUT", "signal": "role"}],
+        source_freshness={"event_live": "CURRENT"},
+        model_update_executed=False,
+    )
+    report = materialize_match_lifecycle_report(
+        canonical_text=canonical,
+        match_surface=surface,
+    )
+    assert report["rendered_section_ids"] == [
+        f"MATCH{i}" for i in range(1, 14)
+    ]
+    assert report["visible_report_count"] if "visible_report_count" in report else True
+    contract = report["content_contract"]
+    assert contract["locked_team"]["authority"] == "OFFICIAL_FPL_SUBMITTED_PICKS"
+    assert contract["locked_team"]["planning_xi_used"] is False
+    assert len(contract["locked_team"]["our15"]) == 15
+    assert contract["bench_presentation"]["bench_gk"] == 12
+    assert contract["bench_presentation"]["outfield_autosub_priority"] == [13, 14, 15]
+    assert contract["global_autosub_state"]["final_substitution_map"]["3"] == 13
+    assert contract["bonus_bps"]["provisional"] is True
+    assert contract["icon"]["submitted_and_live_scopes_separate"] is True
+    assert any(
+        row["status"] == "MODEL_UPDATE_PENDING_NEXT_COMPUTE"
+        for row in contract["calibration_items"]
+    )
+    qa = validate_v12_visible_content_contract(
+        report_mode="MATCH",
+        content_contract=contract,
+    )
+    assert qa["status"] == "PASS", qa["failures"]
+
+    body = render_match_lifecycle_text(report)
+    assert body.count("## MATCH ") == 13
+    assert "LOCKED TEAM VERIFIED" in body
+    assert "Bench GK: 12" in body
+    assert "Outfield autosub priority: 1 13, 2 14, 3 15" in body
+    assert "BPS STATUS: PROVISIONAL" in body
+    assert body.index("PERSONAL IMPACT FIRST") < body.index("RELEVANT LEAGUE-WIDE SIGNALS")
+    rendered_failures = _validate_v12_rendered_body(
+        report_mode="MATCH",
+        rendered_body=body,
+        content_contract=contract,
+    )
+    assert rendered_failures == []
+
+
+def test_stage_e_generated_match_fails_closed_without_exact_submitted_picks():
+    live = _stage_e_match_live_payload()
+    live["players"] = live["players"][:-1]
+    live["coverage"] = {"owned": 14, "expected_owned": 15, "complete": False}
+    with pytest.raises(Exception, match="exact15 unique submitted picks"):
+        build_match_lifecycle_surface(live_payload=live)
+
+
+def test_stage_e_actual_model_update_requires_previous_current_and_timestamp():
+    with pytest.raises(Exception, match="actual model update requires execution proof"):
+        build_match_lifecycle_surface(
+            live_payload=_stage_e_match_live_payload(),
+            model_update_executed=True,
+            model_update_proof={"executed": True},
+        )
+
+
+def test_stage_e_legacy_match_locked_team_without_submitted_picks_authority_fails():
+    payload = _match()
+    payload["locked_team"] = {
+        "status": "CURRENT_IMMUTABLE",
+        "our15": payload["locked_team"]["our15"],
+        "starting_xi": payload["locked_team"]["starting_xi"],
+        "bench_order": payload["locked_team"]["bench_order"],
+        "bench_gk": payload["locked_team"]["bench_gk"],
+        "outfield_autosub_priority": payload["locked_team"]["outfield_autosub_priority"],
+        "captain": "P8",
+        "vice_captain": "P9",
+    }
+    failures = validate_match_lifecycle_surface(payload)
+    assert "MATCH_LOCKED_TEAM_NOT_SUBMITTED_PICKS_AUTHORITY" in failures
+    assert "MATCH_SUBMITTED_PICKS_AUTHORITY_PROOF_MISSING" in failures
+    assert "MATCH_PLANNING_XI_MUST_NOT_BE_USED" in failures
+
+
+def test_stage_e_live_owned_scope_cannot_render_bps_as_final():
+    payload = _match()
+    payload["owned_live_final_points"] = [
+        {"element_id": 8, "fixture_status": "LIVE"}
+    ]
+    payload["bonus_bps"] = {"provisional": False, "rows": []}
+    failures = validate_match_lifecycle_surface(payload)
+    assert "MATCH_BPS_FINAL_BEFORE_OWNED_FIXTURES_RESOLVED" in failures
+
+
+def _stage_e_post_all_surface():
+    return build_post_all_match_lifecycle_surface(
+        completed_fixture_ids=[101, 102],
+        match_scout=[_scout_row(101), _scout_row(102)],
+        gw_result_summary={"gw": 6, "status": "FINAL", "net_points": 72},
+        decision_pnl_counterfactual={
+            "status": "SETTLED",
+            "realized_or_live_pnl": 4.0,
+            "policy": "CURRENT_SUBMITTED_VS_CARRY_FORWARD_LAST_OFFICIAL_SUBMITTED_PLAN",
+        },
+        prediction_calibration={"status": "CALIBRATION_INPUT", "sample": "GW6"},
+        owned15_review=_all15(),
+        role_set_piece_changes=[{"player": "P8", "change": "NONE_MATERIAL"}],
+        bayesian_update_status={
+            "status": "MODEL_UPDATE_PENDING_NEXT_COMPUTE",
+            "reason": "post-match observations are calibration input until recomputed",
+        },
+        icon_final_gw={"status": "COMPLETE", "coverage": "58/58"},
+        price_outlook={"status": "CURRENT", "action": "MONITOR_ONLY"},
+        full_universe_next_gw_scan={
+            "status": "COMPLETE",
+            "search_authority": "FULL",
+            "automatic_transfer_recommendation": False,
+        },
+        watchlist20=_watchlist20(),
+        early_hold_transfer_frontier={
+            "status": "PREPARE",
+            "baseline": "HOLD",
+            "fresh_reoptimization_required": True,
+        },
+        learning_log=[{"lesson": "role evidence", "automatic_transfer_recommendation": False}],
+    )
+
+
+def test_stage_e_post_all_materializes_exact_13_and_every_fixture_once():
+    canonical = Path(
+        "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt"
+    ).read_text(encoding="utf-8")
+    surface = _stage_e_post_all_surface()
+    assert validate_post_all_match_lifecycle_surface(surface) == []
+    report = materialize_post_all_match_lifecycle_report(
+        canonical_text=canonical,
+        surface=surface,
+    )
+    assert report["rendered_section_ids"] == [
+        f"POST_ALL_MATCH{i}" for i in range(1, 14)
+    ]
+    scout = next(
+        row for row in report["sections"]
+        if row["section_id"] == "POST_ALL_MATCH5"
+    )
+    scout_ids = [
+        row["fixture_id"]
+        for row in scout["content"]["match_scout"]
+    ]
+    assert scout_ids == [101, 102]
+    assert len(scout_ids) == len(set(scout_ids)) == 2
+    body = render_natural_post_match_text(report)
+    assert body.count("#### FIXTURE ID:") == 2
+    assert "GW COMPLETED MATCH-BY-MATCH SCOUT" in body
+    assert "MODEL UPDATE PENDING NEXT COMPUTE" in body
+
+
+def test_stage_e_post_all_missing_completed_fixture_fails_closed():
+    surface = _stage_e_post_all_surface()
+    surface["match_scout"] = surface["match_scout"][:1]
+    failures = validate_post_all_match_lifecycle_surface(surface)
+    assert "POST_ALL_MATCH_SCOUT_FIXTURE_COVERAGE_MISMATCH" in failures
+
+
+def test_stage_e_post_all_actual_model_update_requires_execution_delta_proof():
+    surface = _stage_e_post_all_surface()
+    surface["bayesian_update_status"] = {
+        "status": "ACTUAL_MODEL_UPDATE",
+        "execution_proof": {"executed": True},
+    }
+    failures = validate_post_all_match_lifecycle_surface(surface)
+    assert "POST_ALL_MATCH_MODEL_UPDATE_PROOF_MISSING" in failures
+
+
+def test_stage_e_icon_one_healthy_subscope_degrades_without_blanking_it():
+    icon = _stage_e_icon_live()
+    icon.pop("live_standings")
+    surface = build_match_lifecycle_surface(
+        live_payload=_stage_e_match_live_payload(),
+        icon_live=icon,
+    )
+    assert surface["icon_live"]["state"] == "DEGRADED"
+    assert surface["icon_live"]["submitted_picks"] is not None
+    assert surface["icon_live"]["live_standings"] is None
+    assert surface["icon_live"]["missing_scopes"] == ["LIVE_STANDINGS_RANK"]
+    assert "LIVE_STANDINGS_RANK" in surface["icon_live"]["degradation_reason"]

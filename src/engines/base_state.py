@@ -18,6 +18,7 @@ ENTRY_FIELDS = [
 
 LIVE_STAT_FIELDS = [
     "minutes",
+    "starts",
     "goals_scored",
     "assists",
     "clean_sheets",

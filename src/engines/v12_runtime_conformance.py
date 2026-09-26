@@ -837,6 +837,9 @@ def finalize_report_due_after_core(
     dynamic_trigger = "FALSE"
     dynamic_reason = "NO_DYNAMIC_LIFECYCLE_TRANSITION"
     dynamic_mode: str | None = None
+    dynamic_lifecycle_event: str | None = None
+    embedded_obligations: list[str] = []
+    newly_finished_fixture_ids: list[str] = []
 
     if (
         not authority_ok
@@ -848,31 +851,45 @@ def finalize_report_due_after_core(
         dynamic_reason = "DYNAMIC_EVIDENCE_UNRESOLVED_AFTER_CORE"
     else:
         live_ids = list(post_summary.get("live_fixture_ids") or [])
-        if live_ids:
+        pre_live = bool((pre_summary or {}).get("live_fixture_ids"))
+        pre_all_finished = bool((pre_summary or {}).get("all_finished"))
+        post_all_finished = bool(post_summary.get("all_finished"))
+        pre_finished_ids = {
+            str(value)
+            for value in (pre_summary or {}).get("finished_fixture_ids") or []
+        }
+        post_finished_ids = {
+            str(value)
+            for value in post_summary.get("finished_fixture_ids") or []
+        }
+        newly_finished_fixture_ids = sorted(
+            post_finished_ids - pre_finished_ids
+        )
+        preliminary_has_match = "MATCH" in _normalize_report_modes(preliminary_modes)
+
+        if post_all_finished and (
+            preliminary_has_match
+            or (pre_summary is not None and not pre_all_finished)
+        ):
             dynamic_trigger = "TRUE"
-            dynamic_reason = "SCORING_GW_LIVE_MATCH_AFTER_CORE"
+            dynamic_reason = "POST_ALL_MATCH_TRANSITION_AFTER_CORE"
+            dynamic_mode = "POST_ALL_MATCH"
+            dynamic_lifecycle_event = "POST_ALL_MATCH"
+        elif live_ids:
+            dynamic_trigger = "TRUE"
             dynamic_mode = "MATCH"
-        else:
-            pre_live = bool((pre_summary or {}).get("live_fixture_ids"))
-            pre_all_finished = bool((pre_summary or {}).get("all_finished"))
-            post_all_finished = bool(post_summary.get("all_finished"))
-            pre_finished_count = len((pre_summary or {}).get("finished_fixture_ids") or [])
-            post_finished_count = len(post_summary.get("finished_fixture_ids") or [])
-            preliminary_has_match = "MATCH" in _normalize_report_modes(preliminary_modes)
-            if post_all_finished and (
-                preliminary_has_match
-                or (pre_summary is not None and not pre_all_finished)
-            ):
-                dynamic_trigger = "TRUE"
-                dynamic_reason = "POST_ALL_MATCH_TRANSITION_AFTER_CORE"
-                dynamic_mode = "POST_ALL_MATCH"
-            elif (
-                post_finished_count > pre_finished_count
-                and (pre_live or preliminary_has_match)
-            ):
-                dynamic_trigger = "TRUE"
-                dynamic_reason = "MATCH_COMPLETION_TRANSITION_AFTER_CORE"
-                dynamic_mode = "POST_MATCH"
+            if pre_summary is not None and newly_finished_fixture_ids:
+                dynamic_reason = "MATCH_LIVE_WITH_POST_MATCH_INCREMENTAL"
+                dynamic_lifecycle_event = "POST_MATCH"
+                embedded_obligations.append("POST_MATCH_INCREMENTAL")
+            else:
+                dynamic_reason = "SCORING_GW_LIVE_MATCH_AFTER_CORE"
+                dynamic_lifecycle_event = "MATCH"
+        elif pre_summary is not None and newly_finished_fixture_ids:
+            dynamic_trigger = "TRUE"
+            dynamic_reason = "MATCH_COMPLETION_TRANSITION_AFTER_CORE"
+            dynamic_mode = "POST_MATCH"
+            dynamic_lifecycle_event = "POST_MATCH"
 
     final_due = bool(preliminary_due or dynamic_trigger == "TRUE")
     if preliminary_due and not final_due:
@@ -923,6 +940,9 @@ def finalize_report_due_after_core(
         "dynamic_evidence_authority": authority,
         "dynamic_trigger": dynamic_trigger,
         "dynamic_trigger_reason": dynamic_reason,
+        "dynamic_lifecycle_event": dynamic_lifecycle_event,
+        "newly_finished_fixture_ids": newly_finished_fixture_ids,
+        "embedded_obligations": embedded_obligations,
         "dynamic_report_due": dynamic_trigger == "TRUE",
         "final_report_due": final_due,
         "final_modes": modes,

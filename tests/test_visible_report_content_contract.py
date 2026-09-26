@@ -228,7 +228,19 @@ def _match():
     payload.update(
         {
             "visible_order": list(_MATCH_VISIBLE_ORDER),
-            "locked_team": {"status": "CURRENT_IMMUTABLE"},
+            "locked_team": {
+                "status": "CURRENT_IMMUTABLE",
+                "authority": "OFFICIAL_FPL_SUBMITTED_PICKS",
+                "submitted_picks_authority": True,
+                "planning_xi_used": False,
+                "our15": [*[f"P{i}" for i in range(1, 12)], "GK2", "D5", "M5", "F3"],
+                "starting_xi": [f"P{i}" for i in range(1, 12)],
+                "bench_order": ["GK2", "D5", "M5", "F3"],
+                "bench_gk": "GK2",
+                "outfield_autosub_priority": ["D5", "M5", "F3"],
+                "captain": "P8",
+                "vice_captain": "P9",
+            },
             "personal_impact": [
                 {
                     "element_id": 8,
@@ -1106,3 +1118,37 @@ def test_stage_e_actual_model_update_requires_previous_current_and_timestamp():
             model_update_executed=True,
             model_update_proof={"executed": True},
         )
+
+
+def test_stage_e_legacy_match_locked_team_without_submitted_picks_authority_fails():
+    payload = _match()
+    payload["locked_team"] = {
+        "status": "CURRENT_IMMUTABLE",
+        "our15": payload["locked_team"]["our15"],
+        "starting_xi": payload["locked_team"]["starting_xi"],
+        "bench_order": payload["locked_team"]["bench_order"],
+        "bench_gk": payload["locked_team"]["bench_gk"],
+        "outfield_autosub_priority": payload["locked_team"]["outfield_autosub_priority"],
+        "captain": "P8",
+        "vice_captain": "P9",
+    }
+    result = validate_v12_visible_content_contract(
+        report_mode="MATCH",
+        content_contract=payload,
+    )
+    assert "MATCH_LOCKED_TEAM_NOT_SUBMITTED_PICKS_AUTHORITY" in result["failures"]
+    assert "MATCH_SUBMITTED_PICKS_AUTHORITY_PROOF_MISSING" in result["failures"]
+    assert "MATCH_PLANNING_XI_MUST_NOT_BE_USED" in result["failures"]
+
+
+def test_stage_e_live_owned_scope_cannot_render_bps_as_final():
+    payload = _match()
+    payload["owned_live_final_points"] = [
+        {"element_id": 8, "fixture_status": "LIVE"}
+    ]
+    payload["bonus_bps"] = {"provisional": False, "rows": []}
+    result = validate_v12_visible_content_contract(
+        report_mode="MATCH",
+        content_contract=payload,
+    )
+    assert "MATCH_BPS_FINAL_BEFORE_OWNED_FIXTURES_RESOLVED" in result["failures"]

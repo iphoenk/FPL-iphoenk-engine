@@ -1,5 +1,5 @@
 FPL MASTER CANONICAL V12 — FAIL-OPERATIONAL REPORT-PLANE ARCHITECTURE
-Effective: 2026-09-23T07:11:00+07:00
+Effective: 2026-09-27T04:02:05+07:00
 Authority path: control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
 State path: control/fpl_master_v12/FPL_MASTER_STATE_V12.json
 
@@ -16,11 +16,15 @@ ChatGPT owns Gate0, Bayesian/xMins/P(start), tactical/coach fit, fixture adjustm
 DATA_SLOT != REPORT_SLOT != DELIVERY.
 
 2. SCHEDULE / REPORT_DUE
-Hourly :30 Asia/Jakarta.
-Mandatory visible outside deadline-active:
-04:30 DEEP; 05:30 PRICE; 12:30 DEEP; 21:30 DEEP; canonical Deadline/Final; scoring-GW live Match checkpoints; Post-All-Match/next applicable Deep.
-Deadline-active = first canonical :30 at/after T-24h of Official deadline until lock. EVERY hourly :30 inside this window is visible, even NO MATERIAL CHANGE.
-Other checkpoints silent unless routed visible.
+Hourly core evaluation remains :30 Asia/Jakarta and is normally silent.
+Fixed visible schedule authority is config/delivery/v12_delivery_schedule.json:
+04:30 DEEP; 12:30 DEEP; 21:30 DEEP; PRICE at 23:30 Europe/London (05:30 WIB during BST, 06:30 WIB during GMT).
+Deadline checkpoints derive from the exact Official deadline: T-24h DEEP; T-12h DEEP; T-6h DEEP; T-3h DEEP; T-2h DELTA; T-1h DELTA + execution card; T-30m FINAL REVIEW; T-15m GO/NO-GO; T-5m FINAL CONFIRMATION. Deadline-active does NOT create hourly visible reports between these checkpoints.
+Quiet window is strictly after 21:30 through before 04:30 Asia/Jakarta. It suppresses extra visible reports except explicit owner ADHOC and the deadline window from T-3h through lock. Fixed 21:30 and 04:30 reports remain visible.
+MATCH and POST_MATCH may compute incrementally while quiet; outside deadline T-3, quiet-hour live work is summarized into the next permitted visible slot instead of emitting hourly Match reports. POST_ALL_MATCH is delivered at the first applicable visible slot after final factual completion.
+When obligations overlap, emit exactly one coherent visible report carrying all applicable obligations; never duplicate DEEP+MATCH, PRICE+deadline, or checkpoint reports.
+Scheduled visible reports precompute at approximately T-15 to T-10 minutes, then freeze/validate/publish at the visible slot. GitHub runner queue/setup is not part of the warm-worker <=15s metric.
+Other checkpoints are silent unless routed visible by this contract or explicit owner request.
 REPORT_DUE is TWO-STAGE. PRELIMINARY_REPORT_DUE is determined before core from schedule-known/static facts plus any already-known factual trigger. FINAL_REPORT_DUE is finalized only after NATURAL_CORE_UPKEEP_GATE terminalizes and same-occurrence dynamic evidence is re-evaluated.
 FINAL_REPORT_DUE = PRELIMINARY_REPORT_DUE OR SAME_OCCURRENCE_DYNAMIC_TRIGGER.
 Monotonicity is mandatory: false->false allowed; false->true allowed; true->true required; true->false forbidden.
@@ -74,7 +78,7 @@ K. Every natural occurrence retains one transient NATURAL_CORE_UPKEEP_GATE proof
 M. Any early-return or silent-completion path is legal only after NATURAL_CORE_UPKEEP_GATE terminalization AND FINAL_REPORT_DUE finalization. STATE B1 is not an early-return or silent-completion path: when a mandatory report is due it requires full fail-operational visible delivery before the report-plane execution ends, while natural acceptance remains explicitly pending.
 
 4B. SAME-OCCURRENCE DYNAMIC REPORT_DUE FINALIZATION
-A. Static/schedule-known triggers such as 04:30 Deep, 05:30 Price, 12:30 Deep, 21:30 Deep, deadline-active slots and known Deadline/Final belong to PRELIMINARY_REPORT_DUE.
+A. Static/schedule-known triggers are resolved by config/delivery/v12_delivery_schedule.json: fixed 04:30/12:30/21:30 Deep, 23:30 Europe/London Price, the exact nine deadline checkpoints, explicit owner ADHOC, and known Final obligations belong to PRELIMINARY_REPORT_DUE. Deadline proximity alone does not create hourly visible reports.
 B. Dynamic triggers whose truth may change because of the current occurrence core refresh MUST be evaluated only after NATURAL_CORE_UPKEEP_GATE reaches a terminal state. These include scoring-GW LIVE Match, match-completion transition and Post-All-Match transition.
 C. A scoring-GW Match dynamic trigger is TRUE when freshest valid same-occurrence fixture evidence has started=true AND finished=false for one or more scoring-GW fixtures. Multiple live fixtures still produce one coherent Match report.
 D. If PRELIMINARY_REPORT_DUE=false and the post-core dynamic Match trigger becomes TRUE, FINAL_REPORT_DUE MUST promote false->true and FINAL_MODE MUST include MATCH.
@@ -449,7 +453,7 @@ HUMAN-FACING DECISION MEMO PROFILE — DEFAULT
 The normal visible report MUST read like an FPL decision memo, not an engineering incident report.
 
 A. OPENING
-- Title first in natural form, for example: "19:30 DEADLINE DEEP REVIEW, GW5", "12:30 DEEP REVIEW, GW6", or "05:30 PRICE".
+- Title first in natural form, for example: "19:30 DEADLINE DEEP REVIEW, GW5", "12:30 DEEP REVIEW, GW6", or "PRICE".
 - Immediately follow with 1-2 compact paragraphs stating: current operational decision (WAIT/PREPARE/ACT), the most important material change since the prior report, and the practical implication for the user's team.
 - Do not lead with core transport, workflow IDs, QA state, artifact names, scheduler binding, runtime-control, or other plumbing unless a true delivery blocker makes the football report impossible.
 
@@ -766,7 +770,7 @@ EO is shown only when exact multiplier/chip/captain inputs required for EO are s
 For current OUR15 players, apply 14D owned-player bold presentation while retaining element_id as the sole ownership identity basis.
 Football-optimal baseline is first; ICON+ remains an overlay.
 
-14L. 05:30 PRICE DELIVERY BARRIER
+14L. PRICE DELIVERY BARRIER
 Exact backbone:
 1 PRICE DECISION / CURRENT STATUS
 2 OUR15 PRICE & VALUE
@@ -781,7 +785,7 @@ Exact backbone:
 11 SOURCE HEALTH / PRICE-CYCLE / LINEAGE
 12 FINAL PRICE JUDGEMENT
 
-Mandatory 05:30 PRICE is a structured decision report. It MUST never collapse into a short narrative, blocker-only/status-only output, or legacy prose fallback. FAIL-OPERATIONAL permits degraded DATA but never degraded STRUCTURE: all twelve top-level sections remain visible in exact order for every due PRICE occurrence, with only affected fields marked PARTIAL / STALE / DEGRADED / UNAVAILABLE / NOT_RUN and an exact factual reason.
+Mandatory PRICE is a structured decision report. It MUST never collapse into a short narrative, blocker-only/status-only output, or legacy prose fallback. FAIL-OPERATIONAL permits degraded DATA but never degraded STRUCTURE: all twelve top-level sections remain visible in exact order for every due PRICE occurrence, with only affected fields marked PARTIAL / STALE / DEGRADED / UNAVAILABLE / NOT_RUN and an exact factual reason.
 
 PRICE MATERIALIZATION BARRIER
 - DATA AVAILABLE does not require a pre-rendered table artifact.
@@ -836,7 +840,7 @@ ACTION BOARD
 SOURCE HEALTH / LINEAGE
 - Put technical lineage near the end, never ahead of the football/price decision.
 - Expose Official factual timestamp, predictor/model timestamp, personal/current-team timestamp/status, mini-league timestamp/status, core logical slot, authoritative snapshot/run lineage, and scope-specific freshness/degradation.
-- A mandatory 05:30 must bind the correct current core slot. A prior-hour run cannot be relabelled as the 05:00 core.
+- A mandatory PRICE occurrence must bind the correct current core slot for its WIB occurrence. The visible clock is derived from 23:30 Europe/London and therefore shifts from 05:30 WIB in BST to 06:30 WIB in GMT; a prior-hour core cannot be relabelled as current.
 
 FINAL PRICE JUDGEMENT
 - Finish with current action, key price risk, whether affordability is threatened, whether the football edge justifies action, and next checkpoint.
@@ -855,7 +859,7 @@ PRICE HUMAN-FACING SELF-CHECK
 
 NATURAL ACCEPTANCE
 - CODE ACCEPTANCE and NATURAL PRICE ACCEPTANCE are distinct.
-- NATURAL PRICE ACCEPTANCE requires a genuine naturally scheduled mandatory 05:30 occurrence with natural provenance, correctly bound current core evidence, dynamically resolved current ownership, complete twelve-section visible body, exact counts when supportable, ETA/status, package/affordability, mini-league, complete Action Board, source lineage, final judgement, HUMAN_FACING PASS, non-empty visible report, no duplicate acquisition and no replacement occurrence.
+- NATURAL PRICE ACCEPTANCE requires a genuine naturally scheduled mandatory PRICE occurrence at 23:30 Europe/London with natural provenance, correctly bound current core evidence, dynamically resolved current ownership, complete twelve-section visible body, exact counts when supportable, ETA/status, package/affordability, mini-league, complete Action Board, source lineage, final judgement, HUMAN_FACING PASS, non-empty visible report, no duplicate acquisition and no replacement occurrence.
 - Manual/ad-hoc execution may validate code but can never be used to claim NATURAL PRICE ACCEPTANCE.
 
 14M. TIME-SPECIFIC DEEP EMPHASIS

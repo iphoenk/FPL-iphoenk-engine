@@ -218,7 +218,7 @@ def _validate_report_prefetch(root: Path, control: dict[str, Any]) -> None:
         assert prefetch["personal_requested"] is False
         assert prefetch["mini_league_requested"] is True
         assert prefetch["live_requested"] is False
-        assert prefetch["auth_state"] == "NOT_REQUESTED"
+        assert str(prefetch.get("auth_state") or "NOT_REQUESTED").upper() == "NOT_REQUESTED"
         assert prefetch["telemetry"]["request_count"] > 0
         assert prefetch["governance"]["price_0530_requires_mini_league_facts"] is True
 

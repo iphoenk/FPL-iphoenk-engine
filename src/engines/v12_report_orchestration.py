@@ -3026,6 +3026,7 @@ DEEP_HUMAN_SECTION_REQUIREMENTS: dict[str, tuple[str, ...]] = {
     "S15B": (
         "current_league_context",
         "exposures",
+        "rank_battle",
         "denominator_scopes",
         "league_our15_exposure",
         "rivals_our15_exposure",

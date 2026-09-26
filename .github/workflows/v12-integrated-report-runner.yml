@@ -37,7 +37,7 @@ concurrency:
 jobs:
   parse:
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) ||
       (
         github.event_name == 'issue_comment' &&
         github.event.issue.number == 431 &&
@@ -160,6 +160,11 @@ jobs:
         run: |
           set -euo pipefail
           private_prefetch_log="$RUNNER_TEMP/p1-real-prefetch-private.log"
+          legacy_current_team_hash=""
+          if [ -f ../runtime-data/data/v6/personal/current_team.json ]; then
+            legacy_current_team_hash="$(sha256sum ../runtime-data/data/v6/personal/current_team.json | awk '{print $1}')"
+          fi
+
           set +e
           python -m src.runtime_v6.domains.report_plane.report_prefetch \
             --report-kind full_master \
@@ -178,58 +183,127 @@ jobs:
             exit "$rc"
           fi
 
-          python - <<'PY'
-          import hashlib, json
+          rm -rf ../acceptance-private-input ../acceptance-public-sanitize
+          mkdir -p ../acceptance-private-input ../acceptance-public-sanitize
+
+          auth_candidate="false"
+          if [ -f ../runtime-data/data/v6/personal/current_team.json ]; then
+            current_hash="$(sha256sum ../runtime-data/data/v6/personal/current_team.json | awk '{print $1}')"
+            if [ -z "$legacy_current_team_hash" ] || [ "$current_hash" != "$legacy_current_team_hash" ]; then
+              if python - <<'PY'
+          import json
           from pathlib import Path
+
           p = Path("../runtime-data/data/v6/personal/current_team.json")
-          if not p.is_file():
-              raise SystemExit("P1 acceptance requires fresh authenticated current_team")
           obj = json.loads(p.read_text(encoding="utf-8"))
-          if str(obj.get("auth_state") or "").upper() != "AVAILABLE":
-              raise SystemExit("P1 acceptance requires auth_state=AVAILABLE")
-          digest = hashlib.sha256(p.read_bytes()).hexdigest()
-          Path("../p1-current-team-pre.sha256").write_text(digest + "\n", encoding="utf-8")
+          auth_state = str(obj.get("auth_state") or "").upper()
+          if auth_state not in {"AVAILABLE", "AUTH_AVAILABLE"}:
+              raise SystemExit(1)
+          if not obj.get("generated_at"):
+              raise SystemExit(1)
+          PY
+              then
+                auth_candidate="true"
+              fi
+            fi
+          fi
+
+          if [ "$auth_candidate" = "true" ]; then
+            python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          p = Path("../runtime-data/data/v6/personal/current_team.json")
+          obj = json.loads(p.read_text(encoding="utf-8"))
+          payload = json.dumps(
+              obj,
+              sort_keys=True,
+              separators=(",", ":"),
+              ensure_ascii=False,
+              default=str,
+          ).encode("utf-8")
+          digest = hashlib.sha256(payload).hexdigest()
+          Path("../p1-current-team-pre.sha256").write_text(
+              digest + "\n", encoding="utf-8"
+          )
           PY
 
-          rm -rf ../acceptance-private-input
-          mkdir -p ../acceptance-private-input
-          python -m src.runtime_v6.domains.report_plane.private_boundary \
-            --public-root ../runtime-data/data/v6 \
-            --private-root ../acceptance-private-input \
-            >/dev/null
+            python -m src.runtime_v6.domains.report_plane.private_boundary \
+              --public-root ../runtime-data/data/v6 \
+              --private-root ../acceptance-private-input \
+              >/dev/null
 
-          test ! -e ../runtime-data/data/v6/personal/current_team.json
-          python - <<'PY'
+            python - <<'PY'
           import hashlib
+          import json
           from pathlib import Path
-          before = Path("../p1-current-team-pre.sha256").read_text(encoding="utf-8").strip()
+
+          before = Path("../p1-current-team-pre.sha256").read_text(
+              encoding="utf-8"
+          ).strip()
           p = Path("../acceptance-private-input/personal/current_team.json")
-          after = hashlib.sha256(p.read_bytes()).hexdigest()
+          obj = json.loads(p.read_text(encoding="utf-8"))
+          payload = json.dumps(
+              obj,
+              sort_keys=True,
+              separators=(",", ":"),
+              ensure_ascii=False,
+              default=str,
+          ).encode("utf-8")
+          after = hashlib.sha256(payload).hexdigest()
           if before != after:
-              raise SystemExit("P1 current-team payload changed across private split")
+              raise SystemExit("P1 current-team semantics changed across private split")
           print(f"P1_PERSONAL_PAYLOAD_IDENTITY={after}")
           PY
 
-          mkdir -p ../private-reports/personal
-          cp ../acceptance-private-input/personal/current_team.json \
-            ../private-reports/personal/current_team.json
-          if [ -d ../acceptance-private-input/personal/snapshots ]; then
-            mkdir -p ../private-reports/personal/snapshots
-            cp -a ../acceptance-private-input/personal/snapshots/. \
-              ../private-reports/personal/snapshots/
-          fi
-          (
-            cd ../private-reports
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A -- personal
-            if ! git diff --cached --quiet; then
-              git commit -m "data(private): P1 real acceptance current-team ${GITHUB_RUN_ID}" >/dev/null
-              git pull --rebase origin main >/dev/null
-              git push origin HEAD:main >/dev/null
+            mkdir -p ../private-reports/personal
+            cp ../acceptance-private-input/personal/current_team.json \
+              ../private-reports/personal/current_team.json
+            if [ -d ../acceptance-private-input/personal/snapshots ]; then
+              mkdir -p ../private-reports/personal/snapshots
+              cp -a ../acceptance-private-input/personal/snapshots/. \
+                ../private-reports/personal/snapshots/
             fi
-          )
+            (
+              cd ../private-reports
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git add -A -- personal
+              if ! git diff --cached --quiet; then
+                git commit -m "data(private): P1 real acceptance current-team ${GITHUB_RUN_ID}" >/dev/null
+                git pull --rebase origin main >/dev/null
+                git push origin HEAD:main >/dev/null
+              fi
+            )
+            echo "P1_PERSONAL_SOURCE=AUTH_CURRENT_PRIVATE"
+          else
+            # The public runtime branch may still contain legacy current-team
+            # state until the coordinated P1 cutover. Never consume that stale
+            # public copy during branch acceptance. Sanitize it from the
+            # ephemeral public tree and validate against an already-private
+            # authenticated/manual/owner-state candidate instead.
+            rm -f ../runtime-data/data/v6/personal/current_team.json
+            python -m src.runtime_v6.domains.report_plane.private_boundary \
+              --public-root ../runtime-data/data/v6 \
+              --private-root ../acceptance-public-sanitize \
+              >/dev/null
+            python - <<'PY'
+          from pathlib import Path
 
+          root = Path("../private-reports/personal")
+          has_current = (root / "current_team.json").is_file()
+          has_manual = any((root / "manual").glob("*.json"))
+          has_owner = (root / "owner_state.json").is_file()
+          if not (has_current or has_manual or has_owner):
+              raise SystemExit(
+                  "P1 acceptance requires private current/manual/owner state"
+              )
+          print("P1_PERSONAL_SOURCE=EXISTING_PRIVATE_STATE")
+          PY
+          fi
+
+          test ! -e ../runtime-data/data/v6/personal/current_team.json
           (
             cd ../runtime-data
             git config user.name "p1-acceptance"

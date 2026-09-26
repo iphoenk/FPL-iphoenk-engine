@@ -79,6 +79,16 @@ def test_deadline_checkpoint_matches_by_absolute_instant():
     assert got.primary_mode == "DEADLINE:GO_NO_GO"
 
 
+def test_pre_t3_deadline_checkpoint_does_not_break_quiet_hours():
+    deadline = datetime(2026, 9, 28, 1, 0, tzinfo=WIB)
+    t24 = datetime(2026, 9, 27, 1, 0, tzinfo=WIB)
+    got = resolve_delivery_decision(t24, official_deadline=deadline)
+    assert got.deadline_checkpoint == "T-24H"
+    assert got.quiet_window is True
+    assert got.quiet_suppressed is True
+    assert got.visible is False
+
+
 def test_quiet_match_is_suppressed_but_owner_and_t3_deadline_are_visible():
     quiet = datetime(2026, 9, 27, 1, 30, tzinfo=WIB)
     match = resolve_delivery_decision(quiet, match_live=True)

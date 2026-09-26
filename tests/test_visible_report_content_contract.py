@@ -14,6 +14,7 @@ from src.runtime_v6.domains.report_plane.report_qa import (
     validate_v12_visible_content_contract,
 )
 from test_support.report_visible_body import valid_visible_body
+from src.engines.v12_final_delivery_barrier import validate_final_delivery_barrier
 
 
 def _bench():
@@ -927,3 +928,75 @@ def test_deep_delivery_rejects_rank20_resort_and_watchlist_imbalance():
     failures = validate_deep_decision_content_delivery(report, "FALL20")
     assert any(x.startswith("GOVERNED_RANK20_RANK_MISMATCH=S13") for x in failures)
     assert any(x.startswith("WATCHLIST20_POSITION_BALANCE=") for x in failures)
+
+
+def test_stage_f_post_all_final_barrier_requires_exact_fixture_coverage():
+    contract = _post_all_match()
+    report = {
+        "sections": [
+            {
+                "section_id": f"POST_ALL_MATCH{index}",
+                "label": contract["visible_order"][index - 1],
+                "state": "COMPLETE",
+                "content": {"status": "VISIBLE"},
+            }
+            for index in range(1, 14)
+        ]
+    }
+    labels = [
+        "RESULT: 1-0",
+        "FORMATION/SYSTEM: 4-3-3",
+        "COACH PATTERN: stable",
+        "PLAYER ROLES: documented",
+        "MINUTES/SUBS: documented",
+        "XG/XA/XGI/SHOTS/CHANCES: available",
+        "SET PIECES/PENALTIES: available",
+        "DEFCON: available",
+        "OPPONENT CHANNELS: wide",
+        "SUSTAINABLE VS NOISE: mixed",
+        "OUR15 IMPLICATION: review",
+        "NEXT OPPONENT IMPLICATION: review",
+        "POSTERIOR CALIBRATION IMPLICATION: CALIBRATION INPUT",
+    ]
+    body = "DECISION DELTA\nGW COMPLETED MATCH-BY-MATCH SCOUT\n" + "\n".join(
+        [
+            "### FIXTURE ID: 101",
+            *labels,
+            "### FIXTURE ID: 102",
+            *labels,
+        ]
+    )
+    result = validate_final_delivery_barrier(
+        report_mode="POST_ALL_MATCH",
+        report=report,
+        body=body,
+        content_contract=contract,
+        finalization={
+            "final_report_due": True,
+            "visible_report_count": 1,
+            "combined_report": False,
+            "dynamic_lifecycle_event": "POST_ALL_MATCH",
+            "final_mode": "POST_ALL_MATCH",
+            "embedded_obligations": [],
+        },
+    )
+    assert result["status"] == "PASS", result["failures"]
+
+    broken_contract = deepcopy(contract)
+    broken_contract["match_scout"] = broken_contract["match_scout"][:1]
+    failed = validate_final_delivery_barrier(
+        report_mode="POST_ALL_MATCH",
+        report=report,
+        body=body,
+        content_contract=broken_contract,
+        finalization={
+            "final_report_due": True,
+            "visible_report_count": 1,
+            "combined_report": False,
+            "dynamic_lifecycle_event": "POST_ALL_MATCH",
+            "final_mode": "POST_ALL_MATCH",
+            "embedded_obligations": [],
+        },
+    )
+    assert failed["status"] == "FAIL"
+    assert "MATCH_SCOUT_FIXTURE_COVERAGE_MISMATCH" in failed["failures"]

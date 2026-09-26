@@ -211,6 +211,30 @@ jobs:
         working-directory: app
         run: mkdir -p .cache/v12-mc
 
+      - name: Restore previous successful DEEP artifact candidate
+        if: needs.parse.outputs.report_mode == 'DEEP'
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/previous-deep artifacts/previous-deep-candidate
+          for run_id in $(gh api             "repos/${GITHUB_REPOSITORY}/actions/workflows/v12-integrated-report-runner.yml/runs?branch=main&status=success&per_page=20"             --jq '.workflow_runs[].id'); do
+            if [ "$run_id" = "${GITHUB_RUN_ID}" ]; then
+              continue
+            fi
+            artifact_name="v12-report-DEEP-${run_id}"
+            rm -rf artifacts/previous-deep-candidate
+            if gh run download "$run_id"               --repo "${GITHUB_REPOSITORY}"               --name "$artifact_name"               --dir artifacts/previous-deep-candidate >/dev/null 2>&1; then
+              if [ -f artifacts/previous-deep-candidate/report_bundle.json ]; then
+                mv artifacts/previous-deep-candidate artifacts/previous-deep
+                echo "Previous DEEP candidate restored from run_id=$run_id"
+                break
+              fi
+            fi
+          done
+          rm -rf artifacts/previous-deep-candidate
+
       - name: Execute occurrence-bound integrated report
         id: report
         working-directory: app
@@ -231,6 +255,9 @@ jobs:
           )
           if [ -n "$CHECKPOINT_TIME" ]; then
             args+=(--checkpoint-time "$CHECKPOINT_TIME")
+          fi
+          if [ -f artifacts/previous-deep/report_bundle.json ]; then
+            args+=(--previous-visible-deep-dir "artifacts/previous-deep")
           fi
           if [ "$PROFILE_MODE" = "COLD" ]; then
             rm -rf .cache/v12-stage2 .cache/v12-p17 .cache/v12-mc

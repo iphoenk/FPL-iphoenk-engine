@@ -4,9 +4,9 @@ from __future__ import annotations
 
 The acquisition/normalisation producer remains unchanged. This module runs only
 after collection/runtime-control and before the public candidate tree is frozen.
-It moves private current-team state to the private repository checkout, removes
-that payload from the public candidate tree, and strips explicit auth/session
-metadata from public report-prefetch observability.
+It moves owner-specific personal artifacts to the private repository checkout,
+removes those payloads from the public candidate tree, and strips explicit
+auth/session metadata from public report-prefetch observability.
 """
 
 import argparse
@@ -30,7 +30,18 @@ _PRIVATE_TOP_LEVEL_KEYS = {
 }
 
 _PRIVATE_SCOPE_HEALTH_KEYS = {"AUTH", "PERSONAL"}
-_PRIVATE_ENDPOINT_CLASSES = {"authentication", "me", "my_team"}
+_PRIVATE_ENDPOINT_CLASSES = {
+    "authentication",
+    "entry",
+    "me",
+    "my_team",
+    "submitted_picks",
+}
+_PRIVATE_PERSONAL_FILENAMES = {
+    "current_team.json",
+    "memberships.json",
+    "submitted_picks.json",
+}
 
 
 def _read_json(path: Path, default: Any = None) -> Any:
@@ -92,7 +103,10 @@ def _sanitize_public_prefetch(value: Mapping[str, Any]) -> dict[str, Any]:
             continue
         row = dict(raw)
         path = str(row.get("path") or "").replace("\\", "/")
-        if path.endswith("/personal/current_team.json"):
+        if any(
+            path.endswith(f"/personal/{filename}")
+            for filename in _PRIVATE_PERSONAL_FILENAMES
+        ):
             continue
         artifacts.append(row)
     if "artifacts" in out:
@@ -148,6 +162,27 @@ def split_private_personal_state(
     if current_team_path.exists():
         current_team_path.unlink()
 
+    moved_adjacent: dict[str, dict[str, Any]] = {}
+    for filename in ("memberships.json", "submitted_picks.json"):
+        public_path = public_root / "personal" / filename
+        payload = _read_json(public_path, {}) or {}
+        moved_file = False
+        payload_sha = None
+        payload_generated_at = None
+        if isinstance(payload, Mapping) and payload:
+            payload_generated_at = payload.get("generated_at")
+            payload_sha = _sha256_json(payload)
+            _write_json(private_root / "personal" / filename, dict(payload))
+            moved_file = True
+        if public_path.exists():
+            public_path.unlink()
+        moved_adjacent[filename] = {
+            "moved": moved_file,
+            "sha256": payload_sha,
+            "generated_at": payload_generated_at,
+            "public_present_after_split": public_path.exists(),
+        }
+
     latest_path = public_root / "report_prefetch/latest.json"
     latest = _read_json(latest_path, {}) or {}
     if isinstance(latest, Mapping) and latest:
@@ -159,11 +194,25 @@ def split_private_personal_state(
         _write_json(health_path, _sanitize_public_health(health))
 
     receipt = {
-        "schema": "FPL_V6_PRIVATE_BOUNDARY_RECEIPT_V1",
+        "schema": "FPL_V6_PRIVATE_BOUNDARY_RECEIPT_V2",
         "moved_current_team": moved,
         "current_team_sha256": private_sha,
         "current_team_generated_at": generated_at,
         "public_current_team_present_after_split": current_team_path.exists(),
+        "moved_memberships": moved_adjacent["memberships.json"]["moved"],
+        "memberships_sha256": moved_adjacent["memberships.json"]["sha256"],
+        "memberships_generated_at": moved_adjacent["memberships.json"]["generated_at"],
+        "public_memberships_present_after_split": moved_adjacent["memberships.json"][
+            "public_present_after_split"
+        ],
+        "moved_submitted_picks": moved_adjacent["submitted_picks.json"]["moved"],
+        "submitted_picks_sha256": moved_adjacent["submitted_picks.json"]["sha256"],
+        "submitted_picks_generated_at": moved_adjacent["submitted_picks.json"][
+            "generated_at"
+        ],
+        "public_submitted_picks_present_after_split": moved_adjacent[
+            "submitted_picks.json"
+        ]["public_present_after_split"],
         "public_report_prefetch_sanitized": bool(latest),
         "public_report_prefetch_health_sanitized": bool(health),
     }
@@ -187,6 +236,12 @@ def main() -> int:
                 "moved_current_team": receipt["moved_current_team"],
                 "public_current_team_present_after_split": receipt[
                     "public_current_team_present_after_split"
+                ],
+                "public_memberships_present_after_split": receipt[
+                    "public_memberships_present_after_split"
+                ],
+                "public_submitted_picks_present_after_split": receipt[
+                    "public_submitted_picks_present_after_split"
                 ],
             },
             sort_keys=True,

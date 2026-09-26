@@ -958,7 +958,7 @@ def test_stage_f_post_all_final_barrier_requires_exact_fixture_coverage():
         "NEXT OPPONENT IMPLICATION: review",
         "POSTERIOR CALIBRATION IMPLICATION: CALIBRATION INPUT",
     ]
-    body = "GW COMPLETED MATCH-BY-MATCH SCOUT\n" + "\n".join(
+    body = "DECISION DELTA\nGW COMPLETED MATCH-BY-MATCH SCOUT\n" + "\n".join(
         [
             "### FIXTURE ID: 101",
             *labels,

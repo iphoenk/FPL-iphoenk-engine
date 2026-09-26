@@ -8,6 +8,7 @@ from src.runtime_v6.domains.report_plane.report_qa import (
     _MATCH_VISIBLE_ORDER,
     _POST_ALL_MATCH_ORDER,
     _PRICE_VISIBLE_ORDER,
+    _required_visible_markers,
     _validate_v12_rendered_body,
     validate_post_render_qa,
     validate_pre_render_qa,
@@ -15,6 +16,7 @@ from src.runtime_v6.domains.report_plane.report_qa import (
 )
 from test_support.report_visible_body import valid_visible_body
 from src.engines.v12_final_delivery_barrier import validate_final_delivery_barrier
+from src.runtime_v6.domains.report_plane.visible_body_contract import _watchlist_contract
 
 
 def _bench():
@@ -1000,3 +1002,41 @@ def test_stage_f_post_all_final_barrier_requires_exact_fixture_coverage():
     )
     assert failed["status"] == "FAIL"
     assert "MATCH_SCOUT_FIXTURE_COVERAGE_MISMATCH" in failed["failures"]
+
+
+def test_natural_regression_watchlist_scanner_ignores_actionable_table_positions():
+    scanner_rows = []
+    rank = 0
+    for position in ("GK", "DEF", "MID", "FWD"):
+        for _ in range(5):
+            rank += 1
+            scanner_rows.append(
+                f"| {rank} | P{rank} | {position} | NON_OWNED |"
+            )
+    body = "\n".join(
+        [
+            "| rank | player | position | ownership_tag |",
+            "| --- | --- | --- | --- |",
+            *scanner_rows,
+            "",
+            "### ACTIONABLE WATCHLIST",
+            "| player | position | action |",
+            "| --- | --- | --- |",
+            "| A | MID | WATCH |",
+            "| B | FWD | WATCH |",
+        ]
+    )
+    actual, failures = _watchlist_contract(body)
+    assert actual == 20
+    assert failures == []
+
+
+def test_natural_regression_deep_action_markers_match_current_s18_contract():
+    markers = _required_visible_markers("DEEP")
+    assert "MULTI-AXIS ACTION BOARD" in markers
+    assert "TRIGGER TO ACT" in markers
+    assert "LATEST SAFE DECISION POINT" in markers
+    assert "COST OF WAITING" in markers
+    assert "ABORT / REVERSAL" in markers
+    assert "NEXT:" not in markers
+    assert "TRIGGERS:" not in markers

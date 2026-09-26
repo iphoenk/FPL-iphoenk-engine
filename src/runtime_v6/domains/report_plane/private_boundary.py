@@ -46,8 +46,7 @@ def _read_json(path: Path, default: Any = None) -> Any:
 def _write_json(path: Path, value: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps(value, indent=2, ensure_ascii=False, sort_keys=True) + "
-",
+        json.dumps(value, indent=2, ensure_ascii=False, sort_keys=True) + "\\n",
         encoding="utf-8",
     )
 

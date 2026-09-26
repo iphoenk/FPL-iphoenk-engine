@@ -1387,6 +1387,71 @@ def test_stage_c_legacy_single_rival_denominator_cannot_masquerade_as_all_scopes
     assert "S15B_BEHAVIOURAL_BASELINE_LABEL_MISSING" in failures
 
 
+def test_stage_c_direct_scope_cannot_masquerade_as_league_denominator():
+    scopes = {
+        "LEAGUE": {
+            "label": "LEAGUE58_INCL_US",
+            "expected": 58,
+            "collected": 58,
+            "denominator": 58,
+            "includes_us": True,
+        },
+        "RIVALS": {
+            "label": "RIVALS57_EXCL_US",
+            "expected": 57,
+            "collected": 57,
+            "denominator": 57,
+            "includes_us": False,
+        },
+        "DIRECT": {
+            # Deliberately false-pass shaped: DIRECT carries league-sized
+            # label/denominator even though the requested cohort is six.
+            "label": "LEAGUE58_INCL_US",
+            "expected": 58,
+            "collected": 58,
+            "denominator": 58,
+            "includes_us": False,
+        },
+    }
+    report = {
+        "sections": [
+            {
+                "section_id": "S15B",
+                "state": "COMPLETE",
+                "content": {
+                    "coverage_state": "FULL",
+                    "expected_manager_count": 58,
+                    "submitted_picks_available_count": 58,
+                    "disclosed_picks_label": "BEHAVIOURAL BASELINE",
+                    "denominator_scopes": scopes,
+                    "league_our15_exposure": _stage_c_scope_rows(58),
+                    "rivals_our15_exposure": _stage_c_scope_rows(57),
+                    "direct_rival_our15_exposure": _stage_c_scope_rows(58),
+                    "direct_rival_scope": {
+                        "requested_above_count": 6,
+                        "standings_rival_count": 6,
+                        "picks_available_count": 6,
+                        "denominator": 58,
+                    },
+                    "direct_rivals": [],
+                    "strategy_implication": {"human_posture": "BALANCED"},
+                    "authoritative_binding": {
+                        "status": "BOUND",
+                        "producer": "P1_8",
+                        "payload_fingerprint": "direct-mislabeled-as-league",
+                    },
+                },
+            }
+        ]
+    }
+    failures = validate_deep_decision_content_delivery(
+        report,
+        render_deep_text(report),
+    )
+    assert "S15B_DIRECT_SCOPE_LABEL_INVALID" in failures
+    assert "S15B_DIRECT_SCOPE_COHORT_RELATION_INVALID" in failures
+
+
 def test_stage_c_categorical_expected_rank_utility_name_is_forbidden():
     scopes = {
         "LEAGUE": {

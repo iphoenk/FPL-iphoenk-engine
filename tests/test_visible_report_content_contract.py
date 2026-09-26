@@ -19,6 +19,7 @@ from src.engines.v12_report_orchestration import (
     build_match_lifecycle_surface,
     materialize_match_lifecycle_report,
     render_match_lifecycle_text,
+    validate_match_lifecycle_surface,
 )
 
 
@@ -1132,13 +1133,10 @@ def test_stage_e_legacy_match_locked_team_without_submitted_picks_authority_fail
         "captain": "P8",
         "vice_captain": "P9",
     }
-    result = validate_v12_visible_content_contract(
-        report_mode="MATCH",
-        content_contract=payload,
-    )
-    assert "MATCH_LOCKED_TEAM_NOT_SUBMITTED_PICKS_AUTHORITY" in result["failures"]
-    assert "MATCH_SUBMITTED_PICKS_AUTHORITY_PROOF_MISSING" in result["failures"]
-    assert "MATCH_PLANNING_XI_MUST_NOT_BE_USED" in result["failures"]
+    failures = validate_match_lifecycle_surface(payload)
+    assert "MATCH_LOCKED_TEAM_NOT_SUBMITTED_PICKS_AUTHORITY" in failures
+    assert "MATCH_SUBMITTED_PICKS_AUTHORITY_PROOF_MISSING" in failures
+    assert "MATCH_PLANNING_XI_MUST_NOT_BE_USED" in failures
 
 
 def test_stage_e_live_owned_scope_cannot_render_bps_as_final():
@@ -1147,8 +1145,5 @@ def test_stage_e_live_owned_scope_cannot_render_bps_as_final():
         {"element_id": 8, "fixture_status": "LIVE"}
     ]
     payload["bonus_bps"] = {"provisional": False, "rows": []}
-    result = validate_v12_visible_content_contract(
-        report_mode="MATCH",
-        content_contract=payload,
-    )
-    assert "MATCH_BPS_FINAL_BEFORE_OWNED_FIXTURES_RESOLVED" in result["failures"]
+    failures = validate_match_lifecycle_surface(payload)
+    assert "MATCH_BPS_FINAL_BEFORE_OWNED_FIXTURES_RESOLVED" in failures

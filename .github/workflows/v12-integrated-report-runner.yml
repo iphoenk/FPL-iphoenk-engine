@@ -331,6 +331,7 @@ jobs:
           python -m src.engines.v12_stage3_acceptance \
             --bundle artifacts/v12-report/report_bundle.json \
             --runtime-data-root ../runtime-data \
+            --private-data-root ../private-reports \
             --model-sha "$model_sha" \
             --runtime-sha "$runtime_sha" \
             --canonical control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt \

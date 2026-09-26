@@ -2796,6 +2796,10 @@ def _post_match_structural_route(
         "MATCH+FULL",
         "DEEP+MATCH",
         "MATCH+DEEP",
+        "PRICE+MATCH",
+        "MATCH+PRICE",
+        "DEADLINE+MATCH",
+        "MATCH+DEADLINE",
     }:
         return "DEEP", "S04"
     return mode, None
@@ -2812,6 +2816,7 @@ def materialize_natural_post_match_report(
     signal_delta: Mapping[str, Any] | None = None,
     current_gw_locked: bool = False,
     locked_state: Mapping[str, Any] | None = None,
+    match_consequence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Natural V12 post-match renderer binding projections -> movers -> report.
 
@@ -2853,7 +2858,578 @@ def materialize_natural_post_match_report(
     report["post_match_deep_source"] = (
         "projections.post_match_deep_analysis"
     )
+
+    overlap_modes = {
+        "OVERLAP",
+        "FULL+MATCH",
+        "MATCH+FULL",
+        "DEEP+MATCH",
+        "MATCH+DEEP",
+        "PRICE+MATCH",
+        "MATCH+PRICE",
+        "DEADLINE+MATCH",
+        "MATCH+DEADLINE",
+    }
+    consequence = (
+        dict(match_consequence)
+        if isinstance(match_consequence, Mapping)
+        else {}
+    )
+    if mode in overlap_modes:
+        if not consequence or not str(
+            consequence.get("status") or consequence.get("summary") or ""
+        ).strip():
+            raise ReportOrchestrationError(
+                "overlap report requires explicit locked submitted-pick match consequence"
+            )
+        target = next(
+            (
+                row
+                for row in report.get("sections") or []
+                if str(row.get("section_id") or "").upper() == "S04"
+            ),
+            None,
+        )
+        if not isinstance(target, dict):
+            raise ReportOrchestrationError(
+                "overlap report requires DEEP S04 material-development surface"
+            )
+        target_content = dict(target.get("content") or {})
+        if "match_consequence" in target_content:
+            raise ReportOrchestrationError(
+                "match consequence may be materialized only once"
+            )
+        target_content["match_consequence"] = consequence
+        target["content"] = target_content
+
+    update_proof = dict(projections.get("model_update_execution") or {})
+    actual_update = bool(
+        update_proof.get("executed") is True
+        and update_proof.get("previous_value") is not None
+        and update_proof.get("current_value") is not None
+        and str(update_proof.get("evidence_time") or "").strip()
+    )
+    model_update_status = (
+        {
+            "status": "POSTERIOR UPDATED",
+            "previous_value": update_proof.get("previous_value"),
+            "current_value": update_proof.get("current_value"),
+            "evidence_time": update_proof.get("evidence_time"),
+        }
+        if actual_update
+        else {
+            "status": "MODEL UPDATE PENDING",
+            "reason": (
+                "completed-match evidence is calibration input until the "
+                "authoritative model is actually recomputed"
+            ),
+        }
+    )
+    target_for_update = next(
+        (
+            row
+            for row in report.get("sections") or []
+            if str(row.get("label") or "").upper() == str(target_label or "").upper()
+            or str(row.get("section_id") or "").upper() == str(target_label or "").upper()
+        ),
+        None,
+    )
+    if isinstance(target_for_update, dict):
+        target_content = dict(target_for_update.get("content") or {})
+        target_content["model_update_status"] = model_update_status
+        target_for_update["content"] = target_content
+
+    report["lifecycle_contract"] = {
+        "single_visible_report": True,
+        "reported_mode": mode,
+        "structural_mode": structural_mode,
+        "post_match_incremental": mode != "POST_ALL_MATCH",
+        "post_match_return_mode": (
+            "POST_ALL_MATCH" if mode == "POST_ALL_MATCH" else "MATCH"
+        ),
+        "match_consequence_preserved": (
+            True if mode in overlap_modes else None
+        ),
+        "model_update_status": model_update_status["status"],
+    }
     return report
+
+
+def materialize_match_report(
+    *,
+    canonical_text: str,
+    live_payload: Mapping[str, Any],
+    icon_live: Mapping[str, Any] | None = None,
+    league_wide_signals: Sequence[Mapping[str, Any]] | None = None,
+    cards_injury_defcon_role_events: Sequence[Mapping[str, Any]] | None = None,
+    next_gw_learning: Sequence[Mapping[str, Any]] | None = None,
+    next_critical_observation: str | None = None,
+    source_freshness: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Materialize the Canonical MATCH1..MATCH13 surface from locked live truth.
+
+    The scoring authority is the submitted-pick live payload. Planning XI is
+    never accepted as an input here. Missing submitted-pick coverage fails
+    closed while optional league-wide/contextual scopes may degrade visibly.
+    """
+    live = dict(live_payload or {})
+    players = [
+        dict(row)
+        for row in live.get("players") or []
+        if isinstance(row, Mapping)
+    ]
+    player_ids = [
+        int(row.get("element") or 0)
+        for row in players
+        if int(row.get("element") or 0) > 0
+    ]
+    if (
+        str(live.get("submitted_picks_status") or "").upper() != "AVAILABLE"
+        or len(players) != 15
+        or len(set(player_ids)) != 15
+    ):
+        raise ReportOrchestrationError(
+            "MATCH publication requires exact15 locked submitted picks"
+        )
+
+    lifecycle = dict(live.get("lifecycle") or {})
+    checkpoint = dict(live.get("match_checkpoint") or {})
+    bench = dict(live.get("bench_presentation") or {})
+    score = dict(live.get("personalized_live_score") or {})
+    captain = dict(live.get("captain_vice_consequence") or {})
+    bonus = dict(live.get("bonus_bps") or {})
+    generated_at = live.get("generated_at")
+
+    xi_rows = [row for row in players if int(row.get("multiplier") or 0) > 0]
+    bench_rows = [row for row in players if int(row.get("multiplier") or 0) == 0]
+    if len(xi_rows) != 11 or len(bench_rows) != 4:
+        raise ReportOrchestrationError(
+            f"MATCH locked submitted picks require XI=11 and bench=4, got {len(xi_rows)}/{len(bench_rows)}"
+        )
+
+    personal_impact: list[dict[str, Any]] = []
+    for row in players:
+        minutes = int(row.get("minutes") or 0)
+        raw = int(row.get("total_points") or 0)
+        multiplier = int(row.get("multiplier") or 0)
+        fixture_status = str(row.get("fixture_status") or "NOT_STARTED")
+        state = "NO_MATERIAL_EVENT"
+        if int(row.get("red_cards") or 0) > 0:
+            state = "RED_CARD"
+        elif int(row.get("goals_scored") or 0) > 0:
+            state = "GOAL_RETURN"
+        elif int(row.get("assists") or 0) > 0:
+            state = "ASSIST_RETURN"
+        elif multiplier == 0 and raw > 0:
+            state = "BENCH_POINTS"
+        elif fixture_status == "FT" and minutes == 0 and multiplier > 0:
+            state = "DNP_AUTOSUB_PENDING"
+        elif fixture_status == "LIVE" and minutes > 0 and minutes < 90:
+            state = "LIVE_APPEARANCE"
+        if state != "NO_MATERIAL_EVENT":
+            personal_impact.append(
+                {
+                    "element_id": row.get("element"),
+                    "player": row.get("name"),
+                    "personal_state": state,
+                    "fixture_status": fixture_status,
+                    "minutes": minutes,
+                    "raw_points": raw,
+                    "multiplier": multiplier,
+                    "effective_points": row.get("effective_points"),
+                }
+            )
+
+    if not personal_impact:
+        personal_impact.append(
+            {
+                "personal_state": "NO_MATERIAL_PERSONAL_EVENT",
+                "summary": "No owned-player event currently changes the locked scoring consequence.",
+            }
+        )
+
+    global_autosub_state = {
+        "status": (score.get("autosub_implications") or {}).get("status") or "PROVISIONAL",
+        "potential_out": (score.get("autosub_implications") or {}).get("potential_out") or [],
+        "bench_candidates": (score.get("autosub_implications") or {}).get("bench_candidates") or [],
+        "final_substitution_map": {},
+        "official_finalization_authoritative": True,
+    }
+    icon = dict(icon_live or {})
+    icon_state = (
+        "COMPLETE"
+        if str(icon.get("status") or "").upper() in {"FRESH", "COMPLETE"}
+        else "DEGRADED"
+    )
+    icon_reason = None if icon_state == "COMPLETE" else "fresh ICON+ live standings/exposure unavailable"
+
+    section_payloads = {
+        "MATCH CHECKPOINT / GW STATUS": {
+            "state": "COMPLETE",
+            "content": {
+                "scoring_gw": live.get("scoring_gw"),
+                "fixtures_live": checkpoint.get("fixtures_live", lifecycle.get("fixtures_live")),
+                "fixtures_ft": checkpoint.get("fixtures_ft", lifecycle.get("fixtures_ft")),
+                "fixtures_not_started": checkpoint.get(
+                    "fixtures_not_started",
+                    lifecycle.get("fixtures_not_started"),
+                ),
+                "timestamp": checkpoint.get("generated_at") or generated_at,
+                "lifecycle_mode": lifecycle.get("primary_mode"),
+                "transition": lifecycle.get("transition"),
+            },
+        },
+        "LOCKED PERSONAL TEAM": {
+            "state": "COMPLETE",
+            "content": {
+                "rows": players,
+                "xi": [row.get("name") for row in xi_rows],
+                "bench": [row.get("name") for row in bench_rows],
+                "authority": "LOCKED_SUBMITTED_PICKS",
+            },
+        },
+        "PERSONAL IMPACT FIRST": {
+            "state": "COMPLETE",
+            "content": {"rows": personal_impact},
+        },
+        "GLOBAL AUTOSUB STATE": {
+            "state": "COMPLETE",
+            "content": {
+                **global_autosub_state,
+                "bench_gk": bench.get("bench_gk"),
+                "outfield_autosub_priority": bench.get("outfield_autosub_priority") or [],
+            },
+        },
+        "CAPTAIN / VICE CONSEQUENCE": {
+            "state": "COMPLETE",
+            "content": captain,
+        },
+        "OWNED LIVE / FINAL POINTS": {
+            "state": "COMPLETE",
+            "content": {
+                "rows": [
+                    {
+                        "element_id": row.get("element"),
+                        "player": row.get("name"),
+                        "state": row.get("fixture_status"),
+                        "minutes": row.get("minutes"),
+                        "raw_points": row.get("total_points"),
+                        "multiplier": row.get("multiplier"),
+                        "effective_points": row.get("effective_points"),
+                    }
+                    for row in players
+                ]
+            },
+        },
+        "BONUS / BPS": {
+            "state": "COMPLETE",
+            "content": {
+                **bonus,
+                "rows": [
+                    {
+                        "element_id": row.get("element"),
+                        "player": row.get("name"),
+                        "bonus": row.get("bonus"),
+                        "bps": row.get("bps"),
+                    }
+                    for row in players
+                    if int(row.get("bonus") or 0) != 0 or int(row.get("bps") or 0) != 0
+                ],
+            },
+        },
+        "CARDS / INJURY / DEFCON / ROLE EVENTS": {
+            "state": "COMPLETE",
+            "content": {
+                "rows": [
+                    dict(row)
+                    for row in (cards_injury_defcon_role_events or ())
+                    if isinstance(row, Mapping)
+                ],
+                "observation_is_not_automatic_model_change": True,
+            },
+        },
+        "RELEVANT LEAGUE-WIDE SIGNALS": {
+            "state": "COMPLETE",
+            "content": {
+                "rows": [
+                    dict(row)
+                    for row in (league_wide_signals or ())
+                    if isinstance(row, Mapping)
+                ],
+                "scorer_only_scouting_prohibited": True,
+            },
+        },
+        "ICON+ LIVE": {
+            "state": icon_state,
+            "degradation_reason": icon_reason,
+            "content": icon if icon else {"status": "UNAVAILABLE"},
+        },
+        "NEXT-GW LEARNING": {
+            "state": "COMPLETE",
+            "content": {
+                "rows": [
+                    dict(row)
+                    for row in (next_gw_learning or ())
+                    if isinstance(row, Mapping)
+                ],
+                "evidence_not_automatic_transfer": True,
+            },
+        },
+        "NEXT CRITICAL OBSERVATION": {
+            "state": "COMPLETE",
+            "content": {
+                "observation": (
+                    next_critical_observation
+                    or (
+                        "process newly completed fixture evidence"
+                        if lifecycle.get("incremental_post_match_due")
+                        else "next scoring-GW fixture state change"
+                    )
+                )
+            },
+        },
+        "SOURCE / FRESHNESS STATUS": {
+            "state": "COMPLETE",
+            "content": {
+                **dict(source_freshness or {}),
+                "generated_at": generated_at,
+                "submitted_picks": live.get("submitted_picks_status"),
+                "event_live": live.get("event_live_status"),
+                "prediction_snapshot": (live.get("prediction_snapshot") or {}).get("status"),
+                "fixture_state_authority": "OFFICIAL_FPL",
+            },
+        },
+    }
+    report = _materialize_canonical_report(
+        canonical_text=canonical_text,
+        structural_mode="MATCH",
+        reported_mode="MATCH",
+        section_payloads=section_payloads,
+    )
+    report["content_contract"] = {
+        "visible_order": list(report.get("rendered_visible_order") or []),
+        "locked_team": {
+            "status": "CURRENT_IMMUTABLE",
+            "source": "LOCKED_SUBMITTED_PICKS",
+        },
+        "personal_impact": personal_impact,
+        "global_autosub_state": global_autosub_state,
+        "captain_vice_consequence": captain,
+        "owned_live_final_points": section_payloads["OWNED LIVE / FINAL POINTS"]["content"]["rows"],
+        "bonus_bps": bonus,
+        "cards_injury_defcon_role_events": section_payloads["CARDS / INJURY / DEFCON / ROLE EVENTS"]["content"]["rows"],
+        "league_wide_signals": section_payloads["RELEVANT LEAGUE-WIDE SIGNALS"]["content"]["rows"],
+        "next_gw_learning": section_payloads["NEXT-GW LEARNING"]["content"]["rows"],
+        "next_critical_observation": section_payloads["NEXT CRITICAL OBSERVATION"]["content"]["observation"],
+        "source_freshness": section_payloads["SOURCE / FRESHNESS STATUS"]["content"],
+        "bench_presentation": {
+            "bench_gk": (bench.get("bench_gk") or {}).get("name")
+            if isinstance(bench.get("bench_gk"), Mapping)
+            else bench.get("bench_gk"),
+            "outfield_autosub_priority": [
+                row.get("name") if isinstance(row, Mapping) else row
+                for row in bench.get("outfield_autosub_priority") or []
+            ],
+            "position_by_player": {
+                str(row.get("name")): row.get("position")
+                for row in players
+                if row.get("name")
+            },
+        },
+        "icon": icon,
+        "section_states": {
+            "ICON+": {
+                "state": icon_state,
+                "degradation_reason": icon_reason,
+            }
+        },
+        "football_optimal_baseline_before_icon": True,
+        "report_due": True,
+        "optional_scope_degraded": icon_state != "COMPLETE",
+        "visible_report_suppressed": False,
+    }
+    return report
+
+
+def render_match_text(report: Mapping[str, Any]) -> str:
+    """Render one coherent Canonical MATCH1..MATCH13 human-facing report."""
+    blocks: list[str] = []
+    for section in report.get("sections") or []:
+        sid = str(section.get("section_id") or "").upper()
+        label = str(section.get("label") or "")
+        state = str(section.get("state") or "")
+        content = (
+            dict(section.get("content") or {})
+            if isinstance(section.get("content"), Mapping)
+            else {}
+        )
+        lines = [_visible_section_heading(sid, label), f"Status: {state}"]
+        reason = str(section.get("degradation_reason") or "").strip()
+        if state != "COMPLETE" and reason:
+            lines.append(f"Reason: {reason}")
+
+        if sid == "MATCH1":
+            lines.extend(
+                [
+                    f"SCORING GW: {content.get('scoring_gw')}",
+                    f"FIXTURES LIVE: {content.get('fixtures_live')}",
+                    f"FIXTURES FT: {content.get('fixtures_ft')}",
+                    f"FIXTURES NOT STARTED: {content.get('fixtures_not_started')}",
+                    f"TIMESTAMP: {content.get('timestamp')}",
+                    f"LIFECYCLE: {content.get('lifecycle_mode')} / {content.get('transition')}",
+                    "WEATHER: MATCH CURRENT",
+                ]
+            )
+        elif sid == "MATCH2":
+            rows = [
+                dict(row)
+                for row in content.get("rows") or []
+                if isinstance(row, Mapping)
+            ]
+            lines.extend(
+                _markdown_table(
+                    ("element_id", "player_name", "position", "club", "fixture_status"),
+                    [
+                        (
+                            row.get("element"),
+                            row.get("name"),
+                            row.get("position"),
+                            row.get("team"),
+                            row.get("fixture_status"),
+                        )
+                        for row in rows
+                    ],
+                )
+            )
+            lines.append("XI: " + ", ".join(str(x) for x in content.get("xi") or []))
+            lines.append("BENCH: " + ", ".join(str(x) for x in content.get("bench") or []))
+            lines.append(f"SCORING AUTHORITY: {content.get('authority')}")
+        elif sid == "MATCH3":
+            for row in content.get("rows") or []:
+                if isinstance(row, Mapping):
+                    lines.append(
+                        "- "
+                        + " | ".join(
+                            f"{_human_label(key)}={value}"
+                            for key, value in row.items()
+                            if isinstance(value, (str, int, float, bool)) or value is None
+                        )
+                    )
+        elif sid == "MATCH4":
+            bench_gk = content.get("bench_gk")
+            if isinstance(bench_gk, Mapping):
+                bench_gk = bench_gk.get("name") or bench_gk.get("element")
+            priority = [
+                row.get("name") or row.get("element")
+                if isinstance(row, Mapping)
+                else row
+                for row in content.get("outfield_autosub_priority") or []
+            ]
+            lines.append(f"BENCH GK: {bench_gk or 'UNAVAILABLE'}")
+            lines.append(
+                "OUTFIELD AUTOSUB PRIORITY: "
+                + ", ".join(
+                    f"{index} {value}"
+                    for index, value in enumerate(priority, start=1)
+                )
+            )
+            lines.append(f"AUTOSUB STATE: {content.get('status') or 'PROVISIONAL'}")
+        elif sid == "MATCH5":
+            captain = dict(content.get("captain") or {})
+            vice = dict(content.get("vice") or {})
+            lines.extend(
+                [
+                    "CAPTAIN: "
+                    f"{captain.get('name')} | raw={captain.get('raw_points')} | "
+                    f"multiplier={captain.get('multiplier')} | effective={captain.get('effective_points')} | "
+                    f"appearance={captain.get('appearance_state')}",
+                    "VICE: "
+                    f"{vice.get('name')} | raw={vice.get('raw_points')} | "
+                    f"multiplier={vice.get('multiplier')} | effective={vice.get('effective_points')} | "
+                    f"appearance={vice.get('appearance_state')}",
+                    f"VICE TAKEOVER: {content.get('vice_takeover_state')}",
+                    f"FINAL CONSEQUENCE: {content.get('final_consequence')}",
+                ]
+            )
+        elif sid == "MATCH6":
+            lines.extend(
+                _markdown_table(
+                    ("element_id", "player", "state", "minutes", "raw_points", "multiplier", "effective_points"),
+                    [
+                        (
+                            row.get("element_id"),
+                            row.get("player"),
+                            row.get("state"),
+                            row.get("minutes"),
+                            row.get("raw_points"),
+                            row.get("multiplier"),
+                            row.get("effective_points"),
+                        )
+                        for row in content.get("rows") or []
+                        if isinstance(row, Mapping)
+                    ],
+                )
+            )
+        elif sid == "MATCH7":
+            lines.append(
+                "BONUS/BPS STATUS: "
+                + str(content.get("status") or "PROVISIONAL")
+            )
+            lines.append(f"PROVISIONAL: {content.get('provisional') is True}")
+            for row in content.get("rows") or []:
+                if isinstance(row, Mapping):
+                    lines.append(
+                        f"- {row.get('player')} | bonus={row.get('bonus')} | bps={row.get('bps')}"
+                    )
+        elif sid in {"MATCH8", "MATCH9", "MATCH11"}:
+            rows = [
+                dict(row)
+                for row in content.get("rows") or []
+                if isinstance(row, Mapping)
+            ]
+            if rows:
+                for row in rows:
+                    lines.append(
+                        "- "
+                        + " | ".join(
+                            f"{_human_label(key)}={value}"
+                            for key, value in row.items()
+                            if isinstance(value, (str, int, float, bool)) or value is None
+                        )
+                    )
+            else:
+                lines.append("NONE MATERIAL / NONE SUPPORTABLE")
+            if sid == "MATCH8":
+                lines.append("OBSERVATION ≠ AUTOMATIC MODEL CHANGE")
+            if sid == "MATCH11":
+                lines.append("NEXT-GW LEARNING IS EVIDENCE, NOT AUTOMATIC TRANSFER")
+        elif sid == "MATCH10":
+            if state == "COMPLETE":
+                lines.append("MANAGER COVERAGE: COMPLETE")
+            else:
+                lines.append("MINI_LEAGUE SOURCE: DEGRADED")
+            lines.extend(
+                _render_generic_human_content(content)
+                or ["Current ICON+ consequence unavailable."]
+            )
+        elif sid == "MATCH12":
+            lines.append(
+                "NEXT CRITICAL OBSERVATION: "
+                + str(content.get("observation") or "UNAVAILABLE")
+            )
+        elif sid == "MATCH13":
+            lines.extend(
+                [
+                    "FACT: Official FPL fixture/event-live and locked submitted picks.",
+                    "MODEL: Frozen pre-deadline prediction snapshot where available.",
+                    "INFERENCE: Personal/live consequences are explicitly labelled.",
+                ]
+            )
+            lines.extend(_render_generic_human_content(content))
+        else:
+            lines.extend(_render_generic_human_content(content))
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
 
 
 def _visible_section_heading(section_id: Any, label: Any) -> str:

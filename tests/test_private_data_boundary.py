@@ -105,6 +105,8 @@ def test_split_moves_current_team_private_and_sanitizes_public_auth_metadata(tmp
     assert not (public / "personal/current_team.json").exists()
     assert not (public / "personal/memberships.json").exists()
     assert not (public / "personal/submitted_picks.json").exists()
+    assert not (public / "personal").exists()
+    assert second["public_personal_directory_present_after_split"] is False
     private_team = json.loads(
         (private / "personal/current_team.json").read_text(encoding="utf-8")
     )
@@ -114,6 +116,8 @@ def test_split_moves_current_team_private_and_sanitizes_public_auth_metadata(tmp
     assert receipt["moved_submitted_picks"] is True
     assert not (public / "personal/memberships.json").exists()
     assert not (public / "personal/submitted_picks.json").exists()
+    assert not (public / "personal").exists()
+    assert receipt["public_personal_directory_present_after_split"] is False
     assert (private / "personal/memberships.json").is_file()
     assert (private / "personal/submitted_picks.json").is_file()
 

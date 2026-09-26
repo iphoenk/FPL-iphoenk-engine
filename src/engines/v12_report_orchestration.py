@@ -2903,6 +2903,21 @@ def render_natural_post_match_text(report: Mapping[str, Any]) -> str:
         if scout:
             lines.extend(_render_match_scout_lines(scout))
 
+        if str(section_id or "").upper() == "POST_ALL_MATCH7":
+            update_state = str(
+                content_map.get("status") or "MODEL_UPDATE_PENDING_NEXT_COMPUTE"
+            ).replace("_", " ")
+            lines.append("MODEL UPDATE STATUS: " + update_state)
+            if str(content_map.get("status") or "").upper() == "ACTUAL_MODEL_UPDATE":
+                proof = content_map.get("execution_proof")
+                if isinstance(proof, Mapping):
+                    lines.append(
+                        "MODEL UPDATE PROOF: "
+                        f"previous={proof.get('previous_value')} | "
+                        f"current={proof.get('current_value')} | "
+                        f"evidence_time={proof.get('evidence_time')}"
+                    )
+
         math_stack = content_map.get("mathematical_decision_stack")
         if isinstance(math_stack, Mapping):
             lines.extend(_render_math_stack_lines(math_stack))

@@ -7,6 +7,7 @@ import pytest
 
 from src.engines import v12_integrated_report_runner as runner
 from src.engines.visible_content_proof import canonical_mode_contract
+from src.engines.v12_stage3_acceptance import _truthful_source_degraded_sections
 from src.engines.v12_report_orchestration import (
     DEEP_HUMAN_SECTION_REQUIREMENTS,
     _render_deep_visible_contract_lines,
@@ -1235,6 +1236,8 @@ def test_mini_league_s15b_visible_renderer_keeps_comprehensive_contract(monkeypa
     assert "BEHAVIOURAL BASELINE" in body
     assert "DIRECT RIVAL DIFFERENCE DETAIL" in body
     assert "SHIELDS" in body
+    for token in ("STARTER_COUNT", "CAPTAIN_COUNT", "VICE_COUNT", "EO_PCT"):
+        assert token in body
 
 
 def test_stage_c_captain_surface_uses_final_xi_and_p1_7_safe_pool(monkeypatch):
@@ -1464,3 +1467,70 @@ def test_stage_b_workload_ignores_out_of_window_schedule_events():
     assert player["cross_border_travel"] is False
     assert player["timezone_shift_hours"] == 0.0
     assert player["confirmed_call_up"] is False
+
+
+def test_natural_regression_truthful_s03_s05_degradation_is_not_internal_failure():
+    sections = {
+        "S03": {
+            "state": "DEGRADED",
+            "degradation_reason": (
+                "previous valid visible DEEP baseline is unavailable under "
+                "the current semantic contract"
+            ),
+            "content": {
+                "decision_delta": {
+                    "baseline_state": "UNAVAILABLE",
+                    "baseline_requirement": "PREVIOUS_VALID_VISIBLE_DEEP",
+                    "rows": [],
+                }
+            },
+        },
+        "S05": {
+            "state": "DEGRADED",
+            "degradation_reason": (
+                "verified non-PL first-team schedule source is not bound for "
+                "this occurrence; PL topology remains authoritative"
+            ),
+            "content": {
+                "competition_coverage": {
+                    "official_pl": True,
+                    "verified_non_pl_schedule_bound": False,
+                    "verified_non_pl_event_count": 0,
+                }
+            },
+        },
+    }
+    allowed, failures = _truthful_source_degraded_sections(sections)
+    assert allowed == {"S03", "S05"}
+    assert failures == []
+
+
+def test_natural_regression_s03_s05_degradation_does_not_get_blanket_whitelist():
+    sections = {
+        "S03": {
+            "state": "DEGRADED",
+            "degradation_reason": "internal renderer error",
+            "content": {
+                "decision_delta": {
+                    "baseline_state": "UNAVAILABLE",
+                    "baseline_requirement": "PREVIOUS_VALID_VISIBLE_DEEP",
+                    "rows": [],
+                }
+            },
+        },
+        "S05": {
+            "state": "DEGRADED",
+            "degradation_reason": "internal schedule model error",
+            "content": {
+                "competition_coverage": {
+                    "official_pl": True,
+                    "verified_non_pl_schedule_bound": False,
+                    "verified_non_pl_event_count": 0,
+                }
+            },
+        },
+    }
+    allowed, failures = _truthful_source_degraded_sections(sections)
+    assert allowed == set()
+    assert "S03_DEGRADED_NOT_TRUTHFUL_BASELINE_UNAVAILABILITY" in failures
+    assert "S05_DEGRADED_NOT_TRUTHFUL_NON_PL_SOURCE_GAP" in failures

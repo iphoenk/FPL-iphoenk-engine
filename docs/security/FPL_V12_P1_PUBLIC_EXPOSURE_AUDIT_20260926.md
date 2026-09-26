@@ -1,8 +1,9 @@
 # FPL V12 P1-A Public Exposure Audit
 
 Date: 2026-09-26
-Production authority: `f1402818519237d3628184e298bd58c0240983bb`
-Audit branch: `delivery/private-plane-p1-20260926`
+Initial production authority: `f1402818519237d3628184e298bd58c0240983bb`
+Latest production authority re-audited: `3d433348a04d8207321bc4521808e253f21ed3fc`
+Audit / implementation branch: `delivery/private-plane-p1-20260926-r2`
 Scope: PUBLIC GIT / Actions artifacts / Actions logs / Actions caches / issues-comments-workflow summaries.
 
 This document records evidence before any functional P1 privacy patch. It does not change V12 mathematics, V6 factual methodology, section IDs, S03 semantics, Stage3 semantics, or decision computation.
@@ -22,7 +23,7 @@ This document records evidence before any functional P1 privacy patch. It does n
 | PUBLIC GIT | `main:control/fpl_master_v12/FPL_MASTER_STATE_V12.json` | explicit user-confirmed current squad identity plus active scenario/execution state; decision-learning records include route/bench-related fields | YES, `PRIVATE_PERSONAL` + `PRIVATE_DECISION` | main itself contains personal team identity and scenario/decision state, independent of runtime-data-v6 | split persistent model/governance state from private owner state; private overlay reader; keep only non-personal methodology/calibration metadata public |\n| PUBLIC GIT | `runtime-data-v6:data/v6/personal/current_team.json` current HEAD | exact 15-player team, starter/bench state, C/VC, current prices, entry/auth state; finance schema present | YES, `PRIVATE_PERSONAL` | current-team identity and authenticated-capable finance state are personal; current file remains able to carry finance when auth returns | split public submitted facts from private current-team state; private reader + migration; remove private current-team fields from public HEAD after identity proof |
 | PUBLIC GIT | historical runtime-data commit `49bda27cdfd54f1910b2c127c101fe4da0d4a332` | authenticated current-team snapshot had non-null bank, purchase price, selling price, chips plus exact 15/C/VC | YES, historical `PRIVATE_PERSONAL` | proves exposure was real, not just schema potential | inventory under P1-K; no history rewrite without owner approval |
 | PUBLIC GIT | `runtime-data-v6:data/v6/personal/submitted_picks.json` | submitted picks, bench order, C/VC, active-chip field, entry/gw lineage | CONDITIONAL | post-deadline submitted picks can be `PUBLIC_FACT`; pre-disclosure/current authenticated state cannot | add disclosure/timing contract; never use it as transit for manual/current private state |
-| PUBLIC GIT | `runtime-data-v6:data/v6/personal/memberships.json` | entry-linked league memberships/ranks/admin metadata and lineage | YES, `PRIVATE_PERSONAL` | entry-linked personal membership state is not required as public factual plane | move personal membership state to private plane; retain only public league facts needed by model where independently reproducible |
+| PUBLIC GIT | `runtime-data-v6:data/v6/personal/memberships.json` | league membership / priority-resolution facts produced from the unauthenticated Official FPL `entry` endpoint | NO for reproducible fields, `PUBLIC_FACT` | P1 classification is field/source based: these values are publicly reproducible at the same effective time and are not pending/current private decisions | retain public; do not mix future manual/auth-only metadata into this artifact |
 | PUBLIC GIT | `runtime-data-v6:data/v6/report_prefetch/latest.json` and `health/report_prefetch.json` | auth state/actions, entry/personal status and personal-prefetch provenance | YES in part, `PRIVATE_PERSONAL` | auth/session/personal state is explicitly private in P1 contract | sanitize public health proof; move auth-personal fields private |
 | ACTIONS ARTIFACT | run `36126675342`, artifact `v12-report-DEEP-36126675342`, artifact id `10860321241` | `report_bundle.json` ~40.2 MB, `report_body.md` ~0.84 MB, `execution_proof.json`, `stage3_acceptance.json`, runtime proof | YES, `PRIVATE_DECISION` | bundle/body contain full decision render; proof schemas carry Stage3 decision action | stop public full-report upload; private publish canonical outputs; public safe-proof artifact only |
 | ACTIONS ARTIFACT | COLD profile paths in `v12-integrated-report-runner.yml` | `profile_run.log`, profile summaries/pstats are eligible for public upload | SENSITIVE UNTIL GUARDED | combined stdout/stderr can contain decision material through future/debug output | keep profiling proof allowlisted/sanitized only; no raw combined log in public artifact |
@@ -75,3 +76,48 @@ Public proof currently publishes decision action. This is a confirmed leak. P1 p
 ## Non-destructive historical handling
 
 No artifact, log, cache, comment, branch history, or Git history was deleted or rewritten during this audit. P1-K will produce cleanup candidates and wait for owner approval.
+
+
+## Latest-main re-audit after semantic-hardening merge
+
+Production `main` moved by 61 commits after the initial P1 audit. P1 work was
+therefore recreated from `3d433348a04d8207321bc4521808e253f21ed3fc`
+rather than rebasing the old P1 branch blindly.
+
+The latest production workflow still had all four primary exposure classes:
+
+- public artifact upload still included `report_bundle.json` and
+  `report_body.md`;
+- public issue #431 still emitted `action=WAIT` on successful DEEP runs,
+  including run `36232738219`;
+- public Actions cache still restored/saved exact P1.7 and MC cache families;
+- `runtime-data-v6` still contained
+  `data/v6/personal/current_team.json`.
+
+Actual public job log for run `36232738219`, job `108378850663`, contains
+resolved `STAGE3_ACTION: WAIT` and the public report-body artifact path. This
+proves the latest production state remained vulnerable after the semantic
+hardening merge.
+
+## Current P1 implementation status on r2
+
+The bounded P1 branch now:
+
+- preserves the latest semantic-hardening code as base;
+- removes public full-report upload from the integrated report workflow;
+- routes canonical output to the private repository before public proof;
+- removes Stage3 action and MC path counts from public issue output;
+- keeps Stage-2 derived cache public-safe;
+- makes P1.7 and MC caches runner-local rather than public Actions caches;
+- restores previous visible DEEP baseline from private report history so S03
+  semantics remain available;
+- reads current/manual personal state from the private plane;
+- removes direct public-current-team reads from the integrated runner;
+- keeps Stage-2 acceptance on disclosed public submitted picks and public league
+  facts, not authenticated current-team state;
+- defines a V6 boundary that removes current-team/auth-personal state before
+  the public candidate tree is frozen;
+- adds P1 privacy/security tests to mandatory PR CI.
+
+No artifact, run, issue comment, cache, branch history, or Git history has been
+deleted or rewritten.

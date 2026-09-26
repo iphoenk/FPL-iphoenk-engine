@@ -652,7 +652,6 @@ def _watchlist_candidate_universe(
     return out
 
 
-
 def _bgw_propagation_context(
     calendar_context: Mapping[str, Any] | None,
     *,
@@ -694,19 +693,18 @@ def _bgw_propagation_context(
         )
         if element is not None
     }
-    blank_in_final_xi = sorted(set(blank_owned_ids) & final_xi_ids)
-    active = bool(blank_team_ids) or str(calendar.get("gw_topology") or "").upper() in {
-        "BLANK_GW",
-        "MIXED_DGW_BGW",
-    }
     return {
         "source_section": "S05",
         "planning_gw": calendar.get("planning_gw"),
         "gw_topology": calendar.get("gw_topology"),
-        "active": active,
+        "active": (
+            bool(blank_team_ids)
+            or str(calendar.get("gw_topology") or "").upper()
+            in {"BLANK_GW", "MIXED_DGW_BGW"}
+        ),
         "blank_team_ids": blank_team_ids,
         "blank_owned_element_ids": blank_owned_ids,
-        "blank_owned_in_final_xi": blank_in_final_xi,
+        "blank_owned_in_final_xi": sorted(set(blank_owned_ids) & final_xi_ids),
         "decision_math_mutated": False,
         "context_only": True,
     }
@@ -4172,12 +4170,14 @@ def run_deep(
         stage3_decision=stage3_decision,
         stage3_visible=stage3_visible,
         all15_rows=all15_rows,
-staging = _three_gw_staging(
-        planning_gw=planning_gw,
-        action=operational_action,
-        stage3_decision=stage3_decision,
-        stage3_visible=stage3_visible,
-        all15_rows=all15_rows,
+        lineup=lineup,
+        finance=finance,
+    )
+    staging = {
+        **staging,
+        "bgw_context": dict(bgw_context),
+        "bgw_reoptimization_trigger": bool(bgw_context.get("active")),
+    }
     league_context = _mini_context(mini)
     league_exposures = list((mini or {}).get("exposures") or [])
     mini_deep_detail = _mini_league_deep_detail(
@@ -4258,8 +4258,6 @@ staging = _three_gw_staging(
                     "action": operational_action,
                     "selected_route_id": (stage3_decision or {}).get("selected_route_id"),
                     "reason": (stage3_decision or {}).get("reason"),
-                    "bgw_context": dict(bgw_context),
-                    "bgw_reconciled": True,
                     "mini_league_delta": (mini_overlay or {}).get("decision_delta"),
                     "material_only": True,
                 },
@@ -4603,6 +4601,8 @@ staging = _three_gw_staging(
                     "immediate_watch": staging.get("contingency"),
                     "three_gw_direction": staging.get("staging_rows"),
                     "reason": (stage3_decision or {}).get("reason"),
+                    "bgw_context": dict(bgw_context),
+                    "bgw_reconciled": True,
                 }
             },
         ),

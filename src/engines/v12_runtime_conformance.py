@@ -878,14 +878,14 @@ def finalize_report_due_after_core(
         elif live_ids:
             dynamic_trigger = "TRUE"
             dynamic_mode = "MATCH"
-            if newly_finished_fixture_ids and (pre_live or preliminary_has_match):
+            if pre_summary is not None and newly_finished_fixture_ids:
                 dynamic_reason = "MATCH_LIVE_WITH_POST_MATCH_INCREMENTAL"
                 dynamic_lifecycle_event = "POST_MATCH"
                 embedded_obligations.append("POST_MATCH_INCREMENTAL")
             else:
                 dynamic_reason = "SCORING_GW_LIVE_MATCH_AFTER_CORE"
                 dynamic_lifecycle_event = "MATCH"
-        elif newly_finished_fixture_ids and (pre_live or preliminary_has_match):
+        elif pre_summary is not None and newly_finished_fixture_ids:
             dynamic_trigger = "TRUE"
             dynamic_reason = "MATCH_COMPLETION_TRANSITION_AFTER_CORE"
             dynamic_mode = "POST_MATCH"

@@ -1283,7 +1283,20 @@ def test_natural_post_all_match_nests_movers_in_existing_scout_surface():
     assert render_natural_post_match_text(report).count("UNIVERSE MOVERS") == 1
 
 
-@pytest.mark.parametrize("mode", ["FULL+MATCH", "DEEP+MATCH", "MATCH+FULL", "MATCH+DEEP", "OVERLAP"])
+@pytest.mark.parametrize(
+    "mode",
+    [
+        "FULL+MATCH",
+        "DEEP+MATCH",
+        "MATCH+FULL",
+        "MATCH+DEEP",
+        "PRICE+MATCH",
+        "MATCH+PRICE",
+        "DEADLINE+MATCH",
+        "MATCH+DEADLINE",
+        "OVERLAP",
+    ],
+)
 def test_natural_overlap_modes_attach_universe_movers_exactly_once(mode):
     canonical = CANONICAL.read_text(encoding="utf-8")
     projections = _post_match_projection_payload(
@@ -1300,11 +1313,22 @@ def test_natural_overlap_modes_attach_universe_movers_exactly_once(mode):
                 "content": {"existing_changes": ["role"]},
             }
         },
+        match_consequence={
+            "status": "CURRENT_LOCKED_TEAM_IMPACT",
+            "summary": "submitted-pick personal consequence preserved",
+            "source": "LOCKED_SUBMITTED_PICKS",
+        },
     )
     assert report["universe_movers_attachment_count"] == 1
+    assert report["lifecycle_contract"]["single_visible_report"] is True
+    assert report["lifecycle_contract"]["match_consequence_preserved"] is True
+    assert report["lifecycle_contract"]["post_match_return_mode"] == "MATCH"
     body = render_natural_post_match_text(report)
     assert body.count("UNIVERSE MOVERS") == 1
     assert "Minutes Riser" in body
+    assert body.count("MATCH CONSEQUENCE") == 1
+    assert "submitted-pick personal consequence preserved" in body
+    assert "MODEL UPDATE PENDING" in body
 
 
 def test_natural_post_match_partial_universe_is_visibly_degraded():
@@ -1707,3 +1731,75 @@ def test_price_signal_visible_identity_is_verified_official_fpl_predictor_guidan
     assert row["estimate_source"] == "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR"
     assert "Official FPL Price Change Predictor" in row["visible_source_label"]
     assert "not a guarantee" in row["visible_source_label"]
+
+
+def test_overlap_without_locked_match_consequence_fails_closed():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    with pytest.raises(
+        ReportOrchestrationError,
+        match="requires explicit locked submitted-pick match consequence",
+    ):
+        materialize_natural_post_match_report(
+            canonical_text=canonical,
+            report_mode="DEEP+MATCH",
+            projections_payload=_post_match_projection_payload(
+                classifications=["MINUTES_BREAKOUT"],
+                name="Minutes Riser",
+            ),
+            section_payloads={
+                "Changes": {
+                    "state": "COMPLETE",
+                    "content": {"existing_changes": ["role"]},
+                }
+            },
+        )
+
+
+def test_post_match_observation_is_model_update_pending_without_execution_proof():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    report = materialize_natural_post_match_report(
+        canonical_text=canonical,
+        report_mode="POST_MATCH",
+        projections_payload=_post_match_projection_payload(
+            classifications=["BREAKOUT_PROCESS"],
+        ),
+        section_payloads={
+            "RELEVANT LEAGUE-WIDE SIGNALS": {
+                "state": "COMPLETE",
+                "content": {"signal": "new completed fixture evidence"},
+            }
+        },
+    )
+    assert report["lifecycle_contract"]["model_update_status"] == "MODEL UPDATE PENDING"
+    body = render_natural_post_match_text(report)
+    assert "MODEL UPDATE PENDING" in body
+    assert "POSTERIOR UPDATED" not in body
+
+
+def test_post_match_actual_update_requires_execution_proof_before_claim():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    projections = _post_match_projection_payload(
+        classifications=["BREAKOUT_PROCESS"],
+    )
+    projections["model_update_execution"] = {
+        "executed": True,
+        "previous_value": 0.72,
+        "current_value": 0.81,
+        "evidence_time": "2026-09-26T14:20:00+07:00",
+    }
+    report = materialize_natural_post_match_report(
+        canonical_text=canonical,
+        report_mode="POST_MATCH",
+        projections_payload=projections,
+        section_payloads={
+            "RELEVANT LEAGUE-WIDE SIGNALS": {
+                "state": "COMPLETE",
+                "content": {"signal": "new completed fixture evidence"},
+            }
+        },
+    )
+    assert report["lifecycle_contract"]["model_update_status"] == "POSTERIOR UPDATED"
+    body = render_natural_post_match_text(report)
+    assert "POSTERIOR UPDATED" in body
+    assert "PREVIOUS VALUE=0.72" in body
+    assert "CURRENT VALUE=0.81" in body

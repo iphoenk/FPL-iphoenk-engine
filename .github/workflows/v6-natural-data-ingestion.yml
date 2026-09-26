@@ -53,7 +53,19 @@ permissions:
   contents: read
 
 concurrency:
-  group: fpl-v6-hourly-data-ingestion
+  # GitHub keeps at most one pending run per concurrency group. An unrelated
+  # owner comment such as /v12-report-run must therefore never replace a
+  # pending governed V6 report-prefetch while a core run is still active.
+  group: >-
+    ${{
+      (
+        github.event_name == 'issue_comment' &&
+        !startsWith(github.event.comment.body, '/v6-report-prefetch') &&
+        !startsWith(github.event.comment.body, '/v6-manual-recovery')
+      ) &&
+      format('fpl-v6-noncommand-{0}', github.event.comment.id) ||
+      'fpl-v6-hourly-data-ingestion'
+    }}
   cancel-in-progress: false
 
 env:

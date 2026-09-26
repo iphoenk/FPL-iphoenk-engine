@@ -2796,6 +2796,10 @@ def _post_match_structural_route(
         "MATCH+FULL",
         "DEEP+MATCH",
         "MATCH+DEEP",
+        "PRICE+MATCH",
+        "MATCH+PRICE",
+        "DEADLINE+MATCH",
+        "MATCH+DEADLINE",
     }:
         return "DEEP", "S04"
     return mode, None

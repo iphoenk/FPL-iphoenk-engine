@@ -177,3 +177,46 @@ def test_private_publish_failure_never_creates_public_fallback(tmp_path):
             runtime_sha="b" * 40,
         )
     assert not public.exists()
+
+
+def test_latest_pointer_advances_across_distinct_occurrences_without_mutating_history(tmp_path):
+    canonical = tmp_path / "canonical"
+    private = tmp_path / "private"
+    canonical.mkdir()
+    _write_fixture(canonical)
+
+    first = publish_private_output(
+        canonical_dir=canonical,
+        private_root=private,
+        run_id="synthetic-1",
+        season="2026-27",
+        model_sha="a" * 40,
+        runtime_sha="b" * 40,
+    )
+    first_dir = private / first["destination"]
+    first_body_hash = _hash(first_dir / "report_body.md")
+
+    bundle_path = canonical / "report_bundle.json"
+    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+    bundle["report_slot"] = "2026-09-26T21:30:00+07:00"
+    bundle_path.write_text(json.dumps(bundle, indent=2), encoding="utf-8")
+    (canonical / "report_body.md").write_text(
+        "# Synthetic canonical report\n\nSecond occurrence.\n",
+        encoding="utf-8",
+    )
+
+    second = publish_private_output(
+        canonical_dir=canonical,
+        private_root=private,
+        run_id="synthetic-2",
+        season="2026-27",
+        model_sha="a" * 40,
+        runtime_sha="b" * 40,
+    )
+
+    latest = json.loads(
+        (private / "latest/deep.json").read_text(encoding="utf-8")
+    )
+    assert latest["report_slot"] == "2026-09-26T21:30:00+07:00"
+    assert first["destination"] != second["destination"]
+    assert _hash(first_dir / "report_body.md") == first_body_hash

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-25T22:22:26+07:00`
+> **Last runtime/documentation sync:** `2026-09-26T05:12:03+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -21,6 +21,8 @@ The Canonical V12 DEEP report is a **23-section fail-closed human-facing contrac
 Occurrence-stage observability fingerprints normalize supported runtime `datetime` values to deterministic ISO-8601 strings before hashing. This keeps personal-evidence reconciliation auditable without changing evidence selection, football analytics, V6 facts, or decision semantics.
 
 Stage-A semantic correctness is also fail-closed across producer and delivery boundaries. S17 binds private-auth health to `data/v6/personal/current_team.json:auth_state` instead of inferring authentication from current-squad identity resolution; S14B may say `SAVE FT` or `ROLL FT` only when current free-transfer authority is known; S14 separates football-frontier completeness from execution-economics availability and marks non-HOLD routes non-executable when finance is degraded; S06 names `XI_BASE_XPTS`, `CAPTAIN_ADJUSTED_XPTS`, and `LINEUP_ROUTE_UTILITY` explicitly; S10/S12/S13 expose predictor evidence age/freshness while S12/S13 retain terminal governed `date_state` semantics. The regression contract is grounded in sanitized evidence extracted from production occurrence `36126675342`, not a synthetic reconstruction.
+
+Stage-B report hardening keeps the existing football math unchanged while strengthening discovery/context semantics. S05 derives GW topology from official fixture rows, consumes optional verified competition-agnostic schedule evidence, renders descriptive workload/travel states, keeps DGW fixtures separate, marks BGW players explicitly, and forbids static fatigue or weather-driven football-model mutation. When no non-PL schedule authority is bound, S05 degrades truthfully while retaining authoritative PL topology/workload. S11 now has two distinct surfaces: exact positional `Scanner20` (5 GK / 5 DEF / 5 MID / 5 FWD when COMPLETE) and an unpadded `Actionable Watchlist` subset gated by the existing P1.1-derived security thresholds plus position-specific evidence completeness. Position formulae are watchlist evidence/admission only, price remains overlay-only, and neither watchlist surface may emit `ACT`.
 
 Required visible order:
 

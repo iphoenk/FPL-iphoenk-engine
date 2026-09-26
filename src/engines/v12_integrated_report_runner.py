@@ -62,6 +62,7 @@ from src.engines.v12_deep_delivery import (
 )
 from src.engines.v12_report_orchestration import (
     build_actionable_price_radar,
+    build_calendar_workload_context,
     build_deep_human_facing_manifest,
     build_price20,
     build_visible_mathematical_decision_stack,
@@ -581,6 +582,185 @@ def _candidate_universe(
     return list(
         build_canonical_universe(projections).get("players") or []
     )
+
+
+def _watchlist_candidate_universe(
+    projections: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    canonical = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in build_canonical_universe(projections).get("players") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    }
+    pmap = _projection_map(projections)
+    out: list[dict[str, Any]] = []
+    for element, row in canonical.items():
+        player = pmap.get(element) or {}
+        mechanism = _visible_position_mechanism(player, action="WATCH") if player else {}
+        positional = dict(mechanism.get("position_mechanism") or {})
+        position = str(row.get("position") or "").upper()
+        if position == "GK":
+            evidence = {
+                "save_process": positional.get("saves"),
+                "shot_stopping": positional.get("shot_stopping"),
+                "clean_sheet_environment": positional.get("clean_sheet"),
+                "goals_conceded_environment": positional.get("goals_conceded"),
+                "penalty_save_evidence": positional.get("penalty_save"),
+                "hierarchy_security": {
+                    "p_start": mechanism.get("p_start"),
+                    "xmins": mechanism.get("xmins"),
+                },
+            }
+        elif position == "DEF":
+            attacking = dict(positional.get("attacking_upside") or {})
+            evidence = {
+                "goal_process": attacking.get("goal_process"),
+                "creation_process": attacking.get("creation_process"),
+                "clean_sheet_environment": positional.get("clean_sheet"),
+                "defcon": positional.get("defcon"),
+                "defensive_role": positional.get("defensive_role"),
+                "matchup": mechanism.get("dynamic_matchup"),
+            }
+        elif position == "MID":
+            evidence = {
+                "goal_process": positional.get("goal_process"),
+                "creation_process": positional.get("creation_process"),
+                "penalty_process": positional.get("penalty_process"),
+                "set_piece_process": positional.get("set_piece_process"),
+                "advanced_role": mechanism.get("role"),
+                "matchup": mechanism.get("dynamic_matchup"),
+            }
+        else:
+            evidence = {
+                "goal_process": positional.get("goal_process"),
+                "creation_process": positional.get("creation_process"),
+                "penalty_process": positional.get("penalty_process"),
+                "set_piece_process": positional.get("set_piece_process"),
+                "service_linkup": positional.get("service_linkup"),
+                "matchup": mechanism.get("dynamic_matchup"),
+            }
+        out.append(
+            {
+                **row,
+                "p_available": mechanism.get("p_available"),
+                "p_start": mechanism.get("p_start"),
+                "p_dnp": mechanism.get("p_dnp"),
+                "xmins": mechanism.get("xmins"),
+                "position_specific_evidence": evidence,
+            }
+        )
+    return out
+
+
+def _bgw_propagation_context(
+    calendar_context: Mapping[str, Any] | None,
+    *,
+    owned_ids: set[int],
+    lineup: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Project S05 blank-GW truth into downstream decision surfaces only.
+
+    This is context propagation, not a second fixture/xPts/lineup/transfer model.
+    """
+    calendar = dict(calendar_context or {})
+    flags = dict(calendar.get("period_flags") or {})
+    blank_team_ids = sorted(
+        {
+            int(value)
+            for value in flags.get("blank_gw_teams") or []
+            if value is not None
+        }
+    )
+    workload = [
+        dict(row)
+        for row in calendar.get("player_workload") or []
+        if isinstance(row, Mapping)
+    ]
+    blank_owned_ids = sorted(
+        {
+            int(row.get("element_id"))
+            for row in workload
+            if row.get("element_id") is not None
+            and int(row.get("element_id")) in owned_ids
+            and str(row.get("gw_state") or "").upper() == "BLANK"
+        }
+    )
+    final_xi_ids = {
+        element
+        for element in (
+            _surface_element(value)
+            for value in (lineup or {}).get("starting_xi") or []
+        )
+        if element is not None
+    }
+    return {
+        "source_section": "S05",
+        "planning_gw": calendar.get("planning_gw"),
+        "gw_topology": calendar.get("gw_topology"),
+        "active": (
+            bool(blank_team_ids)
+            or str(calendar.get("gw_topology") or "").upper()
+            in {"BLANK_GW", "MIXED_DGW_BGW"}
+        ),
+        "blank_team_ids": blank_team_ids,
+        "blank_owned_element_ids": blank_owned_ids,
+        "blank_owned_in_final_xi": sorted(set(blank_owned_ids) & final_xi_ids),
+        "decision_math_mutated": False,
+        "context_only": True,
+    }
+
+
+def _calendar_relevant_players(
+    projections: Mapping[str, Any] | None,
+    *,
+    planning_gw: int,
+    element_ids: set[int],
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for player in (projections or {}).get("players") or []:
+        if not isinstance(player, Mapping):
+            continue
+        element = int(player.get("element") or player.get("id") or 0)
+        if element <= 0 or element not in element_ids:
+            continue
+        planning_fixture_evidence: list[dict[str, Any]] = []
+        for gw_row in player.get("xpts_by_gw") or []:
+            if not isinstance(gw_row, Mapping):
+                continue
+            try:
+                gw = int(gw_row.get("gw") or gw_row.get("event") or -1)
+            except (TypeError, ValueError):
+                continue
+            if gw != int(planning_gw):
+                continue
+            for fixture in gw_row.get("fixtures") or []:
+                if not isinstance(fixture, Mapping):
+                    continue
+                planning_fixture_evidence.append(
+                    {
+                        "fixture_id": fixture.get("fixture_id", fixture.get("id")),
+                        "xpts": fixture.get("mean", fixture.get("expected_points")),
+                        "xmins": fixture.get("xmins", fixture.get("expected_minutes")),
+                        "p_start": fixture.get("p_start", fixture.get("start_probability")),
+                        "matchup": (
+                            fixture.get("dynamic_matchup_vector")
+                            or fixture.get("matchup")
+                            or fixture.get("opponent")
+                        ),
+                        "rest_from_previous_fixture_hours": fixture.get(
+                            "rest_from_previous_fixture_hours"
+                        ),
+                    }
+                )
+        out.append(
+            {
+                "element_id": element,
+                "name": player.get("name"),
+                "team_id": int(player.get("team_id") or player.get("team") or 0),
+                "planning_fixture_evidence": planning_fixture_evidence,
+            }
+        )
+    return out
 
 
 def _package_candidate_rows(
@@ -1724,6 +1904,32 @@ def _enrich_watchlist_rows(
         })
         enriched.append(row)
     result["rows"] = enriched
+    result["scanner20"] = deepcopy(enriched)
+    enriched_by_id = {
+        int(row.get("element_id") or 0): row
+        for row in enriched
+        if int(row.get("element_id") or 0) > 0
+    }
+    actionable: list[dict[str, Any]] = []
+    for raw in result.get("actionable_watchlist") or []:
+        if not isinstance(raw, Mapping):
+            continue
+        element = int(raw.get("element_id") or 0)
+        if element <= 0:
+            continue
+        merged = {
+            **dict(raw),
+            **dict(enriched_by_id.get(element) or {}),
+        }
+        merged["admission_gate"] = deepcopy(raw.get("admission_gate") or {})
+        merged["position_specific_evidence"] = deepcopy(
+            raw.get("position_specific_evidence") or {}
+        )
+        merged["action"] = "WATCH"
+        merged["watchlist_action"] = "ACTIONABLE_MONITOR"
+        actionable.append(merged)
+    result["actionable_watchlist"] = actionable
+    result["actionable_count"] = len(actionable)
     result["decision_context_materialized"] = True
     return result
 
@@ -3315,7 +3521,7 @@ def run_deep(
         ),
     )
 
-    universe = _candidate_universe(projections or {})
+    universe = _watchlist_candidate_universe(projections or {})
     watchlist = _stage(
         ledger,
         "WATCHLIST20",
@@ -3363,6 +3569,37 @@ def run_deep(
         watchlist,
         projections=projections,
         predictor=predictor,
+    )
+
+    calendar_elements = set(owned_ids)
+    calendar_elements.update(
+        int(row.get("element_id") or 0)
+        for row in (watchlist or {}).get("rows") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    )
+    calendar_context = build_calendar_workload_context(
+        planning_gw=planning_gw,
+        pl_fixtures=fixtures or [],
+        team_ids=[
+            int(row.get("id"))
+            for row in (bootstrap or {}).get("teams") or []
+            if isinstance(row, Mapping) and row.get("id") is not None
+        ],
+        relevant_players=_calendar_relevant_players(
+            projections,
+            planning_gw=planning_gw,
+            element_ids=calendar_elements,
+        ),
+        verified_schedule_events=(),
+        non_pl_schedule_authority=False,
+        report_timestamp=report_slot,
+        weather_rows=(),
+        weather_forecast_horizon_hours=None,
+    )
+    bgw_context = _bgw_propagation_context(
+        calendar_context,
+        owned_ids=owned_ids,
+        lineup=lineup,
     )
 
     canonical_bundle = build_canonical_universe(
@@ -3936,6 +4173,11 @@ def run_deep(
         lineup=lineup,
         finance=finance,
     )
+    staging = {
+        **staging,
+        "bgw_context": dict(bgw_context),
+        "bgw_reoptimization_trigger": bool(bgw_context.get("active")),
+    }
     league_context = _mini_context(mini)
     league_exposures = list((mini or {}).get("exposures") or [])
     mini_deep_detail = _mini_league_deep_detail(
@@ -4053,23 +4295,21 @@ def run_deep(
             },
         ),
         "S05": _section(
-            "COMPLETE",
+            str(calendar_context.get("state") or "DEGRADED"),
             {
-                "planning_gw": planning_gw,
-                "fixtures": [
-                    row for row in fixtures
-                    if int(row.get("event") or -1) == planning_gw
-                ],
-                "home_away_and_rest": "DERIVED_FROM_OFFICIAL_FIXTURE_ROWS_WHERE_AVAILABLE",
+                **calendar_context,
                 "opponent_strength": strength or {},
                 "fixture_swing": "MODEL_DERIVED_WHERE_SUPPORTABLE",
-                "congestion": "DERIVED_FROM_FIXTURE_DATES_WHERE AVAILABLE",
-                "weather": "DIRECT_CHATGPT_REQUIRED_AT_VISIBLE_DELIVERY",
             },
+            calendar_context.get("degradation_reason"),
         ),
         "S06": _section(
             lineup_state,
-            _lineup_content(lineup),
+            {
+                **_lineup_content(lineup),
+                "bgw_context": dict(bgw_context),
+                "bgw_lineup_review_required": bool(bgw_context.get("active")),
+            },
             lineup_reason,
         ),
         "S06B": _section(
@@ -4109,6 +4349,8 @@ def run_deep(
                 "horizon": "REASSESS EACH DEADLINE",
                 "trigger": "material chip-specific fixture/ceiling edge",
                 "hold_reason": "No chip action is created without current authenticated chip state and a supportable edge.",
+                "bgw_context": dict(bgw_context),
+                "bgw_chip_review_required": bool(bgw_context.get("active")),
             },
             None if chip_available else "authenticated chip state unavailable in bound current-team artifact",
         ),
@@ -4125,7 +4367,7 @@ def run_deep(
         "S11": _section(
             watch_state,
             {
-                "rows": (watchlist or {}).get("rows", []),
+                **(watchlist or {"rows": []}),
                 "universe_evaluator": universe_gap,
                 "scope": "FULL_ELIGIBLE_FPL_UNIVERSE",
             },
@@ -4154,6 +4396,9 @@ def run_deep(
                 "package_routes": stage3_visible.get("package_routes", []),
                 "frontier": stage3_visible.get("frontier", []),
                 **stage3_visible,
+                "bgw_context": dict(bgw_context),
+                "bgw_frontier_review_required": bool(bgw_context.get("active")),
+                "bgw_is_context_not_second_optimizer": True,
             },
             None if stage3_internal_pass else (
                 "Stage3 internal producer/wiring failure; this is NOT accepted as factual-source degradation"
@@ -4356,6 +4601,8 @@ def run_deep(
                     "immediate_watch": staging.get("contingency"),
                     "three_gw_direction": staging.get("staging_rows"),
                     "reason": (stage3_decision or {}).get("reason"),
+                    "bgw_context": dict(bgw_context),
+                    "bgw_reconciled": True,
                 }
             },
         ),

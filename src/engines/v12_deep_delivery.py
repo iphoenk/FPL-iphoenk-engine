@@ -410,16 +410,201 @@ def validate_deep_decision_content_delivery(
                 )
                 break
 
-    # Watchlist20 remains a football-decision surface: exact 5/5/5/5 by pos.
+    # Stage-B Watchlist contract: Scanner20 is exact 5/5/5/5 when COMPLETE;
+    # Actionable Watchlist is a gated, unpadded subset and never owns ACT.
     if state("S11") == "COMPLETE":
-        rows = [dict(row) for row in content("S11").get("rows") or [] if isinstance(row, Mapping)]
+        s11 = content("S11")
+        rows = [
+            dict(row)
+            for row in s11.get("scanner20") or s11.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
         counts: dict[str, int] = {"GK": 0, "DEF": 0, "MID": 0, "FWD": 0}
-        for row in rows:
+        ids: list[int] = []
+        expected_formula = {
+            "GK": "V12_WATCH_GK_EVIDENCE_V1",
+            "DEF": "V12_WATCH_DEF_EVIDENCE_V1",
+            "MID": "V12_WATCH_MID_EVIDENCE_V1",
+            "FWD": "V12_WATCH_FWD_EVIDENCE_V1",
+        }
+        for index, row in enumerate(rows, start=1):
             pos = str(row.get("position") or "").upper()
             if pos in counts:
                 counts[pos] += 1
+            try:
+                ids.append(int(row.get("element_id") or row.get("element")))
+            except (TypeError, ValueError):
+                failures.append(f"WATCHLIST20_ELEMENT_ID_INVALID={index}")
+            family = dict(row.get("position_specific_evidence") or {})
+            if str(family.get("formula_id") or "") != expected_formula.get(pos):
+                failures.append(f"WATCHLIST_POSITION_FORMULA_MISSING={index}:{pos}")
+            if pos == "GK" and family.get("attacker_xgi_gate_required") is not False:
+                failures.append("WATCHLIST_GK_ATTACKER_XGI_GATE_FORBIDDEN")
+            gate = dict(row.get("admission_gate") or {})
+            if "admitted" not in gate or not isinstance(gate.get("checks"), Mapping):
+                failures.append(f"WATCHLIST_ADMISSION_GATE_MISSING={index}")
         if counts != {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}:
             failures.append("WATCHLIST20_POSITION_BALANCE=" + str(counts))
+        if len(ids) != len(set(ids)):
+            failures.append("WATCHLIST20_DUPLICATE_ELEMENT")
+        owned_ids = {
+            int(row.get("element_id") or row.get("element"))
+            for row in content("S02").get("rows") or []
+            if isinstance(row, Mapping)
+            and (row.get("element_id") is not None or row.get("element") is not None)
+        }
+        if owned_ids & set(ids):
+            failures.append("WATCHLIST20_OWNED_PLAYER_INCLUDED")
+        actionable = [
+            dict(row)
+            for row in s11.get("actionable_watchlist") or []
+            if isinstance(row, Mapping)
+        ]
+        actionable_ids = {
+            int(row.get("element_id") or row.get("element") or 0)
+            for row in actionable
+            if int(row.get("element_id") or row.get("element") or 0) > 0
+        }
+        if not actionable_ids.issubset(set(ids)):
+            failures.append("ACTIONABLE_WATCHLIST_NOT_SUBSET_OF_SCANNER20")
+        if len(actionable_ids) != len(actionable):
+            failures.append("ACTIONABLE_WATCHLIST_DUPLICATE_ELEMENT")
+        for index, row in enumerate(actionable, start=1):
+            if (row.get("admission_gate") or {}).get("admitted") is not True:
+                failures.append(f"ACTIONABLE_WATCHLIST_UNADMITTED={index}")
+            action = str(row.get("action") or row.get("watchlist_action") or "").upper()
+            if action == "ACT":
+                failures.append(f"WATCHLIST_EMITS_ACT={index}")
+        if s11.get("actionable_watchlist_is_unpadded_subset") is not True:
+            failures.append("ACTIONABLE_WATCHLIST_PADDING_CONTRACT_MISSING")
+        if s11.get("price_is_overlay_not_primary_authority") is not True:
+            failures.append("WATCHLIST_PRICE_PRIMARY_AUTHORITY")
+        if "POSITIONAL SCANNER20" not in upper or "ACTIONABLE WATCHLIST" not in upper:
+            failures.append("WATCHLIST_TWO_SURFACES_NOT_VISIBLE")
+
+    # Stage-B calendar/workload/travel/weather contract. It is descriptive
+    # evidence only and may feed P1.1 review; it never owns a fatigue model.
+    if state("S05") in {"COMPLETE", "DEGRADED"}:
+        s05 = content("S05")
+        topology = str(s05.get("gw_topology") or "")
+        allowed_topology = {
+            "NORMAL_GW",
+            "DOUBLE_GW",
+            "BLANK_GW",
+            "MIXED_DGW_BGW",
+            "REARRANGED_FIXTURE",
+            "INTERNATIONAL_BREAK",
+            "NORMAL_WITH_MIDWEEK_COMPETITION",
+            "CONGESTED_PERIOD",
+        }
+        if topology not in allowed_topology:
+            failures.append("S05_GW_TOPOLOGY_MISSING_OR_INVALID")
+        coverage = dict(s05.get("competition_coverage") or {})
+        if not coverage:
+            failures.append("S05_COMPETITION_COVERAGE_MISSING")
+        if state("S05") == "COMPLETE" and coverage.get("verified_non_pl_schedule_bound") is not True:
+            failures.append("S05_COMPLETE_WITHOUT_NON_PL_SCHEDULE_AUTHORITY")
+        if s05.get("workload_feeds_p1_1_review_only") is not True:
+            failures.append("S05_WORKLOAD_MODEL_BOUNDARY_MISSING")
+        if s05.get("static_fatigue_penalty_applied") is not False:
+            failures.append("S05_UNGOVERNED_FATIGUE_PENALTY")
+        if s05.get("weather_mutates_football_model") is not False:
+            failures.append("S05_WEATHER_MUTATES_FOOTBALL_MODEL")
+        if s05.get("dgw_cross_fixture_covariance_claimed") is not False:
+            failures.append("S05_UNSUPPORTED_DGW_COVARIANCE")
+        workload = [
+            dict(row)
+            for row in s05.get("player_workload") or []
+            if isinstance(row, Mapping)
+        ]
+        for index, row in enumerate(workload, start=1):
+            gw_state = str(row.get("gw_state") or "").upper()
+            fixtures = [
+                item
+                for item in row.get("planning_gw_fixtures") or []
+                if isinstance(item, Mapping)
+            ]
+            if gw_state == "DOUBLE" and len(fixtures) < 2:
+                failures.append(f"S05_DGW_FIXTURE_DETAIL_MISSING={index}")
+            if gw_state == "BLANK" and fixtures:
+                failures.append(f"S05_BGW_PLAYER_HAS_FIXTURE={index}")
+        for index, row in enumerate(s05.get("weather") or [], start=1):
+            if not isinstance(row, Mapping):
+                continue
+            impact = str(row.get("fpl_impact") or "UNAVAILABLE").upper()
+            if impact not in {"NORMAL", "LOW", "MATERIAL", "UNAVAILABLE"}:
+                failures.append(f"S05_WEATHER_IMPACT_INVALID={index}")
+            if impact != "UNAVAILABLE" and not row.get("evidence_timestamp"):
+                failures.append(f"S05_WEATHER_TIMESTAMP_MISSING={index}")
+        for token in ("GW TOPOLOGY:", "PLAYER WORKLOAD / TRAVEL", "### WEATHER"):
+            if token not in upper:
+                failures.append(f"S05_VISIBLE_CONTRACT_MISSING={token}")
+        if any(str(row.get("gw_state") or "").upper() == "BLANK" for row in workload):
+            if "BLANK" not in upper:
+                failures.append("S05_BGW_NOT_VISIBLE")
+
+        blank_team_ids = sorted(
+            int(value)
+            for value in (s05.get("period_flags") or {}).get("blank_gw_teams") or []
+        )
+        bgw_active = bool(blank_team_ids) or topology in {"BLANK_GW", "MIXED_DGW_BGW"}
+        if bgw_active:
+            current15_ids = {
+                int(row.get("element_id") or row.get("element"))
+                for row in content("S02").get("rows") or []
+                if isinstance(row, Mapping)
+                and (row.get("element_id") is not None or row.get("element") is not None)
+            }
+            expected_blank_owned = sorted(
+                int(row.get("element_id"))
+                for row in workload
+                if row.get("element_id") is not None
+                and int(row.get("element_id")) in current15_ids
+                and str(row.get("gw_state") or "").upper() == "BLANK"
+            )
+            final_judgement = dict(content("S19").get("final_judgement") or {})
+            propagation = {
+                "S06": dict(content("S06").get("bgw_context") or {}),
+                "S09": dict(content("S09").get("bgw_context") or {}),
+                "S14": dict(content("S14").get("bgw_context") or {}),
+                "S14B": dict(content("S14B").get("bgw_context") or {}),
+                "S19": dict(final_judgement.get("bgw_context") or {}),
+            }
+            for sid, context in propagation.items():
+                try:
+                    context_blank_teams = sorted(
+                        int(value) for value in context.get("blank_team_ids") or []
+                    )
+                    context_blank_owned = sorted(
+                        int(value)
+                        for value in context.get("blank_owned_element_ids") or []
+                    )
+                except (TypeError, ValueError):
+                    context_blank_teams = []
+                    context_blank_owned = []
+                if (
+                    context.get("source_section") != "S05"
+                    or context.get("active") is not True
+                    or context.get("decision_math_mutated") is not False
+                    or context.get("context_only") is not True
+                    or context.get("gw_topology") != topology
+                    or context_blank_teams != blank_team_ids
+                    or context_blank_owned != expected_blank_owned
+                ):
+                    failures.append(f"S05_BGW_NOT_PROPAGATED_{sid}")
+            if content("S06").get("bgw_lineup_review_required") is not True:
+                failures.append("S05_BGW_S06_REVIEW_MISSING")
+            if content("S09").get("bgw_chip_review_required") is not True:
+                failures.append("S05_BGW_S09_CHIP_REVIEW_MISSING")
+            if (
+                content("S14").get("bgw_frontier_review_required") is not True
+                or content("S14").get("bgw_is_context_not_second_optimizer") is not True
+            ):
+                failures.append("S05_BGW_S14_FRONTIER_REVIEW_MISSING")
+            if content("S14B").get("bgw_reoptimization_trigger") is not True:
+                failures.append("S05_BGW_S14B_REOPTIMIZE_MISSING")
+            if final_judgement.get("bgw_reconciled") is not True:
+                failures.append("S05_BGW_S19_RECONCILIATION_MISSING")
 
 
     # Stage-A semantic correctness barrier. Field paths below are the exact

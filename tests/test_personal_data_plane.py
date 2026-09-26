@@ -156,3 +156,48 @@ def test_dual_read_compatibility_can_preserve_legacy_submitted_pick_behavior(tmp
     assert any(
         row["source_class"] == "OFFICIAL_SUBMITTED_PICKS" for row in rows
     )
+
+
+def test_private_manual_capture_is_user_confirmed_current_and_carries_visible_finance(tmp_path):
+    runtime = tmp_path / "runtime"
+    private = tmp_path / "private"
+    _write(
+        private / "personal/manual/gw6_capture.json",
+        {
+            "schema": "FPL_MANUAL_CURRENT_TEAM_CAPTURE_V1",
+            "captured_at": "2026-09-26T16:56:00+07:00",
+            "planning_gw": 6,
+            "squad": [
+                {"element_id": i, "current_price": 40 + i}
+                for i in range(1, 16)
+            ],
+            "finance": {
+                "bank": 2,
+                "free_transfers": 0,
+                "current_transfer_cost_points": 0,
+            },
+            "chips": {
+                "wildcard": {"status": "PLAYED", "played_in_gw": 2},
+                "free_hit": {"status": "AVAILABLE"},
+            },
+        },
+    )
+    rows = collect_personal_evidence_candidates(
+        runtime_root=runtime,
+        legacy_state={},
+        planning_gw=6,
+        private_root=private,
+        allow_legacy_private_sources=False,
+        require_private_personal=True,
+    )
+    manual = next(
+        row for row in rows
+        if row["source"].startswith("PRIVATE:personal/manual/")
+    )
+    assert manual["source_class"] == "USER_CONFIRMED"
+    assert manual["explicit_confirmation"] is True
+    assert manual["applicable_planning_gw"] == 6
+    assert manual["payload"]["bank"] == 2
+    assert manual["payload"]["free_transfers"] == 0
+    assert manual["payload"]["availability"]["selling_price"] == "UNAVAILABLE"
+    assert len(manual["payload"]["players"]) == 15

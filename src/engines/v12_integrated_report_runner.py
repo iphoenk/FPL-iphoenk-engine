@@ -144,6 +144,439 @@ def _fingerprint(value: Any) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _iso_datetime(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else None
+
+
+def _section_content_from_report(
+    report: Mapping[str, Any] | None,
+    section_id: str,
+) -> dict[str, Any]:
+    for raw in (report or {}).get("sections") or []:
+        if (
+            isinstance(raw, Mapping)
+            and str(raw.get("section_id") or "").upper() == section_id.upper()
+        ):
+            return dict(raw.get("content") or {})
+    return {}
+
+
+def _section_state_from_report(
+    report: Mapping[str, Any] | None,
+    section_id: str,
+) -> str:
+    for raw in (report or {}).get("sections") or []:
+        if (
+            isinstance(raw, Mapping)
+            and str(raw.get("section_id") or "").upper() == section_id.upper()
+        ):
+            return str(raw.get("state") or "").upper()
+    return "UNAVAILABLE"
+
+
+def _delta_element(value: Any) -> int | None:
+    if isinstance(value, Mapping):
+        value = value.get("element_id", value.get("element", value.get("id")))
+    try:
+        element = int(value)
+    except (TypeError, ValueError):
+        return None
+    return element if element > 0 else None
+
+
+def _mini_delta_state(mini_detail: Mapping[str, Any] | None) -> dict[str, Any]:
+    rows = [
+        dict(row)
+        for row in (mini_detail or {}).get("rank_battle") or []
+        if isinstance(row, Mapping)
+    ]
+    our = next((row for row in rows if row.get("is_us") is True), {})
+    if not our:
+        return {}
+    try:
+        our_rank = int(our.get("rank"))
+    except (TypeError, ValueError):
+        our_rank = None
+    try:
+        our_points = int(our.get("total_points"))
+    except (TypeError, ValueError):
+        our_points = None
+
+    by_rank = {}
+    for row in rows:
+        try:
+            rank = int(row.get("rank"))
+            points = int(row.get("total_points"))
+        except (TypeError, ValueError):
+            continue
+        by_rank[rank] = {"points": points, "manager": row.get("manager")}
+
+    leader = by_rank.get(1) or {}
+    top3 = by_rank.get(3) or {}
+    top5 = by_rank.get(5) or {}
+    above = by_rank.get(our_rank - 1) if our_rank and our_rank > 1 else None
+    below = by_rank.get(our_rank + 1) if our_rank else None
+
+    def gap(target: Mapping[str, Any] | None) -> int | None:
+        if not target or our_points is None or target.get("points") is None:
+            return None
+        return int(target["points"]) - our_points
+
+    return {
+        "our_rank": our_rank,
+        "our_points": our_points,
+        "leader_gap": gap(leader),
+        "top3_gap": gap(top3),
+        "top5_gap": gap(top5),
+        "nearest_above": (
+            {"manager": above.get("manager"), "gap": gap(above)}
+            if above else None
+        ),
+        "nearest_below": (
+            {"manager": below.get("manager"), "gap": gap(below)}
+            if below else None
+        ),
+    }
+
+
+def _decision_snapshot_from_report(
+    report: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    s01 = _section_content_from_report(report, "S01")
+    s02 = _section_content_from_report(report, "S02")
+    s06 = _section_content_from_report(report, "S06")
+    s09 = _section_content_from_report(report, "S09")
+    s15b = _section_content_from_report(report, "S15B")
+    s17 = _section_content_from_report(report, "S17")
+    s19 = _section_content_from_report(report, "S19")
+    dashboard = dict(s01.get("decision_dashboard") or {})
+    judgement = dict(s19.get("final_judgement") or {})
+    bench = dict(s06.get("bench") or {})
+
+    xi = [
+        element
+        for element in (
+            _delta_element(value)
+            for value in (
+                judgement.get("xi")
+                or s06.get("starting_xi")
+                or []
+            )
+        )
+        if element is not None
+    ]
+    bench_order = [
+        element
+        for element in (
+            _delta_element(value)
+            for value in (
+                judgement.get("bench_order")
+                or bench.get("order")
+                or []
+            )
+        )
+        if element is not None
+    ]
+    player_state: dict[str, dict[str, Any]] = {}
+    for raw in s02.get("rows") or []:
+        if not isinstance(raw, Mapping):
+            continue
+        element = _delta_element(raw)
+        if element is None:
+            continue
+        player_state[str(element)] = {
+            "player": raw.get("player") or raw.get("name") or f"element:{element}",
+            "p_start": raw.get("p_start"),
+            "xmins": raw.get("xmins"),
+            "projection_1gw": raw.get("projection_1gw", raw.get("gw_plus_1")),
+            "availability": raw.get("availability", raw.get("p_available")),
+            "role": raw.get("tactical_role_label", raw.get("tactical_role")),
+            "price_urgency": raw.get("price_relevance"),
+        }
+
+    return {
+        "operational_transfer_action": (
+            judgement.get("transfer_action")
+            or dashboard.get("TRANSFER")
+            or s01.get("operational_state")
+        ),
+        "selected_transfer_route": (
+            judgement.get("selected_route_id")
+            or s01.get("primary_decision")
+        ),
+        "xi": xi,
+        "bench_gk": _delta_element(
+            judgement.get("bench_gk", bench.get("gk"))
+        ),
+        "bench_order": bench_order,
+        "formation": judgement.get("formation", s06.get("formation")),
+        "captain": _delta_element(
+            judgement.get("final_captain", s06.get("captain"))
+        ),
+        "vice": _delta_element(
+            judgement.get("vice", s06.get("vice_captain"))
+        ),
+        "player_state": player_state,
+        "mini_league": _mini_delta_state(s15b),
+        "finance_state": (
+            (s17.get("source_health") or {}).get("finance")
+        ),
+        "chip_state": s09.get("chip"),
+    }
+
+
+def _decision_snapshot_from_current(
+    *,
+    operational_action: str,
+    final_judgement: Mapping[str, Any],
+    all15_rows: Sequence[Mapping[str, Any]],
+    mini_detail: Mapping[str, Any],
+    finance_available: bool,
+    chip_state: Any,
+    chip_available: bool,
+) -> dict[str, Any]:
+    player_state: dict[str, dict[str, Any]] = {}
+    for raw in all15_rows:
+        if not isinstance(raw, Mapping):
+            continue
+        element = _delta_element(raw)
+        if element is None:
+            continue
+        player_state[str(element)] = {
+            "player": raw.get("player") or raw.get("name") or f"element:{element}",
+            "p_start": raw.get("p_start"),
+            "xmins": raw.get("xmins"),
+            "projection_1gw": raw.get("projection_1gw", raw.get("gw_plus_1")),
+            "availability": raw.get("availability", raw.get("p_available")),
+            "role": raw.get("tactical_role_label", raw.get("tactical_role")),
+            "price_urgency": raw.get("price_relevance"),
+        }
+    return {
+        "operational_transfer_action": (
+            final_judgement.get("transfer_action") or operational_action
+        ),
+        "selected_transfer_route": final_judgement.get("selected_route_id"),
+        "xi": [
+            element
+            for element in (
+                _delta_element(value)
+                for value in final_judgement.get("xi") or []
+            )
+            if element is not None
+        ],
+        "bench_gk": _delta_element(final_judgement.get("bench_gk")),
+        "bench_order": [
+            element
+            for element in (
+                _delta_element(value)
+                for value in final_judgement.get("bench_order") or []
+            )
+            if element is not None
+        ],
+        "formation": final_judgement.get("formation"),
+        "captain": _delta_element(final_judgement.get("final_captain")),
+        "vice": _delta_element(final_judgement.get("vice")),
+        "player_state": player_state,
+        "mini_league": _mini_delta_state(mini_detail),
+        "finance_state": "AVAILABLE" if finance_available else "DEGRADED",
+        "chip_state": chip_state if chip_available else "UNAVAILABLE",
+    }
+
+
+def _decision_delta_surface(
+    *,
+    previous_snapshot: Mapping[str, Any],
+    current_snapshot: Mapping[str, Any],
+    previous_report_slot: str,
+    evidence_time: str,
+) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+
+    def append_change(
+        decision_item: str,
+        previous: Any,
+        current: Any,
+        reason: str,
+    ) -> None:
+        if previous == current:
+            return
+        rows.append(
+            {
+                "decision_item": decision_item,
+                "previous": previous,
+                "current": current,
+                "material_change": True,
+                "reason": reason,
+                "evidence_time": evidence_time,
+            }
+        )
+
+    for key, label in (
+        ("operational_transfer_action", "OPERATIONAL TRANSFER ACTION"),
+        ("selected_transfer_route", "SELECTED TRANSFER ROUTE"),
+        ("xi", "XI"),
+        ("bench_gk", "BENCH GK"),
+        ("bench_order", "BENCH ORDER"),
+        ("formation", "FORMATION"),
+        ("captain", "CAPTAIN"),
+        ("vice", "VICE"),
+        ("finance_state", "FINANCE STATE"),
+        ("chip_state", "CHIP STATE"),
+    ):
+        append_change(
+            label,
+            previous_snapshot.get(key),
+            current_snapshot.get(key),
+            "previous valid visible DEEP versus current occurrence",
+        )
+
+    previous_players = dict(previous_snapshot.get("player_state") or {})
+    current_players = dict(current_snapshot.get("player_state") or {})
+    for element in sorted(set(previous_players) | set(current_players), key=int):
+        previous = dict(previous_players.get(element) or {})
+        current = dict(current_players.get(element) or {})
+        player = current.get("player") or previous.get("player") or f"element:{element}"
+        for key, label in (
+            ("p_start", "P(start)"),
+            ("xmins", "xMins"),
+            ("projection_1gw", "1GW xPts"),
+            ("availability", "AVAILABILITY"),
+            ("role", "ROLE"),
+            ("price_urgency", "PRICE URGENCY"),
+        ):
+            old = previous.get(key)
+            new = current.get(key)
+            if key in {"p_start", "xmins", "projection_1gw"} and (
+                old is None or new is None
+            ):
+                continue
+            append_change(
+                f"{label}: {player} [{element}]",
+                old,
+                new,
+                (
+                    "occurrence model recomputation delta"
+                    if key in {"p_start", "xmins", "projection_1gw"}
+                    else "factual/role/price evidence changed"
+                ),
+            )
+
+    previous_mini = dict(previous_snapshot.get("mini_league") or {})
+    current_mini = dict(current_snapshot.get("mini_league") or {})
+    for key, label in (
+        ("our_rank", "MINI-LEAGUE RANK"),
+        ("our_points", "MINI-LEAGUE POINTS"),
+        ("leader_gap", "LEADER GAP"),
+        ("top3_gap", "TOP3 GAP"),
+        ("top5_gap", "TOP5 GAP"),
+        ("nearest_above", "NEAREST ABOVE"),
+        ("nearest_below", "NEAREST BELOW"),
+    ):
+        append_change(
+            label,
+            previous_mini.get(key),
+            current_mini.get(key),
+            "submitted standings context changed",
+        )
+
+    return {
+        "baseline_state": "AVAILABLE",
+        "baseline_requirement": "PREVIOUS_VALID_VISIBLE_DEEP",
+        "previous_report_slot": previous_report_slot,
+        "rows": rows,
+        "summary": (
+            "NO MATERIAL DECISION CHANGE"
+            if not rows
+            else f"{len(rows)} material decision/evidence changes versus previous valid visible DEEP"
+        ),
+        "material_only": True,
+        "no_recomputation_no_numeric_delta": True,
+        "numeric_delta_policy": (
+            "P(start)/xMins/1GW deltas are emitted only when both occurrences "
+            "contain recomputed values; no value is fabricated for missing evidence."
+        ),
+    }
+
+
+def _load_previous_visible_deep_baseline(
+    directory: Path | None,
+    *,
+    current_report_slot: str,
+) -> dict[str, Any]:
+    if directory is None:
+        return {
+            "state": "UNAVAILABLE",
+            "reason": "PREVIOUS_DEEP_ARTIFACT_NOT_BOUND",
+        }
+    bundle_path = directory / "report_bundle.json"
+    if not bundle_path.exists():
+        return {
+            "state": "UNAVAILABLE",
+            "reason": "PREVIOUS_DEEP_BUNDLE_MISSING",
+        }
+    bundle = _read_json(bundle_path, {}) or {}
+    if not isinstance(bundle, Mapping):
+        return {
+            "state": "UNAVAILABLE",
+            "reason": "PREVIOUS_DEEP_BUNDLE_INVALID",
+        }
+    report = bundle.get("report")
+    body = (
+        (directory / "report_body.md").read_text(encoding="utf-8")
+        if (directory / "report_body.md").exists()
+        else bundle.get("visible_body")
+    )
+    previous_slot = str(bundle.get("report_slot") or "")
+    previous_dt = _iso_datetime(previous_slot)
+    current_dt = _iso_datetime(current_report_slot)
+    status_failures: list[str] = []
+    if str(bundle.get("report_mode") or "").upper() != "DEEP":
+        status_failures.append("REPORT_MODE_NOT_DEEP")
+    if str(bundle.get("runner_status") or "").upper() != "PASS":
+        status_failures.append("RUNNER_STATUS_NOT_PASS")
+    if str((bundle.get("pre_render_qa") or {}).get("status") or "").upper() != "PASS":
+        status_failures.append("PRE_RENDER_NOT_PASS")
+    if str((bundle.get("post_render_qa") or {}).get("status") or "").upper() != "PASS":
+        status_failures.append("POST_RENDER_NOT_PASS")
+    if str((bundle.get("human_facing_qa") or {}).get("status") or "").upper() != "PASS":
+        status_failures.append("HUMAN_FACING_NOT_PASS")
+    if not isinstance(report, Mapping) or not isinstance(body, str) or not body.strip():
+        status_failures.append("REPORT_OR_VISIBLE_BODY_MISSING")
+    if previous_dt is None or current_dt is None or previous_dt >= current_dt:
+        status_failures.append("PREVIOUS_SLOT_NOT_STRICTLY_OLDER")
+
+    semantic_failures: list[str] = []
+    if not status_failures:
+        manifest = build_deep_human_facing_manifest(report)
+        semantic_failures.extend(validate_deep_human_facing_manifest(manifest))
+        semantic_failures.extend(validate_human_facing_body(body))
+        semantic_failures.extend(
+            validate_deep_decision_content_delivery(report, body)
+        )
+    failures = list(dict.fromkeys(status_failures + semantic_failures))
+    if failures:
+        return {
+            "state": "UNAVAILABLE",
+            "reason": "PREVIOUS_DEEP_CURRENT_VALIDATION_FAILED",
+            "candidate_report_slot": previous_slot or None,
+            "validation_failures": failures,
+        }
+    return {
+        "state": "AVAILABLE",
+        "reason": None,
+        "report_slot": previous_slot,
+        "source": "PREVIOUS_SUCCESSFUL_DEEP_ARTIFACT_REVALIDATED_CURRENT",
+        "report": dict(report),
+        "validation_failures": [],
+    }
+
+
 _PROFILED_STAGE_NAMES = frozenset(
     {
         "V12_ANALYTICS_FOUNDATION",
@@ -4084,11 +4517,37 @@ def run_deep(
     report_slot: str,
     output_dir: Path,
     checkpoint_time: str | None = None,
+    previous_visible_deep_dir: Path | None = None,
 ) -> dict[str, Any]:
     ledger: list[dict[str, Any]] = []
     stage2_cache_proof: dict[str, Any] = {}
     canonical = CANONICAL_PATH.read_text(encoding="utf-8")
     state = _read_json(STATE_PATH, {}) or {}
+    previous_deep = _load_previous_visible_deep_baseline(
+        previous_visible_deep_dir,
+        current_report_slot=report_slot,
+    )
+    ledger.append(
+        {
+            "stage": "PREVIOUS_VALID_VISIBLE_DEEP_BASELINE",
+            "status": (
+                "PASS" if previous_deep.get("state") == "AVAILABLE" else "DEGRADED"
+            ),
+            "required": False,
+            "reason": previous_deep.get("reason"),
+            "evidence": {
+                "state": previous_deep.get("state"),
+                "report_slot": previous_deep.get(
+                    "report_slot",
+                    previous_deep.get("candidate_report_slot"),
+                ),
+                "source": previous_deep.get("source"),
+                "validation_failures": previous_deep.get(
+                    "validation_failures"
+                ),
+            },
+        }
+    )
 
     prefetch = _stage(
         ledger,
@@ -5067,6 +5526,48 @@ def run_deep(
         auth_state=str(private_current_team.get("auth_state") or "UNAVAILABLE"),
         finance=finance,
     )
+    current_decision_snapshot = _decision_snapshot_from_current(
+        operational_action=operational_action,
+        final_judgement=final_judgement,
+        all15_rows=all15_rows,
+        mini_detail=mini_deep_detail,
+        finance_available=_execution_finance_available(finance),
+        chip_state=chip_state,
+        chip_available=chip_available,
+    )
+    if previous_deep.get("state") == "AVAILABLE":
+        decision_delta = _decision_delta_surface(
+            previous_snapshot=_decision_snapshot_from_report(
+                previous_deep.get("report") or {}
+            ),
+            current_snapshot=current_decision_snapshot,
+            previous_report_slot=str(previous_deep.get("report_slot") or ""),
+            evidence_time=report_slot,
+        )
+        decision_delta_state = "COMPLETE"
+        decision_delta_reason = None
+    else:
+        decision_delta = {
+            "baseline_state": "UNAVAILABLE",
+            "baseline_requirement": "PREVIOUS_VALID_VISIBLE_DEEP",
+            "rows": [],
+            "summary": (
+                "BASELINE UNAVAILABLE — no prior DEEP artifact survived current "
+                "human-facing semantic validation; no decision delta is inferred."
+            ),
+            "baseline_reason": previous_deep.get("reason"),
+            "candidate_report_slot": previous_deep.get("candidate_report_slot"),
+            "validation_failures": previous_deep.get("validation_failures"),
+            "current_snapshot": current_decision_snapshot,
+            "material_only": True,
+            "no_recomputation_no_numeric_delta": True,
+        }
+        decision_delta_state = "DEGRADED"
+        decision_delta_reason = (
+            "previous valid visible DEEP baseline is unavailable under the "
+            "current semantic contract"
+        )
+
     evidence_quality = _evidence_quality_surface(
         official=official,
         personal_resolution=personal_resolution,
@@ -5148,44 +5649,11 @@ def run_deep(
             expected_count=15,
         ),
         "S03": _section(
-            "DEGRADED",
+            decision_delta_state,
             {
-                "decision_delta": {
-                    "baseline_state": "UNAVAILABLE",
-                    "baseline_requirement": "PREVIOUS_VALID_VISIBLE_DEEP",
-                    "rows": [],
-                    "summary": (
-                        "BASELINE UNAVAILABLE — previous valid visible DEEP occurrence is not "
-                        "bound to this runner; no decision delta is inferred."
-                    ),
-                    "current_snapshot": {
-                        "operational_transfer_action": operational_action,
-                        "selected_transfer_route": (stage3_decision or {}).get("selected_route_id"),
-                        "xi": [
-                            _surface_element(row)
-                            for row in (lineup or {}).get("starting_xi") or []
-                        ],
-                        "bench_order": [
-                            _surface_element(row)
-                            for row in ((lineup or {}).get("bench") or {}).get("order") or []
-                        ],
-                        "formation": (lineup or {}).get("formation"),
-                        "captain": _surface_element((lineup or {}).get("captain")),
-                        "vice": _surface_element((lineup or {}).get("vice_captain")),
-                        "finance_state": (
-                            "AVAILABLE"
-                            if _execution_finance_available(finance)
-                            else "DEGRADED"
-                        ),
-                        "chip_state": (
-                            chip_state if chip_available else "UNAVAILABLE"
-                        ),
-                    },
-                    "material_only": True,
-                    "no_recomputation_no_numeric_delta": True,
-                },
+                "decision_delta": decision_delta,
             },
-            "previous valid visible DEEP baseline is not bound; a true delta cannot be claimed",
+            decision_delta_reason,
         ),
         "S04": _section(
             "COMPLETE",
@@ -5743,6 +6211,7 @@ def main() -> int:
     parser.add_argument("--report-mode", default="DEEP")
     parser.add_argument("--report-slot", required=True)
     parser.add_argument("--checkpoint-time", default=None)
+    parser.add_argument("--previous-visible-deep-dir", default=None)
     parser.add_argument("--output-dir", required=True)
     args = parser.parse_args()
     mode = str(args.report_mode).upper()
@@ -5764,6 +6233,11 @@ def main() -> int:
             report_slot=args.report_slot,
             output_dir=Path(args.output_dir),
             checkpoint_time=args.checkpoint_time,
+            previous_visible_deep_dir=(
+                Path(args.previous_visible_deep_dir)
+                if args.previous_visible_deep_dir
+                else None
+            ),
         )
     print(
         json.dumps(

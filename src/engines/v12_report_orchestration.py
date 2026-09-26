@@ -3241,8 +3241,18 @@ def build_match_lifecycle_surface(
     icon = dict(icon_live or {})
     submitted_scope = dict(icon.get("submitted_picks") or {})
     standings_scope = dict(icon.get("live_standings") or {})
+    icon_missing_scopes = [
+        label
+        for label, scope in (
+            ("SUBMITTED_PICKS_EXPOSURE", submitted_scope),
+            ("LIVE_STANDINGS_RANK", standings_scope),
+        )
+        if not scope
+    ]
     icon_state = (
         "COMPLETE"
+        if submitted_scope and standings_scope
+        else "DEGRADED"
         if submitted_scope or standings_scope
         else "UNAVAILABLE"
     )
@@ -3344,6 +3354,12 @@ def build_match_lifecycle_surface(
             "submitted_picks": submitted_scope or None,
             "live_standings": standings_scope or None,
             "submitted_and_live_scopes_separate": True,
+            "missing_scopes": icon_missing_scopes,
+            "degradation_reason": (
+                None
+                if not icon_missing_scopes
+                else "missing ICON+ sub-scope(s): " + ",".join(icon_missing_scopes)
+            ),
         },
         "next_gw_learning": learning_rows,
         "calibration_items": learning_rows,
@@ -3535,7 +3551,10 @@ def materialize_match_lifecycle_report(
             "degradation_reason": (
                 None
                 if str(icon.get("state") or "").upper() == "COMPLETE"
-                else "current ICON+ live/submitted evidence unavailable"
+                else (
+                    icon.get("degradation_reason")
+                    or "current ICON+ live/submitted evidence unavailable"
+                )
             ),
         },
         "NEXT-GW LEARNING": {

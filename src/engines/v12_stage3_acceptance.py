@@ -100,6 +100,7 @@ def validate(
     bundle: Mapping[str, Any],
     *,
     runtime_data_root: Path,
+    private_data_root: Path | None = None,
     model_sha: str,
     runtime_sha: str,
     canonical_path: Path,
@@ -283,7 +284,13 @@ def validate(
     publish = _read(runtime_data_root / "data/v6/health/publish_integrity.json")
     prefetch = _read(runtime_data_root / "data/v6/report_prefetch/latest.json")
     prefetch_health = _read(runtime_data_root / "data/v6/health/report_prefetch.json")
-    current_team = _read(runtime_data_root / "data/v6/personal/current_team.json")
+    current_team = _read(
+        (
+            private_data_root / "personal/current_team.json"
+            if private_data_root is not None
+            else runtime_data_root / "data/v6/personal/current_team.json"
+        )
+    )
     standings = _read(
         runtime_data_root / "data/v6/mini_leagues/9477/standings.json"
     )
@@ -356,6 +363,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--bundle", required=True)
     parser.add_argument("--runtime-data-root", required=True)
+    parser.add_argument("--private-data-root", default="")
     parser.add_argument("--model-sha", required=True)
     parser.add_argument("--runtime-sha", required=True)
     parser.add_argument("--canonical", required=True)
@@ -364,6 +372,11 @@ def main() -> int:
     proof = validate(
         _read(Path(args.bundle)),
         runtime_data_root=Path(args.runtime_data_root),
+        private_data_root=(
+            Path(args.private_data_root)
+            if args.private_data_root
+            else None
+        ),
         model_sha=args.model_sha,
         runtime_sha=args.runtime_sha,
         canonical_path=Path(args.canonical),

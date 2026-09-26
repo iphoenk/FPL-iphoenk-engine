@@ -55,17 +55,45 @@ def _section(section_id: str, label: str, content: dict, state: str = "COMPLETE"
 
 
 def _action_board(action: str = "WAIT", best_alternative=None):
+    axes = []
+    for axis, now in (
+        ("TRANSFER", action),
+        ("XI", "LOCK"),
+        ("CAPTAIN", "LOCK"),
+        ("PRICE", "MONITOR"),
+        ("AUTH/FINANCE", "AVAILABLE"),
+        ("INJURY/TEAM NEWS", "CLEAR"),
+    ):
+        axes.append(
+            {
+                "axis": axis,
+                "NOW": now,
+                "NEXT": "refresh evidence",
+                "TRIGGER TO ACT": "canonical threshold",
+                "LATEST SAFE DECISION POINT": "next governed checkpoint",
+                "COST OF WAITING": {"status": "AVAILABLE", "points": 0.2},
+                "ABORT / REVERSAL": "material evidence reversal",
+            }
+        )
+    alternative = best_alternative or {"route": "R1", "executable": True}
     return _section(
         "S18",
         "ACTION BOARD",
         {
-            "NOW": action,
-            "NEXT": "refresh evidence",
-            "TRIGGER TO ACT": "canonical threshold",
-            "LATEST SAFE DECISION POINT": "next governed checkpoint",
-            "COST OF WAITING": {"status": "AVAILABLE", "points": 0.2},
-            "ABORT / REVERSAL": "material evidence reversal",
-            "BEST ALTERNATIVE": best_alternative or {"route": "R1"},
+            "action_board": {
+                "axes": axes,
+                "best_alternative": alternative,
+                "best_alternative_executable": alternative.get("executable"),
+            },
+            "NOW": {row["axis"]: row["NOW"] for row in axes},
+            "NEXT": {row["axis"]: row["NEXT"] for row in axes},
+            "TRIGGER TO ACT": {row["axis"]: row["TRIGGER TO ACT"] for row in axes},
+            "LATEST SAFE DECISION POINT": {
+                row["axis"]: row["LATEST SAFE DECISION POINT"] for row in axes
+            },
+            "COST OF WAITING": {row["axis"]: row["COST OF WAITING"] for row in axes},
+            "ABORT / REVERSAL": {row["axis"]: row["ABORT / REVERSAL"] for row in axes},
+            "BEST ALTERNATIVE": alternative,
         },
     )
 
@@ -241,6 +269,35 @@ def _rich_all15_rows():
         }
         for i in range(1, 16)
     ]
+
+
+def _rich_s02_rows():
+    rows = []
+    for i in range(1, 16):
+        rows.append(
+            {
+                "element_id": i,
+                "player": f"P{i:02d}",
+                "position": "MID",
+                "club": "Club",
+                "current_price": 75,
+                "selling_price": 74,
+                "opponent": "Opponent",
+                "home_away": "H",
+                "availability": 0.98,
+                "p_start": 0.90,
+                "xmins": 80,
+                "projection_1gw": 4.0,
+                "projection_3gw": 12.0,
+                "projection_5gw": 20.0,
+                "tactical_role_label": "ROLE",
+                "tactical_score": 0.7,
+                "injury_rotation_warning": "NONE_MATERIAL",
+                "price_relevance": "NONE_MATERIAL",
+                "ownership_source": "OFFICIAL_FPL_PUBLIC_SELECTED_BY_PERCENT",
+            }
+        )
+    return rows
 
 
 def test_a_direct_affordable_upgrade_is_visible():
@@ -583,7 +640,18 @@ def test_m_p1_7_lineup_and_captain_outputs_are_visibly_required():
     s02 = _section(
         "S02",
         "OUR15",
-        {"rows": [{"element_id": i, "player": f"P{i:02d}"} for i in range(1, 16)]},
+        {
+            "rows": _rich_s02_rows(),
+            "current15_authority": {
+                "source_class": "AUTH_CURRENT",
+                "source": "synthetic",
+                "observed_at": "2026-09-26T00:00:00+00:00",
+                "applicable_gw": 6,
+                "auth_state": "AUTH_AVAILABLE",
+                "finance_availability": "AVAILABLE",
+                "stale": False,
+            },
+        },
     )
     s06 = _section(
         "S06",

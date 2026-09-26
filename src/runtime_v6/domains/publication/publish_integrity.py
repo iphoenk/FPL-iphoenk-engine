@@ -53,12 +53,10 @@ _FORBIDDEN_CANONICAL_MINI_LEAGUE_AGGREGATES = {
 _FREEZE_RELATIVE_PATH = "health/candidate_freeze.lock"
 _PUBLISH_INTEGRITY_RELATIVE_PATH = "health/publish_integrity.json"
 
-# Public V6 may retain only post-disclosure/reproducible personal-adjacent facts.
-# Current/manual/authenticated owner state belongs exclusively to the private plane.
-_PUBLIC_PERSONAL_ALLOWED_RELATIVE_PATHS = {
-    "personal/memberships.json",
-    "personal/submitted_picks.json",
-}
+# Public V6 must not retain owner-specific personal artifacts, even when the
+# upstream Official FPL endpoint is publicly readable. Reproducibility of the
+# source does not make one manager's squad/league state public-safe storage.
+_PUBLIC_PERSONAL_ALLOWED_RELATIVE_PATHS: set[str] = set()
 
 
 def _resolve_runtime_path(root: Path, configured: str) -> Path:

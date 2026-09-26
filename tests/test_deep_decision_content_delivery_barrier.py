@@ -819,20 +819,23 @@ def test_p_current_gw_authenticated_squad_beats_previous_gw_submitted_picks():
 
 
 def test_p1_explicit_current15_state_outranks_stale_previous_gw_runtime(tmp_path: Path):
-    root = Path(__file__).resolve().parents[1]
-    state = json.loads(
-        (root / "control/fpl_master_v12/FPL_MASTER_STATE_V12.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    confirmed = dict(state["confirmed_current_squad_state"])
+    confirmed = {
+        "goalkeepers": [{"element_id": i} for i in range(1, 3)],
+        "defenders": [{"element_id": i} for i in range(3, 8)],
+        "midfielders": [{"element_id": i} for i in range(8, 13)],
+        "forwards": [{"element_id": i} for i in range(13, 16)],
+        "explicit_user_confirmation": True,
+        "explicit_user_confirmed_at": "2026-09-26T09:00:00+00:00",
+        "applicable_planning_gw": 6,
+        "bank": None,
+        "chips": None,
+    }
+    state = {"confirmed_current_squad_state": confirmed}
     planning_gw = int(confirmed["applicable_planning_gw"])
 
     confirmed_rows = []
     for group in ("goalkeepers", "defenders", "midfielders", "forwards"):
-        confirmed_rows.extend(
-            dict(row) for row in confirmed.get(group) or []
-        )
+        confirmed_rows.extend(dict(row) for row in confirmed.get(group) or [])
     confirmed_ids = [int(row["element_id"]) for row in confirmed_rows]
 
     assert confirmed["explicit_user_confirmation"] is True
@@ -884,7 +887,6 @@ def test_p1_explicit_current15_state_outranks_stale_previous_gw_runtime(tmp_path
         row.get("purchase_price") is None and row.get("selling_price") is None
         for row in resolved["rows"]
     )
-
 
 def test_q_report_plane_and_new_permanent_contract_do_not_pin_production_players():
     root = Path(__file__).resolve().parents[1]

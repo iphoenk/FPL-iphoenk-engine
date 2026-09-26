@@ -786,3 +786,110 @@ def test_integrated_deep_does_not_bruteforce_global_two_transfer_p17():
     assert "FULL_DIRECT_MATERIAL_FUNDED" in source
     assert "max_transfers=2" not in source
 
+
+
+def test_stage_a_regression_auth_expired_cannot_render_personal_healthy():
+    s02 = _section(
+        "S02",
+        "OUR15",
+        {
+            "rows": [],
+            "personal_resolution": {
+                "status": "CURRENT_VALID",
+                "auth_state": "AUTH_EXPIRED",
+                "finance_available": False,
+            },
+        },
+        state="DEGRADED",
+    )
+    s17 = _section(
+        "S17",
+        "SOURCE HEALTH",
+        {
+            "engine_data_status": {},
+            "source_health": {
+                "authenticated_personal_scope": "HEALTHY",
+                "finance": "AVAILABLE",
+            },
+        },
+    )
+    failures = validate_deep_decision_content_delivery(
+        {"sections": [s02, s17]},
+        "",
+    )
+    assert "S17_AUTH_CONTRADICTS_BOUND_AUTH=AUTH_EXPIRED" in failures
+    assert "S17_FINANCE_CONTRADICTS_BOUND_AUTH" in failures
+
+
+def test_stage_a_regression_unknown_ft_cannot_emit_save_or_roll_ft():
+    s14b = _section(
+        "S14B",
+        "3-GW SQUAD STAGING",
+        {
+            "staging_rows": [
+                {
+                    "timing": "GW6",
+                    "planned_move": "SAVE FT / HOLD SQUAD",
+                    "status": "HOLD",
+                }
+            ],
+            "squad_classification": [],
+            "target_formation": "3-5-2",
+            "ft_saving_plan": "SAVE FT",
+            "ft_state": {"status": "UNAVAILABLE", "free_transfers": None},
+        },
+    )
+    failures = validate_deep_decision_content_delivery(
+        {"sections": [s14b]},
+        "",
+    )
+    assert "FT_UNKNOWN_EMITS_SAVE_OR_ROLL_FT" in failures
+
+
+def test_stage_a_regression_degraded_finance_cannot_mark_route_executable():
+    s14 = _section(
+        "S14",
+        "PACKAGE OPTIMIZER / TRANSFER FRONTIER",
+        {
+            "package_routes": [
+                {
+                    "route": "R1",
+                    "moves": {"out": [{"element": 1}], "in": [{"element": 2}]},
+                    "executable": True,
+                }
+            ],
+            "frontier": [],
+            "execution_economics_status": "DEGRADED",
+        },
+    )
+    failures = validate_deep_decision_content_delivery(
+        {"sections": [s14]},
+        "",
+    )
+    assert "FINANCE_DEGRADED_ROUTE_MARKED_EXECUTABLE" in failures
+
+
+def test_stage_a_regression_lineup_score_semantics_must_be_named():
+    s06 = _section(
+        "S06",
+        "FORMATION / XI / BENCH",
+        {
+            "starting_xi": [{"element": index} for index in range(1, 12)],
+            "bench": {"gk": 12, "order": [13, 14, 15]},
+            "formation": "3-5-2",
+            "lineup_score": {
+                "xpts_mean": 49.78,
+                "captain_multiplier_value": 5.0,
+                "vice_fallback_value": 0.23,
+                "robust": 54.4,
+            },
+        },
+    )
+    body = "FORMATION: 3-5-2\nXI: P1..P11\nBENCH: P12..P15\nCAPTAIN AUTHORITY: P1"
+    failures = validate_deep_decision_content_delivery(
+        {"sections": [s06]},
+        body,
+    )
+    assert "P1_7_SCORE_SEMANTICS_NOT_VISIBLE=XI_BASE_XPTS:" in failures
+    assert "P1_7_SCORE_SEMANTICS_NOT_VISIBLE=CAPTAIN_ADJUSTED_XPTS:" in failures
+    assert "P1_7_SCORE_SEMANTICS_NOT_VISIBLE=LINEUP_ROUTE_UTILITY:" in failures

@@ -17,6 +17,7 @@ from src.runtime_v6.domains.report_plane.report_qa import (
     validate_v12_visible_content_contract,
 )
 from test_support.report_visible_body import valid_visible_body
+from src.engines.v12_final_delivery_barrier import validate_final_delivery_barrier
 from src.engines.v12_report_orchestration import (
     build_match_lifecycle_surface,
     build_post_all_match_lifecycle_surface,
@@ -1247,3 +1248,70 @@ def test_stage_e_icon_one_healthy_subscope_degrades_without_blanking_it():
     assert surface["icon_live"]["live_standings"] is None
     assert surface["icon_live"]["missing_scopes"] == ["LIVE_STANDINGS_RANK"]
     assert "LIVE_STANDINGS_RANK" in surface["icon_live"]["degradation_reason"]
+
+
+def test_stage_f_match_final_barrier_requires_single_report_and_incremental_obligation():
+    canonical = Path(
+        "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt"
+    ).read_text(encoding="utf-8")
+    surface = build_match_lifecycle_surface(
+        live_payload=_stage_e_match_live_payload(),
+        icon_live=_stage_e_icon_live(),
+        source_freshness={"event_live": "CURRENT"},
+    )
+    report = materialize_match_lifecycle_report(
+        canonical_text=canonical,
+        match_surface=surface,
+    )
+    body = render_match_lifecycle_text(report)
+    finalization = {
+        "final_report_due": True,
+        "visible_report_count": 1,
+        "combined_report": False,
+        "dynamic_lifecycle_event": "POST_MATCH",
+        "final_mode": "MATCH",
+        "embedded_obligations": ["POST_MATCH_INCREMENTAL"],
+    }
+    result = validate_final_delivery_barrier(
+        report_mode="MATCH",
+        report=report,
+        body=body,
+        finalization=finalization,
+    )
+    assert result["status"] == "PASS", result["failures"]
+
+    broken = dict(finalization)
+    broken["embedded_obligations"] = []
+    failed = validate_final_delivery_barrier(
+        report_mode="MATCH",
+        report=report,
+        body=body,
+        finalization=broken,
+    )
+    assert "POST_MATCH_INCREMENTAL_OBLIGATION_MISSING" in failed["failures"]
+
+
+def test_stage_f_post_all_final_barrier_accepts_exact_fixture_coverage():
+    canonical = Path(
+        "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt"
+    ).read_text(encoding="utf-8")
+    surface = _stage_e_post_all_surface()
+    report = materialize_post_all_match_lifecycle_report(
+        canonical_text=canonical,
+        surface=surface,
+    )
+    body = render_natural_post_match_text(report)
+    result = validate_final_delivery_barrier(
+        report_mode="POST_ALL_MATCH",
+        report=report,
+        body=body,
+        finalization={
+            "final_report_due": True,
+            "visible_report_count": 1,
+            "combined_report": False,
+            "dynamic_lifecycle_event": "POST_ALL_MATCH",
+            "final_mode": "POST_ALL_MATCH",
+            "embedded_obligations": [],
+        },
+    )
+    assert result["status"] == "PASS", result["failures"]

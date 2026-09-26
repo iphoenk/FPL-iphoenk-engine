@@ -478,25 +478,17 @@ def test_26_football_hold_and_operational_wait_prepare_act_are_distinct():
         )
 
 
-def test_27_migrated_state_expires_barnes_only_and_binds_other_scenarios():
+def test_27_owner_scenarios_are_private_overlay_not_public_state():
     state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
-    rows = {row["scenario_id"]: row for row in state["active_scenarios"]}
-    barnes = rows["TRANSFER_TO_BARNES"]
-    assert barnes["state"] == "EXPIRED"
-    assert barnes["target_gw"] == 5
-    assert barnes["expiry_reason"] == "TARGET_GW_EXECUTION_WINDOW_CLOSED_NOT_EXECUTED"
-    assert barnes["historical_assumptions"]["hit_points_assumption"] == -4
-    assert barnes["historical_assumptions"]["excluded_from_future_gw_economics"] is True
-    for scenario_id in (
-        "HOLD_SANGARE",
-        "JOAO_PEDRO_AVAILABILITY",
-        "BRUNO_KEEP_START",
-        "XI_MARGINAL_SANGARE_DE_CUYPER_DCL",
-    ):
-        assert rows[scenario_id]["state"] == "CONTEMPLATED"
-        assert rows[scenario_id]["currently_valid"] is True
-        assert rows[scenario_id]["scope_type"].startswith("CROSS_GW_")
-
+    assert "active_scenarios" not in state
+    assert "confirmed_current_squad_state" not in state
+    assert "decision_learning" not in state
+    overlay = dict(state.get("private_overlay_contract") or {})
+    assert overlay["classification"] == "PRIVATE_PERSONAL_AND_DECISION"
+    assert overlay["repository"] == "iphoenk/fpl-reports-private"
+    assert overlay["relative_path"] == "personal/owner_state.json"
+    assert overlay["runtime_required_for_private_current_state"] is True
+    assert overlay["public_state_contains_owner_decision_payload"] is False
 
 
 def _mode_proof(

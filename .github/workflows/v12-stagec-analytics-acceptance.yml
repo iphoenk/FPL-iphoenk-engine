@@ -25,6 +25,11 @@ on:
       - "tests/test_price_delivery_barrier.py"
       - "tests/test_price_radar_serving_all15_mandatory.py"
       - "tests/test_price_radar_trajectory.py"
+      - "tests/test_personal_data_plane.py"
+      - "tests/test_private_delivery_security.py"
+      - "tests/test_private_publisher.py"
+      - "tests/test_private_data_boundary.py"
+      - "config/security/v12_delivery_classification.json"
       - ".github/workflows/v12-stagec-analytics-acceptance.yml"
   pull_request:
     paths:
@@ -47,6 +52,11 @@ on:
       - "tests/test_price_delivery_barrier.py"
       - "tests/test_price_radar_serving_all15_mandatory.py"
       - "tests/test_price_radar_trajectory.py"
+      - "tests/test_personal_data_plane.py"
+      - "tests/test_private_delivery_security.py"
+      - "tests/test_private_publisher.py"
+      - "tests/test_private_data_boundary.py"
+      - "config/security/v12_delivery_classification.json"
       - ".github/workflows/v12-stagec-analytics-acceptance.yml"
   workflow_dispatch:
 
@@ -81,7 +91,30 @@ jobs:
           set -euo pipefail
           python -m pytest -q \
             tests/test_stage1_analytics_foundation.py \
-            tests/test_integrated_report_runner.py
+            tests/test_integrated_report_runner.py \
+            tests/test_personal_data_plane.py \
+            tests/test_private_delivery_security.py \
+            tests/test_private_publisher.py \
+            tests/test_private_data_boundary.py
+
+      - name: Run P1 synthetic private/public acceptance
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/p1-synthetic-acceptance"
+          rm -rf "$root"
+          python -m src.engines.v12_p1_synthetic_acceptance \
+            --root "$root" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --model-sha "${GITHUB_SHA}" \
+            --runtime-sha "${GITHUB_SHA}"
+
+      - name: Upload P1 synthetic safe public proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-synthetic-public-proof-${{ github.run_id }}
+          path: ${{ runner.temp }}/p1-synthetic-acceptance/public/public_proof.json
+          if-no-files-found: error
+          retention-days: 14
 
   semantic-deep:
     runs-on: ubuntu-latest

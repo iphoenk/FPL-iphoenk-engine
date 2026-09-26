@@ -1365,18 +1365,16 @@ def test_p17_corrupt_cache_is_rejected_fail_closed_and_recomputed(
     assert stats["p17_cache_writes"] == 1
 
 
-def test_v12_workflow_saves_compute_caches_even_if_downstream_acceptance_fails():
+def test_v12_workflow_persists_only_public_safe_stage2_cache():
     workflow = (
         ROOT / ".github" / "workflows" / "v12-integrated-report-runner.yml"
     ).read_text(encoding="utf-8")
-    for step_name in (
-        "Persist exact P1.7 decision-core cache before downstream acceptance",
-        "Persist deterministic MC summary cache before downstream acceptance",
-    ):
-        start = workflow.index(f"- name: {step_name}")
-        block = workflow[start : start + 450]
-        assert "if: always() && needs.parse.outputs.report_mode == 'DEEP'" in block
-        assert "actions/cache/save@v4" in block
+    assert "Persist deterministic Stage-2 derived projection cache" in workflow
+    assert "v12-stage2-derived-" in workflow
+    assert "Persist exact P1.7 decision-core cache before downstream acceptance" not in workflow
+    assert "Persist deterministic MC summary cache before downstream acceptance" not in workflow
+    assert "v12-p17-decision-" not in workflow
+    assert "v12-mc-summary-" not in workflow
 
 
 def _p17_core_surface_rows(projections):

@@ -60,6 +60,9 @@ from src.engines.v12_deep_delivery import (
     select_personal_evidence,
     validate_deep_decision_content_delivery,
 )
+from src.engines.v12_personal_data_plane import (
+    collect_personal_evidence_candidates,
+)
 from src.engines.v12_final_delivery_barrier import validate_final_delivery_barrier
 from src.engines.v12_report_orchestration import (
     build_actionable_price_radar,
@@ -802,88 +805,23 @@ def _personal_evidence_resolution(
     state: Mapping[str, Any] | None = None,
     *,
     planning_gw: int,
+    private_data_root: Path | None = None,
+    allow_legacy_private_sources: bool = True,
+    require_private_personal: bool = False,
 ) -> dict[str, Any]:
-    candidates: list[dict[str, Any]] = []
-    personal_dir = runtime_root / "data/v6/personal"
-    for path in sorted(personal_dir.glob("*current_team*.json")):
-        payload = _read_json(path, {}) or {}
-        candidates.append({
-            "source": str(path.relative_to(runtime_root)),
-            "source_class": "AUTHENTICATED_CURRENT_TEAM",
-            "payload": payload,
-            "observed_at": payload.get("generated_at"),
-            "gw": payload.get("gw"),
-            "auth_state": payload.get("auth_state"),
-        })
-    confirmed = dict(
-        ((state or {}).get("confirmed_current_squad_state") or {})
+    candidates = collect_personal_evidence_candidates(
+        runtime_root=runtime_root,
+        legacy_state=state,
+        planning_gw=planning_gw,
+        private_root=private_data_root,
+        allow_legacy_private_sources=allow_legacy_private_sources,
+        require_private_personal=require_private_personal,
+        enforce_public_disclosure=not allow_legacy_private_sources,
     )
-    explicit_at = (
-        confirmed.get("explicit_user_confirmed_at")
-        or confirmed.get("evidence_timestamp")
-        or confirmed.get("confirmed_at")
-    )
-    explicit_gw = (
-        confirmed.get("applicable_planning_gw")
-        or confirmed.get("planning_gw")
-        or confirmed.get("gw")
-    )
-    explicit_flag = confirmed.get("explicit_user_confirmation") is True
-    if explicit_at and explicit_gw is not None and explicit_flag:
-        players: list[dict[str, Any]] = []
-        for group, position in (
-            ("goalkeepers", "GK"),
-            ("defenders", "DEF"),
-            ("midfielders", "MID"),
-            ("forwards", "FWD"),
-        ):
-            for item in confirmed.get(group) or []:
-                if not isinstance(item, Mapping):
-                    continue
-                element = item.get("element_id", item.get("element"))
-                if element is None:
-                    continue
-                players.append({
-                    **dict(item),
-                    "element_id": int(element),
-                    "position": position,
-                })
-        candidates.append({
-            "source": "FPL_MASTER_STATE_V12:EXPLICIT_USER_CONFIRMED",
-            "source_class": "USER_CONFIRMED",
-            "payload": {
-                "players": players,
-                "generated_at": explicit_at,
-                "gw": explicit_gw,
-                "bank": confirmed.get("bank"),
-                "chips": confirmed.get("chips"),
-                "availability": confirmed.get("availability") or {},
-            },
-            "observed_at": explicit_at,
-            "gw": explicit_gw,
-            "auth_state": "USER_CONFIRMED",
-            "applicable_planning_gw": int(explicit_gw),
-            "explicit_confirmation": True,
-        })
-
-    submitted = _read_json(
-        personal_dir / "submitted_picks.json",
-        {},
-    ) or {}
-    if submitted:
-        candidates.append({
-            "source": "data/v6/personal/submitted_picks.json",
-            "source_class": "OFFICIAL_SUBMITTED_PICKS",
-            "payload": submitted,
-            "observed_at": submitted.get("generated_at"),
-            "gw": submitted.get("gw"),
-            "auth_state": "PUBLIC_OFFICIAL",
-        })
     return select_personal_evidence(
         candidates,
         planning_gw=planning_gw,
     )
-
 
 def _position_from_official(row: Mapping[str, Any]) -> str:
     mapping = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
@@ -4580,6 +4518,9 @@ def run_deep(
     output_dir: Path,
     checkpoint_time: str | None = None,
     previous_visible_deep_dir: Path | None = None,
+    private_data_root: Path | None = None,
+    allow_legacy_private_sources: bool = True,
+    require_private_personal: bool = False,
 ) -> dict[str, Any]:
     ledger: list[dict[str, Any]] = []
     stage2_cache_proof: dict[str, Any] = {}
@@ -4654,10 +4595,6 @@ def run_deep(
     bootstrap = official["bootstrap"]
     fixtures = official["fixtures"]
     planning_gw = _planning_gw(bootstrap)
-    private_current_team = _read_json(
-        runtime_data_root / "data/v6/personal/current_team.json",
-        {},
-    ) or {}
     personal_resolution = _stage(
         ledger,
         "PERSONAL_EVIDENCE_RECONCILIATION",
@@ -4665,8 +4602,14 @@ def run_deep(
             runtime_data_root,
             state,
             planning_gw=planning_gw,
+            private_data_root=private_data_root,
+            allow_legacy_private_sources=allow_legacy_private_sources,
+            require_private_personal=require_private_personal,
         ),
         required=True,
+    )
+    private_current_team = dict(
+        (personal_resolution or {}).get("payload") or {}
     )
     owned = _stage(
         ledger,
@@ -6309,6 +6252,17 @@ def main() -> int:
     parser.add_argument("--checkpoint-time", default=None)
     parser.add_argument("--previous-visible-deep-dir", default=None)
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--private-data-root", default=None)
+    parser.add_argument(
+        "--disable-legacy-private-sources",
+        action="store_true",
+        help="Do not read personal current-team/manual state from public repo surfaces.",
+    )
+    parser.add_argument(
+        "--require-private-personal",
+        action="store_true",
+        help="Fail closed when the private personal plane is unavailable.",
+    )
     args = parser.parse_args()
     mode = str(args.report_mode).upper()
     if mode not in SUPPORTED_MODES:
@@ -6334,6 +6288,13 @@ def main() -> int:
                 if args.previous_visible_deep_dir
                 else None
             ),
+            private_data_root=(
+                Path(args.private_data_root)
+                if args.private_data_root
+                else None
+            ),
+            allow_legacy_private_sources=not args.disable_legacy_private_sources,
+            require_private_personal=bool(args.require_private_personal),
         )
     print(
         json.dumps(

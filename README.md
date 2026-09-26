@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-26T15:39:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-26T20:25:01+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -20,7 +20,7 @@ The Canonical V12 DEEP report is a **23-section fail-closed human-facing contrac
 
 Occurrence-stage observability fingerprints normalize supported runtime `datetime` values to deterministic ISO-8601 strings before hashing. This keeps personal-evidence reconciliation auditable without changing evidence selection, football analytics, V6 facts, or decision semantics.
 
-Stage-A semantic correctness is also fail-closed across producer and delivery boundaries. S17 binds private-auth health to `data/v6/personal/current_team.json:auth_state` instead of inferring authentication from current-squad identity resolution; S14B may say `SAVE FT` or `ROLL FT` only when current free-transfer authority is known; S14 separates football-frontier completeness from execution-economics availability and marks non-HOLD routes non-executable when finance is degraded; S06 names `XI_BASE_XPTS`, `CAPTAIN_ADJUSTED_XPTS`, and `LINEUP_ROUTE_UTILITY` explicitly; S10/S12/S13 expose predictor evidence age/freshness while S12/S13 retain terminal governed `date_state` semantics. The regression contract is grounded in sanitized evidence extracted from production occurrence `36126675342`, not a synthetic reconstruction.
+Stage-A semantic correctness is also fail-closed across producer and delivery boundaries. S17 binds private-auth health to the selected private personal-evidence payload instead of a public `current_team.json` path or an inference from current-squad identity resolution; S14B may say `SAVE FT` or `ROLL FT` only when current free-transfer authority is known; S14 separates football-frontier completeness from execution-economics availability and marks non-HOLD routes non-executable when finance is degraded; S06 names `XI_BASE_XPTS`, `CAPTAIN_ADJUSTED_XPTS`, and `LINEUP_ROUTE_UTILITY` explicitly; S10/S12/S13 expose predictor evidence age/freshness while S12/S13 retain terminal governed `date_state` semantics. The regression contract is grounded in sanitized evidence extracted from production occurrence `36126675342`, not a synthetic reconstruction.
 
 Stage-B report hardening keeps the existing football math unchanged while strengthening discovery/context semantics. S05 derives GW topology from official fixture rows, consumes optional verified competition-agnostic schedule evidence, renders descriptive workload/travel states, keeps DGW fixtures separate, marks BGW players explicitly, and forbids static fatigue or weather-driven football-model mutation. When no non-PL schedule authority is bound, S05 degrades truthfully while retaining authoritative PL topology/workload. S11 now has two distinct surfaces: exact positional `Scanner20` (5 GK / 5 DEF / 5 MID / 5 FWD when COMPLETE) and an unpadded `Actionable Watchlist` subset gated by the existing P1.1-derived security thresholds plus position-specific evidence completeness. Position formulae are watchlist evidence/admission only, price remains overlay-only, and neither watchlist surface may emit `ACT`.
 
@@ -717,3 +717,26 @@ v12-integrated-report-runner workflow still deliberately checks out main, so a
 genuine natural production acceptance can only attest the SHA that is actually
 on production main. A branch or PR run must never be mislabeled as natural
 production acceptance.\n\nNatural-acceptance hardening additionally aligns visible validation with the current Stage-D/E human contract: Scanner20 validation is scoped to the ranked Scanner20 table rather than the adjacent unpadded Actionable Watchlist; S18 validation follows the multi-axis table labels; S15B exposes explicit starter/captain/vice count and EO field labels; and Stage3 accepts S03/S05 degradation only when it proves truthful missing-baseline or missing optional non-PL schedule authority, never as a blanket degradation waiver.\n
+
+### V12 private decision and personal-data delivery plane
+
+The V12 delivery architecture separates public compute/public factual state from
+owner-specific personal state and decision output. The public repository remains
+the authority for source code, model logic, reproducible football facts and
+allowlisted operational proof. Full report bodies, exact routes, XI/bench/C/VC,
+chip/staging/scenario output, authenticated current-team state, manual captures
+and private finance belong to the private storage plane.
+
+The integrated report workflow publishes canonical report material to the
+private repository first, verifies a delivery receipt, and exposes only an
+allowlisted public proof. Private-delivery failure is fail-closed and never
+falls back to publishing the full report publicly. Stage-2 derived cache remains
+public-safe; exact P1.7 decision-core and Monte Carlo decision caches are
+runner-local/private-required. The V6 acquisition methodology is unchanged:
+authenticated current-team state is split from the candidate tree before public
+publication, while reproducible post-deadline submitted picks and league facts
+remain public factual inputs.
+
+Internal V12 section IDs remain S01..S19 plus S06B/S14B/S15B/S16B. The privacy
+boundary does not change optimizer, package, Monte Carlo, captain, mini-league,
+S03 delta, or section semantics.

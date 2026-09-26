@@ -1651,8 +1651,9 @@ def test_stage_d_legacy_single_wait_s01_cannot_satisfy_multi_axis_dashboard():
     }
     body = render_deep_text(report)
     failures = validate_deep_decision_content_delivery(report, body)
+    assert "MULTI-AXIS DECISION DASHBOARD" in body
     assert "S01_AXIS_INVALID=TRANSFER" in failures
-    assert "S01_MULTI_AXIS_NOT_VISIBLE" in failures
+    assert "S01_MULTI_AXIS_NOT_VISIBLE" not in failures
 
 
 def test_stage_d_legacy_compact_s02_missing_human_decision_fields_fails_closed():

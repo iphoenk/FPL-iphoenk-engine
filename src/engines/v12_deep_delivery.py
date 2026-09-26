@@ -299,11 +299,211 @@ def validate_deep_decision_content_delivery(
     if routes and "BEST ALTERNATIVE" not in upper:
         failures.append("ACTION_BOARD_NOT_LINKED_TO_FRONTIER")
 
+    # Stage-D human-usable semantic barrier. Structural presence or a raw
+    # nested dict is insufficient for these visible decision surfaces.
+    s01 = content("S01")
+    if state("S01") == "COMPLETE":
+        dashboard = dict(s01.get("decision_dashboard") or {})
+        for key, allowed in (
+            ("TRANSFER", {"WAIT", "PREPARE", "ACT"}),
+            ("XI", {"WAIT", "PREPARE", "LOCK"}),
+            ("CAPTAIN", {"WAIT", "PREPARE", "LOCK"}),
+            ("CHIP", {"WAIT", "PREPARE", "ACT", "DEGRADED"}),
+            ("PRICE", {"MONITOR", "PREPARE", "MATERIAL"}),
+            ("PERSONAL_AUTH", {"AVAILABLE", "DEGRADED", "UNAVAILABLE"}),
+        ):
+            if str(dashboard.get(key) or "").upper() not in allowed:
+                failures.append(f"S01_AXIS_INVALID={key}")
+        for key in ("PLANNING_GW", "PRIMARY_REASON", "KEY_DRIVER", "CURRENT_BLOCKERS"):
+            if key not in dashboard:
+                failures.append(f"S01_DASHBOARD_FIELD_MISSING={key}")
+        if "MULTI-AXIS DECISION DASHBOARD" not in upper:
+            failures.append("S01_MULTI_AXIS_NOT_VISIBLE")
+
+    s02 = content("S02")
+    rows02 = [
+        dict(row) for row in s02.get("rows") or []
+        if isinstance(row, Mapping)
+    ]
+    if state("S02") == "COMPLETE":
+        ids02 = [
+            int(row.get("element_id") or 0)
+            for row in rows02
+            if int(row.get("element_id") or 0) > 0
+        ]
+        if len(rows02) != 15 or len(ids02) != 15 or len(set(ids02)) != 15:
+            failures.append(f"S02_CURRENT15_IDENTITY_INVALID={len(set(ids02))}/15")
+        authority = dict(s02.get("current15_authority") or {})
+        for key in (
+            "source_class", "observed_at", "applicable_gw",
+            "auth_state", "finance_availability",
+        ):
+            if key not in authority:
+                failures.append(f"S02_AUTHORITY_FIELD_MISSING={key}")
+        for index, row in enumerate(rows02, start=1):
+            for key in (
+                "position", "club", "current_price", "opponent", "home_away",
+                "p_start", "xmins", "projection_1gw", "projection_3gw",
+                "projection_5gw", "tactical_role_label",
+                "injury_rotation_warning", "price_relevance", "ownership_source",
+            ):
+                if key not in row:
+                    failures.append(f"S02_HUMAN_FIELD_MISSING={index}:{key}")
+                    break
+        if "CURRENT15 AUTHORITY:" not in upper:
+            failures.append("S02_AUTHORITY_NOT_VISIBLE")
+        for token in ("H/A", "OWNERSHIP SOURCE"):
+            if token not in upper:
+                failures.append(f"S02_VISIBLE_FIELD_MISSING={token}")
+
+    s03 = content("S03")
+    delta = dict(s03.get("decision_delta") or {})
+    baseline_state = str(delta.get("baseline_state") or "").upper()
+    if state("S03") == "COMPLETE":
+        if baseline_state != "AVAILABLE":
+            failures.append("S03_COMPLETE_WITHOUT_PREVIOUS_VISIBLE_DEEP")
+        rows = [
+            dict(row) for row in delta.get("rows") or []
+            if isinstance(row, Mapping)
+        ]
+        if not rows and "NO MATERIAL DECISION CHANGE" not in upper:
+            failures.append("S03_NO_CHANGE_SENTINEL_MISSING")
+    elif state("S03") == "DEGRADED":
+        if baseline_state != "UNAVAILABLE":
+            failures.append("S03_DEGRADED_BASELINE_STATE_INVALID")
+        if "BASELINE UNAVAILABLE" not in upper:
+            failures.append("S03_BASELINE_DEGRADATION_NOT_VISIBLE")
+        if delta.get("no_recomputation_no_numeric_delta") is not True:
+            failures.append("S03_NUMERIC_DELTA_GUARD_MISSING")
+
+    s04 = content("S04")
+    if state("S04") == "COMPLETE":
+        changes = [
+            dict(row) for row in s04.get("changes") or []
+            if isinstance(row, Mapping)
+        ]
+        allowed_classes = {"NEW", "IMPROVED", "WORSENED", "UNCHANGED"}
+        seen = set()
+        for index, row in enumerate(changes, start=1):
+            classification = str(row.get("classification") or "").upper()
+            if classification not in allowed_classes:
+                failures.append(f"S04_CLASSIFICATION_INVALID={index}")
+            if not row.get("scope") or not row.get("event_kind"):
+                failures.append(f"S04_SCOPE_KIND_MISSING={index}")
+            fingerprint = (
+                classification,
+                str(row.get("scope") or ""),
+                str(row.get("subject") or ""),
+                str(row.get("summary") or ""),
+            )
+            if fingerprint in seen:
+                failures.append(f"S04_DUPLICATE_CHANGE={index}")
+            seen.add(fingerprint)
+        if "MATERIAL DEVELOPMENTS" not in upper:
+            failures.append("S04_CLASSIFIED_DEVELOPMENTS_NOT_VISIBLE")
+
+    s07 = content("S07")
+    if state("S07") == "COMPLETE":
+        battles = [
+            dict(row) for row in s07.get("battles") or []
+            if isinstance(row, Mapping)
+        ]
+        for index, row in enumerate(battles, start=1):
+            for key in (
+                "p_start_a", "p_start_b", "xmins_a", "xmins_b",
+                "projection_1gw_a", "projection_1gw_b",
+                "fixture_a", "fixture_b", "workload_a", "workload_b",
+                "role_a", "role_b", "eo_a", "eo_b",
+                "direct_eo_a", "direct_eo_b", "final_starter",
+                "utility_margin", "tactical_reason",
+            ):
+                if key not in row:
+                    failures.append(f"S07_BATTLE_FIELD_MISSING={index}:{key}")
+                    break
+        if battles and "DIRECT EO A" not in upper:
+            failures.append("S07_DIRECT_EO_NOT_VISIBLE")
+
+    if state("S10") == "COMPLETE":
+        if "PREDICTION_STRENGTH" not in upper:
+            failures.append("S10_PREDICTION_STRENGTH_NOT_VISIBLE")
+
+    s15 = content("S15")
+    if state("S15") == "COMPLETE":
+        evidence = dict(s15.get("evidence_quality") or {})
+        required_categories = {
+            "Official public FPL",
+            "CURRENT15 identity",
+            "authenticated personal auth",
+            "authenticated finance",
+            "chips",
+            "fixtures/calendar",
+            "workload/travel",
+            "tactical",
+            "post-match underlying",
+            "price factual",
+            "price predictor freshness",
+            "mini-league submitted picks",
+            "mini-league standings/live",
+            "weather",
+            "model snapshot",
+        }
+        missing_categories = sorted(required_categories - set(evidence))
+        if missing_categories:
+            failures.append(
+                "S15_EVIDENCE_CATEGORY_MISSING=" + ",".join(missing_categories)
+            )
+        if "EVIDENCE QUALITY BY SOURCE CATEGORY" not in upper:
+            failures.append("S15_CATEGORY_GRADING_NOT_VISIBLE")
+
+    if state("S16") == "COMPLETE":
+        for token in (
+            "PGOAL", "PASSIST", "PRETURN", "PHAUL", "PBLANK",
+            "XG90", "NPXG90", "XA90", "XGI90",
+            "WORKLOAD/REST", "BAYESIAN", "ML RELEVANCE",
+        ):
+            if token not in upper:
+                failures.append(f"S16_VISIBLE_FIELD_MISSING={token}")
+        if "POSTERIOR_RATES" in upper:
+            failures.append("S16_RAW_POSTERIOR_DICT_VISIBLE")
+
+    if detailed_match_available:
+        if "TRAJECTORY INTERPRETATION:" not in upper:
+            failures.append("S16B_TRAJECTORY_INTERPRETATION_MISSING")
+        # Historical rows are observations. Repeating a posterior on every
+        # match line would falsely imply per-row model execution.
+        for line in str(body or "").splitlines():
+            if line.lstrip().startswith("- GW") and "BAYESIAN" in line.upper():
+                failures.append("S16B_POSTERIOR_REPEATED_PER_MATCH")
+                break
+
+    if state("S18") == "COMPLETE":
+        board = dict(s18.get("action_board") or {})
+        axes = [
+            dict(row) for row in board.get("axes") or []
+            if isinstance(row, Mapping)
+        ]
+        axis_names = {str(row.get("axis") or "").upper() for row in axes}
+        required_axes = {
+            "TRANSFER", "XI", "CAPTAIN", "PRICE",
+            "AUTH/FINANCE", "INJURY/TEAM NEWS",
+        }
+        if not required_axes.issubset(axis_names):
+            failures.append("S18_MULTI_AXIS_INCOMPLETE")
+        if "MULTI-AXIS ACTION BOARD" not in upper:
+            failures.append("S18_MULTI_AXIS_NOT_VISIBLE")
+        if board.get("best_alternative") is not None and (
+            "best_alternative_executable" not in board
+        ):
+            failures.append("S18_ALTERNATIVE_EXECUTION_STATE_MISSING")
+
     # Fail closed when a COMPLETE decision-critical section is not explicitly
     # bound to its authoritative producer payload. This prevents presentation
     # code from silently reconstructing optimizer, Rank20, XI, mini-league,
     # ALL15, or post-match outputs.
-    governed = ("S06", "S08", "S11", "S12", "S13", "S14", "S15B", "S16", "S16B", "S19")
+    governed = (
+        "S01", "S02", "S04", "S06", "S07", "S08", "S10", "S11",
+        "S12", "S13", "S14", "S15", "S15B", "S16", "S16B", "S18", "S19",
+    )
     for sid in governed:
         if state(sid) != "COMPLETE":
             continue

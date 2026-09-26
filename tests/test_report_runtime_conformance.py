@@ -2090,3 +2090,10 @@ def test_131_nonterminal_bound_core_states_cannot_complete_occurrence():
                 publish_integrity=None,
                 authoritative_runtime_snapshot=False,
             )
+
+
+def test_integrated_runner_requires_terminal_same_occurrence_prefetch_before_trigger():
+    canonical = Path("control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt").read_text(encoding="utf-8")
+    assert "wait for terminal SUCCESS plus exact runtime-data-v6 readback" in canonical
+    assert "QUEUED or IN_PROGRESS prefetch is NOT permission" in canonical
+    assert "NOT_ATTEMPTED_PREFETCH_NOT_TERMINAL" in canonical

@@ -5069,7 +5069,15 @@ def _render_deep_visible_contract_lines(
             if exposure_rows:
                 lines.extend(
                     _markdown_table(
-                        ("Player", "OWN", "START", "BENCH", "C", "VC", "EO units / denom = EO%"),
+                        (
+                            "Player",
+                            "OWNERSHIP_COUNT",
+                            "STARTER_COUNT",
+                            "BENCH_COUNT",
+                            "CAPTAIN_COUNT",
+                            "VICE_COUNT",
+                            "EO_PCT / units / denominator",
+                        ),
                         [
                             (
                                 _mini_player(item, owned=True),
@@ -5165,7 +5173,15 @@ def _render_deep_visible_contract_lines(
         if threats:
             lines.extend(
                 _markdown_table(
-                    ("Player", "OWN", "START", "BENCH", "C", "VC", "EO"),
+                    (
+                        "Player",
+                        "OWNERSHIP_COUNT",
+                        "STARTER_COUNT",
+                        "BENCH_COUNT",
+                        "CAPTAIN_COUNT",
+                        "VICE_COUNT",
+                        "EO_PCT / units / denominator",
+                    ),
                     [
                         (
                             _mini_player(item, owned=False),

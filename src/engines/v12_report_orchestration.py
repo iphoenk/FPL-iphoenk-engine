@@ -2983,6 +2983,34 @@ def _markdown_cell(value: Any) -> str:
     return text.replace("|", "/").replace("\n", " ").strip()
 
 
+def _human_summary(value: Any) -> str:
+    """Compact nested evidence without Python/JSON dict syntax."""
+    if value is None:
+        return "UNAVAILABLE"
+    if isinstance(value, Mapping):
+        parts: list[str] = []
+        for key, item in value.items():
+            label = str(key).replace("_", " ")
+            if isinstance(item, Mapping):
+                sub = ", ".join(
+                    f"{str(k).replace('_', ' ')}={v}"
+                    for k, v in item.items()
+                    if v not in (None, "", [], {})
+                )
+                if sub:
+                    parts.append(f"{label}: {sub}")
+            elif isinstance(item, (list, tuple, set)):
+                vals = ", ".join(str(x) for x in item)
+                if vals:
+                    parts.append(f"{label}: {vals}")
+            elif item not in (None, ""):
+                parts.append(f"{label}={item}")
+        return "; ".join(parts) if parts else "UNAVAILABLE"
+    if isinstance(value, (list, tuple, set)):
+        return ", ".join(_human_summary(item) for item in value) or "UNAVAILABLE"
+    return str(value)
+
+
 def _markdown_table(
     headers: Sequence[str],
     rows: Sequence[Sequence[Any]],
@@ -4161,7 +4189,7 @@ def _render_deep_visible_contract_lines(
                     (
                         key,
                         (value or {}).get("state") if isinstance(value, Mapping) else value,
-                        _markdown_cell({
+                        _human_summary({
                             k: v
                             for k, v in dict(value or {}).items()
                             if k != "state"
@@ -4530,11 +4558,11 @@ def _render_deep_visible_contract_lines(
                     (
                         row.get("axis"),
                         row.get("NOW"),
-                        _markdown_cell(row.get("NEXT")),
-                        _markdown_cell(row.get("TRIGGER TO ACT")),
-                        _markdown_cell(row.get("LATEST SAFE DECISION POINT")),
-                        _markdown_cell(row.get("COST OF WAITING")),
-                        _markdown_cell(row.get("ABORT / REVERSAL")),
+                        _human_summary(row.get("NEXT")),
+                        _human_summary(row.get("TRIGGER TO ACT")),
+                        _human_summary(row.get("LATEST SAFE DECISION POINT")),
+                        _human_summary(row.get("COST OF WAITING")),
+                        _human_summary(row.get("ABORT / REVERSAL")),
                     )
                     for row in axes
                 ],
@@ -4543,7 +4571,7 @@ def _render_deep_visible_contract_lines(
         alt = board.get("best_alternative")
         lines.append(
             "BEST ALTERNATIVE: "
-            + _markdown_cell(alt)
+            + _human_summary(alt)
             + f" | EXECUTABLE={board.get('best_alternative_executable')}"
         )
         excluded.extend((
@@ -4623,7 +4651,7 @@ def _render_deep_visible_contract_lines(
                     "xG90", "npxG90", "xA90", "xGI90",
                     "shots", "SIB", "SOT", "BC", "box", "KP", "CC",
                     "role / pen / set-piece", "DefCon", "workload/rest",
-                    "fixture", "Bayesian", "upside", "risk", "ML relevance"
+                    "fixture", "Bayesian / posterior", "upside", "risk", "ML relevance"
                 ),
                 [
                     (
@@ -4650,14 +4678,14 @@ def _render_deep_visible_contract_lines(
                         (row.get("underlying") or {}).get("box_touches"),
                         (row.get("underlying") or {}).get("key_passes"),
                         (row.get("underlying") or {}).get("chances_created"),
-                        _markdown_cell(row.get("role_detail")),
-                        _markdown_cell(row.get("defensive_contribution")),
-                        _markdown_cell(row.get("workload_context")),
-                        _markdown_cell(row.get("fixture_detail")),
-                        _markdown_cell(row.get("bayesian_state")),
+                        _human_summary(row.get("role_detail")),
+                        _human_summary(row.get("defensive_contribution")),
+                        _human_summary(row.get("workload_context")),
+                        _human_summary(row.get("fixture_detail")),
+                        _human_summary(row.get("bayesian_state")),
                         row.get("main_upside"),
-                        _markdown_cell(row.get("main_risk")),
-                        _markdown_cell(row.get("mini_league_relevance")),
+                        _human_summary(row.get("main_risk")),
+                        _human_summary(row.get("mini_league_relevance")),
                     )
                     for row in rows
                 ],
@@ -4736,12 +4764,12 @@ def _render_deep_visible_contract_lines(
                 f"Bayesian={item.get('bayesian_state', payload.get('bayesian_update'))} | "
                 f"current P(start)={item.get('p_start')} | current xMins={item.get('xmins')} | "
                 f"1/3/5GW={item.get('projection_1gw')}/{item.get('projection_3gw')}/{item.get('projection_5gw')} | "
-                f"price={item.get('price')} | ML={_markdown_cell(item.get('mini_league_relevance'))} | "
+                f"price={item.get('price')} | ML={_human_summary(item.get('mini_league_relevance'))} | "
                 f"action={item.get('action')}"
             )
             link = item.get("linkup_dependency")
             if link:
-                lines.append("LINK-UP DEPENDENCY: " + _markdown_cell(link))
+                lines.append("LINK-UP DEPENDENCY: " + _human_summary(link))
         candidates = [
             dict(item)
             for item in payload.get("material_universe_candidates") or []
@@ -4760,7 +4788,13 @@ def _render_deep_visible_contract_lines(
                     f"P(start)={(item.get('minutes') or {}).get('p_start')} | "
                     f"1/3/5GW={item.get('horizon_1gw')}/{item.get('horizon_3gw')}/{item.get('horizon_5gw')}"
                 )
-        excluded.extend(("our15", "material_universe_candidates"))
+        excluded.extend((
+            "our15",
+            "material_universe_candidates",
+            "full_universe_scan",
+            "raw_contextual_dynamics",
+            "debug",
+        ))
 
     elif section_id == "S17":
         lines.extend(

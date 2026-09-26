@@ -1,6 +1,6 @@
 # FPL iphoenk Engine — V6 Data Plane + Canonical V12 Decision Plane
 
-> **Last runtime/documentation sync:** `2026-09-25T16:36:00+07:00`
+> **Last runtime/documentation sync:** `2026-09-26T13:05:42+07:00`
 > **Synchronization basis:** active `main` architecture, `config/v6/schedule_policy.json`, `config/v6/source_activation.json`, and current V12 authority paths.  
 > This timestamp describes when the human-readable repository documentation was last reconciled to the runtime/control-plane contract. Mutable live health still comes from `runtime-data-v6`.
 
@@ -516,6 +516,12 @@ The active system enforces these architectural boundaries:
 - Current runtime truth is never inferred from historical README text.
 
 Repository governance and V6 CI must remain GREEN before a bounded repair is treated as accepted.
+
+### P1 private decision and personal-data boundary
+
+V12 delivery now has an explicit security classification contract for the P1 hardening work. Public surfaces are limited to reproducible football facts, model/source code, and allowlisted operational proof. Owner-specific current-team/finance/manual state and all route/XI/bench/C/VC/chip/staging/scenario outputs are private-plane material. Stage-2 derived projection cache remains public-safe by evidence; exact P1.7 and Monte Carlo route-linked caches are private-required and must not use the public GitHub Actions cache. The migration is fail-closed and must preserve V12 mathematics, S01–S19 plus B-section IDs, S03 semantics, and canonical report content.
+
+The full pre-change exposure inventory and non-destructive cleanup candidates are tracked in `docs/security/FPL_V12_P1_PUBLIC_EXPOSURE_AUDIT_20260926.md`. Private repository creation, credential provisioning, synthetic acceptance, and real DEEP acceptance remain gates before P1 can be called GREEN.
 
 ### Documentation synchronization contract
 

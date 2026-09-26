@@ -152,3 +152,12 @@ def test_private_repository_runtime_hydration_uses_explicit_read_auth():
     assert "AUTHORIZATION: basic $read_auth" in workflow
     assert workflow.count("AUTHORIZATION: basic $read_auth") >= 3
     assert "persist-credentials: false" in workflow
+
+
+def test_non_v6_issue_comments_cannot_replace_pending_governed_prefetch():
+    workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
+    assert "fpl-v6-noncommand-{0}" in workflow
+    assert "!startsWith(github.event.comment.body, '/v6-report-prefetch')" in workflow
+    assert "!startsWith(github.event.comment.body, '/v6-manual-recovery')" in workflow
+    assert "'fpl-v6-hourly-data-ingestion'" in workflow
+    assert "cancel-in-progress: false" in workflow

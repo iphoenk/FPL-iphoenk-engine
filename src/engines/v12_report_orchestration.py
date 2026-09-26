@@ -3048,11 +3048,19 @@ def materialize_match_report(
             }
         )
 
+    pending_substitution_map = {
+        str(row.get("element")): "pending"
+        for row in players
+        if int(row.get("multiplier") or 0) > 0
+        and str(row.get("fixture_status") or "").upper() == "FT"
+        and int(row.get("minutes") or 0) == 0
+        and row.get("element") is not None
+    }
     global_autosub_state = {
         "status": (score.get("autosub_implications") or {}).get("status") or "PROVISIONAL",
         "potential_out": (score.get("autosub_implications") or {}).get("potential_out") or [],
         "bench_candidates": (score.get("autosub_implications") or {}).get("bench_candidates") or [],
-        "final_substitution_map": {},
+        "final_substitution_map": pending_substitution_map,
         "official_finalization_authoritative": True,
     }
     icon = dict(icon_live or {})

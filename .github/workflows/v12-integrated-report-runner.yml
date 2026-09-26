@@ -1,10 +1,6 @@
 name: V12 integrated report runner
 
 on:
-  # TEMPORARY P1-N branch-acceptance trigger. Remove after evidence capture.
-  push:
-    branches:
-      - delivery/private-plane-p1-20260926-r2
   workflow_dispatch:
     inputs:
       report_mode:
@@ -41,11 +37,6 @@ concurrency:
 jobs:
   parse:
     if: >-
-      (
-        github.event_name == 'push' &&
-        github.actor == github.repository_owner &&
-        github.ref_name == 'delivery/private-plane-p1-20260926-r2'
-      ) ||
       (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) ||
       (
         github.event_name == 'issue_comment' &&
@@ -76,14 +67,7 @@ jobs:
           from pathlib import Path
           from zoneinfo import ZoneInfo
 
-          if os.environ["EVENT_NAME"] == "push":
-              mode = "DEEP"
-              slot = datetime.now(ZoneInfo("Asia/Jakarta")).replace(
-                  microsecond=0
-              ).isoformat()
-              checkpoint = ""
-              profile_mode = "OFF"
-          elif os.environ["EVENT_NAME"] == "workflow_dispatch":
+          if os.environ["EVENT_NAME"] == "workflow_dispatch":
               mode = os.environ.get("INPUT_MODE") or "DEEP"
               slot = os.environ.get("INPUT_SLOT") or ""
               if slot.strip().upper() == "AUTO":
@@ -133,7 +117,7 @@ jobs:
       - name: Checkout report code authority
         uses: actions/checkout@v4
         with:
-          ref: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref_name || 'main' }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || 'main' }}
           path: app
 
       - name: Checkout factual runtime-data-v6
@@ -163,7 +147,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Prepare branch-only real DEEP acceptance snapshot
-        if: (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref_name != 'main' && needs.parse.outputs.report_mode == 'DEEP'
+        if: github.event_name == 'workflow_dispatch' && github.ref_name != 'main' && needs.parse.outputs.report_mode == 'DEEP'
         working-directory: app
         env:
           REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
@@ -402,7 +386,7 @@ jobs:
         env:
           REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
           GH_TOKEN: ${{ github.token }}
-          P1_BRANCH_ACCEPTANCE: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref_name != 'main' }}
+          P1_BRANCH_ACCEPTANCE: ${{ github.event_name == 'workflow_dispatch' && github.ref_name != 'main' }}
         run: |
           set -euo pipefail
           rm -rf artifacts/previous-deep

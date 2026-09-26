@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-27T04:02:05+07:00`  
-> **Production main at sync:** `b8d743c0c0c135f3878fa73b6b6c1f1834b46304`  
+> **Last runtime/documentation sync:** `2026-09-27T04:17:07+07:00`  
+> **Production main at sync:** `bac636e00e91eb4ab1e6dcc8f2741f2792e22367`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -17,6 +17,8 @@ The core principle is:
 > **V6 tells V12 what is factually true. V12 decides what those facts mean for FPL.**
 
 Delivery, privacy, latency, historical-validation and consumption architecture are governed by `docs/v12/FPL_V12_DELIVERY_ARCHITECTURE_PLAN_REV6.md`. Revision 6 supersedes earlier Delivery Architecture Plan wording where inconsistent.
+
+Visible delivery timing is machine-governed by `config/delivery/v12_delivery_schedule.json`: DEEP at 04:30/12:30/21:30 Asia/Jakarta, PRICE at 23:30 Europe/London with DST-safe WIB conversion, exact deadline checkpoints, quiet-hour handling, single-report overlap, and T-15/T-10 precompute timing.
 
 ## Questions it answers
 

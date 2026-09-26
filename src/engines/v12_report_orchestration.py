@@ -2812,6 +2812,7 @@ def materialize_natural_post_match_report(
     signal_delta: Mapping[str, Any] | None = None,
     current_gw_locked: bool = False,
     locked_state: Mapping[str, Any] | None = None,
+    match_consequence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Natural V12 post-match renderer binding projections -> movers -> report.
 
@@ -2853,6 +2854,100 @@ def materialize_natural_post_match_report(
     report["post_match_deep_source"] = (
         "projections.post_match_deep_analysis"
     )
+
+    overlap_modes = {
+        "OVERLAP",
+        "FULL+MATCH",
+        "MATCH+FULL",
+        "DEEP+MATCH",
+        "MATCH+DEEP",
+        "PRICE+MATCH",
+        "MATCH+PRICE",
+        "DEADLINE+MATCH",
+        "MATCH+DEADLINE",
+    }
+    consequence = (
+        dict(match_consequence)
+        if isinstance(match_consequence, Mapping)
+        else {}
+    )
+    if mode in overlap_modes:
+        if not consequence or not str(
+            consequence.get("status") or consequence.get("summary") or ""
+        ).strip():
+            raise ReportOrchestrationError(
+                "overlap report requires explicit locked submitted-pick match consequence"
+            )
+        target = next(
+            (
+                row
+                for row in report.get("sections") or []
+                if str(row.get("section_id") or "").upper() == "S04"
+            ),
+            None,
+        )
+        if not isinstance(target, dict):
+            raise ReportOrchestrationError(
+                "overlap report requires DEEP S04 material-development surface"
+            )
+        target_content = dict(target.get("content") or {})
+        if "match_consequence" in target_content:
+            raise ReportOrchestrationError(
+                "match consequence may be materialized only once"
+            )
+        target_content["match_consequence"] = consequence
+        target["content"] = target_content
+
+    update_proof = dict(projections.get("model_update_execution") or {})
+    actual_update = bool(
+        update_proof.get("executed") is True
+        and update_proof.get("previous_value") is not None
+        and update_proof.get("current_value") is not None
+        and str(update_proof.get("evidence_time") or "").strip()
+    )
+    model_update_status = (
+        {
+            "status": "POSTERIOR UPDATED",
+            "previous_value": update_proof.get("previous_value"),
+            "current_value": update_proof.get("current_value"),
+            "evidence_time": update_proof.get("evidence_time"),
+        }
+        if actual_update
+        else {
+            "status": "MODEL UPDATE PENDING",
+            "reason": (
+                "completed-match evidence is calibration input until the "
+                "authoritative model is actually recomputed"
+            ),
+        }
+    )
+    target_for_update = next(
+        (
+            row
+            for row in report.get("sections") or []
+            if str(row.get("label") or "").upper() == str(target_label or "").upper()
+            or str(row.get("section_id") or "").upper() == str(target_label or "").upper()
+        ),
+        None,
+    )
+    if isinstance(target_for_update, dict):
+        target_content = dict(target_for_update.get("content") or {})
+        target_content["model_update_status"] = model_update_status
+        target_for_update["content"] = target_content
+
+    report["lifecycle_contract"] = {
+        "single_visible_report": True,
+        "reported_mode": mode,
+        "structural_mode": structural_mode,
+        "post_match_incremental": mode != "POST_ALL_MATCH",
+        "post_match_return_mode": (
+            "POST_ALL_MATCH" if mode == "POST_ALL_MATCH" else "MATCH"
+        ),
+        "match_consequence_preserved": (
+            True if mode in overlap_modes else None
+        ),
+        "model_update_status": model_update_status["status"],
+    }
     return report
 
 

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "authority": "FPL_V12_D_P3_PRIVATE_CACHE_AEAD",
+  "profiles": {
+    "SECURE_NO_PERSONAL_CACHE": {
+      "persist_personal_decision_cache": false,
+      "secret_required": false
+    },
+    "SECURE_ENCRYPTED_PERSONAL_CACHE": {
+      "persist_personal_decision_cache": true,
+      "secret_required": true
+    }
+  },
+  "algorithm": "AES-256-GCM",
+  "key_bytes": 32,
+  "nonce_bytes": 12,
+  "crypto_version": 1,
+  "key_env": "FPL_V12_PRIVATE_CACHE_KEY_B64",
+  "aad_fields": [
+    "cache_key",
+    "schema_version",
+    "crypto_version"
+  ],
+  "decrypt_failure_behavior": "SAFE_MISS_RECOMPUTE",
+  "public_personal_cache_allowed": false,
+  "pr_fork_secret_access_allowed": false,
+  "plaintext_fallback_allowed": false
+}

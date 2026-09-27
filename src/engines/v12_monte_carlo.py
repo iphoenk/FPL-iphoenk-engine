@@ -29,6 +29,7 @@ from src.engines.private_cache_crypto import (
     SECURE_ENCRYPTED_PERSONAL_CACHE,
     SECURE_NO_PERSONAL_CACHE,
     PrivateCacheCryptoError,
+    PrivateCacheMiss,
     decrypt_bytes,
     encrypt_bytes,
     load_key_from_env,
@@ -1106,6 +1107,7 @@ def _load_mc_summary_cache(key: str) -> dict[str, Any] | None:
             ):
                 return deepcopy(dict(payload["summary"]))
         except (
+            PrivateCacheMiss,
             OSError,
             json.JSONDecodeError,
             EOFError,

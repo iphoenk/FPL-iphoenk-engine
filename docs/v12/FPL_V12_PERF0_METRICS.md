@@ -36,6 +36,10 @@ Every sample records:
 
 Four logical CPUs are never reported as four physical cores without evidence.
 
+## Controlled COLD private-cache profile
+
+A controlled `profile_mode=COLD` run is a correctness/performance baseline and must execute with `SECURE_NO_PERSONAL_CACHE`. It must not restore or persist P1.7/MC personal-decision caches and must not require or receive the production private-cache decrypt key. Normal non-COLD production runs continue to require `SECURE_ENCRYPTED_PERSONAL_CACHE` and fail closed when the production key is unavailable.
+
 ## Frozen timing buckets
 
 1. GitHub queue, when separable and observable.

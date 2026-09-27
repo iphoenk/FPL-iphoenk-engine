@@ -331,27 +331,39 @@ def _public_personal_and_mini_league_evidence(
 ) -> dict[str, Any]:
     """Prove current public Official FPL squad + mini-league evidence.
 
-    Authenticated /me is deliberately diagnostic only here. Stage 2 needs a
-    current 15-player identity surface and current public mini-league facts,
-    both of which Official FPL exposes without an authenticated private session.
-    This function consumes only already-published V6 artifacts read-only.
+    Authenticated/private current-team state is deliberately diagnostic-only.
+    The public acceptance consumes the already-published post-deadline Official
+    FPL mini-league manager-picks surface and never requires data/v6/personal/*.
     """
-    # Compatibility-only parameter: private current-team state is deliberately
-    # ignored. Stage-2 acceptance is proven from disclosed public evidence.
     _ = current_team
-    submitted = _read_json(
-        runtime_data_root / "data/v6/personal/submitted_picks.json"
-    )
-    memberships = _read_json(
-        runtime_data_root / "data/v6/personal/memberships.json"
-    )
     prefetch = _read_json(
         runtime_data_root / "data/v6/report_prefetch/latest.json"
     )
-
+    entry_id = int(prefetch.get("entry_id") or 0)
+    priority_league_id = int(prefetch.get("priority_league_id") or 0)
+    gw = int(prefetch.get("gw") or 0)
+    standings = (
+        _read_json(
+            runtime_data_root
+            / f"data/v6/mini_leagues/{priority_league_id}/standings.json"
+        )
+        if priority_league_id > 0
+        else {}
+    )
+    manager_picks = (
+        _read_json(
+            runtime_data_root
+            / f"data/v6/mini_leagues/{priority_league_id}/gw_{gw}_manager_picks.json"
+        )
+        if priority_league_id > 0 and gw > 0
+        else {}
+    )
+    manager_entry = dict(
+        (manager_picks.get("entries") or {}).get(str(entry_id)) or {}
+    )
     submitted_picks = [
         dict(row)
-        for row in submitted.get("picks") or []
+        for row in manager_entry.get("picks") or []
         if isinstance(row, Mapping)
     ]
     submitted_ids = {
@@ -364,55 +376,21 @@ def _public_personal_and_mini_league_evidence(
         for row in owned
         if int(row.get("element_id") or 0) > 0
     }
-    entry_id = int(
-        submitted.get("entry_id")
-        or prefetch.get("entry_id")
-        or 0
-    )
-    submitted_lineage = dict(submitted.get("lineage") or {})
     current_public_squad = bool(
-        str(submitted.get("status") or "").upper() == "AVAILABLE"
+        prefetch.get("public_core_complete") is True
+        and str(prefetch.get("public_personal_status") or "").upper()
+        == "AVAILABLE"
+        and not (prefetch.get("public_control_failures") or [])
         and entry_id > 0
-        and int(submitted_lineage.get("http_status") or 0) == 200
-        and str(submitted_lineage.get("origin") or "").upper()
-        == "LIVE_FETCHED_CURRENT_GW"
+        and priority_league_id > 0
+        and gw > 0
+        and int(manager_entry.get("http_status") or 0) == 200
         and len(submitted_picks) == 15
         and len(submitted_ids) == 15
         and len(owned_ids) == 15
         and submitted_ids == owned_ids
     )
 
-    priority = [
-        dict(row)
-        for row in memberships.get("priority_resolution") or []
-        if isinstance(row, Mapping)
-        and str(row.get("resolution_status") or "").upper() == "RESOLVED"
-    ]
-    priority_league_id = int(
-        prefetch.get("priority_league_id")
-        or (priority[0].get("league_id") if priority else 0)
-        or 0
-    )
-    standings = (
-        _read_json(
-            runtime_data_root
-            / f"data/v6/mini_leagues/{priority_league_id}/standings.json"
-        )
-        if priority_league_id > 0
-        else {}
-    )
-    gw = int(submitted.get("gw") or prefetch.get("gw") or 0)
-    manager_picks = (
-        _read_json(
-            runtime_data_root
-            / f"data/v6/mini_leagues/{priority_league_id}/gw_{gw}_manager_picks.json"
-        )
-        if priority_league_id > 0 and gw > 0
-        else {}
-    )
-    manager_entry = dict(
-        (manager_picks.get("entries") or {}).get(str(entry_id)) or {}
-    )
     expected_managers = int(
         standings.get("expected_manager_count")
         or prefetch.get("expected_manager_count")
@@ -424,20 +402,14 @@ def _public_personal_and_mini_league_evidence(
         or 0
     )
     public_mini_league = bool(
-        priority_league_id > 0
-        and prefetch.get("public_core_complete") is True
-        and str(prefetch.get("public_personal_status") or "").upper()
-        == "AVAILABLE"
+        current_public_squad
         and str(prefetch.get("mini_league_status") or "").upper()
         == "AVAILABLE"
-        and not (prefetch.get("public_control_failures") or [])
         and standings.get("complete") is True
         and expected_managers > 0
         and collected_managers == expected_managers
         and manager_picks.get("complete") is True
         and float(manager_picks.get("coverage_percent") or 0.0) >= 100.0
-        and int(manager_entry.get("http_status") or 0) == 200
-        and len(manager_entry.get("picks") or []) == 15
     )
     return {
         "current_public_squad_available": current_public_squad,
@@ -445,8 +417,8 @@ def _public_personal_and_mini_league_evidence(
         "entry_id": entry_id,
         "submitted_gw": gw,
         "submitted_pick_count": len(submitted_picks),
-        "submitted_http_status": submitted_lineage.get("http_status"),
-        "submitted_origin": submitted_lineage.get("origin"),
+        "submitted_http_status": manager_entry.get("http_status"),
+        "submitted_origin": "PUBLIC_MINI_LEAGUE_MANAGER_PICKS",
         "priority_league_id": priority_league_id,
         "priority_league_name": prefetch.get("priority_league_name"),
         "standings_complete": standings.get("complete"),
@@ -455,9 +427,10 @@ def _public_personal_and_mini_league_evidence(
         "manager_picks_complete": manager_picks.get("complete"),
         "manager_picks_coverage_percent": manager_picks.get("coverage_percent"),
         "manager_entry_http_status": manager_entry.get("http_status"),
-        "manager_entry_pick_count": len(manager_entry.get("picks") or []),
+        "manager_entry_pick_count": len(submitted_picks),
         "authenticated_session_required": False,
-        "source": "V6_PUBLISHED_OFFICIAL_FPL_PUBLIC_READ_ONLY",
+        "personal_runtime_files_required": False,
+        "source": "V6_PUBLISHED_OFFICIAL_FPL_PUBLIC_MINI_LEAGUE_READ_ONLY",
     }
 
 
@@ -498,12 +471,31 @@ def run_acceptance(
         team_strength=strength,
     )
 
-    submitted_for_owned = _read_json(
-        runtime_data_root / "data/v6/personal/submitted_picks.json"
+    prefetch_for_owned = _read_json(
+        runtime_data_root / "data/v6/report_prefetch/latest.json"
+    )
+    entry_id_for_owned = int(prefetch_for_owned.get("entry_id") or 0)
+    league_id_for_owned = int(
+        prefetch_for_owned.get("priority_league_id") or 0
+    )
+    gw_for_owned = int(prefetch_for_owned.get("gw") or 0)
+    manager_picks_for_owned = (
+        _read_json(
+            runtime_data_root
+            / f"data/v6/mini_leagues/{league_id_for_owned}/gw_{gw_for_owned}_manager_picks.json"
+        )
+        if league_id_for_owned > 0 and gw_for_owned > 0
+        else {}
+    )
+    manager_entry_for_owned = dict(
+        (manager_picks_for_owned.get("entries") or {}).get(
+            str(entry_id_for_owned)
+        )
+        or {}
     )
     submitted_rows = [
         dict(row)
-        for row in submitted_for_owned.get("picks") or []
+        for row in manager_entry_for_owned.get("picks") or []
         if isinstance(row, Mapping)
     ]
     owned = _owned15(

@@ -28,13 +28,13 @@ Default consumer timing is:
 
 ## Report routing contract
 
-| Report kind | Personal | Mini league | Event live |
-|---|---:|---:|---:|
-| `full_master` | yes | yes | no |
-| `match_mode` | yes | yes | yes |
-| `deadline_review` | yes | configurable, default no | no |
-| `05:30_price` | no | no | no |
-| `ad_hoc` | explicit requested scope only | explicit requested scope only | explicit requested scope only |
+| Report kind | Personal | Mini league | Event live | Set-piece notes |
+|---|---:|---:|---:|---:|
+| `full_master` | yes | yes | no | optional public FACT |
+| `match_mode` | yes | yes | yes | no |
+| `deadline_review` | yes | yes | no | optional public FACT |
+| `05:30_price` | no | governed price scope | no | no |
+| `ad_hoc` | explicit requested scope only | explicit requested scope only | explicit requested scope only | no |
 
 The `05:30_price` route is a hard no-op for personal and league acquisition. It may expose an older artifact timestamp as reference metadata, but it must publish `NOT_REFRESHED_FOR_05_30_PRICE_CHECKPOINT` and `request_count=0` for the prefetch invocation.
 
@@ -162,6 +162,7 @@ data/v6/
     live_state.json
   report_prefetch/
     latest.json
+    set_piece_notes.json  # full_master/deadline_review only; public FACT, advisory
   health/
     report_prefetch.json
 ```
@@ -180,6 +181,8 @@ Canonical historical inputs are submitted manager picks, Official event points, 
 
 Each prefetch artifact preserves applicable Official endpoint class, checked time, HTTP status, payload digest, live/cache origin, GW, entry ID, league ID, pagination coverage, and normalization version.
 
+For `set_piece_notes.json`, the artifact is additionally bound to the exact `report_prefetch_run_id`, report kind and logical report slot. Downstream P1.6 must ignore mismatched/stale occurrence evidence and may never mutate xMins, xPts or P(start) directly from these notes.
+
 `report_prefetch/latest.json` records request identity, logical slot, requested domains, domain statuses, source/control failures, completeness, cache state, live check time, artifact digests, and telemetry.
 
 Telemetry includes request count/failures, manager count, cache hits/misses, duration, bounded concurrency, and target-report freshness. Telemetry describes acquisition behavior, not FPL decision quality.
@@ -197,6 +200,7 @@ Failure isolation is explicit:
 - authenticated personal failure does not invalidate unrelated public or league facts;
 - one manager-picks failure produces partial coverage with the exact missing entry ID;
 - event-live failure leaves submitted picks valid and marks live data unavailable;
+- set-piece-note failure is advisory-only and cannot fail the public core; placeholder-only notes remain non-actionable;
 - standings failure never claims current rank or full coverage;
 - duplicate priority-league identity fails closed;
 - malformed or timezone-naive logical slots are rejected;

@@ -1,7 +1,7 @@
 # FPL V12 D-P3 Private Cache Crypto
 
 > Status: PREPARED / NOT YET PRODUCTION-ACTIVE  
-> Change timestamp: 2026-09-27T14:57:31+07:00  
+> Change timestamp: 2026-09-27T15:20:00+07:00
 > Production base at preparation: `508f1ed919b9b37540cc604d92bdfe5075e96366`
 
 ## Purpose
@@ -51,4 +51,19 @@ The key must never be committed, logged, written into artifact metadata, or expo
 10. key loader rejects missing/malformed/non-256-bit keys;
 11. personal payload markers and raw key material absent from serialized envelope.
 
-This preparation is not CRYPTO GREEN by itself. Production closure still requires private P1.7/MC cache integration, fork/secret safety, no plaintext fallback in the active path, cold/warm semantic equality, required CI/governance, and the mandated natural post-merge acceptance.
+## Production wiring prepared
+
+The integrated V12 workflow now selects the cache profile explicitly:
+
+- owner-triggered production main / issue transport uses `SECURE_ENCRYPTED_PERSONAL_CACHE`;
+- non-main branch acceptance uses `SECURE_NO_PERSONAL_CACHE`;
+- branch acceptance must not receive `FPL_V12_PRIVATE_CACHE_KEY_B64`;
+- production encrypted mode fails before canonical compute when the key is absent or does not decode to exactly 32 bytes;
+- P1.7 and MC persistence uses only `*.aead.json` files;
+- restored production cache directories are rejected if any non-AEAD file is present;
+- encrypted cache save occurs only after successful execution;
+- no `pull_request_target` secret-bearing path exists.
+
+P1.7 and MC retain their existing deterministic cache keys, model ownership, 500k Monte Carlo requirement and canonical semantics. Only persistence encoding/profile behavior changes. Authentication failure becomes an exact recomputation path and never a plaintext fallback.
+
+This preparation is not CRYPTO GREEN by itself. Production closure still requires exact-head CI/governance, proof that the production secret is provisioned, cold/warm semantic equality, successful encrypted cache reuse on a governed production run, and the mandated natural post-merge acceptance.

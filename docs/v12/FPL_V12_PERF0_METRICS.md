@@ -66,7 +66,7 @@ If a phase timestamp is absent, the phase is `UNAVAILABLE`. It must not be infer
 - no cherry-picked fast-run baseline;
 - sample basis is frozen before percentile computation.
 
-The requested PERF-0 closure still requires approximately 20 comparable real production/public-runner executions. This branch freezes the definition only; it does not fabricate missing historical timing fields.
+The requested PERF-0 closure still requires approximately 20 comparable real production/public-runner executions. Current public-safe extraction is recorded in `docs/audits/FPL_V12_PERF0_BASELINE_EVIDENCE_20260927.json`. Three real DEEP runs were recovered with 500,000-path MC and successful private delivery, but all three had required `CORE_SLOT_BINDING=PARTIAL / CORE_SLOT_MISMATCH`; therefore they remain diagnostic-only and the primary comparable sample count is truthfully `0/20`. No p50/p90 is computed from them.
 
 ## Warm acceptance relation
 

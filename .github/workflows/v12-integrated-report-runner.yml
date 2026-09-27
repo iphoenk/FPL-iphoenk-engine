@@ -372,13 +372,72 @@ jobs:
 
       # P1 privacy: exact P1.7 and MC payloads contain private decision state.
       # They remain runner-local and never enter the public GitHub Actions cache.
-      - name: Ensure ephemeral P1.7 decision-cache directory
+      - name: Select governed private-cache profile
+        id: private-cache-profile
         working-directory: app
-        run: mkdir -p .cache/v12-p17
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          PROD_PRIVATE_CACHE_KEY: ${{ (github.event_name == 'issue_comment' || github.ref_name == 'main') && secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 || '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "issue_comment" || "$REF_NAME" == "main" ]]; then
+            echo "profile=SECURE_ENCRYPTED_PERSONAL_CACHE" >> "$GITHUB_OUTPUT"
+            if [[ -z "$PROD_PRIVATE_CACHE_KEY" ]]; then
+              echo "D-P3 production encrypted-cache key is unavailable" >&2
+              exit 1
+            fi
+            PROD_PRIVATE_CACHE_KEY="$PROD_PRIVATE_CACHE_KEY" python - <<'PY'
+          import base64
+          import os
 
-      - name: Ensure ephemeral MC decision-cache directory
+          raw = os.environ["PROD_PRIVATE_CACHE_KEY"]
+          key = base64.b64decode(raw, validate=True)
+          if len(key) != 32:
+              raise SystemExit("D-P3 production key must decode to exactly 32 bytes")
+          print("D-P3 production encrypted-cache key contract: PASS")
+          PY
+          else
+            echo "profile=SECURE_NO_PERSONAL_CACHE" >> "$GITHUB_OUTPUT"
+            if [[ -n "$PROD_PRIVATE_CACHE_KEY" ]]; then
+              echo "branch acceptance unexpectedly received production decrypt key" >&2
+              exit 1
+            fi
+          fi
+
+      - name: Restore encrypted private decision caches
+        if: steps.private-cache-profile.outputs.profile == 'SECURE_ENCRYPTED_PERSONAL_CACHE'
+        id: private-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            app/.cache/v12-p17
+            app/.cache/v12-mc
+          key: >-
+            v12-private-aead-v1-${{ runner.os }}-${{
+              hashFiles(
+                'app/src/engines/private_cache_crypto.py',
+                'app/src/engines/v12_lineup_optimizer.py',
+                'app/src/engines/v12_monte_carlo.py',
+                'app/src/engines/v12_cache_runtime_identity.py',
+                'app/config/intelligence/v12_lineup_optimizer.json',
+                'app/config/intelligence/v12_monte_carlo.json'
+              )
+            }}-${{ github.run_id }}
+          restore-keys: |
+            v12-private-aead-v1-${{ runner.os }}-${{ hashFiles('app/src/engines/private_cache_crypto.py', 'app/src/engines/v12_lineup_optimizer.py', 'app/src/engines/v12_monte_carlo.py', 'app/src/engines/v12_cache_runtime_identity.py', 'app/config/intelligence/v12_lineup_optimizer.json', 'app/config/intelligence/v12_monte_carlo.json') }}-
+
+      - name: Ensure private decision-cache directories
         working-directory: app
-        run: mkdir -p .cache/v12-mc
+        run: |
+          mkdir -p .cache/v12-p17 .cache/v12-mc
+          if [[ "${{ steps.private-cache-profile.outputs.profile }}" == "SECURE_ENCRYPTED_PERSONAL_CACHE" ]]; then
+            if find .cache/v12-p17 .cache/v12-mc -type f ! -name '*.aead.json' -print -quit | grep -q .; then
+              echo "non-AEAD file found in restored production personal cache" >&2
+              exit 1
+            fi
+          fi
 
       - name: Restore previous valid DEEP baseline from private history
         if: needs.parse.outputs.report_mode == 'DEEP'
@@ -452,6 +511,8 @@ jobs:
           V12_STAGE2_DERIVED_CACHE_DIR: .cache/v12-stage2
           V12_P17_DECISION_CACHE_DIR: .cache/v12-p17
           V12_MC_SIM_CACHE_DIR: .cache/v12-mc
+          V12_PRIVATE_CACHE_PROFILE: ${{ steps.private-cache-profile.outputs.profile }}
+          FPL_V12_PRIVATE_CACHE_KEY_B64: ${{ (github.event_name == 'issue_comment' || github.ref_name == 'main') && secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 || '' }}
         run: |
           private_input_root="../private-reports"
           if [ -f ../acceptance-private-input/personal/current_team.json ]; then
@@ -506,6 +567,56 @@ jobs:
         with:
           path: app/.cache/v12-stage2
           key: v12-stage2-derived-${{ runner.os }}-${{ hashFiles('app/src/engines/v12_stage2_derived_cache.py', 'app/src/models/historical_projection.py', 'app/src/engines/v12_contextual_dynamics.py', 'app/src/engines/v12_player_events.py', 'app/src/engines/v12_player_minutes.py', 'app/src/engines/v12_position_probability_components.py', 'app/src/engines/p0_decision_quality.py', 'app/src/models/v12_stage1_analytics.py', 'app/src/rules.py', 'app/config/intelligence/player_events.json', 'app/config/intelligence/player_minutes.json', 'app/config/intelligence/historical_priors.json', 'app/config/intelligence/v12_contextual_dynamics.json') }}-${{ github.run_id }}
+
+      - name: Enforce encrypted private-cache artifact boundary
+        if: always() && steps.private-cache-profile.outputs.profile == 'SECURE_ENCRYPTED_PERSONAL_CACHE'
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          if find .cache/v12-p17 .cache/v12-mc -type f ! -name '*.aead.json' -print -quit | grep -q .; then
+            echo "production personal cache contains non-AEAD persistence" >&2
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          allowed = {
+              "schema_version",
+              "crypto_version",
+              "nonce_b64",
+              "ciphertext_b64",
+              "tag_b64",
+          }
+          for root in (Path(".cache/v12-p17"), Path(".cache/v12-mc")):
+              for path in root.rglob("*.aead.json"):
+                  payload = json.loads(path.read_text(encoding="utf-8"))
+                  if set(payload) != allowed:
+                      raise SystemExit(
+                          f"unexpected D-P3 envelope metadata in {path}"
+                      )
+          print("D-P3 encrypted persistence boundary: PASS")
+          PY
+
+      - name: Persist encrypted private decision caches
+        if: always() && steps.private-cache-profile.outputs.profile == 'SECURE_ENCRYPTED_PERSONAL_CACHE'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            app/.cache/v12-p17
+            app/.cache/v12-mc
+          key: >-
+            v12-private-aead-v1-${{ runner.os }}-${{
+              hashFiles(
+                'app/src/engines/private_cache_crypto.py',
+                'app/src/engines/v12_lineup_optimizer.py',
+                'app/src/engines/v12_monte_carlo.py',
+                'app/src/engines/v12_cache_runtime_identity.py',
+                'app/config/intelligence/v12_lineup_optimizer.json',
+                'app/config/intelligence/v12_monte_carlo.json'
+              )
+            }}-${{ github.run_id }}
 
       - name: Read integrated runner proof
         id: proof

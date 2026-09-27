@@ -14,25 +14,55 @@
       "id": "CORE_PUBLIC_SNAPSHOT",
       "owner_service": "official_snapshot",
       "scope": "current planning/submitted/scoring state",
-      "endpoint_families": ["bootstrap-static","fixtures","event-status","entry","entry-history","entry-transfers","current-entry-picks","current-event-live","purchase-baseline-picks"]
+      "endpoint_families": [
+        "bootstrap-static",
+        "fixtures",
+        "event-status",
+        "entry",
+        "entry-history",
+        "entry-transfers",
+        "current-entry-picks",
+        "current-event-live",
+        "purchase-baseline-picks"
+      ]
     },
     {
       "id": "PUBLIC_DETAIL_EXPANSION",
       "owner_service": "official_detail",
       "scope": "expensive/lazy detail and historical submitted-team expansion not present in core snapshot",
-      "endpoint_families": ["element-summary","set-piece-notes","dream-team","entry-cup","league-standings","historical-entry-picks"]
+      "endpoint_families": [
+        "element-summary",
+        "dream-team",
+        "entry-cup",
+        "league-standings",
+        "historical-entry-picks"
+      ]
+    },
+    {
+      "id": "REPORT_PREFETCH_SET_PIECE_NOTES",
+      "owner_service": "v6_report_prefetch",
+      "scope": "exact visible-report occurrence advisory Official FPL set-piece-note evidence only",
+      "endpoint_families": [
+        "set-piece-notes"
+      ],
+      "hard_gate": false,
+      "direct_model_override_forbidden": true
     },
     {
       "id": "HISTORICAL_PREDICTION_SETTLEMENT",
       "owner_service": "prediction_evaluation",
       "scope": "finished historical GW actuals needed to settle frozen predictions",
-      "endpoint_families": ["historical-event-live"]
+      "endpoint_families": [
+        "historical-event-live"
+      ]
     },
     {
       "id": "PRIVATE_AUTHENTICATED_PRECISION",
       "owner_service": "authenticated_official",
       "scope": "authorized unpublished private current-team precision",
-      "endpoint_families": ["private-my-team"]
+      "endpoint_families": [
+        "private-my-team"
+      ]
     }
   ]
 }

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-27T00:44:00Z`  
+> **Last runtime/documentation sync:** `2026-09-27T00:46:00Z`  
 > **Production main at sync:** `bac636e00e91eb4ab1e6dcc8f2741f2792e22367`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 

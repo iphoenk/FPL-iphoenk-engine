@@ -600,7 +600,7 @@ jobs:
           PY
 
       - name: Persist encrypted private decision caches
-        if: always() && steps.private-cache-profile.outputs.profile == 'SECURE_ENCRYPTED_PERSONAL_CACHE'
+        if: success() && steps.private-cache-profile.outputs.profile == 'SECURE_ENCRYPTED_PERSONAL_CACHE'
         uses: actions/cache/save@v4
         with:
           path: |

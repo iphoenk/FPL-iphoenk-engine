@@ -756,7 +756,19 @@ class PrefetchService:
         set_piece_notes_status = "NOT_REQUESTED"
         set_piece_notes_checked_at = None
         if set_piece_notes_requested and client is not None:
-            set_piece_result = client.set_piece_notes()
+            set_piece_fetch = getattr(client, "set_piece_notes", None)
+            set_piece_result = (
+                set_piece_fetch()
+                if callable(set_piece_fetch)
+                else {
+                    "status": "NOT_SUPPORTED",
+                    "endpoint_class": "set_piece_notes",
+                    "checked_at": generated_at,
+                    "http_status": None,
+                    "payload_digest": None,
+                    "payload": None,
+                }
+            )
             set_piece_notes_checked_at = set_piece_result.get("checked_at")
             if set_piece_result.get("status") == "LIVE" and isinstance(
                 set_piece_result.get("payload"), dict

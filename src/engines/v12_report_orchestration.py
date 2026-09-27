@@ -4528,6 +4528,27 @@ def _render_deep_visible_contract_lines(
         )
 
     elif section_id == "S09":
+        lines.append("### CHIP LEDGER")
+        ledger = payload.get("chip_ledger")
+        if isinstance(ledger, Mapping):
+            for chip_name, chip_value in ledger.items():
+                if isinstance(chip_value, Mapping):
+                    lines.append(
+                        f"- {str(chip_name).upper()}: "
+                        + " | ".join(f"{k}={v}" for k, v in chip_value.items())
+                    )
+                else:
+                    lines.append(f"- {str(chip_name).upper()}: {chip_value}")
+        else:
+            lines.append(f"- CHIP LEDGER: {ledger or 'UNAVAILABLE'}")
+        lines.append(
+            "REMAINING CHIP SET: derive only from authoritative chip ledger; "
+            "never resurrect USED chips as executable options."
+        )
+        lines.append(
+            "FREE HIT OPTIMIZATION: when FH is the only remaining first-half chip, "
+            "compare current-window uplift against preservation/opportunity cost."
+        )
         bgw = dict(payload.get("bgw_context") or {})
         lines.append(bgw_visible_line("S09", bgw))
         lines.append(
@@ -5049,6 +5070,46 @@ def _render_deep_visible_contract_lines(
             )
         else:
             lines.append("UNAVAILABLE — no supportable rank battle rows")
+
+        full_comp = [
+            dict(item)
+            for item in payload.get("league_full_composition") or []
+            if isinstance(item, Mapping)
+        ]
+        lines.append("### FULL ICON+ COMPOSITION")
+        lines.append(
+            f"UNIQUE PLAYERS: {payload.get('league_unique_player_count')} | "
+            f"COMPLETE={payload.get('league_full_composition_complete')}"
+        )
+        if full_comp:
+            lines.extend(
+                _markdown_table(
+                    (
+                        "Pos", "Player", "OWNERSHIP_COUNT", "STARTER_COUNT",
+                        "BENCH_COUNT", "CAPTAIN_COUNT", "VICE_COUNT",
+                        "EO_PCT / units / denominator", "OUR15"
+                    ),
+                    [
+                        (
+                            item.get("position"),
+                            _mini_player(item, owned=bool(item.get("our15"))),
+                            _mini_ratio(item, "ownership_count", "ownership_pct"),
+                            _mini_ratio(item, "starter_count", "starter_pct"),
+                            _mini_ratio(item, "bench_count", "bench_pct"),
+                            _mini_ratio(item, "captain_count", "captain_pct"),
+                            _mini_ratio(item, "vice_count", "vice_pct"),
+                            _mini_ratio(
+                                item, "effective_multiplier_sum", "eo_pct",
+                                numerator_key="effective_multiplier_sum"
+                            ),
+                            item.get("our15"),
+                        )
+                        for item in full_comp
+                    ],
+                )
+            )
+        else:
+            lines.append("UNAVAILABLE — complete unique-player composition not materialized")
 
         for scope_key, payload_key in (
             ("LEAGUE", "league_our15_exposure"),

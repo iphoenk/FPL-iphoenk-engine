@@ -1,0 +1,129 @@
+{
+  "schema_version": 2,
+  "authority": "FPL_V12_PERF0_METRIC_CONTRACT",
+  "sample_target": 20,
+  "comparability": {
+    "production_natural_only_for_primary_baseline": true,
+    "report_mode": "DEEP",
+    "minimum_mc_paths": 500000,
+    "require_canonical_cold_equivalence": true,
+    "separate_runtime_classes": true,
+    "exclude_synthetic_from_primary_distribution": true,
+    "exclude_branch_acceptance_from_primary_distribution": true,
+    "exclude_partial_or_skipped_phase_runs": true,
+    "exclude_non_comparable_runtime_profiles": true,
+    "do_not_mix_normalized_and_native": true,
+    "no_cherry_picked_fast_run_baseline": true
+  },
+  "required_sample_metadata": {
+    "main_sha": "REQUIRED",
+    "runtime_data_sha": "REQUIRED",
+    "run_id": "REQUIRED",
+    "logical_cpu_count": "REQUIRED",
+    "physical_core_estimate": "REQUIRED_IF_SUPPORTABLE_ELSE_UNAVAILABLE",
+    "cpu_model": "REQUIRED_IF_AVAILABLE",
+    "runtime_class": "REQUIRED",
+    "python_version": "REQUIRED",
+    "numpy_version": "REQUIRED",
+    "openblas_version": "REQUIRED_IF_AVAILABLE",
+    "simd_features": "REQUIRED_IF_AVAILABLE",
+    "thread_count": "REQUIRED_IF_AVAILABLE",
+    "cache_profile": "REQUIRED",
+    "cache_state": "REQUIRED"
+  },
+  "metrics": {
+    "github_queue_seconds": {
+      "start": "workflow_created_at",
+      "end": "job_queue_exit_or_runner_assignment_at",
+      "fallback": "UNAVAILABLE",
+      "notes": "Do not infer when GitHub does not expose a separable queue boundary."
+    },
+    "runner_provisioning_startup_seconds": {
+      "start": "runner_assignment_or_provisioning_started_at",
+      "end": "first_runner_job_started_at",
+      "fallback": "UNAVAILABLE",
+      "notes": "Do not derive physical-core count from logical CPU count."
+    },
+    "queue_plus_startup_seconds": {
+      "start": "workflow_created_at",
+      "end": "first_runner_job_started_at",
+      "fallback": "UNAVAILABLE",
+      "diagnostic_only": true
+    },
+    "setup_seconds": {
+      "start": "first_runner_job_started_at",
+      "end": "install_runtime_dependencies_completed_at",
+      "fallback": "UNAVAILABLE"
+    },
+    "factual_acquisition_seconds": {
+      "start": "governed_report_prefetch_request_observed_at",
+      "end": "bound_report_prefetch_terminal_publication_at",
+      "fallback": "UNAVAILABLE"
+    },
+    "stage2_seconds": {
+      "source": "occurrence_bound_internal_phase_timing",
+      "fallback": "UNAVAILABLE"
+    },
+    "p1_2a_seconds": {
+      "source": "occurrence_bound_internal_phase_timing",
+      "fallback": "UNAVAILABLE"
+    },
+    "p1_2b_seconds": {
+      "source": "occurrence_bound_internal_phase_timing",
+      "fallback": "UNAVAILABLE"
+    },
+    "p1_7_seconds": {
+      "source": "occurrence_bound_internal_phase_timing",
+      "fallback": "UNAVAILABLE"
+    },
+    "mc_seconds": {
+      "source": "canonical_monte_carlo_performance_elapsed_seconds",
+      "require_actual_paths_at_least": 500000,
+      "fallback": "UNAVAILABLE"
+    },
+    "render_seconds": {
+      "start": "render_started_at",
+      "end": "render_completed_at",
+      "fallback": "UNAVAILABLE"
+    },
+    "qa_seconds": {
+      "start": "post_render_qa_started_at",
+      "end": "post_render_qa_completed_at",
+      "fallback": "UNAVAILABLE"
+    },
+    "private_publish_seconds": {
+      "start": "private_publication_started_at",
+      "end": "validated_private_publication_completed_at",
+      "fallback": "UNAVAILABLE"
+    },
+    "cold_total_seconds": {
+      "start": "workflow_created_at",
+      "end": "validated_private_publication_completed_at",
+      "fallback": "UNAVAILABLE"
+    },
+    "warm_t0_t1_seconds": {
+      "start": "event_or_owner_command_received_by_warm_worker",
+      "end": "validated_private_result_published",
+      "cold_queue_included": false,
+      "fallback": "UNAVAILABLE"
+    }
+  },
+  "summary_rules": {
+    "p50_min_samples": 3,
+    "p90_min_samples": 10,
+    "max_min_samples": 1,
+    "never_infer_missing_phase_timing": true,
+    "report_sample_count_with_every_statistic": true,
+    "freeze_sample_basis_before_percentile_computation": true,
+    "report_per_stage_distribution": true
+  },
+  "physical_cpu_rule": {
+    "logical_cpu_is_not_physical_core_count": true,
+    "unsupported_physical_core_estimate": "UNAVAILABLE"
+  },
+  "warm_acceptance": {
+    "target_seconds_lte": 15,
+    "require_warm_equals_canonical_cold": true,
+    "queue_and_provisioning_excluded": true
+  }
+}

@@ -120,7 +120,7 @@ def test_0530_standard_scope_is_service_resolved_and_requires_league_facts():
         event_name="workflow_dispatch",
         dispatch_values={
             "report_kind": "05:30_price",
-            "logical_slot": "2026-09-07T05:30:00+07:00",
+            "logical_slot": "2026-09-07T05:30+07:00",
             "scope": "",
             "gw_from": "",
             "gw_to": "",
@@ -129,6 +129,8 @@ def test_0530_standard_scope_is_service_resolved_and_requires_league_facts():
     )
 
     assert summary["report_kind"] == "05:30_price"
+    assert summary["logical_slot"] == "2026-09-07T05:30:00+07:00"
+    assert env["V6_PREFETCH_LOGICAL_SLOT"] == "2026-09-07T05:30:00+07:00"
     assert env["V6_PREFETCH_PERSONAL"] == "false"
     assert env["V6_PREFETCH_MINI_LEAGUE"] == "false"
     assert env["V6_PREFETCH_LIVE"] == "false"
@@ -141,6 +143,36 @@ def test_0530_standard_scope_is_service_resolved_and_requires_league_facts():
     assert 'if report_kind == "05:30_price":' in validator
     assert 'prefetch["telemetry"]["request_count"] > 0' in validator
     assert 'prefetch["mini_league_requested"] is True' in validator
+
+
+@pytest.mark.parametrize(
+    ("raw_slot", "canonical_slot"),
+    [
+        ("2026-09-27T05:30+07:00", "2026-09-27T05:30:00+07:00"),
+        ("2026-09-27T05:30:00+07:00", "2026-09-27T05:30:00+07:00"),
+        ("2026-09-26T22:30:00+00:00", "2026-09-26T22:30:00+00:00"),
+    ],
+)
+def test_report_prefetch_slot_identity_is_canonicalized_at_control_boundary(
+    raw_slot,
+    canonical_slot,
+):
+    policy = load_policy()
+    env, summary = resolve_prefetch(
+        policy,
+        event_name="workflow_dispatch",
+        dispatch_values={
+            "report_kind": "05:30_price",
+            "logical_slot": raw_slot,
+            "scope": "",
+            "gw_from": "",
+            "gw_to": "",
+            "force": "true",
+        },
+    )
+
+    assert summary["logical_slot"] == canonical_slot
+    assert env["V6_PREFETCH_LOGICAL_SLOT"] == canonical_slot
 
 
 def test_priority_league_id_is_not_hardcoded_in_executable_v6_code():

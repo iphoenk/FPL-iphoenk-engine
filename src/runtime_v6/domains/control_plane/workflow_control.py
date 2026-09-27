@@ -485,11 +485,20 @@ def resolve_prefetch(
         if not logical_slot:
             raise WorkflowControlError("report-prefetch logical_slot is required")
         try:
-            parse_timestamp(logical_slot, label="report-prefetch logical_slot")
+            parsed_logical_slot = parse_timestamp(
+                logical_slot,
+                label="report-prefetch logical_slot",
+            )
         except TemporalError as exc:
             if "timezone-aware" in str(exc):
                 raise WorkflowControlError("report-prefetch logical_slot must include timezone offset") from exc
             raise WorkflowControlError("report-prefetch logical_slot must be ISO-8601") from exc
+        # Canonicalize the governed report-slot identity exactly once at the
+        # control-plane boundary. Downstream PrefetchService persists
+        # datetime.isoformat(), so carrying a raw form such as
+        # 05:30+07:00 here would make an identical instant fail the exact
+        # publication identity check against 05:30:00+07:00.
+        logical_slot = parsed_logical_slot.isoformat()
         if report_kind != "ad_hoc" and scopes:
             raise WorkflowControlError("scope override is allowed only for ad_hoc report prefetch")
         if report_kind == "ad_hoc" and not scopes:

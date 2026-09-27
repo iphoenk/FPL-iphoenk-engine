@@ -30,6 +30,7 @@ from src.engines.private_cache_crypto import (
     SECURE_ENCRYPTED_PERSONAL_CACHE,
     SECURE_NO_PERSONAL_CACHE,
     PrivateCacheCryptoError,
+    PrivateCacheMiss,
     decrypt_bytes,
     encrypt_bytes,
     load_key_from_env,
@@ -1749,6 +1750,7 @@ def _decision_core_cached(
                         return deepcopy(core)
                 _P17_EXECUTION_STATS["p17_cache_corrupt_rejects"] += 1
             except (
+                PrivateCacheMiss,
                 OSError,
                 json.JSONDecodeError,
                 EOFError,

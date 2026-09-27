@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-27T12:20:00+07:00`  
-> **Production main at sync:** `11855b06565e68ce80dee663cf28cce675fe62b0`  
+> **Last runtime/documentation sync:** `2026-09-27T14:59:46+07:00`  
+> **Production main at sync:** `508f1ed919b9b37540cc604d92bdfe5075e96366`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -25,6 +25,8 @@ Visible delivery timing is machine-governed by `config/delivery/v12_delivery_sch
 Cross-CPU governance now uses a verified frozen direct-proof registry: a transitive PASS is allowed only when the registered GitHub run/artifact is revalidated, the proof commit is an ancestor, protected semantic paths are unchanged, and normalized runtime/output remain identical. Semantic changes still require a direct current-head multi-CPU proof.
 
 D-P2 precompute control is owner-triggered and non-authoritative: it has no cron, cannot edit the core scheduler title, cannot complete or advance a core slot, and may only hand the unchanged future report occurrence to the existing governed V6 `report_prefetch` path at the Revision-6 T-15 window.
+
+PERF-0 freezes latency measurement before optimization: comparable natural DEEP samples record exact app/runtime lineage, runtime/cache class and observable CPU/runtime metadata, while queue, startup, setup, factual acquisition, Stage-2, P1.2A, P1.2B, P1.7, MC, render, QA, private publish and total timing remain distinct. Missing timing is reported as unavailable rather than inferred.
 
 ## Questions it answers
 
@@ -593,7 +595,7 @@ Repository changes are governed by CI and the documentation-sync contract. A cha
 
 As of the README sync timestamp above:
 
-- production `main` is `38b57bdb96ef2c2d5a7a007bcab0bb00f8e788d7`;
+- production `main` is `508f1ed919b9b37540cc604d92bdfe5075e96366`;
 - V6 is the active factual plane;
 - Canonical V12 is the active analytics and decision plane;
 - the public/private decision-data boundary is active;

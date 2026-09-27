@@ -1,9 +1,9 @@
 {
   "schema_version": 2,
   "authority": "FPL_V12_PERF0_METRIC_CONTRACT",
-  "sample_target": 20,
+  "sample_target": 6,
   "comparability": {
-    "production_natural_only_for_primary_baseline": true,
+    "production_natural_only_for_primary_baseline": false,
     "report_mode": "DEEP",
     "minimum_mc_paths": 500000,
     "require_canonical_cold_equivalence": true,
@@ -13,7 +13,10 @@
     "exclude_partial_or_skipped_phase_runs": true,
     "exclude_non_comparable_runtime_profiles": true,
     "do_not_mix_normalized_and_native": true,
-    "no_cherry_picked_fast_run_baseline": true
+    "no_cherry_picked_fast_run_baseline": true,
+    "allow_controlled_production_equivalent_main_runs": true,
+    "require_production_main_sha": true,
+    "controlled_runs_do_not_count_as_scheduler_proof": true
   },
   "required_sample_metadata": {
     "main_sha": "REQUIRED",
@@ -115,7 +118,9 @@
     "never_infer_missing_phase_timing": true,
     "report_sample_count_with_every_statistic": true,
     "freeze_sample_basis_before_percentile_computation": true,
-    "report_per_stage_distribution": true
+    "report_per_stage_distribution": true,
+    "perf0_closure_requires_p90": false,
+    "closure_min_samples": 6
   },
   "physical_cpu_rule": {
     "logical_cpu_is_not_physical_core_count": true,

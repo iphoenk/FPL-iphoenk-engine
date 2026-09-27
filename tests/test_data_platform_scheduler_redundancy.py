@@ -117,7 +117,7 @@ def test_chatgpt_scheduler_contract_is_single_hourly_authority():
     assert scheduler["required_reason"] == "chatgpt_hourly_master"
     assert scheduler["required_audit"] == "FPL_MASTER_HOURLY"
     assert scheduler["health_epoch"] == "CHATGPT_MASTER_V1"
-    assert scheduler["green_after_consecutive_slots"] == 6
+    assert scheduler["green_after_consecutive_slots"] == 3
 
 
 def test_workflow_hydration_is_fail_closed_and_fulfillment_is_explicit():

@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "authority": "FPL_V12_PERF0_METRIC_CONTRACT",
+  "sample_target": 20,
+  "comparability": {
+    "production_natural_only_for_primary_baseline": true,
+    "report_mode": "DEEP",
+    "minimum_mc_paths": 500000,
+    "require_canonical_cold_equivalence": true,
+    "separate_runtime_classes": true,
+    "exclude_synthetic_from_primary_distribution": true,
+    "exclude_branch_acceptance_from_primary_distribution": true,
+    "exclude_partial_or_skipped_phase_runs": true,
+    "do_not_mix_normalized_and_native": true
+  },
+  "metrics": {
+    "github_queue_provisioning_seconds": {
+      "start": "workflow_created_at",
+      "end": "first_runner_job_started_at",
+      "fallback": "UNAVAILABLE"
+    },
+    "setup_seconds": {
+      "start": "first_runner_job_started_at",
+      "end": "install_runtime_dependencies_completed_at",
+      "fallback": "UNAVAILABLE"
+    },
+    "factual_acquisition_seconds": {
+      "start": "governed_report_prefetch_request_observed_at",
+      "end": "bound_report_prefetch_terminal_publication_at",
+      "fallback": "UNAVAILABLE"
+    },
+    "stage2_seconds": {
+      "source": "occurrence_bound_internal_phase_timing",
+      "fallback": "UNAVAILABLE"
+    },
+    "p1_2b_seconds": {
+      "source": "occurrence_bound_internal_phase_timing",
+      "fallback": "UNAVAILABLE"
+    },
+    "p1_7_seconds": {
+      "source": "occurrence_bound_internal_phase_timing",
+      "fallback": "UNAVAILABLE"
+    },
+    "mc_seconds": {
+      "source": "canonical_monte_carlo_performance_elapsed_seconds",
+      "require_actual_paths_at_least": 500000,
+      "fallback": "UNAVAILABLE"
+    },
+    "render_qa_seconds": {
+      "start": "render_started_at",
+      "end": "post_render_qa_completed_at",
+      "fallback": "UNAVAILABLE"
+    },
+    "publication_delivery_seconds": {
+      "start": "private_publication_started_at",
+      "end": "validated_human_delivery_completed_at",
+      "fallback": "UNAVAILABLE"
+    },
+    "cold_total_seconds": {
+      "start": "workflow_created_at",
+      "end": "validated_human_delivery_completed_at",
+      "fallback": "UNAVAILABLE"
+    },
+    "warm_t0_t1_seconds": {
+      "start": "event_or_owner_command_received_by_warm_worker",
+      "end": "validated_private_result_published",
+      "cold_queue_included": false,
+      "fallback": "UNAVAILABLE"
+    }
+  },
+  "summary_rules": {
+    "p50_min_samples": 3,
+    "p90_min_samples": 10,
+    "max_min_samples": 1,
+    "never_infer_missing_phase_timing": true,
+    "report_sample_count_with_every_statistic": true
+  },
+  "warm_acceptance": {
+    "target_seconds_lte": 15,
+    "require_warm_equals_canonical_cold": true,
+    "queue_and_provisioning_excluded": true
+  }
+}

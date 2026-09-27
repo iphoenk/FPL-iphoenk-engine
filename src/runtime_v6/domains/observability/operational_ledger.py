@@ -205,10 +205,10 @@ def build_operational_slots(
                         "reason": "CORE_SLOT_ALREADY_OWNED_FIRST_OWNER_PRESERVED",
                     }
                 )
-            epoch.setdefault("id", CHATGPT_SCHEDULER_EPOCH)
-            epoch.setdefault("authority", CHATGPT_SCHEDULER_AUTHORITY)
+            epoch["id"] = CHATGPT_SCHEDULER_EPOCH
+            epoch["authority"] = CHATGPT_SCHEDULER_AUTHORITY
             epoch.setdefault("start_at", slot)
-            epoch.setdefault("green_after_consecutive_slots", CHATGPT_GREEN_STREAK)
+            epoch["green_after_consecutive_slots"] = CHATGPT_GREEN_STREAK
         else:
             auxiliary_rows = [row for row in auxiliary_rows if str(row.get("slot")) != slot]
             auxiliary_rows.append(

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .official_set_piece_notes import team_set_piece_note_evidence
+
 
 ROLE_SOURCE = "OFFICIAL_FPL_BOOTSTRAP"
 
@@ -53,7 +55,12 @@ def _penalty_role(player: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def attach_official_role_evidence(projections: dict[str, Any], bootstrap: dict[str, Any]) -> dict[str, Any]:
+def attach_official_role_evidence(
+    projections: dict[str, Any],
+    bootstrap: dict[str, Any],
+    *,
+    set_piece_notes: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     official_players = {
         int(player.get("id")): player
         for player in bootstrap.get("elements") or []
@@ -62,6 +69,8 @@ def attach_official_role_evidence(projections: dict[str, Any], bootstrap: dict[s
     set_piece_players = 0
     penalty_players = 0
     annotated_players = 0
+    note_players = 0
+    actionable_note_players = 0
 
     for projection in projections.get("players") or []:
         try:
@@ -76,6 +85,11 @@ def attach_official_role_evidence(projections: dict[str, Any], bootstrap: dict[s
 
         set_piece = _set_piece_role(official)
         penalty = _penalty_role(official)
+        team_notes = (
+            team_set_piece_note_evidence(set_piece_notes, official.get("team"))
+            if set_piece_notes is not None
+            else None
+        )
         if set_piece is not None:
             projection["set_piece_role"] = set_piece
             set_piece_players += 1
@@ -86,15 +100,29 @@ def attach_official_role_evidence(projections: dict[str, Any], bootstrap: dict[s
             penalty_players += 1
         else:
             projection.pop("penalty_role", None)
-        annotated_players += int(set_piece is not None or penalty is not None)
+        if team_notes is not None and team_notes.get("status") != "UNAVAILABLE":
+            projection["official_set_piece_notes"] = team_notes
+            note_players += 1
+            actionable_note_players += int(team_notes.get("actionable") is True)
+        else:
+            projection.pop("official_set_piece_notes", None)
+        annotated_players += int(
+            set_piece is not None
+            or penalty is not None
+            or (team_notes is not None and team_notes.get("status") != "UNAVAILABLE")
+        )
 
     summary = {
         "source": ROLE_SOURCE,
         "set_piece_role_players": set_piece_players,
         "penalty_role_players": penalty_players,
         "players_with_any_role_evidence": annotated_players,
+        "official_set_piece_note_players": note_players,
+        "actionable_official_set_piece_note_players": actionable_note_players,
         "direct_xpts_mutation": False,
         "direct_xmins_mutation": False,
+        "direct_start_probability_mutation": False,
+        "official_set_piece_notes_are_advisory_only": True,
         "share_or_probability_inference_forbidden": True,
         "missing_role_evidence_remains_missing": True,
     }

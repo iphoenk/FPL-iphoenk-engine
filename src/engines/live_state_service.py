@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Any
 
 from src.engines.base_state import bootstrap_maps, expanded_live
@@ -131,6 +132,120 @@ def classify_scoring_gw_lifecycle(
     }
 
 
+
+def _fixture_kickoff_date(row: dict[str, Any]) -> str | None:
+    raw = str(row.get("kickoff_time") or "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00")).date().isoformat()
+    except ValueError:
+        return None
+
+
+def classify_bonus_lifecycle(
+    fixtures: list[dict[str, Any]],
+    scoring_gw: int | None,
+    event_status: dict[str, Any] | None,
+    *,
+    event_meta: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Separate live/provisional bonus from explicitly finalized Official FPL state.
+
+    finished_provisional is deliberately not a finalization signal. Official
+    event-status bonus_added owns bonus finalization by event/date, while
+    bootstrap event finished + data_checked owns the stronger all-GW
+    match-state finalization signal.
+    """
+    if scoring_gw is None:
+        return {
+            "lifecycle_state": "UNAVAILABLE",
+            "status": "PROVISIONAL",
+            "provisional": True,
+            "match_state": "UNAVAILABLE",
+            "bonus_finalized_dates": [],
+            "pending_finished_dates": [],
+            "source": "OFFICIAL_FPL_EVENT_STATUS+BOOTSTRAP_EVENT+FIXTURES",
+        }
+
+    gw = int(scoring_gw)
+    rows = [dict(row) for row in fixtures if int(row.get("event") or -1) == gw]
+    status_rows = [
+        dict(row)
+        for row in ((event_status or {}).get("status") or [])
+        if int(row.get("event") or -1) == gw
+    ]
+    finalized_dates = {
+        str(row.get("date"))
+        for row in status_rows
+        if row.get("bonus_added") is True and row.get("date")
+    }
+    finished_rows = [row for row in rows if row.get("finished") is True]
+    live_rows = [
+        row for row in rows
+        if row.get("started") is True and row.get("finished") is not True
+    ]
+    started_rows = [
+        row for row in rows
+        if row.get("started") is True or row.get("finished") is True
+    ]
+    finished_dates = [_fixture_kickoff_date(row) for row in finished_rows]
+    known_finished_dates = {value for value in finished_dates if value}
+    missing_finished_date = any(value is None for value in finished_dates)
+    pending_finished_dates = sorted(known_finished_dates - finalized_dates)
+    all_finished = bool(rows) and len(finished_rows) == len(rows)
+    all_finished_bonus_final = (
+        bool(finished_rows)
+        and not missing_finished_date
+        and known_finished_dates.issubset(finalized_dates)
+    )
+    meta = dict(event_meta or {})
+    event_data_final = (
+        meta.get("finished") is True
+        and meta.get("data_checked") is True
+        and all_finished
+    )
+
+    if not rows:
+        lifecycle_state = "UNAVAILABLE"
+        match_state = "UNAVAILABLE"
+    elif not started_rows:
+        lifecycle_state = "NOT_STARTED"
+        match_state = "NOT_STARTED"
+    elif all_finished and all_finished_bonus_final and event_data_final:
+        lifecycle_state = "FINAL"
+        match_state = "FINALIZED"
+    elif all_finished:
+        lifecycle_state = "AWAITING_BONUS_FINALIZATION"
+        match_state = (
+            "FINALIZED"
+            if event_data_final
+            else "FIXTURES_COMPLETE_AWAITING_DATA_CHECK"
+        )
+    elif finalized_dates.intersection(known_finished_dates):
+        lifecycle_state = "PARTIALLY_FINALIZED"
+        match_state = "IN_PROGRESS"
+    else:
+        lifecycle_state = "LIVE_PROVISIONAL"
+        match_state = "IN_PROGRESS"
+
+    is_final = lifecycle_state == "FINAL"
+    return {
+        "lifecycle_state": lifecycle_state,
+        "status": "FINAL" if is_final else "PROVISIONAL",
+        "provisional": not is_final,
+        "match_state": match_state,
+        "bonus_finalized_dates": sorted(finalized_dates),
+        "finished_fixture_dates": sorted(known_finished_dates),
+        "pending_finished_dates": pending_finished_dates,
+        "live_fixture_count": len(live_rows),
+        "all_fixtures_finished": all_finished,
+        "event_finished": meta.get("finished"),
+        "event_data_checked": meta.get("data_checked"),
+        "finished_provisional_is_final_authority": False,
+        "source": "OFFICIAL_FPL_EVENT_STATUS+BOOTSTRAP_EVENT+FIXTURES",
+    }
+
 def _match_mode_active(fixtures: list[dict[str, Any]], scoring_gw: int | None) -> bool:
     return classify_scoring_gw_lifecycle(
         fixtures,
@@ -188,9 +303,24 @@ def run() -> dict:
     phase = official.get("phase") or {}
     picks = official.get("picks") or {}
     event_live = official.get("event_live") or {}
+    event_status = official.get("event_status") or {}
     fixtures = list(official.get("fixtures") or [])
     teams, positions, by_id = bootstrap_maps(bootstrap)
     scoring_gw = phase.get("scoring_gw")
+    event_meta = next(
+        (
+            dict(row)
+            for row in bootstrap.get("events") or []
+            if scoring_gw is not None and int(row.get("id") or -1) == int(scoring_gw)
+        ),
+        {},
+    )
+    bonus_lifecycle = classify_bonus_lifecycle(
+        fixtures,
+        scoring_gw,
+        event_status,
+        event_meta=event_meta,
+    )
     previous_live = read_json(OUT, {})
     previous_completed = list(
         ((previous_live.get("lifecycle") or {}).get("completed_fixture_ids") or [])
@@ -370,6 +500,9 @@ def run() -> dict:
         "players_live": status_counts["LIVE"],
         "players_not_started": status_counts["NOT_STARTED"],
         "provisional_bonus_total": provisional_bonus_total,
+        "bonus_total": provisional_bonus_total,
+        "bonus_total_status": bonus_lifecycle["status"],
+        "bonus_lifecycle_state": bonus_lifecycle["lifecycle_state"],
         "hit": hit,
         "current_effective_total": effective_xi_points,
         "current_net_total": effective_xi_points - hit,
@@ -416,11 +549,11 @@ def run() -> dict:
         },
         "captain_vice_consequence": captain_vice_consequence,
         "bonus_bps": {
-            "provisional": True,
-            "status": "PROVISIONAL",
+            **bonus_lifecycle,
+            "observed_bonus_total": provisional_bonus_total,
             "reason": (
-                "event-live bonus/BPS must not be presented as final without "
-                "explicit Official FPL finalization authority"
+                "FINAL requires Official event-status bonus_added coverage plus "
+                "finished/data_checked GW state; otherwise bonus/BPS remains provisional."
             ),
         },
         "governance": {
@@ -431,6 +564,8 @@ def run() -> dict:
             "fixture_gap_after_scoring_started_remains_match_lifecycle": True,
             "post_match_incremental_returns_to_match_until_gw_complete": True,
             "bonus_bps_never_implicitly_final": True,
+            "event_status_bonus_added_is_finalization_authority": True,
+            "finished_provisional_is_not_bonus_finalization_authority": True,
         },
     }
     atomic_json(OUT, payload)

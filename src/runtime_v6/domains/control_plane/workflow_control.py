@@ -143,7 +143,16 @@ def authorize_dispatch(
         and reason == CONTROL_PLANE.recovery_reason
         and manual_confirm == CONTROL_PLANE.recovery_confirmation
     )
-    if actor != repository_owner and not recovery_guard_actor:
+    prefetch_control = dict(policy.get("report_prefetch") or {})
+    precompute_guard_actor = (
+        mode == "report_prefetch"
+        and actor == str(prefetch_control.get("precompute_dispatch_actor") or "")
+        and reason == str(prefetch_control.get("precompute_dispatch_reason") or "")
+        and prefetch_control.get("precompute_dispatch_role") == "REPORT_PRECOMPUTE_ONLY"
+        and prefetch_control.get("precompute_dispatch_counts_as_scheduler_proof") is False
+        and prefetch_control.get("precompute_dispatch_counts_as_completed_operational_slot") is False
+    )
+    if actor != repository_owner and not recovery_guard_actor and not precompute_guard_actor:
         raise WorkflowControlError("V6 governed dispatch actor is not authorized")
     if not str(reason).strip():
         raise WorkflowControlError("V6 governed dispatch requires an audit reason")

@@ -166,6 +166,78 @@ def _validate_v6_recovery_guard(errors: list[str]) -> None:
         errors.append("recovery guard must not re-enable GitHub natural acquisition schedule")
 
 
+
+def _validate_v12_precompute_control(errors: list[str]) -> None:
+    workflow = WORKFLOW_DIR / "v12-precompute-control.yml"
+    config_path = ROOT / "config" / "delivery" / "v12_precompute_control.json"
+    schedule_policy_path = ROOT / "config" / "v6" / "schedule_policy.json"
+    if not workflow.exists():
+        errors.append("V12 D-P2 precompute workflow is missing")
+        return
+    if not config_path.exists():
+        errors.append("V12 D-P2 precompute config is missing")
+        return
+
+    text = _workflow_text(workflow)
+    for marker in (
+        "issue_comment:",
+        "github.actor == github.repository_owner",
+        "startsWith(github.event.comment.body, '/v12-precompute ')",
+        "cancel-in-progress: false",
+        "actions: write",
+        "python -m src.engines.v12_precompute_control",
+        "inputs[mode]=report_prefetch",
+        "inputs[reason]=${DISPATCH_REASON}",
+    ):
+        if marker not in text:
+            errors.append(f"V12 D-P2 precompute missing required marker: {marker}")
+    for forbidden in (
+        "schedule:",
+        "cron:",
+        "workflow_run:",
+        "issues: write",
+        "contents: write",
+        "FPL_MASTER_SLOT",
+        "python -m src.runtime_v6.domains.acquisition.collector",
+        "HEAD:refs/heads/runtime-data-v6",
+    ):
+        if forbidden in text:
+            errors.append(f"V12 D-P2 precompute contains forbidden authority: {forbidden}")
+
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    if config.get("role") != "REPORT_PRECOMPUTE_ONLY":
+        errors.append("V12 D-P2 role must remain REPORT_PRECOMPUTE_ONLY")
+    if config.get("normal_scheduler_authority") != "CHATGPT_FPL_MASTER_MONITOR":
+        errors.append("V12 D-P2 must preserve ChatGPT FPL Master scheduler authority")
+    if config.get("cancel_in_progress") is not False:
+        errors.append("V12 D-P2 cancel-in-progress must remain false")
+    if config.get("schedule_trigger_enabled") is not False:
+        errors.append("V12 D-P2 must not have an independent schedule")
+    for key in (
+        "may_complete_core_operational_slot",
+        "may_advance_scheduler_proof",
+        "may_edit_core_issue_title",
+        "may_acquire_facts_directly",
+        "may_publish_runtime_directly",
+    ):
+        if config.get(key) is not False:
+            errors.append(f"V12 D-P2 policy must be false: {key}")
+    if config.get("preserve_report_occurrence_identity") is not True:
+        errors.append("V12 D-P2 must preserve report occurrence identity")
+
+    policy = json.loads(schedule_policy_path.read_text(encoding="utf-8"))
+    prefetch = dict(policy.get("report_prefetch") or {})
+    if prefetch.get("precompute_dispatch_actor") != config.get("dispatch_actor"):
+        errors.append("V12 D-P2 dispatch actor must match V6 report-prefetch policy")
+    if prefetch.get("precompute_dispatch_reason") != config.get("dispatch_reason"):
+        errors.append("V12 D-P2 dispatch reason must match V6 report-prefetch policy")
+    if prefetch.get("precompute_dispatch_role") != "REPORT_PRECOMPUTE_ONLY":
+        errors.append("V12 D-P2 dispatch role must be report-precompute only")
+    if prefetch.get("precompute_dispatch_counts_as_scheduler_proof") is not False:
+        errors.append("V12 D-P2 dispatch must not count as scheduler proof")
+    if prefetch.get("precompute_dispatch_counts_as_completed_operational_slot") is not False:
+        errors.append("V12 D-P2 dispatch must not complete a core operational slot")
+
 def validate() -> None:
     errors: list[str] = []
 
@@ -226,6 +298,7 @@ def validate() -> None:
         )
     _validate_v6_watchdog(errors)
     _validate_v6_recovery_guard(errors)
+    _validate_v12_precompute_control(errors)
 
     ingestion = WORKFLOW_DIR / "v6-natural-data-ingestion.yml"
     if not ingestion.exists():

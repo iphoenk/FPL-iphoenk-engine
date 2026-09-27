@@ -1,7 +1,7 @@
 # FPL V12 PERF-0 Metric Contract
 
 > Status: FROZEN DEFINITION / SAMPLE COLLECTION PENDING  
-> Change timestamp: 2026-09-27T20:32:42+07:00  
+> Change timestamp: 2026-09-27T20:38:30+07:00  
 > Production base at preparation: `d2b3bc04a9723528100f340ce30610a0bd71d117`
 
 PERF-0 prevents optimization-by-anecdote. No PERF-A/B/C/D/E selection may use a one-off fast run or a metric definition changed after observing results.

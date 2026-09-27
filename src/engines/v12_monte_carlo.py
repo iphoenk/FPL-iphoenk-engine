@@ -25,6 +25,16 @@ from typing import Any, Mapping, Sequence
 
 import numpy as np
 
+from src.engines.private_cache_crypto import (
+    SECURE_ENCRYPTED_PERSONAL_CACHE,
+    SECURE_NO_PERSONAL_CACHE,
+    PrivateCacheCryptoError,
+    PrivateCacheMiss,
+    decrypt_bytes,
+    encrypt_bytes,
+    load_key_from_env,
+)
+
 from src.engines.canonical_decision_methodology import (
     CANONICAL_AUTHORITY,
     CANONICAL_WEIGHTS,
@@ -80,6 +90,8 @@ POSITIONS = ("GK", "DEF", "MID", "FWD")
 OUTFIELD = ("DEF", "MID", "FWD")
 MC_SIM_CACHE_ENV = "V12_MC_SIM_CACHE_DIR"
 MC_SIM_CACHE_SCHEMA = 3
+PRIVATE_CACHE_PROFILE_ENV = "V12_PRIVATE_CACHE_PROFILE"
+LOCAL_EPHEMERAL_TEST_PROFILE = "LOCAL_EPHEMERAL_TEST_ONLY"
 
 
 _MC_UPSTREAM_P17_DEPENDENCIES = (
@@ -1043,16 +1055,71 @@ def _simulation_cache_key(
     )
 
 
+def _private_cache_profile() -> str:
+    raw = str(os.environ.get(PRIVATE_CACHE_PROFILE_ENV) or "").strip()
+    return raw or LOCAL_EPHEMERAL_TEST_PROFILE
+
+
+def _private_cache_key_or_none() -> bytes | None:
+    try:
+        return load_key_from_env()
+    except PrivateCacheCryptoError:
+        return None
+
+
 def _mc_cache_path(key: str) -> Path | None:
     root = str(os.environ.get(MC_SIM_CACHE_ENV) or "").strip()
     if not root:
         return None
-    return Path(root) / key[:2] / f"{key}.pkl"
+    profile = _private_cache_profile()
+    if profile == SECURE_NO_PERSONAL_CACHE:
+        return None
+    if profile == SECURE_ENCRYPTED_PERSONAL_CACHE:
+        return Path(root) / key[:2] / f"{key}.aead.json"
+    if profile == LOCAL_EPHEMERAL_TEST_PROFILE:
+        return Path(root) / key[:2] / f"{key}.pkl"
+    raise MonteCarloError(f"unsupported private cache profile: {profile}")
 
 
 def _load_mc_summary_cache(key: str) -> dict[str, Any] | None:
     path = _mc_cache_path(key)
     if path is None or not path.is_file():
+        return None
+
+    profile = _private_cache_profile()
+    if profile == SECURE_ENCRYPTED_PERSONAL_CACHE:
+        secret = _private_cache_key_or_none()
+        if secret is None:
+            return None
+        try:
+            envelope = json.loads(path.read_text(encoding="utf-8"))
+            plaintext = decrypt_bytes(
+                envelope,
+                cache_key=key,
+                schema_version=MC_SIM_CACHE_SCHEMA,
+                key=secret,
+            )
+            payload = pickle.loads(plaintext)
+            if (
+                isinstance(payload, dict)
+                and int(payload.get("schema") or 0) == MC_SIM_CACHE_SCHEMA
+                and isinstance(payload.get("summary"), dict)
+            ):
+                return deepcopy(dict(payload["summary"]))
+        except (
+            PrivateCacheMiss,
+            OSError,
+            json.JSONDecodeError,
+            EOFError,
+            pickle.PickleError,
+            AttributeError,
+            ValueError,
+            TypeError,
+        ):
+            return None
+        return None
+
+    if profile != LOCAL_EPHEMERAL_TEST_PROFILE:
         return None
     try:
         with path.open("rb") as fh:
@@ -1084,18 +1151,51 @@ def _save_mc_summary_cache(
     path = _mc_cache_path(key)
     if path is None:
         return
+
+    profile = _private_cache_profile()
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     try:
-        with tmp.open("wb") as fh:
-            pickle.dump(
-                {
-                    "schema": MC_SIM_CACHE_SCHEMA,
-                    "key": key,
-                    "summary": dict(summary),
-                },
-                fh,
-                protocol=pickle.HIGHEST_PROTOCOL,
+        if profile == SECURE_ENCRYPTED_PERSONAL_CACHE:
+            secret = _private_cache_key_or_none()
+            if secret is None:
+                # Fail-safe: exact compute remains authoritative, but no
+                # plaintext persistence is permitted without the AEAD key.
+                return
+            envelope = encrypt_bytes(
+                pickle.dumps(
+                    {
+                        "schema": MC_SIM_CACHE_SCHEMA,
+                        "summary": dict(summary),
+                    },
+                    protocol=pickle.HIGHEST_PROTOCOL,
+                ),
+                cache_key=key,
+                schema_version=MC_SIM_CACHE_SCHEMA,
+                key=secret,
+            )
+            tmp.write_text(
+                json.dumps(
+                    envelope,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                encoding="utf-8",
+            )
+        elif profile == LOCAL_EPHEMERAL_TEST_PROFILE:
+            with tmp.open("wb") as fh:
+                pickle.dump(
+                    {
+                        "schema": MC_SIM_CACHE_SCHEMA,
+                        "key": key,
+                        "summary": dict(summary),
+                    },
+                    fh,
+                    protocol=pickle.HIGHEST_PROTOCOL,
+                )
+        else:
+            raise MonteCarloError(
+                f"unsupported private cache profile: {profile}"
             )
         os.replace(tmp, path)
     finally:
@@ -1104,7 +1204,6 @@ def _save_mc_summary_cache(
                 tmp.unlink()
         except OSError:
             pass
-
 
 def _validate_lineup_row(
     row: Mapping[str, Any],

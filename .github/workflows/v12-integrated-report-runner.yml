@@ -378,11 +378,19 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
-          PROD_PRIVATE_CACHE_KEY: ${{ (github.event_name == 'issue_comment' || github.ref_name == 'main') && secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 || '' }}
+          PROFILE_MODE: ${{ needs.parse.outputs.profile_mode }}
+          PROD_PRIVATE_CACHE_KEY: ${{ needs.parse.outputs.profile_mode != 'COLD' && (github.event_name == 'issue_comment' || github.ref_name == 'main') && secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 || '' }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "$EVENT_NAME" == "issue_comment" || "$REF_NAME" == "main" ]]; then
+          if [[ "$PROFILE_MODE" == "COLD" ]]; then
+            echo "profile=SECURE_NO_PERSONAL_CACHE" >> "$GITHUB_OUTPUT"
+            if [[ -n "$PROD_PRIVATE_CACHE_KEY" ]]; then
+              echo "controlled COLD run unexpectedly received production decrypt key" >&2
+              exit 1
+            fi
+            echo "D-P3 COLD profile: no personal cache restore/persist"
+          elif [[ "$EVENT_NAME" == "issue_comment" || "$REF_NAME" == "main" ]]; then
             echo "profile=SECURE_ENCRYPTED_PERSONAL_CACHE" >> "$GITHUB_OUTPUT"
             if [[ -z "$PROD_PRIVATE_CACHE_KEY" ]]; then
               echo "D-P3 production encrypted-cache key is unavailable" >&2
@@ -512,7 +520,7 @@ jobs:
           V12_P17_DECISION_CACHE_DIR: .cache/v12-p17
           V12_MC_SIM_CACHE_DIR: .cache/v12-mc
           V12_PRIVATE_CACHE_PROFILE: ${{ steps.private-cache-profile.outputs.profile }}
-          FPL_V12_PRIVATE_CACHE_KEY_B64: ${{ (github.event_name == 'issue_comment' || github.ref_name == 'main') && secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 || '' }}
+          FPL_V12_PRIVATE_CACHE_KEY_B64: ${{ needs.parse.outputs.profile_mode != 'COLD' && (github.event_name == 'issue_comment' || github.ref_name == 'main') && secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 || '' }}
         run: |
           private_input_root="../private-reports"
           if [ -f ../acceptance-private-input/personal/current_team.json ]; then

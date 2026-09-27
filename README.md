@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-27T08:43:37+07:00`  
-> **Production main at sync:** `ee3ce03ed0aa7d11c4b393f6b9e22cc15bd8f55e`  
+> **Last runtime/documentation sync:** `2026-09-27T09:00:05+07:00`  
+> **Production main at sync:** `ed11496f63d4a554f797c1e209a5bd53ecdd1f35`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -19,6 +19,8 @@ The core principle is:
 Mandatory integrated DEEP delivery is fail-closed on same-occurrence factual binding: the exact governed V6 report-prefetch must reach terminal SUCCESS and be read back from runtime-data-v6 before `/v12-report-run` is started. Unrelated issue comments are isolated from governed V6 concurrency so they cannot replace a pending prefetch.
 
 Delivery, privacy, latency, historical-validation and consumption architecture are governed by `docs/v12/FPL_V12_DELIVERY_ARCHITECTURE_PLAN_REV6.md`. Revision 6 supersedes earlier Delivery Architecture Plan wording where inconsistent.
+
+Visible delivery timing is machine-governed by `config/delivery/v12_delivery_schedule.json`: DEEP at 04:30/12:30/21:30 Asia/Jakarta, PRICE at 23:30 Europe/London with DST-safe WIB conversion, exact deadline checkpoints, quiet-hour handling, single-report overlap, and T-15/T-10 precompute timing.
 
 ## Questions it answers
 

@@ -122,6 +122,18 @@ def _manual_capture_candidates(
     out: list[dict[str, Any]] = []
     if not directory.is_dir():
         return out
+    chip_ledgers: dict[int, dict[str, Any]] = {}
+    for ledger_path in sorted(directory.glob("chip_ledger*.json")):
+        ledger = _read_json(ledger_path, {}) or {}
+        if not isinstance(ledger, Mapping):
+            continue
+        if ledger.get("schema") != "FPL_USER_CONFIRMED_CHIP_LEDGER_V1":
+            continue
+        try:
+            ledger_gw = int(ledger.get("planning_gw"))
+        except (TypeError, ValueError):
+            continue
+        chip_ledgers[ledger_gw] = dict(ledger)
     for path in sorted(directory.glob("*.json")):
         payload = _read_json(path, {}) or {}
         if not isinstance(payload, Mapping):
@@ -135,6 +147,13 @@ def _manual_capture_candidates(
         ]
         finance = dict(payload.get("finance") or {})
         chips = dict(payload.get("chips") or {})
+        try:
+            capture_gw = int(payload.get("planning_gw"))
+        except (TypeError, ValueError):
+            capture_gw = -1
+        chip_ledger = chip_ledgers.get(capture_gw) or {}
+        if chip_ledger:
+            chips = dict(chip_ledger.get("first_half") or chips)
         current_payload = {
             "players": squad,
             "generated_at": payload.get("captured_at"),
@@ -161,7 +180,13 @@ def _manual_capture_candidates(
                 ),
                 "purchase_price": "UNAVAILABLE",
                 "selling_price": "UNAVAILABLE",
-                "chips": "PARTIAL_CAPTURE" if chips else "UNAVAILABLE",
+                "chips": (
+                    "AVAILABLE"
+                    if chip_ledger and chips
+                    else "PARTIAL_CAPTURE"
+                    if chips
+                    else "UNAVAILABLE"
+                ),
             },
             "auth_state": "USER_CONFIRMED",
         }
@@ -175,6 +200,11 @@ def _manual_capture_candidates(
                 "auth_state": "USER_CONFIRMED",
                 "applicable_planning_gw": payload.get("planning_gw"),
                 "explicit_confirmation": True,
+                "chip_ledger_source": (
+                    f"{source_prefix}chip_ledger"
+                    if chip_ledger
+                    else None
+                ),
             }
         )
     return out

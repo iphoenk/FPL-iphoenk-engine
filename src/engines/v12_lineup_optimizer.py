@@ -26,6 +26,16 @@ from src.engines.canonical_decision_methodology import (
     CANONICAL_WEIGHTS,
     validate_methodology_weights,
 )
+from src.engines.private_cache_crypto import (
+    SECURE_ENCRYPTED_PERSONAL_CACHE,
+    SECURE_NO_PERSONAL_CACHE,
+    PrivateCacheCryptoError,
+    PrivateCacheMiss,
+    decrypt_bytes,
+    encrypt_bytes,
+    load_key_from_env,
+)
+
 from src.engines.v12_cache_runtime_identity import runtime_cache_identity
 from src.engines.v12_model_evidence import (
     bind_deterministic_output,
@@ -45,6 +55,8 @@ OUTFIELD = ("DEF", "MID", "FWD")
 LEGAL_FORMATIONS = frozenset(LINEUP_RULES.get("legal_formations") or [])
 P17_DECISION_CACHE_ENV = "V12_P17_DECISION_CACHE_DIR"
 P17_DECISION_CACHE_SCHEMA = 3
+PRIVATE_CACHE_PROFILE_ENV = "V12_PRIVATE_CACHE_PROFILE"
+LOCAL_EPHEMERAL_TEST_PROFILE = "LOCAL_EPHEMERAL_TEST_ONLY"
 
 
 _P17_UPSTREAM_STAGE2_DEPENDENCIES = (
@@ -1680,23 +1692,119 @@ def _decision_core_cache_key(
     )
 
 
+def _private_cache_profile() -> str:
+    raw = str(os.environ.get(PRIVATE_CACHE_PROFILE_ENV) or "").strip()
+    return raw or LOCAL_EPHEMERAL_TEST_PROFILE
+
+
+def _private_cache_key_or_none() -> bytes | None:
+    try:
+        return load_key_from_env()
+    except PrivateCacheCryptoError:
+        return None
+
+
 def _decision_core_cached(
     players: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
-    """Reuse an exact P1.7 decision core only on a full deterministic fingerprint hit.
+    """Reuse P1.7 core under the governed cache profile.
 
-    The cache contains no V6 facts beyond the already-normalized player surfaces,
-    owns no decision authority, and never bypasses current model-evidence binding.
-    optimize_lineup still rebuilds the current output/evidence envelope after this
-    function returns. Any code/config/rules/player-surface change produces a new
-    fingerprint and therefore a mandatory exact recomputation.
+    Production profiles are explicit:
+    - SECURE_NO_PERSONAL_CACHE bypasses personal cache persistence entirely.
+    - SECURE_ENCRYPTED_PERSONAL_CACHE persists only authenticated ciphertext.
+
+    The unset profile keeps the historical runner-local pickle behavior solely
+    for local/unit-test compatibility. Production workflow governance forbids
+    that implicit profile.
     """
     cache_root = str(os.environ.get(P17_DECISION_CACHE_ENV) or "").strip()
-    if not cache_root:
+    profile = _private_cache_profile()
+    if not cache_root or profile == SECURE_NO_PERSONAL_CACHE:
         _P17_EXECUTION_STATS["p17_cache_misses"] += 1
         return _decision_core(players)
 
     key = _decision_core_cache_key(players)
+
+    if profile == SECURE_ENCRYPTED_PERSONAL_CACHE:
+        path = Path(cache_root) / key[:2] / f"{key}.aead.json"
+        secret = _private_cache_key_or_none()
+        if secret is not None and path.is_file():
+            try:
+                envelope = json.loads(path.read_text(encoding="utf-8"))
+                plaintext = decrypt_bytes(
+                    envelope,
+                    cache_key=key,
+                    schema_version=P17_DECISION_CACHE_SCHEMA,
+                    key=secret,
+                )
+                payload = pickle.loads(plaintext)
+                if (
+                    isinstance(payload, dict)
+                    and int(payload.get("schema") or 0)
+                    == P17_DECISION_CACHE_SCHEMA
+                    and isinstance(payload.get("core"), dict)
+                ):
+                    core = dict(payload["core"])
+                    if int(core.get("legal_xi_count") or 0) > 0:
+                        _P17_EXECUTION_STATS["p17_cache_hits"] += 1
+                        return deepcopy(core)
+                _P17_EXECUTION_STATS["p17_cache_corrupt_rejects"] += 1
+            except (
+                PrivateCacheMiss,
+                OSError,
+                json.JSONDecodeError,
+                EOFError,
+                pickle.PickleError,
+                AttributeError,
+                ValueError,
+                TypeError,
+            ):
+                _P17_EXECUTION_STATS["p17_cache_corrupt_rejects"] += 1
+
+        _P17_EXECUTION_STATS["p17_cache_misses"] += 1
+        core = _decision_core(players)
+        if secret is None:
+            # Fail-safe correctness path: exact recomputation, no plaintext
+            # fallback and no persistent cache write.
+            return core
+
+        envelope = encrypt_bytes(
+            pickle.dumps(
+                {"schema": P17_DECISION_CACHE_SCHEMA, "core": core},
+                protocol=pickle.HIGHEST_PROTOCOL,
+            ),
+            cache_key=key,
+            schema_version=P17_DECISION_CACHE_SCHEMA,
+            key=secret,
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+        try:
+            tmp.write_text(
+                json.dumps(
+                    envelope,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                encoding="utf-8",
+            )
+            os.replace(tmp, path)
+            _P17_EXECUTION_STATS["p17_cache_writes"] += 1
+        finally:
+            try:
+                if tmp.exists():
+                    tmp.unlink()
+            except OSError:
+                pass
+        return core
+
+    if profile != LOCAL_EPHEMERAL_TEST_PROFILE:
+        raise LineupOptimizerError(
+            f"unsupported private cache profile: {profile}"
+        )
+
+    # Local/unit-test compatibility only. Production workflow must never select
+    # this implicit runner-local plaintext profile.
     path = Path(cache_root) / key[:2] / f"{key}.pkl"
     if path.is_file():
         try:
@@ -1713,7 +1821,14 @@ def _decision_core_cached(
                     _P17_EXECUTION_STATS["p17_cache_hits"] += 1
                     return deepcopy(core)
             _P17_EXECUTION_STATS["p17_cache_corrupt_rejects"] += 1
-        except (OSError, EOFError, pickle.PickleError, AttributeError, ValueError, TypeError):
+        except (
+            OSError,
+            EOFError,
+            pickle.PickleError,
+            AttributeError,
+            ValueError,
+            TypeError,
+        ):
             _P17_EXECUTION_STATS["p17_cache_corrupt_rejects"] += 1
 
     _P17_EXECUTION_STATS["p17_cache_misses"] += 1
@@ -1740,7 +1855,6 @@ def _decision_core_cached(
         except OSError:
             pass
     return core
-
 
 def _decision_core_scalar_reference(players: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     legal = enumerate_legal_xi(players)

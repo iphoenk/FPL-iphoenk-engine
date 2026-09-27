@@ -46,6 +46,7 @@ def build(
     *,
     calibration_summary: Mapping[str, Any] | None = None,
     model_evidence_binding: Mapping[str, Any] | None = None,
+    scenario_overrides: Mapping[str | int, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     cfg = load_event_config()
     published_horizons = [
@@ -63,6 +64,36 @@ def build(
 
     feature_payload = player_features_payload or {}
     feature_map = feature_payload.get("players") or {}
+    scenario_overrides = scenario_overrides or {}
+
+    def apply_scenario_override(
+        context: dict[str, Any],
+        element_id: int,
+    ) -> None:
+        raw = (
+            scenario_overrides.get(str(element_id))
+            or scenario_overrides.get(element_id)
+        )
+        if not isinstance(raw, Mapping):
+            return
+        override_type = str(raw.get("override_type") or "").upper()
+        if override_type not in {
+            "OWNED_UNAVAILABLE",
+            "CAPTAIN_DOUBT",
+            "VICE_CAPTAIN_DOUBT",
+            "AVAILABILITY",
+        }:
+            raise RuntimeError(
+                f"unsupported P4 scenario override type: {override_type}"
+            )
+        if "p_available" not in raw:
+            raise RuntimeError("P4 scenario override requires p_available")
+        context["scenario_availability_probability_override"] = _f(
+            raw.get("p_available")
+        )
+        context["scenario_override_authorized"] = True
+        context["scenario_override_type"] = override_type
+
     stage1_tactical_states = (
         feature_payload.get("stage1_tactical_states") or {}
     )
@@ -256,6 +287,7 @@ def build(
             "team_matches_played": matches_played,
             "player_match_rows": match_rows_by_player.get(element, []),
         }
+        apply_scenario_override(context, element)
         if historical:
             context.update(
                 {
@@ -327,6 +359,10 @@ def build(
                 teammate_context: dict[str, Any] = {
                     "team_matches_played": teammate_matches
                 }
+                apply_scenario_override(
+                    teammate_context,
+                    teammate_id,
+                )
                 if teammate_historical:
                     teammate_context.update(
                         {
@@ -819,5 +855,10 @@ def build(
             "mini_league_overlay_started_by_p1_3b": False,
             "monte_carlo_applied": False,
             "methodology_weights_20_25_30_25_unchanged": True,
+            "p4_scenario_override_supported": True,
+            "p4_scenario_override_count": len(scenario_overrides),
+            "p4_scenario_override_private_only": True,
+            "p4_scenario_override_uses_canonical_p1_1": True,
+            "p4_scenario_override_posthoc_xpts_mutation": False,
         },
     }

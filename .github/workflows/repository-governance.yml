@@ -270,6 +270,7 @@ jobs:
           tests/test_data_platform_scheduler_watchdog.py
           tests/test_data_platform_scheduler_redundancy.py
           tests/test_delivery_schedule_policy.py
+          tests/test_data_platform_precompute_control.py
           tests/test_runtime_cross_cpu_proof_registry.py
 
   runtime-cross-cpu-probe:

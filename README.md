@@ -26,7 +26,7 @@ Cross-CPU governance now uses a verified frozen direct-proof registry: a transit
 
 D-P2 precompute control is owner-triggered and non-authoritative: it has no cron, cannot edit the core scheduler title, cannot complete or advance a core slot, and may only hand the unchanged future report occurrence to the existing governed V6 `report_prefetch` path at the Revision-6 T-15 window.
 
-D-P3 crypto preparation defines a private-only AES-256-GCM boundary for manager-specific P1.7/MC caches. It uses fresh random 96-bit nonces, request-reconstructed AAD, a metadata-minimal envelope, and fail-closed MISS-on-authentication-failure semantics. It is preparation only until production private-cache wiring and acceptance gates pass.
+D-P3 crypto preparation defines a private-only AES-256-GCM boundary for manager-specific P1.7/MC caches. Production owner execution selects the encrypted profile explicitly; non-main branch acceptance selects no-personal-cache and receives no decrypt key. Persistent P1.7/MC cache files are authenticated `*.aead.json` envelopes only, with restored non-AEAD files rejected. It remains preparation until exact-head CI, production-key availability, governed encrypted reuse, semantic-equivalence, and natural post-merge acceptance pass.
 
 ## Questions it answers
 

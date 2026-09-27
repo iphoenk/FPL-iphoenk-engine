@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-27T17:27:00+07:00`  
-> **Production main at sync:** `2a1d56ffa239fa4984d65bfc964252b062ce4a59`  
+> **Last runtime/documentation sync:** `2026-09-27T17:52:00+07:00`  
+> **Production main at sync:** `051d5b2fd6732f18784a78d934a4cd3ca65ac25b`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -29,6 +29,8 @@ D-P2 precompute control is owner-triggered and non-authoritative: it has no cron
 Scheduler production maturity is established after **3 consecutive genuine natural ChatGPT hourly occurrences**. Historical natural proofs remain immutable; manual recovery, controlled runs, and report-prefetch never increment this maturity counter, and an observed gap remains a scheduler-health failure.
 
 FACT-1/FACT-2 hardening separates live/provisional bonus from final Official FPL bonus/event state, and treats Official set-piece notes as occurrence-bound advisory evidence only. `finished_provisional` is never finalization authority; set-piece evidence cannot directly overwrite xMins, xPts or P(start).
+
+Cache invalidation is governed by a frozen four-state dependency matrix: `HIT`, `MISS`, `PARTIAL_INVALIDATION`, and `NOT_APPLICABLE`. Selective reuse is permitted only with explicit dependency keys; uncertain scope falls back to MISS, and every warm path must remain semantically equal to canonical cold output.
 
 ## Questions it answers
 
@@ -597,7 +599,7 @@ Repository changes are governed by CI and the documentation-sync contract. A cha
 
 As of the README sync timestamp above:
 
-- production `main` is `2a1d56ffa239fa4984d65bfc964252b062ce4a59`;
+- production `main` is `051d5b2fd6732f18784a78d934a4cd3ca65ac25b`;
 - V6 is the active factual plane;
 - Canonical V12 is the active analytics and decision plane;
 - the public/private decision-data boundary is active;

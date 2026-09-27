@@ -1,6 +1,6 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-27T19:24:00+07:00`  
+> **Last runtime/documentation sync:** `2026-09-27T19:32:00+07:00`  
 > **Production main at sync:** `308015dd8841f6124e6794613b7325c1ac2acc4b`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
@@ -35,6 +35,8 @@ FACT-1/FACT-2 hardening separates live/provisional bonus from final Official FPL
 PERF-0 freezes latency measurement before optimization: comparable natural DEEP samples record exact app/runtime lineage, runtime/cache class and observable CPU/runtime metadata, while queue, startup, setup, factual acquisition, Stage-2, P1.2A, P1.2B, P1.7, MC, render, QA, private publish and total timing remain distinct. Missing timing is reported as unavailable rather than inferred.
 
 Cache invalidation is governed by a frozen four-state dependency matrix: `HIT`, `MISS`, `PARTIAL_INVALIDATION`, and `NOT_APPLICABLE`. Selective reuse is permitted only with explicit dependency keys; uncertain scope falls back to MISS, and every warm path must remain semantically equal to canonical cold output.
+
+PERF-A is governed as a same-host ABAB experiment: normalized and native Monte Carlo execute with the same SHA, fixture, routes, seed, 500,000 paths and one thread; semantic output fingerprints must be identical before runtime-class performance can influence the next experiment.
 
 ## Questions it answers
 

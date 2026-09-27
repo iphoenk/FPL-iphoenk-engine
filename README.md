@@ -1,6 +1,6 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-27T11:37:53+07:00`  
+> **Last runtime/documentation sync:** `2026-09-27T11:48:00+07:00`  
 > **Production main at sync:** `a25fd7b22d0aca0c35afa66ccfea935f1d5fcf78`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
@@ -25,6 +25,8 @@ Visible delivery timing is machine-governed by `config/delivery/v12_delivery_sch
 D-P2 precompute control is owner-triggered and non-authoritative: it has no cron, cannot edit the core scheduler title, cannot complete or advance a core slot, and may only hand the unchanged future report occurrence to the existing governed V6 `report_prefetch` path at the Revision-6 T-15 window.
 
 FACT-1/FACT-2 hardening separates live/provisional bonus from final Official FPL bonus/event state, and treats Official set-piece notes as occurrence-bound advisory evidence only. `finished_provisional` is never finalization authority; set-piece evidence cannot directly overwrite xMins, xPts or P(start).
+
+D-P3 private-cache crypto is prepared as a private-only AES-256-GCM boundary with fresh 96-bit nonces, cache/schema/version AAD, two explicit secure profiles, and fail-closed MISS-on-authentication-failure semantics. This preparation does not activate personal persistence or expose production key material.
 
 ## Questions it answers
 

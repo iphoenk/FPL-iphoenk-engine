@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "authority": "FPL_V12_CACHE_DEPENDENCY_MATRIX",
+  "frozen_before_ab": true,
+  "layers": [
+    "Stage2",
+    "P1.7",
+    "MC",
+    "scenario",
+    "stability"
+  ],
+  "semantics": {
+    "HIT": "prior cache entry is correctness-equivalent and should be reusable",
+    "MISS": "prior cache entry must not be reused",
+    "expected_miss_actual_hit": "CORRECTNESS_FAIL",
+    "expected_hit_actual_miss": "PERFORMANCE_OVER_INVALIDATION",
+    "warm_not_equal_canonical_cold": "CORRECTNESS_FAIL"
+  },
+  "matrix": {
+    "UNCHANGED": {
+      "Stage2": "HIT",
+      "P1.7": "HIT",
+      "MC": "HIT",
+      "scenario": "HIT",
+      "stability": "HIT"
+    },
+    "PRICE_ONLY": {
+      "Stage2": "HIT",
+      "P1.7": "HIT",
+      "MC": "HIT",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "INJURY_STATUS": {
+      "Stage2": "MISS",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "OWNED_AVAILABILITY": {
+      "Stage2": "HIT",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "XMINS": {
+      "Stage2": "MISS",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "ROLE": {
+      "Stage2": "MISS",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "SET_PIECE_ROLE": {
+      "Stage2": "MISS",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "FIXTURE": {
+      "Stage2": "MISS",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "TEAM_FINANCE": {
+      "Stage2": "HIT",
+      "P1.7": "HIT",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "MINI_LEAGUE_ONLY": {
+      "Stage2": "HIT",
+      "P1.7": "HIT",
+      "MC": "HIT",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "RUNTIME_CLASS": {
+      "Stage2": "MISS",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "SCENARIO_OVERRIDE": {
+      "Stage2": "MISS",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "CHALLENGER_ONLY": {
+      "Stage2": "HIT",
+      "P1.7": "HIT",
+      "MC": "HIT",
+      "scenario": "HIT",
+      "stability": "HIT"
+    }
+  },
+  "rationale": {
+    "PRICE_ONLY": "Price does not alter canonical football projections, lineup scoring or route-return MC, but it can change affordability, scenario feasibility and downstream decision stability.",
+    "OWNED_AVAILABILITY": "Manager-owned availability is private decision context; it must not invalidate public Stage2 universe projections but must invalidate owned lineup/route and downstream decisions.",
+    "TEAM_FINANCE": "Bank/sell-value/FT state does not alter player projections or owned-XI scoring, but changes legal route space; MC is conservatively invalidated until route-local reuse is separately proven.",
+    "MINI_LEAGUE_ONLY": "Canonical football/lineup/MC distributions remain reusable; scenario action and stability may change because league utility is downstream decision context.",
+    "RUNTIME_CLASS": "Numerical cache reuse across a changed runtime class is forbidden unless a later explicitly governed equivalence contract proves otherwise.",
+    "SCENARIO_OVERRIDE": "Generic owner what-if overrides are conservatively correctness-invalidating across decision compute until narrower typed overrides are proven safe.",
+    "CHALLENGER_ONLY": "Challenger layers are context-only and must not invalidate the canonical decision brain before explicit governed integration."
+  }
+}

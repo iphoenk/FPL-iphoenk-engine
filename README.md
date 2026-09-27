@@ -1,6 +1,6 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-27T12:59:14+07:00`
+> **Last runtime/documentation sync:** `2026-09-27T14:29:45+07:00`
 
 **Probability-driven decision engine for Fantasy Premier League.**
 
@@ -102,6 +102,14 @@ ACT
 ```
 
 The engine keeps **facts → model output → uncertainty → decision** separate rather than presenting every estimate as fact.
+
+## DEEP decision-content delivery barrier
+
+DEEP reports are deliverable only when canonical analytics, decision materialization, rendering, and semantic validation agree. Missing or unsupported evidence remains explicitly degraded or unavailable rather than being invented by the presentation layer.
+
+## PRICE human-facing delivery barrier
+
+PRICE reports follow the same fail-closed principle: price evidence, freshness, affordability context, and decision state must remain traceable to governed inputs. A PRICE report must not manufacture unavailable manager state.
 
 ## What makes it different
 

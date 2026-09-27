@@ -267,15 +267,49 @@ Profiles:
 Experiments are evidence-driven and performed in this order.
 
 ### PERF-0
-Measure the latest 20 comparable standard public-runner production executions. Capture:
+Close the baseline with **6 comparable canonical production-main DEEP executions**.
+
+Qualifying primary samples may be either genuine natural runs or controlled production-equivalent runs, provided all of the following hold:
+- exact production-main SHA;
+- canonical DEEP semantics;
+- actual Monte Carlo paths >= 500,000;
+- complete required phases;
+- correct runtime/cache metadata;
+- no semantic shortcut;
+- branch-only acceptance excluded;
+- synthetic semantic fixtures excluded;
+- normalized and native runtime classes are never mixed in one percentile distribution;
+- controlled samples never count as scheduler continuity proof.
+
+Capture:
+- production main SHA and runtime-data SHA;
+- run ID;
+- logical CPU count;
+- physical core count only when directly supportable;
+- CPU model where available;
+- runtime class;
+- Python, NumPy, OpenBLAS and SIMD where available;
+- thread count;
+- cache profile and cache state;
 - queue/provision/setup;
 - factual acquisition;
 - Stage-2;
+- P1.2A;
 - P1.2B route/package search;
 - P1.7 decision materialization;
 - P1.4 MC;
 - render/QA;
-- publication.
+- private publication;
+- cold total.
+
+Never infer missing timing or physical-core metadata. Three historical diagnostic runs with `REQUIRED_CORE_SLOT_BINDING_PARTIAL_CORE_SLOT_MISMATCH` remain excluded and may not be promoted merely to reach the target.
+
+Summary rules:
+- p50 is valid at n>=3;
+- max is valid at n>=1;
+- PERF-0 closure requires n>=6;
+- p90 is valid only at n>=10;
+- p90 availability is **not** a prerequisite for PERF-0 closure at n=6.
 
 ### PERF-A
 A/B Monte Carlo normalized-runtime versus native-runtime on the **same host**, same SHA, snapshot, routes and seed. Use ABAB order. Freeze the latency metric and acceptance rule before reading results.

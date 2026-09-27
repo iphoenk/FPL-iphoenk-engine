@@ -1,6 +1,6 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-27T20:32:42+07:00`  
+> **Last runtime/documentation sync:** `2026-09-27T20:57:37+07:00`  
 > **Production main at sync:** `d2b3bc04a9723528100f340ce30610a0bd71d117`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
@@ -34,7 +34,7 @@ FACT-1/FACT-2 hardening separates live/provisional bonus from final Official FPL
 
 Stage2 public live acceptance consumes the already-published post-deadline Official FPL mini-league manager-picks factual surface for current-squad identity; it does not require or recreate `data/v6/personal/*` in the public runtime.
 
-PERF-0 freezes latency measurement before optimization: closure requires 6 comparable canonical production-main DEEP executions. Natural and controlled production-equivalent executions may qualify, but controlled runs never count as scheduler proof and branch acceptance is excluded. p90 remains informational until n>=10. Exact app/runtime lineage, runtime/cache class and observable CPU/runtime metadata are preserved, while queue, startup, setup, factual acquisition, Stage-2, P1.2A, P1.2B, P1.7, MC, render, QA, private publish and total timing remain distinct.
+PERF-0 freezes latency measurement before optimization: closure requires 6 comparable canonical production-main DEEP executions. Natural and controlled production-equivalent executions may qualify, but controlled runs never count as scheduler proof and branch acceptance is excluded. p90 remains informational until n>=10. Exact app/runtime lineage, runtime/cache class and observable CPU/runtime metadata are preserved, while queue, startup, setup, factual acquisition, Stage-2, P1.2A, P1.2B, P1.7, MC, render, QA, private publish and total timing remain distinct. Controlled COLD runs use `SECURE_NO_PERSONAL_CACHE`, do not restore or persist personal-decision caches, and do not receive the production decrypt key.
 
 Cache invalidation is governed by a frozen four-state dependency matrix: `HIT`, `MISS`, `PARTIAL_INVALIDATION`, and `NOT_APPLICABLE`. Selective reuse is permitted only with explicit dependency keys; uncertain scope falls back to MISS, and every warm path must remain semantically equal to canonical cold output.
 

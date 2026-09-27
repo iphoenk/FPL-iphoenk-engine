@@ -181,6 +181,11 @@ def test_production_workflow_never_uses_plaintext_personal_cache_or_pr_target():
     assert "SECURE_NO_PERSONAL_CACHE" in workflow
     assert "FPL_V12_PRIVATE_CACHE_KEY_B64" in workflow
     assert "branch acceptance unexpectedly received production decrypt key" in workflow
+    assert "controlled COLD run unexpectedly received production decrypt key" in workflow
+    assert 'PROFILE_MODE: ${{ needs.parse.outputs.profile_mode }}' in workflow
+    assert "needs.parse.outputs.profile_mode != 'COLD'" in workflow
+    assert 'if [[ "$PROFILE_MODE" == "COLD" ]]; then' in workflow
+    assert 'echo "profile=SECURE_NO_PERSONAL_CACHE"' in workflow
     assert "non-AEAD file found in restored production personal cache" in workflow
     assert "find .cache/v12-p17 .cache/v12-mc -type f ! -name '*.aead.json'" in workflow
     assert "actions/cache/restore@v4" in workflow

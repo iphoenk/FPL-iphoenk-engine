@@ -16,6 +16,7 @@ import math
 from pathlib import Path
 import shlex
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from .v12_delivery_schedule import (
     deadline_checkpoints,
@@ -120,7 +121,7 @@ def _validate_target(
         return
 
     if report_kind == "full_master":
-        local = target.astimezone(__import__("zoneinfo").ZoneInfo("Asia/Jakarta"))
+        local = target.astimezone(ZoneInfo("Asia/Jakarta"))
         fixed = set(schedule["fixed_deep_local_times"])
         if f"{local.hour:02d}:{local.minute:02d}" in fixed:
             return

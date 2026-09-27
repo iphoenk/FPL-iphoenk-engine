@@ -724,11 +724,16 @@ class PrefetchService:
 
         requested_for_report = requested_for_report or report_kind
         generated_at = iso(self.now)
+        report_prefetch_run_id = str(uuid.uuid4())
         source_failures: list[dict[str, Any]] = []
+        advisory_source_failures: list[dict[str, Any]] = []
         control_failures: list[str] = []
         artifacts: list[dict[str, Any]] = []
         cache_hits = cache_misses = max_rival_concurrency = 0
-        client = self._client() if (scope.personal or scope.mini_league or scope.live) else None
+        set_piece_notes_requested = report_kind in {"full_master", "deadline_review"}
+        client = self._client() if (
+            scope.personal or scope.mini_league or scope.live or set_piece_notes_requested
+        ) else None
         secrets = tuple(getattr(client, "secret_values", ()) or ()) if client else ()
 
         bootstrap_result = client.bootstrap() if client else None
@@ -745,6 +750,54 @@ class PrefetchService:
                         "domain": "official_fpl",
                         "endpoint_class": "bootstrap_static",
                         "status": (bootstrap_result or {}).get("status", "UNAVAILABLE"),
+                    }
+                )
+
+        set_piece_notes_status = "NOT_REQUESTED"
+        set_piece_notes_checked_at = None
+        if set_piece_notes_requested and client is not None:
+            set_piece_result = client.set_piece_notes()
+            set_piece_notes_checked_at = set_piece_result.get("checked_at")
+            if set_piece_result.get("status") == "LIVE" and isinstance(
+                set_piece_result.get("payload"), dict
+            ):
+                set_piece_notes_status = "AVAILABLE"
+                set_piece_artifact = {
+                    "schema_version": 1,
+                    "semantic_class": "FACT",
+                    "authority": "OFFICIAL_FPL",
+                    "generated_at": generated_at,
+                    "report_kind": report_kind,
+                    "target_logical_report_slot": slot.isoformat(),
+                    "slot_identity": slot_identity,
+                    "report_prefetch_run_id": report_prefetch_run_id,
+                    "status": "AVAILABLE",
+                    "payload": set_piece_result.get("payload") or {},
+                    "lineage": lineage(set_piece_result),
+                    "governance": {
+                        "evidence_only": True,
+                        "direct_xmins_mutation": False,
+                        "direct_xpts_mutation": False,
+                        "direct_start_probability_mutation": False,
+                    },
+                }
+                set_piece_relative = "report_prefetch/set_piece_notes.json"
+                write_json(
+                    self.output_root / set_piece_relative,
+                    set_piece_artifact,
+                    secrets=secrets,
+                )
+                artifacts.append(artifact_meta(self.output_root, set_piece_relative))
+            else:
+                set_piece_notes_status = str(
+                    set_piece_result.get("status") or "UNAVAILABLE"
+                )
+                advisory_source_failures.append(
+                    {
+                        "domain": "official_fpl",
+                        "endpoint_class": "set_piece_notes",
+                        "status": set_piece_notes_status,
+                        "required_for_public_core_complete": False,
                     }
                 )
 
@@ -1089,7 +1142,6 @@ class PrefetchService:
             and personal_auth_state != "AUTH_AVAILABLE"
         )
 
-        report_prefetch_run_id = str(uuid.uuid4())
         core_manifest = read_json(self.output_root / "manifest.json") or {}
         core_control = dict(core_manifest.get("runtime_control") or {})
         source_run_id = str(
@@ -1111,6 +1163,7 @@ class PrefetchService:
             "PERSONAL": personal_status,
             "MINI_LEAGUE": mini_status,
             "AUTH": report_auth_state,
+            "SET_PIECE_NOTES": set_piece_notes_status,
             "ICON+": (
                 mini_status
                 if primary_name and "ICON+" in str(primary_name).upper()
@@ -1213,7 +1266,11 @@ class PrefetchService:
                 else None
             ),
             "live_checked_at": live_checked_at,
+            "set_piece_notes_requested": set_piece_notes_requested,
+            "set_piece_notes_status": set_piece_notes_status,
+            "set_piece_notes_checked_at": set_piece_notes_checked_at,
             "source_failures": source_failures,
+            "advisory_source_failures": advisory_source_failures,
             "control_failures": control_failures,
             "public_control_failures": public_control_failures,
             "scope_health": scope_health,
@@ -1247,6 +1304,9 @@ class PrefetchService:
                 "normal_hourly_personal_refresh": False,
                 "price_0530_requires_mini_league_facts": report_kind == "05:30_price",
                 "independent_prefetch_cron": False,
+                "set_piece_notes_are_optional_public_facts": True,
+                "set_piece_notes_failure_does_not_fail_public_core": True,
+                "set_piece_notes_direct_model_override_forbidden": True,
             },
         }
         write_json(self.output_root / "report_prefetch/latest.json", manifest, secrets=secrets)

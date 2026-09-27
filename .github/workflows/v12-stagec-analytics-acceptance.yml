@@ -29,6 +29,7 @@ on:
       - "tests/test_private_delivery_security.py"
       - "tests/test_private_publisher.py"
       - "tests/test_private_data_boundary.py"
+      - "tests/test_fact_event_bonus_setpiece_lifecycle.py"
       - "config/security/v12_delivery_classification.json"
       - ".github/workflows/v12-stagec-analytics-acceptance.yml"
   pull_request:
@@ -56,6 +57,7 @@ on:
       - "tests/test_private_delivery_security.py"
       - "tests/test_private_publisher.py"
       - "tests/test_private_data_boundary.py"
+      - "tests/test_fact_event_bonus_setpiece_lifecycle.py"
       - "config/security/v12_delivery_classification.json"
       - ".github/workflows/v12-stagec-analytics-acceptance.yml"
   workflow_dispatch:
@@ -95,7 +97,8 @@ jobs:
             tests/test_personal_data_plane.py \
             tests/test_private_delivery_security.py \
             tests/test_private_publisher.py \
-            tests/test_private_data_boundary.py
+            tests/test_private_data_boundary.py \
+            tests/test_fact_event_bonus_setpiece_lifecycle.py
 
       - name: Run P1 synthetic private/public acceptance
         run: |

@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-27T19:24:00+07:00`  
-> **Production main at sync:** `308015dd8841f6124e6794613b7325c1ac2acc4b`  
+> **Last runtime/documentation sync:** `2026-09-27T20:05:30+07:00`  
+> **Production main at sync:** `382bd1845c35547dd62c341ee11e0373e7526718`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -32,7 +32,7 @@ Scheduler production maturity is established after **3 consecutive genuine natur
 
 FACT-1/FACT-2 hardening separates live/provisional bonus from final Official FPL bonus/event state, and treats Official set-piece notes as occurrence-bound advisory evidence only. `finished_provisional` is never finalization authority; set-piece evidence cannot directly overwrite xMins, xPts or P(start).
 
-PERF-0 freezes latency measurement before optimization: comparable natural DEEP samples record exact app/runtime lineage, runtime/cache class and observable CPU/runtime metadata, while queue, startup, setup, factual acquisition, Stage-2, P1.2A, P1.2B, P1.7, MC, render, QA, private publish and total timing remain distinct. Missing timing is reported as unavailable rather than inferred.
+PERF-0 freezes latency measurement before optimization: closure requires 6 comparable canonical production-main DEEP executions. Natural and controlled production-equivalent executions may qualify, but controlled runs never count as scheduler proof and branch acceptance is excluded. p90 remains informational until n>=10. Exact app/runtime lineage, runtime/cache class and observable CPU/runtime metadata are preserved, while queue, startup, setup, factual acquisition, Stage-2, P1.2A, P1.2B, P1.7, MC, render, QA, private publish and total timing remain distinct.
 
 Cache invalidation is governed by a frozen four-state dependency matrix: `HIT`, `MISS`, `PARTIAL_INVALIDATION`, and `NOT_APPLICABLE`. Selective reuse is permitted only with explicit dependency keys; uncertain scope falls back to MISS, and every warm path must remain semantically equal to canonical cold output.
 
@@ -603,7 +603,7 @@ Repository changes are governed by CI and the documentation-sync contract. A cha
 
 As of the README sync timestamp above:
 
-- production `main` is `308015dd8841f6124e6794613b7325c1ac2acc4b`;
+- production `main` is `382bd1845c35547dd62c341ee11e0373e7526718`;
 - V6 is the active factual plane;
 - Canonical V12 is the active analytics and decision plane;
 - the public/private decision-data boundary is active;

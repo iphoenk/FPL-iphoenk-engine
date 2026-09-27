@@ -766,6 +766,63 @@ def _require_report_prefetch(
     }
 
 
+def _bound_set_piece_notes(
+    runtime_root: Path,
+    *,
+    prefetch: Mapping[str, Any],
+    report_slot: str,
+) -> dict[str, Any]:
+    artifact = _read_json(
+        runtime_root / "data/v6/report_prefetch/set_piece_notes.json",
+        {},
+    ) or {}
+    if not artifact:
+        return {
+            "status": "UNAVAILABLE",
+            "reason": "SET_PIECE_NOTES_ARTIFACT_MISSING",
+            "payload": None,
+        }
+
+    expected_slot = _parse_aware(report_slot)
+    artifact_slot = _parse_aware(artifact.get("target_logical_report_slot"))
+    expected_request = str(
+        prefetch.get("report_prefetch_run_id")
+        or prefetch.get("request_id")
+        or ""
+    ).strip()
+    actual_request = str(artifact.get("report_prefetch_run_id") or "").strip()
+    checks = {
+        "report_kind": str(artifact.get("report_kind") or "") == "full_master",
+        "logical_slot": bool(
+            expected_slot is not None
+            and artifact_slot is not None
+            and artifact_slot.astimezone(expected_slot.tzinfo) == expected_slot
+        ),
+        "report_prefetch_run_id": bool(
+            expected_request and actual_request == expected_request
+        ),
+        "authority": artifact.get("authority") == "OFFICIAL_FPL",
+        "semantic_class": artifact.get("semantic_class") == "FACT",
+        "status": artifact.get("status") == "AVAILABLE",
+        "payload": isinstance(artifact.get("payload"), Mapping),
+    }
+    failed = [key for key, value in checks.items() if not value]
+    if failed:
+        return {
+            "status": "DEGRADED",
+            "reason": "SET_PIECE_NOTES_OCCURRENCE_MISMATCH:" + ",".join(failed),
+            "payload": None,
+            "checks": checks,
+        }
+    return {
+        "status": "AVAILABLE",
+        "reason": None,
+        "payload": dict(artifact.get("payload") or {}),
+        "checks": checks,
+        "lineage": artifact.get("lineage"),
+    }
+
+
 def _official_payload(runtime_root: Path) -> dict[str, Any]:
     payload = _read_json(runtime_root / "data/v6/current/official_fpl.json", {}) or {}
     official = payload.get("official") or {}
@@ -4629,6 +4686,20 @@ def run_deep(
         raise IntegratedRunnerError("required Official FPL factual input unavailable")
     bootstrap = official["bootstrap"]
     fixtures = official["fixtures"]
+    set_piece_notes_evidence = _stage(
+        ledger,
+        "OFFICIAL_SET_PIECE_NOTES",
+        lambda: _bound_set_piece_notes(
+            runtime_data_root,
+            prefetch=prefetch,
+            report_slot=report_slot,
+        ),
+    ) or {"status": "UNAVAILABLE", "payload": None}
+    set_piece_notes_payload = (
+        set_piece_notes_evidence.get("payload")
+        if set_piece_notes_evidence.get("status") == "AVAILABLE"
+        else None
+    )
     planning_gw = _planning_gw(bootstrap)
     personal_resolution = _stage(
         ledger,
@@ -4754,7 +4825,11 @@ def run_deep(
         _stage(
             ledger,
             "OFFICIAL_ROLE_EVIDENCE",
-            lambda: attach_official_role_evidence(projections, bootstrap),
+            lambda: attach_official_role_evidence(
+                projections,
+                bootstrap,
+                set_piece_notes=set_piece_notes_payload,
+            ),
         )
         _stage(
             ledger,

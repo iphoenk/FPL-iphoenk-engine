@@ -2854,6 +2854,35 @@ def _mini_league_deep_detail(
         for entry in league_entries
         if int(entry.get("entry_id") or 0) != our_entry_id
     ]
+    league_unique_ids = sorted({
+        element
+        for entry in league_entries
+        for pick in entry.get("picks") or []
+        for element in [pick_element(pick)]
+        if element is not None
+    })
+    league_full_composition = exposure_for_entries(
+        league_entries,
+        league_unique_ids,
+        require_complete_eo=True,
+    )
+    for row in league_full_composition:
+        player = canonical_map.get(int(row.get("element_id") or 0)) or {}
+        row["position"] = (
+            player.get("position")
+            or player.get("position_name")
+            or player.get("element_type")
+            or "UNAVAILABLE"
+        )
+        row["our15"] = int(row.get("element_id") or 0) in owned_set
+    league_full_composition.sort(
+        key=lambda row: (
+            str(row.get("position") or ""),
+            -int(row.get("ownership_count") or 0),
+            -int(row.get("starter_count") or 0),
+            int(row.get("element_id") or 0),
+        )
+    )
     league_our15_exposure = exposure_for_entries(
         league_entries,
         owned_ids,
@@ -3321,6 +3350,12 @@ def _mini_league_deep_detail(
                 "includes_us": False,
             },
         },
+        "league_full_composition": league_full_composition,
+        "league_full_composition_complete": bool(
+            league_entries
+            and all(len(entry.get("picks") or []) == 15 for entry in league_entries)
+        ),
+        "league_unique_player_count": len(league_unique_ids),
         "league_our15_exposure": league_our15_exposure,
         "rivals_our15_exposure": rivals_our15_exposure,
         "our15_rival_exposure": rivals_our15_exposure,
@@ -5760,6 +5795,10 @@ def run_deep(
             "COMPLETE" if chip_available else "DEGRADED",
             {
                 "chip": chip_state if chip_available else "UNAVAILABLE",
+                "chip_ledger": chip_state if chip_available else "UNAVAILABLE",
+                "chip_ledger_authority": "PRIVATE_PERSONAL_PLANE" if chip_available else "UNAVAILABLE",
+                "remaining_chip_set_required": True,
+                "free_hit_optimization_required_when_fh_only": True,
                 "considered_now": False,
                 "horizon": "REASSESS EACH DEADLINE",
                 "trigger": "material chip-specific fixture/ceiling edge",

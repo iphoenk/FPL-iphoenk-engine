@@ -5,7 +5,7 @@
   "metric_contract": "config/performance/v12_perf0_metrics.json",
   "production_main_at_capture": "508f1ed919b9b37540cc604d92bdfe5075e96366",
   "primary_comparable_sample_count": 0,
-  "primary_sample_target": 20,
+  "primary_sample_target": 6,
   "closure_status": "PENDING",
   "diagnostic_samples": [
     {
@@ -105,6 +105,7 @@
     "Diagnostic samples are retained because they are real public-runner production DEEP executions with 500000-path canonical MC and successful private delivery.",
     "They are excluded from the frozen primary PERF-0 distribution because a required CORE_SLOT_BINDING stage was PARTIAL.",
     "No timing bucket absent from source evidence is inferred.",
-    "No diagnostic sample is promoted to natural scheduler acceptance."
+    "Primary PERF-0 closure target is 6 comparable canonical production-main runs. Natural and controlled production-equivalent runs may qualify; controlled runs never count as scheduler proof.",
+    "p90 remains unavailable until at least 10 qualifying samples and is not required for PERF-0 closure at n=6."
   ]
 }

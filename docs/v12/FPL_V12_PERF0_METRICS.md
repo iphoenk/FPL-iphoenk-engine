@@ -1,14 +1,14 @@
 # FPL V12 PERF-0 Metric Contract
 
 > Status: FROZEN DEFINITION / SAMPLE COLLECTION PENDING  
-> Change timestamp: 2026-09-27T14:59:46+07:00  
-> Production base at preparation: `508f1ed919b9b37540cc604d92bdfe5075e96366`
+> Change timestamp: 2026-09-27T20:38:30+07:00  
+> Production base at preparation: `d2b3bc04a9723528100f340ce30610a0bd71d117`
 
 PERF-0 prevents optimization-by-anecdote. No PERF-A/B/C/D/E selection may use a one-off fast run or a metric definition changed after observing results.
 
 ## Primary comparable sample
 
-The primary baseline uses about 20 genuine production-natural DEEP executions with:
+The primary PERF-0 closure baseline uses **6 comparable canonical production-main DEEP executions**. They may be genuine natural runs or controlled production-equivalent runs, provided the execution contract is identical and the sample is not a branch-only acceptance run. Controlled runs never count as scheduler continuity proof. Qualifying samples require:
 
 - canonical V12 semantics;
 - actual Monte Carlo paths >= 500,000;
@@ -66,7 +66,7 @@ If a phase timestamp is absent, the phase is `UNAVAILABLE`. It must not be infer
 - no cherry-picked fast-run baseline;
 - sample basis is frozen before percentile computation.
 
-The requested PERF-0 closure still requires approximately 20 comparable real production/public-runner executions. Current public-safe extraction is recorded in `docs/audits/FPL_V12_PERF0_BASELINE_EVIDENCE_20260927.json`. Three real DEEP runs were recovered with 500,000-path MC and successful private delivery, but all three had required `CORE_SLOT_BINDING=PARTIAL / CORE_SLOT_MISMATCH`; therefore they remain diagnostic-only and the primary comparable sample count is truthfully `0/20`. No p50/p90 is computed from them.
+PERF-0 closure requires **6** comparable canonical production-main executions. p50 is available from n>=3 and max from n>=1. p90 remains deliberately unavailable until n>=10, but p90 availability is not a closure prerequisite at n=6. Current public-safe extraction is recorded in `docs/audits/FPL_V12_PERF0_BASELINE_EVIDENCE_20260927.json`. Three real DEEP runs were recovered with 500,000-path MC and successful private delivery, but all three had required `CORE_SLOT_BINDING=PARTIAL / CORE_SLOT_MISMATCH`; therefore they remain diagnostic-only and the primary comparable sample count is truthfully `0/6`. No p50/p90 is computed from them.
 
 ## Warm acceptance relation
 

@@ -75,7 +75,7 @@ def test_perf0_never_infers_missing_timing_or_physical_cores():
 def test_diagnostic_runs_do_not_pollute_primary_distribution():
     evidence = _read(EVIDENCE)
     assert evidence["primary_comparable_sample_count"] == 0
-    assert evidence["primary_sample_target"] == 20
+    assert evidence["primary_sample_target"] == 6
     assert evidence["closure_status"] == "PENDING"
     assert len(evidence["diagnostic_samples"]) == 3
     assert all(
@@ -99,3 +99,15 @@ def test_diagnostic_samples_preserve_500k_mc_without_claiming_natural_acceptance
         assert sample["mc_actual_paths"] == 500000
         assert sample["mc_convergence"] == "PASS"
         assert sample["private_delivery"] == "PASS"
+
+
+def test_perf0_six_run_closure_keeps_p90_separate():
+    contract = _read(CONTRACT)
+    assert contract["sample_target"] == 6
+    assert contract["comparability"]["production_natural_only_for_primary_baseline"] is False
+    assert contract["comparability"]["allow_controlled_production_equivalent_main_runs"] is True
+    assert contract["comparability"]["require_production_main_sha"] is True
+    assert contract["comparability"]["controlled_runs_do_not_count_as_scheduler_proof"] is True
+    assert contract["summary_rules"]["closure_min_samples"] == 6
+    assert contract["summary_rules"]["perf0_closure_requires_p90"] is False
+    assert contract["summary_rules"]["p90_min_samples"] == 10

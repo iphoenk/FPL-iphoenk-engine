@@ -86,3 +86,33 @@ def test_ledger_exposes_proof_age_without_fabricating_missing_slot() -> None:
     assert observed["summary"]["scheduler_proof_health"] == "RED"
     assert observed["summary"]["missing_operational_slots"] == 0
     assert observed["governance"]["scheduler_proof_age_does_not_fabricate_slots"] is True
+
+
+def test_existing_ledger_epoch_refreshes_policy_metadata_without_rewriting_start() -> None:
+    previous = {
+        "schema_version": 3,
+        "epoch": {
+            "id": "CHATGPT_MASTER_V1",
+            "authority": "CHATGPT_FPL_MASTER_MONITOR",
+            "start_at": "2026-09-08T03:00:00+00:00",
+            "green_after_consecutive_slots": 999,
+        },
+        "slots": [],
+        "auxiliary_operational_slots": [],
+        "duplicate_core_attempts": [],
+        "legacy_slots": [],
+    }
+    control = build_runtime_control(
+        {},
+        now=datetime(2026, 9, 27, 10, 31, tzinfo=timezone.utc),
+        event_name="issue_comment",
+        run_id="scheduler-policy-refresh",
+        schedule_kind="chatgpt_scheduler",
+        logical_slot="2026-09-27T17:00:00+07:00",
+    )
+    ledger = build_operational_slots(previous, control)
+    assert ledger["epoch"]["start_at"] == "2026-09-08T03:00:00+00:00"
+    assert ledger["epoch"]["id"] == CHATGPT_SCHEDULER_EPOCH
+    assert ledger["epoch"]["authority"] == CHATGPT_SCHEDULER_AUTHORITY
+    assert ledger["epoch"]["green_after_consecutive_slots"] == CHATGPT_GREEN_STREAK
+    assert ledger["summary"]["required_consecutive_successes"] == CHATGPT_GREEN_STREAK

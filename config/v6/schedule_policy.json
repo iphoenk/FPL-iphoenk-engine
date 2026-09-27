@@ -204,7 +204,12 @@
     },
     "issue_title_marker": "REPORT_PREFETCH_TITLE_DISABLED",
     "issue_title_edit_enabled": false,
-    "preferred_transport": "ISSUE_COMMENT"
+    "preferred_transport": "ISSUE_COMMENT",
+    "precompute_dispatch_actor": "github-actions[bot]",
+    "precompute_dispatch_reason": "V12_D_P2_PRECOMPUTE",
+    "precompute_dispatch_role": "REPORT_PRECOMPUTE_ONLY",
+    "precompute_dispatch_counts_as_scheduler_proof": false,
+    "precompute_dispatch_counts_as_completed_operational_slot": false
   },
   "github_control_schedules": {
     "only_scheduled_v6_control_workflow": "v6-scheduler-watchdog.yml",

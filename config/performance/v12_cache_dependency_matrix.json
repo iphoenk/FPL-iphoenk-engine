@@ -1,0 +1,137 @@
+{
+  "schema_version": 2,
+  "authority": "FPL_V12_CACHE_DEPENDENCY_MATRIX",
+  "frozen_before_performance_ab": true,
+  "layers": [
+    "Stage2",
+    "P1.7",
+    "MC",
+    "scenario",
+    "stability"
+  ],
+  "states": [
+    "HIT",
+    "MISS",
+    "PARTIAL_INVALIDATION",
+    "NOT_APPLICABLE"
+  ],
+  "semantics": {
+    "HIT": "prior cache entry is correctness-equivalent and reusable",
+    "MISS": "prior cache entry must not be reused",
+    "PARTIAL_INVALIDATION": "only dependency-bound subentries may be reused; affected subentries must be recomputed",
+    "NOT_APPLICABLE": "the change class does not participate in this layer under the current governed architecture",
+    "expected_miss_actual_hit": "CORRECTNESS_FAIL",
+    "expected_hit_actual_miss": "PERFORMANCE_OVER_INVALIDATION",
+    "partial_invalidation_reuses_affected_subentry": "CORRECTNESS_FAIL",
+    "warm_not_equal_canonical_cold": "CORRECTNESS_FAIL"
+  },
+  "matrix": {
+    "UNCHANGED": {
+      "Stage2": "HIT",
+      "P1.7": "HIT",
+      "MC": "HIT",
+      "scenario": "HIT",
+      "stability": "HIT"
+    },
+    "PRICE_ONLY": {
+      "Stage2": "HIT",
+      "P1.7": "HIT",
+      "MC": "PARTIAL_INVALIDATION",
+      "scenario": "PARTIAL_INVALIDATION",
+      "stability": "MISS"
+    },
+    "INJURY_STATUS": {
+      "Stage2": "MISS",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "OWNED_AVAILABILITY": {
+      "Stage2": "HIT",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "PARTIAL_INVALIDATION",
+      "stability": "MISS"
+    },
+    "XMINS": {
+      "Stage2": "MISS",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "ROLE": {
+      "Stage2": "MISS",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "SET_PIECE_ROLE": {
+      "Stage2": "MISS",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "FIXTURE": {
+      "Stage2": "MISS",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "TEAM_FINANCE": {
+      "Stage2": "HIT",
+      "P1.7": "HIT",
+      "MC": "PARTIAL_INVALIDATION",
+      "scenario": "PARTIAL_INVALIDATION",
+      "stability": "MISS"
+    },
+    "MINI_LEAGUE_ONLY": {
+      "Stage2": "HIT",
+      "P1.7": "HIT",
+      "MC": "HIT",
+      "scenario": "PARTIAL_INVALIDATION",
+      "stability": "MISS"
+    },
+    "RUNTIME_CLASS": {
+      "Stage2": "MISS",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "SCENARIO_OVERRIDE": {
+      "Stage2": "PARTIAL_INVALIDATION",
+      "P1.7": "MISS",
+      "MC": "MISS",
+      "scenario": "MISS",
+      "stability": "MISS"
+    },
+    "CHALLENGER_ONLY": {
+      "Stage2": "HIT",
+      "P1.7": "HIT",
+      "MC": "HIT",
+      "scenario": "NOT_APPLICABLE",
+      "stability": "NOT_APPLICABLE"
+    }
+  },
+  "partial_invalidation_contract": {
+    "must_identify_affected_dependency_keys": true,
+    "must_preserve_unaffected_semantic_fingerprints": true,
+    "must_recompute_affected_subentries": true,
+    "must_compare_warm_to_canonical_cold": true,
+    "fallback_when_scope_is_uncertain": "MISS"
+  },
+  "rationale": {
+    "PRICE_ONLY": "Football projection and owned-lineup scoring remain reusable. Affordability and route feasibility may invalidate only finance-dependent MC/scenario subentries; stability is recomputed.",
+    "OWNED_AVAILABILITY": "Private owned-player availability does not invalidate public Stage2 universe projections, but invalidates owned lineup and downstream decision compute. Scenario reuse is limited to unaffected scenario keys.",
+    "TEAM_FINANCE": "Bank, selling values and FT state do not alter football projections or owned-XI scoring. Route-dependent MC/scenario entries are selectively invalidated; uncertain scope falls back to MISS.",
+    "MINI_LEAGUE_ONLY": "Football projection, lineup and football-return MC remain reusable. Decision-context scenario and stability surfaces are recomputed selectively/downstream.",
+    "RUNTIME_CLASS": "Cross-runtime cache reuse is forbidden unless a separately governed equivalence contract proves it.",
+    "SCENARIO_OVERRIDE": "A typed P1.1 availability/xMins override may preserve unaffected Stage2 subentries only when dependency keys are explicit; downstream lineup/MC/scenario/stability must recompute.",
+    "CHALLENGER_ONLY": "Context-only challengers do not alter canonical compute; scenario/stability integration is not applicable until a challenger is explicitly admitted."
+  }
+}

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-27T09:00:05+07:00`  
+> **Last runtime/documentation sync:** `2026-09-27T11:59:00+07:00`  
 > **Production main at sync:** `ed11496f63d4a554f797c1e209a5bd53ecdd1f35`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
@@ -21,6 +21,8 @@ Mandatory integrated DEEP delivery is fail-closed on same-occurrence factual bin
 Delivery, privacy, latency, historical-validation and consumption architecture are governed by `docs/v12/FPL_V12_DELIVERY_ARCHITECTURE_PLAN_REV6.md`. Revision 6 supersedes earlier Delivery Architecture Plan wording where inconsistent.
 
 Visible delivery timing is machine-governed by `config/delivery/v12_delivery_schedule.json`: DEEP at 04:30/12:30/21:30 Asia/Jakarta, PRICE at 23:30 Europe/London with DST-safe WIB conversion, exact deadline checkpoints, quiet-hour handling, single-report overlap, and T-15/T-10 precompute timing.
+
+Cross-CPU governance now uses a verified frozen direct-proof registry: a transitive PASS is allowed only when the registered GitHub run/artifact is revalidated, the proof commit is an ancestor, protected semantic paths are unchanged, and normalized runtime/output remain identical. Semantic changes still require a direct current-head multi-CPU proof.
 
 ## Questions it answers
 

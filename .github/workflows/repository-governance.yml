@@ -270,6 +270,7 @@ jobs:
           tests/test_data_platform_scheduler_watchdog.py
           tests/test_data_platform_scheduler_redundancy.py
           tests/test_delivery_schedule_policy.py
+          tests/test_runtime_cross_cpu_proof_registry.py
 
   runtime-cross-cpu-probe:
     name: runtime-cross-cpu-probe-${{ matrix.label }}
@@ -324,10 +325,11 @@ jobs:
     needs: runtime-cross-cpu-probe
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
     env:
-      BASELINE_PROOF_HEAD: 48f53506ceb7751140aa96771481ec9eee69cb7f
-      BASELINE_PROOF_RUN: "36120950246"
-      BASELINE_OUTPUT_SHA256: 89f41be085a1e387eb87ee86dfecfb5d4cf4c2924a20221ee27c09f757c4db87
+      PROOF_CONFIG: config/performance/v12_runtime_cross_cpu_proof.json
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -340,9 +342,114 @@ jobs:
           pattern: v12-runtime-probe-*-${{ github.run_id }}
           path: runtime-probes
           merge-multiple: true
-      - name: Enforce direct or frozen-transitive multi-CPU bit identity
+
+      - name: Load frozen cross-CPU proof registry
+        id: frozen-proof
+        shell: bash
         run: |
           set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          proof = json.loads(Path(os.environ["PROOF_CONFIG"]).read_text(encoding="utf-8"))
+          required = {
+              "authority": "FPL_V12_RUNTIME_CROSS_CPU_FROZEN_PROOF",
+              "proof_mode": "DIRECT_CURRENT_HEAD_MULTI_CPU",
+          }
+          for key, expected in required.items():
+              if proof.get(key) != expected:
+                  raise SystemExit(f"invalid frozen proof registry {key}: {proof.get(key)!r}")
+          if int(proof.get("distinct_physical_cpu_models") or 0) < 2:
+              raise SystemExit("frozen proof must contain direct multi-CPU evidence")
+          if len(str(proof.get("proof_head") or "")) != 40:
+              raise SystemExit("frozen proof head must be a full commit SHA")
+          if int(proof.get("proof_run_id") or 0) <= 0:
+              raise SystemExit("frozen proof run id missing")
+          if len(str(proof.get("output_sha256") or "")) != 64:
+              raise SystemExit("frozen proof output sha256 missing")
+          for name, value in (
+              ("proof_head", proof["proof_head"]),
+              ("proof_run_id", proof["proof_run_id"]),
+              ("proof_artifact_name", proof["proof_artifact_name"]),
+              ("output_sha256", proof["output_sha256"]),
+          ):
+              print(f"{name}={value}", file=open(os.environ["GITHUB_OUTPUT"], "a"))
+          PY
+
+      - name: Verify frozen cross-CPU registry against immutable GitHub evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROOF_RUN: ${{ steps.frozen-proof.outputs.proof_run_id }}
+          PROOF_HEAD: ${{ steps.frozen-proof.outputs.proof_head }}
+          PROOF_ARTIFACT_NAME: ${{ steps.frozen-proof.outputs.proof_artifact_name }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PROOF_RUN}" > "$RUNNER_TEMP/frozen-proof-run.json"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PROOF_RUN}/artifacts?per_page=100" > "$RUNNER_TEMP/frozen-proof-artifacts.json"
+
+          artifact_id="$(python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          proof = json.loads(Path(os.environ["PROOF_CONFIG"]).read_text(encoding="utf-8"))
+          run = json.loads((Path(os.environ["RUNNER_TEMP"]) / "frozen-proof-run.json").read_text())
+          if run.get("status") != "completed" or run.get("conclusion") != "success":
+              raise SystemExit("registered cross-CPU proof run is not terminal SUCCESS")
+          if run.get("head_sha") != proof["proof_head"]:
+              raise SystemExit("registered cross-CPU proof run head mismatch")
+          if run.get("event") != "pull_request":
+              raise SystemExit("registered cross-CPU proof must originate from pull_request governance")
+
+          payload = json.loads((Path(os.environ["RUNNER_TEMP"]) / "frozen-proof-artifacts.json").read_text())
+          candidates = [
+              row for row in payload.get("artifacts", [])
+              if row.get("name") == proof["proof_artifact_name"] and not row.get("expired")
+          ]
+          if len(candidates) != 1:
+              raise SystemExit(f"registered direct cross-CPU artifact count={len(candidates)}")
+          print(candidates[0]["id"])
+          PY
+          )"
+          test -n "$artifact_id"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "$RUNNER_TEMP/frozen-proof.zip"
+
+          python - <<'PY'
+          import json
+          import os
+          import zipfile
+          from pathlib import Path
+
+          proof = json.loads(Path(os.environ["PROOF_CONFIG"]).read_text(encoding="utf-8"))
+          archive = Path(os.environ["RUNNER_TEMP"]) / "frozen-proof.zip"
+          with zipfile.ZipFile(archive) as zf:
+              json_names = [name for name in zf.namelist() if name.endswith(".json")]
+              if len(json_names) != 1:
+                  raise SystemExit(f"frozen proof artifact JSON count={len(json_names)}")
+              accepted = json.loads(zf.read(json_names[0]))
+
+          checks = {
+              "schema": accepted.get("schema") == "V12_RUNTIME_CROSS_CPU_ACCEPTANCE_V2",
+              "status": accepted.get("status") == "PASS",
+              "proof_mode": accepted.get("proof_mode") == "DIRECT_CURRENT_HEAD_MULTI_CPU",
+              "head": accepted.get("current_head") == proof["proof_head"],
+              "multi_cpu": int(accepted.get("distinct_physical_cpu_models_current_run") or 0) >= 2,
+              "output": accepted.get("output_sha256") == proof["output_sha256"],
+          }
+          failed = [key for key, value in checks.items() if not value]
+          if failed:
+              raise SystemExit("registered frozen proof artifact mismatch: " + ",".join(failed))
+          print(json.dumps({"frozen_proof_verified": True, "checks": checks}, sort_keys=True))
+          PY
+
+      - name: Enforce direct or verified-transitive multi-CPU bit identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROOF_HEAD="${{ steps.frozen-proof.outputs.proof_head }}"
           SEMANTIC_PATHS=(
             src/platform/v12_runtime_cross_cpu_probe.py
             src/engines/v12_cache_runtime_identity.py
@@ -355,11 +462,20 @@ jobs:
             control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt
             tests/test_lineup_distributional_optimizer.py
           )
+
+          proof_is_ancestor=false
+          if git merge-base --is-ancestor "$PROOF_HEAD" "$HEAD_SHA"; then
+            proof_is_ancestor=true
+          fi
+
           semantic_unchanged=true
-          if ! git diff --quiet "$BASELINE_PROOF_HEAD" "$HEAD_SHA" -- "${SEMANTIC_PATHS[@]}"; then
+          if ! git diff --quiet "$PROOF_HEAD" "$HEAD_SHA" -- "${SEMANTIC_PATHS[@]}"; then
             semantic_unchanged=false
           fi
+          export PROOF_IS_ANCESTOR="$proof_is_ancestor"
           export SEMANTIC_UNCHANGED="$semantic_unchanged"
+          export PROOF_HEAD
+
           python - <<'PY'
           import json
           import os
@@ -374,22 +490,17 @@ jobs:
               json.dumps(row.get("runtime_cache_identity"), sort_keys=True, separators=(",", ":"))
               for row in rows
           }
-          baseline_runtime = {
-              "python_major_minor": "3.12",
-              "numpy_version": "2.5.2",
-              "openblas_coretype": "Haswell",
-              "numpy_simd_active": ["X86_V2", "X86_V3"],
-              "openblas_num_threads": 1,
-          }
+
+          proof = json.loads(Path(os.environ["PROOF_CONFIG"]).read_text(encoding="utf-8"))
+          baseline_runtime = dict(proof["runtime_cache_identity"])
           baseline_runtime_key = json.dumps(
               baseline_runtime,
               sort_keys=True,
               separators=(",", ":"),
           )
-          baseline_output = os.environ["BASELINE_OUTPUT_SHA256"]
-          semantic_unchanged = (
-              os.environ.get("SEMANTIC_UNCHANGED", "false").lower() == "true"
-          )
+          baseline_output = str(proof["output_sha256"])
+          semantic_unchanged = os.environ.get("SEMANTIC_UNCHANGED") == "true"
+          proof_is_ancestor = os.environ.get("PROOF_IS_ANCESTOR") == "true"
 
           failures = []
           if len(rows) < 8:
@@ -402,30 +513,32 @@ jobs:
           current_runtime = next(iter(runtime_keys)) if len(runtime_keys) == 1 else None
           current_output = next(iter(output_hashes)) if len(output_hashes) == 1 else None
           direct_multi_cpu = len(models) >= 2
-          transitive_multi_cpu = bool(
+          verified_transitive = bool(
               not direct_multi_cpu
+              and proof_is_ancestor
               and semantic_unchanged
               and current_runtime == baseline_runtime_key
               and current_output == baseline_output
           )
 
-          if not direct_multi_cpu and not transitive_multi_cpu:
+          if not direct_multi_cpu and not verified_transitive:
               failures.append(
                   "multi_cpu_proof_unavailable:"
-                  f"models={len(models)},semantic_unchanged={semantic_unchanged},"
-                  f"runtime_matches_baseline={current_runtime == baseline_runtime_key},"
-                  f"output_matches_baseline={current_output == baseline_output}"
+                  f"models={len(models)},proof_is_ancestor={proof_is_ancestor},"
+                  f"semantic_unchanged={semantic_unchanged},"
+                  f"runtime_matches_frozen={current_runtime == baseline_runtime_key},"
+                  f"output_matches_frozen={current_output == baseline_output}"
               )
 
           proof_mode = (
               "DIRECT_CURRENT_HEAD_MULTI_CPU"
               if direct_multi_cpu
-              else "TRANSITIVE_FROZEN_MULTI_CPU"
-              if transitive_multi_cpu
+              else "VERIFIED_TRANSITIVE_DIRECT_PROOF"
+              if verified_transitive
               else "NONE"
           )
           result = {
-              "schema": "V12_RUNTIME_CROSS_CPU_ACCEPTANCE_V2",
+              "schema": "V12_RUNTIME_CROSS_CPU_ACCEPTANCE_V3",
               "probe_count": len(rows),
               "current_head": os.environ["HEAD_SHA"],
               "physical_cpu_model_distribution": dict(sorted(models.items())),
@@ -434,16 +547,14 @@ jobs:
               "distinct_output_sha256": len(output_hashes),
               "output_sha256": current_output,
               "proof_mode": proof_mode,
-              "semantic_paths_unchanged_from_baseline": semantic_unchanged,
-              "baseline_proof": {
-                  "head_sha": os.environ["BASELINE_PROOF_HEAD"],
-                  "run_id": int(os.environ["BASELINE_PROOF_RUN"]),
-                  "distinct_physical_cpu_models": 3,
-                  "physical_cpu_model_distribution": {
-                      "AMD EPYC 7763 64-Core Processor": 6,
-                      "AMD EPYC 9V74 80-Core Processor": 1,
-                      "Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz": 1,
-                  },
+              "frozen_proof_verified": True,
+              "frozen_proof_is_ancestor": proof_is_ancestor,
+              "semantic_paths_unchanged_from_frozen_proof": semantic_unchanged,
+              "frozen_proof": {
+                  "head_sha": proof["proof_head"],
+                  "run_id": int(proof["proof_run_id"]),
+                  "artifact_name": proof["proof_artifact_name"],
+                  "distinct_physical_cpu_models": int(proof["distinct_physical_cpu_models"]),
                   "runtime_cache_identity": baseline_runtime,
                   "output_sha256": baseline_output,
               },

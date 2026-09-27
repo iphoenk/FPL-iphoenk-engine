@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "authority": "FPL_V12_PERF0_BASELINE_EVIDENCE",
+  "captured_at": "2026-09-27T15:10:00+07:00",
+  "metric_contract": "config/performance/v12_perf0_metrics.json",
+  "production_main_at_capture": "508f1ed919b9b37540cc604d92bdfe5075e96366",
+  "primary_comparable_sample_count": 0,
+  "primary_sample_target": 20,
+  "closure_status": "PENDING",
+  "diagnostic_samples": [
+    {
+      "run_id": 36245142505,
+      "report_slot": "2026-09-26T20:26:02+07:00",
+      "report_mode": "DEEP",
+      "app_sha": "aad536a3660f4ff3df0a85f62253302b2e0fce7a",
+      "runtime_data_sha": "d0bada58d308da3c876a741924e1dfa4c3bbd76b",
+      "public_proof": "PASS",
+      "stage3_validation": "PASS",
+      "private_delivery": "PASS",
+      "mc_actual_paths": 500000,
+      "mc_convergence": "PASS",
+      "primary_eligible": false,
+      "exclusion_reason": "REQUIRED_CORE_SLOT_BINDING_PARTIAL_CORE_SLOT_MISMATCH",
+      "runtime_observed": {
+        "python": "3.12.14",
+        "openblas_coretype": "Haswell",
+        "openblas_num_threads": 1
+      },
+      "timings_seconds": {
+        "stage2": 1.207,
+        "p1_7": 0.507,
+        "p1_2a": 0.117,
+        "p1_2b_package_utility": 18.579,
+        "p1_2b_funded_package_utility": 5.812,
+        "p1_2b_combine": 1.09,
+        "mc": 33.593
+      },
+      "stage2_cache": "HIT"
+    },
+    {
+      "run_id": 36248107711,
+      "report_slot": "2026-09-26T21:20:00+07:00",
+      "report_mode": "DEEP",
+      "app_sha": "bc086a030a49440a1703943c2844dd6d1831a865",
+      "runtime_data_sha": "675ec988cf01079490c70e5fe3b78faccb98d4ca",
+      "public_proof": "PASS",
+      "stage3_validation": "PASS",
+      "private_delivery": "PASS",
+      "mc_actual_paths": 500000,
+      "mc_convergence": "PASS",
+      "primary_eligible": false,
+      "exclusion_reason": "REQUIRED_CORE_SLOT_BINDING_PARTIAL_CORE_SLOT_MISMATCH",
+      "runtime_observed": {
+        "python": "3.12.14",
+        "openblas_coretype": "Haswell",
+        "openblas_num_threads": 1
+      },
+      "timings_seconds": {
+        "stage2": 1.306,
+        "p1_7": 0.491,
+        "p1_2a": 0.222,
+        "p1_2b_package_utility": 18.539,
+        "p1_2b_funded_package_utility": 5.691,
+        "p1_2b_combine": 1.095,
+        "mc": 33.81
+      },
+      "stage2_cache": "HIT"
+    },
+    {
+      "run_id": 36297609424,
+      "report_slot": "2026-09-27T12:30:00+07:00",
+      "report_mode": "DEEP",
+      "app_sha": "11855b06565e68ce80dee663cf28cce675fe62b0",
+      "runtime_data_sha": "82a71af9731f3fcf162eff83ad950a6c5a3da54b",
+      "public_proof": "PASS",
+      "stage3_validation": "PASS",
+      "private_delivery": "PASS",
+      "mc_actual_paths": 500000,
+      "mc_convergence": "PASS",
+      "primary_eligible": false,
+      "exclusion_reason": "REQUIRED_CORE_SLOT_BINDING_PARTIAL_CORE_SLOT_MISMATCH",
+      "runtime_observed": {
+        "python": "3.12.14",
+        "openblas_coretype": "Haswell",
+        "openblas_num_threads": 1
+      },
+      "timings_seconds": {
+        "stage2": 35.066,
+        "p1_7": 0.307,
+        "p1_2a": 0.066,
+        "p1_2b_package_utility": 13.434,
+        "p1_2b_funded_package_utility": 4.439,
+        "p1_2b_combine": 0.665,
+        "mc": 28.206
+      },
+      "stage2_cache": "MISS"
+    }
+  ],
+  "statistics": {
+    "primary_p50": "UNAVAILABLE_N_EQ_0",
+    "primary_p90": "UNAVAILABLE_N_EQ_0",
+    "primary_max": "UNAVAILABLE_N_EQ_0"
+  },
+  "notes": [
+    "Diagnostic samples are retained because they are real public-runner production DEEP executions with 500000-path canonical MC and successful private delivery.",
+    "They are excluded from the frozen primary PERF-0 distribution because a required CORE_SLOT_BINDING stage was PARTIAL.",
+    "No timing bucket absent from source evidence is inferred.",
+    "No diagnostic sample is promoted to natural scheduler acceptance."
+  ]
+}

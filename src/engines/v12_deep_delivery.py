@@ -684,6 +684,18 @@ def validate_deep_decision_content_delivery(
         if "POSITIONAL SCANNER20" not in upper or "ACTIONABLE WATCHLIST" not in upper:
             failures.append("WATCHLIST_TWO_SURFACES_NOT_VISIBLE")
 
+    if state("S09") == "COMPLETE":
+        s09 = content("S09")
+        if "chip_ledger" not in s09:
+            failures.append("S09_CHIP_LEDGER_MISSING")
+        if s09.get("remaining_chip_set_required") is not True:
+            failures.append("S09_REMAINING_CHIP_SET_CONTRACT_MISSING")
+        if s09.get("free_hit_optimization_required_when_fh_only") is not True:
+            failures.append("S09_FH_ONLY_OPTIMIZATION_CONTRACT_MISSING")
+        for token in ("CHIP LEDGER", "REMAINING", "FREE HIT"):
+            if token not in upper:
+                failures.append(f"S09_VISIBLE_CONTRACT_MISSING={token}")
+
     # Stage-B calendar/workload/travel/weather contract. It is descriptive
     # evidence only and may feed P1.1 review; it never owns a fatigue model.
     if state("S05") in {"COMPLETE", "DEGRADED"}:
@@ -935,6 +947,41 @@ def validate_deep_decision_content_delivery(
             failures.append("S15B_RIVALS_SCOPE_LABEL_INVALID")
         if str(s15b.get("disclosed_picks_label") or "") != "BEHAVIOURAL BASELINE":
             failures.append("S15B_BEHAVIOURAL_BASELINE_LABEL_MISSING")
+
+        full_composition = [
+            dict(row)
+            for row in s15b.get("league_full_composition") or []
+            if isinstance(row, Mapping)
+        ]
+        if s15b.get("league_full_composition_complete") is not True:
+            failures.append("S15B_FULL_LEAGUE_COMPOSITION_NOT_COMPLETE")
+        if not full_composition:
+            failures.append("S15B_FULL_LEAGUE_COMPOSITION_MISSING")
+        else:
+            denominator = league_scope.get("denominator")
+            expected_slots = (
+                int(denominator) * 15
+                if isinstance(denominator, int) and denominator > 0
+                else None
+            )
+            owned_slots = sum(int(row.get("ownership_count") or 0) for row in full_composition)
+            if expected_slots is not None and owned_slots != expected_slots:
+                failures.append(
+                    f"S15B_FULL_LEAGUE_SLOT_COUNT={owned_slots}/{expected_slots}"
+                )
+            required = {
+                "ownership_count", "ownership_pct", "starter_count", "starter_pct",
+                "bench_count", "bench_pct", "captain_count", "vice_count", "position"
+            }
+            for index, row in enumerate(full_composition, start=1):
+                missing = sorted(key for key in required if key not in row)
+                if missing:
+                    failures.append(
+                        f"S15B_FULL_LEAGUE_ROW_MISSING={index}:{','.join(missing)}"
+                    )
+                    break
+        if "FULL ICON+ COMPOSITION" not in upper:
+            failures.append("S15B_FULL_LEAGUE_COMPOSITION_NOT_VISIBLE")
 
         for scope_key, payload_key in (
             ("LEAGUE", "league_our15_exposure"),

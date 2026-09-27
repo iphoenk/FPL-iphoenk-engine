@@ -338,15 +338,13 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          pattern: v12-runtime-probe-*-\${{ github.run_id }}
+          pattern: v12-runtime-probe-*-${{ github.run_id }}
           path: runtime-probes
           merge-multiple: true
 
-      - name: Verify frozen cross-CPU proof registry against GitHub evidence
+      - name: Load frozen cross-CPU proof registry
         id: frozen-proof
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -379,14 +377,19 @@ jobs:
               print(f"{name}={value}", file=open(os.environ["GITHUB_OUTPUT"], "a"))
           PY
 
-          proof_run="${{ steps.frozen-proof.outputs.proof_run_id }}"
-          proof_head="${{ steps.frozen-proof.outputs.proof_head }}"
-          proof_artifact_name="${{ steps.frozen-proof.outputs.proof_artifact_name }}"
+      - name: Verify frozen cross-CPU registry against immutable GitHub evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROOF_RUN: ${{ steps.frozen-proof.outputs.proof_run_id }}
+          PROOF_HEAD: ${{ steps.frozen-proof.outputs.proof_head }}
+          PROOF_ARTIFACT_NAME: ${{ steps.frozen-proof.outputs.proof_artifact_name }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PROOF_RUN}" > "$RUNNER_TEMP/frozen-proof-run.json"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PROOF_RUN}/artifacts?per_page=100" > "$RUNNER_TEMP/frozen-proof-artifacts.json"
 
-          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${proof_run}" > "$RUNNER_TEMP/frozen-proof-run.json"
-          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${proof_run}/artifacts?per_page=100" > "$RUNNER_TEMP/frozen-proof-artifacts.json"
-
-          python - <<'PY'
+          artifact_id="$(python - <<'PY'
           import json
           import os
           from pathlib import Path
@@ -407,10 +410,9 @@ jobs:
           ]
           if len(candidates) != 1:
               raise SystemExit(f"registered direct cross-CPU artifact count={len(candidates)}")
-          print(f"artifact_id={candidates[0]['id']}", file=open(os.environ["GITHUB_OUTPUT"], "a"))
+          print(candidates[0]["id"])
           PY
-
-          artifact_id="$(tail -n 1 "$GITHUB_OUTPUT" | sed -n 's/^artifact_id=//p')"
+          )"
           test -n "$artifact_id"
           gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "$RUNNER_TEMP/frozen-proof.zip"
 

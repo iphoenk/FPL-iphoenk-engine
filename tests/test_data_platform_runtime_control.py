@@ -234,7 +234,7 @@ def test_ledger_migrates_old_github_history_out_of_current_health():
     assert ledger["summary"]["legacy_github_scheduler_excluded_from_current_health"] is True
 
 
-def test_six_consecutive_chatgpt_slots_establish_green():
+def test_configured_consecutive_chatgpt_slots_establish_green():
     ledger = {}
     for hour in range(0, CHATGPT_GREEN_STREAK):
         ledger = build_operational_slots(ledger, _chatgpt_control(hour), window_size=48)
@@ -253,7 +253,7 @@ def test_missing_chatgpt_slot_is_retrospectively_densified():
     assert [row["fulfilled_by"] for row in ledger["slots"]] == ["CHATGPT", "MISSING", "CHATGPT"]
     assert ledger["summary"]["missing_operational_slots"] == 1
     assert ledger["summary"]["chatgpt_fulfillment_ratio"] == 0.6667
-    assert ledger["summary"]["health"] == "AMBER"
+    assert ledger["summary"]["health"] == "RED"
 
 
 def test_generic_master_goes_to_auxiliary_and_does_not_green_scheduler():

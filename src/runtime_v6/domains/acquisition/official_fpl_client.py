@@ -287,6 +287,9 @@ class OfficialFPLClient:
     def event_live(self, gw: int) -> dict[str, Any]:
         return self._request("event_live", f"event/{int(gw)}/live/")
 
+    def set_piece_notes(self) -> dict[str, Any]:
+        return self._request("set_piece_notes", "team/set-piece-notes/")
+
     def me(self) -> dict[str, Any]:
         return self._request("me", "me/", authenticated=True)
 

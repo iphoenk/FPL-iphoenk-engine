@@ -29,6 +29,8 @@ _OPTIONAL_SERVING_FILES = (
     "serving_report.json",
     "serving_report.md",
     "delivery_status.json",
+    "delivery_state.json",
+    "presentation_qa.json",
 )
 
 
@@ -294,6 +296,8 @@ def publish_private_output(
             "serving_report.json": "report.json",
             "serving_report.md": "report.md",
             "delivery_status.json": "delivery_status.json",
+            "delivery_state.json": "delivery_state.json",
+            "presentation_qa.json": "presentation_qa.json",
         }
         for source_name, latest_name in serving_map.items():
             source = canonical_dir / source_name

@@ -4,6 +4,8 @@ import inspect
 import json
 from types import SimpleNamespace
 
+from src.engines import v12_p6_runtime
+from src.engines.v12_integrated_report_runner import refresh_mini_league_only_state
 from src.engines.v12_perf_f_acceptance import (
     _case_inputs,
     _mutate_price,
@@ -110,3 +112,37 @@ def test_controlled_warm_recompute_reuses_baseline_cache_workspace():
     assert 'workspace=workspace / "warm-change"' not in source
     assert '\"timings\": result[\"timings\"]' in source
     assert '\"timings\": verdict[\"timings\"]' not in source
+
+
+def test_mini_league_only_acceptance_uses_governed_partial_executor():
+    source = inspect.getsource(execute_case)
+    assert 'if change_class == "MINI_LEAGUE_ONLY"' in source
+    assert "refresh_mini_league_only_state(" in source
+    mini_branch = source.split('if change_class == "MINI_LEAGUE_ONLY"', 1)[1]
+    mini_branch = mini_branch.split("current_state = warm_pipeline.compute(", 1)[0]
+    assert "warm_pipeline.compute(" not in mini_branch
+    assert "return current_state, dict(plan.expected), {}" in mini_branch
+
+
+def test_production_p6_uses_same_mini_league_partial_executor():
+    source = inspect.getsource(v12_p6_runtime.run_window)
+    assert 'if change_class == "MINI_LEAGUE_ONLY"' in source
+    assert "refresh_mini_league_only_state(" in source
+    mini_branch = source.split('if change_class == "MINI_LEAGUE_ONLY"', 1)[1]
+    mini_branch = mini_branch.split("current_state = pipeline.compute(final_identity)", 1)[0]
+    assert "pipeline.compute(final_identity)" not in mini_branch
+    assert "return current_state, dict(plan.expected), {}" in mini_branch
+
+
+def test_mini_league_partial_refresh_reuses_football_math_and_keeps_qa():
+    source = inspect.getsource(refresh_mini_league_only_state)
+    assert "build_mini_league_snapshot(" in source
+    assert "evaluate_mini_league_overlay(" in source
+    assert "attach_mini_league_overlay(" in source
+    assert "validate_pre_render_qa(" in source
+    assert "validate_post_render_qa(" in source
+    assert "validate_final_delivery_barrier(" in source
+    assert '"reused_layers": ["Stage2", "P1.7", "MC"]' in source
+    assert '"football_math_recomputed": False' in source
+    assert "optimize_lineup(" not in source
+    assert "run_package_monte_carlo(" not in source

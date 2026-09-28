@@ -706,12 +706,14 @@ def validate_delivery_bundle(bundle: Mapping[str, Any]) -> list[str]:
         for row in bundle.get("stage_ledger") or []
         if isinstance(row, Mapping) and str(row.get("status") or "").upper() == "FAILED"
     ]
-    if str(bundle.get("delivery_status") or "") == "READY_DEGRADED":
-        if len(root_failures) > 1:
-            failures.append("MULTIPLE_ROOT_FAILURES")
-        if len(root_failures) == 1 and not str(
-            root_failures[0].get("stage") or ""
-        ).strip():
+    if (
+        str(bundle.get("delivery_status") or "") == "READY_DEGRADED"
+        and str((bundle.get("execution_proof") or {}).get("runner_state") or "")
+        == "BLOCKED_UPSTREAM"
+    ):
+        if len(root_failures) != 1:
+            failures.append("FALLBACK_ROOT_FAILURE_COUNT_NOT_ONE")
+        elif not str(root_failures[0].get("stage") or "").strip():
             failures.append("ROOT_FAILURE_STAGE_MISSING")
     if not str(bundle.get("visible_body") or "").strip():
         failures.append("VISIBLE_BODY_EMPTY")
@@ -811,12 +813,18 @@ def write_serving_artifacts(
         else "READY_DEGRADED"
     )
     bundle["delivery_status"] = delivery_status
+    if delivery_status == "READY_DEGRADED" and not str(
+        bundle.get("root_failure") or ""
+    ).strip():
+        bundle["root_failure"] = "ANALYTICS_INCOMPLETE"
     bundle["occurrence_id"] = str(
         bundle.get("occurrence_id")
         or f"{bundle.get('report_mode')}|{bundle.get('report_slot')}"
     )
     execution = dict(bundle.get("execution_proof") or {})
     execution["delivery_status"] = delivery_status
+    if delivery_status == "READY_DEGRADED":
+        execution["root_failure"] = bundle.get("root_failure")
     bundle["execution_proof"] = execution
 
     snapshot = build_serving_snapshot(bundle)

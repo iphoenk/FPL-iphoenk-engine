@@ -135,7 +135,6 @@ def _native_mc_env() -> dict[str, str]:
     env["OMP_NUM_THREADS"] = "1"
     env["V12_PRIVATE_CACHE_PROFILE"] = "SECURE_NO_PERSONAL_CACHE"
     env.pop("FPL_V12_PRIVATE_CACHE_KEY_B64", None)
-    env.pop("V12_MC_SIM_CACHE_DIR", None)
     return env
 
 

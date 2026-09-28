@@ -219,9 +219,11 @@ class WarmWorker:
             "expected_cache_state": plan.expected,
             "actual_cache_state": dict(actual_states),
             "invalidated_dependency_keys": list(plan.affected_dependency_keys),
+            "cache_correctness": validation.correctness,
             "cache_performance": validation.performance,
             "warm_semantic_fingerprint": warm_fp,
             "private_delivery_status": "PASS",
+            "private_remote_sha": str(receipt.get("private_remote_sha") or ""),
             "trace": list(self.trace),
         }
 

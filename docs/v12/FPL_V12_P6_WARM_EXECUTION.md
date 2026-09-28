@@ -16,7 +16,7 @@ Correctness rules are strict: expected MISS plus actual HIT is a correctness fai
 
 D-P2 remains factual/report precompute only. Its governed P6 handoff preserves exact occurrence identity and supports T-15 prefetch plus T-10 freeze validation. Neither step counts as a natural core scheduler proof.
 
-PERF-F measures T0 at event/command acceptance by an already-running warm worker and T1 only after validated private publication. Queue and runner provisioning are excluded. Every required class is judged individually against 15.000 seconds; no average can hide a failing required sample.
+PERF-F measures T0 at event/command acceptance by an already-running warm worker and T1 only after validated private publication. Queue and runner provisioning are excluded. Every required class is judged individually against 15.000 seconds; no average can hide a failing required sample. A PERF-F sample passes only when latency is within target, warm and canonical-cold semantic surfaces are exactly equal, cache correctness passes, owner-context lineage is present, and the private publication is PASS with a verified remote SHA.
 
 Manager-specific CURRENT15, owner context, scenario packages, decision results and decrypted personal caches stay within the private/encrypted boundary. Public CI uses contract fixtures only.
 

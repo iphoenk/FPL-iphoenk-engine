@@ -508,6 +508,59 @@ jobs:
             rm -rf artifacts/previous-deep-candidate
           fi
 
+      - name: Await exact terminal occurrence prefetch
+        if: needs.parse.outputs.report_mode == 'DEEP'
+        id: terminal_prefetch
+        working-directory: app
+        env:
+          REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
+          REMOTE_REFRESH_ALLOWED: ${{ github.event_name != 'workflow_dispatch' || github.ref_name == 'main' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import time
+
+          from src.engines.v12_delivery_reliability import inspect_prefetch_terminal
+
+          runtime = Path("../runtime-data")
+          slot = os.environ["REPORT_SLOT"]
+          refresh_allowed = os.environ.get("REMOTE_REFRESH_ALLOWED", "true").lower() == "true"
+          deadline = time.monotonic() + 60.0
+          attempts = 0
+          state = inspect_prefetch_terminal(runtime, report_slot=slot)
+          while not state["terminal"] and time.monotonic() < deadline:
+              attempts += 1
+              if refresh_allowed:
+                  subprocess.run(
+                      ["git", "-C", str(runtime), "fetch", "--quiet", "origin", "runtime-data-v6"],
+                      check=True,
+                  )
+                  subprocess.run(
+                      ["git", "-C", str(runtime), "reset", "--hard", "origin/runtime-data-v6"],
+                      check=True,
+                  )
+              time.sleep(5)
+              state = inspect_prefetch_terminal(runtime, report_slot=slot)
+
+          status = "TERMINAL" if state["terminal"] else "BLOCKED_UPSTREAM"
+          print(json.dumps({
+              "orchestrator_prefetch_state": status,
+              "attempts": attempts,
+              "failed_checks": state["failed_checks"],
+              "target_logical_report_slot": state.get("target_logical_report_slot"),
+          }, sort_keys=True))
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as handle:
+              print(f"status={status}", file=handle)
+              print(f"attempts={attempts}", file=handle)
+          # Do not fail the job here. The runner owns a second bounded guard and
+          # will publish READY_DEGRADED if terminality cannot be reached.
+          PY
+
       - name: Execute occurrence-bound integrated report
         id: report
         working-directory: app
@@ -648,9 +701,39 @@ jobs:
         if: needs.parse.outputs.report_mode == 'DEEP'
         id: stage3
         working-directory: app
+        env:
+          RUNNER_STATUS: ${{ steps.proof.outputs.runner_status }}
         run: |
           model_sha="$(git rev-parse HEAD)"
           runtime_sha="$(git -C ../runtime-data rev-parse HEAD)"
+          if [ "${RUNNER_STATUS:-UNKNOWN}" != "PASS" ]; then
+            python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          payload = {
+              "contract": "V12_STAGE3_INTEGRATED_ACCEPTANCE_V1",
+              "status": "DEGRADED",
+              "reason": "BLOCKED_UPSTREAM",
+              "integrated_runner": os.environ.get("RUNNER_STATUS", "UNKNOWN"),
+              "stage3_executed": False,
+              "stage3_pass_claimed": False,
+              "mc_pass_claimed": False,
+              "governance": {
+                  "qa_relaxed": False,
+                  "new_scheduler_created": False,
+                  "second_model_authority_created": False,
+              },
+          }
+          Path("artifacts/v12-report/stage3_acceptance.json").write_text(
+              json.dumps(payload, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as fh:
+              fh.write("status=DEGRADED\n")
+          PY
+            exit 0
+          fi
           private_input_root="../private-reports"
           if [ -f ../acceptance-private-input/personal/current_team.json ]; then
             private_input_root="../acceptance-private-input"

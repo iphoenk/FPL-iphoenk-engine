@@ -431,7 +431,7 @@ class CanonicalPipeline:
         )
         if self.private_destination_relpath:
             _git(
-                self.private,
+                self.publisher_private,
                 "add",
                 "--",
                 self.private_destination_relpath,
@@ -442,7 +442,7 @@ class CanonicalPipeline:
         staged = _git(self.publisher_private, "diff", "--cached", "--name-only")
         if staged:
             _git(
-                self.private,
+                self.publisher_private,
                 "commit",
                 "-m",
                 (
@@ -452,7 +452,7 @@ class CanonicalPipeline:
                 capture=False,
             )
             _git(
-                self.private,
+                self.publisher_private,
                 "pull",
                 "--rebase",
                 "origin",
@@ -460,7 +460,7 @@ class CanonicalPipeline:
                 capture=False,
             )
             _git(
-                self.private,
+                self.publisher_private,
                 "push",
                 "origin",
                 "HEAD:main",

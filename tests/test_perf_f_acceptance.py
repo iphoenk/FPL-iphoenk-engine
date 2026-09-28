@@ -253,3 +253,23 @@ def test_price_partial_refresh_exports_exact_zero_layer_timing_for_skipped_mc():
     assert '"change_class": "PRICE_ONLY"' in source
     assert '"MC": 0.0' in source
     assert '"football_math_recomputed": False' in source
+
+
+def test_price_partial_refresh_is_copy_on_write_and_keeps_delivery_barriers():
+    source = inspect.getsource(refresh_price_only_state)
+    assert "refreshed = deepcopy(dict(state))" not in source
+    assert "bundle = deepcopy(dict(" not in source
+    assert "warm = deepcopy(dict(" not in source
+    assert '"content": raw.get("content")' in source
+    assert "materialize_deep_report(" in source
+    assert "render_deep_text(" in source
+    for token in (
+        "validate_pre_render_qa(",
+        "validate_post_render_qa(",
+        "validate_human_facing_body(",
+        "validate_deep_human_facing_manifest(",
+        "validate_final_delivery_barrier(",
+    ):
+        assert token in source
+    assert '"qa_relaxed": False' in source
+    assert '"football_math_recomputed": False' in source

@@ -493,7 +493,11 @@ def _load_scenario_package(private: Path) -> dict[str, Any] | None:
         private / "scenarios/current.json",
     ):
         if candidate.is_file():
-            return _read_json(candidate)
+            payload = _read_json(candidate)
+            # Internal-only locator for lazy private scenario shard resolution.
+            # It is never persisted back into the governed manifest.
+            payload["_storage_root"] = str(candidate.parent.resolve())
+            return payload
     return None
 
 

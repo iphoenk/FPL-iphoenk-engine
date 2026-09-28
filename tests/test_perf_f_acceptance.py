@@ -143,6 +143,9 @@ def test_mini_league_partial_refresh_reuses_football_math_and_keeps_qa():
     assert "validate_post_render_qa(" in source
     assert "truncated=False" in source
     assert "validate_final_delivery_barrier(" in source
+    assert '"payload_fingerprint": payload_fingerprint' in source
+    assert '"report_slot": report_slot' in source
+    assert "if key != \"authoritative_binding\"" in source
     assert "safe_qa_failure" in source
     assert '"pre_render"' in source
     assert '"post_render"' in source

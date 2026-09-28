@@ -326,6 +326,8 @@ def _body_has_progress_placeholder(body: str, first_section_start: int | None) -
 def _parse_weather_state(body: str) -> str:
     if re.search(r"(?mi)^\s{0,3}#{1,6}\s*WEATHER\s*[—-]\s*DIRECT\s+CHATGPT\s*$", body):
         return "DIRECT_CHATGPT"
+    if re.search(r"(?mi)^\s*WEATHER\s+SOURCE\s*:\s*REPORT_TIME_BOUND\s*$", body):
+        return "REPORT_TIME_BOUND"
     if re.search(r"(?mi)^\s*WEATHER\s+SOURCE\s*:\s*DEGRADED\s*$", body):
         return "SOURCE_DEGRADED"
     if re.search(
@@ -336,7 +338,7 @@ def _parse_weather_state(body: str) -> str:
     if re.search(r"(?mi)^\s*WEATHER\s*:\s*MATCH\s+CURRENT\s*$", body):
         return "MATCH_CURRENT"
     legacy = re.search(
-        r"(?mi)^\s*WEATHER\s*:\s*(DIRECT_CHATGPT|SOURCE_DEGRADED|PRICE_NOT_IN_SCOPE|MATCH_CURRENT)\s*$",
+        r"(?mi)^\s*WEATHER\s*:\s*(DIRECT_CHATGPT|REPORT_TIME_BOUND|SOURCE_DEGRADED|PRICE_NOT_IN_SCOPE|MATCH_CURRENT)\s*$",
         body,
     )
     return legacy.group(1).upper() if legacy else "MISSING"

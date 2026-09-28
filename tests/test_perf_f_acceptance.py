@@ -108,3 +108,5 @@ def test_controlled_warm_recompute_reuses_baseline_cache_workspace():
     assert source.count('workspace=workspace / "warm-baseline"') == 2
     assert 'workspace=workspace / "canonical-cold"' in source
     assert 'workspace=workspace / "warm-change"' not in source
+    assert '\"timings\": result[\"timings\"]' in source
+    assert '\"timings\": verdict[\"timings\"]' not in source

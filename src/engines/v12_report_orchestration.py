@@ -4082,6 +4082,9 @@ def _render_deep_visible_contract_lines(
             f"PL={coverage.get('official_pl')} | "
             f"NON_PL_BOUND={coverage.get('verified_non_pl_schedule_bound')} | "
             f"NON_PL_EVENTS={coverage.get('verified_non_pl_event_count')} | "
+            f"CLUB_SCHEDULE_STATUS={coverage.get('club_schedule_status')} | "
+            f"PLAYER_OBSERVATION_STATUS={coverage.get('player_observation_status')} | "
+            f"WEATHER_BINDING_STATUS={coverage.get('weather_binding_status')} | "
             f"CATEGORIES={coverage.get('competition_categories_data_driven')}"
         )
         flags = dict(payload.get("period_flags") or {})

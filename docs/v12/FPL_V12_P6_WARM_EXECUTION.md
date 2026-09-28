@@ -33,3 +33,6 @@ At the visible occurrence, T0 begins only after the already-running worker accep
 Stage3, render QA, and the existing thin private publisher remain mandatory. T1 occurs only after the private repository publication is committed, pushed, and the remote SHA is verified. Manager-specific CURRENT15, owner context, scenario packages, decrypted cache state, and decision results are never uploaded as public artifacts.
 
 PERF-F is therefore allowed to expose slow MISS classes. Latency is optimized only after warm/cold semantic equality is proven and profiling identifies the dominant component. Correctness is not traded for the 15-second target.
+
+
+Warm identity hashes the canonical V6 `data/v6/current/official_fpl.json` snapshot together with publish-integrity and same-occurrence prefetch proof; legacy/nonexistent `data/v6/official_fpl` and `data/v6/fixtures` paths are not identity authority.

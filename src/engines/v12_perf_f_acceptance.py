@@ -29,7 +29,7 @@ from .v12_p6_warm_worker import CanonicalCallbacks, WarmWorker
 from .v12_integrated_report_runner import refresh_mini_league_only_state
 from .v12_perf_f import REQUIRED_CASES
 from .v12_perf_f_production import validate_production_sample
-from .v12_semantic_oracle import semantic_fingerprint
+from .v12_semantic_oracle import semantic_fingerprint, semantic_surface
 
 
 class PerfFAcceptanceError(RuntimeError):

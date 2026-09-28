@@ -369,7 +369,17 @@ def _finalize_row(row: dict[str, Any], keep: int, now: datetime, cfg: dict[str, 
     return row
 
 
-def collect_weather_context(data_dir: Path) -> dict[str, Any]:
+def collect_weather_context(
+    data_dir: Path,
+    *,
+    official_snapshot: dict[str, Any] | None = None,
+    persist: bool = True,
+) -> dict[str, Any]:
+    """Collect weather for a report occurrence without requiring V6 mutation.
+
+    An injected Official FPL snapshot is authoritative for fixture identity.
+    persist=False keeps report-time weather ephemeral.
+    """
     started_clock = time.perf_counter()
     cfg = load_config()
     governance = dict(cfg.get("governance") or {})
@@ -379,8 +389,16 @@ def collect_weather_context(data_dir: Path) -> dict[str, Any]:
     keep = max(1, int(forecast_policy.get("retain_observations_per_fixture") or 12))
     post_hours = float(forecast_policy.get("post_match_retention_hours") or 48)
     max_workers = max(1, min(8, int(api.get("max_parallel_requests") or 4)))
-    official = read_json(data_dir / "official_snapshot.json", {})
-    previous = read_json(data_dir / OUT_NAME, {"fixtures": []})
+    official = (
+        dict(official_snapshot)
+        if isinstance(official_snapshot, dict)
+        else read_json(data_dir / "official_snapshot.json", {})
+    )
+    previous = (
+        read_json(data_dir / OUT_NAME, {"fixtures": []})
+        if persist
+        else {"fixtures": []}
+    )
     prior_by_id = {str(row.get("fixture_id")): row for row in previous.get("fixtures") or []}
     bootstrap = official.get("bootstrap") or {}
     teams = {
@@ -523,5 +541,7 @@ def collect_weather_context(data_dir: Path) -> dict[str, Any]:
         ],
         "governance": governance,
     }
-    atomic_json(data_dir / OUT_NAME, payload)
+    if persist:
+        data_dir.mkdir(parents=True, exist_ok=True)
+        atomic_json(data_dir / OUT_NAME, payload)
     return payload

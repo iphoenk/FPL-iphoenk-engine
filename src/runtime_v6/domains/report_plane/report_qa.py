@@ -82,7 +82,7 @@ _DEEP_WEATHER_MODES = frozenset(
     {"DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP", "POST_ALL_MATCH"}
 )
 _WEATHER_STATES_BY_MODE = {
-    **{mode: frozenset({"DIRECT_CHATGPT", "SOURCE_DEGRADED"}) for mode in _DEEP_WEATHER_MODES},
+    **{mode: frozenset({"DIRECT_CHATGPT", "REPORT_TIME_BOUND", "SOURCE_DEGRADED"}) for mode in _DEEP_WEATHER_MODES},
     "MATCH": frozenset({"MATCH_CURRENT", "SOURCE_DEGRADED"}),
     "PRICE": frozenset({"DIRECT_CHATGPT", "PRICE_NOT_IN_SCOPE"}),
 }

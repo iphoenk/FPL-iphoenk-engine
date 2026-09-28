@@ -29,6 +29,12 @@ from .v12_semantic_oracle import semantic_surface
 
 POLL_SECONDS = 10
 
+RUNTIME_FIXTURE_IDENTITY_PATHS = (
+    "data/v6/current/official_fpl.json",
+    "data/v6/health/publish_integrity.json",
+    "data/v6/report_prefetch/latest.json",
+)
+
 
 class P6RuntimeError(RuntimeError):
     pass
@@ -156,12 +162,7 @@ def _identity(app: Path, runtime: Path, private: Path) -> WarmIdentity:
         schema_version="V12_CACHE_OPERATIONAL_V1",
         gw_fixture_fingerprint=_hash_paths(
             runtime,
-            [
-                "data/v6/official_fpl",
-                "data/v6/fixtures",
-                "data/v6/health/publish_integrity.json",
-                "data/v6/report_prefetch/latest.json",
-            ],
+            list(RUNTIME_FIXTURE_IDENTITY_PATHS),
         ),
         projection_lineage_fingerprint=_hash_paths(
             app,

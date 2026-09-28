@@ -10,7 +10,7 @@ The lifecycle is:
 
 TTL or explicit termination ends in `CLEAN_SHUTDOWN`. The maximum accepted lifetime is strictly less than six hours.
 
-Cache behavior is read from the frozen `config/performance/v12_cache_dependency_matrix.json`. Operational hard invalidations for model/schema/current-15/captain/official-result/bonus-finalization are overlays and do not rewrite the frozen matrix. `SET_PIECE_FACT` deterministically maps to the existing `SET_PIECE_ROLE` class. Unknown or ambiguous dependency scope is a MISS.
+Cache behavior is read from the frozen `config/performance/v12_cache_dependency_matrix.json`. Operational hard invalidations for model/schema/current-15/captain/official-result/bonus-finalization are overlays and do not rewrite the frozen matrix. `SET_PIECE_FACT` deterministically maps to `SET_PIECE_ROLE`, `MATERIAL_PROJECTION` to `XMINS`, and the PERF-F aliases `NO_CHANGE` / `OUR15_AVAILABILITY` to the existing `UNCHANGED` / `OWNED_AVAILABILITY` rows. A dependency-valid `P4_SCENARIO_HIT` maps to `UNCHANGED`; `P4_SCENARIO_MISS` and `UNCERTAIN_SCOPE` force full MISS because the affected bound dependency cannot be safely narrowed. Unknown or ambiguous dependency scope is always fail-closed.
 
 Correctness rules are strict: expected MISS plus actual HIT is a correctness failure; partial invalidation may never reuse affected dependency keys; warm and canonical cold semantic fingerprints must be equal. Expected HIT plus actual MISS is reported as performance over-invalidation, not silently accepted as optimal.
 

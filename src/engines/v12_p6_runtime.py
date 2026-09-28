@@ -232,6 +232,8 @@ class CanonicalPipeline:
         report_kind: str,
         logical_slot: str,
         run_id: str,
+        private_destination_relpath: str | None = None,
+        update_latest: bool = True,
     ) -> None:
         self.app = app
         self.runtime = runtime
@@ -241,9 +243,16 @@ class CanonicalPipeline:
         self.report_mode = _report_mode(report_kind)
         self.logical_slot = logical_slot
         self.run_id = run_id
+        self.private_destination_relpath = private_destination_relpath
+        self.update_latest = bool(update_latest)
         self.sequence = 0
 
-    def compute(self, identity: WarmIdentity) -> dict[str, Any]:
+    def compute(
+        self,
+        identity: WarmIdentity,
+        *,
+        scenario_overrides: Mapping[str, Mapping[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         output = self.workspace / "canonical"
         if output.exists():
             shutil.rmtree(output)
@@ -266,24 +275,47 @@ class CanonicalPipeline:
             ),
         }
 
+        runner_args = [
+            sys.executable,
+            "-m",
+            "src.engines.v12_integrated_report_runner",
+            "--runtime-data-root",
+            str(self.runtime),
+            "--private-data-root",
+            str(self.private),
+            "--disable-legacy-private-sources",
+            "--require-private-personal",
+            "--report-mode",
+            self.report_mode,
+            "--report-slot",
+            self.logical_slot,
+            "--output-dir",
+            str(output),
+        ]
+        if scenario_overrides:
+            if self.report_mode != "DEEP":
+                raise P6RuntimeError("P4 scenario overrides require DEEP mode")
+            scenario_input = (
+                self.workspace
+                / "private-inputs"
+                / f"scenario-{self.sequence:03d}.json"
+            )
+            scenario_input.parent.mkdir(parents=True, exist_ok=True)
+            scenario_input.write_text(
+                json.dumps(
+                    dict(scenario_overrides),
+                    sort_keys=True,
+                    ensure_ascii=False,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            runner_args.extend(
+                ["--scenario-overrides-file", str(scenario_input)]
+            )
+
         _run_command(
-            [
-                sys.executable,
-                "-m",
-                "src.engines.v12_integrated_report_runner",
-                "--runtime-data-root",
-                str(self.runtime),
-                "--private-data-root",
-                str(self.private),
-                "--disable-legacy-private-sources",
-                "--require-private-personal",
-                "--report-mode",
-                self.report_mode,
-                "--report-slot",
-                self.logical_slot,
-                "--output-dir",
-                str(output),
-            ],
+            runner_args,
             cwd=self.app,
             env=env,
             log_path=self.workspace / "private-logs" / f"runner-{self.sequence:03d}.log",
@@ -378,6 +410,8 @@ class CanonicalPipeline:
             season=None,
             model_sha=identity.production_sha,
             runtime_sha=identity.runtime_data_sha,
+            destination_relpath=self.private_destination_relpath,
+            update_latest=self.update_latest,
         )
         _git(
             self.private,
@@ -393,7 +427,16 @@ class CanonicalPipeline:
             "41898282+github-actions[bot]@users.noreply.github.com",
             capture=False,
         )
-        _git(self.private, "add", "latest", "reports", capture=False)
+        if self.private_destination_relpath:
+            _git(
+                self.private,
+                "add",
+                "--",
+                self.private_destination_relpath,
+                capture=False,
+            )
+        else:
+            _git(self.private, "add", "latest", "reports", capture=False)
         staged = _git(self.private, "diff", "--cached", "--name-only")
         if staged:
             _git(

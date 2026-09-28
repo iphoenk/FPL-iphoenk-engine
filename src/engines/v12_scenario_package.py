@@ -3,8 +3,10 @@ from __future__ import annotations
 """Fail-closed private P4 scenario-package orchestration for Canonical V12."""
 
 from collections.abc import Callable, Mapping, Sequence
+import gzip
 import hashlib
 import json
+from pathlib import Path
 from typing import Any
 
 REQUIRED_DECISION_SURFACES = ("S06", "S08", "S09", "S14", "S19")
@@ -93,9 +95,38 @@ def validate_package_for_dependencies(package: Mapping[str, Any], *, dependencie
     return {"status":"HIT" if current else "MISS_RECOMPUTE","current":current,
       "expected_base_fingerprint":expected,"package_base_fingerprint":observed}
 
+def _load_sharded_scenario(package: Mapping[str, Any], row: Mapping[str, Any]) -> Mapping[str, Any]:
+    root_raw = str(package.get("_storage_root") or "").strip()
+    relative_raw = str(row.get("storage_path") or "").strip()
+    encoding = str(row.get("storage_encoding") or "").strip()
+    if not root_raw or not relative_raw or encoding != "gzip-json-v1":
+        raise ScenarioPackageError("sharded P4 scenario storage metadata is incomplete")
+    relative = Path(relative_raw)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ScenarioPackageError("unsafe P4 scenario storage path")
+    root = Path(root_raw).resolve()
+    candidate = (root / relative).resolve()
+    if candidate != root and root not in candidate.parents:
+        raise ScenarioPackageError("P4 scenario shard escaped private storage root")
+    if not candidate.is_file():
+        raise ScenarioPackageError(f"P4 scenario shard unavailable: {relative_raw}")
+    with gzip.open(candidate, "rt", encoding="utf-8") as fh:
+        payload = json.load(fh)
+    if not isinstance(payload, Mapping):
+        raise ScenarioPackageError("P4 scenario shard is not an object")
+    for key in ("scenario_id", "base_fingerprint", "output_fingerprint"):
+        if str(payload.get(key) or "") != str(row.get(key) or ""):
+            raise ScenarioPackageError(f"P4 scenario shard metadata mismatch: {key}")
+    _decision_surfaces(payload)
+    return dict(payload)
+
+
 def resolve_scenario(package: Mapping[str, Any], *, scenario_id: str, dependencies: Mapping[str, Any]) -> Mapping[str, Any]:
     validation=validate_package_for_dependencies(package,dependencies=dependencies)
     if not validation["current"]: raise ScenarioPackageError("stale or wrong-base P4 package: fail closed")
     rows=[x for x in package.get("scenarios") or [] if x.get("scenario_id")==scenario_id]
     if len(rows)!=1: raise ScenarioPackageError(f"scenario not uniquely available: {scenario_id}")
-    return rows[0]
+    row=rows[0]
+    if isinstance(row.get("decision_surfaces"), Mapping):
+        return row
+    return _load_sharded_scenario(package, row)

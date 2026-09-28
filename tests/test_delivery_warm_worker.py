@@ -183,3 +183,17 @@ def test_private_state_is_cleared_on_shutdown():
     worker.start()
     worker.shutdown()
     assert worker._private_state == {}
+
+
+def test_missing_p4_package_is_safe_cache_miss_capability():
+    clock = [0.0]
+    worker = WarmWorker(
+        identity=IDENTITY,
+        private_state={},
+        scenario_package=None,
+        callbacks=callbacks(clock),
+        clock=lambda: clock[0],
+    )
+    worker.start()
+    assert worker.state == WorkerState.WARM_READY
+    worker.shutdown()

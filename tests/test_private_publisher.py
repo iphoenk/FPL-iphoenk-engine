@@ -299,3 +299,45 @@ def test_synthetic_private_public_acceptance_surface_split(tmp_path):
     assert proof["safe_fingerprints"]["canonical_body"] == _hash(
         canonical / "report_body.md"
     )
+
+
+def test_controlled_destination_does_not_advance_live_latest(tmp_path):
+    canonical = tmp_path / "canonical"
+    private = tmp_path / "private"
+    canonical.mkdir()
+    _write_fixture(canonical)
+    live = private / "latest/deep.json"
+    live.parent.mkdir(parents=True)
+    live.write_text('{"sentinel":"live"}\n', encoding="utf-8")
+
+    receipt = publish_private_output(
+        canonical_dir=canonical,
+        private_root=private,
+        run_id="perf-f-controlled",
+        season="2026-27",
+        model_sha="a" * 40,
+        runtime_sha="b" * 40,
+        destination_relpath="acceptance/perf-f/run-1/NO_CHANGE",
+        update_latest=False,
+    )
+
+    assert receipt["destination"] == "acceptance/perf-f/run-1/NO_CHANGE"
+    assert json.loads(live.read_text(encoding="utf-8")) == {"sentinel": "live"}
+    assert (private / receipt["destination"] / "delivery_receipt.json").is_file()
+
+
+def test_controlled_destination_rejects_path_escape(tmp_path):
+    canonical = tmp_path / "canonical"
+    canonical.mkdir()
+    _write_fixture(canonical)
+    with pytest.raises(PrivatePublishError, match="safe relative path"):
+        publish_private_output(
+            canonical_dir=canonical,
+            private_root=tmp_path / "private",
+            run_id="perf-f-controlled",
+            season="2026-27",
+            model_sha="a" * 40,
+            runtime_sha="b" * 40,
+            destination_relpath="../escape",
+            update_latest=False,
+        )

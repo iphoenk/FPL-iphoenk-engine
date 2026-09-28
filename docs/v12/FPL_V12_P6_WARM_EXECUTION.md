@@ -19,3 +19,17 @@ D-P2 remains factual/report precompute only. Its governed P6 handoff preserves e
 PERF-F measures T0 at event/command acceptance by an already-running warm worker and T1 only after validated private publication. Queue and runner provisioning are excluded. Every required class is judged individually against 15.000 seconds; no average can hide a failing required sample.
 
 Manager-specific CURRENT15, owner context, scenario packages, decision results and decrypted personal caches stay within the private/encrypted boundary. Public CI uses contract fixtures only.
+
+## Operational D-P2 wiring
+
+The existing owner-gated D-P2 issue-comment transport remains non-recurring and non-authoritative. At T-15 it dispatches the existing V6 report-prefetch path, then invokes the reusable P6 workflow with the same report kind, logical slot, exact T-10 freeze target, and deterministic occurrence ID. P6 has no cron, cannot edit issue 431, and cannot advance scheduler proof.
+
+The production P6 workflow uses a standard GitHub-hosted runner for strictly less than six hours. It checks out the exact production V12 tree, runtime-data-v6, and the governed private repository. It waits for the factual/report prefetch bound to the same occurrence before preparing canonical state with the existing integrated V12 runner and encrypted personal-cache profile.
+
+At T-10, occurrence, production SHA, runtime state, owner state, model, projection lineage, MC authority, and cache dependencies are revalidated. Broad or ambiguous drift is classified as UNCERTAIN_SCOPE and forces a MISS/full canonical recompute instead of speculative selective reuse.
+
+At the visible occurrence, T0 begins only after the already-running worker accepts the occurrence or material change. Unchanged state may reuse the frozen canonical output. Changed state currently uses the same canonical V12 engine whenever a safe selective executor is not yet proven. Such conservative reuse loss is reported as PERFORMANCE_OVER_INVALIDATION and must never be mislabeled as a HIT.
+
+Stage3, render QA, and the existing thin private publisher remain mandatory. T1 occurs only after the private repository publication is committed, pushed, and the remote SHA is verified. Manager-specific CURRENT15, owner context, scenario packages, decrypted cache state, and decision results are never uploaded as public artifacts.
+
+PERF-F is therefore allowed to expose slow MISS classes. Latency is optimized only after warm/cold semantic equality is proven and profiling identifies the dominant component. Correctness is not traded for the 15-second target.

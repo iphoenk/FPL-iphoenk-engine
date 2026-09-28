@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 from types import SimpleNamespace
 
@@ -7,6 +8,7 @@ from src.engines.v12_perf_f_acceptance import (
     _case_inputs,
     _mutate_price,
     _mutate_role,
+    run_controlled_case,
 )
 
 
@@ -99,3 +101,10 @@ def test_p4_miss_uses_real_package_but_mismatched_dependency(tmp_path):
     assert extra["scenario_dependencies"]["projection_lineage_fingerprint"].endswith(
         ":CONTROLLED_MISS"
     )
+
+
+def test_controlled_warm_recompute_reuses_baseline_cache_workspace():
+    source = inspect.getsource(run_controlled_case)
+    assert source.count('workspace=workspace / "warm-baseline"') == 2
+    assert 'workspace=workspace / "canonical-cold"' in source
+    assert 'workspace=workspace / "warm-change"' not in source

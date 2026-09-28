@@ -5192,6 +5192,19 @@ def refresh_price_only_state(
         encoding="utf-8",
     )
     (output_dir / "report_body.md").write_text(body, encoding="utf-8")
+    refreshed["warm_layer_timings"] = {
+        "change_class": "PRICE_ONLY",
+        "seconds": {
+            "MC": 0.0,
+            "scenario": 0.0,
+        },
+        "evidence": {
+            "football_math_recomputed": False,
+            "mc_execution_skipped": True,
+            "scenario_execution_skipped": True,
+            "price_surfaces_recomputed": True,
+        },
+    }
     return refreshed
 
 

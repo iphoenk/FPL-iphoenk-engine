@@ -230,6 +230,22 @@ class WarmWorker:
             plan,
         )
         recompute_seconds = self.clock() - recompute_started
+        layer_timings: dict[str, float] = {}
+        raw_layer_timings = recomputed.get("warm_layer_timings")
+        if (
+            isinstance(raw_layer_timings, Mapping)
+            and str(raw_layer_timings.get("change_class") or "").upper()
+            == change_class
+        ):
+            raw_seconds = raw_layer_timings.get("seconds")
+            if isinstance(raw_seconds, Mapping):
+                for layer, raw_seconds_value in raw_seconds.items():
+                    seconds = float(raw_seconds_value)
+                    if seconds < 0:
+                        raise WarmWorkerError(
+                            f"negative exact warm layer timing: {layer}"
+                        )
+                    layer_timings[str(layer)] = seconds
         validation = validate_actual_behavior(
             plan,
             actual_states=actual_states,
@@ -286,6 +302,7 @@ class WarmWorker:
             "warm_semantic_fingerprint": warm_fp,
             "private_delivery_status": "PASS",
             "private_remote_sha": str(receipt.get("private_remote_sha") or ""),
+            "layer_timings": layer_timings,
             "timings": {
                 "classification": classification_seconds,
                 "cache_lookup": cache_lookup_seconds,

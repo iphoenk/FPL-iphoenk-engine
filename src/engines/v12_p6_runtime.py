@@ -234,6 +234,7 @@ class CanonicalPipeline:
         run_id: str,
         private_destination_relpath: str | None = None,
         update_latest: bool = True,
+        publisher_private: Path | None = None,
     ) -> None:
         self.app = app
         self.runtime = runtime
@@ -245,6 +246,7 @@ class CanonicalPipeline:
         self.run_id = run_id
         self.private_destination_relpath = private_destination_relpath
         self.update_latest = bool(update_latest)
+        self.publisher_private = publisher_private or private
         self.sequence = 0
 
     def compute(
@@ -405,7 +407,7 @@ class CanonicalPipeline:
         identity = WarmIdentity(**dict(state["identity"]))
         receipt = publish_private_output(
             canonical_dir=Path(str(state["output_dir"])),
-            private_root=self.private,
+            private_root=self.publisher_private,
             run_id=self.run_id,
             season=None,
             model_sha=identity.production_sha,
@@ -414,14 +416,14 @@ class CanonicalPipeline:
             update_latest=self.update_latest,
         )
         _git(
-            self.private,
+            self.publisher_private,
             "config",
             "user.name",
             "github-actions[bot]",
             capture=False,
         )
         _git(
-            self.private,
+            self.publisher_private,
             "config",
             "user.email",
             "41898282+github-actions[bot]@users.noreply.github.com",
@@ -436,8 +438,8 @@ class CanonicalPipeline:
                 capture=False,
             )
         else:
-            _git(self.private, "add", "latest", "reports", capture=False)
-        staged = _git(self.private, "diff", "--cached", "--name-only")
+            _git(self.publisher_private, "add", "latest", "reports", capture=False)
+        staged = _git(self.publisher_private, "diff", "--cached", "--name-only")
         if staged:
             _git(
                 self.private,
@@ -464,8 +466,8 @@ class CanonicalPipeline:
                 "HEAD:main",
                 capture=False,
             )
-        local = _head(self.private)
-        remote = _remote_ref(self.private, "refs/heads/main")
+        local = _head(self.publisher_private)
+        remote = _remote_ref(self.publisher_private, "refs/heads/main")
         if local != remote:
             raise P6RuntimeError("private publication remote verification failed")
         return {**receipt, "private_remote_sha": remote}

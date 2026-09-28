@@ -4603,6 +4603,84 @@ def _section(
     return row
 
 
+def _record_mini_warm_reuse_stage(
+    ledger: list[dict[str, Any]],
+    stage: str,
+    payload: Any,
+    *,
+    required: bool = True,
+) -> None:
+    if payload is None:
+        raise IntegratedRunnerError(
+            f"MINI_LEAGUE_ONLY warm reuse missing frozen payload: {stage}"
+        )
+    ledger.append(
+        {
+            "stage": stage,
+            "status": "PASS",
+            "required": required,
+            "reason": None,
+            "output_fingerprint": _fingerprint(payload),
+            "elapsed_seconds": 0.0,
+            "evidence": {
+                "warm_reuse": True,
+                "cache_state": "HIT",
+                "source": "FROZEN_SAME_OCCURRENCE_PRIVATE_WARM_STATE",
+            },
+        }
+    )
+
+
+def _validate_mini_warm_state(
+    warm: Mapping[str, Any],
+    *,
+    planning_gw: int,
+    owned: Sequence[Mapping[str, Any]],
+) -> None:
+    if str(warm.get("schema") or "") != "FPL_MASTER_V12_PRIVATE_WARM_STATE_V1":
+        raise IntegratedRunnerError("unsupported private warm-state schema")
+    if warm.get("private_only") is not True:
+        raise IntegratedRunnerError("warm reuse state is not private-only")
+    if int(warm.get("planning_gw") or 0) != int(planning_gw):
+        raise IntegratedRunnerError("cross-GW MINI_LEAGUE_ONLY warm reuse rejected")
+    current_ids = sorted(
+        int(row.get("element_id") or 0)
+        for row in owned
+        if int(row.get("element_id") or 0) > 0
+    )
+    frozen_ids = sorted(
+        int(row.get("element_id") or 0)
+        for row in warm.get("owned") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    )
+    if current_ids != frozen_ids or len(current_ids) != 15:
+        raise IntegratedRunnerError(
+            "MINI_LEAGUE_ONLY warm reuse current15 identity mismatch"
+        )
+    required = (
+        "projections",
+        "all15",
+        "lineup",
+        "post_match_review",
+        "package_search_result",
+        "direct_package_utility",
+        "funding_leg_selection",
+        "funded_search_result",
+        "funded_package_utility",
+        "package_utility",
+        "material_mc_routes",
+        "monte_carlo",
+        "stage3_decision",
+        "package_with_stage3_pre_mini",
+    )
+    missing = [key for key in required if warm.get(key) is None]
+    if missing:
+        raise IntegratedRunnerError(
+            "MINI_LEAGUE_ONLY warm reuse missing frozen state: "
+            + ",".join(missing)
+        )
+
+
 def run_deep(
     *,
     runtime_data_root: Path,
@@ -4615,9 +4693,22 @@ def run_deep(
     require_private_personal: bool = False,
     scenario_overrides: Mapping[str | int, Mapping[str, Any]] | None = None,
     warm_state_out: Path | None = None,
+    warm_reuse_state: Mapping[str, Any] | None = None,
+    warm_reuse_change_class: str | None = None,
 ) -> dict[str, Any]:
     ledger: list[dict[str, Any]] = []
     scenario_overrides = dict(scenario_overrides or {})
+    warm_reuse = dict(warm_reuse_state or {})
+    warm_change = str(warm_reuse_change_class or "").strip().upper()
+    if warm_change and warm_change != "MINI_LEAGUE_ONLY":
+        raise IntegratedRunnerError(
+            f"unsupported warm reuse change class: {warm_change}"
+        )
+    mini_only_warm_reuse = bool(warm_reuse) and warm_change == "MINI_LEAGUE_ONLY"
+    if mini_only_warm_reuse and scenario_overrides:
+        raise IntegratedRunnerError(
+            "MINI_LEAGUE_ONLY warm reuse cannot carry scenario overrides"
+        )
     stage2_cache_proof: dict[str, Any] = {}
     canonical = CANONICAL_PATH.read_text(encoding="utf-8")
     state = _read_json(STATE_PATH, {}) or {}
@@ -4728,6 +4819,12 @@ def run_deep(
     )
     if not owned:
         raise IntegratedRunnerError("OUR15 unavailable")
+    if mini_only_warm_reuse:
+        _validate_mini_warm_state(
+            warm_reuse,
+            planning_gw=planning_gw,
+            owned=owned,
+        )
 
     strength = _stage(
         ledger,

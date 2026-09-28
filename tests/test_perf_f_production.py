@@ -181,3 +181,17 @@ def test_missing_exact_package_p17_proof_is_rejected():
     bad["p1_7_execution"]["direct_package"] = None
     with pytest.raises(PerfFProductionError, match="missing exact P1.7 owner proof"):
         canonical_p17_timings(bad)
+
+
+def test_partial_invalidation_accepts_explicit_zero_warm_mc_timing():
+    row = worker("PRICE_ONLY")
+    row["layer_timings"] = {"MC": 0.0}
+    sample = build_production_sample(
+        case="PRICE_ONLY",
+        worker_result=row,
+        execution_proof=proof(),
+        cold_semantic_fingerprint="f" * 64,
+    )
+    assert sample.timings["Stage2"] == 0.0
+    assert sample.timings["P1.7"] == 0.0
+    assert sample.timings["MC"] == 0.0

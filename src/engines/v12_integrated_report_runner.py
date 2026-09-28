@@ -5580,6 +5580,11 @@ def run_deep(
                 required=True,
             )
 
+        package_with_stage3_pre_mini = (
+            deepcopy(package_with_stage3)
+            if package_with_stage3
+            else None
+        )
         if package_with_stage3 and mini:
             mini_overlay = _stage(
                 ledger,

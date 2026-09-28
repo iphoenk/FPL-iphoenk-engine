@@ -44,6 +44,20 @@ class PerfFAcceptanceError(RuntimeError):
     pass
 
 
+P4_REQUIRED_CASES = frozenset(
+    {
+        "OUR15_AVAILABILITY",
+        "MATERIAL_PROJECTION",
+        "P4_SCENARIO_HIT",
+        "P4_SCENARIO_MISS",
+    }
+)
+
+
+def _requires_p4_package(case: str) -> bool:
+    return str(case).upper() in P4_REQUIRED_CASES
+
+
 def _read(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
@@ -341,7 +355,11 @@ def execute_case(
     baseline_private = _copy_repo(private_source, workspace / "baseline-private-input")
 
     baseline_identity = _identity(app, baseline_runtime, baseline_private)
-    scenario_package = _load_scenario_package(baseline_private)
+    scenario_package = (
+        _load_scenario_package(baseline_private)
+        if _requires_p4_package(case)
+        else None
+    )
     keys, overrides, extra = _case_inputs(
         case=case,
         runtime=case_runtime,

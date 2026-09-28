@@ -3,7 +3,10 @@ from __future__ import annotations
 import inspect
 
 from src.engines.v12_p6_selective_refresh import refresh_p4_scenario_state
-from src.engines.v12_perf_f_acceptance import execute_case
+from src.engines.v12_perf_f_acceptance import (
+    _requires_p4_package,
+    execute_case,
+)
 
 
 def test_our15_and_p4_hit_use_canonical_precomputed_selective_path():
@@ -63,3 +66,25 @@ def test_material_projection_control_is_one_way_unavailability():
     assert 'target["chance_of_playing_next_round"] = 0' in source
     assert "else 100" not in source
     assert "no owned available element" in source
+
+
+def test_only_p4_consuming_perf_f_cases_attach_private_scenario_package():
+    for case in (
+        "OUR15_AVAILABILITY",
+        "MATERIAL_PROJECTION",
+        "P4_SCENARIO_HIT",
+        "P4_SCENARIO_MISS",
+    ):
+        assert _requires_p4_package(case) is True
+
+    for case in (
+        "NO_CHANGE",
+        "MINI_LEAGUE_ONLY",
+        "PRICE_ONLY",
+        "CAPTAIN_CHANGE",
+        "VICE_CAPTAIN_CHANGE",
+    ):
+        assert _requires_p4_package(case) is False
+
+    source = inspect.getsource(execute_case)
+    assert "if _requires_p4_package(case)" in source

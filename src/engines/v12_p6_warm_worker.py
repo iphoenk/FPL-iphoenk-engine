@@ -159,11 +159,14 @@ class WarmWorker:
             raise WarmWorkerError("P6 worker is not WARM_READY")
         t0 = self.clock()
         self._transition(WorkerState.RECEIVE_CHANGE)
+        classification_started = self.clock()
         change_class = str(change.get("change_class") or "").upper()
         if not change_class:
             raise WarmWorkerError("unsupported change: missing change_class")
+        classification_seconds = self.clock() - classification_started
 
         self._transition(WorkerState.CLASSIFY_CHANGE)
+        cache_lookup_started = self.clock()
         try:
             plan = plan_cache_behavior(
                 change_class,
@@ -172,14 +175,17 @@ class WarmWorker:
             )
         except CacheOperationalError as exc:
             raise WarmWorkerError(f"unsupported change fails closed: {change_class}") from exc
+        cache_lookup_seconds = self.clock() - cache_lookup_started
 
         self._transition(WorkerState.INVALIDATE_MINIMUM_REQUIRED)
         self._transition(WorkerState.RECOMPUTE)
+        recompute_started = self.clock()
         recomputed, actual_states, reused_keys = self.callbacks.recompute(
             self.canonical_state,
             change,
             plan,
         )
+        recompute_seconds = self.clock() - recompute_started
         validation = validate_actual_behavior(
             plan,
             actual_states=actual_states,
@@ -191,19 +197,27 @@ class WarmWorker:
             )
 
         self._transition(WorkerState.STAGE3)
+        stage3_started = self.clock()
         stage3 = self.callbacks.stage3(recomputed)
+        stage3_seconds = self.clock() - stage3_started
         if str(stage3.get("status") or "").upper() not in {"PASS", "NOT_APPLICABLE"}:
             raise WarmWorkerError("Stage3 failed closed")
 
         self._transition(WorkerState.RENDER)
+        render_started = self.clock()
         rendered = self.callbacks.render(recomputed, stage3)
+        render_seconds = self.clock() - render_started
         self._transition(WorkerState.QA)
+        qa_started = self.clock()
         qa = self.callbacks.qa(rendered, stage3)
+        qa_seconds = self.clock() - qa_started
         if str(qa.get("status") or "").upper() != "PASS":
             raise WarmWorkerError("QA failed closed")
 
         self._transition(WorkerState.PRIVATE_PUBLISH)
+        private_publish_started = self.clock()
         receipt = self.callbacks.private_publish(rendered, qa)
+        private_publish_seconds = self.clock() - private_publish_started
         if str(receipt.get("private_delivery_status") or "").upper() != "PASS":
             raise WarmWorkerError("private publication failed closed")
         t1 = self.clock()
@@ -224,6 +238,15 @@ class WarmWorker:
             "warm_semantic_fingerprint": warm_fp,
             "private_delivery_status": "PASS",
             "private_remote_sha": str(receipt.get("private_remote_sha") or ""),
+            "timings": {
+                "classification": classification_seconds,
+                "cache_lookup": cache_lookup_seconds,
+                "recompute": recompute_seconds,
+                "Stage3": stage3_seconds,
+                "render": render_seconds,
+                "QA": qa_seconds,
+                "private_publish": private_publish_seconds,
+            },
             "trace": list(self.trace),
         }
 

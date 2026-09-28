@@ -10,6 +10,7 @@ from src.engines.v12_perf_f_acceptance import (
     _mutate_role,
     execute_case,
 )
+from src.engines.v12_cache_operational import plan_cache_behavior
 from src.engines.v12_integrated_report_runner import run_deep
 from src.engines.v12_p6_runtime import CanonicalPipeline, run_window
 

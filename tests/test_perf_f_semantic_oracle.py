@@ -1,3 +1,4 @@
+from src.engines.v12_cache_operational import plan_cache_behavior
 from src.engines.v12_perf_f import PerfFSample, summarize_samples, validate_sample
 from src.engines.v12_semantic_oracle import compare_warm_cold, semantic_fingerprint
 
@@ -12,6 +13,7 @@ def semantic(action="WAIT"):
             "S15B": {"eo": {"1": 1.4}},
             "S19": {"action": action},
         },
+        "transfer_action": action,
         "xi": list(range(1, 12)),
         "bench": [12, 13, 14, 15],
         "route": "HOLD",
@@ -51,22 +53,34 @@ def timings():
     }
 
 
-def sample(case, total=1.0, equal=True):
+def sample(case, total=1.0, equal=True, *, private_pass=True, wrong_hit=False):
     cold = semantic()
     warm = semantic() if equal else semantic("TRANSFER")
+    keys = [] if case in {"NO_CHANGE", "P4_SCENARIO_HIT"} else ["test:key"]
+    plan = plan_cache_behavior(case, affected_dependency_keys=keys)
+    actual = dict(plan.expected)
+    if wrong_hit:
+        target = next(
+            layer for layer, state in plan.expected.items()
+            if state == "MISS"
+        )
+        actual[target] = "HIT"
     return PerfFSample(
         case=case,
         t0=100.0,
         t1=100.0 + total,
         lineage=lineage(),
         change_class=case,
-        expected_cache_state={"Stage2": "HIT"},
-        actual_cache_state={"Stage2": "HIT"},
-        invalidated_dependency_keys=[],
+        expected_cache_state=dict(plan.expected),
+        actual_cache_state=actual,
+        invalidated_dependency_keys=keys,
         timings=timings(),
         cold_semantic_fingerprint=semantic_fingerprint(cold),
         warm_semantic_fingerprint=semantic_fingerprint(warm),
         owner_context_fingerprint="owner-private",
+        reused_dependency_keys={},
+        private_delivery_status="PASS" if private_pass else "FAIL",
+        private_remote_sha=("c" * 40) if private_pass else "",
     )
 
 
@@ -83,6 +97,22 @@ def test_latency_pass_never_overrides_semantic_inequality():
     assert out["latency_pass"] is True
     assert out["status"] == "FAIL"
     assert out["reason"] == "SEMANTIC_INEQUALITY"
+
+
+def test_cache_wrong_hit_and_private_publish_are_hard_failures():
+    cache = validate_sample(sample("MATERIAL_PROJECTION", wrong_hit=True))
+    assert cache["status"] == "FAIL"
+    assert cache["reason"] == "CACHE_CORRECTNESS_FAIL"
+    private = validate_sample(sample("NO_CHANGE", private_pass=False))
+    assert private["status"] == "FAIL"
+    assert private["reason"] == "PRIVATE_PUBLISH_FAIL"
+
+
+def test_transfer_action_is_part_of_semantic_surface():
+    warm = semantic()
+    cold = semantic()
+    cold["transfer_action"] = "TRANSFER"
+    assert compare_warm_cold(warm=warm, cold=cold)["equal"] is False
 
 
 def test_over_15s_fails_even_with_semantic_equality():

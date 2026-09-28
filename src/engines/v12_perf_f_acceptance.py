@@ -368,6 +368,13 @@ def execute_case(
         if change_class == "NO_CHANGE":
             current_state = dict(state)
             return current_state, dict(plan.expected), {}
+        if change_class == "MINI_LEAGUE_ONLY":
+            current_state = warm_pipeline.compute(
+                final_identity,
+                warm_reuse_state=dict(state.get("warm_state") or {}),
+                warm_reuse_change_class="MINI_LEAGUE_ONLY",
+            )
+            return current_state, dict(plan.expected), {}
         current_state = warm_pipeline.compute(
             final_identity,
             scenario_overrides=overrides or None,

@@ -104,3 +104,21 @@ def test_summary_does_not_average_away_failing_sample():
     assert summary["cases"]["PRICE_ONLY"]["max_seconds"] == 16.0
     assert summary["cases"]["PRICE_ONLY"]["status"] == "FAIL"
     assert summary["all_required_cases_green"] is False
+
+
+def test_oracle_reads_real_integrated_report_sections_shape():
+    payload = {
+        "report": {
+            "sections": [
+                {"section_id": "S08", "content": {"captain": 1, "vice": 2}},
+                {"section_id": "S11", "content": {"watchlist": [10]}},
+                {"section_id": "S12", "content": {"rise": [10]}},
+                {"section_id": "S13", "content": {"fall": [30]}},
+                {"section_id": "S15B", "content": {"eo": {"1": 1.4}}},
+                {"section_id": "S19", "content": {"action": "WAIT"}},
+            ]
+        },
+        "generated_at": "ignored",
+    }
+    assert semantic_fingerprint(payload)
+    assert compare_warm_cold(warm=payload, cold=payload)["equal"] is True

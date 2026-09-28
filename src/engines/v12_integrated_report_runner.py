@@ -6256,12 +6256,22 @@ def run_deep(
         mini
         and str(mini.get("coverage_state") or "").upper() == "FULL"
     )
+    weather_contract_state = (
+        "REPORT_TIME_BOUND"
+        if any(
+            str(row.get("fpl_impact") or "UNAVAILABLE").upper()
+            in {"NORMAL", "LOW", "MATERIAL"}
+            for row in calendar_context.get("weather") or []
+            if isinstance(row, Mapping)
+        )
+        else "SOURCE_DEGRADED"
+    )
     pre_render_qa = validate_pre_render_qa(
         compute_contract=compute_contract,
         section_manifest=section_manifest,
         mini_league_denominator_complete=mini_complete,
         report_mode="DEEP",
-        weather_contract_state="SOURCE_DEGRADED",
+        weather_contract_state=weather_contract_state,
     )
     body = render_deep_text(report)
     final_delivery_barrier = validate_final_delivery_barrier(
@@ -6290,7 +6300,7 @@ def run_deep(
         rendered_fact_keys=list(pre_render_qa.get("expected_fact_keys") or []),
         rendered_model_keys=list(pre_render_qa.get("expected_model_keys") or []),
         rendered_mini_league_denominator_complete=mini_complete,
-        rendered_weather_contract_state="SOURCE_DEGRADED",
+        rendered_weather_contract_state=weather_contract_state,
         truncated=False,
     )
     contract = canonical_mode_contract(canonical, "DEEP")

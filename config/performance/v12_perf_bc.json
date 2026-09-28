@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "authority": "FPL_V12_PERF_BC_EXPLORATORY",
+  "non_authoritative": true,
+  "perf_a_frozen": {
+    "native_material_speedup_ratio_lte": 0.90,
+    "result": "KEEP_NORMALIZED_RUNTIME",
+    "threshold_immutable": true
+  },
+  "perf_b": {
+    "order": ["NORMALIZED", "NATIVE_MC_SUBPROCESS", "NORMALIZED", "NATIVE_MC_SUBPROCESS"],
+    "actual_paths": 500000,
+    "cache_class": "COLD",
+    "material_e2e_ratio_lte": 0.90,
+    "minimum_e2e_seconds_saved": 5.0
+  },
+  "perf_c_mc": {
+    "order": ["BASELINE", "PREALLOCATED_PARALLEL_COMBINE", "BASELINE", "PREALLOCATED_PARALLEL_COMBINE"],
+    "actual_paths": 500000,
+    "cache_class": "COLD_DIRECT_NO_CACHE",
+    "material_ratio_lte": 0.90,
+    "minimum_seconds_saved": 0.10,
+    "candidate": "PREALLOCATED_PARALLEL_COMBINE"
+  },
+  "perf_c_stage2": {
+    "workers": [1, 2, 4],
+    "repetitions": 2,
+    "cache_class": "COLD_DIRECT_NO_CACHE",
+    "material_ratio_lte": 0.90,
+    "minimum_seconds_saved": 10.0,
+    "candidate": "PRECOMPUTE_IDENTICAL_TEAMMATE_XMINS"
+  },
+  "safety": {
+    "mc_paths_reduced": false,
+    "universe_pruned": false,
+    "search_completeness_reduced": false,
+    "qa_skipped": false,
+    "production_runtime_selection_changed": false,
+    "private_publish_performed": false,
+    "paid_infrastructure": false,
+    "second_scheduler": false,
+    "thresholds_change_after_observation": false
+  }
+}

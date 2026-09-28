@@ -78,6 +78,8 @@ def _visible_weather_lines(state: str) -> list[str]:
     normalized = str(state or "MISSING").strip().upper()
     if normalized == "DIRECT_CHATGPT":
         return ["### WEATHER — DIRECT CHATGPT", "WEATHER: NO MATERIAL IMPACT"]
+    if normalized == "REPORT_TIME_BOUND":
+        return ["WEATHER SOURCE: REPORT_TIME_BOUND"]
     if normalized == "SOURCE_DEGRADED":
         return ["WEATHER SOURCE: DEGRADED"]
     if normalized == "PRICE_NOT_IN_SCOPE":

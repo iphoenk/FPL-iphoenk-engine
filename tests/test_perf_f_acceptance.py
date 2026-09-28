@@ -10,6 +10,8 @@ from src.engines.v12_perf_f_acceptance import (
     _mutate_role,
     execute_case,
 )
+from src.engines.v12_integrated_report_runner import run_deep
+from src.engines.v12_p6_runtime import CanonicalPipeline, run_window
 
 
 def _write(path, payload):
@@ -110,3 +112,37 @@ def test_controlled_warm_recompute_reuses_baseline_cache_workspace():
     assert 'workspace=workspace / "warm-change"' not in source
     assert '\"timings\": result[\"timings\"]' in source
     assert '\"timings\": verdict[\"timings\"]' not in source
+
+
+
+def test_mini_league_acceptance_uses_governed_selective_warm_path():
+    plan = plan_cache_behavior(
+        "MINI_LEAGUE_ONLY",
+        affected_dependency_keys=["mini_league:9477:entry:3462711"],
+    )
+    assert plan.expected == {
+        "Stage2": "HIT",
+        "P1.7": "HIT",
+        "MC": "HIT",
+        "scenario": "PARTIAL_INVALIDATION",
+        "stability": "MISS",
+    }
+
+    acceptance_source = inspect.getsource(execute_case)
+    assert 'change_class == "MINI_LEAGUE_ONLY"' in acceptance_source
+    assert 'warm_reuse_change_class="MINI_LEAGUE_ONLY"' in acceptance_source
+    assert "return current_state, dict(plan.expected), {}" in acceptance_source
+
+    pipeline_source = inspect.getsource(CanonicalPipeline.compute)
+    assert '"--warm-reuse-state-file"' in pipeline_source
+    assert '"--warm-reuse-change-class"' in pipeline_source
+    assert "scenario overrides cannot be combined with selective warm reuse" in pipeline_source
+
+    runtime_source = inspect.getsource(run_window)
+    assert 'change_class == "MINI_LEAGUE_ONLY"' in runtime_source
+    assert 'warm_reuse_state=dict(state.get("warm_state") or {})' in runtime_source
+
+    integrated_source = inspect.getsource(run_deep)
+    assert "mini_only_warm_reuse" in integrated_source
+    assert "package_with_stage3_pre_mini" in integrated_source
+    assert "FROZEN_SAME_OCCURRENCE_PRIVATE_WARM_STATE" in integrated_source

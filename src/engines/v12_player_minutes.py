@@ -46,8 +46,17 @@ def load_historical_policy() -> dict[str, Any]:
     return json.loads(HISTORICAL_POLICY_PATH.read_text(encoding="utf-8"))
 
 
-def _availability(player: dict[str, Any], cfg: dict[str, Any]) -> tuple[float, str]:
-    """Official FPL availability remains factual authority."""
+def _availability(
+    player: dict[str, Any],
+    cfg: dict[str, Any],
+    context: Mapping[str, Any] | None = None,
+) -> tuple[float, str]:
+    """Official FPL authority, with explicit private P4 counterfactual override."""
+    context = context or {}
+    if "scenario_availability_probability_override" in context:
+        if context.get("scenario_override_authorized") is not True:
+            raise RuntimeError("scenario availability override requires explicit authorization")
+        return clamp(_f(context.get("scenario_availability_probability_override")), 0.0, 1.0), "scenario_override"
     chance = player.get("chance_of_playing_next_round")
     if chance is not None:
         return clamp(_f(chance) / 100.0, 0.0, 1.0), "official_chance"
@@ -76,7 +85,7 @@ def _estimate_core(
 ) -> dict[str, Any]:
     cfg = load_config()
     context = context or {}
-    availability, availability_source = _availability(player, cfg)
+    availability, availability_source = _availability(player, cfg, context)
 
     neutral = clamp(_f(cfg.get("neutral_start_prior"), 0.72), 0.01, 0.99)
     weights = cfg.get("signal_weights") or {}
@@ -721,8 +730,13 @@ def estimate_player_minutes(
     }
     out["evidence_lineage"] = {
         "official_availability": {
-            "available": True,
+            "available": out.get("availability_source") != "scenario_override",
             "source": out.get("availability_source"),
+        },
+        "scenario_availability_override": {
+            "applied": out.get("availability_source") == "scenario_override",
+            "private_counterfactual_only": True,
+            "override_type": context.get("scenario_override_type"),
         },
         "current_season_start_rate": {
             "available": _f(context.get("team_matches_played")) > 0,
@@ -755,6 +769,9 @@ def estimate_player_minutes(
         "legacy_xmins_v2_v3_are_migration_oracles_only": True,
         "automatic_parameter_retuning": False,
         "methodology_weights_20_25_30_25_unchanged": True,
+        "scenario_override_supported_by_canonical_p1_1": True,
+        "scenario_override_applied": out.get("availability_source") == "scenario_override",
+        "scenario_override_never_posthoc_mutates_xpts": True,
     })
     out = enrich_xmins_contract(out)
     return _attach_model_evidence(out, model_evidence_binding)

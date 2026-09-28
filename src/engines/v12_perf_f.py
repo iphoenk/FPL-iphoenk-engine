@@ -8,9 +8,11 @@ outside this metric by construction.
 """
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from statistics import median
 from typing import Any, Mapping, Sequence
+
+from .v12_cache_operational import CachePlan, LAYERS, validate_actual_behavior
 
 REQUIRED_CASES = (
     "NO_CHANGE",
@@ -66,6 +68,9 @@ class PerfFSample:
     cold_semantic_fingerprint: str
     warm_semantic_fingerprint: str
     owner_context_fingerprint: str = ""
+    reused_dependency_keys: Mapping[str, Sequence[str]] = field(default_factory=dict)
+    private_delivery_status: str = ""
+    private_remote_sha: str = ""
 
     @property
     def total_seconds(self) -> float:
@@ -79,6 +84,8 @@ def validate_sample(sample: PerfFSample, *, target_seconds: float = 15.0) -> dic
     missing_lineage = [key for key in REQUIRED_LINEAGE if not str(sample.lineage.get(key) or "").strip()]
     if missing_lineage:
         raise PerfFError(f"missing PERF-F lineage: {missing_lineage}")
+    if not str(sample.owner_context_fingerprint or "").strip():
+        raise PerfFError("missing PERF-F owner-context fingerprint")
     if sample.t1 < sample.t0:
         raise PerfFError("T1 precedes T0")
     missing_timings = [key for key in REQUIRED_TIMINGS if key not in sample.timings]
@@ -86,22 +93,67 @@ def validate_sample(sample: PerfFSample, *, target_seconds: float = 15.0) -> dic
         raise PerfFError(f"missing PERF-F stage timings: {missing_timings}")
     if any(float(sample.timings[key]) < 0 for key in REQUIRED_TIMINGS):
         raise PerfFError("negative PERF-F timing")
+
+    expected = {layer: str(sample.expected_cache_state.get(layer) or "").upper() for layer in LAYERS}
+    actual = {layer: str(sample.actual_cache_state.get(layer) or "").upper() for layer in LAYERS}
+    if any(not expected[layer] for layer in LAYERS):
+        raise PerfFError("incomplete PERF-F expected cache state")
+    if any(not actual[layer] for layer in LAYERS):
+        raise PerfFError("incomplete PERF-F actual cache state")
+    cache_plan = CachePlan(
+        change_class=str(sample.change_class or case).upper(),
+        matrix_class=str(sample.change_class or case).upper(),
+        scope_certain=True,
+        affected_dependency_keys=tuple(str(x) for x in sample.invalidated_dependency_keys),
+        expected=expected,
+        recompute_layers=tuple(
+            layer for layer in LAYERS
+            if expected[layer] in {"MISS", "PARTIAL_INVALIDATION"}
+        ),
+        reusable_layers=tuple(layer for layer in LAYERS if expected[layer] == "HIT"),
+        partial_layers=tuple(
+            layer for layer in LAYERS if expected[layer] == "PARTIAL_INVALIDATION"
+        ),
+    )
+    cache_validation = validate_actual_behavior(
+        cache_plan,
+        actual_states=actual,
+        reused_dependency_keys=sample.reused_dependency_keys,
+    )
+    cache_correctness_pass = cache_validation.correctness == "PASS"
+    private_publish_pass = (
+        str(sample.private_delivery_status or "").upper() == "PASS"
+        and bool(str(sample.private_remote_sha or "").strip())
+    )
     semantic_equal = (
         bool(sample.warm_semantic_fingerprint)
         and sample.warm_semantic_fingerprint == sample.cold_semantic_fingerprint
     )
     latency_pass = sample.total_seconds <= target_seconds
+    passed = (
+        semantic_equal
+        and latency_pass
+        and cache_correctness_pass
+        and private_publish_pass
+    )
     return {
         "case": case,
         "total_seconds": sample.total_seconds,
         "semantic_equal": semantic_equal,
         "latency_pass": latency_pass,
-        "status": "PASS" if semantic_equal and latency_pass else "FAIL",
+        "cache_correctness_pass": cache_correctness_pass,
+        "cache_performance": cache_validation.performance,
+        "private_publish_pass": private_publish_pass,
+        "status": "PASS" if passed else "FAIL",
         "reason": (
             "PASS"
-            if semantic_equal and latency_pass
+            if passed
             else "SEMANTIC_INEQUALITY"
             if not semantic_equal
+            else "CACHE_CORRECTNESS_FAIL"
+            if not cache_correctness_pass
+            else "PRIVATE_PUBLISH_FAIL"
+            if not private_publish_pass
             else "LATENCY_OVER_TARGET"
         ),
     }

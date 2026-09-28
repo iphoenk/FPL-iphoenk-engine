@@ -36,6 +36,7 @@ from .v12_p6_selective_refresh import (
 )
 from .v12_perf_f import REQUIRED_CASES
 from .v12_perf_f_production import validate_production_sample
+from .v12_scenario_package import resolve_scenario
 from .v12_semantic_oracle import semantic_fingerprint, semantic_surface
 
 
@@ -452,6 +453,11 @@ def execute_case(
                     raise PerfFAcceptanceError(
                         "OUR15_AVAILABILITY canonical P4 counterfactual unavailable"
                     )
+                scenario_row = resolve_scenario(
+                    scenario_package,
+                    scenario_id=str(scenario_row.get("scenario_id") or ""),
+                    dependencies=baseline_identity.p4_dependencies(),
+                )
             current_state = refresh_p4_scenario_state(
                 state=state,
                 report_slot=report_slot,
@@ -515,6 +521,11 @@ def execute_case(
                 raise PerfFAcceptanceError(
                     "material projection has no equivalent canonical P4 scenario"
                 )
+            scenario_row = resolve_scenario(
+                scenario_package,
+                scenario_id=str(scenario_row.get("scenario_id") or ""),
+                dependencies=baseline_identity.p4_dependencies(),
+            )
             current_state = refresh_p4_scenario_state(
                 state=state,
                 report_slot=report_slot,

@@ -626,6 +626,32 @@ def build_calendar_workload_context(
             bool(row.get("tournament_absence"))
             for _, row in context_dated
         )
+        non_pl_context = [
+            (dt, row)
+            for dt, row in context_dated
+            if str(row.get("competition_category") or "").upper()
+            != "DOMESTIC_LEAGUE"
+        ]
+        non_pl_competitions = sorted(
+            {
+                str(row.get("competition") or "UNSPECIFIED")
+                for _, row in non_pl_context
+            }
+        )
+        next_non_pl = next(
+            (
+                {
+                    "competition": row.get("competition"),
+                    "kickoff": dt.isoformat(),
+                    "home_away": row.get("home_away"),
+                    "opponent": row.get("opponent"),
+                    "travel_context": row.get("travel_context"),
+                }
+                for dt, row in non_pl_context
+                if report_dt is not None and dt > report_dt
+            ),
+            None,
+        )
         reintegration = next(
             (
                 row.get("reintegration_state")
@@ -704,6 +730,8 @@ def build_calendar_workload_context(
                 "minutes_last_days": minutes,
                 "days_rest": days_rest,
                 "load_state": load_state,
+                "non_pl_competitions": non_pl_competitions,
+                "next_non_pl_event": next_non_pl,
                 "cross_border_travel": any(
                     bool(row.get("cross_border"))
                     for _, row in context_dated
@@ -4062,6 +4090,8 @@ def _render_deep_visible_contract_lines(
                     "player",
                     "gw_state",
                     "load_state",
+                    "non_pl_competitions",
+                    "next_non_pl",
                     "prev_match",
                     "next_pl",
                     "matches_3/7/14/21",
@@ -4081,6 +4111,8 @@ def _render_deep_visible_contract_lines(
                         row.get("player") or row.get("element_id"),
                         row.get("gw_state"),
                         row.get("load_state"),
+                        row.get("non_pl_competitions"),
+                        row.get("next_non_pl_event"),
                         row.get("previous_match_datetime"),
                         row.get("next_pl_fixture_datetime"),
                         row.get("matches_last_days"),

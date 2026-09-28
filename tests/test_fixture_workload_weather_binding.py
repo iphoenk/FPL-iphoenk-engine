@@ -119,6 +119,40 @@ def test_report_time_competition_schedule_exact_identity_and_fail_soft(monkeypat
     assert event["verified_source"] == "ESPN_PUBLIC_COMPETITION_SCHEDULE"
 
 
+def test_report_time_competition_schedule_uses_explicit_team_alias_not_fuzzy_join():
+    by_abbreviation, by_name = report_time_competition_schedule._official_team_indexes(
+        {
+            "teams": [
+                {"id": 15, "name": "Man City", "short_name": "MCI"},
+            ]
+        }
+    )
+    provider = {
+        "abbreviation": "MNC",
+        "displayName": "Manchester City",
+        "shortDisplayName": "Man City",
+        "name": "Manchester City",
+    }
+    assert report_time_competition_schedule._provider_team_id(
+        provider,
+        by_abbreviation=by_abbreviation,
+        by_name=by_name,
+        team_name_aliases={"Manchester City": "Man City"},
+    ) == 15
+
+    typo = {
+        "abbreviation": "MNX",
+        "displayName": "Manchester Cty",
+        "name": "Manchester Cty",
+    }
+    assert report_time_competition_schedule._provider_team_id(
+        typo,
+        by_abbreviation=by_abbreviation,
+        by_name=by_name,
+        team_name_aliases={"Manchester City": "Man City"},
+    ) is None
+
+
 def test_report_time_competition_schedule_never_fuzzy_joins_team():
     cfg = {
         "name": "UEFA Champions League",

@@ -32,7 +32,7 @@ from .v12_integrated_report_runner import (
 )
 from .v12_perf_f import REQUIRED_CASES
 from .v12_perf_f_production import validate_production_sample
-from .v12_semantic_oracle import semantic_fingerprint
+from .v12_semantic_oracle import semantic_fingerprint, semantic_surface
 
 
 class PerfFAcceptanceError(RuntimeError):

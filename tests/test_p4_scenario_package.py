@@ -1,4 +1,6 @@
 from copy import deepcopy
+import gzip
+import json
 import pytest
 from src.engines.v12_scenario_package import ScenarioPackageError, base_fingerprint, build_scenario_package, resolve_scenario, validate_package_for_dependencies
 
@@ -37,3 +39,43 @@ def test_current15_and_gw_changes_rejected():
 def test_wrong_owner_context_rejected():
     p=build(); d=dict(DEPS); d["owner_context_fingerprint"]="other-owner"
     with pytest.raises(ScenarioPackageError): resolve_scenario(p,scenario_id="UNAVAILABLE_1",dependencies=d)
+
+
+def test_sharded_scenario_resolution_is_lazy_and_fail_closed(tmp_path):
+    p = build()
+    row = deepcopy(next(x for x in p["scenarios"] if x["scenario_id"] == "UNAVAILABLE_1"))
+    shard_payload = deepcopy(row)
+    shard_payload.pop("delta_vs_base", None)
+    storage = tmp_path / "shards" / p["package_fingerprint"]
+    storage.mkdir(parents=True)
+    shard = storage / "UNAVAILABLE_1.json.gz"
+    with gzip.open(shard, "wt", encoding="utf-8") as fh:
+        json.dump(shard_payload, fh, sort_keys=True)
+    manifest = {
+        **{k: deepcopy(v) for k, v in p.items() if k != "scenarios"},
+        "_storage_root": str(tmp_path),
+        "scenarios": [
+            {
+                "scenario_id": row["scenario_id"],
+                "base_fingerprint": row["base_fingerprint"],
+                "override_type": row["override_type"],
+                "override_input": row["override_input"],
+                "output_fingerprint": row["output_fingerprint"],
+                "storage_path": (
+                    f"shards/{p['package_fingerprint']}/UNAVAILABLE_1.json.gz"
+                ),
+                "storage_encoding": "gzip-json-v1",
+            }
+        ],
+    }
+    resolved = resolve_scenario(
+        manifest,
+        scenario_id="UNAVAILABLE_1",
+        dependencies=DEPS,
+    )
+    assert resolved["decision_surfaces"] == row["decision_surfaces"]
+
+    bad = deepcopy(manifest)
+    bad["scenarios"][0]["output_fingerprint"] = "tampered"
+    with pytest.raises(ScenarioPackageError, match="metadata mismatch"):
+        resolve_scenario(bad, scenario_id="UNAVAILABLE_1", dependencies=DEPS)

@@ -30,7 +30,10 @@ from .v12_integrated_report_runner import (
     refresh_mini_league_only_state,
     refresh_price_only_state,
 )
-from .v12_p6_selective_refresh import refresh_p4_scenario_state
+from .v12_p6_selective_refresh import (
+    refresh_p4_scenario_state,
+    refresh_revalidated_base_state,
+)
 from .v12_perf_f import REQUIRED_CASES
 from .v12_perf_f_production import validate_production_sample
 from .v12_semantic_oracle import semantic_fingerprint, semantic_surface
@@ -196,7 +199,22 @@ def _mutate_material_projection(runtime: Path, owned_ids: list[int]) -> list[str
         raise PerfFAcceptanceError("owned element missing from official bootstrap")
     element = int(target["id"])
     current = target.get("chance_of_playing_next_round")
-    target["chance_of_playing_next_round"] = 0 if current != 0 else 100
+    if current in (0, 0.0):
+        target = next(
+            (
+                row for row in elements
+                if isinstance(row, dict)
+                and int(row.get("id") or 0) in set(owned_ids)
+                and row.get("chance_of_playing_next_round") not in (0, 0.0)
+            ),
+            None,
+        )
+        if target is None:
+            raise PerfFAcceptanceError(
+                "no owned available element for controlled material projection"
+            )
+        element = int(target["id"])
+    target["chance_of_playing_next_round"] = 0
     _write(path, payload)
     return [f"projection:{element}:availability"]
 
@@ -442,6 +460,97 @@ def execute_case(
                 package_fingerprint=str(
                     scenario_package.get("package_fingerprint") or ""
                 ),
+            )
+            current_state["identity"] = asdict(final_identity)
+            current_state["semantic_surface"] = semantic_surface(
+                current_state["bundle"]
+            )
+            return current_state, dict(plan.expected), {}
+        if change_class in {"CAPTAIN_CHANGE", "VICE_CAPTAIN_CHANGE"}:
+            current_state = refresh_revalidated_base_state(
+                state=state,
+                report_slot=report_slot,
+                change_class=change_class,
+                evidence={
+                    "submitted_role_change_revalidated": True,
+                    "football_model_authority_unchanged": True,
+                    "downstream_delivery_revalidated": True,
+                },
+            )
+            current_state["identity"] = asdict(final_identity)
+            current_state["semantic_surface"] = semantic_surface(
+                current_state["bundle"]
+            )
+            return current_state, dict(plan.expected), {}
+        if change_class == "MATERIAL_PROJECTION":
+            if not scenario_package:
+                raise PerfFAcceptanceError(
+                    "MATERIAL_PROJECTION requires canonical P4 equivalence package"
+                )
+            element = next(
+                (
+                    int(token.split(":")[1])
+                    for token in plan.affected_dependency_keys
+                    if token.startswith("projection:")
+                    and len(token.split(":")) >= 3
+                ),
+                0,
+            )
+            scenario_row = next(
+                (
+                    row
+                    for row in scenario_package.get("scenarios") or []
+                    if isinstance(row, Mapping)
+                    and str(row.get("override_type") or "")
+                    == "OWNED_UNAVAILABLE"
+                    and int(
+                        (row.get("override_input") or {}).get("element_id")
+                        or 0
+                    )
+                    == element
+                ),
+                None,
+            )
+            if not isinstance(scenario_row, Mapping):
+                raise PerfFAcceptanceError(
+                    "material projection has no equivalent canonical P4 scenario"
+                )
+            current_state = refresh_p4_scenario_state(
+                state=state,
+                report_slot=report_slot,
+                scenario_row=scenario_row,
+                change_class=change_class,
+                package_fingerprint=str(
+                    scenario_package.get("package_fingerprint") or ""
+                ),
+                extra_evidence={
+                    "controlled_projection_transition": "AVAILABLE_TO_UNAVAILABLE",
+                    "canonical_p1_1_override_equivalence": True,
+                    "element_id": element,
+                },
+            )
+            current_state["identity"] = asdict(final_identity)
+            current_state["semantic_surface"] = semantic_surface(
+                current_state["bundle"]
+            )
+            return current_state, dict(plan.expected), {}
+        if change_class == "P4_SCENARIO_MISS":
+            validation = change.get("scenario_validation")
+            if not isinstance(validation, Mapping) or validation.get("current") is not False:
+                raise PerfFAcceptanceError(
+                    "P4_SCENARIO_MISS requires a proven package dependency mismatch"
+                )
+            current_state = refresh_revalidated_base_state(
+                state=state,
+                report_slot=report_slot,
+                change_class=change_class,
+                evidence={
+                    "p4_package_validation_status": str(
+                        validation.get("status") or ""
+                    ),
+                    "wrong_base_package_rejected": True,
+                    "fallback": "CURRENT_CANONICAL_WARM_BASE",
+                },
             )
             current_state["identity"] = asdict(final_identity)
             current_state["semantic_surface"] = semantic_surface(

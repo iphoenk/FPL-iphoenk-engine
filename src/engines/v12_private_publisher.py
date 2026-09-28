@@ -147,6 +147,8 @@ def publish_private_output(
     season: str | None,
     model_sha: str,
     runtime_sha: str,
+    destination_relpath: str | None = None,
+    update_latest: bool = True,
 ) -> dict[str, Any]:
     missing = [
         name for name in _REQUIRED_CANONICAL_FILES
@@ -178,13 +180,19 @@ def publish_private_output(
 
     season_value = str(season or "").strip() or _season_from_report_slot(report_slot)
     slot_token = _timestamp_token(report_slot)
-    report_dir = (
-        private_root
-        / "reports"
-        / season_value
-        / f"gw_{planning_gw}"
-        / slot_token
-    )
+    if destination_relpath:
+        relative = Path(str(destination_relpath))
+        if relative.is_absolute() or ".." in relative.parts or not relative.parts:
+            raise PrivatePublishError("controlled private destination must be a safe relative path")
+        report_dir = private_root / relative
+    else:
+        report_dir = (
+            private_root
+            / "reports"
+            / season_value
+            / f"gw_{planning_gw}"
+            / slot_token
+        )
     latest_dir = private_root / "latest"
 
     canonical_bundle_sha = before["report_bundle.json"]
@@ -225,9 +233,10 @@ def publish_private_output(
     digest_sha = _safe_write_text(report_dir / "digest.json", digest_json)
     digest_md_sha = _safe_write_text(report_dir / "digest.md", digest_md)
 
-    mode_lower = report_mode.lower()
-    _atomic_replace_text(latest_dir / f"{mode_lower}.json", digest_json)
-    _atomic_replace_text(latest_dir / f"{mode_lower}.md", digest_md)
+    if update_latest:
+        mode_lower = report_mode.lower()
+        _atomic_replace_text(latest_dir / f"{mode_lower}.json", digest_json)
+        _atomic_replace_text(latest_dir / f"{mode_lower}.md", digest_md)
 
     after = {
         name: sha256_file(canonical_dir / name)
@@ -276,6 +285,8 @@ def main() -> int:
     parser.add_argument("--model-sha", required=True)
     parser.add_argument("--runtime-sha", required=True)
     parser.add_argument("--receipt-out", required=True)
+    parser.add_argument("--destination-relpath", default="")
+    parser.add_argument("--no-update-latest", action="store_true")
     args = parser.parse_args()
 
     receipt = publish_private_output(
@@ -285,6 +296,8 @@ def main() -> int:
         season=(args.season or None),
         model_sha=args.model_sha,
         runtime_sha=args.runtime_sha,
+        destination_relpath=(args.destination_relpath or None),
+        update_latest=not args.no_update_latest,
     )
     out = Path(args.receipt_out)
     out.parent.mkdir(parents=True, exist_ok=True)

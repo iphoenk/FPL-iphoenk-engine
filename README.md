@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-28T22:02:00+07:00`
-> **Production main at sync:** `77e5a0ce90af31dd404003e0aa0fc4f8e65fd4f2`  
+> **Last runtime/documentation sync:** `2026-09-29T04:35:00+07:00`
+> **Production main at sync:** `3ffbd83e7336d6ce613395aa449ef8dea58d338f`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.

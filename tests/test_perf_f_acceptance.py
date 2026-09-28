@@ -162,6 +162,15 @@ def test_mini_league_partial_refresh_reuses_football_math_and_keeps_qa():
     assert '"football_math_recomputed": False' in source
     assert "optimize_lineup(" not in source
     assert "run_package_monte_carlo(" not in source
+    # PERF-F latency contract: MINI refresh must not deep-copy the complete
+    # canonical bundle/warm state merely to update P1.8 surfaces.
+    assert "refreshed = deepcopy(dict(state))" not in source
+    assert 'bundle = deepcopy(dict(refreshed.get("bundle") or {}))' not in source
+    assert 'warm = deepcopy(dict(refreshed.get("warm_state") or {}))' not in source
+    assert "stage3_visible = deepcopy(" not in source
+    assert "out = deepcopy(dict(content))" not in source
+    assert "bundle = dict(bundle_source)" in source
+    assert "warm = dict(warm_source)" in source
 
 
 def test_price_only_acceptance_uses_governed_partial_executor():

@@ -1089,3 +1089,186 @@ def run_perf_c_stage2(args: argparse.Namespace) -> int:
     sequence = 0
     # Interleave by repetition to limit host drift.
     for rep in range(1, repetitions + 1):
+        for variant, workers in variants:
+            sequence += 1
+            safe_out = root / f"{sequence:02d}-{variant}.safe.json"
+            private_out = root / f"{sequence:02d}-{variant}.private.json"
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "src.engines.v12_perf_bc",
+                    "_stage2-child",
+                    "--variant",
+                    variant,
+                    "--workers",
+                    str(workers),
+                    "--runtime-data-root",
+                    str(args.runtime_data_root),
+                    "--private-output",
+                    str(private_out),
+                    "--output",
+                    str(safe_out),
+                ],
+                cwd=ROOT,
+                env=_normalized_env(),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=True,
+            )
+            row = json.loads(safe_out.read_text(encoding="utf-8"))
+            row["sequence"] = sequence
+            row["repetition"] = rep
+            rows.append(row)
+            try:
+                private_out.unlink()
+            except OSError:
+                pass
+    baseline = [r for r in rows if r["variant"] == "BASELINE"]
+    baseline_med = _median([r["projection_seconds"] for r in baseline])
+    baseline_total = _median([r["total_acceptance_seconds"] for r in baseline])
+    fingerprint_equal = len({str(r["projection_fingerprint"]) for r in rows}) == 1
+    acceptance_equal = len({str(r["acceptance_semantic_fingerprint"]) for r in rows}) == 1
+    all_pass = all(
+        str(r.get("acceptance_status") or "").upper() == "GREEN"
+        and str(r.get("stage2_engine_status") or "").upper() == "PASS"
+        for r in rows
+    )
+
+    candidates: list[dict[str, Any]] = []
+    for workers in cfg["workers"]:
+        variant = f"PRECOMPUTE_XMINS_W{int(workers)}"
+        subset = [r for r in rows if r["variant"] == variant]
+        med = _median([r["projection_seconds"] for r in subset])
+        total_med = _median([r["total_acceptance_seconds"] for r in subset])
+        ratio = med / baseline_med if baseline_med else None
+        saved = baseline_med - med
+        if not fingerprint_equal or not acceptance_equal or not all_pass:
+            decision = "REJECT"
+        elif len(subset) < 2:
+            decision = "INCONCLUSIVE"
+        elif (
+            ratio is not None
+            and ratio <= float(cfg["material_ratio_lte"])
+            and saved >= float(cfg["minimum_seconds_saved"])
+        ):
+            decision = "PROMOTE"
+        else:
+            decision = "NO_MATERIAL_GAIN"
+        candidates.append(
+            {
+                "variant": variant,
+                "workers": int(workers),
+                "projection_median_seconds": med,
+                "total_acceptance_median_seconds": total_med,
+                "ratio": ratio,
+                "seconds_saved": saved,
+                "terminal_decision": decision,
+            }
+        )
+    promotions = [c for c in candidates if c["terminal_decision"] == "PROMOTE"]
+    rejects = [c for c in candidates if c["terminal_decision"] == "REJECT"]
+    if rejects:
+        overall = "REJECT"
+    elif promotions:
+        overall = "PROMOTE"
+    elif any(c["terminal_decision"] == "INCONCLUSIVE" for c in candidates):
+        overall = "INCONCLUSIVE"
+    else:
+        overall = "NO_MATERIAL_GAIN"
+    result = {
+        "schema_version": 1,
+        "authority": "FPL_V12_PERF_C_STAGE2_EXPLORATORY",
+        "terminal_decision": overall,
+        "cache_class": "COLD_DIRECT_NO_CACHE",
+        "baseline_projection_median_seconds": baseline_med,
+        "baseline_total_acceptance_median_seconds": baseline_total,
+        "projection_semantic_fingerprint_equal": fingerprint_equal,
+        "acceptance_semantic_fingerprint_equal": acceptance_equal,
+        "projection_fingerprint": rows[0]["projection_fingerprint"],
+        "candidates": candidates,
+        "samples": rows,
+        "material_ratio_lte": cfg["material_ratio_lte"],
+        "minimum_seconds_saved": cfg["minimum_seconds_saved"],
+    }
+    Path(args.output).write_text(json.dumps(result, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    print("PERF_C_STAGE2_RESULT=" + json.dumps(result, sort_keys=True))
+    return 0 if overall != "REJECT" else 2
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("select-occurrence")
+    p.add_argument("--private-root", type=Path, required=True)
+    p.add_argument("--output", type=Path, required=True)
+
+    p = sub.add_parser("perf-b")
+    p.add_argument("--runtime-data-root", required=True)
+    p.add_argument("--private-root", required=True)
+    p.add_argument("--report-slot", required=True)
+    p.add_argument("--runtime-sha", required=True)
+    p.add_argument("--model-sha", required=True)
+    p.add_argument("--previous-deep-dir", default="")
+    p.add_argument("--work-dir", required=True)
+    p.add_argument("--output", required=True)
+
+    p = sub.add_parser("perf-c-mc")
+    p.add_argument("--work-dir", required=True)
+    p.add_argument("--output", required=True)
+
+    p = sub.add_parser("perf-c-stage2")
+    p.add_argument("--runtime-data-root", required=True)
+    p.add_argument("--work-dir", required=True)
+    p.add_argument("--output", required=True)
+
+    p = sub.add_parser("_full-child")
+    p.add_argument("--runtime-class", choices=("NORMALIZED", "NATIVE_MC_SUBPROCESS"), required=True)
+    p.add_argument("--runtime-data-root", required=True)
+    p.add_argument("--private-root", required=True)
+    p.add_argument("--report-slot", required=True)
+    p.add_argument("--runtime-sha", required=True)
+    p.add_argument("--model-sha", required=True)
+    p.add_argument("--previous-deep-dir", default="")
+    p.add_argument("--work-dir", required=True)
+    p.add_argument("--output", required=True)
+    p.add_argument("--stage2-workers", type=int, default=0)
+
+    p = sub.add_parser("_mc-native-child")
+    p.add_argument("--input", type=Path, required=True)
+    p.add_argument("--output", type=Path, required=True)
+
+    p = sub.add_parser("_mc-candidate-child")
+    p.add_argument("--variant", choices=("BASELINE", "PREALLOCATED_PARALLEL_COMBINE"), required=True)
+    p.add_argument("--output", required=True)
+
+    p = sub.add_parser("_stage2-child")
+    p.add_argument("--variant", required=True)
+    p.add_argument("--workers", type=int, required=True)
+    p.add_argument("--runtime-data-root", required=True)
+    p.add_argument("--private-output", required=True)
+    p.add_argument("--output", required=True)
+
+    args = parser.parse_args()
+    if args.command == "select-occurrence":
+        return select_occurrence(args.private_root, args.output)
+    if args.command == "perf-b":
+        return run_perf_b(args)
+    if args.command == "perf-c-mc":
+        return run_perf_c_mc(args)
+    if args.command == "perf-c-stage2":
+        return run_perf_c_stage2(args)
+    if args.command == "_full-child":
+        return _full_child(args)
+    if args.command == "_mc-native-child":
+        return _mc_native_child(args.input, args.output)
+    if args.command == "_mc-candidate-child":
+        return _mc_candidate_child(args)
+    if args.command == "_stage2-child":
+        return _stage2_child(args)
+    raise RuntimeError(args.command)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

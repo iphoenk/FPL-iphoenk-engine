@@ -387,6 +387,65 @@ def test_s05_binding_surfaces_europe_and_weather(monkeypatch, tmp_path):
     assert context["weather"][0]["fpl_impact"] == "LOW"
 
 
+def test_s05_weather_fetch_is_scoped_to_planning_gw(monkeypatch, tmp_path):
+    captured = {}
+
+    monkeypatch.setattr(
+        v12_s05_binding,
+        "collect_verified_non_pl_schedule",
+        lambda **kwargs: {
+            "status": "COMPLETE",
+            "authority_complete": True,
+            "events": [],
+        },
+    )
+
+    def fake_weather(*args, **kwargs):
+        captured["official_snapshot"] = kwargs["official_snapshot"]
+        return {"provider": "open_meteo", "fixtures": []}
+
+    monkeypatch.setattr(
+        v12_s05_binding,
+        "collect_weather_context",
+        fake_weather,
+    )
+    monkeypatch.setattr(
+        v12_s05_binding,
+        "load_weather_config",
+        lambda: {"forecast_policy": {"max_horizon_days": 7}},
+    )
+
+    v12_s05_binding.build_report_time_s05_inputs(
+        bootstrap=_bootstrap(),
+        fixtures=[
+            {
+                "id": 9001,
+                "event": 6,
+                "team_h": 1,
+                "team_a": 2,
+                "kickoff_time": "2026-10-03T14:00:00+00:00",
+            },
+            {
+                "id": 9002,
+                "event": 7,
+                "team_h": 2,
+                "team_a": 1,
+                "kickoff_time": "2026-10-10T14:00:00+00:00",
+            },
+        ],
+        planning_gw=6,
+        report_slot="2026-09-28T12:00:00+00:00",
+        output_dir=tmp_path / "report",
+        runtime_data_root=tmp_path / "runtime",
+        private_data_root=None,
+    )
+
+    assert [
+        row["id"]
+        for row in captured["official_snapshot"]["fixtures"]
+    ] == [9001]
+
+
 def test_major_international_tournaments_map_to_international():
     for name in (
         "Africa Cup of Nations",

@@ -146,4 +146,4 @@ def test_mini_league_acceptance_uses_governed_selective_warm_path():
     integrated_source = inspect.getsource(run_deep)
     assert "mini_only_warm_reuse" in integrated_source
     assert "package_with_stage3_pre_mini" in integrated_source
-    assert "FROZEN_SAME_OCCURRENCE_PRIVATE_WARM_STATE" in integrated_source
+    assert "_record_mini_warm_reuse_stage" in integrated_source

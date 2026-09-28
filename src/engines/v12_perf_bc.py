@@ -649,3 +649,223 @@ def _spawn_full(
         "--model-sha",
         model_sha,
         "--work-dir",
+        str(work_dir),
+        "--output",
+        str(output),
+        "--stage2-workers",
+        str(stage2_workers),
+    ]
+    if previous_deep_dir is not None:
+        cmd.extend(["--previous-deep-dir", str(previous_deep_dir)])
+    started = time.perf_counter()
+    subprocess.run(
+        cmd,
+        cwd=ROOT,
+        env=_normalized_env(),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=True,
+    )
+    process_wall = time.perf_counter() - started
+    row = json.loads(output.read_text(encoding="utf-8"))
+    row["outer_process_wall_seconds"] = process_wall
+    row["startup_teardown_seconds"] = max(
+        0.0,
+        process_wall - float(row["process_total_seconds"]),
+    )
+    return row
+
+
+def run_perf_b(args: argparse.Namespace) -> int:
+    cfg = _config()["perf_b"]
+    order = list(cfg["order"])
+    if order != ["NORMALIZED", "NATIVE_MC_SUBPROCESS", "NORMALIZED", "NATIVE_MC_SUBPROCESS"]:
+        raise RuntimeError("PERF-B order contract must remain ABAB")
+    root = Path(args.work_dir)
+    shutil.rmtree(root, ignore_errors=True)
+    root.mkdir(parents=True, exist_ok=True)
+    rows: list[dict[str, Any]] = []
+    for index, runtime_class in enumerate(order, 1):
+        rows.append(
+            _spawn_full(
+                runtime_class=runtime_class,
+                runtime_data_root=Path(args.runtime_data_root),
+                private_root=Path(args.private_root),
+                report_slot=args.report_slot,
+                runtime_sha=args.runtime_sha,
+                model_sha=args.model_sha,
+                previous_deep_dir=(
+                    Path(args.previous_deep_dir)
+                    if args.previous_deep_dir
+                    else None
+                ),
+                work_dir=root / f"run-{index:02d}",
+                output=root / f"run-{index:02d}.json",
+            )
+        )
+    norm = [r for r in rows if r["runtime_class"] == "NORMALIZED"]
+    native = [r for r in rows if r["runtime_class"] == "NATIVE_MC_SUBPROCESS"]
+    semantic_fields = (
+        "report_semantic_fingerprint",
+        "visible_body_fingerprint",
+        "decision_semantic_fingerprint",
+    )
+    semantic_equal = all(len({str(r[field]) for r in rows}) == 1 for field in semantic_fields)
+    mc_fingerprint_equal = len(
+        {
+            tuple(str(v) for v in (r.get("mc_output_fingerprints") or []))
+            for r in rows
+        }
+    ) == 1
+    gates_pass = all(
+        r.get("runner_status") == "PASS"
+        and r.get("pre_render_qa") == "PASS"
+        and r.get("post_render_qa") == "PASS"
+        and r.get("human_facing_qa") == "PASS"
+        and r.get("stage3_status") == "PASS"
+        and r.get("publish_equivalent_status") == "PASS"
+        and r.get("cache_state") == "MISS"
+        and r.get("mc_all_canonical_pass") is True
+        and r.get("mc_any_cache_hit") is False
+        for r in rows
+    )
+    norm_total = _median([r["compute_seconds"] for r in norm])
+    native_total = _median([r["compute_seconds"] for r in native])
+    norm_mc = _median([r["mc_total_wall_seconds"] for r in norm])
+    native_mc = _median([r["mc_total_wall_seconds"] for r in native])
+    norm_mc_kernel = _median([r["mc_total_compute_seconds"] for r in norm])
+    native_mc_kernel = _median([r["mc_total_compute_seconds"] for r in native])
+    e2e_ratio = native_total / norm_total if norm_total else None
+    mc_ratio = native_mc / norm_mc if norm_mc else None
+    mc_kernel_ratio = native_mc_kernel / norm_mc_kernel if norm_mc_kernel else None
+    mc_kernel_seconds_saved = norm_mc_kernel - native_mc_kernel
+    seconds_saved = norm_total - native_total
+    failures: list[str] = []
+    if not semantic_equal or not mc_fingerprint_equal:
+        failures.append("SEMANTIC_DRIFT")
+    if not gates_pass:
+        failures.append("CANONICAL_OR_QA_GATE_FAILED")
+    if failures:
+        decision = "REJECT"
+        promotion_state = "NO_PROMOTION"
+    elif (
+        e2e_ratio is not None
+        and e2e_ratio <= float(cfg["material_e2e_ratio_lte"])
+        and seconds_saved >= float(cfg["minimum_e2e_seconds_saved"])
+    ):
+        decision = "PROMOTE"
+        promotion_state = "PROMOTION_CANDIDATE"
+    else:
+        decision = "NO_MATERIAL_GAIN"
+        promotion_state = "NO_PROMOTION"
+    result = {
+        "schema_version": 1,
+        "authority": "FPL_V12_PERF_B_EXPLORATORY",
+        "status": "PASS" if not failures else "FAIL",
+        "terminal_decision": decision,
+        "promotion_state": promotion_state,
+        "failures": failures,
+        "cache_class": "COLD",
+        "same_host_abab": True,
+        "order": order,
+        "normalized_median_total_compute_seconds": norm_total,
+        "native_mc_subprocess_median_total_compute_seconds": native_total,
+        "e2e_ratio": e2e_ratio,
+        "e2e_seconds_saved": seconds_saved,
+        "normalized_median_mc_wall_seconds": norm_mc,
+        "native_subprocess_median_mc_wall_seconds": native_mc,
+        "mc_ratio": mc_ratio,
+        "normalized_median_mc_kernel_seconds": norm_mc_kernel,
+        "native_median_mc_kernel_seconds": native_mc_kernel,
+        "mc_kernel_ratio": mc_kernel_ratio,
+        "mc_kernel_seconds_saved": mc_kernel_seconds_saved,
+        "semantic_fingerprint_equal": semantic_equal,
+        "mc_output_fingerprint_equal": mc_fingerprint_equal,
+        "report_semantic_fingerprint": rows[0]["report_semantic_fingerprint"],
+        "mc_output_fingerprints": rows[0]["mc_output_fingerprints"],
+        "material_e2e_ratio_lte": cfg["material_e2e_ratio_lte"],
+        "minimum_e2e_seconds_saved": cfg["minimum_e2e_seconds_saved"],
+        "samples": [
+            {
+                "sequence": i + 1,
+                "runtime_class": row["runtime_class"],
+                "total_compute_seconds": row["compute_seconds"],
+                "mc_wall_seconds": row["mc_total_wall_seconds"],
+                "mc_compute_seconds": row["mc_total_compute_seconds"],
+                "mc_spawn_serialization_overhead_seconds": row[
+                    "mc_spawn_serialization_overhead_seconds"
+                ],
+                "stage_seconds": row["stage_seconds"],
+                "stage3_seconds": row["stage3_seconds"],
+                "publish_equivalent_seconds": row["publish_equivalent_seconds"],
+                "process_startup_teardown_seconds": row["startup_teardown_seconds"],
+                "native_mc_runtime_identities": [
+                    mc_row.get("native_runtime_identity")
+                    for mc_row in (row.get("mc") or [])
+                    if mc_row.get("native_runtime_identity") is not None
+                ],
+                "peak_memory_mb": row["peak_memory_mb"],
+                "runtime_identity": row["runtime_identity"],
+            }
+            for i, row in enumerate(rows)
+        ],
+        "perf_a_frozen_result": "KEEP_NORMALIZED_RUNTIME",
+        "perf_a_frozen_threshold_ratio": _config()["perf_a_frozen"][
+            "native_material_speedup_ratio_lte"
+        ],
+    }
+    Path(args.output).write_text(json.dumps(result, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    print("PERF_B_RESULT=" + json.dumps(result, sort_keys=True))
+    return 0 if decision != "REJECT" else 2
+
+
+def _preallocated_parallel_candidate(mc, original_parallel, projections, route_defs, *, actual_paths, seed, horizons, worker_count):
+    workers = max(1, min(int(worker_count), int(os.cpu_count() or 1), int(actual_paths)))
+    if workers <= 1 or not sys.platform.startswith("linux"):
+        return original_parallel(
+            projections,
+            route_defs,
+            actual_paths=actual_paths,
+            seed=seed,
+            horizons=horizons,
+            worker_count=worker_count,
+        )
+    base = int(actual_paths) // workers
+    remainder = int(actual_paths) % workers
+    path_counts = [base + (1 if i < remainder else 0) for i in range(workers)]
+    children = mc.np.random.SeedSequence(int(seed)).spawn(workers)
+    child_seeds = [
+        int(child.generate_state(1, dtype=mc.np.uint64)[0])
+        for child in children
+    ]
+    work = [(i, path_counts[i], child_seeds[i]) for i in range(workers)]
+    fork_context = mp.get_context("fork")
+    with ProcessPoolExecutor(
+        max_workers=workers,
+        mp_context=fork_context,
+        initializer=mc._init_mc_parallel_worker,
+        initargs=(projections, route_defs, tuple(int(v) for v in horizons)),
+    ) as executor:
+        results = list(executor.map(mc._mc_parallel_worker, work, chunksize=1))
+    results.sort(key=lambda row: int(row[0]))
+    first_arrays = results[0][2]
+    route_ids = list(first_arrays)
+    resolved_horizons = sorted(
+        {
+            int(h)
+            for route_arrays in first_arrays.values()
+            for h in route_arrays
+        }
+    )
+    combined = {
+        route_id: {
+            h: mc.np.empty(int(actual_paths), dtype=mc.np.float64)
+            for h in resolved_horizons
+        }
+        for route_id in route_ids
+    }
+    offset = 0
+    for _, count, arrays, _ in results:
+        stop = offset + int(count)
+        for route_id in route_ids:
+            for h in resolved_horizons:

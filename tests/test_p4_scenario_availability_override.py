@@ -1,5 +1,8 @@
 from __future__ import annotations
+import inspect
 import pytest
+
+from src.engines import v12_integrated_report_runner as integrated
 from src.engines.v12_player_minutes import estimate_player_minutes
 from src.models.historical_projection import build as build_projection
 
@@ -26,3 +29,13 @@ def test_unavailable_scenario_is_canonical_p11_and_exact_zero(typ):
 def test_unknown_override_type_fails_closed():
     with pytest.raises(RuntimeError,match="unsupported P4 scenario override type"):
         projection({"1":{"override_type":"POSTHOC_XPTS_HACK","p_available":0.0}})
+
+
+def test_integrated_runner_wires_private_p4_override_and_bypasses_stage2_cache():
+    signature = inspect.signature(integrated.run_deep)
+    assert "scenario_overrides" in signature.parameters
+    source = inspect.getsource(integrated.run_deep)
+    assert "scenario_overrides=scenario_overrides" in source
+    assert '"scenario_override_cache_bypass": True' in source
+    assert "if scenario_overrides:" in source
+    assert "load_or_build_stage2_projections(" in source

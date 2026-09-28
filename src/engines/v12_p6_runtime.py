@@ -232,6 +232,9 @@ class CanonicalPipeline:
         report_kind: str,
         logical_slot: str,
         run_id: str,
+        private_destination_relpath: str | None = None,
+        update_latest: bool = True,
+        publisher_private: Path | None = None,
     ) -> None:
         self.app = app
         self.runtime = runtime
@@ -241,9 +244,17 @@ class CanonicalPipeline:
         self.report_mode = _report_mode(report_kind)
         self.logical_slot = logical_slot
         self.run_id = run_id
+        self.private_destination_relpath = private_destination_relpath
+        self.update_latest = bool(update_latest)
+        self.publisher_private = publisher_private or private
         self.sequence = 0
 
-    def compute(self, identity: WarmIdentity) -> dict[str, Any]:
+    def compute(
+        self,
+        identity: WarmIdentity,
+        *,
+        scenario_overrides: Mapping[str, Mapping[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         output = self.workspace / "canonical"
         if output.exists():
             shutil.rmtree(output)
@@ -266,24 +277,56 @@ class CanonicalPipeline:
             ),
         }
 
+        warm_state_path = (
+            self.workspace
+            / "private-warm-state"
+            / f"warm-{self.sequence:03d}.json"
+        )
+        warm_state_path.parent.mkdir(parents=True, exist_ok=True)
+
+        runner_args = [
+            sys.executable,
+            "-m",
+            "src.engines.v12_integrated_report_runner",
+            "--runtime-data-root",
+            str(self.runtime),
+            "--private-data-root",
+            str(self.private),
+            "--disable-legacy-private-sources",
+            "--require-private-personal",
+            "--report-mode",
+            self.report_mode,
+            "--report-slot",
+            self.logical_slot,
+            "--output-dir",
+            str(output),
+            "--warm-state-out",
+            str(warm_state_path),
+        ]
+        if scenario_overrides:
+            if self.report_mode != "DEEP":
+                raise P6RuntimeError("P4 scenario overrides require DEEP mode")
+            scenario_input = (
+                self.workspace
+                / "private-inputs"
+                / f"scenario-{self.sequence:03d}.json"
+            )
+            scenario_input.parent.mkdir(parents=True, exist_ok=True)
+            scenario_input.write_text(
+                json.dumps(
+                    dict(scenario_overrides),
+                    sort_keys=True,
+                    ensure_ascii=False,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            runner_args.extend(
+                ["--scenario-overrides-file", str(scenario_input)]
+            )
+
         _run_command(
-            [
-                sys.executable,
-                "-m",
-                "src.engines.v12_integrated_report_runner",
-                "--runtime-data-root",
-                str(self.runtime),
-                "--private-data-root",
-                str(self.private),
-                "--disable-legacy-private-sources",
-                "--require-private-personal",
-                "--report-mode",
-                self.report_mode,
-                "--report-slot",
-                self.logical_slot,
-                "--output-dir",
-                str(output),
-            ],
+            runner_args,
             cwd=self.app,
             env=env,
             log_path=self.workspace / "private-logs" / f"runner-{self.sequence:03d}.log",
@@ -367,37 +410,49 @@ class CanonicalPipeline:
             "execution_proof": proof,
             "stage3_acceptance": stage3,
             "semantic_surface": governed_surface,
+            "warm_state": _read_json(warm_state_path),
         }
 
     def publish(self, state: Mapping[str, Any]) -> dict[str, Any]:
         identity = WarmIdentity(**dict(state["identity"]))
         receipt = publish_private_output(
             canonical_dir=Path(str(state["output_dir"])),
-            private_root=self.private,
+            private_root=self.publisher_private,
             run_id=self.run_id,
             season=None,
             model_sha=identity.production_sha,
             runtime_sha=identity.runtime_data_sha,
+            destination_relpath=self.private_destination_relpath,
+            update_latest=self.update_latest,
         )
         _git(
-            self.private,
+            self.publisher_private,
             "config",
             "user.name",
             "github-actions[bot]",
             capture=False,
         )
         _git(
-            self.private,
+            self.publisher_private,
             "config",
             "user.email",
             "41898282+github-actions[bot]@users.noreply.github.com",
             capture=False,
         )
-        _git(self.private, "add", "latest", "reports", capture=False)
-        staged = _git(self.private, "diff", "--cached", "--name-only")
+        if self.private_destination_relpath:
+            _git(
+                self.publisher_private,
+                "add",
+                "--",
+                self.private_destination_relpath,
+                capture=False,
+            )
+        else:
+            _git(self.publisher_private, "add", "latest", "reports", capture=False)
+        staged = _git(self.publisher_private, "diff", "--cached", "--name-only")
         if staged:
             _git(
-                self.private,
+                self.publisher_private,
                 "commit",
                 "-m",
                 (
@@ -407,7 +462,7 @@ class CanonicalPipeline:
                 capture=False,
             )
             _git(
-                self.private,
+                self.publisher_private,
                 "pull",
                 "--rebase",
                 "origin",
@@ -415,14 +470,14 @@ class CanonicalPipeline:
                 capture=False,
             )
             _git(
-                self.private,
+                self.publisher_private,
                 "push",
                 "origin",
                 "HEAD:main",
                 capture=False,
             )
-        local = _head(self.private)
-        remote = _remote_ref(self.private, "refs/heads/main")
+        local = _head(self.publisher_private)
+        remote = _remote_ref(self.publisher_private, "refs/heads/main")
         if local != remote:
             raise P6RuntimeError("private publication remote verification failed")
         return {**receipt, "private_remote_sha": remote}

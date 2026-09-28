@@ -4613,8 +4613,11 @@ def run_deep(
     private_data_root: Path | None = None,
     allow_legacy_private_sources: bool = True,
     require_private_personal: bool = False,
+    scenario_overrides: Mapping[str | int, Mapping[str, Any]] | None = None,
+    warm_state_out: Path | None = None,
 ) -> dict[str, Any]:
     ledger: list[dict[str, Any]] = []
+    scenario_overrides = dict(scenario_overrides or {})
     stage2_cache_proof: dict[str, Any] = {}
     canonical = CANONICAL_PATH.read_text(encoding="utf-8")
     state = _read_json(STATE_PATH, {}) or {}
@@ -4746,12 +4749,12 @@ def run_deep(
         required=True,
     )
     if foundation:
-        def _stage2_projection_with_cache() -> dict[str, Any]:
-            projections_payload, proof = load_or_build_stage2_projections(
-                bootstrap=bootstrap,
-                strength=strength or {},
-                planning_gw=planning_gw,
-                historical_prior=foundation.get("historical_prior") or {},
+        def _canonical_stage2_builder() -> dict[str, Any]:
+            return build_player_projections(
+                bootstrap,
+                strength or {},
+                planning_gw,
+                foundation.get("historical_prior") or {},
                 player_features_payload=(
                     foundation.get("player_features_payload") or {}
                 ),
@@ -4764,11 +4767,37 @@ def run_deep(
                 opponent_history_scope=foundation.get(
                     "opponent_history_scope"
                 ),
-                builder=lambda: build_player_projections(
-                    bootstrap,
-                    strength or {},
-                    planning_gw,
-                    foundation.get("historical_prior") or {},
+                scenario_overrides=scenario_overrides,
+            )
+
+        def _stage2_projection_with_cache() -> dict[str, Any]:
+            if scenario_overrides:
+                started = time.perf_counter()
+                projections_payload = _canonical_stage2_builder()
+                proof = {
+                    "schema": "P4_SCENARIO_OVERRIDE_BYPASS_V1",
+                    "input_fingerprint": _fingerprint(
+                        {"scenario_overrides": scenario_overrides}
+                    ),
+                    "cache_authoritative": False,
+                    "mathematical_owner_changed": False,
+                    "private_current15_in_key": False,
+                    "status": "MISS",
+                    "cache_hit": False,
+                    "cache_miss": True,
+                    "cache_write": False,
+                    "cache_corrupt_reject": False,
+                    "scenario_override_cache_bypass": True,
+                    "load_or_build_seconds": round(
+                        time.perf_counter() - started, 6
+                    ),
+                }
+            else:
+                projections_payload, proof = load_or_build_stage2_projections(
+                    bootstrap=bootstrap,
+                    strength=strength or {},
+                    planning_gw=planning_gw,
+                    historical_prior=foundation.get("historical_prior") or {},
                     player_features_payload=(
                         foundation.get("player_features_payload") or {}
                     ),
@@ -4781,8 +4810,8 @@ def run_deep(
                     opponent_history_scope=foundation.get(
                         "opponent_history_scope"
                     ),
-                ),
-            )
+                    builder=_canonical_stage2_builder,
+                )
             stage2_cache_proof.clear()
             stage2_cache_proof.update(proof)
             print(
@@ -6289,6 +6318,38 @@ def run_deep(
         "stage3_action": operational_action,
         "stage3_required_stages": sorted(stage3_required_stage_names),
         "stage2_derived_cache": deepcopy(stage2_cache_proof),
+        "p4_scenario_override": {
+            "applied": bool(scenario_overrides),
+            "override_count": len(scenario_overrides),
+            "payload_fingerprint": (
+                _fingerprint(scenario_overrides) if scenario_overrides else None
+            ),
+            "stage2_cache_bypassed": bool(scenario_overrides),
+        },
+        "p1_7_execution": {
+            "lineup": next(
+                (
+                    deepcopy(row)
+                    for row in ledger
+                    if str(row.get("stage") or "") == "P1_7_LINEUP"
+                ),
+                None,
+            ),
+            "direct_package": deepcopy(
+                ((direct_package_utility or {}).get("governance") or {}).get(
+                    "p1_7_execution_proof"
+                )
+            ),
+            "funded_package": deepcopy(
+                ((funded_package_utility or {}).get("governance") or {}).get(
+                    "p1_7_execution_proof"
+                )
+            ),
+            "timing_semantics": (
+                "EXACT_OWNER_WALL_TIMES_ONLY; broad package-utility wall time "
+                "is not P1.7 timing authority"
+            ),
+        },
         "monte_carlo": {
             "actual_paths": (monte_carlo or {}).get("actual_paths"),
             "seed": (monte_carlo or {}).get("seed"),
@@ -6343,9 +6404,58 @@ def run_deep(
             "report_falls_back_to_prose_without_bundle": False,
             "fail_operational_delivery": True,
             "qa_relaxed": False,
+            "p4_scenario_override_private_only": bool(scenario_overrides),
+            "p4_scenario_override_posthoc_xpts_mutation": False,
             "stage3_requires_internal_producers_before_runner_pass": True,
         },
     }
+    if warm_state_out is not None:
+        warm_state = {
+            "schema": "FPL_MASTER_V12_PRIVATE_WARM_STATE_V1",
+            "private_only": True,
+            "report_slot": report_slot,
+            "planning_gw": planning_gw,
+            "projections": projections,
+            "owned": owned,
+            "all15": all15,
+            "lineup": lineup,
+            "predictor": predictor,
+            "rise": rise,
+            "fall": fall,
+            "price_radar": price_radar,
+            "watchlist": watchlist,
+            "standings": standings,
+            "manager_picks": manager_picks,
+            "mini": mini,
+            "calendar_context": calendar_context,
+            "bgw_context": bgw_context,
+            "canonical_universe": canonical_bundle,
+            "finance": finance,
+            "package_search_result": package_search_result,
+            "direct_package_utility": direct_package_utility,
+            "funding_leg_selection": funding_leg_selection,
+            "funded_search_result": funded_search_result,
+            "funded_package_utility": funded_package_utility,
+            "package_utility": package_utility,
+            "material_mc_routes": material_mc_routes,
+            "monte_carlo": monte_carlo,
+            "stage3_decision": stage3_decision,
+            "package_with_stage3": package_with_stage3,
+            "mini_overlay": mini_overlay,
+        }
+        warm_state_out.parent.mkdir(parents=True, exist_ok=True)
+        warm_state_out.write_text(
+            json.dumps(
+                warm_state,
+                indent=2,
+                sort_keys=True,
+                ensure_ascii=False,
+                default=str,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
     (output_dir / "report_bundle.json").write_text(
         json.dumps(bundle, indent=2, ensure_ascii=False, default=str),
         encoding="utf-8",
@@ -6377,12 +6487,39 @@ def main() -> int:
         action="store_true",
         help="Fail closed when the private personal plane is unavailable.",
     )
+    parser.add_argument(
+        "--scenario-overrides-file",
+        default=None,
+        help="Private controlled P4 typed availability override JSON.",
+    )
+    parser.add_argument(
+        "--warm-state-out",
+        default=None,
+        help="Ephemeral private warm-state output; never a public artifact.",
+    )
     args = parser.parse_args()
     mode = str(args.report_mode).upper()
     if mode not in SUPPORTED_MODES:
         raise IntegratedRunnerError(
             f"integrated runner supports {sorted(SUPPORTED_MODES)}; got {mode}"
         )
+    scenario_overrides = {}
+    if args.warm_state_out and not args.private_data_root:
+        raise IntegratedRunnerError(
+            "private warm state requires an explicit private data plane"
+        )
+    if args.scenario_overrides_file:
+        if mode != "DEEP":
+            raise IntegratedRunnerError("P4 scenario overrides require DEEP mode")
+        if not args.private_data_root:
+            raise IntegratedRunnerError(
+                "P4 scenario overrides require an explicit private data plane"
+            )
+        raw_overrides = _read_json(Path(args.scenario_overrides_file), None)
+        if not isinstance(raw_overrides, dict):
+            raise IntegratedRunnerError("P4 scenario override file must be a JSON object")
+        scenario_overrides = raw_overrides
+
     if mode == "PRICE":
         bundle = run_price_occurrence(
             runtime_data_root=Path(args.runtime_data_root),
@@ -6409,6 +6546,12 @@ def main() -> int:
             ),
             allow_legacy_private_sources=not args.disable_legacy_private_sources,
             require_private_personal=bool(args.require_private_personal),
+            scenario_overrides=scenario_overrides,
+            warm_state_out=(
+                Path(args.warm_state_out)
+                if args.warm_state_out
+                else None
+            ),
         )
     print(
         json.dumps(

@@ -18,7 +18,11 @@ from .v12_cache_operational import (
     plan_cache_behavior,
     validate_actual_behavior,
 )
-from .v12_scenario_package import validate_package_for_dependencies
+from .v12_scenario_package import (
+    ScenarioPackageError,
+    resolve_scenario,
+    validate_package_for_dependencies,
+)
 from .v12_semantic_oracle import semantic_fingerprint
 
 MAX_TTL_SECONDS = 6 * 60 * 60 - 1
@@ -177,12 +181,52 @@ class WarmWorker:
             raise WarmWorkerError(f"unsupported change fails closed: {change_class}") from exc
         cache_lookup_seconds = self.clock() - cache_lookup_started
 
+        scenario_seconds = 0.0
+        effective_change = dict(change)
+        if change_class in {"P4_SCENARIO_HIT", "P4_SCENARIO_MISS"}:
+            scenario_started = self.clock()
+            if not self._scenario_package:
+                raise WarmWorkerError(
+                    f"{change_class} requires a governed private P4 scenario package"
+                )
+            if change_class == "P4_SCENARIO_HIT":
+                scenario_id = str(change.get("scenario_id") or "").strip()
+                if not scenario_id:
+                    raise WarmWorkerError("P4_SCENARIO_HIT requires scenario_id")
+                try:
+                    resolved = resolve_scenario(
+                        self._scenario_package,
+                        scenario_id=scenario_id,
+                        dependencies=self.identity.p4_dependencies(),
+                    )
+                except ScenarioPackageError as exc:
+                    raise WarmWorkerError(
+                        "P4 scenario HIT failed closed during resolution"
+                    ) from exc
+                effective_change["resolved_scenario"] = dict(resolved)
+            else:
+                raw_dependencies = change.get("scenario_dependencies")
+                if not isinstance(raw_dependencies, Mapping):
+                    raise WarmWorkerError(
+                        "P4_SCENARIO_MISS requires current scenario_dependencies"
+                    )
+                validation = validate_package_for_dependencies(
+                    self._scenario_package,
+                    dependencies=raw_dependencies,
+                )
+                if validation["current"]:
+                    raise WarmWorkerError(
+                        "P4_SCENARIO_MISS cannot reuse a current package"
+                    )
+                effective_change["scenario_validation"] = dict(validation)
+            scenario_seconds = self.clock() - scenario_started
+
         self._transition(WorkerState.INVALIDATE_MINIMUM_REQUIRED)
         self._transition(WorkerState.RECOMPUTE)
         recompute_started = self.clock()
         recomputed, actual_states, reused_keys = self.callbacks.recompute(
             self.canonical_state,
-            change,
+            effective_change,
             plan,
         )
         recompute_seconds = self.clock() - recompute_started
@@ -233,6 +277,10 @@ class WarmWorker:
             "expected_cache_state": plan.expected,
             "actual_cache_state": dict(actual_states),
             "invalidated_dependency_keys": list(plan.affected_dependency_keys),
+            "reused_dependency_keys": {
+                str(layer): [str(key) for key in keys]
+                for layer, keys in dict(reused_keys or {}).items()
+            },
             "cache_correctness": validation.correctness,
             "cache_performance": validation.performance,
             "warm_semantic_fingerprint": warm_fp,
@@ -241,6 +289,7 @@ class WarmWorker:
             "timings": {
                 "classification": classification_seconds,
                 "cache_lookup": cache_lookup_seconds,
+                "scenario": scenario_seconds,
                 "recompute": recompute_seconds,
                 "Stage3": stage3_seconds,
                 "render": render_seconds,

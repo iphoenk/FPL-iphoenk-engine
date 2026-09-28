@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-28T07:50:00+07:00`  
-> **Production main at sync:** `1df1863b982a1b1fd8575db9d351232eecb00f2a`  
+> **Last runtime/documentation sync:** `2026-09-28T09:06:30+07:00`  
+> **Production main at sync:** `5ff0e8b2c25a118d099ffb57ea55acda82e1e186`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -36,7 +36,7 @@ Stage2 public live acceptance consumes the already-published post-deadline Offic
 
 PERF-0 freezes latency measurement before optimization: closure requires 6 comparable canonical production-main DEEP executions. Natural and controlled production-equivalent executions may qualify, but controlled runs never count as scheduler proof and branch acceptance is excluded. p90 remains informational until n>=10. Exact app/runtime lineage, runtime/cache class and observable CPU/runtime metadata are preserved, while queue, startup, setup, factual acquisition, Stage-2, P1.2A, P1.2B, P1.7, MC, render, QA, private publish and total timing remain distinct. Controlled COLD runs use `SECURE_NO_PERSONAL_CACHE`, do not restore or persist personal-decision caches, and do not receive the production decrypt key.
 
-Cache invalidation is governed by a frozen four-state dependency matrix: `HIT`, `MISS`, `PARTIAL_INVALIDATION`, and `NOT_APPLICABLE`. Selective reuse is permitted only with explicit dependency keys; uncertain scope falls back to MISS, and every warm path must remain semantically equal to canonical cold output.
+P4 canonical scenario packages precompute a bounded private BASE_CURRENT15 plus exact OUR15/C/VC unavailability counterfactual set. Reuse is fail-closed against model, OUR15, GW/fixture, projection-lineage, cache/schema, MC-authority, and owner-context fingerprints; manager-specific package payloads remain private.\n\nCache invalidation is governed by a frozen four-state dependency matrix: `HIT`, `MISS`, `PARTIAL_INVALIDATION`, and `NOT_APPLICABLE`. Selective reuse is permitted only with explicit dependency keys; uncertain scope falls back to MISS, and every warm path must remain semantically equal to canonical cold output.
 
 ## Questions it answers
 

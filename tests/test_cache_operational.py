@@ -84,3 +84,12 @@ def test_over_invalidation_is_performance_not_correctness_failure():
 def test_uncertain_scope_fails_closed_to_miss():
     plan = plan_cache_behavior("PRICE_ONLY", affected_dependency_keys=[], scope_certain=False)
     assert set(plan.expected.values()) == {"MISS"}
+
+
+def test_uncertain_scope_sentinel_is_full_miss():
+    plan = plan_cache_behavior(
+        "UNCERTAIN_SCOPE",
+        affected_dependency_keys=["unknown"],
+        scope_certain=False,
+    )
+    assert set(plan.expected.values()) == {"MISS"}

@@ -19,6 +19,7 @@ from src.engines.v12_delivery_reliability import (
     write_serving_artifacts,
 )
 from src.engines.v12_private_publisher import publish_private_output
+from src.engines.v12_delivery_security import build_public_issue_proof, scan_public_text
 
 
 SLOT = "2026-09-28T12:30:00+07:00"
@@ -323,3 +324,20 @@ def test_integrated_workflow_has_orchestrator_guard_before_runner():
     assert guard < runner
     assert "BLOCKED_UPSTREAM" in workflow
     assert "runner owns a second bounded guard" in workflow
+
+
+def test_degraded_public_proof_remains_operational_only():
+    line = build_public_issue_proof(
+        analytics_status="DEGRADED",
+        report_mode="DEEP",
+        report_slot=SLOT,
+        run_id="fixture",
+        stage3_validation="DEGRADED",
+        private_delivery_status="PASS",
+        private_receipt_hash="abc123",
+    )
+    assert "stage3_validation=DEGRADED" in line
+    assert "captain" not in line.lower()
+    assert "selected_route" not in line.lower()
+    assert "current_team" not in line.lower()
+    assert scan_public_text(line) == []

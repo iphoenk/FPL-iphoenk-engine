@@ -10,6 +10,7 @@ from src.engines.v12_integrated_report_runner import (
     refresh_price_only_state,
 )
 from src.engines.v12_perf_f_acceptance import (
+    _require_same_slot_prefetch,
     _case_inputs,
     _mutate_price,
     _mutate_role,
@@ -194,3 +195,41 @@ def test_price_only_partial_refresh_reuses_stage2_p17_and_keeps_qa():
     assert '"football_math_recomputed": False' in source
     assert "optimize_lineup(" not in source
     assert "run_package_monte_carlo(" not in source
+
+
+def test_controlled_prefetch_requires_exact_fresh_full_master_slot(tmp_path):
+    runtime = tmp_path / "runtime"
+    target = runtime / "data/v6/report_prefetch"
+    target.mkdir(parents=True)
+    slot = "2026-09-28T20:50:00+07:00"
+    payload = {
+        "report_kind": "full_master",
+        "target_logical_report_slot": slot,
+        "fresh_for_target_report": True,
+    }
+    (target / "latest.json").write_text(json.dumps(payload), encoding="utf-8")
+    assert _require_same_slot_prefetch(runtime, slot)["fresh_for_target_report"] is True
+
+
+@pytest.mark.parametrize(
+    "patch",
+    [
+        {"target_logical_report_slot": "2026-09-28T20:00:00+07:00"},
+        {"report_kind": "05:30_price"},
+        {"fresh_for_target_report": False},
+    ],
+)
+def test_controlled_prefetch_wrong_lineage_fails_closed(tmp_path, patch):
+    runtime = tmp_path / "runtime"
+    target = runtime / "data/v6/report_prefetch"
+    target.mkdir(parents=True)
+    slot = "2026-09-28T20:50:00+07:00"
+    payload = {
+        "report_kind": "full_master",
+        "target_logical_report_slot": slot,
+        "fresh_for_target_report": True,
+    }
+    payload.update(patch)
+    (target / "latest.json").write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(PerfFAcceptanceError, match="LINEAGE_FAILURE"):
+        _require_same_slot_prefetch(runtime, slot)

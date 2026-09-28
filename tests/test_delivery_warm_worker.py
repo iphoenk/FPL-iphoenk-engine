@@ -107,7 +107,7 @@ def test_lifecycle_is_bounded_and_clean_shutdown():
     out = worker.apply_change({"change_class": "UNCHANGED", "scope_certain": True})
     assert out["private_delivery_status"] == "PASS"
     assert set(out["timings"]) == {
-        "classification", "cache_lookup", "recompute", "Stage3",
+        "classification", "cache_lookup", "scenario", "recompute", "Stage3",
         "render", "QA", "private_publish",
     }
     assert out["timings"]["Stage3"] == 0.5
@@ -205,3 +205,65 @@ def test_missing_p4_package_is_safe_cache_miss_capability():
     worker.start()
     assert worker.state == WorkerState.WARM_READY
     worker.shutdown()
+
+
+def test_p4_scenario_hit_is_resolved_inside_measured_window():
+    clock = [0.0]
+    worker = WarmWorker(
+        identity=IDENTITY,
+        private_state={},
+        scenario_package=package(),
+        callbacks=callbacks(clock),
+        clock=lambda: clock[0],
+    )
+    worker.start()
+    out = worker.apply_change({
+        "change_class": "P4_SCENARIO_HIT",
+        "scenario_id": "UNAVAILABLE_3",
+        "scope_certain": True,
+    })
+    assert out["timings"]["scenario"] >= 0.0
+    assert out["reused_dependency_keys"] == {}
+    worker.shutdown()
+
+
+def test_p4_scenario_miss_requires_real_dependency_mismatch():
+    clock = [0.0]
+    worker = WarmWorker(
+        identity=IDENTITY,
+        private_state={},
+        scenario_package=package(),
+        callbacks=callbacks(clock),
+        clock=lambda: clock[0],
+    )
+    worker.start()
+    changed = dict(IDENTITY.p4_dependencies())
+    changed["projection_lineage_fingerprint"] = "changed-projection"
+    out = worker.apply_change({
+        "change_class": "P4_SCENARIO_MISS",
+        "scenario_dependencies": changed,
+        "affected_dependency_keys": ["projection_lineage_fingerprint"],
+        "scope_certain": True,
+    })
+    assert out["actual_cache_state"]["scenario"] == "MISS"
+    assert out["timings"]["scenario"] >= 0.0
+    worker.shutdown()
+
+
+def test_p4_scenario_miss_rejects_current_package():
+    clock = [0.0]
+    worker = WarmWorker(
+        identity=IDENTITY,
+        private_state={},
+        scenario_package=package(),
+        callbacks=callbacks(clock),
+        clock=lambda: clock[0],
+    )
+    worker.start()
+    with pytest.raises(WarmWorkerError, match="cannot reuse a current package"):
+        worker.apply_change({
+            "change_class": "P4_SCENARIO_MISS",
+            "scenario_dependencies": IDENTITY.p4_dependencies(),
+            "affected_dependency_keys": ["projection_lineage_fingerprint"],
+            "scope_certain": True,
+        })

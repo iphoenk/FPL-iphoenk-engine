@@ -45,12 +45,24 @@ HARD_INVALIDATION_STATES: dict[str, dict[str, str]] = {
     },
     "OFFICIAL_RESULT": {layer: "MISS" for layer in LAYERS},
     "BONUS_FINALIZATION": {layer: "MISS" for layer in LAYERS},
+    # A stale/wrong-base P4 package may differ on any bound dependency and
+    # therefore cannot inherit selective reuse from the scenario-override row.
+    "P4_SCENARIO_MISS": {layer: "MISS" for layer in LAYERS},
+    # The sentinel itself is always fail-closed, even if a caller accidentally
+    # marks the scope as certain.
+    "UNCERTAIN_SCOPE": {layer: "MISS" for layer in LAYERS},
 }
 
 # Deterministic mapping is documented instead of silently changing the matrix.
 DETERMINISTIC_CLASS_MAPPING = {
+    "NO_CHANGE": "UNCHANGED",
+    "OUR15_AVAILABILITY": "OWNED_AVAILABILITY",
     "SET_PIECE_FACT": "SET_PIECE_ROLE",
     "MATERIAL_PROJECTION": "XMINS",
+    # A valid P4 package is already bound to the exact canonical dependency
+    # fingerprint, so the package-level cache outcome is equivalent to an
+    # unchanged dependency set. A miss is handled above as full invalidation.
+    "P4_SCENARIO_HIT": "UNCHANGED",
 }
 
 

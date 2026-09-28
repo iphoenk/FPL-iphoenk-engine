@@ -296,6 +296,28 @@ def _case_inputs(
     return keys, overrides, extra
 
 
+def _require_same_slot_prefetch(runtime_source: Path, report_slot: str) -> dict[str, Any]:
+    path = runtime_source / "data/v6/report_prefetch/latest.json"
+    if not path.is_file():
+        raise PerfFAcceptanceError(
+            "LINEAGE_FAILURE: controlled PERF-F requires report_prefetch/latest.json"
+        )
+    payload = _read(path)
+    if str(payload.get("report_kind") or "") != "full_master":
+        raise PerfFAcceptanceError(
+            "LINEAGE_FAILURE: controlled PERF-F requires full_master prefetch"
+        )
+    if str(payload.get("target_logical_report_slot") or "") != str(report_slot):
+        raise PerfFAcceptanceError(
+            "LINEAGE_FAILURE: controlled PERF-F report_slot does not match prefetch"
+        )
+    if payload.get("fresh_for_target_report") is not True:
+        raise PerfFAcceptanceError(
+            "LINEAGE_FAILURE: controlled PERF-F prefetch is not fresh for target report"
+        )
+    return payload
+
+
 def execute_case(
     *,
     app: Path,
@@ -310,6 +332,8 @@ def execute_case(
     case = str(case).upper()
     if case not in REQUIRED_CASES:
         raise PerfFAcceptanceError(f"case not in PERF-F contract: {case}")
+
+    _require_same_slot_prefetch(runtime_source, report_slot)
 
     case_runtime = _copy_repo(runtime_source, workspace / "case-runtime")
     case_private = _copy_repo(private_source, workspace / "case-private-input")

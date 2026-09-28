@@ -14,6 +14,7 @@ from datetime import datetime
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -201,12 +202,69 @@ def _report_mode(report_kind: str) -> str:
     return "PRICE" if report_kind == "05:30_price" else "DEEP"
 
 
+_SAFE_DIAGNOSTIC_MARKERS = (
+    "V6_REPORT_PREFETCH_BINDING",
+    "PREFETCH_NOT_TERMINAL",
+    "target_report_slot_match",
+    "fresh_for_target_report",
+    "runner_status",
+    "PRE_RENDER",
+    "POST_RENDER",
+    "HUMAN_FACING",
+    "FINAL_DELIVERY",
+)
+
+
+def _safe_error_category(stderr: str) -> str:
+    upper = str(stderr or "").upper()
+    if "V6_REPORT_PREFETCH_BINDING" in upper or "PREFETCH_NOT_TERMINAL" in upper:
+        return "V6_REPORT_PREFETCH_BINDING"
+    if "TARGET_REPORT_SLOT_MATCH" in upper:
+        return "PREFETCH_IDENTITY_MISMATCH"
+    if any(marker in upper for marker in ("PRE_RENDER", "POST_RENDER", "HUMAN_FACING", "FINAL_DELIVERY")):
+        return "QA_FAILURE"
+    return "CANONICAL_SUBPROCESS_FAILURE"
+
+
+def _sanitize_stderr_tail(stderr: str, *, max_lines: int = 8) -> str:
+    safe: list[str] = []
+    private_markers = (
+        "current_team",
+        "memberships",
+        "owner_state",
+        "manager_payload",
+        "decrypted",
+        "ciphertext",
+        "private_cache_key",
+    )
+    for raw in str(stderr or "").splitlines()[-80:]:
+        line = raw.strip()
+        if not line:
+            continue
+        lower = line.lower()
+        if any(marker in lower for marker in private_markers):
+            continue
+        if not (
+            any(marker.lower() in lower for marker in _SAFE_DIAGNOSTIC_MARKERS)
+            or re.search(r"(?:error|exception|traceback|failed|failure)", lower)
+        ):
+            continue
+        line = re.sub(r"https?://\\S+", "<url>", line)
+        line = re.sub(r"(?i)(authorization|password|secret|token|key)\\s*[:=]\\s*\\S+", r"\\1=<redacted>", line)
+        line = re.sub(r"[A-Za-z0-9+/=_-]{40,}", "<redacted>", line)
+        line = re.sub(r"\\b\\d{7,}\\b", "<id>", line)
+        line = re.sub(r"(?:/[^\\s:]+)+", "<path>", line)
+        safe.append(line[:240])
+    return " | ".join(safe[-max_lines:])[:1200] or "<no-safe-stderr-detail>"
+
+
 def _run_command(
     args: list[str],
     *,
     cwd: Path,
     env: Mapping[str, str],
     log_path: Path,
+    stage: str = "canonical",
 ) -> None:
     merged = dict(os.environ)
     merged.update(env)
@@ -216,13 +274,20 @@ def _run_command(
         env=merged,
         text=True,
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stderr=subprocess.PIPE,
         check=False,
     )
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    log_path.write_text(proc.stdout or "", encoding="utf-8")
+    combined = (proc.stdout or "") + (("\\n" + proc.stderr) if proc.stderr else "")
+    log_path.write_text(combined, encoding="utf-8")
     if proc.returncode != 0:
-        raise P6RuntimeError(f"canonical command failed rc={proc.returncode}")
+        category = _safe_error_category(proc.stderr or "")
+        safe_tail = _sanitize_stderr_tail(proc.stderr or "")
+        raise P6RuntimeError(
+            "canonical command failed "
+            f"stage={stage} rc={proc.returncode} "
+            f"category={category} stderr_tail={safe_tail}"
+        )
 
 
 class CanonicalPipeline:
@@ -334,6 +399,7 @@ class CanonicalPipeline:
             cwd=self.app,
             env=env,
             log_path=self.workspace / "private-logs" / f"runner-{self.sequence:03d}.log",
+            stage="integrated_report_runner",
         )
         self.sequence += 1
 
@@ -382,6 +448,7 @@ class CanonicalPipeline:
                 log_path=self.workspace
                 / "private-logs"
                 / f"stage3-{self.sequence:03d}.log",
+                stage="stage3_acceptance",
             )
             self.sequence += 1
 

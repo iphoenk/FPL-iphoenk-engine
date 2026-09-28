@@ -209,3 +209,223 @@ def _stage_seconds(bundle: Mapping[str, Any]) -> dict[str, float]:
                 pass
     return out
 
+        name = str(row.get("stage") or "")
+        elapsed = row.get("elapsed_seconds")
+        if name and elapsed is not None:
+            try:
+                out[name] = float(elapsed)
+            except (TypeError, ValueError):
+                pass
+    return out
+
+
+def _mc_native_child(input_path: Path, output_path: Path) -> int:
+    from src.engines.v12_monte_carlo import run_correlated_monte_carlo
+
+    with input_path.open("rb") as fh:
+        payload = pickle.load(fh)
+    started = time.perf_counter()
+    result = run_correlated_monte_carlo(*payload["args"], **payload["kwargs"])
+    compute = time.perf_counter() - started
+    safe = {
+        "result": result,
+        "child_compute_seconds": compute,
+        "runtime_identity": _runtime_identity(),
+        "peak_memory_mb": _peak_memory_mb(),
+    }
+    with output_path.open("wb") as fh:
+        pickle.dump(safe, fh, protocol=pickle.HIGHEST_PROTOCOL)
+    return 0
+
+
+def _build_mc_wrapper(
+    *,
+    runtime_class: str,
+    temp_root: Path,
+    records: list[dict[str, Any]],
+):
+    from src.engines import v12_monte_carlo as mc
+
+    original = mc.run_correlated_monte_carlo
+    counter = {"value": 0}
+
+    if runtime_class == "NORMALIZED":
+        def wrapper(*args: Any, **kwargs: Any) -> dict[str, Any]:
+            counter["value"] += 1
+            started = time.perf_counter()
+            result = original(*args, **kwargs)
+            elapsed = time.perf_counter() - started
+            records.append(
+                {
+                    "sequence": counter["value"],
+                    "runtime_class": "NORMALIZED",
+                    "wall_seconds": elapsed,
+                    "child_compute_seconds": elapsed,
+                    "serialization_seconds": 0.0,
+                    "deserialization_seconds": 0.0,
+                    "spawn_overhead_seconds": 0.0,
+                    "output_fingerprint": result.get("output_fingerprint"),
+                    "actual_paths": result.get("actual_paths"),
+                    "canonical_pass": result.get("canonical_pass"),
+                    "cache_hit": (
+                        (result.get("performance") or {}).get(
+                            "simulation_cache_hit"
+                        )
+                    ),
+                }
+            )
+            return result
+        return wrapper
+
+    if runtime_class != "NATIVE_MC_SUBPROCESS":
+        raise ValueError(runtime_class)
+
+    def wrapper(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        counter["value"] += 1
+        seq = counter["value"]
+        input_path = temp_root / f"mc-native-{seq}.input.pkl"
+        output_path = temp_root / f"mc-native-{seq}.output.pkl"
+        ser_started = time.perf_counter()
+        with input_path.open("wb") as fh:
+            pickle.dump({"args": args, "kwargs": kwargs}, fh, protocol=pickle.HIGHEST_PROTOCOL)
+        ser_seconds = time.perf_counter() - ser_started
+
+        spawn_started = time.perf_counter()
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "src.engines.v12_perf_bc",
+                "_mc-native-child",
+                "--input",
+                str(input_path),
+                "--output",
+                str(output_path),
+            ],
+            cwd=ROOT,
+            env=_native_mc_env(),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+        )
+        spawn_wall = time.perf_counter() - spawn_started
+        deser_started = time.perf_counter()
+        with output_path.open("rb") as fh:
+            child = pickle.load(fh)
+        deser_seconds = time.perf_counter() - deser_started
+        result = child["result"]
+        child_compute = float(child["child_compute_seconds"])
+        records.append(
+            {
+                "sequence": seq,
+                "runtime_class": "NATIVE_MC_SUBPROCESS",
+                "wall_seconds": spawn_wall + ser_seconds + deser_seconds,
+                "child_compute_seconds": child_compute,
+                "serialization_seconds": ser_seconds,
+                "deserialization_seconds": deser_seconds,
+                "spawn_overhead_seconds": max(0.0, spawn_wall - child_compute),
+                "output_fingerprint": result.get("output_fingerprint"),
+                "actual_paths": result.get("actual_paths"),
+                "canonical_pass": result.get("canonical_pass"),
+                "cache_hit": (
+                    (result.get("performance") or {}).get("simulation_cache_hit")
+                ),
+                "native_runtime_identity": child.get("runtime_identity"),
+                "native_peak_memory_mb": child.get("peak_memory_mb"),
+            }
+        )
+        try:
+            input_path.unlink()
+            output_path.unlink()
+        except OSError:
+            pass
+        return result
+
+    return wrapper
+
+
+def _teammate_contexts(
+    *,
+    bootstrap: Mapping[str, Any],
+    strength: Mapping[str, Any],
+    prior_payload: Mapping[str, Any],
+) -> dict[int, tuple[dict[str, Any], dict[str, Any]]]:
+    team_rows = {
+        int(team["team_id"]): team
+        for team in strength.get("teams") or []
+        if isinstance(team, Mapping) and team.get("team_id") is not None
+    }
+    historical_map = prior_payload.get("players") or {}
+    out: dict[int, tuple[dict[str, Any], dict[str, Any]]] = {}
+    for raw in bootstrap.get("elements") or []:
+        player = dict(raw)
+        element = int(player.get("id") or -1)
+        if element <= 0:
+            continue
+        team_id = int(player.get("team") or -1)
+        matches_played = int(
+            (team_rows.get(team_id) or {}).get("matches_played") or 0
+        )
+        historical = historical_map.get(str(element)) or {}
+        context: dict[str, Any] = {"team_matches_played": matches_played}
+        if historical:
+            context.update(
+                {
+                    "prior_start_probability": historical.get(
+                        "start_probability"
+                    ),
+                    "starter_minutes_prior": historical.get(
+                        "avg_minutes_when_start"
+                    ),
+                    "prior_evidence_minutes": historical.get("minutes"),
+                }
+            )
+        out[element] = (player, context)
+    return out
+
+
+def _optimized_projection_builder(original_build, workers: int, metrics: dict[str, Any]):
+    from src.models import historical_projection as hp
+
+    original_estimate = hp.estimate_xmins
+
+    def build(*args: Any, **kwargs: Any):
+        bootstrap = args[0] if len(args) > 0 else kwargs["bootstrap"]
+        strength = args[1] if len(args) > 1 else kwargs["strength"]
+        prior_payload = args[3] if len(args) > 3 else kwargs["prior_payload"]
+        calibration_summary = kwargs.get("calibration_summary")
+        model_evidence_binding = kwargs.get("model_evidence_binding")
+        contexts = _teammate_contexts(
+            bootstrap=bootstrap,
+            strength=strength,
+            prior_payload=prior_payload,
+        )
+        pre_started = time.perf_counter()
+
+        def compute(item: tuple[int, tuple[dict[str, Any], dict[str, Any]]]):
+            element, (player, context) = item
+            value = original_estimate(
+                player,
+                context,
+                calibration_summary=calibration_summary,
+                model_evidence_binding=model_evidence_binding,
+            )
+            return element, deepcopy(value), _sha(context)
+
+        items = sorted(contexts.items(), key=lambda item: item[0])
+        if workers <= 1:
+            computed = [compute(item) for item in items]
+        else:
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                computed = list(executor.map(compute, items))
+        cache = {element: value for element, value, _ in computed}
+        context_hashes = {element: ctx_hash for element, _, ctx_hash in computed}
+        metrics["precompute_seconds"] = time.perf_counter() - pre_started
+        metrics["precomputed_players"] = len(cache)
+        metrics["workers"] = workers
+        metrics["cache_hits"] = 0
+        metrics["cache_misses"] = 0
+
+        def cached_estimate(
+            player: Mapping[str, Any],
+            context: Mapping[str, Any],

@@ -75,14 +75,23 @@ def _provider_team_id(
     *,
     by_abbreviation: Mapping[str, int],
     by_name: Mapping[str, int],
+    team_name_aliases: Mapping[str, str] | None = None,
 ) -> int | None:
     abbreviation = str(team.get("abbreviation") or "").strip().upper()
     if abbreviation and abbreviation in by_abbreviation:
         return int(by_abbreviation[abbreviation])
+    aliases = {
+        _identity_key(provider_name): _identity_key(official_name)
+        for provider_name, official_name in (team_name_aliases or {}).items()
+        if _identity_key(provider_name) and _identity_key(official_name)
+    }
     for field in ("displayName", "shortDisplayName", "name", "location"):
         key = _identity_key(team.get(field))
         if key and key in by_name:
             return int(by_name[key])
+        alias_key = aliases.get(key)
+        if alias_key and alias_key in by_name:
+            return int(by_name[alias_key])
     return None
 
 
@@ -110,6 +119,7 @@ def _competition_rows(
     floor: datetime,
     ceiling: datetime,
     source_url: str,
+    team_name_aliases: Mapping[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     by_abbreviation, by_name = _official_team_indexes(bootstrap)
     rows: list[dict[str, Any]] = []
@@ -143,6 +153,7 @@ def _competition_rows(
                 provider_team,
                 by_abbreviation=by_abbreviation,
                 by_name=by_name,
+                team_name_aliases=team_name_aliases,
             )
             if team_id is None:
                 continue
@@ -312,6 +323,7 @@ def collect_verified_non_pl_schedule(
                         floor=floor,
                         ceiling=ceiling,
                         source_url=source_url,
+                        team_name_aliases=cfg.get("team_name_aliases") or {},
                     )
                     rows.extend(current_rows)
                     checks.append(

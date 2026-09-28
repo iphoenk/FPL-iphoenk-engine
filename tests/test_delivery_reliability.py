@@ -9,8 +9,11 @@ from src.engines.v12_delivery_reliability import (
     CANONICAL_DEEP_SECTIONS,
     PrefetchNotTerminal,
     assemble_degraded_deep_report,
+    build_occurrence_state,
+    build_presentation_qa_manifest,
     inspect_prefetch_terminal,
     validate_delivery_bundle,
+    validate_presentation_qa_manifest,
     validate_serving_snapshot,
     wait_for_prefetch_terminal,
     write_serving_artifacts,
@@ -176,6 +179,16 @@ def test_serving_snapshot_is_decision_first_and_exact_23(tmp_path: Path):
     assert (tmp_path / "out/serving_report.json").is_file()
     assert (tmp_path / "out/serving_report.md").is_file()
     assert (tmp_path / "out/delivery_status.json").is_file()
+    assert (tmp_path / "out/delivery_state.json").is_file()
+    assert (tmp_path / "out/presentation_qa.json").is_file()
+    occurrence = build_occurrence_state(bundle)
+    assert occurrence["current_state"] == "PUBLISHED_DEGRADED"
+    assert occurrence["occurrence_id"] == f"DEEP|{SLOT}"
+    qa = build_presentation_qa_manifest(bundle)
+    assert qa["section_count"] == 23
+    assert qa["decision_first"] is True
+    assert qa["root_failure_count"] == 1
+    assert validate_presentation_qa_manifest(qa) == []
 
 
 def _canonical_dir(

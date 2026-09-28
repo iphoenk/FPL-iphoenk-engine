@@ -4845,7 +4845,27 @@ def run_deep(
         ),
         required=True,
     )
-    if foundation:
+    if foundation and mini_only_warm_reuse:
+        projections = deepcopy(warm_reuse["projections"])
+        frozen_stage2 = dict(warm_reuse.get("stage2_cache_proof") or {})
+        stage2_cache_proof.update(
+            {
+                **frozen_stage2,
+                "status": "HIT",
+                "cache_hit": True,
+                "cache_miss": False,
+                "cache_write": False,
+                "warm_memory_reuse": True,
+                "load_or_build_seconds": 0.0,
+            }
+        )
+        _record_mini_warm_reuse_stage(
+            ledger,
+            "P1_1_P1_3_FULL_UNIVERSE",
+            projections,
+            required=True,
+        )
+    elif foundation:
         def _canonical_stage2_builder() -> dict[str, Any]:
             return build_player_projections(
                 bootstrap,
@@ -4947,7 +4967,22 @@ def run_deep(
     )
 
     owned_ids = {int(row["element_id"]) for row in owned}
-    if projections:
+    if projections and mini_only_warm_reuse:
+        _record_mini_warm_reuse_stage(
+            ledger, "OFFICIAL_ROLE_EVIDENCE", projections, required=False
+        )
+        _record_mini_warm_reuse_stage(
+            ledger, "P1_6_TACTICAL_ROLE", projections, required=False
+        )
+        all15 = deepcopy(warm_reuse["all15"])
+        lineup = deepcopy(warm_reuse["lineup"])
+        _record_mini_warm_reuse_stage(
+            ledger, "ALL15_MATERIALIZATION", all15, required=True
+        )
+        _record_mini_warm_reuse_stage(
+            ledger, "P1_7_LINEUP", lineup, required=False
+        )
+    elif projections:
         _stage(
             ledger,
             "OFFICIAL_ROLE_EVIDENCE",
@@ -5014,17 +5049,26 @@ def run_deep(
         lineup = None
 
 
-    post_match_review = _stage(
-        ledger,
-        "S16B_POST_MATCH_GW1_NOW",
-        lambda: _post_match_review(
-            projections=projections,
-            foundation=foundation,
-            owned_ids=owned_ids,
-            current_gw=max(1, planning_gw - 1),
-        ),
-        required=True,
-    ) if projections and foundation else None
+    if mini_only_warm_reuse:
+        post_match_review = deepcopy(warm_reuse["post_match_review"])
+        _record_mini_warm_reuse_stage(
+            ledger,
+            "S16B_POST_MATCH_GW1_NOW",
+            post_match_review,
+            required=True,
+        )
+    else:
+        post_match_review = _stage(
+            ledger,
+            "S16B_POST_MATCH_GW1_NOW",
+            lambda: _post_match_review(
+                projections=projections,
+                foundation=foundation,
+                owned_ids=owned_ids,
+                current_gw=max(1, planning_gw - 1),
+            ),
+            required=True,
+        ) if projections and foundation else None
     if post_match_review is None:
         post_match_review = {
             "our15": [],

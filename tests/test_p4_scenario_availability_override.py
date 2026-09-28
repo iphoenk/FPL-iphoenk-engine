@@ -1,5 +1,5 @@
-import inspect
 from __future__ import annotations
+import inspect
 import pytest
 
 from src.engines import v12_integrated_report_runner as integrated

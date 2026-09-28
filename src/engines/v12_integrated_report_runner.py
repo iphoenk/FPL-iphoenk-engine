@@ -6325,6 +6325,30 @@ def run_deep(
             ),
             "stage2_cache_bypassed": bool(scenario_overrides),
         },
+        "p1_7_execution": {
+            "lineup": next(
+                (
+                    deepcopy(row)
+                    for row in ledger
+                    if str(row.get("stage") or "") == "P1_7_LINEUP"
+                ),
+                None,
+            ),
+            "direct_package": deepcopy(
+                ((direct_package_utility or {}).get("governance") or {}).get(
+                    "p1_7_execution_proof"
+                )
+            ),
+            "funded_package": deepcopy(
+                ((funded_package_utility or {}).get("governance") or {}).get(
+                    "p1_7_execution_proof"
+                )
+            ),
+            "timing_semantics": (
+                "EXACT_OWNER_WALL_TIMES_ONLY; broad package-utility wall time "
+                "is not P1.7 timing authority"
+            ),
+        },
         "monte_carlo": {
             "actual_paths": (monte_carlo or {}).get("actual_paths"),
             "seed": (monte_carlo or {}).get("seed"),

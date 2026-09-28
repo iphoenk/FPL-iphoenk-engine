@@ -4666,19 +4666,9 @@ def refresh_price_only_state(
     this executor does not pretend that unchanged football-return math was
     recomputed.
     """
-    # Copy-on-write: the frozen canonical warm state can be very large.
-    # MINI_LEAGUE_ONLY changes only P1.8/downstream report surfaces, so keep
-    # unchanged football/model payloads by reference and copy only containers
-    # that are actually mutated below.
-    refreshed = dict(state)
-    bundle_source = refreshed.get("bundle")
-    warm_source = refreshed.get("warm_state")
-    if not isinstance(bundle_source, Mapping) or not isinstance(warm_source, Mapping):
-        raise IntegratedRunnerError(
-            "MINI_LEAGUE_ONLY requires canonical bundle and warm state"
-        )
-    bundle = dict(bundle_source)
-    warm = dict(warm_source)
+    refreshed = deepcopy(dict(state))
+    bundle = deepcopy(dict(refreshed.get("bundle") or {}))
+    warm = deepcopy(dict(refreshed.get("warm_state") or {}))
     if str(bundle.get("report_mode") or "").upper() != "DEEP":
         raise IntegratedRunnerError("PRICE_ONLY partial refresh requires DEEP state")
     if not warm or not isinstance(bundle.get("report"), Mapping):
@@ -4708,9 +4698,7 @@ def refresh_price_only_state(
             continue
         section_payloads[sid] = {
             "state": raw.get("state"),
-            # Unchanged section content is immutable for this refresh.  Each
-            # MINI-dependent section is copied explicitly before mutation.
-            "content": raw.get("content"),
+            "content": deepcopy(raw.get("content")),
             "degradation_reason": raw.get("degradation_reason"),
             "available_count": raw.get("available_count"),
             "expected_count": raw.get("expected_count"),
@@ -4834,7 +4822,7 @@ def refresh_price_only_state(
     }
 
     def bound(sid: str, content: Mapping[str, Any]) -> dict[str, Any]:
-        out = dict(content)
+        out = deepcopy(dict(content))
         producer = bindings.get(sid)
         if producer:
             out["authoritative_binding"] = {
@@ -4862,7 +4850,7 @@ def refresh_price_only_state(
     )
     section_payloads["S01"]["content"] = bound("S01", s01_existing)
 
-    s02 = dict(section_payloads["S02"].get("content") or {})
+    s02 = deepcopy(dict(section_payloads["S02"].get("content") or {}))
     s02["rows"] = all15_rows
     section_payloads["S02"]["content"] = bound("S02", s02)
 
@@ -4941,7 +4929,7 @@ def refresh_price_only_state(
     s15["evidence_quality"] = evidence_quality
     section_payloads["S15"]["content"] = bound("S15", s15)
 
-    s16 = dict(section_payloads["S16"].get("content") or {})
+    s16 = deepcopy(dict(section_payloads["S16"].get("content") or {}))
     s16["rows"] = all15_rows
     section_payloads["S16"]["content"] = bound("S16", s16)
 
@@ -4969,7 +4957,7 @@ def refresh_price_only_state(
     s17["source_health"] = source_health
     section_payloads["S17"]["content"] = s17
 
-    s18 = dict(section_payloads["S18"].get("content") or {})
+    s18 = deepcopy(dict(section_payloads["S18"].get("content") or {}))
     s18.update(
         {
             "action_board": action_board,
@@ -5103,7 +5091,7 @@ def refresh_price_only_state(
         )
 
     ledger = [
-        dict(row)
+        deepcopy(row)
         for row in bundle.get("stage_ledger") or []
         if isinstance(row, Mapping)
     ]
@@ -5128,7 +5116,7 @@ def refresh_price_only_state(
             },
         }
     )
-    execution_proof = dict(bundle.get("execution_proof") or {})
+    execution_proof = deepcopy(dict(bundle.get("execution_proof") or {}))
     execution_proof["stages"] = ledger
     execution_proof["warm_partial_refresh"] = {
         "change_class": "PRICE_ONLY",
@@ -5142,7 +5130,7 @@ def refresh_price_only_state(
         "affected_dependency_scope": "PRICE_ONLY",
     }
 
-    source_fingerprints = dict(bundle.get("source_fingerprints") or {})
+    source_fingerprints = deepcopy(dict(bundle.get("source_fingerprints") or {}))
     source_fingerprints["price_predictor"] = _fingerprint(predictor)
     bundle.update(
         {
@@ -5160,7 +5148,7 @@ def refresh_price_only_state(
             "source_fingerprints": source_fingerprints,
         }
     )
-    governance_out = dict(bundle.get("governance") or {})
+    governance_out = deepcopy(dict(bundle.get("governance") or {}))
     governance_out.update(
         {
             "p6_partial_refresh": "PRICE_ONLY",
@@ -5220,9 +5208,19 @@ def refresh_mini_league_only_state(
     evidence is rebound through P1.8, then all dependent visible surfaces are
     rematerialized and pass the same QA/final-delivery barriers as a cold run.
     """
-    refreshed = deepcopy(dict(state))
-    bundle = deepcopy(dict(refreshed.get("bundle") or {}))
-    warm = deepcopy(dict(refreshed.get("warm_state") or {}))
+    # Copy-on-write: the frozen canonical warm state can be very large.
+    # MINI_LEAGUE_ONLY changes only P1.8/downstream report surfaces, so keep
+    # unchanged football/model payloads by reference and copy only containers
+    # that are actually mutated below.
+    refreshed = dict(state)
+    bundle_source = refreshed.get("bundle")
+    warm_source = refreshed.get("warm_state")
+    if not isinstance(bundle_source, Mapping) or not isinstance(warm_source, Mapping):
+        raise IntegratedRunnerError(
+            "MINI_LEAGUE_ONLY requires canonical bundle and warm state"
+        )
+    bundle = dict(bundle_source)
+    warm = dict(warm_source)
     if str(bundle.get("report_mode") or "").upper() != "DEEP":
         raise IntegratedRunnerError("MINI_LEAGUE_ONLY partial refresh requires DEEP state")
     if not warm or not isinstance(bundle.get("report"), Mapping):
@@ -5306,7 +5304,9 @@ def refresh_mini_league_only_state(
             continue
         section_payloads[sid] = {
             "state": raw.get("state"),
-            "content": deepcopy(raw.get("content")),
+            # Unchanged section content is immutable for this refresh. Each
+            # MINI-dependent section is copied explicitly before mutation.
+            "content": raw.get("content"),
             "degradation_reason": raw.get("degradation_reason"),
             "available_count": raw.get("available_count"),
             "expected_count": raw.get("expected_count"),
@@ -5462,7 +5462,7 @@ def refresh_mini_league_only_state(
     }
 
     def bound(sid: str, content: Mapping[str, Any]) -> dict[str, Any]:
-        out = deepcopy(dict(content))
+        out = dict(content)
         producer = bindings.get(sid)
         if producer:
             payload_fingerprint = _fingerprint(
@@ -5494,7 +5494,7 @@ def refresh_mini_league_only_state(
     )
     section_payloads["S01"]["content"] = bound("S01", s01)
 
-    s02 = deepcopy(dict(section_payloads["S02"].get("content") or {}))
+    s02 = dict(section_payloads["S02"].get("content") or {})
     s02["rows"] = all15_rows
     section_payloads["S02"]["content"] = bound("S02", s02)
 
@@ -5542,11 +5542,11 @@ def refresh_mini_league_only_state(
         mini_reason,
     )
 
-    s16 = deepcopy(dict(section_payloads["S16"].get("content") or {}))
+    s16 = dict(section_payloads["S16"].get("content") or {})
     s16["rows"] = all15_rows
     section_payloads["S16"]["content"] = bound("S16", s16)
 
-    s18 = deepcopy(dict(section_payloads["S18"].get("content") or {}))
+    s18 = dict(section_payloads["S18"].get("content") or {})
     s18.update(
         {
             "action_board": action_board,
@@ -5700,7 +5700,7 @@ def refresh_mini_league_only_state(
         )
 
     ledger = [
-        deepcopy(row)
+        dict(row)
         for row in bundle.get("stage_ledger") or []
         if isinstance(row, Mapping)
     ]
@@ -5723,7 +5723,7 @@ def refresh_mini_league_only_state(
             },
         }
     )
-    execution_proof = deepcopy(dict(bundle.get("execution_proof") or {}))
+    execution_proof = dict(bundle.get("execution_proof") or {})
     execution_proof["stages"] = ledger
     execution_proof["warm_partial_refresh"] = {
         "change_class": "MINI_LEAGUE_ONLY",
@@ -5737,7 +5737,7 @@ def refresh_mini_league_only_state(
         "affected_dependency_scope": "MINI_LEAGUE_ONLY",
     }
 
-    source_fingerprints = deepcopy(dict(bundle.get("source_fingerprints") or {}))
+    source_fingerprints = dict(bundle.get("source_fingerprints") or {})
     source_fingerprints["mini_league_standings"] = _fingerprint(standings)
     source_fingerprints["mini_league_picks"] = _fingerprint(manager_picks)
 
@@ -5760,7 +5760,7 @@ def refresh_mini_league_only_state(
             "source_fingerprints": source_fingerprints,
         }
     )
-    governance_out = deepcopy(dict(bundle.get("governance") or {}))
+    governance_out = dict(bundle.get("governance") or {})
     governance_out.update(
         {
             "p6_partial_refresh": "MINI_LEAGUE_ONLY",

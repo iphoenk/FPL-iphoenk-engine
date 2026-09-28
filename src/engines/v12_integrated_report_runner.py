@@ -4894,9 +4894,18 @@ def refresh_mini_league_only_state(
         out = deepcopy(dict(content))
         producer = bindings.get(sid)
         if producer:
+            payload_fingerprint = _fingerprint(
+                {
+                    key: value
+                    for key, value in out.items()
+                    if key != "authoritative_binding"
+                }
+            )
             out["authoritative_binding"] = {
                 "status": "BOUND",
                 "producer": producer,
+                "payload_fingerprint": payload_fingerprint,
+                "report_slot": report_slot,
             }
         return out
 

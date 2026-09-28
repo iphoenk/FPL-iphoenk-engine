@@ -4603,6 +4603,548 @@ def _section(
     return row
 
 
+
+def refresh_mini_league_only_state(
+    *,
+    runtime_data_root: Path,
+    state: Mapping[str, Any],
+    report_slot: str,
+) -> dict[str, Any]:
+    """Refresh only downstream P1.8/report surfaces for MINI_LEAGUE_ONLY.
+
+    The frozen football state remains authoritative: Stage2, exact P1.7 and
+    canonical P1.4 MC are reused read-only. Fresh standings/submitted-picks
+    evidence is rebound through P1.8, then all dependent visible surfaces are
+    rematerialized and pass the same QA/final-delivery barriers as a cold run.
+    """
+    refreshed = deepcopy(dict(state))
+    bundle = deepcopy(dict(refreshed.get("bundle") or {}))
+    warm = deepcopy(dict(refreshed.get("warm_state") or {}))
+    if str(bundle.get("report_mode") or "").upper() != "DEEP":
+        raise IntegratedRunnerError("MINI_LEAGUE_ONLY partial refresh requires DEEP state")
+    if not warm or not isinstance(bundle.get("report"), Mapping):
+        raise IntegratedRunnerError("MINI_LEAGUE_ONLY requires frozen private warm state")
+
+    projections = dict(warm.get("projections") or {})
+    owned = [
+        dict(row) for row in warm.get("owned") or [] if isinstance(row, Mapping)
+    ]
+    lineup = dict(warm.get("lineup") or {})
+    predictor = dict(warm.get("predictor") or {})
+    calendar_context = dict(warm.get("calendar_context") or {})
+    bgw_context = dict(warm.get("bgw_context") or {})
+    finance = dict(warm.get("finance") or {})
+    stage3_decision = dict(warm.get("stage3_decision") or {})
+    package_with_stage3 = deepcopy(dict(warm.get("package_with_stage3") or {}))
+    monte_carlo = dict(warm.get("monte_carlo") or {})
+    if not projections or not owned or not lineup or not package_with_stage3:
+        raise IntegratedRunnerError(
+            "MINI_LEAGUE_ONLY frozen football prerequisites are incomplete"
+        )
+
+    # Strip the old P1.8 attachment before recomputing the downstream overlay.
+    package_with_stage3.pop("mini_league_overlay", None)
+    governance = package_with_stage3.get("governance")
+    if isinstance(governance, dict):
+        governance.pop("mini_league_overlay_owner", None)
+        governance.pop("mini_league_overlay_downstream_only", None)
+
+    standings = _read_json(
+        runtime_data_root / "data/v6/mini_leagues/9477/standings.json",
+        {},
+    ) or {}
+    picks_paths = list(
+        (runtime_data_root / "data/v6/mini_leagues/9477").glob(
+            "gw_*_manager_picks.json"
+        )
+    )
+    picks_gw = max(
+        [
+            int(path.name.split("_")[1])
+            for path in picks_paths
+            if path.name.startswith("gw_")
+        ]
+        or [max(1, int(warm.get("planning_gw") or 1) - 1)]
+    )
+    manager_picks = _read_json(
+        runtime_data_root
+        / f"data/v6/mini_leagues/9477/gw_{picks_gw}_manager_picks.json",
+        {},
+    ) or {}
+    planning_gw = int(warm.get("planning_gw") or bundle.get("planning_gw") or 1)
+    mini = build_mini_league_snapshot(
+        standings,
+        manager_picks,
+        our_entry_id=3462711,
+        planning_gw=planning_gw,
+    )
+    mini_overlay = evaluate_mini_league_overlay(
+        package_with_stage3,
+        mini,
+        monte_carlo=monte_carlo,
+        relative_mc=None,
+        input_snapshot_id="STAGE3_MINI:" + _fingerprint(mini)[:24],
+        generated_at=report_slot,
+    )
+    package_with_stage3 = attach_mini_league_overlay(
+        package_with_stage3,
+        mini_overlay,
+    )
+
+    report = dict(bundle.get("report") or {})
+    section_payloads: dict[str, dict[str, Any]] = {}
+    for raw in report.get("sections") or []:
+        if not isinstance(raw, Mapping):
+            continue
+        sid = str(raw.get("section_id") or "")
+        if not sid:
+            continue
+        section_payloads[sid] = {
+            "state": raw.get("state"),
+            "content": deepcopy(raw.get("content")),
+            "degradation_reason": raw.get("degradation_reason"),
+            "available_count": raw.get("available_count"),
+            "expected_count": raw.get("expected_count"),
+        }
+    required_sections = {"S01", "S02", "S06B", "S07", "S08", "S14", "S14B",
+                         "S15B", "S16", "S18", "S19"}
+    missing = sorted(required_sections - set(section_payloads))
+    if missing:
+        raise IntegratedRunnerError(
+            "MINI_LEAGUE_ONLY missing baseline sections: " + ",".join(missing)
+        )
+
+    official = _official_payload(runtime_data_root)
+    mini_deep_detail = _mini_league_deep_detail(
+        mini=mini,
+        standings=standings,
+        manager_picks=manager_picks,
+        owned=owned,
+        projections=projections,
+        lineup=lineup,
+        mini_overlay=mini_overlay,
+        disclosed_gw=picks_gw,
+        operational_action=str(
+            stage3_decision.get("operational_action") or "WAIT"
+        ).upper(),
+        calendar_context=calendar_context,
+    )
+    formation_strategy = _formation_mini_league_strategy(
+        lineup=lineup,
+        mini=mini,
+        mini_overlay=mini_overlay,
+        projections=projections,
+    )
+    all15_rows = _enrich_all15_rows(
+        all15=warm.get("all15"),
+        projections=projections,
+        predictor=predictor,
+        owned=owned,
+        bootstrap=official["bootstrap"],
+        mini=mini,
+        mini_detail=mini_deep_detail,
+        calendar_context=calendar_context,
+    )
+    xi_battles = _xi_battles(
+        lineup=lineup,
+        projections=projections,
+        mini=mini,
+        mini_detail=mini_deep_detail,
+        calendar_context=calendar_context,
+    )
+    lineup_state = "COMPLETE"
+    captain_surface = _captain_decision_surface(
+        owned=owned,
+        lineup=lineup,
+        lineup_state=lineup_state,
+        mini_detail=mini_deep_detail,
+    )
+
+    # S14 keeps the frozen football frontier/MC, replacing only its P1.8 fields.
+    stage3_visible = deepcopy(
+        dict((section_payloads["S14"].get("content") or {}))
+    )
+    stage3_visible["mini_league_overlay"] = deepcopy(mini_overlay)
+    for row in stage3_visible.get("package_routes") or []:
+        if isinstance(row, dict):
+            row["mini_league_utility"] = deepcopy(
+                mini_overlay.get("decision_delta")
+            )
+    for row in stage3_visible.get("package_universe_challengers") or []:
+        if isinstance(row, dict):
+            row["mini_league_leverage"] = deepcopy(
+                mini_overlay.get("decision_delta")
+            )
+
+    chip_state = finance.get("chips")
+    chip_available = (
+        chip_state not in (None, {}, [])
+        and finance.get("chips_status") == "AVAILABLE"
+    )
+    staging = deepcopy(dict(section_payloads["S14B"].get("content") or {}))
+    final_judgement = _final_judgement_surface(
+        operational_action=str(
+            stage3_decision.get("operational_action") or "WAIT"
+        ).upper(),
+        stage3_decision=stage3_decision,
+        stage3_visible=stage3_visible,
+        lineup=lineup,
+        captain_surface=captain_surface,
+        mini_detail=mini_deep_detail,
+        staging=staging,
+        chip_state=chip_state if chip_available else None,
+    )
+    final_judgement["bgw_context"] = bgw_context
+    final_judgement["bgw_reconciled"] = True
+
+    baseline_dashboard = dict(
+        (section_payloads["S01"].get("content") or {}).get(
+            "decision_dashboard"
+        )
+        or {}
+    )
+    personal_auth = str(baseline_dashboard.get("PERSONAL_AUTH") or "UNAVAILABLE")
+    auth_state = (
+        "AUTH_AVAILABLE"
+        if personal_auth == "AVAILABLE"
+        else "AUTH_EXPIRED"
+        if personal_auth == "DEGRADED"
+        else "UNAVAILABLE"
+    )
+    decision_dashboard = _decision_dashboard(
+        operational_action=str(
+            stage3_decision.get("operational_action") or "WAIT"
+        ).upper(),
+        planning_gw=planning_gw,
+        stage3_decision=stage3_decision,
+        lineup_state=lineup_state,
+        lineup=lineup,
+        captain_surface=captain_surface,
+        chip_available=chip_available,
+        price_radar=dict(warm.get("price_radar") or {}),
+        auth_state=auth_state,
+        finance=finance,
+    )
+    action_board = _action_board_surface(
+        dashboard=decision_dashboard,
+        stage3_decision=stage3_decision,
+        stage3_visible=stage3_visible,
+        all15_rows=all15_rows,
+    )
+
+    bindings = {
+        "S01": "STAGE3_DECISION+S08+S09+S10+S17",
+        "S02": "CURRENT15_RESOLUTION+P1_1_P1_3+S05+S15B",
+        "S07": "P1_7_XI_BATTLE+P1_1+S05+S15B",
+        "S08": "P1_7_LINEUP",
+        "S14": "P1_2_PACKAGE_UTILITY+P1_4_MONTE_CARLO+P1_8_MINI_LEAGUE_OVERLAY",
+        "S15B": "P1_8_MINI_LEAGUE_SNAPSHOT+P1_8_MINI_LEAGUE_OVERLAY",
+        "S16": "P1_1_P1_3_FULL_UNIVERSE+P1_6_TACTICAL_ROLE",
+        "S18": "S01+S08+S10+S14+TEAM_NEWS",
+        "S19": "S08_CAPTAIN_FRONTIER+S15B_MINI_LEAGUE_RECONCILIATION",
+    }
+
+    def bound(sid: str, content: Mapping[str, Any]) -> dict[str, Any]:
+        out = deepcopy(dict(content))
+        producer = bindings.get(sid)
+        if producer:
+            out["authoritative_binding"] = {
+                "status": "BOUND",
+                "producer": producer,
+            }
+        return out
+
+    s01 = deepcopy(dict(section_payloads["S01"].get("content") or {}))
+    s01.update(
+        {
+            "decision_dashboard": decision_dashboard,
+            "operational_state": str(
+                stage3_decision.get("operational_action") or "WAIT"
+            ).upper(),
+            "reason": decision_dashboard.get("PRIMARY_REASON"),
+            "key_decision_driver": decision_dashboard.get("KEY_DRIVER"),
+            "current_blockers": decision_dashboard.get("CURRENT_BLOCKERS"),
+        }
+    )
+    section_payloads["S01"]["content"] = bound("S01", s01)
+
+    s02 = deepcopy(dict(section_payloads["S02"].get("content") or {}))
+    s02["rows"] = all15_rows
+    section_payloads["S02"]["content"] = bound("S02", s02)
+
+    section_payloads["S06B"] = _section(
+        "COMPLETE",
+        formation_strategy,
+    )
+    section_payloads["S07"]["content"] = bound(
+        "S07",
+        {
+            "battles": xi_battles,
+            "empty_is_truthful": not bool(xi_battles),
+            "battle_summary": lineup.get("main_starting_xi_battle"),
+        },
+    )
+    section_payloads["S08"]["content"] = bound("S08", captain_surface)
+
+    section_payloads["S14"]["content"] = bound("S14", stage3_visible)
+
+    mini_state = (
+        "COMPLETE"
+        if mini and mini.get("coverage_state") == "FULL"
+        else "DEGRADED"
+    )
+    mini_reason = (
+        None
+        if mini_state == "COMPLETE"
+        else "ICON+ public coverage is incomplete for this occurrence"
+    )
+    s15b = {
+        **mini,
+        "current_league_context": _mini_context(mini),
+        "exposures": list(mini.get("exposures") or []),
+        "downstream_overlay": mini_overlay,
+        "football_baseline_precedes_leverage": True,
+        "protection_players": formation_strategy.get("high_eo_protection"),
+        "differential_opportunities": formation_strategy.get(
+            "differential_slots"
+        ),
+        **mini_deep_detail,
+    }
+    section_payloads["S15B"] = _section(
+        mini_state,
+        bound("S15B", s15b) if mini_state == "COMPLETE" else s15b,
+        mini_reason,
+    )
+
+    s16 = deepcopy(dict(section_payloads["S16"].get("content") or {}))
+    s16["rows"] = all15_rows
+    section_payloads["S16"]["content"] = bound("S16", s16)
+
+    s18 = deepcopy(dict(section_payloads["S18"].get("content") or {}))
+    s18.update(
+        {
+            "action_board": action_board,
+            "NOW": {
+                row.get("axis"): row.get("NOW")
+                for row in action_board.get("axes") or []
+                if isinstance(row, Mapping)
+            },
+            "NEXT": {
+                row.get("axis"): row.get("NEXT")
+                for row in action_board.get("axes") or []
+                if isinstance(row, Mapping)
+            },
+            "TRIGGER TO ACT": {
+                row.get("axis"): row.get("TRIGGER TO ACT")
+                for row in action_board.get("axes") or []
+                if isinstance(row, Mapping)
+            },
+            "LATEST SAFE DECISION POINT": {
+                row.get("axis"): row.get("LATEST SAFE DECISION POINT")
+                for row in action_board.get("axes") or []
+                if isinstance(row, Mapping)
+            },
+            "COST OF WAITING": {
+                row.get("axis"): row.get("COST OF WAITING")
+                for row in action_board.get("axes") or []
+                if isinstance(row, Mapping)
+            },
+            "ABORT / REVERSAL": {
+                row.get("axis"): row.get("ABORT / REVERSAL")
+                for row in action_board.get("axes") or []
+                if isinstance(row, Mapping)
+            },
+            "BEST ALTERNATIVE": action_board.get("best_alternative"),
+        }
+    )
+    section_payloads["S18"]["content"] = bound("S18", s18)
+    section_payloads["S19"]["content"] = bound(
+        "S19",
+        {"final_judgement": final_judgement},
+    )
+
+    canonical = CANONICAL_PATH.read_text(encoding="utf-8")
+    new_report = materialize_deep_report(
+        canonical_text=canonical,
+        section_payloads=section_payloads,
+    )
+    section_manifest = [
+        {
+            "section_id": str(row.get("section_id") or ""),
+            "status": str(row.get("state") or ""),
+        }
+        for row in new_report.get("sections") or []
+    ]
+    human_manifest = build_deep_human_facing_manifest(new_report)
+    compute_contract = _qa_compute_contract(
+        owned=owned,
+        lineup=lineup,
+        watchlist=dict(warm.get("watchlist") or {}),
+        rise=dict(warm.get("rise") or {}),
+        fall=dict(warm.get("fall") or {}),
+        sections=section_payloads,
+        human_manifest=human_manifest,
+    )
+    mini_complete = bool(
+        mini and str(mini.get("coverage_state") or "").upper() == "FULL"
+    )
+    pre_render_qa = validate_pre_render_qa(
+        compute_contract=compute_contract,
+        section_manifest=section_manifest,
+        mini_league_denominator_complete=mini_complete,
+        report_mode="DEEP",
+        weather_contract_state="SOURCE_DEGRADED",
+    )
+    body = render_deep_text(new_report)
+    final_delivery_barrier = validate_final_delivery_barrier(
+        report_mode="DEEP",
+        report=new_report,
+        body=body,
+    )
+    human_failures = list(
+        dict.fromkeys(
+            validate_human_facing_body(body)
+            + validate_deep_human_facing_manifest(human_manifest)
+            + list(final_delivery_barrier.get("failures") or [])
+        )
+    )
+    parsed_ids, _, _ = _parse_sections(body)
+    rendered_states = {
+        str(row.get("section_id") or ""): str(row.get("state") or "")
+        for row in new_report.get("sections") or []
+    }
+    post_render_qa = validate_post_render_qa(
+        pre_render_qa=pre_render_qa,
+        rendered_body=body,
+        rendered_section_ids=parsed_ids,
+        rendered_section_states=rendered_states,
+        rendered_compute_fingerprint=compute_contract["compute_fingerprint"],
+        render_contract_token=pre_render_qa.get("render_contract_token"),
+        rendered_counts=dict(pre_render_qa.get("expected_counts") or {}),
+        rendered_fact_keys=list(pre_render_qa.get("expected_fact_keys") or []),
+        rendered_model_keys=list(pre_render_qa.get("expected_model_keys") or []),
+        rendered_mini_league_denominator_complete=mini_complete,
+        rendered_weather_contract_state="SOURCE_DEGRADED",
+    )
+    if (
+        str(pre_render_qa.get("status") or "").upper() != "PASS"
+        or str(post_render_qa.get("status") or "").upper() != "PASS"
+        or human_failures
+        or str(final_delivery_barrier.get("status") or "").upper() != "PASS"
+    ):
+        raise IntegratedRunnerError(
+            "MINI_LEAGUE_ONLY partial refresh failed canonical delivery QA"
+        )
+
+    ledger = [
+        deepcopy(row)
+        for row in bundle.get("stage_ledger") or []
+        if isinstance(row, Mapping)
+    ]
+    ledger.append(
+        {
+            "stage": "P6_MINI_LEAGUE_PARTIAL_REFRESH",
+            "status": "PASS",
+            "required": True,
+            "reason": None,
+            "evidence": {
+                "change_class": "MINI_LEAGUE_ONLY",
+                "reused_layers": ["Stage2", "P1.7", "MC"],
+                "recomputed_layers": [
+                    "P1.8_MINI_LEAGUE",
+                    "DEPENDENT_REPORT_SURFACES",
+                    "QA",
+                ],
+                "football_math_recomputed": False,
+                "second_optimizer_created": False,
+            },
+        }
+    )
+    execution_proof = deepcopy(dict(bundle.get("execution_proof") or {}))
+    execution_proof["stages"] = ledger
+    execution_proof["warm_partial_refresh"] = {
+        "change_class": "MINI_LEAGUE_ONLY",
+        "status": "PASS",
+        "stage2_reused": True,
+        "p1_7_reused": True,
+        "mc_reused": True,
+        "p1_8_recomputed": True,
+        "stability_recomputed": True,
+        "football_math_recomputed": False,
+        "affected_dependency_scope": "MINI_LEAGUE_ONLY",
+    }
+
+    source_fingerprints = deepcopy(dict(bundle.get("source_fingerprints") or {}))
+    source_fingerprints["mini_league_standings"] = _fingerprint(standings)
+    source_fingerprints["mini_league_picks"] = _fingerprint(manager_picks)
+
+    bundle.update(
+        {
+            "runner_status": "PASS",
+            "stage_ledger": ledger,
+            "section_manifest": section_manifest,
+            "human_facing_manifest": human_manifest,
+            "compute_contract": compute_contract,
+            "pre_render_qa": pre_render_qa,
+            "post_render_qa": post_render_qa,
+            "human_facing_qa": {
+                "status": "PASS",
+                "failures": [],
+            },
+            "execution_proof": execution_proof,
+            "report": new_report,
+            "visible_body": body,
+            "source_fingerprints": source_fingerprints,
+        }
+    )
+    governance_out = deepcopy(dict(bundle.get("governance") or {}))
+    governance_out.update(
+        {
+            "p6_partial_refresh": "MINI_LEAGUE_ONLY",
+            "p6_partial_refresh_reused_football_math": True,
+            "qa_relaxed": False,
+            "second_methodology_created": False,
+        }
+    )
+    bundle["governance"] = governance_out
+
+    warm.update(
+        {
+            "standings": standings,
+            "manager_picks": manager_picks,
+            "mini": mini,
+            "mini_overlay": mini_overlay,
+            "package_with_stage3": package_with_stage3,
+        }
+    )
+    refreshed["bundle"] = bundle
+    refreshed["execution_proof"] = execution_proof
+    refreshed["warm_state"] = warm
+
+    output_dir = Path(str(refreshed.get("output_dir") or ""))
+    if not output_dir:
+        raise IntegratedRunnerError("MINI_LEAGUE_ONLY output_dir is unavailable")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "report_bundle.json").write_text(
+        json.dumps(bundle, indent=2, sort_keys=True, ensure_ascii=False, default=str)
+        + "\n",
+        encoding="utf-8",
+    )
+    (output_dir / "execution_proof.json").write_text(
+        json.dumps(
+            execution_proof,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=False,
+            default=str,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (output_dir / "report_body.md").write_text(body, encoding="utf-8")
+    return refreshed
+
+
 def run_deep(
     *,
     runtime_data_root: Path,

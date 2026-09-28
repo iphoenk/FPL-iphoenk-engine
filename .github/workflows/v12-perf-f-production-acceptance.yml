@@ -8,7 +8,18 @@ permissions:
   contents: read
 
 concurrency:
-  group: v12-perf-f-production-acceptance
+  # PERF-F cases must remain serial, but unrelated issue-comment fanout must
+  # not occupy/replace the single pending governed acceptance slot.
+  group: >-
+    ${{
+      (
+        github.event.issue.number == 431 &&
+        github.actor == github.repository_owner &&
+        startsWith(github.event.comment.body, '/v12-perf-f ')
+      ) &&
+      'v12-perf-f-production-acceptance-command' ||
+      format('v12-perf-f-production-acceptance-noise-{0}', github.event.comment.id)
+    }}
   cancel-in-progress: false
 
 jobs:

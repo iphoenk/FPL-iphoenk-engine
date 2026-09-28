@@ -349,6 +349,7 @@ def test_s05_binding_surfaces_europe_and_weather(monkeypatch, tmp_path):
     assert row["load_state"] == "EUROPE MIDWEEK"
     assert row["non_pl_competitions"] == ["UEFA Champions League"]
     assert row["next_non_pl_event"]["competition"] == "UEFA Champions League"
+    assert row["rest_hours_after_next_non_pl_to_pl"] == 67.0
     assert context["weather"][0]["fpl_impact"] == "LOW"
 
 

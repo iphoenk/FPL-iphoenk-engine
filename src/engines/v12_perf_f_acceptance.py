@@ -336,11 +336,16 @@ def execute_case(
     )
     cold_fingerprint = semantic_fingerprint(cold_state["bundle"])
 
+    # A production warm worker keeps one cache root alive for the whole
+    # bounded window.  The controlled acceptance must preserve that exact
+    # lifecycle: changed inputs get a new pipeline binding, but reuse the
+    # already-warmed cache workspace.  The canonical cold oracle remains
+    # isolated below in canonical-cold.
     warm_pipeline = CanonicalPipeline(
         app=app,
         runtime=case_runtime,
         private=case_private,
-        workspace=workspace / "warm-change",
+        workspace=workspace / "warm-baseline",
         report_kind="full_master",
         logical_slot=report_slot,
         run_id=f"{run_id}-{case.lower()}",
@@ -444,7 +449,7 @@ def execute_case(
         "private_publish_pass": verdict["private_publish_pass"],
         "expected_cache_state": result["expected_cache_state"],
         "actual_cache_state": result["actual_cache_state"],
-        "timings": verdict["timings"],
+        "timings": result["timings"],
         "production_sha": final_identity.production_sha,
         "runtime_data_sha": final_identity.runtime_data_sha,
         "controlled_input_fingerprint": controlled_fingerprint,

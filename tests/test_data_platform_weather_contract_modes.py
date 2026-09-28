@@ -127,6 +127,17 @@ def test_deep_accepts_visible_degraded_weather_block_when_tool_is_unavailable():
     assert post["weather_contract_state"] == "SOURCE_DEGRADED"
 
 
+def test_deep_accepts_report_time_bound_weather_from_machine_source():
+    pre = _pre(report_mode="DEEP", weather_contract_state="REPORT_TIME_BOUND")
+    post = _post(pre, state="REPORT_TIME_BOUND")
+
+    assert pre["status"] == "PASS"
+    assert pre["weather_contract_state"] == "REPORT_TIME_BOUND"
+    assert post["status"] == "PASS"
+    assert post["weather_contract_state"] == "REPORT_TIME_BOUND"
+    assert post["visible_weather_contract_state"] == "REPORT_TIME_BOUND"
+
+
 def test_price_accepts_only_explicit_price_not_in_scope_or_actual_weather():
     explicit = _pre(report_mode="PRICE", weather_contract_state="PRICE_NOT_IN_SCOPE")
     actual = _pre(report_mode="PRICE", weather_contract_state="DIRECT_CHATGPT")

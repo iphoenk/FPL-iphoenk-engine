@@ -516,6 +516,7 @@ def assemble_degraded_deep_report(
             "reason": "BLOCKED_BY_ROOT_FAILURE",
         }
         for stage in downstream_stages
+        if stage != root_stage
     ]
 
     report = {

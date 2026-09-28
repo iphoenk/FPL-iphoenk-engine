@@ -92,6 +92,7 @@ from src.engines.v12_tactical_role import attach_tactical_role_scores
 from src.engines.v12_stage2_derived_cache import (
     load_or_build_stage2_projections,
 )
+from src.engines.v12_s05_binding import build_report_time_s05_inputs
 from src.engines.v12_contextual_dynamics import (
     build_player_trajectory,
     build_post_match_deep_details,
@@ -3800,6 +3801,21 @@ def _decision_dashboard(
     }
 
 
+def _weather_contract_state_from_calendar(
+    calendar_context: Mapping[str, Any] | None,
+) -> str:
+    return (
+        "REPORT_TIME_BOUND"
+        if any(
+            str(row.get("fpl_impact") or "UNAVAILABLE").upper()
+            in {"NORMAL", "LOW", "MATERIAL"}
+            for row in (calendar_context or {}).get("weather") or []
+            if isinstance(row, Mapping)
+        )
+        else "SOURCE_DEGRADED"
+    )
+
+
 def _evidence_quality_surface(
     *,
     official: Mapping[str, Any] | None,
@@ -3877,8 +3893,14 @@ def _evidence_quality_surface(
             "state": (
                 "COMPLETE"
                 if coverage.get("verified_non_pl_schedule_bound") is True
+                and str(coverage.get("player_observation_status") or "").upper()
+                == "VALIDATED"
+                else "CLUB_SCHEDULE_COMPLETE_PLAYER_OBSERVATIONS_UNAVAILABLE"
+                if coverage.get("verified_non_pl_schedule_bound") is True
                 else "PL_ONLY_DEGRADED"
             ),
+            "club_schedule_status": coverage.get("club_schedule_status"),
+            "player_observation_status": coverage.get("player_observation_status"),
             "static_fatigue_penalty": False,
         },
         "tactical": {
@@ -5012,12 +5034,15 @@ def refresh_mini_league_only_state(
     mini_complete = bool(
         mini and str(mini.get("coverage_state") or "").upper() == "FULL"
     )
+    weather_contract_state = _weather_contract_state_from_calendar(
+        calendar_context
+    )
     pre_render_qa = validate_pre_render_qa(
         compute_contract=compute_contract,
         section_manifest=section_manifest,
         mini_league_denominator_complete=mini_complete,
         report_mode="DEEP",
-        weather_contract_state="SOURCE_DEGRADED",
+        weather_contract_state=weather_contract_state,
     )
     body = render_deep_text(new_report)
     final_delivery_barrier = validate_final_delivery_barrier(
@@ -5048,7 +5073,7 @@ def refresh_mini_league_only_state(
         rendered_fact_keys=list(pre_render_qa.get("expected_fact_keys") or []),
         rendered_model_keys=list(pre_render_qa.get("expected_model_keys") or []),
         rendered_mini_league_denominator_complete=mini_complete,
-        rendered_weather_contract_state="SOURCE_DEGRADED",
+        rendered_weather_contract_state=weather_contract_state,
     )
     if (
         str(pre_render_qa.get("status") or "").upper() != "PASS"
@@ -5597,6 +5622,27 @@ def run_deep(
         for row in (watchlist or {}).get("rows") or []
         if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
     )
+    s05_inputs = _stage(
+        ledger,
+        "REPORT_TIME_S05_BINDING",
+        lambda: build_report_time_s05_inputs(
+            bootstrap=bootstrap,
+            fixtures=fixtures or [],
+            planning_gw=planning_gw,
+            report_slot=report_slot,
+            output_dir=output_dir,
+            runtime_data_root=runtime_data_root,
+            private_data_root=private_data_root,
+        ),
+    ) or {
+        "verified_schedule_events": [],
+        "non_pl_schedule_authority": False,
+        "weather_rows": [],
+        "weather_forecast_horizon_hours": 168.0,
+        "weather_status": "UNAVAILABLE",
+        "club_schedule": {"status": "UNAVAILABLE"},
+        "player_observation": {"status": "UNAVAILABLE"},
+    }
     calendar_context = build_calendar_workload_context(
         planning_gw=planning_gw,
         pl_fixtures=fixtures or [],
@@ -5610,11 +5656,28 @@ def run_deep(
             planning_gw=planning_gw,
             element_ids=calendar_elements,
         ),
-        verified_schedule_events=(),
-        non_pl_schedule_authority=False,
+        verified_schedule_events=(
+            s05_inputs.get("verified_schedule_events") or []
+        ),
+        non_pl_schedule_authority=(
+            s05_inputs.get("non_pl_schedule_authority") is True
+        ),
         report_timestamp=report_slot,
-        weather_rows=(),
-        weather_forecast_horizon_hours=None,
+        weather_rows=s05_inputs.get("weather_rows") or [],
+        weather_forecast_horizon_hours=s05_inputs.get(
+            "weather_forecast_horizon_hours"
+        ),
+    )
+    calendar_context["competition_coverage"].update(
+        {
+            "club_schedule_status": (
+                (s05_inputs.get("club_schedule") or {}).get("status")
+            ),
+            "player_observation_status": (
+                (s05_inputs.get("player_observation") or {}).get("status")
+            ),
+            "weather_binding_status": s05_inputs.get("weather_status"),
+        }
     )
     bgw_context = _bgw_propagation_context(
         calendar_context,
@@ -6646,7 +6709,22 @@ def run_deep(
                     ),
                     "tactical_statistical_data": "HEALTHY" if foundation else "UNAVAILABLE",
                     "mini_league": (mini or {}).get("coverage_state") or "UNAVAILABLE",
-                    "weather": "SOURCE_DEGRADED_AT_RUNNER; DIRECT_CHATGPT_AT_VISIBLE_DELIVERY",
+                    "weather": (
+                        "REPORT_TIME_BOUND"
+                        if _weather_contract_state_from_calendar(calendar_context)
+                        == "REPORT_TIME_BOUND"
+                        else (
+                            "OUTSIDE_RELIABLE_FORECAST_HORIZON"
+                            if all(
+                                "OUTSIDE RELIABLE FORECAST HORIZON"
+                                in str(row.get("state") or "")
+                                for row in calendar_context.get("weather") or []
+                                if isinstance(row, Mapping)
+                            )
+                            and bool(calendar_context.get("weather"))
+                            else "DEGRADED_OR_UNAVAILABLE"
+                        )
+                    ),
                 },
                 "auth_authority": {
                     "field": "data/v6/personal/current_team.json:auth_state",
@@ -6767,12 +6845,15 @@ def run_deep(
         mini
         and str(mini.get("coverage_state") or "").upper() == "FULL"
     )
+    weather_contract_state = _weather_contract_state_from_calendar(
+        calendar_context
+    )
     pre_render_qa = validate_pre_render_qa(
         compute_contract=compute_contract,
         section_manifest=section_manifest,
         mini_league_denominator_complete=mini_complete,
         report_mode="DEEP",
-        weather_contract_state="SOURCE_DEGRADED",
+        weather_contract_state=weather_contract_state,
     )
     body = render_deep_text(report)
     final_delivery_barrier = validate_final_delivery_barrier(
@@ -6801,7 +6882,7 @@ def run_deep(
         rendered_fact_keys=list(pre_render_qa.get("expected_fact_keys") or []),
         rendered_model_keys=list(pre_render_qa.get("expected_model_keys") or []),
         rendered_mini_league_denominator_complete=mini_complete,
-        rendered_weather_contract_state="SOURCE_DEGRADED",
+        rendered_weather_contract_state=weather_contract_state,
         truncated=False,
     )
     contract = canonical_mode_contract(canonical, "DEEP")

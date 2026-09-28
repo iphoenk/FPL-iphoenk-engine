@@ -281,6 +281,7 @@ def refresh_p4_scenario_state(
     scenario_row: Mapping[str, Any],
     change_class: str,
     package_fingerprint: str,
+    extra_evidence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Serve an exact canonical P4 counterfactual through full delivery QA."""
     decision_surfaces = scenario_row.get("decision_surfaces")
@@ -322,5 +323,38 @@ def refresh_p4_scenario_state(
             ),
             "package_fingerprint": str(package_fingerprint or ""),
             "decision_surfaces_rebound": sorted(required),
+            **deepcopy(dict(extra_evidence or {})),
+        },
+    )
+
+
+def refresh_revalidated_base_state(
+    *,
+    state: Mapping[str, Any],
+    report_slot: str,
+    change_class: str,
+    evidence: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Reject an invalid downstream request and revalidate the warm canonical base.
+
+    This path never consumes a stale P4 scenario.  It rematerializes the
+    already-current canonical warm base through the complete delivery barriers.
+    It is suitable only when the controlled change does not alter the governed
+    football semantic surface itself, or when a P4 lookup miss is being
+    rejected before any scenario surface is applied.
+    """
+    bundle = deepcopy(dict(state.get("bundle") or {}))
+    sections = _section_map(bundle)
+    if not sections:
+        raise SelectiveRefreshError("canonical base has no report sections")
+    return _finalize_deep_state(
+        state=state,
+        section_payloads=sections,
+        report_slot=report_slot,
+        change_class=change_class,
+        evidence={
+            "stale_scenario_reused": False,
+            "canonical_base_rematerialized": True,
+            **deepcopy(dict(evidence)),
         },
     )

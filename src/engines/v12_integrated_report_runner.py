@@ -4666,9 +4666,18 @@ def refresh_price_only_state(
     this executor does not pretend that unchanged football-return math was
     recomputed.
     """
-    refreshed = deepcopy(dict(state))
-    bundle = deepcopy(dict(refreshed.get("bundle") or {}))
-    warm = deepcopy(dict(refreshed.get("warm_state") or {}))
+    # Copy-on-write: PRICE_ONLY changes predictor-derived/downstream report
+    # surfaces only. Preserve the large frozen football/model state by
+    # reference and copy only containers that are actually mutated below.
+    refreshed = dict(state)
+    bundle_source = refreshed.get("bundle")
+    warm_source = refreshed.get("warm_state")
+    if not isinstance(bundle_source, Mapping) or not isinstance(warm_source, Mapping):
+        raise IntegratedRunnerError(
+            "PRICE_ONLY requires canonical bundle and warm state"
+        )
+    bundle = dict(bundle_source)
+    warm = dict(warm_source)
     if str(bundle.get("report_mode") or "").upper() != "DEEP":
         raise IntegratedRunnerError("PRICE_ONLY partial refresh requires DEEP state")
     if not warm or not isinstance(bundle.get("report"), Mapping):
@@ -4698,7 +4707,9 @@ def refresh_price_only_state(
             continue
         section_payloads[sid] = {
             "state": raw.get("state"),
-            "content": deepcopy(raw.get("content")),
+            # Unchanged section payloads remain immutable by reference.
+            # PRICE-dependent sections are copied explicitly before mutation.
+            "content": raw.get("content"),
             "degradation_reason": raw.get("degradation_reason"),
             "available_count": raw.get("available_count"),
             "expected_count": raw.get("expected_count"),
@@ -4746,9 +4757,7 @@ def refresh_price_only_state(
     )
 
     official = _official_payload(runtime_data_root)
-    s15b_content = deepcopy(
-        dict(section_payloads["S15B"].get("content") or {})
-    )
+    s15b_content = dict(section_payloads["S15B"].get("content") or {})
     all15_rows = _enrich_all15_rows(
         all15=dict(warm.get("all15") or {}),
         projections=projections,
@@ -4760,9 +4769,7 @@ def refresh_price_only_state(
         calendar_context=calendar_context,
     )
 
-    s01_existing = deepcopy(
-        dict(section_payloads["S01"].get("content") or {})
-    )
+    s01_existing = dict(section_payloads["S01"].get("content") or {})
     old_dashboard = dict(s01_existing.get("decision_dashboard") or {})
     personal_auth = str(old_dashboard.get("PERSONAL_AUTH") or "UNAVAILABLE")
     auth_state = (
@@ -4772,9 +4779,7 @@ def refresh_price_only_state(
         if personal_auth == "DEGRADED"
         else "UNAVAILABLE"
     )
-    captain_surface = deepcopy(
-        dict(section_payloads["S08"].get("content") or {})
-    )
+    captain_surface = dict(section_payloads["S08"].get("content") or {})
     captain_surface.pop("authoritative_binding", None)
     operational_action = str(
         stage3_decision.get("operational_action") or "WAIT"
@@ -4798,9 +4803,7 @@ def refresh_price_only_state(
         auth_state=auth_state,
         finance=finance,
     )
-    stage3_visible = deepcopy(
-        dict(section_payloads["S14"].get("content") or {})
-    )
+    stage3_visible = dict(section_payloads["S14"].get("content") or {})
     stage3_visible.pop("authoritative_binding", None)
     action_board = _action_board_surface(
         dashboard=decision_dashboard,
@@ -4822,7 +4825,7 @@ def refresh_price_only_state(
     }
 
     def bound(sid: str, content: Mapping[str, Any]) -> dict[str, Any]:
-        out = deepcopy(dict(content))
+        out = dict(content)
         producer = bindings.get(sid)
         if producer:
             out["authoritative_binding"] = {
@@ -4850,11 +4853,11 @@ def refresh_price_only_state(
     )
     section_payloads["S01"]["content"] = bound("S01", s01_existing)
 
-    s02 = deepcopy(dict(section_payloads["S02"].get("content") or {}))
+    s02 = dict(section_payloads["S02"].get("content") or {})
     s02["rows"] = all15_rows
     section_payloads["S02"]["content"] = bound("S02", s02)
 
-    s03 = deepcopy(dict(section_payloads["S03"].get("content") or {}))
+    s03 = dict(section_payloads["S03"].get("content") or {})
     decision_delta = dict(s03.get("decision_delta") or {})
     current_snapshot = dict(decision_delta.get("current_snapshot") or {})
     player_state = dict(current_snapshot.get("player_state") or {})
@@ -4886,7 +4889,7 @@ def refresh_price_only_state(
         None if price_radar else "Official FPL predictor radar unavailable",
     )
 
-    s11 = deepcopy(dict(section_payloads["S11"].get("content") or {}))
+    s11 = dict(section_payloads["S11"].get("content") or {})
     s11.update(watchlist)
     section_payloads["S11"]["content"] = bound("S11", s11)
 
@@ -4905,8 +4908,8 @@ def refresh_price_only_state(
         expected_count=20,
     )
 
-    s15 = deepcopy(dict(section_payloads["S15"].get("content") or {}))
-    evidence_quality = deepcopy(dict(s15.get("evidence_quality") or {}))
+    s15 = dict(section_payloads["S15"].get("content") or {})
+    evidence_quality = dict(s15.get("evidence_quality") or {})
     price_rows = [
         dict(row)
         for row in rise.get("rows") or []
@@ -4929,12 +4932,12 @@ def refresh_price_only_state(
     s15["evidence_quality"] = evidence_quality
     section_payloads["S15"]["content"] = bound("S15", s15)
 
-    s16 = deepcopy(dict(section_payloads["S16"].get("content") or {}))
+    s16 = dict(section_payloads["S16"].get("content") or {})
     s16["rows"] = all15_rows
     section_payloads["S16"]["content"] = bound("S16", s16)
 
-    s17 = deepcopy(dict(section_payloads["S17"].get("content") or {}))
-    source_health = deepcopy(dict(s17.get("source_health") or {}))
+    s17 = dict(section_payloads["S17"].get("content") or {})
+    source_health = dict(s17.get("source_health") or {})
     source_health.update(
         {
             "price_predictor": rise.get("predictor_health") or "UNAVAILABLE",
@@ -4957,7 +4960,7 @@ def refresh_price_only_state(
     s17["source_health"] = source_health
     section_payloads["S17"]["content"] = s17
 
-    s18 = deepcopy(dict(section_payloads["S18"].get("content") or {}))
+    s18 = dict(section_payloads["S18"].get("content") or {})
     s18.update(
         {
             "action_board": action_board,
@@ -5091,7 +5094,7 @@ def refresh_price_only_state(
         )
 
     ledger = [
-        deepcopy(row)
+        dict(row)
         for row in bundle.get("stage_ledger") or []
         if isinstance(row, Mapping)
     ]
@@ -5116,7 +5119,7 @@ def refresh_price_only_state(
             },
         }
     )
-    execution_proof = deepcopy(dict(bundle.get("execution_proof") or {}))
+    execution_proof = dict(bundle.get("execution_proof") or {})
     execution_proof["stages"] = ledger
     execution_proof["warm_partial_refresh"] = {
         "change_class": "PRICE_ONLY",
@@ -5130,7 +5133,7 @@ def refresh_price_only_state(
         "affected_dependency_scope": "PRICE_ONLY",
     }
 
-    source_fingerprints = deepcopy(dict(bundle.get("source_fingerprints") or {}))
+    source_fingerprints = dict(bundle.get("source_fingerprints") or {})
     source_fingerprints["price_predictor"] = _fingerprint(predictor)
     bundle.update(
         {
@@ -5148,7 +5151,7 @@ def refresh_price_only_state(
             "source_fingerprints": source_fingerprints,
         }
     )
-    governance_out = deepcopy(dict(bundle.get("governance") or {}))
+    governance_out = dict(bundle.get("governance") or {})
     governance_out.update(
         {
             "p6_partial_refresh": "PRICE_ONLY",

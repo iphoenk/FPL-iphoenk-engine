@@ -23,7 +23,10 @@ from typing import Any, Mapping
 
 from .v12_cache_operational import LAYERS, plan_cache_behavior
 from .v12_dp2_p6_handoff import occurrence_id, validate_t15_t10_window
-from .v12_integrated_report_runner import refresh_mini_league_only_state
+from .v12_integrated_report_runner import (
+    refresh_mini_league_only_state,
+    refresh_price_only_state,
+)
 from .v12_p6_warm_worker import CanonicalCallbacks, WarmIdentity, WarmWorker
 from .v12_private_publisher import publish_private_output
 from .v12_semantic_oracle import semantic_surface
@@ -651,6 +654,17 @@ def run_window(
             return current_state, dict(plan.expected), {}
         if change_class == "MINI_LEAGUE_ONLY":
             current_state = refresh_mini_league_only_state(
+                runtime_data_root=runtime,
+                state=state,
+                report_slot=logical.isoformat(),
+            )
+            current_state["identity"] = asdict(final_identity)
+            current_state["semantic_surface"] = semantic_surface(
+                current_state["bundle"]
+            )
+            return current_state, dict(plan.expected), {}
+        if change_class == "PRICE_ONLY":
+            current_state = refresh_price_only_state(
                 runtime_data_root=runtime,
                 state=state,
                 report_slot=logical.isoformat(),

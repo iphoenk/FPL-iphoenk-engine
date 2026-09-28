@@ -5,7 +5,10 @@ import json
 from types import SimpleNamespace
 
 from src.engines import v12_p6_runtime
-from src.engines.v12_integrated_report_runner import refresh_mini_league_only_state
+from src.engines.v12_integrated_report_runner import (
+    refresh_mini_league_only_state,
+    refresh_price_only_state,
+)
 from src.engines.v12_perf_f_acceptance import (
     _case_inputs,
     _mutate_price,
@@ -152,6 +155,42 @@ def test_mini_league_partial_refresh_reuses_football_math_and_keeps_qa():
     assert '"human_facing_failures"' in source
     assert '"final_delivery"' in source
     assert '"reused_layers": ["Stage2", "P1.7", "MC"]' in source
+    assert '"football_math_recomputed": False' in source
+    assert "optimize_lineup(" not in source
+    assert "run_package_monte_carlo(" not in source
+
+
+def test_price_only_acceptance_uses_governed_partial_executor():
+    source = inspect.getsource(execute_case)
+    assert 'if change_class == "PRICE_ONLY"' in source
+    assert "refresh_price_only_state(" in source
+    price_branch = source.split('if change_class == "PRICE_ONLY"', 1)[1]
+    price_branch = price_branch.split("current_state = warm_pipeline.compute(", 1)[0]
+    assert "warm_pipeline.compute(" not in price_branch
+    assert "return current_state, dict(plan.expected), {}" in price_branch
+
+
+def test_production_p6_uses_same_price_only_partial_executor():
+    source = inspect.getsource(v12_p6_runtime.run_window)
+    assert 'if change_class == "PRICE_ONLY"' in source
+    assert "refresh_price_only_state(" in source
+    price_branch = source.split('if change_class == "PRICE_ONLY"', 1)[1]
+    price_branch = price_branch.split("current_state = pipeline.compute(final_identity)", 1)[0]
+    assert "pipeline.compute(final_identity)" not in price_branch
+    assert "return current_state, dict(plan.expected), {}" in price_branch
+
+
+def test_price_only_partial_refresh_reuses_stage2_p17_and_keeps_qa():
+    source = inspect.getsource(refresh_price_only_state)
+    assert "build_price20(" in source
+    assert "build_actionable_price_radar(" in source
+    assert "_enrich_watchlist_rows(" in source
+    assert "_enrich_all15_rows(" in source
+    assert "validate_pre_render_qa(" in source
+    assert "validate_post_render_qa(" in source
+    assert "validate_final_delivery_barrier(" in source
+    assert '"reused_layers": ["Stage2", "P1.7"]' in source
+    assert '"partial_layers": ["MC", "scenario"]' in source
     assert '"football_math_recomputed": False' in source
     assert "optimize_lineup(" not in source
     assert "run_package_monte_carlo(" not in source

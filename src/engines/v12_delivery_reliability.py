@@ -330,9 +330,18 @@ def assemble_degraded_deep_report(
     report_slot: str,
     output_dir: Path,
     root_failure: str,
+    root_stage: str | None = None,
     previous_visible_deep_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Create one usable 23-section DEEP report without inventing analytics."""
+    root_stage = str(
+        root_stage
+        or (
+            "V6_REPORT_PREFETCH_BINDING"
+            if root_failure == "PREFETCH_NOT_TERMINAL"
+            else "ANALYTICS_PIPELINE"
+        )
+    )
     previous_bundle = None
     if previous_visible_deep_dir is not None:
         previous_bundle = _read_json(
@@ -440,6 +449,7 @@ def assemble_degraded_deep_report(
         "content": {
             "presentation_status": "DEGRADED",
             "root_failure": root_failure,
+            "root_stage": root_stage,
             "runner_state": "BLOCKED_UPSTREAM",
             "report_slot": report_slot,
             "prefetch_terminal": prefetch["terminal"],
@@ -492,10 +502,10 @@ def assemble_degraded_deep_report(
     )
     stage_ledger = [
         {
-            "stage": "V6_REPORT_PREFETCH_BINDING",
+            "stage": root_stage,
             "status": "FAILED",
             "required": True,
-            "error_class": "UPSTREAM_DELIVERY_ROOT_FAILURE",
+            "error_class": "DELIVERY_ROOT_FAILURE",
             "error": root_failure,
         }
     ] + [
@@ -699,13 +709,10 @@ def validate_delivery_bundle(bundle: Mapping[str, Any]) -> list[str]:
     if str(bundle.get("delivery_status") or "") == "READY_DEGRADED":
         if len(root_failures) > 1:
             failures.append("MULTIPLE_ROOT_FAILURES")
-        false_downstream = [
-            row
-            for row in root_failures
-            if str(row.get("stage") or "") != "V6_REPORT_PREFETCH_BINDING"
-        ]
-        if false_downstream:
-            failures.append("DOWNSTREAM_FALSE_FAILURES")
+        if len(root_failures) == 1 and not str(
+            root_failures[0].get("stage") or ""
+        ).strip():
+            failures.append("ROOT_FAILURE_STAGE_MISSING")
     if not str(bundle.get("visible_body") or "").strip():
         failures.append("VISIBLE_BODY_EMPTY")
     return failures

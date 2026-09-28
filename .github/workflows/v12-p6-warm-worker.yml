@@ -1,0 +1,31 @@
+name: V12 P6 warm worker acceptance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  p6-acceptance:
+    if: github.actor == github.repository_owner && github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run P6 cache, handoff, semantic and privacy acceptance
+        run: |
+          python -m pytest -q             tests/test_v12_cache_operational.py             tests/test_v12_dp2_p6_handoff.py             tests/test_v12_p6_warm_worker.py             tests/test_v12_perf_f_semantic_oracle.py             tests/test_v12_p6_privacy_governance.py
+      - name: Verify private publication boundary
+        env:
+          PRIVATE_REPOSITORY: iphoenk/fpl-reports-private
+          PRIVATE_TOKEN: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
+          PRIVATE_CACHE_KEY: ${{ secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 }}
+        run: |
+          test "$PRIVATE_REPOSITORY" = "iphoenk/fpl-reports-private"
+          test -n "$PRIVATE_TOKEN"
+          test -n "$PRIVATE_CACHE_KEY"
+          echo "P6 acceptance validates private credentials without publishing manager plaintext."

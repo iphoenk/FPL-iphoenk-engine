@@ -1,0 +1,247 @@
+
+name: V12 PERF-B/C exploratory
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/v12-perf-bc-exploratory.yml"
+      - "config/performance/v12_perf_bc.json"
+      - "src/engines/v12_perf_bc.py"
+      - "tests/test_perf_bc_experiment.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v12-perf-bc-\${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  perf-b-e2e:
+    name: PERF-B E2E ABAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      OPENBLAS_CORETYPE: Haswell
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      NPY_DISABLE_CPU_FEATURES: "X86_V4,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR"
+    steps:
+      - name: Checkout exact experiment head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: \${{ github.event.pull_request.head.sha || github.sha }}
+          path: app
+          persist-credentials: false
+
+      - name: Checkout runtime-data-v6 history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: runtime-data-v6
+          path: runtime-data
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Checkout private evidence read-only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: iphoenk/fpl-reports-private
+          ref: main
+          path: private-reports
+          token: \${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install locked runtime dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.lock
+
+      - name: Select frozen successful DEEP occurrence
+        id: occurrence
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m src.engines.v12_perf_bc select-occurrence \
+            --private-root ../private-reports \
+            --output artifacts/perf-bc-occurrence.json
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          p = json.loads(Path("artifacts/perf-bc-occurrence.json").read_text())
+          print(f"report_slot={p['report_slot']}")
+          print(f"runtime_sha={p['runtime_sha']}")
+          previous = p.get("previous_deep_dir") or ""
+          print(f"previous_deep_dir={previous}")
+          PY
+
+      - name: Checkout exact frozen runtime commit
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime_sha="\${{ steps.occurrence.outputs.runtime_sha }}"
+          git -C ../runtime-data fetch origin "$runtime_sha" --depth=1
+          git -C ../runtime-data checkout --detach "$runtime_sha"
+          test "$(git -C ../runtime-data rev-parse HEAD)" = "$runtime_sha"
+
+      - name: Run PERF-B same-host full DEEP ABAB
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          model_sha="$(git rev-parse HEAD)"
+          python -m src.engines.v12_perf_bc perf-b \
+            --runtime-data-root ../runtime-data \
+            --private-root ../private-reports \
+            --report-slot "\${{ steps.occurrence.outputs.report_slot }}" \
+            --runtime-sha "\${{ steps.occurrence.outputs.runtime_sha }}" \
+            --model-sha "$model_sha" \
+            --previous-deep-dir "\${{ steps.occurrence.outputs.previous_deep_dir }}" \
+            --work-dir artifacts/perf-b-work \
+            --output artifacts/perf-b-safe.json
+
+      - name: Upload public-safe PERF-B evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v12-perf-b-safe-\${{ github.run_id }}
+          path: app/artifacts/perf-b-safe.json
+          if-no-files-found: error
+          retention-days: 14
+
+  perf-c-mc:
+    name: PERF-C MC implementation candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      OPENBLAS_CORETYPE: Haswell
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      NPY_DISABLE_CPU_FEATURES: "X86_V4,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR"
+    steps:
+      - name: Checkout exact experiment head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: \${{ github.event.pull_request.head.sha || github.sha }}
+          path: app
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install locked runtime dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.lock
+
+      - name: Run PERF-C MC ABAB
+        working-directory: app
+        run: |
+          python -m src.engines.v12_perf_bc perf-c-mc \
+            --work-dir artifacts/perf-c-mc-work \
+            --output artifacts/perf-c-mc-safe.json
+
+      - name: Upload public-safe PERF-C MC evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v12-perf-c-mc-safe-\${{ github.run_id }}
+          path: app/artifacts/perf-c-mc-safe.json
+          if-no-files-found: error
+          retention-days: 14
+
+  perf-c-stage2:
+    name: PERF-C Stage2 workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      OPENBLAS_CORETYPE: Haswell
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      NPY_DISABLE_CPU_FEATURES: "X86_V4,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR"
+    steps:
+      - name: Checkout exact experiment head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: \${{ github.event.pull_request.head.sha || github.sha }}
+          path: app
+          persist-credentials: false
+
+      - name: Checkout runtime-data-v6 history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: runtime-data-v6
+          path: runtime-data
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Checkout private receipts read-only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: iphoenk/fpl-reports-private
+          ref: main
+          path: private-reports
+          token: \${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install locked runtime dependencies
+        working-directory: app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.lock
+
+      - name: Select frozen successful DEEP occurrence
+        id: occurrence
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m src.engines.v12_perf_bc select-occurrence \
+            --private-root ../private-reports \
+            --output artifacts/perf-bc-occurrence.json
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          p = json.loads(Path("artifacts/perf-bc-occurrence.json").read_text())
+          print(f"runtime_sha={p['runtime_sha']}")
+          PY
+
+      - name: Checkout exact frozen runtime commit
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime_sha="\${{ steps.occurrence.outputs.runtime_sha }}"
+          git -C ../runtime-data fetch origin "$runtime_sha" --depth=1
+          git -C ../runtime-data checkout --detach "$runtime_sha"
+          test "$(git -C ../runtime-data rev-parse HEAD)" = "$runtime_sha"
+
+      - name: Run PERF-C Stage2 baseline and 1/2/4 workers
+        working-directory: app
+        run: |
+          python -m src.engines.v12_perf_bc perf-c-stage2 \
+            --runtime-data-root ../runtime-data \
+            --work-dir artifacts/perf-c-stage2-work \
+            --output artifacts/perf-c-stage2-safe.json
+
+      - name: Upload public-safe PERF-C Stage2 evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v12-perf-c-stage2-safe-\${{ github.run_id }}
+          path: app/artifacts/perf-c-stage2-safe.json
+          if-no-files-found: error
+          retention-days: 14

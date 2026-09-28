@@ -4628,6 +4628,84 @@ def _section(
     return row
 
 
+def _record_mini_warm_reuse_stage(
+    ledger: list[dict[str, Any]],
+    stage: str,
+    payload: Any,
+    *,
+    required: bool = True,
+) -> None:
+    if payload is None:
+        raise IntegratedRunnerError(
+            f"MINI_LEAGUE_ONLY warm reuse missing frozen payload: {stage}"
+        )
+    ledger.append(
+        {
+            "stage": stage,
+            "status": "PASS",
+            "required": required,
+            "reason": None,
+            "output_fingerprint": _fingerprint(payload),
+            "elapsed_seconds": 0.0,
+            "evidence": {
+                "warm_reuse": True,
+                "cache_state": "HIT",
+                "source": "FROZEN_SAME_OCCURRENCE_PRIVATE_WARM_STATE",
+            },
+        }
+    )
+
+
+def _validate_mini_warm_state(
+    warm: Mapping[str, Any],
+    *,
+    planning_gw: int,
+    owned: Sequence[Mapping[str, Any]],
+) -> None:
+    if str(warm.get("schema") or "") != "FPL_MASTER_V12_PRIVATE_WARM_STATE_V1":
+        raise IntegratedRunnerError("unsupported private warm-state schema")
+    if warm.get("private_only") is not True:
+        raise IntegratedRunnerError("warm reuse state is not private-only")
+    if int(warm.get("planning_gw") or 0) != int(planning_gw):
+        raise IntegratedRunnerError("cross-GW MINI_LEAGUE_ONLY warm reuse rejected")
+    current_ids = sorted(
+        int(row.get("element_id") or 0)
+        for row in owned
+        if int(row.get("element_id") or 0) > 0
+    )
+    frozen_ids = sorted(
+        int(row.get("element_id") or 0)
+        for row in warm.get("owned") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    )
+    if current_ids != frozen_ids or len(current_ids) != 15:
+        raise IntegratedRunnerError(
+            "MINI_LEAGUE_ONLY warm reuse current15 identity mismatch"
+        )
+    required = (
+        "projections",
+        "all15",
+        "lineup",
+        "post_match_review",
+        "package_search_result",
+        "direct_package_utility",
+        "funding_leg_selection",
+        "funded_search_result",
+        "funded_package_utility",
+        "package_utility",
+        "material_mc_routes",
+        "monte_carlo",
+        "stage3_decision",
+        "package_with_stage3_pre_mini",
+    )
+    missing = [key for key in required if warm.get(key) is None]
+    if missing:
+        raise IntegratedRunnerError(
+            "MINI_LEAGUE_ONLY warm reuse missing frozen state: "
+            + ",".join(missing)
+        )
+
+
 def run_deep(
     *,
     runtime_data_root: Path,
@@ -4640,9 +4718,22 @@ def run_deep(
     require_private_personal: bool = False,
     scenario_overrides: Mapping[str | int, Mapping[str, Any]] | None = None,
     warm_state_out: Path | None = None,
+    warm_reuse_state: Mapping[str, Any] | None = None,
+    warm_reuse_change_class: str | None = None,
 ) -> dict[str, Any]:
     ledger: list[dict[str, Any]] = []
     scenario_overrides = dict(scenario_overrides or {})
+    warm_reuse = dict(warm_reuse_state or {})
+    warm_change = str(warm_reuse_change_class or "").strip().upper()
+    if warm_change and warm_change != "MINI_LEAGUE_ONLY":
+        raise IntegratedRunnerError(
+            f"unsupported warm reuse change class: {warm_change}"
+        )
+    mini_only_warm_reuse = bool(warm_reuse) and warm_change == "MINI_LEAGUE_ONLY"
+    if mini_only_warm_reuse and scenario_overrides:
+        raise IntegratedRunnerError(
+            "MINI_LEAGUE_ONLY warm reuse cannot carry scenario overrides"
+        )
     stage2_cache_proof: dict[str, Any] = {}
     canonical = CANONICAL_PATH.read_text(encoding="utf-8")
     state = _read_json(STATE_PATH, {}) or {}
@@ -4756,6 +4847,12 @@ def run_deep(
     )
     if not owned:
         raise IntegratedRunnerError("OUR15 unavailable")
+    if mini_only_warm_reuse:
+        _validate_mini_warm_state(
+            warm_reuse,
+            planning_gw=planning_gw,
+            owned=owned,
+        )
 
     strength = _stage(
         ledger,
@@ -4776,7 +4873,27 @@ def run_deep(
         ),
         required=True,
     )
-    if foundation:
+    if foundation and mini_only_warm_reuse:
+        projections = deepcopy(warm_reuse["projections"])
+        frozen_stage2 = dict(warm_reuse.get("stage2_cache_proof") or {})
+        stage2_cache_proof.update(
+            {
+                **frozen_stage2,
+                "status": "HIT",
+                "cache_hit": True,
+                "cache_miss": False,
+                "cache_write": False,
+                "warm_memory_reuse": True,
+                "load_or_build_seconds": 0.0,
+            }
+        )
+        _record_mini_warm_reuse_stage(
+            ledger,
+            "P1_1_P1_3_FULL_UNIVERSE",
+            projections,
+            required=True,
+        )
+    elif foundation:
         def _canonical_stage2_builder() -> dict[str, Any]:
             return build_player_projections(
                 bootstrap,
@@ -4878,7 +4995,22 @@ def run_deep(
     )
 
     owned_ids = {int(row["element_id"]) for row in owned}
-    if projections:
+    if projections and mini_only_warm_reuse:
+        _record_mini_warm_reuse_stage(
+            ledger, "OFFICIAL_ROLE_EVIDENCE", projections, required=False
+        )
+        _record_mini_warm_reuse_stage(
+            ledger, "P1_6_TACTICAL_ROLE", projections, required=False
+        )
+        all15 = deepcopy(warm_reuse["all15"])
+        lineup = deepcopy(warm_reuse["lineup"])
+        _record_mini_warm_reuse_stage(
+            ledger, "ALL15_MATERIALIZATION", all15, required=True
+        )
+        _record_mini_warm_reuse_stage(
+            ledger, "P1_7_LINEUP", lineup, required=False
+        )
+    elif projections:
         _stage(
             ledger,
             "OFFICIAL_ROLE_EVIDENCE",
@@ -4945,17 +5077,26 @@ def run_deep(
         lineup = None
 
 
-    post_match_review = _stage(
-        ledger,
-        "S16B_POST_MATCH_GW1_NOW",
-        lambda: _post_match_review(
-            projections=projections,
-            foundation=foundation,
-            owned_ids=owned_ids,
-            current_gw=max(1, planning_gw - 1),
-        ),
-        required=True,
-    ) if projections and foundation else None
+    if mini_only_warm_reuse:
+        post_match_review = deepcopy(warm_reuse["post_match_review"])
+        _record_mini_warm_reuse_stage(
+            ledger,
+            "S16B_POST_MATCH_GW1_NOW",
+            post_match_review,
+            required=True,
+        )
+    else:
+        post_match_review = _stage(
+            ledger,
+            "S16B_POST_MATCH_GW1_NOW",
+            lambda: _post_match_review(
+                projections=projections,
+                foundation=foundation,
+                owned_ids=owned_ids,
+                current_gw=max(1, planning_gw - 1),
+            ),
+            required=True,
+        ) if projections and foundation else None
     if post_match_review is None:
         post_match_review = {
             "our15": [],
@@ -5153,9 +5294,74 @@ def run_deep(
     monte_carlo = None
     stage3_decision = None
     package_with_stage3 = None
+    package_with_stage3_pre_mini = None
     mini_overlay = None
 
-    if projections is not None and canonical_complete:
+    if projections is not None and canonical_complete and mini_only_warm_reuse:
+        package_search_result = deepcopy(warm_reuse["package_search_result"])
+        direct_package_utility = deepcopy(warm_reuse["direct_package_utility"])
+        funding_leg_selection = deepcopy(warm_reuse["funding_leg_selection"])
+        funded_search_result = deepcopy(warm_reuse["funded_search_result"])
+        funded_package_utility = deepcopy(warm_reuse["funded_package_utility"])
+        package_utility = deepcopy(warm_reuse["package_utility"])
+        material_mc_routes = deepcopy(warm_reuse["material_mc_routes"])
+        monte_carlo = deepcopy(warm_reuse["monte_carlo"])
+        stage3_decision = deepcopy(warm_reuse["stage3_decision"])
+        package_with_stage3_pre_mini = deepcopy(
+            warm_reuse["package_with_stage3_pre_mini"]
+        )
+        package_with_stage3 = deepcopy(package_with_stage3_pre_mini)
+        reused_stage_payloads = (
+            ("P1_2A_PACKAGE_SEARCH", package_search_result),
+            ("P1_2_PACKAGE_UTILITY", direct_package_utility),
+            ("P1_2_MATERIAL_FUNDING_LEGS", funding_leg_selection),
+            ("P1_2A_FUNDED_PACKAGE_SEARCH", funded_search_result),
+            ("P1_2B_FUNDED_PACKAGE_UTILITY", funded_package_utility),
+            ("P1_2B_PACKAGE_COMBINE", package_utility),
+            ("P1_4_MATERIAL_ROUTE_SELECTION", material_mc_routes),
+            ("P1_4_MONTE_CARLO", monte_carlo),
+            ("P1_4_PACKAGE_BINDING", package_with_stage3_pre_mini),
+            ("P1_2_STAGE3_DECISION_CLOSURE", stage3_decision),
+            ("P1_2_STAGE3_DECISION_BINDING", package_with_stage3_pre_mini),
+        )
+        for stage_name, payload in reused_stage_payloads:
+            _record_mini_warm_reuse_stage(
+                ledger, stage_name, payload, required=True
+            )
+        if package_with_stage3 and mini:
+            mini_overlay = _stage(
+                ledger,
+                "P1_8_MINI_LEAGUE_OVERLAY",
+                lambda: evaluate_mini_league_overlay(
+                    package_with_stage3,
+                    mini,
+                    monte_carlo=monte_carlo,
+                    relative_mc=None,
+                    input_snapshot_id=(
+                        "STAGE3_MINI:" + _fingerprint(mini)[:24]
+                    ),
+                    generated_at=report_slot,
+                ),
+                required=True,
+            )
+            if mini_overlay:
+                package_with_stage3 = _stage(
+                    ledger,
+                    "P1_8_MINI_LEAGUE_BINDING",
+                    lambda: attach_mini_league_overlay(
+                        package_with_stage3,
+                        mini_overlay,
+                    ),
+                    required=True,
+                )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_8_MINI_LEAGUE_OVERLAY",
+                "package decision or mini-league snapshot unavailable",
+                required=True,
+            )
+    elif projections is not None and canonical_complete:
         package_candidates = _package_candidate_rows(projections)
         # P1.2A exhaustively searches the complete direct universe first.
         # Funded two-transfer packages are then composed only from direct legs
@@ -5397,6 +5603,11 @@ def run_deep(
                 required=True,
             )
 
+        package_with_stage3_pre_mini = (
+            deepcopy(package_with_stage3)
+            if package_with_stage3
+            else None
+        )
         if package_with_stage3 and mini:
             mini_overlay = _stage(
                 ledger,
@@ -6447,6 +6658,8 @@ def run_deep(
             "owned": owned,
             "all15": all15,
             "lineup": lineup,
+            "post_match_review": post_match_review,
+            "stage2_cache_proof": stage2_cache_proof,
             "predictor": predictor,
             "rise": rise,
             "fall": fall,
@@ -6468,6 +6681,7 @@ def run_deep(
             "material_mc_routes": material_mc_routes,
             "monte_carlo": monte_carlo,
             "stage3_decision": stage3_decision,
+            "package_with_stage3_pre_mini": package_with_stage3_pre_mini,
             "package_with_stage3": package_with_stage3,
             "mini_overlay": mini_overlay,
         }
@@ -6525,6 +6739,16 @@ def main() -> int:
         default=None,
         help="Ephemeral private warm-state output; never a public artifact.",
     )
+    parser.add_argument(
+        "--warm-reuse-state-file",
+        default=None,
+        help="Private frozen same-occurrence state for governed selective warm reuse.",
+    )
+    parser.add_argument(
+        "--warm-reuse-change-class",
+        default=None,
+        help="Governed selective warm change class; currently MINI_LEAGUE_ONLY only.",
+    )
     args = parser.parse_args()
     mode = str(args.report_mode).upper()
     if mode not in SUPPORTED_MODES:
@@ -6532,10 +6756,22 @@ def main() -> int:
             f"integrated runner supports {sorted(SUPPORTED_MODES)}; got {mode}"
         )
     scenario_overrides = {}
+    warm_reuse_state = {}
     if args.warm_state_out and not args.private_data_root:
         raise IntegratedRunnerError(
             "private warm state requires an explicit private data plane"
         )
+    if args.warm_reuse_state_file:
+        if mode != "DEEP":
+            raise IntegratedRunnerError("warm reuse requires DEEP mode")
+        if not args.private_data_root:
+            raise IntegratedRunnerError(
+                "warm reuse requires an explicit private data plane"
+            )
+        raw_warm_reuse = _read_json(Path(args.warm_reuse_state_file), None)
+        if not isinstance(raw_warm_reuse, dict):
+            raise IntegratedRunnerError("warm reuse state file must be a JSON object")
+        warm_reuse_state = raw_warm_reuse
     if args.scenario_overrides_file:
         if mode != "DEEP":
             raise IntegratedRunnerError("P4 scenario overrides require DEEP mode")
@@ -6584,6 +6820,8 @@ def main() -> int:
                     if args.warm_state_out
                     else None
                 ),
+                warm_reuse_state=warm_reuse_state,
+                warm_reuse_change_class=args.warm_reuse_change_class,
             )
         except Exception as exc:
             message = str(exc)

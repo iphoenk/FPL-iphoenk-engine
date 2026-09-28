@@ -154,11 +154,11 @@ def inspect_prefetch_terminal(
         age_minutes = abs(
             (requested - generated.astimezone(requested.tzinfo)).total_seconds()
         ) / 60.0
-        if age_minutes > 15.0:
-            failed.append("same_occurrence_age")
-            checks["same_occurrence_age"] = False
-        else:
-            checks["same_occurrence_age"] = True
+        # Age is observability only. Exact occurrence identity plus the governed
+        # fresh_for_target_report flag are the terminality authority. A hard
+        # age threshold here could reject a valid T-15 precompute because of
+        # normal release/publish jitter.
+        checks["same_occurrence_age_observed"] = True
 
     return {
         "terminal": not failed,

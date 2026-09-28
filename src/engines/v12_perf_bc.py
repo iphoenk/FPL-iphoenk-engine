@@ -209,15 +209,6 @@ def _stage_seconds(bundle: Mapping[str, Any]) -> dict[str, float]:
                 pass
     return out
 
-        name = str(row.get("stage") or "")
-        elapsed = row.get("elapsed_seconds")
-        if name and elapsed is not None:
-            try:
-                out[name] = float(elapsed)
-            except (TypeError, ValueError):
-                pass
-    return out
-
 
 def _mc_native_child(input_path: Path, output_path: Path) -> int:
     from src.engines.v12_monte_carlo import run_correlated_monte_carlo

@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-28T07:50:00+07:00`  
-> **Production main at sync:** `1df1863b982a1b1fd8575db9d351232eecb00f2a`  
+> **Last runtime/documentation sync:** `2026-09-28T07:59:00+07:00`  
+> **Production main at sync:** `5ff0e8b2c25a118d099ffb57ea55acda82e1e186`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -36,7 +36,7 @@ Stage2 public live acceptance consumes the already-published post-deadline Offic
 
 PERF-0 freezes latency measurement before optimization: closure requires 6 comparable canonical production-main DEEP executions. Natural and controlled production-equivalent executions may qualify, but controlled runs never count as scheduler proof and branch acceptance is excluded. p90 remains informational until n>=10. Exact app/runtime lineage, runtime/cache class and observable CPU/runtime metadata are preserved, while queue, startup, setup, factual acquisition, Stage-2, P1.2A, P1.2B, P1.7, MC, render, QA, private publish and total timing remain distinct. Controlled COLD runs use `SECURE_NO_PERSONAL_CACHE`, do not restore or persist personal-decision caches, and do not receive the production decrypt key.
 
-Cache invalidation is governed by a frozen four-state dependency matrix: `HIT`, `MISS`, `PARTIAL_INVALIDATION`, and `NOT_APPLICABLE`. Selective reuse is permitted only with explicit dependency keys; uncertain scope falls back to MISS, and every warm path must remain semantically equal to canonical cold output.
+PERF-A is closed on production main with its frozen native/normalized material-speedup threshold of `<= 0.90`; the latest exact-head ABAB evidence remains `KEEP_NORMALIZED_RUNTIME`. PERF-B and PERF-C are isolated exploratory harnesses only: they preserve 500,000 MC paths, full-universe/search semantics, canonical QA and privacy boundaries, and cannot change production runtime selection without a separate governed promotion PR.\n\nCache invalidation is governed by a frozen four-state dependency matrix: `HIT`, `MISS`, `PARTIAL_INVALIDATION`, and `NOT_APPLICABLE`. Selective reuse is permitted only with explicit dependency keys; uncertain scope falls back to MISS, and every warm path must remain semantically equal to canonical cold output.
 
 ## Questions it answers
 
@@ -605,7 +605,7 @@ Repository changes are governed by CI and the documentation-sync contract. A cha
 
 As of the README sync timestamp above:
 
-- production `main` is `1df1863b982a1b1fd8575db9d351232eecb00f2a`;
+- production `main` is `5ff0e8b2c25a118d099ffb57ea55acda82e1e186`;
 - V6 is the active factual plane;
 - Canonical V12 is the active analytics and decision plane;
 - the public/private decision-data boundary is active;

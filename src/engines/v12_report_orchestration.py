@@ -652,6 +652,21 @@ def build_calendar_workload_context(
             ),
             None,
         )
+        next_non_pl_dt = (
+            _calendar_dt(next_non_pl.get("kickoff"))
+            if isinstance(next_non_pl, Mapping)
+            else None
+        )
+        rest_after_next_non_pl_hours = (
+            round(
+                (next_pl_dt - next_non_pl_dt).total_seconds() / 3600.0,
+                2,
+            )
+            if next_pl_dt is not None
+            and next_non_pl_dt is not None
+            and next_pl_dt >= next_non_pl_dt
+            else None
+        )
         reintegration = next(
             (
                 row.get("reintegration_state")
@@ -732,6 +747,7 @@ def build_calendar_workload_context(
                 "load_state": load_state,
                 "non_pl_competitions": non_pl_competitions,
                 "next_non_pl_event": next_non_pl,
+                "rest_hours_after_next_non_pl_to_pl": rest_after_next_non_pl_hours,
                 "cross_border_travel": any(
                     bool(row.get("cross_border"))
                     for _, row in context_dated
@@ -4092,6 +4108,7 @@ def _render_deep_visible_contract_lines(
                     "load_state",
                     "non_pl_competitions",
                     "next_non_pl",
+                    "rest_non_pl_to_pl_h",
                     "prev_match",
                     "next_pl",
                     "matches_3/7/14/21",
@@ -4113,6 +4130,7 @@ def _render_deep_visible_contract_lines(
                         row.get("load_state"),
                         row.get("non_pl_competitions"),
                         row.get("next_non_pl_event"),
+                        row.get("rest_hours_after_next_non_pl_to_pl"),
                         row.get("previous_match_datetime"),
                         row.get("next_pl_fixture_datetime"),
                         row.get("matches_last_days"),

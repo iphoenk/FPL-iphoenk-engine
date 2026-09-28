@@ -5082,8 +5082,41 @@ def refresh_mini_league_only_state(
         or human_failures
         or str(final_delivery_barrier.get("status") or "").upper() != "PASS"
     ):
+        safe_qa_failure = {
+            "pre_render": {
+                "status": str(pre_render_qa.get("status") or ""),
+                "failures": [
+                    str(value)
+                    for value in (
+                        pre_render_qa.get("hard_failures")
+                        or pre_render_qa.get("failures")
+                        or []
+                    )
+                ],
+            },
+            "post_render": {
+                "status": str(post_render_qa.get("status") or ""),
+                "failures": [
+                    str(value)
+                    for value in (
+                        post_render_qa.get("hard_failures")
+                        or post_render_qa.get("failures")
+                        or []
+                    )
+                ],
+            },
+            "human_facing_failures": [str(value) for value in human_failures],
+            "final_delivery": {
+                "status": str(final_delivery_barrier.get("status") or ""),
+                "failures": [
+                    str(value)
+                    for value in (final_delivery_barrier.get("failures") or [])
+                ],
+            },
+        }
         raise IntegratedRunnerError(
-            "MINI_LEAGUE_ONLY partial refresh failed canonical delivery QA"
+            "MINI_LEAGUE_ONLY partial refresh failed canonical delivery QA: "
+            + json.dumps(safe_qa_failure, sort_keys=True, ensure_ascii=True)
         )
 
     ledger = [

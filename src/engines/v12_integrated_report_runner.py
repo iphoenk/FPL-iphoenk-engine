@@ -3853,8 +3853,14 @@ def _evidence_quality_surface(
             "state": (
                 "COMPLETE"
                 if coverage.get("verified_non_pl_schedule_bound") is True
+                and str(coverage.get("player_observation_status") or "").upper()
+                == "VALIDATED"
+                else "CLUB_SCHEDULE_COMPLETE_PLAYER_OBSERVATIONS_UNAVAILABLE"
+                if coverage.get("verified_non_pl_schedule_bound") is True
                 else "PL_ONLY_DEGRADED"
             ),
+            "club_schedule_status": coverage.get("club_schedule_status"),
+            "player_observation_status": coverage.get("player_observation_status"),
             "static_fatigue_penalty": False,
         },
         "tactical": {

@@ -35,6 +35,8 @@ def test_d_p2_fixed_deep_waits_until_t15_and_preserves_occurrence():
     assert plan.wait_seconds == 45 * 60
     assert plan.counts_as_core_slot is False
     assert plan.advances_scheduler_proof is False
+    assert plan.warm_worker_workflow == "v12-p6-warm-worker.yml"
+    assert len(plan.occurrence_id) == 64
 
 
 def test_d_p2_inside_t15_t10_window_dispatches_immediately():
@@ -130,6 +132,10 @@ def test_d_p2_workflow_is_non_recurring_non_authoritative_and_reuses_v6():
     assert config["may_advance_scheduler_proof"] is False
     assert config["may_acquire_facts_directly"] is False
     assert config["may_publish_runtime_directly"] is False
+    assert config["warm_worker_downstream_only"] is True
+    assert config["warm_worker_may_advance_scheduler_proof"] is False
+    assert config["warm_worker_may_edit_core_issue_title"] is False
+    assert "uses: ./.github/workflows/v12-p6-warm-worker.yml" in text
 
 
 def test_d_p2_bot_dispatch_is_narrowly_authorized_for_report_prefetch_only():

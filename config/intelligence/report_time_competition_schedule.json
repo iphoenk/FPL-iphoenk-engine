@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "contract": "REPORT_TIME_COMPETITION_SCHEDULE_V1",
+  "provider": {
+    "source_id": "espn_report_time_schedule",
+    "name": "ESPN public competition schedule",
+    "base_url": "https://site.api.espn.com/apis/site/v2/sports/soccer",
+    "request_timeout_seconds": 6,
+    "max_parallel_requests": 5,
+    "lookback_days": 21
+  },
+  "competitions": [
+    {
+      "name": "UEFA Champions League",
+      "slug": "uefa.champions",
+      "category": "CONTINENTAL_CLUB"
+    },
+    {
+      "name": "UEFA Europa League",
+      "slug": "uefa.europa",
+      "category": "CONTINENTAL_CLUB"
+    },
+    {
+      "name": "UEFA Conference League",
+      "slug": "uefa.europa.conf",
+      "category": "CONTINENTAL_CLUB"
+    },
+    {
+      "name": "FA Cup",
+      "slug": "eng.fa",
+      "category": "DOMESTIC_CUP"
+    },
+    {
+      "name": "EFL Cup",
+      "slug": "eng.league_cup",
+      "category": "DOMESTIC_CUP"
+    }
+  ],
+  "governance": {
+    "report_time_only": true,
+    "v6_factual_plane_mutated": false,
+    "context_only": true,
+    "official_fpl_remains_pl_fixture_authority": true,
+    "verified_provider_schedule_never_overrides_official_fpl": true,
+    "deterministic_team_identity_only": true,
+    "fuzzy_team_join_forbidden": true,
+    "per_competition_failure_is_fail_soft": true,
+    "no_blanket_fatigue_penalty": true,
+    "direct_xpts_mutation_forbidden": true,
+    "direct_xmins_mutation_forbidden": true,
+    "allowed_use": [
+      "workload_context",
+      "rest_context",
+      "travel_context",
+      "rotation_review",
+      "uncertainty_context"
+    ]
+  },
+  "team_name_aliases": {
+    "AFC Bournemouth": "Bournemouth",
+    "Brighton & Hove Albion": "Brighton",
+    "Leeds United": "Leeds",
+    "Manchester City": "Man City",
+    "Manchester United": "Man Utd",
+    "Newcastle United": "Newcastle",
+    "Nottingham Forest": "Nott'm Forest",
+    "Tottenham Hotspur": "Spurs"
+  }
+}

@@ -449,7 +449,7 @@ def execute_case(
         "private_publish_pass": verdict["private_publish_pass"],
         "expected_cache_state": result["expected_cache_state"],
         "actual_cache_state": result["actual_cache_state"],
-        "timings": verdict["timings"],
+        "timings": result["timings"],
         "production_sha": final_identity.production_sha,
         "runtime_data_sha": final_identity.runtime_data_sha,
         "controlled_input_fingerprint": controlled_fingerprint,

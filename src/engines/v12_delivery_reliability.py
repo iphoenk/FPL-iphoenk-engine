@@ -697,7 +697,13 @@ def validate_delivery_bundle(bundle: Mapping[str, Any]) -> list[str]:
         failures.append("FINAL_JUDGEMENT_NOT_LAST")
     s01 = next((row for row in sections if row.get("section_id") == "S01"), {})
     s19 = next((row for row in sections if row.get("section_id") == "S19"), {})
-    if not str((s01.get("content") or {}).get("decision") or "").strip():
+    s01_content = dict(s01.get("content") or {})
+    if not str(
+        s01_content.get("decision")
+        or s01_content.get("operational_state")
+        or s01_content.get("primary_decision")
+        or ""
+    ).strip():
         failures.append("DECISION_MISSING")
     if not str((s19.get("content") or {}).get("final_judgement") or "").strip():
         failures.append("FINAL_JUDGEMENT_MISSING")
@@ -973,6 +979,7 @@ def build_serving_snapshot(bundle: Mapping[str, Any]) -> dict[str, Any]:
     decision = (
         s01.get("decision")
         or s01.get("operational_state")
+        or s01.get("primary_decision")
         or ((s19.get("final_judgement") or {}).get("transfer_action")
             if isinstance(s19.get("final_judgement"), Mapping)
             else None)

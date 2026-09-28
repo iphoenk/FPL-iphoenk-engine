@@ -4,12 +4,15 @@ import inspect
 import json
 from types import SimpleNamespace
 
+import pytest
+
 from src.engines import v12_p6_runtime
 from src.engines.v12_integrated_report_runner import (
     refresh_mini_league_only_state,
     refresh_price_only_state,
 )
 from src.engines.v12_perf_f_acceptance import (
+    PerfFAcceptanceError,
     _require_same_slot_prefetch,
     _case_inputs,
     _mutate_price,

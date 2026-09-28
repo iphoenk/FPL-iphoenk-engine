@@ -236,8 +236,6 @@ def _sanitize_stderr_tail(stderr: str, *, max_lines: int = 8) -> str:
         "decrypted",
         "ciphertext",
         "private_cache_key",
-        "secret",
-        "token",
     )
     for raw in str(stderr or "").splitlines()[-80:]:
         line = raw.strip()
@@ -252,7 +250,7 @@ def _sanitize_stderr_tail(stderr: str, *, max_lines: int = 8) -> str:
         ):
             continue
         line = re.sub(r"https?://\\S+", "<url>", line)
-        line = re.sub(r"(?i)(?:authorization|password|secret|token|key)\\s*[:=]\\s*\\S+", r"\\1=<redacted>", line)
+        line = re.sub(r"(?i)(authorization|password|secret|token|key)\\s*[:=]\\s*\\S+", r"\\1=<redacted>", line)
         line = re.sub(r"[A-Za-z0-9+/=_-]{40,}", "<redacted>", line)
         line = re.sub(r"\\b\\d{7,}\\b", "<id>", line)
         line = re.sub(r"(?:/[^\\s:]+)+", "<path>", line)

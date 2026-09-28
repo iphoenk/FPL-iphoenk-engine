@@ -4614,6 +4614,7 @@ def run_deep(
     allow_legacy_private_sources: bool = True,
     require_private_personal: bool = False,
     scenario_overrides: Mapping[str | int, Mapping[str, Any]] | None = None,
+    warm_state_out: Path | None = None,
 ) -> dict[str, Any]:
     ledger: list[dict[str, Any]] = []
     scenario_overrides = dict(scenario_overrides or {})
@@ -6408,6 +6409,53 @@ def run_deep(
             "stage3_requires_internal_producers_before_runner_pass": True,
         },
     }
+    if warm_state_out is not None:
+        warm_state = {
+            "schema": "FPL_MASTER_V12_PRIVATE_WARM_STATE_V1",
+            "private_only": True,
+            "report_slot": report_slot,
+            "planning_gw": planning_gw,
+            "projections": projections,
+            "owned": owned,
+            "all15": all15,
+            "lineup": lineup,
+            "predictor": predictor,
+            "rise": rise,
+            "fall": fall,
+            "price_radar": price_radar,
+            "watchlist": watchlist,
+            "standings": standings,
+            "manager_picks": manager_picks,
+            "mini": mini,
+            "calendar_context": calendar_context,
+            "bgw_context": bgw_context,
+            "canonical_universe": canonical_bundle,
+            "finance": finance,
+            "package_search_result": package_search_result,
+            "direct_package_utility": direct_package_utility,
+            "funding_leg_selection": funding_leg_selection,
+            "funded_search_result": funded_search_result,
+            "funded_package_utility": funded_package_utility,
+            "package_utility": package_utility,
+            "material_mc_routes": material_mc_routes,
+            "monte_carlo": monte_carlo,
+            "stage3_decision": stage3_decision,
+            "package_with_stage3": package_with_stage3,
+            "mini_overlay": mini_overlay,
+        }
+        warm_state_out.parent.mkdir(parents=True, exist_ok=True)
+        warm_state_out.write_text(
+            json.dumps(
+                warm_state,
+                indent=2,
+                sort_keys=True,
+                ensure_ascii=False,
+                default=str,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
     (output_dir / "report_bundle.json").write_text(
         json.dumps(bundle, indent=2, ensure_ascii=False, default=str),
         encoding="utf-8",
@@ -6444,6 +6492,11 @@ def main() -> int:
         default=None,
         help="Private controlled P4 typed availability override JSON.",
     )
+    parser.add_argument(
+        "--warm-state-out",
+        default=None,
+        help="Ephemeral private warm-state output; never a public artifact.",
+    )
     args = parser.parse_args()
     mode = str(args.report_mode).upper()
     if mode not in SUPPORTED_MODES:
@@ -6451,6 +6504,10 @@ def main() -> int:
             f"integrated runner supports {sorted(SUPPORTED_MODES)}; got {mode}"
         )
     scenario_overrides = {}
+    if args.warm_state_out and not args.private_data_root:
+        raise IntegratedRunnerError(
+            "private warm state requires an explicit private data plane"
+        )
     if args.scenario_overrides_file:
         if mode != "DEEP":
             raise IntegratedRunnerError("P4 scenario overrides require DEEP mode")
@@ -6490,6 +6547,11 @@ def main() -> int:
             allow_legacy_private_sources=not args.disable_legacy_private_sources,
             require_private_personal=bool(args.require_private_personal),
             scenario_overrides=scenario_overrides,
+            warm_state_out=(
+                Path(args.warm_state_out)
+                if args.warm_state_out
+                else None
+            ),
         )
     print(
         json.dumps(

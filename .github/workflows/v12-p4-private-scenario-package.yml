@@ -8,7 +8,19 @@ permissions:
   contents: read
 
 concurrency:
-  group: v12-p4-private-scenario-package
+  # Only real /v12-p4-build commands share the governed serial queue.
+  # Unrelated issue-comment fanout gets a unique group so it cannot replace
+  # the single pending P4 command before the job-level if condition is read.
+  group: >-
+    ${{
+      (
+        github.event.issue.number == 431 &&
+        github.actor == github.repository_owner &&
+        startsWith(github.event.comment.body, '/v12-p4-build ')
+      ) &&
+      'v12-p4-private-scenario-package-command' ||
+      format('v12-p4-private-scenario-package-noise-{0}', github.event.comment.id)
+    }}
   cancel-in-progress: false
 
 jobs:

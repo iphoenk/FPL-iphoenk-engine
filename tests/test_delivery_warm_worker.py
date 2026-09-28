@@ -106,6 +106,14 @@ def test_lifecycle_is_bounded_and_clean_shutdown():
     assert worker.state == WorkerState.WARM_READY
     out = worker.apply_change({"change_class": "UNCHANGED", "scope_certain": True})
     assert out["private_delivery_status"] == "PASS"
+    assert set(out["timings"]) == {
+        "classification", "cache_lookup", "recompute", "Stage3",
+        "render", "QA", "private_publish",
+    }
+    assert out["timings"]["Stage3"] == 0.5
+    assert out["timings"]["render"] == 0.5
+    assert out["timings"]["QA"] == 0.5
+    assert out["timings"]["private_publish"] == 0.5
     assert worker.state == WorkerState.WARM_READY
     worker.shutdown()
     assert worker.state == WorkerState.CLEAN_SHUTDOWN

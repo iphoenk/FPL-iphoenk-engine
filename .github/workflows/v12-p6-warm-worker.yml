@@ -1,31 +1,176 @@
-name: V12 P6 warm worker acceptance
+name: V12 P6 warm worker
 
 on:
+  workflow_call:
+    inputs:
+      report_kind:
+        required: true
+        type: string
+      logical_slot:
+        required: true
+        type: string
+      freeze_target_at:
+        required: true
+        type: string
+      occurrence_id:
+        required: true
+        type: string
+    secrets:
+      FPL_PRIVATE_REPORTS_TOKEN:
+        required: true
+      FPL_V12_PRIVATE_CACHE_KEY_B64:
+        required: true
   workflow_dispatch:
+    inputs:
+      report_kind:
+        required: true
+        type: string
+      logical_slot:
+        required: true
+        type: string
+      freeze_target_at:
+        required: true
+        type: string
+      occurrence_id:
+        required: true
+        type: string
+  pull_request:
+    paths:
+      - ".github/workflows/v12-p6-warm-worker.yml"
+      - ".github/workflows/v12-precompute-control.yml"
+      - "config/delivery/v12_precompute_control.json"
+      - "src/engines/v12_cache_operational.py"
+      - "src/engines/v12_dp2_p6_handoff.py"
+      - "src/engines/v12_p6_runtime.py"
+      - "src/engines/v12_p6_warm_worker.py"
+      - "src/engines/v12_perf_f.py"
+      - "src/engines/v12_semantic_oracle.py"
+      - "tests/test_cache_operational.py"
+      - "tests/test_delivery_privacy_governance.py"
+      - "tests/test_delivery_warm_handoff.py"
+      - "tests/test_delivery_warm_runtime.py"
+      - "tests/test_delivery_warm_worker.py"
+      - "tests/test_perf_f_semantic_oracle.py"
 
 permissions:
   contents: read
 
+concurrency:
+  group: v12-p6-warm-${{ inputs.occurrence_id || github.event.pull_request.number }}
+  cancel-in-progress: false
+
 jobs:
-  p6-acceptance:
-    if: github.actor == github.repository_owner && (github.event_name == 'pull_request' || github.ref_name == 'main')
+  contract-tests:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      - name: Run P6 cache, handoff, semantic and privacy acceptance
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-ci.lock
+      - name: Install locked CI dependencies
+        run: python -m pip install --no-deps -r requirements-ci.lock
+      - name: Run P6 cache handoff semantic privacy contracts
         run: |
-          python -m pytest -q             tests/test_cache_operational.py             tests/test_delivery_warm_handoff.py             tests/test_delivery_warm_worker.py             tests/test_perf_f_semantic_oracle.py             tests/test_delivery_privacy_governance.py
-      - name: Verify private publication boundary
-        env:
-          PRIVATE_REPOSITORY: iphoenk/fpl-reports-private
-          PRIVATE_TOKEN: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
-          PRIVATE_CACHE_KEY: ${{ secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 }}
+          set -euo pipefail
+          python -m pytest -q \
+            tests/test_cache_operational.py \
+            tests/test_delivery_warm_handoff.py \
+            tests/test_delivery_warm_runtime.py \
+            tests/test_delivery_warm_worker.py \
+            tests/test_perf_f_semantic_oracle.py \
+            tests/test_delivery_privacy_governance.py
+
+  warm-worker:
+    if: >-
+      github.event_name != 'pull_request' &&
+      github.ref_name == 'main' &&
+      github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      V12_PRIVATE_CACHE_PROFILE: SECURE_ENCRYPTED_PERSONAL_CACHE
+      FPL_V12_PRIVATE_CACHE_KEY_B64: ${{ secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 }}
+    steps:
+      - name: Checkout exact production V12
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: app
+          persist-credentials: false
+
+      - name: Checkout factual runtime-data-v6
+        uses: actions/checkout@v4
+        with:
+          ref: runtime-data-v6
+          path: runtime-data
+          persist-credentials: false
+
+      - name: Checkout governed private decision plane
+        uses: actions/checkout@v4
+        with:
+          repository: iphoenk/fpl-reports-private
+          ref: main
+          path: private-reports
+          token: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
+          persist-credentials: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: app/requirements-ci.lock
+
+      - name: Install locked V12 dependencies
+        working-directory: app
+        run: python -m pip install --no-deps -r requirements-ci.lock
+
+      - name: Verify P6 private encrypted-cache boundary
+        working-directory: app
+        shell: bash
         run: |
-          test "$PRIVATE_REPOSITORY" = "iphoenk/fpl-reports-private"
-          test -n "$PRIVATE_TOKEN"
-          test -n "$PRIVATE_CACHE_KEY"
-          echo "P6 acceptance validates private credentials without publishing manager plaintext."
+          set -euo pipefail
+          test -n "${FPL_V12_PRIVATE_CACHE_KEY_B64:-}"
+          python - <<'PY'
+          import base64
+          import os
+          key = base64.b64decode(
+              os.environ["FPL_V12_PRIVATE_CACHE_KEY_B64"],
+              validate=True,
+          )
+          if len(key) != 32:
+              raise SystemExit(
+                  "P6 private cache key must decode to exactly 32 bytes"
+              )
+          print("P6 private cache key contract: PASS")
+          PY
+
+      - name: Run bounded occurrence-bound P6 warm window
+        working-directory: app
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/v12-p6"
+          python -m src.engines.v12_p6_runtime \
+            --app-root . \
+            --runtime-data-root ../runtime-data \
+            --private-root ../private-reports \
+            --workspace "$RUNNER_TEMP/v12-p6" \
+            --report-kind "${{ inputs.report_kind }}" \
+            --logical-slot "${{ inputs.logical_slot }}" \
+            --freeze-target-at "${{ inputs.freeze_target_at }}" \
+            --occurrence-id "${{ inputs.occurrence_id }}" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --result-out "$RUNNER_TEMP/v12-p6/p6_result.json"
+
+      - name: Enforce no public manager-specific artifact
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -d app/artifacts/v12-p6-public
+          echo "P6 manager-specific state stayed private; no public upload step exists."

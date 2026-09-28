@@ -277,6 +277,13 @@ class CanonicalPipeline:
             ),
         }
 
+        warm_state_path = (
+            self.workspace
+            / "private-warm-state"
+            / f"warm-{self.sequence:03d}.json"
+        )
+        warm_state_path.parent.mkdir(parents=True, exist_ok=True)
+
         runner_args = [
             sys.executable,
             "-m",
@@ -293,6 +300,8 @@ class CanonicalPipeline:
             self.logical_slot,
             "--output-dir",
             str(output),
+            "--warm-state-out",
+            str(warm_state_path),
         ]
         if scenario_overrides:
             if self.report_mode != "DEEP":
@@ -401,6 +410,7 @@ class CanonicalPipeline:
             "execution_proof": proof,
             "stage3_acceptance": stage3,
             "semantic_surface": governed_surface,
+            "warm_state": _read_json(warm_state_path),
         }
 
     def publish(self, state: Mapping[str, Any]) -> dict[str, Any]:

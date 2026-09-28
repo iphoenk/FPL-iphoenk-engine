@@ -4650,6 +4650,551 @@ def _section(
     return row
 
 
+
+def refresh_price_only_state(
+    *,
+    runtime_data_root: Path,
+    state: Mapping[str, Any],
+    report_slot: str,
+) -> dict[str, Any]:
+    """Refresh price-dependent downstream surfaces without recomputing football math.
+
+    PRICE_ONLY preserves Stage2 and exact P1.7. The predictor-derived price
+    surfaces and their downstream presentation/stability surfaces are rebuilt
+    from the frozen warm state, then canonical render/QA barriers are rerun.
+    MC/scenario cache state is reported by the caller as PARTIAL_INVALIDATION;
+    this executor does not pretend that unchanged football-return math was
+    recomputed.
+    """
+    refreshed = deepcopy(dict(state))
+    bundle = deepcopy(dict(refreshed.get("bundle") or {}))
+    warm = deepcopy(dict(refreshed.get("warm_state") or {}))
+    if str(bundle.get("report_mode") or "").upper() != "DEEP":
+        raise IntegratedRunnerError("PRICE_ONLY partial refresh requires DEEP state")
+    if not warm or not isinstance(bundle.get("report"), Mapping):
+        raise IntegratedRunnerError("PRICE_ONLY requires frozen private warm state")
+
+    projections = dict(warm.get("projections") or {})
+    owned = [
+        dict(row) for row in warm.get("owned") or [] if isinstance(row, Mapping)
+    ]
+    lineup = dict(warm.get("lineup") or {})
+    finance = dict(warm.get("finance") or {})
+    stage3_decision = dict(warm.get("stage3_decision") or {})
+    calendar_context = dict(warm.get("calendar_context") or {})
+    mini = dict(warm.get("mini") or {})
+    if not projections or not owned or not lineup or not stage3_decision:
+        raise IntegratedRunnerError(
+            "PRICE_ONLY frozen decision prerequisites are incomplete"
+        )
+
+    report = dict(bundle.get("report") or {})
+    section_payloads: dict[str, dict[str, Any]] = {}
+    for raw in report.get("sections") or []:
+        if not isinstance(raw, Mapping):
+            continue
+        sid = str(raw.get("section_id") or "")
+        if not sid:
+            continue
+        section_payloads[sid] = {
+            "state": raw.get("state"),
+            "content": deepcopy(raw.get("content")),
+            "degradation_reason": raw.get("degradation_reason"),
+            "available_count": raw.get("available_count"),
+            "expected_count": raw.get("expected_count"),
+        }
+    required_sections = {
+        "S01", "S02", "S03", "S08", "S10", "S11", "S12", "S13",
+        "S14", "S15", "S15B", "S16", "S17", "S18", "S19",
+    }
+    missing = sorted(required_sections - set(section_payloads))
+    if missing:
+        raise IntegratedRunnerError(
+            "PRICE_ONLY missing baseline sections: " + ",".join(missing)
+        )
+
+    predictor = _read_json(
+        runtime_data_root / "data/v6/current/official_price_predictor.json",
+        {},
+    ) or {}
+    owned_ids = sorted(
+        int(row.get("element_id") or 0)
+        for row in owned
+        if int(row.get("element_id") or 0) > 0
+    )
+    rise = build_price20(
+        predictor_artifact=predictor,
+        direction="RISE",
+        owned_element_ids=owned_ids,
+        report_timestamp=report_slot,
+    )
+    fall = build_price20(
+        predictor_artifact=predictor,
+        direction="FALL",
+        owned_element_ids=owned_ids,
+        report_timestamp=report_slot,
+    )
+    price_radar = build_actionable_price_radar(
+        owned15=owned,
+        predictor_artifact=predictor,
+        report_timestamp=report_slot,
+    )
+    watchlist = _enrich_watchlist_rows(
+        dict(warm.get("watchlist") or {}),
+        projections=projections,
+        predictor=predictor,
+    )
+
+    official = _official_payload(runtime_data_root)
+    s15b_content = deepcopy(
+        dict(section_payloads["S15B"].get("content") or {})
+    )
+    all15_rows = _enrich_all15_rows(
+        all15=dict(warm.get("all15") or {}),
+        projections=projections,
+        predictor=predictor,
+        owned=owned,
+        bootstrap=official["bootstrap"],
+        mini=mini,
+        mini_detail=s15b_content,
+        calendar_context=calendar_context,
+    )
+
+    s01_existing = deepcopy(
+        dict(section_payloads["S01"].get("content") or {})
+    )
+    old_dashboard = dict(s01_existing.get("decision_dashboard") or {})
+    personal_auth = str(old_dashboard.get("PERSONAL_AUTH") or "UNAVAILABLE")
+    auth_state = (
+        "AUTH_AVAILABLE"
+        if personal_auth == "AVAILABLE"
+        else "AUTH_EXPIRED"
+        if personal_auth == "DEGRADED"
+        else "UNAVAILABLE"
+    )
+    captain_surface = deepcopy(
+        dict(section_payloads["S08"].get("content") or {})
+    )
+    captain_surface.pop("authoritative_binding", None)
+    operational_action = str(
+        stage3_decision.get("operational_action") or "WAIT"
+    ).upper()
+    decision_dashboard = _decision_dashboard(
+        operational_action=operational_action,
+        planning_gw=int(
+            warm.get("planning_gw")
+            or bundle.get("planning_gw")
+            or 1
+        ),
+        stage3_decision=stage3_decision,
+        lineup_state="COMPLETE",
+        lineup=lineup,
+        captain_surface=captain_surface,
+        chip_available=(
+            finance.get("chips") not in (None, {}, [])
+            and finance.get("chips_status") == "AVAILABLE"
+        ),
+        price_radar=price_radar,
+        auth_state=auth_state,
+        finance=finance,
+    )
+    stage3_visible = deepcopy(
+        dict(section_payloads["S14"].get("content") or {})
+    )
+    stage3_visible.pop("authoritative_binding", None)
+    action_board = _action_board_surface(
+        dashboard=decision_dashboard,
+        stage3_decision=stage3_decision,
+        stage3_visible=stage3_visible,
+        all15_rows=all15_rows,
+    )
+
+    bindings = {
+        "S01": "STAGE3_DECISION+S08+S09+S10+S17",
+        "S02": "CURRENT15_RESOLUTION+P1_1_P1_3+S05+S15B",
+        "S10": "OFFICIAL_FPL_PRICE_FACT+PRICE_PREDICTOR",
+        "S11": "WATCHLIST20",
+        "S12": "OFFICIAL_FPL_PREDICTOR_RISE20",
+        "S13": "OFFICIAL_FPL_PREDICTOR_FALL20",
+        "S15": "BOUND_SOURCE_HEALTH+MODEL_EXECUTION",
+        "S16": "P1_1_P1_3_FULL_UNIVERSE+P1_6_TACTICAL_ROLE",
+        "S18": "S01+S08+S10+S14+TEAM_NEWS",
+    }
+
+    def bound(sid: str, content: Mapping[str, Any]) -> dict[str, Any]:
+        out = deepcopy(dict(content))
+        producer = bindings.get(sid)
+        if producer:
+            out["authoritative_binding"] = {
+                "status": "BOUND",
+                "producer": producer,
+                "payload_fingerprint": _fingerprint(
+                    {
+                        key: value
+                        for key, value in out.items()
+                        if key != "authoritative_binding"
+                    }
+                ),
+                "report_slot": report_slot,
+            }
+        return out
+
+    s01_existing.update(
+        {
+            "decision_dashboard": decision_dashboard,
+            "operational_state": operational_action,
+            "reason": decision_dashboard.get("PRIMARY_REASON"),
+            "key_decision_driver": decision_dashboard.get("KEY_DRIVER"),
+            "current_blockers": decision_dashboard.get("CURRENT_BLOCKERS"),
+        }
+    )
+    section_payloads["S01"]["content"] = bound("S01", s01_existing)
+
+    s02 = deepcopy(dict(section_payloads["S02"].get("content") or {}))
+    s02["rows"] = all15_rows
+    section_payloads["S02"]["content"] = bound("S02", s02)
+
+    s03 = deepcopy(dict(section_payloads["S03"].get("content") or {}))
+    decision_delta = dict(s03.get("decision_delta") or {})
+    current_snapshot = dict(decision_delta.get("current_snapshot") or {})
+    player_state = dict(current_snapshot.get("player_state") or {})
+    price_by_element = {
+        str(int(row.get("element_id") or 0)): row.get("price_relevance")
+        for row in all15_rows
+        if int(row.get("element_id") or 0) > 0
+    }
+    for element, price_relevance in price_by_element.items():
+        if element in player_state and isinstance(player_state[element], Mapping):
+            row = dict(player_state[element])
+            row["price_urgency"] = price_relevance
+            player_state[element] = row
+    if current_snapshot:
+        current_snapshot["player_state"] = player_state
+        decision_delta["current_snapshot"] = current_snapshot
+        s03["decision_delta"] = decision_delta
+        section_payloads["S03"]["content"] = s03
+
+    s10 = {
+        **price_radar,
+        "bank": finance.get("bank"),
+        "bank_status": finance.get("bank_status"),
+        "sell_value_status": finance.get("sell_value_status"),
+    }
+    section_payloads["S10"] = _section(
+        "COMPLETE" if price_radar else "DEGRADED",
+        bound("S10", s10) if price_radar else s10,
+        None if price_radar else "Official FPL predictor radar unavailable",
+    )
+
+    s11 = deepcopy(dict(section_payloads["S11"].get("content") or {}))
+    s11.update(watchlist)
+    section_payloads["S11"]["content"] = bound("S11", s11)
+
+    section_payloads["S12"] = _section(
+        str(rise.get("state") or "UNAVAILABLE"),
+        bound("S12", rise),
+        rise.get("degradation_reason"),
+        available_count=rise.get("available_count", 0),
+        expected_count=20,
+    )
+    section_payloads["S13"] = _section(
+        str(fall.get("state") or "UNAVAILABLE"),
+        bound("S13", fall),
+        fall.get("degradation_reason"),
+        available_count=fall.get("available_count", 0),
+        expected_count=20,
+    )
+
+    s15 = deepcopy(dict(section_payloads["S15"].get("content") or {}))
+    evidence_quality = deepcopy(dict(s15.get("evidence_quality") or {}))
+    price_rows = [
+        dict(row)
+        for row in rise.get("rows") or []
+        if isinstance(row, Mapping)
+    ]
+    evidence_quality["price predictor freshness"] = {
+        "state": next(
+            (
+                str(row.get("freshness") or "").upper()
+                for row in price_rows
+            ),
+            "UNAVAILABLE",
+        ),
+        "health": rise.get("predictor_health"),
+        "observed_at": (
+            price_rows[0].get("evidence_timestamp")
+            if price_rows else None
+        ),
+    }
+    s15["evidence_quality"] = evidence_quality
+    section_payloads["S15"]["content"] = bound("S15", s15)
+
+    s16 = deepcopy(dict(section_payloads["S16"].get("content") or {}))
+    s16["rows"] = all15_rows
+    section_payloads["S16"]["content"] = bound("S16", s16)
+
+    s17 = deepcopy(dict(section_payloads["S17"].get("content") or {}))
+    source_health = deepcopy(dict(s17.get("source_health") or {}))
+    source_health.update(
+        {
+            "price_predictor": rise.get("predictor_health") or "UNAVAILABLE",
+            "price_predictor_freshness": next(
+                (
+                    str(row.get("freshness") or "UNKNOWN").upper()
+                    for row in price_rows
+                ),
+                "UNAVAILABLE",
+            ),
+            "price_predictor_source_age_minutes": next(
+                (
+                    row.get("source_age_minutes")
+                    for row in price_rows
+                ),
+                None,
+            ),
+        }
+    )
+    s17["source_health"] = source_health
+    section_payloads["S17"]["content"] = s17
+
+    s18 = deepcopy(dict(section_payloads["S18"].get("content") or {}))
+    s18.update(
+        {
+            "action_board": action_board,
+            "NOW": {
+                row.get("axis"): row.get("NOW")
+                for row in action_board.get("axes") or []
+                if isinstance(row, Mapping)
+            },
+            "NEXT": {
+                row.get("axis"): row.get("NEXT")
+                for row in action_board.get("axes") or []
+                if isinstance(row, Mapping)
+            },
+            "TRIGGER TO ACT": {
+                row.get("axis"): row.get("TRIGGER TO ACT")
+                for row in action_board.get("axes") or []
+                if isinstance(row, Mapping)
+            },
+            "LATEST SAFE DECISION POINT": {
+                row.get("axis"): row.get("LATEST SAFE DECISION_POINT")
+                for row in []
+            },
+            "COST OF WAITING": {
+                row.get("axis"): row.get("COST OF WAITING")
+                for row in action_board.get("axes") or []
+                if isinstance(row, Mapping)
+            },
+            "ABORT / REVERSAL": {
+                row.get("axis"): row.get("ABORT / REVERSAL")
+                for row in action_board.get("axes") or []
+                if isinstance(row, Mapping)
+            },
+            "BEST ALTERNATIVE": action_board.get("best_alternative"),
+        }
+    )
+    s18["LATEST SAFE DECISION POINT"] = {
+        row.get("axis"): row.get("LATEST SAFE DECISION POINT")
+        for row in action_board.get("axes") or []
+        if isinstance(row, Mapping)
+    }
+    section_payloads["S18"]["content"] = bound("S18", s18)
+
+    canonical = CANONICAL_PATH.read_text(encoding="utf-8")
+    new_report = materialize_deep_report(
+        canonical_text=canonical,
+        section_payloads=section_payloads,
+    )
+    section_manifest = [
+        {
+            "section_id": str(row.get("section_id") or ""),
+            "status": str(row.get("state") or ""),
+        }
+        for row in new_report.get("sections") or []
+    ]
+    human_manifest = build_deep_human_facing_manifest(new_report)
+    compute_contract = _qa_compute_contract(
+        owned=owned,
+        lineup=lineup,
+        watchlist=watchlist,
+        rise=rise,
+        fall=fall,
+        sections=section_payloads,
+        human_manifest=human_manifest,
+    )
+    mini_complete = bool(
+        mini and str(mini.get("coverage_state") or "").upper() == "FULL"
+    )
+    weather_contract_state = _weather_contract_state_from_calendar(
+        calendar_context
+    )
+    pre_render_qa = validate_pre_render_qa(
+        compute_contract=compute_contract,
+        section_manifest=section_manifest,
+        mini_league_denominator_complete=mini_complete,
+        report_mode="DEEP",
+        weather_contract_state=weather_contract_state,
+    )
+    body = render_deep_text(new_report)
+    final_delivery_barrier = validate_final_delivery_barrier(
+        report_mode="DEEP",
+        report=new_report,
+        body=body,
+    )
+    human_failures = list(
+        dict.fromkeys(
+            validate_human_facing_body(body)
+            + validate_deep_human_facing_manifest(human_manifest)
+            + list(final_delivery_barrier.get("failures") or [])
+        )
+    )
+    parsed_ids, _, _ = _parse_sections(body)
+    rendered_states = {
+        str(row.get("section_id") or ""): str(row.get("state") or "")
+        for row in new_report.get("sections") or []
+    }
+    post_render_qa = validate_post_render_qa(
+        pre_render_qa=pre_render_qa,
+        rendered_body=body,
+        rendered_section_ids=parsed_ids,
+        rendered_section_states=rendered_states,
+        rendered_compute_fingerprint=compute_contract["compute_fingerprint"],
+        render_contract_token=pre_render_qa.get("render_contract_token"),
+        rendered_counts=dict(pre_render_qa.get("expected_counts") or {}),
+        rendered_fact_keys=list(pre_render_qa.get("expected_fact_keys") or []),
+        rendered_model_keys=list(pre_render_qa.get("expected_model_keys") or []),
+        rendered_mini_league_denominator_complete=mini_complete,
+        rendered_weather_contract_state=weather_contract_state,
+        truncated=False,
+    )
+    if (
+        str(pre_render_qa.get("status") or "").upper() != "PASS"
+        or str(post_render_qa.get("status") or "").upper() != "PASS"
+        or human_failures
+        or str(final_delivery_barrier.get("status") or "").upper() != "PASS"
+    ):
+        raise IntegratedRunnerError(
+            "PRICE_ONLY partial refresh failed canonical delivery QA: "
+            + json.dumps(
+                {
+                    "pre_render": pre_render_qa.get("status"),
+                    "post_render": post_render_qa.get("status"),
+                    "human_facing_failures": human_failures,
+                    "final_delivery": {
+                        "status": final_delivery_barrier.get("status"),
+                        "failures": final_delivery_barrier.get("failures") or [],
+                    },
+                },
+                sort_keys=True,
+                ensure_ascii=True,
+            )
+        )
+
+    ledger = [
+        deepcopy(row)
+        for row in bundle.get("stage_ledger") or []
+        if isinstance(row, Mapping)
+    ]
+    ledger.append(
+        {
+            "stage": "P6_PRICE_ONLY_PARTIAL_REFRESH",
+            "status": "PASS",
+            "required": True,
+            "reason": None,
+            "evidence": {
+                "change_class": "PRICE_ONLY",
+                "reused_layers": ["Stage2", "P1.7"],
+                "partial_layers": ["MC", "scenario"],
+                "recomputed_layers": [
+                    "PRICE_SURFACES",
+                    "STABILITY",
+                    "DEPENDENT_REPORT_SURFACES",
+                    "QA",
+                ],
+                "football_math_recomputed": False,
+                "second_optimizer_created": False,
+            },
+        }
+    )
+    execution_proof = deepcopy(dict(bundle.get("execution_proof") or {}))
+    execution_proof["stages"] = ledger
+    execution_proof["warm_partial_refresh"] = {
+        "change_class": "PRICE_ONLY",
+        "status": "PASS",
+        "stage2_reused": True,
+        "p1_7_reused": True,
+        "mc_partial_invalidation": True,
+        "scenario_partial_invalidation": True,
+        "stability_recomputed": True,
+        "football_math_recomputed": False,
+        "affected_dependency_scope": "PRICE_ONLY",
+    }
+
+    source_fingerprints = deepcopy(dict(bundle.get("source_fingerprints") or {}))
+    source_fingerprints["price_predictor"] = _fingerprint(predictor)
+    bundle.update(
+        {
+            "runner_status": "PASS",
+            "stage_ledger": ledger,
+            "section_manifest": section_manifest,
+            "human_facing_manifest": human_manifest,
+            "compute_contract": compute_contract,
+            "pre_render_qa": pre_render_qa,
+            "post_render_qa": post_render_qa,
+            "human_facing_qa": {"status": "PASS", "failures": []},
+            "execution_proof": execution_proof,
+            "report": new_report,
+            "visible_body": body,
+            "source_fingerprints": source_fingerprints,
+        }
+    )
+    governance_out = deepcopy(dict(bundle.get("governance") or {}))
+    governance_out.update(
+        {
+            "p6_partial_refresh": "PRICE_ONLY",
+            "p6_partial_refresh_reused_football_math": True,
+            "qa_relaxed": False,
+            "second_methodology_created": False,
+        }
+    )
+    bundle["governance"] = governance_out
+    warm.update(
+        {
+            "predictor": predictor,
+            "rise": rise,
+            "fall": fall,
+            "price_radar": price_radar,
+            "watchlist": watchlist,
+        }
+    )
+    refreshed["bundle"] = bundle
+    refreshed["execution_proof"] = execution_proof
+    refreshed["warm_state"] = warm
+
+    output_dir = Path(str(refreshed.get("output_dir") or ""))
+    if not output_dir:
+        raise IntegratedRunnerError("PRICE_ONLY output_dir is unavailable")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "report_bundle.json").write_text(
+        json.dumps(bundle, indent=2, sort_keys=True, ensure_ascii=False, default=str)
+        + "\n",
+        encoding="utf-8",
+    )
+    (output_dir / "execution_proof.json").write_text(
+        json.dumps(
+            execution_proof,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=False,
+            default=str,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (output_dir / "report_body.md").write_text(body, encoding="utf-8")
+    return refreshed
+
+
 def refresh_mini_league_only_state(
     *,
     runtime_data_root: Path,

@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "authority": "FPL_V12_D_P2_PRECOMPUTE_CONTROL",
   "role": "REPORT_PRECOMPUTE_ONLY",
   "normal_scheduler_authority": "CHATGPT_FPL_MASTER_MONITOR",
@@ -9,6 +9,10 @@
   "dispatch_mode": "report_prefetch",
   "dispatch_actor": "github-actions[bot]",
   "dispatch_reason": "V12_D_P2_PRECOMPUTE",
+  "warm_worker_workflow": "v12-p6-warm-worker.yml",
+  "warm_worker_downstream_only": true,
+  "warm_worker_may_advance_scheduler_proof": false,
+  "warm_worker_may_edit_core_issue_title": false,
   "max_horizon_minutes": 65,
   "allowed_report_kinds": [
     "full_master",

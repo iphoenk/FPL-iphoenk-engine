@@ -110,3 +110,20 @@ def validate_snapshot_binding(
             )
     if str(snapshot.get("occurrence_id") or "") != handoff.occurrence_id:
         raise HandoffError("cross-occurrence P6 handoff rejected")
+
+
+def validate_t15_t10_window(
+    *,
+    logical_slot: str,
+    release_at: str,
+    freeze_target_at: str,
+) -> None:
+    logical = _aware(logical_slot, "logical_slot")
+    release = _aware(release_at, "release_at")
+    freeze = _aware(freeze_target_at, "freeze_target_at")
+    if not release < freeze < logical:
+        raise HandoffError("invalid D-P2/P6 T-15/T-10 ordering")
+    if int((logical - release).total_seconds()) != 15 * 60:
+        raise HandoffError("D-P2/P6 window must be exact T-15/T-10")
+    if int((logical - freeze).total_seconds()) != 10 * 60:
+        raise HandoffError("D-P2/P6 window must be exact T-15/T-10")

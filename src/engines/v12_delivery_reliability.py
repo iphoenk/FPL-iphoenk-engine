@@ -135,10 +135,26 @@ def inspect_prefetch_terminal(
         str(health.get("prefetch_status") or "").upper() == "GREEN"
         or public_first_acceptable
     )
+    report_prefetch_artifacts = [
+        row for row in latest.get("artifacts") or []
+        if isinstance(row, Mapping)
+        and str(row.get("artifact_class") or "").upper() == "REPORT_PREFETCH"
+    ]
+    occurrence_publication_proven = bool(
+        report_prefetch_artifacts
+        and all(
+            str(row.get("status") or "").upper() == "PROVEN"
+            and bool(row.get("publication_run_id"))
+            and bool(row.get("published_at"))
+            for row in report_prefetch_artifacts
+        )
+    )
     checks = {
         "report_slot_timezone_aware": requested is not None,
         "report_kind_full_master": str(latest.get("report_kind") or "") == "full_master",
         "target_report_slot_match": _same_instant(target, requested),
+        "report_prefetch_run_id_available": bool(latest.get("report_prefetch_run_id")),
+        "occurrence_publication_proven": occurrence_publication_proven,
         "personal_requested": latest.get("personal_requested") is True,
         "mini_league_requested": latest.get("mini_league_requested") is True,
         "required_mini_league_scope_terminal": mini_state in TERMINAL_SCOPE_STATES,

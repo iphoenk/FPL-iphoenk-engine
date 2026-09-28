@@ -245,3 +245,11 @@ def test_controlled_prefetch_wrong_lineage_fails_closed(tmp_path, patch):
     (target / "latest.json").write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(PerfFAcceptanceError, match="LINEAGE_FAILURE"):
         _require_same_slot_prefetch(runtime, slot)
+
+
+def test_price_partial_refresh_exports_exact_zero_layer_timing_for_skipped_mc():
+    source = inspect.getsource(refresh_price_only_state)
+    assert '"warm_layer_timings"' in source
+    assert '"change_class": "PRICE_ONLY"' in source
+    assert '"MC": 0.0' in source
+    assert '"football_math_recomputed": False' in source

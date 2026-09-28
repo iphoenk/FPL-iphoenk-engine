@@ -2,6 +2,7 @@ from __future__ import annotations
 
 """Occurrence-local S05 bindings for non-PL workload and weather context."""
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -302,50 +303,56 @@ def build_report_time_s05_inputs(
         and int(row.get("event") or -1) == int(planning_gw)
     ]
 
-    try:
-        club_schedule = collect_verified_non_pl_schedule(
+    official_snapshot = {
+        "bootstrap": dict(bootstrap),
+        # S05 renders planning-GW conditions. Do not fetch unrelated fixtures.
+        "fixtures": list(planning_fixtures),
+    }
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        club_future = pool.submit(
+            collect_verified_non_pl_schedule,
             bootstrap=bootstrap,
             planning_fixtures=planning_fixtures,
             report_timestamp=report_slot,
         )
-    except Exception as exc:
-        club_schedule = {
-            "status": "UNAVAILABLE",
-            "events": [],
-            "authority_complete": False,
-            "error": f"{type(exc).__name__}: {exc}",
-        }
-
-    player_events, player_observation = (
-        _verified_player_observation_events(
-            bootstrap=bootstrap,
-            runtime_data_root=runtime_data_root,
-            private_data_root=private_data_root,
-        )
-    )
-
-    official_snapshot = {
-        "bootstrap": dict(bootstrap),
-        "fixtures": [
-            dict(row)
-            for row in fixtures
-            if isinstance(row, Mapping)
-        ],
-    }
-    try:
-        weather_payload = collect_weather_context(
+        weather_future = pool.submit(
+            collect_weather_context,
             output_dir,
             official_snapshot=official_snapshot,
             persist=False,
         )
-        weather_status = "AVAILABLE"
-    except Exception as exc:
-        weather_payload = {
-            "provider": "open_meteo",
-            "fixtures": [],
-            "error": f"{type(exc).__name__}: {exc}",
-        }
-        weather_status = "UNAVAILABLE"
+
+        # Local verified player evidence can be resolved while both network
+        # enrichments are in flight.
+        player_events, player_observation = (
+            _verified_player_observation_events(
+                bootstrap=bootstrap,
+                runtime_data_root=runtime_data_root,
+                private_data_root=private_data_root,
+            )
+        )
+
+        try:
+            club_schedule = club_future.result()
+        except Exception as exc:
+            club_schedule = {
+                "status": "UNAVAILABLE",
+                "events": [],
+                "authority_complete": False,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
+
+        try:
+            weather_payload = weather_future.result()
+            weather_status = "AVAILABLE"
+        except Exception as exc:
+            weather_payload = {
+                "provider": "open_meteo",
+                "fixtures": [],
+                "error": f"{type(exc).__name__}: {exc}",
+            }
+            weather_status = "UNAVAILABLE"
 
     weather_cfg = load_weather_config()
     max_days = float(

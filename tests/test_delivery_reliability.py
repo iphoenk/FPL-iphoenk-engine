@@ -46,6 +46,14 @@ def _write_prefetch(root: Path, *, slot: str, publish: str = "PASS") -> None:
             "mini_league_status": "AVAILABLE",
             "public_control_failures": [],
             "report_prefetch_run_id": "fixture-prefetch",
+            "artifacts": [
+                {
+                    "artifact_class": "REPORT_PREFETCH",
+                    "status": "PROVEN",
+                    "publication_run_id": "fixture-publication",
+                    "published_at": slot,
+                }
+            ],
         },
     )
     _write_json(

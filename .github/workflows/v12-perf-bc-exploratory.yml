@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: v12-perf-bc-\${{ github.event.pull_request.head.sha || github.sha }}
+  group: v12-perf-bc-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
       - name: Checkout exact experiment head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: \${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: app
           persist-credentials: false
 
@@ -49,7 +49,7 @@ jobs:
           repository: iphoenk/fpl-reports-private
           ref: main
           path: private-reports
-          token: \${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
+          token: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
           persist-credentials: false
 
       - name: Setup Python
@@ -87,7 +87,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          runtime_sha="\${{ steps.occurrence.outputs.runtime_sha }}"
+          runtime_sha="${{ steps.occurrence.outputs.runtime_sha }}"
           git -C ../runtime-data fetch origin "$runtime_sha" --depth=1
           git -C ../runtime-data checkout --detach "$runtime_sha"
           test "$(git -C ../runtime-data rev-parse HEAD)" = "$runtime_sha"
@@ -101,17 +101,17 @@ jobs:
           python -m src.engines.v12_perf_bc perf-b \
             --runtime-data-root ../runtime-data \
             --private-root ../private-reports \
-            --report-slot "\${{ steps.occurrence.outputs.report_slot }}" \
-            --runtime-sha "\${{ steps.occurrence.outputs.runtime_sha }}" \
+            --report-slot "${{ steps.occurrence.outputs.report_slot }}" \
+            --runtime-sha "${{ steps.occurrence.outputs.runtime_sha }}" \
             --model-sha "$model_sha" \
-            --previous-deep-dir "\${{ steps.occurrence.outputs.previous_deep_dir }}" \
+            --previous-deep-dir "${{ steps.occurrence.outputs.previous_deep_dir }}" \
             --work-dir artifacts/perf-b-work \
             --output artifacts/perf-b-safe.json
 
       - name: Upload public-safe PERF-B evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: v12-perf-b-safe-\${{ github.run_id }}
+          name: v12-perf-b-safe-${{ github.run_id }}
           path: app/artifacts/perf-b-safe.json
           if-no-files-found: error
           retention-days: 14
@@ -129,7 +129,7 @@ jobs:
       - name: Checkout exact experiment head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: \${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: app
           persist-credentials: false
 
@@ -154,7 +154,7 @@ jobs:
       - name: Upload public-safe PERF-C MC evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: v12-perf-c-mc-safe-\${{ github.run_id }}
+          name: v12-perf-c-mc-safe-${{ github.run_id }}
           path: app/artifacts/perf-c-mc-safe.json
           if-no-files-found: error
           retention-days: 14
@@ -172,7 +172,7 @@ jobs:
       - name: Checkout exact experiment head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: \${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: app
           persist-credentials: false
 
@@ -190,7 +190,7 @@ jobs:
           repository: iphoenk/fpl-reports-private
           ref: main
           path: private-reports
-          token: \${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
+          token: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
           persist-credentials: false
 
       - name: Setup Python
@@ -225,7 +225,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          runtime_sha="\${{ steps.occurrence.outputs.runtime_sha }}"
+          runtime_sha="${{ steps.occurrence.outputs.runtime_sha }}"
           git -C ../runtime-data fetch origin "$runtime_sha" --depth=1
           git -C ../runtime-data checkout --detach "$runtime_sha"
           test "$(git -C ../runtime-data rev-parse HEAD)" = "$runtime_sha"
@@ -241,7 +241,7 @@ jobs:
       - name: Upload public-safe PERF-C Stage2 evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: v12-perf-c-stage2-safe-\${{ github.run_id }}
+          name: v12-perf-c-stage2-safe-${{ github.run_id }}
           path: app/artifacts/perf-c-stage2-safe.json
           if-no-files-found: error
           retention-days: 14

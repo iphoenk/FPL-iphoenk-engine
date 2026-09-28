@@ -26,7 +26,10 @@ from .v12_p6_runtime import (
     _load_scenario_package,
 )
 from .v12_p6_warm_worker import CanonicalCallbacks, WarmWorker
-from .v12_integrated_report_runner import refresh_mini_league_only_state
+from .v12_integrated_report_runner import (
+    refresh_mini_league_only_state,
+    refresh_price_only_state,
+)
 from .v12_perf_f import REQUIRED_CASES
 from .v12_perf_f_production import validate_production_sample
 from .v12_semantic_oracle import semantic_fingerprint
@@ -371,6 +374,17 @@ def execute_case(
             return current_state, dict(plan.expected), {}
         if change_class == "MINI_LEAGUE_ONLY":
             current_state = refresh_mini_league_only_state(
+                runtime_data_root=case_runtime,
+                state=state,
+                report_slot=report_slot,
+            )
+            current_state["identity"] = asdict(final_identity)
+            current_state["semantic_surface"] = semantic_surface(
+                current_state["bundle"]
+            )
+            return current_state, dict(plan.expected), {}
+        if change_class == "PRICE_ONLY":
+            current_state = refresh_price_only_state(
                 runtime_data_root=case_runtime,
                 state=state,
                 report_slot=report_slot,

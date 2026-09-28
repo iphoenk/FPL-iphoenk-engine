@@ -14,7 +14,9 @@ NON_SEMANTIC_KEYS = frozenset({
     "queue_seconds", "started_at", "finished_at",
 })
 DIRECT_SEMANTIC_KEYS = (
-    "transfer_decision", "xi", "bench", "captain", "vice",
+    "transfer_action", "transfer_decision",
+    "xi", "starting_xi", "bench", "bench_order",
+    "captain", "captain_element", "vice", "vice_captain", "vice_captain_element",
     "route", "package_decision", "p1_7", "p17", "monte_carlo", "mc",
     "final_decision_state", "stage3_action",
 )

@@ -38,3 +38,28 @@ def test_p4_selective_refresh_preserves_full_delivery_barriers():
     assert "run_package_monte_carlo(" not in module_source
     assert '"qa_relaxed": False' in module_source
     assert '"second_methodology_created": False' in module_source
+
+
+def test_remaining_perf_f_cases_do_not_fall_through_to_full_pipeline():
+    source = inspect.getsource(execute_case)
+    for case in (
+        "CAPTAIN_CHANGE",
+        "VICE_CAPTAIN_CHANGE",
+        "MATERIAL_PROJECTION",
+        "P4_SCENARIO_MISS",
+    ):
+        assert case in source
+    pre_full = source.split("current_state = warm_pipeline.compute(", 1)[0]
+    assert "refresh_revalidated_base_state(" in pre_full
+    assert pre_full.count("refresh_p4_scenario_state(") >= 2
+    assert '"canonical_p1_1_override_equivalence": True' in pre_full
+    assert '"wrong_base_package_rejected": True' in pre_full
+
+
+def test_material_projection_control_is_one_way_unavailability():
+    from src.engines.v12_perf_f_acceptance import _mutate_material_projection
+
+    source = inspect.getsource(_mutate_material_projection)
+    assert 'target["chance_of_playing_next_round"] = 0' in source
+    assert "else 100" not in source
+    assert "no owned available element" in source

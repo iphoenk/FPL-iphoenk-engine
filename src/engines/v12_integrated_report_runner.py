@@ -4897,6 +4897,14 @@ def refresh_mini_league_only_state(
             out["authoritative_binding"] = {
                 "status": "BOUND",
                 "producer": producer,
+                "payload_fingerprint": _fingerprint(
+                    {
+                        key: value
+                        for key, value in out.items()
+                        if key != "authoritative_binding"
+                    }
+                ),
+                "report_slot": report_slot,
             }
         return out
 

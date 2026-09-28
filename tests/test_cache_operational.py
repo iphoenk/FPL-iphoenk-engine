@@ -33,8 +33,15 @@ def test_owned_availability_and_material_projection():
     assert set(projection.expected.values()) == {"MISS"}
 
 
-def test_fixture_model_schema_and_set_piece_fact_hard_invalidate():
-    for change in ("FIXTURE", "MODEL_VERSION", "SCHEMA_VERSION", "SET_PIECE_FACT"):
+def test_fixture_model_schema_result_bonus_and_set_piece_fact_hard_invalidate():
+    for change in (
+        "FIXTURE",
+        "MODEL_VERSION",
+        "SCHEMA_VERSION",
+        "OFFICIAL_RESULT",
+        "BONUS_FINALIZATION",
+        "SET_PIECE_FACT",
+    ):
         plan = plan_cache_behavior(change, affected_dependency_keys=["x"])
         assert set(plan.expected.values()) == {"MISS"}
 
@@ -46,11 +53,25 @@ def test_current15_and_captain_change_preserve_only_public_stage2():
         assert all(plan.expected[layer] == "MISS" for layer in LAYERS if layer != "Stage2")
 
 
-def test_scenario_hit_and_miss():
-    hit = plan_cache_behavior("UNCHANGED")
-    assert hit.expected["scenario"] == "HIT"
-    miss = plan_cache_behavior("XMINS", affected_dependency_keys=["player:2:xmins"])
-    assert miss.expected["scenario"] == "MISS"
+def test_scenario_hit_and_miss_are_explicit_operational_classes():
+    hit = plan_cache_behavior("P4_SCENARIO_HIT")
+    assert hit.matrix_class == "UNCHANGED"
+    assert set(hit.expected.values()) == {"HIT"}
+    miss = plan_cache_behavior("P4_SCENARIO_MISS", affected_dependency_keys=["scenario:base"])
+    assert set(miss.expected.values()) == {"MISS"}
+
+
+def test_perf_f_case_aliases_resolve_without_rewriting_frozen_matrix():
+    no_change = plan_cache_behavior("NO_CHANGE")
+    assert no_change.matrix_class == "UNCHANGED"
+    assert set(no_change.expected.values()) == {"HIT"}
+    availability = plan_cache_behavior(
+        "OUR15_AVAILABILITY",
+        affected_dependency_keys=["player:1:availability"],
+    )
+    assert availability.matrix_class == "OWNED_AVAILABILITY"
+    assert availability.expected["Stage2"] == "HIT"
+    assert availability.expected["P1.7"] == "MISS"
 
 
 def test_wrong_hit_is_correctness_fail():
@@ -86,10 +107,36 @@ def test_uncertain_scope_fails_closed_to_miss():
     assert set(plan.expected.values()) == {"MISS"}
 
 
-def test_uncertain_scope_sentinel_is_full_miss():
-    plan = plan_cache_behavior(
+def test_uncertain_scope_sentinel_is_full_miss_even_if_caller_marks_scope_certain():
+    for scope_certain in (False, True):
+        plan = plan_cache_behavior(
+            "UNCERTAIN_SCOPE",
+            affected_dependency_keys=["unknown"],
+            scope_certain=scope_certain,
+        )
+        assert set(plan.expected.values()) == {"MISS"}
+
+
+def test_all_required_operational_classes_resolve():
+    required = (
+        "UNCHANGED",
+        "PRICE_ONLY",
+        "MINI_LEAGUE_ONLY",
+        "OWNED_AVAILABILITY",
+        "CURRENT15_CHANGE",
+        "CAPTAIN_CHANGE",
+        "VICE_CAPTAIN_CHANGE",
+        "MATERIAL_PROJECTION",
+        "FIXTURE",
+        "MODEL_VERSION",
+        "SCHEMA_VERSION",
+        "OFFICIAL_RESULT",
+        "BONUS_FINALIZATION",
+        "SET_PIECE_FACT",
+        "P4_SCENARIO_HIT",
+        "P4_SCENARIO_MISS",
         "UNCERTAIN_SCOPE",
-        affected_dependency_keys=["unknown"],
-        scope_certain=False,
     )
-    assert set(plan.expected.values()) == {"MISS"}
+    for change in required:
+        plan = plan_cache_behavior(change, affected_dependency_keys=["test:key"])
+        assert set(plan.expected) == set(LAYERS)

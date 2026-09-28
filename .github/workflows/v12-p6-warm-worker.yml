@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   p6-acceptance:
-    if: github.actor == github.repository_owner && github.ref_name == 'main'
+    if: github.actor == github.repository_owner && (github.event_name == 'pull_request' || github.ref_name == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:

@@ -4666,9 +4666,19 @@ def refresh_price_only_state(
     this executor does not pretend that unchanged football-return math was
     recomputed.
     """
-    refreshed = deepcopy(dict(state))
-    bundle = deepcopy(dict(refreshed.get("bundle") or {}))
-    warm = deepcopy(dict(refreshed.get("warm_state") or {}))
+    # Copy-on-write: the frozen canonical warm state can be very large.
+    # MINI_LEAGUE_ONLY changes only P1.8/downstream report surfaces, so keep
+    # unchanged football/model payloads by reference and copy only containers
+    # that are actually mutated below.
+    refreshed = dict(state)
+    bundle_source = refreshed.get("bundle")
+    warm_source = refreshed.get("warm_state")
+    if not isinstance(bundle_source, Mapping) or not isinstance(warm_source, Mapping):
+        raise IntegratedRunnerError(
+            "MINI_LEAGUE_ONLY requires canonical bundle and warm state"
+        )
+    bundle = dict(bundle_source)
+    warm = dict(warm_source)
     if str(bundle.get("report_mode") or "").upper() != "DEEP":
         raise IntegratedRunnerError("PRICE_ONLY partial refresh requires DEEP state")
     if not warm or not isinstance(bundle.get("report"), Mapping):
@@ -4698,7 +4708,9 @@ def refresh_price_only_state(
             continue
         section_payloads[sid] = {
             "state": raw.get("state"),
-            "content": deepcopy(raw.get("content")),
+            # Unchanged section content is immutable for this refresh.  Each
+            # MINI-dependent section is copied explicitly before mutation.
+            "content": raw.get("content"),
             "degradation_reason": raw.get("degradation_reason"),
             "available_count": raw.get("available_count"),
             "expected_count": raw.get("expected_count"),
@@ -4822,7 +4834,7 @@ def refresh_price_only_state(
     }
 
     def bound(sid: str, content: Mapping[str, Any]) -> dict[str, Any]:
-        out = deepcopy(dict(content))
+        out = dict(content)
         producer = bindings.get(sid)
         if producer:
             out["authoritative_binding"] = {
@@ -4850,7 +4862,7 @@ def refresh_price_only_state(
     )
     section_payloads["S01"]["content"] = bound("S01", s01_existing)
 
-    s02 = deepcopy(dict(section_payloads["S02"].get("content") or {}))
+    s02 = dict(section_payloads["S02"].get("content") or {})
     s02["rows"] = all15_rows
     section_payloads["S02"]["content"] = bound("S02", s02)
 
@@ -4929,7 +4941,7 @@ def refresh_price_only_state(
     s15["evidence_quality"] = evidence_quality
     section_payloads["S15"]["content"] = bound("S15", s15)
 
-    s16 = deepcopy(dict(section_payloads["S16"].get("content") or {}))
+    s16 = dict(section_payloads["S16"].get("content") or {})
     s16["rows"] = all15_rows
     section_payloads["S16"]["content"] = bound("S16", s16)
 
@@ -4957,7 +4969,7 @@ def refresh_price_only_state(
     s17["source_health"] = source_health
     section_payloads["S17"]["content"] = s17
 
-    s18 = deepcopy(dict(section_payloads["S18"].get("content") or {}))
+    s18 = dict(section_payloads["S18"].get("content") or {})
     s18.update(
         {
             "action_board": action_board,
@@ -5091,7 +5103,7 @@ def refresh_price_only_state(
         )
 
     ledger = [
-        deepcopy(row)
+        dict(row)
         for row in bundle.get("stage_ledger") or []
         if isinstance(row, Mapping)
     ]
@@ -5116,7 +5128,7 @@ def refresh_price_only_state(
             },
         }
     )
-    execution_proof = deepcopy(dict(bundle.get("execution_proof") or {}))
+    execution_proof = dict(bundle.get("execution_proof") or {})
     execution_proof["stages"] = ledger
     execution_proof["warm_partial_refresh"] = {
         "change_class": "PRICE_ONLY",
@@ -5130,7 +5142,7 @@ def refresh_price_only_state(
         "affected_dependency_scope": "PRICE_ONLY",
     }
 
-    source_fingerprints = deepcopy(dict(bundle.get("source_fingerprints") or {}))
+    source_fingerprints = dict(bundle.get("source_fingerprints") or {})
     source_fingerprints["price_predictor"] = _fingerprint(predictor)
     bundle.update(
         {
@@ -5148,7 +5160,7 @@ def refresh_price_only_state(
             "source_fingerprints": source_fingerprints,
         }
     )
-    governance_out = deepcopy(dict(bundle.get("governance") or {}))
+    governance_out = dict(bundle.get("governance") or {})
     governance_out.update(
         {
             "p6_partial_refresh": "PRICE_ONLY",
@@ -5226,7 +5238,7 @@ def refresh_mini_league_only_state(
     bgw_context = dict(warm.get("bgw_context") or {})
     finance = dict(warm.get("finance") or {})
     stage3_decision = dict(warm.get("stage3_decision") or {})
-    package_with_stage3 = deepcopy(dict(warm.get("package_with_stage3") or {}))
+    package_with_stage3 = dict(warm.get("package_with_stage3") or {})
     monte_carlo = dict(warm.get("monte_carlo") or {})
     if not projections or not owned or not lineup or not package_with_stage3:
         raise IntegratedRunnerError(
@@ -5236,9 +5248,11 @@ def refresh_mini_league_only_state(
     # Strip the old P1.8 attachment before recomputing the downstream overlay.
     package_with_stage3.pop("mini_league_overlay", None)
     governance = package_with_stage3.get("governance")
-    if isinstance(governance, dict):
+    if isinstance(governance, Mapping):
+        governance = dict(governance)
         governance.pop("mini_league_overlay_owner", None)
         governance.pop("mini_league_overlay_downstream_only", None)
+        package_with_stage3["governance"] = governance
 
     standings = _read_json(
         runtime_data_root / "data/v6/mini_leagues/9477/standings.json",
@@ -5352,27 +5366,39 @@ def refresh_mini_league_only_state(
     )
 
     # S14 keeps the frozen football frontier/MC, replacing only its P1.8 fields.
-    stage3_visible = deepcopy(
-        dict((section_payloads["S14"].get("content") or {}))
-    )
-    stage3_visible["mini_league_overlay"] = deepcopy(mini_overlay)
-    for row in stage3_visible.get("package_routes") or []:
-        if isinstance(row, dict):
-            row["mini_league_utility"] = deepcopy(
-                mini_overlay.get("decision_delta")
+    stage3_visible = dict(section_payloads["S14"].get("content") or {})
+    stage3_visible["mini_league_overlay"] = dict(mini_overlay)
+    if isinstance(stage3_visible.get("package_routes"), list):
+        stage3_visible["package_routes"] = [
+            (
+                {
+                    **dict(row),
+                    "mini_league_utility": mini_overlay.get("decision_delta"),
+                }
+                if isinstance(row, Mapping)
+                else row
             )
-    for row in stage3_visible.get("package_universe_challengers") or []:
-        if isinstance(row, dict):
-            row["mini_league_leverage"] = deepcopy(
-                mini_overlay.get("decision_delta")
+            for row in stage3_visible.get("package_routes") or []
+        ]
+    if isinstance(stage3_visible.get("package_universe_challengers"), list):
+        stage3_visible["package_universe_challengers"] = [
+            (
+                {
+                    **dict(row),
+                    "mini_league_leverage": mini_overlay.get("decision_delta"),
+                }
+                if isinstance(row, Mapping)
+                else row
             )
+            for row in stage3_visible.get("package_universe_challengers") or []
+        ]
 
     chip_state = finance.get("chips")
     chip_available = (
         chip_state not in (None, {}, [])
         and finance.get("chips_status") == "AVAILABLE"
     )
-    staging = deepcopy(dict(section_payloads["S14B"].get("content") or {}))
+    staging = dict(section_payloads["S14B"].get("content") or {})
     final_judgement = _final_judgement_surface(
         operational_action=str(
             stage3_decision.get("operational_action") or "WAIT"
@@ -5454,7 +5480,7 @@ def refresh_mini_league_only_state(
             }
         return out
 
-    s01 = deepcopy(dict(section_payloads["S01"].get("content") or {}))
+    s01 = dict(section_payloads["S01"].get("content") or {})
     s01.update(
         {
             "decision_dashboard": decision_dashboard,

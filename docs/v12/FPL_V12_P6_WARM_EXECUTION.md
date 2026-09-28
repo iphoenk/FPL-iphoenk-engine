@@ -34,5 +34,7 @@ Stage3, render QA, and the existing thin private publisher remain mandatory. T1 
 
 PERF-F is therefore allowed to expose slow MISS classes. Latency is optimized only after warm/cold semantic equality is proven and profiling identifies the dominant component. Correctness is not traded for the 15-second target.
 
+PERF-F unchanged-base revalidation reruns PRE_RENDER, POST_RENDER, HUMAN_FACING, and FINAL_DELIVERY QA against the already-canonical immutable DEEP surface without deep-copying or reserializing the large bundle when the canonical cold oracle proves the decision surface unchanged. This is a latency optimization only; cache expectations, semantic equality, MC 500k, universe/routes, and private publication remain mandatory.
+
 
 Warm identity hashes the canonical V6 `data/v6/current/official_fpl.json` snapshot together with publish-integrity and same-occurrence prefetch proof; legacy/nonexistent `data/v6/official_fpl` and `data/v6/fixtures` paths are not identity authority. This path binding is a correctness contract, not a performance optimization.

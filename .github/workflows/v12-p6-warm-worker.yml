@@ -42,6 +42,7 @@ on:
       - "src/engines/v12_cache_operational.py"
       - "src/engines/v12_dp2_p6_handoff.py"
       - "src/engines/v12_p6_runtime.py"
+      - "src/engines/v12_p6_selective_refresh.py"
       - "src/engines/v12_p6_warm_worker.py"
       - "src/engines/v12_perf_f.py"
       - "src/engines/v12_semantic_oracle.py"
@@ -51,6 +52,8 @@ on:
       - "tests/test_delivery_warm_runtime.py"
       - "tests/test_delivery_warm_worker.py"
       - "tests/test_perf_f_semantic_oracle.py"
+      - "tests/test_perf_f_selective_refresh.py"
+      - "tests/test_perf_f_zero_copy_revalidation.py"
 
 permissions:
   contents: read
@@ -84,6 +87,8 @@ jobs:
             tests/test_delivery_warm_runtime.py \
             tests/test_delivery_warm_worker.py \
             tests/test_perf_f_semantic_oracle.py \
+            tests/test_perf_f_selective_refresh.py \
+            tests/test_perf_f_zero_copy_revalidation.py \
             tests/test_delivery_privacy_governance.py
 
   warm-worker:

@@ -254,6 +254,8 @@ class CanonicalPipeline:
         identity: WarmIdentity,
         *,
         scenario_overrides: Mapping[str, Mapping[str, Any]] | None = None,
+        warm_reuse_state: Mapping[str, Any] | None = None,
+        warm_reuse_change_class: str | None = None,
     ) -> dict[str, Any]:
         output = self.workspace / "canonical"
         if output.exists():
@@ -303,7 +305,43 @@ class CanonicalPipeline:
             "--warm-state-out",
             str(warm_state_path),
         ]
+        if warm_reuse_state:
+            warm_change = str(warm_reuse_change_class or "").strip().upper()
+            if self.report_mode != "DEEP":
+                raise P6RuntimeError("selective warm reuse requires DEEP mode")
+            if warm_change != "MINI_LEAGUE_ONLY":
+                raise P6RuntimeError(
+                    f"unsupported selective warm reuse class: {warm_change}"
+                )
+            warm_reuse_input = (
+                self.workspace
+                / "private-inputs"
+                / f"warm-reuse-{self.sequence:03d}.json"
+            )
+            warm_reuse_input.parent.mkdir(parents=True, exist_ok=True)
+            warm_reuse_input.write_text(
+                json.dumps(
+                    dict(warm_reuse_state),
+                    sort_keys=True,
+                    ensure_ascii=False,
+                    default=str,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            runner_args.extend(
+                [
+                    "--warm-reuse-state-file",
+                    str(warm_reuse_input),
+                    "--warm-reuse-change-class",
+                    warm_change,
+                ]
+            )
         if scenario_overrides:
+            if warm_reuse_state:
+                raise P6RuntimeError(
+                    "scenario overrides cannot be combined with selective warm reuse"
+                )
             if self.report_mode != "DEEP":
                 raise P6RuntimeError("P4 scenario overrides require DEEP mode")
             scenario_input = (
@@ -644,8 +682,30 @@ def run_window(
         Mapping[str, list[str]],
     ]:
         nonlocal current_state
-        if str(change.get("change_class") or "").upper() == "UNCHANGED":
+        change_class = str(change.get("change_class") or "").upper()
+        if change_class == "UNCHANGED":
             current_state = dict(state)
+            return current_state, dict(plan.expected), {}
+        if change_class == "MINI_LEAGUE_ONLY":
+            for field in (
+                "production_sha",
+                "model_version",
+                "schema_version",
+                "gw_fixture_fingerprint",
+                "projection_lineage_fingerprint",
+                "current15_fingerprint",
+                "owner_context_fingerprint",
+                "mc_authority",
+                "runtime_class",
+            ):
+                if getattr(final_identity, field) != getattr(frozen_identity, field):
+                    current_state = pipeline.compute(final_identity)
+                    return current_state, _full_recompute_states(plan.expected), {}
+            current_state = pipeline.compute(
+                final_identity,
+                warm_reuse_state=dict(state.get("warm_state") or {}),
+                warm_reuse_change_class="MINI_LEAGUE_ONLY",
+            )
             return current_state, dict(plan.expected), {}
         current_state = pipeline.compute(final_identity)
         return current_state, _full_recompute_states(plan.expected), {}

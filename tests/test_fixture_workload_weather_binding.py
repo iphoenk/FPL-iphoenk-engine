@@ -130,7 +130,7 @@ def test_report_time_competition_schedule_uses_explicit_team_alias_not_fuzzy_joi
     provider = {
         "abbreviation": "MNC",
         "displayName": "Manchester City",
-        "shortDisplayName": "Man City",
+        "shortDisplayName": "Manchester City",
         "name": "Manchester City",
     }
     assert report_time_competition_schedule._provider_team_id(

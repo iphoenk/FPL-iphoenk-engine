@@ -720,6 +720,239 @@ def validate_delivery_bundle(bundle: Mapping[str, Any]) -> list[str]:
     return failures
 
 
+def build_occurrence_state(bundle: Mapping[str, Any]) -> dict[str, Any]:
+    """Materialize one occurrence identity and its fail-operational state path."""
+    occurrence_id = str(
+        bundle.get("occurrence_id")
+        or f"{bundle.get('report_mode')}|{bundle.get('report_slot')}"
+    )
+    delivery_status = str(bundle.get("delivery_status") or "")
+    runner_status = str(bundle.get("runner_status") or "").upper()
+    execution = dict(bundle.get("execution_proof") or {})
+    now = datetime.now().astimezone().isoformat()
+
+    if delivery_status == "READY_FULL" or runner_status == "PASS":
+        states = [
+            "CREATED",
+            "FACTS_REQUESTED",
+            "FACTS_READY",
+            "ANALYTICS_RUNNING",
+            "ANALYTICS_READY",
+            "RENDERING",
+            "PUBLISHED_FULL",
+        ]
+    else:
+        states = [
+            "CREATED",
+            "FACTS_REQUESTED",
+            "BLOCKED_UPSTREAM",
+            "ANALYTICS_FAILED",
+            "FALLBACK_ASSEMBLY",
+            "RENDERING",
+            "PUBLISHED_DEGRADED",
+        ]
+
+    return {
+        "schema_version": 1,
+        "occurrence_id": occurrence_id,
+        "report_slot": bundle.get("report_slot"),
+        "report_mode": bundle.get("report_mode"),
+        "current_state": states[-1],
+        "delivery_status": delivery_status,
+        "root_failure": bundle.get("root_failure"),
+        "root_stage": execution.get("root_stage"),
+        "transitions": [
+            {
+                "state": state,
+                "at": now,
+                "lineage": {
+                    "runner_status": runner_status or "UNKNOWN",
+                    "report_slot": bundle.get("report_slot"),
+                },
+            }
+            for state in states
+        ],
+        "precompute_observability": {
+            "PRECOMPUTE_REQUESTED": execution.get(
+                "precompute_requested", "UNAVAILABLE"
+            ),
+            "PREFETCH_TERMINAL": (
+                True
+                if runner_status == "PASS"
+                else execution.get("prefetch_terminal", False)
+            ),
+            "WARM_STATUS": execution.get("warm_status", "UNAVAILABLE"),
+            "FREEZE_STATUS": execution.get("freeze_status", "UNAVAILABLE"),
+        },
+        "idempotent_occurrence_identity": True,
+        "duplicate_user_report_allowed": False,
+    }
+
+
+def build_presentation_qa_manifest(bundle: Mapping[str, Any]) -> dict[str, Any]:
+    """Machine-readable decision-first presentation acceptance."""
+    sections = [
+        dict(row)
+        for row in ((bundle.get("report") or {}).get("sections") or [])
+        if isinstance(row, Mapping)
+    ]
+    by_id = {str(row.get("section_id") or ""): row for row in sections}
+
+    def state(section_id: str) -> str:
+        return str((by_id.get(section_id) or {}).get("state") or "").upper()
+
+    def content(section_id: str) -> dict[str, Any]:
+        value = (by_id.get(section_id) or {}).get("content") or {}
+        return dict(value) if isinstance(value, Mapping) else {}
+
+    s02_rows = [
+        row for row in content("S02").get("rows") or []
+        if isinstance(row, Mapping)
+    ]
+    s11 = content("S11")
+    s11_rows = [
+        row for row in (s11.get("scanner20") or s11.get("rows") or [])
+        if isinstance(row, Mapping)
+    ]
+    s12_rows = [
+        row for row in content("S12").get("rows") or []
+        if isinstance(row, Mapping)
+    ]
+    s13_rows = [
+        row for row in content("S13").get("rows") or []
+        if isinstance(row, Mapping)
+    ]
+    s16_rows = [
+        row for row in content("S16").get("rows") or []
+        if isinstance(row, Mapping)
+    ]
+
+    exact_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    actual_ids = [str(row.get("section_id") or "") for row in sections]
+    prior_mislabelled = False
+    for row in sections:
+        payload = row.get("content") or {}
+        if not isinstance(payload, Mapping):
+            continue
+        if str(payload.get("presentation_status") or "").upper() == "PRIOR":
+            if not payload.get("prior_source_occurrence"):
+                prior_mislabelled = True
+
+    stage_ledger = [
+        dict(row) for row in bundle.get("stage_ledger") or []
+        if isinstance(row, Mapping)
+    ]
+    false_failed = [
+        row for row in stage_ledger
+        if str(row.get("status") or "").upper() == "FAILED"
+        and str(row.get("error") or "").strip() == ""
+        and str(row.get("error_class") or "").strip() == ""
+    ]
+
+    def rank20_eta_contract(rows: list[Mapping[str, Any]], section_state: str) -> bool:
+        if section_state != "COMPLETE":
+            return True
+        if len(rows) != 20:
+            return False
+        for row in rows:
+            eta = (
+                row.get("eta_human")
+                or row.get("estimated_change_window")
+                or row.get("predicted_change_at")
+                or row.get("date_state")
+            )
+            if eta in (None, ""):
+                return False
+        return True
+
+    s11_exact = (
+        state("S11") != "COMPLETE"
+        or (
+            len(s11_rows) == 20
+            and len({
+                int(row.get("element_id") or row.get("element") or 0)
+                for row in s11_rows
+            }) == 20
+        )
+    )
+    all15_ok = (
+        state("S16") != "COMPLETE"
+        or len({
+            int(row.get("element_id") or 0)
+            for row in s16_rows
+            if row.get("element_id") is not None
+        }) == 15
+    )
+    our15_ok = (
+        state("S02") != "COMPLETE"
+        or len({
+            int(row.get("element_id") or 0)
+            for row in s02_rows
+            if row.get("element_id") is not None
+        }) == 15
+    )
+
+    return {
+        "schema_version": 1,
+        "section_count": len(sections),
+        "section_order_exact": actual_ids == exact_ids,
+        "our15_count": len(s02_rows),
+        "our15_complete_when_claimed": our15_ok,
+        "watchlist_state": state("S11") or "UNAVAILABLE",
+        "watchlist_exact20_when_claimed": s11_exact,
+        "rise20_state": state("S12") or "UNAVAILABLE",
+        "rise20_eta_contract": rank20_eta_contract(s12_rows, state("S12")),
+        "fall20_state": state("S13") or "UNAVAILABLE",
+        "fall20_eta_contract": rank20_eta_contract(s13_rows, state("S13")),
+        "all15_count": len(s16_rows),
+        "all15_complete_when_claimed": all15_ok,
+        "root_failure_count": sum(
+            1 for row in stage_ledger
+            if str(row.get("status") or "").upper() == "FAILED"
+        ),
+        "downstream_false_failures": len(false_failed),
+        "prior_without_source_occurrence": prior_mislabelled,
+        "decision_first": bool(sections and sections[0].get("section_id") == "S01"),
+        "technical_health_in_s17": "S17" in actual_ids,
+        "final_judgement_present": bool(
+            str(content("S19").get("final_judgement") or "").strip()
+            or str(content("S19").get("summary") or "").strip()
+            or state("S19") == "COMPLETE"
+        ),
+        "visible_report_body_non_empty": bool(
+            str(bundle.get("visible_body") or "").strip()
+        ),
+    }
+
+
+def validate_presentation_qa_manifest(manifest: Mapping[str, Any]) -> list[str]:
+    failures: list[str] = []
+    expected_true = (
+        "section_order_exact",
+        "our15_complete_when_claimed",
+        "watchlist_exact20_when_claimed",
+        "rise20_eta_contract",
+        "fall20_eta_contract",
+        "all15_complete_when_claimed",
+        "decision_first",
+        "technical_health_in_s17",
+        "final_judgement_present",
+        "visible_report_body_non_empty",
+    )
+    for key in expected_true:
+        if manifest.get(key) is not True:
+            failures.append(key.upper())
+    if int(manifest.get("section_count") or 0) != 23:
+        failures.append("SECTION_COUNT_NOT_23")
+    if int(manifest.get("root_failure_count") or 0) > 1:
+        failures.append("ROOT_FAILURE_COUNT_GT_1")
+    if int(manifest.get("downstream_false_failures") or 0) != 0:
+        failures.append("DOWNSTREAM_FALSE_FAILURES")
+    if manifest.get("prior_without_source_occurrence") is True:
+        failures.append("PRIOR_WITHOUT_SOURCE_OCCURRENCE")
+    return failures
+
+
 def build_serving_snapshot(bundle: Mapping[str, Any]) -> dict[str, Any]:
     sections = [
         dict(row)
@@ -828,9 +1061,12 @@ def write_serving_artifacts(
     bundle["execution_proof"] = execution
 
     snapshot = build_serving_snapshot(bundle)
+    occurrence_state = build_occurrence_state(bundle)
+    presentation_qa = build_presentation_qa_manifest(bundle)
     failures = validate_serving_snapshot(snapshot)
     if str(bundle.get("report_mode") or "").upper() == "DEEP":
         failures.extend(validate_delivery_bundle(bundle))
+        failures.extend(validate_presentation_qa_manifest(presentation_qa))
     if failures:
         raise DeliveryReliabilityError(
             "serving snapshot validation failed: " + ",".join(dict.fromkeys(failures))
@@ -857,9 +1093,18 @@ def write_serving_artifacts(
                 "delivery_status": snapshot["delivery_status"],
                 "root_failure": snapshot.get("root_failure"),
                 "generated_at": snapshot["generated_at"],
+                "precompute_observability": occurrence_state[
+                    "precompute_observability"
+                ],
             },
             indent=2,
             ensure_ascii=False,
+        ) + "\n",
+        "delivery_state.json": json.dumps(
+            occurrence_state, indent=2, ensure_ascii=False, default=str
+        ) + "\n",
+        "presentation_qa.json": json.dumps(
+            presentation_qa, indent=2, ensure_ascii=False, default=str
         ) + "\n",
     }
     for name, payload in artifacts.items():

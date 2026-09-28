@@ -429,3 +429,223 @@ def _optimized_projection_builder(original_build, workers: int, metrics: dict[st
         def cached_estimate(
             player: Mapping[str, Any],
             context: Mapping[str, Any],
+            calibration_summary: Mapping[str, Any] | None = None,
+            model_evidence_binding: Mapping[str, Any] | None = None,
+        ):
+            element = int(player.get("id") or -1)
+            if (
+                element in cache
+                and _sha(context) == context_hashes[element]
+            ):
+                metrics["cache_hits"] += 1
+                return deepcopy(cache[element])
+            metrics["cache_misses"] += 1
+            return original_estimate(
+                player,
+                context,
+                calibration_summary=calibration_summary,
+                model_evidence_binding=model_evidence_binding,
+            )
+
+        hp.estimate_xmins = cached_estimate
+        try:
+            return original_build(*args, **kwargs)
+        finally:
+            hp.estimate_xmins = original_estimate
+
+    return build
+
+
+def _prepare_cold_cache_dirs(root: Path) -> None:
+    for name in ("stage2", "p17", "mc"):
+        path = root / name
+        shutil.rmtree(path, ignore_errors=True)
+        path.mkdir(parents=True, exist_ok=True)
+    os.environ["V12_STAGE2_DERIVED_CACHE_DIR"] = str(root / "stage2")
+    os.environ["V12_P17_DECISION_CACHE_DIR"] = str(root / "p17")
+    os.environ["V12_MC_SIM_CACHE_DIR"] = str(root / "mc")
+    os.environ["V12_PRIVATE_CACHE_PROFILE"] = "SECURE_NO_PERSONAL_CACHE"
+    os.environ.pop("FPL_V12_PRIVATE_CACHE_KEY_B64", None)
+
+
+def _full_child(args: argparse.Namespace) -> int:
+    process_started = time.perf_counter()
+    os.environ.update(_normalized_env())
+    os.environ.pop("FPL_V12_PRIVATE_CACHE_KEY_B64", None)
+    work = Path(args.work_dir)
+    work.mkdir(parents=True, exist_ok=True)
+    cache_root = work / "cache"
+    _prepare_cold_cache_dirs(cache_root)
+
+    # Import after normalized runtime env is locked.
+    from src.engines import v12_integrated_report_runner as runner
+    from src.engines import v12_mini_league_overlay as mini
+    from src.engines import v12_monte_carlo as mc
+    from src.engines.v12_private_publisher import publish_private_output
+
+    mc_records: list[dict[str, Any]] = []
+    original_mc = mc.run_correlated_monte_carlo
+    original_mini_mc = mini.run_correlated_monte_carlo
+    wrapper = _build_mc_wrapper(
+        runtime_class=args.runtime_class,
+        temp_root=work,
+        records=mc_records,
+    )
+    mc.run_correlated_monte_carlo = wrapper
+    mini.run_correlated_monte_carlo = wrapper
+
+    stage2_metrics: dict[str, Any] = {}
+    original_runner_projection = runner.build_player_projections
+    if int(args.stage2_workers or 0) > 0:
+        runner.build_player_projections = _optimized_projection_builder(
+            original_runner_projection,
+            int(args.stage2_workers),
+            stage2_metrics,
+        )
+
+    output_dir = work / "canonical"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    compute_started = time.perf_counter()
+    try:
+        bundle = runner.run_deep(
+            runtime_data_root=Path(args.runtime_data_root),
+            report_slot=args.report_slot,
+            output_dir=output_dir,
+            previous_visible_deep_dir=(
+                Path(args.previous_deep_dir)
+                if args.previous_deep_dir
+                else None
+            ),
+            private_data_root=Path(args.private_root),
+            allow_legacy_private_sources=False,
+            require_private_personal=True,
+        )
+    finally:
+        runner.build_player_projections = original_runner_projection
+        mc.run_correlated_monte_carlo = original_mc
+        mini.run_correlated_monte_carlo = original_mini_mc
+    compute_seconds = time.perf_counter() - compute_started
+
+    # External Stage3 acceptance is part of governed QA but remains local.
+    stage3_started = time.perf_counter()
+    stage3_path = output_dir / "stage3_acceptance.json"
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.engines.v12_stage3_acceptance",
+            "--bundle",
+            str(output_dir / "report_bundle.json"),
+            "--runtime-data-root",
+            str(args.runtime_data_root),
+            "--private-data-root",
+            str(args.private_root),
+            "--model-sha",
+            args.model_sha,
+            "--runtime-sha",
+            args.runtime_sha,
+            "--canonical",
+            str(ROOT / "control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt"),
+            "--output",
+            str(stage3_path),
+        ],
+        cwd=ROOT,
+        env=_normalized_env(),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=True,
+    )
+    stage3_seconds = time.perf_counter() - stage3_started
+    stage3 = json.loads(stage3_path.read_text(encoding="utf-8"))
+
+    # Safe publish-equivalent: copy into a runner-local temporary root only.
+    publish_root = work / "publish-equivalent"
+    publish_started = time.perf_counter()
+    receipt = publish_private_output(
+        canonical_dir=output_dir,
+        private_root=publish_root,
+        run_id="PERF_BC_EXPLORATORY",
+        season=None,
+        model_sha=args.model_sha,
+        runtime_sha=args.runtime_sha,
+    )
+    publish_seconds = time.perf_counter() - publish_started
+
+    stage2_proof = (
+        (bundle.get("execution_proof") or {}).get("stage2_derived_cache") or {}
+    )
+    report_hash = _sha(_semantic_strip(bundle.get("report") or {}))
+    body_hash = _sha(str(bundle.get("visible_body") or ""))
+    decision_hash = _decision_fingerprint(bundle)
+    safe = {
+        "runtime_class": args.runtime_class,
+        "cache_state": str(stage2_proof.get("status") or "UNKNOWN"),
+        "runner_status": bundle.get("runner_status"),
+        "pre_render_qa": (bundle.get("pre_render_qa") or {}).get("status"),
+        "post_render_qa": (bundle.get("post_render_qa") or {}).get("status"),
+        "human_facing_qa": (bundle.get("human_facing_qa") or {}).get("status"),
+        "stage3_status": stage3.get("status"),
+        "publish_equivalent_status": receipt.get("private_delivery_status"),
+        "compute_seconds": compute_seconds,
+        "stage3_seconds": stage3_seconds,
+        "publish_equivalent_seconds": publish_seconds,
+        "process_total_seconds": time.perf_counter() - process_started,
+        "stage_seconds": _stage_seconds(bundle),
+        "stage2_experiment": stage2_metrics,
+        "mc": mc_records,
+        "mc_total_wall_seconds": sum(float(r["wall_seconds"]) for r in mc_records),
+        "mc_total_compute_seconds": sum(float(r["child_compute_seconds"]) for r in mc_records),
+        "mc_spawn_serialization_overhead_seconds": sum(
+            float(r["spawn_overhead_seconds"])
+            + float(r["serialization_seconds"])
+            + float(r["deserialization_seconds"])
+            for r in mc_records
+        ),
+        "mc_output_fingerprints": [r.get("output_fingerprint") for r in mc_records],
+        "mc_actual_paths": [r.get("actual_paths") for r in mc_records],
+        "mc_all_canonical_pass": all(r.get("canonical_pass") is True for r in mc_records),
+        "mc_any_cache_hit": any(r.get("cache_hit") is True for r in mc_records),
+        "report_semantic_fingerprint": report_hash,
+        "visible_body_fingerprint": body_hash,
+        "decision_semantic_fingerprint": decision_hash,
+        "runtime_identity": _runtime_identity(),
+        "peak_memory_mb": _peak_memory_mb(),
+    }
+    Path(args.output).write_text(
+        json.dumps(safe, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return 0
+
+
+def _spawn_full(
+    *,
+    runtime_class: str,
+    runtime_data_root: Path,
+    private_root: Path,
+    report_slot: str,
+    runtime_sha: str,
+    model_sha: str,
+    previous_deep_dir: Path | None,
+    work_dir: Path,
+    output: Path,
+    stage2_workers: int = 0,
+) -> dict[str, Any]:
+    cmd = [
+        sys.executable,
+        "-m",
+        "src.engines.v12_perf_bc",
+        "_full-child",
+        "--runtime-class",
+        runtime_class,
+        "--runtime-data-root",
+        str(runtime_data_root),
+        "--private-root",
+        str(private_root),
+        "--report-slot",
+        report_slot,
+        "--runtime-sha",
+        runtime_sha,
+        "--model-sha",
+        model_sha,
+        "--work-dir",

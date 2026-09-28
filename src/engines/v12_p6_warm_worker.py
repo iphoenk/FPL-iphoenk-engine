@@ -99,7 +99,7 @@ class WarmWorker:
         *,
         identity: WarmIdentity,
         private_state: Mapping[str, Any],
-        scenario_package: Mapping[str, Any],
+        scenario_package: Mapping[str, Any] | None,
         callbacks: CanonicalCallbacks,
         ttl_seconds: int = DEFAULT_TTL_SECONDS,
         clock: Callable[[], float] = time.monotonic,
@@ -109,7 +109,7 @@ class WarmWorker:
             raise WarmWorkerError("P6 lifetime must be positive and strictly below 6 hours")
         self.identity = identity
         self._private_state = dict(private_state)
-        self._scenario_package = dict(scenario_package)
+        self._scenario_package = dict(scenario_package or {})
         self.callbacks = callbacks
         self.ttl_seconds = int(ttl_seconds)
         self.clock = clock
@@ -143,12 +143,13 @@ class WarmWorker:
                 raise WarmWorkerError(f"wrong/stale canonical state identity: {key}")
 
         self._transition(WorkerState.VALIDATE_DEPENDENCIES)
-        p4 = validate_package_for_dependencies(
-            self._scenario_package,
-            dependencies=self.identity.p4_dependencies(),
-        )
-        if not p4["current"]:
-            raise WarmWorkerError("stale/wrong-base P4 package rejected")
+        if self._scenario_package:
+            p4 = validate_package_for_dependencies(
+                self._scenario_package,
+                dependencies=self.identity.p4_dependencies(),
+            )
+            if not p4["current"]:
+                raise WarmWorkerError("stale/wrong-base P4 package rejected")
         self.canonical_state = state
         self._transition(WorkerState.WARM_READY)
 

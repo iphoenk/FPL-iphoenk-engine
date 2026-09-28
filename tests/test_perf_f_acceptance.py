@@ -143,6 +143,11 @@ def test_mini_league_partial_refresh_reuses_football_math_and_keeps_qa():
     assert "validate_post_render_qa(" in source
     assert "truncated=False" in source
     assert "validate_final_delivery_barrier(" in source
+    assert "safe_qa_failure" in source
+    assert '"pre_render"' in source
+    assert '"post_render"' in source
+    assert '"human_facing_failures"' in source
+    assert '"final_delivery"' in source
     assert '"reused_layers": ["Stage2", "P1.7", "MC"]' in source
     assert '"football_math_recomputed": False' in source
     assert "optimize_lineup(" not in source

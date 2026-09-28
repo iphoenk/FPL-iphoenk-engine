@@ -5266,9 +5266,79 @@ def run_deep(
     monte_carlo = None
     stage3_decision = None
     package_with_stage3 = None
+    package_with_stage3_pre_mini = None
     mini_overlay = None
 
-    if projections is not None and canonical_complete:
+    if projections is not None and canonical_complete and mini_only_warm_reuse:
+        package_search_result = deepcopy(warm_reuse["package_search_result"])
+        direct_package_utility = deepcopy(warm_reuse["direct_package_utility"])
+        funding_leg_selection = deepcopy(warm_reuse["funding_leg_selection"])
+        funded_search_result = deepcopy(warm_reuse["funded_search_result"])
+        funded_package_utility = deepcopy(warm_reuse["funded_package_utility"])
+        package_utility = deepcopy(warm_reuse["package_utility"])
+        material_mc_routes = deepcopy(warm_reuse["material_mc_routes"])
+        monte_carlo = deepcopy(warm_reuse["monte_carlo"])
+        stage3_decision = deepcopy(warm_reuse["stage3_decision"])
+        package_with_stage3_pre_mini = deepcopy(
+            warm_reuse["package_with_stage3_pre_mini"]
+        )
+        package_with_stage3 = deepcopy(package_with_stage3_pre_mini)
+
+        reused_stage_payloads = (
+            ("P1_2A_PACKAGE_SEARCH", package_search_result),
+            ("P1_2_PACKAGE_UTILITY", direct_package_utility),
+            ("P1_2_MATERIAL_FUNDING_LEGS", funding_leg_selection),
+            ("P1_2A_FUNDED_PACKAGE_SEARCH", funded_search_result),
+            ("P1_2B_FUNDED_PACKAGE_UTILITY", funded_package_utility),
+            ("P1_2B_PACKAGE_COMBINE", package_utility),
+            ("P1_4_MATERIAL_ROUTE_SELECTION", material_mc_routes),
+            ("P1_4_MONTE_CARLO", monte_carlo),
+            ("P1_4_PACKAGE_BINDING", package_with_stage3_pre_mini),
+            ("P1_2_STAGE3_DECISION_CLOSURE", stage3_decision),
+            ("P1_2_STAGE3_DECISION_BINDING", package_with_stage3_pre_mini),
+        )
+        for stage_name, payload in reused_stage_payloads:
+            _record_mini_warm_reuse_stage(
+                ledger,
+                stage_name,
+                payload,
+                required=True,
+            )
+
+        if package_with_stage3 and mini:
+            mini_overlay = _stage(
+                ledger,
+                "P1_8_MINI_LEAGUE_OVERLAY",
+                lambda: evaluate_mini_league_overlay(
+                    package_with_stage3,
+                    mini,
+                    monte_carlo=monte_carlo,
+                    relative_mc=None,
+                    input_snapshot_id=(
+                        "STAGE3_MINI:" + _fingerprint(mini)[:24]
+                    ),
+                    generated_at=report_slot,
+                ),
+                required=True,
+            )
+            if mini_overlay:
+                package_with_stage3 = _stage(
+                    ledger,
+                    "P1_8_MINI_LEAGUE_BINDING",
+                    lambda: attach_mini_league_overlay(
+                        package_with_stage3,
+                        mini_overlay,
+                    ),
+                    required=True,
+                )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_8_MINI_LEAGUE_OVERLAY",
+                "package decision or mini-league snapshot unavailable",
+                required=True,
+            )
+    elif projections is not None and canonical_complete:
         package_candidates = _package_candidate_rows(projections)
         # P1.2A exhaustively searches the complete direct universe first.
         # Funded two-transfer packages are then composed only from direct legs
@@ -6560,6 +6630,8 @@ def run_deep(
             "owned": owned,
             "all15": all15,
             "lineup": lineup,
+            "post_match_review": post_match_review,
+            "stage2_cache_proof": stage2_cache_proof,
             "predictor": predictor,
             "rise": rise,
             "fall": fall,
@@ -6581,6 +6653,7 @@ def run_deep(
             "material_mc_routes": material_mc_routes,
             "monte_carlo": monte_carlo,
             "stage3_decision": stage3_decision,
+            "package_with_stage3_pre_mini": package_with_stage3_pre_mini,
             "package_with_stage3": package_with_stage3,
             "mini_overlay": mini_overlay,
         }

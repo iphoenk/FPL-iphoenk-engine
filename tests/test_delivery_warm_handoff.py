@@ -7,6 +7,7 @@ from src.engines.v12_dp2_p6_handoff import (
     HandoffError,
     build_handoff,
     validate_snapshot_binding,
+    validate_t15_t10_window,
 )
 
 WIB = ZoneInfo("Asia/Jakarta")
@@ -78,4 +79,18 @@ def test_cross_occurrence_and_stale_runtime_rejected():
                 "runtime_data_sha": "c" * 40,
                 "gw_fixture_fingerprint": h.gw_fixture_fingerprint,
             },
+        )
+
+
+def test_t15_t10_window_is_exact_and_fail_closed():
+    validate_t15_t10_window(
+        logical_slot="2026-09-28T12:30:00+07:00",
+        release_at="2026-09-28T12:15:00+07:00",
+        freeze_target_at="2026-09-28T12:20:00+07:00",
+    )
+    with pytest.raises(HandoffError, match="exact T-15/T-10"):
+        validate_t15_t10_window(
+            logical_slot="2026-09-28T12:30:00+07:00",
+            release_at="2026-09-28T12:16:00+07:00",
+            freeze_target_at="2026-09-28T12:20:00+07:00",
         )

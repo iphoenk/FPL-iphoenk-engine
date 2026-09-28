@@ -35,4 +35,4 @@ Stage3, render QA, and the existing thin private publisher remain mandatory. T1 
 PERF-F is therefore allowed to expose slow MISS classes. Latency is optimized only after warm/cold semantic equality is proven and profiling identifies the dominant component. Correctness is not traded for the 15-second target.
 
 
-Warm identity hashes the canonical V6 `data/v6/current/official_fpl.json` snapshot together with publish-integrity and same-occurrence prefetch proof; legacy/nonexistent `data/v6/official_fpl` and `data/v6/fixtures` paths are not identity authority.
+Warm identity hashes the canonical V6 `data/v6/current/official_fpl.json` snapshot together with publish-integrity and same-occurrence prefetch proof; legacy/nonexistent `data/v6/official_fpl` and `data/v6/fixtures` paths are not identity authority. This path binding is a correctness contract, not a performance optimization.

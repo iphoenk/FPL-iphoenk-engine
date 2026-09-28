@@ -43,11 +43,18 @@ def _report_sections(payload: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(report, Mapping):
         report = payload.get("sections")
     if isinstance(report, Mapping):
-        return {
+        direct = {
             section: report[section]
             for section in REQUIRED_REPORT_SECTIONS
             if section in report
         }
+        if direct:
+            return direct
+        nested = report.get("sections")
+        if isinstance(nested, list):
+            report = nested
+        else:
+            return {}
     if isinstance(report, list):
         rows: dict[str, Any] = {}
         for item in report:
@@ -55,7 +62,7 @@ def _report_sections(payload: Mapping[str, Any]) -> dict[str, Any]:
                 continue
             sid = str(item.get("id") or item.get("section_id") or "")
             if sid in REQUIRED_REPORT_SECTIONS:
-                rows[sid] = item
+                rows[sid] = item.get("content", item)
         return rows
     return {}
 

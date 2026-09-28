@@ -869,3 +869,223 @@ def _preallocated_parallel_candidate(mc, original_parallel, projections, route_d
         stop = offset + int(count)
         for route_id in route_ids:
             for h in resolved_horizons:
+                combined[route_id][h][offset:stop] = arrays[route_id][h]
+        offset = stop
+    if offset != int(actual_paths):
+        raise RuntimeError("preallocated MC combine path mismatch")
+    diagnostics = mc._merge_parallel_sampling_diagnostics(
+        results,
+        actual_paths=actual_paths,
+        worker_count=workers,
+        child_seeds=child_seeds,
+    )
+    return combined, diagnostics
+
+
+def _mc_candidate_child(args: argparse.Namespace) -> int:
+    os.environ.update(_normalized_env())
+    os.environ.pop("V12_MC_SIM_CACHE_DIR", None)
+    from src.engines import v12_monte_carlo as mc
+    from src.engines.v12_monte_carlo_acceptance import build_acceptance_fixture
+
+    original_parallel = mc._simulate_route_arrays_parallel
+    if args.variant == "PREALLOCATED_PARALLEL_COMBINE":
+        mc._simulate_route_arrays_parallel = (
+            lambda projections, route_defs, *, actual_paths, seed, horizons, worker_count:
+            _preallocated_parallel_candidate(
+                mc,
+                original_parallel,
+                projections,
+                route_defs,
+                actual_paths=actual_paths,
+                seed=seed,
+                horizons=horizons,
+                worker_count=worker_count,
+            )
+        )
+    projections, package = build_acceptance_fixture()
+    route_defs = mc.package_route_definitions(package, route_ids=["R1"])
+    started = time.perf_counter()
+    try:
+        result = mc.run_correlated_monte_carlo(
+            projections,
+            route_defs,
+            actual_paths=500_000,
+            seed=14_092_026,
+            input_snapshot_id="P1_4_ACCEPTANCE_FIXTURE_V1",
+            canonical=True,
+            horizons=(1, 3, 5),
+            selected_route_id="R1",
+            generated_at="2026-09-20T01:09:04Z",
+            factual_snapshot_timestamps={
+                "acceptance_fixture": "2026-09-20T01:09:04Z"
+            },
+        )
+    finally:
+        mc._simulate_route_arrays_parallel = original_parallel
+    elapsed = time.perf_counter() - started
+    safe = {
+        "variant": args.variant,
+        "elapsed_seconds": elapsed,
+        "output_fingerprint": result.get("output_fingerprint"),
+        "run_fingerprint": result.get("run_fingerprint"),
+        "canonical_pass": result.get("canonical_pass"),
+        "actual_paths": result.get("actual_paths"),
+        "cache_hit": (result.get("performance") or {}).get("simulation_cache_hit"),
+        "execution_mode": (result.get("performance") or {}).get("execution_mode"),
+        "peak_memory_mb": _peak_memory_mb(),
+        "runtime_identity": _runtime_identity(),
+    }
+    Path(args.output).write_text(json.dumps(safe, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    return 0
+
+
+def run_perf_c_mc(args: argparse.Namespace) -> int:
+    cfg = _config()["perf_c_mc"]
+    order = list(cfg["order"])
+    root = Path(args.work_dir)
+    shutil.rmtree(root, ignore_errors=True)
+    root.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for index, variant in enumerate(order, 1):
+        output = root / f"{index:02d}-{variant}.json"
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "src.engines.v12_perf_bc",
+                "_mc-candidate-child",
+                "--variant",
+                variant,
+                "--output",
+                str(output),
+            ],
+            cwd=ROOT,
+            env=_normalized_env(),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+        )
+        row = json.loads(output.read_text(encoding="utf-8"))
+        row["sequence"] = index
+        rows.append(row)
+    base = [r for r in rows if r["variant"] == "BASELINE"]
+    cand = [r for r in rows if r["variant"] != "BASELINE"]
+    base_med = _median([r["elapsed_seconds"] for r in base])
+    cand_med = _median([r["elapsed_seconds"] for r in cand])
+    ratio = cand_med / base_med if base_med else None
+    saved = base_med - cand_med
+    semantic_equal = len({str(r["output_fingerprint"]) for r in rows}) == 1
+    reproducible = len(base) >= 2 and len(cand) >= 2
+    gates = all(
+        r.get("canonical_pass") is True
+        and int(r.get("actual_paths") or 0) == 500_000
+        and r.get("cache_hit") is False
+        for r in rows
+    )
+    if not semantic_equal or not gates:
+        decision = "REJECT"
+    elif not reproducible:
+        decision = "INCONCLUSIVE"
+    elif (
+        ratio is not None
+        and ratio <= float(cfg["material_ratio_lte"])
+        and saved >= float(cfg["minimum_seconds_saved"])
+    ):
+        decision = "PROMOTE"
+    else:
+        decision = "NO_MATERIAL_GAIN"
+    result = {
+        "schema_version": 1,
+        "authority": "FPL_V12_PERF_C_MC_EXPLORATORY",
+        "terminal_decision": decision,
+        "candidate": "PREALLOCATED_PARALLEL_COMBINE",
+        "cache_class": "COLD_DIRECT_NO_CACHE",
+        "actual_paths": 500_000,
+        "baseline_median_seconds": base_med,
+        "candidate_median_seconds": cand_med,
+        "ratio": ratio,
+        "seconds_saved": saved,
+        "semantic_fingerprint_equal": semantic_equal,
+        "output_fingerprint": rows[0]["output_fingerprint"],
+        "reproducible_samples": reproducible,
+        "samples": rows,
+        "material_ratio_lte": cfg["material_ratio_lte"],
+        "minimum_seconds_saved": cfg["minimum_seconds_saved"],
+    }
+    Path(args.output).write_text(json.dumps(result, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    print("PERF_C_MC_RESULT=" + json.dumps(result, sort_keys=True))
+    return 0 if decision != "REJECT" else 2
+
+
+def _stage2_child(args: argparse.Namespace) -> int:
+    os.environ.update(_normalized_env())
+    from src.engines import v12_stage2_acceptance as acceptance
+    from src.models import historical_projection as hp
+
+    original_alias = acceptance.build_player_projections
+    capture: dict[str, Any] = {}
+    stage2_metrics: dict[str, Any] = {}
+
+    if args.variant == "BASELINE":
+        def wrapped(*build_args: Any, **build_kwargs: Any):
+            started = time.perf_counter()
+            out = original_alias(*build_args, **build_kwargs)
+            capture["projection_seconds"] = time.perf_counter() - started
+            capture["projection_fingerprint"] = _sha(_semantic_strip(out))
+            return out
+    else:
+        workers = int(args.workers)
+        optimized = _optimized_projection_builder(
+            hp.build,
+            workers,
+            stage2_metrics,
+        )
+        def wrapped(*build_args: Any, **build_kwargs: Any):
+            started = time.perf_counter()
+            out = optimized(*build_args, **build_kwargs)
+            capture["projection_seconds"] = time.perf_counter() - started
+            capture["projection_fingerprint"] = _sha(_semantic_strip(out))
+            return out
+
+    acceptance.build_player_projections = wrapped
+    total_started = time.perf_counter()
+    try:
+        proof = acceptance.run_acceptance(
+            Path(args.runtime_data_root),
+            output_path=Path(args.private_output),
+        )
+    finally:
+        acceptance.build_player_projections = original_alias
+    total_seconds = time.perf_counter() - total_started
+    safe = {
+        "variant": args.variant,
+        "workers": int(args.workers),
+        "projection_seconds": capture.get("projection_seconds"),
+        "total_acceptance_seconds": total_seconds,
+        "projection_fingerprint": capture.get("projection_fingerprint"),
+        "acceptance_semantic_fingerprint": _sha(_semantic_strip(proof)),
+        "acceptance_status": proof.get("status"),
+        "stage2_engine_status": proof.get("stage2_engine_status"),
+        "stage2_experiment": stage2_metrics,
+        "peak_memory_mb": _peak_memory_mb(),
+        "runtime_identity": _runtime_identity(),
+    }
+    Path(args.output).write_text(json.dumps(safe, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    return 0
+
+
+def run_perf_c_stage2(args: argparse.Namespace) -> int:
+    cfg = _config()["perf_c_stage2"]
+    variants = [("BASELINE", 0)] + [
+        (f"PRECOMPUTE_XMINS_W{w}", int(w))
+        for w in cfg["workers"]
+    ]
+    repetitions = int(cfg["repetitions"])
+    root = Path(args.work_dir)
+    shutil.rmtree(root, ignore_errors=True)
+    root.mkdir(parents=True, exist_ok=True)
+    rows = []
+    sequence = 0
+    # Interleave by repetition to limit host drift.
+    for rep in range(1, repetitions + 1):

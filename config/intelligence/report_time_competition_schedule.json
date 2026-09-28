@@ -55,5 +55,15 @@
       "rotation_review",
       "uncertainty_context"
     ]
+  },
+  "team_name_aliases": {
+    "AFC Bournemouth": "Bournemouth",
+    "Brighton & Hove Albion": "Brighton",
+    "Leeds United": "Leeds",
+    "Manchester City": "Man City",
+    "Manchester United": "Man Utd",
+    "Newcastle United": "Newcastle",
+    "Nottingham Forest": "Nott'm Forest",
+    "Tottenham Hotspur": "Spurs"
   }
 }

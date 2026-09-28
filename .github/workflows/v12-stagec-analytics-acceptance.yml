@@ -34,6 +34,7 @@ on:
       - "tests/test_p4_scenario_package.py"
       - "tests/test_p4_scenario_production.py"
       - "tests/test_perf_f_production.py"
+      - "tests/test_perf_f_acceptance.py"
       - "config/security/v12_delivery_classification.json"
       - ".github/workflows/v12-stagec-analytics-acceptance.yml"
   pull_request:
@@ -66,6 +67,7 @@ on:
       - "tests/test_p4_scenario_package.py"
       - "tests/test_p4_scenario_production.py"
       - "tests/test_perf_f_production.py"
+      - "tests/test_perf_f_acceptance.py"
       - "config/security/v12_delivery_classification.json"
       - ".github/workflows/v12-stagec-analytics-acceptance.yml"
   workflow_dispatch:
@@ -110,7 +112,8 @@ jobs:
             tests/test_p4_scenario_availability_override.py \
             tests/test_p4_scenario_package.py \
             tests/test_p4_scenario_production.py \
-            tests/test_perf_f_production.py
+            tests/test_perf_f_production.py \
+            tests/test_perf_f_acceptance.py
 
       - name: Run P1 synthetic private/public acceptance
         run: |

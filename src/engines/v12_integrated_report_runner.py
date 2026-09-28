@@ -6716,6 +6716,16 @@ def main() -> int:
         default=None,
         help="Ephemeral private warm-state output; never a public artifact.",
     )
+    parser.add_argument(
+        "--warm-reuse-state-file",
+        default=None,
+        help="Private frozen same-occurrence state for governed selective warm reuse.",
+    )
+    parser.add_argument(
+        "--warm-reuse-change-class",
+        default=None,
+        help="Governed selective warm change class; currently MINI_LEAGUE_ONLY only.",
+    )
     args = parser.parse_args()
     mode = str(args.report_mode).upper()
     if mode not in SUPPORTED_MODES:
@@ -6723,10 +6733,22 @@ def main() -> int:
             f"integrated runner supports {sorted(SUPPORTED_MODES)}; got {mode}"
         )
     scenario_overrides = {}
+    warm_reuse_state = {}
     if args.warm_state_out and not args.private_data_root:
         raise IntegratedRunnerError(
             "private warm state requires an explicit private data plane"
         )
+    if args.warm_reuse_state_file:
+        if mode != "DEEP":
+            raise IntegratedRunnerError("warm reuse requires DEEP mode")
+        if not args.private_data_root:
+            raise IntegratedRunnerError(
+                "warm reuse requires an explicit private data plane"
+            )
+        raw_warm_reuse = _read_json(Path(args.warm_reuse_state_file), None)
+        if not isinstance(raw_warm_reuse, dict):
+            raise IntegratedRunnerError("warm reuse state file must be a JSON object")
+        warm_reuse_state = raw_warm_reuse
     if args.scenario_overrides_file:
         if mode != "DEEP":
             raise IntegratedRunnerError("P4 scenario overrides require DEEP mode")
@@ -6771,6 +6793,8 @@ def main() -> int:
                 if args.warm_state_out
                 else None
             ),
+            warm_reuse_state=warm_reuse_state,
+            warm_reuse_change_class=args.warm_reuse_change_class,
         )
     print(
         json.dumps(

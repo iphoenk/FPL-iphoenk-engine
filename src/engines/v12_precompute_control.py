@@ -18,6 +18,7 @@ import shlex
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from .v12_dp2_p6_handoff import occurrence_id
 from .v12_delivery_schedule import (
     deadline_checkpoints,
     is_price_checkpoint,
@@ -45,6 +46,8 @@ class PrecomputePlan:
     dispatch_mode: str
     dispatch_reason: str
     dispatch_workflow: str
+    warm_worker_workflow: str
+    occurrence_id: str
     counts_as_core_slot: bool
     advances_scheduler_proof: bool
 
@@ -70,6 +73,14 @@ def load_precompute_control(path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
         raise PrecomputeControlError("D-P2 cancel_in_progress must remain false")
     if payload.get("preserve_report_occurrence_identity") is not True:
         raise PrecomputeControlError("D-P2 must preserve report occurrence identity")
+    if payload.get("warm_worker_downstream_only") is not True:
+        raise PrecomputeControlError("P6 warm worker must remain downstream-only")
+    if payload.get("warm_worker_may_advance_scheduler_proof") is not False:
+        raise PrecomputeControlError("P6 warm worker may not advance scheduler proof")
+    if payload.get("warm_worker_may_edit_core_issue_title") is not False:
+        raise PrecomputeControlError("P6 warm worker may not edit core issue title")
+    if str(payload.get("warm_worker_workflow") or "") != "v12-p6-warm-worker.yml":
+        raise PrecomputeControlError("unexpected P6 warm-worker workflow")
     return payload
 
 
@@ -193,6 +204,11 @@ def evaluate_precompute_request(
         dispatch_mode=str(config["dispatch_mode"]),
         dispatch_reason=str(config["dispatch_reason"]),
         dispatch_workflow=str(config["dispatch_workflow"]),
+        warm_worker_workflow=str(config["warm_worker_workflow"]),
+        occurrence_id=occurrence_id(
+            report_kind=report_kind,
+            logical_slot=target.isoformat(),
+        ),
         counts_as_core_slot=False,
         advances_scheduler_proof=False,
     )

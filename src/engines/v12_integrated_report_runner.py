@@ -5049,6 +5049,7 @@ def refresh_mini_league_only_state(
         rendered_model_keys=list(pre_render_qa.get("expected_model_keys") or []),
         rendered_mini_league_denominator_complete=mini_complete,
         rendered_weather_contract_state="SOURCE_DEGRADED",
+        truncated=False,
     )
     if (
         str(pre_render_qa.get("status") or "").upper() != "PASS"

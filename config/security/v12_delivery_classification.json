@@ -114,6 +114,7 @@
     "allowed_stage3_values": [
       "PASS",
       "FAIL",
+      "DEGRADED",
       "NOT_APPLICABLE",
       "UNKNOWN"
     ],

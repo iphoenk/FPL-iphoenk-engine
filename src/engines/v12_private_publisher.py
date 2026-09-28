@@ -25,6 +25,13 @@ _REQUIRED_CANONICAL_FILES = (
     "execution_proof.json",
     "stage3_acceptance.json",
 )
+_OPTIONAL_SERVING_FILES = (
+    "serving_report.json",
+    "serving_report.md",
+    "delivery_status.json",
+    "delivery_state.json",
+    "presentation_qa.json",
+)
 
 
 def sha256_bytes(payload: bytes) -> str:
@@ -84,14 +91,17 @@ def _safe_write_text(destination: Path, text: str) -> str:
     return _safe_write_exact(destination, text.encode("utf-8"))
 
 
-def _atomic_replace_text(destination: Path, text: str) -> str:
-    payload = text.encode("utf-8")
+def _atomic_replace_bytes(destination: Path, payload: bytes) -> str:
     digest = sha256_bytes(payload)
     destination.parent.mkdir(parents=True, exist_ok=True)
     tmp = destination.with_name(f".{destination.name}.tmp")
     tmp.write_bytes(payload)
     tmp.replace(destination)
     return digest
+
+
+def _atomic_replace_text(destination: Path, text: str) -> str:
+    return _atomic_replace_bytes(destination, text.encode("utf-8"))
 
 
 def build_private_digest(
@@ -170,12 +180,19 @@ def publish_private_output(
     report_mode = str(bundle.get("report_mode") or "").upper()
     report_slot = str(bundle.get("report_slot") or "")
     planning_gw = int(bundle.get("planning_gw") or 0)
-    if not report_mode or not report_slot or planning_gw <= 0:
-        raise PrivatePublishError("canonical bundle missing mode/slot/planning_gw")
+    delivery_status = str(bundle.get("delivery_status") or "").upper()
+    if not report_mode or not report_slot:
+        raise PrivatePublishError("canonical bundle missing mode/slot")
+    if planning_gw <= 0 and delivery_status != "READY_DEGRADED":
+        raise PrivatePublishError("canonical full bundle missing planning_gw")
 
-    if str(stage3.get("status") or "UNKNOWN").upper() not in {
-        "PASS", "NOT_APPLICABLE"
-    }:
+    stage3_status = str(stage3.get("status") or "UNKNOWN").upper()
+    stage3_publishable = stage3_status in {"PASS", "NOT_APPLICABLE"} or (
+        stage3_status == "DEGRADED"
+        and delivery_status == "READY_DEGRADED"
+        and stage3.get("stage3_pass_claimed") is False
+    )
+    if not stage3_publishable:
         raise PrivatePublishError("Stage3 canonical acceptance is not publishable")
 
     season_value = str(season or "").strip() or _season_from_report_slot(report_slot)
@@ -190,7 +207,7 @@ def publish_private_output(
             private_root
             / "reports"
             / season_value
-            / f"gw_{planning_gw}"
+            / (f"gw_{planning_gw}" if planning_gw > 0 else "gw_unknown")
             / slot_token
         )
     latest_dir = private_root / "latest"
@@ -208,10 +225,48 @@ def publish_private_output(
     )
     digest_md = render_private_digest_markdown(digest)
 
+    recovery_upgrade = False
+    existing_bundle_path = report_dir / "report_bundle.json"
+    if existing_bundle_path.exists():
+        existing_bundle = _read_json(existing_bundle_path)
+        same_occurrence = bool(
+            str(existing_bundle.get("report_mode") or "").upper() == report_mode
+            and str(existing_bundle.get("report_slot") or "") == report_slot
+            and str(existing_bundle.get("occurrence_id") or f"{report_mode}|{report_slot}")
+            == str(bundle.get("occurrence_id") or f"{report_mode}|{report_slot}")
+        )
+        recovery_upgrade = bool(
+            same_occurrence
+            and str(existing_bundle.get("delivery_status") or "").upper()
+            == "READY_DEGRADED"
+            and delivery_status == "READY_FULL"
+        )
+        if not same_occurrence and existing_bundle_path.read_bytes() != (
+            canonical_dir / "report_bundle.json"
+        ).read_bytes():
+            raise PrivatePublishError(
+                "idempotency collision across different report occurrence"
+            )
+
     copied: dict[str, str] = {}
     for name in _REQUIRED_CANONICAL_FILES:
         payload = (canonical_dir / name).read_bytes()
-        copied[name] = _safe_write_exact(report_dir / name, payload)
+        copied[name] = (
+            _atomic_replace_bytes(report_dir / name, payload)
+            if recovery_upgrade
+            else _safe_write_exact(report_dir / name, payload)
+        )
+    for name in _OPTIONAL_SERVING_FILES:
+        source = canonical_dir / name
+        if source.is_file():
+            payload = source.read_bytes()
+            copied[name] = (
+                _atomic_replace_bytes(report_dir / name, payload)
+                if recovery_upgrade
+                else _safe_write_exact(report_dir / name, payload)
+            )
+
+    write_text = _atomic_replace_text if recovery_upgrade else _safe_write_text
 
     execution_private = {
         "schema_version": 1,
@@ -226,17 +281,28 @@ def publish_private_output(
     execution_private_json = (
         json.dumps(execution_private, indent=2, sort_keys=True) + "\n"
     )
-    execution_private_sha = _safe_write_text(
+    execution_private_sha = write_text(
         report_dir / "execution_proof_private.json",
         execution_private_json,
     )
-    digest_sha = _safe_write_text(report_dir / "digest.json", digest_json)
-    digest_md_sha = _safe_write_text(report_dir / "digest.md", digest_md)
+    digest_sha = write_text(report_dir / "digest.json", digest_json)
+    digest_md_sha = write_text(report_dir / "digest.md", digest_md)
 
     if update_latest:
         mode_lower = report_mode.lower()
         _atomic_replace_text(latest_dir / f"{mode_lower}.json", digest_json)
         _atomic_replace_text(latest_dir / f"{mode_lower}.md", digest_md)
+        serving_map = {
+            "serving_report.json": "report.json",
+            "serving_report.md": "report.md",
+            "delivery_status.json": "delivery_status.json",
+            "delivery_state.json": "delivery_state.json",
+            "presentation_qa.json": "presentation_qa.json",
+        }
+        for source_name, latest_name in serving_map.items():
+            source = canonical_dir / source_name
+            if source.is_file():
+                _atomic_replace_bytes(latest_dir / latest_name, source.read_bytes())
 
     after = {
         name: sha256_file(canonical_dir / name)
@@ -263,12 +329,15 @@ def publish_private_output(
         "model_sha": str(model_sha),
         "runtime_sha": str(runtime_sha),
         "private_delivery_status": "PASS",
+        "delivery_status": delivery_status or "LEGACY",
+        "same_occurrence_recovery_upgrade": recovery_upgrade,
+        "serving_snapshot_published": (canonical_dir / "serving_report.json").is_file(),
         "math_recomputed": False,
     }
     receipt_json = (
         json.dumps(receipt, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
     )
-    receipt_sha = _safe_write_text(
+    receipt_sha = write_text(
         report_dir / "delivery_receipt.json",
         receipt_json,
     )

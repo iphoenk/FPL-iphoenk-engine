@@ -23,6 +23,7 @@ import cProfile
 import hashlib
 import json
 import os
+import subprocess
 import time
 from copy import deepcopy
 from datetime import datetime
@@ -59,6 +60,11 @@ from src.engines.v12_price_delivery import run_price_occurrence
 from src.engines.v12_deep_delivery import (
     select_personal_evidence,
     validate_deep_decision_content_delivery,
+)
+from src.engines.v12_delivery_reliability import (
+    assemble_degraded_deep_report,
+    wait_for_prefetch_terminal,
+    write_serving_artifacts,
 )
 from src.engines.v12_personal_data_plane import (
     collect_personal_evidence_candidates,
@@ -692,6 +698,25 @@ def _skip_stage(
             "required": bool(required),
             "reason": reason,
         }
+    )
+
+
+def _refresh_runtime_data_checkout(runtime_root: Path) -> None:
+    """Refresh the local runtime-data-v6 checkout without creating authority."""
+    git_marker = runtime_root / ".git"
+    if not git_marker.exists():
+        return
+    subprocess.run(
+        ["git", "-C", str(runtime_root), "fetch", "--quiet", "origin", "runtime-data-v6"],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    subprocess.run(
+        ["git", "-C", str(runtime_root), "reset", "--hard", "origin/runtime-data-v6"],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
 
 
@@ -4650,16 +4675,19 @@ def run_deep(
     prefetch = _stage(
         ledger,
         "V6_REPORT_PREFETCH_BINDING",
-        lambda: _require_report_prefetch(
+        lambda: wait_for_prefetch_terminal(
             runtime_data_root,
             report_slot=report_slot,
+            refresh_fn=lambda: _refresh_runtime_data_checkout(runtime_data_root),
         ),
         required=True,
     )
     if not prefetch:
-        raise IntegratedRunnerError(
-            "DEEP integrated runner requires fresh same-occurrence V6 report-prefetch"
+        failure = (
+            _stage_failure_reason(ledger, "V6_REPORT_PREFETCH_BINDING")
+            or "same-occurrence prefetch did not become terminal"
         )
+        raise IntegratedRunnerError("PREFETCH_NOT_TERMINAL: " + failure)
 
     publish_integrity = _read_json(
         runtime_data_root / "data/v6/health/publish_integrity.json",
@@ -6529,30 +6557,55 @@ def main() -> int:
             output_dir=Path(args.output_dir),
         )
     else:
-        bundle = run_deep(
-            runtime_data_root=Path(args.runtime_data_root),
-            report_slot=args.report_slot,
-            output_dir=Path(args.output_dir),
-            checkpoint_time=args.checkpoint_time,
-            previous_visible_deep_dir=(
-                Path(args.previous_visible_deep_dir)
-                if args.previous_visible_deep_dir
-                else None
-            ),
-            private_data_root=(
-                Path(args.private_data_root)
-                if args.private_data_root
-                else None
-            ),
-            allow_legacy_private_sources=not args.disable_legacy_private_sources,
-            require_private_personal=bool(args.require_private_personal),
-            scenario_overrides=scenario_overrides,
-            warm_state_out=(
-                Path(args.warm_state_out)
-                if args.warm_state_out
-                else None
-            ),
+        runtime_root = Path(args.runtime_data_root)
+        output_dir = Path(args.output_dir)
+        previous_dir = (
+            Path(args.previous_visible_deep_dir)
+            if args.previous_visible_deep_dir
+            else None
         )
+        try:
+            bundle = run_deep(
+                runtime_data_root=runtime_root,
+                report_slot=args.report_slot,
+                output_dir=output_dir,
+                checkpoint_time=args.checkpoint_time,
+                previous_visible_deep_dir=previous_dir,
+                private_data_root=(
+                    Path(args.private_data_root)
+                    if args.private_data_root
+                    else None
+                ),
+                allow_legacy_private_sources=not args.disable_legacy_private_sources,
+                require_private_personal=bool(args.require_private_personal),
+                scenario_overrides=scenario_overrides,
+                warm_state_out=(
+                    Path(args.warm_state_out)
+                    if args.warm_state_out
+                    else None
+                ),
+            )
+        except Exception as exc:
+            message = str(exc)
+            root_failure = (
+                "PREFETCH_NOT_TERMINAL"
+                if "PREFETCH_NOT_TERMINAL" in message
+                or "same-occurrence" in message
+                else f"ANALYTICS_PIPELINE_FAILURE:{type(exc).__name__}"
+            )
+            print(
+                "[V12_DELIVERY] DEGRADED "
+                f"root_failure={root_failure} error_class={type(exc).__name__}",
+                flush=True,
+            )
+            bundle = assemble_degraded_deep_report(
+                runtime_root=runtime_root,
+                report_slot=args.report_slot,
+                output_dir=output_dir,
+                root_failure=root_failure,
+                previous_visible_deep_dir=previous_dir,
+            )
+        write_serving_artifacts(bundle=bundle, output_dir=output_dir)
     print(
         json.dumps(
             {

@@ -63,11 +63,23 @@ def _runtime_root(tmp_path: Path, report_slot: str) -> Path:
         "target_logical_report_slot": report_slot,
         "personal_requested": True,
         "mini_league_requested": True,
+        "mini_league_status": "AVAILABLE",
+        "public_personal_status": "AVAILABLE",
+        "authenticated_personal_required_for_public_green": False,
+        "public_control_failures": [],
         "live_requested": False,
         "public_core_complete": True,
         "fresh_for_target_report": True,
         "generated_at": "2026-09-21T05:30:00+00:00",
         "report_prefetch_run_id": "prefetch-test",
+        "artifacts": [
+            {
+                "artifact_class": "REPORT_PREFETCH",
+                "status": "PROVEN",
+                "publication_run_id": "prefetch-test-publication",
+                "published_at": "2026-09-21T05:30:01+00:00",
+            }
+        ],
     }
     _write(runtime / "data/v6/report_prefetch/latest.json", prefetch)
     _write(

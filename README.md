@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-28T15:40:00+07:00`
-> **Production main at sync:** `df8db3f226762611047938b1412bfe91ad1a16a8`  
+> **Last runtime/documentation sync:** `2026-09-28T16:15:00+07:00`
+> **Production main at sync:** `7363d46a399b51b57ce3fb9ad339c2847712732e`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -38,7 +38,7 @@ Stage2 public live acceptance consumes the already-published post-deadline Offic
 
 PERF-0 freezes latency measurement before optimization: closure requires 6 comparable canonical production-main DEEP executions. Natural and controlled production-equivalent executions may qualify, but controlled runs never count as scheduler proof and branch acceptance is excluded. p90 remains informational until n>=10. Exact app/runtime lineage, runtime/cache class and observable CPU/runtime metadata are preserved, while queue, startup, setup, factual acquisition, Stage-2, P1.2A, P1.2B, P1.7, MC, render, QA, private publish and total timing remain distinct. Controlled COLD runs use `SECURE_NO_PERSONAL_CACHE`, do not restore or persist personal-decision caches, and do not receive the production decrypt key.
 
-P4 canonical scenario packages precompute a bounded private BASE_CURRENT15 plus exact OUR15/C/VC unavailability counterfactual set. Reuse is fail-closed against model, OUR15, GW/fixture, projection-lineage, cache/schema, MC-authority, and owner-context fingerprints; manager-specific package payloads remain private.\n\nP6 warm execution is bounded below six hours, downstream-only, and fail-closed. D-P2 handoff is occurrence-bound; PERF-F measures warm T0 through validated private publication and requires canonical cold semantic equality.\n\nCache invalidation is governed by a frozen four-state dependency matrix: `HIT`, `MISS`, `PARTIAL_INVALIDATION`, and `NOT_APPLICABLE`. Selective reuse is permitted only with explicit dependency keys; uncertain scope falls back to MISS, and every warm path must remain semantically equal to canonical cold output.
+P4 canonical scenario packages precompute a bounded private BASE_CURRENT15 plus exact OUR15/C/VC unavailability counterfactual set. Reuse is fail-closed against model, OUR15, GW/fixture, projection-lineage, cache/schema, MC-authority, and owner-context fingerprints; manager-specific package payloads remain private.\n\nP6 warm execution is bounded below six hours, downstream-only, and fail-closed. D-P2 handoff is occurrence-bound; PERF-F measures warm T0 through validated private publication and requires canonical cold semantic equality.\n\nCache invalidation is governed by a frozen four-state dependency matrix: `HIT`, `MISS`, `PARTIAL_INVALIDATION`, and `NOT_APPLICABLE`. Selective reuse is permitted only with explicit dependency keys; uncertain scope falls back to MISS, and every warm path must remain semantically equal to canonical cold output. `MINI_LEAGUE_ONLY` reuses the frozen Stage2, exact P1.7 and canonical 500k MC state, recomputes only the P1.8/downstream decision and presentation surfaces, then re-runs the full render, QA and final-delivery barriers.
 
 ## Questions it answers
 

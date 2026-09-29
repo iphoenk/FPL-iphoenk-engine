@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import inspect
 
-from src.engines.v12_p6_selective_refresh import refresh_p4_scenario_state
+import pytest
+
+from src.engines.v12_p6_selective_refresh import (
+    SelectiveRefreshError,
+    _scenario_section_delivery_state,
+    refresh_p4_scenario_state,
+)
 from src.engines.v12_perf_f_acceptance import (
     _requires_p4_package,
     execute_case,
@@ -92,3 +98,47 @@ def test_only_p4_consuming_perf_f_cases_attach_private_scenario_package():
 
     source = inspect.getsource(execute_case)
     assert "if _requires_p4_package(case)" in source
+
+
+def test_p4_s03_unavailable_baseline_stays_degraded():
+    state, reason = _scenario_section_delivery_state(
+        sid="S03",
+        replacement={
+            "decision_delta": {
+                "baseline_state": "UNAVAILABLE",
+                "summary": "BASELINE UNAVAILABLE — no prior valid visible DEEP",
+                "no_recomputation_no_numeric_delta": True,
+            }
+        },
+    )
+    assert state == "DEGRADED"
+    assert reason is not None
+
+
+def test_p4_s03_available_baseline_can_be_complete():
+    state, reason = _scenario_section_delivery_state(
+        sid="S03",
+        replacement={
+            "decision_delta": {
+                "baseline_state": "AVAILABLE",
+                "rows": [],
+                "summary": "NO MATERIAL DECISION CHANGE",
+            }
+        },
+    )
+    assert state == "COMPLETE"
+    assert reason is None
+
+
+def test_p4_s03_unavailable_baseline_fails_closed_without_guards():
+    with pytest.raises(SelectiveRefreshError):
+        _scenario_section_delivery_state(
+            sid="S03",
+            replacement={
+                "decision_delta": {
+                    "baseline_state": "UNAVAILABLE",
+                    "summary": "missing required sentinel",
+                    "no_recomputation_no_numeric_delta": False,
+                }
+            },
+        )

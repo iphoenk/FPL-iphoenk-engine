@@ -132,6 +132,13 @@ jobs:
       - name: Execute production-real PERF-F case
         env:
           FPL_V12_PRIVATE_CACHE_KEY_B64: ${{ secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 }}
+          # PERF-F cold oracle must use the same normalized numerical runtime
+          # as P4. Otherwise identical scenario math can drift at floating-point
+          # boundaries and falsely fail semantic equality.
+          OPENBLAS_CORETYPE: Haswell
+          OPENBLAS_NUM_THREADS: "1"
+          OMP_NUM_THREADS: "1"
+          NPY_DISABLE_CPU_FEATURES: "X86_V4,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR"
         shell: bash
         run: |
           set -euo pipefail

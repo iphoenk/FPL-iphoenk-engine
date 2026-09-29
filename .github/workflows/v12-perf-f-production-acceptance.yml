@@ -109,14 +109,6 @@ jobs:
           test "$GITHUB_REF_NAME" = "main"
           echo "production_sha=$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          repository: iphoenk/FPL-iphoenk-engine
-          ref: runtime-data-v6
-          path: runtime-data
-          fetch-depth: 1
-          persist-credentials: false
-
       - name: Require private publisher credential
         shell: bash
         env:
@@ -133,6 +125,79 @@ jobs:
           token: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
           persist-credentials: true
           fetch-depth: 1
+
+      - name: Resolve governed PERF-F runtime-data ref
+        id: runtime
+        shell: bash
+        env:
+          PERF_F_CASES: ${{ steps.request.outputs.cases }}
+          PERF_F_REPORT_SLOT: ${{ steps.request.outputs.report_slot }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          p4_required = {
+              "OUR15_AVAILABILITY",
+              "MATERIAL_PROJECTION",
+              "P4_SCENARIO_HIT",
+              "P4_SCENARIO_MISS",
+          }
+          cases = {
+              token.strip().upper()
+              for token in os.environ["PERF_F_CASES"].split(",")
+              if token.strip()
+          }
+          requested_slot = os.environ["PERF_F_REPORT_SLOT"]
+          runtime_ref = "runtime-data-v6"
+          source = "CURRENT_RUNTIME_BRANCH"
+
+          if cases & p4_required:
+              path = Path("private-reports/scenarios/latest.json")
+              if not path.is_file():
+                  raise SystemExit("P4-consuming PERF-F chain has no private package")
+              package = json.loads(path.read_text(encoding="utf-8"))
+              binding = dict(package.get("occurrence_binding") or {})
+              runtime_sha = str(binding.get("runtime_data_sha") or "").strip()
+              package_slot = str(binding.get("report_slot") or "").strip()
+              if package_slot != requested_slot:
+                  raise SystemExit(
+                      "P4/PERF-F occurrence mismatch: "
+                      f"package={package_slot} requested={requested_slot}"
+                  )
+              if not re.fullmatch(r"[0-9a-f]{40}", runtime_sha):
+                  raise SystemExit("P4 package has no valid runtime_data_sha binding")
+              runtime_ref = runtime_sha
+              source = "P4_OCCURRENCE_BINDING"
+
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as fh:
+              fh.write(f"runtime_ref={runtime_ref}\n")
+              fh.write(f"source={source}\n")
+          PY
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: iphoenk/FPL-iphoenk-engine
+          ref: ${{ steps.runtime.outputs.runtime_ref }}
+          path: runtime-data
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify governed PERF-F runtime-data binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git -C runtime-data rev-parse HEAD)"
+          source="${{ steps.runtime.outputs.source }}"
+          expected="${{ steps.runtime.outputs.runtime_ref }}"
+          if [ "$source" = "P4_OCCURRENCE_BINDING" ]; then
+            test "$actual" = "$expected"
+          fi
+          echo "PERF_F_RUNTIME_DATA_SHA=$actual" >> "$GITHUB_STEP_SUMMARY"
+          echo "PERF_F_RUNTIME_BINDING_SOURCE=$source" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:

@@ -22,6 +22,33 @@ def test_exact_package_and_base_equality():
     assert resolve_scenario(p,scenario_id="CAPTAIN_UNAVAILABLE",dependencies=DEPS)["decision_surfaces"]==evaluate({"1":{"override_type":"CAPTAIN_UNAVAILABLE","p_available":0.0}})["decision_surfaces"]
 def test_deterministic_fingerprint():
     assert build()["package_fingerprint"]==build()["package_fingerprint"]
+
+
+def test_changed_non_core_surface_is_persisted_for_exact_warm_equivalence():
+    base_result = base()
+    base_result["decision_surfaces"]["S02"] = {"availability": 1.0}
+
+    def evaluate_extra(overrides):
+        out = deepcopy(base_result)
+        out["decision_surfaces"]["S02"] = {"availability": 0.0}
+        return out
+
+    package = build_scenario_package(
+        dependencies=DEPS,
+        base_result=base_result,
+        owned_elements=OWNED,
+        evaluate=evaluate_extra,
+        generated_at="2026-09-28T02:05:00Z",
+        captain_element=1,
+        vice_element=2,
+    )
+    row = resolve_scenario(
+        package,
+        scenario_id="UNAVAILABLE_1",
+        dependencies=DEPS,
+    )
+    assert row["decision_surfaces"]["S02"] == {"availability": 0.0}
+    assert "S02" in row["changed_surface_ids"]
 def test_every_material_dependency_invalidates():
     p=build()
     for key in DEPS:

@@ -140,7 +140,9 @@ Rules:
 - base-fingerprint change invalidates the package;
 - scenario output remains private;
 - scenario labels can never be promoted silently to actual state;
-- scenario records include decision delta, XI/bench/C/VC/chip and final action state;
+- scenario records include the mandatory decision core plus every canonical report section whose content differs from BASE_CURRENT15, and preserve the canonical Stage3 action needed by the semantic oracle;
+- P6 scenario refresh is copy-on-write over the frozen warm state: it applies all persisted changed sections, rematerializes the canonical report, rebuilds serving artifacts, and reruns pre-render, post-render, human-facing and final-delivery QA without deep-copying the full model state;
+- warm scenario publication must be semantically identical to the same controlled canonical-cold input; partial scenario refresh may never expose stale baseline sections or stale optional serving artifacts;
 - scenario lookup feeds the stability layer but never bypasses it once stability is integrated.
 
 ## 5. Warm window worker P6

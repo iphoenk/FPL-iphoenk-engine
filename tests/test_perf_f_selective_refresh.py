@@ -39,6 +39,10 @@ def test_p4_selective_refresh_preserves_full_delivery_barriers():
     for sid in ("S06", "S08", "S09", "S14", "S19"):
         assert f'"{sid}"' in source
     assert "run_package_monte_carlo(" not in module_source
+    assert '"content": raw.get("content")' in module_source
+    assert "for sid in sorted(surface_ids)" in source
+    assert "write_serving_artifacts(" in module_source
+    assert "deepcopy(dict(state))" not in module_source
     assert '"qa_relaxed": False' in module_source
     assert '"second_methodology_created": False' in module_source
 

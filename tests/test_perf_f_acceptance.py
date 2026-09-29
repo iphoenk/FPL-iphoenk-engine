@@ -200,6 +200,9 @@ def test_price_only_partial_refresh_reuses_stage2_p17_and_keeps_qa():
     assert "build_actionable_price_radar(" in source
     assert "_enrich_watchlist_rows(" in source
     assert "_enrich_all15_rows(" in source
+    assert "evaluate_mini_league_overlay(" in source
+    assert "attach_mini_league_overlay(" in source
+    assert 'section_payloads["S15B"]["content"] = bound("S15B", s15b_content)' in source
     assert "validate_pre_render_qa(" in source
     assert "validate_post_render_qa(" in source
     assert "validate_final_delivery_barrier(" in source

@@ -4692,10 +4692,44 @@ def refresh_price_only_state(
     stage3_decision = dict(warm.get("stage3_decision") or {})
     calendar_context = dict(warm.get("calendar_context") or {})
     mini = dict(warm.get("mini") or {})
-    if not projections or not owned or not lineup or not stage3_decision:
+    package_with_stage3 = dict(warm.get("package_with_stage3") or {})
+    monte_carlo = dict(warm.get("monte_carlo") or {})
+    if (
+        not projections
+        or not owned
+        or not lineup
+        or not stage3_decision
+        or not package_with_stage3
+        or not monte_carlo
+    ):
         raise IntegratedRunnerError(
             "PRICE_ONLY frozen decision prerequisites are incomplete"
         )
+
+    # PRICE_ONLY does not recompute football math, but P1.8 carries a
+    # deterministic proof of its upstream package/MC baseline. Rebuild that
+    # downstream overlay from the frozen canonical football package so the
+    # selective path is byte-semantic equivalent to a canonical cold run.
+    package_for_overlay = dict(package_with_stage3)
+    package_for_overlay.pop("mini_league_overlay", None)
+    package_governance = package_for_overlay.get("governance")
+    if isinstance(package_governance, Mapping):
+        package_governance = dict(package_governance)
+        package_governance.pop("mini_league_overlay_owner", None)
+        package_governance.pop("mini_league_overlay_downstream_only", None)
+        package_for_overlay["governance"] = package_governance
+    mini_overlay = evaluate_mini_league_overlay(
+        package_for_overlay,
+        mini,
+        monte_carlo=monte_carlo,
+        relative_mc=None,
+        input_snapshot_id="STAGE3_MINI:" + _fingerprint(mini)[:24],
+        generated_at=report_slot,
+    )
+    package_with_stage3 = attach_mini_league_overlay(
+        package_for_overlay,
+        mini_overlay,
+    )
 
     report = dict(bundle.get("report") or {})
     section_payloads: dict[str, dict[str, Any]] = {}
@@ -4756,6 +4790,7 @@ def refresh_price_only_state(
 
     official = _official_payload(runtime_data_root)
     s15b_content = dict(section_payloads["S15B"].get("content") or {})
+    s15b_content["downstream_overlay"] = mini_overlay
     all15_rows = _enrich_all15_rows(
         all15=dict(warm.get("all15") or {}),
         projections=projections,
@@ -4803,6 +4838,7 @@ def refresh_price_only_state(
     )
     stage3_visible = dict(section_payloads["S14"].get("content") or {})
     stage3_visible.pop("authoritative_binding", None)
+    stage3_visible["mini_league_overlay"] = dict(mini_overlay)
     action_board = _action_board_surface(
         dashboard=decision_dashboard,
         stage3_decision=stage3_decision,
@@ -4818,6 +4854,7 @@ def refresh_price_only_state(
         "S12": "OFFICIAL_FPL_PREDICTOR_RISE20",
         "S13": "OFFICIAL_FPL_PREDICTOR_FALL20",
         "S15": "BOUND_SOURCE_HEALTH+MODEL_EXECUTION",
+        "S15B": "P1_8_MINI_LEAGUE_SNAPSHOT+P1_8_MINI_LEAGUE_OVERLAY",
         "S16": "P1_1_P1_3_FULL_UNIVERSE+P1_6_TACTICAL_ROLE",
         "S18": "S01+S08+S10+S14+TEAM_NEWS",
     }
@@ -4839,6 +4876,8 @@ def refresh_price_only_state(
                 "report_slot": report_slot,
             }
         return out
+
+    section_payloads["S15B"]["content"] = bound("S15B", s15b_content)
 
     s01_existing.update(
         {
@@ -5108,6 +5147,7 @@ def refresh_price_only_state(
                 "partial_layers": ["MC", "scenario"],
                 "recomputed_layers": [
                     "PRICE_SURFACES",
+                    "P1.8_MINI_LEAGUE_OVERLAY",
                     "STABILITY",
                     "DEPENDENT_REPORT_SURFACES",
                     "QA",
@@ -5166,6 +5206,8 @@ def refresh_price_only_state(
             "fall": fall,
             "price_radar": price_radar,
             "watchlist": watchlist,
+            "package_with_stage3": package_with_stage3,
+            "mini_overlay": mini_overlay,
         }
     )
     refreshed["bundle"] = bundle

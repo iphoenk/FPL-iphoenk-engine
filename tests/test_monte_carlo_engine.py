@@ -991,7 +991,6 @@ def test_mc_projection_fingerprint_ignores_noncomputational_scenario_provenance(
 
     assert _mc_projection_fingerprint(official) == _mc_projection_fingerprint(scenario)
 
-    scenario["players"][0]["xmins"]["expected_minutes"] = (
-        float(scenario["players"][0]["xmins"]["expected_minutes"]) + 1.0
-    )
+    state0 = scenario["players"][0]["xmins"]["xmins_distribution"]["states"][0]
+    state0["minutes_mean"] = float(state0["minutes_mean"]) + 1.0
     assert _mc_projection_fingerprint(official) != _mc_projection_fingerprint(scenario)

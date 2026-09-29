@@ -40,6 +40,7 @@ from .v12_scenario_package import resolve_scenario
 from .v12_semantic_oracle import (
     semantic_component_fingerprints,
     semantic_fingerprint,
+    semantic_subcomponent_fingerprints,
     semantic_surface,
 )
 
@@ -698,6 +699,29 @@ def execute_case(
         if warm_component_fingerprints.get(key)
         != cold_component_fingerprints.get(key)
     )
+    mismatch_subcomponents: dict[str, Any] = {}
+    for component in mismatch_components:
+        warm_children = semantic_subcomponent_fingerprints(
+            current_state["bundle"], component
+        )
+        cold_children = semantic_subcomponent_fingerprints(
+            cold_state["bundle"], component
+        )
+        child_mismatches = sorted(
+            key
+            for key in set(warm_children) | set(cold_children)
+            if warm_children.get(key) != cold_children.get(key)
+        )
+        if child_mismatches:
+            mismatch_subcomponents[component] = {
+                "mismatch_keys": child_mismatches,
+                "warm_fingerprints": {
+                    key: warm_children.get(key) for key in child_mismatches
+                },
+                "cold_fingerprints": {
+                    key: cold_children.get(key) for key in child_mismatches
+                },
+            }
     return {
         "case": case,
         "status": verdict["status"],
@@ -717,6 +741,7 @@ def execute_case(
         "warm_semantic_fingerprint": result["warm_semantic_fingerprint"],
         "cold_semantic_fingerprint": cold_fingerprint,
         "semantic_mismatch_components": mismatch_components,
+        "semantic_mismatch_subcomponents": mismatch_subcomponents,
         "warm_semantic_component_fingerprints": warm_component_fingerprints,
         "cold_semantic_component_fingerprints": cold_component_fingerprints,
         "private_remote_sha": result["private_remote_sha"],

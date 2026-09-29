@@ -114,13 +114,62 @@ jobs:
       - name: Install locked canonical runtime
         run: python -m pip install --require-hashes -r requirements.lock
 
+      # Reuse only caches already governed by the integrated production runner.
+      # Stage-2 is public-safe; P1.7/MC remain encrypted AEAD private state.
+      - name: Restore deterministic Stage-2 derived projection cache
+        id: p4-stage2-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: app/.cache/v12-stage2
+          key: v12-stage2-derived-${{ runner.os }}-${{ hashFiles('src/engines/v12_stage2_derived_cache.py', 'src/models/historical_projection.py', 'src/engines/v12_contextual_dynamics.py', 'src/engines/v12_player_events.py', 'src/engines/v12_player_minutes.py', 'src/engines/v12_position_probability_components.py', 'src/engines/p0_decision_quality.py', 'src/models/v12_stage1_analytics.py', 'src/rules.py', 'config/intelligence/player_events.json', 'config/intelligence/player_minutes.json', 'config/intelligence/historical_priors.json', 'config/intelligence/v12_contextual_dynamics.json') }}-p4-${{ github.run_id }}
+          restore-keys: |
+            v12-stage2-derived-${{ runner.os }}-${{ hashFiles('src/engines/v12_stage2_derived_cache.py', 'src/models/historical_projection.py', 'src/engines/v12_contextual_dynamics.py', 'src/engines/v12_player_events.py', 'src/engines/v12_player_minutes.py', 'src/engines/v12_position_probability_components.py', 'src/engines/p0_decision_quality.py', 'src/models/v12_stage1_analytics.py', 'src/rules.py', 'config/intelligence/player_events.json', 'config/intelligence/player_minutes.json', 'config/intelligence/historical_priors.json', 'config/intelligence/v12_contextual_dynamics.json') }}-
+
+      - name: Restore encrypted P1.7 and MC decision caches
+        id: p4-private-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            app/.cache/v12-p17
+            app/.cache/v12-mc
+          key: v12-private-aead-v1-${{ runner.os }}-${{ hashFiles('src/engines/private_cache_crypto.py', 'src/engines/v12_lineup_optimizer.py', 'src/engines/v12_monte_carlo.py', 'src/engines/v12_cache_runtime_identity.py', 'config/intelligence/v12_lineup_optimizer.json', 'config/intelligence/v12_monte_carlo.json') }}-p4-${{ github.run_id }}
+          restore-keys: |
+            v12-private-aead-v1-${{ runner.os }}-${{ hashFiles('src/engines/private_cache_crypto.py', 'src/engines/v12_lineup_optimizer.py', 'src/engines/v12_monte_carlo.py', 'src/engines/v12_cache_runtime_identity.py', 'config/intelligence/v12_lineup_optimizer.json', 'config/intelligence/v12_monte_carlo.json') }}-
+
+      - name: Enforce restored P4 cache security boundary
+        shell: bash
+        env:
+          FPL_V12_PRIVATE_CACHE_KEY_B64: ${{ secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$FPL_V12_PRIVATE_CACHE_KEY_B64"
+          mkdir -p app/.cache/v12-stage2 app/.cache/v12-p17 app/.cache/v12-mc
+          if find app/.cache/v12-p17 app/.cache/v12-mc -type f ! -name '*.aead.json' -print -quit | grep -q .; then
+            echo "non-AEAD file found in restored P4 private cache" >&2
+            exit 1
+          fi
+          python - <<'PY'
+          import base64
+          import os
+          raw = os.environ["FPL_V12_PRIVATE_CACHE_KEY_B64"]
+          key = base64.b64decode(raw, validate=True)
+          if len(key) != 32:
+              raise SystemExit("P4 private cache key must decode to exactly 32 bytes")
+          print("P4 governed cache restore boundary: PASS")
+          PY
+
       - name: Build canonical private P4 package
         env:
-          V12_STAGE2_DERIVED_CACHE_DIR: ${{ runner.temp }}/p4-cache/stage2
-          V12_P17_CACHE_DIR: ${{ runner.temp }}/p4-cache/p17
-          V12_MC_CACHE_DIR: ${{ runner.temp }}/p4-cache/mc
+          V12_STAGE2_DERIVED_CACHE_DIR: ${{ github.workspace }}/app/.cache/v12-stage2
+          V12_P17_CACHE_DIR: ${{ github.workspace }}/app/.cache/v12-p17
+          V12_MC_CACHE_DIR: ${{ github.workspace }}/app/.cache/v12-mc
           V12_P17_CACHE_KEY_B64: ${{ secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 }}
           V12_MC_CACHE_KEY_B64: ${{ secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 }}
+          V12_P4_MAX_WORKERS: "2"
+          OPENBLAS_CORETYPE: Haswell
+          OPENBLAS_NUM_THREADS: "1"
+          OMP_NUM_THREADS: "1"
+          NPY_DISABLE_CPU_FEATURES: "X86_V4,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR"
         shell: bash
         run: |
           set -euo pipefail

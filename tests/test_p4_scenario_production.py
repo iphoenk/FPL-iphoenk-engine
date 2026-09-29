@@ -6,8 +6,11 @@ import pytest
 
 from src.engines.v12_p4_scenario_production import (
     P4ScenarioProductionError,
+    _configured_workers,
     _decision_result,
+    _override_key,
     _owned_context,
+    _scenario_override_specs,
 )
 
 
@@ -56,3 +59,28 @@ def test_owned_context_requires_exact_current15_and_reads_c_vc(tmp_path):
     assert owned == list(range(1, 16))
     assert captain == 1
     assert vice == 2
+
+
+def test_parallel_p4_specs_are_complete_unique_and_worker_count_is_bounded(
+    monkeypatch,
+):
+    owned = list(range(1, 16))
+    specs = _scenario_override_specs(owned, 1, 2)
+    assert len(specs) == 17
+    assert [scenario_id for scenario_id, _ in specs[:2]] == [
+        "UNAVAILABLE_1",
+        "UNAVAILABLE_2",
+    ]
+    assert specs[-2][0] == "CAPTAIN_UNAVAILABLE"
+    assert specs[-1][0] == "VICE_UNAVAILABLE"
+
+    keys = [_override_key(overrides) for _, overrides in specs]
+    assert len(keys) == len(set(keys))
+
+    monkeypatch.setenv("V12_P4_MAX_WORKERS", "2")
+    assert _configured_workers(len(specs)) == 2
+    monkeypatch.setenv("V12_P4_MAX_WORKERS", "1")
+    assert _configured_workers(len(specs)) == 1
+    monkeypatch.setenv("V12_P4_MAX_WORKERS", "3")
+    with pytest.raises(P4ScenarioProductionError, match="governed range"):
+        _configured_workers(len(specs))

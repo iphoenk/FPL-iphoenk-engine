@@ -165,6 +165,11 @@ jobs:
           V12_MC_CACHE_DIR: ${{ github.workspace }}/app/.cache/v12-mc
           V12_P17_CACHE_KEY_B64: ${{ secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 }}
           V12_MC_CACHE_KEY_B64: ${{ secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 }}
+          V12_P4_MAX_WORKERS: "2"
+          OPENBLAS_CORETYPE: Haswell
+          OPENBLAS_NUM_THREADS: "1"
+          OMP_NUM_THREADS: "1"
+          NPY_DISABLE_CPU_FEATURES: "X86_V4,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR"
         shell: bash
         run: |
           set -euo pipefail

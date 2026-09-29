@@ -9,6 +9,7 @@ post-hoc xPts/xMins/Pstart mutation is permitted here.
 
 import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from multiprocessing import get_context
 from datetime import datetime
 import gzip
 import json
@@ -246,7 +247,10 @@ def materialize_p4_package(
     scenario_specs = _scenario_override_specs(owned, captain, vice)
     scenario_results: dict[str, Mapping[str, Any]] = {}
     workers = _configured_workers(len(scenario_specs))
-    executor = ProcessPoolExecutor(max_workers=workers)
+    executor = ProcessPoolExecutor(
+        max_workers=workers,
+        mp_context=get_context("spawn"),
+    )
     futures = {}
     try:
         for index, (scenario_id, overrides) in enumerate(

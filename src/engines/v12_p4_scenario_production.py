@@ -250,6 +250,7 @@ def materialize_p4_package(
     executor = ProcessPoolExecutor(
         max_workers=workers,
         mp_context=get_context("spawn"),
+        max_tasks_per_child=1,
     )
     futures = {}
     try:

@@ -296,3 +296,17 @@ def test_perf_f_production_matches_p4_normalized_numerical_runtime():
     for token in required:
         assert token in p4
         assert token in perf
+
+
+def test_perf_f_workflow_supports_one_serial_multi_case_chain():
+    root = Path(__file__).resolve().parents[1]
+    workflow = (
+        root / ".github/workflows/v12-perf-f-production-acceptance.yml"
+    ).read_text(encoding="utf-8")
+    assert 'keys not in ({"case", "report_slot"}, {"cases", "report_slot"})' in workflow
+    assert 'fh.write(f"cases={\',\'.join(cases)}\\n")' in workflow
+    assert 'IFS=\',\' read -r -a CASES <<< "$PERF_F_CASES"' in workflow
+    assert 'for CASE in "${CASES[@]}"; do' in workflow
+    assert 'perf-f-work-${CASE,,}' in workflow
+    assert 'cancel-in-progress: false' in workflow
+

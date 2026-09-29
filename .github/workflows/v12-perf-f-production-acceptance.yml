@@ -68,18 +68,32 @@ jobs:
               if key in values or not key or not value:
                   raise SystemExit(f"invalid token: {token}")
               values[key] = value
-          if set(values) != {"case", "report_slot"}:
+          keys = set(values)
+          if keys not in ({"case", "report_slot"}, {"cases", "report_slot"}):
               raise SystemExit(
-                  f"PERF-F request requires case + report_slot, got {sorted(values)}"
+                  "PERF-F request requires either case + report_slot or "
+                  f"cases + report_slot, got {sorted(values)}"
               )
-          case = values["case"].upper()
-          if case not in required_cases:
-              raise SystemExit(f"unsupported PERF-F case: {case}")
+          if "case" in values:
+              cases = [values["case"].upper()]
+          else:
+              cases = [
+                  token.strip().upper()
+                  for token in values["cases"].split(",")
+                  if token.strip()
+              ]
+          if not cases:
+              raise SystemExit("PERF-F request has no cases")
+          if len(cases) != len(set(cases)):
+              raise SystemExit("PERF-F request contains duplicate cases")
+          unsupported = [case for case in cases if case not in required_cases]
+          if unsupported:
+              raise SystemExit(f"unsupported PERF-F cases: {unsupported}")
           slot = datetime.fromisoformat(values["report_slot"].replace("Z", "+00:00"))
           if slot.tzinfo is None or slot.utcoffset() is None:
               raise SystemExit("report_slot must be timezone-aware")
           with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as fh:
-              fh.write(f"case={case}\n")
+              fh.write(f"cases={','.join(cases)}\n")
               fh.write(f"report_slot={slot.isoformat()}\n")
           PY
 
@@ -129,9 +143,11 @@ jobs:
       - name: Install locked canonical runtime
         run: python -m pip install --require-hashes -r requirements.lock
 
-      - name: Execute production-real PERF-F case
+      - name: Execute production-real PERF-F case chain
         env:
           FPL_V12_PRIVATE_CACHE_KEY_B64: ${{ secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 }}
+          PERF_F_CASES: ${{ steps.request.outputs.cases }}
+          PERF_F_REPORT_SLOT: ${{ steps.request.outputs.report_slot }}
           # PERF-F cold oracle must use the same normalized numerical runtime
           # as P4. Otherwise identical scenario math can drift at floating-point
           # boundaries and falsely fail semantic equality.
@@ -142,41 +158,63 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf "$RUNNER_TEMP/perf-f-work"
-          python -m src.engines.v12_perf_f_acceptance             --app-root "$GITHUB_WORKSPACE"             --runtime-data-root "$GITHUB_WORKSPACE/runtime-data"             --private-input-root "$GITHUB_WORKSPACE/private-reports"             --private-publisher-root "$GITHUB_WORKSPACE/private-reports"             --workspace "$RUNNER_TEMP/perf-f-work"             --report-slot "${{ steps.request.outputs.report_slot }}"             --case "${{ steps.request.outputs.case }}"             --run-id "${GITHUB_RUN_ID}"             --result-out "$RUNNER_TEMP/perf-f-result.json"
+          IFS=',' read -r -a CASES <<< "$PERF_F_CASES"
+          for CASE in "${CASES[@]}"; do
+            echo "PERF-F serial case: $CASE" >> "$GITHUB_STEP_SUMMARY"
+            WORK_DIR="$RUNNER_TEMP/perf-f-work-${CASE,,}"
+            RESULT_OUT="$RUNNER_TEMP/perf-f-result-${CASE}.json"
+            rm -rf "$WORK_DIR"
+            python -m src.engines.v12_perf_f_acceptance \
+              --app-root "$GITHUB_WORKSPACE" \
+              --runtime-data-root "$GITHUB_WORKSPACE/runtime-data" \
+              --private-input-root "$GITHUB_WORKSPACE/private-reports" \
+              --private-publisher-root "$GITHUB_WORKSPACE/private-reports" \
+              --workspace "$WORK_DIR" \
+              --report-slot "$PERF_F_REPORT_SLOT" \
+              --case "$CASE" \
+              --run-id "${GITHUB_RUN_ID}-${CASE,,}" \
+              --result-out "$RESULT_OUT"
+          done
 
       - name: Record non-sensitive acceptance summary
         if: always()
         shell: bash
         run: |
           set -euo pipefail
-          if test -s "$RUNNER_TEMP/perf-f-result.json"; then
-            python - <<'PY'
+          python - <<'PY'
           import json
           import os
           from pathlib import Path
-          row = json.loads(
-              (Path(os.environ["RUNNER_TEMP"]) / "perf-f-result.json").read_text(
-                  encoding="utf-8"
-              )
-          )
-          safe = {
-              "case": row.get("case"),
-              "status": row.get("status"),
-              "reason": row.get("reason"),
-              "total_seconds": row.get("total_seconds"),
-              "latency_pass": row.get("latency_pass"),
-              "semantic_equal": row.get("semantic_equal"),
-              "cache_correctness_pass": row.get("cache_correctness_pass"),
-              "cache_performance": row.get("cache_performance"),
-              "private_publish_pass": row.get("private_publish_pass"),
-              "production_sha": row.get("production_sha"),
-              "runtime_data_sha": row.get("runtime_data_sha"),
-          }
-          with (Path(os.environ["GITHUB_STEP_SUMMARY"])).open(
-              "a", encoding="utf-8"
-          ) as fh:
-              fh.write("PERF-F_RESULT=" + json.dumps(safe, sort_keys=True) + "\n")
-          print(json.dumps(safe, sort_keys=True))
+
+          root = Path(os.environ["RUNNER_TEMP"])
+          rows = []
+          for path in sorted(root.glob("perf-f-result-*.json")):
+              row = json.loads(path.read_text(encoding="utf-8"))
+              safe = {
+                  "case": row.get("case"),
+                  "status": row.get("status"),
+                  "reason": row.get("reason"),
+                  "total_seconds": row.get("total_seconds"),
+                  "latency_pass": row.get("latency_pass"),
+                  "semantic_equal": row.get("semantic_equal"),
+                  "cache_correctness_pass": row.get("cache_correctness_pass"),
+                  "cache_performance": row.get("cache_performance"),
+                  "private_publish_pass": row.get("private_publish_pass"),
+                  "production_sha": row.get("production_sha"),
+                  "runtime_data_sha": row.get("runtime_data_sha"),
+              }
+              rows.append(safe)
+
+          if rows:
+              with Path(os.environ["GITHUB_STEP_SUMMARY"]).open(
+                  "a", encoding="utf-8"
+              ) as fh:
+                  for safe in rows:
+                      fh.write(
+                          "PERF-F_RESULT="
+                          + json.dumps(safe, sort_keys=True)
+                          + "\n"
+                      )
+              for safe in rows:
+                  print(json.dumps(safe, sort_keys=True))
           PY
-          fi

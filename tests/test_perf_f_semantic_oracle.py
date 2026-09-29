@@ -4,6 +4,7 @@ from src.engines.v12_semantic_oracle import (
     compare_warm_cold,
     semantic_component_fingerprints,
     semantic_fingerprint,
+    semantic_subcomponent_fingerprints,
 )
 
 
@@ -169,4 +170,30 @@ def test_component_fingerprints_localize_semantic_difference_without_payload():
         if warm_parts.get(key) != cold_parts.get(key)
     )
     assert mismatches == ["report_sections.S12"]
+    assert all(len(value) == 64 for value in warm_parts.values())
+
+
+def test_subcomponent_fingerprints_localize_nested_difference_without_payload():
+    warm = semantic()
+    cold = semantic()
+    cold["report"]["S15B"] = {
+        "eo": {"1": 1.4},
+        "mini_overlay": {"captain": 2},
+    }
+    warm["report"]["S15B"] = {
+        "eo": {"1": 1.4},
+        "mini_overlay": {"captain": 1},
+    }
+    warm_parts = semantic_subcomponent_fingerprints(
+        warm, "report_sections.S15B"
+    )
+    cold_parts = semantic_subcomponent_fingerprints(
+        cold, "report_sections.S15B"
+    )
+    mismatches = sorted(
+        key for key in set(warm_parts) | set(cold_parts)
+        if warm_parts.get(key) != cold_parts.get(key)
+    )
+    assert mismatches == ["mini_overlay"]
+    assert warm_parts["eo"] == cold_parts["eo"]
     assert all(len(value) == 64 for value in warm_parts.values())

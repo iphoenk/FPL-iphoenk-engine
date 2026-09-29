@@ -8,9 +8,11 @@ post-hoc xPts/xMins/Pstart mutation is permitted here.
 """
 
 import argparse
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
 import gzip
 import json
+import os
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -100,6 +102,126 @@ def _owned_context(private_root: Path) -> tuple[list[int], int | None, int | Non
     return owned, captain, vice
 
 
+
+def _override_key(overrides: Mapping[str, Mapping[str, Any]]) -> str:
+    return json.dumps(
+        overrides,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+
+
+def _scenario_override_specs(
+    owned: list[int],
+    captain: int | None,
+    vice: int | None,
+) -> list[tuple[str, dict[str, dict[str, Any]]]]:
+    rows: list[tuple[str, dict[str, dict[str, Any]]]] = []
+    for element in owned:
+        rows.append(
+            (
+                f"UNAVAILABLE_{element}",
+                {
+                    str(element): {
+                        "override_type": "OWNED_UNAVAILABLE",
+                        "p_available": 0.0,
+                    }
+                },
+            )
+        )
+    if captain is not None:
+        rows.append(
+            (
+                "CAPTAIN_UNAVAILABLE",
+                {
+                    str(captain): {
+                        "override_type": "CAPTAIN_UNAVAILABLE",
+                        "p_available": 0.0,
+                    }
+                },
+            )
+        )
+    if vice is not None:
+        rows.append(
+            (
+                "VICE_UNAVAILABLE",
+                {
+                    str(vice): {
+                        "override_type": "VICE_UNAVAILABLE",
+                        "p_available": 0.0,
+                    }
+                },
+            )
+        )
+    keys = [_override_key(overrides) for _, overrides in rows]
+    if len(keys) != len(set(keys)):
+        raise P4ScenarioProductionError("P4 scenario override keys are not unique")
+    return rows
+
+
+def _configured_workers(scenario_count: int) -> int:
+    raw = str(os.environ.get("V12_P4_MAX_WORKERS") or "2").strip()
+    try:
+        workers = int(raw)
+    except ValueError as exc:
+        raise P4ScenarioProductionError(
+            f"invalid V12_P4_MAX_WORKERS: {raw!r}"
+        ) from exc
+    if workers < 1 or workers > 2:
+        raise P4ScenarioProductionError(
+            "V12_P4_MAX_WORKERS must remain within governed range 1..2"
+        )
+    return min(workers, max(1, int(scenario_count)))
+
+
+def _evaluate_scenario_worker(
+    runtime_data_root_raw: str,
+    private_root_raw: str,
+    report_slot: str,
+    output_dir_raw: str,
+    cache_root_raw: str | None,
+    overrides: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    runtime_data_root = Path(runtime_data_root_raw)
+    private_root = Path(private_root_raw)
+    output = Path(output_dir_raw)
+    if cache_root_raw:
+        cache_root = Path(cache_root_raw)
+        cache_paths = {
+            "V12_STAGE2_DERIVED_CACHE_DIR": cache_root / "stage2",
+            "V12_P17_CACHE_DIR": cache_root / "p17",
+            "V12_MC_CACHE_DIR": cache_root / "mc",
+        }
+        for env_name, path in cache_paths.items():
+            path.mkdir(parents=True, exist_ok=True)
+            os.environ[env_name] = str(path)
+
+    bundle = run_deep(
+        runtime_data_root=runtime_data_root,
+        report_slot=report_slot,
+        output_dir=output,
+        private_data_root=private_root,
+        allow_legacy_private_sources=False,
+        require_private_personal=True,
+        scenario_overrides=overrides,
+    )
+    if str(bundle.get("runner_status") or "").upper() != "PASS":
+        raise P4ScenarioProductionError("canonical scenario evaluator did not PASS")
+    proof = dict(bundle.get("execution_proof") or {})
+    p4 = dict(proof.get("p4_scenario_override") or {})
+    if overrides:
+        if p4.get("applied") is not True:
+            raise P4ScenarioProductionError(
+                "canonical evaluator did not acknowledge P4 override"
+            )
+        if p4.get("stage2_cache_bypassed") is not True:
+            raise P4ScenarioProductionError(
+                "P4 override must bypass Stage2 derived cache"
+            )
+    return _decision_result(bundle)
+
+
 def materialize_p4_package(
     *,
     app_root: Path,
@@ -112,37 +234,56 @@ def materialize_p4_package(
     owned, captain, vice = _owned_context(private_root)
     workspace.mkdir(parents=True, exist_ok=True)
 
-    sequence = 0
+    base = _evaluate_scenario_worker(
+        str(runtime_data_root),
+        str(private_root),
+        report_slot,
+        str(workspace / "scenario-000-base"),
+        None,
+        {},
+    )
+
+    scenario_specs = _scenario_override_specs(owned, captain, vice)
+    scenario_results: dict[str, Mapping[str, Any]] = {}
+    workers = _configured_workers(len(scenario_specs))
+    executor = ProcessPoolExecutor(max_workers=workers)
+    futures = {}
+    try:
+        for index, (scenario_id, overrides) in enumerate(
+            scenario_specs,
+            start=1,
+        ):
+            key = _override_key(overrides)
+            future = executor.submit(
+                _evaluate_scenario_worker,
+                str(runtime_data_root),
+                str(private_root),
+                report_slot,
+                str(workspace / f"scenario-{index:03d}-{scenario_id}"),
+                str(workspace / "parallel-cache" / scenario_id),
+                overrides,
+            )
+            futures[future] = key
+        for future in as_completed(futures):
+            key = futures[future]
+            scenario_results[key] = future.result()
+    except Exception as exc:
+        for future in futures:
+            future.cancel()
+        raise P4ScenarioProductionError(
+            f"parallel canonical P4 scenario evaluation failed: {exc}"
+        ) from exc
+    finally:
+        executor.shutdown(wait=True, cancel_futures=True)
 
     def evaluate(overrides: Mapping[str, Mapping[str, Any]]) -> Mapping[str, Any]:
-        nonlocal sequence
-        output = workspace / f"scenario-{sequence:03d}"
-        sequence += 1
-        bundle = run_deep(
-            runtime_data_root=runtime_data_root,
-            report_slot=report_slot,
-            output_dir=output,
-            private_data_root=private_root,
-            allow_legacy_private_sources=False,
-            require_private_personal=True,
-            scenario_overrides=overrides,
-        )
-        if str(bundle.get("runner_status") or "").upper() != "PASS":
-            raise P4ScenarioProductionError("canonical scenario evaluator did not PASS")
-        proof = dict(bundle.get("execution_proof") or {})
-        p4 = dict(proof.get("p4_scenario_override") or {})
-        if overrides:
-            if p4.get("applied") is not True:
-                raise P4ScenarioProductionError(
-                    "canonical evaluator did not acknowledge P4 override"
-                )
-            if p4.get("stage2_cache_bypassed") is not True:
-                raise P4ScenarioProductionError(
-                    "P4 override must bypass Stage2 derived cache"
-                )
-        return _decision_result(bundle)
+        key = _override_key(overrides)
+        if key not in scenario_results:
+            raise P4ScenarioProductionError(
+                "canonical P4 scenario result was not precomputed"
+            )
+        return scenario_results[key]
 
-    base = evaluate({})
     package = build_scenario_package(
         dependencies=identity.p4_dependencies(),
         base_result=base,

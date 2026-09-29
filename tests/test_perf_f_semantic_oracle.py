@@ -1,6 +1,10 @@
 from src.engines.v12_cache_operational import plan_cache_behavior
 from src.engines.v12_perf_f import PerfFSample, summarize_samples, validate_sample
-from src.engines.v12_semantic_oracle import compare_warm_cold, semantic_fingerprint
+from src.engines.v12_semantic_oracle import (
+    compare_warm_cold,
+    semantic_component_fingerprints,
+    semantic_fingerprint,
+)
 
 
 def semantic(action="WAIT"):
@@ -152,3 +156,17 @@ def test_oracle_reads_real_integrated_report_sections_shape():
     }
     assert semantic_fingerprint(payload)
     assert compare_warm_cold(warm=payload, cold=payload)["equal"] is True
+
+
+def test_component_fingerprints_localize_semantic_difference_without_payload():
+    warm = semantic()
+    cold = semantic()
+    cold["report"]["S12"] = {"rise": [99]}
+    warm_parts = semantic_component_fingerprints(warm)
+    cold_parts = semantic_component_fingerprints(cold)
+    mismatches = sorted(
+        key for key in set(warm_parts) | set(cold_parts)
+        if warm_parts.get(key) != cold_parts.get(key)
+    )
+    assert mismatches == ["report_sections.S12"]
+    assert all(len(value) == 64 for value in warm_parts.values())

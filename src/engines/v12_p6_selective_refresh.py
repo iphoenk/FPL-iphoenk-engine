@@ -21,6 +21,10 @@ from src.engines.v12_integrated_report_runner import (
     _parse_sections,
     _qa_compute_contract,
 )
+from src.engines.v12_mini_league_overlay import (
+    attach_mini_league_overlay,
+    evaluate_mini_league_overlay,
+)
 from src.engines.v12_report_orchestration import (
     build_deep_human_facing_manifest,
     materialize_deep_report,
@@ -336,6 +340,69 @@ def _finalize_deep_state(
     return refreshed
 
 
+def _rebind_scenario_mini_overlay(
+    *,
+    state: Mapping[str, Any],
+    sections: dict[str, dict[str, Any]],
+    scenario_row: Mapping[str, Any],
+    report_slot: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Rebind P1.8 to the current mini-league snapshot without rerunning football math."""
+    raw_inputs = scenario_row.get("p1_8_rebind_inputs")
+    if not isinstance(raw_inputs, Mapping):
+        raise SelectiveRefreshError(
+            "P4 scenario missing governed P1.8 rebind inputs"
+        )
+    package_for_overlay = dict(raw_inputs.get("package_with_stage3") or {})
+    monte_carlo = dict(raw_inputs.get("monte_carlo") or {})
+    warm = state.get("warm_state")
+    if not isinstance(warm, Mapping):
+        raise SelectiveRefreshError("canonical warm state unavailable for P1.8 rebind")
+    mini = dict(warm.get("mini") or {})
+    if not package_for_overlay or not monte_carlo or not mini:
+        raise SelectiveRefreshError(
+            "P4 scenario P1.8 rebind prerequisites are incomplete"
+        )
+
+    package_for_overlay.pop("mini_league_overlay", None)
+    governance = package_for_overlay.get("governance")
+    if isinstance(governance, Mapping):
+        governance = dict(governance)
+        governance.pop("mini_league_overlay_owner", None)
+        governance.pop("mini_league_overlay_downstream_only", None)
+        package_for_overlay["governance"] = governance
+
+    mini_overlay = evaluate_mini_league_overlay(
+        package_for_overlay,
+        mini,
+        monte_carlo=monte_carlo,
+        relative_mc=None,
+        input_snapshot_id="STAGE3_MINI:" + _fingerprint(mini)[:24],
+        generated_at=report_slot,
+    )
+    package_with_overlay = attach_mini_league_overlay(
+        package_for_overlay,
+        mini_overlay,
+    )
+
+    s15b = sections.get("S15B")
+    if not isinstance(s15b, Mapping):
+        raise SelectiveRefreshError("baseline report missing S15B")
+    content = dict(s15b.get("content") or {})
+    content["downstream_overlay"] = mini_overlay
+    content.pop("authoritative_binding", None)
+    content["authoritative_binding"] = {
+        "status": "BOUND",
+        "producer": "P1_8_MINI_LEAGUE_SNAPSHOT+P1_8_MINI_LEAGUE_OVERLAY",
+        "payload_fingerprint": _fingerprint(content),
+        "report_slot": report_slot,
+    }
+    s15b_out = dict(s15b)
+    s15b_out["content"] = content
+    sections["S15B"] = s15b_out
+    return mini_overlay, package_with_overlay
+
+
 def refresh_p4_scenario_state(
     *,
     state: Mapping[str, Any],
@@ -378,7 +445,14 @@ def refresh_p4_scenario_state(
         sections[sid]["state"] = section_state
         sections[sid]["degradation_reason"] = degradation_reason
 
-    return _finalize_deep_state(
+    mini_overlay, package_with_overlay = _rebind_scenario_mini_overlay(
+        state=state,
+        sections=sections,
+        scenario_row=scenario_row,
+        report_slot=report_slot,
+    )
+
+    refreshed = _finalize_deep_state(
         state=state,
         section_payloads=sections,
         report_slot=report_slot,
@@ -400,6 +474,11 @@ def refresh_p4_scenario_state(
             or None
         ),
     )
+    warm = dict(refreshed.get("warm_state") or {})
+    warm["mini_overlay"] = mini_overlay
+    warm["package_with_stage3"] = package_with_overlay
+    refreshed["warm_state"] = warm
+    return refreshed
 
 
 def refresh_revalidated_base_state(

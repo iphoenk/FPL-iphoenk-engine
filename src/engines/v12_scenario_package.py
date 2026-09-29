@@ -126,6 +126,12 @@ def build_scenario_package(
             for key in selected_surface_ids
         }
         stage3_action = str(evaluated.get("stage3_action") or "")
+        raw_rebind_inputs = evaluated.get("p1_8_rebind_inputs")
+        rebind_inputs = (
+            dict(raw_rebind_inputs)
+            if isinstance(raw_rebind_inputs, Mapping)
+            else None
+        )
         scenarios.append(
             {
                 "scenario_id": spec["scenario_id"],
@@ -145,6 +151,11 @@ def build_scenario_package(
                 "stage3_action_changed": (
                     stage3_action != base_stage3_action
                 ),
+                **(
+                    {"p1_8_rebind_inputs": rebind_inputs}
+                    if rebind_inputs is not None
+                    else {}
+                ),
                 "delta_vs_base": {
                     key: {
                         "changed": base_all[key] != surfaces_all[key],
@@ -160,12 +171,17 @@ def build_scenario_package(
                         "override": override,
                         "decision_surfaces": surfaces,
                         "stage3_action": stage3_action,
+                        **(
+                            {"p1_8_rebind_inputs": rebind_inputs}
+                            if rebind_inputs is not None
+                            else {}
+                        ),
                     }
                 ),
             }
         )
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "authority": "CANONICAL_V12_P4_SCENARIO_PACKAGE",
         "private_only": True,
         "second_model_created": False,
@@ -191,6 +207,10 @@ def build_scenario_package(
             "wrong_base_reuse_fails_closed": True,
             "stale_scenario_is_cache_miss": True,
             "changed_surface_capture_required": True,
+            "p1_8_overlay_rebind_inputs_persisted": all(
+                isinstance(row.get("p1_8_rebind_inputs"), Mapping)
+                for row in scenarios
+            ),
         },
     }
 

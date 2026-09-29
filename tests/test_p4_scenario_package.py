@@ -106,3 +106,34 @@ def test_sharded_scenario_resolution_is_lazy_and_fail_closed(tmp_path):
     bad["scenarios"][0]["output_fingerprint"] = "tampered"
     with pytest.raises(ScenarioPackageError, match="metadata mismatch"):
         resolve_scenario(bad, scenario_id="UNAVAILABLE_1", dependencies=DEPS)
+
+
+def test_p1_8_rebind_inputs_are_bound_into_scenario_fingerprint():
+    base_result = base()
+    base_result["p1_8_rebind_inputs"] = {
+        "package_with_stage3": {"model_owner": "V12_PACKAGE_UTILITY", "routes": []},
+        "monte_carlo": {"model_owner": "V12_MONTE_CARLO", "actual_paths": 500000},
+    }
+
+    def evaluate_with_rebind(overrides):
+        out = evaluate(overrides)
+        out["p1_8_rebind_inputs"] = deepcopy(base_result["p1_8_rebind_inputs"])
+        return out
+
+    package = build_scenario_package(
+        dependencies=DEPS,
+        base_result=base_result,
+        owned_elements=OWNED,
+        evaluate=evaluate_with_rebind,
+        generated_at="2026-09-29T14:00:00Z",
+        captain_element=1,
+        vice_element=2,
+    )
+    assert package["schema_version"] == 4
+    assert package["governance"]["p1_8_overlay_rebind_inputs_persisted"] is True
+    row = resolve_scenario(
+        package,
+        scenario_id="UNAVAILABLE_1",
+        dependencies=DEPS,
+    )
+    assert row["p1_8_rebind_inputs"]["monte_carlo"]["actual_paths"] == 500000

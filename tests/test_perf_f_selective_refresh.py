@@ -6,6 +6,7 @@ import pytest
 
 from src.engines.v12_p6_selective_refresh import (
     SelectiveRefreshError,
+    _rebind_content,
     _scenario_section_delivery_state,
     refresh_p4_scenario_state,
 )
@@ -141,4 +142,47 @@ def test_p4_s03_unavailable_baseline_fails_closed_without_guards():
                     "no_recomputation_no_numeric_delta": False,
                 }
             },
+        )
+
+
+def test_p4_rebind_preserves_same_occurrence_canonical_binding_exactly():
+    binding = {
+        "status": "BOUND",
+        "producer": "P1_8_MINI_LEAGUE_SNAPSHOT+P1_8_MINI_LEAGUE_OVERLAY",
+        "payload_fingerprint": "canonical-pre-serialization-fingerprint",
+        "report_slot": "2026-09-29T06:20:00+07:00",
+    }
+    replacement = {
+        "league": {"rank": 7, "nested": {"1": ["a", "b"]}},
+        "authoritative_binding": binding,
+    }
+    rebound = _rebind_content(
+        current=None,
+        replacement=replacement,
+        report_slot="2026-09-29T06:20:00+07:00",
+    )
+    assert rebound["authoritative_binding"] == binding
+    assert rebound["league"] == replacement["league"]
+
+
+def test_p4_rebind_rejects_canonical_binding_from_wrong_occurrence():
+    with pytest.raises(
+        SelectiveRefreshError,
+        match="authoritative binding mismatch",
+    ):
+        _rebind_content(
+            current=None,
+            replacement={
+                "league": {"rank": 7},
+                "authoritative_binding": {
+                    "status": "BOUND",
+                    "producer": (
+                        "P1_8_MINI_LEAGUE_SNAPSHOT+"
+                        "P1_8_MINI_LEAGUE_OVERLAY"
+                    ),
+                    "payload_fingerprint": "canonical-fingerprint",
+                    "report_slot": "2026-09-29T05:20:00+07:00",
+                },
+            },
+            report_slot="2026-09-29T06:20:00+07:00",
         )

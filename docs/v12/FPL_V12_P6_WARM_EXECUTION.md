@@ -24,6 +24,8 @@ Manager-specific CURRENT15, owner context, scenario packages, decision results a
 
 Controlled PERF-F acceptance attaches the private P4 package only to classes that actually consume P4 state: OUR15 availability, material projection equivalence, and explicit P4 scenario hit/miss cases. NO_CHANGE, MINI_LEAGUE_ONLY, PRICE_ONLY, CAPTAIN_CHANGE, and VICE_CAPTAIN_CHANGE do not attach an unrelated P4 package, so an old scenario artifact cannot block a non-P4 class. P4-consuming classes retain exact dependency validation and fail closed on missing or stale packages.
 
+For same-occurrence P4 selective serving, a canonical section-level `authoritative_binding` is preserved byte-for-byte when it is already `BOUND`, has a producer and payload fingerprint, and matches the requested report slot. A wrong-slot or incomplete canonical binding fails closed. This prevents false semantic inequality caused only by recomputing a proof fingerprint after scenario-shard JSON serialization.
+
 ## Operational D-P2 wiring
 
 The existing owner-gated D-P2 issue-comment transport remains non-recurring and non-authoritative. At T-15 it dispatches the existing V6 report-prefetch path, then invokes the reusable P6 workflow with the same report kind, logical slot, exact T-10 freeze target, and deterministic occurrence ID. P6 has no cron, cannot edit issue 431, and cannot advance scheduler proof.
@@ -42,3 +44,10 @@ PERF-F unchanged-base revalidation reruns PRE_RENDER, POST_RENDER, HUMAN_FACING,
 
 
 Warm identity hashes the canonical V6 `data/v6/current/official_fpl.json` snapshot together with publish-integrity and same-occurrence prefetch proof; legacy/nonexistent `data/v6/official_fpl` and `data/v6/fixtures` paths are not identity authority. This path binding is a correctness contract, not a performance optimization.
+
+
+## P4 exact-main replacement queue
+
+The governed private P4 builder is exact-production-SHA authority. A newer owner-issued `/v12-p4-build` command may therefore supersede an older in-progress P4 build in the same command concurrency group. Unrelated issue-comment fanout remains isolated in unique noise groups and cannot cancel a real P4 command.
+
+Immediately before any private scenario publication, the workflow re-reads the public repository `main` ref and requires it to equal `GITHUB_SHA`. If production moved during the long canonical package build, publication fails closed with `STALE_P4_PRODUCTION_SHA`. This prevents an obsolete package from overwriting `scenarios/latest.json` while avoiding serial waits behind a package that can no longer be authoritative.

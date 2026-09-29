@@ -13,7 +13,13 @@ def test_p4_issue_comment_noise_cannot_replace_pending_command():
     assert "v12-p4-private-scenario-package-noise-{0}" in source
     assert "github.event.comment.id" in source
     assert "startsWith(github.event.comment.body, '/v12-p4-build ')" in source
-    assert "cancel-in-progress: false" in source
+    assert "cancel-in-progress: true" in source
+    assert "Revalidate exact production main before private persist" in source
+    assert "STALE_P4_PRODUCTION_SHA" in source
+    assert (
+        "git ls-remote https://github.com/iphoenk/FPL-iphoenk-engine.git "
+        "refs/heads/main"
+    ) in source
 
 
 def test_perf_f_issue_comment_noise_cannot_replace_pending_serial_case():

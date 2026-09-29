@@ -8,9 +8,10 @@ permissions:
   contents: read
 
 concurrency:
-  # Only real /v12-p4-build commands share the governed serial queue.
-  # Unrelated issue-comment fanout gets a unique group so it cannot replace
-  # the single pending P4 command before the job-level if condition is read.
+  # Only real /v12-p4-build commands share the governed replacement queue.
+  # A newer owner command supersedes an obsolete in-progress P4 build because
+  # P4 authority is bound to the exact production SHA at command acceptance.
+  # Unrelated issue-comment fanout gets a unique group and cannot cancel P4.
   group: >-
     ${{
       (
@@ -21,7 +22,7 @@ concurrency:
       'v12-p4-private-scenario-package-command' ||
       format('v12-p4-private-scenario-package-noise-{0}', github.event.comment.id)
     }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-private-package:
@@ -142,6 +143,18 @@ jobs:
           )
           print({"package_fingerprint": fingerprint, "scenario_count": payload["scenario_count"]})
           PY
+
+      - name: Revalidate exact production main before private persist
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_main="$(git ls-remote https://github.com/iphoenk/FPL-iphoenk-engine.git refs/heads/main | awk '{print $1}')"
+          test -n "$current_main"
+          if [ "$current_main" != "$GITHUB_SHA" ]; then
+            echo "STALE_P4_PRODUCTION_SHA expected=$GITHUB_SHA current=$current_main"
+            exit 1
+          fi
+          echo "P4_PRODUCTION_SHA_REVALIDATED=$current_main" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Persist package only in private plane
         working-directory: private-reports

@@ -14,7 +14,7 @@ Cache behavior is read from the frozen `config/performance/v12_cache_dependency_
 
 Correctness rules are strict: expected MISS plus actual HIT is a correctness failure; partial invalidation may never reuse affected dependency keys; warm and canonical cold semantic fingerprints must be equal. Expected HIT plus actual MISS is reported as performance over-invalidation, not silently accepted as optimal.
 
-When PERF-F semantic equality fails, diagnostics remain privacy-safe: the runner may expose only component names and SHA-256 fingerprints, plus direct child-key names/fingerprints for the mismatched semantic component. Raw S15B/manager payload values are never printed by this diagnostic path.
+When PERF-F semantic equality fails, diagnostics remain privacy-safe: the runner may expose only component names and SHA-256 fingerprints, plus direct child-key names/fingerprints for the mismatched semantic component. Raw S15B/manager payload values and unhashed nested values are never printed by this diagnostic path.
 
 D-P2 remains factual/report precompute only. Its governed P6 handoff preserves exact occurrence identity and supports T-15 prefetch plus T-10 freeze validation. Neither step counts as a natural core scheduler proof.
 

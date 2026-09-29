@@ -96,6 +96,37 @@ def semantic_surface(payload: Mapping[str, Any]) -> dict[str, Any]:
     return _strip_nonsemantic(surface)
 
 
+def _fingerprint_value(value: Any) -> str:
+    canonical = json.dumps(
+        _strip_nonsemantic(value),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+        default=str,
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def semantic_component_fingerprints(payload: Mapping[str, Any]) -> dict[str, str]:
+    """Return privacy-safe hashes for each governed semantic component."""
+    surface = semantic_surface(payload)
+    out: dict[str, str] = {}
+    report_sections = surface.get("report_sections")
+    if isinstance(report_sections, Mapping):
+        for sid, value in sorted(report_sections.items()):
+            out[f"report_sections.{sid}"] = _fingerprint_value(value)
+    decision_surfaces = surface.get("decision_surfaces")
+    if isinstance(decision_surfaces, Mapping):
+        for sid, value in sorted(decision_surfaces.items()):
+            out[f"decision_surfaces.{sid}"] = _fingerprint_value(value)
+    for key, value in sorted(surface.items()):
+        if key in {"report_sections", "decision_surfaces"}:
+            continue
+        out[key] = _fingerprint_value(value)
+    return out
+
+
 def semantic_fingerprint(payload: Mapping[str, Any]) -> str:
     canonical = json.dumps(
         semantic_surface(payload),

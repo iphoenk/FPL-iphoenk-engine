@@ -100,12 +100,37 @@ def test_p4_worker_uses_canonical_private_cache_environment(monkeypatch, tmp_pat
                 {
                     "package_with_stage3": {
                         "model_owner": "V12_PACKAGE_UTILITY",
+                        "selected_route_id": "HOLD",
+                        "planning_gw": 7,
+                        "decision": {"action": "WAIT"},
+                        "model_evidence_binding": {"output_fingerprint": "pkg-fp"},
                         "mini_league_overlay": {"stale": True},
-                        "governance": {
-                            "mini_league_overlay_owner": "P1_8",
-                            "mini_league_overlay_downstream_only": True,
-                        },
-                        "routes": [{"route_id": "HOLD"}],
+                        "routes": [
+                            {
+                                "route_id": "HOLD",
+                                "classification": "HOLD",
+                                "players_out": [],
+                                "players_in": [],
+                                "football_route_utility": {
+                                    "per_gw": [
+                                        {
+                                            "starting_xi": list(range(1, 12)),
+                                            "bench_gk": 12,
+                                            "bench_order": [13, 14, 15],
+                                            "captain": 1,
+                                            "vice_captain": 2,
+                                        }
+                                    ]
+                                },
+                                "horizons": {
+                                    "GW+1": {"net_delta_vs_hold": 0.0},
+                                    "3GW": {"net_delta_vs_hold": 0.0},
+                                    "5GW": {"net_delta_vs_hold": 0.0},
+                                },
+                                "robustness": {},
+                                "expected_regret": 0.0,
+                            }
+                        ],
                     },
                     "monte_carlo": {
                         "model_owner": "V12_MONTE_CARLO",
@@ -159,7 +184,8 @@ def test_p4_worker_uses_canonical_private_cache_environment(monkeypatch, tmp_pat
     assert out["stage3_action"] == "WAIT"
     rebind = out["p1_8_rebind_inputs"]
     assert "mini_league_overlay" not in rebind["package_with_stage3"]
-    assert "mini_league_overlay_owner" not in rebind["package_with_stage3"]["governance"]
+    assert "governance" not in rebind["package_with_stage3"]
+    assert rebind["package_with_stage3"]["selected_route_id"] == "HOLD"
     assert rebind["monte_carlo"]["execution_state"] == "EXECUTED"
     assert observed["stage2"] == str(cache_root / "stage2")
     assert observed["p17"] == str(cache_root / "p17")

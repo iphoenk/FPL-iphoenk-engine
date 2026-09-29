@@ -28,7 +28,7 @@ from src.engines.v12_report_orchestration import (
     validate_human_facing_body,
 )
 from src.engines.v12_final_delivery_barrier import validate_final_delivery_barrier
-from src.engines.v12_scenario_package import REQUIRED_DECISION_SURFACES
+from src.engines.v12_scenario_package import P4_SCENARIO_SURFACES
 from src.runtime_v6.domains.report_plane.report_qa import (
     validate_post_render_qa,
     validate_pre_render_qa,
@@ -294,7 +294,7 @@ def refresh_p4_scenario_state(
     decision_surfaces = scenario_row.get("decision_surfaces")
     if not isinstance(decision_surfaces, Mapping):
         raise SelectiveRefreshError("P4 scenario has no canonical decision surfaces")
-    required = set(REQUIRED_DECISION_SURFACES)
+    required = set(P4_SCENARIO_SURFACES)
     missing = sorted(required - set(str(k) for k in decision_surfaces))
     if missing:
         raise SelectiveRefreshError(

@@ -109,8 +109,31 @@ def _rebind_content(
     report_slot: str,
 ) -> dict[str, Any]:
     out = dict(replacement)
-    existing_binding = dict(out.pop("authoritative_binding", None) or {})
-    if not existing_binding and isinstance(current, Mapping):
+    canonical_binding = dict(out.get("authoritative_binding") or {})
+    if canonical_binding:
+        status = str(canonical_binding.get("status") or "").upper()
+        producer = str(canonical_binding.get("producer") or "").strip()
+        payload_fingerprint = str(
+            canonical_binding.get("payload_fingerprint") or ""
+        ).strip()
+        bound_slot = str(canonical_binding.get("report_slot") or "").strip()
+        if (
+            status != "BOUND"
+            or not producer
+            or not payload_fingerprint
+            or bound_slot != str(report_slot)
+        ):
+            raise SelectiveRefreshError(
+                "P4 scenario authoritative binding mismatch for current report_slot"
+            )
+        # P4 stores the canonical cold section together with its occurrence-bound
+        # proof token. Preserve that exact token on the same occurrence instead
+        # of recomputing a post-serialization fingerprint.
+        out["authoritative_binding"] = canonical_binding
+        return out
+
+    existing_binding: dict[str, Any] = {}
+    if isinstance(current, Mapping):
         existing_binding = dict(current.get("authoritative_binding") or {})
     producer = str(existing_binding.get("producer") or "").strip()
     if producer:

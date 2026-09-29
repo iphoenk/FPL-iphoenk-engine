@@ -310,3 +310,25 @@ def test_perf_f_workflow_supports_one_serial_multi_case_chain():
     assert 'perf-f-work-${CASE,,}' in workflow
     assert 'cancel-in-progress: false' in workflow
 
+
+def test_p4_and_perf_f_pin_one_exact_runtime_data_occurrence():
+    root = Path(__file__).resolve().parents[1]
+    p4 = (
+        root / ".github/workflows/v12-p4-private-scenario-package.yml"
+    ).read_text(encoding="utf-8")
+    perf = (
+        root / ".github/workflows/v12-perf-f-production-acceptance.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "Bind exact runtime-data occurrence" in p4
+    assert 'payload["occurrence_binding"] = {' in p4
+    assert '"runtime_data_sha": runtime_sha' in p4
+    assert '"report_slot": report_slot' in p4
+
+    assert "Resolve governed PERF-F runtime-data ref" in perf
+    assert 'binding = dict(package.get("occurrence_binding") or {})' in perf
+    assert 'runtime_ref = runtime_sha' in perf
+    assert 'source = "P4_OCCURRENCE_BINDING"' in perf
+    assert 'ref: ${{ steps.runtime.outputs.runtime_ref }}' in perf
+    assert 'test "$actual" = "$expected"' in perf
+

@@ -7,7 +7,17 @@ from src.engines.v12_scenario_package import ScenarioPackageError, base_fingerpr
 OWNED=list(range(1,16))
 DEPS={"model_version":"v12","our15_fingerprint":"our15-a","fixture_gw_fingerprint":"gw6-a","projection_lineage_fingerprint":"proj-a","cache_schema_version":"6","mc_authority":"V12_MC_500K_CRN","owner_context_fingerprint":"owner-a"}
 def base():
-    return {"decision_surfaces":{"S06":{"xi":list(range(1,12)),"bench":[12,13,14,15]},"S08":{"captain":1,"vice":2},"S09":{"chip":"NONE"},"S14":{"route":"HOLD"},"S19":{"action":"WAIT"}}}
+    return {"decision_surfaces":{
+        "S06":{"xi":list(range(1,12)),"bench":[12,13,14,15]},
+        "S08":{"captain":1,"vice":2},
+        "S09":{"chip":"NONE"},
+        "S11":{"rows":[]},
+        "S12":{"rows":[]},
+        "S13":{"rows":[]},
+        "S14":{"route":"HOLD"},
+        "S15B":{"mini":"FULL"},
+        "S19":{"action":"WAIT"},
+    }}
 def evaluate(overrides):
     out=deepcopy(base()); e=int(next(iter(overrides)))
     out["decision_surfaces"]["S06"]={"xi":[x for x in range(1,12) if x!=e],"bench":[12,13,14,15,e]}

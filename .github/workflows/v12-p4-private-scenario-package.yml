@@ -88,6 +88,39 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Bind exact runtime-data occurrence
+        id: runtime
+        shell: bash
+        env:
+          P4_REPORT_SLOT: ${{ steps.request.outputs.report_slot }}
+        run: |
+          set -euo pipefail
+          runtime_sha="$(git -C runtime-data rev-parse HEAD)"
+          test "${#runtime_sha}" -eq 40
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          slot = os.environ["P4_REPORT_SLOT"]
+          payload = json.loads(
+              Path("runtime-data/data/v6/report_prefetch/latest.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          if str(payload.get("report_kind") or "") != "full_master":
+              raise SystemExit("P4 runtime binding requires full_master prefetch")
+          if str(payload.get("target_logical_report_slot") or "") != slot:
+              raise SystemExit(
+                  "P4 runtime binding report_slot mismatch: "
+                  f"requested={slot} observed={payload.get('target_logical_report_slot')}"
+              )
+          if payload.get("fresh_for_target_report") is not True:
+              raise SystemExit("P4 runtime binding requires fresh target prefetch")
+          PY
+          echo "runtime_data_sha=$runtime_sha" >> "$GITHUB_OUTPUT"
+          echo "P4_RUNTIME_DATA_SHA=$runtime_sha" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Require private publisher credential
         shell: bash
         env:
@@ -166,6 +199,8 @@ jobs:
           V12_PRIVATE_CACHE_PROFILE: SECURE_ENCRYPTED_PERSONAL_CACHE
           FPL_V12_PRIVATE_CACHE_KEY_B64: ${{ secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 }}
           V12_P4_MAX_WORKERS: "2"
+          P4_RUNTIME_DATA_SHA: ${{ steps.runtime.outputs.runtime_data_sha }}
+          P4_REPORT_SLOT: ${{ steps.request.outputs.report_slot }}
           OPENBLAS_CORETYPE: Haswell
           OPENBLAS_NUM_THREADS: "1"
           OMP_NUM_THREADS: "1"
@@ -178,7 +213,9 @@ jobs:
           python -m src.engines.v12_p4_scenario_production             --app-root "$GITHUB_WORKSPACE"             --runtime-data-root "$GITHUB_WORKSPACE/runtime-data"             --private-root "$GITHUB_WORKSPACE/private-reports"             --report-slot "${{ steps.request.outputs.report_slot }}"             --workspace "$RUNNER_TEMP/p4-work"             --output "$GITHUB_WORKSPACE/private-reports/scenarios/latest.json"
           python - <<'PY'
           import json
+          import os
           from pathlib import Path
+
           root = Path("private-reports/scenarios")
           payload = json.loads((root / "latest.json").read_text(encoding="utf-8"))
           fingerprint = str(payload["package_fingerprint"])
@@ -186,11 +223,27 @@ jobs:
               raise SystemExit("P4 package is not private-only")
           if int(payload.get("scenario_count") or 0) < 16:
               raise SystemExit("P4 scenario coverage incomplete")
-          (root / f"{fingerprint}.json").write_text(
-              json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-              encoding="utf-8",
+          runtime_sha = str(os.environ.get("P4_RUNTIME_DATA_SHA") or "").strip()
+          report_slot = str(os.environ.get("P4_REPORT_SLOT") or "").strip()
+          if len(runtime_sha) != 40 or not report_slot:
+              raise SystemExit("P4 occurrence binding is incomplete")
+          payload["occurrence_binding"] = {
+              "runtime_branch": "runtime-data-v6",
+              "runtime_data_sha": runtime_sha,
+              "report_slot": report_slot,
+          }
+          serialized = (
+              json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False)
+              + "\n"
           )
-          print({"package_fingerprint": fingerprint, "scenario_count": payload["scenario_count"]})
+          (root / "latest.json").write_text(serialized, encoding="utf-8")
+          (root / f"{fingerprint}.json").write_text(serialized, encoding="utf-8")
+          print({
+              "package_fingerprint": fingerprint,
+              "scenario_count": payload["scenario_count"],
+              "runtime_data_sha": runtime_sha,
+              "report_slot": report_slot,
+          })
           PY
 
       - name: Revalidate exact production main before private persist

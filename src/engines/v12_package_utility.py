@@ -748,6 +748,30 @@ def _action(selected: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _deterministic_output_core_for_binding(
+    output_core: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Exclude runtime-only P1.7 telemetry from deterministic model output proof.
+
+    The package decision payload keeps the full execution proof for observability.
+    Wall-clock/cache/process telemetry is not football-model output and can vary
+    between otherwise identical canonical executions, so it must not perturb the
+    package model output fingerprint consumed downstream by P1.8.
+    """
+    deterministic = deepcopy(dict(output_core))
+    methodology = deterministic.get("methodology")
+    if isinstance(methodology, Mapping):
+        methodology = dict(methodology)
+        methodology.pop("lineup_execution", None)
+        deterministic["methodology"] = methodology
+    governance = deterministic.get("governance")
+    if isinstance(governance, Mapping):
+        governance = dict(governance)
+        governance.pop("p1_7_execution_proof", None)
+        deterministic["governance"] = governance
+    return deterministic
+
+
 def _model_evidence_binding(
     *,
     search_result: Mapping[str, Any],
@@ -822,11 +846,16 @@ def _model_evidence_binding(
         planning_gw=int(planning_gw),
         canonical_v12_revision=_canonical_sha256(),
     )
-    bound = bind_deterministic_output(binding, output_core)
+    deterministic_output_core = _deterministic_output_core_for_binding(
+        output_core
+    )
+    bound = bind_deterministic_output(binding, deterministic_output_core)
     return {
         "authority": False,
         **binding,
         "output_fingerprint": bound["output_fingerprint"],
+        "execution_telemetry_excluded_from_output_fingerprint": True,
+        "decision_output_fingerprint_includes_runtime_timing": False,
         "raw_v6_payload_duplicated": False,
         "repository_python_execution_claimed": False,
     }

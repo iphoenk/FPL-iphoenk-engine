@@ -647,6 +647,53 @@ def test_30_model_evidence_is_non_authoritative(monkeypatch):
 
 
 
+def test_30b_model_output_fingerprint_excludes_runtime_execution_telemetry(monkeypatch):
+    search_result, result = _evaluate(monkeypatch)
+    output_core = {
+        key: deepcopy(value)
+        for key, value in result.items()
+        if key not in {"generated_at", "model_evidence_binding"}
+    }
+    first = utility._model_evidence_binding(
+        search_result=search_result,
+        projections=_projections(),
+        output_core=output_core,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+
+    telemetry_changed = deepcopy(output_core)
+    telemetry_changed["methodology"]["lineup_execution"]["elapsed_seconds"] = 9999.0
+    telemetry_changed["governance"]["p1_7_execution_proof"][
+        "p1_7_wall_seconds"
+    ] = 9999.0
+    telemetry_changed["governance"]["p1_7_execution_proof"][
+        "p17_cache_hits"
+    ] = 999999.0
+    second = utility._model_evidence_binding(
+        search_result=search_result,
+        projections=_projections(),
+        output_core=telemetry_changed,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+
+    decision_changed = deepcopy(output_core)
+    decision_changed["selected_route_id"] = "CONTROLLED_DIFFERENT_ROUTE"
+    third = utility._model_evidence_binding(
+        search_result=search_result,
+        projections=_projections(),
+        output_core=decision_changed,
+        planning_gw=GW,
+        generated_at=GENERATED,
+    )
+
+    assert first["output_fingerprint"] == second["output_fingerprint"]
+    assert first["output_fingerprint"] != third["output_fingerprint"]
+    assert first["execution_telemetry_excluded_from_output_fingerprint"] is True
+    assert first["decision_output_fingerprint_includes_runtime_timing"] is False
+
+
 def test_31_p1_2b_parallel_runtime_is_bounded_execution_only():
     perf = utility.load_config()["performance"]
     assert perf["execution_mode"] == "CROSS_ROUTE_FAMILY_NUMPY_EXACT_P1_7"

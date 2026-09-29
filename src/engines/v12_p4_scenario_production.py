@@ -17,7 +17,7 @@ from typing import Any, Mapping
 from .v12_integrated_report_runner import run_deep
 from .v12_p6_runtime import _identity
 from .v12_scenario_package import (
-    REQUIRED_DECISION_SURFACES,
+    P4_SCENARIO_SURFACES,
     build_scenario_package,
 )
 
@@ -42,13 +42,13 @@ def _decision_result(bundle: Mapping[str, Any]) -> dict[str, Any]:
             if not isinstance(row, Mapping):
                 continue
             sid = str(row.get("section_id") or row.get("id") or "").upper()
-            if sid in REQUIRED_DECISION_SURFACES:
+            if sid in P4_SCENARIO_SURFACES:
                 surfaces[sid] = row.get("content", row)
     elif isinstance(sections, Mapping):
-        for sid in REQUIRED_DECISION_SURFACES:
+        for sid in P4_SCENARIO_SURFACES:
             if sid in sections:
                 surfaces[sid] = sections[sid]
-    missing = [sid for sid in REQUIRED_DECISION_SURFACES if sid not in surfaces]
+    missing = [sid for sid in P4_SCENARIO_SURFACES if sid not in surfaces]
     if missing:
         raise P4ScenarioProductionError(
             f"canonical DEEP bundle missing P4 decision surfaces: {missing}"

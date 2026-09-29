@@ -41,20 +41,37 @@ def _decision_result(bundle: Mapping[str, Any]) -> dict[str, Any]:
         for row in sections:
             if not isinstance(row, Mapping):
                 continue
-            sid = str(row.get("section_id") or row.get("id") or "").upper()
-            if sid in REQUIRED_DECISION_SURFACES:
+            sid = str(
+                row.get("section_id")
+                or row.get("id")
+                or ""
+            ).upper()
+            if sid:
                 surfaces[sid] = row.get("content", row)
     elif isinstance(sections, Mapping):
-        for sid in REQUIRED_DECISION_SURFACES:
-            if sid in sections:
-                surfaces[sid] = sections[sid]
-    missing = [sid for sid in REQUIRED_DECISION_SURFACES if sid not in surfaces]
+        for raw_sid, value in sections.items():
+            sid = str(raw_sid or "").upper()
+            if sid:
+                surfaces[sid] = value
+    missing = [
+        sid
+        for sid in REQUIRED_DECISION_SURFACES
+        if sid not in surfaces
+    ]
     if missing:
         raise P4ScenarioProductionError(
             f"canonical DEEP bundle missing P4 decision surfaces: {missing}"
         )
-    return {"decision_surfaces": surfaces}
-
+    proof = dict(bundle.get("execution_proof") or {})
+    stage3_action = str(proof.get("stage3_action") or "").strip()
+    if not stage3_action:
+        raise P4ScenarioProductionError(
+            "canonical DEEP bundle missing Stage3 action"
+        )
+    return {
+        "decision_surfaces": surfaces,
+        "stage3_action": stage3_action,
+    }
 
 def _owned_context(private_root: Path) -> tuple[list[int], int | None, int | None]:
     current = _read_json(private_root / "personal/current_team.json")

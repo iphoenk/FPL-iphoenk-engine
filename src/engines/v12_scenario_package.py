@@ -28,11 +28,21 @@ def _fingerprint(value: Any) -> str:
 def _decision_surfaces(payload: Mapping[str, Any]) -> dict[str, Any]:
     surfaces = dict(payload.get("decision_surfaces") or {})
     if not surfaces:
-        surfaces = {key: payload.get(key) for key in REQUIRED_DECISION_SURFACES if key in payload}
+        surfaces = {
+            key: payload.get(key)
+            for key in REQUIRED_DECISION_SURFACES
+            if key in payload
+        }
     missing = [key for key in REQUIRED_DECISION_SURFACES if key not in surfaces]
     if missing:
-        raise ScenarioPackageError(f"canonical evaluator missing required decision surfaces: {missing}")
-    return {key: surfaces[key] for key in REQUIRED_DECISION_SURFACES}
+        raise ScenarioPackageError(
+            f"canonical evaluator missing required decision surfaces: {missing}"
+        )
+    # Keep every canonical section supplied by the evaluator.  The P4 builder
+    # will persist the mandatory decision core plus any section whose payload
+    # actually changes versus BASE_CURRENT15.  This preserves cold semantics
+    # without bloating every shard with unchanged report sections.
+    return surfaces
 
 def _normalize_owned(owned_elements: Sequence[int]) -> list[int]:
     out = [int(x) for x in owned_elements]
@@ -61,32 +71,127 @@ def _specs(owned: Sequence[int], captain: int | None, vice: int | None) -> list[
             specs.append({"scenario_id":sid,"override_type":typ,"element_id":e,"p_available":0.0})
     return specs
 
-def build_scenario_package(*, dependencies: Mapping[str, Any], base_result: Mapping[str, Any],
-    owned_elements: Sequence[int], evaluate: Callable[[Mapping[str, Mapping[str, Any]]], Mapping[str, Any]],
-    generated_at: str, captain_element: int | None=None, vice_element: int | None=None) -> dict[str, Any]:
-    deps=_normalize_dependencies(dependencies); bf=base_fingerprint(deps); base=_decision_surfaces(base_result)
-    scenarios=[]
-    for spec in _specs(owned_elements,captain_element,vice_element):
-        override={}
+def build_scenario_package(
+    *,
+    dependencies: Mapping[str, Any],
+    base_result: Mapping[str, Any],
+    owned_elements: Sequence[int],
+    evaluate: Callable[
+        [Mapping[str, Mapping[str, Any]]],
+        Mapping[str, Any],
+    ],
+    generated_at: str,
+    captain_element: int | None = None,
+    vice_element: int | None = None,
+) -> dict[str, Any]:
+    deps = _normalize_dependencies(dependencies)
+    bf = base_fingerprint(deps)
+    base_all = _decision_surfaces(base_result)
+    base_stage3_action = str(base_result.get("stage3_action") or "")
+    scenarios = []
+    for spec in _specs(
+        owned_elements,
+        captain_element,
+        vice_element,
+    ):
+        override: dict[str, dict[str, Any]] = {}
         if spec["element_id"] is not None:
-            override={str(spec["element_id"]):{"override_type":spec["override_type"],"p_available":spec["p_available"]}}
-        evaluated=base_result if spec["override_type"]=="BASE" else evaluate(override)
-        surfaces=_decision_surfaces(evaluated)
-        scenarios.append({
-            "scenario_id":spec["scenario_id"],"base_fingerprint":bf,"override_type":spec["override_type"],
-            "override_input": None if spec["element_id"] is None else {"element_id":spec["element_id"],"p_available":spec["p_available"]},
-            "decision_surfaces":surfaces,
-            "delta_vs_base":{k:{"changed":base[k]!=surfaces[k],"base":base[k],"scenario":surfaces[k]} for k in REQUIRED_DECISION_SURFACES},
-            "output_fingerprint":_fingerprint({"base_fingerprint":bf,"scenario_id":spec["scenario_id"],"override":override,"decision_surfaces":surfaces}),
-        })
+            override = {
+                str(spec["element_id"]): {
+                    "override_type": spec["override_type"],
+                    "p_available": spec["p_available"],
+                }
+            }
+        evaluated = (
+            base_result
+            if spec["override_type"] == "BASE"
+            else evaluate(override)
+        )
+        surfaces_all = _decision_surfaces(evaluated)
+        if set(surfaces_all) != set(base_all):
+            raise ScenarioPackageError(
+                "canonical scenario section set differs from BASE_CURRENT15"
+            )
+        changed_surface_ids = [
+            key
+            for key in sorted(base_all)
+            if base_all[key] != surfaces_all[key]
+        ]
+        selected_surface_ids = sorted(
+            set(REQUIRED_DECISION_SURFACES)
+            | set(changed_surface_ids)
+        )
+        surfaces = {
+            key: surfaces_all[key]
+            for key in selected_surface_ids
+        }
+        stage3_action = str(evaluated.get("stage3_action") or "")
+        scenarios.append(
+            {
+                "scenario_id": spec["scenario_id"],
+                "base_fingerprint": bf,
+                "override_type": spec["override_type"],
+                "override_input": (
+                    None
+                    if spec["element_id"] is None
+                    else {
+                        "element_id": spec["element_id"],
+                        "p_available": spec["p_available"],
+                    }
+                ),
+                "changed_surface_ids": changed_surface_ids,
+                "decision_surfaces": surfaces,
+                "stage3_action": stage3_action,
+                "stage3_action_changed": (
+                    stage3_action != base_stage3_action
+                ),
+                "delta_vs_base": {
+                    key: {
+                        "changed": base_all[key] != surfaces_all[key],
+                        "base": base_all[key],
+                        "scenario": surfaces_all[key],
+                    }
+                    for key in selected_surface_ids
+                },
+                "output_fingerprint": _fingerprint(
+                    {
+                        "base_fingerprint": bf,
+                        "scenario_id": spec["scenario_id"],
+                        "override": override,
+                        "decision_surfaces": surfaces,
+                        "stage3_action": stage3_action,
+                    }
+                ),
+            }
+        )
     return {
-        "schema_version":2,"authority":"CANONICAL_V12_P4_SCENARIO_PACKAGE","private_only":True,
-        "second_model_created":False,"generated_at":generated_at,"base_dependencies":deps,
-        "current_base_fingerprint":bf,"scenario_count":len(scenarios),"scenarios":scenarios,
-        "package_fingerprint":_fingerprint({"base_fingerprint":bf,"scenario_fingerprints":[x["output_fingerprint"] for x in scenarios]}),
-        "governance":{"same_canonical_v12_evaluator_required":True,"p1_1_scenario_override_required":True,
-          "posthoc_xpts_mutation_forbidden":True,"public_persistent_personal_cache_forbidden":True,
-          "wrong_base_reuse_fails_closed":True,"stale_scenario_is_cache_miss":True}
+        "schema_version": 3,
+        "authority": "CANONICAL_V12_P4_SCENARIO_PACKAGE",
+        "private_only": True,
+        "second_model_created": False,
+        "generated_at": generated_at,
+        "base_dependencies": deps,
+        "current_base_fingerprint": bf,
+        "scenario_count": len(scenarios),
+        "scenarios": scenarios,
+        "package_fingerprint": _fingerprint(
+            {
+                "base_fingerprint": bf,
+                "scenario_fingerprints": [
+                    row["output_fingerprint"]
+                    for row in scenarios
+                ],
+            }
+        ),
+        "governance": {
+            "same_canonical_v12_evaluator_required": True,
+            "p1_1_scenario_override_required": True,
+            "posthoc_xpts_mutation_forbidden": True,
+            "public_persistent_personal_cache_forbidden": True,
+            "wrong_base_reuse_fails_closed": True,
+            "stale_scenario_is_cache_miss": True,
+            "changed_surface_capture_required": True,
+        },
     }
 
 def validate_package_for_dependencies(package: Mapping[str, Any], *, dependencies: Mapping[str, Any]) -> dict[str, Any]:

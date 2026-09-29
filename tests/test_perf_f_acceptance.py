@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -273,3 +274,22 @@ def test_price_partial_refresh_is_copy_on_write_and_keeps_delivery_barriers():
         assert token in source
     assert '"qa_relaxed": False' in source
     assert '"football_math_recomputed": False' in source
+
+
+def test_perf_f_production_matches_p4_normalized_numerical_runtime():
+    root = Path(__file__).resolve().parents[1]
+    perf = (
+        root / ".github/workflows/v12-perf-f-production-acceptance.yml"
+    ).read_text(encoding="utf-8")
+    p4 = (
+        root / ".github/workflows/v12-p4-private-scenario-package.yml"
+    ).read_text(encoding="utf-8")
+    required = (
+        "OPENBLAS_CORETYPE: Haswell",
+        'OPENBLAS_NUM_THREADS: "1"',
+        'OMP_NUM_THREADS: "1"',
+        'NPY_DISABLE_CPU_FEATURES: "X86_V4,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR"',
+    )
+    for token in required:
+        assert token in p4
+        assert token in perf

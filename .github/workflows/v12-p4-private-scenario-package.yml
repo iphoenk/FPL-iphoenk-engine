@@ -161,10 +161,10 @@ jobs:
       - name: Build canonical private P4 package
         env:
           V12_STAGE2_DERIVED_CACHE_DIR: ${{ github.workspace }}/app/.cache/v12-stage2
-          V12_P17_CACHE_DIR: ${{ github.workspace }}/app/.cache/v12-p17
-          V12_MC_CACHE_DIR: ${{ github.workspace }}/app/.cache/v12-mc
-          V12_P17_CACHE_KEY_B64: ${{ secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 }}
-          V12_MC_CACHE_KEY_B64: ${{ secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 }}
+          V12_P17_DECISION_CACHE_DIR: ${{ github.workspace }}/app/.cache/v12-p17
+          V12_MC_SIM_CACHE_DIR: ${{ github.workspace }}/app/.cache/v12-mc
+          V12_PRIVATE_CACHE_PROFILE: SECURE_ENCRYPTED_PERSONAL_CACHE
+          FPL_V12_PRIVATE_CACHE_KEY_B64: ${{ secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 }}
           V12_P4_MAX_WORKERS: "2"
           OPENBLAS_CORETYPE: Haswell
           OPENBLAS_NUM_THREADS: "1"

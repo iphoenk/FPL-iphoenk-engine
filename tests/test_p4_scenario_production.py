@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 
 import pytest
@@ -8,6 +9,7 @@ from src.engines.v12_p4_scenario_production import (
     P4ScenarioProductionError,
     _configured_workers,
     _decision_result,
+    _evaluate_scenario_worker,
     _override_key,
     _owned_context,
     _scenario_override_specs,
@@ -84,3 +86,65 @@ def test_parallel_p4_specs_are_complete_unique_and_worker_count_is_bounded(
     monkeypatch.setenv("V12_P4_MAX_WORKERS", "3")
     with pytest.raises(P4ScenarioProductionError, match="governed range"):
         _configured_workers(len(specs))
+
+
+def test_p4_worker_uses_canonical_private_cache_environment(monkeypatch, tmp_path):
+    observed = {}
+
+    def fake_run_deep(**kwargs):
+        observed.update({
+            "stage2": __import__("os").environ.get("V12_STAGE2_DERIVED_CACHE_DIR"),
+            "p17": __import__("os").environ.get("V12_P17_DECISION_CACHE_DIR"),
+            "mc": __import__("os").environ.get("V12_MC_SIM_CACHE_DIR"),
+            "legacy_p17": __import__("os").environ.get("V12_P17_CACHE_DIR"),
+            "legacy_mc": __import__("os").environ.get("V12_MC_CACHE_DIR"),
+        })
+        return {
+            "report": {
+                "sections": [
+                    {"section_id": sid, "content": {"sid": sid}}
+                    for sid in ("S02", "S06", "S08", "S09", "S14", "S19")
+                ]
+            },
+            "execution_proof": {
+                "stage3_action": "WAIT",
+                "p4_scenario_override": {
+                    "applied": True,
+                    "stage2_cache_bypassed": True,
+                },
+            },
+            "runner_status": "PASS",
+        }
+
+    monkeypatch.setattr(
+        "src.engines.v12_p4_scenario_production.run_deep",
+        fake_run_deep,
+    )
+    monkeypatch.delenv("V12_P17_CACHE_DIR", raising=False)
+    monkeypatch.delenv("V12_MC_CACHE_DIR", raising=False)
+    cache_root = tmp_path / "cache"
+
+    out = _evaluate_scenario_worker(
+        str(tmp_path / "runtime"),
+        str(tmp_path / "private"),
+        "2026-09-29T12:30:00+07:00",
+        str(tmp_path / "output"),
+        str(cache_root),
+        {"572": {"override_type": "OWNED_UNAVAILABLE", "p_available": 0.0}},
+    )
+
+    assert out["stage3_action"] == "WAIT"
+    assert observed["stage2"] == str(cache_root / "stage2")
+    assert observed["p17"] == str(cache_root / "p17")
+    assert observed["mc"] == str(cache_root / "mc")
+    assert observed["legacy_p17"] is None
+    assert observed["legacy_mc"] is None
+
+
+def test_p4_executor_recycles_no_scenario_worker_state():
+    from src.engines import v12_p4_scenario_production as module
+
+    source = inspect.getsource(module.materialize_p4_package)
+    assert 'max_workers=workers' in source
+    assert 'mp_context=get_context("spawn")' in source
+    assert 'max_tasks_per_child=1' in source

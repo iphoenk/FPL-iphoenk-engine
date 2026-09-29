@@ -191,8 +191,8 @@ def _evaluate_scenario_worker(
         cache_root = Path(cache_root_raw)
         cache_paths = {
             "V12_STAGE2_DERIVED_CACHE_DIR": cache_root / "stage2",
-            "V12_P17_CACHE_DIR": cache_root / "p17",
-            "V12_MC_CACHE_DIR": cache_root / "mc",
+            "V12_P17_DECISION_CACHE_DIR": cache_root / "p17",
+            "V12_MC_SIM_CACHE_DIR": cache_root / "mc",
         }
         for env_name, path in cache_paths.items():
             path.mkdir(parents=True, exist_ok=True)
@@ -250,6 +250,7 @@ def materialize_p4_package(
     executor = ProcessPoolExecutor(
         max_workers=workers,
         mp_context=get_context("spawn"),
+        max_tasks_per_child=1,
     )
     futures = {}
     try:

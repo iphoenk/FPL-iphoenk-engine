@@ -198,6 +198,7 @@ def _evaluate_scenario_worker(
             path.mkdir(parents=True, exist_ok=True)
             os.environ[env_name] = str(path)
 
+    warm_state_path = output / "p4-warm-state.json"
     bundle = run_deep(
         runtime_data_root=runtime_data_root,
         report_slot=report_slot,
@@ -206,6 +207,7 @@ def _evaluate_scenario_worker(
         allow_legacy_private_sources=False,
         require_private_personal=True,
         scenario_overrides=overrides,
+        warm_state_out=warm_state_path,
     )
     if str(bundle.get("runner_status") or "").upper() != "PASS":
         raise P4ScenarioProductionError("canonical scenario evaluator did not PASS")
@@ -220,7 +222,28 @@ def _evaluate_scenario_worker(
             raise P4ScenarioProductionError(
                 "P4 override must bypass Stage2 derived cache"
             )
-    return _decision_result(bundle)
+    warm_state = _read_json(warm_state_path)
+    package_for_overlay = dict(warm_state.get("package_with_stage3") or {})
+    monte_carlo = dict(warm_state.get("monte_carlo") or {})
+    if not package_for_overlay or not monte_carlo:
+        raise P4ScenarioProductionError(
+            "canonical scenario evaluator missing P1.8 rebind inputs"
+        )
+    package_for_overlay.pop("mini_league_overlay", None)
+    governance = package_for_overlay.get("governance")
+    if isinstance(governance, Mapping):
+        governance = dict(governance)
+        governance.pop("mini_league_overlay_owner", None)
+        governance.pop("mini_league_overlay_downstream_only", None)
+        package_for_overlay["governance"] = governance
+
+    result = _decision_result(bundle)
+    result["p1_8_rebind_inputs"] = {
+        "package_with_stage3": package_for_overlay,
+        "monte_carlo": monte_carlo,
+    }
+    warm_state_path.unlink(missing_ok=True)
+    return result
 
 
 def materialize_p4_package(

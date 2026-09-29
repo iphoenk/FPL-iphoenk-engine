@@ -29,6 +29,7 @@ from src.engines.v12_report_orchestration import (
     validate_human_facing_body,
 )
 from src.engines.v12_final_delivery_barrier import validate_final_delivery_barrier
+from src.engines.v12_delivery_reliability import write_serving_artifacts
 from src.runtime_v6.domains.report_plane.report_qa import (
     validate_post_render_qa,
     validate_pre_render_qa,
@@ -52,7 +53,7 @@ def _section_map(bundle: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
             continue
         out[sid] = {
             "state": raw.get("state"),
-            "content": deepcopy(raw.get("content")),
+            "content": raw.get("content"),
             "degradation_reason": raw.get("degradation_reason"),
             "available_count": raw.get("available_count"),
             "expected_count": raw.get("expected_count"),
@@ -66,7 +67,7 @@ def _rebind_content(
     replacement: Mapping[str, Any],
     report_slot: str,
 ) -> dict[str, Any]:
-    out = deepcopy(dict(replacement))
+    out = dict(replacement)
     existing_binding = dict(out.pop("authoritative_binding", None) or {})
     if not existing_binding and isinstance(current, Mapping):
         existing_binding = dict(current.get("authoritative_binding") or {})
@@ -88,10 +89,14 @@ def _finalize_deep_state(
     report_slot: str,
     change_class: str,
     evidence: Mapping[str, Any],
+    stage3_action: str | None = None,
 ) -> dict[str, Any]:
-    refreshed = deepcopy(dict(state))
-    bundle = deepcopy(dict(refreshed.get("bundle") or {}))
-    warm = deepcopy(dict(refreshed.get("warm_state") or {}))
+    # The frozen state can contain tens of MB of canonical model payload.
+    # Selective refresh is copy-on-write: only the report/proof surfaces that
+    # change are rebuilt.  The immutable warm model state remains referenced.
+    refreshed = dict(state)
+    bundle = dict(refreshed.get("bundle") or {})
+    warm = dict(refreshed.get("warm_state") or {})
     if str(bundle.get("report_mode") or "").upper() != "DEEP":
         raise SelectiveRefreshError("selective refresh requires DEEP state")
     owned = [
@@ -214,13 +219,15 @@ def _finalize_deep_state(
             )
         )
 
-    execution_proof = deepcopy(dict(bundle.get("execution_proof") or {}))
+    execution_proof = dict(bundle.get("execution_proof") or {})
+    if stage3_action:
+        execution_proof["stage3_action"] = str(stage3_action)
     execution_proof["warm_selective_refresh"] = {
         "change_class": str(change_class).upper(),
         "status": "PASS",
         "canonical_precomputed_surfaces_only": True,
         "qa_relaxed": False,
-        **deepcopy(dict(evidence)),
+        **dict(evidence),
     }
     bundle.update(
         {
@@ -237,7 +244,7 @@ def _finalize_deep_state(
             "visible_body": body,
         }
     )
-    governance = deepcopy(dict(bundle.get("governance") or {}))
+    governance = dict(bundle.get("governance") or {})
     governance.update(
         {
             "p6_selective_refresh": str(change_class).upper(),
@@ -247,30 +254,21 @@ def _finalize_deep_state(
         }
     )
     bundle["governance"] = governance
-    refreshed["bundle"] = bundle
-    refreshed["execution_proof"] = execution_proof
-
     output_dir = Path(str(refreshed.get("output_dir") or ""))
     if not str(output_dir):
         raise SelectiveRefreshError("selective refresh output_dir unavailable")
     output_dir.mkdir(parents=True, exist_ok=True)
-    (output_dir / "report_bundle.json").write_text(
-        json.dumps(bundle, indent=2, sort_keys=True, ensure_ascii=False, default=str)
-        + "\n",
-        encoding="utf-8",
-    )
-    (output_dir / "execution_proof.json").write_text(
-        json.dumps(
-            execution_proof,
-            indent=2,
-            sort_keys=True,
-            ensure_ascii=False,
-            default=str,
-        )
-        + "\n",
-        encoding="utf-8",
+
+    # Rebuild the canonical serving artifacts from the refreshed bundle.
+    # Publishing baseline optional serving files would otherwise expose a
+    # stale human-facing snapshot even when report_bundle.json is correct.
+    write_serving_artifacts(
+        bundle=bundle,
+        output_dir=output_dir,
     )
     (output_dir / "report_body.md").write_text(body, encoding="utf-8")
+    refreshed["bundle"] = bundle
+    refreshed["execution_proof"] = dict(bundle.get("execution_proof") or {})
     return refreshed
 
 
@@ -288,15 +286,16 @@ def refresh_p4_scenario_state(
     if not isinstance(decision_surfaces, Mapping):
         raise SelectiveRefreshError("P4 scenario has no canonical decision surfaces")
     required = {"S06", "S08", "S09", "S14", "S19"}
-    missing = sorted(required - set(str(k) for k in decision_surfaces))
+    surface_ids = {str(key) for key in decision_surfaces}
+    missing = sorted(required - surface_ids)
     if missing:
         raise SelectiveRefreshError(
             "P4 scenario missing canonical surfaces: " + ",".join(missing)
         )
 
-    bundle = deepcopy(dict(state.get("bundle") or {}))
+    bundle = dict(state.get("bundle") or {})
     sections = _section_map(bundle)
-    for sid in required:
+    for sid in sorted(surface_ids):
         if sid not in sections:
             raise SelectiveRefreshError(f"baseline report missing {sid}")
         replacement = decision_surfaces[sid]
@@ -322,9 +321,16 @@ def refresh_p4_scenario_state(
                 scenario_row.get("output_fingerprint") or ""
             ),
             "package_fingerprint": str(package_fingerprint or ""),
-            "decision_surfaces_rebound": sorted(required),
-            **deepcopy(dict(extra_evidence or {})),
+            "decision_surfaces_rebound": sorted(surface_ids),
+            "changed_surface_ids": list(
+                scenario_row.get("changed_surface_ids") or []
+            ),
+            **dict(extra_evidence or {}),
         },
+        stage3_action=(
+            str(scenario_row.get("stage3_action") or "").strip()
+            or None
+        ),
     )
 
 

@@ -192,5 +192,12 @@ def test_p4_workflow_restores_only_governed_cache_classes():
     assert "app/.cache/v12-p17" in workflow
     assert "app/.cache/v12-mc" in workflow
     assert "non-AEAD file found in restored P4 private cache" in workflow
+    assert "V12_P17_DECISION_CACHE_DIR" in workflow
+    assert "V12_MC_SIM_CACHE_DIR" in workflow
+    assert "V12_PRIVATE_CACHE_PROFILE: SECURE_ENCRYPTED_PERSONAL_CACHE" in workflow
     assert "FPL_V12_PRIVATE_CACHE_KEY_B64" in workflow
+    assert "V12_P17_CACHE_DIR:" not in workflow
+    assert "V12_MC_CACHE_DIR:" not in workflow
+    assert "V12_P17_CACHE_KEY_B64:" not in workflow
+    assert "V12_MC_CACHE_KEY_B64:" not in workflow
     assert "actions/cache/save@v4" not in workflow

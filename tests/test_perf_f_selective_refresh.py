@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 
 from src.engines.v12_p6_selective_refresh import refresh_p4_scenario_state
+from src.engines.v12_scenario_package import P4_SCENARIO_SURFACES
 from src.engines.v12_perf_f_acceptance import (
     _requires_p4_package,
     execute_case,
@@ -36,8 +37,10 @@ def test_p4_selective_refresh_preserves_full_delivery_barriers():
         "validate_final_delivery_barrier(",
     ):
         assert token in module_source
-    for sid in ("S06", "S08", "S09", "S11", "S12", "S13", "S14", "S15B", "S19"):
-        assert sid in module_source
+    assert set(P4_SCENARIO_SURFACES) == {
+        "S06", "S08", "S09", "S11", "S12", "S13", "S14", "S15B", "S19"
+    }
+    assert "required = set(P4_SCENARIO_SURFACES)" in source
     assert "run_package_monte_carlo(" not in module_source
     assert '"qa_relaxed": False' in module_source
     assert '"second_methodology_created": False' in module_source

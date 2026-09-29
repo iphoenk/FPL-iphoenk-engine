@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 
 import pytest
@@ -138,3 +139,12 @@ def test_p4_worker_uses_canonical_private_cache_environment(monkeypatch, tmp_pat
     assert observed["mc"] == str(cache_root / "mc")
     assert observed["legacy_p17"] is None
     assert observed["legacy_mc"] is None
+
+
+def test_p4_executor_recycles_no_scenario_worker_state():
+    from src.engines import v12_p4_scenario_production as module
+
+    source = inspect.getsource(module.materialize_p4_package)
+    assert 'max_workers=workers' in source
+    assert 'mp_context=get_context("spawn")' in source
+    assert 'max_tasks_per_child=1' in source

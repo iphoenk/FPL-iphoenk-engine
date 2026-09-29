@@ -9,7 +9,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-REQUIRED_DECISION_SURFACES = ("S06", "S08", "S09", "S11", "S12", "S13", "S14", "S15B", "S19")
+REQUIRED_DECISION_SURFACES = ("S06", "S08", "S09", "S14", "S19")
+P4_SCENARIO_SURFACES = ("S06", "S08", "S09", "S11", "S12", "S13", "S14", "S15B", "S19")
 REQUIRED_BASE_DEPENDENCIES = (
     "model_version", "our15_fingerprint", "fixture_gw_fingerprint",
     "projection_lineage_fingerprint", "cache_schema_version", "mc_authority",
@@ -32,7 +33,7 @@ def _decision_surfaces(payload: Mapping[str, Any]) -> dict[str, Any]:
     missing = [key for key in REQUIRED_DECISION_SURFACES if key not in surfaces]
     if missing:
         raise ScenarioPackageError(f"canonical evaluator missing required decision surfaces: {missing}")
-    return {key: surfaces[key] for key in REQUIRED_DECISION_SURFACES}
+    return {key: surfaces[key] for key in P4_SCENARIO_SURFACES if key in surfaces}
 
 def _normalize_owned(owned_elements: Sequence[int]) -> list[int]:
     out = [int(x) for x in owned_elements]

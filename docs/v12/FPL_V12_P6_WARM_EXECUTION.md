@@ -24,6 +24,8 @@ Manager-specific CURRENT15, owner context, scenario packages, decision results a
 
 Controlled PERF-F acceptance attaches the private P4 package only to classes that actually consume P4 state: OUR15 availability, material projection equivalence, and explicit P4 scenario hit/miss cases. NO_CHANGE, MINI_LEAGUE_ONLY, PRICE_ONLY, CAPTAIN_CHANGE, and VICE_CAPTAIN_CHANGE do not attach an unrelated P4 package, so an old scenario artifact cannot block a non-P4 class. P4-consuming classes retain exact dependency validation and fail closed on missing or stale packages.
 
+For same-occurrence P4 selective serving, a canonical section-level `authoritative_binding` is preserved byte-for-byte when it is already `BOUND`, has a producer and payload fingerprint, and matches the requested report slot. A wrong-slot or incomplete canonical binding fails closed. This prevents false semantic inequality caused only by recomputing a proof fingerprint after scenario-shard JSON serialization.
+
 ## Operational D-P2 wiring
 
 The existing owner-gated D-P2 issue-comment transport remains non-recurring and non-authoritative. At T-15 it dispatches the existing V6 report-prefetch path, then invokes the reusable P6 workflow with the same report kind, logical slot, exact T-10 freeze target, and deterministic occurrence ID. P6 has no cron, cannot edit issue 431, and cannot advance scheduler proof.

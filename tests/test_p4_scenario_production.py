@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import json
+from pathlib import Path
 
 import pytest
 
@@ -92,6 +93,28 @@ def test_p4_worker_uses_canonical_private_cache_environment(monkeypatch, tmp_pat
     observed = {}
 
     def fake_run_deep(**kwargs):
+        warm_state_out = Path(kwargs["warm_state_out"])
+        warm_state_out.parent.mkdir(parents=True, exist_ok=True)
+        warm_state_out.write_text(
+            json.dumps(
+                {
+                    "package_with_stage3": {
+                        "model_owner": "V12_PACKAGE_UTILITY",
+                        "mini_league_overlay": {"stale": True},
+                        "governance": {
+                            "mini_league_overlay_owner": "P1_8",
+                            "mini_league_overlay_downstream_only": True,
+                        },
+                        "routes": [{"route_id": "HOLD"}],
+                    },
+                    "monte_carlo": {
+                        "model_owner": "V12_MONTE_CARLO",
+                        "execution_state": "EXECUTED",
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
         observed.update({
             "stage2": __import__("os").environ.get("V12_STAGE2_DERIVED_CACHE_DIR"),
             "p17": __import__("os").environ.get("V12_P17_DECISION_CACHE_DIR"),
@@ -134,6 +157,10 @@ def test_p4_worker_uses_canonical_private_cache_environment(monkeypatch, tmp_pat
     )
 
     assert out["stage3_action"] == "WAIT"
+    rebind = out["p1_8_rebind_inputs"]
+    assert "mini_league_overlay" not in rebind["package_with_stage3"]
+    assert "mini_league_overlay_owner" not in rebind["package_with_stage3"]["governance"]
+    assert rebind["monte_carlo"]["execution_state"] == "EXECUTED"
     assert observed["stage2"] == str(cache_root / "stage2")
     assert observed["p17"] == str(cache_root / "p17")
     assert observed["mc"] == str(cache_root / "mc")

@@ -44,3 +44,10 @@ PERF-F unchanged-base revalidation reruns PRE_RENDER, POST_RENDER, HUMAN_FACING,
 
 
 Warm identity hashes the canonical V6 `data/v6/current/official_fpl.json` snapshot together with publish-integrity and same-occurrence prefetch proof; legacy/nonexistent `data/v6/official_fpl` and `data/v6/fixtures` paths are not identity authority. This path binding is a correctness contract, not a performance optimization.
+
+
+## P4 exact-main replacement queue
+
+The governed private P4 builder is exact-production-SHA authority. A newer owner-issued `/v12-p4-build` command may therefore supersede an older in-progress P4 build in the same command concurrency group. Unrelated issue-comment fanout remains isolated in unique noise groups and cannot cancel a real P4 command.
+
+Immediately before any private scenario publication, the workflow re-reads the public repository `main` ref and requires it to equal `GITHUB_SHA`. If production moved during the long canonical package build, publication fails closed with `STALE_P4_PRODUCTION_SHA`. This prevents an obsolete package from overwriting `scenarios/latest.json` while avoiding serial waits behind a package that can no longer be authoritative.

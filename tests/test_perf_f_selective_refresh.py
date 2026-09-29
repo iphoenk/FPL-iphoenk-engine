@@ -36,11 +36,16 @@ def test_p4_selective_refresh_preserves_full_delivery_barriers():
         "validate_final_delivery_barrier(",
     ):
         assert token in module_source
-    for sid in ("S06", "S08", "S09", "S14", "S19"):
-        assert f'"{sid}"' in source
+    for sid in ("S06", "S08", "S09", "S11", "S12", "S13", "S14", "S15B", "S19"):
+        assert sid in module_source
     assert "run_package_monte_carlo(" not in module_source
     assert '"qa_relaxed": False' in module_source
     assert '"second_methodology_created": False' in module_source
+    assert "refreshed = deepcopy(dict(state))" not in module_source
+    assert "bundle = deepcopy(dict(state.get" not in module_source
+    assert '"content": deepcopy(raw.get("content"))' not in module_source
+    assert "out = deepcopy(dict(replacement))" not in module_source
+    assert "bundle = dict(bundle_source)" in module_source
 
 
 def test_remaining_perf_f_cases_do_not_fall_through_to_full_pipeline():

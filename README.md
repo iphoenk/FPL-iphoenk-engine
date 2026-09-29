@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-29T20:45:00+07:00`
-> **Production main at sync:** `b19cfc84f73f71487ddf56a92f9df3cfbde1581c`  
+> **Last runtime/documentation sync:** `2026-09-29T22:13:00+07:00`
+> **Production main at sync:** `27bf28bc620c48cf32288c50b7ce252332b4b91a`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -17,6 +17,8 @@ The core principle is:
 > **V6 tells V12 what is factually true. V12 decides what those facts mean for FPL.**
 
 Mandatory integrated DEEP delivery is fail-closed on same-occurrence factual binding: the exact governed V6 report-prefetch must reach terminal SUCCESS and be read back from runtime-data-v6 before `/v12-report-run` is started. Unrelated issue comments are isolated from governed V6 concurrency so they cannot replace a pending prefetch.
+
+Private P4 scenario shards persist compact scenario-specific P1.8 rebind authority. P4 selective serving re-evaluates only the downstream mini-league overlay against the current warm mini-league snapshot, then rebuilds the S15B authoritative binding through the normal QA barriers. Football-route authority and canonical MC remain scenario-bound; no second optimizer or post-hoc semantic shortcut is introduced.
 
 Mandatory visible DEEP delivery is also fail-operational at the presentation boundary: orchestration and the integrated runner both guard exact-slot prefetch terminality, the runner performs a bounded runtime-data-v6 re-fetch before declaring upstream blockage, and a due occurrence must publish one truthful 23-section private report as either `READY_FULL` or `READY_DEGRADED`. Degraded output never fabricates Stage3/MC proof, marks only the actual root stage failed, labels reused analytics `PRIOR`, and can be atomically upgraded to `READY_FULL` for the same occurrence. Private `latest/report.json`, `latest/report.md`, and `latest/delivery_status.json` form the canonical serving surface for ChatGPT/web/mobile consumers.
 

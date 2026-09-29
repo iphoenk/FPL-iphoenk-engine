@@ -37,7 +37,11 @@ from .v12_p6_selective_refresh import (
 from .v12_perf_f import REQUIRED_CASES
 from .v12_perf_f_production import validate_production_sample
 from .v12_scenario_package import resolve_scenario
-from .v12_semantic_oracle import semantic_fingerprint, semantic_surface
+from .v12_semantic_oracle import (
+    semantic_component_fingerprints,
+    semantic_fingerprint,
+    semantic_surface,
+)
 
 
 class PerfFAcceptanceError(RuntimeError):
@@ -679,6 +683,21 @@ def execute_case(
         cold_semantic_fingerprint=cold_fingerprint,
         target_seconds=15.0,
     )
+    warm_component_fingerprints = semantic_component_fingerprints(
+        current_state["bundle"]
+    )
+    cold_component_fingerprints = semantic_component_fingerprints(
+        cold_state["bundle"]
+    )
+    mismatch_components = sorted(
+        key
+        for key in (
+            set(warm_component_fingerprints)
+            | set(cold_component_fingerprints)
+        )
+        if warm_component_fingerprints.get(key)
+        != cold_component_fingerprints.get(key)
+    )
     return {
         "case": case,
         "status": verdict["status"],
@@ -697,6 +716,9 @@ def execute_case(
         "controlled_input_fingerprint": controlled_fingerprint,
         "warm_semantic_fingerprint": result["warm_semantic_fingerprint"],
         "cold_semantic_fingerprint": cold_fingerprint,
+        "semantic_mismatch_components": mismatch_components,
+        "warm_semantic_component_fingerprints": warm_component_fingerprints,
+        "cold_semantic_component_fingerprints": cold_component_fingerprints,
         "private_remote_sha": result["private_remote_sha"],
     }
 

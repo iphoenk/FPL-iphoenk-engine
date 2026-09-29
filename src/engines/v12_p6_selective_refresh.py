@@ -61,6 +61,47 @@ def _section_map(bundle: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
     return out
 
 
+def _scenario_section_delivery_state(
+    *,
+    sid: str,
+    replacement: Mapping[str, Any],
+) -> tuple[str, str | None]:
+    """Preserve canonical delivery state for scenario-owned report surfaces.
+
+    Most precomputed decision surfaces are COMPLETE by construction. S03 is
+    special: it is an occurrence-relative comparison against a previous
+    visible DEEP report. A P4 evaluator may truthfully have no such baseline,
+    in which case its S03 payload must remain DEGRADED rather than being
+    promoted to COMPLETE by selective serving.
+    """
+    if str(sid).upper() != "S03":
+        return "COMPLETE", None
+
+    delta = replacement.get("decision_delta")
+    if not isinstance(delta, Mapping):
+        raise SelectiveRefreshError("P4 scenario S03 decision_delta unavailable")
+    baseline_state = str(delta.get("baseline_state") or "").upper()
+    if baseline_state == "AVAILABLE":
+        return "COMPLETE", None
+    if baseline_state == "UNAVAILABLE":
+        summary = str(delta.get("summary") or "").upper()
+        if "BASELINE UNAVAILABLE" not in summary:
+            raise SelectiveRefreshError(
+                "P4 scenario S03 unavailable baseline sentinel missing"
+            )
+        if delta.get("no_recomputation_no_numeric_delta") is not True:
+            raise SelectiveRefreshError(
+                "P4 scenario S03 unavailable baseline numeric-delta guard missing"
+            )
+        return (
+            "DEGRADED",
+            "previous valid visible DEEP baseline is unavailable under the current semantic contract",
+        )
+    raise SelectiveRefreshError(
+        "P4 scenario S03 baseline_state must be AVAILABLE or UNAVAILABLE"
+    )
+
+
 def _rebind_content(
     *,
     current: Mapping[str, Any] | None,
@@ -307,8 +348,12 @@ def refresh_p4_scenario_state(
             replacement=replacement,
             report_slot=report_slot,
         )
-        sections[sid]["state"] = "COMPLETE"
-        sections[sid]["degradation_reason"] = None
+        section_state, degradation_reason = _scenario_section_delivery_state(
+            sid=sid,
+            replacement=replacement,
+        )
+        sections[sid]["state"] = section_state
+        sections[sid]["degradation_reason"] = degradation_reason
 
     return _finalize_deep_state(
         state=state,

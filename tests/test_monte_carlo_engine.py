@@ -13,6 +13,7 @@ from src.engines.canonical_decision_methodology import CANONICAL_WEIGHTS
 from src.engines.v12_monte_carlo import (
     MC_SIM_CACHE_ENV,
     MonteCarloError,
+    _mc_projection_fingerprint,
     _projection_map,
     _resolve_route_chunk,
     attach_monte_carlo_to_package_utility,
@@ -960,3 +961,37 @@ def test_canonical_500k_parallel_runtime_acceptance(monkeypatch, capsys):
     )
     captured = capsys.readouterr()
     assert "P1_4_RUNTIME_ACCEPTANCE=" in captured.out
+
+
+def test_mc_projection_fingerprint_ignores_noncomputational_scenario_provenance():
+    projections, _ = _fixture()
+    official = deepcopy(projections)
+    scenario = deepcopy(projections)
+
+    player = scenario["players"][0]
+    xmins = player.setdefault("xmins", {})
+    xmins["availability_source"] = "scenario_override"
+    xmins["evidence_lineage"] = {
+        "official_availability": {"available": False, "source": "scenario_override"},
+        "scenario_availability_override": {
+            "applied": True,
+            "private_counterfactual_only": True,
+            "override_type": "OWNED_UNAVAILABLE",
+        },
+    }
+    xmins["governance"] = {
+        **dict(xmins.get("governance") or {}),
+        "scenario_override_applied": True,
+    }
+    scenario["governance"] = {
+        **dict(scenario.get("governance") or {}),
+        "p4_scenario_override_count": 1,
+        "p4_scenario_override_private_only": True,
+    }
+
+    assert _mc_projection_fingerprint(official) == _mc_projection_fingerprint(scenario)
+
+    scenario["players"][0]["xmins"]["expected_minutes"] = (
+        float(scenario["players"][0]["xmins"]["expected_minutes"]) + 1.0
+    )
+    assert _mc_projection_fingerprint(official) != _mc_projection_fingerprint(scenario)

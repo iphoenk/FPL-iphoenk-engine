@@ -176,6 +176,119 @@ def _configured_workers(scenario_count: int) -> int:
     return min(workers, max(1, int(scenario_count)))
 
 
+def _compact_p1_8_rebind_inputs(
+    warm_state: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Persist only the canonical fields P1.8 consumes for a later overlay rebind."""
+    package = dict(warm_state.get("package_with_stage3") or {})
+    monte_carlo = dict(warm_state.get("monte_carlo") or {})
+    selected_route_id = str(package.get("selected_route_id") or "")
+    raw_routes = [
+        row for row in package.get("routes") or [] if isinstance(row, Mapping)
+    ]
+    if (
+        package.get("model_owner") != "V12_PACKAGE_UTILITY"
+        or not selected_route_id
+        or not raw_routes
+        or not monte_carlo
+    ):
+        raise P4ScenarioProductionError(
+            "canonical scenario evaluator missing P1.8 rebind inputs"
+        )
+
+    routes: list[dict[str, Any]] = []
+    route_ids: set[str] = set()
+    for raw in raw_routes:
+        route_id = str(raw.get("route_id") or "")
+        if not route_id:
+            continue
+        per_gw = ((raw.get("football_route_utility") or {}).get("per_gw") or [])
+        first_lineup = dict(per_gw[0]) if per_gw else {}
+        routes.append(
+            {
+                "route_id": route_id,
+                "classification": raw.get("classification"),
+                "players_out": raw.get("players_out") or [],
+                "players_in": raw.get("players_in") or [],
+                "football_route_utility": {
+                    "per_gw": [
+                        {
+                            "starting_xi": first_lineup.get("starting_xi") or [],
+                            "bench_gk": first_lineup.get("bench_gk"),
+                            "bench_order": first_lineup.get("bench_order") or [],
+                            "captain": first_lineup.get("captain"),
+                            "vice_captain": first_lineup.get("vice_captain"),
+                        }
+                    ]
+                },
+                "horizons": {
+                    label: {
+                        "net_delta_vs_hold": (
+                            (raw.get("horizons") or {}).get(label) or {}
+                        ).get("net_delta_vs_hold")
+                    }
+                    for label in ("GW+1", "3GW", "5GW")
+                },
+                "robustness": raw.get("robustness") or {},
+                "expected_regret": raw.get("expected_regret"),
+            }
+        )
+        route_ids.add(route_id)
+
+    if selected_route_id not in route_ids:
+        raise P4ScenarioProductionError(
+            "P1.8 selected route missing from compact scenario package"
+        )
+
+    metrics: dict[str, Any] = {}
+    raw_metrics = monte_carlo.get("metrics") or {}
+    for route_id in route_ids:
+        row = ((raw_metrics.get(route_id) or {}).get("1") or {})
+        if isinstance(row, Mapping) and row:
+            metrics[route_id] = {"1": dict(row)}
+
+    paired_outputs: dict[str, Any] = {}
+    raw_pairs = monte_carlo.get("paired_outputs") or {}
+    for route_id in route_ids:
+        for key in (
+            f"{route_id}__VS__{selected_route_id}__H1",
+            f"{selected_route_id}__VS__{route_id}__H1",
+        ):
+            row = raw_pairs.get(key)
+            if isinstance(row, Mapping):
+                paired_outputs[key] = {
+                    "p_a_gt_b": row.get("p_a_gt_b"),
+                }
+
+    compact_package = {
+        "model_owner": package.get("model_owner"),
+        "selected_route_id": selected_route_id,
+        "decision": package.get("decision") or {},
+        "model_evidence_binding": {
+            "output_fingerprint": (
+                (package.get("model_evidence_binding") or {}).get(
+                    "output_fingerprint"
+                )
+            )
+        },
+        "planning_gw": package.get("planning_gw"),
+        "routes": routes,
+    }
+    compact_mc = {
+        "model_owner": monte_carlo.get("model_owner"),
+        "execution_state": monte_carlo.get("execution_state"),
+        "canonical_pass": monte_carlo.get("canonical_pass"),
+        "actual_paths": monte_carlo.get("actual_paths"),
+        "output_fingerprint": monte_carlo.get("output_fingerprint"),
+        "metrics": metrics,
+        "paired_outputs": paired_outputs,
+    }
+    return {
+        "package_with_stage3": compact_package,
+        "monte_carlo": compact_mc,
+    }
+
+
 def _evaluate_scenario_worker(
     runtime_data_root_raw: str,
     private_root_raw: str,
@@ -223,25 +336,8 @@ def _evaluate_scenario_worker(
                 "P4 override must bypass Stage2 derived cache"
             )
     warm_state = _read_json(warm_state_path)
-    package_for_overlay = dict(warm_state.get("package_with_stage3") or {})
-    monte_carlo = dict(warm_state.get("monte_carlo") or {})
-    if not package_for_overlay or not monte_carlo:
-        raise P4ScenarioProductionError(
-            "canonical scenario evaluator missing P1.8 rebind inputs"
-        )
-    package_for_overlay.pop("mini_league_overlay", None)
-    governance = package_for_overlay.get("governance")
-    if isinstance(governance, Mapping):
-        governance = dict(governance)
-        governance.pop("mini_league_overlay_owner", None)
-        governance.pop("mini_league_overlay_downstream_only", None)
-        package_for_overlay["governance"] = governance
-
     result = _decision_result(bundle)
-    result["p1_8_rebind_inputs"] = {
-        "package_with_stage3": package_for_overlay,
-        "monte_carlo": monte_carlo,
-    }
+    result["p1_8_rebind_inputs"] = _compact_p1_8_rebind_inputs(warm_state)
     warm_state_path.unlink(missing_ok=True)
     return result
 

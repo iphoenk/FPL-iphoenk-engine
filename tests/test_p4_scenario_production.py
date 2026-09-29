@@ -16,12 +16,12 @@ def test_decision_result_extracts_required_sections_from_canonical_report():
         "report": {
             "sections": [
                 {"section_id": sid, "content": {"sid": sid}}
-                for sid in ("S06", "S08", "S09", "S14", "S19")
+                for sid in ("S06", "S08", "S09", "S11", "S12", "S13", "S14", "S15B", "S19")
             ]
         }
     }
     out = _decision_result(bundle)
-    assert set(out["decision_surfaces"]) == {"S06", "S08", "S09", "S14", "S19"}
+    assert set(out["decision_surfaces"]) == {"S06", "S08", "S09", "S11", "S12", "S13", "S14", "S15B", "S19"}
 
 
 def test_decision_result_fails_closed_when_surface_missing():

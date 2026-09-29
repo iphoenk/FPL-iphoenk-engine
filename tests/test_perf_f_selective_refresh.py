@@ -49,6 +49,10 @@ def test_p4_selective_refresh_preserves_full_delivery_barriers():
     assert '"content": raw.get("content")' in module_source
     assert "for sid in sorted(surface_ids)" in source
     assert "write_serving_artifacts(" in module_source
+    assert "_rebind_scenario_mini_overlay(" in module_source
+    assert "evaluate_mini_league_overlay(" in module_source
+    assert "attach_mini_league_overlay(" in module_source
+    assert '"P1_8_MINI_LEAGUE_SNAPSHOT+P1_8_MINI_LEAGUE_OVERLAY"' in module_source
     assert "deepcopy(dict(state))" not in module_source
     assert '"qa_relaxed": False' in module_source
     assert '"second_methodology_created": False' in module_source

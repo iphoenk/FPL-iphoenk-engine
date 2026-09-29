@@ -203,6 +203,42 @@ def _projection_map(projections: Mapping[str, Any]) -> dict[int, dict[str, Any]]
     return out
 
 
+_MC_NONCOMPUTATIONAL_PROJECTION_KEYS = frozenset(
+    {
+        "availability_source",
+        "evidence_lineage",
+        "governance",
+        "model_evidence",
+    }
+)
+
+
+def _mc_projection_semantic_surface(value: Any) -> Any:
+    """Strip provenance-only projection metadata that P1.4 never consumes.
+
+    P4 availability scenarios and a later Official FPL availability fact can
+    produce identical P1.1/P1.3 football inputs while retaining different
+    provenance labels. Those labels must remain visible in the projection
+    artifact, but they must not perturb the P1.4 simulation/cache identity.
+    Every numerical/event surface consumed by P1.4 remains in this payload.
+    """
+    if isinstance(value, Mapping):
+        return {
+            str(key): _mc_projection_semantic_surface(item)
+            for key, item in value.items()
+            if str(key) not in _MC_NONCOMPUTATIONAL_PROJECTION_KEYS
+        }
+    if isinstance(value, list):
+        return [_mc_projection_semantic_surface(item) for item in value]
+    if isinstance(value, tuple):
+        return [_mc_projection_semantic_surface(item) for item in value]
+    return value
+
+
+def _mc_projection_fingerprint(projections: Mapping[str, Any]) -> str:
+    return fingerprint(_mc_projection_semantic_surface(projections))
+
+
 def _position(player: Mapping[str, Any]) -> str:
     raw = str(player.get("position") or "").upper()
     if raw in POSITIONS:
@@ -3046,7 +3082,7 @@ def run_correlated_monte_carlo(
     horizons = tuple(sorted(set(int(x) for x in horizons)))
     chunk_size = max(1, _i(canonical_cfg.get("chunk_size"), 25_000))
 
-    projection_fp = fingerprint(projections)
+    projection_fp = _mc_projection_fingerprint(projections)
     route_fp = fingerprint(route_defs)
     correlation = dict(cfg.get("correlation") or {})
     generated = generated_at or _now()

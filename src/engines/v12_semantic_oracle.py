@@ -127,6 +127,34 @@ def semantic_component_fingerprints(payload: Mapping[str, Any]) -> dict[str, str
     return out
 
 
+def semantic_subcomponent_fingerprints(
+    payload: Mapping[str, Any],
+    component: str,
+) -> dict[str, str]:
+    """Return privacy-safe hashes for direct children of one semantic component."""
+    surface = semantic_surface(payload)
+    raw_component = str(component or "")
+    value: Any = None
+    if raw_component.startswith("report_sections."):
+        sid = raw_component.split(".", 1)[1]
+        sections = surface.get("report_sections")
+        if isinstance(sections, Mapping):
+            value = sections.get(sid)
+    elif raw_component.startswith("decision_surfaces."):
+        sid = raw_component.split(".", 1)[1]
+        decision = surface.get("decision_surfaces")
+        if isinstance(decision, Mapping):
+            value = decision.get(sid)
+    else:
+        value = surface.get(raw_component)
+    if not isinstance(value, Mapping):
+        return {}
+    return {
+        str(key): _fingerprint_value(child)
+        for key, child in sorted(value.items(), key=lambda item: str(item[0]))
+    }
+
+
 def semantic_fingerprint(payload: Mapping[str, Any]) -> str:
     canonical = json.dumps(
         semantic_surface(payload),

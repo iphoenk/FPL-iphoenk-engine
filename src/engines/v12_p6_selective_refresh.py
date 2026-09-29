@@ -9,7 +9,6 @@ same delivery QA barriers used by the integrated runner.
 """
 
 from collections.abc import Mapping
-from copy import deepcopy
 import json
 from pathlib import Path
 from typing import Any
@@ -29,6 +28,7 @@ from src.engines.v12_report_orchestration import (
     validate_human_facing_body,
 )
 from src.engines.v12_final_delivery_barrier import validate_final_delivery_barrier
+from src.engines.v12_scenario_package import REQUIRED_DECISION_SURFACES
 from src.runtime_v6.domains.report_plane.report_qa import (
     validate_post_render_qa,
     validate_pre_render_qa,
@@ -52,7 +52,7 @@ def _section_map(bundle: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
             continue
         out[sid] = {
             "state": raw.get("state"),
-            "content": deepcopy(raw.get("content")),
+            "content": raw.get("content"),
             "degradation_reason": raw.get("degradation_reason"),
             "available_count": raw.get("available_count"),
             "expected_count": raw.get("expected_count"),
@@ -66,7 +66,7 @@ def _rebind_content(
     replacement: Mapping[str, Any],
     report_slot: str,
 ) -> dict[str, Any]:
-    out = deepcopy(dict(replacement))
+    out = dict(replacement)
     existing_binding = dict(out.pop("authoritative_binding", None) or {})
     if not existing_binding and isinstance(current, Mapping):
         existing_binding = dict(current.get("authoritative_binding") or {})
@@ -89,9 +89,16 @@ def _finalize_deep_state(
     change_class: str,
     evidence: Mapping[str, Any],
 ) -> dict[str, Any]:
-    refreshed = deepcopy(dict(state))
-    bundle = deepcopy(dict(refreshed.get("bundle") or {}))
-    warm = deepcopy(dict(refreshed.get("warm_state") or {}))
+    # Copy-on-write: scenario serving replaces only precomputed report surfaces.
+    # Keep the large frozen canonical state/bundle/warm payloads by reference and
+    # copy only the top-level containers that are mutated below.
+    refreshed = dict(state)
+    bundle_source = refreshed.get("bundle")
+    warm_source = refreshed.get("warm_state")
+    if not isinstance(bundle_source, Mapping) or not isinstance(warm_source, Mapping):
+        raise SelectiveRefreshError("selective refresh requires canonical bundle and warm state")
+    bundle = dict(bundle_source)
+    warm = warm_source
     if str(bundle.get("report_mode") or "").upper() != "DEEP":
         raise SelectiveRefreshError("selective refresh requires DEEP state")
     owned = [
@@ -214,13 +221,13 @@ def _finalize_deep_state(
             )
         )
 
-    execution_proof = deepcopy(dict(bundle.get("execution_proof") or {}))
+    execution_proof = dict(bundle.get("execution_proof") or {})
     execution_proof["warm_selective_refresh"] = {
         "change_class": str(change_class).upper(),
         "status": "PASS",
         "canonical_precomputed_surfaces_only": True,
         "qa_relaxed": False,
-        **deepcopy(dict(evidence)),
+        **dict(evidence),
     }
     bundle.update(
         {
@@ -237,7 +244,7 @@ def _finalize_deep_state(
             "visible_body": body,
         }
     )
-    governance = deepcopy(dict(bundle.get("governance") or {}))
+    governance = dict(bundle.get("governance") or {})
     governance.update(
         {
             "p6_selective_refresh": str(change_class).upper(),
@@ -287,14 +294,14 @@ def refresh_p4_scenario_state(
     decision_surfaces = scenario_row.get("decision_surfaces")
     if not isinstance(decision_surfaces, Mapping):
         raise SelectiveRefreshError("P4 scenario has no canonical decision surfaces")
-    required = {"S06", "S08", "S09", "S14", "S19"}
+    required = set(REQUIRED_DECISION_SURFACES)
     missing = sorted(required - set(str(k) for k in decision_surfaces))
     if missing:
         raise SelectiveRefreshError(
             "P4 scenario missing canonical surfaces: " + ",".join(missing)
         )
 
-    bundle = deepcopy(dict(state.get("bundle") or {}))
+    bundle = dict(state.get("bundle") or {})
     sections = _section_map(bundle)
     for sid in required:
         if sid not in sections:
@@ -323,7 +330,7 @@ def refresh_p4_scenario_state(
             ),
             "package_fingerprint": str(package_fingerprint or ""),
             "decision_surfaces_rebound": sorted(required),
-            **deepcopy(dict(extra_evidence or {})),
+            **dict(extra_evidence or {}),
         },
     )
 

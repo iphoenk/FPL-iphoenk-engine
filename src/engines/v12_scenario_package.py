@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-REQUIRED_DECISION_SURFACES = ("S06", "S08", "S09", "S14", "S19")
+REQUIRED_DECISION_SURFACES = ("S06", "S08", "S09", "S11", "S12", "S13", "S14", "S15B", "S19")
 REQUIRED_BASE_DEPENDENCIES = (
     "model_version", "our15_fingerprint", "fixture_gw_fingerprint",
     "projection_lineage_fingerprint", "cache_schema_version", "mc_authority",

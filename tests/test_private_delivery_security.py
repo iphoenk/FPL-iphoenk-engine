@@ -181,3 +181,16 @@ def test_issue_comment_workflows_cannot_write_private_decision_cache():
         if bad:
             hits[name] = bad
     assert hits == {}
+
+
+def test_p4_workflow_restores_only_governed_cache_classes():
+    workflow = _workflow_texts()["v12-p4-private-scenario-package.yml"]
+    assert "actions/cache/restore@v4" in workflow
+    assert "v12-stage2-derived-${{ runner.os }}" in workflow
+    assert "v12-private-aead-v1-${{ runner.os }}" in workflow
+    assert "app/.cache/v12-stage2" in workflow
+    assert "app/.cache/v12-p17" in workflow
+    assert "app/.cache/v12-mc" in workflow
+    assert "non-AEAD file found in restored P4 private cache" in workflow
+    assert "FPL_V12_PRIVATE_CACHE_KEY_B64" in workflow
+    assert "actions/cache/save@v4" not in workflow

@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-30T10:55:39+07:00`
-> **Production main at sync:** `e36bf0b59eb94ad737ab20fbad32a51a96bad4c9`  
+> **Last runtime/documentation sync:** `2026-09-30T11:21:14+07:00`
+> **Production main at sync:** `26fa827ed6d1689d1e66b0fe4e0f2093a90edec9`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -33,6 +33,8 @@ D-P3 crypto preparation defines a private-only AES-256-GCM boundary for manager-
 P4 scenario-materialization failures expose only bounded whitelist diagnostics: scenario/override identity, safe QA or stage codes, non-sensitive cache state, exact lineage hashes, report slot, and hash-only semantic fingerprints. CURRENT15 payloads, private report bodies, decrypted cache contents and secrets are never part of the failure diagnostic surface.
 
 When a canonical scenario returns `PARTIAL`, the same diagnostic surface records only the names of failed Stage3 boolean guards, allowing bounded root-cause repair without exposing private decision payloads or weakening the Stage3 acceptance contract.
+
+Exact occurrence binding preserves the governed report-slot timestamp without rounding half-hour DEEP slots to the hour. P4 failure diagnostics also retain only the exact public Git lineage object IDs for production and runtime-data commits, while semantic fingerprints remain SHA-256-only.
 
 Scheduler production maturity is established after **3 consecutive genuine natural ChatGPT hourly occurrences**. Historical natural proofs remain immutable; manual recovery, controlled runs, and report-prefetch never increment this maturity counter, and an observed gap remains a scheduler-health failure. Runtime epoch metadata is refreshed from the current schedule policy on each accepted natural slot while preserving the original epoch start.
 

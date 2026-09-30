@@ -1043,7 +1043,7 @@ def canonical_package_seed(
     )
     digest = fingerprint(
         {
-            "projection_fingerprint": fingerprint(projections),
+            "projection_fingerprint": _mc_projection_fingerprint(projections),
             "football_route_signature": _simulation_route_signature(
                 route_defs,
                 include_economics=False,

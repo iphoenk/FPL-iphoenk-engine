@@ -299,6 +299,11 @@ def _safe_scenario_failure_diagnostic(
         ),
         "failed_gates": failed_gates[:12],
         "failed_stages": failed_stages[:12],
+        "stage3_guard_failures": [
+            token
+            for raw in (proof.get("stage3_guard_failures") or [])
+            if (token := _safe_failure_token(raw)) is not None
+        ][:16],
         "execution_state": execution_state,
         "cache_state": cache_state,
         "stage2_cache_bypassed": bool(p4.get("stage2_cache_bypassed") is True),

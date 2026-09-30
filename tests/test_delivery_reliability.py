@@ -422,6 +422,57 @@ def test_last_known_good_latest_is_not_overwritten_by_invalid_candidate(tmp_path
     assert after == before
 
 
+def test_last_known_good_latest_is_not_overwritten_by_privacy_failure(tmp_path: Path):
+    private = tmp_path / "private"
+    valid = _canonical_dir(
+        tmp_path / "privacy-valid",
+        delivery_status="READY_FULL",
+        runner_status="PASS",
+        stage3_status="PASS",
+    )
+    receipt = publish_private_output(
+        canonical_dir=valid,
+        private_root=private,
+        run_id="privacy-valid",
+        season=None,
+        model_sha="m1",
+        runtime_sha="r1",
+    )
+    assert receipt["privacy_validation_status"] == "PASS"
+    latest_paths = [
+        private / "latest/report.json",
+        private / "latest/report.md",
+        private / "latest/delivery_status.json",
+    ]
+    before = {path.name: path.read_bytes() for path in latest_paths}
+
+    invalid = _canonical_dir(
+        tmp_path / "privacy-invalid",
+        delivery_status="READY_FULL",
+        runner_status="PASS",
+        stage3_status="PASS",
+    )
+    serving_md = invalid / "serving_report.md"
+    serving_md.write_text(
+        serving_md.read_text(encoding="utf-8")
+        + "\nAuthorization: Bearer abcdefghijklmnopqrstuvwxyz123456\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PrivatePublishError, match="PRIVACY_VALIDATION"):
+        publish_private_output(
+            canonical_dir=invalid,
+            private_root=private,
+            run_id="privacy-invalid",
+            season=None,
+            model_sha="m2",
+            runtime_sha="r2",
+        )
+
+    after = {path.name: path.read_bytes() for path in latest_paths}
+    assert after == before
+
+
 def test_integrated_workflow_has_orchestrator_guard_before_runner():
     workflow = Path(".github/workflows/v12-integrated-report-runner.yml").read_text(
         encoding="utf-8"

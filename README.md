@@ -24,7 +24,7 @@ Report-first production now separates **REPORT PROD** from **ENGINEERING** accep
 
 Canonical DEEP section assembly is source-resolved per section in the locked order **CURRENT → CURRENT-BOUND → PRIOR → UNAVAILABLE**. `CURRENT-BOUND` requires exact lineage, unchanged dependencies, and mathematical applicability proof; `PRIOR` always carries its source occurrence and is historical context only. All 23 resolved sections are provenance-validated before rendering, so stale analytics cannot be silently relabelled as current.
 
-`serving_report.json` is the stable client-facing contract for ChatGPT/web/mobile. Schema v2 carries occurrence/report slot/GW, delivery and decision status, freeze time, source freshness, per-section states, lineage and supersedes. Canonical artifacts are validated before any private `latest/` pointer replacement; a candidate that fails report-production/presentation validation cannot overwrite the last-known-good serving snapshot.
+`serving_report.json` is the stable client-facing contract for ChatGPT/web/mobile. Schema v2 carries occurrence/report slot/GW, delivery and decision status, freeze time, source freshness, per-section states, lineage and supersedes. Canonical artifacts are validated before any private `latest/` pointer replacement; a candidate that fails report-production, presentation, or governed credential/privacy validation cannot overwrite the last-known-good serving snapshot.
 
 Delivery, privacy, latency, historical-validation and consumption architecture are governed by `docs/v12/FPL_V12_DELIVERY_ARCHITECTURE_PLAN_REV6.md`. Revision 6 supersedes earlier Delivery Architecture Plan wording where inconsistent.
 

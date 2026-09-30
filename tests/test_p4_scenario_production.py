@@ -227,6 +227,16 @@ def test_p4_failure_diagnostic_is_bounded_and_private_payload_safe(
                     "execution_state": "EXECUTED",
                     "output_fingerprint": "d" * 64,
                     "performance": {"simulation_cache_hit": False},
+                    "convergence_evidence": {
+                        "status": "INSUFFICIENT_STABILITY",
+                        "acceptance": {
+                            "mean_delta_stable": True,
+                            "outperform_probability_stable": False,
+                            "median_delta_stable": False,
+                            "private_metric": "DO_NOT_LOG_MC_DETAIL",
+                        },
+                        "checkpoints": [{"private": "DO_NOT_LOG_CHECKPOINT"}],
+                    },
                     "PRIVATE_REPORT_BODY": "DO_NOT_LOG_REPORT",
                 },
             }
@@ -259,7 +269,13 @@ def test_p4_failure_diagnostic_is_bounded_and_private_payload_safe(
                 "private_payload": "DO_NOT_LOG_CACHE",
             },
             "stages": [
-                {"stage": "P1_7_LINEUP", "status": "FAILED", "error": "secret"},
+                {"stage": "P1_7_LINEUP", "status": "FAILED", "required": True, "error": "secret"},
+                {
+                    "stage": "PREVIOUS_VALID_VISIBLE_DEEP_BASELINE",
+                    "status": "DEGRADED",
+                    "required": False,
+                    "reason": "private history unavailable",
+                },
                 {"stage": "P1_8_MINI_LEAGUE_OVERLAY", "status": "PASS"},
             ],
         },
@@ -287,6 +303,11 @@ def test_p4_failure_diagnostic_is_bounded_and_private_payload_safe(
         "WATCHLIST_COMPLETE",
         "MINI_COVERAGE_FULL",
     ]
+    assert diagnostic["mc_convergence_status"] == "INSUFFICIENT_STABILITY"
+    assert diagnostic["mc_convergence_failures"] == [
+        "outperform_probability_stable",
+        "median_delta_stable",
+    ]
     assert diagnostic["production_sha"] == "a" * 40
     assert diagnostic["runtime_data_sha"] == "b" * 40
     assert diagnostic["stage2_cache_bypassed"] is True
@@ -297,6 +318,8 @@ def test_p4_failure_diagnostic_is_bounded_and_private_payload_safe(
     assert "DO_NOT_LOG" not in encoded
     assert "private_report_body" not in encoded
     assert "PRIVATE_CURRENT15" not in encoded
+    assert "DO_NOT_LOG_MC_DETAIL" not in encoded
+    assert "DO_NOT_LOG_CHECKPOINT" not in encoded
 
 
 def test_p4_worker_failure_includes_safe_scenario_identity(monkeypatch, tmp_path):

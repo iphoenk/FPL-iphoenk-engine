@@ -6749,57 +6749,97 @@ def run_deep(
         str(row.get("stage") or ""): str(row.get("status") or "")
         for row in ledger
     }
-    stage3_internal_pass = bool(
-        package_search_result
-        and package_utility
-        and material_mc_routes
-        and monte_carlo
-        and stage3_decision
-        and package_with_stage3
-        and mini_overlay
-        and monte_carlo.get("execution_state") == "EXECUTED"
-        and monte_carlo.get("canonical_pass") is True
-        and int(monte_carlo.get("actual_paths") or 0) >= 500_000
-        and (monte_carlo.get("convergence_evidence") or {}).get(
-            "status"
-        )
-        == "PASS"
-        and (
-            (monte_carlo.get("sampling_diagnostics") or {}).get(
-                "match_state_invariants"
+    stage3_guard_checks = {
+        "PACKAGE_SEARCH_PRESENT": bool(package_search_result),
+        "PACKAGE_UTILITY_PRESENT": bool(package_utility),
+        "MATERIAL_MC_ROUTES_PRESENT": bool(material_mc_routes),
+        "MONTE_CARLO_PRESENT": bool(monte_carlo),
+        "STAGE3_DECISION_PRESENT": bool(stage3_decision),
+        "PACKAGE_WITH_STAGE3_PRESENT": bool(package_with_stage3),
+        "MINI_OVERLAY_PRESENT": bool(mini_overlay),
+        "MC_EXECUTED": bool(
+            monte_carlo and monte_carlo.get("execution_state") == "EXECUTED"
+        ),
+        "MC_CANONICAL_PASS": bool(
+            monte_carlo and monte_carlo.get("canonical_pass") is True
+        ),
+        "MC_PATHS_500K": bool(
+            monte_carlo
+            and int(monte_carlo.get("actual_paths") or 0) >= 500_000
+        ),
+        "MC_CONVERGENCE_PASS": bool(
+            monte_carlo
+            and (monte_carlo.get("convergence_evidence") or {}).get("status")
+            == "PASS"
+        ),
+        "MC_MATCH_STATE_INVARIANTS_PASS": bool(
+            monte_carlo
+            and (
+                (monte_carlo.get("sampling_diagnostics") or {}).get(
+                    "match_state_invariants"
+                )
+                or {}
+            ).get("status")
+            == "PASS"
+        ),
+        "PACKAGE_SEARCH_AUTHORITY_FULL": bool(
+            package_search_result
+            and package_search_result.get("search_authority") == "FULL"
+        ),
+        "PACKAGE_SEARCH_COVERAGE_COMPLETE": bool(
+            package_search_result
+            and package_search_result.get("coverage", {}).get(
+                "coverage_complete"
+            ) is True
+        ),
+        "PACKAGE_UTILITY_AUTHORITY_FULL": bool(
+            package_utility
+            and package_utility.get("search_authority")
+            == "FULL_DIRECT_MATERIAL_FUNDED"
+        ),
+        "NO_GLOBAL_TWO_TRANSFER_EXHAUSTIVE_CLAIM": bool(
+            package_utility
+            and (package_utility.get("search_scope") or {}).get(
+                "global_two_transfer_exhaustive_claim"
+            ) is False
+        ),
+        "DIRECT_SEARCH_COMPLETE": bool(
+            package_utility
+            and (
+                (package_utility.get("search_scope") or {}).get("direct")
+                or {}
+            ).get("global_direct_complete") is True
+        ),
+        "FUNDED_AUTHORITY_MATERIAL_FUNDED": bool(
+            package_utility
+            and (
+                (package_utility.get("search_scope") or {}).get(
+                    "funded_two_transfer"
+                )
+                or {}
+            ).get("authority") == "MATERIAL_FUNDED"
+        ),
+        "STAGE2_LINEAGE_COMPLETE": bool(
+            canonical_bundle.get("stage2_lineage_complete_players")
+            == canonical_bundle.get("complete_players")
+        ),
+        "WATCHLIST_COMPLETE": bool(
+            str((watchlist or {}).get("state") or "").upper() == "COMPLETE"
+        ),
+        "MINI_COVERAGE_FULL": bool(
+            str((mini or {}).get("coverage_state") or "").upper() == "FULL"
+        ),
+        "REQUIRED_STAGES_PASS": bool(
+            all(
+                stage_status.get(name) == "PASS"
+                for name in stage3_required_stage_names
             )
-            or {}
-        ).get("status")
-        == "PASS"
-        and package_search_result.get("search_authority") == "FULL"
-        and package_search_result.get("coverage", {}).get(
-            "coverage_complete"
-        ) is True
-        and package_utility.get("search_authority")
-        == "FULL_DIRECT_MATERIAL_FUNDED"
-        and (package_utility.get("search_scope") or {}).get(
-            "global_two_transfer_exhaustive_claim"
-        ) is False
-        and (
-            (package_utility.get("search_scope") or {}).get("direct") or {}
-        ).get("global_direct_complete") is True
-        and (
-            (package_utility.get("search_scope") or {}).get(
-                "funded_two_transfer"
-            )
-            or {}
-        ).get("authority") == "MATERIAL_FUNDED"
-        and canonical_bundle.get("stage2_lineage_complete_players")
-        == canonical_bundle.get("complete_players")
-        and str((watchlist or {}).get("state") or "").upper()
-        == "COMPLETE"
-        and str((mini or {}).get("coverage_state") or "").upper()
-        == "FULL"
-        and all(
-            stage_status.get(name) == "PASS"
-            for name in stage3_required_stage_names
-        )
-    )
+        ),
+    }
+    stage3_guard_failures = [
+        name for name, passed in stage3_guard_checks.items() if not passed
+    ]
+    stage3_internal_pass = not stage3_guard_failures
     stagec_surface = None
     stagec_scan: dict[str, Any] = {}
     stagec_external_input: dict[str, Any] = {
@@ -7635,6 +7675,7 @@ def run_deep(
         "final_delivery_barrier": deepcopy(final_delivery_barrier),
         "final_delivery_barrier_status": final_delivery_barrier.get("status"),
         "stage3_internal_pass": stage3_internal_pass,
+        "stage3_guard_failures": list(stage3_guard_failures),
         "stage3_action": operational_action,
         "stage3_required_stages": sorted(stage3_required_stage_names),
         "stage2_derived_cache": deepcopy(stage2_cache_proof),

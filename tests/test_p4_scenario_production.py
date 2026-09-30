@@ -246,6 +246,10 @@ def test_p4_failure_diagnostic_is_bounded_and_private_payload_safe(
                 "applied": True,
                 "stage2_cache_bypassed": True,
             },
+            "stage3_guard_failures": [
+                "WATCHLIST_COMPLETE",
+                "MINI_COVERAGE_FULL",
+            ],
             "stage2_derived_cache": {
                 "status": "MISS",
                 "cache_hit": False,
@@ -279,6 +283,10 @@ def test_p4_failure_diagnostic_is_bounded_and_private_payload_safe(
     assert diagnostic["element_id"] == "572"
     assert diagnostic["failed_gates"] == ["P1_7_LINEUP"]
     assert diagnostic["failed_stages"] == ["P1_7_LINEUP"]
+    assert diagnostic["stage3_guard_failures"] == [
+        "WATCHLIST_COMPLETE",
+        "MINI_COVERAGE_FULL",
+    ]
     assert diagnostic["stage2_cache_bypassed"] is True
     assert diagnostic["cache_state"]["stage2_status"] == "MISS"
     assert diagnostic["cache_state"]["p17_cache_hits"] == 4

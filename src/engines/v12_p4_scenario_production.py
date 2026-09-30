@@ -176,6 +176,139 @@ def _configured_workers(scenario_count: int) -> int:
     return min(workers, max(1, int(scenario_count)))
 
 
+
+def _safe_failure_token(value: Any) -> str | None:
+    text = str(value or "").strip()
+    if not text or len(text) > 160:
+        return None
+    allowed = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-.=:+/")
+    if any(ch not in allowed for ch in text):
+        return None
+    return text
+
+
+def _sha256_only(value: Any) -> str | None:
+    text = str(value or "").strip().lower()
+    if len(text) != 64 or any(ch not in "0123456789abcdef" for ch in text):
+        return None
+    return text
+
+
+def _safe_scenario_failure_diagnostic(
+    *,
+    bundle: Mapping[str, Any],
+    scenario_id: str,
+    overrides: Mapping[str, Mapping[str, Any]],
+    report_slot: str,
+    warm_state_path: Path,
+) -> dict[str, Any]:
+    """Return a privacy-safe, bounded diagnostic for a failed P4 child."""
+    proof = dict(bundle.get("execution_proof") or {})
+    p4 = dict(proof.get("p4_scenario_override") or {})
+    override_rows = [
+        (str(element_id), dict(value))
+        for element_id, value in overrides.items()
+        if isinstance(value, Mapping)
+    ]
+    element_id = override_rows[0][0] if len(override_rows) == 1 else None
+    override_type = (
+        str(override_rows[0][1].get("override_type") or "")
+        if len(override_rows) == 1
+        else ("BASE" if not overrides else "MULTI")
+    )
+
+    failed_gates: list[str] = []
+    for qa_name in ("pre_render_qa", "post_render_qa", "human_facing_qa"):
+        qa = bundle.get(qa_name) or {}
+        if not isinstance(qa, Mapping):
+            continue
+        raw = qa.get("hard_failures") or qa.get("failures") or []
+        if isinstance(raw, (list, tuple)):
+            for value in raw:
+                token = _safe_failure_token(value)
+                if token and token not in failed_gates:
+                    failed_gates.append(token)
+
+    failed_stages: list[str] = []
+    raw_stages = proof.get("stages") or bundle.get("stage_ledger") or []
+    if isinstance(raw_stages, list):
+        for row in raw_stages:
+            if not isinstance(row, Mapping):
+                continue
+            status = str(row.get("status") or "").upper()
+            if status in {"PASS", "COMPLETE", "SKIPPED"}:
+                continue
+            name = _safe_failure_token(row.get("stage") or row.get("name"))
+            if name and name not in failed_stages:
+                failed_stages.append(name)
+
+    stage2 = dict(proof.get("stage2_derived_cache") or {})
+    cache_state: dict[str, Any] = {
+        "stage2_status": _safe_failure_token(stage2.get("status")) or "UNKNOWN",
+        "stage2_cache_hit": bool(stage2.get("cache_hit") is True),
+        "stage2_cache_miss": bool(stage2.get("cache_miss") is True),
+        "stage2_cache_write": bool(stage2.get("cache_write") is True),
+    }
+
+    execution_state = "UNKNOWN"
+    fingerprints: dict[str, str] = {}
+    try:
+        if warm_state_path.exists():
+            warm = _read_json(warm_state_path)
+            package = dict(warm.get("package_with_stage3") or {})
+            governance = dict(package.get("governance") or {})
+            p17 = dict(governance.get("p1_7_execution_proof") or {})
+            monte_carlo = dict(warm.get("monte_carlo") or {})
+            performance = dict(monte_carlo.get("performance") or {})
+            execution_state = (
+                _safe_failure_token(monte_carlo.get("execution_state"))
+                or execution_state
+            )
+            cache_state.update(
+                {
+                    "p17_cache_hits": int(p17.get("p17_cache_hits") or 0),
+                    "p17_cache_misses": int(p17.get("p17_cache_misses") or 0),
+                    "mc_simulation_cache_hit": bool(
+                        performance.get("simulation_cache_hit") is True
+                    ),
+                }
+            )
+            candidates = {
+                "package_output": (
+                    (package.get("model_evidence_binding") or {}).get(
+                        "output_fingerprint"
+                    )
+                ),
+                "mc_output": monte_carlo.get("output_fingerprint"),
+                "stage2_input": stage2.get("input_fingerprint"),
+            }
+            fingerprints = {
+                key: value
+                for key, raw in candidates.items()
+                if (value := _sha256_only(raw)) is not None
+            }
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        pass
+
+    return {
+        "scenario_id": _safe_failure_token(scenario_id) or "UNKNOWN",
+        "override_type": _safe_failure_token(override_type) or "UNKNOWN",
+        "element_id": _safe_failure_token(element_id) if element_id else None,
+        "runner_status": (
+            _safe_failure_token(bundle.get("runner_status")) or "UNKNOWN"
+        ),
+        "failed_gates": failed_gates[:12],
+        "failed_stages": failed_stages[:12],
+        "execution_state": execution_state,
+        "cache_state": cache_state,
+        "stage2_cache_bypassed": bool(p4.get("stage2_cache_bypassed") is True),
+        "production_sha": _sha256_only(os.environ.get("GITHUB_SHA")),
+        "runtime_data_sha": _sha256_only(os.environ.get("P4_RUNTIME_DATA_SHA")),
+        "report_slot": _safe_failure_token(report_slot) or "UNKNOWN",
+        "semantic_fingerprints": fingerprints,
+    }
+
+
 def _compact_p1_8_rebind_inputs(
     warm_state: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -296,6 +429,7 @@ def _evaluate_scenario_worker(
     output_dir_raw: str,
     cache_root_raw: str | None,
     overrides: Mapping[str, Mapping[str, Any]],
+    scenario_id: str = "BASE",
 ) -> dict[str, Any]:
     runtime_data_root = Path(runtime_data_root_raw)
     private_root = Path(private_root_raw)
@@ -323,7 +457,17 @@ def _evaluate_scenario_worker(
         warm_state_out=warm_state_path,
     )
     if str(bundle.get("runner_status") or "").upper() != "PASS":
-        raise P4ScenarioProductionError("canonical scenario evaluator did not PASS")
+        diagnostic = _safe_scenario_failure_diagnostic(
+            bundle=bundle,
+            scenario_id=scenario_id,
+            overrides=overrides,
+            report_slot=report_slot,
+            warm_state_path=warm_state_path,
+        )
+        raise P4ScenarioProductionError(
+            "P4_SCENARIO_FAIL "
+            + json.dumps(diagnostic, sort_keys=True, separators=(",", ":"))
+        )
     proof = dict(bundle.get("execution_proof") or {})
     p4 = dict(proof.get("p4_scenario_override") or {})
     if overrides:
@@ -386,6 +530,7 @@ def materialize_p4_package(
                 str(workspace / f"scenario-{index:03d}-{scenario_id}"),
                 str(workspace / "parallel-cache" / scenario_id),
                 overrides,
+                scenario_id,
             )
             futures[future] = key
         for future in as_completed(futures):

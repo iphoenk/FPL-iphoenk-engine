@@ -126,7 +126,7 @@ jobs:
           ref: runtime-data-v6
           path: runtime-data
 
-      - name: Checkout private decision and personal data plane
+      - name: Checkout private report serving surface only
         uses: actions/checkout@v4
         with:
           repository: iphoenk/fpl-reports-private
@@ -134,11 +134,18 @@ jobs:
           path: private-reports
           token: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
           persist-credentials: true
+          fetch-depth: 1
+          sparse-checkout: |
+            personal
+            latest
+            reports
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: app/requirements.txt
 
       - name: Install runtime dependencies
         working-directory: app

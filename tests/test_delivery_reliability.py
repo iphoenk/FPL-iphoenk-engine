@@ -7,10 +7,12 @@ import pytest
 
 from src.engines.v12_delivery_reliability import (
     CANONICAL_DEEP_SECTIONS,
+    SERVING_MAX_SERIALIZED_BYTES,
     PrefetchNotTerminal,
     assemble_degraded_deep_report,
     build_occurrence_state,
     build_presentation_qa_manifest,
+    build_serving_snapshot,
     inspect_prefetch_terminal,
     validate_delivery_bundle,
     validate_presentation_qa_manifest,
@@ -182,7 +184,7 @@ def test_serving_snapshot_is_decision_first_and_exact_23(tmp_path: Path):
         bundle=bundle,
         output_dir=tmp_path / "out",
     )
-    assert snapshot["schema_version"] == 2
+    assert snapshot["schema_version"] == 3
     assert snapshot["delivery_status"] == "READY_DEGRADED"
     assert snapshot["decision"] == "WAIT"
     assert "GW" in snapshot
@@ -213,6 +215,163 @@ def test_serving_snapshot_is_decision_first_and_exact_23(tmp_path: Path):
     assert qa["decision_first"] is True
     assert qa["root_failure_count"] == 1
     assert validate_presentation_qa_manifest(qa) == []
+
+
+
+def test_serving_projection_is_compact_explicit_and_keeps_visible_contract(tmp_path: Path):
+    bundle = assemble_degraded_deep_report(
+        runtime_root=tmp_path / "runtime",
+        report_slot=SLOT,
+        output_dir=tmp_path / "out",
+        root_failure="PREFETCH_NOT_TERMINAL",
+    )
+    by_id = {
+        row["section_id"]: row
+        for row in bundle["report"]["sections"]
+    }
+
+    by_id["S02"]["content"].update({
+        "rows": [
+            {
+                "element_id": element,
+                "player": f"P{element}",
+                "position": "MID",
+                "p_start": 0.9,
+                "xmins": 80,
+                "projection_1gw": 5.0,
+                "projection_3gw": 15.0,
+                "projection_5gw": 25.0,
+                "availability": 1.0,
+                "tactical_role_label": "STARTER",
+                "price_relevance": "WATCH",
+                "huge_internal_trace": ["x" * 10000] * 20,
+            }
+            for element in range(1, 16)
+        ],
+        "current15_authority": {"source_class": "PRIVATE_CURRENT15"},
+    })
+    scanner = [
+        {
+            "element_id": element,
+            "name": f"W{element}",
+            "position": ("GK" if element <= 5 else "DEF" if element <= 10 else "MID" if element <= 15 else "FWD"),
+            "current_price": 5.0,
+            "xmins": 80,
+            "p_start": 0.9,
+            "p_dnp": 0.05,
+            "football_score": 1.0,
+            "position_specific_evidence": {"coverage": "COMPLETE"},
+            "admission_gate": {"admitted": True},
+            "huge_internal_trace": ["y" * 10000] * 10,
+        }
+        for element in range(1, 21)
+    ]
+    by_id["S11"]["content"].update({
+        "state": "COMPLETE",
+        "scanner20": scanner,
+        "rows": scanner,
+        "actionable_watchlist": scanner[:4],
+        "position_counts": {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5},
+    })
+    by_id["S14"]["content"].update({
+        "decision": {
+            "status": "PASS",
+            "operational_action": "WAIT",
+            "selected_route_id": "HOLD",
+            "routes": [{"trace": "r" * 2000000}],
+            "monte_carlo": {"samples": ["m" * 1000000]},
+        },
+        "mini_league_overlay": {
+            "status": "PASS",
+            "risk_posture": {"posture": "BALANCED"},
+            "route_overlays": [{"trace": "o" * 2000000}],
+        },
+        "package_routes": [{"route": "HOLD", "action_verdict": "WAIT"}],
+        "monte_carlo": {"actual_paths": 500000, "canonical_pass": True},
+    })
+    by_id["S15B"]["content"].update({
+        "coverage_state": "FULL",
+        "rank_battle": [
+            {"is_us": True, "rank": 7, "total_points": 344, "manager": "US"}
+        ],
+        "downstream_overlay": {
+            "status": "PASS",
+            "risk_posture": {"posture": "BALANCED"},
+            "route_overlays": [{"trace": "z" * 2000000}],
+        },
+    })
+    by_id["S16"]["content"].update({
+        "rows": [
+            {
+                "element_id": element,
+                "player": f"P{element}",
+                "p_start": 0.9,
+                "xmins": 80,
+                "probabilities": {"p_goal": 0.2, "p_assist": 0.2},
+                "underlying": {"xg90": 0.3},
+                "huge_internal_trace": ["q" * 10000] * 20,
+            }
+            for element in range(1, 16)
+        ],
+        "position_mechanisms": [{"trace": "k" * 2000000}],
+    })
+    by_id["S16B"]["content"].update({
+        "our15": [
+            {
+                "element_id": 1,
+                "player": "P1",
+                "trajectory": {
+                    "trajectory_classification": "STABLE",
+                    "role_minutes_evolution": {"recent_role": "STARTER"},
+                    "matches": [
+                        {
+                            "gw": 1,
+                            "minutes": 90,
+                            "xg": 0.2,
+                            "raw_provider_payload": "x" * 2000000,
+                        }
+                    ],
+                },
+            }
+        ],
+        "material_universe_candidates": [
+            {
+                "element_id": 99,
+                "name": "C99",
+                "primary_classification": "WATCH",
+                "trajectory": {"trajectory_classification": "RISING", "raw": "x" * 2000000},
+                "minutes": {"xmins": 82, "p_start": 0.92, "raw": "x" * 2000000},
+                "underlying": {"raw": "x" * 2000000},
+                "horizon_1gw": 5.0,
+                "horizon_3gw": 15.0,
+                "horizon_5gw": 25.0,
+            }
+        ],
+    })
+
+    snapshot = build_serving_snapshot(bundle)
+    assert list(snapshot["sections"]) == [
+        section_id for section_id, _ in CANONICAL_DEEP_SECTIONS
+    ]
+    assert len(snapshot["sections"]["S02"]["content"]["rows"]) == 15
+    assert len(snapshot["sections"]["S11"]["content"]["scanner20"]) == 20
+    assert snapshot["sections"]["S11"]["content"]["position_counts"] == {
+        "GK": 5, "DEF": 5, "MID": 5, "FWD": 5
+    }
+    assert len(snapshot["sections"]["S16"]["content"]["rows"]) == 15
+    assert "rows" not in snapshot["sections"]["S14"]["content"]["decision"]
+    assert "monte_carlo" not in snapshot["sections"]["S14"]["content"]["decision"]
+    assert "route_overlays" not in snapshot["sections"]["S14"]["content"]["mini_league_overlay"]
+    assert "route_overlays" not in snapshot["sections"]["S15B"]["content"]["downstream_overlay"]
+    assert "position_mechanisms" not in snapshot["sections"]["S16"]["content"]
+    assert "raw_provider_payload" not in (
+        snapshot["sections"]["S16B"]["content"]["our15"][0]["trajectory"]["matches"][0]
+    )
+    payload = json.dumps(
+        snapshot, ensure_ascii=False, separators=(",", ":")
+    ).encode("utf-8")
+    assert len(payload) < SERVING_MAX_SERIALIZED_BYTES
+    assert validate_serving_snapshot(snapshot) == []
 
 
 def _canonical_dir(

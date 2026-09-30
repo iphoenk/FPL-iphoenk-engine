@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-30T11:21:14+07:00`
-> **Production main at sync:** `26fa827ed6d1689d1e66b0fe4e0f2093a90edec9`  
+> **Last runtime/documentation sync:** `2026-09-30T12:35:55+07:00`
+> **Production main at sync:** `aa6c6bf2b055453d26d917fbc58efe22fe93ff26`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -35,6 +35,8 @@ P4 scenario-materialization failures expose only bounded whitelist diagnostics: 
 When a canonical scenario returns `PARTIAL`, the same diagnostic surface records only the names of failed Stage3 boolean guards, allowing bounded root-cause repair without exposing private decision payloads or weakening the Stage3 acceptance contract.
 
 Exact occurrence binding preserves the governed report-slot timestamp without rounding half-hour DEEP slots to the hour. P4 failure diagnostics also retain only the exact public Git lineage object IDs for production and runtime-data commits, while semantic fingerprints remain SHA-256-only.
+
+P4 MC failure diagnostics expose only the convergence status and the names of failed boolean stability checks. They do not log convergence checkpoint values, route metrics, private decision payloads, or change the governed convergence thresholds.
 
 Scheduler production maturity is established after **3 consecutive genuine natural ChatGPT hourly occurrences**. Historical natural proofs remain immutable; manual recovery, controlled runs, and report-prefetch never increment this maturity counter, and an observed gap remains a scheduler-health failure. Runtime epoch metadata is refreshed from the current schedule policy on each accepted natural slot while preserving the original epoch start.
 

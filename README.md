@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-10-01T05:06:30+07:00`
-> **Production main at sync:** `ae86099f55d1e9a48f30b29f77e2e71d7d9b7fa4`  
+> **Last runtime/documentation sync:** `2026-10-01T05:29:37+07:00`
+> **Production main at sync:** `7520f38e72931226cccc477f33fe10b2f46eaef2`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -21,6 +21,8 @@ Mandatory integrated DEEP delivery is fail-closed on same-occurrence factual bin
 Mandatory visible DEEP delivery is also fail-operational at the presentation boundary: orchestration and the integrated runner both guard exact-slot prefetch terminality, the runner performs a bounded runtime-data-v6 re-fetch before declaring upstream blockage, and a due occurrence must publish one truthful 23-section private report as either `READY_FULL` or `READY_DEGRADED`. Degraded output never fabricates Stage3/MC proof, marks only the actual root stage failed, labels reused analytics `PRIOR`, and can be atomically upgraded to `READY_FULL` for the same occurrence. Private `latest/report.json`, `latest/report.md`, and `latest/delivery_status.json` form the canonical serving surface for ChatGPT/web/mobile consumers.
 
 Report-first production now separates **REPORT PROD** from **ENGINEERING** acceptance. A DEEP occurrence is publishable when the canonical 23-section report, presentation/human-facing QA, truthful CURRENT/PRIOR provenance, S01↔S19 consistency, and serving snapshot pass. P4 scenario closure, PERF-F latency, warm-cache benchmarks, and the 53 technical-gate closure remain mandatory engineering evidence but are not publication prerequisites. This changes delivery gating only; V6 factual authority and Canonical V12 decision mathematics remain unchanged.
+
+The integrated report delivery lane materializes only the private serving surface required at runtime: `personal/`, `latest/`, and `reports/`. Engineering-only `acceptance/` and `scenarios/` are excluded from report-lane checkout; this changes I/O only and does not weaken report production, privacy, provenance, or analytics gates.
 
 Canonical DEEP section assembly is source-resolved per section in the locked order **CURRENT → CURRENT-BOUND → PRIOR → UNAVAILABLE**. `CURRENT-BOUND` requires exact lineage, unchanged dependencies, and mathematical applicability proof; `PRIOR` always carries its source occurrence and is historical context only. All 23 resolved sections are provenance-validated before rendering, so stale analytics cannot be silently relabelled as current.
 

@@ -194,6 +194,14 @@ def _sha256_only(value: Any) -> str | None:
     return text
 
 
+def _git_sha_only(value: Any) -> str | None:
+    """Return only canonical hex Git object ids used for public lineage."""
+    text = str(value or "").strip().lower()
+    if len(text) not in {40, 64} or any(ch not in "0123456789abcdef" for ch in text):
+        return None
+    return text
+
+
 def _safe_scenario_failure_diagnostic(
     *,
     bundle: Mapping[str, Any],
@@ -307,8 +315,8 @@ def _safe_scenario_failure_diagnostic(
         "execution_state": execution_state,
         "cache_state": cache_state,
         "stage2_cache_bypassed": bool(p4.get("stage2_cache_bypassed") is True),
-        "production_sha": _sha256_only(os.environ.get("GITHUB_SHA")),
-        "runtime_data_sha": _sha256_only(os.environ.get("P4_RUNTIME_DATA_SHA")),
+        "production_sha": _git_sha_only(os.environ.get("GITHUB_SHA")),
+        "runtime_data_sha": _git_sha_only(os.environ.get("P4_RUNTIME_DATA_SHA")),
         "report_slot": _safe_failure_token(report_slot) or "UNKNOWN",
         "semantic_fingerprints": fingerprints,
     }

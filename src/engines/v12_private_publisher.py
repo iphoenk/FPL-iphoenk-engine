@@ -10,6 +10,8 @@ or Stage3 decision functions.
 import argparse
 import hashlib
 import json
+import re
+import sys
 from pathlib import Path
 import shutil
 from typing import Any, Mapping
@@ -20,6 +22,47 @@ from src.engines.v12_delivery_security import scan_secret_text
 
 class PrivatePublishError(RuntimeError):
     pass
+
+
+def classify_private_publish_error(error: BaseException) -> dict[str, Any]:
+    """Return an allowlisted, non-sensitive publisher failure diagnostic."""
+    message = str(error or "").strip()
+    if message.startswith("REPORT_PRODUCTION_GATE failed:"):
+        raw = message.split(":", 1)[1]
+        failures = [
+            token.strip()
+            for token in raw.split(",")
+            if re.fullmatch(r"[A-Z0-9_:-]+", token.strip())
+        ]
+        return {
+            "code": "REPORT_PRODUCTION_GATE",
+            "failures": failures or ["UNKNOWN"],
+        }
+    if message.startswith("report production gate missing serving artifacts:"):
+        raw = message.split(":", 1)[1]
+        allowed = set(_REPORT_FIRST_SERVING_FILES)
+        missing = [
+            Path(token.strip()).name
+            for token in raw.split(",")
+            if Path(token.strip()).name in allowed
+        ]
+        return {
+            "code": "MISSING_SERVING_ARTIFACTS",
+            "missing": missing or ["UNKNOWN"],
+        }
+    if message.startswith("PRIVACY_VALIDATION failed:"):
+        return {"code": "PRIVACY_VALIDATION"}
+    if "idempotency collision" in message:
+        return {"code": "IDEMPOTENCY_COLLISION"}
+    if message.startswith("canonical output incomplete"):
+        return {"code": "CANONICAL_INCOMPLETE"}
+    if "planning_gw" in message:
+        return {"code": "PLANNING_GW_INVALID"}
+    if "canonical bundle missing mode/slot" in message:
+        return {"code": "CANONICAL_IDENTITY_INVALID"}
+    if "publisher mutated canonical output" in message:
+        return {"code": "CANONICAL_MUTATION_DETECTED"}
+    return {"code": "PRIVATE_PUBLISHER_FAILURE"}
 
 
 _REQUIRED_CANONICAL_FILES = (
@@ -417,16 +460,26 @@ def main() -> int:
     parser.add_argument("--no-update-latest", action="store_true")
     args = parser.parse_args()
 
-    receipt = publish_private_output(
-        canonical_dir=Path(args.canonical_dir),
-        private_root=Path(args.private_root),
-        run_id=args.run_id,
-        season=(args.season or None),
-        model_sha=args.model_sha,
-        runtime_sha=args.runtime_sha,
-        destination_relpath=(args.destination_relpath or None),
-        update_latest=not args.no_update_latest,
-    )
+    try:
+        receipt = publish_private_output(
+            canonical_dir=Path(args.canonical_dir),
+            private_root=Path(args.private_root),
+            run_id=args.run_id,
+            season=(args.season or None),
+            model_sha=args.model_sha,
+            runtime_sha=args.runtime_sha,
+            destination_relpath=(args.destination_relpath or None),
+            update_latest=not args.no_update_latest,
+        )
+    except PrivatePublishError as exc:
+        diagnostic = classify_private_publish_error(exc)
+        print(
+            "PRIVATE_PUBLISH_FAILURE="
+            + json.dumps(diagnostic, sort_keys=True, separators=(",", ":")),
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
     out = Path(args.receipt_out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(

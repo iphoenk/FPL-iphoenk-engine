@@ -1,6 +1,6 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-30T22:59:43+07:00`
+> **Last runtime/documentation sync:** `2026-10-01T05:03:30+07:00`
 > **Production main at sync:** `ae86099f55d1e9a48f30b29f77e2e71d7d9b7fa4`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
@@ -27,6 +27,8 @@ Canonical DEEP section assembly is source-resolved per section in the locked ord
 `serving_report.json` is the stable client-facing contract for ChatGPT/web/mobile. Schema v2 carries occurrence/report slot/GW, delivery and decision status, freeze time, source freshness, per-section states, lineage and supersedes. Canonical artifacts are validated before any private `latest/` pointer replacement; a candidate that fails report-production, presentation, or governed credential/privacy validation cannot overwrite the last-known-good serving snapshot.
 
 Production report workflow treats Stage3/P4 closure as **engineering evidence only**. Stage3 execution still runs and records PASS/FAIL/DEGRADED truth, but its nonzero result cannot override a passing REPORT PRODUCTION GATE. The final human-delivery verdict depends on successful private report publication plus allowlisted public operational proof, not on P4/PERF-F closure.
+
+Private publisher failures emit only bounded allowlisted reason codes to operational logs. REPORT_PRODUCTION_GATE failures expose gate identifiers only; unknown publisher exceptions are reduced to a generic failure code, so delivery incidents can be repaired from evidence without leaking private report content or credentials.
 
 Delivery, privacy, latency, historical-validation and consumption architecture are governed by `docs/v12/FPL_V12_DELIVERY_ARCHITECTURE_PLAN_REV6.md`. Revision 6 supersedes earlier Delivery Architecture Plan wording where inconsistent.
 

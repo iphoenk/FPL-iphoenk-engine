@@ -112,7 +112,7 @@ def _validate_truthful_section_states(
             if content.get("prior_source_occurrence"):
                 failures.append(f"{section_id}:PRIOR_RELABELED_CURRENT")
 
-        if presentation_status == "CURRENT_BOUND":
+        if presentation_status in {"CURRENT-BOUND", "CURRENT_BOUND"}:
             proof = content.get("current_bound_proof")
             if not isinstance(proof, Mapping):
                 failures.append(f"{section_id}:CURRENT_BOUND_PROOF_MISSING")

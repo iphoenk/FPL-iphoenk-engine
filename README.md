@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-30T22:17:25+07:00`
-> **Production main at sync:** `84b555436337c6e977a23254814c1ad3b4bf8ccc`  
+> **Last runtime/documentation sync:** `2026-09-30T22:59:43+07:00`
+> **Production main at sync:** `ae86099f55d1e9a48f30b29f77e2e71d7d9b7fa4`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -25,6 +25,8 @@ Report-first production now separates **REPORT PROD** from **ENGINEERING** accep
 Canonical DEEP section assembly is source-resolved per section in the locked order **CURRENT → CURRENT-BOUND → PRIOR → UNAVAILABLE**. `CURRENT-BOUND` requires exact lineage, unchanged dependencies, and mathematical applicability proof; `PRIOR` always carries its source occurrence and is historical context only. All 23 resolved sections are provenance-validated before rendering, so stale analytics cannot be silently relabelled as current.
 
 `serving_report.json` is the stable client-facing contract for ChatGPT/web/mobile. Schema v2 carries occurrence/report slot/GW, delivery and decision status, freeze time, source freshness, per-section states, lineage and supersedes. Canonical artifacts are validated before any private `latest/` pointer replacement; a candidate that fails report-production, presentation, or governed credential/privacy validation cannot overwrite the last-known-good serving snapshot.
+
+Production report workflow treats Stage3/P4 closure as **engineering evidence only**. Stage3 execution still runs and records PASS/FAIL/DEGRADED truth, but its nonzero result cannot override a passing REPORT PRODUCTION GATE. The final human-delivery verdict depends on successful private report publication plus allowlisted public operational proof, not on P4/PERF-F closure.
 
 Delivery, privacy, latency, historical-validation and consumption architecture are governed by `docs/v12/FPL_V12_DELIVERY_ARCHITECTURE_PLAN_REV6.md`. Revision 6 supersedes earlier Delivery Architecture Plan wording where inconsistent.
 

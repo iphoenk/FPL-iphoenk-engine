@@ -22,6 +22,7 @@ from src.engines.price_radar import (
     OFFICIAL_UPDATE_TIMEZONE,
 )
 from src.engines.visible_content_proof import canonical_mode_contract
+from src.engines.v12_section_resolver import resolve_section
 
 
 SECTION_STATES = frozenset({"COMPLETE", "PARTIAL", "DEGRADED", "UNAVAILABLE"})
@@ -2206,13 +2207,54 @@ def _materialize_canonical_report(
         )
         if raw is None and current_gw_locked:
             raw = _locked_default(section_id, label, locked)
-        if raw is None:
-            raw = {
-                "state": "UNAVAILABLE",
-                "degradation_reason": "current authoritative evidence unavailable",
-                "content": None,
-            }
-        row = dict(raw)
+
+        raw_map = dict(raw or {})
+        candidate_map = raw_map.get("resolution_candidates")
+        if isinstance(candidate_map, Mapping):
+            row = resolve_section(
+                section_id=section_id,
+                label=label,
+                current=(
+                    candidate_map.get("CURRENT")
+                    if isinstance(candidate_map.get("CURRENT"), Mapping)
+                    else None
+                ),
+                current_bound=(
+                    candidate_map.get("CURRENT-BOUND")
+                    if isinstance(candidate_map.get("CURRENT-BOUND"), Mapping)
+                    else None
+                ),
+                prior=(
+                    candidate_map.get("PRIOR")
+                    if isinstance(candidate_map.get("PRIOR"), Mapping)
+                    else None
+                ),
+                prior_source_occurrence=(
+                    str(candidate_map.get("prior_source_occurrence") or "").strip()
+                    or None
+                ),
+                unavailable_reason=(
+                    str(raw_map.get("degradation_reason") or "").strip()
+                    or "current authoritative evidence unavailable"
+                ),
+            )
+        else:
+            raw_state = str(raw_map.get("state") or "").upper()
+            current_candidate = (
+                raw_map
+                if raw_map and raw_state != "UNAVAILABLE"
+                else None
+            )
+            row = resolve_section(
+                section_id=section_id,
+                label=label,
+                current=current_candidate,
+                unavailable_reason=(
+                    str(raw_map.get("degradation_reason") or "").strip()
+                    or "current authoritative evidence unavailable"
+                ),
+            )
+
         state = _status(row.get("state"), label=section_id)
         if state != "COMPLETE" and not str(
             row.get("degradation_reason") or ""
@@ -2275,6 +2317,7 @@ def _materialize_canonical_report(
                 "available_count": row.get("available_count"),
                 "expected_count": row.get("expected_count"),
                 "degradation_reason": row.get("degradation_reason"),
+                "source_state": row.get("source_state"),
                 "content": content,
             }
         )

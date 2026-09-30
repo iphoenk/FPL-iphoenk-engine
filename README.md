@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-30T21:38:00+07:00`
-> **Production main at sync:** `3bef6b33c26e3b208ef0ba391a53f228e2b37236`  
+> **Last runtime/documentation sync:** `2026-09-30T21:57:08+07:00`
+> **Production main at sync:** `146d12b6b934e3361bb41335d9506c1c7676d8d4`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -21,6 +21,8 @@ Mandatory integrated DEEP delivery is fail-closed on same-occurrence factual bin
 Mandatory visible DEEP delivery is also fail-operational at the presentation boundary: orchestration and the integrated runner both guard exact-slot prefetch terminality, the runner performs a bounded runtime-data-v6 re-fetch before declaring upstream blockage, and a due occurrence must publish one truthful 23-section private report as either `READY_FULL` or `READY_DEGRADED`. Degraded output never fabricates Stage3/MC proof, marks only the actual root stage failed, labels reused analytics `PRIOR`, and can be atomically upgraded to `READY_FULL` for the same occurrence. Private `latest/report.json`, `latest/report.md`, and `latest/delivery_status.json` form the canonical serving surface for ChatGPT/web/mobile consumers.
 
 Report-first production now separates **REPORT PROD** from **ENGINEERING** acceptance. A DEEP occurrence is publishable when the canonical 23-section report, presentation/human-facing QA, truthful CURRENT/PRIOR provenance, S01↔S19 consistency, and serving snapshot pass. P4 scenario closure, PERF-F latency, warm-cache benchmarks, and the 53 technical-gate closure remain mandatory engineering evidence but are not publication prerequisites. This changes delivery gating only; V6 factual authority and Canonical V12 decision mathematics remain unchanged.
+
+Canonical DEEP section assembly is source-resolved per section in the locked order **CURRENT → CURRENT-BOUND → PRIOR → UNAVAILABLE**. `CURRENT-BOUND` requires exact lineage, unchanged dependencies, and mathematical applicability proof; `PRIOR` always carries its source occurrence and is historical context only. All 23 resolved sections are provenance-validated before rendering, so stale analytics cannot be silently relabelled as current.
 
 Delivery, privacy, latency, historical-validation and consumption architecture are governed by `docs/v12/FPL_V12_DELIVERY_ARCHITECTURE_PLAN_REV6.md`. Revision 6 supersedes earlier Delivery Architecture Plan wording where inconsistent.
 

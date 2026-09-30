@@ -394,8 +394,9 @@ def assemble_degraded_deep_report(
         "label": "DECISION / CURRENT STATUS",
         "state": "DEGRADED",
         "degradation_reason": root_failure,
+        "source_state": "CURRENT",
         "content": {
-            "presentation_status": "DEGRADED",
+            "presentation_status": "CURRENT",
             "decision": "WAIT",
             "operational_state": "WAIT",
             "reason": (
@@ -414,8 +415,9 @@ def assemble_degraded_deep_report(
         "label": "DECISION DELTA",
         "state": "DEGRADED",
         "degradation_reason": "FRESH_ANALYTICAL_DELTA_NOT_RUN",
+        "source_state": "UNAVAILABLE",
         "content": {
-            "presentation_status": "BLOCKED",
+            "presentation_status": "UNAVAILABLE",
             "summary": "NO FRESH ANALYTICAL DELTA",
             "prior_source_occurrence": previous_slot,
             "empty_is_truthful": True,
@@ -430,8 +432,9 @@ def assemble_degraded_deep_report(
             if facts_status == "FRESH"
             else "CURRENT_FACTS_UNAVAILABLE"
         ),
+        "source_state": "CURRENT" if facts_status == "FRESH" else "UNAVAILABLE",
         "content": {
-            "presentation_status": "DEGRADED" if facts_status == "FRESH" else "UNAVAILABLE",
+            "presentation_status": "CURRENT" if facts_status == "FRESH" else "UNAVAILABLE",
             "fact_layer": facts_status,
             "facts_generated_at": facts_generated_at,
             "model_update": "NOT_RUN",
@@ -443,8 +446,9 @@ def assemble_degraded_deep_report(
         "label": "EVIDENCE QUALITY",
         "state": "DEGRADED",
         "degradation_reason": root_failure,
+        "source_state": "CURRENT",
         "content": {
-            "presentation_status": "DEGRADED",
+            "presentation_status": "CURRENT",
             "evidence_summary": {
                 "Facts": facts_status,
                 "Analytics": "BLOCKED",
@@ -460,8 +464,9 @@ def assemble_degraded_deep_report(
         "label": "SOURCE HEALTH / FRESHNESS / LINEAGE",
         "state": "DEGRADED",
         "degradation_reason": root_failure,
+        "source_state": "CURRENT",
         "content": {
-            "presentation_status": "DEGRADED",
+            "presentation_status": "CURRENT",
             "root_failure": root_failure,
             "root_stage": root_stage,
             "runner_state": "BLOCKED_UPSTREAM",
@@ -477,8 +482,9 @@ def assemble_degraded_deep_report(
         "section_id": "S18",
         "label": "ACTION BOARD",
         "state": "COMPLETE",
+        "source_state": "CURRENT",
         "content": {
-            "presentation_status": "FRESH",
+            "presentation_status": "CURRENT",
             "NOW": "WAIT; do not execute a transfer/chip from incomplete analytical evidence.",
             "NEXT": "Use the same occurrence if exact analytics recover; otherwise keep degraded delivery.",
             "TRIGGERS": "Exact occurrence-bound prefetch + fresh analytics become available.",
@@ -490,8 +496,9 @@ def assemble_degraded_deep_report(
         "label": "FINAL JUDGEMENT",
         "state": "DEGRADED",
         "degradation_reason": root_failure,
+        "source_state": "CURRENT",
         "content": {
-            "presentation_status": "DEGRADED",
+            "presentation_status": "CURRENT",
             "decision": "WAIT",
             "final_judgement": (
                 "WAIT. Current facts may still be usable, but fresh analytical "
@@ -502,6 +509,11 @@ def assemble_degraded_deep_report(
     }
 
     ordered = [by_id[section_id] for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    resolver_failures = validate_resolved_sections(ordered)
+    if resolver_failures:
+        raise RuntimeError(
+            "DEGRADED_SECTION_RESOLUTION_INVALID: " + ",".join(resolver_failures)
+        )
     downstream_stages = (
         "V6_OFFICIAL_FACTS",
         "OUR15_IDENTITY",

@@ -21,6 +21,8 @@ from pathlib import Path
 import time
 from typing import Any, Callable, Mapping, Sequence
 
+from src.engines.v12_section_resolver import resolve_section, validate_resolved_sections
+
 
 CANONICAL_DEEP_SECTIONS: tuple[tuple[str, str], ...] = (
     ("S01", "DECISION / CURRENT STATUS"),
@@ -318,26 +320,22 @@ def _fallback_section(
     root_failure: str,
     prior_content: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    if prior_content:
-        return {
-            "section_id": section_id,
-            "label": label,
-            "state": "DEGRADED",
-            "degradation_reason": "PRIOR_ANALYTICS_EXPLICITLY_LABELLED",
-            "content": dict(prior_content),
-        }
-    return {
-        "section_id": section_id,
-        "label": label,
-        "state": "UNAVAILABLE",
-        "degradation_reason": root_failure,
-        "content": {
-            "presentation_status": "BLOCKED",
-            "delivery_stage": "BLOCKED_UPSTREAM",
-            "root_failure": root_failure,
-            "empty_is_truthful": True,
-        },
-    }
+    prior_candidate = (
+        {"state": "DEGRADED", "content": dict(prior_content)}
+        if prior_content
+        else None
+    )
+    prior_occurrence = (
+        str((prior_content or {}).get("prior_source_occurrence") or "").strip()
+        or None
+    )
+    return resolve_section(
+        section_id=section_id,
+        label=label,
+        prior=prior_candidate,
+        prior_source_occurrence=prior_occurrence,
+        unavailable_reason=root_failure,
+    )
 
 
 def assemble_degraded_deep_report(

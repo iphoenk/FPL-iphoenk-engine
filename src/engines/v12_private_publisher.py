@@ -8,6 +8,7 @@ or Stage3 decision functions.
 """
 
 import argparse
+from copy import deepcopy
 import hashlib
 import json
 import re
@@ -200,6 +201,11 @@ def build_previous_deep_baseline(
     """Build a no-recompute LKG projection from a fully accepted DEEP report."""
     sections = serving_snapshot.get("sections")
     section_ids = list(sections) if isinstance(sections, Mapping) else []
+    canonical_section_ids = [
+        str(row.get("id") or row.get("section_id") or "")
+        for row in (bundle.get("section_manifest") or [])
+        if isinstance(row, Mapping)
+    ]
     return {
         "schema_version": 1,
         "artifact_kind": "V12_PREVIOUS_DEEP_BASELINE",
@@ -217,6 +223,7 @@ def build_previous_deep_baseline(
         "human_facing_status": (bundle.get("human_facing_qa") or {}).get("status"),
         "decision": serving_snapshot.get("decision"),
         "section_ids": section_ids,
+        "canonical_section_ids": canonical_section_ids,
         "section_states": deepcopy(serving_snapshot.get("section_states") or {}),
         "source_freshness": deepcopy(serving_snapshot.get("source_freshness") or {}),
         "sections": deepcopy(sections or {}),
@@ -244,7 +251,7 @@ def validate_previous_deep_baseline(
     baseline: Mapping[str, Any],
 ) -> list[str]:
     failures: list[str] = []
-    expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    expected_ids = list(baseline.get("canonical_section_ids") or [])
     if str(baseline.get("artifact_kind") or "") != "V12_PREVIOUS_DEEP_BASELINE":
         failures.append("LKG_ARTIFACT_KIND_INVALID")
     if str(baseline.get("report_mode") or "").upper() != "DEEP":
@@ -256,6 +263,8 @@ def validate_previous_deep_baseline(
     for key in ("pre_render_status", "post_render_status", "human_facing_status"):
         if str(baseline.get(key) or "").upper() != "PASS":
             failures.append(f"LKG_{key.upper()}_NOT_PASS")
+    if len(expected_ids) != 23 or len(set(expected_ids)) != 23:
+        failures.append("LKG_CANONICAL_SECTION_IDS_INVALID")
     if list(baseline.get("section_ids") or []) != expected_ids:
         failures.append("LKG_SECTION_IDS_INVALID")
     sections = baseline.get("sections")

@@ -111,6 +111,18 @@ class TextLeakFinding:
     pattern: str
 
 
+def scan_secret_text(text: str) -> list[TextLeakFinding]:
+    """Reuse the governed credential patterns without rejecting private decisions."""
+    findings: list[TextLeakFinding] = []
+    for line_number, line in enumerate(str(text).splitlines(), start=1):
+        for pattern in _SECRET_TEXT_PATTERNS:
+            if pattern.search(line):
+                findings.append(
+                    TextLeakFinding(line_number, "SECRET", pattern.pattern)
+                )
+    return findings
+
+
 def scan_public_text(text: str) -> list[TextLeakFinding]:
     findings: list[TextLeakFinding] = []
     for line_number, line in enumerate(str(text).splitlines(), start=1):
@@ -119,11 +131,7 @@ def scan_public_text(text: str) -> list[TextLeakFinding]:
                 findings.append(
                     TextLeakFinding(line_number, "PRIVATE_DECISION", pattern.pattern)
                 )
-        for pattern in _SECRET_TEXT_PATTERNS:
-            if pattern.search(line):
-                findings.append(
-                    TextLeakFinding(line_number, "SECRET", pattern.pattern)
-                )
+    findings.extend(scan_secret_text(text))
     return findings
 
 

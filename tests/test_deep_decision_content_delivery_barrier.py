@@ -373,6 +373,59 @@ def test_b_unaffordable_target_can_reach_funded_two_transfer_mc_surface():
     assert validate_deep_decision_content_delivery(report, body) == []
 
 
+def test_b2_material_mc_always_includes_canonical_selected_route_without_losing_depth():
+    def route(route_id: str, transfer_count: int, edge: float):
+        return {
+            "route_id": route_id,
+            "transfer_count": transfer_count,
+            "football_route_utility": {
+                "per_gw": [
+                    {
+                        "status": "READY",
+                        "expected_fpl_points": 50.0 + edge,
+                    }
+                    for _ in range(5)
+                ]
+            },
+            "lineup_impact": {},
+            "transfer_economics": {"status": "PASS"},
+        }
+
+    hold = route("HOLD", 0, 0.0)
+    direct_representative = route("DIRECT_REP", 1, 4.0)
+    canonical_selected = route("DIRECT_SELECTED", 1, 0.2)
+    funded = route("FUNDED_REP", 2, 3.0)
+    selected = select_stage3_material_mc_routes(
+        {
+            "model_owner": "V12_PACKAGE_UTILITY",
+            "search_authority": "FULL",
+            "selected_route_id": "DIRECT_SELECTED",
+            "routes": [
+                hold,
+                direct_representative,
+                canonical_selected,
+                funded,
+            ],
+        },
+        max_routes=3,
+    )
+    assert selected["route_ids"][0] == "HOLD"
+    assert "DIRECT_SELECTED" in selected["route_ids"]
+    assert "FUNDED_REP" in selected["route_ids"]
+    assert selected["canonical_selected_route_included"] is True
+    assert selected["transfer_depth_coverage"] == {
+        "direct_1_transfer": True,
+        "funded_2_transfer": True,
+        "coverage_is_not_decision_preference": True,
+    }
+
+
+def test_b3_integrated_runner_binds_mc_convergence_to_package_selected_route():
+    source = inspect.getsource(run_deep)
+    assert 'package_utility.get("selected_route_id") or "HOLD"' in source
+    assert 'mc_route_ids[0] if mc_route_ids else "HOLD"' not in source
+
+
 def test_c_hit_economics_can_leave_hold_as_canonical_winner():
     route = _route("R_NEG", transfer_count=2, net=-1.1, verdict="WAIT")
     report = _deep_report([route])

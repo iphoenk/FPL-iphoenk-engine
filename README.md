@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-30T21:57:08+07:00`
-> **Production main at sync:** `146d12b6b934e3361bb41335d9506c1c7676d8d4`  
+> **Last runtime/documentation sync:** `2026-09-30T22:17:25+07:00`
+> **Production main at sync:** `84b555436337c6e977a23254814c1ad3b4bf8ccc`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -23,6 +23,8 @@ Mandatory visible DEEP delivery is also fail-operational at the presentation bou
 Report-first production now separates **REPORT PROD** from **ENGINEERING** acceptance. A DEEP occurrence is publishable when the canonical 23-section report, presentation/human-facing QA, truthful CURRENT/PRIOR provenance, S01↔S19 consistency, and serving snapshot pass. P4 scenario closure, PERF-F latency, warm-cache benchmarks, and the 53 technical-gate closure remain mandatory engineering evidence but are not publication prerequisites. This changes delivery gating only; V6 factual authority and Canonical V12 decision mathematics remain unchanged.
 
 Canonical DEEP section assembly is source-resolved per section in the locked order **CURRENT → CURRENT-BOUND → PRIOR → UNAVAILABLE**. `CURRENT-BOUND` requires exact lineage, unchanged dependencies, and mathematical applicability proof; `PRIOR` always carries its source occurrence and is historical context only. All 23 resolved sections are provenance-validated before rendering, so stale analytics cannot be silently relabelled as current.
+
+`serving_report.json` is the stable client-facing contract for ChatGPT/web/mobile. Schema v2 carries occurrence/report slot/GW, delivery and decision status, freeze time, source freshness, per-section states, lineage and supersedes. Canonical artifacts are validated before any private `latest/` pointer replacement; a candidate that fails report-production/presentation validation cannot overwrite the last-known-good serving snapshot.
 
 Delivery, privacy, latency, historical-validation and consumption architecture are governed by `docs/v12/FPL_V12_DELIVERY_ARCHITECTURE_PLAN_REV6.md`. Revision 6 supersedes earlier Delivery Architecture Plan wording where inconsistent.
 

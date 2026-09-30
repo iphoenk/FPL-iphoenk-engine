@@ -191,6 +191,43 @@ jobs:
           print("P4 governed cache restore boundary: PASS")
           PY
 
+      - name: Restore previous valid DEEP baseline from private history
+        shell: bash
+        env:
+          P4_REPORT_SLOT: ${{ steps.request.outputs.report_slot }}
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/p4-previous-deep"
+          python - <<'PY'
+          import json
+          import os
+          import shutil
+          from datetime import datetime
+          from pathlib import Path
+
+          target = datetime.fromisoformat(os.environ["P4_REPORT_SLOT"].replace("Z", "+00:00"))
+          root = Path("private-reports/reports")
+          candidates = []
+          for path in root.glob("**/report_bundle.json"):
+              try:
+                  payload = json.loads(path.read_text(encoding="utf-8"))
+                  if str(payload.get("report_mode") or "").upper() != "DEEP":
+                      continue
+                  slot = datetime.fromisoformat(str(payload.get("report_slot") or "").replace("Z", "+00:00"))
+                  if slot < target:
+                      candidates.append((slot, path.parent))
+              except (OSError, ValueError, json.JSONDecodeError):
+                  continue
+          if not candidates:
+              raise SystemExit("P4 requires a previous valid visible DEEP baseline")
+          slot, source = max(candidates, key=lambda item: item[0])
+          dest = Path(os.environ["RUNNER_TEMP"]) / "p4-previous-deep"
+          shutil.copytree(source, dest)
+          if not (dest / "report_bundle.json").is_file():
+              raise SystemExit("P4 previous DEEP baseline copy is incomplete")
+          print(f"P4_PREVIOUS_DEEP_BASELINE=AVAILABLE slot={slot.isoformat()}")
+          PY
+
       - name: Build canonical private P4 package
         env:
           V12_STAGE2_DERIVED_CACHE_DIR: ${{ github.workspace }}/app/.cache/v12-stage2
@@ -210,7 +247,7 @@ jobs:
           set -euo pipefail
           rm -rf "$RUNNER_TEMP/p4-work"
           mkdir -p "$RUNNER_TEMP/p4-work" private-reports/scenarios
-          python -m src.engines.v12_p4_scenario_production             --app-root "$GITHUB_WORKSPACE"             --runtime-data-root "$GITHUB_WORKSPACE/runtime-data"             --private-root "$GITHUB_WORKSPACE/private-reports"             --report-slot "${{ steps.request.outputs.report_slot }}"             --workspace "$RUNNER_TEMP/p4-work"             --output "$GITHUB_WORKSPACE/private-reports/scenarios/latest.json"
+          python -m src.engines.v12_p4_scenario_production             --app-root "$GITHUB_WORKSPACE"             --runtime-data-root "$GITHUB_WORKSPACE/runtime-data"             --private-root "$GITHUB_WORKSPACE/private-reports"             --report-slot "${{ steps.request.outputs.report_slot }}"             --workspace "$RUNNER_TEMP/p4-work"             --previous-visible-deep-dir "$RUNNER_TEMP/p4-previous-deep"             --output "$GITHUB_WORKSPACE/private-reports/scenarios/latest.json"
           python - <<'PY'
           import json
           import os

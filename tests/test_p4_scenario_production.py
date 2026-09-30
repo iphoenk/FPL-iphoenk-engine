@@ -142,6 +142,7 @@ def test_p4_worker_uses_canonical_private_cache_environment(monkeypatch, tmp_pat
             encoding="utf-8",
         )
         observed.update({
+            "previous_visible_deep_dir": kwargs.get("previous_visible_deep_dir"),
             "stage2": __import__("os").environ.get("V12_STAGE2_DERIVED_CACHE_DIR"),
             "p17": __import__("os").environ.get("V12_P17_DECISION_CACHE_DIR"),
             "mc": __import__("os").environ.get("V12_MC_SIM_CACHE_DIR"),
@@ -179,6 +180,7 @@ def test_p4_worker_uses_canonical_private_cache_environment(monkeypatch, tmp_pat
         "2026-09-29T12:30:00+07:00",
         str(tmp_path / "output"),
         str(cache_root),
+        str(tmp_path / "previous-deep"),
         {"572": {"override_type": "OWNED_UNAVAILABLE", "p_available": 0.0}},
     )
 
@@ -188,6 +190,7 @@ def test_p4_worker_uses_canonical_private_cache_environment(monkeypatch, tmp_pat
     assert "governance" not in rebind["package_with_stage3"]
     assert rebind["package_with_stage3"]["selected_route_id"] == "HOLD"
     assert rebind["monte_carlo"]["execution_state"] == "EXECUTED"
+    assert observed["previous_visible_deep_dir"] == tmp_path / "previous-deep"
     assert observed["stage2"] == str(cache_root / "stage2")
     assert observed["p17"] == str(cache_root / "p17")
     assert observed["mc"] == str(cache_root / "mc")
@@ -344,6 +347,7 @@ def test_p4_worker_failure_includes_safe_scenario_identity(monkeypatch, tmp_path
             "2026-09-29T21:30:00+07:00",
             str(tmp_path / "output"),
             str(tmp_path / "cache"),
+            str(tmp_path / "previous-deep"),
             {"572": {"override_type": "OWNED_UNAVAILABLE", "p_available": 0.0}},
             "UNAVAILABLE_572",
         )

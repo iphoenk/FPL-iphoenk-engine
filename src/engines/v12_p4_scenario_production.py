@@ -441,6 +441,7 @@ def _evaluate_scenario_worker(
     report_slot: str,
     output_dir_raw: str,
     cache_root_raw: str | None,
+    previous_visible_deep_dir_raw: str | None,
     overrides: Mapping[str, Mapping[str, Any]],
     scenario_id: str = "BASE",
 ) -> dict[str, Any]:
@@ -464,6 +465,11 @@ def _evaluate_scenario_worker(
         report_slot=report_slot,
         output_dir=output,
         private_data_root=private_root,
+        previous_visible_deep_dir=(
+            Path(previous_visible_deep_dir_raw)
+            if previous_visible_deep_dir_raw
+            else None
+        ),
         allow_legacy_private_sources=False,
         require_private_personal=True,
         scenario_overrides=overrides,
@@ -506,6 +512,7 @@ def materialize_p4_package(
     private_root: Path,
     report_slot: str,
     workspace: Path,
+    previous_visible_deep_dir: Path | None = None,
 ) -> dict[str, Any]:
     identity = _identity(app_root, runtime_data_root, private_root)
     owned, captain, vice = _owned_context(private_root)
@@ -517,6 +524,7 @@ def materialize_p4_package(
         report_slot,
         str(workspace / "scenario-000-base"),
         None,
+        str(previous_visible_deep_dir) if previous_visible_deep_dir else None,
         {},
     )
 
@@ -542,6 +550,7 @@ def materialize_p4_package(
                 report_slot,
                 str(workspace / f"scenario-{index:03d}-{scenario_id}"),
                 str(workspace / "parallel-cache" / scenario_id),
+                str(previous_visible_deep_dir) if previous_visible_deep_dir else None,
                 overrides,
                 scenario_id,
             )
@@ -663,6 +672,7 @@ def main() -> int:
     parser.add_argument("--private-root", required=True)
     parser.add_argument("--report-slot", required=True)
     parser.add_argument("--workspace", required=True)
+    parser.add_argument("--previous-visible-deep-dir", default=None)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
@@ -672,6 +682,11 @@ def main() -> int:
         private_root=Path(args.private_root).resolve(),
         report_slot=args.report_slot,
         workspace=Path(args.workspace).resolve(),
+        previous_visible_deep_dir=(
+            Path(args.previous_visible_deep_dir).resolve()
+            if args.previous_visible_deep_dir
+            else None
+        ),
     )
     output = Path(args.output)
     manifest = write_sharded_package(package, output)

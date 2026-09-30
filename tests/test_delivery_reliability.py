@@ -227,6 +227,26 @@ def _canonical_dir(
         "planning_gw": 6,
         "runner_status": runner_status,
         "delivery_status": delivery_status,
+        "root_failure": (
+            "ANALYTICS_PIPELINE_FAILURE:TEST"
+            if delivery_status == "READY_DEGRADED"
+            else None
+        ),
+        "pre_render_qa": {
+            "status": (
+                "PASS"
+                if delivery_status == "READY_FULL"
+                else "DEGRADED_PRESENTATION_PASS"
+            )
+        },
+        "post_render_qa": {
+            "status": (
+                "PASS"
+                if delivery_status == "READY_FULL"
+                else "DEGRADED_PRESENTATION_PASS"
+            )
+        },
+        "human_facing_qa": {"status": "PASS", "failures": []},
         "section_manifest": [
             {"section_id": row["section_id"], "status": row["state"]}
             for row in sections
@@ -243,6 +263,7 @@ def _canonical_dir(
         {
             "runner_status": runner_status,
             "stage3_action": "WAIT" if runner_status == "PASS" else None,
+            "prior_analytics_relabelled_fresh": False,
         },
     )
     stage3 = {"status": stage3_status}
@@ -264,6 +285,11 @@ def _canonical_dir(
             "report_mode": "DEEP",
             "delivery_status": delivery_status,
             "decision": "WAIT",
+            "root_failure": (
+                "ANALYTICS_PIPELINE_FAILURE:TEST"
+                if delivery_status == "READY_DEGRADED"
+                else None
+            ),
             "sections": {row["section_id"]: row for row in sections},
         },
     )

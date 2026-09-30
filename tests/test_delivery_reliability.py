@@ -484,6 +484,21 @@ def test_integrated_workflow_has_orchestrator_guard_before_runner():
     assert "runner owns a second bounded guard" in workflow
 
 
+def test_integrated_workflow_keeps_stage3_engineering_nonblocking():
+    workflow = Path(".github/workflows/v12-integrated-report-runner.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "Record Stage3 engineering closure evidence" in workflow
+    assert "stage3_rc=$?" in workflow
+    assert '"engineering_closure_blocks_report": False' in workflow
+    assert "REPORT-FIRST: Stage3/P4 engineering closure is observable here" in workflow
+
+    final_gate = workflow.split("Enforce fail-closed human delivery", 1)[1]
+    assert "PRIVATE_DELIVERY_STATUS" in final_gate
+    assert "PUBLIC_PROOF_OUTCOME" in final_gate
+    assert "STAGE3" not in final_gate
+
+
 def test_degraded_public_proof_remains_operational_only():
     line = build_public_issue_proof(
         analytics_status="DEGRADED",

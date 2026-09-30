@@ -38,8 +38,6 @@ _REPORT_FIRST_SERVING_FILES = (
     "serving_report.json",
     "serving_report.md",
     "delivery_status.json",
-    "delivery_state.json",
-    "presentation_qa.json",
 )
 
 

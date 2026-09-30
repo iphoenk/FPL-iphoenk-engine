@@ -1100,9 +1100,8 @@ def validate_serving_snapshot(snapshot: Mapping[str, Any]) -> list[str]:
     if str(snapshot.get("delivery_status") or "") not in DELIVERY_STATES:
         failures.append("INVALID_DELIVERY_STATUS")
     sections = snapshot.get("sections")
-    if not isinstance(sections, Mapping) or list(sections) != [
-        section_id for section_id, _ in CANONICAL_DEEP_SECTIONS
-    ]:
+    expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    if not isinstance(sections, Mapping) or list(sections) != expected_ids:
         failures.append("SERVING_SECTION_ORDER_OR_COUNT")
     if not str(snapshot.get("decision") or "").strip():
         failures.append("SERVING_DECISION_MISSING")
@@ -1110,8 +1109,49 @@ def validate_serving_snapshot(snapshot: Mapping[str, Any]) -> list[str]:
         snapshot.get("root_failure") or ""
     ).strip():
         failures.append("DEGRADED_ROOT_FAILURE_MISSING")
-    return failures
 
+    try:
+        schema_version = int(snapshot.get("schema_version") or 1)
+    except (TypeError, ValueError):
+        schema_version = 1
+    if schema_version >= 2:
+        required = (
+            "occurrence_id",
+            "report_slot",
+            "GW",
+            "delivery_status",
+            "decision",
+            "facts_status",
+            "analytics_status",
+            "freeze_time",
+            "source_freshness",
+            "section_states",
+            "lineage",
+            "supersedes",
+        )
+        for key in required:
+            if key not in snapshot:
+                failures.append(f"SERVING_CLIENT_FIELD_MISSING:{key}")
+        section_states = snapshot.get("section_states")
+        if (
+            not isinstance(section_states, Mapping)
+            or list(section_states) != expected_ids
+        ):
+            failures.append("SERVING_SECTION_STATES_ORDER_OR_COUNT")
+        freshness = snapshot.get("source_freshness")
+        if not isinstance(freshness, Mapping):
+            failures.append("SERVING_SOURCE_FRESHNESS_INVALID")
+        else:
+            freshness_sections = freshness.get("sections")
+            if (
+                not isinstance(freshness_sections, Mapping)
+                or list(freshness_sections) != expected_ids
+            ):
+                failures.append("SERVING_SOURCE_FRESHNESS_SECTION_ORDER_OR_COUNT")
+        lineage = snapshot.get("lineage")
+        if not isinstance(lineage, Mapping):
+            failures.append("SERVING_LINEAGE_INVALID")
+    return failures
 
 def write_serving_artifacts(
     *,

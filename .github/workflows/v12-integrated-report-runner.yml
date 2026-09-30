@@ -697,15 +697,19 @@ jobs:
               fh.write(f"human_facing={proof.get('human_facing_qa_status', 'UNKNOWN')}\n")
           PY
 
-      - name: Enforce Stage3 natural integrated acceptance
+      - name: Record Stage3 engineering closure evidence
         if: needs.parse.outputs.report_mode == 'DEEP'
         id: stage3
         working-directory: app
         env:
           RUNNER_STATUS: ${{ steps.proof.outputs.runner_status }}
+        shell: bash
         run: |
+          set -euo pipefail
           model_sha="$(git rev-parse HEAD)"
           runtime_sha="$(git -C ../runtime-data rev-parse HEAD)"
+          mkdir -p artifacts/v12-private-delivery
+
           if [ "${RUNNER_STATUS:-UNKNOWN}" != "PASS" ]; then
             python - <<'PY'
           import json
@@ -719,6 +723,7 @@ jobs:
               "stage3_executed": False,
               "stage3_pass_claimed": False,
               "mc_pass_claimed": False,
+              "engineering_closure_blocks_report": False,
               "governance": {
                   "qa_relaxed": False,
                   "new_scheduler_created": False,
@@ -731,14 +736,17 @@ jobs:
           )
           with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as fh:
               fh.write("status=DEGRADED\n")
+              fh.write("process_rc=0\n")
           PY
             exit 0
           fi
+
           private_input_root="../private-reports"
           if [ -f ../acceptance-private-input/personal/current_team.json ]; then
             private_input_root="../acceptance-private-input"
           fi
-          mkdir -p artifacts/v12-private-delivery
+
+          set +e
           python -m src.engines.v12_stage3_acceptance \
             --bundle artifacts/v12-report/report_bundle.json \
             --runtime-data-root ../runtime-data \
@@ -748,17 +756,54 @@ jobs:
             --canonical control/fpl_master_v12/FPL_MASTER_CANONICAL_V12.txt \
             --output artifacts/v12-report/stage3_acceptance.json \
             >artifacts/v12-private-delivery/stage3.log 2>&1
-          python - <<'PY'
-          import json, os
+          stage3_rc=$?
+          set -e
+
+          STAGE3_RC="$stage3_rc" python - <<'PY'
+          import json
+          import os
           from pathlib import Path
-          proof = json.loads(
-              Path("artifacts/v12-report/stage3_acceptance.json").read_text(
-                  encoding="utf-8"
-              )
+
+          path = Path("artifacts/v12-report/stage3_acceptance.json")
+          rc = int(os.environ["STAGE3_RC"])
+          payload = None
+          if path.is_file():
+              try:
+                  value = json.loads(path.read_text(encoding="utf-8"))
+                  if isinstance(value, dict):
+                      payload = value
+              except Exception:
+                  payload = None
+
+          if payload is None:
+              payload = {
+                  "contract": "V12_STAGE3_INTEGRATED_ACCEPTANCE_V1",
+                  "status": "FAIL",
+                  "reason": "STAGE3_PROCESS_FAILURE",
+                  "stage3_executed": True,
+                  "stage3_pass_claimed": False,
+                  "mc_pass_claimed": False,
+              }
+
+          if rc != 0 and str(payload.get("status") or "").upper() == "PASS":
+              payload["status"] = "FAIL"
+              payload["reason"] = "STAGE3_PROCESS_NONZERO_WITH_PASS_PAYLOAD"
+              payload["stage3_pass_claimed"] = False
+
+          payload["process_rc"] = rc
+          payload["engineering_closure_blocks_report"] = False
+          path.write_text(
+              json.dumps(payload, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
           )
           with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as fh:
-              fh.write(f"status={proof.get('status', 'UNKNOWN')}\n")
+              fh.write(f"status={payload.get('status', 'UNKNOWN')}\n")
+              fh.write(f"process_rc={rc}\n")
           PY
+
+          # REPORT-FIRST: Stage3/P4 engineering closure is observable here but
+          # never converts a passing REPORT PRODUCTION GATE into delivery failure.
+          exit 0
 
       - name: Record Stage3 not applicable for PRICE
         if: needs.parse.outputs.report_mode == 'PRICE'

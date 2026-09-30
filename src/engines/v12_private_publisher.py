@@ -187,6 +187,88 @@ def build_private_digest(
     }
 
 
+
+def build_previous_deep_baseline(
+    bundle: Mapping[str, Any],
+    serving_snapshot: Mapping[str, Any],
+    *,
+    canonical_bundle_sha256: str,
+    canonical_body_sha256: str,
+    model_sha: str,
+    runtime_sha: str,
+) -> dict[str, Any]:
+    """Build a no-recompute LKG projection from a fully accepted DEEP report."""
+    sections = serving_snapshot.get("sections")
+    section_ids = list(sections) if isinstance(sections, Mapping) else []
+    return {
+        "schema_version": 1,
+        "artifact_kind": "V12_PREVIOUS_DEEP_BASELINE",
+        "report_mode": bundle.get("report_mode"),
+        "report_slot": bundle.get("report_slot"),
+        "occurrence_id": (
+            bundle.get("occurrence_id")
+            or serving_snapshot.get("occurrence_id")
+        ),
+        "planning_gw": bundle.get("planning_gw"),
+        "delivery_status": bundle.get("delivery_status"),
+        "runner_status": bundle.get("runner_status"),
+        "pre_render_status": (bundle.get("pre_render_qa") or {}).get("status"),
+        "post_render_status": (bundle.get("post_render_qa") or {}).get("status"),
+        "human_facing_status": (bundle.get("human_facing_qa") or {}).get("status"),
+        "decision": serving_snapshot.get("decision"),
+        "section_ids": section_ids,
+        "section_states": deepcopy(serving_snapshot.get("section_states") or {}),
+        "source_freshness": deepcopy(serving_snapshot.get("source_freshness") or {}),
+        "sections": deepcopy(sections or {}),
+        "serving_schema_version": serving_snapshot.get("schema_version"),
+        "canonical_bundle_sha256": canonical_bundle_sha256,
+        "canonical_body_sha256": canonical_body_sha256,
+        "lineage": {
+            "model_sha": str(model_sha),
+            "runtime_sha": str(runtime_sha),
+            "serving_projection_contract": (
+                (serving_snapshot.get("lineage") or {}).get(
+                    "projection_contract"
+                )
+                if isinstance(serving_snapshot.get("lineage"), Mapping)
+                else None
+            ),
+            "canonical_heavy_bundle_retained": True,
+        },
+        "decision_source": "CANONICAL_OUTPUT_COPY_ONLY",
+        "math_recomputed": False,
+    }
+
+
+def validate_previous_deep_baseline(
+    baseline: Mapping[str, Any],
+) -> list[str]:
+    failures: list[str] = []
+    expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    if str(baseline.get("artifact_kind") or "") != "V12_PREVIOUS_DEEP_BASELINE":
+        failures.append("LKG_ARTIFACT_KIND_INVALID")
+    if str(baseline.get("report_mode") or "").upper() != "DEEP":
+        failures.append("LKG_REPORT_MODE_NOT_DEEP")
+    if str(baseline.get("delivery_status") or "").upper() != "READY_FULL":
+        failures.append("LKG_DELIVERY_NOT_FULL")
+    if str(baseline.get("runner_status") or "").upper() != "PASS":
+        failures.append("LKG_RUNNER_NOT_PASS")
+    for key in ("pre_render_status", "post_render_status", "human_facing_status"):
+        if str(baseline.get(key) or "").upper() != "PASS":
+            failures.append(f"LKG_{key.upper()}_NOT_PASS")
+    if list(baseline.get("section_ids") or []) != expected_ids:
+        failures.append("LKG_SECTION_IDS_INVALID")
+    sections = baseline.get("sections")
+    if not isinstance(sections, Mapping) or list(sections) != expected_ids:
+        failures.append("LKG_SECTIONS_INVALID")
+    for key in ("canonical_bundle_sha256", "canonical_body_sha256"):
+        if not re.fullmatch(r"[0-9a-f]{64}", str(baseline.get(key) or "")):
+            failures.append(f"LKG_{key.upper()}_INVALID")
+    if baseline.get("math_recomputed") is not False:
+        failures.append("LKG_MATH_RECOMPUTED")
+    return failures
+
+
 def render_private_digest_markdown(digest: Mapping[str, Any]) -> str:
     return (
         f"# V12 {digest.get('report_mode')} report\n\n"
@@ -322,6 +404,40 @@ def publish_private_output(
     )
     digest_md = render_private_digest_markdown(digest)
 
+    previous_deep_baseline = None
+    previous_deep_baseline_json = None
+    if (
+        report_mode == "DEEP"
+        and delivery_status == "READY_FULL"
+        and isinstance(serving_snapshot, Mapping)
+    ):
+        previous_deep_baseline = build_previous_deep_baseline(
+            bundle,
+            serving_snapshot,
+            canonical_bundle_sha256=canonical_bundle_sha,
+            canonical_body_sha256=canonical_body_sha,
+            model_sha=model_sha,
+            runtime_sha=runtime_sha,
+        )
+        baseline_failures = validate_previous_deep_baseline(
+            previous_deep_baseline
+        )
+        if baseline_failures:
+            raise PrivatePublishError(
+                "PREVIOUS_DEEP_BASELINE_INVALID:"
+                + ",".join(baseline_failures)
+            )
+        previous_deep_baseline_json = (
+            json.dumps(
+                previous_deep_baseline,
+                indent=2,
+                sort_keys=True,
+                ensure_ascii=False,
+                default=str,
+            )
+            + "\n"
+        )
+
     recovery_upgrade = False
     existing_bundle_path = report_dir / "report_bundle.json"
     if existing_bundle_path.exists():
@@ -384,6 +500,12 @@ def publish_private_output(
     )
     digest_sha = write_text(report_dir / "digest.json", digest_json)
     digest_md_sha = write_text(report_dir / "digest.md", digest_md)
+    previous_deep_baseline_sha = None
+    if previous_deep_baseline_json is not None:
+        previous_deep_baseline_sha = write_text(
+            report_dir / "previous_deep_baseline.json",
+            previous_deep_baseline_json,
+        )
 
     if update_latest:
         mode_lower = report_mode.lower()
@@ -400,6 +522,11 @@ def publish_private_output(
             source = canonical_dir / source_name
             if source.is_file():
                 _atomic_replace_bytes(latest_dir / latest_name, source.read_bytes())
+        if previous_deep_baseline_json is not None:
+            _atomic_replace_text(
+                latest_dir / "previous_deep_baseline.json",
+                previous_deep_baseline_json,
+            )
 
     after = {
         name: sha256_file(canonical_dir / name)
@@ -434,6 +561,8 @@ def publish_private_output(
         "delivery_status": delivery_status or "LEGACY",
         "same_occurrence_recovery_upgrade": recovery_upgrade,
         "serving_snapshot_published": (canonical_dir / "serving_report.json").is_file(),
+        "previous_deep_baseline_published": previous_deep_baseline_sha is not None,
+        "previous_deep_baseline_sha256": previous_deep_baseline_sha,
         "math_recomputed": False,
     }
     receipt_json = (

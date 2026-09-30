@@ -18,7 +18,10 @@ from src.engines.v12_delivery_reliability import (
     wait_for_prefetch_terminal,
     write_serving_artifacts,
 )
-from src.engines.v12_private_publisher import publish_private_output
+from src.engines.v12_private_publisher import (
+    PrivatePublishError,
+    publish_private_output,
+)
 from src.engines.v12_delivery_security import build_public_issue_proof, scan_public_text
 
 
@@ -179,9 +182,21 @@ def test_serving_snapshot_is_decision_first_and_exact_23(tmp_path: Path):
         bundle=bundle,
         output_dir=tmp_path / "out",
     )
+    assert snapshot["schema_version"] == 2
     assert snapshot["delivery_status"] == "READY_DEGRADED"
     assert snapshot["decision"] == "WAIT"
+    assert "GW" in snapshot
+    assert snapshot["freeze_time"] == "UNAVAILABLE"
+    assert isinstance(snapshot["source_freshness"], dict)
+    assert isinstance(snapshot["lineage"], dict)
+    assert "supersedes" in snapshot
     assert list(snapshot["sections"]) == [
+        section_id for section_id, _ in CANONICAL_DEEP_SECTIONS
+    ]
+    assert list(snapshot["section_states"]) == [
+        section_id for section_id, _ in CANONICAL_DEEP_SECTIONS
+    ]
+    assert list(snapshot["source_freshness"]["sections"]) == [
         section_id for section_id, _ in CANONICAL_DEEP_SECTIONS
     ]
     assert validate_serving_snapshot(snapshot) == []
@@ -347,6 +362,115 @@ def test_private_publisher_upgrades_same_occurrence_degraded_to_full(tmp_path: P
     assert json.loads(
         (private / "latest/delivery_status.json").read_text(encoding="utf-8")
     )["delivery_status"] == "READY_FULL"
+
+
+def test_last_known_good_latest_is_not_overwritten_by_invalid_candidate(tmp_path: Path):
+    private = tmp_path / "private"
+    valid = _canonical_dir(
+        tmp_path / "valid",
+        delivery_status="READY_FULL",
+        runner_status="PASS",
+        stage3_status="PASS",
+    )
+    publish_private_output(
+        canonical_dir=valid,
+        private_root=private,
+        run_id="lkg-valid",
+        season=None,
+        model_sha="m1",
+        runtime_sha="r1",
+    )
+    latest_paths = [
+        private / "latest/report.json",
+        private / "latest/report.md",
+        private / "latest/delivery_status.json",
+    ]
+    before = {path.name: path.read_bytes() for path in latest_paths}
+
+    invalid = _canonical_dir(
+        tmp_path / "invalid",
+        delivery_status="READY_FULL",
+        runner_status="PASS",
+        stage3_status="PASS",
+    )
+    bundle_path = invalid / "report_bundle.json"
+    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+    bundle["report"]["sections"] = [
+        row for row in bundle["report"]["sections"]
+        if row.get("section_id") != "S19"
+    ]
+    bundle["section_manifest"] = [
+        row for row in bundle["section_manifest"]
+        if row.get("section_id") != "S19"
+    ]
+    bundle_path.write_text(
+        json.dumps(bundle, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PrivatePublishError, match="REPORT_PRODUCTION_GATE"):
+        publish_private_output(
+            canonical_dir=invalid,
+            private_root=private,
+            run_id="lkg-invalid",
+            season=None,
+            model_sha="m2",
+            runtime_sha="r2",
+        )
+
+    after = {path.name: path.read_bytes() for path in latest_paths}
+    assert after == before
+
+
+def test_last_known_good_latest_is_not_overwritten_by_privacy_failure(tmp_path: Path):
+    private = tmp_path / "private"
+    valid = _canonical_dir(
+        tmp_path / "privacy-valid",
+        delivery_status="READY_FULL",
+        runner_status="PASS",
+        stage3_status="PASS",
+    )
+    receipt = publish_private_output(
+        canonical_dir=valid,
+        private_root=private,
+        run_id="privacy-valid",
+        season=None,
+        model_sha="m1",
+        runtime_sha="r1",
+    )
+    assert receipt["privacy_validation_status"] == "PASS"
+    latest_paths = [
+        private / "latest/report.json",
+        private / "latest/report.md",
+        private / "latest/delivery_status.json",
+    ]
+    before = {path.name: path.read_bytes() for path in latest_paths}
+
+    invalid = _canonical_dir(
+        tmp_path / "privacy-invalid",
+        delivery_status="READY_FULL",
+        runner_status="PASS",
+        stage3_status="PASS",
+    )
+    serving_md = invalid / "serving_report.md"
+    serving_md.write_text(
+        serving_md.read_text(encoding="utf-8")
+        + "\nAuthorization: Bearer abcdefghijklmnopqrstuvwxyz123456\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PrivatePublishError, match="PRIVACY_VALIDATION"):
+        publish_private_output(
+            canonical_dir=invalid,
+            private_root=private,
+            run_id="privacy-invalid",
+            season=None,
+            model_sha="m2",
+            runtime_sha="r2",
+        )
+
+    after = {path.name: path.read_bytes() for path in latest_paths}
+    assert after == before
 
 
 def test_integrated_workflow_has_orchestrator_guard_before_runner():

@@ -160,24 +160,28 @@ def test_private_publish_collision_fails_closed(tmp_path):
         )
 
 
-def test_private_publish_failure_never_creates_public_fallback(tmp_path):
+def test_private_publish_ignores_engineering_stage3_failure_when_report_gate_passes(tmp_path):
     canonical = tmp_path / "canonical"
     canonical.mkdir()
     _write_fixture(canonical)
     (canonical / "stage3_acceptance.json").write_text(
-        json.dumps({"status": "FAIL"}), encoding="utf-8"
+        json.dumps({"status": "FAIL", "stage3_pass_claimed": False}),
+        encoding="utf-8",
     )
-    public = tmp_path / "public"
-    with pytest.raises(PrivatePublishError):
-        publish_private_output(
-            canonical_dir=canonical,
-            private_root=tmp_path / "private",
-            run_id="synthetic-fail",
-            season="2026-27",
-            model_sha="a" * 40,
-            runtime_sha="b" * 40,
-        )
-    assert not public.exists()
+
+    receipt = publish_private_output(
+        canonical_dir=canonical,
+        private_root=tmp_path / "private",
+        run_id="synthetic-engineering-fail",
+        season="2026-27",
+        model_sha="a" * 40,
+        runtime_sha="b" * 40,
+    )
+
+    assert receipt["private_delivery_status"] == "PASS"
+    assert receipt["report_prod_status"] == "REPORT GREEN"
+    assert receipt["engineering_closure_status"] == "FAIL"
+    assert receipt["engineering_closure_blocks_report"] is False
 
 
 def test_latest_pointer_advances_across_distinct_occurrences_without_mutating_history(tmp_path):

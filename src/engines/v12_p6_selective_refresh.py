@@ -403,6 +403,59 @@ def _rebind_scenario_mini_overlay(
     return mini_overlay, package_with_overlay
 
 
+def _same_occurrence_scenario_mini_overlay(
+    *,
+    sections: dict[str, dict[str, Any]],
+    scenario_row: Mapping[str, Any],
+    report_slot: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Reuse the canonical P4 P1.8 surface for a same-occurrence factual transition.
+
+    MATERIAL_PROJECTION is bound to the exact P4 runtime-data SHA and report
+    slot. Re-evaluating P1.8 from the compact OUR15 rebind payload can replace
+    an already-canonical scenario overlay with a lossy reconstruction. For this
+    same-occurrence material transition, keep the persisted canonical S15B
+    overlay and binding exactly, while still materializing a bounded warm
+    package container for subsequent worker state.
+    """
+    s15b = sections.get("S15B")
+    if not isinstance(s15b, Mapping):
+        raise SelectiveRefreshError("P4 MATERIAL scenario missing S15B")
+    content = s15b.get("content")
+    if not isinstance(content, Mapping):
+        raise SelectiveRefreshError("P4 MATERIAL S15B content unavailable")
+    binding = content.get("authoritative_binding")
+    if (
+        not isinstance(binding, Mapping)
+        or str(binding.get("report_slot") or "") != str(report_slot)
+    ):
+        raise SelectiveRefreshError(
+            "P4 MATERIAL S15B authoritative binding mismatch"
+        )
+    mini_overlay = content.get("downstream_overlay")
+    if not isinstance(mini_overlay, Mapping):
+        raise SelectiveRefreshError(
+            "P4 MATERIAL canonical downstream overlay unavailable"
+        )
+
+    raw_inputs = scenario_row.get("p1_8_rebind_inputs")
+    if not isinstance(raw_inputs, Mapping):
+        raise SelectiveRefreshError(
+            "P4 MATERIAL scenario missing governed P1.8 state inputs"
+        )
+    package_for_overlay = dict(raw_inputs.get("package_with_stage3") or {})
+    if not package_for_overlay:
+        raise SelectiveRefreshError(
+            "P4 MATERIAL package state input unavailable"
+        )
+    package_for_overlay.pop("mini_league_overlay", None)
+    package_with_overlay = attach_mini_league_overlay(
+        package_for_overlay,
+        dict(mini_overlay),
+    )
+    return dict(mini_overlay), package_with_overlay
+
+
 def refresh_p4_scenario_state(
     *,
     state: Mapping[str, Any],
@@ -445,12 +498,19 @@ def refresh_p4_scenario_state(
         sections[sid]["state"] = section_state
         sections[sid]["degradation_reason"] = degradation_reason
 
-    mini_overlay, package_with_overlay = _rebind_scenario_mini_overlay(
-        state=state,
-        sections=sections,
-        scenario_row=scenario_row,
-        report_slot=report_slot,
-    )
+    if str(change_class).upper() == "MATERIAL_PROJECTION":
+        mini_overlay, package_with_overlay = _same_occurrence_scenario_mini_overlay(
+            sections=sections,
+            scenario_row=scenario_row,
+            report_slot=report_slot,
+        )
+    else:
+        mini_overlay, package_with_overlay = _rebind_scenario_mini_overlay(
+            state=state,
+            sections=sections,
+            scenario_row=scenario_row,
+            report_slot=report_slot,
+        )
 
     refreshed = _finalize_deep_state(
         state=state,

@@ -15,6 +15,7 @@ import shutil
 from typing import Any, Mapping
 
 from src.engines.v12_report_production_gate import evaluate_report_production_gate
+from src.engines.v12_delivery_security import scan_secret_text
 
 
 class PrivatePublishError(RuntimeError):
@@ -234,6 +235,20 @@ def publish_private_output(
             + ",".join(report_gate.get("failures") or ["UNKNOWN"])
         )
 
+    privacy_findings: dict[str, list[int]] = {}
+    for name in ("report_body.md", "serving_report.md", "serving_report.json"):
+        path = canonical_dir / name
+        if not path.is_file():
+            continue
+        findings = scan_secret_text(path.read_text(encoding="utf-8", errors="replace"))
+        if findings:
+            privacy_findings[name] = sorted({item.line_number for item in findings})
+    if privacy_findings:
+        raise PrivatePublishError(
+            "PRIVACY_VALIDATION failed: client-serving credential material detected "
+            + json.dumps(privacy_findings, sort_keys=True)
+        )
+
     season_value = str(season or "").strip() or _season_from_report_slot(report_slot)
     slot_token = _timestamp_token(report_slot)
     if destination_relpath:
@@ -368,6 +383,7 @@ def publish_private_output(
         "model_sha": str(model_sha),
         "runtime_sha": str(runtime_sha),
         "private_delivery_status": "PASS",
+        "privacy_validation_status": "PASS",
         "report_prod_status": "REPORT GREEN",
         "report_production_gate": report_gate.get("contract"),
         "engineering_closure_status": stage3_status,

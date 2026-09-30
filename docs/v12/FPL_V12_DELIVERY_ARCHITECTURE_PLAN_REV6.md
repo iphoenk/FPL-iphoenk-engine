@@ -2,7 +2,7 @@
 
 **Authority revision:** 6  
 **Effective:** 2026-09-27T04:02:05+07:00  
-**Last runtime/documentation sync:** `2026-09-30T21:57:08+07:00`  
+**Last runtime/documentation sync:** `2026-09-30T22:17:25+07:00`  
 **Repository:** iphoenk/FPL-iphoenk-engine  
 **Supersedes:** Delivery Architecture Plan Revision 4 and earlier delivery-plan wording where inconsistent with this document.
 
@@ -20,6 +20,7 @@ This document is the delivery/performance/validation authority for FPL Master V1
 8. **No performance shortcut may weaken correctness:** do not reduce MC paths, prune exact route search, loosen QA, bypass private-plane rules, or rewrite acceptance evidence to hit latency targets.
 9. **Report delivery and engineering closure are separate verdicts:** `REPORT GREEN` is determined only by the canonical visible-report production gate. P4/PERF-F/warm-cache/53-gate closure remains an engineering lane and may not suppress an otherwise safe `READY_FULL` or truthful `READY_DEGRADED` report.
 10. **Section freshness is resolved, never inferred:** every canonical DEEP section resolves in the fixed order `CURRENT → CURRENT-BOUND → PRIOR → UNAVAILABLE`; CURRENT-BOUND requires exact lineage/dependency/applicability proof, PRIOR requires source-occurrence provenance, and the 23-section resolved set must pass anti-fabrication validation before rendering.
+11. **Serving is a stable client contract with last-known-good protection:** `serving_report.json` is the canonical ChatGPT/web/mobile interface; schema v2 exposes occurrence/report slot/GW, delivery/decision/facts/analytics state, freeze time, source freshness, per-section states, lineage and supersedes. Invalid presentation, section-count/order, provenance or report-production candidates fail before atomic `latest/` replacement and therefore cannot overwrite the prior valid serving snapshot.
 
 ## 1. Production continuity and privacy prerequisites
 

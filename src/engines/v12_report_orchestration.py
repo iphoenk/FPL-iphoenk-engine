@@ -22,7 +22,10 @@ from src.engines.price_radar import (
     OFFICIAL_UPDATE_TIMEZONE,
 )
 from src.engines.visible_content_proof import canonical_mode_contract
-from src.engines.v12_section_resolver import resolve_section
+from src.engines.v12_section_resolver import (
+    resolve_section,
+    validate_resolved_sections,
+)
 
 
 SECTION_STATES = frozenset({"COMPLETE", "PARTIAL", "DEGRADED", "UNAVAILABLE"})
@@ -2240,15 +2243,39 @@ def _materialize_canonical_report(
             )
         else:
             raw_state = str(raw_map.get("state") or "").upper()
-            current_candidate = (
-                raw_map
-                if raw_map and raw_state != "UNAVAILABLE"
-                else None
+            raw_content = raw_map.get("content")
+            presentation_status = (
+                str(
+                    (raw_content or {}).get("presentation_status")
+                    if isinstance(raw_content, Mapping)
+                    else ""
+                )
+                .strip()
+                .upper()
             )
+            current_candidate = None
+            current_bound_candidate = None
+            prior_candidate = None
+            prior_source_occurrence = None
+            if raw_map and raw_state != "UNAVAILABLE":
+                if presentation_status == "PRIOR":
+                    prior_candidate = raw_map
+                    prior_source_occurrence = str(
+                        (raw_content or {}).get("prior_source_occurrence")
+                        if isinstance(raw_content, Mapping)
+                        else ""
+                    ).strip() or None
+                elif presentation_status == "CURRENT-BOUND":
+                    current_bound_candidate = raw_map
+                else:
+                    current_candidate = raw_map
             row = resolve_section(
                 section_id=section_id,
                 label=label,
                 current=current_candidate,
+                current_bound=current_bound_candidate,
+                prior=prior_candidate,
+                prior_source_occurrence=prior_source_occurrence,
                 unavailable_reason=(
                     str(raw_map.get("degradation_reason") or "").strip()
                     or "current authoritative evidence unavailable"
@@ -2320,6 +2347,13 @@ def _materialize_canonical_report(
                 "source_state": row.get("source_state"),
                 "content": content,
             }
+        )
+
+    resolution_failures = validate_resolved_sections(sections)
+    if resolution_failures:
+        raise ReportOrchestrationError(
+            "section source resolution contract failed: "
+            + ",".join(resolution_failures)
         )
 
     if universe_movers is not None and mover_attachments != 1:

@@ -498,6 +498,8 @@ def test_private_publisher_upgrades_same_occurrence_degraded_to_full(tmp_path: P
     )
     assert first["private_delivery_status"] == "PASS"
     assert first["delivery_status"] == "READY_DEGRADED"
+    assert first["previous_deep_baseline_published"] is False
+    assert not (private / "latest/previous_deep_baseline.json").exists()
     assert json.loads(
         (private / "latest/delivery_status.json").read_text(encoding="utf-8")
     )["delivery_status"] == "READY_DEGRADED"
@@ -521,6 +523,22 @@ def test_private_publisher_upgrades_same_occurrence_degraded_to_full(tmp_path: P
     assert json.loads(
         (private / "latest/delivery_status.json").read_text(encoding="utf-8")
     )["delivery_status"] == "READY_FULL"
+
+    assert second["previous_deep_baseline_published"] is True
+    baseline_path = private / "latest/previous_deep_baseline.json"
+    assert baseline_path.is_file()
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    assert baseline["artifact_kind"] == "V12_PREVIOUS_DEEP_BASELINE"
+    assert baseline["delivery_status"] == "READY_FULL"
+    assert baseline["runner_status"] == "PASS"
+    assert baseline["pre_render_status"] == "PASS"
+    assert baseline["post_render_status"] == "PASS"
+    assert baseline["human_facing_status"] == "PASS"
+    assert len(baseline["section_ids"]) == 23
+    assert list(baseline["sections"]) == baseline["section_ids"]
+    assert baseline["canonical_bundle_sha256"] == second["canonical_bundle_sha256"]
+    assert baseline["canonical_body_sha256"] == second["canonical_body_sha256"]
+    assert baseline["math_recomputed"] is False
 
 
 def test_last_known_good_latest_is_not_overwritten_by_invalid_candidate(tmp_path: Path):

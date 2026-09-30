@@ -1941,9 +1941,27 @@ def select_stage3_material_mc_routes(
     )
 
     # Preserve the existing materiality ordering while guaranteeing that
-    # supportable direct and funded package depths can both reach canonical
-    # Monte Carlo. This is route-surface coverage, not a new decision score.
+    # the canonical P1.2B selected route and supportable direct/funded package
+    # depths can all reach P1.4. This is route-surface coverage, not a new
+    # decision score or reranking authority.
     mandatory: list[dict[str, Any]] = []
+    canonical_selected_id = str(
+        package_utility.get("selected_route_id") or "HOLD"
+    )
+    if canonical_selected_id != "HOLD":
+        canonical_selected = next(
+            (
+                row for row in candidates
+                if str(row.get("route_id") or "") == canonical_selected_id
+            ),
+            None,
+        )
+        if canonical_selected is None:
+            raise PackageUtilityError(
+                "canonical selected route missing from Stage3 MC candidates"
+            )
+        mandatory.append(canonical_selected)
+
     for transfer_count in (1, 2):
         representative = next(
             (
@@ -1974,6 +1992,11 @@ def select_stage3_material_mc_routes(
         "candidate_evidence": selected_rows,
         "max_routes": limit,
         "selection_purpose": "MC_MATERIALITY_ONLY_NOT_DECISION_RANKING",
+        "canonical_selected_route_id": canonical_selected_id,
+        "canonical_selected_route_included": (
+            canonical_selected_id == "HOLD"
+            or canonical_selected_id in selected
+        ),
         "transfer_depth_coverage": {
             "direct_1_transfer": any(
                 int(row.get("transfer_count") or 0) == 1

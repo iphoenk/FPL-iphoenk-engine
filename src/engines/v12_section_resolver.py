@@ -31,7 +31,7 @@ def _content(candidate: Mapping[str, Any] | None) -> dict[str, Any] | None:
 
 def _semantic_state(candidate: Mapping[str, Any] | None, default: str) -> str:
     state = str((candidate or {}).get("state") or default).strip().upper()
-    if state not in {"COMPLETE", "DEGRADED", "UNAVAILABLE"}:
+    if state not in {"COMPLETE", "PARTIAL", "DEGRADED", "UNAVAILABLE"}:
         return default
     return state
 

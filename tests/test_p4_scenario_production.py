@@ -207,8 +207,8 @@ def test_p4_executor_recycles_no_scenario_worker_state():
 def test_p4_failure_diagnostic_is_bounded_and_private_payload_safe(
     monkeypatch, tmp_path
 ):
-    monkeypatch.setenv("GITHUB_SHA", "a" * 64)
-    monkeypatch.setenv("P4_RUNTIME_DATA_SHA", "b" * 64)
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    monkeypatch.setenv("P4_RUNTIME_DATA_SHA", "b" * 40)
     warm_state = tmp_path / "warm.json"
     warm_state.write_text(
         json.dumps(
@@ -287,6 +287,8 @@ def test_p4_failure_diagnostic_is_bounded_and_private_payload_safe(
         "WATCHLIST_COMPLETE",
         "MINI_COVERAGE_FULL",
     ]
+    assert diagnostic["production_sha"] == "a" * 40
+    assert diagnostic["runtime_data_sha"] == "b" * 40
     assert diagnostic["stage2_cache_bypassed"] is True
     assert diagnostic["cache_state"]["stage2_status"] == "MISS"
     assert diagnostic["cache_state"]["p17_cache_hits"] == 4

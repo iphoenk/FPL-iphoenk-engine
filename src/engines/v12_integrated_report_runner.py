@@ -4538,7 +4538,10 @@ def _core_slot_binding(
     actual = _parse_aware(publish_integrity.get("logical_slot"))
     if requested is None:
         return {"status": "FAIL", "reason": "REPORT_SLOT_INVALID"}
-    expected = requested.replace(minute=0, second=0, microsecond=0)
+    # The governed occurrence authority is the exact report slot. DEEP slots
+    # are intentionally scheduled at :30, so rounding to the hour turns a
+    # valid 21:30 publication into a false CORE_SLOT_MISMATCH.
+    expected = requested
     actual_local = actual.astimezone(requested.tzinfo) if actual else None
     matched = actual_local == expected
     return {

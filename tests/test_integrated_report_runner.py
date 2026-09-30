@@ -95,7 +95,7 @@ def _runtime_root(tmp_path: Path, report_slot: str) -> Path:
         runtime / "data/v6/health/publish_integrity.json",
         {
             "status": "PASS",
-            "logical_slot": "2026-09-21T05:00:00+00:00",
+            "logical_slot": report_slot,
             "identity": {
                 "players": {"canonical_count": 15},
                 "teams": {"canonical_count": 5},
@@ -1542,3 +1542,29 @@ def test_natural_regression_s03_s05_degradation_does_not_get_blanket_whitelist()
     assert allowed == set()
     assert "S03_DEGRADED_NOT_TRUTHFUL_BASELINE_UNAVAILABILITY" in failures
     assert "S05_DEGRADED_NOT_TRUTHFUL_NON_PL_SOURCE_GAP" in failures
+
+
+def test_core_slot_binding_preserves_exact_half_hour_governed_slot():
+    result = runner._core_slot_binding(
+        report_slot="2026-09-29T21:30:00+07:00",
+        publish_integrity={
+            "status": "PASS",
+            "logical_slot": "2026-09-29T21:30:00+07:00",
+        },
+    )
+    assert result["status"] == "PASS"
+    assert result["reason"] is None
+    assert result["expected_core_slot"] == "2026-09-29T21:30:00+07:00"
+    assert result["actual_core_slot"] == "2026-09-29T21:30:00+07:00"
+
+
+def test_core_slot_binding_fails_closed_on_nearby_but_wrong_slot():
+    result = runner._core_slot_binding(
+        report_slot="2026-09-29T21:30:00+07:00",
+        publish_integrity={
+            "status": "PASS",
+            "logical_slot": "2026-09-29T21:00:00+07:00",
+        },
+    )
+    assert result["status"] == "PARTIAL"
+    assert result["reason"] == "CORE_SLOT_MISMATCH"

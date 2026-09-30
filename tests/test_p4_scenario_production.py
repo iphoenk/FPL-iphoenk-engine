@@ -13,6 +13,7 @@ from src.engines.v12_p4_scenario_production import (
     _evaluate_scenario_worker,
     _override_key,
     _owned_context,
+    _safe_scenario_failure_diagnostic,
     _scenario_override_specs,
 )
 
@@ -201,3 +202,200 @@ def test_p4_executor_recycles_no_scenario_worker_state():
     assert 'max_workers=workers' in source
     assert 'mp_context=get_context("spawn")' in source
     assert 'max_tasks_per_child=1' in source
+
+
+def test_p4_failure_diagnostic_is_bounded_and_private_payload_safe(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("GITHUB_SHA", "a" * 64)
+    monkeypatch.setenv("P4_RUNTIME_DATA_SHA", "b" * 64)
+    warm_state = tmp_path / "warm.json"
+    warm_state.write_text(
+        json.dumps(
+            {
+                "package_with_stage3": {
+                    "model_evidence_binding": {"output_fingerprint": "c" * 64},
+                    "governance": {
+                        "p1_7_execution_proof": {
+                            "p17_cache_hits": 4,
+                            "p17_cache_misses": 2,
+                        }
+                    },
+                    "PRIVATE_CURRENT15": "DO_NOT_LOG_PRIVATE_TEAM",
+                },
+                "monte_carlo": {
+                    "execution_state": "EXECUTED",
+                    "output_fingerprint": "d" * 64,
+                    "performance": {"simulation_cache_hit": False},
+                    "PRIVATE_REPORT_BODY": "DO_NOT_LOG_REPORT",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    bundle = {
+        "runner_status": "FAIL",
+        "PRIVATE_CURRENT15": "DO_NOT_LOG_PRIVATE_TEAM",
+        "report": {"private_report_body": "DO_NOT_LOG_REPORT"},
+        "pre_render_qa": {
+            "status": "FAIL",
+            "hard_failures": ["P1_7_LINEUP", "unsafe private text"],
+        },
+        "execution_proof": {
+            "p4_scenario_override": {
+                "applied": True,
+                "stage2_cache_bypassed": True,
+            },
+            "stage2_derived_cache": {
+                "status": "MISS",
+                "cache_hit": False,
+                "cache_miss": True,
+                "cache_write": False,
+                "input_fingerprint": "e" * 64,
+                "private_payload": "DO_NOT_LOG_CACHE",
+            },
+            "stages": [
+                {"stage": "P1_7_LINEUP", "status": "FAILED", "error": "secret"},
+                {"stage": "P1_8_MINI_LEAGUE_OVERLAY", "status": "PASS"},
+            ],
+        },
+    }
+    diagnostic = _safe_scenario_failure_diagnostic(
+        bundle=bundle,
+        scenario_id="UNAVAILABLE_572",
+        overrides={
+            "572": {
+                "override_type": "OWNED_UNAVAILABLE",
+                "p_available": 0.0,
+                "private": "DO_NOT_LOG_OVERRIDE",
+            }
+        },
+        report_slot="2026-09-29T21:30:00+07:00",
+        warm_state_path=warm_state,
+    )
+    encoded = json.dumps(diagnostic, sort_keys=True)
+    assert diagnostic["scenario_id"] == "UNAVAILABLE_572"
+    assert diagnostic["override_type"] == "OWNED_UNAVAILABLE"
+    assert diagnostic["element_id"] == "572"
+    assert diagnostic["failed_gates"] == ["P1_7_LINEUP"]
+    assert diagnostic["failed_stages"] == ["P1_7_LINEUP"]
+    assert diagnostic["stage2_cache_bypassed"] is True
+    assert diagnostic["cache_state"]["stage2_status"] == "MISS"
+    assert diagnostic["cache_state"]["p17_cache_hits"] == 4
+    assert diagnostic["cache_state"]["p17_cache_misses"] == 2
+    assert diagnostic["semantic_fingerprints"]["mc_output"] == "d" * 64
+    assert "DO_NOT_LOG" not in encoded
+    assert "private_report_body" not in encoded
+    assert "PRIVATE_CURRENT15" not in encoded
+
+
+def test_p4_worker_failure_includes_safe_scenario_identity(monkeypatch, tmp_path):
+    def fake_run_deep(**kwargs):
+        warm_state_out = Path(kwargs["warm_state_out"])
+        warm_state_out.parent.mkdir(parents=True, exist_ok=True)
+        warm_state_out.write_text(
+            json.dumps(
+                {
+                    "package_with_stage3": {
+                        "model_evidence_binding": {"output_fingerprint": "c" * 64}
+                    },
+                    "monte_carlo": {
+                        "execution_state": "EXECUTED",
+                        "output_fingerprint": "d" * 64,
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        return {
+            "runner_status": "FAIL",
+            "pre_render_qa": {
+                "status": "FAIL",
+                "failures": ["P1_7_LINEUP"],
+            },
+            "execution_proof": {
+                "p4_scenario_override": {
+                    "applied": True,
+                    "stage2_cache_bypassed": True,
+                },
+                "stages": [{"stage": "P1_7_LINEUP", "status": "FAILED"}],
+            },
+            "private_report_body": "DO_NOT_LOG_REPORT",
+        }
+
+    monkeypatch.setattr(
+        "src.engines.v12_p4_scenario_production.run_deep",
+        fake_run_deep,
+    )
+    with pytest.raises(P4ScenarioProductionError) as exc_info:
+        _evaluate_scenario_worker(
+            str(tmp_path / "runtime"),
+            str(tmp_path / "private"),
+            "2026-09-29T21:30:00+07:00",
+            str(tmp_path / "output"),
+            str(tmp_path / "cache"),
+            {"572": {"override_type": "OWNED_UNAVAILABLE", "p_available": 0.0}},
+            "UNAVAILABLE_572",
+        )
+    message = str(exc_info.value)
+    assert message.startswith("P4_SCENARIO_FAIL ")
+    assert '"scenario_id":"UNAVAILABLE_572"' in message
+    assert '"failed_gates":["P1_7_LINEUP"]' in message
+    assert "DO_NOT_LOG_REPORT" not in message
+
+
+def test_parallel_wrapper_preserves_child_scenario_failure_identity(
+    monkeypatch, tmp_path
+):
+    from concurrent.futures import Future
+    from src.engines import v12_p4_scenario_production as module
+
+    class FakeIdentity:
+        def p4_dependencies(self):
+            return {}
+
+    class FakeExecutor:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+        def submit(self, fn, *args):
+            future = Future()
+            future.set_exception(
+                P4ScenarioProductionError(
+                    'P4_SCENARIO_FAIL {"scenario_id":"UNAVAILABLE_572"}'
+                )
+            )
+            return future
+
+        def shutdown(self, wait=True, cancel_futures=True):
+            return None
+
+    monkeypatch.setattr(module, "_identity", lambda *args: FakeIdentity())
+    monkeypatch.setattr(module, "_owned_context", lambda *_: ([572] * 15, 572, 572))
+    monkeypatch.setattr(
+        module,
+        "_evaluate_scenario_worker",
+        lambda *args, **kwargs: {"base": True},
+    )
+    monkeypatch.setattr(
+        module,
+        "_scenario_override_specs",
+        lambda *args: [
+            (
+                "UNAVAILABLE_572",
+                {"572": {"override_type": "OWNED_UNAVAILABLE", "p_available": 0.0}},
+            )
+        ],
+    )
+    monkeypatch.setattr(module, "ProcessPoolExecutor", FakeExecutor)
+
+    with pytest.raises(P4ScenarioProductionError) as exc_info:
+        module.materialize_p4_package(
+            app_root=tmp_path,
+            runtime_data_root=tmp_path / "runtime",
+            private_root=tmp_path / "private",
+            report_slot="2026-09-29T21:30:00+07:00",
+            workspace=tmp_path / "workspace",
+        )
+    assert "UNAVAILABLE_572" in str(exc_info.value)
+

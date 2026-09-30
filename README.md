@@ -30,6 +30,8 @@ D-P2 precompute control is owner-triggered and non-authoritative: it has no cron
 
 D-P3 crypto preparation defines a private-only AES-256-GCM boundary for manager-specific P1.7/MC caches. Production owner execution selects the encrypted profile explicitly; non-main branch acceptance selects no-personal-cache and receives no decrypt key. Persistent P1.7/MC cache files are authenticated `*.aead.json` envelopes only, with restored non-AEAD files rejected. It remains preparation until exact-head CI, production-key availability, governed encrypted reuse, semantic-equivalence, and natural post-merge acceptance pass.
 
+P4 scenario-materialization failures expose only bounded whitelist diagnostics: scenario/override identity, safe QA or stage codes, non-sensitive cache state, exact lineage hashes, report slot, and hash-only semantic fingerprints. CURRENT15 payloads, private report bodies, decrypted cache contents and secrets are never part of the failure diagnostic surface.
+
 Scheduler production maturity is established after **3 consecutive genuine natural ChatGPT hourly occurrences**. Historical natural proofs remain immutable; manual recovery, controlled runs, and report-prefetch never increment this maturity counter, and an observed gap remains a scheduler-health failure. Runtime epoch metadata is refreshed from the current schedule policy on each accepted natural slot while preserving the original epoch start.
 
 FACT-1/FACT-2 hardening separates live/provisional bonus from final Official FPL bonus/event state, and treats Official set-piece notes as occurrence-bound advisory evidence only. `finished_provisional` is never finalization authority; set-piece evidence cannot directly overwrite xMins, xPts or P(start).

@@ -2360,6 +2360,12 @@ def _materialize_canonical_report(
         raise ReportOrchestrationError(
             "natural post-match report must attach UNIVERSE MOVERS exactly once"
         )
+    resolver_failures = validate_resolved_sections(sections)
+    if resolver_failures:
+        raise ReportOrchestrationError(
+            "canonical section source resolution failed: "
+            + ",".join(resolver_failures)
+        )
     return {
         "report_mode": reported_mode,
         "structural_mode": structural_mode,

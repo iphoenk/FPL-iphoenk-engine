@@ -6615,8 +6615,8 @@ def run_deep(
                         )[:24]
                     ),
                     route_ids=mc_route_ids,
-                    selected_route_id=(
-                        mc_route_ids[0] if mc_route_ids else "HOLD"
+                    selected_route_id=str(
+                        package_utility.get("selected_route_id") or "HOLD"
                     ),
                     canonical=True,
                     generated_at=report_slot,

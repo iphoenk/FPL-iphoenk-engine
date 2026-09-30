@@ -14,6 +14,8 @@ from pathlib import Path
 import shutil
 from typing import Any, Mapping
 
+from src.engines.v12_report_production_gate import evaluate_report_production_gate
+
 
 class PrivatePublishError(RuntimeError):
     pass
@@ -31,6 +33,11 @@ _OPTIONAL_SERVING_FILES = (
     "delivery_status.json",
     "delivery_state.json",
     "presentation_qa.json",
+)
+_REPORT_FIRST_SERVING_FILES = (
+    "serving_report.json",
+    "serving_report.md",
+    "delivery_status.json",
 )
 
 
@@ -187,13 +194,45 @@ def publish_private_output(
         raise PrivatePublishError("canonical full bundle missing planning_gw")
 
     stage3_status = str(stage3.get("status") or "UNKNOWN").upper()
-    stage3_publishable = stage3_status in {"PASS", "NOT_APPLICABLE"} or (
-        stage3_status == "DEGRADED"
-        and delivery_status == "READY_DEGRADED"
-        and stage3.get("stage3_pass_claimed") is False
+
+    # REPORT-FIRST: P4/Stage3/PERF-F are engineering closure evidence, not
+    # publication permission. Production DEEP occurrences must instead satisfy
+    # the canonical report-serving contract and serving snapshot validation.
+    production_delivery = report_mode == "DEEP" and bool(delivery_status)
+    if production_delivery:
+        missing_serving = [
+            name for name in _REPORT_FIRST_SERVING_FILES
+            if not (canonical_dir / name).is_file()
+        ]
+        if missing_serving:
+            raise PrivatePublishError(
+                "report production gate missing serving artifacts: "
+                + ",".join(missing_serving)
+            )
+
+    presentation_qa = (
+        _read_json(canonical_dir / "presentation_qa.json")
+        if (canonical_dir / "presentation_qa.json").is_file()
+        else None
     )
-    if not stage3_publishable:
-        raise PrivatePublishError("Stage3 canonical acceptance is not publishable")
+    serving_snapshot = (
+        _read_json(canonical_dir / "serving_report.json")
+        if (canonical_dir / "serving_report.json").is_file()
+        else None
+    )
+    report_gate = evaluate_report_production_gate(
+        bundle,
+        presentation_qa=presentation_qa,
+        serving_snapshot=serving_snapshot,
+        visible_body_non_empty=bool(
+            (canonical_dir / "report_body.md").read_text(encoding="utf-8").strip()
+        ),
+    )
+    if report_gate.get("status") != "PASS":
+        raise PrivatePublishError(
+            "REPORT_PRODUCTION_GATE failed: "
+            + ",".join(report_gate.get("failures") or ["UNKNOWN"])
+        )
 
     season_value = str(season or "").strip() or _season_from_report_slot(report_slot)
     slot_token = _timestamp_token(report_slot)
@@ -329,6 +368,10 @@ def publish_private_output(
         "model_sha": str(model_sha),
         "runtime_sha": str(runtime_sha),
         "private_delivery_status": "PASS",
+        "report_prod_status": "REPORT GREEN",
+        "report_production_gate": report_gate.get("contract"),
+        "engineering_closure_status": stage3_status,
+        "engineering_closure_blocks_report": False,
         "delivery_status": delivery_status or "LEGACY",
         "same_occurrence_recovery_upgrade": recovery_upgrade,
         "serving_snapshot_published": (canonical_dir / "serving_report.json").is_file(),

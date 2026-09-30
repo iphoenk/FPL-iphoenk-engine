@@ -2,6 +2,7 @@
 
 **Authority revision:** 6  
 **Effective:** 2026-09-27T04:02:05+07:00  
+**Last runtime/documentation sync:** `2026-09-30T21:38:00+07:00`  
 **Repository:** iphoenk/FPL-iphoenk-engine  
 **Supersedes:** Delivery Architecture Plan Revision 4 and earlier delivery-plan wording where inconsistent with this document.
 
@@ -17,6 +18,7 @@ This document is the delivery/performance/validation authority for FPL Master V1
 6. **No second model:** scenarios, stability analysis, challengers, PWA and MCP consume or perturb the canonical engine. They may not implement a second scorer, optimizer or captain model.
 7. **No legacy production execution:** V3/V4/V5 remain frozen and non-executable.
 8. **No performance shortcut may weaken correctness:** do not reduce MC paths, prune exact route search, loosen QA, bypass private-plane rules, or rewrite acceptance evidence to hit latency targets.
+9. **Report delivery and engineering closure are separate verdicts:** `REPORT GREEN` is determined only by the canonical visible-report production gate. P4/PERF-F/warm-cache/53-gate closure remains an engineering lane and may not suppress an otherwise safe `READY_FULL` or truthful `READY_DEGRADED` report.
 
 ## 1. Production continuity and privacy prerequisites
 

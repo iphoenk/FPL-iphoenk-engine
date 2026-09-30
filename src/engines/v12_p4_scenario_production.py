@@ -246,6 +246,9 @@ def _safe_scenario_failure_diagnostic(
             status = str(row.get("status") or "").upper()
             if status in {"PASS", "COMPLETE", "SKIPPED"}:
                 continue
+            required = row.get("required") is True
+            if not required and status not in {"FAIL", "FAILED", "ERROR"}:
+                continue
             name = _safe_failure_token(row.get("stage") or row.get("name"))
             if name and name not in failed_stages:
                 failed_stages.append(name)
@@ -259,6 +262,8 @@ def _safe_scenario_failure_diagnostic(
     }
 
     execution_state = "UNKNOWN"
+    mc_convergence_status = "UNKNOWN"
+    mc_convergence_failures: list[str] = []
     fingerprints: dict[str, str] = {}
     try:
         if warm_state_path.exists():
@@ -268,10 +273,25 @@ def _safe_scenario_failure_diagnostic(
             p17 = dict(governance.get("p1_7_execution_proof") or {})
             monte_carlo = dict(warm.get("monte_carlo") or {})
             performance = dict(monte_carlo.get("performance") or {})
+            convergence = dict(monte_carlo.get("convergence_evidence") or {})
             execution_state = (
                 _safe_failure_token(monte_carlo.get("execution_state"))
                 or execution_state
             )
+            mc_convergence_status = (
+                _safe_failure_token(convergence.get("status"))
+                or mc_convergence_status
+            )
+            acceptance = dict(convergence.get("acceptance") or {})
+            for key in (
+                "mean_delta_stable",
+                "outperform_probability_stable",
+                "median_delta_stable",
+            ):
+                if acceptance.get(key) is False:
+                    token = _safe_failure_token(key)
+                    if token:
+                        mc_convergence_failures.append(token)
             cache_state.update(
                 {
                     "p17_cache_hits": int(p17.get("p17_cache_hits") or 0),
@@ -313,6 +333,8 @@ def _safe_scenario_failure_diagnostic(
             if (token := _safe_failure_token(raw)) is not None
         ][:16],
         "execution_state": execution_state,
+        "mc_convergence_status": mc_convergence_status,
+        "mc_convergence_failures": mc_convergence_failures[:3],
         "cache_state": cache_state,
         "stage2_cache_bypassed": bool(p4.get("stage2_cache_bypassed") is True),
         "production_sha": _git_sha_only(os.environ.get("GITHUB_SHA")),

@@ -1948,6 +1948,7 @@ def select_stage3_material_mc_routes(
     canonical_selected_id = str(
         package_utility.get("selected_route_id") or "HOLD"
     )
+    canonical_selected_transfer_count = 0
     if canonical_selected_id != "HOLD":
         canonical_selected = next(
             (
@@ -1961,8 +1962,13 @@ def select_stage3_material_mc_routes(
                 "canonical selected route missing from Stage3 MC candidates"
             )
         mandatory.append(canonical_selected)
+        canonical_selected_transfer_count = int(
+            canonical_selected.get("transfer_count") or 0
+        )
 
     for transfer_count in (1, 2):
+        if transfer_count == canonical_selected_transfer_count:
+            continue
         representative = next(
             (
                 row for row in candidates

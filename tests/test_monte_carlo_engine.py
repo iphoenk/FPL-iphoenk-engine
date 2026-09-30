@@ -13,6 +13,7 @@ from src.engines.canonical_decision_methodology import CANONICAL_WEIGHTS
 from src.engines.v12_monte_carlo import (
     MC_SIM_CACHE_ENV,
     MonteCarloError,
+    _convergence,
     _mc_projection_fingerprint,
     _projection_map,
     _resolve_route_chunk,
@@ -400,6 +401,25 @@ def test_35_progressive_convergence_checkpoints_emitted():
     assert checkpoints[0]["paths"] == 50_000
     assert checkpoints[-1]["paths"] == 60_000
     assert all("mean_delta_mcse" in row for row in checkpoints)
+
+
+def test_35b_hold_selected_convergence_is_exact_degenerate_pass():
+    hold = np.zeros(500, dtype=np.float64)
+    challenger = np.linspace(-2.0, 2.0, 500, dtype=np.float64)
+    result = _convergence(
+        hold,
+        hold,
+        {"HOLD": hold, "R1": challenger},
+        checkpoints=(250, 500),
+        cfg=load_config(),
+    )
+    assert result["status"] == "PASS"
+    assert result["checkpoints"][-1]["mean_route_delta"] == 0.0
+    assert result["checkpoints"][-1]["p_route_gt_hold"] == 0.0
+    assert result["checkpoints"][-1]["p50_delta"] == 0.0
+    assert result["acceptance"]["mean_delta_stable"] is True
+    assert result["acceptance"]["outperform_probability_stable"] is True
+    assert result["acceptance"]["median_delta_stable"] is True
 
 
 def test_36_acceptance_contract_requires_real_500k():

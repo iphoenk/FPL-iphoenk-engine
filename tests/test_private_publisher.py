@@ -11,6 +11,7 @@ from src.engines.v12_delivery_security import build_public_proof_from_files
 from src.engines.v12_private_publisher import (
     PrivatePublishError,
     build_private_digest,
+    classify_private_publish_error,
     publish_private_output,
 )
 
@@ -345,3 +346,36 @@ def test_controlled_destination_rejects_path_escape(tmp_path):
             destination_relpath="../escape",
             update_latest=False,
         )
+
+
+def test_private_publish_failure_diagnostic_exposes_only_gate_codes():
+    error = PrivatePublishError(
+        "REPORT_PRODUCTION_GATE failed:S14:PRIOR_WITHOUT_SOURCE_OCCURRENCE,S01_S19_DECISION_MISMATCH"
+    )
+    assert classify_private_publish_error(error) == {
+        "code": "REPORT_PRODUCTION_GATE",
+        "failures": [
+            "S14:PRIOR_WITHOUT_SOURCE_OCCURRENCE",
+            "S01_S19_DECISION_MISMATCH",
+        ],
+    }
+
+
+def test_private_publish_failure_diagnostic_redacts_unknown_detail():
+    error = PrivatePublishError(
+        "unexpected secret-looking content /tmp/private/token=do-not-print"
+    )
+    assert classify_private_publish_error(error) == {
+        "code": "PRIVATE_PUBLISHER_FAILURE",
+    }
+
+
+def test_private_publish_failure_diagnostic_allowlists_missing_serving_files():
+    error = PrivatePublishError(
+        "report production gate missing serving artifacts: "
+        "serving_report.json,delivery_status.json,/tmp/not-allowed"
+    )
+    assert classify_private_publish_error(error) == {
+        "code": "MISSING_SERVING_ARTIFACTS",
+        "missing": ["serving_report.json", "delivery_status.json"],
+    }

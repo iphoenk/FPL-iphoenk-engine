@@ -870,6 +870,14 @@ jobs:
           else
             echo "status=FAIL" >> "$GITHUB_OUTPUT"
             echo "PRIVATE_DELIVERY=FAIL"
+            python -m src.engines.v12_delivery_security scan-log \
+              --path artifacts/v12-private-delivery/publisher.log
+            diagnostic="$(grep -m1 '^PRIVATE_PUBLISH_FAILURE=' artifacts/v12-private-delivery/publisher.log || true)"
+            if [ -n "$diagnostic" ]; then
+              echo "$diagnostic"
+            else
+              echo 'PRIVATE_PUBLISH_FAILURE={"code":"PRIVATE_PUBLISHER_FAILURE"}'
+            fi
           fi
           exit 0
 

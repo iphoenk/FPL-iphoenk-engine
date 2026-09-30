@@ -987,6 +987,7 @@ def validate_presentation_qa_manifest(manifest: Mapping[str, Any]) -> list[str]:
 
 
 def build_serving_snapshot(bundle: Mapping[str, Any]) -> dict[str, Any]:
+    """Build the stable client-facing serving contract from one canonical bundle."""
     sections = [
         dict(row)
         for row in ((bundle.get("report") or {}).get("sections") or [])
@@ -995,6 +996,7 @@ def build_serving_snapshot(bundle: Mapping[str, Any]) -> dict[str, Any]:
     by_id = {str(row.get("section_id") or ""): row for row in sections}
     s01 = dict((by_id.get("S01") or {}).get("content") or {})
     s19 = dict((by_id.get("S19") or {}).get("content") or {})
+    execution = dict(bundle.get("execution_proof") or {})
     delivery_status = str(bundle.get("delivery_status") or "")
     if delivery_status not in DELIVERY_STATES:
         delivery_status = (
@@ -1012,31 +1014,69 @@ def build_serving_snapshot(bundle: Mapping[str, Any]) -> dict[str, Any]:
             else None)
         or "UNAVAILABLE"
     )
+    facts_status = (
+        "FRESH"
+        if delivery_status == "READY_FULL"
+        else s01.get("facts_status", "PARTIAL")
+    )
+    analytics_status = (
+        "FRESH"
+        if delivery_status == "READY_FULL"
+        else s01.get("analytics_status", "DEGRADED")
+    )
+    section_states = {
+        str(row.get("section_id") or ""): {
+            "state": str(row.get("state") or "UNAVAILABLE"),
+            "source_state": str(
+                row.get("source_state")
+                or ((row.get("content") or {}).get("presentation_status")
+                    if isinstance(row.get("content"), Mapping) else "")
+                or "UNAVAILABLE"
+            ),
+        }
+        for row in sections
+    }
+    prefetch_binding = (
+        dict(execution.get("report_prefetch_binding") or {})
+        if isinstance(execution.get("report_prefetch_binding"), Mapping)
+        else {}
+    )
+    freeze_time = (
+        bundle.get("freeze_time")
+        or execution.get("freeze_time")
+        or execution.get("freeze_at")
+        or "UNAVAILABLE"
+    )
+    planning_gw = bundle.get("planning_gw")
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "occurrence_id": str(
             bundle.get("occurrence_id")
             or f"{bundle.get('report_mode')}|{bundle.get('report_slot')}"
         ),
         "report_slot": bundle.get("report_slot"),
         "report_mode": bundle.get("report_mode"),
+        "GW": planning_gw if planning_gw not in (None, 0, "") else "UNAVAILABLE",
         "delivery_status": delivery_status,
         "decision": decision,
-        "facts_status": (
-            "FRESH"
-            if delivery_status == "READY_FULL"
-            else s01.get("facts_status", "PARTIAL")
-        ),
-        "analytics_status": (
-            "FRESH"
-            if delivery_status == "READY_FULL"
-            else s01.get("analytics_status", "DEGRADED")
-        ),
+        "facts_status": facts_status,
+        "analytics_status": analytics_status,
+        "freeze_time": freeze_time,
+        "source_freshness": {
+            "facts": facts_status,
+            "analytics": analytics_status,
+            "sections": {
+                section_id: meta["source_state"]
+                for section_id, meta in section_states.items()
+            },
+        },
+        "section_states": section_states,
         "root_failure": root_failure,
         "sections": {
             str(row.get("section_id") or ""): {
                 "label": row.get("label"),
                 "state": row.get("state"),
+                "source_state": row.get("source_state"),
                 "content": deepcopy(row.get("content") or {}),
             }
             for row in sections
@@ -1044,11 +1084,16 @@ def build_serving_snapshot(bundle: Mapping[str, Any]) -> dict[str, Any]:
         "generated_at": datetime.now().astimezone().isoformat(),
         "lineage": {
             "runner_status": bundle.get("runner_status"),
-            "planning_gw": bundle.get("planning_gw"),
+            "planning_gw": planning_gw,
+            "model_sha": execution.get("model_sha"),
+            "runtime_sha": execution.get("runtime_sha"),
+            "report_prefetch_run_id": prefetch_binding.get("report_prefetch_run_id"),
+            "target_logical_report_slot": prefetch_binding.get(
+                "target_logical_report_slot"
+            ),
         },
-        "supersedes": None,
+        "supersedes": bundle.get("supersedes") or execution.get("supersedes"),
     }
-
 
 def validate_serving_snapshot(snapshot: Mapping[str, Any]) -> list[str]:
     failures: list[str] = []

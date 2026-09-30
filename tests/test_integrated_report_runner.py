@@ -95,7 +95,7 @@ def _runtime_root(tmp_path: Path, report_slot: str) -> Path:
         runtime / "data/v6/health/publish_integrity.json",
         {
             "status": "PASS",
-            "logical_slot": "2026-09-21T05:00:00+00:00",
+            "logical_slot": report_slot,
             "identity": {
                 "players": {"canonical_count": 15},
                 "teams": {"canonical_count": 5},

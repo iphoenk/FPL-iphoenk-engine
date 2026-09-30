@@ -752,6 +752,59 @@ def test_mc_input_stable_seed_ignores_occurrence_only_p17_evidence():
     assert changed == baseline
 
 
+def test_mc_input_stable_seed_ignores_noncomputational_scenario_provenance():
+    projections, package = _fixture()
+    official = deepcopy(projections)
+    scenario = deepcopy(projections)
+
+    player = scenario["players"][0]
+    xmins = player.setdefault("xmins", {})
+    xmins["availability_source"] = "scenario_override"
+    xmins["evidence_lineage"] = {
+        "official_availability": {
+            "available": False,
+            "source": "scenario_override",
+        },
+        "scenario_availability_override": {
+            "applied": True,
+            "private_counterfactual_only": True,
+            "override_type": "OWNED_UNAVAILABLE",
+        },
+    }
+    xmins["governance"] = {
+        **dict(xmins.get("governance") or {}),
+        "scenario_override_applied": True,
+    }
+    scenario["governance"] = {
+        **dict(scenario.get("governance") or {}),
+        "p4_scenario_override_count": 1,
+        "p4_scenario_override_private_only": True,
+    }
+
+    official_seed = canonical_package_seed(
+        official,
+        package,
+        route_ids=["R1"],
+    )
+    scenario_seed = canonical_package_seed(
+        scenario,
+        package,
+        route_ids=["R1"],
+    )
+    assert scenario_seed == official_seed
+
+    state0 = (
+        scenario["players"][0]["xmins"]["xmins_distribution"]["states"][0]
+    )
+    state0["minutes_mean"] = float(state0["minutes_mean"]) + 1.0
+    changed_seed = canonical_package_seed(
+        scenario,
+        package,
+        route_ids=["R1"],
+    )
+    assert changed_seed != official_seed
+
+
 def test_mc_summary_cache_reuses_simulation_and_rebinds_occurrence(
     monkeypatch,
     tmp_path,

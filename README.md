@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-09-30T08:35:00+07:00`
-> **Production main at sync:** `5299ad23b103e029df4401285a8e5ca9661a1ea0`  
+> **Last runtime/documentation sync:** `2026-09-30T09:49:54+07:00`
+> **Production main at sync:** `3fe1443199d305fed28a6a7203d9bc0535a91808`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -29,6 +29,8 @@ Cross-CPU governance now uses a verified frozen direct-proof registry: a transit
 D-P2 precompute control is owner-triggered and non-authoritative: it has no cron, cannot edit the core scheduler title, cannot complete or advance a core slot, and may only hand the unchanged future report occurrence to the existing governed V6 `report_prefetch` path at the Revision-6 T-15 window.
 
 D-P3 crypto preparation defines a private-only AES-256-GCM boundary for manager-specific P1.7/MC caches. Production owner execution selects the encrypted profile explicitly; non-main branch acceptance selects no-personal-cache and receives no decrypt key. Persistent P1.7/MC cache files are authenticated `*.aead.json` envelopes only, with restored non-AEAD files rejected. It remains preparation until exact-head CI, production-key availability, governed encrypted reuse, semantic-equivalence, and natural post-merge acceptance pass.
+
+P4 scenario-materialization failures expose only bounded whitelist diagnostics: scenario/override identity, safe QA or stage codes, non-sensitive cache state, exact lineage hashes, report slot, and hash-only semantic fingerprints. CURRENT15 payloads, private report bodies, decrypted cache contents and secrets are never part of the failure diagnostic surface.
 
 Scheduler production maturity is established after **3 consecutive genuine natural ChatGPT hourly occurrences**. Historical natural proofs remain immutable; manual recovery, controlled runs, and report-prefetch never increment this maturity counter, and an observed gap remains a scheduler-health failure. Runtime epoch metadata is refreshed from the current schedule policy on each accepted natural slot while preserving the original epoch start.
 

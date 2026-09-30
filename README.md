@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-10-01T05:34:02+07:00`
-> **Production main at sync:** `7520f38e72931226cccc477f33fe10b2f46eaef2`  
+> **Last runtime/documentation sync:** `2026-10-01T05:55:00+07:00`
+> **Production main at sync:** `3a6159fede2b9242521ed37a4dcbd6f3780804b2`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -31,6 +31,7 @@ Canonical DEEP section assembly is source-resolved per section in the locked ord
 Production report workflow treats Stage3/P4 closure as **engineering evidence only**. Stage3 execution still runs and records PASS/FAIL/DEGRADED truth, but its nonzero result cannot override a passing REPORT PRODUCTION GATE. The final human-delivery verdict depends on successful private report publication plus allowlisted public operational proof, not on P4/PERF-F closure.
 
 Private publisher failures emit only bounded allowlisted reason codes to operational logs. REPORT_PRODUCTION_GATE failures expose gate identifiers only; unknown publisher exceptions are reduced to a generic failure code, so delivery incidents can be repaired from evidence without leaking private report content or credentials.
+S19 carries the canonical operational decision token alongside its human-readable final judgement so the fail-closed S01↔S19 consistency gate compares the same authoritative WAIT/PREPARE/ACT state without weakening presentation semantics.
 
 Delivery, privacy, latency, historical-validation and consumption architecture are governed by `docs/v12/FPL_V12_DELIVERY_ARCHITECTURE_PLAN_REV6.md`. Revision 6 supersedes earlier Delivery Architecture Plan wording where inconsistent.
 

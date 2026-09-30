@@ -1314,6 +1314,8 @@ def test_stage_c_s19_explicitly_consumes_s08_and_s15b(monkeypatch):
         chip_state=None,
     )
     assert judgement["consumed_sections"] == ["S08", "S15B"]
+    assert judgement["decision"] == "WAIT"
+    assert judgement["transfer_action"] == "NO TRANSFER NOW"
     assert judgement["selected_route_executable"] is True
     assert judgement["football_optimal_captain"]["element_id"] == 1
     assert judgement["final_captain"]["element_id"] == 1

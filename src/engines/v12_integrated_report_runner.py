@@ -3630,6 +3630,7 @@ def _final_judgement_surface(
     direct_context = dict(mini_detail.get("direct_rival_scope") or {})
     return {
         "consumed_sections": ["S08", "S15B"],
+        "decision": str(operational_action or "WAIT").upper(),
         "transfer_action": (
             "NO TRANSFER NOW"
             if str(operational_action).upper() == "WAIT"

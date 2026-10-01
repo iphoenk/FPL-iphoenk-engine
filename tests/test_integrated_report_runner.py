@@ -1479,6 +1479,166 @@ def test_stage_b_workload_ignores_out_of_window_schedule_events():
     assert player["confirmed_call_up"] is False
 
 
+
+def _compact_previous_sections_fixture() -> dict:
+    ids = [section_id for section_id, _ in runner.CANONICAL_DEEP_SECTIONS]
+    sections = {
+        section_id: {
+            "label": section_id,
+            "state": "COMPLETE",
+            "source_state": "CURRENT",
+            "degradation_reason": None,
+            "content": {
+                "presentation_status": "CURRENT",
+                "authoritative_binding": {"occurrence_bound": True},
+            },
+        }
+        for section_id in ids
+    }
+    sections["S01"]["content"].update({
+        "decision_dashboard": {"TRANSFER": "WAIT"},
+        "operational_state": "WAIT",
+        "primary_decision": "HOLD",
+    })
+    sections["S02"]["content"]["rows"] = [{
+        "element_id": 101,
+        "player": "P101",
+        "p_start": 0.91,
+        "xmins": 82,
+        "projection_1gw": 5.4,
+        "availability": 1.0,
+        "tactical_role_label": "STARTER",
+        "price_relevance": "WATCH",
+    }]
+    sections["S06"]["content"].update({
+        "formation": "4-4-2",
+        "starting_xi": [{"element_id": 101}],
+        "bench": {"gk": 102, "order": [103, 104, 105]},
+        "captain": 101,
+        "vice_captain": 106,
+    })
+    sections["S09"]["content"]["chip"] = "NO CHIP"
+    sections["S15B"]["content"]["rank_battle"] = [
+        {"is_us": False, "rank": 1, "total_points": 360, "manager": "Leader"},
+        {"is_us": True, "rank": 7, "total_points": 344, "manager": "Us"},
+        {"is_us": False, "rank": 8, "total_points": 341, "manager": "Below"},
+    ]
+    sections["S17"]["content"]["source_health"] = {"finance": "AVAILABLE"}
+    sections["S19"]["content"]["final_judgement"] = {
+        "decision": "WAIT",
+        "transfer_action": "WAIT",
+        "selected_route_id": "HOLD",
+        "xi": [101],
+        "bench_gk": 102,
+        "bench_order": [103, 104, 105],
+        "formation": "4-4-2",
+        "final_captain": 101,
+        "vice": 106,
+    }
+    return sections
+
+
+def test_compact_previous_deep_lkg_preserves_decision_delta_inputs(tmp_path: Path):
+    previous = tmp_path / "previous"
+    sections = _compact_previous_sections_fixture()
+    payload = {
+        "schema_version": 1,
+        "artifact_kind": "V12_PREVIOUS_DEEP_BASELINE",
+        "report_mode": "DEEP",
+        "report_slot": "2026-10-01T04:30:00+07:00",
+        "occurrence_id": "DEEP|2026-10-01T04:30:00+07:00",
+        "planning_gw": 6,
+        "delivery_status": "READY_FULL",
+        "runner_status": "PASS",
+        "pre_render_status": "PASS",
+        "post_render_status": "PASS",
+        "human_facing_status": "PASS",
+        "decision": "WAIT",
+        "section_ids": list(sections),
+        "canonical_section_ids": list(sections),
+        "sections": sections,
+        "canonical_bundle_sha256": "a" * 64,
+        "canonical_body_sha256": "b" * 64,
+        "math_recomputed": False,
+    }
+    _write(previous / "previous_deep_baseline.json", payload)
+
+    loaded = runner._load_previous_visible_deep_baseline(
+        previous,
+        current_report_slot="2026-10-01T12:30:00+07:00",
+    )
+    assert loaded["state"] == "AVAILABLE"
+    assert loaded["source"] == "COMPACT_PREVIOUS_DEEP_LKG_CANONICAL_PROJECTION"
+    assert loaded["report_slot"] == "2026-10-01T04:30:00+07:00"
+    assert loaded["math_recomputed"] is False
+
+    snapshot = runner._decision_snapshot_from_report(loaded["report"])
+    assert snapshot == {
+        "operational_transfer_action": "WAIT",
+        "selected_transfer_route": "HOLD",
+        "xi": [101],
+        "bench_gk": 102,
+        "bench_order": [103, 104, 105],
+        "formation": "4-4-2",
+        "captain": 101,
+        "vice": 106,
+        "player_state": {
+            "101": {
+                "player": "P101",
+                "p_start": 0.91,
+                "xmins": 82,
+                "projection_1gw": 5.4,
+                "availability": 1.0,
+                "role": "STARTER",
+                "price_urgency": "WATCH",
+            }
+        },
+        "mini_league": {
+            "our_rank": 7,
+            "our_points": 344,
+            "leader_gap": 16,
+            "top3_gap": None,
+            "top5_gap": None,
+            "nearest_above": None,
+            "nearest_below": {"manager": "Below", "gap": -3},
+        },
+        "finance_state": "AVAILABLE",
+        "chip_state": "NO CHIP",
+    }
+
+
+def test_latest_serving_compat_is_strictly_transitional_canonical_copy(tmp_path: Path):
+    previous = tmp_path / "previous"
+    sections = _compact_previous_sections_fixture()
+    _write(previous / "serving_report.json", {
+        "schema_version": 2,
+        "occurrence_id": "DEEP|2026-10-01T04:30:00+07:00",
+        "report_mode": "DEEP",
+        "report_slot": "2026-10-01T04:30:00+07:00",
+        "delivery_status": "READY_FULL",
+        "sections": sections,
+    })
+    _write(previous / "deep.json", {
+        "report_mode": "DEEP",
+        "report_slot": "2026-10-01T04:30:00+07:00",
+        "runner_status": "PASS",
+        "pre_render_status": "PASS",
+        "post_render_status": "PASS",
+        "human_facing_status": "PASS",
+        "canonical_bundle_sha256": "c" * 64,
+        "canonical_body_sha256": "d" * 64,
+        "math_recomputed": False,
+    })
+    loaded = runner._load_previous_visible_deep_baseline(
+        previous,
+        current_report_slot="2026-10-01T12:30:00+07:00",
+    )
+    assert loaded["state"] == "AVAILABLE"
+    assert loaded["source"] == "LATEST_SERVING_COMPAT_CANONICAL_COPY"
+    assert loaded["math_recomputed"] is False
+
+
+
 def test_natural_regression_truthful_s03_s05_degradation_is_not_internal_failure():
     sections = {
         "S03": {

@@ -650,6 +650,91 @@ def test_last_known_good_latest_is_not_overwritten_by_privacy_failure(tmp_path: 
     assert after == before
 
 
+
+def test_compact_lkg_supplies_truthful_prior_without_history_scan(tmp_path: Path):
+    private = tmp_path / "private"
+    full = _canonical_dir(
+        tmp_path / "full-lkg",
+        delivery_status="READY_FULL",
+        runner_status="PASS",
+        stage3_status="PASS",
+    )
+    publish_private_output(
+        canonical_dir=full,
+        private_root=private,
+        run_id="lkg-source",
+        season=None,
+        model_sha="model",
+        runtime_sha="runtime",
+    )
+
+    later_slot = "2026-09-28T21:30:00+07:00"
+    bundle = assemble_degraded_deep_report(
+        runtime_root=tmp_path / "runtime",
+        report_slot=later_slot,
+        output_dir=tmp_path / "degraded-from-lkg",
+        root_failure="PREFETCH_NOT_TERMINAL",
+        previous_visible_deep_dir=private / "latest",
+    )
+    by_id = {
+        row["section_id"]: row
+        for row in bundle["report"]["sections"]
+    }
+    assert by_id["S02"]["content"]["presentation_status"] == "PRIOR"
+    assert by_id["S02"]["content"]["prior_source_occurrence"] == SLOT
+    assert by_id["S02"]["content"]["prior_reason"]
+    assert by_id["S01"]["content"]["presentation_status"] == "CURRENT"
+    assert by_id["S19"]["content"]["presentation_status"] == "CURRENT"
+
+
+def test_compact_lkg_never_relabels_same_occurrence_as_prior(tmp_path: Path):
+    private = tmp_path / "private"
+    full = _canonical_dir(
+        tmp_path / "same-slot-full",
+        delivery_status="READY_FULL",
+        runner_status="PASS",
+        stage3_status="PASS",
+    )
+    publish_private_output(
+        canonical_dir=full,
+        private_root=private,
+        run_id="same-slot-source",
+        season=None,
+        model_sha="model",
+        runtime_sha="runtime",
+    )
+    bundle = assemble_degraded_deep_report(
+        runtime_root=tmp_path / "runtime",
+        report_slot=SLOT,
+        output_dir=tmp_path / "same-slot-degraded",
+        root_failure="PREFETCH_NOT_TERMINAL",
+        previous_visible_deep_dir=private / "latest",
+    )
+    s02 = {
+        row["section_id"]: row
+        for row in bundle["report"]["sections"]
+    }["S02"]
+    assert s02["content"]["presentation_status"] == "UNAVAILABLE"
+    assert not s02["content"].get("prior_source_occurrence")
+
+
+def test_integrated_report_lane_does_not_checkout_or_scan_private_history():
+    workflow = Path(".github/workflows/v12-integrated-report-runner.yml").read_text(
+        encoding="utf-8"
+    )
+    checkout = workflow.split(
+        "Checkout private report serving surface only", 1
+    )[1].split("Setup Python", 1)[0]
+    assert "            personal\n            latest" in checkout
+    assert "\n            reports" not in checkout
+    assert "\n            acceptance" not in checkout
+    assert "\n            scenarios" not in checkout
+    assert 'root.glob("**/report_bundle.json")' not in workflow
+    assert "previous_deep_baseline.json" in workflow
+    assert "LATEST_SERVING_COMPAT" in workflow
+    assert "git add --sparse latest reports" in workflow
+
+
 def test_integrated_workflow_has_orchestrator_guard_before_runner():
     workflow = Path(".github/workflows/v12-integrated-report-runner.yml").read_text(
         encoding="utf-8"

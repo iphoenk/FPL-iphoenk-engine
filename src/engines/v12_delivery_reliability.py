@@ -293,6 +293,105 @@ def _official_fact_status(runtime_root: Path) -> tuple[str, str | None]:
     return "UNAVAILABLE", official.get("generated_at")
 
 
+def _previous_visible_bundle_from_directory(
+    directory: Path | None,
+) -> dict[str, Any] | None:
+    """Load governed previous presentation state without scanning history."""
+    if directory is None:
+        return None
+    expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+
+    compact = _read_json(directory / "previous_deep_baseline.json", None)
+    if isinstance(compact, Mapping):
+        sections = compact.get("sections")
+        valid = bool(
+            str(compact.get("artifact_kind") or "")
+            == "V12_PREVIOUS_DEEP_BASELINE"
+            and str(compact.get("report_mode") or "").upper() == "DEEP"
+            and str(compact.get("delivery_status") or "").upper() == "READY_FULL"
+            and str(compact.get("runner_status") or "").upper() == "PASS"
+            and str(compact.get("pre_render_status") or "").upper() == "PASS"
+            and str(compact.get("post_render_status") or "").upper() == "PASS"
+            and str(compact.get("human_facing_status") or "").upper() == "PASS"
+            and compact.get("math_recomputed") is False
+            and list(compact.get("section_ids") or []) == expected_ids
+            and isinstance(sections, Mapping)
+            and list(sections) == expected_ids
+        )
+        if valid:
+            return {
+                "report_mode": "DEEP",
+                "report_slot": compact.get("report_slot"),
+                "occurrence_id": compact.get("occurrence_id"),
+                "planning_gw": compact.get("planning_gw"),
+                "canonical_bundle_sha256": compact.get(
+                    "canonical_bundle_sha256"
+                ),
+                "canonical_body_sha256": compact.get(
+                    "canonical_body_sha256"
+                ),
+                "math_recomputed": False,
+                "report": {
+                    "mode": "DEEP",
+                    "sections": [
+                        {
+                            "section_id": section_id,
+                            **deepcopy(dict(sections[section_id])),
+                        }
+                        for section_id in expected_ids
+                    ],
+                },
+            }
+        return None
+
+    serving = _read_json(directory / "serving_report.json", None)
+    digest = _read_json(directory / "deep.json", None)
+    if isinstance(serving, Mapping) and isinstance(digest, Mapping):
+        sections = serving.get("sections")
+        valid = bool(
+            str(serving.get("report_mode") or "").upper() == "DEEP"
+            and str(serving.get("delivery_status") or "").upper() == "READY_FULL"
+            and str(digest.get("report_mode") or "").upper() == "DEEP"
+            and str(digest.get("runner_status") or "").upper() == "PASS"
+            and str(digest.get("pre_render_status") or "").upper() == "PASS"
+            and str(digest.get("post_render_status") or "").upper() == "PASS"
+            and str(digest.get("human_facing_status") or "").upper() == "PASS"
+            and digest.get("math_recomputed") is False
+            and str(serving.get("report_slot") or "")
+            == str(digest.get("report_slot") or "")
+            and isinstance(sections, Mapping)
+            and list(sections) == expected_ids
+        )
+        if valid:
+            return {
+                "report_mode": "DEEP",
+                "report_slot": serving.get("report_slot"),
+                "occurrence_id": serving.get("occurrence_id"),
+                "planning_gw": serving.get("GW"),
+                "canonical_bundle_sha256": digest.get(
+                    "canonical_bundle_sha256"
+                ),
+                "canonical_body_sha256": digest.get(
+                    "canonical_body_sha256"
+                ),
+                "math_recomputed": False,
+                "report": {
+                    "mode": "DEEP",
+                    "sections": [
+                        {
+                            "section_id": section_id,
+                            **deepcopy(dict(sections[section_id])),
+                        }
+                        for section_id in expected_ids
+                    ],
+                },
+            }
+        return None
+
+    legacy = _read_json(directory / "report_bundle.json", None)
+    return dict(legacy) if isinstance(legacy, Mapping) else None
+
+
 def _prior_payload(
     previous_bundle: Mapping[str, Any] | None,
     section_id: str,
@@ -356,11 +455,9 @@ def assemble_degraded_deep_report(
             else "ANALYTICS_PIPELINE"
         )
     )
-    previous_bundle = None
-    if previous_visible_deep_dir is not None:
-        previous_bundle = _read_json(
-            previous_visible_deep_dir / "report_bundle.json", None
-        )
+    previous_bundle = _previous_visible_bundle_from_directory(
+        previous_visible_deep_dir
+    )
     previous_slot = (
         str((previous_bundle or {}).get("report_slot") or "") or None
     )

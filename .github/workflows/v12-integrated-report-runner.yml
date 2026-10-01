@@ -138,7 +138,6 @@ jobs:
           sparse-checkout: |
             personal
             latest
-            reports
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -454,7 +453,7 @@ jobs:
             fi
           fi
 
-      - name: Restore previous valid DEEP baseline from private history
+      - name: Restore governed previous DEEP baseline from private latest
         if: needs.parse.outputs.report_mode == 'DEEP'
         working-directory: app
         env:
@@ -463,39 +462,31 @@ jobs:
           P1_BRANCH_ACCEPTANCE: ${{ github.event_name == 'workflow_dispatch' && github.ref_name != 'main' }}
         run: |
           set -euo pipefail
-          rm -rf artifacts/previous-deep
-          python - <<'PY'
-          import json
-          import os
-          import shutil
-          from datetime import datetime
-          from pathlib import Path
+          rm -rf artifacts/previous-deep artifacts/previous-deep-candidate
+          mkdir -p artifacts/previous-deep
 
-          target = datetime.fromisoformat(os.environ["REPORT_SLOT"].replace("Z", "+00:00"))
-          root = Path("../private-reports/reports")
-          candidates = []
-          for path in root.glob("**/report_bundle.json"):
-              try:
-                  payload = json.loads(path.read_text(encoding="utf-8"))
-                  if str(payload.get("report_mode") or "").upper() != "DEEP":
-                      continue
-                  slot = datetime.fromisoformat(
-                      str(payload.get("report_slot") or "").replace("Z", "+00:00")
-                  )
-                  if slot < target:
-                      candidates.append((slot, path.parent))
-              except (OSError, ValueError, json.JSONDecodeError):
-                  continue
-          if candidates:
-              _, source = max(candidates, key=lambda item: item[0])
-              dest = Path("artifacts/previous-deep")
-              shutil.copytree(source, dest)
-              print("PREVIOUS_PRIVATE_DEEP_BASELINE=AVAILABLE")
-          else:
-              print("PREVIOUS_PRIVATE_DEEP_BASELINE=UNAVAILABLE")
-          PY
-          if [ ! -f artifacts/previous-deep/report_bundle.json ] && [ "$P1_BRANCH_ACCEPTANCE" = "true" ]; then
-            rm -rf artifacts/previous-deep-candidate
+          if [ -f ../private-reports/latest/previous_deep_baseline.json ]; then
+            cp ../private-reports/latest/previous_deep_baseline.json \
+              artifacts/previous-deep/previous_deep_baseline.json
+            echo "PREVIOUS_PRIVATE_DEEP_BASELINE=COMPACT_LKG"
+          elif [ -f ../private-reports/latest/report.json ] && \
+               [ -f ../private-reports/latest/deep.json ]; then
+            cp ../private-reports/latest/report.json \
+              artifacts/previous-deep/serving_report.json
+            cp ../private-reports/latest/deep.json \
+              artifacts/previous-deep/deep.json
+            echo "PREVIOUS_PRIVATE_DEEP_BASELINE=LATEST_SERVING_COMPAT"
+          else
+            echo "PREVIOUS_PRIVATE_DEEP_BASELINE=UNAVAILABLE"
+          fi
+
+          # Transitional branch-only fallback. Production never scans or checks
+          # out private reports/** history. This may disappear once every branch
+          # acceptance environment has seen a governed latest/LKG publication.
+          if [ ! -f artifacts/previous-deep/previous_deep_baseline.json ] && \
+             [ ! -f artifacts/previous-deep/serving_report.json ] && \
+             [ "$P1_BRANCH_ACCEPTANCE" = "true" ]; then
+            rm -rf artifacts/previous-deep
             for run_id in $(gh api \
               "repos/${GITHUB_REPOSITORY}/actions/workflows/v12-integrated-report-runner.yml/runs?branch=main&status=success&per_page=20" \
               --jq '.workflow_runs[].id'); do
@@ -514,7 +505,6 @@ jobs:
             done
             rm -rf artifacts/previous-deep-candidate
           fi
-
       - name: Await exact terminal occurrence prefetch
         if: needs.parse.outputs.report_mode == 'DEEP'
         id: terminal_prefetch
@@ -598,7 +588,9 @@ jobs:
           if [ -n "$CHECKPOINT_TIME" ]; then
             args+=(--checkpoint-time "$CHECKPOINT_TIME")
           fi
-          if [ -f artifacts/previous-deep/report_bundle.json ]; then
+          if [ -f artifacts/previous-deep/previous_deep_baseline.json ] || \
+             [ -f artifacts/previous-deep/serving_report.json ] || \
+             [ -f artifacts/previous-deep/report_bundle.json ]; then
             args+=(--previous-visible-deep-dir "artifacts/previous-deep")
           fi
           mkdir -p artifacts/v12-private-delivery
@@ -859,7 +851,7 @@ jobs:
               cd ../private-reports
               git config user.name "github-actions[bot]"
               git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-              git add latest reports
+              git add --sparse latest reports
               if ! git diff --cached --quiet; then
                 git commit -m "report(v12): private ${REPORT_MODE} ${REPORT_SLOT} run ${GITHUB_RUN_ID}"
               fi

@@ -62,6 +62,7 @@ from src.engines.v12_deep_delivery import (
     validate_deep_decision_content_delivery,
 )
 from src.engines.v12_delivery_reliability import (
+    CANONICAL_DEEP_SECTIONS,
     assemble_degraded_deep_report,
     wait_for_prefetch_terminal,
     write_serving_artifacts,
@@ -515,6 +516,141 @@ def _decision_delta_surface(
     }
 
 
+def _serving_sections_as_report(
+    sections: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Rehydrate only the existing presentation contract, never model internals."""
+    expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    rows: list[dict[str, Any]] = []
+    for section_id in expected_ids:
+        raw = sections.get(section_id)
+        if not isinstance(raw, Mapping):
+            continue
+        rows.append(
+            {
+                "section_id": section_id,
+                "label": raw.get("label"),
+                "state": raw.get("state"),
+                "source_state": raw.get("source_state"),
+                "degradation_reason": raw.get("degradation_reason"),
+                "available_count": raw.get("available_count"),
+                "expected_count": raw.get("expected_count"),
+                "content": deepcopy(raw.get("content") or {}),
+            }
+        )
+    return {
+        "mode": "DEEP",
+        "sections": rows,
+        "numbered_headings": 19,
+        "rendered_blocks_including_suffix_sections": len(rows),
+        "rendered_blocks_including_15B": len(rows),
+        "exact_canonical_order": [row["section_id"] for row in rows] == expected_ids,
+    }
+
+
+def _sha256_token_valid(value: Any) -> bool:
+    token = str(value or "").strip().lower()
+    return len(token) == 64 and all(char in "0123456789abcdef" for char in token)
+
+
+def _validate_compact_previous_deep(
+    payload: Mapping[str, Any],
+    *,
+    current_report_slot: str,
+) -> tuple[list[str], dict[str, Any] | None]:
+    expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    failures: list[str] = []
+    if str(payload.get("artifact_kind") or "") != "V12_PREVIOUS_DEEP_BASELINE":
+        failures.append("ARTIFACT_KIND_INVALID")
+    if str(payload.get("report_mode") or "").upper() != "DEEP":
+        failures.append("REPORT_MODE_NOT_DEEP")
+    if str(payload.get("delivery_status") or "").upper() != "READY_FULL":
+        failures.append("DELIVERY_STATUS_NOT_FULL")
+    if str(payload.get("runner_status") or "").upper() != "PASS":
+        failures.append("RUNNER_STATUS_NOT_PASS")
+    for key in ("pre_render_status", "post_render_status", "human_facing_status"):
+        if str(payload.get(key) or "").upper() != "PASS":
+            failures.append(f"{key.upper()}_NOT_PASS")
+    if payload.get("math_recomputed") is not False:
+        failures.append("MATH_RECOMPUTED")
+    if list(payload.get("section_ids") or []) != expected_ids:
+        failures.append("SECTION_IDS_INVALID")
+    sections = payload.get("sections")
+    if not isinstance(sections, Mapping) or list(sections) != expected_ids:
+        failures.append("SECTIONS_INVALID")
+    for key in ("canonical_bundle_sha256", "canonical_body_sha256"):
+        if not _sha256_token_valid(payload.get(key)):
+            failures.append(f"{key.upper()}_INVALID")
+
+    previous_slot = str(payload.get("report_slot") or "")
+    previous_dt = _iso_datetime(previous_slot)
+    current_dt = _iso_datetime(current_report_slot)
+    if previous_dt is None or current_dt is None or previous_dt >= current_dt:
+        failures.append("PREVIOUS_SLOT_NOT_STRICTLY_OLDER")
+
+    report = (
+        _serving_sections_as_report(sections)
+        if isinstance(sections, Mapping)
+        else None
+    )
+    if isinstance(report, Mapping):
+        if len(report.get("sections") or []) != len(expected_ids):
+            failures.append("REPORT_REHYDRATION_INCOMPLETE")
+        snapshot = _decision_snapshot_from_report(report)
+        if not snapshot.get("operational_transfer_action"):
+            failures.append("DECISION_SNAPSHOT_OPERATIONAL_STATE_MISSING")
+    return list(dict.fromkeys(failures)), report
+
+
+def _validate_latest_serving_compat(
+    serving: Mapping[str, Any],
+    digest: Mapping[str, Any],
+    *,
+    current_report_slot: str,
+) -> tuple[list[str], dict[str, Any] | None]:
+    """One-generation bridge until the first governed compact LKG is published."""
+    expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    failures: list[str] = []
+    if str(serving.get("report_mode") or "").upper() != "DEEP":
+        failures.append("SERVING_REPORT_MODE_NOT_DEEP")
+    if str(serving.get("delivery_status") or "").upper() != "READY_FULL":
+        failures.append("SERVING_DELIVERY_NOT_FULL")
+    if str(digest.get("report_mode") or "").upper() != "DEEP":
+        failures.append("DIGEST_REPORT_MODE_NOT_DEEP")
+    if str(digest.get("runner_status") or "").upper() != "PASS":
+        failures.append("DIGEST_RUNNER_NOT_PASS")
+    for key in ("pre_render_status", "post_render_status", "human_facing_status"):
+        if str(digest.get(key) or "").upper() != "PASS":
+            failures.append(f"DIGEST_{key.upper()}_NOT_PASS")
+    if digest.get("math_recomputed") is not False:
+        failures.append("DIGEST_MATH_RECOMPUTED")
+    for key in ("canonical_bundle_sha256", "canonical_body_sha256"):
+        if not _sha256_token_valid(digest.get(key)):
+            failures.append(f"DIGEST_{key.upper()}_INVALID")
+
+    previous_slot = str(serving.get("report_slot") or "")
+    if previous_slot != str(digest.get("report_slot") or ""):
+        failures.append("SERVING_DIGEST_SLOT_MISMATCH")
+    previous_dt = _iso_datetime(previous_slot)
+    current_dt = _iso_datetime(current_report_slot)
+    if previous_dt is None or current_dt is None or previous_dt >= current_dt:
+        failures.append("PREVIOUS_SLOT_NOT_STRICTLY_OLDER")
+
+    sections = serving.get("sections")
+    if not isinstance(sections, Mapping) or list(sections) != expected_ids:
+        failures.append("SERVING_SECTIONS_INVALID")
+    report = (
+        _serving_sections_as_report(sections)
+        if isinstance(sections, Mapping)
+        else None
+    )
+    if isinstance(report, Mapping):
+        snapshot = _decision_snapshot_from_report(report)
+        if not snapshot.get("operational_transfer_action"):
+            failures.append("DECISION_SNAPSHOT_OPERATIONAL_STATE_MISSING")
+    return list(dict.fromkeys(failures)), report
+
+
 def _load_previous_visible_deep_baseline(
     directory: Path | None,
     *,
@@ -525,11 +661,81 @@ def _load_previous_visible_deep_baseline(
             "state": "UNAVAILABLE",
             "reason": "PREVIOUS_DEEP_ARTIFACT_NOT_BOUND",
         }
+
+    compact_path = directory / "previous_deep_baseline.json"
+    if compact_path.exists():
+        payload = _read_json(compact_path, {}) or {}
+        failures, report = _validate_compact_previous_deep(
+            payload,
+            current_report_slot=current_report_slot,
+        )
+        previous_slot = str(payload.get("report_slot") or "")
+        if not failures and isinstance(report, Mapping):
+            return {
+                "state": "AVAILABLE",
+                "reason": None,
+                "report_slot": previous_slot,
+                "occurrence_id": payload.get("occurrence_id"),
+                "source": "COMPACT_PREVIOUS_DEEP_LKG_CANONICAL_PROJECTION",
+                "report": dict(report),
+                "canonical_bundle_sha256": payload.get(
+                    "canonical_bundle_sha256"
+                ),
+                "canonical_body_sha256": payload.get(
+                    "canonical_body_sha256"
+                ),
+                "validation_failures": [],
+                "math_recomputed": False,
+            }
+        return {
+            "state": "UNAVAILABLE",
+            "reason": "COMPACT_PREVIOUS_DEEP_VALIDATION_FAILED",
+            "candidate_report_slot": previous_slot or None,
+            "validation_failures": failures,
+        }
+
+    serving_path = directory / "serving_report.json"
+    digest_path = directory / "deep.json"
+    if serving_path.exists() and digest_path.exists():
+        serving = _read_json(serving_path, {}) or {}
+        digest = _read_json(digest_path, {}) or {}
+        failures, report = _validate_latest_serving_compat(
+            serving,
+            digest,
+            current_report_slot=current_report_slot,
+        )
+        previous_slot = str(serving.get("report_slot") or "")
+        if not failures and isinstance(report, Mapping):
+            return {
+                "state": "AVAILABLE",
+                "reason": None,
+                "report_slot": previous_slot,
+                "occurrence_id": serving.get("occurrence_id"),
+                "source": "LATEST_SERVING_COMPAT_CANONICAL_COPY",
+                "report": dict(report),
+                "canonical_bundle_sha256": digest.get(
+                    "canonical_bundle_sha256"
+                ),
+                "canonical_body_sha256": digest.get(
+                    "canonical_body_sha256"
+                ),
+                "validation_failures": [],
+                "math_recomputed": False,
+            }
+        return {
+            "state": "UNAVAILABLE",
+            "reason": "LATEST_SERVING_COMPAT_VALIDATION_FAILED",
+            "candidate_report_slot": previous_slot or None,
+            "validation_failures": failures,
+        }
+
+    # Transitional branch-acceptance compatibility only. Production workflow
+    # no longer checks out or scans private reports/** history.
     bundle_path = directory / "report_bundle.json"
     if not bundle_path.exists():
         return {
             "state": "UNAVAILABLE",
-            "reason": "PREVIOUS_DEEP_BUNDLE_MISSING",
+            "reason": "PREVIOUS_DEEP_BASELINE_MISSING",
         }
     bundle = _read_json(bundle_path, {}) or {}
     if not isinstance(bundle, Mapping):

@@ -295,11 +295,34 @@ def _official_fact_status(runtime_root: Path) -> tuple[str, str | None]:
 
 def _previous_visible_bundle_from_directory(
     directory: Path | None,
+    *,
+    current_report_slot: str,
 ) -> dict[str, Any] | None:
     """Load governed previous presentation state without scanning history."""
     if directory is None:
         return None
     expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    try:
+        current_dt = datetime.fromisoformat(
+            str(current_report_slot or "").replace("Z", "+00:00")
+        )
+    except ValueError:
+        return None
+    if current_dt.tzinfo is None or current_dt.utcoffset() is None:
+        return None
+
+    def strictly_older(value: Any) -> bool:
+        try:
+            previous_dt = datetime.fromisoformat(
+                str(value or "").replace("Z", "+00:00")
+            )
+        except ValueError:
+            return False
+        return bool(
+            previous_dt.tzinfo is not None
+            and previous_dt.utcoffset() is not None
+            and previous_dt < current_dt
+        )
 
     compact = _read_json(directory / "previous_deep_baseline.json", None)
     if isinstance(compact, Mapping):
@@ -314,6 +337,7 @@ def _previous_visible_bundle_from_directory(
             and str(compact.get("post_render_status") or "").upper() == "PASS"
             and str(compact.get("human_facing_status") or "").upper() == "PASS"
             and compact.get("math_recomputed") is False
+            and strictly_older(compact.get("report_slot"))
             and list(compact.get("section_ids") or []) == expected_ids
             and isinstance(sections, Mapping)
             and list(sections) == expected_ids
@@ -357,6 +381,7 @@ def _previous_visible_bundle_from_directory(
             and str(digest.get("post_render_status") or "").upper() == "PASS"
             and str(digest.get("human_facing_status") or "").upper() == "PASS"
             and digest.get("math_recomputed") is False
+            and strictly_older(serving.get("report_slot"))
             and str(serving.get("report_slot") or "")
             == str(digest.get("report_slot") or "")
             and isinstance(sections, Mapping)
@@ -389,7 +414,12 @@ def _previous_visible_bundle_from_directory(
         return None
 
     legacy = _read_json(directory / "report_bundle.json", None)
-    return dict(legacy) if isinstance(legacy, Mapping) else None
+    if (
+        isinstance(legacy, Mapping)
+        and strictly_older(legacy.get("report_slot"))
+    ):
+        return dict(legacy)
+    return None
 
 
 def _prior_payload(
@@ -456,7 +486,8 @@ def assemble_degraded_deep_report(
         )
     )
     previous_bundle = _previous_visible_bundle_from_directory(
-        previous_visible_deep_dir
+        previous_visible_deep_dir,
+        current_report_slot=report_slot,
     )
     previous_slot = (
         str((previous_bundle or {}).get("report_slot") or "") or None

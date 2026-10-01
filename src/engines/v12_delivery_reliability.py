@@ -293,6 +293,135 @@ def _official_fact_status(runtime_root: Path) -> tuple[str, str | None]:
     return "UNAVAILABLE", official.get("generated_at")
 
 
+def _previous_visible_bundle_from_directory(
+    directory: Path | None,
+    *,
+    current_report_slot: str,
+) -> dict[str, Any] | None:
+    """Load governed previous presentation state without scanning history."""
+    if directory is None:
+        return None
+    expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    try:
+        current_dt = datetime.fromisoformat(
+            str(current_report_slot or "").replace("Z", "+00:00")
+        )
+    except ValueError:
+        return None
+    if current_dt.tzinfo is None or current_dt.utcoffset() is None:
+        return None
+
+    def strictly_older(value: Any) -> bool:
+        try:
+            previous_dt = datetime.fromisoformat(
+                str(value or "").replace("Z", "+00:00")
+            )
+        except ValueError:
+            return False
+        return bool(
+            previous_dt.tzinfo is not None
+            and previous_dt.utcoffset() is not None
+            and previous_dt < current_dt
+        )
+
+    compact = _read_json(directory / "previous_deep_baseline.json", None)
+    if isinstance(compact, Mapping):
+        sections = compact.get("sections")
+        valid = bool(
+            str(compact.get("artifact_kind") or "")
+            == "V12_PREVIOUS_DEEP_BASELINE"
+            and str(compact.get("report_mode") or "").upper() == "DEEP"
+            and str(compact.get("delivery_status") or "").upper() == "READY_FULL"
+            and str(compact.get("runner_status") or "").upper() == "PASS"
+            and str(compact.get("pre_render_status") or "").upper() == "PASS"
+            and str(compact.get("post_render_status") or "").upper() == "PASS"
+            and str(compact.get("human_facing_status") or "").upper() == "PASS"
+            and compact.get("math_recomputed") is False
+            and strictly_older(compact.get("report_slot"))
+            and list(compact.get("section_ids") or []) == expected_ids
+            and isinstance(sections, Mapping)
+            and list(sections) == expected_ids
+        )
+        if valid:
+            return {
+                "report_mode": "DEEP",
+                "report_slot": compact.get("report_slot"),
+                "occurrence_id": compact.get("occurrence_id"),
+                "planning_gw": compact.get("planning_gw"),
+                "canonical_bundle_sha256": compact.get(
+                    "canonical_bundle_sha256"
+                ),
+                "canonical_body_sha256": compact.get(
+                    "canonical_body_sha256"
+                ),
+                "math_recomputed": False,
+                "report": {
+                    "mode": "DEEP",
+                    "sections": [
+                        {
+                            "section_id": section_id,
+                            **deepcopy(dict(sections[section_id])),
+                        }
+                        for section_id in expected_ids
+                    ],
+                },
+            }
+        return None
+
+    serving = _read_json(directory / "serving_report.json", None)
+    digest = _read_json(directory / "deep.json", None)
+    if isinstance(serving, Mapping) and isinstance(digest, Mapping):
+        sections = serving.get("sections")
+        valid = bool(
+            str(serving.get("report_mode") or "").upper() == "DEEP"
+            and str(serving.get("delivery_status") or "").upper() == "READY_FULL"
+            and str(digest.get("report_mode") or "").upper() == "DEEP"
+            and str(digest.get("runner_status") or "").upper() == "PASS"
+            and str(digest.get("pre_render_status") or "").upper() == "PASS"
+            and str(digest.get("post_render_status") or "").upper() == "PASS"
+            and str(digest.get("human_facing_status") or "").upper() == "PASS"
+            and digest.get("math_recomputed") is False
+            and strictly_older(serving.get("report_slot"))
+            and str(serving.get("report_slot") or "")
+            == str(digest.get("report_slot") or "")
+            and isinstance(sections, Mapping)
+            and list(sections) == expected_ids
+        )
+        if valid:
+            return {
+                "report_mode": "DEEP",
+                "report_slot": serving.get("report_slot"),
+                "occurrence_id": serving.get("occurrence_id"),
+                "planning_gw": serving.get("GW"),
+                "canonical_bundle_sha256": digest.get(
+                    "canonical_bundle_sha256"
+                ),
+                "canonical_body_sha256": digest.get(
+                    "canonical_body_sha256"
+                ),
+                "math_recomputed": False,
+                "report": {
+                    "mode": "DEEP",
+                    "sections": [
+                        {
+                            "section_id": section_id,
+                            **deepcopy(dict(sections[section_id])),
+                        }
+                        for section_id in expected_ids
+                    ],
+                },
+            }
+        return None
+
+    legacy = _read_json(directory / "report_bundle.json", None)
+    if (
+        isinstance(legacy, Mapping)
+        and strictly_older(legacy.get("report_slot"))
+    ):
+        return dict(legacy)
+    return None
+
+
 def _prior_payload(
     previous_bundle: Mapping[str, Any] | None,
     section_id: str,
@@ -356,11 +485,10 @@ def assemble_degraded_deep_report(
             else "ANALYTICS_PIPELINE"
         )
     )
-    previous_bundle = None
-    if previous_visible_deep_dir is not None:
-        previous_bundle = _read_json(
-            previous_visible_deep_dir / "report_bundle.json", None
-        )
+    previous_bundle = _previous_visible_bundle_from_directory(
+        previous_visible_deep_dir,
+        current_report_slot=report_slot,
+    )
     previous_slot = (
         str((previous_bundle or {}).get("report_slot") or "") or None
     )
@@ -986,8 +1114,378 @@ def validate_presentation_qa_manifest(manifest: Mapping[str, Any]) -> list[str]:
     return failures
 
 
+SERVING_MAX_SERIALIZED_BYTES = 5 * 1024 * 1024
+
+_SERVING_PROVENANCE_KEYS: tuple[str, ...] = (
+    "presentation_status",
+    "prior_source_occurrence",
+    "prior_reason",
+    "authoritative_binding",
+)
+
+_SERVING_SECTION_KEYS: dict[str, tuple[str, ...]] = {
+    "S01": (
+        "decision_dashboard", "operational_state", "planning_gw",
+        "primary_decision", "reason", "key_decision_driver",
+        "current_blockers", "current_planning_gw",
+    ),
+    "S02": ("rows", "current15_authority"),
+    "S03": ("decision_delta",),
+    "S04": ("changes", "stagec_universe_intelligence"),
+    "S05": (
+        "state", "planning_gw", "gw_topology", "period_flags",
+        "competition_coverage", "player_workload", "weather",
+        "workload_feeds_p1_1_review_only", "static_fatigue_penalty_applied",
+        "weather_mutates_football_model", "dgw_cross_fixture_covariance_claimed",
+        "degradation_reason", "fixture_swing",
+    ),
+    "S06": (
+        "formation", "starting_xi", "bench", "captain", "vice_captain",
+        "lineup_score", "formation_comparison", "xi_base_xpts",
+        "captain_adjusted_xpts", "lineup_route_utility", "score_semantics",
+        "bgw_context", "bgw_lineup_review_required",
+    ),
+    "S06B": (
+        "stance", "stance_source", "league_context", "raw_ev_formation",
+        "football_optimal_formation", "mini_league_objective_formation",
+        "objectives_same", "projected_points_difference",
+        "raw_projected_points", "mini_league_objective_projected_points",
+        "formation_alternatives", "high_eo_protection", "differential_slots",
+        "rational_differential_exposure", "aggressive_downside", "governance",
+    ),
+    "S07": ("battles", "empty_is_truthful", "battle_summary"),
+    "S08": (
+        "decision_state", "captain", "vice_captain", "captain_frontier",
+        "captain_safe_pool", "candidate_universe_proof",
+        "football_baseline_first", "mini_league_overlay_second",
+        "mini_league_override_applied", "near_tie_authority",
+        "reconciliation_reason", "authority", "raw_mean_is_not_sole_authority",
+    ),
+    "S09": (
+        "chip", "chip_ledger", "chip_ledger_authority",
+        "remaining_chip_set_required",
+        "free_hit_optimization_required_when_fh_only", "considered_now",
+        "horizon", "trigger", "hold_reason", "bgw_context",
+        "bgw_chip_review_required",
+    ),
+    "S10": (
+        "state", "available_count", "expected_count", "rows",
+        "identity_complete", "predictor_complete_count",
+        "date_state_complete_count", "degradation_reason",
+        "price_alone_may_create_act", "bank", "bank_status",
+        "sell_value_status",
+    ),
+    "S11": (
+        "state", "available_count", "expected_count", "scanner20",
+        "actionable_watchlist", "actionable_count", "position_counts",
+        "universe_authority", "full_eligible_universe_scanned_count",
+        "owned_excluded", "degradation_reason", "macro_weights",
+        "position_formulae", "scope",
+    ),
+    "S12": (
+        "state", "available_count", "expected_count", "rows",
+        "predictor_health", "degradation_reason", "artifact_adapter",
+        "sort_contract", "visible_contract_fields",
+        "existing_eta_threshold_source", "predictor_payload_hash",
+        "date_state_complete_count", "expected_change_date_count",
+        "no_crossing_count",
+    ),
+    "S13": (
+        "state", "available_count", "expected_count", "rows",
+        "predictor_health", "degradation_reason", "artifact_adapter",
+        "sort_contract", "visible_contract_fields",
+        "existing_eta_threshold_source", "predictor_payload_hash",
+        "date_state_complete_count", "expected_change_date_count",
+        "no_crossing_count",
+    ),
+    "S14": (
+        "universe_scan", "package_routes", "frontier",
+        "package_search_proof", "funded_search_proof", "package_search_scope",
+        "package_universe_challengers", "football_frontier_status",
+        "execution_economics_status", "execution_economics_authority",
+        "material_route_selection", "monte_carlo", "decision",
+        "position_mechanisms", "mini_league_overlay", "bgw_context",
+        "bgw_frontier_review_required", "bgw_is_context_not_second_optimizer",
+        "mathematical_decision_stack",
+    ),
+    "S14B": (
+        "squad_classification", "staging_rows", "free_transfers",
+        "free_transfers_status", "ft_authority", "ft_saving_plan",
+        "order_of_transfers", "budget_dependency", "price_dependency",
+        "player_dependency", "contingency", "target_formation",
+        "roadmap_is_not_transfer_commitment",
+        "roadmap_reoptimizes_on_new_evidence", "bgw_context",
+        "bgw_reoptimization_trigger",
+    ),
+    "S15": ("evidence_quality", "model_execution"),
+    "S15B": (
+        "schema_version", "snapshot_id", "league_id", "league_name",
+        "league_kind", "planning_gw", "generated_at", "coverage_state",
+        "league_scope", "expected_manager_count", "standings_manager_count",
+        "submitted_picks_available_count", "submitted_picks_missing_count",
+        "missing_entry_ids", "rival_exposure_denominator",
+        "denominator_fingerprint", "eo_supported", "exposures", "chip_counts",
+        "current_league_context", "provenance", "downstream_overlay",
+        "football_baseline_precedes_leverage", "protection_players",
+        "differential_opportunities", "disclosed_picks_gw",
+        "disclosed_picks_are_baseline_not_gw_forecast",
+        "disclosed_picks_label", "rank_battle", "denominator_scopes",
+        "league_full_composition", "league_full_composition_complete",
+        "league_unique_player_count", "league_our15_exposure",
+        "rivals_our15_exposure", "our15_rival_exposure",
+        "direct_rival_scope", "direct_rivals",
+        "direct_rival_our15_exposure", "rival_threats",
+        "captain_leverage", "strategy_implication", "report_contract",
+    ),
+    "S16": ("rows", "why_not_duplicate_of_our15"),
+    "S16B": (
+        "our15", "material_universe_candidates", "full_universe_scan",
+        "recency_weighting", "bayesian_update", "linkup_dependency",
+    ),
+    "S17": ("engine_data_status", "source_health", "auth_authority", "lineage"),
+    "S18": (
+        "action_board", "NOW", "NEXT", "TRIGGER TO ACT",
+        "LATEST SAFE DECISION POINT", "COST OF WAITING",
+        "ABORT / REVERSAL", "BEST ALTERNATIVE",
+    ),
+    "S19": ("final_judgement",),
+}
+
+_SERVING_ROW_KEYS: dict[str, tuple[str, ...]] = {
+    "S02": (
+        "element_id", "player", "name", "position", "club",
+        "current_price", "selling_price", "opponent", "home_away",
+        "availability", "p_available", "p_start", "xmins",
+        "projection_1gw", "gw_plus_1", "projection_3gw", "three_gw",
+        "projection_5gw", "five_gw", "tactical_role_label",
+        "tactical_role", "tactical_score", "injury_rotation_warning",
+        "price_relevance", "ownership_source",
+    ),
+    "S06": (
+        "element", "element_id", "name", "player", "position",
+        "p_start", "xmins", "xpts_mean", "selection_score",
+    ),
+    "S10": (
+        "element_id", "name", "player", "current_price",
+        "authenticated_sell_value", "predictor_direction",
+        "predictor_progress", "predictor_projected_percent",
+        "prediction_strength", "next_official_price_cycle_uk",
+        "next_official_price_cycle_wib", "cycles_to_expected_change",
+        "estimated_change_date_uk", "estimated_change_date_wib",
+        "estimated_change_window", "eta_context", "eta_reason",
+        "date_state", "evidence_timestamp", "source_age_minutes",
+        "freshness", "confidence", "decision_implication",
+    ),
+    "S11": (
+        "element_id", "element", "name", "position", "current_price",
+        "xmins", "p_start", "p_dnp", "position_specific_evidence",
+        "admission_gate", "football_score", "watchlist_action", "action",
+        "predictor_direction", "predictor_progress", "delta_state",
+        "delta", "movement",
+    ),
+    "S12": (
+        "element_id", "player", "player_name", "current_price",
+        "selected_by_percent", "ownership_percent", "direction",
+        "official_or_provider_progress", "current_progress_percent",
+        "projected_percent", "projection_offset_0_percent",
+        "cycles_to_expected_change", "predicted_change_cycle",
+        "estimated_change_at_wib", "predicted_change_at", "eta_context",
+        "eta_human", "estimated_change_window", "impact_on_our_decision",
+        "model_urgency", "confidence", "estimate_source", "source",
+        "evidence_timestamp", "observed_at", "source_age_minutes",
+        "freshness", "date_state", "delta_progress", "progress_delta",
+        "delta_rank", "rank_delta", "velocity", "progress_velocity",
+        "target_relevance", "raw_payload_hash",
+    ),
+    "S13": (
+        "element_id", "player", "player_name", "current_price",
+        "selected_by_percent", "ownership_percent", "direction",
+        "official_or_provider_progress", "current_progress_percent",
+        "projected_percent", "projection_offset_0_percent",
+        "cycles_to_expected_change", "predicted_change_cycle",
+        "estimated_change_at_wib", "predicted_change_at", "eta_context",
+        "eta_human", "estimated_change_window", "impact_on_our_decision",
+        "model_urgency", "confidence", "estimate_source", "source",
+        "evidence_timestamp", "observed_at", "source_age_minutes",
+        "freshness", "date_state", "delta_progress", "progress_delta",
+        "delta_rank", "rank_delta", "velocity", "progress_velocity",
+        "target_relevance", "raw_payload_hash",
+    ),
+    "S16": (
+        "element_id", "player", "name", "availability", "p_available",
+        "p_start", "xmins", "probabilities", "projection_1gw", "gw_plus_1",
+        "projection_3gw", "three_gw", "projection_5gw", "five_gw",
+        "underlying", "role_detail", "defensive_contribution",
+        "workload_context", "fixture_detail", "bayesian_state",
+        "main_upside", "main_risk", "mini_league_relevance",
+        "action", "decision",
+    ),
+}
+
+_SERVING_OVERLAY_KEYS: tuple[str, ...] = (
+    "schema_version", "model_owner", "model_id", "planning_gw",
+    "football_baseline", "league_context", "mini_league_evidence_provenance",
+    "coverage", "risk_posture", "relevant_rival_exposure",
+    "route_screening_summary", "adjusted_decision", "decision_delta",
+    "reversal_triggers", "rank_probability_boundary", "governance",
+    "status", "generated_at", "model_version", "feature_version",
+    "parameter_version", "run_fingerprint", "output_fingerprint",
+    "model_evidence_binding",
+)
+
+
+def _serving_pick(
+    value: Mapping[str, Any] | None,
+    keys: Sequence[str],
+) -> dict[str, Any]:
+    source = value if isinstance(value, Mapping) else {}
+    return {
+        key: deepcopy(source[key])
+        for key in keys
+        if key in source
+    }
+
+
+def _serving_project_rows(
+    rows: Any,
+    keys: Sequence[str],
+) -> list[dict[str, Any]]:
+    return [
+        _serving_pick(row, keys)
+        for row in (rows or [])
+        if isinstance(row, Mapping)
+    ]
+
+
+def _serving_project_s16b(content: dict[str, Any]) -> None:
+    compact_our15 = []
+    for raw in content.get("our15") or []:
+        if not isinstance(raw, Mapping):
+            continue
+        row = _serving_pick(
+            raw,
+            (
+                "element_id", "player", "trajectory",
+                "bayesian_state", "linkup_dependency",
+            ),
+        )
+        trajectory = row.get("trajectory")
+        if isinstance(trajectory, Mapping):
+            projected = _serving_pick(
+                trajectory,
+                (
+                    "trajectory_classification",
+                    "role_minutes_evolution",
+                    "matches",
+                ),
+            )
+            projected["matches"] = _serving_project_rows(
+                projected.get("matches"),
+                (
+                    "gw", "opponent_team_id", "home", "starter", "minutes",
+                    "result", "fpl_points", "goals", "assists", "xg",
+                    "npxg", "xa", "xgi", "shots", "shots_on_target",
+                    "box_touches", "key_passes", "chances_created",
+                    "big_chances", "set_piece_role", "set_piece_involvement",
+                    "penalty_role", "penalty_involvement",
+                    "defensive_contribution", "team_formation",
+                    "opponent_formation", "role", "price_movement",
+                    "outlook_1_3_5gw",
+                ),
+            )
+            row["trajectory"] = projected
+        compact_our15.append(row)
+    content["our15"] = compact_our15
+
+    compact_candidates = []
+    for raw in content.get("material_universe_candidates") or []:
+        if not isinstance(raw, Mapping):
+            continue
+        compact_candidates.append(
+            {
+                **_serving_pick(
+                    raw,
+                    (
+                        "element_id", "name", "primary_classification",
+                        "horizon_1gw", "horizon_3gw", "horizon_5gw",
+                    ),
+                ),
+                "trajectory": _serving_pick(
+                    raw.get("trajectory") if isinstance(raw.get("trajectory"), Mapping) else {},
+                    ("trajectory_classification",),
+                ),
+                "minutes": _serving_pick(
+                    raw.get("minutes") if isinstance(raw.get("minutes"), Mapping) else {},
+                    ("xmins", "p_start"),
+                ),
+            }
+        )
+    content["material_universe_candidates"] = compact_candidates
+
+
+def _serving_project_content(
+    section_id: str,
+    raw_content: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Allowlist only presentation-required fields for one client section."""
+    keys = _SERVING_SECTION_KEYS.get(section_id, ())
+    content = _serving_pick(
+        raw_content,
+        (*keys, *_SERVING_PROVENANCE_KEYS),
+    )
+
+    row_keys = _SERVING_ROW_KEYS.get(section_id)
+    if row_keys and "rows" in content:
+        content["rows"] = _serving_project_rows(content.get("rows"), row_keys)
+
+    if section_id == "S06" and "starting_xi" in content:
+        content["starting_xi"] = _serving_project_rows(
+            content.get("starting_xi"),
+            _SERVING_ROW_KEYS["S06"],
+        )
+
+    if section_id == "S11":
+        for key in ("scanner20", "actionable_watchlist"):
+            if key in content:
+                content[key] = _serving_project_rows(
+                    content.get(key),
+                    _SERVING_ROW_KEYS["S11"],
+                )
+
+    if section_id == "S14":
+        decision = content.get("decision")
+        if isinstance(decision, Mapping):
+            content["decision"] = _serving_pick(
+                decision,
+                (
+                    "status", "model_owner", "decision_layer",
+                    "selected_route_id", "operational_action", "reason",
+                    "sequential_decision", "action_contract", "governance",
+                ),
+            )
+        overlay = content.get("mini_league_overlay")
+        if isinstance(overlay, Mapping):
+            content["mini_league_overlay"] = _serving_pick(
+                overlay,
+                _SERVING_OVERLAY_KEYS,
+            )
+
+    if section_id == "S15B":
+        overlay = content.get("downstream_overlay")
+        if isinstance(overlay, Mapping):
+            content["downstream_overlay"] = _serving_pick(
+                overlay,
+                _SERVING_OVERLAY_KEYS,
+            )
+
+    if section_id == "S16B":
+        _serving_project_s16b(content)
+
+    return content
+
+
 def build_serving_snapshot(bundle: Mapping[str, Any]) -> dict[str, Any]:
-    """Build the stable client-facing serving contract from one canonical bundle."""
+    """Build the stable compact client contract from one canonical bundle."""
     sections = [
         dict(row)
         for row in ((bundle.get("report") or {}).get("sections") or [])
@@ -1009,7 +1507,7 @@ def build_serving_snapshot(bundle: Mapping[str, Any]) -> dict[str, Any]:
         s01.get("decision")
         or s01.get("operational_state")
         or s01.get("primary_decision")
-        or ((s19.get("final_judgement") or {}).get("transfer_action")
+        or ((s19.get("final_judgement") or {}).get("decision")
             if isinstance(s19.get("final_judgement"), Mapping)
             else None)
         or "UNAVAILABLE"
@@ -1049,7 +1547,7 @@ def build_serving_snapshot(bundle: Mapping[str, Any]) -> dict[str, Any]:
     )
     planning_gw = bundle.get("planning_gw")
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "occurrence_id": str(
             bundle.get("occurrence_id")
             or f"{bundle.get('report_mode')}|{bundle.get('report_slot')}"
@@ -1077,7 +1575,13 @@ def build_serving_snapshot(bundle: Mapping[str, Any]) -> dict[str, Any]:
                 "label": row.get("label"),
                 "state": row.get("state"),
                 "source_state": row.get("source_state"),
-                "content": deepcopy(row.get("content") or {}),
+                "degradation_reason": row.get("degradation_reason"),
+                "available_count": row.get("available_count"),
+                "expected_count": row.get("expected_count"),
+                "content": _serving_project_content(
+                    str(row.get("section_id") or ""),
+                    row.get("content") if isinstance(row.get("content"), Mapping) else {},
+                ),
             }
             for row in sections
         },
@@ -1091,9 +1595,12 @@ def build_serving_snapshot(bundle: Mapping[str, Any]) -> dict[str, Any]:
             "target_logical_report_slot": prefetch_binding.get(
                 "target_logical_report_slot"
             ),
+            "projection_contract": "V12_CLIENT_PRESENTATION_PROJECTION_V1",
+            "canonical_heavy_bundle_retained": True,
         },
         "supersedes": bundle.get("supersedes") or execution.get("supersedes"),
     }
+
 
 def validate_serving_snapshot(snapshot: Mapping[str, Any]) -> list[str]:
     failures: list[str] = []
@@ -1151,7 +1658,84 @@ def validate_serving_snapshot(snapshot: Mapping[str, Any]) -> list[str]:
         lineage = snapshot.get("lineage")
         if not isinstance(lineage, Mapping):
             failures.append("SERVING_LINEAGE_INVALID")
+
+    if schema_version >= 3 and isinstance(sections, Mapping):
+        s01 = ((sections.get("S01") or {}).get("content") or {})
+        s19 = ((sections.get("S19") or {}).get("content") or {})
+        judgement = (
+            (s19.get("final_judgement") or {})
+            if isinstance(s19, Mapping)
+            else {}
+        )
+        dashboard = (
+            (s01.get("decision_dashboard") or {})
+            if isinstance(s01, Mapping)
+            else {}
+        )
+        s01_decision = str(
+            (s01.get("operational_state") if isinstance(s01, Mapping) else None)
+            or (dashboard.get("TRANSFER") if isinstance(dashboard, Mapping) else None)
+            or ""
+        ).upper()
+        s19_decision = str(
+            (judgement.get("decision") if isinstance(judgement, Mapping) else None)
+            or ""
+        ).upper()
+        if s01_decision and s19_decision and s01_decision != s19_decision:
+            failures.append("SERVING_S01_S19_DECISION_MISMATCH")
+
+        serialized_size = len(
+            json.dumps(
+                snapshot,
+                ensure_ascii=False,
+                separators=(",", ":"),
+                default=str,
+            ).encode("utf-8")
+        )
+        if serialized_size > SERVING_MAX_SERIALIZED_BYTES:
+            failures.append(
+                f"SERVING_SIZE_EXCEEDS_CEILING:{serialized_size}:"
+                f"{SERVING_MAX_SERIALIZED_BYTES}"
+            )
+
+        s11 = ((sections.get("S11") or {}).get("content") or {})
+        scanner20 = (
+            s11.get("scanner20")
+            if isinstance(s11, Mapping)
+            else None
+        )
+        if (
+            str((s11 or {}).get("state") or "").upper() == "COMPLETE"
+            and isinstance(scanner20, list)
+            and len(scanner20) != 20
+        ):
+            failures.append("SERVING_S11_COMPLETE_NOT_EXACT_20")
+
+        for section_id in ("S14", "S15B"):
+            content = ((sections.get(section_id) or {}).get("content") or {})
+            if not isinstance(content, Mapping):
+                continue
+            overlay = (
+                content.get("mini_league_overlay")
+                if section_id == "S14"
+                else content.get("downstream_overlay")
+            )
+            if isinstance(overlay, Mapping) and "route_overlays" in overlay:
+                failures.append(f"SERVING_HEAVY_FIELD_LEAK:{section_id}:route_overlays")
+        s14 = ((sections.get("S14") or {}).get("content") or {})
+        decision_payload = (
+            s14.get("decision")
+            if isinstance(s14, Mapping)
+            else None
+        )
+        if isinstance(decision_payload, Mapping):
+            for heavy_key in ("routes", "monte_carlo"):
+                if heavy_key in decision_payload:
+                    failures.append(
+                        f"SERVING_HEAVY_FIELD_LEAK:S14.decision:{heavy_key}"
+                    )
     return failures
+
 
 def write_serving_artifacts(
     *,

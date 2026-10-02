@@ -1,0 +1,334 @@
+name: FPL Master occurrence orchestrator
+run-name: FPL Master occurrence ${{ github.event.comment.id }}
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  actions: write
+  issues: write
+
+concurrency:
+  group: fpl-master-occurrence-orchestrator
+  cancel-in-progress: false
+
+jobs:
+  orchestrate:
+    if: >-
+      github.event.issue.number == 431 &&
+      github.actor == github.repository_owner &&
+      startsWith(github.event.comment.body, '/fpl-master-tick ')
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      GH_TOKEN: ${{ github.token }}
+      COMMAND: ${{ github.event.comment.body }}
+      REQUEST_ID: fpl_master_orchestrator_${{ github.run_id }}
+
+    steps:
+      - name: Parse and validate occurrence
+        id: parse
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          import shlex
+          from datetime import datetime
+
+          tokens = shlex.split(os.environ["COMMAND"])
+          if not tokens or tokens[0] != "/fpl-master-tick":
+              raise SystemExit("invalid command")
+
+          args = {}
+          for token in tokens[1:]:
+              if "=" not in token:
+                  raise SystemExit(f"invalid argument: {token}")
+              key, value = token.split("=", 1)
+              if key in args:
+                  raise SystemExit(f"duplicate argument: {key}")
+              args[key] = value
+
+          allowed = {"report_mode", "report_slot", "checkpoint_time"}
+          unknown = set(args) - allowed
+          if unknown:
+              raise SystemExit(f"unknown arguments: {sorted(unknown)}")
+
+          mode = str(args.get("report_mode") or "").upper()
+          slot = str(args.get("report_slot") or "")
+          if mode not in {"DEEP", "PRICE"}:
+              raise SystemExit("report_mode must be DEEP or PRICE")
+          if not slot:
+              raise SystemExit("report_slot is required")
+
+          dt = datetime.fromisoformat(slot)
+          if dt.utcoffset() is None or int(dt.utcoffset().total_seconds()) != 7 * 3600:
+              raise SystemExit("report_slot must use Asia/Jakarta +07:00")
+          if dt.second != 0 or dt.microsecond != 0:
+              raise SystemExit("report_slot must be exact to the minute")
+
+          checkpoint = args.get("checkpoint_time") or dt.strftime("%H:%M")
+          if checkpoint != dt.strftime("%H:%M"):
+              raise SystemExit("checkpoint_time must equal report_slot local HH:MM")
+
+          if mode == "DEEP" and checkpoint not in {"04:30", "12:30", "21:30"}:
+              raise SystemExit("DEEP occurrence must be 04:30, 12:30, or 21:30 WIB")
+
+          report_kind = "full_master" if mode == "DEEP" else "05:30_price"
+          occurrence_id = f"{mode}|{slot}"
+          serving_file = "deep.json" if mode == "DEEP" else "price.json"
+
+          out = os.environ["GITHUB_OUTPUT"]
+          with open(out, "a", encoding="utf-8") as fh:
+              fh.write(f"report_mode={mode}\n")
+              fh.write(f"report_slot={slot}\n")
+              fh.write(f"checkpoint_time={checkpoint}\n")
+              fh.write(f"report_kind={report_kind}\n")
+              fh.write(f"occurrence_id={occurrence_id}\n")
+              fh.write(f"serving_file={serving_file}\n")
+          PY
+
+      - name: Idempotency guard
+        id: guard
+        env:
+          OCCURRENCE_ID: ${{ steps.parse.outputs.occurrence_id }}
+          FPL_PRIVATE_REPORTS_TOKEN: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh api --paginate "/repos/${GITHUB_REPOSITORY}/issues/431/comments?per_page=100" \
+            --jq '.[].body' | grep -Fq "FPL_MASTER_RECEIPT occurrence_id=${OCCURRENCE_ID} status=READY_FULL"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "reuse_source=EXISTING_RECEIPT" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ -n "${FPL_PRIVATE_REPORTS_TOKEN:-}" ]]; then
+            tmp="$RUNNER_TEMP/delivery-status.json"
+            if GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
+              "/repos/iphoenk/fpl-reports-private/contents/latest/delivery_status.json?ref=main" \
+              --jq '.content' | tr -d '\n' | base64 -d > "$tmp" 2>/dev/null; then
+              if OCCURRENCE_ID="$OCCURRENCE_ID" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          p = Path(os.environ["RUNNER_TEMP"]) / "delivery-status.json"
+          obj = json.loads(p.read_text(encoding="utf-8"))
+          ok = (
+              obj.get("occurrence_id") == os.environ["OCCURRENCE_ID"]
+              and obj.get("delivery_status") in {"READY_FULL", "READY_DEGRADED"}
+          )
+          raise SystemExit(0 if ok else 1)
+          PY
+              then
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                echo "reuse_source=PRIVATE_LATEST" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+            fi
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "reuse_source=NONE" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch and bind exact V6 report-prefetch
+        id: prefetch
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          REPORT_KIND: ${{ steps.parse.outputs.report_kind }}
+          REPORT_SLOT: ${{ steps.parse.outputs.report_slot }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="V6 report_prefetch ${REPORT_KIND} ${REPORT_SLOT} ${REQUEST_ID}"
+          dispatched_after="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          gh workflow run v6-natural-data-ingestion.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f mode=report_prefetch \
+            -f reason="$REQUEST_ID" \
+            -f report_kind="$REPORT_KIND" \
+            -f logical_slot="$REPORT_SLOT" \
+            -f force=true
+
+          run_id=""
+          for _ in $(seq 1 30); do
+            payload="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/v6-natural-data-ingestion.yml/runs?event=workflow_dispatch&per_page=30")"
+            run_id="$(printf '%s' "$payload" | jq -r \
+              --arg expected "$expected" \
+              --arg after "$dispatched_after" \
+              '.workflow_runs[] | select(.display_title == $expected and .created_at >= $after) | .id' | head -n1)"
+            if [[ -n "$run_id" && "$run_id" != "null" ]]; then
+              break
+            fi
+            sleep 2
+          done
+          test -n "$run_id"
+          test "$run_id" != "null"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status
+
+      - name: Dispatch and bind exact integrated report
+        id: report
+        if: steps.guard.outputs.skip != 'true' && steps.prefetch.outcome == 'success'
+        env:
+          REPORT_MODE: ${{ steps.parse.outputs.report_mode }}
+          REPORT_SLOT: ${{ steps.parse.outputs.report_slot }}
+          CHECKPOINT_TIME: ${{ steps.parse.outputs.checkpoint_time }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="V12 ${REPORT_MODE} ${REPORT_SLOT} ${REQUEST_ID}"
+          dispatched_after="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          gh workflow run v12-integrated-report-runner.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f report_mode="$REPORT_MODE" \
+            -f report_slot="$REPORT_SLOT" \
+            -f checkpoint_time="$CHECKPOINT_TIME" \
+            -f profile_mode=OFF \
+            -f request_id="$REQUEST_ID"
+
+          run_id=""
+          for _ in $(seq 1 30); do
+            payload="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/v12-integrated-report-runner.yml/runs?event=workflow_dispatch&per_page=30")"
+            run_id="$(printf '%s' "$payload" | jq -r \
+              --arg expected "$expected" \
+              --arg after "$dispatched_after" \
+              '.workflow_runs[] | select(.display_title == $expected and .created_at >= $after) | .id' | head -n1)"
+            if [[ -n "$run_id" && "$run_id" != "null" ]]; then
+              break
+            fi
+            sleep 2
+          done
+          test -n "$run_id"
+          test "$run_id" != "null"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status
+
+      - name: Verify exact private serving publication
+        id: verify
+        if: steps.guard.outputs.skip != 'true' && steps.report.outcome == 'success'
+        env:
+          FPL_PRIVATE_REPORTS_TOKEN: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
+          REPORT_MODE: ${{ steps.parse.outputs.report_mode }}
+          REPORT_SLOT: ${{ steps.parse.outputs.report_slot }}
+          OCCURRENCE_ID: ${{ steps.parse.outputs.occurrence_id }}
+          SERVING_FILE: ${{ steps.parse.outputs.serving_file }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${FPL_PRIVATE_REPORTS_TOKEN:-}"
+
+          GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
+            "/repos/iphoenk/fpl-reports-private/contents/latest/delivery_status.json?ref=main" \
+            --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/delivery-status.json"
+
+          GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
+            "/repos/iphoenk/fpl-reports-private/contents/latest/${SERVING_FILE}?ref=main" \
+            --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/serving.json"
+
+          GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
+            "/repos/iphoenk/fpl-reports-private/contents/latest/report.md?ref=main" \
+            --jq '{sha:.sha,size:.size}' > "$RUNNER_TEMP/report-meta.json"
+
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["RUNNER_TEMP"])
+          delivery = json.loads((root / "delivery-status.json").read_text(encoding="utf-8"))
+          serving = json.loads((root / "serving.json").read_text(encoding="utf-8"))
+          meta = json.loads((root / "report-meta.json").read_text(encoding="utf-8"))
+
+          assert delivery.get("occurrence_id") == os.environ["OCCURRENCE_ID"], delivery
+          assert delivery.get("report_slot") == os.environ["REPORT_SLOT"], delivery
+          assert delivery.get("report_mode") == os.environ["REPORT_MODE"], delivery
+          assert delivery.get("delivery_status") in {"READY_FULL", "READY_DEGRADED"}, delivery
+
+          assert serving.get("report_slot") == os.environ["REPORT_SLOT"], serving
+          assert serving.get("report_mode") == os.environ["REPORT_MODE"], serving
+          assert serving.get("runner_status") == "PASS", serving
+
+          if os.environ["REPORT_MODE"] == "DEEP":
+              expected = [
+                  "S01","S02","S03","S04","S05","S06","S06B","S07","S08","S09",
+                  "S10","S11","S12","S13","S14","S14B","S15","S15B","S16","S16B",
+                  "S17","S18","S19",
+              ]
+              assert serving.get("section_ids") == expected, serving
+              if delivery.get("delivery_status") == "READY_FULL":
+                  assert serving.get("pre_render_status") == "PASS", serving
+                  assert serving.get("post_render_status") == "PASS", serving
+                  assert serving.get("human_facing_status") == "PASS", serving
+
+          assert int(meta.get("size") or 0) > 0, meta
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"delivery_status={delivery['delivery_status']}\n")
+              fh.write(f"report_sha={meta['sha']}\n")
+              fh.write(f"report_size={meta['size']}\n")
+          PY
+
+      - name: Publish occurrence receipt
+        if: always()
+        env:
+          OCCURRENCE_ID: ${{ steps.parse.outputs.occurrence_id }}
+          REPORT_MODE: ${{ steps.parse.outputs.report_mode }}
+          REPORT_SLOT: ${{ steps.parse.outputs.report_slot }}
+          REUSE: ${{ steps.guard.outputs.skip }}
+          REUSE_SOURCE: ${{ steps.guard.outputs.reuse_source }}
+          PREFETCH_OUTCOME: ${{ steps.prefetch.outcome }}
+          PREFETCH_RUN: ${{ steps.prefetch.outputs.run_id }}
+          REPORT_OUTCOME: ${{ steps.report.outcome }}
+          REPORT_RUN: ${{ steps.report.outputs.run_id }}
+          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+          DELIVERY_STATUS: ${{ steps.verify.outputs.delivery_status }}
+          REPORT_SHA: ${{ steps.verify.outputs.report_sha }}
+          REPORT_SIZE: ${{ steps.verify.outputs.report_size }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${REUSE:-}" == "true" ]]; then
+            status="READY_REUSED"
+          elif [[ "${VERIFY_OUTCOME:-}" == "success" ]]; then
+            status="${DELIVERY_STATUS:-READY_FULL}"
+          elif [[ "${PREFETCH_OUTCOME:-}" != "success" ]]; then
+            status="FAILED_PREFETCH"
+          elif [[ "${REPORT_OUTCOME:-}" != "success" ]]; then
+            status="FAILED_REPORT"
+          else
+            status="FAILED_VERIFY"
+          fi
+
+          body="$RUNNER_TEMP/receipt.md"
+          {
+            echo "<!-- FPL_MASTER_RECEIPT occurrence_id=${OCCURRENCE_ID:-UNKNOWN} status=$status -->"
+            echo "FPL_MASTER_RECEIPT"
+            echo
+            echo "- occurrence_id: \`${OCCURRENCE_ID:-UNKNOWN}\`"
+            echo "- report_mode: \`${REPORT_MODE:-UNKNOWN}\`"
+            echo "- report_slot: \`${REPORT_SLOT:-UNKNOWN}\`"
+            echo "- status: \`$status\`"
+            echo "- orchestrator_run: \`$GITHUB_RUN_ID\`"
+            echo "- request_id: \`$REQUEST_ID\`"
+            echo "- reused: \`${REUSE:-false}\`"
+            echo "- reuse_source: \`${REUSE_SOURCE:-NONE}\`"
+            echo "- prefetch_run: \`${PREFETCH_RUN:-UNAVAILABLE}\`"
+            echo "- report_run: \`${REPORT_RUN:-UNAVAILABLE}\`"
+            echo "- private_report_sha: \`${REPORT_SHA:-UNAVAILABLE}\`"
+            echo "- private_report_size: \`${REPORT_SIZE:-UNAVAILABLE}\`"
+            echo "- user_visible_required: \`true\`"
+            echo "- generated_at_utc: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+          } > "$body"
+
+          gh issue comment 431 --repo "$GITHUB_REPOSITORY" --body-file "$body"
+
+          case "$status" in
+            READY_FULL|READY_DEGRADED|READY_REUSED) exit 0 ;;
+            *) exit 1 ;;
+          esac

@@ -1,4 +1,12 @@
 name: V12 integrated report runner
+run-name: >-
+  ${{
+    github.event_name == 'workflow_dispatch' &&
+    format('V12 {0} {1} {2}', inputs.report_mode, inputs.report_slot, inputs.request_id) ||
+    github.event_name == 'issue_comment' &&
+    format('V12 issue-comment {0}', github.event.comment.id) ||
+    'V12 integrated report'
+  }}
 
 on:
   workflow_dispatch:
@@ -21,6 +29,11 @@ on:
         description: Performance profiling mode (OFF or COLD)
         required: false
         default: "OFF"
+        type: string
+      request_id:
+        description: Orchestrator request identity used only for exact run binding
+        required: false
+        default: ""
         type: string
   issue_comment:
     types: [created]

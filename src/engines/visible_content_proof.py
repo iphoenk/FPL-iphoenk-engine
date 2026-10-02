@@ -136,8 +136,13 @@ def _contract_from_rows(mode: str, rows: Sequence[Mapping[str, str]]) -> dict[st
     }
 
 
-def canonical_mode_contract(canonical_text: str, report_mode: str) -> dict[str, Any]:
-    """Derive structural section identity/order directly from the current Canonical text."""
+def canonical_mode_contract(
+    canonical_text: str,
+    report_mode: str,
+    *,
+    s16b_due: bool | None = None,
+) -> dict[str, Any]:
+    """Derive structural order, applying the conditional S16B lifecycle when supplied."""
     text = _nonempty(canonical_text, label="canonical_text")
     mode = str(report_mode or "").strip().upper()
 
@@ -148,6 +153,13 @@ def canonical_mode_contract(canonical_text: str, report_mode: str) -> dict[str, 
             section_prefix="S",
             zero_pad=True,
         )
+        if s16b_due is not None:
+            rows = [
+                row
+                for row in rows
+                if str(row.get("section_id") or "").upper() != "S16B"
+                or bool(s16b_due)
+            ]
         if mode == "FINAL":
             final_title, final_body = _canonical_subsection(text, "14I")
             lock_label = re.sub(r"^FINAL\s+[—-]\s*", "", final_title).strip().rstrip(".")

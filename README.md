@@ -1,6 +1,6 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-10-02T21:11:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-03T06:30:00+07:00`
 > **Production main at sync:** `95241f03303c6ff25f6118bc783236d431ad5fe9`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
@@ -562,6 +562,8 @@ Canonical DEEP reporting covers:
 - action board and final judgement.
 
 The detailed section contract is intentionally maintained outside this README so the front page stays readable.
+
+The user-visible DEEP presentation itself is version-locked by `config/intelligence/v12_deep_presentation_lock_v1.json`. That contract freezes the visible section order, per-section block structure, exact table column order, governed row counts for OUR15/Scanner20/RISE20/FALL20, and separate S15B mini-league tables. S15B population statistics must show numerator, denominator, and percentage where the population is known; unrelated scopes such as LEAGUE58, RIVALS57, DIRECT6, direct rivals, rival-only threats, and captain landscape must not be merged into one generic table. This presentation lock does not change canonical V12 decisions, model maths, MC500k, universe/routes, factual authority, or S16B lifecycle semantics.
 
 ## DEEP decision-content delivery barrier
 

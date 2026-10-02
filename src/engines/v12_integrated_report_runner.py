@@ -5168,6 +5168,15 @@ def _post_match_review(
             if scan.get("eligible_count") is not None
             else scan.get("scanned_count")
         ),
+        # Compatibility aliases for existing evidence-quality consumers only.
+        "our15": owned_reassessment,
+        "material_universe_candidates": material_details,
+        "full_universe_scan": {
+            "eligible_count": scan.get("eligible_count"),
+            "scanned_count": scan.get("scanned_count"),
+            "material_count": scan.get("material_count"),
+            "scope": scan.get("scope"),
+        },
         "recency_weighting": "EXPONENTIAL_HALF_LIFE_GW",
         "bayesian_update": "ONLY_WHERE_EXISTING_POSTERIOR_RECOMPUTED",
         "candidate_traceability": candidate_outcomes,

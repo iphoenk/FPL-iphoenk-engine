@@ -8321,7 +8321,11 @@ def run_deep(
         rendered_weather_contract_state=weather_contract_state,
         truncated=False,
     )
-    contract = canonical_mode_contract(canonical, "DEEP")
+    contract = canonical_mode_contract(
+        canonical,
+        "DEEP",
+        s16b_due=s16b_context.get("s16b_due") is True,
+    )
     catalog_complete = (
         list(parsed_ids) == list(contract.get("expected_section_ids") or [])
     )
@@ -8375,6 +8379,17 @@ def run_deep(
         ]
     )
 
+    s16b_delivery_state = state_after_occurrence(
+        s16b_context,
+        occurrence_id=f"DEEP|{report_slot}",
+        generated_at=datetime.now().astimezone().isoformat(),
+        body_fingerprint=(
+            hashlib.sha256(body.encode("utf-8")).hexdigest()
+            if s16b_context.get("s16b_due") is True
+            else None
+        ),
+    )
+
     output_dir.mkdir(parents=True, exist_ok=True)
     execution_proof = {
         "schema_version": 2,
@@ -8384,8 +8399,8 @@ def run_deep(
         "report_mode": "DEEP",
         "planning_gw": planning_gw,
         "s16b_due": s16b_context.get("s16b_due") is True,
-        "s16b_context": s16b_context,
-        "s16b_delivery_state": s16b_delivery_state,
+        "s16b_completed_gw": s16b_context.get("completed_gw"),
+        "s16b_due_reason": s16b_context.get("due_reason"),
         "runner_status": runner_status,
         "canonical_expected_section_ids": contract.get("expected_section_ids"),
         "rendered_section_ids": parsed_ids,
@@ -8456,17 +8471,6 @@ def run_deep(
         "no_second_model_authority": True,
         "monte_carlo_fabricated": False,
     }
-    s16b_delivery_state = state_after_occurrence(
-        s16b_context,
-        occurrence_id=f"DEEP|{report_slot}",
-        generated_at=datetime.now().astimezone().isoformat(),
-        body_fingerprint=(
-            hashlib.sha256(body.encode("utf-8")).hexdigest()
-            if s16b_context.get("s16b_due") is True
-            else None
-        ),
-    )
-
     bundle = {
         "schema": "FPL_MASTER_V12_INTEGRATED_REPORT_BUNDLE_V2",
         "authority": str(CANONICAL_PATH.relative_to(ROOT)),
@@ -8474,6 +8478,9 @@ def run_deep(
         "report_mode": "DEEP",
         "report_slot": report_slot,
         "planning_gw": planning_gw,
+        "s16b_due": s16b_context.get("s16b_due") is True,
+        "s16b_context": s16b_context,
+        "s16b_delivery_state": s16b_delivery_state,
         "runner_status": runner_status,
         "stage_ledger": ledger,
         "section_manifest": section_manifest,

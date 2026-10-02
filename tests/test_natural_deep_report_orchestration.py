@@ -30,6 +30,8 @@ from src.engines.v12_report_orchestration import (
     materialize_natural_post_match_report,
     render_deep_text,
     render_natural_post_match_text,
+    humanize_visible_text,
+    humanize_visible_value,
     validate_human_facing_body,
     weather_report_time_evidence,
 )
@@ -1803,3 +1805,35 @@ def test_post_match_actual_update_requires_execution_proof_before_claim():
     assert "POSTERIOR UPDATED" in body
     assert "PREVIOUS VALUE=0.72" in body
     assert "CURRENT VALUE=0.81" in body
+
+
+def test_human_presentation_firewall_translates_internal_enums():
+    assert humanize_visible_value(
+        "NO_POSITIVE_MC_SUPPORTED_ROUTE_CLEARS_1_3_5GW_VECTOR"
+    ) == (
+        "Belum ada rute transfer yang mengalahkan HOLD secara meyakinkan "
+        "pada horizon 1, 3, dan 5 GW"
+    )
+    assert humanize_visible_value("MINUTES_ROLE_IMPROVING") == (
+        "Menit bermain dan peran membaik"
+    )
+    assert humanize_visible_value("USER_CONFIRMED/CURRENT_VALID") == (
+        "Dikonfirmasi pengguna / Valid saat ini"
+    )
+
+
+def test_human_presentation_firewall_rejects_raw_machine_language():
+    raw = (
+        "Reason: NO_POSITIVE_MC_SUPPORTED_ROUTE_CLEARS_1_3_5GW_VECTOR\n"
+        "user_summary: {'rank': 7}\n"
+        "actual_paths=500000\n"
+    )
+    failures = validate_human_facing_body(raw)
+    assert "MACHINE_LANGUAGE=RAW_ENUM" in failures
+    assert "MACHINE_LANGUAGE=RAW_DICT" in failures
+    assert "MACHINE_LANGUAGE=RAW_KEY_VALUE" in failures
+
+    cleaned = humanize_visible_text(
+        "NO_POSITIVE_MC_SUPPORTED_ROUTE_CLEARS_1_3_5GW_VECTOR"
+    )
+    assert "_" not in cleaned

@@ -2840,8 +2840,14 @@ def materialize_deep_report(
     locked_state: Mapping[str, Any] | None = None,
     post_all_match_scout: Sequence[Mapping[str, Any]] | None = None,
     mathematical_decision_stack: Mapping[str, Any] | None = None,
+    s16b_due: bool | None = None,
 ) -> dict[str, Any]:
-    """Materialize Canonical DEEP plus nested post-match/math evidence when due."""
+    """Materialize the 22-section DEEP base plus conditional S16B when due."""
+    due = (
+        bool(s16b_due)
+        if s16b_due is not None
+        else "S16B" in dict(section_payloads or {})
+    )
     report = _materialize_canonical_report(
         canonical_text=canonical_text,
         structural_mode="DEEP",
@@ -2852,6 +2858,13 @@ def materialize_deep_report(
         current_gw_locked=current_gw_locked,
         locked_state=locked_state,
     )
+    if not due:
+        report["sections"] = [
+            row
+            for row in report.get("sections") or []
+            if str(row.get("section_id") or "").upper() != "S16B"
+        ]
+    report["s16b_due"] = due
     scout = [
         dict(row)
         for row in (post_all_match_scout or ())
@@ -3866,7 +3879,14 @@ DEEP_HUMAN_SECTION_REQUIREMENTS: dict[str, tuple[str, ...]] = {
         "disclosed_picks_label",
     ),
     "S16": ("rows", "position_mechanisms"),
-    "S16B": ("our15", "material_universe_candidates", "recency_weighting", "bayesian_update"),
+    "S16B": (
+        "gw",
+        "fixtures_expected",
+        "fixtures_reviewed",
+        "match_by_match_review",
+        "after_gw_reassessment",
+        "full_universe_denominator",
+    ),
     "S17": ("engine_data_status", "source_health"),
     "S18": (
         "NOW",
@@ -3894,6 +3914,8 @@ def build_deep_human_facing_manifest(
     failures: list[str] = []
     for section_id, required_keys in DEEP_HUMAN_SECTION_REQUIREMENTS.items():
         section = sections.get(section_id)
+        if section_id == "S16B" and section is None:
+            continue
         if section is None:
             failures.append(f"HUMAN_SECTION_MISSING={section_id}")
             entries.append({
